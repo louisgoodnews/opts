@@ -11,7 +11,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 ## 🎯 Milestones
 
 - [M-0013 — Binary Mesh Parsers (`.o3d`)](M-0013.md) — 🟢 Complete (🔴 High priority; `.o3d` parser complete)
-- [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — ⚪ Planned (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
+- [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — 🟢 Complete (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
 - [M-0015 — World & Scenery Parsers](M-0015.md) — ⚪ Planned (🟢 Low priority; deferred pending Mutation Kit 2)
 - [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — 🟢 Complete (🔴 High priority; `.x` parser complete)
 
@@ -27,11 +27,11 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
   - [x] Implement `.o3d` parser supporting versions 1, 3, 4, 5, 7, vertex decoding, faces, materials, transform matrix.
   - [x] Implement `.x` parser for DirectX text and binary meshes.
   - [x] Integration test suite against mutation kit fixtures (`t01`–`t07`, `t10`–`t12`).
-- [ ] **📝 Vehicle & Operational Parsers (`opts_core::formats::vehicles::*`)** — M-0014
-  - [ ] Implement `.bus` vehicle manifest parser.
-  - [ ] Implement `paths.cfg` passenger navigation and seat layout parser.
-  - [ ] Implement `.org` number and license plate pool parser.
-  - [ ] Implement `Money/<pack>/*.cfg` currency denominations parser.
+- [x] **📝 Vehicle & Operational Parsers (`opts_core::formats::vehicles::*`)** — M-0014
+  - [x] Implement `.bus` vehicle manifest parser.
+  - [x] Implement `paths.cfg` passenger navigation and seat layout parser.
+  - [x] Implement `.org` number and license plate pool parser.
+  - [x] Implement `Money/<pack>/*.cfg` currency denominations parser.
 - [ ] **🗺️ Scenery & World Parsers (`opts_core::formats::map::*`)** — M-0015 (Deferred)
   - [ ] Implement `.sco` and `.sli` parsers upon spec promotion.
   - [ ] Implement `global.cfg` and `tile_*.map` parsers upon spec promotion.

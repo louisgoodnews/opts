@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (P-004 board update for M-0014)_
+_Last updated: 2026-10-06 by Agent (P-006 closeout of M-0014)_
 
 ---
 
@@ -105,12 +105,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟡 **Implement shared text decoding & block tokenizer** — (M-0014, code). CP1252/UTF-8 decoding and OMSI keyword block scanner in `opts_core::formats::text`.
-- [ ] 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
-- [ ] 🟡 **Implement `opts_core::formats::money` parser** — (M-0014, code). Currency pack parser for `Money/<pack>/*.cfg`. Unblocked: `money.md` is 🟢 Specified.
-- [ ] 🟡 **Implement `opts_core::formats::vehicles::paths` parser** — (M-0014, code). Passenger waypoint paths and door bindings for `paths.cfg`. Unblocked: `paths_cfg.md` is 🟢 Specified.
-- [ ] 🔴 **Implement `opts_core::formats::vehicles::bus` parser** — (M-0014, code). Top-level `.bus` vehicle manifest parser. Unblocked: `bus.md` is 🟢 Specified.
-- [ ] 🟡 **Integration test suite for operational data parsers** — (M-0014, test). End-to-end and fuzzing test suite in `tests/operational_parse.rs`.
 - [ ] 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
@@ -180,6 +174,15 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-06 — M-0014 (Vehicle Configuration & Operational Data Parsers, complete)**
+
+- `[x]` 🟡 **Implement shared text decoding & block tokenizer** (M-0014, code) — CP1252/UTF-8 decoding and OMSI keyword block scanner in `opts_core::formats::text`.
+- `[x]` 🟡 **Implement `opts_core::formats::org` parser** (M-0014, code) — Registration and fleet number list parser with frequency weighting.
+- `[x]` 🟡 **Implement `opts_core::formats::money` parser** (M-0014, code) — Currency pack parser for `Money/<pack>/*.cfg`.
+- `[x]` 🟡 **Implement `opts_core::formats::vehicles::paths` parser** (M-0014, code) — Passenger waypoint paths and door bindings for `paths.cfg`.
+- `[x]` 🔴 **Implement `opts_core::formats::vehicles::bus` parser** (M-0014, code) — Top-level `.bus` vehicle manifest parser.
+- `[x]` 🟡 **Integration test suite for operational data parsers** (M-0014, test) — End-to-end and fuzzing test suite in `tests/operational_parse.rs`. 21 tests (14 unit, 7 integration), zero unsafe, zero warnings.
 
 **2026-10-06 — M-0016 (DirectX .x Legacy Mesh Parser, complete)**
 
@@ -316,3 +319,4 @@ The agent should check these during P-001 audits:
 - `2026-10-06` — P-004: M-0016 (DirectX `.x` Legacy Mesh Parser) work items populated: 2 in Ready, 1 in Backlog.
 - `2026-10-06` — P-006: M-0016 (DirectX `.x` Legacy Mesh Parser) complete. Binary mesh parsing in Phase 2 complete. Items moved to Recently Done.
 - `2026-10-06` — P-004: M-0014 (Vehicle Configuration & Operational Data Parsers) work items populated: 6 in Ready.
+- `2026-10-06` — P-006: M-0014 (Vehicle Configuration & Operational Data Parsers) complete. Items moved to Recently Done.
