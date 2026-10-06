@@ -104,10 +104,22 @@ By contributing to this project, you **affirm** that:
 - **Error Handling:** Use `thiserror` for library crates (`opts-core`, `opts-sim`) and `anyhow` for binary crates (`opts-game`, `opts-tools`).
 - **Documentation:** All public items must have rustdoc comments (`///`). Use `#![warn(missing_docs)]` in `lib.rs`.
 
-### Markdown
+### Markdown & Documentation Standards
 - **Headings:** Use ATX-style headings (`#`, `##`, `###`).
 - **Emojis:** Use them in top-level documents (like the Roadmap and Glossary) to improve visual scanning.
 - **Links:** Use relative links for internal docs (e.g., `../glossary.md`) and absolute links for external resources.
+- **Character Encoding:** All Markdown files (`*.md`) must strictly be encoded in **UTF-8 without BOM** with `LF` line endings. Never save documentation using legacy single-byte encodings (such as Windows-1252, CP866, or CP1251) which causes mojibake.
+- **EditorConfig Recommendation:** Configure your editor to enforce UTF-8:
+  ```ini
+  [*.md]
+  charset = utf-8
+  end_of_line = lf
+  insert_final_newline = true
+  ```
+- **Encoding Verification:** You can verify all Markdown files in the repository using:
+  ```bash
+  find docs/ -name "*.md" -exec sh -c 'file "$1" | grep -q "UTF-8" || echo "Not UTF-8: $1"' _ {} \;
+  ```
 
 ---
 
