@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (P-006 closeout of M-0016)_
+_Last updated: 2026-10-06 by Agent (P-004 board update for M-0014)_
 
 ---
 
@@ -105,10 +105,15 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- `[ ]` 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
-- `[ ]` 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
-- `[ ]` 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
-- `[ ]` 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
+- [ ] 🟡 **Implement shared text decoding & block tokenizer** — (M-0014, code). CP1252/UTF-8 decoding and OMSI keyword block scanner in `opts_core::formats::text`.
+- [ ] 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
+- [ ] 🟡 **Implement `opts_core::formats::money` parser** — (M-0014, code). Currency pack parser for `Money/<pack>/*.cfg`. Unblocked: `money.md` is 🟢 Specified.
+- [ ] 🟡 **Implement `opts_core::formats::vehicles::paths` parser** — (M-0014, code). Passenger waypoint paths and door bindings for `paths.cfg`. Unblocked: `paths_cfg.md` is 🟢 Specified.
+- [ ] 🔴 **Implement `opts_core::formats::vehicles::bus` parser** — (M-0014, code). Top-level `.bus` vehicle manifest parser. Unblocked: `bus.md` is 🟢 Specified.
+- [ ] 🟡 **Integration test suite for operational data parsers** — (M-0014, test). End-to-end and fuzzing test suite in `tests/operational_parse.rs`.
+- [ ] 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
+- [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
+- [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
 ---
 
@@ -116,7 +121,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- `[!]` 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `opts_bevy` mesh loader and `.sco` parser.
+- [!] 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `opts_bevy` mesh loader and `.sco` parser.
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -129,19 +134,9 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
-#### M-0016 — DirectX .x Legacy Mesh Parser
-
-- `[ ]` 🟢 **Add `.x` parser documentation to `opts-core` book** — Document API and examples in `docs/crates/opts-core.md` (M-0016, docs)
-
-#### M-0014 — Vehicle & Operational Data Parsers
-
-- `[ ]` 🟡 **Implement `opts_core::formats::money` parser** — (M-0014, code). Currency pack parser for `Money/<pack>/*.cfg`.
-- `[ ]` 🟡 **Implement `opts_core::formats::vehicles::paths` parser** — (M-0014, code). Passenger waypoint paths and door bindings for `paths.cfg`.
-- `[ ]` 🔴 **Implement `opts_core::formats::vehicles::bus` parser** — (M-0014, code). Top-level `.bus` vehicle manifest parser.
-
 #### M-0015 — World & Scenery Parsers (Deferred)
 
-- `[ ]` 🟢 **Scenery & world parsers** — (M-0015, code/spec). Deferred pending Mutation Kit 2 for `.sco`, `.sli`, `tile_*.map`, `global.cfg`.
+- [ ] 🟢 **Scenery & world parsers** — (M-0015, code/spec). Deferred pending Mutation Kit 2 for `.sco`, `.sli`, `tile_*.map`, `global.cfg`.
 
 #### M-0004 — Transit Data Specifications
 
@@ -320,3 +315,4 @@ The agent should check these during P-001 audits:
 - `2026-10-06` — P-006: `opts_core::formats::o3d` parser complete. Unblocked `opts_bevy` mesh loader. M-0013 marked In Progress with `.x` parser next in Ready.
 - `2026-10-06` — P-004: M-0016 (DirectX `.x` Legacy Mesh Parser) work items populated: 2 in Ready, 1 in Backlog.
 - `2026-10-06` — P-006: M-0016 (DirectX `.x` Legacy Mesh Parser) complete. Binary mesh parsing in Phase 2 complete. Items moved to Recently Done.
+- `2026-10-06` — P-004: M-0014 (Vehicle Configuration & Operational Data Parsers) work items populated: 6 in Ready.
