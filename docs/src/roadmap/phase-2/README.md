@@ -14,6 +14,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 - [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — 🟢 Complete (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
 - [M-0015 — World & Scenery Parsers](M-0015.md) — ⚪ Planned (🟢 Low priority; deferred pending Mutation Kit 2)
 - [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — 🟢 Complete (🔴 High priority; `.x` parser complete)
+- [M-0017 — Model Configuration Parser (`model.cfg`)](M-0017.md) — ⚪ Planned (🔴 High priority; mesh bindings and animations)
 
 ---
 
@@ -32,6 +33,8 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
   - [x] Implement `paths.cfg` passenger navigation and seat layout parser.
   - [x] Implement `.org` number and license plate pool parser.
   - [x] Implement `Money/<pack>/*.cfg` currency denominations parser.
+- [ ] **📐 Model Configuration Parser (`opts_core::formats::vehicles::model`)** — [M-0017](M-0017.md)
+  - [ ] Implement `model.cfg` parser for mesh bindings, LOD tiers, animations, viewpoints, and material modifiers.
 - [ ] **🗺️ Scenery & World Parsers (`opts_core::formats::map::*`)** — M-0015 (Deferred)
   - [ ] Implement `.sco` and `.sli` parsers upon spec promotion.
   - [ ] Implement `global.cfg` and `tile_*.map` parsers upon spec promotion.
