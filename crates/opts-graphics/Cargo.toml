@@ -1,0 +1,33 @@
+[package]
+name = "opts-graphics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Graphics Engine for OPTS."
+repository.workspace = true
+
+[[bin]]
+name = "opts-game"
+path = "src/main.rs"
+
+[dependencies]
+# Internal Crates
+opts-core = { workspace = true }
+opts-bevy = { workspace = true }
+opts-sim = { workspace = true }
+opts-utils = { workspace = true }
+
+# Bevy Engine
+bevy = { workspace = true }
+
+# Logging & Error Handling
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# CLI arguments for the game (e.g., specifying map path, config file)
+# clap = { version = "4.5", features = ["derive"] } # Uncomment when needed
+
+[dev-dependencies]
+# Add test-specific dependencies here

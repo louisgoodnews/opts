@@ -1,0 +1,56 @@
+# ─────────────────────────────────────────────────────────────────────
+# OPTS — Main Book
+#
+# Vision, roadmap, OMSI format specifications, ADRs and contributor
+# guides. Crate-level documentation lives in the separate Crate Book
+# (docs/crates/book.toml), published under <site>/crates/.
+#
+# Build:   mdbook build docs          (then: mdbook build docs/crates)
+# Serve:   mdbook serve docs
+# ─────────────────────────────────────────────────────────────────────
+
+[book]
+title = "OPTS — Open Public Transport Simulator"
+authors = ["OPTS Contributors"]
+description = "Specifications, roadmap and design records for OPTS, an open-source public transport simulator that brings OMSI 2 assets to the Bevy engine."
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+# SUMMARY.md contains draft chapters (`[Title]()`); never let mdBook
+# create stub files for them.
+create-missing = false
+
+[rust]
+edition = "2021"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+smart-punctuation = true
+# TODO: replace `your-username` once the repository has its final home
+# (same placeholder as `repository` in the root Cargo.toml).
+git-repository-url = "https://github.com/your-username/opts"
+edit-url-template = "https://github.com/your-username/opts/edit/main/docs/src/{path}"
+site-url = "/opts/"
+
+# Format specs contain Rust sketches that are not complete programs.
+[output.html.playground]
+runnable = false
+copyable = true
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+# Format names (`.sco`, `.o3d`) are usually what people search for.
+boost-title = 2
+boost-hierarchy = 1
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.print]
+enable = true

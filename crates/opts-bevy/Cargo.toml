@@ -1,0 +1,26 @@
+[package]
+name = "opts-bevy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Bevy plugin and asset loaders for OPTS."
+repository.workspace = true
+
+[dependencies]
+# Internal
+opts-core = { workspace = true }
+
+# Bevy Ecosystem
+bevy = { workspace = true }
+# bevy_asset_loader = { workspace = true } # Uncomment when needed
+
+# Image & Asset Handling
+image = { workspace = true }
+ddsfile = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+# Add test-specific dependencies here

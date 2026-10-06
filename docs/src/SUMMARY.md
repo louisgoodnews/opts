@@ -1,0 +1,170 @@
+# Summary
+
+[Introduction](introduction.md)
+[Vision](vision.md)
+[Glossary](glossary.md)
+
+---
+
+# 🗺️ Roadmap
+
+- [Overview](roadmap/README.md)
+- [Phase 0: Foundation](roadmap/phase-0/README.md)
+  - [M-0000: Foundation & Documentation](roadmap/phase-0/M-0000.md)
+- [Phase 1: Format Specification](roadmap/phase-1/README.md)
+  - [M-0001: Vehicle Text Formats](roadmap/phase-1/M-0001.md)
+  - [M-0002: Binary Mesh Formats](roadmap/phase-1/M-0002.md)
+  - [M-0003: World Formats](roadmap/phase-1/M-0003.md)
+  - [M-0004: Transit Data](roadmap/phase-1/M-0004.md)
+  - [M-0005: Script Formats](roadmap/phase-1/M-0005.md)
+  - [M-0006: Community Wiki Cross-Check](roadmap/phase-1/M-0006.md)
+  - [M-0007: Documentation Drift Repair](roadmap/phase-1/M-0007.md)
+  - [M-0008: Script Reference](roadmap/phase-1/M-0008.md)
+  - [M-0009: Repaint System](roadmap/phase-1/M-0009.md)
+  - [M-0010: Engine & Environment Configs](roadmap/phase-1/M-0010.md)
+  - [M-0011: Passenger Content](roadmap/phase-1/M-0011.md)
+  - [M-0012: Chrono and Map Variants](roadmap/phase-1/M-0012.md)
+- [Phase 2: Core Parsers](roadmap/phase-2/README.md)
+- [Phase 3: Bevy Integration](roadmap/phase-3/README.md)
+- [Phase 4: Simulation](roadmap/phase-4/README.md)
+- [Phase 5: Ecosystem](roadmap/phase-5/README.md)
+
+---
+
+# 🏗️ Architecture
+
+- [Overview](architecture/overview.md)
+- [Crate Structure](architecture/crate-structure.md)
+- [Coordinate Systems](architecture/coordinates.md)
+- [Asset Pipeline](architecture/asset-pipeline.md)
+- [Error Handling](architecture/error-handling.md)
+- [Determinism & Replays](architecture/determinism-replays.md)
+
+---
+
+# 📄 OMSI Formats
+
+- [Overview](formats/overview.md)
+- [Text Formats](formats/text/README.md)
+  - [`.sco` — Scenery Objects](formats/text/sco.md)
+  - [`.sli` — Splines](formats/text/sli.md)
+  - [`.sco` / `.sli` Corpus Audit](formats/text/sco-sli-audit.md)
+  - [`.bus` — Vehicle Definitions](formats/text/vehicles/bus.md)
+  - [`.cfg` — Vehicle Configuration](formats/text/cfg.md)
+  - [`model.cfg`](formats/text/vehicles/model_cfg.md)
+  - [Passenger Paths (`paths.cfg`)](formats/text/vehicles/paths_cfg.md)
+  - [Passenger Cabin](formats/text/vehicles/passengercabin_cfg.md)
+  - [Sound Configuration](formats/text/vehicles/sound_cfg.md)
+  - [`.osc` — Scripts](formats/text/vehicles/osc.md)
+  - [Variable Lists](formats/text/vehicles/varnamelist.md)
+  - [Constant Files](formats/text/vehicles/const.md)
+  - [Predefined Variables & Callbacks](formats/text/vehicles/predefined-variables.md)
+  - [Vehicle Script Sets](formats/text/vehicles/script-sets.md)
+  - [Scenery Scripts](formats/text/scenery-scripts.md)
+  - [Repaints (`.cti`, `[CTC]`)](formats/text/repaints.md)
+  - [Environment, Weather & Scenarios](formats/text/environment.md)
+  - [Engine Configuration (inputs, options)](formats/text/engine-config.md)
+  - [`.opl` — Plug-in Declarations](formats/text/opl.md)
+  - [Ticket Packs](formats/text/ticketpacks.md)
+  - [Money Systems](formats/text/money.md)
+  - [Fonts](formats/text/fonts.md)
+  - [`.hof` — Bus Stops & Routes](formats/text/vehicles/hof.md)
+  - [`.org` — Number Lists](formats/text/org.md)
+  - [Misc. Extension Types](formats/text/misc-types.md)
+  - [Vehicle-side Corpus Audit](formats/text/vehicles/vehicle-corpus-audit.md)
+- [Binary Formats](formats/binary/README.md)
+  - [`.o3d` — 3D Meshes](formats/binary/o3d.md)
+  - [Chunk Reference](formats/binary/o3d-chunks.md)
+  - [`.x` — DirectX Meshes (Legacy)](formats/binary/x.md)
+- [Map & Scenario Files](formats/map/README.md)
+  - [`global.cfg`, `laststn.osn`, `.dsc`](formats/map/global-cfg.md)
+  - [Map Lists & Calendars](formats/map/lists.md)
+  - [Timetable Files](formats/map/timetables.md)
+  - [Chrono Overlays & Map Variants](formats/map/chrono.md)
+  - [Map Tiles](formats/map/tiles.md)
+- [Texture Property Files (`*.bmp.cfg`)](formats/text/texture-cfg.md)
+- [Texture Formats](formats/textures.md)
+- [Community Documentation Cross-Check](formats/community-crosscheck.md)
+- [Documentation Gap Analysis](formats/gap-analysis.md)
+- [Format Inventory (P-100)](formats/inventory.md)
+  - [`.wav` — Sound Files](formats/wav.md)
+  - [`.dat` — Star Catalogue](formats/dat.md)
+  - [`.xsli` — Spline Project (XML)](formats/xsli.md)
+  - [`.itx` — Internet Texture List](formats/itx.md)
+  - [`.ipr` — Internet Texture Dates](formats/ipr.md)
+  - [`.kyb` — Key-Name Tables](formats/kyb.md)
+  - [`.kennz` — Number-Plate Patterns](formats/kennz.md)
+  - [`.html` — Tutorial & Menu Pages](formats/html.md)
+  - [`.off` — Disabled Texture Lists](formats/off.md)
+  - [`.sichtbar` / `.unsichtbar`](formats/sichtbar.md)
+
+---
+
+# 🧑‍💻 Contributing
+
+- [Setup](contributing/setup.md)
+- [Coding Standards](contributing/standards.md)
+- [Documentation Standards](contributing/documentation-standards.md)
+- [Legal & Licensing](contributing/legal-licensing.md)
+- [Release Process](contributing/release-process.md)
+
+---
+
+# 📜 Architecture Decision Records
+
+- [ADR Template](adr/template.md)
+- [ADR-0001: Why Bevy and Rust?](adr/0001-why-bevy-and-rust.md)
+- [ADR-0002: Clean-Room Reverse Engineering Policy](adr/0002-clean-room-policy.md)
+
+---
+
+<!-- Placeholder sections with no written chapters yet — commented out until implemented -->
+<!--
+# 🚏 Simulation
+
+- [Overview]()
+- [Simulation Loop]()
+- [Vehicle Physics]()
+- [Passenger Model]()
+- [Routing Algorithm]()
+- [Transit Network]()
+
+---
+
+# 🎓 Tutorials
+
+- [Loading Your First `.sco`]()
+- [Loading a Bus with Textures]()
+- [Building a Custom AssetLoader]()
+- [Creating a Test Fixture]()
+
+---
+
+# 📘 Reference
+
+- [opts-core API]()
+- [opts-bevy API]()
+- [opts-sim API]()
+- [opts-tools CLI]()
+- [Error Catalogue]()
+
+---
+
+# 🎮 User Guide
+
+- [Installation]()
+- [Controls]()
+- [Loading a Map]()
+- [Troubleshooting]()
+- [FAQ]()
+
+---
+
+# 🛠️ Modding Guide
+
+- [Overview]()
+- [Asset Pipeline]()
+- [Packaging a Map]()
+- [Supported Formats]()
+- [Limitations]()
+-->

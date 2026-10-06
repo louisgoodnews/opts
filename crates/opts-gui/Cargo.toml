@@ -1,0 +1,23 @@
+[package]
+name = "opts-gui"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "GUI for OPTS."
+repository.workspace = true
+
+[dependencies]
+# Internal
+opts-core = { workspace = true }
+opts-assets = { workspace = true }
+
+# Bevy Ecosystem
+bevy = { workspace = true }
+# bevy_asset_loader = { workspace = true } # Uncomment when needed
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+# Add test-specific dependencies here

@@ -1,0 +1,63 @@
+# ─────────────────────────────────────────────────────────────────────
+# OPTS — Crate Book
+#
+# The second mdBook of the project. It documents the Cargo workspace:
+# the role of every crate, the architecture that binds them together,
+# and the rules that keep the crate graph modular.
+#
+# The main book (docs/book.toml) documents formats, roadmap and policy.
+# This book documents *code*. It complements rustdoc: rustdoc explains
+# items inside a crate, this book explains a crate's place in the system.
+#
+# Build:   mdbook build docs/crates   (after `mdbook build docs`)
+# Serve:   mdbook serve docs/crates
+#
+# The output lands in docs/book/crates/, i.e. it is published under
+# <site>/crates/ next to the main book. Build the main book FIRST:
+# mdBook wipes its build directory, which would delete this output.
+# ─────────────────────────────────────────────────────────────────────
+
+[book]
+title = "OPTS — Crate Book"
+authors = ["OPTS Contributors"]
+description = "Architecture and per-crate documentation for the Open Public Transport Simulator (OPTS) Cargo workspace."
+language = "en"
+# Per-crate pages live directly in docs/crates/<crate>/README.md,
+# so the book root doubles as the source directory.
+src = "."
+
+[build]
+build-dir = "../book/crates"
+# Never silently create files for broken SUMMARY links.
+create-missing = false
+
+[rust]
+edition = "2021"
+
+[output.html]
+default-theme = "light"
+preferred-dark-theme = "navy"
+smart-punctuation = true
+# TODO: replace `your-username` once the repository has its final home
+# (same placeholder as `repository` in the root Cargo.toml).
+git-repository-url = "https://github.com/your-username/opts"
+edit-url-template = "https://github.com/your-username/opts/edit/main/docs/crates/{path}"
+site-url = "/opts/crates/"
+
+# Code samples in this book are illustrative API sketches, not
+# runnable programs — never offer the Rust Playground "Run" button.
+[output.html.playground]
+runnable = false
+copyable = true
+
+[output.html.search]
+enable = true
+limit-results = 30
+use-boolean-and = true
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.print]
+enable = true

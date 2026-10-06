@@ -1,0 +1,84 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/opts-assets",
+    "crates/opts-benchmark",
+    "crates/opts-bevy",
+    "crates/opts-cli",
+    "crates/opts-core",
+    "crates/opts-discovery",
+    "crates/opts-game",
+    "crates/opts-graphics",
+    "crates/opts-gui",
+    "crates/opts-parsers",
+    "crates/opts-sim",
+    "crates/opts-tools",
+    "crates/opts-utils",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.76" # Minimum Supported Rust Version (MSRV)
+authors = ["OPTS Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-username/opts"
+description = "Open Public Transport Simulator - Bringing OMSI 2 assets to the Bevy engine."
+keywords = ["bevy", "simulation", "omsi", "transport", "gamedev"]
+categories = ["game-development", "simulation"]
+
+[workspace.dependencies]
+# --- Internal Crates ---
+opts-assets = { path = "crates/opts-assets" }
+opts-benchmark = { path = "crates/opts-benchmark" }
+opts-bevy = { path = "crates/opts-bevy" }
+opts-cli = { path = "crates/opts-cli" }
+opts-core = { path = "crates/opts-core" }
+opts-discovery = { path = "crates/opts-discovery" }
+opts-game = { path = "crates/opts-game" }
+opts-graphics = { path = "crates/opts-graphics" }
+opts-gui = { path = "crates/opts-gui" }
+opts-parsers = { path = "crates/opts-parsers" }
+opts-sim = { path = "crates/opts-sim" }
+opts-tools = { path = "crates/opts-tools" }
+opts-utils = { path = "crates/opts-utils" }
+
+# --- Bevy Ecosystem ---
+# Bevy moves fast. Check the latest version before starting. 
+# As of mid-2024, 0.14 is stable, but 0.15 might be out.
+bevy = { version = "0.14", features = ["file_watcher"] } 
+bevy_asset_loader = "0.20" # Optional, but great for managing asset states
+
+# --- Parsing & Serialization ---
+nom = "7.1"                 # For parsing OMSI text config files (.sco, .sli, .cfg)
+binrw = "0.13"              # For parsing the binary .o3d files (much better than manual byte reading)
+serde = { version = "1.0", features = ["derive"] }
+ron = "0.8"                 # Rusty Object Notation for config files/save games
+bincode = "1.3"             # Fast binary serialization for save games
+
+# --- Image & Asset Handling ---
+image = "0.25"              # For loading .tga, .bmp, .jpg
+ddsfile = "0.5"             # For loading OMSI's primary .dds textures
+glam = "0.27"               # Math library (Bevy uses this internally)
+petgraph = "0.6"            # For representing the transit network graph
+
+# --- Utilities ---
+anyhow = "1.0"              # For easy error handling in tools and binaries
+thiserror = "1.0"           # For defining strict, typed errors in libraries
+tracing = "0.1"             # Logging and diagnostics (Bevy uses this)
+tracing-subscriber = "0.3"
+rayon = "1.10"              # Data parallelism (use carefully to maintain determinism)
+
+# --- Profiles ---
+# Bevy compiles very slowly in debug mode. These settings optimize 
+# dependencies (like Bevy) while keeping your own crates fast to compile.
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

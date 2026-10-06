@@ -1,0 +1,30 @@
+[package]
+name = "opts-sim"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Simulation logic for OPTS (vehicles, passengers, routing)."
+repository.workspace = true
+
+[dependencies]
+# Internal
+opts-core = { workspace = true }
+
+# Math & Data
+glam = { workspace = true }
+petgraph = { workspace = true }
+
+# Serialization (for save games)
+serde = { workspace = true }
+bincode = { workspace = true }
+
+# Parallelism (use carefully to maintain determinism)
+rayon = { workspace = true }
+
+# Error Handling & Logging
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+# Add test-specific dependencies here

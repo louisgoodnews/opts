@@ -1,0 +1,17 @@
+[package]
+name = "opts-utils"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared utilities for OPTS."
+repository.workspace = true
+
+[dependencies]
+# Only add things here that are truly shared across multiple crates.
+# For example:
+# tracing = { workspace = true }
+# thiserror = { workspace = true }
+
+[dev-dependencies]
+# Add test-specific dependencies here
