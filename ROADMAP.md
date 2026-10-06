@@ -96,8 +96,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## ⚙️ Phase 2: `opts-core` Implementation (The Parsers)
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 
-- [ ] **💾 Binary Mesh Parsers** — [M-0013](docs/src/roadmap/phase-2/M-0013.md)
-  - [ ] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
+- [~] **💾 Binary Mesh Parsers** — [M-0013](docs/src/roadmap/phase-2/M-0013.md)
+  - [x] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
   - [ ] `.x` legacy DirectX mesh parser (`opts_core::formats::x`)
   - [ ] Clean-room mutation fixtures integration tests (`t01`–`t07`, `t10`–`t12`)
 - [ ] **📝 Vehicle & Operational Data Parsers** — [M-0014](docs/src/roadmap/phase-2/M-0014.md)
@@ -105,6 +105,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] `paths.cfg` passenger paths parser (`opts_core::formats::vehicles::paths`)
   - [ ] `.org` registration & fleet lists parser (`opts_core::formats::org`)
   - [ ] `Money/<pack>/*.cfg` currency denominations parser (`opts_core::formats::money`)
+- [ ] **📐 Model Configuration Parser** — Parse `model.cfg` mesh bindings, material animations, and illumination maps (discovered in M-0013)
 - [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
   - [ ] Deferred pending spec promotion from Mutation Kit 2 (`.sco`, `.sli`, `tile_*.map`, `global.cfg`)
 
@@ -118,6 +119,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement custom `AssetLoader` for `.o3d` files.
   - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
   - [ ] Register the loaders with the `AssetServer`.
+- [ ] **🔄 Mesh Conversion Bridge** — Convert `opts_core::formats::o3d::O3d` and vertex streams to Bevy `Mesh` primitives (discovered in M-0013)
 - [ ] **🔄 Coordinate Conversion**
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
 - [ ] **🌟 Rendering OMSI Assets**

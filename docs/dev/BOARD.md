@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (Documentation freeze reconciliation)_
+_Last updated: 2026-10-06 by Agent (P-006 closeout of .o3d parser)_
 
 ---
 
@@ -107,6 +107,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 - `[ ]` 🔴 **Implement `opts_core::formats::x` parser** — (M-0013, code). DirectX text and binary mesh parser. Unblocked: `x.md` is 🟢 Specified.
 - `[ ]` 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
+- `[ ]` 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
 - `[ ]` 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - `[ ]` 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
@@ -116,8 +117,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- `[!]` 🟡 **Implement `opts_bevy` mesh loader** — Blocked on `opts-core` `.o3d` parser (M-0002, code). Dependency: parser implementation.
-- `[!]` 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `.o3d` parser and the `opts_bevy` mesh loader above (the `.o3d` and `.sco` specs now exist as Drafts).
+- `[!]` 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `opts_bevy` mesh loader and `.sco` parser.
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -187,6 +187,10 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-06 — M-0013 (.o3d Parser Implementation, complete)**
+
+- `[x]` 🔴 **Implement `opts_core::formats::o3d` parser** (M-0013, code) — Pure Rust .o3d parser in `opts-core` supporting versions 1, 3, 4, 5, 7, vertex decoding (32-byte stride), 16/32-bit indices, material tables, matrix chunks (`0x79`), and bone weights (`0x54`). 36 passing tests (24 unit, 11 integration, 1 doc-test), 0 unsafe, 0 warnings, verified against all 24 mutation kit fixtures.
 
 **2026-10-04 — Gap closure (M-0008–M-0012, complete)**
 
@@ -310,3 +314,4 @@ The agent should check these during P-001 audits:
 - `2026-10-04` — M-0007: board reconciled with the repository. Ready = 3 (mutation-kit run, map-side kit, maintainer review); Blocked = 4 (above the target of 3: coordinates doc, parser, mesh loader, tutorial — all hang off the first two Ready items).
 - `2026-10-04` — P-004: M-0008–M-0012 (gap closure) added; Ready grows to 11 items; the project lead approved reading the shipped manuals.
 - `2026-10-04` — P-006: M-0008–M-0012 closed; their items moved to Recently Done. Ready returns to 3 (mutation-kit run, map-side kit, maintainer review).
+- `2026-10-06` — P-006: `opts_core::formats::o3d` parser complete. Unblocked `opts_bevy` mesh loader. M-0013 marked In Progress with `.x` parser next in Ready.
