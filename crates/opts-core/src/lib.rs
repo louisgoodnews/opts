@@ -20,6 +20,7 @@
 //!
 //! - [`formats`]: Format parsers for OMSI 2 asset containers:
 //!   - [`formats::o3d`]: Native OMSI 3D mesh format (`.o3d`).
+//!   - [`formats::x`]: Legacy Microsoft DirectX 3D mesh format (`.x`).
 //!
 //! ## Example
 //!

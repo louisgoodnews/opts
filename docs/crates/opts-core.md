@@ -29,6 +29,14 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `Material`: Surface attributes including diffuse RGBA, specular RGB, emissive RGB, shininess exponent, and texture filenames.
   - `Header`: File header containing version (1, 3, 4, 5, 7), flags, and stamp metadata.
   - `O3dParseError`: Strongly typed error enumeration with zero panics.
+- **`opts_core::formats::x`:**
+  - `parse_x(bytes: &[u8]) -> Result<XMesh, XParseError>`: Primary entry point for decoding Microsoft DirectX `.x` text mesh files.
+  - `XMesh`: Structured 3D model containing hierarchical frames (`Vec<XFrame>`), sub-meshes (`Vec<XSubMesh>`), and global materials (`Vec<XMaterial>`).
+  - `XSubMesh`: Geometry block containing vertices (`Vec<XVertex>`), triangulated indices (`Vec<[u32; 3]>`), face material slots, and material tables.
+  - `XVertex`: 3D vertex with position (`Vec3`), surface normal (`Vec3`), and texture coordinates (`Vec2`).
+  - `XMaterial`: Material parameters including diffuse RGBA, specular power, specular RGB, emissive RGB, and texture filename.
+  - `XFrame`: Hierarchical transformation node with optional 4×4 affine matrix and child sub-meshes.
+  - `XParseError`: Strongly typed error enumeration with zero panics.
 
 ---
 
@@ -58,7 +66,9 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
 
 - [`.o3d` Specification](../src/formats/binary/o3d.md)
 - [`.o3d` Chunk Reference](../src/formats/binary/o3d-chunks.md)
+- [`.x` Specification](../src/formats/binary/x.md)
 - [Coordinate Systems & Math](../src/architecture/coordinates.md)
 - [Coding Standards](../src/contributing/standards.md)
 - [Clean-Room Policy (ADR-0002)](../src/adr/0002-clean-room-policy.md)
-- [Milestone M-0013: Binary Mesh Parsers](../src/roadmap/phase-2/M-0013.md)
+- [Milestone M-0013: Binary Mesh Parsers (`.o3d`)](../src/roadmap/phase-2/M-0013.md)
+- [Milestone M-0016: DirectX `.x` Legacy Mesh Parser](../src/roadmap/phase-2/M-0016.md)
