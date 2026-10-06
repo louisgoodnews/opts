@@ -24,7 +24,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 # Command Line
-argh = { workspace = true }
+# argh = { workspace = true }  # Deferred: undeclared in workspace manifest (Audit F2)
 
 [dev-dependencies]
 # Add test-specific dependencies here

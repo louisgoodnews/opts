@@ -105,7 +105,8 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- `[ ]` 🔴 **Implement `opts_core::formats::o3d` parser** — (M-0002, code). Unblocked: `o3d.md` is now 🟢 Specified following the mutation pass. Ready for P-001.
+- `[ ]` 🔴 **Implement `opts_core::formats::x` parser** — (M-0013, code). DirectX text and binary mesh parser. Unblocked: `x.md` is 🟢 Specified.
+- `[ ]` 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
 - `[ ]` 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - `[ ]` 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
@@ -128,6 +129,21 @@ _Work that cannot proceed until a dependency is resolved._
 ### 📚 Backlog
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
+
+#### M-0013 — Binary Mesh Parsers
+
+- `[ ]` 🔴 **Implement `opts_core::formats::x` parser** — (M-0013, code). DirectX text and binary mesh parser.
+- `[ ]` 🔴 **Integration test suite for binary meshes** — (M-0013, test). Validate against mutation kit fixtures (`t01`–`t07`, `t10`–`t12`).
+
+#### M-0014 — Vehicle & Operational Data Parsers
+
+- `[ ]` 🟡 **Implement `opts_core::formats::money` parser** — (M-0014, code). Currency pack parser for `Money/<pack>/*.cfg`.
+- `[ ]` 🟡 **Implement `opts_core::formats::vehicles::paths` parser** — (M-0014, code). Passenger waypoint paths and door bindings for `paths.cfg`.
+- `[ ]` 🔴 **Implement `opts_core::formats::vehicles::bus` parser** — (M-0014, code). Top-level `.bus` vehicle manifest parser.
+
+#### M-0015 — World & Scenery Parsers (Deferred)
+
+- `[ ]` 🟢 **Scenery & world parsers** — (M-0015, code/spec). Deferred pending Mutation Kit 2 for `.sco`, `.sli`, `tile_*.map`, `global.cfg`.
 
 #### M-0004 — Transit Data Specifications
 

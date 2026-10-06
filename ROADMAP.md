@@ -96,18 +96,18 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## ⚙️ Phase 2: `opts-core` Implementation (The Parsers)
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 
-- [ ] **🧱 Setup `opts-core`**
-  - [ ] Convert `src/main.rs` to `src/lib.rs`.
-  - [ ] Define the custom `OptsError` enum using `thiserror`.
-- [ ] **📝 Implement Text Parsers**
-  - [ ] Write `nom` combinators for `.sco`, `.sli`, and `.hof` based strictly on the specs.
-  - [ ] Write unit tests for every parser using self-authored (non-copyrighted) test fixtures.
-- [ ] **💾 Implement Binary Parsers**
-  - [ ] Write `binrw` structs for the `.o3d` format.
-  - [ ] Implement tests that verify the byte alignment and chunk parsing.
-- [ ] **🗂️ Data Model**
-  - [ ] Define the core Rust structs (`ScoObject`, `SliSpline`, `O3dMesh`, `BusConfig`).
-  - [ ] Implement `serde` traits for save/load functionality.
+- [ ] **💾 Binary Mesh Parsers** — [M-0013](docs/src/roadmap/phase-2/M-0013.md)
+  - [ ] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
+  - [ ] `.x` legacy DirectX mesh parser (`opts_core::formats::x`)
+  - [ ] Clean-room mutation fixtures integration tests (`t01`–`t07`, `t10`–`t12`)
+- [ ] **📝 Vehicle & Operational Data Parsers** — [M-0014](docs/src/roadmap/phase-2/M-0014.md)
+  - [ ] `.bus` vehicle manifest parser (`opts_core::formats::vehicles::bus`)
+  - [ ] `paths.cfg` passenger paths parser (`opts_core::formats::vehicles::paths`)
+  - [ ] `.org` registration & fleet lists parser (`opts_core::formats::org`)
+  - [ ] `Money/<pack>/*.cfg` currency denominations parser (`opts_core::formats::money`)
+- [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
+  - [ ] Deferred pending spec promotion from Mutation Kit 2 (`.sco`, `.sli`, `tile_*.map`, `global.cfg`)
+
 
 ---
 
