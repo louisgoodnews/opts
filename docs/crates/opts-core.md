@@ -37,6 +37,28 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `XMaterial`: Material parameters including diffuse RGBA, specular power, specular RGB, emissive RGB, and texture filename.
   - `XFrame`: Hierarchical transformation node with optional 4×4 affine matrix and child sub-meshes.
   - `XParseError`: Strongly typed error enumeration with zero panics.
+- **`opts_core::formats::org`:**
+  - `parse_org(text: &str) -> Result<RegistrationPool, OrgParseError>` / `RegistrationPool::parse_bytes(bytes: &[u8])`: Entry points for parsing number and license plate pools.
+  - `RegistrationPool`: Data structure storing identifiers, frequency weights, and weighted draw helpers.
+  - `OrgParseError`: Typed error representing empty pools or decoding errors.
+- **`opts_core::formats::money`:**
+  - `parse_money(text: &str) -> Result<MoneySystem, MoneyParseError>` / `MoneySystem::parse_bytes(bytes: &[u8])`: Entry points for parsing currency packs (`Money/<pack>/*.cfg`).
+  - `MoneySystem`: Data model containing currency label and decimals, coin denominations, and banknote denominations.
+  - `Currency`, `Denomination`: Currency attributes and physical currency models with values.
+  - `MoneyParseError`: Typed error for missing currency blocks, parameter count mismatches, or invalid numbers.
+- **`opts_core::formats::vehicles::paths`:**
+  - `parse_paths(text: &str) -> Result<PassengerPaths, PathsParseError>` / `PassengerPaths::parse_bytes(bytes: &[u8])`: Entry points for parsing passenger navigation graphs (`paths.cfg`).
+  - `PassengerPaths`: Navigation network containing 3D waypoints (`Vec<PathPoint>`), directed edges (`Vec<PathLink>`), footstep sounds (`Vec<StepSoundPack>`), door bindings, and ceiling height.
+  - `PathPoint`, `PathLink`, `StepSoundPack`, `DoorBinding`: Structural graph elements.
+  - `PathsParseError`: Typed error for missing parameters or malformed coordinates.
+- **`opts_core::formats::vehicles::bus`:**
+  - `parse_bus(text: &str) -> Result<BusManifest, BusParseError>` / `BusManifest::parse_bytes(bytes: &[u8])`: Entry points for parsing `.bus` vehicle manifests.
+  - `BusManifest`: Vehicle manifest capturing friendly identity, description, registration modes, audio/model/path asset paths, script lists, physical mass, axles, and articulation couplings.
+  - `FriendlyName`, `RegistrationMode`, `BusAxle`: Vehicle configuration components.
+  - `BusParseError`: Typed error for malformed vehicle manifest blocks.
+- **`opts_core::formats::text`:**
+  - `decode_bytes(bytes: &[u8]) -> String`: Dual-encoding string decoder with automatic Windows-1252 (CP1252) fallback for legacy German assets.
+  - `scan_blocks(text: &str) -> Vec<OmsiBlock>`: Keyword-delimited block tokenizer handling comments, whitespace, and parameter streams.
 
 ---
 
@@ -72,3 +94,8 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
 - [Clean-Room Policy (ADR-0002)](../src/adr/0002-clean-room-policy.md)
 - [Milestone M-0013: Binary Mesh Parsers (`.o3d`)](../src/roadmap/phase-2/M-0013.md)
 - [Milestone M-0016: DirectX `.x` Legacy Mesh Parser](../src/roadmap/phase-2/M-0016.md)
+- [Milestone M-0014: Vehicle Configuration & Operational Data Parsers](../src/roadmap/phase-2/M-0014.md)
+- [`.bus` Specification](../src/formats/text/vehicles/bus.md)
+- [`paths.cfg` Specification](../src/formats/text/vehicles/paths_cfg.md)
+- [`.org` Specification](../src/formats/text/org.md)
+- [Money Systems Specification](../src/formats/text/money.md)
