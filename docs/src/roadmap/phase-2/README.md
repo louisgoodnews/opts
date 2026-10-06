@@ -13,7 +13,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 - [M-0013 — Binary Mesh Parsers (`.o3d`)](M-0013.md) — 🟢 Complete (🔴 High priority; `.o3d` parser complete)
 - [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — ⚪ Planned (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
 - [M-0015 — World & Scenery Parsers](M-0015.md) — ⚪ Planned (🟢 Low priority; deferred pending Mutation Kit 2)
-- [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — ⚪ Planned (🔴 High priority; unblocks legacy 3D meshes)
+- [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — 🟢 Complete (🔴 High priority; `.x` parser complete)
 
 ---
 
@@ -23,10 +23,10 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 
-- [~] **💾 Binary Mesh Parsers (`opts_core::formats::o3d`, `opts_core::formats::x`)** — M-0013
+- [x] **💾 Binary Mesh Parsers (`opts_core::formats::o3d`, `opts_core::formats::x`)** — M-0013 & M-0016
   - [x] Implement `.o3d` parser supporting versions 1, 3, 4, 5, 7, vertex decoding, faces, materials, transform matrix.
-  - [ ] Implement `.x` parser for DirectX text and binary meshes.
-  - [ ] Integration test suite against mutation kit fixtures (`t01`–`t07`, `t10`–`t12`).
+  - [x] Implement `.x` parser for DirectX text and binary meshes.
+  - [x] Integration test suite against mutation kit fixtures (`t01`–`t07`, `t10`–`t12`).
 - [ ] **📝 Vehicle & Operational Parsers (`opts_core::formats::vehicles::*`)** — M-0014
   - [ ] Implement `.bus` vehicle manifest parser.
   - [ ] Implement `paths.cfg` passenger navigation and seat layout parser.

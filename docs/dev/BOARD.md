@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (P-004 board update for M-0016)_
+_Last updated: 2026-10-06 by Agent (P-006 closeout of M-0016)_
 
 ---
 
@@ -95,8 +95,7 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- [ ] 🔴 **Implement `opts_core::formats::x` parser** — (M-0016, code). DirectX text mesh parser.
-- [ ] 🔴 **Integration test suite for `.x` meshes** — (M-0016, test). Validate against 7 mutation kit fixtures and fuzzing.
+- `[ ]` None
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -186,6 +185,11 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-06 — M-0016 (DirectX .x Legacy Mesh Parser, complete)**
+
+- `[x]` 🔴 **Implement `opts_core::formats::x` parser** (M-0016, code) — Pure Rust DirectX .x text mesh parser in `opts-core` supporting headers (`xof 0303txt`/`0302txt`), flexible separators, quad triangulation, named material reference resolution, and frame matrices. 23 tests (17 unit, 6 integration), zero unsafe, zero warnings, verified against all 7 mutation kit fixtures.
+- `[x]` 🔴 **Integration test suite for `.x` meshes** (M-0016, test) — Validated against clean-room mutation fixtures `t10_x_*`, `t11_x_*`, `t12_x_*` and 1,000 pseudorandom fuzzed buffers.
 
 **2026-10-06 — M-0013 (.o3d Parser Implementation, complete)**
 
@@ -315,3 +319,4 @@ The agent should check these during P-001 audits:
 - `2026-10-04` — P-006: M-0008–M-0012 closed; their items moved to Recently Done. Ready returns to 3 (mutation-kit run, map-side kit, maintainer review).
 - `2026-10-06` — P-006: `opts_core::formats::o3d` parser complete. Unblocked `opts_bevy` mesh loader. M-0013 marked In Progress with `.x` parser next in Ready.
 - `2026-10-06` — P-004: M-0016 (DirectX `.x` Legacy Mesh Parser) work items populated: 2 in Ready, 1 in Backlog.
+- `2026-10-06` — P-006: M-0016 (DirectX `.x` Legacy Mesh Parser) complete. Binary mesh parsing in Phase 2 complete. Items moved to Recently Done.
