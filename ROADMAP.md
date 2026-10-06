@@ -98,7 +98,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [~] **💾 Binary Mesh Parsers** — [M-0013](docs/src/roadmap/phase-2/M-0013.md)
   - [x] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
-  - [ ] `.x` legacy DirectX mesh parser (`opts_core::formats::x`)
+  - [ ] `.x` legacy DirectX mesh parser (`opts_core::formats::x`) — [M-0016](docs/src/roadmap/phase-2/M-0016.md)
   - [ ] Clean-room mutation fixtures integration tests (`t01`–`t07`, `t10`–`t12`)
 - [ ] **📝 Vehicle & Operational Data Parsers** — [M-0014](docs/src/roadmap/phase-2/M-0014.md)
   - [ ] `.bus` vehicle manifest parser (`opts_core::formats::vehicles::bus`)

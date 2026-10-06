@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (P-006 closeout of .o3d parser)_
+_Last updated: 2026-10-06 by Agent (P-004 board update for M-0016)_
 
 ---
 
@@ -95,7 +95,8 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- `[ ]` None
+- [ ] 🔴 **Implement `opts_core::formats::x` parser** — (M-0016, code). DirectX text mesh parser.
+- [ ] 🔴 **Integration test suite for `.x` meshes** — (M-0016, test). Validate against 7 mutation kit fixtures and fuzzing.
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -105,7 +106,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- `[ ]` 🔴 **Implement `opts_core::formats::x` parser** — (M-0013, code). DirectX text and binary mesh parser. Unblocked: `x.md` is 🟢 Specified.
 - `[ ]` 🟡 **Implement `opts_core::formats::org` parser** — (M-0014, code). Registration and fleet number list parser with frequency weighting. Unblocked: `org.md` is 🟢 Specified.
 - `[ ]` 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
 - `[ ]` 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
@@ -130,10 +130,9 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
-#### M-0013 — Binary Mesh Parsers
+#### M-0016 — DirectX .x Legacy Mesh Parser
 
-- `[ ]` 🔴 **Implement `opts_core::formats::x` parser** — (M-0013, code). DirectX text and binary mesh parser.
-- `[ ]` 🔴 **Integration test suite for binary meshes** — (M-0013, test). Validate against mutation kit fixtures (`t01`–`t07`, `t10`–`t12`).
+- `[ ]` 🟢 **Add `.x` parser documentation to `opts-core` book** — Document API and examples in `docs/crates/opts-core.md` (M-0016, docs)
 
 #### M-0014 — Vehicle & Operational Data Parsers
 
@@ -315,3 +314,4 @@ The agent should check these during P-001 audits:
 - `2026-10-04` — P-004: M-0008–M-0012 (gap closure) added; Ready grows to 11 items; the project lead approved reading the shipped manuals.
 - `2026-10-04` — P-006: M-0008–M-0012 closed; their items moved to Recently Done. Ready returns to 3 (mutation-kit run, map-side kit, maintainer review).
 - `2026-10-06` — P-006: `opts_core::formats::o3d` parser complete. Unblocked `opts_bevy` mesh loader. M-0013 marked In Progress with `.x` parser next in Ready.
+- `2026-10-06` — P-004: M-0016 (DirectX `.x` Legacy Mesh Parser) work items populated: 2 in Ready, 1 in Backlog.

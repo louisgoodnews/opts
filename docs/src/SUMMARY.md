@@ -28,6 +28,7 @@
   - [M-0013: Binary Mesh Parsers](roadmap/phase-2/M-0013.md)
   - [M-0014: Vehicle & Operational Parsers](roadmap/phase-2/M-0014.md)
   - [M-0015: World & Scenery Parsers](roadmap/phase-2/M-0015.md)
+  - [M-0016: DirectX .x Legacy Mesh Parser](roadmap/phase-2/M-0016.md)
 - [Phase 3: Bevy Integration](roadmap/phase-3/README.md)
 - [Phase 4: Simulation](roadmap/phase-4/README.md)
 - [Phase 5: Ecosystem](roadmap/phase-5/README.md)

@@ -10,9 +10,10 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 
 ## 🎯 Milestones
 
-- [M-0013 — Binary Mesh Parsers (`.o3d` & `.x`)](M-0013.md) — 🟡 In Progress (🔴 High priority; .o3d complete, .x pending)
+- [M-0013 — Binary Mesh Parsers (`.o3d`)](M-0013.md) — 🟢 Complete (🔴 High priority; `.o3d` parser complete)
 - [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — ⚪ Planned (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
 - [M-0015 — World & Scenery Parsers](M-0015.md) — ⚪ Planned (🟢 Low priority; deferred pending Mutation Kit 2)
+- [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — ⚪ Planned (🔴 High priority; unblocks legacy 3D meshes)
 
 ---
 
