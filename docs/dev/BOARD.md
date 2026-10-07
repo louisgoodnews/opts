@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0017)_
+_Last updated: 2026-10-07 by Agent (P-004 board update for M-0018)_
 
 ---
 
@@ -105,7 +105,9 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
+- [ ] 🔴 **Coordinate conversion & Bevy mesh bridge** — Implement pure conversion functions for O3d and XMesh with Z-negation and triangle index reversal (M-0018, code)
+- [ ] 🔴 **Bevy AssetLoader implementations for .o3d and .x** — Implement O3dAssetLoader and XAssetLoader registering with Bevy AssetServer (M-0018, code)
+- [ ] 🔴 **OptsMeshPlugin and integration test suite** — Define OptsMeshPlugin and headless Bevy App tests loading mesh assets (M-0018, code/test)
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
@@ -127,6 +129,10 @@ _Work that cannot proceed until a dependency is resolved._
 ### 📚 Backlog
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
+
+#### M-0018 — 3D Mesh Asset Loaders & Conversion Bridge
+
+- [ ] 🟢 **Document `opts-bevy` crate and mesh loader in book** — Create `docs/crates/opts-bevy.md` documenting coordinate conversion and asset loading (M-0018, docs)
 
 #### M-0015 — World & Scenery Parsers (Deferred)
 
