@@ -23,24 +23,28 @@ See [`opts-bevy.md`](../opts-bevy.md) for full crate documentation.
 
 ```rust
 use bevy::prelude::*;
-use opts_bevy::OptsMeshPlugin;
+use opts_bevy::OptsAssetPlugin;
 
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(OptsMeshPlugin)
+    .add_plugins(OptsAssetPlugin)
     .run();
 ```
 
-- `OptsMeshPlugin`: Registers `.o3d` and `.x` asset loaders.
+- `OptsAssetPlugin`, `OptsMeshPlugin`, `OptsMaterialPlugin`: Registers `.o3d`, `.x`, `.dds`, `.bmp`, and `.tga` asset loaders.
 - `o3d_to_bevy_mesh`, `x_submesh_to_bevy_mesh`, `x_mesh_to_combined_bevy_mesh`: Coordinate conversion and mesh builders.
-- `O3dAssetLoader`, `XAssetLoader`: Native Bevy asset loaders.
+- `o3d_material_to_standard_material`, `x_material_to_standard_material`: Translates Direct3D materials into Bevy `StandardMaterial`.
+- `load_bevy_image`, `dds_to_bevy_image`, `sniff_image_format`: Content sniffing and texture decoders.
+- `O3dAssetLoader`, `XAssetLoader`, `DdsAssetLoader`, `OptsImageLoader`: Native Bevy asset loaders.
 
 ## 📦 Dependencies — and why
 
 | Dependency | Why |
 | :--- | :--- |
-| `bevy` | Core engine, `Mesh` asset, `AssetLoader` trait |
-| `opts-core` | Shared models (`O3d`, `XMesh`) and format parsers |
+| `bevy` | Core engine, `Mesh`, `Image`, `StandardMaterial`, `AssetLoader` trait |
+| `opts-core` | Shared models (`O3d`, `XMesh`, `Material`) and format parsers |
+| `ddsfile` | DirectDraw Surface (`.dds`) decoding and block-compression support |
+| `image` | Fallback decoding for `.bmp`, `.tga`, `.png`, `.jpg` |
 | `glam` | Math types |
 | `thiserror` | Strongly typed errors |
 
@@ -48,12 +52,13 @@ App::new()
 
 - Pure safe Rust (`#![deny(unsafe_code)]`).
 - Coordinate conversion flips $Z$ and reverses triangle winding to bridge left-handed OMSI geometry into Bevy right-handed space.
+- Magic-byte content sniffing resolves 1,170+ corpus assets with mismatched extensions (e.g. BMP disguised as `.dds`).
 - Zero panics/unwraps in library code.
 
 ## 🚧 Current State & Known Issues
 
 - 🟢 M-0018 complete: `O3dAssetLoader`, `XAssetLoader`, coordinate conversion bridge, and `OptsMeshPlugin`.
-- Next: Material & texture loaders (M-0019).
+- 🟢 M-0019 complete: `DdsAssetLoader`, `OptsImageLoader`, format sniffing, Bevy `StandardMaterial` conversion bridge, and `OptsMaterialPlugin` / `OptsAssetPlugin`.
 
 ## 🔗 Cross-References
 

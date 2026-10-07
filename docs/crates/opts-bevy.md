@@ -41,20 +41,44 @@ Its primary responsibilities are:
 - **`MeshConversionError`:**
   - Typed error enum covering `EmptyMesh` and `IndexOutOfBounds`.
 
-### 2. Asset Loaders (`opts_bevy::loader`)
+### 2. Texture Sniffing & Image Decoders (`opts_bevy::texture`)
+- **`sniff_image_format(bytes: &[u8]) -> ImageFormat`:**
+  - Sniffs magic bytes (`DDS `, `BM`, `\x89PNG`, `\xFF\xD8`, and TGA header heuristics) to correctly classify container formats regardless of file extension (resolving the 1,170 corpus extension mismatches).
+- **`dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError>`:**
+  - Decodes DirectDraw Surface buffers using `ddsfile`. Supports block-compressed formats (BC1/DXT1, BC2/DXT3, BC3/DXT5), uncompressed BGRA/RGBA 32-bit, RGB 24-bit, and single-channel A8 alpha masks.
+- **`image_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError>`:**
+  - Decodes `.bmp`, `.tga`, `.png`, and `.jpg` via the `image` crate into GPU-ready `Rgba8UnormSrgb` Bevy `Image` assets.
+- **`load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError>`:**
+  - Unified loader combining content sniffing with appropriate decoder routing.
+
+### 3. Material Conversion Bridge (`opts_bevy::material`)
+- **`o3d_material_to_standard_material(mat: &Material, texture: Option<Handle<Image>>) -> StandardMaterial`:**
+  - Translates OMSI `.o3d` material properties into Bevy `StandardMaterial`.
+  - Maps diffuse RGBA to `Color::srgba`, emissive RGB to `LinearRgba`, specular power to perceptual roughness, and sets `AlphaMode::Opaque` or `AlphaMode::Blend` based on alpha opacity.
+- **`x_material_to_standard_material(mat: &XMaterial, texture: Option<Handle<Image>>) -> StandardMaterial`:**
+  - Translates DirectX `.x` material properties into Bevy `StandardMaterial`.
+- **`specular_power_to_roughness(power: f32) -> f32`:**
+  - Approximates PBR perceptual roughness from Direct3D Blinn-Phong shininess power: $\sqrt{2 / (\text{power} + 2)}$.
+
+### 4. Asset Loaders (`opts_bevy::loader`)
 - **`O3dAssetLoader`:**
   - Implements `bevy::asset::AssetLoader` for files with extension `o3d`.
   - Asynchronously reads bytes, calls `opts_core::formats::o3d::parse`, and converts to Bevy `Mesh`.
 - **`XAssetLoader`:**
   - Implements `bevy::asset::AssetLoader` for files with extension `x`.
   - Asynchronously reads bytes, calls `opts_core::formats::x::parse_x`, and converts all submeshes into a combined Bevy `Mesh`.
-- **`O3dLoaderError` & `XLoaderError`:**
-  - Strongly typed error enums wrapping I/O errors, parse errors, and mesh conversion errors.
+- **`DdsAssetLoader`:**
+  - Implements `bevy::asset::AssetLoader` for files with extension `dds`.
+  - Uses content sniffing to transparently decode `.dds` files containing true DDS or disguised BMP/JPEG data into Bevy `Image`.
+- **`OptsImageLoader`:**
+  - Implements `bevy::asset::AssetLoader` for legacy image extensions `bmp` and `tga`.
+- **`O3dLoaderError`, `XLoaderError`, `TextureLoaderError`:**
+  - Strongly typed error enums wrapping I/O errors, parse errors, and conversion errors.
 
-### 3. Engine Plugin (`opts_bevy::plugin`)
-- **`OptsMeshPlugin`:**
-  - Implements `bevy::app::Plugin`.
-  - Registers `O3dAssetLoader` and `XAssetLoader` with the Bevy `App` via `app.init_asset_loader`.
+### 5. Engine Plugins (`opts_bevy::plugin`)
+- **`OptsMeshPlugin`:** Registers `O3dAssetLoader` and `XAssetLoader`.
+- **`OptsMaterialPlugin`:** Registers `DdsAssetLoader` and `OptsImageLoader`.
+- **`OptsAssetPlugin`:** Convenience plugin bundling `OptsMeshPlugin` and `OptsMaterialPlugin`.
 
 ---
 
@@ -78,6 +102,8 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 | :--- | :--- |
 | `bevy` | Core engine, `Mesh` asset definitions, `AssetLoader` trait, and `Plugin` lifecycle. |
 | `opts-core` | Source 3D mesh representations (`O3d`, `XMesh`, `XSubMesh`) and parsers (`parse_o3d`, `parse_x`). |
+| `ddsfile` | DirectDraw Surface (`.dds`) header decoding and block compression support. |
+| `image` | Fallback decoding for `.bmp`, `.tga`, `.png`, and `.jpg` image formats. |
 | `glam` | Vector and matrix math primitives compatible with Bevy math. |
 | `thiserror` | Zero-cost strongly typed error definitions. |
 

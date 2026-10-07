@@ -95,7 +95,7 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- `[ ]` None
+- [x] 🔴 **Implement texture loaders & material bridge** — Texture sniffing/decoding, DdsAssetLoader, Bevy StandardMaterial bridge, and OptsMaterialPlugin (M-0019, code/test)
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -105,11 +105,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🔴 **Implement texture format sniffer & image decoders** — Magic-byte sniffing and DDS/image decoding into Bevy Image (M-0019, code)
-- [ ] 🔴 **Implement native Bevy texture loader & plugin** — DdsAssetLoader and OptsMaterialPlugin registering texture loaders (M-0019, code)
-- [ ] 🔴 **Implement material conversion bridge** — Translate O3d and XMesh materials into Bevy StandardMaterial assets (M-0019, code)
-- [ ] 🔴 **Integration test suite for textures & materials** — Unit and headless Bevy tests for format sniffing, DDS decoding, and materials (M-0019, test)
-- [ ] 🟢 **Document texture loaders and material bridge in book** — Update docs/crates/opts-bevy.md with texture and material API reference (M-0019, docs)
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 

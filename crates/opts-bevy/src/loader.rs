@@ -107,3 +107,71 @@ impl AssetLoader for XAssetLoader {
         &["x"]
     }
 }
+
+/// Errors that can occur when loading a texture asset.
+#[derive(Debug, Error)]
+pub enum TextureLoaderError {
+    /// An I/O error occurred while reading from the asset source.
+    #[error("I/O error reading texture asset: {0}")]
+    Io(#[from] std::io::Error),
+
+    /// Texture decoding failed.
+    #[error("Failed to decode texture: {0}")]
+    Texture(#[from] crate::texture::TextureError),
+}
+
+/// Native Bevy [`AssetLoader`] for DirectDraw Surface (`.dds`) and disguised texture files.
+///
+/// Uses content sniffing via [`load_bevy_image`](crate::texture::load_bevy_image) to decode
+/// `.dds` files regardless of whether they contain true DirectDraw Surface headers or
+/// disguised BMP / JPEG / PNG bitmaps.
+#[derive(Default)]
+pub struct DdsAssetLoader;
+
+impl AssetLoader for DdsAssetLoader {
+    type Asset = bevy::render::texture::Image;
+    type Settings = ();
+    type Error = TextureLoaderError;
+
+    async fn load<'a>(
+        &'a self,
+        reader: &'a mut Reader<'_>,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+        let image = crate::texture::load_bevy_image(&bytes)?;
+        Ok(image)
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["dds"]
+    }
+}
+
+/// Native Bevy [`AssetLoader`] for legacy OMSI image files (`.bmp`, `.tga`).
+#[derive(Default)]
+pub struct OptsImageLoader;
+
+impl AssetLoader for OptsImageLoader {
+    type Asset = bevy::render::texture::Image;
+    type Settings = ();
+    type Error = TextureLoaderError;
+
+    async fn load<'a>(
+        &'a self,
+        reader: &'a mut Reader<'_>,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+        let image = crate::texture::load_bevy_image(&bytes)?;
+        Ok(image)
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["bmp", "tga"]
+    }
+}
