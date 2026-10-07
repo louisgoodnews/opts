@@ -125,8 +125,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
 - [ ] **🔄 Coordinate Conversion**
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
-- [ ] **🌟 Rendering OMSI Assets**
-  - [ ] Create a Bevy `Material` from parsed OMSI texture files (`.dds`).
+- [ ] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](docs/src/roadmap/phase-3/M-0019.md)
+  - [ ] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
+  - [ ] Implement custom `AssetLoader` for `.dds` textures in `opts-bevy`.
+  - [ ] Create Bevy `StandardMaterial` assets from parsed OMSI `Material` and `XMaterial` properties.
   - [ ] Spawn parsed `.sco` objects as Bevy entities with `Mesh` and `Transform` components.
 - [ ] **🎓 Tutorials & Examples**
   - [ ] Write `docs/src/tutorials/first-sco.md`: "Loading a single OMSI scenery object in Bevy."
