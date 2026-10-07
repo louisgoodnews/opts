@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-06 by Agent (P-006 closeout of M-0014)_
+_Last updated: 2026-10-07 by Agent (P-004 board update for M-0017)_
 
 ---
 
@@ -105,6 +105,9 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
+- [ ] 🔴 **Implement AST and data models for `model.cfg`** — (M-0017, code). In-memory models for meshes, LODs, animations, and material modifiers in `opts_core::formats::vehicles::model::ast`.
+- [ ] 🔴 **Implement `model.cfg` stateful parser** — (M-0017, code). Parse global directives, LOD tiers, mesh blocks, `[newanim]`, and unknown property preservation in `opts_core::formats::vehicles::model::parse`.
+- [ ] 🟡 **Integration test suite and fuzzing for `model.cfg`** — (M-0017, test). Multi-mesh hierarchies, LODs, and fuzz tests in `tests/model_parse.rs`.
 - [ ] 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
@@ -127,6 +130,10 @@ _Work that cannot proceed until a dependency is resolved._
 ### 📚 Backlog
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
+
+#### M-0017 — Model Configuration Parser
+
+- [ ] 🟢 **Add `model.cfg` parser documentation to `opts-core` book** — Document API and examples in `docs/crates/opts-core.md` (M-0017, docs)
 
 #### M-0015 — World & Scenery Parsers (Deferred)
 
@@ -320,3 +327,4 @@ The agent should check these during P-001 audits:
 - `2026-10-06` — P-006: M-0016 (DirectX `.x` Legacy Mesh Parser) complete. Binary mesh parsing in Phase 2 complete. Items moved to Recently Done.
 - `2026-10-06` — P-004: M-0014 (Vehicle Configuration & Operational Data Parsers) work items populated: 6 in Ready.
 - `2026-10-06` — P-006: M-0014 (Vehicle Configuration & Operational Data Parsers) complete. Items moved to Recently Done.
+- `2026-10-07` — P-004: M-0017 (Model Configuration Parser) work items populated: 3 in Ready, 1 in Backlog.
