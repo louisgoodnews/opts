@@ -2,13 +2,13 @@
 
 *Goal: Bridge `opts-core` data and Bevy's ECS and rendering pipeline.*
 
-**Status:** ⏳ Not started — depends on Phase 2
+**Status:** 🟡 Planned — Phase 2 core parsers complete, beginning Bevy integration.
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
 ## Milestones
 
-_No milestone has been planned for this phase yet. The next milestone is created by prompt P-002 when the previous phase's blocking items are resolved._
+- [M-0018 — 3D Mesh Asset Loaders & Conversion Bridge (`.o3d` & `.x`)](M-0018.md) — ⚪ Planned (🔴 High priority; bridge OMSI geometry to Bevy Mesh)
 
 ## Checklist
 
