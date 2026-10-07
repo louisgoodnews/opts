@@ -68,6 +68,40 @@ Bevy and standard modern graphics pipelines expect $V=0.0$ at the bottom or top 
 
 ---
 
+## 📐 OMSI Vehicle & Entity Space (Resolved)
+
+Established from `.bus` manifests, passenger path networks (`paths.cfg`), and model animations (`model.cfg`):
+
+| Axis | Direction | Meaning |
+| :---: | :--- | :--- |
+| **+X** | Right | Lateral axis |
+| **+Y** | Forward | Longitudinal axis |
+| **+Z** | Up | Vertical elevation |
+
+- **Handedness:** Right-handed ($+X \times +Y = +Z$).
+- **Units:** Metres ($1.0 = 1\text{ m}$).
+
+### 🔄 Coordinate Conversion: Entity Space to Bevy
+
+Converting an OMSI vehicle/entity position into Bevy requires remapping the longitudinal and vertical axes:
+
+$$\begin{bmatrix} X_{\text{bevy}} \\ Y_{\text{bevy}} \\ Z_{\text{bevy}} \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & 1 \\ 0 & -1 & 0 \end{bmatrix} \begin{bmatrix} X_{\text{omsi}} \\ Y_{\text{omsi}} \\ Z_{\text{omsi}} \end{bmatrix}$$
+
+Inverse transformation:
+
+$$\begin{bmatrix} X_{\text{omsi}} \\ Y_{\text{omsi}} \\ Z_{\text{omsi}} \end{bmatrix} = \begin{bmatrix} 1 & 0 & 0 \\ 0 & 0 & -1 \\ 0 & 1 & 0 \end{bmatrix} \begin{bmatrix} X_{\text{bevy}} \\ Y_{\text{bevy}} \\ Z_{\text{bevy}} \end{bmatrix}$$
+
+### 🔄 Orientation and Euler Angles
+
+OMSI Euler angles (yaw, pitch, roll in degrees) map into Bevy quaternion space:
+- **Yaw ($\psi$):** Turn around OMSI vertical axis $+Z$ $\longrightarrow$ Bevy rotation around $+Y$.
+- **Pitch ($\theta$):** Nose up/down around OMSI lateral axis $+X$ $\longrightarrow$ Bevy rotation around $+X$.
+- **Roll ($\phi$):** Lateral banking around OMSI longitudinal axis $+Y$ $\longrightarrow$ Bevy rotation around $-Z$.
+
+Implemented and verified in `opts_bevy::coords` (`omsi_to_bevy_pos`, `bevy_to_omsi_pos`, `omsi_euler_to_bevy_quat`, `bevy_quat_to_omsi_euler`, `OmsiTransform`, and `OptsCoordsPlugin`).
+
+---
+
 ## 🚧 Blocker: World and Tile Coordinates (Q-M01)
 
 > ⚠️ **Documented Blocker:** The mutation kit `opts-mutation-kit` only included fixtures for `.o3d` and `.x` mesh formats. World tile layout and spline coordinate frame questions ([`tiles.md`](../formats/map/tiles.md) Q-M01, Q-M02, Q-M03) could not be resolved during this pass.

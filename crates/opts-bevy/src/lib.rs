@@ -8,19 +8,26 @@
 //!
 //! ## Coordinate Conversions
 //!
-//! OMSI meshes use a **left-handed Y-up** coordinate system (+X right, +Y up, +Z forward).
-//! Bevy uses a **right-handed Y-up** coordinate system (+X right, +Y up, -Z forward, +Z back).
+//! - **OMSI Meshes (`.o3d`, `.x`)**: Left-handed Y-up (+X right, +Y up, +Z forward).
+//! - **OMSI Entities & Vehicles (`.bus`, `.map`)**: Right-handed Z-up (+X right, +Y forward, +Z up).
+//! - **Bevy Engine Space**: Right-handed Y-up (+X right, +Y up, -Z forward, +Z back).
 //!
 //! See [`coordinates.md`](../../../docs/src/architecture/coordinates.md) for full details.
 
 #![deny(unsafe_code)]
 
+pub mod coords;
 pub mod loader;
 pub mod material;
 pub mod mesh;
 pub mod plugin;
 pub mod texture;
 
+pub use coords::{
+    bevy_quat_to_omsi_euler, bevy_to_omsi_pos, bevy_to_omsi_transform, omsi_euler_to_bevy_quat,
+    omsi_to_bevy_pos, omsi_to_bevy_transform, sync_bevy_to_omsi_transforms,
+    sync_coordinate_transforms, sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
+};
 pub use loader::{
     DdsAssetLoader, O3dAssetLoader, O3dLoaderError, OptsImageLoader, TextureLoaderError,
     XAssetLoader, XLoaderError,
@@ -31,7 +38,7 @@ pub use material::{
 pub use mesh::{
     o3d_to_bevy_mesh, x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh, x_submesh_to_bevy_mesh,
 };
-pub use plugin::{OptsAssetPlugin, OptsMaterialPlugin, OptsMeshPlugin};
+pub use plugin::{OptsAssetPlugin, OptsCoordsPlugin, OptsMaterialPlugin, OptsMeshPlugin};
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,
     TextureError,

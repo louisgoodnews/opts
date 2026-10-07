@@ -75,10 +75,30 @@ Its primary responsibilities are:
 - **`O3dLoaderError`, `XLoaderError`, `TextureLoaderError`:**
   - Strongly typed error enums wrapping I/O errors, parse errors, and conversion errors.
 
-### 5. Engine Plugins (`opts_bevy::plugin`)
+### 5. Spatial Coordinate Conversion Bridge & ECS Systems (`opts_bevy::coords`)
+- **`omsi_to_bevy_pos(pos: Vec3) -> Vec3`:**
+  - Converts OMSI vehicle/world position ($X$ right, $Y$ forward, $Z$ up) to Bevy engine space ($X$ right, $Y$ up, $-Z$ forward): $(x, z, -y)$.
+- **`bevy_to_omsi_pos(pos: Vec3) -> Vec3`:**
+  - Inverse mapping converting Bevy positions to OMSI coordinates: $(x, -z, y)$.
+- **`omsi_euler_to_bevy_quat(yaw_deg: f32, pitch_deg: f32, roll_deg: f32) -> Quat`:**
+  - Converts OMSI Euler rotation angles in degrees to a Bevy `Quat`:
+    - Yaw ($\psi$, heading turn around OMSI $+Z$) maps to Bevy rotation around $+Y$.
+    - Pitch ($\theta$, nose up/down around OMSI $+X$) maps to Bevy rotation around $+X$.
+    - Roll ($\phi$, lateral banking around OMSI $+Y$) maps to Bevy rotation around $-Z$.
+- **`bevy_quat_to_omsi_euler(quat: Quat) -> (f32, f32, f32)`:**
+  - Extracts OMSI Euler angles in degrees `(yaw, pitch, roll)` from a Bevy orientation quaternion.
+- **`omsi_to_bevy_transform(pos: Vec3, rot_deg: Vec3, scale: Vec3) -> Transform` & `bevy_to_omsi_transform`:**
+  - Full transform bridges between OMSI triples and Bevy `Transform`.
+- **`OmsiCoords(pub Vec3)` & `OmsiTransform`:**
+  - Bevy ECS components representing raw coordinates and entity transforms in native OMSI space.
+- **`sync_coordinate_transforms`:**
+  - Unified bidirectional synchronization system updating Bevy `Transform` from `OmsiTransform` (and vice-versa) with change detection and epsilon checks to prevent feedback cycles.
+
+### 6. Engine Plugins (`opts_bevy::plugin`)
 - **`OptsMeshPlugin`:** Registers `O3dAssetLoader` and `XAssetLoader`.
 - **`OptsMaterialPlugin`:** Registers `DdsAssetLoader` and `OptsImageLoader`.
-- **`OptsAssetPlugin`:** Convenience plugin bundling `OptsMeshPlugin` and `OptsMaterialPlugin`.
+- **`OptsCoordsPlugin`:** Registers reflection types and bidirectional transform sync systems for `OmsiTransform` and `OmsiCoords`.
+- **`OptsAssetPlugin`:** Convenience plugin bundling `OptsMeshPlugin`, `OptsMaterialPlugin`, and `OptsCoordsPlugin`.
 
 ---
 

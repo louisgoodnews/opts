@@ -1,9 +1,10 @@
-//! Bevy plugin registering OMSI mesh asset loaders.
+//! Bevy plugin registering OMSI mesh asset loaders, texture loaders, and coordinate systems.
 
-use bevy::app::{App, Plugin};
+use bevy::app::{App, Plugin, PostUpdate};
 use bevy::asset::AssetApp;
 
-use crate::loader::{O3dAssetLoader, XAssetLoader};
+use crate::coords::{sync_coordinate_transforms, OmsiCoords, OmsiTransform};
+use crate::loader::{DdsAssetLoader, O3dAssetLoader, OptsImageLoader, XAssetLoader};
 
 /// Bevy plugin that registers native asset loaders for OMSI `.o3d` and DirectX `.x` meshes.
 ///
@@ -46,14 +47,43 @@ pub struct OptsMaterialPlugin;
 
 impl Plugin for OptsMaterialPlugin {
     fn build(&self, app: &mut App) {
-        app.init_asset_loader::<crate::loader::DdsAssetLoader>()
-            .init_asset_loader::<crate::loader::OptsImageLoader>();
+        app.init_asset_loader::<DdsAssetLoader>()
+            .init_asset_loader::<OptsImageLoader>();
     }
 }
 
-/// Unified Bevy plugin that bundles both mesh and texture asset loaders.
+/// Bevy plugin that registers OMSI coordinate components and bidirectional transform sync systems.
 ///
-/// Registers `.o3d`, `.x`, `.dds`, `.bmp`, and `.tga` asset loaders with the Bevy `App`.
+/// Registers:
+/// - [`OmsiCoords`] and [`OmsiTransform`] component reflection types.
+/// - [`sync_omsi_to_bevy_transforms`] system in [`PostUpdate`].
+/// - [`sync_bevy_to_omsi_transforms`] system in [`PostUpdate`].
+///
+/// # Usage
+///
+/// ```no_run
+/// use bevy::prelude::*;
+/// use opts_bevy::OptsCoordsPlugin;
+///
+/// App::new()
+///     .add_plugins(DefaultPlugins)
+///     .add_plugins(OptsCoordsPlugin)
+///     .run();
+/// ```
+#[derive(Default)]
+pub struct OptsCoordsPlugin;
+
+impl Plugin for OptsCoordsPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<OmsiCoords>()
+            .register_type::<OmsiTransform>()
+            .add_systems(PostUpdate, sync_coordinate_transforms);
+    }
+}
+
+/// Unified Bevy plugin that bundles mesh loaders, texture loaders, and coordinate conversion systems.
+///
+/// Registers `.o3d`, `.x`, `.dds`, `.bmp`, and `.tga` asset loaders and coordinate sync with the Bevy `App`.
 ///
 /// # Usage
 ///
@@ -72,6 +102,7 @@ pub struct OptsAssetPlugin;
 impl Plugin for OptsAssetPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(OptsMeshPlugin)
-            .add_plugins(OptsMaterialPlugin);
+            .add_plugins(OptsMaterialPlugin)
+            .add_plugins(OptsCoordsPlugin);
     }
 }
