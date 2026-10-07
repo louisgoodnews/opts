@@ -56,6 +56,14 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `BusManifest`: Vehicle manifest capturing friendly identity, description, registration modes, audio/model/path asset paths, script lists, physical mass, axles, and articulation couplings.
   - `FriendlyName`, `RegistrationMode`, `BusAxle`: Vehicle configuration components.
   - `BusParseError`: Typed error for malformed vehicle manifest blocks.
+- **`opts_core::formats::vehicles::model`:**
+  - `parse_model(text: &str) -> Result<ModelConfig, ModelParseError>` / `ModelConfig::parse_bytes(bytes: &[u8])`: Entry points for parsing vehicle rendering manifests (`model.cfg`).
+  - `ModelConfig`: Complete rendering manifest containing LOD tiers (`Vec<ModelLod>`), dynamic text textures (`Vec<TextTexture>`), script textures, repaint schemes (`Vec<CtcScheme>`), exterior headlights (`Vec<Spotlight>`), and interior lights (`Vec<InteriorLight>`).
+  - `ModelLod`: Distance threshold partition containing rendered geometry meshes (`Vec<ModelMesh>`).
+  - `ModelMesh`: Geometry entry with relative `.o3d` or `.x` path, camera viewpoint bitmask (`ViewpointFlags`), illumination bindings, conditional visibility rules (`MeshVisibility`), mouse events, animations (`ModelAnim`), skinning bones, and material modifiers (`ModelMaterial`).
+  - `ModelAnim`: Variable-driven hierarchical mesh animation transform with pivot translation, rotation angles, origin from mesh, speed, and delay damping.
+  - `ModelMaterial`: Material slot selection and modifiers including alpha mode, lightmaps, envmaps, nightmaps, bumpmaps, dynamic text textures, and conditional texture swaps.
+  - `ModelParseError`: Strongly typed error enumeration for missing parameters or malformed numeric values.
 - **`opts_core::formats::text`:**
   - `decode_bytes(bytes: &[u8]) -> String`: Dual-encoding string decoder with automatic Windows-1252 (CP1252) fallback for legacy German assets.
   - `scan_blocks(text: &str) -> Vec<OmsiBlock>`: Keyword-delimited block tokenizer handling comments, whitespace, and parameter streams.
@@ -95,7 +103,9 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
 - [Milestone M-0013: Binary Mesh Parsers (`.o3d`)](../src/roadmap/phase-2/M-0013.md)
 - [Milestone M-0016: DirectX `.x` Legacy Mesh Parser](../src/roadmap/phase-2/M-0016.md)
 - [Milestone M-0014: Vehicle Configuration & Operational Data Parsers](../src/roadmap/phase-2/M-0014.md)
+- [Milestone M-0017: Model Configuration Parser (`model.cfg`)](../src/roadmap/phase-2/M-0017.md)
 - [`.bus` Specification](../src/formats/text/vehicles/bus.md)
+- [`model.cfg` Specification](../src/formats/text/vehicles/model_cfg.md)
 - [`paths.cfg` Specification](../src/formats/text/vehicles/paths_cfg.md)
 - [`.org` Specification](../src/formats/text/org.md)
 - [Money Systems Specification](../src/formats/text/money.md)

@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-004 board update for M-0017)_
+_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0017)_
 
 ---
 
@@ -83,7 +83,7 @@ A work item may enter the **Done** column only when:
 
 _Work actively being executed in the current session._
 
-- `[~]` None — awaiting user directive
+- [ ] None
 
 > 📝 The agent populates this column only after starting execution
 > under P-005. Idle state is explicitly marked as "None" rather than
@@ -105,9 +105,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🔴 **Implement AST and data models for `model.cfg`** — (M-0017, code). In-memory models for meshes, LODs, animations, and material modifiers in `opts_core::formats::vehicles::model::ast`.
-- [ ] 🔴 **Implement `model.cfg` stateful parser** — (M-0017, code). Parse global directives, LOD tiers, mesh blocks, `[newanim]`, and unknown property preservation in `opts_core::formats::vehicles::model::parse`.
-- [ ] 🟡 **Integration test suite and fuzzing for `model.cfg`** — (M-0017, test). Multi-mesh hierarchies, LODs, and fuzz tests in `tests/model_parse.rs`.
 - [ ] 🟡 **Implement `opts_bevy` mesh loader** — (Phase 3 / M-0002, code). Unblocked: `opts-core` `.o3d` parser complete.
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
@@ -130,10 +127,6 @@ _Work that cannot proceed until a dependency is resolved._
 ### 📚 Backlog
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
-
-#### M-0017 — Model Configuration Parser
-
-- [ ] 🟢 **Add `model.cfg` parser documentation to `opts-core` book** — Document API and examples in `docs/crates/opts-core.md` (M-0017, docs)
 
 #### M-0015 — World & Scenery Parsers (Deferred)
 
@@ -181,6 +174,12 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-07 — M-0017 (Model Configuration Parser `model.cfg`, complete)**
+
+- `[x]` 🔴 **Implement `opts_core::formats::vehicles::model` parser** (M-0017, code) — Pure Rust `model.cfg` vehicle rendering manifest parser in `opts-core` supporting multi-LOD distance switches, viewpoint bitmasks, conditional visibility bindings, interactive click events, variable-driven animations (`[newanim]`), material slot modifiers (`[matl]`, `[matl_change]`, alpha, envmaps, lightmaps), dynamic text textures, and unscoped/scoped light sources.
+- `[x]` 🔴 **Integration test suite for `model.cfg`** (M-0017, test) — End-to-end integration tests modeling full bus body, interior, and wheel hierarchies (`tests/model_parse.rs`) and 1,000 pseudorandom fuzzed buffers. 7 tests, zero unsafe, zero warnings.
+- `[x]` 🟢 **Document `model.cfg` parser in `opts-core` book** (M-0017, docs) — API surface, models, and usage examples added to `docs/crates/opts-core.md`.
 
 **2026-10-06 — M-0014 (Vehicle Configuration & Operational Data Parsers, complete)**
 

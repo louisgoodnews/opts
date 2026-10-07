@@ -105,7 +105,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] `paths.cfg` passenger paths parser (`opts_core::formats::vehicles::paths`)
   - [x] `.org` registration & fleet lists parser (`opts_core::formats::org`)
   - [x] `Money/<pack>/*.cfg` currency denominations parser (`opts_core::formats::money`)
-- [ ] **📐 Model Configuration Parser** — [M-0017](docs/src/roadmap/phase-2/M-0017.md): Parse `model.cfg` mesh bindings, material animations, and illumination maps (discovered in M-0013)
+- [x] **📐 Model Configuration Parser** — [M-0017](docs/src/roadmap/phase-2/M-0017.md)
+  - [x] `model.cfg` vehicle rendering manifest parser (`opts_core::formats::vehicles::model`)
+  - [x] LOD tiers, viewpoint camera masks, interactive click events, variable-driven animations, and material modifiers
 - [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
   - [ ] Deferred pending spec promotion from Mutation Kit 2 (`.sco`, `.sli`, `tile_*.map`, `global.cfg`)
 

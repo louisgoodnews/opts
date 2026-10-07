@@ -1,5 +1,7 @@
 # 🚌 OPTS (Open Public Transport Simulator) Roadmap
 
+> 📌 This file mirrors [`docs/src/roadmap/README.md`](docs/src/roadmap/README.md), which is canonical (and is what the book publishes). Update the canonical file first, then re-mirror. Per-phase folders with milestones: [`docs/src/roadmap/`](docs/src/roadmap/).
+
 **Vision:** A free, open-source public transport simulator built in Rust and Bevy, capable of natively loading and simulating OMSI 2 assets.
 
 **Core Philosophy:** 📖 *Documentation-Driven Development.* We write the specifications, format definitions, and architecture docs before writing the implementation code. The documentation is the source of truth.
@@ -10,12 +12,12 @@
 
 | Phase | Goal | Status | Folder |
 | :--- | :--- | :--- | :--- |
-| 🏗️ **Phase 0** — Foundation & Documentation Infrastructure | skeleton, workspace, governance, docs pipeline | 🟡 nearly complete (hosted Pages deployment unverified) | [`phase-0/`](phase-0/README.md) |
-| 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟡 **current** — all specs drafted; mutation tests and review pending | [`phase-1/`](phase-1/README.md) |
-| ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | ⏳ not started | [`phase-2/`](phase-2/README.md) |
-| 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering | ⏳ not started | [`phase-3/`](phase-3/README.md) |
-| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | ⏳ not started | [`phase-4/`](phase-4/README.md) |
-| 🚀 **Phase 5** — Tooling, Polish & Community | CLI, user/modding docs, release | ⏳ not started | [`phase-5/`](phase-5/README.md) |
+| 🏗️ **Phase 0** — Foundation & Documentation Infrastructure | skeleton, workspace, governance, docs pipeline | 🟡 nearly complete (hosted Pages deployment unverified) | [`phase-0/`](docs/src/roadmap/phase-0/README.md) |
+| 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟡 **current** — all specs drafted; mutation tests and review pending | [`phase-1/`](docs/src/roadmap/phase-1/README.md) |
+| ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | ⏳ not started | [`phase-2/`](docs/src/roadmap/phase-2/README.md) |
+| 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering | ⏳ not started | [`phase-3/`](docs/src/roadmap/phase-3/README.md) |
+| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | ⏳ not started | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
+| 🚀 **Phase 5** — Tooling, Polish & Community | CLI, user/modding docs, release | ⏳ not started | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -52,41 +54,41 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Status 2026-10-04: first drafts of every planned format exist. All are 🟡 **Draft** — structure verified against the full installed corpus by clean-room analysis (hex dumps, corpus-wide structural walks, statistics; no executables inspected), but many field **meanings** still need mutation tests in OMSI and a maintainer review before they can be marked 🟢.*
 
 - [x] **📄 Text Config Formats (Parser: `nom`)** — drafted
-  - [x] [`formats/text/sco.md`](../formats/text/sco.md), [`sli.md`](../formats/text/sli.md) + [corpus audit](../formats/text/sco-sli-audit.md) (47 undocumented `.sco` keywords, misspelled aliases, BOM/encoding findings).
-  - [x] [`formats/text/vehicles/bus.md`](../formats/text/vehicles/bus.md), [`cfg.md`](../formats/text/cfg.md), model/paths/passengercabin/sound configs.
-  - [x] [`formats/text/vehicles/hof.md`](../formats/text/vehicles/hof.md), [`osc.md`](../formats/text/vehicles/osc.md), [`varnamelist.md`](../formats/text/vehicles/varnamelist.md), [`const.md`](../formats/text/vehicles/const.md) + [vehicle-side corpus audit](../formats/text/vehicles/vehicle-corpus-audit.md) (UTF-16 hofs, undocumented `$` functions, duplicate varlist names).
-  - [x] [`formats/text/org.md`](../formats/text/org.md): number/registration lists.
-  - [x] [`formats/text/misc-types.md`](../formats/text/misc-types.md): `.ovh`, `.hum`, `.cti`, `.oft`, `.otp`, `.owt`, `.oop`, `.olf`, `.ocu`, `.zug`, `.amf`, `.rdy`, backups.
-  - [x] [`formats/text/texture-cfg.md`](../formats/text/texture-cfg.md): `*.bmp.cfg` surface/moisture/puddle properties.
+  - [x] [`formats/text/sco.md`](docs/src/formats/text/sco.md), [`sli.md`](docs/src/formats/text/sli.md) + [corpus audit](docs/src/formats/text/sco-sli-audit.md) (47 undocumented `.sco` keywords, misspelled aliases, BOM/encoding findings).
+  - [x] [`formats/text/vehicles/bus.md`](docs/src/formats/text/vehicles/bus.md), [`cfg.md`](docs/src/formats/text/cfg.md), model/paths/passengercabin/sound configs.
+  - [x] [`formats/text/vehicles/hof.md`](docs/src/formats/text/vehicles/hof.md), [`osc.md`](docs/src/formats/text/vehicles/osc.md), [`varnamelist.md`](docs/src/formats/text/vehicles/varnamelist.md), [`const.md`](docs/src/formats/text/vehicles/const.md) + [vehicle-side corpus audit](docs/src/formats/text/vehicles/vehicle-corpus-audit.md) (UTF-16 hofs, undocumented `$` functions, duplicate varlist names).
+  - [x] [`formats/text/org.md`](docs/src/formats/text/org.md): number/registration lists.
+  - [x] [`formats/text/misc-types.md`](docs/src/formats/text/misc-types.md): `.ovh`, `.hum`, `.cti`, `.oft`, `.otp`, `.owt`, `.oop`, `.olf`, `.ocu`, `.zug`, `.amf`, `.rdy`, backups.
+  - [x] [`formats/text/texture-cfg.md`](docs/src/formats/text/texture-cfg.md): `*.bmp.cfg` surface/moisture/puddle properties.
 - [x] **🗺️ Map & Scenario Files** — drafted
-  - [x] [`formats/map/global-cfg.md`](../formats/map/global-cfg.md): `global.cfg`, `laststn.osn`, `.dsc` (UTF-16LE pitfall).
-  - [x] [`formats/map/tiles.md`](../formats/map/tiles.md): `tile_<x>_<y>.map` (object/spline records), `.terrain` height grid, `.water`, `.LM.bmp`, `.prt`, `.hole`, `.surf`.
-  - [x] [`formats/map/lists.md`](../formats/map/lists.md): AI lists, unscheduled traffic, parked/human/driver/registration lists, holidays, time zone, signal routes.
-  - [x] [`formats/map/timetables.md`](../formats/map/timetables.md): `Chrono.cfg`, `.ttl`, `.ttp`, `.ttr`, bus stops, station links.
+  - [x] [`formats/map/global-cfg.md`](docs/src/formats/map/global-cfg.md): `global.cfg`, `laststn.osn`, `.dsc` (UTF-16LE pitfall).
+  - [x] [`formats/map/tiles.md`](docs/src/formats/map/tiles.md): `tile_<x>_<y>.map` (object/spline records), `.terrain` height grid, `.water`, `.LM.bmp`, `.prt`, `.hole`, `.surf`.
+  - [x] [`formats/map/lists.md`](docs/src/formats/map/lists.md): AI lists, unscheduled traffic, parked/human/driver/registration lists, holidays, time zone, signal routes.
+  - [x] [`formats/map/timetables.md`](docs/src/formats/map/timetables.md): `Chrono.cfg`, `.ttl`, `.ttp`, `.ttr`, bus stops, station links.
 - [x] **🔢 Binary Formats (Parser: `binrw`)** — 🟢 Specified
-  - [x] [`formats/binary/o3d.md`](../formats/binary/o3d.md) + [chunk reference](../formats/binary/o3d-chunks.md): layout confirmed on 165,695 of 165,750 non-empty files; field semantics and coordinate space confirmed by mutation testing [M]. 🟢 Specified.
+  - [x] [`formats/binary/o3d.md`](docs/src/formats/binary/o3d.md) + [chunk reference](docs/src/formats/binary/o3d-chunks.md): layout confirmed on 165,695 of 165,750 non-empty files; field semantics and coordinate space confirmed by mutation testing [M]. 🟢 Specified.
   - [x] Annotated hex breakdown of a simple `.o3d` (self-authored sample in `o3d.md`).
-  - [x] [`formats/binary/x.md`](../formats/binary/x.md): legacy DirectX `.x` (text and binary variants); frame matrix, material ref, and quad triangulation confirmed by mutation testing [M]. 🟢 Specified.
-- [x] **🔊 Format inventory & audio analysis** — [`formats/inventory.md`](../formats/inventory.md) (619,821 files, 122 extensions, coverage per extension), full [`.wav` analysis](../formats/wav.md) (42,375 files: variants, chunks, robustness findings, config references) and nine small stubs (`.dat`, `.xsli`, `.itx`, `.ipr`, `.kyb`, `.kennz`, `.html`, `.off`, `.sichtbar`/`.unsichtbar`) (2026-10-04)
-- [x] **🌐 Community cross-check** — [`formats/community-crosscheck.md`](../formats/community-crosscheck.md): reconciles the drafts with the public OMSI community wiki (facts only, CC BY-SA attribution); resolves several open questions (`$msg`, `[rendertype]`, surface types 0–16, `.surf`) and records conflicts (`[matl_alpha]` value distribution differs from `sco.md`, UTF-16 hofs, keyword case).
-- [x] **🌐 Wiki Cross-Check & Spec Overhaul** — milestone [M-0006](phase-1/M-0006.md) (complete 2026-10-04; 31 pages, 19 specs updated)
-- [x] **🕳️ Documentation Gap Closure** — from [`formats/gap-analysis.md`](../formats/gap-analysis.md)
-  - [x] [M-0008](phase-1/M-0008.md) Script Reference — predefined variables and callbacks (`program/`), script sets, scenery scripts, manual review
-  - [x] [M-0009](phase-1/M-0009.md) Repaint System — `.cti` / `[CTC]` chain
-  - [x] [M-0010](phase-1/M-0010.md) Engine & Environment Configs — `envir.cfg`, weather, scenarios, inputs, `.opl`
-  - [x] [M-0011](phase-1/M-0011.md) Passenger Content — ticket packs, money, fonts
-  - [x] [M-0012](phase-1/M-0012.md) Chrono and Map Variants
+  - [x] [`formats/binary/x.md`](docs/src/formats/binary/x.md): legacy DirectX `.x` (text and binary variants); frame matrix, material ref, and quad triangulation confirmed by mutation testing [M]. 🟢 Specified.
+- [x] **🔊 Format inventory & audio analysis** — [`formats/inventory.md`](docs/src/formats/inventory.md) (619,821 files, 122 extensions, coverage per extension), full [`.wav` analysis`](docs/src/formats/wav.md) (42,375 files: variants, chunks, robustness findings, config references) and nine small stubs (`.dat`, `.xsli`, `.itx`, `.ipr`, `.kyb`, `.kennz`, `.html`, `.off`, `.sichtbar`/`.unsichtbar`) (2026-10-04)
+- [x] **🌐 Community cross-check** — [`formats/community-crosscheck.md`](docs/src/formats/community-crosscheck.md): reconciles the drafts with the public OMSI community wiki (facts only, CC BY-SA attribution); resolves several open questions (`$msg`, `[rendertype]`, surface types 0–16, `.surf`) and records conflicts (`[matl_alpha]` value distribution differs from `sco.md`, UTF-16 hofs, keyword case).
+- [x] **🌐 Wiki Cross-Check & Spec Overhaul** — milestone [M-0006](docs/src/roadmap/phase-1/M-0006.md) (complete 2026-10-04; 31 pages, 19 specs updated)
+- [x] **🕳️ Documentation Gap Closure** — from [`formats/gap-analysis.md`](docs/src/formats/gap-analysis.md) (all complete 2026-10-04)
+  - [x] [M-0008](docs/src/roadmap/phase-1/M-0008.md) Script Reference — predefined variables and callbacks (`program/`), script sets, scenery scripts, manual review
+  - [x] [M-0009](docs/src/roadmap/phase-1/M-0009.md) Repaint System — `.cti` / `[CTC]` chain
+  - [x] [M-0010](docs/src/roadmap/phase-1/M-0010.md) Engine & Environment Configs — `envir.cfg`, weather, scenarios, inputs, `.opl`
+  - [x] [M-0011](docs/src/roadmap/phase-1/M-0011.md) Passenger Content — ticket packs, money, fonts
+  - [x] [M-0012](docs/src/roadmap/phase-1/M-0012.md) Chrono and Map Variants
 - [~] **🧪 Mutation-Test Round (needs OMSI)** — binary mesh round complete (2026-10-05)
   - [x] Run `CHECKLIST.md` (now also covers the axis prediction in `o3d.md` Addendum 2: Y up, Z longitudinal); folded results into `o3d.md` (Q-004 material groups, Q-005 axes/winding/UV, Q-006 matrix, Q-001–003 header) and `x.md` (Q-X01 frame matrix, Q-X02, Q-X07, Q-X08). Both promoted to 🟢 Specified.
   - [ ] Design a second kit for the map side: `[spline]` / `[object]` field meanings (Q-M02, Q-M03), `[groundtex]` numbers (Q-G01), timetable profiles (Q-T01, Q-T02), misspelled collision keywords (Q-AUD-005).
 - [x] **🖼️ Texture Formats** — drafted
-  - [x] [`formats/textures.md`](../formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers). Alpha semantics (Q-TX03), name resolution (Q-TX01) and UV/origin (Q-TX07) await mutation tests.
+  - [x] [`formats/textures.md`](docs/src/formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers). Alpha semantics (Q-TX03), name resolution (Q-TX01) and UV/origin (Q-TX07) await mutation tests.
 - [x] **📐 Coordinate Systems & Math**
   - [x] `docs/src/architecture/coordinates.md`: OMSI's axes/handedness mapped to Bevy (completed 2026-10-05, Q-M01 blocker noted).
 - [ ] **✅ Review & Promotion**
   - [ ] Maintainer review of all 🟡 drafts; promote to 🟢 once the high-priority open questions of that spec are resolved.
   - [x] Add the missing index pages referenced by `SUMMARY.md` (`formats/overview.md`, `formats/text/README.md`, `formats/binary/README.md`) — done in M-0007.
-  - [ ] Confirm the drafts' provenance sections against [ADR-0002](../adr/0002-clean-room-policy.md) (clean-room policy).
+  - [ ] Confirm the drafts' provenance sections against [ADR-0002](docs/src/adr/0002-clean-room-policy.md) (clean-room policy).
 - [ ] **📚 Only shallowly covered:** `.osn` field meanings, the purpose of `.rra`/`.surf`/`.prt` caches, and vehicle `.dsc` fragments. Tool files (`.pdn`, `.sfk`, `.blend`, …) and `.dll` plug-ins are intentionally not specified.
 
 ---
@@ -94,18 +96,21 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## ⚙️ Phase 2: `opts-core` Implementation (The Parsers)
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 
-- [x] **💾 Binary Mesh Parsers** — [M-0013](phase-2/M-0013.md) & [M-0016](phase-2/M-0016.md)
+- [x] **💾 Binary Mesh Parsers** — [M-0013](docs/src/roadmap/phase-2/M-0013.md) & [M-0016](docs/src/roadmap/phase-2/M-0016.md)
   - [x] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
-  - [x] `.x` legacy DirectX mesh parser (`opts_core::formats::x`) — [M-0016](phase-2/M-0016.md)
+  - [x] `.x` legacy DirectX mesh parser (`opts_core::formats::x`) — [M-0016](docs/src/roadmap/phase-2/M-0016.md)
   - [x] Clean-room mutation fixtures integration tests (`t01`–`t07`, `t10`–`t12`)
-- [x] **📝 Vehicle & Operational Data Parsers** — [M-0014](phase-2/M-0014.md)
+- [x] **📝 Vehicle & Operational Data Parsers** — [M-0014](docs/src/roadmap/phase-2/M-0014.md)
   - [x] `.bus` vehicle manifest parser (`opts_core::formats::vehicles::bus`)
   - [x] `paths.cfg` passenger paths parser (`opts_core::formats::vehicles::paths`)
   - [x] `.org` registration & fleet lists parser (`opts_core::formats::org`)
   - [x] `Money/<pack>/*.cfg` currency denominations parser (`opts_core::formats::money`)
-- [ ] **📐 Model Configuration Parser** — [M-0017](phase-2/M-0017.md): Parse `model.cfg` mesh bindings, material animations, and illumination maps (discovered in M-0013)
-- [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](phase-2/M-0015.md)
+- [x] **📐 Model Configuration Parser** — [M-0017](docs/src/roadmap/phase-2/M-0017.md)
+  - [x] `model.cfg` vehicle rendering manifest parser (`opts_core::formats::vehicles::model`)
+  - [x] LOD tiers, viewpoint camera masks, interactive click events, variable-driven animations, and material modifiers
+- [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
   - [ ] Deferred pending spec promotion from Mutation Kit 2 (`.sco`, `.sli`, `tile_*.map`, `global.cfg`)
+
 
 ---
 

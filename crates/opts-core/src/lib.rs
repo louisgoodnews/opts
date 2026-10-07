@@ -23,7 +23,7 @@
 //!   - [`formats::x`]: Legacy Microsoft DirectX 3D mesh format (`.x`).
 //!   - [`formats::org`]: Vehicle registration and fleet number lists (`.org`).
 //!   - [`formats::money`]: Money system configurations (`Money/<pack>/*.cfg`).
-//!   - [`formats::vehicles`]: Vehicle manifests (`.bus`) and passenger path networks (`paths.cfg`).
+//!   - [`formats::vehicles`]: Vehicle manifests (`.bus`), passenger path networks (`paths.cfg`), and render manifests (`model.cfg`).
 //!
 //! ## Example
 //!
