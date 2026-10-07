@@ -10,6 +10,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - [M-0018 — 3D Mesh Asset Loaders & Conversion Bridge (`.o3d` & `.x`)](M-0018.md) — 🟢 Complete (bridge OMSI geometry to Bevy Mesh, native AssetLoaders & plugin)
 - [M-0019 — Texture Asset Loaders & Bevy Material Bridge (`.dds`, `.tga`, `.bmp`)](M-0019.md) — 🟢 Complete (texture format sniffing, DDS loader, Bevy StandardMaterial)
+- [M-0020 — Spatial Coordinate Conversion Systems (`Z`-up to `Y`-up)](M-0020.md) — ⚪ Planned (🔴 High priority; spatial vectors, rotations, OmsiTransform, sync systems)
 
 ## Checklist
 
@@ -23,7 +24,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
   - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin`.
   - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
-- [ ] **🔄 Coordinate Conversion**
+- [ ] **🔄 Coordinate Conversion Systems** — [M-0020](M-0020.md)
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
 - [ ] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](M-0019.md)
   - [x] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
