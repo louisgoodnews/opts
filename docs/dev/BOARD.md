@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-005 implementation complete for M-0020)_
+_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0020)_
 
 ---
 
@@ -95,11 +95,7 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- [ ] 🔴 **Implement vector & rotation conversion functions** — Pure functions converting between OMSI Z-up and Bevy Y-up positions and orientations (M-0020, code)
-- [ ] 🔴 **Implement OmsiTransform component & ECS sync systems** — Components and change-detection systems syncing OMSI and Bevy transforms (M-0020, code)
-- [ ] 🔴 **Register OptsCoordsPlugin & exports** — Expose coordinate bridge APIs and register sync systems in Bevy App (M-0020, code)
-- [ ] 🔴 **Implement unit & integration test suite** — Tests verifying position mappings, Euler rotations, and headless Bevy ECS sync (M-0020, test)
-- [ ] 🟡 **Document coordinate systems & API** — Update docs/crates/opts-bevy.md and docs/src/architecture/coordinates.md (M-0020, docs)
+- `[ ]` None
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -177,6 +173,14 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-07 — M-0020 (Spatial Coordinate Conversion Systems, complete)**
+
+- `[x]` 🔴 **Implement vector & rotation conversion functions** (M-0020, code) — Pure functions converting between OMSI Z-up and Bevy Y-up positions and orientations (`omsi_to_bevy_pos`, `bevy_to_omsi_pos`, `omsi_euler_to_bevy_quat`, `bevy_quat_to_omsi_euler`) in `crates/opts-bevy/src/coords.rs`.
+- `[x]` 🔴 **Implement OmsiTransform component & ECS sync systems** (M-0020, code) — Components (`OmsiCoords`, `OmsiTransform`) and bidirectional change-detection sync systems (`sync_coordinate_transforms`) with numerical epsilon guards in `crates/opts-bevy/src/coords.rs`.
+- `[x]` 🔴 **Register OptsCoordsPlugin & exports** (M-0020, code) — Expose coordinate bridge APIs and register component reflection and sync systems in Bevy `App` via `OptsCoordsPlugin` and `OptsAssetPlugin` (`crates/opts-bevy/src/plugin.rs`, `lib.rs`).
+- `[x]` 🔴 **Implement unit & integration test suite** (M-0020, test) — 9 tests verifying exact position mappings, round-trips, cardinal Euler angles, and headless Bevy ECS transform synchronization (`crates/opts-bevy/tests/coords_sync.rs`).
+- `[x]` 🟡 **Document coordinate systems & API** (M-0020, docs) — Reference guide updated in `docs/crates/opts-bevy.md`, `docs/crates/opts-bevy/README.md`, and resolved vehicle/entity frame documented in `docs/src/architecture/coordinates.md`.
 
 **2026-10-07 — M-0019 (Texture Asset Loaders & Bevy Material Bridge, complete)**
 

@@ -123,8 +123,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
   - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin`.
   - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
-- [ ] **🔄 Coordinate Conversion Systems** — [M-0020](docs/src/roadmap/phase-3/M-0020.md)
-  - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
+- [x] **🔄 Coordinate Conversion Systems** — [M-0020](docs/src/roadmap/phase-3/M-0020.md)
+  - [x] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
+  - [ ] Implement camera preset projection bridge for vehicle view definitions (`[add_camera_driver]`, etc.) (M-0020)
 - [ ] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](docs/src/roadmap/phase-3/M-0019.md)
   - [x] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
   - [x] Implement custom `AssetLoader` for `.dds` textures in `opts-bevy`.
