@@ -5,53 +5,60 @@
 | **Layer** | L5 · Engine |
 | **Role** | facade |
 | **Kind** | lib |
-| **Status** | ⬜ Skeleton |
-| **Proposed fate** | ✅ Keep — becomes the `OptsPlugins` group |
-| **Last Updated** | 2026-10-04 |
+| **Status** | 🟢 Active Implementation |
+| **Proposed fate** | ✅ Keep — engine adapter & loaders |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
 ## 🎯 Purpose
 
-The single entry point for Bevy applications: a `PluginGroup` that bundles all OPTS engine-adapter plugins, each behind a feature.
+The primary engine integration crate connecting OPTS models, parsers, and assets with the Bevy 0.14 engine.
+
+Provides coordinate conversion bridges, mesh conversion routines, and native `AssetLoader` implementations for `.o3d` and `.x` mesh formats.
+
+See [`opts-bevy.md`](../opts-bevy.md) for full crate documentation.
 
 ## 📤 Public API (high level)
 
-> [!NOTE]
-> Planned surface — nothing is implemented yet.
-
 ```rust
+use bevy::prelude::*;
+use opts_bevy::OptsMeshPlugin;
+
 App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugins(opts_bevy::OptsPlugins)   // or .build().disable::<…>()
+    .add_plugins(OptsMeshPlugin)
     .run();
 ```
+
+- `OptsMeshPlugin`: Registers `.o3d` and `.x` asset loaders.
+- `o3d_to_bevy_mesh`, `x_submesh_to_bevy_mesh`, `x_mesh_to_combined_bevy_mesh`: Coordinate conversion and mesh builders.
+- `O3dAssetLoader`, `XAssetLoader`: Native Bevy asset loaders.
 
 ## 📦 Dependencies — and why
 
 | Dependency | Why |
 | :--- | :--- |
-| `bevy` | Engine |
-| `opts-bevy-*` *(planned)* | The member plugins |
-| `opts-core` | Shared types |
-
-Currently also declares `image` and `ddsfile`; texture decoding should live in `opts-fmt-texture`, with `opts-bevy-assets` converting to Bevy `Image`.
+| `bevy` | Core engine, `Mesh` asset, `AssetLoader` trait |
+| `opts-core` | Shared models (`O3d`, `XMesh`) and format parsers |
+| `glam` | Math types |
+| `thiserror` | Strongly typed errors |
 
 ## 🧭 Design Decisions
 
-- Facade only (rule R4). Logic lives in focused `opts-bevy-*` crates that depend on `opts-bevy-core`, never on each other.
-- Model types are wrapped in newtypes to derive Bevy traits (orphan rule).
+- Pure safe Rust (`#![deny(unsafe_code)]`).
+- Coordinate conversion flips $Z$ and reverses triangle winding to bridge left-handed OMSI geometry into Bevy right-handed space.
+- Zero panics/unwraps in library code.
 
 ## 🚧 Current State & Known Issues
 
-- Empty `lib.rs`.
-
-## 🔮 Future Direction
-
-Members: `opts-bevy-core`, `-assets`, `-render`, `-camera`, `-input`, `-ui`, `-sim`, `-audio`, `-streaming`, `-devtools`.
+- 🟢 M-0018 complete: `O3dAssetLoader`, `XAssetLoader`, coordinate conversion bridge, and `OptsMeshPlugin`.
+- Next: Material & texture loaders (M-0019).
 
 ## 🔗 Cross-References
 
+- [Comprehensive Crate Guide](../opts-bevy.md)
 - [ADR-0001: Why Bevy and Rust?](../../src/adr/0001-why-bevy-and-rust.md)
 - [Phase 3 roadmap](../../src/roadmap/phase-3/README.md)
-- [Proposed Architecture](../architecture.md) · [Workspace Audit](../audit.md)
+- [Milestone M-0018](../../src/roadmap/phase-3/M-0018.md)
+

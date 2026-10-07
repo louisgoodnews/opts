@@ -8,7 +8,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0018 — 3D Mesh Asset Loaders & Conversion Bridge (`.o3d` & `.x`)](M-0018.md) — ⚪ Planned (🔴 High priority; bridge OMSI geometry to Bevy Mesh)
+- [M-0018 — 3D Mesh Asset Loaders & Conversion Bridge (`.o3d` & `.x`)](M-0018.md) — 🟢 Complete (bridge OMSI geometry to Bevy Mesh, native AssetLoaders & plugin)
 
 ## Checklist
 
@@ -16,10 +16,12 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Goal: Bridge the gap between `opts-core` data and Bevy's ECS and rendering pipeline.*
 
-- [ ] **📥 Bevy Asset Loaders**
-  - [ ] Implement custom `AssetLoader` for `.o3d` files.
+- [ ] **📥 Bevy Asset Loaders & Mesh Bridge** — [M-0018](M-0018.md)
+  - [x] Implement custom `AssetLoader` for `.o3d` files.
+  - [x] Implement custom `AssetLoader` for `.x` files (discovered in M-0016).
   - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
-  - [ ] Register the loaders with the `AssetServer`.
+  - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin`.
+  - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
 - [ ] **🔄 Coordinate Conversion**
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
 - [ ] **🌟 Rendering OMSI Assets**

@@ -118,11 +118,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Bridge the gap between `opts-core` data and Bevy's ECS and rendering pipeline.*
 
 - [ ] **📥 Bevy Asset Loaders & Mesh Bridge** — [M-0018](docs/src/roadmap/phase-3/M-0018.md)
-  - [ ] Implement custom `AssetLoader` for `.o3d` files.
-  - [ ] Implement custom `AssetLoader` for `.x` files (discovered in M-0016).
+  - [x] Implement custom `AssetLoader` for `.o3d` files.
+  - [x] Implement custom `AssetLoader` for `.x` files (discovered in M-0016).
   - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
-  - [ ] Register the loaders with the `AssetServer`.
-  - [ ] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
+  - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin`.
+  - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
 - [ ] **🔄 Coordinate Conversion**
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
 - [ ] **🌟 Rendering OMSI Assets**

@@ -3511,6 +3511,7 @@ dependencies = [
  "ddsfile",
  "image",
  "opts-core",
+ "thiserror 1.0.69",
  "tracing",
 ]
 

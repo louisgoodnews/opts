@@ -19,8 +19,9 @@ bevy = { workspace = true }
 image = { workspace = true }
 ddsfile = { workspace = true }
 
-# Logging
+# Logging & Error Handling
 tracing = { workspace = true }
+thiserror = { workspace = true }
 
 [dev-dependencies]
 # Add test-specific dependencies here
