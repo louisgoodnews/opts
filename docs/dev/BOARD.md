@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-004 board update for M-0020)_
+_Last updated: 2026-10-07 by Agent (P-005 implementation complete for M-0020)_
 
 ---
 
@@ -95,7 +95,11 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- `[ ]` None
+- [ ] 🔴 **Implement vector & rotation conversion functions** — Pure functions converting between OMSI Z-up and Bevy Y-up positions and orientations (M-0020, code)
+- [ ] 🔴 **Implement OmsiTransform component & ECS sync systems** — Components and change-detection systems syncing OMSI and Bevy transforms (M-0020, code)
+- [ ] 🔴 **Register OptsCoordsPlugin & exports** — Expose coordinate bridge APIs and register sync systems in Bevy App (M-0020, code)
+- [ ] 🔴 **Implement unit & integration test suite** — Tests verifying position mappings, Euler rotations, and headless Bevy ECS sync (M-0020, test)
+- [ ] 🟡 **Document coordinate systems & API** — Update docs/crates/opts-bevy.md and docs/src/architecture/coordinates.md (M-0020, docs)
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -105,11 +109,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🔴 **Implement vector & rotation conversion functions** — Pure functions converting between OMSI Z-up and Bevy Y-up positions and orientations (M-0020, code)
-- [ ] 🔴 **Implement OmsiTransform component & ECS sync systems** — Components and change-detection systems syncing OMSI and Bevy transforms (M-0020, code)
-- [ ] 🔴 **Register OptsCoordsPlugin & exports** — Expose coordinate bridge APIs and register sync systems in Bevy App (M-0020, code)
-- [ ] 🔴 **Implement unit & integration test suite** — Tests verifying position mappings, Euler rotations, and headless Bevy ECS sync (M-0020, test)
-- [ ] 🟡 **Document coordinate systems & API** — Update docs/crates/opts-bevy.md and docs/src/architecture/coordinates.md (M-0020, docs)
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
