@@ -9,7 +9,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 ## Milestones
 
 - [M-0018 — 3D Mesh Asset Loaders & Conversion Bridge (`.o3d` & `.x`)](M-0018.md) — 🟢 Complete (bridge OMSI geometry to Bevy Mesh, native AssetLoaders & plugin)
-- [M-0019 — Texture Asset Loaders & Bevy Material Bridge (`.dds`, `.tga`, `.bmp`)](M-0019.md) — ⚪ Planned (🔴 High priority; texture format sniffing, DDS loader, Bevy StandardMaterial)
+- [M-0019 — Texture Asset Loaders & Bevy Material Bridge (`.dds`, `.tga`, `.bmp`)](M-0019.md) — 🟢 Complete (texture format sniffing, DDS loader, Bevy StandardMaterial)
 
 ## Checklist
 
@@ -26,9 +26,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [ ] **🔄 Coordinate Conversion**
   - [ ] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
 - [ ] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](M-0019.md)
-  - [ ] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
-  - [ ] Implement custom `AssetLoader` for `.dds` textures in `opts-bevy`.
-  - [ ] Create Bevy `StandardMaterial` assets from parsed OMSI `Material` and `XMaterial` properties.
+  - [x] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
+  - [x] Implement custom `AssetLoader` for `.dds` textures in `opts-bevy`.
+  - [x] Create Bevy `StandardMaterial` assets from parsed OMSI `Material` and `XMaterial` properties.
   - [ ] Spawn parsed `.sco` objects as Bevy entities with `Mesh` and `Transform` components.
 - [ ] **🎓 Tutorials & Examples**
   - [ ] Write `docs/src/tutorials/first-sco.md`: "Loading a single OMSI scenery object in Bevy."

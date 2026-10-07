@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-004 board update for M-0019)_
+_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0019)_
 
 ---
 
@@ -95,7 +95,7 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- [x] 🔴 **Implement texture loaders & material bridge** — Texture sniffing/decoding, DdsAssetLoader, Bevy StandardMaterial bridge, and OptsMaterialPlugin (M-0019, code/test)
+- `[ ]` None
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -173,6 +173,14 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-07 — M-0019 (Texture Asset Loaders & Bevy Material Bridge, complete)**
+
+- `[x]` 🔴 **Implement texture format sniffer & image decoders** (M-0019, code) — Magic-byte sniffing (`DDS `, `BM`, `\x89PNG`, `\xFF\xD8`, TGA heuristics) and DDS/image decoding into Bevy `Image` (`crates/opts-bevy/src/texture.rs`), handling the 1,170+ corpus assets with mismatched extensions.
+- `[x]` 🔴 **Implement native Bevy texture loaders & plugin** (M-0019, code) — Native `DdsAssetLoader` and `OptsImageLoader` implementing Bevy 0.14 `AssetLoader`, registered via `OptsMaterialPlugin` and unified `OptsAssetPlugin` (`crates/opts-bevy/src/loader.rs`, `plugin.rs`).
+- `[x]` 🔴 **Implement material conversion bridge** (M-0019, code) — Translates `O3d` and `XMesh` materials into Bevy `StandardMaterial` assets with accurate base color, perceptual roughness, emissive illumination, and `AlphaMode` (`crates/opts-bevy/src/material.rs`).
+- `[x]` 🔴 **Integration test suite for textures & materials** (M-0019, test) — 14 tests covering format sniffing, synthetic DXT1/DXT5/A8 DDS decoding, BMP-in-DDS extension mismatch handling, material roughness mapping, and headless Bevy `App` plugin registration (`crates/opts-bevy/tests/texture_material.rs`).
+- `[x]` 🟢 **Document texture loaders and material bridge in book** (M-0019, docs) — Comprehensive API reference and dependency mappings documented in `docs/crates/opts-bevy.md` and updated `docs/crates/opts-bevy/README.md`.
 
 **2026-10-07 — M-0018 (3D Mesh Asset Loaders & Conversion Bridge, complete)**
 
