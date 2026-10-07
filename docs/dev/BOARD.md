@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0018)_
+_Last updated: 2026-10-07 by Agent (P-004 board update for M-0019)_
 
 ---
 
@@ -105,6 +105,11 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
+- [ ] 🔴 **Implement texture format sniffer & image decoders** — Magic-byte sniffing and DDS/image decoding into Bevy Image (M-0019, code)
+- [ ] 🔴 **Implement native Bevy texture loader & plugin** — DdsAssetLoader and OptsMaterialPlugin registering texture loaders (M-0019, code)
+- [ ] 🔴 **Implement material conversion bridge** — Translate O3d and XMesh materials into Bevy StandardMaterial assets (M-0019, code)
+- [ ] 🔴 **Integration test suite for textures & materials** — Unit and headless Bevy tests for format sniffing, DDS decoding, and materials (M-0019, test)
+- [ ] 🟢 **Document texture loaders and material bridge in book** — Update docs/crates/opts-bevy.md with texture and material API reference (M-0019, docs)
 - [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
 - [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
 
@@ -114,7 +119,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- [!] 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `opts_bevy` mesh loader and `.sco` parser.
+- [!] 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `.sco` parser (opts-bevy mesh loader is implemented).
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
