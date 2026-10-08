@@ -4,20 +4,23 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "GUI for OPTS."
+description = "Material Design 3 GUI widget library for OPTS."
 repository.workspace = true
 
 [dependencies]
 # Internal
 opts-core = { workspace = true }
-opts-assets = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }
-# bevy_asset_loader = { workspace = true } # Uncomment when needed
 
-# Logging
+# Error Handling, Logging, and Serialization
+thiserror = { workspace = true }
 tracing = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[features]
+default = []
+serde = ["dep:serde"]
 
 [dev-dependencies]
-# Add test-specific dependencies here

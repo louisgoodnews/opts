@@ -1,1 +1,22 @@
+//! Material Design 3 GUI widget library for the Open Public Transport Simulator (OPTS).
+//!
+//! `opts-gui` provides a modular, token-driven user interface toolkit built natively
+//! on Bevy UI (`bevy_ui`).
+//!
+//! # Features
+//! - **Material Design 3 Tokens:** Color, typography, spacing, shape, elevation, and motion.
+//! - **Theming & Accessibility:** Preconfigured light and dark schemes compliant with WCAG AA.
+//! - **Reactive State Layer:** Decoupled tokens and interaction states for all components.
+//! - **Ergonomic Builders:** High-level fluent builders for UI layout and widgets.
 
+#![deny(unsafe_code)]
+
+pub mod components;
+pub mod interaction;
+pub mod layout;
+pub mod plugin;
+pub mod prelude;
+pub mod theme;
+pub mod tokens;
+
+pub use plugin::OptsGuiPlugin;

@@ -5,23 +5,21 @@
 | **Layer** | L5 · Engine |
 | **Role** | member |
 | **Kind** | lib |
-| **Status** | ⬜ Skeleton |
-| **Proposed fate** | 🔁 Rename → `opts-bevy-ui` |
-| **Last Updated** | 2026-10-04 |
+| **Status** | 🟢 Active Implementation |
+| **Proposed fate** | 🔁 Foundation Complete (`opts-gui`) |
+| **Last Updated** | 2026-10-08 |
 
 ---
 
 ## 🎯 Purpose
 
-In-game user interface: menus, HUD, dialogs, settings.
+Material Design 3 GUI widget library for OPTS. See full documentation in [opts-gui.md](../opts-gui.md).
 
 ## 📤 Public API (high level)
 
-> [!NOTE]
-> Planned surface — nothing is implemented yet.
-
-- `OptsUiPlugin`
-- UI state reacting to `opts-bevy-core` states (`Menu`, `Loading`, `Driving`, …)
+- `OptsGuiPlugin`: Root Bevy plugin registering all theme systems, tokens, and widget interaction handlers.
+- `MaterialTheme`, `ColorScheme`: Full Material Design 3 design system with WCAG 2.1 AA verified palettes.
+- Widget builders: `ButtonBuilder`, `LabelBuilder`, `IconBuilder`, `CardBuilder`, `DividerBuilder`, `TextFieldBuilder`, `CheckboxBuilder`, `SwitchBuilder`, `RadioBuilder`, `ComboboxBuilder`, `NotebookBuilder`, `ToastBuilder`, `ToplevelBuilder`, `TreeviewBuilder`, `DateSelectBuilder`, `DateTimeSelectBuilder`.
 
 ## 📦 Dependencies — and why
 
