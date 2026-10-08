@@ -89,16 +89,58 @@ Its primary responsibilities are:
   - Extracts OMSI Euler angles in degrees `(yaw, pitch, roll)` from a Bevy orientation quaternion.
 - **`omsi_to_bevy_transform(pos: Vec3, rot_deg: Vec3, scale: Vec3) -> Transform` & `bevy_to_omsi_transform`:**
   - Full transform bridges between OMSI triples and Bevy `Transform`.
+- **`camera_preset_to_bevy_transform(camera_pos: Vec3, dist: f32, yaw_deg: f32, pitch_deg: f32) -> Transform`:**
+  - Converts an OMSI vehicle camera preset (`[add_camera_driver]`, `[add_camera_pax]`) into a native Bevy `Transform`. Correctly handles camera $X$-negation (left is positive), line-of-sight distance offsets, and Euler orientation.
 - **`OmsiCoords(pub Vec3)` & `OmsiTransform`:**
   - Bevy ECS components representing raw coordinates and entity transforms in native OMSI space.
 - **`sync_coordinate_transforms`:**
   - Unified bidirectional synchronization system updating Bevy `Transform` from `OmsiTransform` (and vice-versa) with change detection and epsilon checks to prevent feedback cycles.
 
-### 6. Engine Plugins (`opts_bevy::plugin`)
+### 6. Scenery & World Spawning Bridge (`opts_bevy::scenery`)
+- **`ScoAssetLoader` & `SliAssetLoader`:**
+  - Native Bevy asset loaders parsing `.sco` scenery objects and `.sli` spline extrusion profiles.
+- **`SceneryObjectAsset` & `SplineProfileAsset`:**
+  - Asset wrappers storing parsed domain structures.
+- **`spawn_scenery_object(commands, sco, transform, mesh_handles, material_handles) -> Entity`:**
+  - Spawns a scenery entity hierarchy with `OmsiTransform` and child mesh attachments.
+- **`extrude_spline_profile(profile, length_m) -> Vec<(usize, Mesh)>`:**
+  - Procedurally extrudes 2D spline cross-section profiles into 3D Bevy `Mesh` assets with UVs, normals, and texture slot bindings.
+
+### 7. Vehicle Spawning & Cockpit Presets (`opts_bevy::vehicle`)
+- **`BusVehicle`:**
+  - Component tracking vehicle identity, driver/passenger camera presets, outside orbit center, and current active camera index.
+- **`spawn_vehicle_model(commands, manifest, model, transform, mesh_handles, material_handles) -> Entity`:**
+  - Spawns an OMSI bus root entity with child entities for LOD 0 meshes, interior lights (`PointLightBundle`), and exterior spotlights/headlights (`SpotLightBundle`).
+
+### 8. Vehicle Simulation ECS Bridge (`opts_bevy::vehicle_sim`)
+- **`VehicleController`:**
+  - Component wrapping authoritative [`VehicleSimulation`](opts-sim.md) physics state from `opts-sim`. Provides forwarders for `inputs()`, `inputs_mut()`, `forward_speed_km_h()`, `engine_rpm()`, `gear()`, and `axles()`.
+- **`PlayerVehicle`:**
+  - Marker component identifying the vehicle driven by local player inputs.
+- **`WheelVisual`:**
+  - Component identifying 3D child wheel meshes with axle index and lateral wheel side (`WheelSide::Left` / `WheelSide::Right`). Updates local transforms dynamically for Ackermann steering angle deflection and angular rolling spin.
+- **`VehicleCameraRig`:**
+  - Component controlling dynamic chase tracking (`VehicleCameraMode::ExteriorChase`) and driver cockpit eye view (`VehicleCameraMode::InteriorCockpit`) with smooth damping and F1 / F2 toggle keys.
+- **`OptsVehiclePlugin`:**
+  - Adds fixed-step physics execution (`FixedUpdate`), keyboard input polling (`Update`), chassis 3D spatial alignment (`Update`), and wheel transform synchronization (`Update`).
+
+### 9. Engine Plugins (`opts_bevy::plugin`)
 - **`OptsMeshPlugin`:** Registers `O3dAssetLoader` and `XAssetLoader`.
 - **`OptsMaterialPlugin`:** Registers `DdsAssetLoader` and `OptsImageLoader`.
 - **`OptsCoordsPlugin`:** Registers reflection types and bidirectional transform sync systems for `OmsiTransform` and `OmsiCoords`.
-- **`OptsAssetPlugin`:** Convenience plugin bundling `OptsMeshPlugin`, `OptsMaterialPlugin`, and `OptsCoordsPlugin`.
+- **`OptsSceneryPlugin`:** Registers `ScoAssetLoader` and `SliAssetLoader`.
+- **`OptsVehiclePlugin`:** Registers vehicle physics simulation, input systems, and wheel animation.
+- **`OptsAssetPlugin`:** Master convenience plugin bundling `OptsMeshPlugin`, `OptsMaterialPlugin`, `OptsCoordsPlugin`, `OptsSceneryPlugin`, and `OptsVehiclePlugin`.
+
+---
+
+## 🎮 Examples & Tutorials
+
+- **[`crates/opts-bevy/examples/load_sco.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_sco.rs):** Runnable 3D scenery object loader scene.
+- **[`crates/opts-bevy/examples/load_bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_bus.rs):** Runnable full bus model loader with interactive camera preset switching.
+- **[`crates/opts-bevy/examples/drive_bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/drive_bus.rs):** Interactive playable 12m transit bus driving simulation with telemetry HUD and chase/cockpit cameras.
+- **Tutorial: [Loading Your First `.sco`](../src/tutorials/first-sco.md)**
+- **Tutorial: [Loading Your First Bus Model](../src/tutorials/first-bus.md)**
 
 ---
 
@@ -121,7 +163,8 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 | Dependency | Purpose |
 | :--- | :--- |
 | `bevy` | Core engine, `Mesh` asset definitions, `AssetLoader` trait, and `Plugin` lifecycle. |
-| `opts-core` | Source 3D mesh representations (`O3d`, `XMesh`, `XSubMesh`) and parsers (`parse_o3d`, `parse_x`). |
+| `opts-core` | Source 3D mesh representations (`O3d`, `XMesh`, `XSubMesh`), scenery (`SceneryObject`, `SplineProfile`), vehicles (`BusManifest`, `ModelConfig`), and parsers. |
+| `opts-sim` | Authoritative vehicle dynamics simulation engine (`VehicleSimulation`, `DrivetrainModel`, `AxleState`). |
 | `ddsfile` | DirectDraw Surface (`.dds`) header decoding and block compression support. |
 | `image` | Fallback decoding for `.bmp`, `.tga`, `.png`, and `.jpg` image formats. |
 | `glam` | Vector and matrix math primitives compatible with Bevy math. |
@@ -142,6 +185,8 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 
 - [Coordinate Systems & Math](../src/architecture/coordinates.md)
 - [Milestone M-0018: 3D Mesh Asset Loaders & Conversion Bridge](../src/roadmap/phase-3/M-0018.md)
+- [Milestone M-0019: Texture Asset Loaders & Material Bridge](../src/roadmap/phase-3/M-0019.md)
+- [Milestone M-0020: Spatial Coordinate Conversion Systems](../src/roadmap/phase-3/M-0020.md)
 - [`.o3d` Binary Mesh Specification](../src/formats/binary/o3d.md)
 - [DirectX `.x` Mesh Specification](../src/formats/binary/x.md)
 - [Phase 3 Roadmap](../src/roadmap/phase-3/README.md)

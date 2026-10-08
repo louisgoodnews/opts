@@ -81,9 +81,26 @@ impl Plugin for OptsCoordsPlugin {
     }
 }
 
-/// Unified Bevy plugin that bundles mesh loaders, texture loaders, and coordinate conversion systems.
+use crate::scenery::{SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset};
+
+/// Bevy plugin that registers native asset loaders for OMSI scenery objects (`.sco`) and splines (`.sli`).
+#[derive(Default)]
+pub struct OptsSceneryPlugin;
+
+impl Plugin for OptsSceneryPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_asset::<SceneryObjectAsset>()
+            .init_asset::<SplineProfileAsset>()
+            .init_asset_loader::<ScoAssetLoader>()
+            .init_asset_loader::<SliAssetLoader>();
+    }
+}
+
+pub use crate::vehicle_sim::OptsVehiclePlugin;
+
+/// Unified Bevy plugin that bundles mesh loaders, texture loaders, scenery loaders, coordinate conversion, and vehicle simulation systems.
 ///
-/// Registers `.o3d`, `.x`, `.dds`, `.bmp`, and `.tga` asset loaders and coordinate sync with the Bevy `App`.
+/// Registers `.o3d`, `.x`, `.dds`, `.bmp`, `.tga`, `.sco`, and `.sli` asset loaders, coordinate sync, and vehicle physics with the Bevy `App`.
 ///
 /// # Usage
 ///
@@ -103,6 +120,8 @@ impl Plugin for OptsAssetPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(OptsMeshPlugin)
             .add_plugins(OptsMaterialPlugin)
-            .add_plugins(OptsCoordsPlugin);
+            .add_plugins(OptsCoordsPlugin)
+            .add_plugins(OptsSceneryPlugin)
+            .add_plugins(OptsVehiclePlugin);
     }
 }

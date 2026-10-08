@@ -10,6 +10,7 @@ repository.workspace = true
 [dependencies]
 # Internal
 opts-core = { workspace = true }
+opts-sim = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }

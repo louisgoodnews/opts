@@ -9,6 +9,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 ## Milestones
 
 - [M-0022 — Vehicle Physics & Kinematics Scaffold (`opts-sim`)](M-0022.md) — 🟢 Complete (physics spec & simulation core)
+- [M-0023 — Bevy Vehicle ECS Simulation Bridge & Interactive Driving (`opts-bevy`)](M-0023.md) — 🟡 In Progress
 
 ## Checklist
 
@@ -19,9 +20,10 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [ ] **🗺️ World & Map Loading**
   - [ ] Document the architecture of the map streaming system.
   - [ ] Implement systems in `opts-game` to load a full OMSI map tile.
-- [ ] **🛞 Vehicle Physics & Control** — [M-0022](M-0022.md)
+- [ ] **🛞 Vehicle Physics & Control** — [M-0022](M-0022.md) & [M-0023](M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
+  - [ ] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.

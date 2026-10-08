@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-08 by Agent (P-006 closeout for M-0022: Vehicle Physics & Kinematics Scaffold)_
+_Last updated: 2026-10-08 by Agent (P-004 board update for M-0023: Bevy Vehicle ECS Bridge)_
 
 ---
 
@@ -95,7 +95,16 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- `[ ]` None
+- [ ] Author ECS bridge architectural specification — docs/src/architecture/vehicle-ecs-bridge.md (M-0023, spec)
+- [ ] Add opts-sim workspace dependency to opts-bevy — crates/opts-bevy/Cargo.toml (M-0023, code)
+- [ ] Implement VehicleController and ECS components — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
+- [ ] Implement fixed-timestep physics stepping & input systems — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
+- [ ] Implement chassis & wheel visual transform synchronization — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
+- [ ] Implement vehicle camera tracking rig and viewpoint system — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
+- [ ] Register OptsVehiclePlugin and export types — crates/opts-bevy/src/plugin.rs, lib.rs (M-0023, code)
+- [ ] Create interactive driving demonstration — crates/opts-bevy/examples/drive_bus.rs (M-0023, code)
+- [ ] Implement headless ECS vehicle simulation tests — crates/opts-bevy/tests/vehicle_sim_sync.rs (M-0023, test)
+- [ ] Update opts-bevy crate documentation — docs/crates/opts-bevy.md (M-0023, docs)
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -128,7 +137,6 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### Phase 4 — Simulation & Transit Follow-ups
 
-- [ ] 🔴 **Bevy simulation bridge ECS plugin (`opts-bevy`)** — Connect `VehicleSimulation` state to Bevy entity `Transform` and wheel mesh rotation components (Phase 4, code, M-0022)
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for AI/passenger traversal in `opts-sim` (Phase 4, code)
 - [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code)
 

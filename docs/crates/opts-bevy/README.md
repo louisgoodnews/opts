@@ -31,13 +31,17 @@ App::new()
     .run();
 ```
 
-- `OptsAssetPlugin`, `OptsMeshPlugin`, `OptsMaterialPlugin`, `OptsCoordsPlugin`: Registers loaders, materials, and transform sync systems.
+- `OptsAssetPlugin`, `OptsMeshPlugin`, `OptsMaterialPlugin`, `OptsCoordsPlugin`, `OptsSceneryPlugin`, `OptsVehiclePlugin`: Registers loaders, materials, scenery assets, coordinate bridges, and vehicle physics.
+- `VehicleController`, `PlayerVehicle`, `WheelVisual`, `VehicleCameraRig`: Dynamic vehicle physics ECS components and systems.
 - `omsi_to_bevy_pos`, `bevy_to_omsi_pos`, `omsi_euler_to_bevy_quat`, `bevy_quat_to_omsi_euler`: Pure spatial conversion functions ($Z$-up to $Y$-up).
+- `camera_preset_to_bevy_transform`: Vehicle camera view preset projection bridge (`[add_camera_driver]`, `[add_camera_pax]`).
 - `OmsiCoords`, `OmsiTransform`, `sync_coordinate_transforms`: ECS components and transform synchronization systems.
 - `o3d_to_bevy_mesh`, `x_submesh_to_bevy_mesh`, `x_mesh_to_combined_bevy_mesh`: Coordinate conversion and mesh builders.
 - `o3d_material_to_standard_material`, `x_material_to_standard_material`: Translates Direct3D materials into Bevy `StandardMaterial`.
 - `load_bevy_image`, `dds_to_bevy_image`, `sniff_image_format`: Content sniffing and texture decoders.
-- `O3dAssetLoader`, `XAssetLoader`, `DdsAssetLoader`, `OptsImageLoader`: Native Bevy asset loaders.
+- `O3dAssetLoader`, `XAssetLoader`, `DdsAssetLoader`, `OptsImageLoader`, `ScoAssetLoader`, `SliAssetLoader`: Native Bevy asset loaders.
+- `spawn_scenery_object`, `extrude_spline_profile`: Scenery object entity hierarchy and procedural spline mesh extrusion.
+- `spawn_vehicle_model`, `BusVehicle`: Bus vehicle entity hierarchy spawning, LOD meshes, headlights/interior lights, and camera switching.
 
 ## 📦 Dependencies — and why
 
@@ -45,6 +49,7 @@ App::new()
 | :--- | :--- |
 | `bevy` | Core engine, `Mesh`, `Image`, `StandardMaterial`, `AssetLoader` trait, ECS |
 | `opts-core` | Shared models (`O3d`, `XMesh`, `Material`) and format parsers |
+| `opts-sim` | Vehicle physics and dynamics engine (`VehicleSimulation`) |
 | `ddsfile` | DirectDraw Surface (`.dds`) decoding and block-compression support |
 | `image` | Fallback decoding for `.bmp`, `.tga`, `.png`, `.jpg` |
 | `glam` | Math types |

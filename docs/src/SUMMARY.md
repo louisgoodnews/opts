@@ -30,7 +30,13 @@
   - [M-0015: World & Scenery Parsers](roadmap/phase-2/M-0015.md)
   - [M-0016: DirectX .x Legacy Mesh Parser](roadmap/phase-2/M-0016.md)
 - [Phase 3: Bevy Integration](roadmap/phase-3/README.md)
+  - [M-0018: 3D Mesh Loaders](roadmap/phase-3/M-0018.md)
+  - [M-0019: Material & Texture Bridge](roadmap/phase-3/M-0019.md)
+  - [M-0020: Spatial Coordinate Systems](roadmap/phase-3/M-0020.md)
+  - [M-0021: Material Design 3 GUI Widget Library](roadmap/phase-3/M-0021.md)
 - [Phase 4: Simulation](roadmap/phase-4/README.md)
+  - [M-0022: Vehicle Physics & Kinematics](roadmap/phase-4/M-0022.md)
+  - [M-0023: Vehicle ECS Simulation Bridge](roadmap/phase-4/M-0023.md)
 - [Phase 5: Ecosystem](roadmap/phase-5/README.md)
 
 ---
@@ -47,6 +53,7 @@
 - [Vehicle Playability Rules](architecture/playability-rules.md)
 - [Ego Perspective & Character Locomotion](architecture/ego-perspective.md)
 - [GUI Design System](architecture/gui-design-system.md)
+- [Vehicle ECS Simulation Bridge](architecture/vehicle-ecs-bridge.md)
 
 
 ---

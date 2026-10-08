@@ -155,10 +155,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🗺️ World & Map Loading**
   - [ ] Document the architecture of the map streaming system.
   - [ ] Implement systems in `opts-game` to load a full OMSI map tile.
-- [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md)
+- [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md) & [M-0023](docs/src/roadmap/phase-4/M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
-  - [ ] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0022)
+  - [ ] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
