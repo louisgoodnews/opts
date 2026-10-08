@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-08 by Agent (P-004 board update for M-0023: Bevy Vehicle ECS Bridge)_
+_Last updated: 2026-10-08 by Agent (P-006 closeout for M-0023: Bevy Vehicle ECS Bridge)_
 
 ---
 
@@ -95,16 +95,7 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- [ ] Author ECS bridge architectural specification — docs/src/architecture/vehicle-ecs-bridge.md (M-0023, spec)
-- [ ] Add opts-sim workspace dependency to opts-bevy — crates/opts-bevy/Cargo.toml (M-0023, code)
-- [ ] Implement VehicleController and ECS components — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
-- [ ] Implement fixed-timestep physics stepping & input systems — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
-- [ ] Implement chassis & wheel visual transform synchronization — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
-- [ ] Implement vehicle camera tracking rig and viewpoint system — crates/opts-bevy/src/vehicle_sim.rs (M-0023, code)
-- [ ] Register OptsVehiclePlugin and export types — crates/opts-bevy/src/plugin.rs, lib.rs (M-0023, code)
-- [ ] Create interactive driving demonstration — crates/opts-bevy/examples/drive_bus.rs (M-0023, code)
-- [ ] Implement headless ECS vehicle simulation tests — crates/opts-bevy/tests/vehicle_sim_sync.rs (M-0023, test)
-- [ ] Update opts-bevy crate documentation — docs/crates/opts-bevy.md (M-0023, docs)
+- `[ ]` None
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -137,6 +128,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### Phase 4 — Simulation & Transit Follow-ups
 
+- [ ] 🟡 **AI traffic vehicle controller system** — Implement autonomous waypoint and spline path following in `opts-sim` / `opts-bevy` (Phase 4, code)
+- [ ] 🟡 **Vehicle spatial audio simulation bridge** — Map engine RPM, retarder, and pneumatic brake events to Bevy spatial audio (Phase 4, code)
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for AI/passenger traversal in `opts-sim` (Phase 4, code)
 - [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code)
 
@@ -182,6 +175,19 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-08 — M-0023 (Bevy Vehicle ECS Simulation Bridge & Interactive Driving, complete)**
+
+- `[x]` 🔴 **Author ECS bridge architectural specification** (M-0023, spec) — Authored `docs/src/architecture/vehicle-ecs-bridge.md` detailing domain simulation isolation, FixedUpdate schedule execution, coordinate transformations, and wheel hierarchy animation.
+- `[x]` 🟡 **Add opts-sim workspace dependency to opts-bevy** (M-0023, code) — Integrated `opts-sim` into `crates/opts-bevy/Cargo.toml`.
+- `[x]` 🔴 **Implement VehicleController and ECS components** (M-0023, code) — Implemented `VehicleController`, `PlayerVehicle`, `WheelVisual`, `WheelSide`, `VehicleCameraRig`, `VehicleCameraMode`, `VehicleInputConfig` in `crates/opts-bevy/src/vehicle_sim.rs`.
+- `[x]` 🔴 **Implement fixed-timestep physics stepping & input systems** (M-0023, code) — Implemented `vehicle_physics_step_system` (60 Hz deterministic stepping in `FixedUpdate`) and `vehicle_input_system` (WASD/Arrows, Space handbrake, E/N/R gear shifts).
+- `[x]` 🔴 **Implement chassis & wheel visual transform synchronization** (M-0023, code) — Implemented `vehicle_transform_sync_system` mapping simulation $(x, y, \psi)$ to Bevy 3D transforms via `omsi_to_bevy_pos` and `wheel_transform_sync_system` animating steering deflection and wheel rolling spin.
+- `[x]` 🟡 **Implement vehicle camera tracking rig and viewpoint system** (M-0023, code) — Implemented `vehicle_camera_system` supporting exterior chase tracking and interior cockpit eye viewpoint with F1/F2 toggle.
+- `[x]` 🔴 **Register OptsVehiclePlugin and export types** (M-0023, code) — Registered plugin and systems in `crates/opts-bevy/src/plugin.rs` and re-exported in `lib.rs`.
+- `[x]` 🔴 **Create interactive driving demonstration** (M-0023, code) — Built runnable application `crates/opts-bevy/examples/drive_bus.rs` with drivable 12m transit bus, asphalt terrain, telemetry HUD, and camera controls.
+- `[x]` 🔴 **Implement headless ECS vehicle simulation tests** (M-0023, test) — Implemented integration test suite `crates/opts-bevy/tests/vehicle_sim_sync.rs` (4 tests passing).
+- `[x]` 🟡 **Update opts-bevy crate documentation** (M-0023, docs) — Documented vehicle ECS bridge APIs in `docs/crates/opts-bevy.md` and `docs/crates/opts-bevy/README.md`.
 
 **2026-10-08 — M-0022 (Vehicle Physics & Kinematics Scaffold, complete)**
 
