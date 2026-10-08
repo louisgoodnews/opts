@@ -43,6 +43,11 @@
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)
+- [Path Catalogue Schema](architecture/catalogue-schema.md)
+- [Vehicle Playability Rules](architecture/playability-rules.md)
+- [Ego Perspective & Character Locomotion](architecture/ego-perspective.md)
+- [GUI Design System](architecture/gui-design-system.md)
+
 
 ---
 
@@ -74,6 +79,7 @@
   - [Fonts](formats/text/fonts.md)
   - [`.hof` — Bus Stops & Routes](formats/text/vehicles/hof.md)
   - [`.org` — Number Lists](formats/text/org.md)
+  - [`.hum` — Human Characters](formats/text/humans.md)
   - [Misc. Extension Types](formats/text/misc-types.md)
   - [Vehicle-side Corpus Audit](formats/text/vehicles/vehicle-corpus-audit.md)
 - [Binary Formats](formats/binary/README.md)
@@ -120,15 +126,25 @@
 - [ADR-0001: Why Bevy and Rust?](adr/0001-why-bevy-and-rust.md)
 - [ADR-0002: Clean-Room Reverse Engineering Policy](adr/0002-clean-room-policy.md)
 
+# 🎓 Tutorials
+
+- [Loading Your First `.sco`](tutorials/first-sco.md)
+- [Loading Your First Bus Model](tutorials/first-bus.md)
+
+---
+
+# 🚏 Simulation
+
+- [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
+
 ---
 
 <!-- Placeholder sections with no written chapters yet — commented out until implemented -->
 <!--
-# 🚏 Simulation
+# 🚏 Simulation (Planned)
 
 - [Overview]()
 - [Simulation Loop]()
-- [Vehicle Physics]()
 - [Passenger Model]()
 - [Routing Algorithm]()
 - [Transit Network]()
@@ -137,7 +153,6 @@
 
 # 🎓 Tutorials
 
-- [Loading Your First `.sco`]()
 - [Loading a Bus with Textures]()
 - [Building a Custom AssetLoader]()
 - [Creating a Test Fixture]()

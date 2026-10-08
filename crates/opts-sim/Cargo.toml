@@ -12,7 +12,7 @@ repository.workspace = true
 opts-core = { workspace = true }
 
 # Math & Data
-glam = { workspace = true }
+glam = { workspace = true, features = ["serde"] }
 petgraph = { workspace = true }
 
 # Serialization (for save games)

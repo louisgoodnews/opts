@@ -5,27 +5,33 @@
 | **Layer** | L4 · Simulation |
 | **Role** | facade + scheduler |
 | **Kind** | lib |
-| **Status** | ⬜ Skeleton |
-| **Proposed fate** | ✅ Keep — becomes facade over `opts-sim-*` |
-| **Last Updated** | 2026-10-04 |
+| **Status** | 🟢 Active Implementation |
+| **Proposed fate** | ✅ Keep — core vehicle dynamics & simulation engine |
+| **Last Updated** | 2026-10-08 |
 
 ---
 
 ## 🎯 Purpose
 
-Owns the deterministic fixed-timestep **simulation loop** and composes simulation systems (physics, vehicle systems, transit, passengers, traffic, world) into one runnable world — without Bevy.
+Owns the deterministic fixed-timestep simulation loop and core vehicle dynamics, multi-axle Ackermann kinematics, powertrain propulsion, braking systems, and suspension compliance — completely decoupled from Bevy.
 
 ## 📤 Public API (high level)
 
-> [!NOTE]
-> Planned surface — nothing is implemented yet.
-
 ```rust
-let mut sim = opts_sim::Simulation::builder()
-    .with_default_systems()          // feature-gated members
-    .seed(42)
-    .build(world_model);
-sim.step(Tick::fixed());
+use opts_sim::{VehicleSimulation, VehicleInputs, GearPosition};
+
+// Instantiate from parsed OMSI .bus manifest
+let mut sim = VehicleSimulation::from_manifest(&manifest);
+
+// Apply driver inputs
+sim.inputs.set_gear(GearPosition::Drive);
+sim.inputs.set_parking_brake(false);
+sim.inputs.set_throttle(1.0);
+sim.inputs.set_steering(0.2); // Right turn
+
+// Step simulation at 60 Hz
+sim.step(1.0 / 60.0);
+println!("Speed: {:.1} km/h", sim.chassis.forward_speed_km_h());
 ```
 
 ## 📦 Dependencies — and why
