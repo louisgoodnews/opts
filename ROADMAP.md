@@ -16,8 +16,10 @@
 | 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟢 specs drafted & mutation tested; review ongoing | [`phase-1/`](docs/src/roadmap/phase-1/README.md) |
 | ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | 🟢 complete | [`phase-2/`](docs/src/roadmap/phase-2/README.md) |
 | 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering, GUI foundation | 🟢 complete | [`phase-3/`](docs/src/roadmap/phase-3/README.md) |
-| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — M-0022 active | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
-| 🚀 **Phase 5** — Tooling, Polish & Community | CLI, user/modding docs, release | ⏳ not started | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
+| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — M-0022 and M-0023 complete | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
+| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | ⏳ planned | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
+| 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned | [`phase-6/`](docs/src/roadmap/phase-6/README.md) |
+| 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](docs/src/roadmap/phase-7/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -152,16 +154,18 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🚌 Phase 4: `opts-sim` & `opts-game` (The Simulation)
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
-- [ ] **🗺️ World & Map Loading**
-  - [ ] Document the architecture of the map streaming system.
-  - [ ] Implement systems in `opts-game` to load a full OMSI map tile.
+- [ ] **🗺️ World & Map Loading** — [M-0024](docs/src/roadmap/phase-4/M-0024.md) & [M-0025](docs/src/roadmap/phase-4/M-0025.md)
+  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`).
+  - [ ] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018).
+  - [ ] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018).
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md) & [M-0023](docs/src/roadmap/phase-4/M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
+  - [ ] Implement OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](docs/src/roadmap/phase-4/M-0026.md) — traces to F-008, F-019).
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
-  - [ ] Implement vehicle audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic brake pressure to spatial audio.
+  - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](docs/src/roadmap/phase-4/M-0027.md) — traces to F-009, F-020).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
   - [ ] Implement bus stop logic and passenger boarding/alighting.
@@ -172,28 +176,51 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 ---
 
-## 🚀 Phase 5: Tooling, Polish & Community (The Ecosystem)
-*Goal: Make OPTS accessible to users and modders, and prepare for public release.*
+## ⚡ Phase 5: Tooling, Performance & Optimization
+*Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-- [ ] **🧰 `opts-tools` CLI**
-  - [ ] Document the CLI usage in `docs/src/reference/opts-tools.md`.
-  - [ ] Implement `opts inspect <file>` to validate OMSI assets.
-  - [ ] Implement `opts convert <file> --output <gltf>` to export OMSI assets to standard formats.
-- [ ] **📘 User & Modding Docs**
-  - [ ] Write `docs/src/user/installation.md` and `docs/src/user/controls.md`.
-  - [ ] Write `docs/src/modding/asset_pipeline.md`: How modders can structure assets for OPTS.
-- [ ] **⚡ Performance & Optimization**
-  - [ ] Document LOD (Level of Detail), frustum culling, and occlusion culling strategies.
-  - [ ] Implement async asset loading to prevent frame drops.
-- [ ] **📦 Release**
-  - [ ] Set up cross-platform CI builds (Windows, Linux, macOS).
-  - [ ] Publish v0.1.0-alpha to GitHub Releases.
+- [ ] **⚡ Performance & Optimization** — [M-0028](docs/src/roadmap/phase-5/README.md) & [M-0029](docs/src/roadmap/phase-5/README.md)
+  - [ ] Implement Criterion microbenchmark suite in `opts-benchmark` for format parsers and vehicle physics step (M-0028 — traces to F-021).
+  - [ ] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`.
+  - [ ] Implement distance-based dynamic LOD mesh switching and shadow culling in `opts-bevy` (M-0029).
+  - [ ] Implement async background asset streaming to prevent frame drops during tile boundary crossings.
+- [ ] **🧰 Developer CLI Tooling** — [M-0030](docs/src/roadmap/phase-5/README.md)
+  - [ ] Document CLI command specifications in `docs/src/reference/opts-tools.md`.
+  - [ ] Implement `opts inspect <file>` to validate OMSI asset syntax and detect corrupt files (M-0030).
+  - [ ] Implement `opts convert <file> --output <gltf>` to export legacy meshes to standard formats.
+
+---
+
+## 🌐 Phase 6: Modding Ecosystem & Community Content
+*Goal: Empower content creators to build, package, validate, and share vehicles, scenery objects, maps, and repaints.*
+
+- [ ] **📦 Modding Infrastructure** — [M-0031](docs/src/roadmap/phase-6/README.md) & [M-0032](docs/src/roadmap/phase-6/README.md)
+  - [ ] Specify mod directory layout, virtual filesystem mounting, and load priority rules in `docs/src/architecture/modding-vfs.md` (M-0031).
+  - [ ] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032).
+- [ ] **📘 Creator Documentation & Tooling** — [M-0033](docs/src/roadmap/phase-6/README.md)
+  - [ ] Author `docs/src/modding/overview.md` and `docs/src/modding/asset-pipeline.md`.
+  - [ ] Author vehicle and map creation guides for content authors.
+  - [ ] Implement mod package validation linter in `opts-tools` (M-0033).
+
+---
+
+## 🚀 Phase 7: Release & Cross-Platform Distribution
+*Goal: Package, validate, and distribute production-ready binaries of OPTS across Linux and Windows platforms.*
+
+- [ ] **⚙️ Release Engineering** — [M-0034](docs/src/roadmap/phase-7/README.md)
+  - [ ] Configure multi-platform GitHub Actions release matrix for Linux (`x86_64-unknown-linux-gnu`) and Windows (`x86_64-pc-windows-msvc`) (M-0034 — traces to F-017).
+  - [ ] Implement automated release workflow generating compressed binary packages with SHA-256 checksums.
+- [ ] **📖 User Documentation & Settings UI** — [M-0035](docs/src/roadmap/phase-7/README.md)
+  - [ ] Author end-user installation, controls, and troubleshooting manuals (`docs/src/user/`).
+  - [ ] Implement in-game settings dialog in `opts-gui` for graphics preferences, audio volume, and input rebinding (M-0035).
+- [ ] **🏁 Milestone Release** — [M-0036](docs/src/roadmap/phase-7/README.md)
+  - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).
 
 ---
 
 ## 🧹 Deferred Cleanup
 
-*Small items discovered while closing M-0006; none warrants a milestone.*
+*Small items discovered during milestones and critical reviews; none warrants a full milestone.*
 
 - [ ] Add a mutation test for `[matl_alpha]` modes 0–3 and `[light_enh_2]` field order to the kit (M-0006)
 - [ ] Add a case-sensitivity probe (`[NIGHTMAPMODE]`, `$CUTEND`) to the kit (M-0006)
@@ -205,6 +232,18 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] Decide whether to obtain the unofficial SDK intersection manual the wiki cites (not installed; legal status unchecked) (M-0006)
 - [x] Write the 36 chapters that `SUMMARY.md` lists as mdBook *draft chapters* — reconciled in freeze pass: 9 stubs created in Architecture/Contributing, 5 unwritten sections commented out (2026-10-06)
 - [x] Set a real date in ADR-0002 (`2026-10-04`) (M-0007 / freeze pass)
-- [ ] Align the CI/Pages branch (`main`) with the repository's actual default branch (`master` locally) before the first push (M-0007)
+- [x] Align the CI/Pages branch (`main`) with the repository's actual default branch (`master` locally) (F-014 — resolved 2026-10-08)
 - [x] Remove or replace the 0-byte `docs/crates/book.toml` (populated in M-0007)
 - [ ] Install `mdbook` and run `mdbook build docs` once to confirm the book builds with `create-missing = false` (M-0007)
+- [ ] Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-core/src/formats/x/parse.rs:388`) (F-001)
+- [ ] Audit and prune premature stub crates from workspace `members` in root `Cargo.toml` (F-002)
+- [ ] Provide `opts_bevy::testing::TestAppBuilder` helper for headless `FixedUpdate` time stepping (F-003)
+- [ ] Decompose monolithic parser (1,061 lines) and 546-line `from_text` function in `crates/opts-core/src/formats/scenery/sco.rs` (F-004)
+- [ ] Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005)
+- [ ] Split `bus.rs` (583 lines) and `world_parse.rs` (689 lines) to comply with 500-line file limit (F-006)
+- [ ] Consolidate entity spawning boilerplate between `spawn` and `spawn_child` in `opts-gui` widgets (F-007)
+- [ ] Execute link normalization sweep across `docs/src/roadmap/README.md` and meta reports (F-011)
+- [ ] Reconcile stale Open Questions in promoted specifications (`o3d.md`, `x.md`, `bus.md`) into Resolved Questions (F-012)
+- [ ] Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015)
+- [ ] Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
+- [ ] Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)

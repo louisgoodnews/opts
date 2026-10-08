@@ -37,7 +37,13 @@
 - [Phase 4: Simulation](roadmap/phase-4/README.md)
   - [M-0022: Vehicle Physics & Kinematics](roadmap/phase-4/M-0022.md)
   - [M-0023: Vehicle ECS Simulation Bridge](roadmap/phase-4/M-0023.md)
-- [Phase 5: Ecosystem](roadmap/phase-5/README.md)
+  - [M-0024: OMSI Map Tile Grid & Chunk Streaming](roadmap/phase-4/M-0024.md)
+  - [M-0025: Terrain Heightmap & Water Mesh Generation](roadmap/phase-4/M-0025.md)
+  - [M-0026: OMSI Script Stack VM & Dynamic Variables](roadmap/phase-4/M-0026.md)
+  - [M-0027: Vehicle & Environmental Spatial Audio](roadmap/phase-4/M-0027.md)
+- [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
+- [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
+- [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
 ---
 
@@ -143,6 +149,18 @@
 # 🚏 Simulation
 
 - [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
+
+---
+
+# 🔍 Meta & Audits
+
+- [Critical Review (2026-10-08)](meta/critical-review-2026-10-08.md)
+- [Documentation Freeze (2026-10-06)](meta/documentation-freeze-2026-10-06.md)
+- [Link Integrity Audit](meta/link-integrity.md)
+- [Format Status Audit](meta/status-audit.md)
+- [Provenance Audit](meta/provenance-audit.md)
+- [Roadmap Reconciliation](meta/roadmap-reconciliation.md)
+- [Cross-Reference Graph](meta/cross-references.md)
 
 ---
 

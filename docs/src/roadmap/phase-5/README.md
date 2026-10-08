@@ -1,31 +1,26 @@
-# 🚀 Phase 5: Tooling, Polish & Community (The Ecosystem)
+# ⚡ Phase 5: Tooling, Performance & Optimization
 
-*Goal: Make OPTS accessible to users and modders and prepare a public release.*
+*Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-**Status:** ⏳ Not started — depends on Phase 4
+**Status:** ⏳ Planned — depends on Phase 4
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
 ## Milestones
 
-_No milestone has been planned for this phase yet. The next milestone is created by prompt P-002 when the previous phase's blocking items are resolved._
+- [M-0028 — Performance Benchmark Suite & Profiling Harness (`opts-benchmark`)](M-0028.md) — ⏳ Planned (Criterion parser benchmarks, physics step profiling)
+- [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems (`opts-bevy`)](M-0029.md) — ⏳ Planned (LOD switching, shadow distance culling, mesh instancing)
+- [M-0030 — Asset Validation & Inspection CLI Tooling (`opts-cli`, `opts-tools`)](M-0030.md) — ⏳ Planned (asset validator, header dumper, glTF export)
 
 ## Checklist
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*
 
-*Goal: Make OPTS accessible to users and modders, and prepare for public release.*
-
-- [ ] **🧰 `opts-tools` CLI**
-  - [ ] Document the CLI usage in `docs/src/reference/opts-tools.md`.
-  - [ ] Implement `opts inspect <file>` to validate OMSI assets.
-  - [ ] Implement `opts convert <file> --output <gltf>` to export OMSI assets to standard formats.
-- [ ] **📘 User & Modding Docs**
-  - [ ] Write `docs/src/user/installation.md` and `docs/src/user/controls.md`.
-  - [ ] Write `docs/src/modding/asset_pipeline.md`: How modders can structure assets for OPTS.
 - [ ] **⚡ Performance & Optimization**
-  - [ ] Document LOD (Level of Detail), frustum culling, and occlusion culling strategies.
-  - [ ] Implement async asset loading to prevent frame drops.
-- [ ] **📦 Release**
-  - [ ] Set up cross-platform CI builds (Windows, Linux, macOS).
-  - [ ] Publish v0.1.0-alpha to GitHub Releases.
+  - [ ] Implement Criterion microbenchmarks for all format parsers and physics step in `crates/opts-benchmark`.
+  - [ ] Document LOD (Level of Detail), frustum culling, and occlusion strategies in `docs/src/architecture/lod-culling.md`.
+  - [ ] Implement distance-based LOD mesh switching in `opts-bevy`.
+  - [ ] Implement async background asset streaming to prevent frame drops during tile boundary crossings.
+- [ ] **🧰 Developer CLI Tooling**
+  - [ ] Implement `opts inspect <file>` to validate OMSI asset syntax and report corruption.
+  - [ ] Implement `opts convert <file> --output <gltf>` to export legacy meshes to standard formats.

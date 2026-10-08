@@ -105,7 +105,10 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] None
+- [ ] 🔴 **Author script VM bytecode and stack architecture specification** (M-0026, spec) — Specify VM instruction set, stack operations, variable mapping, and timing contracts in `docs/src/architecture/script-vm.md` (traces to F-008, F-019).
+- [ ] 🔴 **Author map streaming architecture specification** (M-0024, spec) — Specify tile paging radius, memory cache budgets, and async task pipelines in `docs/src/architecture/map-streaming.md` (traces to F-018).
+- [ ] 🟡 **Author terrain & water rendering architecture specification** (M-0025, spec) — Specify vertex generation, normal calculation, edge stitching, and elevation query interface in `docs/src/architecture/terrain-rendering.md` (traces to F-018).
+- [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — Document curve interpolation, audio emitter hierarchy, and performance limits in `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 
 ---
 
@@ -126,10 +129,31 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
+#### M-0026 — OMSI Script Stack VM (`opts-sim`)
+- [ ] 🔴 **Implement .osc lexer and bytecode compiler** (M-0026, code) — Parse script token streams to structured bytecode opcodes.
+- [ ] 🔴 **Implement ScriptVm stack execution engine** (M-0026, code) — Implement stack machine, call frames, arithmetic, and control flow branching.
+- [ ] 🔴 **Implement dynamic VariableTable and macro dispatcher** (M-0026, code) — Manage fast numeric/string variable arrays, string interning, and system callbacks.
+- [ ] 🔴 **Implement script VM integration test suite** (M-0026, test) — Verify door logic, gearbox selector, and odometer script sets against community standards.
+
+#### M-0024 — OMSI Map Tile Grid & Chunk Streaming (`opts-game`, `opts-bevy`)
+- [ ] 🔴 **Implement TileGridManager and coordinate tracking** (M-0024, code) — Track player grid coordinates and calculate adjacent tile load radii.
+- [ ] 🔴 **Implement tile async streaming and entity grouping** (M-0024, code) — Dispatch background parse jobs via `AsyncComputeTaskPool` and manage `TileChunk` entity hierarchy.
+- [ ] 🟡 **Implement chunk eviction and resource despawning** (M-0024, code) — Gracefully unload distant scenery, meshes, and collision colliders outside active radius.
+
+#### M-0025 — Terrain Heightmap & Water Mesh Generation (`opts-core`, `opts-bevy`)
+- [ ] 🟡 **Implement terrain elevation mesh tessellation** (M-0025, code) — Generate indexed triangle strip meshes with smoothed vertex normals from `.map.terrain`.
+- [ ] 🟡 **Implement multi-layer ground texture splatting** (M-0025, code) — Blend ground textures via vertex alpha layers.
+- [ ] 🟡 **Implement GroundElevationQuery raycasting interface** (M-0025, code) — Provide $O(1)$ height queries for vehicle suspension and wheel raycasting.
+- [ ] 🟡 **Implement water surface planar meshes** (M-0025, code) — Construct translucent water planes from `.map.water` level data.
+
+#### M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)
+- [ ] 🟡 **Implement SoundConfigLoader and piecewise curve evaluator** (M-0027, code) — Parse `sound.cfg` and sample non-linear volume/pitch curves.
+- [ ] 🟡 **Implement VehicleAudioEmitter and telemetry sync** (M-0027, code) — Bind vehicle engine RPM, road speed, and pneumatic pressure to Bevy spatial audio sinks.
+- [ ] 🟡 **Implement one-shot trigger system and cockpit acoustics** (M-0027, code) — Trigger switch, door, and horn sounds with interior/exterior attenuation filtering.
+
 #### Phase 4 — Simulation & Transit Follow-ups
 
 - [ ] 🟡 **AI traffic vehicle controller system** — Implement autonomous waypoint and spline path following in `opts-sim` / `opts-bevy` (Phase 4, code)
-- [ ] 🟡 **Vehicle spatial audio simulation bridge** — Map engine RPM, retarder, and pneumatic brake events to Bevy spatial audio (Phase 4, code)
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for AI/passenger traversal in `opts-sim` (Phase 4, code)
 - [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code)
 
@@ -166,9 +190,21 @@ _Small items discovered during implementation that don't warrant a milestone._
 - `[x]` 🟢 Convert `crates/*/src/main.rs` to `lib.rs` for library crates (chore) — verified: library crates use `lib.rs`
 - `[ ]` 🟢 Add `workspace.dependencies` for `clap` when `opts-tools` needs it (chore)
 - `[x]` 🟢 Set a real date in ADR-0002 (2026-10-04) (chore)
-- `[ ]` 🟢 Align the CI/Pages branch (`main`) with the repository's default branch (`master` locally) (chore)
+- `[x]` 🟢 Align the CI/Pages branch (`main`) with the repository's default branch (`master` locally) (F-014 — resolved 2026-10-08)
 - `[x]` 🟢 Remove or replace the 0-byte `docs/crates/book.toml` (chore) — Populated in M-0007
 - `[ ]` 🟢 Install `mdbook` and run `mdbook build docs` once (chore)
+- `[ ]` 🟡 Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-core/src/formats/x/parse.rs:388`) (F-001)
+- `[ ]` 🟠 Audit and prune premature stub crates from workspace `members` in root `Cargo.toml` (F-002)
+- `[ ]` 🟡 Provide `opts_bevy::testing::TestAppBuilder` helper for headless `FixedUpdate` time stepping (F-003)
+- `[ ]` 🟠 Decompose monolithic parser (1,061 lines) and 546-line `from_text` function in `crates/opts-core/src/formats/scenery/sco.rs` (F-004)
+- `[ ]` 🟡 Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005)
+- `[ ]` 🟡 Split `bus.rs` (583 lines) and `world_parse.rs` (689 lines) to comply with 500-line file limit (F-006)
+- `[ ]` 🟢 Consolidate entity spawning boilerplate between `spawn` and `spawn_child` in `opts-gui` widgets (F-007)
+- `[ ]` 🟠 Execute link normalization sweep across `docs/src/roadmap/README.md` and meta reports (F-011)
+- `[ ]` 🟡 Reconcile stale Open Questions in promoted specifications (`o3d.md`, `x.md`, `bus.md`) into Resolved Questions (F-012)
+- `[ ]` 🟠 Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015)
+- `[ ]` 🟡 Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
+- `[ ]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)
 
 ---
 

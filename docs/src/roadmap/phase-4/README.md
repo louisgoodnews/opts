@@ -10,6 +10,10 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - [M-0022 — Vehicle Physics & Kinematics Scaffold (`opts-sim`)](M-0022.md) — 🟢 Complete (physics spec & simulation core)
 - [M-0023 — Bevy Vehicle ECS Simulation Bridge & Interactive Driving (`opts-bevy`)](M-0023.md) — 🟢 Complete (ECS physics bridge, input mapping, transform sync & interactive driving)
+- [M-0024 — OMSI Map Tile Grid & Chunk Streaming Engine (`opts-game`, `opts-bevy`)](M-0024.md) — ⏳ Planned (tile paging, async loading, memory bounding)
+- [M-0025 — Terrain Heightmap & Water Surface Mesh Generation (`opts-core`, `opts-bevy`)](M-0025.md) — ⏳ Planned (elevation mesh tessellation, water planes, wheel height raycasting)
+- [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — ⏳ Planned (RPN stack VM, .osc bytecode, dynamic variable tables)
+- [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — ⏳ Planned (sound.cfg evaluation, dynamic curve modulation, Bevy spatial audio)
 
 ## Checklist
 
@@ -17,16 +21,18 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
-- [ ] **🗺️ World & Map Loading**
-  - [ ] Document the architecture of the map streaming system.
-  - [ ] Implement systems in `opts-game` to load a full OMSI map tile.
+- [ ] **🗺️ World & Map Loading** — [M-0024](M-0024.md) & [M-0025](M-0025.md)
+  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`).
+  - [ ] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024).
+  - [ ] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025).
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](M-0022.md) & [M-0023](M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
+  - [ ] Implement OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` (M-0026).
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
-  - [ ] Implement vehicle audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic brake pressure to spatial audio.
+  - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio (M-0027).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
   - [ ] Implement bus stop logic and passenger boarding/alighting.
