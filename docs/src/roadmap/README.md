@@ -13,10 +13,10 @@
 | Phase | Goal | Status | Folder |
 | :--- | :--- | :--- | :--- |
 | 🏗️ **Phase 0** — Foundation & Documentation Infrastructure | skeleton, workspace, governance, docs pipeline | 🟡 nearly complete (hosted Pages deployment unverified) | [`phase-0/`](docs/src/roadmap/phase-0/README.md) |
-| 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟡 **current** — all specs drafted; mutation tests and review pending | [`phase-1/`](docs/src/roadmap/phase-1/README.md) |
-| ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | ⏳ not started | [`phase-2/`](docs/src/roadmap/phase-2/README.md) |
-| 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering | ⏳ not started | [`phase-3/`](docs/src/roadmap/phase-3/README.md) |
-| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | ⏳ not started | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
+| 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟢 specs drafted & mutation tested; review ongoing | [`phase-1/`](docs/src/roadmap/phase-1/README.md) |
+| ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | 🟢 complete | [`phase-2/`](docs/src/roadmap/phase-2/README.md) |
+| 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering, GUI foundation | 🟢 complete | [`phase-3/`](docs/src/roadmap/phase-3/README.md) |
+| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — M-0022 active | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
 | 🚀 **Phase 5** — Tooling, Polish & Community | CLI, user/modding docs, release | ⏳ not started | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -78,11 +78,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] [M-0010](docs/src/roadmap/phase-1/M-0010.md) Engine & Environment Configs — `envir.cfg`, weather, scenarios, inputs, `.opl`
   - [x] [M-0011](docs/src/roadmap/phase-1/M-0011.md) Passenger Content — ticket packs, money, fonts
   - [x] [M-0012](docs/src/roadmap/phase-1/M-0012.md) Chrono and Map Variants
-- [~] **🧪 Mutation-Test Round (needs OMSI)** — binary mesh round complete (2026-10-05)
+- [x] **🧪 Mutation-Test Round (needs OMSI)** — binary mesh round complete (2026-10-05); map-side round complete (2026-10-08)
   - [x] Run `CHECKLIST.md` (now also covers the axis prediction in `o3d.md` Addendum 2: Y up, Z longitudinal); folded results into `o3d.md` (Q-004 material groups, Q-005 axes/winding/UV, Q-006 matrix, Q-001–003 header) and `x.md` (Q-X01 frame matrix, Q-X02, Q-X07, Q-X08). Both promoted to 🟢 Specified.
-  - [ ] Design a second kit for the map side: `[spline]` / `[object]` field meanings (Q-M02, Q-M03), `[groundtex]` numbers (Q-G01), timetable profiles (Q-T01, Q-T02), misspelled collision keywords (Q-AUD-005).
+  - [x] Design and execute Mutation Kit 2 for the map & scenery side: `[spline]` field layout and axis order (Q-M02 resolved), `[object]` pitch/roll orientation (Q-M03 resolved), texture fallback chain (`.bmp` $\to$ `.dds` exclusive, Q-TX01 resolved), tile dimensions (Q-M01 confirmed), and alpha blending modes (Q-TX03 confirmed).
 - [x] **🖼️ Texture Formats** — drafted
-  - [x] [`formats/textures.md`](docs/src/formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers). Alpha semantics (Q-TX03), name resolution (Q-TX01) and UV/origin (Q-TX07) await mutation tests.
+  - [x] [`formats/textures.md`](docs/src/formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers). Alpha semantics (Q-TX03) and name resolution (Q-TX01) verified by Mutation Kit 2.
 - [x] **📐 Coordinate Systems & Math**
   - [x] `docs/src/architecture/coordinates.md`: OMSI's axes/handedness mapped to Bevy (completed 2026-10-05, Q-M01 blocker noted).
 - [ ] **✅ Review & Promotion**
@@ -108,8 +108,12 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **📐 Model Configuration Parser** — [M-0017](docs/src/roadmap/phase-2/M-0017.md)
   - [x] `model.cfg` vehicle rendering manifest parser (`opts_core::formats::vehicles::model`)
   - [x] LOD tiers, viewpoint camera masks, interactive click events, variable-driven animations, and material modifiers
-- [ ] **🗺️ World & Scenery Parsers (Planned)** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
-  - [ ] Deferred pending spec promotion from Mutation Kit 2 (`.sco`, `.sli`, `tile_*.map`, `global.cfg`)
+- [x] **🗺️ World & Scenery Parsers** — [M-0015](docs/src/roadmap/phase-2/M-0015.md)
+  - [x] Scenery object parser (`opts_core::formats::scenery::sco`)
+  - [x] Spline profile parser (`opts_core::formats::scenery::sli`)
+  - [x] Map manifest parser (`opts_core::formats::map::global`)
+  - [x] Tile layout parser (`opts_core::formats::map::tile`)
+  - [x] Binary height grid (`.terrain`) and water level (`.water`) parsers (`opts_core::formats::map::{terrain, water}`)
 
 
 ---
@@ -117,24 +121,31 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🎨 Phase 3: `opts-bevy` Integration (The Visuals)
 *Goal: Bridge the gap between `opts-core` data and Bevy's ECS and rendering pipeline.*
 
-- [ ] **📥 Bevy Asset Loaders & Mesh Bridge** — [M-0018](docs/src/roadmap/phase-3/M-0018.md)
+- [x] **📥 Bevy Asset Loaders & Mesh Bridge** — [M-0018](docs/src/roadmap/phase-3/M-0018.md)
   - [x] Implement custom `AssetLoader` for `.o3d` files.
   - [x] Implement custom `AssetLoader` for `.x` files (discovered in M-0016).
-  - [ ] Implement custom `AssetLoader` for `.sco` and `.sli` files.
-  - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin`.
+  - [x] Implement custom `AssetLoader` for `.sco` and `.sli` files (`OptsSceneryPlugin`).
+  - [x] Register the loaders with the `AssetServer` via `OptsMeshPlugin` and `OptsSceneryPlugin`.
   - [x] Mesh Conversion Bridge: convert `opts_core::formats::o3d::O3d` and `XMesh` to Bevy `Mesh` primitives with left-to-right handed coordinate conversion ($Z \to -Z$, winding inversion).
 - [x] **🔄 Coordinate Conversion Systems** — [M-0020](docs/src/roadmap/phase-3/M-0020.md)
   - [x] Write systems to convert OMSI Z-up coordinates to Bevy Y-up coordinates.
-  - [ ] Implement camera preset projection bridge for vehicle view definitions (`[add_camera_driver]`, etc.) (M-0020)
-- [ ] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](docs/src/roadmap/phase-3/M-0019.md)
+  - [x] Implement camera preset projection bridge for vehicle view definitions (`[add_camera_driver]`, etc.) (`camera_preset_to_bevy_transform`) (M-0020)
+- [x] **🌟 Rendering OMSI Assets & Material Bridge** — [M-0019](docs/src/roadmap/phase-3/M-0019.md)
   - [x] Implement texture format sniffing and decoding for `.dds`, `.bmp`, `.tga`, `.png`, `.jpg`.
   - [x] Implement custom `AssetLoader` for `.dds` textures in `opts-bevy`.
   - [x] Create Bevy `StandardMaterial` assets from parsed OMSI `Material` and `XMaterial` properties.
-  - [ ] Spawn parsed `.sco` objects as Bevy entities with `Mesh` and `Transform` components.
-- [ ] **🎓 Tutorials & Examples**
-  - [ ] Write `docs/src/tutorials/first-sco.md`: "Loading a single OMSI scenery object in Bevy."
-  - [ ] Write `docs/src/tutorials/first-bus.md`: "Loading a full OMSI bus model with textures."
-  - [ ] Create runnable `examples/` in the `opts-bevy` crate matching the tutorials.
+  - [x] Spawn parsed `.sco` objects as Bevy entities with `Mesh` and `Transform` components (`spawn_scenery_object`).
+- [x] **🎨 Material Design 3 GUI Widget Library (`opts-gui`)** — [M-0021](docs/src/roadmap/phase-3/M-0021.md)
+  - [x] Implement token architecture (`theme/`, `tokens/`) with WCAG 2.1 AA luminance contrast verification.
+  - [x] Implement layout builders: `StackBuilder`, `RowBuilder`, `GridBuilder`.
+  - [x] Implement Tier 1 components: `Button`, `Label`, `Icon`, `Card`, `Divider`, `TextField`, `Checkbox`, `Switch`, `Radio`.
+  - [x] Implement advanced components: `Combobox`, `Notebook`, `Toast`, `Toplevel`, `Treeview`, `DateSelect`, `DateTimeSelect`.
+  - [x] Implement interaction & focus navigation system (`Focusable`, `FocusEvent`, `FocusPlugin`).
+  - [x] Build comprehensive interactive gallery application (`examples/gallery.rs`).
+- [x] **🎓 Tutorials & Examples**
+  - [x] Write `docs/src/tutorials/first-sco.md`: "Loading a single OMSI scenery object in Bevy."
+  - [x] Write `docs/src/tutorials/first-bus.md`: "Loading a full OMSI bus model with textures."
+  - [x] Create runnable `examples/` in the `opts-bevy` crate matching the tutorials (`load_sco.rs`, `load_bus.rs`).
 
 ---
 
@@ -144,9 +155,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🗺️ World & Map Loading**
   - [ ] Document the architecture of the map streaming system.
   - [ ] Implement systems in `opts-game` to load a full OMSI map tile.
-- [ ] **🛞 Vehicle Physics & Control**
-  - [ ] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
-  - [ ] Implement kinematic/dynamic vehicle movement in `opts-sim`.
+- [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md)
+  - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
+  - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
+  - [ ] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0022)
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.

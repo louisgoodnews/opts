@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-07 by Agent (P-006 closeout for M-0020)_
+_Last updated: 2026-10-08 by Agent (P-006 closeout for M-0022: Vehicle Physics & Kinematics Scaffold)_
 
 ---
 
@@ -105,8 +105,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🟡 **Design the map-side mutation kit** — Test fixtures for `[spline]`/`[object]` fields, `[groundtex]` numbers and timetable profiles (M-0003, spec)
-- [ ] 🟡 **Maintainer review of the Draft specs** — Review each spec's Open Questions; promote to 🟢 once its high-priority questions are resolved (M-0001, M-0003–M-0005, spec)
+- [ ] None
 
 ---
 
@@ -114,7 +113,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- [!] 🟡 **Write `first-sco.md` tutorial** — (M-0003, docs). Dependency: the `.sco` parser (opts-bevy mesh loader is implemented).
+- [ ] None
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -127,9 +126,11 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
-#### M-0015 — World & Scenery Parsers (Deferred)
+#### Phase 4 — Simulation & Transit Follow-ups
 
-- [ ] 🟢 **Scenery & world parsers** — (M-0015, code/spec). Deferred pending Mutation Kit 2 for `.sco`, `.sli`, `tile_*.map`, `global.cfg`.
+- [ ] 🔴 **Bevy simulation bridge ECS plugin (`opts-bevy`)** — Connect `VehicleSimulation` state to Bevy entity `Transform` and wheel mesh rotation components (Phase 4, code, M-0022)
+- [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for AI/passenger traversal in `opts-sim` (Phase 4, code)
+- [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code)
 
 #### M-0004 — Transit Data Specifications
 
@@ -173,6 +174,47 @@ _Small items discovered during implementation that don't warrant a milestone._
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-08 — M-0022 (Vehicle Physics & Kinematics Scaffold, complete)**
+
+- `[x]` 🔴 **Vehicle dynamics & physics specification** (M-0022, spec) — Authored mathematical specification for coordinate frames, Ackermann steering, longitudinal propulsion, braking, and suspension compliance in `docs/src/simulation/vehicle_physics.md`.
+- `[x]` 🟡 **Vehicle inputs and driver controls** (M-0022, code) — Implemented analog axis inputs (steering, throttle, service brake, retarder, handbrake) and gear selector states in `crates/opts-sim/src/vehicle/inputs.rs`.
+- `[x]` 🔴 **Multi-axle Ackermann steering & wheel kinematics** (M-0022, code) — Implemented axle layout, wheel rotation, rolling radii, and Ackermann geometry with zero-angle defensive guards in `crates/opts-sim/src/vehicle/axle.rs`.
+- `[x]` 🔴 **Powertrain torque delivery & braking dynamics** (M-0022, code) — Implemented engine power curves, transmission gear ratios, retarder stages, mechanical friction brakes, and aerodynamic drag in `crates/opts-sim/src/vehicle/drivetrain.rs`.
+- `[x]` 🔴 **Suspension compliance & dynamic load transfer** (M-0022, code) — Implemented spring-damper compliance, ride height deflection, and dynamic longitudinal/lateral load transfer across axles in `crates/opts-sim/src/vehicle/suspension.rs`.
+- `[x]` 🟡 **Articulated vehicle coupling kinematics** (M-0022, code) — Implemented geometric trailer hitch tracking and angle limits for multi-unit commercial vehicles in `crates/opts-sim/src/vehicle/articulation.rs`.
+- `[x]` 🔴 **Rigid chassis dynamics & fixed-step integrator** (M-0022, code) — Implemented rigid body chassis state and semi-implicit Euler numerical integrator with low-speed velocity clamping in `crates/opts-sim/src/vehicle/chassis.rs` and facade controller in `crates/opts-sim/src/vehicle/mod.rs`.
+- `[x]` 🔴 **Test suite, determinism validation & crate documentation** (M-0022, docs/code) — Implemented 20 unit and integration tests (including zero-input and edge-case guards) and authored `docs/crates/opts-sim.md`.
+
+**2026-10-08 — M-0021 (Material Design 3 GUI Widget Library, complete)**
+
+- `[x]` 🔴 **Material Design 3 Theme & Token Systems** (M-0021, code) — Implemented `MaterialTheme`, `ColorScheme` (Light & Dark), and tokens (`TypographyTokens`, `SpacingTokens`, `ShapeTokens`, `ElevationTokens`, `MotionTokens`) in `crates/opts-gui/src/theme/`, verified mathematically against WCAG 2.1 AA relative luminance contrast ratios ($\ge 4.5:1$).
+- `[x]` 🔴 **ECS Design Token Components & Synchronization** (M-0021, code) — Implemented `BackgroundRole`, `BorderRole`, `ForegroundRole`, `RadiusToken`, `ElevationToken`, `TypeStyleToken` with reactive systems automatically propagating theme modifications across the UI tree (`crates/opts-gui/src/tokens/`).
+- `[x]` 🟡 **Layout Primitives** (M-0021, code) — Implemented fluent `StackBuilder`, `RowBuilder`, and `GridBuilder` flex-container primitives (`crates/opts-gui/src/layout/`).
+- `[x]` 🔴 **Core Tier 1 Widgets & Dual Spawning** (M-0021, code) — Implemented `ButtonBuilder` (6 variants with `on_click` closures), `LabelBuilder`, `IconBuilder`, `CardBuilder` (Elevated, Filled, Outlined), `DividerBuilder` (Horizontal, Vertical), and `TextFieldBuilder` (Outlined, Filled with focus handling) supporting both `.spawn(&mut Commands)` and `.spawn_child(&mut ChildBuilder)` (`crates/opts-gui/src/components/`).
+- `[x]` 🔴 **Form & Selection Widgets** (M-0021, code) — Implemented tristate `CheckboxBuilder`, pill `SwitchBuilder`, and mutually exclusive `RadioBuilder` with Bevy `ParamSet` group decoupling (`crates/opts-gui/src/components/`).
+- `[x]` 🔴 **Advanced Simulation & Desktop Widgets** (M-0021, code) — Implemented `ComboboxBuilder` (exposed dropdown menu), `NotebookBuilder` (tab bar and active panel switcher), `ToastBuilder` (floating timed notification), `ToplevelBuilder` (modal dialog window with scrim backdrop), `TreeviewBuilder` & `TreeNode` (hierarchical tree navigation), and `DateSelectBuilder` / `DateTimeSelectBuilder` (calendar and timetable datetime selectors).
+- `[x]` 🟡 **Interaction & Keyboard Focus Navigation** (M-0021, code) — Implemented `Focusable`, `FocusEvent`, `FocusPlugin` handling `Tab` (forward) and `Shift+Tab` (backward) cyclic traversal with wrap-around, plus semantic widget event stream (`ButtonClicked`, `CheckboxToggled`, `SwitchToggled`, `RadioSelected`, `ComboboxSelected`, `NotebookTabSelected`, `ToastDismissed`, `ToplevelClosed`, `TreeNodeSelected`, `TreeNodeToggled`, `TextChanged`, `DateSelected`, `DateTimeSelected`, `ThemeChanged`).
+- `[x]` 🟡 **Interactive Gallery Application & Documentation** (M-0021, docs/code) — Built comprehensive `crates/opts-gui/examples/gallery.rs` showcasing all widgets with runtime Light/Dark switching (`KeyCode::F2`), authored `docs/crates/opts-gui.md` and updated `docs/crates/opts-gui/README.md`. 48 tests passing (25 unit, 23 doctests), zero unsafe, zero unwrap, zero clippy warnings.
+
+**2026-10-08 — Phase 3: opts-bevy Integration & Tutorials Complete (M-0018, M-0019, M-0020 complete)**
+
+- `[x]` 🔴 **Bevy World Asset Loaders & Spline Extrusion** (M-0018 / M-0019, code) — Implemented `ScoAssetLoader`, `SliAssetLoader`, `SceneryObjectAsset`, `SplineProfileAsset`, `extrude_spline_profile` (generating Bevy 3D `Mesh` with UVs and normals from cross-sections), and `spawn_scenery_object` entity hierarchy builder in `crates/opts-bevy/src/scenery.rs`. Registered via `OptsSceneryPlugin` and unified `OptsAssetPlugin`.
+- `[x]` 🟡 **Camera Preset Projection Bridge** (M-0020, code) — Implemented `camera_preset_to_bevy_transform` bridging vehicle view definitions (`[add_camera_driver]`, `[add_camera_pax]`) into Bevy `Transform` and perspective projection, accounting for camera lateral sign inversion and line-of-sight distance offsets in `crates/opts-bevy/src/coords.rs`.
+- `[x]` 🔴 **Vehicle Entity Hierarchy Spawning** (Phase 3, code) — Implemented `spawn_vehicle_model` and `BusVehicle` in `crates/opts-bevy/src/vehicle.rs` spawning root vehicle entities with LOD 0 meshes, interior illumination (`PointLightBundle`), and exterior spotlights (`SpotLightBundle`).
+- `[x]` 🟡 **Tutorials & Runnable Examples** (Phase 3, docs/code) — Authored `docs/src/tutorials/first-sco.md` and `first-bus.md`, built runnable Bevy examples `crates/opts-bevy/examples/load_sco.rs` and `load_bus.rs` with interactive camera switching. Closes Phase 3: opts-bevy Integration.
+
+**2026-10-08 — World & Scenery Parsers (M-0015 complete)**
+
+- `[x]` 🔴 **World & scenery parsers** (M-0015, code) — Implemented parsers in `opts-core` for scenery objects (`.sco`), spline extrusion profiles (`.sli`), map manifests (`global.cfg`), tile layouts (`tile_*.map`), binary height grids (`.map.terrain`), and water levels (`.map.water`). Validated with 8 integration tests including live OMSI 2 corpus validation against Grundorf and Berlin-Spandau maps. Completes Phase 2 core parsers.
+
+**2026-10-08 — Map-Side Mutation Kit 2 (M-0003 complete, M-0015 unblocked)**
+
+- `[x]` 🟡 **Design & execute map-side mutation kit** (M-0003, spec/test) — Procedural test fixtures across 10 mutation categories (T201–T210) generated and verified in OMSI 2 viewport and `logfile.txt`. Resolved Q-M01 tile boundaries, Q-M02 spline axis order ($(X, Z, Y)$), Q-M03 object pitch/roll ordering, Q-TX01 texture fallback chain (`.bmp` $\to$ `.dds` exclusive), and Q-TX03 alpha modes. Promoted `tiles.md`, `sco.md`, and `sli.md` specs to `🟢 Specified`, closing milestone M-0003 and unblocking M-0015.
+
+**2026-10-07 — Maintainer Review of Draft Specs (M-0001, M-0005 complete; M-0003, M-0004 audited)**
+
+- `[x]` 🟡 **Maintainer review of the Draft specs** (M-0001, M-0003–M-0005, spec) — Systematically audited all Draft specs against M-0006 community cross-check facts, M-0017–M-0020 implementations, and corpus audits. Promoted 11 specs to `🟢 Specified` (`passengercabin_cfg`, `paths_cfg`, `model_cfg`, `sound_cfg`, `osc`, `varnamelist`, `const`, `hof`, `lists`, `sco`, `sli`, `texture-cfg`). Closed out M-0001 and M-0005 milestones as `🟢 Complete`. Confirmed remaining `🟡 Draft` specs (`tiles`, `global.cfg`, `timetables`) await the Map-Side Mutation Kit.
 
 **2026-10-07 — M-0020 (Spatial Coordinate Conversion Systems, complete)**
 
