@@ -3,10 +3,10 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Layer** | L0 · Shared Foundations |
-| **Role** | Command-Line Interface Definitions & Argument Parser |
-| **Kind** | Library (`opts_cli`) |
+| **Role** | Game arguments, control-protocol types, remote-control client (manual: [`../opts-cli.md`](../opts-cli.md)) |
+| **Kind** | Library (`opts_cli`) + binary `opts-cli` |
 | **Status** | 🟢 Implemented (`CliArgs`, dimensions, flags) |
-| **Last Updated** | 2026-10-09 |
+| **Last Updated** | 2026-10-10 |
 
 ---
 
@@ -35,6 +35,8 @@ let (width, height) = args.parse_dimensions();
 | `--windowed` | `bool` | `false` | Explicitly request windowed mode (overrides fullscreen) |
 | `--window-size <WxH>` | `String` | `"1280x720"` | Initial window dimension (e.g. `1920x1080`) |
 | `--headless` | `bool` | `false` | Run without opening an OS display window (ideal for CI testing) |
+| `--cli-port`, `--cli-bind`, `--cli-token`, `--cli-allow-dir` | | off | Control server (see the [manual](../opts-cli.md)) |
+| `--no-hot-reload`, `--hot-reload-root`, `--hot-reload-debounce-ms` | | on, 250 ms | Hot reload of edited content |
 
 ## 📦 Dependencies
 

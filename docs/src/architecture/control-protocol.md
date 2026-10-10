@@ -193,7 +193,68 @@ comparing versions.
 
 ## 9. Using the protocol from an AI agent
 
-*(Completed in Part E: worked example, error handling, batching guidance.)*
+**What an agent can do.** Start or find a running OPTS, load a map, put the camera anywhere, drive the
+bus with injected keys, pause and single-step time, look at the result (screenshot) and read what the game
+complained about (`log.filter`), edit a content file and have it reloaded, and file a report — all without
+a human at the keyboard.
+
+**Connecting.** Start the game with `opts-game --cli-port 44201` (add `--cli-token <T>` if the port is
+reachable by others). The listening address is logged at `INFO` (`control server listening addr=…`), which is
+how an agent finds an ephemeral port (`--cli-port 0`).
+
+| Use | When |
+| :--- | :--- |
+| `opts-cli <method> [args]` | quick one-shot commands from a shell; `--json` for machine output; exit codes 0/1/2/3 tell success, command error, no connection, bad protocol |
+| `opts-cli batch` (stdin) / `batch` method | several commands in one round trip |
+| Raw TCP | an agent runtime with sockets: send one JSON line, read one JSON line — `printf '{"jsonrpc":"2.0","id":1,"method":"ping"}\n' \| nc 127.0.0.1 44201` |
+| `opts_cli::client::Client` | Rust code; see `crates/opts-cli/examples/` |
+
+**A worked session** (drive to a spot, look, report). Each line is one request; results are abbreviated.
+
+```text
+ 1 ping                                         → {"pong":true,"uptime_secs":3}
+ 2 capabilities                                 → which methods exist and are implemented
+ 3 scene.load_map  path="…/maps/BRT Berlin"     → {"map":"BRT Berlin","tiles_loaded":8,…}   (≈ 2–20 s)
+ 4 camera.set_mode external
+ 5 sim.resume
+ 6 input.key_hold W
+ 7 sim.step 120                                 → only if the sim is paused; otherwise just wait
+ 8 input.key_release W
+ 9 sim.pause
+10 camera.get                                   → where am I?
+11 screenshot                                   → {"path":"…/reports/screenshot_2026-10-10_16-01-40.png"}
+12 log.filter level=warn n=10                   → what did the game complain about?
+13 report text="the junction at … has no road surface"   → {"png":…,"report":…}
+```
+
+As one batch, steps 4–12 cost a single round trip:
+
+```json
+{"jsonrpc":"2.0","id":9,"method":"batch","params":{"commands":[
+  {"method":"camera.set_mode","params":{"mode":"external"}},
+  {"method":"sim.pause"},
+  {"method":"sim.step","params":{"frames":60}},
+  {"method":"screenshot"},
+  {"method":"log.filter","params":{"level":"warn","n":10}}]}}
+```
+
+**Deterministic loops.** Prefer *pause → act → `sim.step N` → observe* over sleeping: with the simulation
+paused, input injected before a step takes effect in exactly those frames.
+
+**When a command fails** (error `code`): `-32602` — fix the parameter (the message names it; `input.key`
+lists valid keys in `data`); `1001` — the app is in the wrong state (load a map first, or the camera mode is
+unavailable); `1002` — the path is outside the allowed directories (use `--cli-allow-dir` when starting the
+game); `1004` — nothing there; `1005` — the app did not answer: it is frozen or loading, retry after
+`ping`; `1006` — slow down or batch; `1007` — not implemented in this build (`capabilities` shows which);
+`1008` — the operation ran and failed (reload of a broken file: the previous content is still in the game).
+Connection errors (exit code 2) mean the game is not running or the port differs.
+
+**Rate limits.** 200 requests/s per connection with a burst of 400; the game runs at most 64 commands per
+frame. Batches of up to 100 commands avoid both limits.
+
+**Editing content.** Write the file with your own tools; the game's watcher reloads it after a 250 ms quiet
+period. To be sure, call `reload.asset {path}` — it answers with what was rebuilt, or with error `1008` and
+the parser's message when the file is broken. A bad save never breaks the running scene.
 
 ## 10. Path to bevy_remote
 
