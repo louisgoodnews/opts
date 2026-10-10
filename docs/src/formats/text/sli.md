@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::sli` |
 | **Encoding** | Windows-1252 (CP1252); a few files are UTF-8 |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -25,7 +25,7 @@ A `.sli` file describes a **cross-section profile** that OMSI **extrudes along a
 
 | File | Relationship |
 | :--- | :--- |
-| Texture files | Named by `[texture]` and `[matl]`, resolved in the global `Texture` folder. |
+| Texture files | Named by `[texture]` and `[matl]`. Observed to resolve in the `.sli`'s own pack folder (`Splines/<Pack>/texture/`) rather than the global `Texture` folder (Gladbeck: 20+ spline textures such as `str_gehweg02.bmp` exist only there). |
 | [`.sco`](sco.md) | `[splinehelper]` places a `.sli` profile inside a scenery object (junction arms). `[path]` there uses the same type and direction convention. |
 | Map file | Places splines by `.sli` path. |
 

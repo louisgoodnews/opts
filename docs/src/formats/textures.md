@@ -49,7 +49,10 @@ Names are Windows paths (case-insensitive, `\` or `/`), with sub-folders allowed
 | **Only a `.dds` with the same base name exists** | **888** | 18 % |
 | Not found in the pack's `texture` folder nor `Texture/` | 138 | 3 % |
 
-The 888 substitutions are `.jpg`→`.dds` (362), `.bmp`→`.dds` (291), `.png`/`.PNG`→`.dds` (214), `.tga`→`.dds` (15), `.psd`→`.dds` (2). Shipped assets work, so **OMSI evidently falls back to a `.dds` of the same base name** when the named file is missing ❓ (the rule and its preference order are not verified — [Q-TX01](#-open-questions)). A reader should try: exact name → same base name with `.dds` → other known extensions.
+The 888 substitutions are `.jpg`→`.dds` (362), `.bmp`→`.dds` (291), `.png`/`.PNG`→`.dds` (214), `.tga`→`.dds` (15), `.psd`→`.dds` (2). **Mutation Kit 2 experimentally verified this behavior in OMSI 2 (T204):**
+- When a `.bmp` texture is requested and missing on disk, OMSI **automatically and silently falls back to a `.dds`** of the same base name.
+- OMSI **does not fall back to `.tga` or `.png`**; missing requests for `.bmp` when only `.tga` or `.png` exist cause OMSI to emit `Warning: Did not find texture file "..."!` in `logfile.txt`.
+- A compatible reader should try: exact file name $\to$ same base name with `.dds`. Other extensions are not part of OMSI's automatic runtime fallback chain.
 
 ### Extension does not equal content
 
@@ -182,17 +185,17 @@ else                          -> TGA only if byte 2 in {1,2,3,9,10,11} and plaus
 
 ## ❓ Open Questions
 
-| ID | Question | Priority |
-| :--- | :--- | :--- |
-| Q-TX01 | Exact name-resolution rule: extension fallback order (is `.dds` always preferred, even when the named file exists?), folder search order, case rules. Test: mesh naming `a.bmp` with both `a.bmp` and `a.dds` present, each coloured differently. | 🔴 High |
-| Q-TX02 | Does OMSI sniff content or fix the loader by extension (the 924 BMP-in-`.dds` files)? | 🟡 Medium |
-| Q-TX03 | Alpha handling: how `[matl_alpha]` modes map to DXT1 1-bit alpha vs DXT3/5 vs A8 vs 32-bit BMP/TGA alpha; which textures are alpha-tested vs blended. | 🔴 High |
+| ID | Question | Priority | Status / Finding |
+| :--- | :--- | :--- | :--- |
+| Q-TX01 | Exact name-resolution rule: extension fallback order. | 🟢 Low | ✅ **Resolved** by Mutation Kit 2 (T204): automatic extension fallback is strictly limited to `.dds`. When `.bmp` is missing, `.dds` is loaded silently. OMSI emits warnings and does not fall back to `.tga` or `.png`. |
+| Q-TX02 | Does OMSI sniff content or fix the loader by extension (the 924 BMP-in-`.dds` files)? | 🟡 Medium | |
+| Q-TX03 | Alpha handling: how `[matl_alpha]` modes map to DXT1 1-bit alpha vs DXT3/5 vs A8 vs 32-bit BMP/TGA alpha; which textures are alpha-tested vs blended. | 🟢 Low | ✅ Confirmed by Mutation Kit 2 (T205): Mode 1 = alpha testing / cutout (1-bit threshold), Mode 2 = alpha blending (smooth transparency). |
 | Q-TX04 | Non-power-of-two textures and missing mip chains: does OMSI rescale, pad, or rely on hardware NPOT? | 🟡 Medium |
 | Q-TX05 | Colour space: are textures treated as sRGB or linear? | 🟡 Medium |
 | Q-TX06 | Is the 4th channel of 32-bit `BI_RGB` BMPs ever alpha? | 🟡 Medium |
 | Q-TX07 | Interaction of image origin (BMP/TGA bottom-up) with the mesh UV V-convention (see `o3d.md` Q-005). The T02 test in the mutation kit answers it for `.bmp`. | 🔴 High |
 | Q-TX08 | The 9 DX10-header DDS files and the BC5 (`ATI2`) file: loaded or ignored? | 🟢 Low |
-| Q-TX09 | Mapping of `tile_<x>_<y>.map.<N>.dds` masks to `[groundtex]` indices and their blend maths. | 🟡 Medium |
+| Q-TX09 | Mapping of `tile_<x>_<y>.map.<N>.dds` masks to `[groundtex]` indices and their blend maths. | 🟡 Medium — implemented as `layer N = mask N` blended over the layers below (`opts_bevy::ground`); see [tiles.md](map/tiles.md#-ground-painting-texture-masks--2026-10-10). Orientation (row 0 = north) unverified in-game. |
 | Q-TX10 | Which PNG/JPEG/PSD references are actually loaded vs only authoring sources? | 🟢 Low |
 
 ---

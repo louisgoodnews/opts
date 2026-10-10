@@ -8,7 +8,7 @@
 | **Parser Module** | `opts_core::formats::bus` |
 | **Encoding** | Windows-1252 (CP1252) |
 | **Status** | 🟢 Specified — Ready for Implementation |
-| **Last Updated** | 2026-10-04 |
+| **Last Updated** | 2026-10-08 |
 
 ---
 
@@ -153,6 +153,7 @@ The following keywords have been observed in the sample files. Each entry lists 
 | :--- | :--- | :--- |
 | `[friendlyname]` | **3** | Manufacturer, model name, and default livery name. Displayed in the vehicle selection menu. **Exactly 3 lines** — no more, no less. |
 | `[description]` | until `[end]` | Free-form multi-line description shown in the vehicle menu. Terminated by a line containing only `[end]`. |
+| `[type]` | 1 | Simulation domain selector: omitted (or `0`/`1`) = road vehicle, `2` = rail/track vehicle (train, tram, subway), `3` = aircraft / airborne. |
 
 #### `[friendlyname]` — Example
 
@@ -168,6 +169,15 @@ Beige
 | 1 | Manufacturer | `MAN` |
 | 2 | Model designation | `NG272 - GN92` |
 | 3 | Default livery name | `Beige` |
+
+#### `[type]` — Simulation Domain Selector
+
+The `[type]` keyword selects the primary simulation physics domain:
+- **Omitted (or `0` / `1`)**: Road vehicle (steered road physics; buses, cars, trucks). Default for player buses.
+- **`2`**: Rail / track vehicle (constrained to rail splines, bogies, train consists; trains, subways, trams).
+- **`3`**: Aircraft / ambient airborne (3D trajectory without ground friction; airplanes, helicopters, birds).
+
+> ℹ️ While predominantly active in non-player and rail/AI definitions ([`.ovh`](../misc-types.md)), `[type]` shares the identical parser grammar and semantics across all vehicle marker formats.
 
 ### 🧾 Registration & Fleet Numbers
 
@@ -335,12 +345,15 @@ The three legacy inertia values duplicate what `[momentofintertia]` provides. In
 | Keyword | Parameters | Description |
 | :--- | :--- | :--- |
 | `[coupling_back]` | 3 | `x, y, z` position of the rear coupling point. |
-| `[couple_back]` | 2 | Filename of the trailer `.bus` file, and a boolean flag indicating whether the trailer itself has a further trailer. |
+| `[couple_back]` | 2 | Filename of the trailer `.bus` or `.ovh` file, and a boolean flag indicating whether the trailer itself has a further trailer. |
 | `[coupling_front]` | 3 | `x, y, z` position of the front coupling point. |
+| `[couple_front]` | 2 | Filename of the leading vehicle / tractor `.bus` or `.ovh` file, and a boolean flag (`true`/`false`) for inverted orientation / reverse coupling. |
 | `[couple_front_open_for_sound]` | 0 | Enables bidirectional sound propagation through the coupling. |
 | `[coupling_front_character]` | 4 | Physical characteristics of the front coupling. See below. |
 
-#### `[couple_back]` — Semantics
+#### Coupling Directives — Semantics
+
+##### `[couple_back]` (Trailing Segment)
 
 > ✅ **Resolved:** The boolean flag indicates whether the coupled trailer has **its own further trailer** behind it.
 
@@ -357,9 +370,25 @@ false
 ```
 Means: "My rear is coupled to `MAN_GN92_trail.bus`, and that trailer has no further trailer behind it."
 
-> 🚋 **Architectural Consequence for OPTS:** This flag exists because OMSI loads vehicle segments **recursively**. When a vehicle's `[couple_back]` references another `.bus` file, OMSI loads that file and links the two into a single articulated entity. The boolean prevents infinite recursion and lets the loader know when to stop.
+##### `[couple_front]` (Leading Segment / Inverted Consist)
+
+Used in push-pull consists, bi-directional train cabs, and multi-unit trains:
+
+| Value | Meaning |
+| :--- | :--- |
+| `true` | Reverse coupling orientation: the coupled leading vehicle is linked facing the opposite direction. |
+| `false` | Standard forward coupling orientation. |
+
+Example:
+```
+[couple_front]
+A3L_67_K.ovh
+false
+```
+
+> 🚋 **Architectural Consequence for OPTS:** These flags exist because OMSI loads vehicle segments **recursively**. When a vehicle's `[couple_back]` or `[couple_front]` references another file, OMSI loads that file and links the units into a single articulated entity. The boolean prevents infinite recursion and lets the loader know when to stop.
 >
-> **OPTS must support arbitrary-length chains**: double-articulated buses (two joints, three segments), multi-car trams (many segments), and even locomotive-style configurations. The `Vehicle` entity in `opts-sim` must therefore be a **chain** of `VehicleSegment`s, not a single flat object.
+> **OPTS must support arbitrary-length chains**: double-articulated buses (two joints, three segments), multi-car trams (many segments), and locomotive/push-pull configurations. The `Vehicle` entity in `opts-sim` must therefore be a **chain** of `VehicleSegment`s, not a single flat object.
 
 #### `[coupling_front_character]` — Parameter Layout
 

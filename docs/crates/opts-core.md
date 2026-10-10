@@ -64,8 +64,22 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `ModelAnim`: Variable-driven hierarchical mesh animation transform with pivot translation, rotation angles, origin from mesh, speed, and delay damping.
   - `ModelMaterial`: Material slot selection and modifiers including alpha mode, lightmaps, envmaps, nightmaps, bumpmaps, dynamic text textures, and conditional texture swaps.
   - `ModelParseError`: Strongly typed error enumeration for missing parameters or malformed numeric values.
+- **`opts_core::formats::scenery`:**
+  - `SceneryObject::parse(bytes: &[u8]) -> Result<SceneryObject, SceneryParseError>`: Parses `.sco` scenery object manifests.
+  - `SceneryObject`: Scenery object containing editor metadata (`groups`, `friendly_name`, `complexity`), flags (`fixed`, `abs_height`, `surface`), mesh attachments (`Vec<ScoMesh>`), bounding box (`ScoBoundingBox`), center of gravity, breakable pole physics, traffic light groups (`Vec<ScoTrafficLightGroup>`), AI traffic/pedestrian/rail paths (`Vec<ScoPath>`), spline helpers (`Vec<ScoSplineHelper>`), map lights (`Vec<ScoMapLight>`), text textures (`Vec<ScoTextTexture>`), CTC repaint pickers, and scripts.
+  - `SplineProfile::parse(bytes: &[u8]) -> Result<SplineProfile, SceneryParseError>`: Parses `.sli` cross-section spline profiles.
+  - `SplineProfile`: Profile model with terrain height profiles (`Vec<SplineHeightProfile>`), preloaded textures (`Vec<SplineTexture>`), graphical ribbon profiles (`Vec<SplineGraphicalProfile>`), AI/pedestrian/rail path lanes (`Vec<SplinePath>`), and rail oscillation physics (`SplineRailEnh`).
+  - `SceneryParseError`: Strongly typed error for missing parameters, malformed numbers, and decode errors.
+- **`opts_core::formats::map`:**
+  - `MapManifest::parse(bytes: &[u8]) -> Result<MapManifest, MapParseError>`: Parses top-level `global.cfg` map manifests with automatic UTF-16LE BOM detection.
+  - `MapManifest`: Scenario configuration containing map name, friendly name, description, valid calendar years, tile index list (`Vec<MapTileEntry>`), vehicle spawn entry points (`Vec<MapEntryPoint>`), ground texture palette mappings (`Vec<MapGroundTex>`), seasons (`Vec<MapSeason>`), and road/passenger traffic density curves.
+  - `MapTile::parse(bytes: &[u8]) -> Result<MapTile, MapParseError>`: Parses individual `tile_<x>_<y>.map` tile layout files.
+  - `MapTile`: Placed scenery object instances (`Vec<MapObjectInstance>`) with $(X, Y, Z)$ positions and heading/pitch/roll, placed spline segments (`Vec<MapSplineInstance>`) with verified $(X, Z, Y)$ coordinates, traffic rules (`Vec<MapTrafficRule>`), and spline attachments.
+  - `MapTerrain::parse(bytes: &[u8]) -> Result<MapTerrain, MapParseError>`: Parses binary 14,888-byte `.map.terrain` elevation height grids with 61×61 vertex resolution and row-major index access.
+  - `MapWater::parse(bytes: &[u8]) -> Result<MapWater, MapParseError>`: Parses binary 20-byte `.map.water` water level elevation files.
+  - `MapParseError`: Strongly typed error for text parsing, invalid numbers, and binary size violations.
 - **`opts_core::formats::text`:**
-  - `decode_bytes(bytes: &[u8]) -> String`: Dual-encoding string decoder with automatic Windows-1252 (CP1252) fallback for legacy German assets.
+  - `decode_bytes(bytes: &[u8]) -> String`: Multi-encoding string decoder with automatic UTF-16LE/BE BOM detection, UTF-8 BOM stripping, and Windows-1252 (CP1252) fallback.
   - `scan_blocks(text: &str) -> Vec<OmsiBlock>`: Keyword-delimited block tokenizer handling comments, whitespace, and parameter streams.
 
 ---

@@ -8,8 +8,8 @@
 | **Parser Crate** | `opts-core` (parse), `opts-sim` (execute) |
 | **Parser Module** | `opts_core::formats::osc` |
 | **Encoding** | Windows-1252 (CP1252), CRLF line endings |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -305,7 +305,7 @@ OMSI is lenient about leftover values on the stack (the original scripts leave e
 | Q-OSC-002 | Are registers truly block-local, or per-vehicle? | Block-local assumed from usage. |
 | Q-OSC-003 | Exact stack effects of the `$` family. | Open. |
 | Q-OSC-004 | Full set of `(X.Y.)` accessor pairs. | Only observed pairs are listed. |
-| Q-OSC-005 | Meaning of the `@` and `%` tokens seen in a few files. | `%` = modulo (📚 confirmed); `@` unknown. |
+| Q-OSC-005 | ~~Meaning of the `@` and `%` tokens seen in a few files~~ — resolved: `%` = modulo (📚 confirmed); `@` unknown. | ✅ |
 
 ---
 

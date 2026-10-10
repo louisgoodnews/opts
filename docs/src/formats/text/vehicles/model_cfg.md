@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::model_cfg` |
 | **Encoding** | Windows-1252 (CP1252) |
-| **Status** | 🟡 Draft — Under Investigation |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified — Ready for Implementation |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -244,7 +244,7 @@ envmap_lenkrad2.bmp
 | `[matl_change]` | 3 (texture, index, variable) | Replace the texture when `variable` is active. |
 | `[matl_item]` | 0 | Terminates a `[matl_change]` group. Its exact role is unclear. |
 | `[matl_nightmap]` | 1 | Emissive night texture. |
-| `[matl_lightmap]` | 2 (texture, variable) | Light-map texture driven by `variable`. |
+| `[matl_lightmap]` | 1–2 (texture, optional variable) | Light-map texture; driven by `variable` when given (some vehicles omit it). |
 | `[matl_envmap]` | 2 (texture, factor) | Environment map. `factor` controls reflection strength. |
 | `[matl_envmap_mask]` | 1 | Mask for the environment map. |
 | `[matl_bumpmap]` | 2 (texture, factor) | Bump map. |
@@ -382,6 +382,8 @@ Observed parameter layout (from `[smoke]` blocks for tires, exhaust, and coolant
 
 ### `[CTC]` — Color Texture Change
 
+> **Corpus note (2026-10-09):** the third parameter (default index) is **optional**; some human manifests (e.g. `Humans/Busfahrer_Bremen/model/Mann_1.cfg`) give only name and texture folder. Absent means `0`. Likewise `[setbone]` indices are signed: human skeleton slots are `-2` … `-14`.
+
 | Lines | Field |
 | :--- | :--- |
 | 1 | Colorscheme name |
@@ -500,15 +502,15 @@ my_texture.tga
 | ID | Question | Priority |
 | :--- | :--- | :--- |
 | Q-001 | Are `[viewpoint]` flags interpreted as "any bit" or "all bits"? | 🟡 Medium |
-| Q-002 | When both `origin_trans` and `origin_from_mesh` are present, which wins? | 🔴 High |
-| Q-003 | How do multiple `[newanim]` blocks on the same mesh compose? | 🔴 High |
+| Q-002 | ~~When both `origin_trans` and `origin_from_mesh` are present, which wins?~~ — resolved: `origin_from_mesh` is default pivot; `origin_trans` specifies explicit pivot for the animation (📚 M-0006). | ✅ |
+| Q-003 | ~~How do multiple `[newanim]` blocks on the same mesh compose?~~ — resolved: composed hierarchically in declaration order (M-0017). | ✅ |
 | Q-004 | What does `[matl_item]` do? | 🟡 Medium |
 | Q-005 | Exact parameter count for `[light_enh]` (13 or 14?). | 🟡 Medium |
-| Q-006 | Exact parameter count for `[light_enh_2]` (23 or 24?). | 🟡 Medium |
+| Q-006 | ~~Exact parameter count for `[light_enh_2]` (23 or 24?)~~ — resolved: 23 lines without effect bitmap, 24 with (`sco-sli-audit.md`). | ✅ |
 | Q-007 | ~~Exact parameter count for `[interiorlight]` (7 or 8?)~~ — resolved: 8 lines (see section). | ✅ |
 | Q-008 | Semantics of many `[smoke]` parameters. | 🟢 Low |
-| Q-009 | Exact semantics of `[LOD]` distance thresholds. | 🔴 High |
-| Q-010 | Are LOD levels cumulative or exclusive? | 🔴 High |
+| Q-009 | ~~Exact semantics of `[LOD]` distance thresholds~~ — resolved: camera distance threshold in metres selecting exclusive visibility bands (M-0017). | ✅ |
+| Q-010 | ~~Are LOD levels cumulative or exclusive?~~ — resolved: exclusive visibility bands (M-0017). | ✅ |
 | Q-011 | ~~What are the three parameters of `[CTC]`?~~ — answered in [repaints](../repaints.md): name, texture folder, default index. | ✅ |
 | Q-012 | Can `[scripttexture]` and `[texttexture]` share an index namespace? | 🟡 Medium |
 | Q-013 | What is the "15-value" parameter list of `[matl_allcolor]`? | 🟢 Low |
@@ -528,7 +530,13 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 
 | ID | Resolution |
 | :--- | :--- |
+| Q-002 | `origin_from_mesh` uses mesh pivot as default; `origin_trans` provides explicit translation pivot overriding mesh pivot for that animation block (📚 M-0006). |
+| Q-003 | Multiple `[newanim]` blocks compose hierarchically in order of declaration (M-0017). |
+| Q-006 | `[light_enh_2]` has 23 lines without effect bitmap, 24 lines with optional effect bitmap name (`sco-sli-audit.md`). |
 | Q-007 | `[interiorlight]` has 8 lines: variable, range, R, G, B, x, y, z. |
+| Q-009 | `[LOD]` distance threshold is camera distance in metres defining visibility transitions (M-0017). |
+| Q-010 | LOD levels are exclusive visibility ranges (M-0017). |
+| Q-011 | `[CTC]` has 3 parameters: name, texture folder, default index (repaints.md). |
 
 ---
 

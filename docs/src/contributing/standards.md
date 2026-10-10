@@ -434,27 +434,28 @@ If `unsafe` is truly necessary, it must include:
 
 ### 2.11 Crate Boundaries
 
-The workspace enforces a strict dependency direction:
+The workspace enforces a strict 4-layer unidirectional dependency direction per [ADR-0005](../adr/0005-crate-architecture.md):
 
 ```
-opts-game
-├── opts-bevy
-│   └── opts-core
-├── opts-sim
-│   └── opts-core
-└── opts-utils
+opts-game (L3)
+├── opts-bevy (L2)
+│   ├── opts-core (L1)
+│   └── opts-sim (L2)
+│       └── opts-core (L1)
+├── opts-gui (L2)
+└── opts-logging (L0)
 
-opts-tools
-└── opts-core
+opts-tools (L3)
+├── opts-core (L1)
+└── opts-logging (L0)
 ```
 
 **Rules:**
 
-- `opts-core` **must not** depend on Bevy.
-- `opts-core` **must not** depend on `opts-bevy` or `opts-sim`.
-- `opts-sim` **must not** depend on Bevy.
-- `opts-bevy` is the **only** crate that depends on Bevy.
-- `opts-utils` has minimal dependencies — push logic down.
+- `opts-logging` (Layer 0) **must not** depend on any OPTS internal crate.
+- `opts-core` (Layer 1) **must not** depend on Bevy, and **must not** perform synchronous file I/O.
+- `opts-sim` (Layer 2) **must not** depend on Bevy, and **must not** perform synchronous file I/O.
+- Only `opts-bevy`, `opts-gui`, and `opts-game` are permitted to depend on Bevy.
 
 Violating the boundary is a build error in code review. If a change
 requires crossing the boundary, the boundary is wrong, and the ADR

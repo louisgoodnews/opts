@@ -183,6 +183,8 @@ Sixteen floats, 64 bytes. In 7,995 of 7,995 sampled matrices the 4th element of 
 
 **Runtime transform behaviour [M: T04]:** The matrix is **applied by the loader at runtime**; vertices in chunk `0x17` are in local model space and are transformed by this matrix when loaded. Translation (+3 in X) and scaling (2x scale) were confirmed visually in test T04. The chunk is **optional**: when omitted (as in 3 corpus files), identity is assumed, and the object loads without error. [C][M: T04]
 
+**OPTS behaviour:** only scale/translation matrices (no off-diagonal terms) are applied. About 60,000 installed files carry matrices with axis-permutation terms; for those the stored vertices are already in model orientation (e.g. `SD77_wagenkasten.o3d`: applying its cyclic-permutation matrix moves the body 20 m sideways and rotates it, while the raw vertices form a correct 11.5 m bus). Observed by rendering, not decoded; revisit if a counter-example appears.
+
 ### `0x54` — Bone-weight chunk (optional)
 
 ```
@@ -366,3 +368,49 @@ The install also contains **5,590 `.rdy` files** (cached terrain meshes, see [mi
 - [`.cfg` — Vehicle Configuration](../text/cfg.md)
 - [`model.cfg`](../text/vehicles/model_cfg.md) — names meshes and bones used by `0x54`
 - [Texture Formats](../textures.md)
+
+## 📎 Addendum 4 — 2026-10-10: header key, scrambled vertices, tolerant reading
+
+Sources: black-box measurements with our own parser over all 165,807 installed `.o3d` files, plus the public feature list and import front-end of the Blender add-on (`Blender-O3D-IO-Public`; read for structure only, per ADR-0002).
+
+**Header key (versions ≥ 4).** Bytes 4–7 are a `u32` key. `0xFFFF_FFFF` means *plain*; any other value (including `0`) marks a file written with the exporter's **vertex scrambling** (the add-on lists "encryption (private module)" and an "alternative seed", selected by bit 1 of the flags byte). Measured: plain v7 files are 99.9 % `Standard` (24,854 of 24,884) — a plain file is never scrambled; keyed v7 files are 86 % incoherent. OPTS therefore stores the key (`O3d::encryption_key`) and treats incoherent *plain* meshes as "bad normals only" (recompute normals) instead of unreadable.
+
+**What the scrambling does** (measured on 671 plain/keyed twins of the same model, identical vertex order):
+- position components are permuted **bit-exactly** per vertex; only four permutations occur (identity 47 %, swap x/z 27 %, swap x/y 15 %, swap y/z 11 %); normals receive their own signed permutation (strongly correlated with the position permutation) and about 30 % of vertices get an additive texture-coordinate jitter `(r/50)²` with integer `r` in `0..50`;
+- the vertex order, indices and materials are untouched;
+- for **vertex 0** all of these are a deterministic function of `(key, version, flags, vertex count n)`: the permutation class is an interval of `(k·n) mod 100`, and the jitter is `r = (k·n) mod 50` with a per-key constant `k` (e.g. key `0x31B6`: `k_v = 26` = key mod 50, `k_u = 3`, class constant 41); later vertices depend on the data of earlier ones (the add-on's chained `prev_seed`/`prev_vpos_seed`), so a file cannot be unscrambled without the generator;
+- the generator itself is **not** reproduced: no common LCG/xorshift/Mersenne family seeded from `key ± n` fits. A purely geometric solver (per-vertex choice among the four permutations by edge smoothness, coordinate-pool coincidence and face-normal agreement) recovers on average ~80 % of vertices (45 % of meshes ≥ 98 %), which is not good enough to render, so scrambled-and-incoherent meshes stay skipped (`VertexLayout::Unreadable`, 17.7k files ≈ 10 %).
+
+**Tolerant reading** (all measured defects of otherwise complete files, 0.04 % of the corpus):
+- text-mode damage (every `0x00` replaced by `0x20`) and leading junk before the magic are repaired when the strict read fails;
+- unknown or garbage chunks *after* vertices, faces and materials are ignored (the optional matrix/bone chunks are lost), zero padding between chunks is skipped;
+- texture names are decoded as Windows-1252 when they are not UTF-8 (585 files);
+- not recoverable: 34 damaged files (truncated or with wrong name lengths), 12 vehicle files with garbage headers, and the project's own `OPTS_Test` fixtures.
+
+**Matrix chunk — not applied (supersedes the earlier "only scale/translation" rule).** The `0x79` matrix is the exporting object's pivot frame left over from the modelling tool; vertices are already baked into model space. Evidence (`opts-bevy` example `vehicle_audit`, all 1,485 `.bus` files):
+- with the matrix ignored, **8,007 of 8,012** wheel meshes (all vehicles whose wheels are scripted with `Wheel_Rotation*`) have their geometry centre within 0.35 m (height and forward position) of the `[newanim] origin_trans` pivot; with scale/translation matrices applied only ~2,500 did — e.g. `GX437_ROUES_RARG.o3d` has the matrix `scale (−0.988, 0.988, 0.988)`, translation `(−0.912, 0.470, 0.000)` equal to its pivot, so applying it puts the wheel at the origin and doubles its height. The 5 remaining outliers are lorry wheels and one `_cache` mesh;
+- `SD77_wagenkasten.o3d` (permutation matrix, translation `(19.3, 2.0, 6.8)`) would be moved 20 m;
+- of 21 measurable scenery objects with a scale/translation matrix, 16 have their raw geometry closer to the declared `[boundingbox]` centre (5 are indifferent); permutation-matrix scenery is indecisive (86 applied vs 53 raw closer, the axis mapping of the bounding box is unverified).
+Only about 15 % of vehicle meshes and 40 % of scenery meshes carry an identity matrix, so the chunk is common noise. The earlier in-engine observation T04 (matrix translation/scale visibly applied) is **not reproduced** by the corpus and is treated as specific to that test object; `APPLY_O3D_MATRIX` in `opts-bevy/src/mesh.rs` switches the behaviour. `.x` frame transforms are unaffected and always applied.
+
+**Update (same day, 1,934 twins).** Vertex 0 is now fully characterised: with `K = key + version − 4` (alternative seed, flag bit 1: `K = key + version − 23`, all modulo 100) its texture jitter is `u += ((K·n mod 100)/100)²` and `v += ((2K·n mod 100)/100)²` (83/83 and 132/132 observations for key `0x31B6`); the permutation class is *not* a function of `K·n mod M`. From vertex 1 on the state depends on earlier data (`s₁ − n` takes values that are not linear in `n` or in quantised vertex-0 coordinates), so the chain remains unreproduced.
+
+**Geometric descrambler** (`opts_core::formats::o3d::descramble`, evaluated by the `descramble_eval` example on all 1,934 twins): mean 85 % of vertices recovered, 42 % of meshes fully; being correct only up to one global axis permutation explains just +1 %. No self-check separates good from bad solutions (triangle edge coherence: accepted 49–78 % at mean recovery 0.85–0.86 irrespective of the threshold; face-normal agreement: 0.87 → 0.90). It is therefore opt-in (`OPTS_DECODE_SCRAMBLED=1`) and scrambled meshes stay skipped by default.
+
+**Update 3 (same day): vertex 0 is reproduced exactly; plain twins make 23 % of scrambled meshes usable.**
+- Let `K = key + version − 4` (`+ 381` with the alternative-seed flag) and `q = K·n mod 8000` (`n` = vertex count). For vertex 0, over all 1,505 twin files: the permutation is selected by `u = (q + 1000) mod 8000` — `u > 4000` identity, `> 2000` swap x/z, `> 1000` swap x/y, else swap y/z (probabilities ½, ¼, ⅛, ⅛); texture jitter `u += ((q mod 100)/100)²` if `q mod 5 = 0` and `v += ((2q mod 100)/100)²` if `q mod 3 = 0`. Vertex `i ≥ 1` follows the same decision rules with a different state `qᵢ` that depends on the data of earlier vertices (not affine in `n`, not a function of vertex index, first-occurrence index, valence, quantised coordinates or the previous operation); the state update remains unknown.
+- **Every keyed file is scrambled** (91 % of those the coherence test called `Standard` differ from their plain twin in > 20 % of vertices), so `vertex_layout()` now returns `Unreadable` for all keyed meshes; this removes the "shards" some Hamburg buses showed.
+- **Plain twins:** 4,148 of 17,685 scrambled meshes (2,650 in `Vehicles`, 1,498 in `Sceneryobjects`) exist unscrambled elsewhere with the same file name, vertex/face counts and the same multiset of per-vertex sorted coordinate triples. The loader substitutes such a twin (`OmsiInstall::files_named`, catalogue-backed); `ContentCache` counts them (`twin_meshes`). The remaining 13.5k meshes stay skipped. Evaluation tools: `twin_cover`, `twin_ops`, `descramble_eval` (`opts-core` examples).
+
+## 📎 Addendum 5 — 2026-10-11: confident decoding of scrambled meshes (no twin needed)
+
+**Findings about the scrambler (twin data, 868 file groups, ~790 k vertices).**
+- Header byte 2 is the *version*; only versions ≥ 4 have a key. (A check of bytes 4–7 on a v1 file reads geometry, not a key — most `X10 Kreuzungen` crossings are plain v1; only some, e.g. `Verzieh_Gatower1`, `Einm_*`, most traffic signs, are keyed.)
+- The state `q` of every vertex is `q = n · s (mod 8000)` where `n` is the vertex count and `s` an integer that starts as `K` for vertex 0 and then follows an unknown, data-dependent chain: files with `5 | n` show u-jitter on 78 % of their vertices versus 20 % otherwise; for files with the same `(K, n)` but different geometry the sequences differ, for identical previous-vertex data they usually still differ, so `s` is not a function of the previous vertex alone. `q mod 100` is revealed by the u-jitter whenever `q mod 5 = 0` (v-jitter reveals `2q mod 100` when `q mod 3 = 0`). Consecutive visible states repeat ~14 % of the time (5 % expected), but no linear function of quantised or raw float bits of neighbouring vertices explains the increments.
+- The jitter `(du, dv)` of a vertex always lies in a closed set of ~80 pairs (99.98 % of 794 k vertices): none; u only `((5k)/100)²`; v only `((2m)/100)²` with `2q mod 100` not a multiple of 10; or both with `m_v = 2·m_u mod 100`.
+
+**Decoding by optimisation.** The earlier descrambler failed mostly because its local search got stuck: on twins, for 780 of 899 imperfect meshes the *true* labelling scores higher under the solver's own objective than the labelling it found. `descramble::solve` now starts from loopy belief propagation over the four permutations and anneals (single-vertex Gibbs sampling, T₀ = 4, 100 rounds) before the greedy rounds. Two independent runs (BP-seeded and random) that place ≥ 98 % of the vertices identically (up to 0.5 % of the bounding diagonal) are accepted by `decode_confident`; up to six runs are tried. Measured on 1,876 twins (`confident_eval`): 67.5 % of meshes accepted, 85 % of the accepted meshes have ≥ 98 % of their positions right (the rest are mostly right but contain wrong vertices; incoherent triangles are dropped). Mean cost ≈ 135 ms per mesh, up to ~1.6 s for large ones; results are cached on disk (`opts-bevy::descramble_cache`, `~/.cache/opts/descramble`).
+
+**Texture jitter.** `uvfix::unjitter_uv` fits plane-affine UV models (RANSAC over coplanar patches) and removes jitter only where a vertex's residual equals one of the allowed pairs and the patch is mostly clean; a second pass accepts a leftover vertex when exactly one allowed offset makes both coordinates equal to values that occur ≥ 3 times elsewhere. On twins this raises the share of exactly restored UVs from 49.9 % to 70.9 % (1.7 % of vertices end up wrong, 43 % remain jittered). Stored normals of decoded meshes are not recovered; `O3d::descrambled` makes the loader recompute them.
+
+**Still unknown:** the `s` chain. With it, positions and UVs would be exact and the heuristics unnecessary.

@@ -8,7 +8,7 @@
 | **Parser Module** | `opts_core::formats::{ovh, hum, cti, oft, otp, owt, oop, olf, ocu, zug, amf}` |
 | **Encoding** | CP1252 mostly; UTF-8, UTF-8+BOM and UTF-16LE occur — detect per file |
 | **Status** | 🟡 Draft — structure corpus-verified; value meanings partly unverified |
-| **Last Updated** | 2026-10-04 |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -18,7 +18,7 @@ This page covers the extension-based types found in the install that have no pag
 
 | Type | Files | Role | Section |
 | :--- | ---: | :--- | :--- |
-| `.ovh` | 1,061 | Vehicle definition for AI / static / non-bus vehicles (same grammar as [`.bus`](vehicles/bus.md)) | [.ovh](#ovh) |
+| `.ovh` | 1,061 | Co-equal vehicle definition for AI / rail / air / non-player vehicles (same grammar as [`.bus`](vehicles/bus.md)) | [.ovh](#ovh) |
 | `.hum` | 58 | Pedestrian / driver definition | [.hum](#hum) |
 | `.cti` | 3,152 | Texture-change items (liveries, ads, destinations) | [.cti](#cti) |
 | `.oft` | 1,056 | Bitmap font | [.oft](#oft) |
@@ -48,7 +48,14 @@ Shared rules: keyword line = `^\[name\]$` (case-insensitive); everything else is
 
 ### `.ovh`
 
-An `.ovh` ("other vehicle") is used for AI traffic, trailers, parked vehicles, trams and rail vehicles. It is a **`.bus`-style** vehicle definition: all of its keywords are the `.bus` vocabulary. Census over 1,061 files [C] (count of files, typical parameter lines):
+An `.ovh` ("other vehicle") is a co-equal vehicle definition file alongside [`.bus`](vehicles/bus.md), used for non-player vehicles: AI road traffic, rail vehicles (trains, trams, subways), aircraft, trailers, and parked vehicles. In OMSI, `.ovh` files never appear in the player vehicle selection UI (`is_playable = false`), but are referenced extensively by map AI lists (`ailists.cfg`, 1,004 references) and train consists (`.zug`, 1,166 references, 100% of consist entries). It shares the identical keyword grammar and parser as `.bus`. Census over 1,061 files [C] (1,052 in `Vehicles/`, 9 static scenery objects):
+
+The `[type]` keyword acts as the top-level vehicle simulation domain selector:
+- `[type]` omitted: Road vehicle (steered road physics; buses, cars, trucks)
+- `[type] 2`: Rail / track vehicle (constrained to rail splines, bogies, train consists; trains, subways, trams)
+- `[type] 3`: Aircraft / ambient airborne (3D trajectory without ground friction; airplanes, helicopters, birds)
+
+Census over 1,061 files [C] (count of files, typical parameter lines):
 
 | Keyword | Files | Lines | Keyword | Files | Lines |
 | :--- | ---: | :--- | :--- | ---: | :--- |
@@ -220,7 +227,7 @@ Reading: livery "Red" assigns `body_red.dds` to CTC slot `farbschema_tex1` and `
 
 | ID | Question | Priority |
 | :--- | :--- | :--- |
-| Q-MS01 | Does OMSI treat `.ovh` differently from `.bus` (e.g. which keywords are ignored for AI vehicles)? | 🟡 Medium |
+| Q-MS01 | ~~Does OMSI treat `.ovh` differently from `.bus`~~ — resolved: `.ovh` is hidden from the player vehicle selection UI (AI-only); physics and keywords follow `.bus`, with `[type]` selecting road/rail/air. | ✅ |
 | Q-MS02 | `.cti`: do `[setvar]` blocks belong to the preceding `[item]` name, or to the whole file? | 🟡 Medium |
 | Q-MS03 | `.hum` `[links]` field order and units; difference between the 22- and 28-value variants. | 🟡 Medium |
 | Q-MS04 | `.owt` field meaning (`wind`, `temp`, `clouds`, `precip`, `groundwet`). | 🟢 Low |
@@ -244,6 +251,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 
 | ID | Resolution |
 | :--- | :--- |
+| Q-MS01 | `.ovh` is hidden from the player vehicle selection UI (`is_playable = 0`); keywords and physics parser are identical to `.bus`; `[type]` selects simulation domain (omitted: road, `2`: rail, `3`: aircraft). |
 | Q-MS05 | `.zug` second value = orientation of the vehicle in the consist (0 forward, 1 backward). |
 
 ---

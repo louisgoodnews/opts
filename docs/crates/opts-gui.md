@@ -55,6 +55,8 @@
 - **`NotebookBuilder`**: Tabbed container with interactive tab header bar, active underline indicator, panel switching, and `NotebookTabSelected` event.
 - **`ToastBuilder`**: Snackbar notification banner with auto-dismiss duration timer, action button, and `ToastDismissed` event.
 - **`ToplevelBuilder`**: Floating modal window dialog with title bar, close button, body container, modal scrim overlay, and `ToplevelClosed` event.
+- **`ModalBuilder`** (`ModalRoot`, `ModalContent`, `ModalEvent`): full-screen scrim (60 % black) with a centred card (70 % × 90 % of the viewport, 600–1200 px wide). The backdrop blocks pointer input beneath it and clicking it does nothing; Escape emits `ModalEvent::CancelRequested`; Tab / Shift+Tab cycle only through focusables inside the card (the global focus navigation is suspended while a modal exists).
+- **`TextAreaBuilder`** (`TextArea`, `TextBuffer`, `TextAreaChanged`): multiline input. Layout-aware typing (umlauts, dead keys), Enter = newline, arrows, Home/End (Ctrl = document), PageUp/PageDown, Backspace/Delete, Shift-selection, `Ctrl+A/C/X/V` through `arboard` (falls back to an in-app clipboard with a `WARN` when no system clipboard exists), word-boundary wrapping, vertical scrolling that follows the cursor (wrapped-line count is estimated from glyph width), blinking cursor on `Time<Real>` so it keeps blinking while virtual time is paused. Tab is not consumed. Glyphs come from the active font: Bevy's built-in font is an ASCII-only Fira Mono subset, so apps must install a full-coverage TTF/OTF as the default font (`Assets<Font>::insert(Handle::<Font>::default().id(), font)`, see the `modal_text_area` example's `OPTS_EXAMPLE_FONT`). Bevy 0.14 has no font fallback or colour emoji; a single font must cover every glyph used.
 - **`TreeviewBuilder` & `TreeNode`**: Hierarchical tree navigation with recursive nesting, expand/collapse chevron toggle, and `TreeNodeToggled`/`TreeNodeSelected` events.
 - **`DateSelectBuilder` & `DateTimeSelectBuilder`**: Transit timetable and chronotimed event date/datetime selectors emitting `DateSelected` and `DateTimeSelected`.
 
@@ -76,6 +78,9 @@ cargo run -p opts-gui --example buttons_and_text
 
 # 3. Layout Primitives (Stacks, Rows, Grids)
 cargo run -p opts-gui --example layout_demo
+
+# 4. Modal dialog with multiline TextArea, Report/Cancel and a success toast
+cargo run -p opts-gui --example modal_text_area
 ```
 
 ---

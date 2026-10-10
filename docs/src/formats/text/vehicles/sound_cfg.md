@@ -8,8 +8,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::sound_cfg` |
 | **Encoding** | Windows-1252 (CP1252) |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified — Ready for Implementation |
+| **Last Updated** | 2026-10-07 |
 
 ---
 

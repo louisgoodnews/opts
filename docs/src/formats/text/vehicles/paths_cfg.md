@@ -460,6 +460,10 @@ Step_01.wav
 
 | ID | Question | Resolution |
 | :--- | :--- | :--- |
+| Q-001 | Are pathlinks directed or undirected? | `[pathlink]` is bidirectional. One-way directed links use `[pathlink_oneway]` (📚 M-0006). |
+| Q-002 | Are pathpoint coordinates relative to the segment's local origin? | Yes — segment-local coordinate space relative to the vehicle/segment origin (confirmed by M-0020). |
+| Q-003 | Meaning of `[next_roomheight]`'s value. | Ceiling height in metres for subsequent links to prevent passenger head clipping (📚 M-0006). |
+| Q-005 | How sound packs are selected at runtime. | `[next_stepsound]` assigns the zero-based footstep sound index from `[stepsoundpack]` to subsequent links (📚 M-0006). |
 | Q-006 | Are pathpoint indices global across all vehicles in a chain, or per-segment? | **Per-segment.** Every segment's paths file starts at index 0. Confirmed by the trailer sample. |
 
 ---
@@ -468,24 +472,8 @@ Step_01.wav
 
 | ID | Question | Priority | Status |
 | :--- | :--- | :--- | :--- |
-| Q-001 | Are pathlinks directed or undirected? | 🔴 High | Open — parser stores as directed; `opts-sim` may symmetrize |
-| Q-002 | Are pathpoint coordinates relative to the segment's local origin? | 🟡 Medium | Working assumption: yes |
-| Q-003 | Meaning of `[next_roomheight]`'s value (units, semantics). | 🟡 Medium | Open |
-| Q-004 | Why the `next_` prefix on metadata keywords? | 🟢 Low | Open |
-| Q-005 | How are sound packs selected at runtime beyond `[next_stepsound]`? | 🟡 Medium | Open |
-| Q-007 | Are link declarations required to be non-self-referential and non-duplicated? | 🟢 Low | Open |
-
-### Q-001 — Directionality
-
-The declaration syntax (`from`, `to`) implies directed edges. The asymmetric graphs in all three samples strongly suggest directed interpretation. However, OMSI's simulation may traverse them bidirectionally.
-
-**Parser directive:** Store as directed. Do not symmetrize in `opts-core`. Symmetrize (or not) in `opts-sim` after testing against observed OMSI behavior.
-
-### Q-002 — Coordinate Frame
-
-Per-segment indexing strongly implies per-segment coordinate frames. The trailer's pathpoint 0 at `(0, 3.784, 0.632)` is expressed in the trailer's own coordinate space, whose origin is defined by the coupling to the main segment.
-
-**Parser directive:** Store coordinates as-read, tagged with the segment index. Transform during chain assembly in `opts-sim`.
+| Q-004 | Why the `next_` prefix on metadata keywords? | 🟢 Low | Open (stylistic convention for modal state commands). |
+| Q-007 | Are link declarations required to be non-self-referential and non-duplicated? | 🟢 Low | Open (parser guards against self-loops and duplicates). |
 
 ---
 

@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::map::lists` |
 | **Encoding** | UTF-8/ASCII, CP1252, UTF-8+BOM, a few UTF-16LE (`Holidays*.txt`) — detect per file |
-| **Status** | 🟡 Draft — structure corpus-verified; semantics partly unverified |
-| **Last Updated** | 2026-10-04 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 

@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::texture_cfg` |
 | **Encoding** | UTF-8 / ASCII (12,000 of 12,000) |
-| **Status** | 🟡 Draft — structure corpus-verified; value meanings partly unverified |
-| **Last Updated** | 2026-10-04 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 

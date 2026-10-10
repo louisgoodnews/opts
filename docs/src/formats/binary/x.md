@@ -311,3 +311,12 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - [`.sco` — Scenery Objects](../text/sco.md) — `[mesh]`, `[collisionsmesh]`
 - [`model.cfg`](../text/vehicles/model_cfg.md) — `[mesh]` in vehicles
 - [Texture Formats](../textures.md)
+
+## 📎 Addendum — 2026-10-10: what the OPTS reader accepts
+
+Measured over all 8,152 installed `.x` files; every file now loads except none (0 failures):
+- **Binary `bin ` files (26)** are read through the standard tokenised encoding (name, string, integer/float lists, punctuation; 32- or 64-bit floats). Compressed variants (`tzip`/`bzip`) are rejected (none exist in the corpus).
+- **N-gon faces** (856 files, e.g. `5; 0,1,2,3,4;`) are fan-triangulated from the first vertex, the same rule as quads; faces with fewer than three vertices are skipped.
+- **Named data objects** (`FrameTransformMatrix relative {`, `MeshTextureCoords c1 {`; 116 files) — the instance name is ignored.
+- **`TextureFilename { "diffuse.jpg", "normal.jpg"; }`** — only the first string is the colour map.
+- **Unbalanced braces** at end of file are tolerated; everything read before is kept.

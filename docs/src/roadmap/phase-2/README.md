@@ -2,7 +2,7 @@
 
 *Goal: Implement the Rust code that turns the Phase 1 specifications into data structures.*
 
-**Status:** 🟡 In Progress — M-0013 `.o3d` parser complete; `.x` and M-0014 open.
+**Status:** 🟢 Complete — All Phase 2 parser milestones implemented and verified.
 
 The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this page lists its milestones.
 
@@ -12,7 +12,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 
 - [M-0013 — Binary Mesh Parsers (`.o3d`)](M-0013.md) — 🟢 Complete (🔴 High priority; `.o3d` parser complete)
 - [M-0014 — Vehicle Configuration & Operational Data Parsers](M-0014.md) — 🟢 Complete (🟡 Medium priority; `.bus`, `paths.cfg`, `.org`, `Money/*.cfg`)
-- [M-0015 — World & Scenery Parsers](M-0015.md) — ⚪ Planned (🟢 Low priority; deferred pending Mutation Kit 2)
+- [M-0015 — World & Scenery Parsers](M-0015.md) — 🟢 Complete (🔴 High priority; `.sco`, `.sli`, `tile_*.map`, `global.cfg`, `.terrain`, `.water`)
 - [M-0016 — DirectX `.x` Legacy Mesh Parser](M-0016.md) — 🟢 Complete (🔴 High priority; `.x` parser complete)
 - [M-0017 — Model Configuration Parser (`model.cfg`)](M-0017.md) — 🟢 Complete (🔴 High priority; mesh bindings and animations)
 
@@ -35,6 +35,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
   - [x] Implement `Money/<pack>/*.cfg` currency denominations parser.
 - [x] **📐 Model Configuration Parser (`opts_core::formats::vehicles::model`)** — [M-0017](M-0017.md)
   - [x] Implement `model.cfg` parser for mesh bindings, LOD tiers, animations, viewpoints, and material modifiers.
-- [ ] **🗺️ Scenery & World Parsers (`opts_core::formats::map::*`)** — M-0015 (Deferred)
-  - [ ] Implement `.sco` and `.sli` parsers upon spec promotion.
-  - [ ] Implement `global.cfg` and `tile_*.map` parsers upon spec promotion.
+- [x] **🗺️ Scenery & World Parsers (`opts_core::formats::scenery`, `opts_core::formats::map`)** — [M-0015](M-0015.md)
+  - [x] Implement `.sco` scenery object and `.sli` spline profile parsers.
+  - [x] Implement `global.cfg` manifest and `tile_*.map` tile layout parsers.
+  - [x] Implement `.map.terrain` height field and `.map.water` water level binary parsers.

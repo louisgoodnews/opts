@@ -8,8 +8,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::constfile` |
 | **Encoding** | Windows-1252 (CP1252), CRLF line endings |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 

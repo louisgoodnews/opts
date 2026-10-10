@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::sco` |
 | **Encoding** | Windows-1252 (CP1252); a few files are UTF-8 (see [Encoding](#-encoding)) |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -557,9 +557,9 @@ streetlight_large.o3d
 | ID | Question | Status |
 | :--- | :--- | :--- |
 | Q-SCO-001 | Exact `[matl_alpha]` mode meanings. | Corpus: `2` and `1` dominate, `0`/`3`/`16` exist; wiki lists 0–2 📚; behaviour untested (see `community-crosscheck.md` Q-CC02). |
-| Q-SCO-002 | `[rendertype]` numeric values 0–4. | **Answered 📚:** `presurface` before terrain, `surface` with terrain, `on_surface` after terrain, `1` before normal objects, `2` normal (default), `3` after normal objects, `4` after vehicles/pedestrians. `0` (4 uses) undocumented. |
+| Q-SCO-002 | ~~`[rendertype]` numeric values 0–4~~ — resolved: `presurface` before terrain, `surface` with terrain, `on_surface` after terrain, `1` before normal objects, `2` normal (default), `3` after normal objects, `4` after vehicles/pedestrians (📚 M-0006). | ✅ |
 | Q-SCO-003 | `[LOD]` threshold direction. | Provisional. |
-| Q-SCO-004 | Length of `[light_enh_2]` (23 or 24 lines in the wild). | **Resolved:** 17 numeric fields, one variable (name or number), 5 numeric fields, and an **optional** effect-bitmap name; 23 lines without bitmap, 24 with. See [`sco-sli-audit.md`](sco-sli-audit.md#light_enh_2-field-layout-corpus-derived). |
+| Q-SCO-004 | ~~Length of `[light_enh_2]` (23 or 24 lines in the wild)~~ — resolved: 23 lines without effect bitmap, 24 with optional bitmap name (`sco-sli-audit.md`). | ✅ |
 | Q-SCO-005 | Parameters of `[traffic_light_stop]` (3) and `[traffic_light_jump]` (4). | Open. Observed `0`, `1.0`, `1` / `1`, `11.0`, `1`, `1.0`. |
 | Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Open. |
 | Q-SCO-007 | Last two `[splinehelper]` values. | Observed `0`, `0`. |

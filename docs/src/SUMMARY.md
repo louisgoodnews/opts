@@ -51,6 +51,7 @@
 
 - [Overview](architecture/overview.md)
 - [Crate Structure](architecture/crate-structure.md)
+- [Crate Dependency Graph](architecture/crate-graph.md)
 - [Coordinate Systems](architecture/coordinates.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)
@@ -60,6 +61,9 @@
 - [Ego Perspective & Character Locomotion](architecture/ego-perspective.md)
 - [GUI Design System](architecture/gui-design-system.md)
 - [Vehicle ECS Simulation Bridge](architecture/vehicle-ecs-bridge.md)
+- [Main Menu Architecture](architecture/main-menu.md)
+- [Application Startup & Wiring](architecture/application-startup.md)
+- [F1 Reporting Feature](architecture/reporting-feature.md)
 
 
 ---
@@ -70,6 +74,7 @@
 - [Text Formats](formats/text/README.md)
   - [`.sco` — Scenery Objects](formats/text/sco.md)
   - [`.sli` — Splines](formats/text/sli.md)
+  - [`.report` — F1 bug reports](formats/text/report-format.md)
   - [`.sco` / `.sli` Corpus Audit](formats/text/sco-sli-audit.md)
   - [`.bus` — Vehicle Definitions](formats/text/vehicles/bus.md)
   - [`.cfg` — Vehicle Configuration](formats/text/cfg.md)
@@ -138,6 +143,8 @@
 - [ADR Template](adr/template.md)
 - [ADR-0001: Why Bevy and Rust?](adr/0001-why-bevy-and-rust.md)
 - [ADR-0002: Clean-Room Reverse Engineering Policy](adr/0002-clean-room-policy.md)
+- [ADR-0004: Unified Logging Architecture](adr/0004-logging-architecture.md)
+- [ADR-0005: Workspace Crate Architecture](adr/0005-crate-architecture.md)
 
 # 🎓 Tutorials
 
@@ -154,6 +161,8 @@
 
 # 🔍 Meta & Audits
 
+- [F1 Reporting Final Report (2026-10-10)](meta/f1-reporting-2026-10-10.md)
+- [Modularization Final Report (2026-10-09)](meta/modularization-2026-10-09.md)
 - [Critical Review (2026-10-08)](meta/critical-review-2026-10-08.md)
 - [Documentation Freeze (2026-10-06)](meta/documentation-freeze-2026-10-06.md)
 - [Link Integrity Audit](meta/link-integrity.md)
@@ -186,6 +195,7 @@
 
 # 📘 Reference
 
+- [opts-logging API](crates/opts-logging.md)
 - [opts-core API]()
 - [opts-bevy API]()
 - [opts-sim API]()

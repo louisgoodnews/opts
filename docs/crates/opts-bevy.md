@@ -106,6 +106,21 @@ Its primary responsibilities are:
 - **`extrude_spline_profile(profile, length_m) -> Vec<(usize, Mesh)>`:**
   - Procedurally extrudes 2D spline cross-section profiles into 3D Bevy `Mesh` assets with UVs, normals, and texture slot bindings.
 
+### 6b. Runtime OMSI Content (`opts_bevy::install`, `model`, `terrain`)
+
+- `OmsiInstall` — case-insensitive, backslash-tolerant path resolution (`find_file`, `find_in`, `root_from_map_dir`).
+- `ContentLoader` / `ContentCache` / `ModelPart` / `TextureOverride` — mesh file + texture overrides → one `ModelPart` per material slot, with texture search (owner folder → global `Texture/`, alternative extensions) and statistics.
+- `attach_model_parts` — spawn parts under an entity.
+- `build_terrain_mesh`, `sample_terrain`, `terrain_material` — `.map.terrain` grids.
+- `extrude_spline_segment` (in `scenery`) — placed spline segment with arc and gradient; `extrude_spline_profile` is the straight-segment convenience wrapper.
+- `parse_mesh_file` / `o3d_to_bevy_meshes_by_material` (in `mesh`) — `.o3d`/`.x` normalisation and per-material split.
+
+See [Asset Pipeline](../src/architecture/asset-pipeline.md).
+
+### 6c. Camera Perspective System (`opts_bevy::camera`)
+
+`OptsCameraPlugin` (part of `OptsAssetPlugin`) provides `CameraMode`, `CameraState`, `CameraAvailability`, F1–F6 switching, free-roam flight (WASD/QE + mouse look, Shift+wheel speed ×1.25, min 5 m/s, no max), Shift+Space reset and `camera_hint_text` for the HUD. Design and status: [camera-system.md](../src/architecture/camera-system.md).
+
 ### 7. Vehicle Spawning & Cockpit Presets (`opts_bevy::vehicle`)
 - **`BusVehicle`:**
   - Component tracking vehicle identity, driver/passenger camera presets, outside orbit center, and current active camera index.
@@ -190,3 +205,8 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 - [`.o3d` Binary Mesh Specification](../src/formats/binary/o3d.md)
 - [DirectX `.x` Mesh Specification](../src/formats/binary/x.md)
 - [Phase 3 Roadmap](../src/roadmap/phase-3/README.md)
+
+
+## Reporting (`opts_bevy::reporting`)
+
+`ReportingPlugin` implements the F1 bug report: screenshot capture (`ScreenshotManager`), `ReportModalState` (`Inactive → Capturing → Open`), a modal with a multiline text area (from `opts-gui`), pause of `Time<Virtual>` (only if it was running), the `ModalActive` resource with the `not_modal_active` run condition for input systems, and asynchronous saving of `{datetime}.png` + `.report` ([format](../src/formats/text/report-format.md)). `ReportContext` carries version, git hash, map, camera and vehicle (filled by `opts-game`). Env `OPTS_REPORTS_DIR` overrides the reports directory. Example: `cargo run -p opts-bevy --example report_flow`.

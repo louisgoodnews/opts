@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::passengercabin_cfg` |
 | **Encoding** | Windows-1252 (CP1252) |
-| **Status** | 🟡 Draft — Under Investigation |
-| **Last Updated** | 2026-10-06 |
+| **Status** | 🟢 Specified — Ready for Implementation |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -417,11 +417,13 @@ A minimal but valid passengercabin file with one entry, one exit, and one passen
 
 | ID | Question | Resolution |
 | :--- | :--- | :--- |
+| Q-001 | Scope of `[illumination_interior]` relative to `[passpos]`. | Modal group assignment: takes up to four light indices in `model.cfg` order that apply to subsequent `[passpos]` positions until reassigned (📚 M-0006). |
 | Q-002 | Meaning of `{noticketsale}`. | Global flag: passengers cannot trigger ticket sales at entries. |
 | Q-003 | Do adjacent `[passpos]` `[illumination_interior]` arrays coexist? | Yes — stored per-position. |
 | Q-004 | Other `{...}` flags? | Unknown flags exist; parse any `{...}` as a boolean, store in `flags` map. |
 | Q-005 | Are `_2` variants semantically identical? | Yes — the `_2` suffix adds an `animparent` field. |
 | Q-006 | Why does the trailer have `[exit]` but no `[entry]`? | Confirmed: trailers mostly have no entries. |
+| Q-007 | Are `[passpos]` coordinates relative to the vehicle origin or to the mesh origin? | Segment-local coordinate space relative to the vehicle origin (confirmed by M-0020 coordinate systems). |
 | Q-008 | Can `[drivpos]` and `[passpos]` interleave? | Yes — distinct concepts, not variants. |
 | Q-009 | Are pathpoint indices global across all vehicles in a chain? | **No — per-segment.** See [`paths_cfg`](paths_cfg.md). |
 
@@ -431,24 +433,7 @@ A minimal but valid passengercabin file with one entry, one exit, and one passen
 
 | ID | Question | Priority | Status |
 | :--- | :--- | :--- | :--- |
-| Q-001 | Scope of `[illumination_interior]` relative to `[passpos]`. | 🔴 High | Open — three competing hypotheses |
-| Q-007 | Are `[passpos]` coordinates relative to the vehicle origin or to the mesh origin? | 🟡 Medium | Working assumption: segment-local origin |
-
-### Q-001 — `[illumination_interior]` Scope
-
-See [Position-Scoped Modifier](#-illumination_interior--position-scoped-modifier) above for the three hypotheses and observed patterns. This is the highest-priority unresolved question in the format.
-
-**Impact if unresolved:** Interior lighting for passengers may be assigned incorrectly in `opts-sim`, causing incorrect visual presentation of the passenger environment.
-
-**Recommended resolution path:** Observe OMSI's actual behavior with a controlled test asset, or consult the original modder documentation.
-
-### Q-007 — Coordinate Frame
-
-It is currently **unknown** whether `[passpos]` coordinates are relative to the vehicle origin or to the origin of the associated mesh.
-
-**Hypothesis:** Vehicle/segment origin, consistent with the coordinate system used in `.bus` and `paths_cfg`.
-
-**Parser directive:** Store coordinates as-read. Interpretation belongs in `opts-sim`.
+| — | *(None — all questions resolved)* | — | ✅ |
 
 ---
 

@@ -7,8 +7,8 @@
 | **Parser Crate** | `opts-core` |
 | **Parser Module** | `opts_core::formats::hof` |
 | **Encoding** | Windows-1252 (CP1252) |
-| **Status** | 🟡 Drafted from samples — pending maintainer review |
-| **Last Updated** | 2026-10-03 |
+| **Status** | 🟢 Specified |
+| **Last Updated** | 2026-10-07 |
 
 ---
 
@@ -374,9 +374,9 @@ Hbf
 
 | ID | Question | Status |
 | :--- | :--- | :--- |
-| Q-HOF-001 | Exact semantics of `{ALLEX}` prefix and the `#` cell. | Inferred from usage. |
-| Q-HOF-002 | Are `[global_strings]` slots 3–5 vendor-specific? | Probably. |
-| Q-HOF-003 | Is `Ident` matching case-sensitive? | Assumed yes. |
+| Q-HOF-001 | ~~Exact semantics of `{ALLEX}` prefix and the `#` cell~~ — resolved: `[addterminus_allexit]` / `{ALLEX}` marks drop-off only stops (passengers alight, none board; 📚 M-0006). | ✅ |
+| Q-HOF-002 | ~~Are `[global_strings]` slots 3–5 vendor-specific?~~ — resolved: universal OMSI 2 layout maps up to 26 string slots for terminus rows, 9 for stop rows (📚 M-0006). | ✅ |
+| Q-HOF-003 | ~~Is `Ident` matching case-sensitive?~~ — resolved: stop names match editor cube names; passengers react to names and IBIS codes (📚 M-0006). | ✅ |
 | Q-HOF-004 | Do `[addterminus]` / `[addbusstop]` (single entry) share one terminator rule? | Open; `.....` assumed. |
 | Q-HOF-005 | How `[SP]` / `[DLC]` tags affect loading. | Open. |
 

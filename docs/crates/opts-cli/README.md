@@ -2,57 +2,48 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Layer** | L6 · Application |
-| **Role** | composition root |
-| **Kind** | lib → bin (`opts`) |
-| **Status** | ⬜ Skeleton |
-| **Proposed fate** | 🔁 Becomes the `opts` binary |
-| **Last Updated** | 2026-10-04 |
+| **Layer** | L0 · Shared Foundations |
+| **Role** | Command-Line Interface Definitions & Argument Parser |
+| **Kind** | Library (`opts_cli`) |
+| **Status** | 🟢 Implemented (`CliArgs`, dimensions, flags) |
+| **Last Updated** | 2026-10-09 |
 
 ---
 
 ## 🎯 Purpose
 
-The command-line front end: `opts inspect`, `opts convert`, `opts validate`, `opts graph`. Argument parsing and output formatting only; the commands themselves live in `opts-tools`.
+`opts-cli` provides unified command-line argument parsing and flag definitions for the Open Public Transport Simulator. It isolates argument schemas from runtime engine components, allowing both the root binary (`src/main.rs`) and `opts-game` to ingest options consistently.
 
-## 📤 Public API (high level)
+## 📤 Public API
 
-> [!NOTE]
-> Planned surface — nothing is implemented yet.
+```rust
+use opts_cli::CliArgs;
 
-```text
-opts inspect  <file>                 # pretty-print parsed AST + diagnostics
-opts validate <omsi-root> [--format] # parse everything, report problems
-opts graph    <omsi-root> <asset>    # dependency graph via opts-discovery
-opts convert  <file> --to <fmt>      # e.g. .o3d → glTF (later)
+let args = CliArgs::parse_args();
+let (width, height) = args.parse_dimensions();
 ```
 
-## 📦 Dependencies — and why
+### Supported CLI Flags
+
+| Flag | Type | Default | Description |
+| :--- | :---: | :--- | :--- |
+| `--map-path <PATH>` | `Option<PathBuf>` | None | Override map directory for background preview |
+| `--recent-map <PATH>` | `Option<PathBuf>` | None | Persist path as the last-loaded recent map in user settings |
+| `--log-level <LEVEL>` | `String` | `"info"` | Global log filter level (`trace`, `debug`, `info`, `warn`, `error`) |
+| `--log-file <PATH>` | `Option<PathBuf>` | Platform default | Directory where subsystem log files are written |
+| `--fullscreen` | `bool` | `false` | Launch window in borderless fullscreen mode |
+| `--windowed` | `bool` | `false` | Explicitly request windowed mode (overrides fullscreen) |
+| `--window-size <WxH>` | `String` | `"1280x720"` | Initial window dimension (e.g. `1920x1080`) |
+| `--headless` | `bool` | `false` | Run without opening an OS display window (ideal for CI testing) |
+
+## 📦 Dependencies
 
 | Dependency | Why |
 | :--- | :--- |
-| `opts-tools` *(planned)* | Command implementations |
-| `argh` **or** `clap` | Argument parsing — pick one workspace-wide |
-| `anyhow`, `tracing-subscriber` | Binary-level errors and logging |
-
-Currently declares parser libraries (`nom`, `binrw`, `glam`, `petgraph`) — those belong to lower layers. ⚠️ `argh` is not declared in `[workspace.dependencies]` (Audit F2).
-
-## 🧭 Design Decisions
-
-- Proposed split (Architecture Q2): **`opts-tools` = library** of commands, **`opts-cli` = binary**. This lets the editor and tests call the same commands without spawning a process.
-- Alternative: drop `opts-cli` entirely and keep `opts-tools` as both. Simpler, but loses reuse.
-
-## 🚧 Current State & Known Issues
-
-- Empty `lib.rs`.
-- ⚠️ Undeclared workspace dependency `argh`.
-
-## 🔮 Future Direction
-
-Shell completions, JSON output mode for CI pipelines.
+| `clap` (`derive`) | Robust, declarative argument parsing and auto-generated `--help` documentation |
 
 ## 🔗 Cross-References
 
-- [opts-tools](../opts-tools/)
-- [Workspace Audit F2, F6](../audit.md)
-- [Proposed Architecture](../architecture.md) · [Workspace Audit](../audit.md)
+- [opts-game](../opts-game.md)
+- [Application Startup Architecture](../../src/architecture/application-startup.md)
+- [Crate Architecture ADR-0005](../../src/adr/0005-crate-architecture.md)

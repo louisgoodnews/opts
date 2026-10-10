@@ -56,7 +56,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 
 | Crate | Status | Purpose | Key deps | Phase |
 | :--- | :---: | :--- | :--- | :---: |
-| `opts-discovery` | ✅ | Asset scanning and dependency graph | `opts-vfs`, `opts-formats`, `petgraph` | 2 |
+| `opts-catalogue` | ✅ | SQLite path catalogue of an OMSI install (replaced `opts-discovery`) | `opts-core`, `rusqlite`, `rayon` | 2 |
 | `opts-import-omsi` | 🆕 | OMSI AST → model | `opts-formats`, `opts-model-*` | 2–3 |
 | `opts-assets` | 🔁 | Bevy-free asset catalog | `opts-core`, `opts-vfs` | 3 |
 | `opts-tools` | 🔁 | Tool-command library (`inspect`, `convert`, `validate`, `graph`) | pipeline crates | 2 |

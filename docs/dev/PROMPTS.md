@@ -1,5 +1,8 @@
 # 🧭 OPTS Dev Agent Prompt Library
 
+> **Deprecated 2026-10-11.** The prompts now live one per file under [`prompts/`](prompts/README.md). This file is kept unchanged below for history; edit the per-file versions.
+
+
 This document is the canonical prompt library for working with a
 local dev agent (Antigravity, Cursor, Claude Code, etc.) on the OPTS
 project. Each prompt is self-contained, versioned by ID, and designed

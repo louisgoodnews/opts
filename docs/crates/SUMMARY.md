@@ -22,7 +22,7 @@
 - [Formats]()
   - [opts-parsers](opts-parsers/README.md)
 - [Pipeline]()
-  - [opts-discovery](opts-discovery/README.md)
+  - [opts-catalogue](opts-catalogue/README.md)
   - [opts-assets](opts-assets/README.md)
 - [Simulation]()
   - [opts-sim](opts-sim/README.md)

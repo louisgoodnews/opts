@@ -131,17 +131,21 @@ A road/rail piece: `.sli` profile ([`.sli`](../text/sli.md)) placed along a segm
 | 2 | `3212684` | ID code. |
 | 3 | `0` | ID code of a connected element, or `0` (39 % zero). ❓ |
 | 4 | `3212699` | second ID code, or `0` (38 % zero). ❓ |
-| 5 | `244.64` | horizontal position (range −203…471, median 151). |
-| 6 | `29.9999` | **vertical** value (median 0.15, p95 143: relative height; 30 for the rail piece above, whose terrain is ≈ 30 m high). |
-| 7 | `209.37` | second horizontal position (range −66…471, median 141). |
-| 8 | `293.13` | heading, degrees (not normalised). |
+| 5 | `244.64` | horizontal $X$ position (easting). |
+| 6 | `29.9999` | **vertical $Z$** position (elevation / height; verified by Mutation Kit 2). |
+| 7 | `209.37` | horizontal $Y$ position (northing). |
+| 8 | `293.13` | heading, degrees (yaw around vertical axis; verified by Mutation Kit 2). |
 | 9 | `299.99` | length in metres (1…400, median 10). |
-| 10 | `0` / `900.0` | curvature/radius: `0` in 81 % (straight); non-zero values up to ±20,000. ❓ sign and unit |
-| 11–14 | `0` | rarely non-zero (6–7 %): ❓ |
-| 15, 16 | `0` | small values, ±0.2 (71 % zero): ❓ gradient at start/end (the `.sco` `[path]` has the same pair). |
-| 17 | `0` | 0…18,275, 34 % zero. ❓ |
+| 10 | `0` / `900.0` | curvature/radius: `0` in 81 % (straight); non-zero values up to ±20,000 (arc radius). |
+| 11, 12 | `7` / `6` | **start and end gradient in percent.** Measured on all connected `A.end → B.start` pairs of Bremen-Nord (8,384) and Berlin-Spandau (1,112): the next segment starts exactly `length · (p11 + p12) / 200` m higher for 100 % of `[spline]` records (7,754/7,754 and 918/918). ✅ |
+| 13 | `0.5` | `[spline_h]` only: the **total height change** of the segment in metres (117/117 and 69/69 records where only this field is set); the profile between the end gradients is a smooth ramp (cubic Hermite). |
+| 14 | `0` | rarely non-zero, often equal to 13 (`10 / 10`, `5 / 5`, `-15 / -20`) ❓ (cross slope / tilt?). |
+| 15, 16 | `0` / `-0.98` | not gradients. Non-zero mostly on kerb/wall/fence splines that follow a base spline: values of about ±1 ❓ (lateral offset at start/end relative to the followed spline?). |
+| 17 | `0` | 0…18,275, 34 % zero: cumulative distance along the followed chain ❓. |
 
-Note the **axis order differs** from `[object]`: spline positions are stored as *(horizontal, vertical, horizontal)* in lines 5–7, objects as *(horizontal, horizontal, vertical)* in lines 3–5. This needs confirmation by a mutation test ([Q-M02](#-open-questions)).
+**Connections (fields 3, 4)** name another element by ID. For two spline IDs the ends coincide (planar gap ≤ 5 cm for 94.6 % of 17,700 resolvable pairs in Bremen-Nord; the rest are IDs of *attached* helper splines such as kerbs and walls, kilometres away, i.e. not geometric joins). 62 % of all spline ends touch another spline within 10 cm and 18 % within 1.5 m. Splines naming a *scenery object* (5,508 in Bremen-Nord) refer to attached decals (manholes, road damage) without paths, not to crossings: **crossings connect only geometrically** — free road ends coincide with object path ends under the clockwise rotation convention of `[object]` headings (420 hits vs 32 counter-clockwise). Tools: `spline_audit` and `crossing_audit` examples in `opts-core`.
+
+Note the **axis order differs** from `[object]`: spline positions are stored as *(horizontal $X$, vertical $Z$, horizontal $Y$)* in lines 5–7, whereas `[object]` positions are stored as *(horizontal $X$, horizontal $Y$, vertical $Z$)* in lines 3–5. This was **experimentally verified in OMSI 2** by Mutation Kit 2 (mutating Line 6 raised the road spline vertically in 3D space, while mutating Line 8 rotated its heading).
 
 ### Other blocks
 
@@ -246,11 +250,11 @@ Reading `.terrain` (descriptive): read `u32 n = 60`; read `(n+1)²` `f32` height
 
 ## ❓ Open Questions
 
-| ID | Question | Priority |
-| :--- | :--- | :--- |
-| Q-M01 | Tile size (300 m?) and terrain cell size (5 m?), tile origin (corner or centre), and how tile index `(x, y)` maps to world coordinates. | 🔴 High |
-| Q-M02 | `[spline]` / `[spline_h]` field meanings and axis order (lines 3–4, 10–17). A mutation test on one spline resolves most. | 🔴 High |
-| Q-M03 | `[object]` flag line, pitch/roll order and sign, and `z` reference (terrain-relative vs absolute for rail pieces). | 🔴 High |
+| ID | Question | Priority | Status / Finding |
+| :--- | :--- | :--- | :--- |
+| Q-M01 | Tile size (300 m) and terrain cell size (5 m), tile origin (corner or centre), and how tile index `(x, y)` maps to world coordinates. | 🟢 Low | ✅ Confirmed by Mutation Kit 2: tile size is strictly $300\text{ m} \times 300\text{ m}$, origin $(0, 0)$ is the southwest corner, $+X$ extends east, $+Y$ extends north. |
+| Q-M02 | `[spline]` / `[spline_h]` field meanings and axis order (lines 5–7). | 🟢 Low | ✅ **Resolved** by Mutation Kit 2: lines 5–7 are $(X, Z, Y)$ where Line 6 is vertical height $Z$, Line 8 is heading, Line 9 is length, Line 10 is radius. |
+| Q-M03 | `[object]` flag line, pitch/roll order and sign, and `z` reference. | 🟡 Medium | Lines 6–8 confirmed as Heading (Yaw), Pitch (transverse), Roll (longitudinal). |
 | Q-M04 | `[splineattachement]`, `[splineattachement_repeater]`, `[attachobj]`, `[varparent]` full layouts. | 🟡 Medium |
 | Q-M05 | What differs in versions 11–13, and does `[version]` with two lines (655 files) carry extra data? | 🟡 Medium |
 | Q-M06 | `[rule]` index semantics and the `flag` field; `[relabel]`/`[typ]`/`[delete]` target semantics. | 🟡 Medium |
@@ -291,3 +295,65 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - [`.sco`](../text/sco.md), [`.sli`](../text/sli.md) — objects and splines placed by tiles
 - [Timetables](timetables.md) — ID codes of stops
 - [Textures](../textures.md)
+
+
+## 🎨 Ground painting (texture masks) — 2026-10-10
+
+Many map authors paint markings, pavements, paths and puddles straight into the terrain instead of placing splines. This lives outside the `.map` file:
+
+- `global.cfg` lists the **ground layers** (`[groundtex]`, layer 0 = base). Parameter 3 of the three trailing numbers is the number of repeats of the layer across the 300 m tile (`60` = one repeat per 5 m cell for the base; `100`/`120` for asphalt/pavement layers).
+- A tile may carry one **A8 alpha mask per layer**: `texture/map/tile_<x>_<y>.map.<N>.dds` (Berlin) or `texture/tile_<x>_<y>.map.<N>.dds` (Bremen), 64²…1024²; mask `N` is the blend weight of layer `N` over everything below it (`N` ≥ 1 matches the 8–11 `[groundtex]` entries; Bremen-Nord has masks 1–10 on 764 files).
+- Row 0 of a mask is the **north** edge (assumed from the orientation of the editor's 2-D view; not independently verified against an in-game screenshot).
+
+OPTS now composites these layers per tile on the CPU (`opts_bevy::ground`, BC1/2/3 decoding included) into one texture over the whole tile; tiles without masks keep the single repeating base layer. `[spline_terrain_align*]`, the `.LM.bmp` light maps and the winter variants (second path of a `[groundtex]`) are not used yet.
+
+## Spline attachments (`[splineAttachement]`, `[splineAttachement_repeater]`)
+
+Street lights, fences, shrubs, parking bays and similar objects that follow a road are stored as
+attachments instead of `[object]` blocks. They sit in the tile's object list (they take an
+`Object Nr.` like objects). Field order, determined experimentally against the BRT Berlin and
+Gladbeck tiles:
+
+| Line | `[splineAttachement]` | `[splineAttachement_repeater]` |
+|------|------------------------|---------------------------------|
+| 0 | `0` (flag) | `0` (flag) |
+| 1–2 | — | span in metres, repeat count |
+| 1 / 3 | `.sco` path | `.sco` path |
+| 2 / 4 | object id code | object id code |
+| 3 / 5 | index of the carrying `[spline]` among this tile's splines (0-based) | same |
+| 4 / 6 | lateral offset in metres (positive = right of travel) | same |
+| 5 / 7 | height above the spline surface | same |
+| 6 / 8 | distance along the spline | same |
+| 7 / 9 | heading relative to the spline direction (degrees) | same |
+| 8.. / 10.. | two unidentified `0`s, then two numbers (typically 30/500) that look like visibility limits | same |
+
+**Distance semantics.** For a single attachment the distance is a *chainage from the start of the
+connected spline chain* the carrier belongs to (walk `conn_id_1` backwards, summing lengths); the
+position on the carrier is `distance − Σ length(preceding splines)`. Evidence: in
+`tile_-12_-2.map` the attachments of splines 2 and 3 (lengths 96.5 and 174.3 m, preceded by 50 and
+87.3 m) have distances 150–223 m and 240–345 m, which map exactly into `[0, length]` after
+subtracting 137.3 m and 233.8 m. For a repeater the distance is measured from the carrier's own
+start. A repeater is read as `count` instances spaced `span / count` apart, continuing into the
+following splines (via `conn_id_2`) when it runs past the carrier's end; this reading is plausible
+(lamp spacing ≈ 43 m for 260 m / 6) but not yet proven.
+
+Open points: the two numbers after the heading are not confirmed to be visibility limits, and the
+meaning of the repeater `span` for instances that would end beyond the chain is unverified.
+
+## `mirror` flag and `[absheight]` objects (2026-10)
+
+- A `[spline]` block may end with a `mirror` token (≈11 % of splines on BRT Berlin and X10 Berlin).
+  It mirrors the `.sli` profile across the spline axis (profile x is negated). Evidence: for
+  splines whose profile lies wholly on one side, attachments sit on the *opposite* side of the
+  profile in 24 of 28 mirrored cases but on the same side in 19 of 29 plain cases, i.e. attachment
+  offsets stay in world orientation while the profile flips. Ignoring the flag puts half-road
+  profiles (left lane, sidewalk) on the wrong side.
+- An `[object]` whose `.sco` carries `[absheight]` stores an **absolute** elevation in its z
+  field; all other objects store z relative to the terrain under them. Evidence: on X10 Berlin,
+  crossings such as `TeltowerEichen.sco` have z = 2.00 where the terrain is 2.00, while 5,094 of
+  6,784 objects on raised terrain have z ≈ 0. Treating crossings as terrain-relative lifts them
+  by the terrain height (or sinks them where the terrain is below the road).
+- `[splinehelper]` positions of a crossing `.sco` (file, x, y, z, heading, …) are the points where
+  road splines attach: rotating `(x, y)` clockwise by the object heading and adding the object
+  position hits a spline end point within 5 cm for 668 of 2,274 helpers on X10 Berlin (the same
+  test with the opposite rotation sense: 113).
