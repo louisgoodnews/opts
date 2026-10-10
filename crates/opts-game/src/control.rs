@@ -97,9 +97,9 @@ fn scene(world: &mut World, _: &Value) -> Outcome {
     }))
 }
 
-/// Brings the app into a fresh in-game session, leaving the current one first. Answers when the
-/// HUD of the new session is up.
-fn restart_session(world: &mut World) -> Outcome {
+/// A waiter that drives the app through leaving the current session and entering a fresh one; it
+/// finishes with a summary once the new session's HUD is up.
+pub(crate) fn restart_waiter(world: &mut World) -> Waiter {
     let was_in_game = app_state(world) == AppState::InGame;
     world
         .resource_mut::<NextState<AppState>>()
@@ -109,7 +109,7 @@ fn restart_session(world: &mut World) -> Outcome {
             AppState::InGame
         });
     let mut left = !was_in_game;
-    let waiter: Waiter = Box::new(move |world| {
+    Box::new(move |world| {
         if !left {
             if app_state(world) != AppState::MainMenu {
                 return None;
@@ -128,8 +128,13 @@ fn restart_session(world: &mut World) -> Outcome {
             let stats = world.resource::<WorldStats>();
             Ok(json!({ "map": stats.map_name, "vehicle": stats.vehicle_name, "tiles_loaded": stats.tiles_loaded }))
         })
-    });
-    Outcome::Wait(waiter)
+    })
+}
+
+/// Brings the app into a fresh in-game session, leaving the current one first. Answers when the
+/// HUD of the new session is up.
+fn restart_session(world: &mut World) -> Outcome {
+    Outcome::Wait(restart_waiter(world))
 }
 
 fn read_path(world: &World, params: &Value, name: &str) -> Result<PathBuf, RpcError> {

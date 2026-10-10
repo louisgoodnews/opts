@@ -99,7 +99,7 @@ fn errors_use_the_documented_codes() {
         vec![
             rpc_code(c.call("no.such.method", Value::Null).expect_err("unknown")),
             rpc_code(
-                c.call("reload.asset", json!({"path": "x"}))
+                c.call("entity.list", Value::Null)
                     .expect_err("unimplemented"),
             ),
             rpc_code(

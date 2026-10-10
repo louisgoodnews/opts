@@ -3,7 +3,7 @@
 //! Every mesh, texture and position comes from the OMSI installation: nothing here fabricates
 //! geometry. Assets that cannot be loaded are logged at `ERROR` and skipped.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -19,6 +19,7 @@ use crate::in_game::attachments::SplineIndex;
 mod ground;
 mod job;
 mod overlay;
+mod reload;
 mod tile;
 mod trees;
 mod vehicle;
@@ -26,6 +27,7 @@ mod vehicle;
 use ground::GroundArray;
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{spawn_debug_overlay, update_debug_overlay, DebugOverlayText};
+pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use vehicle::load_player_vehicle;
 
@@ -121,6 +123,12 @@ pub struct WorldLoadJob {
     ground_material: Option<Handle<StandardMaterial>>,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,
+    /// Files each resident tile was built from (normalised paths); drives hot reload.
+    tile_deps: HashMap<(i32, i32), HashSet<PathBuf>>,
+    /// Files collected while the current tile loads.
+    loading_deps: HashSet<PathBuf>,
+    /// Directories of the player vehicle; a changed file inside restarts the session.
+    vehicle_dirs: Vec<PathBuf>,
     spawn: Option<(Vec3, f32)>,
     start_tile: (i32, i32),
     /// Camera parameters, set once the vehicle is loaded.

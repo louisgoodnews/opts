@@ -44,6 +44,10 @@ pub(super) fn compose_tile_material(
         ]
         .iter()
         .find_map(|rel| job.install.find_in(&job.config.map_dir, rel))
+        .inspect(|p| {
+            job.loading_deps
+                .insert(opts_bevy::hot_reload::cache::normalize(p));
+        })
         .and_then(|p| std::fs::read(p).ok())
         .and_then(|b| opts_bevy::load_bevy_image(&b).ok())
         .and_then(|img| CpuImage::from_image(&img));

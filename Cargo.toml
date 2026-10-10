@@ -89,6 +89,7 @@ time = { version = "0.3", features = ["formatting", "macros"] }
 nu-ansi-term = "0.50"
 clap = { version = "4.5", features = ["derive"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
+notify = "6.1"              # File watching for hot reload
 rayon = "1.10"              # Data parallelism (use carefully to maintain determinism)
 
 # --- Profiles ---

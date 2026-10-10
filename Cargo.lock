@@ -3878,6 +3878,7 @@ dependencies = [
  "ddsfile",
  "directories",
  "image",
+ "notify",
  "opts-cli",
  "opts-core",
  "opts-gui",

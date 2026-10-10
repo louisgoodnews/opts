@@ -1,6 +1,6 @@
 //! Session resolution and the `WorldLoadJob` implementation.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -202,6 +202,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         stream_radius: 1,
         total_tiles: 0,
         sli_cache: HashMap::new(),
+        tile_deps: HashMap::new(),
+        loading_deps: HashSet::new(),
+        vehicle_dirs: Vec::new(),
         spline_index: None,
         sco_cache: HashMap::new(),
         spline_materials: HashMap::new(),
@@ -340,6 +343,8 @@ impl WorldLoadJob {
             tracing::error!(sli = rel, "spline profile not found");
             return None;
         };
+        self.loading_deps
+            .insert(opts_bevy::hot_reload::cache::normalize(&path));
         if let Some(c) = self.sli_cache.get(&path) {
             return c.clone();
         }
@@ -365,6 +370,8 @@ impl WorldLoadJob {
             tracing::error!(sco = rel, "scenery object not found");
             return None;
         };
+        self.loading_deps
+            .insert(opts_bevy::hot_reload::cache::normalize(&path));
         if let Some(c) = self.sco_cache.get(&path) {
             return c.clone().map(|o| (path, o));
         }

@@ -79,12 +79,23 @@ pub struct ContentStats {
     pub failures: Vec<String>,
 }
 
+/// The sampler of OMSI textures: repeating on all axes.
+#[must_use]
+pub fn repeat_sampler() -> ImageSampler {
+    ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_v: ImageAddressMode::Repeat,
+        address_mode_w: ImageAddressMode::Repeat,
+        ..Default::default()
+    })
+}
+
 /// Caches shared across a loading session.
 #[derive(Default)]
 pub struct ContentCache {
-    textures: HashMap<PathBuf, Option<Handle<Image>>>,
-    parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
-    protected: std::collections::HashSet<PathBuf>,
+    pub(crate) textures: HashMap<PathBuf, Option<Handle<Image>>>,
+    pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
+    pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Loading statistics.
     pub stats: ContentStats,
 }
@@ -191,12 +202,7 @@ impl ContentLoader<'_> {
         let handle = match std::fs::read(&path) {
             Ok(bytes) => match load_bevy_image(&bytes) {
                 Ok(mut image) => {
-                    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-                        address_mode_u: ImageAddressMode::Repeat,
-                        address_mode_v: ImageAddressMode::Repeat,
-                        address_mode_w: ImageAddressMode::Repeat,
-                        ..Default::default()
-                    });
+                    image.sampler = repeat_sampler();
                     self.cache.stats.textures += 1;
                     tracing::debug!(path = %path.display(), "loaded texture");
                     Some(self.images.add(image))

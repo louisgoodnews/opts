@@ -2,6 +2,7 @@
 
 pub mod attachments;
 pub mod camera;
+pub mod hot_reload;
 pub mod hud;
 pub mod loading_pipeline;
 pub mod loading_ui;

@@ -45,6 +45,9 @@ pub fn load_next_tile(
         (a.0 - b.0, a.1 - b.1)
     };
     let tile_path = job.tile_path(key).unwrap_or_default();
+    job.loading_deps.clear();
+    job.loading_deps
+        .insert(opts_bevy::hot_reload::cache::normalize(&tile_path));
     tracing::info!(
         tile = ?key,
         path = %tile_path.display(),
@@ -58,6 +61,10 @@ pub fn load_next_tile(
     let terrain: Option<MapTerrain> = job
         .install
         .find_in(&job.config.map_dir, &terrain_rel)
+        .inspect(|p| {
+            job.loading_deps
+                .insert(opts_bevy::hot_reload::cache::normalize(p));
+        })
         .and_then(|p| match std::fs::read(&p).map(|b| MapTerrain::parse(&b)) {
             Ok(Ok(t)) => Some(t),
             Ok(Err(e)) => {
@@ -286,7 +293,12 @@ pub fn load_next_tile(
         let protected_before = job.cache.stats.protected_meshes;
         let mut parts = Vec::new();
         for mesh_def in &sco.meshes {
-            let Some(o3d_path) = job.install.find_in(&model_dir, &mesh_def.file) else {
+            let found = job.install.find_in(&model_dir, &mesh_def.file);
+            if let Some(p) = &found {
+                job.loading_deps
+                    .insert(opts_bevy::hot_reload::cache::normalize(p));
+            }
+            let Some(o3d_path) = found else {
                 job.cache
                     .stats
                     .failures
@@ -351,6 +363,8 @@ pub fn load_next_tile(
         .id();
     commands.entity(tile_root).push_children(&children);
     job.resident.insert(key, tile_root);
+    let deps = std::mem::take(&mut job.loading_deps);
+    job.tile_deps.insert(key, deps);
     stats.tiles_loaded = job.resident.len();
     stats.asset_failures = job.cache.stats.failures.len();
 }

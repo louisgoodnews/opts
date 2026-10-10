@@ -90,6 +90,16 @@ pub fn build_app(args: CliArgs) -> App {
         ));
     }
 
+    // Hot reload of edited OMSI files (on by default; `--no-hot-reload` disables the watcher).
+    app.add_plugins(opts_bevy::hot_reload::HotReloadPlugin {
+        config: opts_bevy::hot_reload::HotReloadConfig {
+            enabled: !args.no_hot_reload,
+            debounce: Duration::from_millis(args.hot_reload_debounce_ms),
+            roots: args.hot_reload_root.clone(),
+        },
+    })
+    .add_plugins(crate::in_game::hot_reload::GameHotReloadPlugin);
+
     // 3. Register engine bridges, UI, and application plugins
     app.add_plugins(OptsAssetPlugin)
         .add_plugins(OptsGamePlugin)

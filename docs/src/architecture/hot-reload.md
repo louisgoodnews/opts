@@ -11,7 +11,7 @@ is watched, how events become reloads, and what happens when a file is broken.
 | :--- | :--- | :--- |
 | Meshes | `.o3d`, `.x` | drop the content-cache entry, re-parse, rebuild the `Mesh`; entities using it are rebuilt |
 | Textures | `.dds`, `.tga`, `.bmp`, `.png`, `.jpg` | drop the texture-cache entry, decode again, replace the pixels of the existing `Image` (handles stay valid) |
-| Configs | `.cfg`, `.bus`, `.sco`, `.sli`, `.hum` | re-parse; affected objects/splines/vehicle are despawned and respawned |
+| Configs | `.cfg`, `.bus`, `.sco`, `.sli`, `.hum` | re-parse and validate (`model*.cfg` and `global.cfg` with their parsers, other `.cfg` only for readability); affected tiles/vehicle are rebuilt |
 | Map tiles | `.map`, `.terrain` | the resident tile is despawned and re-queued |
 | Audio | `.wav` | reserved (M-0027) |
 | Rust sources | `.rs` | **out of scope** — needs a rebuild (a dylib-based reloader is a separate project) |
@@ -21,11 +21,13 @@ OPTS loads OMSI content through its own `ContentLoader`, not Bevy's `AssetServer
 
 ## 2. Watch roots
 
-Watched by default while a session runs: the current map folder, the folders of the loaded vehicle (`.bus`,
-its `model/` and `texture/` folders), and the folders of the scenery objects and spline profiles placed on
-resident tiles (discovered while loading). `--hot-reload-root <PATH>` adds roots, `--no-hot-reload` disables
-the watcher. At runtime `watch.add`/`watch.remove`/`watch.list` (control protocol) change the set. The watcher
-is recursive, ignores editor temp files (`*~`, `*.swp`, `.#*`, `*.tmp`) and files outside the allowed roots.
+While a session runs the watcher covers (a) the map folder, recursively, and (b) every directory the session
+has loaded content from — scenery object, spline, model and texture folders, the vehicle's folders — each
+non-recursively. (b) is refreshed once a second from the loader's caches, so newly streamed content is
+picked up without watching the whole installation (thousands of directories). `--hot-reload-root <DIR>`
+adds recursive roots, `--no-hot-reload` disables the watcher. At runtime `watch.add`/`watch.remove`/`watch.list`
+(control protocol) change the set; at most 3,000 directories are watched. Editor scratch files (`*~`, `*.swp`,
+`.#*`, `*.tmp`, `*.bak`) and files of unknown type are ignored.
 
 ## 3. Pipeline
 
@@ -50,20 +52,23 @@ successful parse reaches the apply step, so a half-saved file can never remove w
 
 ## 4. Applying a reload
 
-A reverse index `path → users` is maintained by the world loader when it spawns content (mesh path → object
-entities, `.sco` → object entities, `.sli` → spline entities, texture path → materials). This turns "which
-entities are affected" into a lookup.
+While a tile loads, the world loader records every file it was built from (the `.map` and `.terrain`
+files, the `.sco`/`.sli` files, the `.o3d`/`.x` meshes and the ground masks) as the tile's *dependency set*.
+A validated change is looked up in those sets, so the granularity is the **tile**.
 
 | Kind | Apply |
 | :--- | :--- |
-| Mesh | `ContentCache::invalidate(path)`, then respawn the object entities that used it (their transform is kept). Entities for the vehicle are rebuilt through the vehicle path below. |
-| Texture | decode, then overwrite the existing `Image` data in place; no entity changes |
-| `.sco` | invalidate the parsed object, respawn every placed instance |
-| `.sli` | invalidate the profile, respawn the splines (and their materials) that use it |
-| `.bus` / vehicle `.cfg` | rebuild the player vehicle; the previous state (transform, velocity, gear, doors) is snapshotted and restored |
-| `.map` / `.terrain` | despawn the resident tile (`TileRoot`), re-queue it in the streamer |
+| Texture already loaded | decode again and overwrite the existing `Image` in place; materials update without a rebuild |
+| Mesh | drop the cached meshes built from the file, rebuild the tiles whose dependency set contains it |
+| `.sco` / `.sli` | forget the parsed object (and the spline materials built from a profile), rebuild the tiles that use it |
+| `.map` / `.terrain` | rebuild that tile |
+| Map ground texture | rebuild the ground layer array and every resident tile |
+| Vehicle file (`.bus`, model config, vehicle mesh) | the session restarts on the same map and vehicle — the vehicle is back at the start position |
+| `reload.scene` | rebuild every resident tile and forget all parsed objects and meshes |
 
-All respawns happen in one frame, in the `PostUpdate` schedule, after the frame's gameplay systems.
+Rebuilding a tile despawns its root entity and puts the tile at the front of the streamer's queue; the next
+frames load it again from the (partly cached) content. Everything happens in the `Update` schedule between
+simulation ticks.
 
 ## 5. Catalogue
 
@@ -87,10 +92,10 @@ copy until the session ends.
 
 ## 8. Interaction with the simulation
 
-Reloading while driving is supported. The vehicle snapshot/restore (§4) keeps the bus moving; tile
-respawns do not touch the vehicle entity. Reloads are applied between simulation ticks, so physics never sees
-a half-built entity. With the simulation paused (`sim.pause`) reloads still apply; a following `sim.step`
-shows the result.
+Tile rebuilds do not touch the vehicle entity, so scenery can be edited while driving. A change to a vehicle
+file restarts the session; the vehicle's driving state is **not** preserved yet (a snapshot/restore of the
+chassis state is a possible follow-up). With the simulation paused (`sim.pause`) reloads still apply; a
+following `sim.step` shows the result.
 
 ## 9. Path to embedded scripting
 

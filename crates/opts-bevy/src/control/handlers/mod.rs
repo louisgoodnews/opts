@@ -5,6 +5,7 @@ pub mod input;
 pub mod meta;
 pub mod output;
 pub mod query;
+pub mod reload;
 pub mod scene;
 pub mod sim;
 
@@ -18,5 +19,6 @@ pub fn register_all(registry: &mut ControlRegistry) {
     sim::register(registry);
     scene::register(registry);
     output::register(registry);
+    reload::register(registry);
     batch::register(registry);
 }

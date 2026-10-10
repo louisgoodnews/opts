@@ -257,6 +257,11 @@ pub fn load_player_vehicle(
         scale: Vec3::ONE,
     };
 
+    job.vehicle_dirs = std::iter::once(bus_dir.clone())
+        .chain(std::iter::once(model_dir.clone()))
+        .chain(tex_dirs.iter().cloned())
+        .map(|d| opts_bevy::hot_reload::cache::normalize(&d))
+        .collect();
     let root = spawn_vehicle_model(commands, &manifest, &model, root_tf, &[], &[]);
 
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(

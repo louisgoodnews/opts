@@ -28,6 +28,7 @@ chrono = { workspace = true }
 # Serialization (control protocol)
 serde_json = { workspace = true }
 smol_str = "0.2"
+notify = { workspace = true }
 
 # Logging & Error Handling
 tracing = { workspace = true }
