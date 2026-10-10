@@ -44,6 +44,8 @@
   - [M-0037: Shipped-Work Reconciliation](roadmap/phase-4/M-0037.md)
   - [M-0038: Scrambled-Mesh Completion](roadmap/phase-4/M-0038.md)
   - [M-0039: Text Textures](roadmap/phase-4/M-0039.md)
+  - [M-0045: Script-Driven Animation](roadmap/phase-4/M-0045.md)
+  - [M-0046: World Loader Extraction](roadmap/phase-4/M-0046.md)
 - [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
   - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
   - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)

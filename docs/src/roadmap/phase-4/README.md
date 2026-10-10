@@ -18,6 +18,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)
 
+- [M-0045 — Script-Driven Vehicle Animation, Lights and Doors](M-0045.md) — ⏳ Planned (active script bridge)
+- [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
+
 ## Checklist
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*

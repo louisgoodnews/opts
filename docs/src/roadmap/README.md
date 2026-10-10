@@ -183,6 +183,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](phase-4/M-0037.md) (F-019, F-023).
   - [ ] Complete scrambled-mesh decoding: async decoding, deterministic parameters, cache policy, generator research — [M-0038](phase-4/M-0038.md) (F-001, F-003, F-014, F-017).
   - [x] Render `[texttexture]` text on signs, stops and displays — [M-0039](phase-4/M-0039.md) (F-002).
+  - [ ] Script-driven animation, lights and doors — [M-0045](phase-4/M-0045.md).
+  - [ ] World loader extraction — [M-0046](phase-4/M-0046.md).
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](phase-4/M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](phase-4/M-0025.md); F-004, F-007, F-008).
 
