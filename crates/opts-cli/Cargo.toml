@@ -4,27 +4,8 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Command line interface for OPTS."
+description = "Command-line interface definitions and argument parsing for OPTS."
 repository.workspace = true
 
 [dependencies]
-# Parsing
-nom = { workspace = true }
-binrw = { workspace = true }
-
-# Serialization
-serde = { workspace = true }
-
-# Data structures & Math
-glam = { workspace = true }
-petgraph = { workspace = true }
-
-# Error Handling
-thiserror = { workspace = true }
-tracing = { workspace = true }
-
-# Command Line
-# argh = { workspace = true }  # Deferred: undeclared in workspace manifest (Audit F2)
-
-[dev-dependencies]
-# Add test-specific dependencies here
+clap = { workspace = true }

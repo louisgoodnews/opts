@@ -15,19 +15,30 @@ path = "src/main.rs"
 # Internal Crates
 opts-core = { workspace = true }
 opts-bevy = { workspace = true }
+opts-gui = { workspace = true }
 opts-sim = { workspace = true }
-opts-utils = { workspace = true }
+opts-catalogue = { workspace = true }
+opts-logging = { workspace = true }
 
 # Bevy Engine
 bevy = { workspace = true }
+
+# Serialization & Assets
+serde = { workspace = true }
+serde_json = { workspace = true }
+directories = "5.0"
+toml = "0.8"
+image = { workspace = true }
+rusqlite = { workspace = true }
 
 # Logging & Error Handling
 anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
-# CLI arguments for the game (e.g., specifying map path, config file)
-# clap = { version = "4.5", features = ["derive"] } # Uncomment when needed
+# CLI arguments for the game
+opts-cli = { workspace = true }
+clap = { workspace = true }
 
 [dev-dependencies]
 # Add test-specific dependencies here

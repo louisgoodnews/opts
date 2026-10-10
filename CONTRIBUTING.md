@@ -46,16 +46,20 @@ If you want to add a new feature, parse a new OMSI format, or change the archite
 
 OPTS is organized as a Cargo workspace. Please ensure your contributions go into the correct crate:
 
-| Crate | Purpose | Dependencies Allowed |
-| :--- | :--- | :--- |
-| `opts-core` | Pure data structures and parsers for OMSI formats. | `nom`, `binrw`, `serde`, `glam`, `thiserror` |
-| `opts-bevy` | Bevy plugin, asset loaders, and rendering integration. | `opts-core`, `bevy`, `image` |
-| `opts-sim` | Engine-agnostic simulation logic (physics, passengers). | `opts-core`, `petgraph`, `rayon` |
-| `opts-game` | The main executable that ties everything together. | `opts-bevy`, `opts-sim`, `bevy` |
-| `opts-tools` | CLI tools for inspecting and converting OMSI assets. | `opts-core`, `anyhow` |
-| `opts-utils` | Shared utilities. Keep this lean. | Minimal |
+| Crate | Layer | Purpose | Dependencies Allowed |
+| :--- | :---: | :--- | :--- |
+| `opts-logging` | L0 | Structured logging, non-blocking writers, subsystem routing, panic hook. | Zero internal OPTS dependencies |
+| `opts-core` | L1 | Pure data structures and parsers for OMSI formats. Zero Bevy, zero file I/O. | `nom`, `binrw`, `serde`, `glam`, `thiserror`, `opts-logging` |
+| `opts-sim` | L2 | Engine-agnostic vehicle simulation logic (kinematics, drivetrain). Zero Bevy. | `opts-core`, `petgraph`, `rayon`, `opts-logging` |
+| `opts-gui` | L2 | Material Design 3 GUI widget library, design tokens, layout primitives. | `bevy`, `opts-core`, `opts-logging` |
+| `opts-bevy` | L2 | Bevy plugin, 3D asset loaders, coordinates, ECS vehicle physics bridge. | `opts-core`, `opts-sim`, `bevy`, `image`, `opts-logging` |
+| `opts-game` | L3 | The main interactive simulator executable that ties everything together. | `opts-core`, `opts-sim`, `opts-bevy`, `opts-gui`, `opts-logging`, `bevy` |
+| `opts-tools` | L3 | Unified CLI tools for inspecting, validating, and converting OMSI assets. | `opts-core`, `opts-logging`, `anyhow` |
 
-**⚠️ Important:** `opts-core` must **never** depend on Bevy. It must remain a pure, testable Rust library that could theoretically run in a headless server.
+**⚠️ Important Boundary Invariants:**
+- `opts-core` and `opts-sim` must **never** depend on Bevy, and must not perform synchronous file I/O.
+- `opts-logging` must **never** depend on any OPTS internal crate.
+- Only `opts-bevy`, `opts-gui`, and `opts-game` are permitted to depend on Bevy.
 
 ---
 

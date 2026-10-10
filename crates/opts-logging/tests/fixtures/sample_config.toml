@@ -1,0 +1,21 @@
+# Sample OPTS Logging Configuration
+
+level = "debug"
+
+[per_target]
+"wgpu" = "warn"
+"naga" = "warn"
+"opts_sim" = "trace"
+
+[console]
+enabled = true
+ansi = "never"
+verbosity = "standard"
+
+[files]
+enabled = true
+directory = "target/tmp_test_logs"
+rotation = "never"
+retention = "forever"
+per_subsystem = true
+json = false

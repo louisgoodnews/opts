@@ -1,0 +1,23 @@
+[package]
+name = "opts-logging"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Centralized logging, non-blocking subsystem routing, rotation, and crash telemetry for OPTS."
+repository.workspace = true
+
+[dependencies]
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = [
+    "env-filter", "fmt", "ansi", "json", "registry", "std"
+] }
+tracing-appender = { workspace = true }
+directories = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+toml = { workspace = true }
+time = { workspace = true, features = ["formatting", "macros"] }
+nu-ansi-term = { workspace = true }
+
+[dev-dependencies]

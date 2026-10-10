@@ -17,6 +17,7 @@ bevy = { workspace = true }
 # Error Handling, Logging, and Serialization
 thiserror = { workspace = true }
 tracing = { workspace = true }
+arboard = { workspace = true }
 serde = { workspace = true, optional = true }
 
 [features]
@@ -24,3 +25,4 @@ default = []
 serde = ["dep:serde"]
 
 [dev-dependencies]
+ab_glyph = "0.2"

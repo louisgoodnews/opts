@@ -11,6 +11,7 @@ repository.workspace = true
 # Internal
 opts-core = { workspace = true }
 opts-sim = { workspace = true }
+opts-gui = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }
@@ -19,6 +20,8 @@ bevy = { workspace = true }
 # Image & Asset Handling
 image = { workspace = true }
 ddsfile = { workspace = true }
+directories = { workspace = true }
+chrono = { workspace = true }
 
 # Logging & Error Handling
 tracing = { workspace = true }
