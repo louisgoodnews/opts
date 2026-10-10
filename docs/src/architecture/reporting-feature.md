@@ -19,7 +19,7 @@ F1 anywhere in the application captures the primary window, opens a modal with t
 | `Modal` in `opts-gui` | missing → Part B |
 | multiline field | missing; `M3TextField` is single-line → Part B (extend, else new `TextArea`) |
 | pause mechanism | none; use `Time<Virtual>` |
-| screenshot API | Bevy **0.14.2**: `ScreenshotManager::take_screenshot(window: Entity, callback: impl FnOnce(Image) + Send + Sync + 'static) -> Result<(), ScreenshotAlreadyRequestedError>`; already used by `opts-game/src/in_game/screenshot.rs` |
+| screenshot API | Bevy **0.14.2** (before the 0.19 migration): `ScreenshotManager::take_screenshot(window: Entity, callback: impl FnOnce(Image) + Send + Sync + 'static) -> Result<(), ScreenshotAlreadyRequestedError>`; already used by `opts-game/src/in_game/screenshot.rs` |
 | reports dir | `directories` 5.0 (workspace dep), `time` 0.3 for the local timestamp (needs the `local-offset` feature) |
 
 ## A2 — State machine

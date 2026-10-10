@@ -206,7 +206,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Design documents and ADRs: [Control Protocol](../architecture/control-protocol.md), [Hot Reload](../architecture/hot-reload.md), ADR-0006, ADR-0007.
   - [x] `opts-cli` client, `opts-bevy::control` server and `opts-bevy::hot_reload` ([final report](../meta/control-protocol-2026-10-10.md)).
 - [ ] **⬆️ Engine Upgrade** — [M-0044](phase-5/M-0044.md)
-  - [ ] Migrate Bevy 0.14 → current in verified single-version steps.
+  - [x] Migrate Bevy 0.14 → 0.19.1 (done in one step; see [M-0044](phase-5/M-0044.md)).
 - [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
   - [~] Code-quality debt (rustdoc, panics, fixtures, tile loader done; size splits open): size limits, panics in library code, stubs, rustdoc — [M-0040](phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
   - [x] Documentation repair and developer switch reference — [M-0041](phase-5/M-0041.md) (F-013, F-018, F-020–F-023).

@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Topic** | Vehicle Loading, Model Hierarchies & Camera Presets in Bevy |
-| **Prerequisites** | Rust 1.76+, Bevy 0.14 ECS concepts, [Coordinate Systems](../architecture/coordinates.md), [Loading Your First `.sco`](first-sco.md) |
+| **Prerequisites** | Rust 1.76+, Bevy 0.19 ECS concepts, [Coordinate Systems](../architecture/coordinates.md), [Loading Your First `.sco`](first-sco.md) |
 | **Crates Used** | `opts-core`, `opts-bevy` |
 | **Example Code** | [`crates/opts-bevy/examples/load_bus.rs`](../../../crates/opts-bevy/examples/load_bus.rs) |
 
@@ -107,7 +107,7 @@ Ensure your project includes `bevy`, `opts-core`, and `opts-bevy`:
 
 ```toml
 [dependencies]
-bevy = "0.14"
+bevy = "0.19"
 opts-core = { path = "crates/opts-core" }
 opts-bevy = { path = "crates/opts-bevy" }
 ```

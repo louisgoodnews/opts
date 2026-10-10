@@ -72,7 +72,7 @@ Add `opts-core` and `opts-bevy` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-bevy = "0.14"
+bevy = "0.19"
 opts-core = { path = "crates/opts-core" }
 opts-bevy = { path = "crates/opts-bevy" }
 ```
