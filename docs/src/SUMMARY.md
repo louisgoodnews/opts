@@ -48,6 +48,8 @@
   - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
   - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)
   - [M-0042: CI & Toolchain Hardening](roadmap/phase-5/M-0042.md)
+  - [M-0043: CLI Control Protocol & Hot Reload](roadmap/phase-5/M-0043.md)
+  - [M-0044: Bevy Engine Upgrade](roadmap/phase-5/M-0044.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
@@ -70,6 +72,8 @@
 - [Main Menu Architecture](architecture/main-menu.md)
 - [Application Startup & Wiring](architecture/application-startup.md)
 - [F1 Reporting Feature](architecture/reporting-feature.md)
+- [Control Protocol](architecture/control-protocol.md)
+- [Hot Reload](architecture/hot-reload.md)
 
 
 ---
@@ -151,6 +155,8 @@
 - [ADR-0002: Clean-Room Reverse Engineering Policy](adr/0002-clean-room-policy.md)
 - [ADR-0004: Unified Logging Architecture](adr/0004-logging-architecture.md)
 - [ADR-0005: Workspace Crate Architecture](adr/0005-crate-architecture.md)
+- [ADR-0006: Control Protocol](adr/0006-control-protocol.md)
+- [ADR-0007: Hot Reload](adr/0007-hot-reload.md)
 
 # 🎓 Tutorials
 
