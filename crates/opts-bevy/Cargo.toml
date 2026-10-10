@@ -12,6 +12,8 @@ repository.workspace = true
 opts-core = { workspace = true }
 opts-sim = { workspace = true }
 opts-gui = { workspace = true }
+opts-cli = { workspace = true }
+opts-logging = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }
@@ -23,9 +25,15 @@ ddsfile = { workspace = true }
 directories = { workspace = true }
 chrono = { workspace = true }
 
+# Serialization (control protocol)
+serde_json = { workspace = true }
+smol_str = "0.2"
+
 # Logging & Error Handling
 tracing = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-# Add test-specific dependencies here
+opts-cli = { workspace = true, features = ["client"] }
+serde_json = { workspace = true }
+tracing-subscriber = { workspace = true }

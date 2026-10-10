@@ -17,6 +17,7 @@
 #![deny(unsafe_code)]
 
 pub mod camera;
+pub mod control;
 pub mod coords;
 pub mod descramble_cache;
 pub mod ground;

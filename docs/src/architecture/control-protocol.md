@@ -122,11 +122,11 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 
 | Method | Params | Result | Priority |
 | :--- | :--- | :--- | :--- |
-| `scene.load_map` | `{path, entry?}` | starts an in-game session on the map (async; poll `state`) | P1 |
+| `scene.load_map` | `{path, entry?}` | leaves the current session if any, starts one on the map folder and answers when the HUD is up (≤ 120 s) | P1 |
 | `scene.unload` | — | returns to the main menu | P1 |
-| `camera.set_mode` | `{mode, sub?}` | `mode` ∈ `F1…`/`external,ego,cockpit,pax,free` | P1 |
-| `camera.teleport` | `{x,y,z,yaw?,pitch?}` | OMSI world coordinates, degrees | P1 |
-| `vehicle.set` | `{path}` | replaces the player vehicle with a `.bus` file | P1 |
+| `camera.set_mode` | `{mode, sub?}` | `mode` ∈ `ego, cockpit, external, pax, free` or `1`–`5` (the camera number keys); injects the key, so unavailable modes answer `1001`; answers `{mode, sub_index}` two frames later | P1 |
+| `camera.teleport` | `{x,y,z,yaw?,pitch?}` | switches to free roam and moves the camera to the **absolute** OMSI world position (metres; tile `(i,j)` starts at `300·i`, `300·j`); `yaw` is a compass heading in degrees (0 = north, clockwise), `pitch` degrees up | P1 |
+| `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |
 | `entity.spawn` | `{asset, transform}` | `{id}` | P2 |
 | `entity.despawn` | `{id}` | ok | P2 |
 | `entity.set_component` | `{id, type, value}` | ok (only types registered as settable) | P2 |

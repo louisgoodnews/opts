@@ -3,6 +3,7 @@
 pub mod app;
 pub mod app_state;
 pub mod catalogue_service;
+pub mod control;
 pub mod in_game;
 pub mod menu;
 pub mod new_game_screen;

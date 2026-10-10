@@ -48,5 +48,6 @@ pub use config::{
 pub use error::{LogError, LogResult};
 pub use guard::LogGuard;
 pub use init::{init, init_default, init_from_env, set_global_level, set_level};
+pub use layer::ring::{recent as recent_logs, LogQuery, LogRecord};
 pub use panic::install_panic_hook;
 pub use rotation::apply_retention;

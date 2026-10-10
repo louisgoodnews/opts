@@ -159,6 +159,11 @@ pub fn init(config: LogConfig) -> LogResult<LogGuard> {
         }
     }
 
+    // In-memory ring of recent events for the control protocol (`log.tail`).
+    layers.push(Box::new(
+        crate::layer::ring::RingLayer.with_filter(Targets::new().with_default(default_level)),
+    ));
+
     // Register with Tracing Subscriber Registry
     tracing_subscriber::registry()
         .with(layers)

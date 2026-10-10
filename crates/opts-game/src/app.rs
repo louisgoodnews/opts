@@ -78,11 +78,24 @@ pub fn build_app(args: CliArgs) -> App {
     }
     app.insert_resource(settings);
 
+    // Remote control (opt-in: `--cli-port`).
+    if args.cli_port.is_some() {
+        app.add_plugins(opts_bevy::control::ControlPlugin::new(
+            opts_bevy::control::ControlConfig {
+                port: args.cli_port,
+                bind: args.cli_bind.clone(),
+                token: args.cli_token.clone(),
+                allow_dirs: args.cli_allow_dir.clone(),
+            },
+        ));
+    }
+
     // 3. Register engine bridges, UI, and application plugins
     app.add_plugins(OptsAssetPlugin)
         .add_plugins(OptsGamePlugin)
         .add_plugins(crate::catalogue_service::CataloguePlugin)
-        .add_plugins(ShutdownPlugin);
+        .add_plugins(ShutdownPlugin)
+        .add_plugins(crate::control::GameControlPlugin);
 
     // F1 bug reports (screenshot + text); needs a window, so not in headless runs.
     if !args.headless {

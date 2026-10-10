@@ -3878,11 +3878,16 @@ dependencies = [
  "ddsfile",
  "directories",
  "image",
+ "opts-cli",
  "opts-core",
  "opts-gui",
+ "opts-logging",
  "opts-sim",
+ "serde_json",
+ "smol_str",
  "thiserror 1.0.69",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
