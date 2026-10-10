@@ -280,6 +280,7 @@ pub fn load_player_vehicle(
     commands
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
+    attach_scripts(job, commands, root, &manifest, &bus_dir);
     let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
@@ -490,4 +491,42 @@ pub(super) fn load_driver_human(
     });
     commands.entity(vehicle_root).add_child(human);
     Ok(name)
+}
+
+/// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
+/// A vehicle with `[scriptshare]` has none of its own and gets no engine.
+fn attach_scripts(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    root: Entity,
+    manifest: &BusManifest,
+    bus_dir: &Path,
+) {
+    if manifest.scripts.is_empty() {
+        return;
+    }
+    let (engine, diags) = opts_sim::script::load_vehicle_scripts(manifest, |rel| {
+        let found = job.install.find_in(bus_dir, rel);
+        if let Some(p) = &found {
+            job.vehicle_dirs
+                .push(opts_bevy::hot_reload::cache::normalize(p));
+        }
+        found
+    });
+    let errors = diags
+        .iter()
+        .filter(|d| d.severity == opts_sim::script::Severity::Error)
+        .count();
+    for d in diags.iter().filter(|d| d.message == "file not found") {
+        tracing::error!(file = %d.file, "vehicle script file not found");
+    }
+    tracing::info!(
+        scripts = manifest.scripts.len(),
+        diagnostics = diags.len(),
+        errors,
+        "vehicle scripts loaded"
+    );
+    commands
+        .entity(root)
+        .insert(opts_bevy::VehicleScripts::new(engine));
 }

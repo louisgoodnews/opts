@@ -27,10 +27,10 @@ fn warning(file: &str, message: String) -> Diagnostic {
 /// with `[scriptshare]` the caller loads the leading unit's `BusManifest` instead.
 pub fn load_vehicle_scripts(
     bus: &BusManifest,
-    resolve: impl Fn(&str) -> Option<PathBuf>,
+    mut resolve: impl FnMut(&str) -> Option<PathBuf>,
 ) -> (ScriptEngine, Vec<Diagnostic>) {
     let mut diags = Vec::new();
-    let read = |rel: &str, diags: &mut Vec<Diagnostic>| -> Option<(String, Vec<u8>)> {
+    let mut read = |rel: &str, diags: &mut Vec<Diagnostic>| -> Option<(String, Vec<u8>)> {
         let Some(path) = resolve(rel) else {
             diags.push(warning(rel, "file not found".into()));
             return None;

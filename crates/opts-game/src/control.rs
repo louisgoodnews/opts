@@ -33,6 +33,7 @@ impl Plugin for GameControlPlugin {
         registry.register("scene.load_map", load_map);
         registry.register("scene.unload", unload);
         registry.register("vehicle.set", set_vehicle);
+        registry.register("vehicle.script_vars", script_vars);
         registry.register("camera.teleport", teleport);
         app.add_systems(Update, allow_session_reads);
     }
@@ -241,4 +242,33 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
             json!({ "translation": [position.x, position.y, position.z] }),
         ))
     }))
+}
+
+/// `vehicle.script_vars {contains?}`: the player vehicle's script variables (name → value),
+/// optionally filtered by a case-insensitive substring.
+fn script_vars(world: &mut World, params: &Value) -> Outcome {
+    let needle = params
+        .get("contains")
+        .and_then(Value::as_str)
+        .map(str::to_lowercase);
+    let mut query =
+        world.query_filtered::<&opts_bevy::VehicleScripts, With<opts_bevy::PlayerVehicle>>();
+    let Some(scripts) = query.iter(world).next() else {
+        return Outcome::err(RpcError::new(
+            code::NOT_READY,
+            "the player vehicle has no scripts",
+        ));
+    };
+    let Ok(engine) = scripts.engine.lock() else {
+        return Outcome::err(RpcError::new(code::NOT_READY, "script engine unavailable"));
+    };
+    let vars: serde_json::Map<String, Value> = engine
+        .variables()
+        .into_iter()
+        .filter(|(n, _)| needle.as_deref().is_none_or(|s| n.contains(s)))
+        .map(|(n, v)| (n, json!(v)))
+        .collect();
+    Outcome::ok(
+        json!({ "count": vars.len(), "variables": vars, "ops_executed": engine.ops_executed() }),
+    )
 }

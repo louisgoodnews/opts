@@ -224,6 +224,15 @@ impl ScriptEngine {
         !blocks.is_empty()
     }
 
+    /// All float variables the scripts know, with their current values (diagnostics).
+    #[must_use]
+    pub fn variables(&self) -> Vec<(String, f32)> {
+        let names = &self.program.names.vars;
+        (0..names.len() as u32)
+            .map(|i| (names.name(i).to_owned(), self.vars.float(i)))
+            .collect()
+    }
+
     /// Instructions executed so far (profiling).
     #[must_use]
     pub fn ops_executed(&self) -> u64 {
