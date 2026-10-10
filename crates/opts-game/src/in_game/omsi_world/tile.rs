@@ -1,5 +1,6 @@
 //! Tile loading: terrain, splines, attachments and scenery objects, plus streaming around the camera.
 
+use std::collections::HashSet;
 use std::path::Path;
 
 use bevy::prelude::*;
@@ -303,6 +304,7 @@ pub fn load_next_tile(
             "placing scenery object"
         );
         let protected_before = job.cache.stats.protected_meshes;
+        let deferred_before = job.cache.stats.deferred_meshes;
         let mut parts = Vec::new();
         for mesh_def in &sco.meshes {
             let found = job.install.find_in(&model_dir, &mesh_def.file);
@@ -376,6 +378,8 @@ pub fn load_next_tile(
             if sco.meshes.is_empty() {
                 tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
                 stats.objects_no_geometry += 1;
+            } else if job.cache.stats.deferred_meshes > deferred_before {
+                tracing::debug!(sco = %sco_path.display(), tile = ?key, "object waits for background mesh decoding");
             } else if job.cache.stats.protected_meshes > protected_before {
                 stats.objects_protected += 1;
                 tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: all meshes are scrambled");
@@ -411,6 +415,21 @@ pub fn load_next_tile(
     job.resident.insert(key, tile_root);
     let deps = std::mem::take(&mut job.loading_deps);
     job.tile_deps.insert(key, deps);
+    let waiting: HashSet<_> = job
+        .cache
+        .take_deferred()
+        .into_iter()
+        .filter(|k| {
+            job.cache
+                .decode_pool
+                .as_ref()
+                .is_some_and(|p| p.is_pending(*k))
+        })
+        .collect();
+    if !waiting.is_empty() {
+        tracing::info!(tile = ?key, meshes = waiting.len(), "tile rebuilds when its meshes are decoded");
+        job.waiting_decode.insert(key, waiting);
+    }
     stats.tiles_loaded = job.resident.len();
     stats.asset_failures = job.cache.stats.failures.len();
 }
@@ -437,6 +456,7 @@ pub fn stream_world_tiles(
     if !state.is_complete {
         return;
     }
+    job.rebuild_decoded_tiles(&mut commands, &mut stats);
     let Ok(cam) = camera.get_single() else { return };
     let p = cam.translation();
     let centre = (
@@ -490,5 +510,42 @@ pub fn stream_world_tiles(
             images,
             assets.ground_materials.as_deref_mut(),
         );
+    }
+}
+
+impl WorldLoadJob {
+    /// Re-queues tiles whose background mesh decoding finished and refreshes the counters.
+    fn rebuild_decoded_tiles(&mut self, commands: &mut Commands, stats: &mut WorldStats) {
+        let Some(pool) = self.cache.decode_pool.clone() else {
+            return;
+        };
+        let done = pool.drain_finished();
+        if !done.is_empty() {
+            for waiting in self.waiting_decode.values_mut() {
+                for k in &done {
+                    waiting.remove(k);
+                }
+            }
+            let ready: Vec<_> = self
+                .waiting_decode
+                .iter()
+                .filter(|(_, w)| w.is_empty())
+                .map(|(k, _)| *k)
+                .collect();
+            for key in ready {
+                self.waiting_decode.remove(&key);
+                if let Some(root) = self.resident.remove(&key) {
+                    commands.entity(root).despawn_recursive();
+                    self.tile_deps.remove(&key);
+                    if !self.queue.contains(&key) {
+                        self.queue.push_front(key);
+                    }
+                    tracing::info!(tile = ?key, "tile rebuilt with decoded meshes");
+                }
+            }
+        }
+        stats.meshes_decoding = pool.pending_count();
+        stats.meshes_decoded = self.cache.stats.decoded_meshes;
+        stats.meshes_twin = self.cache.stats.twin_meshes;
     }
 }

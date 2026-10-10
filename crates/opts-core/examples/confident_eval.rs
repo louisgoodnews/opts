@@ -3,10 +3,11 @@
 use std::collections::HashMap;
 use std::io::BufRead;
 
-use opts_core::formats::o3d::descramble::decode_confident;
+use opts_core::formats::o3d::descramble::{decode_confident_with, DecodeParams};
 use opts_core::formats::o3d::parse;
 
 fn main() {
+    let params = DecodeParams::default().with_overrides(|k| std::env::var(k).ok());
     let paths: Vec<String> = std::io::stdin()
         .lock()
         .lines()
@@ -67,7 +68,7 @@ fn main() {
         }
         twins += 1;
         let enc0 = eo.clone();
-        let rep = decode_confident(&mut eo);
+        let rep = decode_confident_with(&mut eo, &params);
         // positions: decode_confident keeps vertex order and only drops triangles
         let (mut lo, mut hi) = (glam::Vec3::splat(f32::MAX), glam::Vec3::splat(f32::MIN));
         for v in &po.vertices {

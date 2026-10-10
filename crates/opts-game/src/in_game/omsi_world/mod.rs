@@ -89,6 +89,10 @@ pub struct WorldStats {
     pub vehicle_meshes: usize,
     pub vehicle_vertices: usize,
     pub asset_failures: usize,
+    /// Scrambled meshes recovered by the decoder / replaced by a plain twin / still decoding.
+    pub meshes_decoded: usize,
+    pub meshes_twin: usize,
+    pub meshes_decoding: usize,
     pub overlay_visible: bool,
 }
 
@@ -110,6 +114,8 @@ pub struct WorldLoadJob {
     manifest: MapManifest,
     tile_files: HashMap<(i32, i32), String>,
     queue: VecDeque<(i32, i32)>,
+    /// Tiles waiting for background mesh decoding, with the meshes they wait for.
+    waiting_decode: HashMap<(i32, i32), HashSet<opts_bevy::descramble_cache::Key>>,
     /// Tiles currently spawned, by tile coordinates (root entity of each tile).
     resident: HashMap<(i32, i32), Entity>,
     /// Chebyshev radius of tiles kept loaded around the camera.

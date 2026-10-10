@@ -193,11 +193,12 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
 
     let mut job = WorldLoadJob {
         install,
-        cache: ContentCache::default(),
+        cache: decoder_cache(),
         config,
         manifest,
         tile_files,
         queue: VecDeque::new(),
+        waiting_decode: HashMap::new(),
         resident: HashMap::new(),
         stream_radius: 1,
         total_tiles: 0,
@@ -460,4 +461,21 @@ impl WorldLoadJob {
         }
         None
     }
+}
+
+/// Content cache with the decoder configured: parameters (developer overrides from the
+/// environment) and a background pool sized to leave cores for the renderer.
+fn decoder_cache() -> ContentCache {
+    use opts_bevy::descramble_cache::DecodePool;
+    use opts_core::formats::o3d::descramble::DecodeParams;
+    let params = DecodeParams::default().with_overrides(|k| std::env::var(k).ok());
+    let threads =
+        std::thread::available_parallelism().map_or(2, |n| n.get().saturating_sub(2).clamp(1, 4));
+    let mut cache = ContentCache::default();
+    cache.decode_pool = Some(std::sync::Arc::new(DecodePool::new(
+        threads,
+        params.clone(),
+    )));
+    cache.decode_params = params;
+    cache
 }

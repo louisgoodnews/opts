@@ -15,7 +15,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — ⏳ Planned (RPN stack VM, .osc bytecode, dynamic variable tables)
 - [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — ⏳ Planned (sound.cfg evaluation, dynamic curve modulation, Bevy spatial audio)
 - [M-0037 — Shipped-Work Reconciliation (Roadmap, Phase Pages, Board)](M-0037.md) — 🟢 Complete (audit 5037f89a F-019, F-023)
-- [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — ⏳ Planned (async decoding, cache policy, generator research)
+- [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)
 
 ## Checklist

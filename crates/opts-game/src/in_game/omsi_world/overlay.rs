@@ -49,7 +49,7 @@ pub fn update_debug_overlay(
             Visibility::Hidden
         };
         text.sections[0].value = format!(
-            "[F10] map: {}\ntile: {:?} | tiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {}",
+            "[F10] map: {}\ntile: {:?} | tiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {}\nscrambled meshes: decoded {}, plain twins {}, decoding {}",
             stats.map_name,
             stats.start_tile,
             stats.tiles_loaded,
@@ -66,6 +66,9 @@ pub fn update_debug_overlay(
             stats.vehicle_vertices,
             stats.scene_vertices,
             stats.asset_failures,
+            stats.meshes_decoded,
+            stats.meshes_twin,
+            stats.meshes_decoding,
         );
     }
 }

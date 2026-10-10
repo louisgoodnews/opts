@@ -113,7 +113,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [x] 🟠 **Re-run the link scan and list broken links by owner file** (M-0041, docs) — done in P-900 Phase D; 144 → 0 — Baseline for the documentation repair (audit 5037f89a F-018).
 - [x] 🟠 **Choose and document the CI link checker** (M-0042, chore) — done: `scripts/check_links.py` + `docs-links` job (decision to be written up in `docs/src/contributing/`) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
 - [ ] 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — Input for the size-limit refactor (audit 5037f89a F-009).
-- [ ] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
+- [x] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
 - [x] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
 
 ---
@@ -169,10 +169,10 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟠 **Annotate M-0024/M-0025 with verified satisfied items; update BOARD and PROMPTS references** (M-0037, docs)
 
 #### M-0038 — Scrambled-Mesh Completion
-- [ ] 🟠 **Async decoding / loading-stage pre-warm** (M-0038, code) — F-003.
-- [ ] 🟡 **`DecodeParams` struct and cache policy (cap, version)** (M-0038, code) — F-014, F-017.
+- [x] 🟠 **Async decoding / loading-stage pre-warm** (M-0038, code) — F-003.
+- [x] 🟡 **`DecodeParams` struct and cache policy (cap, version)** (M-0038, code) — F-014, F-017.
 - [ ] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001.
-- [ ] 🟡 **Decoder counters in F10 overlay; `confident_eval` thresholds in CI** (M-0038, test)
+- [x] 🟡 **Decoder counters in F10 overlay; `confident_eval` thresholds in CI** (M-0038, test)
 
 #### M-0039 — Text Textures
 - [x] 🟠 **Text rasteriser and material binding in `opts-bevy`** (M-0039, code)
@@ -493,3 +493,4 @@ The agent should check these during P-001 audits:
 - `2026-10-10` — M-0043 (CLI Control Protocol & Hot Reload) complete: 36 of 49 methods, hot reload for meshes, configs, tiles and textures; follow-ups in ROADMAP Deferred Cleanup. See `docs/src/meta/control-protocol-2026-10-10.md`.
 - `2026-10-10` — M-0037 (Shipped-Work Reconciliation) complete: delivered-work list added to ROADMAP and Phase 4, M-0024/M-0025 annotated, `PROMPTS.md` references re-pointed. Spline/terrain bug fixed (`2816806`).
 - `2026-10-10` — M-0039 (Text Textures) complete for static strings: `.oft` parser, bitmap-font rasteriser, per-instance strings; named sources and script text remain (spec lists them). Screenshot check done on Grundorf, not X10 Berlin.
+- `2026-10-11` — M-0038 engineering done (parameters, cache policy, background decoding, overlay counters); state-chain research and CI thresholds remain open.

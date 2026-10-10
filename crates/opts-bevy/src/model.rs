@@ -75,6 +75,8 @@ pub struct ContentStats {
     pub twin_meshes: usize,
     /// Scrambled meshes recovered by the confident geometric decoder.
     pub decoded_meshes: usize,
+    /// Meshes left out for now because their background decoding is still running.
+    pub deferred_meshes: usize,
     /// Meshes read with the axis-cycled layout (coherent positions, unusable stored normals).
     pub axis_cycled_meshes: usize,
     /// Human-readable descriptions of assets that failed to load.
@@ -98,8 +100,21 @@ pub struct ContentCache {
     pub(crate) textures: HashMap<PathBuf, Option<Handle<Image>>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
+    /// Parameters of the scrambled-mesh decoder.
+    pub decode_params: opts_core::formats::o3d::descramble::DecodeParams,
+    /// Background decoder; without it meshes are decoded on the calling thread.
+    pub decode_pool: Option<std::sync::Arc<crate::descramble_cache::DecodePool>>,
+    /// Meshes whose decoding was queued since the last [`Self::take_deferred`].
+    pub deferred: std::collections::HashSet<crate::descramble_cache::Key>,
     /// Loading statistics.
     pub stats: ContentStats,
+}
+
+impl ContentCache {
+    /// Takes the keys of meshes that were queued for background decoding since the last call.
+    pub fn take_deferred(&mut self) -> std::collections::HashSet<crate::descramble_cache::Key> {
+        std::mem::take(&mut self.deferred)
+    }
 }
 
 /// Borrowed view tying an installation, caches and Bevy asset stores together.
@@ -279,6 +294,7 @@ impl ContentLoader<'_> {
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
+        let mut deferred_here = false;
         if is_o3d {
             let unreadable = models
                 .iter()
@@ -315,17 +331,35 @@ impl ContentLoader<'_> {
             // No twin: try the confident decoder (two independent annealing runs must agree),
             // reusing earlier outcomes from the on-disk cache. `OPTS_NO_DESCRAMBLE=1` disables it.
             if unreadable && !experimental && std::env::var_os("OPTS_NO_DESCRAMBLE").is_none() {
+                let fingerprint = self.cache.decode_params.fingerprint();
+                deferred_here = false;
                 for (mi, m) in models.iter_mut().enumerate() {
                     if !matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable) {
                         continue;
                     }
-                    let cached = crate::descramble_cache::load(&bytes, mi);
+                    let ckey = crate::descramble_cache::key(&bytes, mi);
+                    let cached = self
+                        .cache
+                        .decode_pool
+                        .as_ref()
+                        .and_then(|p| p.result(ckey))
+                        .or_else(|| crate::descramble_cache::load(ckey, fingerprint));
                     let applied = match &cached {
                         Some(c) => crate::descramble_cache::apply(m, c),
                         None => {
+                            if let Some(pool) = &self.cache.decode_pool {
+                                // Decode in the background; the tile is rebuilt when it is done.
+                                pool.submit(ckey, m);
+                                self.cache.deferred.insert(ckey);
+                                deferred_here = true;
+                                continue;
+                            }
                             let before = m.clone();
                             let t = std::time::Instant::now();
-                            let report = o3d::descramble::decode_confident(m);
+                            let report = o3d::descramble::decode_confident_with(
+                                m,
+                                &self.cache.decode_params,
+                            );
                             tracing::info!(
                                 path = %o3d_path.display(),
                                 accepted = report.accepted,
@@ -341,7 +375,7 @@ impl ContentLoader<'_> {
                             } else {
                                 crate::descramble_cache::Cached::Rejected
                             };
-                            crate::descramble_cache::store(&bytes, mi, &outcome);
+                            crate::descramble_cache::store(ckey, fingerprint, &outcome);
                             report.accepted
                         }
                     };
@@ -355,6 +389,11 @@ impl ContentLoader<'_> {
                 && models
                     .iter()
                     .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable));
+            if unreadable && !experimental && deferred_here {
+                // Decoding runs in the background; the caller rebuilds the object when it ends.
+                self.cache.stats.deferred_meshes += 1;
+                return Vec::new();
+            }
             if unreadable && !experimental {
                 // Vertex positions are permuted per vertex; the geometry cannot be reconstructed.
                 self.cache.stats.protected_meshes += 1;

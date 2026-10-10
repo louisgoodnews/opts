@@ -43,6 +43,94 @@ pub const CONFIDENT_MIN_AGREEMENT: f32 = 0.98;
 /// Independent runs tried before giving up.
 pub const CONFIDENT_MAX_RUNS: u32 = 6;
 const BP_ITERS: usize = 25;
+const BP_TRUNC: f32 = 0.35;
+
+/// Tunable parameters of the decoder. The defaults are the evaluated configuration; the library
+/// never reads the environment (use [`DecodeParams::with_overrides`] from a binary or example).
+#[derive(Debug, Clone, PartialEq)]
+pub struct DecodeParams {
+    /// Weight of the belief-propagation edge cost.
+    pub bp_weight: f32,
+    /// Truncation of the belief-propagation edge cost (share of the mesh diagonal).
+    pub bp_trunc: f32,
+    /// Belief-propagation sweeps.
+    pub bp_iterations: usize,
+    /// Starting temperature of the annealing.
+    pub anneal_t0: f32,
+    /// Annealing rounds.
+    pub anneal_rounds: usize,
+    /// Restarts of the plain [`descramble`] solver (best score wins).
+    pub restarts: u32,
+    /// Share of vertices two runs must agree on ([`decode_confident`]).
+    pub min_agreement: f32,
+}
+
+impl Default for DecodeParams {
+    fn default() -> Self {
+        Self {
+            bp_weight: W_BP,
+            bp_trunc: BP_TRUNC,
+            bp_iterations: BP_ITERS,
+            anneal_t0: ANNEAL_T0,
+            anneal_rounds: ANNEAL_ROUNDS,
+            restarts: 1,
+            min_agreement: CONFIDENT_MIN_AGREEMENT,
+        }
+    }
+}
+
+impl DecodeParams {
+    /// Applies overrides from a key lookup (`BP_W`, `BP_T`, `BP_I`, `ANNEAL_T0`, `ANNEAL_R`,
+    /// `OPTS_DESCRAMBLE_RESTARTS`, `OPTS_CONF_AGREE`); unparsable values are ignored. Pass
+    /// `|k| std::env::var(k).ok()` to read the environment.
+    #[must_use]
+    pub fn with_overrides(mut self, get: impl Fn(&str) -> Option<String>) -> Self {
+        let f = |k: &str| get(k).and_then(|v| v.parse::<f32>().ok());
+        if let Some(v) = f("BP_W") {
+            self.bp_weight = v;
+        }
+        if let Some(v) = f("BP_T") {
+            self.bp_trunc = v;
+        }
+        if let Some(v) = f("BP_I") {
+            self.bp_iterations = v as usize;
+        }
+        if let Some(v) = f("ANNEAL_T0") {
+            self.anneal_t0 = v;
+        }
+        if let Some(v) = f("ANNEAL_R") {
+            self.anneal_rounds = v as usize;
+        }
+        if let Some(v) = f("OPTS_DESCRAMBLE_RESTARTS") {
+            self.restarts = v as u32;
+        }
+        if let Some(v) = f("OPTS_CONF_AGREE") {
+            self.min_agreement = v;
+        }
+        self
+    }
+
+    /// Stable hash of all parameters: part of the on-disk cache version, so changing a parameter
+    /// invalidates results decoded under the old one.
+    #[must_use]
+    pub fn fingerprint(&self) -> u32 {
+        let mut h = 0x811C_9DC5_u32;
+        for v in [
+            self.bp_weight.to_bits(),
+            self.bp_trunc.to_bits(),
+            self.bp_iterations as u32,
+            self.anneal_t0.to_bits(),
+            self.anneal_rounds as u32,
+            self.restarts,
+            self.min_agreement.to_bits(),
+        ] {
+            for b in v.to_le_bytes() {
+                h = (h ^ u32::from(b)).wrapping_mul(0x0100_0193);
+            }
+        }
+        h
+    }
+}
 
 /// Outcome of [`descramble`].
 #[derive(Debug, Clone, PartialEq)]
@@ -115,7 +203,7 @@ impl Pool {
 
 /// Loop belief propagation (min-sum) over the four labels with truncated-linear edge costs:
 /// a good starting labelling for the local search. Messages are normalised each sweep.
-fn bp_init(o: &O3d) -> Vec<u8> {
+fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
     let n = o.vertices.len();
     let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
     let mut edges: Vec<(u32, u32)> = Vec::new();
@@ -135,17 +223,7 @@ fn bp_init(o: &O3d) -> Vec<u8> {
         hi = hi.max(*p);
     }
     let diag = (hi - lo).length().max(1e-4);
-    let envf = |k: &str, d: f32| {
-        std::env::var(k)
-            .ok()
-            .and_then(|v| v.parse::<f32>().ok())
-            .unwrap_or(d)
-    };
-    let (w_bp, trunc, iters) = (
-        envf("BP_W", W_BP),
-        envf("BP_T", 0.35),
-        envf("BP_I", BP_ITERS as f32) as usize,
-    );
+    let (w_bp, trunc, iters) = (p.bp_weight, p.bp_trunc, p.bp_iterations);
     // cost[e][la][lb]
     let cost: Vec<[[f32; 4]; 4]> = edges
         .iter()
@@ -230,17 +308,15 @@ fn bp_init(o: &O3d) -> Vec<u8> {
 }
 
 /// Chooses a permutation per vertex; returns the labels (index into the four permutations).
-fn solve(o: &O3d) -> Vec<u8> {
-    let restarts: u32 = std::env::var("OPTS_DESCRAMBLE_RESTARTS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(1);
+fn solve(o: &O3d, p: &DecodeParams) -> Vec<u8> {
+    let restarts = p.restarts;
     let mut best: Option<(f32, Vec<u8>)> = None;
     for r in 0..restarts.max(1) {
         let (lab, e) = solve_once(
             o,
             0x9E37_79B9_u32.wrapping_add(r.wrapping_mul(0x85EB_CA6B)),
             r > 0,
+            p,
         );
         if best.as_ref().is_none_or(|b| e > b.0) {
             best = Some((e, lab));
@@ -250,15 +326,27 @@ fn solve(o: &O3d) -> Vec<u8> {
 }
 
 /// One optimisation run; returns the labels and the total score reached (higher is better).
-fn solve_once(o: &O3d, seed: u32, random_init: bool) -> (Vec<u8>, f32) {
-    let init = if random_init { None } else { Some(bp_init(o)) };
-    run_local_search(o, seed, random_init, init, false)
+fn solve_once(o: &O3d, seed: u32, random_init: bool, p: &DecodeParams) -> (Vec<u8>, f32) {
+    let init = if random_init {
+        None
+    } else {
+        Some(bp_init(o, p))
+    };
+    run_local_search(o, seed, random_init, init, false, p)
 }
 
 /// Total score of a given labelling under the solver's own objective (evaluation tool).
 #[must_use]
 pub fn labels_score(o: &O3d, labels: &[u8]) -> f32 {
-    run_local_search(o, 1, false, Some(labels.to_vec()), true).1
+    run_local_search(
+        o,
+        1,
+        false,
+        Some(labels.to_vec()),
+        true,
+        &DecodeParams::default(),
+    )
+    .1
 }
 
 fn run_local_search(
@@ -267,6 +355,7 @@ fn run_local_search(
     random_init: bool,
     init: Option<Vec<u8>>,
     eval_only: bool,
+    params: &DecodeParams,
 ) -> (Vec<u8>, f32) {
     let n = o.vertices.len();
     let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
@@ -310,19 +399,10 @@ fn run_local_search(
     let mut order: Vec<u32> = (0..n as u32).collect();
     let mut rng = seed;
     let mut total = 0.0f32;
-    let envf = |k: &str, d: f32| {
-        std::env::var(k)
-            .ok()
-            .and_then(|v| v.parse::<f32>().ok())
-            .unwrap_or(d)
-    };
     let (t0, anneal_rounds) = if eval_only {
         (0.0, 0)
     } else {
-        (
-            envf("ANNEAL_T0", ANNEAL_T0),
-            envf("ANNEAL_R", ANNEAL_ROUNDS as f32) as usize,
-        )
+        (params.anneal_t0, params.anneal_rounds)
     };
     for round in 0..(anneal_rounds + ROUNDS) {
         let temp = if round < anneal_rounds {
@@ -467,6 +547,11 @@ pub const GATE_MIN_COHERENCE: f32 = 0.9;
 ///
 /// Accepted meshes lose the triangles that are still incoherent (holes instead of spikes).
 pub fn descramble(o: &mut O3d) -> DescrambleReport {
+    descramble_with(o, &DecodeParams::default())
+}
+
+/// [`descramble`] with explicit parameters.
+pub fn descramble_with(o: &mut O3d, params: &DecodeParams) -> DescrambleReport {
     let total = o.indices.len();
     if o.vertices.len() < 4 || total < 2 {
         return DescrambleReport {
@@ -476,7 +561,7 @@ pub fn descramble(o: &mut O3d) -> DescrambleReport {
             coherence: 0.0,
         };
     }
-    let labels = solve(o);
+    let labels = solve(o, params);
     let mut trial = o.clone();
     for (v, &l) in trial.vertices.iter_mut().zip(&labels) {
         v.position = permuted(l as usize, v.position);
@@ -552,23 +637,30 @@ pub fn normal_agreement(o: &O3d, tol: f32) -> f32 {
 /// belief propagation, later runs from random labels).
 #[must_use]
 pub fn solved_labels_run(o: &O3d, run: u32) -> (Vec<u8>, f32) {
+    solved_labels_run_with(o, run, &DecodeParams::default())
+}
+
+/// [`solved_labels_run`] with explicit parameters.
+#[must_use]
+pub fn solved_labels_run_with(o: &O3d, run: u32, params: &DecodeParams) -> (Vec<u8>, f32) {
     solve_once(
         o,
         0x9E37_79B9_u32.wrapping_add(run.wrapping_mul(0x85EB_CA6B)),
         run > 0,
+        params,
     )
 }
 
 /// Test/evaluation helper: the chosen label (index into the four permutations) per vertex.
 #[must_use]
 pub fn solved_labels(o: &O3d) -> Vec<u8> {
-    solve(o)
+    solve(o, &DecodeParams::default())
 }
 
 /// Test/evaluation helper: the labels the solver would choose, applied to `o`'s positions.
 #[must_use]
 pub fn solved_positions(o: &O3d) -> Vec<Vec3> {
-    let labels = solve(o);
+    let labels = solve(o, &DecodeParams::default());
     o.vertices
         .iter()
         .zip(labels)
@@ -599,6 +691,11 @@ pub struct ConfidentReport {
 /// Accepted meshes lose their remaining incoherent triangles and get their texture jitter
 /// removed where a planar UV model proves it ([`super::uvfix::unjitter_uv`]).
 pub fn decode_confident(o: &mut O3d) -> ConfidentReport {
+    decode_confident_with(o, &DecodeParams::default())
+}
+
+/// [`decode_confident`] with explicit parameters.
+pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentReport {
     let rejected = |agreement: f32, coherence: f32| ConfidentReport {
         accepted: false,
         agreement,
@@ -628,15 +725,12 @@ pub fn decode_confident(o: &mut O3d) -> ConfidentReport {
             .count() as f32
             / x.len() as f32
     };
-    let min_agree = std::env::var("OPTS_CONF_AGREE")
-        .ok()
-        .and_then(|v| v.parse::<f32>().ok())
-        .unwrap_or(CONFIDENT_MIN_AGREEMENT);
+    let min_agree = params.min_agreement;
     let mut runs: Vec<(Vec<u8>, f32)> = Vec::new();
     let mut chosen: Option<(Vec<u8>, f32)> = None;
     let mut best_pair = 0.0f32;
     'runs: for r in 0..CONFIDENT_MAX_RUNS {
-        runs.push(solved_labels_run(o, r));
+        runs.push(solved_labels_run_with(o, r, params));
         for i in 0..runs.len() - 1 {
             let ag = agreement(&runs[i].0, &runs[runs.len() - 1].0);
             best_pair = best_pair.max(ag);
@@ -684,5 +778,62 @@ pub fn decode_confident(o: &mut O3d) -> ConfidentReport {
         coherence,
         dropped_faces: dropped,
         uv,
+    }
+}
+
+#[cfg(test)]
+mod params_tests {
+    use super::DecodeParams;
+
+    #[test]
+    fn overrides_apply_and_bad_values_are_ignored() {
+        let p = DecodeParams::default().with_overrides(|k| match k {
+            "BP_W" => Some("12.5".into()),
+            "ANNEAL_R" => Some("40".into()),
+            "OPTS_CONF_AGREE" => Some("nonsense".into()),
+            _ => None,
+        });
+        assert_eq!(p.bp_weight, 12.5);
+        assert_eq!(p.anneal_rounds, 40);
+        assert_eq!(p.min_agreement, DecodeParams::default().min_agreement);
+    }
+
+    #[test]
+    fn fingerprint_changes_with_every_parameter() {
+        let base = DecodeParams::default();
+        let variants = [
+            DecodeParams {
+                bp_weight: 1.0,
+                ..base.clone()
+            },
+            DecodeParams {
+                bp_trunc: 0.5,
+                ..base.clone()
+            },
+            DecodeParams {
+                bp_iterations: 3,
+                ..base.clone()
+            },
+            DecodeParams {
+                anneal_t0: 9.0,
+                ..base.clone()
+            },
+            DecodeParams {
+                anneal_rounds: 7,
+                ..base.clone()
+            },
+            DecodeParams {
+                restarts: 4,
+                ..base.clone()
+            },
+            DecodeParams {
+                min_agreement: 0.9,
+                ..base.clone()
+            },
+        ];
+        for v in &variants {
+            assert_ne!(v.fingerprint(), base.fingerprint());
+        }
+        assert_eq!(base.fingerprint(), DecodeParams::default().fingerprint());
     }
 }
