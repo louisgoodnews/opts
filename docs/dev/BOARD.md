@@ -495,3 +495,4 @@ The agent should check these during P-001 audits:
 - `2026-10-10` — M-0039 (Text Textures) complete for static strings: `.oft` parser, bitmap-font rasteriser, per-instance strings; named sources and script text remain (spec lists them). Screenshot check done on Grundorf, not X10 Berlin.
 - `2026-10-11` — M-0038 engineering done (parameters, cache policy, background decoding, overlay counters); state-chain research and CI thresholds remain open.
 - `2026-10-11` — M-0040 partly done: rustdoc clean, panics removed, test fixtures feature-gated, `opts-tools inspect`, Credits text, `load_next_tile` split, `scripts/size_check.py`; size splits and Load Game remain.
+- `2026-10-11` — M-0042 mostly written: toolchain pin, `.editorconfig`, `deny.toml`, rustdoc `-D warnings`, Windows job; unverified until the first CI run; `binrw` upgrade open.

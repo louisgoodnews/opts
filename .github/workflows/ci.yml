@@ -46,6 +46,14 @@ jobs:
       - name: Run tests
         run: cargo test --workspace --all-features
 
+      - name: Rustdoc without warnings
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps
+
+      - name: Size report (standards.md limits; informational until the splits land)
+        run: python3 scripts/size_check.py
+
       - name: Check compilation (all targets)
         run: cargo check --workspace --all-targets
 
@@ -59,3 +67,23 @@ jobs:
 
       - name: Check relative markdown links
         run: python3 scripts/check_links.py
+
+  windows:
+    name: Windows build and tests
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check (all targets)
+        run: cargo check --workspace --all-targets
+
+      - name: Run tests
+        run: cargo test --workspace
