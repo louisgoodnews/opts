@@ -48,3 +48,14 @@ jobs:
 
       - name: Check compilation (all targets)
         run: cargo check --workspace --all-targets
+
+  docs-links:
+    name: Documentation links
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check relative markdown links
+        run: python3 scripts/check_links.py
