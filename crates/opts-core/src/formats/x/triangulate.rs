@@ -16,7 +16,6 @@ use crate::formats::x::error::XParseError;
 /// * `vertex_count` - Total number of available vertices (for bounds checking).
 ///
 /// # Errors
-/// * Returns [`XParseError::UnsupportedFaceVertexCount`] if `indices.len() != 3 && indices.len() != 4`.
 /// * Returns [`XParseError::IndexOutOfBounds`] if any vertex index is `>= vertex_count`.
 pub fn triangulate_face(
     indices: &[u32],
@@ -37,7 +36,12 @@ pub fn triangulate_face(
             [indices[0], indices[1], indices[2]],
             [indices[0], indices[2], indices[3]],
         ]),
-        other => Err(XParseError::UnsupportedFaceVertexCount(other as u32)),
+        // N-gons (5+ vertices) are fan-triangulated from the first vertex, which generalises
+        // the quad rule above. Degenerate faces with fewer than three vertices have no area.
+        n if n >= 5 => Ok((1..n - 1)
+            .map(|k| [indices[0], indices[k], indices[k + 1]])
+            .collect()),
+        _ => Ok(Vec::new()),
     }
 }
 
@@ -90,9 +94,15 @@ mod tests {
     }
 
     #[test]
-    fn test_rejects_unsupported_polygon() {
-        let err = triangulate_face(&[0, 1, 2, 3, 4], 10).unwrap_err();
-        assert_eq!(err, XParseError::UnsupportedFaceVertexCount(5));
+    fn test_ngon_is_fan_triangulated() {
+        let tris = triangulate_face(&[0, 1, 2, 3, 4], 10).expect("pentagon");
+        assert_eq!(tris, vec![[0, 1, 2], [0, 2, 3], [0, 3, 4]]);
+    }
+
+    #[test]
+    fn test_degenerate_faces_are_skipped() {
+        assert!(triangulate_face(&[0, 1], 10).expect("line").is_empty());
+        assert!(triangulate_face(&[], 10).expect("empty").is_empty());
     }
 
     #[test]

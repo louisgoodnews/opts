@@ -111,9 +111,8 @@ pub fn parse_material_chunk(reader: &mut Cursor<&[u8]>) -> Result<Vec<Material>>
                 }
             })?;
 
-            let tex_name = std::str::from_utf8(&name_bytes)
-                .map_err(|_| O3dParseError::InvalidUtf8(str_pos))?
-                .to_string();
+            // Legacy add-ons store names in Windows-1252 (umlauts); decode, never reject.
+            let tex_name = crate::formats::text::decode_bytes(&name_bytes).to_string();
 
             vec![tex_name]
         } else {
@@ -223,17 +222,17 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_utf8_texture_name() {
+    fn test_legacy_encoded_texture_name_is_decoded() {
         let mut bytes = vec![TAG_MATERIAL];
         bytes.extend_from_slice(&1u16.to_le_bytes());
         for _ in 0..11 {
             bytes.extend_from_slice(&0.0f32.to_le_bytes());
         }
         bytes.push(2); // length 2
-        bytes.extend_from_slice(&[0xFF, 0xFE]); // invalid UTF-8 bytes
+        bytes.extend_from_slice(&[0xE4, 0xF6]); // "äö" in Windows-1252, invalid UTF-8
 
         let mut cursor = Cursor::new(&bytes[..]);
-        let err = parse_material_chunk(&mut cursor).unwrap_err();
-        assert!(matches!(err, O3dParseError::InvalidUtf8(_)));
+        let materials = parse_material_chunk(&mut cursor).expect("legacy encodings must decode");
+        assert_eq!(materials[0].textures, vec!["äö".to_string()]);
     }
 }

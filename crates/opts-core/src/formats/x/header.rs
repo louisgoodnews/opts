@@ -21,6 +21,8 @@ pub struct XHeader {
     pub version: (u8, u8),
     /// Bit width of floating-point values (32 or 64).
     pub float_bits: u8,
+    /// `true` for the binary (`bin `) encoding, `false` for text (`txt `).
+    pub binary: bool,
 }
 
 /// Parses and validates the 16-byte DirectX `.x` header.
@@ -65,9 +67,11 @@ pub fn parse_header(bytes: &[u8]) -> Result<(XHeader, &[u8]), XParseError> {
         }
     };
 
-    if format_str != "txt " {
-        return Err(XParseError::UnsupportedFormat(format_str.to_string()));
-    }
+    let binary = match format_str {
+        "txt " => false,
+        "bin " => true,
+        other => return Err(XParseError::UnsupportedFormat(other.to_string())),
+    };
 
     let float_str = match std::str::from_utf8(&bytes[12..16]) {
         Ok(s) => s,
@@ -87,6 +91,7 @@ pub fn parse_header(bytes: &[u8]) -> Result<(XHeader, &[u8]), XParseError> {
     let header = XHeader {
         version,
         float_bits,
+        binary,
     };
 
     Ok((header, &bytes[HEADER_LEN..]))
@@ -105,6 +110,7 @@ mod tests {
             XHeader {
                 version: (3, 3),
                 float_bits: 32,
+                binary: false,
             }
         );
         assert_eq!(remainder, b"\r\nFrame Root { }");
@@ -119,6 +125,7 @@ mod tests {
             XHeader {
                 version: (3, 2),
                 float_bits: 64,
+                binary: false,
             }
         );
         assert_eq!(remainder, b"payload");
@@ -139,10 +146,11 @@ mod tests {
     }
 
     #[test]
-    fn test_rejects_binary_format() {
-        let raw = b"xof 0303bin 0032";
-        let err = parse_header(raw).unwrap_err();
-        assert_eq!(err, XParseError::UnsupportedFormat("bin ".to_string()));
+    fn test_accepts_binary_format_and_rejects_compressed() {
+        let (header, _) = parse_header(b"xof 0303bin 0032").expect("binary header");
+        assert!(header.binary);
+        let err = parse_header(b"xof 0303tzip0032").unwrap_err();
+        assert_eq!(err, XParseError::UnsupportedFormat("tzip".to_string()));
     }
 
     #[test]

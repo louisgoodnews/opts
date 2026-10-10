@@ -8,7 +8,7 @@ use std::io::Cursor;
 use crate::formats::o3d::chunks::{
     parse_bone_weights_chunk, parse_matrix_chunk, peek_tag, TAG_BONE_WEIGHTS, TAG_MATRIX,
 };
-use crate::formats::o3d::error::{O3dParseError, Result};
+use crate::formats::o3d::error::Result;
 use crate::formats::o3d::header::Header;
 use crate::formats::o3d::index::parse_face_chunk;
 use crate::formats::o3d::material::parse_material_chunk;
@@ -24,6 +24,48 @@ use crate::formats::o3d::O3d;
 /// Returns [`O3dParseError`] if the byte slice is truncated, contains an invalid magic sequence,
 /// an unsupported version, out-of-bounds indices, or unknown chunk tags.
 pub fn parse(bytes: &[u8]) -> Result<O3d> {
+    match parse_exact(bytes) {
+        Ok(o) => Ok(o),
+        Err(first) => salvage(bytes).ok_or(first),
+    }
+}
+
+/// How many leading bytes may precede the magic in a damaged file.
+const MAX_LEADING_JUNK: usize = 64;
+
+/// Last-resort repairs for files that real-world mod packs ship damaged. Each repair is only
+/// accepted if the result parses completely into a non-empty mesh.
+///
+/// 1. Leading junk before the `84 19` magic (some exporters prepend a byte or two).
+/// 2. Text-mode transfer damage: every `0x00` byte became `0x20`. Detected by a large share of
+///    `0x20` bytes in a file that fails normally; reverting them restores the counts and floats
+///    (a genuine `0x20` byte inside a float is rare and only perturbs that value).
+fn salvage(bytes: &[u8]) -> Option<O3d> {
+    let accept = |o: O3d| (!o.vertices.is_empty() && !o.indices.is_empty()).then_some(o);
+    if let Some(start) = bytes
+        .windows(2)
+        .take(MAX_LEADING_JUNK)
+        .position(|w| w == [0x84, 0x19])
+        .filter(|&i| i > 0)
+    {
+        if let Some(o) = parse_exact(&bytes[start..]).ok().and_then(accept) {
+            return Some(o);
+        }
+    }
+    let spaces = bytes.iter().filter(|&&b| b == 0x20).count();
+    if spaces * 10 > bytes.len() {
+        let repaired: Vec<u8> = bytes
+            .iter()
+            .map(|&b| if b == 0x20 { 0x00 } else { b })
+            .collect();
+        if let Some(o) = parse_exact(&repaired).ok().and_then(accept) {
+            return Some(o);
+        }
+    }
+    None
+}
+
+fn parse_exact(bytes: &[u8]) -> Result<O3d> {
     let mut cursor = Cursor::new(bytes);
 
     let header = Header::parse(&mut cursor)?;
@@ -52,10 +94,11 @@ pub fn parse(bytes: &[u8]) -> Result<O3d> {
                 let bone_chunk = parse_bone_weights_chunk(&mut cursor)?;
                 unknown_chunks.push(bone_chunk);
             }
-            Some(tag) => {
-                let offset = cursor.position() as usize;
-                return Err(O3dParseError::UnknownChunk(u32::from(tag), offset));
-            }
+            // Zero padding between chunks occurs in some exporters' files; skip it.
+            Some(0) => cursor.set_position(cursor.position() + 1),
+            // Vertices, faces and materials are complete; anything unrecognised after them is
+            // trailing garbage (matrix/bone chunks are optional), so the mesh is kept as is.
+            Some(_) => break,
             None => break,
         }
     }
@@ -69,6 +112,8 @@ pub fn parse(bytes: &[u8]) -> Result<O3d> {
         materials,
         transform,
         unknown_chunks,
+        encryption_key: header.stamp.filter(|&k| k != 0xFFFF_FFFF),
+        descrambled: false,
     })
 }
 
@@ -167,7 +212,27 @@ mod tests {
         let mut sample = build_self_authored_v1_sample();
         sample.push(0x99); // trailing garbage tag
 
-        let err = parse(&sample).unwrap_err();
-        assert!(matches!(err, O3dParseError::UnknownChunk(0x99, _)));
+        // Complete core chunks: trailing garbage is ignored instead of rejecting the mesh.
+        let o3d = parse(&sample).expect("mesh with trailing garbage still loads");
+        assert_eq!(o3d.vertices.len(), 3);
+        assert!(o3d.transform.is_some());
+    }
+
+    #[test]
+    fn test_parse_skips_leading_junk() {
+        let mut sample = vec![0x12];
+        sample.extend(build_self_authored_v1_sample());
+        assert!(parse(&sample).is_ok());
+    }
+
+    #[test]
+    fn test_parse_repairs_zero_to_space_damage() {
+        let damaged: Vec<u8> = build_self_authored_v1_sample()
+            .into_iter()
+            .map(|b| if b == 0 { 0x20 } else { b })
+            .collect();
+        let o3d = parse(&damaged).expect("repair");
+        assert_eq!(o3d.vertices.len(), 3);
+        assert_eq!(o3d.indices, vec![[0, 2, 1]]);
     }
 }

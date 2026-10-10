@@ -24,6 +24,8 @@
 //!   - [`formats::org`]: Vehicle registration and fleet number lists (`.org`).
 //!   - [`formats::money`]: Money system configurations (`Money/<pack>/*.cfg`).
 //!   - [`formats::vehicles`]: Vehicle manifests (`.bus`), passenger path networks (`paths.cfg`), and render manifests (`model.cfg`).
+//!   - [`formats::scenery`]: Scenery objects (`.sco`) and spline extrusion profiles (`.sli`).
+//!   - [`formats::map`]: Map manifests (`global.cfg`), tile layouts (`tile_*.map`), height grids (`.terrain`), and water (`.water`).
 //!
 //! ## Example
 //!

@@ -1,0 +1,436 @@
+//! Parser and data structures for OMSI Spline Profile (`.sli`) files.
+//!
+//! A `.sli` file defines a 2D cross-section profile extruded along a 3D curve
+//! in the world to produce roads, curbs, rails, bridges, and footpaths.
+//! It contains terrain height profiles, graphical mesh ribbon profiles,
+//! and traffic path lanes.
+//!
+//! See specification in `docs/src/formats/text/sli.md`.
+
+use super::error::SceneryParseError;
+use crate::formats::text::{decode_bytes, parse_float, scan_blocks};
+
+/// Terrain height deformation profile strip (`[heightprofile]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplineHeightProfile {
+    /// Starting X coordinate (left edge) relative to spline center in meters.
+    pub x_start: f32,
+    /// Ending X coordinate (right edge) relative to spline center in meters.
+    pub x_end: f32,
+    /// Starting elevation above spline origin in meters.
+    pub z_start: f32,
+    /// Ending elevation above spline origin in meters.
+    pub z_end: f32,
+}
+
+/// Texture definition in a spline file (`[texture]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplineTexture {
+    /// Texture bitmap filename.
+    pub file: String,
+    /// Optional material slot index.
+    pub material_index: Option<usize>,
+    /// Optional alpha transparency mode.
+    pub alpha_mode: Option<u32>,
+}
+
+/// Point on a graphical extrusion profile polyline (`[profilepnt]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplineProfilePoint {
+    /// Lateral offset across profile in meters (positive = right).
+    pub x: f32,
+    /// Vertical height offset in meters.
+    pub z: f32,
+    /// Horizontal texture U coordinate.
+    pub u: f32,
+    /// Texture V gradient per longitudinal meter.
+    pub v_slope: f32,
+}
+
+/// Graphical profile ribbon extruded along the spline (`[profile]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplineGraphicalProfile {
+    /// Texture index (0-based) referencing `textures`.
+    pub texture_index: usize,
+    /// Sequential cross-section vertices from left to right.
+    pub points: Vec<SplineProfilePoint>,
+}
+
+/// AI traffic, pedestrian, or rail path lane in a spline (`[path]`, `[path_2]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplinePath {
+    /// Path traffic type: 0 = road vehicles, 1 = pedestrians, 2 = rail.
+    pub path_type: u32,
+    /// Lateral offset from centerline in meters (positive = right).
+    pub offset_x: f32,
+    /// Vertical elevation offset above spline datum in meters.
+    pub offset_z: f32,
+    /// Evading lane width in meters.
+    pub width: f32,
+    /// Allowed travel direction: 0 = forward, 1 = reverse, 2 = bidirectional.
+    pub direction: u32,
+    /// Extra flag from `[path_2]`.
+    pub extra: Option<u32>,
+}
+
+/// Rail geometry quality / track irregular oscillation parameters (`[rail_enh]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SplineRailEnh {
+    /// Length of individual track rails in meters.
+    pub rail_length: f32,
+    /// Rail joints style (0 = clean, 1 = rough).
+    pub joints: u32,
+    /// Horizontal reference wavelength in meters.
+    pub wavelength: f32,
+    /// Maximum horizontal amplitude in meters.
+    pub amplitude: f32,
+    /// Horizontal exponent power.
+    pub power: f32,
+    /// Vertical reference wavelength in meters.
+    pub wavelength_z: f32,
+    /// Maximum vertical amplitude in meters.
+    pub amplitude_z: f32,
+    /// Vertical exponent power.
+    pub power_z: f32,
+}
+
+/// Complete representation of an OMSI spline cross-section profile (`.sli`).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct SplineProfile {
+    /// Subdivision unit segment length in meters.
+    pub length: Option<f32>,
+    /// Half-width of superelevated banking zone in meters.
+    pub half_cant_width: Option<f32>,
+    /// Scale texture V coordinate by segment length rather than profile slope.
+    pub scale_tex_by_length: bool,
+    /// Render pass designation (`"4"`, `"presurface"`, etc.).
+    pub render_type: Option<String>,
+    /// Whether this spline is only visible in the map editor.
+    pub only_editor: bool,
+
+    /// Terrain height adjustment strips.
+    pub height_profiles: Vec<SplineHeightProfile>,
+    /// Preloaded texture bitmaps.
+    pub textures: Vec<SplineTexture>,
+    /// Graphical extruded ribbon profiles.
+    pub graphical_profiles: Vec<SplineGraphicalProfile>,
+    /// Traffic lanes and pedestrian paths.
+    pub paths: Vec<SplinePath>,
+    /// Enhanced rail physics / track geometry parameters.
+    pub rail_enh: Option<SplineRailEnh>,
+}
+
+impl SplineProfile {
+    /// Parses a spline profile from raw file bytes.
+    ///
+    /// Automatically handles UTF-16LE/BE BOM, UTF-8 BOM, UTF-8, and CP1252 encodings.
+    ///
+    /// # Errors
+    /// Returns [`SceneryParseError`] if decoding fails or numeric fields are malformed.
+    pub fn parse(bytes: &[u8]) -> Result<Self, SceneryParseError> {
+        let text = decode_bytes(bytes);
+        Self::from_text(&text)
+    }
+
+    /// Parses a spline profile from decoded text.
+    ///
+    /// # Errors
+    /// Returns [`SceneryParseError`] if required parameters are missing or malformed.
+    pub fn from_text(text: &str) -> Result<Self, SceneryParseError> {
+        let blocks = scan_blocks(text);
+        let mut sli = SplineProfile::default();
+
+        for block in &blocks {
+            match block.keyword.as_str() {
+                "length" => {
+                    if let Some(val) = block.parameters.first() {
+                        sli.length = Some(parse_f32(val, "length", block.line_number)?);
+                    }
+                }
+                "halfcantwidth" => {
+                    if let Some(val) = block.parameters.first() {
+                        sli.half_cant_width =
+                            Some(parse_f32(val, "halfcantwidth", block.line_number)?);
+                    }
+                }
+                "scaletexbylength" => {
+                    sli.scale_tex_by_length = true;
+                }
+                "rendertype" => {
+                    if let Some(val) = block.parameters.first() {
+                        sli.render_type = Some(val.clone());
+                    }
+                }
+                "onlyeditor" => {
+                    sli.only_editor = true;
+                }
+                "heightprofile" | "heightproflile" | "heigthprofile" => {
+                    if block.parameters.len() >= 4 {
+                        let xs = parse_f32(
+                            &block.parameters[0],
+                            "heightprofile x_start",
+                            block.line_number,
+                        )?;
+                        let xe = parse_f32(
+                            &block.parameters[1],
+                            "heightprofile x_end",
+                            block.line_number,
+                        )?;
+                        let zs = parse_f32(
+                            &block.parameters[2],
+                            "heightprofile z_start",
+                            block.line_number,
+                        )?;
+                        let ze = parse_f32(
+                            &block.parameters[3],
+                            "heightprofile z_end",
+                            block.line_number,
+                        )?;
+                        sli.height_profiles.push(SplineHeightProfile {
+                            x_start: xs,
+                            x_end: xe,
+                            z_start: zs,
+                            z_end: ze,
+                        });
+                    }
+                }
+                "texture" => {
+                    if let Some(file) = block.parameters.first() {
+                        sli.textures.push(SplineTexture {
+                            file: file.clone(),
+                            material_index: None,
+                            alpha_mode: None,
+                        });
+                    }
+                }
+                "matl" => {
+                    if block.parameters.len() >= 2 {
+                        let idx =
+                            parse_usize(&block.parameters[1], "matl index", block.line_number)?;
+                        if let Some(tex) = sli.textures.last_mut() {
+                            tex.material_index = Some(idx);
+                        }
+                    }
+                }
+                "matl_alpha" => {
+                    if let Some(val) = block.parameters.first() {
+                        let mode = parse_u32(val, "matl_alpha", block.line_number)?;
+                        if let Some(tex) = sli.textures.last_mut() {
+                            tex.alpha_mode = Some(mode);
+                        }
+                    }
+                }
+                "profile" => {
+                    if let Some(val) = block.parameters.first() {
+                        let tex_idx = parse_usize(val, "profile texture_index", block.line_number)?;
+                        sli.graphical_profiles.push(SplineGraphicalProfile {
+                            texture_index: tex_idx,
+                            points: Vec::new(),
+                        });
+                    }
+                }
+                "profilepnt" => {
+                    if block.parameters.len() >= 4 {
+                        let x = parse_f32(&block.parameters[0], "profilepnt x", block.line_number)?;
+                        let z = parse_f32(&block.parameters[1], "profilepnt z", block.line_number)?;
+                        let u = parse_f32(&block.parameters[2], "profilepnt u", block.line_number)?;
+                        let vslope = parse_f32(
+                            &block.parameters[3],
+                            "profilepnt v_slope",
+                            block.line_number,
+                        )?;
+
+                        if let Some(prof) = sli.graphical_profiles.last_mut() {
+                            prof.points.push(SplineProfilePoint {
+                                x,
+                                z,
+                                u,
+                                v_slope: vslope,
+                            });
+                        }
+                    }
+                }
+                "path" | "path_2" => {
+                    if block.parameters.len() >= 5 {
+                        let ptype =
+                            parse_u32(&block.parameters[0], "path type", block.line_number)?;
+                        let ox =
+                            parse_f32(&block.parameters[1], "path offset_x", block.line_number)?;
+                        let oz =
+                            parse_f32(&block.parameters[2], "path offset_z", block.line_number)?;
+                        let w = parse_f32(&block.parameters[3], "path width", block.line_number)?;
+                        let dir =
+                            parse_u32(&block.parameters[4], "path direction", block.line_number)?;
+                        let extra = block.parameters.get(5).and_then(|s| s.parse::<u32>().ok());
+
+                        sli.paths.push(SplinePath {
+                            path_type: ptype,
+                            offset_x: ox,
+                            offset_z: oz,
+                            width: w,
+                            direction: dir,
+                            extra,
+                        });
+                    }
+                }
+                "rail_enh" if block.parameters.len() >= 8 => {
+                    let rlen =
+                        parse_f32(&block.parameters[0], "rail_enh length", block.line_number)?;
+                    let joints =
+                        parse_u32(&block.parameters[1], "rail_enh joints", block.line_number)?;
+                    let wl = parse_f32(
+                        &block.parameters[2],
+                        "rail_enh wavelength",
+                        block.line_number,
+                    )?;
+                    let amp = parse_f32(
+                        &block.parameters[3],
+                        "rail_enh amplitude",
+                        block.line_number,
+                    )?;
+                    let pwr = parse_f32(&block.parameters[4], "rail_enh power", block.line_number)?;
+                    let wlz = parse_f32(
+                        &block.parameters[5],
+                        "rail_enh wavelength_z",
+                        block.line_number,
+                    )?;
+                    let ampz = parse_f32(
+                        &block.parameters[6],
+                        "rail_enh amplitude_z",
+                        block.line_number,
+                    )?;
+                    let pwrz =
+                        parse_f32(&block.parameters[7], "rail_enh power_z", block.line_number)?;
+
+                    sli.rail_enh = Some(SplineRailEnh {
+                        rail_length: rlen,
+                        joints,
+                        wavelength: wl,
+                        amplitude: amp,
+                        power: pwr,
+                        wavelength_z: wlz,
+                        amplitude_z: ampz,
+                        power_z: pwrz,
+                    });
+                }
+                _ => {
+                    // Unknown or comment block - ignore gracefully
+                }
+            }
+        }
+
+        Ok(sli)
+    }
+}
+
+fn parse_f32(s: &str, field: &'static str, line: usize) -> Result<f32, SceneryParseError> {
+    parse_float(s).map_err(|_| SceneryParseError::InvalidNumber {
+        field,
+        value: s.to_string(),
+        line,
+    })
+}
+
+fn parse_u32(s: &str, field: &'static str, line: usize) -> Result<u32, SceneryParseError> {
+    s.trim()
+        .parse::<u32>()
+        .map_err(|_| SceneryParseError::InvalidNumber {
+            field,
+            value: s.to_string(),
+            line,
+        })
+}
+
+fn parse_usize(s: &str, field: &'static str, line: usize) -> Result<usize, SceneryParseError> {
+    s.trim()
+        .parse::<usize>()
+        .map_err(|_| SceneryParseError::InvalidNumber {
+            field,
+            value: s.to_string(),
+            line,
+        })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_minimal_sli() {
+        let text = r#"
+[length]
+10.0
+
+[heightprofile]
+-5.750
+-3.750
+0.250
+0.250
+
+[heightprofile]
+-3.750
+3.750
+0.100
+0.100
+
+[texture]
+str_gehweg02.bmp
+
+[texture]
+str_asphdrk_1line.bmp
+
+[profile]
+1
+
+[profilepnt]
+-3.750
+0.100
+0.995
+0.167
+
+[profilepnt]
+0.000
+0.100
+0.005
+0.167
+
+[path]
+0
+-2.5
+0.125
+5.0
+1
+
+[path]
+0
+2.5
+0.125
+5.0
+0
+"#;
+        let sli = SplineProfile::from_text(text).unwrap();
+        assert_eq!(sli.length, Some(10.0));
+        assert_eq!(sli.height_profiles.len(), 2);
+        assert_eq!(sli.height_profiles[0].x_start, -5.75);
+        assert_eq!(sli.height_profiles[0].z_start, 0.25);
+
+        assert_eq!(sli.textures.len(), 2);
+        assert_eq!(sli.textures[0].file, "str_gehweg02.bmp");
+        assert_eq!(sli.textures[1].file, "str_asphdrk_1line.bmp");
+
+        assert_eq!(sli.graphical_profiles.len(), 1);
+        assert_eq!(sli.graphical_profiles[0].texture_index, 1);
+        assert_eq!(sli.graphical_profiles[0].points.len(), 2);
+        assert_eq!(sli.graphical_profiles[0].points[0].x, -3.75);
+        assert_eq!(sli.graphical_profiles[0].points[0].z, 0.1);
+        assert_eq!(sli.graphical_profiles[0].points[0].u, 0.995);
+        assert_eq!(sli.graphical_profiles[0].points[0].v_slope, 0.167);
+
+        assert_eq!(sli.paths.len(), 2);
+        assert_eq!(sli.paths[0].path_type, 0);
+        assert_eq!(sli.paths[0].offset_x, -2.5);
+        assert_eq!(sli.paths[0].direction, 1);
+        assert_eq!(sli.paths[1].offset_x, 2.5);
+        assert_eq!(sli.paths[1].direction, 0);
+    }
+}

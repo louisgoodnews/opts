@@ -54,6 +54,31 @@ pub struct BusAxle {
     pub is_driven: bool,
 }
 
+/// Vehicle view camera preset (`[add_camera_driver]`, `[add_camera_pax]`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct BusCamera {
+    /// Lateral offset in meters (OMSI: positive = left).
+    pub x: f32,
+    /// Longitudinal offset in meters (positive = forward).
+    pub y: f32,
+    /// Vertical offset in meters (positive = up).
+    pub z: f32,
+    /// Eye distance from pivot point in meters (slightly negative for driver cameras).
+    pub dist: f32,
+    /// Horizontal field of view in degrees.
+    pub fov_deg: f32,
+    /// Horizontal viewing direction in degrees (-120 full left, 0 forward, +120 full right).
+    pub yaw_deg: f32,
+    /// Vertical viewing direction in degrees (negative = down).
+    pub pitch_deg: f32,
+    /// Whether this is a driver view camera.
+    pub is_driver: bool,
+    /// Whether marked as timetable schedule view (`[view_schedule]`).
+    pub is_schedule_view: bool,
+    /// Whether marked as ticket selling view (`[view_ticketselling]`).
+    pub is_ticket_view: bool,
+}
+
 /// Parsed vehicle manifest configuration.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BusManifest {
@@ -93,6 +118,20 @@ pub struct BusManifest {
     pub coupling_front_y: Option<f32>,
     /// Rear coupling joint Y position in meters (for articulated tractors).
     pub coupling_back_y: Option<f32>,
+    /// Front coupling point `(x, y, z)` in the vehicle frame (`[coupling_front]`).
+    pub coupling_front: Option<glam::Vec3>,
+    /// Rear coupling point `(x, y, z)` in the vehicle frame (`[coupling_back]`).
+    pub coupling_back: Option<glam::Vec3>,
+    /// File name of the trailer coupled behind this vehicle (`[couple_back]`).
+    pub couple_back: Option<String>,
+    /// Driver view camera presets.
+    pub driver_cameras: Vec<BusCamera>,
+    /// Passenger view camera presets.
+    pub pax_cameras: Vec<BusCamera>,
+    /// Index of the default driver camera.
+    pub std_camera_index: Option<usize>,
+    /// Orbit pivot center for external exterior camera.
+    pub outside_camera_center: Option<glam::Vec3>,
 }
 
 impl BusManifest {
@@ -121,6 +160,13 @@ impl BusManifest {
         let mut axles = Vec::new();
         let mut coupling_front_y = None;
         let mut coupling_back_y = None;
+        let mut coupling_front = None;
+        let mut coupling_back = None;
+        let mut couple_back = None;
+        let mut driver_cameras = Vec::new();
+        let mut pax_cameras = Vec::new();
+        let mut std_camera_index = None;
+        let mut outside_camera_center = None;
 
         for block in blocks {
             match block.keyword.as_str() {
@@ -220,14 +266,69 @@ impl BusManifest {
                     parse_axle_block(&block.parameters, &mut axle);
                     axles.push(axle);
                 }
-                "coupling_front" => {
-                    if let Some(first) = block.parameters.first() {
-                        coupling_front_y = parse_float(first).ok();
+                "coupling_front" | "coupling_back" => {
+                    // `[coupling_*]` carries `x, y, z`; the longitudinal position is the second.
+                    let v: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .take(3)
+                        .filter_map(|p| parse_float(p).ok())
+                        .collect();
+                    let front = block.keyword == "coupling_front";
+                    if v.len() >= 3 {
+                        let point = glam::Vec3::new(v[0], v[1], v[2]);
+                        if front {
+                            coupling_front = Some(point);
+                            coupling_front_y = Some(point.y);
+                        } else {
+                            coupling_back = Some(point);
+                            coupling_back_y = Some(point.y);
+                        }
+                    } else if let [y] = v[..] {
+                        // Hand-written files give only the longitudinal position.
+                        if front {
+                            coupling_front_y = Some(y);
+                        } else {
+                            coupling_back_y = Some(y);
+                        }
                     }
                 }
-                "coupling_back" => {
+                "couple_back" => {
+                    couple_back = block
+                        .parameters
+                        .first()
+                        .map(|f| f.trim().to_string())
+                        .filter(|f| !f.is_empty());
+                }
+                "add_camera_driver" if block.parameters.len() >= 7 => {
+                    if let Some(cam) = parse_camera_block(&block.parameters, true) {
+                        driver_cameras.push(cam);
+                    }
+                }
+                "add_camera_pax" if block.parameters.len() >= 7 => {
+                    if let Some(cam) = parse_camera_block(&block.parameters, false) {
+                        pax_cameras.push(cam);
+                    }
+                }
+                "set_camera_std" => {
                     if let Some(first) = block.parameters.first() {
-                        coupling_back_y = parse_float(first).ok();
+                        std_camera_index = first.trim().parse::<usize>().ok();
+                    }
+                }
+                "set_camera_outside_center" if block.parameters.len() >= 3 => {
+                    let x = parse_float(&block.parameters[0]).unwrap_or(0.0);
+                    let y = parse_float(&block.parameters[1]).unwrap_or(0.0);
+                    let z = parse_float(&block.parameters[2]).unwrap_or(0.0);
+                    outside_camera_center = Some(glam::Vec3::new(x, y, z));
+                }
+                "view_schedule" => {
+                    if let Some(cam) = driver_cameras.last_mut() {
+                        cam.is_schedule_view = true;
+                    }
+                }
+                "view_ticketselling" => {
+                    if let Some(cam) = driver_cameras.last_mut() {
+                        cam.is_ticket_view = true;
                     }
                 }
                 _ => {}
@@ -253,6 +354,13 @@ impl BusManifest {
             axles,
             coupling_front_y,
             coupling_back_y,
+            coupling_front,
+            coupling_back,
+            couple_back,
+            driver_cameras,
+            pax_cameras,
+            std_camera_index,
+            outside_camera_center,
         })
     }
 
@@ -324,6 +432,32 @@ fn parse_axle_block(params: &[String], axle: &mut BusAxle) {
             _ => {}
         }
     }
+}
+
+fn parse_camera_block(params: &[String], is_driver: bool) -> Option<BusCamera> {
+    if params.len() < 7 {
+        return None;
+    }
+    let x = parse_float(&params[0]).ok()?;
+    let y = parse_float(&params[1]).ok()?;
+    let z = parse_float(&params[2]).ok()?;
+    let dist = parse_float(&params[3]).ok()?;
+    let fov = parse_float(&params[4]).ok()?;
+    let yaw = parse_float(&params[5]).ok()?;
+    let pitch = parse_float(&params[6]).ok()?;
+
+    Some(BusCamera {
+        x,
+        y,
+        z,
+        dist,
+        fov_deg: fov,
+        yaw_deg: yaw,
+        pitch_deg: pitch,
+        is_driver,
+        is_schedule_view: false,
+        is_ticket_view: false,
+    })
 }
 
 /// Convenience function to parse a `.bus` file from a string slice.
@@ -411,5 +545,75 @@ achse_antrieb
         assert_eq!(bus.axles[0].longitudinal_m, 3.238);
         assert_eq!(bus.axles[0].max_width_m, Some(2.25));
         assert!(bus.axles[0].is_driven);
+    }
+
+    #[test]
+    fn test_parse_bus_cameras() {
+        let sample = r#"
+[add_camera_driver]
+-0.70
+4.40
+1.80
+-0.06
+55.0
+0.0
+-5.0
+
+[view_schedule]
+
+[add_camera_driver]
+-0.70
+4.40
+1.80
+-0.06
+55.0
+-45.0
+-15.0
+
+[view_ticketselling]
+
+[set_camera_std]
+0
+
+[add_camera_pax]
+0.0
+2.0
+1.7
+0.0
+65.0
+0.0
+0.0
+
+[set_camera_outside_center]
+0.0
+0.5
+1.5
+"#;
+        let bus = parse_bus(sample).unwrap();
+        assert_eq!(bus.driver_cameras.len(), 2);
+        assert_eq!(bus.driver_cameras[0].x, -0.70);
+        assert_eq!(bus.driver_cameras[0].y, 4.40);
+        assert_eq!(bus.driver_cameras[0].z, 1.80);
+        assert_eq!(bus.driver_cameras[0].dist, -0.06);
+        assert_eq!(bus.driver_cameras[0].fov_deg, 55.0);
+        assert_eq!(bus.driver_cameras[0].yaw_deg, 0.0);
+        assert_eq!(bus.driver_cameras[0].pitch_deg, -5.0);
+        assert!(bus.driver_cameras[0].is_driver);
+        assert!(bus.driver_cameras[0].is_schedule_view);
+        assert!(!bus.driver_cameras[0].is_ticket_view);
+
+        assert_eq!(bus.driver_cameras[1].yaw_deg, -45.0);
+        assert!(bus.driver_cameras[1].is_ticket_view);
+
+        assert_eq!(bus.std_camera_index, Some(0));
+
+        assert_eq!(bus.pax_cameras.len(), 1);
+        assert_eq!(bus.pax_cameras[0].y, 2.0);
+        assert!(!bus.pax_cameras[0].is_driver);
+
+        assert_eq!(
+            bus.outside_camera_center,
+            Some(glam::Vec3::new(0.0, 0.5, 1.5))
+        );
     }
 }

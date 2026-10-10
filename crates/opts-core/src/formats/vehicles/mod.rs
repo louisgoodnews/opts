@@ -5,7 +5,7 @@ pub mod error;
 pub mod model;
 pub mod paths;
 
-pub use bus::{parse_bus, BusAxle, BusManifest, FriendlyName, RegistrationMode};
+pub use bus::{parse_bus, BusAxle, BusCamera, BusManifest, FriendlyName, RegistrationMode};
 pub use error::{BusParseError, PathsParseError};
 pub use model::{
     parse_model, MaterialModifier, ModelAnim, ModelConfig, ModelLod, ModelMaterial, ModelMesh,

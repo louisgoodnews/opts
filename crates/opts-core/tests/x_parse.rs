@@ -7,10 +7,27 @@ use std::path::PathBuf;
 
 use opts_core::formats::x::{parse_x, XParseError};
 
+/// The mutation-test fixtures live in the OMSI installation (`Sceneryobjects/OPTS_Test/model`);
+/// an `OPTS_X_FIXTURES` directory, the old mutation-kit output and `$OMSI_PATH` are tried too.
 fn fixtures_dir() -> PathBuf {
-    PathBuf::from(
+    let mut candidates: Vec<PathBuf> = Vec::new();
+    if let Some(p) = std::env::var_os("OPTS_X_FIXTURES") {
+        candidates.push(PathBuf::from(p));
+    }
+    candidates.push(PathBuf::from(
         "/home/louisgoodnews/Dokumente/opts-mutation-kit/out/Sceneryobjects/OPTS_Test/model",
-    )
+    ));
+    if let Some(root) = std::env::var_os("OMSI_PATH") {
+        candidates.push(PathBuf::from(root).join("Sceneryobjects/OPTS_Test/model"));
+    }
+    candidates.push(PathBuf::from(
+        "/mnt/nvme2n1/nvme2n1p1/louisgoodnews/steamapps/common/OMSI 2/Sceneryobjects/OPTS_Test/model",
+    ));
+    candidates
+        .iter()
+        .find(|p| p.join("t10_x_ident_quad.x").exists())
+        .cloned()
+        .unwrap_or_else(|| candidates[0].clone())
 }
 
 fn read_fixture(filename: &str) -> Vec<u8> {
@@ -108,9 +125,11 @@ fn test_t12_reversed_face_winding() {
 fn test_robustness_empty_and_short_inputs() {
     assert_eq!(parse_x(b""), Err(XParseError::TruncatedHeader(0)));
     assert_eq!(parse_x(b"xof "), Err(XParseError::TruncatedHeader(4)));
+    // An empty binary payload is a valid (empty) file; compressed variants are rejected.
+    assert!(parse_x(b"xof 0303bin 0032").is_ok());
     assert_eq!(
-        parse_x(b"xof 0303bin 0032"),
-        Err(XParseError::UnsupportedFormat("bin ".to_string()))
+        parse_x(b"xof 0303tzip0032"),
+        Err(XParseError::UnsupportedFormat("tzip".to_string()))
     );
     assert_eq!(
         parse_x(b"not_directx_header"),

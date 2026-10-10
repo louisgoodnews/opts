@@ -13,6 +13,31 @@ use glam::Vec3;
 /// widely used in legacy German OMSI add-ons.
 #[must_use]
 pub fn decode_bytes(bytes: &[u8]) -> String {
+    // Check for UTF-16LE BOM (used by most OMSI .map, global.cfg, laststn.osn files)
+    if bytes.starts_with(&[0xFF, 0xFE]) {
+        let u16_slice: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+            .collect();
+        return String::from_utf16_lossy(&u16_slice);
+    }
+
+    // Check for UTF-16BE BOM
+    if bytes.starts_with(&[0xFE, 0xFF]) {
+        let u16_slice: Vec<u16> = bytes[2..]
+            .chunks_exact(2)
+            .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
+            .collect();
+        return String::from_utf16_lossy(&u16_slice);
+    }
+
+    // Check for and strip UTF-8 BOM if present
+    let bytes = if bytes.starts_with(&[0xEF, 0xBB, 0xBF]) {
+        &bytes[3..]
+    } else {
+        bytes
+    };
+
     if let Ok(s) = std::str::from_utf8(bytes) {
         return s.to_string();
     }
@@ -175,6 +200,12 @@ mod tests {
         // 0x80 is € in Windows-1252
         let euro_bytes = vec![0x80];
         assert_eq!(decode_bytes(&euro_bytes), "€");
+
+        // UTF-16LE with BOM
+        let utf16le = vec![
+            0xFF, 0xFE, b'H', 0x00, b'a', 0x00, b'l', 0x00, b'l', 0x00, b'o', 0x00,
+        ];
+        assert_eq!(decode_bytes(&utf16le), "Hallo");
     }
 
     #[test]

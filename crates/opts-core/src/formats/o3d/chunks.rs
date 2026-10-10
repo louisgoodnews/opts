@@ -216,3 +216,42 @@ mod tests {
         assert_eq!(chunk.data.len(), bytes.len() - 1);
     }
 }
+
+/// Weights of one bone from the bone-weight chunk (`0x54`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct BoneInfluence {
+    /// Bone name (`Hip`, `Head`, `OS_L`, …).
+    pub name: String,
+    /// `(vertex index, weight)` entries.
+    pub entries: Vec<(u16, f32)>,
+}
+
+/// Decodes the payload of a preserved `0x54` chunk (the bytes after the tag).
+///
+/// Returns `None` if the payload is truncated.
+#[must_use]
+pub fn decode_bone_weights(data: &[u8]) -> Option<Vec<BoneInfluence>> {
+    let mut pos = 0usize;
+    let take = |pos: &mut usize, n: usize| -> Option<&[u8]> {
+        let s = data.get(*pos..*pos + n)?;
+        *pos += n;
+        Some(s)
+    };
+    let count = u16::from_le_bytes(take(&mut pos, 2)?.try_into().ok()?);
+    let mut bones = Vec::with_capacity(count as usize);
+    for _ in 0..count {
+        let name_len = take(&mut pos, 1)?[0] as usize;
+        let name = String::from_utf8_lossy(take(&mut pos, name_len)?).into_owned();
+        let n = u16::from_le_bytes(take(&mut pos, 2)?.try_into().ok()?) as usize;
+        let mut entries = Vec::with_capacity(n);
+        for _ in 0..n {
+            let e = take(&mut pos, 6)?;
+            entries.push((
+                u16::from_le_bytes([e[0], e[1]]),
+                f32::from_le_bytes([e[2], e[3], e[4], e[5]]),
+            ));
+        }
+        bones.push(BoneInfluence { name, entries });
+    }
+    Some(bones)
+}

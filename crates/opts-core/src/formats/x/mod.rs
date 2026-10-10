@@ -10,6 +10,7 @@
 //! resolving named material references, and preserving hierarchical frame transformations.
 
 pub mod ast;
+pub mod binary;
 pub mod error;
 pub mod header;
 pub mod lexer;

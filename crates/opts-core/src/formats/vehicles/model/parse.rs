@@ -227,7 +227,8 @@ fn handle_mesh_property(mesh: &mut ModelMesh, block: &OmsiBlock) -> Result<(), M
         }
         "setbone" => {
             let params = require_params(block, 2)?;
-            let index = parse_number::<u32>(&params[1], block.line_number)?;
+            // Human skeleton slots are negative (-2 … -14); vehicle bones are non-negative.
+            let index = parse_number::<i32>(&params[1], block.line_number)?;
             mesh.bones.push(MeshBone {
                 name: params[0].clone(),
                 index,
@@ -273,24 +274,28 @@ fn apply_material_modifier(
             mat.alpha_mode = Some(parse_number::<u32>(&params[0], block.line_number)?);
         }
         "matl_change" => {
-            let params = require_params(block, 3)?;
+            let params = require_params(block, 2)?;
             let idx = parse_number::<u32>(&params[1], block.line_number)?;
             mat.texture_changes.push(TextureChange {
                 texture: params[0].clone(),
                 index: idx,
-                variable: params[2].clone(),
+                variable: params.get(2).cloned().unwrap_or_default(),
             });
         }
         "matl_nightmap" => {
-            let params = require_params(block, 1)?;
-            mat.night_map = Some(params[0].clone());
+            if let Some(texture) = block.parameters.first() {
+                mat.night_map = Some(texture.clone());
+            }
         }
         "matl_lightmap" => {
-            let params = require_params(block, 2)?;
-            mat.light_map = Some(LightMap {
-                texture: params[0].clone(),
-                variable: params[1].clone(),
-            });
+            // The variable is optional in the wild (e.g. Citybus 530); without one the lightmap
+            // has no switch. If parameters are empty, ignore gracefully.
+            if let Some(texture) = block.parameters.first() {
+                mat.light_map = Some(LightMap {
+                    texture: texture.clone(),
+                    variable: block.parameters.get(1).cloned().unwrap_or_default(),
+                });
+            }
         }
         "matl_envmap" => {
             let params = require_params(block, 2)?;
@@ -398,8 +403,12 @@ fn handle_global_directive(
             config.tex_detail_factor = Some(parse_number::<f32>(&params[0], block.line_number)?);
         }
         "ctc" => {
-            let params = require_params(block, 3)?;
-            let default_index = parse_number::<i32>(&params[2], block.line_number)?;
+            // The default-index line is absent in some human manifests (e.g. Busfahrer_Bremen).
+            let params = require_params(block, 2)?;
+            let default_index = match params.get(2) {
+                Some(p) => parse_number::<i32>(p, block.line_number)?,
+                None => 0,
+            };
             config.ctc_schemes.push(CtcScheme {
                 name: params[0].clone(),
                 texture_path: params[1].clone(),

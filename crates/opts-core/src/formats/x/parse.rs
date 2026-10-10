@@ -50,6 +50,16 @@ impl<'a> TokenReader<'a> {
 
     fn expect_open_brace(&mut self) -> Result<(), XParseError> {
         self.skip_separators();
+        // Data objects may carry an optional instance name (`MeshTextureCoords c1 {`,
+        // `FrameTransformMatrix relative {`); it is not needed for geometry.
+        while matches!(self.peek().map(|t| &t.kind), Some(TokenKind::Ident(_)))
+            && matches!(
+                self.tokens.get(self.pos + 1).map(|t| &t.kind),
+                Some(TokenKind::OpenBrace)
+            )
+        {
+            self.pos += 1;
+        }
         let tok = self.next()?;
         if tok.kind == TokenKind::OpenBrace {
             Ok(())
@@ -64,6 +74,11 @@ impl<'a> TokenReader<'a> {
 
     fn expect_close_brace(&mut self) -> Result<(), XParseError> {
         self.skip_separators();
+        // A file that ends inside open blocks (missing final braces) is accepted: everything
+        // read so far is valid geometry.
+        if self.peek().is_none() {
+            return Ok(());
+        }
         let tok = self.next()?;
         if tok.kind == TokenKind::CloseBrace {
             Ok(())
@@ -99,6 +114,9 @@ impl<'a> TokenReader<'a> {
         self.expect_open_brace()?;
         let mut depth = 1;
         while depth > 0 {
+            if self.peek().is_none() {
+                break;
+            }
             let tok = self.next()?;
             match tok.kind {
                 TokenKind::OpenBrace => depth += 1,
@@ -118,8 +136,12 @@ impl<'a> TokenReader<'a> {
 /// # Errors
 /// Returns [`XParseError`] if the header is invalid, tokens are malformed, or references fail.
 pub fn parse_x(bytes: &[u8]) -> Result<XMesh, XParseError> {
-    let (_header, text_bytes) = parse_header(bytes)?;
-    let tokens = tokenize(text_bytes, 16)?;
+    let (header, payload) = parse_header(bytes)?;
+    let tokens = if header.binary {
+        crate::formats::x::binary::tokenize_binary(payload, header.float_bits)?
+    } else {
+        tokenize(payload, 16)?
+    };
     let mut reader = TokenReader::new(&tokens);
 
     let mut frames = Vec::new();
@@ -450,7 +472,14 @@ fn parse_material(reader: &mut TokenReader) -> Result<XMaterial, XParseError> {
                 if let TokenKind::String(ref s) = tex_tok.kind {
                     texture_filename = Some(s.clone());
                 }
-                reader.skip_separators();
+                // Some exporters list extra maps (`"diffuse.jpg", "normal.jpg";`); only the first
+                // is the colour texture.
+                while !matches!(
+                    reader.peek().map(|t| &t.kind),
+                    Some(TokenKind::CloseBrace) | None
+                ) {
+                    reader.pos += 1;
+                }
                 reader.expect_close_brace()?;
             }
             TokenKind::Separator(_) => {

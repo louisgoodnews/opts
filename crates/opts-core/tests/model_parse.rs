@@ -373,3 +373,48 @@ fn test_fuzz_pseudo_random_buffers() {
         let _ = ModelConfig::parse_bytes(&buf);
     }
 }
+
+#[test]
+fn test_matl_lightmap_optional_variable() {
+    let text = r#"
+[mesh]
+test.o3d
+
+[matl]
+test1.dds
+0
+
+[matl_lightmap]
+lights1.dds
+
+[matl]
+test2.dds
+1
+
+[matl_lightmap]
+lights2.dds
+light_switch_var
+"#;
+    let config = ModelConfig::parse(text).expect("Should parse matl_lightmap with 1 or 2 params");
+    let mesh = &config.lods[0].meshes[0];
+    assert_eq!(mesh.materials.len(), 2);
+    let lm1 = mesh.materials[0].light_map.as_ref().unwrap();
+    assert_eq!(lm1.texture, "lights1.dds");
+    assert_eq!(lm1.variable, "");
+
+    let lm2 = mesh.materials[1].light_map.as_ref().unwrap();
+    assert_eq!(lm2.texture, "lights2.dds");
+    assert_eq!(lm2.variable, "light_switch_var");
+}
+
+#[test]
+fn test_citybus_facelift_model_cfg_live() {
+    let path = std::path::Path::new("/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/Vehicles/Citybus 530 Facelift by Kajosoft/Model/model_o530_e3_3.cfg");
+    if path.exists() {
+        let bytes = std::fs::read(path).expect("read Citybus model cfg");
+        let config =
+            ModelConfig::parse_bytes(&bytes).expect("parse Citybus model cfg successfully");
+        assert!(!config.lods.is_empty());
+        assert!(!config.lods[0].meshes.is_empty());
+    }
+}

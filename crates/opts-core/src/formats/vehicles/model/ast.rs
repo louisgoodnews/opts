@@ -74,8 +74,8 @@ pub struct MeshVisibility {
 pub struct MeshBone {
     /// Bone identifier string.
     pub name: String,
-    /// Numerical bone index.
-    pub index: u32,
+    /// Numerical bone slot. Human skeleton slots are negative (`-2` … `-14`).
+    pub index: i32,
 }
 
 /// Variable-driven animation action (translation or rotation).
