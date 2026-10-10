@@ -173,6 +173,12 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🎮 The Game Binary**
   - [ ] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App`.
   - [ ] Implement the main menu, loading screens, and basic HUD.
+- [ ] **🧾 Audit-Driven Work (audit 5037f89a, 2026-10-10)**
+  - [ ] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](docs/src/roadmap/phase-4/M-0037.md) (F-019, F-023).
+  - [ ] Complete scrambled-mesh decoding: async decoding, deterministic parameters, cache policy, generator research — [M-0038](docs/src/roadmap/phase-4/M-0038.md) (F-001, F-003, F-014, F-017).
+  - [ ] Render `[texttexture]` text on signs, stops and displays — [M-0039](docs/src/roadmap/phase-4/M-0039.md) (F-002).
+  - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](docs/src/roadmap/phase-4/M-0024.md); F-015, F-016).
+  - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](docs/src/roadmap/phase-4/M-0025.md); F-004, F-007, F-008).
 
 ---
 
@@ -188,6 +194,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Document CLI command specifications in `docs/src/reference/opts-tools.md`.
   - [ ] Implement `opts inspect <file>` to validate OMSI asset syntax and detect corrupt files (M-0030).
   - [ ] Implement `opts convert <file> --output <gltf>` to export legacy meshes to standard formats.
+- [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
+  - [ ] Code-quality debt: size limits, panics in library code, stubs, rustdoc — [M-0040](docs/src/roadmap/phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
+  - [ ] Documentation repair and developer switch reference — [M-0041](docs/src/roadmap/phase-5/M-0041.md) (F-013, F-018, F-020–F-023).
+  - [ ] CI and toolchain hardening: link check, mdBook build, toolchain pin, Windows job — [M-0042](docs/src/roadmap/phase-5/M-0042.md) (F-024–F-026).
 
 ---
 

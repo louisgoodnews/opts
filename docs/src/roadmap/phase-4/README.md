@@ -14,6 +14,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0025 — Terrain Heightmap & Water Surface Mesh Generation (`opts-core`, `opts-bevy`)](M-0025.md) — ⏳ Planned (elevation mesh tessellation, water planes, wheel height raycasting)
 - [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — ⏳ Planned (RPN stack VM, .osc bytecode, dynamic variable tables)
 - [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — ⏳ Planned (sound.cfg evaluation, dynamic curve modulation, Bevy spatial audio)
+- [M-0037 — Shipped-Work Reconciliation (Roadmap, Phase Pages, Board)](M-0037.md) — ⏳ Planned (audit 5037f89a F-019, F-023)
+- [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — ⏳ Planned (async decoding, cache policy, generator research)
+- [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — ⏳ Planned (`[texttexture]` rendering)
 
 ## Checklist
 
@@ -37,6 +40,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
   - [ ] Implement bus stop logic and passenger boarding/alighting.
   - [ ] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`).
+- [ ] **🧾 Audit-Driven Work (audit 5037f89a)** — [M-0037](M-0037.md), [M-0038](M-0038.md), [M-0039](M-0039.md); items appended to [M-0024](M-0024.md) and [M-0025](M-0025.md).
 - [ ] **🎮 The Game Binary**
   - [ ] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App`.
   - [ ] Implement the main menu, loading screens, and basic HUD.
