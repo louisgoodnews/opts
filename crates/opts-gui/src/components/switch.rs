@@ -95,8 +95,9 @@ impl SwitchBuilder {
         let (thumb_bg, thumb_size) = Self::thumb_styles(self.is_on);
 
         let mut row_cmd = commands.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -105,9 +106,8 @@ impl SwitchBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Switch { is_on: self.is_on },
             Focusable { tab_index: 0 },
         ));
@@ -121,23 +121,20 @@ impl SwitchBuilder {
         commands.entity(root).with_children(|parent| {
             // Track
             let mut track_cmd = parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Px(52.0),
-                        height: Val::Px(32.0),
-                        padding: UiRect::all(Val::Px(4.0)),
-                        display: Display::Flex,
-                        align_items: AlignItems::Center,
-                        justify_content: justify,
-                        border: if track_border.is_some() {
-                            UiRect::all(Val::Px(2.0))
-                        } else {
-                            UiRect::DEFAULT
-                        },
-                        ..default()
+                (Node {
+                    width: Val::Px(52.0),
+                    height: Val::Px(32.0),
+                    padding: UiRect::all(Val::Px(4.0)),
+                    display: Display::Flex,
+                    align_items: AlignItems::Center,
+                    justify_content: justify,
+                    border: if track_border.is_some() {
+                        UiRect::all(Val::Px(2.0))
+                    } else {
+                        UiRect::DEFAULT
                     },
                     ..default()
-                },
+                }),
                 SwitchTrack(root),
                 BackgroundRole(track_bg),
                 RadiusToken(RadiusLevel::Full),
@@ -150,14 +147,11 @@ impl SwitchBuilder {
             track_cmd.with_children(|track_parent| {
                 // Thumb
                 track_parent.spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(thumb_size),
-                            height: Val::Px(thumb_size),
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(thumb_size),
+                        height: Val::Px(thumb_size),
                         ..default()
-                    },
+                    }),
                     SwitchThumb(root),
                     BackgroundRole(thumb_bg),
                     RadiusToken(RadiusLevel::Full),
@@ -167,13 +161,13 @@ impl SwitchBuilder {
             // Optional label
             if let Some(lbl) = self.label {
                 parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -184,14 +178,15 @@ impl SwitchBuilder {
         root
     }
 
-    /// Spawns the switch as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the switch as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let (track_bg, track_border, justify) = Self::track_styles(self.is_on);
         let (thumb_bg, thumb_size) = Self::thumb_styles(self.is_on);
 
         let mut row_cmd = parent.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -200,9 +195,8 @@ impl SwitchBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Switch { is_on: self.is_on },
             Focusable { tab_index: 0 },
         ));
@@ -216,23 +210,20 @@ impl SwitchBuilder {
         row_cmd.with_children(|child_parent| {
             // Track
             let mut track_cmd = child_parent.spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Px(52.0),
-                        height: Val::Px(32.0),
-                        padding: UiRect::all(Val::Px(4.0)),
-                        display: Display::Flex,
-                        align_items: AlignItems::Center,
-                        justify_content: justify,
-                        border: if track_border.is_some() {
-                            UiRect::all(Val::Px(2.0))
-                        } else {
-                            UiRect::DEFAULT
-                        },
-                        ..default()
+                (Node {
+                    width: Val::Px(52.0),
+                    height: Val::Px(32.0),
+                    padding: UiRect::all(Val::Px(4.0)),
+                    display: Display::Flex,
+                    align_items: AlignItems::Center,
+                    justify_content: justify,
+                    border: if track_border.is_some() {
+                        UiRect::all(Val::Px(2.0))
+                    } else {
+                        UiRect::DEFAULT
                     },
                     ..default()
-                },
+                }),
                 SwitchTrack(root),
                 BackgroundRole(track_bg),
                 RadiusToken(RadiusLevel::Full),
@@ -245,14 +236,11 @@ impl SwitchBuilder {
             track_cmd.with_children(|track_parent| {
                 // Thumb
                 track_parent.spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(thumb_size),
-                            height: Val::Px(thumb_size),
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(thumb_size),
+                        height: Val::Px(thumb_size),
                         ..default()
-                    },
+                    }),
                     SwitchThumb(root),
                     BackgroundRole(thumb_bg),
                     RadiusToken(RadiusLevel::Full),
@@ -262,13 +250,13 @@ impl SwitchBuilder {
             // Optional label
             if let Some(lbl) = self.label {
                 child_parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -286,12 +274,12 @@ pub type SwitchClickItem<'a> = (Entity, &'a Interaction, &'a mut M3Switch);
 /// System handling click interactions on switches and toggling their state.
 pub fn switch_toggle_system(
     mut interaction_query: Query<SwitchClickItem, (Without<Disabled>, Changed<Interaction>)>,
-    mut events: EventWriter<SwitchToggled>,
+    mut events: MessageWriter<SwitchToggled>,
 ) {
     for (entity, interaction, mut switch) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             switch.is_on = !switch.is_on;
-            events.send(SwitchToggled {
+            events.write(SwitchToggled {
                 entity,
                 is_on: switch.is_on,
             });
@@ -302,8 +290,8 @@ pub fn switch_toggle_system(
 /// System synchronizing switch visual track and thumb nodes when switch state changes.
 pub fn switch_sync_system(
     changed_query: Query<(Entity, &M3Switch), Changed<M3Switch>>,
-    mut track_query: Query<(&SwitchTrack, &mut Style, &mut BackgroundRole), Without<SwitchThumb>>,
-    mut thumb_query: Query<(&SwitchThumb, &mut Style, &mut BackgroundRole), Without<SwitchTrack>>,
+    mut track_query: Query<(&SwitchTrack, &mut Node, &mut BackgroundRole), Without<SwitchThumb>>,
+    mut thumb_query: Query<(&SwitchThumb, &mut Node, &mut BackgroundRole), Without<SwitchTrack>>,
 ) {
     for (entity, switch) in &changed_query {
         let (track_bg, _, justify) = SwitchBuilder::track_styles(switch.is_on);
@@ -332,8 +320,8 @@ pub struct SwitchPlugin;
 
 impl Plugin for SwitchPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<SwitchToggled>>() {
-            app.add_event::<SwitchToggled>();
+        if !app.world().contains_resource::<Messages<SwitchToggled>>() {
+            app.add_message::<SwitchToggled>();
         }
         app.add_systems(Update, (switch_toggle_system, switch_sync_system));
     }
@@ -363,7 +351,7 @@ mod tests {
     fn test_switch_toggle_system() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<SwitchToggled>()
+            .add_message::<SwitchToggled>()
             .add_systems(Update, switch_toggle_system);
 
         let entity = {
@@ -383,7 +371,7 @@ mod tests {
         let switch = app.world().get::<M3Switch>(entity);
         assert_eq!(switch.map(|s| s.is_on), Some(true));
 
-        let events = app.world().resource::<Events<SwitchToggled>>();
+        let events = app.world().resource::<Messages<SwitchToggled>>();
         let mut reader = events.get_reader();
         let received = reader.read(events).find(|e| e.entity == entity);
         assert_eq!(received.map(|e| e.is_on), Some(true));

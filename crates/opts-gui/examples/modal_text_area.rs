@@ -43,13 +43,13 @@ fn setup(mut commands: Commands) {
             28.0,
             Color::WHITE,
         ));
-        p.spawn(TextBundle::from_section(
-            "Describe the issue (Größe, Ärger, ✓ ▼ ↺):",
-            TextStyle {
-                font_size: 16.0,
-                color: Color::WHITE,
+        p.spawn((
+            Text::new("Describe the issue (Größe, Ärger, ✓ ▼ ↺):"),
+            TextFont {
+                font_size: FontSize::Px(16.0),
                 ..default()
             },
+            TextColor(Color::WHITE),
         ));
         TextAreaBuilder::new()
             .with_placeholder("What happened?")
@@ -60,14 +60,13 @@ fn setup(mut commands: Commands) {
             )
             .autofocus(true)
             .spawn_child(p);
-        p.spawn(NodeBundle {
-            style: Style {
+        p.spawn(
+            (Node {
                 column_gap: Val::Px(12.0),
                 justify_content: JustifyContent::FlexEnd,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|row| {
             let r = ButtonBuilder::filled("Report").spawn_child(row);
             row.add_command(move |world: &mut World| {
@@ -82,7 +81,7 @@ fn setup(mut commands: Commands) {
 }
 
 fn handle_buttons(
-    mut clicks: EventReader<ButtonClicked>,
+    mut clicks: MessageReader<ButtonClicked>,
     report: Query<(), With<ReportButton>>,
     cancel: Query<(), With<CancelButton>>,
     areas: Query<&TextArea>,
@@ -100,14 +99,14 @@ fn handle_buttons(
             continue;
         }
         for m in &modals {
-            commands.entity(m).despawn_recursive();
+            commands.entity(m).despawn();
         }
     }
 }
 
-fn handle_escape(mut events: EventReader<ModalEvent>, mut commands: Commands) {
+fn handle_escape(mut events: MessageReader<ModalEvent>, mut commands: Commands) {
     for ModalEvent::CancelRequested(m) in events.read() {
-        commands.entity(*m).despawn_recursive();
+        commands.entity(*m).despawn();
     }
 }
 
@@ -116,18 +115,18 @@ fn screenshot_for_ci(
     mut frames: Local<u32>,
     mut shots: ResMut<bevy::render::view::screenshot::ScreenshotManager>,
     window: Query<Entity, With<bevy::window::PrimaryWindow>>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     let Ok(path) = std::env::var("OPTS_EXAMPLE_SCREENSHOT") else {
         return;
     };
     *frames += 1;
     if *frames == 30 {
-        if let Ok(w) = window.get_single() {
+        if let Ok(w) = window.single() {
             let _ = shots.save_screenshot_to_disk(w, path);
         }
     }
     if *frames == 60 {
-        exit.send(AppExit::Success);
+        exit.write(AppExit::Success);
     }
 }

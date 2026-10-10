@@ -80,8 +80,8 @@ impl ToastBuilder {
 
         let root = commands
             .spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         display: Display::Flex,
                         flex_direction: FlexDirection::Row,
                         align_items: AlignItems::Center,
@@ -96,9 +96,8 @@ impl ToastBuilder {
                         right: Val::Px(24.0),
                         ..default()
                     },
-                    z_index: ZIndex::Global(100),
-                    ..default()
-                },
+                    GlobalZIndex(100),
+                ),
                 M3Toast {
                     message: self.message.clone(),
                     timer,
@@ -112,13 +111,13 @@ impl ToastBuilder {
         commands.entity(root).with_children(|parent| {
             // Message text
             parent.spawn((
-                TextBundle::from_section(
-                    self.message,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(self.message),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -128,25 +127,25 @@ impl ToastBuilder {
             if let Some(action) = self.action_label {
                 parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
                                 ..default()
                             },
-                            background_color: BackgroundColor(Color::NONE),
-                            ..default()
-                        },
+                            BackgroundColor(Color::NONE),
+                        ),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
                         btn_parent.spawn((
-                            TextBundle::from_section(
-                                action,
-                                TextStyle {
-                                    font_size: 14.0,
-                                    color: Color::WHITE,
+                            (
+                                Text::new(action),
+                                TextFont {
+                                    font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
+                                TextColor(Color::WHITE),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
                             TypeStyleToken(TypeScale::LabelLarge),
@@ -158,15 +157,15 @@ impl ToastBuilder {
         root
     }
 
-    /// Spawns the toast as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the toast as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let timer = self
             .duration_secs
             .map(|secs| Timer::from_seconds(secs, TimerMode::Once));
 
         let mut root_cmd = parent.spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -181,9 +180,8 @@ impl ToastBuilder {
                     right: Val::Px(24.0),
                     ..default()
                 },
-                z_index: ZIndex::Global(100),
-                ..default()
-            },
+                GlobalZIndex(100),
+            ),
             M3Toast {
                 message: self.message.clone(),
                 timer,
@@ -198,13 +196,13 @@ impl ToastBuilder {
         root_cmd.with_children(|child_parent| {
             // Message text
             child_parent.spawn((
-                TextBundle::from_section(
-                    self.message,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(self.message),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -214,25 +212,25 @@ impl ToastBuilder {
             if let Some(action) = self.action_label {
                 child_parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
                                 ..default()
                             },
-                            background_color: BackgroundColor(Color::NONE),
-                            ..default()
-                        },
+                            BackgroundColor(Color::NONE),
+                        ),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
                         btn_parent.spawn((
-                            TextBundle::from_section(
-                                action,
-                                TextStyle {
-                                    font_size: 14.0,
-                                    color: Color::WHITE,
+                            (
+                                Text::new(action),
+                                TextFont {
+                                    font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
+                                TextColor(Color::WHITE),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
                             TypeStyleToken(TypeScale::LabelLarge),
@@ -250,14 +248,14 @@ pub fn toast_timer_system(
     mut commands: Commands,
     time: Res<Time>,
     mut toast_query: Query<(Entity, &mut M3Toast)>,
-    mut events: EventWriter<ToastDismissed>,
+    mut events: MessageWriter<ToastDismissed>,
 ) {
     for (entity, mut toast) in &mut toast_query {
         if let Some(ref mut timer) = toast.timer {
             timer.tick(time.delta());
             if timer.just_finished() {
-                events.send(ToastDismissed { entity });
-                commands.entity(entity).despawn_recursive();
+                events.write(ToastDismissed { entity });
+                commands.entity(entity).despawn();
             }
         }
     }
@@ -267,12 +265,12 @@ pub fn toast_timer_system(
 pub fn toast_action_click_system(
     mut commands: Commands,
     mut action_query: Query<(&ToastActionButton, &Interaction), Changed<Interaction>>,
-    mut events: EventWriter<ToastDismissed>,
+    mut events: MessageWriter<ToastDismissed>,
 ) {
     for (action, interaction) in &mut action_query {
         if *interaction == Interaction::Pressed {
-            events.send(ToastDismissed { entity: action.0 });
-            commands.entity(action.0).despawn_recursive();
+            events.write(ToastDismissed { entity: action.0 });
+            commands.entity(action.0).despawn();
         }
     }
 }
@@ -283,8 +281,8 @@ pub struct ToastPlugin;
 
 impl Plugin for ToastPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<ToastDismissed>>() {
-            app.add_event::<ToastDismissed>();
+        if !app.world().contains_resource::<Messages<ToastDismissed>>() {
+            app.add_message::<ToastDismissed>();
         }
         app.add_systems(Update, (toast_timer_system, toast_action_click_system));
     }

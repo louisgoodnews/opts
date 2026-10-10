@@ -75,15 +75,14 @@ impl IconBuilder {
     pub fn bundle(self) -> impl Bundle {
         let size_px = self.size.px();
         (
-            ImageBundle {
-                style: Style {
+            (
+                ImageNode::new(self.image),
+                Node {
                     width: Val::Px(size_px),
                     height: Val::Px(size_px),
                     ..default()
                 },
-                image: UiImage::new(self.image),
-                ..default()
-            },
+            ),
             M3Icon { size: self.size },
             ForegroundRole(self.color),
         )
@@ -94,8 +93,8 @@ impl IconBuilder {
         commands.spawn(self.bundle()).id()
     }
 
-    /// Spawns the icon entity as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the icon entity as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         parent.spawn(self.bundle()).id()
     }
 }

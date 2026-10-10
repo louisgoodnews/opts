@@ -79,8 +79,8 @@ impl TextFieldBuilder {
         self
     }
 
-    fn style(&self) -> Style {
-        Style {
+    fn style(&self) -> Node {
+        Node {
             min_height: Val::Px(48.0),
             min_width: Val::Px(200.0),
             padding: UiRect::axes(Val::Px(16.0), Val::Px(12.0)),
@@ -117,7 +117,7 @@ impl TextFieldBuilder {
         let is_placeholder = initial_text.is_empty() && !placeholder.is_empty();
 
         let entity_commands = commands.spawn((
-            ButtonBundle { style, ..default() },
+            (Button, style),
             M3TextField {
                 variant: self.variant,
                 text: initial_text,
@@ -134,13 +134,13 @@ impl TextFieldBuilder {
 
         commands.entity(root).with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section(
-                    display_text,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(display_text),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(if is_placeholder {
@@ -154,8 +154,8 @@ impl TextFieldBuilder {
         root
     }
 
-    /// Spawns the text field as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the text field as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let (bg_role, border_role) = match self.variant {
             TextFieldVariant::Outlined => (ColorRole::Surface, ColorRole::Outline),
             TextFieldVariant::Filled => (ColorRole::SurfaceContainerHighest, ColorRole::Primary),
@@ -172,7 +172,7 @@ impl TextFieldBuilder {
         let is_placeholder = initial_text.is_empty() && !placeholder.is_empty();
 
         let mut entity_commands = parent.spawn((
-            ButtonBundle { style, ..default() },
+            (Button, style),
             M3TextField {
                 variant: self.variant,
                 text: initial_text,
@@ -189,13 +189,13 @@ impl TextFieldBuilder {
 
         entity_commands.with_children(|child_parent| {
             child_parent.spawn((
-                TextBundle::from_section(
-                    display_text,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(display_text),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(if is_placeholder {
@@ -230,10 +230,10 @@ pub fn text_field_interaction_system(
 /// System detecting text modifications on [`M3TextField`] and dispatching [`TextChanged`].
 pub fn text_field_change_system(
     query: Query<(Entity, &M3TextField), Changed<M3TextField>>,
-    mut events: EventWriter<TextChanged>,
+    mut events: MessageWriter<TextChanged>,
 ) {
     for (entity, field) in &query {
-        events.send(TextChanged {
+        events.write(TextChanged {
             entity,
             text: field.text.clone(),
         });
@@ -246,8 +246,8 @@ pub struct TextFieldPlugin;
 
 impl Plugin for TextFieldPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<TextChanged>>() {
-            app.add_event::<TextChanged>();
+        if !app.world().contains_resource::<Messages<TextChanged>>() {
+            app.add_message::<TextChanged>();
         }
         app.add_systems(
             Update,
@@ -282,7 +282,7 @@ mod tests {
     fn test_text_field_change_event() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<TextChanged>()
+            .add_message::<TextChanged>()
             .add_systems(Update, text_field_change_system);
 
         let entity = {
@@ -299,7 +299,7 @@ mod tests {
 
         app.update();
 
-        let events = app.world().resource::<Events<TextChanged>>();
+        let events = app.world().resource::<Messages<TextChanged>>();
         let mut reader = events.get_reader();
         let received = reader.read(events).filter(|e| e.entity == entity).last();
         assert_eq!(received.map(|e| e.text.as_str()), Some("M29"));

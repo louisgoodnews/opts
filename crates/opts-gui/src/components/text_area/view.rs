@@ -16,6 +16,15 @@ const BLINK_PERIOD: f32 = 1.0;
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct TextAreaText;
 
+/// The child spans of the text node: cursor or selection, and the text after it.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextAreaSpan {
+    /// The cursor bar or the selected text.
+    Middle,
+    /// The text after the cursor/selection.
+    After,
+}
+
 /// Estimated visual (wrapped) line of the cursor, counted from the top.
 fn cursor_visual_line(area: &TextArea, chars_per_line: usize) -> usize {
     let (line, col) = area.buffer.cursor_line_col();
@@ -39,18 +48,20 @@ fn total_visual_lines(area: &TextArea, chars_per_line: usize) -> usize {
 pub fn text_area_render_system(
     real: Res<Time<Real>>,
     theme: Res<MaterialTheme>,
-    mut areas: Query<(&mut TextArea, &Node, &Children)>,
-    mut texts: Query<(&mut Text, &mut Style), With<TextAreaText>>,
+    mut areas: Query<(&mut TextArea, &ComputedNode, &Children)>,
+    mut texts: Query<(&mut Text, &mut TextColor, &mut Node, &Children), With<TextAreaText>>,
+    mut spans: Query<(&mut TextSpan, &mut TextColor, &TextAreaSpan), Without<TextAreaText>>,
 ) {
-    let dt = real.delta_seconds();
+    let dt = real.delta_secs();
     let color = |role| theme.scheme.get(role);
-    for (mut area, node, children) in &mut areas {
+    for (mut area, computed, children) in &mut areas {
         area.blink_clock += dt;
         let cursor_on = area.focused && (area.blink_clock % BLINK_PERIOD) < BLINK_PERIOD * 0.5;
 
-        let width = (node.size().x - 2.0 * PAD).max(FONT_SIZE);
+        let size = computed.size() * computed.inverse_scale_factor();
+        let width = (size.x - 2.0 * PAD).max(FONT_SIZE);
         let cpl = ((width / (FONT_SIZE * GLYPH_WIDTH)) as usize).max(1);
-        let visible_h = (node.size().y - 2.0 * PAD).max(LINE_HEIGHT);
+        let visible_h = (size.y - 2.0 * PAD).max(LINE_HEIGHT);
         let cur_y = cursor_visual_line(&area, cpl) as f32 * LINE_HEIGHT;
         let max_scroll = (total_visual_lines(&area, cpl) as f32 * LINE_HEIGHT - visible_h).max(0.0);
         let mut scroll = area.scroll_px.min(max_scroll);
@@ -63,63 +74,71 @@ pub fn text_area_render_system(
             area.scroll_px = scroll;
         }
 
-        let base = TextStyle {
-            font_size: FONT_SIZE,
-            color: color(ColorRole::OnSurface),
-            ..default()
-        };
-        let sections = if area.buffer.text().is_empty() && !area.focused {
-            vec![TextSection::new(
-                area.placeholder.clone(),
-                TextStyle {
-                    color: color(ColorRole::OnSurfaceVariant),
-                    ..base
-                },
-            )]
-        } else {
-            let (before, selected, after) = area.buffer.split_for_render();
-            let cursor_color = if cursor_on {
-                color(ColorRole::Primary)
+        // (before, middle, after) with their colours.
+        let (before, middle, after, middle_color, base_color) =
+            if area.buffer.text().is_empty() && !area.focused {
+                (
+                    area.placeholder.clone(),
+                    String::new(),
+                    String::new(),
+                    Color::NONE,
+                    color(ColorRole::OnSurfaceVariant),
+                )
             } else {
-                Color::NONE
+                let (before, selected, after) = area.buffer.split_for_render();
+                if selected.is_empty() {
+                    let cursor = if cursor_on {
+                        color(ColorRole::Primary)
+                    } else {
+                        Color::NONE
+                    };
+                    (
+                        before,
+                        "|".to_owned(),
+                        after,
+                        cursor,
+                        color(ColorRole::OnSurface),
+                    )
+                } else {
+                    (
+                        before,
+                        selected,
+                        after,
+                        color(ColorRole::Primary),
+                        color(ColorRole::OnSurface),
+                    )
+                }
             };
-            let mut s = vec![TextSection::new(before, base.clone())];
-            if selected.is_empty() {
-                s.push(TextSection::new(
-                    "|",
-                    TextStyle {
-                        color: cursor_color,
-                        ..base.clone()
-                    },
-                ));
-            } else {
-                s.push(TextSection::new(
-                    selected,
-                    TextStyle {
-                        color: color(ColorRole::Primary),
-                        ..base.clone()
-                    },
-                ));
-            }
-            s.push(TextSection::new(after, base));
-            s
-        };
 
         for &child in children {
-            if let Ok((mut text, mut style)) = texts.get_mut(child) {
-                if text.sections.len() != sections.len()
-                    || text
-                        .sections
-                        .iter()
-                        .zip(&sections)
-                        .any(|(a, b)| a.value != b.value || a.style.color != b.style.color)
-                {
-                    text.sections = sections.clone();
+            let Ok((mut text, mut text_color, mut node, span_children)) = texts.get_mut(child)
+            else {
+                continue;
+            };
+            if text.0 != before {
+                text.0 = before.clone();
+            }
+            if text_color.0 != base_color {
+                text_color.0 = base_color;
+            }
+            for &span in span_children {
+                let Ok((mut span_text, mut span_color, kind)) = spans.get_mut(span) else {
+                    continue;
+                };
+                let (value, c) = match kind {
+                    TextAreaSpan::Middle => (&middle, middle_color),
+                    TextAreaSpan::After => (&after, base_color),
+                };
+                if span_text.0 != *value {
+                    span_text.0 = value.clone();
                 }
-                let top = Val::Px(PAD - area.scroll_px);
-                if style.top != top {
-                    style.top = top;
+                if span_color.0 != c {
+                    span_color.0 = c;
                 }
+            }
+            let top = Val::Px(PAD - area.scroll_px);
+            if node.top != top {
+                node.top = top;
             }
         }
     }

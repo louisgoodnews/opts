@@ -68,14 +68,14 @@ impl DividerBuilder {
         self
     }
 
-    fn style(&self) -> Style {
+    fn style(&self) -> Node {
         match self.orientation {
-            DividerOrientation::Horizontal => Style {
+            DividerOrientation::Horizontal => Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(self.thickness),
                 ..default()
             },
-            DividerOrientation::Vertical => Style {
+            DividerOrientation::Vertical => Node {
                 width: Val::Px(self.thickness),
                 height: Val::Percent(100.0),
                 ..default()
@@ -87,10 +87,7 @@ impl DividerBuilder {
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         commands
             .spawn((
-                NodeBundle {
-                    style: self.style(),
-                    ..default()
-                },
+                (self.style()),
                 M3Divider {
                     orientation: self.orientation,
                 },
@@ -99,14 +96,11 @@ impl DividerBuilder {
             .id()
     }
 
-    /// Spawns the divider as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the divider as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         parent
             .spawn((
-                NodeBundle {
-                    style: self.style(),
-                    ..default()
-                },
+                (self.style()),
                 M3Divider {
                     orientation: self.orientation,
                 },

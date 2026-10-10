@@ -112,18 +112,15 @@ impl ComboboxBuilder {
         }
     }
 
-    fn root_bundle(&self) -> (NodeBundle, M3Combobox, Focusable) {
+    fn root_bundle(&self) -> impl Bundle {
         (
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    min_width: Val::Px(200.0),
-                    position_type: PositionType::Relative,
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                min_width: Val::Px(200.0),
+                position_type: PositionType::Relative,
                 ..default()
-            },
+            }),
             M3Combobox {
                 options: self.options.clone(),
                 selected: self.selected,
@@ -153,8 +150,8 @@ impl ComboboxBuilder {
         root
     }
 
-    /// Spawns the combobox as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the combobox as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let display_text = self.current_display_text();
         let options = self.options.clone();
         let disabled = self.disabled;
@@ -174,7 +171,7 @@ impl ComboboxBuilder {
 }
 
 fn populate_combobox_children(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     root: Entity,
     display_text: &str,
     options: &[String],
@@ -182,8 +179,9 @@ fn populate_combobox_children(
     // Header button
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
@@ -193,8 +191,7 @@ fn populate_combobox_children(
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                ..default()
-            },
+            ),
             ComboboxHeader(root),
             BackgroundRole(ColorRole::Surface),
             BorderRole(ColorRole::Outline),
@@ -202,13 +199,13 @@ fn populate_combobox_children(
         ))
         .with_children(|header_parent| {
             header_parent.spawn((
-                TextBundle::from_section(
-                    display_text,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(display_text),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 ComboboxLabelText(root),
                 ForegroundRole(ColorRole::OnSurface),
@@ -216,13 +213,13 @@ fn populate_combobox_children(
             ));
 
             header_parent.spawn((
-                TextBundle::from_section(
-                    "▼",
-                    TextStyle {
-                        font_size: 12.0,
-                        color: Color::WHITE,
+                (
+                    Text::new("▼"),
+                    TextFont {
+                        font_size: FontSize::Px(12.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
                 TypeStyleToken(TypeScale::LabelMedium),
@@ -232,8 +229,8 @@ fn populate_combobox_children(
     // Dropdown menu (initially hidden)
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     display: Display::None,
                     flex_direction: FlexDirection::Column,
                     position_type: PositionType::Absolute,
@@ -246,9 +243,8 @@ fn populate_combobox_children(
                     overflow: Overflow::clip_y(),
                     ..default()
                 },
-                z_index: ZIndex::Global(50),
-                ..default()
-            },
+                GlobalZIndex(50),
+            ),
             ComboboxMenu(root),
             BackgroundRole(ColorRole::SurfaceContainerHigh),
             BorderRole(ColorRole::OutlineVariant),
@@ -259,17 +255,17 @@ fn populate_combobox_children(
             for (i, opt) in options.iter().enumerate() {
                 menu_parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(12.0), Val::Px(10.0)),
                                 width: Val::Percent(100.0),
                                 display: Display::Flex,
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
-                            background_color: BackgroundColor(Color::NONE),
-                            ..default()
-                        },
+                            BackgroundColor(Color::NONE),
+                        ),
                         ComboboxMenuItem {
                             combobox_entity: root,
                             index: i,
@@ -279,13 +275,13 @@ fn populate_combobox_children(
                     ))
                     .with_children(|item_parent| {
                         item_parent.spawn((
-                            TextBundle::from_section(
-                                opt.clone(),
-                                TextStyle {
-                                    font_size: 14.0,
-                                    color: Color::WHITE,
+                            (
+                                Text::new(opt.clone()),
+                                TextFont {
+                                    font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
+                                TextColor(Color::WHITE),
                             ),
                             ForegroundRole(ColorRole::OnSurface),
                             TypeStyleToken(TypeScale::BodyMedium),
@@ -313,7 +309,7 @@ pub fn combobox_header_system(
 pub fn combobox_item_system(
     mut item_query: Query<(&ComboboxMenuItem, &Interaction), Changed<Interaction>>,
     mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
-    mut events: EventWriter<ComboboxSelected>,
+    mut events: MessageWriter<ComboboxSelected>,
 ) {
     for (item, interaction) in &mut item_query {
         if *interaction == Interaction::Pressed {
@@ -321,7 +317,7 @@ pub fn combobox_item_system(
                 combo.selected = Some(item.index);
                 combo.is_open = false;
                 let val = combo.options.get(item.index).cloned().unwrap_or_default();
-                events.send(ComboboxSelected {
+                events.write(ComboboxSelected {
                     entity: item.combobox_entity,
                     selected_index: item.index,
                     selected_value: val,
@@ -334,7 +330,7 @@ pub fn combobox_item_system(
 /// System updating visibility of dropdown menu and updating display text.
 pub fn combobox_sync_system(
     combo_query: Query<(Entity, &M3Combobox), Changed<M3Combobox>>,
-    mut menu_query: Query<(&ComboboxMenu, &mut Style)>,
+    mut menu_query: Query<(&ComboboxMenu, &mut Node)>,
     mut text_query: Query<(&ComboboxLabelText, &mut Text)>,
 ) {
     for (entity, combo) in &combo_query {
@@ -356,9 +352,7 @@ pub fn combobox_sync_system(
 
         for (lbl, mut text) in &mut text_query {
             if lbl.0 == entity {
-                if let Some(sec) = text.sections.first_mut() {
-                    sec.value = display_str.clone();
-                }
+                text.0 = display_str.clone();
             }
         }
     }
@@ -370,8 +364,11 @@ pub struct ComboboxPlugin;
 
 impl Plugin for ComboboxPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<ComboboxSelected>>() {
-            app.add_event::<ComboboxSelected>();
+        if !app
+            .world()
+            .contains_resource::<Messages<ComboboxSelected>>()
+        {
+            app.add_message::<ComboboxSelected>();
         }
         app.add_systems(
             Update,

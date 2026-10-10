@@ -64,17 +64,14 @@ impl StackBuilder {
     }
 
     /// Builds a Bevy [`NodeBundle`] configured for vertical flex stacking.
-    pub fn build(self) -> NodeBundle {
-        NodeBundle {
-            style: Style {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                row_gap: self.spacing.val(),
-                align_items: self.align_items,
-                justify_content: self.justify_content,
-                ..default()
-            },
+    pub fn build(self) -> impl Bundle {
+        (Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            row_gap: self.spacing.val(),
+            align_items: self.align_items,
+            justify_content: self.justify_content,
             ..default()
-        }
+        })
     }
 }

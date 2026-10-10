@@ -55,13 +55,13 @@ impl LabelBuilder {
     /// Creates the component bundle tuple for this label.
     pub fn bundle(self) -> impl Bundle {
         (
-            TextBundle::from_section(
-                self.text,
-                TextStyle {
-                    font_size: 14.0,
-                    color: Color::WHITE,
+            (
+                Text::new(self.text),
+                TextFont {
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
+                TextColor(Color::WHITE),
             ),
             M3Label,
             TypeStyleToken(self.style),
@@ -74,8 +74,8 @@ impl LabelBuilder {
         commands.spawn(self.bundle()).id()
     }
 
-    /// Spawns the label as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the label as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         parent.spawn(self.bundle()).id()
     }
 }

@@ -42,16 +42,13 @@ fn setup_gallery(mut commands: Commands) {
     // Root screen layout
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    ..default()
-                },
+            (Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::Surface),
         ))
         .id();
@@ -60,37 +57,31 @@ fn setup_gallery(mut commands: Commands) {
     commands.entity(root).with_children(|parent| {
         parent
             .spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        min_height: Val::Px(56.0),
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        padding: UiRect::axes(Val::Px(24.0), Val::Px(8.0)),
-                        border: UiRect {
-                            bottom: Val::Px(1.0),
-                            ..default()
-                        },
+                (Node {
+                    width: Val::Percent(100.0),
+                    min_height: Val::Px(56.0),
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(8.0)),
+                    border: UiRect {
+                        bottom: Val::Px(1.0),
                         ..default()
                     },
                     ..default()
-                },
+                }),
                 BackgroundRole(ColorRole::SurfaceContainerLow),
                 BorderRole(ColorRole::OutlineVariant),
             ))
             .with_children(|bar| {
-                bar.spawn((NodeBundle {
-                    style: Style {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        align_items: AlignItems::Center,
-                        column_gap: Val::Px(12.0),
-                        ..default()
-                    },
+                bar.spawn(((Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(12.0),
                     ..default()
-                },))
+                }),))
                     .with_children(|title_box| {
                         LabelBuilder::new("OPTS Design System Gallery")
                             .with_style(TypeScale::TitleLarge)
@@ -103,16 +94,13 @@ fn setup_gallery(mut commands: Commands) {
                             .spawn_child(title_box);
                     });
 
-                bar.spawn((NodeBundle {
-                    style: Style {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        align_items: AlignItems::Center,
-                        column_gap: Val::Px(16.0),
-                        ..default()
-                    },
+                bar.spawn(((Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(16.0),
                     ..default()
-                },))
+                }),))
                     .with_children(|controls| {
                         LabelBuilder::new("F2: Toggle Theme | Tab: Focus")
                             .with_style(TypeScale::LabelMedium)
@@ -126,7 +114,7 @@ fn setup_gallery(mut commands: Commands) {
                                         let theme = world.resource::<MaterialTheme>();
                                         theme.scheme.is_dark
                                     };
-                                    world.send_event(ThemeChanged { is_dark: !is_dark });
+                                    world.write_message(ThemeChanged { is_dark: !is_dark });
                                 });
                             })
                             .spawn_child(controls);
@@ -153,33 +141,30 @@ fn setup_gallery(mut commands: Commands) {
     commands.entity(root).with_children(|parent| {
         parent
             .spawn((
-                NodeBundle {
-                    style: Style {
-                        width: Val::Percent(100.0),
-                        min_height: Val::Px(32.0),
-                        padding: UiRect::axes(Val::Px(24.0), Val::Px(6.0)),
-                        display: Display::Flex,
-                        align_items: AlignItems::Center,
-                        border: UiRect {
-                            top: Val::Px(1.0),
-                            ..default()
-                        },
+                (Node {
+                    width: Val::Percent(100.0),
+                    min_height: Val::Px(32.0),
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(6.0)),
+                    display: Display::Flex,
+                    align_items: AlignItems::Center,
+                    border: UiRect {
+                        top: Val::Px(1.0),
                         ..default()
                     },
                     ..default()
-                },
+                }),
                 BackgroundRole(ColorRole::SurfaceContainerLowest),
                 BorderRole(ColorRole::OutlineVariant),
             ))
             .with_children(|status_bar| {
                 status_bar.spawn((
-                    TextBundle::from_section(
-                        "Ready. Interact with any widget to observe reactive events.",
-                        TextStyle {
-                            font_size: 12.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new("Ready. Interact with any widget to observe reactive events."),
+                        TextFont {
+                            font_size: FontSize::Px(12.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     StatusLabel,
                     ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -189,12 +174,12 @@ fn setup_gallery(mut commands: Commands) {
     });
 }
 
-fn populate_gallery_panels(parent: &mut ChildBuilder, _notebook: Entity) {
+fn populate_gallery_panels(parent: &mut ChildSpawnerCommands, _notebook: Entity) {
     // Note: Notebook panels are automatically spawned inside NotebookBuilder.
     // Here we can spawn our gallery section containers inside a row layout for demonstration.
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 display: Display::Flex,
                 flex_direction: FlexDirection::Row,
                 flex_grow: 1.0,
@@ -203,9 +188,8 @@ fn populate_gallery_panels(parent: &mut ChildBuilder, _notebook: Entity) {
                 column_gap: Val::Px(24.0),
                 overflow: Overflow::clip_y(),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|content| {
             // Column 1: Buttons & Inputs
             build_inputs_column(content);
@@ -218,20 +202,17 @@ fn populate_gallery_panels(parent: &mut ChildBuilder, _notebook: Entity) {
         });
 }
 
-fn build_inputs_column(parent: &mut ChildBuilder) {
+fn build_inputs_column(parent: &mut ChildSpawnerCommands) {
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    row_gap: Val::Px(16.0),
-                    padding: UiRect::all(Val::Px(16.0)),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(16.0)),
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::SurfaceContainerLow),
             RadiusToken(RadiusLevel::Medium),
         ))
@@ -258,20 +239,17 @@ fn build_inputs_column(parent: &mut ChildBuilder) {
         });
 }
 
-fn build_selection_column(parent: &mut ChildBuilder) {
+fn build_selection_column(parent: &mut ChildSpawnerCommands) {
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    row_gap: Val::Px(16.0),
-                    padding: UiRect::all(Val::Px(16.0)),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(16.0)),
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::SurfaceContainerLow),
             RadiusToken(RadiusLevel::Medium),
         ))
@@ -311,20 +289,17 @@ fn build_selection_column(parent: &mut ChildBuilder) {
         });
 }
 
-fn build_transit_column(parent: &mut ChildBuilder) {
+fn build_transit_column(parent: &mut ChildSpawnerCommands) {
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    flex_grow: 1.0,
-                    row_gap: Val::Px(16.0),
-                    padding: UiRect::all(Val::Px(16.0)),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.0,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(16.0)),
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::SurfaceContainerLow),
             RadiusToken(RadiusLevel::Medium),
         ))
@@ -341,15 +316,15 @@ fn build_transit_column(parent: &mut ChildBuilder) {
 
             // Action triggers
             col.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    ..default()
-                },
+                ),
                 SpawnDialogButton,
                 BackgroundRole(ColorRole::SecondaryContainer),
                 RadiusToken(RadiusLevel::Full),
@@ -362,15 +337,15 @@ fn build_transit_column(parent: &mut ChildBuilder) {
             });
 
             col.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    ..default()
-                },
+                ),
                 SpawnToastButton,
                 BackgroundRole(ColorRole::TertiaryContainer),
                 RadiusToken(RadiusLevel::Full),
@@ -398,10 +373,10 @@ fn build_transit_column(parent: &mut ChildBuilder) {
 fn theme_hotkey_toggle_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     theme: Res<MaterialTheme>,
-    mut events: EventWriter<ThemeChanged>,
+    mut events: MessageWriter<ThemeChanged>,
 ) {
     if keyboard.just_pressed(KeyCode::F2) {
-        events.send(ThemeChanged {
+        events.write(ThemeChanged {
             is_dark: !theme.scheme.is_dark,
         });
     }
@@ -436,44 +411,32 @@ fn spawn_toast_system(
 }
 
 fn gallery_interaction_listener(
-    mut click_events: EventReader<ButtonClicked>,
-    mut check_events: EventReader<CheckboxToggled>,
-    mut switch_events: EventReader<SwitchToggled>,
-    mut radio_events: EventReader<RadioSelected>,
-    mut combo_events: EventReader<ComboboxSelected>,
-    mut tree_select_events: EventReader<TreeNodeSelected>,
+    mut click_events: MessageReader<ButtonClicked>,
+    mut check_events: MessageReader<CheckboxToggled>,
+    mut switch_events: MessageReader<SwitchToggled>,
+    mut radio_events: MessageReader<RadioSelected>,
+    mut combo_events: MessageReader<ComboboxSelected>,
+    mut tree_select_events: MessageReader<TreeNodeSelected>,
     mut status_query: Query<&mut Text, With<StatusLabel>>,
 ) {
     for mut text in &mut status_query {
         for event in click_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: ButtonClicked({:?})", event.0);
-            }
+            text.0 = format!("Event: ButtonClicked({:?})", event.0);
         }
         for event in check_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: CheckboxToggled({:?})", event.state);
-            }
+            text.0 = format!("Event: CheckboxToggled({:?})", event.state);
         }
         for event in switch_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: SwitchToggled(is_on={})", event.is_on);
-            }
+            text.0 = format!("Event: SwitchToggled(is_on={})", event.is_on);
         }
         for event in radio_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: RadioSelected({:?})", event.entity);
-            }
+            text.0 = format!("Event: RadioSelected({:?})", event.entity);
         }
         for event in combo_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: ComboboxSelected('{}')", event.selected_value);
-            }
+            text.0 = format!("Event: ComboboxSelected('{}')", event.selected_value);
         }
         for event in tree_select_events.read() {
-            if let Some(sec) = text.sections.first_mut() {
-                sec.value = format!("Event: TreeNodeSelected('{}')", event.node_id);
-            }
+            text.0 = format!("Event: TreeNodeSelected('{}')", event.node_id);
         }
     }
 }

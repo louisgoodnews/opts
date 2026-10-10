@@ -17,7 +17,6 @@ opts-logging = { workspace = true }
 
 # Bevy Ecosystem
 bevy = { workspace = true }
-# bevy_asset_loader = { workspace = true } # Uncomment when needed
 
 # Image & Asset Handling
 image = { workspace = true }

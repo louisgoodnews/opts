@@ -17,8 +17,10 @@ pub const MATERIAL_ICONS: &[u8] = include_bytes!("../assets/fonts/MaterialIcons-
 
 /// Fixed handle of the Material Icons font; use it as `TextStyle::font` for icon glyphs.
 /// A constant handle means no system needs a resource to spawn icons.
-pub const ICON_FONT: Handle<Font> =
-    Handle::weak_from_u128(0x6f70_7473_6963_6f6e_6600_0000_0000_0001);
+pub const ICON_FONT: Handle<Font> = Handle::Uuid(
+    bevy::asset::uuid::Uuid::from_u128(0x6f70_7473_6963_6f6e_6600_0000_0000_0001),
+    std::marker::PhantomData,
+);
 
 /// Installs DejaVu Sans as the default font and registers the [`ICON_FONT`].
 pub fn install_fonts(fonts: Option<ResMut<Assets<Font>>>) {
@@ -26,18 +28,11 @@ pub fn install_fonts(fonts: Option<ResMut<Assets<Font>>>) {
         tracing::debug!("no font assets (headless): skipping font installation");
         return;
     };
-    match Font::try_from_bytes(DEJAVU_SANS.to_vec()) {
-        Ok(font) => {
-            fonts.insert(Handle::<Font>::default().id(), font);
-        }
-        Err(e) => tracing::error!("bundled DejaVu Sans is invalid: {e}"),
-    }
-    match Font::try_from_bytes(MATERIAL_ICONS.to_vec()) {
-        Ok(font) => {
-            fonts.insert(ICON_FONT.id(), font);
-        }
-        Err(e) => tracing::error!("bundled Material Icons is invalid: {e}"),
-    }
+    let _ = fonts.insert(
+        Handle::<Font>::default().id(),
+        Font::from_bytes(DEJAVU_SANS.to_vec()),
+    );
+    let _ = fonts.insert(ICON_FONT.id(), Font::from_bytes(MATERIAL_ICONS.to_vec()));
 }
 
 #[cfg(test)]

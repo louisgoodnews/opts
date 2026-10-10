@@ -25,18 +25,15 @@ fn setup_scene(mut commands: Commands) {
     // Root screen layout
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    padding: UiRect::all(Val::Px(32.0)),
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(24.0),
-                    ..default()
-                },
+            (Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                padding: UiRect::all(Val::Px(32.0)),
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(24.0),
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::Surface),
         ))
         .id();
@@ -132,7 +129,7 @@ fn setup_scene(mut commands: Commands) {
     });
 }
 
-fn handle_clicks(mut events: EventReader<ButtonClicked>) {
+fn handle_clicks(mut events: MessageReader<ButtonClicked>) {
     for event in events.read() {
         info!("Received ButtonClicked event for entity {:?}", event.0);
     }

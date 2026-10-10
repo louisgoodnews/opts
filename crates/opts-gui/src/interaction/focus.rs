@@ -12,7 +12,7 @@ pub struct Focusable {
 }
 
 /// Event requesting a shift in widget focus.
-#[derive(Event, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FocusEvent {
     /// Move focus to next widget in tab order.
     Next,
@@ -28,7 +28,7 @@ pub enum FocusEvent {
 pub fn keyboard_focus_navigation_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     modals: Query<(), With<crate::components::modal::ModalRoot>>,
-    mut events: EventWriter<FocusEvent>,
+    mut events: MessageWriter<FocusEvent>,
 ) {
     // An open modal traps Tab itself (`modal_focus_trap_system`).
     if !modals.is_empty() {
@@ -36,9 +36,9 @@ pub fn keyboard_focus_navigation_system(
     }
     if keyboard.just_pressed(KeyCode::Tab) {
         if keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight) {
-            events.send(FocusEvent::Previous);
+            events.write(FocusEvent::Previous);
         } else {
-            events.send(FocusEvent::Next);
+            events.write(FocusEvent::Next);
         }
     }
 }
@@ -46,7 +46,7 @@ pub fn keyboard_focus_navigation_system(
 /// System processing [`FocusEvent`] and updating the [`Focused`] component across focusable entities.
 pub fn focus_event_handler_system(
     mut commands: Commands,
-    mut events: EventReader<FocusEvent>,
+    mut events: MessageReader<FocusEvent>,
     focusables_query: Query<(Entity, &Focusable), Without<Disabled>>,
     focused_query: Query<Entity, With<Focused>>,
 ) {
@@ -128,8 +128,8 @@ pub struct FocusPlugin;
 
 impl Plugin for FocusPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<FocusEvent>>() {
-            app.add_event::<FocusEvent>();
+        if !app.world().contains_resource::<Messages<FocusEvent>>() {
+            app.add_message::<FocusEvent>();
         }
         app.add_systems(
             Update,
@@ -146,7 +146,7 @@ mod tests {
     fn test_focus_navigation_next_previous() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<FocusEvent>()
+            .add_message::<FocusEvent>()
             .add_systems(Update, focus_event_handler_system);
 
         let e1 = app.world_mut().spawn(Focusable { tab_index: 0 }).id();
@@ -155,21 +155,21 @@ mod tests {
         app.update();
 
         // Send Next
-        app.world_mut().send_event(FocusEvent::Next);
+        app.world_mut().write_message(FocusEvent::Next);
         app.update();
 
         assert!(app.world().get::<Focused>(e1).is_some());
         assert!(app.world().get::<Focused>(e2).is_none());
 
         // Send Next again
-        app.world_mut().send_event(FocusEvent::Next);
+        app.world_mut().write_message(FocusEvent::Next);
         app.update();
 
         assert!(app.world().get::<Focused>(e1).is_none());
         assert!(app.world().get::<Focused>(e2).is_some());
 
         // Send Previous
-        app.world_mut().send_event(FocusEvent::Previous);
+        app.world_mut().write_message(FocusEvent::Previous);
         app.update();
 
         assert!(app.world().get::<Focused>(e1).is_some());

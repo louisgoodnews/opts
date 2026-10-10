@@ -100,16 +100,13 @@ impl TreeviewBuilder {
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let root = commands
             .spawn((
-                NodeBundle {
-                    style: Style {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Column,
-                        width: Val::Percent(100.0),
-                        padding: UiRect::all(Val::Px(8.0)),
-                        ..default()
-                    },
+                (Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Column,
+                    width: Val::Percent(100.0),
+                    padding: UiRect::all(Val::Px(8.0)),
                     ..default()
-                },
+                }),
                 M3Treeview::default(),
             ))
             .id();
@@ -123,19 +120,16 @@ impl TreeviewBuilder {
         root
     }
 
-    /// Spawns the treeview as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the treeview as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let mut root_cmd = parent.spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    padding: UiRect::all(Val::Px(8.0)),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                width: Val::Percent(100.0),
+                padding: UiRect::all(Val::Px(8.0)),
                 ..default()
-            },
+            }),
             M3Treeview::default(),
         ));
 
@@ -151,7 +145,7 @@ impl TreeviewBuilder {
     }
 
     fn spawn_node_hierarchy(
-        parent: &mut ChildBuilder,
+        parent: &mut ChildSpawnerCommands,
         tree_entity: Entity,
         parent_id: Option<String>,
         node: &TreeNode,
@@ -170,8 +164,9 @@ impl TreeviewBuilder {
 
         // Node row button
         let mut row_cmd = parent.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -185,9 +180,8 @@ impl TreeviewBuilder {
                     column_gap: Val::Px(8.0),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3TreeNode {
                 tree_entity,
                 node_id: node_id.clone(),
@@ -203,13 +197,13 @@ impl TreeviewBuilder {
         row_cmd.with_children(|row_parent| {
             // Chevron indicator
             row_parent.spawn((
-                TextBundle::from_section(
-                    chevron_symbol,
-                    TextStyle {
-                        font_size: 12.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(chevron_symbol),
+                    TextFont {
+                        font_size: FontSize::Px(12.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 TreeNodeChevron(row_entity),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -218,13 +212,13 @@ impl TreeviewBuilder {
 
             // Node label text
             row_parent.spawn((
-                TextBundle::from_section(
-                    node.label.clone(),
-                    TextStyle {
-                        font_size: 14.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(node.label.clone()),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 ForegroundRole(ColorRole::OnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -248,15 +242,15 @@ impl TreeviewBuilder {
 pub fn treeview_click_system(
     mut click_query: Query<(Entity, &Interaction, &mut M3TreeNode), Changed<Interaction>>,
     mut tree_query: Query<&mut M3Treeview>,
-    mut select_events: EventWriter<TreeNodeSelected>,
-    mut toggle_events: EventWriter<TreeNodeToggled>,
+    mut select_events: MessageWriter<TreeNodeSelected>,
+    mut toggle_events: MessageWriter<TreeNodeToggled>,
 ) {
     for (_entity, interaction, mut node) in &mut click_query {
         if *interaction == Interaction::Pressed {
             // Selection event
             if let Ok(mut tree) = tree_query.get_mut(node.tree_entity) {
                 tree.selected_node_id = Some(node.node_id.clone());
-                select_events.send(TreeNodeSelected {
+                select_events.write(TreeNodeSelected {
                     tree_entity: node.tree_entity,
                     node_id: node.node_id.clone(),
                 });
@@ -265,7 +259,7 @@ pub fn treeview_click_system(
             // Toggle expansion if expandable
             if node.has_children {
                 node.is_expanded = !node.is_expanded;
-                toggle_events.send(TreeNodeToggled {
+                toggle_events.write(TreeNodeToggled {
                     tree_entity: node.tree_entity,
                     node_id: node.node_id.clone(),
                     is_expanded: node.is_expanded,
@@ -279,7 +273,7 @@ pub fn treeview_click_system(
 pub fn treeview_sync_system(
     changed_nodes: Query<(Entity, &M3TreeNode), Changed<M3TreeNode>>,
     mut chevron_query: Query<(&TreeNodeChevron, &mut Text)>,
-    mut all_nodes: Query<(&M3TreeNode, &mut Style)>,
+    mut all_nodes: Query<(&M3TreeNode, &mut Node)>,
 ) {
     for (entity, changed_node) in &changed_nodes {
         // Update chevron glyph
@@ -293,9 +287,7 @@ pub fn treeview_sync_system(
 
         for (chevron, mut text) in &mut chevron_query {
             if chevron.0 == entity {
-                if let Some(sec) = text.sections.first_mut() {
-                    sec.value = glyph.to_string();
-                }
+                text.0 = glyph.to_string();
             }
         }
 
@@ -321,11 +313,14 @@ pub struct TreeviewPlugin;
 
 impl Plugin for TreeviewPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<TreeNodeSelected>>() {
-            app.add_event::<TreeNodeSelected>();
+        if !app
+            .world()
+            .contains_resource::<Messages<TreeNodeSelected>>()
+        {
+            app.add_message::<TreeNodeSelected>();
         }
-        if !app.world().contains_resource::<Events<TreeNodeToggled>>() {
-            app.add_event::<TreeNodeToggled>();
+        if !app.world().contains_resource::<Messages<TreeNodeToggled>>() {
+            app.add_message::<TreeNodeToggled>();
         }
         app.add_systems(Update, (treeview_click_system, treeview_sync_system));
     }

@@ -26,7 +26,7 @@ pub struct ModalRoot;
 pub struct ModalContent;
 
 /// Events emitted by modals.
-#[derive(Event, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModalEvent {
     /// The user pressed Escape while the modal was open.
     CancelRequested(Entity),
@@ -42,7 +42,7 @@ pub enum ModalEvent {
 /// fn open(mut commands: Commands) {
 ///     let (root, content) = ModalBuilder::new().spawn(&mut commands);
 ///     commands.entity(content).with_children(|p| {
-///         p.spawn(TextBundle::from_section("Hello", TextStyle::default()));
+///         p.spawn((Text::new("Hello")));
 ///     });
 ///     let _ = root;
 /// }
@@ -95,8 +95,8 @@ impl ModalBuilder {
     pub fn spawn(self, commands: &mut Commands) -> (Entity, Entity) {
         let root = commands
             .spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         position_type: PositionType::Absolute,
                         left: Val::Px(0.0),
                         top: Val::Px(0.0),
@@ -106,12 +106,9 @@ impl ModalBuilder {
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    // Scrim at ~60 % opacity.
-                    background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
-                    focus_policy: FocusPolicy::Block,
-                    z_index: ZIndex::Global(self.z_index),
-                    ..default()
-                },
+                    FocusPolicy::Block,
+                    GlobalZIndex(self.z_index),
+                ),
                 // Interaction makes the backdrop swallow pointer events beneath it.
                 Interaction::default(),
                 ModalRoot,
@@ -120,8 +117,8 @@ impl ModalBuilder {
             .id();
         let content = commands
             .spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         flex_direction: FlexDirection::Column,
                         width: Val::Percent(self.width_percent),
                         height: Val::Percent(self.height_percent),
@@ -131,9 +128,8 @@ impl ModalBuilder {
                         row_gap: Val::Px(12.0),
                         ..default()
                     },
-                    focus_policy: FocusPolicy::Block,
-                    ..default()
-                },
+                    FocusPolicy::Block,
+                ),
                 Interaction::default(),
                 ModalContent,
                 BackgroundRole(ColorRole::SurfaceContainerHigh),
@@ -151,18 +147,18 @@ impl ModalBuilder {
 pub fn modal_escape_system(
     keys: Res<ButtonInput<KeyCode>>,
     modals: Query<Entity, With<ModalRoot>>,
-    mut events: EventWriter<ModalEvent>,
+    mut events: MessageWriter<ModalEvent>,
 ) {
     if keys.just_pressed(KeyCode::Escape) {
         if let Some(modal) = modals.iter().last() {
-            events.send(ModalEvent::CancelRequested(modal));
+            events.write(ModalEvent::CancelRequested(modal));
         }
     }
 }
 
-fn is_inside(mut entity: Entity, ancestor: Entity, parents: &Query<&Parent>) -> bool {
+fn is_inside(mut entity: Entity, ancestor: Entity, parents: &Query<&ChildOf>) -> bool {
     while let Ok(p) = parents.get(entity) {
-        entity = p.get();
+        entity = p.parent();
         if entity == ancestor {
             return true;
         }
@@ -176,8 +172,8 @@ pub fn modal_focus_trap_system(
     content: Query<Entity, With<ModalContent>>,
     focusables: Query<(Entity, &Focusable), Without<Disabled>>,
     focused: Query<Entity, With<Focused>>,
-    parents: Query<&Parent>,
-    mut events: EventWriter<FocusEvent>,
+    parents: Query<&ChildOf>,
+    mut events: MessageWriter<FocusEvent>,
 ) {
     if !keys.just_pressed(KeyCode::Tab) {
         return;
@@ -205,7 +201,7 @@ pub fn modal_focus_trap_system(
         (None, false) => 0,
         (None, true) => len - 1,
     };
-    events.send(FocusEvent::Set(inside[next].1));
+    events.write(FocusEvent::Set(inside[next].1));
 }
 
 /// Plugin registering the modal systems and [`ModalEvent`].
@@ -214,8 +210,8 @@ pub struct ModalPlugin;
 
 impl Plugin for ModalPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<ModalEvent>()
-            .add_event::<FocusEvent>()
+        app.add_message::<ModalEvent>()
+            .add_message::<FocusEvent>()
             .add_systems(Update, (modal_escape_system, modal_focus_trap_system));
     }
 }
@@ -245,14 +241,14 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<ButtonInput<KeyCode>>()
-            .add_event::<ModalEvent>()
+            .add_message::<ModalEvent>()
             .add_systems(Update, modal_escape_system);
         let root = app.world_mut().spawn(ModalRoot).id();
         app.world_mut()
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::Escape);
         app.update();
-        let events = app.world().resource::<Events<ModalEvent>>();
+        let events = app.world().resource::<Messages<ModalEvent>>();
         let got: Vec<_> = events.get_reader().read(events).copied().collect();
         assert_eq!(got, vec![ModalEvent::CancelRequested(root)]);
     }
@@ -262,7 +258,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<ButtonInput<KeyCode>>()
-            .add_event::<FocusEvent>()
+            .add_message::<FocusEvent>()
             .add_systems(Update, modal_focus_trap_system);
         let content = app.world_mut().spawn(ModalContent).id();
         let a = app
@@ -281,7 +277,7 @@ mod tests {
             .resource_mut::<ButtonInput<KeyCode>>()
             .press(KeyCode::Tab);
         app.update();
-        let events = app.world().resource::<Events<FocusEvent>>();
+        let events = app.world().resource::<Messages<FocusEvent>>();
         let got: Vec<_> = events.get_reader().read(events).copied().collect();
         assert_eq!(got, vec![FocusEvent::Set(a)]);
     }

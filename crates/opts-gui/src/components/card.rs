@@ -91,8 +91,8 @@ impl CardBuilder {
         }
     }
 
-    fn style(&self) -> Style {
-        Style {
+    fn style(&self) -> Node {
+        Node {
             padding: UiRect::all(self.padding.val()),
             display: Display::Flex,
             flex_direction: FlexDirection::Column,
@@ -110,10 +110,7 @@ impl CardBuilder {
         let (bg_role, elevation) = self.roles();
         let is_outlined = self.variant == CardVariant::Outlined;
         let mut entity_commands = commands.spawn((
-            NodeBundle {
-                style: self.style(),
-                ..default()
-            },
+            (self.style()),
             M3Card {
                 variant: self.variant,
             },
@@ -129,15 +126,12 @@ impl CardBuilder {
         entity_commands.id()
     }
 
-    /// Spawns the card container as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the card container as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let (bg_role, elevation) = self.roles();
         let is_outlined = self.variant == CardVariant::Outlined;
         let mut entity_commands = parent.spawn((
-            NodeBundle {
-                style: self.style(),
-                ..default()
-            },
+            (self.style()),
             M3Card {
                 variant: self.variant,
             },

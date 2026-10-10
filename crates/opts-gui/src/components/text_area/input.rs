@@ -11,7 +11,7 @@ use crate::interaction::{focus::FocusEvent, state::Focused};
 const PAGE_LINES: isize = 10;
 
 /// Sent whenever the text of a [`TextArea`] changes.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct TextAreaChanged {
     /// The text area entity.
     pub entity: Entity,
@@ -22,11 +22,11 @@ pub struct TextAreaChanged {
 /// Focuses a text area on click and mirrors the shared [`Focused`] marker into `TextArea::focused`.
 pub fn text_area_focus_system(
     mut areas: Query<(Entity, &Interaction, &mut TextArea, Has<Focused>)>,
-    mut focus: EventWriter<FocusEvent>,
+    mut focus: MessageWriter<FocusEvent>,
 ) {
     for (entity, interaction, mut area, has_focus) in &mut areas {
         if *interaction == Interaction::Pressed && !has_focus {
-            focus.send(FocusEvent::Set(entity));
+            focus.write(FocusEvent::Set(entity));
         }
         if area.focused != has_focus {
             area.focused = has_focus;
@@ -37,11 +37,11 @@ pub fn text_area_focus_system(
 
 /// Applies keyboard input to the focused text area(s).
 pub fn text_area_input_system(
-    mut keys: EventReader<KeyboardInput>,
+    mut keys: MessageReader<KeyboardInput>,
     pressed: Res<ButtonInput<KeyCode>>,
     mut clipboard: NonSendMut<TextClipboard>,
     mut areas: Query<(Entity, &mut TextArea)>,
-    mut changed: EventWriter<TextAreaChanged>,
+    mut changed: MessageWriter<TextAreaChanged>,
 ) {
     let events: Vec<KeyboardInput> = keys.read().cloned().collect();
     if events.is_empty() {
@@ -64,7 +64,7 @@ pub fn text_area_input_system(
             apply_key(&mut area, ev, shift, ctrl, &mut clipboard);
         }
         if area.buffer.text() != before {
-            changed.send(TextAreaChanged {
+            changed.write(TextAreaChanged {
                 entity,
                 text: area.buffer.text().to_owned(),
             });
@@ -137,7 +137,7 @@ mod tests {
     fn app_with_area() -> (App, Entity) {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, InputPlugin))
-            .add_event::<TextAreaChanged>()
+            .add_message::<TextAreaChanged>()
             .insert_non_send_resource(TextClipboard::in_memory())
             .add_systems(Update, text_area_input_system);
         let e = app
@@ -151,7 +151,7 @@ mod tests {
     }
 
     fn press(app: &mut App, key_code: KeyCode, logical_key: Key) {
-        app.world_mut().send_event(KeyboardInput {
+        app.world_mut().write_message(KeyboardInput {
             key_code,
             logical_key,
             state: ButtonState::Pressed,
@@ -175,7 +175,7 @@ mod tests {
             app.world().get::<TextArea>(e).map(TextArea::value),
             Some("ü\n")
         );
-        let events = app.world().resource::<Events<TextAreaChanged>>();
+        let events = app.world().resource::<Messages<TextAreaChanged>>();
         assert!(!events.is_empty());
     }
 

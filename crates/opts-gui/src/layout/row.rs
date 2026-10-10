@@ -64,17 +64,14 @@ impl RowBuilder {
     }
 
     /// Builds a Bevy [`NodeBundle`] configured for horizontal row flex.
-    pub fn build(self) -> NodeBundle {
-        NodeBundle {
-            style: Style {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                column_gap: self.spacing.val(),
-                align_items: self.align_items,
-                justify_content: self.justify_content,
-                ..default()
-            },
+    pub fn build(self) -> impl Bundle {
+        (Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            column_gap: self.spacing.val(),
+            align_items: self.align_items,
+            justify_content: self.justify_content,
             ..default()
-        }
+        })
     }
 }

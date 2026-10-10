@@ -13,7 +13,7 @@ mod view;
 pub use buffer::TextBuffer;
 pub use clipboard::TextClipboard;
 pub use input::{text_area_focus_system, text_area_input_system, TextAreaChanged};
-pub use view::{text_area_render_system, TextAreaText};
+pub use view::{text_area_render_system, TextAreaSpan, TextAreaText};
 
 use bevy::prelude::*;
 
@@ -104,7 +104,7 @@ impl TextAreaBuilder {
     }
 
     fn components(self) -> (impl Bundle, impl Bundle) {
-        let style = Style {
+        let style = Node {
             flex_grow: 1.0,
             width: Val::Percent(100.0),
             min_height: Val::Px(80.0),
@@ -114,7 +114,7 @@ impl TextAreaBuilder {
         };
         (
             (
-                ButtonBundle { style, ..default() },
+                (Button, style),
                 TextArea {
                     buffer: TextBuffer::new(self.text),
                     focused: self.autofocus,
@@ -134,25 +134,37 @@ impl TextAreaBuilder {
         )
     }
 
-    fn inner_text() -> impl Bundle {
-        (
-            TextBundle {
-                text: Text {
-                    sections: vec![],
-                    justify: JustifyText::Left,
-                    linebreak_behavior: bevy::text::BreakLineOn::WordBoundary,
-                },
-                style: Style {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(12.0),
-                    right: Val::Px(12.0),
-                    top: Val::Px(12.0),
-                    ..default()
-                },
+    /// Spawns the text node: the text before the cursor, with two child spans for the
+    /// cursor/selection and the text after it (see `view.rs`).
+    fn spawn_inner_text(p: &mut ChildSpawnerCommands) {
+        p.spawn((
+            Text::new(""),
+            TextFont {
+                font_size: FontSize::Px(16.0),
+                ..default()
+            },
+            TextLayout::new(Justify::Left, LineBreak::WordBoundary),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(12.0),
+                right: Val::Px(12.0),
+                top: Val::Px(12.0),
                 ..default()
             },
             TextAreaText,
-        )
+        ))
+        .with_children(|t| {
+            for kind in [TextAreaSpan::Middle, TextAreaSpan::After] {
+                t.spawn((
+                    TextSpan::new(""),
+                    TextFont {
+                        font_size: FontSize::Px(16.0),
+                        ..default()
+                    },
+                    kind,
+                ));
+            }
+        });
     }
 
     /// Spawns the text area using top-level [`Commands`].
@@ -164,13 +176,13 @@ impl TextAreaBuilder {
             commands.entity(root).insert(Focused);
         }
         commands.entity(root).with_children(|p| {
-            p.spawn(Self::inner_text());
+            Self::spawn_inner_text(p);
         });
         root
     }
 
-    /// Spawns the text area as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the text area as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let autofocus = self.autofocus;
         let (a, b) = self.components();
         let mut cmd = parent.spawn((a, b));
@@ -178,7 +190,7 @@ impl TextAreaBuilder {
             cmd.insert(Focused);
         }
         cmd.with_children(|p| {
-            p.spawn(Self::inner_text());
+            Self::spawn_inner_text(p);
         });
         cmd.id()
     }
@@ -190,7 +202,7 @@ pub struct TextAreaPlugin;
 
 impl Plugin for TextAreaPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<TextAreaChanged>()
+        app.add_message::<TextAreaChanged>()
             .init_non_send_resource::<TextClipboard>()
             .add_systems(
                 Update,

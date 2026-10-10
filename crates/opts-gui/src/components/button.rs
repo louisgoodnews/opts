@@ -185,14 +185,14 @@ impl ButtonBuilder {
         }
     }
 
-    fn style(&self) -> Style {
+    fn style(&self) -> Node {
         let is_icon_only = self.variant == ButtonVariant::Icon;
         let padding = if is_icon_only {
             UiRect::all(Val::Px(8.0))
         } else {
             UiRect::axes(Val::Px(24.0), Val::Px(10.0))
         };
-        Style {
+        Node {
             min_height: Val::Px(40.0),
             min_width: if is_icon_only {
                 Val::Px(40.0)
@@ -216,10 +216,7 @@ impl ButtonBuilder {
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let (bg_role, fg_role, elevation) = self.roles();
         let mut entity_commands = commands.spawn((
-            ButtonBundle {
-                style: self.style(),
-                ..default()
-            },
+            (Button, self.style()),
             M3Button {
                 variant: self.variant,
             },
@@ -245,15 +242,14 @@ impl ButtonBuilder {
 
         if let Some(icon_handle) = self.icon {
             commands.entity(button_entity).with_children(|parent| {
-                parent.spawn(ImageBundle {
-                    style: Style {
+                parent.spawn((
+                    ImageNode::new(icon_handle),
+                    Node {
                         width: Val::Px(18.0),
                         height: Val::Px(18.0),
                         ..default()
                     },
-                    image: UiImage::new(icon_handle),
-                    ..default()
-                });
+                ));
             });
         }
 
@@ -261,13 +257,13 @@ impl ButtonBuilder {
             let label_text = self.label;
             commands.entity(button_entity).with_children(|parent| {
                 parent.spawn((
-                    TextBundle::from_section(
-                        label_text,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(label_text),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),
@@ -278,8 +274,8 @@ impl ButtonBuilder {
         button_entity
     }
 
-    /// Spawns the button entity hierarchy as a child inside a [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the button entity hierarchy as a child inside a [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let (bg_role, fg_role, elevation) = self.roles();
         let style = self.style();
         let icon_handle = self.icon;
@@ -289,7 +285,7 @@ impl ButtonBuilder {
         let on_click = self.on_click;
 
         let mut entity_commands = parent.spawn((
-            ButtonBundle { style, ..default() },
+            (Button, style),
             M3Button {
                 variant: self.variant,
             },
@@ -313,26 +309,25 @@ impl ButtonBuilder {
 
         entity_commands.with_children(|child_parent| {
             if let Some(icon) = icon_handle {
-                child_parent.spawn(ImageBundle {
-                    style: Style {
+                child_parent.spawn((
+                    ImageNode::new(icon),
+                    Node {
                         width: Val::Px(18.0),
                         height: Val::Px(18.0),
                         ..default()
                     },
-                    image: UiImage::new(icon),
-                    ..default()
-                });
+                ));
             }
 
             if !label_text.is_empty() {
                 child_parent.spawn((
-                    TextBundle::from_section(
-                        label_text,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(label_text),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),
@@ -354,11 +349,11 @@ pub type ButtonInteractionFilter = (With<M3Button>, Without<Disabled>, Changed<I
 pub fn button_click_system(
     mut commands: Commands,
     interaction_query: Query<ButtonInteractionItem, ButtonInteractionFilter>,
-    mut click_events: EventWriter<ButtonClicked>,
+    mut click_events: MessageWriter<ButtonClicked>,
 ) {
     for (entity, interaction, callback) in &interaction_query {
         if *interaction == Interaction::Pressed {
-            click_events.send(ButtonClicked(entity));
+            click_events.write(ButtonClicked(entity));
             if let Some(cb) = callback {
                 (cb.0)(&mut commands, entity);
             }
@@ -372,8 +367,8 @@ pub struct ButtonPlugin;
 
 impl Plugin for ButtonPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<ButtonClicked>>() {
-            app.add_event::<ButtonClicked>();
+        if !app.world().contains_resource::<Messages<ButtonClicked>>() {
+            app.add_message::<ButtonClicked>();
         }
         app.add_systems(Update, button_click_system);
     }
@@ -388,7 +383,7 @@ mod tests {
     fn test_button_on_click_and_event() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<ButtonClicked>()
+            .add_message::<ButtonClicked>()
             .add_systems(Update, button_click_system);
 
         let clicked = Arc::new(AtomicBool::new(false));
@@ -420,7 +415,7 @@ mod tests {
         );
 
         // Verify ButtonClicked event was dispatched
-        let events = app.world().resource::<Events<ButtonClicked>>();
+        let events = app.world().resource::<Messages<ButtonClicked>>();
         let mut reader = events.get_reader();
         let received = reader.read(events).any(|e| e.0 == button_entity);
         assert!(received, "ButtonClicked event should have been dispatched");

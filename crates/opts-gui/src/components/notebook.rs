@@ -82,18 +82,15 @@ impl NotebookBuilder {
         self
     }
 
-    fn root_bundle(&self) -> (NodeBundle, M3Notebook) {
+    fn root_bundle(&self) -> impl Bundle {
         (
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Column,
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Column,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
                 ..default()
-            },
+            }),
             M3Notebook {
                 active_tab: self.active_tab,
                 tab_count: self.tabs.len(),
@@ -121,8 +118,8 @@ impl NotebookBuilder {
         (root, panels)
     }
 
-    /// Spawns the notebook as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the notebook as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let tabs = self.tabs.clone();
         let active = self.active_tab;
 
@@ -138,7 +135,7 @@ impl NotebookBuilder {
 }
 
 fn populate_notebook_children(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     root: Entity,
     tabs: &[String],
     active: usize,
@@ -148,20 +145,17 @@ fn populate_notebook_children(
     // Tab header bar
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    width: Val::Percent(100.0),
-                    min_height: Val::Px(48.0),
-                    border: UiRect {
-                        bottom: Val::Px(1.0),
-                        ..default()
-                    },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                width: Val::Percent(100.0),
+                min_height: Val::Px(48.0),
+                border: UiRect {
+                    bottom: Val::Px(1.0),
                     ..default()
                 },
                 ..default()
-            },
+            }),
             BackgroundRole(ColorRole::Surface),
             BorderRole(ColorRole::OutlineVariant),
         ))
@@ -170,8 +164,9 @@ fn populate_notebook_children(
                 let is_active = i == active;
                 bar_parent
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(16.0), Val::Px(12.0)),
                                 display: Display::Flex,
                                 flex_direction: FlexDirection::Column,
@@ -180,9 +175,8 @@ fn populate_notebook_children(
                                 position_type: PositionType::Relative,
                                 ..default()
                             },
-                            background_color: BackgroundColor(Color::NONE),
-                            ..default()
-                        },
+                            BackgroundColor(Color::NONE),
+                        ),
                         NotebookTabHeader {
                             notebook: root,
                             index: i,
@@ -190,13 +184,13 @@ fn populate_notebook_children(
                     ))
                     .with_children(|tab_parent| {
                         tab_parent.spawn((
-                            TextBundle::from_section(
-                                title.clone(),
-                                TextStyle {
-                                    font_size: 14.0,
-                                    color: Color::WHITE,
+                            (
+                                Text::new(title.clone()),
+                                TextFont {
+                                    font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
+                                TextColor(Color::WHITE),
                             ),
                             ForegroundRole(if is_active {
                                 ColorRole::Primary
@@ -208,21 +202,18 @@ fn populate_notebook_children(
 
                         // Active indicator underline
                         tab_parent.spawn((
-                            NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(100.0),
-                                    height: Val::Px(3.0),
-                                    position_type: PositionType::Absolute,
-                                    bottom: Val::Px(0.0),
-                                    display: if is_active {
-                                        Display::Flex
-                                    } else {
-                                        Display::None
-                                    },
-                                    ..default()
+                            (Node {
+                                width: Val::Percent(100.0),
+                                height: Val::Px(3.0),
+                                position_type: PositionType::Absolute,
+                                bottom: Val::Px(0.0),
+                                display: if is_active {
+                                    Display::Flex
+                                } else {
+                                    Display::None
                                 },
                                 ..default()
-                            },
+                            }),
                             NotebookTabIndicator {
                                 notebook: root,
                                 index: i,
@@ -238,36 +229,32 @@ fn populate_notebook_children(
 
     // Content panels container
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 display: Display::Flex,
                 flex_direction: FlexDirection::Column,
                 flex_grow: 1.0,
                 width: Val::Percent(100.0),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|content_parent| {
             for i in 0..tab_count {
                 let is_active = i == active;
                 let panel_id = content_parent
                     .spawn((
-                        NodeBundle {
-                            style: Style {
-                                display: if is_active {
-                                    Display::Flex
-                                } else {
-                                    Display::None
-                                },
-                                flex_direction: FlexDirection::Column,
-                                flex_grow: 1.0,
-                                width: Val::Percent(100.0),
-                                padding: UiRect::all(Val::Px(16.0)),
-                                ..default()
+                        (Node {
+                            display: if is_active {
+                                Display::Flex
+                            } else {
+                                Display::None
                             },
+                            flex_direction: FlexDirection::Column,
+                            flex_grow: 1.0,
+                            width: Val::Percent(100.0),
+                            padding: UiRect::all(Val::Px(16.0)),
                             ..default()
-                        },
+                        }),
                         NotebookPanel {
                             notebook: root,
                             index: i,
@@ -285,14 +272,14 @@ fn populate_notebook_children(
 pub fn notebook_tab_click_system(
     mut header_query: Query<(&NotebookTabHeader, &Interaction), Changed<Interaction>>,
     mut notebook_query: Query<&mut M3Notebook>,
-    mut events: EventWriter<NotebookTabSelected>,
+    mut events: MessageWriter<NotebookTabSelected>,
 ) {
     for (header, interaction) in &mut header_query {
         if *interaction == Interaction::Pressed {
             if let Ok(mut nb) = notebook_query.get_mut(header.notebook) {
                 if nb.active_tab != header.index {
                     nb.active_tab = header.index;
-                    events.send(NotebookTabSelected {
+                    events.write(NotebookTabSelected {
                         entity: header.notebook,
                         tab_index: header.index,
                     });
@@ -305,8 +292,8 @@ pub fn notebook_tab_click_system(
 /// System synchronizing tab indicator visibility and panel visibility with the active tab.
 pub fn notebook_sync_system(
     nb_query: Query<(Entity, &M3Notebook), Changed<M3Notebook>>,
-    mut indicator_query: Query<(&NotebookTabIndicator, &mut Style), Without<NotebookPanel>>,
-    mut panel_query: Query<(&NotebookPanel, &mut Style), Without<NotebookTabIndicator>>,
+    mut indicator_query: Query<(&NotebookTabIndicator, &mut Node), Without<NotebookPanel>>,
+    mut panel_query: Query<(&NotebookPanel, &mut Node), Without<NotebookTabIndicator>>,
 ) {
     for (entity, nb) in &nb_query {
         for (indicator, mut style) in &mut indicator_query {
@@ -339,9 +326,9 @@ impl Plugin for NotebookPlugin {
     fn build(&self, app: &mut App) {
         if !app
             .world()
-            .contains_resource::<Events<NotebookTabSelected>>()
+            .contains_resource::<Messages<NotebookTabSelected>>()
         {
-            app.add_event::<NotebookTabSelected>();
+            app.add_message::<NotebookTabSelected>();
         }
         app.add_systems(Update, (notebook_tab_click_system, notebook_sync_system));
     }

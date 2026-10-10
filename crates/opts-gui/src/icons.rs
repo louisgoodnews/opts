@@ -34,18 +34,21 @@ icons! {
     DOT = "\u{e061}",
 }
 
-/// Text style for an icon glyph rendered with the Material Icons font.
+/// Font and colour of an icon glyph rendered with the Material Icons font.
 #[must_use]
-pub fn icon_style(size: f32, color: Color) -> TextStyle {
-    TextStyle {
-        font: ICON_FONT,
-        font_size: size,
-        color,
-    }
+pub fn icon_style(size: f32, color: Color) -> (TextFont, TextColor) {
+    (
+        TextFont {
+            font: FontSource::Handle(ICON_FONT),
+            font_size: FontSize::Px(size),
+            ..default()
+        },
+        TextColor(color),
+    )
 }
 
-/// A [`TextBundle`] showing `icon` (one of the constants in this module).
+/// A text bundle showing `icon` (one of the constants in this module).
 #[must_use]
-pub fn icon_text(icon: &str, size: f32, color: Color) -> TextBundle {
-    TextBundle::from_section(icon, icon_style(size, color))
+pub fn icon_text(icon: &str, size: f32, color: Color) -> impl Bundle {
+    (Text::new(icon), icon_style(size, color))
 }

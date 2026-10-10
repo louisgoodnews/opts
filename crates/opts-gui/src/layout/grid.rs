@@ -63,16 +63,13 @@ impl GridBuilder {
     }
 
     /// Builds a Bevy [`NodeBundle`] configured for CSS Grid layout.
-    pub fn build(self) -> NodeBundle {
-        NodeBundle {
-            style: Style {
-                display: Display::Grid,
-                column_gap: self.column_gap.val(),
-                row_gap: self.row_gap.val(),
-                grid_template_columns: self.columns,
-                ..default()
-            },
+    pub fn build(self) -> impl Bundle {
+        (Node {
+            display: Display::Grid,
+            column_gap: self.column_gap.val(),
+            row_gap: self.row_gap.val(),
+            grid_template_columns: self.columns,
             ..default()
-        }
+        })
     }
 }

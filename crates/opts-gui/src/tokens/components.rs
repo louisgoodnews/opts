@@ -36,7 +36,7 @@ pub struct BackgroundRole(pub ColorRole);
 ///
 /// fn spawn_heading(mut commands: Commands) {
 ///     commands.spawn((
-///         TextBundle::from_section("OPTS", TextStyle::default()),
+///         (Text::new("OPTS")),
 ///         ForegroundRole(ColorRole::Primary),
 ///     ));
 /// }
@@ -70,7 +70,7 @@ pub struct BorderRole(pub ColorRole);
 ///
 /// fn spawn_title(mut commands: Commands) {
 ///     commands.spawn((
-///         TextBundle::from_section("Schedule", TextStyle::default()),
+///         (Text::new("Schedule")),
 ///         TypeStyleToken(TypeScale::TitleMedium),
 ///     ));
 /// }
@@ -173,12 +173,12 @@ pub fn sync_border_roles(
     for (entity, role) in &uninitialized {
         commands
             .entity(entity)
-            .insert(BorderColor(theme.scheme.get(role.0)));
+            .insert(BorderColor::all(theme.scheme.get(role.0)));
     }
     let theme_changed = theme.is_changed();
     for (role, mut border) in &mut query {
         if theme_changed || role.is_changed() {
-            border.0 = theme.scheme.get(role.0);
+            *border = BorderColor::all(theme.scheme.get(role.0));
         }
     }
 }
@@ -186,31 +186,22 @@ pub fn sync_border_roles(
 /// System that synchronizes [`Text`] foreground color with [`ForegroundRole`].
 pub fn sync_foreground_roles(
     theme: Res<MaterialTheme>,
-    mut query: Query<(Ref<ForegroundRole>, &mut Text)>,
+    mut query: Query<(Ref<ForegroundRole>, &mut TextColor)>,
 ) {
     let theme_changed = theme.is_changed();
     for (role, mut text) in &mut query {
         if theme_changed || role.is_changed() {
-            let color = theme.scheme.get(role.0);
-            for section in &mut text.sections {
-                section.style.color = color;
-            }
+            text.0 = theme.scheme.get(role.0);
         }
     }
 }
 
-/// System that synchronizes [`BorderRadius`] with [`RadiusToken`].
-pub fn sync_radius_tokens(
-    mut query: Query<(Ref<RadiusToken>, &mut BorderRadius)>,
-    uninitialized: Query<(Entity, &RadiusToken), Without<BorderRadius>>,
-    mut commands: Commands,
-) {
-    for (entity, token) in &uninitialized {
-        commands.entity(entity).insert(token.0.to_border_radius());
-    }
-    for (token, mut radius) in &mut query {
-        if token.is_changed() {
-            *radius = token.0.to_border_radius();
+/// System that synchronizes the node's border radius with [`RadiusToken`].
+pub fn sync_radius_tokens(mut query: Query<(Ref<RadiusToken>, &mut Node)>) {
+    for (token, mut node) in &mut query {
+        let radius = token.0.to_border_radius();
+        if token.is_changed() && node.border_radius != radius {
+            node.border_radius = radius;
         }
     }
 }
@@ -218,15 +209,13 @@ pub fn sync_radius_tokens(
 /// System that synchronizes [`Text`] typography font size and line height with [`TypeStyleToken`].
 pub fn sync_typestyle_tokens(
     theme: Res<MaterialTheme>,
-    mut query: Query<(Ref<TypeStyleToken>, &mut Text)>,
+    mut query: Query<(Ref<TypeStyleToken>, &mut TextFont)>,
 ) {
     let theme_changed = theme.is_changed();
-    for (token, mut text) in &mut query {
+    for (token, mut font) in &mut query {
         if theme_changed || token.is_changed() {
             let style = theme.typography.get(token.0);
-            for section in &mut text.sections {
-                section.style.font_size = style.font_size;
-            }
+            font.font_size = FontSize::Px(style.font_size);
         }
     }
 }
@@ -266,7 +255,7 @@ mod tests {
         let text_child = app
             .world_mut()
             .spawn((
-                TextBundle::from_section("Sample Text", TextStyle::default()),
+                (Text::new("Sample Text")),
                 ForegroundRole(ColorRole::OnPrimary),
                 TypeStyleToken(TypeScale::BodyLarge),
             ))

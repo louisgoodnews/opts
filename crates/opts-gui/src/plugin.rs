@@ -43,21 +43,21 @@ impl Plugin for OptsGuiPlugin {
         }
 
         // Register widget event streams
-        app.add_event::<ButtonClicked>()
-            .add_event::<CheckboxToggled>()
-            .add_event::<SwitchToggled>()
-            .add_event::<RadioSelected>()
-            .add_event::<TextChanged>()
-            .add_event::<DateSelected>()
-            .add_event::<DateTimeSelected>()
-            .add_event::<ComboboxSelected>()
-            .add_event::<NotebookTabSelected>()
-            .add_event::<ToastDismissed>()
-            .add_event::<ToplevelClosed>()
-            .add_event::<TreeNodeSelected>()
-            .add_event::<TreeNodeToggled>()
-            .add_event::<ThemeChanged>()
-            .add_event::<FocusEvent>();
+        app.add_message::<ButtonClicked>()
+            .add_message::<CheckboxToggled>()
+            .add_message::<SwitchToggled>()
+            .add_message::<RadioSelected>()
+            .add_message::<TextChanged>()
+            .add_message::<DateSelected>()
+            .add_message::<DateTimeSelected>()
+            .add_message::<ComboboxSelected>()
+            .add_message::<NotebookTabSelected>()
+            .add_message::<ToastDismissed>()
+            .add_message::<ToplevelClosed>()
+            .add_message::<TreeNodeSelected>()
+            .add_message::<TreeNodeToggled>()
+            .add_message::<ThemeChanged>()
+            .add_message::<FocusEvent>();
 
         // Register focus navigation systems
         app.add_systems(
@@ -125,7 +125,10 @@ impl Plugin for OptsGuiPlugin {
 }
 
 /// System responding to [`ThemeChanged`] events by updating [`MaterialTheme`].
-fn theme_change_listener(mut events: EventReader<ThemeChanged>, mut theme: ResMut<MaterialTheme>) {
+fn theme_change_listener(
+    mut events: MessageReader<ThemeChanged>,
+    mut theme: ResMut<MaterialTheme>,
+) {
     for event in events.read() {
         theme.scheme = if event.is_dark {
             ColorScheme::dark()

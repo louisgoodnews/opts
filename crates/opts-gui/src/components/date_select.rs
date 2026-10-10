@@ -43,17 +43,14 @@ impl DateSelectBuilder {
     pub fn spawn(self, commands: &mut Commands) -> Entity {
         let root = commands
             .spawn((
-                NodeBundle {
-                    style: Style {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(8.0),
-                        align_items: AlignItems::Center,
-                        padding: UiRect::all(Val::Px(8.0)),
-                        ..default()
-                    },
+                (Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(8.0),
+                    align_items: AlignItems::Center,
+                    padding: UiRect::all(Val::Px(8.0)),
                     ..default()
-                },
+                }),
                 M3DateSelect {
                     year: self.year,
                     month: self.month,
@@ -64,34 +61,31 @@ impl DateSelectBuilder {
 
         let formatted_date = format!("{:04}-{:02}-{:02}", self.year, self.month, self.day);
         commands.entity(root).with_children(|parent| {
-            parent.spawn(TextBundle::from_section(
-                formatted_date,
-                TextStyle {
-                    font_size: 14.0,
-                    color: Color::WHITE,
+            parent.spawn((
+                Text::new(formatted_date),
+                TextFont {
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
+                TextColor(Color::WHITE),
             ));
         });
 
         root
     }
 
-    /// Spawns the date selector as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the date selector as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let formatted_date = format!("{:04}-{:02}-{:02}", self.year, self.month, self.day);
         let mut root_cmd = parent.spawn((
-            NodeBundle {
-                style: Style {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(8.0),
-                    align_items: AlignItems::Center,
-                    padding: UiRect::all(Val::Px(8.0)),
-                    ..default()
-                },
+            (Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(8.0),
+                align_items: AlignItems::Center,
+                padding: UiRect::all(Val::Px(8.0)),
                 ..default()
-            },
+            }),
             M3DateSelect {
                 year: self.year,
                 month: self.month,
@@ -102,13 +96,13 @@ impl DateSelectBuilder {
         let root = root_cmd.id();
 
         root_cmd.with_children(|child_parent| {
-            child_parent.spawn(TextBundle::from_section(
-                formatted_date,
-                TextStyle {
-                    font_size: 14.0,
-                    color: Color::WHITE,
+            child_parent.spawn((
+                Text::new(formatted_date),
+                TextFont {
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
+                TextColor(Color::WHITE),
             ));
         });
 
@@ -119,10 +113,10 @@ impl DateSelectBuilder {
 /// System that detects changes in [`M3DateSelect`] entities and emits [`DateSelected`].
 pub fn date_select_system(
     query: Query<(Entity, &M3DateSelect), Changed<M3DateSelect>>,
-    mut events: EventWriter<DateSelected>,
+    mut events: MessageWriter<DateSelected>,
 ) {
     for (entity, date) in &query {
-        events.send(DateSelected {
+        events.write(DateSelected {
             entity,
             year: date.year,
             month: date.month,
@@ -139,7 +133,7 @@ mod tests {
     fn test_date_select_event_emission() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<DateSelected>()
+            .add_message::<DateSelected>()
             .add_systems(Update, date_select_system);
 
         let entity = {
@@ -156,7 +150,7 @@ mod tests {
 
         app.update();
 
-        let events = app.world().resource::<Events<DateSelected>>();
+        let events = app.world().resource::<Messages<DateSelected>>();
         let mut reader = events.get_reader();
         let received = reader.read(events).filter(|e| e.entity == entity).last();
         assert_eq!(

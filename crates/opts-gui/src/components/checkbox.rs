@@ -124,8 +124,9 @@ impl CheckboxBuilder {
         let glyph_str = Self::glyph_char(self.state);
 
         let mut row_cmd = commands.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -134,9 +135,8 @@ impl CheckboxBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Checkbox { state: self.state },
             Focusable { tab_index: 0 },
         ));
@@ -151,17 +151,14 @@ impl CheckboxBuilder {
             // Box indicator
             parent
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(18.0),
-                            height: Val::Px(18.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(18.0),
+                        height: Val::Px(18.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
-                    },
+                    }),
                     CheckboxIndicator(root),
                     BackgroundRole(bg_role),
                     BorderRole(border_role),
@@ -169,13 +166,13 @@ impl CheckboxBuilder {
                 ))
                 .with_children(|box_parent| {
                     box_parent.spawn((
-                        TextBundle::from_section(
-                            glyph_str,
-                            TextStyle {
-                                font_size: 13.0,
-                                color: Color::WHITE,
+                        (
+                            Text::new(glyph_str),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(Color::WHITE),
                         ),
                         CheckboxGlyph(root),
                         ForegroundRole(fg_role),
@@ -186,13 +183,13 @@ impl CheckboxBuilder {
             // Optional label text
             if let Some(lbl) = self.label {
                 parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -203,14 +200,15 @@ impl CheckboxBuilder {
         root
     }
 
-    /// Spawns the checkbox as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the checkbox as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let (bg_role, border_role, fg_role) = Self::indicator_roles(self.state);
         let glyph_str = Self::glyph_char(self.state);
 
         let mut row_cmd = parent.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -219,9 +217,8 @@ impl CheckboxBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Checkbox { state: self.state },
             Focusable { tab_index: 0 },
         ));
@@ -236,17 +233,14 @@ impl CheckboxBuilder {
             // Box indicator
             child_parent
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(18.0),
-                            height: Val::Px(18.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(18.0),
+                        height: Val::Px(18.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
-                    },
+                    }),
                     CheckboxIndicator(root),
                     BackgroundRole(bg_role),
                     BorderRole(border_role),
@@ -254,13 +248,13 @@ impl CheckboxBuilder {
                 ))
                 .with_children(|box_parent| {
                     box_parent.spawn((
-                        TextBundle::from_section(
-                            glyph_str,
-                            TextStyle {
-                                font_size: 13.0,
-                                color: Color::WHITE,
+                        (
+                            Text::new(glyph_str),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(Color::WHITE),
                         ),
                         CheckboxGlyph(root),
                         ForegroundRole(fg_role),
@@ -271,13 +265,13 @@ impl CheckboxBuilder {
             // Optional label text
             if let Some(lbl) = self.label {
                 child_parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -295,7 +289,7 @@ pub type CheckboxClickItem<'a> = (Entity, &'a Interaction, &'a mut M3Checkbox);
 /// System handling click interactions on checkboxes and toggling their state.
 pub fn checkbox_toggle_system(
     mut interaction_query: Query<CheckboxClickItem, (Without<Disabled>, Changed<Interaction>)>,
-    mut events: EventWriter<CheckboxToggled>,
+    mut events: MessageWriter<CheckboxToggled>,
 ) {
     for (entity, interaction, mut checkbox) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
@@ -304,7 +298,7 @@ pub fn checkbox_toggle_system(
                 CheckState::Checked => CheckState::Unchecked,
                 CheckState::Indeterminate => CheckState::Checked,
             };
-            events.send(CheckboxToggled {
+            events.write(CheckboxToggled {
                 entity,
                 state: checkbox.state,
             });
@@ -331,9 +325,7 @@ pub fn checkbox_sync_system(
 
         for (glyph, mut text, mut fg_role) in &mut glyph_query {
             if glyph.0 == entity {
-                if let Some(section) = text.sections.first_mut() {
-                    section.value = glyph_str.to_string();
-                }
+                text.0 = glyph_str.to_string();
                 fg_role.0 = fg;
             }
         }
@@ -346,8 +338,8 @@ pub struct CheckboxPlugin;
 
 impl Plugin for CheckboxPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<CheckboxToggled>>() {
-            app.add_event::<CheckboxToggled>();
+        if !app.world().contains_resource::<Messages<CheckboxToggled>>() {
+            app.add_message::<CheckboxToggled>();
         }
         app.add_systems(Update, (checkbox_toggle_system, checkbox_sync_system));
     }
@@ -377,7 +369,7 @@ mod tests {
     fn test_checkbox_toggle_system() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<CheckboxToggled>()
+            .add_message::<CheckboxToggled>()
             .add_systems(Update, checkbox_toggle_system);
 
         let entity = {
@@ -397,7 +389,7 @@ mod tests {
         let checkbox = app.world().get::<M3Checkbox>(entity);
         assert_eq!(checkbox.map(|c| c.state), Some(CheckState::Checked));
 
-        let events = app.world().resource::<Events<CheckboxToggled>>();
+        let events = app.world().resource::<Messages<CheckboxToggled>>();
         let mut reader = events.get_reader();
         let received = reader.read(events).find(|e| e.entity == entity);
         assert_eq!(received.map(|e| e.state), Some(CheckState::Checked));

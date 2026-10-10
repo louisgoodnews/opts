@@ -101,8 +101,9 @@ impl RadioBuilder {
         let dot_bg = Self::dot_bg(self.is_selected);
 
         let mut row_cmd = commands.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -111,9 +112,8 @@ impl RadioBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Radio {
                 is_selected: self.is_selected,
                 group_id: self.group_id,
@@ -131,17 +131,14 @@ impl RadioBuilder {
             // Outer ring
             parent
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(20.0),
-                            height: Val::Px(20.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(20.0),
+                        height: Val::Px(20.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
-                    },
+                    }),
                     RadioOuterRing(root),
                     BackgroundRole(ColorRole::Surface),
                     BorderRole(border_role),
@@ -150,19 +147,16 @@ impl RadioBuilder {
                 .with_children(|ring_parent| {
                     // Inner dot
                     ring_parent.spawn((
-                        NodeBundle {
-                            style: Style {
-                                width: Val::Px(10.0),
-                                height: Val::Px(10.0),
-                                display: if self.is_selected {
-                                    Display::Flex
-                                } else {
-                                    Display::None
-                                },
-                                ..default()
+                        (Node {
+                            width: Val::Px(10.0),
+                            height: Val::Px(10.0),
+                            display: if self.is_selected {
+                                Display::Flex
+                            } else {
+                                Display::None
                             },
                             ..default()
-                        },
+                        }),
                         RadioInnerDot(root),
                         BackgroundRole(dot_bg),
                         RadiusToken(RadiusLevel::Full),
@@ -172,13 +166,13 @@ impl RadioBuilder {
             // Optional label
             if let Some(lbl) = self.label {
                 parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -189,14 +183,15 @@ impl RadioBuilder {
         root
     }
 
-    /// Spawns the radio button as a child inside a parent [`ChildBuilder`].
-    pub fn spawn_child(self, parent: &mut ChildBuilder) -> Entity {
+    /// Spawns the radio button as a child inside a parent [`ChildSpawnerCommands`].
+    pub fn spawn_child(self, parent: &mut ChildSpawnerCommands) -> Entity {
         let border_role = Self::ring_border(self.is_selected);
         let dot_bg = Self::dot_bg(self.is_selected);
 
         let mut row_cmd = parent.spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     display: Display::Flex,
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
@@ -205,9 +200,8 @@ impl RadioBuilder {
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Radio {
                 is_selected: self.is_selected,
                 group_id: self.group_id,
@@ -225,17 +219,14 @@ impl RadioBuilder {
             // Outer ring
             child_parent
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Px(20.0),
-                            height: Val::Px(20.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Px(20.0),
+                        height: Val::Px(20.0),
+                        border: UiRect::all(Val::Px(2.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
                         ..default()
-                    },
+                    }),
                     RadioOuterRing(root),
                     BackgroundRole(ColorRole::Surface),
                     BorderRole(border_role),
@@ -244,19 +235,16 @@ impl RadioBuilder {
                 .with_children(|ring_parent| {
                     // Inner dot
                     ring_parent.spawn((
-                        NodeBundle {
-                            style: Style {
-                                width: Val::Px(10.0),
-                                height: Val::Px(10.0),
-                                display: if self.is_selected {
-                                    Display::Flex
-                                } else {
-                                    Display::None
-                                },
-                                ..default()
+                        (Node {
+                            width: Val::Px(10.0),
+                            height: Val::Px(10.0),
+                            display: if self.is_selected {
+                                Display::Flex
+                            } else {
+                                Display::None
                             },
                             ..default()
-                        },
+                        }),
                         RadioInnerDot(root),
                         BackgroundRole(dot_bg),
                         RadiusToken(RadiusLevel::Full),
@@ -266,13 +254,13 @@ impl RadioBuilder {
             // Optional label
             if let Some(lbl) = self.label {
                 child_parent.spawn((
-                    TextBundle::from_section(
-                        lbl,
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(lbl),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -294,7 +282,7 @@ pub fn radio_select_system(
         Query<RadioClickItem, (Without<Disabled>, Changed<Interaction>)>,
         Query<(Entity, &mut M3Radio), Without<Disabled>>,
     )>,
-    mut events: EventWriter<RadioSelected>,
+    mut events: MessageWriter<RadioSelected>,
 ) {
     let mut selected_entities = Vec::new();
 
@@ -302,7 +290,7 @@ pub fn radio_select_system(
         if *interaction == Interaction::Pressed && !radio.is_selected {
             radio.is_selected = true;
             selected_entities.push((entity, radio.group_id));
-            events.send(RadioSelected { entity });
+            events.write(RadioSelected { entity });
         }
     }
 
@@ -322,7 +310,7 @@ pub fn radio_select_system(
 pub fn radio_sync_system(
     changed_query: Query<(Entity, &M3Radio), Changed<M3Radio>>,
     mut ring_query: Query<(&RadioOuterRing, &mut BorderRole)>,
-    mut dot_query: Query<(&RadioInnerDot, &mut Style, &mut BackgroundRole)>,
+    mut dot_query: Query<(&RadioInnerDot, &mut Node, &mut BackgroundRole)>,
 ) {
     for (entity, radio) in &changed_query {
         let border_role = RadioBuilder::ring_border(radio.is_selected);
@@ -353,8 +341,8 @@ pub struct RadioPlugin;
 
 impl Plugin for RadioPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Events<RadioSelected>>() {
-            app.add_event::<RadioSelected>();
+        if !app.world().contains_resource::<Messages<RadioSelected>>() {
+            app.add_message::<RadioSelected>();
         }
         app.add_systems(Update, (radio_select_system, radio_sync_system));
     }
@@ -386,7 +374,7 @@ mod tests {
     fn test_radio_mutual_exclusion() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .add_event::<RadioSelected>()
+            .add_message::<RadioSelected>()
             .add_systems(Update, radio_select_system);
 
         let entity_a = {
