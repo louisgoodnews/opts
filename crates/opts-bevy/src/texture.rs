@@ -122,20 +122,74 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
         return Err(TextureError::DdsDecode("zero width or height".into()));
     }
 
+    // Determine texture format and prepare data buffer
+    let (format, data) = parse_dds_format_and_data(&dds)?;
+
+    // Block-compressed textures must have dimensions that are multiples of the 4×4 block size
+    // (wgpu rejects the texture otherwise and the validation error is fatal). The data already
+    // holds whole blocks, so rounding the extent up keeps the layout valid at the cost of a
+    // sub-percent UV scale (e.g. 533 → 536 rows).
+    let (width, height) = if matches!(
+        format,
+        TextureFormat::Bc1RgbaUnormSrgb
+            | TextureFormat::Bc2RgbaUnormSrgb
+            | TextureFormat::Bc3RgbaUnormSrgb
+    ) {
+        (width.div_ceil(4) * 4, height.div_ceil(4) * 4)
+    } else {
+        (width, height)
+    };
     let extent = Extent3d {
         width,
         height,
         depth_or_array_layers: 1,
     };
 
-    // Determine texture format and prepare data buffer
-    let (format, data) = parse_dds_format_and_data(&dds)?;
-
     let mut image = Image::default();
     image.texture_descriptor.size = extent;
     image.texture_descriptor.format = format;
     image.texture_descriptor.dimension = TextureDimension::D2;
-    image.texture_descriptor.mip_level_count = dds.header.mip_map_count.unwrap_or(1).max(1);
+    let mut mips = dds.header.mip_map_count.unwrap_or(1).max(1);
+    let mut data = data;
+    // The GPU upload slices the buffer by the mip sizes derived from the (possibly rounded)
+    // extent; when that disagrees with the file's chain, keep only the base level.
+    let (block_width, block_height, block_bytes) = match format {
+        TextureFormat::Bc1RgbaUnormSrgb => (4, 4, 8),
+        TextureFormat::Bc2RgbaUnormSrgb | TextureFormat::Bc3RgbaUnormSrgb => (4, 4, 16),
+        TextureFormat::Rgba8UnormSrgb => (1, 1, 4),
+        TextureFormat::R8Unorm => (1, 1, 1),
+        _ => (1, 1, 4),
+    };
+    let level_bytes = |w: u32, h: u32| {
+        (w.div_ceil(block_width).max(1) as usize)
+            * (h.div_ceil(block_height).max(1) as usize)
+            * block_bytes
+    };
+    let mut expected = 0usize;
+    let (mut w, mut h) = (width, height);
+    for _ in 0..mips {
+        expected += level_bytes(w, h);
+        w = (w / 2).max(1);
+        h = (h / 2).max(1);
+    }
+    if data.len() < expected {
+        let base = level_bytes(width, height);
+        if data.len() < base {
+            if data.len() + 1024 >= base {
+                data.resize(base, 0);
+            } else {
+                return Err(TextureError::DdsDecode(
+                    "DDS data shorter than its base level".into(),
+                ));
+            }
+        } else {
+            data.truncate(base);
+        }
+        mips = 1;
+    } else if data.len() > expected {
+        data.truncate(expected);
+    }
+    image.texture_descriptor.mip_level_count = mips;
     image.asset_usage = RenderAssetUsages::default();
     image.data = data;
 
@@ -247,12 +301,20 @@ fn convert_rgb24_to_rgba(data: &[u8]) -> Result<(TextureFormat, Vec<u8>), Textur
 /// # Errors
 /// Returns [`TextureError::ImageDecode`] if the image decoder fails.
 pub fn image_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
+    decode_with(bytes, None)
+}
+
+/// Decodes with an explicit container format (TGA has no magic number, so it cannot be guessed).
+fn decode_with(bytes: &[u8], format: Option<image::ImageFormat>) -> Result<Image, TextureError> {
     if bytes.is_empty() {
         return Err(TextureError::EmptyBuffer);
     }
 
-    let dyn_img =
-        image::load_from_memory(bytes).map_err(|e| TextureError::ImageDecode(e.to_string()))?;
+    let decoded = match format {
+        Some(f) => image::load_from_memory_with_format(bytes, f),
+        None => image::load_from_memory(bytes),
+    };
+    let dyn_img = decoded.map_err(|e| TextureError::ImageDecode(e.to_string()))?;
 
     let width = dyn_img.width();
     let height = dyn_img.height();
@@ -292,12 +354,13 @@ pub fn load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     let format = sniff_image_format(bytes);
     match format {
         ImageFormat::Dds => dds_to_bevy_image(bytes),
-        ImageFormat::Bmp | ImageFormat::Png | ImageFormat::Jpeg | ImageFormat::Tga => {
-            image_to_bevy_image(bytes)
-        }
+        ImageFormat::Tga => decode_with(bytes, Some(image::ImageFormat::Tga)),
+        ImageFormat::Bmp | ImageFormat::Png | ImageFormat::Jpeg => image_to_bevy_image(bytes),
         ImageFormat::Unknown => {
             // Attempt generic image decode fallback before giving up
-            image_to_bevy_image(bytes).map_err(|_| TextureError::UnknownFormat)
+            image_to_bevy_image(bytes)
+                .or_else(|_| decode_with(bytes, Some(image::ImageFormat::Tga)))
+                .map_err(|_| TextureError::UnknownFormat)
         }
     }
 }
@@ -328,5 +391,77 @@ mod tests {
             load_bevy_image(&[]),
             Err(TextureError::EmptyBuffer)
         ));
+    }
+
+    /// Builds a DXT5 DDS whose mip chain follows `height` exactly like the files in the wild.
+    fn dxt5_dds(width: u32, height: u32, mips: u32) -> Vec<u8> {
+        let mut b = Vec::new();
+        let mut put = |v: u32| b.extend_from_slice(&v.to_le_bytes());
+        put(0x2053_4444); // "DDS "
+        put(124);
+        put(0x0002_1007 | 0x0008_0000);
+        put(height);
+        put(width);
+        put(0);
+        put(0);
+        put(mips);
+        for _ in 0..11 {
+            put(0);
+        }
+        put(32);
+        put(4); // DDPF_FOURCC
+        put(u32::from_le_bytes(*b"DXT5"));
+        for _ in 0..5 {
+            put(0);
+        }
+        put(0x1000);
+        for _ in 0..4 {
+            put(0);
+        }
+        let (mut w, mut h) = (width, height);
+        for _ in 0..mips {
+            let n = (w.div_ceil(4).max(1) * h.div_ceil(4).max(1) * 16) as usize;
+            b.extend(std::iter::repeat_n(0u8, n));
+            w = (w / 2).max(1);
+            h = (h / 2).max(1);
+        }
+        b
+    }
+
+    #[test]
+    fn block_compressed_extent_and_mips_stay_consistent() {
+        let img = dds_to_bevy_image(&dxt5_dds(64, 533, 7)).expect("decodes");
+        assert_eq!(img.texture_descriptor.size.height, 536);
+        assert_eq!(img.texture_descriptor.mip_level_count, 7);
+        // A header that claims more levels than the data holds falls back to the base level.
+        let mut bytes = dxt5_dds(64, 64, 3);
+        bytes[28..32].copy_from_slice(&7u32.to_le_bytes());
+        let img = dds_to_bevy_image(&bytes).expect("decodes");
+        assert_eq!(img.texture_descriptor.mip_level_count, 1);
+        assert_eq!(img.data.len(), 16 * 16 * 16);
+    }
+
+    #[test]
+    fn test_non_block_aligned_mip_chain_fallback() {
+        // Dimensions like hochspannungsmast.dds (256x1025, 11 mips).
+        // Rounding 1025 to 1028 shifts intermediate mip sizes such that wgpu expected size (351376)
+        // exceeds the file data size (350608). The loader must fall back to base level (mips = 1)
+        // and truncate data to 263168, preventing wgpu slice out-of-range panics.
+        let bytes = dxt5_dds(256, 1025, 11);
+        assert_eq!(bytes.len(), 128 + 350608);
+        let img = dds_to_bevy_image(&bytes).expect("decodes without panic");
+        assert_eq!(img.texture_descriptor.size.width, 256);
+        assert_eq!(img.texture_descriptor.size.height, 1028);
+        assert_eq!(img.texture_descriptor.mip_level_count, 1);
+        assert_eq!(img.data.len(), 263168);
+    }
+
+    #[test]
+    fn test_dds_with_trailing_bytes_truncated() {
+        let mut bytes = dxt5_dds(64, 64, 3);
+        bytes.extend_from_slice(&[0xCC; 256]); // 256 trailing bytes
+        let img = dds_to_bevy_image(&bytes).expect("decodes");
+        assert_eq!(img.texture_descriptor.mip_level_count, 3);
+        assert_eq!(img.data.len(), (16 * 16 + 8 * 8 + 4 * 4) * 16);
     }
 }

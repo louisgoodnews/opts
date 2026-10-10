@@ -231,17 +231,19 @@ pub fn vehicle_input_system(
         }
 
         // 4. Parking brake toggle (Space)
-        if keyboard.just_pressed(KeyCode::Space) {
+        // Shift+Space is the camera reset chord, not the parking brake.
+        let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+        if keyboard.just_pressed(KeyCode::Space) && !shift {
             let current_park = inputs.is_parking_brake_engaged();
             inputs.set_parking_brake(!current_park);
         }
 
-        // 5. Gear selector (E/3 = Drive, N/2 = Neutral, R/1 = Reverse)
-        if keyboard.just_pressed(KeyCode::KeyE) || keyboard.just_pressed(KeyCode::Digit3) {
+        // 5. Gear selector (E = Drive, N = Neutral, R = Reverse; digits belong to the camera modes)
+        if keyboard.just_pressed(KeyCode::KeyE) {
             inputs.set_gear(GearPosition::Drive);
-        } else if keyboard.just_pressed(KeyCode::KeyN) || keyboard.just_pressed(KeyCode::Digit2) {
+        } else if keyboard.just_pressed(KeyCode::KeyN) {
             inputs.set_gear(GearPosition::Neutral);
-        } else if keyboard.just_pressed(KeyCode::KeyR) || keyboard.just_pressed(KeyCode::Digit1) {
+        } else if keyboard.just_pressed(KeyCode::KeyR) {
             inputs.set_gear(GearPosition::Reverse);
         }
     }
@@ -303,7 +305,6 @@ pub fn wheel_transform_sync_system(
 /// System tracking player vehicle position and adjusting camera view mode.
 pub fn vehicle_camera_system(
     time: Res<Time>,
-    keyboard: Res<ButtonInput<KeyCode>>,
     player_query: Query<(&Transform, &VehicleController), With<PlayerVehicle>>,
     mut camera_query: Query<(&mut Transform, &mut VehicleCameraRig), Without<PlayerVehicle>>,
 ) {
@@ -313,14 +314,7 @@ pub fn vehicle_camera_system(
         return;
     };
 
-    for (mut cam_tf, mut rig) in &mut camera_query {
-        // Toggle view modes via F1 (Chase) and F2 (Cockpit)
-        if keyboard.just_pressed(KeyCode::F1) {
-            rig.mode = VehicleCameraMode::ExteriorChase;
-        } else if keyboard.just_pressed(KeyCode::F2) {
-            rig.mode = VehicleCameraMode::InteriorCockpit;
-        }
-
+    for (mut cam_tf, rig) in &mut camera_query {
         match rig.mode {
             VehicleCameraMode::ExteriorChase => {
                 let forward = vehicle_tf.forward();
@@ -352,11 +346,16 @@ impl Plugin for OptsVehiclePlugin {
             .add_systems(
                 Update,
                 (
-                    vehicle_input_system,
+                    vehicle_input_system
+                        .run_if(crate::camera::vehicle_accepts_input)
+                        .run_if(crate::reporting::not_modal_active),
                     vehicle_transform_sync_system,
                     wheel_transform_sync_system,
                 ),
             )
-            .add_systems(PostUpdate, vehicle_camera_system);
+            .add_systems(
+                PostUpdate,
+                vehicle_camera_system.run_if(crate::camera::rig_drives_camera),
+            );
     }
 }

@@ -320,3 +320,44 @@ pub fn sync_coordinate_transforms(mut query: Query<SyncTransformData, SyncTransf
         }
     }
 }
+
+/// Converts an OMSI vehicle camera preset into a native Bevy [`Transform`].
+///
+/// In OMSI camera definitions (`[add_camera_driver]`, `[add_camera_pax]`):
+/// - Lateral offset $x$ has positive pointing left ($x_{\text{omsi}} = -x$).
+/// - Longitudinal offset $y$ has positive pointing forward ($y_{\text{omsi}} = y$).
+/// - Vertical offset $z$ has positive pointing up ($z_{\text{omsi}} = z$).
+/// - `yaw_deg`: 0° forward, -120° left, +120° right.
+/// - `pitch_deg`: negative down, positive up.
+/// - `dist`: pivot distance offset along viewing direction.
+#[must_use]
+pub fn camera_preset_to_bevy_transform(
+    camera_pos: Vec3,
+    dist: f32,
+    yaw_deg: f32,
+    pitch_deg: f32,
+) -> Transform {
+    // In OMSI vehicle camera definitions, positive X is left, so invert X for standard OMSI coordinates
+    let omsi_pos = Vec3::new(-camera_pos.x, camera_pos.y, camera_pos.z);
+    let mut bevy_pos = omsi_to_bevy_pos(omsi_pos);
+
+    // Bevy rotation: Yaw around +Y (-yaw because right is negative in Bevy angles), pitch around +X
+    let rot = Quat::from_euler(
+        EulerRot::YXZ,
+        (-yaw_deg).to_radians(),
+        pitch_deg.to_radians(),
+        0.0,
+    );
+
+    // If dist is non-zero, translate along forward line-of-sight (-Z in Bevy space)
+    if dist.abs() > 1e-4 {
+        let forward = rot * Vec3::NEG_Z;
+        bevy_pos += forward * dist;
+    }
+
+    Transform {
+        translation: bevy_pos,
+        rotation: rot,
+        scale: Vec3::ONE,
+    }
+}

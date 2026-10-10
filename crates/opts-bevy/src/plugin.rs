@@ -56,8 +56,8 @@ impl Plugin for OptsMaterialPlugin {
 ///
 /// Registers:
 /// - [`OmsiCoords`] and [`OmsiTransform`] component reflection types.
-/// - [`sync_omsi_to_bevy_transforms`] system in [`PostUpdate`].
-/// - [`sync_bevy_to_omsi_transforms`] system in [`PostUpdate`].
+/// - [`crate::coords::sync_omsi_to_bevy_transforms`] system in [`PostUpdate`].
+/// - [`crate::coords::sync_bevy_to_omsi_transforms`] system in [`PostUpdate`].
 ///
 /// # Usage
 ///
@@ -122,6 +122,7 @@ impl Plugin for OptsAssetPlugin {
             .add_plugins(OptsMaterialPlugin)
             .add_plugins(OptsCoordsPlugin)
             .add_plugins(OptsSceneryPlugin)
-            .add_plugins(OptsVehiclePlugin);
+            .add_plugins(OptsVehiclePlugin)
+            .add_plugins(crate::camera::OptsCameraPlugin);
     }
 }
