@@ -40,6 +40,16 @@ pub fn feed_predefined(engine: &mut ScriptEngine, controller: &VehicleController
     engine.set("throttle", sim.inputs.throttle());
     engine.set("brake", sim.inputs.service_brake());
     engine.set("ai", 0.0);
+    // Axle animation inputs: wheel spin (rad, growing while driving forward), steering (rad) and
+    // suspension travel (m). Positive steering is assumed to turn left ❓ (the simulation's
+    // positive steering turns right).
+    for (i, axle) in sim.axles.iter().enumerate() {
+        for (side, wheel) in [("L", &axle.left_wheel), ("R", &axle.right_wheel)] {
+            engine.set(&format!("wheel_rotation_{i}_{side}"), wheel.rotation_rad);
+            engine.set(&format!("axle_steering_{i}_{side}"), -wheel.steer_angle_rad);
+            engine.set(&format!("axle_suspension_{i}_{side}"), 0.0);
+        }
+    }
 }
 
 /// Fixed-step system: initialises and advances every vehicle's scripts.

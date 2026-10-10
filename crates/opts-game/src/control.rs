@@ -34,6 +34,7 @@ impl Plugin for GameControlPlugin {
         registry.register("scene.unload", unload);
         registry.register("vehicle.set", set_vehicle);
         registry.register("vehicle.script_vars", script_vars);
+        registry.register("vehicle.get", vehicle_get);
         registry.register("camera.teleport", teleport);
         app.add_systems(Update, allow_session_reads);
     }
@@ -271,4 +272,21 @@ fn script_vars(world: &mut World, params: &Value) -> Outcome {
     Outcome::ok(
         json!({ "count": vars.len(), "variables": vars, "ops_executed": engine.ops_executed() }),
     )
+}
+
+/// `vehicle.get`: the player vehicle's absolute OMSI position, heading and speed.
+fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
+    let mut query =
+        world.query_filtered::<&opts_bevy::VehicleController, With<opts_bevy::PlayerVehicle>>();
+    let Some(c) = query.iter(world).next() else {
+        return Outcome::err(RpcError::new(code::NOT_READY, "there is no player vehicle"));
+    };
+    let ch = &c.sim.chassis;
+    Outcome::ok(json!({
+        "x": ch.position.x,
+        "y": ch.position.y,
+        "z": ch.elevation_z,
+        "heading_deg": ch.heading_rad.to_degrees(),
+        "speed_kmh": ch.forward_speed_km_h(),
+    }))
 }

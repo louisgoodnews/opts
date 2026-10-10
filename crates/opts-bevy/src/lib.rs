@@ -36,6 +36,7 @@ pub mod terrain;
 pub mod text_texture;
 pub mod texture;
 pub mod vehicle;
+pub mod vehicle_anim;
 pub mod vehicle_script;
 pub mod vehicle_sim;
 
@@ -84,6 +85,9 @@ pub use texture::{
     TextureError,
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
+pub use vehicle_anim::{
+    animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation, VehicleAnimationPlugin,
+};
 pub use vehicle_script::{vehicle_script_system, VehicleScriptPlugin, VehicleScripts};
 pub use vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,

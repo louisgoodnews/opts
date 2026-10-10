@@ -63,11 +63,6 @@ pub(super) fn load_segment_meshes(
         }) {
             continue;
         }
-        // Static pose: every animation/visibility variable is at its default of 0.
-        if mesh_def.visibility.iter().any(|v| v.expected_value != 0.0) {
-            tracing::debug!(mesh = %mesh_def.path, visibility = ?mesh_def.visibility, "vehicle mesh hidden in default state");
-            continue;
-        }
         let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
             tracing::error!(mesh = %mesh_def.path, "vehicle o3d not found");
             job.cache
@@ -118,7 +113,13 @@ pub(super) fn load_segment_meshes(
             vertex_count += part.vertices;
             mesh_count += 1;
         }
-        attach_model_parts(commands, root, &parts, &mesh_def.path);
+        let spawned = attach_model_parts(commands, root, &parts, &mesh_def.path);
+        // Script variables move and show the mesh (`[newanim]`, `[visible]`).
+        if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(root, mesh_def) {
+            for e in spawned {
+                commands.entity(e).insert(anim.clone());
+            }
+        }
     }
     (mesh_count, vertex_count, min, max)
 }

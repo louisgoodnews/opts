@@ -202,6 +202,17 @@ This means: "Rotate the mesh around the point defined by these origin transforms
 
 A mesh can have **multiple** `[newanim]` blocks. Their transforms are applied in **declaration order**.
 
+### Axis convention (M-0045, 2026-10-11)
+
+Evidence from the model authors' own comments in `model_SD77.cfg` (wheels) and the SD77 values:
+
+- `anim_rot` rotates about the **X axis of the animation frame**, `anim_trans` moves along it: "no rotation is needed, since the wheels turn about the X axis" (wheel entries have no `origin_rot_*`). Axle animations pass the variable **in radians**, so the factor `57.2957795…` converts to degrees.
+- The frame is `origin_trans` plus the rotation of `origin_rot_x/y/z` in OMSI axes (x right, y forward, z up). Suspension uses `origin_rot_y = -90` and steering `+90` to make the frame's X axis vertical (a vertical axis only results from a rotation about Y). The SD77 steering wheel (`rot_x = -10`, `rot_y = 90`, factor 1450) is then a nearly flat wheel on a column leaning 10° — which fits a double-decker's steering wheel and fixes the composition order as `Rx·Ry·Rz` (the Z rotation applied first, X last).
+- Sign: a wheel's top must move forward while `Wheel_Rotation_*` grows, i.e. `anim_rot` turns by `-variable × factor` degrees in the right-handed sense about the frame's X axis; `origin_rot_*` are right-handed (suspension `-90`: X points up). Steering sign is unverified ❓.
+- Several `[newanim]` blocks: the first declared is innermost (wheel: spin, suspension, steering).
+
+Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspension and ordering cases.
+
 > ⚠️ **Open Question:** When both `origin_trans` and `origin_from_mesh` are present, which takes precedence? Observation suggests `origin_from_mesh` overrides. **Needs verification.**
 
 > ⚠️ **Open Question:** The exact interaction between multiple `anim_rot` and `anim_trans` entries in the same block is not documented. Are they additive? Does one override the other? **Needs verification.**

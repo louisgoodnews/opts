@@ -126,6 +126,7 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `scene.unload` | — | returns to the main menu | P1 |
 | `camera.set_mode` | `{mode, sub?}` | `mode` ∈ `ego, cockpit, external, pax, free` or `1`–`5` (the camera number keys); injects the key, so unavailable modes answer `1001`; answers `{mode, sub_index}` two frames later | P1 |
 | `camera.teleport` | `{x,y,z,yaw?,pitch?}` | switches to free roam and moves the camera to the **absolute** OMSI world position (metres; tile `(i,j)` starts at `300·i`, `300·j`); `yaw` is a compass heading in degrees (0 = north, clockwise), `pitch` degrees up | P1 |
+| `vehicle.get` | — | `{x, y, z, heading_deg, speed_kmh}` of the player vehicle (absolute OMSI coordinates) | P1 |
 | `vehicle.script_vars` | `{contains?}` | the player vehicle's script variables `{count, variables, ops_executed}` (substring filter) | P1 |
 | `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |
 | `entity.spawn` | `{asset, transform}` | `{id}` | P2 |

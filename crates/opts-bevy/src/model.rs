@@ -603,7 +603,8 @@ pub fn attach_model_parts(
     parent: Entity,
     parts: &[ModelPart],
     name: &str,
-) {
+) -> Vec<Entity> {
+    let mut spawned = Vec::with_capacity(parts.len());
     for (i, part) in parts.iter().enumerate() {
         let child = commands
             .spawn((
@@ -613,7 +614,9 @@ pub fn attach_model_parts(
             .insert(Name::new(format!("{name}_{i}")))
             .id();
         commands.entity(parent).add_child(child);
+        spawned.push(child);
     }
+    spawned
 }
 
 /// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
