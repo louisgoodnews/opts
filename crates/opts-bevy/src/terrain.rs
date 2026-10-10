@@ -6,9 +6,11 @@ use bevy::render::mesh::Mesh;
 use bevy::render::render_resource::Face;
 use bevy::render::texture::Image;
 
-use opts_core::formats::map::MapTerrain;
+use opts_core::formats::map::{MapSplineInstance, MapTerrain};
+use opts_core::formats::scenery::SplineProfile;
 
 use crate::mesh::smooth_normal_mesh;
+use crate::scenery::spline_pose;
 
 /// Side length of a map tile in metres (confirmed, `docs/src/formats/map/tiles.md` Q-M01).
 pub const TILE_SIZE_M: f32 = 300.0;
@@ -72,6 +74,91 @@ pub fn build_terrain_mesh(terrain: &MapTerrain, origin: (f32, f32), uv_per_tile:
         }
     }
     smooth_normal_mesh(positions, uvs, indices)
+}
+
+/// Ground a road-like spline covers: its centreline and the lowest surface height of its profile.
+///
+/// OMSI bakes a spline's `[heightprofile]` into the terrain, but the terrain grid is only 5 m wide
+/// and its curb strips sit up to 0.15 m above the carriageway, so the raw grid pokes through the
+/// road surface from above (the road then only shows from below).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RoadFootprint {
+    /// Centreline samples `(east, north, surface datum z)`, tile-local metres.
+    pub centreline: Vec<[f32; 3]>,
+    /// Half of the profile's total width (m).
+    pub half_width: f32,
+    /// Lowest profile point height relative to the centreline datum (m).
+    pub min_surface_z: f32,
+}
+
+/// Footprint of a placed spline, or `None` when it does not deform the terrain (no height profile).
+#[must_use]
+pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Option<RoadFootprint> {
+    if profile.height_profiles.is_empty() {
+        return None;
+    }
+    let points = || profile.graphical_profiles.iter().flat_map(|g| &g.points);
+    let half_width = points().map(|p| p.x.abs()).fold(0.0_f32, f32::max);
+    let min_surface_z = points().map(|p| p.z).fold(f32::INFINITY, f32::min);
+    if half_width <= 0.0 || !min_surface_z.is_finite() {
+        return None;
+    }
+    let length = inst.length_m.max(0.01);
+    let steps = ((length / 2.0).ceil() as usize).clamp(1, 400);
+    let centreline = (0..=steps)
+        .map(|k| {
+            let p = spline_pose(inst, length * k as f32 / steps as f32);
+            [p.x, p.y, p.z]
+        })
+        .collect();
+    Some(RoadFootprint {
+        centreline,
+        half_width,
+        min_surface_z,
+    })
+}
+
+/// Lowers terrain vertices under road surfaces so the terrain never covers them.
+///
+/// A vertex within `half_width + ½ cell` of a road centreline is capped at the road's lowest
+/// surface height minus a small clearance; vertices elsewhere and heights already below the road
+/// stay untouched.
+#[must_use]
+pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) -> MapTerrain {
+    const CLEARANCE_M: f32 = 0.03;
+    let dim = terrain.grid_cells as usize + 1;
+    let mut out = terrain.clone();
+    if out.heights.len() < dim * dim {
+        return out;
+    }
+    for road in roads {
+        let reach = road.half_width + TERRAIN_CELL_M * 0.5;
+        for seg in road.centreline.windows(2) {
+            let (a, b) = (seg[0], seg[1]);
+            let (min_x, max_x) = (a[0].min(b[0]) - reach, a[0].max(b[0]) + reach);
+            let (min_y, max_y) = (a[1].min(b[1]) - reach, a[1].max(b[1]) + reach);
+            let i0 = ((min_x / TERRAIN_CELL_M).floor().max(0.0)) as usize;
+            let j0 = ((min_y / TERRAIN_CELL_M).floor().max(0.0)) as usize;
+            let i1 = (((max_x / TERRAIN_CELL_M).ceil()).max(0.0) as usize).min(dim - 1);
+            let j1 = (((max_y / TERRAIN_CELL_M).ceil()).max(0.0) as usize).min(dim - 1);
+            let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+            let len2 = (dx * dx + dy * dy).max(1e-9);
+            for j in j0..=j1 {
+                for i in i0..=i1 {
+                    let (vx, vy) = (i as f32 * TERRAIN_CELL_M, j as f32 * TERRAIN_CELL_M);
+                    let t = (((vx - a[0]) * dx + (vy - a[1]) * dy) / len2).clamp(0.0, 1.0);
+                    let (px, py) = (a[0] + t * dx, a[1] + t * dy);
+                    if (vx - px).hypot(vy - py) > reach {
+                        continue;
+                    }
+                    let ceiling = a[2] + t * (b[2] - a[2]) + road.min_surface_z - CLEARANCE_M;
+                    let h = &mut out.heights[j * dim + i];
+                    *h = h.min(ceiling);
+                }
+            }
+        }
+    }
+    out
 }
 
 #[must_use]

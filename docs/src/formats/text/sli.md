@@ -99,6 +99,8 @@ Four values, defining one cross-section **strip**, left to right:
 | 3 | z start | Height above the local origin at the start. |
 | 4 | z end | Height at the end. |
 
+> **Terrain vs. road surface.** The `.terrain` grid baked from these strips is only sampled every 5 m and curb strips sit above the carriageway (Waldhofen: terrain up to 0.15 m over the road surface). Renderers must keep the terrain from covering the road, e.g. by capping terrain vertices under the footprint at the lowest profile height; see the [spline winding bug report](../../meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md).
+
 ```
 [heightprofile]
 -5.750

@@ -126,7 +126,7 @@ A road/rail piece: `.sli` profile ([`.sli`](../text/sli.md)) placed along a segm
 
 | # | Example | Meaning |
 | ---: | :--- | :--- |
-| 0 | `0` | flag. |
+| 0 | `0` | flag. Always `0` in Waldhofen (7,210 of 7,210 splines); it does not control face visibility or winding. |
 | 1 | `Splines\Ruede\rail_concrete_01.sli` | profile file. |
 | 2 | `3212684` | ID code. |
 | 3 | `0` | ID code of a connected element, or `0` (39 % zero). ❓ |

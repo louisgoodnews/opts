@@ -6,8 +6,9 @@ use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{
-    attach_model_parts, build_terrain_mesh, extrude_spline_segment, sample_terrain,
-    terrain_material, ContentLoader, TextureOverride, TILE_SIZE_M,
+    attach_model_parts, build_terrain_mesh, carve_terrain_under_roads, extrude_spline_segment,
+    road_footprint, sample_terrain, terrain_material, ContentLoader, RoadFootprint,
+    TextureOverride, TILE_SIZE_M,
 };
 use opts_core::formats::map::MapTerrain;
 
@@ -103,7 +104,17 @@ pub fn load_next_tile(
         // Ground painting: per-layer alpha masks of this tile (road markings, pavements, paths).
         let tile_material = ground_materials
             .and_then(|gm| compose_tile_material(job, key, images, materials, meshes, gm));
-        let mesh = build_terrain_mesh(t, origin, tile_material.is_some());
+        // Terrain under height-profile splines must not cover the road surface.
+        let roads: Vec<RoadFootprint> = tile
+            .splines
+            .iter()
+            .filter_map(|inst| {
+                let profile = job.sli(&inst.sli_file)?;
+                road_footprint(&profile, inst)
+            })
+            .collect();
+        let carved = carve_terrain_under_roads(t, &roads);
+        let mesh = build_terrain_mesh(&carved, origin, tile_material.is_some());
         stats.scene_vertices += mesh.count_vertices();
         let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
         children.push(match tile_material {
