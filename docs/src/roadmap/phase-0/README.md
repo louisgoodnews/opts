@@ -19,7 +19,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 *Status 2026-10-04: all items done except the hosted GitHub Pages deployment, which cannot be verified from the working tree. ADR-0002 still carries a `YYYY-MM-DD` placeholder date.*
 
 - [x] **📦 Workspace Setup** *(`cargo check --workspace --offline` passes, verified 2026-10-04)*
-  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`.
+  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`. *(Annotation 2026-10-10: `opts-utils` and other placeholder crates were removed in `07de1b0`.)*
   - [x] Configure root `Cargo.toml` with shared dependencies and build profiles.
 - [ ] **📚 Documentation Pipeline**
   - [x] Set up `mdBook` in the `docs/` directory. *(`docs/book.toml` was a 0-byte file until M-0007; `mdbook build` has not been run locally — the tool is not installed)*

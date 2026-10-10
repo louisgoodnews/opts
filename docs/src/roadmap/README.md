@@ -31,7 +31,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Status 2026-10-04: all items done except the hosted GitHub Pages deployment, which cannot be verified from the working tree. ADR-0002 still carries a `YYYY-MM-DD` placeholder date.*
 
 - [x] **📦 Workspace Setup** *(`cargo check --workspace --offline` passes, verified 2026-10-04)*
-  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`.
+  - [x] Initialize Cargo workspace with `opts-core`, `opts-bevy`, `opts-sim`, `opts-tools`, `opts-utils`, and `opts-game`. *(Annotation 2026-10-10: `opts-utils` and other placeholder crates were removed in `07de1b0`; the workspace now has bevy, catalogue, cli, core, game, gui, logging, sim, tools.)*
   - [x] Configure root `Cargo.toml` with shared dependencies and build profiles.
 - [ ] **📚 Documentation Pipeline**
   - [x] Set up `mdBook` in the `docs/` directory. *(`docs/book.toml` was a 0-byte file until M-0007; `mdbook build` has not been run locally — the tool is not installed)*
@@ -173,8 +173,14 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🎮 The Game Binary**
   - [ ] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App`.
   - [ ] Implement the main menu, loading screens, and basic HUD.
+- [x] **📦 Delivered outside milestones (reconciled 2026-10-10, [M-0037](phase-4/M-0037.md))** — shipped after M-0023 without their own milestone; no earlier status changed.
+  - [x] Workspace modularisation, `opts-catalogue` (map/vehicle catalogue) and `opts-logging` — `07de1b0`, [report](../meta/modularization-2026-10-09.md).
+  - [x] Real OMSI asset loading, tile streaming (`stream_world_tiles`), terrain mesh, data-driven sky, layered ground shader, spline attachments, camera system, humans/ego perspective — `69e94b2`, `780cae4` (crates `opts-bevy`, `opts-game`).
+  - [x] Map, scenery, humans and envir parsers; `.o3d`/`.x` robustness; scrambled-mesh decoder (partial, see [M-0038](phase-4/M-0038.md)) — `438d622` (`opts-core`).
+  - [x] F1 reporting and GUI modal/text area/fonts — `f5dfd38`, [report](../meta/f1-reporting-2026-10-10.md).
+  - [x] Control protocol and hot reload — M-0043 (see Phase 5); spline road/terrain fix — `2816806`, [bug report](../meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md).
 - [ ] **🧾 Audit-Driven Work (audit 5037f89a, 2026-10-10)**
-  - [ ] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](phase-4/M-0037.md) (F-019, F-023).
+  - [x] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](phase-4/M-0037.md) (F-019, F-023).
   - [ ] Complete scrambled-mesh decoding: async decoding, deterministic parameters, cache policy, generator research — [M-0038](phase-4/M-0038.md) (F-001, F-003, F-014, F-017).
   - [ ] Render `[texttexture]` text on signs, stops and displays — [M-0039](phase-4/M-0039.md) (F-002).
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](phase-4/M-0024.md); F-015, F-016).

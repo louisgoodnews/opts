@@ -824,7 +824,7 @@ Before submitting a pull request, verify:
 ## 🔗 Related Documents
 
 - [`CONTRIBUTING.md`](../../../CONTRIBUTING.md) — Contribution workflow
-- [`dev/PROMPTS.md`](../../dev/PROMPTS.md) — Dev agent prompt library
+- [`dev/prompts/README.md`](../../dev/prompts/README.md) — Dev agent prompt library (replaces the deprecated `PROMPTS.md`)
 - [`docs/src/adr/0001-why-bevy-and-rust.md`](../adr/0001-why-bevy-and-rust.md) — Technology choices
 - [`docs/src/adr/0002-clean-room-policy.md`](../adr/0002-clean-room-policy.md) — Legal constraints
 - [`docs/src/glossary.md`](../glossary.md) — Shared vocabulary
