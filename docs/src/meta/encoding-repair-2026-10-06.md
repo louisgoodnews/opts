@@ -1,6 +1,6 @@
 # 🔤 Encoding Repair Report — 2026-10-06
 
-This document certifies the execution and completion of the documentation encoding repair pass across the OPTS repository, conducted pursuant to [`docs/prompts/tasks/Encoding-Sweep Repair — Task Prompt.md`](file:///home/louisgoodnews/Dokumente/opts/docs/prompts/tasks/Encoding-Sweep%20Repair%20%E2%80%94%20Task%20Prompt.md).
+This document certifies the execution and completion of the documentation encoding repair pass across the OPTS repository, conducted pursuant to [`docs/prompts/tasks/Encoding-Sweep Repair — Task Prompt.md`](../../prompts/tasks/Encoding-Sweep Repair — Task Prompt.md).
 
 ---
 
@@ -18,7 +18,7 @@ This document certifies the execution and completion of the documentation encodi
 
 ## 2. Freeze Report Gap Reconciliation
 
-In [`docs/src/meta/documentation-freeze-2026-10-06.md`](file:///home/louisgoodnews/Dokumente/opts/docs/meta/documentation-freeze-2026-10-06.md), Section 4 ("Remaining Known Issues & Environmental Blockers") noted a planned follow-up regarding suspected mojibake in [`docs/src/formats/text/money.md`](file:///home/louisgoodnews/Dokumente/opts/docs/formats/text/money.md).
+In `docs/src/meta/documentation-freeze-2026-10-06.md`, Section 4 ("Remaining Known Issues & Environmental Blockers") noted a planned follow-up regarding suspected mojibake in `docs/src/formats/text/money.md`.
 
 ### Findings:
 1. **Verification of `money.md`:** Byte-level and character-level scanning of `money.md` confirmed that the file was committed in clean UTF-8 in commit `9d8771a` (`docs: documentation freeze 2026-10-06`). All em dashes (`—`), status badges (`🟢`, `❓`), section emojis (`📖`, `🔤`, `📚`, `🧪`, `📝`, `🔗`), and checkmarks (`✅`) are intact and valid UTF-8. No legacy CP1252/CP866 mojibake bytes (`тАФ`, `ЁЯЯв`, `â€`, etc.) were present.
@@ -83,7 +83,7 @@ The only hits are:
 To permanently safeguard the repository against future mojibake regressions:
 
 ### 1. Contributing Documentation Updated
-[`CONTRIBUTING.md`](file:///home/louisgoodnews/Dokumente/opts/CONTRIBUTING.md) and [`docs/src/contributing/documentation-standards.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/contributing/documentation-standards.md) have been updated to explicitly require UTF-8 without BOM with Unix `LF` line endings for all documentation.
+[`CONTRIBUTING.md`](../../../CONTRIBUTING.md) and [`docs/src/contributing/documentation-standards.md`](../contributing/documentation-standards.md) have been updated to explicitly require UTF-8 without BOM with Unix `LF` line endings for all documentation.
 
 ### 2. EditorConfig Recommendation
 Contributors and maintainers are advised to maintain the following configuration in their editor or `.editorconfig`:

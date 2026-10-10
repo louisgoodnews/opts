@@ -202,7 +202,7 @@
 
 # 📘 Reference
 
-- [opts-logging API](crates/opts-logging.md)
+- [opts-logging API]()
 - [opts-core API]()
 - [opts-bevy API]()
 - [opts-sim API]()

@@ -8,9 +8,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0031 — Modding Architecture & Asset Packaging Specifications (`docs`)](M-0031.md) — ⏳ Planned (package structure, mod loading order, conflict resolution)
-- [M-0032 — Repaint & Livery Customization System (`opts-bevy`, `opts-core`)](M-0032.md) — ⏳ Planned (`.cti` repaint manifests, dynamic material swapping)
-- [M-0033 — Content Creator Guide & Mod Validation Tooling (`opts-tools`)](M-0033.md) — ⏳ Planned (creator tutorial, interactive syntax linter, content packager)
+- M-0031 — Modding Architecture & Asset Packaging Specifications (`docs`) — ⏳ Planned (package structure, mod loading order, conflict resolution)
+- M-0032 — Repaint & Livery Customization System (`opts-bevy`, `opts-core`) — ⏳ Planned (`.cti` repaint manifests, dynamic material swapping)
+- M-0033 — Content Creator Guide & Mod Validation Tooling (`opts-tools`) — ⏳ Planned (creator tutorial, interactive syntax linter, content packager)
 
 ## Checklist
 

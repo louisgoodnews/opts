@@ -8,9 +8,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0034 — Cross-Platform CI Matrix & Release Build Automation (`.github`, CI)](M-0034.md) — ⏳ Planned (Windows & Linux matrix, binary stripping, artifact generation)
-- [M-0035 — End-User Documentation & Control Configuration UI (`docs`, `opts-gui`)](M-0035.md) — ⏳ Planned (input rebinding menu, audio/graphic settings panel, user manual)
-- [M-0036 — OPTS v0.1.0-alpha Milestone & Binary Distribution](M-0036.md) — ⏳ Planned (alpha release tagging, checksum verification, release notes)
+- M-0034 — Cross-Platform CI Matrix & Release Build Automation (`.github`, CI) — ⏳ Planned (Windows & Linux matrix, binary stripping, artifact generation)
+- M-0035 — End-User Documentation & Control Configuration UI (`docs`, `opts-gui`) — ⏳ Planned (input rebinding menu, audio/graphic settings panel, user manual)
+- M-0036 — OPTS v0.1.0-alpha Milestone & Binary Distribution — ⏳ Planned (alpha release tagging, checksum verification, release notes)
 
 ## Checklist
 

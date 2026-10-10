@@ -13,7 +13,7 @@
 
 This report documents the completion of the **Workspace Modularization & `opts-logging`** milestone. The OPTS workspace has been transformed from an uncoordinated set of 14 crates with premature stubs, boundary leaks, and ad-hoc logging into a strictly layered, highly maintainable **7-crate architecture**. 
 
-The new foundational crate, [`opts-logging`](../../crates/opts-logging), was designed and implemented at Layer 0 with zero internal OPTS dependencies. It provides non-blocking multi-target logging, per-subsystem file dispatch (`opts.log`, `opts-core.log`, `opts-sim.log`, `opts-bevy.log`, `opts-gui.log`, `opts-game.log`, `opts-tools.log`, `panics.log`), rolling daily rotation, historical retention pruning, and fatal crash panic hooks.
+The new foundational crate, [`opts-logging`](../../../crates/opts-logging), was designed and implemented at Layer 0 with zero internal OPTS dependencies. It provides non-blocking multi-target logging, per-subsystem file dispatch (`opts.log`, `opts-core.log`, `opts-sim.log`, `opts-bevy.log`, `opts-gui.log`, `opts-game.log`, `opts-tools.log`, `panics.log`), rolling daily rotation, historical retention pruning, and fatal crash panic hooks.
 
 All 8 premature and redundant stub crates were unlinked and removed with user confirmation. All 233 unit, integration, and doc tests pass across the entire workspace, and `cargo clippy --workspace --all-targets --all-features -- -D warnings` succeeds cleanly with zero warnings.
 

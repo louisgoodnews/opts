@@ -113,5 +113,5 @@ set_level("opts_bevy", Level::WARN)?;
 ## 🧪 Verification & Guarantees
 
 - **Non-blocking Writes:** Disk and stdout operations execute on background worker threads via lock-free ring buffers (`tracing-appender`). Frame times in simulation and rendering are unaffected.
-- **Flushing on Exit:** Dropping [`LogGuard`](crate::LogGuard) flushes all worker queues before process termination.
+- **Flushing on Exit:** Dropping `LogGuard` flushes all worker queues before process termination.
 - **Panic Hook:** Captures fatal crashes directly into `panics.log` with thread name and backtrace.

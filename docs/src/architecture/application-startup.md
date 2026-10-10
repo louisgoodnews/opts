@@ -108,7 +108,7 @@ When `--headless` is **true**:
 
 ## 🗺️ Real-Content Loading (In-Game Session)
 
-The in-game session loads **real OMSI content at runtime**; nothing is bundled and no placeholder geometry exists. The stage machine in `crates/opts-game/src/in_game/loading_pipeline.rs` drives `crates/opts-game/src/in_game/omsi_world.rs`:
+The in-game session loads **real OMSI content at runtime**; nothing is bundled and no placeholder geometry exists. The stage machine in `crates/opts-game/src/in_game/loading_pipeline.rs` drives `crates/opts-game/src/in_game/omsi_world/`:
 
 | Stage | Work (real) |
 | :--- | :--- |

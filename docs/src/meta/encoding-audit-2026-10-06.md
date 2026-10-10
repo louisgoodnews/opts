@@ -1,6 +1,6 @@
 # 🔤 Encoding Audit Report — 2026-10-06
 
-This audit report records the results of the repository-wide UTF-8 encoding sweep across all documentation and Markdown files in the OPTS repository, executed in accordance with Phase A of [`docs/prompts/tasks/Encoding-Sweep Repair — Task Prompt.md`](file:///home/louisgoodnews/Dokumente/opts/docs/prompts/tasks/Encoding-Sweep%20Repair%20%E2%80%94%20Task%20Prompt.md).
+This audit report records the results of the repository-wide UTF-8 encoding sweep across all documentation and Markdown files in the OPTS repository, executed in accordance with Phase A of [`docs/prompts/tasks/Encoding-Sweep Repair — Task Prompt.md`](../../prompts/tasks/Encoding-Sweep Repair — Task Prompt.md).
 
 ---
 

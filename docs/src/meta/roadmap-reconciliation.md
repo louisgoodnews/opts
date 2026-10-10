@@ -3,7 +3,7 @@
 - **Date:** 2026-10-06
 - **Pass:** Documentation Freeze Pass (Stage 6)
 - **Sources Reconciled:**
-  - Project Root [`ROADMAP.md`](../../ROADMAP.md)
+  - Project Root [`ROADMAP.md`](../../../ROADMAP.md)
   - Canonical Roadmap [`docs/src/roadmap/README.md`](../roadmap/README.md)
   - Phase READMEs (`docs/src/roadmap/phase-*/README.md`)
   - Milestone Files (`M-0000.md` through `M-0012.md`)

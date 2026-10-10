@@ -1,6 +1,6 @@
 # 🚌 OPTS (Open Public Transport Simulator) Roadmap
 
-> 📌 This file mirrors [`docs/src/roadmap/README.md`](docs/src/roadmap/README.md), which is canonical (and is what the book publishes). Update the canonical file first, then re-mirror. Per-phase folders with milestones: [`docs/src/roadmap/`](docs/src/roadmap/).
+> 📌 This file is canonical. [`docs/src/roadmap/README.md`](docs/src/roadmap/README.md) is the book's generated copy (same content, links rewritten). Per-phase folders with milestones: [`docs/src/roadmap/`](docs/src/roadmap/).
 
 **Vision:** A free, open-source public transport simulator built in Rust and Bevy, capable of natively loading and simulating OMSI 2 assets.
 

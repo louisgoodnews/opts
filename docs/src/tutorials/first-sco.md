@@ -5,7 +5,7 @@
 | **Topic** | Scenery Loading & Bevy ECS Spawning |
 | **Prerequisites** | Rust 1.76+, basic Bevy ECS concepts, [Coordinate Systems](../architecture/coordinates.md) |
 | **Crates Used** | `opts-core`, `opts-bevy` |
-| **Example Code** | [`crates/opts-bevy/examples/load_sco.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_sco.rs) |
+| **Example Code** | [`crates/opts-bevy/examples/load_sco.rs`](../../../crates/opts-bevy/examples/load_sco.rs) |
 
 ---
 
@@ -13,9 +13,9 @@
 
 In this tutorial, you will:
 1. Understand the structure of an OMSI 2 scenery object (`.sco`).
-2. Parse `.sco` asset data using [`opts_core::formats::scenery::SceneryObject`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/scenery/sco.rs).
+2. Parse `.sco` asset data using [`opts_core::formats::scenery::SceneryObject`](../../../crates/opts-core/src/formats/scenery/sco.rs).
 3. Handle coordinate transformations between OMSI (right-handed $Z$-up) and Bevy (right-handed $Y$-up).
-4. Spawn a complete scenery object entity hierarchy in Bevy with mesh attachments and materials using [`spawn_scenery_object`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/scenery.rs).
+4. Spawn a complete scenery object entity hierarchy in Bevy with mesh attachments and materials using [`spawn_scenery_object`](../../../crates/opts-bevy/src/scenery.rs).
 
 ---
 
@@ -48,7 +48,7 @@ Bevy uses a **right-handed $Y$-up** world frame:
 - $-Z$: Forward
 - $+Z$: Backwards (toward the camera)
 
-`opts-bevy` provides the [`OmsiTransform`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/coords.rs) component and [`OptsCoordsPlugin`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/plugin.rs), which automatically synchronize OMSI coordinates with Bevy's native `Transform` component:
+`opts-bevy` provides the [`OmsiTransform`](../../../crates/opts-bevy/src/coords.rs) component and [`OptsCoordsPlugin`](../../../crates/opts-bevy/src/plugin.rs), which automatically synchronize OMSI coordinates with Bevy's native `Transform` component:
 
 ```rust
 use opts_bevy::{omsi_to_bevy_pos, bevy_to_omsi_pos};
@@ -79,7 +79,7 @@ opts-bevy = { path = "crates/opts-bevy" }
 
 ### Step 2: Initialize Bevy with `OptsAssetPlugin`
 
-The [`OptsAssetPlugin`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/plugin.rs) bundles all asset loaders (`.o3d`, `.x`, `.dds`, `.bmp`, `.tga`, `.sco`, `.sli`) and registers the coordinate synchronization systems:
+The [`OptsAssetPlugin`](../../../crates/opts-bevy/src/plugin.rs) bundles all asset loaders (`.o3d`, `.x`, `.dds`, `.bmp`, `.tga`, `.sco`, `.sli`) and registers the coordinate synchronization systems:
 
 ```rust
 use bevy::prelude::*;
@@ -96,7 +96,7 @@ fn main() {
 
 ### Step 3: Spawn the Scenery Object
 
-In your startup system, parse the `.sco` file and call [`spawn_scenery_object`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/scenery.rs):
+In your startup system, parse the `.sco` file and call [`spawn_scenery_object`](../../../crates/opts-bevy/src/scenery.rs):
 
 ```rust
 use bevy::prelude::*;

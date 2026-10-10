@@ -4,7 +4,7 @@
 
 **Status:** 🟢 Complete — All Phase 2 parser milestones implemented and verified.
 
-The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this page lists its milestones.
+The checklist for this phase lives in the [roadmap](../../../../ROADMAP.md); this page lists its milestones.
 
 ---
 
@@ -20,7 +20,7 @@ The checklist for this phase lives in the [roadmap](../../../ROADMAP.md); this p
 
 ## 📋 Checklist
 
-*Mirrored from the [roadmap](../../../ROADMAP.md), which is canonical; update it there first.*
+*Mirrored from the [roadmap](../../../../ROADMAP.md), which is canonical; update it there first.*
 
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 

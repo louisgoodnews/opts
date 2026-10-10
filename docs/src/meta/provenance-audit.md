@@ -2,7 +2,7 @@
 
 - **Date:** 2026-10-06
 - **Pass:** Documentation Freeze Pass (Stage 3)
-- **Standard:** [ADR-0002 Clean-Room Reverse Engineering Policy](../../adr/0002-clean-room-policy.md)
+- **Standard:** [ADR-0002 Clean-Room Reverse Engineering Policy](../adr/0002-clean-room-policy.md)
 
 ---
 

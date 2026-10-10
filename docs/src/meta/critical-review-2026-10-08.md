@@ -25,7 +25,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-001 — Bare `.unwrap()` in DirectX `.x` Parser
 - **Severity:** 🟡 Moderate
 - **Dimension:** Correctness
-- **Location:** [`crates/opts-core/src/formats/x/parse.rs:388`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/x/parse.rs#L388)
+- **Location:** [`crates/opts-core/src/formats/x/parse.rs:388`](../../../crates/opts-core/src/formats/x/parse.rs#L388)
 - **Description:** A bare `.unwrap()` is invoked on the result of `parse_face_indices` within `parse_mesh`, bypassing the crate's `Result<_, ParseError>` error-handling contract.
 - **Evidence:**
   ```rust
@@ -37,7 +37,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-002 — Premature Crate Proliferation in Workspace
 - **Severity:** 🟠 Major
 - **Dimension:** Correctness
-- **Location:** [`Cargo.toml:4-17`](file:///home/louisgoodnews/Dokumente/opts/Cargo.toml#L4-L17), [`crates/`](file:///home/louisgoodnews/Dokumente/opts/crates/)
+- **Location:** [`Cargo.toml:4-17`](../../../Cargo.toml#L4-L17), [`crates/`](../../../crates)
 - **Description:** Ten skeleton crates (`opts-assets`, `opts-benchmark`, `opts-cli`, `opts-discovery`, `opts-editor`, `opts-game`, `opts-graphics`, `opts-parsers`, `opts-tools`, `opts-utils`) were created prematurely before their architecture, interfaces, or implementing milestones were active. Several declare unutilized external dependencies in their individual `Cargo.toml` files, polluting workspace targets and build graphs.
 - **Evidence:** `crates/opts-benchmark/src/lib.rs` and `crates/opts-utils/src/lib.rs` consist of 0-byte or 1-line empty files, yet exist as full workspace members.
 - **Impact:** Artificially inflates workspace compilation time, generates confusing empty library targets, creates ambiguity regarding code ownership (e.g., `opts-parsers` vs `opts-core`), and burdens dependency maintenance.
@@ -46,7 +46,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-003 — FixedUpdate Headless Testing Requires Manual Time Stepping
 - **Severity:** 🟡 Moderate
 - **Dimension:** Correctness
-- **Location:** [`crates/opts-bevy/tests/vehicle_sim_sync.rs:25-30`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/tests/vehicle_sim_sync.rs#L25-L30)
+- **Location:** [`crates/opts-bevy/tests/vehicle_sim_sync.rs:25-30`](../../../crates/opts-bevy/tests/vehicle_sim_sync.rs#L25-L30)
 - **Description:** In headless integration tests running `FixedUpdate` systems, standard `app.update()` calls do not advance virtual time unless `TimeUpdateStrategy::ManualDuration` is configured, creating silent test stalls or non-deterministic test behavior if neglected.
 - **Evidence:** Test harness required explicit workaround insertion:
   ```rust
@@ -64,7 +64,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-004 — Monolithic Parser and Massive Function in `sco.rs`
 - **Severity:** 🟠 Major
 - **Dimension:** Quality
-- **Location:** [`crates/opts-core/src/formats/scenery/sco.rs:1-1061`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/scenery/sco.rs#L1-L1061)
+- **Location:** [`crates/opts-core/src/formats/scenery/sco.rs:1-1061`](../../../crates/opts-core/src/formats/scenery/sco.rs#L1-L1061)
 - **Description:** `sco.rs` is 1,061 lines long (violating the project's 500-line recommended file limit), and its central parsing function `from_text` spans 546 contiguous lines (severely violating the 80-line function length guideline in `docs/src/contributing/standards.md`).
 - **Evidence:** Lines 220–766 of `sco.rs` form a single procedural `match` block handling scenery object tags without modular helper dispatch.
 - **Impact:** High cognitive load, elevated risk of regression when adding scenery keywords, poor test isolation, and degraded maintainability.
@@ -74,12 +74,12 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Severity:** 🟡 Moderate
 - **Dimension:** Quality
 - **Location:**
-  - [`crates/opts-core/src/formats/vehicles/bus.rs:77-270`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
-  - [`crates/opts-core/src/formats/scenery/sli.rs:188-372`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/scenery/sli.rs#L188-L372) (184 lines)
-  - [`crates/opts-core/src/formats/map/global.rs:77-253`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/map/global.rs#L77-L253) (176 lines)
-  - [`crates/opts-core/src/formats/map/tile.rs:160-328`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/map/tile.rs#L160-L328) (168 lines)
-  - [`crates/opts-core/src/formats/vehicles/model/parse.rs:114-254`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)
-  - [`crates/opts-core/src/formats/vehicles/paths.rs:59-194`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/paths.rs#L59-L194) (135 lines)
+  - [`crates/opts-core/src/formats/vehicles/bus.rs:77-270`](../../../crates/opts-core/src/formats/vehicles/bus.rs#L77-L270) (193 lines)
+  - [`crates/opts-core/src/formats/scenery/sli.rs:188-372`](../../../crates/opts-core/src/formats/scenery/sli.rs#L188-L372) (184 lines)
+  - [`crates/opts-core/src/formats/map/global.rs:77-253`](../../../crates/opts-core/src/formats/map/global.rs#L77-L253) (176 lines)
+  - [`crates/opts-core/src/formats/map/tile.rs:160-328`](../../../crates/opts-core/src/formats/map/tile.rs#L160-L328) (168 lines)
+  - [`crates/opts-core/src/formats/vehicles/model/parse.rs:114-254`](../../../crates/opts-core/src/formats/vehicles/model/parse.rs#L114-L254) (140 lines)
+  - [`crates/opts-core/src/formats/vehicles/paths.rs:59-194`](../../../crates/opts-core/src/formats/vehicles/paths.rs#L59-L194) (135 lines)
 - **Description:** Multiple parsing functions across `opts-core` exceed the 80-line clean-code threshold, implementing large inline loops and state accumulators.
 - **Evidence:** `grep -n "fn from_text"` and `fn parse_` reveal consecutive blocks over 130 lines in all enumerated files.
 - **Impact:** Difficult readability, repetitive token iteration boilerplate, and non-uniform parsing architecture across different OMSI format implementations.
@@ -89,8 +89,8 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Severity:** 🟡 Moderate
 - **Dimension:** Quality
 - **Location:**
-  - [`crates/opts-core/src/formats/vehicles/bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/bus.rs) (583 lines)
-  - [`crates/opts-core/tests/world_parse.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/tests/world_parse.rs) (689 lines)
+  - [`crates/opts-core/src/formats/vehicles/bus.rs`](../../../crates/opts-core/src/formats/vehicles/bus.rs) (583 lines)
+  - [`crates/opts-core/tests/world_parse.rs`](../../../crates/opts-core/tests/world_parse.rs) (689 lines)
 - **Description:** Both files exceed the 500-line guideline established in project contributing standards.
 - **Evidence:** Line counts: `bus.rs` = 583 lines, `world_parse.rs` = 689 lines.
 - **Impact:** Decreased code navigability and overgrown integration test files combining disparate format test fixtures.
@@ -99,7 +99,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-007 — Duplicated Widget Spawning Logic in `opts-gui`
 - **Severity:** 🟢 Minor
 - **Dimension:** Quality
-- **Location:** [`crates/opts-gui/src/widgets/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-gui/src/widgets/) (`button.rs`, `card.rs`, `dialog.rs`)
+- **Location:** `crates/opts-gui/src/widgets/` (`button.rs`, `card.rs`, `dialog.rs`)
 - **Description:** UI widgets in `opts-gui` duplicate styling entity spawning logic between `spawn(&mut Commands)` and `spawn_child(&mut ChildBuilder)`.
 - **Evidence:** `spawn` and `spawn_child` in `button.rs` share ~40 lines of identical node bundle creation code with only the caller context differing.
 - **Impact:** Minor code duplication and maintenance friction when adjusting Material Design 3 tokens or layout defaults.
@@ -112,7 +112,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-008 — Missing OMSI Script VM Engine (`.osc` Stack VM) in `opts-sim`
 - **Severity:** 🔴 Critical
 - **Dimension:** Architecture
-- **Location:** [`crates/opts-sim/src/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-sim/src/)
+- **Location:** [`crates/opts-sim/src/`](../../../crates/opts-sim/src)
 - **Description:** `opts-sim` implements vehicle physics, powertrain mechanics, and kinematics, but has no execution engine for OMSI vehicle scripts (`.osc` reverse-Polish notation stack machine). OMSI vehicle behavior, electrical systems, dashboard instrumentation, and door sequencing are dictated by `.osc` scripts. Hardcoding variables in Bevy or Rust breaks native asset compatibility.
 - **Evidence:** `crates/opts-sim/src/vehicle.rs` relies exclusively on native Rust variables (`throttle`, `brake`, `clutch`); there is no bytecode compiler, AST evaluator, or script execution system in `opts-sim`.
 - **Impact:** **BLOCKER for the project's stated purpose.** OMSI buses cannot be loaded and driven with authentic vehicle behavior unless user scripts and variable sets can be executed.
@@ -121,7 +121,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-009 — Missing Vehicle Audio & Environmental Sound Engine
 - **Severity:** 🟠 Major
 - **Dimension:** Architecture
-- **Location:** [`crates/opts-bevy/src/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/), [`crates/opts-sim/src/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-sim/src/)
+- **Location:** [`crates/opts-bevy/src/`](../../../crates/opts-bevy/src), [`crates/opts-sim/src/`](../../../crates/opts-sim/src)
 - **Description:** While `sound_cfg.md` and `.wav` specifications exist in Phase 1, there is no audio system in `opts-sim` or `opts-bevy` to evaluate vehicle sound triggers (engine pitch curves, volume envelopes, speed-dependent roll noise, door sounds) and bind them to Bevy spatial audio.
 - **Evidence:** Zero references to Bevy audio bundles or audio sources exist anywhere in `crates/opts-bevy/src/`.
 - **Impact:** Vehicles and scenery objects remain completely silent; interactive driving cannot deliver realistic acoustic feedback.
@@ -130,7 +130,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-010 — Clean Crate Decoupling and Pure Rust Boundaries Maintained
 - **Severity:** 🔵 Observation
 - **Dimension:** Architecture
-- **Location:** [`crates/opts-core/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/), [`crates/opts-sim/`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-sim/)
+- **Location:** [`crates/opts-core/`](../../../crates/opts-core), [`crates/opts-sim/`](../../../crates/opts-sim)
 - **Description:** Strict crate boundaries are preserved. `opts-core` and `opts-sim` depend on zero Bevy crates and perform zero file I/O or rendering calls, operating entirely as pure in-memory compute libraries.
 - **Evidence:** Verification of `Cargo.toml` dependencies confirms `opts-core` and `opts-sim` have zero Bevy dependencies and run in sub-second headless test suites.
 - **Impact:** Highly positive architectural adherence; allows headless testing, deterministic simulation, and independent benchmarking.
@@ -144,12 +144,12 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Severity:** 🟠 Major
 - **Dimension:** Docs
 - **Location:**
-  - [`docs/src/roadmap/README.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/README.md) (52 broken links)
-  - [`docs/src/architecture/catalogue-schema.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/architecture/catalogue-schema.md) (1 broken link)
-  - [`docs/src/roadmap/phase-2/README.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-2/README.md) (2 broken links)
-  - [`docs/src/meta/provenance-audit.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/meta/provenance-audit.md) (1 broken link)
-  - [`docs/src/meta/roadmap-reconciliation.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/meta/roadmap-reconciliation.md) (1 broken link)
-  - [`docs/src/meta/encoding-repair-2026-10-06.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/meta/encoding-repair-2026-10-06.md) (3 broken links using absolute `file:///` URIs)
+  - [`docs/src/roadmap/README.md`](../roadmap/README.md) (52 broken links)
+  - [`docs/src/architecture/catalogue-schema.md`](../architecture/catalogue-schema.md) (1 broken link)
+  - [`docs/src/roadmap/phase-2/README.md`](../roadmap/phase-2/README.md) (2 broken links)
+  - [`docs/src/meta/provenance-audit.md`](provenance-audit.md) (1 broken link)
+  - [`docs/src/meta/roadmap-reconciliation.md`](roadmap-reconciliation.md) (1 broken link)
+  - [`docs/src/meta/encoding-repair-2026-10-06.md`](encoding-repair-2026-10-06.md) (3 broken links using absolute `file:///` URIs)
   - Various prompt task files in `docs/prompts/` and `docs/dev/` (7 broken links)
 - **Description:** A total of 67 internal markdown links fail to resolve to existing files on disk. Investigation reveals this is not an error in the original freeze report: at the freeze commit `9d8771a`, the tree had zero broken links outside of 2 intentional placeholders and 2 minor relative path slips. The breakage occurred post-freeze—principally in commit `7da3a2a`, where content was copied from root `ROADMAP.md` into `docs/src/roadmap/README.md` without translating `docs/src/...` paths into relative paths, and in subsequent tasks where absolute `file:///` URIs were authored.
 - **Evidence:** Automated link scanner reports 67 broken references; checkout of tag `docs-freeze-2026-10-06` (`9d8771a`) confirmed the freeze had verified its scope cleanly at the time.
@@ -159,7 +159,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-012 — Stale Open Questions Sections in Promoted Specs
 - **Severity:** 🟡 Moderate
 - **Dimension:** Docs
-- **Location:** [`docs/src/formats/binary/o3d.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/formats/binary/o3d.md), [`docs/src/formats/binary/x.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/formats/binary/x.md), [`docs/src/formats/text/vehicles/bus.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/formats/text/vehicles/bus.md)
+- **Location:** [`docs/src/formats/binary/o3d.md`](../formats/binary/o3d.md), [`docs/src/formats/binary/x.md`](../formats/binary/x.md), [`docs/src/formats/text/vehicles/bus.md`](../formats/text/vehicles/bus.md)
 - **Description:** Specifications marked 🟢 **Specified** still retain extensive prose under `## ❓ Open Questions` discussing historical unknowns that have already been resolved by mutation passes and parser implementations.
 - **Evidence:** `o3d.md` discusses vertex block interpretations under Open Questions despite having a fully passing clean-room mutation test suite resolving those exact questions.
 - **Impact:** Readers and implementers are misled about whether the format specification is finalized or blocked.
@@ -168,7 +168,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-013 — Commented-Out Placeholder Chapters in `SUMMARY.md`
 - **Severity:** 🟡 Moderate
 - **Dimension:** Docs
-- **Location:** [`docs/src/SUMMARY.md:120-168`](file:///home/louisgoodnews/Dokumente/opts/docs/src/SUMMARY.md#L120-L168)
+- **Location:** [`docs/src/SUMMARY.md:120-168`](../SUMMARY.md#L120-L168)
 - **Description:** 15 chapters across `Simulation`, `Tutorials`, `Reference`, `User Guide`, and `Modding Guide` remain commented out as placeholders in `SUMMARY.md`.
 - **Evidence:**
   ```markdown
@@ -185,7 +185,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-014 — CI Workflow Branch Trigger Mismatch (Hotfixed)
 - **Severity:** 🔴 Critical *(Immediate Hotfix Applied)*
 - **Dimension:** Infra
-- **Location:** [`.github/workflows/ci.yml:5-7`](file:///home/louisgoodnews/Dokumente/opts/.github/workflows/ci.yml#L5-L7), [`.github/workflows/deploy-docs.yml:5`](file:///home/louisgoodnews/Dokumente/opts/.github/workflows/deploy-docs.yml#L5)
+- **Location:** [`.github/workflows/ci.yml:5-7`](../../../.github/workflows/ci.yml#L5-L7), [`.github/workflows/deploy-docs.yml:5`](../../../.github/workflows/deploy-docs.yml#L5)
 - **Description:** Both CI workflows were configured with `branches: [main]`, but the local repository branch is `master`. Consequently, pushes to `master` failed to trigger GitHub Actions CI, allowing commits to land without remote automated test validation.
 - **Evidence:**
   ```yaml
@@ -199,7 +199,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-015 — Missing Automated Link-Checker and mdBook Validation in CI
 - **Severity:** 🟠 Major
 - **Dimension:** Infra
-- **Location:** [`.github/workflows/ci.yml`](file:///home/louisgoodnews/Dokumente/opts/.github/workflows/ci.yml)
+- **Location:** [`.github/workflows/ci.yml`](../../../.github/workflows/ci.yml)
 - **Description:** CI contains no step to validate Markdown link integrity or execute `mdbook test` / `cargo test-docs`. As demonstrated by F-011, documentation rot can occur instantly after a freeze because no automated regression gate exists.
 - **Evidence:** `ci.yml` runs only `cargo fmt`, `cargo clippy`, `cargo test`, and `cargo check`. No link validator or mdBook check is present.
 - **Impact:** Broken links and invalid cross-references silently accumulate across documentation updates.
@@ -217,7 +217,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-017 — Single-Platform Linux CI Lacks Windows Validation
 - **Severity:** 🟡 Moderate
 - **Dimension:** Infra
-- **Location:** [`.github/workflows/ci.yml:16`](file:///home/louisgoodnews/Dokumente/opts/.github/workflows/ci.yml#L16)
+- **Location:** [`.github/workflows/ci.yml:16`](../../../.github/workflows/ci.yml#L16)
 - **Description:** CI runs exclusively on `ubuntu-latest`. OPTS is a public transport simulator targeting Windows and Linux users (OMSI 2 was a Windows-only simulator).
 - **Evidence:** `runs-on: ubuntu-latest` is hardcoded with no GitHub Actions matrix strategy.
 - **Impact:** Windows-specific path handling bugs (case-insensitivity, backslashes vs slashes) or audio/input driver compilation failures on Windows will escape detection until end-user release.
@@ -230,7 +230,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-018 — Underspecified World & Map Streaming in Phase 4
 - **Severity:** 🟠 Major
 - **Dimension:** Roadmap
-- **Location:** [`ROADMAP.md:120-140`](file:///home/louisgoodnews/Dokumente/opts/ROADMAP.md#L120-L140), [`docs/src/roadmap/phase-4/`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/)
+- **Location:** [`ROADMAP.md:120-140`](../../../ROADMAP.md#L120-L140), [`docs/src/roadmap/phase-4/`](../roadmap/phase-4)
 - **Description:** Phase 4 moves directly from vehicle simulation into "World & Scenery Loading" without discrete milestones for tile grid streaming, terrain heightmap generation (`.map.terrain`), water mesh construction (`.map.water`), and chunk LOD paging.
 - **Evidence:** Phase 4 roadmap contains only generic placeholders for map streaming without data structure definitions or memory budgeting.
 - **Impact:** World loading implementation risks becoming a massive, unmanageable milestone or hitting performance bottlenecks when loading large multi-tile maps (e.g. Spandau).
@@ -239,7 +239,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-019 — Missing Milestone for OMSI Script Interpreter (`.osc` Stack VM)
 - **Severity:** 🟠 Major
 - **Dimension:** Roadmap
-- **Location:** [`ROADMAP.md:Phase 4`](file:///home/louisgoodnews/Dokumente/opts/ROADMAP.md), [`docs/src/roadmap/phase-4/`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/)
+- **Location:** [`ROADMAP.md:Phase 4`](../../../ROADMAP.md), [`docs/src/roadmap/phase-4/`](../roadmap/phase-4)
 - **Description:** Phase 4 lacks a formal milestone dedicating effort to the OMSI Script execution engine (tracing to F-008).
 - **Evidence:** No milestone in Phase 4 or Phase 2 covers the script stack machine interpreter, variable tables, or callback dispatcher.
 - **Impact:** Critical feature gap; vehicle interaction cannot progress past mock controller inputs.
@@ -248,7 +248,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-020 — Missing Milestone for Vehicle & Environmental Audio Simulation
 - **Severity:** 🟡 Moderate
 - **Dimension:** Roadmap
-- **Location:** [`ROADMAP.md:Phase 4`](file:///home/louisgoodnews/Dokumente/opts/ROADMAP.md), [`docs/src/roadmap/phase-4/`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/)
+- **Location:** [`ROADMAP.md:Phase 4`](../../../ROADMAP.md), [`docs/src/roadmap/phase-4/`](../roadmap/phase-4)
 - **Description:** Phase 4 lacks a milestone dedicating effort to vehicle and environmental spatial audio simulation (tracing to F-009).
 - **Evidence:** No milestone exists for audio playback, sound curve evaluation, or Doppler/spatial effects.
 - **Impact:** Audio remains unaddressed throughout the entire core development roadmap.
@@ -257,7 +257,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 #### F-021 — Overcrowded Phase 5 Conflating Engine Optimization, Tooling, and Release
 - **Severity:** 🟡 Moderate
 - **Dimension:** Roadmap
-- **Location:** [`ROADMAP.md:145-165`](file:///home/louisgoodnews/Dokumente/opts/ROADMAP.md#L145-L165), [`docs/src/roadmap/phase-5/README.md`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-5/README.md)
+- **Location:** [`ROADMAP.md:145-165`](../../../ROADMAP.md#L145-L165), [`docs/src/roadmap/phase-5/README.md`](../roadmap/phase-5/README.md)
 - **Description:** Phase 5 is currently a catch-all container bundling rendering optimizations (LOD, frustum culling), developer tools (CLI asset inspect), modding ecosystem docs, package distribution, and v1.0 release management into a single unordered list.
 - **Evidence:** Phase 5 checklist lists 8 unrelated themes ranging from graphics profiling to Steam distribution without sequential milestones.
 - **Impact:** Unclear delivery criteria and lack of clear definition of done for the simulator's initial release.
@@ -375,7 +375,7 @@ Despite declaring a dedicated `crates/opts-benchmark` crate in the workspace, th
 
 ## 🗺️ Roadmap Expansion
 
-Following the findings of this critical review, the project roadmap has been expanded in [`ROADMAP.md`](file:///home/louisgoodnews/Dokumente/opts/ROADMAP.md), [`docs/src/roadmap/`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/), and [`docs/dev/BOARD.md`](file:///home/louisgoodnews/Dokumente/opts/docs/dev/BOARD.md):
+Following the findings of this critical review, the project roadmap has been expanded in [`ROADMAP.md`](../../../ROADMAP.md), [`docs/src/roadmap/`](../roadmap), and [`docs/dev/BOARD.md`](../../dev/BOARD.md):
 
 ### Categorization & Statistics
 - **Total Findings Audited:** 21 (F-001 through F-021)
@@ -387,10 +387,10 @@ Following the findings of this critical review, the project roadmap has been exp
 
 ### Milestones Added to Existing Phases
 - **Phase 4: `opts-sim` & `opts-game` (The Simulation):**
-  - [`M-0024: OMSI Map Tile Grid & Chunk Streaming Engine (opts-game, opts-bevy)`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/M-0024.md) — Traces to F-018.
-  - [`M-0025: Terrain Heightmap & Water Surface Mesh Generation (opts-core, opts-bevy)`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/M-0025.md) — Traces to F-018.
-  - [`M-0026: OMSI Script Stack VM & Dynamic Variable System (opts-sim)`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/M-0026.md) — Traces to F-008, F-019.
-  - [`M-0027: Vehicle & Environmental Spatial Audio Simulation (opts-bevy)`](file:///home/louisgoodnews/Dokumente/opts/docs/src/roadmap/phase-4/M-0027.md) — Traces to F-009, F-020.
+  - [`M-0024: OMSI Map Tile Grid & Chunk Streaming Engine (opts-game, opts-bevy)`](../roadmap/phase-4/M-0024.md) — Traces to F-018.
+  - [`M-0025: Terrain Heightmap & Water Surface Mesh Generation (opts-core, opts-bevy)`](../roadmap/phase-4/M-0025.md) — Traces to F-018.
+  - [`M-0026: OMSI Script Stack VM & Dynamic Variable System (opts-sim)`](../roadmap/phase-4/M-0026.md) — Traces to F-008, F-019.
+  - [`M-0027: Vehicle & Environmental Spatial Audio Simulation (opts-bevy)`](../roadmap/phase-4/M-0027.md) — Traces to F-009, F-020.
 
 ### Phases Restructured & Added
 - **Phase 5 (Restructured):** *⚡ Tooling, Performance & Optimization* — Milestones M-0028 (Benchmark suite), M-0029 (LOD & culling), M-0030 (CLI asset inspection). Traces to F-021 and Performance subsection.

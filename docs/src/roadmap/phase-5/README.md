@@ -8,9 +8,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0028 — Performance Benchmark Suite & Profiling Harness (`opts-benchmark`)](M-0028.md) — ⏳ Planned (Criterion parser benchmarks, physics step profiling)
-- [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems (`opts-bevy`)](M-0029.md) — ⏳ Planned (LOD switching, shadow distance culling, mesh instancing)
-- [M-0030 — Asset Validation & Inspection CLI Tooling (`opts-cli`, `opts-tools`)](M-0030.md) — ⏳ Planned (asset validator, header dumper, glTF export)
+- M-0028 — Performance Benchmark Suite & Profiling Harness (`opts-benchmark`) — ⏳ Planned (Criterion parser benchmarks, physics step profiling)
+- M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems (`opts-bevy`) — ⏳ Planned (LOD switching, shadow distance culling, mesh instancing)
+- M-0030 — Asset Validation & Inspection CLI Tooling (`opts-cli`, `opts-tools`) — ⏳ Planned (asset validator, header dumper, glTF export)
 - [M-0040 — Code-Quality Debt: Size Limits, Panics, Rustdoc, Stubs](M-0040.md) — ⏳ Planned (audit 5037f89a F-005, F-006, F-009–F-012)
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — ⏳ Planned (audit 5037f89a F-013, F-018, F-020–F-023)
 - [M-0042 — CI & Toolchain Hardening](M-0042.md) — ⏳ Planned (audit 5037f89a F-024–F-026)

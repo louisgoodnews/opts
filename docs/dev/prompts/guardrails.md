@@ -5,7 +5,7 @@ restated in each prompt for redundancy, but the agent should treat
 them as invariant.
 
 1. **Never inspect OMSI binaries.** No `OMSI.exe`, no DLLs, no
-   decompilation, no Ghidra/IDA/dnSpy. See [ADR-0002](../src/adr/0002-clean-room-policy.md).
+   decompilation, no Ghidra/IDA/dnSpy. See [ADR-0002](../../src/adr/0002-clean-room-policy.md).
 
 2. **Never copy GPL code.** Apply the "read, close, write" discipline
    when consulting community tools. Cite concepts, not code.

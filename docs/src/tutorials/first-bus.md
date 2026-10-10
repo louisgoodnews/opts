@@ -5,7 +5,7 @@
 | **Topic** | Vehicle Loading, Model Hierarchies & Camera Presets in Bevy |
 | **Prerequisites** | Rust 1.76+, Bevy 0.14 ECS concepts, [Coordinate Systems](../architecture/coordinates.md), [Loading Your First `.sco`](first-sco.md) |
 | **Crates Used** | `opts-core`, `opts-bevy` |
-| **Example Code** | [`crates/opts-bevy/examples/load_bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_bus.rs) |
+| **Example Code** | [`crates/opts-bevy/examples/load_bus.rs`](../../../crates/opts-bevy/examples/load_bus.rs) |
 
 ---
 
@@ -13,10 +13,10 @@
 
 In this tutorial, you will:
 1. Understand the multi-tiered structure of OMSI 2 vehicle assets (`.bus` manifest and `model.cfg` rendering definition).
-2. Parse vehicle metadata and geometry manifests using [`opts_core::formats::vehicles::bus`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/bus.rs) and [`opts_core::formats::vehicles::model`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-core/src/formats/vehicles/model/mod.rs).
+2. Parse vehicle metadata and geometry manifests using [`opts_core::formats::vehicles::bus`](../../../crates/opts-core/src/formats/vehicles/bus.rs) and [`opts_core::formats::vehicles::model`](../../../crates/opts-core/src/formats/vehicles/model/mod.rs).
 3. Bridge OMSI vehicle coordinate spaces ($X$ right, $Y$ forward, $Z$ up) and camera conventions into Bevy's right-handed engine frame.
-4. Spawn an interactive bus entity hierarchy in Bevy ECS with mesh attachments, PBR materials, spotlights (headlights), and interior lights using [`spawn_vehicle_model`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/vehicle.rs).
-5. Switch smoothly between vehicle camera presets (`[add_camera_driver]`, `[view_schedule]`, `[view_ticketselling]`, `[add_camera_pax]`, exterior orbit) using [`camera_preset_to_bevy_transform`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/coords.rs).
+4. Spawn an interactive bus entity hierarchy in Bevy ECS with mesh attachments, PBR materials, spotlights (headlights), and interior lights using [`spawn_vehicle_model`](../../../crates/opts-bevy/src/vehicle.rs).
+5. Switch smoothly between vehicle camera presets (`[add_camera_driver]`, `[view_schedule]`, `[view_ticketselling]`, `[add_camera_pax]`, exterior orbit) using [`camera_preset_to_bevy_transform`](../../../crates/opts-bevy/src/coords.rs).
 
 ---
 
@@ -82,7 +82,7 @@ In OMSI vehicle camera directives (`[add_camera_driver]`, `[add_camera_pax]`), t
 - Line 6 (`yaw`): Horizontal viewing rotation (0° forward, negative left, positive right).
 - Line 7 (`pitch`): Vertical elevation angle (negative down, positive up).
 
-`opts-bevy` provides the [`camera_preset_to_bevy_transform`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/coords.rs) function to compute the exact camera transform:
+`opts-bevy` provides the [`camera_preset_to_bevy_transform`](../../../crates/opts-bevy/src/coords.rs) function to compute the exact camera transform:
 
 ```rust
 use opts_bevy::camera_preset_to_bevy_transform;
@@ -114,7 +114,7 @@ opts-bevy = { path = "crates/opts-bevy" }
 
 ### Step 2: Initialize Bevy with `OptsAssetPlugin`
 
-The [`OptsAssetPlugin`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/plugin.rs) bundles loaders for `.o3d`, `.x`, `.dds`, `.bmp`, `.tga`, `.sco`, and `.sli`, along with coordinate synchronization:
+The [`OptsAssetPlugin`](../../../crates/opts-bevy/src/plugin.rs) bundles loaders for `.o3d`, `.x`, `.dds`, `.bmp`, `.tga`, `.sco`, and `.sli`, along with coordinate synchronization:
 
 ```rust
 use bevy::prelude::*;
@@ -131,7 +131,7 @@ fn main() {
 
 ### Step 3: Parse and Spawn the Vehicle Hierarchy
 
-In your startup system, parse the manifest text and spawn the hierarchy using [`spawn_vehicle_model`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/vehicle.rs):
+In your startup system, parse the manifest text and spawn the hierarchy using [`spawn_vehicle_model`](../../../crates/opts-bevy/src/vehicle.rs):
 
 ```rust
 use bevy::prelude::*;
@@ -208,7 +208,7 @@ fn setup_scene(
 
 ### Step 4: Add Interactive Camera Switching
 
-With [`BusVehicle`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/src/vehicle.rs) attached to the bus root entity, you can easily switch cameras at runtime:
+With [`BusVehicle`](../../../crates/opts-bevy/src/vehicle.rs) attached to the bus root entity, you can easily switch cameras at runtime:
 
 ```rust
 fn handle_camera_switching(

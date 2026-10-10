@@ -151,9 +151,9 @@ See [Asset Pipeline](../src/architecture/asset-pipeline.md).
 
 ## 🎮 Examples & Tutorials
 
-- **[`crates/opts-bevy/examples/load_sco.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_sco.rs):** Runnable 3D scenery object loader scene.
-- **[`crates/opts-bevy/examples/load_bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/load_bus.rs):** Runnable full bus model loader with interactive camera preset switching.
-- **[`crates/opts-bevy/examples/drive_bus.rs`](file:///home/louisgoodnews/Dokumente/opts/crates/opts-bevy/examples/drive_bus.rs):** Interactive playable 12m transit bus driving simulation with telemetry HUD and chase/cockpit cameras.
+- **[`crates/opts-bevy/examples/load_sco.rs`](../../crates/opts-bevy/examples/load_sco.rs):** Runnable 3D scenery object loader scene.
+- **[`crates/opts-bevy/examples/load_bus.rs`](../../crates/opts-bevy/examples/load_bus.rs):** Runnable full bus model loader with interactive camera preset switching.
+- **[`crates/opts-bevy/examples/drive_bus.rs`](../../crates/opts-bevy/examples/drive_bus.rs):** Interactive playable 12m transit bus driving simulation with telemetry HUD and chase/cockpit cameras.
 - **Tutorial: [Loading Your First `.sco`](../src/tutorials/first-sco.md)**
 - **Tutorial: [Loading Your First Bus Model](../src/tutorials/first-bus.md)**
 
