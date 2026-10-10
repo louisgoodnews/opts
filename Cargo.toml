@@ -13,7 +13,7 @@ name = "opts"
 path = "src/main.rs"
 
 [dependencies]
-opts-cli = { path = "crates/opts-cli" }
+opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-game = { path = "crates/opts-game" }
 opts-logging = { path = "crates/opts-logging" }
 tracing = { workspace = true }
@@ -47,7 +47,7 @@ categories = ["game-development", "simulation"]
 # --- Internal Crates ---
 opts-bevy = { path = "crates/opts-bevy" }
 opts-catalogue = { path = "crates/opts-catalogue" }
-opts-cli = { path = "crates/opts-cli" }
+opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-core = { path = "crates/opts-core" }
 opts-game = { path = "crates/opts-game" }
 opts-gui = { path = "crates/opts-gui" }

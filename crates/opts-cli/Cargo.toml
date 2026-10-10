@@ -4,8 +4,22 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Command-line interface definitions and argument parsing for OPTS."
+description = "Command-line arguments, the control-protocol types and the `opts-cli` remote-control client for OPTS."
 repository.workspace = true
+
+[features]
+default = ["client"]
+# The remote-control client (binary `opts-cli`). Game crates depend on this crate without it.
+client = ["dep:rustyline", "dep:directories"]
+
+[[bin]]
+name = "opts-cli"
+path = "src/main.rs"
+required-features = ["client"]
 
 [dependencies]
 clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+rustyline = { version = "14", features = ["derive"], optional = true }
+directories = { workspace = true, optional = true }
