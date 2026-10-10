@@ -27,8 +27,13 @@ pub enum FocusEvent {
 /// System detecting Tab and Shift+Tab key presses and emitting [`FocusEvent`].
 pub fn keyboard_focus_navigation_system(
     keyboard: Res<ButtonInput<KeyCode>>,
+    modals: Query<(), With<crate::components::modal::ModalRoot>>,
     mut events: EventWriter<FocusEvent>,
 ) {
+    // An open modal traps Tab itself (`modal_focus_trap_system`).
+    if !modals.is_empty() {
+        return;
+    }
     if keyboard.just_pressed(KeyCode::Tab) {
         if keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight) {
             events.send(FocusEvent::Previous);

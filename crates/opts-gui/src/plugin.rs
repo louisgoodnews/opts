@@ -65,6 +65,15 @@ impl Plugin for OptsGuiPlugin {
             (keyboard_focus_navigation_system, focus_event_handler_system),
         );
 
+        // Bundled fonts: DejaVu Sans as the default text font, Material Icons as `IconFont`
+        app.add_systems(Startup, crate::fonts::install_fonts);
+
+        // Modal dialogs and the multiline text area
+        app.add_plugins((
+            crate::components::modal::ModalPlugin,
+            crate::components::text_area::TextAreaPlugin,
+        ));
+
         // Register core theme and token synchronization systems
         app.add_systems(
             Update,

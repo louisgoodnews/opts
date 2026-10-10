@@ -103,16 +103,22 @@ impl NotebookBuilder {
 
     /// Spawns the notebook into the Bevy ECS world using top-level [`Commands`].
     pub fn spawn(self, commands: &mut Commands) -> Entity {
+        self.spawn_with_panels(commands).0
+    }
+
+    /// Spawns the notebook into the Bevy ECS world and returns `(root_entity, panel_entities)`.
+    pub fn spawn_with_panels(self, commands: &mut Commands) -> (Entity, Vec<Entity>) {
         let tabs = self.tabs.clone();
         let active = self.active_tab;
+        let mut panels = Vec::new();
 
         let root = commands.spawn(self.root_bundle()).id();
 
         commands.entity(root).with_children(|parent| {
-            populate_notebook_children(parent, root, &tabs, active);
+            panels = populate_notebook_children(parent, root, &tabs, active);
         });
 
-        root
+        (root, panels)
     }
 
     /// Spawns the notebook as a child inside a parent [`ChildBuilder`].
@@ -124,7 +130,7 @@ impl NotebookBuilder {
         let root = root_cmd.id();
 
         root_cmd.with_children(|child_parent| {
-            populate_notebook_children(child_parent, root, &tabs, active);
+            let _ = populate_notebook_children(child_parent, root, &tabs, active);
         });
 
         root
@@ -136,7 +142,7 @@ fn populate_notebook_children(
     root: Entity,
     tabs: &[String],
     active: usize,
-) {
+) -> Vec<Entity> {
     let tab_count = tabs.len();
 
     // Tab header bar
@@ -228,6 +234,8 @@ fn populate_notebook_children(
             }
         });
 
+    let mut panels = Vec::with_capacity(tab_count);
+
     // Content panels container
     parent
         .spawn(NodeBundle {
@@ -243,29 +251,34 @@ fn populate_notebook_children(
         .with_children(|content_parent| {
             for i in 0..tab_count {
                 let is_active = i == active;
-                content_parent.spawn((
-                    NodeBundle {
-                        style: Style {
-                            display: if is_active {
-                                Display::Flex
-                            } else {
-                                Display::None
+                let panel_id = content_parent
+                    .spawn((
+                        NodeBundle {
+                            style: Style {
+                                display: if is_active {
+                                    Display::Flex
+                                } else {
+                                    Display::None
+                                },
+                                flex_direction: FlexDirection::Column,
+                                flex_grow: 1.0,
+                                width: Val::Percent(100.0),
+                                padding: UiRect::all(Val::Px(16.0)),
+                                ..default()
                             },
-                            flex_direction: FlexDirection::Column,
-                            flex_grow: 1.0,
-                            width: Val::Percent(100.0),
-                            padding: UiRect::all(Val::Px(16.0)),
                             ..default()
                         },
-                        ..default()
-                    },
-                    NotebookPanel {
-                        notebook: root,
-                        index: i,
-                    },
-                ));
+                        NotebookPanel {
+                            notebook: root,
+                            index: i,
+                        },
+                    ))
+                    .id();
+                panels.push(panel_id);
             }
         });
+
+    panels
 }
 
 /// System handling clicks on tab headers to switch the active tab.

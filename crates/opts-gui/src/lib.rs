@@ -12,6 +12,8 @@
 #![deny(unsafe_code)]
 
 pub mod components;
+pub mod fonts;
+pub mod icons;
 pub mod interaction;
 pub mod layout;
 pub mod plugin;
