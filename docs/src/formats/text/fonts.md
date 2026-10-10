@@ -43,6 +43,10 @@ Text elements refer to a font by its `[newfont]` **name**: of 32,373 font-name l
 - Names are compared case-insensitively in the corpus (`din narrow` ↔ `DIN Narrow`) ❓.
 - Sub-folders (`St-Servan`) are scanned too ✅ (their fonts are referenced by name like the rest).
 
+### Parser status [C]
+
+`opts_core::formats::oft::OftFile` parses all 1,055 `.oft` files (1,127 `[newfont]` blocks, 84,013 glyph cells). Many files start with an **indented tutorial** that quotes `[newfont]`/`[char]`; keywords count only at column 0. The first `[char]` line may be a space character. Text rendering: [text textures](../../architecture/text-textures.md).
+
 ## 🧪 Examples
 
 ```

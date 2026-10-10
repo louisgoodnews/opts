@@ -208,6 +208,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         spline_index: None,
         sco_cache: HashMap::new(),
         spline_materials: HashMap::new(),
+        fonts: opts_bevy::text_texture::FontRegistry::default(),
         ground_material: None,
         ground_array: None,
         spawn: None,

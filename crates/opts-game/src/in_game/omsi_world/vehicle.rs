@@ -85,6 +85,7 @@ pub(super) fn load_segment_meshes(
                 alpha: m.alpha_mode,
                 hidden_by_variable: m.alpha_scale_var.is_some(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
+                image: None,
             })
             .collect();
         let mut loader = ContentLoader {
@@ -451,6 +452,7 @@ pub(super) fn load_driver_human(
                 alpha: m.alpha_mode,
                 hidden_by_variable: m.alpha_scale_var.is_some(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
+                image: None,
             })
             .collect();
         let mut loader = ContentLoader {

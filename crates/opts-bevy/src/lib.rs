@@ -33,6 +33,7 @@ pub mod plugin;
 pub mod reporting;
 pub mod scenery;
 pub mod terrain;
+pub mod text_texture;
 pub mod texture;
 pub mod vehicle;
 pub mod vehicle_sim;

@@ -706,3 +706,18 @@ fn spline_attachments_parse_single_and_repeater() {
         (1, "Sceneryobjects\\b.sco")
     );
 }
+
+#[test]
+fn text_texture_binds_to_the_preceding_material() {
+    let text = "[texttexture_enh]\n1\nStreetBerlin\n256\n32\n0\n10\n20\n30\n2\n0\n\n[mesh]\nplate.o3d\n\n[matl]\nTextfeld_1.bmp\n0\n\n[useTextTexture]\n0\n\n[matl_alpha]\n2\n\n[matl]\nother.bmp\n1\n";
+    let sco = SceneryObject::from_text(text).expect("parse");
+    let tt = &sco.text_textures[0];
+    assert_eq!(
+        (tt.string_index, tt.orientation, tt.text_color),
+        (1, 2, [10, 20, 30])
+    );
+    let mats = &sco.meshes[0].materials;
+    assert_eq!(mats[0].text_texture, Some(0));
+    assert_eq!(mats[0].alpha_mode, Some(2));
+    assert_eq!(mats[1].text_texture, None);
+}

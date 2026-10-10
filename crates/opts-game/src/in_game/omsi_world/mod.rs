@@ -120,6 +120,8 @@ pub struct WorldLoadJob {
     spline_index: Option<Arc<SplineIndex>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
+    /// Bitmap fonts and rendered text textures (`[texttexture]`).
+    fonts: opts_bevy::text_texture::FontRegistry,
     ground_material: Option<Handle<StandardMaterial>>,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,

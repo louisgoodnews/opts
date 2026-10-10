@@ -5,6 +5,7 @@ pub mod humans;
 pub mod map;
 pub mod money;
 pub mod o3d;
+pub mod oft;
 pub mod org;
 pub mod scenery;
 pub mod text;

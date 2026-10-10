@@ -67,6 +67,9 @@ pub struct ScoMaterial {
     pub matl_change: Option<(String, usize, String)>,
     /// Variable name driving material alpha scale.
     pub alpha_scale: Option<String>,
+    /// Text texture (index into `text_textures`) drawn on this material (`[useTextTexture]`
+    /// directly after the `[matl]`).
+    pub text_texture: Option<usize>,
 }
 
 impl ScoMaterial {
@@ -87,6 +90,7 @@ impl ScoMaterial {
             free_tex: None,
             matl_change: None,
             alpha_scale: None,
+            text_texture: None,
         }
     }
 }
@@ -234,6 +238,9 @@ pub struct ScoTextTexture {
     pub color_mode: u32,
     /// Text color RGB (0..255).
     pub text_color: [u8; 3],
+    /// Alignment (`[texttexture_enh]` line 9): 0 centred, 1 left, 2 right; plain `[texttexture]`
+    /// is centred.
+    pub orientation: u32,
 }
 
 /// Change-The-Color (CTC) repaint picker configuration.
@@ -617,6 +624,9 @@ impl SceneryObject {
                         let idx = parse_usize(val, "useTextTexture index", block.line_number)?;
                         if let Some(mesh) = obj.meshes.last_mut() {
                             mesh.text_texture_indices.push(idx);
+                            if let Some(mat) = mesh.materials.last_mut() {
+                                mat.text_texture = Some(idx);
+                            }
                         }
                     }
                 }
@@ -847,6 +857,11 @@ impl SceneryObject {
                             height: h,
                             color_mode: mono,
                             text_color: [r, g, b],
+                            orientation: block
+                                .parameters
+                                .get(8)
+                                .and_then(|v| v.trim().parse().ok())
+                                .unwrap_or(0),
                         });
                     }
                 }

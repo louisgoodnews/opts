@@ -114,7 +114,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [x] 🟠 **Choose and document the CI link checker** (M-0042, chore) — done: `scripts/check_links.py` + `docs-links` job (decision to be written up in `docs/src/contributing/`) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
 - [ ] 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — Input for the size-limit refactor (audit 5037f89a F-009).
 - [ ] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
-- [ ] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
+- [x] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
 
 ---
 
@@ -175,9 +175,9 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Decoder counters in F10 overlay; `confident_eval` thresholds in CI** (M-0038, test)
 
 #### M-0039 — Text Textures
-- [ ] 🟠 **Text rasteriser and material binding in `opts-bevy`** (M-0039, code)
-- [ ] 🟡 **Per-instance string resolution from tiles; runtime texture references** (M-0039, code)
-- [ ] 🟡 **Unit tests and X10 Berlin screenshot check** (M-0039, test)
+- [x] 🟠 **Text rasteriser and material binding in `opts-bevy`** (M-0039, code)
+- [x] 🟡 **Per-instance string resolution from tiles; runtime texture references** (M-0039, code)
+- [x] 🟡 **Unit tests and X10 Berlin screenshot check** (M-0039, test)
 
 #### M-0040 — Code-Quality Debt
 - [ ] 🟠 **Split `omsi_world.rs`, `sco.rs::from_text`, `opts-catalogue/lib.rs`, `descramble.rs`, UI builders** (M-0040, refactor) — F-009.
@@ -492,3 +492,4 @@ The agent should check these during P-001 audits:
 - `2026-10-10` — P-900 Phase D (audit 5037f89a): links repaired (144 → 0), link-check CI job added, `omsi_world.rs` split into modules. Related items ticked; milestones M-0040/41/42 stay Planned with progress notes.
 - `2026-10-10` — M-0043 (CLI Control Protocol & Hot Reload) complete: 36 of 49 methods, hot reload for meshes, configs, tiles and textures; follow-ups in ROADMAP Deferred Cleanup. See `docs/src/meta/control-protocol-2026-10-10.md`.
 - `2026-10-10` — M-0037 (Shipped-Work Reconciliation) complete: delivered-work list added to ROADMAP and Phase 4, M-0024/M-0025 annotated, `PROMPTS.md` references re-pointed. Spline/terrain bug fixed (`2816806`).
+- `2026-10-10` — M-0039 (Text Textures) complete for static strings: `.oft` parser, bitmap-font rasteriser, per-instance strings; named sources and script text remain (spec lists them). Screenshot check done on Grundorf, not X10 Berlin.

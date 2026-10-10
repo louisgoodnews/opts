@@ -61,6 +61,7 @@
 - [Crate Structure](architecture/crate-structure.md)
 - [Crate Dependency Graph](architecture/crate-graph.md)
 - [Coordinate Systems](architecture/coordinates.md)
+- [Text Textures](architecture/text-textures.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)

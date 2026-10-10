@@ -45,6 +45,8 @@ pub struct TextureOverride {
     pub hidden_by_variable: bool,
     /// `[matl_transmap]` texture: its values become the alpha channel of the material's texture.
     pub trans_map: Option<String>,
+    /// Ready-made image (rendered text) used instead of loading `texture`.
+    pub image: Option<Handle<Image>>,
 }
 
 /// One renderable submesh of a model: geometry bound to a single material.
@@ -449,7 +451,10 @@ impl ContentLoader<'_> {
                 let tex_name = over
                     .map(|o| o.texture.clone())
                     .or_else(|| base.primary_texture().map(str::to_owned));
-                let mut tex = tex_name.and_then(|n| self.texture(&n, tex_dirs));
+                let mut tex = match over.and_then(|o| o.image.clone()) {
+                    Some(h) => Some(h),
+                    None => tex_name.and_then(|n| self.texture(&n, tex_dirs)),
+                };
                 let mut blended_by_map = false;
                 if let (Some(base_h), Some(tm)) =
                     (tex.clone(), over.and_then(|o| o.trans_map.clone()))

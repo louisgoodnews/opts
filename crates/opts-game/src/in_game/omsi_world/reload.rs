@@ -126,6 +126,7 @@ impl WorldLoadJob {
         self.sco_cache.clear();
         self.sli_cache.clear();
         self.spline_materials.clear();
+        self.fonts = opts_bevy::text_texture::FontRegistry::default();
         self.ground_array = None;
         let all: Vec<_> = self.resident.keys().copied().collect();
         self.respawn_tiles(&all, &mut plan);

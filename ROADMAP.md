@@ -182,7 +182,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧾 Audit-Driven Work (audit 5037f89a, 2026-10-10)**
   - [x] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](docs/src/roadmap/phase-4/M-0037.md) (F-019, F-023).
   - [ ] Complete scrambled-mesh decoding: async decoding, deterministic parameters, cache policy, generator research — [M-0038](docs/src/roadmap/phase-4/M-0038.md) (F-001, F-003, F-014, F-017).
-  - [ ] Render `[texttexture]` text on signs, stops and displays — [M-0039](docs/src/roadmap/phase-4/M-0039.md) (F-002).
+  - [x] Render `[texttexture]` text on signs, stops and displays — [M-0039](docs/src/roadmap/phase-4/M-0039.md) (F-002).
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](docs/src/roadmap/phase-4/M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](docs/src/roadmap/phase-4/M-0025.md); F-004, F-007, F-008).
 

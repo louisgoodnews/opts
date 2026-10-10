@@ -5,6 +5,7 @@ use std::path::Path;
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
+use opts_bevy::text_texture::{resolve_text, TextSpec};
 use opts_bevy::{
     attach_model_parts, build_terrain_mesh, carve_terrain_under_roads, extrude_spline_segment,
     road_footprint, sample_terrain, terrain_material, ContentLoader, RoadFootprint,
@@ -326,6 +327,40 @@ pub fn load_next_tile(
                     alpha: m.alpha_mode,
                     hidden_by_variable: m.alpha_scale.is_some(),
                     trans_map: None,
+                    image: m.text_texture.and_then(|i| {
+                        let tt = sco.text_textures.get(i)?;
+                        let Some(text) = resolve_text(
+                            tt.string_index,
+                            tt.string_var.as_deref(),
+                            &obj.string_vars,
+                            &[],
+                        ) else {
+                            tracing::error!(
+                                sco = %sco_path.display(),
+                                source = ?tt.string_var.as_deref().unwrap_or("by number"),
+                                index = tt.string_index,
+                                "text texture has no string on this object instance"
+                            );
+                            return None;
+                        };
+                        let spec = TextSpec {
+                            font: tt.font_name.clone(),
+                            text,
+                            width: tt.width,
+                            height: tt.height,
+                            mono: tt.color_mode == 0,
+                            rgb: tt.text_color,
+                            orientation: tt.orientation,
+                        };
+                        tracing::debug!(
+                            sco = %sco_path.display(),
+                            text = %spec.text,
+                            tile = ?key,
+                            pos = ?obj.position,
+                            "text texture"
+                        );
+                        job.fonts.render(&job.install, images, &spec)
+                    }),
                 })
                 .collect();
             let mut loader = ContentLoader {
