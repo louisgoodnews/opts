@@ -147,13 +147,13 @@ pub fn spawn_loading_screen_ui(
                 }))
             .with_children(|head| {
                 head.spawn((
-                    (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px( FontSize::Px(26.0)), ..default() }, TextColor(Color::WHITE)),
+                    (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
                     TypeStyleToken(TypeScale::HeadlineMedium),
                     ForegroundRole(ColorRole::OnSurface),
                 ));
 
                 head.spawn((
-                    (Text::new("Synthesizing scenario geometry, vehicle mechanics, and environmental lighting"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(Color::srgb(0.7, 0.75, 0.82))),
+                    (Text::new("Synthesizing scenario geometry, vehicle mechanics, and environmental lighting"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(Color::srgb(0.7, 0.75, 0.82))),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));
@@ -216,13 +216,13 @@ pub fn spawn_loading_screen_ui(
                         }))
                     .with_children(|row| {
                         row.spawn((
-                            (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(Color::srgb(0.65, 0.72, 0.80))),
+                            (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.65, 0.72, 0.80))),
                             TypeStyleToken(TypeScale::LabelMedium),
                             ForegroundRole(ColorRole::Outline),
                         ));
 
                         row.spawn((
-                            (Text::new("5%"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
+                            (Text::new("5%"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                             ProgressPercentText,
                             TypeStyleToken(TypeScale::TitleSmall),
                             ForegroundRole(ColorRole::Primary),
@@ -270,7 +270,7 @@ pub fn spawn_loading_screen_ui(
             ))
             .with_children(|ticker| {
                 ticker.spawn((
-                    (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(Color::srgb(0.75, 0.85, 0.95))),
+                    (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(Color::srgb(0.75, 0.85, 0.95))),
                     StatusTickerText,
                     TypeStyleToken(TypeScale::BodySmall),
                 ));

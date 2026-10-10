@@ -222,8 +222,8 @@ pub fn spawn_sky(
     {
         let (el, _) = sun_position(sky.start_hour, sky.day_of_year);
         let data = blended_sky(&sky, sky.config.sky_weights(el));
-        if let Some(img) = images.get_mut(&sky.image) {
-            img.data = data;
+        if let Some(mut img) = images.get_mut(&sky.image) {
+            img.data = Some(data);
         }
     }
     let image = sky.image.clone();
@@ -238,8 +238,8 @@ pub fn spawn_sky(
                 ..default()
             })),
         ),
-        bevy::pbr::NotShadowCaster,
-        bevy::pbr::NotShadowReceiver,
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
         SkyDome,
         InGameEntity,
         Name::new("Sky_Dome"),
@@ -259,8 +259,8 @@ pub fn spawn_sky(
         let (mesh, material) = disc(meshes, materials, tex, images, size);
         let mut e = commands.spawn((
             (Mesh3d(mesh), MeshMaterial3d(material)),
-            bevy::pbr::NotShadowCaster,
-            bevy::pbr::NotShadowReceiver,
+            bevy::light::NotShadowCaster,
+            bevy::light::NotShadowReceiver,
             InGameEntity,
         ));
         if is_sun {
@@ -280,7 +280,7 @@ pub fn update_sky(
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
-    mut ambient: Option<ResMut<AmbientLight>>,
+    mut ambient: Option<ResMut<GlobalAmbientLight>>,
     cameras: Query<&GlobalTransform, (With<Camera3d>, Without<SkyDome>)>,
     mut dome: Query<
         &mut Transform,
@@ -329,8 +329,8 @@ pub fn update_sky(
         sky.last_refresh = now;
         let weights = sky.config.sky_weights(elevation);
         let data = blended_sky(&sky, weights);
-        if let Some(img) = images.get_mut(&sky.image) {
-            img.data = data;
+        if let Some(mut img) = images.get_mut(&sky.image) {
+            img.data = Some(data);
         }
         let l = |c: [f32; 3]| (c[0] + c[1] + c[2]) / 3.0;
         let a = sky.config.light_at(&sky.config.light_a, elevation);

@@ -30,7 +30,7 @@ pub fn spawn_general_tab(
                     }))
                 .with_children(|section| {
                     section.spawn((
-                        (Text::new("Storage & Persistence Architecture:"), TextFont { font_size: FontSize::Px( FontSize::Px(16.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
+                        (Text::new("Storage & Persistence Architecture:"), TextFont { font_size: FontSize::Px(16.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleMedium),
                         ForegroundRole(ColorRole::Primary),
                     ));
@@ -57,7 +57,7 @@ pub fn spawn_general_tab(
                             .to_string(),
                     ] {
                         section.spawn((
-                            (Text::new(text), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
+                            (Text::new(text), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                             TypeStyleToken(TypeScale::BodyMedium),
                             ForegroundRole(ColorRole::OnSurfaceVariant),
                         ));
@@ -75,7 +75,7 @@ pub fn spawn_general_tab(
                     }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow))))
                 .with_children(|disc_box| {
                     disc_box.spawn((
-                        (Text::new("Vehicle Catalogue Discovery & SQLite Sync:"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
+                        (Text::new("Vehicle Catalogue Discovery & SQLite Sync:"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleSmall),
                         ForegroundRole(ColorRole::Primary),
                     ));
@@ -94,13 +94,13 @@ pub fn spawn_general_tab(
                         (Text::new(format!(
                                 "OMSI catalogue (SQLite): {} files · {} entities · {}",
                                 files, entities, last_time_str
-                            )), TextFont { font_size: FontSize::Px( FontSize::Px(12.5)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
+                            )), TextFont { font_size: FontSize::Px(12.5), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                         TypeStyleToken(TypeScale::BodySmall),
                         ForegroundRole(ColorRole::OnSurface),
                     ));
 
                     disc_box.spawn((
-                        (Text::new("Periodic Discovery Interval (Runs on Game Startup):"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
+                        (Text::new("Periodic Discovery Interval (Runs on Game Startup):"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                         TypeStyleToken(TypeScale::LabelLarge),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
@@ -153,7 +153,7 @@ pub fn spawn_general_tab(
                                     ))
                                     .with_children(|btn| {
                                         btn.spawn((
-                                            (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(if is_active {
+                                            (Text::new(label), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(if is_active {
                                                         theme.scheme.get(ColorRole::OnPrimaryContainer)
                                                     } else {
                                                         theme.scheme.get(ColorRole::OnSurface)
@@ -182,7 +182,7 @@ pub fn spawn_general_tab(
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                (Text::new("Run Discovery Now"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
+                                (Text::new("Run Discovery Now"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
                                 TypeStyleToken(TypeScale::LabelLarge),
                                 ForegroundRole(ColorRole::OnPrimary),
                             ));

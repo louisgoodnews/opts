@@ -51,7 +51,7 @@ fn setup_scene(
     ));
 
     // Ambient light
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 500.0,
     });

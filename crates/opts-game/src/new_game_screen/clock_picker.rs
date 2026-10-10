@@ -86,7 +86,7 @@ pub fn spawn_material_clock_picker(
                 .with_children(|header| {
                     // Digital display entity for test query synchronization
                     header.spawn((
-                        (Text::new(format!("{h12}:{:02}", setup.minute)), TextFont { font_size: FontSize::Px( FontSize::Px(0.1)), ..default() }, TextColor(Color::NONE), Node {
+                        (Text::new(format!("{h12}:{:02}", setup.minute)), TextFont { font_size: FontSize::Px(0.1), ..default() }, TextColor(Color::NONE), Node {
                             display: Display::None,
                             ..default()
                         }),
@@ -110,13 +110,13 @@ pub fn spawn_material_clock_picker(
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                (Text::new(format!("{h12}")), TextFont { font_size: FontSize::Px( FontSize::Px(38.0)), ..default() }, TextColor(hour_col)),
+                                (Text::new(format!("{h12}")), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(hour_col)),
                                 TypeStyleToken(TypeScale::DisplaySmall),
                             ));
                         });
 
                     header.spawn((
-                        (Text::new(":"), TextFont { font_size: FontSize::Px( FontSize::Px(38.0)), ..default() }, TextColor(Color::WHITE)),
+                        (Text::new(":"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(Color::WHITE)),
                         TypeStyleToken(TypeScale::DisplaySmall),
                     ));
 
@@ -137,13 +137,13 @@ pub fn spawn_material_clock_picker(
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                (Text::new(format!("{:02}", setup.minute)), TextFont { font_size: FontSize::Px( FontSize::Px(38.0)), ..default() }, TextColor(min_col)),
+                                (Text::new(format!("{:02}", setup.minute)), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(min_col)),
                                 TypeStyleToken(TypeScale::DisplaySmall),
                             ));
                         });
 
                     header.spawn((
-                        (Text::new(meridian_str), TextFont { font_size: FontSize::Px( FontSize::Px(18.0)), ..default() }, TextColor(teal_light)),
+                        (Text::new(meridian_str), TextFont { font_size: FontSize::Px(18.0), ..default() }, TextColor(teal_light)),
                         TypeStyleToken(TypeScale::TitleMedium),
                     ));
                 });

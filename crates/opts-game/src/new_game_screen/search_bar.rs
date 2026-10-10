@@ -61,7 +61,7 @@ pub fn spawn_search_bar(
                 };
 
                 left.spawn((
-                    (Text::new(display_text), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(if current_query.is_empty() {
+                    (Text::new(display_text), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(if current_query.is_empty() {
                                 theme.scheme.get(ColorRole::OnSurfaceVariant)
                             } else {
                                 theme.scheme.get(ColorRole::OnSurface)
@@ -99,7 +99,7 @@ pub fn spawn_search_bar(
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    (Text::new("✖"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
+                    (Text::new("✖"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                     TypeStyleToken(TypeScale::LabelSmall),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));

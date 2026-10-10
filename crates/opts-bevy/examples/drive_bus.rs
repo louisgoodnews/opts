@@ -92,7 +92,7 @@ fn setup_world(
     ));
 
     // 4. Ambient light
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.85, 0.9, 1.0),
         brightness: 450.0,
     });

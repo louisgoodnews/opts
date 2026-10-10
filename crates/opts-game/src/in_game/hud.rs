@@ -206,13 +206,13 @@ pub fn spawn_in_game_hud(
                         }))
                     .with_children(|speed_box| {
                         speed_box.spawn((
-                            (Text::new("0.0"), TextFont { font_size: FontSize::Px( FontSize::Px(38.0)), ..default() }, TextColor(Color::srgb(0.2, 0.85, 0.95))),
+                            (Text::new("0.0"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(Color::srgb(0.2, 0.85, 0.95))),
                             SpeedometerText,
                             TypeStyleToken(TypeScale::HeadlineLarge),
                         ));
 
                         speed_box.spawn((
-                            (Text::new("KM/H"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("KM/H"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -226,13 +226,13 @@ pub fn spawn_in_game_hud(
                         }))
                     .with_children(|rpm_box| {
                         rpm_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(26.0)), ..default() }, TextColor(Color::WHITE)),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
                             TachometerText,
                             TypeStyleToken(TypeScale::HeadlineSmall),
                         ));
 
                         rpm_box.spawn((
-                            (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -246,13 +246,13 @@ pub fn spawn_in_game_hud(
                         }))
                     .with_children(|gear_box| {
                         gear_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(28.0)), ..default() }, TextColor(Color::srgb(0.3, 0.9, 0.4))),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(28.0), ..default() }, TextColor(Color::srgb(0.3, 0.9, 0.4))),
                             GearIndicatorText,
                             TypeStyleToken(TypeScale::HeadlineMedium),
                         ));
 
                         gear_box.spawn((
-                            (Text::new("GEAR [E/N/R]"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("GEAR [E/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -266,13 +266,13 @@ pub fn spawn_in_game_hud(
                         }))
                     .with_children(|brake_box| {
                         brake_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(14.0)), ..default() }, TextColor(Color::srgb(0.4, 0.8, 0.5))),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(14.0), ..default() }, TextColor(Color::srgb(0.4, 0.8, 0.5))),
                             HandbrakeIndicatorText,
                             TypeStyleToken(TypeScale::TitleSmall),
                         ));
 
                         brake_box.spawn((
-                            (Text::new("PARK [Space]"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("PARK [Space]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -289,7 +289,7 @@ pub fn spawn_in_game_hud(
             ))
             .with_children(|legend| {
                 legend.spawn((
-                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [Esc] Menu"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
+                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
             });
@@ -334,7 +334,7 @@ pub fn update_in_game_hud(
         ),
     >,
     mut brake_query: Query<
-        &mut Text,
+        (&mut Text, &mut TextColor),
         (
             With<HandbrakeIndicatorText>,
             Without<SpeedometerText>,
@@ -384,13 +384,13 @@ pub fn update_in_game_hud(
 
     // 4. Parking brake
     let is_park = controller.inputs().is_parking_brake_engaged();
-    for mut text in &mut brake_query {
+    for (mut text, mut text_color) in &mut brake_query {
         if is_park {
             text.0 = "[PARK]".to_string();
-            text.sections[0].style.color = Color::srgb(0.95, 0.35, 0.3);
+            text_color.0 = Color::srgb(0.95, 0.35, 0.3);
         } else {
             text.0 = "RELEASED".to_string();
-            text.sections[0].style.color = Color::srgb(0.35, 0.85, 0.45);
+            text_color.0 = Color::srgb(0.35, 0.85, 0.45);
         }
     }
 

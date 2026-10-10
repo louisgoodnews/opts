@@ -43,7 +43,7 @@ pub fn spawn_dial_btn<T: Component>(
         ))
         .with_children(|btn| {
             btn.spawn((
-                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(if is_active {
+                (Text::new(label), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(if is_active {
                             Color::WHITE
                         } else {
                             theme.scheme.get(ColorRole::OnSurface)
@@ -82,7 +82,7 @@ pub fn spawn_meridian_btn(
         ))
         .with_children(|btn| {
             btn.spawn((
-                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(if is_active {
+                (Text::new(label), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(if is_active {
                             Color::WHITE
                         } else {
                             theme.scheme.get(ColorRole::OnSurfaceVariant)

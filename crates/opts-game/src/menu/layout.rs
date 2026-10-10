@@ -56,7 +56,7 @@ pub fn spawn_main_menu(
                 right: Val::Px(24.0),
                 ..default()
             },
-            ZIndex::Local(2),
+            ZIndex(2),
         ),))
         .with_children(|parent| {
             parent.spawn((
@@ -103,7 +103,7 @@ pub fn spawn_main_menu(
                     ..default()
                 },
                 BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
-                ZIndex::Local(2),
+                ZIndex(2),
             ),
             MenuCard,
             GlassSurface::new(ColorRole::SurfaceContainerLowest, 0.82),
@@ -132,7 +132,7 @@ pub fn spawn_main_menu(
                 row_gap: Val::Px(20.0),
                 ..default()
             },
-            ZIndex::Local(1),
+            ZIndex(1),
         ),))
         .with_children(|hero_parent| {
             // Title & Subtitle

@@ -173,7 +173,7 @@ pub fn handle_discovery_interval_clicks(
 
         for (btn, mut border, mut bg) in &mut card_query {
             let is_active = btn.interval_days == days;
-            *border = BorderColor(if is_active {
+            *border = BorderColor::all(if is_active {
                 theme.scheme.get(ColorRole::Primary)
             } else {
                 theme.scheme.get(ColorRole::OutlineVariant)

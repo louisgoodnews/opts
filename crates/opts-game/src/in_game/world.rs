@@ -76,8 +76,9 @@ pub fn spawn_atmosphere_and_lighting(commands: &mut Commands, setup: &NewGameSet
         (Color::srgb(0.88, 0.92, 1.0), 480.0)
     };
 
-    commands.insert_resource(AmbientLight {
+    commands.insert_resource(GlobalAmbientLight {
         color: ambient_color,
         brightness: ambient_brightness,
+        ..default()
     });
 }

@@ -5,7 +5,7 @@
 use std::path::PathBuf;
 use std::time::Instant;
 
-use bevy::ecs::event::{Events, ManualEventReader};
+use bevy::ecs::message::MessageCursor;
 use bevy::prelude::*;
 use opts_bevy::control::state::Waiter;
 use opts_bevy::hot_reload::{
@@ -33,7 +33,7 @@ impl Plugin for GameHotReloadPlugin {
 
 fn execute(world: &mut World, plan: &ReloadPlan) {
     for e in &plan.despawn {
-        if let Some(entity) = world.get_entity_mut(*e) {
+        if let Ok(entity) = world.get_entity_mut(*e) {
             entity.despawn();
         }
     }
@@ -70,8 +70,8 @@ fn plan(
 /// Consumes [`ReloadValidated`] and [`ReloadSceneRequested`].
 pub fn apply_reloads(
     world: &mut World,
-    mut validated: Local<ManualEventReader<ReloadValidated>>,
-    mut scenes: Local<ManualEventReader<ReloadSceneRequested>>,
+    mut validated: Local<MessageCursor<ReloadValidated>>,
+    mut scenes: Local<MessageCursor<ReloadSceneRequested>>,
 ) {
     let files: Vec<ReloadValidated> = validated
         .read(world.resource::<Messages<ReloadValidated>>())

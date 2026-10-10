@@ -42,7 +42,7 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
                     ..default()
                 },
                 BorderColor::all(theme.scheme.get(ColorRole::Outline)),
-                ZIndex::Local(2),
+                ZIndex(2),
             ),
             ThemeToggleBtn,
             GlassSurface::new(ColorRole::Surface, 0.70),
@@ -100,9 +100,7 @@ pub fn theme_toggle_system(
         // Update glyph display
         let next_glyph = if new_is_dark { "Light" } else { "Dark" };
         for mut text in &mut glyph_query {
-            for section in &mut text.sections {
-                section.value = next_glyph.to_string();
-            }
+            text.0 = next_glyph.to_string();
         }
     }
 }

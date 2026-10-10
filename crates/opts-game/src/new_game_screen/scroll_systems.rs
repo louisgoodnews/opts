@@ -54,7 +54,7 @@ pub fn handle_mouse_scroll(
     mut container_query: Query<(
         &mut ScrollableContainer,
         &GlobalTransform,
-        &Node,
+        &ComputedNode,
         &InheritedVisibility,
     )>,
     mut content_query: Query<(&ScrollContent, &mut Node)>,
@@ -69,11 +69,14 @@ pub fn handle_mouse_scroll(
     for wheel in wheel_events.read() {
         let delta = -wheel.y * 36.0;
         for (mut container, transform, node, vis) in &mut container_query {
-            if !vis.get() || node.size().x <= 0.0 || node.size().y <= 0.0 {
+            if !vis.get()
+                || (node.size() * node.inverse_scale_factor()).x <= 0.0
+                || (node.size() * node.inverse_scale_factor()).y <= 0.0
+            {
                 continue;
             }
             let center = transform.translation().truncate();
-            let half = node.size() * 0.5;
+            let half = (node.size() * node.inverse_scale_factor()) * 0.5;
             let min = center - half;
             let max = center + half;
 

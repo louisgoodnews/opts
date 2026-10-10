@@ -40,7 +40,7 @@ pub fn spawn_menu_background(
                     height: Val::Percent(100.0),
                     ..default()
                 },
-                ZIndex::Local(0),
+                ZIndex(0),
             ),
             MenuBackgroundRoot,
         ))
@@ -80,7 +80,7 @@ pub fn spawn_menu_background(
                         ..default()
                     },
                     BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.45)),
-                    ZIndex::Local(1),
+                    ZIndex(1),
                 ),
                 MenuBackgroundScrim,
             ));

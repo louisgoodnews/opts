@@ -105,6 +105,7 @@ pub fn handle_calendar_interaction(
     month_year_entity_query: Query<Entity, With<CalendarMonthYearText>>,
     summary_entities_query: Query<Entity, Or<(With<LaunchSummaryText>, With<TabSummaryText>)>>,
     mut text_query: Query<&mut Text>,
+    mut color_query: Query<&mut TextColor>,
     mut setup: ResMut<NewGameSetup>,
 ) {
     let mut date_changed = false;
@@ -164,10 +165,11 @@ pub fn handle_calendar_interaction(
             } else {
                 Color::NONE
             };
-            for &child in children.iter() {
+            for child in children.iter() {
                 if let Ok(mut text) = text_query.get_mut(child) {
-                    text.sections[0].style.color =
-                        if is_selected { on_primary } else { on_surface };
+                    if let Ok(mut text_color) = color_query.get_mut(child) {
+                        text_color.0 = if is_selected { on_primary } else { on_surface };
+                    }
                 }
             }
         }
@@ -193,6 +195,7 @@ pub fn handle_year_spinbox(
     header_entity_query: Query<Entity, With<CalendarHeaderDateText>>,
     summary_entities_query: Query<Entity, Or<(With<LaunchSummaryText>, With<TabSummaryText>)>>,
     mut text_query: Query<&mut Text>,
+    mut color_query: Query<&mut TextColor>,
     mut setup: ResMut<NewGameSetup>,
 ) {
     let mut year_changed = false;
@@ -380,6 +383,7 @@ pub fn update_clock_picker_visuals(
     digital_display_query: Query<Entity, With<ClockDigitalDisplayText>>,
     summary_entities_query: Query<Entity, Or<(With<LaunchSummaryText>, With<TabSummaryText>)>>,
     mut text_query: Query<&mut Text>,
+    mut color_query: Query<&mut TextColor>,
 ) {
     if !setup.is_changed() {
         return;
@@ -400,26 +404,30 @@ pub fn update_clock_picker_visuals(
 
     // 1. Update Header Readout text
     for children in &hour_text_bundle {
-        for &child in children.iter() {
+        for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{h12}");
-                text.sections[0].style.color = if setup.clock_mode == ClockPickerMode::Hours {
-                    active_white
-                } else {
-                    muted_white
-                };
+                if let Ok(mut text_color) = color_query.get_mut(child) {
+                    text_color.0 = if setup.clock_mode == ClockPickerMode::Hours {
+                        active_white
+                    } else {
+                        muted_white
+                    };
+                }
             }
         }
     }
     for children in &min_text_bundle {
-        for &child in children.iter() {
+        for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
                 text.0 = format!("{:02}", setup.minute);
-                text.sections[0].style.color = if setup.clock_mode == ClockPickerMode::Minutes {
-                    active_white
-                } else {
-                    muted_white
-                };
+                if let Ok(mut text_color) = color_query.get_mut(child) {
+                    text_color.0 = if setup.clock_mode == ClockPickerMode::Minutes {
+                        active_white
+                    } else {
+                        muted_white
+                    };
+                }
             }
         }
     }
@@ -457,13 +465,15 @@ pub fn update_clock_picker_visuals(
     for (h_btn, mut bg, children) in &mut hour_btns_query {
         let active = h_btn.hour_12 == h12;
         bg.0 = if active { teal_accent } else { Color::NONE };
-        for &child in children.iter() {
+        for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
-                text.sections[0].style.color = if active {
-                    Color::WHITE
-                } else {
-                    theme.scheme.get(ColorRole::OnSurface)
-                };
+                if let Ok(mut text_color) = color_query.get_mut(child) {
+                    text_color.0 = if active {
+                        Color::WHITE
+                    } else {
+                        theme.scheme.get(ColorRole::OnSurface)
+                    };
+                }
             }
         }
     }
@@ -472,13 +482,15 @@ pub fn update_clock_picker_visuals(
     for (m_btn, mut bg, children) in &mut min_btns_query {
         let active = setup.minute / 5 == m_btn.minute / 5;
         bg.0 = if active { teal_accent } else { Color::NONE };
-        for &child in children.iter() {
+        for child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
-                text.sections[0].style.color = if active {
-                    Color::WHITE
-                } else {
-                    theme.scheme.get(ColorRole::OnSurface)
-                };
+                if let Ok(mut text_color) = color_query.get_mut(child) {
+                    text_color.0 = if active {
+                        Color::WHITE
+                    } else {
+                        theme.scheme.get(ColorRole::OnSurface)
+                    };
+                }
             }
         }
     }

@@ -36,12 +36,11 @@ pub fn build_app(args: CliArgs) -> App {
         .init_asset::<Image>()
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
-        .add_plugins(bevy::ecs::hierarchy::HierarchyPlugin)
         .add_plugins(bevy::input::InputPlugin);
     } else {
         let (width, height) = args.parse_dimensions();
         let mode = if args.fullscreen && !args.windowed {
-            bevy::window::WindowMode::BorderlessFullscreen
+            bevy::window::WindowMode::BorderlessFullscreen(bevy::window::MonitorSelection::Current)
         } else {
             bevy::window::WindowMode::Windowed
         };
@@ -51,7 +50,10 @@ pub fn build_app(args: CliArgs) -> App {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "OPTS — Open Public Transport Simulator".to_string(),
-                        resolution: (width, height).into(),
+                        resolution: bevy::window::WindowResolution::new(
+                            width as u32,
+                            height as u32,
+                        ),
                         mode,
                         resize_constraints: bevy::window::WindowResizeConstraints {
                             min_width: 800.0,

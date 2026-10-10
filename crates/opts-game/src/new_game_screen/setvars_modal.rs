@@ -53,12 +53,12 @@ pub fn spawn_setvars_modal(
                 ))
                 .with_children(|dialog| {
                     dialog.spawn((
-                        (Text::new("Bus Setvars & Equipment Configuration"), TextFont { font_size: FontSize::Px( FontSize::Px(20.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
+                        (Text::new("Bus Setvars & Equipment Configuration"), TextFont { font_size: FontSize::Px(20.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleLarge),
                     ));
 
                     dialog.spawn((
-                        (Text::new(format!("Vehicle: {} · Livery: {}", vehicle.full_name, setup.selected_livery)), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
+                        (Text::new(format!("Vehicle: {} · Livery: {}", vehicle.full_name, setup.selected_livery)), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                         TypeStyleToken(TypeScale::BodySmall),
                     ));
 
@@ -74,12 +74,12 @@ pub fn spawn_setvars_modal(
                                 }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest))))
                             .with_children(|box_node| {
                                 box_node.spawn((
-                                    (Text::new("ℹ Vehicle Configuration Not Available"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
+                                    (Text::new("ℹ Vehicle Configuration Not Available"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
                                     TypeStyleToken(TypeScale::TitleMedium),
                                 ));
 
                                 box_node.spawn((
-                                    (Text::new("In this menu, you can configure setvars (equipment, visual accessories, and script options) for the vehicle. This vehicle model does not declare any configurable setvars."), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
+                                    (Text::new("In this menu, you can configure setvars (equipment, visual accessories, and script options) for the vehicle. This vehicle model does not declare any configurable setvars."), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                     TypeStyleToken(TypeScale::BodyMedium),
                                 ));
                             });
@@ -125,7 +125,7 @@ pub fn spawn_setvars_modal(
                                 ))
                                 .with_children(|btn| {
                                     btn.spawn((
-                                        (Text::new("↺ Reset Defaults"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
+                                        (Text::new("↺ Reset Defaults"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                         TypeStyleToken(TypeScale::LabelMedium),
                                     ));
                                 });
@@ -144,7 +144,7 @@ pub fn spawn_setvars_modal(
                                 ))
                                 .with_children(|btn| {
                                     btn.spawn((
-                                        (Text::new("Apply & Close"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
+                                        (Text::new("Apply & Close"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
                                         TypeStyleToken(TypeScale::LabelLarge),
                                     ));
                                 });

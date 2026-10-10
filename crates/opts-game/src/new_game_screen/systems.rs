@@ -88,7 +88,7 @@ pub fn handle_map_selection(
             // Update border & background on left list cards
             for (btn, mut border, mut bg) in &mut card_query {
                 let is_selected = btn.map_id == map.id;
-                *border = BorderColor(if is_selected {
+                *border = BorderColor::all(if is_selected {
                     theme.scheme.get(ColorRole::Primary)
                 } else {
                     theme.scheme.get(ColorRole::OutlineVariant)
@@ -102,7 +102,7 @@ pub fn handle_map_selection(
 
             // Repopulate 70% right frame details
             for detail_entity in &detail_panel_query {
-                commands.entity(detail_entity).despawn_descendants();
+                commands.entity(detail_entity).despawn_related::<Children>();
                 commands.entity(detail_entity).with_children(|right_col| {
                     populate_map_details_inner(right_col, &theme, map, &setup);
                 });
@@ -136,7 +136,7 @@ pub fn handle_entrypoint_selection(
 
         for (btn, mut border, mut bg) in &mut chip_query {
             let is_selected = btn.entry_point == ep;
-            *border = BorderColor(if is_selected {
+            *border = BorderColor::all(if is_selected {
                 theme.scheme.get(ColorRole::Primary)
             } else {
                 theme.scheme.get(ColorRole::OutlineVariant)
@@ -185,7 +185,7 @@ pub fn handle_vehicle_selection(
 
             for (btn, mut border, mut bg) in &mut card_query {
                 let is_selected = btn.vehicle_id == veh.id;
-                *border = BorderColor(if is_selected {
+                *border = BorderColor::all(if is_selected {
                     theme.scheme.get(ColorRole::Primary)
                 } else {
                     theme.scheme.get(ColorRole::OutlineVariant)
@@ -198,7 +198,7 @@ pub fn handle_vehicle_selection(
             }
 
             for detail_entity in &detail_panel_query {
-                commands.entity(detail_entity).despawn_descendants();
+                commands.entity(detail_entity).despawn_related::<Children>();
                 commands.entity(detail_entity).with_children(|right_col| {
                     populate_vehicle_details_inner(right_col, &theme, veh, &setup);
                 });
@@ -233,7 +233,7 @@ pub fn handle_livery_selection(
     if changed {
         for (btn, mut border, mut bg) in &mut card_query {
             let is_selected = btn.livery == setup.selected_livery;
-            *border = BorderColor(if is_selected {
+            *border = BorderColor::all(if is_selected {
                 theme.scheme.get(ColorRole::Primary)
             } else {
                 theme.scheme.get(ColorRole::OutlineVariant)
@@ -283,7 +283,7 @@ pub fn handle_weather_selection(
     if changed {
         for (btn, mut border, mut bg) in &mut preset_query {
             let is_selected = btn.preset_name == setup.weather_preset;
-            *border = BorderColor(if is_selected {
+            *border = BorderColor::all(if is_selected {
                 theme.scheme.get(ColorRole::Primary)
             } else {
                 theme.scheme.get(ColorRole::OutlineVariant)
@@ -296,7 +296,7 @@ pub fn handle_weather_selection(
         }
 
         for detail_entity in &detail_panel_query {
-            commands.entity(detail_entity).despawn_descendants();
+            commands.entity(detail_entity).despawn_related::<Children>();
             commands.entity(detail_entity).with_children(|center_col| {
                 populate_weather_details_inner(center_col, &theme, &setup, &live_weather);
             });

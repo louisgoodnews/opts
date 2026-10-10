@@ -45,13 +45,13 @@ pub fn menu_focus_visual_system(
                 });
             }
             style.border = UiRect::all(Val::Px(2.0));
-            border_color.0 = theme.scheme.get(ColorRole::Secondary);
+            *border_color = BorderColor::all(theme.scheme.get(ColorRole::Secondary));
         } else if let Some(orig) = orig_border {
             style.border = orig.border;
             if let Some(role) = border_role {
-                border_color.0 = theme.scheme.get(role.0);
+                *border_color = BorderColor::all(theme.scheme.get(role.0));
             } else {
-                border_color.0 = Color::NONE;
+                *border_color = BorderColor::all(Color::NONE);
             }
             commands.entity(entity).remove::<OriginalBorderStyle>();
         }

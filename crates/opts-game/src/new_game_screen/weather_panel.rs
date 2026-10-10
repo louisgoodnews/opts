@@ -64,7 +64,7 @@ pub fn spawn_weather_datetime_tab(
                         ))
                         .with_children(|col1| {
                             col1.spawn((
-                                (Text::new("Atmospheric Presets (Scrollable):"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
+                                (Text::new("Atmospheric Presets (Scrollable):"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                                 TypeStyleToken(TypeScale::TitleSmall),
                                 ForegroundRole(ColorRole::Primary),
                             ));
@@ -173,7 +173,7 @@ pub fn spawn_weather_datetime_tab(
                                                                 }))
                                                             .with_children(|title_box| {
                                                                 title_box.spawn((
-                                                                    (Text::new(preset.name), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(if is_active {
+                                                                    (Text::new(preset.name), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(if is_active {
                                                                                 theme.scheme.get(ColorRole::OnPrimaryContainer)
                                                                             } else {
                                                                                 theme.scheme.get(ColorRole::OnSurface)
@@ -183,7 +183,7 @@ pub fn spawn_weather_datetime_tab(
                                                             });
 
                                                             btn.spawn((
-                                                                (Text::new(preset.temp_str), TextFont { font_size: FontSize::Px( FontSize::Px(11.5)), ..default() }, TextColor(if is_active {
+                                                                (Text::new(preset.temp_str), TextFont { font_size: FontSize::Px(11.5), ..default() }, TextColor(if is_active {
                                                                             theme.scheme.get(ColorRole::Primary)
                                                                         } else {
                                                                             theme.scheme.get(ColorRole::Outline)
@@ -253,7 +253,7 @@ pub fn spawn_weather_datetime_tab(
                                 setup.hour, setup.minute, setup.year, setup.month, setup.day
                             );
                             col3.spawn((
-                                (Text::new(departure_str), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
+                                (Text::new(departure_str), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
                                 DepartureTimeDisplayText,
                                 TypeStyleToken(TypeScale::TitleSmall),
                                 ForegroundRole(ColorRole::Secondary),
@@ -282,7 +282,7 @@ pub fn spawn_weather_datetime_tab(
                                         ))
                                         .with_children(|btn| {
                                             btn.spawn((
-                                                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
+                                                (Text::new(label), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                                 TypeStyleToken(TypeScale::LabelSmall),
                                                 ForegroundRole(ColorRole::OnSurface),
                                             ));

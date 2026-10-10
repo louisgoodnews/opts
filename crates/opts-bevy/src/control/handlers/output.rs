@@ -38,11 +38,11 @@ fn capture(world: &mut World) -> Result<mpsc::Receiver<Image>, RpcError> {
         ));
     }
     let (tx, rx) = mpsc::channel();
-    world
-        .spawn(Screenshot::window(window))
-        .observe(move |captured: bevy::ecs::observer::On<ScreenshotCaptured>| {
+    world.spawn(Screenshot::window(window)).observe(
+        move |captured: bevy::ecs::observer::On<ScreenshotCaptured>| {
             let _ = tx.send(captured.image.clone());
-        });
+        },
+    );
     Ok(rx)
 }
 
