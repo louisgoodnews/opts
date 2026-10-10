@@ -10,6 +10,7 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod script;
 pub mod vehicle;
 
 // Convenient top-level re-exports

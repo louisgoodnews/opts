@@ -271,7 +271,7 @@ Reading: *if the blinker lever is neutral, set it to left and fire the "on" soun
 
 | Condition | Behavior |
 | :--- | :--- |
-| Unbalanced `{if}` / `{endif}` | Hard error for the block; script disabled; `ERROR` with line number. |
+| Unbalanced `{if}` / `{endif}` | Corpus-verified leniency (M-0026): a block ending inside open `{if}`s is closed at `{end}`; surplus `{endif}`/`{else}` are ignored; `WARN` with line number. 752 surplus `{endif}` and 86 unclosed `{if}`s occur in shipped scripts, so OMSI must accept them. |
 | Unknown token | `WARN`; treated as a no-op and the line number is reported. |
 | Undeclared variable | `WARN` at link time; reads yield `0`, writes are discarded. |
 | Call to undefined macro | `WARN`; no-op. |
@@ -293,7 +293,7 @@ OMSI is lenient about leftover values on the stack (the original scripts leave e
 | T-OSC-004 | `'only a comment` | no tokens |
 | T-OSC-005 | `5 s3 l3 l3 +` | pushes `10` |
 | T-OSC-006 | `"a" "b" $+ (S.$.s)` | `s = "ab"` |
-| T-OSC-007 | `{if}` with no `{endif}` | parse error with line |
+| T-OSC-007 | `{if}` with no `{endif}` | warning with line; closed at `{end}` |
 
 ---
 
@@ -320,6 +320,10 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - **Variables**: `(L.S.name)` loads a **read-only system variable**; `(L.L.name)` / `(S.L.name)` load/save a vehicle float variable; `(L.$.name)` / `(S.$.name)` the string equivalents; "on-demand" variables must be declared in a varlist to connect to the engine; parts sharing a script (`LINK SCRIPTSHARE`) share one variable store. Constants `(C.L.name)` and curves `(F.L.name)` come from constfiles.
 - **Comments**: in scripts only the **apostrophe at line start** works (📚); ✅ 309,888 such lines in the corpus.
 - ⚠️ The wiki states the script syntax is case-sensitive; the corpus has `$CutEnd` (7) beside `$cutEnd` (13,917) — see `community-crosscheck.md` Q-CC01.
+
+### Additions from the compiler corpus run (M-0026, 2026-10-11)
+
+All 6,062 `.osc` files compile (83,861 blocks). Beyond the table above: `sgn` (632 uses), `cos`, `tan`, `arcsin`, `arccos`, `arctan`, `$cutBegin`/`$cutEnd`, `$<`…`$>=`; `$=>` appears 52 times (read as `$>=`); accessor pairs `(T.F.x)` (666) and `(T.S.x)` (6) exist; `(M.V.x)` is used 58,033 times. Some files are UTF-16LE. See [script VM](../../../architecture/script-vm.md).
 
 ## ✅ Resolved Questions
 

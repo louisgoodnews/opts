@@ -162,7 +162,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
-  - [ ] Implement OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](phase-4/M-0026.md) — traces to F-008, F-019).
+  - [~] Script VM core implemented (compiles all 6,062 corpus scripts); vehicle wiring open — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](phase-4/M-0026.md) — traces to F-008, F-019).
   - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](phase-4/M-0027.md) — traces to F-009, F-020).
