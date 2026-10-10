@@ -281,7 +281,7 @@ impl GameSettings {
         stmt.query_row(params![name], |row| row.get(0)).ok()
     }
 
-    /// Synchronizes a [`MaterialTheme`] with active settings: mode (dark/light), preset, and widget overrides.
+    /// Synchronizes a `MaterialTheme` with active settings: mode (dark/light), preset, and widget overrides.
     pub fn apply_to_theme(&self, theme: &mut opts_gui::theme::theme::MaterialTheme) {
         let mut scheme = if self.is_dark_theme {
             opts_gui::theme::color::ColorScheme::dark()

@@ -61,7 +61,7 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub windowed: bool,
 
-    /// Initial window dimensions formatted as <WIDTH>x<HEIGHT> (e.g. 1920x1080).
+    /// Initial window dimensions formatted as `WIDTHxHEIGHT` (e.g. 1920x1080).
     #[arg(long, value_name = "WxH", default_value = "1280x720")]
     pub window_size: String,
 

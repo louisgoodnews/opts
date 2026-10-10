@@ -324,6 +324,7 @@ pub fn spawn_discovery(service: &CatalogueService) {
 /// Test support: builds a miniature OMSI installation on disk, runs the real discovery on it
 /// and returns the menu lists. Used by integration tests so they never depend on a local
 /// OMSI installation.
+#[cfg(feature = "test-support")]
 #[doc(hidden)]
 pub mod testing {
     use std::sync::atomic::{AtomicUsize, Ordering};

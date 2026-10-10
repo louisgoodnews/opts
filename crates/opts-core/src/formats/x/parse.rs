@@ -407,7 +407,10 @@ fn parse_material_list(
                 // Named material reference: { MaterialName }
                 reader.pos += 1; // consume '{'
                 let ref_name = match reader.next()? {
-                    t if matches!(t.kind, TokenKind::Ident(_)) => t.as_ident().unwrap().to_string(),
+                    Token {
+                        kind: TokenKind::Ident(name),
+                        ..
+                    } => name.clone(),
                     other => {
                         return Err(XParseError::UnexpectedToken {
                             offset: other.offset,

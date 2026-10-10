@@ -12,7 +12,7 @@
 //!   those of the stored vertex normals (invariant under permutation and sign);
 //! * **prior** — the observed permutation frequencies.
 //!
-//! The result is applied only when [`quality_gate`] accepts it; texture-coordinate jitter and
+//! The result is applied only when the quality gate (`GATE_MIN_COHERENCE`) accepts it; texture-coordinate jitter and
 //! normals of scrambled files are *not* recoverable here (normals are recomputed by the renderer).
 
 #![allow(clippy::needless_range_loop)]

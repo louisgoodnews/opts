@@ -40,5 +40,11 @@ tracing-subscriber = { workspace = true }
 opts-cli = { workspace = true }
 clap = { workspace = true }
 
+[features]
+# Fixtures for integration tests (miniature OMSI installation); not part of the shipped game.
+test-support = []
+
 [dev-dependencies]
+# Enables the fixtures for this crate's own integration tests.
+opts-game = { path = ".", features = ["test-support"] }
 # Add test-specific dependencies here

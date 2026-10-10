@@ -135,7 +135,10 @@ fn spawn_credits(mut commands: Commands) {
     spawn_generic_stub(
         &mut commands,
         "Credits & Attributions",
-        "OPTS is an open-source clean-room transit simulation built by community contributors.",
+        "OPTS is an open-source (MIT or Apache-2.0) transit simulator written from public file-format \
+         research; no OMSI code or assets are included.\n\
+         Built with Bevy, Rust and the Material Design 3 type and colour system.\n\
+         Content is read from your own OMSI 2 installation; OMSI is a trademark of its authors.",
     );
 }
 

@@ -185,10 +185,12 @@ impl Catalogue {
     }
 
     fn with<T>(&self, f: impl FnOnce(&Connection) -> rusqlite::Result<T>) -> Result<T> {
+        // A panic in another thread cannot leave the connection half-written (SQLite is
+        // transactional), so a poisoned lock is safe to reuse.
         let guard = self
             .conn
             .lock()
-            .expect("catalogue connection mutex poisoned");
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(f(&guard)?)
     }
 

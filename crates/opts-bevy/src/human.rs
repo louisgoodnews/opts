@@ -210,7 +210,7 @@ pub fn spawn_human(
     }
 
     let rig = HumanRig {
-        joints: joints.try_into().expect("13 joints"),
+        joints: std::array::from_fn(|i| joints.get(i).copied().unwrap_or(root)),
         head_anchor,
     };
     commands.entity(root).insert(Human {

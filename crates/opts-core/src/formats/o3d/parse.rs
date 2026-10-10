@@ -21,7 +21,7 @@ use crate::formats::o3d::O3d;
 ///
 /// # Errors
 ///
-/// Returns [`O3dParseError`] if the byte slice is truncated, contains an invalid magic sequence,
+/// Returns [`super::O3dParseError`] if the byte slice is truncated, contains an invalid magic sequence,
 /// an unsupported version, out-of-bounds indices, or unknown chunk tags.
 pub fn parse(bytes: &[u8]) -> Result<O3d> {
     match parse_exact(bytes) {

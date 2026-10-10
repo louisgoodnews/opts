@@ -2,7 +2,7 @@
 //! `envir.cfg`, driven by the sun's elevation at the session's time of day.
 //!
 //! OMSI maps carry no geographic position, so the sun path assumes a fixed mid-latitude
-//! ([`LATITUDE_DEG`]) and treats the clock time as local solar time.
+//! (`LATITUDE_DEG`) and treats the clock time as local solar time.
 
 use std::path::Path;
 
