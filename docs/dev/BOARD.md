@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-08 by Agent (P-006 closeout for M-0023: Bevy Vehicle ECS Bridge)_
+_Last updated: 2026-10-10 by Agent (P-900 Phase C: audit 5037f89a roadmap expansion)_
 
 ---
 
@@ -109,6 +109,12 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🔴 **Author map streaming architecture specification** (M-0024, spec) — Specify tile paging radius, memory cache budgets, and async task pipelines in `docs/src/architecture/map-streaming.md` (traces to F-018).
 - [ ] 🟡 **Author terrain & water rendering architecture specification** (M-0025, spec) — Specify vertex generation, normal calculation, edge stitching, and elevation query interface in `docs/src/architecture/terrain-rendering.md` (traces to F-018).
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — Document curve interpolation, audio emitter hierarchy, and performance limits in `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
+- [ ] 🟠 **Inventory work shipped since M-0023** (M-0037, docs) — Map catalogue, logging, reporting, asset loading, sky, ground shader, attachments and decoder to commits and reports (traces to audit 5037f89a F-019).
+- [ ] 🟠 **Re-run the link scan and list broken links by owner file** (M-0041, docs) — Baseline for the documentation repair (audit 5037f89a F-018).
+- [ ] 🟠 **Choose and document the CI link checker** (M-0042, chore) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
+- [ ] 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — Input for the size-limit refactor (audit 5037f89a F-009).
+- [ ] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
+- [ ] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
 
 ---
 
@@ -150,6 +156,47 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Implement SoundConfigLoader and piecewise curve evaluator** (M-0027, code) — Parse `sound.cfg` and sample non-linear volume/pitch curves.
 - [ ] 🟡 **Implement VehicleAudioEmitter and telemetry sync** (M-0027, code) — Bind vehicle engine RPM, road speed, and pneumatic pressure to Bevy spatial audio sinks.
 - [ ] 🟡 **Implement one-shot trigger system and cockpit acoustics** (M-0027, code) — Trigger switch, door, and horn sounds with interior/exterior attenuation filtering.
+
+#### M-0024 / M-0025 additions (audit 5037f89a)
+- [ ] 🟡 **Extract the world loader from `opts-game/in_game` into `opts-bevy`** (M-0024, code) — F-016.
+- [ ] 🟡 **Move the reporting modal out of `opts-bevy` to drop the `opts-gui` dependency** (M-0024, code) — F-015.
+- [ ] 🟡 **Verify spline-attachment repeater span/count against an OMSI reference** (M-0025, spec) — F-004.
+- [ ] 🟡 **Reproduce and fix floating crossing/object on Rheinhausen** (M-0025, code) — needs entry point and camera position; F-007.
+- [ ] 🟡 **Read `Weather/*.owt` fog and `clouds.cfg`; remove hard-coded fallback lighting** (M-0025, code) — F-008.
+
+#### M-0037 — Shipped-Work Reconciliation
+- [ ] 🟠 **Append delivered-work list to ROADMAP and phase README** (M-0037, docs)
+- [ ] 🟠 **Annotate M-0024/M-0025 with verified satisfied items; update BOARD and PROMPTS references** (M-0037, docs)
+
+#### M-0038 — Scrambled-Mesh Completion
+- [ ] 🟠 **Async decoding / loading-stage pre-warm** (M-0038, code) — F-003.
+- [ ] 🟡 **`DecodeParams` struct and cache policy (cap, version)** (M-0038, code) — F-014, F-017.
+- [ ] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001.
+- [ ] 🟡 **Decoder counters in F10 overlay; `confident_eval` thresholds in CI** (M-0038, test)
+
+#### M-0039 — Text Textures
+- [ ] 🟠 **Text rasteriser and material binding in `opts-bevy`** (M-0039, code)
+- [ ] 🟡 **Per-instance string resolution from tiles; runtime texture references** (M-0039, code)
+- [ ] 🟡 **Unit tests and X10 Berlin screenshot check** (M-0039, test)
+
+#### M-0040 — Code-Quality Debt
+- [ ] 🟠 **Split `omsi_world.rs`, `sco.rs::from_text`, `opts-catalogue/lib.rs`, `descramble.rs`, UI builders** (M-0040, refactor) — F-009.
+- [ ] 🟡 **Group system parameters into `SystemParam`s; remove lint allows** (M-0040, refactor) — F-010.
+- [ ] 🟡 **Feature-gate `catalogue_service::testing`; replace remaining unwrap/expect** (M-0040, code) — F-005, F-006.
+- [ ] 🟡 **Implement or remove Load Game / Credits stubs and `opts-tools` placeholder** (M-0040, code) — F-011.
+- [ ] 🟡 **Fix six rustdoc warnings** (M-0040, docs) — F-012.
+
+#### M-0041 — Documentation Repair
+- [ ] 🟠 **Fix broken links; regenerate roadmap README; remove `file://` links; unlink or create M-0028–M-0036 files** (M-0041, docs) — F-018.
+- [ ] 🟡 **Deprecate stale `docs/crates/*` folders; update catalog.md** (M-0041, docs) — F-020.
+- [ ] 🟡 **Annotate superseded o3d.md paragraphs; index orphan chapters; fix prompt dates** (M-0041, docs) — F-021, F-022, F-023.
+- [ ] 🟡 **Write `developer-switches.md`** (M-0041, docs) — F-013.
+
+#### M-0042 — CI & Toolchain Hardening
+- [ ] 🟠 **Add mdBook build and link check job** (M-0042, chore) — F-024.
+- [ ] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — F-025.
+- [ ] 🟡 **Add Windows CI job and `cargo doc -D warnings`** (M-0042, chore) — F-025.
+- [ ] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026.
 
 #### Phase 4 — Simulation & Transit Follow-ups
 
@@ -419,7 +466,7 @@ The agent should check these during P-001 audits:
 
 ## 🔗 Related Documents
 
-- [`dev/PROMPTS.md`](PROMPTS.md) — Prompt library that drives this board
+- [`prompts/README.md`](prompts/README.md) — Prompt library that drives this board (the monolithic [`PROMPTS.md`](PROMPTS.md) is deprecated)
 - [`ROADMAP.md`](../../ROADMAP.md) — Full project roadmap
 - [`docs/src/roadmap/`](../../docs/src/roadmap/) — Per-phase milestones
 - [`docs/src/adr/0002-clean-room-policy.md`](../../docs/src/adr/0002-clean-room-policy.md) — Legal guardrails
@@ -441,3 +488,4 @@ The agent should check these during P-001 audits:
 - `2026-10-06` — P-004: M-0014 (Vehicle Configuration & Operational Data Parsers) work items populated: 6 in Ready.
 - `2026-10-06` — P-006: M-0014 (Vehicle Configuration & Operational Data Parsers) complete. Items moved to Recently Done.
 - `2026-10-07` — P-004: M-0017 (Model Configuration Parser) work items populated: 3 in Ready, 1 in Backlog.
+- `2026-10-10` — P-900 Phase C (audit 5037f89a): M-0037–M-0042 added (first task each to Ready, rest to Backlog); items appended for M-0024/M-0025. Nothing moved to In Progress. Ready = 10 (above the usual size: six are first tasks of new milestones).

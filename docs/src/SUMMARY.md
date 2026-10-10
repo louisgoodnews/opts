@@ -41,7 +41,13 @@
   - [M-0025: Terrain Heightmap & Water Mesh Generation](roadmap/phase-4/M-0025.md)
   - [M-0026: OMSI Script Stack VM & Dynamic Variables](roadmap/phase-4/M-0026.md)
   - [M-0027: Vehicle & Environmental Spatial Audio](roadmap/phase-4/M-0027.md)
+  - [M-0037: Shipped-Work Reconciliation](roadmap/phase-4/M-0037.md)
+  - [M-0038: Scrambled-Mesh Completion](roadmap/phase-4/M-0038.md)
+  - [M-0039: Text Textures](roadmap/phase-4/M-0039.md)
 - [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
+  - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
+  - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)
+  - [M-0042: CI & Toolchain Hardening](roadmap/phase-5/M-0042.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
