@@ -218,7 +218,7 @@ mod tests {
             factor: 1.0,
             translate: true,
         };
-        let m = animation_matrix(&[spin("w"), raise], |n| if n == "w" { 1.0 } else { 1.0 });
+        let m = animation_matrix(&[spin("w"), raise], |_| 1.0);
         let hub = bevy(Vec3::new(1.2, 2.9, 0.5));
         let p = m.transform_point3(hub);
         assert!((p.y - (hub.y + 1.0)).abs() < 1e-4, "{p:?}");
