@@ -110,8 +110,8 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🟡 **Author terrain & water rendering architecture specification** (M-0025, spec) — Specify vertex generation, normal calculation, edge stitching, and elevation query interface in `docs/src/architecture/terrain-rendering.md` (traces to F-018).
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — Document curve interpolation, audio emitter hierarchy, and performance limits in `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 - [ ] 🟠 **Inventory work shipped since M-0023** (M-0037, docs) — Map catalogue, logging, reporting, asset loading, sky, ground shader, attachments and decoder to commits and reports (traces to audit 5037f89a F-019).
-- [ ] 🟠 **Re-run the link scan and list broken links by owner file** (M-0041, docs) — Baseline for the documentation repair (audit 5037f89a F-018).
-- [ ] 🟠 **Choose and document the CI link checker** (M-0042, chore) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
+- [x] 🟠 **Re-run the link scan and list broken links by owner file** (M-0041, docs) — done in P-900 Phase D; 144 → 0 — Baseline for the documentation repair (audit 5037f89a F-018).
+- [x] 🟠 **Choose and document the CI link checker** (M-0042, chore) — done: `scripts/check_links.py` + `docs-links` job (decision to be written up in `docs/src/contributing/`) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
 - [ ] 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — Input for the size-limit refactor (audit 5037f89a F-009).
 - [ ] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
 - [ ] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
@@ -187,13 +187,13 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Fix six rustdoc warnings** (M-0040, docs) — F-012.
 
 #### M-0041 — Documentation Repair
-- [ ] 🟠 **Fix broken links; regenerate roadmap README; remove `file://` links; unlink or create M-0028–M-0036 files** (M-0041, docs) — F-018.
+- [x] 🟠 **Fix broken links; regenerate roadmap README; remove `file://` links; unlink or create M-0028–M-0036 files** (M-0041, docs) — F-018.
 - [ ] 🟡 **Deprecate stale `docs/crates/*` folders; update catalog.md** (M-0041, docs) — F-020.
 - [ ] 🟡 **Annotate superseded o3d.md paragraphs; index orphan chapters; fix prompt dates** (M-0041, docs) — F-021, F-022, F-023.
 - [ ] 🟡 **Write `developer-switches.md`** (M-0041, docs) — F-013.
 
 #### M-0042 — CI & Toolchain Hardening
-- [ ] 🟠 **Add mdBook build and link check job** (M-0042, chore) — F-024.
+- [x] 🟠 **Add mdBook build and link check job** (M-0042, chore) — F-024. Done (link check; the mdBook build was already in `deploy-docs.yml`).
 - [ ] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — F-025.
 - [ ] 🟡 **Add Windows CI job and `cargo doc -D warnings`** (M-0042, chore) — F-025.
 - [ ] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026.
@@ -489,3 +489,4 @@ The agent should check these during P-001 audits:
 - `2026-10-06` — P-006: M-0014 (Vehicle Configuration & Operational Data Parsers) complete. Items moved to Recently Done.
 - `2026-10-07` — P-004: M-0017 (Model Configuration Parser) work items populated: 3 in Ready, 1 in Backlog.
 - `2026-10-10` — P-900 Phase C (audit 5037f89a): M-0037–M-0042 added (first task each to Ready, rest to Backlog); items appended for M-0024/M-0025. Nothing moved to In Progress. Ready = 10 (above the usual size: six are first tasks of new milestones).
+- `2026-10-10` — P-900 Phase D (audit 5037f89a): links repaired (144 → 0), link-check CI job added, `omsi_world.rs` split into modules. Related items ticked; milestones M-0040/41/42 stay Planned with progress notes.
