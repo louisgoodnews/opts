@@ -44,15 +44,13 @@ pub fn spawn_in_game_hud(
 
     // 1. Top Bar: Session Info (Left) and Camera / Exit (Right)
     let top_bar = commands
-        .spawn(
-            (Node {
-                width: Val::Percent(100.0),
-                flex_direction: FlexDirection::Row,
-                justify_content: JustifyContent::SpaceBetween,
-                align_items: AlignItems::FlexStart,
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            width: Val::Percent(100.0),
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::FlexStart,
+            ..default()
+        })
         .with_children(|bar| {
             // Left: Session Location & Environment Pill
             bar.spawn((
@@ -101,14 +99,12 @@ pub fn spawn_in_game_hud(
             });
 
             // Right: Camera Mode & Exit to Menu Button
-            bar.spawn(
-                (Node {
-                    flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(12.0),
-                    align_items: AlignItems::Center,
-                    ..default()
-                }),
-            )
+            bar.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                align_items: AlignItems::Center,
+                ..default()
+            })
             .with_children(|right_box| {
                 // Camera Indicator
                 right_box
@@ -175,13 +171,13 @@ pub fn spawn_in_game_hud(
 
     // 2. Bottom Dashboard: Instrument Cluster & Controls Legend
     let bottom_section = commands
-        .spawn((Node {
+        .spawn(Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 row_gap: Val::Px(12.0),
                 ..default()
-            }))
+            })
         .with_children(|dash| {
             // Instrument Cluster Card
             dash.spawn((
@@ -199,11 +195,11 @@ pub fn spawn_in_game_hud(
             .with_children(|cluster| {
                 // Speedometer
                 cluster
-                    .spawn((Node {
+                    .spawn(Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        }))
+                        })
                     .with_children(|speed_box| {
                         speed_box.spawn((
                             (Text::new("0.0"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(Color::srgb(0.2, 0.85, 0.95))),
@@ -219,11 +215,11 @@ pub fn spawn_in_game_hud(
 
                 // Tachometer (RPM)
                 cluster
-                    .spawn((Node {
+                    .spawn(Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        }))
+                        })
                     .with_children(|rpm_box| {
                         rpm_box.spawn((
                             (Text::new("--"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
@@ -239,11 +235,11 @@ pub fn spawn_in_game_hud(
 
                 // Transmission Gear Selector
                 cluster
-                    .spawn((Node {
+                    .spawn(Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        }))
+                        })
                     .with_children(|gear_box| {
                         gear_box.spawn((
                             (Text::new("--"), TextFont { font_size: FontSize::Px(28.0), ..default() }, TextColor(Color::srgb(0.3, 0.9, 0.4))),
@@ -259,11 +255,11 @@ pub fn spawn_in_game_hud(
 
                 // Parking Brake Indicator
                 cluster
-                    .spawn((Node {
+                    .spawn(Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        }))
+                        })
                     .with_children(|brake_box| {
                         brake_box.spawn((
                             (Text::new("--"), TextFont { font_size: FontSize::Px(14.0), ..default() }, TextColor(Color::srgb(0.4, 0.8, 0.5))),

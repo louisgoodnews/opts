@@ -14,20 +14,20 @@ pub fn spawn_general_tab(
     settings: &GameSettings,
 ) {
     parent
-        .spawn((Node {
+        .spawn(Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(16.0),
                 max_width: Val::Px(680.0),
                 ..default()
-            }))
+            })
         .with_children(|main_col| {
             // Section 1: Storage & Persistence Architecture
             main_col
-                .spawn((Node {
+                .spawn(Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(8.0),
                         ..default()
-                    }))
+                    })
                 .with_children(|section| {
                     section.spawn((
                         (Text::new("Storage & Persistence Architecture:"), TextFont { font_size: FontSize::Px(16.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
@@ -107,12 +107,12 @@ pub fn spawn_general_tab(
 
                     // Discovery Interval Frequency Buttons
                     disc_box
-                        .spawn((Node {
+                        .spawn(Node {
                                 flex_direction: FlexDirection::Row,
                                 column_gap: Val::Px(10.0),
                                 flex_wrap: FlexWrap::Wrap,
                                 ..default()
-                            }))
+                            })
                         .with_children(|interval_row| {
                             let options = [
                                 (0, "Every Startup"),

@@ -166,7 +166,7 @@ pub fn handle_calendar_interaction(
                 Color::NONE
             };
             for child in children.iter() {
-                if let Ok(mut text) = text_query.get_mut(child) {
+                if let Ok(_text) = text_query.get_mut(child) {
                     if let Ok(mut text_color) = color_query.get_mut(child) {
                         text_color.0 = if is_selected { on_primary } else { on_surface };
                     }
@@ -195,7 +195,7 @@ pub fn handle_year_spinbox(
     header_entity_query: Query<Entity, With<CalendarHeaderDateText>>,
     summary_entities_query: Query<Entity, Or<(With<LaunchSummaryText>, With<TabSummaryText>)>>,
     mut text_query: Query<&mut Text>,
-    mut color_query: Query<&mut TextColor>,
+    _color_query: Query<&mut TextColor>,
     mut setup: ResMut<NewGameSetup>,
 ) {
     let mut year_changed = false;
@@ -466,7 +466,7 @@ pub fn update_clock_picker_visuals(
         let active = h_btn.hour_12 == h12;
         bg.0 = if active { teal_accent } else { Color::NONE };
         for child in children.iter() {
-            if let Ok(mut text) = text_query.get_mut(child) {
+            if let Ok(_text) = text_query.get_mut(child) {
                 if let Ok(mut text_color) = color_query.get_mut(child) {
                     text_color.0 = if active {
                         Color::WHITE
@@ -483,7 +483,7 @@ pub fn update_clock_picker_visuals(
         let active = setup.minute / 5 == m_btn.minute / 5;
         bg.0 = if active { teal_accent } else { Color::NONE };
         for child in children.iter() {
-            if let Ok(mut text) = text_query.get_mut(child) {
+            if let Ok(_text) = text_query.get_mut(child) {
                 if let Ok(mut text_color) = color_query.get_mut(child) {
                     text_color.0 = if active {
                         Color::WHITE

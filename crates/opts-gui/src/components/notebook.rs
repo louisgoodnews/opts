@@ -229,15 +229,13 @@ fn populate_notebook_children(
 
     // Content panels container
     parent
-        .spawn(
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                width: Val::Percent(100.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Column,
+            flex_grow: 1.0,
+            width: Val::Percent(100.0),
+            ..default()
+        })
         .with_children(|content_parent| {
             for i in 0..tab_count {
                 let is_active = i == active;

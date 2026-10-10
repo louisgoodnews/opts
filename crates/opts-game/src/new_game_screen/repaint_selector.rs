@@ -110,15 +110,13 @@ pub fn spawn_repaint_scrollable_selection(
 
     // Section Title row with Configure button
     parent
-        .spawn(
-            (Node {
-                width: Val::Percent(100.0),
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceBetween,
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            width: Val::Percent(100.0),
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            ..default()
+        })
         .with_children(|header| {
             header.spawn((
                 (
@@ -274,14 +272,12 @@ pub fn spawn_repaint_scrollable_selection(
                                         Focusable { tab_index: 0 },
                                     ))
                                     .with_children(|btn| {
-                                        btn.spawn(
-                                            (Node {
-                                                flex_direction: FlexDirection::Row,
-                                                align_items: AlignItems::Center,
-                                                column_gap: Val::Px(8.0),
-                                                ..default()
-                                            }),
-                                        )
+                                        btn.spawn(Node {
+                                            flex_direction: FlexDirection::Row,
+                                            align_items: AlignItems::Center,
+                                            column_gap: Val::Px(8.0),
+                                            ..default()
+                                        })
                                         .with_children(
                                             |row| {
                                                 row.spawn((

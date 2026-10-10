@@ -40,13 +40,13 @@ pub fn spawn_search_bar(
         ))
         .with_children(|bar| {
             // Left: Icon + Text
-            bar.spawn((Node {
+            bar.spawn(Node {
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
                     column_gap: Val::Px(8.0),
                     flex_grow: 1.0,
                     ..default()
-                }))
+                })
             .with_children(|left| {
                 left.spawn((
                     (Text::new(opts_gui::icons::SEARCH), /* TODO text style opts_gui::icons::icon_style(16.0, theme.scheme.get(ColorRole::Primary)) */),

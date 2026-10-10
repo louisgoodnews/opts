@@ -54,13 +54,11 @@ pub fn spawn_loading_screen_ui(
             BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.25)),
         ))
         .with_children(|bar| {
-            bar.spawn(
-                (Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(2.0),
-                    ..default()
-                }),
-            )
+            bar.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(2.0),
+                ..default()
+            })
             .with_children(|title_box| {
                 title_box.spawn((
                     (
@@ -139,12 +137,12 @@ pub fn spawn_loading_screen_ui(
         ))
         .with_children(|card| {
             // Title & Brief
-            card.spawn((Node {
+            card.spawn(Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     row_gap: Val::Px(6.0),
                     ..default()
-                }))
+                })
             .with_children(|head| {
                 head.spawn((
                     (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
@@ -160,13 +158,13 @@ pub fn spawn_loading_screen_ui(
             });
 
             // 3-Column Manifest Cards
-            card.spawn((Node {
+            card.spawn(Node {
                     width: Val::Percent(100.0),
                     flex_direction: FlexDirection::Row,
                     column_gap: Val::Px(16.0),
                     justify_content: JustifyContent::SpaceBetween,
                     ..default()
-                }))
+                })
             .with_children(|manifest_row| {
                 // Card 1: Map & Terminal
                 spawn_manifest_tile(
@@ -198,22 +196,22 @@ pub fn spawn_loading_screen_ui(
             });
 
             // Linear Progress Bar Section
-            card.spawn((Node {
+            card.spawn(Node {
                     width: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(10.0),
                     ..default()
-                }))
+                })
             .with_children(|progress_box| {
                 // Header row with Label & Percentage Text
                 progress_box
-                    .spawn((Node {
+                    .spawn(Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Row,
                             justify_content: JustifyContent::SpaceBetween,
                             align_items: AlignItems::Center,
                             ..default()
-                        }))
+                        })
                     .with_children(|row| {
                         row.spawn((
                             (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.65, 0.72, 0.80))),
@@ -280,16 +278,14 @@ pub fn spawn_loading_screen_ui(
 
     // 3. Bottom Navigation Controls
     let footer = commands
-        .spawn(
-            (Node {
-                width: Val::Percent(85.0),
-                max_width: Val::Px(960.0),
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceBetween,
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            width: Val::Percent(85.0),
+            max_width: Val::Px(960.0),
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            ..default()
+        })
         .with_children(|nav| {
             // Cancel Button
             nav.spawn((

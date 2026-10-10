@@ -137,13 +137,11 @@ pub fn spawn_main_menu(
         .with_children(|hero_parent| {
             // Title & Subtitle
             hero_parent
-                .spawn(
-                    (Node {
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(6.0),
-                        ..default()
-                    }),
-                )
+                .spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(6.0),
+                    ..default()
+                })
                 .with_children(|brand| {
                     brand.spawn((
                         (

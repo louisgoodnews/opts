@@ -20,16 +20,14 @@ pub fn spawn_vehicle_selection_tab(
     setup: &NewGameSetup,
 ) {
     parent
-        .spawn(
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                column_gap: Val::Px(16.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            column_gap: Val::Px(16.0),
+            ..default()
+        })
         .with_children(|row| {
             // ==========================================
             // Left Frame: 30% Scrolled Vehicle List
@@ -297,15 +295,13 @@ pub fn populate_vehicle_details_inner(
 
     // Technical specification badges row 1
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(10.0),
-                flex_wrap: FlexWrap::Wrap,
-                row_gap: Val::Px(6.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(10.0),
+            flex_wrap: FlexWrap::Wrap,
+            row_gap: Val::Px(6.0),
+            ..default()
+        })
         .with_children(|badges| {
             spawn_stat_chip(badges, theme, "Powertrain", &veh.engine_power);
             spawn_stat_chip(badges, theme, "Transmission", &veh.transmission);
@@ -315,15 +311,13 @@ pub fn populate_vehicle_details_inner(
 
     // Technical specification badges row 2
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(10.0),
-                flex_wrap: FlexWrap::Wrap,
-                row_gap: Val::Px(6.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(10.0),
+            flex_wrap: FlexWrap::Wrap,
+            row_gap: Val::Px(6.0),
+            ..default()
+        })
         .with_children(|badges| {
             spawn_stat_chip(badges, theme, "Top Speed", &veh.max_speed_kmh);
             spawn_stat_chip(badges, theme, "Passenger Doors", &veh.passenger_doors);

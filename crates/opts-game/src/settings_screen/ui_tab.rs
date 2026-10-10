@@ -15,15 +15,13 @@ pub fn spawn_ui_tab(
 ) {
     // Section 1: Dark Mode Toggle
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(16.0),
-                margin: UiRect::bottom(Val::Px(16.0)),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(16.0),
+            margin: UiRect::bottom(Val::Px(16.0)),
+            ..default()
+        })
         .with_children(|row| {
             row.spawn((
                 (
@@ -78,14 +76,12 @@ pub fn spawn_ui_tab(
 
     // Section 2: Preset Themes
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(8.0),
-                margin: UiRect::bottom(Val::Px(20.0)),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(8.0),
+            margin: UiRect::bottom(Val::Px(20.0)),
+            ..default()
+        })
         .with_children(|section| {
             section.spawn((
                 (
@@ -101,14 +97,12 @@ pub fn spawn_ui_tab(
             ));
 
             section
-                .spawn(
-                    (Node {
-                        flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(12.0),
-                        flex_wrap: FlexWrap::Wrap,
-                        ..default()
-                    }),
-                )
+                .spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(12.0),
+                    flex_wrap: FlexWrap::Wrap,
+                    ..default()
+                })
                 .with_children(|buttons| {
                     let presets = [
                         ("Default", "Standard Material"),
@@ -171,14 +165,12 @@ pub fn spawn_ui_tab(
 
     // Section 3: Per-Widget Color Customization Palette
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(10.0),
-                margin: UiRect::bottom(Val::Px(16.0)),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(10.0),
+            margin: UiRect::bottom(Val::Px(16.0)),
+            ..default()
+        })
         .with_children(|section| {
             section.spawn((
                 (
@@ -234,15 +226,13 @@ fn spawn_swatch_row(
     colors: &[(&'static str, Color)],
 ) {
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(12.0),
-                margin: UiRect::vertical(Val::Px(4.0)),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(12.0),
+            margin: UiRect::vertical(Val::Px(4.0)),
+            ..default()
+        })
         .with_children(|row| {
             row.spawn((
                 (

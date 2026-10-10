@@ -273,30 +273,30 @@ pub fn spawn_material_clock_picker(
                     });
 
                     // AM / PM and Quick Minute Adjustment Controls
-                    body.spawn((Node {
+                    body.spawn(Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
                             justify_content: JustifyContent::SpaceBetween,
                             padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
                             ..default()
-                        }))
+                        })
                     .with_children(|row| {
-                        row.spawn((Node {
+                        row.spawn(Node {
                                 flex_direction: FlexDirection::Row,
                                 column_gap: Val::Px(8.0),
                                 ..default()
-                            }))
+                            })
                         .with_children(|mer_box| {
                             spawn_meridian_btn(mer_box, theme, "AM", false, !is_pm, teal_accent);
                             spawn_meridian_btn(mer_box, theme, "PM", true, is_pm, teal_accent);
                         });
 
-                        row.spawn((Node {
+                        row.spawn(Node {
                                 flex_direction: FlexDirection::Row,
                                 column_gap: Val::Px(6.0),
                                 ..default()
-                            }))
+                            })
                         .with_children(|min_box| {
                             spawn_minute_step_btn(min_box, theme, "-15m", -15);
                             spawn_minute_step_btn(min_box, theme, "+15m", 15);

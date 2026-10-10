@@ -20,16 +20,14 @@ pub fn spawn_map_selection_tab(
     setup: &NewGameSetup,
 ) {
     parent
-        .spawn(
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                column_gap: Val::Px(16.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            column_gap: Val::Px(16.0),
+            ..default()
+        })
         .with_children(|row| {
             // ==========================================
             // Left Frame: 30% Scrolled Map List
@@ -291,15 +289,13 @@ pub fn populate_map_details_inner(
 
     // Metadata stats badges row
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(12.0),
-                flex_wrap: FlexWrap::Wrap,
-                margin: UiRect::vertical(Val::Px(4.0)),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(12.0),
+            flex_wrap: FlexWrap::Wrap,
+            margin: UiRect::vertical(Val::Px(4.0)),
+            ..default()
+        })
         .with_children(|badges| {
             spawn_stat_chip(badges, theme, "World Tiles", &format!("{}", map.tile_count));
             spawn_stat_chip(badges, theme, "Standard Depot", &map.standard_depot);

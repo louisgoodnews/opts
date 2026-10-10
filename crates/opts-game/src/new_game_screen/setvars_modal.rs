@@ -85,13 +85,13 @@ pub fn spawn_setvars_modal(
                             });
                     } else {
                         dialog
-                            .spawn((Node {
+                            .spawn(Node {
                                     width: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Column,
                                     row_gap: Val::Px(10.0),
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                }))
+                                })
                             .with_children(|list| {
                                 for item in &setvars {
                                     spawn_setvar_row(list, theme, item);
@@ -169,14 +169,12 @@ fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, it
             BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
         ))
         .with_children(|row| {
-            row.spawn(
-                (Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(2.0),
-                    max_width: Val::Px(360.0),
-                    ..default()
-                }),
-            )
+            row.spawn(Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(2.0),
+                max_width: Val::Px(360.0),
+                ..default()
+            })
             .with_children(|col| {
                 col.spawn((
                     (
@@ -203,14 +201,12 @@ fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, it
                 ));
             });
 
-            row.spawn(
-                (Node {
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    column_gap: Val::Px(6.0),
-                    ..default()
-                }),
-            )
+            row.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(6.0),
+                ..default()
+            })
             .with_children(|ctrl| {
                 spawn_stepper_btn(ctrl, theme, "-", item.name.clone(), -1);
 

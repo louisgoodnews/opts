@@ -6,14 +6,12 @@ use opts_gui::prelude::*;
 /// Spawns the Display & Sound settings panel.
 pub fn spawn_display_tab(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme) {
     parent
-        .spawn(
-            (Node {
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(12.0),
-                max_width: Val::Px(640.0),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(12.0),
+            max_width: Val::Px(640.0),
+            ..default()
+        })
         .with_children(|section| {
             section.spawn((
                 (

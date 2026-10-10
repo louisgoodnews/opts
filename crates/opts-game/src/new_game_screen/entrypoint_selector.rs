@@ -135,14 +135,12 @@ pub fn spawn_entrypoint_scrollable_selection(
                                         Focusable { tab_index: 0 },
                                     ))
                                     .with_children(|btn| {
-                                        btn.spawn(
-                                            (Node {
-                                                flex_direction: FlexDirection::Row,
-                                                align_items: AlignItems::Center,
-                                                column_gap: Val::Px(8.0),
-                                                ..default()
-                                            }),
-                                        )
+                                        btn.spawn(Node {
+                                            flex_direction: FlexDirection::Row,
+                                            align_items: AlignItems::Center,
+                                            column_gap: Val::Px(8.0),
+                                            ..default()
+                                        })
                                         .with_children(
                                             |row| {
                                                 row.spawn((

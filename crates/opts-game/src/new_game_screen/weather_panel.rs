@@ -24,24 +24,24 @@ pub fn spawn_weather_datetime_tab(
     live_weather: &DeviceLocationWeather,
 ) {
     parent
-        .spawn((Node {
+        .spawn(Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(12.0),
                 ..default()
-            }))
+            })
         .with_children(|main_col| {
             // 3-Column Container
             main_col
-                .spawn((Node {
+                .spawn(Node {
                         width: Val::Percent(100.0),
                         flex_grow: 1.0,
                         flex_direction: FlexDirection::Row,
                         column_gap: Val::Px(16.0),
                         align_items: AlignItems::Stretch,
                         ..default()
-                    }))
+                    })
                 .with_children(|cols_row| {
                     // =========================================================
                     // Column 1 (1/3): Scrollable Weather Presets Selection
@@ -165,12 +165,12 @@ pub fn spawn_weather_datetime_tab(
                                                             Focusable { tab_index: 0 },
                                                         ))
                                                         .with_children(|btn| {
-                                                            btn.spawn((Node {
+                                                            btn.spawn(Node {
                                                                     flex_direction: FlexDirection::Row,
                                                                     align_items: AlignItems::Center,
                                                                     column_gap: Val::Px(8.0),
                                                                     ..default()
-                                                                }))
+                                                                })
                                                             .with_children(|title_box| {
                                                                 title_box.spawn((
                                                                     (Text::new(preset.name), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(if is_active {
@@ -260,12 +260,12 @@ pub fn spawn_weather_datetime_tab(
                             ));
 
                             // Stepper Row
-                            col3.spawn((Node {
+                            col3.spawn(Node {
                                     flex_direction: FlexDirection::Row,
                                     column_gap: Val::Px(8.0),
                                     align_items: AlignItems::Center,
                                     ..default()
-                                }))
+                                })
                             .with_children(|steppers| {
                                 for (offset, label) in [(-2, "-2h"), (-1, "-1h"), (1, "+1h"), (2, "+2h")] {
                                     steppers
@@ -291,7 +291,7 @@ pub fn spawn_weather_datetime_tab(
                             });
 
                             // Date & Time Pickers Container (Aligned side-by-side or wrapped)
-                            col3.spawn((Node {
+                            col3.spawn(Node {
                                     width: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Row,
                                     justify_content: JustifyContent::Center,
@@ -300,7 +300,7 @@ pub fn spawn_weather_datetime_tab(
                                     flex_wrap: FlexWrap::Wrap,
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                }))
+                                })
                             .with_children(|pickers_node| {
                                 spawn_material_date_picker(pickers_node, theme, setup);
                                 spawn_material_clock_picker(pickers_node, theme, setup);

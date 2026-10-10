@@ -10,7 +10,7 @@ use crate::in_game::types::{InGameCamera, InGameEntity};
 /// Spawns the 3D tracking camera with a [`VehicleCameraRig`] sized from the loaded vehicle.
 pub fn spawn_camera_rig(commands: &mut Commands, setup: &CameraSetup) {
     commands.spawn((
-        (Camera3d::default(), setup.start),
+        (Camera3d::default(), bevy::ui::IsDefaultUiCamera, setup.start),
         VehicleCameraRig {
             mode: VehicleCameraMode::ExteriorChase,
             chase_distance: setup.chase_distance,
@@ -27,7 +27,7 @@ pub fn spawn_camera_rig(commands: &mut Commands, setup: &CameraSetup) {
 /// Spawns a plain 3D camera for free-roam inspection when there is no vehicle to track.
 pub fn spawn_free_camera(commands: &mut Commands, transform: Transform) {
     commands.spawn((
-        (Camera3d::default(), transform),
+        (Camera3d::default(), bevy::ui::IsDefaultUiCamera, transform),
         InGameEntity,
         InGameCamera,
         Name::new("Free_Roam_Camera"),

@@ -134,15 +134,13 @@ pub fn spawn_material_date_picker(
                     ));
 
                     header
-                        .spawn(
-                            (Node {
-                                width: Val::Percent(100.0),
-                                flex_direction: FlexDirection::Row,
-                                align_items: AlignItems::Center,
-                                justify_content: JustifyContent::SpaceBetween,
-                                ..default()
-                            }),
-                        )
+                        .spawn(Node {
+                            width: Val::Percent(100.0),
+                            flex_direction: FlexDirection::Row,
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::SpaceBetween,
+                            ..default()
+                        })
                         .with_children(|date_row| {
                             date_row.spawn((
                                 (
@@ -185,27 +183,23 @@ pub fn spawn_material_date_picker(
                 ))
                 .with_children(|body| {
                     // Month & Year Selector
-                    body.spawn(
-                        (Node {
-                            width: Val::Percent(100.0),
-                            flex_direction: FlexDirection::Row,
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::SpaceBetween,
-                            padding: UiRect::bottom(Val::Px(4.0)),
-                            ..default()
-                        }),
-                    )
+                    body.spawn(Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::SpaceBetween,
+                        padding: UiRect::bottom(Val::Px(4.0)),
+                        ..default()
+                    })
                     .with_children(|nav_bar| {
                         // Month Selector with Prev/Next buttons
                         nav_bar
-                            .spawn(
-                                (Node {
-                                    flex_direction: FlexDirection::Row,
-                                    align_items: AlignItems::Center,
-                                    column_gap: Val::Px(4.0),
-                                    ..default()
-                                }),
-                            )
+                            .spawn(Node {
+                                flex_direction: FlexDirection::Row,
+                                align_items: AlignItems::Center,
+                                column_gap: Val::Px(4.0),
+                                ..default()
+                            })
                             .with_children(|month_box| {
                                 spawn_nav_arrow(month_box, theme, "<", PrevMonthBtn);
                                 month_box.spawn((
@@ -228,15 +222,13 @@ pub fn spawn_material_date_picker(
                     });
 
                     // Weekday Column Headers: S M T W T F S
-                    body.spawn(
-                        (Node {
-                            width: Val::Percent(100.0),
-                            flex_direction: FlexDirection::Row,
-                            justify_content: JustifyContent::SpaceBetween,
-                            padding: UiRect::vertical(Val::Px(2.0)),
-                            ..default()
-                        }),
-                    )
+                    body.spawn(Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        padding: UiRect::vertical(Val::Px(2.0)),
+                        ..default()
+                    })
                     .with_children(|week_row| {
                         for letter in ["S", "M", "T", "W", "T", "F", "S"] {
                             week_row.spawn((
@@ -263,14 +255,12 @@ pub fn spawn_material_date_picker(
                     let first_dow = day_of_week(setup.year, setup.month, 1);
                     let total_days = days_in_month(setup.year, setup.month);
 
-                    body.spawn(
-                        (Node {
-                            width: Val::Percent(100.0),
-                            flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(4.0),
-                            ..default()
-                        }),
-                    )
+                    body.spawn(Node {
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(4.0),
+                        ..default()
+                    })
                     .with_children(|grid| {
                         let mut current_day = 1u32;
                         let mut week_slot = 0u32;
@@ -280,24 +270,20 @@ pub fn spawn_material_date_picker(
                                 break;
                             }
 
-                            grid.spawn(
-                                (Node {
-                                    width: Val::Percent(100.0),
-                                    flex_direction: FlexDirection::Row,
-                                    justify_content: JustifyContent::SpaceBetween,
-                                    ..default()
-                                }),
-                            )
+                            grid.spawn(Node {
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                ..default()
+                            })
                             .with_children(|row| {
                                 for _day_col in 0..7 {
                                     if week_slot < first_dow || current_day > total_days {
-                                        row.spawn(
-                                            (Node {
-                                                width: Val::Px(34.0),
-                                                height: Val::Px(34.0),
-                                                ..default()
-                                            }),
-                                        );
+                                        row.spawn(Node {
+                                            width: Val::Px(34.0),
+                                            height: Val::Px(34.0),
+                                            ..default()
+                                        });
                                     } else {
                                         let day_num = current_day;
                                         let is_active = day_num == setup.day;

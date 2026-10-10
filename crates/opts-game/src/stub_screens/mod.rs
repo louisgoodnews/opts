@@ -59,15 +59,13 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
 
     commands.entity(card).with_children(|card_parent| {
         card_parent
-            .spawn(
-                (Node {
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    row_gap: Val::Px(16.0),
-                    min_width: Val::Px(360.0),
-                    ..default()
-                }),
-            )
+            .spawn(Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                row_gap: Val::Px(16.0),
+                min_width: Val::Px(360.0),
+                ..default()
+            })
             .with_children(|content| {
                 content.spawn((
                     (

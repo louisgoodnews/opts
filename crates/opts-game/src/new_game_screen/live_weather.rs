@@ -334,14 +334,12 @@ pub fn populate_weather_details_inner(
             ));
 
             box_node
-                .spawn(
-                    (Node {
-                        flex_direction: FlexDirection::Row,
-                        column_gap: Val::Px(8.0),
-                        align_items: AlignItems::Center,
-                        ..default()
-                    }),
-                )
+                .spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(8.0),
+                    align_items: AlignItems::Center,
+                    ..default()
+                })
                 .with_children(|btns| {
                     btns.spawn((
                         (
@@ -413,15 +411,13 @@ fn spawn_metric_row(
     val: &str,
 ) {
     parent
-        .spawn(
-            (Node {
-                width: Val::Percent(100.0),
-                flex_direction: FlexDirection::Row,
-                justify_content: JustifyContent::SpaceBetween,
-                align_items: AlignItems::Center,
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            width: Val::Percent(100.0),
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+            ..default()
+        })
         .with_children(|row| {
             row.spawn((
                 (

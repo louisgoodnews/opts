@@ -43,16 +43,14 @@ pub fn spawn_modal(mut commands: Commands, data: Res<ReportModalData>, images: R
     let mut text_area = Entity::PLACEHOLDER;
     commands.entity(content).with_children(|p| {
         // Preview: top 25 % of the viewport, aspect preserved, letterboxed.
-        p.spawn(
-            (Node {
-                height: Val::Vh(25.0),
-                width: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                flex_shrink: 0.0,
-                ..default()
-            }),
-        )
+        p.spawn(Node {
+            height: Val::Vh(25.0),
+            width: Val::Percent(100.0),
+            justify_content: JustifyContent::Center,
+            align_items: AlignItems::Center,
+            flex_shrink: 0.0,
+            ..default()
+        })
         .with_children(|frame| {
             if let Some(handle) = preview {
                 frame.spawn((
@@ -81,14 +79,12 @@ pub fn spawn_modal(mut commands: Commands, data: Res<ReportModalData>, images: R
             .with_placeholder("What happened? What did you expect?")
             .autofocus(true)
             .spawn_child(p);
-        p.spawn(
-            (Node {
-                column_gap: Val::Px(12.0),
-                justify_content: JustifyContent::FlexEnd,
-                flex_shrink: 0.0,
-                ..default()
-            }),
-        )
+        p.spawn(Node {
+            column_gap: Val::Px(12.0),
+            justify_content: JustifyContent::FlexEnd,
+            flex_shrink: 0.0,
+            ..default()
+        })
         .with_children(|row| {
             let report = ButtonBuilder::filled("Report").spawn_child(row);
             let cancel = ButtonBuilder::outlined("Cancel").spawn_child(row);

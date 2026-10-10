@@ -164,16 +164,14 @@ fn populate_toplevel_children(
         .with_children(|window_parent| {
             // Header Bar (Title + Close Button)
             window_parent
-                .spawn(
-                    (Node {
-                        display: Display::Flex,
-                        flex_direction: FlexDirection::Row,
-                        justify_content: JustifyContent::SpaceBetween,
-                        align_items: AlignItems::Center,
-                        width: Val::Percent(100.0),
-                        ..default()
-                    }),
-                )
+                .spawn(Node {
+                    display: Display::Flex,
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::SpaceBetween,
+                    align_items: AlignItems::Center,
+                    width: Val::Percent(100.0),
+                    ..default()
+                })
                 .with_children(|header_parent| {
                     header_parent.spawn((
                         (

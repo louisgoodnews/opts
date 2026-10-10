@@ -11,19 +11,17 @@ use crate::new_game_screen::types::{
 /// Spawns an interactive scrollbar column with top `▲` button, clickable track with thumb, and bottom `▼` button.
 pub fn spawn_scrollbar(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, kind: ScrollKind) {
     parent
-        .spawn(
-            (Node {
-                position_type: PositionType::Absolute,
-                right: Val::Px(2.0),
-                top: Val::Px(4.0),
-                bottom: Val::Px(4.0),
-                width: Val::Px(18.0),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::SpaceBetween,
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            position_type: PositionType::Absolute,
+            right: Val::Px(2.0),
+            top: Val::Px(4.0),
+            bottom: Val::Px(4.0),
+            width: Val::Px(18.0),
+            flex_direction: FlexDirection::Column,
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::SpaceBetween,
+            ..default()
+        })
         .with_children(|col| {
             // 1. Top Stepper Button (▲)
             col.spawn((

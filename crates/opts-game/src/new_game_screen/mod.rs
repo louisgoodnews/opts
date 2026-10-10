@@ -187,13 +187,11 @@ pub fn spawn_new_game_screen(
                 BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
             ))
             .with_children(|bar| {
-                bar.spawn(
-                    (Node {
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(2.0),
-                        ..default()
-                    }),
-                )
+                bar.spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(2.0),
+                    ..default()
+                })
                 .with_children(|title_box| {
                     title_box.spawn((
                         (
