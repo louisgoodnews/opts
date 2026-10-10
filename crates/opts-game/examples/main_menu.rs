@@ -38,7 +38,7 @@ fn main() {
                     primary_window: Some(Window {
                         title: "OPTS — Main Menu (Material Design 3 & Glassmorphic Surfaces)"
                             .to_string(),
-                        resolution: (1280.0_f32, 800.0_f32).into(),
+                        resolution: bevy::window::WindowResolution::new(1280, 800),
                         resize_constraints: bevy::window::WindowResizeConstraints {
                             min_width: 800.0,
                             min_height: 600.0,

@@ -294,7 +294,7 @@ mod tests {
             },
         ];
         let img = compose_tile_ground(&layers, 4);
-        let px = |x: usize, y: usize| &img.data[(y * 4 + x) * 4..][..3];
+        let px = |x: usize, y: usize| &img.data.as_ref().unwrap()[(y * 4 + x) * 4..][..3];
         assert_eq!(px(1, 0), [255, 0, 0], "north half is painted");
         assert_eq!(px(1, 3), [0, 0, 255], "south half keeps the base");
     }

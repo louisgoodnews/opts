@@ -151,7 +151,7 @@ mod tests {
         app.update();
 
         let events = app.world().resource::<Messages<DateSelected>>();
-        let mut reader = events.get_reader();
+        let mut reader = events.get_cursor();
         let received = reader.read(events).filter(|e| e.entity == entity).last();
         assert_eq!(
             received.map(|e| (e.year, e.month, e.day)),

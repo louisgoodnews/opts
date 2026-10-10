@@ -28,7 +28,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                resolution: (900.0_f32, 600.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(900, 600),
                 ..default()
             }),
             ..default()
@@ -75,6 +75,8 @@ fn key(window: Entity, code: KeyCode, logical: Key) -> KeyboardInput {
         key_code: code,
         logical_key: logical,
         state: ButtonState::Pressed,
+        text: None,
+        repeat: false,
         window,
     }
 }
@@ -90,7 +92,7 @@ fn script(
     mut keys: MessageWriter<KeyboardInput>,
     mut clicks: MessageWriter<ButtonClicked>,
     mut exit: MessageWriter<AppExit>,
-    mut shots: ResMut<bevy::render::view::screenshot::ScreenshotManager>,
+    mut commands: Commands,
 ) {
     s.frame += 1;
     let Ok(w) = window.single() else { return };
@@ -120,7 +122,9 @@ fn script(
         }
         if f == 40 {
             if let Ok(path) = std::env::var("OPTS_EXAMPLE_MODAL_SHOT") {
-                let _ = shots.save_screenshot_to_disk(w, path);
+                commands
+                    .spawn(bevy::render::view::screenshot::Screenshot::window(w))
+                    .observe(bevy::render::view::screenshot::save_to_disk(path));
             }
         }
         if f == 60 {

@@ -144,10 +144,13 @@ pub fn spawn_entrypoint_scrollable_selection(
                                         .with_children(
                                             |row| {
                                                 row.spawn((
-                                                    (Text::new(opts_gui::icons::DIRECTIONS_BUS), /* TODO text style opts_gui::icons::icon_style(
+                                                    (
+                                                        Text::new(opts_gui::icons::DIRECTIONS_BUS),
+                                                        opts_gui::icons::icon_style(
                                                             16.0,
                                                             theme.scheme.get(ColorRole::Primary),
-                                                        ) */),
+                                                        ),
+                                                    ),
                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                 ));
 

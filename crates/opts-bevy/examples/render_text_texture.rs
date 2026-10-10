@@ -33,6 +33,8 @@ fn main() {
     // Composite onto a light grey backdrop so transparent text is visible in viewers.
     let flat: Vec<u8> = img
         .data
+        .as_deref()
+        .unwrap_or_default()
         .chunks_exact(4)
         .flat_map(|p| {
             let k = u32::from(p[3]);

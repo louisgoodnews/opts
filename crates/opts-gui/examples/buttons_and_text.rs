@@ -8,7 +8,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS GUI — Buttons, Labels & Icons".into(),
-                resolution: (1024.0_f32, 700.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1024, 700),
                 ..default()
             }),
             ..default()

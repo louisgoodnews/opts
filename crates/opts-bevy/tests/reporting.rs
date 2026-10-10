@@ -109,12 +109,15 @@ fn press_f1(app: &mut App) {
     let window = app
         .world_mut()
         .query_filtered::<Entity, With<PrimaryWindow>>()
-        .single(app.world());
+        .single(app.world())
+        .unwrap();
     app.world_mut()
         .write_message(bevy::input::keyboard::KeyboardInput {
             key_code: KeyCode::F1,
             logical_key: bevy::input::keyboard::Key::F1,
             state: bevy::input::ButtonState::Pressed,
+            text: None,
+            repeat: false,
             window,
         });
     app.update();
@@ -173,7 +176,8 @@ fn f1_pauses_gates_opens_and_cancel_resumes() {
     let any_modal = app
         .world_mut()
         .query_filtered::<Entity, With<ModalRoot>>()
-        .single(app.world());
+        .single(app.world())
+        .unwrap();
     app.world_mut()
         .write_message(ModalEvent::CancelRequested(any_modal));
     app.update();
@@ -201,7 +205,8 @@ fn an_already_paused_simulation_stays_paused_after_the_modal() {
     let m = app
         .world_mut()
         .query_filtered::<Entity, With<ModalRoot>>()
-        .single(app.world());
+        .single(app.world())
+        .unwrap();
     app.world_mut()
         .write_message(ModalEvent::CancelRequested(m));
     app.update();
@@ -224,7 +229,8 @@ fn report_button_saves_both_files_and_closes() {
     let btn = app
         .world_mut()
         .query_filtered::<Entity, With<opts_bevy::reporting::modal::ReportButton>>()
-        .single(app.world());
+        .single(app.world())
+        .unwrap();
     app.world_mut().write_message(ButtonClicked(btn));
     for _ in 0..400 {
         app.update();
@@ -272,7 +278,7 @@ fn gating_condition_reads_the_modal_flag() {
     let mut world = World::new();
     let mut sys = IntoSystem::into_system(not_modal_active);
     sys.initialize(&mut world);
-    assert!(sys.run((), &mut world), "no resource = not gated");
+    assert!(sys.run((), &mut world).unwrap(), "no resource = not gated");
 }
 
 #[test]

@@ -38,7 +38,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS — OMSI Bus Vehicle Loader & Camera Preset Example".into(),
-                resolution: (1280.0_f32, 720.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1280, 720),
                 ..default()
             }),
             ..default()
@@ -82,6 +82,7 @@ fn setup_scene(
     commands.insert_resource(GlobalAmbientLight {
         color: Color::srgb(0.9, 0.92, 1.0),
         brightness: 450.0,
+        ..default()
     });
 
     // 2. Asphalt Road Ground Plane

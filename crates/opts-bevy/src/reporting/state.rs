@@ -95,8 +95,8 @@ mod tests {
         world.insert_resource(ModalActive(false));
         let mut sys = IntoSystem::into_system(not_modal_active);
         sys.initialize(&mut world);
-        assert!(sys.run((), &mut world));
+        assert!(sys.run((), &mut world).unwrap());
         world.insert_resource(ModalActive(true));
-        assert!(!sys.run((), &mut world));
+        assert!(!sys.run((), &mut world).unwrap());
     }
 }

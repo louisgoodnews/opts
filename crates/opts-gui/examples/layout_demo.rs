@@ -8,7 +8,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS GUI — Layout Primitives Demo".into(),
-                resolution: (1024.0_f32, 600.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1024, 600),
                 ..default()
             }),
             ..default()

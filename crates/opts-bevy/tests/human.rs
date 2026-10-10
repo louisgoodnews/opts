@@ -23,7 +23,6 @@ fn build(pose: HumanPose) -> (App, Human) {
             watch_for_changes_override: Some(false),
             ..Default::default()
         },
-        bevy::ecs::hierarchy::HierarchyPlugin,
         bevy::transform::TransformPlugin,
     ))
     .init_asset::<SkinnedMeshInverseBindposes>()

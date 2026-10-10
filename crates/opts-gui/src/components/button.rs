@@ -416,7 +416,7 @@ mod tests {
 
         // Verify ButtonClicked event was dispatched
         let events = app.world().resource::<Messages<ButtonClicked>>();
-        let mut reader = events.get_reader();
+        let mut reader = events.get_cursor();
         let received = reader.read(events).any(|e| e.0 == button_entity);
         assert!(received, "ButtonClicked event should have been dispatched");
     }

@@ -138,7 +138,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, InputPlugin))
             .add_message::<TextAreaChanged>()
-            .insert_non_send_resource(TextClipboard::in_memory())
+            .insert_non_send(TextClipboard::in_memory())
             .add_systems(Update, text_area_input_system);
         let e = app
             .world_mut()
@@ -155,6 +155,8 @@ mod tests {
             key_code,
             logical_key,
             state: ButtonState::Pressed,
+            text: None,
+            repeat: false,
             window: Entity::PLACEHOLDER,
         });
         app.update();

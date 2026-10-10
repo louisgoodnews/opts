@@ -20,7 +20,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS — Scenery Object Loader Example".into(),
-                resolution: (1280.0_f32, 720.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1280, 720),
                 ..default()
             }),
             ..default()
@@ -54,6 +54,7 @@ fn setup_scene(
     commands.insert_resource(GlobalAmbientLight {
         color: Color::WHITE,
         brightness: 500.0,
+        ..default()
     });
 
     // 2. Define or parse an OMSI Scenery Object

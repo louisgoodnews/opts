@@ -231,7 +231,7 @@ mod tests {
         assert!(app.world().get::<ModalRoot>(root).is_some());
         assert!(app.world().get::<ModalContent>(content).is_some());
         assert_eq!(
-            app.world().get::<Parent>(content).map(Parent::get),
+            app.world().get::<ChildOf>(content).map(ChildOf::parent),
             Some(root)
         );
     }
@@ -249,7 +249,7 @@ mod tests {
             .press(KeyCode::Escape);
         app.update();
         let events = app.world().resource::<Messages<ModalEvent>>();
-        let got: Vec<_> = events.get_reader().read(events).copied().collect();
+        let got: Vec<_> = events.get_cursor().read(events).copied().collect();
         assert_eq!(got, vec![ModalEvent::CancelRequested(root)]);
     }
 
@@ -264,12 +264,12 @@ mod tests {
         let a = app
             .world_mut()
             .spawn(Focusable { tab_index: 0 })
-            .set_parent(content)
+            .insert(ChildOf(content))
             .id();
         let b = app
             .world_mut()
             .spawn(Focusable { tab_index: 1 })
-            .set_parent(content)
+            .insert(ChildOf(content))
             .id();
         let _outside = app.world_mut().spawn(Focusable { tab_index: 0 }).id();
         app.world_mut().entity_mut(b).insert(Focused);
@@ -278,7 +278,7 @@ mod tests {
             .press(KeyCode::Tab);
         app.update();
         let events = app.world().resource::<Messages<FocusEvent>>();
-        let got: Vec<_> = events.get_reader().read(events).copied().collect();
+        let got: Vec<_> = events.get_cursor().read(events).copied().collect();
         assert_eq!(got, vec![FocusEvent::Set(a)]);
     }
 }

@@ -265,7 +265,9 @@ fn test_year_spinbox_keyboard_input_regular_and_numpad() {
             key_code: code,
             logical_key: Key::Character(ch.into()),
             state: ButtonState::Pressed,
-            window: Entity::from_raw(0),
+            text: None,
+            repeat: false,
+            window: Entity::PLACEHOLDER,
         };
         app.world_mut().write_message(key_event);
         app.update();
@@ -276,7 +278,9 @@ fn test_year_spinbox_keyboard_input_regular_and_numpad() {
         key_code: KeyCode::Enter,
         logical_key: Key::Enter,
         state: ButtonState::Pressed,
-        window: Entity::from_raw(0),
+        text: None,
+        repeat: false,
+        window: Entity::PLACEHOLDER,
     };
     app.world_mut().write_message(enter_event);
     app.update();

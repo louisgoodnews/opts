@@ -1,7 +1,7 @@
 //! Native Bevy [`AssetLoader`] implementations for OMSI `.o3d` and DirectX `.x` mesh formats.
 
 use bevy::asset::io::Reader;
-use bevy::asset::{AssetLoader, AsyncReadExt, LoadContext};
+use bevy::asset::{AssetLoader, LoadContext};
 use bevy::mesh::Mesh;
 use bevy::reflect::TypePath;
 use thiserror::Error;

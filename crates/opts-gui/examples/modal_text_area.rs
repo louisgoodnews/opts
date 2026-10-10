@@ -17,7 +17,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS GUI — Modal & TextArea".into(),
-                resolution: (1100.0_f32, 760.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1100, 760),
                 ..default()
             }),
             ..default()
@@ -60,13 +60,11 @@ fn setup(mut commands: Commands) {
             )
             .autofocus(true)
             .spawn_child(p);
-        p.spawn(
-            (Node {
-                column_gap: Val::Px(12.0),
-                justify_content: JustifyContent::FlexEnd,
-                ..default()
-            }),
-        )
+        p.spawn(Node {
+            column_gap: Val::Px(12.0),
+            justify_content: JustifyContent::FlexEnd,
+            ..default()
+        })
         .with_children(|row| {
             let r = ButtonBuilder::filled("Report").spawn_child(row);
             row.commands().queue(move |world: &mut World| {
@@ -113,7 +111,7 @@ fn handle_escape(mut events: MessageReader<ModalEvent>, mut commands: Commands) 
 /// With `OPTS_EXAMPLE_SCREENSHOT=<file.png>` saves one frame after start-up and exits (visual checks).
 fn screenshot_for_ci(
     mut frames: Local<u32>,
-    mut shots: ResMut<bevy::render::view::screenshot::ScreenshotManager>,
+    mut commands: Commands,
     window: Query<Entity, With<bevy::window::PrimaryWindow>>,
     mut exit: MessageWriter<AppExit>,
 ) {
@@ -123,7 +121,9 @@ fn screenshot_for_ci(
     *frames += 1;
     if *frames == 30 {
         if let Ok(w) = window.single() {
-            let _ = shots.save_screenshot_to_disk(w, path);
+            commands
+                .spawn(bevy::render::view::screenshot::Screenshot::window(w))
+                .observe(bevy::render::view::screenshot::save_to_disk(path));
         }
     }
     if *frames == 60 {

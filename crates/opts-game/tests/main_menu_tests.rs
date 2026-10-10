@@ -194,6 +194,8 @@ fn test_escape_key_in_stub_screen_returns_to_main_menu() {
             key_code: KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Escape,
             state: bevy::input::ButtonState::Pressed,
+            text: None,
+            repeat: false,
             window: Entity::PLACEHOLDER,
         });
     app.update(); // PreUpdate processes KeyboardInput, Update runs escape_to_menu_system

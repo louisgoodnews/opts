@@ -129,7 +129,7 @@ fn entering_free_roam_records_spawn_and_reset_restores_it() {
     let mut cams = app
         .world_mut()
         .query_filtered::<&mut Transform, With<Camera3d>>();
-    cams.single_mut(app.world_mut()).translation = Vec3::splat(99.0);
+    cams.single_mut(app.world_mut()).unwrap().translation = Vec3::splat(99.0);
 
     {
         let mut keys = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
@@ -151,7 +151,7 @@ fn entering_free_roam_records_spawn_and_reset_restores_it() {
         CameraMode::Cockpit,
         "reset must not touch previous_mode"
     );
-    let t = cams.single(app.world());
+    let t = cams.single(app.world()).unwrap();
     assert_eq!(t.translation, spawn);
 }
 

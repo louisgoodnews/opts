@@ -212,9 +212,7 @@ fn test_material_date_picker_screenshot_1_interaction() {
             .map(|(e, _)| e)
             .expect("Header date text exists")
     };
-    let initial_header_text = app.world().get::<Text>(header_entity).unwrap().sections[0]
-        .value
-        .clone();
+    let initial_header_text = app.world().get::<Text>(header_entity).unwrap().0.clone();
     assert!(
         !initial_header_text.is_empty(),
         "Header date string must not be empty"
@@ -235,9 +233,7 @@ fn test_material_date_picker_screenshot_1_interaction() {
     let setup = app.world().resource::<NewGameSetup>();
     assert_eq!(setup.day, 15, "Selected day must update to 15");
 
-    let updated_header_text = app.world().get::<Text>(header_entity).unwrap().sections[0]
-        .value
-        .clone();
+    let updated_header_text = app.world().get::<Text>(header_entity).unwrap().0.clone();
     assert!(
         updated_header_text.contains("15"),
         "Header must reflect selected day 15: {}",
@@ -294,9 +290,7 @@ fn test_material_clock_picker_screenshot_2_interaction() {
     app.world_mut().write_message(ButtonClicked(hour_7_entity));
     app.update();
 
-    let clock_text = app.world().get::<Text>(clock_entity).unwrap().sections[0]
-        .value
-        .clone();
+    let clock_text = app.world().get::<Text>(clock_entity).unwrap().0.clone();
     assert!(
         clock_text.starts_with("7:"),
         "Clock display must show 7:.., got: {}",

@@ -438,7 +438,7 @@ mod tests {
         bytes[28..32].copy_from_slice(&7u32.to_le_bytes());
         let img = dds_to_bevy_image(&bytes).expect("decodes");
         assert_eq!(img.texture_descriptor.mip_level_count, 1);
-        assert_eq!(img.data.len(), 16 * 16 * 16);
+        assert_eq!(img.data.as_ref().unwrap().len(), 16 * 16 * 16);
     }
 
     #[test]
@@ -453,7 +453,7 @@ mod tests {
         assert_eq!(img.texture_descriptor.size.width, 256);
         assert_eq!(img.texture_descriptor.size.height, 1028);
         assert_eq!(img.texture_descriptor.mip_level_count, 1);
-        assert_eq!(img.data.len(), 263168);
+        assert_eq!(img.data.as_ref().unwrap().len(), 263168);
     }
 
     #[test]
@@ -462,6 +462,9 @@ mod tests {
         bytes.extend_from_slice(&[0xCC; 256]); // 256 trailing bytes
         let img = dds_to_bevy_image(&bytes).expect("decodes");
         assert_eq!(img.texture_descriptor.mip_level_count, 3);
-        assert_eq!(img.data.len(), (16 * 16 + 8 * 8 + 4 * 4) * 16);
+        assert_eq!(
+            img.data.as_ref().unwrap().len(),
+            (16 * 16 + 8 * 8 + 4 * 4) * 16
+        );
     }
 }

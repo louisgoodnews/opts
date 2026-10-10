@@ -296,15 +296,16 @@ pub fn spawn_material_date_picker(
                                                     height: Val::Px(34.0),
                                                     align_items: AlignItems::Center,
                                                     justify_content: JustifyContent::Center,
+                                                    border_radius: BorderRadius::all(Val::Percent(
+                                                        50.0,
+                                                    )),
                                                     ..default()
                                                 },
                                                 BackgroundColor(if is_active {
                                                     theme.scheme.get(ColorRole::Primary)
                                                 } else {
                                                     Color::NONE
-                                                }), /* TODO border_radius: BorderRadius::all(Val::Percent(
-                                                        50.0,
-                                                    )) */
+                                                }),
                                             ),
                                             M3Button::default(),
                                             SelectCalendarDayBtn { day: day_num },

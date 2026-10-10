@@ -218,10 +218,11 @@ mod tests {
         let img = layer_array(&[&a, &b], 8);
         // 8x8 + 4x4 + 2x2 + 1x1 texels per layer, RGBA8.
         let per_layer = (64 + 16 + 4 + 1) * 4;
-        assert_eq!(img.data.len(), 2 * per_layer);
+        assert_eq!(img.data.as_ref().unwrap().len(), 2 * per_layer);
         assert_eq!(img.texture_descriptor.mip_level_count, 4);
         assert_eq!(
-            img.data[per_layer], 200,
+            img.data.as_ref().unwrap()[per_layer],
+            200,
             "second layer starts after the first layer's mips"
         );
     }
@@ -234,8 +235,8 @@ mod tests {
             rgba: [0, 0, 0, 128].repeat(4),
         };
         let img = mask_array(&[None, Some(&m), None], 2);
-        assert_eq!(&img.data[0..4], &[255; 4]);
-        assert_eq!(&img.data[4..8], &[128; 4]);
-        assert_eq!(&img.data[8..12], &[0; 4]);
+        assert_eq!(&img.data.as_ref().unwrap()[0..4], &[255; 4]);
+        assert_eq!(&img.data.as_ref().unwrap()[4..8], &[128; 4]);
+        assert_eq!(&img.data.as_ref().unwrap()[8..12], &[0; 4]);
     }
 }

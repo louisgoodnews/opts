@@ -203,7 +203,7 @@ pub struct TextAreaPlugin;
 impl Plugin for TextAreaPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<TextAreaChanged>()
-            .init_non_send_resource::<TextClipboard>()
+            .init_non_send::<TextClipboard>()
             .add_systems(
                 Update,
                 (

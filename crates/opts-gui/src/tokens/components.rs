@@ -19,7 +19,7 @@ use crate::theme::{
 ///
 /// fn spawn_card(mut commands: Commands) {
 ///     commands.spawn((
-///         NodeBundle::default(),
+///         Node::default(),
 ///         BackgroundRole(ColorRole::SurfaceContainerLow),
 ///     ));
 /// }
@@ -53,7 +53,7 @@ pub struct ForegroundRole(pub ColorRole);
 ///
 /// fn spawn_outlined(mut commands: Commands) {
 ///     commands.spawn((
-///         NodeBundle::default(),
+///         Node::default(),
 ///         BorderRole(ColorRole::Outline),
 ///     ));
 /// }
@@ -87,7 +87,7 @@ pub struct TypeStyleToken(pub TypeScale);
 ///
 /// fn spawn_pill(mut commands: Commands) {
 ///     commands.spawn((
-///         NodeBundle::default(),
+///         Node::default(),
 ///         RadiusToken(RadiusLevel::Full),
 ///     ));
 /// }
@@ -104,7 +104,7 @@ pub struct RadiusToken(pub RadiusLevel);
 ///
 /// fn spawn_elevated_card(mut commands: Commands) {
 ///     commands.spawn((
-///         NodeBundle::default(),
+///         Node::default(),
 ///         ElevationToken(ElevationLevel::Level2),
 ///         BackgroundRole(ColorRole::SurfaceContainerLow),
 ///     ));
@@ -245,7 +245,7 @@ mod tests {
         let entity = app
             .world_mut()
             .spawn((
-                NodeBundle::default(),
+                Node::default(),
                 BackgroundRole(ColorRole::Primary),
                 BorderRole(ColorRole::Outline),
                 RadiusToken(RadiusLevel::Medium),

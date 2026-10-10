@@ -304,6 +304,8 @@ fn test_escape_key_in_game_returns_to_main_menu() {
             key_code: KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Escape,
             state: bevy::input::ButtonState::Pressed,
+            text: None,
+            repeat: false,
             window: Entity::PLACEHOLDER,
         });
     app.update();

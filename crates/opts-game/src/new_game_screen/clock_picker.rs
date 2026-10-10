@@ -59,22 +59,25 @@ pub fn spawn_material_clock_picker(
     // Root Dialog Card
     parent
         .spawn((
-            (Node {
+            (
+                Node {
                     width: Val::Px(310.0),
                     height: Val::Px(400.0),
                     flex_direction: FlexDirection::Column,
                     border: UiRect::all(Val::Px(1.0)),
                     overflow: Overflow::clip(),
                     ..default()
-                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
-                    theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                )),
+                },
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+            ),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
         ))
         .with_children(|dialog| {
             // 1. Top Header Banner: Interactive "HH : MM AM/PM"
             dialog
-                .spawn((Node {
+                .spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(14.0)),
                         flex_direction: FlexDirection::Row,
@@ -82,14 +85,24 @@ pub fn spawn_material_clock_picker(
                         justify_content: JustifyContent::Center,
                         column_gap: Val::Px(6.0),
                         ..default()
-                    }, BackgroundColor(teal_accent)))
+                    },
+                    BackgroundColor(teal_accent),
+                ))
                 .with_children(|header| {
                     // Digital display entity for test query synchronization
                     header.spawn((
-                        (Text::new(format!("{h12}:{:02}", setup.minute)), TextFont { font_size: FontSize::Px(0.1), ..default() }, TextColor(Color::NONE), Node {
-                            display: Display::None,
-                            ..default()
-                        }),
+                        (
+                            Text::new(format!("{h12}:{:02}", setup.minute)),
+                            TextFont {
+                                font_size: FontSize::Px(0.1),
+                                ..default()
+                            },
+                            TextColor(Color::NONE),
+                            Node {
+                                display: Display::None,
+                                ..default()
+                            },
+                        ),
                         ClockDigitalDisplayText,
                     ));
 
@@ -100,23 +113,41 @@ pub fn spawn_material_clock_picker(
                     };
                     header
                         .spawn((
-                            (Button, Node {
+                            (
+                                Button,
+                                Node {
                                     padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
                                     ..default()
-                                }, BackgroundColor(Color::NONE)),
+                                },
+                                BackgroundColor(Color::NONE),
+                            ),
                             M3Button::default(),
                             ClockHourTextBtn,
                             Focusable { tab_index: 0 },
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                (Text::new(format!("{h12}")), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(hour_col)),
+                                (
+                                    Text::new(format!("{h12}")),
+                                    TextFont {
+                                        font_size: FontSize::Px(38.0),
+                                        ..default()
+                                    },
+                                    TextColor(hour_col),
+                                ),
                                 TypeStyleToken(TypeScale::DisplaySmall),
                             ));
                         });
 
                     header.spawn((
-                        (Text::new(":"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(Color::WHITE)),
+                        (
+                            Text::new(":"),
+                            TextFont {
+                                font_size: FontSize::Px(38.0),
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                        ),
                         TypeStyleToken(TypeScale::DisplaySmall),
                     ));
 
@@ -127,61 +158,86 @@ pub fn spawn_material_clock_picker(
                     };
                     header
                         .spawn((
-                            (Button, Node {
+                            (
+                                Button,
+                                Node {
                                     padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
                                     ..default()
-                                }, BackgroundColor(Color::NONE)),
+                                },
+                                BackgroundColor(Color::NONE),
+                            ),
                             M3Button::default(),
                             ClockMinuteTextBtn,
                             Focusable { tab_index: 0 },
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                (Text::new(format!("{:02}", setup.minute)), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(min_col)),
+                                (
+                                    Text::new(format!("{:02}", setup.minute)),
+                                    TextFont {
+                                        font_size: FontSize::Px(38.0),
+                                        ..default()
+                                    },
+                                    TextColor(min_col),
+                                ),
                                 TypeStyleToken(TypeScale::DisplaySmall),
                             ));
                         });
 
                     header.spawn((
-                        (Text::new(meridian_str), TextFont { font_size: FontSize::Px(18.0), ..default() }, TextColor(teal_light)),
+                        (
+                            Text::new(meridian_str),
+                            TextFont {
+                                font_size: FontSize::Px(18.0),
+                                ..default()
+                            },
+                            TextColor(teal_light),
+                        ),
                         TypeStyleToken(TypeScale::TitleMedium),
                     ));
                 });
 
             // 2. Clock Body Container
             dialog
-                .spawn((Node {
+                .spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(12.0)),
                         flex_direction: FlexDirection::Column,
                         align_items: AlignItems::Center,
                         row_gap: Val::Px(12.0),
                         ..default()
-                    }, BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                    )))
+                    },
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                ))
                 .with_children(|body| {
                     // Circular Dial Disc (210px x 210px)
-                    body.spawn((Node {
+                    body.spawn((
+                        Node {
                             width: Val::Px(210.0),
                             height: Val::Px(210.0),
                             position_type: PositionType::Relative,
                             align_items: AlignItems::Center,
                             justify_content: JustifyContent::Center,
+                            border_radius: BorderRadius::all(Val::Percent(50.0)),
                             ..default()
-                        }, BackgroundColor(
-                            theme.scheme.get(ColorRole::SurfaceContainerLow),
-                        ), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */))
+                        },
+                        BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
+                    ))
                     .with_children(|disc| {
                         // Center Pivot Dot
-                        disc.spawn((Node {
+                        disc.spawn((
+                            Node {
                                 width: Val::Px(6.0),
                                 height: Val::Px(6.0),
                                 position_type: PositionType::Absolute,
                                 left: Val::Px(102.0),
                                 top: Val::Px(102.0),
+                                border_radius: BorderRadius::all(Val::Percent(50.0)),
                                 ..default()
-                            }, BackgroundColor(teal_accent), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */));
+                            },
+                            BackgroundColor(teal_accent),
+                        ));
 
                         // Center Hand Line
                         let center = 105.0f32;
@@ -191,32 +247,36 @@ pub fn spawn_material_clock_picker(
                         let mid_y = center + (radius / 2.0) * angle.sin();
 
                         disc.spawn((
-                            (Node {
+                            (
+                                Node {
                                     position_type: PositionType::Absolute,
                                     left: Val::Px(mid_x - (radius / 2.0)),
                                     top: Val::Px(mid_y - 1.0),
                                     width: Val::Px(radius),
                                     height: Val::Px(2.0),
                                     ..default()
-                                }, BackgroundColor(teal_accent), Transform::from_rotation(Quat::from_rotation_z(angle))),
+                                },
+                                BackgroundColor(teal_accent),
+                                Transform::from_rotation(Quat::from_rotation_z(angle)),
+                            ),
                             ClockHandPointer,
                         ));
 
                         // Radial Hours Container (1..=12)
                         disc.spawn((
                             (Node {
-                                    position_type: PositionType::Absolute,
-                                    left: Val::Px(0.0),
-                                    top: Val::Px(0.0),
-                                    width: Val::Px(210.0),
-                                    height: Val::Px(210.0),
-                                    display: if setup.clock_mode == ClockPickerMode::Hours {
-                                        Display::Flex
-                                    } else {
-                                        Display::None
-                                    },
-                                    ..default()
-                                }),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                width: Val::Px(210.0),
+                                height: Val::Px(210.0),
+                                display: if setup.clock_mode == ClockPickerMode::Hours {
+                                    Display::Flex
+                                } else {
+                                    Display::None
+                                },
+                                ..default()
+                            }),
                             ClockDialHourContainer,
                         ))
                         .with_children(|hour_dial| {
@@ -239,18 +299,18 @@ pub fn spawn_material_clock_picker(
                         // Radial Minutes Container (00, 05, ..., 55)
                         disc.spawn((
                             (Node {
-                                    position_type: PositionType::Absolute,
-                                    left: Val::Px(0.0),
-                                    top: Val::Px(0.0),
-                                    width: Val::Px(210.0),
-                                    height: Val::Px(210.0),
-                                    display: if setup.clock_mode == ClockPickerMode::Minutes {
-                                        Display::Flex
-                                    } else {
-                                        Display::None
-                                    },
-                                    ..default()
-                                }),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                width: Val::Px(210.0),
+                                height: Val::Px(210.0),
+                                display: if setup.clock_mode == ClockPickerMode::Minutes {
+                                    Display::Flex
+                                } else {
+                                    Display::None
+                                },
+                                ..default()
+                            }),
                             ClockDialMinuteContainer,
                         ))
                         .with_children(|min_dial| {
@@ -274,29 +334,29 @@ pub fn spawn_material_clock_picker(
 
                     // AM / PM and Quick Minute Adjustment Controls
                     body.spawn(Node {
-                            width: Val::Percent(100.0),
-                            flex_direction: FlexDirection::Row,
-                            align_items: AlignItems::Center,
-                            justify_content: JustifyContent::SpaceBetween,
-                            padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
-                            ..default()
-                        })
+                        width: Val::Percent(100.0),
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        justify_content: JustifyContent::SpaceBetween,
+                        padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
+                        ..default()
+                    })
                     .with_children(|row| {
                         row.spawn(Node {
-                                flex_direction: FlexDirection::Row,
-                                column_gap: Val::Px(8.0),
-                                ..default()
-                            })
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(8.0),
+                            ..default()
+                        })
                         .with_children(|mer_box| {
                             spawn_meridian_btn(mer_box, theme, "AM", false, !is_pm, teal_accent);
                             spawn_meridian_btn(mer_box, theme, "PM", true, is_pm, teal_accent);
                         });
 
                         row.spawn(Node {
-                                flex_direction: FlexDirection::Row,
-                                column_gap: Val::Px(6.0),
-                                ..default()
-                            })
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(6.0),
+                            ..default()
+                        })
                         .with_children(|min_box| {
                             spawn_minute_step_btn(min_box, theme, "-15m", -15);
                             spawn_minute_step_btn(min_box, theme, "+15m", 15);

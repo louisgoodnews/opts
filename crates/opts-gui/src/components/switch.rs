@@ -372,7 +372,7 @@ mod tests {
         assert_eq!(switch.map(|s| s.is_on), Some(true));
 
         let events = app.world().resource::<Messages<SwitchToggled>>();
-        let mut reader = events.get_reader();
+        let mut reader = events.get_cursor();
         let received = reader.read(events).find(|e| e.entity == entity);
         assert_eq!(received.map(|e| e.is_on), Some(true));
     }

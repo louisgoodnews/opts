@@ -8,7 +8,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS Material Design 3 Widget Gallery".into(),
-                resolution: (1280.0_f32, 800.0_f32).into(),
+                resolution: bevy::window::WindowResolution::new(1280, 800),
                 ..default()
             }),
             ..default()
@@ -178,18 +178,16 @@ fn populate_gallery_panels(parent: &mut ChildSpawnerCommands, _notebook: Entity)
     // Note: Notebook panels are automatically spawned inside NotebookBuilder.
     // Here we can spawn our gallery section containers inside a row layout for demonstration.
     parent
-        .spawn(
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Row,
-                flex_grow: 1.0,
-                width: Val::Percent(100.0),
-                padding: UiRect::all(Val::Px(16.0)),
-                column_gap: Val::Px(24.0),
-                overflow: Overflow::clip_y(),
-                ..default()
-            }),
-        )
+        .spawn(Node {
+            display: Display::Flex,
+            flex_direction: FlexDirection::Row,
+            flex_grow: 1.0,
+            width: Val::Percent(100.0),
+            padding: UiRect::all(Val::Px(16.0)),
+            column_gap: Val::Px(24.0),
+            overflow: Overflow::clip_y(),
+            ..default()
+        })
         .with_children(|content| {
             // Column 1: Buttons & Inputs
             build_inputs_column(content);

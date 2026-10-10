@@ -5,7 +5,7 @@
 //! spline extrusion meshes.
 
 use bevy::asset::io::Reader;
-use bevy::asset::{Asset, AssetLoader, AsyncReadExt, Handle, LoadContext};
+use bevy::asset::{Asset, AssetLoader, Handle, LoadContext};
 use bevy::ecs::entity::Entity;
 use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;

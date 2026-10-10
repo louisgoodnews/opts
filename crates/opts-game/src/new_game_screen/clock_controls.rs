@@ -27,7 +27,9 @@ pub fn spawn_dial_btn<T: Component>(
 
     parent
         .spawn((
-            (Button, Node {
+            (
+                Button,
+                Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(left),
                     top: Val::Px(top),
@@ -35,19 +37,29 @@ pub fn spawn_dial_btn<T: Component>(
                     height: Val::Px(size),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
+                    border_radius: BorderRadius::all(Val::Percent(50.0)),
                     ..default()
-                }, BackgroundColor(if is_active { teal } else { Color::NONE }), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */),
+                },
+                BackgroundColor(if is_active { teal } else { Color::NONE }),
+            ),
             M3Button::default(),
             marker,
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                (Text::new(label), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(if is_active {
-                            Color::WHITE
-                        } else {
-                            theme.scheme.get(ColorRole::OnSurface)
-                        })),
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(12.0),
+                        ..default()
+                    },
+                    TextColor(if is_active {
+                        Color::WHITE
+                    } else {
+                        theme.scheme.get(ColorRole::OnSurface)
+                    }),
+                ),
                 TypeStyleToken(TypeScale::BodyMedium),
             ));
         });
@@ -64,29 +76,42 @@ pub fn spawn_meridian_btn(
 ) {
     parent
         .spawn((
-            (Button, Node {
+            (
+                Button,
+                Node {
                     width: Val::Px(36.0),
                     height: Val::Px(28.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     border: UiRect::all(Val::Px(1.0)),
+                    border_radius: BorderRadius::all(Val::Percent(50.0)),
                     ..default()
-                }, BorderColor::all(if is_active {
+                },
+                BorderColor::all(if is_active {
                     teal
                 } else {
                     theme.scheme.get(ColorRole::OutlineVariant)
-                }), BackgroundColor(if is_active { teal } else { Color::NONE }), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */),
+                }),
+                BackgroundColor(if is_active { teal } else { Color::NONE }),
+            ),
             M3Button::default(),
             SelectClockMeridianBtn { is_pm },
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                (Text::new(label), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(if is_active {
-                            Color::WHITE
-                        } else {
-                            theme.scheme.get(ColorRole::OnSurfaceVariant)
-                        })),
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(11.0),
+                        ..default()
+                    },
+                    TextColor(if is_active {
+                        Color::WHITE
+                    } else {
+                        theme.scheme.get(ColorRole::OnSurfaceVariant)
+                    }),
+                ),
                 TypeStyleToken(TypeScale::LabelMedium),
             ));
         });

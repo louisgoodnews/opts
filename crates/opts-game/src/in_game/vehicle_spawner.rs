@@ -10,7 +10,11 @@ use crate::in_game::types::{InGameCamera, InGameEntity};
 /// Spawns the 3D tracking camera with a [`VehicleCameraRig`] sized from the loaded vehicle.
 pub fn spawn_camera_rig(commands: &mut Commands, setup: &CameraSetup) {
     commands.spawn((
-        (Camera3d::default(), bevy::ui::IsDefaultUiCamera, setup.start),
+        (
+            Camera3d::default(),
+            bevy::ui::IsDefaultUiCamera,
+            setup.start,
+        ),
         VehicleCameraRig {
             mode: VehicleCameraMode::ExteriorChase,
             chase_distance: setup.chase_distance,
