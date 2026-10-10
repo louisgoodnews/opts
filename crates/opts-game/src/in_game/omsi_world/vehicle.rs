@@ -1,0 +1,486 @@
+//! Player vehicle, trailers and driver loading.
+
+use std::path::{Path, PathBuf};
+
+use bevy::prelude::*;
+use opts_bevy::coords::{
+    camera_preset_to_bevy_transform, omsi_euler_to_bevy_quat, omsi_to_bevy_pos,
+};
+use opts_bevy::{
+    attach_model_parts, spawn_vehicle_model, ContentLoader, PlayerVehicle, TextureOverride,
+    VehicleController,
+};
+use opts_core::formats::vehicles::model::ModelConfig;
+use opts_core::formats::vehicles::BusManifest;
+
+use crate::in_game::types::InGameEntity;
+
+/// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
+use super::{CameraSetup, WorldLoadJob, WorldStats};
+
+/// Reads the first vehicle listed in the map's `ailists.cfg` (fallback when no `--vehicle-path`).
+pub(super) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
+    let cfg = job.install.find_in(&job.config.map_dir, "ailists.cfg")?;
+    let text = opts_core::formats::text::decode_bytes(&std::fs::read(cfg).ok()?);
+    text.lines()
+        .map(str::trim)
+        .filter(|l| l.to_lowercase().contains(".bus"))
+        .find_map(|l| {
+            let rel = l.split('\t').next()?.trim();
+            job.install.find_file(rel)
+        })
+}
+
+/// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
+/// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
+#[allow(clippy::too_many_arguments)]
+pub(super) fn load_segment_meshes(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    root: Entity,
+    lod0: &opts_core::formats::vehicles::model::ModelLod,
+    model_dir: &Path,
+    tex_dirs: &[PathBuf],
+) -> (usize, usize, Vec3, Vec3) {
+    let mut mesh_count = 0usize;
+    let mut vertex_count = 0usize;
+    let (mut min, mut max) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+    for mesh_def in &lod0.meshes {
+        // Shadow-only and AI-only meshes are not part of the visible player model.
+        let vp = mesh_def.viewpoint;
+        if mesh_def.isshadow || !(vp.is_outside() || vp.is_inside()) {
+            continue;
+        }
+        // Developer aid: `OPTS_HIDE_MESH=<substring>[,<substring>]` skips matching vehicle meshes
+        // (used to bisect rendering problems).
+        if std::env::var("OPTS_HIDE_MESH").is_ok_and(|v| {
+            v.split(',')
+                .filter(|t| !t.is_empty())
+                .any(|t| mesh_def.path.to_lowercase().contains(&t.to_lowercase()))
+        }) {
+            continue;
+        }
+        // Static pose: every animation/visibility variable is at its default of 0.
+        if mesh_def.visibility.iter().any(|v| v.expected_value != 0.0) {
+            tracing::debug!(mesh = %mesh_def.path, visibility = ?mesh_def.visibility, "vehicle mesh hidden in default state");
+            continue;
+        }
+        let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
+            tracing::error!(mesh = %mesh_def.path, "vehicle o3d not found");
+            job.cache
+                .stats
+                .failures
+                .push(format!("vehicle o3d not found: {}", mesh_def.path));
+            continue;
+        };
+        let overrides: Vec<TextureOverride> = mesh_def
+            .materials
+            .iter()
+            .map(|m| TextureOverride {
+                slot: m.slot_index as usize,
+                texture: m.texture.clone(),
+                alpha: m.alpha_mode,
+                hidden_by_variable: m.alpha_scale_var.is_some(),
+                trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
+            })
+            .collect();
+        let mut loader = ContentLoader {
+            install: &job.install,
+            cache: &mut job.cache,
+            meshes,
+            materials,
+            images,
+        };
+        let parts = loader.o3d_parts(&o3d_path, tex_dirs, &overrides);
+        for part in &parts {
+            if let Some(mesh) = meshes.get(&part.mesh) {
+                if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos)) =
+                    mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                {
+                    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+                    for p in pos {
+                        lo = lo.min(Vec3::from(*p));
+                        hi = hi.max(Vec3::from(*p));
+                    }
+                    // Camera framing uses the vehicle body only: meshes that are huge or far
+                    // from the origin (shadow volumes, sky/helper geometry) would skew it.
+                    if (hi - lo).max_element() < 16.0 && ((hi + lo) * 0.5).abs().max_element() < 8.0
+                    {
+                        min = min.min(lo);
+                        max = max.max(hi);
+                    }
+                }
+            }
+            vertex_count += part.vertices;
+            mesh_count += 1;
+        }
+        attach_model_parts(commands, root, &parts, &mesh_def.path);
+    }
+    (mesh_count, vertex_count, min, max)
+}
+
+/// Spawns the trailers named by `[couple_back]` (recursively) behind `root`. Returns the
+/// passenger camera presets of all trailers with the segment entity they are defined in.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn spawn_trailer_chain(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    root: Entity,
+    bus_dir: &Path,
+    tractor: &BusManifest,
+) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
+    const MAX_SEGMENTS: usize = 4;
+    let mut cams = Vec::new();
+    let (mut parent, mut parent_dir, mut parent_manifest) =
+        (root, bus_dir.to_path_buf(), tractor.clone());
+    for _ in 0..MAX_SEGMENTS {
+        let Some(name) = parent_manifest.couple_back.clone() else {
+            break;
+        };
+        let Some(path) = job.install.find_in(&parent_dir, &name) else {
+            tracing::error!(trailer = %name, "trailer .bus not found; vehicle stays without it");
+            break;
+        };
+        let loaded = (|| -> Result<_, String> {
+            let manifest =
+                BusManifest::parse_bytes(&std::fs::read(&path).map_err(|e| e.to_string())?)
+                    .map_err(|e| e.to_string())?;
+            let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
+            let cfg_rel = manifest.model_cfg.clone().ok_or("no [model] entry")?;
+            let cfg = job
+                .install
+                .find_in(&dir, &cfg_rel)
+                .ok_or_else(|| format!("model config not found: {cfg_rel}"))?;
+            let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).map_err(|e| e.to_string())?)
+                .map_err(|e| e.to_string())?;
+            Ok((manifest, dir, cfg, model))
+        })();
+        let (manifest, dir, cfg, model) = match loaded {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(trailer = %path.display(), "cannot load trailer: {e}");
+                break;
+            }
+        };
+        let Some(lod0) = model.lods.first() else {
+            break;
+        };
+        // Both coupling points are in their own vehicle frame; the trailer origin sits where
+        // its front joint meets the parent's rear joint.
+        let offset = match (parent_manifest.coupling_back, manifest.coupling_front) {
+            (Some(b), Some(f)) => omsi_to_bevy_pos(b - f),
+            _ => {
+                tracing::error!(trailer = %path.display(), "coupling points missing; trailer not attached");
+                break;
+            }
+        };
+        let seg = commands
+            .spawn((
+                Name::new(name.clone()),
+                SpatialBundle::from_transform(Transform::from_translation(offset)),
+                InGameEntity,
+            ))
+            .id();
+        commands.entity(parent).add_child(seg);
+        let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
+        let tex_dirs = vec![
+            job.install
+                .find_in(&dir, "texture")
+                .unwrap_or_else(|| dir.join("texture")),
+            model_dir.join("texture"),
+        ];
+        let (count, verts, _, _) = load_segment_meshes(
+            job, commands, meshes, materials, images, seg, lod0, &model_dir, &tex_dirs,
+        );
+        tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
+        cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
+        (parent, parent_dir, parent_manifest) = (seg, dir, manifest);
+    }
+    cams
+}
+
+/// Loads the player's vehicle from its `.bus` file and spawns it at the map's start point.
+pub fn load_player_vehicle(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    bindposes: &mut Assets<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>,
+) -> Result<(), String> {
+    let bus_path = match job.config.vehicle_path.clone() {
+        Some(p) => p,
+        None => first_ai_list_vehicle(job)
+            .ok_or("no --vehicle-path given and the map's ailists.cfg lists no vehicle")?,
+    };
+    let bus_bytes = std::fs::read(&bus_path).map_err(|e| format!("{}: {e}", bus_path.display()))?;
+    let manifest =
+        BusManifest::parse_bytes(&bus_bytes).map_err(|e| format!("{}: {e}", bus_path.display()))?;
+    tracing::info!(path = %bus_path.display(), mass_t = ?manifest.mass_tonnes, axles = manifest.axles.len(), "vehicle .bus parsed");
+
+    let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let cfg_rel = manifest
+        .model_cfg
+        .clone()
+        .ok_or("the .bus file has no [model] entry")?;
+    let cfg_path = job
+        .install
+        .find_in(&bus_dir, &cfg_rel)
+        .ok_or_else(|| format!("model config not found: {cfg_rel}"))?;
+    let cfg_bytes = std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
+    let model =
+        ModelConfig::parse_bytes(&cfg_bytes).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
+    let lod0 = model.lods.first().ok_or("model config has no meshes")?;
+    tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
+
+    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let tex_dirs = vec![
+        job.install
+            .find_in(&bus_dir, "texture")
+            .unwrap_or_else(|| bus_dir.join("texture")),
+        model_dir.join("texture"),
+    ];
+
+    // Spawn point: the start road spline's lane position, converted to Bevy space.
+    let (spawn_world, heading_deg) = job.spawn.ok_or("no spawn point")?;
+    let bevy_pos = omsi_to_bevy_pos(spawn_world);
+    let root_tf = Transform {
+        translation: bevy_pos,
+        rotation: omsi_euler_to_bevy_quat(-heading_deg, 0.0, 0.0),
+        scale: Vec3::ONE,
+    };
+
+    let root = spawn_vehicle_model(commands, &manifest, &model, root_tf, &[], &[]);
+
+    let (mesh_count, vertex_count, min, max) = load_segment_meshes(
+        job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
+    );
+    if mesh_count == 0 {
+        return Err("no vehicle meshes could be loaded".into());
+    }
+
+    let mut controller = VehicleController::from_manifest(&manifest);
+    controller.sim.chassis.position = Vec2::new(spawn_world.x, spawn_world.y);
+    controller.sim.chassis.elevation_z = spawn_world.z;
+    // The simulation uses compass-style heading (clockwise from +Y), like OMSI map headings.
+    controller.sim.chassis.heading_rad = heading_deg.to_radians();
+    commands
+        .entity(root)
+        .insert((controller, PlayerVehicle, InGameEntity));
+    let trailer_cams = spawn_trailer_chain(
+        job, commands, meshes, materials, images, root, &bus_dir, &manifest,
+    );
+    if !trailer_cams.is_empty() {
+        commands.add(move |world: &mut World| {
+            if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
+                bus.trailer_pax_cameras = trailer_cams;
+            }
+        });
+    }
+    match load_driver_human(
+        job,
+        commands,
+        meshes,
+        materials,
+        images,
+        bindposes,
+        root,
+        &bus_dir,
+        manifest.passengercabin_cfg.as_deref(),
+    ) {
+        Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
+        Err(e) => tracing::error!("cannot load the player character: {e}"),
+    }
+
+    tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
+    let length = (max.z - min.z).abs().max(1.0);
+    let height = (max.y - min.y).abs().max(1.0);
+    let driver_cam = manifest
+        .driver_cameras
+        .get(manifest.std_camera_index.unwrap_or(0))
+        .or_else(|| manifest.driver_cameras.first());
+    // Driver camera preset converted by the shared helper (vehicle space → Bevy).
+    let cockpit_offset = driver_cam
+        .map(|c| {
+            camera_preset_to_bevy_transform(
+                Vec3::new(c.x, c.y, c.z),
+                c.dist,
+                c.yaw_deg,
+                c.pitch_deg,
+            )
+            .translation
+        })
+        .unwrap_or(Vec3::new(0.0, height * 0.8, 0.0));
+    let chase_distance = length * 1.3;
+    let chase_height = height * 1.6;
+    job.camera_std_index = manifest.std_camera_index.unwrap_or(0);
+    job.camera = Some(CameraSetup {
+        start: Transform::from_translation(
+            bevy_pos + root_tf.rotation * Vec3::new(0.0, chase_height, chase_distance),
+        )
+        .looking_at(bevy_pos + Vec3::Y * (height * 0.5), Vec3::Y),
+        chase_distance,
+        chase_height,
+        cockpit_offset,
+    });
+
+    stats.vehicle_name = manifest
+        .friendly_name
+        .as_ref()
+        .map(|f| format!("{} {}", f.manufacturer, f.model))
+        .unwrap_or_else(|| {
+            bus_path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned()
+        });
+    stats.vehicle_meshes = mesh_count;
+    stats.vehicle_vertices = vertex_count;
+    stats.scene_vertices += vertex_count;
+    stats.asset_failures = job.cache.stats.failures.len();
+    tracing::info!(
+        vehicle = %stats.vehicle_name,
+        meshes = mesh_count,
+        vertices = vertex_count,
+        "vehicle meshes loaded"
+    );
+    Ok(())
+}
+
+/// Loads the player's character and seats it at the vehicle's `[drivpos]`.
+///
+/// The skinned mesh, joint pivots and head anchor come from the `.hum`, its model manifest and
+/// the `.o3d` bone weights; the seat contact point comes from the vehicle's passenger cabin.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn load_driver_human(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    bindposes: &mut Assets<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>,
+    vehicle_root: Entity,
+    bus_dir: &Path,
+    cabin_rel: Option<&str>,
+) -> Result<String, String> {
+    use opts_bevy::{hip_offset, spawn_human, HumanPose};
+    use opts_core::formats::humans::HumanProfile;
+    use opts_core::formats::text::{decode_bytes, scan_blocks};
+
+    let hum_path = job
+        .config
+        .human_path
+        .clone()
+        .ok_or("no .hum profile in the installation")?;
+    let profile = HumanProfile::parse(
+        &std::fs::read(&hum_path).map_err(|e| format!("{}: {e}", hum_path.display()))?,
+    )
+    .map_err(|e| format!("{}: {e}", hum_path.display()))?;
+    let hum_dir = hum_path.parent().map(Path::to_path_buf).unwrap_or_default();
+
+    // Driver seat: `[drivpos]` x, y, z, h, rot in the vehicle's passenger cabin.
+    let cabin = cabin_rel
+        .and_then(|c| job.install.find_in(bus_dir, c))
+        .ok_or("vehicle has no passenger cabin file")?;
+    let text =
+        decode_bytes(&std::fs::read(&cabin).map_err(|e| format!("{}: {e}", cabin.display()))?);
+    let blocks = scan_blocks(&text);
+    let seat: Vec<f32> = blocks
+        .iter()
+        .find(|b| b.keyword == "drivpos")
+        .ok_or("passenger cabin has no [drivpos]")?
+        .parameters
+        .iter()
+        .take(5)
+        .map(|p| {
+            p.trim()
+                .replace(',', ".")
+                .parse::<f32>()
+                .map_err(|_| format!("bad [drivpos] value '{p}'"))
+        })
+        .collect::<Result<_, _>>()?;
+    if seat.len() < 5 {
+        return Err("[drivpos] needs 5 values".into());
+    }
+
+    // Model manifest and skinned meshes (highest-detail LOD).
+    let cfg_path = job
+        .install
+        .find_in(&hum_dir, &profile.model)
+        .ok_or_else(|| format!("human model config not found: {}", profile.model))?;
+    let cfg = opts_core::formats::vehicles::model::ModelConfig::parse_bytes(
+        &std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?,
+    )
+    .map_err(|e| format!("{}: {e}", cfg_path.display()))?;
+    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let tex_dirs = vec![
+        model_dir.clone(),
+        model_dir.join("texture"),
+        hum_dir.join("texture"),
+        model_dir
+            .parent()
+            .map(|p| p.join("Texture"))
+            .unwrap_or_default(),
+    ];
+    let lod = cfg.lods.first().ok_or("human model has no meshes")?;
+    let mut parts = Vec::new();
+    for mesh_def in &lod.meshes {
+        let Some(o3d_path) = job.install.find_in(&model_dir, &mesh_def.path) else {
+            tracing::error!(mesh = %mesh_def.path, "human mesh not found");
+            continue;
+        };
+        let overrides: Vec<TextureOverride> = mesh_def
+            .materials
+            .iter()
+            .map(|m| TextureOverride {
+                slot: m.slot_index as usize,
+                texture: m.texture.clone(),
+                alpha: m.alpha_mode,
+                hidden_by_variable: m.alpha_scale_var.is_some(),
+                trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
+            })
+            .collect();
+        let mut loader = ContentLoader {
+            install: &job.install,
+            cache: &mut job.cache,
+            meshes,
+            materials,
+            images,
+        };
+        parts.extend(loader.o3d_skinned_parts(&o3d_path, &tex_dirs, &overrides));
+    }
+    if parts.is_empty() {
+        return Err("no human meshes could be loaded".into());
+    }
+
+    tracing::info!(parts = parts.len(), vertices = parts.iter().map(|p| p.vertices).sum::<usize>(), seat = ?seat, "human meshes loaded");
+    let name = hum_path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let human = spawn_human(
+        commands,
+        bindposes,
+        &profile,
+        &parts,
+        &name,
+        HumanPose::Seated,
+    );
+    // Hips on the seat contact point, facing along `rot` (clockwise like headings).
+    let contact = omsi_to_bevy_pos(Vec3::new(seat[0], seat[1], seat[2]));
+    commands.entity(human).insert(Transform {
+        translation: contact - hip_offset(&profile),
+        rotation: omsi_euler_to_bevy_quat(-seat[4], 0.0, 0.0),
+        scale: Vec3::ONE,
+    });
+    commands.entity(vehicle_root).add_child(human);
+    Ok(name)
+}
