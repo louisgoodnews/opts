@@ -9,6 +9,7 @@ mod compiler;
 mod lexer;
 mod strings;
 mod variables;
+mod vehicle;
 mod vm;
 
 use std::collections::HashSet;
@@ -19,6 +20,7 @@ pub use compiler::{
 pub use lexer::{tokenize, Token};
 pub use strings::Stacks;
 pub use variables::{ConstTable, Curve, Interner, VariableStore};
+pub use vehicle::load_vehicle_scripts;
 
 /// Handler for `(M.V.name)` macros of vehicle-external systems: receives the name and both
 /// operand stacks.
@@ -49,6 +51,7 @@ pub struct ScriptEngine {
     pub(crate) resolved_curves: Vec<Option<Curve>>,
     pub(crate) missing_seen: HashSet<(u8, u32)>,
     consts_dirty: bool,
+    declared: Option<HashSet<String>>,
     pub(crate) ops_executed: u64,
     time: f32,
 }
@@ -72,6 +75,7 @@ impl ScriptEngine {
             resolved_curves: Vec::new(),
             missing_seen: HashSet::new(),
             consts_dirty: true,
+            declared: None,
             ops_executed: 0,
             time: 0.0,
         }
@@ -92,6 +96,46 @@ impl ScriptEngine {
     pub fn consts_mut(&mut self) -> &mut ConstTable {
         self.consts_dirty = true;
         &mut self.consts
+    }
+
+    /// Declares the float (`strings == false`) or string variables of a `varnamelist`; their
+    /// order fixes the variable indices (`varnamelist.md`).
+    pub fn declare_variables(&mut self, names: &[String], strings: bool) {
+        for n in names {
+            if strings {
+                self.program.names.strvars.intern(n);
+            } else {
+                self.program.names.vars.intern(n);
+                self.declared
+                    .get_or_insert_with(HashSet::new)
+                    .insert(n.to_lowercase());
+            }
+        }
+    }
+
+    /// Float variables the scripts use although no varlist declared them (empty until
+    /// [`Self::declare_variables`] was called). OMSI reads such names as 0.
+    #[must_use]
+    pub fn undeclared_variables(&self) -> Vec<String> {
+        let Some(declared) = &self.declared else {
+            return Vec::new();
+        };
+        let names = &self.program.names.vars;
+        (0..names.len() as u32)
+            .map(|i| names.name(i).to_owned())
+            .filter(|n| !declared.contains(n))
+            .collect()
+    }
+
+    /// Applies a parsed constant file (later entries override earlier ones).
+    pub fn add_constfile(&mut self, file: &opts_core::formats::constfile::ConstFile) {
+        for (name, value) in &file.scalars {
+            self.consts_mut().set_scalar(name, *value);
+        }
+        for c in &file.curves {
+            self.consts_mut()
+                .set_curve(&c.name, Curve::new(c.points.clone()));
+        }
     }
 
     /// Installs the handler for `(M.V.x)` macros.

@@ -283,3 +283,39 @@ fn missing_end_still_compiles_with_a_warning() {
     e.run_init();
     assert_eq!(e.get("x"), 1.0);
 }
+
+#[test]
+fn vehicle_loader_reads_scripts_varlists_and_constfiles() {
+    use opts_core::formats::vehicles::BusManifest;
+    use opts_sim::script::load_vehicle_scripts;
+
+    let dir = std::env::temp_dir().join(format!("opts-script-load-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("mkdir");
+    std::fs::write(
+        dir.join("main.osc"),
+        "{frame}\n(C.L.k) (L.L.in) * (S.L.out)\n{end}",
+    )
+    .expect("write");
+    std::fs::write(dir.join("v.txt"), "in\nout\n").expect("write");
+    std::fs::write(dir.join("c.txt"), "prose\n[const]\nk\n3\n").expect("write");
+    let bus = BusManifest::parse(
+        "[varnamelist]\n1\nv.txt\n[script]\n2\nmain.osc\nmissing.osc\n[constfile]\n1\nc.txt\n",
+    )
+    .expect("bus");
+    let (mut e, diags) = load_vehicle_scripts(&bus, |rel| {
+        let p = dir.join(rel);
+        p.exists().then_some(p)
+    });
+    assert_eq!(
+        diags
+            .iter()
+            .filter(|d| d.message == "file not found")
+            .count(),
+        1
+    );
+    assert!(e.undeclared_variables().is_empty());
+    e.set("in", 4.0);
+    e.run_frame(0.016, false);
+    assert_eq!(e.get("out"), 12.0);
+    let _ = std::fs::remove_dir_all(dir);
+}

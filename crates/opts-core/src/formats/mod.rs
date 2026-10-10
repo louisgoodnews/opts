@@ -1,5 +1,6 @@
 //! Format parser implementations for OMSI file formats.
 
+pub mod constfile;
 pub mod envir;
 pub mod humans;
 pub mod map;
@@ -9,5 +10,6 @@ pub mod oft;
 pub mod org;
 pub mod scenery;
 pub mod text;
+pub mod varlist;
 pub mod vehicles;
 pub mod x;

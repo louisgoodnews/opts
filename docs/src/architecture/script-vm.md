@@ -48,9 +48,12 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 
 `example osc_bench` runs the 25 scripts of `HH109_Stadtbus_HHA` (382 blocks): about **11,700 instructions and 100 µs per `{frame}`** (≈ 8.5 ns per instruction, constants unloaded) — 0.6 % of a 60 Hz frame per vehicle; the milestone target of 50 µs is not met for this large vehicle. Cheap wins left: pre-allocated stacks, avoiding string clones in `LoadStr`.
 
+## Vehicle loading
+
+`opts_core::formats::{constfile, varlist}` parse constant files and variable lists; `script::load_vehicle_scripts(&BusManifest, resolve)` reads a `.bus`'s `[script]`, `[varnamelist]`, `[stringvarnamelist]` and `[constfile]` lists into one engine (missing files become warnings). `example vehicle_scripts` loads all 1,485 `.bus` files of the install: 1,216 have scripts, every one loads and runs `{init}` plus 60 frames without panics; 38 referenced files are missing; **median 71 µs, p90 114 µs, max 307 µs per frame**. 1,207 of them use variables that no varlist declares (OMSI's predefined variables, `predefined-variables.md`) — these are reported as one summary warning.
+
 ## Not done yet (M-0026 follow-ups)
 
-- Parsers for constant files and `varnamelist`/`stringvarnamelist` (declared names) in `opts-core`; `[script]`/`[constfile]` lists of a `.bus` are not yet fed to the engine.
-- Bridging to Bevy: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.
+- Predefined variables fed by the simulation (`velocity`, `engine rpm`, …) and the Bevy bridge: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.
 - `(M.V.*)` external systems, `$SetLengthM`, the payload of `(T.F.name)`, `RemoveSpaces` semantics (all spaces removed here) and Q-OSC-003 stay unverified against OMSI.
 - Benchmarks in CI (the examples need an OMSI install).

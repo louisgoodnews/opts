@@ -497,3 +497,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — M-0040 partly done: rustdoc clean, panics removed, test fixtures feature-gated, `opts-tools inspect`, Credits text, `load_next_tile` split, `scripts/size_check.py`; size splits and Load Game remain.
 - `2026-10-11` — M-0042 mostly written: toolchain pin, `.editorconfig`, `deny.toml`, rustdoc `-D warnings`, Windows job; unverified until the first CI run; `binrw` upgrade open.
 - `2026-10-11` — M-0026 core done: `opts_sim::script` (lexer, compiler, VM, variables, string ops) compiles all 6,062 corpus `.osc` files with 0 errors; 22 integration tests; bus frame ≈ 100 µs. Open: constant/varlist parsers, `.bus` wiring, Bevy bridge, audio events.
+- `2026-10-11` — M-0026: constfile/varlist parsers, `.bus` script loading; all 1,216 scripted corpus vehicles load and run (median 71 µs per frame). Next: predefined variables + Bevy bridge.
