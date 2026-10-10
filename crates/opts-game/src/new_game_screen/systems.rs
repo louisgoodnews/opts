@@ -18,7 +18,7 @@ use crate::new_game_screen::vehicle_panel::populate_vehicle_details_inner;
 
 /// System returning to the main menu when the back button is clicked.
 pub fn handle_back_button(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     back_query: Query<&BackToMenuBtn>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
@@ -32,7 +32,7 @@ pub fn handle_back_button(
 
 /// System launching simulation when the launch button is clicked.
 pub fn handle_launch_button(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     launch_query: Query<&LaunchGameBtn>,
     setup: Res<NewGameSetup>,
     mut next_state: ResMut<NextState<AppState>>,
@@ -56,7 +56,7 @@ pub fn handle_launch_button(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_map_selection(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     map_btn_query: Query<&SelectMapBtn>,
     mut card_query: Query<(&SelectMapBtn, &mut BorderColor, &mut BackgroundColor)>,
     detail_panel_query: Query<Entity, With<MapDetailPanelRoot>>,
@@ -115,7 +115,7 @@ pub fn handle_map_selection(
 
 /// System updating selected spawn entrypoint and chip styling.
 pub fn handle_entrypoint_selection(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     ep_btn_query: Query<&SelectEntryPointBtn>,
     mut chip_query: Query<(&SelectEntryPointBtn, &mut BorderColor, &mut BackgroundColor)>,
     theme: Res<MaterialTheme>,
@@ -156,7 +156,7 @@ pub fn handle_entrypoint_selection(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_vehicle_selection(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     veh_btn_query: Query<&SelectVehicleBtn>,
     mut card_query: Query<(&SelectVehicleBtn, &mut BorderColor, &mut BackgroundColor)>,
     detail_panel_query: Query<Entity, With<VehicleDetailPanelRoot>>,
@@ -213,7 +213,7 @@ pub use crate::new_game_screen::scroll_systems::{handle_mouse_scroll, handle_scr
 
 /// System updating selected vehicle repaint / livery.
 pub fn handle_livery_selection(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     query: Query<&SelectLiveryBtn>,
     mut card_query: Query<(&SelectLiveryBtn, &mut BorderColor, &mut BackgroundColor)>,
     theme: Res<MaterialTheme>,
@@ -252,7 +252,7 @@ pub fn handle_livery_selection(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_weather_selection(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     query: Query<&SelectWeatherBtn>,
     mut preset_query: Query<(&SelectWeatherBtn, &mut BorderColor, &mut BackgroundColor)>,
     refresh_query: Query<&RefreshWeatherBtn>,
@@ -309,7 +309,7 @@ pub fn handle_weather_selection(
 /// System adjusting departure time and updating display text.
 #[allow(clippy::type_complexity)]
 pub fn handle_time_adjustment(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     query: Query<&AdjustTimeBtn>,
     mut setup: ResMut<NewGameSetup>,
     mut departure_query: Query<
@@ -352,7 +352,7 @@ pub fn handle_time_adjustment(
 
     if changed {
         for mut text in departure_query.iter_mut() {
-            text.sections[0].value = format!(
+            text.0 = format!(
                 "Departure Time: {:02}:{:02} (Date: {:04}-{:02}-{:02})",
                 setup.hour, setup.minute, setup.year, setup.month, setup.day
             );
@@ -382,10 +382,10 @@ pub fn update_all_summaries<
     );
 
     for mut text in launch_summary_query.iter_mut() {
-        text.sections[0].value = summary_str.clone();
+        text.0 = summary_str.clone();
     }
     for mut text in tab_summary_query.iter_mut() {
-        text.sections[0].value = summary_str.clone();
+        text.0 = summary_str.clone();
     }
 }
 
@@ -395,7 +395,7 @@ pub fn update_summary_text<F: bevy::ecs::query::QueryFilter>(
     summary_query: &mut Query<&mut Text, F>,
 ) {
     for mut text in summary_query.iter_mut() {
-        text.sections[0].value = format!(
+        text.0 = format!(
             "Map: {} ({}) | Bus: {} ({}) | Weather: {} | {:02}:{:02}",
             setup.selected_map,
             setup.selected_entry_point,
@@ -414,7 +414,7 @@ pub fn cleanup_new_game_screen(
     query: Query<Entity, With<NewGameScreenRoot>>,
 ) {
     for entity in &query {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 

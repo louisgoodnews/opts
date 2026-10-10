@@ -193,7 +193,7 @@ pub fn query_live_weather_background(weather_res: Arc<Mutex<DeviceLocationWeathe
 
 /// Populates the center column with detailed atmospheric parameters and live weather lookup.
 pub fn populate_weather_details_inner(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     setup: &NewGameSetup,
     live_weather: &DeviceLocationWeather,
@@ -202,13 +202,13 @@ pub fn populate_weather_details_inner(
 
     // 1. Large Preset Headline
     parent.spawn((
-        TextBundle::from_section(
-            preset.name,
-            TextStyle {
-                font_size: 24.0,
-                color: theme.scheme.get(ColorRole::Primary),
+        (
+            Text::new(preset.name),
+            TextFont {
+                font_size: FontSize::Px(24.0),
                 ..default()
             },
+            TextColor(theme.scheme.get(ColorRole::Primary)),
         ),
         TypeStyleToken(TypeScale::HeadlineMedium),
         ForegroundRole(ColorRole::Primary),
@@ -216,13 +216,13 @@ pub fn populate_weather_details_inner(
 
     // 2. Preset Description Body
     parent.spawn((
-        TextBundle::from_section(
-            preset.description,
-            TextStyle {
-                font_size: 12.0,
-                color: theme.scheme.get(ColorRole::OnSurface),
+        (
+            Text::new(preset.description),
+            TextFont {
+                font_size: FontSize::Px(12.0),
                 ..default()
             },
+            TextColor(theme.scheme.get(ColorRole::OnSurface)),
         ),
         TypeStyleToken(TypeScale::BodySmall),
         ForegroundRole(ColorRole::OnSurface),
@@ -230,8 +230,8 @@ pub fn populate_weather_details_inner(
 
     // 3. Meteorological Specifications Matrix
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(6.0),
@@ -239,19 +239,18 @@ pub fn populate_weather_details_inner(
                 border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
+        ))
         .with_children(|matrix| {
             matrix.spawn((
-                TextBundle::from_section(
-                    "Atmospheric & Physics Parameters:",
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::Primary),
+                (
+                    Text::new("Atmospheric & Physics Parameters:"),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
                 TypeStyleToken(TypeScale::LabelLarge),
                 ForegroundRole(ColorRole::Primary),
@@ -288,8 +287,8 @@ pub fn populate_weather_details_inner(
 
     // 4. Live Device Location Weather Section
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(8.0),
@@ -297,68 +296,64 @@ pub fn populate_weather_details_inner(
                 border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+            BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
+        ))
         .with_children(|box_node| {
             box_node.spawn((
-                TextBundle::from_section(
-                    "Live Device Location Telemetry (wttr.in):",
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::OnPrimaryContainer),
+                (
+                    Text::new("Live Device Location Telemetry (wttr.in):"),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
                 ForegroundRole(ColorRole::OnPrimaryContainer),
             ));
 
             box_node.spawn((
-                TextBundle::from_section(
-                    format!(
+                (
+                    Text::new(format!(
                         "Location: {}\nConditions: {} · {:.1}°C · Wind: {:.0} km/h · Humidity: {}%",
                         live_weather.location_name,
                         live_weather.condition_desc,
                         live_weather.temperature_c,
                         live_weather.wind_speed_kmh,
                         live_weather.humidity_pct
-                    ),
-                    TextStyle {
-                        font_size: 11.5,
-                        color: theme.scheme.get(ColorRole::OnPrimaryContainer),
+                    )),
+                    TextFont {
+                        font_size: FontSize::Px(11.5),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                 ),
                 TypeStyleToken(TypeScale::BodySmall),
                 ForegroundRole(ColorRole::OnPrimaryContainer),
             ));
 
             box_node
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn(
+                    (Node {
                         flex_direction: FlexDirection::Row,
                         column_gap: Val::Px(8.0),
                         align_items: AlignItems::Center,
                         ..default()
-                    },
-                    ..default()
-                })
+                    }),
+                )
                 .with_children(|btns| {
                     btns.spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                            background_color: BackgroundColor(
-                                theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                            ),
-                            ..default()
-                        },
+                            BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                        ),
                         M3Button::default(),
                         RefreshWeatherBtn,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -366,29 +361,29 @@ pub fn populate_weather_details_inner(
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            TextBundle::from_section(
-                                "Refresh",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: theme.scheme.get(ColorRole::Primary),
+                            (
+                                Text::new("Refresh"),
+                                TextFont {
+                                    font_size: FontSize::Px(11.0),
                                     ..default()
                                 },
+                                TextColor(theme.scheme.get(ColorRole::Primary)),
                             ),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
 
                     btns.spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                            background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                            ..default()
-                        },
+                            BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                            BackgroundColor(theme.scheme.get(ColorRole::Primary)),
+                        ),
                         M3Button::default(),
                         ApplyLiveWeatherBtn,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -396,13 +391,13 @@ pub fn populate_weather_details_inner(
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            TextBundle::from_section(
-                                "Apply Live Weather",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: theme.scheme.get(ColorRole::OnPrimary),
+                            (
+                                Text::new("Apply Live Weather"),
+                                TextFont {
+                                    font_size: FontSize::Px(11.0),
                                     ..default()
                                 },
+                                TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                             ),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
@@ -411,39 +406,43 @@ pub fn populate_weather_details_inner(
         });
 }
 
-fn spawn_metric_row(parent: &mut ChildBuilder, theme: &MaterialTheme, label: &str, val: &str) {
+fn spawn_metric_row(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    label: &str,
+    val: &str,
+) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Row,
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::Center,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|row| {
             row.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 11.5,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(11.5),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::BodySmall),
             ));
 
             row.spawn((
-                TextBundle::from_section(
-                    val,
-                    TextStyle {
-                        font_size: 11.5,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new(val),
+                    TextFont {
+                        font_size: FontSize::Px(11.5),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::LabelMedium),
             ));

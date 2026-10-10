@@ -9,14 +9,15 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::{Assets, Handle};
-use bevy::core::Name;
 use bevy::ecs::entity::Entity;
+use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
-use bevy::hierarchy::BuildChildren;
-use bevy::pbr::{PbrBundle, StandardMaterial};
+use bevy::image::{Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::mesh::Mesh;
+use bevy::mesh::Mesh3d;
+use bevy::pbr::MeshMaterial3d;
+use bevy::pbr::StandardMaterial;
 use bevy::prelude::AlphaMode;
-use bevy::render::mesh::Mesh;
-use bevy::render::texture::{Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 
 use opts_core::formats::o3d::{self, O3d};
 
@@ -605,11 +606,10 @@ pub fn attach_model_parts(
 ) {
     for (i, part) in parts.iter().enumerate() {
         let child = commands
-            .spawn(PbrBundle {
-                mesh: part.mesh.clone(),
-                material: part.material.clone(),
-                ..Default::default()
-            })
+            .spawn((
+                Mesh3d(part.mesh.clone()),
+                MeshMaterial3d(part.material.clone()),
+            ))
             .insert(Name::new(format!("{name}_{i}")))
             .id();
         commands.entity(parent).add_child(child);
@@ -622,22 +622,24 @@ fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     use bevy::render::render_resource::TextureFormat as F;
     let (bw, bh) = (base.width() as usize, base.height() as usize);
     let (tw, th) = (trans.width() as usize, trans.height() as usize);
+    let base_data = base.data.as_deref()?;
+    let trans_data = trans.data.as_deref()?;
     if !matches!(
         base.texture_descriptor.format,
         F::Rgba8UnormSrgb | F::Rgba8Unorm
-    ) || base.data.len() != bw * bh * 4
+    ) || base_data.len() != bw * bh * 4
         || tw == 0
         || th == 0
     {
         return None;
     }
     let sample: Box<dyn Fn(usize) -> u8> = match trans.texture_descriptor.format {
-        F::R8Unorm if trans.data.len() == tw * th => Box::new(|i| trans.data[i]),
-        F::Rgba8UnormSrgb | F::Rgba8Unorm if trans.data.len() == tw * th * 4 => {
+        F::R8Unorm if trans_data.len() == tw * th => Box::new(|i| trans_data[i]),
+        F::Rgba8UnormSrgb | F::Rgba8Unorm if trans_data.len() == tw * th * 4 => {
             // Use the alpha channel if the map has one, else its luminance.
-            let has_alpha = trans.data.chunks_exact(4).any(|p| p[3] != 255);
+            let has_alpha = trans_data.chunks_exact(4).any(|p| p[3] != 255);
             Box::new(move |i| {
-                let p = &trans.data[i * 4..i * 4 + 4];
+                let p = &trans_data[i * 4..i * 4 + 4];
                 if has_alpha {
                     p[3]
                 } else {
@@ -648,10 +650,11 @@ fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
         _ => return None,
     };
     let mut out = base.clone();
+    let out_data = out.data.as_mut()?;
     for y in 0..bh {
         for x in 0..bw {
             let (tx, ty) = (x * tw / bw, y * th / bh);
-            out.data[(y * bw + x) * 4 + 3] = sample(ty * tw + tx);
+            out_data[(y * bw + x) * 4 + 3] = sample(ty * tw + tx);
         }
     }
     Some(out)

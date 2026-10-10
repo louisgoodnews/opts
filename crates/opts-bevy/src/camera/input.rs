@@ -23,7 +23,7 @@ pub fn update_camera_availability(
     humans: Query<(), With<HumanHead>>,
     mut avail: ResMut<CameraAvailability>,
 ) {
-    let bus = vehicles.get_single().ok();
+    let bus = vehicles.single().ok();
     let new = CameraAvailability {
         ego: !humans.is_empty(),
         cockpit: bus.is_some_and(|b| !b.driver_cameras.is_empty()),
@@ -67,7 +67,7 @@ pub fn handle_camera_key_input(
         }
     }
     let Some(mode) = requested else { return };
-    let std_index = vehicle.get_single().ok().map(|b| b.std_camera_index);
+    let std_index = vehicle.single().ok().map(|b| b.std_camera_index);
 
     if !avail.allows(mode) {
         match mode {
@@ -95,7 +95,7 @@ pub fn handle_camera_key_input(
         state.sub_camera_index = std_index.unwrap_or(0);
     }
     if mode == CameraMode::FreeRoam && from != mode {
-        if let Ok(tf) = camera.get_single() {
+        if let Ok(tf) = camera.single() {
             enter_free_roam(&mut state, tf);
         }
     }
@@ -126,7 +126,7 @@ pub fn handle_camera_reset_input(
     mut camera: Query<&mut Transform, With<Camera3d>>,
     vehicle: Query<&BusVehicle, With<PlayerVehicle>>,
 ) {
-    let std_index = vehicle.get_single().ok().map(|b| b.std_camera_index);
+    let std_index = vehicle.single().ok().map(|b| b.std_camera_index);
     let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     if !(shift && keys.just_pressed(KeyCode::Space)) {
         return;
@@ -141,7 +141,7 @@ pub fn handle_camera_reset_input(
             state.free_roam_yaw = 0.0;
             state.free_roam_pitch = 0.0;
             state.free_roam_speed = FREE_ROAM_MIN_SPEED;
-            if let Ok(mut tf) = camera.get_single_mut() {
+            if let Ok(mut tf) = camera.single_mut() {
                 tf.translation = state.free_roam_spawn;
                 tf.rotation = Quat::IDENTITY;
             }

@@ -6,7 +6,7 @@
 //! rise above the road surface.
 
 use bevy::math::Vec3;
-use bevy::render::mesh::{Indices, Mesh};
+use bevy::mesh::{Indices, Mesh};
 use opts_bevy::{
     carve_terrain_under_roads, extrude_spline_segment, road_footprint, TERRAIN_CELL_M,
 };

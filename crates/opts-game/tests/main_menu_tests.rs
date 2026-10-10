@@ -155,7 +155,8 @@ fn test_theme_toggle_flips_color_scheme() {
     assert!(!app.world().resource::<MaterialTheme>().scheme.is_dark());
 
     // Send ThemeChanged event
-    app.world_mut().send_event(ThemeChanged { is_dark: true });
+    app.world_mut()
+        .write_message(ThemeChanged { is_dark: true });
     app.update();
 
     assert!(app.world().resource::<MaterialTheme>().scheme.is_dark());
@@ -189,7 +190,7 @@ fn test_escape_key_in_stub_screen_returns_to_main_menu() {
 
     // Send KeyboardInput event for Escape
     app.world_mut()
-        .send_event(bevy::input::keyboard::KeyboardInput {
+        .write_message(bevy::input::keyboard::KeyboardInput {
             key_code: KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Escape,
             state: bevy::input::ButtonState::Pressed,

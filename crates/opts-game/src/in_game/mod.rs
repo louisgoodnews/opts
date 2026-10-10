@@ -38,7 +38,7 @@ pub struct InGamePlugin;
 
 impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
-        app.init_asset::<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>()
+        app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<SimulationLoadState>()
             .init_resource::<InGameSessionInfo>()
             .init_resource::<opts_bevy::CameraState>()
@@ -128,7 +128,7 @@ fn cleanup_in_game_session(
     tracing::info!("Tearing down 3D in-game simulation session and restoring menus");
 
     for entity in &query {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
     commands.remove_resource::<omsi_world::WorldLoadJob>();
     commands.remove_resource::<sky::Sky>();

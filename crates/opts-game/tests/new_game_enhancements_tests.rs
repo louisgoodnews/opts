@@ -101,7 +101,7 @@ fn test_searchbars_and_filtering_maps_and_vehicles() {
     app.update();
 
     // Verify filtering applied
-    let mut map_query = app.world_mut().query::<(&MapCardItem, &Style)>();
+    let mut map_query = app.world_mut().query::<(&MapCardItem, &Node)>();
     let mut matching_visible = 0;
     let mut non_matching_hidden = 0;
     for (card, style) in map_query.iter(app.world()) {
@@ -123,7 +123,7 @@ fn test_searchbars_and_filtering_maps_and_vehicles() {
     }
     app.update();
 
-    let mut map_query = app.world_mut().query::<(&MapCardItem, &Style)>();
+    let mut map_query = app.world_mut().query::<(&MapCardItem, &Node)>();
     for (_card, style) in map_query.iter(app.world()) {
         assert_eq!(
             style.display,
@@ -183,7 +183,7 @@ fn test_scrollbars_and_scroll_to_top_button() {
     }
 
     // Click floating action button
-    app.world_mut().send_event(ButtonClicked(fab_entity));
+    app.world_mut().write_message(ButtonClicked(fab_entity));
     app.update();
 
     // Verify container scroll reset to 0.0
@@ -229,7 +229,7 @@ fn test_material_date_picker_screenshot_1_interaction() {
             .map(|(e, _)| e)
             .expect("Day 15 button exists")
     };
-    app.world_mut().send_event(ButtonClicked(day_15_entity));
+    app.world_mut().write_message(ButtonClicked(day_15_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -254,7 +254,8 @@ fn test_material_date_picker_screenshot_1_interaction() {
             .expect("NextMonthBtn exists")
     };
     let month_before = app.world().resource::<NewGameSetup>().month;
-    app.world_mut().send_event(ButtonClicked(next_month_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(next_month_entity));
     app.update();
 
     let month_after = app.world().resource::<NewGameSetup>().month;
@@ -290,7 +291,7 @@ fn test_material_clock_picker_screenshot_2_interaction() {
             .map(|(e, _)| e)
             .expect("Hour 7 button exists")
     };
-    app.world_mut().send_event(ButtonClicked(hour_7_entity));
+    app.world_mut().write_message(ButtonClicked(hour_7_entity));
     app.update();
 
     let clock_text = app.world().get::<Text>(clock_entity).unwrap().sections[0]
@@ -311,7 +312,7 @@ fn test_material_clock_picker_screenshot_2_interaction() {
             .map(|(e, _)| e)
             .expect("PM button exists")
     };
-    app.world_mut().send_event(ButtonClicked(pm_entity));
+    app.world_mut().write_message(ButtonClicked(pm_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -327,7 +328,7 @@ fn test_material_clock_picker_screenshot_2_interaction() {
             .expect("+15m button exists")
     };
     let min_before = app.world().resource::<NewGameSetup>().minute;
-    app.world_mut().send_event(ButtonClicked(min_plus_15));
+    app.world_mut().write_message(ButtonClicked(min_plus_15));
     app.update();
 
     let min_after = app.world().resource::<NewGameSetup>().minute;
@@ -367,7 +368,7 @@ fn test_tab_summary_cards_synchronize_across_all_tabs() {
             .map(|(e, _)| e)
             .expect("Berlin-Spandau button exists")
     };
-    app.world_mut().send_event(ButtonClicked(spandau_btn));
+    app.world_mut().write_message(ButtonClicked(spandau_btn));
     app.update();
 
     // Verify all tab summaries reflect "Berlin-Spandau"
@@ -376,9 +377,9 @@ fn test_tab_summary_cards_synchronize_across_all_tabs() {
         .query_filtered::<&Text, With<TabSummaryText>>();
     for summary in tab_query.iter(app.world()) {
         assert!(
-            summary.sections[0].value.contains("Berlin-Spandau"),
+            summary.0.contains("Berlin-Spandau"),
             "Tab summary must be synchronized with selected map: {}",
-            summary.sections[0].value
+            summary.0
         );
     }
 
@@ -388,9 +389,9 @@ fn test_tab_summary_cards_synchronize_across_all_tabs() {
         .query_filtered::<&Text, With<LaunchSummaryText>>();
     for footer in footer_query.iter(app.world()) {
         assert!(
-            footer.sections[0].value.contains("Berlin-Spandau"),
+            footer.0.contains("Berlin-Spandau"),
             "Footer summary must be synchronized with selected map: {}",
-            footer.sections[0].value
+            footer.0
         );
     }
 }

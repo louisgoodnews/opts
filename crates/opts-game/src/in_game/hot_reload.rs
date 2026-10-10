@@ -34,7 +34,7 @@ impl Plugin for GameHotReloadPlugin {
 fn execute(world: &mut World, plan: &ReloadPlan) {
     for e in &plan.despawn {
         if let Some(entity) = world.get_entity_mut(*e) {
-            entity.despawn_recursive();
+            entity.despawn();
         }
     }
     if !plan.restart_vehicle {
@@ -74,18 +74,18 @@ pub fn apply_reloads(
     mut scenes: Local<ManualEventReader<ReloadSceneRequested>>,
 ) {
     let files: Vec<ReloadValidated> = validated
-        .read(world.resource::<Events<ReloadValidated>>())
+        .read(world.resource::<Messages<ReloadValidated>>())
         .cloned()
         .collect();
     let scene_requests: Vec<ReloadSceneRequested> = scenes
-        .read(world.resource::<Events<ReloadSceneRequested>>())
+        .read(world.resource::<Messages<ReloadSceneRequested>>())
         .copied()
         .collect();
     for ev in files {
         let started = Instant::now();
         match plan(world, &ev.path, ev.kind) {
             None => {
-                world.send_event(ReloadApplied {
+                world.write_message(ReloadApplied {
                     path: ev.path,
                     kind: ev.kind,
                     seq: ev.seq,
@@ -95,7 +95,7 @@ pub fn apply_reloads(
             Some(Ok(p)) => {
                 execute(world, &p);
                 let summary = format!("{} ({} ms)", p.summary(), started.elapsed().as_millis());
-                world.send_event(ReloadApplied {
+                world.write_message(ReloadApplied {
                     path: ev.path,
                     kind: ev.kind,
                     seq: ev.seq,
@@ -104,7 +104,7 @@ pub fn apply_reloads(
             }
             Some(Err(error)) => {
                 tracing::warn!(target: "opts_bevy::hot_reload", path = %ev.path.display(), "reload failed, keeping the previous content: {error}");
-                world.send_event(ReloadFailed {
+                world.write_message(ReloadFailed {
                     path: ev.path,
                     kind: ev.kind,
                     seq: ev.seq,
@@ -119,7 +119,7 @@ pub fn apply_reloads(
             .is_some()
             .then(|| world.resource_scope(|_, mut job: Mut<WorldLoadJob>| job.plan_scene_reload()));
         let Some(p) = planned else {
-            world.send_event(ReloadFailed {
+            world.write_message(ReloadFailed {
                 path: PathBuf::new(),
                 kind: ReloadKind::Tile,
                 seq: req.seq,
@@ -128,7 +128,7 @@ pub fn apply_reloads(
             continue;
         };
         execute(world, &p);
-        world.send_event(ReloadApplied {
+        world.write_message(ReloadApplied {
             path: PathBuf::new(),
             kind: ReloadKind::Tile,
             seq: req.seq,
@@ -161,7 +161,7 @@ fn sync_watch_roots(
     job: Option<Res<WorldLoadJob>>,
     mut since: Local<f32>,
 ) {
-    *since += time.delta_seconds();
+    *since += time.delta_secs();
     if *since < 1.0 {
         return;
     }

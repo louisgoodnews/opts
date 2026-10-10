@@ -2,7 +2,7 @@
 //!
 //! `cargo run --release -p opts-bevy --example render_text_texture -- <OMSI dir> <font> <text> <w> <h> <out.png> [orientation] [mono 0/1] [r g b]`
 use bevy::asset::Assets;
-use bevy::render::texture::Image;
+use bevy::image::Image;
 use opts_bevy::install::OmsiInstall;
 use opts_bevy::text_texture::{FontRegistry, TextSpec};
 

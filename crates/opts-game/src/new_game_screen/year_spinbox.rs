@@ -18,47 +18,50 @@ pub fn is_valid_year(year: i32) -> bool {
 }
 
 /// Spawns the year spinbox with direct clickable text input and ▲/▼ increment/decrement steppers.
-pub fn spawn_year_spinbox(parent: &mut ChildBuilder, theme: &MaterialTheme, setup: &NewGameSetup) {
+pub fn spawn_year_spinbox(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    setup: &NewGameSetup,
+) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
+        ))
         .with_children(|spinbox| {
             // Clickable text input
             spinbox
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
                             min_width: Val::Px(48.0),
                             align_items: AlignItems::Center,
                             justify_content: JustifyContent::Center,
                             ..default()
                         },
-                        background_color: BackgroundColor(Color::NONE),
-                        ..default()
-                    },
+                        BackgroundColor(Color::NONE),
+                    ),
                     M3Button::default(),
                     YearInputBox,
                     Focusable { tab_index: 0 },
                 ))
                 .with_children(|input| {
                     input.spawn((
-                        TextBundle::from_section(
-                            format!("{}", setup.year),
-                            TextStyle {
-                                font_size: 13.0,
-                                color: theme.scheme.get(ColorRole::OnSurface),
+                        (
+                            Text::new(format!("{}", setup.year)),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurface)),
                         ),
                         YearInputText,
                         TypeStyleToken(TypeScale::BodyMedium),
@@ -67,8 +70,8 @@ pub fn spawn_year_spinbox(parent: &mut ChildBuilder, theme: &MaterialTheme, setu
 
             // Vertical Steppers: ▲ and ▼
             spinbox
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         flex_direction: FlexDirection::Column,
                         border: UiRect {
                             left: Val::Px(1.0),
@@ -76,37 +79,36 @@ pub fn spawn_year_spinbox(parent: &mut ChildBuilder, theme: &MaterialTheme, setu
                         },
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    ..default()
-                })
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                ))
                 .with_children(|steppers| {
                     // ▲ Increment
                     steppers
                         .spawn((
-                            ButtonBundle {
-                                style: Style {
+                            (
+                                Button,
+                                Node {
                                     width: Val::Px(16.0),
                                     height: Val::Px(11.0),
                                     align_items: AlignItems::Center,
                                     justify_content: JustifyContent::Center,
                                     ..default()
                                 },
-                                background_color: BackgroundColor(Color::NONE),
-                                ..default()
-                            },
+                                BackgroundColor(Color::NONE),
+                            ),
                             M3Button::default(),
                             YearIncrementBtn,
                             Focusable { tab_index: 0 },
                         ))
                         .with_children(|b| {
                             b.spawn((
-                                TextBundle::from_section(
-                                    "+",
-                                    TextStyle {
-                                        font_size: 9.0,
-                                        color: theme.scheme.get(ColorRole::Primary),
+                                (
+                                    Text::new("+"),
+                                    TextFont {
+                                        font_size: FontSize::Px(9.0),
                                         ..default()
                                     },
+                                    TextColor(theme.scheme.get(ColorRole::Primary)),
                                 ),
                                 TypeStyleToken(TypeScale::LabelSmall),
                             ));
@@ -115,30 +117,30 @@ pub fn spawn_year_spinbox(parent: &mut ChildBuilder, theme: &MaterialTheme, setu
                     // ▼ Decrement
                     steppers
                         .spawn((
-                            ButtonBundle {
-                                style: Style {
+                            (
+                                Button,
+                                Node {
                                     width: Val::Px(16.0),
                                     height: Val::Px(11.0),
                                     align_items: AlignItems::Center,
                                     justify_content: JustifyContent::Center,
                                     ..default()
                                 },
-                                background_color: BackgroundColor(Color::NONE),
-                                ..default()
-                            },
+                                BackgroundColor(Color::NONE),
+                            ),
                             M3Button::default(),
                             YearDecrementBtn,
                             Focusable { tab_index: 0 },
                         ))
                         .with_children(|b| {
                             b.spawn((
-                                TextBundle::from_section(
-                                    "-",
-                                    TextStyle {
-                                        font_size: 9.0,
-                                        color: theme.scheme.get(ColorRole::Primary),
+                                (
+                                    Text::new("-"),
+                                    TextFont {
+                                        font_size: FontSize::Px(9.0),
                                         ..default()
                                     },
+                                    TextColor(theme.scheme.get(ColorRole::Primary)),
                                 ),
                                 TypeStyleToken(TypeScale::LabelSmall),
                             ));

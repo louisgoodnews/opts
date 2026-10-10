@@ -1,10 +1,10 @@
 //! Terrain height grids (`.map.terrain`) → Bevy meshes and height sampling.
 
 use bevy::asset::Handle;
+use bevy::image::Image;
+use bevy::mesh::Mesh;
 use bevy::pbr::StandardMaterial;
-use bevy::render::mesh::Mesh;
 use bevy::render::render_resource::Face;
-use bevy::render::texture::Image;
 
 use opts_core::formats::map::{MapSplineInstance, MapTerrain};
 use opts_core::formats::scenery::SplineProfile;

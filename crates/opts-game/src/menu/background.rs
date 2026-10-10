@@ -1,7 +1,7 @@
 //! Map-backed background image loading with contrast scrim and solid fallback.
 
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_gui::theme::color::ColorRole;
 use opts_gui::theme::MaterialTheme;
@@ -29,8 +29,8 @@ pub fn spawn_menu_background(
 ) -> Entity {
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(0.0),
                     right: Val::Px(0.0),
@@ -40,9 +40,8 @@ pub fn spawn_menu_background(
                     height: Val::Percent(100.0),
                     ..default()
                 },
-                z_index: ZIndex::Local(0),
-                ..default()
-            },
+                ZIndex::Local(0),
+            ),
             MenuBackgroundRoot,
         ))
         .id();
@@ -53,8 +52,9 @@ pub fn spawn_menu_background(
         tracing::info!("Map background picture successfully attached to main menu");
         commands.entity(root).with_children(|parent| {
             // Background image layer (scaled to fill)
-            parent.spawn(ImageBundle {
-                style: Style {
+            parent.spawn((
+                ImageNode::new(handle),
+                Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(0.0),
                     right: Val::Px(0.0),
@@ -64,14 +64,12 @@ pub fn spawn_menu_background(
                     height: Val::Percent(100.0),
                     ..default()
                 },
-                image: UiImage::new(handle),
-                ..default()
-            });
+            ));
 
             // Contrast scrim layer (z=1 relative to background root)
             parent.spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         position_type: PositionType::Absolute,
                         left: Val::Px(0.0),
                         right: Val::Px(0.0),
@@ -81,10 +79,9 @@ pub fn spawn_menu_background(
                         height: Val::Percent(100.0),
                         ..default()
                     },
-                    background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.45)),
-                    z_index: ZIndex::Local(1),
-                    ..default()
-                },
+                    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.45)),
+                    ZIndex::Local(1),
+                ),
                 MenuBackgroundScrim,
             ));
         });

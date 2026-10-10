@@ -18,8 +18,8 @@ pub fn spawn_loading_screen_ui(
 ) {
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     position_type: PositionType::Absolute,
@@ -31,10 +31,9 @@ pub fn spawn_loading_screen_ui(
                     padding: UiRect::all(Val::Px(32.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.98)),
-                z_index: ZIndex::Global(100),
-                ..default()
-            },
+                BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.98)),
+                GlobalZIndex(100),
+            ),
             InGameEntity,
             LoadingScreenRoot,
         ))
@@ -42,8 +41,8 @@ pub fn spawn_loading_screen_ui(
 
     // 1. Top Header Bar
     let header = commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
@@ -52,40 +51,38 @@ pub fn spawn_loading_screen_ui(
                 border: UiRect::bottom(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(Color::srgba(0.3, 0.4, 0.5, 0.25)),
-            ..default()
-        })
+            BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.25)),
+        ))
         .with_children(|bar| {
-            bar.spawn(NodeBundle {
-                style: Style {
+            bar.spawn(
+                (Node {
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(2.0),
                     ..default()
-                },
-                ..default()
-            })
+                }),
+            )
             .with_children(|title_box| {
                 title_box.spawn((
-                    TextBundle::from_section(
-                        "OPTS TRANSIT OPERATIONS",
-                        TextStyle {
-                            font_size: 18.0,
-                            color: theme.scheme.get(ColorRole::Primary),
+                    (
+                        Text::new("OPTS TRANSIT OPERATIONS"),
+                        TextFont {
+                            font_size: FontSize::Px(18.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
                     TypeStyleToken(TypeScale::TitleMedium),
                     ForegroundRole(ColorRole::Primary),
                 ));
 
                 title_box.spawn((
-                    TextBundle::from_section(
-                        "Clean-Room Simulation Engine & Asset Pipeline",
-                        TextStyle {
-                            font_size: 12.0,
-                            color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                    (
+                        Text::new("Clean-Room Simulation Engine & Asset Pipeline"),
+                        TextFont {
+                            font_size: FontSize::Px(12.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                     ),
                     TypeStyleToken(TypeScale::LabelSmall),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -94,30 +91,27 @@ pub fn spawn_loading_screen_ui(
 
             // Stage Status Badge Chip
             bar.spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         align_items: AlignItems::Center,
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::PrimaryContainer),
-                    ),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                    BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
+                ),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
             ))
             .with_children(|chip| {
                 chip.spawn((
-                    TextBundle::from_section(
-                        "STAGE 1/5: INITIALIZING",
-                        TextStyle {
-                            font_size: 11.0,
-                            color: theme.scheme.get(ColorRole::OnPrimaryContainer),
+                    (
+                        Text::new("STAGE 1/5: INITIALIZING"),
+                        TextFont {
+                            font_size: FontSize::Px(11.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                     ),
                     StageIndicatorText,
                     TypeStyleToken(TypeScale::LabelSmall),
@@ -130,8 +124,7 @@ pub fn spawn_loading_screen_ui(
     // 2. Center Content Card: Manifest Summary + Progress Bar + Telemetry Ticker
     let center_card = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (Node {
                     width: Val::Percent(85.0),
                     max_width: Val::Px(960.0),
                     flex_direction: FlexDirection::Column,
@@ -140,64 +133,40 @@ pub fn spawn_loading_screen_ui(
                     padding: UiRect::all(Val::Px(32.0)),
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
-                },
-                border_color: BorderColor(Color::srgba(0.3, 0.45, 0.6, 0.35)),
-                background_color: BackgroundColor(Color::srgba(0.10, 0.13, 0.18, 0.85)),
-                ..default()
-            },
+                }, BorderColor::all(Color::srgba(0.3, 0.45, 0.6, 0.35)), BackgroundColor(Color::srgba(0.10, 0.13, 0.18, 0.85))),
             GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.85),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
         ))
         .with_children(|card| {
             // Title & Brief
-            card.spawn(NodeBundle {
-                style: Style {
+            card.spawn((Node {
                     flex_direction: FlexDirection::Column,
                     align_items: AlignItems::Center,
                     row_gap: Val::Px(6.0),
                     ..default()
-                },
-                ..default()
-            })
+                }))
             .with_children(|head| {
                 head.spawn((
-                    TextBundle::from_section(
-                        "Preparing Transit Session",
-                        TextStyle {
-                            font_size: 26.0,
-                            color: Color::WHITE,
-                            ..default()
-                        },
-                    ),
+                    (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px( FontSize::Px(26.0)), ..default() }, TextColor(Color::WHITE)),
                     TypeStyleToken(TypeScale::HeadlineMedium),
                     ForegroundRole(ColorRole::OnSurface),
                 ));
 
                 head.spawn((
-                    TextBundle::from_section(
-                        "Synthesizing scenario geometry, vehicle mechanics, and environmental lighting",
-                        TextStyle {
-                            font_size: 13.0,
-                            color: Color::srgb(0.7, 0.75, 0.82),
-                            ..default()
-                        },
-                    ),
+                    (Text::new("Synthesizing scenario geometry, vehicle mechanics, and environmental lighting"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(Color::srgb(0.7, 0.75, 0.82))),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));
             });
 
             // 3-Column Manifest Cards
-            card.spawn(NodeBundle {
-                style: Style {
+            card.spawn((Node {
                     width: Val::Percent(100.0),
                     flex_direction: FlexDirection::Row,
                     column_gap: Val::Px(16.0),
                     justify_content: JustifyContent::SpaceBetween,
                     ..default()
-                },
-                ..default()
-            })
+                }))
             .with_children(|manifest_row| {
                 // Card 1: Map & Terminal
                 spawn_manifest_tile(
@@ -229,51 +198,31 @@ pub fn spawn_loading_screen_ui(
             });
 
             // Linear Progress Bar Section
-            card.spawn(NodeBundle {
-                style: Style {
+            card.spawn((Node {
                     width: Val::Percent(100.0),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(10.0),
                     ..default()
-                },
-                ..default()
-            })
+                }))
             .with_children(|progress_box| {
                 // Header row with Label & Percentage Text
                 progress_box
-                    .spawn(NodeBundle {
-                        style: Style {
+                    .spawn((Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Row,
                             justify_content: JustifyContent::SpaceBetween,
                             align_items: AlignItems::Center,
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }))
                     .with_children(|row| {
                         row.spawn((
-                            TextBundle::from_section(
-                                "ASSET COMPILATION & WORLD SYNTHESIS",
-                                TextStyle {
-                                    font_size: 12.0,
-                                    color: Color::srgb(0.65, 0.72, 0.80),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(Color::srgb(0.65, 0.72, 0.80))),
                             TypeStyleToken(TypeScale::LabelMedium),
                             ForegroundRole(ColorRole::Outline),
                         ));
 
                         row.spawn((
-                            TextBundle::from_section(
-                                "5%",
-                                TextStyle {
-                                    font_size: 15.0,
-                                    color: theme.scheme.get(ColorRole::Primary),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("5%"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                             ProgressPercentText,
                             TypeStyleToken(TypeScale::TitleSmall),
                             ForegroundRole(ColorRole::Primary),
@@ -283,34 +232,25 @@ pub fn spawn_loading_screen_ui(
                 // Progress Bar Track
                 progress_box
                     .spawn((
-                        NodeBundle {
-                            style: Style {
+                        (Node {
                                 width: Val::Percent(100.0),
                                 height: Val::Px(12.0),
                                 border: UiRect::all(Val::Px(1.0)),
                                 overflow: Overflow::clip(),
                                 ..default()
-                            },
-                            border_color: BorderColor(Color::srgba(0.35, 0.45, 0.55, 0.5)),
-                            background_color: BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.9)),
-                            ..default()
-                        },
+                            }, BorderColor::all(Color::srgba(0.35, 0.45, 0.55, 0.5)), BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.9))),
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
                     ))
                     .with_children(|track| {
                         // Filled Indicator
                         track.spawn((
-                            NodeBundle {
-                                style: Style {
+                            (Node {
                                     width: Val::Percent(5.0),
                                     height: Val::Percent(100.0),
                                     ..default()
-                                },
-                                background_color: BackgroundColor(
+                                }, BackgroundColor(
                                     theme.scheme.get(ColorRole::Primary),
-                                ),
-                                ..default()
-                            },
+                                )),
                             ProgressBarFill,
                             RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
                         ));
@@ -319,30 +259,18 @@ pub fn spawn_loading_screen_ui(
 
             // Live Telemetry Status Ticker
             card.spawn((
-                NodeBundle {
-                    style: Style {
+                (Node {
                         width: Val::Percent(100.0),
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         align_items: AlignItems::Center,
                         ..default()
-                    },
-                    border_color: BorderColor(Color::srgba(0.25, 0.35, 0.45, 0.4)),
-                    background_color: BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.95)),
-                    ..default()
-                },
+                    }, BorderColor::all(Color::srgba(0.25, 0.35, 0.45, 0.4)), BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.95))),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
             ))
             .with_children(|ticker| {
                 ticker.spawn((
-                    TextBundle::from_section(
-                        "> Initializing 3D simulation engine & coordinates...",
-                        TextStyle {
-                            font_size: 13.0,
-                            color: Color::srgb(0.75, 0.85, 0.95),
-                            ..default()
-                        },
-                    ),
+                    (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(Color::srgb(0.75, 0.85, 0.95))),
                     StatusTickerText,
                     TypeStyleToken(TypeScale::BodySmall),
                 ));
@@ -352,30 +280,29 @@ pub fn spawn_loading_screen_ui(
 
     // 3. Bottom Navigation Controls
     let footer = commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 width: Val::Percent(85.0),
                 max_width: Val::Px(960.0),
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::SpaceBetween,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|nav| {
             // Cancel Button
             nav.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(Color::srgba(0.4, 0.45, 0.55, 0.5)),
-                    background_color: BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.8)),
-                    ..default()
-                },
+                    BorderColor::all(Color::srgba(0.4, 0.45, 0.55, 0.5)),
+                    BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.8)),
+                ),
                 M3Button::default(),
                 CancelLoadingBtn,
                 GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.70),
@@ -383,13 +310,13 @@ pub fn spawn_loading_screen_ui(
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        "< Cancel & Return to Menu",
-                        TextStyle {
-                            font_size: 13.0,
-                            color: Color::srgb(0.85, 0.88, 0.92),
+                    (
+                        Text::new("< Cancel & Return to Menu"),
+                        TextFont {
+                            font_size: FontSize::Px(13.0),
                             ..default()
                         },
+                        TextColor(Color::srgb(0.85, 0.88, 0.92)),
                     ),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
@@ -397,16 +324,16 @@ pub fn spawn_loading_screen_ui(
 
             // Start Driving Button (Hidden/Disabled until complete)
             nav.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         padding: UiRect::axes(Val::Px(28.0), Val::Px(12.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                    background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                    BackgroundColor(theme.scheme.get(ColorRole::Primary)),
+                ),
                 M3Button::default(),
                 StartDrivingBtn,
                 GlassSurface::new(ColorRole::Primary, 0.90),
@@ -414,13 +341,13 @@ pub fn spawn_loading_screen_ui(
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        "Start Driving Now ->",
-                        TextStyle {
-                            font_size: 14.0,
-                            color: theme.scheme.get(ColorRole::OnPrimary),
+                    (
+                        Text::new("Start Driving Now ->"),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                     ),
                     TypeStyleToken(TypeScale::TitleSmall),
                     ForegroundRole(ColorRole::OnPrimary),
@@ -431,11 +358,11 @@ pub fn spawn_loading_screen_ui(
 
     commands
         .entity(root)
-        .push_children(&[header, center_card, footer]);
+        .add_children(&[header, center_card, footer]);
 }
 
 fn spawn_manifest_tile(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     category: &'static str,
     title: &str,
     subtitle: &str,
@@ -443,8 +370,8 @@ fn spawn_manifest_tile(
 ) {
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     flex_grow: 1.0,
                     flex_basis: Val::Percent(30.0),
                     flex_direction: FlexDirection::Column,
@@ -453,45 +380,44 @@ fn spawn_manifest_tile(
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                border_color: BorderColor(Color::srgba(0.3, 0.4, 0.5, 0.3)),
-                background_color: BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.8)),
-                ..default()
-            },
+                BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.3)),
+                BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.8)),
+            ),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
         ))
         .with_children(|tile| {
             tile.spawn((
-                TextBundle::from_section(
-                    category,
-                    TextStyle {
-                        font_size: 10.0,
-                        color: accent,
+                (
+                    Text::new(category),
+                    TextFont {
+                        font_size: FontSize::Px(10.0),
                         ..default()
                     },
+                    TextColor(accent),
                 ),
                 TypeStyleToken(TypeScale::LabelSmall),
             ));
 
             tile.spawn((
-                TextBundle::from_section(
-                    title,
-                    TextStyle {
-                        font_size: 15.0,
-                        color: Color::WHITE,
+                (
+                    Text::new(title),
+                    TextFont {
+                        font_size: FontSize::Px(15.0),
                         ..default()
                     },
+                    TextColor(Color::WHITE),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
             ));
 
             tile.spawn((
-                TextBundle::from_section(
-                    subtitle,
-                    TextStyle {
-                        font_size: 12.0,
-                        color: Color::srgb(0.68, 0.72, 0.78),
+                (
+                    Text::new(subtitle),
+                    TextFont {
+                        font_size: FontSize::Px(12.0),
                         ..default()
                     },
+                    TextColor(Color::srgb(0.68, 0.72, 0.78)),
                 ),
                 TypeStyleToken(TypeScale::BodySmall),
             ));

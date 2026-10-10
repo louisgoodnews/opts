@@ -37,7 +37,7 @@ struct SpawnToastButton;
 struct StatusLabel;
 
 fn setup_gallery(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     // Root screen layout
     let root = commands
@@ -109,7 +109,7 @@ fn setup_gallery(mut commands: Commands) {
 
                         ButtonBuilder::tonal("Toggle Theme")
                             .on_click(|commands, _entity| {
-                                commands.add(|world: &mut World| {
+                                commands.queue(|world: &mut World| {
                                     let is_dark = {
                                         let theme = world.resource::<MaterialTheme>();
                                         theme.scheme.is_dark

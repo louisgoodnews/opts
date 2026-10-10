@@ -1,8 +1,8 @@
 //! Human rig: eye anchor height, mirrored pivots and posed limbs in world space.
 
 use bevy::asset::AssetPlugin;
+use bevy::mesh::skinning::SkinnedMeshInverseBindposes;
 use bevy::prelude::*;
-use bevy::render::mesh::skinning::SkinnedMeshInverseBindposes;
 use opts_bevy::{spawn_human, Human, HumanHead, HumanPose, HUMAN_BONES};
 use opts_core::formats::humans::HumanProfile;
 
@@ -23,7 +23,7 @@ fn build(pose: HumanPose) -> (App, Human) {
             watch_for_changes_override: Some(false),
             ..Default::default()
         },
-        bevy::hierarchy::HierarchyPlugin,
+        bevy::ecs::hierarchy::HierarchyPlugin,
         bevy::transform::TransformPlugin,
     ))
     .init_asset::<SkinnedMeshInverseBindposes>()

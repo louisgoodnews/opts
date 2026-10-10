@@ -9,7 +9,7 @@ use std::io::BufRead;
 use std::path::Path;
 
 use bevy::math::Vec3;
-use bevy::render::mesh::VertexAttributeValues as V;
+use bevy::mesh::VertexAttributeValues as V;
 use opts_bevy::{
     mesh::o3d_to_bevy_meshes_by_material, mesh::parse_mesh_file, omsi_to_bevy_pos, OmsiInstall,
 };
@@ -20,9 +20,7 @@ fn bounds(path: &Path, bytes: &[u8]) -> Option<(Vec3, Vec3)> {
     let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
     for m in &models {
         for (_, mesh) in o3d_to_bevy_meshes_by_material(m) {
-            if let Some(V::Float32x3(pos)) =
-                mesh.attribute(bevy::render::mesh::Mesh::ATTRIBUTE_POSITION)
-            {
+            if let Some(V::Float32x3(pos)) = mesh.attribute(bevy::mesh::Mesh::ATTRIBUTE_POSITION) {
                 for p in pos {
                     lo = lo.min(Vec3::from(*p));
                     hi = hi.max(Vec3::from(*p));

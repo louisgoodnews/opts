@@ -98,7 +98,7 @@ pub(super) fn load_segment_meshes(
         let parts = loader.o3d_parts(&o3d_path, tex_dirs, &overrides);
         for part in &parts {
             if let Some(mesh) = meshes.get(&part.mesh) {
-                if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos)) =
+                if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
                 {
                     let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
@@ -184,7 +184,7 @@ pub(super) fn spawn_trailer_chain(
         let seg = commands
             .spawn((
                 Name::new(name.clone()),
-                SpatialBundle::from_transform(Transform::from_translation(offset)),
+                Transform::from_translation(offset),
                 InGameEntity,
             ))
             .id();
@@ -214,7 +214,7 @@ pub fn load_player_vehicle(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
-    bindposes: &mut Assets<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>,
+    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
 ) -> Result<(), String> {
     let bus_path = match job.config.vehicle_path.clone() {
         Some(p) => p,
@@ -285,7 +285,7 @@ pub fn load_player_vehicle(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
     if !trailer_cams.is_empty() {
-        commands.add(move |world: &mut World| {
+        commands.queue(move |world: &mut World| {
             if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
                 bus.trailer_pax_cameras = trailer_cams;
             }
@@ -373,7 +373,7 @@ pub(super) fn load_driver_human(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
-    bindposes: &mut Assets<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>,
+    bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
     vehicle_root: Entity,
     bus_dir: &Path,
     cabin_rel: Option<&str>,

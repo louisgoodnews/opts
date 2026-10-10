@@ -1,7 +1,7 @@
 use bevy::app::App;
 use bevy::asset::AssetPlugin;
 use bevy::math::{Vec2, Vec3};
-use bevy::render::mesh::{Indices, Mesh, VertexAttributeValues};
+use bevy::mesh::{Indices, Mesh, VertexAttributeValues};
 use bevy::MinimalPlugins;
 
 use opts_bevy::{

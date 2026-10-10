@@ -72,7 +72,7 @@ impl Plugin for OptsGamePlugin {
 }
 
 fn setup_camera(mut commands: Commands) {
-    commands.spawn((Camera2dBundle::default(), MenuCamera));
+    commands.spawn((Camera2d, MenuCamera));
 }
 
 fn transition_to_main_menu(

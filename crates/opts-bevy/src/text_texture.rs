@@ -8,10 +8,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::asset::{Assets, Handle};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::image::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::texture::Image;
 use opts_core::formats::oft::{OftFile, OftFont};
 
 use crate::install::OmsiInstall;

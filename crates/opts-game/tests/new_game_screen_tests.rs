@@ -160,7 +160,8 @@ fn test_map_selection_updates_setup_and_summary() {
     };
 
     // Simulate clicking Grundorf
-    app.world_mut().send_event(ButtonClicked(grundorf_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(grundorf_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -178,7 +179,7 @@ fn test_map_selection_updates_setup_and_summary() {
         .next()
         .expect("Summary text exists");
     assert!(
-        summary_text.sections[0].value.contains("Grundorf"),
+        summary_text.0.contains("Grundorf"),
         "Summary text must contain 'Grundorf'"
     );
 
@@ -191,7 +192,7 @@ fn test_map_selection_updates_setup_and_summary() {
             .expect("Entrypoint chip must exist");
         e
     };
-    app.world_mut().send_event(ButtonClicked(ep_entity));
+    app.world_mut().write_message(ButtonClicked(ep_entity));
     app.update();
 
     let updated_setup = app.world().resource::<NewGameSetup>();
@@ -230,7 +231,7 @@ fn test_vehicle_selection_updates_setup_and_summary() {
     };
 
     // Simulate clicking vehicle
-    app.world_mut().send_event(ButtonClicked(vehicle_entity));
+    app.world_mut().write_message(ButtonClicked(vehicle_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -259,7 +260,7 @@ fn test_vehicle_selection_updates_setup_and_summary() {
         .next()
         .expect("Summary text exists");
     assert!(
-        summary_text.sections[0].value.contains(&veh_full_name),
+        summary_text.0.contains(&veh_full_name),
         "Summary text must contain selected vehicle full name"
     );
 }
@@ -287,7 +288,7 @@ fn test_scroll_buttons_adjust_offset() {
     };
 
     app.world_mut()
-        .send_event(ButtonClicked(scroll_down_entity));
+        .write_message(ButtonClicked(scroll_down_entity));
     app.update();
 
     // Check scroll offset increased
@@ -305,7 +306,7 @@ fn test_scroll_buttons_adjust_offset() {
     };
 
     // Check that inner ScrollContent received negative top style
-    let mut content_query = app.world_mut().query::<(&ScrollContent, &Style)>();
+    let mut content_query = app.world_mut().query::<(&ScrollContent, &Node)>();
     let (_, style) = content_query
         .iter(app.world())
         .find(|(c, _)| c.kind == ScrollKind::Maps)
@@ -335,7 +336,7 @@ fn test_weather_and_time_adjustment_updates_setup() {
         found.expect("Winter Snowfall preset must exist")
     };
 
-    app.world_mut().send_event(ButtonClicked(snow_entity));
+    app.world_mut().write_message(ButtonClicked(snow_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -355,7 +356,8 @@ fn test_weather_and_time_adjustment_updates_setup() {
     };
 
     let hour_before = app.world().resource::<NewGameSetup>().hour;
-    app.world_mut().send_event(ButtonClicked(plus_hour_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(plus_hour_entity));
     app.update();
 
     let hour_after = app.world().resource::<NewGameSetup>().hour;
@@ -371,7 +373,7 @@ fn test_weather_and_time_adjustment_updates_setup() {
         .expect("Departure time text exists");
     let expected_str = format!("{:02}:30", hour_after);
     assert!(
-        time_text.sections[0].value.contains(&expected_str),
+        time_text.0.contains(&expected_str),
         "Departure time display must show updated hour {:02}:30",
         hour_after
     );
@@ -393,7 +395,7 @@ fn test_launch_simulation_transitions_to_in_game() {
         .next()
         .expect("Launch button must exist");
 
-    app.world_mut().send_event(ButtonClicked(launch_entity));
+    app.world_mut().write_message(ButtonClicked(launch_entity));
     app.update();
     app.update();
 
@@ -420,7 +422,7 @@ fn test_back_button_returns_to_main_menu() {
         .next()
         .expect("Back button must exist");
 
-    app.world_mut().send_event(ButtonClicked(back_entity));
+    app.world_mut().write_message(ButtonClicked(back_entity));
     app.update();
     app.update();
 
@@ -441,7 +443,7 @@ fn test_escape_key_returns_to_main_menu() {
     app.update();
 
     app.world_mut()
-        .send_event(bevy::input::keyboard::KeyboardInput {
+        .write_message(bevy::input::keyboard::KeyboardInput {
             key_code: KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Escape,
             state: bevy::input::ButtonState::Pressed,

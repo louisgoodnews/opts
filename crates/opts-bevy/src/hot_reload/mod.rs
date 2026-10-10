@@ -72,11 +72,11 @@ impl Plugin for HotReloadPlugin {
             .insert_resource(PendingDebounce(Debouncer::new(self.config.debounce)))
             .init_resource::<Validations>()
             .init_resource::<ReloadStats>()
-            .add_event::<ReloadRequested>()
-            .add_event::<ReloadValidated>()
-            .add_event::<ReloadFailed>()
-            .add_event::<ReloadApplied>()
-            .add_event::<ReloadSceneRequested>();
+            .add_message::<ReloadRequested>()
+            .add_message::<ReloadValidated>()
+            .add_message::<ReloadFailed>()
+            .add_message::<ReloadApplied>()
+            .add_message::<ReloadSceneRequested>();
         if self.config.enabled {
             match FileWatcher::new() {
                 Ok(w) => {
@@ -111,7 +111,7 @@ fn collect_file_events(
     config: Res<HotReloadConfig>,
     mut debounce: ResMut<PendingDebounce>,
     mut stats: ResMut<ReloadStats>,
-    mut out: EventWriter<ReloadRequested>,
+    mut out: MessageWriter<ReloadRequested>,
 ) {
     debounce.0.set_window(config.debounce);
     let now = Instant::now();
@@ -126,13 +126,13 @@ fn collect_file_events(
         if let Some(kind) = classify(&path) {
             let seq = stats.allocate();
             tracing::info!(target: "opts_bevy::hot_reload", path = %path.display(), kind = kind.label(), "reload requested (file changed)");
-            out.send(ReloadRequested { path, kind, seq });
+            out.write(ReloadRequested { path, kind, seq });
         }
     }
 }
 
 fn start_validations(
-    mut events: EventReader<ReloadRequested>,
+    mut events: MessageReader<ReloadRequested>,
     mut tasks: ResMut<Validations>,
     mut stats: ResMut<ReloadStats>,
 ) {
@@ -154,15 +154,15 @@ fn start_validations(
 
 fn finish_validations(
     mut tasks: ResMut<Validations>,
-    mut ok: EventWriter<ReloadValidated>,
-    mut failed: EventWriter<ReloadFailed>,
+    mut ok: MessageWriter<ReloadValidated>,
+    mut failed: MessageWriter<ReloadFailed>,
 ) {
     let mut still = Vec::new();
     for mut v in std::mem::take(&mut tasks.0) {
         match block_on(future::poll_once(&mut v.task)) {
             None => still.push(v),
             Some(Ok(())) => {
-                ok.send(ReloadValidated {
+                ok.write(ReloadValidated {
                     path: v.path,
                     kind: v.kind,
                     seq: v.seq,
@@ -170,7 +170,7 @@ fn finish_validations(
             }
             Some(Err(error)) => {
                 tracing::warn!(target: "opts_bevy::hot_reload", path = %v.path.display(), "reload failed, keeping the previous content: {error}");
-                failed.send(ReloadFailed {
+                failed.write(ReloadFailed {
                     path: v.path,
                     kind: v.kind,
                     seq: v.seq,
@@ -185,9 +185,9 @@ fn finish_validations(
 /// Folds applier answers and validation failures into [`ReloadStats`]. Without an applier a
 /// validated file counts as finished.
 fn record_outcomes(
-    mut applied: EventReader<ReloadApplied>,
-    mut failed: EventReader<ReloadFailed>,
-    mut validated: EventReader<ReloadValidated>,
+    mut applied: MessageReader<ReloadApplied>,
+    mut failed: MessageReader<ReloadFailed>,
+    mut validated: MessageReader<ReloadValidated>,
     has_applier: Option<Res<ReloadApplierRegistered>>,
     mut stats: ResMut<ReloadStats>,
 ) {

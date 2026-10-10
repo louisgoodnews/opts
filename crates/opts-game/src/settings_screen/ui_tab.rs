@@ -8,28 +8,31 @@ use crate::settings::GameSettings;
 use crate::settings_screen::types::{ColorSwatchButton, DarkModeToggleButton, ThemePresetButton};
 
 /// Spawns the UI & Themes tab content.
-pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: &GameSettings) {
+pub fn spawn_ui_tab(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    settings: &GameSettings,
+) {
     // Section 1: Dark Mode Toggle
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 column_gap: Val::Px(16.0),
                 margin: UiRect::bottom(Val::Px(16.0)),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|row| {
             row.spawn((
-                TextBundle::from_section(
-                    "Theme Mode:",
-                    TextStyle {
-                        font_size: 15.0,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new("Theme Mode:"),
+                    TextFont {
+                        font_size: FontSize::Px(15.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
                 ForegroundRole(ColorRole::OnSurface),
@@ -42,18 +45,16 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
             };
 
             row.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                    ),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                ),
                 DarkModeToggleButton,
                 GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.65),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -61,13 +62,13 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        mode_label,
-                        TextStyle {
-                            font_size: 13.0,
-                            color: theme.scheme.get(ColorRole::Primary),
+                    (
+                        Text::new(mode_label),
+                        TextFont {
+                            font_size: FontSize::Px(13.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(ColorRole::Primary),
@@ -77,39 +78,37 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
 
     // Section 2: Preset Themes
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(8.0),
                 margin: UiRect::bottom(Val::Px(20.0)),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|section| {
             section.spawn((
-                TextBundle::from_section(
-                    "Curated Theme Presets:",
-                    TextStyle {
-                        font_size: 15.0,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new("Curated Theme Presets:"),
+                    TextFont {
+                        font_size: FontSize::Px(15.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
                 ForegroundRole(ColorRole::OnSurface),
             ));
 
             section
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn(
+                    (Node {
                         flex_direction: FlexDirection::Row,
                         column_gap: Val::Px(12.0),
                         flex_wrap: FlexWrap::Wrap,
                         ..default()
-                    },
-                    ..default()
-                })
+                    }),
+                )
                 .with_children(|buttons| {
                     let presets = [
                         ("Default", "Standard Material"),
@@ -123,8 +122,9 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
                         let is_active = settings.active_theme == name;
                         buttons
                             .spawn((
-                                ButtonBundle {
-                                    style: Style {
+                                (
+                                    Button,
+                                    Node {
                                         padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
                                         border: UiRect::all(Val::Px(if is_active {
                                             2.0
@@ -133,16 +133,15 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
                                         })),
                                         ..default()
                                     },
-                                    border_color: BorderColor(if is_active {
+                                    BorderColor::all(if is_active {
                                         theme.scheme.get(ColorRole::Primary)
                                     } else {
                                         theme.scheme.get(ColorRole::OutlineVariant)
                                     }),
-                                    background_color: BackgroundColor(
+                                    BackgroundColor(
                                         theme.scheme.get(ColorRole::SurfaceContainerLow),
                                     ),
-                                    ..default()
-                                },
+                                ),
                                 ThemePresetButton { preset_name: name },
                                 GlassSurface::new(ColorRole::SurfaceContainerLow, 0.60),
                                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -150,17 +149,17 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
                             ))
                             .with_children(|btn| {
                                 btn.spawn((
-                                    TextBundle::from_section(
-                                        label,
-                                        TextStyle {
-                                            font_size: 13.0,
-                                            color: if is_active {
-                                                theme.scheme.get(ColorRole::Primary)
-                                            } else {
-                                                theme.scheme.get(ColorRole::OnSurface)
-                                            },
+                                    (
+                                        Text::new(label),
+                                        TextFont {
+                                            font_size: FontSize::Px(13.0),
                                             ..default()
                                         },
+                                        TextColor(if is_active {
+                                            theme.scheme.get(ColorRole::Primary)
+                                        } else {
+                                            theme.scheme.get(ColorRole::OnSurface)
+                                        }),
                                     ),
                                     TypeStyleToken(TypeScale::LabelMedium),
                                     ForegroundRole(ColorRole::OnSurface),
@@ -172,24 +171,23 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
 
     // Section 3: Per-Widget Color Customization Palette
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(10.0),
                 margin: UiRect::bottom(Val::Px(16.0)),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|section| {
             section.spawn((
-                TextBundle::from_section(
-                    "Per-Widget Colorization (Click Swatch to Apply & Persist):",
-                    TextStyle {
-                        font_size: 15.0,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new("Per-Widget Colorization (Click Swatch to Apply & Persist):"),
+                    TextFont {
+                        font_size: FontSize::Px(15.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
                 ForegroundRole(ColorRole::OnSurface),
@@ -228,7 +226,7 @@ pub fn spawn_ui_tab(parent: &mut ChildBuilder, theme: &MaterialTheme, settings: 
 }
 
 fn spawn_swatch_row(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     title: &'static str,
     widget: &'static str,
@@ -236,25 +234,24 @@ fn spawn_swatch_row(
     colors: &[(&'static str, Color)],
 ) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 column_gap: Val::Px(12.0),
                 margin: UiRect::vertical(Val::Px(4.0)),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|row| {
             row.spawn((
-                TextBundle::from_section(
-                    title,
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new(title),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::LabelLarge),
                 ForegroundRole(ColorRole::OnSurface),
@@ -262,17 +259,17 @@ fn spawn_swatch_row(
 
             for &(hex, color) in colors {
                 row.spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             width: Val::Px(24.0),
                             height: Val::Px(24.0),
                             border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        border_color: BorderColor(Color::WHITE.with_alpha(0.4)),
-                        background_color: BackgroundColor(color),
-                        ..default()
-                    },
+                        BorderColor::all(Color::WHITE.with_alpha(0.4)),
+                        BackgroundColor(color),
+                    ),
                     ColorSwatchButton {
                         widget_type: widget,
                         role_name: role,

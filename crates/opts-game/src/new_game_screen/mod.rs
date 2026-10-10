@@ -149,8 +149,8 @@ pub fn spawn_new_game_screen(
     // 1. Fullscreen Root Container (flush to window borders)
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     position_type: PositionType::Absolute,
@@ -161,9 +161,8 @@ pub fn spawn_new_game_screen(
                     row_gap: Val::Px(0.0),
                     ..default()
                 },
-                background_color: BackgroundColor(theme.scheme.get(ColorRole::Surface)),
-                ..default()
-            },
+                BackgroundColor(theme.scheme.get(ColorRole::Surface)),
+            ),
             NewGameScreenRoot,
         ))
         .id();
@@ -171,8 +170,8 @@ pub fn spawn_new_game_screen(
     // 2. Header Bar with Title and Back Navigation
     commands.entity(root).with_children(|header_parent| {
         header_parent
-            .spawn(NodeBundle {
-                style: Style {
+            .spawn((
+                Node {
                     width: Val::Percent(100.0),
                     min_height: Val::Px(52.0),
                     flex_direction: FlexDirection::Row,
@@ -185,40 +184,40 @@ pub fn spawn_new_game_screen(
                     padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                ..default()
-            })
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            ))
             .with_children(|bar| {
-                bar.spawn(NodeBundle {
-                    style: Style {
+                bar.spawn(
+                    (Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(2.0),
                         ..default()
-                    },
-                    ..default()
-                })
+                    }),
+                )
                 .with_children(|title_box| {
                     title_box.spawn((
-                        TextBundle::from_section(
-                            "Start New Game",
-                            TextStyle {
-                                font_size: 22.0,
-                                color: theme.scheme.get(ColorRole::Primary),
+                        (
+                            Text::new("Start New Game"),
+                            TextFont {
+                                font_size: FontSize::Px(22.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
                         TypeStyleToken(TypeScale::HeadlineSmall),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
                     title_box.spawn((
-                        TextBundle::from_section(
-                            "Configure World Map, Vehicle Fleet, and Environmental Simulation",
-                            TextStyle {
-                                font_size: 12.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                        (
+                            Text::new(
+                                "Configure World Map, Vehicle Fleet, and Environmental Simulation",
+                            ),
+                            TextFont {
+                                font_size: FontSize::Px(12.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
                         TypeStyleToken(TypeScale::LabelMedium),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -227,18 +226,16 @@ pub fn spawn_new_game_screen(
 
                 // Back Button
                 bar.spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                             border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                        background_color: BackgroundColor(
-                            theme.scheme.get(ColorRole::SecondaryContainer),
-                        ),
-                        ..default()
-                    },
+                        BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                        BackgroundColor(theme.scheme.get(ColorRole::SecondaryContainer)),
+                    ),
                     M3Button::default(),
                     BackToMenuBtn,
                     GlassSurface::new(ColorRole::SecondaryContainer, 0.70),
@@ -247,13 +244,13 @@ pub fn spawn_new_game_screen(
                 ))
                 .with_children(|btn| {
                     btn.spawn((
-                        TextBundle::from_section(
-                            "< Back to Main Menu",
-                            TextStyle {
-                                font_size: 13.0,
-                                color: theme.scheme.get(ColorRole::OnSecondaryContainer),
+                        (
+                            Text::new("< Back to Main Menu"),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSecondaryContainer)),
                         ),
                         TypeStyleToken(TypeScale::LabelMedium),
                         ForegroundRole(ColorRole::OnSecondaryContainer),
@@ -272,7 +269,7 @@ pub fn spawn_new_game_screen(
         .with_active(0)
         .spawn_with_panels(&mut commands);
 
-    commands.entity(notebook_root).insert(Style {
+    commands.entity(notebook_root).insert(Node {
         display: Display::Flex,
         flex_direction: FlexDirection::Column,
         width: Val::Percent(100.0),
@@ -310,8 +307,8 @@ pub fn spawn_new_game_screen(
     // 4. Bottom Action & Launch Bar (Pinned to viewport bottom)
     commands.entity(root).with_children(|footer_parent| {
         footer_parent
-            .spawn(NodeBundle {
-                style: Style {
+            .spawn((
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Px(56.0),
                     min_height: Val::Px(56.0),
@@ -326,9 +323,8 @@ pub fn spawn_new_game_screen(
                     padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                ..default()
-            })
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            ))
             .with_children(|bar| {
                 let summary_text = format!(
                     "Map: {} ({}) | Bus: {} ({}) | Weather: {} | {:02}:{:02}",
@@ -342,13 +338,13 @@ pub fn spawn_new_game_screen(
                 );
 
                 bar.spawn((
-                    TextBundle::from_section(
-                        summary_text,
-                        TextStyle {
-                            font_size: 13.0,
-                            color: theme.scheme.get(ColorRole::OnSurface),
+                    (
+                        Text::new(summary_text),
+                        TextFont {
+                            font_size: FontSize::Px(13.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
                     LaunchSummaryText,
                     TypeStyleToken(TypeScale::TitleSmall),
@@ -357,16 +353,16 @@ pub fn spawn_new_game_screen(
 
                 // Launch Simulation Primary Button
                 bar.spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             padding: UiRect::axes(Val::Px(24.0), Val::Px(10.0)),
                             border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                        background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                        ..default()
-                    },
+                        BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                        BackgroundColor(theme.scheme.get(ColorRole::Primary)),
+                    ),
                     M3Button::default(),
                     LaunchGameBtn,
                     GlassSurface::new(ColorRole::Primary, 0.90),
@@ -375,13 +371,13 @@ pub fn spawn_new_game_screen(
                 ))
                 .with_children(|btn| {
                     btn.spawn((
-                        TextBundle::from_section(
-                            "Start Simulation",
-                            TextStyle {
-                                font_size: 14.0,
-                                color: theme.scheme.get(ColorRole::OnPrimary),
+                        (
+                            Text::new("Start Simulation"),
+                            TextFont {
+                                font_size: FontSize::Px(14.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                         ),
                         TypeStyleToken(TypeScale::TitleSmall),
                         ForegroundRole(ColorRole::OnPrimary),

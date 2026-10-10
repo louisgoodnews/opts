@@ -7,7 +7,7 @@ use crate::new_game_screen::types::{ClearSearchBtn, ScrollKind, SearchInputBox, 
 
 /// Spawns a search bar container with search icon, text/placeholder, and clear button.
 pub fn spawn_search_bar(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     kind: ScrollKind,
     placeholder: &str,
@@ -16,8 +16,7 @@ pub fn spawn_search_bar(
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (Button, Node {
                     width: Val::Percent(100.0),
                     min_height: Val::Px(38.0),
                     flex_direction: FlexDirection::Row,
@@ -27,17 +26,13 @@ pub fn spawn_search_bar(
                     border: UiRect::all(Val::Px(if is_focused { 2.0 } else { 1.0 })),
                     margin: UiRect::bottom(Val::Px(6.0)),
                     ..default()
-                },
-                border_color: BorderColor(if is_focused {
+                }, BorderColor::all(if is_focused {
                     theme.scheme.get(ColorRole::Primary)
                 } else {
                     theme.scheme.get(ColorRole::OutlineVariant)
-                }),
-                background_color: BackgroundColor(
+                }), BackgroundColor(
                     theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                ),
-                ..default()
-            },
+                )),
             M3Button::default(),
             SearchInputBox { kind },
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -45,22 +40,16 @@ pub fn spawn_search_bar(
         ))
         .with_children(|bar| {
             // Left: Icon + Text
-            bar.spawn(NodeBundle {
-                style: Style {
+            bar.spawn((Node {
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
                     column_gap: Val::Px(8.0),
                     flex_grow: 1.0,
                     ..default()
-                },
-                ..default()
-            })
+                }))
             .with_children(|left| {
                 left.spawn((
-                    TextBundle::from_section(
-                        opts_gui::icons::SEARCH,
-                        opts_gui::icons::icon_style(16.0, theme.scheme.get(ColorRole::Primary)),
-                    ),
+                    (Text::new(opts_gui::icons::SEARCH), /* TODO text style opts_gui::icons::icon_style(16.0, theme.scheme.get(ColorRole::Primary)) */),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::Primary),
                 ));
@@ -72,18 +61,11 @@ pub fn spawn_search_bar(
                 };
 
                 left.spawn((
-                    TextBundle::from_section(
-                        display_text,
-                        TextStyle {
-                            font_size: 13.0,
-                            color: if current_query.is_empty() {
+                    (Text::new(display_text), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(if current_query.is_empty() {
                                 theme.scheme.get(ColorRole::OnSurfaceVariant)
                             } else {
                                 theme.scheme.get(ColorRole::OnSurface)
-                            },
-                            ..default()
-                        },
-                    ),
+                            })),
                     SearchInputText { kind },
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(if current_query.is_empty() {
@@ -96,8 +78,7 @@ pub fn spawn_search_bar(
 
             // Right: Reset / Clear Button (displayed when focused or query is not empty)
             bar.spawn((
-                ButtonBundle {
-                    style: Style {
+                (Button, Node {
                         display: if is_focused || !current_query.is_empty() {
                             Display::Flex
                         } else {
@@ -108,13 +89,9 @@ pub fn spawn_search_bar(
                         align_items: AlignItems::Center,
                         justify_content: JustifyContent::Center,
                         ..default()
-                    },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(
+                    }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
                         theme.scheme.get(ColorRole::SurfaceContainerLow),
-                    ),
-                    ..default()
-                },
+                    )),
                 M3Button::default(),
                 ClearSearchBtn { kind },
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -122,14 +99,7 @@ pub fn spawn_search_bar(
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        "✖",
-                        TextStyle {
-                            font_size: 11.0,
-                            color: theme.scheme.get(ColorRole::OnSurfaceVariant),
-                            ..default()
-                        },
-                    ),
+                    (Text::new("✖"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                     TypeStyleToken(TypeScale::LabelSmall),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));

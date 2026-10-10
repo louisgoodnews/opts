@@ -70,15 +70,14 @@ fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     // 1. Environment Lighting & Sky
-    commands.spawn(DirectionalLightBundle {
-        directional_light: DirectionalLight {
+    commands.spawn((
+        DirectionalLight {
             illuminance: 14_000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
-        transform: Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.65, 0.45, 0.0)),
-        ..default()
-    });
+        Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.65, 0.45, 0.0)),
+    ));
 
     commands.insert_resource(AmbientLight {
         color: Color::srgb(0.9, 0.92, 1.0),
@@ -92,12 +91,11 @@ fn setup_scene(
         perceptual_roughness: 0.9,
         ..default()
     });
-    commands.spawn(PbrBundle {
-        mesh: road_mesh,
-        material: road_mat,
-        transform: Transform::IDENTITY,
-        ..default()
-    });
+    commands.spawn((
+        Mesh3d(road_mesh),
+        MeshMaterial3d(road_mat),
+        Transform::IDENTITY,
+    ));
 
     // 3. Construct / Parse representative OMSI 2 .bus Manifest
     let bus_text = r#"
@@ -360,14 +358,14 @@ passengercabin\passengercabin_NL202.cfg
     };
 
     commands.spawn((
-        Camera3dBundle {
-            transform: world_cam_transform,
-            projection: Projection::Perspective(PerspectiveProjection {
+        (
+            Camera3d::default(),
+            world_cam_transform,
+            Projection::Perspective(PerspectiveProjection {
                 fov: initial_driver_cam.fov_deg.to_radians(),
                 ..default()
             }),
-            ..default()
-        },
+        ),
         BusViewerCamera {
             current_mode: CameraMode::DriverSeat,
         },
@@ -389,7 +387,7 @@ fn handle_camera_inputs(
     keyboard: Res<ButtonInput<KeyCode>>,
     mut camera_query: Query<&mut BusViewerCamera>,
 ) {
-    let Ok(mut cam) = camera_query.get_single_mut() else {
+    let Ok(mut cam) = camera_query.single_mut() else {
         return;
     };
 
@@ -428,10 +426,10 @@ fn update_camera_transform(
         With<BusViewerCamera>,
     >,
 ) {
-    let Ok((vehicle, vehicle_tx)) = vehicle_query.get_single() else {
+    let Ok((vehicle, vehicle_tx)) = vehicle_query.single() else {
         return;
     };
-    let Ok((viewer, mut cam_tx, mut projection)) = camera_query.get_single_mut() else {
+    let Ok((viewer, mut cam_tx, mut projection)) = camera_query.single_mut() else {
         return;
     };
 
@@ -454,14 +452,14 @@ fn update_camera_transform(
         let target_pos = vehicle_tx.translation + local_tx.translation;
         cam_tx.translation = cam_tx
             .translation
-            .lerp(target_pos, time.delta_seconds() * 10.0);
+            .lerp(target_pos, time.delta_secs() * 10.0);
         cam_tx.rotation = cam_tx
             .rotation
-            .slerp(local_tx.rotation, time.delta_seconds() * 10.0);
+            .slerp(local_tx.rotation, time.delta_secs() * 10.0);
 
         if let Projection::Perspective(ref mut persp) = *projection {
             let target_fov = preset.fov_deg.to_radians();
-            persp.fov = persp.fov + (target_fov - persp.fov) * time.delta_seconds() * 8.0;
+            persp.fov = persp.fov + (target_fov - persp.fov) * time.delta_secs() * 8.0;
         }
     } else if viewer.current_mode == CameraMode::ExteriorOrbit {
         // Orbit around outside_camera_center
@@ -472,7 +470,7 @@ fn update_camera_transform(
 
         let orbit_dist = 14.0;
         let orbit_height = 4.0;
-        let orbit_angle = time.elapsed_seconds() * 0.2;
+        let orbit_angle = time.elapsed_secs() * 0.2;
 
         let target_pos = center_bevy
             + Vec3::new(
@@ -481,13 +479,11 @@ fn update_camera_transform(
                 orbit_angle.cos() * orbit_dist,
             );
 
-        cam_tx.translation = cam_tx
-            .translation
-            .lerp(target_pos, time.delta_seconds() * 5.0);
+        cam_tx.translation = cam_tx.translation.lerp(target_pos, time.delta_secs() * 5.0);
         let look_rot = Transform::from_translation(cam_tx.translation)
             .looking_at(center_bevy, Vec3::Y)
             .rotation;
-        cam_tx.rotation = cam_tx.rotation.slerp(look_rot, time.delta_seconds() * 5.0);
+        cam_tx.rotation = cam_tx.rotation.slerp(look_rot, time.delta_secs() * 5.0);
 
         if let Projection::Perspective(ref mut persp) = *projection {
             persp.fov = 60.0_f32.to_radians();

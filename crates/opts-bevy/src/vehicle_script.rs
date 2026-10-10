@@ -47,7 +47,7 @@ pub fn vehicle_script_system(
     time: Res<Time>,
     mut query: Query<(&VehicleController, &mut VehicleScripts)>,
 ) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
     }

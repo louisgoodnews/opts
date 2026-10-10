@@ -110,14 +110,14 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
 /// System that exits the application when the shutdown button is clicked.
 pub fn quit_button_action_system(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     quit_query: Query<&QuitButton>,
-    mut app_exit: EventWriter<AppExit>,
+    mut app_exit: MessageWriter<AppExit>,
 ) {
     for event in events.read() {
         if quit_query.contains(event.0) {
             tracing::info!("Shutting down OPTS via Shutdown button");
-            app_exit.send(AppExit::Success);
+            app_exit.write(AppExit::Success);
         }
     }
 }

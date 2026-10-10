@@ -90,22 +90,14 @@ pub(super) fn spawn_terrain(
         let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
         children.push(match tile_material {
             Some(material) => commands
-                .spawn((
-                    MaterialMeshBundle {
-                        mesh: meshes.add(mesh),
-                        material,
-                        ..default()
-                    },
-                    name,
-                ))
+                .spawn(((Mesh3d(meshes.add(mesh)), MeshMaterial3d(material)), name))
                 .id(),
             None => commands
                 .spawn((
-                    PbrBundle {
-                        mesh: meshes.add(mesh),
-                        material: job.ground_material.clone().unwrap_or_default(),
-                        ..default()
-                    },
+                    (
+                        Mesh3d(meshes.add(mesh)),
+                        MeshMaterial3d(job.ground_material.clone().unwrap_or_default()),
+                    ),
                     name,
                 ))
                 .id(),
@@ -191,11 +183,7 @@ pub(super) fn spawn_splines(
             children.push(
                 commands
                     .spawn((
-                        PbrBundle {
-                            mesh: meshes.add(mesh),
-                            material: mat,
-                            ..default()
-                        },
+                        (Mesh3d(meshes.add(mesh)), MeshMaterial3d(mat)),
                         Name::new(format!("Spline_{}_{}", inst.id_code, tex_idx)),
                     ))
                     .id(),

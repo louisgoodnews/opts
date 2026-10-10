@@ -15,7 +15,7 @@ impl Plugin for ShutdownPlugin {
 
 /// System that intercepts [`AppExit`] and writes settings to disk before window destruction.
 fn handle_application_shutdown(
-    mut exit_events: EventReader<AppExit>,
+    mut exit_events: MessageReader<AppExit>,
     settings: Option<Res<GameSettings>>,
 ) {
     if exit_events.read().next().is_some() {

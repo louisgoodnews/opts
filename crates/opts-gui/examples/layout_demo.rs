@@ -19,7 +19,7 @@ fn main() {
 }
 
 fn setup_layout_demo(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     // Root container
     commands

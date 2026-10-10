@@ -262,7 +262,7 @@ fn log_tail_returns_recent_events() {
 #[derive(Resource, Default)]
 struct ExitSeen(bool);
 
-fn note_exit(mut events: EventReader<bevy::app::AppExit>, mut seen: ResMut<ExitSeen>) {
+fn note_exit(mut events: MessageReader<bevy::app::AppExit>, mut seen: ResMut<ExitSeen>) {
     seen.0 |= events.read().count() > 0;
 }
 

@@ -27,17 +27,14 @@ pub fn spawn_main_menu(
     // Top-level full-viewport root node
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    ..default()
-                },
+            (Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
                 ..default()
-            },
+            }),
             MainMenuRoot,
         ))
         .id();
@@ -52,25 +49,24 @@ pub fn spawn_main_menu(
 
     // 3. Floating version label (bottom-right, z=2)
     let version_entity = commands
-        .spawn((NodeBundle {
-            style: Style {
+        .spawn(((
+            Node {
                 position_type: PositionType::Absolute,
                 bottom: Val::Px(16.0),
                 right: Val::Px(24.0),
                 ..default()
             },
-            z_index: ZIndex::Local(2),
-            ..default()
-        },))
+            ZIndex::Local(2),
+        ),))
         .with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section(
-                    "OPTS v0.1.0-alpha · Clean-Room Architecture",
-                    TextStyle {
-                        font_size: 12.0,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new("OPTS v0.1.0-alpha · Clean-Room Architecture"),
+                    TextFont {
+                        font_size: FontSize::Px(12.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::LabelSmall),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -83,8 +79,8 @@ pub fn spawn_main_menu(
     let sidebar_width = Val::Px(280.0);
     let sidebar_entity = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(0.0),
                     top: Val::Px(0.0),
@@ -106,10 +102,9 @@ pub fn spawn_main_menu(
                     },
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                z_index: ZIndex::Local(2),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                ZIndex::Local(2),
+            ),
             MenuCard,
             GlassSurface::new(ColorRole::SurfaceContainerLowest, 0.82),
             BorderRole(ColorRole::OutlineVariant),
@@ -123,8 +118,8 @@ pub fn spawn_main_menu(
 
     // 5. Right Hero Branding and Overview Panel (z=1)
     let hero_entity = commands
-        .spawn((NodeBundle {
-            style: Style {
+        .spawn(((
+            Node {
                 position_type: PositionType::Absolute,
                 left: Val::Px(300.0),
                 right: Val::Px(0.0),
@@ -137,42 +132,40 @@ pub fn spawn_main_menu(
                 row_gap: Val::Px(20.0),
                 ..default()
             },
-            z_index: ZIndex::Local(1),
-            ..default()
-        },))
+            ZIndex::Local(1),
+        ),))
         .with_children(|hero_parent| {
             // Title & Subtitle
             hero_parent
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn(
+                    (Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(6.0),
                         ..default()
-                    },
-                    ..default()
-                })
+                    }),
+                )
                 .with_children(|brand| {
                     brand.spawn((
-                        TextBundle::from_section(
-                            "OPTS",
-                            TextStyle {
-                                font_size: 64.0,
-                                color: theme.scheme.get(ColorRole::Primary),
+                        (
+                            Text::new("OPTS"),
+                            TextFont {
+                                font_size: FontSize::Px(64.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
                         TypeStyleToken(TypeScale::DisplayLarge),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
                     brand.spawn((
-                        TextBundle::from_section(
-                            "Open Public Transport Simulator",
-                            TextStyle {
-                                font_size: 18.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                        (
+                            Text::new("Open Public Transport Simulator"),
+                            TextFont {
+                                font_size: FontSize::Px(18.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
                         TypeStyleToken(TypeScale::TitleMedium),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -182,8 +175,8 @@ pub fn spawn_main_menu(
             // Status Card
             hero_parent
                 .spawn((
-                    NodeBundle {
-                        style: Style {
+                    (
+                        Node {
                             max_width: Val::Px(480.0),
                             flex_direction: FlexDirection::Column,
                             padding: UiRect::all(Val::Px(20.0)),
@@ -191,22 +184,21 @@ pub fn spawn_main_menu(
                             border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                        ..default()
-                    },
+                        BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    ),
                     GlassSurface::new(ColorRole::SurfaceContainerLow, 0.65),
                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     BorderRole(ColorRole::OutlineVariant),
                 ))
                 .with_children(|card| {
                     card.spawn((
-                        TextBundle::from_section(
-                            "Clean-Room Simulation Engine",
-                            TextStyle {
-                                font_size: 15.0,
-                                color: theme.scheme.get(ColorRole::OnSurface),
+                        (
+                            Text::new("Clean-Room Simulation Engine"),
+                            TextFont {
+                                font_size: FontSize::Px(15.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurface)),
                         ),
                         TypeStyleToken(TypeScale::TitleSmall),
                         ForegroundRole(ColorRole::OnSurface),
@@ -219,26 +211,28 @@ pub fn spawn_main_menu(
                     };
 
                     card.spawn((
-                        TextBundle::from_section(
-                            map_text,
-                            TextStyle {
-                                font_size: 13.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                        (
+                            Text::new(map_text),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
                         TypeStyleToken(TypeScale::BodySmall),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
 
                     card.spawn((
-                        TextBundle::from_section(
-                            "Storage: SQLite (WAL) · UI: Material Design 3 Glassmorphism",
-                            TextStyle {
-                                font_size: 11.0,
-                                color: theme.scheme.get(ColorRole::Outline),
+                        (
+                            Text::new(
+                                "Storage: SQLite (WAL) · UI: Material Design 3 Glassmorphism",
+                            ),
+                            TextFont {
+                                font_size: FontSize::Px(11.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::Outline)),
                         ),
                         TypeStyleToken(TypeScale::LabelSmall),
                         ForegroundRole(ColorRole::Outline),
@@ -253,6 +247,6 @@ pub fn spawn_main_menu(
 /// System that despawns all main menu entities when exiting `AppState::MainMenu`.
 pub fn cleanup_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenuRoot>>) {
     for entity in &query {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }

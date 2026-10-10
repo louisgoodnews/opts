@@ -1,25 +1,24 @@
 //! Layered ground material: a standard PBR material whose base colour is blended on the GPU from
 //! the map's `[groundtex]` layers and the tile's per-layer masks.
 
+use bevy::asset::RenderAssetUsages;
 use bevy::asset::{load_internal_asset, Asset};
+use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::pbr::{ExtendedMaterial, MaterialExtension, MaterialPlugin, StandardMaterial};
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
-use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{
-    AsBindGroup, Extent3d, ShaderRef, TextureDimension, TextureFormat, TextureViewDescriptor,
+    AsBindGroup, Extent3d, TextureDimension, TextureFormat, TextureViewDescriptor,
     TextureViewDimension,
 };
-use bevy::render::texture::{
-    ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor,
-};
+use bevy::shader::ShaderRef;
 
 use crate::ground::CpuImage;
 
 /// Most layers a tile can blend (the shader packs repeat counts into two `vec4`s).
 pub const MAX_GROUND_LAYERS: usize = 8;
 
-const SHADER: Handle<Shader> = Handle::weak_from_u128(0x6f70_7473_6772_6f75_6e64_6c61_7965_7273);
+const SHADER: Handle<Shader> = bevy::asset::uuid_handle!("6f707473-6772-6f75-6e64-6c6179657273");
 
 /// Bind-group extension of [`StandardMaterial`] carrying the layer and mask arrays.
 #[derive(Asset, AsBindGroup, TypePath, Debug, Clone)]
@@ -128,7 +127,7 @@ pub fn layer_array(layers: &[&CpuImage], size: usize) -> Image {
         RenderAssetUsages::RENDER_WORLD,
     );
     image.texture_descriptor.mip_level_count = mips as u32;
-    image.data = data;
+    image.data = Some(data);
     image.texture_view_descriptor = Some(TextureViewDescriptor {
         dimension: Some(TextureViewDimension::D2Array),
         ..default()
@@ -169,7 +168,7 @@ pub fn mask_array(masks: &[Option<&CpuImage>], size: usize) -> Image {
         TextureFormat::R8Unorm,
         RenderAssetUsages::RENDER_WORLD,
     );
-    image.data = data;
+    image.data = Some(data);
     image.texture_view_descriptor = Some(TextureViewDescriptor {
         dimension: Some(TextureViewDimension::D2Array),
         ..default()

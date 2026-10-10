@@ -119,13 +119,13 @@ pub fn load_next_tile(
 
     let tile_root = commands
         .spawn((
-            SpatialBundle::default(),
+            Transform::default(),
             InGameEntity,
             TileRoot(key),
             Name::new(format!("Tile_{}_{}", key.0, key.1)),
         ))
         .id();
-    commands.entity(tile_root).push_children(&children);
+    commands.entity(tile_root).add_children(&children);
     job.resident.insert(key, tile_root);
     let deps = std::mem::take(&mut job.loading_deps);
     job.tile_deps.insert(key, deps);
@@ -310,9 +310,7 @@ fn spawn_object(
         .friendly_name
         .clone()
         .unwrap_or_else(|| obj.sco_file.clone());
-    let parent = commands
-        .spawn((SpatialBundle::from_transform(transform), Name::new(name)))
-        .id();
+    let parent = commands.spawn((transform, Name::new(name))).id();
     children.push(parent);
     stats.scene_vertices += parts.iter().map(|p| p.vertices).sum::<usize>();
     attach_model_parts(commands, parent, &parts, "Mesh");
@@ -342,7 +340,7 @@ pub fn stream_world_tiles(
         return;
     }
     job.rebuild_decoded_tiles(&mut commands, &mut stats);
-    let Ok(cam) = camera.get_single() else { return };
+    let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
     let centre = (
         job.start_tile.0 + (p.x / TILE_SIZE_M).floor() as i32,
@@ -359,7 +357,7 @@ pub fn stream_world_tiles(
         .collect();
     for key in far {
         if let Some(root) = job.resident.remove(&key) {
-            commands.entity(root).despawn_recursive();
+            commands.entity(root).despawn();
             tracing::debug!(tile = ?key, "tile unloaded");
         }
     }
@@ -420,7 +418,7 @@ impl WorldLoadJob {
             for key in ready {
                 self.waiting_decode.remove(&key);
                 if let Some(root) = self.resident.remove(&key) {
-                    commands.entity(root).despawn_recursive();
+                    commands.entity(root).despawn();
                     self.tile_deps.remove(&key);
                     if !self.queue.contains(&key) {
                         self.queue.push_front(key);

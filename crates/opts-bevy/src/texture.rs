@@ -8,9 +8,9 @@
 
 #![deny(unsafe_code)]
 
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::asset::RenderAssetUsages;
+use bevy::image::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::texture::Image;
 use ddsfile::{D3DFormat, Dds, DxgiFormat, FourCC, PixelFormatFlags};
 use thiserror::Error;
 
@@ -191,7 +191,7 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     }
     image.texture_descriptor.mip_level_count = mips;
     image.asset_usage = RenderAssetUsages::default();
-    image.data = data;
+    image.data = Some(data);
 
     Ok(image)
 }

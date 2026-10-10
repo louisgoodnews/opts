@@ -4,7 +4,7 @@ use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::input::ButtonInput;
 use bevy::math::{EulerRot, Quat, Vec3};
 use bevy::prelude::*;
-use bevy::window::{CursorGrabMode, PrimaryWindow};
+use bevy::window::{CursorGrabMode, CursorOptions, PrimaryWindow};
 
 use crate::camera::state::{scale_free_roam_speed, CameraMode, CameraState};
 
@@ -28,8 +28,8 @@ pub fn free_roam_rotation(yaw: f32, pitch: f32) -> Quat {
 pub fn update_free_roam_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion: EventReader<MouseMotion>,
-    mut wheel: EventReader<MouseWheel>,
+    mut motion: MessageReader<MouseMotion>,
+    mut wheel: MessageReader<MouseWheel>,
     mut state: ResMut<CameraState>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
 ) {
@@ -65,7 +65,7 @@ pub fn update_free_roam_camera(
     state.free_roam_pitch = (state.free_roam_pitch - delta.y * sens)
         .clamp(-89.0_f32.to_radians(), 89.0_f32.to_radians());
 
-    let Ok(mut tf) = camera.get_single_mut() else {
+    let Ok(mut tf) = camera.single_mut() else {
         return;
     };
     tf.rotation = free_roam_rotation(state.free_roam_yaw, state.free_roam_pitch);
@@ -79,7 +79,7 @@ pub fn update_free_roam_camera(
         axis(KeyCode::KeyD, KeyCode::KeyA),
         axis(KeyCode::KeyE, KeyCode::KeyQ),
     );
-    tf.translation += dir * state.free_roam_speed * time.delta_seconds();
+    tf.translation += dir * state.free_roam_speed * time.delta_secs();
 }
 
 /// Locks and hides the cursor while flying the free camera or looking from the ego view.
@@ -91,7 +91,7 @@ pub fn manage_free_roam_cursor(
     keys: Res<ButtonInput<KeyCode>>,
     cameras: Query<(), With<Camera3d>>,
     modal: Option<Res<crate::reporting::ModalActive>>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mut windows: Query<&mut CursorOptions, With<PrimaryWindow>>,
     mut locked: Local<bool>,
 ) {
     // The cursor is released while the report modal is open so its buttons are reachable.
@@ -104,12 +104,12 @@ pub fn manage_free_roam_cursor(
     }
     *locked = want_lock;
     for mut window in &mut windows {
-        window.cursor.grab_mode = if want_lock {
+        window.grab_mode = if want_lock {
             CursorGrabMode::Locked
         } else {
             CursorGrabMode::None
         };
-        window.cursor.visible = !want_lock;
+        window.visible = !want_lock;
     }
     tracing::debug!(locked = want_lock, "free-roam cursor capture changed");
 }

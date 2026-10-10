@@ -19,7 +19,7 @@ pub type NameLookup = Arc<dyn Fn(&str, &str, bool) -> Option<PathBuf> + Send + S
 /// scrambled meshes.
 pub type TwinLookup = Arc<dyn Fn(&str) -> Vec<PathBuf> + Send + Sync>;
 
-use bevy::ecs::system::Resource;
+use bevy::ecs::resource::Resource;
 
 /// Handle to an OMSI installation directory with case-insensitive file lookup.
 #[derive(Resource)]

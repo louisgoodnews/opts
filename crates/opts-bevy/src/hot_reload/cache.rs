@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use bevy::asset::Assets;
-use bevy::render::texture::Image;
+use bevy::image::Image;
 
 use crate::model::{repeat_sampler, ContentCache};
 
@@ -56,7 +56,7 @@ impl ContentCache {
         let mut image = crate::texture::load_bevy_image(&bytes).map_err(|e| e.to_string())?;
         image.sampler = repeat_sampler();
         match images.get_mut(&handle) {
-            Some(slot) => {
+            Some(mut slot) => {
                 *slot = image;
                 Ok(true)
             }

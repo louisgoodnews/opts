@@ -80,7 +80,7 @@ fn test_map_entrypoints_scrollable_container_and_selection() {
             .expect("Target entry point button entity exists")
     };
 
-    app.world_mut().send_event(ButtonClicked(btn_entity));
+    app.world_mut().write_message(ButtonClicked(btn_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -95,7 +95,7 @@ fn test_map_entrypoints_scrollable_container_and_selection() {
         .query_filtered::<&Text, With<LaunchSummaryText>>();
     for summary_text in summary_query.iter(app.world()) {
         assert!(
-            summary_text.sections[0].value.contains(&target_ep),
+            summary_text.0.contains(&target_ep),
             "Summary text must contain selected entrypoint"
         );
     }
@@ -143,7 +143,8 @@ fn test_vehicle_repaints_scrollable_and_setvars_modal() {
             .map(|(e, _)| e)
             .expect("Livery button entity exists")
     };
-    app.world_mut().send_event(ButtonClicked(livery_btn_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(livery_btn_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -161,7 +162,8 @@ fn test_vehicle_repaints_scrollable_and_setvars_modal() {
             .map(|(e, _)| e)
             .expect("OpenSetvarsModalBtn exists")
     };
-    app.world_mut().send_event(ButtonClicked(config_btn_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(config_btn_entity));
     app.update();
 
     // Verify modal spawned
@@ -179,7 +181,7 @@ fn test_vehicle_repaints_scrollable_and_setvars_modal() {
     };
 
     if let Some((step_entity, btn_info)) = step_btn {
-        app.world_mut().send_event(ButtonClicked(step_entity));
+        app.world_mut().write_message(ButtonClicked(step_entity));
         app.update();
 
         let setup = app.world().resource::<NewGameSetup>();
@@ -194,7 +196,7 @@ fn test_vehicle_repaints_scrollable_and_setvars_modal() {
             query.iter(app.world()).next().map(|(e, _)| e)
         };
         if let Some(r_ent) = reset_btn {
-            app.world_mut().send_event(ButtonClicked(r_ent));
+            app.world_mut().write_message(ButtonClicked(r_ent));
             app.update();
 
             let setup = app.world().resource::<NewGameSetup>();
@@ -214,7 +216,8 @@ fn test_vehicle_repaints_scrollable_and_setvars_modal() {
             .map(|(e, _)| e)
             .expect("CloseSetvarsModalBtn exists")
     };
-    app.world_mut().send_event(ButtonClicked(close_btn_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(close_btn_entity));
     app.update();
 
     let modal_count_after = app
@@ -242,7 +245,8 @@ fn test_year_spinbox_keyboard_input_regular_and_numpad() {
             .map(|(e, _)| e)
             .expect("YearInputBox exists")
     };
-    app.world_mut().send_event(ButtonClicked(year_box_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(year_box_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -263,7 +267,7 @@ fn test_year_spinbox_keyboard_input_regular_and_numpad() {
             state: ButtonState::Pressed,
             window: Entity::from_raw(0),
         };
-        app.world_mut().send_event(key_event);
+        app.world_mut().write_message(key_event);
         app.update();
     }
 
@@ -274,7 +278,7 @@ fn test_year_spinbox_keyboard_input_regular_and_numpad() {
         state: ButtonState::Pressed,
         window: Entity::from_raw(0),
     };
-    app.world_mut().send_event(enter_event);
+    app.world_mut().write_message(enter_event);
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -337,7 +341,8 @@ fn test_datetime_and_weather_three_column_layout_and_no_ok_buttons() {
             .map(|(e, _)| e)
             .expect("Rain weather preset button exists")
     };
-    app.world_mut().send_event(ButtonClicked(rain_btn_entity));
+    app.world_mut()
+        .write_message(ButtonClicked(rain_btn_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -355,7 +360,7 @@ fn test_datetime_and_weather_three_column_layout_and_no_ok_buttons() {
             .map(|(e, _)| e)
             .expect("Day 20 button exists")
     };
-    app.world_mut().send_event(ButtonClicked(day_20_entity));
+    app.world_mut().write_message(ButtonClicked(day_20_entity));
     app.update();
 
     let setup = app.world().resource::<NewGameSetup>();
@@ -368,7 +373,7 @@ fn test_datetime_and_weather_three_column_layout_and_no_ok_buttons() {
         query
             .iter(app.world())
             .next()
-            .map(|t| t.sections[0].value.clone())
+            .map(|t| t.0.clone())
             .expect("Header date text exists")
     };
     assert!(
@@ -386,7 +391,7 @@ fn test_datetime_and_weather_three_column_layout_and_no_ok_buttons() {
             .map(|(e, _)| e)
             .expect("Hour 4 button exists")
     };
-    app.world_mut().send_event(ButtonClicked(hour_4_entity));
+    app.world_mut().write_message(ButtonClicked(hour_4_entity));
     app.update();
 
     let clock_text = {
@@ -396,7 +401,7 @@ fn test_datetime_and_weather_three_column_layout_and_no_ok_buttons() {
         query
             .iter(app.world())
             .next()
-            .map(|t| t.sections[0].value.clone())
+            .map(|t| t.0.clone())
             .expect("Clock digital display text exists")
     };
     assert!(

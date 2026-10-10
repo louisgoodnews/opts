@@ -67,8 +67,8 @@ pub fn spawn_settings_screen(
     // 1. Fullscreen Root Container
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     position_type: PositionType::Absolute,
@@ -79,9 +79,8 @@ pub fn spawn_settings_screen(
                     row_gap: Val::Px(16.0),
                     ..default()
                 },
-                background_color: BackgroundColor(theme.scheme.get(ColorRole::Surface)),
-                ..default()
-            },
+                BackgroundColor(theme.scheme.get(ColorRole::Surface)),
+            ),
             SettingsScreenRoot,
         ))
         .id();
@@ -89,8 +88,8 @@ pub fn spawn_settings_screen(
     // 2. Header Bar with Title and Back Button
     commands.entity(root).with_children(|header_parent| {
         header_parent
-            .spawn(NodeBundle {
-                style: Style {
+            .spawn((
+                Node {
                     width: Val::Percent(100.0),
                     min_height: Val::Px(56.0),
                     flex_direction: FlexDirection::Row,
@@ -103,41 +102,39 @@ pub fn spawn_settings_screen(
                     padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                ..default()
-            })
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            ))
             .with_children(|bar| {
                 // Title
-                bar.spawn(NodeBundle {
-                    style: Style {
+                bar.spawn(
+                    (Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(2.0),
                         ..default()
-                    },
-                    ..default()
-                })
+                    }),
+                )
                 .with_children(|title_box| {
                     title_box.spawn((
-                        TextBundle::from_section(
-                            "Application Settings",
-                            TextStyle {
-                                font_size: 26.0,
-                                color: theme.scheme.get(ColorRole::Primary),
+                        (
+                            Text::new("Application Settings"),
+                            TextFont {
+                                font_size: FontSize::Px(26.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
                         TypeStyleToken(TypeScale::HeadlineSmall),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
                     title_box.spawn((
-                        TextBundle::from_section(
-                            "Preferences, UI Colorization & Theme Configuration",
-                            TextStyle {
-                                font_size: 13.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                        (
+                            Text::new("Preferences, UI Colorization & Theme Configuration"),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
                         TypeStyleToken(TypeScale::LabelMedium),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -146,18 +143,16 @@ pub fn spawn_settings_screen(
 
                 // Back Button
                 bar.spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             padding: UiRect::axes(Val::Px(18.0), Val::Px(10.0)),
                             border: UiRect::all(Val::Px(1.0)),
                             ..default()
                         },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                        background_color: BackgroundColor(
-                            theme.scheme.get(ColorRole::SecondaryContainer),
-                        ),
-                        ..default()
-                    },
+                        BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                        BackgroundColor(theme.scheme.get(ColorRole::SecondaryContainer)),
+                    ),
                     BackToMenuButton,
                     GlassSurface::new(ColorRole::SecondaryContainer, 0.70),
                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
@@ -165,13 +160,13 @@ pub fn spawn_settings_screen(
                 ))
                 .with_children(|btn| {
                     btn.spawn((
-                        TextBundle::from_section(
-                            "< Back to Main Menu",
-                            TextStyle {
-                                font_size: 14.0,
-                                color: theme.scheme.get(ColorRole::OnSecondaryContainer),
+                        (
+                            Text::new("< Back to Main Menu"),
+                            TextFont {
+                                font_size: FontSize::Px(14.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnSecondaryContainer)),
                         ),
                         TypeStyleToken(TypeScale::LabelLarge),
                         ForegroundRole(ColorRole::OnSecondaryContainer),
@@ -190,7 +185,7 @@ pub fn spawn_settings_screen(
         .with_active(0)
         .spawn_with_panels(&mut commands);
 
-    commands.entity(notebook_root).insert(Style {
+    commands.entity(notebook_root).insert(Node {
         display: Display::Flex,
         flex_direction: FlexDirection::Column,
         width: Val::Percent(100.0),

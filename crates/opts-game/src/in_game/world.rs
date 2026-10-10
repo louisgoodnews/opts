@@ -54,16 +54,15 @@ pub fn spawn_atmosphere_and_lighting(commands: &mut Commands, setup: &NewGameSet
     };
 
     commands.spawn((
-        DirectionalLightBundle {
-            directional_light: DirectionalLight {
+        (
+            DirectionalLight {
                 color: sun_color,
                 illuminance,
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 ..default()
             },
-            transform: Transform::from_rotation(sun_rotation),
-            ..default()
-        },
+            Transform::from_rotation(sun_rotation),
+        ),
         InGameEntity,
         Name::new("Atmosphere_Sun_Light"),
     ));

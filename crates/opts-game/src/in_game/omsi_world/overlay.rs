@@ -14,20 +14,20 @@ pub struct DebugOverlayText;
 /// Spawns the (initially visible) diagnostic overlay.
 pub fn spawn_debug_overlay(commands: &mut Commands) {
     commands.spawn((
-        TextBundle::from_section(
-            "",
-            TextStyle {
-                font_size: 14.0,
-                color: Color::srgb(0.85, 1.0, 0.85),
+        (
+            Text::new(""),
+            TextFont {
+                font_size: FontSize::Px(14.0),
                 ..default()
             },
-        )
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: Val::Px(70.0),
-            left: Val::Px(12.0),
-            ..default()
-        }),
+            TextColor(Color::srgb(0.85, 1.0, 0.85)),
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(70.0),
+                left: Val::Px(12.0),
+                ..default()
+            },
+        ),
         DebugOverlayText,
         InGameEntity,
     ));
@@ -48,7 +48,7 @@ pub fn update_debug_overlay(
         } else {
             Visibility::Hidden
         };
-        text.sections[0].value = format!(
+        text.0 = format!(
             "[F10] map: {}\ntile: {:?} | tiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {}\nscrambled meshes: decoded {}, plain twins {}, decoding {}",
             stats.map_name,
             stats.start_tile,

@@ -36,7 +36,7 @@ pub fn build_app(args: CliArgs) -> App {
         .init_asset::<Image>()
         .init_asset::<Mesh>()
         .init_asset::<StandardMaterial>()
-        .add_plugins(bevy::hierarchy::HierarchyPlugin)
+        .add_plugins(bevy::ecs::hierarchy::HierarchyPlugin)
         .add_plugins(bevy::input::InputPlugin);
     } else {
         let (width, height) = args.parse_dimensions();

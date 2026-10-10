@@ -11,7 +11,7 @@ use crate::human::HumanHead;
 /// Mouse look relative to the head (yaw ±120°, pitch ±80°). Hold Left Alt to free the cursor.
 pub fn update_ego_look(
     keys: Res<ButtonInput<KeyCode>>,
-    mut motion: EventReader<MouseMotion>,
+    mut motion: MessageReader<MouseMotion>,
     mut state: ResMut<CameraState>,
 ) {
     if state.mode != CameraMode::Ego {
@@ -38,7 +38,7 @@ pub fn update_ego_camera(
     if state.mode != CameraMode::Ego {
         return;
     }
-    let (Ok(head), Ok(mut cam)) = (head.get_single(), camera.get_single_mut()) else {
+    let (Ok(head), Ok(mut cam)) = (head.single(), camera.single_mut()) else {
         return;
     };
     let (_, rot, pos) = head.to_scale_rotation_translation();

@@ -44,7 +44,7 @@ pub struct LoadAssets<'w> {
     /// Layered ground materials (absent when the renderer lacks the material plugin).
     pub ground_materials: Option<ResMut<'w, Assets<GroundMaterial>>>,
     /// Skin inverse bind poses.
-    pub bindposes: ResMut<'w, Assets<bevy::render::mesh::skinning::SkinnedMeshInverseBindposes>>,
+    pub bindposes: ResMut<'w, Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>,
 }
 
 /// Where the session content comes from, resolved from CLI arguments.

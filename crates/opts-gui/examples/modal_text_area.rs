@@ -29,7 +29,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
     let (_root, content) = ModalBuilder::new().spawn(&mut commands);
     commands.entity(content).with_children(|p| {
         p.spawn(icons::icon_text(
@@ -69,11 +69,11 @@ fn setup(mut commands: Commands) {
         )
         .with_children(|row| {
             let r = ButtonBuilder::filled("Report").spawn_child(row);
-            row.add_command(move |world: &mut World| {
+            row.commands().queue(move |world: &mut World| {
                 world.entity_mut(r).insert(ReportButton);
             });
             let c = ButtonBuilder::outlined("Cancel").spawn_child(row);
-            row.add_command(move |world: &mut World| {
+            row.commands().queue(move |world: &mut World| {
                 world.entity_mut(c).insert(CancelButton);
             });
         });

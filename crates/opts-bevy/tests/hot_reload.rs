@@ -23,8 +23,8 @@ struct Seen {
 }
 
 fn collect(
-    mut ok: EventReader<ReloadValidated>,
-    mut bad: EventReader<ReloadFailed>,
+    mut ok: MessageReader<ReloadValidated>,
+    mut bad: MessageReader<ReloadFailed>,
     mut seen: ResMut<Seen>,
 ) {
     seen.validated

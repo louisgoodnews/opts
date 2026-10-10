@@ -36,8 +36,8 @@ pub struct OptsCameraPlugin;
 
 impl Plugin for OptsCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<MouseMotion>()
-            .add_event::<MouseWheel>()
+        app.add_message::<MouseMotion>()
+            .add_message::<MouseWheel>()
             .init_resource::<CameraState>()
             .init_resource::<CameraAvailability>()
             .add_systems(
@@ -63,7 +63,7 @@ impl Plugin for OptsCameraPlugin {
                     update_passenger_camera,
                     update_external_camera,
                 )
-                    .after(bevy::transform::TransformSystem::TransformPropagate),
+                    .after(bevy::transform::TransformSystems::Propagate),
             );
     }
 }

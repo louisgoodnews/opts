@@ -43,39 +43,37 @@ pub fn spawn_modal(mut commands: Commands, data: Res<ReportModalData>, images: R
     let mut text_area = Entity::PLACEHOLDER;
     commands.entity(content).with_children(|p| {
         // Preview: top 25 % of the viewport, aspect preserved, letterboxed.
-        p.spawn(NodeBundle {
-            style: Style {
+        p.spawn(
+            (Node {
                 height: Val::Vh(25.0),
                 width: Val::Percent(100.0),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 flex_shrink: 0.0,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|frame| {
             if let Some(handle) = preview {
-                frame.spawn(ImageBundle {
-                    image: UiImage::new(handle),
-                    style: Style {
+                frame.spawn((
+                    ImageNode::new(handle),
+                    Node {
                         height: Val::Percent(100.0),
                         aspect_ratio: Some(aspect),
                         max_width: Val::Percent(100.0),
                         ..default()
                     },
-                    ..default()
-                });
+                ));
             }
         });
         p.spawn((
-            TextBundle::from_section(
-                "Describe the issue:",
-                TextStyle {
-                    font_size: 16.0,
-                    color: Color::WHITE,
+            (
+                Text::new("Describe the issue:"),
+                TextFont {
+                    font_size: FontSize::Px(16.0),
                     ..default()
                 },
+                TextColor(Color::WHITE),
             ),
             ForegroundRole(ColorRole::OnSurface),
         ));
@@ -83,39 +81,38 @@ pub fn spawn_modal(mut commands: Commands, data: Res<ReportModalData>, images: R
             .with_placeholder("What happened? What did you expect?")
             .autofocus(true)
             .spawn_child(p);
-        p.spawn(NodeBundle {
-            style: Style {
+        p.spawn(
+            (Node {
                 column_gap: Val::Px(12.0),
                 justify_content: JustifyContent::FlexEnd,
                 flex_shrink: 0.0,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|row| {
             let report = ButtonBuilder::filled("Report").spawn_child(row);
             let cancel = ButtonBuilder::outlined("Cancel").spawn_child(row);
-            row.add_command(move |world: &mut World| {
+            row.commands().queue(move |world: &mut World| {
                 world.entity_mut(report).insert(ReportButton);
                 world.entity_mut(cancel).insert(CancelButton);
             });
         });
     });
     // Focus the text area so the user can type immediately (clears focus elsewhere).
-    commands.add(move |world: &mut World| {
-        world.send_event(FocusEvent::Set(text_area));
+    commands.queue(move |world: &mut World| {
+        world.write_message(FocusEvent::Set(text_area));
     });
 }
 
 /// Despawns the modal (also when a capture failed and none exists).
 pub fn despawn_modal(mut commands: Commands, roots: Query<Entity, With<ReportModalRoot>>) {
     for e in &roots {
-        commands.entity(e).despawn_recursive();
+        commands.entity(e).despawn();
     }
 }
 
 /// Keeps `ReportModalData::text` in sync with the text area.
-pub fn sync_text(mut events: EventReader<TextAreaChanged>, mut data: ResMut<ReportModalData>) {
+pub fn sync_text(mut events: MessageReader<TextAreaChanged>, mut data: ResMut<ReportModalData>) {
     for ev in events.read() {
         data.text.clone_from(&ev.text);
     }
@@ -124,8 +121,8 @@ pub fn sync_text(mut events: EventReader<TextAreaChanged>, mut data: ResMut<Repo
 /// Handles the Report and Cancel buttons and Escape.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_modal_actions(
-    mut clicks: EventReader<ButtonClicked>,
-    mut cancels: EventReader<ModalEvent>,
+    mut clicks: MessageReader<ButtonClicked>,
+    mut cancels: MessageReader<ModalEvent>,
     report: Query<(), With<ReportButton>>,
     cancel: Query<(), With<CancelButton>>,
     area: Query<&TextArea>,
@@ -193,7 +190,7 @@ pub fn poll_save(
             let toast = ToastBuilder::new(format!("Could not save the report: {e}"))
                 .with_duration(8.0)
                 .spawn(&mut commands);
-            commands.entity(toast).insert(ZIndex::Global(TOAST_Z));
+            commands.entity(toast).insert(GlobalZIndex(TOAST_Z));
         }
     }
 }

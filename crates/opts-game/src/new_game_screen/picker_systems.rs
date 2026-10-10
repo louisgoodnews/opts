@@ -32,11 +32,11 @@ fn format_summary_string(setup: &NewGameSetup) -> String {
 
 /// System handling scrollbar track clicks and floating scroll-to-top button.
 pub fn handle_scroll_to_top(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     top_btn_query: Query<&ScrollToTopBtn>,
     track_query: Query<&ScrollbarTrack>,
     mut container_query: Query<&mut ScrollableContainer>,
-    mut content_query: Query<(&ScrollContent, &mut Style)>,
+    mut content_query: Query<(&ScrollContent, &mut Node)>,
 ) {
     for event in events.read() {
         if let Ok(btn) = top_btn_query.get(event.0) {
@@ -68,7 +68,7 @@ pub fn handle_scroll_to_top(
 /// System synchronizing scrollbar thumbs with current container scroll position.
 pub fn update_scrollbar_thumbs(
     container_query: Query<&ScrollableContainer>,
-    mut thumb_query: Query<(&ScrollbarThumb, &mut Style)>,
+    mut thumb_query: Query<(&ScrollbarThumb, &mut Node)>,
 ) {
     for container in &container_query {
         for (thumb, mut style) in &mut thumb_query {
@@ -91,7 +91,7 @@ pub fn update_scrollbar_thumbs(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn handle_calendar_interaction(
     theme: Res<MaterialTheme>,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     prev_query: Query<&PrevMonthBtn>,
     next_query: Query<&NextMonthBtn>,
     day_query: Query<&SelectCalendarDayBtn>,
@@ -144,12 +144,12 @@ pub fn handle_calendar_interaction(
 
         for ent in &header_entity_query {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = new_header.clone();
+                text.0 = new_header.clone();
             }
         }
         for ent in &month_year_entity_query {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = new_my.clone();
+                text.0 = new_my.clone();
             }
         }
 
@@ -175,7 +175,7 @@ pub fn handle_calendar_interaction(
         let summary_str = format_summary_string(&setup);
         for ent in &summary_entities_query {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = summary_str.clone();
+                text.0 = summary_str.clone();
             }
         }
     }
@@ -185,7 +185,7 @@ pub fn handle_calendar_interaction(
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn handle_year_spinbox(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     year_inc_query: Query<&YearIncrementBtn>,
     year_dec_query: Query<&YearDecrementBtn>,
     year_box_query: Query<&YearInputBox>,
@@ -253,7 +253,7 @@ pub fn handle_year_spinbox(
         }
         for ent in &year_input_entity {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = format!("{}|", setup.year_buffer);
+                text.0 = format!("{}|", setup.year_buffer);
             }
         }
     } else {
@@ -264,7 +264,7 @@ pub fn handle_year_spinbox(
                 setup.year_buffer.push(ch);
                 for ent in &year_input_entity {
                     if let Ok(mut text) = text_query.get_mut(ent) {
-                        text.sections[0].value = format!("{}|", setup.year_buffer);
+                        text.0 = format!("{}|", setup.year_buffer);
                     }
                 }
                 break;
@@ -293,20 +293,20 @@ pub fn handle_year_spinbox(
         let new_header = format_calendar_header_date(setup.year, setup.month, setup.day);
         for ent in &header_entity_query {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = new_header.clone();
+                text.0 = new_header.clone();
             }
         }
         if !setup.year_editing {
             for ent in &year_input_entity {
                 if let Ok(mut text) = text_query.get_mut(ent) {
-                    text.sections[0].value = setup.year.to_string();
+                    text.0 = setup.year.to_string();
                 }
             }
         }
         let summary_str = format_summary_string(&setup);
         for ent in &summary_entities_query {
             if let Ok(mut text) = text_query.get_mut(ent) {
-                text.sections[0].value = summary_str.clone();
+                text.0 = summary_str.clone();
             }
         }
     }
@@ -315,7 +315,7 @@ pub fn handle_year_spinbox(
 /// System handling Clock Time Picker interaction: Hours/Minutes modes and input clicks.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn handle_clock_picker_interaction(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     hour_text_query: Query<&ClockHourTextBtn>,
     minute_text_query: Query<&ClockMinuteTextBtn>,
     hour_btn_query: Query<&SelectClockHourBtn>,
@@ -353,7 +353,7 @@ pub fn update_clock_picker_visuals(
     hour_text_bundle: Query<&Children, With<ClockHourTextBtn>>,
     min_text_bundle: Query<&Children, With<ClockMinuteTextBtn>>,
     mut hour_dial_query: Query<
-        &mut Style,
+        &mut Node,
         (
             With<ClockDialHourContainer>,
             Without<ClockDialMinuteContainer>,
@@ -361,14 +361,14 @@ pub fn update_clock_picker_visuals(
         ),
     >,
     mut min_dial_query: Query<
-        &mut Style,
+        &mut Node,
         (
             With<ClockDialMinuteContainer>,
             Without<ClockDialHourContainer>,
             Without<ClockHandPointer>,
         ),
     >,
-    mut pointer_query: Query<(&mut Style, &mut Transform), With<ClockHandPointer>>,
+    mut pointer_query: Query<(&mut Node, &mut Transform), With<ClockHandPointer>>,
     mut hour_btns_query: Query<
         (&SelectClockHourBtn, &mut BackgroundColor, &Children),
         Without<SelectClockMinuteBtn>,
@@ -394,7 +394,7 @@ pub fn update_clock_picker_visuals(
     let time_str = format!("{h12}:{:02}", setup.minute);
     for ent in &digital_display_query {
         if let Ok(mut text) = text_query.get_mut(ent) {
-            text.sections[0].value = time_str.clone();
+            text.0 = time_str.clone();
         }
     }
 
@@ -402,7 +402,7 @@ pub fn update_clock_picker_visuals(
     for children in &hour_text_bundle {
         for &child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
-                text.sections[0].value = format!("{h12}");
+                text.0 = format!("{h12}");
                 text.sections[0].style.color = if setup.clock_mode == ClockPickerMode::Hours {
                     active_white
                 } else {
@@ -414,7 +414,7 @@ pub fn update_clock_picker_visuals(
     for children in &min_text_bundle {
         for &child in children.iter() {
             if let Ok(mut text) = text_query.get_mut(child) {
-                text.sections[0].value = format!("{:02}", setup.minute);
+                text.0 = format!("{:02}", setup.minute);
                 text.sections[0].style.color = if setup.clock_mode == ClockPickerMode::Minutes {
                     active_white
                 } else {
@@ -486,7 +486,7 @@ pub fn update_clock_picker_visuals(
     let summary_str = format_summary_string(&setup);
     for ent in &summary_entities_query {
         if let Ok(mut text) = text_query.get_mut(ent) {
-            text.sections[0].value = summary_str.clone();
+            text.0 = summary_str.clone();
         }
     }
 }

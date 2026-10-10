@@ -10,7 +10,7 @@ use crate::new_game_screen::types::{AdjustMinuteBtn, SelectClockMeridianBtn};
 /// Spawns a radial number button on the clock face dial.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_dial_btn<T: Component>(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     center: f32,
     radius: f32,
     step_idx: usize,
@@ -27,8 +27,7 @@ pub fn spawn_dial_btn<T: Component>(
 
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (Button, Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(left),
                     top: Val::Px(top),
@@ -37,29 +36,18 @@ pub fn spawn_dial_btn<T: Component>(
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     ..default()
-                },
-                background_color: BackgroundColor(if is_active { teal } else { Color::NONE }),
-                border_radius: BorderRadius::all(Val::Percent(50.0)),
-                ..default()
-            },
+                }, BackgroundColor(if is_active { teal } else { Color::NONE }), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */),
             M3Button::default(),
             marker,
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 12.0,
-                        color: if is_active {
+                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(if is_active {
                             Color::WHITE
                         } else {
                             theme.scheme.get(ColorRole::OnSurface)
-                        },
-                        ..default()
-                    },
-                ),
+                        })),
                 TypeStyleToken(TypeScale::BodyMedium),
             ));
         });
@@ -67,7 +55,7 @@ pub fn spawn_dial_btn<T: Component>(
 
 /// Spawns an AM or PM toggle pill button.
 pub fn spawn_meridian_btn(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     label: &str,
     is_pm: bool,
@@ -76,42 +64,29 @@ pub fn spawn_meridian_btn(
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (Button, Node {
                     width: Val::Px(36.0),
                     height: Val::Px(28.0),
                     align_items: AlignItems::Center,
                     justify_content: JustifyContent::Center,
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
-                },
-                border_color: BorderColor(if is_active {
+                }, BorderColor::all(if is_active {
                     teal
                 } else {
                     theme.scheme.get(ColorRole::OutlineVariant)
-                }),
-                background_color: BackgroundColor(if is_active { teal } else { Color::NONE }),
-                border_radius: BorderRadius::all(Val::Percent(50.0)),
-                ..default()
-            },
+                }), BackgroundColor(if is_active { teal } else { Color::NONE }), /* TODO border_radius: BorderRadius::all(Val::Percent(50.0)) */),
             M3Button::default(),
             SelectClockMeridianBtn { is_pm },
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 11.0,
-                        color: if is_active {
+                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(if is_active {
                             Color::WHITE
                         } else {
                             theme.scheme.get(ColorRole::OnSurfaceVariant)
-                        },
-                        ..default()
-                    },
-                ),
+                        })),
                 TypeStyleToken(TypeScale::LabelMedium),
             ));
         });
@@ -119,25 +94,23 @@ pub fn spawn_meridian_btn(
 
 /// Spawns a -15m or +15m quick minute offset button.
 pub fn spawn_minute_step_btn(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     label: &str,
     offset: i32,
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                background_color: BackgroundColor(
-                    theme.scheme.get(ColorRole::SurfaceContainerLowest),
-                ),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
+            ),
             M3Button::default(),
             AdjustMinuteBtn {
                 minute_offset: offset,
@@ -147,13 +120,13 @@ pub fn spawn_minute_step_btn(
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 11.0,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(11.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::LabelSmall),
             ));
@@ -161,29 +134,29 @@ pub fn spawn_minute_step_btn(
 }
 
 /// Spawns a text action button like CANCEL or OK.
-pub fn spawn_clock_action_btn(parent: &mut ChildBuilder, label: &str, teal: Color) {
+pub fn spawn_clock_action_btn(parent: &mut ChildSpawnerCommands, label: &str, teal: Color) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Button::default(),
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 13.0,
-                        color: teal,
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(teal),
                 ),
                 TypeStyleToken(TypeScale::LabelLarge),
             ));

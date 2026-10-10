@@ -14,7 +14,7 @@ use crate::settings_screen::types::{
 
 /// System returning to the main menu when the back button is clicked.
 pub fn handle_back_to_menu(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     back_query: Query<&BackToMenuButton>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
@@ -28,7 +28,7 @@ pub fn handle_back_to_menu(
 
 /// System handling preset theme clicks and saving to SQLite.
 pub fn handle_theme_preset_clicks(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     preset_query: Query<&ThemePresetButton>,
     mut theme: ResMut<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
@@ -74,7 +74,7 @@ pub fn handle_theme_preset_clicks(
 
 /// System handling per-widget color swatch clicks and saving to SQLite.
 pub fn handle_color_swatch_clicks(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     swatch_query: Query<&ColorSwatchButton>,
     mut theme: ResMut<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
@@ -107,7 +107,7 @@ pub fn handle_color_swatch_clicks(
 
 /// System handling Dark / Light theme mode toggle and saving to SQLite.
 pub fn handle_dark_mode_toggle_clicks(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     toggle_query: Query<&DarkModeToggleButton>,
     mut theme: ResMut<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
@@ -132,7 +132,7 @@ pub fn handle_dark_mode_toggle_clicks(
             if let Ok(children) = toggle_btn_query.get(event.0) {
                 for &child in children {
                     if let Ok(mut text) = text_query.get_mut(child) {
-                        text.sections[0].value = if settings.is_dark_theme {
+                        text.0 = if settings.is_dark_theme {
                             "Dark Mode (Active)".to_string()
                         } else {
                             "Light Mode (Active)".to_string()
@@ -150,7 +150,7 @@ pub fn handle_dark_mode_toggle_clicks(
 
 /// System handling discovery interval frequency selection and saving to SQLite.
 pub fn handle_discovery_interval_clicks(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     interval_query: Query<&DiscoveryIntervalButton>,
     mut card_query: Query<(
         &DiscoveryIntervalButton,
@@ -194,7 +194,7 @@ pub fn handle_discovery_interval_clicks(
 /// System handling manual "Run Discovery Now" button click.
 pub fn handle_run_discovery_clicks(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     trigger_query: Query<&RunDiscoveryNowButton>,
     service: Option<Res<CatalogueService>>,
 ) {
@@ -221,7 +221,7 @@ pub fn cleanup_settings_screen(
     query: Query<Entity, With<SettingsScreenRoot>>,
 ) {
     for entity in &query {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 }
 

@@ -101,7 +101,7 @@ pub fn get_vehicle_repaints(vehicle: &VehicleItem) -> Vec<String> {
 
 /// Spawns the scrollable repaint selection container for the vehicle detail panel.
 pub fn spawn_repaint_scrollable_selection(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     veh: &VehicleItem,
     setup: &NewGameSetup,
@@ -110,25 +110,24 @@ pub fn spawn_repaint_scrollable_selection(
 
     // Section Title row with Configure button
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::SpaceBetween,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|header| {
             header.spawn((
-                TextBundle::from_section(
-                    "Select Paint Livery / Repaint (Scrollable):",
-                    TextStyle {
-                        font_size: 14.0,
-                        color: theme.scheme.get(ColorRole::Primary),
+                (
+                    Text::new("Select Paint Livery / Repaint (Scrollable):"),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
                 ForegroundRole(ColorRole::Primary),
@@ -136,20 +135,18 @@ pub fn spawn_repaint_scrollable_selection(
 
             header
                 .spawn((
-                    ButtonBundle {
-                        style: Style {
+                    (
+                        Button,
+                        Node {
                             padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
                             border: UiRect::all(Val::Px(1.0)),
                             align_items: AlignItems::Center,
                             justify_content: JustifyContent::Center,
                             ..default()
                         },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                        background_color: BackgroundColor(
-                            theme.scheme.get(ColorRole::PrimaryContainer),
-                        ),
-                        ..default()
-                    },
+                        BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                        BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
+                    ),
                     M3Button::default(),
                     OpenSetvarsModalBtn,
                     GlassSurface::new(ColorRole::PrimaryContainer, 0.85),
@@ -158,13 +155,13 @@ pub fn spawn_repaint_scrollable_selection(
                 ))
                 .with_children(|btn| {
                     btn.spawn((
-                        TextBundle::from_section(
-                            "Configure...",
-                            TextStyle {
-                                font_size: 12.0,
-                                color: theme.scheme.get(ColorRole::OnPrimaryContainer),
+                        (
+                            Text::new("Configure..."),
+                            TextFont {
+                                font_size: FontSize::Px(12.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                         ),
                         TypeStyleToken(TypeScale::LabelMedium),
                         ForegroundRole(ColorRole::OnPrimaryContainer),
@@ -178,8 +175,8 @@ pub fn spawn_repaint_scrollable_selection(
     let max_scroll_y = (total_height - viewport_height).max(0.0);
 
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(viewport_height),
                 position_type: PositionType::Relative,
@@ -187,23 +184,19 @@ pub fn spawn_repaint_scrollable_selection(
                 border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
+        ))
         .with_children(|viewport| {
             viewport
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            position_type: PositionType::Relative,
-                            overflow: Overflow::clip_y(),
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        position_type: PositionType::Relative,
+                        overflow: Overflow::clip_y(),
                         ..default()
-                    },
+                    }),
                     ScrollableContainer {
                         kind: ScrollKind::Repaints,
                         scroll_y: 0.0,
@@ -213,20 +206,17 @@ pub fn spawn_repaint_scrollable_selection(
                 .with_children(|scroll_container| {
                     scroll_container
                         .spawn((
-                            NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(100.0),
-                                    flex_direction: FlexDirection::Column,
-                                    row_gap: Val::Px(6.0),
-                                    position_type: PositionType::Absolute,
-                                    left: Val::Px(0.0),
-                                    top: Val::Px(0.0),
-                                    padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0))
-                                        .with_right(Val::Px(24.0)),
-                                    ..default()
-                                },
+                            (Node {
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Column,
+                                row_gap: Val::Px(6.0),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0))
+                                    .with_right(Val::Px(24.0)),
                                 ..default()
-                            },
+                            }),
                             ScrollContent {
                                 kind: ScrollKind::Repaints,
                             },
@@ -247,8 +237,9 @@ pub fn spawn_repaint_scrollable_selection(
 
                                 content
                                     .spawn((
-                                        ButtonBundle {
-                                            style: Style {
+                                        (
+                                            Button,
+                                            Node {
                                                 width: Val::Percent(100.0),
                                                 padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
                                                 flex_direction: FlexDirection::Row,
@@ -261,10 +252,9 @@ pub fn spawn_repaint_scrollable_selection(
                                                 })),
                                                 ..default()
                                             },
-                                            border_color: BorderColor(border_c),
-                                            background_color: BackgroundColor(bg_c),
-                                            ..default()
-                                        },
+                                            BorderColor::all(border_c),
+                                            BackgroundColor(bg_c),
+                                        ),
                                         M3Button::default(),
                                         SelectLiveryBtn {
                                             livery: repaint.clone(),
@@ -284,47 +274,44 @@ pub fn spawn_repaint_scrollable_selection(
                                         Focusable { tab_index: 0 },
                                     ))
                                     .with_children(|btn| {
-                                        btn.spawn(NodeBundle {
-                                            style: Style {
+                                        btn.spawn(
+                                            (Node {
                                                 flex_direction: FlexDirection::Row,
                                                 align_items: AlignItems::Center,
                                                 column_gap: Val::Px(8.0),
                                                 ..default()
-                                            },
-                                            ..default()
-                                        })
+                                            }),
+                                        )
                                         .with_children(
                                             |row| {
                                                 row.spawn((
-                                                    TextBundle::from_section(
-                                                        "",
-                                                        TextStyle {
-                                                            font_size: 14.0,
-                                                            color: theme
-                                                                .scheme
-                                                                .get(ColorRole::Primary),
+                                                    (
+                                                        Text::new(""),
+                                                        TextFont {
+                                                            font_size: FontSize::Px(14.0),
                                                             ..default()
                                                         },
+                                                        TextColor(
+                                                            theme.scheme.get(ColorRole::Primary),
+                                                        ),
                                                     ),
                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                 ));
 
                                                 row.spawn((
-                                                    TextBundle::from_section(
-                                                        repaint,
-                                                        TextStyle {
-                                                            font_size: 12.0,
-                                                            color: if is_selected {
-                                                                theme.scheme.get(
-                                                                    ColorRole::OnPrimaryContainer,
-                                                                )
-                                                            } else {
-                                                                theme
-                                                                    .scheme
-                                                                    .get(ColorRole::OnSurface)
-                                                            },
+                                                    (
+                                                        Text::new(repaint),
+                                                        TextFont {
+                                                            font_size: FontSize::Px(12.0),
                                                             ..default()
                                                         },
+                                                        TextColor(if is_selected {
+                                                            theme
+                                                                .scheme
+                                                                .get(ColorRole::OnPrimaryContainer)
+                                                        } else {
+                                                            theme.scheme.get(ColorRole::OnSurface)
+                                                        }),
                                                     ),
                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                     ForegroundRole(ColorRole::OnSurface),
@@ -333,21 +320,21 @@ pub fn spawn_repaint_scrollable_selection(
                                         );
 
                                         btn.spawn((
-                                            TextBundle::from_section(
-                                                if is_selected {
+                                            (
+                                                Text::new(if is_selected {
                                                     "● Active Livery"
                                                 } else {
                                                     "Paint Scheme"
-                                                },
-                                                TextStyle {
-                                                    font_size: 11.0,
-                                                    color: if is_selected {
-                                                        theme.scheme.get(ColorRole::Primary)
-                                                    } else {
-                                                        theme.scheme.get(ColorRole::Outline)
-                                                    },
+                                                }),
+                                                TextFont {
+                                                    font_size: FontSize::Px(11.0),
                                                     ..default()
                                                 },
+                                                TextColor(if is_selected {
+                                                    theme.scheme.get(ColorRole::Primary)
+                                                } else {
+                                                    theme.scheme.get(ColorRole::Outline)
+                                                }),
                                             ),
                                             TypeStyleToken(TypeScale::LabelSmall),
                                             ForegroundRole(ColorRole::Outline),

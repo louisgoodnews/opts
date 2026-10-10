@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 
 use bevy::ecs::world::World;
 use bevy::prelude::Image;
-use bevy::render::view::screenshot::ScreenshotManager;
+use bevy::render::view::screenshot::{CapturedScreenshots, Screenshot, ScreenshotCaptured};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
@@ -31,18 +31,18 @@ pub fn register(r: &mut ControlRegistry) {
 /// Requests a frame; the returned waiter yields it (or an error after [`CAPTURE_WAIT`]).
 fn capture(world: &mut World) -> Result<mpsc::Receiver<Image>, RpcError> {
     let window = primary_window_or_placeholder(world);
-    let Some(mut manager) = world.get_resource_mut::<ScreenshotManager>() else {
+    if !world.contains_resource::<CapturedScreenshots>() {
         return Err(RpcError::new(
             code::NOT_READY,
             "there is no renderer to take a screenshot from",
         ));
-    };
+    }
     let (tx, rx) = mpsc::channel();
-    manager
-        .take_screenshot(window, move |img| {
-            let _ = tx.send(img);
-        })
-        .map_err(|e| RpcError::new(code::FAILED, format!("screenshot request failed: {e}")))?;
+    world
+        .spawn(Screenshot::window(window))
+        .observe(move |captured: bevy::ecs::observer::On<ScreenshotCaptured>| {
+            let _ = tx.send(captured.image.clone());
+        });
     Ok(rx)
 }
 

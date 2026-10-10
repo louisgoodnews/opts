@@ -152,7 +152,7 @@ fn test_wheel_visual_transform_updates() {
         .spawn((controller, Transform::from_xyz(0.0, 0.0, 0.0)))
         .id();
 
-    app.world_mut().entity_mut(vehicle_entity).push_children(&[
+    app.world_mut().entity_mut(vehicle_entity).add_children(&[
         front_left_wheel,
         front_right_wheel,
         rear_left_wheel,

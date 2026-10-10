@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use bevy::prelude::{Event, Resource};
+use bevy::prelude::{Message, Resource};
 
 /// What kind of content a file holds; decides how it is validated and applied.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -91,7 +91,7 @@ pub fn is_editor_scratch(path: &Path) -> bool {
 }
 
 /// A file changed (after debouncing) or a reload was requested explicitly.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct ReloadRequested {
     /// The file.
     pub path: PathBuf,
@@ -102,7 +102,7 @@ pub struct ReloadRequested {
 }
 
 /// The file parsed successfully; the application may now replace the affected content.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct ReloadValidated {
     /// The file.
     pub path: PathBuf,
@@ -113,7 +113,7 @@ pub struct ReloadValidated {
 }
 
 /// The file could not be used; nothing was changed.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct ReloadFailed {
     /// The file.
     pub path: PathBuf,
@@ -126,7 +126,7 @@ pub struct ReloadFailed {
 }
 
 /// The application replaced the content that depended on the file.
-#[derive(Event, Debug, Clone, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, PartialEq, Eq)]
 pub struct ReloadApplied {
     /// The file.
     pub path: PathBuf,
@@ -139,7 +139,7 @@ pub struct ReloadApplied {
 }
 
 /// Asks the application to rebuild everything that is loaded (`reload.scene`).
-#[derive(Event, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ReloadSceneRequested {
     /// Sequence number of the request.
     pub seq: u64,

@@ -67,7 +67,7 @@ fn reload_asset(world: &mut World, params: &Value) -> Outcome {
         return Outcome::err(not_ready());
     };
     let seq = stats.allocate();
-    world.send_event(ReloadRequested { path, kind, seq });
+    world.write_message(ReloadRequested { path, kind, seq });
     wait_for_outcome(seq, Some(kind.label()))
 }
 
@@ -82,7 +82,7 @@ fn reload_scene(world: &mut World, _: &Value) -> Outcome {
         return Outcome::err(not_ready());
     };
     let seq = stats.allocate();
-    world.send_event(ReloadSceneRequested { seq });
+    world.write_message(ReloadSceneRequested { seq });
     wait_for_outcome(seq, None)
 }
 

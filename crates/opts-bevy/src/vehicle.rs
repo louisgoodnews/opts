@@ -127,7 +127,7 @@ pub fn spawn_vehicle_model(
     let parent = commands
         .spawn((
             Name::new(friendly_name),
-            SpatialBundle::from_transform(transform),
+            transform,
             OmsiTransform::from_bevy_transform(&transform),
             vehicle_component,
         ))
@@ -140,16 +140,15 @@ pub fn spawn_vehicle_model(
                 let mat_handle = material_handles.get(i).cloned().unwrap_or_default();
 
                 let child = commands
-                    .spawn(PbrBundle {
-                        mesh: mesh_handle.clone(),
-                        material: mat_handle,
-                        transform: Transform::IDENTITY,
-                        ..Default::default()
-                    })
+                    .spawn((
+                        Mesh3d(mesh_handle.clone()),
+                        MeshMaterial3d(mat_handle),
+                        Transform::IDENTITY,
+                    ))
                     .insert(Name::new(format!("Mesh_{i}_{}", mesh_def.path)))
                     .id();
 
-                commands.entity(parent).push_children(&[child]);
+                commands.entity(parent).add_children(&[child]);
             }
         }
     }
@@ -194,24 +193,23 @@ fn spawn_interior_light_child(
     let color = Color::srgb_u8(light.color_rgb[0], light.color_rgb[1], light.color_rgb[2]);
 
     let child = commands
-        .spawn(PointLightBundle {
-            point_light: PointLight {
+        .spawn((
+            PointLight {
                 color,
                 range: light.range,
                 radius: 0.1,
-                shadows_enabled: false,
+                shadow_maps_enabled: false,
                 ..default()
             },
-            transform: Transform::from_translation(pos_bevy),
-            ..default()
-        })
+            Transform::from_translation(pos_bevy),
+        ))
         .insert(Name::new(format!(
             "InteriorLight_{index}_{}",
             light.variable
         )))
         .id();
 
-    commands.entity(parent).push_children(&[child]);
+    commands.entity(parent).add_children(&[child]);
 }
 
 fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, spot: &Spotlight) {
@@ -226,24 +224,23 @@ fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, 
     let color = Color::srgb_u8(spot.color_rgb[0], spot.color_rgb[1], spot.color_rgb[2]);
 
     let child = commands
-        .spawn(SpotLightBundle {
-            spot_light: SpotLight {
+        .spawn((
+            SpotLight {
                 color,
                 range: spot.range,
                 inner_angle: spot.inner_cone.to_radians(),
                 outer_angle: spot.outer_cone.to_radians(),
-                shadows_enabled: true,
+                shadow_maps_enabled: true,
                 ..default()
             },
-            transform: Transform {
+            Transform {
                 translation: pos_bevy,
                 rotation,
                 scale: Vec3::ONE,
             },
-            ..default()
-        })
+        ))
         .insert(Name::new(format!("Spotlight_{index}")))
         .id();
 
-    commands.entity(parent).push_children(&[child]);
+    commands.entity(parent).add_children(&[child]);
 }

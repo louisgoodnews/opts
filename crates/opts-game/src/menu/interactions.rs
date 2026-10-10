@@ -28,7 +28,7 @@ pub fn menu_focus_visual_system(
     mut query: Query<
         (
             Entity,
-            &mut Style,
+            &mut Node,
             &mut BorderColor,
             Has<Focused>,
             Option<&OriginalBorderStyle>,
@@ -63,12 +63,12 @@ pub fn menu_focus_visual_system(
 pub fn menu_keyboard_activation_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     query: Query<(Entity, Option<&OnClickCallback>), (With<Focused>, Without<Disabled>)>,
-    mut click_events: EventWriter<ButtonClicked>,
+    mut click_events: MessageWriter<ButtonClicked>,
     mut commands: Commands,
 ) {
     if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Space) {
         for (entity, callback) in &query {
-            click_events.send(ButtonClicked(entity));
+            click_events.write(ButtonClicked(entity));
             if let Some(cb) = callback {
                 (cb.0)(&mut commands, entity);
             }

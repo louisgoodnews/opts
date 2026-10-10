@@ -7,8 +7,8 @@
 //! instead of placing splines. [`compose_tile_ground`] blends the layers on the CPU into one
 //! RGBA texture covering the whole 300 m tile.
 
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 /// A decoded 8-bit RGBA image on the CPU (top row first).
@@ -137,25 +137,23 @@ impl CpuImage {
     #[must_use]
     pub fn from_image(img: &Image) -> Option<Self> {
         let (w, h) = (img.width() as usize, img.height() as usize);
+        let data = img.data.as_deref()?;
         let rgba = match img.texture_descriptor.format {
             TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb => {
-                (img.data.len() >= w * h * 4).then(|| img.data[..w * h * 4].to_vec())?
+                (data.len() >= w * h * 4).then(|| data[..w * h * 4].to_vec())?
             }
             TextureFormat::R8Unorm => {
-                (img.data.len() >= w * h).then_some(())?;
-                img.data[..w * h]
-                    .iter()
-                    .flat_map(|&a| [a, a, a, a])
-                    .collect()
+                (data.len() >= w * h).then_some(())?;
+                data[..w * h].iter().flat_map(|&a| [a, a, a, a]).collect()
             }
             TextureFormat::Bc1RgbaUnorm | TextureFormat::Bc1RgbaUnormSrgb => {
-                decode_bc(&img.data, w, h, 1)?
+                decode_bc(data, w, h, 1)?
             }
             TextureFormat::Bc2RgbaUnorm | TextureFormat::Bc2RgbaUnormSrgb => {
-                decode_bc(&img.data, w, h, 2)?
+                decode_bc(data, w, h, 2)?
             }
             TextureFormat::Bc3RgbaUnorm | TextureFormat::Bc3RgbaUnormSrgb => {
-                decode_bc(&img.data, w, h, 3)?
+                decode_bc(data, w, h, 3)?
             }
             _ => return None,
         };

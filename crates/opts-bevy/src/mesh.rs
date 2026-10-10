@@ -12,9 +12,9 @@
 //! - Triangle face indices $[i_0, i_1, i_2]$ are reversed to $[i_0, i_2, i_1]$ to preserve
 //!   front-face counter-clockwise rasterization after the single-axis reflection.
 
+use bevy::asset::RenderAssetUsages;
 use bevy::math::Vec3;
-use bevy::render::mesh::{Indices, Mesh, PrimitiveTopology};
-use bevy::render::render_asset::RenderAssetUsages;
+use bevy::mesh::{Indices, Mesh, PrimitiveTopology};
 use opts_core::formats::o3d::O3d;
 use opts_core::formats::x::{XFrame, XMesh, XSubMesh};
 
@@ -293,7 +293,7 @@ pub fn o3d_to_bevy_meshes_by_material(o3d: &O3d) -> Vec<(usize, Mesh)> {
         if skin.is_some() {
             mesh.insert_attribute(
                 Mesh::ATTRIBUTE_JOINT_INDEX,
-                bevy::render::mesh::VertexAttributeValues::Uint16x4(joint_idx),
+                bevy::mesh::VertexAttributeValues::Uint16x4(joint_idx),
             );
             mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_w);
         }
@@ -390,19 +390,19 @@ pub fn x_mesh_to_combined_bevy_mesh(x_mesh: &XMesh) -> Option<Mesh> {
     for mesh in submeshes {
         let base_index = all_positions.len() as u32;
 
-        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(pos)) =
+        if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
             mesh.attribute(Mesh::ATTRIBUTE_POSITION)
         {
             all_positions.extend_from_slice(pos);
         }
 
-        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x3(norms)) =
+        if let Some(bevy::mesh::VertexAttributeValues::Float32x3(norms)) =
             mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
         {
             all_normals.extend_from_slice(norms);
         }
 
-        if let Some(bevy::render::mesh::VertexAttributeValues::Float32x2(uvs)) =
+        if let Some(bevy::mesh::VertexAttributeValues::Float32x2(uvs)) =
             mesh.attribute(Mesh::ATTRIBUTE_UV_0)
         {
             all_uvs.extend_from_slice(uvs);
@@ -590,6 +590,6 @@ mod tree_tests {
     fn billboard_has_two_crossed_quads() {
         let m = tree_billboard_mesh(16.0, 18.0);
         assert_eq!(m.count_vertices(), 8);
-        assert_eq!(m.indices().map(bevy::render::mesh::Indices::len), Some(12));
+        assert_eq!(m.indices().map(bevy::mesh::Indices::len), Some(12));
     }
 }

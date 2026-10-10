@@ -28,8 +28,9 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
 
     let btn = commands
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     position_type: PositionType::Absolute,
                     top: Val::Px(24.0),
                     right: Val::Px(24.0),
@@ -40,23 +41,22 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::Outline)),
-                z_index: ZIndex::Local(2),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::Outline)),
+                ZIndex::Local(2),
+            ),
             ThemeToggleBtn,
             GlassSurface::new(ColorRole::Surface, 0.70),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
         ))
         .with_children(|parent| {
             parent.spawn((
-                TextBundle::from_section(
-                    glyph,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: theme.scheme.get(ColorRole::OnSurface),
+                (
+                    Text::new(glyph),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 ThemeToggleGlyph,
                 ForegroundRole(ColorRole::OnSurface),
@@ -73,7 +73,7 @@ pub fn theme_toggle_system(
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<ThemeToggleBtn>)>,
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
-    mut theme_events: EventWriter<ThemeChanged>,
+    mut theme_events: MessageWriter<ThemeChanged>,
     mut glyph_query: Query<&mut Text, With<ThemeToggleGlyph>>,
 ) {
     let mut should_toggle = keyboard.just_pressed(KeyCode::F2);
@@ -89,7 +89,7 @@ pub fn theme_toggle_system(
         let new_is_dark = !theme.scheme.is_dark();
         tracing::info!(new_is_dark = new_is_dark, "Toggling application theme");
 
-        theme_events.send(ThemeChanged {
+        theme_events.write(ThemeChanged {
             is_dark: new_is_dark,
         });
         settings.is_dark_theme = new_is_dark;

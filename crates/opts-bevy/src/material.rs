@@ -10,9 +10,9 @@
 
 use bevy::asset::Handle;
 use bevy::color::{Color, LinearRgba};
+use bevy::image::Image;
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::AlphaMode;
-use bevy::render::texture::Image;
 
 use opts_core::formats::o3d::Material as O3dMaterial;
 use opts_core::formats::x::XMaterial;

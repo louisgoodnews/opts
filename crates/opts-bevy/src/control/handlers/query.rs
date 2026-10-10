@@ -1,6 +1,6 @@
 //! `state`, `camera.get`, `sim.get`, `log.tail`, `log.filter`.
 
-use bevy::core_pipeline::core_3d::Camera3d;
+use bevy::camera::Camera3d;
 use bevy::ecs::world::World;
 use bevy::prelude::*;
 use bevy::time::{Real, Time, Virtual};
@@ -68,7 +68,7 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
     let _ = world.resource::<Time<Real>>();
     Outcome::ok(json!({
         "paused": virt.is_paused(),
-        "sim_time": virt.elapsed_seconds_f64(),
+        "sim_time": virt.elapsed_secs_f64(),
         "time_scale": virt.relative_speed(),
         "tick": tick,
     }))

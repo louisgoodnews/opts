@@ -1,10 +1,9 @@
 //! F1 reporting: formatting, file saving, and the headless state machine / pause behaviour.
 
+use bevy::asset::RenderAssetUsages;
 use bevy::input::InputPlugin;
 use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::view::screenshot::ScreenshotManager;
 use bevy::state::app::StatesPlugin;
 use bevy::window::PrimaryWindow;
 use opts_bevy::reporting::capture::CaptureChannel;
@@ -96,7 +95,6 @@ fn app() -> App {
     .init_asset::<Image>()
     .init_asset::<Font>()
     .init_asset::<Mesh>()
-    .init_resource::<ScreenshotManager>()
     .add_plugins(ReportingPlugin);
     app.world_mut().spawn((Window::default(), PrimaryWindow));
     app.update();
@@ -113,7 +111,7 @@ fn press_f1(app: &mut App) {
         .query_filtered::<Entity, With<PrimaryWindow>>()
         .single(app.world());
     app.world_mut()
-        .send_event(bevy::input::keyboard::KeyboardInput {
+        .write_message(bevy::input::keyboard::KeyboardInput {
             key_code: KeyCode::F1,
             logical_key: bevy::input::keyboard::Key::F1,
             state: bevy::input::ButtonState::Pressed,
@@ -177,7 +175,7 @@ fn f1_pauses_gates_opens_and_cancel_resumes() {
         .query_filtered::<Entity, With<ModalRoot>>()
         .single(app.world());
     app.world_mut()
-        .send_event(ModalEvent::CancelRequested(any_modal));
+        .write_message(ModalEvent::CancelRequested(any_modal));
     app.update();
     app.update();
     assert_eq!(state(&app), ReportModalState::Inactive);
@@ -204,7 +202,8 @@ fn an_already_paused_simulation_stays_paused_after_the_modal() {
         .world_mut()
         .query_filtered::<Entity, With<ModalRoot>>()
         .single(app.world());
-    app.world_mut().send_event(ModalEvent::CancelRequested(m));
+    app.world_mut()
+        .write_message(ModalEvent::CancelRequested(m));
     app.update();
     app.update();
     assert_eq!(state(&app), ReportModalState::Inactive);
@@ -226,7 +225,7 @@ fn report_button_saves_both_files_and_closes() {
         .world_mut()
         .query_filtered::<Entity, With<opts_bevy::reporting::modal::ReportButton>>()
         .single(app.world());
-    app.world_mut().send_event(ButtonClicked(btn));
+    app.world_mut().write_message(ButtonClicked(btn));
     for _ in 0..400 {
         app.update();
         if state(&app) == ReportModalState::Inactive {

@@ -6,13 +6,15 @@
 
 use bevy::asset::io::Reader;
 use bevy::asset::{Asset, AssetLoader, AsyncReadExt, Handle, LoadContext};
-use bevy::core::Name;
 use bevy::ecs::entity::Entity;
+use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
-use bevy::pbr::{PbrBundle, StandardMaterial};
-use bevy::prelude::{BuildChildren, SpatialBundle};
+use bevy::mesh::Mesh3d;
+use bevy::pbr::MeshMaterial3d;
+use bevy::pbr::StandardMaterial;
+
+use bevy::mesh::Mesh;
 use bevy::reflect::TypePath;
-use bevy::render::mesh::Mesh;
 use bevy::transform::components::Transform;
 use thiserror::Error;
 
@@ -43,7 +45,7 @@ pub struct SceneryObjectAsset {
 }
 
 /// Bevy [`AssetLoader`] for OMSI `.sco` scenery object files.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct ScoAssetLoader;
 
 impl AssetLoader for ScoAssetLoader {
@@ -51,11 +53,11 @@ impl AssetLoader for ScoAssetLoader {
     type Settings = ();
     type Error = SceneryLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
@@ -76,7 +78,7 @@ pub struct SplineProfileAsset {
 }
 
 /// Bevy [`AssetLoader`] for OMSI `.sli` spline profile files.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct SliAssetLoader;
 
 impl AssetLoader for SliAssetLoader {
@@ -84,11 +86,11 @@ impl AssetLoader for SliAssetLoader {
     type Settings = ();
     type Error = SceneryLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
@@ -307,7 +309,7 @@ pub fn spawn_scenery_object(
     let parent = commands
         .spawn((
             Name::new(name),
-            SpatialBundle::from_transform(transform),
+            transform,
             OmsiTransform::from_bevy_transform(&transform),
         ))
         .id();
@@ -317,16 +319,15 @@ pub fn spawn_scenery_object(
             let mat_handle = material_handles.get(i).cloned().unwrap_or_default();
 
             let child = commands
-                .spawn(PbrBundle {
-                    mesh: mesh_handle.clone(),
-                    material: mat_handle,
-                    transform: Transform::IDENTITY,
-                    ..Default::default()
-                })
+                .spawn((
+                    Mesh3d(mesh_handle.clone()),
+                    MeshMaterial3d(mat_handle),
+                    Transform::IDENTITY,
+                ))
                 .insert(Name::new(format!("Mesh_{i}_{}", mesh_def.file)))
                 .id();
 
-            commands.entity(parent).push_children(&[child]);
+            commands.entity(parent).add_children(&[child]);
         }
     }
 

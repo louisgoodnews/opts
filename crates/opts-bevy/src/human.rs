@@ -4,16 +4,16 @@
 //! 13 canonical bones. The rest pose of the meshes is a T-pose (hands 0.7–0.9 m to the side), so
 //! bind poses are pure translations to the pivots and a pose is a set of joint rotations.
 
-use bevy::core::Name;
+use bevy::camera::visibility::NoFrustumCulling;
 use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
+use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
-use bevy::hierarchy::BuildChildren;
 use bevy::math::{Mat4, Quat, Vec3};
-use bevy::pbr::PbrBundle;
-use bevy::prelude::{Assets, SpatialBundle, Transform};
-use bevy::render::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
-use bevy::render::view::NoFrustumCulling;
+use bevy::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
+use bevy::mesh::Mesh3d;
+use bevy::pbr::MeshMaterial3d;
+use bevy::prelude::{Assets, Transform};
 
 use opts_core::formats::humans::{HumanProfile, EYE_BELOW_CROWN_M};
 
@@ -153,7 +153,7 @@ pub fn spawn_human(
     let pivots = rest_pivots(profile);
     let rotations = pose_rotations(profile, pose);
     let root = commands
-        .spawn((SpatialBundle::default(), Name::new(name.to_string())))
+        .spawn((Transform::default(), Name::new(name.to_string())))
         .id();
 
     let mut joints: Vec<Entity> = Vec::with_capacity(13);
@@ -161,11 +161,11 @@ pub fn spawn_human(
         let parent_pos = PARENT[i].map_or(Vec3::ZERO, |p| pivots[p]);
         let id = commands
             .spawn((
-                SpatialBundle::from_transform(Transform {
+                Transform {
                     translation: pivots[i] - parent_pos,
                     rotation: rotations[i],
                     scale: Vec3::ONE,
-                }),
+                },
                 Name::new((*bone).to_string()),
             ))
             .id();
@@ -181,7 +181,7 @@ pub fn spawn_human(
     );
     let head_anchor = commands
         .spawn((
-            SpatialBundle::from_transform(Transform::from_translation(eye_rel)),
+            Transform::from_translation(eye_rel),
             HumanHead,
             Name::new("HeadAnchor"),
         ))
@@ -193,11 +193,10 @@ pub fn spawn_human(
     for (i, part) in parts.iter().enumerate() {
         let child = commands
             .spawn((
-                PbrBundle {
-                    mesh: part.mesh.clone(),
-                    material: part.material.clone(),
-                    ..Default::default()
-                },
+                (
+                    Mesh3d(part.mesh.clone()),
+                    MeshMaterial3d(part.material.clone()),
+                ),
                 SkinnedMesh {
                     inverse_bindposes: ibp.clone(),
                     joints: joints.clone(),

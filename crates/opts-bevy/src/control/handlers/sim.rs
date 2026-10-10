@@ -50,7 +50,7 @@ fn step(world: &mut World, params: &Value) -> Outcome {
         let mut time = world.resource_mut::<Time<Virtual>>();
         time.pause();
         Some(Ok(
-            json!({ "stepped": frames, "sim_time": time.elapsed_seconds_f64() }),
+            json!({ "stepped": frames, "sim_time": time.elapsed_secs_f64() }),
         ))
     }))
 }

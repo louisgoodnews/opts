@@ -50,10 +50,10 @@ pub fn initial_focus_system(
 /// System that handles pressing `Escape` in [`crate::app_state::AppState::MainMenu`] to exit the application.
 pub fn menu_escape_exit_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut exit_events: EventWriter<AppExit>,
+    mut exit_events: MessageWriter<AppExit>,
 ) {
     if keyboard.just_pressed(KeyCode::Escape) {
         tracing::info!("Escape pressed on Main Menu; requesting clean exit");
-        exit_events.send(AppExit::Success);
+        exit_events.write(AppExit::Success);
     }
 }

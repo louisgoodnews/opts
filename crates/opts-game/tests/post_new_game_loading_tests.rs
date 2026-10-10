@@ -66,7 +66,7 @@ fn test_post_new_game_launch_spawns_loading_screen_and_widgets() {
         .next()
         .expect("LaunchGameBtn must be present in menu");
 
-    app.world_mut().send_event(ButtonClicked(launch_entity));
+    app.world_mut().write_message(ButtonClicked(launch_entity));
     app.update();
     app.update();
 
@@ -266,7 +266,7 @@ fn test_cancel_loading_returns_to_main_menu_with_cleanup() {
         .next()
         .expect("CancelLoadingBtn must exist on loading screen");
 
-    app.world_mut().send_event(ButtonClicked(cancel_btn));
+    app.world_mut().write_message(ButtonClicked(cancel_btn));
     app.update();
     app.update();
 
@@ -300,7 +300,7 @@ fn test_escape_key_in_game_returns_to_main_menu() {
 
     // Simulate pressing Escape key
     app.world_mut()
-        .send_event(bevy::input::keyboard::KeyboardInput {
+        .write_message(bevy::input::keyboard::KeyboardInput {
             key_code: KeyCode::Escape,
             logical_key: bevy::input::keyboard::Key::Escape,
             state: bevy::input::ButtonState::Pressed,

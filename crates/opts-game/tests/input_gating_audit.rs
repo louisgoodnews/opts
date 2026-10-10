@@ -24,9 +24,9 @@ fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
 fn reads_input(src: &str) -> bool {
     [
         "ButtonInput<",
-        "EventReader<MouseWheel>",
-        "EventReader<MouseMotion>",
-        "EventReader<KeyboardInput>",
+        "MessageReader<MouseWheel>",
+        "MessageReader<MouseMotion>",
+        "MessageReader<KeyboardInput>",
         "Changed<Interaction>",
     ]
     .iter()

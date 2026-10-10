@@ -2,11 +2,11 @@
 
 use bevy::app::App;
 use bevy::asset::{AssetPlugin, Assets, Handle};
-use bevy::core::Name;
-use bevy::hierarchy::Children;
+use bevy::ecs::hierarchy::Children;
+use bevy::ecs::name::Name;
 use bevy::math::Vec3;
+use bevy::mesh::Mesh;
 use bevy::pbr::StandardMaterial;
-use bevy::render::mesh::Mesh;
 use bevy::transform::components::Transform;
 use bevy::MinimalPlugins;
 

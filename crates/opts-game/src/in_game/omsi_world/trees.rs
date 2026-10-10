@@ -79,13 +79,12 @@ pub(super) fn spawn_tree(
     });
     let id = commands
         .spawn((
-            PbrBundle {
-                mesh: meshes.add(mesh),
-                material,
-                transform: Transform::from_translation(omsi_to_bevy_pos(world))
+            (
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(material),
+                Transform::from_translation(omsi_to_bevy_pos(world))
                     .with_rotation(omsi_euler_to_bevy_quat(-obj.heading_deg, 0.0, 0.0)),
-                ..default()
-            },
+            ),
             Name::new(format!("Tree_{}", obj.id_code)),
         ))
         .id();

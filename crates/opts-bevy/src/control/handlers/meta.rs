@@ -80,6 +80,6 @@ fn shutdown(world: &mut World, params: &Value) -> Outcome {
         Err(e) => return Outcome::err(e),
     };
     tracing::info!(target: "opts_bevy::control", force, "shutdown requested over the control protocol");
-    world.send_event(AppExit::Success);
+    world.write_message(AppExit::Success);
     Outcome::ok(json!({ "ok": true }))
 }

@@ -18,44 +18,37 @@ use crate::new_game_screen::types::{
 
 /// Populates Tab 3: Weather & Datetime Selection in a 3-column architecture (1:1:1 ratio).
 pub fn spawn_weather_datetime_tab(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     setup: &NewGameSetup,
     live_weather: &DeviceLocationWeather,
 ) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(12.0),
                 ..default()
-            },
-            ..default()
-        })
+            }))
         .with_children(|main_col| {
             // 3-Column Container
             main_col
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((Node {
                         width: Val::Percent(100.0),
                         flex_grow: 1.0,
                         flex_direction: FlexDirection::Row,
                         column_gap: Val::Px(16.0),
                         align_items: AlignItems::Stretch,
                         ..default()
-                    },
-                    ..default()
-                })
+                    }))
                 .with_children(|cols_row| {
                     // =========================================================
                     // Column 1 (1/3): Scrollable Weather Presets Selection
                     // =========================================================
                     cols_row
                         .spawn((
-                            NodeBundle {
-                                style: Style {
+                            (Node {
                                     width: Val::Percent(27.0),
                                     height: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Column,
@@ -63,26 +56,15 @@ pub fn spawn_weather_datetime_tab(
                                     padding: UiRect::all(Val::Px(12.0)),
                                     border: UiRect::all(Val::Px(1.0)),
                                     ..default()
-                                },
-                                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                background_color: BackgroundColor(
+                                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
                                     theme.scheme.get(ColorRole::SurfaceContainerLow),
-                                ),
-                                ..default()
-                            },
+                                )),
                             GlassSurface::new(ColorRole::SurfaceContainerLow, 0.45),
                             RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                         ))
                         .with_children(|col1| {
                             col1.spawn((
-                                TextBundle::from_section(
-                                    "Atmospheric Presets (Scrollable):",
-                                    TextStyle {
-                                        font_size: 15.0,
-                                        color: theme.scheme.get(ColorRole::Primary),
-                                        ..default()
-                                    },
-                                ),
+                                (Text::new("Atmospheric Presets (Scrollable):"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                                 TypeStyleToken(TypeScale::TitleSmall),
                                 ForegroundRole(ColorRole::Primary),
                             ));
@@ -93,36 +75,28 @@ pub fn spawn_weather_datetime_tab(
                             let max_scroll_y = (total_height - viewport_height).max(0.0);
 
                             col1.spawn((
-                                NodeBundle {
-                                    style: Style {
+                                (Node {
                                         width: Val::Percent(100.0),
                                         height: Val::Px(viewport_height),
                                         position_type: PositionType::Relative,
                                         overflow: Overflow::clip_y(),
                                         border: UiRect::all(Val::Px(1.0)),
                                         ..default()
-                                    },
-                                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                    background_color: BackgroundColor(
+                                    }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
                                         theme.scheme.get(ColorRole::SurfaceContainerLowest),
-                                    ),
-                                    ..default()
-                                },
+                                    )),
                                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
                             ))
                             .with_children(|viewport| {
                                 viewport
                                     .spawn((
-                                        NodeBundle {
-                                            style: Style {
+                                        (Node {
                                                 width: Val::Percent(100.0),
                                                 height: Val::Percent(100.0),
                                                 position_type: PositionType::Relative,
                                                 overflow: Overflow::clip_y(),
                                                 ..default()
-                                            },
-                                            ..default()
-                                        },
+                                            }),
                                         ScrollableContainer {
                                             kind: ScrollKind::Weather,
                                             scroll_y: 0.0,
@@ -132,8 +106,7 @@ pub fn spawn_weather_datetime_tab(
                                     .with_children(|scroll_container| {
                                         scroll_container
                                             .spawn((
-                                                NodeBundle {
-                                                    style: Style {
+                                                (Node {
                                                         width: Val::Percent(100.0),
                                                         flex_direction: FlexDirection::Column,
                                                         row_gap: Val::Px(6.0),
@@ -143,9 +116,7 @@ pub fn spawn_weather_datetime_tab(
                                                         padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0))
                                                             .with_right(Val::Px(24.0)),
                                                         ..default()
-                                                    },
-                                                    ..default()
-                                                },
+                                                    }),
                                                 ScrollContent {
                                                     kind: ScrollKind::Weather,
                                                 },
@@ -166,8 +137,7 @@ pub fn spawn_weather_datetime_tab(
 
                                                     content
                                                         .spawn((
-                                                            ButtonBundle {
-                                                                style: Style {
+                                                            (Button, Node {
                                                                     width: Val::Percent(100.0),
                                                                     padding: UiRect::axes(Val::Px(10.0), Val::Px(8.0)),
                                                                     flex_direction: FlexDirection::Row,
@@ -175,11 +145,7 @@ pub fn spawn_weather_datetime_tab(
                                                                     justify_content: JustifyContent::SpaceBetween,
                                                                     border: UiRect::all(Val::Px(if is_active { 2.0 } else { 1.0 })),
                                                                     ..default()
-                                                                },
-                                                                border_color: BorderColor(border_c),
-                                                                background_color: BackgroundColor(bg_c),
-                                                                ..default()
-                                                            },
+                                                                }, BorderColor::all(border_c), BackgroundColor(bg_c)),
                                                             M3Button::default(),
                                                             SelectWeatherBtn {
                                                                 preset_name: preset.id,
@@ -199,46 +165,29 @@ pub fn spawn_weather_datetime_tab(
                                                             Focusable { tab_index: 0 },
                                                         ))
                                                         .with_children(|btn| {
-                                                            btn.spawn(NodeBundle {
-                                                                style: Style {
+                                                            btn.spawn((Node {
                                                                     flex_direction: FlexDirection::Row,
                                                                     align_items: AlignItems::Center,
                                                                     column_gap: Val::Px(8.0),
                                                                     ..default()
-                                                                },
-                                                                ..default()
-                                                            })
+                                                                }))
                                                             .with_children(|title_box| {
                                                                 title_box.spawn((
-                                                                    TextBundle::from_section(
-                                                                        preset.name,
-                                                                        TextStyle {
-                                                                            font_size: 13.0,
-                                                                            color: if is_active {
+                                                                    (Text::new(preset.name), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(if is_active {
                                                                                 theme.scheme.get(ColorRole::OnPrimaryContainer)
                                                                             } else {
                                                                                 theme.scheme.get(ColorRole::OnSurface)
-                                                                            },
-                                                                            ..default()
-                                                                        },
-                                                                    ),
+                                                                            })),
                                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                                 ));
                                                             });
 
                                                             btn.spawn((
-                                                                TextBundle::from_section(
-                                                                    preset.temp_str,
-                                                                    TextStyle {
-                                                                        font_size: 11.5,
-                                                                        color: if is_active {
+                                                                (Text::new(preset.temp_str), TextFont { font_size: FontSize::Px( FontSize::Px(11.5)), ..default() }, TextColor(if is_active {
                                                                             theme.scheme.get(ColorRole::Primary)
                                                                         } else {
                                                                             theme.scheme.get(ColorRole::Outline)
-                                                                        },
-                                                                        ..default()
-                                                                    },
-                                                                ),
+                                                                        })),
                                                                 TypeStyleToken(TypeScale::LabelSmall),
                                                             ));
                                                         });
@@ -256,8 +205,7 @@ pub fn spawn_weather_datetime_tab(
                     // =========================================================
                     cols_row
                         .spawn((
-                            NodeBundle {
-                                style: Style {
+                            (Node {
                                     width: Val::Percent(31.0),
                                     height: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Column,
@@ -266,13 +214,9 @@ pub fn spawn_weather_datetime_tab(
                                     border: UiRect::all(Val::Px(1.0)),
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                },
-                                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                background_color: BackgroundColor(
+                                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
                                     theme.scheme.get(ColorRole::SurfaceContainerLow),
-                                ),
-                                ..default()
-                            },
+                                )),
                             WeatherDetailPanelRoot,
                             GlassSurface::new(ColorRole::SurfaceContainerLow, 0.40),
                             RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
@@ -286,8 +230,7 @@ pub fn spawn_weather_datetime_tab(
                     // =========================================================
                     cols_row
                         .spawn((
-                            NodeBundle {
-                                style: Style {
+                            (Node {
                                     width: Val::Percent(42.0),
                                     height: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Column,
@@ -297,13 +240,9 @@ pub fn spawn_weather_datetime_tab(
                                     border: UiRect::all(Val::Px(1.0)),
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                },
-                                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                background_color: BackgroundColor(
+                                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(
                                     theme.scheme.get(ColorRole::SurfaceContainerLow),
-                                ),
-                                ..default()
-                            },
+                                )),
                             GlassSurface::new(ColorRole::SurfaceContainerLow, 0.40),
                             RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                         ))
@@ -314,43 +253,28 @@ pub fn spawn_weather_datetime_tab(
                                 setup.hour, setup.minute, setup.year, setup.month, setup.day
                             );
                             col3.spawn((
-                                TextBundle::from_section(
-                                    departure_str,
-                                    TextStyle {
-                                        font_size: 13.0,
-                                        color: theme.scheme.get(ColorRole::Secondary),
-                                        ..default()
-                                    },
-                                ),
+                                (Text::new(departure_str), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
                                 DepartureTimeDisplayText,
                                 TypeStyleToken(TypeScale::TitleSmall),
                                 ForegroundRole(ColorRole::Secondary),
                             ));
 
                             // Stepper Row
-                            col3.spawn(NodeBundle {
-                                style: Style {
+                            col3.spawn((Node {
                                     flex_direction: FlexDirection::Row,
                                     column_gap: Val::Px(8.0),
                                     align_items: AlignItems::Center,
                                     ..default()
-                                },
-                                ..default()
-                            })
+                                }))
                             .with_children(|steppers| {
                                 for (offset, label) in [(-2, "-2h"), (-1, "-1h"), (1, "+1h"), (2, "+2h")] {
                                     steppers
                                         .spawn((
-                                            ButtonBundle {
-                                                style: Style {
+                                            (Button, Node {
                                                     padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
                                                     border: UiRect::all(Val::Px(1.0)),
                                                     ..default()
-                                                },
-                                                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                                background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
-                                                ..default()
-                                            },
+                                                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh))),
                                             M3Button::default(),
                                             AdjustTimeBtn { hour_offset: offset },
                                             RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -358,14 +282,7 @@ pub fn spawn_weather_datetime_tab(
                                         ))
                                         .with_children(|btn| {
                                             btn.spawn((
-                                                TextBundle::from_section(
-                                                    label,
-                                                    TextStyle {
-                                                        font_size: 11.0,
-                                                        color: theme.scheme.get(ColorRole::OnSurface),
-                                                        ..default()
-                                                    },
-                                                ),
+                                                (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                                 TypeStyleToken(TypeScale::LabelSmall),
                                                 ForegroundRole(ColorRole::OnSurface),
                                             ));
@@ -374,8 +291,7 @@ pub fn spawn_weather_datetime_tab(
                             });
 
                             // Date & Time Pickers Container (Aligned side-by-side or wrapped)
-                            col3.spawn(NodeBundle {
-                                style: Style {
+                            col3.spawn((Node {
                                     width: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Row,
                                     justify_content: JustifyContent::Center,
@@ -384,9 +300,7 @@ pub fn spawn_weather_datetime_tab(
                                     flex_wrap: FlexWrap::Wrap,
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                },
-                                ..default()
-                            })
+                                }))
                             .with_children(|pickers_node| {
                                 spawn_material_date_picker(pickers_node, theme, setup);
                                 spawn_material_clock_picker(pickers_node, theme, setup);

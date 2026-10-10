@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::sync::Mutex;
 
-use bevy::input::InputSystem;
+use bevy::input::InputSystems;
 use bevy::prelude::*;
 
 pub use paths::PathPolicy;
@@ -105,7 +105,7 @@ impl Plugin for ControlPlugin {
                     .insert_resource(state::ControlInbox(Mutex::new(rx)))
                     .add_systems(
                         PreUpdate,
-                        channel::drain_control_commands.before(InputSystem),
+                        channel::drain_control_commands.before(InputSystems),
                     );
             }
             Err(e) => {

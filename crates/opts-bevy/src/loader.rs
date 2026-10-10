@@ -2,7 +2,8 @@
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, AsyncReadExt, LoadContext};
-use bevy::render::mesh::Mesh;
+use bevy::mesh::Mesh;
+use bevy::reflect::TypePath;
 use thiserror::Error;
 
 use crate::mesh::{o3d_to_bevy_mesh, x_mesh_to_bevy_meshes};
@@ -22,7 +23,7 @@ pub enum O3dLoaderError {
 }
 
 /// Native Bevy [`AssetLoader`] for OMSI `.o3d` 3D mesh files.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct O3dAssetLoader;
 
 impl AssetLoader for O3dAssetLoader {
@@ -30,11 +31,11 @@ impl AssetLoader for O3dAssetLoader {
     type Settings = ();
     type Error = O3dLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
@@ -64,7 +65,7 @@ pub enum XLoaderError {
 }
 
 /// Native Bevy [`AssetLoader`] for Microsoft DirectX `.x` text mesh files.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct XAssetLoader;
 
 impl AssetLoader for XAssetLoader {
@@ -72,11 +73,11 @@ impl AssetLoader for XAssetLoader {
     type Settings = ();
     type Error = XLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
@@ -91,7 +92,7 @@ impl AssetLoader for XAssetLoader {
         if all_meshes.len() > 1 {
             for (i, submesh) in all_meshes.iter().enumerate() {
                 let label = format!("submesh_{i}");
-                load_context.labeled_asset_scope(label, |_| submesh.clone());
+                load_context.add_labeled_asset(label, submesh.clone());
             }
         }
 
@@ -125,19 +126,19 @@ pub enum TextureLoaderError {
 /// Uses content sniffing via [`load_bevy_image`](crate::texture::load_bevy_image) to decode
 /// `.dds` files regardless of whether they contain true DirectDraw Surface headers or
 /// disguised BMP / JPEG / PNG bitmaps.
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct DdsAssetLoader;
 
 impl AssetLoader for DdsAssetLoader {
-    type Asset = bevy::render::texture::Image;
+    type Asset = bevy::image::Image;
     type Settings = ();
     type Error = TextureLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;
@@ -151,19 +152,19 @@ impl AssetLoader for DdsAssetLoader {
 }
 
 /// Native Bevy [`AssetLoader`] for legacy OMSI image files (`.bmp`, `.tga`).
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct OptsImageLoader;
 
 impl AssetLoader for OptsImageLoader {
-    type Asset = bevy::render::texture::Image;
+    type Asset = bevy::image::Image;
     type Settings = ();
     type Error = TextureLoaderError;
 
-    async fn load<'a>(
-        &'a self,
-        reader: &'a mut Reader<'_>,
-        _settings: &'a Self::Settings,
-        _load_context: &'a mut LoadContext<'_>,
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut bytes = Vec::new();
         reader.read_to_end(&mut bytes).await?;

@@ -50,24 +50,23 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut mats: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 1.5, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
-        ..default()
-    });
-    commands.spawn(DirectionalLightBundle::default());
     commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(Cuboid::default()),
-            material: mats.add(Color::srgb(0.8, 0.3, 0.2)),
-            ..default()
-        },
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 1.5, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+    commands.spawn(DirectionalLight::default());
+    commands.spawn((
+        (
+            Mesh3d(meshes.add(Cuboid::default())),
+            MeshMaterial3d(mats.add(Color::srgb(0.8, 0.3, 0.2))),
+        ),
         Spinner,
     ));
 }
 
 fn spin(time: Res<Time>, mut q: Query<&mut Transform, With<Spinner>>) {
     for mut t in &mut q {
-        t.rotate_y(time.delta_seconds());
+        t.rotate_y(time.delta_secs());
     }
 }
 
@@ -88,19 +87,19 @@ fn script(
     window: Query<Entity, With<PrimaryWindow>>,
     report_btn: Query<Entity, With<ReportButton>>,
     dir: Res<ReportsDir>,
-    mut keys: EventWriter<KeyboardInput>,
-    mut clicks: EventWriter<ButtonClicked>,
-    mut exit: EventWriter<AppExit>,
+    mut keys: MessageWriter<KeyboardInput>,
+    mut clicks: MessageWriter<ButtonClicked>,
+    mut exit: MessageWriter<AppExit>,
     mut shots: ResMut<bevy::render::view::screenshot::ScreenshotManager>,
 ) {
     s.frame += 1;
-    let Ok(w) = window.get_single() else { return };
+    let Ok(w) = window.single() else { return };
     if s.frame == 40 {
-        keys.send(key(w, KeyCode::F1, Key::F1));
+        keys.write(key(w, KeyCode::F1, Key::F1));
     }
     if *state.get() == ReportModalState::Open && s.open_frame.is_none() {
         s.open_frame = Some(s.frame);
-        s.time_at_open = vtime.elapsed_seconds_f64();
+        s.time_at_open = vtime.elapsed_secs_f64();
         info!(
             "modal open at frame {}, virtual time {:.3}, paused {}",
             s.frame,
@@ -112,11 +111,11 @@ fn script(
         let f = s.frame - of;
         if f == 10 {
             for ch in ["G", "r", "ö", "ß", "e", " ", "✓"] {
-                keys.send(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
-            keys.send(key(w, KeyCode::Enter, Key::Enter));
+            keys.write(key(w, KeyCode::Enter, Key::Enter));
             for ch in ["Z", "w", "e", "i", "t", "e"] {
-                keys.send(key(w, KeyCode::KeyA, Key::Character(ch.into())));
+                keys.write(key(w, KeyCode::KeyA, Key::Character(ch.into())));
             }
         }
         if f == 40 {
@@ -125,13 +124,13 @@ fn script(
             }
         }
         if f == 60 {
-            let drift = vtime.elapsed_seconds_f64() - s.time_at_open;
+            let drift = vtime.elapsed_secs_f64() - s.time_at_open;
             info!("virtual time drift while modal open: {drift:.4} s (must be 0)");
             if drift > 1e-6 {
                 error!("SIMULATION DID NOT PAUSE");
             }
-            if let Ok(b) = report_btn.get_single() {
-                clicks.send(ButtonClicked(b));
+            if let Ok(b) = report_btn.single() {
+                clicks.write(ButtonClicked(b));
                 s.clicked = true;
             }
         }
@@ -146,6 +145,6 @@ fn script(
         }
     }
     if s.done_frame.is_some_and(|d| s.frame > d + 20) {
-        exit.send(AppExit::Success);
+        exit.write(AppExit::Success);
     }
 }

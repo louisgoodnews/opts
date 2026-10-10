@@ -14,7 +14,7 @@ pub fn handle_cursor_blink(time: Res<Time>, mut search_state: ResMut<CatalogueSe
     if !search_state.map_focused && !search_state.vehicle_focused {
         return;
     }
-    search_state.cursor_timer += time.delta_seconds();
+    search_state.cursor_timer += time.delta_secs();
     if search_state.cursor_timer >= 0.50 {
         search_state.cursor_timer = 0.0;
         search_state.cursor_visible = !search_state.cursor_visible;
@@ -23,7 +23,7 @@ pub fn handle_cursor_blink(time: Res<Time>, mut search_state: ResMut<CatalogueSe
 
 /// System managing searchbar focus on click.
 pub fn handle_search_focus(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     box_query: Query<&SearchInputBox>,
     mut search_state: ResMut<CatalogueSearchState>,
 ) {
@@ -50,7 +50,7 @@ pub fn handle_search_focus(
 
 /// System handling the clear / reset search button ("✖").
 pub fn handle_clear_search(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     clear_query: Query<&ClearSearchBtn>,
     mut search_state: ResMut<CatalogueSearchState>,
 ) {
@@ -129,11 +129,11 @@ pub fn handle_search_typing(
 #[allow(clippy::type_complexity)]
 pub fn filter_search_cards(
     search_state: Res<CatalogueSearchState>,
-    mut map_cards_query: Query<(&MapCardItem, &mut Style), Without<VehicleCardItem>>,
-    mut veh_cards_query: Query<(&VehicleCardItem, &mut Style), Without<MapCardItem>>,
+    mut map_cards_query: Query<(&MapCardItem, &mut Node), Without<VehicleCardItem>>,
+    mut veh_cards_query: Query<(&VehicleCardItem, &mut Node), Without<MapCardItem>>,
     mut text_query: Query<(&SearchInputText, &mut Text)>,
     mut clear_btns_query: Query<
-        (&ClearSearchBtn, &mut Style),
+        (&ClearSearchBtn, &mut Node),
         (Without<MapCardItem>, Without<VehicleCardItem>),
     >,
     mut container_query: Query<&mut ScrollableContainer>,
@@ -173,7 +173,7 @@ pub fn filter_search_cards(
                 } else {
                     ""
                 };
-                text.sections[0].value = if search_state.map_query.is_empty() {
+                text.0 = if search_state.map_query.is_empty() {
                     if search_state.map_focused {
                         format!("Search 42 maps...{cursor_sym}")
                     } else {
@@ -189,7 +189,7 @@ pub fn filter_search_cards(
                 } else {
                     ""
                 };
-                text.sections[0].value = if search_state.vehicle_query.is_empty() {
+                text.0 = if search_state.vehicle_query.is_empty() {
                     if search_state.vehicle_focused {
                         format!("Search 956 vehicles...{cursor_sym}")
                     } else {

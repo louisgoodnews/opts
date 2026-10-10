@@ -4,52 +4,53 @@ use bevy::prelude::*;
 use opts_gui::prelude::*;
 
 /// Spawns the Display & Sound settings panel.
-pub fn spawn_display_tab(parent: &mut ChildBuilder, theme: &MaterialTheme) {
+pub fn spawn_display_tab(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(12.0),
                 max_width: Val::Px(640.0),
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|section| {
             section.spawn((
-                TextBundle::from_section(
-                    "Display & Render Pipeline:",
-                    TextStyle {
-                        font_size: 16.0,
-                        color: theme.scheme.get(ColorRole::Primary),
+                (
+                    Text::new("Display & Render Pipeline:"),
+                    TextFont {
+                        font_size: FontSize::Px(16.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
                 TypeStyleToken(TypeScale::TitleMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
 
             section.spawn((
-                TextBundle::from_section(
-                    "Resolution: 1280x720 (Default) · VSync: AutoVsync · Backend: WGPU",
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new("Resolution: 1280x720 (Default) · VSync: AutoVsync · Backend: WGPU"),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
 
             section.spawn((
-                TextBundle::from_section(
-                    "Audio Engine: Simulation spatial mixer initialized (Master Volume 100%).",
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new(
+                        "Audio Engine: Simulation spatial mixer initialized (Master Volume 100%).",
+                    ),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::OnSurfaceVariant),

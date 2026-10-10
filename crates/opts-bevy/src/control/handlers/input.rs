@@ -41,7 +41,7 @@ pub fn primary_window_or_placeholder(world: &mut World) -> Entity {
 }
 
 fn now(world: &World) -> f64 {
-    world.resource::<Time<Real>>().elapsed_seconds_f64()
+    world.resource::<Time<Real>>().elapsed_secs_f64()
 }
 
 fn lookup(params: &Value) -> Result<(KeyCode, Key), RpcError> {
@@ -54,10 +54,12 @@ fn lookup(params: &Value) -> Result<(KeyCode, Key), RpcError> {
 
 fn send_key(world: &mut World, key: (KeyCode, Key), state: ButtonState) {
     let window = primary_window_or_placeholder(world);
-    world.send_event(KeyboardInput {
+    world.write_message(KeyboardInput {
         key_code: key.0,
         logical_key: key.1,
         state,
+        text: None,
+        repeat: false,
         window,
     });
 }
@@ -111,10 +113,12 @@ fn text(world: &mut World, params: &Value) -> Outcome {
             Key::Character(SmolStr::new(ch.to_string()))
         };
         for state in [ButtonState::Pressed, ButtonState::Released] {
-            world.send_event(KeyboardInput {
+            world.write_message(KeyboardInput {
                 key_code,
                 logical_key: logical_key.clone(),
                 state,
+                text: None,
+                repeat: false,
                 window,
             });
         }
@@ -125,7 +129,7 @@ fn text(world: &mut World, params: &Value) -> Outcome {
 fn mouse_move(world: &mut World, params: &Value) -> Outcome {
     match (f64_param(params, "dx"), f64_param(params, "dy")) {
         (Ok(dx), Ok(dy)) => {
-            world.send_event(MouseMotion {
+            world.write_message(MouseMotion {
                 delta: Vec2::new(dx as f32, dy as f32),
             });
             Outcome::ok(json!({ "ok": true }))
@@ -164,7 +168,7 @@ fn mouse_click(world: &mut World, params: &Value) -> Outcome {
     if let (Some(p), Some(mut w)) = (pos, world.get_mut::<Window>(window)) {
         w.set_physical_cursor_position(Some(p));
     }
-    world.send_event(MouseButtonInput {
+    world.write_message(MouseButtonInput {
         button,
         state: ButtonState::Pressed,
         window,
@@ -182,10 +186,11 @@ fn mouse_scroll(world: &mut World, params: &Value) -> Outcome {
     match f64_param(params, "delta") {
         Ok(delta) => {
             let window = primary_window_or_placeholder(world);
-            world.send_event(MouseWheel {
+            world.write_message(MouseWheel {
                 unit: MouseScrollUnit::Line,
                 x: 0.0,
                 y: delta as f32,
+                phase: bevy::input::touch::TouchPhase::Moved,
                 window,
             });
             Outcome::ok(json!({ "ok": true }))

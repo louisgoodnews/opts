@@ -73,7 +73,7 @@ fn test_headless_shutdown_event_handling() {
     app.update();
 
     // Trigger AppExit event
-    app.world_mut().send_event(AppExit::Success);
+    app.world_mut().write_message(AppExit::Success);
 
     // Stepping frame should execute ShutdownPlugin systems cleanly without panics
     app.update();

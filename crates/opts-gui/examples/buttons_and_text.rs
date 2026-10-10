@@ -20,7 +20,7 @@ fn main() {
 }
 
 fn setup_scene(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2d);
 
     // Root screen layout
     let root = commands

@@ -23,8 +23,8 @@ pub fn spawn_in_game_hud(
 ) {
     let root = commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     width: Val::Percent(100.0),
                     height: Val::Percent(100.0),
                     position_type: PositionType::Absolute,
@@ -35,9 +35,8 @@ pub fn spawn_in_game_hud(
                     padding: UiRect::all(Val::Px(20.0)),
                     ..default()
                 },
-                z_index: ZIndex::Global(50),
-                ..default()
-            },
+                GlobalZIndex(50),
+            ),
             InGameEntity,
             InGameHudRoot,
         ))
@@ -45,58 +44,56 @@ pub fn spawn_in_game_hud(
 
     // 1. Top Bar: Session Info (Left) and Camera / Exit (Right)
     let top_bar = commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Row,
                 justify_content: JustifyContent::SpaceBetween,
                 align_items: AlignItems::FlexStart,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|bar| {
             // Left: Session Location & Environment Pill
             bar.spawn((
-                NodeBundle {
-                    style: Style {
+                (
+                    Node {
                         padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(4.0),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(Color::srgba(0.3, 0.45, 0.6, 0.35)),
-                    background_color: BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.85)),
-                    ..default()
-                },
+                    BorderColor::all(Color::srgba(0.3, 0.45, 0.6, 0.35)),
+                    BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.85)),
+                ),
                 GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.8),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
             ))
             .with_children(|pill| {
                 pill.spawn((
-                    TextBundle::from_section(
-                        format!("{} - {}", session.map_name, session.entry_point),
-                        TextStyle {
-                            font_size: 14.0,
-                            color: Color::WHITE,
+                    (
+                        Text::new(format!("{} - {}", session.map_name, session.entry_point)),
+                        TextFont {
+                            font_size: FontSize::Px(14.0),
                             ..default()
                         },
+                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::TitleSmall),
                 ));
 
                 pill.spawn((
-                    TextBundle::from_section(
-                        format!(
+                    (
+                        Text::new(format!(
                             "Departure: {:02}:{:02} | Weather: {}",
                             session.start_hour, session.start_minute, session.weather_preset
-                        ),
-                        TextStyle {
-                            font_size: 12.0,
-                            color: Color::srgb(0.7, 0.8, 0.9),
+                        )),
+                        TextFont {
+                            font_size: FontSize::Px(12.0),
                             ..default()
                         },
+                        TextColor(Color::srgb(0.7, 0.8, 0.9)),
                     ),
                     HudClockText,
                     TypeStyleToken(TypeScale::BodySmall),
@@ -104,40 +101,38 @@ pub fn spawn_in_game_hud(
             });
 
             // Right: Camera Mode & Exit to Menu Button
-            bar.spawn(NodeBundle {
-                style: Style {
+            bar.spawn(
+                (Node {
                     flex_direction: FlexDirection::Row,
                     column_gap: Val::Px(12.0),
                     align_items: AlignItems::Center,
                     ..default()
-                },
-                ..default()
-            })
+                }),
+            )
             .with_children(|right_box| {
                 // Camera Indicator
                 right_box
                     .spawn((
-                        NodeBundle {
-                            style: Style {
+                        (
+                            Node {
                                 padding: UiRect::axes(Val::Px(12.0), Val::Px(8.0)),
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            border_color: BorderColor(Color::srgba(0.3, 0.4, 0.5, 0.3)),
-                            background_color: BackgroundColor(Color::srgba(0.1, 0.12, 0.16, 0.85)),
-                            ..default()
-                        },
+                            BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.3)),
+                            BackgroundColor(Color::srgba(0.1, 0.12, 0.16, 0.85)),
+                        ),
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     ))
                     .with_children(|cam_pill| {
                         cam_pill.spawn((
-                            TextBundle::from_section(
-                                "--",
-                                TextStyle {
-                                    font_size: 12.0,
-                                    color: theme.scheme.get(ColorRole::Primary),
+                            (
+                                Text::new("--"),
+                                TextFont {
+                                    font_size: FontSize::Px(12.0),
                                     ..default()
                                 },
+                                TextColor(theme.scheme.get(ColorRole::Primary)),
                             ),
                             CameraModeText,
                             TypeStyleToken(TypeScale::LabelMedium),
@@ -147,29 +142,29 @@ pub fn spawn_in_game_hud(
                 // Exit Button
                 right_box
                     .spawn((
-                        ButtonBundle {
-                            style: Style {
+                        (
+                            Button,
+                            Node {
                                 padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            border_color: BorderColor(Color::srgba(0.5, 0.3, 0.3, 0.5)),
-                            background_color: BackgroundColor(Color::srgba(0.2, 0.08, 0.08, 0.85)),
-                            ..default()
-                        },
+                            BorderColor::all(Color::srgba(0.5, 0.3, 0.3, 0.5)),
+                            BackgroundColor(Color::srgba(0.2, 0.08, 0.08, 0.85)),
+                        ),
                         M3Button::default(),
                         PauseMenuBtn,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            TextBundle::from_section(
-                                "Exit to Menu [Esc]",
-                                TextStyle {
-                                    font_size: 12.0,
-                                    color: Color::srgb(1.0, 0.7, 0.7),
+                            (
+                                Text::new("Exit to Menu [Esc]"),
+                                TextFont {
+                                    font_size: FontSize::Px(12.0),
                                     ..default()
                                 },
+                                TextColor(Color::srgb(1.0, 0.7, 0.7)),
                             ),
                             TypeStyleToken(TypeScale::LabelMedium),
                         ));
@@ -180,180 +175,104 @@ pub fn spawn_in_game_hud(
 
     // 2. Bottom Dashboard: Instrument Cluster & Controls Legend
     let bottom_section = commands
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((Node {
                 width: Val::Percent(100.0),
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 row_gap: Val::Px(12.0),
                 ..default()
-            },
-            ..default()
-        })
+            }))
         .with_children(|dash| {
             // Instrument Cluster Card
             dash.spawn((
-                NodeBundle {
-                    style: Style {
+                (Node {
                         padding: UiRect::axes(Val::Px(28.0), Val::Px(14.0)),
                         flex_direction: FlexDirection::Row,
                         column_gap: Val::Px(36.0),
                         align_items: AlignItems::Center,
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    },
-                    border_color: BorderColor(Color::srgba(0.35, 0.5, 0.65, 0.4)),
-                    background_color: BackgroundColor(Color::srgba(0.06, 0.08, 0.12, 0.90)),
-                    ..default()
-                },
+                    }, BorderColor::all(Color::srgba(0.35, 0.5, 0.65, 0.4)), BackgroundColor(Color::srgba(0.06, 0.08, 0.12, 0.90))),
                 GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.85),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
             ))
             .with_children(|cluster| {
                 // Speedometer
                 cluster
-                    .spawn(NodeBundle {
-                        style: Style {
+                    .spawn((Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }))
                     .with_children(|speed_box| {
                         speed_box.spawn((
-                            TextBundle::from_section(
-                                "0.0",
-                                TextStyle {
-                                    font_size: 38.0,
-                                    color: Color::srgb(0.2, 0.85, 0.95),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("0.0"), TextFont { font_size: FontSize::Px( FontSize::Px(38.0)), ..default() }, TextColor(Color::srgb(0.2, 0.85, 0.95))),
                             SpeedometerText,
                             TypeStyleToken(TypeScale::HeadlineLarge),
                         ));
 
                         speed_box.spawn((
-                            TextBundle::from_section(
-                                "KM/H",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: Color::srgb(0.6, 0.7, 0.8),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("KM/H"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
 
                 // Tachometer (RPM)
                 cluster
-                    .spawn(NodeBundle {
-                        style: Style {
+                    .spawn((Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }))
                     .with_children(|rpm_box| {
                         rpm_box.spawn((
-                            TextBundle::from_section(
-                                "--",
-                                TextStyle {
-                                    font_size: 26.0,
-                                    color: Color::WHITE,
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(26.0)), ..default() }, TextColor(Color::WHITE)),
                             TachometerText,
                             TypeStyleToken(TypeScale::HeadlineSmall),
                         ));
 
                         rpm_box.spawn((
-                            TextBundle::from_section(
-                                "ENGINE RPM",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: Color::srgb(0.6, 0.7, 0.8),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
 
                 // Transmission Gear Selector
                 cluster
-                    .spawn(NodeBundle {
-                        style: Style {
+                    .spawn((Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }))
                     .with_children(|gear_box| {
                         gear_box.spawn((
-                            TextBundle::from_section(
-                                "--",
-                                TextStyle {
-                                    font_size: 28.0,
-                                    color: Color::srgb(0.3, 0.9, 0.4),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(28.0)), ..default() }, TextColor(Color::srgb(0.3, 0.9, 0.4))),
                             GearIndicatorText,
                             TypeStyleToken(TypeScale::HeadlineMedium),
                         ));
 
                         gear_box.spawn((
-                            TextBundle::from_section(
-                                "GEAR [E/N/R]",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: Color::srgb(0.6, 0.7, 0.8),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("GEAR [E/N/R]"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
 
                 // Parking Brake Indicator
                 cluster
-                    .spawn(NodeBundle {
-                        style: Style {
+                    .spawn((Node {
                             flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }))
                     .with_children(|brake_box| {
                         brake_box.spawn((
-                            TextBundle::from_section(
-                                "--",
-                                TextStyle {
-                                    font_size: 14.0,
-                                    color: Color::srgb(0.4, 0.8, 0.5),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px( FontSize::Px(14.0)), ..default() }, TextColor(Color::srgb(0.4, 0.8, 0.5))),
                             HandbrakeIndicatorText,
                             TypeStyleToken(TypeScale::TitleSmall),
                         ));
 
                         brake_box.spawn((
-                            TextBundle::from_section(
-                                "PARK [Space]",
-                                TextStyle {
-                                    font_size: 11.0,
-                                    color: Color::srgb(0.6, 0.7, 0.8),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new("PARK [Space]"), TextFont { font_size: FontSize::Px( FontSize::Px(11.0)), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -361,28 +280,16 @@ pub fn spawn_in_game_hud(
 
             // Driver Controls Legend
             dash.spawn((
-                NodeBundle {
-                    style: Style {
+                (Node {
                         padding: UiRect::axes(Val::Px(20.0), Val::Px(6.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    },
-                    border_color: BorderColor(Color::srgba(0.3, 0.4, 0.5, 0.2)),
-                    background_color: BackgroundColor(Color::srgba(0.04, 0.06, 0.08, 0.75)),
-                    ..default()
-                },
+                    }, BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.2)), BackgroundColor(Color::srgba(0.04, 0.06, 0.08, 0.75))),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
             ))
             .with_children(|legend| {
                 legend.spawn((
-                    TextBundle::from_section(
-                        "[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [Esc] Menu",
-                        TextStyle {
-                            font_size: 12.0,
-                            color: Color::srgb(0.75, 0.82, 0.90),
-                            ..default()
-                        },
-                    ),
+                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [Esc] Menu"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
             });
@@ -391,7 +298,7 @@ pub fn spawn_in_game_hud(
 
     commands
         .entity(root)
-        .push_children(&[top_bar, bottom_section]);
+        .add_children(&[top_bar, bottom_section]);
 }
 
 /// Updates telemetry HUD elements every frame from the active vehicle controller.
@@ -447,21 +354,21 @@ pub fn update_in_game_hud(
         ),
     >,
 ) {
-    let Ok(controller) = vehicle_query.get_single() else {
+    let Ok(controller) = vehicle_query.single() else {
         return;
     };
 
     // 1. Road speed
     let speed_kmh = controller.forward_speed_km_h().abs();
     for mut text in &mut speed_query {
-        text.sections[0].value = format!("{:.1}", speed_kmh);
+        text.0 = format!("{:.1}", speed_kmh);
     }
 
     // 2. Engine RPM: the drivetrain model is not yet parameterised from the vehicle's own
     // configuration (gear ratios and engine curve live in its scripts/consts), so show N/A
     // rather than a default-model number.
     for mut text in &mut rpm_query {
-        text.sections[0].value = "--".to_string();
+        text.0 = "--".to_string();
     }
 
     // 3. Transmission gear
@@ -472,23 +379,23 @@ pub fn update_in_game_hud(
         GearPosition::Forward(g) => format!("{g}"),
     };
     for mut text in &mut gear_query {
-        text.sections[0].value = gear_str.clone();
+        text.0 = gear_str.clone();
     }
 
     // 4. Parking brake
     let is_park = controller.inputs().is_parking_brake_engaged();
     for mut text in &mut brake_query {
         if is_park {
-            text.sections[0].value = "[PARK]".to_string();
+            text.0 = "[PARK]".to_string();
             text.sections[0].style.color = Color::srgb(0.95, 0.35, 0.3);
         } else {
-            text.sections[0].value = "RELEASED".to_string();
+            text.0 = "RELEASED".to_string();
             text.sections[0].style.color = Color::srgb(0.35, 0.85, 0.45);
         }
     }
 
     // 5. Elapsed simulation clock
-    session.sim_elapsed_seconds += time.delta_seconds();
+    session.sim_elapsed_seconds += time.delta_secs();
     let total_secs = (session.start_hour * 3600 + session.start_minute * 60) as f32
         + session.sim_elapsed_seconds;
     let cur_h = ((total_secs / 3600.0) as u32) % 24;
@@ -496,7 +403,7 @@ pub fn update_in_game_hud(
     let cur_s = ((total_secs % 60.0) as u32) % 60;
 
     for mut text in &mut clock_query {
-        text.sections[0].value = format!(
+        text.0 = format!(
             "Time: {:02}:{:02}:{:02} | Weather: {}",
             cur_h, cur_m, cur_s, session.weather_preset
         );
@@ -505,7 +412,7 @@ pub fn update_in_game_hud(
 
 /// Handles interactions with HUD buttons (such as Exit to Menu).
 pub fn handle_hud_interactions(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     pause_query: Query<&PauseMenuBtn>,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
@@ -524,15 +431,15 @@ pub fn handle_camera_shortcuts(
     vehicle: Query<&opts_bevy::vehicle::BusVehicle, With<PlayerVehicle>>,
     mut text_query: Query<&mut Text, With<CameraModeText>>,
 ) {
-    let total = vehicle.get_single().map_or(0, |b| match state.mode {
+    let total = vehicle.single().map_or(0, |b| match state.mode {
         opts_bevy::CameraMode::Cockpit => b.driver_cameras.len(),
         opts_bevy::CameraMode::Passenger => b.pax_camera_count(),
         _ => 0,
     });
     let line = camera_hint_text(&state, &avail, total);
     for mut text in &mut text_query {
-        if text.sections[0].value != line {
-            text.sections[0].value.clone_from(&line);
+        if text.0 != line {
+            text.0.clone_from(&line);
         }
     }
 }

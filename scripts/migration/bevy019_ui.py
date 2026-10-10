@@ -132,6 +132,57 @@ def build_image(f):
     return "(" + ", ".join([img, node_expr(f)] + extra(f, {"style", "image"})) + ")"
 
 
+def build_pbr(f):
+    comps = []
+    if "mesh" in f:
+        comps.append(f"Mesh3d({f['mesh']})")
+    if "material" in f:
+        comps.append(f"MeshMaterial3d({f['material']})")
+    for k in ("transform", "global_transform", "visibility"):
+        if k in f:
+            comps.append(f[k])
+    other = [k for k in f if k not in ("mesh", "material", "transform", "global_transform", "visibility")]
+    comps += [f"/* TODO {k}: {f[k]} */" for k in other]
+    return "(" + ", ".join(comps) + ")"
+
+
+def build_spatial(f):
+    comps = [f[k] for k in ("transform", "visibility") if k in f]
+    return "(" + ", ".join(comps) + ")" if len(comps) != 1 else comps[0]
+
+
+def build_light(key):
+    def b(f):
+        comps = [f.get(key, "Default::default()")]
+        comps += [f[k] for k in ("transform", "visibility") if k in f]
+        return "(" + ", ".join(comps) + ")"
+    return b
+
+
+def build_cam3d(f):
+    comps = ["Camera3d::default()"]
+    comps += [f[k] for k in ("camera", "transform", "projection", "tonemapping", "exposure") if k in f]
+    return "(" + ", ".join(comps) + ")"
+
+
+def conv_calls(s):
+    s = re.sub(r"\bCamera2dBundle::default\(\)", "Camera2d", s)
+    s = re.sub(r"\bDirectionalLightBundle::default\(\)", "DirectionalLight::default()", s)
+    s = re.sub(r"\bSpatialBundle::default\(\)", "Transform::default()", s)
+    pat = re.compile(r"\bSpatialBundle::from_transform\s*\(")
+    pos = 0
+    while True:
+        m = pat.search(s, pos)
+        if not m:
+            break
+        b = m.end() - 1
+        e = match(s, b, "(", ")")
+        inner = s[b + 1 : e]
+        s = s[: m.start()] + inner + s[e + 1 :]
+        pos = m.start() + len(inner)
+    return s
+
+
 def conv_text(s):
     pat = re.compile(r"\bTextBundle::from_section\s*\(")
     pos = 0
@@ -175,6 +226,16 @@ def conv_text(s):
 
 
 RENAMES = [
+    (r"bevy::render::texture::", "bevy::image::"),
+    (r"bevy::render::render_asset::RenderAssetUsages", "bevy::asset::RenderAssetUsages"),
+    (r"bevy::render::render_resource::ShaderRef", "bevy::shader::ShaderRef"),
+    (r"bevy::render::view::NoFrustumCulling", "bevy::camera::visibility::NoFrustumCulling"),
+    (r"bevy::core::Name", "bevy::ecs::name::Name"),
+    (r"bevy::hierarchy::", "bevy::ecs::hierarchy::"),
+    (r"bevy::ecs::system::Resource", "bevy::ecs::resource::Resource"),
+    (r"\bTransformSystem\b", "TransformSystems"),
+    (r"\bInputSystem\b", "InputSystems"),
+    (r"\bBuildChildren\b", "BuildChildren_REMOVED"),
     (r"\bEventWriter<", "MessageWriter<"),
     (r"\bEventReader<", "MessageReader<"),
     (r"\bEvents<", "Messages<"),
@@ -206,6 +267,14 @@ def main():
         s = conv_struct(s, "NodeBundle", build_node)
         s = conv_struct(s, "ButtonBundle", build_button)
         s = conv_struct(s, "ImageBundle", build_image)
+        s = conv_struct(s, "PbrBundle", build_pbr)
+        s = conv_struct(s, "MaterialMeshBundle", build_pbr)
+        s = conv_struct(s, "SpatialBundle", build_spatial)
+        s = conv_struct(s, "PointLightBundle", build_light("point_light"))
+        s = conv_struct(s, "SpotLightBundle", build_light("spot_light"))
+        s = conv_struct(s, "DirectionalLightBundle", build_light("directional_light"))
+        s = conv_struct(s, "Camera3dBundle", build_cam3d)
+        s = conv_calls(s)
         s = conv_text(s)
         for a, b in RENAMES:
             s = re.sub(a, b, s)

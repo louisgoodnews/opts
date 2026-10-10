@@ -51,7 +51,7 @@ pub fn update_loading_progress(
     let dt = if is_headless {
         0.35
     } else {
-        time.delta_seconds().min(0.1)
+        time.delta_secs().min(0.1)
     };
     state.stage_elapsed += dt;
 
@@ -229,7 +229,7 @@ pub fn update_loading_progress(
                                     Vec3::new(focus.x, cam.start.translation.y, focus.z),
                                     Vec3::Y,
                                 );
-                                commands.add(move |w: &mut World| {
+                                commands.queue(move |w: &mut World| {
                                     let mut q =
                                         w.query_filtered::<&mut Transform, With<Camera3d>>();
                                     for mut t in q.iter_mut(w) {
@@ -291,7 +291,7 @@ fn cfg_name(job: &WorldLoadJob) -> String {
 #[allow(clippy::type_complexity)]
 pub fn update_loading_ui(
     state: Res<SimulationLoadState>,
-    mut fill_query: Query<&mut Style, With<ProgressBarFill>>,
+    mut fill_query: Query<&mut Node, With<ProgressBarFill>>,
     mut percent_query: Query<
         &mut Text,
         (
@@ -328,11 +328,11 @@ pub fn update_loading_ui(
     }
 
     for mut text in &mut percent_query {
-        text.sections[0].value = format!("{:.0}%", pct);
+        text.0 = format!("{:.0}%", pct);
     }
 
     for mut text in &mut ticker_query {
-        text.sections[0].value = format!("> {}", state.status_message);
+        text.0 = format!("> {}", state.status_message);
     }
 
     for mut text in &mut stage_query {
@@ -344,7 +344,7 @@ pub fn update_loading_ui(
             LoadStage::CalibrateControls => "STAGE 5/5: CALIBRATING CONTROLS",
             LoadStage::Ready => "READY: COMMENCING TRANSIT",
         };
-        text.sections[0].value = badge.to_string();
+        text.0 = badge.to_string();
     }
 }
 
@@ -352,7 +352,7 @@ pub fn update_loading_ui(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_loading_interactions(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     cancel_query: Query<&CancelLoadingBtn>,
     start_query: Query<&StartDrivingBtn>,
     mut state: ResMut<SimulationLoadState>,
@@ -388,7 +388,7 @@ fn transition_to_active_simulation(
 ) {
     // Despawn loading overlay
     for entity in loading_screen_query {
-        commands.entity(entity).despawn_recursive();
+        commands.entity(entity).despawn();
     }
 
     // Spawn Driving HUD

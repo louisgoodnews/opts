@@ -9,41 +9,28 @@ use crate::settings_screen::types::{DiscoveryIntervalButton, RunDiscoveryNowButt
 
 /// Spawns the General & Storage settings panel.
 pub fn spawn_general_tab(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     settings: &GameSettings,
 ) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((Node {
                 flex_direction: FlexDirection::Column,
                 row_gap: Val::Px(16.0),
                 max_width: Val::Px(680.0),
                 ..default()
-            },
-            ..default()
-        })
+            }))
         .with_children(|main_col| {
             // Section 1: Storage & Persistence Architecture
             main_col
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(8.0),
                         ..default()
-                    },
-                    ..default()
-                })
+                    }))
                 .with_children(|section| {
                     section.spawn((
-                        TextBundle::from_section(
-                            "Storage & Persistence Architecture:",
-                            TextStyle {
-                                font_size: 16.0,
-                                color: theme.scheme.get(ColorRole::Primary),
-                                ..default()
-                            },
-                        ),
+                        (Text::new("Storage & Persistence Architecture:"), TextFont { font_size: FontSize::Px( FontSize::Px(16.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleMedium),
                         ForegroundRole(ColorRole::Primary),
                     ));
@@ -70,14 +57,7 @@ pub fn spawn_general_tab(
                             .to_string(),
                     ] {
                         section.spawn((
-                            TextBundle::from_section(
-                                text,
-                                TextStyle {
-                                    font_size: 13.0,
-                                    color: theme.scheme.get(ColorRole::OnSurfaceVariant),
-                                    ..default()
-                                },
-                            ),
+                            (Text::new(text), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                             TypeStyleToken(TypeScale::BodyMedium),
                             ForegroundRole(ColorRole::OnSurfaceVariant),
                         ));
@@ -86,28 +66,16 @@ pub fn spawn_general_tab(
 
             // Section 2: Vehicle Discovery & Periodic Refresh
             main_col
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((Node {
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(10.0),
                         padding: UiRect::all(Val::Px(14.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
-                    ..default()
-                })
+                    }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow))))
                 .with_children(|disc_box| {
                     disc_box.spawn((
-                        TextBundle::from_section(
-                            "Vehicle Catalogue Discovery & SQLite Sync:",
-                            TextStyle {
-                                font_size: 15.0,
-                                color: theme.scheme.get(ColorRole::Primary),
-                                ..default()
-                            },
-                        ),
+                        (Text::new("Vehicle Catalogue Discovery & SQLite Sync:"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleSmall),
                         ForegroundRole(ColorRole::Primary),
                     ));
@@ -123,45 +91,28 @@ pub fn spawn_general_tab(
                         .unwrap_or_else(|| "Last scan timestamp: Never".to_string());
 
                     disc_box.spawn((
-                        TextBundle::from_section(
-                            format!(
+                        (Text::new(format!(
                                 "OMSI catalogue (SQLite): {} files · {} entities · {}",
                                 files, entities, last_time_str
-                            ),
-                            TextStyle {
-                                font_size: 12.5,
-                                color: theme.scheme.get(ColorRole::OnSurface),
-                                ..default()
-                            },
-                        ),
+                            )), TextFont { font_size: FontSize::Px( FontSize::Px(12.5)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                         TypeStyleToken(TypeScale::BodySmall),
                         ForegroundRole(ColorRole::OnSurface),
                     ));
 
                     disc_box.spawn((
-                        TextBundle::from_section(
-                            "Periodic Discovery Interval (Runs on Game Startup):",
-                            TextStyle {
-                                font_size: 13.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
-                                ..default()
-                            },
-                        ),
+                        (Text::new("Periodic Discovery Interval (Runs on Game Startup):"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                         TypeStyleToken(TypeScale::LabelLarge),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
 
                     // Discovery Interval Frequency Buttons
                     disc_box
-                        .spawn(NodeBundle {
-                            style: Style {
+                        .spawn((Node {
                                 flex_direction: FlexDirection::Row,
                                 column_gap: Val::Px(10.0),
                                 flex_wrap: FlexWrap::Wrap,
                                 ..default()
-                            },
-                            ..default()
-                        })
+                            }))
                         .with_children(|interval_row| {
                             let options = [
                                 (0, "Every Startup"),
@@ -174,24 +125,19 @@ pub fn spawn_general_tab(
                                 let is_active = settings.discovery_interval_days == days;
                                 interval_row
                                     .spawn((
-                                        ButtonBundle {
-                                            style: Style {
+                                        (Button, Node {
                                                 padding: UiRect::axes(Val::Px(12.0), Val::Px(7.0)),
                                                 border: UiRect::all(Val::Px(if is_active { 2.0 } else { 1.0 })),
                                                 ..default()
-                                            },
-                                            border_color: BorderColor(if is_active {
+                                            }, BorderColor::all(if is_active {
                                                 theme.scheme.get(ColorRole::Primary)
                                             } else {
                                                 theme.scheme.get(ColorRole::OutlineVariant)
-                                            }),
-                                            background_color: BackgroundColor(if is_active {
+                                            }), BackgroundColor(if is_active {
                                                 theme.scheme.get(ColorRole::PrimaryContainer)
                                             } else {
                                                 theme.scheme.get(ColorRole::SurfaceContainerHigh)
-                                            }),
-                                            ..default()
-                                        },
+                                            })),
                                         M3Button::default(),
                                         DiscoveryIntervalButton { interval_days: days },
                                         GlassSurface::new(
@@ -207,18 +153,11 @@ pub fn spawn_general_tab(
                                     ))
                                     .with_children(|btn| {
                                         btn.spawn((
-                                            TextBundle::from_section(
-                                                label,
-                                                TextStyle {
-                                                    font_size: 12.0,
-                                                    color: if is_active {
+                                            (Text::new(label), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(if is_active {
                                                         theme.scheme.get(ColorRole::OnPrimaryContainer)
                                                     } else {
                                                         theme.scheme.get(ColorRole::OnSurface)
-                                                    },
-                                                    ..default()
-                                                },
-                                            ),
+                                                    })),
                                             TypeStyleToken(TypeScale::LabelMedium),
                                         ));
                                     });
@@ -228,18 +167,13 @@ pub fn spawn_general_tab(
                     // Manual Discovery Trigger Button
                     disc_box
                         .spawn((
-                            ButtonBundle {
-                                style: Style {
+                            (Button, Node {
                                     align_self: AlignSelf::FlexStart,
                                     padding: UiRect::axes(Val::Px(18.0), Val::Px(9.0)),
                                     border: UiRect::all(Val::Px(1.0)),
                                     margin: UiRect::top(Val::Px(6.0)),
                                     ..default()
-                                },
-                                border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                                background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                                ..default()
-                            },
+                                }, BorderColor::all(theme.scheme.get(ColorRole::Primary)), BackgroundColor(theme.scheme.get(ColorRole::Primary))),
                             M3Button::default(),
                             RunDiscoveryNowButton,
                             GlassSurface::new(ColorRole::Primary, 0.90),
@@ -248,14 +182,7 @@ pub fn spawn_general_tab(
                         ))
                         .with_children(|btn| {
                             btn.spawn((
-                                TextBundle::from_section(
-                                    "Run Discovery Now",
-                                    TextStyle {
-                                        font_size: 13.0,
-                                        color: theme.scheme.get(ColorRole::OnPrimary),
-                                        ..default()
-                                    },
-                                ),
+                                (Text::new("Run Discovery Now"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
                                 TypeStyleToken(TypeScale::LabelLarge),
                                 ForegroundRole(ColorRole::OnPrimary),
                             ));

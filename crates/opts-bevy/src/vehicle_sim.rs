@@ -185,7 +185,7 @@ pub fn vehicle_input_system(
     time: Res<Time>,
     mut query: Query<(&mut VehicleController, Option<&VehicleInputConfig>), With<PlayerVehicle>>,
 ) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
     }
@@ -251,7 +251,7 @@ pub fn vehicle_input_system(
 
 /// Fixed-update system executing deterministic vehicle physics simulation ticks.
 pub fn vehicle_physics_step_system(time: Res<Time>, mut query: Query<&mut VehicleController>) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
     }
@@ -308,9 +308,9 @@ pub fn vehicle_camera_system(
     player_query: Query<(&Transform, &VehicleController), With<PlayerVehicle>>,
     mut camera_query: Query<(&mut Transform, &mut VehicleCameraRig), Without<PlayerVehicle>>,
 ) {
-    let dt = time.delta_seconds();
+    let dt = time.delta_secs();
 
-    let Ok((vehicle_tf, _controller)) = player_query.get_single() else {
+    let Ok((vehicle_tf, _controller)) = player_query.single() else {
         return;
     };
 

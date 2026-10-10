@@ -106,7 +106,7 @@ fn test_settings_screen_color_swatch_updates_state() {
     };
 
     // Simulate clicking the swatch
-    app.world_mut().send_event(ButtonClicked(swatch_entity));
+    app.world_mut().write_message(ButtonClicked(swatch_entity));
     app.update();
 
     // Verify GameSettings has the color override
@@ -146,7 +146,7 @@ fn test_settings_screen_dark_mode_toggle() {
         .expect("Toggle button must exist");
 
     // Click dark mode toggle
-    app.world_mut().send_event(ButtonClicked(toggle_entity));
+    app.world_mut().write_message(ButtonClicked(toggle_entity));
     app.update();
 
     let settings = app.world().resource::<GameSettings>();

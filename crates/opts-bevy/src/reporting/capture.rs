@@ -4,7 +4,7 @@ use std::sync::{mpsc, Mutex};
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy::render::view::screenshot::ScreenshotManager;
+use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
 use bevy::window::PrimaryWindow;
 
@@ -52,14 +52,23 @@ pub fn encode_png(image: &Image) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// Asks the renderer for a frame of `window`; the observer forwards it to `tx`.
+pub fn spawn_capture(commands: &mut Commands, window: Entity, tx: mpsc::Sender<Image>) {
+    commands
+        .spawn(Screenshot::window(window))
+        .observe(move |captured: On<ScreenshotCaptured>| {
+            let _ = tx.send(captured.image.clone());
+        });
+}
+
 /// Requests the screenshot (runs on entering `Capturing`, i.e. before the modal exists).
 pub fn request_screenshot(
-    mut manager: ResMut<ScreenshotManager>,
+    mut commands: Commands,
     window: Query<Entity, With<PrimaryWindow>>,
     channel: Res<CaptureChannel>,
     mut next: ResMut<NextState<ReportModalState>>,
 ) {
-    let Ok(window) = window.get_single() else {
+    let Ok(window) = window.single() else {
         tracing::error!("report: no primary window to capture");
         next.set(ReportModalState::Inactive);
         return;
@@ -68,13 +77,7 @@ pub fn request_screenshot(
     if let Ok(rx) = channel.rx.lock() {
         while rx.try_recv().is_ok() {}
     }
-    let tx = channel.tx.clone();
-    if let Err(e) = manager.take_screenshot(window, move |img| {
-        let _ = tx.send(img);
-    }) {
-        tracing::error!("report: screenshot request failed: {e}");
-        next.set(ReportModalState::Inactive);
-    }
+    spawn_capture(&mut commands, window, channel.tx.clone());
 }
 
 /// Collects the frame, encodes it off-thread, then opens the modal.

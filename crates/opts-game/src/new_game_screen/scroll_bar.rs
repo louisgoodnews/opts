@@ -9,10 +9,10 @@ use crate::new_game_screen::types::{
 };
 
 /// Spawns an interactive scrollbar column with top `▲` button, clickable track with thumb, and bottom `▼` button.
-pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: ScrollKind) {
+pub fn spawn_scrollbar(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, kind: ScrollKind) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn(
+            (Node {
                 position_type: PositionType::Absolute,
                 right: Val::Px(2.0),
                 top: Val::Px(4.0),
@@ -22,14 +22,14 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
                 align_items: AlignItems::Center,
                 justify_content: JustifyContent::SpaceBetween,
                 ..default()
-            },
-            ..default()
-        })
+            }),
+        )
         .with_children(|col| {
             // 1. Top Stepper Button (▲)
             col.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         width: Val::Px(18.0),
                         height: Val::Px(18.0),
                         align_items: AlignItems::Center,
@@ -37,12 +37,9 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                    ),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                ),
                 M3Button::default(),
                 ScrollUpBtn { kind },
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -50,13 +47,13 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        "^",
-                        TextStyle {
-                            font_size: 9.0,
-                            color: theme.scheme.get(ColorRole::Primary),
+                    (
+                        Text::new("^"),
+                        TextFont {
+                            font_size: FontSize::Px(9.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
                     TypeStyleToken(TypeScale::LabelSmall),
                     ForegroundRole(ColorRole::Primary),
@@ -65,8 +62,9 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
 
             // 2. Clickable Scrollbar Track
             col.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         flex_grow: 1.0,
                         width: Val::Px(12.0),
                         margin: UiRect::vertical(Val::Px(3.0)),
@@ -74,12 +72,9 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
                         position_type: PositionType::Relative,
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerLowest),
-                    ),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
+                ),
                 M3Button::default(),
                 ScrollbarTrack { kind },
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
@@ -88,8 +83,8 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
             .with_children(|track| {
                 // Indicator Thumb inside track
                 track.spawn((
-                    NodeBundle {
-                        style: Style {
+                    (
+                        Node {
                             position_type: PositionType::Absolute,
                             left: Val::Px(1.0),
                             right: Val::Px(1.0),
@@ -97,9 +92,8 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
                             height: Val::Px(48.0),
                             ..default()
                         },
-                        background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                        ..default()
-                    },
+                        BackgroundColor(theme.scheme.get(ColorRole::Primary)),
+                    ),
                     ScrollbarThumb { kind },
                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
                 ));
@@ -107,8 +101,9 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
 
             // 3. Bottom Stepper Button (▼)
             col.spawn((
-                ButtonBundle {
-                    style: Style {
+                (
+                    Button,
+                    Node {
                         width: Val::Px(18.0),
                         height: Val::Px(18.0),
                         align_items: AlignItems::Center,
@@ -116,12 +111,9 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                    ),
-                    ..default()
-                },
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                ),
                 M3Button::default(),
                 ScrollDownBtn { kind },
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -129,13 +121,13 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
             ))
             .with_children(|btn| {
                 btn.spawn((
-                    TextBundle::from_section(
-                        "v",
-                        TextStyle {
-                            font_size: 9.0,
-                            color: theme.scheme.get(ColorRole::Primary),
+                    (
+                        Text::new("v"),
+                        TextFont {
+                            font_size: FontSize::Px(9.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
                     TypeStyleToken(TypeScale::LabelSmall),
                     ForegroundRole(ColorRole::Primary),
@@ -146,14 +138,15 @@ pub fn spawn_scrollbar(parent: &mut ChildBuilder, theme: &MaterialTheme, kind: S
 
 /// Spawns a floating action button (FAB) for scrolling back to the top of the list.
 pub fn spawn_scroll_to_top_button(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     kind: ScrollKind,
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     position_type: PositionType::Absolute,
                     right: Val::Px(28.0),
                     bottom: Val::Px(16.0),
@@ -164,10 +157,9 @@ pub fn spawn_scroll_to_top_button(
                     border: UiRect::all(Val::Px(1.5)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                background_color: BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::Primary)),
+                BackgroundColor(theme.scheme.get(ColorRole::PrimaryContainer)),
+            ),
             M3Button::default(),
             ScrollToTopBtn { kind },
             GlassSurface::new(ColorRole::PrimaryContainer, 0.90),
@@ -176,13 +168,13 @@ pub fn spawn_scroll_to_top_button(
         ))
         .with_children(|fab| {
             fab.spawn((
-                TextBundle::from_section(
-                    "^",
-                    TextStyle {
-                        font_size: 15.0,
-                        color: theme.scheme.get(ColorRole::OnPrimaryContainer),
+                (
+                    Text::new("^"),
+                    TextFont {
+                        font_size: FontSize::Px(15.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                 ),
                 TypeStyleToken(TypeScale::TitleMedium),
                 ForegroundRole(ColorRole::OnPrimaryContainer),

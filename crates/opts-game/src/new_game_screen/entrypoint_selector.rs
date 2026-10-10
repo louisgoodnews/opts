@@ -12,19 +12,19 @@ use crate::new_game_screen::types::{
 
 /// Spawns the scrollable entrypoint selection container matching map selection list style.
 pub fn spawn_entrypoint_scrollable_selection(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     map: &MapItem,
     setup: &NewGameSetup,
 ) {
     parent.spawn((
-        TextBundle::from_section(
-            "Select Starting Spawn Terminal (Scrollable):",
-            TextStyle {
-                font_size: 14.0,
-                color: theme.scheme.get(ColorRole::Primary),
+        (
+            Text::new("Select Starting Spawn Terminal (Scrollable):"),
+            TextFont {
+                font_size: FontSize::Px(14.0),
                 ..default()
             },
+            TextColor(theme.scheme.get(ColorRole::Primary)),
         ),
         TypeStyleToken(TypeScale::TitleSmall),
         ForegroundRole(ColorRole::Primary),
@@ -36,8 +36,8 @@ pub fn spawn_entrypoint_scrollable_selection(
     let max_scroll_y = (total_height - viewport_height).max(0.0);
 
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 height: Val::Px(viewport_height),
                 position_type: PositionType::Relative,
@@ -45,23 +45,19 @@ pub fn spawn_entrypoint_scrollable_selection(
                 border: UiRect::all(Val::Px(1.0)),
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
+        ))
         .with_children(|viewport| {
             viewport
                 .spawn((
-                    NodeBundle {
-                        style: Style {
-                            width: Val::Percent(100.0),
-                            height: Val::Percent(100.0),
-                            position_type: PositionType::Relative,
-                            overflow: Overflow::clip_y(),
-                            ..default()
-                        },
+                    (Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Percent(100.0),
+                        position_type: PositionType::Relative,
+                        overflow: Overflow::clip_y(),
                         ..default()
-                    },
+                    }),
                     ScrollableContainer {
                         kind: ScrollKind::EntryPoints,
                         scroll_y: 0.0,
@@ -71,20 +67,17 @@ pub fn spawn_entrypoint_scrollable_selection(
                 .with_children(|scroll_container| {
                     scroll_container
                         .spawn((
-                            NodeBundle {
-                                style: Style {
-                                    width: Val::Percent(100.0),
-                                    flex_direction: FlexDirection::Column,
-                                    row_gap: Val::Px(6.0),
-                                    position_type: PositionType::Absolute,
-                                    left: Val::Px(0.0),
-                                    top: Val::Px(0.0),
-                                    padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0))
-                                        .with_right(Val::Px(24.0)),
-                                    ..default()
-                                },
+                            (Node {
+                                width: Val::Percent(100.0),
+                                flex_direction: FlexDirection::Column,
+                                row_gap: Val::Px(6.0),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0))
+                                    .with_right(Val::Px(24.0)),
                                 ..default()
-                            },
+                            }),
                             ScrollContent {
                                 kind: ScrollKind::EntryPoints,
                             },
@@ -105,8 +98,9 @@ pub fn spawn_entrypoint_scrollable_selection(
 
                                 content
                                     .spawn((
-                                        ButtonBundle {
-                                            style: Style {
+                                        (
+                                            Button,
+                                            Node {
                                                 width: Val::Percent(100.0),
                                                 padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
                                                 flex_direction: FlexDirection::Row,
@@ -119,10 +113,9 @@ pub fn spawn_entrypoint_scrollable_selection(
                                                 })),
                                                 ..default()
                                             },
-                                            border_color: BorderColor(border_c),
-                                            background_color: BackgroundColor(bg_c),
-                                            ..default()
-                                        },
+                                            BorderColor::all(border_c),
+                                            BackgroundColor(bg_c),
+                                        ),
                                         M3Button::default(),
                                         SelectEntryPointBtn {
                                             entry_point: ep.clone(),
@@ -142,44 +135,38 @@ pub fn spawn_entrypoint_scrollable_selection(
                                         Focusable { tab_index: 0 },
                                     ))
                                     .with_children(|btn| {
-                                        btn.spawn(NodeBundle {
-                                            style: Style {
+                                        btn.spawn(
+                                            (Node {
                                                 flex_direction: FlexDirection::Row,
                                                 align_items: AlignItems::Center,
                                                 column_gap: Val::Px(8.0),
                                                 ..default()
-                                            },
-                                            ..default()
-                                        })
+                                            }),
+                                        )
                                         .with_children(
                                             |row| {
                                                 row.spawn((
-                                                    TextBundle::from_section(
-                                                        opts_gui::icons::DIRECTIONS_BUS,
-                                                        opts_gui::icons::icon_style(
+                                                    (Text::new(opts_gui::icons::DIRECTIONS_BUS), /* TODO text style opts_gui::icons::icon_style(
                                                             16.0,
                                                             theme.scheme.get(ColorRole::Primary),
-                                                        ),
-                                                    ),
+                                                        ) */),
                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                 ));
 
                                                 row.spawn((
-                                                    TextBundle::from_section(
-                                                        ep,
-                                                        TextStyle {
-                                                            font_size: 12.0,
-                                                            color: if is_selected {
-                                                                theme.scheme.get(
-                                                                    ColorRole::OnPrimaryContainer,
-                                                                )
-                                                            } else {
-                                                                theme
-                                                                    .scheme
-                                                                    .get(ColorRole::OnSurface)
-                                                            },
+                                                    (
+                                                        Text::new(ep),
+                                                        TextFont {
+                                                            font_size: FontSize::Px(12.0),
                                                             ..default()
                                                         },
+                                                        TextColor(if is_selected {
+                                                            theme
+                                                                .scheme
+                                                                .get(ColorRole::OnPrimaryContainer)
+                                                        } else {
+                                                            theme.scheme.get(ColorRole::OnSurface)
+                                                        }),
                                                     ),
                                                     TypeStyleToken(TypeScale::LabelMedium),
                                                     ForegroundRole(ColorRole::OnSurface),
@@ -188,21 +175,21 @@ pub fn spawn_entrypoint_scrollable_selection(
                                         );
 
                                         btn.spawn((
-                                            TextBundle::from_section(
-                                                if is_selected {
+                                            (
+                                                Text::new(if is_selected {
                                                     "● Active Terminal"
                                                 } else {
                                                     "Spawn Terminal"
-                                                },
-                                                TextStyle {
-                                                    font_size: 11.0,
-                                                    color: if is_selected {
-                                                        theme.scheme.get(ColorRole::Primary)
-                                                    } else {
-                                                        theme.scheme.get(ColorRole::Outline)
-                                                    },
+                                                }),
+                                                TextFont {
+                                                    font_size: FontSize::Px(11.0),
                                                     ..default()
                                                 },
+                                                TextColor(if is_selected {
+                                                    theme.scheme.get(ColorRole::Primary)
+                                                } else {
+                                                    theme.scheme.get(ColorRole::Outline)
+                                                }),
                                             ),
                                             TypeStyleToken(TypeScale::LabelSmall),
                                             ForegroundRole(ColorRole::Outline),

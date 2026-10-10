@@ -63,7 +63,7 @@ fn answer(
 }
 
 fn release_due_inputs(world: &mut World) {
-    let now = world.resource::<Time<Real>>().elapsed_seconds_f64();
+    let now = world.resource::<Time<Real>>().elapsed_secs_f64();
     let due: Vec<_> = {
         let mut state = world.resource_mut::<ControlState>();
         let (due, keep) = std::mem::take(&mut state.releases)
@@ -75,15 +75,17 @@ fn release_due_inputs(world: &mut World) {
     let window = primary_window_or_placeholder(world);
     for release in due {
         if let Some((key_code, logical_key)) = release.key {
-            world.send_event(KeyboardInput {
+            world.write_message(KeyboardInput {
                 key_code,
                 logical_key,
                 state: ButtonState::Released,
+                text: None,
+                repeat: false,
                 window,
             });
         }
         if let Some(button) = release.mouse {
-            world.send_event(MouseButtonInput {
+            world.write_message(MouseButtonInput {
                 button,
                 state: ButtonState::Released,
                 window,
@@ -136,7 +138,7 @@ fn poll_deferred(world: &mut World) {
 /// The per-frame system: bookkeeping, input releases, new commands, deferred commands.
 pub fn drain_control_commands(world: &mut World) {
     {
-        let dt = world.resource::<Time<Real>>().delta_seconds();
+        let dt = world.resource::<Time<Real>>().delta_secs();
         let mut state = world.resource_mut::<ControlState>();
         state.frame += 1;
         if dt > 0.0 {

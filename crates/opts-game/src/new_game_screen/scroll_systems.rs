@@ -11,11 +11,11 @@ use crate::new_game_screen::types::{
 
 /// System handling list stepper scroll buttons (Up / Down).
 pub fn handle_scroll_buttons(
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     up_query: Query<&ScrollUpBtn>,
     down_query: Query<&ScrollDownBtn>,
     mut container_query: Query<&mut ScrollableContainer>,
-    mut content_query: Query<(&ScrollContent, &mut Style)>,
+    mut content_query: Query<(&ScrollContent, &mut Node)>,
 ) {
     for event in events.read() {
         let mut scroll_delta = 0.0;
@@ -49,7 +49,7 @@ pub fn handle_scroll_buttons(
 
 /// System handling mouse wheel scrolling strictly for the hovered list container.
 pub fn handle_mouse_scroll(
-    mut wheel_events: EventReader<MouseWheel>,
+    mut wheel_events: MessageReader<MouseWheel>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut container_query: Query<(
         &mut ScrollableContainer,
@@ -57,9 +57,9 @@ pub fn handle_mouse_scroll(
         &Node,
         &InheritedVisibility,
     )>,
-    mut content_query: Query<(&ScrollContent, &mut Style)>,
+    mut content_query: Query<(&ScrollContent, &mut Node)>,
 ) {
-    let Ok(window) = window_query.get_single() else {
+    let Ok(window) = window_query.single() else {
         return;
     };
     let Some(cursor_pos) = window.cursor_position() else {

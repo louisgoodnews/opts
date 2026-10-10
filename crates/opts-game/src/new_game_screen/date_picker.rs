@@ -84,7 +84,7 @@ pub fn format_calendar_header_date(year: i32, month: u32, day: u32) -> String {
 
 /// Spawns the complete Material Design Date Picker card matching Screenshot 1.
 pub fn spawn_material_date_picker(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     setup: &NewGameSetup,
 ) {
@@ -93,8 +93,8 @@ pub fn spawn_material_date_picker(
     // Root Dialog Card
     parent
         .spawn((
-            NodeBundle {
-                style: Style {
+            (
+                Node {
                     width: Val::Px(310.0),
                     height: Val::Px(400.0),
                     flex_direction: FlexDirection::Column,
@@ -102,74 +102,69 @@ pub fn spawn_material_date_picker(
                     overflow: Overflow::clip(),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                background_color: BackgroundColor(
-                    theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                ),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+            ),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
         ))
         .with_children(|dialog| {
             // 1. Top Header Banner (Primary Surface)
             dialog
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         padding: UiRect::all(Val::Px(18.0)),
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(12.0),
                         ..default()
                     },
-                    background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                    ..default()
-                })
+                    BackgroundColor(theme.scheme.get(ColorRole::Primary)),
+                ))
                 .with_children(|header| {
                     header.spawn((
-                        TextBundle::from_section(
-                            "SELECT DATE",
-                            TextStyle {
-                                font_size: 11.0,
-                                color: theme.scheme.get(ColorRole::OnPrimary),
+                        (
+                            Text::new("SELECT DATE"),
+                            TextFont {
+                                font_size: FontSize::Px(11.0),
                                 ..default()
                             },
+                            TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                         ),
                         TypeStyleToken(TypeScale::LabelSmall),
                     ));
 
                     header
-                        .spawn(NodeBundle {
-                            style: Style {
+                        .spawn(
+                            (Node {
                                 width: Val::Percent(100.0),
                                 flex_direction: FlexDirection::Row,
                                 align_items: AlignItems::Center,
                                 justify_content: JustifyContent::SpaceBetween,
                                 ..default()
-                            },
-                            ..default()
-                        })
+                            }),
+                        )
                         .with_children(|date_row| {
                             date_row.spawn((
-                                TextBundle::from_section(
-                                    header_date,
-                                    TextStyle {
-                                        font_size: 24.0,
-                                        color: theme.scheme.get(ColorRole::OnPrimary),
+                                (
+                                    Text::new(header_date),
+                                    TextFont {
+                                        font_size: FontSize::Px(24.0),
                                         ..default()
                                     },
+                                    TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                                 ),
                                 CalendarHeaderDateText,
                                 TypeStyleToken(TypeScale::HeadlineSmall),
                             ));
 
                             date_row.spawn((
-                                TextBundle::from_section(
-                                    "",
-                                    TextStyle {
-                                        font_size: 18.0,
-                                        color: theme.scheme.get(ColorRole::OnPrimary),
+                                (
+                                    Text::new(""),
+                                    TextFont {
+                                        font_size: FontSize::Px(18.0),
                                         ..default()
                                     },
+                                    TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                                 ),
                                 TypeStyleToken(TypeScale::TitleMedium),
                             ));
@@ -178,54 +173,49 @@ pub fn spawn_material_date_picker(
 
             // 2. Calendar Body Container
             dialog
-                .spawn(NodeBundle {
-                    style: Style {
+                .spawn((
+                    Node {
                         width: Val::Percent(100.0),
                         padding: UiRect::all(Val::Px(16.0)),
                         flex_direction: FlexDirection::Column,
                         row_gap: Val::Px(10.0),
                         ..default()
                     },
-                    background_color: BackgroundColor(
-                        theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                    ),
-                    ..default()
-                })
+                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+                ))
                 .with_children(|body| {
                     // Month & Year Selector
-                    body.spawn(NodeBundle {
-                        style: Style {
+                    body.spawn(
+                        (Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
                             justify_content: JustifyContent::SpaceBetween,
                             padding: UiRect::bottom(Val::Px(4.0)),
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }),
+                    )
                     .with_children(|nav_bar| {
                         // Month Selector with Prev/Next buttons
                         nav_bar
-                            .spawn(NodeBundle {
-                                style: Style {
+                            .spawn(
+                                (Node {
                                     flex_direction: FlexDirection::Row,
                                     align_items: AlignItems::Center,
                                     column_gap: Val::Px(4.0),
                                     ..default()
-                                },
-                                ..default()
-                            })
+                                }),
+                            )
                             .with_children(|month_box| {
                                 spawn_nav_arrow(month_box, theme, "<", PrevMonthBtn);
                                 month_box.spawn((
-                                    TextBundle::from_section(
-                                        month_name(setup.month),
-                                        TextStyle {
-                                            font_size: 14.0,
-                                            color: theme.scheme.get(ColorRole::OnSurface),
+                                    (
+                                        Text::new(month_name(setup.month)),
+                                        TextFont {
+                                            font_size: FontSize::Px(14.0),
                                             ..default()
                                         },
+                                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
                                     ),
                                     CalendarMonthYearText,
                                     TypeStyleToken(TypeScale::TitleSmall),
@@ -238,33 +228,32 @@ pub fn spawn_material_date_picker(
                     });
 
                     // Weekday Column Headers: S M T W T F S
-                    body.spawn(NodeBundle {
-                        style: Style {
+                    body.spawn(
+                        (Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Row,
                             justify_content: JustifyContent::SpaceBetween,
                             padding: UiRect::vertical(Val::Px(2.0)),
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }),
+                    )
                     .with_children(|week_row| {
                         for letter in ["S", "M", "T", "W", "T", "F", "S"] {
                             week_row.spawn((
-                                TextBundle::from_section(
-                                    letter,
-                                    TextStyle {
-                                        font_size: 12.0,
-                                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                                (
+                                    Text::new(letter),
+                                    TextFont {
+                                        font_size: FontSize::Px(12.0),
                                         ..default()
                                     },
-                                )
-                                .with_style(Style {
-                                    width: Val::Px(34.0),
-                                    justify_content: JustifyContent::Center,
-                                    align_content: AlignContent::Center,
-                                    ..default()
-                                }),
+                                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
+                                    Node {
+                                        width: Val::Px(34.0),
+                                        justify_content: JustifyContent::Center,
+                                        align_content: AlignContent::Center,
+                                        ..default()
+                                    },
+                                ),
                                 TypeStyleToken(TypeScale::LabelMedium),
                             ));
                         }
@@ -274,15 +263,14 @@ pub fn spawn_material_date_picker(
                     let first_dow = day_of_week(setup.year, setup.month, 1);
                     let total_days = days_in_month(setup.year, setup.month);
 
-                    body.spawn(NodeBundle {
-                        style: Style {
+                    body.spawn(
+                        (Node {
                             width: Val::Percent(100.0),
                             flex_direction: FlexDirection::Column,
                             row_gap: Val::Px(4.0),
                             ..default()
-                        },
-                        ..default()
-                    })
+                        }),
+                    )
                     .with_children(|grid| {
                         let mut current_day = 1u32;
                         let mut week_slot = 0u32;
@@ -292,49 +280,46 @@ pub fn spawn_material_date_picker(
                                 break;
                             }
 
-                            grid.spawn(NodeBundle {
-                                style: Style {
+                            grid.spawn(
+                                (Node {
                                     width: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Row,
                                     justify_content: JustifyContent::SpaceBetween,
                                     ..default()
-                                },
-                                ..default()
-                            })
+                                }),
+                            )
                             .with_children(|row| {
                                 for _day_col in 0..7 {
                                     if week_slot < first_dow || current_day > total_days {
-                                        row.spawn(NodeBundle {
-                                            style: Style {
+                                        row.spawn(
+                                            (Node {
                                                 width: Val::Px(34.0),
                                                 height: Val::Px(34.0),
                                                 ..default()
-                                            },
-                                            ..default()
-                                        });
+                                            }),
+                                        );
                                     } else {
                                         let day_num = current_day;
                                         let is_active = day_num == setup.day;
 
                                         row.spawn((
-                                            ButtonBundle {
-                                                style: Style {
+                                            (
+                                                Button,
+                                                Node {
                                                     width: Val::Px(34.0),
                                                     height: Val::Px(34.0),
                                                     align_items: AlignItems::Center,
                                                     justify_content: JustifyContent::Center,
                                                     ..default()
                                                 },
-                                                background_color: BackgroundColor(if is_active {
+                                                BackgroundColor(if is_active {
                                                     theme.scheme.get(ColorRole::Primary)
                                                 } else {
                                                     Color::NONE
-                                                }),
-                                                border_radius: BorderRadius::all(Val::Percent(
-                                                    50.0,
-                                                )),
-                                                ..default()
-                                            },
+                                                }), /* TODO border_radius: BorderRadius::all(Val::Percent(
+                                                        50.0,
+                                                    )) */
+                                            ),
                                             M3Button::default(),
                                             SelectCalendarDayBtn { day: day_num },
                                             Focusable { tab_index: 0 },
@@ -342,21 +327,17 @@ pub fn spawn_material_date_picker(
                                         .with_children(
                                             |day_cell| {
                                                 day_cell.spawn((
-                                                    TextBundle::from_section(
-                                                        format!("{day_num}"),
-                                                        TextStyle {
-                                                            font_size: 13.0,
-                                                            color: if is_active {
-                                                                theme
-                                                                    .scheme
-                                                                    .get(ColorRole::OnPrimary)
-                                                            } else {
-                                                                theme
-                                                                    .scheme
-                                                                    .get(ColorRole::OnSurface)
-                                                            },
+                                                    (
+                                                        Text::new(format!("{day_num}")),
+                                                        TextFont {
+                                                            font_size: FontSize::Px(13.0),
                                                             ..default()
                                                         },
+                                                        TextColor(if is_active {
+                                                            theme.scheme.get(ColorRole::OnPrimary)
+                                                        } else {
+                                                            theme.scheme.get(ColorRole::OnSurface)
+                                                        }),
                                                     ),
                                                     TypeStyleToken(TypeScale::BodyMedium),
                                                 ));
@@ -375,34 +356,34 @@ pub fn spawn_material_date_picker(
 }
 
 fn spawn_nav_arrow<T: Component>(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     arrow: &str,
     marker: T,
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
                     ..default()
                 },
-                background_color: BackgroundColor(Color::NONE),
-                ..default()
-            },
+                BackgroundColor(Color::NONE),
+            ),
             M3Button::default(),
             marker,
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    arrow,
-                    TextStyle {
-                        font_size: 13.0,
-                        color: theme.scheme.get(ColorRole::OnSurfaceVariant),
+                (
+                    Text::new(arrow),
+                    TextFont {
+                        font_size: FontSize::Px(13.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::BodyMedium),
             ));

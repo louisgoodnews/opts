@@ -6,8 +6,8 @@
 
 use std::path::Path;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy::render::render_asset::RenderAssetUsages;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_bevy::ground::CpuImage;
 use opts_core::formats::envir::EnvirConfig;
@@ -91,7 +91,7 @@ fn direction(elevation_deg: f32, azimuth_deg: f32) -> Vec3 {
 fn dome_mesh() -> Mesh {
     let mut mesh = Sphere::new(DOME_RADIUS).mesh().uv(48, 24);
     let uvs: Option<Vec<[f32; 2]>> = {
-        use bevy::render::mesh::VertexAttributeValues as V;
+        use bevy::mesh::VertexAttributeValues as V;
         match (
             mesh.attribute(Mesh::ATTRIBUTE_POSITION),
             mesh.attribute(Mesh::ATTRIBUTE_UV_0),
@@ -195,15 +195,14 @@ pub fn spawn_sky(
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    sky_image.sampler = bevy::render::texture::ImageSampler::Descriptor(
-        bevy::render::texture::ImageSamplerDescriptor {
-            address_mode_u: bevy::render::texture::ImageAddressMode::Repeat,
-            address_mode_v: bevy::render::texture::ImageAddressMode::ClampToEdge,
-            mag_filter: bevy::render::texture::ImageFilterMode::Linear,
-            min_filter: bevy::render::texture::ImageFilterMode::Linear,
+    sky_image.sampler =
+        bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
+            address_mode_u: bevy::image::ImageAddressMode::Repeat,
+            address_mode_v: bevy::image::ImageAddressMode::ClampToEdge,
+            mag_filter: bevy::image::ImageFilterMode::Linear,
+            min_filter: bevy::image::ImageFilterMode::Linear,
             ..default()
-        },
-    );
+        });
     let image = images.add(sky_image);
 
     let weather = setup.weather_preset.to_lowercase();
@@ -229,17 +228,16 @@ pub fn spawn_sky(
     }
     let image = sky.image.clone();
     commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(dome_mesh()),
-            material: materials.add(StandardMaterial {
+        (
+            Mesh3d(meshes.add(dome_mesh())),
+            MeshMaterial3d(materials.add(StandardMaterial {
                 base_color_texture: Some(image),
                 unlit: true,
                 cull_mode: Some(bevy::render::render_resource::Face::Front),
                 fog_enabled: false,
                 ..default()
-            }),
-            ..default()
-        },
+            })),
+        ),
         bevy::pbr::NotShadowCaster,
         bevy::pbr::NotShadowReceiver,
         SkyDome,
@@ -247,13 +245,10 @@ pub fn spawn_sky(
         Name::new("Sky_Dome"),
     ));
     commands.spawn((
-        DirectionalLightBundle {
-            directional_light: DirectionalLight {
-                shadows_enabled: true,
-                ..default()
-            },
+        (DirectionalLight {
+            shadow_maps_enabled: true,
             ..default()
-        },
+        }),
         SunLight,
         InGameEntity,
         Name::new("Sun_Light"),
@@ -263,11 +258,7 @@ pub fn spawn_sky(
     for (is_sun, tex, size) in [(true, sun_tex, 160.0), (false, moon_tex, 120.0)] {
         let (mesh, material) = disc(meshes, materials, tex, images, size);
         let mut e = commands.spawn((
-            PbrBundle {
-                mesh,
-                material,
-                ..default()
-            },
+            (Mesh3d(mesh), MeshMaterial3d(material)),
             bevy::pbr::NotShadowCaster,
             bevy::pbr::NotShadowReceiver,
             InGameEntity,
@@ -324,7 +315,7 @@ pub fn update_sky(
     let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
         return;
     };
-    let now = time.elapsed_seconds();
+    let now = time.elapsed_secs();
     let hour = sky.start_hour + now / 3600.0;
     let (elevation, azimuth) = sun_position(hour, sky.day_of_year);
     let sun_dir = direction(elevation, azimuth);

@@ -55,7 +55,7 @@ pub fn preset_world_transform(
 
 fn window_aspect(windows: &Query<&Window, With<PrimaryWindow>>) -> f32 {
     windows
-        .get_single()
+        .single()
         .map_or(16.0 / 9.0, |w| w.width() / w.height().max(1.0))
 }
 
@@ -69,7 +69,7 @@ fn set_fov(projection: &mut Projection, fov_y: f32) {
 
 /// Wheel handling for the vehicle views: cycles sub-cameras (wrapping) in modes 2/4, zooms in mode 3.
 pub fn handle_vehicle_view_wheel(
-    mut wheel: EventReader<MouseWheel>,
+    mut wheel: MessageReader<MouseWheel>,
     keys: Res<ButtonInput<KeyCode>>,
     vehicle: Query<&BusVehicle, With<PlayerVehicle>>,
     mut state: ResMut<CameraState>,
@@ -82,7 +82,7 @@ pub fn handle_vehicle_view_wheel(
     let steps = notches.round() as i32;
     match state.mode {
         CameraMode::Cockpit | CameraMode::Passenger => {
-            let Ok(bus) = vehicle.get_single() else {
+            let Ok(bus) = vehicle.single() else {
                 return;
             };
             let len = if state.mode == CameraMode::Cockpit {
@@ -113,7 +113,7 @@ pub fn handle_vehicle_view_wheel(
 /// it feels the same at close and far range, and leaves yaw, pitch and zoom untouched.
 pub fn handle_vehicle_view_drag(
     mouse: Res<ButtonInput<MouseButton>>,
-    mut motion: EventReader<MouseMotion>,
+    mut motion: MessageReader<MouseMotion>,
     mut state: ResMut<CameraState>,
     camera: Query<&Transform, With<Camera3d>>,
 ) {
@@ -132,7 +132,7 @@ pub fn handle_vehicle_view_drag(
                 state.external_yaw -= delta.x * sens;
                 state.external_pitch = (state.external_pitch - delta.y * sens).clamp(-1.5, 1.5);
             } else if mouse.pressed(MouseButton::Middle) {
-                let Ok(cam) = camera.get_single() else { return };
+                let Ok(cam) = camera.single() else { return };
                 let rate = state.external_zoom * 0.005;
                 let (right, up) = (cam.rotation * Vec3::X, cam.rotation * Vec3::Y);
                 state.pan_offset += right * (-delta.x * rate) + up * (delta.y * rate);
@@ -152,8 +152,7 @@ pub fn update_cockpit_camera(
     if state.mode != CameraMode::Cockpit {
         return;
     }
-    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.get_single(), camera.get_single_mut())
-    else {
+    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut()) else {
         return;
     };
     let Some(cam) = bus.driver_cameras.get(state.sub_camera_index) else {
@@ -178,8 +177,7 @@ pub fn update_passenger_camera(
     if state.mode != CameraMode::Passenger {
         return;
     }
-    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.get_single(), camera.get_single_mut())
-    else {
+    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut()) else {
         return;
     };
     let Some((segment, cam)) = bus.pax_camera(state.sub_camera_index) else {
@@ -202,8 +200,7 @@ pub fn update_external_camera(
     if state.mode != CameraMode::External {
         return;
     }
-    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.get_single(), camera.get_single_mut())
-    else {
+    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut()) else {
         return;
     };
     let (_, vrot, vpos) = gt.to_scale_rotation_translation();

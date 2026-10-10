@@ -22,8 +22,7 @@ pub fn spawn_setvars_modal(
 
     commands
         .spawn((
-            NodeBundle {
-                style: Style {
+            (Node {
                     position_type: PositionType::Absolute,
                     left: Val::Px(0.0),
                     top: Val::Px(0.0),
@@ -33,18 +32,13 @@ pub fn spawn_setvars_modal(
                     justify_content: JustifyContent::Center,
                     padding: UiRect::all(Val::Px(24.0)),
                     ..default()
-                },
-                background_color: BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.75)),
-                z_index: ZIndex::Global(100),
-                ..default()
-            },
+                }, BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.75)), GlobalZIndex(100)),
             SetvarsModalRoot,
         ))
         .with_children(|backdrop| {
             backdrop
                 .spawn((
-                    NodeBundle {
-                        style: Style {
+                    (Node {
                             width: Val::Px(580.0),
                             max_height: Val::Px(520.0),
                             flex_direction: FlexDirection::Column,
@@ -53,88 +47,51 @@ pub fn spawn_setvars_modal(
                             border: UiRect::all(Val::Px(1.5)),
                             overflow: Overflow::clip_y(),
                             ..default()
-                        },
-                        border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                        background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
-                        ..default()
-                    },
+                        }, BorderColor::all(theme.scheme.get(ColorRole::Primary)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh))),
                     GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.95),
                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
                 ))
                 .with_children(|dialog| {
                     dialog.spawn((
-                        TextBundle::from_section(
-                            "Bus Setvars & Equipment Configuration",
-                            TextStyle {
-                                font_size: 20.0,
-                                color: theme.scheme.get(ColorRole::Primary),
-                                ..default()
-                            },
-                        ),
+                        (Text::new("Bus Setvars & Equipment Configuration"), TextFont { font_size: FontSize::Px( FontSize::Px(20.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                         TypeStyleToken(TypeScale::TitleLarge),
                     ));
 
                     dialog.spawn((
-                        TextBundle::from_section(
-                            format!("Vehicle: {} · Livery: {}", vehicle.full_name, setup.selected_livery),
-                            TextStyle {
-                                font_size: 12.0,
-                                color: theme.scheme.get(ColorRole::OnSurfaceVariant),
-                                ..default()
-                            },
-                        ),
+                        (Text::new(format!("Vehicle: {} · Livery: {}", vehicle.full_name, setup.selected_livery)), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                         TypeStyleToken(TypeScale::BodySmall),
                     ));
 
                     if setvars.is_empty() {
                         dialog
-                            .spawn(NodeBundle {
-                                style: Style {
+                            .spawn((Node {
                                     width: Val::Percent(100.0),
                                     padding: UiRect::all(Val::Px(18.0)),
                                     border: UiRect::all(Val::Px(1.0)),
                                     flex_direction: FlexDirection::Column,
                                     row_gap: Val::Px(8.0),
                                     ..default()
-                                },
-                                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
-                                ..default()
-                            })
+                                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest))))
                             .with_children(|box_node| {
                                 box_node.spawn((
-                                    TextBundle::from_section("ℹ Vehicle Configuration Not Available", TextStyle {
-                                        font_size: 15.0,
-                                        color: theme.scheme.get(ColorRole::Secondary),
-                                        ..default()
-                                    }),
+                                    (Text::new("ℹ Vehicle Configuration Not Available"), TextFont { font_size: FontSize::Px( FontSize::Px(15.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
                                     TypeStyleToken(TypeScale::TitleMedium),
                                 ));
 
                                 box_node.spawn((
-                                    TextBundle::from_section(
-                                        "In this menu, you can configure setvars (equipment, visual accessories, and script options) for the vehicle. This vehicle model does not declare any configurable setvars.",
-                                        TextStyle {
-                                            font_size: 13.0,
-                                            color: theme.scheme.get(ColorRole::OnSurface),
-                                            ..default()
-                                        },
-                                    ),
+                                    (Text::new("In this menu, you can configure setvars (equipment, visual accessories, and script options) for the vehicle. This vehicle model does not declare any configurable setvars."), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                     TypeStyleToken(TypeScale::BodyMedium),
                                 ));
                             });
                     } else {
                         dialog
-                            .spawn(NodeBundle {
-                                style: Style {
+                            .spawn((Node {
                                     width: Val::Percent(100.0),
                                     flex_direction: FlexDirection::Column,
                                     row_gap: Val::Px(10.0),
                                     overflow: Overflow::clip_y(),
                                     ..default()
-                                },
-                                ..default()
-                            })
+                                }))
                             .with_children(|list| {
                                 for item in &setvars {
                                     spawn_setvar_row(list, theme, item);
@@ -144,8 +101,7 @@ pub fn spawn_setvars_modal(
 
                     // Footer Buttons
                     dialog
-                        .spawn(NodeBundle {
-                            style: Style {
+                        .spawn((Node {
                                 width: Val::Percent(100.0),
                                 flex_direction: FlexDirection::Row,
                                 justify_content: JustifyContent::SpaceBetween,
@@ -153,23 +109,15 @@ pub fn spawn_setvars_modal(
                                 padding: UiRect::top(Val::Px(12.0)),
                                 border: UiRect { top: Val::Px(1.0), ..default() },
                                 ..default()
-                            },
-                            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                            ..default()
-                        })
+                            }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant))))
                         .with_children(|footer| {
                             footer
                                 .spawn((
-                                    ButtonBundle {
-                                        style: Style {
+                                    (Button, Node {
                                             padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
                                             border: UiRect::all(Val::Px(1.0)),
                                             ..default()
-                                        },
-                                        border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                                        background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest)),
-                                        ..default()
-                                    },
+                                        }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest))),
                                     M3Button::default(),
                                     ResetSetvarsBtn,
                                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -177,30 +125,18 @@ pub fn spawn_setvars_modal(
                                 ))
                                 .with_children(|btn| {
                                     btn.spawn((
-                                        TextBundle::from_section(
-                                            "↺ Reset Defaults",
-                                            TextStyle {
-                                                font_size: 12.0,
-                                                color: theme.scheme.get(ColorRole::OnSurface),
-                                                ..default()
-                                            },
-                                        ),
+                                        (Text::new("↺ Reset Defaults"), TextFont { font_size: FontSize::Px( FontSize::Px(12.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                                         TypeStyleToken(TypeScale::LabelMedium),
                                     ));
                                 });
 
                             footer
                                 .spawn((
-                                    ButtonBundle {
-                                        style: Style {
+                                    (Button, Node {
                                             padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
                                             border: UiRect::all(Val::Px(1.0)),
                                             ..default()
-                                        },
-                                        border_color: BorderColor(theme.scheme.get(ColorRole::Primary)),
-                                        background_color: BackgroundColor(theme.scheme.get(ColorRole::Primary)),
-                                        ..default()
-                                    },
+                                        }, BorderColor::all(theme.scheme.get(ColorRole::Primary)), BackgroundColor(theme.scheme.get(ColorRole::Primary))),
                                     M3Button::default(),
                                     CloseSetvarsModalBtn,
                                     RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
@@ -208,14 +144,7 @@ pub fn spawn_setvars_modal(
                                 ))
                                 .with_children(|btn| {
                                     btn.spawn((
-                                        TextBundle::from_section(
-                                            "Apply & Close",
-                                            TextStyle {
-                                                font_size: 13.0,
-                                                color: theme.scheme.get(ColorRole::OnPrimary),
-                                                ..default()
-                                            },
-                                        ),
+                                        (Text::new("Apply & Close"), TextFont { font_size: FontSize::Px( FontSize::Px(13.0)), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
                                         TypeStyleToken(TypeScale::LabelLarge),
                                     ));
                                 });
@@ -224,10 +153,10 @@ pub fn spawn_setvars_modal(
         });
 }
 
-fn spawn_setvar_row(parent: &mut ChildBuilder, theme: &MaterialTheme, item: &SetvarItem) {
+fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, item: &SetvarItem) {
     parent
-        .spawn(NodeBundle {
-            style: Style {
+        .spawn((
+            Node {
                 width: Val::Percent(100.0),
                 padding: UiRect::axes(Val::Px(12.0), Val::Px(8.0)),
                 border: UiRect::all(Val::Px(1.0)),
@@ -236,66 +165,63 @@ fn spawn_setvar_row(parent: &mut ChildBuilder, theme: &MaterialTheme, item: &Set
                 justify_content: JustifyContent::SpaceBetween,
                 ..default()
             },
-            border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-            background_color: BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
-            ..default()
-        })
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+            BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLow)),
+        ))
         .with_children(|row| {
-            row.spawn(NodeBundle {
-                style: Style {
+            row.spawn(
+                (Node {
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(2.0),
                     max_width: Val::Px(360.0),
                     ..default()
-                },
-                ..default()
-            })
+                }),
+            )
             .with_children(|col| {
                 col.spawn((
-                    TextBundle::from_section(
-                        format!("{} [{}]", item.label, item.name),
-                        TextStyle {
-                            font_size: 13.0,
-                            color: theme.scheme.get(ColorRole::OnSurface),
+                    (
+                        Text::new(format!("{} [{}]", item.label, item.name)),
+                        TextFont {
+                            font_size: FontSize::Px(13.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                 ));
 
                 col.spawn((
-                    TextBundle::from_section(
-                        &item.description,
-                        TextStyle {
-                            font_size: 11.0,
-                            color: theme.scheme.get(ColorRole::Outline),
+                    (
+                        Text::new(&item.description),
+                        TextFont {
+                            font_size: FontSize::Px(11.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Outline)),
                     ),
                     TypeStyleToken(TypeScale::BodySmall),
                 ));
             });
 
-            row.spawn(NodeBundle {
-                style: Style {
+            row.spawn(
+                (Node {
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
                     column_gap: Val::Px(6.0),
                     ..default()
-                },
-                ..default()
-            })
+                }),
+            )
             .with_children(|ctrl| {
                 spawn_stepper_btn(ctrl, theme, "-", item.name.clone(), -1);
 
                 ctrl.spawn((
-                    TextBundle::from_section(
-                        format!("{}", item.value),
-                        TextStyle {
-                            font_size: 13.0,
-                            color: theme.scheme.get(ColorRole::Primary),
+                    (
+                        Text::new(format!("{}", item.value)),
+                        TextFont {
+                            font_size: FontSize::Px(13.0),
                             ..default()
                         },
+                        TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                 ));
@@ -306,7 +232,7 @@ fn spawn_setvar_row(parent: &mut ChildBuilder, theme: &MaterialTheme, item: &Set
 }
 
 fn spawn_stepper_btn(
-    parent: &mut ChildBuilder,
+    parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     label: &str,
     var_name: String,
@@ -314,8 +240,9 @@ fn spawn_stepper_btn(
 ) {
     parent
         .spawn((
-            ButtonBundle {
-                style: Style {
+            (
+                Button,
+                Node {
                     width: Val::Px(28.0),
                     height: Val::Px(28.0),
                     align_items: AlignItems::Center,
@@ -323,25 +250,22 @@ fn spawn_stepper_btn(
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                border_color: BorderColor(theme.scheme.get(ColorRole::OutlineVariant)),
-                background_color: BackgroundColor(
-                    theme.scheme.get(ColorRole::SurfaceContainerHigh),
-                ),
-                ..default()
-            },
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
+            ),
             M3Button::default(),
             SetvarStepBtn { var_name, delta },
             Focusable { tab_index: 0 },
         ))
         .with_children(|btn| {
             btn.spawn((
-                TextBundle::from_section(
-                    label,
-                    TextStyle {
-                        font_size: 14.0,
-                        color: theme.scheme.get(ColorRole::Primary),
+                (
+                    Text::new(label),
+                    TextFont {
+                        font_size: FontSize::Px(14.0),
                         ..default()
                     },
+                    TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
             ));
@@ -352,7 +276,7 @@ fn spawn_stepper_btn(
 #[allow(clippy::too_many_arguments)]
 pub fn handle_setvars_modal_interactions(
     mut commands: Commands,
-    mut events: EventReader<ButtonClicked>,
+    mut events: MessageReader<ButtonClicked>,
     open_query: Query<&OpenSetvarsModalBtn>,
     close_query: Query<&CloseSetvarsModalBtn>,
     step_query: Query<&SetvarStepBtn>,
@@ -370,7 +294,7 @@ pub fn handle_setvars_modal_interactions(
         } else if close_query.get(event.0).is_ok() {
             setup.setvars_modal_open = false;
             for ent in &modal_query {
-                commands.entity(ent).despawn_recursive();
+                commands.entity(ent).despawn();
             }
         } else if let Ok(step) = step_query.get(event.0) {
             let current = *setup.custom_setvars.get(&step.var_name).unwrap_or(&0);
@@ -385,7 +309,7 @@ pub fn handle_setvars_modal_interactions(
 
     if should_reopen && setup.setvars_modal_open {
         for ent in &modal_query {
-            commands.entity(ent).despawn_recursive();
+            commands.entity(ent).despawn();
         }
         let current_veh = catalogue
             .vehicles

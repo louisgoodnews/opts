@@ -1,6 +1,6 @@
 //! Camera mode enumeration and the shared [`CameraState`] resource.
 
-use bevy::ecs::system::Resource;
+use bevy::ecs::resource::Resource;
 use bevy::math::Vec3;
 
 /// Minimum (and initial) free-roam speed in metres per second.
