@@ -82,7 +82,7 @@ fn is_slow(method: &str) -> bool {
 /// Runs one command from words and prints the outcome; returns the process exit code.
 pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
     let Some((method, rest)) = words.split_first() else {
-        eprintln!("no command given; try `opts-cli list`");
+        errln!("no command given; try `opts-cli list`");
         return 1;
     };
     let params = match find(method) {
@@ -92,7 +92,7 @@ pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
     let params = match params {
         Ok(p) => p,
         Err(e) => {
-            eprintln!("{e}");
+            errln!("{e}");
             return 1;
         }
     };
@@ -107,11 +107,11 @@ pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
             0
         }
         Err(ClientError::Rpc(e)) => {
-            eprintln!("{}", render_error(mode, &e));
+            errln!("{}", render_error(mode, &e));
             1
         }
         Err(e) => {
-            eprintln!("{e}");
+            errln!("{e}");
             e.exit_code()
         }
     }
@@ -131,24 +131,24 @@ fn print_list() {
 fn run_batch(client: &mut Client, mode: OutputMode) -> u8 {
     let mut input = String::new();
     if let Err(e) = std::io::stdin().read_to_string(&mut input) {
-        eprintln!("cannot read stdin: {e}");
+        errln!("cannot read stdin: {e}");
         return 1;
     }
     let value: Value = match serde_json::from_str(&input) {
         Ok(v) => v,
         Err(e) => {
-            eprintln!("stdin is not JSON: {e}");
+            errln!("stdin is not JSON: {e}");
             return 1;
         }
     };
     let Some(items) = value.as_array() else {
-        eprintln!("batch input must be a JSON array of {{\"method\", \"params\"}} objects");
+        errln!("batch input must be a JSON array of {{\"method\", \"params\"}} objects");
         return 1;
     };
     let mut commands = Vec::new();
     for item in items {
         let Some(method) = item.get("method").and_then(Value::as_str) else {
-            eprintln!("every batch entry needs a `method`");
+            errln!("every batch entry needs a `method`");
             return 1;
         };
         commands.push((
@@ -159,11 +159,11 @@ fn run_batch(client: &mut Client, mode: OutputMode) -> u8 {
     match client.batch(&commands, false) {
         Ok(results) => print_batch(mode, &commands, &results),
         Err(ClientError::Rpc(e)) => {
-            eprintln!("{}", render_error(mode, &e));
+            errln!("{}", render_error(mode, &e));
             1
         }
         Err(e) => {
-            eprintln!("{e}");
+            errln!("{e}");
             e.exit_code()
         }
     }
@@ -195,7 +195,7 @@ fn print_batch(
                 }
                 Err(e) => {
                     failed = true;
-                    eprintln!("[{method}] {}", render_error(mode, e));
+                    errln!("[{method}] {}", render_error(mode, e));
                 }
             }
         }
@@ -215,7 +215,7 @@ pub fn run(cli: &Cli) -> u8 {
         Some("repl") => crate::repl::run_repl(Client::new(cli.config()), mode),
         Some("batch") => run_batch(&mut Client::new(cli.config()), mode),
         Some("watch") => {
-            eprintln!("`watch` needs the event stream, which protocol 1.0 does not have yet");
+            errln!("`watch` needs the event stream, which protocol 1.0 does not have yet");
             1
         }
         _ => execute(&mut Client::new(cli.config()), mode, &cli.words),

@@ -194,9 +194,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Document CLI command specifications in `docs/src/reference/opts-tools.md`.
   - [ ] Implement `opts inspect <file>` to validate OMSI asset syntax and detect corrupt files (M-0030).
   - [ ] Implement `opts convert <file> --output <gltf>` to export legacy meshes to standard formats.
-- [ ] **🎛️ Remote Control & Live Editing** — [M-0043](docs/src/roadmap/phase-5/M-0043.md)
-  - [ ] Design documents and ADRs: [Control Protocol](docs/src/architecture/control-protocol.md), [Hot Reload](docs/src/architecture/hot-reload.md), ADR-0006, ADR-0007.
-  - [ ] `opts-cli` client, `opts-bevy::control` server and `opts-bevy::hot_reload`.
+- [x] **🎛️ Remote Control & Live Editing** — [M-0043](docs/src/roadmap/phase-5/M-0043.md)
+  - [x] Design documents and ADRs: [Control Protocol](docs/src/architecture/control-protocol.md), [Hot Reload](docs/src/architecture/hot-reload.md), ADR-0006, ADR-0007.
+  - [x] `opts-cli` client, `opts-bevy::control` server and `opts-bevy::hot_reload` ([final report](docs/src/meta/control-protocol-2026-10-10.md)).
 - [ ] **⬆️ Engine Upgrade** — [M-0044](docs/src/roadmap/phase-5/M-0044.md)
   - [ ] Migrate Bevy 0.14 → current in verified single-version steps.
 - [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
@@ -262,3 +262,4 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015)
 - [ ] Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
 - [ ] Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)
+- [ ] Control protocol follow-ups (M-0043): `entity.*`/`resource.*`/`asset.*` via reflection or `bevy_remote`, `debug.*`, `sim.set_time`, event streaming (`opts-cli watch`), vehicle-state snapshot on hot reload

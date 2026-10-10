@@ -7,6 +7,10 @@
 //! * With the `client` feature (default): the `opts-cli` control client — transport, high-level client,
 //!   command table, output formatting and the REPL.
 
+#[cfg(feature = "client")]
+#[macro_use]
+mod macros;
+
 pub mod args;
 pub mod protocol;
 

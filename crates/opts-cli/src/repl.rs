@@ -127,7 +127,7 @@ fn show_help(topic: &[String]) {
 /// Runs the interactive loop until `exit` or end of input; returns the exit code.
 pub fn run_repl(mut client: Client, mode: OutputMode) -> u8 {
     let Ok(mut editor) = Editor::<CommandHelper, FileHistory>::new() else {
-        eprintln!("cannot start the line editor");
+        errln!("cannot start the line editor");
         return 1;
     };
     editor.set_helper(Some(CommandHelper));
@@ -141,7 +141,7 @@ pub fn run_repl(mut client: Client, mode: OutputMode) -> u8 {
             Err(ReadlineError::Interrupted) => continue,
             Err(ReadlineError::Eof) => break,
             Err(e) => {
-                eprintln!("input error: {e}");
+                errln!("input error: {e}");
                 break;
             }
         };

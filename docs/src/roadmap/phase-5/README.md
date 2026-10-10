@@ -11,7 +11,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - M-0028 — Performance Benchmark Suite & Profiling Harness (`opts-benchmark`) — ⏳ Planned (Criterion parser benchmarks, physics step profiling)
 - M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems (`opts-bevy`) — ⏳ Planned (LOD switching, shadow distance culling, mesh instancing)
 - M-0030 — Asset Validation & Inspection CLI Tooling (`opts-cli`, `opts-tools`) — ⏳ Planned (asset validator, header dumper, glTF export)
-- [M-0043 — CLI Control Protocol & Hot Reload (`opts-cli`, `opts-bevy`)](M-0043.md) — ⏳ Planned (design done; JSON-RPC control server, CLI client, hot reload)
+- [M-0043 — CLI Control Protocol & Hot Reload (`opts-cli`, `opts-bevy`)](M-0043.md) — 🟢 Complete (JSON-RPC control server, `opts-cli` client, hot reload; P2 commands deferred)
 - [M-0044 — Bevy Engine Upgrade](M-0044.md) — ⏳ Planned (0.14 → current, stepwise)
 - [M-0040 — Code-Quality Debt: Size Limits, Panics, Rustdoc, Stubs](M-0040.md) — ⏳ Planned (audit 5037f89a F-005, F-006, F-009–F-012)
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — ⏳ Planned (audit 5037f89a F-013, F-018, F-020–F-023)

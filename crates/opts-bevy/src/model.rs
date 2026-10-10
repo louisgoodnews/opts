@@ -148,7 +148,8 @@ impl ContentLoader<'_> {
     /// Loads a texture, searching `dirs` in order and then the global `Texture` folder.
     pub fn texture(&mut self, name: &str, dirs: &[PathBuf]) -> Option<Handle<Image>> {
         let name = name.trim();
-        if name.is_empty() {
+        // Authors write `------` for "no texture"; that is not a missing file.
+        if name.is_empty() || name.chars().all(|c| c == '-') {
             return None;
         }
         let global = self.install.root().join("Texture");

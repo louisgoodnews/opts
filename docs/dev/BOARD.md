@@ -490,3 +490,4 @@ The agent should check these during P-001 audits:
 - `2026-10-07` — P-004: M-0017 (Model Configuration Parser) work items populated: 3 in Ready, 1 in Backlog.
 - `2026-10-10` — P-900 Phase C (audit 5037f89a): M-0037–M-0042 added (first task each to Ready, rest to Backlog); items appended for M-0024/M-0025. Nothing moved to In Progress. Ready = 10 (above the usual size: six are first tasks of new milestones).
 - `2026-10-10` — P-900 Phase D (audit 5037f89a): links repaired (144 → 0), link-check CI job added, `omsi_world.rs` split into modules. Related items ticked; milestones M-0040/41/42 stay Planned with progress notes.
+- `2026-10-10` — M-0043 (CLI Control Protocol & Hot Reload) complete: 36 of 49 methods, hot reload for meshes, configs, tiles and textures; follow-ups in ROADMAP Deferred Cleanup. See `docs/src/meta/control-protocol-2026-10-10.md`.
