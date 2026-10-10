@@ -1,7 +1,6 @@
 //! Scrollable livery/repaint selection widget and setvars configuration trigger for vehicles.
 
 use std::fs;
-use std::path::Path;
 
 use bevy::prelude::*;
 use opts_gui::prelude::*;
@@ -23,11 +22,11 @@ pub fn get_vehicle_repaints(vehicle: &VehicleItem) -> Vec<String> {
     }
 
     // Scan external OMSI 2 installation for actual .cti files
-    for base in [
-        "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/Vehicles",
-        "/home/louisgoodnews/.steam/steam/steamapps/common/OMSI 2/Vehicles",
-    ] {
-        let base_path = Path::new(base);
+    for base_path in crate::omsi_root::known_omsi_root()
+        .map(|r| r.join("Vehicles"))
+        .iter()
+        .map(std::path::PathBuf::as_path)
+    {
         if !base_path.is_dir() {
             continue;
         }

@@ -409,9 +409,13 @@ light_switch_var
 
 #[test]
 fn test_citybus_facelift_model_cfg_live() {
-    let path = std::path::Path::new("/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/Vehicles/Citybus 530 Facelift by Kajosoft/Model/model_o530_e3_3.cfg");
+    let Some(root) = std::env::var_os("OMSI_PATH") else {
+        return;
+    };
+    let path = std::path::Path::new(&root)
+        .join("Vehicles/Citybus 530 Facelift by Kajosoft/Model/model_o530_e3_3.cfg");
     if path.exists() {
-        let bytes = std::fs::read(path).expect("read Citybus model cfg");
+        let bytes = std::fs::read(&path).expect("read Citybus model cfg");
         let config =
             ModelConfig::parse_bytes(&bytes).expect("parse Citybus model cfg successfully");
         assert!(!config.lods.is_empty());

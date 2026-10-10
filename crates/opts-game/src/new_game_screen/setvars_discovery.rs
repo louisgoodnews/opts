@@ -1,7 +1,6 @@
 //! Vehicle setvar discovery routines: inspecting .cti files and known model definitions.
 
 use std::fs;
-use std::path::Path;
 
 use crate::new_game_screen::types::VehicleItem;
 
@@ -22,11 +21,11 @@ pub fn get_vehicle_setvars(
     custom_setvars: &std::collections::HashMap<String, i32>,
 ) -> Vec<SetvarItem> {
     let mut scanned_vars = std::collections::HashSet::new();
-    for base in [
-        "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/Vehicles",
-        "/home/louisgoodnews/.steam/steam/steamapps/common/OMSI 2/Vehicles",
-    ] {
-        let base_path = Path::new(base);
+    for base_path in crate::omsi_root::known_omsi_root()
+        .map(|r| r.join("Vehicles"))
+        .iter()
+        .map(std::path::PathBuf::as_path)
+    {
         if !base_path.is_dir() {
             continue;
         }

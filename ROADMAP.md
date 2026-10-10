@@ -208,9 +208,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **⬆️ Engine Upgrade** — [M-0044](docs/src/roadmap/phase-5/M-0044.md)
   - [ ] Migrate Bevy 0.14 → current in verified single-version steps.
 - [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
-  - [ ] Code-quality debt: size limits, panics in library code, stubs, rustdoc — [M-0040](docs/src/roadmap/phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
-  - [ ] Documentation repair and developer switch reference — [M-0041](docs/src/roadmap/phase-5/M-0041.md) (F-013, F-018, F-020–F-023).
-  - [ ] CI and toolchain hardening: link check, mdBook build, toolchain pin, Windows job — [M-0042](docs/src/roadmap/phase-5/M-0042.md) (F-024–F-026).
+  - [~] Code-quality debt (rustdoc, panics, fixtures, tile loader done; size splits open): size limits, panics in library code, stubs, rustdoc — [M-0040](docs/src/roadmap/phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
+  - [x] Documentation repair and developer switch reference — [M-0041](docs/src/roadmap/phase-5/M-0041.md) (F-013, F-018, F-020–F-023).
+  - [~] CI and toolchain hardening (written, unverified until first CI run; binrw open): link check, mdBook build, toolchain pin, Windows job — [M-0042](docs/src/roadmap/phase-5/M-0042.md) (F-024–F-026).
 
 ---
 

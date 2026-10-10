@@ -1,5 +1,7 @@
 # `opts-benchmark`
 
+> ⚠️ **Deprecated (2026-10-11):** this crate does not exist in the workspace; the page is kept as design history. See the [catalog](../catalog.md).
+
 | Metadata | Value |
 | :--- | :--- |
 | **Layer** | Development |

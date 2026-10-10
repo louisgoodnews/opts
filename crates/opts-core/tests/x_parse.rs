@@ -1,45 +1,48 @@
 //! Integration and robustness tests for DirectX `.x` parser.
 //!
 //! Validates parser against clean-room mutation kit fixtures (tests T10–T12)
-//! located at `/home/louisgoodnews/Dokumente/opts-mutation-kit/out/Sceneryobjects/OPTS_Test/model/`.
+//! located in the OMSI installation (`$OMSI_PATH`).
 
 use std::path::PathBuf;
 
 use opts_core::formats::x::{parse_x, XParseError};
 
-/// The mutation-test fixtures live in the OMSI installation (`Sceneryobjects/OPTS_Test/model`);
-/// an `OPTS_X_FIXTURES` directory, the old mutation-kit output and `$OMSI_PATH` are tried too.
-fn fixtures_dir() -> PathBuf {
+/// The mutation-test fixtures live in the OMSI installation (`Sceneryobjects/OPTS_Test/model`),
+/// found through `$OPTS_X_FIXTURES` (the folder itself) or `$OMSI_PATH` (the installation).
+/// Without them the tests skip.
+fn fixtures_dir() -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
     if let Some(p) = std::env::var_os("OPTS_X_FIXTURES") {
         candidates.push(PathBuf::from(p));
     }
-    candidates.push(PathBuf::from(
-        "/home/louisgoodnews/Dokumente/opts-mutation-kit/out/Sceneryobjects/OPTS_Test/model",
-    ));
     if let Some(root) = std::env::var_os("OMSI_PATH") {
         candidates.push(PathBuf::from(root).join("Sceneryobjects/OPTS_Test/model"));
     }
-    candidates.push(PathBuf::from(
-        "/mnt/nvme2n1/nvme2n1p1/louisgoodnews/steamapps/common/OMSI 2/Sceneryobjects/OPTS_Test/model",
-    ));
     candidates
-        .iter()
+        .into_iter()
         .find(|p| p.join("t10_x_ident_quad.x").exists())
-        .cloned()
-        .unwrap_or_else(|| candidates[0].clone())
 }
 
-fn read_fixture(filename: &str) -> Vec<u8> {
-    let path = fixtures_dir().join(filename);
-    std::fs::read(&path)
-        .unwrap_or_else(|e| panic!("Failed to read fixture {}: {}", path.display(), e))
+fn read_fixture(filename: &str) -> Option<Vec<u8>> {
+    let Some(dir) = fixtures_dir() else {
+        eprintln!("OPTS_Test fixtures not found (set OMSI_PATH); skipping");
+        return None;
+    };
+    let path = dir.join(filename);
+    Some(
+        std::fs::read(&path)
+            .unwrap_or_else(|e| panic!("Failed to read fixture {}: {}", path.display(), e)),
+    )
 }
 
 #[test]
 fn test_t10_quad_triangulation_vs_triangles() {
-    let quad_bytes = read_fixture("t10_x_ident_quad.x");
-    let tri_bytes = read_fixture("t10_x_ident_tri.x");
+    let Some(quad_bytes) = read_fixture("t10_x_ident_quad.x") else {
+        return;
+    };
+    let Some(tri_bytes) = read_fixture("t10_x_ident_tri.x") else {
+        return;
+    };
 
     let quad_mesh = parse_x(&quad_bytes).expect("t10_x_ident_quad.x should parse");
     let tri_mesh = parse_x(&tri_bytes).expect("t10_x_ident_tri.x should parse");
@@ -67,7 +70,9 @@ fn test_t10_quad_triangulation_vs_triangles() {
 #[test]
 fn test_t11_frame_transform_matrices() {
     // 1. SwapYZ: row 1 is (0,0,1,0), row 2 is (0,1,0,0)
-    let swap_bytes = read_fixture("t11_x_swapyz.x");
+    let Some(swap_bytes) = read_fixture("t11_x_swapyz.x") else {
+        return;
+    };
     let swap_mesh = parse_x(&swap_bytes).expect("t11_x_swapyz.x should parse");
     let swap_frame = &swap_mesh.frames[0];
     let m = swap_frame.transform.expect("frame must have transform");
@@ -75,7 +80,9 @@ fn test_t11_frame_transform_matrices() {
     assert_eq!(m[2], [0.0, 1.0, 0.0, 0.0]);
 
     // 2. Scale 0.025: diagonal is (0.025, 0.025, 0.025, 1.0)
-    let scale_bytes = read_fixture("t11_x_scale0025.x");
+    let Some(scale_bytes) = read_fixture("t11_x_scale0025.x") else {
+        return;
+    };
     let scale_mesh = parse_x(&scale_bytes).expect("t11_x_scale0025.x should parse");
     let scale_frame = &scale_mesh.frames[0];
     let m_scale = scale_frame.transform.expect("frame must have transform");
@@ -84,7 +91,9 @@ fn test_t11_frame_transform_matrices() {
     assert!((m_scale[2][2] - 0.025).abs() < 1e-6);
 
     // 3. Translate 3.0 in X: m[3] is (3.0, 0.0, 0.0, 1.0)
-    let trans_bytes = read_fixture("t11_x_translate3.x");
+    let Some(trans_bytes) = read_fixture("t11_x_translate3.x") else {
+        return;
+    };
     let trans_mesh = parse_x(&trans_bytes).expect("t11_x_translate3.x should parse");
     let trans_frame = &trans_mesh.frames[0];
     let m_trans = trans_frame.transform.expect("frame must have transform");
@@ -93,7 +102,9 @@ fn test_t11_frame_transform_matrices() {
 
 #[test]
 fn test_t12_named_material_reference_resolution() {
-    let ref_bytes = read_fixture("t12_x_refmaterial.x");
+    let Some(ref_bytes) = read_fixture("t12_x_refmaterial.x") else {
+        return;
+    };
     let ref_mesh = parse_x(&ref_bytes).expect("t12_x_refmaterial.x should parse");
 
     // Top-level material M was defined
@@ -112,7 +123,9 @@ fn test_t12_named_material_reference_resolution() {
 
 #[test]
 fn test_t12_reversed_face_winding() {
-    let rev_bytes = read_fixture("t12_x_reversed.x");
+    let Some(rev_bytes) = read_fixture("t12_x_reversed.x") else {
+        return;
+    };
     let rev_mesh = parse_x(&rev_bytes).expect("t12_x_reversed.x should parse");
     let sub = rev_mesh.primary_mesh().expect("primary mesh should exist");
 

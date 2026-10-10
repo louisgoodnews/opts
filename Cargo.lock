@@ -3939,6 +3939,7 @@ dependencies = [
  "opts-catalogue",
  "opts-cli",
  "opts-core",
+ "opts-game",
  "opts-gui",
  "opts-logging",
  "opts-sim",
@@ -3996,12 +3997,9 @@ dependencies = [
 name = "opts-tools"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "ddsfile",
  "image",
  "opts-core",
- "opts-logging",
- "tracing",
 ]
 
 [[package]]

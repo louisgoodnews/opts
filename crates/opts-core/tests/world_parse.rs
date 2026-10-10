@@ -597,11 +597,14 @@ fn test_robustness_pseudorandom_fuzzing() {
 
 #[test]
 fn test_omsi2_corpus_live_validation() {
-    let omsi_root = std::path::Path::new("/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2");
-    if !omsi_root.exists() {
-        eprintln!("OMSI 2 root not present; skipping live corpus verification");
+    let Some(omsi_root) = std::env::var_os("OMSI_PATH")
+        .map(std::path::PathBuf::from)
+        .filter(|p| p.exists())
+    else {
+        eprintln!("OMSI_PATH not set; skipping live corpus verification");
         return;
-    }
+    };
+    let omsi_root = omsi_root.as_path();
 
     // 1. Verify Grundorf global.cfg
     let grundorf_global = omsi_root.join("maps/Grundorf/global.cfg");

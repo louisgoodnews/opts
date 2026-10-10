@@ -10,7 +10,9 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 > [!IMPORTANT]
 > This catalog is a **map, not a to-do list**. A planned crate is created when its first code is written and it passes the [When to Create a Crate](architecture.md#-when-to-create-a-crate) test. Until then, the code lives as a module in the nearest existing crate.
 
-**Status legend:** ✅ exists · 🔁 exists, to be renamed/repurposed · 🆕 planned · 💭 speculative
+**Status legend:** ✅ exists · 🔁 exists, to be renamed/repurposed · 🆕 planned · 💭 speculative · 🗑️ removed
+
+> **Current workspace (2026-10-11):** `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core`, `opts-game`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-tools`. The folders `opts-assets`, `opts-benchmark`, `opts-discovery`, `opts-editor`, `opts-graphics`, `opts-parsers` and `opts-utils` describe crates that no longer exist or were never created; they are kept as design history.
 
 ---
 
@@ -18,7 +20,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 
 | Crate | Status | Purpose | Key deps | Phase |
 | :--- | :---: | :--- | :--- | :---: |
-| `opts-utils` | ✅ | Minimal shared helpers | — | 2 |
+| `opts-utils` | 🗑️ | Removed in `07de1b0` (placeholder crate); its folder here is history | — | — |
 | `opts-diagnostics` | 🆕 | Spans, severities, multi-error reports | `thiserror` | 2 |
 | `opts-text` | 🆕 | CP1252/UTF-8 decoding, `[keyword]` line lexer | `encoding_rs`, `nom` | 2 |
 | `opts-vfs` | 🆕 | `FileSource`, case-insensitive paths, overlays | — | 2 |
