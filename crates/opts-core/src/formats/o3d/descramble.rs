@@ -1021,6 +1021,41 @@ pub fn decode_joint_bounded(
     out
 }
 
+/// Moves vertices that the labelling put far outside the bulk of the mesh back inside, when one
+/// of their four permutations fits: the robust box is the 2 %–98 % range of every axis widened by
+/// 30 % of its span. Real stray vertices are rare, wrong labels at symmetric parts produce them.
+fn refine_outliers(o: &O3d, labels: &mut [u8]) {
+    let n = o.vertices.len();
+    if n < 50 {
+        return;
+    }
+    let pos = |i: usize, l: u8| permuted(l as usize, o.vertices[i].position);
+    let mut axis: [Vec<f32>; 3] = Default::default();
+    for i in 0..n {
+        let p = pos(i, labels[i]);
+        for k in 0..3 {
+            axis[k].push(p[k]);
+        }
+    }
+    let (mut lo, mut hi) = ([0.0f32; 3], [0.0f32; 3]);
+    for k in 0..3 {
+        axis[k].sort_by(f32::total_cmp);
+        let (a, b) = (axis[k][n / 50], axis[k][n - 1 - n / 50]);
+        let pad = 0.3 * (b - a) + 0.05;
+        lo[k] = a - pad;
+        hi[k] = b + pad;
+    }
+    let inside = |p: Vec3| (0..3).all(|k| p[k] >= lo[k] && p[k] <= hi[k]);
+    for i in 0..n {
+        if inside(pos(i, labels[i])) {
+            continue;
+        }
+        if let Some(l) = (0..4u8).find(|&l| inside(pos(i, l))) {
+            labels[i] = l;
+        }
+    }
+}
+
 /// Axis-aligned box every decoded vertex is expected to lie in (mesh frame).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ExpectedBounds {
@@ -1128,7 +1163,10 @@ fn decode_confident_masked(
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
     }
-    let (labels, agree) = match confident_labels(o, params, allowed.as_deref()) {
+    let (labels, agree) = match confident_labels(o, params, allowed.as_deref()).map(|(mut l, a)| {
+        refine_outliers(o, &mut l);
+        (l, a)
+    }) {
         Ok(v) => v,
         Err(best_pair) => return rejected(best_pair, 0.0),
     };

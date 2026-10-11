@@ -27,7 +27,7 @@ use crate::material::o3d_material_to_standard_material;
 use crate::texture::load_bevy_image;
 
 /// Scrambled (keyed) meshes larger than this along any axis are rejected as corrupt (metres).
-pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 150.0;
+pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 400.0;
 
 /// Plain meshes are trusted far more: road and crossing models are legitimately hundreds of
 /// metres long (up to ~700 m observed), so only absurd sizes count as corrupt.

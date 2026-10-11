@@ -19,7 +19,7 @@ use opts_core::formats::o3d::O3d;
 
 /// Bump when the decoder *algorithm* changes in a way that alters its output; parameter changes
 /// are covered by [`DecodeParams::fingerprint`], which is part of every entry's file name.
-const VERSION: u8 = 4;
+const VERSION: u8 = 5;
 /// Default size cap of the cache directory.
 pub const DEFAULT_MAX_BYTES: u64 = 256 * 1024 * 1024;
 
