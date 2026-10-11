@@ -32,6 +32,9 @@ pub struct ArticulatedSegment {
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
     pub max_alpha_deg: f32,
+    /// The segment hangs backwards (its model is turned by 180°). Its coupling points and rear
+    /// axle are then given mirrored (`-x`, `-y`) and the model is rotated half a turn.
+    pub reversed: bool,
     /// The kinematic state, created on the first step from the leader's pose.
     state: Option<TrailerKinematics>,
 }
@@ -45,6 +48,7 @@ impl ArticulatedSegment {
             front_local,
             rear_axle_y,
             max_alpha_deg,
+            reversed: false,
             state: None,
         }
     }
@@ -113,7 +117,12 @@ pub fn articulation_system(
                 st.origin.y as f32,
                 root_tf.translation.y,
             ));
-            tf.rotation = Quat::from_rotation_y(-(st.heading as f32));
+            let turn = if seg.reversed {
+                std::f32::consts::PI
+            } else {
+                0.0
+            };
+            tf.rotation = Quat::from_rotation_y(-(st.heading as f32) - turn);
             alphas.push(st.alpha.to_degrees());
             leader = (st.origin, st.heading);
         }

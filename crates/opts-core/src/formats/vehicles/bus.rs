@@ -143,6 +143,9 @@ pub struct BusManifest {
     pub coupling_back: Option<glam::Vec3>,
     /// File name of the trailer coupled behind this vehicle (`[couple_back]`).
     pub couple_back: Option<String>,
+    /// The trailer is coupled facing backwards (second line of `[couple_back]` is `true`): its
+    /// *rear* coupling meets this vehicle's rear coupling, as the B head of the NF6D.
+    pub couple_back_reversed: bool,
     /// Limits of the front coupling of a trailing segment (`[coupling_front_character]`).
     pub coupling_front_limits: Option<CouplingLimits>,
     /// Driver view camera presets.
@@ -186,6 +189,7 @@ impl BusManifest {
         let mut coupling_front = None;
         let mut coupling_back = None;
         let mut couple_back = None;
+        let mut couple_back_reversed = false;
         let mut coupling_front_limits = None;
         let mut driver_cameras = Vec::new();
         let mut pax_cameras = Vec::new();
@@ -359,6 +363,10 @@ impl BusManifest {
                         .first()
                         .map(|f| f.trim().to_string())
                         .filter(|f| !f.is_empty());
+                    couple_back_reversed = block
+                        .parameters
+                        .get(1)
+                        .is_some_and(|f| f.trim().eq_ignore_ascii_case("true"));
                 }
                 "add_camera_driver" if block.parameters.len() >= 7 => {
                     if let Some(cam) = parse_camera_block(&block.parameters, true) {
@@ -419,6 +427,7 @@ impl BusManifest {
             coupling_front,
             coupling_back,
             couple_back,
+            couple_back_reversed,
             coupling_front_limits,
             driver_cameras,
             pax_cameras,

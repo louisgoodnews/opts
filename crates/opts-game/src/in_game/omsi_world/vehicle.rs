@@ -314,7 +314,7 @@ pub(super) fn spawn_trailer_chain(
     bus_dir: &Path,
     tractor: &BusManifest,
 ) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
-    const MAX_SEGMENTS: usize = 4;
+    const MAX_SEGMENTS: usize = 16;
     let mut cams = Vec::new();
     let mut chain = Vec::new();
     let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
@@ -352,15 +352,30 @@ pub(super) fn spawn_trailer_chain(
         };
         // Both coupling points are in their own vehicle frame; the segment follows its leader
         // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
-        let (Some(b), Some(f)) = (parent_manifest.coupling_back, manifest.coupling_front) else {
+        let reversed = parent_manifest.couple_back_reversed;
+        let own_joint = if reversed {
+            manifest.coupling_back.map(|c| -c)
+        } else {
+            manifest.coupling_front
+        };
+        let (Some(b), Some(f)) = (parent_manifest.coupling_back, own_joint) else {
             tracing::error!(at = %opts_bevy::position_tag(), trailer = %path.display(), "coupling points missing; trailer not attached");
             break;
         };
-        let rear_axle_y = manifest
-            .axles
-            .iter()
-            .map(|a| a.longitudinal_m)
-            .fold(f32::INFINITY, f32::min);
+        let rear_axle_y = if reversed {
+            // Mirrored: the model's frontmost axle becomes the rearmost.
+            -manifest
+                .axles
+                .iter()
+                .map(|a| a.longitudinal_m)
+                .fold(f32::NEG_INFINITY, f32::max)
+        } else {
+            manifest
+                .axles
+                .iter()
+                .map(|a| a.longitudinal_m)
+                .fold(f32::INFINITY, f32::min)
+        };
         let rear_axle_y = if rear_axle_y.is_finite() {
             rear_axle_y
         } else {
@@ -374,12 +389,16 @@ pub(super) fn spawn_trailer_chain(
                 Name::new(name.clone()),
                 Transform::default(),
                 Visibility::default(),
-                opts_bevy::ArticulatedSegment::new(
-                    Vec2::new(b.x, b.y),
-                    Vec2::new(f.x, f.y),
-                    rear_axle_y,
-                    max_alpha,
-                ),
+                {
+                    let mut s = opts_bevy::ArticulatedSegment::new(
+                        Vec2::new(b.x, b.y),
+                        Vec2::new(f.x, f.y),
+                        rear_axle_y,
+                        max_alpha,
+                    );
+                    s.reversed = reversed;
+                    s
+                },
                 InGameEntity,
             ))
             .id();
@@ -400,6 +419,11 @@ pub(super) fn spawn_trailer_chain(
         job.cache.texture_replacements.clear();
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
+        if reversed {
+            // The chain of a reversed head leads back into this consist (the NF6D's B head
+            // couples to the articulation joint again): the ring is closed here.
+            break;
+        }
         (parent_dir, parent_manifest) = (dir, manifest);
     }
     if !chain.is_empty() {
