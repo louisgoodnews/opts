@@ -338,14 +338,88 @@ pub fn rail_player_step(
     }
 }
 
-/// Pitches the player's tram along the gradient (after the transform sync of the vehicle).
-pub fn rail_player_pose(mut players: Query<(&RailPlayer, &VehicleController, &mut Transform)>) {
-    for (rail, controller, mut tf) in &mut players {
-        if rail.train.is_none() {
+/// The units behind a rail-bound player's head: `(entity, origin distance behind the head's
+/// origin, hangs backwards)`. They are placed on the track, not by trailer kinematics.
+#[derive(Component, Default)]
+pub struct RailChainLayout {
+    /// Segment entities in coupling order.
+    pub units: Vec<(Entity, f32, bool)>,
+}
+
+/// Pose of a unit whose origin is `behind` metres behind the head: it lies on the track at that
+/// point, aligned with the chord of the track 2 m ahead and behind it, pitched with the gradient.
+fn unit_pose(train: &Train, net: &PedestrianNet, behind: f32, reversed: bool) -> Option<Transform> {
+    let (mid, tangent) = train.pose_behind(net, behind)?;
+    let a = (behind - 2.0).max(0.0);
+    let front = train.pose_behind(net, a)?.0;
+    let rear = train.pose_behind(net, a + 4.0)?.0;
+    let (dx, dy) = (front.x - rear.x, front.y - rear.y);
+    let run = dx.hypot(dy);
+    let (heading, pitch) = if run > 0.5 {
+        (dx.atan2(dy), ((front.z - rear.z) / run).atan())
+    } else {
+        (tangent, 0.0)
+    };
+    let turn = if reversed { std::f32::consts::PI } else { 0.0 };
+    Some(Transform {
+        translation: omsi_to_bevy_pos(mid),
+        rotation: Quat::from_rotation_y(-heading)
+            * Quat::from_rotation_x(pitch)
+            * Quat::from_rotation_y(turn),
+        scale: Vec3::ONE,
+    })
+}
+
+/// Places the player's tram (head and following units) on the track, and writes the joint angles
+/// the models' bellows read.
+pub fn rail_player_pose(
+    net: Res<RailNetwork>,
+    mut players: Query<(
+        &RailPlayer,
+        &mut Transform,
+        Option<&RailChainLayout>,
+        Option<&opts_bevy::VehicleScripts>,
+    )>,
+    mut units: Query<&mut Transform, Without<RailPlayer>>,
+) {
+    for (rail, mut tf, layout, scripts) in &mut players {
+        let Some(train) = rail.train.as_ref() else {
             continue;
+        };
+        if let Some(t) = unit_pose(train, &net.0, 0.0, false) {
+            *tf = t;
         }
-        tf.rotation = Quat::from_rotation_y(-controller.sim.chassis.heading_rad)
-            * Quat::from_rotation_x(rail.pitch);
+        let Some(layout) = layout else { continue };
+        let mut previous = tf.rotation.to_euler(EulerRot::YXZ).0;
+        let mut alphas = Vec::with_capacity(layout.units.len());
+        for &(e, behind, reversed) in &layout.units {
+            let Some(pose) = unit_pose(train, &net.0, behind, reversed) else {
+                continue;
+            };
+            let yaw = pose.rotation.to_euler(EulerRot::YXZ).0;
+            let own = if reversed {
+                yaw + std::f32::consts::PI
+            } else {
+                yaw
+            };
+            let d = (own - previous + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
+                - std::f32::consts::PI;
+            // Bevy yaw is counter-clockwise; the models expect clockwise degrees.
+            alphas.push(-d.to_degrees());
+            previous = own;
+            if let Ok(mut u) = units.get_mut(e) {
+                *u = pose;
+            }
+        }
+        if let Some(scripts) = scripts {
+            if let Ok(mut engine) = scripts.engine.lock() {
+                for (k, a) in alphas.iter().enumerate() {
+                    engine.set(&format!("articulation_{k}_alpha"), *a);
+                    engine.set(&format!("articulation_{k}_beta"), 0.0);
+                    engine.set(&format!("articulation_{k}_gamma"), 0.0);
+                }
+            }
+        }
     }
 }
 
@@ -359,6 +433,8 @@ struct UnitSpec {
     tex_dirs: Vec<std::path::PathBuf>,
     /// Distance of the unit's origin behind the head unit's origin (m).
     behind: f32,
+    /// Hangs backwards (coupled with the `true` flag).
+    reversed: bool,
 }
 
 /// A trainset assembled from a `.bus`/`.ovh` chain.
@@ -386,7 +462,7 @@ pub struct AiTrain {
     bike: bool,
     train: Train,
     speed: f32,
-    units: Vec<(Entity, f32)>,
+    units: Vec<(Entity, f32, bool)>,
     wheel_angle: f32,
 }
 
@@ -480,10 +556,11 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
         model_dir,
         tex_dirs,
         behind: 0.0,
+        reversed: false,
     }];
     let mut dir = path.parent()?.to_path_buf();
     let mut behind = 0.0_f32;
-    for _ in 0..12 {
+    for _ in 0..40 {
         let Some(next) = manifest.couple_back.clone() else {
             break;
         };
@@ -493,11 +570,17 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
         let Some((m, lod, model_dir, tex_dirs)) = parse_unit(job, &next_path) else {
             break;
         };
-        let (Some(b), Some(f)) = (manifest.coupling_back, m.coupling_front) else {
+        let reversed = manifest.couple_back_reversed;
+        let own = if reversed {
+            m.coupling_back.map(|c| -c)
+        } else {
+            m.coupling_front
+        };
+        let (Some(b), Some(f)) = (manifest.coupling_back, own) else {
             break;
         };
         // The next unit's origin lies at `b − f` in this unit's frame (y forward).
-        behind += -(b.y - f.y);
+        behind += f.y - b.y;
         units.push(UnitSpec {
             name: next_path
                 .file_stem()
@@ -507,7 +590,11 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
             model_dir,
             tex_dirs,
             behind,
+            reversed,
         });
+        if reversed {
+            break; // the ring of a double-ended consist closes here
+        }
         dir = next_path.parent()?.to_path_buf();
         manifest = m;
     }
@@ -629,9 +716,9 @@ fn try_spawn(
             &u.model_dir,
             &u.tex_dirs,
         );
-        units.push((root, u.behind, count));
+        units.push((root, u.behind, u.reversed, count));
     }
-    if units.iter().any(|u| u.2 == 0) {
+    if units.iter().any(|u| u.3 == 0) {
         // Meshes still decoding in the background: discard and try again on the next tick.
         for (e, ..) in &units {
             commands.entity(*e).despawn();
@@ -644,7 +731,7 @@ fn try_spawn(
         bike,
         train: Train::new(lane, s, dir),
         speed: 0.0,
-        units: units.iter().map(|u| (u.0, u.1)).collect(),
+        units: units.iter().map(|u| (u.0, u.1, u.2)).collect(),
         wheel_angle: 0.0,
     });
 }
@@ -677,7 +764,7 @@ pub fn move_ai_trains(
                 .is_some_and(|(p, _)| c.distance(omsi_to_bevy_pos(p)) > AI_DESPAWN_M)
         });
         if end || far || t.train.pose(net).is_none() {
-            for (e, _) in &t.units {
+            for (e, ..) in &t.units {
                 commands.entity(*e).despawn();
             }
             let _ = head;
@@ -685,14 +772,13 @@ pub fn move_ai_trains(
         }
         t.wheel_angle += step / 0.29;
         let angle = t.wheel_angle;
-        let list: Vec<(Entity, f32)> = t.units.clone();
-        for (e, behind) in list {
-            let Some((p, h)) = t.train.pose_behind(net, behind) else {
+        let list = t.units.clone();
+        for (e, behind, reversed) in list {
+            let Some(pose) = unit_pose(&t.train, net, behind, reversed) else {
                 continue;
             };
             if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {
-                tf.translation = omsi_to_bevy_pos(p);
-                tf.rotation = Quat::from_rotation_y(-h);
+                *tf = pose;
                 *vis = Visibility::Visible;
                 for axle in 0..6 {
                     for side in ["l", "r"] {

@@ -314,9 +314,11 @@ pub(super) fn spawn_trailer_chain(
     bus_dir: &Path,
     tractor: &BusManifest,
 ) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
-    const MAX_SEGMENTS: usize = 16;
+    const MAX_SEGMENTS: usize = 40;
     let mut cams = Vec::new();
     let mut chain = Vec::new();
+    let mut layout = Vec::new();
+    let mut behind = 0.0_f32;
     let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
     for _ in 0..MAX_SEGMENTS {
         let Some(name) = parent_manifest.couple_back.clone() else {
@@ -403,6 +405,9 @@ pub(super) fn spawn_trailer_chain(
             ))
             .id();
         chain.push(seg);
+        // Origin of the segment behind the root's origin along the vehicle's axis (for rails).
+        behind += f.y - b.y;
+        layout.push((seg, behind, reversed));
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
             job.install
@@ -427,9 +432,10 @@ pub(super) fn spawn_trailer_chain(
         (parent_dir, parent_manifest) = (dir, manifest);
     }
     if !chain.is_empty() {
-        commands
-            .entity(root)
-            .insert(opts_bevy::ArticulatedChain { segments: chain });
+        commands.entity(root).insert((
+            opts_bevy::ArticulatedChain { segments: chain },
+            super::RailChainLayout { units: layout },
+        ));
     }
     cams
 }
@@ -588,7 +594,10 @@ pub fn load_player_vehicle(
     if super::is_rail(&manifest) {
         // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`).
         let mass = commands_mass(&manifest);
-        commands.entity(root).insert(super::RailPlayer::new(mass));
+        commands
+            .entity(root)
+            .remove::<opts_bevy::ArticulatedChain>()
+            .insert(super::RailPlayer::new(mass));
     }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
