@@ -27,6 +27,8 @@ const PATH_TYPE_RAIL: u32 = 2;
 const SNAP_MAX_M: f32 = 12.0;
 /// Default number of AI trains.
 pub const DEFAULT_MAX_TRAINS: usize = 3;
+/// Cruise speed of cyclists (m/s).
+const BIKE_CRUISE_MS: f32 = 4.5;
 /// Cruise speed of AI trains (m/s).
 const AI_CRUISE_MS: f32 = 9.0;
 /// AI trains appear this far from the camera (m)…
@@ -39,6 +41,23 @@ const AI_DESPAWN_M: f32 = 600.0;
 /// The track network of the resident tiles.
 #[derive(Resource, Default)]
 pub struct RailNetwork(pub PedestrianNet);
+
+/// The cycle-path network of the resident tiles (`LaneKind::Bike` lanes of splines).
+#[derive(Resource, Default)]
+pub struct BikeNetwork(pub PedestrianNet);
+
+/// Cap on riders (`--cyclists N`).
+#[derive(Resource, Clone, Copy)]
+pub struct BikeSettings {
+    /// Cap on simultaneously riding cyclists.
+    pub max_riders: usize,
+}
+
+impl Default for BikeSettings {
+    fn default() -> Self {
+        Self { max_riders: 6 }
+    }
+}
 
 /// Number of AI trains (`--trains N`).
 #[derive(Resource, Clone, Copy)]
@@ -111,6 +130,41 @@ pub(super) fn tile_rail_lanes(
     out
 }
 
+/// Cycle-path lanes of a tile's splines in the session frame.
+pub(super) fn tile_bike_lanes(
+    job: &mut WorldLoadJob,
+    tile: &MapTile,
+    origin: (f32, f32),
+) -> Vec<FootLane> {
+    let mut out = Vec::new();
+    for inst in &tile.splines {
+        let Some(profile) = job.sli(&inst.sli_file) else {
+            continue;
+        };
+        let name = inst.sli_file.rsplit(['\\', '/']).next().unwrap_or("");
+        out.extend(lanes_of_kind(inst, &profile, name, origin, LaneKind::Bike));
+    }
+    out
+}
+
+/// Registers a tile's cycle-path lanes.
+pub(super) fn register_bike_tile(commands: &mut Commands, key: (i32, i32), lanes: Vec<FootLane>) {
+    commands.queue(move |world: &mut World| {
+        if let Some(mut net) = world.get_resource_mut::<BikeNetwork>() {
+            net.0.insert_tile(key, lanes);
+        }
+    });
+}
+
+/// Removes an unloaded tile's cycle-path lanes.
+pub(super) fn unregister_bike_tile(commands: &mut Commands, key: (i32, i32)) {
+    commands.queue(move |world: &mut World| {
+        if let Some(mut net) = world.get_resource_mut::<BikeNetwork>() {
+            net.0.remove_tile(key);
+        }
+    });
+}
+
 /// Registers a tile's track lanes.
 pub(super) fn register_tile(commands: &mut Commands, key: (i32, i32), lanes: Vec<FootLane>) {
     commands.queue(move |world: &mut World| {
@@ -135,7 +189,16 @@ pub fn configure_rail(
     mut settings: ResMut<RailSettings>,
     mut net: ResMut<RailNetwork>,
     mut pool: ResMut<RailAiPool>,
+    mut bike_settings: ResMut<BikeSettings>,
+    mut bike_net: ResMut<BikeNetwork>,
+    mut bike_pool: ResMut<BikeAiPool>,
 ) {
+    bike_settings.max_riders = args
+        .as_ref()
+        .and_then(|a| a.0.cyclists)
+        .unwrap_or(BikeSettings::default().max_riders);
+    bike_net.0 = PedestrianNet::default();
+    *bike_pool = BikeAiPool::default();
     settings.max_trains = args.and_then(|a| a.0.trains).unwrap_or(DEFAULT_MAX_TRAINS);
     net.0 = PedestrianNet::default();
     *pool = RailAiPool::default();
@@ -313,9 +376,14 @@ pub struct RailAiPool {
     rng: u32,
 }
 
+/// Riders found in the map's AI lists (light `[type] 2` vehicles: bicycles, e-scooters).
+#[derive(Resource, Default)]
+pub struct BikeAiPool(RailAiPool);
+
 /// A running AI train.
 #[derive(Component)]
 pub struct AiTrain {
+    bike: bool,
     train: Train,
     speed: f32,
     units: Vec<(Entity, f32)>,
@@ -323,13 +391,19 @@ pub struct AiTrain {
 }
 
 /// Reads the AI lists once and keeps every rail vehicle (`[type] 2`) with its coupling chain.
-pub fn load_rail_variants(job: Option<ResMut<WorldLoadJob>>, mut pool: ResMut<RailAiPool>) {
+pub fn load_rail_variants(
+    job: Option<ResMut<WorldLoadJob>>,
+    mut pool: ResMut<RailAiPool>,
+    mut bikes: ResMut<BikeAiPool>,
+) {
     let Some(job) = job else { return };
     if pool.started {
         return;
     }
     pool.started = true;
     pool.rng = 0x7A41_C0DE;
+    bikes.0.started = true;
+    bikes.0.rng = 0xB1CE_0001;
     let Some(path) = job.install.find_in(&job.config.map_dir, "ailists.cfg") else {
         return;
     };
@@ -344,12 +418,20 @@ pub fn load_rail_variants(job: Option<ResMut<WorldLoadJob>>, mut pool: ResMut<Ra
             if !(f.ends_with(".bus") || f.ends_with(".ovh")) || !seen.insert(f) {
                 continue;
             }
-            if let Some(spec) = load_spec(&job, &e.vehicle) {
-                pool.specs.push(spec);
+            if let Some((spec, light)) = load_spec(&job, &e.vehicle) {
+                if light {
+                    bikes.0.specs.push(spec);
+                } else {
+                    pool.specs.push(spec);
+                }
             }
         }
     }
-    tracing::info!(trains = pool.specs.len(), "rail vehicles in the AI lists");
+    tracing::info!(
+        trains = pool.specs.len(),
+        riders = bikes.0.specs.len(),
+        "rail vehicles and cycles in the AI lists"
+    );
 }
 
 fn parse_unit(
@@ -381,13 +463,16 @@ fn parse_unit(
     Some((manifest, lod, model_dir, tex_dirs))
 }
 
-/// The coupling chain of a rail vehicle; `None` for road vehicles and unreadable files.
-fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<TrainSpec> {
+/// The coupling chain of a `[type] 2` vehicle and whether it is a light one (bicycle, e-scooter:
+/// under a tonne; OMSI files them under the rail type too); `None` for road vehicles and
+/// unreadable files.
+fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
     let path = job.install.find_file(rel)?;
     let (mut manifest, lod, model_dir, tex_dirs) = parse_unit(job, &path)?;
     if !is_rail(&manifest) {
         return None;
     }
+    let light = manifest.mass_tonnes.is_some_and(|m| m < 1.0);
     let name = path.file_stem()?.to_string_lossy().into_owned();
     let mut units = vec![UnitSpec {
         name: name.clone(),
@@ -426,50 +511,96 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<TrainSpec> {
         dir = next_path.parent()?.to_path_buf();
         manifest = m;
     }
-    Some(TrainSpec { name, units })
+    Some((TrainSpec { name, units }, light))
 }
 
 fn next_rand(state: &mut u32) -> f32 {
     opts_sim::pedestrian::net::next_f32(state)
 }
 
-/// Spawns AI trains on tracks around the camera up to `--trains`.
+/// Spawns AI trains on tracks and cyclists on cycle paths around the camera.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_ai_trains(
     time: Res<Time>,
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
     settings: Res<RailSettings>,
+    bike_settings: Res<BikeSettings>,
     net: Res<RailNetwork>,
+    bike_net: Res<BikeNetwork>,
     mut pool: ResMut<RailAiPool>,
+    mut bike_pool: ResMut<BikeAiPool>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
-    living: Query<(), With<AiTrain>>,
+    living: Query<&AiTrain>,
 ) {
-    pool.elapsed += time.delta_secs();
-    if pool.elapsed < 1.0 || settings.max_trains == 0 || pool.specs.is_empty() {
-        return;
-    }
-    pool.elapsed = 0.0;
     let (Some(mut job), Ok(cam)) = (job, camera.single()) else {
         return;
     };
-    if living.iter().count() >= settings.max_trains || net.0.lane_count() == 0 {
+    let centre = (cam.translation().x, -cam.translation().z);
+    let trains = living.iter().filter(|t| !t.bike).count();
+    let riders = living.iter().count() - trains;
+    let dt = time.delta_secs();
+    let mut assets = (&mut *meshes, &mut *materials, &mut *images);
+    try_spawn(
+        false,
+        dt,
+        settings.max_trains.saturating_sub(trains),
+        centre,
+        &net.0,
+        &mut pool,
+        &mut job,
+        &mut commands,
+        &mut assets,
+    );
+    try_spawn(
+        true,
+        dt,
+        bike_settings.max_riders.saturating_sub(riders),
+        centre,
+        &bike_net.0,
+        &mut bike_pool.0,
+        &mut job,
+        &mut commands,
+        &mut assets,
+    );
+}
+
+type SpawnAssets<'a> = (
+    &'a mut Assets<Mesh>,
+    &'a mut Assets<StandardMaterial>,
+    &'a mut Assets<Image>,
+);
+
+/// One spawn attempt per second and kind, when below the cap.
+#[allow(clippy::too_many_arguments)]
+fn try_spawn(
+    bike: bool,
+    dt: f32,
+    room: usize,
+    centre: (f32, f32),
+    net: &PedestrianNet,
+    pool: &mut RailAiPool,
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    assets: &mut SpawnAssets,
+) {
+    pool.elapsed += dt;
+    if pool.elapsed < 1.0 || room == 0 || pool.specs.is_empty() || net.lane_count() == 0 {
         return;
     }
-    let centre = (cam.translation().x, -cam.translation().z);
+    pool.elapsed = 0.0;
+    let (meshes, materials, images) = (&mut *assets.0, &mut *assets.1, &mut *assets.2);
     let mut rng = pool.rng;
-    let spot = net
-        .0
-        .random_spot(centre, AI_SPAWN_MIN_M, AI_SPAWN_MAX_M, &mut rng);
+    let spot = net.random_spot(centre, AI_SPAWN_MIN_M, AI_SPAWN_MAX_M, &mut rng);
     let Some((lane, s)) = spot else {
         pool.rng = rng;
         return;
     };
     let pick = (next_rand(&mut rng) * pool.specs.len() as f32) as usize % pool.specs.len();
-    let dir = match net.0.lane(lane).map(|l| l.travel) {
+    let dir = match net.lane(lane).map(|l| l.travel) {
         Some(Travel::Reverse) => -1,
         Some(Travel::Both) if next_rand(&mut rng) < 0.5 => -1,
         _ => 1,
@@ -488,11 +619,11 @@ pub fn spawn_ai_trains(
             ))
             .id();
         let (count, ..) = load_segment_meshes(
-            &mut job,
-            &mut commands,
-            &mut meshes,
-            &mut materials,
-            &mut images,
+            job,
+            commands,
+            meshes,
+            materials,
+            images,
             root,
             &u.lod,
             &u.model_dir,
@@ -507,9 +638,10 @@ pub fn spawn_ai_trains(
         }
         return;
     }
-    tracing::info!(train = %spec.name, units = spec.units.len(), lane, "AI train spawned");
+    tracing::info!(vehicle = %spec.name, units = spec.units.len(), lane, bike, "AI rail/cycle vehicle spawned");
     let head = units[0].0;
     commands.entity(head).insert(AiTrain {
+        bike,
         train: Train::new(lane, s, dir),
         speed: 0.0,
         units: units.iter().map(|u| (u.0, u.1)).collect(),
@@ -521,7 +653,8 @@ pub fn spawn_ai_trains(
 pub fn move_ai_trains(
     time: Res<Time>,
     mut commands: Commands,
-    net: Res<RailNetwork>,
+    rail_net: Res<RailNetwork>,
+    bike_net: Res<BikeNetwork>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut trains: Query<(Entity, &mut AiTrain)>,
     mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
@@ -529,15 +662,21 @@ pub fn move_ai_trains(
     let dt = time.delta_secs().min(0.1);
     let cam = camera.single().ok().map(|c| c.translation());
     for (head, mut t) in &mut trains {
-        t.speed = (t.speed + 0.8 * dt).min(AI_CRUISE_MS);
+        let net = if t.bike { &bike_net.0 } else { &rail_net.0 };
+        let (accel, cruise) = if t.bike {
+            (1.0, BIKE_CRUISE_MS)
+        } else {
+            (0.8, AI_CRUISE_MS)
+        };
+        t.speed = (t.speed + accel * dt).min(cruise);
         let step = t.speed * dt;
-        let end = t.train.advance(step, &net.0) == Moved::EndOfTrack;
+        let end = t.train.advance(step, net) == Moved::EndOfTrack;
         let far = cam.is_some_and(|c| {
             t.train
-                .pose(&net.0)
+                .pose(net)
                 .is_some_and(|(p, _)| c.distance(omsi_to_bevy_pos(p)) > AI_DESPAWN_M)
         });
-        if end || far || t.train.pose(&net.0).is_none() {
+        if end || far || t.train.pose(net).is_none() {
             for (e, _) in &t.units {
                 commands.entity(*e).despawn();
             }
@@ -548,7 +687,7 @@ pub fn move_ai_trains(
         let angle = t.wheel_angle;
         let list: Vec<(Entity, f32)> = t.units.clone();
         for (e, behind) in list {
-            let Some((p, h)) = t.train.pose_behind(&net.0, behind) else {
+            let Some((p, h)) = t.train.pose_behind(net, behind) else {
                 continue;
             };
             if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {

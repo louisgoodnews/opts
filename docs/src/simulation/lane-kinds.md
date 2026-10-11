@@ -36,3 +36,7 @@ OMSI's `[path]` has four types (`0` road, `1` pedestrian, `2` rail, `3` aircraft
 
 * Shared foot/bike ways (type 1, bike-named) and cycle tracks drawn only as markings (no path): riders would need a path derived from the marking profile's position.
 * Maps with real bike traffic: the Hamburg maps were checked by profile name only; none of the installed Hamburg tiles uses a bike-named *spline* (counted 0 in `Hamburg109`), so bike paths there come from `Invis_*` helper objects or the `.sco` paths ([`sco.md`](../formats/text/sco.md#paths)) — to be surveyed.
+
+## Runtime cyclists
+
+`LaneKind::Bike` lanes of all splines of the resident tiles form a second lane network (`BikeNetwork`, `omsi_world/rail.rs`). Cyclists are the light `[type] 2` vehicles of the map's `ailists.cfg` (under one tonne: `fahrrad_*.bus`, e-scooters, motor scooters; OMSI files them under the rail type) and ride these lanes at ≈ 4.5 m/s with the same lane-following core as trains (`--cyclists N`, default 6). First cut: the bicycle model moves and its wheels turn; limb animation needs the `.osc` scripts (not run for AI vehicles yet). Verified to spawn on HamburgLi20 (`HH4_motorroller_f`, `wagen_1`).

@@ -89,6 +89,10 @@ pub struct CliArgs {
     #[arg(long, value_name = "NAME")]
     pub livery: Option<String>,
 
+    /// Number of cyclists on cycle paths (default 6; `0` = none).
+    #[arg(long, value_name = "N")]
+    pub cyclists: Option<usize>,
+
     /// Number of AI trains (default 3; `0` = none).
     #[arg(long, value_name = "N")]
     pub trains: Option<usize>,
@@ -136,6 +140,7 @@ impl Default for CliArgs {
             cli_token: None,
             pedestrians: None,
             trains: None,
+            cyclists: None,
             livery: None,
             traffic: None,
             cli_allow_dir: Vec::new(),
