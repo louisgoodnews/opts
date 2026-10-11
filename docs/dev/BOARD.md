@@ -118,6 +118,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 - [ ] 🟡 **Extend articulation.md with the coupled physics model and pitch rule** (M-0053, spec) — F-002, F-003.
 - [ ] 🟡 **Specify the passenger model (`docs/src/simulation/passengers.md`)** (M-0050, spec) — before any stop/boarding code (F-023).
+- [ ] 🔴 **Scenery benchmark: verify off-screen rendering (Q-SB-01) and build the `opts-benchmark` worker skeleton** (M-0054, code) — generated one-tile map, `begin_world_load` + `plan_reload` per object, two-view black/white capture, `results.jsonl`; spec [scenery-benchmark.md](../src/architecture/scenery-benchmark.md).
 
 ---
 
@@ -193,6 +194,15 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0042 — CI & Toolchain Hardening
 - [~] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — files exist; `binrw 0.13.4` future-incompat warning remains.
 - [ ] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026.
+
+#### M-0054 — Scenery Object Load Verification (`opts-benchmark`)
+- [ ] 🔴 **Preflight, CPU rasteriser, metrics and verdicts; map writers in `opts-core`** (M-0054, code) — Phase B.
+- [ ] 🔴 **Supervisor: shards, crash/hang restart, resume, isolated settings** (M-0054, code) — Phase B (Q-SB-08, Q-SB-09).
+- [ ] 🟠 **Missing-texture sentinel and per-object diagnostics capture** (M-0054, code) — Phase B.
+- [ ] 🟠 **Measure 1,000-object sample; calibrate thresholds on 200 labelled objects** (M-0054, test) — Phase B (Q-SB-02).
+- [ ] 🟡 **Decide the owner of the scenery-script runtime** (M-0054/M-0026, decision) — blocks Phase C (Q-SB-11).
+- [ ] 🟡 **Script-effect checks S0–S5; audio recorded only** (M-0054, code) — Phase C.
+- [ ] 🟡 **Full corpus run and triage report; one BOARD item per failure category** (M-0054, docs) — Phase D.
 
 #### Phase 4 — Simulation & Transit Follow-ups
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for passenger traversal in `opts-sim` (Phase 4, code) — after `passengers.md` (M-0050).

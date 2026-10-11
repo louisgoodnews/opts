@@ -19,6 +19,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Merged to `master` 2026-10-11; `Interaction` follow-up open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
+- [M-0054 — Scenery Object Load Verification (`opts-benchmark`)](M-0054.md) — 🟡 Spec done (Phase A), harness planned, 🔴 high
 
 ## Checklist
 
@@ -51,3 +52,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
+- [ ] **🔬 Scenery Object Load Verification** — [M-0054](M-0054.md) (spec: [scenery benchmark](../../architecture/scenery-benchmark.md))
+  - [x] Specify the `opts-benchmark` scenery harness: one-tile generated map, one object at a time, off-screen capture, automatic placement/geometry/texture checks, script-effect checks, report format (Phase A).
+  - [ ] Implement the harness with static checks and calibrate thresholds (Phase B).
+  - [ ] Script-effect checks; audio recorded only (Phase C, needs a scenery-script runtime).
+  - [ ] Full corpus run and triage report (Phase D); fixes by failure category (Phase E).
