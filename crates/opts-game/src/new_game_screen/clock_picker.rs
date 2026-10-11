@@ -257,7 +257,7 @@ pub fn spawn_material_clock_picker(
                                     ..default()
                                 },
                                 BackgroundColor(teal_accent),
-                                Transform::from_rotation(Quat::from_rotation_z(angle)),
+                                UiTransform::from_rotation(Rot2::radians(angle)),
                             ),
                             ClockHandPointer,
                         ));

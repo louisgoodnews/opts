@@ -86,7 +86,7 @@ pub fn menu_interaction_state_system(
             &mut BackgroundColor,
             Option<&GlassSurface>,
             Option<&opts_gui::tokens::components::BackgroundRole>,
-            Option<&mut Transform>,
+            Option<&mut UiTransform>,
         ),
         (Changed<Interaction>, Without<Disabled>),
     >,
@@ -102,20 +102,20 @@ pub fn menu_interaction_state_system(
                         lighten_color(base_color, 0.12).with_alpha((base_alpha + 0.12).min(0.95));
                     bg_color.0 = hovered_color;
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(1.0);
+                        xform.scale = Vec2::splat(1.0);
                     }
                 }
                 Interaction::Pressed => {
                     let pressed_color = darken_color(base_color, 0.15).with_alpha(base_alpha);
                     bg_color.0 = pressed_color;
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(0.98);
+                        xform.scale = Vec2::splat(0.98);
                     }
                 }
                 Interaction::None => {
                     bg_color.0 = base_color.with_alpha(base_alpha);
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(1.0);
+                        xform.scale = Vec2::splat(1.0);
                     }
                 }
             }
@@ -128,13 +128,13 @@ pub fn menu_interaction_state_system(
                 Interaction::Pressed => {
                     bg_color.0 = darken_color(base_color, 0.15);
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(0.98);
+                        xform.scale = Vec2::splat(0.98);
                     }
                 }
                 Interaction::None => {
                     bg_color.0 = base_color;
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(1.0);
+                        xform.scale = Vec2::splat(1.0);
                     }
                 }
             }
@@ -147,13 +147,13 @@ pub fn menu_interaction_state_system(
                 Interaction::Pressed => {
                     bg_color.0 = theme.scheme.get(ColorRole::OnSurface).with_alpha(0.16);
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(0.98);
+                        xform.scale = Vec2::splat(0.98);
                     }
                 }
                 Interaction::None => {
                     bg_color.0 = Color::NONE;
                     if let Some(mut xform) = transform {
-                        xform.scale = Vec3::splat(1.0);
+                        xform.scale = Vec2::splat(1.0);
                     }
                 }
             }

@@ -343,9 +343,9 @@ impl ButtonBuilder {
 pub type ButtonInteractionItem<'a> = (Entity, &'a Interaction, Option<&'a OnClickCallback>);
 
 /// Query filter alias for active button interaction events.
-pub type ButtonInteractionFilter = (With<M3Button>, Without<Disabled>, Changed<Interaction>);
+pub type ButtonInteractionFilter = (With<Button>, Without<Disabled>, Changed<Interaction>);
 
-/// System detecting clicks on [`M3Button`] entities and firing events & callbacks.
+/// System detecting clicks on every [`Button`] (M3 or hand-built) and firing events & callbacks.
 pub fn button_click_system(
     mut commands: Commands,
     interaction_query: Query<ButtonInteractionItem, ButtonInteractionFilter>,

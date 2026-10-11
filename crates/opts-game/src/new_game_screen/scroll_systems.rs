@@ -48,12 +48,15 @@ pub fn handle_scroll_buttons(
 }
 
 /// System handling mouse wheel scrolling strictly for the hovered list container.
+///
+/// UI nodes carry a [`UiGlobalTransform`] in physical pixels (Bevy ≥ 0.17); the ordinary
+/// `GlobalTransform` of a node is not maintained, so the hit test uses the node's own geometry.
 pub fn handle_mouse_scroll(
     mut wheel_events: MessageReader<MouseWheel>,
     window_query: Query<&Window, With<PrimaryWindow>>,
     mut container_query: Query<(
         &mut ScrollableContainer,
-        &GlobalTransform,
+        &UiGlobalTransform,
         &ComputedNode,
         &InheritedVisibility,
     )>,
@@ -62,29 +65,14 @@ pub fn handle_mouse_scroll(
     let Ok(window) = window_query.single() else {
         return;
     };
-    let Some(cursor_pos) = window.cursor_position() else {
+    let Some(cursor) = window.physical_cursor_position() else {
         return;
     };
 
     for wheel in wheel_events.read() {
         let delta = -wheel.y * 36.0;
         for (mut container, transform, node, vis) in &mut container_query {
-            if !vis.get()
-                || (node.size() * node.inverse_scale_factor()).x <= 0.0
-                || (node.size() * node.inverse_scale_factor()).y <= 0.0
-            {
-                continue;
-            }
-            let center = transform.translation().truncate();
-            let half = (node.size() * node.inverse_scale_factor()) * 0.5;
-            let min = center - half;
-            let max = center + half;
-
-            if cursor_pos.x < min.x
-                || cursor_pos.x > max.x
-                || cursor_pos.y < min.y
-                || cursor_pos.y > max.y
-            {
+            if !vis.get() || !node.contains_point(*transform, cursor) {
                 continue;
             }
 

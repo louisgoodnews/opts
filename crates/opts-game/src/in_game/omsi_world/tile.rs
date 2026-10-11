@@ -186,14 +186,14 @@ fn spawn_object(
     let tex_dirs = vec![sco_dir.join("texture"), job.config.map_dir.join("texture")];
 
     // `[absheight]` objects (crossings, bridges, ...) store an absolute elevation.
-    let terrain_h = if sco.abs_height {
+    let terrain_h = if sco.has_absolute_height() {
         0.0
     } else {
         terrain
             .as_ref()
             .map_or(0.0, |t| sample_terrain(t, obj.position.x, obj.position.y))
     };
-    let z = match (attached_z, sco.abs_height) {
+    let z = match (attached_z, sco.has_absolute_height()) {
         (Some(z), true) => z,
         _ => terrain_h + obj.position.z,
     };

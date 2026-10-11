@@ -371,7 +371,7 @@ pub fn update_clock_picker_visuals(
             Without<ClockHandPointer>,
         ),
     >,
-    mut pointer_query: Query<(&mut Node, &mut Transform), With<ClockHandPointer>>,
+    mut pointer_query: Query<(&mut Node, &mut UiTransform), With<ClockHandPointer>>,
     mut hour_btns_query: Query<
         (&SelectClockHourBtn, &mut BackgroundColor, &Children),
         Without<SelectClockMinuteBtn>,
@@ -458,7 +458,7 @@ pub fn update_clock_picker_visuals(
     for (mut style, mut transform) in &mut pointer_query {
         style.left = Val::Px(mid_x - (radius / 2.0));
         style.top = Val::Px(mid_y - 1.0);
-        transform.rotation = Quat::from_rotation_z(angle);
+        transform.rotation = Rot2::radians(angle);
     }
 
     // 4. Update Hour Dial Highlights

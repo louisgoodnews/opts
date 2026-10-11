@@ -63,6 +63,8 @@ pub struct DecodeParams {
     pub restarts: u32,
     /// Share of vertices two runs must agree on ([`decode_confident`]).
     pub min_agreement: f32,
+    /// Share of triangles whose normal must fit the stored vertex normals ([`decode_confident`]).
+    pub min_coherence: f32,
 }
 
 impl Default for DecodeParams {
@@ -75,6 +77,7 @@ impl Default for DecodeParams {
             anneal_rounds: ANNEAL_ROUNDS,
             restarts: 1,
             min_agreement: CONFIDENT_MIN_AGREEMENT,
+            min_coherence: GATE_MIN_COHERENCE,
         }
     }
 }
@@ -107,6 +110,9 @@ impl DecodeParams {
         if let Some(v) = f("OPTS_CONF_AGREE") {
             self.min_agreement = v;
         }
+        if let Some(v) = f("OPTS_CONF_COH") {
+            self.min_coherence = v;
+        }
         self
     }
 
@@ -123,6 +129,7 @@ impl DecodeParams {
             self.anneal_rounds as u32,
             self.restarts,
             self.min_agreement.to_bits(),
+            self.min_coherence.to_bits(),
         ] {
             for b in v.to_le_bytes() {
                 h = (h ^ u32::from(b)).wrapping_mul(0x0100_0193);
@@ -750,7 +757,7 @@ pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentRep
         v.position = permuted(l as usize, v.position);
     }
     let (verdicts, coherence) = triangle_verdicts(&trial);
-    if coherence < GATE_MIN_COHERENCE {
+    if coherence < params.min_coherence {
         return rejected(agree, coherence);
     }
     let total = trial.indices.len();

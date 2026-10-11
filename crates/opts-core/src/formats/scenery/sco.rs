@@ -123,6 +123,16 @@ pub struct ScoMesh {
     pub animations: Vec<ScoAnimation>,
 }
 
+impl SceneryObject {
+    /// Whether the object's z in the map is an absolute elevation: objects with `[absheight]`, and
+    /// crossings (objects with `[splinehelper]` arms), which are always stored at the road's height
+    /// (232 of 233 unflagged crossings on Rheinhausen sit at the terrain height, not at 0).
+    #[must_use]
+    pub fn has_absolute_height(&self) -> bool {
+        self.abs_height || !self.spline_helpers.is_empty()
+    }
+}
+
 impl ScoMesh {
     /// Creates a new mesh attachment with the specified file path.
     #[must_use]
@@ -806,10 +816,12 @@ impl SceneryObject {
                         let file = block.parameters[0].clone();
                         let x =
                             parse_f32(&block.parameters[1], "splinehelper x", block.line_number)?;
-                        let y =
-                            parse_f32(&block.parameters[2], "splinehelper y", block.line_number)?;
+                        // Line order is x, height, y (verified on 2,274 helpers of X10 Berlin and
+                        // 509 of Bad Hügelsdorf: arms then meet the spline ends in plan and height).
                         let z =
-                            parse_f32(&block.parameters[3], "splinehelper z", block.line_number)?;
+                            parse_f32(&block.parameters[2], "splinehelper z", block.line_number)?;
+                        let y =
+                            parse_f32(&block.parameters[3], "splinehelper y", block.line_number)?;
                         let rot =
                             parse_f32(&block.parameters[4], "splinehelper rot", block.line_number)?;
                         let mut extra = Vec::new();

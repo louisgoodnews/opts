@@ -385,7 +385,7 @@ red
 | :--- | :--- | :--- |
 | `[path]` | 12 | Path segment (below). |
 | `[path_2]` | 14 | Same, plus two trailing values (see below). |
-| `[splinehelper]` | 7 (rarely 6) | Embeds a spline profile (junction arm): `<.sli path>`, x, y, z, rotation (degrees), plus two further values. |
+| `[splinehelper]` | 7 (rarely 6) | Embeds a spline profile (junction arm): `<.sli path>`, **x, height, y** (in this order), rotation (degrees), plus two further values. Objects with helpers (crossings) are stored at **absolute** height even without `[absheight]`. |
 | `[switch]` | 1 | Number of switch positions (rail points). |
 | `[switchdir]` | 1 | Selects the switch position for the following `[path]`. |
 

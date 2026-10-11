@@ -724,3 +724,23 @@ fn text_texture_binds_to_the_preceding_material() {
     assert_eq!(mats[0].alpha_mode, Some(2));
     assert_eq!(mats[1].text_texture, None);
 }
+
+#[test]
+fn spline_helper_lines_are_x_height_y_and_crossings_are_absolute() {
+    // Lines after the profile: x, height, y, heading, two further values (Einmuedung_Gewerbegebiet.sco).
+    let text = "[splinehelper]\nSplines\\a.sli\n-12\n0.5\n-3\n270\n0\n0\n\n[mesh]\nm.o3d\n";
+    let sco = SceneryObject::from_text(text).expect("parse");
+    let h = &sco.spline_helpers[0];
+    assert_eq!(
+        (h.position.x, h.position.y, h.position.z),
+        (-12.0, -3.0, 0.5)
+    );
+    assert_eq!(h.rotation_deg, 270.0);
+    assert!(!sco.abs_height, "no [absheight]");
+    assert!(
+        sco.has_absolute_height(),
+        "a crossing is stored at absolute height"
+    );
+    let plain = SceneryObject::from_text("[mesh]\nm.o3d\n").expect("parse");
+    assert!(!plain.has_absolute_height());
+}

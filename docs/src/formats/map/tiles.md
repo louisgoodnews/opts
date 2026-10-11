@@ -353,7 +353,16 @@ meaning of the repeater `span` for instances that would end beyond the chain is 
   crossings such as `TeltowerEichen.sco` have z = 2.00 where the terrain is 2.00, while 5,094 of
   6,784 objects on raised terrain have z ≈ 0. Treating crossings as terrain-relative lifts them
   by the terrain height (or sinks them where the terrain is below the road).
-- `[splinehelper]` positions of a crossing `.sco` (file, x, y, z, heading, …) are the points where
+- **Crossings are absolute.** An object whose `.sco` has `[splinehelper]` arms stores its z as an
+  absolute elevation even without `[absheight]`: of the unflagged crossings on raised terrain, 232
+  of 234 on Rheinhausen, 206 of 285 on Berlin-Spandau (the rest differ for another reason), 42 of
+  42 on Bad Hügelsdorf, 45 of 47 on X10 Berlin and 48 of 49 on BRT Berlin have z ≈ terrain height;
+  only 1–2 per map have z ≈ 0. Treated as terrain-relative they float one terrain height above
+  the road (Bad Hügelsdorf at 23 m terrain: 46 m).
+- **Helper line order is x, height, y** (not x, y, z): with the order x, y, z only 74 of 509 arms
+  of Bad Hügelsdorf meet a spline end within 0.5 m, with x, height, y 259 (X10 Berlin: 668 → 1,398
+  of 2,274). Tool: `conn_audit` in `opts-core`.
+- `[splinehelper]` positions of a crossing `.sco` (file, x, height, y, heading, …) are the points where
   road splines attach: rotating `(x, y)` clockwise by the object heading and adding the object
   position hits a spline end point within 5 cm for 668 of 2,274 helpers on X10 Berlin (the same
   test with the opposite rotation sense: 113).
