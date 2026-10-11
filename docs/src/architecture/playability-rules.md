@@ -342,3 +342,9 @@ Reported defect: the New Game vehicle list offered cars, lorries, bicycles, e-sc
 | **R5 (extended)** | the file stem contains `ai`/`ki` as a whole token anywhere (`MB_KI_C2_E5_Solo`, `HHStadtbus_VHH_AI_OMSI2`, `MAN_AI_A47`) — not only as prefix/suffix | not playable |
 
 The `[drivpos]` lookup now resolves the cabin path case-insensitively through the file index; the previous exact-case read silently failed on case-sensitive file systems (`Model/` vs `model\`), which hid most vehicles from R3's "full cab" exemption. `SCAN_VERSION` is 3, so existing catalogues are rebuilt on the next start.
+
+## 📎 Revision — 2026-10-11: R11
+
+| Rule | Condition | Result |
+| :--- | :--- | :--- |
+| **R11** | rail vehicle (`[type] 2`) without a `[sound]` block | not playable. These are the passenger-car variants (`NF6D_B`, `NF6D_B_DT2`: model `model_NF6D_B_Pax.cfg` with a single dummy plate, `Redux` scripts, no cockpit scripts); the playable B head is `NF6D_B_User[_DT2]`. Of the 52 rail `.bus` files, the six without `[sound]` are these two, the three `NF6D_KI*` and `Tram_wagen_1_C`. |

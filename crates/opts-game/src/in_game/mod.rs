@@ -83,6 +83,7 @@ impl Plugin for InGamePlugin {
             OnExit(AppState::InGame),
             (
                 omsi_world::log_final_position,
+                |mut t: ResMut<Time<Virtual>>| t.unpause(),
                 cleanup_in_game_session,
                 reactivate_menu_camera,
             )
@@ -98,6 +99,7 @@ impl Plugin for InGamePlugin {
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
+                toggle_pause,
                 omsi_world::load_rail_variants,
                 omsi_world::spawn_ai_trains,
                 omsi_world::move_ai_trains,
@@ -195,5 +197,26 @@ fn escape_to_menu_in_game(
     if keyboard.just_pressed(KeyCode::Escape) {
         tracing::info!("User pressed [Escape] - exiting in-game session to Main Menu");
         next_state.set(AppState::MainMenu);
+    }
+}
+
+/// `P` pauses and resumes the simulation (virtual time; the free camera and the HUD keep
+/// running). Ignored while the F1 report modal is open, whose text field takes the key.
+fn toggle_pause(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    report: Res<State<opts_bevy::reporting::ReportModalState>>,
+    mut time: ResMut<Time<Virtual>>,
+) {
+    if *report.get() != opts_bevy::reporting::ReportModalState::Inactive
+        || !keyboard.just_pressed(KeyCode::KeyP)
+    {
+        return;
+    }
+    if time.is_paused() {
+        time.unpause();
+        tracing::info!("simulation resumed [P]");
+    } else {
+        time.pause();
+        tracing::info!("simulation paused [P]");
     }
 }

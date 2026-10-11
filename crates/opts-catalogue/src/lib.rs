@@ -49,7 +49,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 /// Version of the scan logic. Bumped when what a scan records changes (new reference kinds,
 /// rerouting) so that databases from older builds are rebuilt even if they are recent.
-pub const SCAN_VERSION: i64 = 3;
+pub const SCAN_VERSION: i64 = 4;
 
 fn now_secs() -> i64 {
     SystemTime::now()

@@ -286,7 +286,7 @@ pub fn spawn_in_game_hud(
             ))
             .with_children(|legend| {
                 legend.spawn((
-                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
+                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
             });

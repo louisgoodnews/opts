@@ -114,6 +114,8 @@ struct VehicleFacts {
     info: Info,
     class: Option<&'static str>,
     script_share: bool,
+    /// Rail vehicle without a `[sound]` block (R11).
+    silent_rail: bool,
     has_driver_cam: bool,
     couple_back: Option<String>,
     cabin: Option<String>,
@@ -185,6 +187,8 @@ fn analyze_vehicle(bytes: &[u8], fallback_name: &str) -> VehicleFacts {
         },
         class,
         script_share: has("scriptshare"),
+        silent_rail: class == Some("rail")
+            && manifest.as_ref().is_some_and(|m| m.sound_cfg.is_none()),
         has_driver_cam: manifest
             .as_ref()
             .is_some_and(|m| !m.driver_cameras.is_empty()),
@@ -199,6 +203,8 @@ fn analyze_vehicle(bytes: &[u8], fallback_name: &str) -> VehicleFacts {
 ///
 /// R9: a vehicle without a complete driver workstation (a driver camera *and* `[drivpos]` in its
 /// passenger cabin) cannot be driven (bicycles, fire engines, lorries delivered as `.bus`).
+/// R11: a rail vehicle without a `[sound]` block is a passenger-car variant (the NF6D `B` with
+/// the dummy plate model and the `Redux` scripts), not a head; the head is `B_User`.
 /// R10: vehicles that live in a folder named for AI/KI traffic are traffic, not player vehicles.
 fn classify_playable(
     ext: &str,
@@ -206,6 +212,7 @@ fn classify_playable(
     script_share: bool,
     inbound_trailer_target: bool,
     has_full_cab: bool,
+    silent_rail: bool,
 ) -> bool {
     let name = rel_path.rsplit('/').next().unwrap_or(rel_path);
     let r1 = ext == "ovh";
@@ -214,7 +221,7 @@ fn classify_playable(
     let r4_r5 = is_trailer_name(name) || is_ai_name(name);
     let r9 = !has_full_cab;
     let r10 = in_ai_folder(rel_path);
-    !(r1 || r2 || r3 || r4_r5 || r9 || r10)
+    !(r1 || r2 || r3 || r4_r5 || r9 || r10 || silent_rail)
 }
 
 /// Whether a directory component of `rel_path` contains the token `ai` or `ki` (split on
@@ -425,6 +432,7 @@ pub fn detect_entities(root: &Path, files: &[FileRec], dirs: &[DirRec]) -> Vec<E
             facts.script_share,
             trailer_targets.contains(&f.rel_path.to_lowercase()),
             has_full_cab,
+            facts.silent_rail,
         );
         let alias_of_marker = (f.ext == "ovh")
             .then(|| {
@@ -620,6 +628,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn r11_silent_rail_is_not_playable() {
+        assert!(!classify_playable(
+            "bus",
+            "NF6D_B_DT2.bus",
+            false,
+            false,
+            true,
+            true
+        ));
+        assert!(classify_playable(
+            "bus",
+            "NF6D_B_User.bus",
+            false,
+            false,
+            true,
+            false
+        ));
+    }
+
+    #[test]
     fn name_guards() {
         assert!(is_trailer_name("MAN_GN92_trail.bus") && is_trailer_name("x_heck.bus"));
         assert!(
@@ -631,42 +659,80 @@ mod tests {
 
     #[test]
     fn playability_rules() {
-        assert!(classify_playable("bus", "MAN_SD77.bus", false, false, true));
+        assert!(classify_playable(
+            "bus",
+            "MAN_SD77.bus",
+            false,
+            false,
+            true,
+            false
+        ));
         assert!(
-            !classify_playable("ovh", "BX.ovh", false, false, false),
+            !classify_playable("ovh", "BX.ovh", false, false, false, false),
             "R1"
         );
-        assert!(!classify_playable("bus", "x.bus", true, false, false), "R2");
         assert!(
-            !classify_playable("bus", "NF6D_B.bus", false, true, false),
+            !classify_playable("bus", "x.bus", true, false, false, false),
+            "R2"
+        );
+        assert!(
+            !classify_playable("bus", "NF6D_B.bus", false, true, false, false),
             "R3"
         );
         assert!(
-            classify_playable("bus", "NF6D_EEF_V.bus", false, true, true),
+            classify_playable("bus", "NF6D_EEF_V.bus", false, true, true, false),
             "double-ended cab exempt"
         );
         assert!(
-            !classify_playable("bus", "MAN_GN92_trail.bus", false, false, false),
+            !classify_playable("bus", "MAN_GN92_trail.bus", false, false, false, false),
             "R4"
         );
         assert!(
-            !classify_playable("bus", "ai_golf.bus", false, false, true),
+            !classify_playable("bus", "ai_golf.bus", false, false, true, false),
             "R5"
         );
         assert!(
-            !classify_playable("bus", "Vehicles/X/MB_KI_C2_E5_Solo.bus", false, false, true),
+            !classify_playable(
+                "bus",
+                "Vehicles/X/MB_KI_C2_E5_Solo.bus",
+                false,
+                false,
+                true,
+                false
+            ),
             "R5: KI token in the middle"
         );
         assert!(
-            !classify_playable("bus", "Vehicles/Fahrrad/fahrrad_1.bus", false, false, false),
+            !classify_playable(
+                "bus",
+                "Vehicles/Fahrrad/fahrrad_1.bus",
+                false,
+                false,
+                false,
+                false
+            ),
             "R9: no driver workstation"
         );
         assert!(
-            !classify_playable("bus", "Vehicles/HOH_KI_Autos/Truck.bus", false, false, true),
+            !classify_playable(
+                "bus",
+                "Vehicles/HOH_KI_Autos/Truck.bus",
+                false,
+                false,
+                true,
+                false
+            ),
             "R10: AI folder"
         );
         assert!(
-            classify_playable("bus", "Vehicles/HOH_Kaiser_Bus/Bus.bus", false, false, true),
+            classify_playable(
+                "bus",
+                "Vehicles/HOH_Kaiser_Bus/Bus.bus",
+                false,
+                false,
+                true,
+                false
+            ),
             "'KI' inside a longer token is not an AI folder"
         );
     }
