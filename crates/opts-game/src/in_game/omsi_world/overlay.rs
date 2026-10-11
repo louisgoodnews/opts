@@ -111,12 +111,15 @@ fn world_pos(start_tile: (i32, i32), p: Vec3) -> WorldPos {
     }
 }
 
+/// Tiles the camera and the vehicle were last logged in.
+type LastTiles = (Option<(i32, i32)>, Option<(i32, i32)>);
+
 /// Keeps [`WorldStats::position`] current and logs where the player is: `DEBUG` whenever the
 /// camera or vehicle enters another tile, `TRACE` every 5 seconds, `INFO` when the session ends.
 pub fn track_position(
     time: Res<Time>,
     mut since_trace: Local<f32>,
-    mut last: Local<(Option<(i32, i32)>, Option<(i32, i32)>)>,
+    mut last: Local<LastTiles>,
     mut stats: ResMut<WorldStats>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     vehicle: Query<&GlobalTransform, With<opts_bevy::PlayerVehicle>>,
