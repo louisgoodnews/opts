@@ -1,6 +1,7 @@
 //! 30% / 70% Two-frame layout for OMSI Map Selection.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;

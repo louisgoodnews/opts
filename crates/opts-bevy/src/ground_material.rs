@@ -60,7 +60,7 @@ pub struct GroundMaterialPlugin;
 
 impl Plugin for GroundMaterialPlugin {
     fn build(&self, app: &mut App) {
-        load_internal_asset!(app, SHADER, "shaders/ground_layers.wgsl", Shader::from_wgsl);
+        load_internal_asset!(app, SHADER, "shaders/ground_layers.wesl", Shader::from_wesl);
         app.add_plugins(MaterialPlugin::<GroundMaterial>::default());
     }
 }

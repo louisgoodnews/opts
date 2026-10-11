@@ -1,6 +1,7 @@
 //! Scrollable entrypoint selection widget for the map detail panel.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;

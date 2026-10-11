@@ -24,6 +24,9 @@ Read from the migration guide (the last ~10 k characters of the guide were not r
 
 Not applicable: BSN scene syntax changes (we spawn with required components), Solari (path tracing, needs hardware RT; not a target), sprites.
 
+## 1a. What the upgrade actually needed (2026-10-11, branch `bevy-0.20`)
+Result of the first pass; details in [M-0047](../roadmap/phase-5/M-0047.md). Compared with the estimate below: the shader port was two lines of API (`alpha_discard` arguments) beyond the syntax; the surprise was `Button` (deprecated alias of a private struct → cannot be spawned; solved by a local marker with the same requirements) and two toolchain/dependency pins (Rust ≥ 1.97.1, `glam` 0.33). `GroundMaterial`, observers, cameras, tonemapping and assets compiled unchanged.
+
 ## 2. Upgrade strategy (M-0047)
 
 1. **Branch `bevy-0.20`** from `master`; bump `bevy = "0.20"`; keep the pin policy of M-0044 (exact minor, patch via `cargo update -p bevy`).

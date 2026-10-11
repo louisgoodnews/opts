@@ -19,7 +19,7 @@ pub mod toast;
 pub mod toplevel;
 pub mod treeview;
 
-pub use button::{ButtonBuilder, ButtonPlugin, ButtonVariant, M3Button, OnClickCallback};
+pub use button::{Button, ButtonBuilder, ButtonPlugin, ButtonVariant, M3Button, OnClickCallback};
 pub use card::{CardBuilder, CardPlugin, CardVariant, M3Card};
 pub use checkbox::{CheckboxBuilder, CheckboxPlugin, M3Checkbox};
 pub use combobox::{ComboboxBuilder, ComboboxPlugin, M3Combobox};

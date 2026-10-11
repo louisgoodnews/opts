@@ -1,6 +1,8 @@
+#![allow(deprecated)]
 //! Comprehensive gallery demonstrating all Material Design 3 widgets in OPTS GUI.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 fn main() {

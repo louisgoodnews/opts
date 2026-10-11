@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use opts_bevy::{
     camera_hint_text, CameraAvailability, CameraState, PlayerVehicle, VehicleController,
 };
+use opts_gui::components::Button;
 use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::prelude::*;
 use opts_sim::vehicle::inputs::GearPosition;

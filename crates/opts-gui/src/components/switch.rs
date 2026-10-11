@@ -1,5 +1,6 @@
 //! Material Design 3 Switch toggle widget.
 
+use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{

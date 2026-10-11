@@ -1,5 +1,6 @@
 //! Material Design 3 Toplevel / Floating modal window dialog widget.
 
+use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{

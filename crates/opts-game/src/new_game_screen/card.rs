@@ -1,6 +1,7 @@
 //! Reusable selection card widget, stat chips, and scroll buttons for new game panels.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;

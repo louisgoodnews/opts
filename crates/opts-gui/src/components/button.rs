@@ -13,6 +13,15 @@ use crate::{
     },
 };
 
+/// Marker for a clickable UI node: the role Bevy's `Button` had before 0.20 (it requires `Node`,
+/// blocks focus below it and carries the legacy [`Interaction`] state that `ui_focus_system`
+/// keeps current). Bevy 0.20 deprecated its own `Button`/`Interaction` in favour of the headless
+/// `ui_widgets::Button` plus `Pressed`/`Hovered`; the migration is tracked as a follow-up of M-0047.
+#[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[allow(deprecated)]
+#[require(Node, bevy::ui::FocusPolicy::Block, Interaction)]
+pub struct Button;
+
 /// Button variants supported by Material Design 3.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ButtonVariant {

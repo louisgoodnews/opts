@@ -1,6 +1,7 @@
 //! Material Design 3 loading screen UI hierarchy and progress indicators.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::in_game::types::{

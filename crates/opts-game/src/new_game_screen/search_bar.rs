@@ -1,6 +1,7 @@
 //! Searchbar widget and helper routines for filtering lists in the new game screen.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::new_game_screen::types::{ClearSearchBtn, ScrollKind, SearchInputBox, SearchInputText};

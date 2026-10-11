@@ -58,7 +58,7 @@ opts-tools = { path = "crates/opts-tools" }
 # --- Bevy Ecosystem ---
 # Bevy moves fast. Check the latest version before starting. 
 # As of mid-2024, 0.14 is stable, but 0.15 might be out.
-bevy = { version = "0.19", features = ["file_watcher"] }
+bevy = { version = "0.20", features = ["file_watcher"] }
 
 # --- Parsing & Serialization ---
 nom = "7.1"                 # For parsing OMSI text config files (.sco, .sli, .cfg)
@@ -72,7 +72,7 @@ toml = "0.8"
 # --- Image & Asset Handling ---
 image = "0.25"              # For loading .tga, .bmp, .jpg
 ddsfile = "0.5"             # For loading OMSI's primary .dds textures
-glam = "0.32"               # Math library (Bevy uses this internally)
+glam = "0.33"               # Math library (Bevy uses this internally)
 petgraph = "0.6"            # For representing the transit network graph
 
 # --- System & Diagnostics ---

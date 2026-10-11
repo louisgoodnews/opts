@@ -1,6 +1,7 @@
 //! Year spinbox widget with direct numeric typing and increment/decrement steppers.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::new_game_screen::types::{

@@ -10,6 +10,9 @@
 //! - **Ergonomic Builders:** High-level fluent builders for UI layout and widgets.
 
 #![deny(unsafe_code)]
+// Bevy 0.20 deprecated `Interaction` (now `Hovered` + `Pressed`); the migration is the follow-up
+// of M-0047 (docs/src/architecture/bevy-0-20-dlss.md). Until then the legacy state keeps working.
+#![allow(deprecated)]
 
 pub mod components;
 pub mod fonts;

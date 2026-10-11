@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! Layout Demo Example — Renders Stack, Row, and Grid primitives side by side.
 
 use bevy::prelude::*;

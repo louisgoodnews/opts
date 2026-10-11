@@ -1,6 +1,7 @@
 //! General & Storage settings tab implementation.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;

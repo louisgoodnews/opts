@@ -1,3 +1,4 @@
+#![allow(deprecated)]
 //! Example: a modal dialog with a multiline text area, Report/Cancel buttons and a success toast.
 //!
 //! Type with the keyboard (Enter = newline, arrows/Home/End, Ctrl+A/C/X/V), Tab cycles inside the

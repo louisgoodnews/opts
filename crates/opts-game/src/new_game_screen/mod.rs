@@ -30,6 +30,7 @@ pub mod weather_panel;
 pub mod year_spinbox;
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;

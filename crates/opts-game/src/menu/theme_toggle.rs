@@ -1,6 +1,7 @@
 //! Floating theme toggle button and hotkey system for runtime light/dark switching.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::{
     interaction::events::ThemeChanged,
     theme::{color::ColorRole, theme::MaterialTheme},

@@ -1,5 +1,6 @@
 //! Material Design 3 Notebook / Tabbed container widget.
 
+use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{

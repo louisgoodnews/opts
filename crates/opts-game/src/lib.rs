@@ -1,5 +1,9 @@
 //! OPTS Game - Core application orchestration, state management, and consumer UI screens.
 
+// Bevy 0.20 deprecated `Interaction` (now `Hovered` + `Pressed`); the migration is the follow-up
+// of M-0047 (docs/src/architecture/bevy-0-20-dlss.md). Until then the legacy state keeps working.
+#![allow(deprecated)]
+
 pub mod app;
 pub mod app_state;
 pub mod catalogue_service;

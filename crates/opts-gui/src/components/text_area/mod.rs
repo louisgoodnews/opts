@@ -15,6 +15,7 @@ pub use clipboard::TextClipboard;
 pub use input::{text_area_focus_system, text_area_input_system, TextAreaChanged};
 pub use view::{text_area_render_system, TextAreaSpan, TextAreaText};
 
+use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{

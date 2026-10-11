@@ -1,6 +1,7 @@
 //! Visual scrollbar column with integrated top/bottom stepper buttons, clickable track, and floating scroll-to-top button.
 
 use bevy::prelude::*;
+use opts_gui::components::Button;
 use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;
