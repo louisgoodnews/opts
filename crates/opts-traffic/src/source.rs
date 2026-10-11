@@ -16,11 +16,11 @@
 //! (`docs/src/architecture/ai-traffic.md`, "Gaps in `opts-core`").
 
 use glam::DVec2;
-use opts_core::formats::map::{MapTile, MapTrafficRule, RuleKind, RuleOwner};
+use opts_core::formats::map::{MapObjectInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner};
 use opts_core::formats::scenery::{ScoPath, SplinePath};
 
 use crate::geometry::PathGeometry;
-use crate::graph::{Direction, LaneKind, LaneRules, LaneSegment};
+use crate::graph::{Direction, Elevation, LaneKind, LaneRules, LaneSegment};
 
 /// Tile edge length in metres: tile `(x, y)` starts at `(x · 300, y · 300)`.
 pub const TILE_SIZE_M: f64 = 300.0;
@@ -37,6 +37,12 @@ pub trait PathSource {
     fn sli_paths(&mut self, sli_file: &str) -> Option<&[SplinePath]>;
     /// The `[path]` records of a `.sco`; `None` when the file is unknown or unreadable.
     fn sco_paths(&mut self, sco_file: &str) -> Option<&[ScoPath]>;
+    /// Height of the object's origin in metres. The default is the position's `z` as written in
+    /// the tile; hosts add the terrain height for objects that are not stored at absolute height
+    /// (`[absheight]`, crossings with spline helpers).
+    fn object_base_height(&mut self, object: &MapObjectInstance) -> f64 {
+        f64::from(object.position.z)
+    }
 }
 
 /// Folds the rules that address path `path_index` of `owner` into a speed limit (m/s) and the
@@ -107,11 +113,23 @@ pub fn segments_from_tile(
                 direction: Direction::from_number(p.direction),
                 speed_limit,
                 rules,
+                elevation: Elevation {
+                    z0: f64::from(s.position.z) + f64::from(p.offset_z),
+                    grad_start: f64::from(s.gradient_start),
+                    grad_end: f64::from(s.gradient_end),
+                },
                 source: s.id_code,
             });
         }
     }
     for (oi, o) in tile.objects.iter().enumerate() {
+        if source
+            .sco_paths(&o.sco_file)
+            .is_none_or(<[ScoPath]>::is_empty)
+        {
+            continue;
+        }
+        let base_height = source.object_base_height(o);
         let Some(paths) = source.sco_paths(&o.sco_file) else {
             continue;
         };
@@ -142,6 +160,11 @@ pub fn segments_from_tile(
                 direction: Direction::from_number(p.direction),
                 speed_limit,
                 rules,
+                elevation: Elevation {
+                    z0: base_height + f64::from(p.start.z),
+                    grad_start: f64::from(p.slope_start),
+                    grad_end: f64::from(p.slope_end),
+                },
                 source: o.id_code,
             });
         }

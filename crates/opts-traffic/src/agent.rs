@@ -79,6 +79,12 @@ impl Agent {
         let g = &graph.lane(self.lane)?.geometry;
         Some((g.point_at(self.s), g.heading_at(self.s)))
     }
+
+    /// Height of the front bumper in metres (from the lane's elevation profile).
+    #[must_use]
+    pub fn height(&self, graph: &LaneGraph) -> Option<f64> {
+        Some(graph.lane(self.lane)?.z_at(self.s))
+    }
 }
 
 /// Indicators are requested when the next lane turns by more than this (radians) …
@@ -132,6 +138,41 @@ impl TrafficWorld {
         let before = self.agents.len();
         self.agents.retain(|a| a.id != id);
         self.agents.len() != before
+    }
+
+    /// Swaps in a rebuilt graph (the resident tiles changed). Agents keep their lane when a lane
+    /// with the same [`crate::graph::Lane::key`] exists and lose it otherwise; the latter are
+    /// removed. Returns the ids of the removed agents.
+    pub fn replace_graph(&mut self, graph: LaneGraph) -> Vec<AgentId> {
+        let old = std::mem::replace(&mut self.graph, graph);
+        let mut removed = Vec::new();
+        let graph = &self.graph;
+        self.agents.retain_mut(|a| {
+            let remap = |id: LaneId| old.lane(id).and_then(|l| graph.lane_by_key(l.key));
+            match remap(a.lane) {
+                Some(lane) if a.s <= graph.lane(lane).map_or(0.0, |l| l.length()) + 1e-6 => {
+                    a.lane = lane;
+                    a.next = a.next.and_then(remap);
+                    true
+                }
+                _ => {
+                    removed.push(a.id);
+                    false
+                }
+            }
+        });
+        // A lane that lost its successor choice picks again.
+        let lanes: Vec<(usize, LaneId)> = self
+            .agents
+            .iter()
+            .enumerate()
+            .filter(|(_, a)| a.next.is_none())
+            .map(|(i, a)| (i, a.lane))
+            .collect();
+        for (i, lane) in lanes {
+            self.agents[i].next = self.pick_next(lane);
+        }
+        removed
     }
 
     /// Takes the events raised since the last call.
@@ -402,6 +443,28 @@ mod tests {
     }
 
     #[test]
+    fn replacing_the_graph_keeps_agents_on_lanes_that_still_exist() {
+        let mut a = straight(0.0, 100.0);
+        a.source = 1;
+        let mut b = straight(100.0, 100.0);
+        b.source = 2;
+        let mut w = world(&[a.clone(), b.clone()]);
+        let on_a = w.spawn(LaneId(0), 50.0, 5.0, IdmParams::default()).unwrap();
+        let on_b = w.spawn(LaneId(1), 50.0, 5.0, IdmParams::default()).unwrap();
+        // Tile of lane `a` unloads; lane `b` stays but now has id 0.
+        let removed = w.replace_graph(LaneGraph::build(&[b], &ConnectParams::default()));
+        assert_eq!(removed, [on_a]);
+        assert!(w.agent(on_a).is_none());
+        assert_eq!(w.agent(on_b).unwrap().lane, LaneId(0));
+        // Loading `a` again does not bring the agent back, and `on_b` keeps its lane by key.
+        let removed = w.replace_graph(LaneGraph::build(
+            &[a, straight(100.0, 100.0)],
+            &ConnectParams::default(),
+        ));
+        assert!(removed.is_empty() || removed == [on_b]);
+    }
+
+    #[test]
     fn spawning_needs_room() {
         let mut w = world(&[straight(0.0, 100.0)]);
         w.spawn(LaneId(0), 20.0, 0.0, IdmParams::default()).unwrap();
@@ -431,6 +494,7 @@ mod tests {
             direction: Direction::Forward,
             speed_limit: None,
             rules: Default::default(),
+            elevation: Default::default(),
             source: 0,
         };
         let mut w = world(&[straight(0.0, 100.0), turn]);

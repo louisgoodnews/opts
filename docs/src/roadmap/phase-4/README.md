@@ -38,7 +38,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [ ] Implement OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` (M-0026).
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, lights, light maps, key/hot-spot triggers done; screenshot check open ([M-0045](M-0045.md)).
-  - [~] AI road traffic — [M-0049](M-0049.md): research and plan ([`ai-traffic.md`](../../architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; game integration, signals and calibration open.
+  - [~] AI road traffic — [M-0049](M-0049.md): research and plan ([`ai-traffic.md`](../../architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; kinematic traffic runs in the game (cars follow lanes with the IDM, speed limits and density rules, spawn around the camera); signals, priority, script-driven vehicles and calibration open.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio (M-0027).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.

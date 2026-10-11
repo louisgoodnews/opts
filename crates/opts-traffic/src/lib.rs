@@ -38,7 +38,8 @@ pub use agent::{Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWor
 pub use density::{weighted_pick, DensityCurve};
 pub use geometry::PathGeometry;
 pub use graph::{
-    ConnectParams, Direction, Lane, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment, SpawnError,
+    ConnectParams, Direction, Elevation, Lane, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment,
+    SpawnError,
 };
 pub use idm::IdmParams;
 pub use rng::Rng;

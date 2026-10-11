@@ -42,6 +42,9 @@ impl Plugin for InGamePlugin {
             .init_resource::<omsi_world::PedestrianNetwork>()
             .init_resource::<omsi_world::PedestrianSettings>()
             .init_resource::<omsi_world::PedestrianPool>()
+            .init_resource::<omsi_world::TrafficState>()
+            .init_resource::<omsi_world::TrafficSettings>()
+            .init_resource::<omsi_world::TrafficPool>()
             .init_resource::<SimulationLoadState>()
             .init_resource::<InGameSessionInfo>()
             .init_resource::<opts_bevy::CameraState>()
@@ -58,6 +61,7 @@ impl Plugin for InGamePlugin {
                 deactivate_menu_camera,
                 setup_in_game_session,
                 omsi_world::configure_pedestrians,
+                omsi_world::configure_traffic,
             ),
         )
         .add_systems(
@@ -77,6 +81,13 @@ impl Plugin for InGamePlugin {
                     omsi_world::load_variants,
                     omsi_world::spawn_pedestrians,
                     omsi_world::move_pedestrians,
+                )
+                    .chain(),
+                (
+                    omsi_world::update_traffic_graph,
+                    omsi_world::load_traffic_variants,
+                    omsi_world::spawn_traffic,
+                    omsi_world::move_traffic,
                 )
                     .chain(),
                 sky::update_sky.run_if(resource_exists::<sky::Sky>),

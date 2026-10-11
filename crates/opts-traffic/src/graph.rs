@@ -13,6 +13,7 @@ use glam::DVec2;
 use thiserror::Error;
 
 use crate::geometry::PathGeometry;
+use crate::rng::Rng;
 
 /// Index of a lane in a [`LaneGraph`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -87,6 +88,39 @@ pub struct LaneRules {
     pub no_overtaking: bool,
 }
 
+/// Height profile along a lane: start height and the gradients (rise over run) at both ends,
+/// changing linearly in between (the rule of `[spline]` records:
+/// `rise = length · (g0 + g1) / 2`, `docs/src/formats/map/tiles.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Elevation {
+    /// Height at the start in metres.
+    pub z0: f64,
+    /// Gradient at the start (ratio).
+    pub grad_start: f64,
+    /// Gradient at the end (ratio).
+    pub grad_end: f64,
+}
+
+impl Elevation {
+    /// Height after `s` metres of a lane of `length` metres.
+    #[must_use]
+    pub fn at(&self, s: f64, length: f64) -> f64 {
+        let s = s.max(0.0).min(length.max(0.0));
+        let t = if length > 1e-9 { s / length } else { 0.0 };
+        self.z0 + s * (self.grad_start + (self.grad_end - self.grad_start) * t / 2.0)
+    }
+
+    /// The same profile walked backwards.
+    #[must_use]
+    pub fn reversed(&self, length: f64) -> Self {
+        Self {
+            z0: self.at(length, length),
+            grad_start: -self.grad_end,
+            grad_end: -self.grad_start,
+        }
+    }
+}
+
 /// A path in world space as read from the map, before direction expansion.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LaneSegment {
@@ -102,6 +136,8 @@ pub struct LaneSegment {
     pub speed_limit: Option<f64>,
     /// The other `[rule]`s of the path.
     pub rules: LaneRules,
+    /// Height profile.
+    pub elevation: Elevation,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }
@@ -117,6 +153,7 @@ impl LaneSegment {
             direction: Direction::Forward,
             speed_limit: None,
             rules: LaneRules::default(),
+            elevation: Elevation::default(),
             source: 0,
         }
     }
@@ -135,8 +172,13 @@ pub struct Lane {
     pub speed_limit: Option<f64>,
     /// The other `[rule]`s of the path.
     pub rules: LaneRules,
+    /// Height profile in travel direction.
+    pub elevation: Elevation,
     /// The host's tag from the segment.
     pub source: u64,
+    /// Stable identity across rebuilds: the segment's `source` and the number of lanes of that
+    /// source before this one (reversed twins of `Both` lanes count).
+    pub key: (u64, u32),
 }
 
 impl Lane {
@@ -144,6 +186,12 @@ impl Lane {
     #[must_use]
     pub fn length(&self) -> f64 {
         self.geometry.length
+    }
+
+    /// Height after `s` metres.
+    #[must_use]
+    pub fn z_at(&self, s: f64) -> f64 {
+        self.elevation.at(s, self.length())
     }
 }
 
@@ -195,21 +243,30 @@ impl LaneGraph {
     #[must_use]
     pub fn build(segments: &[LaneSegment], params: &ConnectParams) -> Self {
         let mut lanes = Vec::new();
+        let mut per_source: HashMap<u64, u32> = HashMap::new();
         for s in segments {
-            let mk = |geometry: PathGeometry| Lane {
-                geometry,
-                kind: s.kind,
-                width: s.width,
-                speed_limit: s.speed_limit,
-                rules: s.rules,
-                source: s.source,
+            let mut mk = |geometry: PathGeometry, elevation: Elevation| {
+                let n = per_source.entry(s.source).or_default();
+                let key = (s.source, *n);
+                *n += 1;
+                Lane {
+                    geometry,
+                    kind: s.kind,
+                    width: s.width,
+                    speed_limit: s.speed_limit,
+                    rules: s.rules,
+                    elevation,
+                    source: s.source,
+                    key,
+                }
             };
+            let back = s.elevation.reversed(s.geometry.length);
             match s.direction {
-                Direction::Forward => lanes.push(mk(s.geometry)),
-                Direction::Reverse => lanes.push(mk(s.geometry.reversed())),
+                Direction::Forward => lanes.push(mk(s.geometry, s.elevation)),
+                Direction::Reverse => lanes.push(mk(s.geometry.reversed(), back)),
                 Direction::Both => {
-                    lanes.push(mk(s.geometry));
-                    lanes.push(mk(s.geometry.reversed()));
+                    lanes.push(mk(s.geometry, s.elevation));
+                    lanes.push(mk(s.geometry.reversed(), back));
                 }
             }
         }
@@ -277,6 +334,58 @@ impl LaneGraph {
         self.successors
             .get(id.0 as usize)
             .map_or(&[], Vec::as_slice)
+    }
+
+    /// The lane with stable key `key` (see [`Lane::key`]).
+    #[must_use]
+    pub fn lane_by_key(&self, key: (u64, u32)) -> Option<LaneId> {
+        self.lanes
+            .iter()
+            .position(|l| l.key == key)
+            .map(|i| LaneId(i as u32))
+    }
+
+    /// A random place on an accepted lane at a distance of `min..=max` metres from `centre`
+    /// (up to 12 tries). `accept` filters lanes, e.g. by kind and density rule.
+    pub fn random_spot(
+        &self,
+        centre: DVec2,
+        min: f64,
+        max: f64,
+        rng: &mut Rng,
+        accept: impl Fn(&Lane) -> bool,
+    ) -> Option<(LaneId, f64)> {
+        // Lanes with a start or end within reach; lane lengths are short against the radius.
+        let near: Vec<u32> = self
+            .lanes
+            .iter()
+            .enumerate()
+            .filter(|(_, l)| {
+                // Distance to the chord, with slack for the bulge of an arc.
+                let (a, b) = (l.geometry.start, l.geometry.end());
+                let ab = b - a;
+                let t = if ab.length_squared() > 1e-9 {
+                    ((centre - a).dot(ab) / ab.length_squared()).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                (a + ab * t).distance(centre) <= max + 0.25 * l.length() && accept(l)
+            })
+            .map(|(i, _)| i as u32)
+            .collect();
+        if near.is_empty() {
+            return None;
+        }
+        for _ in 0..12 {
+            let id = LaneId(near[rng.below(near.len())]);
+            let lane = &self.lanes[id.0 as usize];
+            let s = rng.next_f64() * lane.length();
+            let d = lane.geometry.point_at(s).distance(centre);
+            if (min..=max).contains(&d) {
+                return Some((id, s));
+            }
+        }
+        None
     }
 
     /// Shortest route (by length) from `from` to `to`, both included.
@@ -384,6 +493,61 @@ mod tests {
         let l = g.lane(LaneId(2)).unwrap();
         assert!(l.geometry.start.abs_diff_eq(DVec2::new(0.0, 130.0), 1e-9));
         assert!(angle_diff(l.geometry.heading, std::f64::consts::PI) < 1e-9);
+    }
+
+    #[test]
+    fn elevation_follows_the_gradients_and_reverses() {
+        let e = Elevation {
+            z0: 10.0,
+            grad_start: 0.02,
+            grad_end: 0.06,
+        };
+        // rise = length · (g0 + g1) / 2 = 100 · 0.04 = 4 m.
+        assert!((e.at(100.0, 100.0) - 14.0).abs() < 1e-9);
+        assert!((e.at(50.0, 100.0) - (10.0 + 50.0 * 0.03)).abs() < 1e-9);
+        let back = e.reversed(100.0);
+        assert!((back.z0 - 14.0).abs() < 1e-9);
+        assert!((back.at(100.0, 100.0) - 10.0).abs() < 1e-9);
+        assert!((back.at(50.0, 100.0) - e.at(50.0, 100.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn keys_survive_a_rebuild_with_other_segments() {
+        let mut a = road(0.0, 0.0, 0.0, 30.0);
+        a.source = 5;
+        a.direction = Direction::Both;
+        let mut b = road(0.0, 100.0, 0.0, 30.0);
+        b.source = 6;
+        let g1 = LaneGraph::build(&[a.clone(), b.clone()], &ConnectParams::default());
+        let g2 = LaneGraph::build(&[b, a], &ConnectParams::default());
+        assert_eq!(g1.lane_by_key((5, 1)), Some(LaneId(1)));
+        assert_eq!(g2.lane_by_key((5, 1)), Some(LaneId(2)));
+        assert_eq!(g2.lane_by_key((9, 0)), None);
+    }
+
+    #[test]
+    fn random_spots_lie_in_the_requested_band() {
+        let g = LaneGraph::build(&[road(0.0, 0.0, 0.0, 400.0)], &ConnectParams::default());
+        let mut rng = Rng::new(9);
+        let mut found = 0;
+        for _ in 0..50 {
+            if let Some((id, s)) =
+                g.random_spot(DVec2::new(0.0, 200.0), 50.0, 120.0, &mut rng, |_| true)
+            {
+                let d = g
+                    .lane(id)
+                    .unwrap()
+                    .geometry
+                    .point_at(s)
+                    .distance(DVec2::new(0.0, 200.0));
+                assert!((50.0..=120.0).contains(&d));
+                found += 1;
+            }
+        }
+        assert!(found > 20, "only {found} spots");
+        assert!(g
+            .random_spot(DVec2::new(0.0, 200.0), 50.0, 120.0, &mut rng, |_| false)
+            .is_none());
     }
 
     #[test]

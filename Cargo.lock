@@ -5263,6 +5263,7 @@ dependencies = [
  "opts-gui",
  "opts-logging",
  "opts-sim",
+ "opts-traffic",
  "rfd",
  "rusqlite",
  "serde",

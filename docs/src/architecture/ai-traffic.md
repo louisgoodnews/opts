@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Plan with a first implementation slice (`opts-traffic` crate, lists parsers); nothing is wired into the game yet |
+| **Status** | 🟡 Plan; kinematic traffic (cars on lanes, IDM, rules for speed and density) runs in the game; signals, priority, script-driven vehicles and calibration are open |
 | **Date** | 2026-10-11 |
 | **Milestone** | [M-0049](../roadmap/phase-4/M-0049.md) |
 | **Crate** | [`opts-traffic`](../../crates/opts-traffic.md) (pure Rust, no Bevy) |
@@ -33,7 +33,7 @@ OMSI maps are alive with background traffic: cars, lorries, cyclists, scheduled 
 | Speed limit, density, priority, lane/type bans per path | `[rule]` in tiles | [tiles](../formats/map/tiles.md) | ✅ with owner and path index (`MapTrafficRule::owner`, `kind()`), applied to lanes by `segments_from_tile` |
 | Traffic-light programs and which paths they stop | `[traffic_lights_group]`, `[traffic_light]`, `[phase]`, `[use_traffic_light]`, `[approachdist]` | [sco](../formats/text/sco.md#-traffic-lights) | ✅ programs, light index per path, approach distance |
 | How a vehicle turns throttle/brake into motion | `{frame}` of the AI script, `*_constfile.txt` `AI_*` constants | [osc](../formats/text/vehicles/osc.md), [const](../formats/text/vehicles/const.md) | ✅ script VM (`opts-sim`) |
-| AI-only vehicle keywords | `[ai_deltaheight]`, `[ai_brakeperformance]`, `[ai_veh_type]`, `[sound_ai]` | [bus](../formats/text/vehicles/bus.md), [misc types](../formats/text/misc-types.md#ovh) | ⚠️ `[ai_deltaheight]` yes; the others are kept as unknown fields |
+| AI-only vehicle keywords | `[ai_deltaheight]`, `[ai_brakeperformance]`, `[ai_veh_type]`, `[sound_ai]` | [bus](../formats/text/vehicles/bus.md), [misc types](../formats/text/misc-types.md#ovh) | ⚠️ none are fields of `BusManifest`; the game reads `[ai_deltaheight]` straight from the file text (`omsi_world/traffic.rs`), the others are not read |
 
 ### 2.1 What the lists look like in the installed corpus [M]
 
@@ -142,17 +142,19 @@ Principles:
 | Module | Content | Tests |
 | :--- | :--- | :--- |
 | `geometry` | `PathGeometry`: arc/straight, `point_at`, `reversed`, lateral `offset`, `to_world` (object placement) | 7 |
-| `graph` | `LaneSegment`, `LaneGraph::build` (spatial-hash geometric joins, direction expansion), `shortest_route` | 5 |
+| `graph` | `LaneSegment`, `LaneGraph::build` (spatial-hash geometric joins, direction expansion, stable lane keys, `Elevation` profile), `shortest_route`, `lane_by_key`, `random_spot` | 8 |
 | `idm` | `IdmParams` (car, heavy), `acceleration` with speed cap and obstacle | 5 |
-| `agent` | `TrafficWorld` (spawn with free-room check, `step`, lane transitions, leaders across lane borders, dead-end events), `DriverCommand` (throttle/brake from acceleration, indicators from the next lane's turn) | 7 |
+| `agent` | `TrafficWorld` (spawn with free-room check, `step`, lane transitions, leaders across lane borders, dead-end events, `replace_graph` when tiles stream), `DriverCommand` (throttle/brake from acceleration, indicators from the next lane's turn) | 7 |
 | `density` | `DensityCurve` (wraps at 24 h), `weighted_pick` | 3 |
-| `source` | `segments_from_tile` with the `PathSource` trait (spline `[path]` + object `[path]` → world lanes) | 2 |
+| `source` | `segments_from_tile` with the `PathSource` trait (spline `[path]` + object `[path]` → world lanes with `[rule]`s and height profile) | 4 |
 | `rng` | SplitMix64 | 2 |
 | `examples/lane_graph_audit` | the measurement of §3.1 | — |
 
 ---
 
 ## 6. Integration steps (what the game needs)
+
+**State 2026-10-11 — steps 1–3 exist in `opts-game` (`omsi_world/traffic.rs`, switch `--traffic N`):** each loaded tile contributes its road lanes (`tile_segments`, with the load job's `.sli`/`.sco` caches as `PathSource` and the terrain height for objects); the graph is rebuilt when the resident tile set changes and agents keep their lane through the rebuild by lane key; the map's `ailists.cfg` group `NormalCars` (else the first group) supplies the vehicle types, loaded lazily (models come from `[model]` of the `.bus`/`.ovh`, lod 0, textures from the vehicle folder); spawning happens every 0.5 s on a random lane 80–220 m from the camera, outside the camera's view cone, thinned by the lane's `trafficdensity` rule (`0` = never), up to `min(--traffic, road length / 250 m × density(hour))`; vehicles are placed with the model origin behind the front bumper by the measured body length, lowered by `[ai_deltaheight]`, and removed at dead ends, on lane loss or beyond 320 m. **Verified in the running game** on Berlin-Spandau (screenshot from a free camera: a column of cars on both carriageways of the main road, aligned with the lanes) and in the log (28 vehicles spawned within 90 s, graph rebuilds of 0–2 ms). **Not there yet:** wheel spin, lights and indicators from `DriverCommand`, collision avoidance at merging lanes (agents only see leaders on their own and the next lane), signals, priority, the dynamic mode (steps 4–7).
 
 1. **Loader glue (`opts-bevy`)**: implement `PathSource` over the existing content cache (`.sli`/`.sco` are already parsed for rendering and spline attachments), call `segments_from_tile` for each resident tile, build/extend the graph. Optional debug overlay: draw lanes and successors (gizmos) and agent states on F10.
 2. **Spawner**: read `ailists.cfg` + `unsched_*.txt` of the active map (and the active chrono's replacements), choose group → vehicle with `weighted_pick`, load the vehicle through the normal vehicle loader with an AI flavour (script `ai = 1`, no driver, `[ai_deltaheight]` applied), skip entries that are not installed.

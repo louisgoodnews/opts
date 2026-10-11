@@ -15,6 +15,10 @@ Environment variables and flags that change behaviour for development, tests and
 | `OPTS_REPORTS_DIR` | Where F1 reports and screenshots are saved (default `~/.local/share/opts/reports`). |
 | `XDG_CACHE_HOME` | Base of the descrambler cache (`<base>/opts/descramble`, capped at 256 MiB). |
 
+## Game flags
+
+`--pedestrians <n>` caps simultaneously walking pedestrians (`0` = none, default 40). `--traffic <n>` caps simultaneously driving AI vehicles (`0` = none, default 30); the target count is also limited by the road length of the loaded tiles (one vehicle per 250 m) and the map's `unsched_trafficdens.txt` curve at the session's time of day. Debug lines of the traffic module: `OPTS_LOG_LEVEL=debug` (lane graph rebuilds, spawns).
+
 ## Decoder tuning (read by the game and by `confident_eval`; see `o3d.md`, Addendum 6)
 
 `BP_W`, `BP_T`, `BP_I` (belief propagation weight, truncation, sweeps), `ANNEAL_T0`, `ANNEAL_R` (annealing start temperature, rounds), `OPTS_DESCRAMBLE_RESTARTS` (restarts of the plain solver), `OPTS_CONF_AGREE` (agreement two runs need, default `0.98`). They are applied through `DecodeParams::with_overrides`; every distinct set has its own cache entries.

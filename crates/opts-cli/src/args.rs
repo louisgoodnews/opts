@@ -89,6 +89,10 @@ pub struct CliArgs {
     #[arg(long, value_name = "N")]
     pub pedestrians: Option<usize>,
 
+    /// Cap on simultaneously driving AI vehicles (`0` = none; default 30).
+    #[arg(long, value_name = "N")]
+    pub traffic: Option<usize>,
+
     /// Disable the file watcher that hot-reloads edited OMSI content.
     #[arg(long, default_value_t = false)]
     pub no_hot_reload: bool,
@@ -123,6 +127,7 @@ impl Default for CliArgs {
             cli_bind: "127.0.0.1".to_string(),
             cli_token: None,
             pedestrians: None,
+            traffic: None,
             cli_allow_dir: Vec::new(),
             no_hot_reload: false,
             hot_reload_root: Vec::new(),

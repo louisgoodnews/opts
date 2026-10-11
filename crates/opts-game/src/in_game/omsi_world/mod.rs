@@ -23,6 +23,7 @@ mod pedestrians;
 mod reload;
 mod tile;
 mod tile_ground;
+mod traffic;
 mod trees;
 mod vehicle;
 
@@ -35,6 +36,10 @@ pub use pedestrians::{
 };
 pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
+pub use traffic::{
+    configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_traffic_graph,
+    TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
+};
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
