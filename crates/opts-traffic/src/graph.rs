@@ -139,6 +139,8 @@ pub struct LaneSegment {
     pub rules: LaneRules,
     /// Height profile.
     pub elevation: Elevation,
+    /// The light that governs entering this lane (`[use_traffic_light]`), if any.
+    pub signal: Option<crate::signals::SignalKey>,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }
@@ -155,6 +157,7 @@ impl LaneSegment {
             speed_limit: None,
             rules: LaneRules::default(),
             elevation: Elevation::default(),
+            signal: None,
             source: 0,
         }
     }
@@ -175,6 +178,8 @@ pub struct Lane {
     pub rules: LaneRules,
     /// Height profile in travel direction.
     pub elevation: Elevation,
+    /// The light that governs entering this lane.
+    pub signal: Option<crate::signals::SignalKey>,
     /// The host's tag from the segment.
     pub source: u64,
     /// Stable identity across rebuilds: the segment's `source` and the number of lanes of that
@@ -237,6 +242,8 @@ pub struct LaneGraph {
     pub(crate) grid: HashMap<(i64, i64), Vec<u32>>,
     /// Conflict zones per lane, computed on first use.
     pub(crate) conflict_cache: Vec<OnceLock<Vec<crate::conflict::Conflict>>>,
+    /// Parallel same-direction lanes per lane, computed on first use.
+    pub(crate) neighbour_cache: Vec<OnceLock<Vec<crate::neighbours::Neighbour>>>,
 }
 
 fn angle_diff(a: f64, b: f64) -> f64 {
@@ -262,6 +269,7 @@ impl LaneGraph {
                     speed_limit: s.speed_limit,
                     rules: s.rules,
                     elevation,
+                    signal: s.signal,
                     source: s.source,
                     key,
                 }
@@ -316,12 +324,14 @@ impl LaneGraph {
         }
         let grid = Self::index_lanes(&lanes);
         let conflict_cache = (0..lanes.len()).map(|_| OnceLock::new()).collect();
+        let neighbour_cache = (0..lanes.len()).map(|_| OnceLock::new()).collect();
         Self {
             lanes,
             successors,
             predecessors,
             grid,
             conflict_cache,
+            neighbour_cache,
         }
     }
 

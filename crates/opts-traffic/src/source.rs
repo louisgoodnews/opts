@@ -17,10 +17,11 @@
 
 use glam::DVec2;
 use opts_core::formats::map::{MapObjectInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner};
-use opts_core::formats::scenery::{ScoPath, SplinePath};
+use opts_core::formats::scenery::{ScoPath, ScoTrafficLightGroup, SplinePath};
 
 use crate::geometry::PathGeometry;
 use crate::graph::{Direction, Elevation, LaneKind, LaneRules, LaneSegment};
+use crate::signals::{SignalKey, SignalProgram};
 
 /// Tile edge length in metres: tile `(x, y)` starts at `(x · 300, y · 300)`.
 pub const TILE_SIZE_M: f64 = 300.0;
@@ -43,6 +44,37 @@ pub trait PathSource {
     fn object_base_height(&mut self, object: &MapObjectInstance) -> f64 {
         f64::from(object.position.z)
     }
+    /// The light programs of a `.sco` (`None` when the file is unknown).
+    fn sco_lights(&mut self, _sco_file: &str) -> Option<&[ScoTrafficLightGroup]> {
+        None
+    }
+}
+
+/// The light programs of every object of `tile`, keyed like [`LaneSegment::signal`]: the object's
+/// `id_code` and the program's index in declaration order across its groups.
+pub fn signals_from_tile(
+    tile: &MapTile,
+    source: &mut impl PathSource,
+) -> Vec<(SignalKey, SignalProgram)> {
+    let mut out = Vec::new();
+    for o in &tile.objects {
+        let Some(groups) = source.sco_lights(&o.sco_file) else {
+            continue;
+        };
+        let programs = groups.iter().flat_map(|g| g.programs.iter());
+        for (i, p) in programs.enumerate() {
+            let phases = p
+                .phases
+                .iter()
+                .map(|ph| (ph.state, f64::from(ph.duration_sec)))
+                .collect();
+            let approach = f64::from(p.approach_distance_m.unwrap_or(0.0));
+            if let Some(program) = SignalProgram::new(phases, approach) {
+                out.push(((o.id_code, i), program));
+            }
+        }
+    }
+    out
 }
 
 /// Folds the rules that address path `path_index` of `owner` into a speed limit (m/s) and the
@@ -118,6 +150,7 @@ pub fn segments_from_tile(
                     grad_start: f64::from(s.gradient_start),
                     grad_end: f64::from(s.gradient_end),
                 },
+                signal: None,
                 source: s.id_code,
             });
         }
@@ -165,6 +198,7 @@ pub fn segments_from_tile(
                     grad_start: f64::from(p.slope_start),
                     grad_end: f64::from(p.slope_end),
                 },
+                signal: p.traffic_light_index.map(|i| (o.id_code, i)),
                 source: o.id_code,
             });
         }

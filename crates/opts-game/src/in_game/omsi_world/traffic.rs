@@ -17,14 +17,14 @@ use opts_core::formats::map::lists::day;
 use opts_core::formats::map::{
     parse_unsched_trafficdens, AiLists, GroupDensity, MapObjectInstance, MapTerrain, MapTile,
 };
-use opts_core::formats::scenery::sco::ScoPath;
+use opts_core::formats::scenery::sco::{ScoPath, ScoTrafficLightGroup};
 use opts_core::formats::scenery::{SceneryObject, SplinePath, SplineProfile};
 use opts_core::formats::text::{decode_bytes, scan_blocks};
 use opts_core::formats::vehicles::model::ModelConfig;
 use opts_core::formats::vehicles::BusManifest;
 use opts_traffic::{
-    segments_from_tile, AgentId, ConnectParams, IdmParams, LaneGraph, LaneKind, LaneSegment,
-    PathSource, Rng, TrafficWorld,
+    segments_from_tile, signals_from_tile, AgentId, ConnectParams, IdmParams, LaneGraph, LaneKind,
+    LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld,
 };
 
 use crate::in_game::types::{InGameEntity, InGameSessionInfo};
@@ -68,6 +68,8 @@ pub struct TrafficState {
     world: TrafficWorld,
     /// Road lane segments per resident tile.
     segments: HashMap<(i32, i32), Vec<LaneSegment>>,
+    /// Light programs of the junction objects per resident tile.
+    signals: HashMap<(i32, i32), Vec<(SignalKey, SignalProgram)>>,
     /// The segments changed; the graph is rebuilt before the next step.
     dirty: bool,
     road_length_m: f64,
@@ -78,6 +80,7 @@ impl Default for TrafficState {
         Self {
             world: TrafficWorld::new(LaneGraph::default(), 0x7AF1_C001),
             segments: HashMap::new(),
+            signals: HashMap::new(),
             dirty: false,
             road_length_m: 0.0,
         }
@@ -167,6 +170,15 @@ impl PathSource for JobSource<'_> {
             .map(|o| o.paths.as_slice())
     }
 
+    fn sco_lights(&mut self, f: &str) -> Option<&[ScoTrafficLightGroup]> {
+        let job = &mut *self.job;
+        self.sco
+            .entry(f.to_owned())
+            .or_insert_with(|| job.sco(f).map(|(_, o)| o))
+            .as_deref()
+            .map(|o| o.traffic_light_groups.as_slice())
+    }
+
     fn object_base_height(&mut self, o: &MapObjectInstance) -> f64 {
         let absolute = self
             .sco
@@ -184,13 +196,13 @@ impl PathSource for JobSource<'_> {
     }
 }
 
-/// Road lane segments of a tile in the world frame.
+/// Road lane segments and light programs of a tile in the world frame.
 pub(super) fn tile_segments(
     job: &mut WorldLoadJob,
     tile: &MapTile,
     terrain: Option<&MapTerrain>,
     origin: (f32, f32),
-) -> Vec<LaneSegment> {
+) -> (Vec<LaneSegment>, Vec<(SignalKey, SignalProgram)>) {
     let mut source = JobSource {
         job,
         terrain,
@@ -203,14 +215,20 @@ pub(super) fn tile_segments(
         &mut source,
     );
     segs.retain(|s| s.kind == LaneKind::Road);
-    segs
+    let signals = signals_from_tile(tile, &mut source);
+    (segs, signals)
 }
 
 /// Registers a tile's lanes.
-pub(super) fn register_tile(commands: &mut Commands, key: (i32, i32), segments: Vec<LaneSegment>) {
+pub(super) fn register_tile(
+    commands: &mut Commands,
+    key: (i32, i32),
+    (segments, signals): (Vec<LaneSegment>, Vec<(SignalKey, SignalProgram)>),
+) {
     commands.queue(move |world: &mut World| {
         if let Some(mut state) = world.get_resource_mut::<TrafficState>() {
             state.segments.insert(key, segments);
+            state.signals.insert(key, signals);
             state.dirty = true;
         }
     });
@@ -221,6 +239,7 @@ pub(super) fn unregister_tile(commands: &mut Commands, key: (i32, i32)) {
     commands.queue(move |world: &mut World| {
         if let Some(mut state) = world.get_resource_mut::<TrafficState>() {
             state.segments.remove(&key);
+            state.signals.remove(&key);
             state.dirty = true;
         }
     });
@@ -262,9 +281,16 @@ pub fn update_traffic_graph(mut state: ResMut<TrafficState>) {
         .sum();
     let (lanes, length_km) = (graph.len(), state.road_length_m / 1000.0);
     let removed = state.world.replace_graph(graph);
+    let programs: HashMap<SignalKey, SignalProgram> = tiles
+        .iter()
+        .flat_map(|k| state.signals[k].iter().cloned())
+        .collect();
+    let lights = programs.len();
+    state.world.set_signals(programs);
     tracing::debug!(
         lanes,
         length_km,
+        lights,
         removed = removed.len(),
         ms = t.elapsed().as_millis() as u64,
         "traffic lane graph rebuilt"
@@ -664,11 +690,20 @@ pub fn update_ai_variables(
 pub fn move_traffic(
     time: Res<Time>,
     mut commands: Commands,
+    session: Option<Res<InGameSessionInfo>>,
     mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut vehicles: Query<(Entity, &TrafficVehicle, &mut Transform, &mut Visibility)>,
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
+    // The lights follow the session's time of day.
+    if let Some(s) = &session {
+        state.world.set_clock(
+            f64::from(s.start_hour) * 3600.0
+                + f64::from(s.start_minute) * 60.0
+                + f64::from(s.sim_elapsed_seconds),
+        );
+    }
     // Sub-steps of at most 0.1 s keep the car-following law stable.
     let steps = (dt / 0.1).ceil().max(1.0);
     for _ in 0..steps as usize {

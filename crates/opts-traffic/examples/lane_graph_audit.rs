@@ -5,9 +5,12 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use opts_core::formats::map::MapTile;
-use opts_core::formats::scenery::{SceneryObject, ScoPath, SplinePath, SplineProfile};
+use opts_core::formats::scenery::{
+    SceneryObject, ScoPath, ScoTrafficLightGroup, SplinePath, SplineProfile,
+};
 use opts_traffic::{
-    segments_from_tile, tile_origin, ConnectParams, LaneGraph, LaneKind, PathSource,
+    segments_from_tile, signals_from_tile, tile_origin, Aspect, ConnectParams, LaneGraph, LaneKind,
+    PathSource,
 };
 
 fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
@@ -25,7 +28,7 @@ fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
 struct Files {
     root: PathBuf,
     sli: HashMap<String, Option<Vec<SplinePath>>>,
-    sco: HashMap<String, Option<Vec<ScoPath>>>,
+    sco: HashMap<String, Option<SceneryObject>>,
 }
 
 impl PathSource for Files {
@@ -46,9 +49,18 @@ impl PathSource for Files {
             .entry(f.to_owned())
             .or_insert_with(|| {
                 let bytes = std::fs::read(find_ci(root, f)?).ok()?;
-                SceneryObject::parse(&bytes).ok().map(|o| o.paths)
+                SceneryObject::parse(&bytes).ok()
             })
-            .as_deref()
+            .as_ref()
+            .map(|o| o.paths.as_slice())
+    }
+
+    fn sco_lights(&mut self, f: &str) -> Option<&[ScoTrafficLightGroup]> {
+        self.sco_paths(f)?;
+        self.sco
+            .get(f)?
+            .as_ref()
+            .map(|o| o.traffic_light_groups.as_slice())
     }
 }
 
@@ -65,6 +77,7 @@ fn main() {
         sco: HashMap::new(),
     };
     let mut segments = Vec::new();
+    let mut programs = HashMap::new();
     for e in std::fs::read_dir(&map_dir).expect("map dir").flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         let Some(rest) = name
@@ -88,6 +101,7 @@ fn main() {
         };
         let origin = tile_origin(x, y);
         segments.extend(segments_from_tile(&tile, origin, &mut files));
+        programs.extend(signals_from_tile(&tile, &mut files));
     }
     segments.retain(|s| s.kind == LaneKind::Road);
     let params = ConnectParams::default();
@@ -163,6 +177,48 @@ fn main() {
         100.0 * conflicts.iter().filter(|&&c| c > 0).count() as f64 / n.max(1) as f64,
         conflicts.iter().sum::<usize>(),
         conflicts.iter().max().unwrap_or(&0),
+        t.elapsed().as_millis()
+    );
+    let signalled = graph
+        .lane_ids()
+        .filter_map(|l| graph.lane(l))
+        .filter(|l| l.signal.is_some())
+        .count();
+    let with_program = graph
+        .lane_ids()
+        .filter_map(|l| graph.lane(l))
+        .filter_map(|l| l.signal)
+        .filter(|k| programs.contains_key(k))
+        .count();
+    let mut aspects = [0usize; 4];
+    for p in programs.values() {
+        for t in (0..p.cycle() as usize).step_by(1) {
+            aspects[match p.aspect_at(t as f64) {
+                Aspect::Stop => 0,
+                Aspect::Go => 1,
+                Aspect::Yellow => 2,
+                Aspect::Off => 3,
+            }] += 1;
+        }
+    }
+    let total: usize = aspects.iter().sum::<usize>().max(1);
+    println!(
+        "lights: {} programs, {signalled} lanes governed ({with_program} with a known program); share of the cycle red {:.0} %, green {:.0} %, yellow {:.0} %, dark {:.0} %",
+        programs.len(),
+        100.0 * aspects[0] as f64 / total as f64,
+        100.0 * aspects[1] as f64 / total as f64,
+        100.0 * aspects[2] as f64 / total as f64,
+        100.0 * aspects[3] as f64 / total as f64,
+    );
+    let t = std::time::Instant::now();
+    let neighbours: Vec<usize> = graph
+        .lane_ids()
+        .map(|l| graph.neighbours(l).len())
+        .collect();
+    println!(
+        "neighbour lanes: {} lanes have one ({:.1} %); computed for all lanes in {} ms",
+        neighbours.iter().filter(|&&c| c > 0).count(),
+        100.0 * neighbours.iter().filter(|&&c| c > 0).count() as f64 / n.max(1) as f64,
         t.elapsed().as_millis()
     );
     let lanes = || graph.lane_ids().filter_map(|l| graph.lane(l));

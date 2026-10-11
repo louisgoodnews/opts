@@ -131,6 +131,19 @@ impl SceneryObject {
     pub fn has_absolute_height(&self) -> bool {
         self.abs_height || !self.spline_helpers.is_empty()
     }
+
+    /// The light program `index` of `[use_traffic_light]`: programs are numbered in declaration
+    /// order across all groups, with the group that holds the program.
+    #[must_use]
+    pub fn traffic_light(
+        &self,
+        index: usize,
+    ) -> Option<(&ScoTrafficLightGroup, &ScoTrafficLightProgram)> {
+        self.traffic_light_groups
+            .iter()
+            .flat_map(|g| g.programs.iter().map(move |p| (g, p)))
+            .nth(index)
+    }
 }
 
 impl ScoMesh {
@@ -164,8 +177,20 @@ pub struct ScoPhase {
 pub struct ScoTrafficLightProgram {
     /// Program name (e.g. "Main", "RPB Haupt").
     pub name: String,
-    /// Sequential phase timing entries.
+    /// Sequential phase timing entries (a repeating cycle).
     pub phases: Vec<ScoPhase>,
+    /// `[approachdist]` of the program: how far before the stop line vehicles check the light
+    /// (`0` = none; corpus: `0`, `25`, `30`, `50`, `100`). It follows the program's phases in the
+    /// file, not a path.
+    pub approach_distance_m: Option<f32>,
+}
+
+impl ScoTrafficLightProgram {
+    /// Length of one cycle in seconds (sum of the phase durations).
+    #[must_use]
+    pub fn cycle_sec(&self) -> f32 {
+        self.phases.iter().map(|p| p.duration_sec).sum()
+    }
 }
 
 /// Traffic light controller group.
@@ -373,8 +398,12 @@ impl SceneryObject {
         let mut obj = SceneryObject::default();
 
         let mut current_lod: Option<f32> = None;
+        // `[use_traffic_light]` governs the next `[path]` only (every controlled path of the
+        // installed junctions has its own, repeated line; the uncontrolled approach stubs
+        // between them would otherwise inherit it).
         let mut active_traffic_light: Option<usize> = None;
         let mut active_approach_dist: Option<f32> = None;
+        let mut seen_path = false;
 
         for block in &blocks {
             match block.keyword.as_str() {
@@ -732,6 +761,7 @@ impl SceneryObject {
                         let prog = ScoTrafficLightProgram {
                             name: name.clone(),
                             phases: Vec::new(),
+                            approach_distance_m: None,
                         };
                         if let Some(grp) = obj.traffic_light_groups.last_mut() {
                             grp.programs.push(prog);
@@ -769,8 +799,19 @@ impl SceneryObject {
                 }
                 "approachdist" => {
                     if let Some(val) = block.parameters.first() {
-                        active_approach_dist =
-                            Some(parse_f32(val, "approachdist", block.line_number)?);
+                        let dist = parse_f32(val, "approachdist", block.line_number)?;
+                        // 20,598 of 20,625 uses sit right after the phases of a light program.
+                        let program = if seen_path {
+                            None
+                        } else {
+                            obj.traffic_light_groups
+                                .last_mut()
+                                .and_then(|g| g.programs.last_mut())
+                        };
+                        match program {
+                            Some(p) => p.approach_distance_m = Some(dist),
+                            None => active_approach_dist = Some(dist),
+                        }
                     }
                 }
                 "path" | "path_2" => {
@@ -803,9 +844,10 @@ impl SceneryObject {
                             width_m: width,
                             direction: dir,
                             extra,
-                            traffic_light_index: active_traffic_light,
+                            traffic_light_index: active_traffic_light.take(),
                             approach_distance_m: active_approach_dist,
                         });
+                        seen_path = true;
                     }
                 }
                 "maplight" => {
@@ -959,6 +1001,21 @@ impl SceneryObject {
             }
         }
 
+        // A path's approach distance comes from the light that governs it.
+        let approach: Vec<Option<f32>> = obj
+            .paths
+            .iter()
+            .map(|p| {
+                p.traffic_light_index
+                    .and_then(|i| obj.traffic_light(i))
+                    .and_then(|(_, prog)| prog.approach_distance_m)
+            })
+            .collect();
+        for (path, a) in obj.paths.iter_mut().zip(approach) {
+            if a.is_some() {
+                path.approach_distance_m = a;
+            }
+        }
         Ok(obj)
     }
 }
@@ -1149,6 +1206,27 @@ Main
         assert_eq!(path.direction, 0);
         assert_eq!(path.traffic_light_index, Some(0));
         assert_eq!(path.approach_distance_m, Some(25.0));
+    }
+
+    #[test]
+    fn use_traffic_light_governs_the_next_path_only_and_approachdist_belongs_to_the_program() {
+        let text = "[traffic_lights_group]\n80\n[traffic_light]\nA\n[phase]\n6\n40\n[phase]\n0\n40\n[approachdist]\n50\n[traffic_light]\nB\n[phase]\n6\n80\n[approachdist]\n0\n\n[path]\n0\n0\n0\n0\n0\n3\n0\n0\n0\n3.5\n0\n[use_traffic_light]\n1\n[path]\n0\n3\n0\n0\n0\n10\n0\n0\n0\n3.5\n0\n[path]\n0\n13\n0\n0\n0\n10\n0\n0\n0\n3.5\n0\n[use_traffic_light]\n0\n[path]\n0\n23\n0\n0\n0\n10\n0\n0\n0\n3.5\n0\n";
+        let sco = SceneryObject::from_text(text).unwrap();
+        let lights: Vec<_> = sco.paths.iter().map(|p| p.traffic_light_index).collect();
+        assert_eq!(lights, [None, Some(1), None, Some(0)]);
+        // Approach distances come from the programs (declaration order across groups).
+        assert_eq!(
+            sco.traffic_light(0).unwrap().1.approach_distance_m,
+            Some(50.0)
+        );
+        assert_eq!(
+            sco.traffic_light(1).unwrap().1.approach_distance_m,
+            Some(0.0)
+        );
+        assert!(sco.traffic_light(2).is_none());
+        assert_eq!(sco.paths[1].approach_distance_m, Some(0.0));
+        assert_eq!(sco.paths[3].approach_distance_m, Some(50.0));
+        assert_eq!(sco.traffic_light(0).unwrap().1.cycle_sec(), 80.0);
     }
 
     #[test]

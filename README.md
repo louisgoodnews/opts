@@ -2,7 +2,7 @@
 
 OPTS is a free, open-source public transport simulator written in **Rust** on the **Bevy** engine. Its first goal is to load, natively and from files you already own, the assets of the bus simulator **OMSI 2** — vehicles, scenery, maps and timetables — and run them in a modern engine.
 
-> 🚧 **Status: early development — a runnable prototype, not a release.** `opts-game` starts, finds your OMSI 2 installation (or asks for it), lists your maps and vehicles, loads a map with terrain, roads, scenery, sky and parked vehicles, and lets you drive a vehicle whose original OMSI scripts run: animations, lights, doors, indicators and the cockpit's clickable controls respond. AI cars drive along the road lanes around you in a simple form (they take turns at crossings; no traffic lights yet). Passengers, timetables and sound are not implemented yet, and some OMSI meshes whose vertex data is scrambled still cannot be shown. Format specifications remain drafts. See the [roadmap](ROADMAP.md) and the [BOARD](docs/dev/BOARD.md) for what is in flight.
+> 🚧 **Status: early development — a runnable prototype, not a release.** `opts-game` starts, finds your OMSI 2 installation (or asks for it), lists your maps and vehicles, loads a map with terrain, roads, scenery, sky and parked vehicles, and lets you drive a vehicle whose original OMSI scripts run: animations, lights, doors, indicators and the cockpit's clickable controls respond. AI cars drive along the road lanes around you in a simple form (they stop at red lights, take turns at crossings and change lanes). Passengers, timetables and sound are not implemented yet, and some OMSI meshes whose vertex data is scrambled still cannot be shown. Format specifications remain drafts. See the [roadmap](ROADMAP.md) and the [BOARD](docs/dev/BOARD.md) for what is in flight.
 
 ## ✅ What works today
 
@@ -13,8 +13,8 @@ OPTS is a free, open-source public transport simulator written in **Rust** on th
 | **Vehicles** | kinematic/dynamic driving, wheels, cockpit/chase/passenger/free-roam cameras, driver character |
 | **Scripts** (`opts-sim`) | OMSI `.osc` script VM (compiles all 6,062 scripts of the reference corpus), driving mesh animation, lights, light maps, OMSI key bindings and cockpit hot-spots |
 | **Tooling** | `opts-cli` remote control of a running game, hot reload of changed assets, F1 bug reporting, `opts-tools inspect` |
-| **AI traffic** | cars from the map's AI list follow the road lanes and keep their distance (`--traffic N`); vehicles take turns at crossings and merges; no signals, right-of-way rules or lane changes yet |
-| **Not yet** | passengers and routing, timetables, signals and priority for AI traffic, spatial audio, night maps, in-game settings, packaged releases |
+| **AI traffic** | cars from the map's AI list follow the road lanes and keep their distance (`--traffic N`); vehicles stop at traffic lights, take turns at crossings and merges and change lanes gently; no right-of-way rules yet |
+| **Not yet** | passengers and routing, timetables, right of way and animated signal heads, spatial audio, night maps, in-game settings, packaged releases |
 
 ## 🚀 Running it
 

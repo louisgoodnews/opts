@@ -5,14 +5,21 @@
 //! driving a real vehicle simulation through its scripts, uses [`TrafficWorld::command`] — the
 //! pedal and indicator values OMSI's `{frame}` blocks of AI vehicles read (`Throttle`, `Brake`,
 //! `AI_Blinker_L/R`; `docs/src/architecture/ai-traffic.md`, "The vehicle contract").
+//!
+//! What limits a vehicle each step, nearest first: the leader (same lane or ahead along the
+//! agent's planned lanes), a traffic light it must stop for ([`crate::signals`]), a conflict zone
+//! it must give way at ([`crate::conflict`]). Lane changes ([`crate::lanechange`]) are decided
+//! before the accelerations are computed.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use glam::DVec2;
 
 use crate::graph::{LaneGraph, LaneId, SpawnError};
 use crate::idm::IdmParams;
+use crate::neighbours::Side;
 use crate::rng::Rng;
+use crate::signals::{Aspect, SignalKey, SignalProgram};
 
 /// Identifies an agent for its lifetime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -51,7 +58,18 @@ pub enum TrafficEvent {
         /// The lane it left.
         lane: LaneId,
     },
+    /// The agent moved over to a neighbouring lane (its sideways motion takes
+    /// [`LANE_CHANGE_DURATION_S`] seconds).
+    LaneChanged {
+        /// The agent.
+        id: AgentId,
+        /// Side it moved to.
+        side: Side,
+    },
 }
+
+/// Seconds a lane change takes sideways (smooth start and end).
+pub const LANE_CHANGE_DURATION_S: f64 = 3.0;
 
 /// A vehicle on a lane.
 #[derive(Debug, Clone, PartialEq)]
@@ -68,26 +86,91 @@ pub struct Agent {
     pub accel: f64,
     /// Driver and vehicle parameters.
     pub params: IdmParams,
-    /// The lane taken after this one (chosen on entry), if any.
-    pub next: Option<LaneId>,
+    /// The lanes that follow the current one (chosen ahead of time, at least ~150 m).
+    pub plan: VecDeque<LaneId>,
     /// Seconds spent standing still because of a conflict zone.
     pub waiting_s: f64,
     /// World time until which conflicts are ignored (breaks deadlocks).
     pub ignore_conflicts_until: f64,
+    /// Sideways offset from the lane's centre line in metres (positive = right); non-zero while a
+    /// lane change is still being driven.
+    pub lateral: f64,
+    /// Offset at the start of the running lane change and seconds since then.
+    pub(crate) lc_from: f64,
+    pub(crate) lc_t: f64,
+    /// Yaw (rad, clockwise) caused by the sideways motion.
+    pub(crate) yaw: f64,
+    /// Side of the lane change being driven or announced.
+    pub(crate) lc_side: Option<Side>,
+    /// Announced lane change: the indicator is on until this world time, then it is executed if
+    /// still safe.
+    pub(crate) lc_due: Option<f64>,
+    /// No new lane change before this world time; next evaluation time.
+    pub(crate) lc_cooldown_until: f64,
+    pub(crate) lc_next_check: f64,
 }
 
 impl Agent {
-    /// World position and compass heading (radians) of the front bumper.
+    /// The lane taken after this one, if any.
+    #[must_use]
+    pub fn next(&self) -> Option<LaneId> {
+        self.plan.front().copied()
+    }
+
+    /// Whether the sideways motion of a lane change is still going on.
+    #[must_use]
+    pub fn changing_lane(&self) -> bool {
+        self.lc_t < LANE_CHANGE_DURATION_S && self.lc_from != 0.0
+    }
+
+    /// World position and compass heading (radians) of the front bumper, including the sideways
+    /// offset and yaw of a lane change in progress.
     #[must_use]
     pub fn pose(&self, graph: &LaneGraph) -> Option<(DVec2, f64)> {
         let g = &graph.lane(self.lane)?.geometry;
-        Some((g.point_at(self.s), g.heading_at(self.s)))
+        let h = g.heading_at(self.s);
+        let right = DVec2::new(h.cos(), -h.sin());
+        Some((g.point_at(self.s) + right * self.lateral, h + self.yaw))
     }
 
     /// Height of the front bumper in metres (from the lane's elevation profile).
     #[must_use]
     pub fn height(&self, graph: &LaneGraph) -> Option<f64> {
         Some(graph.lane(self.lane)?.z_at(self.s))
+    }
+
+    /// Starts a lane change: the car is now on the new lane, `offset` metres beside its centre.
+    pub(crate) fn begin_lane_change(&mut self, offset: f64, side: Side) {
+        self.lc_from = offset;
+        self.lateral = offset;
+        self.lc_t = 0.0;
+        self.lc_side = Some(side);
+    }
+
+    /// Advances the sideways motion of a lane change by `dt`.
+    fn glide(&mut self, dt: f64) {
+        if self.lc_from == 0.0 || self.lc_t >= LANE_CHANGE_DURATION_S {
+            self.lateral = 0.0;
+            self.yaw = 0.0;
+            if self.lc_due.is_none() {
+                self.lc_side = None;
+            }
+            return;
+        }
+        self.lc_t = (self.lc_t + dt).min(LANE_CHANGE_DURATION_S);
+        let u = self.lc_t / LANE_CHANGE_DURATION_S;
+        // Smoothstep: zero lateral speed at both ends.
+        self.lateral = self.lc_from * (1.0 - u * u * (3.0 - 2.0 * u));
+        let rate = -self.lc_from * 6.0 * u * (1.0 - u) / LANE_CHANGE_DURATION_S;
+        self.yaw = rate.atan2(self.speed.max(1.0));
+        if self.lc_t >= LANE_CHANGE_DURATION_S {
+            self.lateral = 0.0;
+            self.yaw = 0.0;
+            self.lc_from = 0.0;
+            if self.lc_due.is_none() {
+                self.lc_side = None;
+            }
+        }
     }
 }
 
@@ -101,6 +184,16 @@ const MIN_ARRIVAL_SPEED: f64 = 2.0;
 const DEADLOCK_AFTER_S: f64 = 12.0;
 /// … and ignores conflicts for this long (s).
 const DEADLOCK_IGNORE_S: f64 = 5.0;
+/// How far along its planned lanes an agent looks for leaders, signals and zones (m).
+pub(crate) const LOOKAHEAD_M: f64 = 100.0;
+/// The plan covers at least this much road ahead (m).
+const PLAN_HORIZON_M: f64 = 150.0;
+/// Vehicles stop this far (m) before the start of a lane whose light is red.
+const SIGNAL_STOP_MARGIN_M: f64 = 1.0;
+/// Deceleration (m/s²) a driver accepts to stop for a yellow light.
+const YELLOW_COMFORT_DECEL: f64 = 3.0;
+/// Light-checking distance (m) when the program does not name one (`[approachdist]` `0`).
+const DEFAULT_APPROACH_M: f64 = 60.0;
 
 /// Indicators are requested when the next lane turns by more than this (radians) …
 const BLINK_TURN: f64 = 20.0 * std::f64::consts::PI / 180.0;
@@ -110,16 +203,20 @@ const BLINK_DISTANCE: f64 = 30.0;
 /// Lane graph plus the agents driving on it.
 #[derive(Debug, Clone)]
 pub struct TrafficWorld {
-    graph: LaneGraph,
-    agents: Vec<Agent>,
+    pub(crate) graph: LaneGraph,
+    pub(crate) agents: Vec<Agent>,
     next_id: u64,
-    rng: Rng,
+    pub(crate) rng: Rng,
     events: Vec<TrafficEvent>,
-    time: f64,
+    /// Simulation time in seconds since the world was created.
+    pub(crate) time: f64,
+    /// Clock time (seconds of the day) at simulation time zero.
+    clock_base: f64,
+    signals: HashMap<SignalKey, SignalProgram>,
 }
 
 impl TrafficWorld {
-    /// Creates an empty world; `seed` fixes every random choice (route branches).
+    /// Creates an empty world; `seed` fixes every random choice (route branches, lane changes).
     #[must_use]
     pub fn new(graph: LaneGraph, seed: u64) -> Self {
         Self {
@@ -129,6 +226,8 @@ impl TrafficWorld {
             rng: Rng::new(seed),
             events: Vec::new(),
             time: 0.0,
+            clock_base: 0.0,
+            signals: HashMap::new(),
         }
     }
 
@@ -157,9 +256,33 @@ impl TrafficWorld {
         self.agents.len() != before
     }
 
+    /// Sets the time of day (seconds since midnight) of the current simulation time; it keeps
+    /// running with [`Self::step`]. Light programs follow this clock.
+    pub fn set_clock(&mut self, seconds_of_day: f64) {
+        self.clock_base = seconds_of_day - self.time;
+    }
+
+    /// The current time of day in seconds (not wrapped).
+    #[must_use]
+    pub fn clock(&self) -> f64 {
+        self.clock_base + self.time
+    }
+
+    /// Replaces the light programs (the resident tiles changed).
+    pub fn set_signals(&mut self, signals: HashMap<SignalKey, SignalProgram>) {
+        self.signals = signals;
+    }
+
+    /// The aspect of the light `key` now, if the program is known.
+    #[must_use]
+    pub fn aspect(&self, key: SignalKey) -> Option<Aspect> {
+        self.signals.get(&key).map(|p| p.aspect_at(self.clock()))
+    }
+
     /// Swaps in a rebuilt graph (the resident tiles changed). Agents keep their lane when a lane
     /// with the same [`crate::graph::Lane::key`] exists and lose it otherwise; the latter are
-    /// removed. Returns the ids of the removed agents.
+    /// removed. Planned lanes that vanished cut the plan short. Returns the ids of the removed
+    /// agents.
     pub fn replace_graph(&mut self, graph: LaneGraph) -> Vec<AgentId> {
         let old = std::mem::replace(&mut self.graph, graph);
         let mut removed = Vec::new();
@@ -169,7 +292,15 @@ impl TrafficWorld {
             match remap(a.lane) {
                 Some(lane) if a.s <= graph.lane(lane).map_or(0.0, |l| l.length()) + 1e-6 => {
                     a.lane = lane;
-                    a.next = a.next.and_then(remap);
+                    let mut kept = VecDeque::new();
+                    for p in &a.plan {
+                        match remap(*p) {
+                            Some(n) => kept.push_back(n),
+                            None => break,
+                        }
+                    }
+                    a.plan = kept;
+                    a.lc_due = None;
                     true
                 }
                 _ => {
@@ -178,17 +309,6 @@ impl TrafficWorld {
                 }
             }
         });
-        // A lane that lost its successor choice picks again.
-        let lanes: Vec<(usize, LaneId)> = self
-            .agents
-            .iter()
-            .enumerate()
-            .filter(|(_, a)| a.next.is_none())
-            .map(|(i, a)| (i, a.lane))
-            .collect();
-        for (i, lane) in lanes {
-            self.agents[i].next = self.pick_next(lane);
-        }
         removed
     }
 
@@ -197,9 +317,35 @@ impl TrafficWorld {
         std::mem::take(&mut self.events)
     }
 
+    pub(crate) fn push_event(&mut self, e: TrafficEvent) {
+        self.events.push(e);
+    }
+
     fn pick_next(&mut self, lane: LaneId) -> Option<LaneId> {
         let succ = self.graph.successors(lane);
         (!succ.is_empty()).then(|| succ[self.rng.below(succ.len())])
+    }
+
+    /// Extends agent `i`'s plan until it covers [`PLAN_HORIZON_M`] of road (or runs out).
+    pub(crate) fn extend_plan(&mut self, i: usize) {
+        loop {
+            let a = &self.agents[i];
+            let Some(lane) = self.graph.lane(a.lane) else {
+                return;
+            };
+            let mut covered = lane.length() - a.s;
+            for p in &a.plan {
+                covered += self.graph.lane(*p).map_or(0.0, |l| l.length());
+            }
+            if covered >= PLAN_HORIZON_M || a.plan.len() >= 16 {
+                return;
+            }
+            let last = a.plan.back().copied().unwrap_or(a.lane);
+            match self.pick_next(last) {
+                Some(n) => self.agents[i].plan.push_back(n),
+                None => return,
+            }
+        }
     }
 
     /// Places an agent at `s` metres on `lane` with `speed`. Fails when the spot is not free
@@ -227,7 +373,6 @@ impl TrafficWorld {
         }
         let id = AgentId(self.next_id);
         self.next_id += 1;
-        let next = self.pick_next(lane);
         self.agents.push(Agent {
             id,
             lane,
@@ -235,28 +380,123 @@ impl TrafficWorld {
             speed: speed.max(0.0),
             accel: 0.0,
             params,
-            next,
+            plan: VecDeque::new(),
             waiting_s: 0.0,
             ignore_conflicts_until: 0.0,
+            lateral: 0.0,
+            lc_from: 0.0,
+            lc_t: LANE_CHANGE_DURATION_S,
+            yaw: 0.0,
+            lc_side: None,
+            lc_due: None,
+            lc_cooldown_until: 0.0,
+            lc_next_check: self.time + (id.0 % 10) as f64 * 0.1,
         });
+        let last = self.agents.len() - 1;
+        self.extend_plan(last);
         Ok(id)
+    }
+
+    /// The lanes ahead of agent `i` with the distance from its front bumper to each lane's start
+    /// (negative for the current lane), up to [`LOOKAHEAD_M`].
+    pub(crate) fn lookahead(&self, i: usize) -> Vec<(LaneId, f64)> {
+        let a = &self.agents[i];
+        let mut out = vec![(a.lane, -a.s)];
+        let Some(lane) = self.graph.lane(a.lane) else {
+            return out;
+        };
+        let mut offset = lane.length() - a.s;
+        for p in &a.plan {
+            if offset > LOOKAHEAD_M {
+                break;
+            }
+            out.push((*p, offset));
+            offset += self.graph.lane(*p).map_or(0.0, |l| l.length());
+        }
+        out
+    }
+
+    /// The nearest vehicle ahead of agent `i` along its lookahead: `(net gap, its speed)`.
+    pub(crate) fn leader(
+        &self,
+        i: usize,
+        look: &[(LaneId, f64)],
+        by_lane: &HashMap<LaneId, Vec<usize>>,
+    ) -> Option<(f64, f64)> {
+        let a = &self.agents[i];
+        for &(lane, off) in look {
+            let Some(list) = by_lane.get(&lane) else {
+                continue;
+            };
+            let o = if lane == a.lane {
+                let pos = list.iter().position(|&j| j == i)?;
+                list.get(pos + 1)
+            } else {
+                list.first()
+            };
+            if let Some(&j) = o {
+                let o = &self.agents[j];
+                return Some((off + o.s - o.params.length, o.speed));
+            }
+        }
+        None
+    }
+
+    /// The gap (m) to the start of the lane whose light agent `i` has to stop for, if any:
+    /// red and red + yellow stop it, yellow only when it can stop at a comfortable deceleration.
+    fn signal_gap(&self, i: usize, look: &[(LaneId, f64)]) -> Option<f64> {
+        let a = &self.agents[i];
+        for &(lane_id, off) in look {
+            if off < 0.5 {
+                continue;
+            }
+            let Some(key) = self.graph.lane(lane_id).and_then(|l| l.signal) else {
+                continue;
+            };
+            let Some(program) = self.signals.get(&key) else {
+                continue;
+            };
+            let reach = if program.approach > 0.0 {
+                program.approach
+            } else {
+                DEFAULT_APPROACH_M
+            };
+            if off > reach.max(DEFAULT_APPROACH_M) {
+                continue;
+            }
+            let stop = match program.aspect_at(self.clock()) {
+                Aspect::Stop => true,
+                Aspect::Yellow => off > a.speed * a.speed / (2.0 * YELLOW_COMFORT_DECEL),
+                Aspect::Go | Aspect::Off => false,
+            };
+            if stop {
+                return Some((off - SIGNAL_STOP_MARGIN_M).max(0.0));
+            }
+        }
+        None
     }
 
     /// The gap (m) to the zone agent `i` has to wait in front of, if it must give way to another
     /// vehicle: crossing and merging flows take turns by estimated arrival time at the zone (a
-    /// vehicle already in the zone always goes first; ties go to the lower id). Zones the agent
-    /// has entered are never blocked, so nobody stops in the middle of a junction.
-    fn conflict_gap(&self, i: usize, by_lane: &HashMap<LaneId, Vec<usize>>) -> Option<f64> {
+    /// vehicle already in the zone always goes first; ties go to the lower id). Vehicles that
+    /// stand at a red light do not count as arriving. Zones the agent has entered are never
+    /// blocked, so nobody stops in the middle of a junction.
+    fn conflict_gap(
+        &self,
+        i: usize,
+        look: &[(LaneId, f64)],
+        by_lane: &HashMap<LaneId, Vec<usize>>,
+        held: &[bool],
+    ) -> Option<f64> {
         let a = &self.agents[i];
         if a.ignore_conflicts_until > self.time {
             return None;
         }
-        let lane = self.graph.lane(a.lane)?;
-        let remaining = lane.length() - a.s;
-        let next = a.next;
         let mut best: Option<f64> = None;
-        for (lane_id, offset) in std::iter::once((a.lane, -a.s)).chain(next.map(|n| (n, remaining)))
-        {
+        for &(lane_id, offset) in look {
+            if offset > CONFLICT_LOOKAHEAD_M {
+                break;
+            }
             for c in self.graph.conflicts(lane_id) {
                 // Distance from my front bumper to the zone entrance.
                 let d = c.enter + offset;
@@ -272,7 +512,7 @@ impl TrafficWorld {
                         let b = &self.agents[j];
                         let inside = b.s > c.other_enter && b.s - b.params.length < c.other_exit;
                         let gap_b = c.other_enter - b.s;
-                        if !inside && !(0.0..=CONFLICT_LOOKAHEAD_M).contains(&gap_b) {
+                        if !inside && (held[j] || !(0.0..=CONFLICT_LOOKAHEAD_M).contains(&gap_b)) {
                             return false;
                         }
                         let t_b = if inside {
@@ -292,12 +532,8 @@ impl TrafficWorld {
         best
     }
 
-    /// Advances every agent by `dt` seconds (use steps of at most 0.1 s).
-    pub fn step(&mut self, dt: f64) {
-        if dt <= 0.0 {
-            return;
-        }
-        // Agents per lane, rearmost first; ties broken by id so the order is deterministic.
+    /// Agents per lane, rearmost first; ties broken by id so the order is deterministic.
+    pub(crate) fn agents_by_lane(&self) -> HashMap<LaneId, Vec<usize>> {
         let mut by_lane: HashMap<LaneId, Vec<usize>> = HashMap::new();
         for (i, a) in self.agents.iter().enumerate() {
             by_lane.entry(a.lane).or_default().push(i);
@@ -308,6 +544,37 @@ impl TrafficWorld {
                 a.s.total_cmp(&b.s).then(a.id.cmp(&b.id))
             });
         }
+        by_lane
+    }
+
+    /// Advances every agent by `dt` seconds (use steps of at most 0.1 s).
+    pub fn step(&mut self, dt: f64) {
+        if dt <= 0.0 {
+            return;
+        }
+        for i in 0..self.agents.len() {
+            self.extend_plan(i);
+        }
+        let mut by_lane = self.agents_by_lane();
+        // One lane change per step at most; the lists are rebuilt when it happened.
+        if self.lane_change_pass(&by_lane) {
+            for i in 0..self.agents.len() {
+                self.extend_plan(i);
+            }
+            by_lane = self.agents_by_lane();
+        }
+        let looks: Vec<Vec<(LaneId, f64)>> =
+            (0..self.agents.len()).map(|i| self.lookahead(i)).collect();
+        // Lights first: vehicles standing at a red light are not "arriving" for conflict zones.
+        let signal: Vec<Option<f64>> = (0..self.agents.len())
+            .map(|i| self.signal_gap(i, &looks[i]))
+            .collect();
+        let held: Vec<bool> = self
+            .agents
+            .iter()
+            .zip(&signal)
+            .map(|(a, g)| g.is_some_and(|g| g < 12.0) && a.speed < 3.0)
+            .collect();
         // Decide accelerations from the state at the start of the step.
         let mut accels = Vec::with_capacity(self.agents.len());
         let mut blocked = vec![false; self.agents.len()];
@@ -316,28 +583,16 @@ impl TrafficWorld {
                 accels.push(0.0);
                 continue;
             };
-            let list = &by_lane[&a.lane];
-            let pos = list.iter().position(|&j| j == i).unwrap_or(0);
-            let ahead = if let Some(&j) = list.get(pos + 1) {
-                let o = &self.agents[j];
-                Some((o.s - o.params.length - a.s, o.speed))
-            } else {
-                // Rearmost agent of the next lane, measured across the lane boundary.
-                a.next
-                    .and_then(|n| by_lane.get(&n).and_then(|l| l.first()))
-                    .map(|&j| {
-                        let o = &self.agents[j];
-                        (lane.length() - a.s + o.s - o.params.length, o.speed)
-                    })
-            };
-            let wait = self.conflict_gap(i, &by_lane);
+            let leader = self.leader(i, &looks[i], &by_lane);
+            let wait = self.conflict_gap(i, &looks[i], &by_lane, &held);
             blocked[i] = wait.is_some();
-            // The nearer of the leader and the conflict zone limits the vehicle.
-            let ahead = match (ahead, wait) {
-                (Some((g, _)), Some(w)) if w < g => Some((w, 0.0)),
-                (None, Some(w)) => Some((w, 0.0)),
-                (ahead, _) => ahead,
-            };
+            // The nearest of leader, light and conflict zone limits the vehicle.
+            let mut ahead = leader;
+            for gap in [signal[i], wait].into_iter().flatten() {
+                if ahead.is_none_or(|(g, _)| gap < g) {
+                    ahead = Some((gap, 0.0));
+                }
+            }
             let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
             accels.push(a.params.acceleration(a.speed, cap, ahead));
         }
@@ -356,6 +611,7 @@ impl TrafficWorld {
                 a.speed = v1;
             }
             a.accel = acc;
+            a.glide(dt);
         }
         self.time += dt;
         // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles).
@@ -385,14 +641,13 @@ impl TrafficWorld {
                 if a.s <= len {
                     break;
                 }
-                let (over, next, id, lane) = (a.s - len, a.next, a.id, a.lane);
-                match next {
+                let (over, id, lane) = (a.s - len, a.id, a.lane);
+                match self.agents[i].plan.pop_front() {
                     Some(n) => {
-                        let after = self.pick_next(n);
                         let a = &mut self.agents[i];
                         a.lane = n;
                         a.s = over;
-                        a.next = after;
+                        self.extend_plan(i);
                     }
                     None => {
                         self.events.push(TrafficEvent::ReachedDeadEnd { id, lane });
@@ -407,7 +662,8 @@ impl TrafficWorld {
     }
 
     /// Pedal and indicator values for `id` derived from its last acceleration: positive
-    /// accelerations map to `throttle = a / A`, braking to `brake = −a / max_decel`.
+    /// accelerations map to `throttle = a / A`, braking to `brake = −a / max_decel`. The
+    /// indicator shows an announced or running lane change, else an upcoming turn.
     #[must_use]
     pub fn command(&self, id: AgentId) -> Option<DriverCommand> {
         let a = self.agent(id)?;
@@ -417,20 +673,26 @@ impl TrafficWorld {
             (0.0, (-a.accel / a.params.max_decel).clamp(0.0, 1.0))
         };
         let lane = self.graph.lane(a.lane)?;
-        let mut blinker = Blinker::Off;
-        if let Some(next) = a.next.and_then(|n| self.graph.lane(n)) {
-            if lane.length() - a.s < BLINK_DISTANCE {
-                let turn = (next.geometry.end_heading() - lane.geometry.end_heading()
-                    + std::f64::consts::PI)
-                    .rem_euclid(std::f64::consts::TAU)
-                    - std::f64::consts::PI;
-                blinker = if turn > BLINK_TURN {
-                    Blinker::Right
-                } else if turn < -BLINK_TURN {
-                    Blinker::Left
-                } else {
-                    Blinker::Off
-                };
+        let mut blinker = match a.lc_side {
+            Some(Side::Left) => Blinker::Left,
+            Some(Side::Right) => Blinker::Right,
+            None => Blinker::Off,
+        };
+        if blinker == Blinker::Off {
+            if let Some(next) = a.next().and_then(|n| self.graph.lane(n)) {
+                if lane.length() - a.s < BLINK_DISTANCE {
+                    let turn = (next.geometry.end_heading() - lane.geometry.end_heading()
+                        + std::f64::consts::PI)
+                        .rem_euclid(std::f64::consts::TAU)
+                        - std::f64::consts::PI;
+                    blinker = if turn > BLINK_TURN {
+                        Blinker::Right
+                    } else if turn < -BLINK_TURN {
+                        Blinker::Left
+                    } else {
+                        Blinker::Off
+                    };
+                }
             }
         }
         Some(DriverCommand {
@@ -446,6 +708,8 @@ mod tests {
     use super::*;
     use crate::geometry::PathGeometry;
     use crate::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
+    use crate::neighbours::Side;
+    use crate::signals::SignalProgram;
 
     fn straight(y: f64, len: f64) -> LaneSegment {
         LaneSegment::straight(DVec2::new(0.0, y), 0.0, len, LaneKind::Road)
@@ -586,6 +850,7 @@ mod tests {
             speed_limit: None,
             rules: Default::default(),
             elevation: Default::default(),
+            signal: None,
             source: 0,
         };
         let mut w = world(&[straight(0.0, 100.0), turn]);
@@ -714,6 +979,252 @@ mod tests {
             w.agent(b).is_none_or(|a| a.s > 100.0),
             "B never passed the crossing"
         );
+    }
+
+    /// Two parallel north-bound lanes 3.5 m apart: lane 0 (left) and lane 1 (right, east).
+    fn two_lanes() -> TrafficWorld {
+        let right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 800.0, LaneKind::Road);
+        world(&[straight(0.0, 800.0), right])
+    }
+
+    fn slow() -> IdmParams {
+        IdmParams {
+            desired_speed: 3.0,
+            ..IdmParams::default()
+        }
+    }
+
+    #[test]
+    fn a_car_behind_a_slow_one_changes_lanes_without_hard_braking() {
+        let mut w = two_lanes();
+        w.spawn(LaneId(0), 110.0, 3.0, slow()).unwrap();
+        let fast = w
+            .spawn(LaneId(0), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        let (mut worst, mut changed) = (0.0f64, false);
+        for _ in 0..400 {
+            w.step(0.1);
+            worst = worst.min(w.agents().iter().map(|a| a.accel).fold(0.0, f64::min));
+            changed |= w
+                .drain_events()
+                .iter()
+                .any(|e| matches!(e, TrafficEvent::LaneChanged { id, .. } if *id == fast));
+        }
+        assert!(changed, "the fast car never changed lanes");
+        assert!(worst > -2.2, "someone braked at {worst} m/s²");
+        // The slow car did not hold it up for the whole run.
+        assert!(w.agent(fast).is_none_or(|a| a.speed > 10.0));
+    }
+
+    #[test]
+    fn the_target_lane_has_priority_over_a_lane_change() {
+        let mut w = two_lanes();
+        // A slow leader makes the changer want to leave; a fast car closes in from behind in the
+        // target lane, so it has to wait until that car has passed.
+        w.spawn(LaneId(0), 124.0, 3.0, slow()).unwrap();
+        let changer = w
+            .spawn(LaneId(0), 100.0, 9.0, IdmParams::default())
+            .unwrap();
+        let fast = w
+            .spawn(
+                LaneId(1),
+                55.0,
+                20.0,
+                IdmParams {
+                    desired_speed: 20.0,
+                    ..IdmParams::default()
+                },
+            )
+            .unwrap();
+        let mut worst_fast = 0.0f64;
+        for _ in 0..250 {
+            w.step(0.1);
+            let (c, f) = (w.agent(changer), w.agent(fast));
+            if let (Some(c), Some(f)) = (c, f) {
+                worst_fast = worst_fast.min(f.accel);
+                // While the fast car is still behind (or beside) the changer, no move into its lane.
+                if f.s < c.s + 2.0 {
+                    assert_eq!(
+                        c.lane,
+                        LaneId(0),
+                        "cut in front of a fast car at t = {}",
+                        w.time
+                    );
+                }
+            }
+        }
+        assert!(
+            worst_fast > -1.5,
+            "the fast car braked at {worst_fast} m/s²"
+        );
+    }
+
+    #[test]
+    fn a_free_right_lane_is_taken_and_the_right_lane_is_kept() {
+        let mut w = two_lanes();
+        let left = w
+            .spawn(LaneId(0), 50.0, 12.0, IdmParams::default())
+            .unwrap();
+        let right = w
+            .spawn(LaneId(1), 300.0, 12.0, IdmParams::default())
+            .unwrap();
+        let mut events = Vec::new();
+        for _ in 0..300 {
+            w.step(0.1);
+            events.extend(w.drain_events());
+        }
+        assert!(events.contains(&TrafficEvent::LaneChanged {
+            id: left,
+            side: Side::Right
+        }));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, TrafficEvent::LaneChanged { id, .. } if *id == right)));
+        assert_eq!(w.agent(left).unwrap().lane, LaneId(1));
+    }
+
+    #[test]
+    fn a_lane_change_is_continuous_to_the_eye_and_glides_to_the_centre() {
+        let mut w = two_lanes();
+        w.spawn(LaneId(0), 110.0, 3.0, slow()).unwrap();
+        let id = w
+            .spawn(LaneId(0), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        let mut glided = false;
+        for _ in 0..400 {
+            let before = w.agent(id).and_then(|a| a.pose(w.graph()));
+            w.step(0.1);
+            let changed = w
+                .drain_events()
+                .iter()
+                .any(|e| matches!(e, TrafficEvent::LaneChanged { id: who, .. } if *who == id));
+            let Some(a) = w.agent(id).cloned() else { break };
+            if changed {
+                let (b, after) = (before.unwrap().0, a.pose(w.graph()).unwrap().0);
+                // Travel plus a little: the car must not jump a lane width sideways.
+                assert!(
+                    b.distance(after) < 14.0 * 0.1 + 0.6,
+                    "jumped {} m",
+                    b.distance(after)
+                );
+                assert!(a.changing_lane() && a.lateral.abs() > 3.0);
+                glided = true;
+                for _ in 0..32 {
+                    w.step(0.1);
+                }
+                let a = w.agent(id).unwrap();
+                assert!(
+                    !a.changing_lane() && a.lateral == 0.0,
+                    "still offset by {}",
+                    a.lateral
+                );
+                break;
+            }
+        }
+        assert!(glided);
+    }
+
+    #[test]
+    fn no_lane_change_is_started_towards_a_prohibited_overtaking_side() {
+        // The right lane is the free one; the changer sits on it and the left lane forbids
+        // overtaking, so it must not move left past the slow leader.
+        let mut left = straight(0.0, 800.0);
+        left.rules.no_overtaking = true;
+        let right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 800.0, LaneKind::Road);
+        let mut w = world(&[left, right]);
+        w.spawn(LaneId(1), 110.0, 3.0, slow()).unwrap();
+        w.spawn(LaneId(1), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        for _ in 0..300 {
+            w.step(0.1);
+        }
+        assert!(w.drain_events().iter().all(|e| !matches!(
+            e,
+            TrafficEvent::LaneChanged {
+                side: Side::Left,
+                ..
+            }
+        )));
+    }
+
+    /// A lane of 100 m followed by a lane governed by light `(1, 0)`.
+    fn light_world(program: SignalProgram) -> TrafficWorld {
+        let mut gated = straight(100.0, 200.0);
+        gated.signal = Some((1, 0));
+        let mut w = world(&[straight(0.0, 100.0), gated]);
+        w.set_signals(HashMap::from([((1, 0), program)]));
+        w.set_clock(0.0);
+        w
+    }
+
+    #[test]
+    fn vehicles_stop_at_a_red_light_and_go_on_green() {
+        let mut w = light_world(SignalProgram::new(vec![(0, 20.0), (6, 100.0)], 50.0).unwrap());
+        let id = w.spawn(LaneId(0), 0.0, 12.0, IdmParams::default()).unwrap();
+        for _ in 0..150 {
+            w.step(0.1);
+        }
+        let a = w.agent(id).unwrap();
+        assert_eq!(a.lane, LaneId(0), "ran the red light");
+        assert!(
+            a.speed < 0.2 && a.s > 90.0 && a.s < 100.0,
+            "stopped at s = {}",
+            a.s
+        );
+        for _ in 0..100 {
+            w.step(0.1);
+        }
+        let a = w.agent(id).unwrap();
+        assert_eq!(a.lane, LaneId(1));
+        assert!(a.speed > 5.0);
+    }
+
+    #[test]
+    fn a_vehicle_too_close_to_stop_runs_the_yellow() {
+        let mut w = light_world(SignalProgram::new(vec![(9, 10.0), (0, 30.0)], 0.0).unwrap());
+        let late = w
+            .spawn(LaneId(0), 90.0, 14.0, IdmParams::default())
+            .unwrap();
+        for _ in 0..30 {
+            w.step(0.1);
+        }
+        assert_eq!(
+            w.agent(late).unwrap().lane,
+            LaneId(1),
+            "stopped hard for a yellow"
+        );
+        assert!(w.agent(late).unwrap().speed > 10.0);
+    }
+
+    #[test]
+    fn a_vehicle_waiting_at_red_does_not_hold_up_crossing_traffic() {
+        use std::f64::consts::FRAC_PI_2;
+        // East-bound approach lane, then the signalled lane across the north-bound road at x = 0.
+        let approach =
+            LaneSegment::straight(DVec2::new(-100.0, 100.0), FRAC_PI_2, 97.0, LaneKind::Road);
+        let mut gated =
+            LaneSegment::straight(DVec2::new(-3.0, 100.0), FRAC_PI_2, 106.0, LaneKind::Road);
+        gated.signal = Some((7, 0));
+        let mut w = world(&[straight(0.0, 200.0), approach, gated]);
+        w.set_signals(HashMap::from([(
+            (7, 0),
+            SignalProgram::new(vec![(0, 60.0), (6, 60.0)], 0.0).unwrap(),
+        )]));
+        w.set_clock(0.0);
+        w.spawn(LaneId(1), 95.0, 0.0, IdmParams::default()).unwrap();
+        let north = w
+            .spawn(LaneId(0), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        let mut slowest = f64::INFINITY;
+        for _ in 0..80 {
+            w.step(0.1);
+            if let Some(a) = w.agent(north) {
+                if a.s < 110.0 {
+                    slowest = slowest.min(a.speed);
+                }
+            }
+        }
+        assert!(slowest > 9.0, "the crossing car slowed to {slowest} m/s");
     }
 
     #[test]

@@ -327,8 +327,8 @@ A junction defines **traffic-light groups**. Each light is a named **phase progr
 | `[traffic_lights_group]` | 1 | Group cycle time in seconds (for example `99.99`, `115`). Starts a group. |
 | `[traffic_light]` | 1 | Name of one light program (`Main`, `RPB Haupt`). Starts the light. |
 | `[phase]` | 2 | `<state>`, `<duration in seconds>`. The program is a repeating sequence of `[phase]` blocks. |
-| `[use_traffic_light]` | 1 | Index of the `[traffic_light]` (0-based, declaration order) governing the **following** `[path]`. |
-| `[approachdist]` | 1 | Distance before the path where vehicles check the light (`0` none, `25`, `50`, `100`). |
+| `[use_traffic_light]` | 1 | Index of the `[traffic_light]` (0-based, declaration order **across all groups**) governing the **next** `[path]` only (M-0049: the installed junctions repeat the line before every controlled path and leave the approach stubs between them uncontrolled). |
+| `[approachdist]` | 1 | A property of the **light program**: it follows the `[phase]` blocks of a `[traffic_light]` (20,598 of 20,625 uses over 3,894 files) and gives the distance before the stop line where vehicles check that light (corpus: `0` 17,768, `50`, `25`, `30`, `100`). |
 | `[traffic_light_stop]` | 3 | Stop-line for a light: see [Q-SCO-005](#-open-questions). |
 | `[traffic_light_jump]` | 4 | Jump / skip rule for a light: see [Q-SCO-005](#-open-questions). |
 
@@ -344,7 +344,7 @@ The state is a number; the scripts of the sample vehicles use these ranges:
 | `9`–`11` | Yellow |
 | `12` | Off (dark) |
 
-The reference vehicle script for car lights reads `TrafficLightPhase` and maps these ranges to `Red`, `Yellow`, `Green`. Sub-values inside a range select **variants** (for example blinking green). The **most used** states in the corpus are `0`, `6`, `9`, `3`, `12`.
+The reference vehicle script for car lights reads `TrafficLightPhase` and maps these ranges to `Red`, `Yellow`, `Green` (the signal-head script `ampel1.osc` documents the same ranges in its header: "Phase 0..2: red, 3..5: red-yellow, 6..8: green, 9..11: yellow, else: off"). A program is a repeating cycle: the phases of the Gladbeck program `6 2 s, 6 30 s, 9 5 s, 0 33 s, 3 2 s, 6 6 s, 6 4 s` add up to the group's cycle time (82 s) and the green at the end runs into the green at the start. A vehicle stops at the **start** of the controlled path (approach stubs of 3 m lead up to it); which instant of the cycle is "now" is unknown ❓ (OPTS uses the session's time of day). Sub-values inside a range select **variants** (for example blinking green). The **most used** states in the corpus are `0`, `6`, `9`, `3`, `12`.
 
 ```
 [traffic_lights_group]
@@ -564,7 +564,7 @@ streetlight_large.o3d
 | Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Open. |
 | Q-SCO-007 | Last two `[splinehelper]` values. | Observed `0`, `0`. |
 | Q-SCO-008 | `[crashmode_pole]` parameter semantics. | Open. |
-| Q-SCO-009 | Does `[use_traffic_light]` apply only to the next `[path]` or to all following? | Next assumed. |
+| Q-SCO-009 | Does `[use_traffic_light]` apply only to the next `[path]` or to all following? | ✅ The next path only (M-0049): a Gladbeck junction repeats `[use_traffic_light]` before every controlled path, and the uncontrolled stubs of the arms sit between them. |
 
 ---
 

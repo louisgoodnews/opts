@@ -32,10 +32,15 @@ pub mod density;
 pub mod geometry;
 pub mod graph;
 pub mod idm;
+pub mod lanechange;
+pub mod neighbours;
 pub mod rng;
+pub mod signals;
 pub mod source;
 
-pub use agent::{Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld};
+pub use agent::{
+    Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld, LANE_CHANGE_DURATION_S,
+};
 pub use conflict::Conflict;
 pub use density::{weighted_pick, DensityCurve};
 pub use geometry::PathGeometry;
@@ -44,5 +49,7 @@ pub use graph::{
     SpawnError,
 };
 pub use idm::IdmParams;
+pub use neighbours::{Neighbour, Side};
 pub use rng::Rng;
-pub use source::{segments_from_tile, tile_origin, PathSource, TILE_SIZE_M};
+pub use signals::{Aspect, SignalKey, SignalProgram};
+pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource, TILE_SIZE_M};
