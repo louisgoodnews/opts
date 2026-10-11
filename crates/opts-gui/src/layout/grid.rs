@@ -7,7 +7,7 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone, Default)]
 pub struct Grid;
 
-/// Fluent builder for constructing a CSS Grid [`NodeBundle`].
+/// Fluent builder for constructing a CSS Grid `Node`.
 ///
 /// # Example
 /// ```rust
@@ -62,7 +62,7 @@ impl GridBuilder {
         self
     }
 
-    /// Builds a Bevy [`NodeBundle`] configured for CSS Grid layout.
+    /// Builds a Bevy `Node` configured for CSS Grid layout.
     pub fn build(self) -> impl Bundle {
         Node {
             display: Display::Grid,

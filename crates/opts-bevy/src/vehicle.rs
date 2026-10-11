@@ -85,11 +85,11 @@ impl BusVehicle {
 
 /// Spawns an OMSI bus vehicle entity hierarchy in Bevy.
 ///
-/// Creates a root entity containing [`BusVehicle`], [`OmsiTransform`], and [`SpatialBundle`],
+/// Creates a root entity containing [`BusVehicle`], [`OmsiTransform`], and `Transform`/`Visibility`,
 /// along with child entities for:
 /// - Visual 3D mesh attachments from the primary LOD group.
-/// - Unscoped and mesh-scoped spotlights (headlights) converted to [`SpotLightBundle`].
-/// - Unscoped and mesh-scoped interior lights converted to [`PointLightBundle`].
+/// - Unscoped and mesh-scoped spotlights (headlights) converted to `SpotLight` components.
+/// - Unscoped and mesh-scoped interior lights converted to `PointLight` components.
 ///
 /// # Arguments
 /// * `commands` - Bevy entity commands buffer.

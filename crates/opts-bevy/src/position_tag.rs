@@ -28,11 +28,10 @@ pub fn set_position_tag(tag: String) {
 /// loaded, if any.
 #[must_use]
 pub fn position_tag() -> String {
-    let player = TAG
-        .lock()
-        .ok()
-        .filter(|t| !t.is_empty())
-        .map_or_else(|| "unknown (world still loading)".to_string(), |t| t.clone());
+    let player = TAG.lock().ok().filter(|t| !t.is_empty()).map_or_else(
+        || "unknown (world still loading)".to_string(),
+        |t| t.clone(),
+    );
     match LOADING.lock().ok().and_then(|l| *l) {
         Some(tile) => format!("while loading tile {tile:?}; player at {player}"),
         None => format!("player at {player}"),

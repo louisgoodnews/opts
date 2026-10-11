@@ -292,7 +292,7 @@ pub fn extrude_spline_segment(
 
 /// Spawns an OMSI scenery object entity hierarchy in Bevy.
 ///
-/// Creates a parent entity carrying an [`OmsiTransform`] and [`SpatialBundle`],
+/// Creates a parent entity carrying an [`OmsiTransform`] and `Transform`/`Visibility`,
 /// along with child entities for visual 3D mesh attachments.
 pub fn spawn_scenery_object(
     commands: &mut Commands,
