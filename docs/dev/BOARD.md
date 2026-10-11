@@ -87,7 +87,7 @@ _Work actively being executed in the current session._
 
 - `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
-- `[~]` 🟠 **Bevy 0.20: merge decision and merge to `master`** (M-0047, chore) — 14 commits only on `bevy-0.20` (F-019).
+- `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution

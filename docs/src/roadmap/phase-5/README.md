@@ -2,7 +2,7 @@
 
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-**Status:** 🟡 Started — control protocol, hot reload, Bevy 0.19 upgrade and audit hardening done; Bevy 0.20 running on an unmerged branch; CI written but never run (no hosted repository); benchmarks, LOD and DLSS planned
+**Status:** 🟡 Started — control protocol, hot reload, Bevy 0.19 upgrade and audit hardening done; Bevy 0.20 on `master` (merged 2026-10-11); CI written but never run (no hosted repository); benchmarks, LOD and DLSS planned
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
@@ -16,7 +16,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0040 — Code-Quality Debt: Size Limits, Panics, Rustdoc, Stubs](M-0040.md) — 🟡 In progress (audit 5037f89a F-005, F-006, F-009–F-012)
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — 🟢 Complete (audit 5037f89a F-013, F-018, F-020–F-023)
 - [M-0042 — CI & Toolchain Hardening](M-0042.md) — 🟡 Written, never run — blocked on [M-0052](M-0052.md) (audit 5037f89a F-024–F-026)
-- [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Branch `bevy-0.20` builds and runs; merge decision open
+- [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Merged to `master` 2026-10-11; `Interaction` follow-up open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
 
@@ -49,5 +49,5 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../../meta/critical-review-2026-10-11.md))**
   - [ ] Host the repository, activate CI, fix the three gate failures at HEAD (fmt, clippy, rustdoc), isolate agent sessions in worktrees and gate commits on a staged-tree build — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
   - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](M-0040.md); F-005–F-007).
-  - [ ] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019).
+  - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).

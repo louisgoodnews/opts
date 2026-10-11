@@ -17,7 +17,7 @@
 | ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | 🟢 complete | [`phase-2/`](docs/src/roadmap/phase-2/README.md) |
 | 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering, GUI foundation | 🟢 complete | [`phase-3/`](docs/src/roadmap/phase-3/README.md) |
 | 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — physics, world streaming, text textures, script VM, script-driven animation/lights/triggers, AI traffic, walking pedestrians and articulated buses running; passengers, timetables, audio open | [`phase-4/`](docs/src/roadmap/phase-4/README.md) |
-| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20 running on branch `bevy-0.20` (unmerged); CI written but never run (no hosted repository, M-0052); DLSS planned | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
+| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20 merged to `master` 2026-10-11; CI written but never run (no hosted repository, M-0052); DLSS planned | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](docs/src/roadmap/phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](docs/src/roadmap/phase-7/README.md) |
 
@@ -222,7 +222,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](docs/src/meta/critical-review-2026-10-11.md))**
   - [ ] Host the repository, activate CI, fix the three gate failures at HEAD (fmt, clippy, rustdoc), isolate agent sessions in worktrees and gate commits on a staged-tree build — [M-0052](docs/src/roadmap/phase-5/M-0052.md) (F-001, F-018, F-019, F-020).
   - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](docs/src/roadmap/phase-5/M-0040.md); F-005–F-007).
-  - [ ] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](docs/src/roadmap/phase-5/M-0047.md); F-019).
+  - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](docs/src/roadmap/phase-5/M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
 
 ---
