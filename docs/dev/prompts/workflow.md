@@ -71,4 +71,5 @@ bottom.
 ### Changelog
 
 - `YYYY-MM-DD` — Initial library created (P-000 through P-006).
+- `2026-10-11` — Guardrail 7 added (one work station per agent: own `git worktree` and branch per session); no prompt text changed.
 - `2026-10-04` — Link fix only (ADR-0002 path in the Universal Guardrails); no prompt text changed. Note for the next revision: the prompts name `dev/BOARD.md`, `dev/PROMPTS.md` and `docs/src/roadmap/phase-N/`, while the files live at `docs/dev/…`; `phase-N` now matches the folder names.
