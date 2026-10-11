@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
-use opts_bevy::{attach_model_parts, sample_terrain, ContentLoader, TextureOverride, TILE_SIZE_M};
+use opts_bevy::{attach_model_parts, sample_terrain, ContentLoader, TextureOverride};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
 use opts_core::formats::vehicles::model::ModelConfig;
 
@@ -443,8 +443,8 @@ pub fn stream_world_tiles(
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
     let centre = (
-        job.start_tile.0 + (p.x / TILE_SIZE_M).floor() as i32,
-        job.start_tile.1 + ((-p.z) / TILE_SIZE_M).floor() as i32,
+        job.start_tile.0 + (p.x / opts_bevy::tile_size()).floor() as i32,
+        job.start_tile.1 + ((-p.z) / opts_bevy::tile_size()).floor() as i32,
     );
     let dist = |k: (i32, i32)| (k.0 - centre.0).abs().max((k.1 - centre.1).abs());
 

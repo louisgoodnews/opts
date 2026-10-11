@@ -226,6 +226,27 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         camera_std_index: 0,
     };
 
+    // Tile size: 300 m, except for maps with world coordinates (measured from the splines).
+    {
+        let mut sample = Vec::new();
+        let keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
+        for key in keys {
+            if let Some(tile) = job.read_tile(key) {
+                sample.push((key, tile.splines));
+            }
+            if sample.len() >= 80 {
+                break;
+            }
+        }
+        let size = opts_core::formats::map::estimate_tile_size(&sample);
+        opts_bevy::set_tile_size(size);
+        tracing::info!(
+            tile_size_m = size,
+            sampled_tiles = sample.len(),
+            "tile size"
+        );
+    }
+
     // Start tile and spawn: the chosen `[entrypoints]` record if it resolves to a placed
     // `entrypoint_*.sco` object, otherwise the first road spline of the first usable tile.
     let mut keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();

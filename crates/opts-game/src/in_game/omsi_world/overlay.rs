@@ -6,7 +6,6 @@ use crate::in_game::types::InGameEntity;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{PositionReadout, WorldPos, WorldStats};
-use opts_bevy::TILE_SIZE_M;
 
 /// Marker for the toggleable diagnostic overlay text.
 #[derive(Component)]
@@ -93,20 +92,20 @@ fn format_pos(label: &str, p: Option<WorldPos>) -> String {
 /// into an OMSI-frame position.
 fn world_pos(start_tile: (i32, i32), p: Vec3) -> WorldPos {
     let (ox, oy) = (
-        start_tile.0 as f32 * TILE_SIZE_M,
-        start_tile.1 as f32 * TILE_SIZE_M,
+        start_tile.0 as f32 * opts_bevy::tile_size(),
+        start_tile.1 as f32 * opts_bevy::tile_size(),
     );
     let (x, y) = (ox + p.x, oy - p.z);
     let tile = (
-        (x / TILE_SIZE_M).floor() as i32,
-        (y / TILE_SIZE_M).floor() as i32,
+        (x / opts_bevy::tile_size()).floor() as i32,
+        (y / opts_bevy::tile_size()).floor() as i32,
     );
     WorldPos {
         tile,
         world: Vec3::new(x, y, p.y),
         local: Vec2::new(
-            x - tile.0 as f32 * TILE_SIZE_M,
-            y - tile.1 as f32 * TILE_SIZE_M,
+            x - tile.0 as f32 * opts_bevy::tile_size(),
+            y - tile.1 as f32 * opts_bevy::tile_size(),
         ),
     }
 }

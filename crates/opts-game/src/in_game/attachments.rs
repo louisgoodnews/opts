@@ -13,7 +13,6 @@ use opts_bevy::scenery::spline_pose;
 use opts_core::formats::map::{MapObjectInstance, MapSplineAttachment, MapSplineInstance};
 
 use bevy::math::Vec3;
-use opts_bevy::TILE_SIZE_M;
 
 /// Upper bound on chain links followed in either direction (guards against cycles).
 const MAX_CHAIN: usize = 512;
@@ -110,8 +109,8 @@ pub fn expand_attachments(
             let ((ex, ey), (tx, ty)) = (entry.0, tile);
             let pose = spline_pose(&entry.1, local);
             let (rx, ry) = (pose.heading.cos(), -pose.heading.sin());
-            let x = pose.x + rx * att.lateral_m + (ex - tx) as f32 * TILE_SIZE_M;
-            let y = pose.y + ry * att.lateral_m + (ey - ty) as f32 * TILE_SIZE_M;
+            let x = pose.x + rx * att.lateral_m + (ex - tx) as f32 * opts_bevy::tile_size();
+            let y = pose.y + ry * att.lateral_m + (ey - ty) as f32 * opts_bevy::tile_size();
             let absolute_z = pose.z + att.height_m;
             out.push((
                 MapObjectInstance {

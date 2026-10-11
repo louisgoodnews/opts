@@ -3,6 +3,7 @@
 pub mod error;
 pub mod global;
 pub mod lists;
+pub mod pitch;
 pub mod terrain;
 pub mod tile;
 pub mod water;
@@ -13,6 +14,7 @@ pub use lists::{
     parse_unsched_trafficdens, parse_unsched_vehgroups, AiEntry, AiGroup, AiLists, DensityProfile,
     GroupDensity, UnschedGroup,
 };
+pub use pitch::{estimate_tile_size, DEFAULT_TILE_SIZE_M};
 pub use terrain::MapTerrain;
 pub use tile::{
     MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile, MapTrafficRule, RuleKind,

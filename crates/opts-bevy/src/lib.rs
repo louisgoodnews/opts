@@ -88,8 +88,8 @@ pub use scenery::{
     SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
 pub use terrain::{
-    build_terrain_mesh, carve_terrain_under_roads, road_footprint, sample_terrain,
-    terrain_material, RoadFootprint, TERRAIN_CELL_M, TILE_SIZE_M,
+    build_terrain_mesh, carve_terrain_under_roads, road_footprint, sample_terrain, set_tile_size,
+    terrain_cell, terrain_material, tile_size, RoadFootprint, TERRAIN_CELL_M, TILE_SIZE_M,
 };
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,

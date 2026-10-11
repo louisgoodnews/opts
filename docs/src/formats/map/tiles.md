@@ -366,3 +366,9 @@ meaning of the repeater `span` for instances that would end beyond the chain is 
   road splines attach: rotating `(x, y)` clockwise by the object heading and adding the object
   position hits a spline end point within 5 cm for 668 of 2,274 helpers on X10 Berlin (the same
   test with the opposite rotation sense: 113).
+
+## Tile size is not always 300 m — 2026-10-11
+
+Maps with the `[worldcoordinates]` flag use **larger tiles**: a spline that continues in the neighbouring tile starts at `end − P·Δtile` in that tile's own coordinates, and `P` measured over all such pairs (`opts_core::formats::map::estimate_tile_size`, example run over the installation) is **300.000 m** for every map without the flag (Oberstedt 249 pairs, Ruhrau V2 1,023, Bad Hügelsdorf 477, Rheinhausen 386, Hamburg 109, Grundorf 9) and **≈ 372 m for Berlin-Spandau** (305 pairs, median 371.96, p10–p90 371.7–372.1) and **382.8 m for Wuppertal 639** (172 pairs, 382.77–382.87). Object coordinates agree: Berlin-Spandau objects span 3.5…372, Wuppertal 0…383, Oberstedt 0…302. The terrain still has 60 × 60 cells per tile (its edge heights match between neighbours at any pitch), so cells are `P/60` wide (6.2 m in Berlin). Nothing in `global.cfg` states `P` ❓ (the flag only says "world coordinates"); OPTS measures it from the spline chains of up to 80 tiles at load time (≥ 5 crossing pairs, otherwise 300 m). Consequence of ignoring it: neighbouring tiles overlapped by 72–83 m, roads ended mid-air and the entry point of *Spandau Nervenklinik* sat in a field without its road.
+
+`[splineAttachement]` with carrier index `-1` (no spline; 1 in Berlin tile 2394/11275) is skipped; it used to fail the whole tile.

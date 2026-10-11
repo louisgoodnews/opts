@@ -10,7 +10,7 @@ use opts_bevy::control::params::{f64_param, opt_f64, opt_str, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome, Waiter};
 use opts_bevy::control::{channel::dispatch, PathPolicy};
 use opts_bevy::coords::omsi_to_bevy_pos;
-use opts_bevy::{CameraState, TILE_SIZE_M};
+use opts_bevy::CameraState;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
@@ -215,8 +215,8 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
         ));
     };
     let local = Vec3::new(
-        x as f32 - start.0 as f32 * TILE_SIZE_M,
-        y as f32 - start.1 as f32 * TILE_SIZE_M,
+        x as f32 - start.0 as f32 * opts_bevy::tile_size(),
+        y as f32 - start.1 as f32 * opts_bevy::tile_size(),
         z as f32,
     );
     let position = omsi_to_bevy_pos(local);

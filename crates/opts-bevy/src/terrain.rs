@@ -12,11 +12,33 @@ use opts_core::formats::scenery::SplineProfile;
 use crate::mesh::smooth_normal_mesh;
 use crate::scenery::spline_pose;
 
-/// Side length of a map tile in metres (confirmed, `docs/src/formats/map/tiles.md` Q-M01).
+/// Default side length of a map tile in metres (`docs/src/formats/map/tiles.md` Q-M01). Maps with
+/// `[worldcoordinates]` use larger tiles (Berlin-Spandau 372 m, Wuppertal 639 382.8 m): see
+/// [`tile_size`].
 pub const TILE_SIZE_M: f32 = 300.0;
 
-/// Terrain grid cell size in metres (inferred from 60 cells per 300 m tile).
+/// Default terrain grid cell size (60 cells per default tile); see [`terrain_cell`].
 pub const TERRAIN_CELL_M: f32 = TILE_SIZE_M / 60.0;
+
+static TILE_SIZE_BITS: std::sync::atomic::AtomicU32 =
+    std::sync::atomic::AtomicU32::new(TILE_SIZE_M.to_bits());
+
+/// Side length of a tile of the map being played (set once per session by [`set_tile_size`]).
+#[must_use]
+pub fn tile_size() -> f32 {
+    f32::from_bits(TILE_SIZE_BITS.load(std::sync::atomic::Ordering::Relaxed))
+}
+
+/// Sets the tile size of the current map.
+pub fn set_tile_size(metres: f32) {
+    TILE_SIZE_BITS.store(metres.to_bits(), std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Terrain cell size of the current map (a tile has 60 × 60 cells).
+#[must_use]
+pub fn terrain_cell() -> f32 {
+    tile_size() / 60.0
+}
 
 /// Bilinearly samples a tile's height grid at tile-local `(x, y)` metres.
 #[must_use]
@@ -26,8 +48,8 @@ pub fn sample_terrain(terrain: &MapTerrain, x: f32, y: f32) -> f32 {
         return 0.0;
     }
     let max = terrain.grid_cells as f32 - 0.0001;
-    let gx = (x / TERRAIN_CELL_M).clamp(0.0, max);
-    let gy = (y / TERRAIN_CELL_M).clamp(0.0, max);
+    let gx = (x / terrain_cell()).clamp(0.0, max);
+    let gy = (y / terrain_cell()).clamp(0.0, max);
     let (ix, iy) = (gx as usize, gy as usize);
     let (fx, fy) = (gx - ix as f32, gy - iy as f32);
     let h = |i: usize, j: usize| terrain.heights[j * dim + i];
@@ -50,9 +72,9 @@ pub fn build_terrain_mesh(terrain: &MapTerrain, origin: (f32, f32), uv_per_tile:
         for i in 0..dim {
             let h = terrain.heights.get(j * dim + i).copied().unwrap_or(0.0);
             positions.push([
-                origin.0 + i as f32 * TERRAIN_CELL_M,
+                origin.0 + i as f32 * terrain_cell(),
                 h,
-                -(origin.1 + j as f32 * TERRAIN_CELL_M),
+                -(origin.1 + j as f32 * terrain_cell()),
             ]);
             if uv_per_tile {
                 // One texture over the whole tile, row 0 at the north edge.
@@ -132,20 +154,20 @@ pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) 
         return out;
     }
     for road in roads {
-        let reach = road.half_width + TERRAIN_CELL_M * 0.5;
+        let reach = road.half_width + terrain_cell() * 0.5;
         for seg in road.centreline.windows(2) {
             let (a, b) = (seg[0], seg[1]);
             let (min_x, max_x) = (a[0].min(b[0]) - reach, a[0].max(b[0]) + reach);
             let (min_y, max_y) = (a[1].min(b[1]) - reach, a[1].max(b[1]) + reach);
-            let i0 = ((min_x / TERRAIN_CELL_M).floor().max(0.0)) as usize;
-            let j0 = ((min_y / TERRAIN_CELL_M).floor().max(0.0)) as usize;
-            let i1 = (((max_x / TERRAIN_CELL_M).ceil()).max(0.0) as usize).min(dim - 1);
-            let j1 = (((max_y / TERRAIN_CELL_M).ceil()).max(0.0) as usize).min(dim - 1);
+            let i0 = ((min_x / terrain_cell()).floor().max(0.0)) as usize;
+            let j0 = ((min_y / terrain_cell()).floor().max(0.0)) as usize;
+            let i1 = (((max_x / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
+            let j1 = (((max_y / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
             let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
             let len2 = (dx * dx + dy * dy).max(1e-9);
             for j in j0..=j1 {
                 for i in i0..=i1 {
-                    let (vx, vy) = (i as f32 * TERRAIN_CELL_M, j as f32 * TERRAIN_CELL_M);
+                    let (vx, vy) = (i as f32 * terrain_cell(), j as f32 * terrain_cell());
                     let t = (((vx - a[0]) * dx + (vy - a[1]) * dy) / len2).clamp(0.0, 1.0);
                     let (px, py) = (a[0] + t * dx, a[1] + t * dy);
                     if (vx - px).hypot(vy - py) > reach {

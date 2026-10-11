@@ -386,6 +386,11 @@ impl MapTile {
                         continue;
                     }
                     let p = &block.parameters;
+                    // `-1` as carrier: the attachment belongs to no spline (an editor leftover, e.g.
+                    // Berlin-Spandau tile 2394/11275). It has no place to be put.
+                    if p[3 + o].trim() == "-1" {
+                        continue;
+                    }
                     let repeat = if repeater {
                         Some((
                             parse_f32(&p[1], "attachment span", block.line_number)?,

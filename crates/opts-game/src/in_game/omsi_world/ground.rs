@@ -2,13 +2,14 @@
 
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
-use opts_bevy::{terrain_material, ContentLoader, TILE_SIZE_M};
+use opts_bevy::{terrain_material, ContentLoader};
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::WorldLoadJob;
 
 pub(super) fn tile_origin(key: (i32, i32)) -> (f32, f32) {
-    (key.0 as f32 * TILE_SIZE_M, key.1 as f32 * TILE_SIZE_M)
+    let t = opts_bevy::tile_size();
+    (key.0 as f32 * t, key.1 as f32 * t)
 }
 
 /// Layer textures of a map shared by all its tiles (one GPU array with mip chains).
