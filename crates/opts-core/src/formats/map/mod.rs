@@ -15,6 +15,7 @@ pub use lists::{
 };
 pub use terrain::MapTerrain;
 pub use tile::{
-    MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile, MapTrafficRule,
+    MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile, MapTrafficRule, RuleKind,
+    RuleOwner,
 };
 pub use water::MapWater;

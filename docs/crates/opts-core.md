@@ -74,7 +74,7 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `MapManifest::parse(bytes: &[u8]) -> Result<MapManifest, MapParseError>`: Parses top-level `global.cfg` map manifests with automatic UTF-16LE BOM detection.
   - `MapManifest`: Scenario configuration containing map name, friendly name, description, valid calendar years, tile index list (`Vec<MapTileEntry>`), vehicle spawn entry points (`Vec<MapEntryPoint>`), ground texture palette mappings (`Vec<MapGroundTex>`), seasons (`Vec<MapSeason>`), and road/passenger traffic density curves.
   - `MapTile::parse(bytes: &[u8]) -> Result<MapTile, MapParseError>`: Parses individual `tile_<x>_<y>.map` tile layout files.
-  - `MapTile`: Placed scenery object instances (`Vec<MapObjectInstance>`) with $(X, Y, Z)$ positions and heading/pitch/roll, placed spline segments (`Vec<MapSplineInstance>`) with verified $(X, Z, Y)$ coordinates, traffic rules (`Vec<MapTrafficRule>`), and spline attachments.
+  - `MapTile`: Placed scenery object instances (`Vec<MapObjectInstance>`) with $(X, Y, Z)$ positions and heading/pitch/roll, placed spline segments (`Vec<MapSplineInstance>`) with verified $(X, Z, Y)$ coordinates, traffic rules (`Vec<MapTrafficRule>`, each with its owning spline or object `RuleOwner` and a typed `kind()` → `RuleKind`), and spline attachments.
   - `MapTerrain::parse(bytes: &[u8]) -> Result<MapTerrain, MapParseError>`: Parses binary 14,888-byte `.map.terrain` elevation height grids with 61×61 vertex resolution and row-major index access.
   - `MapWater::parse(bytes: &[u8]) -> Result<MapWater, MapParseError>`: Parses binary 20-byte `.map.water` water level elevation files.
   - `MapParseError`: Strongly typed error for text parsing, invalid numbers, and binary size violations.

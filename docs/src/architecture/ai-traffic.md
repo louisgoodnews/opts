@@ -30,7 +30,7 @@ OMSI maps are alive with background traffic: cars, lorries, cyclists, scheduled 
 | Seasonal/dated replacements | `Chrono/*/ailists_#upd.cfg`, `unsched_trafficdens.txt` | [chrono](../formats/map/chrono.md) | ✅ same parsers, caller picks the file |
 | Where vehicles may drive | `[path]` of `.sli` (splines) and `.sco` (junctions, crossings) | [sli](../formats/text/sli.md#path), [sco](../formats/text/sco.md) | ✅ `SplinePath`, `ScoPath` |
 | Placement of those splines/objects | `tile_<x>_<y>.map` | [tiles](../formats/map/tiles.md) | ✅ `MapTile` |
-| Speed limit, density, priority, lane/type bans per path | `[rule]` in tiles | [tiles](../formats/map/tiles.md) | ⚠️ parsed, but **not tied to the spline it follows** (§7) |
+| Speed limit, density, priority, lane/type bans per path | `[rule]` in tiles | [tiles](../formats/map/tiles.md) | ✅ with owner and path index (`MapTrafficRule::owner`, `kind()`), applied to lanes by `segments_from_tile` |
 | Traffic-light programs and which paths they stop | `[traffic_lights_group]`, `[traffic_light]`, `[phase]`, `[use_traffic_light]`, `[approachdist]` | [sco](../formats/text/sco.md#-traffic-lights) | ✅ programs, light index per path, approach distance |
 | How a vehicle turns throttle/brake into motion | `{frame}` of the AI script, `*_constfile.txt` `AI_*` constants | [osc](../formats/text/vehicles/osc.md), [const](../formats/text/vehicles/const.md) | ✅ script VM (`opts-sim`) |
 | AI-only vehicle keywords | `[ai_deltaheight]`, `[ai_brakeperformance]`, `[ai_veh_type]`, `[sound_ai]` | [bus](../formats/text/vehicles/bus.md), [misc types](../formats/text/misc-types.md#ovh) | ⚠️ `[ai_deltaheight]` yes; the others are kept as unknown fields |
@@ -96,7 +96,7 @@ Compass heading (clockwise from +Y), positive radius turns clockwise, `-999.99` 
 
 ### 3.3 Rules, priority, signals
 
-* `[rule]` types seen: `trafficdensity` (10,993 in 500 sampled tiles), `speedlimit` (2,654), `priority` (2,475), `trucks` (225), `overtaking_prohib` (182), `bus` (89), `no_cars` (82). With **no priority rule, AI vehicles follow right-before-left** (📚).
+* `[rule]` over the whole corpus [M] (524,909 rules): `trafficdensity` 342,849, `speedlimit` 83,072, `priority` 74,143, `trucks` 13,088, `overtaking_prohib` 6,329, `no_cars` 3,297, `bus` 2,131. Speed limits are km/h; priorities are `192` or `64`; the vehicle-type flags carry no value. Every rule follows a spline or object and addresses one of its paths by index ([tiles](../formats/map/tiles.md)). On the real maps the lanes pick them up: Ruhrau V2 has a density rule on 11,346 of 12,054 road lanes and a speed limit on 3,380; Hamburg109 on 4,075 of 8,325 and 720. With **no priority rule, AI vehicles follow right-before-left** (📚).
 * Signals: a junction object defines programs (`[traffic_light]` + `[phase]` states) and each `[path]` names the light that governs it (`[use_traffic_light]`) and an approach distance (`[approachdist]`). Phase *state codes* (`0` red … `6` green … `9` yellow, sub-values for blinking variants) are only partly decoded ([sco](../formats/text/sco.md), Q-SCO-005). The AI rule must be: stop at the path's end when its light is red (or yellow and the vehicle can stop), i.e. treat the path end as a standing obstacle with speed 0 — which is exactly the IDM's "leader at gap *s* with speed 0".
 * Stop lines other than traffic lights (`[traffic_light_stop]`, `[traffic_light_jump]`) have unexplained parameters (Q-SCO-005).
 
@@ -168,7 +168,8 @@ Principles:
 
 | Gap | Why it matters | Where |
 | :--- | :--- | :--- |
-| `[rule]` blocks are collected in `MapTile::rules` without the spline (or object) they follow | speed limits, priorities, density and vehicle bans cannot be applied to a lane | `formats/map/tile.rs`: store the owning spline `id_code` (the rule follows its `[spline]` in the file) |
+| ~~`[rule]` blocks without the spline/object they follow~~ — closed 2026-10-11: `MapTrafficRule::owner`, `kind()`; 219 of 520,437 indices (one add-on) point past the owner's paths even with helper arms | — | `formats/map/tile.rs`, corpus test `tile_rules_corpus` |
+| **Spline arms of objects** (`[splinehelper]`) have no known length/radius (the last two values are `0 0`, Q-SCO-007), so their paths are not lanes yet — a likely contributor to unconnected lane ends at crossings | complete junction lanes; rule indices already continue into them | spec + OMSI test |
 | Traffic-light phase **state codes** are only partly decoded | red/yellow/green decision for AI | `docs/src/formats/text/sco.md` Q-SCO-005 + an observation test in OMSI |
 | `[ai_brakeperformance]`, `[ai_veh_type]` kept as unknown fields | braking scale and vehicle class for rule matching | `formats/vehicles/bus.rs` |
 | `[aigroup_depot*]` blocks and legacy `[ailist]`/`[aigroup]` are skipped | scheduled AI, old maps | `formats/map/lists.rs` |
@@ -215,6 +216,7 @@ Automated checks already in place: unit tests of every module, the OMSI-gated li
 | Q-AI06 | Semantics of splines with negative length. | 🟢 Low |
 | Q-AI07 | Why some maps have so many unconnected lane ends (tolerances, tile borders, different path types). | 🟡 Medium |
 | Q-AI08 | Does a density hour beyond 24 wrap or extend the curve (`TH_Wald` has 25.0)? | 🟢 Low |
+| Q-AI10 | Which `priority` value (`192` or `64`) is the higher, and whether `trucks`/`bus`/`no_cars` allow or forbid; meaning of `trafficdensity` flag `2`. | 🟡 Medium |
 | Q-AI09 | How `ailists_#low.cfg` / `_#upd.cfg` are selected (open since the lists spec, Q-L02). | 🟡 Medium |
 
 ---

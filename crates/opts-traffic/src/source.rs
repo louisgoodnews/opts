@@ -6,18 +6,21 @@
 //!   its `.sco`; they are rotated clockwise by the object's heading and moved to its position.
 //!
 //! The host supplies the parsed `.sli`/`.sco` through [`PathSource`] (it already caches them);
-//! this module does no I/O. Splines and paths whose length is not a positive number are skipped
-//! (the installed maps contain a few with negative lengths such as `-9.11`; what they mean is an
-//! open question). Speed limits and priorities (`[rule]`) are not applied yet: the tile
+//! this module does no I/O. The tile's `[rule]` records are applied to the lane they address (owner
+//! element and path index in file order; speed limits are km/h in the file). Splines and paths
+//! whose length is not a positive number are skipped (the installed maps contain a few with
+//! negative lengths such as `-9.11`; what they mean is an open question). Spline arms embedded in
+//! objects with `[splinehelper]` are not converted yet: rule indices of such objects continue
+//! into the helpers' paths (`docs/src/formats/map/tiles.md`). Speed limits and priorities (`[rule]`) are not applied yet: the tile
 //! parser keeps the rules apart from the spline they belong to
 //! (`docs/src/architecture/ai-traffic.md`, "Gaps in `opts-core`").
 
 use glam::DVec2;
-use opts_core::formats::map::MapTile;
+use opts_core::formats::map::{MapTile, MapTrafficRule, RuleKind, RuleOwner};
 use opts_core::formats::scenery::{ScoPath, SplinePath};
 
 use crate::geometry::PathGeometry;
-use crate::graph::{Direction, LaneKind, LaneSegment};
+use crate::graph::{Direction, LaneKind, LaneRules, LaneSegment};
 
 /// Tile edge length in metres: tile `(x, y)` starts at `(x · 300, y · 300)`.
 pub const TILE_SIZE_M: f64 = 300.0;
@@ -36,6 +39,35 @@ pub trait PathSource {
     fn sco_paths(&mut self, sco_file: &str) -> Option<&[ScoPath]>;
 }
 
+/// Folds the rules that address path `path_index` of `owner` into a speed limit (m/s) and the
+/// other lane rules.
+fn rules_for(
+    rules: &[MapTrafficRule],
+    owner: RuleOwner,
+    path_index: usize,
+) -> (Option<f64>, LaneRules) {
+    let mut speed = None;
+    let mut out = LaneRules::default();
+    for r in rules
+        .iter()
+        .filter(|r| r.owner == Some(owner) && r.path_index == path_index)
+    {
+        let value = f64::from(r.value);
+        match r.kind() {
+            // km/h in the file; `0` would stop all traffic, so it counts as "no limit" ❓.
+            Some(RuleKind::SpeedLimit) if value > 0.0 => speed = Some(value / 3.6),
+            Some(RuleKind::TrafficDensity) => out.density = Some(value),
+            Some(RuleKind::Priority) => out.priority = Some(r.value.max(0.0) as u32),
+            Some(RuleKind::Trucks) => out.trucks = true,
+            Some(RuleKind::Bus) => out.bus = true,
+            Some(RuleKind::NoCars) => out.no_cars = true,
+            Some(RuleKind::OvertakingProhibited) => out.no_overtaking = true,
+            _ => {}
+        }
+    }
+    (speed, out)
+}
+
 /// Lane segments of every spline and object of `tile`, which sits at `origin`.
 ///
 /// Pedestrian and rail paths are included (see [`LaneKind`]); filter by kind when building a
@@ -46,7 +78,7 @@ pub fn segments_from_tile(
     source: &mut impl PathSource,
 ) -> Vec<LaneSegment> {
     let mut out = Vec::new();
-    for s in &tile.splines {
+    for (si, s) in tile.splines.iter().enumerate() {
         if !(s.length_m.is_finite() && s.length_m > 0.0) {
             continue;
         }
@@ -59,27 +91,37 @@ pub fn segments_from_tile(
             radius: f64::from(s.radius_m),
             length: f64::from(s.length_m),
         };
-        for p in paths {
+        let owner = RuleOwner::Spline {
+            index: si,
+            id_code: s.id_code,
+        };
+        for (pi, p) in paths.iter().enumerate() {
             let Some(kind) = LaneKind::from_path_type(p.path_type) else {
                 continue;
             };
+            let (speed_limit, rules) = rules_for(&tile.rules, owner, pi);
             out.push(LaneSegment {
                 geometry: centre.offset(f64::from(p.offset_x)),
                 kind,
                 width: f64::from(p.width),
                 direction: Direction::from_number(p.direction),
-                speed_limit: None,
+                speed_limit,
+                rules,
                 source: s.id_code,
             });
         }
     }
-    for o in &tile.objects {
+    for (oi, o) in tile.objects.iter().enumerate() {
         let Some(paths) = source.sco_paths(&o.sco_file) else {
             continue;
         };
         let position = origin + DVec2::new(f64::from(o.position.x), f64::from(o.position.y));
         let heading = f64::from(o.heading_deg).to_radians();
-        for p in paths {
+        let owner = RuleOwner::Object {
+            index: oi,
+            id_code: o.id_code,
+        };
+        for (pi, p) in paths.iter().enumerate() {
             let Some(kind) = LaneKind::from_path_type(p.path_type) else {
                 continue;
             };
@@ -92,12 +134,14 @@ pub fn segments_from_tile(
                 radius: f64::from(p.radius_m),
                 length: f64::from(p.length_m),
             };
+            let (speed_limit, rules) = rules_for(&tile.rules, owner, pi);
             out.push(LaneSegment {
                 geometry: local.to_world(position, heading),
                 kind,
                 width: f64::from(p.width_m),
                 direction: Direction::from_number(p.direction),
-                speed_limit: None,
+                speed_limit,
+                rules,
                 source: o.id_code,
             });
         }
@@ -213,6 +257,84 @@ mod tests {
             &[crate::graph::LaneId(2)]
         );
         assert!(g.successors(crate::graph::LaneId(1)).is_empty());
+    }
+
+    #[test]
+    fn rules_apply_to_the_addressed_path_of_their_owner() {
+        use opts_core::formats::map::MapTrafficRule;
+        let rule = |owner, path_index, rule_type: &str, value| MapTrafficRule {
+            owner: Some(owner),
+            path_index,
+            rule_type: rule_type.into(),
+            value,
+            flag: 0,
+        };
+        let me = RuleOwner::Spline {
+            index: 0,
+            id_code: 7,
+        };
+        let other = RuleOwner::Spline {
+            index: 1,
+            id_code: 8,
+        };
+        let tile = MapTile {
+            splines: vec![spline(0.0, 100.0)],
+            rules: vec![
+                rule(me, 1, "speedlimit", 36.0),
+                rule(me, 1, "trafficdensity", 0.5),
+                rule(me, 1, "priority", 192.0),
+                rule(me, 1, "trucks", 0.0),
+                rule(me, 0, "overtaking_prohib", 0.0),
+                rule(other, 0, "speedlimit", 5.0),
+                rule(me, 0, "speedlimit", 0.0),
+            ],
+            ..MapTile::default()
+        };
+        let mut src = Fixed {
+            sli: vec![spline_path(1.75, 0), spline_path(-1.75, 0)],
+            sco: Vec::new(),
+        };
+        let segs = segments_from_tile(&tile, DVec2::ZERO, &mut src);
+        // Path 0: only the overtaking ban; a limit of 0 means none, the other owner's is ignored.
+        assert_eq!(segs[0].speed_limit, None);
+        assert!(segs[0].rules.no_overtaking && segs[0].rules.density.is_none());
+        // Path 1: 36 km/h = 10 m/s, density 0.5, priority 192, trucks.
+        assert!((segs[1].speed_limit.unwrap() - 10.0).abs() < 1e-9);
+        assert_eq!(
+            (segs[1].rules.density, segs[1].rules.priority),
+            (Some(0.5), Some(192))
+        );
+        assert!(segs[1].rules.trucks && !segs[1].rules.bus && !segs[1].rules.no_overtaking);
+    }
+
+    #[test]
+    fn rule_indices_count_every_path_even_filtered_ones() {
+        // Path 0 is a pedestrian path; the rule addresses path 1, the road lane.
+        let mut ped = spline_path(3.0, 0);
+        ped.path_type = 1;
+        let owner = RuleOwner::Spline {
+            index: 0,
+            id_code: 7,
+        };
+        let tile = MapTile {
+            splines: vec![spline(0.0, 50.0)],
+            rules: vec![MapTrafficRule {
+                owner: Some(owner),
+                path_index: 1,
+                rule_type: "speedlimit".into(),
+                value: 72.0,
+                flag: 0,
+            }],
+            ..MapTile::default()
+        };
+        let mut src = Fixed {
+            sli: vec![ped, spline_path(0.0, 0)],
+            sco: Vec::new(),
+        };
+        let segs = segments_from_tile(&tile, DVec2::ZERO, &mut src);
+        assert_eq!(segs.len(), 2);
+        assert_eq!(segs[0].speed_limit, None);
+        assert!((segs[1].speed_limit.unwrap() - 20.0).abs() < 1e-9);
     }
 
     #[test]

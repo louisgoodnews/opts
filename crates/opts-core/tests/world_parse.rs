@@ -9,7 +9,7 @@
 //! - `.map.water` binary water levels (`opts_core::formats::map::water`)
 
 use glam::Vec3;
-use opts_core::formats::map::{MapManifest, MapTerrain, MapTile, MapWater};
+use opts_core::formats::map::{MapManifest, MapTerrain, MapTile, MapWater, RuleKind, RuleOwner};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 #[test]
@@ -530,6 +530,32 @@ priority
     assert_eq!(tile.rules[1].path_index, 1);
     assert_eq!(tile.rules[1].rule_type, "priority");
     assert_eq!(tile.rules[1].value, 128.0);
+    // Both rules follow the spline (the last placed element), not the earlier object.
+    let owner = Some(RuleOwner::Spline {
+        index: 0,
+        id_code: 9901,
+    });
+    assert_eq!(tile.rules[0].owner, owner);
+    assert_eq!(tile.rules[1].owner, owner);
+    assert_eq!(tile.rules[0].kind(), Some(RuleKind::SpeedLimit));
+    assert_eq!(tile.rules[1].kind(), Some(RuleKind::Priority));
+}
+
+#[test]
+fn rules_follow_the_element_before_them_and_unknown_types_have_no_kind() {
+    let text = "[version]\n14\n\n[rule]\n0\ntrafficdensity\n0\n0\n\n[object]\n0\nA.sco\n7\n1\n2\n3\n0\n0\n0\n0\n\n[rule]\n2\nSpeedLimit\n30\n0\n\n[rule]\n0\nfuture_rule\n1\n0\n";
+    let tile = MapTile::from_text(text).expect("parses");
+    assert_eq!(tile.rules.len(), 3);
+    assert_eq!(tile.rules[0].owner, None);
+    assert_eq!(
+        tile.rules[1].owner,
+        Some(RuleOwner::Object {
+            index: 0,
+            id_code: 7
+        })
+    );
+    assert_eq!(tile.rules[1].kind(), Some(RuleKind::SpeedLimit));
+    assert_eq!(tile.rules[2].kind(), None);
 }
 
 #[test]

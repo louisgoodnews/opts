@@ -155,6 +155,17 @@ fn main() {
         100.0 * with_succ as f64 / n.max(1) as f64,
         100.0 * with_pred as f64 / n.max(1) as f64
     );
+    let lanes = || graph.lane_ids().filter_map(|l| graph.lane(l));
+    println!(
+        "rules on lanes: speed limit {}, density {}, priority {}, trucks {}, bus {}, no_cars {}, no overtaking {}",
+        lanes().filter(|l| l.speed_limit.is_some()).count(),
+        lanes().filter(|l| l.rules.density.is_some()).count(),
+        lanes().filter(|l| l.rules.priority.is_some()).count(),
+        lanes().filter(|l| l.rules.trucks).count(),
+        lanes().filter(|l| l.rules.bus).count(),
+        lanes().filter(|l| l.rules.no_cars).count(),
+        lanes().filter(|l| l.rules.no_overtaking).count(),
+    );
     println!(
         "components: {}  largest: {:?}",
         sizes.len(),

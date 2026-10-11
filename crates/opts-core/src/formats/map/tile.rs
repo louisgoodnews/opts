@@ -68,10 +68,50 @@ pub struct MapSplineInstance {
     pub raw_params: Vec<String>,
 }
 
-/// Traffic rule constraint on a spline path (`[rule]`).
+/// What a `[rule]` is attached to: the spline or object whose block precedes it in the tile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleOwner {
+    /// A spline: `index` into [`MapTile::splines`].
+    Spline {
+        /// Position in [`MapTile::splines`].
+        index: usize,
+        /// The spline's `id_code`.
+        id_code: u64,
+    },
+    /// A scenery object (a junction, say): `index` into [`MapTile::objects`].
+    Object {
+        /// Position in [`MapTile::objects`].
+        index: usize,
+        /// The object's `id_code`.
+        id_code: u64,
+    },
+}
+
+/// The known rule types of `[rule]` records (`docs/src/formats/map/tiles.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuleKind {
+    /// `trafficdensity`: AI traffic density on the path (0 = none).
+    TrafficDensity,
+    /// `speedlimit`: speed limit on the path.
+    SpeedLimit,
+    /// `priority`: priority of the path at a junction.
+    Priority,
+    /// `trucks`: vehicle-type restriction.
+    Trucks,
+    /// `overtaking_prohib`: overtaking prohibited.
+    OvertakingProhibited,
+    /// `bus`: vehicle-type restriction.
+    Bus,
+    /// `no_cars`: vehicle-type restriction.
+    NoCars,
+}
+
+/// Traffic rule constraint on a path of a spline or object (`[rule]`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct MapTrafficRule {
-    /// Path or lane index on preceding spline.
+    /// The spline or object the rule follows in the file; `None` for a rule before any of them.
+    pub owner: Option<RuleOwner>,
+    /// Index of the path (lane) among the owner's `[path]` records.
     pub path_index: usize,
     /// Rule type identifier (e.g. `"trafficdensity"`, `"speedlimit"`, `"priority"`).
     pub rule_type: String,
@@ -79,6 +119,23 @@ pub struct MapTrafficRule {
     pub value: f32,
     /// Additional rule flag.
     pub flag: u32,
+}
+
+impl MapTrafficRule {
+    /// The rule type, if it is one of the known ones (case-insensitive).
+    #[must_use]
+    pub fn kind(&self) -> Option<RuleKind> {
+        Some(match self.rule_type.to_ascii_lowercase().as_str() {
+            "trafficdensity" => RuleKind::TrafficDensity,
+            "speedlimit" => RuleKind::SpeedLimit,
+            "priority" => RuleKind::Priority,
+            "trucks" => RuleKind::Trucks,
+            "overtaking_prohib" => RuleKind::OvertakingProhibited,
+            "bus" => RuleKind::Bus,
+            "no_cars" => RuleKind::NoCars,
+            _ => return None,
+        })
+    }
 }
 
 /// Object attached to a spline (`[splineAttachement]`) or repeated along it
@@ -151,6 +208,8 @@ impl MapTile {
     pub fn from_text(text: &str) -> Result<Self, MapParseError> {
         let blocks = scan_blocks(text);
         let mut tile = MapTile::default();
+        // The spline or object a following `[rule]` belongs to.
+        let mut rule_owner: Option<RuleOwner> = None;
 
         for block in &blocks {
             match block.keyword.as_str() {
@@ -216,6 +275,10 @@ impl MapTile {
                             (p, r, strings)
                         };
 
+                        rule_owner = Some(RuleOwner::Object {
+                            index: tile.objects.len(),
+                            id_code: id,
+                        });
                         tile.objects.push(MapObjectInstance {
                             flag,
                             sco_file: sco,
@@ -271,6 +334,10 @@ impl MapTile {
                             .unwrap_or(0.0)
                             / 100.0;
 
+                        rule_owner = Some(RuleOwner::Spline {
+                            index: tile.splines.len(),
+                            id_code: id,
+                        });
                         tile.splines.push(MapSplineInstance {
                             flag,
                             sli_file: sli,
@@ -304,6 +371,7 @@ impl MapTile {
                         let val = parse_f32(&block.parameters[2], "rule value", block.line_number)?;
                         let flag = parse_u32(&block.parameters[3], "rule flag", block.line_number)?;
                         tile.rules.push(MapTrafficRule {
+                            owner: rule_owner,
                             path_index: idx,
                             rule_type: rtype,
                             value: val,

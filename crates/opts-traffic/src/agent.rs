@@ -430,6 +430,7 @@ mod tests {
             width: 2.5,
             direction: Direction::Forward,
             speed_limit: None,
+            rules: Default::default(),
             source: 0,
         };
         let mut w = world(&[straight(0.0, 100.0), turn]);

@@ -66,6 +66,27 @@ impl Direction {
     }
 }
 
+/// Traffic rules of a path (`[rule]` records of the owning spline or object).
+///
+/// Which vehicles the restriction flags allow or forbid is not settled ❓: the corpus only has
+/// them with value `0`; they are kept as "a rule of this type exists".
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct LaneRules {
+    /// `trafficdensity`: factor for AI traffic on the lane (`0` = none; corpus values `0`,
+    /// `0.001`, `0.1`, `0.5`, `3`, …).
+    pub density: Option<f64>,
+    /// `priority`: raw value (corpus: `64` and `192`; the order is not settled ❓).
+    pub priority: Option<u32>,
+    /// A `trucks` rule exists.
+    pub trucks: bool,
+    /// A `bus` rule exists.
+    pub bus: bool,
+    /// A `no_cars` rule exists.
+    pub no_cars: bool,
+    /// An `overtaking_prohib` rule exists.
+    pub no_overtaking: bool,
+}
+
 /// A path in world space as read from the map, before direction expansion.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LaneSegment {
@@ -79,6 +100,8 @@ pub struct LaneSegment {
     pub direction: Direction,
     /// Speed limit in m/s from a `speedlimit` `[rule]`, if any.
     pub speed_limit: Option<f64>,
+    /// The other `[rule]`s of the path.
+    pub rules: LaneRules,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }
@@ -93,6 +116,7 @@ impl LaneSegment {
             width: 2.5,
             direction: Direction::Forward,
             speed_limit: None,
+            rules: LaneRules::default(),
             source: 0,
         }
     }
@@ -109,6 +133,8 @@ pub struct Lane {
     pub width: f64,
     /// Speed limit in m/s, if any.
     pub speed_limit: Option<f64>,
+    /// The other `[rule]`s of the path.
+    pub rules: LaneRules,
     /// The host's tag from the segment.
     pub source: u64,
 }
@@ -175,6 +201,7 @@ impl LaneGraph {
                 kind: s.kind,
                 width: s.width,
                 speed_limit: s.speed_limit,
+                rules: s.rules,
                 source: s.source,
             };
             match s.direction {
