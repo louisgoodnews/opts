@@ -66,7 +66,12 @@ impl Plugin for InGamePlugin {
         )
         .add_systems(
             OnExit(AppState::InGame),
-            (cleanup_in_game_session, reactivate_menu_camera),
+            (
+                omsi_world::log_final_position,
+                cleanup_in_game_session,
+                reactivate_menu_camera,
+            )
+                .chain(),
         );
 
         // Active simulation frame updates
@@ -77,6 +82,7 @@ impl Plugin for InGamePlugin {
                 update_loading_ui,
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
+                omsi_world::track_position,
                 (
                     omsi_world::load_variants,
                     omsi_world::spawn_pedestrians,

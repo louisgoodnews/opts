@@ -29,7 +29,9 @@ mod vehicle;
 
 use ground::GroundArray;
 pub use job::{begin_world_load, resolve_session_config};
-pub use overlay::{spawn_debug_overlay, update_debug_overlay, DebugOverlayText};
+pub use overlay::{
+    log_final_position, spawn_debug_overlay, track_position, update_debug_overlay, DebugOverlayText,
+};
 pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
     PedestrianNetwork, PedestrianPool, PedestrianSettings,
@@ -83,10 +85,32 @@ pub struct OmsiSessionConfig {
 }
 
 /// Counters for the diagnostic overlay and the final report.
+/// OMSI-frame position (x east, y north, z up, metres) of something in the world.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct WorldPos {
+    /// Tile coordinates.
+    pub tile: (i32, i32),
+    /// Absolute OMSI world position.
+    pub world: Vec3,
+    /// Position inside the tile (x, y in 0..300).
+    pub local: Vec2,
+}
+
+/// Camera and vehicle positions for the diagnostic overlay and the log.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct PositionReadout {
+    /// The 3D camera.
+    pub camera: Option<WorldPos>,
+    /// The player's vehicle and its heading in degrees (clockwise from north).
+    pub vehicle: Option<(WorldPos, f32)>,
+}
+
 #[derive(Resource, Debug, Clone, Default)]
 pub struct WorldStats {
     pub map_name: String,
     pub start_tile: (i32, i32),
+    /// Where the camera and the player's vehicle are (updated every frame).
+    pub position: PositionReadout,
     pub tiles_loaded: usize,
     pub tiles_missing: usize,
     pub objects_loaded: usize,
