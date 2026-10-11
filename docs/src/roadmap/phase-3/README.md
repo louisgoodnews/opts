@@ -17,7 +17,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*
 
-*Goal: Bridge the gap between `opts-core` data and Bevy's ECS and rendering pipeline, providing visual assets, coordinates, and GUI foundations.*
+*Goal: Bridge the gap between `opts-core` data and Bevy's ECS and rendering pipeline.*
 
 - [x] **📥 Bevy Asset Loaders & Mesh Bridge** — [M-0018](M-0018.md)
   - [x] Implement custom `AssetLoader` for `.o3d` files.

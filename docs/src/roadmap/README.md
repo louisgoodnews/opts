@@ -1,6 +1,6 @@
 # 🚌 OPTS (Open Public Transport Simulator) Roadmap
 
-> 📌 This page is the book's copy of the repository-root [`ROADMAP.md`](../../../ROADMAP.md), which is canonical. Edit `ROADMAP.md` and regenerate this page (links are rewritten relative to `docs/src/roadmap/`).
+> 📌 This page is the book's copy of the repository-root [`ROADMAP.md`](../../../ROADMAP.md), which is canonical. Edit `ROADMAP.md` and regenerate this page (`python3 scripts/gen_roadmap_copy.py`; links are rewritten relative to `docs/src/roadmap/`).
 
 **Vision:** A free, open-source public transport simulator built in Rust and Bevy, capable of natively loading and simulating OMSI 2 assets.
 
@@ -16,9 +16,9 @@
 | 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟢 specs drafted & mutation tested; review ongoing | [`phase-1/`](phase-1/README.md) |
 | ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | 🟢 complete | [`phase-2/`](phase-2/README.md) |
 | 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering, GUI foundation | 🟢 complete | [`phase-3/`](phase-3/README.md) |
-| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — physics, world streaming, text textures, script VM and script-driven animation/lights/triggers running; passengers, AI traffic, audio open | [`phase-4/`](phase-4/README.md) |
-| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20/DLSS planned | [`phase-5/`](phase-5/README.md) |
-| 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned | [`phase-6/`](phase-6/README.md) |
+| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — physics, world streaming, text textures, script VM, script-driven animation/lights/triggers, AI traffic, walking pedestrians and articulated buses running; passengers, timetables, audio open | [`phase-4/`](phase-4/README.md) |
+| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20 running on branch `bevy-0.20` (unmerged); CI written but never run (no hosted repository, M-0052); DLSS planned | [`phase-5/`](phase-5/README.md) |
+| 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](phase-7/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -155,9 +155,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
 - [ ] **🗺️ World & Map Loading** — [M-0024](phase-4/M-0024.md) & [M-0025](phase-4/M-0025.md)
-  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`).
-  - [ ] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018).
-  - [ ] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018).
+  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
+  - [~] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018). *Paging runs in `opts-game` (`stream_world_tiles`); async jobs and the `opts-bevy` module are open.*
+  - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh and elevation sampling done; water and a ground-height query for vehicles open.*
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](phase-4/M-0022.md) & [M-0023](phase-4/M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
@@ -166,14 +166,15 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; in-game screenshot check, night maps and `delay` open ([M-0045](phase-4/M-0045.md)).
   - [~] AI road traffic — [M-0049](phase-4/M-0049.md): research and plan ([`ai-traffic.md`](../architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; kinematic traffic runs in the game (cars follow lanes with the IDM, speed limits and density rules, spawn around the camera); signals, priority, script-driven vehicles and calibration open.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](phase-4/M-0027.md) — traces to F-009, F-020).
+  - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](../architecture/articulation.md), M-0022 addendum 2026-10-11); physics coupling, pitch, `[couple_front]` and AI/parked trailers open — [M-0053](phase-4/M-0053.md) (critical review 2026-10-11 F-002, F-003).
 - [~] **🚶 Pedestrians** — [M-0050](phase-4/M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
-  - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
+  - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md` — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
   - [ ] Implement bus stop logic and passenger boarding/alighting.
   - [ ] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`).
-- [ ] **🎮 The Game Binary**
-  - [ ] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App`.
-  - [ ] Implement the main menu, loading screens, and basic HUD.
+- [~] **🎮 The Game Binary** *(status corrected 2026-10-11, critical review F-014)*
+  - [x] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App` (`crates/opts-game/src/app.rs`).
+  - [~] Implement the main menu, loading screens, and basic HUD — menu (`menu/`), new-game screen, loading pipeline and in-game HUD exist; Load Game/Credits are stubs (M-0040).
 - [x] **📦 Delivered outside milestones (reconciled 2026-10-10, [M-0037](phase-4/M-0037.md))** — shipped after M-0023 without their own milestone; no earlier status changed.
   - [x] Workspace modularisation, `opts-catalogue` (map/vehicle catalogue) and `opts-logging` — `07de1b0`, [report](../meta/modularization-2026-10-09.md).
   - [x] Real OMSI asset loading, tile streaming (`stream_world_tiles`), terrain mesh, data-driven sky, layered ground shader, spline attachments, camera system, humans/ego perspective — `69e94b2`, `780cae4` (crates `opts-bevy`, `opts-game`).
@@ -189,6 +190,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] World loader extraction — [M-0046](phase-4/M-0046.md).
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](phase-4/M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](phase-4/M-0025.md); F-004, F-007, F-008).
+- [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../meta/critical-review-2026-10-11.md))**
+  - [ ] Articulated vehicle completion: one articulation model for physics and rendering, pitch from terrain, `[couple_front]`, trailers for AI and parked vehicles — [M-0053](phase-4/M-0053.md) (F-002, F-003).
+  - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
 
 ---
 
@@ -215,15 +219,20 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Code-quality debt (rustdoc, panics, fixtures, tile loader done; size splits open): size limits, panics in library code, stubs, rustdoc — [M-0040](phase-5/M-0040.md) (F-005, F-006, F-009–F-012).
   - [x] Documentation repair and developer switch reference — [M-0041](phase-5/M-0041.md) (F-013, F-018, F-020–F-023).
   - [~] CI and toolchain hardening (written, unverified until first CI run; binrw open): link check, mdBook build, toolchain pin, Windows job — [M-0042](phase-5/M-0042.md) (F-024–F-026).
+- [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../meta/critical-review-2026-10-11.md))**
+  - [ ] Host the repository, activate CI, fix the three gate failures at HEAD (fmt, clippy, rustdoc), isolate agent sessions in worktrees and gate commits on a staged-tree build — [M-0052](phase-5/M-0052.md) (F-001, F-018, F-019, F-020).
+  - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](phase-5/M-0040.md); F-005–F-007).
+  - [ ] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](phase-5/M-0047.md); F-019).
+  - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
 
 ---
 
 ## 🌐 Phase 6: Modding Ecosystem & Community Content
 *Goal: Empower content creators to build, package, validate, and share vehicles, scenery objects, maps, and repaints.*
 
-- [ ] **📦 Modding Infrastructure** — [M-0031](phase-6/README.md) & [M-0032](phase-6/README.md)
+- [ ] **📦 Modding Infrastructure** — [M-0031](phase-6/README.md) & [M-0032](phase-6/M-0032.md)
   - [ ] Specify mod directory layout, virtual filesystem mounting, and load priority rules in `docs/src/architecture/modding-vfs.md` (M-0031).
-  - [ ] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032).
+  - [~] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032). *Repaint discovery, selection in the new-game screen, texture replacement at load time and `[setvar]` equipment shipped in Phase 4 (`c00c3fc`, `7f24124`); switching at runtime and the `opts-bevy` home are open (critical review 2026-10-11 F-022).*
 - [ ] **✏️ Editor Mode** — [M-0051](phase-6/M-0051.md): specification in [docs/src/editor](../editor/README.md); implementation phases E1–E6 open.
 - [ ] **📘 Creator Documentation & Tooling** — [M-0033](phase-6/README.md)
   - [ ] Author `docs/src/modding/overview.md` and `docs/src/modding/asset-pipeline.md`.

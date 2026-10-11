@@ -68,6 +68,9 @@ jobs:
       - name: Check relative markdown links
         run: python3 scripts/check_links.py
 
+      - name: Roadmap copies match ROADMAP.md
+        run: python3 scripts/gen_roadmap_copy.py --check
+
   windows:
     name: Windows build and tests
     runs-on: windows-latest

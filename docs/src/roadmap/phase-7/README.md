@@ -16,11 +16,13 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*
 
-- [ ] **⚙️ Release Engineering**
-  - [ ] Configure multi-platform GitHub Actions release matrix for Linux (`x86_64-unknown-linux-gnu`) and Windows (`x86_64-pc-windows-msvc`).
-  - [ ] Implement automated release workflow generating tar.gz and zip archives with release notes.
-- [ ] **📖 User Documentation & Settings UI**
-  - [ ] Author `docs/src/user/installation.md`, `docs/src/user/controls.md`, and `docs/src/user/troubleshooting.md`.
-  - [ ] Implement settings dialog in `opts-gui` for graphics options (resolution, vsync, shadow distance) and control remapping.
-- [ ] **🏁 Milestone Release**
-  - [ ] Publish `v0.1.0-alpha` public release on GitHub Releases.
+*Goal: Package, validate, and distribute production-ready binaries of OPTS across Linux and Windows platforms.*
+
+- [ ] **⚙️ Release Engineering** — [M-0034](README.md)
+  - [ ] Configure multi-platform GitHub Actions release matrix for Linux (`x86_64-unknown-linux-gnu`) and Windows (`x86_64-pc-windows-msvc`) (M-0034 — traces to F-017).
+  - [ ] Implement automated release workflow generating compressed binary packages with SHA-256 checksums.
+- [ ] **📖 User Documentation & Settings UI** — [M-0035](README.md)
+  - [ ] Author end-user installation, controls, and troubleshooting manuals (`docs/src/user/`).
+  - [ ] Implement in-game settings dialog in `opts-gui` for graphics preferences, audio volume, and input rebinding (M-0035).
+- [ ] **🏁 Milestone Release** — [M-0036](README.md)
+  - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).

@@ -29,7 +29,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Goal: Completely document the OMSI 2 file formats and asset pipeline before writing a single Rust parser. This phase produces the specification that `opts-core` will implement.*
 
-*Status 2026-10-05: first drafts of every planned format exist. `.o3d` and `.x` promoted to 🟢 **Specified** following in-engine mutation testing in OMSI 2 (M-0002 complete). Map-side formats await second mutation kit round.*
+*Status 2026-10-04: first drafts of every planned format exist. All are 🟡 **Draft** — structure verified against the full installed corpus by clean-room analysis (hex dumps, corpus-wide structural walks, statistics; no executables inspected), but many field **meanings** still need mutation tests in OMSI and a maintainer review before they can be marked 🟢.*
 
 - [x] **📄 Text Config Formats (Parser: `nom`)** — drafted
   - [x] [`formats/text/sco.md`](../../formats/text/sco.md), [`sli.md`](../../formats/text/sli.md) + [corpus audit](../../formats/text/sco-sli-audit.md) (47 undocumented `.sco` keywords, misspelled aliases, BOM/encoding findings).
@@ -47,7 +47,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] [`formats/binary/o3d.md`](../../formats/binary/o3d.md) + [chunk reference](../../formats/binary/o3d-chunks.md): layout confirmed on 165,695 of 165,750 non-empty files; field semantics and coordinate space confirmed by mutation testing [M]. 🟢 Specified.
   - [x] Annotated hex breakdown of a simple `.o3d` (self-authored sample in `o3d.md`).
   - [x] [`formats/binary/x.md`](../../formats/binary/x.md): legacy DirectX `.x` (text and binary variants); frame matrix, material ref, and quad triangulation confirmed by mutation testing [M]. 🟢 Specified.
-- [x] **🔊 Format inventory & audio analysis** — [`formats/inventory.md`](../../formats/inventory.md) (619,821 files, 122 extensions, coverage per extension), full [`.wav` analysis](../../formats/wav.md) (42,375 files: variants, chunks, robustness findings, config references) and nine small stubs (`.dat`, `.xsli`, `.itx`, `.ipr`, `.kyb`, `.kennz`, `.html`, `.off`, `.sichtbar`/`.unsichtbar`) (2026-10-04)
+- [x] **🔊 Format inventory & audio analysis** — [`formats/inventory.md`](../../formats/inventory.md) (619,821 files, 122 extensions, coverage per extension), full [`.wav` analysis`](../../formats/wav.md) (42,375 files: variants, chunks, robustness findings, config references) and nine small stubs (`.dat`, `.xsli`, `.itx`, `.ipr`, `.kyb`, `.kennz`, `.html`, `.off`, `.sichtbar`/`.unsichtbar`) (2026-10-04)
 - [x] **🌐 Community cross-check** — [`formats/community-crosscheck.md`](../../formats/community-crosscheck.md): reconciles the drafts with the public OMSI community wiki (facts only, CC BY-SA attribution); resolves several open questions (`$msg`, `[rendertype]`, surface types 0–16, `.surf`) and records conflicts (`[matl_alpha]` value distribution differs from `sco.md`, UTF-16 hofs, keyword case).
 - [x] **🌐 Wiki Cross-Check & Spec Overhaul** — milestone [M-0006](M-0006.md) (complete 2026-10-04; 31 pages, 19 specs updated)
 - [x] **🕳️ Documentation Gap Closure** — from [`formats/gap-analysis.md`](../../formats/gap-analysis.md) (all complete 2026-10-04)
@@ -56,11 +56,11 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] [M-0010](M-0010.md) Engine & Environment Configs — `envir.cfg`, weather, scenarios, inputs, `.opl`
   - [x] [M-0011](M-0011.md) Passenger Content — ticket packs, money, fonts
   - [x] [M-0012](M-0012.md) Chrono and Map Variants
-- [~] **🧪 Mutation-Test Round (needs OMSI)** — binary mesh round complete (2026-10-05)
+- [x] **🧪 Mutation-Test Round (needs OMSI)** — binary mesh round complete (2026-10-05); map-side round complete (2026-10-08)
   - [x] Run `CHECKLIST.md` (now also covers the axis prediction in `o3d.md` Addendum 2: Y up, Z longitudinal); folded results into `o3d.md` (Q-004 material groups, Q-005 axes/winding/UV, Q-006 matrix, Q-001–003 header) and `x.md` (Q-X01 frame matrix, Q-X02, Q-X07, Q-X08). Both promoted to 🟢 Specified.
-  - [ ] Design a second kit for the map side: `[spline]` / `[object]` field meanings (Q-M02, Q-M03), `[groundtex]` numbers (Q-G01), timetable profiles (Q-T01, Q-T02), misspelled collision keywords (Q-AUD-005).
+  - [x] Design and execute Mutation Kit 2 for the map & scenery side: `[spline]` field layout and axis order (Q-M02 resolved), `[object]` pitch/roll orientation (Q-M03 resolved), texture fallback chain (`.bmp` $\to$ `.dds` exclusive, Q-TX01 resolved), tile dimensions (Q-M01 confirmed), and alpha blending modes (Q-TX03 confirmed).
 - [x] **🖼️ Texture Formats** — drafted
-  - [x] [`formats/textures.md`](../../formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers).
+  - [x] [`formats/textures.md`](../../formats/textures.md): `.dds` / `.bmp` / `.tga` / `.png` / `.jpg` usage over 202,000 files (A8 ground masks, extension-vs-content mismatches, `.dds` name fallback, RLE TGA, V4/V5 BMP headers). Alpha semantics (Q-TX03) and name resolution (Q-TX01) verified by Mutation Kit 2.
 - [x] **📐 Coordinate Systems & Math**
   - [x] `docs/src/architecture/coordinates.md`: OMSI's axes/handedness mapped to Bevy (completed 2026-10-05, Q-M01 blocker noted).
 - [ ] **✅ Review & Promotion**
