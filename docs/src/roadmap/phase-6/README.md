@@ -10,6 +10,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - M-0031 — Modding Architecture & Asset Packaging Specifications (`docs`) — ⏳ Planned (package structure, mod loading order, conflict resolution)
 - M-0032 — Repaint & Livery Customization System (`opts-bevy`, `opts-core`) — ⏳ Planned (`.cti` repaint manifests, dynamic material swapping)
+- M-0051 — [Editor Mode](M-0051.md) (`opts-edit`, `opts-editor`, writers in `opts-core`) — 📝 Specified ([editor documentation](../../editor/README.md))
 - M-0033 — Content Creator Guide & Mod Validation Tooling (`opts-tools`) — ⏳ Planned (creator tutorial, interactive syntax linter, content packager)
 
 ## Checklist

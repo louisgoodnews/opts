@@ -48,6 +48,7 @@
   - [M-0045: Script-Driven Animation](roadmap/phase-4/M-0045.md)
   - [M-0046: World Loader Extraction](roadmap/phase-4/M-0046.md)
   - [M-0049: AI Road Traffic](roadmap/phase-4/M-0049.md)
+  - [M-0050: Pedestrians](roadmap/phase-4/M-0050.md)
 - [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
   - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
   - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)
@@ -57,6 +58,7 @@
   - [M-0047: Bevy 0.20 Upgrade](roadmap/phase-5/M-0047.md)
   - [M-0048: DLSS Upscaling](roadmap/phase-5/M-0048.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
+  - [M-0051: Editor Mode](roadmap/phase-6/M-0051.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
 ---
@@ -170,6 +172,21 @@
 - [ADR-0005: Workspace Crate Architecture](adr/0005-crate-architecture.md)
 - [ADR-0006: Control Protocol](adr/0006-control-protocol.md)
 - [ADR-0007: Hot Reload](adr/0007-hot-reload.md)
+- [ADR-0008: Editor Mode](adr/0008-editor-mode.md)
+
+# ✏️ Editor Mode
+
+- [Overview and Principles](editor/README.md)
+- [Architecture](editor/architecture.md)
+- [Workspace and UI](editor/workspace-ui.md)
+- [Maps](editor/content-maps.md)
+- [Assets](editor/content-assets.md)
+- [Vehicles and Characters](editor/content-vehicles.md)
+- [Transport Content](editor/content-transport.md)
+- [Files and Fidelity](editor/files-and-fidelity.md)
+- [Validation](editor/validation.md)
+- [Workflow and Packaging](editor/workflow-and-packaging.md)
+- [Editor Roadmap](editor/roadmap.md)
 
 # 🎓 Tutorials
 
@@ -181,6 +198,7 @@
 # 🚏 Simulation
 
 - [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
+- [Pedestrians](simulation/pedestrians.md)
 
 ---
 

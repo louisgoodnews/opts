@@ -166,6 +166,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; in-game screenshot check, night maps and `delay` open ([M-0045](phase-4/M-0045.md)).
   - [~] AI road traffic — [M-0049](phase-4/M-0049.md): research and plan ([`ai-traffic.md`](../architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; kinematic traffic runs in the game (cars follow lanes with the IDM, speed limits and density rules, spawn around the camera); signals, priority, script-driven vehicles and calibration open.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](phase-4/M-0027.md) — traces to F-009, F-020).
+- [~] **🚶 Pedestrians** — [M-0050](phase-4/M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
   - [ ] Implement bus stop logic and passenger boarding/alighting.
@@ -223,6 +224,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **📦 Modding Infrastructure** — [M-0031](phase-6/README.md) & [M-0032](phase-6/README.md)
   - [ ] Specify mod directory layout, virtual filesystem mounting, and load priority rules in `docs/src/architecture/modding-vfs.md` (M-0031).
   - [ ] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032).
+- [ ] **✏️ Editor Mode** — [M-0051](phase-6/M-0051.md): specification in [docs/src/editor](../editor/README.md); implementation phases E1–E6 open.
 - [ ] **📘 Creator Documentation & Tooling** — [M-0033](phase-6/README.md)
   - [ ] Author `docs/src/modding/overview.md` and `docs/src/modding/asset-pipeline.md`.
   - [ ] Author vehicle and map creation guides for content authors.

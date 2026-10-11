@@ -312,7 +312,7 @@ The three legacy inertia values duplicate what `[momentofintertia]` provides. In
 
 | Box | Lines | Field | Notes |
 | :--- | :--- | :--- | :--- |
-| **Primary** | 1–6 | `half_width`, `half_length`, `half_height`, `offset_x`, `offset_y`, `offset_z` | Used for rendering culling and collision. |
+| **Primary** | 1–6 | `width`, `length`, `height`, `offset_x`, `offset_y`, `offset_z` | Used for rendering culling and collision. **Full extents, not half** (2026-10-11): the MAN GN92 stores `2.472 / 9.555 / 2.491` for a 2.55 m wide body, and across 14 buses with plain body meshes the box matches the body size (width 2.55 ↔ mesh 2.567, length 11.927 ↔ 11.944) while excluding roof equipment and undercarriage (height `2.0` ↔ mesh `2.75`). The earlier names `half_*` were wrong. |
 | **Secondary** | 7–12 | Same 6 fields | Purpose unknown — possibly a fallback or a low-LOD box. Store both. |
 
 > ⚠️ **Investigation Note:** The secondary box's semantic purpose is not yet documented. It may relate to the vehicle's kneeling state, an alternate collision volume, or an AI pathing box. Store it faithfully and revisit later.
