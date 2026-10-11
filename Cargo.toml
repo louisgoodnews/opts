@@ -30,6 +30,7 @@ members = [
     "crates/opts-logging",
     "crates/opts-sim",
     "crates/opts-tools",
+    "crates/opts-traffic",
 ]
 
 [workspace.package]
@@ -54,6 +55,7 @@ opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
 opts-tools = { path = "crates/opts-tools" }
+opts-traffic = { path = "crates/opts-traffic" }
 
 # --- Bevy Ecosystem ---
 # Bevy moves fast. Check the latest version before starting. 

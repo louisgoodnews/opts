@@ -5324,6 +5324,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-traffic"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "opts-core",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "orbclient"
 version = "0.3.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"

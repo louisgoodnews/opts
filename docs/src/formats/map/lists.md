@@ -5,7 +5,7 @@
 | **Format Family** | Text (keyword-based / plain line lists) |
 | **File Names** | see table below (name-based, no distinguishing extension) |
 | **Parser Crate** | `opts-core` |
-| **Parser Module** | `opts_core::formats::map::lists` |
+| **Parser Module** | `opts_core::formats::map::lists` (`AiLists`, `parse_unsched_vehgroups`, `parse_unsched_trafficdens`; depot groups and the legacy `[ailist]` syntax are skipped) |
 | **Encoding** | UTF-8/ASCII, CP1252, UTF-8+BOM, a few UTF-16LE (`Holidays*.txt`) — detect per file |
 | **Status** | 🟢 Specified |
 | **Last Updated** | 2026-10-07 |
@@ -317,6 +317,10 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - No OMSI binaries were inspected.
 - No GPL source code was read.
 - No OMSI assets were committed.
+
+## Parser findings (M-0049, 2026-10-11)
+
+`crates/opts-core/tests/ai_lists_corpus.rs` over the installed `maps/` tree: 101 `ailists*.cfg` files with 953 `[aigroup_2]` groups and 2,187 vehicle entries, of which **760 have no weight**; 5 lists have no `NormalCars` group. 32 `unsched_vehgroups.txt` (147 groups), 250 `unsched_trafficdens.txt` (1,561 groups). **A `[trafficdensity]` hour can exceed 24** (`TH_Wald`: `25.000 / 0.25`), so hours must not be clamped to `0..=24`. How the AI uses these lists is described in [AI Road Traffic](../../architecture/ai-traffic.md).
 
 ## 🔗 Related Documents
 

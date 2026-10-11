@@ -1,0 +1,19 @@
+[package]
+name = "opts-traffic"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AI road traffic for OPTS: lane graph from OMSI paths, car following, spawning (no Bevy)."
+repository.workspace = true
+
+[dependencies]
+# Internal
+opts-core = { workspace = true }
+
+# Math
+glam = { workspace = true }
+
+# Error handling & logging
+thiserror = { workspace = true }
+tracing = { workspace = true }

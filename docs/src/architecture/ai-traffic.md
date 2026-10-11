@@ -1,0 +1,238 @@
+# AI Road Traffic — Research and Integration Plan
+
+| Metadata | Value |
+| :--- | :--- |
+| **Status** | 📝 Plan with a first implementation slice (`opts-traffic` crate, lists parsers); nothing is wired into the game yet |
+| **Date** | 2026-10-11 |
+| **Milestone** | [M-0049](../roadmap/phase-4/M-0049.md) |
+| **Crate** | [`opts-traffic`](../../crates/opts-traffic.md) (pure Rust, no Bevy) |
+| **Specs it builds on** | [map lists](../formats/map/lists.md), [`.sco` paths and traffic lights](../formats/text/sco.md), [`.sli` paths](../formats/text/sli.md), [map tiles (`[rule]`)](../formats/map/tiles.md), [`.osc` scripts](../formats/text/vehicles/osc.md), [predefined variables](../formats/text/vehicles/predefined-variables.md), [script VM](script-vm.md) |
+
+Evidence tags as elsewhere: **[C]** counted over the installed corpus, **[M]** measured with the tools of this repository, 📚 community wiki (facts only), 🌐 external literature, ❓ unverified.
+
+---
+
+## 1. Goal
+
+OMSI maps are alive with background traffic: cars, lorries, cyclists, scheduled buses and trams that follow the road network, stop at signals and keep their distance. OPTS has the *data* for this (lists, paths, rules, signals, vehicle scripts) but no *behaviour*. This document records what the repository already knows, what the corpus adds, which algorithms fit, and how the pieces are cut so that AI traffic can be added step by step without touching the player's vehicle code.
+
+**Out of scope for the first milestone:** scheduled public-transport AI (timetables, bus stops, depot rosters), pedestrians, rail signalling, collisions with the player. Section 8 records the hooks they need.
+
+---
+
+## 2. What OMSI gives us (inputs)
+
+| Need | Source | Spec | Parsed in `opts-core`? |
+| :--- | :--- | :--- | :--- |
+| Which vehicles may appear, with relative frequency | `ailists.cfg` `[aigroup_2]` | [lists](../formats/map/lists.md) | ✅ `AiLists` (this milestone) |
+| Which groups take part, default density class | `unsched_vehgroups.txt` | [lists](../formats/map/lists.md) | ✅ `parse_unsched_vehgroups` |
+| Density over the day, per group and day type | `unsched_trafficdens.txt`, `global.cfg` `[trafficdensity_road]` | [lists](../formats/map/lists.md), [global.cfg](../formats/map/global-cfg.md) | ✅ `parse_unsched_trafficdens`; `global.cfg` curve ✅ (`MapManifest`) |
+| Seasonal/dated replacements | `Chrono/*/ailists_#upd.cfg`, `unsched_trafficdens.txt` | [chrono](../formats/map/chrono.md) | ✅ same parsers, caller picks the file |
+| Where vehicles may drive | `[path]` of `.sli` (splines) and `.sco` (junctions, crossings) | [sli](../formats/text/sli.md#path), [sco](../formats/text/sco.md) | ✅ `SplinePath`, `ScoPath` |
+| Placement of those splines/objects | `tile_<x>_<y>.map` | [tiles](../formats/map/tiles.md) | ✅ `MapTile` |
+| Speed limit, density, priority, lane/type bans per path | `[rule]` in tiles | [tiles](../formats/map/tiles.md) | ⚠️ parsed, but **not tied to the spline it follows** (§7) |
+| Traffic-light programs and which paths they stop | `[traffic_lights_group]`, `[traffic_light]`, `[phase]`, `[use_traffic_light]`, `[approachdist]` | [sco](../formats/text/sco.md#-traffic-lights) | ✅ programs, light index per path, approach distance |
+| How a vehicle turns throttle/brake into motion | `{frame}` of the AI script, `*_constfile.txt` `AI_*` constants | [osc](../formats/text/vehicles/osc.md), [const](../formats/text/vehicles/const.md) | ✅ script VM (`opts-sim`) |
+| AI-only vehicle keywords | `[ai_deltaheight]`, `[ai_brakeperformance]`, `[ai_veh_type]`, `[sound_ai]` | [bus](../formats/text/vehicles/bus.md), [misc types](../formats/text/misc-types.md#ovh) | ⚠️ `[ai_deltaheight]` yes; the others are kept as unknown fields |
+
+### 2.1 What the lists look like in the installed corpus [M]
+
+`crates/opts-core/tests/ai_lists_corpus.rs` (needs `OMSI_PATH`):
+
+* 101 `ailists*.cfg` files under `maps/`, 953 `[aigroup_2]` groups, 2,187 vehicle entries — **760 (35 %) have no weight**, so the default weight matters; OPTS counts a missing weight as `1` ❓. 5 lists have no `NormalCars` group.
+* 32 `unsched_vehgroups.txt` (147 groups), 250 `unsched_trafficdens.txt` (1,561 groups); 28 density groups name an AI group that is absent from the sibling `ailists.cfg` (chrono folders use their own lists, so this is expected for some).
+* **A density point can lie beyond 24 h** (`TH_Wald`: hour `25.000`, density `0.25`). Hours are therefore not clamped to `0..=24`; [`DensityCurve`](../../crates/opts-traffic.md) wraps modulo 24 ❓.
+
+### 2.2 The vehicle contract: the AI "driver" only presses pedals [C][M]
+
+The decisive finding for the architecture. OMSI's engine decides *where and how fast* an AI vehicle drives; the **vehicle's own script** turns that into forces. The shared AI car script (`Scripts/AI_Cars/main_AI.osc`, family of 20+ files; read-only inspection) contains, in `{frame}`:
+
+```
+(L.L.Throttle) (C.L.AI_M_gas_max) * 1 (L.L.Velocity) (C.L.AI_v_max_erreich) / - * (S.L.M_Wheel)
+(L.L.Brake)    (C.L.AI_F_brems_max) * (S.L.Brakeforce)
+(L.L.AI_Blinker_L) …  (S.L.lights_blinker_l)
+```
+
+So the engine-side AI writes **`Throttle`, `Brake`, `AI_Blinker_L/R`, `AI_Light`, `AI_target_index`, `AI_Engine`**; the script computes `M_Wheel` (torque, falling linearly to zero at `AI_v_max_erreich` km/h) and `Brakeforce` from constants. Emergency vehicles additionally read engine-provided `TrafficPriority`/`TrafficPriorityWarningNeeded` (siren logic). Constants used by AI vehicles, counted over all constfiles [C]: `AI_F_brems_max` (553), `AI_lights_blinkgeberintervall` (524), `AI_M_gas_max` (489), `AI_v_max_erreich` (474), `AI_v_max` and `AI_Motorkennlinie` (282 each), `AI_wandler_*` (99 each).
+
+Consequences:
+
+1. **A real AI vehicle is the same simulation as the player's vehicle**, driven by a controller instead of a keyboard. OPTS already has everything on that side (`VehicleController`, `VehicleScripts`, `VehicleSimulation`); the AI only has to produce `Throttle`/`Brake`/indicators. `opts-traffic` models exactly that output: [`DriverCommand`](../../crates/opts-traffic.md).
+2. **A cheap kinematic mode is possible** for far-away vehicles: integrate position directly (the IDM), skip scripts and physics, place the model at the pose. Both modes share the same agent state, so a vehicle can change mode without a visible jump.
+3. `{frame_ai}` blocks exist (`osc` spec), but the shared AI scripts above use plain `{frame}` and a `(L.L.AI)` flag; both forms must be supported (the script VM already runs `frame_ai` when asked).
+4. Per-vehicle AI keywords: `[ai_deltaheight]` (vertical offset; 1,475 uses, **-0.10 m in 1,202, -0.12 in 109** [C]) lowers the model onto the road when driven by AI; `[ai_brakeperformance]` (141 uses, two numbers, values `1.3`/`1.0` then `0.0` [C]) scales braking ❓; `[ai_veh_type]` (76 uses, one number `0`–`3`: 0 ×23, 1 ×5, 2 ×2, 3 ×46 [C]) is a vehicle class ❓ (likely car/bus/lorry/… and used by path rules such as `trucks`, `bus`, `no_cars`).
+
+---
+
+## 3. The road network
+
+### 3.1 Connectivity is geometric — confirmed at scale [M]
+
+The specs state that OMSI never names a path's successor; lanes join where an end meets a start in position and heading ([sco](../formats/text/sco.md), [tiles](../formats/map/tiles.md): crossings "connect only geometrically"). `opts-traffic` builds the lane graph that way, and the `lane_graph_audit` example measures it on the real maps (all splines' `.sli` paths with their lateral offsets, all objects' `.sco` paths placed with the clockwise heading convention; road lanes only, tolerance 0.75 m / 15°):
+
+| Map | Road lanes | Length | Lanes with a successor | Components (largest) |
+| :--- | ---: | ---: | ---: | ---: |
+| Grundorf | 260 | 8 km | **99.6 %** | 1 (260) |
+| Hamburg109 | 8,325 | 188 km | 97.0 % | 45 (8,032) |
+| HafenCityHamburg | 14,919 | 338 km | 96.8 % | 144 (12,833) |
+| Bad_Huegelsdorf_2020 | 8,621 | 247 km | 96.4 % | 118 (3,058) |
+| Rheinhausen | 11,514 | 329 km | 95.2 % | 211 (10,336) |
+| Ruhrau V2 | 12,057 | 344 km | 91.1 % | 710 (1,563) |
+| Berlin-Spandau | 7,258 | 282 km | 85.5 % | 595 (283) |
+| Ruhrgebiet | 47,425 | 1,772 km | 81.1 % | 6,718 (5,783) |
+| Düsseldorf | 12,253 | 518 km | 71.1 % | 3,159 (100) |
+
+Over **42 maps** with lanes (419,554 road lanes, 13,440 km): median **92 %** of lanes have a successor, about two thirds of the maps are at 90 % or above, range 71–99.6 %. Build time for Ruhrgebiet (47 k lanes): a few milliseconds. Widening the position tolerance from 0.25 m to 0.75 m adds 0.1–0.4 % of the joins, to 2 m only another 0.1 %; the remainder are genuine dead ends (map edges, depots, cul-de-sacs) or broken joins ❓. **Conclusion: the geometric rule is right, the graph is cheap to build, and the defaults (0.75 m, 15°) are sound.** Maps with many components (Düsseldorf, Wuppertal2, Tram) need a look at what ends there before spawning on them ❓ (§9).
+
+Data hazards found while doing this:
+
+* Some splines have **non-positive lengths** (e.g. `-9.11`, `-0.14` in `Ahlheim 5` and `Waldhofen`). They are skipped; what OMSI does with them is unknown (reversed direction?) ❓.
+* `Neuendorf` yields **no road lanes** although it has 254 tiles — a tile or profile variant that the parsers or this builder do not cover ❓.
+* A lane's `direction` `2` (both ways) becomes two directed lanes on the same centre line; opposing lanes are therefore only distinguished by their lateral offsets (`offsetX`), as OMSI authors draw them.
+
+### 3.2 Geometry conventions (verified in earlier work, reused here)
+
+Compass heading (clockwise from +Y), positive radius turns clockwise, `-999.99` radius means straight, object-local paths rotate clockwise by the object heading, tile origin `300 m · (x, y)`. The conventions come from the `[spline]` mutation tests and the `crossing_audit` example; `opts_traffic::geometry` implements and tests them (arc, reverse, lateral offset, object placement).
+
+### 3.3 Rules, priority, signals
+
+* `[rule]` types seen: `trafficdensity` (10,993 in 500 sampled tiles), `speedlimit` (2,654), `priority` (2,475), `trucks` (225), `overtaking_prohib` (182), `bus` (89), `no_cars` (82). With **no priority rule, AI vehicles follow right-before-left** (📚).
+* Signals: a junction object defines programs (`[traffic_light]` + `[phase]` states) and each `[path]` names the light that governs it (`[use_traffic_light]`) and an approach distance (`[approachdist]`). Phase *state codes* (`0` red … `6` green … `9` yellow, sub-values for blinking variants) are only partly decoded ([sco](../formats/text/sco.md), Q-SCO-005). The AI rule must be: stop at the path's end when its light is red (or yellow and the vehicle can stop), i.e. treat the path end as a standing obstacle with speed 0 — which is exactly the IDM's "leader at gap *s* with speed 0".
+* Stop lines other than traffic lights (`[traffic_light_stop]`, `[traffic_light_jump]`) have unexplained parameters (Q-SCO-005).
+
+---
+
+## 4. Algorithms (research summary)
+
+OMSI's own AI algorithm is **not documented anywhere I could find**: web search returned only store pages and tool descriptions (the official Aerosoft "Power Toolkit" lists an *AI List Editor*; no description of path following, priority or spacing). The wiki facts already absorbed into the specs (lists, rules, right-before-left, depot rules) are all there is. OPTS therefore needs its own model, calibrated against observation of OMSI (§9). The literature offers standard, well-tested building blocks:
+
+* **Car following — Intelligent Driver Model** (Treiber, Hennecke, Helbing 2000). `a = A·[1 − (v/v0)^δ − (s*/s)²]`, `s* = s0 + v·T + v·Δv / (2·√(A·B))`; collision-free, one equation, stops cleanly behind a standing obstacle, parameters have physical meanings. Reference values from the [traffic-simulation.de page](https://traffic-simulation.de/info/info_IDM.html): car `v0` 120 km/h (adapt to town), `T` 1.5 s, `s0` 2 m, `A` 0.3 m/s² (as a low-acceleration example; realistic 0.8–2.5), `B` 3 m/s² (realistic ≈ 2), lorry `T` 1.7 s. The page integrates ballistically with steps below 0.5 s and stops a vehicle exactly when speed would turn negative — the same update `opts-traffic` uses.
+* **Lane changes — MOBIL** (Kesting, Treiber, Helbing 2007, [Transportation Research Record 1999](https://journals.sagepub.com/doi/abs/10.3141/1999-10)): a lane change is allowed if the new follower does not have to brake harder than a safe limit and the net acceleration gain (own plus politeness × others') exceeds a threshold. It composes with the IDM. Needed only for overtaking slow vehicles (the `overtaking_prohib` rule marks where that is forbidden) and is **not** part of the first milestone.
+* **Junctions** — OMSI's junction objects already contain every possible movement as a path; conflicts between paths are the junction's business. A first-order solution that needs no data OMSI does not provide: *reservation* — a vehicle may enter a junction path only when no vehicle with priority occupies or has reserved a conflicting path (conflicts are found geometrically by intersecting path centre lines), with right-before-left as the default priority. Signals override it.
+* **Routing** — unscheduled traffic does not have destinations; vehicles pick a branch at each fork (OPTS: seeded random choice, weighted by `trafficdensity` rules once those are associated with lanes). Scheduled vehicles need shortest-route search over the same graph (`LaneGraph::shortest_route`, Dijkstra by length).
+
+---
+
+## 5. Architecture
+
+```
+ opts-core (parse)            opts-traffic (decide)              opts-bevy / opts-game (show)
+ ───────────────────          ──────────────────────────         ─────────────────────────────
+ ailists / unsched_*  ──►     SpawnTable (weights, density) ──►  spawn system: picks a vehicle,
+ tile .map + .sli/.sco ─►     segments_from_tile                  loads model + scripts (existing
+                              LaneGraph (geometric joins)         vehicle loader, AI flavour)
+                              TrafficWorld.step(dt)         ──►  kinematic mode: place model at pose
+                                │  IDM, leaders, lane ends   ──►  dynamic mode: write Throttle/Brake/
+                                │  signals, priority (later)        AI_Blinker_* into VehicleScripts,
+                                ▼                                    VehicleController integrates
+                              Agent { lane, s, v, command }
+```
+
+Principles:
+
+1. **`opts-traffic` knows no Bevy and does no I/O** — like `opts-sim`. The host feeds it parsed data and the clock; it can run headless, be replayed (one seeded SplitMix64 generator, no hash-order dependence: agents are processed in lane/`s`/id order) and be unit-tested without a window.
+2. **Parsing stays in `opts-core`**, simulation in `opts-traffic`, ECS glue in `opts-bevy` (an `AiTrafficPlugin` that owns the world as a resource, mirrors agents to entities and implements the two modes). The game decides *when* to run it (map loaded, player position, density settings).
+3. **Two fidelity levels, one state.** *Kinematic*: the crate moves the agent and the host places a mesh. *Dynamic*: the host spawns the vehicle simulation and scripts and feeds `DriverCommand`; the agent's `s`/`speed` are then read back from the vehicle (the lane position follows from projecting the vehicle onto its lane). Dynamic is used within a radius of the player (≈ 150 m ❓), kinematic beyond, with hysteresis. Most background vehicles never need scripts at all.
+4. **Streaming.** The lane graph is built per loaded tile set; because tiles stream in and out (M-0024, resident-tile streaming as implemented by `stream_world_tiles`), the graph is rebuilt (or extended) when the resident tile set changes. A whole map builds in milliseconds [M]; agents on a lane that disappears are despawned (`TrafficEvent`), agents must not outlive their tile's data. Spawn only on resident lanes, outside the camera frustum and beyond a minimum distance from the player; despawn beyond the despawn radius or at dead ends.
+5. **Density.** Target vehicle count near the player = `lane_km_resident × density(hour, day) × base_per_km` where `density` comes from `unsched_trafficdens.txt` (× `global.cfg`), and per-lane `[rule] trafficdensity` scales it. OMSI's own scale is unknown ❓ — `base_per_km` is a game setting (default chosen by visual calibration).
+6. **Time.** The simulation runs in `FixedUpdate` at the existing fixed step (≤ 0.1 s for the IDM) after the physics step; the day clock comes from the game's time of day.
+
+### 5.1 `opts-traffic` today (this milestone's slice)
+
+| Module | Content | Tests |
+| :--- | :--- | :--- |
+| `geometry` | `PathGeometry`: arc/straight, `point_at`, `reversed`, lateral `offset`, `to_world` (object placement) | 7 |
+| `graph` | `LaneSegment`, `LaneGraph::build` (spatial-hash geometric joins, direction expansion), `shortest_route` | 5 |
+| `idm` | `IdmParams` (car, heavy), `acceleration` with speed cap and obstacle | 5 |
+| `agent` | `TrafficWorld` (spawn with free-room check, `step`, lane transitions, leaders across lane borders, dead-end events), `DriverCommand` (throttle/brake from acceleration, indicators from the next lane's turn) | 7 |
+| `density` | `DensityCurve` (wraps at 24 h), `weighted_pick` | 3 |
+| `source` | `segments_from_tile` with the `PathSource` trait (spline `[path]` + object `[path]` → world lanes) | 2 |
+| `rng` | SplitMix64 | 2 |
+| `examples/lane_graph_audit` | the measurement of §3.1 | — |
+
+---
+
+## 6. Integration steps (what the game needs)
+
+1. **Loader glue (`opts-bevy`)**: implement `PathSource` over the existing content cache (`.sli`/`.sco` are already parsed for rendering and spline attachments), call `segments_from_tile` for each resident tile, build/extend the graph. Optional debug overlay: draw lanes and successors (gizmos) and agent states on F10.
+2. **Spawner**: read `ailists.cfg` + `unsched_*.txt` of the active map (and the active chrono's replacements), choose group → vehicle with `weighted_pick`, load the vehicle through the normal vehicle loader with an AI flavour (script `ai = 1`, no driver, `[ai_deltaheight]` applied), skip entries that are not installed.
+3. **Kinematic mode**: entity per agent, transform from `Agent::pose` (height from the terrain/spline height query already used for roads), wheel spin from speed, lights from `DriverCommand`.
+4. **Dynamic mode**: attach `VehicleController` + `VehicleScripts`; a system writes `Throttle`, `Brake`, `AI_Blinker_L/R`, `AI = 1` before the script step. This needs a closed-loop adapter because the script's thrust law (`M_Wheel = Throttle·M_max·(1 − v/v_max)`) differs from the IDM's acceleration: scale `Throttle` so that the resulting force matches the requested acceleration for the vehicle's mass (a small PI controller on speed is enough and avoids modelling every drivetrain).
+5. **Signals**: traffic-light phase clocks per junction object (`ScoTrafficLightGroup`), published to `opts-traffic` as `LaneId → aspect`; paths ending at a red light get a standing obstacle at their end.
+6. **Rules**: associate `[rule]` with its spline (§7) and apply speed limits and bans.
+7. **Settings / control protocol**: `traffic.set_density`, `traffic.dump` via the existing control server (`docs/src/architecture/control-protocol.md`) so agents can be inspected while the game runs.
+
+---
+
+## 7. Gaps in `opts-core` to close first
+
+| Gap | Why it matters | Where |
+| :--- | :--- | :--- |
+| `[rule]` blocks are collected in `MapTile::rules` without the spline (or object) they follow | speed limits, priorities, density and vehicle bans cannot be applied to a lane | `formats/map/tile.rs`: store the owning spline `id_code` (the rule follows its `[spline]` in the file) |
+| Traffic-light phase **state codes** are only partly decoded | red/yellow/green decision for AI | `docs/src/formats/text/sco.md` Q-SCO-005 + an observation test in OMSI |
+| `[ai_brakeperformance]`, `[ai_veh_type]` kept as unknown fields | braking scale and vehicle class for rule matching | `formats/vehicles/bus.rs` |
+| `[aigroup_depot*]` blocks and legacy `[ailist]`/`[aigroup]` are skipped | scheduled AI, old maps | `formats/map/lists.rs` |
+| Splines with non-positive length | semantics unknown | spec + OMSI test |
+| `Neuendorf`: no road lanes | missing coverage | investigate tile/profile variant |
+
+---
+
+## 8. Later extensions and their hooks
+
+* **Scheduled AI** (buses, trams): `.ttl/.ttp/.ttr`, `Busstops.cfg`, `.hof`, depot groups. A scheduled agent has a route (`shortest_route` between stop lanes), dwell times at stops, and the `AI_Scheduled_*` variables / `ai_scheduled_settarget` trigger of the vehicle scripts ([script sets](../formats/text/vehicles/script-sets.md): `terminus.osc`). `Agent` needs a `route: VecDeque<LaneId>` and a stop plan; `pick_next` already centralises branch choice.
+* **Lane changes and overtaking**: MOBIL on top of lane adjacency (parallel same-direction lanes within ≈ one lane width), gated by `overtaking_prohib`.
+* **Pedestrians and cyclists**: the graph already keeps `LaneKind::Pedestrian`; cyclists are ordinary road paths with density default `0` in `unsched_vehgroups.txt` (📚).
+* **Rail**: `LaneKind::Rail` with switches (`[switch]`, `[switchdir]`) and signal routes.
+* **Player interaction**: the player's vehicle as an agent-shaped obstacle (position, speed) so AI brakes for it; honking/priority vehicles (`TrafficPriority` variables).
+
+---
+
+## 9. Calibration and verification plan
+
+Nothing about OMSI's AI *behaviour* is measured yet. Before tuning numbers, observe OMSI (running OMSI is permitted by the clean-room policy; no binaries are inspected) and record results here and in [lists](../formats/map/lists.md):
+
+1. **Speed**: free-road speed of a `NormalCars` vehicle on a road with and without a `speedlimit` rule (is it the limit, or limit × a factor?).
+2. **Spacing**: headway behind a standing AI vehicle and at traffic lights (compare `s0`, `T`).
+3. **Acceleration/braking**: speed curves (`AI_M_gas_max`, `AI_F_brems_max`, `ai_brakeperformance`).
+4. **Density**: number of AI vehicles within 300 m at density factors 0.1, 1, 2 on a known road length (fix `base_per_km`).
+5. **Priority**: a junction without rules — confirm right-before-left; with `priority` rules.
+6. **Dead ends and the lane-graph audit**: why Düsseldorf (71 %), Tram (71.5 %) and Wuppertal2 (73.6 %) have so many lane ends; which of them OMSI treats as joined.
+7. **Missing weights**: frequency of weight-less entries relative to weighted ones.
+
+Automated checks already in place: unit tests of every module, the OMSI-gated lists corpus test, the lane graph audit example (numbers in §3.1 are its output; rerun after any change to the builder or tolerances).
+
+---
+
+## 10. Open questions
+
+| ID | Question | Priority |
+| :--- | :--- | :--- |
+| Q-AI01 | What are AI vehicles' desired speeds and headways in OMSI (limit × factor? per `[ai_veh_type]`)? | 🔴 High |
+| Q-AI02 | Meaning of `[ai_veh_type]` values 0–3 and the second `[ai_brakeperformance]` number. | 🟡 Medium |
+| Q-AI03 | Default weight of a weight-less `ailists.cfg` entry (1? the group mean?). | 🟡 Medium |
+| Q-AI04 | How OMSI converts a density factor into vehicles per kilometre, and the spawn/despawn radii. | 🔴 High |
+| Q-AI05 | Phase state code → aspect mapping and how AI treats yellow ([sco](../formats/text/sco.md) Q-SCO-005). | 🔴 High |
+| Q-AI06 | Semantics of splines with negative length. | 🟢 Low |
+| Q-AI07 | Why some maps have so many unconnected lane ends (tolerances, tile borders, different path types). | 🟡 Medium |
+| Q-AI08 | Does a density hour beyond 24 wrap or extend the curve (`TH_Wald` has 25.0)? | 🟢 Low |
+| Q-AI09 | How `ailists_#low.cfg` / `_#upd.cfg` are selected (open since the lists spec, Q-L02). | 🟡 Medium |
+
+---
+
+## 11. Sources
+
+* Repository specs listed in the header; corpus numbers marked [C]/[M] come from this repository's tools (`ai_lists_corpus` test, `lane_graph_audit` example, read-only keyword counts over `Vehicles/**/*.ovh|bus` and constfiles, inspection of `Scripts/AI_Cars/main_AI*.osc`).
+* 🌐 M. Treiber, A. Hennecke, D. Helbing, *Congested traffic states in empirical observations and microscopic simulations*, Phys. Rev. E 62 (2000) — the IDM; summary and parameter table: [traffic-simulation.de, "The Intelligent-Driver Model and its Variants"](https://traffic-simulation.de/info/info_IDM.html).
+* 🌐 A. Kesting, M. Treiber, D. Helbing, *General lane-changing model MOBIL for car-following models*, Transportation Research Record 1999 (2007), [doi:10.3141/1999-10](https://journals.sagepub.com/doi/abs/10.3141/1999-10).
+* 📚 OMSI community wiki pages already condensed into [lists](../formats/map/lists.md), [tiles](../formats/map/tiles.md) and the [community cross-check](../formats/community-crosscheck.md) (`20-ki-verkehr-von-ailists-pkw-und-menschen`, traffic-rules page).
+* A web search for OMSI's AI behaviour found only product pages ([Aerosoft Power Toolkit](https://www.aerosoft.com/en/shop/move/bus-train/omsi-2/downloadpacks-tools/4077/omsi-2-tools-power-toolkit) lists an AI List Editor) — no technical description.
+
+**Clean-room attestation (ADR-0002):**
+- No OMSI binaries were inspected.
+- No GPL source code was read.
+- No OMSI assets were committed.
+
+## 🔗 Related Documents
+
+- [Map lists & calendars](../formats/map/lists.md), [Script VM](script-vm.md), [Vehicle physics](../simulation/vehicle_physics.md)
+- [M-0049 — AI Traffic](../roadmap/phase-4/M-0049.md)

@@ -50,6 +50,7 @@ OPTS **does not distribute** any OMSI 2 file or asset. It only reads files you o
 | :--- | :--- |
 | `opts-core` | file-format parsers and data model (no Bevy dependency) |
 | `opts-sim` | vehicle physics and the OMSI script VM (no Bevy dependency) |
+| `opts-traffic` | AI road traffic: lane graph from OMSI paths, car following, spawning helpers (no Bevy dependency; not yet wired into the game) |
 | `opts-bevy` | Bevy integration: asset loaders, world and vehicle rendering, script bridge, camera, control protocol server, hot reload |
 | `opts-gui` | Material Design 3 widget library for Bevy UI |
 | `opts-game` | the game executable: menus, map and vehicle selection, in-game world |

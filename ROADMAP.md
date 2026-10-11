@@ -164,7 +164,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [x] Script VM (compiles all 6,062 corpus scripts; 1,216 scripted vehicles load and run) wired to the vehicle through a passive and an active Bevy bridge — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](docs/src/roadmap/phase-4/M-0026.md) — traces to F-008, F-019).
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; in-game screenshot check, night maps and `delay` open ([M-0045](docs/src/roadmap/phase-4/M-0045.md)).
-  - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
+  - [~] AI road traffic — [M-0049](docs/src/roadmap/phase-4/M-0049.md): research and plan ([`ai-traffic.md`](docs/src/architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; game integration, signals and calibration open.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](docs/src/roadmap/phase-4/M-0027.md) — traces to F-009, F-020).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md`.
