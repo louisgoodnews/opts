@@ -53,7 +53,8 @@ pub use coords::{
     sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
 };
 pub use human::{
-    apply_pose, hip_offset, spawn_human, Human, HumanHead, HumanPose, HumanRig, HUMAN_BONES,
+    apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, Human, HumanHead, HumanPose,
+    HumanRig, HUMAN_BONES,
 };
 pub use install::OmsiInstall;
 pub use loader::{

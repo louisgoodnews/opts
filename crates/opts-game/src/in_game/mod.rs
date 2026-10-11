@@ -39,6 +39,9 @@ pub struct InGamePlugin;
 impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
+            .init_resource::<omsi_world::PedestrianNetwork>()
+            .init_resource::<omsi_world::PedestrianSettings>()
+            .init_resource::<omsi_world::PedestrianPool>()
             .init_resource::<SimulationLoadState>()
             .init_resource::<InGameSessionInfo>()
             .init_resource::<opts_bevy::CameraState>()
@@ -51,7 +54,11 @@ impl Plugin for InGamePlugin {
         // Lifecycle hooks for entering/exiting AppState::InGame
         app.add_systems(
             OnEnter(AppState::InGame),
-            (deactivate_menu_camera, setup_in_game_session),
+            (
+                deactivate_menu_camera,
+                setup_in_game_session,
+                omsi_world::configure_pedestrians,
+            ),
         )
         .add_systems(
             OnExit(AppState::InGame),
@@ -66,6 +73,12 @@ impl Plugin for InGamePlugin {
                 update_loading_ui,
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
+                (
+                    omsi_world::load_variants,
+                    omsi_world::spawn_pedestrians,
+                    omsi_world::move_pedestrians,
+                )
+                    .chain(),
                 sky::update_sky.run_if(resource_exists::<sky::Sky>),
                 screenshot::capture_screenshot_when_ready,
                 handle_camera_shortcuts,

@@ -96,6 +96,8 @@ pub fn load_next_tile(
             |x, y| terrain.as_ref().map_or(0.0, |t| sample_terrain(t, x, y)),
         )
     };
+    let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
+    super::pedestrians::register_tile(commands, key, lanes);
     let placements = tile
         .objects
         .iter()
@@ -452,6 +454,7 @@ pub fn stream_world_tiles(
     for key in far {
         if let Some(root) = job.resident.remove(&key) {
             commands.entity(root).despawn();
+            super::pedestrians::unregister_tile(&mut commands, key);
             tracing::debug!(tile = ?key, "tile unloaded");
         }
     }

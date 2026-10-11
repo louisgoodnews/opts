@@ -19,6 +19,7 @@ use crate::in_game::attachments::SplineIndex;
 mod ground;
 mod job;
 mod overlay;
+mod pedestrians;
 mod reload;
 mod tile;
 mod tile_ground;
@@ -28,6 +29,10 @@ mod vehicle;
 use ground::GroundArray;
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{spawn_debug_overlay, update_debug_overlay, DebugOverlayText};
+pub use pedestrians::{
+    configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
+    PedestrianNetwork, PedestrianPool, PedestrianSettings,
+};
 pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};

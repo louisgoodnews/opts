@@ -85,6 +85,10 @@ pub struct CliArgs {
     #[arg(long, value_name = "DIR")]
     pub cli_allow_dir: Vec<PathBuf>,
 
+    /// Cap on simultaneously walking pedestrians (`0` = none; default 40).
+    #[arg(long, value_name = "N")]
+    pub pedestrians: Option<usize>,
+
     /// Disable the file watcher that hot-reloads edited OMSI content.
     #[arg(long, default_value_t = false)]
     pub no_hot_reload: bool,
@@ -118,6 +122,7 @@ impl Default for CliArgs {
             cli_port: None,
             cli_bind: "127.0.0.1".to_string(),
             cli_token: None,
+            pedestrians: None,
             cli_allow_dir: Vec::new(),
             no_hot_reload: false,
             hot_reload_root: Vec::new(),

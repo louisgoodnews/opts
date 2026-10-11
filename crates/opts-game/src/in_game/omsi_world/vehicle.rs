@@ -442,6 +442,72 @@ pub fn load_player_vehicle(
     Ok(())
 }
 
+/// Loads the skinned meshes of a character: the first (highest-detail) LOD of its model manifest.
+///
+/// Fails with "no human meshes could be loaded" while scrambled meshes are still being decoded in
+/// the background; callers may retry later.
+pub(super) fn load_human_parts(
+    job: &mut WorldLoadJob,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    profile: &opts_core::formats::humans::HumanProfile,
+    hum_dir: &Path,
+) -> Result<Vec<opts_bevy::ModelPart>, String> {
+    // Model manifest and skinned meshes (highest-detail LOD).
+    let cfg_path = job
+        .install
+        .find_in(hum_dir, &profile.model)
+        .ok_or_else(|| format!("human model config not found: {}", profile.model))?;
+    let cfg = opts_core::formats::vehicles::model::ModelConfig::parse_bytes(
+        &std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?,
+    )
+    .map_err(|e| format!("{}: {e}", cfg_path.display()))?;
+    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let tex_dirs = vec![
+        model_dir.clone(),
+        model_dir.join("texture"),
+        hum_dir.join("texture"),
+        model_dir
+            .parent()
+            .map(|p| p.join("Texture"))
+            .unwrap_or_default(),
+    ];
+    let lod = cfg.lods.first().ok_or("human model has no meshes")?;
+    let mut parts = Vec::new();
+    for mesh_def in &lod.meshes {
+        let Some(o3d_path) = job.install.find_in(&model_dir, &mesh_def.path) else {
+            tracing::error!(mesh = %mesh_def.path, "human mesh not found");
+            continue;
+        };
+        let overrides: Vec<TextureOverride> = mesh_def
+            .materials
+            .iter()
+            .map(|m| TextureOverride {
+                slot: m.slot_index as usize,
+                texture: m.texture.clone(),
+                alpha: m.alpha_mode,
+                hidden_by_variable: m.alpha_scale_var.is_some(),
+                trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
+                image: None,
+                light_map: None,
+            })
+            .collect();
+        let mut loader = ContentLoader {
+            install: &job.install,
+            cache: &mut job.cache,
+            meshes,
+            materials,
+            images,
+        };
+        parts.extend(loader.o3d_skinned_parts(&o3d_path, &tex_dirs, &overrides));
+    }
+    if parts.is_empty() {
+        return Err("no human meshes could be loaded".into());
+    }
+    Ok(parts)
+}
+
 /// Loads the player's character and seats it at the vehicle's `[drivpos]`.
 ///
 /// The skinned mesh, joint pivots and head anchor come from the `.hum`, its model manifest and
@@ -498,57 +564,7 @@ pub(super) fn load_driver_human(
         return Err("[drivpos] needs 5 values".into());
     }
 
-    // Model manifest and skinned meshes (highest-detail LOD).
-    let cfg_path = job
-        .install
-        .find_in(&hum_dir, &profile.model)
-        .ok_or_else(|| format!("human model config not found: {}", profile.model))?;
-    let cfg = opts_core::formats::vehicles::model::ModelConfig::parse_bytes(
-        &std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?,
-    )
-    .map_err(|e| format!("{}: {e}", cfg_path.display()))?;
-    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let tex_dirs = vec![
-        model_dir.clone(),
-        model_dir.join("texture"),
-        hum_dir.join("texture"),
-        model_dir
-            .parent()
-            .map(|p| p.join("Texture"))
-            .unwrap_or_default(),
-    ];
-    let lod = cfg.lods.first().ok_or("human model has no meshes")?;
-    let mut parts = Vec::new();
-    for mesh_def in &lod.meshes {
-        let Some(o3d_path) = job.install.find_in(&model_dir, &mesh_def.path) else {
-            tracing::error!(mesh = %mesh_def.path, "human mesh not found");
-            continue;
-        };
-        let overrides: Vec<TextureOverride> = mesh_def
-            .materials
-            .iter()
-            .map(|m| TextureOverride {
-                slot: m.slot_index as usize,
-                texture: m.texture.clone(),
-                alpha: m.alpha_mode,
-                hidden_by_variable: m.alpha_scale_var.is_some(),
-                trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
-                image: None,
-                light_map: None,
-            })
-            .collect();
-        let mut loader = ContentLoader {
-            install: &job.install,
-            cache: &mut job.cache,
-            meshes,
-            materials,
-            images,
-        };
-        parts.extend(loader.o3d_skinned_parts(&o3d_path, &tex_dirs, &overrides));
-    }
-    if parts.is_empty() {
-        return Err("no human meshes could be loaded".into());
-    }
+    let parts = load_human_parts(job, meshes, materials, images, &profile, &hum_dir)?;
 
     tracing::info!(parts = parts.len(), vertices = parts.iter().map(|p| p.vertices).sum::<usize>(), seat = ?seat, "human meshes loaded");
     let name = hum_path
