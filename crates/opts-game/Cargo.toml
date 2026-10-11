@@ -15,6 +15,7 @@ path = "src/main.rs"
 # Internal Crates
 opts-core = { workspace = true }
 opts-bevy = { workspace = true }
+rfd = { workspace = true }
 opts-gui = { workspace = true }
 opts-sim = { workspace = true }
 opts-catalogue = { workspace = true }

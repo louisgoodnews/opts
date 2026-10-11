@@ -105,6 +105,7 @@ pub fn build_app(args: CliArgs) -> App {
     // 3. Register engine bridges, UI, and application plugins
     app.add_plugins(OptsAssetPlugin)
         .add_plugins(OptsGamePlugin)
+        .add_plugins(crate::omsi_setup::OmsiSetupPlugin)
         .add_plugins(crate::catalogue_service::CataloguePlugin)
         .add_plugins(ShutdownPlugin)
         .add_plugins(crate::control::GameControlPlugin);

@@ -8,6 +8,7 @@ pub mod in_game;
 pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
+pub mod omsi_setup;
 pub mod report_context;
 pub mod settings;
 pub mod settings_screen;

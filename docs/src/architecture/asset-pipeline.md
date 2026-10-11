@@ -23,7 +23,7 @@ The session needs an OMSI root, a map folder and a vehicle. Each comes from, in 
 
 1. CLI: `--omsi-path`, `--map-path`, `--vehicle-path`.
 2. The New Game selection, mapped through the catalogue: a map's catalogue id is its folder under `<OMSI>/maps`; a vehicle's id is its `.bus` file stem (`<OMSI>/Vehicles/*/<id>.bus`).
-3. Root only: `$OMSI_PATH`, then the known Steam locations (`opts_game::omsi_root`).
+3. Root only: `$OMSI_PATH`, then the path saved in the settings, then the known Steam locations (`opts_game::omsi_root`); with none of them, the startup dialog asks ([application startup](application-startup.md#-omsi-installation-check-startup)).
 4. Vehicle only: the first entry of the map's `ailists.cfg`.
 
 ## Conventions the loaders rely on

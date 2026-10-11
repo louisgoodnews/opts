@@ -102,9 +102,21 @@ When `--headless` is **true**:
 
 ---
 
+## 📂 OMSI Installation Check (Startup)
+
+`OmsiSetupPlugin` (`opts-game/src/omsi_setup.rs`) runs before the catalogue service and resolves the installation in this order: `--omsi-path` (or the root above `--map-path`), `$OMSI_PATH`, the `omsi_path` remembered in the settings (`settings.db`, key `omsi_path`), the default Steam locations below `$HOME`. A folder counts as an installation when it contains `maps` and `Vehicles`.
+
+- **Found without an override** (no `--omsi-path`/`--map-path`/`$OMSI_PATH`): the path is saved to the settings, so later runs use the same installation.
+- **Not found** (interactive start, no `--headless`/`--autostart`): a modal asks for the folder. **Browse…** opens the native folder dialog (`rfd`; the XDG desktop portal on Linux, so no GTK is needed) on its own thread; **Quit** leaves. A chosen folder (or a sub-folder such as `maps/Grundorf`, resolved to the installation above it) is validated, saved to the settings, and the catalogue starts at once. An invalid or cancelled choice shows a message and the dialog stays.
+- **Not found without a window** (`--headless`, `--autostart`): a warning, empty catalogue, no dialog.
+
+The saved path is changed by choosing another installation (delete the `omsi_path` row or pass `--omsi-path` to override for one run).
+
+---
+
 ## 🗄️ Catalogue Discovery (Startup)
 
-`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, known Steam paths), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
+`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, the saved settings path, known Steam paths), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
 
 ## 🗺️ Real-Content Loading (In-Game Session)
 

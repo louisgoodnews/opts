@@ -18,6 +18,10 @@ pub struct GameSettings {
     /// Path to the most recently loaded map directory containing `picture.jpg`.
     #[serde(default)]
     pub recent_map_path: Option<PathBuf>,
+    /// OMSI 2 installation chosen by the user (or found at a known location) and remembered for
+    /// later runs; `--omsi-path` and `$OMSI_PATH` override it.
+    #[serde(default)]
+    pub omsi_path: Option<PathBuf>,
     /// Whether dark mode is enabled (defaults to false for M3 baseline light).
     #[serde(default)]
     pub is_dark_theme: bool,
@@ -44,6 +48,7 @@ impl Default for GameSettings {
     fn default() -> Self {
         Self {
             recent_map_path: None,
+            omsi_path: None,
             is_dark_theme: false,
             active_theme: "Default".to_string(),
             discovery_interval_days: 1,
@@ -133,6 +138,9 @@ impl GameSettings {
                         self.recent_map_path = Some(PathBuf::from(value));
                     }
                 }
+                "omsi_path" => {
+                    self.omsi_path = (!value.trim().is_empty()).then(|| PathBuf::from(value));
+                }
                 "is_dark_theme" => {
                     self.is_dark_theme = value.parse::<bool>().unwrap_or(false);
                 }
@@ -180,6 +188,16 @@ impl GameSettings {
             "INSERT INTO app_settings (key, value) VALUES ('recent_map_path', ?1)
              ON CONFLICT(key) DO UPDATE SET value = excluded.value",
             params![map_str],
+        )?;
+
+        tx.execute(
+            "INSERT INTO app_settings (key, value) VALUES ('omsi_path', ?1)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            params![self
+                .omsi_path
+                .as_ref()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")],
         )?;
 
         tx.execute(
@@ -368,6 +386,7 @@ mod tests {
         let mut conn = Connection::open_in_memory().expect("In-memory SQLite connection");
         let mut settings = GameSettings {
             recent_map_path: Some(PathBuf::from("/maps/Berlin")),
+            omsi_path: Some(PathBuf::from("/games/OMSI 2")),
             is_dark_theme: true,
             active_theme: "Amber".to_string(),
             discovery_interval_days: 1,
@@ -385,6 +404,7 @@ mod tests {
             .expect("Loading from SQLite must succeed");
 
         assert_eq!(loaded.recent_map_path, Some(PathBuf::from("/maps/Berlin")));
+        assert_eq!(loaded.omsi_path, Some(PathBuf::from("/games/OMSI 2")));
         assert!(loaded.is_dark_theme);
         assert_eq!(loaded.active_theme, "Amber");
         assert_eq!(
