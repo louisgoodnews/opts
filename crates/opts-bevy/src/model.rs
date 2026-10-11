@@ -358,7 +358,14 @@ impl ContentLoader<'_> {
                         None => {
                             if let Some(pool) = &self.cache.decode_pool {
                                 // Decode in the background; the tile is rebuilt when it is done.
-                                pool.submit(ckey, m);
+                                let siblings: Vec<PathBuf> = o3d_path
+                                    .file_name()
+                                    .map(|n| self.install.files_named(&n.to_string_lossy()))
+                                    .unwrap_or_default()
+                                    .into_iter()
+                                    .filter(|p| p != o3d_path)
+                                    .collect();
+                                pool.submit(ckey, m, siblings);
                                 self.cache.deferred.insert(ckey);
                                 deferred_here = true;
                                 continue;

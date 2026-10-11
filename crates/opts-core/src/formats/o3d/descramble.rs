@@ -224,7 +224,7 @@ impl Pool {
 
 /// Loop belief propagation (min-sum) over the four labels with truncated-linear edge costs:
 /// a good starting labelling for the local search. Messages are normalised each sweep.
-fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
+fn bp_init(o: &O3d, p: &DecodeParams, allowed: Option<&[u8]>) -> Vec<u8> {
     let n = o.vertices.len();
     let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
     let mut edges: Vec<(u32, u32)> = Vec::new();
@@ -261,7 +261,12 @@ fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
             c
         })
         .collect();
-    let unary: [f32; 4] = [-PRIOR[0], -PRIOR[1], -PRIOR[2], -PRIOR[3]];
+    let unary_of = |i: usize| -> [f32; 4] {
+        std::array::from_fn(|l| {
+            let banned = allowed.is_some_and(|a| a[i] & (1 << l) == 0);
+            -PRIOR[l] + if banned { 1.0e4 } else { 0.0 }
+        })
+    };
     // directed messages: 2 per edge, index 2e = a->b, 2e+1 = b->a
     let mut msg = vec![[0.0f32; 4]; edges.len() * 2];
     let mut incoming: Vec<Vec<usize>> = vec![Vec::new(); n]; // message ids arriving at node
@@ -279,7 +284,7 @@ fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
                     (b as usize, 2 * e + 1)
                 };
                 let back = if dir == 0 { 2 * e + 1 } else { 2 * e };
-                let mut belief = unary;
+                let mut belief = unary_of(from);
                 for &m in &incoming[from] {
                     if m != back {
                         for l in 0..4 {
@@ -311,7 +316,7 @@ fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
     }
     (0..n)
         .map(|i| {
-            let mut belief = unary;
+            let mut belief = unary_of(i);
             for &m in &incoming[i] {
                 for l in 0..4 {
                     belief[l] += msg[m][l];
@@ -330,6 +335,10 @@ fn bp_init(o: &O3d, p: &DecodeParams) -> Vec<u8> {
 
 /// Chooses a permutation per vertex; returns the labels (index into the four permutations).
 fn solve(o: &O3d, p: &DecodeParams) -> Vec<u8> {
+    solve_masked(o, p, None)
+}
+
+fn solve_masked(o: &O3d, p: &DecodeParams, allowed: Option<&[u8]>) -> Vec<u8> {
     let restarts = p.restarts;
     let mut best: Option<(f32, Vec<u8>)> = None;
     for r in 0..restarts.max(1) {
@@ -338,6 +347,7 @@ fn solve(o: &O3d, p: &DecodeParams) -> Vec<u8> {
             0x9E37_79B9_u32.wrapping_add(r.wrapping_mul(0x85EB_CA6B)),
             r > 0,
             p,
+            allowed,
         );
         if best.as_ref().is_none_or(|b| e > b.0) {
             best = Some((e, lab));
@@ -347,13 +357,19 @@ fn solve(o: &O3d, p: &DecodeParams) -> Vec<u8> {
 }
 
 /// One optimisation run; returns the labels and the total score reached (higher is better).
-fn solve_once(o: &O3d, seed: u32, random_init: bool, p: &DecodeParams) -> (Vec<u8>, f32) {
+fn solve_once(
+    o: &O3d,
+    seed: u32,
+    random_init: bool,
+    p: &DecodeParams,
+    allowed: Option<&[u8]>,
+) -> (Vec<u8>, f32) {
     let init = if random_init {
         None
     } else {
-        Some(bp_init(o, p))
+        Some(bp_init(o, p, allowed))
     };
-    run_local_search(o, seed, random_init, init, false, p)
+    run_local_search(o, seed, random_init, init, false, p, allowed)
 }
 
 /// Total score of a given labelling under the solver's own objective (evaluation tool).
@@ -366,6 +382,7 @@ pub fn labels_score(o: &O3d, labels: &[u8]) -> f32 {
         Some(labels.to_vec()),
         true,
         &DecodeParams::default(),
+        None,
     )
     .1
 }
@@ -564,8 +581,10 @@ fn run_local_search(
     init: Option<Vec<u8>>,
     eval_only: bool,
     params: &DecodeParams,
+    allowed: Option<&[u8]>,
 ) -> (Vec<u8>, f32) {
     let n = o.vertices.len();
+    let ok = |i: usize, l: usize| allowed.is_none_or(|a| a[i] & (1 << l) != 0);
     let sc = Scorer::new(o, params.w_fold);
     let stored = &sc.stored;
 
@@ -577,6 +596,11 @@ fn run_local_search(
             r ^= r >> 17;
             r ^= r << 5;
             *l = (r % 4) as u8;
+        }
+        for (i, l) in lab.iter_mut().enumerate() {
+            while !ok(i, *l as usize) {
+                *l = (*l + 1) % 4;
+            }
         }
     }
     let mut pool = Pool::new();
@@ -613,7 +637,7 @@ fn run_local_search(
             let mut best = (f32::MIN, lab[i]);
             let mut scores = [f32::MIN; 4];
             for p in 0..4 {
-                if eval_only && p != lab[i] as usize {
+                if (eval_only && p != lab[i] as usize) || !ok(i, p) {
                     continue;
                 }
                 let score = sc.score(&pool, &lab, i, p);
@@ -800,6 +824,7 @@ pub fn solved_labels_run_with(o: &O3d, run: u32, params: &DecodeParams) -> (Vec<
         0x9E37_79B9_u32.wrapping_add(run.wrapping_mul(0x85EB_CA6B)),
         run > 0,
         params,
+        None,
     )
 }
 
@@ -835,6 +860,149 @@ pub struct ConfidentReport {
     pub uv: super::uvfix::UvFixReport,
 }
 
+/// Two independent runs (belief-propagation seeded and random) must agree; returns the labels and
+/// the agreement, or the best agreement reached when none sufficed. `allowed` restricts the label
+/// set of each vertex (bit `l` set: label `l` possible).
+fn confident_labels(
+    o: &O3d,
+    params: &DecodeParams,
+    allowed: Option<&[u8]>,
+) -> Result<(Vec<u8>, f32), f32> {
+    // Runs agree on a vertex when both decodings put it in (practically) the same place; two
+    // labels can differ yet give the same position when coordinates coincide.
+    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+    for v in &o.vertices {
+        lo = lo.min(v.position);
+        hi = hi.max(v.position);
+    }
+    let tol = ((hi - lo).length() * 0.005).max(1e-5);
+    let agreement = |x: &[u8], y: &[u8]| {
+        o.vertices
+            .iter()
+            .zip(x.iter().zip(y))
+            .filter(|(v, (p, q))| {
+                permuted(**p as usize, v.position).distance(permuted(**q as usize, v.position))
+                    <= tol
+            })
+            .count() as f32
+            / x.len() as f32
+    };
+    let mut runs: Vec<(Vec<u8>, f32)> = Vec::new();
+    let mut best_pair = 0.0f32;
+    for r in 0..CONFIDENT_MAX_RUNS {
+        runs.push(solve_once(
+            o,
+            0x9E37_79B9_u32.wrapping_add(r.wrapping_mul(0x85EB_CA6B)),
+            r > 0,
+            params,
+            allowed,
+        ));
+        for i in 0..runs.len() - 1 {
+            let ag = agreement(&runs[i].0, &runs[runs.len() - 1].0);
+            best_pair = best_pair.max(ag);
+            if ag >= params.min_agreement {
+                let last = runs.len() - 1;
+                let pick = if runs[i].1 >= runs[last].1 { i } else { last };
+                return Ok((runs[pick].0.clone(), ag));
+            }
+        }
+    }
+    Err(best_pair)
+}
+
+/// Whether two meshes are scramblings of the same model: same face lists and the same sorted
+/// coordinate triple at every vertex.
+#[must_use]
+pub fn same_model(a: &O3d, b: &O3d) -> bool {
+    a.vertices.len() == b.vertices.len()
+        && a.indices == b.indices
+        && a.vertices.iter().zip(&b.vertices).all(|(p, q)| {
+            let (mut x, mut y) = (
+                [p.position.x, p.position.y, p.position.z],
+                [q.position.x, q.position.y, q.position.z],
+            );
+            x.sort_by(f32::total_cmp);
+            y.sort_by(f32::total_cmp);
+            x == y
+        })
+}
+
+/// Decodes several scramblings of the *same* model together (see [`same_model`]). The files carry
+/// different keys, so their per-vertex permutations are independent while the true positions are
+/// equal: the first copy is solved with every label no other copy contradicts, the other copies
+/// take the labels that give the same positions. Texture jitter is resolved jointly too (a
+/// vertex's true coordinates must reproduce every copy's stored value with an allowed offset).
+///
+/// Returns one report per copy (all rejected when the copies do not match or the runs disagree);
+/// accepted copies are modified in place.
+pub fn decode_joint(copies: &mut [O3d], params: &DecodeParams) -> Vec<ConfidentReport> {
+    let rejected = |agreement: f32| ConfidentReport {
+        accepted: false,
+        agreement,
+        coherence: 0.0,
+        dropped_faces: 0,
+        uv: super::uvfix::UvFixReport::default(),
+    };
+    let none = |n: usize| vec![rejected(0.0); n];
+    if copies.len() < 2 {
+        return none(copies.len());
+    }
+    let n = copies[0].vertices.len();
+    if !(4..=CONFIDENT_MAX_VERTICES).contains(&n)
+        || copies[0].indices.len() < 2
+        || copies[1..].iter().any(|c| !same_model(&copies[0], c))
+    {
+        return none(copies.len());
+    }
+    const EPS: f32 = 1e-5;
+    let close = |a: Vec3, b: Vec3| (a - b).abs().max_element() <= EPS;
+    // Labels of copy 0 that every other copy can reproduce.
+    let mut allowed = vec![0u8; n];
+    for i in 0..n {
+        let a = copies[0].vertices[i].position;
+        for l in 0..4 {
+            let t = permuted(l, a);
+            if copies[1..].iter().all(|c| {
+                let b = c.vertices[i].position;
+                (0..4).any(|q| close(permuted(q, b), t))
+            }) {
+                allowed[i] |= 1 << l;
+            }
+        }
+        if allowed[i] == 0 {
+            return none(copies.len()); // not the same scrambled model after all
+        }
+    }
+    let (labels, agree) = match confident_labels(&copies[0], params, Some(&allowed)) {
+        Ok(v) => v,
+        Err(best) => return vec![rejected(best); copies.len()],
+    };
+    let truth: Vec<Vec3> = (0..n)
+        .map(|i| permuted(labels[i] as usize, copies[0].vertices[i].position))
+        .collect();
+    let uv_hints = super::uvfix::joint_uv(&copies.iter().collect::<Vec<&O3d>>());
+    let mut out = Vec::with_capacity(copies.len());
+    for (ci, c) in copies.iter_mut().enumerate() {
+        for (v, t) in c.vertices.iter_mut().zip(&truth) {
+            let stored = v.position;
+            v.position = (0..4)
+                .map(|q| permuted(q, stored))
+                .find(|p| close(*p, *t))
+                .unwrap_or(*t);
+        }
+        let uv = super::uvfix::unjitter_uv_with_hints(c, &uv_hints[ci]);
+        c.descrambled = true;
+        out.push(ConfidentReport {
+            accepted: true,
+            agreement: agree,
+            coherence: 1.0,
+            dropped_faces: 0,
+            uv,
+        });
+    }
+    out
+}
+
 /// Decodes a scrambled mesh without a plain twin when the answer is trustworthy.
 ///
 /// Two independent annealing runs (one seeded by belief propagation, one from random labels) must
@@ -857,44 +1025,9 @@ pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentRep
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
     }
-    // Runs agree on a vertex when both decodings put it in (practically) the same place; two
-    // labels can differ yet give the same position when coordinates coincide.
-    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    for v in &o.vertices {
-        lo = lo.min(v.position);
-        hi = hi.max(v.position);
-    }
-    let tol = ((hi - lo).length() * 0.005).max(1e-5);
-    let agreement = |x: &[u8], y: &[u8]| {
-        o.vertices
-            .iter()
-            .zip(x.iter().zip(y))
-            .filter(|(v, (p, q))| {
-                permuted(**p as usize, v.position).distance(permuted(**q as usize, v.position))
-                    <= tol
-            })
-            .count() as f32
-            / x.len() as f32
-    };
-    let min_agree = params.min_agreement;
-    let mut runs: Vec<(Vec<u8>, f32)> = Vec::new();
-    let mut chosen: Option<(Vec<u8>, f32)> = None;
-    let mut best_pair = 0.0f32;
-    'runs: for r in 0..CONFIDENT_MAX_RUNS {
-        runs.push(solved_labels_run_with(o, r, params));
-        for i in 0..runs.len() - 1 {
-            let ag = agreement(&runs[i].0, &runs[runs.len() - 1].0);
-            best_pair = best_pair.max(ag);
-            if ag >= min_agree {
-                let last = runs.len() - 1;
-                let pick = if runs[i].1 >= runs[last].1 { i } else { last };
-                chosen = Some((runs[pick].0.clone(), ag));
-                break 'runs;
-            }
-        }
-    }
-    let Some((labels, agree)) = chosen else {
-        return rejected(best_pair, 0.0);
+    let (labels, agree) = match confident_labels(o, params, None) {
+        Ok(v) => v,
+        Err(best_pair) => return rejected(best_pair, 0.0),
     };
     let mut trial = o.clone();
     for (v, &l) in trial.vertices.iter_mut().zip(&labels) {
@@ -982,5 +1115,98 @@ mod params_tests {
             assert_ne!(v.fingerprint(), base.fingerprint());
         }
         assert_eq!(base.fingerprint(), DecodeParams::default().fingerprint());
+    }
+}
+
+#[cfg(test)]
+mod joint_tests {
+    use super::*;
+    use crate::formats::o3d::Vertex;
+    use glam::{Vec2, Vec3};
+
+    /// An asymmetric box surface, 3x3 quads per face, flat-shaded (vertices not shared across faces).
+    fn box_mesh() -> O3d {
+        let dims = Vec3::new(1.0, 2.3, 3.7);
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for axis in 0..3usize {
+            for side in [0.0f32, 1.0] {
+                let (a, b) = ((axis + 1) % 3, (axis + 2) % 3);
+                let base = vertices.len() as u32;
+                for j in 0..4 {
+                    for i in 0..4 {
+                        let mut p = [0.0f32; 3];
+                        p[axis] = side * dims[axis];
+                        p[a] = i as f32 / 3.0 * dims[a];
+                        p[b] = j as f32 / 3.0 * dims[b];
+                        let mut n = [0.0f32; 3];
+                        n[axis] = if side == 0.0 { -1.0 } else { 1.0 };
+                        vertices.push(Vertex {
+                            position: Vec3::from(p),
+                            normal: Vec3::from(n),
+                            uv: Vec2::new(i as f32 / 3.0, j as f32 / 3.0),
+                            color: None,
+                        });
+                    }
+                }
+                for j in 0..3u32 {
+                    for i in 0..3u32 {
+                        let q = base + j * 4 + i;
+                        indices.push([q, q + 1, q + 4]);
+                        indices.push([q + 1, q + 5, q + 4]);
+                    }
+                }
+            }
+        }
+        let faces = indices.len();
+        O3d {
+            version: 7,
+            header_flags: 0,
+            vertices,
+            indices,
+            face_materials: vec![0; faces],
+            materials: Vec::new(),
+            transform: None,
+            encryption_key: Some(7),
+            descrambled: false,
+            unknown_chunks: Vec::new(),
+        }
+    }
+
+    /// Applies a pseudo-random permutation class to every vertex.
+    fn scramble(truth: &O3d, mut seed: u32, key: u32) -> O3d {
+        let mut o = truth.clone();
+        o.encryption_key = Some(key);
+        for v in &mut o.vertices {
+            seed = seed.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            let l = (seed >> 24) as usize % 4;
+            // `permuted` is its own inverse for these four (transpositions and identity).
+            v.position = permuted(l, v.position);
+        }
+        o
+    }
+
+    #[test]
+    fn two_scramblings_decode_to_the_true_positions() {
+        let truth = box_mesh();
+        let mut copies = vec![scramble(&truth, 11, 100), scramble(&truth, 99, 200)];
+        assert!(same_model(&copies[0], &copies[1]));
+        let reports = decode_joint(&mut copies, &DecodeParams::default());
+        assert!(reports.iter().all(|r| r.accepted), "{reports:?}");
+        for c in &copies {
+            for (v, t) in c.vertices.iter().zip(&truth.vertices) {
+                assert!((v.position - t.position).length() < 1e-5);
+            }
+        }
+    }
+
+    #[test]
+    fn unrelated_meshes_are_rejected() {
+        let a = box_mesh();
+        let mut b = box_mesh();
+        b.vertices[3].position += Vec3::splat(0.5);
+        let mut copies = vec![a, b];
+        let reports = decode_joint(&mut copies, &DecodeParams::default());
+        assert!(reports.iter().all(|r| !r.accepted));
     }
 }

@@ -442,3 +442,21 @@ All numbers are from `confident_eval` / `uv_unjitter_eval` on the 1,853 plain/ke
 **Engineering.** The decode cache version is 3 (UV algorithm changed). The player vehicle is built only after its scrambled meshes are decoded in the background (loading stage "Decoding protected vehicle meshes"); before, a cold cache produced the error *no vehicle meshes could be loaded*.
 
 **Ideas not yet tried.** Joint decoding of the ≈ 7,900 keyed duplicates (same geometry, different keys: 18,279 keyed files, 10,337 distinct contents — each copy is an independent scrambling of the same positions, so labels must agree across copies); per-island axis-order enumeration; a learned vertex-level correctness model.
+
+## 📎 Addendum 8 — 2026-10-11: joint decoding of keyed duplicates
+
+18,279 keyed files contain only 10,337 distinct models: the same geometry is shipped several times with different header keys, and each copy is an *independent* scrambling (different per-vertex permutations and texture offsets) of the same true data. `descramble::decode_joint` (used by the background `DecodePool`, which finds copies through `OmsiInstall::files_named`, at most three siblings) decodes such copies together:
+
+* two files are copies when `descramble::same_model` holds (same face list, same sorted coordinate triple at every vertex);
+* the label set of each vertex of the first copy is restricted to labels every other copy can reproduce (`π(true) = stored` for some allowed permutation of that copy); the usual two-run solver then runs on the restricted problem; the other copies take the labels that give the same positions;
+* texture offsets: candidates `stored₀ − offset` must reproduce every other copy's stored value with an allowed offset; the candidate with the best summed prior is applied as a *hint* only when it beats the runner-up by 8 nats (97.5 % correct, a third of the vertices) and the hints seed the usual `uvfix` passes. Looser margins (1.5–5 nats) gave only ~79 % correct hints.
+
+Measured on the 531 duplicate groups that also have a plain twin (`joint_eval` example; first copy, `MAXK` = 4):
+
+| Copies | Meshes exact (≥ 98 %) single → joint | Mean exact UV single → joint |
+| ---: | :--- | :--- |
+| 2 | 212/258 (82 %) → 235/270 (87 %) | 0.772 → 0.873 |
+| 3 | 147/167 (88 %) → 156/167 (93 %) | 0.766 → 0.848 |
+| 4 | 54/61 (89 %) → 58/62 (94 %) | 0.818 → 0.888 |
+
+In the game, 7 of 38 scrambled meshes of Ruhrau V2 had copies; the cars and most scenery objects of a map are scattered across add-ons, so the share varies. Results of every decoded copy are stored in the disk cache (version 4) under their own file keys. Not applicable to the MAN NG 272 body meshes (no duplicates).
