@@ -214,6 +214,18 @@ pub fn lanes_of_kind(
 /// clockwise heading; the path coordinates are object-local.
 #[must_use]
 pub fn lanes_from_object(paths: &[ScoPath], origin: Vec3, heading_deg: f32) -> Vec<FootLane> {
+    lanes_from_object_of_type(paths, origin, heading_deg, PATH_TYPE_PEDESTRIAN)
+}
+
+/// Lanes of one `[path]` type of a placed scenery object (`0` road, `1` footpath, `2` rail);
+/// see [`lanes_from_object`].
+#[must_use]
+pub fn lanes_from_object_of_type(
+    paths: &[ScoPath],
+    origin: Vec3,
+    heading_deg: f32,
+    path_type: u32,
+) -> Vec<FootLane> {
     let (sin, cos) = heading_deg.to_radians().sin_cos();
     // Clockwise rotation of an object-local (x, y) vector.
     let to_world = |p: Vec3| {
@@ -225,7 +237,7 @@ pub fn lanes_from_object(paths: &[ScoPath], origin: Vec3, heading_deg: f32) -> V
     };
     paths
         .iter()
-        .filter(|p| p.path_type == PATH_TYPE_PEDESTRIAN && p.length_m > 0.05)
+        .filter(|p| p.path_type == path_type && p.length_m > 0.05)
         .filter_map(|p| {
             let length = p.length_m;
             let (s0, s1) = (p.slope_start, p.slope_end);

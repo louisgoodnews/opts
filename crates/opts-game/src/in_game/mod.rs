@@ -40,6 +40,9 @@ impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
+            .init_resource::<omsi_world::RailNetwork>()
+            .init_resource::<omsi_world::RailSettings>()
+            .init_resource::<omsi_world::RailAiPool>()
             .init_resource::<omsi_world::PedestrianNetwork>()
             .init_resource::<omsi_world::PedestrianSettings>()
             .init_resource::<omsi_world::PedestrianPool>()
@@ -57,11 +60,19 @@ impl Plugin for InGamePlugin {
 
         // Lifecycle hooks for entering/exiting AppState::InGame
         app.add_systems(
+            FixedUpdate,
+            omsi_world::rail_player_step
+                .in_set(opts_bevy::RailSet)
+                .after(opts_bevy::vehicle_physics_step_system)
+                .run_if(in_state(AppState::InGame)),
+        );
+        app.add_systems(
             OnEnter(AppState::InGame),
             (
                 deactivate_menu_camera,
                 setup_in_game_session,
                 omsi_world::configure_pedestrians,
+                omsi_world::configure_rail,
                 omsi_world::configure_traffic,
             ),
         )
@@ -84,6 +95,10 @@ impl Plugin for InGamePlugin {
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
+                omsi_world::load_rail_variants,
+                omsi_world::spawn_ai_trains,
+                omsi_world::move_ai_trains,
+                omsi_world::rail_player_pose.after(opts_bevy::vehicle_transform_sync_system),
                 omsi_world::follow_ground.after(opts_bevy::vehicle_transform_sync_system),
                 (
                     omsi_world::load_variants,

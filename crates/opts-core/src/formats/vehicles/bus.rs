@@ -123,6 +123,8 @@ pub struct BusManifest {
     pub constfiles: Vec<String>,
     /// Whether this vehicle inherits scripts from the leading unit.
     pub script_share: bool,
+    /// `[type]`: `None`/`0`/`1` road vehicle, `2` rail-bound, `3` aircraft.
+    pub vehicle_type: Option<u32>,
     /// Total curb vehicle weight in tonnes.
     pub mass_tonnes: Option<f32>,
     /// Primary bounding box (`[boundingbox]`): extents and centre offset in the vehicle frame
@@ -176,6 +178,7 @@ impl BusManifest {
         let mut constfiles = Vec::new();
         let mut script_share = false;
         let mut mass_tonnes = None;
+        let mut vehicle_type: Option<u32> = None;
         let mut bounding_box = None;
         let mut axles = Vec::new();
         let mut coupling_front_y = None;
@@ -279,6 +282,12 @@ impl BusManifest {
                             glam::Vec3::new(v[3], v[4], v[5]),
                         ));
                     }
+                }
+                "type" => {
+                    vehicle_type = block
+                        .parameters
+                        .first()
+                        .and_then(|p| p.trim().parse::<u32>().ok());
                 }
                 "mass" => {
                     if let Some(first) = block.parameters.first() {
@@ -402,6 +411,7 @@ impl BusManifest {
             constfiles,
             script_share,
             mass_tonnes,
+            vehicle_type,
             bounding_box,
             axles,
             coupling_front_y,

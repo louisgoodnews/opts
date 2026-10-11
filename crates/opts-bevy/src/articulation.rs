@@ -139,6 +139,7 @@ impl Plugin for ArticulationPlugin {
             FixedUpdate,
             articulation_system
                 .after(crate::vehicle_sim::vehicle_physics_step_system)
+                .after(crate::RailSet)
                 .before(crate::vehicle_script::vehicle_script_system),
         );
     }

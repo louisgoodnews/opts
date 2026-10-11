@@ -476,6 +476,12 @@ pub fn decodes_pending(job: &WorldLoadJob, keys: &[opts_bevy::descramble_cache::
         .map_or(0, |p| keys.iter().filter(|k| p.is_pending(**k)).count())
 }
 
+/// Mass of a rail consist for the dynamics (kg): the head unit's mass, at least 20 t (the other
+/// units usually state 0; assumed, see `docs/src/simulation/rail-vehicles.md`).
+fn commands_mass(manifest: &BusManifest) -> f32 {
+    (manifest.mass_tonnes.unwrap_or(0.0) * 1000.0).max(20_000.0)
+}
+
 /// Loads the player's vehicle from its `.bus` file and spawns it at the map's start point.
 pub fn load_player_vehicle(
     job: &mut WorldLoadJob,
@@ -555,6 +561,11 @@ pub fn load_player_vehicle(
     commands
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
+    if super::is_rail(&manifest) {
+        // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`).
+        let mass = commands_mass(&manifest);
+        commands.entity(root).insert(super::RailPlayer::new(mass));
+    }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(

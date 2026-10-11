@@ -113,3 +113,8 @@ pub use vehicle_triggers::{
     dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, MouseTrigger,
     ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
 };
+
+/// System set of the rail-bound player's track step: runs after the road physics and before the
+/// articulation of the following units.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, bevy::ecs::schedule::SystemSet)]
+pub struct RailSet;

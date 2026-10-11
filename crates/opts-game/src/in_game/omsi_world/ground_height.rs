@@ -12,6 +12,9 @@ use opts_bevy::{sample_terrain, tile_size, VehicleController};
 use opts_core::formats::map::{MapSplineInstance, MapTerrain};
 use opts_core::formats::scenery::SplineProfile;
 
+/// Player vehicles that follow the ground (rail-bound ones follow their track instead).
+type GroundBound = (With<opts_bevy::PlayerVehicle>, Without<super::RailPlayer>);
+
 /// Spacing of the road centre-line samples (m).
 const SAMPLE_STEP_M: f32 = 2.0;
 /// Cell size of the sample index (m).
@@ -162,7 +165,7 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
 /// 3 m ahead and behind.
 pub fn follow_ground(
     index: Res<GroundIndex>,
-    mut vehicles: Query<(&mut VehicleController, &mut Transform), With<opts_bevy::PlayerVehicle>>,
+    mut vehicles: Query<(&mut VehicleController, &mut Transform), GroundBound>,
 ) {
     for (mut controller, mut tf) in &mut vehicles {
         let ch = &mut controller.sim.chassis;

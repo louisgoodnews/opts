@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Research and proposal (2026-10-11); nothing implemented |
+| **Status** | 🚧 R1–R3 first cut implemented (2026-10-11): track network, player tram, AI trains; see §7 |
 | **Premise** | OMSI treats trams and trains as buses and cars: `.bus`/`.ovh` files with a type flag, road-style axle physics, rail only as a path type. OPTS does **not** have to: rail vehicles get their own domain model, with the same assets. |
 
 ## 1. What the data says
@@ -69,3 +69,15 @@ No change in loaders: meshes, `[newanim]` for bogie swing/wheels, pantograph by 
 * `[third_rail]` identifiers (`9030`), `.ttr` fields, `[switchdir]` semantics, and how scripts read speed/axle variables for rail units are open in the specifications.
 * Composite-vehicle scripts assume OMSI's road-style variable names (`Wheel_Rotation*`, steering); the compatibility layer must map them.
 * Performance: long consists (6–8 units × 2 bogies) at 60 fps with AI — budget per train ≈ 0.1 ms.
+
+## 7. Implementation status (first cut)
+
+| Part | Where | Notes |
+| :--- | :--- | :--- |
+| Track graph | `opts-sim::pedestrian::{FootLane, PedestrianNet}` with `lanes_of_kind(.., Rail)` and `lanes_from_object_of_type(.., 2)` | The lane graph is reused; rail `[path]`s of splines and placed objects are loaded per tile (`omsi_world/rail.rs`, `RailNetwork`). Ends within 0.6 m / 0.8 m connect. |
+| Train on the graph | `opts-sim::rail::Train` | Position as (lane, s, direction) plus a trail for poses behind the head; at a point, `Branch` (Straight/Left/Right) picks the exit. |
+| Dynamics | `opts-sim::rail::RailDynamics::tram` | Tractive force with a power limit, Davis resistance, service/emergency/hold brake, adhesion limit, 70 km/h. Constants are **assumed** (typical tram values), not measured in OMSI. |
+| Player tram | `RailPlayer` (inserted when the `.bus` has `[type] 2`) | W/S/E/Space as for road vehicles; Z/X/C choose left/straight/right at the next point. The chassis is snapped to the nearest track within 12 m (else ERROR, stays a road vehicle); `follow_ground` skips it; the coupled units follow through the existing articulation. Verified on `Tram` (Katenberg) with the NF6D: accelerates to 60 km/h, brakes to a stop. |
+| AI trains | `AiTrain`, `--trains N` (default 3) | Rail vehicles of the map's `ailists.cfg` (`[type] 2`) with their `[couple_back]` chain, placed by their coupling distance behind the head; they appear 80–400 m from the camera on random tracks, run at ≈ 9 m/s and are removed at 600 m or at the end of the track. |
+
+Not yet: reverse (R), switch state from the map's point objects (`[switch]`), `[rail_enh]` noise, bogie-accurate poses per unit, cab scripts (R4), timetables and headway (R5), signals (R6), and AI unit animation beyond wheel rotation.

@@ -89,6 +89,10 @@ pub struct CliArgs {
     #[arg(long, value_name = "NAME")]
     pub livery: Option<String>,
 
+    /// Number of AI trains (default 3; `0` = none).
+    #[arg(long, value_name = "N")]
+    pub trains: Option<usize>,
+
     /// Cap on simultaneously walking pedestrians (`0` = none; default 40).
     #[arg(long, value_name = "N")]
     pub pedestrians: Option<usize>,
@@ -131,6 +135,7 @@ impl Default for CliArgs {
             cli_bind: "127.0.0.1".to_string(),
             cli_token: None,
             pedestrians: None,
+            trains: None,
             livery: None,
             traffic: None,
             cli_allow_dir: Vec::new(),

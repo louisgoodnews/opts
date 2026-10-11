@@ -10,5 +10,8 @@ pub mod lane;
 pub mod net;
 
 pub use gait::{gait, Gait};
-pub use lane::{lanes_from_object, lanes_from_spline, lanes_of_kind, FootLane, Travel};
+pub use lane::{
+    lanes_from_object, lanes_from_object_of_type, lanes_from_spline, lanes_of_kind, FootLane,
+    Travel,
+};
 pub use net::{Advance, End, LaneId, PedestrianNet, Walker};

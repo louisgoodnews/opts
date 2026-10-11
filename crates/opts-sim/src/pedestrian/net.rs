@@ -81,6 +81,28 @@ impl PedestrianNet {
         self.lanes.get(&id)
     }
 
+    /// The lane point nearest to `p` within `max_xy` metres horizontally: `(lane, arc length,
+    /// distance)`. Lanes are scanned linearly (use it for placement, not per frame).
+    #[must_use]
+    pub fn nearest(&self, p: Vec3, max_xy: f32) -> Option<(LaneId, f32, f32)> {
+        let mut best: Option<(LaneId, f32, f32)> = None;
+        for (&id, lane) in &self.lanes {
+            for w in lane.points.windows(2).zip(lane.cum.windows(2)) {
+                let (pts, cum) = w;
+                let (a, b) = (pts[0], pts[1]);
+                let ab = b - a;
+                let l2 = (ab.x * ab.x + ab.y * ab.y).max(1e-9);
+                let t = (((p.x - a.x) * ab.x + (p.y - a.y) * ab.y) / l2).clamp(0.0, 1.0);
+                let q = a + ab * t;
+                let d = (q.x - p.x).hypot(q.y - p.y);
+                if d <= max_xy && best.is_none_or(|b| d < b.2 || (d == b.2 && id < b.0)) {
+                    best = Some((id, cum[0] + (cum[1] - cum[0]) * t, d));
+                }
+            }
+        }
+        best
+    }
+
     /// Number of lanes.
     #[must_use]
     pub fn lane_count(&self) -> usize {
@@ -372,6 +394,15 @@ mod tests {
         assert_eq!(w.advance(3.0, &n, &mut rng), Advance::Moving);
         assert_eq!(w.dir, -1);
         assert!((w.s - 8.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn nearest_finds_the_closest_lane_point() {
+        let n = net();
+        let (lane, s, d) = n.nearest(Vec3::new(2.0, 4.0, 0.0), 10.0).unwrap();
+        assert_eq!(lane, 0);
+        assert!((s - 4.0).abs() < 1e-4 && (d - 2.0).abs() < 1e-4);
+        assert!(n.nearest(Vec3::new(50.0, 4.0, 0.0), 10.0).is_none());
     }
 
     #[test]
