@@ -415,7 +415,9 @@ pub fn configure_pedestrians(
     mut settings: ResMut<PedestrianSettings>,
     mut net: ResMut<PedestrianNetwork>,
     mut pool: ResMut<PedestrianPool>,
+    mut ground: ResMut<super::GroundIndex>,
 ) {
+    *ground = super::GroundIndex::default();
     settings.max = args
         .and_then(|a| a.0.pedestrians)
         .unwrap_or(DEFAULT_MAX_PEDESTRIANS);

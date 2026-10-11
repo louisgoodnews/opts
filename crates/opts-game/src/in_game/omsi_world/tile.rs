@@ -83,6 +83,30 @@ pub fn load_next_tile(
         &mut children,
     );
 
+    // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and terrain.
+    {
+        let mut roads = Vec::new();
+        for inst in &tile.splines {
+            let Some(profile) = job.sli(&inst.sli_file) else {
+                continue;
+            };
+            if !profile.only_editor
+                && profile.paths.iter().any(|p| p.path_type == 0 || p.path_type == 2)
+                && !profile.graphical_profiles.is_empty()
+            {
+                roads.push((inst.clone(), (*profile).clone()));
+            }
+        }
+        super::ground_height::register(
+            commands,
+            key,
+            origin,
+            terrain.clone(),
+            roads,
+            job.start_tile,
+        );
+    }
+
     // --- Scenery objects -------------------------------------------------------------------
     // Spline attachments become ordinary placements once resolved against their carrier spline.
     let attached = if tile.spline_attachments.is_empty() {
@@ -459,6 +483,7 @@ pub fn stream_world_tiles(
         if let Some(root) = job.resident.remove(&key) {
             commands.entity(root).despawn();
             super::pedestrians::unregister_tile(&mut commands, key);
+            super::ground_height::unregister(&mut commands, key);
             super::traffic::unregister_tile(&mut commands, key);
             tracing::debug!(tile = ?key, "tile unloaded");
         }

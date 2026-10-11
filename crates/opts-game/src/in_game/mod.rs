@@ -39,6 +39,7 @@ pub struct InGamePlugin;
 impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
+            .init_resource::<omsi_world::GroundIndex>()
             .init_resource::<omsi_world::PedestrianNetwork>()
             .init_resource::<omsi_world::PedestrianSettings>()
             .init_resource::<omsi_world::PedestrianPool>()
@@ -83,6 +84,7 @@ impl Plugin for InGamePlugin {
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
+                omsi_world::follow_ground.after(opts_bevy::vehicle_transform_sync_system),
                 (
                     omsi_world::load_variants,
                     omsi_world::spawn_pedestrians,

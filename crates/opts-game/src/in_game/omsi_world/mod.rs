@@ -17,6 +17,7 @@ use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 mod ground;
+mod ground_height;
 mod job;
 mod overlay;
 mod pedestrians;
@@ -28,6 +29,7 @@ mod trees;
 mod vehicle;
 
 use ground::GroundArray;
+pub use ground_height::{follow_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, track_position, update_debug_overlay, DebugOverlayText,
