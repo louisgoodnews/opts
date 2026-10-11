@@ -170,6 +170,40 @@ pub fn vehicle_repaints(vehicle: &VehicleItem) -> VehicleRepaints {
     }
 }
 
+impl VehicleRepaints {
+    /// Texture replacements of repaint `name` for a model whose `[CTCTexture]` slots declare the
+    /// default texture file of each slot: `(default file name, replacement path)`. Empty for the
+    /// default repaint and for unknown names.
+    #[must_use]
+    pub fn replacements(
+        &self,
+        name: &str,
+        slots: &[opts_core::formats::vehicles::model::CtcTexture],
+    ) -> Vec<(String, PathBuf)> {
+        if name == self.default_name {
+            return Vec::new();
+        }
+        let Some(items) = self.textures.get(name) else {
+            return Vec::new();
+        };
+        slots
+            .iter()
+            .filter_map(|slot| {
+                let (_, path) = items
+                    .iter()
+                    .find(|(s, _)| s.eq_ignore_ascii_case(&slot.name))?;
+                let default = slot
+                    .texture_path
+                    .rsplit(['\\', '/'])
+                    .next()
+                    .unwrap_or("")
+                    .to_lowercase();
+                Some((default, path.clone()))
+            })
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,39 +262,5 @@ mod tests {
         eprintln!("{} repaints: {:?}", r.names.len(), r.names);
         assert_eq!(r.names[0], "Beige");
         assert!(r.names.len() > 5);
-    }
-}
-
-impl VehicleRepaints {
-    /// Texture replacements of repaint `name` for a model whose `[CTCTexture]` slots declare the
-    /// default texture file of each slot: `(default file name, replacement path)`. Empty for the
-    /// default repaint and for unknown names.
-    #[must_use]
-    pub fn replacements(
-        &self,
-        name: &str,
-        slots: &[opts_core::formats::vehicles::model::CtcTexture],
-    ) -> Vec<(String, PathBuf)> {
-        if name == self.default_name {
-            return Vec::new();
-        }
-        let Some(items) = self.textures.get(name) else {
-            return Vec::new();
-        };
-        slots
-            .iter()
-            .filter_map(|slot| {
-                let (_, path) = items
-                    .iter()
-                    .find(|(s, _)| s.eq_ignore_ascii_case(&slot.name))?;
-                let default = slot
-                    .texture_path
-                    .rsplit(['\\', '/'])
-                    .next()
-                    .unwrap_or("")
-                    .to_lowercase();
-                Some((default, path.clone()))
-            })
-            .collect()
     }
 }
