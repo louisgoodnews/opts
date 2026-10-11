@@ -26,6 +26,15 @@ const SUN_ILLUMINANCE: f32 = 20_000.0;
 /// Ambient brightness for full white ambient light.
 const AMBIENT_BRIGHTNESS: f32 = 700.0;
 
+impl Sky {
+    /// Whether it is dark enough for vehicle headlights `elapsed_s` seconds into the session
+    /// (sun lower than 3° above the horizon).
+    #[must_use]
+    pub fn lights_needed(&self, elapsed_s: f32) -> bool {
+        sun_position(self.start_hour + elapsed_s / 3600.0, self.day_of_year).0 < 3.0
+    }
+}
+
 /// Sky state for the running session.
 #[derive(Resource)]
 pub struct Sky {

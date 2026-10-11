@@ -23,6 +23,7 @@ use bevy::math::{Mat4, Vec3};
 use bevy::prelude::*;
 use opts_core::formats::vehicles::model::{AnimAction, ModelAnim, ModelMesh};
 
+use crate::ai_variables::{AiVariables, VariableSource};
 use crate::vehicle_script::VehicleScripts;
 
 /// One animation step: the frame in OMSI axes and what the variable does in it.
@@ -154,14 +155,14 @@ pub fn animation_matrix_from_values(steps: &[AnimStep], values: &[f32]) -> Mat4 
 pub fn vehicle_animation_system(
     time: Res<Time>,
     mut meshes: Query<(&mut MeshAnimation, &mut Transform, &mut Visibility)>,
-    vehicles: Query<&VehicleScripts>,
+    vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
 ) {
     let dt = time.delta_secs();
     for (mut anim, mut transform, mut visibility) in &mut meshes {
-        let Ok(scripts) = vehicles.get(anim.owner) else {
+        let Ok((scripts, table)) = vehicles.get(anim.owner) else {
             continue;
         };
-        let Ok(engine) = scripts.engine.lock() else {
+        let Some(engine) = VariableSource::of(scripts, table) else {
             continue;
         };
         if !anim.steps.is_empty() {

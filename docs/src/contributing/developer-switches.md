@@ -8,6 +8,7 @@ Environment variables and flags that change behaviour for development, tests and
 | :--- | :--- |
 | `OMSI_PATH` | OMSI 2 installation root when `--omsi-path` is not given (before the path remembered in the settings); also used by tests that need real files (they skip without it). |
 | `OPTS_DEV_ENTRY` | Entry-point name to start at (with `--autostart`), e.g. `Salthammer 595`. |
+| `OPTS_DEV_HOUR` | Hour `0`–`23` the session starts at (with `--autostart`; checks of night lighting). |
 | `OPTS_DEV_CAM_HEIGHT` | Metres: start the free camera this high above the spawn, looking down (overview screenshots). |
 | `OPTS_HIDE_MESH` | Comma-separated substrings; vehicle meshes whose name matches are not spawned (bisecting rendering problems). |
 | `OPTS_NO_DESCRAMBLE` | Disables the scrambled-mesh decoder (meshes without a plain twin are skipped). |

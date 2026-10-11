@@ -37,8 +37,8 @@ pub use pedestrians::{
 pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
-    configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_traffic_graph,
-    TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
+    configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
+    update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
 

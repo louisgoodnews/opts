@@ -83,9 +83,20 @@ fn setup_camera(mut commands: Commands) {
 fn transition_to_main_menu(
     mut next_state: ResMut<NextState<AppState>>,
     args: Option<Res<AppArgs>>,
+    setup: Option<ResMut<new_game_screen::NewGameSetup>>,
 ) {
     if args.is_some_and(|a| a.0.autostart) {
         tracing::info!("--autostart: skipping menus and entering the in-game session");
+        // Developer aid: `OPTS_DEV_HOUR=<0-23>` starts the session at that hour (night checks).
+        if let (Some(mut setup), Some(h)) = (
+            setup,
+            std::env::var("OPTS_DEV_HOUR")
+                .ok()
+                .and_then(|h| h.parse::<u32>().ok()),
+        ) {
+            setup.hour = h.min(23);
+            setup.minute = 0;
+        }
         next_state.set(AppState::InGame);
         return;
     }

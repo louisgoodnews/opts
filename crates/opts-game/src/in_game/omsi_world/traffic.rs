@@ -129,6 +129,15 @@ pub struct TrafficVehicle {
     /// Distance from the model origin to the front bumper (m).
     front_offset: f32,
     delta_height: f32,
+    /// Wheel radius (m) and wheelbase (m) used for the wheel variables.
+    wheel_radius: f32,
+    wheelbase: f32,
+    /// Accumulated wheel rotation (rad).
+    wheel_angle: f32,
+    /// Seat occupation (`ai_pax1…4`): bit `i` shows passenger `i + 1`.
+    pax: u8,
+    /// Phase offset of the indicator flash (s), so vehicles do not blink in unison.
+    blink_phase: f32,
 }
 
 /// Path data for [`segments_from_tile`], read through the load job's caches.
@@ -547,17 +556,107 @@ pub fn spawn_traffic(
     let speed = params.desired_speed * 0.8;
     let delta_height = variant.delta_height;
     let name = variant.name.clone();
+    let mut rng_pax = Rng::new(rng.next_u64());
     pool.rng = Some(rng);
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             tracing::debug!(agent = id.0, vehicle = %name, speed, "AI vehicle spawned");
-            commands.entity(root).insert(TrafficVehicle {
-                id,
-                front_offset: size.1,
-                delta_height,
-            });
+            // Seats: the driver is nearly always there, further passengers by chance.
+            let mut pax = 0u8;
+            for (i, p) in [0.9, 0.35, 0.2, 0.1].into_iter().enumerate() {
+                if rng_pax.next_f64() < p {
+                    pax |= 1 << i;
+                }
+            }
+            commands.entity(root).insert((
+                TrafficVehicle {
+                    id,
+                    front_offset: size.1,
+                    delta_height,
+                    wheel_radius: if heavy { 0.5 } else { 0.31 },
+                    wheelbase: size.0 * 0.6,
+                    wheel_angle: 0.0,
+                    pax,
+                    blink_phase: rng_pax.next_f64() as f32 * 0.7,
+                },
+                opts_bevy::AiVariables::default(),
+            ));
         }
         Err(_) => commands.entity(root).despawn(),
+    }
+}
+
+/// Period of the indicator flash (s); half of it on, half off.
+const BLINK_PERIOD_S: f32 = 0.7;
+
+/// Feeds the variables the AI vehicle models read: wheel rotation and steering from speed and lane
+/// curvature, indicators, headlights, brake lights and passengers.
+///
+/// `ai_light` follows the values the AI scripts of OMSI map to their lamps (`0` off, `0.5` position
+/// lights, `1` dipped beam, `2` high beam; `docs/src/architecture/ai-traffic.md`, §2.2).
+pub fn update_ai_variables(
+    time: Res<Time>,
+    state: Res<TrafficState>,
+    sky: Option<Res<super::super::sky::Sky>>,
+    session: Option<Res<InGameSessionInfo>>,
+    mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
+) {
+    let dt = time.delta_secs().min(0.2);
+    let now = time.elapsed_secs();
+    let dark = match (&sky, &session) {
+        (Some(s), Some(i)) => s.lights_needed(i.sim_elapsed_seconds),
+        _ => false,
+    };
+    for (mut v, mut vars) in &mut vehicles {
+        let Some(agent) = state.world.agent(v.id) else {
+            continue;
+        };
+        let Some(command) = state.world.command(v.id) else {
+            continue;
+        };
+        v.wheel_angle = (v.wheel_angle + agent.speed as f32 / v.wheel_radius * dt)
+            % (std::f32::consts::TAU * 64.0);
+        // Steering from the lane's curvature under the bicycle model; positive radius = right.
+        let steer = state.world.graph().lane(agent.lane).map_or(0.0, |l| {
+            let r = l.geometry.radius;
+            if l.geometry.is_straight() {
+                0.0
+            } else {
+                (f64::from(v.wheelbase) / r).atan() as f32
+            }
+        });
+        for axle in 0..4 {
+            for side in ["l", "r"] {
+                vars.set(&format!("wheel_rotation_{axle}_{side}"), v.wheel_angle);
+                let s = if axle == 0 { -steer } else { 0.0 };
+                vars.set(&format!("axle_steering_{axle}_{side}"), s);
+            }
+        }
+        let flash = (now + v.blink_phase) % BLINK_PERIOD_S < BLINK_PERIOD_S / 2.0;
+        let (left, right) = (
+            f32::from(flash && command.blinker == opts_traffic::Blinker::Left),
+            f32::from(flash && command.blinker == opts_traffic::Blinker::Right),
+        );
+        vars.set("ai", 1.0);
+        vars.set(
+            "ai_blinker_l",
+            f32::from(command.blinker == opts_traffic::Blinker::Left),
+        );
+        vars.set(
+            "ai_blinker_r",
+            f32::from(command.blinker == opts_traffic::Blinker::Right),
+        );
+        vars.set("lights_blinker_l", left);
+        vars.set("lights_blinker_r", right);
+        let brake = f32::from(command.brake > 0.05);
+        vars.set("ai_brakelight", brake);
+        vars.set("lights_brems", brake);
+        let light = if dark { 1.0 } else { 0.0 };
+        vars.set("ai_light", light);
+        vars.set("lights_ai", light);
+        for i in 0..4 {
+            vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));
+        }
     }
 }
 

@@ -88,6 +88,7 @@ impl Plugin for InGamePlugin {
                     omsi_world::load_traffic_variants,
                     omsi_world::spawn_traffic,
                     omsi_world::move_traffic,
+                    omsi_world::update_ai_variables,
                 )
                     .chain(),
                 sky::update_sky.run_if(resource_exists::<sky::Sky>),

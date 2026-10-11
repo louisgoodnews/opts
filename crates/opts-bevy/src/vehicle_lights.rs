@@ -13,6 +13,7 @@
 
 use bevy::prelude::*;
 
+use crate::ai_variables::{AiVariables, VariableSource};
 use crate::vehicle_script::VehicleScripts;
 
 /// Upper bound of a brightness variable; brighter values look the same in OMSI.
@@ -93,13 +94,13 @@ pub fn vehicle_light_system(
         Option<&mut SpotLight>,
         &mut Visibility,
     )>,
-    vehicles: Query<&VehicleScripts>,
+    vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
 ) {
     for (light, point, spot, mut visibility) in &mut lights {
-        let Ok(scripts) = vehicles.get(light.owner) else {
+        let Ok((scripts, table)) = vehicles.get(light.owner) else {
             continue;
         };
-        let Ok(engine) = scripts.engine.lock() else {
+        let Some(engine) = VariableSource::of(scripts, table) else {
             continue;
         };
         let f = light.factor(|n| engine.get(n));
@@ -129,15 +130,15 @@ pub fn vehicle_light_system(
 /// Scales light-map emission by the owners' script variables.
 pub fn vehicle_light_map_system(
     mut parts: Query<(&mut LightMapBinding, &mut MeshMaterial3d<StandardMaterial>)>,
-    vehicles: Query<&VehicleScripts>,
+    vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (mut binding, mut material) in &mut parts {
-        let Ok(scripts) = vehicles.get(binding.owner) else {
+        let Ok((scripts, table)) = vehicles.get(binding.owner) else {
             continue;
         };
         let f = {
-            let Ok(engine) = scripts.engine.lock() else {
+            let Some(engine) = VariableSource::of(scripts, table) else {
                 continue;
             };
             engine.get(&binding.variable).clamp(0.0, MAX_BRIGHTNESS)
