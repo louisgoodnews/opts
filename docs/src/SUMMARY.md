@@ -73,6 +73,7 @@
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Script VM](architecture/script-vm.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
+- [Articulated Vehicles](architecture/articulation.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)

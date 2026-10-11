@@ -17,6 +17,7 @@
 #![deny(unsafe_code)]
 
 pub mod ai_variables;
+pub mod articulation;
 pub mod camera;
 pub mod control;
 pub mod coords;
@@ -44,6 +45,9 @@ pub mod vehicle_sim;
 pub mod vehicle_triggers;
 
 pub use ai_variables::{AiVariables, VariableSource};
+pub use articulation::{
+    articulation_system, ArticulatedChain, ArticulatedSegment, ArticulationPlugin,
+};
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
     OptsCameraPlugin, FREE_ROAM_MIN_SPEED,

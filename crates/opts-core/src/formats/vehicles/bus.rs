@@ -33,6 +33,19 @@ pub enum RegistrationMode {
     None,
 }
 
+/// Limits of a coupling (`[coupling_front_character]`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CouplingLimits {
+    /// Largest yaw angle `α` in degrees (corpus: 38–110, mostly 50–57).
+    pub max_alpha_deg: f32,
+    /// Smallest pitch `β` in degrees (negative = down).
+    pub min_beta_deg: f32,
+    /// Largest pitch `β` in degrees.
+    pub max_beta_deg: f32,
+    /// `0` = truck coupling (three degrees of freedom), `1` = bus joint (two).
+    pub kind: u32,
+}
+
 /// Physical parameters of a vehicle axle.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BusAxle {
@@ -128,6 +141,8 @@ pub struct BusManifest {
     pub coupling_back: Option<glam::Vec3>,
     /// File name of the trailer coupled behind this vehicle (`[couple_back]`).
     pub couple_back: Option<String>,
+    /// Limits of the front coupling of a trailing segment (`[coupling_front_character]`).
+    pub coupling_front_limits: Option<CouplingLimits>,
     /// Driver view camera presets.
     pub driver_cameras: Vec<BusCamera>,
     /// Passenger view camera presets.
@@ -168,6 +183,7 @@ impl BusManifest {
         let mut coupling_front = None;
         let mut coupling_back = None;
         let mut couple_back = None;
+        let mut coupling_front_limits = None;
         let mut driver_cameras = Vec::new();
         let mut pax_cameras = Vec::new();
         let mut std_camera_index = None;
@@ -312,6 +328,22 @@ impl BusManifest {
                         }
                     }
                 }
+                "coupling_front_character" => {
+                    let v: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .take(4)
+                        .filter_map(|p| parse_float(p).ok())
+                        .collect();
+                    if let [a, b0, b1, k] = v[..] {
+                        coupling_front_limits = Some(CouplingLimits {
+                            max_alpha_deg: a,
+                            min_beta_deg: b0,
+                            max_beta_deg: b1,
+                            kind: k.max(0.0) as u32,
+                        });
+                    }
+                }
                 "couple_back" => {
                     couple_back = block
                         .parameters
@@ -377,6 +409,7 @@ impl BusManifest {
             coupling_front,
             coupling_back,
             couple_back,
+            coupling_front_limits,
             driver_cameras,
             pax_cameras,
             std_camera_index,
@@ -488,6 +521,20 @@ pub fn parse_bus(text: &str) -> Result<BusManifest, BusParseError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn coupling_front_character_is_parsed() {
+        let m = BusManifest::parse(
+            "[coupling_front]\n0\n4.5\n0.3\n\n[coupling_front_character]\n52.5\n-20\n20\n1\n",
+        )
+        .unwrap();
+        let l = m.coupling_front_limits.expect("limits");
+        assert_eq!(
+            (l.max_alpha_deg, l.min_beta_deg, l.max_beta_deg, l.kind),
+            (52.5, -20.0, 20.0, 1)
+        );
+        assert_eq!(m.coupling_front.map(|p| p.y), Some(4.5));
+    }
 
     #[test]
     fn test_parse_sample_bus() {

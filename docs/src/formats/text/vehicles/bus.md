@@ -416,7 +416,7 @@ This has significant architectural consequences for OPTS:
 | Concern | Implication |
 | :--- | :--- |
 | **Data model** | The `Vehicle` type in `opts-core` must be a recursive structure (a chain of `VehicleSegment`s), not a flat structure. |
-| **ECS hierarchy** | In `opts-bevy`, each segment is a `Child` of the segment in front of it. Bevy's entity hierarchy naturally models this. |
+| **ECS hierarchy** | In `opts-bevy`, each segment is a `Child` of the segment in front of it. Bevy's entity hierarchy naturally models this. *(Superseded 2026-10-11: segments are top-level entities linked by an `ArticulatedChain`, because a trailer's heading is integrated state, not an inherited rotation; see [Articulated Vehicles](../../../architecture/articulation.md).)* |
 | **Physics** | `opts-sim` must simulate each segment independently, with constraints at each coupling point. This is a multi-body simulation problem, not a single rigid-body problem. |
 | **Controls** | `opts-game` must forward throttle, brake, and steering inputs from the cab to the entire chain in the correct order (e.g., rear axle steering in some buses). |
 | **Sound** | `[couple_front_open_for_sound]` becomes relevant: sound emitted from a rear segment must be audible from the driver's cabin at appropriate attenuation. |

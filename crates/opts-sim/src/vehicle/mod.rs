@@ -10,6 +10,7 @@ pub mod chassis;
 pub mod drivetrain;
 pub mod inputs;
 pub mod suspension;
+pub mod trailer;
 
 use self::articulation::ArticulationJoint;
 use self::axle::AxleState;

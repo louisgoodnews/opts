@@ -50,6 +50,7 @@ fn make_test_manifest(mass_tonnes: Option<f32>, wheel_diameter: Option<f32>) -> 
         coupling_front: None,
         coupling_back: None,
         couple_back: None,
+        coupling_front_limits: None,
         driver_cameras: Vec::new(),
         pax_cameras: Vec::new(),
         std_camera_index: None,
