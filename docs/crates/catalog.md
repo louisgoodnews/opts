@@ -12,7 +12,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 
 **Status legend:** ✅ exists · 🔁 exists, to be renamed/repurposed · 🆕 planned · 💭 speculative · 🗑️ removed
 
-> **Current workspace (2026-10-11):** `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core`, `opts-game`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-tools`, `opts-traffic` (the first slice of the planned `opts-sim-traffic`; see [AI Road Traffic](../src/architecture/ai-traffic.md)). The folders `opts-assets`, `opts-benchmark`, `opts-discovery`, `opts-editor`, `opts-graphics`, `opts-parsers` and `opts-utils` describe crates that no longer exist or were never created; they are kept as design history.
+> **Current workspace (2026-10-11):** `opts-benchmark` ([guide](opts-benchmark.md); the scenery verification of M-0054), `opts-bevy`, `opts-catalogue`, `opts-cli`, `opts-core`, `opts-game`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-tools`, `opts-traffic` (the first slice of the planned `opts-sim-traffic`; see [AI Road Traffic](../src/architecture/ai-traffic.md)). The folders `opts-assets`, `opts-discovery`, `opts-editor`, `opts-graphics`, `opts-parsers` and `opts-utils` describe crates that no longer exist or were never created; they are kept as design history.
 
 ---
 
@@ -119,7 +119,7 @@ Every crate OPTS has or is expected to need, by layer. Phases refer to the [road
 | :--- | :---: | :--- | :---: |
 | `opts-testkit` | 🆕 | Test helpers, in-memory VFS | 2 |
 | `opts-fixtures` | 🆕 | Clean-room fixtures & generators | 2 |
-| `opts-benchmark` | 🔁 | Benchmarks (dev-only) | 2–3 |
+| `opts-benchmark` | ✅ | Scenery load verification (M-0054); Criterion benches later (M-0028) — [guide](opts-benchmark.md) | 2–5 |
 | `xtask` | 🆕 | `check-layers`, `new-crate`, docs build | 2 |
 
 ---

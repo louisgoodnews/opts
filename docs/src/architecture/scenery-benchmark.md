@@ -2,9 +2,9 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Specified (Phase A of M-0054); no code yet |
+| **Status** | 🟡 Phase B implemented (harness, static checks); thresholds calibrated on a sample; Phase C blocked (Q-SB-11) |
 | **Milestone** | [M-0054](../roadmap/phase-5/M-0054.md) |
-| **Code (planned)** | `crates/opts-benchmark` (`opts-benchmark scenery …`); reuses `opts_game::in_game::omsi_world`, `opts_bevy`, `opts_core::formats::{scenery, o3d, map}` |
+| **Code** | `crates/opts-benchmark` (`opts-benchmark scenery …`, guide: [`opts-benchmark`](../../crates/opts-benchmark.md)); reuses `opts_game::in_game::omsi_world`, `opts_bevy`, `opts_core::formats::{scenery, o3d, map}` |
 | **Related** | [Hot Reload](hot-reload.md), [Control Protocol](control-protocol.md), [Text Textures](text-textures.md), [Script VM](script-vm.md), [`.sco` format](../formats/text/sco.md), [Scenery scripts](../formats/text/scenery-scripts.md) |
 | **Last Updated** | 2026-10-11 |
 
@@ -64,9 +64,10 @@ Three options were measured or estimated on 2026-10-11 (debug build of `agent/pr
 **Chosen: P3**, organised as a **supervisor with worker processes**:
 
 - The **supervisor** (`opts-benchmark scenery run`) enumerates the corpus, writes the run manifest, splits the object list into shards and starts `N` workers (default 3). It restarts a worker that crashes or stops sending heartbeats, records the object it was working on as `F-CRASH` or `F-TIMEOUT`, and continues with the next one. A panic in one object therefore costs one restart (≈ 5–10 s), not the run.
-- Each **worker** (`opts-benchmark scenery worker --shard i/N`) is one Bevy app. It builds the plugin set it needs itself: asset and render plugins, `OptsAssetPlugin`, no `InGamePlugin`, no HUD, sky, vehicle, traffic or pedestrians. It loads the generated map once with `begin_world_load`, then for every object rewrites the tile file and calls `plan_reload(tile_path, ReloadKind::Tile, …)` directly, without the file watcher and its 250 ms debounce.
+- Each **worker** (`opts-benchmark scenery worker --run-dir <dir> --worker-id i`) is one Bevy app. It builds the plugin set it needs itself: `DefaultPlugins` without `WinitPlugin`, `LogPlugin`, `AudioPlugin` and `GilrsPlugin`, no window ([Q-SB-01](#open-questions)), no `InGamePlugin`, no HUD, sky, vehicle, traffic or pedestrians. `OptsAssetPlugin` is not needed: the loader writes meshes, materials and images into the asset stores directly. The worker drives the app itself (`SubApps::update` plus a blocking device poll per frame). It loads the generated map once with `begin_world_load`, then for every object rewrites the tile file and rebuilds it directly, without the file watcher and its 250 ms debounce (see [Per-object loop](#per-object-loop)).
+- **Dispatch (implementation, 2026-10-11).** Objects are handed out **one at a time over each worker's stdin** instead of as fixed shards: a slow worker does not hold back the others, and a restarted worker simply takes the next object. A worker answers on stdout with protocol lines (`@@opts-benchmark {json}`: `ready`, `start`, `result`, `recycle`); other stdout lines are ignored. The supervisor writes `results.jsonl`; a worker whose current object exceeds the time budget plus 15 s is killed (`F-TIMEOUT`), one whose stdout closes while busy is recorded as `F-CRASH`; both are restarted, and three failed starts in a row abort the run.
 - A worker **recycles** itself (exits, and the supervisor starts a fresh one) every 2,000 objects, to bound asset-cache and GPU memory growth ([Q-SB-09](#open-questions)).
-- The worker runs with an isolated `XDG_CONFIG_HOME` under the run directory. **Observed 2026-10-11:** `opts-game` writes `recent_map_path` into the user's `settings.db` on shutdown even without `--recent-map`. The catalogue is opened read-only ([Q-SB-08](#open-questions)).
+- The worker runs with an isolated `XDG_CONFIG_HOME` and `XDG_DATA_HOME` under `<run-dir>/work/worker-<i>/`. **Observed 2026-10-11:** `opts-game` writes `recent_map_path` into the user's `settings.db` on shutdown even without `--recent-map`; the worker never loads `GameSettings` either. The game's catalogue (`catalogue.db`, used when it describes the same OMSI root, or `--catalogue <file>`) is opened with `Catalogue::open_read_only` by every worker, so lookups resolve files exactly as in the game ([Q-SB-08](#open-questions)). `XDG_CACHE_HOME` (the decoder cache, `opts/descramble`) is inherited unless `--cache-dir` is given.
 
 ## Map generation
 
@@ -101,14 +102,17 @@ Benchmark                           <N>  <string 1> … <string N>
 Every object goes through these steps. Each has a watchdog; the whole object has 30 s (keyed meshes decoding cold may take up to ~1.6 s each, `docs/src/formats/binary/o3d.md:412`).
 
 1. **Preflight** (CPU only, no rendering). Parse the `.sco` and its meshes with `opts-core`; resolve paths like the game does (`OmsiInstall::find_file`, `<sco dir>/model/…`). Record feature flags and the context class (below). Build the **expected geometry**: the triangles of every mesh that OPTS should draw, in OMSI object space, transformed by the documented placement (`docs/src/architecture/coordinates.md`; heading clockwise from north). The harness computes this transform with its own code, never by reading the spawned entity's `Transform`; otherwise transform bugs would be invisible.
-2. **Place.** Rewrite `tile_0_0.map`; call `plan_reload`; run `load_next_tile` until the queue is empty.
-3. **Settle.** Wait until the tile queue is empty, `WorldStats::meshes_decoding == 0`, every `Mesh`/`Image` handle under the tile root is loaded, and no tile rebuild happened for 2 frames. Decoded meshes trigger a rebuild through the private `rebuild_decoded_tiles` (`tile.rs:502`), which only `stream_world_tiles` calls; the worker runs `stream_world_tiles` with its camera at the tile centre, or the implementation makes a public wrapper.
+   - *Implementation:* the `.sco` is parsed before placement (it decides the string variables); the expected triangles are built **after settle**, because a keyed mesh's geometry is only known once the loader has resolved it: through a verified plain twin (`opts_bevy::model::find_plain_twin`, the loader's own rule) or through the decoder's on-disk cache (`opts_bevy::descramble_cache`). A keyed mesh with neither has no expected geometry. The mesh interpretation follows the loader (axis-cycled layout `(-y, x, z)`, `.x` frame transforms, `[matl]` overrides via `find_override`, `[alphascale]` materials left out), because that is OPTS's reading of the files; only the placement is independent.
+2. **Place.** Rewrite `tile_0_0.map`; call `WorldLoadJob::plan_scene_reload` (implementation choice, see below) and despawn the returned tile roots; run `load_next_tile` until the queue is empty.
+3. **Settle.** Run `rebuild_decoded_tiles` (made public for this) and `load_next_tile` each frame until the tile queue is empty and `WorldStats::meshes_decoding == 0` for two consecutive checks. Meshes and images need no load wait: the loader adds them to the asset stores synchronously, and the render world prepares them in the frame that draws them.
+
+**Why `plan_scene_reload` and not `plan_reload(tile)` (2026-10-11).** `plan_reload` keeps parsed `.sco` files and mesh parts cached, so an object whose meshes another object loaded earlier would not log its texture or mesh failures again: diagnostics would depend on which objects a worker saw before, and with dynamic dispatch that order changes between runs. `plan_scene_reload` forgets parsed objects and mesh parts (textures that loaded stay cached; missing textures are never cached, so they are reported every time), which makes each object's diagnostics independent of the order and bounds memory growth.
 4. **Diagnose.** Take the deltas of `WorldStats` (`objects_failed`, `objects_protected`, `objects_no_geometry`, `asset_failures`, `meshes_decoded`, `meshes_twin`, `crates/opts-game/src/in_game/omsi_world/mod.rs:109`) and the `WARN`/`ERROR` events a tracing layer captured while this object loaded (target + message template, paths normalised).
 5. **Render** ([Capture](#capture)), compute masks and metrics ([Static check](#static-check)), decide the verdict.
 6. **Scripts** (Phase C, scripted objects only, [Script-effect check](#script-effect-check)).
 7. **Record.** Append one JSON line to `results.jsonl` and flush; keep images only when the verdict is not `pass` (default).
 
-**Context classes** (from preflight): `standalone`, `editor-only` (`[onlyeditor]`, expected to render nothing), `no-geometry` (no `[mesh]`), `tree` (`[tree]` billboard, random size), `surface` (`[surface]`, `[splinehelper]` or `[crossing_heightdeformation]`; junction pieces whose spline-helper geometry is not built standalone), `spline-attachment` (referenced by maps only through `[splineAttachement]`), `keyed` (at least one keyed mesh). The class is reported and selects thresholds; it never skips the object silently.
+**Context classes** (from preflight): `standalone`, `editor-only` (`[onlyeditor]`, expected to render nothing), `no-geometry` (no `[mesh]`), `tree` (`[tree]` billboard; the generated placement writes the middle of the `.sco` height and width ranges as the instance's string variables, so the expected size is exact), `surface` (`[surface]`, `[splinehelper]` or `[crossing_heightdeformation]`; junction pieces whose spline-helper geometry is not built standalone), `spline-attachment` (referenced by maps only through `[splineAttachement]`), `keyed` (at least one keyed mesh), `vehicle-model` (`[model]`, parked vehicles; not predicted, verdict `unknown`), `carpark-marker` (`[carpark_p]`; the generated map has no `parklist_p.txt`, so nothing is expected). The class is reported and selects thresholds; it never skips the object silently.
 
 ## Capture
 
@@ -117,7 +121,8 @@ Every object goes through these steps. Each has a watchdog; the whole object has
   - **V1 oblique perspective:** azimuth 35° to the right of the object's front, elevation 25°, vertical FOV 40°, distance chosen so the bounding sphere fills 80 % of the image height.
   - **V2 top-down orthographic:** looks straight down, image axes aligned with OMSI east and north, extent = horizontal bounds + 10 %. This view carries the placement and heading checks.
 - **Background matting.** Each view is rendered twice in the **same frame** by two cameras with `ClearColorConfig::Custom`: once over black, once over white. Four `RenderTarget::Image` targets are read back with `Readback`. Per pixel, `d = max over channels |I_white − I_black|` and coverage `α = 1 − d / 255`. A pixel is object if `α ≥ 0.5`. The object's colour is `I_black / α`. This works for any object colour and any texture, with no reserved key colour.
-- **Missing-texture sentinel.** The worker sets a benchmark-only resource that makes the two fallbacks (material without texture, `material.rs:38-70`; missing slot, `model.rs:549-555`) an **unlit** magenta `(255, 0, 255)`. Sentinel pixels are then exact. The structured diagnostics from step 4 stay the primary evidence; the sentinel catches textures that load but never reach the screen (wrong slot, wrong UV set).
+- **Missing-texture sentinel.** The worker turns on a benchmark-only switch that makes the two fallbacks (a diffuse texture that **failed to load**; a missing material slot, `model.rs`) an **unlit** magenta `(255, 0, 255)`. A material that names no texture keeps its diffuse colour. Sentinel pixels are then exact (verified: unlit magenta reads back as exactly `(255, 0, 255)` with tonemapping off). The structured diagnostics from step 4 stay the primary evidence; the sentinel catches textures that load but never reach the screen (wrong slot, wrong UV set). *Implementation:* `ContentLoader` is not a system, so the switch is a process-wide flag (`opts_bevy::texture_sentinel::set_missing_texture_sentinel`), not a Bevy resource; the game never sets it.
+- **Readback (Q-SB-01, verified 2026-10-11).** Targets are `Rgba8UnormSrgb` images with `COPY_SRC` usage added (without it wgpu rejects the copy). Cameras use `Msaa::Off`, `Tonemapping::None`, `DebandDither::Disabled` and stay inactive except in capture frames. A capture is two frames: frame 1 renders and copies (the `Readback` components are removed right after it), frame 2 delivers `ReadbackComplete`. `ReadbackOnce` is **not** usable here: its cleanup runs in `First` of the next update and removes a readback requested between two updates before it is ever extracted.
 
 ## Static check
 
@@ -136,7 +141,8 @@ Every object goes through these steps. Each has a watchdog; the whole object has
 | `bbox_overshoot` | how far R's bounding box exceeds E_all's, as a share of E_all's diagonal | far-away vertices |
 | `centroid_offset` | distance of the mask centroids / E_all's diagonal | offset |
 | `size_ratio` | R's bounding box extent / E_all's, per axis | scale |
-| `best_rotation` (V2 only) | the rotation of E_all by 0°, ±90°, 180° or a mirror that maximises IoU, if better than the identity | heading or axis errors |
+| `best_rotation` (V2 only) | the alternative placement (heading +90°, +180°, +270°, mirrored heading `−h`, mirrored object x axis) whose re-rasterised E_all maximises IoU, if better than the identity; computed only when the identity IoU is below 0.5 | heading or axis errors |
+| `alpha_share` | share of `E_all` covered only by alpha-tested or blended materials | selects the alpha-tested recall rule |
 | `sentinel_share` | sentinel pixels / `|R|` | missing textures |
 
 **Verdict rules** (initial thresholds; Phase B calibrates them on a hand-labelled sample of 200 objects and records the final values in this table):
@@ -151,9 +157,9 @@ Every object goes through these steps. Each has a watchdog; the whole object has
 | `F-GEOM-PARTIAL` | `recall < 0.6`; for objects whose expected area is mostly alpha-tested (fences, foliage), `recall < 0.2`, and 0.2–0.6 gives `unknown` |
 | `F-TEX-MISSING` | `sentinel_share > 0.02` or a texture-not-found diagnostic |
 | `F-EDITOR-RENDERED` | class `editor-only` and `px_rendered ≥ 20` |
-| `F-LOD-OVERDRAW` | structural: more than one LOD group spawned (informational until M-0029) |
+| `F-LOD-OVERDRAW` | structural: more than one LOD group spawned (informational until M-0029: recorded in `tags.info`, does not change the verdict) |
 
-Load-stage categories come from preflight and diagnostics: `F-SCO-PARSE`, `F-MESH-MISSING`, `F-MESH-PARSE`, `F-MESH-PROTECTED` (keyed, no twin, decoder rejected), `F-LOAD-ERROR` (an `ERROR` event not covered by another category), `F-TIMEOUT`, `F-CRASH`.
+Load-stage categories come from preflight and diagnostics: `F-SCO-PARSE`, `F-MESH-MISSING`, `F-MESH-PARSE`, `F-MESH-PROTECTED` (keyed, no twin, decoder rejected; also the loader's "mesh extent is implausible" rejection), `F-LOAD-ERROR` (an `ERROR` event not covered by another category), `F-TIMEOUT`, `F-CRASH`, and `F-CAPTURE` (the readback did not arrive; the worker is recycled). Texture decode and read failures count as `F-TEX-MISSING`. Diagnostics are the `WARN`/`ERROR` events of targets `opts*` minus those the empty map (anchor only) already produced, such as "tile has no readable .terrain grid".
 
 **Verdicts:** `pass` (no failure category), `fail` (at least one), `unknown` (no expected silhouette, for example a keyed mesh without twin that still rendered: then only `[boundingbox]`/`[VFDmaxmin]` bounds are checked if present; tree billboards are checked against the `[tree]` size range only), `skipped` (only on explicit request, e.g. `--filter`). `no-geometry` objects pass when they load without errors and render nothing.
 
@@ -259,11 +265,17 @@ Every file stays within the size limits of the [coding standards](../contributin
 
 ```text
 opts-benchmark scenery run    --omsi-path <root> [--out <dir>] [--workers 3]
-                              [--tier referenced|all] [--filter <glob>] [--limit <n>]
-                              [--scripts] [--keep-images none|fail|all] [--resume <run-id>]
-opts-benchmark scenery worker --run-dir <dir> --shard <i>/<n>      (started by `run`)
+                              [--tier referenced|all] [--filter <glob>] [--list <file>]
+                              [--sample <n>] [--limit <n>] [--scripts]
+                              [--keep-images none|fail|all] [--resume <run-id>]
+                              [--catalogue <db> | --no-catalogue] [--cache-dir <dir>]
+                              [--timeout-s 30] [--recycle 2000] [--anchor <sco>]
+                              [--seed-fault heading-mirror|offset-10m|scale-2x]
+opts-benchmark scenery worker --run-dir <dir> --worker-id <i>      (started by `run`)
 opts-benchmark scenery report --run-dir <dir> [--compare <other-run-dir>]
 ```
+
+`--list` takes relative `.sco` paths (one per line), `--sample n` picks about `n` objects spread evenly over the key order (deterministic). `--seed-fault` makes the tile disagree with the expected placement (mirrored heading, 10 m east, or a 2× scale through a half-size expectation) for the acceptance tests. Worker options travel in `run.json`; the worker reads them from there. The layout differs from the plan in three files: `lookups.rs` (catalogue lookups), `object.rs` (the per-object loop) and `protocol.rs` (supervisor–worker lines); `diag.rs`'s capture layer is installed by `src/logging.rs`.
 
 `report --compare` lists objects whose verdict changed between two runs, which is how Phase E proves that a fix worked and broke nothing.
 
@@ -306,14 +318,14 @@ Most common scripts by file name (all packs together, objects using them): `ampe
 
 | ID | Question | Impact |
 | :--- | :--- | :--- |
-| Q-SB-01 | Does a Bevy 0.20 app with `primary_window: None` and only image render targets run on this Wayland workstation and on a GPU-less CI runner (software Vulkan)? If not, a hidden 64 × 64 window is the fallback. | 🔴 Blocks Phase B |
+| Q-SB-01 | Does a Bevy 0.20 app with `primary_window: None` and only image render targets run on this Wayland workstation and on a GPU-less CI runner (software Vulkan)? If not, a hidden 64 × 64 window is the fallback. | ✅ **Workstation: yes, no window at all** (verified 2026-10-11 with `crates/opts-benchmark/examples/offscreen_probe.rs`, also with `DISPLAY` and `WAYLAND_DISPLAY` unset; NVIDIA RTX 3060, Vulkan): `DefaultPlugins` minus `WinitPlugin`, `primary_window: None`, `ExitCondition::DontExit`, `synchronous_pipeline_compilation`, app driven by `SubApps::update` (pattern of Bevy's `externally_driven_headless_renderer` example). 🟡 **GPU-less CI: not verified** — no software Vulkan driver (lavapipe) is installed here, and `WGPU_BACKEND=gl` panics because the build has no GL backend. CI needs `mesa-vulkan-drivers` (lavapipe). |
 | Q-SB-02 | Final thresholds; needs a hand-labelled sample of 200 objects. | 🔴 Phase B |
 | Q-SB-03 | `[LOD]` semantics (Q-SCO-003) decide which meshes belong in `E_base`. | 🟡 |
 | Q-SB-04 | `[visible]`: equality with the flag (vehicle code, `vehicle_anim.rs:178`) or non-zero (`sco.md:179`)? | 🟡 Phase C |
 | Q-SB-05 | Which `[visible]` meshes OMSI shows when no script runs (variables at 0)? Affects `E_base`. | 🟡 |
 | Q-SB-06 | Are standalone results meaningful for spline-dependent objects (2,131 attachment-only, 4,020 `[splinehelper]`, 7,859 `[surface]`)? A later version may place them on a generated spline. | 🟡 |
 | Q-SB-07 | Script paths with `..` across packs (Q-SC03): 52 objects unresolved. | 🟢 |
-| Q-SB-08 | Read-only, concurrent use of the SQLite catalogue by several workers; settings isolation (the game writes `recent_map_path` on shutdown). | 🟡 Phase B |
+| Q-SB-08 | Read-only, concurrent use of the SQLite catalogue by several workers; settings isolation (the game writes `recent_map_path` on shutdown). | ✅ `Catalogue::open_read_only` (no migration, no writes) in every worker; isolated `XDG_CONFIG_HOME`/`XDG_DATA_HOME` per worker; the worker never loads `GameSettings`. 3 workers ran concurrently without errors. |
 | Q-SB-09 | Asset-cache and GPU memory growth over thousands of tile rebuilds; is 2,000 objects per worker the right recycle interval? | 🟡 Phase B |
 | Q-SB-10 | Self-consistency only: fidelity to OMSI needs a human or OMSI-side comparison, which cannot be automated here (no OMSI screenshots in the repository). | 🟢 Known limitation |
 | Q-SB-11 | Who builds the scenery-script runtime (VM per placed object, scenery variables, typed `[newanim]`, `[visible]`, `[light_enh*]`)? Reopen the scenery half of M-0026, or a new milestone? Project-lead decision. | 🔴 Blocks Phase C |
