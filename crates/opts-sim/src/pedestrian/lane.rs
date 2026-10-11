@@ -3,7 +3,7 @@
 use glam::Vec3;
 use opts_core::formats::map::MapSplineInstance;
 use opts_core::formats::scenery::sco::ScoPath;
-use opts_core::formats::scenery::SplineProfile;
+use opts_core::formats::scenery::{LaneKind, SplineProfile};
 
 /// Path type of pedestrians in `[path]` records.
 pub const PATH_TYPE_PEDESTRIAN: u32 = 1;
@@ -131,6 +131,8 @@ fn arc(
 
 /// Footpath lanes of a placed spline: one per type-1 `[path]` of its profile.
 ///
+/// See [`lanes_of_kind`] for other lane kinds (bike lanes).
+///
 /// `shift` moves the tile-local coordinates into the world frame. `[spline_h]` records with an
 /// explicit height change follow the cubic profile of the ribbon.
 #[must_use]
@@ -138,6 +140,19 @@ pub fn lanes_from_spline(
     inst: &MapSplineInstance,
     profile: &SplineProfile,
     shift: (f32, f32),
+) -> Vec<FootLane> {
+    lanes_of_kind(inst, profile, "", shift, LaneKind::Pedestrian)
+}
+
+/// Lanes of one [`LaneKind`] of a placed spline (`name` is the `.sli` file name, which feeds the
+/// bike heuristic of [`SplinePath::kind`]); same geometry rules as [`lanes_from_spline`].
+#[must_use]
+pub fn lanes_of_kind(
+    inst: &MapSplineInstance,
+    profile: &SplineProfile,
+    name: &str,
+    shift: (f32, f32),
+    kind: LaneKind,
 ) -> Vec<FootLane> {
     let length = inst.length_m.max(0.01);
     let explicit = inst
@@ -167,7 +182,10 @@ pub fn lanes_from_spline(
     profile
         .paths
         .iter()
-        .filter(|p| p.path_type == PATH_TYPE_PEDESTRIAN)
+        .filter(|p| match kind {
+            LaneKind::Pedestrian => p.path_type == PATH_TYPE_PEDESTRIAN,
+            k => p.kind(name) == k,
+        })
         .filter_map(|p| {
             let offset = if inst.mirrored {
                 -p.offset_x
@@ -286,6 +304,44 @@ mod tests {
         assert!((l.length() - 20.0).abs() < 1e-3);
         let (_, h) = l.at(5.0);
         assert!(h.abs() < 1e-4);
+    }
+
+    #[test]
+    fn bike_lanes_of_a_composite_are_found_by_kind() {
+        let mut p = profile(2.2);
+        p.paths.push(SplinePath {
+            path_type: 0,
+            offset_x: 3.0,
+            offset_z: 0.05,
+            width: 0.1,
+            direction: 2,
+            extra: None,
+        });
+        let bikes = lanes_of_kind(
+            &spline(0.0, 0.0, 20.0),
+            &p,
+            "x.sli",
+            (0.0, 0.0),
+            LaneKind::Bike,
+        );
+        assert_eq!(bikes.len(), 1);
+        assert!((bikes[0].points[0].x - 13.0).abs() < 1e-4);
+        // The 3 m road lane is a road, the footpath still a footpath.
+        assert_eq!(
+            lanes_of_kind(
+                &spline(0.0, 0.0, 20.0),
+                &p,
+                "x.sli",
+                (0.0, 0.0),
+                LaneKind::Road
+            )
+            .len(),
+            1
+        );
+        assert_eq!(
+            lanes_from_spline(&spline(0.0, 0.0, 20.0), &p, (0.0, 0.0)).len(),
+            1
+        );
     }
 
     #[test]

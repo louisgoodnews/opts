@@ -10,6 +10,6 @@ pub use sco::{
     ScoSplineHelper, ScoTextTexture, ScoTrafficLightGroup, ScoTrafficLightProgram, ScoTree,
 };
 pub use sli::{
-    SplineGraphicalProfile, SplineHeightProfile, SplinePath, SplineProfile, SplineProfilePoint,
-    SplineRailEnh, SplineTexture,
+    LaneKind, SplineGraphicalProfile, SplineHeightProfile, SplinePath, SplineProfile,
+    SplineProfilePoint, SplineRailEnh, SplineTexture,
 };

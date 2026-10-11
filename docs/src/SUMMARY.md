@@ -203,6 +203,8 @@
 
 - [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
 - [Pedestrians](simulation/pedestrians.md)
+- [Lane Kinds and Composite Splines](simulation/lane-kinds.md)
+- [Rail Vehicles](simulation/rail-vehicles.md)
 
 ---
 
