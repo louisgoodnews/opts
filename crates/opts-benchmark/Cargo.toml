@@ -1,0 +1,46 @@
+[package]
+name = "opts-benchmark"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Benchmarks and corpus verification for OPTS (scenery object load verification, M-0054)."
+repository.workspace = true
+publish = false
+
+[[bin]]
+name = "opts-benchmark"
+path = "src/main.rs"
+
+[[example]]
+# Q-SB-01 probe: off-screen rendering and readback with no window.
+name = "offscreen_probe"
+required-features = ["scenery"]
+
+[features]
+default = ["scenery"]
+# The scenery harness renders objects with the game's loader; it pulls in Bevy's renderer.
+# `--no-default-features` builds only the renderer-free parts (for M-0028's Criterion benches).
+scenery = ["dep:opts-game", "dep:opts-bevy", "dep:opts-catalogue", "dep:bevy"]
+
+[dependencies]
+opts-core = { workspace = true }
+opts-game = { workspace = true, optional = true }
+opts-bevy = { workspace = true, optional = true }
+opts-catalogue = { workspace = true, optional = true }
+bevy = { workspace = true, optional = true }
+
+anyhow = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+image = { workspace = true }
+sha2 = "0.10"
+globset = "0.4"
+chrono = { workspace = true }
+glam = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
