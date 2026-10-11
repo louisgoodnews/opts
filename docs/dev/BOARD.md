@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-10 by Agent (P-900 Phase C: audit 5037f89a roadmap expansion)_
+_Last updated: 2026-10-11 by Agent (critical review 2026-10-11: status reconciliation and roadmap expansion)_
 
 ---
 
@@ -83,7 +83,12 @@ A work item may enter the **Done** column only when:
 
 _Work actively being executed in the current session._
 
-- `[ ]` None
+> ⚠️ WIP is 4 (target ≤ 1): several milestones are active at once (critical review 2026-10-11, F-014). Listed as they are, not as they should be.
+
+- `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; these are the open Phase C/D items.
+- `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
+- `[~]` 🟠 **Bevy 0.20: merge decision and merge to `master`** (M-0047, chore) — 14 commits only on `bevy-0.20` (F-019).
+- `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution
 > under P-005. Idle state is explicitly marked as "None" rather than
@@ -95,7 +100,8 @@ _Work actively being executed in the current session._
 
 _Work completed but not yet marked Done — awaiting human or agent review._
 
-- `[ ]` None
+- `[ ]` 🟡 **Articulated trailers follow kinematically; joint angle to scripts; bellows skinned** (M-0022 addendum, code) — `f20ff5f` + parts of `7f24124`; spec [articulation.md](../src/architecture/articulation.md). Needs an in-game look at an articulated bus; follow-ups in M-0053.
+- `[ ]` 🟡 **Repaints applied in game, `--livery`** (M-0032, code) — `7f24124`; needs a review against [repaints.md](../src/formats/text/repaints.md) Q-RP01/Q-RP02.
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
 
@@ -105,16 +111,13 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🔴 **Author script VM bytecode and stack architecture specification** (M-0026, spec) — Specify VM instruction set, stack operations, variable mapping, and timing contracts in `docs/src/architecture/script-vm.md` (traces to F-008, F-019).
-- [ ] 🔴 **Author map streaming architecture specification** (M-0024, spec) — Specify tile paging radius, memory cache budgets, and async task pipelines in `docs/src/architecture/map-streaming.md` (traces to F-018).
-- [ ] 🟡 **Author terrain & water rendering architecture specification** (M-0025, spec) — Specify vertex generation, normal calculation, edge stitching, and elevation query interface in `docs/src/architecture/terrain-rendering.md` (traces to F-018).
-- [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — Document curve interpolation, audio emitter hierarchy, and performance limits in `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
-- [x] 🟠 **Inventory work shipped since M-0023** (M-0037, docs) — Map catalogue, logging, reporting, asset loading, sky, ground shader, attachments and decoder to commits and reports (traces to audit 5037f89a F-019).
-- [x] 🟠 **Re-run the link scan and list broken links by owner file** (M-0041, docs) — done in P-900 Phase D; 144 → 0 — Baseline for the documentation repair (audit 5037f89a F-018).
-- [x] 🟠 **Choose and document the CI link checker** (M-0042, chore) — done: `scripts/check_links.py` + `docs-links` job (decision to be written up in `docs/src/contributing/`) — Select the tool and record the decision in `docs/src/contributing/` (audit 5037f89a F-024).
-- [ ] 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — Input for the size-limit refactor (audit 5037f89a F-009).
-- [x] 🟡 **Extend o3d.md Addendum 5 with the decoder research plan and acceptance metric** (M-0038, spec) — (audit 5037f89a F-001).
-- [x] 🟡 **Write `docs/src/architecture/text-textures.md`** (M-0039, spec) — Rendering rules for `[texttexture]` from corpus statistics (audit 5037f89a F-002).
+- [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
+- [ ] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`; the code (`stream_world_tiles`) has run without a spec since before 2026-10-10 (F-012).
+- [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
+- [ ] 🟠 **Pre-commit hook building the staged tree; worktree-per-session rule** (M-0052, chore) — F-001.
+- [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
+- [ ] 🟡 **Extend articulation.md with the coupled physics model and pitch rule** (M-0053, spec) — F-002, F-003.
+- [ ] 🟡 **Specify the passenger model (`docs/src/simulation/passengers.md`)** (M-0050, spec) — before any stop/boarding code (F-023).
 
 ---
 
@@ -122,7 +125,9 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- [ ] None
+- [!] 🟡 **Configure GitHub Pages and verify the live site** (M-0000) — blocked on a hosted repository: **Host the repository and activate CI** (M-0052).
+- [!] 🟡 **First green CI run, Windows job, broken-link CI proof** (M-0042) — blocked on **Host the repository and activate CI** (M-0052).
+- [!] 🔴 **Host the repository and activate CI** (M-0052, chore) — blocked on a project-lead decision: hosting location and account (critical review open question 1).
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -135,21 +140,25 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
-#### M-0026 — OMSI Script Stack VM (`opts-sim`)
-- [ ] 🔴 **Implement .osc lexer and bytecode compiler** (M-0026, code) — Parse script token streams to structured bytecode opcodes.
-- [ ] 🔴 **Implement ScriptVm stack execution engine** (M-0026, code) — Implement stack machine, call frames, arithmetic, and control flow branching.
-- [ ] 🔴 **Implement dynamic VariableTable and macro dispatcher** (M-0026, code) — Manage fast numeric/string variable arrays, string interning, and system callbacks.
-- [ ] 🔴 **Implement script VM integration test suite** (M-0026, test) — Verify door logic, gearbox selector, and odometer script sets against community standards.
+#### M-0052 — Repository Hosting, CI Activation & Commit Gate
+- [ ] 🟠 **CI triggers on all branches and pull requests** (M-0052, chore) — today `[main, master]` only (F-019).
+- [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
+
+#### M-0053 — Articulated Vehicle Completion
+- [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test)
+- [ ] 🟡 **Replace `ArticulationJoint` with `TrailerKinematics` in `VehicleSimulation`; trailer loads in physics** (M-0053, code) — F-002.
+- [ ] 🟡 **Segment pitch from the ground-height query; `articulation_<n>_beta`** (M-0053, code) — needs M-0025 query; F-003.
+- [ ] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code)
 
 #### M-0024 — OMSI Map Tile Grid & Chunk Streaming (`opts-game`, `opts-bevy`)
-- [ ] 🔴 **Implement TileGridManager and coordinate tracking** (M-0024, code) — Track player grid coordinates and calculate adjacent tile load radii.
+- [~] 🔴 **Implement TileGridManager and coordinate tracking** (M-0024, code) — paging by radius exists in `opts-game` (`stream_world_tiles`); the `opts-bevy` module does not.
 - [ ] 🔴 **Implement tile async streaming and entity grouping** (M-0024, code) — Dispatch background parse jobs via `AsyncComputeTaskPool` and manage `TileChunk` entity hierarchy.
-- [ ] 🟡 **Implement chunk eviction and resource despawning** (M-0024, code) — Gracefully unload distant scenery, meshes, and collision colliders outside active radius.
+- [~] 🟡 **Implement chunk eviction and resource despawning** (M-0024, code) — eviction with hysteresis exists in `opts-game`.
 
 #### M-0025 — Terrain Heightmap & Water Mesh Generation (`opts-core`, `opts-bevy`)
-- [ ] 🟡 **Implement terrain elevation mesh tessellation** (M-0025, code) — Generate indexed triangle strip meshes with smoothed vertex normals from `.map.terrain`.
-- [ ] 🟡 **Implement multi-layer ground texture splatting** (M-0025, code) — Blend ground textures via vertex alpha layers.
-- [ ] 🟡 **Implement GroundElevationQuery raycasting interface** (M-0025, code) — Provide $O(1)$ height queries for vehicle suspension and wheel raycasting.
+- [x] 🟡 **Implement terrain elevation mesh tessellation** (M-0025, code) — `build_terrain_mesh` in `opts-bevy/src/terrain.rs` (verified by M-0037).
+- [x] 🟡 **Implement multi-layer ground texture splatting** (M-0025, code) — layered ground shader (`ground_material.rs`, WESL on 0.20).
+- [ ] 🟡 **Implement GroundElevationQuery raycasting interface** (M-0025, code) — needed by vehicles and M-0053.
 - [ ] 🟡 **Implement water surface planar meshes** (M-0025, code) — Construct translucent water planes from `.map.water` level data.
 
 #### M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)
@@ -157,75 +166,45 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Implement VehicleAudioEmitter and telemetry sync** (M-0027, code) — Bind vehicle engine RPM, road speed, and pneumatic pressure to Bevy spatial audio sinks.
 - [ ] 🟡 **Implement one-shot trigger system and cockpit acoustics** (M-0027, code) — Trigger switch, door, and horn sounds with interior/exterior attenuation filtering.
 
-#### M-0024 / M-0025 additions (audit 5037f89a)
-- [ ] 🟡 **Extract the world loader from `opts-game/in_game` into `opts-bevy`** (M-0024, code) — F-016.
+#### M-0046 — World Loader Extraction (with M-0024 / M-0025 additions of audit 5037f89a)
+- [ ] 🟠 **Extract the world loader from `opts-game/in_game` into `opts-bevy`, including traffic, pedestrians, articulation and repaint discovery** (M-0046/M-0024, code) — F-016, critical review F-009.
 - [ ] 🟡 **Move the reporting modal out of `opts-bevy` to drop the `opts-gui` dependency** (M-0024, code) — F-015.
 - [ ] 🟡 **Verify spline-attachment repeater span/count against an OMSI reference** (M-0025, spec) — F-004.
 - [ ] 🟡 **Reproduce and fix floating crossing/object on Rheinhausen** (M-0025, code) — needs entry point and camera position; F-007.
 - [ ] 🟡 **Read `Weather/*.owt` fog and `clouds.cfg`; remove hard-coded fallback lighting** (M-0025, code) — F-008.
 
-#### M-0037 — Shipped-Work Reconciliation
-- [x] 🟠 **Append delivered-work list to ROADMAP and phase README** (M-0037, docs)
-- [x] 🟠 **Annotate M-0024/M-0025 with verified satisfied items; update BOARD and PROMPTS references** (M-0037, docs)
+#### M-0032 — Repaints & Liveries
+- [ ] 🟡 **Move repaint discovery out of `new_game_screen` into `opts-core`/`opts-bevy`** (M-0032, refactor) — critical review F-009.
+- [ ] 🟢 **Runtime repaint switching; repaints for AI and parked vehicles** (M-0032, code)
 
 #### M-0038 — Scrambled-Mesh Completion
-- [x] 🟠 **Async decoding / loading-stage pre-warm** (M-0038, code) — F-003.
-- [x] 🟡 **`DecodeParams` struct and cache policy (cap, version)** (M-0038, code) — F-014, F-017.
 - [ ] 🟡 **State-chain research on the twin corpus; record negatives in o3d.md** (M-0038, research) — F-001.
-- [x] 🟡 **Decoder counters in F10 overlay; `confident_eval` thresholds in CI** (M-0038, test)
-
-#### M-0039 — Text Textures
-- [x] 🟠 **Text rasteriser and material binding in `opts-bevy`** (M-0039, code)
-- [x] 🟡 **Per-instance string resolution from tiles; runtime texture references** (M-0039, code)
-- [x] 🟡 **Unit tests and X10 Berlin screenshot check** (M-0039, test)
 
 #### M-0040 — Code-Quality Debt
-- [ ] 🟠 **Split `omsi_world.rs`, `sco.rs::from_text`, `opts-catalogue/lib.rs`, `descramble.rs`, UI builders** (M-0040, refactor) — F-009.
-- [ ] 🟡 **Group system parameters into `SystemParam`s; remove lint allows** (M-0040, refactor) — F-010.
-- [ ] 🟡 **Feature-gate `catalogue_service::testing`; replace remaining unwrap/expect** (M-0040, code) — F-005, F-006.
-- [ ] 🟡 **Implement or remove Load Game / Credits stubs and `opts-tools` placeholder** (M-0040, code) — F-011.
-- [ ] 🟡 **Fix six rustdoc warnings** (M-0040, docs) — F-012.
+- [ ] 🟠 **Fail CI on new size violations (baseline file)** (M-0040, chore) — critical review F-005: 21 files > 500 lines, 59 functions > 100 lines.
+- [ ] 🟠 **Split `sco.rs::from_text` (625), `descramble.rs`, `opts-traffic/agent.rs`, `opts-catalogue/lib.rs`, `omsi_world/vehicle.rs`, `traffic.rs`, UI builders** (M-0040, refactor) — F-009 (audit), F-005.
+- [ ] 🟡 **Group system/load-job parameters into `SystemParam`s; remove the 37 lint allows** (M-0040, refactor) — F-010 (audit), F-006.
+- [ ] 🟡 **Fix rustdoc links to removed Bevy bundles** (M-0040, docs) — critical review F-007.
+- [ ] 🟡 **Load Game screen (needs a save system) — labelled "not available" until then** (M-0040, code) — F-011.
 
 #### M-0041 — Documentation Repair
-- [x] 🟠 **Fix broken links; regenerate roadmap README; remove `file://` links; unlink or create M-0028–M-0036 files** (M-0041, docs) — F-018.
-- [ ] 🟡 **Deprecate stale `docs/crates/*` folders; update catalog.md** (M-0041, docs) — F-020.
-- [ ] 🟡 **Annotate superseded o3d.md paragraphs; index orphan chapters; fix prompt dates** (M-0041, docs) — F-021, F-022, F-023.
-- [ ] 🟡 **Write `developer-switches.md`** (M-0041, docs) — F-013.
+- [ ] 🟢 **Crate-graph Mermaid diagram: add `opts-traffic`, `opts-catalogue`, `opts-cli` and the `opts-bevy` → `opts-gui`/`opts-cli` edges** (M-0041, docs) — critical review F-011 (table done).
 
 #### M-0042 — CI & Toolchain Hardening
-- [x] 🟠 **Add mdBook build and link check job** (M-0042, chore) — F-024. Done (link check; the mdBook build was already in `deploy-docs.yml`).
-- [ ] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — F-025.
-- [ ] 🟡 **Add Windows CI job and `cargo doc -D warnings`** (M-0042, chore) — F-025.
+- [~] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — files exist; `binrw 0.13.4` future-incompat warning remains.
 - [ ] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026.
 
 #### Phase 4 — Simulation & Transit Follow-ups
-
-- [ ] 🟡 **AI traffic vehicle controller system** — Implement autonomous waypoint and spline path following in `opts-sim` / `opts-bevy` (Phase 4, code)
-- [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for AI/passenger traversal in `opts-sim` (Phase 4, code)
-- [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code)
+- [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for passenger traversal in `opts-sim` (Phase 4, code) — after `passengers.md` (M-0050).
+- [ ] 🟡 **Timetable & trip schedule execution engine** — Implement schedule tracking and trip progress state machine from `.ttl` and `global.cfg` in `opts-sim` (Phase 4, code) — no milestone yet.
 
 #### M-0004 — Transit Data Specifications
 
 - `[ ]` 🟢 **GTFS compatibility notes** — Long-term integration target (docs)
 
-#### Documentation chapters
-
-- `[x]` 🟢 **Write the 36 draft chapters in `SUMMARY.md`** — (docs) Reconciled in freeze pass: 9 stubs created in Architecture/Contributing, 5 unwritten sections commented out
-
 #### Documentation Infrastructure
 
-- `[x]` 🟡 **Set up mdBook pipeline** — `docs/book.toml` (empty until M-0007), `SUMMARY.md`, deploy workflow (docs) — GitHub Pages deployment unverified, see M-0000
-- `[x]` 🟡 **Set up CI workflow** — `cargo check`, `clippy`, `test`, `mdbook build` (chore) — completed in M-0000
 - `[ ]` 🟢 **Add Mermaid diagram support** — Enable `mdbook-mermaid` for architecture diagrams (chore)
-- `[ ]` 🟢 **Add link checker** — Enable `mdbook-linkcheck` in CI (chore)
-
-#### Governance & Legal
-
-- `[x]` 🔴 **Write ADR-0001 — Why Bevy and Rust** (docs) — completed in M-0000
-- `[x]` 🔴 **Write ADR-0002 — Clean-Room Policy** (docs) — completed in M-0000
-- `[x]` 🔴 **Dual license** — MIT OR Apache-2.0 (docs) — completed in M-0000
-- `[x]` 🟡 **Contributor Covenant** — CODE_OF_CONDUCT.md (docs) — completed in M-0000
-- `[x]` 🟡 **CONTRIBUTING.md** — Development guide (docs) — completed in M-0000
 
 ---
 
@@ -240,24 +219,36 @@ _Small items discovered during implementation that don't warrant a milestone._
 - `[x]` 🟢 Align the CI/Pages branch (`main`) with the repository's default branch (`master` locally) (F-014 — resolved 2026-10-08)
 - `[x]` 🟢 Remove or replace the 0-byte `docs/crates/book.toml` (chore) — Populated in M-0007
 - `[ ]` 🟢 Install `mdbook` and run `mdbook build docs` once (chore)
-- `[ ]` 🟡 Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-core/src/formats/x/parse.rs:388`) (F-001)
-- `[ ]` 🟠 Audit and prune premature stub crates from workspace `members` in root `Cargo.toml` (F-002)
+- `[x]` 🟡 Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-core/src/formats/x/parse.rs:388`) (F-001) — done in M-0040; scan finds no `unwrap`/`expect` in non-test library code *(reconciled 2026-10-11, critical review)*
+- `[x]` 🟠 Audit and prune premature stub crates from workspace `members` in root `Cargo.toml` (F-002) — done in `07de1b0` *(reconciled 2026-10-11, critical review)*
 - `[ ]` 🟡 Provide `opts_bevy::testing::TestAppBuilder` helper for headless `FixedUpdate` time stepping (F-003)
-- `[ ]` 🟠 Decompose monolithic parser (1,061 lines) and 546-line `from_text` function in `crates/opts-core/src/formats/scenery/sco.rs` (F-004)
-- `[ ]` 🟡 Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005)
-- `[ ]` 🟡 Split `bus.rs` (583 lines) and `world_parse.rs` (689 lines) to comply with 500-line file limit (F-006)
+- `[ ]` 🟠 Decompose monolithic parser and `from_text` in `crates/opts-core/src/formats/scenery/sco.rs` (F-004) — superseded by M-0040 (now 1,243 lines / `from_text` 625) *(reconciled 2026-10-11, critical review)*
+- `[ ]` 🟡 Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005) — superseded by M-0040 *(reconciled 2026-10-11, critical review)*
+- `[ ]` 🟡 Split `bus.rs` (now 686 lines) to comply with the 500-line file limit (F-006; `world_parse.rs` no longer exists) — superseded by M-0040 *(reconciled 2026-10-11, critical review)*
 - `[ ]` 🟢 Consolidate entity spawning boilerplate between `spawn` and `spawn_child` in `opts-gui` widgets (F-007)
-- `[ ]` 🟠 Execute link normalization sweep across `docs/src/roadmap/README.md` and meta reports (F-011)
+- `[x]` 🟠 Execute link normalization sweep across `docs/src/roadmap/README.md` and meta reports (F-011) — done (audit 5037f89a Phase D; 0 broken links) *(reconciled 2026-10-11, critical review)*
 - `[ ]` 🟡 Reconcile stale Open Questions in promoted specifications (`o3d.md`, `x.md`, `bus.md`) into Resolved Questions (F-012)
-- `[ ]` 🟠 Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015)
-- `[ ]` 🟡 Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
-- `[ ]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)
+- `[x]` 🟠 Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015) — `docs-links` job and `deploy-docs.yml`; never executed (M-0052) *(reconciled 2026-10-11, critical review)*
+- `[x]` 🟡 Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016) — both exist (1.97.1) *(reconciled 2026-10-11, critical review)*
+- `[~]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017) — job written; never run (M-0052) *(reconciled 2026-10-11, critical review)*
 
 ---
 
 ### 🗄️ Recently Done
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
+
+**2026-10-11 — Critical review reconciliation** (items that were done but still listed as open)
+
+- `[x]` 🔴 **Author script VM bytecode and stack architecture specification** (M-0026, spec) — `docs/src/architecture/script-vm.md` exists; M-0026 🟢.
+- `[x]` 🔴 **Implement .osc lexer and bytecode compiler / ScriptVm / VariableTable / VM test suite** (M-0026, code+test) — `opts_sim::script`; all 6,062 corpus scripts compile.
+- `[x]` 🟡 **AI traffic vehicle controller system** (Phase 4 backlog) — delivered as M-0049.
+- `[x]` 🟠 **List every function > 80 lines and file > 500 lines with a split plan** (M-0040, plan) — `scripts/size_check.py`.
+- `[x]` 🟠 **Inventory shipped work / link scan / CI link checker** (M-0037, M-0041, M-0042) — done 2026-10-10.
+- `[x]` 🟡 **o3d.md Addendum 5 / text-textures.md** (M-0038, M-0039, spec) — done.
+- `[x]` 🟡 **Write `developer-switches.md`; annotate superseded o3d paragraphs; orphan chapters; deprecate stale `docs/crates/*` folders** (M-0041, docs) — done (0 orphans, deprecation banners).
+- `[x]` 🟡 **Articulation spec and kinematic trailers** (M-0022 addendum) — `docs/src/architecture/articulation.md`, `f20ff5f`.
+- `[x]` 🟡 **Roadmap copy generator with CI check; crate-graph table; crate guides; README** (M-0041 follow-up, critical review F-011/F-013/F-015/F-017).
 
 **2026-10-08 — M-0023 (Bevy Vehicle ECS Simulation Bridge & Interactive Driving, complete)**
 
@@ -510,3 +501,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — M-0049: wheel/steering/indicator/headlight variables for AI models; traffic lights from the `.sco` programs (parser fix: `[use_traffic_light]` = next path only, `[approachdist]` = per program); lane changes with target-lane priority and 3 s glide; lookahead over a 150 m plan. Open: calibration against OMSI, animated signal heads, dynamic mode.
 - `2026-10-11` — M-0049 phase D started: geometric conflict zones (`opts_traffic::conflict`) and turn-taking at crossings/merges, scenario tests with a negative control; priority rules and signals remain.
 - `2026-10-11` — Startup routine for the OMSI path: saved in `settings.db`, folder dialog (`rfd`) when nothing is found; verified with a clean config on the real system.
+- `2026-10-11` — Critical review 2026-10-11 ([report](../src/meta/critical-review-2026-10-11.md)): board reconciled (In Progress shows the four active milestones, stale Ready/Backlog items archived, Blocked shows the hosting dependency), M-0052 and M-0053 added, M-0032 file created, Deferred Cleanup items from the 2026-10-08 review closed or pointed at M-0040/M-0042. WIP = 4 (red flag, recorded rather than hidden).

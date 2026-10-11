@@ -49,6 +49,7 @@
   - [M-0046: World Loader Extraction](roadmap/phase-4/M-0046.md)
   - [M-0049: AI Road Traffic](roadmap/phase-4/M-0049.md)
   - [M-0050: Pedestrians](roadmap/phase-4/M-0050.md)
+  - [M-0053: Articulated Vehicle Completion](roadmap/phase-4/M-0053.md)
 - [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
   - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
   - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)
@@ -57,7 +58,9 @@
   - [M-0044: Bevy Engine Upgrade](roadmap/phase-5/M-0044.md)
   - [M-0047: Bevy 0.20 Upgrade](roadmap/phase-5/M-0047.md)
   - [M-0048: DLSS Upscaling](roadmap/phase-5/M-0048.md)
+  - [M-0052: Repository Hosting, CI & Commit Gate](roadmap/phase-5/M-0052.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
+  - [M-0032: Repaints & Liveries](roadmap/phase-6/M-0032.md)
   - [M-0051: Editor Mode](roadmap/phase-6/M-0051.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
@@ -205,6 +208,7 @@
 
 # 🔍 Meta & Audits
 
+- [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Bug: Spline Winding / Road Hidden by Terrain (2026-10-10)](meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md)
 - [Audit 5037f89a (2026-10-10)](meta/audits/5037f89a-28fb-4408-8196-c2c0e3b3dd8c_2026-10-10_14-59-54.md)

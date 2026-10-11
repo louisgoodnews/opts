@@ -2,7 +2,7 @@
 
 OPTS is a free, open-source public transport simulator written in **Rust** on the **Bevy** engine. Its first goal is to load, natively and from files you already own, the assets of the bus simulator **OMSI 2** — vehicles, scenery, maps and timetables — and run them in a modern engine.
 
-> 🚧 **Status: early development — a runnable prototype, not a release.** `opts-game` starts, finds your OMSI 2 installation (or asks for it), lists your maps and vehicles, loads a map with terrain, roads, scenery, sky and parked vehicles, and lets you drive a vehicle whose original OMSI scripts run: animations, lights, doors, indicators and the cockpit's clickable controls respond. AI cars drive along the road lanes around you in a simple form (they stop at red lights, take turns at crossings and change lanes). Passengers, timetables and sound are not implemented yet, and some OMSI meshes whose vertex data is scrambled still cannot be shown. Format specifications remain drafts. See the [roadmap](ROADMAP.md) and the [BOARD](docs/dev/BOARD.md) for what is in flight.
+> 🚧 **Status: early development — a runnable prototype, not a release.** `opts-game` starts, finds your OMSI 2 installation (or asks for it), lists your maps and vehicles, loads a map with terrain, roads, scenery, sky and parked vehicles, and lets you drive a vehicle whose original OMSI scripts run: animations, lights, doors, indicators and the cockpit's clickable controls respond. AI cars drive along the road lanes around you in a simple form (they stop at red lights, take turns at crossings and change lanes), pedestrians walk the footpaths, articulated buses bend through curves, and you can pick a vehicle's repaint. Passengers, timetables and sound are not implemented yet, and some OMSI meshes whose vertex data is scrambled still cannot be shown. Format specifications remain drafts. See the [roadmap](ROADMAP.md) and the [BOARD](docs/dev/BOARD.md) for what is in flight.
 
 ## ✅ What works today
 
@@ -10,10 +10,11 @@ OPTS is a free, open-source public transport simulator written in **Rust** on th
 | :--- | :--- |
 | **Parsers** (`opts-core`) | `.o3d`, `.x`, `.sco`, `.sli`, map tiles, terrain, water, `.bus`, `model.cfg`, `paths.cfg`, `.org`, money, humans, `.cti`, `keyboard.cfg`, constfiles and varlists |
 | **World** | tile streaming, terrain with layered ground shader, roads and spline attachments, sky from the map's environment, text textures on signs and stops, parked vehicles |
-| **Vehicles** | kinematic/dynamic driving, wheels, cockpit/chase/passenger/free-roam cameras, driver character |
+| **Vehicles** | kinematic/dynamic driving, wheels, cockpit/chase/passenger/free-roam cameras, driver character, articulated buses (trailing segments follow the leader, joint angle drives the bellows), repaint selection (`.cti`, `--livery`) |
 | **Scripts** (`opts-sim`) | OMSI `.osc` script VM (compiles all 6,062 scripts of the reference corpus), driving mesh animation, lights, light maps, OMSI key bindings and cockpit hot-spots |
 | **Tooling** | `opts-cli` remote control of a running game, hot reload of changed assets, F1 bug reporting, `opts-tools inspect` |
 | **AI traffic** | cars from the map's AI list follow the road lanes and keep their distance (`--traffic N`); vehicles stop at traffic lights, follow priority rules and right before left, and change lanes gently |
+| **Pedestrians** | walkers on the footpath lanes of splines and objects, with gait animation (`--pedestrians N`); crossings and stops not yet |
 | **Not yet** | passengers and routing, timetables, animated signal heads, spatial audio, night maps, in-game settings, packaged releases |
 
 ## 🚀 Running it
@@ -25,7 +26,7 @@ cargo run -p opts-game                          # asks for the OMSI folder on fi
 cargo run -p opts-game -- --omsi-path "/path/to/OMSI 2"
 ```
 
-The installation is also found through `$OMSI_PATH` and the default Steam folders. Developer switches are listed in the [developer switches reference](docs/src/contributing/developer-switches.md). The Rust toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml); the engine is **Bevy 0.19** (0.20 is planned).
+The installation is also found through `$OMSI_PATH` and the default Steam folders. Developer switches are listed in the [developer switches reference](docs/src/contributing/developer-switches.md). The Rust toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml); the engine is **Bevy 0.20** on the `bevy-0.20` branch, where current development happens, and Bevy 0.19 on `master` until the merge ([M-0047](docs/src/roadmap/phase-5/M-0047.md)). The CI workflows in `.github/workflows/` have not run yet: the repository is not hosted ([M-0052](docs/src/roadmap/phase-5/M-0052.md)).
 
 ## 📖 Documentation first
 
@@ -50,8 +51,8 @@ OPTS **does not distribute** any OMSI 2 file or asset. It only reads files you o
 | Crate | Role |
 | :--- | :--- |
 | `opts-core` | file-format parsers and data model (no Bevy dependency) |
-| `opts-sim` | vehicle physics and the OMSI script VM (no Bevy dependency) |
-| `opts-traffic` | AI road traffic: lane graph from OMSI paths, car following, spawning helpers (no Bevy dependency; not yet wired into the game) |
+| `opts-sim` | vehicle physics, articulated-segment kinematics, pedestrians and the OMSI script VM (no Bevy dependency) |
+| `opts-traffic` | AI road traffic: lane graph from OMSI paths, car following, conflict zones, right of way, lane changes (no Bevy dependency) |
 | `opts-bevy` | Bevy integration: asset loaders, world and vehicle rendering, script bridge, camera, control protocol server, hot reload |
 | `opts-gui` | Material Design 3 widget library for Bevy UI |
 | `opts-game` | the game executable: menus, map and vehicle selection, in-game world |

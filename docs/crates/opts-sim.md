@@ -62,6 +62,18 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
 
 ### 6. Articulation (`opts_sim::ArticulationJoint`, `ArticulationState`)
 - `ArticulationJoint`: Trailer hitch position computation, mechanical angle stops ($\pm 54^\circ$), and kinematic yaw tracking.
+- `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). `ArticulationJoint` above still runs inside `VehicleSimulation` with fixed geometry; merging the two is [M-0053](../src/roadmap/phase-4/M-0053.md).
+
+### 7. OMSI Script Engine (`opts_sim::script`)
+- `ScriptEngine`: compiles a vehicle's `.osc` files to bytecode and runs them on a stack machine. Per frame the host sets system values, calls `run_frame`/`trigger`, reads variables and drains events. The engine is deterministic, apart from a seeded random generator.
+- `tokenize`/`Token` (lexer), the compiler, `VariableStore`, `ConstTable`, `Curve`, `Interner` and `Stacks` (string stack), plus `load_vehicle_scripts`, which loads the script, constfile and varlist sets named by a `.bus`.
+- Design: [Script VM](../src/architecture/script-vm.md); language: [`.osc`](../src/formats/text/vehicles/osc.md). It compiles all 6,062 corpus scripts (M-0026).
+
+### 8. Pedestrians (`opts_sim::pedestrian`)
+- `FootLane`, `lanes_from_spline`, `lanes_from_object`: footpath lanes from the type-1 `[path]` records of `.sli` and `.sco`.
+- `PedestrianNet`, `Walker`, `LaneId`, `Advance`, `End`: lane network with geometric junctions, and walkers moving on it.
+- `gait`/`Gait`: walking speed to joint angles (`[walk_param]`).
+- Design: [Pedestrians](../src/simulation/pedestrians.md) (M-0050).
 
 ---
 

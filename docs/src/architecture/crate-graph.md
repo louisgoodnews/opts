@@ -65,14 +65,19 @@ graph TD
 
 | Crate | Layer | Purpose | Dependencies (Internal) | Depended By | Engine Coupling |
 | :--- | :---: | :--- | :--- | :--- | :---: |
-| **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None (zero OPTS deps)* | All crates | Pure Rust |
-| **`opts-core`** | L1 | OMSI format parsers, math, road graph, vehicle/scenery data models | `opts-logging` *(optional)* | `opts-sim`, `opts-bevy`, `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-sim`** | L2 | Deterministic vehicle dynamics, kinematics, drivetrain, script VM | `opts-core`, `opts-logging` | `opts-bevy`, `opts-game` | Pure Rust |
-| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme token hierarchy | `opts-core` *(optional)*, `opts-logging` | `opts-game` | Bevy UI |
-| **`opts-bevy`** | L2 | Bevy 3D asset loaders, materials, coordinates, ECS vehicle bridge | `opts-core`, `opts-sim`, `opts-logging` | `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Primary interactive simulator application and state machine root | `opts-core`, `opts-sim`, `opts-bevy`, `opts-gui`, `opts-logging` | *None (executable root)* | Bevy Engine |
-| **`opts-tools`** | L3 | Unified CLI toolsuite (`opts`) for inspection and asset conversion | `opts-core`, `opts-logging` | *None (executable root)* | CLI Tooling |
+| **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None* | `opts`, `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts`, `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-core`** | L1 | OMSI format parsers and data models | *None* | `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-game`, `opts-tools` | Pure Rust |
+| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-traffic`** | L2 | AI road traffic: lane graph, car following, conflict zones, right of way | `opts-core` | `opts-game` | Pure Rust |
+| **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-game` | Pure Rust |
+| **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-core` | `opts-bevy`, `opts-game` | Bevy UI |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-core`, `opts-sim`, `opts-gui`, `opts-cli`, `opts-logging` | `opts-game` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-cli`, `opts-logging` | `opts` | Bevy Engine |
+| **`opts`** | L3 | Workspace root binary | `opts-game`, `opts-cli`, `opts-logging` | *None (executable root)* | — |
+| **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core` | *None (executable root)* | CLI Tooling |
 
+*Table regenerated from `cargo metadata` (normal dependencies) on 2026-10-11 by the [critical review](../meta/critical-review-2026-10-11.md) (F-011). Two edges break the intended layering: `opts-bevy` → `opts-gui` (reporting modal) and `opts-bevy` → `opts-cli` (audit 5037f89a A-F-015, M-0046). The Mermaid diagram above has not been updated yet (M-0041).*
 ---
 
 ## 🔒 Invariant Boundary Rules
