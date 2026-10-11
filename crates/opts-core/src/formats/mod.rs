@@ -1,6 +1,7 @@
 //! Format parser implementations for OMSI file formats.
 
 pub mod constfile;
+pub mod cti;
 pub mod envir;
 pub mod humans;
 pub mod map;

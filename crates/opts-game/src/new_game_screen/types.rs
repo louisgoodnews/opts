@@ -119,6 +119,9 @@ pub struct VehicleItem {
     pub model: String,
     pub full_name: String,
     pub default_livery: String,
+    /// `.bus` path relative to the OMSI root (empty when unknown).
+    #[serde(default)]
+    pub bus_file: String,
     pub description: String,
     pub engine_power: String,
     pub transmission: String,
@@ -169,7 +172,7 @@ impl Default for NewGameSetup {
             selected_map: "Berlin-Spandau".to_string(),
             selected_entry_point: "Spandau Westerwaldstr./Siegener Str.".to_string(),
             selected_vehicle: "MAN SD200 - SD77".to_string(),
-            selected_livery: "BVG Sandgelb Traditional".to_string(),
+            selected_livery: String::new(),
             weather_preset: "Clear Summer Day".to_string(),
             year: 1989,
             month: 10,

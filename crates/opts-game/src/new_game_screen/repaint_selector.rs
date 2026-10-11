@@ -1,7 +1,5 @@
 //! Scrollable livery/repaint selection widget and setvars configuration trigger for vehicles.
 
-use std::fs;
-
 use bevy::prelude::*;
 use opts_gui::prelude::*;
 
@@ -12,91 +10,11 @@ use crate::new_game_screen::types::{
     ScrollableContainer, SelectLiveryBtn, VehicleItem,
 };
 
-/// Discovers all available repaints for a vehicle by scanning .cti files and known liveries.
+/// Repaints offered for a vehicle: its `.bus` default first, then the `.cti` items of its
+/// `Colorscheme` folder (see [`crate::new_game_screen::repaints`]).
+#[must_use]
 pub fn get_vehicle_repaints(vehicle: &VehicleItem) -> Vec<String> {
-    let mut repaints = std::collections::BTreeSet::new();
-
-    // Always include the vehicle's declared default livery
-    if !vehicle.default_livery.is_empty() {
-        repaints.insert(vehicle.default_livery.clone());
-    }
-
-    // Scan external OMSI 2 installation for actual .cti files
-    for base_path in crate::omsi_root::known_omsi_root()
-        .map(|r| r.join("Vehicles"))
-        .iter()
-        .map(std::path::PathBuf::as_path)
-    {
-        if !base_path.is_dir() {
-            continue;
-        }
-
-        let rel_folder = if vehicle.id.contains("EN92")
-            || vehicle.id.contains("GN92")
-            || vehicle.model.contains("NL202")
-            || vehicle.model.contains("NG272")
-        {
-            Some("MAN_NL_NG")
-        } else if vehicle.id.contains("SD") || vehicle.model.contains("SD200") {
-            Some("MAN_SD200")
-        } else if vehicle.model.contains("SD202")
-            || vehicle.id.contains("D8")
-            || vehicle.id.contains("D9")
-        {
-            Some("MAN_SD202")
-        } else {
-            None
-        };
-
-        if let Some(folder) = rel_folder {
-            let tex_dir = base_path.join(folder).join("Texture");
-            if let Ok(entries) = fs::read_dir(&tex_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        if let Ok(cti_files) = fs::read_dir(&path) {
-                            for cti in cti_files.flatten() {
-                                if cti.path().extension().and_then(|e| e.to_str()) == Some("cti") {
-                                    if let Ok(content) = fs::read_to_string(cti.path()) {
-                                        let lines: Vec<&str> =
-                                            content.lines().map(|l| l.trim()).collect();
-                                        for i in 0..lines.len() {
-                                            if lines[i] == "[item]" && i + 1 < lines.len() {
-                                                let repaint_name = lines[i + 1].trim();
-                                                if !repaint_name.is_empty()
-                                                    && !repaint_name.starts_with('[')
-                                                {
-                                                    repaints.insert(repaint_name.to_string());
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Fallback standard liveries if few were discovered
-    if repaints.len() <= 1 {
-        for l in [
-            "BVG Sandgelb Traditional",
-            "BVG Sonnengelb Modern",
-            "BVG Corporate Standard (White)",
-            "HVL Havelland Verkehrsbetriebe",
-            "Bogestra Bochum-Gelsenkirchen",
-            "Vestische Strassenbahnen GmbH",
-            "Wiener Linien (rot-weiß)",
-            "Neutral Pure White",
-        ] {
-            repaints.insert(l.to_string());
-        }
-    }
-
-    repaints.into_iter().collect()
+    crate::new_game_screen::repaints::vehicle_repaints(vehicle).names
 }
 
 /// Spawns the scrollable repaint selection container for the vehicle detail panel.

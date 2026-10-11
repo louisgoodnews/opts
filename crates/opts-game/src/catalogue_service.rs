@@ -121,6 +121,7 @@ pub fn load_menu_lists(cat: &Catalogue) -> GameCatalogue {
             manufacturer: v.manufacturer,
             model: v.model,
             default_livery: v.livery,
+            bus_file: v.marker_file,
             description: v.description,
             engine_power: na(),
             transmission: na(),
@@ -254,6 +255,18 @@ pub fn reconcile_selection(lists: &GameCatalogue, setup: &mut NewGameSetup) {
             .or_else(|| lists.vehicles.first())
         {
             setup.selected_vehicle.clone_from(&v.full_name);
+        }
+    }
+    if let Some(v) = lists
+        .vehicles
+        .iter()
+        .find(|v| v.full_name == setup.selected_vehicle)
+    {
+        if !crate::new_game_screen::repaints::vehicle_repaints(v)
+            .names
+            .contains(&setup.selected_livery)
+        {
+            setup.selected_livery.clone_from(&v.default_livery);
         }
     }
     if !lists

@@ -16,6 +16,7 @@ pub mod live_weather;
 pub mod map_panel;
 pub mod picker_systems;
 pub mod repaint_selector;
+pub mod repaints;
 pub mod scroll_bar;
 pub mod scroll_systems;
 pub mod search_bar;

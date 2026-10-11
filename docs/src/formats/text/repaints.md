@@ -109,3 +109,7 @@ A preset with equipment options (descriptive): `[item] HVL / farbschema_tex1 / E
 ## 🔗 Related Documents
 
 - [misc types (`.cti`)](misc-types.md#cti), [`model.cfg`](vehicles/model_cfg.md), [`.sco`](sco.md), [lists (ailists)](../map/lists.md), [predefined variables](vehicles/predefined-variables.md), [`.off`](../off.md)
+
+## Vehicle-selection implementation (2026-10-11)
+
+The selection tab lists, for the selected vehicle: (1) the **default repaint** — the third `[friendlyname]` line of its `.bus` ("name of the standard paint, shown while the texture change is not active"), then (2) every `[item]` name found in the `*.cti` files (not recursive) of the folder named by each `[CTC]` whose name is `Colorscheme` in the vehicle's `model.cfg`, names trimmed, merged alphabetically, duplicates removed. The folder is tried relative to the vehicle folder, its parent, its grandparent and the installation root. Example `MAN_GN92_main.bus`: default `Beige`; `[CTC] Colorscheme → Texture\Werbung_GN92` holds 30 `.cti`-bearing entries (`Bogestra.cti`, `EUROBUS.cti`, …). `[setvar]` lines are attributed to the repaint of the preceding `[item]` and feed the "Configure…" dialog. Choosing a vehicle resets the repaint to its `.bus` default. Not yet implemented: applying the chosen repaint to the in-game vehicle (the `[CTCTexture]` slot replacement) and the advertising/other `[CTC]` categories.

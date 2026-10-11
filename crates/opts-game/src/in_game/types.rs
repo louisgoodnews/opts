@@ -49,6 +49,9 @@ pub struct SimulationLoadState {
     pub world_spawned: bool,
     pub atmosphere_spawned: bool,
     pub vehicle_spawned: bool,
+    /// Scrambled vehicle meshes queued for background decoding; the vehicle waits for them.
+    pub vehicle_prewarmed: bool,
+    pub vehicle_wait: Vec<opts_bevy::descramble_cache::Key>,
     pub camera_spawned: bool,
     pub hud_spawned: bool,
 }
@@ -65,6 +68,8 @@ impl Default for SimulationLoadState {
             world_spawned: false,
             atmosphere_spawned: false,
             vehicle_spawned: false,
+            vehicle_prewarmed: false,
+            vehicle_wait: Vec::new(),
             camera_spawned: false,
             hud_spawned: false,
         }

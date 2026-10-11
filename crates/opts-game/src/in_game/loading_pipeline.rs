@@ -8,8 +8,9 @@ use crate::app_state::AppState;
 use crate::catalogue_service::CatalogueService;
 use crate::in_game::hud::spawn_in_game_hud;
 use crate::in_game::omsi_world::{
-    begin_world_load, load_next_tile, load_player_vehicle, resolve_session_config,
-    spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
+    begin_world_load, decodes_pending, load_next_tile, load_player_vehicle, prewarm_vehicle_meshes,
+    resolve_session_config, spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob,
+    WorldStats,
 };
 use crate::in_game::types::{
     CancelLoadingBtn, InGameSessionInfo, LoadStage, LoadingScreenRoot, ProgressBarFill,
@@ -171,6 +172,24 @@ pub fn update_loading_progress(
         LoadStage::SpawnVehicle => {
             if !state.vehicle_spawned {
                 if let Some(mut job) = job {
+                    // Scrambled vehicle meshes decode on background threads; the vehicle is
+                    // built only once they are all done.
+                    if !state.vehicle_prewarmed {
+                        state.vehicle_wait = prewarm_vehicle_meshes(
+                            &mut job,
+                            &mut commands,
+                            &mut assets.meshes,
+                            &mut assets.materials,
+                            &mut assets.images,
+                        );
+                        state.vehicle_prewarmed = true;
+                    }
+                    let pending = decodes_pending(&job, &state.vehicle_wait);
+                    if pending > 0 {
+                        state.status_message =
+                            format!("Decoding protected vehicle meshes ({pending} left)...");
+                        return;
+                    }
                     if let Err(e) = load_player_vehicle(
                         &mut job,
                         &mut stats,

@@ -40,6 +40,13 @@ const ANNEAL_ROUNDS: usize = 100;
 pub const CONFIDENT_MAX_VERTICES: usize = 40_000;
 /// Minimum share of vertices on which two independent runs must agree.
 pub const CONFIDENT_MIN_AGREEMENT: f32 = 0.98;
+/// Minimum share of coherent triangles for [`decode_confident`]. Off by default: on plain/keyed
+/// twins the exact share stays at 85–86 % for every gate between 0.9 and 0.3 (coverage 68 % →
+/// 92 %), i.e. the measure does not predict correctness.
+pub const CONFIDENT_MIN_COHERENCE: f32 = 0.0;
+/// Weight of the fold penalty (adjacent consistently wound triangles must not bend past 90°);
+/// on twins 12 raises the share of exact decodes from 85.0 % to 86.3 %.
+const FOLD_WEIGHT: f32 = 12.0;
 /// Independent runs tried before giving up.
 pub const CONFIDENT_MAX_RUNS: u32 = 6;
 const BP_ITERS: usize = 25;
@@ -63,6 +70,8 @@ pub struct DecodeParams {
     pub restarts: u32,
     /// Share of vertices two runs must agree on ([`decode_confident`]).
     pub min_agreement: f32,
+    /// Weight of the fold penalty (adjacent consistently wound triangles bending past 90°).
+    pub w_fold: f32,
     /// Share of triangles whose normal must fit the stored vertex normals ([`decode_confident`]).
     pub min_coherence: f32,
 }
@@ -77,7 +86,8 @@ impl Default for DecodeParams {
             anneal_rounds: ANNEAL_ROUNDS,
             restarts: 1,
             min_agreement: CONFIDENT_MIN_AGREEMENT,
-            min_coherence: GATE_MIN_COHERENCE,
+            min_coherence: CONFIDENT_MIN_COHERENCE,
+            w_fold: FOLD_WEIGHT,
         }
     }
 }
@@ -110,6 +120,9 @@ impl DecodeParams {
         if let Some(v) = f("OPTS_CONF_AGREE") {
             self.min_agreement = v;
         }
+        if let Some(v) = f("W_FOLD") {
+            self.w_fold = v;
+        }
         if let Some(v) = f("OPTS_CONF_COH") {
             self.min_coherence = v;
         }
@@ -130,6 +143,7 @@ impl DecodeParams {
             self.restarts,
             self.min_agreement.to_bits(),
             self.min_coherence.to_bits(),
+            self.w_fold.to_bits(),
         ] {
             for b in v.to_le_bytes() {
                 h = (h ^ u32::from(b)).wrapping_mul(0x0100_0193);
@@ -356,6 +370,193 @@ pub fn labels_score(o: &O3d, labels: &[u8]) -> f32 {
     .1
 }
 
+/// Neighbourhood data and scoring of one vertex label under the solver's objective.
+struct Scorer<'a> {
+    o: &'a O3d,
+    w_fold: f32,
+    /// Faces sharing each undirected edge with the opposite direction (consistent winding).
+    mates: HashMap<(u32, u32), Vec<(u32, bool)>>,
+    stored: Vec<Vec3>,
+    normal_key: Vec<[f32; 3]>,
+    adj: Vec<Vec<u32>>,
+    vfaces: Vec<Vec<u32>>,
+    diag2: f32,
+}
+
+impl<'a> Scorer<'a> {
+    fn new(o: &'a O3d, w_fold: f32) -> Self {
+        let n = o.vertices.len();
+        let mut mates: HashMap<(u32, u32), Vec<(u32, bool)>> = HashMap::new();
+        for (fi, f) in o.indices.iter().enumerate() {
+            for k in 0..3 {
+                let (a, b) = (f[k], f[(k + 1) % 3]);
+                if a != b {
+                    mates
+                        .entry((a.min(b), a.max(b)))
+                        .or_default()
+                        .push((fi as u32, a < b));
+                }
+            }
+        }
+        let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
+        let normal_key: Vec<[f32; 3]> = o.vertices.iter().map(|v| sorted_abs(v.normal)).collect();
+        let mut adj: Vec<Vec<u32>> = vec![Vec::new(); n];
+        let mut vfaces: Vec<Vec<u32>> = vec![Vec::new(); n];
+        for (fi, f) in o.indices.iter().enumerate() {
+            for k in 0..3 {
+                let (a, b) = (f[k] as usize, f[(k + 1) % 3] as usize);
+                if a < n && b < n {
+                    adj[a].push(b as u32);
+                    adj[b].push(a as u32);
+                }
+                if a < n {
+                    vfaces[a].push(fi as u32);
+                }
+            }
+        }
+        let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+        for p in &stored {
+            lo = lo.min(*p);
+            hi = hi.max(*p);
+        }
+        let diag2 = (hi - lo).length_squared().max(1e-6);
+        Self {
+            o,
+            w_fold,
+            mates,
+            stored,
+            normal_key,
+            adj,
+            vfaces,
+            diag2,
+        }
+    }
+
+    fn pos(&self, lab: &[u8], i: usize) -> Vec3 {
+        permuted(lab[i] as usize, self.stored[i])
+    }
+
+    /// Score of giving vertex `i` label `p` while the others keep `lab`; `pool` must not contain `i`.
+    fn score(&self, pool: &Pool, lab: &[u8], i: usize, p: usize) -> f32 {
+        let cand = permuted(p, self.stored[i]);
+        let mut score = pool.gain(cand) + PRIOR[p];
+        if !self.adj[i].is_empty() {
+            let adjc: f32 = self.adj[i]
+                .iter()
+                .map(|&j| (cand - self.pos(lab, j as usize)).length_squared())
+                .sum::<f32>()
+                / self.adj[i].len() as f32;
+            score -= W_ADJ * adjc / self.diag2;
+        }
+        if !self.vfaces[i].is_empty() {
+            let mut c = 0.0;
+            for &fi in &self.vfaces[i] {
+                let f = self.o.indices[fi as usize];
+                let ps: Vec<Vec3> = f
+                    .iter()
+                    .map(|&v| {
+                        if v as usize == i {
+                            cand
+                        } else {
+                            self.pos(lab, v as usize)
+                        }
+                    })
+                    .collect();
+                let nrm = (ps[1] - ps[0]).cross(ps[2] - ps[0]);
+                if nrm.length_squared() < 1e-12 {
+                    continue;
+                }
+                let sf = sorted_abs(nrm.normalize());
+                for &v in &f {
+                    if let Some(sn) = self.normal_key.get(v as usize) {
+                        c += (0..3).map(|k| (sf[k] - sn[k]).powi(2)).sum::<f32>();
+                    }
+                }
+            }
+            score -= W_NORMAL * c / self.vfaces[i].len() as f32;
+        }
+        if self.w_fold > 0.0 {
+            score -= self.w_fold * self.fold_penalty(lab, i, cand);
+        }
+        score
+    }
+
+    /// Mean over the faces at `i` of how far their folds against winding-consistent neighbours
+    /// exceed 90° (flat or convex-ish surfaces keep the dot product of adjacent normals >= 0).
+    fn fold_penalty(&self, lab: &[u8], i: usize, cand: Vec3) -> f32 {
+        let at = |v: u32| {
+            if v as usize == i {
+                cand
+            } else {
+                self.pos(lab, v as usize)
+            }
+        };
+        let normal = |fi: u32| {
+            let f = self.o.indices[fi as usize];
+            let (p0, p1, p2) = (at(f[0]), at(f[1]), at(f[2]));
+            (p1 - p0).cross(p2 - p0).normalize_or_zero()
+        };
+        let (mut sum, mut cnt) = (0.0f32, 0u32);
+        for &fi in &self.vfaces[i] {
+            let f = self.o.indices[fi as usize];
+            let n1 = normal(fi);
+            if n1 == Vec3::ZERO {
+                continue;
+            }
+            for k in 0..3 {
+                let (a, b) = (f[k], f[(k + 1) % 3]);
+                if a as usize != i && b as usize != i {
+                    continue;
+                }
+                let Some(list) = self.mates.get(&(a.min(b), a.max(b))) else {
+                    continue;
+                };
+                let forward = a < b;
+                for &(gi, gfwd) in list {
+                    if gi == fi || gfwd == forward {
+                        continue; // same face, or winding not consistent across this edge
+                    }
+                    let n2 = normal(gi);
+                    if n2 == Vec3::ZERO {
+                        continue;
+                    }
+                    sum += (-n1.dot(n2)).max(0.0);
+                    cnt += 1;
+                }
+            }
+        }
+        if cnt == 0 {
+            0.0
+        } else {
+            sum / cnt as f32
+        }
+    }
+}
+
+/// Per-vertex margin of the labelling `labels`: the objective's score for the chosen label minus
+/// the best alternative (negative: another label would fit better). Small margins mark vertices
+/// the data does not pin down.
+#[must_use]
+pub fn label_margins(o: &O3d, labels: &[u8]) -> Vec<f32> {
+    let sc = Scorer::new(o, DecodeParams::default().w_fold);
+    let mut pool = Pool::new();
+    for (i, p) in sc.stored.iter().enumerate() {
+        pool.add(permuted(labels[i] as usize, *p), 1);
+    }
+    (0..o.vertices.len())
+        .map(|i| {
+            pool.add(sc.pos(labels, i), -1);
+            let own = sc.score(&pool, labels, i, labels[i] as usize);
+            let alt = (0..4)
+                .filter(|&p| p != labels[i] as usize)
+                .map(|p| sc.score(&pool, labels, i, p))
+                .fold(f32::MIN, f32::max);
+            pool.add(sc.pos(labels, i), 1);
+            own - alt
+        })
+        .collect()
+}
+
 fn run_local_search(
     o: &O3d,
     seed: u32,
@@ -365,28 +566,8 @@ fn run_local_search(
     params: &DecodeParams,
 ) -> (Vec<u8>, f32) {
     let n = o.vertices.len();
-    let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
-    let normal_key: Vec<[f32; 3]> = o.vertices.iter().map(|v| sorted_abs(v.normal)).collect();
-    let mut adj: Vec<Vec<u32>> = vec![Vec::new(); n];
-    let mut vfaces: Vec<Vec<u32>> = vec![Vec::new(); n];
-    for (fi, f) in o.indices.iter().enumerate() {
-        for k in 0..3 {
-            let (a, b) = (f[k] as usize, f[(k + 1) % 3] as usize);
-            if a < n && b < n {
-                adj[a].push(b as u32);
-                adj[b].push(a as u32);
-            }
-            if a < n {
-                vfaces[a].push(fi as u32);
-            }
-        }
-    }
-    let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-    for p in &stored {
-        lo = lo.min(*p);
-        hi = hi.max(*p);
-    }
-    let diag2 = (hi - lo).length_squared().max(1e-6);
+    let sc = Scorer::new(o, params.w_fold);
+    let stored = &sc.stored;
 
     let mut lab = init.unwrap_or_else(|| vec![0u8; n]);
     if random_init {
@@ -402,7 +583,7 @@ fn run_local_search(
     for (i, p) in stored.iter().enumerate() {
         pool.add(permuted(lab[i] as usize, *p), 1);
     }
-    let pos = |lab: &[u8], i: usize| permuted(lab[i] as usize, stored[i]);
+    let pos = |lab: &[u8], i: usize| sc.pos(lab, i);
     let mut order: Vec<u32> = (0..n as u32).collect();
     let mut rng = seed;
     let mut total = 0.0f32;
@@ -435,43 +616,7 @@ fn run_local_search(
                 if eval_only && p != lab[i] as usize {
                     continue;
                 }
-                let cand = permuted(p, stored[i]);
-                let mut score = pool.gain(cand) + PRIOR[p];
-                if !adj[i].is_empty() {
-                    let adjc: f32 = adj[i]
-                        .iter()
-                        .map(|&j| (cand - pos(&lab, j as usize)).length_squared())
-                        .sum::<f32>()
-                        / adj[i].len() as f32;
-                    score -= W_ADJ * adjc / diag2;
-                }
-                if !vfaces[i].is_empty() {
-                    let mut c = 0.0;
-                    for &fi in &vfaces[i] {
-                        let f = o.indices[fi as usize];
-                        let ps: Vec<Vec3> = f
-                            .iter()
-                            .map(|&v| {
-                                if v as usize == i {
-                                    cand
-                                } else {
-                                    pos(&lab, v as usize)
-                                }
-                            })
-                            .collect();
-                        let nrm = (ps[1] - ps[0]).cross(ps[2] - ps[0]);
-                        if nrm.length_squared() < 1e-12 {
-                            continue;
-                        }
-                        let sf = sorted_abs(nrm.normalize());
-                        for &v in &f {
-                            if let Some(sn) = normal_key.get(v as usize) {
-                                c += (0..3).map(|k| (sf[k] - sn[k]).powi(2)).sum::<f32>();
-                            }
-                        }
-                    }
-                    score -= W_NORMAL * c / vfaces[i].len() as f32;
-                }
+                let score = sc.score(&pool, &lab, i, p);
                 scores[p] = score;
                 if score > best.0 + 1e-6 {
                     best = (score, p as u8);
@@ -694,9 +839,8 @@ pub struct ConfidentReport {
 ///
 /// Two independent annealing runs (one seeded by belief propagation, one from random labels) must
 /// agree on [`CONFIDENT_MIN_AGREEMENT`] of the vertices (on plain/keyed twins, runs that agree
-/// to 98 % are exact to 98 % in 92 % of the cases) and the decoded triangles must be coherent.
-/// Accepted meshes lose their remaining incoherent triangles and get their texture jitter
-/// removed where a planar UV model proves it ([`super::uvfix::unjitter_uv`]).
+/// to 98 % are exact to 98 % in 86 % of the cases). Accepted meshes keep all triangles and get
+/// their texture jitter removed where a planar UV model proves it ([`super::uvfix::unjitter_uv`]).
 pub fn decode_confident(o: &mut O3d) -> ConfidentReport {
     decode_confident_with(o, &DecodeParams::default())
 }
@@ -760,22 +904,10 @@ pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentRep
     if coherence < params.min_coherence {
         return rejected(agree, coherence);
     }
-    let total = trial.indices.len();
-    let (mut idx, mut mats) = (Vec::new(), Vec::new());
-    for ((f, m), ok) in trial
-        .indices
-        .iter()
-        .zip(&trial.face_materials)
-        .zip(&verdicts)
-    {
-        if *ok {
-            idx.push(*f);
-            mats.push(*m);
-        }
-    }
-    let dropped = total - idx.len();
-    trial.indices = idx;
-    trial.face_materials = mats;
+    // Long-edge faces are kept: on plain/keyed twins 91 % of the faces such a filter drops are
+    // correct (big flat panels), so it punched holes into bodies to remove a few spikes.
+    let _ = verdicts;
+    let dropped = 0;
     let uv = super::uvfix::unjitter_uv(&mut trial);
     trial.descrambled = true;
     *o = trial;
@@ -835,6 +967,14 @@ mod params_tests {
             },
             DecodeParams {
                 min_agreement: 0.9,
+                ..base.clone()
+            },
+            DecodeParams {
+                min_coherence: 0.5,
+                ..base.clone()
+            },
+            DecodeParams {
+                w_fold: 1.0,
                 ..base.clone()
             },
         ];

@@ -207,6 +207,66 @@ pub(super) fn spawn_trailer_chain(
     cams
 }
 
+/// Queues the background decoding of the vehicle's scrambled meshes and returns their keys.
+///
+/// The vehicle must not be built before they are done (it would come up without a body), so the
+/// loading stage waits until none of the returned keys is pending, then calls
+/// [`load_player_vehicle`]. The scratch meshes built here are dropped.
+pub fn prewarm_vehicle_meshes(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+) -> Vec<opts_bevy::descramble_cache::Key> {
+    let Some(bus_path) = job
+        .config
+        .vehicle_path
+        .clone()
+        .or_else(|| first_ai_list_vehicle(job))
+    else {
+        return Vec::new();
+    };
+    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig)> {
+        let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
+        let bus_dir = bus_path.parent()?.to_path_buf();
+        let cfg = job
+            .install
+            .find_in(&bus_dir, manifest.model_cfg.as_deref()?)?;
+        let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).ok()?).ok()?;
+        Some((bus_dir, cfg, model))
+    })();
+    let Some((bus_dir, cfg, model)) = loaded else {
+        return Vec::new();
+    };
+    let Some(lod0) = model.lods.first() else {
+        return Vec::new();
+    };
+    let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
+    let tex_dirs = vec![
+        job.install
+            .find_in(&bus_dir, "texture")
+            .unwrap_or_else(|| bus_dir.join("texture")),
+        model_dir.join("texture"),
+    ];
+    job.cache.take_deferred();
+    let scratch = commands.spawn_empty().id();
+    load_segment_meshes(
+        job, commands, meshes, materials, images, scratch, lod0, &model_dir, &tex_dirs,
+    );
+    commands.entity(scratch).despawn();
+    job.cache.take_deferred().into_iter().collect()
+}
+
+/// Number of the given decode keys still being worked on.
+#[must_use]
+pub fn decodes_pending(job: &WorldLoadJob, keys: &[opts_bevy::descramble_cache::Key]) -> usize {
+    job.cache
+        .decode_pool
+        .as_ref()
+        .map_or(0, |p| keys.iter().filter(|k| p.is_pending(**k)).count())
+}
+
 /// Loads the player's vehicle from its `.bus` file and spawns it at the map's start point.
 pub fn load_player_vehicle(
     job: &mut WorldLoadJob,

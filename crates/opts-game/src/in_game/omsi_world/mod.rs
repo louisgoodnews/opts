@@ -30,7 +30,7 @@ pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{spawn_debug_overlay, update_debug_overlay, DebugOverlayText};
 pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
-pub use vehicle::load_player_vehicle;
+pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 #[derive(bevy::ecs::system::SystemParam)]
