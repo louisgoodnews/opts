@@ -91,7 +91,10 @@ pub fn load_next_tile(
                 continue;
             };
             if !profile.only_editor
-                && profile.paths.iter().any(|p| p.path_type == 0 || p.path_type == 2)
+                && profile
+                    .paths
+                    .iter()
+                    .any(|p| p.path_type == 0 || p.path_type == 2)
                 && !profile.graphical_profiles.is_empty()
             {
                 roads.push((inst.clone(), (*profile).clone()));
