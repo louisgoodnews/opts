@@ -500,7 +500,10 @@ pub fn stream_world_tiles(
 
 impl WorldLoadJob {
     /// Re-queues tiles whose background mesh decoding finished and refreshes the counters.
-    fn rebuild_decoded_tiles(&mut self, commands: &mut Commands, stats: &mut WorldStats) {
+    ///
+    /// [`stream_world_tiles`] calls it every frame; a host that drives [`load_next_tile`] itself
+    /// (the scenery benchmark, M-0054) calls it to learn when decoded meshes are ready.
+    pub fn rebuild_decoded_tiles(&mut self, commands: &mut Commands, stats: &mut WorldStats) {
         let Some(pool) = self.cache.decode_pool.clone() else {
             return;
         };

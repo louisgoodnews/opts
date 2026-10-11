@@ -38,6 +38,7 @@ pub mod scenery;
 pub mod terrain;
 pub mod text_texture;
 pub mod texture;
+pub mod texture_sentinel;
 pub mod vehicle;
 pub mod vehicle_anim;
 pub mod vehicle_lights;

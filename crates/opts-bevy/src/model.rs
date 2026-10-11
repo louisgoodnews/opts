@@ -182,29 +182,9 @@ impl ContentLoader<'_> {
         out
     }
 
-    /// Finds a verified plain twin of a scrambled mesh: same file name, same vertex and face
-    /// counts and the same multiset of (axis-order independent) position triples.
+    /// Finds a verified plain twin of a scrambled mesh (see [`find_plain_twin`]).
     fn plain_twin(&self, path: &Path, scrambled: &[O3d]) -> Option<(Vec<O3d>, PathBuf)> {
-        let [target] = scrambled else { return None };
-        let name = path.file_name()?.to_string_lossy().into_owned();
-        let want = position_signature(target);
-        for cand in self.install.files_named(&name) {
-            if cand == path {
-                continue;
-            }
-            let Ok(bytes) = std::fs::read(&cand) else {
-                continue;
-            };
-            let Ok(o) = o3d::parse(&bytes) else { continue };
-            if o.encryption_key.is_none()
-                && o.vertices.len() == target.vertices.len()
-                && o.indices.len() == target.indices.len()
-                && position_signature(&o) == want
-            {
-                return Some((vec![o], cand));
-            }
-        }
-        None
+        find_plain_twin(self.install, path, scrambled)
     }
 
     fn fail(&mut self, what: String) {
@@ -557,6 +537,7 @@ impl ContentLoader<'_> {
                 if over.is_some_and(|o| o.hidden_by_variable) {
                     continue;
                 }
+                let failures_before = self.cache.stats.failures.len();
                 let tex_name = over
                     .map(|o| o.texture.clone())
                     .or_else(|| base.primary_texture().map(str::to_owned));
@@ -579,6 +560,10 @@ impl ContentLoader<'_> {
                         }
                     }),
                 };
+                // Benchmark sentinel (M-0054): the diffuse texture or the material slot is missing.
+                let sentinel = crate::texture_sentinel::missing_texture_sentinel()
+                    && (self.cache.stats.failures.len() > failures_before
+                        || model.materials.get(slot).is_none());
                 let mut blended_by_map = false;
                 if let (Some(base_h), Some(tm)) =
                     (tex.clone(), over.and_then(|o| o.trans_map.clone()))
@@ -632,6 +617,9 @@ impl ContentLoader<'_> {
                         light_variable = Some(lm.variable.trim().to_owned());
                     }
                 }
+                if sentinel {
+                    material = crate::texture_sentinel::sentinel_material();
+                }
                 tracing::debug!(path = %o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?tex_name, "model part");
                 parts.push(ModelPart {
                     mesh: self.meshes.add(mesh),
@@ -644,6 +632,38 @@ impl ContentLoader<'_> {
         self.cache.parts.insert(key, parts.clone());
         parts
     }
+}
+
+/// Finds a verified plain twin of a scrambled mesh: same file name, same vertex and face
+/// counts and the same multiset of (axis-order independent) position triples.
+///
+/// Public so the scenery benchmark (M-0054) predicts the geometry the loader will draw.
+#[must_use]
+pub fn find_plain_twin(
+    install: &OmsiInstall,
+    path: &Path,
+    scrambled: &[O3d],
+) -> Option<(Vec<O3d>, PathBuf)> {
+    let [target] = scrambled else { return None };
+    let name = path.file_name()?.to_string_lossy().into_owned();
+    let want = position_signature(target);
+    for cand in install.files_named(&name) {
+        if cand == path {
+            continue;
+        }
+        let Ok(bytes) = std::fs::read(&cand) else {
+            continue;
+        };
+        let Ok(o) = o3d::parse(&bytes) else { continue };
+        if o.encryption_key.is_none()
+            && o.vertices.len() == target.vertices.len()
+            && o.indices.len() == target.indices.len()
+            && position_signature(&o) == want
+        {
+            return Some((vec![o], cand));
+        }
+    }
+    None
 }
 
 /// Sorted multiset of per-vertex sorted coordinate triples (2/10 mm quantised): equal for a
@@ -678,7 +698,7 @@ fn base_name(path: &str) -> String {
 /// alpha settings (measured on 275,721 entries: 65 % are consistent with this reading, 38 % with
 /// "`n` is the slot index"). When the named texture matches no native slot, the entry is a
 /// texture *replacement* and `n` is the slot index.
-fn find_override<'a>(
+pub fn find_override<'a>(
     materials: &[o3d::Material],
     slot: usize,
     overrides: &'a [TextureOverride],
