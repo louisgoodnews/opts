@@ -1,4 +1,5 @@
-//! Map scenario manifest (`global.cfg`), tile (`tile_*.map`), terrain, and water parsers.
+//! Map scenario manifest (`global.cfg`), tile (`tile_*.map`), terrain, and water parsers, plus
+//! writers for `global.cfg` and tile `[object]` records.
 
 pub mod error;
 pub mod global;
@@ -7,6 +8,7 @@ pub mod pitch;
 pub mod terrain;
 pub mod tile;
 pub mod water;
+pub mod write;
 
 pub use error::MapParseError;
 pub use global::{MapEntryPoint, MapGroundTex, MapManifest, MapSeason, MapTileEntry};
@@ -21,3 +23,4 @@ pub use tile::{
     RuleOwner,
 };
 pub use water::MapWater;
+pub use write::MapWriteError;
