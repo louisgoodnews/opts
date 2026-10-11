@@ -37,8 +37,10 @@ pub mod text_texture;
 pub mod texture;
 pub mod vehicle;
 pub mod vehicle_anim;
+pub mod vehicle_lights;
 pub mod vehicle_script;
 pub mod vehicle_sim;
+pub mod vehicle_triggers;
 
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
@@ -88,9 +90,17 @@ pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{
     animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation, VehicleAnimationPlugin,
 };
+pub use vehicle_lights::{
+    vehicle_light_map_system, vehicle_light_system, LightMapBinding, LightSwitch, ScriptLight,
+    VehicleLightPlugin,
+};
 pub use vehicle_script::{vehicle_script_system, VehicleScriptPlugin, VehicleScripts};
 pub use vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,
     vehicle_transform_sync_system, wheel_transform_sync_system, PlayerVehicle, VehicleCameraMode,
     VehicleCameraRig, VehicleController, VehicleInputConfig, WheelSide, WheelVisual,
+};
+pub use vehicle_triggers::{
+    dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, MouseTrigger,
+    ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
 };

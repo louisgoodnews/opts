@@ -5,7 +5,7 @@
 | **Format Family** | Text (keyword-based) |
 | **File Extensions / Names** | `Inputs/keyboard.cfg`, `Inputs/keyboard_reset.cfg`, `Inputs/gamectrler.cfg`, `Inputs/*.kyb`, `options.cfg`, `option_presets/*.oop` |
 | **Parser Crate** | `opts-core` (settings; low priority) |
-| **Parser Module** | `opts_core::formats::engine_config` |
+| **Parser Module** | `opts_core::formats::engine_config` (`KeyboardConfig`; `gamectrler.cfg` and `options.cfg` not yet parsed) |
 | **Encoding** | UTF-8 / ASCII (`keyboard.cfg`, `gamectrler.cfg`, `options.cfg`), CP1252/UTF-8 (`.kyb`) |
 | **Status** | 🟡 Draft — structure verified; one field calibrated against the manual |
 | **Last Updated** | 2026-10-04 |
@@ -28,7 +28,7 @@ Keyword file, 656 lines. Two section markers, `[game]` and `[vehicles]`, followe
 | 2 | **key code** — an index into the key-name table in `ENG.kyb` / `DEU.kyb` | `25` = `P`, `44` = `Z`, `48` = `B`, `181` = `Num /` |
 | 3 | **modifier mask**: `0` none, `2` Shift, `4` Ctrl, `6` Ctrl+Shift (`1` = Alt ❓) | `4` with `20`(T) = change |
 
-**Calibration (📖 + [C]).** The key-code column matches the key-name tables line for line (`25 → P`, `44 → Z`, `48 → B`, `181 → Num /`; the table has 131 entries, indices up to 237), i.e. the codes are the **DirectInput keyboard scan codes** ❓ (identical numbering for the classic PC keyboard). The modifier values were tied down with the manual's shortcuts: `ticket_give` = T (modifier 0, "hand over a ticket"), `change_give` = T + modifier 4 (the manual: *Ctrl+T* hands over a ticket with change), `change_take` = T + modifier 2 (*Shift+T* collects the money), `IBIS_setmode_route` = Num / + modifier 4 (*Ctrl+Num /* = Line/Course). So **2 = Shift, 4 = Ctrl**, and 6 = both; the remaining bit (1) is presumably Alt ❓. Modifier values seen: 0 ×69, 4 ×28, 1 ×16, 6 ×8, 2 ×7, 3 ×1, 5 ×1.
+**Calibration (📖 + [C]).** The key-code column matches the key-name tables line for line (`25 → P`, `44 → Z`, `48 → B`, `181 → Num /`; the table has 131 entries, indices up to 237), i.e. the codes are the **DirectInput keyboard scan codes** ❓ (identical numbering for the classic PC keyboard). The modifier values were tied down with the manual's shortcuts: `ticket_give` = T (modifier 0, "hand over a ticket"), `change_give` = T + modifier 4 (the manual: *Ctrl+T* hands over a ticket with change), `change_take` = T + modifier 2 (*Shift+T* collects the money), `IBIS_setmode_route` = Num / + modifier 4 (*Ctrl+Num /* = Line/Course). So **2 = Shift, 4 = Ctrl**, and 6 = both. **Bit 1 marks a held key, not Alt** (M-0045, 2026-10-11): in the `[vehicles]` section it is set exactly on the continuous controls — `throttle` (Num 8), `brake` (Num 2), `clutch`, `steering_left/neutral/right` (Num 4/5/6), `horn` (H), `blinker_left_set`/`blinker_right_set`, `cp_microphone`, `bus_rollband_up/dn` — and clear on their one-shot twins (`bus_rollband_up_step`, `blinker_off`); an Alt chord on the numeric keypad for driving would make no sense. OPTS therefore raises `<action>_off` when a held binding's key is released ❓ (consistent with the `name`/`name_off` trigger pairs of the [community cross-check](../community-crosscheck.md)). Modifier values seen: 0 ×69, 4 ×28, 1 ×16, 6 ×8, 2 ×7, 3 ×1, 5 ×1.
 
 The **`[vehicles]` action names are script trigger names**: `bus_doorfront0`, `parking_brake_toggle`, `IBIS_setmode_route`, `kw_scheinwerfer_toggle` … occur as `{trigger:name}` in vehicle scripts ([script sets](vehicles/script-sets.md)). `[game]` actions (`view_set_*`, `sim_pause`, `screenshot`, `quicksave`, `debug_*`, `exit`) are engine commands. The manual confirms that any event reachable by mouse or shortcut can be bound 📖.
 
@@ -66,7 +66,7 @@ change_give          ← action (a script trigger name)
 
 | ID | Question | Priority |
 | :--- | :--- | :--- |
-| Q-EC01 | Confirm modifier bit 1 = Alt and the scan-code numbering (the table has gaps at keys without names). | 🟢 Low |
+| Q-EC01 | ~~Confirm modifier bit 1 = Alt~~ — bit 1 = held key (see above); the scan-code numbering is confirmed for the 92 `[vehicles]` entries of the installed `keyboard.cfg` (all map to a known DirectInput key). | ✅ |
 | Q-EC02 | Meaning of each pair in `gamectrler.cfg` `[axis]` (device axis, inversion, dead zone?). | 🟢 Low |
 | Q-EC03 | Do `[game]` entries also appear as `[vehicles]` triggers when a vehicle defines the same name? | 🟢 Low |
 

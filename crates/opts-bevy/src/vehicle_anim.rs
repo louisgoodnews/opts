@@ -14,7 +14,10 @@
 //!   right-handed rotation: with `Wheel_Rotation` increasing while driving forward the wheel top
 //!   must move forward. The sign for steering is unverified ❓;
 //! * several `[newanim]` blocks apply in declaration order, the first innermost (wheel: spin,
-//!   then suspension, then steering).
+//!   then suspension, then steering);
+//! * `maxspeed` limits how fast the animation follows its variable, in variable units per second
+//!   (the wiki: `maxspeed` = 1 ÷ duration in seconds); the first update snaps to the value.
+//!   `delay` (damping near the end) is not applied yet ❓.
 
 use bevy::math::{Mat4, Vec3};
 use bevy::prelude::*;
@@ -33,6 +36,8 @@ pub struct AnimStep {
     pub factor: f32,
     /// `true`: translate along the frame's X axis; `false`: rotate about it.
     pub translate: bool,
+    /// Largest change of the variable per second (`maxspeed`); `None` follows it at once.
+    pub maxspeed: Option<f32>,
 }
 
 /// Animation and visibility rules of one mesh, driven by the vehicle's script variables.
@@ -44,6 +49,8 @@ pub struct MeshAnimation {
     pub steps: Vec<AnimStep>,
     /// `[visible]` rules: the mesh shows only while every variable equals its value.
     pub visible: Vec<(String, f32)>,
+    /// Variable value each step currently shows (after `maxspeed`); empty before the first update.
+    pub shown: Vec<f32>,
 }
 
 fn frame_of(a: &ModelAnim) -> Mat4 {
@@ -61,6 +68,7 @@ fn steps_of(anim: &ModelAnim) -> Vec<AnimStep> {
         variable: a.variable.clone(),
         factor: a.factor,
         translate,
+        maxspeed: anim.maxspeed.filter(|v| *v > 0.0),
     };
     // Translation first would move the rotation axis; rotation is the inner step.
     anim.anim_rot
@@ -84,7 +92,26 @@ impl MeshAnimation {
             owner,
             steps,
             visible,
+            shown: Vec::new(),
         })
+    }
+
+    /// Moves the shown values towards `targets` (one per step) over `dt` seconds, limited by each
+    /// step's `maxspeed`; the first call adopts the targets.
+    pub fn follow(&mut self, targets: &[f32], dt: f32) {
+        if self.shown.len() != targets.len() {
+            self.shown = targets.to_vec();
+            return;
+        }
+        for ((shown, target), step) in self.shown.iter_mut().zip(targets).zip(&self.steps) {
+            *shown = match step.maxspeed {
+                Some(speed) => {
+                    let max = speed * dt;
+                    *shown + (target - *shown).clamp(-max, max)
+                }
+                None => *target,
+            };
+        }
     }
 }
 
@@ -102,9 +129,16 @@ fn omsi_to_bevy_basis() -> Mat4 {
 /// already converted to Bevy axes, so the OMSI-space motion is conjugated with the basis change).
 #[must_use]
 pub fn animation_matrix(steps: &[AnimStep], value: impl Fn(&str) -> f32) -> Mat4 {
+    let values: Vec<f32> = steps.iter().map(|s| value(&s.variable)).collect();
+    animation_matrix_from_values(steps, &values)
+}
+
+/// Like [`animation_matrix`] with the variable value of each step given directly.
+#[must_use]
+pub fn animation_matrix_from_values(steps: &[AnimStep], values: &[f32]) -> Mat4 {
     let mut m = Mat4::IDENTITY;
-    for s in steps {
-        let v = value(&s.variable) * s.factor;
+    for (s, value) in steps.iter().zip(values) {
+        let v = value * s.factor;
         let a = if s.translate {
             Mat4::from_translation(Vec3::X * v)
         } else {
@@ -118,10 +152,12 @@ pub fn animation_matrix(steps: &[AnimStep], value: impl Fn(&str) -> f32) -> Mat4
 
 /// Applies animation and visibility to every animated mesh.
 pub fn vehicle_animation_system(
-    mut meshes: Query<(&MeshAnimation, &mut Transform, &mut Visibility)>,
+    time: Res<Time>,
+    mut meshes: Query<(&mut MeshAnimation, &mut Transform, &mut Visibility)>,
     vehicles: Query<&VehicleScripts>,
 ) {
-    for (anim, mut transform, mut visibility) in &mut meshes {
+    let dt = time.delta_secs();
+    for (mut anim, mut transform, mut visibility) in &mut meshes {
         let Ok(scripts) = vehicles.get(anim.owner) else {
             continue;
         };
@@ -129,7 +165,9 @@ pub fn vehicle_animation_system(
             continue;
         };
         if !anim.steps.is_empty() {
-            let m = animation_matrix(&anim.steps, |name| engine.get(name));
+            let targets: Vec<f32> = anim.steps.iter().map(|s| engine.get(&s.variable)).collect();
+            anim.follow(&targets, dt);
+            let m = animation_matrix_from_values(&anim.steps, &anim.shown);
             *transform = Transform::from_matrix(m);
         }
         if !anim.visible.is_empty() {
@@ -172,6 +210,7 @@ mod tests {
             variable: var.into(),
             factor: 57.295_78,
             translate: false,
+            maxspeed: None,
         }
     }
 
@@ -200,6 +239,7 @@ mod tests {
             variable: "s".into(),
             factor: 1.0,
             translate: true,
+            maxspeed: None,
         };
         let m = animation_matrix(&[step], |_| 0.1);
         let p = m.transform_point3(Vec3::ZERO);
@@ -217,11 +257,36 @@ mod tests {
             variable: "s".into(),
             factor: 1.0,
             translate: true,
+            maxspeed: None,
         };
         let m = animation_matrix(&[spin("w"), raise], |_| 1.0);
         let hub = bevy(Vec3::new(1.2, 2.9, 0.5));
         let p = m.transform_point3(hub);
         assert!((p.y - (hub.y + 1.0)).abs() < 1e-4, "{p:?}");
+    }
+
+    #[test]
+    fn maxspeed_limits_how_fast_the_shown_value_follows() {
+        let mut step = spin("door");
+        step.maxspeed = Some(0.5);
+        let mut anim = MeshAnimation {
+            owner: Entity::PLACEHOLDER,
+            steps: vec![step, spin("other")],
+            visible: Vec::new(),
+            shown: Vec::new(),
+        };
+        anim.follow(&[0.0, 0.0], 0.1);
+        assert_eq!(anim.shown, [0.0, 0.0]);
+        // The door opens in two seconds; the unlimited step jumps.
+        anim.follow(&[1.0, 1.0], 1.0);
+        assert!((anim.shown[0] - 0.5).abs() < 1e-6 && anim.shown[1] == 1.0);
+        anim.follow(&[1.0, 1.0], 1.0);
+        anim.follow(&[1.0, 1.0], 1.0);
+        assert!(
+            (anim.shown[0] - 1.0).abs() < 1e-6,
+            "no overshoot: {:?}",
+            anim.shown
+        );
     }
 
     #[test]

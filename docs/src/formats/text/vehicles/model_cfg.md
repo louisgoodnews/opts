@@ -211,7 +211,18 @@ Evidence from the model authors' own comments in `model_SD77.cfg` (wheels) and t
 - Sign: a wheel's top must move forward while `Wheel_Rotation_*` grows, i.e. `anim_rot` turns by `-variable × factor` degrees in the right-handed sense about the frame's X axis; `origin_rot_*` are right-handed (suspension `-90`: X points up). Steering sign is unverified ❓.
 - Several `[newanim]` blocks: the first declared is innermost (wheel: spin, suspension, steering).
 
-Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspension and ordering cases.
+- `maxspeed` limits how fast the animation follows its variable, in variable units per second (📚 `maxspeed` = 1 ÷ duration in seconds). OPTS snaps to the value on the first frame; `delay` (damping) is not applied yet ❓.
+
+Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspension, ordering and `maxspeed` cases.
+
+### Runtime behaviour of lights and hot-spots (M-0045, 2026-10-11)
+
+- `[interiorlight]`: the variable is the brightness factor (clamped to `0..=3`, 📚 values above ~3 look the same); 0 hides the light.
+- `[matl_lightmap] <texture> <variable>`: the texture is emissive light scaled by the variable. A light map without a variable is left dark ❓ (it has no switch).
+- `[mouseevent] <name>`: the name is a script trigger (the SD77's 94 hot-spots use the same names as `keyboard.cfg`, e.g. `bus_doorfront0`, `horn`, `kw_fernlicht_toggle`). Click raises `<name>`, the first drag movement `<name>_drag`, release `<name>_off`.
+- `[matl_nightmap]` and `[light_enh_2]` light points are not rendered yet.
+
+Implementation: `opts_bevy::vehicle_lights`, `opts_bevy::vehicle_triggers`.
 
 > ⚠️ **Open Question:** When both `origin_trans` and `origin_from_mesh` are present, which takes precedence? Observation suggests `origin_from_mesh` overrides. **Needs verification.**
 
@@ -279,7 +290,7 @@ OMSI has **three** light systems, layered historically:
 
 ### `[spotlight]` — Legacy (12 params)
 
-Used for headlights. Only one `[spotlight]` is active at a time, selected by the `Spot_Select` variable.
+Used for headlights. Only one `[spotlight]` is active at a time, selected by the `Spot_Select` variable: its value is the 0-based index of the spotlight in declaration order and `-1` switches all off (M-0045: the SD200 declares high beam then dipped beam and its `lights.osc` writes `0`, `1` or `-1`). OPTS numbers unscoped spotlights first, then those inside `[mesh]` entries in mesh order ❓.
 
 | Lines | Field |
 | :--- | :--- |

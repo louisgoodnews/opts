@@ -20,6 +20,7 @@ use bevy::pbr::StandardMaterial;
 use bevy::prelude::AlphaMode;
 
 use opts_core::formats::o3d::{self, O3d};
+use opts_core::formats::vehicles::model::LightMap;
 
 use crate::install::OmsiInstall;
 use crate::material::o3d_material_to_standard_material;
@@ -48,6 +49,10 @@ pub struct TextureOverride {
     pub trans_map: Option<String>,
     /// Ready-made image (rendered text) used instead of loading `texture`.
     pub image: Option<Handle<Image>>,
+    /// `[matl_lightmap]` texture and the script variable that switches it. The texture becomes
+    /// the material's emissive texture with an emissive strength of 0; the variable is reported
+    /// in [`ModelPart::light_variable`] for the runtime to drive (`crate::vehicle_lights`).
+    pub light_map: Option<LightMap>,
 }
 
 /// One renderable submesh of a model: geometry bound to a single material.
@@ -59,6 +64,9 @@ pub struct ModelPart {
     pub material: Handle<StandardMaterial>,
     /// Number of vertices in the mesh.
     pub vertices: usize,
+    /// Script variable that scales the material's light map (`[matl_lightmap]`); `None` when the
+    /// material has no light map or the map names no variable.
+    pub light_variable: Option<String>,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.
@@ -532,10 +540,24 @@ impl ContentLoader<'_> {
                 // inside a building see out through the (culled) inner faces.
                 material.cull_mode = Some(bevy::render::render_resource::Face::Back);
                 material.double_sided = false;
+                // A light map is emissive light switched by a script variable; it starts dark.
+                // Maps without a variable have no switch and stay off ❓.
+                let mut light_variable = None;
+                if let Some(lm) = over
+                    .and_then(|o| o.light_map.as_ref())
+                    .filter(|lm| !lm.variable.trim().is_empty())
+                {
+                    if let Some(h) = self.texture(&lm.texture, tex_dirs) {
+                        material.emissive_texture = Some(h);
+                        material.emissive = bevy::color::LinearRgba::BLACK;
+                        light_variable = Some(lm.variable.trim().to_owned());
+                    }
+                }
                 parts.push(ModelPart {
                     mesh: self.meshes.add(mesh),
                     material: self.materials.add(material),
                     vertices,
+                    light_variable,
                 });
             }
         }

@@ -11,6 +11,7 @@ use opts_core::formats::vehicles::{
 };
 
 use crate::coords::{camera_preset_to_bevy_transform, omsi_to_bevy_pos, OmsiTransform};
+use crate::vehicle_lights::{LightSwitch, ScriptLight};
 
 /// Component attached to a spawned OMSI bus vehicle root entity.
 #[derive(Component, Debug, Clone)]
@@ -167,17 +168,15 @@ pub fn spawn_vehicle_model(
         }
     }
 
-    // 3. Spawn spotlights / headlights
-    for (i, spot) in model.spotlights.iter().enumerate() {
+    // 3. Spawn spotlights / headlights, numbered in declaration order for `Spot_Select`
+    // (unscoped ones first, then those of the meshes).
+    let mesh_spots = model
+        .lods
+        .first()
+        .into_iter()
+        .flat_map(|lod| lod.meshes.iter().flat_map(|m| m.spotlights.iter()));
+    for (i, spot) in model.spotlights.iter().chain(mesh_spots).enumerate() {
         spawn_spotlight_child(commands, parent, i, spot);
-    }
-
-    if let Some(lod0) = model.lods.first() {
-        for (m_idx, mesh_def) in lod0.meshes.iter().enumerate() {
-            for (i, spot) in mesh_def.spotlights.iter().enumerate() {
-                spawn_spotlight_child(commands, parent, m_idx * 100 + i, spot);
-            }
-        }
     }
 
     parent
@@ -192,17 +191,20 @@ fn spawn_interior_light_child(
     let pos_bevy = omsi_to_bevy_pos(light.pos);
     let color = Color::srgb_u8(light.color_rgb[0], light.color_rgb[1], light.color_rgb[2]);
 
+    let point = PointLight {
+        color,
+        range: light.range,
+        radius: 0.1,
+        shadow_maps_enabled: false,
+        ..default()
+    };
+    let switch = ScriptLight {
+        owner: parent,
+        switch: LightSwitch::Variable(light.variable.clone()),
+        base_intensity: point.intensity,
+    };
     let child = commands
-        .spawn((
-            PointLight {
-                color,
-                range: light.range,
-                radius: 0.1,
-                shadow_maps_enabled: false,
-                ..default()
-            },
-            Transform::from_translation(pos_bevy),
-        ))
+        .spawn((point, switch, Transform::from_translation(pos_bevy)))
         .insert(Name::new(format!(
             "InteriorLight_{index}_{}",
             light.variable
@@ -223,16 +225,23 @@ fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, 
 
     let color = Color::srgb_u8(spot.color_rgb[0], spot.color_rgb[1], spot.color_rgb[2]);
 
+    let light = SpotLight {
+        color,
+        range: spot.range,
+        inner_angle: spot.inner_cone.to_radians(),
+        outer_angle: spot.outer_cone.to_radians(),
+        shadow_maps_enabled: true,
+        ..default()
+    };
+    let switch = ScriptLight {
+        owner: parent,
+        switch: LightSwitch::Spot(index),
+        base_intensity: light.intensity,
+    };
     let child = commands
         .spawn((
-            SpotLight {
-                color,
-                range: spot.range,
-                inner_angle: spot.inner_cone.to_radians(),
-                outer_angle: spot.outer_cone.to_radians(),
-                shadow_maps_enabled: true,
-                ..default()
-            },
+            light,
+            switch,
             Transform {
                 translation: pos_bevy,
                 rotation,

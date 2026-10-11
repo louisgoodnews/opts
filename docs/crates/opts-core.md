@@ -78,6 +78,8 @@ In accordance with OPTS architectural decisions (ADR-0001, ADR-0002, ADR-0003), 
   - `MapTerrain::parse(bytes: &[u8]) -> Result<MapTerrain, MapParseError>`: Parses binary 14,888-byte `.map.terrain` elevation height grids with 61×61 vertex resolution and row-major index access.
   - `MapWater::parse(bytes: &[u8]) -> Result<MapWater, MapParseError>`: Parses binary 20-byte `.map.water` water level elevation files.
   - `MapParseError`: Strongly typed error for text parsing, invalid numbers, and binary size violations.
+- **`opts_core::formats::engine_config`:**
+  - `KeyboardConfig::parse(bytes: &[u8]) -> KeyboardConfig`: `Inputs/keyboard.cfg` entries (`KeyBinding`: section, action, DirectInput scan code, modifier mask with `held()`, `shift()`, `ctrl()`); `vehicle_bindings()` yields the script-trigger entries.
 - **`opts_core::formats::text`:**
   - `decode_bytes(bytes: &[u8]) -> String`: Multi-encoding string decoder with automatic UTF-16LE/BE BOM detection, UTF-8 BOM stripping, and Windows-1252 (CP1252) fallback.
   - `scan_blocks(text: &str) -> Vec<OmsiBlock>`: Keyword-delimited block tokenizer handling comments, whitespace, and parameter streams.

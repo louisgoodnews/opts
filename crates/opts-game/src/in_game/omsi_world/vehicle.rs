@@ -81,6 +81,7 @@ pub(super) fn load_segment_meshes(
                 hidden_by_variable: m.alpha_scale_var.is_some(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
                 image: None,
+                light_map: m.light_map.clone(),
             })
             .collect();
         let mut loader = ContentLoader {
@@ -114,10 +115,27 @@ pub(super) fn load_segment_meshes(
             mesh_count += 1;
         }
         let spawned = attach_model_parts(commands, root, &parts, &mesh_def.path);
-        // Script variables move and show the mesh (`[newanim]`, `[visible]`).
-        if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(root, mesh_def) {
-            for e in spawned {
-                commands.entity(e).insert(anim.clone());
+        // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
+        // maps; a click on it raises its `[mouseevent]` trigger.
+        let anim = opts_bevy::MeshAnimation::from_mesh(root, mesh_def);
+        let hot_spot = mesh_def
+            .mouseevent
+            .as_deref()
+            .map(str::trim)
+            .filter(|t| !t.is_empty());
+        for (e, part) in spawned.into_iter().zip(&parts) {
+            let mut entity = commands.entity(e);
+            if let Some(anim) = &anim {
+                entity.insert(anim.clone());
+            }
+            if let Some(var) = &part.light_variable {
+                entity.insert(opts_bevy::LightMapBinding::new(root, var.clone()));
+            }
+            if let Some(trigger) = hot_spot {
+                entity.insert(opts_bevy::MouseTrigger {
+                    owner: root,
+                    trigger: trigger.to_owned(),
+                });
             }
         }
     }
@@ -342,6 +360,7 @@ pub fn load_player_vehicle(
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
     attach_scripts(job, commands, root, &manifest, &bus_dir);
+    load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
@@ -515,6 +534,7 @@ pub(super) fn load_driver_human(
                 hidden_by_variable: m.alpha_scale_var.is_some(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
                 image: None,
+                light_map: None,
             })
             .collect();
         let mut loader = ContentLoader {
@@ -590,4 +610,27 @@ fn attach_scripts(
     commands
         .entity(root)
         .insert(opts_bevy::VehicleScripts::new(engine));
+}
+
+/// Loads the installation's `Inputs/keyboard.cfg` into [`opts_bevy::ScriptKeyBindings`], so the
+/// player's keys raise the vehicle's script triggers. Without the file no key triggers exist.
+fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
+    let Some(path) = job.install.find_file("Inputs/keyboard.cfg") else {
+        tracing::warn!("Inputs/keyboard.cfg not found; vehicle script triggers have no keys");
+        return;
+    };
+    let config = match std::fs::read(&path) {
+        Ok(bytes) => opts_core::formats::engine_config::KeyboardConfig::parse(&bytes),
+        Err(e) => {
+            tracing::error!(path = %path.display(), "cannot read keyboard.cfg: {e}");
+            return;
+        }
+    };
+    let bindings = opts_bevy::ScriptKeyBindings::from_config(&config);
+    tracing::info!(
+        entries = config.vehicle_bindings().count(),
+        bound = bindings.0.len(),
+        "vehicle script key bindings loaded"
+    );
+    commands.insert_resource(bindings);
 }

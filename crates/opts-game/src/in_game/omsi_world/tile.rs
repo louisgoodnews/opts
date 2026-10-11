@@ -270,6 +270,7 @@ fn spawn_object(
                 alpha: m.alpha_mode,
                 hidden_by_variable: m.alpha_scale.is_some(),
                 trans_map: None,
+                light_map: None,
                 image: m.text_texture.and_then(|i| {
                     let tt = sco.text_textures.get(i)?;
                     let Some(text) = resolve_text(

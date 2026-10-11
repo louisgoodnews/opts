@@ -1,8 +1,9 @@
 //! Runs a vehicle's `.osc` scripts next to its physics (`docs/src/architecture/script-vm.md`).
 //!
-//! Passive bridge: the simulation feeds OMSI's predefined variables (`Velocity`, `Throttle`,
-//! `Brake`, …) into the engine and the scripts run every fixed step; their outputs are readable
-//! by name (control protocol) but do not yet drive lights, doors or the drivetrain.
+//! The simulation feeds OMSI's predefined variables (`Velocity`, `Throttle`, `Brake`, …) into the
+//! engine and the scripts run every fixed step. Their outputs move and show meshes
+//! (`crate::vehicle_anim`) and switch lights (`crate::vehicle_lights`); keys and hot-spots raise
+//! their triggers (`crate::vehicle_triggers`). They do not drive the drivetrain.
 
 use std::sync::Mutex;
 
@@ -75,8 +76,10 @@ pub fn vehicle_script_system(
         for d in engine.drain_diagnostics() {
             tracing::warn!(file = %d.file, line = d.line, "{}", d.message);
         }
-        // Events (sounds, announcements) have no consumer yet; drop them so they do not pile up.
-        engine.drain_events();
+        // Events (sounds, announcements) have no consumer until the audio layer exists (M-0027).
+        for e in engine.drain_events() {
+            tracing::debug!(kind = ?e.kind, name = %e.name, "vehicle script event");
+        }
     }
 }
 

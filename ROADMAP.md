@@ -163,7 +163,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [~] Script VM core implemented (compiles all 6,062 corpus scripts); vehicle wiring open — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](docs/src/roadmap/phase-4/M-0026.md) — traces to F-008, F-019).
-  - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
+  - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, lights, light maps, key/hot-spot triggers done; screenshot check open ([M-0045](docs/src/roadmap/phase-4/M-0045.md)).
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](docs/src/roadmap/phase-4/M-0027.md) — traces to F-009, F-020).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
@@ -183,7 +183,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](docs/src/roadmap/phase-4/M-0037.md) (F-019, F-023).
   - [ ] Complete scrambled-mesh decoding: async decoding, deterministic parameters, cache policy, generator research — [M-0038](docs/src/roadmap/phase-4/M-0038.md) (F-001, F-003, F-014, F-017).
   - [x] Render `[texttexture]` text on signs, stops and displays — [M-0039](docs/src/roadmap/phase-4/M-0039.md) (F-002).
-  - [ ] Script-driven animation, lights and doors — [M-0045](docs/src/roadmap/phase-4/M-0045.md).
+  - [~] Script-driven animation, lights and doors (all but the in-game screenshot check done) — [M-0045](docs/src/roadmap/phase-4/M-0045.md).
   - [ ] World loader extraction — [M-0046](docs/src/roadmap/phase-4/M-0046.md).
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](docs/src/roadmap/phase-4/M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](docs/src/roadmap/phase-4/M-0025.md); F-004, F-007, F-008).

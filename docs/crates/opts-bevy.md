@@ -139,6 +139,15 @@ See [Asset Pipeline](../src/architecture/asset-pipeline.md).
 - **`OptsVehiclePlugin`:**
   - Adds fixed-step physics execution (`FixedUpdate`), keyboard input polling (`Update`), chassis 3D spatial alignment (`Update`), and wheel transform synchronization (`Update`).
 
+### 8b. Active Script Bridge (`opts_bevy::vehicle_anim`, `vehicle_lights`, `vehicle_triggers`) — M-0045
+- **`MeshAnimation`** (`vehicle_anim`): `[newanim]`/`[visible]` rules of a mesh; `vehicle_animation_system` applies them from the owner's `VehicleScripts`, rate-limited by `maxspeed`.
+- **`ScriptLight`** / **`LightSwitch`** (`vehicle_lights`): attached by `spawn_vehicle_model` to every interior light (`Variable`) and spotlight (`Spot(index)`, on while `Spot_Select` equals the index); `vehicle_light_system` sets intensity and visibility.
+- **`LightMapBinding`**: a mesh part whose `[matl_lightmap]` is scaled by a variable; the shared material is replaced by a private copy the first time the owner runs scripts (`vehicle_light_map_system`).
+- **`ScriptKeyBindings`** / **`dik_to_keycode`** / **`OPTS_RESERVED_KEYS`** (`vehicle_triggers`): `keyboard.cfg` `[vehicles]` entries turned into key → trigger bindings (keys OPTS uses are left out unless Ctrl is needed); `script_key_trigger_system` raises `<name>` on press and `<name>_off` on release of held bindings.
+- **`MouseTrigger`**: `[mouseevent]` hot-spot; `script_mouse_trigger_system` ray-casts left clicks in the cockpit/passenger views and raises `<name>`, `<name>_drag`, `<name>_off` (feeding `mouse_x`/`mouse_y`).
+- **`VehicleLightPlugin`**, **`VehicleTriggerPlugin`**: registered by `OptsAssetPlugin`; the trigger systems are gated by `not_modal_active`.
+- `TextureOverride::light_map` and `ModelPart::light_variable` carry the light map from `model.cfg` through `ContentLoader`.
+
 ### 9. Engine Plugins (`opts_bevy::plugin`)
 - **`OptsMeshPlugin`:** Registers `O3dAssetLoader` and `XAssetLoader`.
 - **`OptsMaterialPlugin`:** Registers `DdsAssetLoader` and `OptsImageLoader`.

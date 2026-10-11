@@ -503,4 +503,5 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — M-0041 complete: developer-switches reference, orphans in SUMMARY, stale crate pages marked deprecated, o3d addenda annotated. Hardcoded OMSI paths removed from `omsi_root`, repaint/setvars discovery and four test files (they use `$OMSI_PATH`/`--omsi-path` now).
 - `2026-10-11` — M-0044 complete: workspace on Bevy 0.19.1 (branch `bevy-0.19`), 474 tests and clippy green; dev profile slimmed (target/debug had reached 659 GB).
 - `2026-10-11` — M-0045 part: script-driven mesh animation and visibility (`vehicle_anim.rs`), axle variables from the simulation, `vehicle.get`; lights, triggers and doors remain.
+- `2026-10-11` — M-0045: lights (`[interiorlight]`, `Spot_Select` spotlights, `[matl_lightmap]`), `keyboard.cfg` key triggers (bit 1 = held key), `[mouseevent]` hot-spots, `maxspeed` smoothing, events logged; headless bridge test. Open: SD200 screenshot check, night maps, `delay`.
 - `2026-10-11` — Startup routine for the OMSI path: saved in `settings.db`, folder dialog (`rfd`) when nothing is found; verified with a clean config on the real system.

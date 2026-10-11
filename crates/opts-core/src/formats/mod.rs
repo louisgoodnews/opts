@@ -2,6 +2,7 @@
 
 pub mod constfile;
 pub mod cti;
+pub mod engine_config;
 pub mod envir;
 pub mod humans;
 pub mod map;

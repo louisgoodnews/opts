@@ -36,7 +36,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
   - [ ] Implement OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` (M-0026).
-  - [ ] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators.
+  - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, lights, light maps, key/hot-spot triggers done; screenshot check open ([M-0045](M-0045.md)).
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio (M-0027).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**

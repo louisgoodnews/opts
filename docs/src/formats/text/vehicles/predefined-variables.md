@@ -94,7 +94,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `Axle_Steering_0_L` | 884 | L.L |  |
 | `Axle_Suspension_0_R` | 863 | L.L |  |
 | `Axle_Springfactor_2_R` | 820 | L.L, S.L |  |
-| `Spot_Select` | 806 | L.L, S.L | selected spotlight (see model_cfg `[spotlight]`) ❓ |
+| `Spot_Select` | 806 | L.L, S.L | 0-based index of the shining `[spotlight]` in declaration order; `-1` = none (SD200 `lights.osc`: `0` high beam, `1` dipped, `-1` off; TW6000 `lights.osc`: `0`/`-1`) |
 | `Wheel_RotationSpeed_1_L` | 781 | L.L |  |
 | `AI_Light` | 772 | L.L, S.L |  |
 | `AI_Blinker_L` | 758 | L.L, S.L |  |

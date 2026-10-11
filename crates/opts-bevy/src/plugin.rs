@@ -125,6 +125,8 @@ impl Plugin for OptsAssetPlugin {
             .add_plugins(OptsVehiclePlugin)
             .add_plugins(crate::vehicle_script::VehicleScriptPlugin)
             .add_plugins(crate::vehicle_anim::VehicleAnimationPlugin)
+            .add_plugins(crate::vehicle_lights::VehicleLightPlugin)
+            .add_plugins(crate::vehicle_triggers::VehicleTriggerPlugin)
             .add_plugins(crate::camera::OptsCameraPlugin);
     }
 }

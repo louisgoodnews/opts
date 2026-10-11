@@ -41,6 +41,7 @@ const REVIEWED: &[&str] = &[
     "opts-bevy/src/camera/mode/vehicle_views.rs",
     "opts-bevy/src/reporting/trigger.rs",
     "opts-bevy/src/vehicle_sim.rs",
+    "opts-bevy/src/vehicle_triggers.rs",
     "opts-game/src/in_game/hud.rs",
     "opts-game/src/in_game/loading_pipeline.rs",
     "opts-game/src/in_game/mod.rs",
@@ -106,6 +107,7 @@ fn gated_registrations_still_use_the_run_condition() {
     for (file, min) in [
         ("opts-bevy/src/camera/plugin.rs", 6),
         ("opts-bevy/src/vehicle_sim.rs", 1),
+        ("opts-bevy/src/vehicle_triggers.rs", 2),
         ("opts-game/src/menu/plugin.rs", 1),
         ("opts-game/src/new_game_screen/mod.rs", 2),
         ("opts-game/src/settings_screen/mod.rs", 1),
