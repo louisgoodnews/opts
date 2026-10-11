@@ -112,6 +112,10 @@ pub struct BusManifest {
     pub script_share: bool,
     /// Total curb vehicle weight in tonnes.
     pub mass_tonnes: Option<f32>,
+    /// Primary bounding box (`[boundingbox]`): extents and centre offset in the vehicle frame
+    /// (x lateral, y longitudinal, z up). The extents are full sizes (measured against plain
+    /// body meshes), not half extents.
+    pub bounding_box: Option<(glam::Vec3, glam::Vec3)>,
     /// Physical wheel axles.
     pub axles: Vec<BusAxle>,
     /// Front coupling joint Y position in meters (for articulated trailers).
@@ -157,6 +161,7 @@ impl BusManifest {
         let mut constfiles = Vec::new();
         let mut script_share = false;
         let mut mass_tonnes = None;
+        let mut bounding_box = None;
         let mut axles = Vec::new();
         let mut coupling_front_y = None;
         let mut coupling_back_y = None;
@@ -244,6 +249,20 @@ impl BusManifest {
                 }
                 "scriptshare" => {
                     script_share = true;
+                }
+                "boundingbox" => {
+                    let v: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .take(6)
+                        .filter_map(|p| parse_float(p).ok())
+                        .collect();
+                    if v.len() == 6 {
+                        bounding_box = Some((
+                            glam::Vec3::new(v[0], v[1], v[2]),
+                            glam::Vec3::new(v[3], v[4], v[5]),
+                        ));
+                    }
                 }
                 "mass" => {
                     if let Some(first) = block.parameters.first() {
@@ -351,6 +370,7 @@ impl BusManifest {
             constfiles,
             script_share,
             mass_tonnes,
+            bounding_box,
             axles,
             coupling_front_y,
             coupling_back_y,

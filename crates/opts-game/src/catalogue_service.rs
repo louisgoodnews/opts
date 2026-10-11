@@ -62,6 +62,13 @@ impl CatalogueService {
         })
     }
 
+    /// Relocated-file lookup for [`opts_bevy::OmsiInstall::with_relocate_lookup`].
+    #[must_use]
+    pub fn relocate_lookup(&self) -> opts_bevy::install::RelocateLookup {
+        let cat = self.catalogue.clone();
+        Arc::new(move |rel: &str| cat.find_relocated(rel).ok().flatten())
+    }
+
     /// Same-name lookup for [`opts_bevy::OmsiInstall::with_twin_lookup`].
     #[must_use]
     pub fn twin_lookup(&self) -> opts_bevy::install::TwinLookup {

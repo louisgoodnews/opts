@@ -12,7 +12,8 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
 use opts_core::formats::o3d::descramble::{
-    decode_confident_with, decode_joint, same_model, DecodeParams,
+    decode_confident_bounded, decode_confident_with, decode_joint_bounded, same_model,
+    DecodeParams, ExpectedBounds,
 };
 use opts_core::formats::o3d::O3d;
 
@@ -29,6 +30,13 @@ pub type Key = (u64, usize);
 #[must_use]
 pub fn key(file_bytes: &[u8], model_index: usize) -> Key {
     (fnv(file_bytes), model_index)
+}
+
+/// Like [`key`], for a decoding restricted to `bounds` (a different box is a different result).
+#[must_use]
+pub fn key_bounded(file_bytes: &[u8], model_index: usize, bounds: Option<ExpectedBounds>) -> Key {
+    let (h, i) = key(file_bytes, model_index);
+    (h ^ bounds.map_or(0, |b| b.tag()), i)
 }
 const MAGIC: &[u8; 4] = b"OPDC";
 
@@ -240,7 +248,12 @@ pub struct DecodePool {
 }
 
 /// A queued mesh and the files that may hold other scramblings of the same model.
-type Job = (Key, Box<O3d>, Vec<std::path::PathBuf>);
+type Job = (
+    Key,
+    Box<O3d>,
+    Vec<std::path::PathBuf>,
+    Option<ExpectedBounds>,
+);
 
 #[derive(Default)]
 struct PoolState {
@@ -263,11 +276,11 @@ impl DecodePool {
                 .name(format!("opts-descramble-{i}"))
                 .spawn(move || loop {
                     let job = rx.lock().ok().and_then(|r| r.recv().ok());
-                    let Some((key, model, candidates)) = job else {
+                    let Some((key, model, candidates, bounds)) = job else {
                         return;
                     };
                     let t = std::time::Instant::now();
-                    let outcomes = decode_with_copies(key, *model, &candidates, &params);
+                    let outcomes = decode_with_copies(key, *model, &candidates, bounds, &params);
                     tracing::info!(
                         copies = outcomes.len(),
                         accepted = matches!(outcomes.first(), Some((_, Cached::Decoded { .. }))),
@@ -311,7 +324,13 @@ impl DecodePool {
     }
 
     /// Queues `model` unless `key` is already queued or finished.
-    pub fn submit(&self, key: Key, model: &O3d, candidates: Vec<std::path::PathBuf>) {
+    pub fn submit(
+        &self,
+        key: Key,
+        model: &O3d,
+        candidates: Vec<std::path::PathBuf>,
+        bounds: Option<ExpectedBounds>,
+    ) {
         let Ok(mut st) = self.state.lock() else {
             return;
         };
@@ -320,7 +339,9 @@ impl DecodePool {
         }
         st.pending.insert(key);
         drop(st);
-        let _ = self.jobs.send((key, Box::new(model.clone()), candidates));
+        let _ = self
+            .jobs
+            .send((key, Box::new(model.clone()), candidates, bounds));
     }
 
     /// Whether `key` is queued or running.
@@ -354,6 +375,7 @@ fn decode_with_copies(
     key: Key,
     model: O3d,
     candidates: &[std::path::PathBuf],
+    bounds: Option<ExpectedBounds>,
     params: &DecodeParams,
 ) -> Vec<(Key, Cached)> {
     let mut copies = vec![model.clone()];
@@ -365,7 +387,7 @@ fn decode_with_copies(
         let Ok(bytes) = std::fs::read(path) else {
             continue;
         };
-        let k = self::key(&bytes, 0);
+        let k = key_bounded(&bytes, 0, bounds);
         if keys.contains(&k) {
             continue;
         }
@@ -379,7 +401,7 @@ fn decode_with_copies(
     }
     if copies.len() >= 2 {
         let before = copies.clone();
-        let reports = decode_joint(&mut copies, params);
+        let reports = decode_joint_bounded(&mut copies, params, bounds);
         if reports.first().is_some_and(|r| r.accepted) {
             return keys
                 .into_iter()
@@ -398,7 +420,10 @@ fn decode_with_copies(
         }
     }
     let mut single = model.clone();
-    let report = decode_confident_with(&mut single, params);
+    let report = match bounds {
+        Some(b) => decode_confident_bounded(&mut single, params, b),
+        None => decode_confident_with(&mut single, params),
+    };
     let outcome = if report.accepted {
         capture(&model, &single)
     } else {
@@ -461,8 +486,8 @@ mod tests {
             unknown_chunks: Vec::new(),
         };
         let k = key(b"pool-file", 0);
-        pool.submit(k, &mesh, Vec::new());
-        pool.submit(k, &mesh, Vec::new()); // duplicate submissions are ignored
+        pool.submit(k, &mesh, Vec::new(), None);
+        pool.submit(k, &mesh, Vec::new(), None); // duplicate submissions are ignored
         let start = std::time::Instant::now();
         let mut finished = Vec::new();
         while finished.is_empty() && start.elapsed().as_secs() < 10 {

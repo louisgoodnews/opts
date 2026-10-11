@@ -137,7 +137,7 @@ pub(super) fn spawn_splines(
             tracing::debug!(sli = %inst.sli_file, "spline has no graphical profile");
             continue;
         }
-        let sli_key = job.install.find_file(&inst.sli_file).unwrap_or_default();
+        let sli_key = job.locate(&inst.sli_file).unwrap_or_default();
         // Spline textures live in the profile's own pack folder (`Splines/<Pack>/texture`).
         let sli_dir = sli_key.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![

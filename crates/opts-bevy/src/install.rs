@@ -15,6 +15,9 @@ pub type PathLookup = Arc<dyn Fn(&str) -> Option<PathBuf> + Send + Sync>;
 /// → absolute path; repairs references whose path is wrong but whose file exists elsewhere.
 pub type NameLookup = Arc<dyn Fn(&str, &str, bool) -> Option<PathBuf> + Send + Sync>;
 
+/// Reference path (OMSI-relative) → real location of a file installed under other folder names.
+pub type RelocateLookup = Arc<dyn Fn(&str) -> Option<PathBuf> + Send + Sync>;
+
 /// All indexed files with a given file name (any case), used to find plain twins of
 /// scrambled meshes.
 pub type TwinLookup = Arc<dyn Fn(&str) -> Vec<PathBuf> + Send + Sync>;
@@ -28,6 +31,7 @@ pub struct OmsiInstall {
     lookup: Option<PathLookup>,
     name_lookup: Option<NameLookup>,
     twin_lookup: Option<TwinLookup>,
+    relocate_lookup: Option<RelocateLookup>,
     dir_cache: Mutex<HashMap<PathBuf, Arc<HashMap<String, PathBuf>>>>,
 }
 
@@ -49,6 +53,7 @@ impl OmsiInstall {
             lookup: None,
             name_lookup: None,
             twin_lookup: None,
+            relocate_lookup: None,
             dir_cache: Mutex::new(HashMap::new()),
         }
     }
@@ -72,6 +77,20 @@ impl OmsiInstall {
     pub fn with_twin_lookup(mut self, lookup: TwinLookup) -> Self {
         self.twin_lookup = Some(lookup);
         self
+    }
+
+    /// Attaches the lookup that finds relocated files.
+    #[must_use]
+    pub fn with_relocate_lookup(mut self, lookup: RelocateLookup) -> Self {
+        self.relocate_lookup = Some(lookup);
+        self
+    }
+
+    /// Real location of `rel` when the file is not at that path but installed elsewhere under the
+    /// same name (see `Catalogue::find_relocated`).
+    #[must_use]
+    pub fn find_relocated(&self, rel: &str) -> Option<PathBuf> {
+        self.relocate_lookup.as_ref().and_then(|l| l(rel))
     }
 
     /// All indexed files with this file name (empty without an index).

@@ -22,6 +22,7 @@ fn make_test_manifest(mass_tonnes: Option<f32>, wheel_diameter: Option<f32>) -> 
         constfiles: Vec::new(),
         script_share: false,
         mass_tonnes,
+        bounding_box: None,
         axles: vec![
             BusAxle {
                 longitudinal_m: 3.25,

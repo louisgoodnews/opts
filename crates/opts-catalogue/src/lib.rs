@@ -330,6 +330,36 @@ impl Catalogue {
         Ok(None)
     }
 
+    /// Finds the real location of a referenced file that does not exist at its stated path
+    /// (content packs are often installed under other folder names than the map was made with).
+    ///
+    /// Candidates are the indexed files with the same name. A single candidate is taken; among
+    /// several, the one whose folder names match the reference's best (equal trailing folders,
+    /// then shared name tokens) wins, but only when it beats the runner-up clearly.
+    ///
+    /// # Errors
+    /// SQLite failures.
+    pub fn find_relocated(&self, referenced_rel: &str) -> Result<Option<PathBuf>> {
+        let rel = normalize(referenced_rel);
+        let Some((dir, name)) = rel.rsplit_once('/').or(Some(("", rel.as_str()))) else {
+            return Ok(None);
+        };
+        if name.is_empty() {
+            return Ok(None);
+        }
+        let Some(root) = self.root()? else {
+            return Ok(None);
+        };
+        let found: Vec<String> = self.with(|c| {
+            let mut st = c.prepare_cached(
+                "SELECT rel_path FROM files WHERE file_name = ?1 COLLATE NOCASE LIMIT 256",
+            )?;
+            let rows = st.query_map([name], |r| r.get(0))?;
+            rows.collect()
+        })?;
+        Ok(pick_relocated(&found, dir).map(|c| root.join(c)))
+    }
+
     /// Resolves an OMSI-relative directory path, like [`Catalogue::find_file`].
     ///
     /// # Errors
@@ -494,6 +524,51 @@ fn best_candidate<'a>(candidates: &'a [String], near_dir: &str) -> Option<&'a St
             .cmp(&shared_prefix(b, near_dir))
             .then_with(|| b.len().cmp(&a.len()))
     })
+}
+
+/// Chooses among same-named files for a reference made from `ref_dir`: a single candidate is
+/// taken; of several, the best folder match when it beats the runner-up clearly.
+fn pick_relocated<'a>(found: &'a [String], ref_dir: &str) -> Option<&'a String> {
+    match found {
+        [] => None,
+        [one] => Some(one),
+        _ => {
+            let mut scored: Vec<((usize, usize), &String)> = found
+                .iter()
+                .map(|c| (relocation_score(c, ref_dir), c))
+                .collect();
+            scored.sort_by_key(|s| std::cmp::Reverse(s.0));
+            let (best, second) = (scored[0].0, scored[1].0);
+            (best > second && best != (0, 0)).then_some(scored[0].1)
+        }
+    }
+}
+
+/// How well the folders of candidate `cand` match the folders of a reference made from `ref_dir`:
+/// `(equal trailing folders, shared name tokens)`.
+fn relocation_score(cand: &str, ref_dir: &str) -> (usize, usize) {
+    let cand_dir = cand.rsplit_once('/').map_or("", |(d, _)| d);
+    let trailing = cand_dir
+        .rsplit('/')
+        .zip(ref_dir.rsplit('/'))
+        .take_while(|(a, b)| a.eq_ignore_ascii_case(b))
+        .count();
+    const GENERIC: [&str; 6] = [
+        "splines",
+        "sceneryobjects",
+        "vehicles",
+        "texture",
+        "model",
+        "maps",
+    ];
+    let tokens = |d: &str| -> Vec<String> {
+        d.split(|c: char| !c.is_alphanumeric())
+            .map(str::to_lowercase)
+            .filter(|t| t.len() >= 3 && !GENERIC.contains(&t.as_str()))
+            .collect()
+    };
+    let (a, b) = (tokens(cand_dir), tokens(ref_dir));
+    (trailing, a.iter().filter(|t| b.contains(t)).count())
 }
 
 fn normalize(rel: &str) -> String {
@@ -948,5 +1023,48 @@ mod tests {
             "global Texture/ fallback"
         );
         let _ = fs::remove_dir_all(&root);
+    }
+}
+
+#[cfg(test)]
+mod relocation_tests {
+    use super::pick_relocated;
+
+    fn v(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    #[test]
+    fn a_single_candidate_is_taken() {
+        let f = v(&["Splines/Oberstedt_V2/Wilsede_by_Oberpfalz/8m_Standard3.sli"]);
+        assert!(pick_relocated(&f, "Splines/Oberpfalz 3D/Wilsede").is_some());
+    }
+
+    #[test]
+    fn equal_trailing_folders_win() {
+        let f = v(&[
+            "Sceneryobjects/ADDON_Bad_Huegelsdorf/Odanrebode/Blumenkasten1.sco",
+            "Sceneryobjects/St-Servan_Additionnel/Tettau/Blumenkasten/Blumenkasten1.sco",
+            "Sceneryobjects/Oberpfalz 3D/Krummenaab2/Blumenkasten1.sco",
+        ]);
+        let got = pick_relocated(&f, "Sceneryobjects/Tettau/Blumenkasten").unwrap();
+        assert!(got.contains("St-Servan_Additionnel/Tettau"));
+    }
+
+    #[test]
+    fn shared_name_tokens_decide_when_no_folder_matches() {
+        let f = v(&[
+            "Splines/VKL´s Splines/Zaun.sli",
+            "Splines/Altenessen-Splines/Zaun.sli",
+        ]);
+        let got =
+            pick_relocated(&f, "Splines/Oberpfalz 3D/LVB_VKL_Splines_Private_Changes").unwrap();
+        assert!(got.contains("VKL"));
+    }
+
+    #[test]
+    fn ambiguous_candidates_are_not_guessed() {
+        let f = v(&["Splines/A/Zaun.sli", "Splines/B/Zaun.sli"]);
+        assert!(pick_relocated(&f, "Splines/C").is_none());
     }
 }

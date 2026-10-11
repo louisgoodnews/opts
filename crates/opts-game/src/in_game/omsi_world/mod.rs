@@ -76,6 +76,8 @@ pub struct OmsiSessionConfig {
     pub name_lookup: Option<opts_bevy::install::NameLookup>,
     /// Cached all-files-by-name index (plain twins of scrambled meshes).
     pub twin_lookup: Option<opts_bevy::install::TwinLookup>,
+    /// Finder of files installed under other folder names than their references say.
+    pub relocate_lookup: Option<opts_bevy::install::RelocateLookup>,
 }
 
 /// Counters for the diagnostic overlay and the final report.

@@ -70,7 +70,8 @@ pub fn resolve_session_config(
         install = install
             .with_lookup(s.path_lookup())
             .with_name_lookup(s.name_lookup())
-            .with_twin_lookup(s.twin_lookup());
+            .with_twin_lookup(s.twin_lookup())
+            .with_relocate_lookup(s.relocate_lookup());
     }
 
     let map_dir = match req.map_path {
@@ -131,6 +132,7 @@ pub fn resolve_session_config(
         lookup: service.map(CatalogueService::path_lookup),
         name_lookup: service.map(CatalogueService::name_lookup),
         twin_lookup: service.map(CatalogueService::twin_lookup),
+        relocate_lookup: service.map(CatalogueService::relocate_lookup),
     })
 }
 
@@ -166,6 +168,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
     }
     if let Some(l) = &config.name_lookup {
         install = install.with_name_lookup(l.clone());
+    }
+    if let Some(l) = &config.relocate_lookup {
+        install = install.with_relocate_lookup(l.clone());
     }
     if let Some(l) = &config.twin_lookup {
         install = install.with_twin_lookup(l.clone());
@@ -340,8 +345,19 @@ impl WorldLoadJob {
         }
     }
 
+    /// Where a referenced file really is: at its path, or, failing that, under another folder name.
+    pub(super) fn locate(&self, rel: &str) -> Option<PathBuf> {
+        self.install
+            .find_file(rel)
+            .or_else(|| self.install.find_relocated(rel))
+    }
+
     pub(super) fn sli(&mut self, rel: &str) -> Option<Arc<SplineProfile>> {
-        let path = self.install.find_file(rel);
+        let path = self.install.find_file(rel).or_else(|| {
+            let found = self.install.find_relocated(rel)?;
+            tracing::warn!(sli = rel, found = %found.display(), "spline profile found under another folder name");
+            Some(found)
+        });
         let Some(path) = path else {
             tracing::error!(sli = rel, "spline profile not found");
             return None;
@@ -409,7 +425,11 @@ impl WorldLoadJob {
     }
 
     pub(super) fn sco(&mut self, rel: &str) -> Option<(PathBuf, Arc<SceneryObject>)> {
-        let Some(path) = self.install.find_file(rel) else {
+        let Some(path) = self.install.find_file(rel).or_else(|| {
+            let found = self.install.find_relocated(rel)?;
+            tracing::warn!(sco = rel, found = %found.display(), "scenery object found under another folder name");
+            Some(found)
+        }) else {
             tracing::error!(sco = rel, "scenery object not found");
             return None;
         };

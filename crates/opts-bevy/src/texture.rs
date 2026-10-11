@@ -304,12 +304,32 @@ pub fn image_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
     decode_with(bytes, None)
 }
 
+/// Some tools write 24-bit TGAs whose descriptor claims 8 alpha bits; the `image` crate rejects
+/// that combination. The descriptor's alpha-bit count is cleared for 24-bit (and 15/16-bit
+/// without alpha) images.
+fn repair_tga_header(bytes: &[u8]) -> std::borrow::Cow<'_, [u8]> {
+    if bytes.len() > 18 && bytes[16] == 24 && bytes[17] & 0x0F != 0 {
+        let mut fixed = bytes.to_vec();
+        fixed[17] &= 0xF0;
+        std::borrow::Cow::Owned(fixed)
+    } else {
+        std::borrow::Cow::Borrowed(bytes)
+    }
+}
+
 /// Decodes with an explicit container format (TGA has no magic number, so it cannot be guessed).
 fn decode_with(bytes: &[u8], format: Option<image::ImageFormat>) -> Result<Image, TextureError> {
     if bytes.is_empty() {
         return Err(TextureError::EmptyBuffer);
     }
 
+    let repaired;
+    let bytes = if format == Some(image::ImageFormat::Tga) {
+        repaired = repair_tga_header(bytes);
+        repaired.as_ref()
+    } else {
+        bytes
+    };
     let decoded = match format {
         Some(f) => image::load_from_memory_with_format(bytes, f),
         None => image::load_from_memory(bytes),
@@ -466,5 +486,24 @@ mod tests {
             img.data.as_ref().unwrap().len(),
             (16 * 16 + 8 * 8 + 4 * 4) * 16
         );
+    }
+}
+
+#[cfg(test)]
+mod tga_repair_tests {
+    use super::*;
+
+    #[test]
+    fn a_24_bit_tga_claiming_alpha_bits_decodes() {
+        // 2x1 uncompressed true-colour TGA, 24 bpp, descriptor 0x08 (as written by some tools).
+        let mut tga = vec![0u8; 18];
+        tga[2] = 2;
+        tga[12] = 2;
+        tga[14] = 1;
+        tga[16] = 24;
+        tga[17] = 0x08;
+        tga.extend_from_slice(&[0, 0, 255, 0, 255, 0]);
+        let img = decode_with(&tga, Some(image::ImageFormat::Tga)).expect("decodes");
+        assert_eq!((img.width(), img.height()), (2, 1));
     }
 }

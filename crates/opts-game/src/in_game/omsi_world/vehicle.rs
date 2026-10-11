@@ -31,6 +31,16 @@ pub(super) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
         })
 }
 
+/// Expected mesh box of a vehicle from its `.bus` `[boundingbox]` (restricts the scrambled-mesh
+/// decoder; see `docs/src/formats/binary/o3d.md`, Addendum 9).
+fn manifest_bounds(
+    manifest: &BusManifest,
+) -> Option<opts_core::formats::o3d::descramble::ExpectedBounds> {
+    manifest.bounding_box.map(|(half, centre)| {
+        opts_core::formats::o3d::descramble::ExpectedBounds::from_omsi_box(half, centre)
+    })
+}
+
 /// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
 /// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
 #[allow(clippy::too_many_arguments)]
@@ -215,9 +225,11 @@ pub(super) fn spawn_trailer_chain(
                 .unwrap_or_else(|| dir.join("texture")),
             model_dir.join("texture"),
         ];
+        job.cache.expected_bounds = manifest_bounds(&manifest);
         let (count, verts, _, _) = load_segment_meshes(
             job, commands, meshes, materials, images, seg, lod0, &model_dir, &tex_dirs,
         );
+        job.cache.expected_bounds = None;
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
         (parent, parent_dir, parent_manifest) = (seg, dir, manifest);
@@ -245,16 +257,17 @@ pub fn prewarm_vehicle_meshes(
     else {
         return Vec::new();
     };
-    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig)> {
+    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig, Option<_>)> {
         let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
         let bus_dir = bus_path.parent()?.to_path_buf();
         let cfg = job
             .install
             .find_in(&bus_dir, manifest.model_cfg.as_deref()?)?;
         let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).ok()?).ok()?;
-        Some((bus_dir, cfg, model))
+        let bounds = manifest_bounds(&manifest);
+        Some((bus_dir, cfg, model, bounds))
     })();
-    let Some((bus_dir, cfg, model)) = loaded else {
+    let Some((bus_dir, cfg, model, bounds)) = loaded else {
         return Vec::new();
     };
     let Some(lod0) = model.lods.first() else {
@@ -269,9 +282,11 @@ pub fn prewarm_vehicle_meshes(
     ];
     job.cache.take_deferred();
     let scratch = commands.spawn_empty().id();
+    job.cache.expected_bounds = bounds;
     load_segment_meshes(
         job, commands, meshes, materials, images, scratch, lod0, &model_dir, &tex_dirs,
     );
+    job.cache.expected_bounds = None;
     commands.entity(scratch).despawn();
     job.cache.take_deferred().into_iter().collect()
 }
@@ -344,9 +359,11 @@ pub fn load_player_vehicle(
         .collect();
     let root = spawn_vehicle_model(commands, &manifest, &model, root_tf, &[], &[]);
 
+    job.cache.expected_bounds = manifest_bounds(&manifest);
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
+    job.cache.expected_bounds = None;
     if mesh_count == 0 {
         return Err("no vehicle meshes could be loaded".into());
     }

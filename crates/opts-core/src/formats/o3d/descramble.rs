@@ -38,8 +38,10 @@ const ANNEAL_T0: f32 = 4.0;
 const ANNEAL_ROUNDS: usize = 100;
 /// Largest mesh the confident decoder attempts (vertices).
 pub const CONFIDENT_MAX_VERTICES: usize = 40_000;
-/// Minimum share of vertices on which two independent runs must agree.
-pub const CONFIDENT_MIN_AGREEMENT: f32 = 0.98;
+/// Minimum share of vertices on which two independent runs must agree. On twins 0.98 accepts
+/// 92 % of the meshes (86 % of them exact), 0.9 accepts 98 % (82 % exact): a mostly right door or
+/// panel beats a missing one.
+pub const CONFIDENT_MIN_AGREEMENT: f32 = 0.9;
 /// Minimum share of coherent triangles for [`decode_confident`]. Off by default: on plain/keyed
 /// twins the exact share stays at 85–86 % for every gate between 0.9 and 0.3 (coverage 68 % →
 /// 92 %), i.e. the measure does not predict correctness.
@@ -936,6 +938,15 @@ pub fn same_model(a: &O3d, b: &O3d) -> bool {
 /// Returns one report per copy (all rejected when the copies do not match or the runs disagree);
 /// accepted copies are modified in place.
 pub fn decode_joint(copies: &mut [O3d], params: &DecodeParams) -> Vec<ConfidentReport> {
+    decode_joint_bounded(copies, params, None)
+}
+
+/// [`decode_joint`] with an expected box for the vertices.
+pub fn decode_joint_bounded(
+    copies: &mut [O3d],
+    params: &DecodeParams,
+    bounds: Option<ExpectedBounds>,
+) -> Vec<ConfidentReport> {
     let rejected = |agreement: f32| ConfidentReport {
         accepted: false,
         agreement,
@@ -973,6 +984,13 @@ pub fn decode_joint(copies: &mut [O3d], params: &DecodeParams) -> Vec<ConfidentR
             return none(copies.len()); // not the same scrambled model after all
         }
     }
+    if let Some(mask) = bounds.and_then(|b| bounds_mask(&copies[0], b)) {
+        for (a, m) in allowed.iter_mut().zip(mask) {
+            if *a & m != 0 {
+                *a &= m;
+            }
+        }
+    }
     let (labels, agree) = match confident_labels(&copies[0], params, Some(&allowed)) {
         Ok(v) => v,
         Err(best) => return vec![rejected(best); copies.len()],
@@ -1003,6 +1021,83 @@ pub fn decode_joint(copies: &mut [O3d], params: &DecodeParams) -> Vec<ConfidentR
     out
 }
 
+/// Axis-aligned box every decoded vertex is expected to lie in (mesh frame).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ExpectedBounds {
+    /// Smallest corner.
+    pub min: Vec3,
+    /// Largest corner.
+    pub max: Vec3,
+}
+
+impl ExpectedBounds {
+    /// Box of a vehicle given in OMSI's frame (x lateral, y longitudinal, z up) as *full* extents
+    /// and centre offset, expressed in the mesh frame (x lateral, y up, z longitudinal) and widened
+    /// by `0.5 m + 10 %` of the longest side. (The `.bus` box holds full extents although the
+    /// format description calls them half extents: a 2.55 m wide bus has `2.55`; it covers the
+    /// body without roof equipment and undercarriage, hence the margin.)
+    #[must_use]
+    pub fn from_omsi_box(size: Vec3, centre: Vec3) -> Self {
+        let pad = 0.5 + 0.1 * size.max_element();
+        let h = Vec3::new(size.x, size.z, size.y) * 0.5;
+        let c = Vec3::new(centre.x, centre.z, centre.y);
+        Self {
+            min: c - h - Vec3::splat(pad),
+            max: c + h + Vec3::splat(pad),
+        }
+    }
+
+    /// Stable tag of the box for cache keys (centimetre resolution).
+    #[must_use]
+    pub fn tag(&self) -> u64 {
+        let mut h = 0xcbf2_9ce4_8422_2325_u64;
+        for v in [self.min, self.max] {
+            for c in [v.x, v.y, v.z] {
+                h ^= (c * 100.0).round() as i64 as u64;
+                h = h.wrapping_mul(0x0100_0000_01b3);
+            }
+        }
+        h
+    }
+}
+
+/// Label masks that keep only the permutations placing each vertex inside `bounds`; a vertex no
+/// label fits keeps all four. `None` when more than 5 % of the vertices fit no label (the box
+/// does not describe this mesh).
+fn bounds_mask(o: &O3d, bounds: ExpectedBounds) -> Option<Vec<u8>> {
+    let mut misfits = 0usize;
+    let mask: Vec<u8> = o
+        .vertices
+        .iter()
+        .map(|v| {
+            let mut m = 0u8;
+            for l in 0..4 {
+                let p = permuted(l, v.position);
+                if p.cmpge(bounds.min).all() && p.cmple(bounds.max).all() {
+                    m |= 1 << l;
+                }
+            }
+            if m == 0 {
+                misfits += 1;
+                0b1111
+            } else {
+                m
+            }
+        })
+        .collect();
+    (misfits * 20 <= o.vertices.len()).then_some(mask)
+}
+
+/// [`decode_confident_with`] restricted to labels that keep every vertex inside `bounds`
+/// (for instance the box of the vehicle the mesh belongs to).
+pub fn decode_confident_bounded(
+    o: &mut O3d,
+    params: &DecodeParams,
+    bounds: ExpectedBounds,
+) -> ConfidentReport {
+    decode_confident_masked(o, params, bounds_mask(o, bounds))
+}
+
 /// Decodes a scrambled mesh without a plain twin when the answer is trustworthy.
 ///
 /// Two independent annealing runs (one seeded by belief propagation, one from random labels) must
@@ -1015,6 +1110,14 @@ pub fn decode_confident(o: &mut O3d) -> ConfidentReport {
 
 /// [`decode_confident`] with explicit parameters.
 pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentReport {
+    decode_confident_masked(o, params, None)
+}
+
+fn decode_confident_masked(
+    o: &mut O3d,
+    params: &DecodeParams,
+    allowed: Option<Vec<u8>>,
+) -> ConfidentReport {
     let rejected = |agreement: f32, coherence: f32| ConfidentReport {
         accepted: false,
         agreement,
@@ -1025,7 +1128,7 @@ pub fn decode_confident_with(o: &mut O3d, params: &DecodeParams) -> ConfidentRep
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
     }
-    let (labels, agree) = match confident_labels(o, params, None) {
+    let (labels, agree) = match confident_labels(o, params, allowed.as_deref()) {
         Ok(v) => v,
         Err(best_pair) => return rejected(best_pair, 0.0),
     };
@@ -1099,7 +1202,7 @@ mod params_tests {
                 ..base.clone()
             },
             DecodeParams {
-                min_agreement: 0.9,
+                min_agreement: 0.7,
                 ..base.clone()
             },
             DecodeParams {
@@ -1208,5 +1311,35 @@ mod joint_tests {
         let mut copies = vec![a, b];
         let reports = decode_joint(&mut copies, &DecodeParams::default());
         assert!(reports.iter().all(|r| !r.accepted));
+    }
+}
+
+#[cfg(test)]
+mod bounds_tests {
+    use super::*;
+
+    #[test]
+    fn omsi_box_becomes_a_padded_mesh_frame_box() {
+        // 2.5 wide, 10 long, 2.5 high, centred 1 m ahead and 1.5 m up (OMSI: x, y long, z up).
+        let b = ExpectedBounds::from_omsi_box(Vec3::new(2.5, 10.0, 2.5), Vec3::new(0.0, 1.0, 1.5));
+        let pad = 0.5 + 0.1 * 10.0;
+        // Mesh frame: x lateral, y up, z longitudinal.
+        assert!((b.min.x + 1.25 + pad).abs() < 1e-5 && (b.max.x - 1.25 - pad).abs() < 1e-5);
+        assert!((b.min.y - (0.25 - pad)).abs() < 1e-5 && (b.max.y - (2.75 + pad)).abs() < 1e-5);
+        assert!((b.min.z - (-4.0 - pad)).abs() < 1e-5 && (b.max.z - (6.0 + pad)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn the_tag_depends_on_the_box() {
+        let a = ExpectedBounds {
+            min: Vec3::ZERO,
+            max: Vec3::ONE,
+        };
+        let b = ExpectedBounds {
+            min: Vec3::ZERO,
+            max: Vec3::splat(1.5),
+        };
+        assert_ne!(a.tag(), b.tag());
+        assert_eq!(a.tag(), a.tag());
     }
 }

@@ -107,12 +107,17 @@ pub fn repeat_sampler() -> ImageSampler {
 #[derive(Default)]
 pub struct ContentCache {
     pub(crate) textures: HashMap<PathBuf, Option<Handle<Image>>>,
+    /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
+    pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Parameters of the scrambled-mesh decoder.
     pub decode_params: opts_core::formats::o3d::descramble::DecodeParams,
     /// Background decoder; without it meshes are decoded on the calling thread.
     pub decode_pool: Option<std::sync::Arc<crate::descramble_cache::DecodePool>>,
+    /// Box the meshes loaded next are expected to lie in (the owning vehicle's bounding box);
+    /// restricts the scrambled-mesh decoder.
+    pub expected_bounds: Option<opts_core::formats::o3d::descramble::ExpectedBounds>,
     /// Meshes whose decoding was queued since the last [`Self::take_deferred`].
     pub deferred: std::collections::HashSet<crate::descramble_cache::Key>,
     /// Loading statistics.
@@ -141,6 +146,39 @@ pub struct ContentLoader<'a> {
 }
 
 impl ContentLoader<'_> {
+    /// The texture without its alpha channel.
+    ///
+    /// OMSI uses a texture's alpha only where the material asks for it (`[matl_alpha]`,
+    /// `[matl_transmap]`); paint textures such as `GN92_1.tga` carry unrelated data there (here
+    /// almost all zeros), which made whole bodies invisible when blended. Images that are already
+    /// opaque, or compressed, are returned unchanged.
+    fn opaque_variant(&mut self, handle: &Handle<Image>) -> Handle<Image> {
+        if let Some(h) = self.cache.opaque.get(&handle.id()) {
+            return h.clone();
+        }
+        let out = match self.images.get(handle) {
+            Some(img)
+                if img.texture_descriptor.format
+                    == bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb
+                    && img
+                        .data
+                        .as_ref()
+                        .is_some_and(|d| d.chunks_exact(4).any(|p| p[3] != 255)) =>
+            {
+                let mut copy = img.clone();
+                if let Some(d) = copy.data.as_mut() {
+                    for p in d.chunks_exact_mut(4) {
+                        p[3] = 255;
+                    }
+                }
+                self.images.add(copy)
+            }
+            _ => handle.clone(),
+        };
+        self.cache.opaque.insert(handle.id(), out.clone());
+        out
+    }
+
     /// Finds a verified plain twin of a scrambled mesh: same file name, same vertex and face
     /// counts and the same multiset of (axis-order independent) position triples.
     fn plain_twin(&self, path: &Path, scrambled: &[O3d]) -> Option<(Vec<O3d>, PathBuf)> {
@@ -278,7 +316,7 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
     ) -> Vec<ModelPart> {
-        let key = (o3d_path.to_path_buf(), format!("{overrides:?}"));
+        let key = (o3d_path.to_path_buf(), format!("{overrides:?}{keep_skin}"));
         if let Some(parts) = self.cache.parts.get(&key) {
             if self.cache.protected.contains(o3d_path) {
                 self.cache.stats.protected_meshes += 1;
@@ -346,7 +384,8 @@ impl ContentLoader<'_> {
                     if !matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable) {
                         continue;
                     }
-                    let ckey = crate::descramble_cache::key(&bytes, mi);
+                    let bounds = self.cache.expected_bounds;
+                    let ckey = crate::descramble_cache::key_bounded(&bytes, mi, bounds);
                     let cached = self
                         .cache
                         .decode_pool
@@ -365,17 +404,24 @@ impl ContentLoader<'_> {
                                     .into_iter()
                                     .filter(|p| p != o3d_path)
                                     .collect();
-                                pool.submit(ckey, m, siblings);
+                                pool.submit(ckey, m, siblings, bounds);
                                 self.cache.deferred.insert(ckey);
                                 deferred_here = true;
                                 continue;
                             }
                             let before = m.clone();
                             let t = std::time::Instant::now();
-                            let report = o3d::descramble::decode_confident_with(
-                                m,
-                                &self.cache.decode_params,
-                            );
+                            let report = match bounds {
+                                Some(b) => o3d::descramble::decode_confident_bounded(
+                                    m,
+                                    &self.cache.decode_params,
+                                    b,
+                                ),
+                                None => o3d::descramble::decode_confident_with(
+                                    m,
+                                    &self.cache.decode_params,
+                                ),
+                            };
                             tracing::info!(
                                 path = %o3d_path.display(),
                                 accepted = report.accepted,
@@ -508,7 +554,7 @@ impl ContentLoader<'_> {
                     .or_else(|| base.primary_texture().map(str::to_owned));
                 let mut tex = match over.and_then(|o| o.image.clone()) {
                     Some(h) => Some(h),
-                    None => tex_name.and_then(|n| self.texture(&n, tex_dirs)),
+                    None => tex_name.clone().and_then(|n| self.texture(&n, tex_dirs)),
                 };
                 let mut blended_by_map = false;
                 if let (Some(base_h), Some(tm)) =
@@ -524,6 +570,9 @@ impl ContentLoader<'_> {
                             blended_by_map = true;
                         }
                     }
+                }
+                if over.and_then(|o| o.alpha).is_none() && !blended_by_map {
+                    tex = tex.map(|h| self.opaque_variant(&h));
                 }
                 let textured = tex.is_some();
                 let mut material = o3d_material_to_standard_material(&base, tex);
@@ -560,6 +609,7 @@ impl ContentLoader<'_> {
                         light_variable = Some(lm.variable.trim().to_owned());
                     }
                 }
+                tracing::debug!(path = %o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?tex_name, "model part");
                 parts.push(ModelPart {
                     mesh: self.meshes.add(mesh),
                     material: self.materials.add(material),

@@ -224,6 +224,18 @@ pub fn load_variants(
         &profile,
         &dir,
     ) {
+        Ok(parts)
+            if parts.iter().any(|p| {
+                meshes
+                    .get(&p.mesh)
+                    .is_some_and(|m| m.attribute(Mesh::ATTRIBUTE_JOINT_INDEX).is_none())
+            }) =>
+        {
+            // Without bone weights the mesh cannot follow the skeleton (and a skinned draw call
+            // with a non-skinned mesh is a render validation error).
+            tracing::error!(hum = %path.display(), "character mesh has no bone weights; not used as pedestrian");
+            pool.slots[i].2 = 40;
+        }
         Ok(parts) => {
             let name = path
                 .file_stem()
