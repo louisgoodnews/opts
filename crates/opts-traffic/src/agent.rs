@@ -18,6 +18,7 @@ use glam::DVec2;
 use crate::graph::{LaneGraph, LaneId, SpawnError};
 use crate::idm::IdmParams;
 use crate::neighbours::Side;
+use crate::rightofway::{precedence, Precedence};
 use crate::rng::Rng;
 use crate::signals::{Aspect, SignalKey, SignalProgram};
 
@@ -180,6 +181,8 @@ const CONFLICT_LOOKAHEAD_M: f64 = 60.0;
 const CONFLICT_STOP_MARGIN_M: f64 = 1.5;
 /// Speed (m/s) assumed for arrival-time estimates of slow or standing vehicles.
 const MIN_ARRIVAL_SPEED: f64 = 2.0;
+/// A vehicle without right of way waits for others that reach the zone within this time (s).
+const GAP_ACCEPTANCE_S: f64 = 6.0;
 /// A vehicle that has stood this long (s) at a conflict zone goes anyway …
 const DEADLOCK_AFTER_S: f64 = 12.0;
 /// … and ignores conflicts for this long (s).
@@ -321,9 +324,17 @@ impl TrafficWorld {
         self.events.push(e);
     }
 
-    fn pick_next(&mut self, lane: LaneId) -> Option<LaneId> {
+    /// A successor of `lane` for a vehicle of `class`, chosen at random among the lanes it may
+    /// use (all of them when none qualifies, so a vehicle is never stranded by a rule).
+    fn pick_next(&mut self, lane: LaneId, class: crate::idm::VehicleClass) -> Option<LaneId> {
         let succ = self.graph.successors(lane);
-        (!succ.is_empty()).then(|| succ[self.rng.below(succ.len())])
+        let allowed: Vec<LaneId> = succ
+            .iter()
+            .copied()
+            .filter(|s| self.graph.lane(*s).is_none_or(|l| l.rules.allows(class)))
+            .collect();
+        let pool: &[LaneId] = if allowed.is_empty() { succ } else { &allowed };
+        (!pool.is_empty()).then(|| pool[self.rng.below(pool.len())])
     }
 
     /// Extends agent `i`'s plan until it covers [`PLAN_HORIZON_M`] of road (or runs out).
@@ -341,7 +352,7 @@ impl TrafficWorld {
                 return;
             }
             let last = a.plan.back().copied().unwrap_or(a.lane);
-            match self.pick_next(last) {
+            match self.pick_next(last, self.agents[i].params.class) {
                 Some(n) => self.agents[i].plan.push_back(n),
                 None => return,
             }
@@ -504,6 +515,7 @@ impl TrafficWorld {
                     continue; // inside the zone already, or too far to matter
                 }
                 let t_me = d.max(0.0) / a.speed.max(MIN_ARRIVAL_SPEED);
+                let prec = precedence(&self.graph, lane_id, c);
                 let must_wait = by_lane.get(&c.other).is_some_and(|list| {
                     list.iter().any(|&j| {
                         if j == i {
@@ -520,7 +532,14 @@ impl TrafficWorld {
                         } else {
                             gap_b / b.speed.max(MIN_ARRIVAL_SPEED)
                         };
-                        inside || t_b < t_me || (t_b == t_me && b.id < a.id)
+                        match prec {
+                            _ if inside => true,
+                            // The other has the right of way: give way if it is near enough.
+                            Precedence::Second => t_b < GAP_ACCEPTANCE_S,
+                            // I have it: the other yields (and a vehicle inside is respected above).
+                            Precedence::First => false,
+                            Precedence::Equal => t_b < t_me || (t_b == t_me && b.id < a.id),
+                        }
                     })
                 });
                 if must_wait {
@@ -707,6 +726,7 @@ impl TrafficWorld {
 mod tests {
     use super::*;
     use crate::geometry::PathGeometry;
+    use crate::graph::LaneRules;
     use crate::graph::{ConnectParams, Direction, LaneKind, LaneSegment};
     use crate::neighbours::Side;
     use crate::signals::SignalProgram;
@@ -1194,6 +1214,109 @@ mod tests {
             "stopped hard for a yellow"
         );
         assert!(w.agent(late).unwrap().speed > 10.0);
+    }
+
+    /// Two perpendicular roads crossing at (0, 100): lane 0 north-bound, lane 1 west-bound (it comes
+    /// from the north-bound driver's right), both 200 m long.
+    fn crossing(a: LaneRules, b: LaneRules) -> TrafficWorld {
+        use std::f64::consts::FRAC_PI_2;
+        let mut north = straight(0.0, 200.0);
+        north.rules = a;
+        let mut west = LaneSegment::straight(
+            DVec2::new(100.0, 100.0),
+            3.0 * FRAC_PI_2,
+            200.0,
+            LaneKind::Road,
+        );
+        west.rules = b;
+        world(&[north, west])
+    }
+
+    /// Slowest speed each agent had while it was within 60 m of the crossing, plus the closest
+    /// approach of the two bodies.
+    fn run_crossing(w: &mut TrafficWorld, steps: usize) -> ([f64; 2], f64) {
+        let mut slowest = [f64::INFINITY; 2];
+        let mut closest = f64::INFINITY;
+        for _ in 0..steps {
+            w.step(0.1);
+            let mut pos = Vec::new();
+            for (k, a) in w.agents().iter().enumerate() {
+                let near = a.s > 40.0 && a.s < 130.0;
+                if near {
+                    slowest[a.id.0 as usize - 1] = slowest[a.id.0 as usize - 1].min(a.speed);
+                }
+                let g = &w.graph().lane(a.lane).unwrap().geometry;
+                pos.push((k, g.point_at(a.s)));
+            }
+            if pos.len() == 2 {
+                closest = closest.min(pos[0].1.distance(pos[1].1));
+            }
+        }
+        (slowest, closest)
+    }
+
+    #[test]
+    fn right_before_left_the_vehicle_from_the_right_goes_first() {
+        let mut w = crossing(LaneRules::default(), LaneRules::default());
+        // Both reach the crossing together; the north-bound one has the other on its right.
+        w.spawn(LaneId(0), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        w.spawn(LaneId(1), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        let (slowest, closest) = run_crossing(&mut w, 150);
+        assert!(
+            slowest[1] > 10.0,
+            "the vehicle from the right slowed to {}",
+            slowest[1]
+        );
+        assert!(
+            slowest[0] < 6.0,
+            "the vehicle from the left did not give way ({})",
+            slowest[0]
+        );
+        assert!(closest > 1.4, "bodies came within {closest} m");
+    }
+
+    #[test]
+    fn a_priority_road_goes_first_even_when_the_side_road_arrives_earlier() {
+        let high = LaneRules {
+            priority: Some(192),
+            ..LaneRules::default()
+        };
+        let low = LaneRules {
+            priority: Some(64),
+            ..LaneRules::default()
+        };
+        // The west-bound vehicle is on the left-hand priority... flip: lane 0 is the priority road
+        // although lane 1 comes from its right, and lane 1 is 10 m closer to the crossing.
+        let mut w = crossing(high, low);
+        w.spawn(LaneId(0), 50.0, 12.0, IdmParams::default())
+            .unwrap();
+        w.spawn(LaneId(1), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        let (slowest, closest) = run_crossing(&mut w, 150);
+        assert!(
+            slowest[0] > 10.0,
+            "the priority road was held up (slowest {})",
+            slowest[0]
+        );
+        assert!(
+            slowest[1] < 6.0,
+            "the side road did not give way ({})",
+            slowest[1]
+        );
+        assert!(closest > 1.4, "bodies came within {closest} m");
+    }
+
+    #[test]
+    fn vehicles_without_right_of_way_do_not_wait_for_far_away_traffic() {
+        let mut w = crossing(LaneRules::default(), LaneRules::default());
+        // The vehicle from the right is 150 m away (12 s): the north-bound one just drives on.
+        w.spawn(LaneId(0), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        w.spawn(LaneId(1), 0.0, 12.0, IdmParams::default()).unwrap();
+        let (slowest, _) = run_crossing(&mut w, 80);
+        assert!(slowest[0] > 10.0, "slowed to {}", slowest[0]);
     }
 
     #[test]

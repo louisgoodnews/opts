@@ -24,7 +24,7 @@ use opts_core::formats::vehicles::model::ModelConfig;
 use opts_core::formats::vehicles::BusManifest;
 use opts_traffic::{
     segments_from_tile, signals_from_tile, AgentId, ConnectParams, IdmParams, LaneGraph, LaneKind,
-    LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld,
+    LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld, VehicleClass,
 };
 
 use crate::in_game::types::{InGameEntity, InGameSessionInfo};
@@ -98,6 +98,20 @@ struct Variant {
     /// Body length and the distance from the model origin to its front bumper (m), measured when
     /// the meshes first load.
     size: Option<(f32, f32)>,
+    /// The vehicle has a passenger cabin (`[passengercabin]`): a bus.
+    has_cabin: bool,
+}
+
+impl Variant {
+    /// Class for lane restrictions: a bus when it has a passenger cabin, a truck when it is long
+    /// without one, else a car.
+    fn class(&self) -> VehicleClass {
+        match (self.has_cabin, self.size) {
+            (true, _) => VehicleClass::Bus,
+            (false, Some((len, _))) if len > 7.5 => VehicleClass::Truck,
+            _ => VehicleClass::Car,
+        }
+    }
 }
 
 enum SlotState {
@@ -338,6 +352,7 @@ fn load_variant(job: &WorldLoadJob, rel: &str) -> Result<Variant, String> {
         tex_dirs,
         delta_height,
         size: None,
+        has_cabin: manifest.passengercabin_cfg.is_some(),
     })
 }
 
@@ -471,12 +486,30 @@ pub fn spawn_traffic(
         );
         let fwd = cam.forward();
         let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
+        // The vehicle type comes first: bus and truck lanes admit only their own.
+        let total: f32 = ready.iter().map(|&i| pool.slots[i].weight).sum();
+        let mut pick = rng.next_f64() as f32 * total;
+        let mut slot = ready[0];
+        for &i in &ready {
+            if pick < pool.slots[i].weight {
+                slot = i;
+                break;
+            }
+            pick -= pool.slots[i].weight;
+        }
+        let class = match &pool.slots[slot].state {
+            SlotState::Ready(v) => v.class(),
+            _ => VehicleClass::Car,
+        };
         let (lane_id, s) =
             state
                 .world
                 .graph()
                 .random_spot(centre, SPAWN_MIN_M, SPAWN_MAX_M, &mut rng, |l| {
-                    l.kind == LaneKind::Road && l.length() > 6.0 && l.rules.density != Some(0.0)
+                    l.kind == LaneKind::Road
+                        && l.length() > 6.0
+                        && l.rules.density != Some(0.0)
+                        && l.rules.allows(class)
                 })?;
         let lane = state.world.graph().lane(lane_id)?;
         // A density rule below 1 thins out the lane (`0` was excluded above).
@@ -492,16 +525,6 @@ pub fn spawn_traffic(
             return None;
         }
         let limit = lane.speed_limit;
-        let total: f32 = ready.iter().map(|&i| pool.slots[i].weight).sum();
-        let mut pick = rng.next_f64() as f32 * total;
-        let mut slot = ready[0];
-        for &i in &ready {
-            if pick < pool.slots[i].weight {
-                slot = i;
-                break;
-            }
-            pick -= pool.slots[i].weight;
-        }
         Some((lane_id, s, limit, slot, at))
     })();
     let Some((lane_id, s, limit, slot, at)) = result else {
@@ -567,13 +590,25 @@ pub fn spawn_traffic(
             (4.4, 2.2)
         }
     });
-    let heavy = size.0 > 8.0;
+    let heavy = size.0 > 7.5;
     let mut params = if heavy {
         IdmParams::heavy()
     } else {
         IdmParams::default()
     };
     params.length = f64::from(size.0);
+    params.class = variant.class();
+    // The vehicle may not use the lane it was placed on (its length was unknown before).
+    if state
+        .world
+        .graph()
+        .lane(lane_id)
+        .is_some_and(|l| !l.rules.allows(params.class))
+    {
+        commands.entity(root).despawn();
+        pool.rng = Some(rng);
+        return;
+    }
     // Drivers differ a little; the lane's speed limit caps the desired speed.
     params.desired_speed *= 0.9 + 0.2 * rng.next_f64();
     if let Some(l) = limit {

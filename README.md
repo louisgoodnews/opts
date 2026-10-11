@@ -13,8 +13,8 @@ OPTS is a free, open-source public transport simulator written in **Rust** on th
 | **Vehicles** | kinematic/dynamic driving, wheels, cockpit/chase/passenger/free-roam cameras, driver character |
 | **Scripts** (`opts-sim`) | OMSI `.osc` script VM (compiles all 6,062 scripts of the reference corpus), driving mesh animation, lights, light maps, OMSI key bindings and cockpit hot-spots |
 | **Tooling** | `opts-cli` remote control of a running game, hot reload of changed assets, F1 bug reporting, `opts-tools inspect` |
-| **AI traffic** | cars from the map's AI list follow the road lanes and keep their distance (`--traffic N`); vehicles stop at traffic lights, take turns at crossings and merges and change lanes gently; no right-of-way rules yet |
-| **Not yet** | passengers and routing, timetables, right of way and animated signal heads, spatial audio, night maps, in-game settings, packaged releases |
+| **AI traffic** | cars from the map's AI list follow the road lanes and keep their distance (`--traffic N`); vehicles stop at traffic lights, follow priority rules and right before left, and change lanes gently |
+| **Not yet** | passengers and routing, timetables, animated signal heads, spatial audio, night maps, in-game settings, packaged releases |
 
 ## 🚀 Running it
 

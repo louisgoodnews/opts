@@ -178,8 +178,7 @@ impl TrafficWorld {
             let ml = self.graph.lane(n.lane)?;
             let allowed = ml.kind == lane.kind
                 && ml.rules.density != Some(0.0)
-                && !ml.rules.no_cars
-                && !ml.rules.bus
+                && ml.rules.allows(own.class)
                 && ml.signal.is_none()
                 && !(n.side == Side::Left && (lane.rules.no_overtaking || ml.rules.no_overtaking));
             if !allowed {

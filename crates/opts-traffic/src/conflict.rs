@@ -34,9 +34,20 @@ const STEP: f64 = 1.0;
 /// Side of the spatial-hash cells (m).
 pub(crate) const CELL: f64 = 16.0;
 
+/// How two lanes meet.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConflictKind {
+    /// The lanes cross each other.
+    Crossing,
+    /// The lanes lead into the same successor.
+    Merge,
+}
+
 /// A zone on one lane that another lane's vehicles also use.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Conflict {
+    /// Crossing or merging.
+    pub kind: ConflictKind,
     /// The other lane.
     pub other: LaneId,
     /// Start of the zone on this lane, metres from the lane start.
@@ -124,6 +135,7 @@ impl LaneGraph {
             }
             if e <= x {
                 out.push(Conflict {
+                    kind: ConflictKind::Crossing,
                     other,
                     enter: (e - MARGIN).max(0.0),
                     exit: (x + MARGIN).min(lane.length()),
@@ -143,6 +155,7 @@ impl LaneGraph {
                     continue;
                 }
                 out.push(Conflict {
+                    kind: ConflictKind::Merge,
                     other: m,
                     enter: (lane.length() - MERGE_ZONE).max(0.0),
                     exit: lane.length(),

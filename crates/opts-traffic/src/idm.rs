@@ -9,6 +9,18 @@
 //! defaults are the literature's city values, **not** calibrated against OMSI's AI ❓
 //! (`docs/src/architecture/ai-traffic.md`, section "Calibration").
 
+/// What kind of vehicle it is, for lane restrictions (`bus`, `trucks`, `no_cars` rules).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum VehicleClass {
+    /// A passenger car (and van, taxi, motorcycle).
+    #[default]
+    Car,
+    /// A lorry or other commercial vehicle.
+    Truck,
+    /// A bus or tram-like public transport vehicle.
+    Bus,
+}
+
 /// Parameters of one driver/vehicle pair.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct IdmParams {
@@ -28,6 +40,8 @@ pub struct IdmParams {
     pub length: f64,
     /// Hardest braking the model may ask for, m/s² (keeps the law crash-free yet bounded).
     pub max_decel: f64,
+    /// Vehicle class for lane restrictions.
+    pub class: VehicleClass,
 }
 
 impl Default for IdmParams {
@@ -42,6 +56,7 @@ impl Default for IdmParams {
             delta: 4.0,
             length: 4.4,
             max_decel: 9.0,
+            class: VehicleClass::Car,
         }
     }
 }
@@ -54,6 +69,7 @@ impl IdmParams {
             max_accel: 0.8,
             comfort_decel: 1.5,
             length: 12.0,
+            class: VehicleClass::Truck,
             ..Self::default()
         }
     }

@@ -34,6 +34,7 @@ pub mod graph;
 pub mod idm;
 pub mod lanechange;
 pub mod neighbours;
+pub mod rightofway;
 pub mod rng;
 pub mod signals;
 pub mod source;
@@ -41,15 +42,16 @@ pub mod source;
 pub use agent::{
     Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld, LANE_CHANGE_DURATION_S,
 };
-pub use conflict::Conflict;
+pub use conflict::{Conflict, ConflictKind};
 pub use density::{weighted_pick, DensityCurve};
 pub use geometry::PathGeometry;
 pub use graph::{
     ConnectParams, Direction, Elevation, Lane, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment,
     SpawnError,
 };
-pub use idm::IdmParams;
+pub use idm::{IdmParams, VehicleClass};
 pub use neighbours::{Neighbour, Side};
+pub use rightofway::{precedence, Precedence};
 pub use rng::Rng;
 pub use signals::{Aspect, SignalKey, SignalProgram};
 pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource, TILE_SIZE_M};

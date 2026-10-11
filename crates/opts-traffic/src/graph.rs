@@ -70,8 +70,9 @@ impl Direction {
 
 /// Traffic rules of a path (`[rule]` records of the owning spline or object).
 ///
-/// Which vehicles the restriction flags allow or forbid is not settled ❓: the corpus only has
-/// them with value `0`; they are kept as "a rule of this type exists".
+/// The vehicle-type flags read as their names say (project decision, M-0049): `bus` makes the lane
+/// a lane **for buses**, `trucks` one **for trucks**, `no_cars` keeps **cars** off it. The corpus
+/// has them only with value `0`; the semantics are not confirmed in OMSI ❓.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LaneRules {
     /// `trafficdensity`: factor for AI traffic on the lane (`0` = none; corpus values `0`,
@@ -87,6 +88,22 @@ pub struct LaneRules {
     pub no_cars: bool,
     /// An `overtaking_prohib` rule exists.
     pub no_overtaking: bool,
+}
+
+impl LaneRules {
+    /// Whether vehicles of `class` may use the lane: `bus` and `trucks` restrict the lane to the
+    /// classes they name (both together admit both), `no_cars` excludes cars.
+    #[must_use]
+    pub fn allows(&self, class: crate::idm::VehicleClass) -> bool {
+        use crate::idm::VehicleClass::{Bus, Car, Truck};
+        if class == Car && self.no_cars {
+            return false;
+        }
+        if self.bus || self.trucks {
+            return (class == Bus && self.bus) || (class == Truck && self.trucks);
+        }
+        true
+    }
 }
 
 /// Height profile along a lane: start height and the gradients (rise over run) at both ends,
@@ -198,6 +215,13 @@ impl Lane {
     #[must_use]
     pub fn z_at(&self, s: f64) -> f64 {
         self.elevation.at(s, self.length())
+    }
+
+    /// Heading change from start to end in radians (positive = clockwise = a right turn).
+    #[must_use]
+    pub fn turn(&self) -> f64 {
+        let d = self.geometry.end_heading() - self.geometry.heading;
+        (d + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI
     }
 }
 
@@ -531,6 +555,55 @@ mod tests {
         let l = g.lane(LaneId(2)).unwrap();
         assert!(l.geometry.start.abs_diff_eq(DVec2::new(0.0, 130.0), 1e-9));
         assert!(angle_diff(l.geometry.heading, std::f64::consts::PI) < 1e-9);
+    }
+
+    #[test]
+    fn vehicle_type_rules_read_as_their_names_say() {
+        use crate::idm::VehicleClass::{Bus, Car, Truck};
+        let none = LaneRules::default();
+        assert!([Car, Truck, Bus].iter().all(|c| none.allows(*c)));
+        let bus_lane = LaneRules { bus: true, ..none };
+        assert_eq!(
+            [
+                bus_lane.allows(Car),
+                bus_lane.allows(Truck),
+                bus_lane.allows(Bus)
+            ],
+            [false, false, true]
+        );
+        let truck_lane = LaneRules {
+            trucks: true,
+            ..none
+        };
+        assert_eq!(
+            [
+                truck_lane.allows(Car),
+                truck_lane.allows(Truck),
+                truck_lane.allows(Bus)
+            ],
+            [false, true, false]
+        );
+        let both = LaneRules {
+            bus: true,
+            trucks: true,
+            ..none
+        };
+        assert_eq!(
+            [both.allows(Car), both.allows(Truck), both.allows(Bus)],
+            [false, true, true]
+        );
+        let no_cars = LaneRules {
+            no_cars: true,
+            ..none
+        };
+        assert_eq!(
+            [
+                no_cars.allows(Car),
+                no_cars.allows(Truck),
+                no_cars.allows(Bus)
+            ],
+            [false, true, true]
+        );
     }
 
     #[test]
