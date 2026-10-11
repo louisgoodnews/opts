@@ -53,6 +53,8 @@
   - [M-0042: CI & Toolchain Hardening](roadmap/phase-5/M-0042.md)
   - [M-0043: CLI Control Protocol & Hot Reload](roadmap/phase-5/M-0043.md)
   - [M-0044: Bevy Engine Upgrade](roadmap/phase-5/M-0044.md)
+  - [M-0047: Bevy 0.20 Upgrade](roadmap/phase-5/M-0047.md)
+  - [M-0048: DLSS Upscaling](roadmap/phase-5/M-0048.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
@@ -65,6 +67,7 @@
 - [Crate Dependency Graph](architecture/crate-graph.md)
 - [Coordinate Systems](architecture/coordinates.md)
 - [Text Textures](architecture/text-textures.md)
+- [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Script VM](architecture/script-vm.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)

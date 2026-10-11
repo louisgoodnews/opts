@@ -185,4 +185,15 @@ mod tests {
         assert_eq!(r.names, ["Beige"]);
         let _ = std::fs::remove_dir_all(&root);
     }
+
+    /// Needs an installation: `OMSI_PATH=<root> cargo test -p opts-game repaints -- --ignored`.
+    #[test]
+    #[ignore]
+    fn real_installation_lists_gn92_repaints() {
+        let root = PathBuf::from(std::env::var("OMSI_PATH").expect("OMSI_PATH"));
+        let r = discover(&root, "Vehicles/MAN_NL_NG/MAN_GN92_main.bus", "Beige");
+        eprintln!("{} repaints: {:?}", r.names.len(), r.names);
+        assert_eq!(r.names[0], "Beige");
+        assert!(r.names.len() > 5);
+    }
 }
