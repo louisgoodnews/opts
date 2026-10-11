@@ -27,6 +27,7 @@
 #![warn(missing_docs)]
 
 pub mod agent;
+pub mod conflict;
 pub mod density;
 pub mod geometry;
 pub mod graph;
@@ -35,6 +36,7 @@ pub mod rng;
 pub mod source;
 
 pub use agent::{Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld};
+pub use conflict::Conflict;
 pub use density::{weighted_pick, DensityCurve};
 pub use geometry::PathGeometry;
 pub use graph::{

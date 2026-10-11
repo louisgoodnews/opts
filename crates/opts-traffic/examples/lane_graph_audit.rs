@@ -155,6 +155,16 @@ fn main() {
         100.0 * with_succ as f64 / n.max(1) as f64,
         100.0 * with_pred as f64 / n.max(1) as f64
     );
+    let t = std::time::Instant::now();
+    let conflicts: Vec<usize> = graph.lane_ids().map(|l| graph.conflicts(l).len()).collect();
+    println!(
+        "conflict zones: {} lanes have some ({:.1} %), {} zones in total, max {} on one lane; computed for all lanes in {} ms",
+        conflicts.iter().filter(|&&c| c > 0).count(),
+        100.0 * conflicts.iter().filter(|&&c| c > 0).count() as f64 / n.max(1) as f64,
+        conflicts.iter().sum::<usize>(),
+        conflicts.iter().max().unwrap_or(&0),
+        t.elapsed().as_millis()
+    );
     let lanes = || graph.lane_ids().filter_map(|l| graph.lane(l));
     println!(
         "rules on lanes: speed limit {}, density {}, priority {}, trucks {}, bus {}, no_cars {}, no overtaking {}",

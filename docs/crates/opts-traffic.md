@@ -23,6 +23,7 @@ Pure Rust, deterministic AI traffic: turns the `[path]` lanes of OMSI splines an
 - **`idm::IdmParams`** — Intelligent Driver Model (`acceleration(v, speed_cap, ahead)`); presets `default()` (car, 50 km/h) and `heavy()`. Literature defaults, not calibrated to OMSI.
 - **`agent::{TrafficWorld, Agent, AgentId, DriverCommand, Blinker, TrafficEvent}`** — `spawn` (free-room check), `step(dt)` (leaders on the same lane and across the lane border, ballistic update, lane transitions with seeded branch choice, dead-end removal), `command(id)` (`throttle`/`brake` from acceleration, indicators from the next lane's turn), `Agent::pose`.
 - **`graph::Elevation`**, **`Lane::z_at`**, **`Lane::key`**, **`LaneGraph::{lane_by_key, random_spot}`** — height profile from the gradients (`rise = length·(g0+g1)/2`), stable lane identity across rebuilds, random placement in a distance band; **`TrafficWorld::replace_graph`** swaps in a rebuilt graph and keeps agents on lanes with the same key.
+- **`conflict::Conflict`**, **`LaneGraph::{conflicts, predecessors}`** — crossing and merging zones per lane, computed on first use; the agent step makes vehicles wait in front of a zone when another arrives earlier (`TrafficWorld` keeps a clock and a deadlock breaker).
 - **`density::{DensityCurve, weighted_pick}`**, **`rng::Rng`** (SplitMix64) — spawn weights and day curves; all randomness is seeded.
 
 Parsers for the input files live in `opts-core`: `opts_core::formats::map::{AiLists, parse_unsched_vehgroups, parse_unsched_trafficdens}`.
@@ -35,4 +36,4 @@ Parsers for the input files live in `opts-core`: `opts_core::formats::map::{AiLi
 
 - Agents are processed in lane / position / id order and use one seeded generator, so runs are reproducible.
 - Kinematic and script-driven vehicles share the same agent state; see the plan, §5.
-- Not implemented yet: signals, priority/reservation, speed limits from `[rule]`, lane changes, scheduled routes (plan §6–§8).
+- Not implemented yet: signals, right of way by rule (conflicts are resolved by arrival time), lane changes, scheduled routes (plan §6–§8).

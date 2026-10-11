@@ -8,6 +8,7 @@
 
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
+use std::sync::OnceLock;
 
 use glam::DVec2;
 use thiserror::Error;
@@ -231,6 +232,11 @@ pub enum SpawnError {
 pub struct LaneGraph {
     lanes: Vec<Lane>,
     successors: Vec<Vec<LaneId>>,
+    predecessors: Vec<Vec<LaneId>>,
+    /// Spatial hash of lane samples for conflict search.
+    pub(crate) grid: HashMap<(i64, i64), Vec<u32>>,
+    /// Conflict zones per lane, computed on first use.
+    pub(crate) conflict_cache: Vec<OnceLock<Vec<crate::conflict::Conflict>>>,
 }
 
 fn angle_diff(a: f64, b: f64) -> f64 {
@@ -302,7 +308,21 @@ impl LaneGraph {
             }
             successors[i].sort_unstable();
         }
-        Self { lanes, successors }
+        let mut predecessors = vec![Vec::new(); lanes.len()];
+        for (i, succ) in successors.iter().enumerate() {
+            for s in succ {
+                predecessors[s.0 as usize].push(LaneId(i as u32));
+            }
+        }
+        let grid = Self::index_lanes(&lanes);
+        let conflict_cache = (0..lanes.len()).map(|_| OnceLock::new()).collect();
+        Self {
+            lanes,
+            successors,
+            predecessors,
+            grid,
+            conflict_cache,
+        }
     }
 
     /// Number of lanes.
@@ -386,6 +406,14 @@ impl LaneGraph {
             }
         }
         None
+    }
+
+    /// Lanes that lead into `id`, sorted by id.
+    #[must_use]
+    pub fn predecessors(&self, id: LaneId) -> &[LaneId] {
+        self.predecessors
+            .get(id.0 as usize)
+            .map_or(&[], Vec::as_slice)
     }
 
     /// Shortest route (by length) from `from` to `to`, both included.

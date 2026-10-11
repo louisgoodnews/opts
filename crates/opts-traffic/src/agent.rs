@@ -70,6 +70,10 @@ pub struct Agent {
     pub params: IdmParams,
     /// The lane taken after this one (chosen on entry), if any.
     pub next: Option<LaneId>,
+    /// Seconds spent standing still because of a conflict zone.
+    pub waiting_s: f64,
+    /// World time until which conflicts are ignored (breaks deadlocks).
+    pub ignore_conflicts_until: f64,
 }
 
 impl Agent {
@@ -87,6 +91,17 @@ impl Agent {
     }
 }
 
+/// Conflict zones further ahead than this (m) are not considered.
+const CONFLICT_LOOKAHEAD_M: f64 = 60.0;
+/// Vehicles stop this far (m) before a conflict zone they have to wait for.
+const CONFLICT_STOP_MARGIN_M: f64 = 1.5;
+/// Speed (m/s) assumed for arrival-time estimates of slow or standing vehicles.
+const MIN_ARRIVAL_SPEED: f64 = 2.0;
+/// A vehicle that has stood this long (s) at a conflict zone goes anyway …
+const DEADLOCK_AFTER_S: f64 = 12.0;
+/// … and ignores conflicts for this long (s).
+const DEADLOCK_IGNORE_S: f64 = 5.0;
+
 /// Indicators are requested when the next lane turns by more than this (radians) …
 const BLINK_TURN: f64 = 20.0 * std::f64::consts::PI / 180.0;
 /// … and the lane end is closer than this (metres).
@@ -100,6 +115,7 @@ pub struct TrafficWorld {
     next_id: u64,
     rng: Rng,
     events: Vec<TrafficEvent>,
+    time: f64,
 }
 
 impl TrafficWorld {
@@ -112,6 +128,7 @@ impl TrafficWorld {
             next_id: 1,
             rng: Rng::new(seed),
             events: Vec::new(),
+            time: 0.0,
         }
     }
 
@@ -219,8 +236,60 @@ impl TrafficWorld {
             accel: 0.0,
             params,
             next,
+            waiting_s: 0.0,
+            ignore_conflicts_until: 0.0,
         });
         Ok(id)
+    }
+
+    /// The gap (m) to the zone agent `i` has to wait in front of, if it must give way to another
+    /// vehicle: crossing and merging flows take turns by estimated arrival time at the zone (a
+    /// vehicle already in the zone always goes first; ties go to the lower id). Zones the agent
+    /// has entered are never blocked, so nobody stops in the middle of a junction.
+    fn conflict_gap(&self, i: usize, by_lane: &HashMap<LaneId, Vec<usize>>) -> Option<f64> {
+        let a = &self.agents[i];
+        if a.ignore_conflicts_until > self.time {
+            return None;
+        }
+        let lane = self.graph.lane(a.lane)?;
+        let remaining = lane.length() - a.s;
+        let next = a.next;
+        let mut best: Option<f64> = None;
+        for (lane_id, offset) in std::iter::once((a.lane, -a.s)).chain(next.map(|n| (n, remaining)))
+        {
+            for c in self.graph.conflicts(lane_id) {
+                // Distance from my front bumper to the zone entrance.
+                let d = c.enter + offset;
+                if !(-0.5..=CONFLICT_LOOKAHEAD_M).contains(&d) {
+                    continue; // inside the zone already, or too far to matter
+                }
+                let t_me = d.max(0.0) / a.speed.max(MIN_ARRIVAL_SPEED);
+                let must_wait = by_lane.get(&c.other).is_some_and(|list| {
+                    list.iter().any(|&j| {
+                        if j == i {
+                            return false;
+                        }
+                        let b = &self.agents[j];
+                        let inside = b.s > c.other_enter && b.s - b.params.length < c.other_exit;
+                        let gap_b = c.other_enter - b.s;
+                        if !inside && !(0.0..=CONFLICT_LOOKAHEAD_M).contains(&gap_b) {
+                            return false;
+                        }
+                        let t_b = if inside {
+                            0.0
+                        } else {
+                            gap_b / b.speed.max(MIN_ARRIVAL_SPEED)
+                        };
+                        inside || t_b < t_me || (t_b == t_me && b.id < a.id)
+                    })
+                });
+                if must_wait {
+                    let gap = (d - CONFLICT_STOP_MARGIN_M).max(0.0);
+                    best = Some(best.map_or(gap, |g: f64| g.min(gap)));
+                }
+            }
+        }
+        best
     }
 
     /// Advances every agent by `dt` seconds (use steps of at most 0.1 s).
@@ -241,6 +310,7 @@ impl TrafficWorld {
         }
         // Decide accelerations from the state at the start of the step.
         let mut accels = Vec::with_capacity(self.agents.len());
+        let mut blocked = vec![false; self.agents.len()];
         for (i, a) in self.agents.iter().enumerate() {
             let Some(lane) = self.graph.lane(a.lane) else {
                 accels.push(0.0);
@@ -260,6 +330,14 @@ impl TrafficWorld {
                         (lane.length() - a.s + o.s - o.params.length, o.speed)
                     })
             };
+            let wait = self.conflict_gap(i, &by_lane);
+            blocked[i] = wait.is_some();
+            // The nearer of the leader and the conflict zone limits the vehicle.
+            let ahead = match (ahead, wait) {
+                (Some((g, _)), Some(w)) if w < g => Some((w, 0.0)),
+                (None, Some(w)) => Some((w, 0.0)),
+                (ahead, _) => ahead,
+            };
             let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
             accels.push(a.params.acceleration(a.speed, cap, ahead));
         }
@@ -278,6 +356,19 @@ impl TrafficWorld {
                 a.speed = v1;
             }
             a.accel = acc;
+        }
+        self.time += dt;
+        // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles).
+        for (a, &b) in self.agents.iter_mut().zip(&blocked) {
+            if b && a.speed < 0.2 {
+                a.waiting_s += dt;
+                if a.waiting_s > DEADLOCK_AFTER_S {
+                    a.waiting_s = 0.0;
+                    a.ignore_conflicts_until = self.time + DEADLOCK_IGNORE_S;
+                }
+            } else {
+                a.waiting_s = 0.0;
+            }
         }
         self.advance_lanes();
     }
@@ -504,6 +595,125 @@ mod tests {
         assert!(c.throttle > 0.9 && c.brake == 0.0 && c.blinker == Blinker::Off);
         w.agents[0].s = 80.0;
         assert_eq!(w.command(id).unwrap().blinker, Blinker::Right);
+    }
+
+    /// Smallest distance between the bodies (front bumper to rear) of two agents over a run.
+    fn min_body_distance(w: &mut TrafficWorld, steps: usize) -> f64 {
+        let mut min = f64::INFINITY;
+        for _ in 0..steps {
+            w.step(0.1);
+            let pts: Vec<Vec<DVec2>> = w
+                .agents()
+                .iter()
+                .map(|a| {
+                    let g = &w.graph().lane(a.lane).unwrap().geometry;
+                    (0..=4)
+                        .map(|k| g.point_at((a.s - a.params.length * f64::from(k) / 4.0).max(0.0)))
+                        .collect()
+                })
+                .collect();
+            for i in 0..pts.len() {
+                for j in i + 1..pts.len() {
+                    for p in &pts[i] {
+                        for q in &pts[j] {
+                            min = min.min(p.distance(*q));
+                        }
+                    }
+                }
+            }
+        }
+        min
+    }
+
+    #[test]
+    fn crossing_flows_take_turns_without_touching() {
+        use std::f64::consts::FRAC_PI_2;
+        // North-bound and east-bound lanes cross at (0, 100); both vehicles arrive together.
+        let north = straight(0.0, 200.0);
+        let east =
+            LaneSegment::straight(DVec2::new(-100.0, 100.0), FRAC_PI_2, 200.0, LaneKind::Road);
+        let mut w = world(&[north, east]);
+        let a = w
+            .spawn(LaneId(0), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        let b = w
+            .spawn(LaneId(1), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        let min = min_body_distance(&mut w, 400);
+        assert!(min > 1.4, "bodies came within {min} m");
+        // Both got through (and left at the dead ends) without a deadlock.
+        assert!(w.agent(a).is_none() && w.agent(b).is_none());
+    }
+
+    #[test]
+    fn without_conflict_handling_the_same_crossing_would_collide() {
+        use std::f64::consts::FRAC_PI_2;
+        // Negative control for the test above: with conflicts ignored the bodies overlap.
+        let north = straight(0.0, 200.0);
+        let east =
+            LaneSegment::straight(DVec2::new(-100.0, 100.0), FRAC_PI_2, 200.0, LaneKind::Road);
+        let mut w = world(&[north, east]);
+        w.spawn(LaneId(0), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        w.spawn(LaneId(1), 60.0, 12.0, IdmParams::default())
+            .unwrap();
+        for a in &mut w.agents {
+            a.ignore_conflicts_until = f64::INFINITY;
+        }
+        assert!(min_body_distance(&mut w, 400) < 1.0);
+    }
+
+    #[test]
+    fn merging_lanes_take_turns() {
+        let mut w = world(&[
+            straight(0.0, 60.0),
+            straight(60.0, 100.0),
+            LaneSegment::straight(DVec2::new(-0.2, 10.0), 0.0, 50.2, LaneKind::Road),
+        ]);
+        w.spawn(LaneId(0), 30.0, 10.0, IdmParams::default())
+            .unwrap();
+        w.spawn(LaneId(2), 30.0, 10.0, IdmParams::default())
+            .unwrap();
+        let min = min_body_distance(&mut w, 400);
+        assert!(min > 1.4, "bodies came within {min} m");
+        assert!(w.agents().is_empty());
+    }
+
+    #[test]
+    fn parallel_traffic_is_not_held_up() {
+        let neighbour = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 400.0, LaneKind::Road);
+        let mut w = world(&[straight(0.0, 400.0), neighbour]);
+        let a = w.spawn(LaneId(0), 0.0, 12.0, IdmParams::default()).unwrap();
+        w.spawn(LaneId(1), 0.0, 12.0, IdmParams::default()).unwrap();
+        for _ in 0..100 {
+            w.step(0.1);
+        }
+        assert!(w.agent(a).unwrap().speed > 10.0);
+    }
+
+    #[test]
+    fn a_stuck_vehicle_goes_anyway_after_the_deadlock_timeout() {
+        use std::f64::consts::FRAC_PI_2;
+        // A stands in the middle of the crossing at speed 0 with no way to leave it (its desired
+        // speed is 0), B approaches on the other lane: B waits, then goes after the timeout.
+        let north = straight(0.0, 200.0);
+        let east =
+            LaneSegment::straight(DVec2::new(-100.0, 100.0), FRAC_PI_2, 200.0, LaneKind::Road);
+        let mut w = world(&[north, east]);
+        let parked = IdmParams {
+            desired_speed: 0.1,
+            max_accel: 0.0,
+            ..IdmParams::default()
+        };
+        w.spawn(LaneId(0), 101.0, 0.0, parked).unwrap();
+        let b = w.spawn(LaneId(1), 40.0, 8.0, IdmParams::default()).unwrap();
+        for _ in 0..600 {
+            w.step(0.1);
+        }
+        assert!(
+            w.agent(b).is_none_or(|a| a.s > 100.0),
+            "B never passed the crossing"
+        );
     }
 
     #[test]
