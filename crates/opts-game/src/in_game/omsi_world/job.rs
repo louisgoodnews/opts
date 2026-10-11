@@ -208,6 +208,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         vehicle_dirs: Vec::new(),
         spline_index: None,
         sco_cache: HashMap::new(),
+        parklist: None,
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
         ground_material: None,
@@ -365,6 +366,46 @@ impl WorldLoadJob {
         };
         self.sli_cache.insert(path, out.clone());
         out
+    }
+
+    /// Picks the parked vehicle for a parking-bay marker from `parklist_p.txt`.
+    ///
+    /// One `.sco` per line; duplicates raise the pick probability (`docs/src/formats/map/lists.md`).
+    /// The draw is a hash of the marker's id code, so a bay shows the same car on every load.
+    pub(super) fn parked_vehicle(&mut self, id_code: u64) -> Option<String> {
+        if self.parklist.is_none() {
+            let path = self.install.find_in(&self.config.map_dir, "parklist_p.txt");
+            let list = match path.map(|p| std::fs::read(&p).map(|b| (p, b))) {
+                Some(Ok((p, bytes))) => {
+                    self.loading_deps
+                        .insert(opts_bevy::hot_reload::cache::normalize(&p));
+                    let text: String = bytes.iter().map(|&b| char::from(b)).collect();
+                    text.lines()
+                        .map(|l| l.trim().to_string())
+                        .filter(|l| !l.is_empty())
+                        .collect()
+                }
+                Some(Err(e)) => {
+                    tracing::error!("parklist_p.txt unreadable: {e}");
+                    Vec::new()
+                }
+                None => {
+                    tracing::error!(map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
+                    Vec::new()
+                }
+            };
+            self.parklist = Some(list);
+        }
+        let list = self.parklist.as_deref().unwrap_or_default();
+        if list.is_empty() {
+            return None;
+        }
+        // splitmix64 finaliser: spreads consecutive ids evenly.
+        let mut h = id_code.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        h = (h ^ (h >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        h = (h ^ (h >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        h ^= h >> 31;
+        Some(list[(h % list.len() as u64) as usize].clone())
     }
 
     pub(super) fn sco(&mut self, rel: &str) -> Option<(PathBuf, Arc<SceneryObject>)> {

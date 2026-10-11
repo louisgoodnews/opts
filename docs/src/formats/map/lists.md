@@ -324,3 +324,19 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - [`.sco`](../text/sco.md) — keyword grammar and parked-vehicle objects
 - [.org — Number and Registration Lists](../text/org.md)
 - [Repaints](../text/repaints.md)
+
+## Parking bays and parked vehicles (2026-10)
+
+Verified on `Ruhrau V2` (2,829 placements) and `Hamburg109`/`Neuendorf`:
+
+- `Sceneryobjects/Generic/car_park.sco` (also `ADDON_Rheinhausen/Zane_Utilities/carpark_random.sco`) is an
+  `[onlyeditor]` marker carrying the bare flag `[carpark_p]`. It is placed as a normal `[object]` or,
+  mostly, as a `[splineAttachement]` along a road. The game shows no mesh for the marker; instead a
+  vehicle `.sco` from the map's `parklist_p.txt` stands in the bay (Latin-1 text, one `.sco` per line,
+  duplicates weight the draw). OPTS draws deterministically from the marker's id code.
+- Parked-vehicle `.sco` files (`Vehicles/<name>/parked_*.sco`) have no `[mesh]`; their `[model]` points
+  to a vehicle-style `model_parked.cfg`. Such configs often list two `[LOD]` levels: a close-up one with
+  interior and shadow-decal meshes (`[LOD] 0.07`) and the plain body (`[LOD] 0`). OPTS uses the
+  `[LOD] 0` level (the close-up level renders as black decal blobs).
+- Cars may also be placed directly as `Vehicles\…\parked_*.sco` objects (e.g. 106× `parked_hh109kipkw5_ziv.sco`).
+- Open: how `parklist_p_<n>.txt` variants are selected per bay (the attachment's trailing `1 / 1` fields are a guess).

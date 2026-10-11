@@ -277,6 +277,12 @@ pub struct SceneryObject {
     pub tree: Option<ScoTree>,
     /// Whether this object is only visible in the editor.
     pub only_editor: bool,
+    /// Parking-bay marker (`[carpark_p]`): the game places a random parked car from the map's
+    /// `parklist_p.txt` here (the marker itself is editor-only).
+    pub carpark_p: bool,
+    /// Vehicle-style model config (`[model]`, e.g. `model\model_parked.cfg`) of a parked/static
+    /// vehicle object.
+    pub model_cfg: Option<String>,
     /// Whether this object can be joined with neighbors in the editor.
     pub joinable: bool,
     /// Whether this object is a route helper arrow.
@@ -423,6 +429,14 @@ impl SceneryObject {
                 }
                 "onlyeditor" => {
                     obj.only_editor = true;
+                }
+                "carpark_p" => {
+                    obj.carpark_p = true;
+                }
+                "model" => {
+                    if let Some(path) = block.parameters.first() {
+                        obj.model_cfg = Some(path.clone());
+                    }
                 }
                 "joinable" => {
                     obj.joinable = true;

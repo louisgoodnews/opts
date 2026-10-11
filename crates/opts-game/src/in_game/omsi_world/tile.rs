@@ -9,6 +9,7 @@ use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
 use opts_bevy::{attach_model_parts, sample_terrain, ContentLoader, TextureOverride, TILE_SIZE_M};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
+use opts_core::formats::vehicles::model::ModelConfig;
 
 use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
@@ -174,6 +175,23 @@ fn spawn_object(
         ));
         return;
     }
+    if sco.carpark_p {
+        let Some(parked) = job.parked_vehicle(obj.id_code) else {
+            return;
+        };
+        let mut replaced = obj.clone();
+        replaced.sco_file = parked;
+        let is_marker = job
+            .sco(&replaced.sco_file)
+            .is_some_and(|(_, s)| s.carpark_p);
+        if !is_marker {
+            spawn_object(
+                job, stats, commands, meshes, materials, images, &replaced, attached_z, terrain,
+                key, origin, children,
+            );
+        }
+        return;
+    }
     if sco.only_editor {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
@@ -219,6 +237,13 @@ fn spawn_object(
         roll = ?obj.roll_deg,
         "placing scenery object"
     );
+    if let Some(cfg_rel) = &sco.model_cfg {
+        spawn_vehicle_model(
+            job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
+            transform, children,
+        );
+        return;
+    }
     let protected_before = job.cache.stats.protected_meshes;
     let deferred_before = job.cache.stats.deferred_meshes;
     let mut parts = Vec::new();
@@ -314,6 +339,74 @@ fn spawn_object(
     children.push(parent);
     stats.scene_vertices += parts.iter().map(|p| p.vertices).sum::<usize>();
     attach_model_parts(commands, parent, &parts, "Mesh");
+    stats.objects_loaded += 1;
+}
+
+/// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config whose
+/// first LOD holds the visible meshes.
+#[allow(clippy::too_many_arguments)]
+fn spawn_vehicle_model(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    sco_path: &Path,
+    sco_dir: &Path,
+    cfg_rel: &str,
+    transform: Transform,
+    children: &mut Vec<Entity>,
+) {
+    let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
+        tracing::error!(sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
+        stats.objects_failed += 1;
+        return;
+    };
+    job.loading_deps
+        .insert(opts_bevy::hot_reload::cache::normalize(&cfg_path));
+    let model = match std::fs::read(&cfg_path)
+        .map_err(|e| e.to_string())
+        .and_then(|b| ModelConfig::parse_bytes(&b).map_err(|e| e.to_string()))
+    {
+        Ok(m) => m,
+        Err(e) => {
+            tracing::error!(cfg = %cfg_path.display(), "vehicle model config failed: {e}");
+            stats.objects_failed += 1;
+            return;
+        }
+    };
+    // Parked models list a decal-laden close-up level first and the plain body as `[LOD] 0`.
+    let Some(lod0) = model
+        .lods
+        .iter()
+        .find(|l| l.threshold == 0.0)
+        .or_else(|| model.lods.first())
+    else {
+        tracing::error!(cfg = %cfg_path.display(), "vehicle model config has no meshes");
+        stats.objects_failed += 1;
+        return;
+    };
+    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let tex_dirs = vec![
+        job.install
+            .find_in(sco_dir, "texture")
+            .unwrap_or_else(|| sco_dir.join("texture")),
+        model_dir.join("texture"),
+    ];
+    let root = commands
+        .spawn((transform, Name::new(cfg_rel.to_string())))
+        .id();
+    let (count, verts, _, _) = super::vehicle::load_segment_meshes(
+        job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
+    );
+    if count == 0 {
+        commands.entity(root).despawn();
+        stats.objects_failed += 1;
+        return;
+    }
+    children.push(root);
+    stats.scene_vertices += verts;
     stats.objects_loaded += 1;
 }
 
