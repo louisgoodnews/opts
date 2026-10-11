@@ -1,5 +1,6 @@
 //! Scroll interaction systems for list containers and scrollbars.
 
+use crate::new_game_screen::types::ScrollKind;
 use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -83,6 +84,31 @@ pub fn handle_mouse_scroll(
             for (content, mut style) in &mut content_query {
                 if content.kind == kind {
                     style.top = Val::Px(-current_offset);
+                }
+            }
+        }
+    }
+}
+
+/// Sets the scroll range of the map description from the measured text height (its length is not
+/// known when the panel is built).
+pub fn update_description_scroll_extent(
+    mut containers: Query<(&mut ScrollableContainer, &ComputedNode, &Children)>,
+    contents: Query<(&ScrollContent, &ComputedNode)>,
+) {
+    for (mut container, viewport, children) in &mut containers {
+        if container.kind != ScrollKind::MapDescription {
+            continue;
+        }
+        for child in children.iter() {
+            if let Ok((content, node)) = contents.get(child) {
+                if content.kind == ScrollKind::MapDescription {
+                    let h = node.size().y * node.inverse_scale_factor();
+                    let v = viewport.size().y * viewport.inverse_scale_factor();
+                    let max = (h - v).max(0.0);
+                    if (container.max_scroll_y - max).abs() > 0.5 {
+                        container.max_scroll_y = max;
+                    }
                 }
             }
         }

@@ -336,18 +336,54 @@ pub fn populate_map_details_inner(
                 ForegroundRole(ColorRole::Primary),
             ));
 
-            desc_box.spawn((
-                (
-                    Text::new(&map.description),
-                    TextFont {
-                        font_size: FontSize::Px(12.0),
+            // The description can be long: a fixed-height scrollable text field keeps the
+            // entry-point list below it reachable.
+            desc_box
+                .spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        height: Val::Px(170.0),
+                        position_type: PositionType::Relative,
+                        overflow: Overflow::clip_y(),
                         ..default()
                     },
-                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
-                ),
-                TypeStyleToken(TypeScale::BodySmall),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
+                    ScrollableContainer {
+                        kind: ScrollKind::MapDescription,
+                        scroll_y: 0.0,
+                        max_scroll_y: 0.0,
+                    },
+                ))
+                .with_children(|viewport| {
+                    viewport
+                        .spawn((
+                            Node {
+                                width: Val::Percent(100.0),
+                                position_type: PositionType::Absolute,
+                                left: Val::Px(0.0),
+                                top: Val::Px(0.0),
+                                padding: UiRect::right(Val::Px(26.0)),
+                                ..default()
+                            },
+                            ScrollContent {
+                                kind: ScrollKind::MapDescription,
+                            },
+                        ))
+                        .with_children(|content| {
+                            content.spawn((
+                                (
+                                    Text::new(&map.description),
+                                    TextFont {
+                                        font_size: FontSize::Px(12.0),
+                                        ..default()
+                                    },
+                                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
+                                ),
+                                TypeStyleToken(TypeScale::BodySmall),
+                                ForegroundRole(ColorRole::OnSurface),
+                            ));
+                        });
+                    spawn_scrollbar(viewport, theme, ScrollKind::MapDescription);
+                });
         });
 
     // Scrollable Entrypoint selection list

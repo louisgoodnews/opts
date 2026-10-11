@@ -118,6 +118,9 @@ pub struct ContentCache {
     /// Box the meshes loaded next are expected to lie in (the owning vehicle's bounding box);
     /// restricts the scrambled-mesh decoder.
     pub expected_bounds: Option<opts_core::formats::o3d::descramble::ExpectedBounds>,
+    /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
+    /// next (see `docs/src/formats/text/repaints.md`).
+    pub texture_replacements: HashMap<String, PathBuf>,
     /// Meshes whose decoding was queued since the last [`Self::take_deferred`].
     pub deferred: std::collections::HashSet<crate::descramble_cache::Key>,
     /// Loading statistics.
@@ -316,7 +319,12 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
     ) -> Vec<ModelPart> {
-        let key = (o3d_path.to_path_buf(), format!("{overrides:?}{keep_skin}"));
+        let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
+        repaint.sort();
+        let key = (
+            o3d_path.to_path_buf(),
+            format!("{overrides:?}{keep_skin}{repaint:?}"),
+        );
         if let Some(parts) = self.cache.parts.get(&key) {
             if self.cache.protected.contains(o3d_path) {
                 self.cache.stats.protected_meshes += 1;
@@ -554,7 +562,22 @@ impl ContentLoader<'_> {
                     .or_else(|| base.primary_texture().map(str::to_owned));
                 let mut tex = match over.and_then(|o| o.image.clone()) {
                     Some(h) => Some(h),
-                    None => tex_name.clone().and_then(|n| self.texture(&n, tex_dirs)),
+                    None => tex_name.clone().and_then(|n| {
+                        let replacement =
+                            self.cache.texture_replacements.get(&base_name(&n)).cloned();
+                        match replacement {
+                            Some(path) => {
+                                let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
+                                let file = path
+                                    .file_name()
+                                    .map(|f| f.to_string_lossy().into_owned())
+                                    .unwrap_or_default();
+                                self.texture(&file, &[dir])
+                                    .or_else(|| self.texture(&n, tex_dirs))
+                            }
+                            None => self.texture(&n, tex_dirs),
+                        }
+                    }),
                 };
                 let mut blended_by_map = false;
                 if let (Some(base_h), Some(tm)) =

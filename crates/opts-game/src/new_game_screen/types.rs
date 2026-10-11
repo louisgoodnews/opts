@@ -60,6 +60,8 @@ pub enum ScrollKind {
     Maps,
     Vehicles,
     EntryPoints,
+    /// Multi-line map description text.
+    MapDescription,
     Repaints,
     Weather,
 }

@@ -88,6 +88,9 @@ pub fn update_loading_progress(
                     selected_map: &setup.selected_map,
                     selected_vehicle: &setup.selected_vehicle,
                     selected_entry_point: &setup.selected_entry_point,
+                    selected_livery: args
+                        .and_then(|a| a.livery.as_deref())
+                        .unwrap_or(&setup.selected_livery),
                 },
                 catalogue.as_deref(),
                 service.as_deref(),

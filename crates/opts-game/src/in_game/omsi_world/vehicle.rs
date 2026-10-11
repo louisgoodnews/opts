@@ -41,6 +41,42 @@ fn manifest_bounds(
     })
 }
 
+/// Reads the repaints of the player's vehicle once per session (they come from the `.cti` files of
+/// its `Colorscheme` folders, `docs/src/formats/text/repaints.md`).
+fn ensure_repaints(job: &mut WorldLoadJob, bus_path: &Path, manifest: &BusManifest) {
+    if job.repaint.is_none() {
+        let default = manifest
+            .friendly_name
+            .as_ref()
+            .map(|f| f.livery.clone())
+            .unwrap_or_default();
+        job.repaint = Some(crate::new_game_screen::repaints::discover_at(
+            &job.config.root,
+            bus_path,
+            &default,
+        ));
+    }
+}
+
+/// Texture replacements of the chosen repaint for the model of one segment: each `[CTCTexture]`
+/// slot's default file is swapped for the repaint's file of that slot.
+fn repaint_map(
+    job: &WorldLoadJob,
+    model: &ModelConfig,
+) -> std::collections::HashMap<String, PathBuf> {
+    let Some(r) = &job.repaint else {
+        return Default::default();
+    };
+    let name = if job.config.livery.is_empty() {
+        r.default_name.as_str()
+    } else {
+        job.config.livery.as_str()
+    };
+    r.replacements(name, &model.ctc_textures)
+        .into_iter()
+        .collect()
+}
+
 /// Loads the visible lod0 meshes of one vehicle segment as children of `root`.
 /// Returns `(mesh_count, vertex_count, bounds_min, bounds_max)` (Bevy space, body meshes only).
 #[allow(clippy::too_many_arguments)]
@@ -55,9 +91,36 @@ pub(super) fn load_segment_meshes(
     model_dir: &Path,
     tex_dirs: &[PathBuf],
 ) -> (usize, usize, Vec3, Vec3) {
+    load_segment_meshes_for(
+        job, commands, meshes, materials, images, root, root, lod0, model_dir, tex_dirs,
+    )
+}
+
+/// [`load_segment_meshes`] for a segment whose animations, light maps and hot spots read the
+/// variables of `owner` (the leading unit: trailers share its scripts, `[scriptshare]`).
+#[allow(clippy::too_many_arguments)]
+fn load_segment_meshes_for(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    root: Entity,
+    owner: Entity,
+    lod0: &opts_core::formats::vehicles::model::ModelLod,
+    model_dir: &Path,
+    tex_dirs: &[PathBuf],
+) -> (usize, usize, Vec3, Vec3) {
     let mut mesh_count = 0usize;
     let mut vertex_count = 0usize;
     let (mut min, mut max) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+    // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
+    // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.
+    let mut dummies: Vec<(String, Entity)> = Vec::new();
+    let mut skins: Vec<(
+        Vec<Entity>,
+        Vec<opts_core::formats::vehicles::model::MeshBone>,
+    )> = Vec::new();
     for mesh_def in &lod0.meshes {
         // Shadow-only and AI-only meshes are not part of the visible player model.
         let vp = mesh_def.viewpoint;
@@ -72,6 +135,25 @@ pub(super) fn load_segment_meshes(
                 .any(|t| mesh_def.path.to_lowercase().contains(&t.to_lowercase()))
         }) {
             continue;
+        }
+        // A dummy mesh only carries the animation of a bone. Its geometry is often protected
+        // (scrambled) or empty, so the joint is an entity of its own.
+        let stem = Path::new(&mesh_def.path.replace('\\', "/"))
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        if stem.contains("dum") && mesh_def.anims.iter().any(|a| a.driver_variable().is_some()) {
+            let mut joint = commands.spawn((
+                Name::new(format!("joint_{stem}")),
+                Transform::IDENTITY,
+                Visibility::Inherited,
+            ));
+            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(owner, mesh_def) {
+                joint.insert(anim);
+            }
+            let id = joint.id();
+            commands.entity(root).add_child(id);
+            dummies.push((stem.clone(), id));
         }
         let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
             tracing::error!(mesh = %mesh_def.path, "vehicle o3d not found");
@@ -101,7 +183,12 @@ pub(super) fn load_segment_meshes(
             materials,
             images,
         };
-        let parts = loader.o3d_parts(&o3d_path, tex_dirs, &overrides);
+        let skinned = mesh_def.smoothskin && !mesh_def.bones.is_empty();
+        let parts = if skinned {
+            loader.o3d_skinned_parts(&o3d_path, tex_dirs, &overrides)
+        } else {
+            loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
+        };
         for part in &parts {
             if let Some(mesh) = meshes.get(&part.mesh) {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
@@ -127,29 +214,91 @@ pub(super) fn load_segment_meshes(
         let spawned = attach_model_parts(commands, root, &parts, &mesh_def.path);
         // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
         // maps; a click on it raises its `[mouseevent]` trigger.
-        let anim = opts_bevy::MeshAnimation::from_mesh(root, mesh_def);
+        let anim = opts_bevy::MeshAnimation::from_mesh(owner, mesh_def);
         let hot_spot = mesh_def
             .mouseevent
             .as_deref()
             .map(str::trim)
             .filter(|t| !t.is_empty());
-        for (e, part) in spawned.into_iter().zip(&parts) {
+        if skinned {
+            skins.push((spawned.clone(), mesh_def.bones.clone()));
+        }
+        for (e, part) in spawned.iter().copied().zip(&parts) {
             let mut entity = commands.entity(e);
             if let Some(anim) = &anim {
                 entity.insert(anim.clone());
             }
             if let Some(var) = &part.light_variable {
-                entity.insert(opts_bevy::LightMapBinding::new(root, var.clone()));
+                entity.insert(opts_bevy::LightMapBinding::new(owner, var.clone()));
             }
             if let Some(trigger) = hot_spot {
                 entity.insert(opts_bevy::MouseTrigger {
-                    owner: root,
+                    owner,
                     trigger: trigger.to_owned(),
                 });
             }
         }
     }
+    bind_skins(commands, root, &dummies, skins);
     (mesh_count, vertex_count, min, max)
+}
+
+/// Binds skinned meshes of a vehicle to the dummy meshes that carry their bones' animation.
+///
+/// OMSI names a bone in `[setbone] <name> <index>`; the dummy mesh of that bone is the one whose
+/// file name contains the bone name (`GN_Dum_Gelenk_A.o3d` for `Gelenk_A`). The bone matrix is
+/// the dummy's animation matrix (the vertices are in vehicle space), so the inverse bind poses
+/// are the identity. A bone without a dummy stays on the vehicle root (not animated).
+fn bind_skins(
+    commands: &mut Commands,
+    root: Entity,
+    dummies: &[(String, Entity)],
+    skins: Vec<(
+        Vec<Entity>,
+        Vec<opts_core::formats::vehicles::model::MeshBone>,
+    )>,
+) {
+    for (entities, bones) in skins {
+        let n = bones
+            .iter()
+            .map(|b| usize::try_from(b.index).map_or(0, |i| i + 1))
+            .max()
+            .unwrap_or(0);
+        if n == 0 {
+            continue;
+        }
+        let mut joints = vec![root; n];
+        for b in &bones {
+            let Ok(i) = usize::try_from(b.index) else {
+                continue;
+            };
+            let name = b.name.to_lowercase();
+            match dummies.iter().find(|(stem, _)| stem.contains(&name)) {
+                Some((_, e)) => joints[i] = *e,
+                None => {
+                    tracing::warn!(bone = %b.name, "no dummy mesh for bone; it stays on the root")
+                }
+            }
+        }
+        commands.queue(move |world: &mut World| {
+            let handle = world
+                .resource_mut::<Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>>()
+                .add(bevy::mesh::skinning::SkinnedMeshInverseBindposes::from(
+                    vec![Mat4::IDENTITY; joints.len()],
+                ));
+            for e in entities {
+                if let Ok(mut entity) = world.get_entity_mut(e) {
+                    entity.insert((
+                        bevy::mesh::skinning::SkinnedMesh {
+                            inverse_bindposes: handle.clone(),
+                            joints: joints.clone(),
+                        },
+                        bevy::camera::visibility::NoFrustumCulling,
+                    ));
+                }
+            }
+        });
+    }
 }
 
 /// Spawns the trailers named by `[couple_back]` (recursively) behind `root`. Returns the
@@ -167,8 +316,8 @@ pub(super) fn spawn_trailer_chain(
 ) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
     const MAX_SEGMENTS: usize = 4;
     let mut cams = Vec::new();
-    let (mut parent, mut parent_dir, mut parent_manifest) =
-        (root, bus_dir.to_path_buf(), tractor.clone());
+    let mut chain = Vec::new();
+    let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
     for _ in 0..MAX_SEGMENTS {
         let Some(name) = parent_manifest.couple_back.clone() else {
             break;
@@ -201,23 +350,40 @@ pub(super) fn spawn_trailer_chain(
         let Some(lod0) = model.lods.first() else {
             break;
         };
-        // Both coupling points are in their own vehicle frame; the trailer origin sits where
-        // its front joint meets the parent's rear joint.
-        let offset = match (parent_manifest.coupling_back, manifest.coupling_front) {
-            (Some(b), Some(f)) => omsi_to_bevy_pos(b - f),
-            _ => {
-                tracing::error!(trailer = %path.display(), "coupling points missing; trailer not attached");
-                break;
-            }
+        // Both coupling points are in their own vehicle frame; the segment follows its leader
+        // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
+        let (Some(b), Some(f)) = (parent_manifest.coupling_back, manifest.coupling_front) else {
+            tracing::error!(trailer = %path.display(), "coupling points missing; trailer not attached");
+            break;
         };
+        let rear_axle_y = manifest
+            .axles
+            .iter()
+            .map(|a| a.longitudinal_m)
+            .fold(f32::INFINITY, f32::min);
+        let rear_axle_y = if rear_axle_y.is_finite() {
+            rear_axle_y
+        } else {
+            f.y - 6.0
+        };
+        let max_alpha = manifest
+            .coupling_front_limits
+            .map_or(52.5, |l| l.max_alpha_deg);
         let seg = commands
             .spawn((
                 Name::new(name.clone()),
-                Transform::from_translation(offset),
+                Transform::default(),
+                Visibility::default(),
+                opts_bevy::ArticulatedSegment::new(
+                    Vec2::new(b.x, b.y),
+                    Vec2::new(f.x, f.y),
+                    rear_axle_y,
+                    max_alpha,
+                ),
                 InGameEntity,
             ))
             .id();
-        commands.entity(parent).add_child(seg);
+        chain.push(seg);
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
             job.install
@@ -226,13 +392,20 @@ pub(super) fn spawn_trailer_chain(
             model_dir.join("texture"),
         ];
         job.cache.expected_bounds = manifest_bounds(&manifest);
-        let (count, verts, _, _) = load_segment_meshes(
-            job, commands, meshes, materials, images, seg, lod0, &model_dir, &tex_dirs,
+        job.cache.texture_replacements = repaint_map(job, &model);
+        let (count, verts, _, _) = load_segment_meshes_for(
+            job, commands, meshes, materials, images, seg, root, lod0, &model_dir, &tex_dirs,
         );
         job.cache.expected_bounds = None;
+        job.cache.texture_replacements.clear();
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
-        (parent, parent_dir, parent_manifest) = (seg, dir, manifest);
+        (parent_dir, parent_manifest) = (dir, manifest);
+    }
+    if !chain.is_empty() {
+        commands
+            .entity(root)
+            .insert(opts_bevy::ArticulatedChain { segments: chain });
     }
     cams
 }
@@ -257,7 +430,7 @@ pub fn prewarm_vehicle_meshes(
     else {
         return Vec::new();
     };
-    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig, Option<_>)> {
+    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig, Option<_>, BusManifest)> {
         let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
         let bus_dir = bus_path.parent()?.to_path_buf();
         let cfg = job
@@ -265,9 +438,9 @@ pub fn prewarm_vehicle_meshes(
             .find_in(&bus_dir, manifest.model_cfg.as_deref()?)?;
         let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).ok()?).ok()?;
         let bounds = manifest_bounds(&manifest);
-        Some((bus_dir, cfg, model, bounds))
+        Some((bus_dir, cfg, model, bounds, manifest))
     })();
-    let Some((bus_dir, cfg, model, bounds)) = loaded else {
+    let Some((bus_dir, cfg, model, bounds, manifest)) = loaded else {
         return Vec::new();
     };
     let Some(lod0) = model.lods.first() else {
@@ -282,11 +455,14 @@ pub fn prewarm_vehicle_meshes(
     ];
     job.cache.take_deferred();
     let scratch = commands.spawn_empty().id();
+    ensure_repaints(job, &bus_path, &manifest);
     job.cache.expected_bounds = bounds;
+    job.cache.texture_replacements = repaint_map(job, &model);
     load_segment_meshes(
         job, commands, meshes, materials, images, scratch, lod0, &model_dir, &tex_dirs,
     );
     job.cache.expected_bounds = None;
+    job.cache.texture_replacements.clear();
     commands.entity(scratch).despawn();
     job.cache.take_deferred().into_iter().collect()
 }
@@ -359,11 +535,14 @@ pub fn load_player_vehicle(
         .collect();
     let root = spawn_vehicle_model(commands, &manifest, &model, root_tf, &[], &[]);
 
+    ensure_repaints(job, &bus_path, &manifest);
     job.cache.expected_bounds = manifest_bounds(&manifest);
+    job.cache.texture_replacements = repaint_map(job, &model);
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
     job.cache.expected_bounds = None;
+    job.cache.texture_replacements.clear();
     if mesh_count == 0 {
         return Err("no vehicle meshes could be loaded".into());
     }
@@ -640,6 +819,21 @@ fn attach_scripts(
         errors,
         "vehicle scripts loaded"
     );
+    let mut engine = engine;
+    // Equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
+    if let Some(r) = &job.repaint {
+        let name = if job.config.livery.is_empty() {
+            r.default_name.as_str()
+        } else {
+            job.config.livery.as_str()
+        };
+        for (var, value) in r.setvars.get(name).into_iter().flatten() {
+            match value.trim().replace(',', ".").parse::<f32>() {
+                Ok(v) => engine.set(var, v),
+                Err(_) => tracing::warn!(var, value, "repaint [setvar] value is not a number"),
+            }
+        }
+    }
     commands
         .entity(root)
         .insert(opts_bevy::VehicleScripts::new(engine));

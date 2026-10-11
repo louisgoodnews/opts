@@ -109,6 +109,7 @@ impl Plugin for NewGameMenuPlugin {
                     handle_livery_selection,
                     handle_scroll_buttons,
                     handle_mouse_scroll,
+                    scroll_systems::update_description_scroll_extent,
                     handle_weather_selection,
                     handle_time_adjustment,
                 )

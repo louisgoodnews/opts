@@ -85,6 +85,10 @@ pub struct CliArgs {
     #[arg(long, value_name = "DIR")]
     pub cli_allow_dir: Vec<PathBuf>,
 
+    /// Repaint of the player's vehicle (a name from its `.cti` files; default: the `.bus` default).
+    #[arg(long, value_name = "NAME")]
+    pub livery: Option<String>,
+
     /// Cap on simultaneously walking pedestrians (`0` = none; default 40).
     #[arg(long, value_name = "N")]
     pub pedestrians: Option<usize>,
@@ -127,6 +131,7 @@ impl Default for CliArgs {
             cli_bind: "127.0.0.1".to_string(),
             cli_token: None,
             pedestrians: None,
+            livery: None,
             traffic: None,
             cli_allow_dir: Vec::new(),
             no_hot_reload: false,

@@ -68,6 +68,8 @@ pub struct OmsiSessionConfig {
     pub vehicle_path: Option<PathBuf>,
     /// Entry point name chosen in the New Game screen.
     pub entry_point: String,
+    /// Repaint of the player's vehicle (empty: the default of its `.bus`).
+    pub livery: String,
     /// `.hum` profile of the player's character, if the installation has one.
     pub human_path: Option<PathBuf>,
     /// Cached path index (the SQLite catalogue), if available.
@@ -153,6 +155,8 @@ pub struct WorldLoadJob {
     /// Directories of the player vehicle; a changed file inside restarts the session.
     vehicle_dirs: Vec<PathBuf>,
     spawn: Option<(Vec3, f32)>,
+    /// Repaints of the player's vehicle, read when it is loaded.
+    repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
     /// Camera parameters, set once the vehicle is loaded.
     pub camera: Option<CameraSetup>,
@@ -175,4 +179,6 @@ pub struct SessionRequest<'a> {
     pub selected_vehicle: &'a str,
     /// Entry point chosen in the New Game screen (name from `global.cfg`).
     pub selected_entry_point: &'a str,
+    /// Repaint chosen in the New Game screen (empty: the vehicle's default).
+    pub selected_livery: &'a str,
 }

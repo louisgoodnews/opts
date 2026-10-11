@@ -108,11 +108,17 @@ impl OmsiInstall {
         alt_extensions: bool,
     ) -> Option<PathBuf> {
         let lookup = self.name_lookup.as_ref()?;
-        let near = near_dir
+        // The directory may be spelled through a symlink of the root (or the other way round).
+        let relative = near_dir
             .strip_prefix(&self.root)
-            .ok()?
-            .to_string_lossy()
-            .into_owned();
+            .map(Path::to_path_buf)
+            .or_else(|_| {
+                let (root, near) = (self.root.canonicalize()?, near_dir.canonicalize()?);
+                near.strip_prefix(&root)
+                    .map(Path::to_path_buf)
+                    .map_err(std::io::Error::other)
+            });
+        let near = relative.ok()?.to_string_lossy().into_owned();
         lookup(name, &near, alt_extensions)
     }
 

@@ -128,6 +128,7 @@ pub fn resolve_session_config(
         map_dir,
         vehicle_path,
         entry_point: req.selected_entry_point.to_string(),
+        livery: req.selected_livery.to_string(),
         human_path,
         lookup: service.map(CatalogueService::path_lookup),
         name_lookup: service.map(CatalogueService::name_lookup),
@@ -219,6 +220,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         ground_material: None,
         ground_array: None,
         spawn: None,
+        repaint: None,
         start_tile: (0, 0),
         camera: None,
         camera_std_index: 0,
@@ -488,6 +490,29 @@ impl WorldLoadJob {
                 let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
                 tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved");
                 return Some((key, (pos, obj.heading_deg)));
+            }
+            // The entry-point object may be attached to a spline (`[splineAttachement]`, e.g.
+            // `entrypoint_bus.sco` along a bus lane in Wuppertal 639): its place follows from the
+            // carrier spline.
+            if let Some(att) = tile
+                .spline_attachments
+                .iter()
+                .find(|a| a.id_code == u64::from(ep.id_code))
+            {
+                let index = self.spline_index();
+                let placed = crate::in_game::attachments::expand_attachments(
+                    std::slice::from_ref(att),
+                    &tile.splines,
+                    &index,
+                    key,
+                    |_, _| 0.0,
+                );
+                if let Some((obj, _)) = placed.first() {
+                    let o = tile_origin(key);
+                    let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
+                    tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved (spline attachment)");
+                    return Some((key, (pos, obj.heading_deg)));
+                }
             }
         }
         None

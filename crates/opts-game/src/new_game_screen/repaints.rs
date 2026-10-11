@@ -24,6 +24,8 @@ pub struct VehicleRepaints {
     pub names: Vec<String>,
     /// `[setvar]` lines per repaint name (variable, value).
     pub setvars: BTreeMap<String, Vec<(String, String)>>,
+    /// Texture files per repaint name and `[CTCTexture]` slot (resolved paths).
+    pub textures: BTreeMap<String, Vec<(String, PathBuf)>>,
 }
 
 /// Folders a `[CTC]` texture path is resolved against: the vehicle folder, its parent and
@@ -38,6 +40,27 @@ fn base_folders(bus_dir: &Path, root: &Path) -> Vec<PathBuf> {
 /// Discovers the repaints of a vehicle under `root`; `bus_file` is the `.bus` path relative to it.
 #[must_use]
 pub fn discover(root: &Path, bus_file: &str, default_name: &str) -> VehicleRepaints {
+    let install = OmsiInstall::new(root);
+    match install.find_file(bus_file) {
+        Some(bus_path) => discover_at(root, &bus_path, default_name),
+        None => {
+            tracing::error!(bus = bus_file, "vehicle .bus not found; no repaints listed");
+            VehicleRepaints {
+                default_name: default_name.to_string(),
+                names: if default_name.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![default_name.to_string()]
+                },
+                ..Default::default()
+            }
+        }
+    }
+}
+
+/// Discovers the repaints of the vehicle whose `.bus` file is `bus_path`.
+#[must_use]
+pub fn discover_at(root: &Path, bus_path: &Path, default_name: &str) -> VehicleRepaints {
     let mut out = VehicleRepaints {
         default_name: default_name.to_string(),
         ..Default::default()
@@ -46,14 +69,10 @@ pub fn discover(root: &Path, bus_file: &str, default_name: &str) -> VehicleRepai
         out.names.push(default_name.to_string());
     }
     let install = OmsiInstall::new(root);
-    let Some(bus_path) = install.find_file(bus_file) else {
-        tracing::error!(bus = bus_file, "vehicle .bus not found; no repaints listed");
-        return out;
-    };
     let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let model = (|| -> Result<ModelConfig, String> {
         let manifest =
-            BusManifest::parse_bytes(&std::fs::read(&bus_path).map_err(|e| e.to_string())?)
+            BusManifest::parse_bytes(&std::fs::read(bus_path).map_err(|e| e.to_string())?)
                 .map_err(|e| e.to_string())?;
         let rel = manifest.model_cfg.ok_or("no [model] entry")?;
         let cfg = install
@@ -70,6 +89,7 @@ pub fn discover(root: &Path, bus_file: &str, default_name: &str) -> VehicleRepai
         }
     };
     let mut found: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
+    let mut textures: BTreeMap<String, Vec<(String, PathBuf)>> = BTreeMap::new();
     for scheme in model
         .ctc_schemes
         .iter()
@@ -99,6 +119,18 @@ pub fn discover(root: &Path, bus_file: &str, default_name: &str) -> VehicleRepai
             };
             let cti = CtiFile::parse(&bytes);
             for item in cti.items {
+                match install.find_in(&folder, &item.texture) {
+                    Some(path) => textures
+                        .entry(item.name.clone())
+                        .or_default()
+                        .push((item.slot, path)),
+                    None => tracing::debug!(
+                        repaint = %item.name,
+                        texture = %item.texture,
+                        folder = %folder.display(),
+                        "repaint texture not found"
+                    ),
+                }
                 found.entry(item.name).or_default();
             }
             for sv in cti.setvars {
@@ -109,6 +141,7 @@ pub fn discover(root: &Path, bus_file: &str, default_name: &str) -> VehicleRepai
             }
         }
     }
+    out.textures = textures;
     for (name, setvars) in found {
         if !name.is_empty() && !out.names.contains(&name) {
             out.names.push(name.clone());
@@ -195,5 +228,39 @@ mod tests {
         eprintln!("{} repaints: {:?}", r.names.len(), r.names);
         assert_eq!(r.names[0], "Beige");
         assert!(r.names.len() > 5);
+    }
+}
+
+impl VehicleRepaints {
+    /// Texture replacements of repaint `name` for a model whose `[CTCTexture]` slots declare the
+    /// default texture file of each slot: `(default file name, replacement path)`. Empty for the
+    /// default repaint and for unknown names.
+    #[must_use]
+    pub fn replacements(
+        &self,
+        name: &str,
+        slots: &[opts_core::formats::vehicles::model::CtcTexture],
+    ) -> Vec<(String, PathBuf)> {
+        if name == self.default_name {
+            return Vec::new();
+        }
+        let Some(items) = self.textures.get(name) else {
+            return Vec::new();
+        };
+        slots
+            .iter()
+            .filter_map(|slot| {
+                let (_, path) = items
+                    .iter()
+                    .find(|(s, _)| s.eq_ignore_ascii_case(&slot.name))?;
+                let default = slot
+                    .texture_path
+                    .rsplit(['\\', '/'])
+                    .next()
+                    .unwrap_or("")
+                    .to_lowercase();
+                Some((default, path.clone()))
+            })
+            .collect()
     }
 }
