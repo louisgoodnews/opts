@@ -404,7 +404,7 @@ pub fn load_traffic_variants(
                     .collect();
             }
             None => {
-                tracing::error!(map = %job.config.map_dir.display(), "no AI group in ailists.cfg; no traffic");
+                tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no AI group in ailists.cfg; no traffic");
             }
         }
     }

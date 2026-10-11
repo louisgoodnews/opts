@@ -156,7 +156,7 @@ fn load_segment_meshes_for(
             dummies.push((stem.clone(), id));
         }
         let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
-            tracing::error!(mesh = %mesh_def.path, "vehicle o3d not found");
+            tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, "vehicle o3d not found");
             job.cache
                 .stats
                 .failures
@@ -323,7 +323,7 @@ pub(super) fn spawn_trailer_chain(
             break;
         };
         let Some(path) = job.install.find_in(&parent_dir, &name) else {
-            tracing::error!(trailer = %name, "trailer .bus not found; vehicle stays without it");
+            tracing::error!(at = %opts_bevy::position_tag(), trailer = %name, "trailer .bus not found; vehicle stays without it");
             break;
         };
         let loaded = (|| -> Result<_, String> {
@@ -343,7 +343,7 @@ pub(super) fn spawn_trailer_chain(
         let (manifest, dir, cfg, model) = match loaded {
             Ok(v) => v,
             Err(e) => {
-                tracing::error!(trailer = %path.display(), "cannot load trailer: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), trailer = %path.display(), "cannot load trailer: {e}");
                 break;
             }
         };
@@ -353,7 +353,7 @@ pub(super) fn spawn_trailer_chain(
         // Both coupling points are in their own vehicle frame; the segment follows its leader
         // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
         let (Some(b), Some(f)) = (parent_manifest.coupling_back, manifest.coupling_front) else {
-            tracing::error!(trailer = %path.display(), "coupling points missing; trailer not attached");
+            tracing::error!(at = %opts_bevy::position_tag(), trailer = %path.display(), "coupling points missing; trailer not attached");
             break;
         };
         let rear_axle_y = manifest
@@ -579,7 +579,9 @@ pub fn load_player_vehicle(
         manifest.passengercabin_cfg.as_deref(),
     ) {
         Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
-        Err(e) => tracing::error!("cannot load the player character: {e}"),
+        Err(e) => {
+            tracing::error!(at = %opts_bevy::position_tag(), "cannot load the player character: {e}")
+        }
     }
 
     tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
@@ -673,7 +675,7 @@ pub(super) fn load_human_parts(
     let mut parts = Vec::new();
     for mesh_def in &lod.meshes {
         let Some(o3d_path) = job.install.find_in(&model_dir, &mesh_def.path) else {
-            tracing::error!(mesh = %mesh_def.path, "human mesh not found");
+            tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, "human mesh not found");
             continue;
         };
         let overrides: Vec<TextureOverride> = mesh_def
@@ -811,7 +813,7 @@ fn attach_scripts(
         .filter(|d| d.severity == opts_sim::script::Severity::Error)
         .count();
     for d in diags.iter().filter(|d| d.message == "file not found") {
-        tracing::error!(file = %d.file, "vehicle script file not found");
+        tracing::error!(at = %opts_bevy::position_tag(), file = %d.file, "vehicle script file not found");
     }
     tracing::info!(
         scripts = manifest.scripts.len(),
@@ -849,7 +851,7 @@ fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
     let config = match std::fs::read(&path) {
         Ok(bytes) => opts_core::formats::engine_config::KeyboardConfig::parse(&bytes),
         Err(e) => {
-            tracing::error!(path = %path.display(), "cannot read keyboard.cfg: {e}");
+            tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "cannot read keyboard.cfg: {e}");
             return;
         }
     };

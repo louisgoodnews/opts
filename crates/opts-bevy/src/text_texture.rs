@@ -186,7 +186,7 @@ impl FontRegistry {
                                 .or_insert_with(|| (path.clone(), Arc::new(font)));
                         }
                     }
-                    Err(e) => tracing::error!(font = %path.display(), "font parse failed: {e}"),
+                    Err(e) => tracing::error!(at = %crate::position_tag::position_tag(), font = %path.display(), "font parse failed: {e}"),
                 }
             }
             tracing::info!(fonts = map.len(), "font registry built");
@@ -196,7 +196,7 @@ impl FontRegistry {
 
     fn report_once(&mut self, key: String, message: &str) {
         if self.reported.insert(key.clone()) {
-            tracing::error!(font = %key, "{message}");
+            tracing::error!(at = %crate::position_tag::position_tag(), font = %key, "{message}");
         }
     }
 

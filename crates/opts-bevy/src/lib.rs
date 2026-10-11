@@ -32,6 +32,7 @@ pub mod material;
 pub mod mesh;
 pub mod model;
 pub mod plugin;
+pub mod position_tag;
 pub mod reporting;
 pub mod scenery;
 pub mod terrain;
@@ -81,6 +82,7 @@ pub use plugin::{
     OptsAssetPlugin, OptsCoordsPlugin, OptsMaterialPlugin, OptsMeshPlugin, OptsSceneryPlugin,
     OptsVehiclePlugin,
 };
+pub use position_tag::{position_tag, set_loading_tile, set_position_tag};
 pub use scenery::{
     extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, SceneryLoaderError,
     SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,

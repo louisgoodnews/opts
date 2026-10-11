@@ -251,7 +251,7 @@ pub fn o3d_to_bevy_meshes_by_material(o3d: &O3d) -> Vec<(usize, Mesh)> {
             }
         }
         if !ok || positions.is_empty() {
-            tracing::error!(
+            tracing::error!(at = %crate::position_tag::position_tag(),
                 slot,
                 "o3d face references a vertex out of range; submesh skipped"
             );

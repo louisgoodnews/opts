@@ -180,7 +180,7 @@ pub fn load_variants(
         }
         pool.slots = distinct.into_iter().map(|d| (d, None, 0)).collect();
         if pool.slots.is_empty() {
-            tracing::error!(map = %job.config.map_dir.display(), "no characters in humans.txt; no pedestrians");
+            tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no characters in humans.txt; no pedestrians");
         }
     }
     pool.frames += 1;
@@ -197,7 +197,7 @@ pub fn load_variants(
     pool.slots[i].2 += 1;
     let rel = pool.slots[i].0.clone();
     let Some(path) = job.install.find_file(&rel) else {
-        tracing::error!(hum = %rel, "pedestrian character not found");
+        tracing::error!(at = %opts_bevy::position_tag(), hum = %rel, "pedestrian character not found");
         pool.slots[i].2 = 40;
         return;
     };
@@ -207,7 +207,7 @@ pub fn load_variants(
     {
         Ok(p) => p,
         Err(e) => {
-            tracing::error!(hum = %path.display(), "pedestrian profile failed: {e}");
+            tracing::error!(at = %opts_bevy::position_tag(), hum = %path.display(), "pedestrian profile failed: {e}");
             pool.slots[i].2 = 40;
             return;
         }
@@ -233,7 +233,7 @@ pub fn load_variants(
         {
             // Without bone weights the mesh cannot follow the skeleton (and a skinned draw call
             // with a non-skinned mesh is a render validation error).
-            tracing::error!(hum = %path.display(), "character mesh has no bone weights; not used as pedestrian");
+            tracing::error!(at = %opts_bevy::position_tag(), hum = %path.display(), "character mesh has no bone weights; not used as pedestrian");
             pool.slots[i].2 = 40;
         }
         Ok(parts) => {

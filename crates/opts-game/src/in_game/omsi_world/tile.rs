@@ -40,6 +40,7 @@ pub fn load_next_tile(
         stats.tiles_missing += 1;
         return;
     };
+    opts_bevy::set_loading_tile(Some(key));
     let mut children: Vec<Entity> = Vec::new();
     let origin = {
         let (a, b) = (tile_origin(key), tile_origin(job.start_tile));
@@ -151,6 +152,7 @@ pub fn load_next_tile(
     }
     stats.tiles_loaded = job.resident.len();
     stats.asset_failures = job.cache.stats.failures.len();
+    opts_bevy::set_loading_tile(None);
 }
 
 /// Places one scenery object (or tree) of a tile.
@@ -262,7 +264,7 @@ fn spawn_object(
                 .stats
                 .failures
                 .push(format!("o3d not found: {}", mesh_def.file));
-            tracing::error!(sco = %sco_path.display(), mesh = %mesh_def.file, "o3d not found");
+            tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), mesh = %mesh_def.file, "o3d not found");
             return;
         };
         let overrides: Vec<TextureOverride> = mesh_def
@@ -283,7 +285,7 @@ fn spawn_object(
                         &obj.string_vars,
                         &[],
                     ) else {
-                        tracing::error!(
+                        tracing::error!(at = %opts_bevy::position_tag(),
                             sco = %sco_path.display(),
                             source = ?tt.string_var.as_deref().unwrap_or("by number"),
                             index = tt.string_index,
@@ -330,7 +332,7 @@ fn spawn_object(
             stats.objects_protected += 1;
             tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: all meshes are scrambled");
         } else {
-            tracing::error!(sco = %sco_path.display(), "object has meshes but none could be loaded");
+            tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), "object has meshes but none could be loaded");
             stats.objects_failed += 1;
         }
         return;
@@ -364,7 +366,7 @@ fn spawn_vehicle_model(
     children: &mut Vec<Entity>,
 ) {
     let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
-        tracing::error!(sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
+        tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
         stats.objects_failed += 1;
         return;
     };
@@ -376,7 +378,7 @@ fn spawn_vehicle_model(
     {
         Ok(m) => m,
         Err(e) => {
-            tracing::error!(cfg = %cfg_path.display(), "vehicle model config failed: {e}");
+            tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config failed: {e}");
             stats.objects_failed += 1;
             return;
         }
@@ -388,7 +390,7 @@ fn spawn_vehicle_model(
         .find(|l| l.threshold == 0.0)
         .or_else(|| model.lods.first())
     else {
-        tracing::error!(cfg = %cfg_path.display(), "vehicle model config has no meshes");
+        tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config has no meshes");
         stats.objects_failed += 1;
         return;
     };

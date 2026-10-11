@@ -146,6 +146,12 @@ pub fn track_position(
         stats.position = readout;
     }
     *ended = Some(readout);
+    opts_bevy::set_position_tag(veh.map(|(v, _)| v).or(cam).map_or_else(String::new, |p| {
+        format!(
+            "tile {:?} local ({:.0}, {:.0}) world ({:.0}, {:.0}, {:.0})",
+            p.tile, p.local.x, p.local.y, p.world.x, p.world.y, p.world.z
+        )
+    }));
     if let Some(c) = cam {
         if last.0 != Some(c.tile) {
             tracing::debug!(tile = ?c.tile, local = ?c.local, world = ?c.world, "camera entered tile");

@@ -208,7 +208,7 @@ impl ContentLoader<'_> {
     }
 
     fn fail(&mut self, what: String) {
-        tracing::error!("{what}");
+        tracing::error!(at = %crate::position_tag::position_tag(), "{what}");
         self.cache.stats.failures.push(what);
     }
 

@@ -40,11 +40,11 @@ pub(super) fn spawn_terrain(
         .and_then(|p| match std::fs::read(&p).map(|b| MapTerrain::parse(&b)) {
             Ok(Ok(t)) => Some(t),
             Ok(Err(e)) => {
-                tracing::error!(path = %p.display(), "terrain parse failed: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), path = %p.display(), "terrain parse failed: {e}");
                 None
             }
             Err(e) => {
-                tracing::error!(path = %p.display(), "terrain read failed: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), path = %p.display(), "terrain read failed: {e}");
                 None
             }
         });

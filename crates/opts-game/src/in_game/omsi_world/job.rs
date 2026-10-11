@@ -341,7 +341,7 @@ impl WorldLoadJob {
         match MapTile::parse(&bytes) {
             Ok(t) => Some(t),
             Err(e) => {
-                tracing::error!(path = %path.display(), "tile parse failed: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "tile parse failed: {e}");
                 None
             }
         }
@@ -361,7 +361,7 @@ impl WorldLoadJob {
             Some(found)
         });
         let Some(path) = path else {
-            tracing::error!(sli = rel, "spline profile not found");
+            tracing::error!(at = %opts_bevy::position_tag(), sli = rel, "spline profile not found");
             return None;
         };
         self.loading_deps
@@ -378,7 +378,7 @@ impl WorldLoadJob {
                 Some(Arc::new(p))
             }
             Err(e) => {
-                tracing::error!(path = %path.display(), "sli parse failed: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "sli parse failed: {e}");
                 None
             }
         };
@@ -404,11 +404,11 @@ impl WorldLoadJob {
                         .collect()
                 }
                 Some(Err(e)) => {
-                    tracing::error!("parklist_p.txt unreadable: {e}");
+                    tracing::error!(at = %opts_bevy::position_tag(), "parklist_p.txt unreadable: {e}");
                     Vec::new()
                 }
                 None => {
-                    tracing::error!(map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
+                    tracing::error!(at = %opts_bevy::position_tag(), map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
                     Vec::new()
                 }
             };
@@ -432,7 +432,7 @@ impl WorldLoadJob {
             tracing::warn!(sco = rel, found = %found.display(), "scenery object found under another folder name");
             Some(found)
         }) else {
-            tracing::error!(sco = rel, "scenery object not found");
+            tracing::error!(at = %opts_bevy::position_tag(), sco = rel, "scenery object not found");
             return None;
         };
         self.loading_deps
@@ -449,7 +449,7 @@ impl WorldLoadJob {
                 Some(Arc::new(o))
             }
             Err(e) => {
-                tracing::error!(path = %path.display(), "sco parse failed: {e}");
+                tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "sco parse failed: {e}");
                 None
             }
         };
