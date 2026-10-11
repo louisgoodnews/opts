@@ -16,8 +16,8 @@
 | 📝 **Phase 1** — OMSI Format Specification | document every OMSI 2 format before writing parsers | 🟢 specs drafted & mutation tested; review ongoing | [`phase-1/`](phase-1/README.md) |
 | ⚙️ **Phase 2** — `opts-core` Implementation | parsers and data model | 🟢 complete | [`phase-2/`](phase-2/README.md) |
 | 🎨 **Phase 3** — `opts-bevy` Integration | loaders, coordinates, rendering, GUI foundation | 🟢 complete | [`phase-3/`](phase-3/README.md) |
-| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — M-0022 and M-0023 complete | [`phase-4/`](phase-4/README.md) |
-| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | ⏳ planned | [`phase-5/`](phase-5/README.md) |
+| 🚌 **Phase 4** — `opts-sim` & `opts-game` | simulation and the game binary | 🟡 in progress — physics, world streaming, text textures, script VM and script-driven animation/lights/triggers running; passengers, AI traffic, audio open | [`phase-4/`](phase-4/README.md) |
+| ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20/DLSS planned | [`phase-5/`](phase-5/README.md) |
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned | [`phase-6/`](phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](phase-7/README.md) |
 
@@ -162,8 +162,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
   - [x] Implement Bevy ECS bridge plugin in `opts-bevy` connecting `VehicleSimulation` state to entity `Transform` and wheel mesh rotation. (M-0023)
-  - [~] Script VM core implemented (compiles all 6,062 corpus scripts); vehicle wiring open — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](phase-4/M-0026.md) — traces to F-008, F-019).
-  - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, lights, light maps, key/hot-spot triggers done; screenshot check open ([M-0045](phase-4/M-0045.md)).
+  - [x] Script VM (compiles all 6,062 corpus scripts; 1,216 scripted vehicles load and run) wired to the vehicle through a passive and an active Bevy bridge — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](phase-4/M-0026.md) — traces to F-008, F-019).
+  - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; in-game screenshot check, night maps and `delay` open ([M-0045](phase-4/M-0045.md)).
   - [ ] Implement AI vehicle spline path following and traffic controller in `opts-sim` and `opts-bevy`.
   - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](phase-4/M-0027.md) — traces to F-009, F-020).
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
@@ -178,6 +178,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Real OMSI asset loading, tile streaming (`stream_world_tiles`), terrain mesh, data-driven sky, layered ground shader, spline attachments, camera system, humans/ego perspective — `69e94b2`, `780cae4` (crates `opts-bevy`, `opts-game`).
   - [x] Map, scenery, humans and envir parsers; `.o3d`/`.x` robustness; scrambled-mesh decoder (partial, see [M-0038](phase-4/M-0038.md)) — `438d622` (`opts-core`).
   - [x] F1 reporting and GUI modal/text area/fonts — `f5dfd38`, [report](../meta/f1-reporting-2026-10-10.md).
+  - [x] Startup OMSI-installation check with folder dialog and saved path (`a68ad63`); parked vehicles from `car_park` markers and vehicle-model scenery objects (`304856e`); repaint discovery from `.bus`/`model.cfg`/`.cti` (`c00c3fc`); scrambled-mesh decoder keeps all triangles and infers UV jitter (`c00c3fc`); map-list scrolling, back buttons, absolute-height crossings (`5c752fe`).
   - [x] Control protocol and hot reload — M-0043 (see Phase 5); spline road/terrain fix — `2816806`, [bug report](../meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md).
 - [ ] **🧾 Audit-Driven Work (audit 5037f89a, 2026-10-10)**
   - [x] Reconcile roadmap, phase pages and board with work shipped since M-0023 — [M-0037](phase-4/M-0037.md) (F-019, F-023).

@@ -12,13 +12,13 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0023 — Bevy Vehicle ECS Simulation Bridge & Interactive Driving (`opts-bevy`)](M-0023.md) — 🟢 Complete (ECS physics bridge, input mapping, transform sync & interactive driving)
 - [M-0024 — OMSI Map Tile Grid & Chunk Streaming Engine (`opts-game`, `opts-bevy`)](M-0024.md) — ⏳ Planned (tile paging, async loading, memory bounding)
 - [M-0025 — Terrain Heightmap & Water Surface Mesh Generation (`opts-core`, `opts-bevy`)](M-0025.md) — ⏳ Planned (elevation mesh tessellation, water planes, wheel height raycasting)
-- [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — 🟡 Core implemented (compiler, VM, variables); vehicle wiring open
+- [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — 🟢 Complete for vehicles (compiler, VM, variables, passive bridge); audio events wait for M-0027
 - [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — ⏳ Planned (sound.cfg evaluation, dynamic curve modulation, Bevy spatial audio)
 - [M-0037 — Shipped-Work Reconciliation (Roadmap, Phase Pages, Board)](M-0037.md) — 🟢 Complete (audit 5037f89a F-019, F-023)
 - [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)
 
-- [M-0045 — Script-Driven Vehicle Animation, Lights and Doors](M-0045.md) — 🟡 Animation and visibility done (lights, doors, triggers open)
+- [M-0045 — Script-Driven Vehicle Animation, Lights and Doors](M-0045.md) — 🟡 Animation, visibility, lights, key and hot-spot triggers done; in-game screenshot check open
 - [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
 
 ## Checklist

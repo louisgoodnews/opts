@@ -2,7 +2,7 @@
 
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-**Status:** ⏳ Planned — depends on Phase 4
+**Status:** 🟡 Started — control protocol, hot reload, Bevy 0.19 upgrade and audit hardening done; benchmarks, LOD and Bevy 0.20/DLSS planned
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
