@@ -110,6 +110,16 @@ pub fn x_material_to_standard_material(
     }
 }
 
+/// Whether a `[matl_alpha]` mode lets the texture's alpha channel take effect. Mode 0 (and no
+/// entry at all) is opaque: the alpha channel is unrelated data there. Corpus evidence: the
+/// textures of the `Ampelmast_*` traffic-light poles and of many houses are fully transparent
+/// but declare `[matl_alpha] 0`, and the objects stand on the maps (Q-SCO-001 in
+/// `docs/src/formats/text/sco.md`).
+#[must_use]
+pub fn uses_texture_alpha(mode: Option<u32>) -> bool {
+    matches!(mode, Some(m) if m != 0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,5 +161,14 @@ mod tests {
 
         let std_mat = x_material_to_standard_material(&mat, None);
         assert_eq!(std_mat.alpha_mode, AlphaMode::Blend);
+    }
+
+    #[test]
+    fn alpha_mode_zero_is_opaque() {
+        assert!(!uses_texture_alpha(None));
+        assert!(!uses_texture_alpha(Some(0)));
+        assert!(uses_texture_alpha(Some(1)));
+        assert!(uses_texture_alpha(Some(2)));
+        assert!(uses_texture_alpha(Some(3)));
     }
 }
