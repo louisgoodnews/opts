@@ -83,6 +83,7 @@
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Texture Quality and Colour (Proposal)](architecture/texture-quality.md)
+- [Visual A/B Procedure and Image Metrics](architecture/visual-ab.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)

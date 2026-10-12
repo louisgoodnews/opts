@@ -1,7 +1,13 @@
-//! OPTS asset toolsuite: `opts-tools inspect <file>...` validates OMSI files with the real parsers.
+//! OPTS asset toolsuite.
 //!
-//! The format is chosen by file extension (`.o3d`, `.x`, `.sco`, `.sli`, `.oft`, `.terrain`,
-//! `.map` tiles). Each file prints one line; the exit code is 1 if any file failed.
+//! - `opts-tools inspect <file>...` validates OMSI files with the real parsers. The format is
+//!   chosen by file extension (`.o3d`, `.x`, `.sco`, `.sli`, `.oft`, `.terrain`, `.map` tiles).
+//!   Each file prints one line; the exit code is 1 if any file failed.
+//! - `opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]` measures screenshots
+//!   (saturation, luminance, high-frequency energy) and the difference of two of them; see
+//!   [`metrics`].
+
+mod metrics;
 
 use std::path::Path;
 use std::process::ExitCode;
@@ -78,14 +84,100 @@ fn inspect(path: &Path) -> Result<String, String> {
     }
 }
 
+/// Loads an image as RGB8, optionally cropped.
+fn load_rgb(path: &str, crop: Option<metrics::Crop>) -> Result<image::RgbImage, String> {
+    let img = image::open(path)
+        .map_err(|e| format!("{path}: {e}"))?
+        .to_rgb8();
+    match crop {
+        Some(c) => c.apply(&img).map_err(|e| format!("{path}: {e}")),
+        None => Ok(img),
+    }
+}
+
+/// `image-metrics` with its arguments; prints one block per image and the difference.
+fn image_metrics(args: &[String]) -> Result<(), String> {
+    let mut crop = None;
+    let mut json = false;
+    let mut files = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--crop" => {
+                let v = it.next().ok_or("--crop needs x,y,w,h")?;
+                crop = Some(metrics::Crop::parse(v)?);
+            }
+            "--json" => json = true,
+            f => files.push(f),
+        }
+    }
+    if files.is_empty() || files.len() > 2 {
+        return Err("expected one or two image files".into());
+    }
+    let images: Vec<_> = files
+        .iter()
+        .map(|f| load_rgb(f, crop))
+        .collect::<Result<_, _>>()?;
+    let mut out = Vec::new();
+    for (f, img) in files.iter().zip(&images) {
+        let m = metrics::measure(img);
+        if json {
+            out.push(format!(
+                "{{\"file\":{f:?},\"pixels\":{},\"saturation\":{:.4},\"luma_mean\":{:.4},\"luma_std\":{:.4},\"luma_min\":{:.4},\"laplacian\":{:.5}}}",
+                m.pixels, m.saturation, m.luma_mean, m.luma_std, m.luma_min, m.laplacian
+            ));
+        } else {
+            println!(
+                "{f}\n  pixels {}\n  saturation {:.4}\n  luma mean {:.4}  std {:.4}  min {:.4}\n  laplacian {:.5}",
+                m.pixels, m.saturation, m.luma_mean, m.luma_std, m.luma_min, m.laplacian
+            );
+        }
+    }
+    if let [a, b] = &images[..] {
+        let d = metrics::difference(a, b)?;
+        if json {
+            out.push(format!(
+                "{{\"difference\":{{\"mean_abs\":{:.5},\"rmse\":{:.5},\"psnr\":{}}}}}",
+                d.mean_abs,
+                d.rmse,
+                if d.psnr.is_finite() {
+                    format!("{:.2}", d.psnr)
+                } else {
+                    "null".into()
+                }
+            ));
+        } else {
+            println!(
+                "difference\n  mean abs {:.5}  rmse {:.5}  psnr {:.2} dB",
+                d.mean_abs, d.rmse, d.psnr
+            );
+        }
+    }
+    if json {
+        println!("[{}]", out.join(","));
+    }
+    Ok(())
+}
+
+const USAGE: &str = "usage: opts-tools inspect <file>...\n       opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]";
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some((cmd, files)) = args.split_first() else {
-        eprintln!("usage: opts-tools inspect <file>...");
+        eprintln!("{USAGE}");
         return ExitCode::from(2);
     };
+    if cmd == "image-metrics" {
+        return match image_metrics(files) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("image-metrics: {e}\n{USAGE}");
+                ExitCode::from(2)
+            }
+        };
+    }
     if cmd != "inspect" || files.is_empty() {
-        eprintln!("usage: opts-tools inspect <file>...");
+        eprintln!("{USAGE}");
         return ExitCode::from(2);
     }
     let mut failed = 0;
