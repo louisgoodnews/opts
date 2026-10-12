@@ -336,6 +336,10 @@ pub fn spawn_when(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     commands
         .entity(body)
         .add_children(&[quick_title, quick, dt_title, dt, w_title, weather]);
+    super::ui::no_shrink(
+        commands,
+        &[quick_title, quick, dt_title, dt, w_title, weather],
+    );
     body
 }
 

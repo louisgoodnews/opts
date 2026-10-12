@@ -250,13 +250,14 @@ pub(super) fn attach_pointer_observers(
     thumb: Entity,
 ) {
     commands.entity(list).observe(
-        move |ev: On<PointerScroll>, mut views: Query<&mut MasterDetailView>| {
+        move |mut ev: On<PointerScroll>, mut views: Query<&mut MasterDetailView>| {
             if let Ok(mut view) = views.get_mut(root) {
                 let amount = match ev.unit {
                     bevy::input::mouse::MouseScrollUnit::Line => ev.y * ITEM_HEIGHT,
                     bevy::input::mouse::MouseScrollUnit::Pixel => ev.y,
                 };
                 view.scroll -= amount;
+                ev.propagate(false);
             }
         },
     );

@@ -116,3 +116,11 @@ Plain language, themed (all colours and sizes through role/type tokens, no `Colo
 - Wizard: every step builds, *Next*/*Back*/*Skip to review*, `Esc` order, validity reasons, remembered choices applied, history written on *Drive*, facts without data not shown, live weather is a not-yet control without numbers, pickers fit 1024×640 at 100 %/150 %, `ui.tree` snapshots.
 - Loading: seeded failures keep their text, auto-continue on success, outcomes and their buttons, manifest follows the real session, no overlay while loading.
 - CI rules (`ui_rules.rs`): target ≥ 32 px, text ≥ 12 px, keyboard traversal, disabled with reason, no hard-coded colours or user-visible literals in the wizard and loading modules.
+
+## 10. Implementation notes and deviations (2026-10-12)
+
+- *Copy* and *Report* in the problem details are not built: they need the clipboard and the report dialog owned by the Help milestone (M-0064). The details view shows paths and messages.
+- *Back* on a failed load goes Home (`AppState::MainMenu`); *Choose another* and `Esc` go to the wizard. Retry restarts the pipeline on the same screen.
+- The menu camera now stays active until a 3D scene camera exists; before, the loading screen (and a failed one, which never gets a scene camera) was invisible. The control-protocol screenshot is black during the stages for the same reason it was black before; with the fix the screen is drawn by the menu camera.
+- Real maps nearly always have a few unreadable assets, so *Ready with N problems* will be common and the screen waits for *Continue*. Open question for the project lead: a severity threshold ("minor" asset problems do not stop the screen).
+- Compact stacking: the list gets 260 px and the page scrolls; verified in the layout tests, not in a real small window (the compositor kept the window at 1920x1013).

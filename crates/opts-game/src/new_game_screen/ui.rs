@@ -136,3 +136,15 @@ pub fn action_button(
     commands.entity(button).insert((Act(action), UiId::new(id)));
     button
 }
+
+/// Stops the given nodes from shrinking: children of a scrolling body keep their height and the
+/// body scrolls instead.
+pub fn no_shrink(commands: &mut Commands, entities: &[Entity]) {
+    for e in entities {
+        commands.entity(*e).queue(|mut entity: EntityWorldMut| {
+            if let Some(mut node) = entity.get_mut::<Node>() {
+                node.flex_shrink = 0.0;
+            }
+        });
+    }
+}

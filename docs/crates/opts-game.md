@@ -163,3 +163,7 @@ cargo run -- --headless
 # Run with custom map background preview:
 cargo run -- --map-path /path/to/omsi/maps/Berlin-Spandau
 ```
+
+## Plan a drive and loading (M-0062)
+
+`new_game_screen` is the four-step wizard (*Where, What, When, Review*) built on `opts_gui::patterns::master_detail`; the choices live in `NewGameSetup` and are remembered through `drive_history` (`PlannerHistory`). `thumbnails.rs` decodes map pictures off the main thread into a capped cache. `in_game::loading_ui`/`loading_pipeline` show real stages and the outcomes *Ready*, *Ready with N problems*, *Failed*; everything that went wrong is kept in `in_game::load_report::LoadReport`. Specification: [wizard and loading](../src/roadmap/phase-9/wizard-and-loading.md).

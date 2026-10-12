@@ -132,7 +132,6 @@ fn spawn_summary(commands: &mut Commands) -> Entity {
             Node {
                 width: Val::Percent(100.0),
                 flex_shrink: 0.0,
-                flex_wrap: FlexWrap::Wrap,
                 padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
                 border: UiRect::top(Val::Px(1.0)),
                 ..row(4.0)
@@ -155,10 +154,19 @@ fn spawn_summary(commands: &mut Commands) -> Entity {
             );
         }
         let part = ButtonBuilder::text(String::new()).spawn(commands);
+        commands.entity(part).queue(|mut e: EntityWorldMut| {
+            if let Some(mut n) = e.get_mut::<Node>() {
+                n.min_width = Val::Px(0.0);
+                n.flex_shrink = 1.0;
+                n.overflow = Overflow::clip();
+                n.justify_content = JustifyContent::FlexStart;
+            }
+        });
         let text = commands
             .spawn((
                 plain(String::new(), TypeScale::BodyMedium, ColorRole::OnSurface),
                 SummaryPart(step),
+                TextLayout::new(Justify::Left, LineBreak::NoWrap),
             ))
             .id();
         commands.entity(part).insert((

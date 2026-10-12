@@ -24,8 +24,8 @@ Game runs: `XDG_CONFIG_HOME=<wizard>/run-N/config XDG_DATA_HOME=<wizard>/run-N/d
 | W1 Master-detail pattern (`opts-gui/src/patterns/`) | done (18 tests in the real layout; gates green for opts-gui, catalogue, audit) |
 | W2 Stepper and the four steps | done (10 headless tests in the real layout; visual check at 1280x720 only so far) |
 | W3 Thumbnails and images | done (service, cache with cap, map pictures, livery swatches; 4 unit tests) |
-| W4 Loading screen | open |
-| W5 Tests, screenshots, docs, close-out | open |
+| W4 Loading screen | done (11 tests with seeded failures on self-authored mini installations) |
+| W5 Tests, screenshots, docs, close-out | done (see notes) |
 
 ## Design decisions
 
@@ -57,3 +57,11 @@ Spec in `docs/src/roadmap/phase-9/wizard-and-loading.md`.
 - `vehicle_menu.rs` (in-game) no longer shows the six N/A facts, only the empty weight when known.
 - Seen in the running game (1280x720, dark): all four steps, real map pictures as thumbnails and hero, livery swatches coloured from textures, live weather card red marker. Not yet seen: light theme, 1024x640, 150 % scale, Compact stacking in the real game.
 - Environment note: other agents' games run on the same desktop; check `pgrep -fa wizard/target/debug/opts-game` for stale instances before taking screenshots (a stale instance shares `run-1/game.log`).
+
+### W4 + W5
+- `in_game/load_report.rs` (problems, outcome), `loading_pipeline.rs` split into stage functions (`LoadEnv` system param), `loading_ui.rs` (themed screen, manifest from `InGameSessionInfo`, outcome block, cancel dialog, overlay hidden). Tests: `tests/loading_tests.rs` (+ `tests/common` mini installation writer), `tests/wizard_tests.rs` (13).
+- F17 cause: the manifest tiles were built once from `NewGameSetup`; `--map-path` or a catalogue match resolves another map. Fixed and tested.
+- Found and fixed: the menu camera was deactivated on entering the session, so the loading screen was invisible until the last stage.
+- Retry runs inside the pipeline system (a deferred remove in another system was flushed after the insert).
+- Screenshots in `~/.local/share/opts/benchmark/dev-ui-impl/wizard/shots/`: `d1920-*`, `d1024-*` (real 1024x640), `l1280-*` (light), `d1024s150-*` (taken at 1920x1013, 150 % scale applied; not a 1024x640 window), `after-loading-hud.png`. NOT obtained: a screenshot of the loading screen itself (the control screenshot is black or times out during loading; another process sent stray keys to the game window and moved it out of the flow). The loading screen is verified by tests and `ui.tree` only.
+- Run directory `run-1` (with a 250 MB catalogue) is deleted at close-out.

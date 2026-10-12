@@ -353,6 +353,7 @@ pub fn spawn_master_detail(
     ));
     commands.entity(panel).add_child(detail);
     super::scroll::wheel_scroll(commands, panel);
+    super::scroll::wheel_scroll(commands, root);
     commands.entity(root).add_children(&[list_col, panel]);
     parts
 }

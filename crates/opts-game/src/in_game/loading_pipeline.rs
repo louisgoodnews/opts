@@ -1,6 +1,6 @@
 //! Loading pipeline state machine: each stage does real work against the OMSI installation and
 //! reports it in plain numbers; everything that goes wrong is recorded in the
-//! [`LoadReport`](crate::in_game::load_report::LoadReport) and never overwritten.
+//! [`LoadReport`] and never overwritten.
 
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;

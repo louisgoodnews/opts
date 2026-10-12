@@ -277,6 +277,14 @@ pub(super) fn adapt_layout(
                     FlexDirection::Row
                 },
             );
+            set_if(
+                &mut n.overflow,
+                if compact {
+                    Overflow::scroll_y()
+                } else {
+                    Overflow::visible()
+                },
+            );
         }
         if let Ok(mut n) = nodes.get_mut(p.list_col) {
             set_if(
@@ -297,12 +305,9 @@ pub(super) fn adapt_layout(
             );
             set_if(
                 &mut n.height,
-                if compact {
-                    Val::Percent(45.0)
-                } else {
-                    Val::Auto
-                },
+                if compact { Val::Px(260.0) } else { Val::Auto },
             );
+            set_if(&mut n.flex_shrink, if compact { 0.0 } else { 1.0 });
         }
     }
 }

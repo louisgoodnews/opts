@@ -155,7 +155,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🔴 **Theme foundations: dark default, modes, typography, UI scale/density, accents with contrast guard, one theme everywhere, instrument tokens** (M-0061 part A, code) — done 2026-10-12.
 - [x] 🔴 **States, focus ring, keyboard operability, action layer, TextField, NotAvailableYet, localisation scaffold** (M-0061 part B, code) — done 2026-10-12.
 - [x] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, text size, traversal, disabled reasons** (M-0061, code) — done 2026-10-12; the contrast rule is covered by the theme audit.
-- [ ] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code)
+- [~] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code) — wizard, master-detail pattern and loading screen done on `agent/ui-wizard`; shell, Home, pause pending
 - [ ] 🟡 **Settings registry and generic settings page** (M-0063, code) — the theme/interface keys, their migration and the UI & Themes tab exist since M-0061 part A; M-0063 moves them into the registry.
 - [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; colour-blind simulation in the contrast test; remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).
 - [ ] 🟡 **Instrument HUD, HUD registry, help overlay, developer panel** (M-0064, code)

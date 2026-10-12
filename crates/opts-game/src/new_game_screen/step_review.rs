@@ -224,5 +224,6 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         );
     }
     commands.entity(body).add_children(&kids);
+    super::ui::no_shrink(commands, &kids);
     body
 }
