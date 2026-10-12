@@ -11,6 +11,7 @@ repository.workspace = true
 # Internal
 opts-core = { workspace = true }
 opts-sim = { workspace = true }
+opts-traffic = { workspace = true }
 opts-gui = { workspace = true }
 opts-cli = { workspace = true }
 opts-logging = { workspace = true }

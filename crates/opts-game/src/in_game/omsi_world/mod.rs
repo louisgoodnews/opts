@@ -16,11 +16,13 @@ use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
+mod dev_look;
 mod ground;
 mod job;
 mod overlay;
 mod pedestrians;
 mod reload;
+mod scenery_objects;
 mod tile;
 mod tile_ground;
 mod traffic;
@@ -36,7 +38,9 @@ pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
     PedestrianNetwork, PedestrianPool, PedestrianSettings,
 };
+pub use dev_look::place_dev_camera;
 pub use reload::ReloadPlan;
+pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
@@ -164,6 +168,8 @@ pub struct WorldLoadJob {
     /// Map-wide spline lookup for attachments, built on first use.
     spline_index: Option<Arc<SplineIndex>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
+    scenery: scenery_objects::SceneryObjectCache,
     /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
     parklist: Option<Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,

@@ -13,6 +13,7 @@ use bevy::ecs::entity::Entity;
 use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
 use bevy::image::{Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::math::Vec3;
 use bevy::mesh::Mesh;
 use bevy::mesh::Mesh3d;
 use bevy::pbr::MeshMaterial3d;
@@ -67,6 +68,10 @@ pub struct ModelPart {
     /// Script variable that scales the material's light map (`[matl_lightmap]`); `None` when the
     /// material has no light map or the map names no variable.
     pub light_variable: Option<String>,
+    /// Translation of the mesh file's own `0x79` matrix (the modelling tool's pivot) in Bevy
+    /// axes; `None` for files without one and for `.x` meshes (whose frames are applied).
+    /// `[newanim] origin_from_mesh` rotates about it.
+    pub pivot: Option<Vec3>,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.
@@ -633,11 +638,16 @@ impl ContentLoader<'_> {
                     }
                 }
                 tracing::debug!(path = %o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?tex_name, "model part");
+                let pivot = model
+                    .transform
+                    .filter(|_| model.version != 0)
+                    .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
                 parts.push(ModelPart {
                     mesh: self.meshes.add(mesh),
                     material: self.materials.add(material),
                     vertices,
                     light_variable,
+                    pivot,
                 });
             }
         }

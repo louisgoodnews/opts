@@ -24,6 +24,8 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 | `from_sources(&[(file, text)])` | Compile and build; returns compile diagnostics. |
 | `set(name, v)` / `get(name)` / `set_string` / `get_string` | Variables shared with the host (pedals, doors, lamps). |
 | `set_system(name, v)` | `(L.S.name)` values: `Timegap` and `GetTime` are set by `run_frame`; the host sets `Time`, `Day`, `Month`, `Year`, weather, mouse. |
+| `system_id(name)` / `set_system_id(id, v)`, `variable_id(name)` / `get_id` / `set_id` | The same by a fixed index: hosts that feed the same values every frame resolve the names once (name lookups lower-case and hash). |
+| `fork()` | A fresh engine with the same compiled program, constants and declarations but zeroed variables: one compile per scenery `.sco`, one engine per placed object ([Scenery Runtime](scenery-runtime.md)). |
 | `consts_mut()` | Scalars (`(C.L.x)`) and piecewise-linear curves (`(F.L.x)`), loaded from constant files. |
 | `run_init()`, `run_frame(dt, ai)`, `trigger(name)` | Lifecycle. |
 | `drain_events()` | `(T.L/F/S.name)` events for the sound system and others. |
@@ -35,6 +37,7 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 ## Semantics fixed by the corpus
 
 - Booleans are floats; comparisons push `1`/`0`; `{if}` takes the branch for non-zero.
+- `(S.L.x)` and `s0`…`s7` store the top of the float stack **without popping it** (corpus evidence in [`.osc`](../formats/text/vehicles/osc.md#registers): stack underflows drop from 233,472 to 4 sites over the vehicle scripts).
 - `/` and `%` by zero give `0` (no NaN reaches variables).
 - String operators (stack effects read from real scripts): `string n $SetLengthL` keeps the first *n* characters (pads right), `$SetLengthR` keeps the last *n* (pads left), `$SetLengthC` centres; `number format $IntToStrEnh` with the format a pad character plus width (`"02"` → `07`, `" 3"` → `  7`); `string n $*` repeats; `$cutBegin`/`$cutEnd` remove *n* characters; `$=` and the comparisons consume two strings and push a number.
 - Leniency, as in OMSI: a block that ends inside open `{if}`s is closed at `{end}` (warning); surplus `{endif}`/`{else}` are ignored (warning); stray tokens outside blocks are ignored; unknown tokens are ignored with the line number; missing `{end}` closes at the next header or end of file; stack underflow reads `0`; undefined variables read `0`; undefined macros, constants and curves are no-ops reported once.
@@ -48,9 +51,9 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 
 `example osc_bench` runs the 25 scripts of `HH109_Stadtbus_HHA` (382 blocks): about **11,700 instructions and 100 µs per `{frame}`** (≈ 8.5 ns per instruction, constants unloaded) — 0.6 % of a 60 Hz frame per vehicle; the milestone target of 50 µs is not met for this large vehicle. Cheap wins left: pre-allocated stacks, avoiding string clones in `LoadStr`.
 
-## Vehicle loading
+## Loading
 
-`opts_core::formats::{constfile, varlist}` parse constant files and variable lists; `script::load_vehicle_scripts(&BusManifest, resolve)` reads a `.bus`'s `[script]`, `[varnamelist]`, `[stringvarnamelist]` and `[constfile]` lists into one engine (missing files become warnings). `example vehicle_scripts` loads all 1,485 `.bus` files of the install: 1,216 have scripts, every one loads and runs `{init}` plus 60 frames without panics; 38 referenced files are missing; **median 71 µs, p90 114 µs, max 307 µs per frame**. 1,207 of them use variables that no varlist declares (OMSI's predefined variables, `predefined-variables.md`) — these are reported as one summary warning.
+`opts_core::formats::{constfile, varlist}` parse constant files and variable lists; `script::load_script_files(ScriptFiles, resolve)` loads any script set, `script::load_scenery_scripts(&SceneryObject, resolve)` a `.sco`'s (returning the `[stringvarnamelist]` names too), and `script::load_vehicle_scripts(&BusManifest, resolve)` reads a `.bus`'s `[script]`, `[varnamelist]`, `[stringvarnamelist]` and `[constfile]` lists into one engine (missing files become warnings). `example vehicle_scripts` loads all 1,485 `.bus` files of the install: 1,216 have scripts, every one loads and runs `{init}` plus 60 frames without panics; 38 referenced files are missing; **median 71 µs, p90 114 µs, max 307 µs per frame**. 1,207 of them use variables that no varlist declares (OMSI's predefined variables, `predefined-variables.md`) — these are reported as one summary warning.
 
 ## In the game
 

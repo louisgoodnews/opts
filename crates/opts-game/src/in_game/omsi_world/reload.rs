@@ -68,6 +68,8 @@ impl WorldLoadJob {
     fn forget_parsed(&mut self, path: &Path) {
         self.sco_cache.retain(|p, _| normalize(p) != *path);
         self.sli_cache.retain(|p, _| normalize(p) != *path);
+        // Scripts are compiled per `.sco`; recompiling on demand is cheap.
+        self.scenery.clear_templates();
         self.spline_materials
             .retain(|(p, _), _| normalize(p) != *path);
     }
@@ -125,6 +127,7 @@ impl WorldLoadJob {
         self.cache.clear_meshes();
         self.sco_cache.clear();
         self.sli_cache.clear();
+        self.scenery.clear_templates();
         self.spline_materials.clear();
         self.fonts = opts_bevy::text_texture::FontRegistry::default();
         self.ground_array = None;
