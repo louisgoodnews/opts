@@ -29,13 +29,3 @@ pub fn cleanup_settings_screen(
         commands.entity(entity).despawn();
     }
 }
-
-/// Escape key listener returning to the Main Menu (unless a modal or the text field has it).
-pub fn escape_to_menu_system(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    if keyboard.just_pressed(KeyCode::Escape) {
-        next_state.set(AppState::MainMenu);
-    }
-}

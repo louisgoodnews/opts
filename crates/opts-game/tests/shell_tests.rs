@@ -27,7 +27,8 @@ fn shell_app() -> App {
         .add_plugins(OptsGuiPlugin)
         .add_plugins(ShellPlugin)
         .add_plugins(HomePlugin)
-        .add_plugins(HelpPlugin);
+        .add_plugins(HelpPlugin)
+        .add_plugins(opts_game::settings_screen::SettingsScreenPlugin);
     app.update(); // start-up: the shell frame exists before any screen is built
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
@@ -228,4 +229,35 @@ fn the_rail_shows_icons_only_in_the_compact_layout_class_and_labels_otherwise() 
         .filter(|n| n.id.starts_with("shell.nav."))
         .count();
     assert_eq!(ids, 6);
+}
+
+#[test]
+fn the_escape_key_in_settings_goes_one_step_back_through_the_shell_only() {
+    use bevy::input::keyboard::{Key, KeyboardInput};
+    use bevy::input::ButtonState;
+    let mut app = shell_app();
+    go(&mut app, Navigate::to("settings"));
+    go(&mut app, Navigate::push("help"));
+    go(&mut app, Navigate::push("settings"));
+    assert_eq!(state(&app), AppState::Settings);
+    let press = |app: &mut App, st: ButtonState| {
+        app.world_mut().write_message(KeyboardInput {
+            key_code: KeyCode::Escape,
+            logical_key: Key::Escape,
+            state: st,
+            text: None,
+            repeat: false,
+            window: Entity::PLACEHOLDER,
+        });
+        for _ in 0..3 {
+            app.update();
+        }
+    };
+    press(&mut app, ButtonState::Pressed);
+    press(&mut app, ButtonState::Released);
+    assert_eq!(
+        state(&app),
+        AppState::Help,
+        "one press, one level: the screen has no Esc handler of its own"
+    );
 }

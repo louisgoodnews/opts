@@ -38,6 +38,18 @@ fn wizard_with(history: PlannerHistory) -> App {
         .insert_resource(opts_game::catalogue_service::testing::fixture_lists())
         .insert_resource(history)
         .add_plugins(NewGameMenuPlugin);
+    // The shell's one Esc mechanism; the shell's navigation is stood in for by a system that
+    // answers `NavigateBack` with Home (the back stack is empty here).
+    opts_game::shell::esc::build(&mut app);
+    app.add_systems(
+        Update,
+        |mut back: MessageReader<opts_game::shell::nav::NavigateBack>,
+         mut next: ResMut<NextState<AppState>>| {
+            if back.read().count() > 0 {
+                next.set(AppState::MainMenu);
+            }
+        },
+    );
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::VehicleSelection);
