@@ -124,7 +124,10 @@ fn load_segment_meshes_for(
     let mut skins: Vec<SkinBinding> = Vec::new();
     // Runs of `bone_<letter>` dummies: a skinned mesh numbers its bones (`[setbone] name n`)
     // along the run of dummies declared before it (the NF6D-style bellows of the Heuliez GX).
-    let mut bone_runs: Vec<Vec<Entity>> = Vec::new();
+    // (shared stem without the last letter, dummies in declaration order); the run touched last
+    // belongs to the skinned mesh that follows.
+    let mut bone_runs: Vec<(String, Vec<Entity>)> = Vec::new();
+    let mut last_run: Option<usize> = None;
     // Names of the bones the skinned meshes of this model list (`[setbone]`): a mesh with that
     // file name is the dummy that carries the bone's animation (`Gelenk_A.o3d` for `Gelenk_A`).
     let bone_names: std::collections::HashSet<String> = lod0
@@ -132,8 +135,8 @@ fn load_segment_meshes_for(
         .iter()
         .flat_map(|m| m.bones.iter().map(|b| b.name.to_lowercase()))
         .collect();
-    let mut previous_was_bone = false;
-    for mesh_def in &lod0.meshes {
+    let sibling_run = articulation_runs(&lod0.meshes);
+    for (mesh_index, mesh_def) in lod0.meshes.iter().enumerate() {
         // Shadow-only and AI-only meshes are not part of the visible player model.
         let vp = mesh_def.viewpoint;
         if mesh_def.isshadow || !(vp.is_outside() || vp.is_inside()) {
@@ -154,11 +157,10 @@ fn load_segment_meshes_for(
             .file_stem()
             .map(|s| s.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        let is_bone_dummy = is_bone_stem(&stem);
+        // Numbered siblings driven by `articulation_*` (`Dum_A`…`Dum_D`, `Gelenk_Dummy_A`…,
+        // `przd_a`…) are the bones' dummies even when their names say nothing about bones.
+        let is_bone_dummy = is_bone_stem(&stem) || sibling_run[mesh_index];
         let carries_animation = mesh_def.anims.iter().any(|a| a.driver_variable().is_some());
-        if !is_bone_dummy {
-            previous_was_bone = false;
-        }
         if (stem.contains("dum") || is_bone_dummy || bone_names.contains(&stem))
             && carries_animation
         {
@@ -178,14 +180,18 @@ fn load_segment_meshes_for(
             commands.entity(root).add_child(id);
             dummies.push((stem.clone(), id));
             if is_bone_dummy {
-                if previous_was_bone {
-                    if let Some(run) = bone_runs.last_mut() {
-                        run.push(id);
+                let mut chars = stem.chars();
+                chars.next_back();
+                let prefix = chars.as_str().to_owned();
+                let at = match bone_runs.iter().position(|(k, _)| *k == prefix) {
+                    Some(at) => at,
+                    None => {
+                        bone_runs.push((prefix, Vec::new()));
+                        bone_runs.len() - 1
                     }
-                } else {
-                    bone_runs.push(vec![id]);
-                }
-                previous_was_bone = true;
+                };
+                bone_runs[at].1.push(id);
+                last_run = Some(at);
             }
         }
         let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
@@ -287,7 +293,28 @@ fn load_segment_meshes_for(
             skins.push(SkinBinding {
                 entities: spawned.clone(),
                 bones: mesh_def.bones.clone(),
-                run: bone_runs.last().cloned().unwrap_or_default(),
+                run: {
+                    // Most recently touched run first; the skinned mesh takes the first one long
+                    // enough for its bone numbers (damper pairs `…_l`/`…_r` form short runs).
+                    let need = mesh_def
+                        .bones
+                        .iter()
+                        .filter_map(|b| usize::try_from(b.index).ok())
+                        .max()
+                        .map_or(0, |m| m + 1);
+                    let mut order: Vec<usize> = (0..bone_runs.len()).rev().collect();
+                    if let Some(at) = last_run {
+                        order.retain(|i| *i != at);
+                        order.insert(0, at);
+                    }
+                    order
+                        .into_iter()
+                        .map(|i| &bone_runs[i].1)
+                        .find(|r| r.len() >= need)
+                        .or_else(|| last_run.and_then(|at| bone_runs.get(at)).map(|r| &r.1))
+                        .cloned()
+                        .unwrap_or_default()
+                },
             });
         }
         for (e, part) in spawned.iter().copied().zip(&parts) {
@@ -316,6 +343,34 @@ struct SkinBinding {
     entities: Vec<Entity>,
     bones: Vec<opts_core::formats::vehicles::model::MeshBone>,
     run: Vec<Entity>,
+}
+
+/// Marks the meshes that belong to a run of numbered dummies: two or more meshes of the model whose
+/// file stems differ only in their last letter or digit and whose animations are driven by
+/// `articulation_*` variables (the bones of a bellows in the order of their `[setbone]` index).
+fn articulation_runs(meshes: &[opts_core::formats::vehicles::model::ModelMesh]) -> Vec<bool> {
+    let key = |m: &opts_core::formats::vehicles::model::ModelMesh| -> Option<String> {
+        let driven = m.anims.iter().any(|a| {
+            a.driver_variable()
+                .is_some_and(|v| v.to_ascii_lowercase().starts_with("articulation_"))
+        });
+        let stem = Path::new(&m.path.replace('\\', "/"))
+            .file_stem()?
+            .to_string_lossy()
+            .to_lowercase();
+        let mut chars = stem.chars();
+        let last = chars.next_back()?;
+        (driven && last.is_ascii_alphanumeric() && stem.chars().count() >= 3)
+            .then(|| chars.as_str().to_owned())
+    };
+    let keys: Vec<Option<String>> = meshes.iter().map(key).collect();
+    let mut count: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+    for k in keys.iter().flatten() {
+        *count.entry(k.as_str()).or_default() += 1;
+    }
+    keys.iter()
+        .map(|k| k.as_deref().is_some_and(|k| count[k] >= 2))
+        .collect()
 }
 
 /// Whether a mesh file stem names a bone dummy of a bellows (`bone_a` … `bone_f`).
@@ -362,6 +417,11 @@ fn bind_skins(
         run,
     } in skins
     {
+        let run_stems: Vec<(&String, Entity)> = dummies
+            .iter()
+            .filter(|(_, e)| run.contains(e))
+            .map(|(stem, e)| (stem, *e))
+            .collect();
         let n = bones
             .iter()
             .map(|b| usize::try_from(b.index).map_or(0, |i| i + 1))
@@ -378,12 +438,24 @@ fn bind_skins(
                 continue;
             };
             let name = b.name.to_lowercase();
+            // By name (`Gelenk_A.o3d` for `Gelenk_A`), else the dummy of the same trailing letter
+            // or digit (`Bone_C` ↔ `Dum_1_C`), else the dummy at the bone's number in the run.
+            let suffix = name
+                .rsplit(['_', ' '])
+                .next()
+                .filter(|t| t.chars().count() == 1);
+            let lettered = suffix.and_then(|t| {
+                run_stems
+                    .iter()
+                    .find(|(stem, _)| stem.ends_with(t))
+                    .map(|(_, e)| *e)
+            });
             match dummies.iter().find(|(stem, _)| stem.contains(&name)) {
                 Some((_, e)) => joints[i] = *e,
-                None => match run.get(i) {
-                    Some(e) => joints[i] = *e,
+                None => match lettered.or_else(|| run.get(i).copied()) {
+                    Some(e) => joints[i] = e,
                     None => {
-                        tracing::warn!(bone = %b.name, "no dummy mesh for bone; it stays on the root");
+                        tracing::warn!(bone = %b.name, index = b.index, run = run.len(), dummies = ?dummies.iter().map(|d| d.0.as_str()).collect::<Vec<_>>(), "no dummy mesh for bone; it stays on the root");
                     }
                 },
             }

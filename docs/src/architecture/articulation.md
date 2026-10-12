@@ -50,14 +50,14 @@ Provenance: these figures come from the probe above and a `grep` over the instal
 4. **ECS** (`opts_bevy::articulation_system`):
    - Runs in `FixedUpdate`, after `vehicle_physics_step_system` and before `vehicle_script_system`.
    - Each segment follows the one in front of it, starting with the root's simulated chassis pose.
-   - Each segment's transform is then written in Bevy space. The chain is flat: every segment takes the root's height.
+   - Each segment's transform is then written in Bevy space, at the height, pitch and roll of the ground under its own axles (`follow_ground`, 2026-10-12; a segment without a ground pose, e.g. AI or parked, stays level at the root's height).
 5. **Script variables.**
    - For joint `k` the system writes `articulation_<k>_alpha` in **degrees**, positive when the segment is turned clockwise relative to its leader, so it lags on a right-hand curve.
-   - `articulation_<k>_beta` and `articulation_<k>_gamma` are always `0`.
+   - `articulation_<k>_beta` and `articulation_<k>_gamma` (since 2026-10-12) are the **pitch and roll of a unit against its leader in degrees**: `follow_ground` lays every unit on the ground under its rear axle and its front joint (the head: under its four wheels), smooths pitch and roll, and writes the difference of neighbouring units each frame. Pitch is nose up positive, roll right side up positive. The signs against OMSI are unverified (Q-ART-02).
    - The variables go into the root's script engine, so the scripts see them in the same fixed step.
 6. **Bellows skinning** (`bind_skins`):
    - A mesh whose file stem contains `dum` and that has a driven `[newanim]` becomes a joint entity of its own, animated like any other mesh.
-   - A `[smoothskin]` mesh gets a Bevy `SkinnedMesh` whose joint `i` is the dummy whose stem contains the name of `[setbone] … i`.
+   - A `[smoothskin]` mesh gets a Bevy `SkinnedMesh` whose joint `i` is, in this order: the dummy whose stem contains the bone's name (`Gelenk_A.o3d` for `Gelenk_A`); the dummy of the same trailing letter or digit in the run of numbered dummies (`Bone_C` ↔ `Dum_1_C`); the dummy at number `i` of that run. A *run* is two or more meshes of the model whose file stems differ only in their last character and whose animations are driven by `articulation_*` (`Dum_A`…`Dum_D`, `Gelenk_Dummy_A`…, `przd_a`…) or the fixed names `bone_x`, `dummyx`, `dummy_x`; the skinned mesh takes the most recently declared run that is long enough for its bone numbers (damper pairs `…_l`/`…_r` form short runs of their own).
    - The vertices are already in vehicle space, so the inverse bind poses are the identity.
    - A bone without a dummy stays on the segment root, with a warning.
    - Skinned meshes get `NoFrustumCulling`, because their bounds move with the bones.

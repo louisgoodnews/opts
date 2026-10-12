@@ -87,6 +87,7 @@
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [Articulated Vehicles](architecture/articulation.md)
+- [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
