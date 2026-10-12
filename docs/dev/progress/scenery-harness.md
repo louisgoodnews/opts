@@ -9,7 +9,7 @@ Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-
 | H0 Assess | done (see "State found") |
 | H1 Single object end to end | done |
 | H2 Static check and seeded faults | done |
-| H3 Run control (crash/hang recovery) | todo |
+| H3 Run control (crash/hang recovery) | done |
 | H4 Text-texture check, corpus preflight | todo |
 | H5 Sample run, performance | todo |
 | H6 Calibration (sub-batches of ~50) | todo |
@@ -49,3 +49,5 @@ H0: 5-object smoke run, 4 pass, 1 fail (car_park, see above).
 H1: `h1.list` (Academica building, Adalst100 building, Trees_MC/arbor_1 tree, Generic/entrypoint_bus editor-only anchor, Generic/car_park carpark marker) all pass with `DISPLAY`/`WAYLAND_DISPLAY` unset (windowless rendering, Q-SB-01 recorded in the spec). Mask/diff/rgb/expected images and the result record were written. Fix: the carpark marker produced a benchmark artifact error ("map has parking bays but no parklist_p.txt"), now ignored in `diag.rs`. First object of a run costs about 1 s (cold), warm objects 50 ms.
 
 H2: `crates/opts-benchmark/tests/seeded_faults.rs` (synthetic root, hand-written `.x`) catches mirrored heading, 2x scale, 10 m offset, removed texture, removed mesh with the expected categories (all pass on the first run; about 2 s). Added 4 verdict unit tests (28 lib tests). Expected silhouette, metrics and categories already existed in code and match the spec table.
+
+H3: `tests/run_control.rs` (real binary, synthetic root, `OPTS_BENCH_INJECT` hook): crash gives F-CRASH, hang gives F-TIMEOUT, recycling and resume work, run continues. Found and fixed a lost-object race (Result before Recycle). Test takes about 24 s.

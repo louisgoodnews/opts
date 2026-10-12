@@ -294,25 +294,53 @@ pub fn run(config: WorkerConfig, sink: EventSink) -> Result<()> {
         send(&WorkerMsg::Start {
             key: entry.key.clone(),
         });
+        inject_fault(&entry.sco);
         let (record, healthy) = super::object::process(&mut h, &entry);
+        processed += 1;
+        let recycle = if !healthy {
+            Some("soft timeout: background work may still run".to_string())
+        } else if processed >= h.config.max_objects {
+            Some(format!("recycled after {processed} objects"))
+        } else {
+            None
+        };
+        // `Recycle` goes out before the result: the supervisor must know the worker is leaving
+        // before it sees the worker idle, or it would hand the next object to a dying process.
+        if let Some(reason) = &recycle {
+            send(&WorkerMsg::Recycle {
+                reason: reason.clone(),
+            });
+        }
         send(&WorkerMsg::Result {
             record: Box::new(record),
         });
-        processed += 1;
-        if !healthy {
-            send(&WorkerMsg::Recycle {
-                reason: "soft timeout: background work may still run".into(),
-            });
-            break;
-        }
-        if processed >= h.config.max_objects {
-            send(&WorkerMsg::Recycle {
-                reason: format!("recycled after {processed} objects"),
-            });
+        if recycle.is_some() {
             break;
         }
     }
     Ok(())
+}
+
+/// Test hook for the supervisor's crash and hang recovery: `OPTS_BENCH_INJECT` holds
+/// `crash:<text>` or `hang:<text>`; an object whose path contains `<text>` aborts the worker or
+/// blocks it forever. Unset in normal runs.
+fn inject_fault(sco: &str) {
+    let Ok(spec) = std::env::var("OPTS_BENCH_INJECT") else {
+        return;
+    };
+    let Some((kind, text)) = spec.split_once(':') else {
+        return;
+    };
+    if !sco.to_lowercase().contains(&text.to_lowercase()) {
+        return;
+    }
+    match kind {
+        "crash" => std::process::abort(),
+        "hang" => loop {
+            std::thread::sleep(Duration::from_secs(3600));
+        },
+        _ => {}
+    }
 }
 
 fn send(msg: &WorkerMsg) {

@@ -123,6 +123,17 @@ pub fn run(opts: RunOptions) -> Result<PathBuf> {
     pool.dispatch(pending)?;
     pool.shutdown();
     let records = report::latest(report::read_results(&run_dir.join("results.jsonl")));
+    let have: HashSet<&str> = records.iter().map(|r| r.key.as_str()).collect();
+    let missing = corpus::read_jsonl(&run_dir.join("objects.jsonl"))?
+        .iter()
+        .filter(|e| !have.contains(e.key.as_str()))
+        .count();
+    if missing > 0 {
+        tracing::error!(
+            missing,
+            "objects without a record; resume the run to retry them"
+        );
+    }
     report::write_summaries(&run_dir, &records)?;
     let mut manifest = manifest;
     manifest.finished = Some(chrono::Utc::now().to_rfc3339());

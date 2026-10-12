@@ -29,6 +29,7 @@ pub enum WorkerMsg {
         record: Box<Record>,
     },
     /// The worker exits on purpose (recycling, or after a soft timeout) and wants a successor.
+    /// Sent **before** the `Result` of the object that triggered it (see the worker loop).
     Recycle {
         /// Why.
         reason: String,
