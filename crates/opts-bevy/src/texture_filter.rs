@@ -149,6 +149,40 @@ pub fn current_object_sampler() -> ImageSampler {
     object_sampler(texture_filtering())
 }
 
+/// Finishes a freshly decoded object texture: the shared sampler and, unless filtering is *Off*,
+/// a generated mip chain for uncompressed images that lack one (hard cutouts get a
+/// coverage-preserving alpha so foliage does not thin out with distance). Block-compressed
+/// textures keep what the file has.
+pub fn prepare_object_texture(image: &mut bevy::image::Image) {
+    prepare(image, false);
+}
+
+/// Like [`prepare_object_texture`] for rendered text (transparent background): colours are
+/// averaged weighted by alpha so distant text keeps its colour.
+pub fn prepare_text_texture(image: &mut bevy::image::Image) {
+    prepare(image, true);
+}
+
+fn prepare(image: &mut bevy::image::Image, weight_colour_by_alpha: bool) {
+    let filtering = texture_filtering();
+    image.sampler = object_sampler(filtering);
+    if !filtering.is_filtered() {
+        return;
+    }
+    let cutout = !weight_colour_by_alpha
+        && image
+            .data
+            .as_deref()
+            .is_some_and(crate::texture::looks_like_cutout);
+    crate::texture::generate_mip_chain(
+        image,
+        crate::texture::MipOptions {
+            alpha_cutoff: cutout.then_some(0.5),
+            weight_colour_by_alpha,
+        },
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -241,7 +241,7 @@ impl FontRegistry {
             RenderAssetUsages::default(),
         );
         // Mesh UVs may lie outside 0..1 (negative V is common): wrap like every OMSI texture.
-        image.sampler = crate::model::repeat_sampler();
+        crate::texture_filter::prepare_text_texture(&mut image);
         let handle = images.add(image);
         self.rendered.insert(spec.clone(), handle.clone());
         Some(handle)

@@ -8,6 +8,12 @@
 
 #![deny(unsafe_code)]
 
+mod mips;
+pub use mips::{
+    full_chain_levels, generate_mip_chain, level_size, looks_like_cutout, mip_stats,
+    rgba8_srgb_chain, MipOptions, MipStats,
+};
+
 use bevy::asset::RenderAssetUsages;
 use bevy::image::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -100,6 +106,16 @@ fn is_plausible_tga(bytes: &[u8]) -> bool {
         && matches!(pixel_depth, 8 | 15 | 16 | 24 | 32)
 }
 
+static DROPPED_DDS_CHAINS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Number of DDS files decoded in this process whose declared mipmap chain disagreed with the
+/// data and was reduced to the base level (Q-TQ03). Uncompressed ones get a generated chain
+/// afterwards; block-compressed ones stay without.
+#[must_use]
+pub fn dropped_dds_chains() -> u64 {
+    DROPPED_DDS_CHAINS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// Decodes a DirectDraw Surface (`.dds`) buffer into a Bevy [`Image`].
 ///
 /// Supports DXT1 (BC1), DXT3 (BC2), DXT5 (BC3), uncompressed 32-bit RGBA/BGRA,
@@ -184,6 +200,9 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
             }
         } else {
             data.truncate(base);
+        }
+        if mips > 1 {
+            DROPPED_DDS_CHAINS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         }
         mips = 1;
     } else if data.len() > expected {

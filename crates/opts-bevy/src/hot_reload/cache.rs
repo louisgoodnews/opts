@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use bevy::asset::Assets;
 use bevy::image::Image;
 
-use crate::model::{repeat_sampler, ContentCache};
+use crate::model::ContentCache;
 
 /// A path with symlinks and `..` resolved, so paths from the watcher and from the loaders compare equal.
 #[must_use]
@@ -54,7 +54,7 @@ impl ContentCache {
         let bytes =
             std::fs::read(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
         let mut image = crate::texture::load_bevy_image(&bytes).map_err(|e| e.to_string())?;
-        image.sampler = repeat_sampler();
+        crate::texture_filter::prepare_object_texture(&mut image);
         match images.get_mut(&handle) {
             Some(mut slot) => {
                 *slot = image;

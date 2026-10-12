@@ -18,9 +18,12 @@ fn loader_paths_use_the_shared_sampler() {
             "{name} builds its own sampler descriptor"
         );
     }
-    assert!(LOADER_SOURCES[0].1.contains("current_object_sampler()"));
-    assert!(LOADER_SOURCES[1].1.contains("repeat_sampler()"));
-    assert!(LOADER_SOURCES[2].1.contains("repeat_sampler()"));
+    for (name, src) in &LOADER_SOURCES[..2] {
+        assert!(src.contains("prepare_object_texture(&mut image)"), "{name}");
+    }
+    assert!(LOADER_SOURCES[2]
+        .1
+        .contains("prepare_text_texture(&mut image)"));
 }
 
 #[test]
