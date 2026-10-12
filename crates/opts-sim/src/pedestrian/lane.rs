@@ -145,7 +145,7 @@ pub fn lanes_from_spline(
 }
 
 /// Lanes of one [`LaneKind`] of a placed spline (`name` is the `.sli` file name, which feeds the
-/// bike heuristic of [`SplinePath::kind`]); same geometry rules as [`lanes_from_spline`].
+/// bike heuristic of [`opts_core::formats::scenery::SplinePath::kind`]); same geometry rules as [`lanes_from_spline`].
 #[must_use]
 pub fn lanes_of_kind(
     inst: &MapSplineInstance,

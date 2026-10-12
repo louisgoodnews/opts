@@ -47,7 +47,7 @@ pub struct GameSettings {
     baseline: Baseline,
 }
 
-/// Snapshot of the persisted key/value pairs (see [`GameSettings::baseline`]).
+/// Snapshot of the persisted key/value pairs (the baseline of `GameSettings`, used to save only changed keys).
 #[derive(Debug, Default)]
 pub struct Baseline(std::sync::Mutex<Option<BTreeMap<String, String>>>);
 

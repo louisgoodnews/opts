@@ -210,7 +210,7 @@ fn flat_ground_surfaces_are_not_covered_but_cuttings_stay() {
         grid_cells: 60,
         heights: vec![10.08; dim * dim],
     };
-    let carved = carve_terrain_under_roads(&near, &[footprint.clone()]);
+    let carved = carve_terrain_under_roads(&near, std::slice::from_ref(&footprint));
     assert!(carved.heights.iter().any(|h| *h < 10.05));
     // Terrain 2 m above it (a hill over a tunnel) stays as authored.
     let hill = MapTerrain {
