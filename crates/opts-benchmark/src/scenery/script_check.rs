@@ -179,30 +179,37 @@ pub fn unsupported_channels(pre: &Preflight) -> Vec<String> {
         .collect()
 }
 
-/// The views of the script scenarios: V1 is the usual oblique view, unless the object has a
-/// directional light; then V1 looks along the first such light's shining direction (the
-/// runtime hides a directional light outside its cone, as seen from the first capture camera).
+/// The views of the script scenarios: the usual oblique view V1 (unless the object has a
+/// directional light, then V1 looks along the first such light's shining direction: the
+/// runtime hides a directional light outside its cone, as seen from the first capture camera),
+/// the top view V2 and a front view V3 (8° above the horizon, square on to the object's front:
+/// signal lamps and displays face forward and sit inside visors that hide them from the
+/// oblique view).
 #[must_use]
 pub fn views(
     bounds: &super::framing::Bounds,
     heading_deg: f32,
     pre: &Preflight,
     base: &[super::framing::View; 2],
-) -> [super::framing::View; 2] {
+) -> Vec<super::framing::View> {
     let light = pre.object.as_ref().and_then(|o| {
         o.lights
             .iter()
             .find(|l| !l.omni && l.direction.length() > 0.1)
     });
-    let Some(l) = light else {
-        return *base;
+    let v1 = match light {
+        Some(l) => {
+            let d = l.direction.normalize();
+            let azimuth = heading_deg + d.x.atan2(d.y).to_degrees();
+            let elevation = d.z.clamp(-1.0, 1.0).asin().to_degrees().clamp(3.0, 60.0);
+            super::framing::view_from(bounds, azimuth, elevation)
+        }
+        None => base[0],
     };
-    let d = l.direction.normalize();
-    let azimuth = heading_deg + d.x.atan2(d.y).to_degrees();
-    let elevation = d.z.clamp(-1.0, 1.0).asin().to_degrees().clamp(3.0, 60.0);
-    [
-        super::framing::view_from(bounds, azimuth, elevation),
+    vec![
+        v1,
         base[1],
+        super::framing::view_from(bounds, heading_deg, 8.0),
     ]
 }
 

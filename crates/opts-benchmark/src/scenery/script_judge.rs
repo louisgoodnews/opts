@@ -59,11 +59,11 @@ pub struct Judge<'a> {
     /// Masks `[view][mesh]`; empty without expected geometry.
     pub masks: Vec<Vec<MeshMasks>>,
     /// Mattes `[state][view]`.
-    pub mattes: Vec<[Matte; 2]>,
+    pub mattes: Vec<Vec<Matte>>,
     /// The object's lights (variable, factor, size).
     pub sco: &'a SceneryObject,
     /// The views.
-    pub views: &'a [View; 2],
+    pub views: &'a [View],
     /// Thresholds.
     pub th: &'a ScriptThresholds,
 }
@@ -129,12 +129,7 @@ fn mesh_infos(sco: &SceneryObject) -> Vec<MeshInfo> {
         .collect()
 }
 
-fn mesh_masks(
-    exp: &Expected,
-    place: &Placement,
-    views: &[View; 2],
-    n: usize,
-) -> Vec<Vec<MeshMasks>> {
+fn mesh_masks(exp: &Expected, place: &Placement, views: &[View], n: usize) -> Vec<Vec<MeshMasks>> {
     if exp.tris.is_empty() {
         return Vec::new();
     }
@@ -160,15 +155,20 @@ pub fn judge(
     sco: &SceneryObject,
     exp: &Expected,
     place: &Placement,
-    views: &[View; 2],
+    views: &[View],
     th: &ScriptThresholds,
 ) -> Judgement {
     let meshes = mesh_infos(sco);
     let masks = mesh_masks(exp, place, views, meshes.len());
-    let mattes: Vec<[Matte; 2]> = outcome
+    let mattes: Vec<Vec<Matte>> = outcome
         .states
         .iter()
-        .map(|s| [0, 1].map(|v| metrics::matte(&s.pixels[v].black, &s.pixels[v].white)))
+        .map(|s| {
+            s.pixels
+                .iter()
+                .map(|p| metrics::matte(&p.black, &p.white))
+                .collect()
+        })
         .collect();
     let j = Judge {
         outcome,
@@ -313,7 +313,7 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
         }
         let shown = |i: usize| j.meshes[i].top && j.visible(i, state);
         let fixed = |i: usize| shown(i) && j.meshes[i].anim.is_empty();
-        for v in 0..2 {
+        for v in 0..j.views.len() {
             let discs = sprite_discs(j, si, v);
             let r = j.mattes[si][v].mask.minus(&discs);
             let vis_all = j.union(v, false, fixed).minus(&discs);
@@ -383,7 +383,7 @@ fn determinism(j: &Judge<'_>, out: &mut Judgement) {
     };
     let mut diff = 0usize;
     let mut total = 0usize;
-    for v in 0..2 {
+    for v in 0..a.pixels.len().min(b.pixels.len()) {
         for (pa, pb) in a.pixels[v]
             .black
             .chunks_exact(4)
@@ -416,16 +416,7 @@ mod tests {
     fn state(vars: &[(&str, f32)]) -> State {
         State {
             name: "s".into(),
-            pixels: [
-                super::super::capture::ViewPixels {
-                    black: Vec::new(),
-                    white: Vec::new(),
-                },
-                super::super::capture::ViewPixels {
-                    black: Vec::new(),
-                    white: Vec::new(),
-                },
-            ],
+            pixels: Vec::new(),
             probe: Probe {
                 vars: vars.iter().map(|(k, v)| ((*k).to_string(), *v)).collect(),
                 ..Probe::default()

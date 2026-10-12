@@ -1,6 +1,7 @@
 //! Off-screen capture: four cameras (two views × black and white background) render into image
 //! targets that are read back with `Readback` (Q-SB-01: works with no window at all).
 
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use bevy::asset::RenderAssetUsages;
@@ -14,6 +15,11 @@ use bevy::render::gpu_readback::{Readback, ReadbackComplete};
 use bevy::render::render_resource::{TextureFormat, TextureUsages};
 
 use super::framing::{Projection, View, IMAGE_SIZE};
+
+/// Most views one capture takes (the static check uses two, the script check three).
+pub const MAX_VIEWS: usize = 3;
+/// Cameras: every view over black and over white.
+const CAMERAS: usize = 2 * MAX_VIEWS;
 
 /// Readback results by camera index.
 type Sink = Arc<Mutex<Vec<(usize, Vec<u8>)>>>;
@@ -30,8 +36,10 @@ pub struct ViewPixels {
 /// The four cameras, their targets and the light.
 #[derive(Debug)]
 pub struct CaptureRig {
-    cameras: [Entity; 4],
-    images: [Handle<Image>; 4],
+    cameras: [Entity; CAMERAS],
+    images: [Handle<Image>; CAMERAS],
+    /// Views the cameras are aimed at in the current capture.
+    views: AtomicUsize,
     light: Entity,
     sink: Sink,
 }
@@ -50,7 +58,7 @@ impl CaptureRig {
             brightness: AMBIENT,
             affects_lightmapped_meshes: true,
         });
-        let images: [Handle<Image>; 4] = std::array::from_fn(|_| {
+        let images: [Handle<Image>; CAMERAS] = std::array::from_fn(|_| {
             let mut img = Image::new_target_texture(
                 IMAGE_SIZE,
                 IMAGE_SIZE,
@@ -61,7 +69,7 @@ impl CaptureRig {
             img.texture_descriptor.usage |= TextureUsages::COPY_SRC;
             world.resource_mut::<Assets<Image>>().add(img)
         });
-        let cameras: [Entity; 4] = std::array::from_fn(|i| {
+        let cameras: [Entity; CAMERAS] = std::array::from_fn(|i| {
             let clear = if i % 2 == 0 {
                 Color::BLACK
             } else {
@@ -98,14 +106,17 @@ impl CaptureRig {
         Self {
             cameras,
             images,
+            views: AtomicUsize::new(2),
             light,
             sink: Arc::default(),
         }
     }
 
-    /// Points the cameras at `views` (V1, V2) and the light from V1's upper left.
-    pub fn aim(&self, world: &mut World, views: &[View; 2]) {
-        for (i, cam) in self.cameras.iter().enumerate() {
+    /// Points the cameras at `views` (at most [`MAX_VIEWS`]) and the light from V1's upper left.
+    pub fn aim(&self, world: &mut World, views: &[View]) {
+        let n = views.len().min(MAX_VIEWS);
+        self.views.store(n, Ordering::Relaxed);
+        for (i, cam) in self.cameras.iter().enumerate().take(2 * n) {
             let view = &views[i / 2];
             let projection = match view.projection {
                 Projection::Perspective { fov_y, near, far } => {
@@ -152,6 +163,7 @@ impl CaptureRig {
         self.images
             .iter()
             .enumerate()
+            .take(2 * self.views.load(Ordering::Relaxed))
             .map(|(i, image)| {
                 let sink = self.sink.clone();
                 world
@@ -186,34 +198,33 @@ impl CaptureRig {
 
     /// Deactivates the cameras (no rendering while objects load).
     pub fn set_active(&self, world: &mut World, active: bool) {
-        for cam in &self.cameras {
+        let n = 2 * self.views.load(Ordering::Relaxed);
+        for (i, cam) in self.cameras.iter().enumerate() {
             if let Some(mut c) = world.get_mut::<Camera>(*cam) {
-                c.is_active = active;
+                c.is_active = active && i < n;
             }
         }
     }
 
-    /// The two views' pixels once all four readbacks arrived.
+    /// The views' pixels once all their readbacks arrived.
     #[must_use]
-    pub fn take(&self) -> Option<[ViewPixels; 2]> {
+    pub fn take(&self) -> Option<Vec<ViewPixels>> {
         let got = self.sink.lock().ok()?;
+        let n = 2 * self.views.load(Ordering::Relaxed);
         let find = |i: usize| got.iter().find(|(j, _)| *j == i).map(|(_, d)| d.clone());
         let expected = (IMAGE_SIZE * IMAGE_SIZE * 4) as usize;
-        let all: Vec<Vec<u8>> = (0..4).filter_map(find).collect();
-        if all.len() != 4 || all.iter().any(|d| d.len() < expected) {
+        let all: Vec<Vec<u8>> = (0..n).filter_map(find).collect();
+        if all.len() != n || all.iter().any(|d| d.len() < expected) {
             return None;
         }
         let mut it = all.into_iter();
-        let mut next = || it.next().unwrap_or_default();
-        Some([
-            ViewPixels {
-                black: next(),
-                white: next(),
-            },
-            ViewPixels {
-                black: next(),
-                white: next(),
-            },
-        ])
+        Some(
+            (0..n / 2)
+                .map(|_| ViewPixels {
+                    black: it.next().unwrap_or_default(),
+                    white: it.next().unwrap_or_default(),
+                })
+                .collect(),
+        )
     }
 }

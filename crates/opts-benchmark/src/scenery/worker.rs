@@ -247,7 +247,7 @@ impl Harness {
     /// were hidden until now (light sprites) have their meshes and materials prepared for the
     /// GPU only once they are drawn, which takes one frame; a capture right after they appear
     /// would miss them.
-    pub fn warm_up(&mut self, views: &[View; 2]) {
+    pub fn warm_up(&mut self, views: &[View]) {
         let world = self.apps.main.world_mut();
         self.rig.aim(world, views);
         self.rig.set_active(world, true);
@@ -261,6 +261,19 @@ impl Harness {
     /// # Errors
     /// The readbacks do not arrive within a few frames.
     pub fn capture(&mut self, views: &[View; 2]) -> Result<[ViewPixels; 2]> {
+        let [a, b]: [ViewPixels; 2] = self
+            .capture_views(views)?
+            .try_into()
+            .map_err(|_| anyhow!("unexpected number of views"))?;
+        Ok([a, b])
+    }
+
+    /// Renders up to [`super::capture::MAX_VIEWS`] views over black and white and reads them
+    /// back.
+    ///
+    /// # Errors
+    /// The readbacks do not arrive within a few frames.
+    pub fn capture_views(&mut self, views: &[View]) -> Result<Vec<ViewPixels>> {
         let world = self.apps.main.world_mut();
         self.rig.aim(world, views);
         let readers = self.rig.request(world);

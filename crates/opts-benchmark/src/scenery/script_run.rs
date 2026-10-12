@@ -74,7 +74,7 @@ pub struct State {
     /// `s0`, `s1`, `s2`, `s3`, `s4_<phase>`, `s0b`.
     pub name: String,
     /// Both views over black and white.
-    pub pixels: [ViewPixels; 2],
+    pub pixels: Vec<ViewPixels>,
     /// The runtime's state.
     pub probe: Probe,
 }
@@ -126,7 +126,7 @@ pub struct Ctx<'a> {
     /// Where the tile places it.
     pub tile_place: mapgen::Placement,
     /// The views (framed on the expected geometry).
-    pub views: &'a [View; 2],
+    pub views: &'a [View],
     /// Time budget end.
     pub deadline: Instant,
     /// Thresholds.
@@ -251,7 +251,7 @@ fn step(h: &mut Harness, n: usize, ctx: &Ctx<'_>) {
 /// Captures the views and the probe of the current step and collects new diagnostics.
 fn snap(h: &mut Harness, ctx: &Ctx<'_>, name: &str, out: &mut Outcome) -> Result<()> {
     h.warm_up(ctx.views);
-    let pixels = h.capture(ctx.views)?;
+    let pixels = h.capture_views(ctx.views)?;
     let Some(sco) = ctx.pre.object.as_ref() else {
         return Err(anyhow!("no parsed object"));
     };

@@ -52,12 +52,12 @@ fn quantise(v: f32, step: f32) -> i64 {
 /// A channel element's region in both views and what counts as a change there.
 struct Element {
     /// Where to look.
-    regions: [Mask; 2],
+    regions: Vec<Mask>,
     /// The element's own area in each view (pixels); a view with fewer than
     /// `min_region_px` cannot judge it.
-    area: [usize; 2],
+    area: Vec<usize>,
     /// Changed pixels needed in each view.
-    need: [usize; 2],
+    need: Vec<usize>,
 }
 
 /// Pixels of `region` that differ between two renders: only one shows the object there, or a
@@ -75,18 +75,23 @@ fn changed_px(a: &Matte, b: &Matte, region: &Mask, delta: u8) -> usize {
 
 /// A mesh element (`visible` flips, animations): its own area decides how much must change.
 fn mesh_element(j: &Judge<'_>, i: usize, dilate: usize) -> Element {
-    let area = [0, 1].map(|v| j.masks[v][i].all.count());
+    let views = 0..j.views.len();
+    let area: Vec<usize> = views.clone().map(|v| j.masks[v][i].all.count()).collect();
     Element {
-        regions: [0, 1].map(|v| {
-            if dilate == 0 {
-                j.masks[v][i].all.clone()
-            } else {
-                j.masks[v][i].all.dilate(dilate)
-            }
-        }),
-        area,
+        regions: views
+            .map(|v| {
+                if dilate == 0 {
+                    j.masks[v][i].all.clone()
+                } else {
+                    j.masks[v][i].all.dilate(dilate)
+                }
+            })
+            .collect(),
         need: area
-            .map(|a| ((j.th.live_area_frac * a as f32).ceil() as usize).max(j.th.live_min_px)),
+            .iter()
+            .map(|a| ((j.th.live_area_frac * *a as f32).ceil() as usize).max(j.th.live_min_px))
+            .collect(),
+        area,
     }
 }
 
@@ -200,16 +205,20 @@ fn lightmap_stimuli(j: &Judge<'_>, t: &mut Tally) {
         if reps.len() < 2 {
             continue;
         }
-        let regions = [0, 1].map(|v| {
-            let mut m = Mask::new(size, size);
-            for mm in &j.masks[v] {
-                m.union_with(&mm.all);
-            }
-            m
-        });
-        let area = [regions[0].count(), regions[1].count()];
+        let regions: Vec<Mask> = (0..j.views.len())
+            .map(|v| {
+                let mut m = Mask::new(size, size);
+                for mm in &j.masks[v] {
+                    m.union_with(&mm.all);
+                }
+                m
+            })
+            .collect();
+        let area: Vec<usize> = regions.iter().map(Mask::count).collect();
         let need = area
-            .map(|a| ((j.th.live_changed_share * a as f32).ceil() as usize).max(j.th.live_min_px));
+            .iter()
+            .map(|a| ((j.th.live_changed_share * *a as f32).ceil() as usize).max(j.th.live_min_px))
+            .collect();
         let live = element_live(
             j,
             &reps,
@@ -241,7 +250,7 @@ fn window_brightness(m: &Matte, cx: i64, cy: i64) -> f32 {
 /// Brightness gain of light `l` between two states, best of both views.
 fn light_gain(j: &Judge<'_>, l: usize, off: usize, on: usize) -> bool {
     let pos: Vec3 = j.outcome.states[on].probe.lights[l].pos;
-    (0..2).any(|v| {
+    (0..j.views.len()).any(|v| {
         let Some(p) = j.views[v].project(pos) else {
             return false;
         };

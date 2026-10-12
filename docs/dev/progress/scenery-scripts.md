@@ -48,3 +48,8 @@ Plan (spec: `docs/src/architecture/scenery-benchmark.md`, "Script-effect check",
 - C1-C3 were implemented together and committed as one change (the gates were green for the whole).
 - Seeded fault is `--seed-fault script-effect-off` (the brief's `S-NO-EFFECT` = spec's `S-EFFECT-NOT-SHOWN`).
 - Thresholds are the uncalibrated first values (spec table); calibration is C4.
+
+### State after the second container restart
+- Committed: C0-C3 and wips. Uncommitted work snapshotted in the next wip: script scenarios now capture THREE views (V1 oblique or light axis, V2 top, V3 front; `capture_views`, `MAX_VIEWS`), because lamps inside visors were invisible from the oblique view (110 false `S-EFFECT-NOT-SHOWN` among `ampel1.osc` heads).
+- Next: rebuild release, rerun `fullrun.sh $D/scripted.list all` (see Resume), re-run the gates, then label >= 80 objects (labels under `$D/labels/`), calibrate, then C5.
+- Run run (3 views not yet measured): previous 2-view run `runs/20261012T062126Z-363e1c5`: pass 1440, fail 785, unknown 597.
