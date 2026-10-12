@@ -28,9 +28,9 @@ Branch `agent/control-protocol`, worktree `opts-wt-control-protocol`. Resume fro
 - [x] compile + unit tests green for all of the above
 - [x] headless tests per command group: `opts-bevy/tests/control_ui_ext.rs` (scroll, list, toggle, select, text, key, hover, gating), `opts-game/tests/control_protocol.rs` (table vs registry, help/commands, drive, gates, triggers, odometer, teleport, reset, wait_for, snapshot, screen), `opts-gui` master-list scroll API, `opts-cli` reference and protocol tests
 - [x] loading-screen screenshot investigated live: NOT black in this build (see findings)
-- [x] live e2e session verified step by step with opts-cli (Berlin-Spandau, MAN SD77); script `crates/opts-cli/examples/play_session.sh` (whole-script run: see findings)
-- [ ] docs: architecture/control-protocol.md updated, reference generated, link check, roadmap copy check
-- [ ] gates: fmt, clippy, test, doc, check_links, gen_roadmap_copy
+- [x] live e2e session verified step by step with opts-cli (Berlin-Spandau, MAN SD77); script `crates/opts-cli/examples/play_session.sh` (whole script run live, exit 0: Home -> drive 100.2 m -> settings -> leave)
+- [x] docs: architecture/control-protocol.md updated, reference generated, link check, roadmap copy check
+- [x] gates: fmt, clippy, doc, check_links, gen_roadmap_copy clean; `cargo test --workspace --all-features --no-fail-fast`: everything passes except the two pre-existing golden tests `golden_screens` (pause goldens still show *Settings: not available yet*, which the pause overlay no longer shows; unchanged by this branch)
 
 ## Live findings
 
