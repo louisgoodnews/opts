@@ -80,6 +80,8 @@
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Performance Profiling and Frame Pacing](architecture/performance-profiling.md)
+- [Content Quality](quality/README.md)
+  - [Content Issue Registry](quality/content-issue-registry.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)

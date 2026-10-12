@@ -76,6 +76,24 @@ fn main() {
         }
     }
     rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    if std::env::var_os("BY_PROFILE").is_some() {
+        let mut by: std::collections::BTreeMap<&str, Vec<f32>> = Default::default();
+        for (dz, sli) in &rows {
+            by.entry(sli.as_str()).or_default().push(*dz);
+        }
+        let mut list: Vec<_> = by.into_iter().collect();
+        list.sort_by_key(|(_, v)| std::cmp::Reverse(v.len()));
+        for (sli, mut v) in list.into_iter().take(40) {
+            v.sort_by(f32::total_cmp);
+            println!(
+                "{:5} splines  median dz {:7.2}  p10 {:7.2}  p90 {:7.2}  {sli}",
+                v.len(),
+                v[v.len() / 2],
+                v[v.len() / 10],
+                v[v.len() * 9 / 10]
+            );
+        }
+    }
     let n = rows.len();
     println!(
         "{n} splines; dz percentiles 5/25/50/75/95: {:?}",
