@@ -86,6 +86,8 @@ Tile coordinates are integers; the file name follows `tile_<x>_<y>.map` in 16,60
 
 `[entrypoints]` is followed by **N**, then exactly **12·N** lines, in 43 of 43 files. [C] Record (12 lines), example [H]:
 
+**The name line is data, not a comment.** A record's last line may start with `#` (`# Betriebshof Rostorf Reisen (Kranenburg)` in `Ahlheim 5`) or be empty; a reader that drops comment and blank lines shifts every following record and fails (`invalid number for entrypoint id_code`; `Ahlheim 5` and `HB_2017_Bremen-Nord_FIKTIV` did not load). OPTS reads the block from the raw lines (P-1014).
+
 | # | Value (example) | Notes |
 | ---: | :--- | :--- |
 | 1 | `221` | Index/ID. ❓ |

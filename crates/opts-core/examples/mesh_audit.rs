@@ -97,10 +97,12 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
     }
     if decode && keyed {
         let mut d = o.clone();
+        let t0 = std::time::Instant::now();
         let r = decode_confident(&mut d);
+        let ms = t0.elapsed().as_millis();
         metrics.push(format!(
-            "dec_acc={} agree={:.2} dropped={} uv={}/{}/{}",
-            r.accepted, r.agreement, r.dropped_faces, r.uv.clean, r.uv.corrected, r.uv.unresolved
+            "dec_acc={} agree={:.2} dropped={} uv={}/{}/{} dec_ms={}",
+            r.accepted, r.agreement, r.dropped_faces, r.uv.clean, r.uv.corrected, r.uv.unresolved, ms
         ));
         if r.accepted {
             codes.push("DECODED".into());

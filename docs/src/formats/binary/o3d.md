@@ -476,3 +476,15 @@ In the game, 7 of 38 scrambled meshes of Ruhrau V2 had copies; the cars and most
 ## 📎 Addendum 10 — 2026-10-11: stray vertices, size limit
 
 After a labelling is chosen, vertices that lie outside the 2 %–98 % range of their axis widened by 30 % of the span are moved to a permutation that fits inside (`refine_outliers`): exact meshes on twins 1,494 → 1,504 of 1,817 accepted. The plausibility limit for decoded meshes is 400 m (was 150 m): the goods shed `Gueterschuppen_Spandau` is 153 m long and was dropped as "implausible"; the 70s housing block `bw_70s_01A` is 190 m. Cache version 5. Small meshes (signs, lamp heads, towers with ≤ 200 vertices) still fail the two-run agreement (0.57–0.88) and stay out rather than being drawn wrong.
+
+## 📎 Addendum 11 — 2026-10-13: mesh audit (P-1014): wrapped counts, spike faces, non-finite vertices
+
+Result of a corpus-wide audit (`mesh_audit` example, 172,434 `.o3d` files of the installed corpus; registry: [Mesh Issue Registry](../../quality/mesh-issue-registry.md)).
+
+**Version 1 counts wrap at 65,536.** Version 1 stores the vertex and face counts as `u16`. `Sceneryobjects/PAD-Labs/Buildings/model/HBF_Koeln.o3d` (2.5 MB) declares 4,391 vertices but holds 69,927 (`declared + 65,536`); the chunk that should have been the face chunk (`0x49`) was vertex data. `parse` now probes `declared + k * 65,536` for the vertex count (and likewise for the face count) until the face tag follows the vertices and the material tag follows the faces, re-frames the stream with 32-bit counts and parses it normally (`version` stays 1). Face indices stay 16-bit, so only the first 65,536 vertices can be referenced; the rest is unused.
+
+**Non-finite vertices.** Five vehicles ship `kfznhalterung.o3d` with `inf` coordinates. A single non-finite coordinate makes the mesh bounding box NaN. The converter skips faces that use a vertex with a non-finite position or texture coordinate.
+
+**Spike faces of decoded meshes.** An accepted decode has wrong vertices in about 18 % of the meshes (301 of 1,826 accepted twins have < 98 % of their positions right, `mesh_detector_eval`). The generic offline detectors find few of them (recall 12 %; the texture-chaos detector has 7 % precision and was retired as a defect signal); without a plain twin a wrongly decoded mesh is mostly not detectable. The one rule with usable precision is the edge length: faces whose longest edge exceeds 40 times the median edge (and 1 m) touch a wrongly labelled vertex in 69 % of the cases (2,303 wrong against 1,049 correct faces of 592,012; the 6x rule of Addendum 7 dropped two correct faces for every wrong one). `descramble::drop_spike_faces` removes them in `decode_confident` and `decode_joint` and reports the number as `dropped_faces`; the decode cache version is 6.
+
+**Still open.** 714 of 22,395 keyed meshes (3.2 %) are rejected by the confident decoder and stay skipped; accepted decodes remain wrong in about 18 % of the meshes (see Addendum 7 for the causes); none of the generic detectors can find them without a twin.
