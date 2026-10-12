@@ -13,6 +13,7 @@ pub mod build;
 pub mod details;
 pub mod fade;
 pub mod keys;
+pub mod parts;
 pub mod profile;
 pub mod protocol;
 pub mod update;

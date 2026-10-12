@@ -169,12 +169,20 @@ impl Plugin for InGamePlugin {
                 .run_if(in_state(AppState::InGame)),
         );
 
+        // F10 changes the developer panel setting (needs the settings registry).
+        app.add_systems(
+            Update,
+            omsi_world::toggle_developer_panel
+                .run_if(in_state(AppState::InGame))
+                .run_if(opts_bevy::reporting::not_modal_active)
+                .run_if(resource_exists::<crate::settings_registry::SettingsRegistry>),
+        );
+
         // Input-driven systems stand still while the report modal is open.
         app.add_systems(
             Update,
             (
                 handle_loading_interactions,
-                omsi_world::toggle_developer_panel,
                 omsi_world::update_debug_overlay,
                 handle_hud_interactions,
             )
