@@ -412,14 +412,17 @@ pub fn move_pedestrians(
 /// Reads `--pedestrians` and resets the per-session state when a session starts.
 pub fn configure_pedestrians(
     args: Option<Res<crate::AppArgs>>,
+    user: Option<Res<crate::settings::GameSettings>>,
     mut settings: ResMut<PedestrianSettings>,
     mut net: ResMut<PedestrianNetwork>,
     mut pool: ResMut<PedestrianPool>,
     mut ground: ResMut<super::GroundIndex>,
 ) {
     *ground = super::GroundIndex::default();
+    // The command line wins for this run; then the setting *Pedestrians*; then the default.
     settings.max = args
         .and_then(|a| a.0.pedestrians)
+        .or_else(|| user.and_then(|u| u.raw("gameplay.pedestrians")?.parse().ok()))
         .unwrap_or(DEFAULT_MAX_PEDESTRIANS);
     net.0 = PedestrianNet::default();
     *pool = PedestrianPool::default();

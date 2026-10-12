@@ -17,6 +17,7 @@ pub mod api;
 pub mod builtin;
 pub mod descriptor;
 pub mod display;
+pub mod live;
 pub mod reference;
 pub mod search;
 pub mod value;
@@ -272,6 +273,21 @@ pub fn apply_change(
     Ok(changed)
 }
 
+/// A [`Localization`] for `locale` that also knows the messages of the settings (tests and the
+/// generated reference).
+#[must_use]
+pub fn localization(locale: &str) -> Localization {
+    let mut loc = Localization::new(locale);
+    add_messages(&mut loc);
+    loc
+}
+
+/// Adds the settings messages (`en`, `de`) to `loc`.
+pub fn add_messages(loc: &mut Localization) {
+    loc.extend("en", include_str!("messages_en.ftl"));
+    loc.extend("de", include_str!("messages_de.ftl"));
+}
+
 /// Adds the registry, the message and the migration of renamed keys.
 pub struct SettingsRegistryPlugin;
 
@@ -288,11 +304,7 @@ impl Plugin for SettingsRegistryPlugin {
         if !app.world().contains_resource::<Localization>() {
             app.insert_resource(Localization::detect());
         }
-        {
-            let mut loc = app.world_mut().resource_mut::<Localization>();
-            loc.extend("en", include_str!("messages_en.ftl"));
-            loc.extend("de", include_str!("messages_de.ftl"));
-        }
+        add_messages(&mut app.world_mut().resource_mut::<Localization>());
         app.init_resource::<SettingsCapabilities>()
             .add_message::<SettingChanged>()
             .insert_resource(display::DisplayBackend(Box::new(display::WindowDisplay)))
@@ -300,7 +312,15 @@ impl Plugin for SettingsRegistryPlugin {
                 Startup,
                 (migrate_registered, display::apply_saved_display).chain(),
             )
-            .add_systems(Update, display::apply_display_changes);
+            .add_systems(
+                Update,
+                (
+                    display::apply_display_changes,
+                    live::apply_live_changes,
+                    live::sync_developer_panel,
+                ),
+            )
+            .add_systems(Startup, live::apply_saved_language);
     }
 }
 

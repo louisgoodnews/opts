@@ -7,8 +7,8 @@ use bevy::input::mouse::MouseWheel;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use opts_gui::components::button::ButtonBuilder;
-use opts_gui::components::text_field::{TextFieldBuilder, TextFieldPlaceholder};
-use opts_gui::l10n::{L10nKey, Localization};
+use opts_gui::components::text_field::{M3TextField, TextFieldBuilder};
+use opts_gui::l10n::Localization;
 use opts_gui::prelude::*;
 
 use crate::settings::GameSettings;
@@ -186,6 +186,7 @@ pub fn mark_dirty(
 pub fn rebuild_page(
     mut commands: Commands,
     mut state: ResMut<SettingsPageState>,
+    theme: Res<MaterialTheme>,
     registry: Res<SettingsRegistry>,
     settings: Res<GameSettings>,
     caps: Res<SettingsCapabilities>,
@@ -271,6 +272,12 @@ pub fn rebuild_page(
         {
             spawn_row(&mut commands, pane, &ctx, d);
         }
+        let kind = match theme.kind() {
+            opts_gui::theme::ThemeKind::Dark => "set-opt-theme-dark",
+            opts_gui::theme::ThemeKind::Light => "set-opt-theme-light",
+            opts_gui::theme::ThemeKind::HighContrast => "set-high-contrast",
+        };
+        super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);
     }
 }
 
@@ -307,32 +314,31 @@ pub fn style_categories(
     }
 }
 
-/// Gives the search field its localized placeholder and empties it after a category was chosen.
+/// Gives the search field its localized placeholder and name, a usable width, and empties it
+/// after a category was chosen.
 pub fn search_field_system(
-    mut commands: Commands,
     mut state: ResMut<SettingsPageState>,
     loc: Res<Localization>,
-    fields: Query<(Entity, &TextFieldPlaceholder), With<SettingsSearch>>,
-    mut texts: Query<&mut Text>,
-    mut fields_mut: Query<&mut opts_gui::components::text_field::M3TextField, With<SettingsSearch>>,
+    mut fields: Query<(&mut M3TextField, &mut Node), With<SettingsSearch>>,
+    fresh: Query<(), Added<SettingsSearch>>,
 ) {
-    for (field, ph) in &fields {
-        if let Ok(mut t) = texts.get_mut(ph.0) {
-            let want = loc.t("settings-search-placeholder");
-            if t.0 != want {
-                t.0 = want;
-            }
+    let fresh = !fresh.is_empty();
+    for (mut field, mut node) in &mut fields {
+        let want = loc.t("settings-search-placeholder");
+        if field.placeholder != want {
+            field.placeholder.clone_from(&want);
+            field.label = want;
         }
-        commands
-            .entity(ph.0)
-            .try_insert(L10nKey("settings-search-placeholder"));
-        let _ = field;
+        if fresh {
+            node.min_width = Val::Px(260.0);
+            node.flex_grow = 0.0;
+        }
+        if state.clear_search_field {
+            field.text.clear();
+        }
     }
     if state.clear_search_field {
         state.clear_search_field = false;
-        for mut f in &mut fields_mut {
-            f.text.clear();
-        }
     }
 }
 

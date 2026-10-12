@@ -30,6 +30,10 @@ mod scenery_objects;
 mod tile;
 mod tile_ground;
 mod traffic;
+#[cfg(test)]
+pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;
+#[cfg(test)]
+pub(crate) use traffic::DEFAULT_MAX_TRAFFIC;
 mod trees;
 mod vehicle;
 mod vehicle_text;

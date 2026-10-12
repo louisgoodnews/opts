@@ -1,7 +1,6 @@
 //! The generated reference page `docs/src/reference/settings.md`.
 
 use super::{Apply, Available, SettingKind, SettingsRegistry};
-use opts_gui::l10n::Localization;
 
 fn kind_text(k: &SettingKind) -> String {
     match k {
@@ -24,7 +23,7 @@ fn kind_text(k: &SettingKind) -> String {
 /// The reference page for `registry`, in English.
 #[must_use]
 pub fn markdown(registry: &SettingsRegistry) -> String {
-    let loc = Localization::new("en");
+    let loc = super::localization("en");
     let mut out = String::from(
         "<!-- Generated from the settings registry by the test `reference_page_is_up_to_date`; \
          regenerate with `UPDATE_SETTINGS_DOC=1 cargo test -p opts-game settings_registry`. -->\n\n\

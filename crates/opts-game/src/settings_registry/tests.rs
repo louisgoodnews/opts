@@ -238,10 +238,7 @@ fn an_old_database_loads_without_loss_including_the_theme_keys_of_m0061() {
 #[test]
 fn every_descriptor_is_well_formed_and_has_both_languages() {
     let r = registry();
-    let loc = Localization::new("en");
-    let mut loc = loc;
-    loc.extend("en", include_str!("messages_en.ftl"));
-    loc.extend("de", include_str!("messages_de.ftl"));
+    let loc = localization("en");
     for d in r.all() {
         // the default is valid for its own kind
         if d.is_stored() {
@@ -280,9 +277,7 @@ fn keys_are_unique_and_never_another_keys_old_name() {
 fn search_finds_by_label_keyword_and_description_in_both_languages() {
     let mut r = registry();
     r.register(FIXTURE);
-    let mut loc = Localization::new("en");
-    loc.extend("en", include_str!("messages_en.ftl"));
-    loc.extend("de", include_str!("messages_de.ftl"));
+    let mut loc = localization("en");
     let keys = |q: &str, loc: &Localization| -> Vec<&'static str> {
         search::search(&r, loc, q).iter().map(|d| d.key).collect()
     };
@@ -315,5 +310,19 @@ fn reference_page_is_up_to_date() {
     assert_eq!(
         have, want,
         "docs/src/reference/settings.md is stale: run `UPDATE_SETTINGS_DOC=1 cargo test -p opts-game settings_registry`"
+    );
+}
+
+#[test]
+fn gameplay_defaults_equal_the_constants_of_the_session_systems() {
+    use crate::in_game::omsi_world::{DEFAULT_MAX_PEDESTRIANS, DEFAULT_MAX_TRAFFIC};
+    let r = registry();
+    assert_eq!(
+        r.get("gameplay.traffic").map(|d| d.default),
+        Some(DEFAULT_MAX_TRAFFIC.to_string().as_str())
+    );
+    assert_eq!(
+        r.get("gameplay.pedestrians").map(|d| d.default),
+        Some(DEFAULT_MAX_PEDESTRIANS.to_string().as_str())
     );
 }

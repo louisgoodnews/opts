@@ -1,46 +1,31 @@
-//! Interactive Settings menu screen utilizing the Material Design 3 Notebook widget.
+//! The Settings screen (`AppState::Settings`): the generic page of the settings registry inside
+//! the shell's content area (or a full window before the shell exists).
 //!
-//! # Architecture & Features
-//! - Uses [`opts_gui::components::notebook::NotebookBuilder`] to organize settings into tabs.
-//! - **UI Tab:** Theme mode (dark, light, system, auto by clock), high contrast, accent preset, UI scale, density and reduced motion.
-//! - **General Tab:** Displays SQLite storage connection, discovery frequency settings, and manual discovery trigger.
-//! - **Display & Audio Tab:** Resolution, window mode, and volume presets.
-//! - Persists all active selections to SQLite `settings.db` while leaving `settings.toml` as an immutable reference.
+//! - [`page`]: frame, category list, rebuild; [`rows`]: one row and its control per kind;
+//!   [`input`]: what controls do and the revert prompt; [`mod@info`]: read-only lines (locations,
+//!   catalogue, keys); [`content`]: the OMSI folder chooser, *Scan now*, *Clear cache*.
+//! - [`spawn_settings_page`] hosts the page anywhere (deep link `screen:settings/<category>`).
+//! - Spec: `docs/src/architecture/settings-registry.md`.
 
-pub mod display_tab;
-pub mod general_tab;
+pub mod content;
+pub mod info;
 pub mod input;
 pub mod page;
-pub mod render_choice;
 pub mod rows;
 pub mod systems;
-pub mod theme_choice;
 pub mod types;
-pub mod ui_tab;
 
 use bevy::prelude::*;
-use opts_gui::components::Button;
+use opts_gui::components::button::ButtonBuilder;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
-use crate::menu::glass::GlassSurface;
-use crate::settings::GameSettings;
+use crate::shell::{spawn_screen_root, ShellContent};
 
-pub use display_tab::spawn_display_tab;
-pub use general_tab::spawn_general_tab;
 pub use input::{PendingRevert, SettingActionRequested};
 pub use page::{spawn_settings_page, SettingsPageState};
-pub use render_choice::handle_render_choice_clicks;
-pub use systems::{
-    cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu,
-    handle_discovery_interval_clicks, handle_run_discovery_clicks,
-};
-pub use theme_choice::{handle_theme_choice_clicks, handle_theme_file_clicks};
-pub use types::{
-    BackToMenuButton, DiscoveryIntervalButton, RunDiscoveryNowButton, SettingsScreenRoot,
-    ThemeChoice, ThemeChoiceButton, ThemeFileButton,
-};
-pub use ui_tab::spawn_ui_tab;
+pub use systems::{cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu};
+pub use types::{BackToMenuButton, SettingsScreenRoot};
 
 /// Plugin managing the interactive Settings screen.
 #[derive(Default)]
@@ -48,19 +33,21 @@ pub struct SettingsScreenPlugin;
 
 impl Plugin for SettingsScreenPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(page::SettingsPagePlugin);
-        app.init_resource::<crate::look::ActiveLook>()
+        if !app.is_plugin_added::<crate::settings_registry::SettingsRegistryPlugin>() {
+            app.add_plugins(crate::settings_registry::SettingsRegistryPlugin);
+        }
+        app.add_plugins(page::SettingsPagePlugin)
+            .init_resource::<crate::look::ActiveLook>()
+            .init_resource::<content::FolderChooserRes>()
+            .init_resource::<content::PendingPick>()
             .add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
             .add_systems(OnExit(AppState::Settings), cleanup_settings_screen)
             .add_systems(
                 Update,
                 (
                     handle_back_to_menu,
-                    handle_theme_choice_clicks,
-                    handle_theme_file_clicks,
-                    handle_discovery_interval_clicks,
-                    handle_render_choice_clicks,
-                    handle_run_discovery_clicks,
+                    content::run_actions,
+                    content::take_picked_folder,
                     escape_to_menu_system,
                 )
                     .run_if(in_state(AppState::Settings))
@@ -69,165 +56,46 @@ impl Plugin for SettingsScreenPlugin {
     }
 }
 
-/// Spawns the complete Settings screen with the tabbed Notebook widget.
-pub fn spawn_settings_screen(
-    mut commands: Commands,
-    theme: Res<MaterialTheme>,
-    settings: Res<GameSettings>,
-) {
-    // 1. Fullscreen Root Container
-    let root = commands
-        .spawn((
-            (
-                Node {
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(24.0)),
-                    row_gap: Val::Px(16.0),
-                    ..default()
-                },
-                BackgroundColor(theme.scheme.get(ColorRole::Surface)),
-            ),
-            SettingsScreenRoot,
-        ))
-        .id();
-
-    // 2. Header Bar with Title and Back Button
-    commands.entity(root).with_children(|header_parent| {
-        header_parent
-            .spawn((
-                Node {
-                    width: Val::Percent(100.0),
-                    min_height: Val::Px(56.0),
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::SpaceBetween,
-                    border: UiRect {
-                        bottom: Val::Px(1.0),
-                        ..default()
-                    },
-                    padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
-                    ..default()
-                },
-                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
-            ))
-            .with_children(|bar| {
-                // Title
-                bar.spawn(Node {
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(2.0),
-                    ..default()
-                })
-                .with_children(|title_box| {
-                    title_box.spawn((
-                        (
-                            Text::new("Application Settings"),
-                            TextFont {
-                                font_size: FontSize::Px(26.0),
-                                ..default()
-                            },
-                            TextColor(theme.scheme.get(ColorRole::Primary)),
-                        ),
-                        TypeStyleToken(TypeScale::Headline),
-                        ForegroundRole(ColorRole::Primary),
-                    ));
-
-                    title_box.spawn((
-                        (
-                            Text::new("Preferences, UI Colorization & Theme Configuration"),
-                            TextFont {
-                                font_size: FontSize::Px(13.0),
-                                ..default()
-                            },
-                            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
-                        ),
-                        TypeStyleToken(TypeScale::Label),
-                        ForegroundRole(ColorRole::OnSurfaceVariant),
-                    ));
-                });
-
-                // Back Button
-                bar.spawn((
-                    (
-                        Button,
-                        Node {
-                            padding: UiRect::axes(Val::Px(18.0), Val::Px(10.0)),
-                            border: UiRect::all(Val::Px(1.0)),
-                            ..default()
-                        },
-                        BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
-                        BackgroundColor(theme.scheme.get(ColorRole::SecondaryContainer)),
-                    ),
-                    BackToMenuButton,
-                    GlassSurface::new(ColorRole::SecondaryContainer, 0.70),
-                    RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
-                    Focusable { tab_index: 0 },
-                ))
-                .with_children(|btn| {
-                    btn.spawn((
-                        (
-                            Text::new("< Back to Main Menu"),
-                            TextFont {
-                                font_size: FontSize::Px(14.0),
-                                ..default()
-                            },
-                            TextColor(theme.scheme.get(ColorRole::OnSecondaryContainer)),
-                        ),
-                        TypeStyleToken(TypeScale::BodyMedium),
-                        ForegroundRole(ColorRole::OnSecondaryContainer),
-                    ));
-                });
-            });
-    });
-
-    // 3. Notebook Widget with 3 Categories
-    let (notebook_root, panels) = NotebookBuilder::new()
-        .with_tabs(vec![
-            "UI & Themes".into(),
-            "General & Storage".into(),
-            "Display & Sound".into(),
-        ])
-        .with_active(0)
-        .spawn_with_panels(&mut commands);
-
-    commands.entity(notebook_root).insert(Node {
-        display: Display::Flex,
-        flex_direction: FlexDirection::Column,
-        width: Val::Percent(100.0),
-        height: Val::Auto,
-        flex_grow: 1.0,
-        flex_shrink: 1.0,
-        min_height: Val::Px(0.0),
-        overflow: Overflow::clip(),
-        ..default()
-    });
-
-    commands.entity(root).add_child(notebook_root);
-
-    // Tab 0: UI & Themes Panel
-    if let Some(&ui_panel) = panels.first() {
-        commands.entity(ui_panel).with_children(|tab| {
-            spawn_ui_tab(tab, &theme, &settings);
-        });
+/// Spawns the Settings screen: the page inside the shell's content area, or full window with a
+/// back button when there is no shell.
+pub fn spawn_settings_screen(mut commands: Commands, shell: Option<Res<ShellContent>>) {
+    let shell = shell.map_or_else(ShellContent::default, |s| *s);
+    let root = spawn_screen_root(&mut commands, &shell, "settings");
+    commands.entity(root).insert(SettingsScreenRoot);
+    if shell.0.is_none() {
+        commands.entity(root).insert((
+            Node {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                flex_direction: FlexDirection::Column,
+                ..default()
+            },
+            BackgroundRole(ColorRole::Surface),
+        ));
+        let back = ButtonBuilder::outlined("settings-back")
+            .with_key("settings-back")
+            .spawn(&mut commands);
+        commands.entity(back).insert((
+            BackToMenuButton,
+            UiId::new("settings/back"),
+            Node {
+                margin: UiRect::new(Val::Px(16.0), Val::Auto, Val::Px(12.0), Val::Px(0.0)),
+                align_self: AlignSelf::FlexStart,
+                min_height: Val::Px(40.0),
+                padding: UiRect::axes(Val::Px(24.0), Val::Px(10.0)),
+                column_gap: Val::Px(8.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border: UiRect::all(Val::Px(1.0)),
+                ..default()
+            },
+            ChildOf(root),
+        ));
     }
-
-    // Tab 1: General & Storage Panel
-    if let Some(&gen_panel) = panels.get(1) {
-        commands.entity(gen_panel).with_children(|tab| {
-            spawn_general_tab(tab, &theme, &settings);
-        });
-    }
-
-    // Tab 2: Display & Sound Panel
-    if let Some(&disp_panel) = panels.get(2) {
-        commands.entity(disp_panel).with_children(|tab| {
-            spawn_display_tab(tab, &theme, &settings);
-        });
-    }
+    spawn_settings_page(&mut commands, root, None);
 }
 
 #[cfg(test)]

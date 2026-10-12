@@ -62,6 +62,13 @@ fn fnv(bytes: &[u8]) -> u64 {
     h
 }
 
+/// The cache directory of the decoded-geometry cache (the setting *Clear texture cache* and
+/// the size shown on the Content page use it).
+#[must_use]
+pub fn directory() -> Option<PathBuf> {
+    dir()
+}
+
 fn dir() -> Option<PathBuf> {
     let base = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)

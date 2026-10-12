@@ -410,7 +410,8 @@ fn content() -> Vec<D> {
             "set-omsi-path",
             "set-omsi-path-desc",
         )
-        .keywords(&["folder", "installation", "directory", "steam"]),
+        .keywords(&["folder", "installation", "directory", "steam"])
+        .apply(Apply::OnRestart),
         D::new(
             "discovery_interval_days",
             K::Int {
