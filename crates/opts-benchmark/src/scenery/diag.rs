@@ -138,6 +138,9 @@ pub fn load_categories(events: &[EventRecord], stats: &BTreeMap<String, i64>) ->
             Some("F-MESH-PROTECTED")
         } else if t.starts_with("sco parse failed") {
             Some("F-SCO-PARSE")
+        } else if t.starts_with("map has parking bays but no parklist") {
+            // Artifact of the generated map (no parking list), not an object fault.
+            None
         } else if e.level == "ERROR" {
             Some("F-LOAD-ERROR")
         } else {
@@ -170,6 +173,7 @@ mod tests {
             ev("WARN", "mesh vertex positions are scrambled; skipped"),
             ev("ERROR", "something else broke"),
             ev("WARN", "harmless"),
+            ev("ERROR", "map has parking bays but no parklist_p.txt"),
         ];
         let cats = load_categories(&events, &BTreeMap::new());
         assert_eq!(
