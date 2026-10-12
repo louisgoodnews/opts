@@ -11,7 +11,7 @@ Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-
 | H2 Static check and seeded faults | done |
 | H3 Run control (crash/hang recovery) | done |
 | H4 Text-texture check, corpus preflight | done |
-| H5 Sample run, performance | todo |
+| H5 Sample run, performance | done |
 | H6 Calibration (sub-batches of ~50) | todo |
 | H7 Close-out | todo |
 
@@ -53,3 +53,5 @@ H2: `crates/opts-benchmark/tests/seeded_faults.rs` (synthetic root, hand-written
 H3: `tests/run_control.rs` (real binary, synthetic root, `OPTS_BENCH_INJECT` hook): crash gives F-CRASH, hang gives F-TIMEOUT, recycling and resume work, run continues. Found and fixed a lost-object race (Result before Recycle). Test takes about 24 s.
 
 H4: new command `opts-benchmark scenery preflight --omsi-path <root> --out <jsonl> [--catalogue db]` (CPU only; whole corpus in seconds; output `~/.local/share/opts/benchmark/dev/preflight.jsonl` has class/tags/text strings per object, use it to stratify samples). New class `help-arrow`; text source without string maps to `F-TEXT-NOT-SHOWN`; unreadable tiles are logged (61, old version 10). 12 text objects run (`h4.list`): text check discriminates (Parkleit_li pass, blank signs fail). Open: `routearrow_R` renders empty (alpha 100 %), to be judged in calibration.
+
+H5: sample list `~/.local/share/opts/benchmark/dev/h5.list` (1,018 stratified objects), runs under `~/.local/share/opts/benchmark/dev/runs/`. Release build (`cargo build --release -p opts-benchmark`; scripts `runrel.sh`, `stats.py` in the dev dir). 1 worker 2:44, 3 workers 25.7 s, identical verdicts in both runs, no crash. Verdicts: pass 657, fail 338, unknown 23. Categories: F-TEXT-NOT-SHOWN 95, F-EDITOR-RENDERED 79, F-RENDER-EMPTY 66, F-TEX-MISSING 57, F-XFORM-SCALE 28, F-MESH-PROTECTED 26, F-GEOM-PARTIAL 26, F-XFORM-OFFSET 10, F-MESH-MISSING 10, F-LOAD-ERROR 7, F-SCO-PARSE 4. Too many failures for a clean corpus: H6 must separate real OPTS faults from benchmark false positives (suspects: F-EDITOR-RENDERED 79 of 60 editor-only? includes help-arrow, text check on tiny glyphs, F-XFORM-SCALE).
