@@ -43,7 +43,7 @@ fn main() {
     buses(&root.join("Vehicles"), &mut files);
     files.sort();
     let (mut loaded, mut with_scripts, mut missing, mut undeclared) = (0, 0, 0, 0);
-    let (mut frame_us, mut ops) = (Vec::new(), 0u64);
+    let (mut frame_us, mut ops, mut underflows) = (Vec::new(), 0u64, 0usize);
     for f in &files {
         let Ok(bytes) = std::fs::read(f) else {
             continue;
@@ -75,6 +75,11 @@ fn main() {
         }
         frame_us.push(t.elapsed().as_secs_f64() * 1e6 / 60.0);
         ops += engine.ops_executed();
+        underflows += engine
+            .drain_diagnostics()
+            .iter()
+            .filter(|d| d.message.contains("underflow"))
+            .count();
     }
     frame_us.sort_by(f64::total_cmp);
     let pct = |p: f64| {
@@ -90,4 +95,5 @@ fn main() {
         pct(0.9),
         pct(1.0)
     );
+    println!("stack-underflow sites: {underflows}");
 }
