@@ -1019,6 +1019,7 @@ fn attach_scripts(
         "vehicle scripts loaded"
     );
     let mut engine = engine;
+    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks(root.to_bits()));
     // Equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
     if let Some(r) = &job.repaint {
         let name = if job.config.livery.is_empty() {

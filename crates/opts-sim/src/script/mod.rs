@@ -24,7 +24,9 @@ pub use vehicle::load_vehicle_scripts;
 
 /// Handler for `(M.V.name)` macros of vehicle-external systems: receives the name and both
 /// operand stacks.
-pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) + Send>;
+/// Handler of the `(M.V.name)` callbacks of the host (name in lower case, arguments on the stacks).
+/// Returns `false` for a callback it does not implement; that is reported once.
+pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) -> bool + Send>;
 
 /// An event raised by a script with `(T.x.name)`.
 #[derive(Debug, Clone, PartialEq, Eq)]

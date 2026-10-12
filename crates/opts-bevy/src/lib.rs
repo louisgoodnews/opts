@@ -24,6 +24,7 @@ pub mod coords;
 pub mod descramble_cache;
 pub mod ground;
 pub mod ground_material;
+pub mod host_callbacks;
 pub mod hot_reload;
 pub mod human;
 pub mod install;

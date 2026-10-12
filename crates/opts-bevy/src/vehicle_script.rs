@@ -165,7 +165,7 @@ pub fn script_drive_system(
             engine.get("brakeforce")
         };
         *ticks = ticks.wrapping_add(1);
-        if *ticks % 64 == 0 {
+        if (*ticks).is_multiple_of(64) {
             tracing::debug!(
                 m_wheel = engine.get("m_wheel"),
                 brake,

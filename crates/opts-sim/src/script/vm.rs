@@ -277,7 +277,14 @@ impl ScriptEngine {
     fn call_external(&mut self, id: u32, st: &mut Stacks) {
         let name = self.program.names.externals.name(id).to_owned();
         match self.external.as_mut() {
-            Some(handler) => handler(&name, st),
+            Some(handler) => {
+                if !handler(&name, st) {
+                    self.warn_once(
+                        format!("external {name}"),
+                        format!("external macro `{name}` is not implemented by the host; ignored"),
+                    );
+                }
+            }
             None => self.warn_once(
                 format!("external {name}"),
                 format!("external macro `{name}` has no handler; ignored"),

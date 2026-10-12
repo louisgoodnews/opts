@@ -50,6 +50,8 @@
   - [M-0049: AI Road Traffic](roadmap/phase-4/M-0049.md)
   - [M-0050: Pedestrians](roadmap/phase-4/M-0050.md)
   - [M-0053: Articulated Vehicle Completion](roadmap/phase-4/M-0053.md)
+  - [M-0057: Host Callbacks (Timetable, IBIS)](roadmap/phase-4/M-0057.md)
+  - [M-0058: Script Textures](roadmap/phase-4/M-0058.md)
 - [Phase 5: Tooling & Performance](roadmap/phase-5/README.md)
   - [M-0040: Code-Quality Debt](roadmap/phase-5/M-0040.md)
   - [M-0041: Documentation Repair](roadmap/phase-5/M-0041.md)

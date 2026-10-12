@@ -253,6 +253,7 @@ fn external_macros_reach_the_host() {
         let b = st.numbers.pop().unwrap_or(0.0);
         let a = st.numbers.pop().unwrap_or(0.0);
         st.numbers.push(a * b);
+        true
     }));
     e.run_init();
 }
