@@ -331,10 +331,18 @@ As one batch, steps 4–12 cost a single round trip:
 **Deterministic loops.** Prefer *pause → act → `sim.step N` → observe* over sleeping: with the simulation
 paused, input injected before a step takes effect in exactly those frames.
 
+**Known limits of what an agent can do (honest list).**
+
+- `route` and `stops` in `drive.state` are `null`: the timetable (route, stops, tickets) is not implemented in OPTS yet; the vehicle scripts' own variables are readable with `vehicle.script_vars`.
+- Numeric settings are `-`/`+` steppers, not sliders: use `ui.click ... count` or set the value directly with `settings.set`.
+- `ui.drag` and `ui.hover` move the cursor and press the left button like a person; they were exercised against the test UI and the real game's hover, but no real screen needs a drag yet.
+- A freshly installed OPTS scans the OMSI folder for about 8 s. Answering the first-run question before the scan has ended can leave the wizard's lists empty; `ui.wait_for items_above wizard.where.list` shows it, and leaving the Drive screen and entering it again fills them.
+- Control commands that skip the gates are marked *debug* in the reference (`scene.load_map`, `scene.unload`, `vehicle.set`, `vehicle.teleport`, `vehicle.reset`, `camera.teleport`, `hud.alert`, `hud.toast`); everything else is refused with `1009` where a key press would be swallowed.
+
 **When a command fails** (error `code`): `-32602` — fix the parameter (the message names it; `input.key`
 lists valid keys in `data`); `1001` — the app is in the wrong state (load a map first, or the camera mode is
 unavailable); `1002` — the path is outside the allowed directories (use `--cli-allow-dir` when starting the
-game); `1004` — nothing there; `1005` — the app did not answer: it is frozen or loading, retry after
+game); `1009` — a dialog or the vehicle menu is open, or the camera is in free roam: answer or close it first (`ui.screen` lists the dialog's buttons), or `camera.set_mode external`; `1004` — nothing there; `1005` — the app did not answer: it is frozen or loading, retry after
 `ping`; `1006` — slow down or batch; `1007` — not implemented in this build (`capabilities` shows which);
 `1008` — the operation ran and failed (reload of a broken file: the previous content is still in the game).
 Connection errors (exit code 2) mean the game is not running or the port differs.

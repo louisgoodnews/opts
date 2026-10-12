@@ -20,6 +20,13 @@ c ping >/dev/null || { echo "no OPTS control server on port ${OPTS_CLI_PORT:-442
 c version | grep protocol_version
 
 echo "== Home"
+# A fresh configuration scans the OMSI folder first (about 8 s) and Home says "43 maps" when it is done.
+# Answering the first-run question before that can leave the wizard's lists empty (an app limitation,
+# see the architecture page), so wait until Home shows the counts.
+for _ in $(seq 1 120); do
+  "${CLI[@]}" --json ui.tree --visible_only true | jq -e '[.. | objects | .label? // empty | select(test("[0-9]+ maps"))] | length > 0' >/dev/null && break
+  sleep 1
+done
 JQ='.result.screen + " / " + .result.app_state' j ui.screen
 # The first-run dialog (a fresh configuration) is a dialog like any other: answer it by id.
 if [ "$(JQ='.result.dialogs[0].tag // ""' j ui.screen)" = "first-run" ]; then
@@ -32,7 +39,7 @@ fi
 
 echo "== Plan a drive (Where, What, When, Review)"
 c ui.wait_for visible wizard.where.list >/dev/null
-c ui.wait_for items_above wizard.where.list --number 0 --timeout_ms 60000 >/dev/null   # a fresh install is still scanning OMSI
+c ui.wait_for items_above wizard.where.list --number 0 --timeout_ms 20000 >/dev/null
 c ui.scroll --target wizard.where.list --item "$MAP" >/dev/null   # reveals the entry in the windowed list
 c ui.select wizard.where.list "$MAP"
 c ui.click wizard.footer.next >/dev/null
@@ -74,7 +81,9 @@ JQ='"texture_filtering = " + .result.value' j settings.get texture_filtering
 c ui.click settings-overlay.close >/dev/null
 
 echo "== Leave"
+c ui.wait_for visible pause.leave >/dev/null               # the pause overlay is back under the settings
 c ui.click pause.leave >/dev/null
+c ui.wait_for dialog --value pause.leave >/dev/null        # the confirmation (its tag)
 c ui.click dialog.pause.leave.home >/dev/null
 c ui.wait_for app_state --value MainMenu >/dev/null
 JQ='.result.screen' j ui.screen

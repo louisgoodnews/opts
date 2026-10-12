@@ -325,5 +325,6 @@
 - [Limitations]()
 -->
 - [Settings (generated)](reference/settings.md)
+- [Control protocol (generated)](reference/control-protocol.md)
 - [Input devices and profiles](reference/input-devices.md)
 - [Translating OPTS](reference/translating.md)
