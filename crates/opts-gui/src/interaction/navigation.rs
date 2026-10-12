@@ -193,10 +193,20 @@ pub fn pick_directional(
     others: &[(Entity, Rect)],
     dir: Direction,
 ) -> Option<Entity> {
+    let weighted: Vec<(Entity, Rect, f32)> = others.iter().map(|(e, r)| (*e, *r, 0.0)).collect();
+    pick_directional_weighted(current, &weighted, dir)
+}
+
+/// [`pick_directional`] with an extra cost per candidate (logical pixels added to its distance).
+pub fn pick_directional_weighted(
+    current: Rect,
+    others: &[(Entity, Rect, f32)],
+    dir: Direction,
+) -> Option<Entity> {
     let here = current.center();
     others
         .iter()
-        .filter_map(|(entity, rect)| {
+        .filter_map(|(entity, rect, penalty)| {
             let d = rect.center() - here;
             let (along, across) = match dir {
                 Direction::Right => (d.x, d.y.abs()),
@@ -204,14 +214,22 @@ pub fn pick_directional(
                 Direction::Down => (d.y, d.x.abs()),
                 Direction::Up => (-d.y, d.x.abs()),
             };
-            (along > 1.0).then_some((*entity, along + 2.0 * across))
+            (along > 1.0).then_some((*entity, along + 2.0 * across + penalty))
         })
         .min_by(|a, b| a.1.total_cmp(&b.1))
         .map(|(entity, _)| entity)
 }
 
+/// What leaving the current region costs a directional move, in logical pixels of distance: a
+/// control of the same region wins unless one of another region is clearly nearer in the
+/// direction pressed.
+const REGION_CROSSING_COST: f32 = 200.0;
+
 /// The target of a [`Direction`] move: geometric when the layout has run, otherwise by layout
-/// order (right/down = next, left/up = previous). Stays inside the current region.
+/// order (right/down = next, left/up = previous). Prefers the current region (another region's
+/// controls cost [`REGION_CROSSING_COST`] extra), but **crosses into another region when that is
+/// clearly the nearer target or the region has none in that direction**, so a gamepad or a wheel's
+/// D-pad (which have no `Tab`) can reach the rail from the content and back (M-0065).
 pub fn move_focus(
     candidates: &[Candidate],
     current: Option<Entity>,
@@ -228,12 +246,19 @@ pub fn move_focus(
     let Some(rect) = cur.rect else {
         return next_linear(candidates, current, backwards);
     };
-    let others: Vec<(Entity, Rect)> = candidates
+    let others: Vec<(Entity, Rect, f32)> = candidates
         .iter()
-        .filter(|k| k.entity != cur.entity && k.region == cur.region)
-        .filter_map(|k| k.rect.map(|r| (k.entity, r)))
+        .filter(|k| k.entity != cur.entity)
+        .filter_map(|k| {
+            let penalty = if k.region == cur.region {
+                0.0
+            } else {
+                REGION_CROSSING_COST
+            };
+            k.rect.map(|r| (k.entity, r, penalty))
+        })
         .collect();
-    pick_directional(rect, &others, dir)
+    pick_directional_weighted(rect, &others, dir)
 }
 
 #[cfg(test)]
@@ -309,12 +334,25 @@ mod tests {
     }
 
     #[test]
-    fn directional_stays_inside_the_region() {
+    fn directional_stays_inside_the_region_while_it_has_a_target() {
+        let c = [
+            cand(1, Some(0), r(100.0, 100.0)),
+            cand(2, Some(1), r(200.0, 100.0)),
+            cand(3, Some(0), r(350.0, 100.0)),
+        ];
+        // 2 is nearer but belongs to another region (cost 200): 3 wins.
+        assert_eq!(move_focus(&c, Some(e(1)), Direction::Right), Some(e(3)));
+    }
+
+    #[test]
+    fn directional_crosses_into_the_next_region_at_the_edge() {
         let c = [
             cand(1, Some(0), r(100.0, 100.0)),
             cand(2, Some(1), r(300.0, 100.0)),
         ];
-        assert_eq!(move_focus(&c, Some(e(1)), Direction::Right), None);
+        assert_eq!(move_focus(&c, Some(e(1)), Direction::Right), Some(e(2)));
+        assert_eq!(move_focus(&c, Some(e(2)), Direction::Left), Some(e(1)));
+        assert_eq!(move_focus(&c, Some(e(1)), Direction::Up), None, "nothing above");
     }
 
     #[test]

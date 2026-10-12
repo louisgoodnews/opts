@@ -90,3 +90,19 @@ fn building_a_screen_in_a_theme_equals_switching_to_it() {
         }
     }
 }
+
+#[test]
+fn a_gamepad_alone_reaches_every_control_of_every_screen() {
+    let mut findings = Vec::new();
+    for screen in Screen::ALL {
+        let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+        let t = rules::directional_traversal(&mut app);
+        if std::env::var_os("OPTS_DEBUG_REACH").is_some() {
+            eprintln!("{}: reached {:?}", screen.name(), t.reached);
+        }
+        for id in t.unreachable {
+            findings.push(format!("{}: {id}", screen.name()));
+        }
+    }
+    assert!(findings.is_empty(), "not reachable by directions alone:\n{}", findings.join("\n"));
+}

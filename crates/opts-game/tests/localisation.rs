@@ -3,7 +3,8 @@
 //! their variables, and the pseudo-locale `en-XA` really lengthens every message.
 
 use bevy::prelude::*;
-use opts_gui::l10n::{Localization, PSEUDO_TAG};
+use opts_gui::l10n::pseudo::PSEUDO_TAG;
+use opts_gui::l10n::Localization;
 
 /// The localisation as the application assembles it: the library tables plus what the shell and
 /// the settings registry add.
@@ -87,7 +88,23 @@ fn german_is_translated_not_copied() {
     for key in loc.keys_of("en") {
         let (en, de) = (loc.format_in("en", key), loc.format_in("de", key));
         // One word or less, or digits and symbols only: names and units are legitimately equal.
-        let wordy = en.split_whitespace().count() >= 2 && en.chars().any(char::is_alphabetic);
+        let prose: String = {
+            let mut depth = 0;
+            en.chars()
+                .filter(|c| match c {
+                    '{' => {
+                        depth += 1;
+                        false
+                    }
+                    '}' => {
+                        depth -= 1;
+                        false
+                    }
+                    _ => depth == 0,
+                })
+                .collect()
+        };
+        let wordy = prose.split_whitespace().count() >= 2 && prose.chars().any(char::is_alphabetic);
         if wordy && en == de && !SAME_IN_BOTH.contains(&key) {
             same.push(format!("{key} = {en}"));
         }

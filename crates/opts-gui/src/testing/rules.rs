@@ -583,6 +583,66 @@ pub fn keyboard_traversal(app: &mut App) -> Traversal {
     report
 }
 
+/// What a gamepad-only traversal (D-pad / left stick = `Navigate`, A = `Confirm`) achieved.
+#[derive(Debug, Default)]
+pub struct DirectionalTraversal {
+    /// Ids reached by following `Navigate(dir)` from the first focus, breadth first.
+    pub reached: Vec<String>,
+    /// Focusable, visible elements no sequence of directions reaches.
+    pub unreachable: Vec<String>,
+}
+
+/// Starts at the first focus and follows the four directions from every reached element (the
+/// gamepad has no `Tab`): what is not reached cannot be used with a gamepad or a wheel's D-pad.
+pub fn directional_traversal(app: &mut App) -> DirectionalTraversal {
+    use crate::actions::Direction;
+    let wanted: Vec<String> = snapshot(app.world_mut())
+        .flatten()
+        .into_iter()
+        .filter(|n| n.focusable && n.state.visible && is_target(n.role))
+        .map(|n| n.id.clone())
+        .collect();
+    let mut out = DirectionalTraversal::default();
+    act(app, UiAction::FocusNext);
+    let mut queue = std::collections::VecDeque::new();
+    if let Some(id) = focused(app).and_then(|e| ui_id_of(app.world(), e)) {
+        out.reached.push(id.clone());
+        queue.push_back(id);
+    }
+    while let Some(id) = queue.pop_front() {
+        for dir in [
+            Direction::Down,
+            Direction::Right,
+            Direction::Up,
+            Direction::Left,
+        ] {
+            let Some(target) = crate::ui_tree::find_entity(app.world_mut(), &id) else {
+                continue;
+            };
+            let proxy = app
+                .world()
+                .get::<crate::interaction::layer::FocusProxy>(target)
+                .map_or(target, |p| p.0);
+            app.world_mut()
+                .write_message(crate::interaction::focus::FocusEvent::Set(proxy));
+            app.update();
+            app.update();
+            act(app, UiAction::Navigate(dir));
+            if let Some(next) = focused(app).and_then(|e| ui_id_of(app.world(), e)) {
+                if !out.reached.contains(&next) {
+                    out.reached.push(next.clone());
+                    queue.push_back(next);
+                }
+            }
+        }
+    }
+    out.unreachable = wanted
+        .into_iter()
+        .filter(|id| !out.reached.contains(id))
+        .collect();
+    out
+}
+
 fn ui_id_of(world: &World, entity: Entity) -> Option<String> {
     world
         .get::<UiId>(entity)

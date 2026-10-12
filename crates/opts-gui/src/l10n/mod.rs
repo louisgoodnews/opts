@@ -147,15 +147,16 @@ impl Localization {
     /// The message `key` from the own table of `locale` only (no fallback), without variables;
     /// `⟦key⟧` when that table lacks it. Tests use it to compare languages.
     pub fn format_in(&self, locale: &str, key: &str) -> String {
-        let args: &[(String, Arg)] = &[];
-        self.bundles
-            .get(locale)
-            .and_then(|b| b.messages.get(key))
-            .map(|p| {
-                let lang = locale.split('-').next().unwrap_or("en");
-                fluent::format(p, lang, args, &|k: &str| self.format(k, args), 0)
-            })
+        self.format_in_at(locale, key, 0)
             .unwrap_or_else(|| format!("⟦{key}⟧"))
+    }
+
+    fn format_in_at(&self, locale: &str, key: &str, depth: usize) -> Option<String> {
+        let args: &[(String, Arg)] = &[];
+        let pattern = self.bundles.get(locale)?.messages.get(key)?;
+        let lang = locale.split('-').next().unwrap_or("en");
+        let lookup = |k: &str| self.format_in_at(locale, k, depth + 1);
+        Some(fluent::format(pattern, lang, args, &lookup, depth))
     }
 
     /// Keys of the English table (the source of truth).
