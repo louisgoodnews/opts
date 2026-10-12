@@ -106,7 +106,7 @@ pub fn check(dir: &Path, name: &str, actual: &RgbaImage, tol: Tolerance) -> Resu
     let path = dir.join(format!("{name}.png"));
     if std::env::var_os("UPDATE_GOLDEN").is_some() {
         std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-        actual.save(&path).map_err(|e| e.to_string())?;
+        write_png(actual, &path)?;
         return Ok(());
     }
     let golden = image::open(&path)
@@ -154,6 +154,25 @@ pub fn check(dir: &Path, name: &str, actual: &RgbaImage, tol: Tolerance) -> Resu
         d.size_mismatch,
         out.display()
     ))
+}
+
+/// Writes `img` as a PNG with the best compression (goldens are checked in; flat colours shrink a lot).
+fn write_png(img: &RgbaImage, path: &Path) -> Result<(), String> {
+    use image::codecs::png::{CompressionType, FilterType, PngEncoder};
+    use image::ImageEncoder;
+    let file = std::fs::File::create(path).map_err(|e| e.to_string())?;
+    PngEncoder::new_with_quality(
+        std::io::BufWriter::new(file),
+        CompressionType::Best,
+        FilterType::Adaptive,
+    )
+    .write_image(
+        img.as_raw(),
+        img.width(),
+        img.height(),
+        image::ExtendedColorType::Rgba8,
+    )
+    .map_err(|e| e.to_string())
 }
 
 fn to_rgba(c: Color) -> [f32; 4] {

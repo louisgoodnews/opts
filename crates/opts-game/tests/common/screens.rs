@@ -13,7 +13,6 @@ use opts_game::{
     shell::ShellPlugin,
 };
 use opts_gui::l10n::Localization;
-use opts_gui::prelude::*;
 use opts_gui::testing::layout_base;
 use opts_gui::theme::mode::ThemeKind;
 use opts_gui::theme::AccentPreset;
