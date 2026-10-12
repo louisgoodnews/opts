@@ -71,6 +71,18 @@
   - [M-0058: Mipmaps, Cache & 2-Minute Budget](roadmap/phase-8/M-0058.md)
   - [M-0059: Foliage & Cutout Coverage](roadmap/phase-8/M-0059.md)
   - [M-0060: Realistic Colour & Looks](roadmap/phase-8/M-0060.md)
+- [Phase 9: User Interface & Experience](roadmap/phase-9/README.md)
+  - [Report analysis and principles](roadmap/phase-9/report-analysis.md)
+  - [Audit of the current UI](roadmap/phase-9/current-ui-audit.md)
+  - [Design language (looks)](roadmap/phase-9/design-language.md)
+  - [Interaction and feel](roadmap/phase-9/interaction-and-feel.md)
+  - [Flow](roadmap/phase-9/flow.md)
+  - [Expandability](roadmap/phase-9/expandability.md)
+  - [M-0061: UI Foundations](roadmap/phase-9/M-0061.md)
+  - [M-0062: App Shell & Flow](roadmap/phase-9/M-0062.md)
+  - [M-0063: Settings System](roadmap/phase-9/M-0063.md)
+  - [M-0064: HUD & In-Game UI](roadmap/phase-9/M-0064.md)
+  - [M-0065: Accessibility, Localisation & Validation](roadmap/phase-9/M-0065.md)
 
 ---
 
@@ -190,6 +202,7 @@
 - [ADR-0006: Control Protocol](adr/0006-control-protocol.md)
 - [ADR-0007: Hot Reload](adr/0007-hot-reload.md)
 - [ADR-0008: Editor Mode](adr/0008-editor-mode.md)
+- [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
 
 # ✏️ Editor Mode
 

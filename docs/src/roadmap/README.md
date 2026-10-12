@@ -21,6 +21,7 @@
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](phase-7/README.md) |
 | 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 decided 2026-10-12, not started | [`phase-8/`](phase-8/README.md) |
+| 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 📝 design proposed 2026-10-12, awaiting review | [`phase-9/`](phase-9/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -274,6 +275,23 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](phase-8/M-0060.md)
   - [ ] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted.
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
+
+---
+
+## 🧭 Phase 9: User Interface & Experience
+*Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design proposed 2026-10-12, awaiting project-lead review; decisions D-UI-01 to D-UI-11 are open. Documents: [phase page](phase-9/README.md), [ADR-0009](../adr/0009-ui-architecture.md).*
+
+- [ ] **🧱 UI Foundations** — [M-0061](phase-9/M-0061.md)
+  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget; one theme for all screens; UI scale 75–200 %; accent presets with a contrast guard.
+  - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
+- [ ] **🧭 App Shell & Flow** — [M-0062](phase-9/M-0062.md)
+  - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.
+- [ ] **⚙️ Settings System** — [M-0063](phase-9/M-0063.md)
+  - [ ] Declarative setting registry; Graphics, Interface, Content, Controls, Advanced pages with real controls and search; absorbs the settings part of M-0035.
+- [ ] **🕹️ HUD & In-Game UI** — [M-0064](phase-9/M-0064.md)
+  - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
+- [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](phase-9/M-0065.md)
+  - [ ] WCAG 2.2 AA audit, gamepad/wheel navigation, German and English complete, moderated usability test.
 
 ---
 

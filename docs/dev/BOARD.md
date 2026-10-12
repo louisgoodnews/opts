@@ -147,6 +147,16 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **CI triggers on all branches and pull requests** (M-0052, chore) — today `[main, master]` only (F-019).
 - [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
 
+#### M-0061–M-0065 — Phase 9: User Interface & Experience (design proposed 2026-10-12, awaiting review)
+- [ ] 🟠 **Review the Phase 9 design and answer decisions D-UI-01 … D-UI-11** (Phase 9, decision) — [phase page](../src/roadmap/phase-9/README.md#decisions-for-the-project-lead); blocks everything below.
+- [ ] 🔴 **Spikes: text input/IME, accessibility tree, virtualised list, typeface comparison** (M-0061, research)
+- [ ] 🔴 **States, focus ring and keyboard operability in every `opts-gui` widget; one theme; UI scale** (M-0061, code)
+- [ ] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, contrast, traversal** (M-0061, code)
+- [ ] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code)
+- [ ] 🟡 **Settings registry and generic settings page** (M-0063, code)
+- [ ] 🟡 **Instrument HUD, HUD registry, help overlay, developer panel** (M-0064, code)
+- [ ] 🟡 **WCAG audit, gamepad navigation, German/English, usability test** (M-0065, test)
+
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
 - [ ] 🔴 **Image-metrics tool, reference views, scripted A/B run** (M-0057, code) — results outside the repository.
 - [ ] 🔴 **DXT mip chains through a derived cache with the hard 120 s first-run budget** (M-0058 phase C, code)
