@@ -37,10 +37,8 @@ script\\lamp_stringvarlist.txt
 ";
 
 fn fixture_dir(tag: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!(
-        "opts-scenery-scripts-{}-{tag}",
-        std::process::id()
-    ));
+    let dir =
+        std::env::temp_dir().join(format!("opts-scenery-scripts-{}-{tag}", std::process::id()));
     let script = dir.join("script");
     std::fs::create_dir_all(&script).expect("temp dir");
     std::fs::write(script.join("lamp.osc"), LAMP_OSC).expect("write");

@@ -47,9 +47,10 @@ pub fn needs_runtime(input: &SceneryObjectInput<'_>) -> bool {
     let sco = input.sco;
     input.scripts.is_some()
         || !sco.lights.is_empty()
-        || sco.meshes.iter().any(|m| {
-            m.lod_threshold.is_some() || m.visible.is_some() || !m.animations.is_empty()
-        })
+        || sco
+            .meshes
+            .iter()
+            .any(|m| m.lod_threshold.is_some() || m.visible.is_some() || !m.animations.is_empty())
         || input
             .mesh_parts
             .iter()
@@ -75,11 +76,7 @@ fn to_omsi(p: Vec3) -> Vec3 {
 }
 
 /// Spawns the LOD group entities (one per distinct threshold) under `root`.
-fn lod_groups(
-    commands: &mut Commands,
-    root: Entity,
-    sco: &SceneryObject,
-) -> Vec<(Entity, f32)> {
+fn lod_groups(commands: &mut Commands, root: Entity, sco: &SceneryObject) -> Vec<(Entity, f32)> {
     let mut thresholds: Vec<f32> = Vec::new();
     let all = sco
         .meshes

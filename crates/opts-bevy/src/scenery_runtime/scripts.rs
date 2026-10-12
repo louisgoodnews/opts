@@ -225,7 +225,12 @@ mod tests {
             Vec::new(),
         );
         let got = s
-            .with_engine(|e| (e.get_string("name").to_owned(), e.get_string("line").to_owned()))
+            .with_engine(|e| {
+                (
+                    e.get_string("name").to_owned(),
+                    e.get_string("line").to_owned(),
+                )
+            })
             .unwrap();
         assert_eq!(got, ("Hauptbahnhof".to_string(), String::new()));
     }

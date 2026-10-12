@@ -28,8 +28,7 @@ pub use spawn::{
     build_scenery_object, needs_runtime, SceneryBuildAssets, SceneryObjectInput, NIGHT_VARIABLE,
 };
 pub use tick::{
-    advance_scenery, scenery_script_system, SceneryRuntimeSettings, SceneryRuntimeStats,
-    MAX_STEP_S,
+    advance_scenery, scenery_script_system, SceneryRuntimeSettings, SceneryRuntimeStats, MAX_STEP_S,
 };
 
 /// System set of the scenery runtime; hosts update [`SceneryClock`] before it.

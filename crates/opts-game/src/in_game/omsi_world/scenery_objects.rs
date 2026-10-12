@@ -154,7 +154,11 @@ impl WorldLoadJob {
 
     /// The light program behind `TrafficLightPhase` of `obj`: its `[varparent]` junction's
     /// program, else its own first program.
-    fn signal_for(&mut self, obj: &MapObjectInstance, sco: &SceneryObject) -> Option<SignalProgram> {
+    fn signal_for(
+        &mut self,
+        obj: &MapObjectInstance,
+        sco: &SceneryObject,
+    ) -> Option<SignalProgram> {
         let program_of = |s: &SceneryObject, i: usize| {
             let (_, p) = s.traffic_light(i)?;
             let phases = p
@@ -178,7 +182,12 @@ impl WorldLoadJob {
             self.scenery.stats.signals_linked += 1;
         } else {
             self.scenery.stats.signals_unlinked += 1;
-            tracing::debug!(object = obj.id_code, parent, index, "signal head: junction program not found");
+            tracing::debug!(
+                object = obj.id_code,
+                parent,
+                index,
+                "signal head: junction program not found"
+            );
         }
         linked
     }

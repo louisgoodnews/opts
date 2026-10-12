@@ -29,6 +29,7 @@ mod traffic;
 mod trees;
 mod vehicle;
 
+pub use dev_look::place_dev_camera;
 use ground::GroundArray;
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{
@@ -38,7 +39,6 @@ pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
     PedestrianNetwork, PedestrianPool, PedestrianSettings,
 };
-pub use dev_look::place_dev_camera;
 pub use reload::ReloadPlan;
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};

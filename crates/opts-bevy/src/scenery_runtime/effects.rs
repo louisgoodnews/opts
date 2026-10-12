@@ -131,7 +131,15 @@ pub fn read_var(r: VarRef, engine: Option<&ScriptEngine>, host: &HostValues, pha
 /// The entities an object update writes to.
 #[derive(SystemParam)]
 pub struct EffectTargets<'w, 's> {
-    rules: Query<'w, 's, (&'static mut SceneryMeshRule, &'static mut Transform, &'static mut Visibility)>,
+    rules: Query<
+        'w,
+        's,
+        (
+            &'static mut SceneryMeshRule,
+            &'static mut Transform,
+            &'static mut Visibility,
+        ),
+    >,
     lights: Query<'w, 's, &'static mut SceneryLight>,
     light_maps: Query<
         'w,

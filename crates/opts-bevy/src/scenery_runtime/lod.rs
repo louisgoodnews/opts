@@ -85,7 +85,10 @@ pub fn scenery_lod_system(
             SceneryLodMode::Camera => {
                 let Some((cam, fov)) = camera else { continue };
                 let d = transform.transform_point(lod.centre).distance(cam);
-                select_band(lod.groups.iter().map(|g| g.1), screen_size(lod.radius, d, fov))
+                select_band(
+                    lod.groups.iter().map(|g| g.1),
+                    screen_size(lod.radius, d, fov),
+                )
             }
         };
         let all = *mode == SceneryLodMode::All;

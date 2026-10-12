@@ -56,7 +56,9 @@ fn run(scripts: &mut SceneryScripts) -> (usize, bool, u64, u128) {
     }
     let nanos = started.elapsed().as_nanos();
     let live = snapshots[0] != snapshots[1]
-        || snapshots[0].iter().any(|(n, v)| *v != 0.0 && n != "trafficlightphase");
+        || snapshots[0]
+            .iter()
+            .any(|(n, v)| *v != 0.0 && n != "trafficlightphase");
     (diags, live, (2 * FRAMES_PER_SCENARIO) as u64, nanos)
 }
 
@@ -74,7 +76,9 @@ fn main() {
     let mut messages: HashMap<String, usize> = HashMap::new();
     let (mut scripted, mut unparsable) = (0, 0);
     for path in &files {
-        let Ok(bytes) = std::fs::read(path) else { continue };
+        let Ok(bytes) = std::fs::read(path) else {
+            continue;
+        };
         let Ok(sco) = SceneryObject::parse(&bytes) else {
             unparsable += 1;
             continue;

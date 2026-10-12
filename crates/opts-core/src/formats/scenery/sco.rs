@@ -10,8 +10,8 @@ use glam::Vec3;
 
 use super::error::SceneryParseError;
 use super::light::{parse_light_enh, parse_light_enh_2, ScoLight};
-use crate::formats::vehicles::model::{parse_newanim, ModelAnim};
 use crate::formats::text::{decode_bytes, parse_float, scan_blocks, OmsiBlock};
+use crate::formats::vehicles::model::{parse_newanim, ModelAnim};
 
 /// Billboard tree helper (`[tree]`): texture plus default height and width-ratio ranges.
 ///
@@ -695,9 +695,10 @@ impl SceneryObject {
                             mesh.animations.push(anim);
                         }
                     }
-                    Err(e) => obj
-                        .warnings
-                        .push(format!("[newanim] skipped (line {}): {e}", block.line_number)),
+                    Err(e) => obj.warnings.push(format!(
+                        "[newanim] skipped (line {}): {e}",
+                        block.line_number
+                    )),
                 },
                 "collision_mesh" | "collisionsmesh" | "collisionmesh" | "collisioionsmesh" => {
                     if let Some(file) = block.parameters.first() {

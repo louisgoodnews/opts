@@ -351,7 +351,11 @@ fn spawn_object(
         .unwrap_or_else(|| obj.sco_file.clone());
     let parent = commands.spawn((transform, Name::new(name))).id();
     children.push(parent);
-    stats.scene_vertices += mesh_parts.iter().flatten().map(|p| p.vertices).sum::<usize>();
+    stats.scene_vertices += mesh_parts
+        .iter()
+        .flatten()
+        .map(|p| p.vertices)
+        .sum::<usize>();
     job.finish_object(
         commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
     );
