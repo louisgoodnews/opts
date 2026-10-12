@@ -120,10 +120,35 @@ pub struct OmsiFolderChosen(pub Result<PathBuf, ChooseError>);
 #[derive(Resource, Default)]
 pub struct FolderPicker(Mutex<Option<Receiver<Option<PathBuf>>>>);
 
+impl FolderPicker {
+    /// Whether a dialog is open (or its answer is not taken yet).
+    pub fn is_open(&self) -> bool {
+        self.0.lock().is_ok_and(|slot| slot.is_some())
+    }
+}
+
+/// What shows the folder dialog (the native one; tests substitute a fake that answers at once).
+#[derive(Resource, Clone)]
+pub struct FolderOpener(pub std::sync::Arc<dyn Fn() -> Option<PathBuf> + Send + Sync>);
+
+impl Default for FolderOpener {
+    fn default() -> Self {
+        Self(std::sync::Arc::new(|| {
+            rfd::FileDialog::new()
+                .set_title(select_title())
+                .pick_folder()
+        }))
+    }
+}
+
 /// Opens the native folder dialog on its own thread. Anyone may call it (the Settings page for
 /// *Content -> OMSI folder*, the Home banner); the result arrives as [`OmsiFolderChosen`].
 pub fn choose_omsi_folder(commands: &mut Commands) {
     commands.queue(|world: &mut World| {
+        let opener = world
+            .get_resource::<FolderOpener>()
+            .cloned()
+            .unwrap_or_default();
         let picker = world.get_resource_or_insert_with(FolderPicker::default);
         let Ok(mut slot) = picker.0.lock() else {
             return;
@@ -134,10 +159,7 @@ pub fn choose_omsi_folder(commands: &mut Commands) {
         let (tx, rx) = channel();
         *slot = Some(rx);
         std::thread::spawn(move || {
-            let picked = rfd::FileDialog::new()
-                .set_title(select_title())
-                .pick_folder();
-            let _ = tx.send(picked);
+            let _ = tx.send((opener.0)());
         });
     });
 }

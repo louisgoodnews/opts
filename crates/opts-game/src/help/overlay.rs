@@ -62,7 +62,7 @@ fn spawn_overlay(commands: &mut Commands) {
             overflow: Overflow::scroll_y(),
             ..default()
         })
-        .with_children(|list| spawn_controls(list, true));
+        .with_children(|list| spawn_controls(list));
         c.spawn(Node {
             column_gap: Val::Px(12.0),
             justify_content: JustifyContent::FlexEnd,

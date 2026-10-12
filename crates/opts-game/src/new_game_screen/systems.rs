@@ -26,6 +26,8 @@ use super::types::{GameCatalogue, NewGameSetup};
 use super::ui::{Act, PlannerAction};
 use super::BuildCtx;
 use crate::app_state::AppState;
+use crate::shell::esc::{ScreenBack, ScreenBackSteps};
+use crate::shell::nav::{Navigate, NavigateBack};
 
 /// Seconds since the unix epoch (the time stamp of a drive).
 fn now_unix() -> i64 {
@@ -49,6 +51,8 @@ pub struct Env<'w, 's> {
     liveries: Res<'w, LiveryState>,
     loc: Res<'w, Localization>,
     next_state: ResMut<'w, NextState<AppState>>,
+    leave: MessageWriter<'w, NavigateBack>,
+    navigate: MessageWriter<'w, Navigate>,
     modals: Query<'w, 's, Entity, With<OptionsModal>>,
 }
 
@@ -98,7 +102,10 @@ pub fn handle_actions(
             ),
             PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
             PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
-            PlannerAction::OpenSettings => env.next_state.set(AppState::Settings),
+            PlannerAction::OpenSettings => {
+                // A step into a sub-page: Back returns here.
+                env.navigate.write(Navigate::push("settings"));
+            }
         }
     }
 }
@@ -106,7 +113,9 @@ pub fn handle_actions(
 fn back(env: &mut Env) {
     match env.state.step.prev() {
         Some(prev) => env.state.step = prev,
-        None => env.next_state.set(AppState::MainMenu),
+        None => {
+            env.leave.write(NavigateBack);
+        }
     }
 }
 
@@ -147,25 +156,18 @@ fn drive(env: &mut Env, commands: &mut Commands) {
     env.next_state.set(AppState::InGame);
 }
 
-/// `Esc` / `Back`: one step back, then out. Dialogs, open drop-downs and text fields keep the
-/// first press (the library handles it).
-#[allow(clippy::too_many_arguments)]
-pub fn handle_back_action(
-    mut actions: MessageReader<UiAction>,
-    modals: Query<(), With<ModalRoot>>,
-    combos: Query<&M3Combobox>,
-    text_focus: Query<(), (With<Focused>, TextEntry)>,
-    mut env: Env,
-) {
-    for action in actions.read() {
-        if *action == UiAction::Back
-            && modals.is_empty()
-            && text_focus.is_empty()
-            && !combos.iter().any(|c| c.is_open)
-        {
-            back(&mut env);
-        }
+/// `Esc` / `Back` inside the wizard: the shell's one Esc mechanism (`shell::esc`) sends
+/// [`ScreenBack`] while a step is left to go back to, and leaves the screen through the back stack
+/// otherwise. Dialogs, open drop-downs and text fields keep the press (the shell's gate).
+pub fn handle_back_action(mut back: MessageReader<ScreenBack>, mut env: Env) {
+    for _ in back.read() {
+        back(&mut env);
     }
+}
+
+/// Tells the shell whether *Back* has a step to go back to inside the wizard.
+pub fn publish_back_steps(state: Res<PlannerState>, mut steps: ResMut<ScreenBackSteps>) {
+    steps.set_if_neq(ScreenBackSteps(state.step.prev().is_some()));
 }
 
 /// `]` and `[` switch steps like tabs.

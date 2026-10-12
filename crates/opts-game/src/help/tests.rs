@@ -75,7 +75,7 @@ fn keys_shown(app: &mut App) -> Vec<&'static str> {
 }
 
 #[test]
-fn the_page_offers_four_tabs_and_starts_on_controls_with_the_not_yet_line() {
+fn the_page_offers_four_tabs_and_starts_on_the_generated_controls() {
     let mut app = app();
     enter_help(&mut app);
     let ids = ids(&mut app);
@@ -84,10 +84,14 @@ fn the_page_offers_four_tabs_and_starts_on_controls_with_the_not_yet_line() {
     }
     let shown = keys_shown(&mut app);
     assert!(shown.contains(&keys::HELP_KEY_THROTTLE));
-    assert!(
-        shown.contains(&opts_gui::l10n::keys::NOT_AVAILABLE),
-        "generated list is marked"
-    );
+    // The table is generated from the bindings registry: every row is on the page.
+    for (group, rows) in super::controls::GROUPS {
+        assert!(shown.contains(group), "{group}");
+        for row in *rows {
+            assert!(shown.contains(&row.action), "{}", row.shown);
+        }
+    }
+    assert!(!shown.contains(&opts_gui::l10n::keys::NOT_AVAILABLE));
 }
 
 #[test]

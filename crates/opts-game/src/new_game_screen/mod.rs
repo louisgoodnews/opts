@@ -62,6 +62,10 @@ impl Plugin for NewGameMenuPlugin {
             .init_resource::<NewGameSetup>()
             .init_resource::<PlannerState>()
             .init_resource::<livery::LiveryState>()
+            .init_resource::<crate::shell::esc::ScreenBackSteps>()
+            .add_message::<crate::shell::esc::ScreenBack>()
+            .add_message::<crate::shell::nav::NavigateBack>()
+            .add_message::<crate::shell::nav::Navigate>()
             .init_resource::<thumbnails::ThumbnailService>();
         if !app.world().contains_resource::<ShellContent>() {
             app.init_resource::<ShellContent>();
@@ -91,9 +95,13 @@ impl Plugin for NewGameMenuPlugin {
                 systems::handle_back_action
                     .run_if(active.clone())
                     .run_if(opts_bevy::reporting::not_modal_active)
-                    .after(opts_gui::actions::ActionInput)
-                    .before(opts_gui::interaction::handlers::back_system),
+                    .after(crate::shell::esc::shell_back_system),
             )
+            .add_systems(
+                PreUpdate,
+                systems::publish_back_steps.run_if(active.clone()),
+            )
+            .add_systems(OnExit(AppState::VehicleSelection), reset_back_steps)
             .add_systems(
                 Update,
                 (
@@ -202,4 +210,9 @@ fn cleanup_wizard(
     for e in roots.iter().chain(modals.iter()) {
         commands.entity(e).despawn();
     }
+}
+
+/// Leaving the wizard: *Back* on the next screen has no step of this one to take.
+fn reset_back_steps(mut steps: ResMut<crate::shell::esc::ScreenBackSteps>) {
+    steps.0 = false;
 }

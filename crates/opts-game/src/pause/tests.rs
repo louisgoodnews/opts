@@ -24,6 +24,7 @@ fn app() -> App {
         .init_resource::<NewGameSetup>()
         .add_plugins(OptsGuiPlugin)
         .add_plugins(ShellPlugin)
+        .add_plugins(crate::settings_screen::SettingsScreenPlugin)
         .add_plugins(PausePlugin);
     app.update();
     app.world_mut()
@@ -167,15 +168,46 @@ fn leaving_to_home_keeps_the_summary_and_resumes_time() {
 }
 
 #[test]
-fn an_unused_drive_is_left_without_a_question_or_a_summary() {
+fn an_unused_drive_also_asks_and_leaves_without_a_summary() {
     let mut app = app();
     esc(&mut app);
     click(&mut app, "pause.leave");
+    assert_eq!(state(&app), AppState::InGame, "nothing happens before the answer");
+    click(&mut app, "dialog.pause.leave.home");
     for _ in 0..3 {
         app.update();
     }
     assert_eq!(state(&app), AppState::MainMenu);
     assert!(app.world().get_resource::<LastSession>().is_none());
+}
+
+#[test]
+fn esc_cancels_the_leave_dialog_and_the_pause_overlay_returns() {
+    let mut app = app();
+    esc(&mut app);
+    click(&mut app, "pause.leave");
+    assert!(ids(&mut app).contains(&"dialog.pause.leave.cancel".to_owned()));
+    esc(&mut app);
+    assert!(!ids(&mut app).contains(&"dialog.pause.leave.cancel".to_owned()));
+    assert_eq!(state(&app), AppState::InGame);
+    assert!(ids(&mut app).contains(&"pause.resume".to_owned()), "overlay is back");
+}
+
+#[test]
+fn settings_in_the_pause_overlay_opens_the_page_and_esc_returns_to_the_pause_menu() {
+    let mut app = app();
+    esc(&mut app);
+    click(&mut app, "pause.settings");
+    let open = ids(&mut app);
+    assert!(open.contains(&"settings".to_owned()), "{open:?}");
+    assert!(!open.contains(&"pause.resume".to_owned()));
+    assert_eq!(state(&app), AppState::InGame);
+    esc(&mut app);
+    let back = ids(&mut app);
+    assert!(!back.contains(&"settings".to_owned()), "{back:?}");
+    assert!(back.contains(&"pause.resume".to_owned()), "pause menu is back");
+    assert!(app.world().resource::<Pause>().open);
+    assert!(paused(&app));
 }
 
 #[test]

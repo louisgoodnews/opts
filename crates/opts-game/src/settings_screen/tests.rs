@@ -333,67 +333,56 @@ fn every_category_obeys_the_ui_rules() {
     }
 }
 
-struct FixedFolder(Option<std::path::PathBuf>);
-
-impl super::content::FolderChooser for FixedFolder {
-    fn choose(&self) -> Option<std::path::PathBuf> {
-        self.0.clone()
-    }
-}
-
-fn content_app(name: &str, pick: Option<std::path::PathBuf>) -> (App, std::path::PathBuf) {
+fn content_app(name: &str) -> (App, std::path::PathBuf) {
     let (mut app, _, db) = page_app(name, "content");
-    app.insert_resource(super::content::FolderChooserRes(Arc::new(FixedFolder(
-        pick,
-    ))))
-    .init_resource::<super::content::PendingPick>()
-    .add_systems(
-        Update,
-        (
-            super::content::run_actions,
-            super::content::take_picked_folder,
-        ),
-    );
+    app.insert_resource(crate::first_run::FolderOpener(Arc::new(|| None)))
+        .init_resource::<crate::first_run::FolderPicker>()
+        .add_message::<crate::first_run::OmsiFolderChosen>()
+        .add_systems(
+            Update,
+            (
+                super::content::run_actions,
+                super::content::sync_chosen_folder,
+            ),
+        );
     app.update();
     (app, db)
 }
 
 #[test]
-fn choosing_the_omsi_folder_validates_and_saves_it() {
-    let root = std::env::temp_dir().join(format!("opts-settings-omsi-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(root.join("maps")).expect("maps");
-    std::fs::create_dir_all(root.join("Vehicles")).expect("vehicles");
-    let (mut app, db) = content_app("omsi-ok", Some(root.clone()));
+fn the_omsi_folder_button_starts_the_shells_folder_flow() {
+    let (mut app, _) = content_app("omsi-flow");
+    assert!(!app.world().resource::<crate::first_run::FolderPicker>().is_open());
     let b = by_id(&mut app, "settings/content/omsi_path/choose").expect("choose button");
     click(&mut app, b);
-    for _ in 0..200 {
-        app.update();
-        if app.world().resource::<GameSettings>().omsi_path.is_some() {
-            break;
-        }
-        std::thread::sleep(Duration::from_millis(10));
-    }
-    assert_eq!(
-        app.world().resource::<GameSettings>().omsi_path.as_deref(),
-        Some(root.as_path())
+    assert!(
+        app.world().resource::<crate::first_run::FolderPicker>().is_open(),
+        "first_run::choose_omsi_folder ran"
     );
-    assert_eq!(stored(&db, "omsi_path").as_deref(), root.to_str());
-    crate::omsi_root::set_saved_root(None);
 }
 
 #[test]
-fn a_folder_that_is_not_omsi_is_refused() {
-    let bad = std::env::temp_dir().join(format!("opts-settings-notomsi-{}", std::process::id()));
-    std::fs::create_dir_all(&bad).expect("dir");
-    let (mut app, _) = content_app("omsi-bad", Some(bad));
-    let b = by_id(&mut app, "settings/content/omsi_path/choose").expect("choose button");
-    click(&mut app, b);
-    for _ in 0..50 {
+fn a_folder_the_shell_flow_adopted_reaches_the_registry() {
+    let root = std::env::temp_dir().join(format!("opts-settings-omsi-{}", std::process::id()));
+    let (mut app, db) = content_app("omsi-ok");
+    app.world_mut()
+        .write_message(crate::first_run::OmsiFolderChosen(Ok(root.clone())));
+    for _ in 0..3 {
         app.update();
-        std::thread::sleep(Duration::from_millis(5));
     }
-    assert!(app.world().resource::<GameSettings>().omsi_path.is_none());
+    assert_eq!(stored(&db, "omsi_path").as_deref(), root.to_str());
+}
+
+#[test]
+fn a_refused_folder_changes_nothing() {
+    let (mut app, db) = content_app("omsi-bad");
+    app.world_mut().write_message(crate::first_run::OmsiFolderChosen(Err(
+        crate::first_run::ChooseError::Cancelled,
+    )));
+    for _ in 0..3 {
+        app.update();
+    }
+    assert!(stored(&db, "omsi_path").is_none_or(|v| v.is_empty()));
 }
 
 fn module_sources() -> Vec<(String, String)> {

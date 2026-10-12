@@ -10,6 +10,7 @@
 pub mod content;
 pub mod info;
 pub mod input;
+pub mod overlay;
 pub mod page;
 pub mod rows;
 pub mod systems;
@@ -22,9 +23,10 @@ use opts_gui::prelude::*;
 use crate::app_state::AppState;
 use crate::shell::{spawn_screen_root, ShellContent};
 
+pub use overlay::{open_settings_overlay, SettingsOverlay};
 pub use input::{PendingRevert, SettingActionRequested};
 pub use page::{spawn_settings_page, SettingsPageState};
-pub use systems::{cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu};
+pub use systems::{cleanup_settings_screen, handle_back_to_menu};
 pub use types::{BackToMenuButton, SettingsScreenRoot};
 
 /// Plugin managing the interactive Settings screen.
@@ -38,8 +40,7 @@ impl Plugin for SettingsScreenPlugin {
         }
         app.add_plugins(page::SettingsPagePlugin)
             .init_resource::<crate::look::ActiveLook>()
-            .init_resource::<content::FolderChooserRes>()
-            .init_resource::<content::PendingPick>()
+            .add_message::<crate::first_run::OmsiFolderChosen>()
             .add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
             .add_systems(OnExit(AppState::Settings), cleanup_settings_screen)
             .add_systems(
@@ -47,10 +48,10 @@ impl Plugin for SettingsScreenPlugin {
                 (
                     handle_back_to_menu,
                     content::run_actions,
-                    content::take_picked_folder,
-                    escape_to_menu_system,
+                    content::sync_chosen_folder,
+                    overlay::close_overlay,
                 )
-                    .run_if(in_state(AppState::Settings))
+                    .run_if(any_with_component::<page::SettingsPage>)
                     .run_if(opts_bevy::reporting::not_modal_active),
             );
     }

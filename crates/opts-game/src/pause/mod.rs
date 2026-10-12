@@ -13,7 +13,6 @@ use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
 use opts_gui::components::modal::{ModalBuilder, ModalEvent, ModalRoot};
 use opts_gui::interaction::activation::Activated;
 use opts_gui::l10n::{L10nArgs, L10nKey};
-use opts_gui::not_yet::{Availability, PAUSE_SETTINGS};
 use opts_gui::prelude::*;
 
 pub use stats::SessionStats;
@@ -59,7 +58,7 @@ pub enum PauseItem {
     Resume,
     /// Open the vehicle menu.
     Vehicle,
-    /// Settings (not available yet during a drive).
+    /// The settings page as an overlay.
     Settings,
     /// Controls (Help).
     Controls,
@@ -111,8 +110,7 @@ pub(crate) fn spawn_overlay(commands: &mut Commands) -> Entity {
         let resume = item(c, PauseItem::Resume, keys::PAUSE_RESUME, "resume");
         c.commands().entity(resume).insert(DefaultFocus);
         item(c, PauseItem::Vehicle, keys::PAUSE_VEHICLE, "vehicle");
-        let settings = item(c, PauseItem::Settings, keys::PAUSE_SETTINGS, "settings");
-        Availability::NotYet(&PAUSE_SETTINGS).apply(&mut c.commands().entity(settings));
+        item(c, PauseItem::Settings, keys::PAUSE_SETTINGS, "settings");
         item(c, PauseItem::Controls, keys::PAUSE_CONTROLS, "controls");
         item(c, PauseItem::Report, keys::PAUSE_REPORT, "report");
         c.spawn(Node {
@@ -217,8 +215,7 @@ pub fn pause_items(
     mut report: ResMut<ReportModalData>,
     report_state: Res<State<ReportModalState>>,
     mut report_next: ResMut<NextState<ReportModalState>>,
-    session: Res<SessionStats>,
-) {
+    ) {
     for Activated(entity) in activated.read() {
         let Ok(which) = items.get(*entity) else {
             continue;
@@ -241,17 +238,12 @@ pub fn pause_items(
                 request_report(&time, &mut report, &report_state, &mut report_next);
             }
             PauseItem::Leave => {
-                let moved = session.moved();
-                if moved {
-                    // One dialog at a time: the overlay steps aside and returns on Cancel.
-                    if let Some(root) = pause.root.take() {
-                        commands.entity(root).try_despawn();
-                    }
-                    spawn_confirm_dialog(&mut commands, leave_spec());
-                } else {
-                    // Nothing would be lost: no question.
-                    commands.queue(|world: &mut World| leave_to_home(world));
+                // Always one question (interaction-and-feel section 6): the user chose to end the
+                // session. The overlay steps aside (one dialog at a time) and returns on Cancel.
+                if let Some(root) = pause.root.take() {
+                    commands.entity(root).try_despawn();
                 }
+                spawn_confirm_dialog(&mut commands, leave_spec());
             }
             PauseItem::Controls => {
                 // One dialog at a time: the overlay steps aside and returns when Help closes.
@@ -260,7 +252,13 @@ pub fn pause_items(
                 }
                 crate::help::open_overlay(&mut commands);
             }
-            PauseItem::Settings => {}
+            PauseItem::Settings => {
+                // One dialog at a time: the overlay steps aside and returns when Settings close.
+                if let Some(root) = pause.root.take() {
+                    commands.entity(root).try_despawn();
+                }
+                crate::settings_screen::open_settings_overlay(&mut commands);
+            }
         }
     }
 }

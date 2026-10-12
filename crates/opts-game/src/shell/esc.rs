@@ -60,16 +60,32 @@ pub fn compute_esc_gate(
     };
 }
 
-/// Back in a shell screen: one level up (the back stack), Home when the stack is empty, nothing on
-/// Home.
+/// Whether the screen on display has a step inside itself that *Back* takes first (the steps of
+/// *Plan a drive*). The screen keeps it up to date; the shell then sends [`ScreenBack`] instead of
+/// leaving the screen.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct ScreenBackSteps(pub bool);
+
+/// *Back* for the screen itself: go one step back inside it (see [`ScreenBackSteps`]).
+#[derive(Message, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScreenBack;
+
+/// Back in a shell screen: the screen's own step first, then one level up (the back stack), Home
+/// when the stack is empty, nothing on Home.
 pub fn shell_back_system(
     mut actions: MessageReader<UiAction>,
     gate: Res<EscGate>,
+    steps: Res<ScreenBackSteps>,
     mut back: MessageWriter<NavigateBack>,
+    mut inner: MessageWriter<ScreenBack>,
 ) {
     for action in actions.read() {
         if *action == UiAction::Back && !gate.closed() {
-            back.write(NavigateBack);
+            if steps.0 {
+                inner.write(ScreenBack);
+            } else {
+                back.write(NavigateBack);
+            }
         }
     }
 }
@@ -77,6 +93,8 @@ pub fn shell_back_system(
 /// Registers the gate and the system. Active only in the shell's screens.
 pub fn build(app: &mut App) {
     app.init_resource::<EscGate>()
+        .init_resource::<ScreenBackSteps>()
+        .add_message::<ScreenBack>()
         .add_systems(PreUpdate, compute_esc_gate)
         .add_systems(
             Update,

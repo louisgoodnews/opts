@@ -239,7 +239,7 @@ fn sync_pane(
         }
         let tab = state.tab;
         commands.entity(pane).with_children(|p| match tab {
-            HelpTab::Controls => controls::spawn_controls(p, true),
+            HelpTab::Controls => controls::spawn_controls(p),
             HelpTab::Guides => {
                 p.spawn((
                     Text::new(keys::HELP_GUIDES_BODY),
@@ -327,14 +327,15 @@ pub fn f1_opens_help(
     }
 }
 
-/// When the Help overlay closes during a drive, the pause overlay is back.
+/// When the Help or Settings overlay closes during a drive, the pause overlay is back.
 pub fn return_to_pause(
     mut closed: RemovedComponents<HelpOverlay>,
+    mut settings_closed: RemovedComponents<crate::settings_screen::SettingsOverlay>,
     mut pause: ResMut<Pause>,
     reporting: Res<State<ReportModalState>>,
     mut commands: Commands,
 ) {
-    if closed.read().count() == 0 {
+    if closed.read().count() + settings_closed.read().count() == 0 {
         return;
     }
     // The report dialog (opened from the overlay) brings the pause overlay back itself.
