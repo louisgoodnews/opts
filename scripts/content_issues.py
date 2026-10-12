@@ -72,6 +72,7 @@ def main() -> int:
     ap.add_argument("--logs", default=os.path.expanduser("~/.local/share/opts/logs"))
     ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "..", "docs", "src", "quality"))
     ap.add_argument("--top", type=int, default=40)
+    ap.add_argument("--corpus", help="TSV of the script corpus run (CORPUS_REPORT of the vehicle_scripts example)")
     args = ap.parse_args()
 
     files = []
@@ -106,6 +107,23 @@ def main() -> int:
                 for k in ("vehicle", "map", "tile"):
                     if k in fields:
                         e["ctx"].add(f"{k}={fields[k]}")
+
+    # Offline run of every vehicle's scripts (all 1,218 scripted vehicles, 60 frames each).
+    if args.corpus:
+        with open(args.corpus, errors="replace") as fh:
+            for row in fh:
+                parts = row.rstrip("\n").split("\t")
+                if len(parts) != 4:
+                    continue
+                bus, sev, file, msg = parts
+                sev = {"Warning": "WARN", "Error": "ERROR"}.get(sev, sev.upper())
+                subject = re.sub(r"^.*?/OMSI 2/", "", file) or "(script engine)"
+                key = ("vehicle scripts", subject, sev, normalise(msg))
+                e = entries.setdefault(key, {"count": 0, "first": "corpus", "last": "corpus", "ctx": set()})
+                e["count"] += 1
+                if len(e["ctx"]) < 3:
+                    e["ctx"].add("vehicle=" + os.path.basename(bus))
+                total += 1
 
     os.makedirs(args.out, exist_ok=True)
     rows = sorted(entries.items(), key=lambda kv: (-kv[1]["count"], kv[0]))

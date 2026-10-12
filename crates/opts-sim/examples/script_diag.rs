@@ -36,7 +36,7 @@ fn main() {
         find_ci(&dir, rel).or_else(|| find_ci(&root, rel))
     });
     for d in &diags {
-        println!("load: {:?} {} {}", d.severity, d.file, d.message);
+        println!("load: {:?} {}:{} {}", d.severity, d.file, d.line, d.message);
     }
     engine.run_init();
     // `SCRIPT_TRIGGERS=a,b` raise triggers, `SCRIPT_SET=x=1,y=2` set variables before the frames,

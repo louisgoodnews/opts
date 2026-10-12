@@ -1,5 +1,6 @@
 //! Loads the scripts of every `.bus` below `<OMSI>/Vehicles`, runs `{init}` and 60 frames and
 //! reports load problems and run-time cost: `vehicle_scripts <OMSI dir>`.
+use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -44,6 +45,7 @@ fn main() {
     files.sort();
     let (mut loaded, mut with_scripts, mut missing, mut undeclared) = (0, 0, 0, 0);
     let (mut frame_us, mut ops) = (Vec::new(), 0u64);
+    let mut report = std::env::var_os("CORPUS_REPORT").and_then(|p| std::fs::File::create(p).ok());
     let mut underflow_sites = 0usize;
     let mut underflow_vehicles = std::collections::HashSet::new();
     for f in &files {
@@ -70,6 +72,27 @@ fn main() {
             .iter()
             .filter(|d| d.message.contains("without a varlist"))
             .count();
+        // `CORPUS_REPORT=<file>` collects every load and run diagnostic for the content issue
+        // registry (`scripts/content_issues.py --corpus <file>`).
+        let mut report_line = |sev: &str, file: &str, msg: &str| {
+            if let Some(out) = report.as_mut() {
+                let bus_rel = f.strip_prefix(&root).unwrap_or(f).display().to_string();
+                let file_rel = file
+                    .strip_prefix(&format!("{}/", root.display()))
+                    .unwrap_or(file);
+                let _ = writeln!(
+                    out,
+                    "{bus_rel}\t{sev}\t{file_rel}\t{}",
+                    msg.replace(['\t', '\n'], " ")
+                );
+            }
+        };
+        for d in diags
+            .iter()
+            .filter(|d| !d.message.contains("without a varlist"))
+        {
+            report_line(&format!("{:?}", d.severity), &d.file, &d.message);
+        }
         engine.run_init();
         let t = Instant::now();
         for _ in 0..60 {
@@ -78,6 +101,7 @@ fn main() {
         frame_us.push(t.elapsed().as_secs_f64() * 1e6 / 60.0);
         ops += engine.ops_executed();
         for d in engine.drain_diagnostics() {
+            report_line(&format!("{:?}", d.severity), &d.file, &d.message);
             if d.message.starts_with("stack underflow") {
                 underflow_sites += 1;
                 underflow_vehicles.insert(f.clone());
