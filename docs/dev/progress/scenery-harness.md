@@ -13,7 +13,7 @@ Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-
 | H4 Text-texture check, corpus preflight | done |
 | H5 Sample run, performance | done |
 | H6 Calibration (sub-batches of ~50) | done (done as one iterative batch, not in sub-batches; labels 145) |
-| H7 Close-out | todo |
+| H7 Close-out | done |
 
 ## Commands
 
@@ -58,3 +58,12 @@ H5: sample list `~/.local/share/opts/benchmark/dev/h5.list` (1,018 stratified ob
 
 H6: calibration set `h6.list` (265 objects drawn by class x verdict x category from the 1,018 sample), labels `~/.local/share/opts/benchmark/dev/labels.json` (145: 90 visual, 55 diagnostic; script `mklabels.py` maps contact-sheet indices to keys, `conf.py` prints the confusion matrix, `sheet.py`/`grid.py` make contact sheets with the dev venv `venv/bin/python`). Final matrix: label pass 65 pass / 3 unknown / 0 fail; label fail 0 pass / 3 unknown / 74 fail. Held-out look at 25 objects fixed the text threshold. Changes: back-face culled expectation (sign verified, IoU .97), `[matl_alpha] 0` opaque, alpha rules (`unknown` instead of fail), text close-ups from both sides with changed-pixel share, help-arrow, tree+onlyeditor (Q-SB-13), derived-category suppression. Sample result 1,018 objects: pass 856, fail 115, unknown 47. Geometric categories never fired on the sample (only the seeded test covers them).
 Resume hint: nothing to resume in H6; thresholds are in `verdict::Thresholds::default()` and the spec table.
+
+H7: `docs/crates/opts-benchmark.md`, BOARD, M-0054, spec updated. Final release timing (final code): 1 worker 1:41, 3 workers 22 s for 1,018 objects. The sample runs shared and grew the user's decoder cache (`~/.cache/opts/descramble`, 4,287 -> 4,913 entries; it is a content cache, harmless). Final gate run green (see last commit).
+
+## Open problems (for the reader of the report)
+
+- GPU-less CI (software Vulkan) not verified.
+- Geometric thresholds only covered by the seeded-fault test (no real object triggered them).
+- Q-SB-13 (`[tree]` + `[onlyeditor]`), 61 unparsed v10 tiles, `[matl_alpha] 0` loader finding, text sources with named variables.
+- Phase C (script effects) not implemented: `script_check.rs` is the extension point, `S-NOT-RUN` is reported.

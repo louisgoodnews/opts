@@ -6,7 +6,7 @@
 | **Role** | Benchmarks and corpus verification |
 | **Kind** | Library (`opts_benchmark`) + binary (`opts-benchmark`) |
 | **Status** | 🟡 Scenery harness implemented (M-0054 Phase B); Criterion suite (M-0028) not started |
-| **Last Updated** | 2026-10-11 |
+| **Last Updated** | 2026-10-12 |
 
 ## 🎯 Purpose
 
@@ -23,6 +23,9 @@ The Criterion benches of M-0028 will live in `benches/` and build with `--no-def
 ```sh
 # Whole corpus, 3 workers, results under ~/.local/share/opts/benchmark/<run-id>/
 opts-benchmark scenery run --omsi-path "<OMSI 2>" --workers 3
+
+# CPU-only survey: tiers, context classes, unsupported tags (seconds for the whole corpus)
+opts-benchmark scenery preflight --omsi-path "<OMSI 2>" --out /tmp/preflight.jsonl
 
 # A spread sample, keeping every image, with a throw-away decoder cache
 opts-benchmark scenery run --omsi-path "<OMSI 2>" --sample 300 --keep-images all \
@@ -85,7 +88,15 @@ To run the tool itself with isolated settings, prefix it with
 
 - Phase C (script effects) reports `S-NOT-RUN`; see Q-SB-11.
 - GPU-less CI (software Vulkan) is not verified (Q-SB-01).
-- Expected silhouettes ignore back-face culling; see the calibration notes in the spec.
+- Expected silhouettes are back-face culled like the loader; alpha-tested objects cannot be predicted and end `unknown` when they cover less than expected (about 3 % of a sample).
+- The geometric thresholds (offset, scale, rotation, outside) are conservative defaults: no real object triggered them in the calibration; the seeded-fault test is their only evidence.
+- 61 map tiles (version 10) do not parse, so objects only they place are tiered `unreferenced`.
+
+## 🧪 Tests
+
+- Unit tests per module (raster, metrics, framing, verdict, diag, preflight, corpus, report).
+- `tests/seeded_faults.rs`: a synthetic installation (hand-written `.sco` and `.x`) through the real worker; mirrored heading, 2x scale, 10 m offset, removed texture and removed mesh each give their category. Needs a GPU adapter; without one the test passes with a message.
+- `tests/run_control.rs`: the real binary with the test hook `OPTS_BENCH_INJECT=crash:<text>|hang:<text>`; crash gives `F-CRASH`, hang `F-TIMEOUT`, workers recycle, `--resume` repeats nothing.
 
 ## 🔗 Cross-References
 
