@@ -84,6 +84,13 @@ fn steps_of(anim: &ModelAnim, pivot: Option<Vec3>) -> Vec<AnimStep> {
         .collect()
 }
 
+/// The steps of one `[newanim]` block. `pivot` is the mesh file's own origin (the translation of
+/// its matrix chunk); it is used for `origin_from_mesh` unless an explicit `origin_trans` is given.
+#[must_use]
+pub fn anim_steps(anim: &ModelAnim, pivot: Option<Vec3>) -> Vec<AnimStep> {
+    steps_of(anim, pivot)
+}
+
 impl MeshAnimation {
     /// Builds the rules of `mesh`; `None` when it has neither animation nor visibility rules.
     /// `pivot` is the mesh's own origin in OMSI vehicle axes (the matrix of its `.o3d`), used by

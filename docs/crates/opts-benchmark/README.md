@@ -1,6 +1,6 @@
 # `opts-benchmark`
 
-> ⚠️ **Deprecated (2026-10-11):** this crate does not exist in the workspace; the page is kept as design history. See the [catalog](../catalog.md).
+> ⚠️ **Superseded (2026-10-11):** the crate now exists; its guide is [`opts-benchmark.md`](../opts-benchmark.md). This page is the 2026-10-04 plan, kept as design history.
 
 | Metadata | Value |
 | :--- | :--- |

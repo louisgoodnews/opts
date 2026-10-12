@@ -17,6 +17,7 @@ use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 mod collision;
+mod dev_look;
 mod ground;
 mod ground_height;
 mod job;
@@ -25,6 +26,7 @@ mod pedestrians;
 pub(crate) mod rail;
 mod reload;
 mod respawn;
+mod scenery_objects;
 mod tile;
 mod tile_ground;
 mod traffic;
@@ -36,6 +38,7 @@ pub use collision::{
     attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
     VehicleCollider,
 };
+pub use dev_look::place_dev_camera;
 use ground::GroundArray;
 pub use ground_height::{follow_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
@@ -55,6 +58,7 @@ pub use reload::ReloadPlan;
 pub use respawn::{
     handle_vehicle_requests, DespawnVehicleRequest, EntryIndex, ResolvedEntry, SpawnVehicleRequest,
 };
+pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
@@ -188,6 +192,8 @@ pub struct WorldLoadJob {
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
+    /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
+    scenery: scenery_objects::SceneryObjectCache,
     /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
     parklist: Option<Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,

@@ -148,6 +148,10 @@ impl Plugin for InGamePlugin {
                 )
                     .chain(),
                 sky::update_sky.run_if(resource_exists::<sky::Sky>),
+                omsi_world::place_dev_camera,
+                omsi_world::sync_scenery_clock
+                    .run_if(resource_exists::<opts_bevy::SceneryClock>)
+                    .before(opts_bevy::scenery_runtime::SceneryRuntimeSet),
                 screenshot::capture_screenshot_when_ready,
                 handle_camera_shortcuts,
             )

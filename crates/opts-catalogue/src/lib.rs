@@ -178,6 +178,22 @@ impl Catalogue {
         })
     }
 
+    /// Opens an existing catalogue for reading only: no file is created, no schema is migrated
+    /// and nothing can be written. Several processes may hold it open at once (the scenery
+    /// benchmark's workers, `docs/src/architecture/scenery-benchmark.md`, Q-SB-08).
+    ///
+    /// # Errors
+    /// Fails if the file does not exist or cannot be opened.
+    pub fn open_read_only(db_path: &Path) -> Result<Self> {
+        let flags =
+            rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
+        let conn = Connection::open_with_flags(db_path, flags)?;
+        Ok(Self {
+            path: db_path.to_path_buf(),
+            conn: Mutex::new(conn),
+        })
+    }
+
     /// Path of the database file.
     #[must_use]
     pub fn db_path(&self) -> &Path {
@@ -894,6 +910,10 @@ mod tests {
         );
         assert_eq!(vehicles[0].id, "Bus1");
         assert_eq!(vehicles[0].manufacturer, "ACME");
+
+        let ro = Catalogue::open_read_only(&db).unwrap();
+        assert_eq!(ro.maps().unwrap().len(), 1);
+        assert!(Catalogue::open_read_only(&root.join("missing.db")).is_err());
 
         let found = cat.find_file("vehicles\\BUS1\\MODEL\\Model.CFG").unwrap();
         assert!(found.is_some_and(|p| p.ends_with("Vehicles/Bus1/model/model.cfg")));

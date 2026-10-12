@@ -187,6 +187,10 @@ pub struct MapTile {
     pub rules: Vec<MapTrafficRule>,
     /// Attachments bound to splines.
     pub spline_attachments: Vec<MapSplineAttachment>,
+    /// `[varparent] <id>` links: `(index into objects, parent id code)`. A signal head names its
+    /// junction this way; its single string variable is the junction's light program index
+    /// (`docs/src/architecture/scenery-runtime.md`).
+    pub var_parents: Vec<(usize, u64)>,
 }
 
 impl MapTile {
@@ -210,9 +214,18 @@ impl MapTile {
         let mut tile = MapTile::default();
         // The spline or object a following `[rule]` belongs to.
         let mut rule_owner: Option<RuleOwner> = None;
+        // The object a `[varparent]` right after it belongs to.
+        let mut prev_object: Option<usize> = None;
 
         for block in &blocks {
+            let this_object = prev_object.take();
             match block.keyword.as_str() {
+                "varparent" => {
+                    let parent = block.parameters.first().and_then(|s| s.parse().ok());
+                    if let (Some(index), Some(parent)) = (this_object, parent) {
+                        tile.var_parents.push((index, parent));
+                    }
+                }
                 "version" => {
                     if let Some(val) = block.parameters.first() {
                         tile.version = Some(parse_u32(val, "version", block.line_number)?);
@@ -279,6 +292,7 @@ impl MapTile {
                             index: tile.objects.len(),
                             id_code: id,
                         });
+                        prev_object = Some(tile.objects.len());
                         tile.objects.push(MapObjectInstance {
                             flag,
                             sco_file: sco,

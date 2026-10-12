@@ -216,6 +216,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         spline_index: None,
         sco_cache: HashMap::new(),
         collision_bounds: HashMap::new(),
+        scenery: super::scenery_objects::SceneryObjectCache::new(),
         parklist: None,
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),

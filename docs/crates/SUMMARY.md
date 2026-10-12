@@ -35,7 +35,8 @@
   - [opts-cli](opts-cli/README.md)
   - [opts-tools](opts-tools/README.md)
 - [Development]()
-  - [opts-benchmark](opts-benchmark/README.md)
+  - [opts-benchmark](opts-benchmark.md)
+  - [opts-benchmark (2026-10-04 plan)](opts-benchmark/README.md)
 
 ---
 

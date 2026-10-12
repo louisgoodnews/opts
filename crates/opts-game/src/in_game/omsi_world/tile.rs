@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
-use opts_bevy::{attach_model_parts, sample_terrain, ContentLoader, TextureOverride};
+use opts_bevy::{sample_terrain, ContentLoader, TextureOverride};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
 use opts_core::formats::vehicles::model::ModelConfig;
 
@@ -136,6 +136,7 @@ pub fn load_next_tile(
     super::rail::register_bike_tile(commands, key, bikes);
     let road = super::traffic::tile_segments(job, &tile, terrain.as_ref(), origin);
     super::traffic::register_tile(commands, key, road);
+    job.scenery.index_tile(&tile);
     let placements = tile
         .objects
         .iter()
@@ -288,7 +289,13 @@ fn spawn_object(
     }
     let protected_before = job.cache.stats.protected_meshes;
     let deferred_before = job.cache.stats.deferred_meshes;
-    let mut parts = Vec::new();
+    // Scripts and string-variable names (`[texttexture_enh]` sources given by name).
+    let template = job.script_template(&sco_path, &sco);
+    let string_names = template
+        .as_ref()
+        .map(|t| t.string_names.clone())
+        .unwrap_or_default();
+    let mut mesh_parts = Vec::with_capacity(sco.meshes.len());
     for mesh_def in &sco.meshes {
         let found = job.install.find_in(&model_dir, &mesh_def.file);
         if let Some(p) = &found {
@@ -312,14 +319,14 @@ fn spawn_object(
                 alpha: m.alpha_mode,
                 hidden_by_variable: m.alpha_scale.is_some(),
                 trans_map: None,
-                light_map: None,
+                light_map: super::scenery_objects::light_map_of(m),
                 image: m.text_texture.and_then(|i| {
                     let tt = sco.text_textures.get(i)?;
                     let Some(text) = resolve_text(
                         tt.string_index,
                         tt.string_var.as_deref(),
                         &obj.string_vars,
-                        &[],
+                        &string_names,
                     ) else {
                         tracing::error!(at = %opts_bevy::position_tag(),
                             sco = %sco_path.display(),
@@ -356,9 +363,9 @@ fn spawn_object(
             materials,
             images,
         };
-        parts.extend(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
+        mesh_parts.push(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
     }
-    if parts.is_empty() {
+    if mesh_parts.iter().all(Vec::is_empty) {
         if sco.meshes.is_empty() {
             tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
             stats.objects_no_geometry += 1;
@@ -380,8 +387,14 @@ fn spawn_object(
         .unwrap_or_else(|| obj.sco_file.clone());
     let parent = commands.spawn((transform, Name::new(name))).id();
     children.push(parent);
-    stats.scene_vertices += parts.iter().map(|p| p.vertices).sum::<usize>();
-    attach_model_parts(commands, parent, &parts, "Mesh");
+    stats.scene_vertices += mesh_parts
+        .iter()
+        .flatten()
+        .map(|p| p.vertices)
+        .sum::<usize>();
+    job.finish_object(
+        commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
+    );
     stats.objects_loaded += 1;
 }
 
@@ -541,7 +554,10 @@ pub fn stream_world_tiles(
 
 impl WorldLoadJob {
     /// Re-queues tiles whose background mesh decoding finished and refreshes the counters.
-    fn rebuild_decoded_tiles(&mut self, commands: &mut Commands, stats: &mut WorldStats) {
+    ///
+    /// [`stream_world_tiles`] calls it every frame; a host that drives [`load_next_tile`] itself
+    /// (the scenery benchmark, M-0054) calls it to learn when decoded meshes are ready.
+    pub fn rebuild_decoded_tiles(&mut self, commands: &mut Commands, stats: &mut WorldStats) {
         let Some(pool) = self.cache.decode_pool.clone() else {
             return;
         };

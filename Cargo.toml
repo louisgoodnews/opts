@@ -21,6 +21,7 @@ tracing = { workspace = true }
 [workspace]
 resolver = "2"
 members = [
+    "crates/opts-benchmark",
     "crates/opts-bevy",
     "crates/opts-catalogue",
     "crates/opts-cli",
@@ -46,6 +47,7 @@ categories = ["game-development", "simulation"]
 
 [workspace.dependencies]
 # --- Internal Crates ---
+opts-benchmark = { path = "crates/opts-benchmark" }
 opts-bevy = { path = "crates/opts-bevy" }
 opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }

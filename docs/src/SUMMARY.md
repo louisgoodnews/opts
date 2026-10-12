@@ -59,6 +59,7 @@
   - [M-0047: Bevy 0.20 Upgrade](roadmap/phase-5/M-0047.md)
   - [M-0048: DLSS Upscaling](roadmap/phase-5/M-0048.md)
   - [M-0052: Repository Hosting, CI & Commit Gate](roadmap/phase-5/M-0052.md)
+  - [M-0054: Scenery Object Load Verification](roadmap/phase-5/M-0054.md)
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
   - [M-0032: Repaints & Liveries](roadmap/phase-6/M-0032.md)
   - [M-0051: Editor Mode](roadmap/phase-6/M-0051.md)
@@ -119,6 +120,8 @@
 - [F1 Reporting Feature](architecture/reporting-feature.md)
 - [Control Protocol](architecture/control-protocol.md)
 - [Hot Reload](architecture/hot-reload.md)
+- [Scenery Object Load Verification](architecture/scenery-benchmark.md)
+- [Scenery Object Runtime](architecture/scenery-runtime.md)
 
 
 ---

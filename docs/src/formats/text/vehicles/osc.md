@@ -147,10 +147,12 @@ Eight local scratch registers hold values across expression parts.
 
 | Token | Operation |
 | :--- | :--- |
-| `s0` … `s7` | Pop and store into register N. |
+| `s0` … `s7` | Store the top of the stack into register N; the value stays on the stack. |
 | `l0` … `l7` | Push register N. |
 
 `s0 0.8 > l0 0.2 < ||` stores the top, then tests it twice. Registers are **local to a block run** and not preserved between triggers or frames.
+
+**Stores do not pop** (corpus-verified 2026-10-11, scenery runtime work): read as popping, the installed scripts underflow the float stack at **233,472** sites in the 1,218 vehicle script sets (60 frames each, `example vehicle_scripts`) and they cause most of the 2,425 run-time diagnostics of the 2,822 scenery script sets (`opts-bevy` `example scenery_scripts`, 20 simulated seconds each); read as non-popping, **4** and **14** underflow sites remain. Typical idioms that need it: `(L.S.Month) s0 3 > l0 11 < &&` (season switch) and `1 (S.L.a) (S.L.b)`. The string store `(S.$.name)` still pops (unverified ❓).
 
 ### Operators
 
@@ -290,6 +292,7 @@ OMSI is lenient about leftover values on the stack (the original scripts leave e
 | T-OSC-001 | `2 3 + (S.L.x)` | `x = 5` |
 | T-OSC-002 | `1 {if} 7 (S.L.x) {endif}` | `x = 7` |
 | T-OSC-003 | `0 {if} 1 {else} 2 {endif} (S.L.x)` | `x = 2` |
+| T-OSC-010 | `4 s0 3 > (S.L.a) l0 (S.L.b) (S.L.c)` | `a = 1`, `b = c = 4` (stores keep the value on the stack) |
 | T-OSC-004 | `'only a comment` | no tokens |
 | T-OSC-005 | `5 s3 l3 l3 +` | pushes `10` |
 | T-OSC-006 | `"a" "b" $+ (S.$.s)` | `s = "ab"` |

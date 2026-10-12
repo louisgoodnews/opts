@@ -226,6 +226,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](phase-5/M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](phase-5/M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
+- [ ] **🔬 Scenery Object Load Verification** — [M-0054](phase-5/M-0054.md) (spec: [scenery benchmark](../architecture/scenery-benchmark.md))
+  - [x] Specify the `opts-benchmark` scenery harness: one-tile generated map, one object at a time, off-screen capture, automatic placement/geometry/texture checks, script-effect checks, report format (Phase A).
+  - [ ] Implement the harness with static checks and calibrate thresholds (Phase B).
+  - [ ] Script-effect checks; audio recorded only (Phase C, needs a scenery-script runtime).
+  - [ ] Full corpus run and triage report (Phase D); fixes by failure category (Phase E).
 
 ---
 

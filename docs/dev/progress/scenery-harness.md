@@ -1,0 +1,69 @@
+# Scenery harness (M-0054 Phase B): progress
+
+Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-scenery-harness`. A replacement agent reads this file first and continues with the first unfinished batch. Large data lives in `~/.local/share/opts/benchmark/dev/` (never in the repository).
+
+## Batches
+
+| Batch | Status |
+| :--- | :--- |
+| H0 Assess | done (see "State found") |
+| H1 Single object end to end | done |
+| H2 Static check and seeded faults | done |
+| H3 Run control (crash/hang recovery) | done |
+| H4 Text-texture check, corpus preflight | done |
+| H5 Sample run, performance | done |
+| H6 Calibration (sub-batches of ~50) | done (done as one iterative batch, not in sub-batches; labels 145) |
+| H7 Close-out | done |
+
+## Commands
+
+```fish
+cd /home/louisgoodnews/Dokumente/opts-wt-scenery-harness
+# all gates (throwaway XDG dirs; prints one line per gate)
+~/.local/share/opts/benchmark/dev/gates.sh
+# a run (always throwaway config/data dirs; catalogue copy and cache are read only)
+set -x XDG_CONFIG_HOME (mktemp -d); set -x XDG_DATA_HOME (mktemp -d)
+cargo run -q -p opts-benchmark -- scenery run --omsi-path "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2" \
+  --out ~/.local/share/opts/benchmark/dev/runs --workers 1 --list ~/.local/share/opts/benchmark/dev/h1.list \
+  --catalogue ~/.local/share/opts/benchmark/dev/catalogue.db --keep-images all --cache-dir ~/.cache/opts
+```
+
+`catalogue.db*` in the dev directory is a copy of the game's catalogue (the live one has a WAL).
+
+## State found (H0)
+
+- The 4 commits contain a nearly complete crate (about 4,800 lines): corpus, preflight, mapgen, worker, capture, framing, CPU rasteriser, metrics, verdict, diag, supervisor, report, CLI. It compiles, and all 24 unit tests and all gates (fmt, clippy, test, doc, links, roadmap) pass.
+- A 5-object smoke run (`h1.list`) works: windowless rendering, matting, silhouette comparison, results/CSV/report/images/repro. Warm objects take 50 ms to 1 s.
+- The spec header claimed "thresholds calibrated on a sample"; that is not true (no labels exist). Corrected in H0.
+- Not verified yet / missing against the spec: seeded-fault tests (only `heading-mirror`, `offset-10m`, `scale-2x` exist as CLI faults; removed texture and removed mesh are missing), crash/hang recovery test, resume test, text-texture check evidence, any 1,000-object run, calibration.
+- Smoke finding: `car_park.sco` (class `carpark-marker`) fails with `F-LOAD-ERROR` because the generated map has no `parklist_p.txt` (artifact of the benchmark, to handle in H1/H2).
+
+## Results so far
+
+H0: 5-object smoke run, 4 pass, 1 fail (car_park, see above).
+
+## Open problems
+
+- GPU-less CI (software Vulkan) not verified (Q-SB-01 second half).
+
+H1: `h1.list` (Academica building, Adalst100 building, Trees_MC/arbor_1 tree, Generic/entrypoint_bus editor-only anchor, Generic/car_park carpark marker) all pass with `DISPLAY`/`WAYLAND_DISPLAY` unset (windowless rendering, Q-SB-01 recorded in the spec). Mask/diff/rgb/expected images and the result record were written. Fix: the carpark marker produced a benchmark artifact error ("map has parking bays but no parklist_p.txt"), now ignored in `diag.rs`. First object of a run costs about 1 s (cold), warm objects 50 ms.
+
+H2: `crates/opts-benchmark/tests/seeded_faults.rs` (synthetic root, hand-written `.x`) catches mirrored heading, 2x scale, 10 m offset, removed texture, removed mesh with the expected categories (all pass on the first run; about 2 s). Added 4 verdict unit tests (28 lib tests). Expected silhouette, metrics and categories already existed in code and match the spec table.
+
+H3: `tests/run_control.rs` (real binary, synthetic root, `OPTS_BENCH_INJECT` hook): crash gives F-CRASH, hang gives F-TIMEOUT, recycling and resume work, run continues. Found and fixed a lost-object race (Result before Recycle). Test takes about 24 s.
+
+H4: new command `opts-benchmark scenery preflight --omsi-path <root> --out <jsonl> [--catalogue db]` (CPU only; whole corpus in seconds; output `~/.local/share/opts/benchmark/dev/preflight.jsonl` has class/tags/text strings per object, use it to stratify samples). New class `help-arrow`; text source without string maps to `F-TEXT-NOT-SHOWN`; unreadable tiles are logged (61, old version 10). 12 text objects run (`h4.list`): text check discriminates (Parkleit_li pass, blank signs fail). Open: `routearrow_R` renders empty (alpha 100 %), to be judged in calibration.
+
+H5: sample list `~/.local/share/opts/benchmark/dev/h5.list` (1,018 stratified objects), runs under `~/.local/share/opts/benchmark/dev/runs/`. Release build (`cargo build --release -p opts-benchmark`; scripts `runrel.sh`, `stats.py` in the dev dir). 1 worker 2:44, 3 workers 25.7 s, identical verdicts in both runs, no crash. Verdicts: pass 657, fail 338, unknown 23. Categories: F-TEXT-NOT-SHOWN 95, F-EDITOR-RENDERED 79, F-RENDER-EMPTY 66, F-TEX-MISSING 57, F-XFORM-SCALE 28, F-MESH-PROTECTED 26, F-GEOM-PARTIAL 26, F-XFORM-OFFSET 10, F-MESH-MISSING 10, F-LOAD-ERROR 7, F-SCO-PARSE 4. Too many failures for a clean corpus: H6 must separate real OPTS faults from benchmark false positives (suspects: F-EDITOR-RENDERED 79 of 60 editor-only? includes help-arrow, text check on tiny glyphs, F-XFORM-SCALE).
+
+H6: calibration set `h6.list` (265 objects drawn by class x verdict x category from the 1,018 sample), labels `~/.local/share/opts/benchmark/dev/labels.json` (145: 90 visual, 55 diagnostic; script `mklabels.py` maps contact-sheet indices to keys, `conf.py` prints the confusion matrix, `sheet.py`/`grid.py` make contact sheets with the dev venv `venv/bin/python`). Final matrix: label pass 65 pass / 3 unknown / 0 fail; label fail 0 pass / 3 unknown / 74 fail. Held-out look at 25 objects fixed the text threshold. Changes: back-face culled expectation (sign verified, IoU .97), `[matl_alpha] 0` opaque, alpha rules (`unknown` instead of fail), text close-ups from both sides with changed-pixel share, help-arrow, tree+onlyeditor (Q-SB-13), derived-category suppression. Sample result 1,018 objects: pass 856, fail 115, unknown 47. Geometric categories never fired on the sample (only the seeded test covers them).
+Resume hint: nothing to resume in H6; thresholds are in `verdict::Thresholds::default()` and the spec table.
+
+H7: `docs/crates/opts-benchmark.md`, BOARD, M-0054, spec updated. Final release timing (final code): 1 worker 1:41, 3 workers 22 s for 1,018 objects. The sample runs shared and grew the user's decoder cache (`~/.cache/opts/descramble`, 4,287 -> 4,913 entries; it is a content cache, harmless). Final gate run green (see last commit).
+
+## Open problems (for the reader of the report)
+
+- GPU-less CI (software Vulkan) not verified.
+- Geometric thresholds only covered by the seeded-fault test (no real object triggered them).
+- Q-SB-13 (`[tree]` + `[onlyeditor]`), 61 unparsed v10 tiles, `[matl_alpha] 0` loader finding, text sources with named variables.
+- Phase C (script effects) not implemented: `script_check.rs` is the extension point, `S-NOT-RUN` is reported.

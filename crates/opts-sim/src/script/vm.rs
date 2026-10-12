@@ -123,6 +123,17 @@ impl ScriptEngine {
         }
     }
 
+    /// The top of the float stack without removing it (`s0`…`s7`).
+    fn peek(&mut self, st: &mut Stacks, block: usize, pc: usize) -> f32 {
+        match st.numbers.last() {
+            Some(v) => *v,
+            None => {
+                self.report_underflow(block, pc);
+                0.0
+            }
+        }
+    }
+
     fn report_underflow(&mut self, block: usize, pc: usize) {
         let site = ((block as u32) << 16) | (pc as u32 & 0xFFFF);
         if self.missing_seen.insert((3, site)) {
@@ -184,7 +195,7 @@ impl ScriptEngine {
             }
             Op::Jump(t) => return Some(t as usize),
             Op::LoadReg(r) => st.numbers.push(regs[usize::from(r)]),
-            Op::StoreReg(r) => regs[usize::from(r)] = self.pop(st, block, pc),
+            Op::StoreReg(r) => regs[usize::from(r)] = self.peek(st, block, pc),
             other => self.step_data(other, depth, st, block, pc),
         }
         None
@@ -198,9 +209,8 @@ impl ScriptEngine {
             // (the idiom runs through the original scripts; with a popping store the second
             // variable would read an empty stack).
             Op::Store(id) => {
-                let v = self.pop(st, block, pc);
+                let v = self.peek(st, block, pc);
                 self.vars.set_float(id, v);
-                st.numbers.push(v);
             }
             Op::LoadStr(id) => st.strings.push(self.vars.string(id).to_owned()),
             Op::StoreStr(id) => {

@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-11 by Agent (critical review 2026-10-11: status reconciliation and roadmap expansion)_
+_Last updated: 2026-10-12 by Agent (M-0054 Phase B harness finished)_
 
 ---
 
@@ -85,7 +85,7 @@ _Work actively being executed in the current session._
 
 > ⚠️ WIP is 4 (target ≤ 1): several milestones are active at once (critical review 2026-10-11, F-014). Listed as they are, not as they should be.
 
-- `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; these are the open Phase C/D items.
+- `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12); these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
 - `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
@@ -122,6 +122,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 - [ ] 🟡 **Extend articulation.md with the coupled physics model and pitch rule** (M-0053, spec) — F-002, F-003.
 - [ ] 🟡 **Specify the passenger model (`docs/src/simulation/passengers.md`)** (M-0050, spec) — before any stop/boarding code (F-023).
+- [x] 🔴 **Scenery benchmark: verify off-screen rendering (Q-SB-01) and build the `opts-benchmark` worker skeleton** (M-0054, code) — generated one-tile map, `begin_world_load` + `plan_reload` per object, two-view black/white capture, `results.jsonl`; spec [scenery-benchmark.md](../src/architecture/scenery-benchmark.md). **Done 2026-10-12** (windowless; harness complete, calibrated).
 
 ---
 
@@ -214,6 +215,15 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0042 — CI & Toolchain Hardening
 - [~] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — files exist; `binrw 0.13.4` future-incompat warning remains.
 - [ ] 🟡 **Run F1 keyboard checklist; add headless key-event test** (M-0042, test) — F-026.
+
+#### M-0054 — Scenery Object Load Verification (`opts-benchmark`)
+- [x] 🔴 **Preflight, CPU rasteriser, metrics and verdicts; map writers in `opts-core`** (M-0054, code) — Phase B. **Done 2026-10-12.**
+- [x] 🔴 **Supervisor: shards, crash/hang restart, resume, isolated settings** (M-0054, code) — Phase B (Q-SB-08, Q-SB-09). **Done 2026-10-12** (`tests/run_control.rs`).
+- [x] 🟠 **Missing-texture sentinel and per-object diagnostics capture** (M-0054, code) — Phase B. **Done 2026-10-12.**
+- [x] 🟠 **Measure 1,000-object sample; calibrate thresholds on 200 labelled objects** (M-0054, test) — Phase B (Q-SB-02). **Done 2026-10-12** (1,018 objects: 2:44 with 1 worker, 26 s with 3; 145 labels).
+- [x] 🟡 **Decide the owner of the scenery-script runtime** (M-0054/M-0026, decision) — done 2026-10-12: `opts_bevy::scenery_runtime` on the shared `opts_sim` VM ([spec](../src/architecture/scenery-runtime.md)).
+- [ ] 🟡 **Script-effect checks S0–S5; audio recorded only** (M-0054, code) — Phase C.
+- [ ] 🟡 **Full corpus run and triage report; one BOARD item per failure category** (M-0054, docs) — Phase D.
 
 #### Phase 4 — Simulation & Transit Follow-ups
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for passenger traversal in `opts-sim` (Phase 4, code) — after `passengers.md` (M-0050).

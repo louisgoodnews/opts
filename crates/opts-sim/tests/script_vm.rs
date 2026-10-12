@@ -30,6 +30,17 @@ fn t_osc_001b_store_keeps_the_value_for_chained_stores() {
 }
 
 #[test]
+fn t_osc_010_stores_keep_the_value_on_the_stack() {
+    let e = run("4 s0 3 > (S.L.a) l0 (S.L.b) (S.L.c)");
+    assert_eq!((e.get("a"), e.get("b"), e.get("c")), (1.0, 4.0, 4.0));
+    let mut e = e;
+    assert!(
+        e.drain_diagnostics().is_empty(),
+        "no stack underflow for the season-switch idiom"
+    );
+}
+
+#[test]
 fn t_osc_002_if_taken() {
     assert_eq!(run("1 {if} 7 (S.L.x) {endif}").get("x"), 7.0);
 }

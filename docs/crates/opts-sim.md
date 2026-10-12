@@ -66,7 +66,7 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
 
 ### 7. OMSI Script Engine (`opts_sim::script`)
 - `ScriptEngine`: compiles a vehicle's `.osc` files to bytecode and runs them on a stack machine. Per frame the host sets system values, calls `run_frame`/`trigger`, reads variables and drains events. The engine is deterministic, apart from a seeded random generator.
-- `tokenize`/`Token` (lexer), the compiler, `VariableStore`, `ConstTable`, `Curve`, `Interner` and `Stacks` (string stack), plus `load_vehicle_scripts`, which loads the script, constfile and varlist sets named by a `.bus`.
+- `tokenize`/`Token` (lexer), the compiler, `VariableStore`, `ConstTable`, `Curve`, `Interner` and `Stacks` (string stack), plus `load_vehicle_scripts` and `load_scenery_scripts`, which load the script, constfile, varlist and string-list sets named by a `.bus` or a `.sco` (one shared loader, `script::load`). `ScriptEngine::fork` gives a placed scenery object its own variables on a shared compiled program.
 - Design: [Script VM](../src/architecture/script-vm.md); language: [`.osc`](../src/formats/text/vehicles/osc.md). It compiles all 6,062 corpus scripts (M-0026).
 
 ### 8. Pedestrians (`opts_sim::pedestrian`)
