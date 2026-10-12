@@ -107,6 +107,10 @@ fn click(world: &mut World, params: &Value) -> Outcome {
         Ok(i) => i.to_string(),
         Err(e) => return Outcome::err(e),
     };
+    let count = match crate::control::params::opt_u64(params, "count") {
+        Ok(c) => c.unwrap_or(1).clamp(1, 1000),
+        Err(e) => return Outcome::err(e),
+    };
     let Some(entity) = find_entity(world, &id) else {
         return not_found(&id);
     };
@@ -114,6 +118,17 @@ fn click(world: &mut World, params: &Value) -> Outcome {
     let Some(node) = snap.find(&id) else {
         return not_found(&id);
     };
+    let modals = super::ui_ext::open_modals(world);
+    if !modals.is_empty()
+        && !modals
+            .iter()
+            .any(|m| super::ui_ext::is_inside(world, entity, *m))
+    {
+        return Outcome::err(RpcError::new(
+            code::GATED,
+            format!("`{id}` is behind an open dialog"),
+        ));
+    }
     if !node.state.visible {
         return Outcome::err(RpcError::new(
             code::NOT_READY,
@@ -132,10 +147,12 @@ fn click(world: &mut World, params: &Value) -> Outcome {
             world.write_message(FocusEvent::Set(input));
         }
         None => {
-            world.write_message(Activated(entity));
+            for _ in 0..count {
+                world.write_message(Activated(entity));
+            }
         }
     }
-    Outcome::ok(json!({ "ok": true, "id": id }))
+    Outcome::ok(json!({ "ok": true, "id": id, "count": count }))
 }
 
 fn focus(world: &mut World, params: &Value) -> Outcome {

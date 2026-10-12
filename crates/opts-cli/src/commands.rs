@@ -18,6 +18,89 @@ pub struct CommandSpec {
     pub summary: &'static str,
     /// Parameter declaration (see the module docs); empty for none.
     pub params: &'static str,
+    /// Protocol version that introduced the method (`1.0`, `1.1`, ...).
+    pub since: &'static str,
+    /// What the result contains (one line); empty when it is only `{ok:true}`.
+    pub result: &'static str,
+    /// Longer description: semantics, gating, caveats; empty when the summary says it all.
+    pub doc: &'static str,
+    /// A debug command that deliberately skips the input layer and its gates (documented as such).
+    pub debug: bool,
+}
+
+impl CommandSpec {
+    /// Sets the version that introduced the method.
+    #[must_use]
+    pub const fn since(mut self, v: &'static str) -> Self {
+        self.since = v;
+        self
+    }
+
+    /// Sets the result description.
+    #[must_use]
+    pub const fn result(mut self, r: &'static str) -> Self {
+        self.result = r;
+        self
+    }
+
+    /// Sets the long description.
+    #[must_use]
+    pub const fn doc(mut self, d: &'static str) -> Self {
+        self.doc = d;
+        self
+    }
+
+    /// Marks a debug command that bypasses the input layer.
+    #[must_use]
+    pub const fn debug(mut self) -> Self {
+        self.debug = true;
+        self
+    }
+
+    /// The parameters as `{name, type, required, position, aliases, values}` objects.
+    #[must_use]
+    pub fn args_schema(&self) -> Value {
+        Value::Array(
+            parse_decls(self.params)
+                .iter()
+                .map(|d| {
+                    let ty = match d.kind {
+                        Kind::Str => "string",
+                        Kind::Int => "integer",
+                        Kind::Float => "number",
+                        Kind::Bool => "boolean",
+                        Kind::Json => "json",
+                    };
+                    let mut o = json!({
+                        "name": d.name,
+                        "type": ty,
+                        "required": !d.optional,
+                        "position": d.position,
+                        "aliases": d.aliases,
+                    });
+                    if !d.values.is_empty() {
+                        o["values"] = json!(d.values);
+                    }
+                    o
+                })
+                .collect(),
+        )
+    }
+
+    /// The full descriptor as sent by `help` and `commands`.
+    #[must_use]
+    pub fn descriptor_json(&self) -> Value {
+        json!({
+            "method": self.method,
+            "group": self.group,
+            "summary": self.summary,
+            "since": self.since,
+            "args": self.args_schema(),
+            "result": self.result,
+            "doc": self.doc,
+            "debug": self.debug,
+        })
+    }
 }
 
 const fn c(
@@ -31,6 +114,10 @@ const fn c(
         group,
         summary,
         params,
+        since: "1.0",
+        result: "",
+        doc: "",
+        debug: false,
     }
 }
 
@@ -38,7 +125,13 @@ const fn c(
 pub const COMMANDS: &[CommandSpec] = &[
     c("ping", "meta", "Check that the server answers", ""),
     c("version", "meta", "App and protocol version", ""),
-    c("help", "meta", "Describe one command", "command:s@0?"),
+    c(
+        "help",
+        "meta",
+        "Describe one command (or list all)",
+        "command:s@0?",
+    )
+    .result("`{command, group, summary, since, args, result, doc, debug, implemented}`; without `command` a list of `{method, summary}`"),
     c("capabilities", "meta", "List all commands by group", ""),
     c(
         "auth",
@@ -74,7 +167,13 @@ pub const COMMANDS: &[CommandSpec] = &[
         "The UI as a tree: id, role, label, state, rect, focusable",
         "visible_only:b?",
     ),
-    c("ui.click", "ui", "Activate an element by id", "id:s@0"),
+    c(
+        "ui.click",
+        "ui",
+        "Activate an element by id (a text field gets focus)",
+        "id:s@0 count:i?",
+    )
+    .doc("`count` activates the element that many times (stepper buttons like `settings/<category>/<key>/up`); each activation is a separate message, as separate clicks would be."),
     c(
         "ui.focus",
         "ui",
@@ -131,7 +230,8 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Scroll the wheel",
         "delta:f@0",
     ),
-    c("sim.pause", "sim", "Pause the simulation", ""),
+    c("sim.pause", "sim", "Pause the simulation", "")
+    .doc("Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause overlay; the overlay is reached with `ui.action menu` or `ui.key Escape`."),
     c("sim.resume", "sim", "Resume the simulation", ""),
     c(
         "sim.step",
@@ -156,8 +256,12 @@ pub const COMMANDS: &[CommandSpec] = &[
         "scene",
         "Start a session on a map",
         "path:s@0 entry:s?",
-    ),
-    c("scene.unload", "scene", "Return to the main menu", ""),
+    )
+    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).")
+    .debug(),
+    c("scene.unload", "scene", "Return to the main menu", "")
+    .doc("A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).")
+    .debug(),
     c(
         "camera.set_mode",
         "scene",
@@ -169,7 +273,8 @@ pub const COMMANDS: &[CommandSpec] = &[
         "scene",
         "Move the camera (OMSI coordinates)",
         "x:f@0 y:f@1 z:f@2 yaw:f? pitch:f?",
-    ),
+    )
+    .debug(),
     c(
         "render.look",
         "scene",
@@ -205,7 +310,8 @@ pub const COMMANDS: &[CommandSpec] = &[
         "scene",
         "Replace the player vehicle",
         "path:s@0",
-    ),
+    )
+    .debug(),
     c(
         "entity.spawn",
         "scene",
@@ -260,6 +366,258 @@ pub const COMMANDS: &[CommandSpec] = &[
         "File a report (screenshot + text)",
         "text:s@0",
     ),
+    // ---- protocol 1.1: discovery -------------------------------------------------------------
+    c(
+        "commands",
+        "meta",
+        "Every command with its argument schema, result and documentation",
+        "group:s?",
+    )
+    .since("1.1")
+    .result("`{protocol_version, count, commands:[{method, group, summary, since, args, result, doc, debug, implemented}]}`")
+    .doc("The machine-readable form of the generated reference. `args` entries are `{name, type, required, position, aliases, values?}`; `debug` marks commands that skip the input layer on purpose."),
+    // ---- protocol 1.1: UI -------------------------------------------------------------------
+    c(
+        "ui.screen",
+        "ui",
+        "Where the app is: state, screen, open dialogs, toasts, focus, scrollables",
+        "",
+    )
+    .since("1.1")
+    .result("`{app_state, screen, modal_open, dialogs:[{id, tag?, title, buttons}], toasts:[...], focus, back_stack, scrollables}`")
+    .doc("One call that answers \"what is on screen and what can I do now\". `dialogs` lists every open modal with the ids of its buttons, so a script can answer a confirmation without reading the whole tree."),
+    c(
+        "ui.scrollables",
+        "ui",
+        "List the scrollable views with offset, content size and position",
+        "visible_only:b?",
+    )
+    .since("1.1")
+    .result("`{count, scrollables:[{id, owner, rect, offset, viewport, content, max, at_top, at_bottom, items:[id...]}]}`")
+    .doc("`id` is what `ui.scroll target` takes: the element's own id, else `<nearest id>/scroll` (suffix `-2`, `-3` for duplicates). `items` are the ids of the elements inside the view in layout order, so `ui.scroll item` can reveal any of them."),
+    c(
+        "ui.scroll",
+        "ui",
+        "Scroll a view by an amount, by pages, to the top or bottom, or to an item",
+        "target:s? by:f? dx:f? pages:f? to:s[top|bottom|left|right]? item:s?",
+    )
+    .since("1.1")
+    .result("the scrollable after the move (as in `ui.scrollables`) plus `moved`")
+    .doc("Without `target` the view under focus is used, else the first visible one; while a dialog is open only views inside it can be scrolled (`1009` otherwise). Exactly one of `by` (logical pixels, positive scrolls down), `dx`, `pages` (viewport heights), `to` or `item` is needed. `item` reveals the element with that id (the same effect as focusing it); `1004` when the item is not inside the view."),
+    c(
+        "ui.text",
+        "ui",
+        "Type text into a text field (optionally by id; replaces the content by default)",
+        "text:s@0 id:s@1? replace:b? submit:b?",
+    )
+    .since("1.1")
+    .result("`{ok, id, value}` - the field's content once the text has arrived")
+    .doc("Focuses the field `id` (like a click), clears it when `replace` is true (the default) and types the text as keyboard events, so validation, search-as-you-type and the settings search react exactly as for a person. `submit` presses Enter afterwards. Without `id` the focused field receives the text. `1001` when the field is disabled, hidden or behind a dialog."),
+    c(
+        "ui.select",
+        "ui",
+        "Choose an option of a combo box, a tab, a radio or a list row",
+        "id:s@0 option:s@1? index:i?",
+    )
+    .since("1.1")
+    .result("`{ok, id, selected}`")
+    .doc("For a combo box `option` is the visible text (or `index` the position): the drop-down is opened and the entry activated like clicks. For a tab, radio or list row no option is needed. Disabled targets answer `1001` with the reason."),
+    c(
+        "ui.toggle",
+        "ui",
+        "Set a switch, check box or radio to on or off (or flip it)",
+        "id:s@0 value:b@1?",
+    )
+    .since("1.1")
+    .result("`{ok, id, checked, changed}`")
+    .doc("Only activates the element when its state differs from `value`; without `value` it flips. Settings with a revert prompt open the prompt as for a click."),
+    c(
+        "ui.hover",
+        "ui",
+        "Move the pointer over an element (tooltips, hover states)",
+        "id:s@0",
+    )
+    .since("1.1")
+    .result("`{ok, id, pos}` with the pointer position in logical pixels")
+    .doc("Places the cursor at the centre of the element's rectangle and reports it to the window like a mouse move, so picking, hover states and tooltips behave as for a person. `1001` for an element without a rectangle (not laid out or hidden)."),
+    c(
+        "ui.key",
+        "ui",
+        "Press a key with modifiers (Ctrl, Shift, Alt) through the input layer",
+        "key:s@0 ctrl:b? shift:b? alt:b? duration_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, key, modifiers}`")
+    .doc("Presses the modifiers, then the key, and releases everything after `duration_ms` (default 50). The events are ordinary keyboard events, so shortcuts (`Ctrl+F`, `Ctrl+Tab`) and gating are the same as for a keyboard."),
+    c(
+        "ui.drag",
+        "ui",
+        "Drag from one element to another element or by an offset",
+        "from:s@0 to:s@1? dx:f? dy:f? steps:i?",
+    )
+    .since("1.1")
+    .result("`{ok, from, to?, from_pos, to_pos}` once the button is released")
+    .doc("Presses the left button on the centre of `from`, moves the cursor in `steps` frames (default 8) to the centre of `to` or by `(dx, dy)` logical pixels and releases. Answers after the release."),
+    c(
+        "ui.wait_for",
+        "ui",
+        "Wait until a condition holds (element, screen, dialog, app state, speed, ...)",
+        "until:s[exists|visible|gone|enabled|disabled|focused|checked|text|screen|dialog|no_dialog|app_state|hud_ready|speed_above|speed_below|distance_above|paused|running|sim_time_above]@0 id:s@1? value:s? number:f? timeout_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, until, waited_ms}` on success; error `1005` with `data.last` (the last observed value) when `timeout_ms` (default 10000, at most 120000) passes first")
+    .doc("Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time. Use it instead of sleeping."),
+    // ---- protocol 1.1: driving --------------------------------------------------------------
+    c(
+        "drive.controls",
+        "drive",
+        "List every vehicle control by name with its kind, range and current value",
+        "",
+    )
+    .since("1.1")
+    .result("`{vehicle, controls:[{name, kind, range?, value, bound?}], triggers:[{name, key, held}]}`")
+    .doc("`throttle`, `brake`, `steer`, `gear`, `parking_brake` are built in; `triggers` are the script triggers the vehicle's keyboard bindings can raise (doors, lights, indicators, horn, ... named as in the vehicle's scripts), usable with `drive.trigger` and `drive.set`."),
+    c(
+        "drive.set",
+        "drive",
+        "Set a vehicle control by name, optionally held for a duration",
+        "control:s@0 value:j@1 hold_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, control, value, hold_ms?}`")
+    .doc("`throttle`/`brake` take 0..1, `steer` -1 (left)..1 (right), `gear` `drive|neutral|reverse`, `parking_brake` true/false/`toggle`; any other name is raised as a script trigger (`horn`, `bus_doorfront0`, ...). Analog values stay set for `hold_ms` of **simulation time** (while the sim is paused the time does not run) or, without it, until set again or released with `drive.release`. The values reach the vehicle through the same system as the keyboard, so they are ignored while a dialog is open or the vehicle does not take input (`1009`)."),
+    c(
+        "drive.release",
+        "drive",
+        "Release held controls (one by name, or all)",
+        "control:s@0?",
+    )
+    .since("1.1"),
+    c(
+        "drive.trigger",
+        "drive",
+        "Raise a vehicle script trigger (doors, lights, indicators, horn, ...)",
+        "name:s@0 hold_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, name, handled, held_ms?}`")
+    .doc("Raises `<name>`; for a binding that is held (like the horn) `<name>_off` follows after `hold_ms` of simulation time (default 200). `handled` says whether a script of the vehicle reacted. An unbound name is raised as is. Gated like a key press."),
+    c(
+        "drive.state",
+        "drive",
+        "Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state",
+        "",
+    )
+    .since("1.1")
+    .result("`{speed_kmh, signed_speed_kmh, x, y, z, heading_deg, gear, throttle, brake, steer, parking_brake, rpm?, distance_m, camera, paused, time_scale, sim_time, alert?, route, stops}`")
+    .doc("`distance_m` is the path length driven since the session (or the last `vehicle.reset`) started. `route` and `stops` are `null`: the timetable is not implemented yet (`not available yet`); `alert` is the HUD alert on screen, if any."),
+    c(
+        "vehicle.teleport",
+        "drive",
+        "Place the player vehicle at an absolute OMSI position and heading, standing still",
+        "x:f@0 y:f@1 heading_deg:f?",
+    )
+    .since("1.1")
+    .doc("A debug command: it moves the vehicle directly (speed zero, controls neutral) without any gate. Coordinates are absolute OMSI metres as in `vehicle.get`.")
+    .debug(),
+    c(
+        "vehicle.reset",
+        "drive",
+        "Put the player vehicle back where the session placed it, standing still",
+        "",
+    )
+    .since("1.1")
+    .doc("A debug command: restores the start position, zeroes speed and the controls and the distance counter.")
+    .debug(),
+    c(
+        "camera.look",
+        "scene",
+        "Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external)",
+        "yaw:f? pitch:f? dx:f? dy:f?",
+    )
+    .since("1.1")
+    .result("`{mode, yaw_deg, pitch_deg}`")
+    .doc("`dx`/`dy` are mouse-motion pixels delivered like a right-drag; `yaw`/`pitch` (degrees, compass yaw) set the free-roam camera directly and answer `1001` in other modes."),
+    c(
+        "camera.move",
+        "scene",
+        "Move the free camera forward/right/up for a duration, like the movement keys",
+        "forward:f? right:f? up:f? duration_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, mode, duration_ms}`")
+    .doc("Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`."),
+    c(
+        "snapshot",
+        "output",
+        "One call that returns everything an agent needs to judge the state, optionally with a screenshot",
+        "path:s@0? screenshot:b? warnings:i?",
+    )
+    .since("1.1")
+    .result("`{state, screen, drive?, hud?, camera, sim, warnings:[log lines], screenshot?}`")
+    .doc("`path` writes the JSON to a file below the reports directory (or an allowed directory). `screenshot` also saves a PNG (the loading screen included) and returns its path. `warnings` is the number of recent `warn`/`error` log lines (default 20)."),
+    c(
+        "batch",
+        "meta",
+        "Run several commands in order in one round trip",
+        "commands:j@0 stop_on_error:b?",
+    )
+    .result("`{results:[{result}|{error}]}` in command order")
+    .doc("At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.load_map`, `ui.drag`) finishes before the next one starts, so a batch is a script: act, wait, observe."),
+    // ---- game methods that existed without a table entry -------------------------------------
+    c(
+        "ui.navigate",
+        "ui",
+        "Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics)",
+        "screen:s@0",
+    )
+    .doc("Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet."),
+    c(
+        "hud.state",
+        "query",
+        "What the HUD shows: widgets, texts, alert, speed, gear",
+        "",
+    ),
+    c(
+        "hud.alert",
+        "debug",
+        "Raise or clear a test alert on the HUD",
+        "severity:s[info|warning|critical]@0? clear:b?",
+    )
+    .debug(),
+    c(
+        "hud.toast",
+        "debug",
+        "Show a test toast",
+        "message:s@0 details:s?",
+    )
+    .debug(),
+    c(
+        "vehicle.get",
+        "query",
+        "Position, heading and speed of the player vehicle (absolute OMSI coordinates)",
+        "",
+    )
+    .result("`{x, y, z, heading_deg, speed_kmh}`"),
+    c(
+        "vehicle.script_vars",
+        "query",
+        "Script variables of the player vehicle (substring filter)",
+        "contains:s@0?",
+    ),
+    c(
+        "menu.do",
+        "scene",
+        "Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...)",
+        "command:s@0",
+    )
+    .doc("Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`."),
+    c(
+        "menu.state",
+        "query",
+        "Page, choices and free entry points of the in-game vehicle menu",
+        "",
+    ),
 ];
 
 /// A spec for methods this client does not know (a newer server): any `name=value` or `--name value`
@@ -267,6 +625,18 @@ pub const COMMANDS: &[CommandSpec] = &[
 #[must_use]
 pub fn generic_spec() -> CommandSpec {
     c("", "", "", "")
+}
+
+/// The group names in table order, without repeats.
+#[must_use]
+pub fn groups() -> Vec<&'static str> {
+    let mut out: Vec<&'static str> = Vec::new();
+    for c in COMMANDS {
+        if !out.contains(&c.group) {
+            out.push(c.group);
+        }
+    }
+    out
 }
 
 /// Looks a method up by name.
@@ -298,6 +668,7 @@ struct ParamDecl<'a> {
     position: Option<usize>,
     optional: bool,
     aliases: Vec<&'a str>,
+    values: Vec<&'a str>,
 }
 
 fn parse_decls(decl: &str) -> Vec<ParamDecl<'_>> {
@@ -314,6 +685,11 @@ fn parse_decls(decl: &str) -> Vec<ParamDecl<'_>> {
                         .unwrap_or(usize::MAX)
                 })
                 .filter(|p| *p != usize::MAX);
+            let values: Vec<&str> = rest
+                .split_once('[')
+                .and_then(|(_, t)| t.split_once(']'))
+                .map(|(v, _)| v.split('|').filter(|x| !x.is_empty()).collect())
+                .unwrap_or_default();
             let kind = match rest.chars().next()? {
                 's' => Kind::Str,
                 'i' => Kind::Int,
@@ -328,6 +704,7 @@ fn parse_decls(decl: &str) -> Vec<ParamDecl<'_>> {
                 position,
                 optional,
                 aliases: aliases.split(',').filter(|a| !a.is_empty()).collect(),
+                values,
             })
         })
         .collect()

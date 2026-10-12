@@ -4,6 +4,8 @@ pub mod app;
 pub mod app_state;
 pub mod catalogue_service;
 pub mod control;
+pub mod control_drive;
+pub mod control_ui;
 pub mod drive_history;
 pub mod first_run;
 pub mod help;

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 /// Version reported by the `version` method; additive changes bump the minor part.
-pub const PROTOCOL_VERSION: &str = "1.0.0";
+pub const PROTOCOL_VERSION: &str = "1.1.0";
 /// Port the control server uses when it is started without an explicit one.
 pub const DEFAULT_PORT: u16 = 44201;
 /// Longest accepted line in bytes.
@@ -43,6 +43,41 @@ pub mod code {
     pub const UNSUPPORTED: i64 = 1007;
     /// The operation ran and failed.
     pub const FAILED: i64 = 1008;
+    /// The input layer refused the command: a dialog or another gate is blocking it (the same
+    /// gate that would swallow a key press).
+    pub const GATED: i64 = 1009;
+
+    /// Every code with its symbolic name and whether retrying later can succeed.
+    pub const ALL: &[(i64, &str, bool, &str)] = &[
+        (PARSE_ERROR, "PARSE_ERROR", false, "the line is not valid JSON"),
+        (INVALID_REQUEST, "INVALID_REQUEST", false, "not a JSON-RPC request object"),
+        (METHOD_NOT_FOUND, "METHOD_NOT_FOUND", false, "unknown method (see `commands`)"),
+        (INVALID_PARAMS, "INVALID_PARAMS", false, "missing, mistyped or out-of-range parameter"),
+        (INTERNAL_ERROR, "INTERNAL_ERROR", false, "handler panicked or failed unexpectedly"),
+        (NOT_READY, "NOT_READY", true, "the app is not in a state in which the command makes sense (no session, wrong screen, element hidden or disabled)"),
+        (FORBIDDEN_PATH, "FORBIDDEN_PATH", false, "path outside the allowed read/write roots"),
+        (UNAUTHORIZED, "UNAUTHORIZED", false, "token missing or wrong"),
+        (NOT_FOUND, "NOT_FOUND", false, "entity, element, asset or file does not exist"),
+        (TIMEOUT, "TIMEOUT", true, "the app (or a `ui.wait_for` condition) did not answer in time"),
+        (BUSY, "BUSY", true, "rate limit exceeded or command queue full"),
+        (UNSUPPORTED, "UNSUPPORTED", false, "specified but not implemented in this build"),
+        (FAILED, "FAILED", false, "the operation ran and failed (`data` carries the cause)"),
+        (GATED, "GATED", true, "the input layer refused the command because a dialog or another gate blocks it, exactly as it would swallow a key press"),
+    ];
+
+    /// The symbolic name of `code`.
+    #[must_use]
+    pub fn name(code: i64) -> &'static str {
+        ALL.iter()
+            .find(|(c, ..)| *c == code)
+            .map_or("UNKNOWN", |(_, n, ..)| n)
+    }
+
+    /// Whether the same call may succeed later without changing its parameters.
+    #[must_use]
+    pub fn retryable(code: i64) -> bool {
+        ALL.iter().any(|(c, _, r, _)| *c == code && *r)
+    }
 }
 
 /// A JSON-RPC request. A request without `id` is a notification and is never answered.
@@ -110,6 +145,28 @@ impl RpcError {
     }
 }
 
+impl RpcError {
+    /// The error as sent on the wire: `data` always is an object carrying `name` (the symbolic
+    /// code) and `retryable`; other details stay as they are.
+    #[must_use]
+    pub fn structured(mut self) -> Self {
+        let mut data = match self.data.take() {
+            Some(Value::Object(m)) => m,
+            Some(other) => {
+                let mut m = serde_json::Map::new();
+                m.insert("detail".into(), other);
+                m
+            }
+            None => serde_json::Map::new(),
+        };
+        data.entry("name").or_insert_with(|| json!(code::name(self.code)));
+        data.entry("retryable")
+            .or_insert_with(|| json!(code::retryable(self.code)));
+        self.data = Some(Value::Object(data));
+        self
+    }
+}
+
 impl std::fmt::Display for RpcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} (code {})", self.message, self.code)
@@ -152,7 +209,7 @@ impl Response {
             jsonrpc: "2.0".into(),
             id,
             result: None,
-            error: Some(error),
+            error: Some(error.structured()),
         }
     }
 

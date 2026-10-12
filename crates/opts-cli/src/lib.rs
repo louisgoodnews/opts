@@ -19,6 +19,7 @@ pub use args::{CliArgs, MIN_WINDOW_SIZE};
 #[cfg(feature = "client")]
 pub mod client;
 pub mod commands;
+pub mod reference;
 #[cfg(feature = "client")]
 pub mod output;
 #[cfg(feature = "client")]

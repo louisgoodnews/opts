@@ -15,6 +15,7 @@ pub fn register(r: &mut ControlRegistry) {
     r.register("version", version);
     r.register("help", help);
     r.register("capabilities", capabilities);
+    r.register("commands", commands_list);
     r.register("shutdown", shutdown);
 }
 
@@ -46,13 +47,13 @@ fn help(world: &mut World, params: &Value) -> Outcome {
         return Outcome::ok(json!({ "commands": all }));
     };
     match commands::find(name) {
-        Some(c) => Outcome::ok(json!({
-            "command": c.method,
-            "group": c.group,
-            "summary": c.summary,
-            "params": c.params,
-            "implemented": registry.contains(c.method),
-        })),
+        Some(c) => {
+            let mut d = c.descriptor_json();
+            d["command"] = json!(c.method);
+            d["params"] = json!(c.params);
+            d["implemented"] = json!(registry.contains(c.method));
+            Outcome::ok(d)
+        }
         None => Outcome::err(RpcError::new(
             code::NOT_FOUND,
             format!("no command `{name}`"),
@@ -68,10 +69,40 @@ fn capabilities(world: &mut World, _: &Value) -> Outcome {
             .entry(c.group.to_string())
             .or_insert_with(|| json!([]));
         if let Some(list) = entry.as_array_mut() {
-            list.push(json!({ "method": c.method, "since": "1.0", "implemented": registry.contains(c.method) }));
+            list.push(json!({ "method": c.method, "since": c.since, "implemented": registry.contains(c.method) }));
         }
     }
     Outcome::ok(json!({ "protocol_version": PROTOCOL_VERSION, "groups": groups }))
+}
+
+fn commands_list(world: &mut World, params: &Value) -> Outcome {
+    let group = match opt_str(params, "group") {
+        Ok(g) => g,
+        Err(e) => return Outcome::err(e),
+    };
+    let registry = world.resource::<ControlRegistry>();
+    let list: Vec<Value> = COMMANDS
+        .iter()
+        .filter(|c| group.is_none_or(|g| c.group == g))
+        .map(|c| {
+            let mut d = c.descriptor_json();
+            d["implemented"] = json!(registry.contains(c.method));
+            d
+        })
+        .collect();
+    if list.is_empty() {
+        return Outcome::err(
+            RpcError::new(code::NOT_FOUND, "no such command group").with_data(json!({
+                "groups": commands::groups(),
+            })),
+        );
+    }
+    Outcome::ok(json!({
+        "protocol_version": PROTOCOL_VERSION,
+        "count": list.len(),
+        "errors": code::ALL.iter().map(|(c, n, r, d)| json!({"code": c, "name": n, "retryable": r, "meaning": d})).collect::<Vec<_>>(),
+        "commands": list,
+    }))
 }
 
 fn shutdown(world: &mut World, params: &Value) -> Outcome {

@@ -46,6 +46,7 @@ pub mod vehicle;
 pub mod vehicle_anim;
 pub mod vehicle_lights;
 pub mod vehicle_script;
+pub mod vehicle_remote;
 pub mod vehicle_sim;
 pub mod vehicle_triggers;
 
