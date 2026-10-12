@@ -94,6 +94,8 @@ keys! {
     FIRSTRUN_OTHER = "firstrun-other",
     /// Message `firstrun-quit`.
     FIRSTRUN_QUIT = "firstrun-quit",
+    /// Message `firstrun-language`: names the *other* language in its own language.
+    FIRSTRUN_LANGUAGE = "firstrun-language",
     /// Message `firstrun-choose-title`.
     FIRSTRUN_CHOOSE_TITLE = "firstrun-choose-title",
     /// Message `firstrun-choose-body`.

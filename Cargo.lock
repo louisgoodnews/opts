@@ -5394,6 +5394,7 @@ dependencies = [
  "arboard",
  "bevy",
  "chrono",
+ "image",
  "opts-core",
  "ron 0.8.1",
  "serde",

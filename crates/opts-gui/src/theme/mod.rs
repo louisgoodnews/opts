@@ -10,6 +10,7 @@ pub mod audit;
 pub mod color;
 pub mod contrast;
 pub mod custom;
+pub mod cvd;
 pub mod elevation;
 #[cfg(feature = "serde")]
 pub mod file;

@@ -46,6 +46,7 @@ firstrun-found-title = Use this OMSI 2 folder?
 firstrun-found-body = OPTS found an OMSI 2 installation at { $path }. OPTS only reads from it; nothing is changed or copied.
 firstrun-use = Use this folder
 firstrun-other = Choose another folder…
+firstrun-language = Deutsch
 firstrun-quit = Quit
 firstrun-choose-title = Where is OMSI 2?
 firstrun-choose-body = OPTS reads maps and vehicles from your own OMSI 2 installation. A valid folder contains the folders "maps" and "Vehicles". The choice is remembered and can be changed in Settings.

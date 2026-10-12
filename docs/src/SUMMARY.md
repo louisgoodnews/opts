@@ -83,6 +83,7 @@
   - [Plan a drive and loading](roadmap/phase-9/wizard-and-loading.md)
   - [Screen specifications](roadmap/phase-9/screens.md)
   - [Expandability](roadmap/phase-9/expandability.md)
+  - [Accessibility audit (WCAG 2.2 AA)](roadmap/phase-9/accessibility-audit.md)
   - [M-0061: UI Foundations](roadmap/phase-9/M-0061.md)
   - [M-0062: App Shell & Flow](roadmap/phase-9/M-0062.md)
   - [M-0063: Settings System](roadmap/phase-9/M-0063.md)
@@ -253,6 +254,7 @@
 
 # 🔍 Meta & Audits
 
+- [Usability Test Protocol (Phase 9, not yet run)](meta/usability-test-protocol.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Bug: Spline Winding / Road Hidden by Terrain (2026-10-10)](meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md)
@@ -323,3 +325,5 @@
 - [Limitations]()
 -->
 - [Settings (generated)](reference/settings.md)
+- [Input devices and profiles](reference/input-devices.md)
+- [Translating OPTS](reference/translating.md)

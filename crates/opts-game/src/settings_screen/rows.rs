@@ -184,6 +184,10 @@ pub fn spawn_control(
                 SettingSwitch(d.key),
                 UiId::new(format!("settings/{}/{}/switch", d.category.id(), d.key)),
                 ChildOf(group),
+                // A switch has no text of its own: the setting's title is its accessible name
+                // (and its tooltip), kept in the current language by the library.
+                opts_gui::interaction::tooltip::Tooltip::new(String::new()),
+                opts_gui::l10n::L10nTooltip(d.label_key),
             ));
             mark(c, e, &u);
         }

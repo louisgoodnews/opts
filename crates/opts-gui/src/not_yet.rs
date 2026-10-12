@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use crate::interaction::state::{Disabled, DisabledReason};
 use crate::l10n::L10nKey;
 use crate::theme::{color::ColorRole, typography::TypeScale};
-use crate::tokens::components::{ForegroundRole, TypeStyleToken};
+use crate::tokens::components::{BackgroundRole, ForegroundRole, TypeStyleToken};
 
 /// The text, exactly as the decision words it.
 pub const MESSAGE: &str = "Feature not available yet!"; // l10n-ok: the decision wording, also the `en` message
@@ -192,6 +192,14 @@ fn label_bundle() -> impl Bundle {
         TextColor::default(),
         ForegroundRole(ColorRole::Error),
         TypeStyleToken(TypeScale::Label),
+        // A solid surface chip behind the red text: the label keeps its 4.5:1 whatever fill the
+        // disabled control has (red on the primary fill measured 4.47:1; M-0065 audit).
+        BackgroundColor::default(),
+        BackgroundRole(ColorRole::Surface),
+        Node {
+            padding: UiRect::axes(Val::Px(4.0), Val::Px(0.0)),
+            ..default()
+        },
         // Above the disabled scrim (z 1) of the control it sits in: the marker is never faded.
         ZIndex(2),
         NotYetLabel,

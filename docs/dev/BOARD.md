@@ -159,10 +159,12 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟠 **Plan a drive wizard, honest loading, master-detail pattern** (M-0062 wizard part, code) — done 2026-10-12 on `agent/ui-wizard` (minor load problems no longer block).
 - [x] 🟡 **Settings registry and generic settings page** (M-0063, code) — done 2026-10-12: descriptors, `settings.db` bridge, seven-category page with search, *Reset* and the 15 s revert prompt, `settings.*` in the control protocol, generated reference; see [progress](progress/ui-settings.md).
 - [ ] 🟡 **Key, gamepad and wheel rebinding** (M-0035, code) — the *Controls* page lists the menu keys read-only; rebinding is marked "Feature not available yet!".
-- [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; colour-blind simulation in the contrast test; remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).
+- [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; (colour-blind simulation in the contrast test: done in M-0065); remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).
 - [x] 🟡 **HUD registry, profiles, alerts, camera label, Details dialog, developer panel setting** (M-0064, code) — done 2026-10-12 on `agent/ui-hud`; see [progress](progress/ui-hud.md).
-- [ ] 🟡 **Help overlay generated from the bindings; Pause → Vehicle; HUD review** (M-0064, code)
-- [ ] 🟡 **WCAG audit, gamepad navigation, German/English, usability test** (M-0065, test)
+- [ ] 🟡 **Pause → Vehicle; HUD review** (M-0064, code)
+- [x] 🟡 **WCAG audit (automatic part), gamepad navigation, German/English completeness, golden screenshots** (M-0065, test) — done 2026-10-12 on `agent/ui-a11y`; see [accessibility audit](../src/roadmap/phase-9/accessibility-audit.md) and [progress](progress/ui-a11y.md).
+- [ ] 🟠 **Run the moderated usability test (5 participants, 6 tasks)** (M-0065, test) — [protocol](../src/meta/usability-test-protocol.md) written; needs people; acceptance criterion unmet until then.
+- [ ] 🟡 **Open from the accessibility audit:** screen reader and hardware gamepad/wheel checks; `Help`/`Menu` gamepad actions; text over pictures; HUD, loading screen and report dialog in the rule matrix; language packs from the user directory (A9–A12, section 5).
 
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
 - [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.

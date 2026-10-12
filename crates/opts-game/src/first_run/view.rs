@@ -22,6 +22,8 @@ pub const QUIT: &str = "quit";
 pub const PICK: &str = "pick";
 /// Choice: welcome, quick drive.
 pub const QUICK: &str = "quick";
+/// Choice: switch between German and English (every step offers it).
+pub const LANGUAGE: &str = "language";
 
 fn button(
     choice: &'static str,
@@ -54,9 +56,10 @@ pub fn spec_for(step: &Step, error: Option<&ChooseError>) -> DialogSpec {
             buttons: vec![
                 button(USE, keys::FIRSTRUN_USE, Primary),
                 button(OTHER, keys::FIRSTRUN_OTHER, Quiet),
+                button(LANGUAGE, keys::FIRSTRUN_LANGUAGE, Quiet),
                 button(QUIT, keys::FIRSTRUN_QUIT, Quiet),
             ],
-            keep_open: vec![OTHER],
+            keep_open: vec![OTHER, LANGUAGE],
             error,
         },
         Step::Choose => DialogSpec {
@@ -66,9 +69,10 @@ pub fn spec_for(step: &Step, error: Option<&ChooseError>) -> DialogSpec {
             body_args: L10nArgs::default(),
             buttons: vec![
                 button(CHOOSE, keys::FIRSTRUN_CHOOSE_ACTION, Primary),
+                button(LANGUAGE, keys::FIRSTRUN_LANGUAGE, Quiet),
                 button(QUIT, keys::FIRSTRUN_QUIT, Quiet),
             ],
-            keep_open: vec![CHOOSE],
+            keep_open: vec![CHOOSE, LANGUAGE],
             error,
         },
         Step::Welcome => DialogSpec {
@@ -79,8 +83,9 @@ pub fn spec_for(step: &Step, error: Option<&ChooseError>) -> DialogSpec {
             buttons: vec![
                 button(PICK, keys::FIRSTRUN_PICK, Primary),
                 button(QUICK, keys::FIRSTRUN_QUICK, Quiet),
+                button(LANGUAGE, keys::FIRSTRUN_LANGUAGE, Quiet),
             ],
-            keep_open: Vec::new(),
+            keep_open: vec![LANGUAGE],
             error: None,
         },
     }

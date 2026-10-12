@@ -105,3 +105,32 @@ fn no_hard_coded_colours_outside_the_token_files() {
     let bad = rules::hardcoded_colours(&src);
     assert!(bad.is_empty(), "hard-coded colours:\n{}", bad.join("\n"));
 }
+
+// ---- Contrast of every text and control in every theme and accent -------------------------
+
+use opts_gui::theme::mode::ThemeKind;
+use opts_gui::theme::{AccentPreset, MaterialTheme};
+
+#[test]
+fn every_text_and_border_has_contrast_in_every_theme_and_accent() {
+    let mut app = app();
+    let mut total = 0;
+    for kind in [ThemeKind::Dark, ThemeKind::Light, ThemeKind::HighContrast] {
+        for preset in AccentPreset::ALL {
+            let theme = MaterialTheme::new(kind, preset);
+            let scheme = theme.scheme.clone();
+            app.insert_resource(theme);
+            for _ in 0..3 {
+                app.update();
+            }
+            let report = rules::text_contrast(app.world_mut(), &scheme);
+            total += report.checked;
+            assert!(
+                report.violations.is_empty(),
+                "{kind:?}/{preset:?}:\n{}",
+                report.violations.join("\n")
+            );
+        }
+    }
+    assert!(total > 500, "only {total} pairs measured");
+}

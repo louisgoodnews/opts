@@ -8,6 +8,7 @@ pub mod focus;
 pub mod handlers;
 pub mod layer;
 pub mod navigation;
+pub mod scroll_into_view;
 pub mod state;
 pub mod tooltip;
 
@@ -39,6 +40,7 @@ impl Plugin for InteractionPlugin {
         layer::build(app);
         tooltip::build(app);
         focus::build(app);
+        scroll_into_view::build(app);
         handlers::build(app);
         crate::ui_id::build(app);
         crate::not_yet::build(app);

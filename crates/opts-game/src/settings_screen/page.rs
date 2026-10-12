@@ -123,17 +123,23 @@ pub fn spawn_settings_page(
             ChildOf(page),
         ))
         .id();
-    commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(6.0),
-            flex_shrink: 0.0,
-            min_width: Val::Px(150.0),
-            ..default()
-        },
-        PageCategories,
-        ChildOf(body),
-    ));
+    let categories = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(6.0),
+                flex_shrink: 0.0,
+                min_width: Val::Px(150.0),
+                min_height: Val::Px(0.0),
+                // seven categories do not fit under 480 logical px (UI scale 200 %)
+                overflow: Overflow::scroll_y(),
+                ..default()
+            },
+            PageCategories,
+            ChildOf(body),
+        ))
+        .id();
+    opts_gui::patterns::scroll::wheel_scroll(commands, categories);
     commands.spawn((
         Node {
             flex_direction: FlexDirection::Column,

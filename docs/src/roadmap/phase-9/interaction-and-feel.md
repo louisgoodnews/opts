@@ -39,6 +39,7 @@ Input never talks to widgets directly. A thin **action layer** translates device
 - The right stick produces `Scroll(Line)`; the left stick is edge-triggered at 60 % deflection. There is no repeat for the D-pad yet (keyboard repeat comes from the OS key events).
 - `Confirm`, `Back` (open combobox, focused toast, focused text entry outside a modal), `Search`, `NextTab`/`PrevTab` (notebooks) and the arrows (tree rows, combobox headers, tab headers, spatial moves) are handled by the library; everything else is left to the screen, which reads `UiAction` too.
 - The in-game HUD carries `PointerOnly` and never takes focus (section 8).
+- *Arrows cross regions (M-0065).* A directional move prefers the current region (another region's controls cost 200 logical px of extra distance) but takes a clearly nearer control of another region, or the only one in that direction, because a gamepad has no Tab. A newly focused control scrolls every scrolling ancestor until it is visible (`interaction::scroll_into_view`). Device profiles: [input devices](../../reference/input-devices.md).
 
 The existing control protocol gains the same actions (`ui.action navigate right`) so tests drive the UI exactly as users do ([expandability](expandability.md#7-testing)).
 

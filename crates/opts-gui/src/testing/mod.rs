@@ -12,6 +12,7 @@ use bevy::prelude::*;
 
 use crate::OptsGuiPlugin;
 
+pub mod golden;
 pub mod rules;
 
 /// A minimal app with the whole GUI plugin and the resources widgets read.
@@ -25,6 +26,14 @@ pub fn headless_app() -> App {
 /// Like [`headless_app`] but with Bevy's real UI layout (no renderer, no window system): nodes get
 /// a `ComputedNode`, so sizes and positions are the ones a player would see in a 1280x720 window.
 pub fn layout_app() -> App {
+    let mut app = layout_base();
+    app.update();
+    app
+}
+
+/// [`layout_app`] before its first frame: more plugins with `Startup` systems can still be added
+/// (a `Startup` system added after the first update never runs).
+pub fn layout_base() -> App {
     let mut app = App::new();
     app.add_plugins((
         MinimalPlugins,
@@ -44,7 +53,6 @@ pub fn layout_app() -> App {
         .init_asset::<bevy::image::TextureAtlasLayout>();
     app.add_plugins(OptsGuiPlugin);
     app.world_mut().spawn(Camera2d);
-    app.update();
     app
 }
 

@@ -39,8 +39,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0061 — UI Foundations](M-0061.md) — 🟡 In progress: **part A done** (theme foundations: dark default, modes, typography, scale, density, accents with contrast guard, one theme everywhere); part B open (states, focus, action layer, UI ids)
 - [M-0062 — App Shell and Flow](M-0062.md) — ⏳ Planned (shell, Home, Plan a drive, loading, pause)
 - [M-0063 — Settings System](M-0063.md) — 🟡 Started (registry, generic page, real settings and `settings.*` done; rebinding, audio, view distance, time scale shown as not available yet)
-- [M-0064 — HUD and In-Game UI](M-0064.md) — 🟡 Started (HUD registry, profiles, slots, alerts, developer panel done; generated help overlay open)
-- [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — ⏳ Planned (WCAG audit, gamepad, de/en, usability test)
+- [M-0064 — HUD and In-Game UI](M-0064.md) — 🟡 Started (HUD registry, profiles, slots, alerts, developer panel done; Pause → Vehicle open)
+- [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
 
@@ -89,4 +89,5 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] HUD from registered widgets and vehicle-type profiles (RON), widget switches in Settings, alerts, 1.5 s camera label, Details dialog, developer panel off by default (2026-10-12, `agent/ui-hud`).
   - [ ] Help overlay generated from the bindings; *Pause → Vehicle*; HUD review sign-off.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](M-0065.md)
-  - [ ] WCAG 2.2 AA audit, gamepad/wheel navigation, German and English complete, moderated usability test.
+  - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
+  - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
