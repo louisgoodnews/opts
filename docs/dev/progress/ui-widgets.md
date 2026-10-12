@@ -24,7 +24,7 @@ Runs of the game/tools: `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d)
 | B1 State mechanism, release activation, tooltips | done |
 | B2 Focus and action layer | done |
 | B3 TextField | done |
-| B4 UI ids and `ui.*` protocol | todo |
+| B4 UI ids and `ui.*` protocol | done |
 | B5 NotAvailableYet + registry | todo |
 | B6 Localisation scaffold | todo |
 | B7 CI rules, gallery, docs | todo |
@@ -68,3 +68,10 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 ### B3
 - `TextField` on `TextInput`/`EditableText`, new-game search bars migrated, `handle_search_typing` and friends deleted. `keyboard_layout.rs` kept for label hints.
 - Headless typing is simulated with queued `TextEdit`s (no fonts, no key dispatch); real key dispatch and IME are NOT verified here.
+
+### B4
+- `ui_id.rs`: `UiId`, `slug`, automatic ids (`parent/role:slug`, `-2` suffix, ordered by layout path), a11y nodes (`accesskit` 0.24 direct dependency, same version as `bevy_a11y`) written for every element with an id.
+- `ui_tree.rs`: `UiRole`, `role_of`, `label_of`, `UiNodeState`, `UiNode`, `UiSnapshot`, `snapshot(world)`, `find_entity`; `A11yHidden`, `ListRow` markers.
+- `opts-bevy/src/control/handlers/ui.rs`: `ui.tree`, `ui.click`, `ui.focus`, `ui.action`, `ui.state`; `opts-cli` command table (54 methods); `control-protocol.md` section 4.9.
+- Tests: `opts-gui/tests/ui_tree.rs`, `opts-bevy/tests/control_ui.rs` (real socket, headless app).
+- `l10n/mod.rs` is a stub (`L10nKey`, `key_of`) until B6.

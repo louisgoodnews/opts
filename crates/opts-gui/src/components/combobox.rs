@@ -234,6 +234,7 @@ fn populate_combobox_children(
             ),
             ForegroundRole(ColorRole::OnSurfaceVariant),
             TypeStyleToken(TypeScale::LabelMedium),
+            crate::ui_tree::A11yHidden,
         ));
     });
 

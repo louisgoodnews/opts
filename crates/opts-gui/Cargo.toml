@@ -18,6 +18,8 @@ bevy = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 arboard = { workspace = true }
+# AccessKit node types; same version as `bevy_a11y` (Bevy does not re-export them)
+accesskit = "0.24"
 serde = { workspace = true, optional = true }
 
 [features]

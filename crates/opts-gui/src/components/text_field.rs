@@ -47,6 +47,8 @@ pub enum TextFieldVariant {
 #[derive(Component, Debug, Clone, Default)]
 pub struct M3TextField {
     pub variant: TextFieldVariant,
+    /// Accessible name of the field.
+    pub label: String,
     pub text: String,
     pub placeholder: String,
     /// Mirror of "the input holds focus" (maintained by the library).
@@ -217,6 +219,7 @@ impl TextFieldBuilder {
             self.frame_node(),
             M3TextField {
                 variant: self.variant,
+                label: self.label.clone(),
                 text: self.initial_text.clone(),
                 placeholder: self.placeholder.clone(),
                 is_focused: false,

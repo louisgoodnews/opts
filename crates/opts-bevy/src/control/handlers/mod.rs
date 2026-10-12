@@ -8,6 +8,7 @@ pub mod query;
 pub mod reload;
 pub mod scene;
 pub mod sim;
+pub mod ui;
 
 use super::state::ControlRegistry;
 
@@ -20,5 +21,6 @@ pub fn register_all(registry: &mut ControlRegistry) {
     scene::register(registry);
     output::register(registry);
     reload::register(registry);
+    ui::register(registry);
     batch::register(registry);
 }

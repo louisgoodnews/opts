@@ -38,5 +38,6 @@ impl Plugin for InteractionPlugin {
         tooltip::build(app);
         focus::build(app);
         handlers::build(app);
+        crate::ui_id::build(app);
     }
 }

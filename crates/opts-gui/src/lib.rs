@@ -15,11 +15,14 @@ pub mod components;
 pub mod fonts;
 pub mod icons;
 pub mod interaction;
+pub mod l10n;
 pub mod layout;
 pub mod plugin;
 pub mod prelude;
 pub mod testing;
 pub mod theme;
 pub mod tokens;
+pub mod ui_id;
+pub mod ui_tree;
 
 pub use plugin::OptsGuiPlugin;

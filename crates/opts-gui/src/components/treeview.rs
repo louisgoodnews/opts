@@ -213,6 +213,7 @@ impl TreeviewBuilder {
                     TextColor(Color::WHITE),
                 ),
                 TreeNodeChevron(row_entity),
+                crate::ui_tree::A11yHidden,
                 ForegroundRole(ColorRole::OnSurfaceVariant),
                 TypeStyleToken(TypeScale::LabelMedium),
             ));

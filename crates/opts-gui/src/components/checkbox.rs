@@ -177,6 +177,7 @@ impl CheckboxBuilder {
                             TextColor(Color::WHITE),
                         ),
                         CheckboxGlyph(root),
+                        crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
                         TypeStyleToken(TypeScale::LabelSmall),
                     ));
@@ -259,6 +260,7 @@ impl CheckboxBuilder {
                             TextColor(Color::WHITE),
                         ),
                         CheckboxGlyph(root),
+                        crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
                         TypeStyleToken(TypeScale::LabelSmall),
                     ));
