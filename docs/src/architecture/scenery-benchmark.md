@@ -145,19 +145,27 @@ Every object goes through these steps. Each has a watchdog; the whole object has
 | `alpha_share` | share of `E_all` covered only by alpha-tested or blended materials | selects the alpha-tested recall rule |
 | `sentinel_share` | sentinel pixels / `|R|` | missing textures |
 
-**Verdict rules** (initial thresholds; Phase B calibrates them on a hand-labelled sample of 200 objects and records the final values in this table):
+**Verdict rules** (final thresholds after calibration on 2026-10-12, see [Calibration](#calibration); the constants live in `verdict::Thresholds` and are written into every `run.json`):
 
 | Category | Rule |
 | :--- | :--- |
-| `F-RENDER-EMPTY` | `px_rendered < 20` while `px_expected ≥ 200` |
+| `F-RENDER-EMPTY` | every judged view has `px_rendered < 20` while `px_expected ≥ 200`, and the expected area is not mostly alpha (then the verdict is `unknown`) |
 | `F-GEOM-OUTSIDE` | `precision < 0.90` or `bbox_overshoot > 0.25` |
 | `F-XFORM-ROTATION` | V2: identity IoU < 0.5 and `best_rotation` IoU ≥ 0.8 |
-| `F-XFORM-OFFSET` | `centroid_offset > 0.10` (both views) |
-| `F-XFORM-SCALE` | any `size_ratio` outside [0.8, 1.25] (both views) |
-| `F-GEOM-PARTIAL` | `recall < 0.6`; for objects whose expected area is mostly alpha-tested (fences, foliage), `recall < 0.2`, and 0.2–0.6 gives `unknown` |
+| `F-XFORM-OFFSET` | `centroid_offset > 0.10` in both views, solid objects only (the visible part of an alpha texture sits anywhere in its quad) |
+| `F-XFORM-SCALE` | a `size_ratio` outside [0.8, 1.25] in both views; for mostly alpha objects only growth (> 1.25) counts |
+| `F-GEOM-PARTIAL` | solid objects: `recall < 0.6`. Mostly alpha objects (`alpha_share > 0.5`): no failure, `unknown` when `recall < 0.6` (`< 0.02` for tree billboards and text boards, whose coverage is mostly gaps) |
 | `F-TEX-MISSING` | `sentinel_share > 0.02` or a texture-not-found diagnostic |
-| `F-EDITOR-RENDERED` | class `editor-only` and `px_rendered ≥ 20` |
+| `F-TEXT-NOT-SHOWN` | in both text close-ups (front and back of the text triangles) fewer than 0.2 % of the text-region pixels change between string sets A and B (a pixel changes when a channel differs by ≥ 16, or only one set has ink there); needs ≥ 20 text pixels |
+| `F-EDITOR-RENDERED` | class `editor-only`, not `tree`, and `px_rendered ≥ 20` |
 | `F-LOD-OVERDRAW` | structural: more than one LOD group spawned (informational until M-0029: recorded in `tags.info`, does not change the verdict) |
+
+Rules that follow from the calibration (all in `verdict.rs`, `expected.rs`, `metrics.rs`):
+- **Expected silhouette is back-face culled.** The loader culls back faces (`opts-bevy/src/model.rs`), and OMSI meshes are left-handed: a triangle faces the camera when it winds clockwise in a right-handed frame, which is the positive area in image coordinates (verified on the calibration set: mean IoU of solid objects 0.97 with this sign, 0.58 to 0.75 with the opposite one). Tree billboards are two-sided. Without culling every single-sided wall facing away from both views looked like a missing part.
+- **`[matl_alpha] 0` is opaque** in the expectation (`sco.md`: 0 opaque, 1 cutout, 2 blend). OPTS draws mode 0 as a cutout (`model.rs`, "anything else is a hard cutout"), so a texture with a zero alpha channel makes such an object invisible; the benchmark reports it as `F-RENDER-EMPTY` (3 of 1,018 sample objects, for example `Ampelmast_Lang_*` of one add-on). That is a loader finding, not a benchmark error. Text-textured triangles count as alpha (only glyphs are covered).
+- **`help-arrow` objects** (`[helparrow]`, 268 in the corpus) are shown by OMSI only when its route-arrow helper is on: no rendering and no text is required, only the texture sentinel is checked.
+- **`[tree]` with `[onlyeditor]`** (79 in the first sample): the game draws the billboard although the file says editor-only. The harness judges these as trees and tags `I-EDITOR-TREE`; whether OMSI hides them is open ([Q-SB-13](#open-questions)).
+- **Derived categories are dropped.** With `F-TEX-MISSING` the invisible object is explained: `F-RENDER-EMPTY` and `F-TEXT-NOT-SHOWN` are removed. With `F-MESH-PROTECTED` or `F-MESH-MISSING`, `F-RENDER-EMPTY`, `F-GEOM-PARTIAL`, `F-XFORM-SCALE` and `F-XFORM-OFFSET` are removed. The diagnostics stay the primary evidence.
 
 Load-stage categories come from preflight and diagnostics: `F-SCO-PARSE`, `F-MESH-MISSING`, `F-MESH-PARSE`, `F-MESH-PROTECTED` (keyed, no twin, decoder rejected; also the loader's "mesh extent is implausible" rejection), `F-LOAD-ERROR` (an `ERROR` event not covered by another category), `F-TIMEOUT`, `F-CRASH`, and `F-CAPTURE` (the readback did not arrive; the worker is recycled). Texture decode and read failures count as `F-TEX-MISSING`. Diagnostics are the `WARN`/`ERROR` events of targets `opts*` minus those the empty map (anchor only) already produced, such as "tile has no readable .terrain grid".
 
@@ -167,9 +175,18 @@ Unsupported features (`[light_enh_2]`, `[newanim]`, `[visible]`, `[maplight]`, `
 
 ### Text-texture check
 
-*Implementation notes (2026-10-12):* the strings of set A are `OPTS-A1…`, of set B `WWWW-B1…`, one per `[texttexture]` source without a variable name. Sources fed by a named string variable have no string on the placement; the loader then logs "text texture has no string on this object instance", which the harness counts as `F-TEXT-NOT-SHOWN`. A sample of 12 sign objects on 2026-10-12 showed the check works in both directions: objects whose mean difference was 0.03 to 0.08 passed, blank signs (mean difference 0 to 0.008) failed. The 2 % threshold is calibrated in H6.
+Objects with `[useTextTexture]` whose texture sources take a placement string are placed with string set A and again with set B (one more tile rebuild). The check does not compare the regular views: a sign's text is small in V1, may face away from the camera, and a transparent board shows only glyphs. Instead it takes two **orthographic close-ups of the text-textured triangles**, looking at their area-weighted normal from both sides (`framing::text_views`; the harness does not assume which side the loader calls front; things further than 1.5 radii in front of the text are clipped so nothing can hide it). A pixel of the text region changes when only one set has ink there or when a channel differs by at least 16 of 255; the object fails when the changed share is below 0.2 % in **both** close-ups. Blank signs gave exactly 0, shown text gave 3 % to 87 % ([Calibration](#calibration)). A text source fed by a named string variable gets no placement string; the loader logs "text texture has no string on this object instance" (`tile.rs:286` passes no name list), which counts as `F-TEXT-NOT-SHOWN` as well, as do missing font bitmaps and fonts. Strings of set A are `OPTS-A1…`, of set B `WWWW-B1…`, one per source without a variable name; none is ever empty. Close-up images are kept as `t1_a`, `t1_b`, `t2_a`, `t2_b` with `--keep-images`.
 
-Objects with `[useTextTexture]` are rendered with string set A and again with string set B (one more tile rebuild). If the per-view mean colour difference inside `E` of the text-textured materials is below 2 % of full scale, the result is `F-TEXT-NOT-SHOWN`. Text textures are static in OPTS today ([Text Textures](text-textures.md)), so this belongs to Phase B; `[texttexture_enh]` sources resolved by name fail today (`tile.rs:286` passes no name list) and are expected to show up here.
+### Calibration
+
+*Done 2026-10-12 (Q-SB-02).* Method: a stratified sample of 1,018 objects (from `scenery preflight`, see Performance budget) gave a first run with 338 failures, far too many. A calibration set of 265 objects was drawn from it by cell (class × verdict × category) and rendered with all images kept. The author looked at the contact sheets (view V1, the diff image, V2, or the text close-ups) and labelled 145 objects: 90 visually (68 pass, 22 fail, each with a reason) and 55 by diagnostics (the loader logged the cause: a missing texture, mesh or font, a protected mesh, a parse error), which is true by construction and therefore not independent. The corrections above came out of the disagreements between labels and verdicts: the culling sign, the alpha rules, the text close-ups, `help-arrow`, trees with `[onlyeditor]` and the derived-category suppression.
+
+| Labels (145) | verdict `pass` | verdict `unknown` | verdict `fail` |
+| :--- | ---: | ---: | ---: |
+| label pass (68) | 65 | 3 | 0 |
+| label fail (77) | 0 | 3 | 74 |
+
+No false positive and no false negative; the six `unknown` cases are alpha objects whose coverage cannot be predicted (a road marking, a glass door, cutlery, and three French traffic signs whose coloured face is missing, which a human sees at once). Of the 74 correct failures, 19 were judged visually and all had the labelled reason among the verdict's categories. **Caveat:** the labels and the thresholds come from the same objects. A held-out look at 25 further objects of the sample (12 passes, 13 suspicious ones) found two false `F-TEXT-NOT-SHOWN` (small or low-contrast text); the text threshold was then lowered from a changed share of 1 % at delta 40 to 0.2 % at delta 16, which fixed both and kept every earlier label. After the final thresholds the 1,018-object sample gave pass 856, fail 115, unknown 47 (`F-TEX-MISSING` 57, `F-MESH-PROTECTED` 26, `F-TEXT-NOT-SHOWN` 13, `F-MESH-MISSING` 10, `F-LOAD-ERROR` 7, `F-SCO-PARSE` 4, `F-RENDER-EMPTY` 3). Everything except `F-TEXT-NOT-SHOWN` and `F-RENDER-EMPTY` is diagnostics-driven. The geometric categories (offset, scale, rotation, partial, outside) have not fired on this sample at all; they are exercised by the seeded-fault test only, so their thresholds are conservative defaults, not calibrated values. Stage 3 should read the `unknown` list and the first hundred `fail` objects of each category by eye before trusting the numbers.
 
 ## Script-effect check
 
@@ -328,7 +345,7 @@ Most common scripts by file name (all packs together, objects using them): `ampe
 | ID | Question | Impact |
 | :--- | :--- | :--- |
 | Q-SB-01 | Does a Bevy 0.20 app with `primary_window: None` and only image render targets run on this Wayland workstation and on a GPU-less CI runner (software Vulkan)? If not, a hidden 64 × 64 window is the fallback. | ✅ **Workstation: yes, no window at all** (verified 2026-10-11 with `crates/opts-benchmark/examples/offscreen_probe.rs`, also with `DISPLAY` and `WAYLAND_DISPLAY` unset; NVIDIA RTX 3060, Vulkan): `DefaultPlugins` minus `WinitPlugin`, `primary_window: None`, `ExitCondition::DontExit`, `synchronous_pipeline_compilation`, app driven by `SubApps::update` (pattern of Bevy's `externally_driven_headless_renderer` example). ✅ Re-verified 2026-10-12 through the harness itself (`scenery run` over a building, a tree, an editor-only anchor and a carpark marker with `DISPLAY` and `WAYLAND_DISPLAY` unset: all pass, no window). 🟡 **GPU-less CI: not verified** — no software Vulkan driver (lavapipe) is installed here, and `WGPU_BACKEND=gl` panics because the build has no GL backend. CI needs `mesa-vulkan-drivers` (lavapipe). |
-| Q-SB-02 | Final thresholds; needs a hand-labelled sample of 200 objects. | 🔴 Phase B |
+| Q-SB-02 | Final thresholds; needs a hand-labelled sample of 200 objects. | ✅ [Calibration](#calibration) (2026-10-12): 145 labels on a 265-object set; geometric thresholds are defaults, not calibrated (no object triggered them) |
 | Q-SB-03 | `[LOD]` semantics (Q-SCO-003) decide which meshes belong in `E_base`. | 🟡 |
 | Q-SB-04 | `[visible]`: equality with the flag (vehicle code, `vehicle_anim.rs:178`) or non-zero (`sco.md:179`)? | 🟡 Phase C |
 | Q-SB-05 | Which `[visible]` meshes OMSI shows when no script runs (variables at 0)? Affects `E_base`. | 🟡 |
@@ -339,6 +356,7 @@ Most common scripts by file name (all packs together, objects using them): `ampe
 | Q-SB-10 | Self-consistency only: fidelity to OMSI needs a human or OMSI-side comparison, which cannot be automated here (no OMSI screenshots in the repository). | 🟢 Known limitation |
 | Q-SB-11 | Who builds the scenery-script runtime (VM per placed object, scenery variables, typed `[newanim]`, `[visible]`, `[light_enh*]`)? Reopen the scenery half of M-0026, or a new milestone? Project-lead decision. | 🔴 Blocks Phase C |
 | Q-SB-12 | Is the confident decoder deterministic across runs (random restarts)? Cached results make reruns stable; cold runs may differ. | 🟢 |
+| Q-SB-13 | Does OMSI draw a `[tree]` billboard whose `.sco` also says `[onlyeditor]` (79 of the 1,018-object sample, e.g. bushes with a helper `[mesh]`)? OPTS draws it; the harness accepts that and tags `I-EDITOR-TREE`. | 🟡 |
 
 ## Provenance
 

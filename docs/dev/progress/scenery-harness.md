@@ -12,7 +12,7 @@ Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-
 | H3 Run control (crash/hang recovery) | done |
 | H4 Text-texture check, corpus preflight | done |
 | H5 Sample run, performance | done |
-| H6 Calibration (sub-batches of ~50) | todo |
+| H6 Calibration (sub-batches of ~50) | done (done as one iterative batch, not in sub-batches; labels 145) |
 | H7 Close-out | todo |
 
 ## Commands
@@ -55,3 +55,6 @@ H3: `tests/run_control.rs` (real binary, synthetic root, `OPTS_BENCH_INJECT` hoo
 H4: new command `opts-benchmark scenery preflight --omsi-path <root> --out <jsonl> [--catalogue db]` (CPU only; whole corpus in seconds; output `~/.local/share/opts/benchmark/dev/preflight.jsonl` has class/tags/text strings per object, use it to stratify samples). New class `help-arrow`; text source without string maps to `F-TEXT-NOT-SHOWN`; unreadable tiles are logged (61, old version 10). 12 text objects run (`h4.list`): text check discriminates (Parkleit_li pass, blank signs fail). Open: `routearrow_R` renders empty (alpha 100 %), to be judged in calibration.
 
 H5: sample list `~/.local/share/opts/benchmark/dev/h5.list` (1,018 stratified objects), runs under `~/.local/share/opts/benchmark/dev/runs/`. Release build (`cargo build --release -p opts-benchmark`; scripts `runrel.sh`, `stats.py` in the dev dir). 1 worker 2:44, 3 workers 25.7 s, identical verdicts in both runs, no crash. Verdicts: pass 657, fail 338, unknown 23. Categories: F-TEXT-NOT-SHOWN 95, F-EDITOR-RENDERED 79, F-RENDER-EMPTY 66, F-TEX-MISSING 57, F-XFORM-SCALE 28, F-MESH-PROTECTED 26, F-GEOM-PARTIAL 26, F-XFORM-OFFSET 10, F-MESH-MISSING 10, F-LOAD-ERROR 7, F-SCO-PARSE 4. Too many failures for a clean corpus: H6 must separate real OPTS faults from benchmark false positives (suspects: F-EDITOR-RENDERED 79 of 60 editor-only? includes help-arrow, text check on tiny glyphs, F-XFORM-SCALE).
+
+H6: calibration set `h6.list` (265 objects drawn by class x verdict x category from the 1,018 sample), labels `~/.local/share/opts/benchmark/dev/labels.json` (145: 90 visual, 55 diagnostic; script `mklabels.py` maps contact-sheet indices to keys, `conf.py` prints the confusion matrix, `sheet.py`/`grid.py` make contact sheets with the dev venv `venv/bin/python`). Final matrix: label pass 65 pass / 3 unknown / 0 fail; label fail 0 pass / 3 unknown / 74 fail. Held-out look at 25 objects fixed the text threshold. Changes: back-face culled expectation (sign verified, IoU .97), `[matl_alpha] 0` opaque, alpha rules (`unknown` instead of fail), text close-ups from both sides with changed-pixel share, help-arrow, tree+onlyeditor (Q-SB-13), derived-category suppression. Sample result 1,018 objects: pass 856, fail 115, unknown 47. Geometric categories never fired on the sample (only the seeded test covers them).
+Resume hint: nothing to resume in H6; thresholds are in `verdict::Thresholds::default()` and the spec table.

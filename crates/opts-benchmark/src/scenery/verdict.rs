@@ -28,8 +28,9 @@ pub struct Thresholds {
     pub scale: f32,
     /// `F-GEOM-PARTIAL` below this recall.
     pub recall: f32,
-    /// Mostly alpha-tested objects: below this recall the verdict is `unknown` (the coverage
-    /// of an alpha texture is not predictable from the mesh).
+    /// Alpha-tested tree billboards: below this recall the verdict is `unknown` (the coverage
+    /// of an alpha texture is not predictable from the mesh). Other mostly alpha-tested
+    /// objects are `unknown` below `recall`.
     pub recall_alpha: f32,
     /// An object is mostly alpha-tested above this alpha share.
     pub alpha_share: f32,
@@ -58,8 +59,8 @@ impl Default for Thresholds {
             recall_alpha: 0.02,
             alpha_share: 0.5,
             sentinel_share: 0.02,
-            text_changed_share: 0.01,
-            text_delta: 40,
+            text_changed_share: 0.002,
+            text_delta: 16,
             text_min_px: 20,
         }
     }
@@ -178,6 +179,8 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
 
 /// The silhouette rules; returns an `unknown` reason when alpha coverage cannot be verified.
 fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> Option<String> {
+    // Billboards and text-textured boards are mostly gaps: their coverage is not predictable.
+    let sparse = ev.classes.iter().any(|c| c == "tree") || ev.text.is_some();
     let judged: Vec<&ViewMetrics> = ev
         .views
         .values()
@@ -206,8 +209,11 @@ fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> 
         }
         if let Some(r) = v.recall {
             if alpha(v) {
-                if r < t.recall_alpha {
-                    unknown = Some("alpha-tested object with almost no coverage".to_string());
+                // Other alpha objects (signs, fences) that cover well under the mesh area
+                // deserve a human look.
+                let floor = if sparse { t.recall_alpha } else { t.recall };
+                if r < floor {
+                    unknown = Some("alpha-tested object below the expected coverage".to_string());
                 }
             } else if r < t.recall {
                 push(cats, "F-GEOM-PARTIAL");

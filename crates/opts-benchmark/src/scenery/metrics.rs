@@ -256,6 +256,46 @@ mod tests {
     }
 
     #[test]
+    fn back_faces_are_not_expected_and_billboards_are_two_sided() {
+        use super::super::expected::TriFlags;
+        use bevy::math::Vec3;
+        let view = super::super::framing::top_view(&super::super::framing::Bounds {
+            min: Vec3::new(-2.0, -2.0, 0.0),
+            max: Vec3::new(2.0, 2.0, 1.0),
+        });
+        let place = Placement {
+            position: Vec3::ZERO,
+            heading_deg: 0.0,
+            mirror_x: false,
+            scale: 1.0,
+        };
+        let tri = |v: [Vec3; 3], two_sided| ExpectedTri {
+            v,
+            flags: TriFlags {
+                base: true,
+                two_sided,
+                ..TriFlags::default()
+            },
+        };
+        let a = [
+            Vec3::new(-1.0, 0.0, -1.0),
+            Vec3::new(-1.0, 0.0, 1.0),
+            Vec3::new(1.0, 0.0, -1.0),
+        ];
+        let b = [a[0], a[2], a[1]];
+        let front = expected_masks(&[tri(a, false)], &place, &view).all.count();
+        let back = expected_masks(&[tri(b, false)], &place, &view).all.count();
+        assert!(
+            (front == 0) != (back == 0),
+            "exactly one winding faces the camera"
+        );
+        let both = expected_masks(&[tri(a, true)], &place, &view).all.count();
+        assert!(both > 0);
+        let both_b = expected_masks(&[tri(b, true)], &place, &view).all.count();
+        assert_eq!(both, both_b);
+    }
+
+    #[test]
     fn identical_masks_give_perfect_metrics() {
         let (b, w) = buffers(&(1000..1100).collect::<Vec<_>>(), [90, 90, 90]);
         let r = matte(&b, &w);
