@@ -23,18 +23,26 @@ fn app() -> App {
 }
 
 fn spawn_articulated(app: &mut App, steering: f32) -> (Entity, Entity) {
+    spawn_articulated_with(app, steering, false)
+}
+
+fn spawn_articulated_with(app: &mut App, steering: f32, reversed: bool) -> (Entity, Entity) {
     let mut controller = VehicleController::standard_bus(11_500.0, 5.85);
     controller.inputs_mut().set_parking_brake(false);
     controller.inputs_mut().set_gear(GearPosition::Drive);
     controller.inputs_mut().set_throttle(0.5);
     controller.inputs_mut().set_steering(steering);
     let (engine, _) = ScriptEngine::from_sources(&[("t.osc", "{frame}\n{end}")]);
+    let mut seg = ArticulatedSegment::new(Vec2::new(0.0, -5.0), Vec2::new(0.0, 1.0), -5.0, 52.5);
+    seg.reversed = reversed;
+    // One trailer axle numbered after the head's two, wheel radius 0.5 m.
+    seg.set_wheels(2, [0.5]);
     let segment = app
         .world_mut()
         .spawn((
             // Hitch 1.5 m behind the leader's origin; front coupling 1 m ahead of the segment's
             // origin; rear axle 6 m behind that.
-            ArticulatedSegment::new(Vec2::new(0.0, -5.0), Vec2::new(0.0, 1.0), -5.0, 52.5),
+            seg,
             Transform::default(),
         ))
         .id();
@@ -113,4 +121,35 @@ fn driving_straight_keeps_the_segment_in_line() {
         .lock()
         .unwrap();
     assert!(engine.get("articulation_0_alpha").abs() < 0.5);
+}
+
+#[test]
+fn trailer_wheels_roll_with_the_segments_own_travel() {
+    for reversed in [false, true] {
+        let mut app = app();
+        let (root, _) = spawn_articulated_with(&mut app, 0.0, reversed);
+        for _ in 0..300 {
+            app.update();
+        }
+        let engine = app
+            .world()
+            .get::<VehicleScripts>(root)
+            .unwrap()
+            .engine
+            .lock()
+            .unwrap();
+        // Axle 2 is the trailer's; both sides spin alike and the speed matches rolling at 0.5 m.
+        let spin = engine.get("wheel_rotation_2_l");
+        assert_eq!(spin, engine.get("wheel_rotation_2_r"));
+        let rpm = engine.get("wheel_rotationspeed_2_l");
+        let speed = app.world().get::<VehicleController>(root).unwrap().sim.chassis.forward_speed_m_s();
+        let expected = speed / 0.5 * 60.0 / std::f32::consts::TAU;
+        // A segment hanging backwards rolls the other way along its model.
+        let expected = if reversed { -expected } else { expected };
+        assert!(
+            (rpm - expected).abs() < expected.abs() * 0.1 + 1.0,
+            "reversed={reversed}: {rpm} rpm, expected {expected}"
+        );
+        assert!(spin != 0.0);
+    }
 }

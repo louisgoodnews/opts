@@ -44,6 +44,20 @@ pub struct ArticulatedSegment {
     /// Height, pitch and roll of the segment on the ground under it, set by the game each frame
     /// (`None`: the segment keeps the root's height and stays level).
     pub ground: Option<SegmentGround>,
+    /// Index of the segment's first axle in the consist-wide numbering the model uses
+    /// (`Wheel_Rotation_<index>_L`: the head's axles come first, then each trailer's).
+    pub first_axle: usize,
+    /// The wheels of the segment's own axles (radius, spin), rolling with the segment's travel.
+    pub wheels: Vec<SegmentWheel>,
+}
+
+/// One axle of a following segment: both wheels roll alike.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SegmentWheel {
+    /// Wheel radius (m).
+    pub radius: f32,
+    /// Accumulated spin (rad), growing while the segment rolls forward along its model.
+    pub rotation_rad: f32,
 }
 
 /// How a segment lies on the ground (see [`ArticulatedSegment::ground`]).
@@ -71,7 +85,37 @@ impl ArticulatedSegment {
             prev_pose: None,
             curr_pose: None,
             ground: None,
+            first_axle: 0,
+            wheels: Vec::new(),
         }
+    }
+
+    /// Gives the segment its wheels: `first_axle` is the consist-wide index of its first axle and
+    /// `radii` the wheel radii of its axles in order.
+    pub fn set_wheels(&mut self, first_axle: usize, radii: impl IntoIterator<Item = f32>) {
+        self.first_axle = first_axle;
+        self.wheels = radii
+            .into_iter()
+            .map(|radius| SegmentWheel {
+                radius: radius.max(0.05),
+                rotation_rad: 0.0,
+            })
+            .collect();
+    }
+
+    /// Rolls the wheels by the segment's own travel `from -> to` (simulation space, kinematic
+    /// frame, heading `heading` compass rad) and returns the signed distance along the model's
+    /// forward direction.
+    fn roll(&mut self, from: Vec2, to: Vec2, heading: f32) -> f32 {
+        let forward = Vec2::new(heading.sin(), heading.cos());
+        let mut d = (to - from).dot(forward);
+        if self.reversed {
+            d = -d;
+        }
+        for w in &mut self.wheels {
+            w.rotation_rad = (w.rotation_rad + d / w.radius).rem_euclid(std::f32::consts::TAU);
+        }
+        d
     }
 
     /// Position and heading of the segment in the kinematic frame (its mirrored frame when
@@ -136,6 +180,7 @@ pub fn articulation_system(
             f64::from(chassis.heading_rad),
         );
         let mut alphas = Vec::with_capacity(chain.segments.len());
+        let mut wheel_vars: Vec<(usize, f32, Vec<SegmentWheel>)> = Vec::new();
         for &e in &chain.segments {
             let Ok((mut seg, mut tf)) = segments.get_mut(e) else {
                 break;
@@ -158,6 +203,12 @@ pub fn articulation_system(
                 Vec2::new(st.origin.x as f32, st.origin.y as f32),
                 st.heading as f32,
             );
+            let travelled = seg.curr_pose.map_or(0.0, |(p0, _)| {
+                // Rolled along the heading half-way through the step (the segment's own motion,
+                // not the tractor's speed).
+                seg.roll(p0, now.0, now.1)
+            });
+            wheel_vars.push((seg.first_axle, travelled / dt as f32, seg.wheels.clone()));
             seg.prev_pose = seg.curr_pose.or(Some(now));
             seg.curr_pose = Some(now);
             // The placement happens in `articulation_render_system`, interpolated.
@@ -171,6 +222,20 @@ pub fn articulation_system(
                 // by the game each frame (`follow_ground_chain`); the kinematics only know yaw.
                 for (k, a) in alphas.iter().enumerate() {
                     engine.set(&format!("articulation_{k}_alpha"), *a as f32);
+                }
+                // The trailers' wheel variables under the consist-wide axle numbers.
+                for (first, speed, wheels) in &wheel_vars {
+                    for (j, w) in wheels.iter().enumerate() {
+                        let i = first + j;
+                        let rpm = speed / w.radius * 60.0 / std::f32::consts::TAU;
+                        for side in ["L", "R"] {
+                            engine.set(&format!("wheel_rotation_{i}_{side}"), w.rotation_rad);
+                            engine.set(&format!("axle_steering_{i}_{side}"), 0.0);
+                            engine.set(&format!("axle_suspension_{i}_{side}"), 0.0);
+                        }
+                        engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
+                        engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
+                    }
                 }
             }
         }

@@ -499,6 +499,8 @@ pub(super) fn spawn_trailer_chain(
     let mut chain = Vec::new();
     let mut layout = Vec::new();
     let mut behind = 0.0_f32;
+    // Axles counted so far: trailer models number theirs after the head's (`Wheel_Rotation_2_L`).
+    let mut axle_base = tractor.axles.len();
     let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
     for _ in 0..MAX_SEGMENTS {
         let Some(name) = parent_manifest.couple_back.clone() else {
@@ -581,12 +583,20 @@ pub(super) fn spawn_trailer_chain(
                         max_alpha,
                     );
                     s.reversed = reversed;
+                    s.set_wheels(
+                        axle_base,
+                        manifest
+                            .axles
+                            .iter()
+                            .map(|a| a.wheel_diameter_m.filter(|&d| d > 0.1).unwrap_or(0.98) * 0.5),
+                    );
                     s
                 },
                 InGameEntity,
             ))
             .id();
         chain.push(seg);
+        axle_base += manifest.axles.len();
         // Origin of the segment behind the root's origin along the vehicle's axis (for rails).
         behind += f.y - b.y;
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
