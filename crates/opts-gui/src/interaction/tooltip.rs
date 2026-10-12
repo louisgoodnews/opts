@@ -162,7 +162,7 @@ pub fn tooltip_system(
         .with_children(|p| {
             p.spawn((
                 Text::new(text),
-                TextColor(Color::WHITE),
+                TextColor::default(),
                 TypeStyleToken(TypeScale::BodySmall),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 Pickable::IGNORE,

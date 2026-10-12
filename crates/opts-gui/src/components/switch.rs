@@ -170,7 +170,7 @@ impl SwitchBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -259,7 +259,7 @@ impl SwitchBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),

@@ -27,7 +27,7 @@ Runs of the game/tools: `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d)
 | B4 UI ids and `ui.*` protocol | done |
 | B5 NotAvailableYet + registry | done |
 | B6 Localisation scaffold | done |
-| B7 CI rules, gallery, docs | todo |
+| B7 CI rules, gallery, docs | done |
 
 ## Design decisions (all batches)
 
@@ -81,7 +81,7 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 - Main menu: Load Last Game uses it; ids `menu.*` set explicitly; default focus is *Start New Game* (was Shutdown by accident of `tab_index`); `initial_focus_system` removed.
 - Verified live (screenshot `widgets/shots/menu_not_yet.png`): red label under the dimmed button, `ui.click` answers 1001 with the reason.
 - Fix found while verifying: `InputFocusVisible` started `false` (Bevy default) so no focus ring showed initially; now `true` at startup.
-- Open: the red label is `LabelSmall` (11 px in today's typography; part A raises the floor to 12 px).
+- The red label uses `LabelMedium` (12 px) because `LabelSmall` is 11 px in today's typography.
 
 ### B6
 - No Fluent crates in the offline registry (checked `~/.cargo/registry/src`: none) -> own Fluent-subset parser `l10n/fluent.rs` (messages, `{ $var }`, `{ message }` references, plural/value selectors with `*[default]`; no terms/attributes/functions), upgrade path documented in the module header (`fluent-bundle` reads the same `.ftl`).
@@ -90,3 +90,27 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 - Verified live with `OPTS_LOCALE=en-XA` (screenshot `widgets/shots/menu_pseudo_locale.png`): all menu texts bracketed/padded, buttons wrap to two lines but nothing is cut off.
 - No settings key for the language yet (part A owns settings/theme; the language setting belongs with the settings milestone M-0063): env var only.
 - /tmp note: the game writes a 250 MB `catalogue.db` per fresh `XDG_DATA_HOME`; tests/other runs filled /tmp (16 GB tmpfs) once. `widgets/run_game.sh` now keeps throwaway dirs under the benchmark dir and deletes them on exit.
+
+### B7
+- `testing/rules.rs` (`small_targets`, `small_text`, `disabled_without_reason`, `keyboard_traversal`, `hardcoded_colours`), `testing::layout_app` (Bevy's real UI layout headless: `UiPlugin` + `CameraPlugin` + the asset registrations, no renderer), `showcase.rs` (every component in every pinned state), tests `opts-gui/tests/ci_rules.rs` (7), `opts-game/tests/ui_rules.rs` (5, main menu).
+- Findings the rules produced and that were fixed: toast action 47x26 (now min 32 px), 11 px label sizes in checkbox glyph/not-yet label/menu footer and storage line, hard-coded `Color::WHITE` placeholders, date selector text invisible on the light theme (no `ForegroundRole`), text field placeholder drawn outside the padding, clear button visible on a disabled field.
+- Gallery (`cargo run -p opts-gui --example gallery`, `OPTS_GALLERY_SHOT`, `OPTS_GALLERY_LIGHT`) rewritten on the showcase. Screenshots under `~/.local/share/opts/benchmark/dev-ui-impl/widgets/shots/`: `gallery_dark.png`, `gallery_light.png`, `menu_default_focus.png`, `menu_nav_down.png`, `menu_not_yet.png`, `menu_pseudo_locale.png`.
+- Docs: `gui-interaction-layer.md` (new), pointer line in `gui-design-system.md`, `crates/opts-gui.md`, `control-protocol.md` 4.9, `interaction-and-feel.md` 1/2a/3, `ui-spikes.md`, M-0061 checklist, BOARD.
+
+## Legacy screens (not fixed here; measured on the running game)
+
+New game screen (live `ui.tree`, 1920x1080): 1,149 UI elements, 25 focusable targets under 32 px (18x18 calendar/icon buttons, 12 px scroll-bar thumbs, 29-31 px entry-point rows), several 11 px texts (`FontSize::Px(11.0)` literals in `live_weather.rs`, `repaint_selector.rs`, `layout.rs`), 956 vehicle cards as entities (virtualisation is future work), no default focus. Settings, HUD and loading screens were not measured. These join `ui_rules.rs` as the shell milestone rebuilds them.
+
+## Verified vs assumed
+
+Verified by tests: states/activation/focus/actions/ids/protocol/localisation/rules (headless, plus real UI layout in `ci_rules`). Verified by eye (screenshots, described in the final report): main menu focus ring, default focus, not-yet label, pseudo-locale, gallery in dark and light. NOT verified: real keyboard typing with a non-US layout, IME composition, system clipboard, screen-reader output (Orca), gamepad input (no pad attached), hover/press with a real mouse (pointer observers are tested with synthetic `PointerPress`/`PointerRelease` events; `ui.click` uses `Activated` directly).
+
+## Known problems / open questions
+
+- Builders still have two spawn forms (`spawn` / `spawn_child`); M-0061 item left open.
+- Contrast over resolved backgrounds belongs to part A; the disabled look is a scrim (container not exactly 12 %).
+- Language has no settings key (env `OPTS_LOCALE` only); belongs with the settings milestone.
+- Tab order is layout-tree order, not geometric reading order.
+- Part A may rename `ColorRole` variants or token components: `layer::on_color` matches roles with a `_` fallback; `TextColor::default()` replaced the white placeholders; `Typography` sizes: LabelSmall is 11 px (nothing in `opts-gui` uses it now).
+- Pre-existing size violations: `populate_notebook_children` (131 lines), `populate_combobox_children` (124), `spawn_main_menu` (230).
+- The decoder-cache copy in `dev-textures/cache` was used read/write by game runs; throwaway config/data dirs live under `widgets/` and are removed on exit.

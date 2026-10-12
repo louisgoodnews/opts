@@ -123,7 +123,7 @@ impl ToastBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -136,7 +136,11 @@ impl ToastBuilder {
                         (
                             Button,
                             Node {
-                                padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                                min_width: Val::Px(48.0),
+                                min_height: Val::Px(32.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),
@@ -152,7 +156,7 @@ impl ToastBuilder {
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
                             TypeStyleToken(TypeScale::LabelLarge),
@@ -210,7 +214,7 @@ impl ToastBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -223,7 +227,11 @@ impl ToastBuilder {
                         (
                             Button,
                             Node {
-                                padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                                min_width: Val::Px(48.0),
+                                min_height: Val::Px(32.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),
@@ -239,7 +247,7 @@ impl ToastBuilder {
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
                             TypeStyleToken(TypeScale::LabelLarge),

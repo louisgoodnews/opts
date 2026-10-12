@@ -196,7 +196,7 @@ fn populate_notebook_children(
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(if is_active {
                                 ColorRole::Primary

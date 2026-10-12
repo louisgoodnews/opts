@@ -142,18 +142,21 @@ impl Localization {
     }
 }
 
-/// The key of an element or of its first descendant that has one.
+/// The key of an element or of one of its direct children (the label of a control). The
+/// not-yet marker's own key does not name a control.
 pub fn key_of(world: &World, entity: Entity) -> Option<String> {
     let e = world.get_entity(entity).ok()?;
-    if let Some(k) = e.get::<L10nKey>() {
-        return Some(k.0.to_string());
-    }
-    for child in e.get::<Children>().into_iter().flat_map(|c| c.iter()) {
-        if let Some(k) = key_of(world, child) {
-            return Some(k);
-        }
-    }
-    None
+    let own = |e: &EntityRef| {
+        e.get::<L10nKey>()
+            .filter(|k| k.0 != keys::NOT_AVAILABLE)
+            .map(|k| k.0.to_string())
+    };
+    own(&e).or_else(|| {
+        e.get::<Children>()
+            .into_iter()
+            .flat_map(|c| c.iter())
+            .find_map(|child| world.get_entity(child).ok().and_then(|c| own(&c)))
+    })
 }
 
 /// Query item: a text with a key.

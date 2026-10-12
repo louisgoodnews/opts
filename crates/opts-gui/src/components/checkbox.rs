@@ -174,12 +174,12 @@ impl CheckboxBuilder {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         CheckboxGlyph(root),
                         crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::LabelMedium),
                     ));
                 });
 
@@ -192,7 +192,7 @@ impl CheckboxBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -257,12 +257,12 @@ impl CheckboxBuilder {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         CheckboxGlyph(root),
                         crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::LabelMedium),
                     ));
                 });
 
@@ -275,7 +275,7 @@ impl CheckboxBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),

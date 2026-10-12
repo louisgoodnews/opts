@@ -139,6 +139,7 @@ const LITERAL_OK_FILES: &[&str] = &[
     "actions.rs",     // `ui.action` spellings
     "ui_tree.rs",     // protocol role names
     "ui_id.rs",       // id syntax
+    "showcase.rs",    // demo content of the gallery and the CI fixture
     "not_yet.rs",     // developer registry text (the user-visible marker text is a key)
     "fonts.rs",       // asset paths
     "icons.rs",       // code points
@@ -180,7 +181,10 @@ fn no_user_visible_literals_outside_key_tables() {
             .unwrap_or(&f)
             .to_string_lossy()
             .replace('\\', "/");
-        if LITERAL_OK_FILES.contains(&rel.as_str()) || rel.ends_with("tests.rs") {
+        if LITERAL_OK_FILES.contains(&rel.as_str())
+            || rel.ends_with("tests.rs")
+            || rel.starts_with("testing/")
+        {
             continue;
         }
         let text = std::fs::read_to_string(&f).unwrap_or_default();

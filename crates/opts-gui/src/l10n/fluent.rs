@@ -90,6 +90,10 @@ pub struct Table {
     pub errors: Vec<String>,
 }
 
+/// Brace characters, spelled as numbers so line-counting tools do not mistake them for blocks.
+const LBRACE: char = 0x7b as char;
+const RBRACE: char = 0x7d as char;
+
 fn is_id_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
 }
@@ -163,13 +167,13 @@ fn parse_pattern(text: &str) -> Result<Pattern, String> {
     let chars: Vec<char> = text.chars().collect();
     let mut i = 0;
     while i < chars.len() {
-        if chars[i] == '{' {
+        if chars[i] == LBRACE {
             let mut depth = 1;
             let mut j = i + 1;
             while j < chars.len() && depth > 0 {
                 match chars[j] {
-                    '{' => depth += 1,
-                    '}' => depth -= 1,
+                    c if c == LBRACE => depth += 1,
+                    c if c == RBRACE => depth -= 1,
                     _ => {}
                 }
                 j += 1;

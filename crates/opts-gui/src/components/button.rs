@@ -293,7 +293,7 @@ impl ButtonBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),
@@ -361,7 +361,7 @@ impl ButtonBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),

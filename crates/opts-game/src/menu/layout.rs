@@ -70,7 +70,7 @@ pub fn spawn_main_menu(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::LabelMedium),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
         })
@@ -235,12 +235,12 @@ pub fn spawn_main_menu(
                             Text::new(keys::CARD_STORAGE),
                             L10nKey(keys::CARD_STORAGE),
                             TextFont {
-                                font_size: FontSize::Px(11.0),
+                                font_size: FontSize::Px(12.0),
                                 ..default()
                             },
                             TextColor(theme.scheme.get(ColorRole::Outline)),
                         ),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::LabelMedium),
                         ForegroundRole(ColorRole::Outline),
                     ));
                 });

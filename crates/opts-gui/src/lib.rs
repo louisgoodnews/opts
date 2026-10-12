@@ -20,6 +20,7 @@ pub mod layout;
 pub mod not_yet;
 pub mod plugin;
 pub mod prelude;
+pub mod showcase;
 pub mod testing;
 pub mod theme;
 pub mod tokens;

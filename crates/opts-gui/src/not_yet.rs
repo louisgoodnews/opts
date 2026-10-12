@@ -130,9 +130,9 @@ fn label_bundle() -> impl Bundle {
     (
         Text::new(MESSAGE),
         L10nKey(crate::l10n::keys::NOT_AVAILABLE),
-        TextColor(Color::WHITE),
+        TextColor::default(),
         ForegroundRole(ColorRole::Error),
-        TypeStyleToken(TypeScale::LabelSmall),
+        TypeStyleToken(TypeScale::LabelMedium),
         // Above the disabled scrim (z 1) of the control it sits in: the marker is never faded.
         ZIndex(2),
         NotYetLabel,

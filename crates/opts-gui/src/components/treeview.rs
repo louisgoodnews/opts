@@ -210,7 +210,7 @@ impl TreeviewBuilder {
                         font_size: FontSize::Px(12.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 TreeNodeChevron(row_entity),
                 crate::ui_tree::A11yHidden,
@@ -226,7 +226,7 @@ impl TreeviewBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::OnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),

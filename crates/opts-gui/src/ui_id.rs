@@ -49,6 +49,7 @@ pub fn slug(label: &str) -> String {
 /// Elements that get an automatic id.
 type NeedsId = (
     Without<UiId>,
+    Without<crate::components::text_field::TextFieldInput>,
     Or<(
         With<crate::interaction::focus::Focusable>,
         With<crate::interaction::focus::FocusRegion>,
@@ -158,7 +159,19 @@ fn accesskit_role(role: UiRole) -> Role {
 }
 
 /// Writes role, label and state of every element with an id into its [`AccessibilityNode`].
-pub fn sync_accessibility(world: &mut World) {
+pub fn sync_accessibility(world: &mut World, mut since_last: Local<Option<f32>>) {
+    // Screen readers do not need 60 updates a second; 10 per second keeps 1,000 controls cheap.
+    let waited = since_last.unwrap_or(f32::MAX) + world.resource::<Time<Real>>().delta_secs();
+    let new_ids = world
+        .query_filtered::<(), Added<UiId>>()
+        .iter(world)
+        .next()
+        .is_some();
+    if waited < 0.1 && !new_ids {
+        *since_last = Some(waited);
+        return;
+    }
+    *since_last = Some(0.0);
     let ids: Vec<Entity> = world
         .query_filtered::<Entity, With<UiId>>()
         .iter(world)

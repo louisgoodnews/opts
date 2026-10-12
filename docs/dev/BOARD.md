@@ -151,9 +151,9 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0061–M-0065 — Phase 9: User Interface & Experience (design proposed 2026-10-12, awaiting review)
 - [ ] 🟠 **Review the Phase 9 design and answer decisions D-UI-01 … D-UI-11** (Phase 9, decision) — [phase page](../src/roadmap/phase-9/README.md#decisions-for-the-project-lead); blocks everything below.
-- [ ] 🔴 **Spikes: text input/IME, accessibility tree, virtualised list, typeface comparison** (M-0061, research)
-- [ ] 🔴 **States, focus ring and keyboard operability in every `opts-gui` widget; one theme; UI scale** (M-0061, code)
-- [ ] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, contrast, traversal** (M-0061, code)
+- [ ] 🔴 **Spikes: text input/IME, accessibility tree, virtualised list, typeface comparison** (M-0061, research) — text input, accessibility, virtualised list done 2026-10-12 (`ui-spikes.md`); typeface comparison is part A
+- [ ] 🔴 **States, focus ring and keyboard operability in every `opts-gui` widget; one theme; UI scale** (M-0061, code) — states, focus, actions, TextField, NotAvailableYet, localisation done on `agent/ui-widgets`; one theme and UI scale are part A
+- [x] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, contrast, traversal** (M-0061, code) — done on `agent/ui-widgets` except the contrast rule (part A)
 - [ ] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code)
 - [ ] 🟡 **Settings registry and generic settings page** (M-0063, code)
 - [ ] 🟡 **Instrument HUD, HUD registry, help overlay, developer panel** (M-0064, code)
@@ -540,3 +540,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — M-0049 phase D started: geometric conflict zones (`opts_traffic::conflict`) and turn-taking at crossings/merges, scenario tests with a negative control; priority rules and signals remain.
 - `2026-10-11` — Startup routine for the OMSI path: saved in `settings.db`, folder dialog (`rfd`) when nothing is found; verified with a clean config on the real system.
 - `2026-10-11` — Critical review 2026-10-11 ([report](../src/meta/critical-review-2026-10-11.md)): board reconciled (In Progress shows the four active milestones, stale Ready/Backlog items archived, Blocked shows the hosting dependency), M-0052 and M-0053 added, M-0032 file created, Deferred Cleanup items from the 2026-10-08 review closed or pointed at M-0040/M-0042. WIP = 4 (red flag, recorded rather than hidden).
+- `2026-10-12` — M-0061 part B (`agent/ui-widgets`): one state mechanism (state layer, focus ring, scrim), activation on release, `UiAction` layer, layout-order focus with regions, keyboard-operable widgets, `TextField` on Bevy `TextInput`, stable UI ids + `ui.*` control commands, `NotAvailableYet` with generated list, localisation scaffold (en, de, en-XA), CI rules and the component gallery. Open: builders still have two spawn forms; legacy screens still have small targets/text (recorded in `docs/dev/progress/ui-widgets.md`).

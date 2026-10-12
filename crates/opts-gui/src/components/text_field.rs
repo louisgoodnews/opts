@@ -250,7 +250,7 @@ impl TextFieldBuilder {
                 linebreak: LineBreak::NoWrap,
                 ..default()
             },
-            TextColor(Color::WHITE),
+            TextColor::default(),
             ForegroundRole(ColorRole::OnSurface),
             TypeStyleToken(TypeScale::BodyMedium),
             TextCursorStyle::default(),
@@ -263,7 +263,7 @@ impl TextFieldBuilder {
         commands.entity(placeholder).insert((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
+                left: Val::Px(if self.compact { 10.0 } else { 16.0 }),
                 display: if has_text {
                     Display::None
                 } else {
@@ -272,7 +272,7 @@ impl TextFieldBuilder {
                 ..default()
             },
             Text::new(self.placeholder),
-            TextColor(Color::WHITE),
+            TextColor::default(),
             ForegroundRole(ColorRole::OnSurfaceVariant),
             TypeStyleToken(TypeScale::BodyMedium),
             Pickable::IGNORE,
@@ -301,7 +301,7 @@ impl TextFieldBuilder {
         ));
         commands.entity(clear).with_children(|p| {
             p.spawn((
-                icons::icon_text(icons::CLOSE, 16.0, Color::WHITE),
+                icons::icon_text(icons::CLOSE, 16.0, TextColor::default().0),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
         });
@@ -348,12 +348,12 @@ pub fn text_field_sync_system(
 /// Shows the placeholder only for an empty value and the clear button only for a non-empty one;
 /// mirrors focus into [`M3TextField::is_focused`].
 pub fn text_field_chrome_system(
-    mut fields: Query<(&mut M3TextField, &FocusProxy)>,
+    mut fields: Query<(&mut M3TextField, &FocusProxy, Has<Disabled>)>,
     focused: Query<(), With<Focused>>,
     mut placeholders: Query<(&TextFieldPlaceholder, &mut Node, &mut Text), Without<TextFieldClear>>,
     mut clears: Query<(&TextFieldClear, &mut Node), Without<TextFieldPlaceholder>>,
 ) {
-    for (mut field, proxy) in &mut fields {
+    for (mut field, proxy, _) in &mut fields {
         let has_focus = focused.contains(proxy.0);
         if field.is_focused != has_focus {
             field.is_focused = has_focus;
@@ -361,7 +361,7 @@ pub fn text_field_chrome_system(
     }
     let fields = fields.as_readonly();
     for (placeholder, mut node, mut text) in &mut placeholders {
-        if let Ok((field, _)) = fields.get(placeholder.0) {
+        if let Ok((field, _, _)) = fields.get(placeholder.0) {
             let display = if field.text.is_empty() {
                 Display::Flex
             } else {
@@ -376,8 +376,8 @@ pub fn text_field_chrome_system(
         }
     }
     for (clear, mut node) in &mut clears {
-        if let Ok((field, _)) = fields.get(clear.0) {
-            let display = if field.text.is_empty() {
+        if let Ok((field, _, disabled)) = fields.get(clear.0) {
+            let display = if field.text.is_empty() || disabled {
                 Display::None
             } else {
                 Display::Flex

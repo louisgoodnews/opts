@@ -181,7 +181,7 @@ fn populate_toplevel_children(
                                 font_size: FontSize::Px(20.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         ForegroundRole(ColorRole::OnSurface),
                         TypeStyleToken(TypeScale::TitleMedium),
@@ -212,7 +212,7 @@ fn populate_toplevel_children(
                                         font_size: FontSize::Px(16.0),
                                         ..default()
                                     },
-                                    TextColor(Color::WHITE),
+                                    TextColor::default(),
                                 ),
                                 ForegroundRole(ColorRole::OnSurfaceVariant),
                                 TypeStyleToken(TypeScale::LabelLarge),

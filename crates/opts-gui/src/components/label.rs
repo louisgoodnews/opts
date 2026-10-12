@@ -61,7 +61,7 @@ impl LabelBuilder {
                     font_size: FontSize::Px(14.0),
                     ..default()
                 },
-                TextColor(Color::WHITE),
+                TextColor::default(),
             ),
             M3Label,
             TypeStyleToken(self.style),

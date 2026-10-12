@@ -1,443 +1,149 @@
-//! Comprehensive gallery demonstrating all Material Design 3 widgets in OPTS GUI.
+//! Component gallery: every `opts-gui` component in every state (rest, hover, focus, pressed,
+//! disabled with a reason, "Feature not available yet!", error).
+//!
+//! ```text
+//! cargo run -p opts-gui --example gallery
+//! OPTS_LOCALE=en-XA cargo run -p opts-gui --example gallery     # pseudo-locale (+40 % text)
+//! OPTS_GALLERY_SHOT=/path/shot.png cargo run -p opts-gui --example gallery   # save a PNG, exit
+//! ```
+//!
+//! Keys: Tab / arrows move focus, Enter or Space activate, Esc goes back, F2 toggles light/dark.
+//! The pinned hover/focus/pressed rows are display aids (`ForcedState`); everything else is live.
 
 use bevy::prelude::*;
-use opts_gui::components::Button;
+use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use opts_gui::prelude::*;
-
-fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "OPTS Material Design 3 Widget Gallery".into(),
-                resolution: bevy::window::WindowResolution::new(1280, 800),
-                ..default()
-            }),
-            ..default()
-        }))
-        .add_plugins(OptsGuiPlugin)
-        .add_systems(Startup, setup_gallery)
-        .add_systems(
-            Update,
-            (
-                theme_hotkey_toggle_system,
-                gallery_interaction_listener,
-                spawn_dialog_system,
-                spawn_toast_system,
-            ),
-        )
-        .run();
-}
-
-#[derive(Component)]
-struct SpawnDialogButton;
-
-#[derive(Component)]
-struct SpawnToastButton;
+use opts_gui::showcase::spawn_showcase;
 
 #[derive(Component)]
 struct StatusLabel;
 
-fn setup_gallery(mut commands: Commands) {
-    commands.spawn(Camera2d);
+#[derive(Resource)]
+struct ShotPlan {
+    path: String,
+    frames: u32,
+}
 
-    // Root screen layout
+fn main() {
+    let mut app = App::new();
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "OPTS component gallery".into(),
+            resolution: bevy::window::WindowResolution::new(1700, 1000),
+            ..default()
+        }),
+        ..default()
+    }))
+    .add_plugins(OptsGuiPlugin)
+    .add_systems(Startup, setup)
+    .add_systems(Update, (theme_hotkey, status_line, take_screenshot));
+    if let Ok(path) = std::env::var("OPTS_GALLERY_SHOT") {
+        app.insert_resource(ShotPlan { path, frames: 0 });
+    }
+    app.run();
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn(Camera2d);
     let root = commands
         .spawn((
-            (Node {
+            Node {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                display: Display::Flex,
                 flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(12.0),
+                overflow: Overflow::scroll_y(),
                 ..default()
-            }),
+            },
             BackgroundRole(ColorRole::Surface),
         ))
         .id();
-
-    // 1. App Top Bar
-    commands.entity(root).with_children(|parent| {
-        parent
-            .spawn((
-                (Node {
-                    width: Val::Percent(100.0),
-                    min_height: Val::Px(56.0),
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    padding: UiRect::axes(Val::Px(24.0), Val::Px(8.0)),
-                    border: UiRect {
-                        bottom: Val::Px(1.0),
-                        ..default()
-                    },
-                    ..default()
-                }),
-                BackgroundRole(ColorRole::SurfaceContainerLow),
-                BorderRole(ColorRole::OutlineVariant),
-            ))
-            .with_children(|bar| {
-                bar.spawn(((Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    column_gap: Val::Px(12.0),
-                    ..default()
-                }),))
-                    .with_children(|title_box| {
-                        LabelBuilder::new("OPTS Design System Gallery")
-                            .with_style(TypeScale::TitleLarge)
-                            .with_color(ColorRole::Primary)
-                            .spawn_child(title_box);
-
-                        LabelBuilder::new("— Material Design 3")
-                            .with_style(TypeScale::LabelLarge)
-                            .with_color(ColorRole::OnSurfaceVariant)
-                            .spawn_child(title_box);
-                    });
-
-                bar.spawn(((Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    align_items: AlignItems::Center,
-                    column_gap: Val::Px(16.0),
-                    ..default()
-                }),))
-                    .with_children(|controls| {
-                        LabelBuilder::new("F2: Toggle Theme | Tab: Focus")
-                            .with_style(TypeScale::LabelMedium)
-                            .with_color(ColorRole::Outline)
-                            .spawn_child(controls);
-
-                        ButtonBuilder::tonal("Toggle Theme")
-                            .on_click(|commands, _entity| {
-                                commands.queue(|world: &mut World| {
-                                    let is_dark = {
-                                        let theme = world.resource::<MaterialTheme>();
-                                        theme.scheme.is_dark
-                                    };
-                                    world.write_message(ThemeChanged { is_dark: !is_dark });
-                                });
-                            })
-                            .spawn_child(controls);
-                    });
-            });
-    });
-
-    // 2. Main Content Notebook
-    commands.entity(root).with_children(|parent| {
-        let notebook = NotebookBuilder::new()
-            .with_tabs(vec![
-                "Inputs & Controls".into(),
-                "Transit & Timetable".into(),
-                "Overlays & Cards".into(),
-            ])
-            .with_active(0)
-            .spawn_child(parent);
-
-        // Find the panels and populate them
-        populate_gallery_panels(parent, notebook);
-    });
-
-    // 3. Status Bar at Bottom
-    commands.entity(root).with_children(|parent| {
-        parent
-            .spawn((
-                (Node {
-                    width: Val::Percent(100.0),
-                    min_height: Val::Px(32.0),
-                    padding: UiRect::axes(Val::Px(24.0), Val::Px(6.0)),
-                    display: Display::Flex,
-                    align_items: AlignItems::Center,
-                    border: UiRect {
-                        top: Val::Px(1.0),
-                        ..default()
-                    },
-                    ..default()
-                }),
-                BackgroundRole(ColorRole::SurfaceContainerLowest),
-                BorderRole(ColorRole::OutlineVariant),
-            ))
-            .with_children(|status_bar| {
-                status_bar.spawn((
-                    (
-                        Text::new("Ready. Interact with any widget to observe reactive events."),
-                        TextFont {
-                            font_size: FontSize::Px(12.0),
-                            ..default()
-                        },
-                        TextColor(Color::WHITE),
-                    ),
-                    StatusLabel,
-                    ForegroundRole(ColorRole::OnSurfaceVariant),
-                    TypeStyleToken(TypeScale::LabelMedium),
-                ));
-            });
-    });
-}
-
-fn populate_gallery_panels(parent: &mut ChildSpawnerCommands, _notebook: Entity) {
-    // Note: Notebook panels are automatically spawned inside NotebookBuilder.
-    // Here we can spawn our gallery section containers inside a row layout for demonstration.
-    parent
-        .spawn(Node {
-            display: Display::Flex,
-            flex_direction: FlexDirection::Row,
-            flex_grow: 1.0,
-            width: Val::Percent(100.0),
-            padding: UiRect::all(Val::Px(16.0)),
-            column_gap: Val::Px(24.0),
-            overflow: Overflow::clip_y(),
-            ..default()
-        })
-        .with_children(|content| {
-            // Column 1: Buttons & Inputs
-            build_inputs_column(content);
-
-            // Column 2: Selection & Toggles
-            build_selection_column(content);
-
-            // Column 3: Transit Widgets & Containers
-            build_transit_column(content);
-        });
-}
-
-fn build_inputs_column(parent: &mut ChildSpawnerCommands) {
-    parent
+    let title = LabelBuilder::new("OPTS component gallery")
+        .with_style(TypeScale::HeadlineSmall)
+        .spawn(&mut commands);
+    let status = commands
         .spawn((
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                row_gap: Val::Px(16.0),
-                padding: UiRect::all(Val::Px(16.0)),
-                ..default()
-            }),
-            BackgroundRole(ColorRole::SurfaceContainerLow),
-            RadiusToken(RadiusLevel::Medium),
+            Text::new("Use Tab, arrows and Enter; F2 switches the theme."),
+            TypeStyleToken(TypeScale::BodyMedium),
+            ForegroundRole(ColorRole::OnSurfaceVariant),
+            StatusLabel,
         ))
-        .with_children(|col| {
-            LabelBuilder::new("Buttons & Text Fields")
-                .with_style(TypeScale::TitleMedium)
-                .with_color(ColorRole::Primary)
-                .spawn_child(col);
-
-            DividerBuilder::horizontal().spawn_child(col);
-
-            ButtonBuilder::filled("Filled Button").spawn_child(col);
-            ButtonBuilder::outlined("Outlined Button").spawn_child(col);
-            ButtonBuilder::text("Text Button").spawn_child(col);
-
-            TextFieldBuilder::outlined("Bus Line")
-                .with_placeholder("e.g. M29")
-                .with_text("100")
-                .spawn_child(col);
-
-            TextFieldBuilder::filled("Driver Name")
-                .with_placeholder("Enter name")
-                .spawn_child(col);
-        });
+        .id();
+    commands.entity(root).add_children(&[title, status]);
+    spawn_showcase(&mut commands, root);
 }
 
-fn build_selection_column(parent: &mut ChildSpawnerCommands) {
-    parent
-        .spawn((
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                row_gap: Val::Px(16.0),
-                padding: UiRect::all(Val::Px(16.0)),
-                ..default()
-            }),
-            BackgroundRole(ColorRole::SurfaceContainerLow),
-            RadiusToken(RadiusLevel::Medium),
-        ))
-        .with_children(|col| {
-            LabelBuilder::new("Selection & Menus")
-                .with_style(TypeScale::TitleMedium)
-                .with_color(ColorRole::Primary)
-                .spawn_child(col);
-
-            DividerBuilder::horizontal().spawn_child(col);
-
-            CheckboxBuilder::new("Automated Signal Priority")
-                .checked(true)
-                .spawn_child(col);
-
-            SwitchBuilder::new("Dynamic Headway Control")
-                .with_value(true)
-                .spawn_child(col);
-
-            RadioBuilder::new("Standard Service")
-                .with_group(1)
-                .selected(true)
-                .spawn_child(col);
-
-            RadioBuilder::new("Express Service")
-                .with_group(1)
-                .spawn_child(col);
-
-            ComboboxBuilder::new("Depot")
-                .with_options(vec![
-                    "Cicerostraße Depot".into(),
-                    "Britz Depot".into(),
-                    "Müllerstraße Depot".into(),
-                ])
-                .with_selected(0)
-                .spawn_child(col);
-        });
-}
-
-fn build_transit_column(parent: &mut ChildSpawnerCommands) {
-    parent
-        .spawn((
-            (Node {
-                display: Display::Flex,
-                flex_direction: FlexDirection::Column,
-                flex_grow: 1.0,
-                row_gap: Val::Px(16.0),
-                padding: UiRect::all(Val::Px(16.0)),
-                ..default()
-            }),
-            BackgroundRole(ColorRole::SurfaceContainerLow),
-            RadiusToken(RadiusLevel::Medium),
-        ))
-        .with_children(|col| {
-            LabelBuilder::new("Transit & Overlays")
-                .with_style(TypeScale::TitleMedium)
-                .with_color(ColorRole::Primary)
-                .spawn_child(col);
-
-            DividerBuilder::horizontal().spawn_child(col);
-
-            DateSelectBuilder::new(2026, 10, 8).spawn_child(col);
-            DateTimeSelectBuilder::new(2026, 10, 8, 14, 30).spawn_child(col);
-
-            // Action triggers
-            col.spawn((
-                (
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                ),
-                SpawnDialogButton,
-                BackgroundRole(ColorRole::SecondaryContainer),
-                RadiusToken(RadiusLevel::Full),
-            ))
-            .with_children(|btn| {
-                LabelBuilder::new("Open Modal Dialog")
-                    .with_style(TypeScale::LabelLarge)
-                    .with_color(ColorRole::OnSecondaryContainer)
-                    .spawn_child(btn);
-            });
-
-            col.spawn((
-                (
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..default()
-                    },
-                ),
-                SpawnToastButton,
-                BackgroundRole(ColorRole::TertiaryContainer),
-                RadiusToken(RadiusLevel::Full),
-            ))
-            .with_children(|btn| {
-                LabelBuilder::new("Show Toast Alert")
-                    .with_style(TypeScale::LabelLarge)
-                    .with_color(ColorRole::OnTertiaryContainer)
-                    .spawn_child(btn);
-            });
-
-            // Treeview demo
-            let root_node = TreeNode::new("bvg", "BVG Network")
-                .with_child(
-                    TreeNode::new("bus", "Bus Network")
-                        .with_child(TreeNode::new("m29", "Line M29 (Hermannplatz ↔ Roseneck)"))
-                        .with_child(TreeNode::new("100", "Line 100 (Alexanderplatz ↔ Zoo)")),
-                )
-                .with_child(TreeNode::new("subway", "U-Bahn Network"));
-
-            TreeviewBuilder::new().with_node(root_node).spawn_child(col);
-        });
-}
-
-fn theme_hotkey_toggle_system(
+fn theme_hotkey(
     keyboard: Res<ButtonInput<KeyCode>>,
     theme: Res<MaterialTheme>,
     mut events: MessageWriter<ThemeChanged>,
 ) {
     if keyboard.just_pressed(KeyCode::F2) {
         events.write(ThemeChanged {
-            is_dark: !theme.scheme.is_dark,
+            is_dark: !theme.scheme.is_dark(),
         });
     }
 }
 
-fn spawn_dialog_system(
-    mut commands: Commands,
-    mut activated: MessageReader<Activated>,
-    query: Query<(), With<SpawnDialogButton>>,
+#[allow(clippy::too_many_arguments)]
+fn status_line(
+    mut clicks: MessageReader<ButtonClicked>,
+    mut checks: MessageReader<CheckboxToggled>,
+    mut switches: MessageReader<SwitchToggled>,
+    mut radios: MessageReader<RadioSelected>,
+    mut combos: MessageReader<ComboboxSelected>,
+    mut trees: MessageReader<TreeNodeSelected>,
+    mut texts: MessageReader<TextChanged>,
+    mut label: Query<&mut Text, With<StatusLabel>>,
 ) {
-    for Activated(entity) in activated.read() {
-        if query.contains(*entity) {
-            ToplevelBuilder::new("Vehicle Dispatch Parameters")
-                .with_size(440.0, 260.0)
-                .modal(true)
-                .spawn(&mut commands);
-        }
+    let Ok(mut text) = label.single_mut() else {
+        return;
+    };
+    if let Some(e) = clicks.read().last() {
+        text.0 = format!("Button {:?} activated", e.0);
+    }
+    if let Some(e) = checks.read().last() {
+        text.0 = format!("Check box {:?} is now {:?}", e.entity, e.state);
+    }
+    if let Some(e) = switches.read().last() {
+        text.0 = format!(
+            "Switch {:?} is now {}",
+            e.entity,
+            if e.is_on { "on" } else { "off" }
+        );
+    }
+    if let Some(e) = radios.read().last() {
+        text.0 = format!("Radio {:?} selected", e.entity);
+    }
+    if let Some(e) = combos.read().last() {
+        text.0 = format!("Combo box chose {}", e.selected_value);
+    }
+    if let Some(e) = trees.read().last() {
+        text.0 = format!("Tree row {} selected", e.node_id);
+    }
+    if let Some(e) = texts.read().last() {
+        text.0 = format!("Text is now {:?}", e.text);
     }
 }
 
-fn spawn_toast_system(
+fn take_screenshot(
     mut commands: Commands,
-    mut activated: MessageReader<Activated>,
-    query: Query<(), With<SpawnToastButton>>,
+    plan: Option<ResMut<ShotPlan>>,
+    mut exit: MessageWriter<AppExit>,
+    mut theme: MessageWriter<ThemeChanged>,
 ) {
-    for Activated(entity) in activated.read() {
-        if query.contains(*entity) {
-            ToastBuilder::new("Timetable schedule synchronized successfully")
-                .with_duration(3.5)
-                .with_action("OK")
-                .spawn(&mut commands);
-        }
+    let Some(mut plan) = plan else { return };
+    plan.frames += 1;
+    if plan.frames == 5 && std::env::var_os("OPTS_GALLERY_LIGHT").is_some() {
+        theme.write(ThemeChanged { is_dark: false });
     }
-}
-
-fn gallery_interaction_listener(
-    mut click_events: MessageReader<ButtonClicked>,
-    mut check_events: MessageReader<CheckboxToggled>,
-    mut switch_events: MessageReader<SwitchToggled>,
-    mut radio_events: MessageReader<RadioSelected>,
-    mut combo_events: MessageReader<ComboboxSelected>,
-    mut tree_select_events: MessageReader<TreeNodeSelected>,
-    mut status_query: Query<&mut Text, With<StatusLabel>>,
-) {
-    for mut text in &mut status_query {
-        for event in click_events.read() {
-            text.0 = format!("Event: ButtonClicked({:?})", event.0);
-        }
-        for event in check_events.read() {
-            text.0 = format!("Event: CheckboxToggled({:?})", event.state);
-        }
-        for event in switch_events.read() {
-            text.0 = format!("Event: SwitchToggled(is_on={})", event.is_on);
-        }
-        for event in radio_events.read() {
-            text.0 = format!("Event: RadioSelected({:?})", event.entity);
-        }
-        for event in combo_events.read() {
-            text.0 = format!("Event: ComboboxSelected('{}')", event.selected_value);
-        }
-        for event in tree_select_events.read() {
-            text.0 = format!("Event: TreeNodeSelected('{}')", event.node_id);
-        }
+    if plan.frames == 40 {
+        commands
+            .spawn(Screenshot::primary_window())
+            .observe(save_to_disk(plan.path.clone()));
+    }
+    if plan.frames == 80 {
+        exit.write(AppExit::Success);
     }
 }

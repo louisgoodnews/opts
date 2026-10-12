@@ -115,6 +115,7 @@
 - [Camera System](architecture/camera-system.md)
 - [GUI Design System](architecture/gui-design-system.md)
 - [UI Foundations Spikes](architecture/ui-spikes.md)
+- [GUI Interaction Layer and Components](architecture/gui-interaction-layer.md)
 - [Vehicle ECS Simulation Bridge](architecture/vehicle-ecs-bridge.md)
 - [Main Menu Architecture](architecture/main-menu.md)
 - [Application Startup & Wiring](architecture/application-startup.md)

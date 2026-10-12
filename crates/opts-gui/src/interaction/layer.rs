@@ -49,6 +49,18 @@ pub struct StateLayerRole(pub ColorRole);
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SavedBorderRole(pub Option<ColorRole>);
 
+/// Pins visual states for the component gallery and screenshots: the pinned states are OR-ed with
+/// the real ones. Never set by game code.
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ForcedState {
+    /// Draw the hover layer.
+    pub hovered: bool,
+    /// Draw the focus layer and ring.
+    pub focused: bool,
+    /// Draw the pressed layer.
+    pub pressed: bool,
+}
+
 /// Gives a control that is *not* a [`Button`] the state layer, scrim and focus ring (frames of
 /// composite controls such as the text field). [`Button`] requires it.
 #[derive(Component, Debug, Clone, Copy, Default)]
@@ -159,6 +171,7 @@ type ControlItem<'a> = (
     Option<&'a BackgroundRole>,
     &'a Node,
     Option<&'a FocusProxy>,
+    Option<&'a ForcedState>,
 );
 
 /// Applies the state layer tint, the disabled scrim and the border radius to the helper nodes.
@@ -170,18 +183,31 @@ pub fn update_state_layers(
     mut nodes: Query<(&mut BackgroundColor, &mut Node), Without<StateLayerLink>>,
 ) {
     let ring_visible = visible.is_none_or(|v| v.0);
-    for (link, hovered, pressed, focused, disabled, error, role, bg_role, control_node, proxy) in
-        &controls
+    for (
+        link,
+        hovered,
+        pressed,
+        focused,
+        disabled,
+        error,
+        role,
+        bg_role,
+        control_node,
+        proxy,
+        forced,
+    ) in &controls
     {
         let proxied = proxy.is_some_and(|p| focus_holders.contains(p.0));
-        let state = ui_state(
+        let forced = forced.copied().unwrap_or_default();
+        let mut state = ui_state(
             hovered,
-            pressed,
-            focused || proxied,
+            pressed || forced.pressed,
+            focused || proxied || forced.focused,
             disabled,
             error,
-            ring_visible || proxy.is_some(),
+            ring_visible || proxy.is_some() || forced.focused,
         );
+        state.hovered |= forced.hovered;
         let tint_role = role
             .map(|r| r.0)
             .unwrap_or_else(|| bg_role.map_or(ColorRole::OnSurface, |b| on_color(b.0)));
@@ -213,6 +239,7 @@ type FocusRingItem<'a> = (
     Has<Focused>,
     Option<&'a Outline>,
     Option<&'a FocusProxy>,
+    Option<&'a ForcedState>,
 );
 
 /// Draws and removes the focus ring.
@@ -225,9 +252,9 @@ pub fn update_focus_ring(
 ) {
     let ring_visible = visible.is_none_or(|v| v.0);
     let color = theme.scheme.get(ColorRole::Secondary);
-    for (entity, focused, outline, proxy) in &controls {
+    for (entity, focused, outline, proxy, forced) in &controls {
         let proxied = proxy.is_some_and(|p| focus_holders.contains(p.0));
-        let want = (focused && ring_visible) || proxied;
+        let want = (focused && ring_visible) || proxied || forced.is_some_and(|f| f.focused);
         match (want, outline) {
             (true, Some(o)) if o.color == color => {}
             (true, _) => {
