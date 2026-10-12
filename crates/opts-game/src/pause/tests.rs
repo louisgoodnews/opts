@@ -199,12 +199,12 @@ fn settings_in_the_pause_overlay_opens_the_page_and_esc_returns_to_the_pause_men
     esc(&mut app);
     click(&mut app, "pause.settings");
     let open = ids(&mut app);
-    assert!(open.contains(&"settings".to_owned()), "{open:?}");
+    assert!(open.contains(&"settings/search".to_owned()), "{open:?}");
     assert!(!open.contains(&"pause.resume".to_owned()));
     assert_eq!(state(&app), AppState::InGame);
     esc(&mut app);
     let back = ids(&mut app);
-    assert!(!back.contains(&"settings".to_owned()), "{back:?}");
+    assert!(!back.contains(&"settings/search".to_owned()), "{back:?}");
     assert!(back.contains(&"pause.resume".to_owned()), "pause menu is back");
     assert!(app.world().resource::<Pause>().open);
     assert!(paused(&app));

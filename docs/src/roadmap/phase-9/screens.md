@@ -90,17 +90,17 @@ Centred panel over the paused scene (`Modal`); simulation paused (`Time<Virtual>
 | title | `pause-title` | |
 | **Resume** (default focus) | `pause-resume` | closes, restores pause state and cursor |
 | Vehicle | `pause-vehicle` | closes the pause panel and opens the vehicle menu (L-Alt menu); Esc there returns to the game |
-| Settings | `pause-settings` | red *Feature not available yet!* until the settings registry offers an embeddable pane (see below) |
+| Settings | `pause-settings` | opens the settings page as an overlay over the paused scene (`settings_screen::overlay`); Esc or *Close* returns to this panel |
 | Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal); the Help overlay |
 | Report an issue | `pause-report` | the report dialog |
 | ─── separator | | |
 | **Leave drive…** | `pause-leave` | confirmation dialog |
 
-*Settings in the pause panel*: the settings pages build into the shell's content area, which is hidden in game. Until the settings registry provides an embeddable pane, *Settings* in the pause panel is a registered not-yet place (`pause.settings`, M-0063) with the red text. This is recorded rather than faked.
+*Settings in the pause panel*: the shell's content area is hidden in game, so the same page (`spawn_settings_page`) is hosted in a modal (`SettingsOverlay`). The pause panel steps aside and returns when the overlay closes (`pause::return_after_overlay`).
 
 **Behaviour as built.** Esc while the drive is still loading cancels the load (the loading screen of the wizard agent owns that later); Backspace never opens the overlay (a vehicle uses it); the overlay steps aside while the leave dialog is open and returns on *Cancel*; *Report an issue* closes the overlay, takes the screenshot of the game, and the overlay returns when the report dialog closes. The HUD's top-right button reads *Pause [Esc]* and opens the overlay.
 
-**Leave dialog**: title `leave-title` ("Leave the drive?"), body `leave-body` ("Your progress on this route is lost."), actions **Leave to Home** (`leave-home`, destructive styling), **Quit OPTS** (`leave-quit`), **Cancel** (`leave-cancel`, default focus). Skipped when the session has not started moving (nothing is lost): *Leave drive…* then goes straight to the summary-free Home.
+**Leave dialog**: title `leave-title` ("Leave the drive?"), body `leave-body` ("Your progress on this route is lost."), actions **Leave to Home** (`leave-home`, destructive styling), **Quit OPTS** (`leave-quit`), **Cancel** (`leave-cancel`, default focus). Always shown (the user chose to end the session; Esc cancels and the pause panel returns). Only a drive that moved leaves a summary on Home.
 
 The HUD's *Exit to Menu* button opens the same pause panel (not a direct exit).
 
@@ -124,7 +124,7 @@ Left list (tabs) **Controls · Guides · Report an issue · About** and a right 
 
 | Tab | Content |
 | :--- | :--- |
-| **Controls** (`help-controls`) | the key table of the HUD as it exists today (`hud.rs` shortcuts), grouped (Driving, Camera, Menus); a red *Feature not available yet!* line for the generated, per-vehicle list (`help.controls-generated`, M-0064) |
+| **Controls** (`help-controls`) | generated from `help::controls::GROUPS`, the one registry of the keyboard bindings (Driving, Camera, Menus); a test checks every listed key against the source file of the input system that reads it. The per-vehicle list is not part of it |
 | **Guides** (`help-guides`) | red *Feature not available yet!* (`help.guides`, M-0064) |
 | **Report an issue** (`help-report`) | what is sent (screenshot, log excerpt, the text), the **Report an issue** button that opens the existing report dialog; a failure produces an error toast and a banner on the page |
 | **About** (`help-about`) | `OPTS`, version, `help-about-licence` (MIT or Apache-2.0), the third-party notices (Bevy, Rust, Noto Sans, JetBrains Mono, Material Icons: from [legal-licensing](../../contributing/legal-licensing.md)), the clean-room statement, project link |
@@ -150,8 +150,6 @@ Implemented as described in [interaction and feel §5](interaction-and-feel.md#5
 | `nav.workshop` | rail, Workshop | M-0051 |
 | `home.load-game` | Home, Load game | M-0062 |
 | `help.guides` | Help, Guides | M-0064 |
-| `help.controls-generated` | Help, Controls (generated list; the table is handwritten from the HUD hints) | M-0064 |
-| `pause.settings` | Pause, Settings | M-0063 |
 | `home.rescan` | Home banner, Rescan | M-0063 |
 
 ## 9. Test matrix (S7)

@@ -98,7 +98,7 @@ impl Plugin for HelpPlugin {
             )
             .add_systems(
                 Update,
-                (f1_opens_help, overlay::overlay_actions, return_to_pause)
+                (f1_opens_help, overlay::overlay_actions)
                     .run_if(not(in_state(AppState::Loading))),
             );
     }
@@ -324,23 +324,6 @@ pub fn f1_opens_help(
         _ => {
             navigate.write(Navigate::push("help"));
         }
-    }
-}
-
-/// When the Help or Settings overlay closes during a drive, the pause overlay is back.
-pub fn return_to_pause(
-    mut closed: RemovedComponents<HelpOverlay>,
-    mut settings_closed: RemovedComponents<crate::settings_screen::SettingsOverlay>,
-    mut pause: ResMut<Pause>,
-    reporting: Res<State<ReportModalState>>,
-    mut commands: Commands,
-) {
-    if closed.read().count() + settings_closed.read().count() == 0 {
-        return;
-    }
-    // The report dialog (opened from the overlay) brings the pause overlay back itself.
-    if pause.open && pause.root.is_none() && *reporting.get() == ReportModalState::Inactive {
-        pause.root = Some(crate::pause::spawn_overlay(&mut commands));
     }
 }
 

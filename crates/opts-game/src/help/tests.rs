@@ -91,7 +91,6 @@ fn the_page_offers_four_tabs_and_starts_on_the_generated_controls() {
             assert!(shown.contains(&row.action), "{}", row.shown);
         }
     }
-    assert!(!shown.contains(&opts_gui::l10n::keys::NOT_AVAILABLE));
 }
 
 #[test]

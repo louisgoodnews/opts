@@ -21,6 +21,7 @@ use crate::app_state::AppState;
 use crate::in_game::types::SimulationLoadState;
 use crate::in_game::VehicleMenu;
 use crate::new_game_screen::types::NewGameSetup;
+use crate::settings_screen::SettingsOverlay;
 use crate::session_summary::LastSession;
 use crate::shell::dialog::{
     spawn_confirm_dialog, DialogButtonSpec, DialogButtonStyle, DialogChoice, DialogSpec, CANCEL,
@@ -333,6 +334,23 @@ pub fn leave_choices(
     }
 }
 
+/// When the Help or Settings overlay closes during a drive, the pause overlay is back.
+pub fn return_after_overlay(
+    mut closed: RemovedComponents<crate::help::HelpOverlay>,
+    mut settings_closed: RemovedComponents<SettingsOverlay>,
+    mut pause: ResMut<Pause>,
+    reporting: Res<State<ReportModalState>>,
+    mut commands: Commands,
+) {
+    if closed.read().count() + settings_closed.read().count() == 0 {
+        return;
+    }
+    // The report dialog (opened from the overlay) brings the pause overlay back itself.
+    if pause.open && pause.root.is_none() && *reporting.get() == ReportModalState::Inactive {
+        pause.root = Some(spawn_overlay(&mut commands));
+    }
+}
+
 /// After the report dialog closes the overlay returns.
 pub fn reopen_after_report(
     mut commands: Commands,
@@ -398,6 +416,7 @@ impl Plugin for PausePlugin {
                     pause_items,
                     leave_choices,
                     reopen_after_report,
+                    return_after_overlay,
                 )
                     .run_if(in_state(AppState::InGame)),
             )

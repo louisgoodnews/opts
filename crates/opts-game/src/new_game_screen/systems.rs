@@ -2,11 +2,7 @@
 
 use bevy::prelude::*;
 use opts_gui::actions::UiAction;
-use opts_gui::components::combobox::M3Combobox;
-use opts_gui::components::modal::ModalRoot;
 use opts_gui::interaction::events::ComboboxSelected;
-use opts_gui::interaction::handlers::TextEntry;
-use opts_gui::interaction::state::Focused;
 use opts_gui::interaction::Activated;
 use opts_gui::l10n::Localization;
 use opts_gui::patterns::master_detail::{
@@ -159,8 +155,8 @@ fn drive(env: &mut Env, commands: &mut Commands) {
 /// `Esc` / `Back` inside the wizard: the shell's one Esc mechanism (`shell::esc`) sends
 /// [`ScreenBack`] while a step is left to go back to, and leaves the screen through the back stack
 /// otherwise. Dialogs, open drop-downs and text fields keep the press (the shell's gate).
-pub fn handle_back_action(mut back: MessageReader<ScreenBack>, mut env: Env) {
-    for _ in back.read() {
+pub fn handle_back_action(mut requests: MessageReader<ScreenBack>, mut env: Env) {
+    for _ in requests.read() {
         back(&mut env);
     }
 }

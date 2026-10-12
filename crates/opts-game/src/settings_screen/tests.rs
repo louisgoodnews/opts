@@ -355,6 +355,9 @@ fn the_omsi_folder_button_starts_the_shells_folder_flow() {
     assert!(!app.world().resource::<crate::first_run::FolderPicker>().is_open());
     let b = by_id(&mut app, "settings/content/omsi_path/choose").expect("choose button");
     click(&mut app, b);
+    for _ in 0..3 {
+        app.update();
+    }
     assert!(
         app.world().resource::<crate::first_run::FolderPicker>().is_open(),
         "first_run::choose_omsi_folder ran"

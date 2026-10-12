@@ -2,7 +2,7 @@
 //!
 //! The same page as the Settings screen (`spawn_settings_page`) inside a modal over the paused
 //! scene. Esc (the modal's cancel request) or *Close* closes it and the pause overlay comes back
-//! (`help::return_to_pause`).
+//! (`pause::return_after_overlay`).
 
 use bevy::prelude::*;
 use opts_gui::components::modal::{ModalBuilder, ModalEvent};
