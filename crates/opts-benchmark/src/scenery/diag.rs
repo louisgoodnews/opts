@@ -138,6 +138,8 @@ pub fn load_categories(events: &[EventRecord], stats: &BTreeMap<String, i64>) ->
             Some("F-MESH-PROTECTED")
         } else if t.starts_with("sco parse failed") {
             Some("F-SCO-PARSE")
+        } else if t.starts_with("text texture has no string") {
+            Some("F-TEXT-NOT-SHOWN")
         } else if t.starts_with("map has parking bays but no parklist") {
             // Artifact of the generated map (no parking list), not an object fault.
             None

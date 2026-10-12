@@ -10,7 +10,7 @@ use super::diag::EventSink;
 use super::supervisor::{self, RunManifest, RunOptions};
 use super::verdict::Thresholds;
 use super::worker::{self, WorkerConfig};
-use super::{mapgen, report};
+use super::{corpus, lookups, mapgen, preflight, report};
 
 /// `opts-benchmark scenery` subcommands.
 #[derive(Debug, Subcommand)]
@@ -23,6 +23,8 @@ pub enum SceneryCommand {
     Worker(WorkerArgs),
     /// Rewrite the summary files of a run, or compare two runs.
     Report(ReportArgs),
+    /// CPU-only survey: tiers, context classes and tags of the corpus (no rendering).
+    Preflight(PreflightArgs),
 }
 
 /// Arguments of `scenery run`.
@@ -104,6 +106,58 @@ pub struct ReportArgs {
     /// Another run directory to compare with (lists changed verdicts).
     #[arg(long)]
     pub compare: Option<PathBuf>,
+}
+
+/// Arguments of `scenery preflight`.
+#[derive(Debug, Args)]
+pub struct PreflightArgs {
+    /// OMSI 2 installation root (only read).
+    #[arg(long)]
+    pub omsi_path: PathBuf,
+    /// File to write one JSON line per object to.
+    #[arg(long)]
+    pub out: PathBuf,
+    /// `referenced` or `all`.
+    #[arg(long, default_value = "all")]
+    pub tier: String,
+    /// Case-insensitive glob on the relative `.sco` path.
+    #[arg(long)]
+    pub filter: Option<String>,
+    /// Catalogue database; paths resolve on disk only when absent.
+    #[arg(long)]
+    pub catalogue: Option<PathBuf>,
+}
+
+/// Runs the preflight survey; returns the class counts as text.
+///
+/// # Errors
+/// Corpus or I/O failures.
+fn survey(args: &PreflightArgs) -> Result<String> {
+    use std::collections::BTreeMap;
+    use std::io::Write as _;
+    let sel = corpus::Selection {
+        tier: args.tier.clone(),
+        filter: args.filter.clone(),
+        ..corpus::Selection::default()
+    };
+    let entries = corpus::select(corpus::entries(&args.omsi_path)?, &sel)?;
+    let catalogue = lookups::open(args.catalogue.as_deref());
+    let install = lookups::install(&args.omsi_path, catalogue.as_ref());
+    let lines = preflight::survey(&install, &entries);
+    let mut file = std::io::BufWriter::new(std::fs::File::create(&args.out)?);
+    let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+    for l in &lines {
+        writeln!(file, "{}", serde_json::to_string(l)?)?;
+        for c in l.class.iter().chain(&l.categories) {
+            *counts.entry(c.clone()).or_default() += 1;
+        }
+        *counts.entry(format!("tier:{}", l.tier)).or_default() += 1;
+    }
+    let mut text = format!("{} objects\n", lines.len());
+    for (k, n) in counts {
+        text.push_str(&format!("{k}: {n}\n"));
+    }
+    Ok(text)
 }
 
 /// The game's catalogue database, if it exists and describes `root`.
@@ -200,6 +254,7 @@ pub fn execute(cmd: SceneryCommand, sink: EventSink) -> Result<String> {
             worker::run(worker_config(&args)?, sink)?;
             Ok(String::new())
         }
+        SceneryCommand::Preflight(args) => survey(&args),
         SceneryCommand::Report(args) => {
             let records = report::latest(report::read_results(&args.run_dir.join("results.jsonl")));
             report::write_summaries(&args.run_dir, &records)?;

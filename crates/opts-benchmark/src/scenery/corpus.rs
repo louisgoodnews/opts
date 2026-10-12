@@ -101,6 +101,7 @@ fn scan_tiles(files: &[PathBuf]) -> (HashSet<String>, HashSet<String>) {
     let norm = |s: &str| normalise_rel(s.trim()).to_lowercase();
     for f in files {
         let Some(tile) = std::fs::read(f).ok().and_then(|b| MapTile::parse(&b).ok()) else {
+            tracing::warn!(tile = %f.display(), "map tile unreadable; its objects are not counted as referenced");
             continue;
         };
         objects.extend(tile.objects.iter().map(|o| norm(&o.sco_file)));

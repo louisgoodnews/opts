@@ -112,7 +112,7 @@ Every object goes through these steps. Each has a watchdog; the whole object has
 6. **Scripts** (Phase C, scripted objects only, [Script-effect check](#script-effect-check)).
 7. **Record.** Append one JSON line to `results.jsonl` and flush; keep images only when the verdict is not `pass` (default).
 
-**Context classes** (from preflight): `standalone`, `editor-only` (`[onlyeditor]`, expected to render nothing), `no-geometry` (no `[mesh]`), `tree` (`[tree]` billboard; the generated placement writes the middle of the `.sco` height and width ranges as the instance's string variables, so the expected size is exact), `surface` (`[surface]`, `[splinehelper]` or `[crossing_heightdeformation]`; junction pieces whose spline-helper geometry is not built standalone), `spline-attachment` (referenced by maps only through `[splineAttachement]`), `keyed` (at least one keyed mesh), `vehicle-model` (`[model]`, parked vehicles; not predicted, verdict `unknown`), `carpark-marker` (`[carpark_p]`; the generated map has no `parklist_p.txt`, so nothing is expected). The class is reported and selects thresholds; it never skips the object silently.
+**Context classes** (from preflight): `standalone`, `editor-only` (`[onlyeditor]`, expected to render nothing), `no-geometry` (no `[mesh]`), `help-arrow` (`[helparrow]`; informational, does not change the rules), `tree` (`[tree]` billboard; the generated placement writes the middle of the `.sco` height and width ranges as the instance's string variables, so the expected size is exact), `surface` (`[surface]`, `[splinehelper]` or `[crossing_heightdeformation]`; junction pieces whose spline-helper geometry is not built standalone), `spline-attachment` (referenced by maps only through `[splineAttachement]`), `keyed` (at least one keyed mesh), `vehicle-model` (`[model]`, parked vehicles; not predicted, verdict `unknown`), `carpark-marker` (`[carpark_p]`; the generated map has no `parklist_p.txt`, so nothing is expected). The class is reported and selects thresholds; it never skips the object silently.
 
 ## Capture
 
@@ -166,6 +166,8 @@ Load-stage categories come from preflight and diagnostics: `F-SCO-PARSE`, `F-MES
 Unsupported features (`[light_enh_2]`, `[newanim]`, `[visible]`, `[maplight]`, `[matl_lightmap]`, `[CTC]`, `[alphascale]`, LOD) become **tags** on the record (`unsupported: [...]`), not failures. Phase E uses them to split categories by cause.
 
 ### Text-texture check
+
+*Implementation notes (2026-10-12):* the strings of set A are `OPTS-A1…`, of set B `WWWW-B1…`, one per `[texttexture]` source without a variable name. Sources fed by a named string variable have no string on the placement; the loader then logs "text texture has no string on this object instance", which the harness counts as `F-TEXT-NOT-SHOWN`. A sample of 12 sign objects on 2026-10-12 showed the check works in both directions: objects whose mean difference was 0.03 to 0.08 passed, blank signs (mean difference 0 to 0.008) failed. The 2 % threshold is calibrated in H6.
 
 Objects with `[useTextTexture]` are rendered with string set A and again with string set B (one more tile rebuild). If the per-view mean colour difference inside `E` of the text-textured materials is below 2 % of full scale, the result is `F-TEXT-NOT-SHOWN`. Text textures are static in OPTS today ([Text Textures](text-textures.md)), so this belongs to Phase B; `[texttexture_enh]` sources resolved by name fail today (`tile.rs:286` passes no name list) and are expected to show up here.
 
@@ -291,6 +293,8 @@ opts-benchmark scenery report --run-dir <dir> [--compare <other-run-dir>]
 - **Optional speed-up:** 38,483 of the 55,664 `.sco` files have distinct contents. Objects whose `.sco` bytes and resolved mesh and texture files are identical could share one verdict. Not in the first version: identical `.sco` text in different folders often resolves different textures.
 
 ## Corpus statistics
+
+**Preflight survey (OPTS parsers, 2026-10-12, `opts-benchmark scenery preflight`, takes seconds):** 55,664 objects; tiers `referenced` 31,181, `attachment` 1,448, `unreferenced` 23,035; classes `standalone` 42,354, `surface` 8,415, `editor-only` 3,351, `spline-attachment` 1,448, `tree` 941, `no-geometry` 638, `help-arrow` 268, `vehicle-model` 19, `carpark-marker` 5; 4 `.sco` files fail OPTS's parser (`F-SCO-PARSE`: e.g. a maplight radius `3.5--`, a `------` where a number is expected). 61 map tiles of 15,839 do not parse with `MapTile::parse` (old tile version 10, e.g. `maps/Neuendorf`), so the objects only they place count as `unreferenced` here and differ from the scanner counts below (33,596 referenced). Both are known and documented; Phase D can use the scanner definition if needed.
 
 Measured 2026-10-11 on the installation at `…/steamapps/common/OMSI 2` (43 maps, 15,839 tile files) with a text scanner (Python, files decoded as UTF-16 with BOM or cp1252; keywords matched only as whole lines; mesh paths resolved case-insensitively below `<sco dir>/model/`; a mesh counts as keyed when its version is ≥ 4 and its stamp is not `0xFFFFFFFF`, the rule of `crates/opts-core/src/formats/o3d/parse.rs:115`). Phase B's preflight replaces these counts with the OPTS parsers' own.
 

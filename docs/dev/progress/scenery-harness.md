@@ -10,7 +10,7 @@ Branch `agent/scenery-harness`, worktree `/home/louisgoodnews/Dokumente/opts-wt-
 | H1 Single object end to end | done |
 | H2 Static check and seeded faults | done |
 | H3 Run control (crash/hang recovery) | done |
-| H4 Text-texture check, corpus preflight | todo |
+| H4 Text-texture check, corpus preflight | done |
 | H5 Sample run, performance | todo |
 | H6 Calibration (sub-batches of ~50) | todo |
 | H7 Close-out | todo |
@@ -51,3 +51,5 @@ H1: `h1.list` (Academica building, Adalst100 building, Trees_MC/arbor_1 tree, Ge
 H2: `crates/opts-benchmark/tests/seeded_faults.rs` (synthetic root, hand-written `.x`) catches mirrored heading, 2x scale, 10 m offset, removed texture, removed mesh with the expected categories (all pass on the first run; about 2 s). Added 4 verdict unit tests (28 lib tests). Expected silhouette, metrics and categories already existed in code and match the spec table.
 
 H3: `tests/run_control.rs` (real binary, synthetic root, `OPTS_BENCH_INJECT` hook): crash gives F-CRASH, hang gives F-TIMEOUT, recycling and resume work, run continues. Found and fixed a lost-object race (Result before Recycle). Test takes about 24 s.
+
+H4: new command `opts-benchmark scenery preflight --omsi-path <root> --out <jsonl> [--catalogue db]` (CPU only; whole corpus in seconds; output `~/.local/share/opts/benchmark/dev/preflight.jsonl` has class/tags/text strings per object, use it to stratify samples). New class `help-arrow`; text source without string maps to `F-TEXT-NOT-SHOWN`; unreadable tiles are logged (61, old version 10). 12 text objects run (`h4.list`): text check discriminates (Parkleit_li pass, blank signs fail). Open: `routearrow_R` renders empty (alpha 100 %), to be judged in calibration.
