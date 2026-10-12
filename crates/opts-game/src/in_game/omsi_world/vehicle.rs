@@ -396,16 +396,15 @@ fn mesh_pivot(
     let path = job.install.find_in(model_dir, rel)?;
     let o3d = opts_core::formats::o3d::parse(&std::fs::read(path).ok()?).ok()?;
     let m = o3d.transform?;
-    // The rotation part is the y/z swap when row y is (0,0,±1) and row z is (0,±1,0).
-    let swaps_yz = m[1][0].abs() < 0.01
-        && m[1][1].abs() < 0.01
-        && m[1][2].abs() > 0.9
-        && m[2][0].abs() < 0.01
-        && m[2][1].abs() > 0.9
-        && m[2][2].abs() < 0.01;
+    // Rotation part of the matrix: normalised rows (images of the local axes, o3d coordinates).
+    let row = |i: usize| {
+        let v = Vec3::new(m[i][0], m[i][1], m[i][2]);
+        let v = v.try_normalize().unwrap_or(Vec3::ZERO);
+        [v.x, v.y, v.z]
+    };
     Some(opts_bevy::MeshPivot {
         origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
-        swaps_yz,
+        rows: [row(0), row(1), row(2)],
     })
 }
 

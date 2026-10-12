@@ -28,6 +28,42 @@ The matrix is composed into a rotation step's frame only when **all** hold:
 Tests: `explicit_origin_steering_is_vertical_sd77`, `swapped_matrix_mesh_steers_about_the_vertical_nlc`,
 `the_matrix_is_left_out_where_the_axis_is_already_vertical` (`vehicle_anim.rs`).
 
+## Steering wheels and other rotated meshes (MAN NG272 GN92, 2nd scoped rule)
+`GN92\GN92_lenkrad.o3d`: `[newanim] origin_from_mesh / anim_rot Axle_Steering_0_L 1680`, no origin rotation, matrix rows
+`[0,0.985,-0.174 | 0,-0.174,-0.985 | -1,0,0]` (a proper rotation: a 3-cycle with the column's 10 degree tilt). The old frame
+turned the wheel about the lateral X axis (rim nodding up and down). SD77's steering wheel has the same kind of
+`origin_from_mesh` block with a different matrix; the NLC difference is again the matrix, not the cfg.
+
+**Ground truth** (`anim_axis_geometry`): the rotation axis of a flat ring or disc is its vertex normal (least variance,
+after descrambling). For the 578 steering wheels of the fleet (`*lenkrad*`, `origin_from_mesh`, vehicles installed):
+the origin rotation alone (H1) matches the normal for 28; composing the matrix as `P = C·Mᵀ·C` (M: rows = the
+object's axes in o3d coordinates, C: the y/z swap between o3d and vehicle axes; axis = `P·a`) matches for 575 (H4).
+For GN92 the measured rim normal is (0,-0.177,0.984); H4 gives (0,-0.174,0.985) = the tilted column axis. The
+y/z swap is the special case `P = S`, so the NLC rule is the same model.
+
+**Rule 2** (`matrix_rotation`): `origin_from_mesh` without `origin_trans`, with `anim_rot`, a non-identity matrix that is
+not the pure y/z swap, `origin_rot_x == 0` (all measured counter examples, 4 wheel spins with a yaw matrix, rotate about x)
+and the matrix actually moves the axis (|cos| < 0.95). The frame orientation is `P·R`. Test:
+`steering_wheel_turns_about_the_tilted_column_ng272` (axis parallel to the measured rim normal, and the nodding axis of
+the old code is perpendicular to it).
+
+**Broader than the steering wheel:** the rule is generic, so in GN92 it also fires for 73 meshes (panel switches, gauge
+needles, clock hands, the cash desk's change dispensers), logged once each as WARN. No ground truth exists for them (a flat
+needle should turn about its normal, but the census cannot separate it from toggles); they follow the same rule because
+OMSI's frame for `origin_from_mesh` is the object's own, and the data say so for the only class that can be measured.
+Verify gauges and switches against OMSI; restrict the rule if one of them turns the wrong way.
+
+**Direction:** with a rotated or reflected frame the sense of the rotation follows from the composition (a reflection
+reverses it). Whether wheels and the steering wheel turn the right way is not verified against OMSI.
+
+## Outstanding class of issues (not part of P-1011)
+The axis rule for `origin_from_mesh` is now two scoped fixes (swap with vertical intent, matrix `P·R` for other
+matrices) on top of the vehicle-axes default. A general treatment would need a harness validating all animation samples
+against ground truth, and ground truth exists only for flat parts (spin axes, steering wheels, needles). Open
+questions: the 12 `rot (0,90,0)` + swap main steering samples, the 116 factor-4 entries, the 42 `(32.25,-90,0)`
+steering animations, wheel spins with yaw matrices (9 samples where H3 fits, H4 not), `anim_trans` frames on swapped
+meshes (NLC suspension). Separate investigation, not started.
+
 ## Classes left unchanged
 - explicit `origin_trans` frames (the fleet majority, vehicle axes);
 - identity-matrix `origin_from_mesh` (382 of 382 already vertical);

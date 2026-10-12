@@ -54,14 +54,52 @@ pub struct MeshAnimation {
     pub shown: Vec<f32>,
 }
 
-/// The mesh's own origin (for `origin_from_mesh`) and whether its `.o3d` matrix swaps the y and z
-/// axes (the matrix of the wheel meshes of the MAN New Lion's City family).
+/// The mesh's own origin (for `origin_from_mesh`) and the rotation part of its `.o3d` matrix.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MeshPivot {
     /// Origin in OMSI vehicle axes.
     pub origin: Vec3,
-    /// The matrix rotation is the y/z swap `[1,0,0|0,0,1|0,1,0]`.
-    pub swaps_yz: bool,
+    /// Rows of the matrix rotation (normalised, o3d coordinates): the images of the object's local
+    /// axes in the parent.
+    pub rows: [[f32; 3]; 3],
+}
+
+/// Rows of the y/z swap `[1,0,0|0,0,1|0,1,0]` (the wheel meshes of the MAN New Lion's City).
+pub const SWAP_YZ_ROWS: [[f32; 3]; 3] = [[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0]];
+
+impl MeshPivot {
+    /// A pivot with an identity matrix rotation.
+    #[must_use]
+    pub fn plain(origin: Vec3) -> Self {
+        Self {
+            origin,
+            rows: [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+        }
+    }
+
+    fn is_identity(&self) -> bool {
+        (0..3).all(|i| (0..3).all(|j| (self.rows[i][j] - f32::from(u8::from(i == j))).abs() < 0.02))
+    }
+
+    fn is_swap_yz(&self) -> bool {
+        (0..3).all(|i| (0..3).all(|j| (self.rows[i][j] - SWAP_YZ_ROWS[i][j]).abs() < 0.02))
+    }
+
+    /// The matrix rotation in vehicle axes, `P = C·Mᵀ·C` with `C` the y/z swap between o3d and
+    /// vehicle axes: an axis `a` of the origin rotation becomes the object's axis `P·a`.
+    fn vehicle_rotation(&self) -> Mat4 {
+        let r = self.rows;
+        // M has the rows r; Mᵀ has them as columns; conjugation with C swaps indices 1 and 2.
+        let c = [0usize, 2, 1];
+        // P[i][j] = Mᵀ[c(i)][c(j)] = M[c(j)][c(i)] = r[c(j)][c(i)]; column j of P:
+        let column = |j: usize| Vec3::new(r[c[j]][c[0]], r[c[j]][c[1]], r[c[j]][c[2]]);
+        Mat4::from_cols(
+            column(0).extend(0.0),
+            column(1).extend(0.0),
+            column(2).extend(0.0),
+            Vec4::W,
+        )
+    }
 }
 
 /// The y/z swap as a matrix in OMSI axes.
@@ -74,19 +112,33 @@ fn swap_yz() -> Mat4 {
     )
 }
 
-/// Whether a rotation animation needs the mesh matrix to get its vertical axis: with
-/// `origin_from_mesh` on a y/z-swapping mesh, the origin rotation gives a horizontal axis that
-/// the swap turns vertical (`origin_rot_z 90`: forward, then up). Axes that are vertical or
-/// stay horizontal are left alone (`docs/src/architecture/animation-axes.md`).
-fn needs_matrix(a: &ModelAnim, pivot: Option<MeshPivot>) -> bool {
-    if !a.origin_from_mesh || a.origin_trans.is_some() || a.anim_rot.is_none() {
-        return false;
-    }
-    if !pivot.is_some_and(|p| p.swaps_yz) {
-        return false;
+/// The mesh matrix rotation to compose after the origin rotation of a rotation animation, if it
+/// is needed (`docs/src/architecture/animation-axes.md`). Only `origin_from_mesh` animations
+/// without `origin_trans` with an `anim_rot` qualify, and
+///
+/// * on a y/z-swapping matrix (NLC wheels): only when the origin rotation gives a horizontal axis
+///   that the swap turns vertical (`origin_rot_z 90`: forward, then up);
+/// * on any other non-identity matrix (steering wheels): when the matrix changes the axis, the
+///   origin rotation has no x part (the measured counter examples all rotate about x), and the
+///   result is the mesh's own axis (checked against the vertices of 575 steering wheels).
+fn matrix_rotation(a: &ModelAnim, pivot: Option<MeshPivot>) -> Option<Mat4> {
+    let pivot = pivot?;
+    if !a.origin_from_mesh || a.origin_trans.is_some() || a.anim_rot.is_none() || pivot.is_identity()
+    {
+        return None;
     }
     let axis = origin_rotation(a).transform_vector3(Vec3::X);
-    axis.z.abs() < 0.5 && (swap_yz().transform_vector3(axis)).z.abs() > 0.97
+    let p = pivot.vehicle_rotation();
+    if pivot.is_swap_yz() {
+        let swapped = swap_yz().transform_vector3(axis);
+        return (axis.z.abs() < 0.5 && swapped.z.abs() > 0.97).then(swap_yz);
+    }
+    let moved = p.transform_vector3(axis);
+    (a.origin_rot.x == 0.0 && axis.dot(moved).abs() < 0.95).then_some(p)
+}
+
+fn needs_matrix(a: &ModelAnim, pivot: Option<MeshPivot>) -> bool {
+    matrix_rotation(a, pivot).is_some()
 }
 
 fn origin_rotation(a: &ModelAnim) -> Mat4 {
@@ -104,7 +156,11 @@ fn frame_of(a: &ModelAnim, pivot: Option<MeshPivot>, with_matrix: bool) -> Mat4 
         .unwrap_or(Vec3::ZERO);
     let rot = origin_rotation(a);
     // The mesh matrix follows the origin rotation (the frame's axes are the rotated, then swapped).
-    let matrix = if with_matrix { swap_yz() } else { Mat4::IDENTITY };
+    let matrix = if with_matrix {
+        matrix_rotation(a, pivot).unwrap_or(Mat4::IDENTITY)
+    } else {
+        Mat4::IDENTITY
+    };
     Mat4::from_translation(origin) * matrix * rot
 }
 
@@ -142,7 +198,7 @@ fn warn_matrix_once(mesh: &str) {
     {
         tracing::warn!(
             mesh,
-            "origin_from_mesh rotation axis composed with the mesh's y/z-swap matrix (animation-axes.md)"
+            "origin_from_mesh rotation axis composed with the mesh matrix rotation (animation-axes.md)"
         );
     }
 }
@@ -400,11 +456,11 @@ mod tests {
     #[test]
     fn swapped_matrix_mesh_steers_about_the_vertical_nlc() {
         let hub = Vec3::new(-1.0, 3.0, 0.5);
-        let swapped = MeshPivot { origin: hub, swaps_yz: true };
+        let swapped = MeshPivot { origin: hub, rows: SWAP_YZ_ROWS };
         let anim = steering_mesh(NLC, Some(swapped));
         assert!(steers_about_vertical(&anim.steps, hub));
         // Without the swap (no matrix) the same data rolls about the forward axis (the bug).
-        let plain = MeshPivot { origin: hub, swaps_yz: false };
+        let plain = MeshPivot::plain(hub);
         let anim = steering_mesh(NLC, Some(plain));
         assert!(!steers_about_vertical(&anim.steps, hub));
     }
@@ -412,12 +468,42 @@ mod tests {
     #[test]
     fn the_matrix_is_left_out_where_the_axis_is_already_vertical() {
         // The class `origin_rot_y 90` on a swapped mesh is not changed (the side-effect entry).
-        let swapped = MeshPivot { origin: Vec3::ZERO, swaps_yz: true };
+        let swapped = MeshPivot { origin: Vec3::ZERO, rows: SWAP_YZ_ROWS };
         let anim = steering_mesh(NLC, Some(swapped));
         // (factor 4: the variable is raised so that the angle is clearly measurable)
         let m = animation_matrix(&anim.steps[1..2], |_| 5.0);
         let p = bevy(Vec3::Y);
         let moved = m.transform_point3(p);
         assert!((moved.x - p.x).abs() > 0.1 && (moved.y - p.y).abs() < 1e-4);
+    }
+
+    /// MAN_NL_NG `model_GN92_main.cfg` steering wheel: `origin_from_mesh`, no origin rotation.
+    const GN92_WHEEL: &str = "[mesh]\nGN92\\GN92_lenkrad.o3d\n\n[newanim]\norigin_from_mesh\nanim_rot\nAxle_Steering_0_L\n1680\n\n++++++\n";
+
+    /// The `GN92_Lenkrad.o3d` matrix rows (a 3-cycle with the column's 10° tilt) and the normal of
+    /// the rim measured from its descrambled vertices in vehicle axes (`anim_axis_geometry`).
+    const GN92_ROWS: [[f32; 3]; 3] = [
+        [0.0, 0.984_815_8, -0.173_602_79],
+        [0.0, -0.173_602_79, -0.984_815_8],
+        [-1.0, 0.0, 0.0],
+    ];
+    const GN92_RIM_NORMAL: Vec3 = Vec3::new(0.0, -0.177_297_74, 0.984_157_26);
+
+    #[test]
+    fn steering_wheel_turns_about_the_tilted_column_ng272() {
+        let pivot = MeshPivot {
+            origin: Vec3::new(-0.7, 5.2, 1.4),
+            rows: GN92_ROWS,
+        };
+        let anim = steering_mesh(GN92_WHEEL, Some(pivot));
+        let axis = anim.steps[0].frame.transform_vector3(Vec3::X);
+        assert!(
+            axis.dot(GN92_RIM_NORMAL).abs() > 0.99,
+            "axis {axis:?} against the rim normal {GN92_RIM_NORMAL:?}"
+        );
+        // Without the matrix the wheel would turn about the lateral axis (the rim nodding up and down).
+        let plain = steering_mesh(GN92_WHEEL, Some(MeshPivot::plain(pivot.origin)));
+        let nod = plain.steps[0].frame.transform_vector3(Vec3::X);
+        assert!(nod.dot(GN92_RIM_NORMAL).abs() < 0.1);
     }
 }
