@@ -55,7 +55,7 @@ Counts are over 46 files; "lines" = parameter lines.
 | `[NextIDCode]` | 1 | 44 | Next free object ID code for the editor (a number such as `322886`). |
 | `[worldcoordinates]` | — | 8 | Flag (real-world coordinates present). ❓ |
 | `[dynhelperactive]` | — | 6 | Flag (dynamic helper lines on). ❓ |
-| `[realrail]` | — | 41 | Flag (real rail rules). ❓ |
+| `[realrail]` | — | 41 | Flag: **real rail rules** (Tram SDK 1.2): realistic point behaviour, AI trains set their own points (approaching at reduced speed), and trains run on **splines along the centre line regardless of the defined `[path]` offset**; on objects (crossings, points) they follow the object's rail path. Must be set for any map with rail vehicles. |
 | `[backgroundimage]` | 5 | 45 | `0` (no image) or image name, then four numbers (observed `299.99… 299.99… 0 0`). ❓ |
 | `[mapcam]` | 8 | 45 | Editor camera: two tile coordinates then six floats (position/orientation). ❓ per-field |
 | `[moneysystem]` | 1 | 45 | Path to a money `.cfg` (`Money\DM\DM.cfg`). |

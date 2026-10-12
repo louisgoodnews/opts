@@ -278,7 +278,7 @@ Six values:
 0.051
 ```
 
-The `Meterspur_*` tram splines instead carry `[third_rail]` with an identifier-like third value (`9030`, `9031`). Their meaning is open ([Q-SLI-004](#-open-questions)).
+**Resolved (2026-10-12, Tram SDK 1.2):** the value read as the *voltage* (the **fourth** line of the block, e.g. `9001`) of the tram splines is an **in-band signalling code**. The NF6D carries an invisible contact shoe in the middle of its active part (`[contact_shoe]` in the `.bus`) that touches an invisible third rail in the spline, and its scripts interpret the "voltage": `9000` leaves a tunnel, `9001` enters one (tunnel mode: wipers/rain off, interior light on, rail brake and sanding locked, ambient sound off); `9002–9007` limit the speed to 50.2 … 2.2 km/h; `9008` AI at most 30 km/h between 22:00 and 07:00; `9011–9016` train stop (*Fahrsperre*) at 10–60 km/h (overspeed by more than 0.2 km/h forces the brakes until the bypass key is used); `9030` section insulator (read at the pantograph in the middle of the train: driving under power across it interrupts traction, up to about 10 s drive failure with forced braking); `9031–9047` overhead-wire height (`9031` = 5.50 m above the rail head, then 5.40, 5.30, 5.20, 5.10, 5.00, 4.90, 4.80, 4.75, 4.60, 4.50, 4.40, 4.30, 4.20, `9045` = 4.08 m; `9047` = the constant `Oberleitungshoehe` of the vehicle's constfile); `9050` emergency-brake zone in a tunnel station. Corpus [C] over 348 profiles: `9030` ×45, `9050` ×25, `9034` ×25, `9002–9007` ×15 each, `9011–9016` ×10 each, `750` ×10 (a real third-rail voltage), `80xx` codes of other add-ons (`8001`–`8010`: unknown ❓). So **a rail spline's `[third_rail]` is a data channel for the vehicle script, not (only) electricity**; the host must hand the code under the contact shoe to the script as `volt_rail` (see the variables `contactshoe_%_rail_pos_x/_y`, `rail_index`, `volt_rail`, `volt_veh`, `freq` in the OMSI wiki) and interpret nothing itself.
 
 ### 🕳️ Terrain Holes
 
@@ -440,7 +440,7 @@ str_asphdrk_1line.bmp
 | Q-SLI-001 | Semantics of `[patchwork_chain]`. | **Structure resolved** (length, letters n+1, frequency n, mirror n); letter meaning open. |
 | Q-SLI-002 | Meaning of the first `[rail_enh]` value (`200`). | Rail length assumed. |
 | Q-SLI-003 | Sixth `[path_2]` value. | Open. |
-| Q-SLI-004 | `[third_rail]` third value on tram splines (`9030`). | Open. |
+| Q-SLI-004 | `[third_rail]` voltage field on tram splines (`9030`). | ✅ Resolved: signalling code, see the note under `[third_rail]`. |
 | Q-SLI-005 | Exact `[matl_alpha]` mode meanings. | Provisional. |
 | Q-SLI-006 | The fifth `[profilepnt]`-less `[profile]` variant (21 cases). | Read to the next keyword. |
 

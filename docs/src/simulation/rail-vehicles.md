@@ -89,3 +89,60 @@ Every unit of a consist (player and AI) is placed from the track, not from trail
 ### Composition and head position
 
 `VehicleComposition` (component on the head entity, also for road vehicles with trailers and for every AI train) stores the sub parts once at spawn: the head and the coupled units in order, each as a `Part` (entity, name, distance behind the head's origin, half bogie span, reversed flag, mesh and vertex counts). `find(name)`, `parts()`, `len()` and `length()` answer without walking `[couple_back]` or touching files. For a rail player the train's track point is the head's *front bogie*; the chassis position (`vehicle.get`, camera, HUD) is the **body's origin**, the midpoint of its two bogies (the train point lies one half span ahead of it), so reported and drawn positions agree. Rail players no longer get an `ArticulatedChain`: their units are placed on the track only.
+
+## 8. What OMSI's own rail documents say (Tram SDK 1.2, NF6D manual, `.bus` tutorial)
+
+Sources shipped with the install (read 2026-10-12, facts restated, nothing copied): the **Tram SDK 1.2** ("Bahn-SDK für OMSI 2", Philipp Zunk, 2017; `Vehicles/Tram_NF6D/manuals/Tram_SDK_1.1.pdf`, `…1.2.pdf`, German) written for map builders, the **NF6D manual** (Aerosoft, `Addons/Strassenbahn NF6D/Manual.pdf`) and the **in-file tutorial inside `NF6D_A.bus`** (German/English comments). The other 1,500 add-on PDFs contain no further rail technology (checked by keyword over all of them: only travel information and bus manuals). [SDK] = Tram SDK, [Man] = NF6D manual, [Bus] = `.bus` tutorial, [C] = corpus count.
+
+### 8.1 Track side
+
+| Fact | Source | Consequence for OPTS |
+| :--- | :--- | :--- |
+| OMSI is a bus simulator: rail vehicles are `.bus` files whose movement follows type-2 `[path]`s; user-driven trains only work reliably in OMSI 2.2.032 (2.3+ despawns them unpredictably) | [SDK] | The behaviours below are *workarounds* of that design; OPTS needs the data meaning, not the quirks |
+| Rail `[path]` record: `2` (type), lateral offset, **height of the rail head above the spline datum (`0.449`)**, width (irrelevant for trams), direction (`2` both, `1` backward, `0` forward only) | [SDK] | Matches `lanes_of_kind(.., Rail)`; the rail-head height is the vehicle's ground height |
+| `[realrail]` in `global.cfg` (41 maps): realistic points, AI trains set points, and trains run **on the spline centre line irrespective of the path offset**; on objects they follow the object's path | [SDK] | Rail lanes on splines use offset 0 for trains; objects use their paths. Maps without the flag: same rule (legacy behaviour unspecified ❓) |
+| A player train that leaves its rail path (end of track, change to an opposite-direction path or a type-0 path) is **removed**; builders add tiny loops at the ends. All rail paths should be bidirectional (`2`) so trains can run both ways | [SDK] | OPTS stops the train at the end of a path (buffer stop) and never removes it; the diagnostics below flag one-way rail paths |
+| A Y-fork without a point: the player train takes the **last-added** segment; AI trains err there, so builders use points | [SDK] | `Branch` choice (done) replaces the editor-order accident |
+| Path connections with segments shorter than 0.5 m (better 1 m) make AI trains despawn; broken connections are the usual cause of random despawns | [SDK] | OPTS joins ends within 0.6 m; log a WARN with the position for rail segments under 1 m |
+| **Spawning**: OMSI uses the *last-laid* rail path of the editor, the path must be long enough for the consist (30–40 m, longer for a double traction), loaded tiles are searched first, the entry point's influence is "unclear" | [SDK] | OPTS spawns at the rail lane nearest to the entry point that has room for the whole consist ahead of the head (and behind, for the reversed head); otherwise ERROR with the position and fall back to the entry point, never to the other end of the map |
+| Collisions of player rail vehicles are always off; buses can collide with rail vehicles | [SDK] | Player trams are ghosts for road traffic; road AI and pedestrians still yield to trams |
+| Points can be driven by **traffic-light phases** of a parent object (editor "parent to"): phases `0/1/2` are red, `6/7/8` green; `0` and `8` lock the point *straight*, `2` and `6` lock it *left/right*, `1` and `7` leave it adjustable, other phases leave it adjustable but re-set it on entering `0/8/6/2`; for a V-point "left" = straight. The lock keeps a point from switching under a train, otherwise the **train is torn apart** (the player may reset and rejoin) | [SDK] | `RailNetwork` points carry (state, locked) fed by the signal group of the parent object (`opts-traffic`); consist coupling does not break in OPTS, an unsafe switch is refused instead |
+| AI trains: timetable, destination boards and `.hof` work; AI placement can be 20 m off and occasionally reversed; player takeover of AI trains is not supported (despawns); traffic-light *requests* by the player's train are impossible, AI trains trigger them from far away | [SDK] | OPTS can do better: place AI trains exactly, support takeover (the kinematic state is ours), and let a player tram raise requests |
+| **Bidirectional operation**: bus stops expect forward entry and one door side; with the B head leading the stop does not see the vehicle, so builders add a second stop cube turned by 180° at the other end of the platform with its own invisible trip | [SDK] | OPTS' stop logic uses the *leading head's direction of travel* and the door side, so no mirrored cubes are needed |
+| Doors: release needs a preselected side and standstill; a **double traction** needs a platform at least as long as the consist (`approachdist` of the stop cube) or passengers do not reach the rear car | [SDK], [Man] | Passenger boarding per part by its door position along the platform |
+| Overhead wire height reaches the pantograph by the callback `GetHeightAbovePoint`, a constant, or the spline codes `9031–9047` (see `sli.md`) | [SDK] | Provide the callback from the ground/object index; the spline code wins when present |
+| Track gauge is not part of the path: the NF6D has metre-gauge and standard-gauge bogies (`CTI_Drehgestelle`); minimum curve radius is about 15 m (20 recommended) for metre gauge and 27 m for standard gauge, below that the articulation shows errors | [SDK] | Report a WARN when a rail lane's curve radius is under the vehicle's limit; do not clamp |
+
+### 8.2 Vehicle side
+
+* **Unit structure and state bus.** A consist is a chain of independent `.bus` parts with their own script sets (`NF6D_A`, `…Gelenk_ACV`, `…DrehgestellV`, `…EEF_V`, `…C`, …). They exchange state only through `[control_cable_*]` links (see `bus.md`): variable pairs `SLR_x`/`SLW_x` copied between coupled partners every frame while the link's coupling variable is true. This resolves the open question of how parts share doors, power, timetable index, car number, brake and head activity.
+* **Two cabs, one train.** Each head has its own scripts, its own IBIS device; the devices do not communicate and a head is active only after being switched on (`R` off, `N` on but cannot drive, `D` ready, with about 7 s of start-up sequence). Timetable data can only be accepted in the *first* part (the A head) and is forwarded to the B head over the control cables; battery, pantograph and timetable run from A. In a double traction only the two end cabs are usable. [SDK], [Man]
+* **Direction** is the active head's: the same train drives "forward" with either head, which is why `E/N/R` do not mean what they mean for a bus. OPTS maps the three keys to the head state (script contract) and takes the travel direction from the active head.
+* **Ride feel**: `[sinus]` (hunting motion of the wheel sets) and `[rail_body_osc]` (body sway), 186 and 294 definitions. They are small lateral/roll/vertical motions of the body on the bogies (optional second phase); `[rail_enh]` on the spline adds track irregularities.
+* **Variants** are repaint-dependent: `.cti` `[setvar]` entries (the NF6D lists `CTI_Kupplung_FrontBRB`, `CTI_Drehgestelle`, `CTI_Wagennummer_DT2`, `CTI_Spiegel_Auto`, … ) set script variables at spawn; a double traction reads the second car's textures with a `_DT` suffix (`Wagenkasten_A_DT`). OPTS' repaint application must therefore also set the `[setvar]` variables on the vehicle's script engines per part.
+* **Braking** constants of the player vehicle can be tuned with the constfile entry `Multiplikator_Bremse` (AI always uses `1`) — evidence that brake force is computed in scripts and only handed to the physics (`Brakeforce`).
+* **Signal codes in the track** and the contact shoe: §8.1 and `sli.md`.
+
+## 9. How OPTS runs trams without treating them as buses
+
+| OMSI (bus simulator) | OPTS rule |
+| :--- | :--- |
+| Vehicle is a bus with rail-constrained axles; pedals, gears and steering exist | A rail vehicle has **no steering and no tyres**: head state (off/on/driveable), traction, brake notches; the track decides the heading |
+| Pose from the vehicle's axle positions on the path | Pose from **bogie points on the track** (`[boogies]`), midpoint/chord/gradient (done) |
+| `[realrail]` rules per map | Always: centre line on splines, object paths on objects |
+| Leaving the path removes the train | Buffer stop at the end of the path, WARN for dead ends that are one-way |
+| Entry point decides where a train appears, with undocumented side conditions | Nearest rail lane with room for the consist; explicit ERROR otherwise |
+| Stop cubes only see forward-entering vehicles | Stops accept either direction; the door side comes from the active head |
+| Signalling and speed limits hidden in `[third_rail]` | The contact shoe's track code is handed to the scripts as `volt_rail` (unchanged codes); OPTS itself only enforces what the scripts do with it |
+| Parts talk via control cables | `[control_cable_*]` bridge between the part engines (script route VS1) |
+| Points via parent-to traffic-light phases, trains torn apart on unsafe switching | Points have (position, lock); an unsafe switch is refused instead of tearing the consist |
+| Collisions off for player trains | Same default, but road AI/pedestrians treat a train as an obstacle that does not yield |
+
+### Implementation order derived from this
+
+1. Rail lanes keep the **spline instance and profile index** so a lane can answer `[third_rail]` code and rail-head height at any `s` (needs `RailLane { third_rail: Option<f32> }`; corpus: 348 profiles).
+2. Spawn rule (room for the consist ahead/behind), buffer stops, one-way and short-segment diagnostics.
+3. Active head (`A`/`B`): direction from the head, camera/cab per head; double traction has two usable ends.
+4. Points with lock state fed by the signal group; refusal instead of coupling break.
+5. Contact-shoe query and `GetHeightAbovePoint`; then the control-cable bridge and per-part scripts ([vehicle scripts route](../architecture/vehicle-scripts-route.md)).
+6. Ride-feel oscillations (`[sinus]`, `[rail_body_osc]`) last.

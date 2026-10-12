@@ -424,6 +424,21 @@ This has significant architectural consequences for OPTS:
 
 ---
 
+### 🚆 Rail vehicles (`[type] 2`) and inter-part links
+
+Counted over 2,732 `.bus`/`.ovh` files, 893 of them `[type] 2` [C]. The `NF6D_A.bus` carries OMSI's own in-file tutorial for these keywords (paraphrased below); the Tram SDK 1.2 adds the track side ([rail vehicles](../../../simulation/rail-vehicles.md) §8).
+
+| Keyword | Params | Meaning | Files |
+| :--- | :--- | :--- | ---: |
+| `[boogies]` | 1: `y1` | **Bogie pivots at `±y1`** along the vehicle axis; replaces `[rot_pnt_long]` for rail vehicles. The body rests on its two bogies. | 860 (all rail) |
+| `[sinus]` | 4: wheel radius, wheel-set span (standard `1.5` m), wheel conicity ("tapering"), damping | Sinusoidal run (hunting motion) of the wheel set, NF6D: `0.425 / 1.5 / 0.025 / 0.01` | 186 |
+| `[rail_body_osc]` | 7: vertical arm bogie pin → centre of gravity; angular frequency and damping about Y; the same about X; the same for translation along Z | Body sway on the bogies; NF6D: `0 / 1 / 10000 / 1 / 10000 / 1 / 10000` | 294 |
+| `[contact_shoe]` | 6: bogie (`0` front, `1` rear), `x_min`, `x_max`, `z_min`, `z_max`, type (`+1` top contact rail, `+2` bottom, `+4` side) | A current collector at a bogie that touches the track's `[third_rail]`; NF6D: `0 / -0.1 / 0.1 / 0.01 / 0.536 / 1` | 172 |
+| `[control_cable_front]`, `[control_cable_back]` | 5: plug side `C`/`L`/`R`, number, **read variable**, **write variable**, **coupling variable** | **Electric link between two coupled vehicles** (below) | 575 each (all rail) |
+| `[couple_back]` second line | `true`/`false` | In the NF6D chain the flag is `true` where the named unit hangs *backwards* (the B head); see [composition](../../../simulation/rail-vehicles.md) | 220 |
+
+**`[control_cable_*]`** (the `.bus` tutorial): *"creates a new electric link between two coupled vehicles."* The plug side says which part of the coupling carries it: the `L` plugs of vehicle A are linked with the `R` plugs of vehicle B, the `C` plugs of both are linked together; numbering is independent per side (`R-0` pairs with `L-0`, `C-0` with the other `C-0`). The **read variable** is read from this vehicle each frame and its value is **written into the write variable of the partner** (the link works in both directions: A's read → B's write and B's read → A's write). The **coupling variable** is a vehicle variable; the link is broken while it is not true (`> 0.5`). The NF6D head `A` declares 102 records (51 channels at the front and back each) that carry indicator state, the line separator, interior light, the timetable stop index, the cab-signal forwarding, radio channel, car number, delay and its sign, emergency brake, throttle and head-inactive flags, the electric network and more (`SLR_*`/`SLW_*` variable pairs; coupling variables `Steuerleitung_V/H/CSV/CSH/V_NoAI`). Corpus [C]: the coupling variables are `E-Kupplung_Front` (2,503 records) and `E-Kupplung_KK` (1,543), `Steuerleitung_V/H` (1,705 each, `_NoAI` 456), `Druckluft_Front/Back` (215: compressed-air line), `CCS` (92), `Steuerkabel_Front/Back` (90). This is the state bus between the **independent script sets of the parts of a consist** ([vehicle scripts route](../../../architecture/vehicle-scripts-route.md)).
+
 ## 🧩 Block Keywords
 
 Block keywords are structurally different from simple keywords. Instead of consuming a fixed number of positional parameters, they consume a **sequence of named sub-parameters** until the next top-level keyword is encountered or until the enclosing block is closed.
