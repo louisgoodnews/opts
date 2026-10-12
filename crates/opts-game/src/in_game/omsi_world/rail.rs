@@ -339,26 +339,43 @@ pub fn rail_player_step(
 }
 
 /// The units behind a rail-bound player's head: `(entity, origin distance behind the head's
-/// origin, hangs backwards)`. They are placed on the track, not by trailer kinematics.
+/// origin, hangs backwards, half bogie span)`. They are placed on the track, not by trailer
+/// kinematics.
 #[derive(Component, Default)]
 pub struct RailChainLayout {
     /// Segment entities in coupling order.
-    pub units: Vec<(Entity, f32, bool)>,
+    pub units: Vec<(Entity, f32, bool, f32)>,
+    /// Half bogie span of the head unit (its origin lies this far behind the track point).
+    pub head_span: f32,
 }
 
-/// Pose of a unit whose origin is `behind` metres behind the head: it lies on the track at that
-/// point, aligned with the chord of the track 2 m ahead and behind it, pitched with the gradient.
-fn unit_pose(train: &Train, net: &PedestrianNet, behind: f32, reversed: bool) -> Option<Transform> {
-    let (mid, tangent) = train.pose_behind(net, behind)?;
-    let a = (behind - 2.0).max(0.0);
-    let front = train.pose_behind(net, a)?.0;
-    let rear = train.pose_behind(net, a + 4.0)?.0;
+/// Smallest half span used for the chord of a unit without bogie data (m).
+const MIN_HALF_SPAN: f32 = 1.0;
+
+/// Pose of a unit whose origin is `centre` metres behind the track point of the train: its two
+/// bogies (`±half_span` about the origin) sit on the track, the body spans the chord between
+/// them, pitched with the gradient. A unit without bogie data uses a 2 m chord.
+fn unit_pose(
+    train: &Train,
+    net: &PedestrianNet,
+    centre: f32,
+    half_span: f32,
+    reversed: bool,
+) -> Option<Transform> {
+    let span = if half_span > 0.0 {
+        half_span
+    } else {
+        MIN_HALF_SPAN
+    };
+    let front = train.pose_behind(net, (centre - span).max(0.0))?.0;
+    let rear = train.pose_behind(net, centre + span)?.0;
+    let mid = (front + rear) * 0.5;
     let (dx, dy) = (front.x - rear.x, front.y - rear.y);
     let run = dx.hypot(dy);
-    let (heading, pitch) = if run > 0.5 {
+    let (heading, pitch) = if run > 0.1 {
         (dx.atan2(dy), ((front.z - rear.z) / run).atan())
     } else {
-        (tangent, 0.0)
+        (train.pose_behind(net, centre)?.1, 0.0)
     };
     let turn = if reversed { std::f32::consts::PI } else { 0.0 };
     Some(Transform {
@@ -386,14 +403,15 @@ pub fn rail_player_pose(
         let Some(train) = rail.train.as_ref() else {
             continue;
         };
-        if let Some(t) = unit_pose(train, &net.0, 0.0, false) {
+        let head_span = layout.map_or(0.0, |l| l.head_span);
+        if let Some(t) = unit_pose(train, &net.0, head_span, head_span, false) {
             *tf = t;
         }
         let Some(layout) = layout else { continue };
         let mut previous = tf.rotation.to_euler(EulerRot::YXZ).0;
         let mut alphas = Vec::with_capacity(layout.units.len());
-        for &(e, behind, reversed) in &layout.units {
-            let Some(pose) = unit_pose(train, &net.0, behind, reversed) else {
+        for &(e, behind, reversed, span) in &layout.units {
+            let Some(pose) = unit_pose(train, &net.0, behind + head_span, span, reversed) else {
                 continue;
             };
             let yaw = pose.rotation.to_euler(EulerRot::YXZ).0;
@@ -435,6 +453,8 @@ struct UnitSpec {
     behind: f32,
     /// Hangs backwards (coupled with the `true` flag).
     reversed: bool,
+    /// Half bogie span (`[boogies]`; 0 when unknown).
+    span: f32,
 }
 
 /// A trainset assembled from a `.bus`/`.ovh` chain.
@@ -462,7 +482,9 @@ pub struct AiTrain {
     bike: bool,
     train: Train,
     speed: f32,
-    units: Vec<(Entity, f32, bool)>,
+    units: Vec<(Entity, f32, bool, f32)>,
+    /// Half bogie span of the head unit.
+    head_span: f32,
     wheel_angle: f32,
 }
 
@@ -557,6 +579,7 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
         tex_dirs,
         behind: 0.0,
         reversed: false,
+        span: manifest.bogie_half_span.unwrap_or(0.0),
     }];
     let mut dir = path.parent()?.to_path_buf();
     let mut behind = 0.0_f32;
@@ -591,6 +614,7 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
             tex_dirs,
             behind,
             reversed,
+            span: m.bogie_half_span.unwrap_or(0.0),
         });
         if reversed {
             break; // the ring of a double-ended consist closes here
@@ -716,9 +740,9 @@ fn try_spawn(
             &u.model_dir,
             &u.tex_dirs,
         );
-        units.push((root, u.behind, u.reversed, count));
+        units.push((root, u.behind, u.reversed, u.span, count));
     }
-    if units.iter().any(|u| u.3 == 0) {
+    if units.iter().any(|u| u.4 == 0) {
         // Meshes still decoding in the background: discard and try again on the next tick.
         for (e, ..) in &units {
             commands.entity(*e).despawn();
@@ -731,7 +755,8 @@ fn try_spawn(
         bike,
         train: Train::new(lane, s, dir),
         speed: 0.0,
-        units: units.iter().map(|u| (u.0, u.1, u.2)).collect(),
+        units: units.iter().map(|u| (u.0, u.1, u.2, u.3)).collect(),
+        head_span: spec.units[0].span,
         wheel_angle: 0.0,
     });
 }
@@ -773,8 +798,9 @@ pub fn move_ai_trains(
         t.wheel_angle += step / 0.29;
         let angle = t.wheel_angle;
         let list = t.units.clone();
-        for (e, behind, reversed) in list {
-            let Some(pose) = unit_pose(&t.train, net, behind, reversed) else {
+        let head_span = t.head_span;
+        for (e, behind, reversed, span) in list {
+            let Some(pose) = unit_pose(&t.train, net, behind + head_span, span, reversed) else {
                 continue;
             };
             if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {

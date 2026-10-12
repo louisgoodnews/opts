@@ -407,7 +407,12 @@ pub(super) fn spawn_trailer_chain(
         chain.push(seg);
         // Origin of the segment behind the root's origin along the vehicle's axis (for rails).
         behind += f.y - b.y;
-        layout.push((seg, behind, reversed));
+        layout.push((
+            seg,
+            behind,
+            reversed,
+            manifest.bogie_half_span.unwrap_or(0.0),
+        ));
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
             job.install
@@ -434,7 +439,10 @@ pub(super) fn spawn_trailer_chain(
     if !chain.is_empty() {
         commands.entity(root).insert((
             opts_bevy::ArticulatedChain { segments: chain },
-            super::RailChainLayout { units: layout },
+            super::RailChainLayout {
+                units: layout,
+                head_span: tractor.bogie_half_span.unwrap_or(0.0),
+            },
         ));
     }
     cams

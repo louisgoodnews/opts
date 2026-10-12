@@ -81,3 +81,7 @@ No change in loaders: meshes, `[newanim]` for bogie swing/wheels, pantograph by 
 | AI trains | `AiTrain`, `--trains N` (default 3) | Rail vehicles of the map's `ailists.cfg` (`[type] 2`) with their `[couple_back]` chain, placed by their coupling distance behind the head; they appear 80–400 m from the camera on random tracks, run at ≈ 9 m/s and are removed at 600 m or at the end of the track. |
 
 Not yet: reverse (R), switch state from the map's point objects (`[switch]`), `[rail_enh]` noise, bogie-accurate poses per unit, cab scripts (R4), timetables and headway (R5), signals (R6), and AI unit animation beyond wheel rotation.
+
+### Unit placement (bogie-accurate)
+
+Every unit of a consist (player and AI) is placed from the track, not from trailer kinematics: its origin lies `behind` metres behind the head, computed from the coupling points (`[coupling_back]` of the leader minus `[coupling_front]` of the follower; a unit coupled with the `true` flag hangs backwards, mirrored joint, rotated 180°, and closes the ring of a double-ended consist). The two bogies sit at `±y` of the unit's origin (`[boogies] y`, which for rail vehicles replaces `[rot_pnt_long]`; without it a 2 m chord is used). The body's origin is the midpoint of the track points at both bogies, its heading is the chord between them and its pitch the gradient along the chord. Very long cars on tight curves can still cut slightly (accepted). The bellows variables `articulation_<n>_alpha` come from the heading differences of consecutive units.

@@ -125,6 +125,9 @@ pub struct BusManifest {
     pub script_share: bool,
     /// `[type]`: `None`/`0`/`1` road vehicle, `2` rail-bound, `3` aircraft.
     pub vehicle_type: Option<u32>,
+    /// Half distance between the two bogies of a rail vehicle (`[boogies]`): the bogies sit at
+    /// `±y` of the origin and the body pivots there.
+    pub bogie_half_span: Option<f32>,
     /// Total curb vehicle weight in tonnes.
     pub mass_tonnes: Option<f32>,
     /// Primary bounding box (`[boundingbox]`): extents and centre offset in the vehicle frame
@@ -182,6 +185,7 @@ impl BusManifest {
         let mut script_share = false;
         let mut mass_tonnes = None;
         let mut vehicle_type: Option<u32> = None;
+        let mut bogie_half_span: Option<f32> = None;
         let mut bounding_box = None;
         let mut axles = Vec::new();
         let mut coupling_front_y = None;
@@ -292,6 +296,13 @@ impl BusManifest {
                         .parameters
                         .first()
                         .and_then(|p| p.trim().parse::<u32>().ok());
+                }
+                "boogies" => {
+                    bogie_half_span = block
+                        .parameters
+                        .first()
+                        .and_then(|p| parse_float(p).ok())
+                        .filter(|y| *y > 0.0);
                 }
                 "mass" => {
                     if let Some(first) = block.parameters.first() {
@@ -420,6 +431,7 @@ impl BusManifest {
             script_share,
             mass_tonnes,
             vehicle_type,
+            bogie_half_span,
             bounding_box,
             axles,
             coupling_front_y,
