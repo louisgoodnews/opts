@@ -159,7 +159,8 @@ impl RpcError {
             }
             None => serde_json::Map::new(),
         };
-        data.entry("name").or_insert_with(|| json!(code::name(self.code)));
+        data.entry("name")
+            .or_insert_with(|| json!(code::name(self.code)));
         data.entry("retryable")
             .or_insert_with(|| json!(code::retryable(self.code)));
         self.data = Some(Value::Object(data));

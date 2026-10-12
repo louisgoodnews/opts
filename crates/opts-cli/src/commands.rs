@@ -384,8 +384,8 @@ pub const COMMANDS: &[CommandSpec] = &[
         "",
     )
     .since("1.1")
-    .result("`{app_state, screen, modal_open, dialogs:[{id, tag?, title, buttons}], toasts:[...], focus, back_stack, scrollables}`")
-    .doc("One call that answers \"what is on screen and what can I do now\". `dialogs` lists every open modal with the ids of its buttons, so a script can answer a confirmation without reading the whole tree."),
+    .result("`{app_state, screen, loading?, modal_open, dialogs:[{id, tag?, label, visible, controls:[{id, label, role, enabled, focused}]}], toasts:[{id, label}], focus, back_stack, scrollables}`")
+    .doc("One call that answers \"what is on screen and what can I do now\". `dialogs` lists every open modal (confirmations, the pause overlay, settings) with the ids of its controls, so a script can answer a confirmation without reading the whole tree; `loading` (stage and progress) is present while a drive loads, which is when the screen has nothing to click."),
     c(
         "ui.scrollables",
         "ui",
@@ -462,11 +462,11 @@ pub const COMMANDS: &[CommandSpec] = &[
         "ui.wait_for",
         "ui",
         "Wait until a condition holds (element, screen, dialog, app state, speed, ...)",
-        "until:s[exists|visible|gone|enabled|disabled|focused|checked|text|screen|dialog|no_dialog|app_state|hud_ready|speed_above|speed_below|distance_above|paused|running|sim_time_above]@0 id:s@1? value:s? number:f? timeout_ms:i?",
+        "until:s[exists|visible|gone|enabled|disabled|focused|checked|text|screen|dialog|no_dialog|app_state|hud_ready|speed_above|speed_below|distance_above|paused|running|sim_time_above|items_above]@0 id:s@1? value:s? number:f? timeout_ms:i?",
     )
     .since("1.1")
     .result("`{ok, until, waited_ms}` on success; error `1005` with `data.last` (the last observed value) when `timeout_ms` (default 10000, at most 120000) passes first")
-    .doc("Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time. Use it instead of sleeping."),
+    .doc("Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time, `items_above` the number of entries a scrollable `id` lists (a list fills in after the catalogue scan). Use it instead of sleeping."),
     // ---- protocol 1.1: driving --------------------------------------------------------------
     c(
         "drive.controls",
@@ -571,7 +571,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics)",
         "screen:s@0",
     )
-    .doc("Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet."),
+    .doc("Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet. While a dialog is open (the first-run question, a confirmation) the rail is behind it for a person, so the command answers `1009`."),
     c(
         "hud.state",
         "query",

@@ -50,7 +50,11 @@ fn button_json(n: &UiNode) -> Value {
 
 fn dialogs(world: &mut World, snap: &UiSnapshot) -> Vec<Value> {
     let mut out = Vec::new();
-    for n in snap.flatten().into_iter().filter(|n| n.role == UiRole::Dialog) {
+    for n in snap
+        .flatten()
+        .into_iter()
+        .filter(|n| n.role == UiRole::Dialog)
+    {
         let tag = opts_gui::ui_tree::find_entity(world, &n.id)
             .and_then(|e| world.get::<ConfirmDialog>(e).map(|d| d.tag));
         fn walk<'a>(n: &'a UiNode, out: &mut Vec<&'a UiNode>) {
@@ -98,7 +102,12 @@ fn screen_value(world: &mut World) -> Value {
             .get_resource::<opts_bevy::reporting::state::MenuModalActive>()
             .is_some_and(|m| m.0);
     let scrollables = scrollables_json(world, true, false);
+    let loading = world
+        .get_resource::<crate::in_game::types::SimulationLoadState>()
+        .filter(|s| app_state(world) == AppState::InGame && !s.hud_spawned)
+        .map(|s| json!({ "stage": format!("{:?}", s.stage), "progress": s.progress }));
     json!({
+        "loading": loading,
         "app_state": format!("{:?}", app_state(world)),
         "screen": screen_id(world),
         "modal_open": !dialogs.is_empty() || modal_flags,
@@ -134,9 +143,7 @@ fn need<'a>(c: &'a Cond, what: &str) -> Result<&'a str, RpcError> {
         "id" => c.id.as_deref(),
         _ => c.value.as_deref(),
     }
-    .ok_or_else(|| {
-        RpcError::invalid_params(format!("`until: {}` needs `{what}`", c.until))
-    })
+    .ok_or_else(|| RpcError::invalid_params(format!("`until: {}` needs `{what}`", c.until)))
 }
 
 fn num(c: &Cond) -> Result<f64, RpcError> {
@@ -164,6 +171,7 @@ const KNOWN: &[&str] = &[
     "paused",
     "running",
     "sim_time_above",
+    "items_above",
 ];
 
 fn validate(c: &Cond) -> Result<(), RpcError> {
@@ -176,6 +184,10 @@ fn validate(c: &Cond) -> Result<(), RpcError> {
     match c.until.as_str() {
         "exists" | "visible" | "gone" | "enabled" | "disabled" | "focused" | "checked" => {
             need(c, "id")?;
+        }
+        "items_above" => {
+            need(c, "id")?;
+            num(c)?;
         }
         "text" => {
             need(c, "id")?;
@@ -223,12 +235,24 @@ fn eval(world: &mut World, c: &Cond) -> (bool, Value) {
                 ("checked", Some(n)) => n.state.checked == Some("true"),
                 ("text", Some(n)) => {
                     let want = c.value.clone().unwrap_or_default().to_lowercase();
-                    n.value.as_deref().is_some_and(|v| v.to_lowercase().contains(&want))
+                    n.value
+                        .as_deref()
+                        .is_some_and(|v| v.to_lowercase().contains(&want))
                         || n.label.to_lowercase().contains(&want)
                 }
                 _ => false,
             };
             (holds, observed)
+        }
+        "items_above" => {
+            let n = opts_bevy::control::handlers::ui_ext::scrollable_item_count(
+                world,
+                c.id.as_deref().unwrap_or_default(),
+            );
+            (
+                n.is_some_and(|n| n as f64 > c.number.unwrap_or(0.0)),
+                json!(n),
+            )
         }
         "screen" => {
             let now = screen_id(world);
@@ -240,7 +264,9 @@ fn eval(world: &mut World, c: &Cond) -> (bool, Value) {
         "app_state" => {
             let now = format!("{:?}", app_state(world));
             (
-                c.value.as_deref().is_some_and(|v| v.eq_ignore_ascii_case(&now)),
+                c.value
+                    .as_deref()
+                    .is_some_and(|v| v.eq_ignore_ascii_case(&now)),
                 json!(now),
             )
         }
@@ -249,9 +275,8 @@ fn eval(world: &mut World, c: &Cond) -> (bool, Value) {
             let list = dialogs(world, &snap);
             let want = c.value.clone();
             let found = list.iter().any(|d| {
-                want.as_deref().is_none_or(|w| {
-                    d["tag"].as_str() == Some(w) || d["id"].as_str() == Some(w)
-                })
+                want.as_deref()
+                    .is_none_or(|w| d["tag"].as_str() == Some(w) || d["id"].as_str() == Some(w))
             });
             let observed = json!(list
                 .iter()
@@ -340,7 +365,9 @@ fn wait_for(_world: &mut World, params: &Value) -> Outcome {
                 code::TIMEOUT,
                 format!("`{}` did not hold within {timeout_ms} ms", cond.until),
             )
-            .with_data(json!({ "last": last, "until": cond.until, "id": cond.id, "value": cond.value })))
+            .with_data(
+                json!({ "last": last, "until": cond.until, "id": cond.id, "value": cond.value }),
+            ))
         })
     }))
 }
@@ -380,7 +407,10 @@ mod tests {
             .filter_map(|v| v.as_str().map(str::to_string))
             .collect();
         for k in KNOWN {
-            assert!(values.contains(&(*k).to_string()), "`{k}` missing in the descriptor");
+            assert!(
+                values.contains(&(*k).to_string()),
+                "`{k}` missing in the descriptor"
+            );
         }
         assert_eq!(values.len(), KNOWN.len());
     }

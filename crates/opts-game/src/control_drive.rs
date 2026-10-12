@@ -17,9 +17,7 @@ use opts_bevy::control::keys::parse_key;
 use opts_bevy::control::params::{opt_f64, opt_u64, str_param};
 use opts_bevy::control::state::{ControlRegistry, ControlState, Outcome, Release};
 use opts_bevy::vehicle_remote::{raise_trigger, Hold, ParkingRequest, RemoteControls};
-use opts_bevy::{
-    CameraMode, CameraState, PlayerVehicle, ScriptKeyBindings, VehicleController,
-};
+use opts_bevy::{CameraMode, CameraState, PlayerVehicle, ScriptKeyBindings, VehicleController};
 use opts_cli::protocol::{code, RpcError};
 use opts_sim::vehicle::inputs::GearPosition;
 use serde_json::{json, Value};
@@ -83,7 +81,10 @@ fn has_player(world: &mut World) -> bool {
 /// The conditions under which the vehicle input systems run, checked now.
 fn vehicle_gate(world: &mut World) -> Result<(), RpcError> {
     if !has_player(world) {
-        return Err(RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"));
+        return Err(RpcError::new(
+            code::NOT_READY,
+            "there is no player vehicle (no drive is running)",
+        ));
     }
     if modal_open(world) {
         return Err(RpcError::new(
@@ -105,7 +106,10 @@ fn vehicle_gate(world: &mut World) -> Result<(), RpcError> {
 
 fn trigger_gate(world: &mut World) -> Result<(), RpcError> {
     if !has_player(world) {
-        return Err(RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"));
+        return Err(RpcError::new(
+            code::NOT_READY,
+            "there is no player vehicle (no drive is running)",
+        ));
     }
     if modal_open(world) {
         return Err(RpcError::new(
@@ -131,7 +135,10 @@ fn gear_name(g: GearPosition) -> &'static str {
 fn controls(world: &mut World, _: &Value) -> Outcome {
     let mut q = world.query_filtered::<&VehicleController, With<PlayerVehicle>>();
     let Some(c) = q.iter(world).next() else {
-        return Outcome::err(RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"));
+        return Outcome::err(RpcError::new(
+            code::NOT_READY,
+            "there is no player vehicle (no drive is running)",
+        ));
     };
     let i = c.inputs();
     let list = json!([
@@ -146,7 +153,10 @@ fn controls(world: &mut World, _: &Value) -> Outcome {
         .0
         .iter()
         .map(|b| {
-            let alias = TRIGGER_ALIASES.iter().find(|(_, real)| *real == b.trigger).map(|(a, _)| *a);
+            let alias = TRIGGER_ALIASES
+                .iter()
+                .find(|(_, real)| *real == b.trigger)
+                .map(|(a, _)| *a);
             json!({ "name": b.trigger, "alias": alias, "key": format!("{:?}", b.key),
                     "shift": b.shift, "ctrl": b.ctrl, "held": b.held })
         })
@@ -189,10 +199,17 @@ fn set_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     let name = str_param(params, "control")?.to_ascii_lowercase();
     let hold_ms = opt_u64(params, "hold_ms")?;
     let remaining = hold_ms.map(|ms| ms as f32 / 1000.0);
-    let hold = |v: f32| Hold { value: v, remaining };
+    let hold = |v: f32| Hold {
+        value: v,
+        remaining,
+    };
     match name.as_str() {
         "throttle" | "brake" | "steer" => {
-            let (lo, hi) = if name == "steer" { (-1.0, 1.0) } else { (0.0, 1.0) };
+            let (lo, hi) = if name == "steer" {
+                (-1.0, 1.0)
+            } else {
+                (0.0, 1.0)
+            };
             let v = number_value(params, &name, lo, hi)?;
             vehicle_gate(world)?;
             let mut r = world.resource_mut::<RemoteControls>();
@@ -204,14 +221,20 @@ fn set_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
             Ok(json!({ "ok": true, "control": name, "value": v, "hold_ms": hold_ms }))
         }
         "gear" => {
-            let text = params.get("value").and_then(Value::as_str).unwrap_or("").to_ascii_lowercase();
+            let text = params
+                .get("value")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_ascii_lowercase();
             let gear = match text.as_str() {
                 "drive" | "d" => GearPosition::Drive,
                 "neutral" | "n" => GearPosition::Neutral,
                 "reverse" | "r" => GearPosition::Reverse,
                 _ => {
-                    return Err(RpcError::invalid_params("`value` of `gear` is drive, neutral or reverse")
-                        .with_data(json!({ "valid": ["drive", "neutral", "reverse"] })))
+                    return Err(RpcError::invalid_params(
+                        "`value` of `gear` is drive, neutral or reverse",
+                    )
+                    .with_data(json!({ "valid": ["drive", "neutral", "reverse"] })))
                 }
             };
             vehicle_gate(world)?;
@@ -250,7 +273,11 @@ fn raise(world: &mut World, name: &str, on: bool, hold_ms: Option<u64>) -> Resul
         .0
         .iter()
         .any(|b| b.trigger == real && b.held);
-    let to_raise = if on { real.clone() } else { format!("{real}_off") };
+    let to_raise = if on {
+        real.clone()
+    } else {
+        format!("{real}_off")
+    };
     let handled = raise_trigger(world, &to_raise)
         .ok_or_else(|| RpcError::new(code::NOT_READY, "the player vehicle has no scripts"))?;
     let mut held_ms = None;
@@ -262,7 +289,9 @@ fn raise(world: &mut World, name: &str, on: bool, hold_ms: Option<u64>) -> Resul
             .push((format!("{real}_off"), ms as f32 / 1000.0));
         held_ms = Some(ms);
     }
-    Ok(json!({ "ok": true, "name": real, "requested": name, "raised": to_raise, "handled": handled, "held_ms": held_ms }))
+    Ok(
+        json!({ "ok": true, "name": real, "requested": name, "raised": to_raise, "handled": handled, "held_ms": held_ms }),
+    )
 }
 
 fn trigger(world: &mut World, params: &Value) -> Outcome {
@@ -276,7 +305,10 @@ fn trigger(world: &mut World, params: &Value) -> Outcome {
 
 fn release(world: &mut World, params: &Value) -> Outcome {
     let res = (|| {
-        let which = params.get("control").and_then(Value::as_str).map(str::to_ascii_lowercase);
+        let which = params
+            .get("control")
+            .and_then(Value::as_str)
+            .map(str::to_ascii_lowercase);
         let mut r = world.resource_mut::<RemoteControls>();
         match which.as_deref() {
             None | Some("all") => r.release_all(),
@@ -285,10 +317,12 @@ fn release(world: &mut World, params: &Value) -> Outcome {
             Some("steer") => r.steer = None,
             Some("gear") => r.gear = None,
             Some("parking_brake") => r.parking = None,
-            Some(other) => {
-                return Err(RpcError::invalid_params(format!("`{other}` is not a held control"))
-                    .with_data(json!({ "valid": ["throttle", "brake", "steer", "gear", "parking_brake", "all"] })))
-            }
+            Some(other) => return Err(RpcError::invalid_params(format!(
+                "`{other}` is not a held control"
+            ))
+            .with_data(
+                json!({ "valid": ["throttle", "brake", "steer", "gear", "parking_brake", "all"] }),
+            )),
         }
         Ok(json!({ "ok": true, "released": which.unwrap_or_else(|| "all".into()) }))
     })();
@@ -317,13 +351,20 @@ pub fn drive_state_json(world: &mut World) -> Option<Value> {
     let (x, y) = absolute_position(world, ch.position);
     let signed = ch.forward_speed_km_h();
     let virt = world.resource::<Time<Virtual>>();
-    let (paused, scale, sim_time) = (virt.is_paused(), virt.relative_speed(), virt.elapsed_secs_f64());
+    let (paused, scale, sim_time) = (
+        virt.is_paused(),
+        virt.relative_speed(),
+        virt.elapsed_secs_f64(),
+    );
     let distance = world
         .get_resource::<RemoteControls>()
         .map_or(0.0, |r| r.odometer_m);
     let alert = world
         .get_resource::<crate::hud::alerts::AlertQueue>()
-        .and_then(|q| q.visible().map(|a| json!({ "id": a.id, "severity": a.severity.id() })));
+        .and_then(|q| {
+            q.visible()
+                .map(|a| json!({ "id": a.id, "severity": a.severity.id() }))
+        });
     let camera = world.get_resource::<CameraState>().map(|c| c.mode.label());
     Some(json!({
         "speed_kmh": signed.abs(),
@@ -351,16 +392,27 @@ pub fn drive_state_json(world: &mut World) -> Option<Value> {
 fn drive_state(world: &mut World, _: &Value) -> Outcome {
     match drive_state_json(world) {
         Some(v) => Outcome::ok(v),
-        None => Outcome::err(RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)")),
+        None => Outcome::err(RpcError::new(
+            code::NOT_READY,
+            "there is no player vehicle (no drive is running)",
+        )),
     }
 }
 
 // ---- vehicle.teleport / reset -------------------------------------------------------------------
 
-fn place(world: &mut World, local: Vec2, heading_rad: Option<f32>, elevation: Option<f32>) -> Result<(), RpcError> {
+fn place(
+    world: &mut World,
+    local: Vec2,
+    heading_rad: Option<f32>,
+    elevation: Option<f32>,
+) -> Result<(), RpcError> {
     let mut q = world.query_filtered::<&mut VehicleController, With<PlayerVehicle>>();
     let Some(mut c) = q.iter_mut(world).next() else {
-        return Err(RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"));
+        return Err(RpcError::new(
+            code::NOT_READY,
+            "there is no player vehicle (no drive is running)",
+        ));
     };
     let ch = &mut c.sim.chassis;
     ch.position = local;
@@ -390,7 +442,10 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
             .map(|s| s.start_tile)
             .ok_or_else(|| RpcError::new(code::NOT_READY, "no session has been started"))?;
         let tile = f64::from(opts_bevy::tile_size());
-        let local = Vec2::new((x - f64::from(tx) * tile) as f32, (y - f64::from(ty) * tile) as f32);
+        let local = Vec2::new(
+            (x - f64::from(tx) * tile) as f32,
+            (y - f64::from(ty) * tile) as f32,
+        );
         place(world, local, heading.map(|h| (h as f32).to_radians()), None)?;
         Ok(json!({ "ok": true, "x": x, "y": y, "heading_deg": heading }))
     })();
@@ -402,7 +457,12 @@ fn reset(world: &mut World, _: &Value) -> Outcome {
         let pose = world
             .get_resource::<RemoteControls>()
             .and_then(|r| r.start_pose)
-            .ok_or_else(|| RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"))?;
+            .ok_or_else(|| {
+                RpcError::new(
+                    code::NOT_READY,
+                    "there is no player vehicle (no drive is running)",
+                )
+            })?;
         place(world, pose.0, Some(pose.1), Some(pose.2))?;
         let (x, y) = absolute_position(world, pose.0);
         Ok(json!({ "ok": true, "x": x, "y": y, "heading_deg": pose.1.to_degrees() }))
@@ -427,11 +487,17 @@ fn look_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
         .map(|c| c.mode)
         .ok_or_else(|| RpcError::new(code::NOT_READY, "there is no camera"))?;
     if modal_open(world) {
-        return Err(RpcError::new(code::GATED, "a dialog or the vehicle menu is open: camera input is blocked"));
+        return Err(RpcError::new(
+            code::GATED,
+            "a dialog or the vehicle menu is open: camera input is blocked",
+        ));
     }
     if yaw.is_some() || pitch.is_some() {
         if mode != CameraMode::FreeRoam {
-            return Err(RpcError::new(code::NOT_READY, "`yaw`/`pitch` set the free camera; use `dx`/`dy` in this mode"));
+            return Err(RpcError::new(
+                code::NOT_READY,
+                "`yaw`/`pitch` set the free camera; use `dx`/`dy` in this mode",
+            ));
         }
         let mut cam = world.resource_mut::<CameraState>();
         if let Some(y) = yaw {
@@ -446,7 +512,9 @@ fn look_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
         for mut t in cameras.iter_mut(world) {
             t.rotation = rotation;
         }
-        return Ok(Outcome::ok(json!({ "mode": mode.label(), "yaw_deg": -y.to_degrees(), "pitch_deg": p.to_degrees() })));
+        return Ok(Outcome::ok(
+            json!({ "mode": mode.label(), "yaw_deg": -y.to_degrees(), "pitch_deg": p.to_degrees() }),
+        ));
     }
     let (dx, dy) = (dx.unwrap_or(0.0) as f32, dy.unwrap_or(0.0) as f32);
     if dx == 0.0 && dy == 0.0 {
@@ -460,22 +528,34 @@ fn look_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
     };
     let window = primary_window_or_placeholder(world);
     if let Some(b) = button {
-        world.write_message(MouseButtonInput { button: b, state: ButtonState::Pressed, window });
+        world.write_message(MouseButtonInput {
+            button: b,
+            state: ButtonState::Pressed,
+            window,
+        });
     }
     let mut frame = 0;
     Ok(Outcome::Wait(Box::new(move |world| {
         frame += 1;
         match frame {
             1 => {
-                world.write_message(MouseMotion { delta: Vec2::new(dx, dy) });
+                world.write_message(MouseMotion {
+                    delta: Vec2::new(dx, dy),
+                });
                 None
             }
             2 => None,
             _ => {
                 if let Some(b) = button {
-                    world.write_message(MouseButtonInput { button: b, state: ButtonState::Released, window });
+                    world.write_message(MouseButtonInput {
+                        button: b,
+                        state: ButtonState::Released,
+                        window,
+                    });
                 }
-                Some(Ok(json!({ "ok": true, "mode": mode.label(), "dx": dx, "dy": dy })))
+                Some(Ok(
+                    json!({ "ok": true, "mode": mode.label(), "dx": dx, "dy": dy }),
+                ))
             }
         }
     })))
@@ -491,10 +571,16 @@ fn move_camera(world: &mut World, params: &Value) -> Outcome {
         let ms = opt_u64(params, "duration_ms")?.unwrap_or(500).min(600_000);
         let mode = world.get_resource::<CameraState>().map(|c| c.mode);
         if mode != Some(CameraMode::FreeRoam) {
-            return Err(RpcError::new(code::NOT_READY, "the camera is not in free roam (`camera.set_mode free`)"));
+            return Err(RpcError::new(
+                code::NOT_READY,
+                "the camera is not in free roam (`camera.set_mode free`)",
+            ));
         }
         if modal_open(world) {
-            return Err(RpcError::new(code::GATED, "a dialog or the vehicle menu is open: camera input is blocked"));
+            return Err(RpcError::new(
+                code::GATED,
+                "a dialog or the vehicle menu is open: camera input is blocked",
+            ));
         }
         let window = primary_window_or_placeholder(world);
         let at = world.resource::<Time<Real>>().elapsed_secs_f64() + ms as f64 / 1000.0;
@@ -518,7 +604,11 @@ fn move_camera(world: &mut World, params: &Value) -> Outcome {
         }
         let mut state = world.resource_mut::<ControlState>();
         for k in pressed {
-            state.releases.push(Release { key: Some(k), mouse: None, at });
+            state.releases.push(Release {
+                key: Some(k),
+                mouse: None,
+                at,
+            });
         }
         let _: Option<Key> = None;
         let _ = KeyCode::KeyW;
@@ -539,7 +629,10 @@ fn result_of(outcome: Outcome) -> Value {
 
 fn snapshot(world: &mut World, params: &Value) -> Outcome {
     let parsed = (|| -> Result<(Option<String>, bool, usize), RpcError> {
-        let path = params.get("path").and_then(Value::as_str).map(str::to_string);
+        let path = params
+            .get("path")
+            .and_then(Value::as_str)
+            .map(str::to_string);
         let shot = opts_bevy::control::params::opt_bool(params, "screenshot")?.unwrap_or(false);
         let n = opt_u64(params, "warnings")?.unwrap_or(20) as usize;
         Ok((path, shot, n))
@@ -559,16 +652,31 @@ fn snapshot(world: &mut World, params: &Value) -> Outcome {
         None => None,
     };
     let mut doc = serde_json::Map::new();
-    doc.insert("state".into(), result_of(dispatch(world, "state", &Value::Null)));
+    doc.insert(
+        "state".into(),
+        result_of(dispatch(world, "state", &Value::Null)),
+    );
     doc.insert("screen".into(), crate::control_ui::screen_json(world));
     if let Some(d) = drive_state_json(world) {
         doc.insert("drive".into(), d);
     }
-    if world.get_resource::<crate::hud::build::ActiveProfile>().is_some() {
-        doc.insert("hud".into(), result_of(dispatch(world, "hud.state", &Value::Null)));
+    if world
+        .get_resource::<crate::hud::build::ActiveProfile>()
+        .is_some()
+    {
+        doc.insert(
+            "hud".into(),
+            result_of(dispatch(world, "hud.state", &Value::Null)),
+        );
     }
-    doc.insert("camera".into(), result_of(dispatch(world, "camera.get", &Value::Null)));
-    doc.insert("sim".into(), result_of(dispatch(world, "sim.get", &Value::Null)));
+    doc.insert(
+        "camera".into(),
+        result_of(dispatch(world, "camera.get", &Value::Null)),
+    );
+    doc.insert(
+        "sim".into(),
+        result_of(dispatch(world, "sim.get", &Value::Null)),
+    );
     let warnings: Vec<Value> = opts_logging::recent_logs(
         n_warn,
         &opts_logging::LogQuery {
@@ -629,8 +737,14 @@ mod tests {
             held: false,
         }]);
         assert_eq!(resolve_trigger(&bindings, "door_front"), "bus_doorfront0");
-        assert_eq!(resolve_trigger(&bindings, "bus_doorfront0"), "bus_doorfront0");
-        assert_eq!(resolve_trigger(&bindings, "my_own_trigger"), "my_own_trigger");
+        assert_eq!(
+            resolve_trigger(&bindings, "bus_doorfront0"),
+            "bus_doorfront0"
+        );
+        assert_eq!(
+            resolve_trigger(&bindings, "my_own_trigger"),
+            "my_own_trigger"
+        );
     }
 
     #[test]
@@ -639,7 +753,9 @@ mod tests {
         assert!(number_value(&json!({"value": 1.5}), "throttle", 0.0, 1.0).is_err());
         assert!(number_value(&json!({"value": "x"}), "steer", -1.0, 1.0).is_err());
         assert_eq!(
-            number_value(&json!({"value": 2.0}), "steer", -1.0, 1.0).unwrap_err().code,
+            number_value(&json!({"value": 2.0}), "steer", -1.0, 1.0)
+                .unwrap_err()
+                .code,
             code::INVALID_PARAMS
         );
     }

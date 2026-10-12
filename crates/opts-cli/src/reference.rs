@@ -143,6 +143,9 @@ mod tests {
             .as_array()
             .and_then(|a| a.iter().find(|x| x["name"] == "to"))
             .expect("`to`");
-        assert_eq!(to["values"], serde_json::json!(["top", "bottom", "left", "right"]));
+        assert_eq!(
+            to["values"],
+            serde_json::json!(["top", "bottom", "left", "right"])
+        );
     }
 }

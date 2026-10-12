@@ -56,7 +56,9 @@ fn base_app(allow: Vec<PathBuf>) -> App {
     let mut app = App::new();
     app.add_plugins((MinimalPlugins, bevy::input::InputPlugin, StatesPlugin));
     app.init_state::<AppState>();
-    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(16)));
+    app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
+        16,
+    )));
     app.add_plugins(ControlPlugin::new(ControlConfig {
         allow_dirs: allow,
         ..ControlConfig::default()
@@ -73,8 +75,10 @@ fn base_app(allow: Vec<PathBuf>) -> App {
 fn drive_app() -> App {
     let mut app = base_app(Vec::new());
     app.add_plugins(OptsVehiclePlugin);
-    app.world_mut()
-        .spawn((VehicleController::standard_bus(12_000.0, 5.9), PlayerVehicle));
+    app.world_mut().spawn((
+        VehicleController::standard_bus(12_000.0, 5.9),
+        PlayerVehicle,
+    ));
     // Free roam is the default camera and takes the vehicle's input away; drive from outside.
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::External;
     app.update();
@@ -152,7 +156,11 @@ fn help_and_commands_describe_the_schema() {
     for want in ["drive.set", "drive.trigger", "drive.state", "vehicle.reset"] {
         assert!(names.contains(&want), "{want} in {names:?}");
     }
-    assert!(all["errors"].as_array().unwrap().iter().any(|e| e["name"] == "GATED"));
+    assert!(all["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|e| e["name"] == "GATED"));
     let none = call(&mut app, "commands", json!({"group": "nonsense"})).expect_err("group");
     assert_eq!(none.code, code::NOT_FOUND);
     assert!(none.data.expect("data")["groups"].is_array());
@@ -162,15 +170,30 @@ fn help_and_commands_describe_the_schema() {
 fn drive_controls_reach_the_vehicle_through_the_input_system() {
     let mut app = drive_app();
     assert!(inputs(&mut app).4, "starts parked");
-    call(&mut app, "drive.set", json!({"control": "gear", "value": "drive"})).expect("gear");
-    call(&mut app, "drive.set", json!({"control": "parking_brake", "value": false})).expect("pb");
+    call(
+        &mut app,
+        "drive.set",
+        json!({"control": "gear", "value": "drive"}),
+    )
+    .expect("gear");
+    call(
+        &mut app,
+        "drive.set",
+        json!({"control": "parking_brake", "value": false}),
+    )
+    .expect("pb");
     call(
         &mut app,
         "drive.set",
         json!({"control": "throttle", "value": 0.6, "hold_ms": 100}),
     )
     .expect("throttle");
-    call(&mut app, "drive.set", json!({"control": "steer", "value": -0.4})).expect("steer");
+    call(
+        &mut app,
+        "drive.set",
+        json!({"control": "steer", "value": -0.4}),
+    )
+    .expect("steer");
     app.update();
     let (throttle, _, steer, gear, parked) = inputs(&mut app);
     assert!((throttle - 0.6).abs() < 1e-5, "throttle {throttle}");
@@ -181,13 +204,22 @@ fn drive_controls_reach_the_vehicle_through_the_input_system() {
     for _ in 0..30 {
         app.update();
     }
-    assert!(inputs(&mut app).0 < 0.2, "throttle released after its duration");
-    assert!((inputs(&mut app).2 + 0.4).abs() < 1e-5, "an open-ended hold stays");
+    assert!(
+        inputs(&mut app).0 < 0.2,
+        "throttle released after its duration"
+    );
+    assert!(
+        (inputs(&mut app).2 + 0.4).abs() < 1e-5,
+        "an open-ended hold stays"
+    );
     call(&mut app, "drive.release", json!({})).expect("release");
     for _ in 0..200 {
         app.update();
     }
-    assert!(inputs(&mut app).2.abs() < 0.05, "steering returns after release");
+    assert!(
+        inputs(&mut app).2.abs() < 0.05,
+        "steering returns after release"
+    );
     let controls = call(&mut app, "drive.controls", json!({})).expect("controls");
     assert!(controls["controls"].as_array().unwrap().len() >= 5);
 }
@@ -197,27 +229,55 @@ fn drive_controls_are_refused_by_the_same_gates_as_keys() {
     let mut app = drive_app();
     // A dialog or the vehicle menu is open.
     app.insert_resource(ModalActive(true));
-    let e = call(&mut app, "drive.set", json!({"control": "throttle", "value": 1.0})).expect_err("gated");
+    let e = call(
+        &mut app,
+        "drive.set",
+        json!({"control": "throttle", "value": 1.0}),
+    )
+    .expect_err("gated");
     assert_eq!(e.code, code::GATED);
     assert_eq!(e.structured().data.expect("data")["name"], "GATED");
     app.insert_resource(ModalActive(false));
     // Free roam: the vehicle takes no input.
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::FreeRoam;
-    let e = call(&mut app, "drive.set", json!({"control": "gear", "value": "drive"})).expect_err("free roam");
+    let e = call(
+        &mut app,
+        "drive.set",
+        json!({"control": "gear", "value": "drive"}),
+    )
+    .expect_err("free roam");
     assert_eq!(e.code, code::GATED);
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::External;
     // A held value is dropped when a gate closes, so nothing fires when it reopens.
-    call(&mut app, "drive.set", json!({"control": "brake", "value": 1.0})).expect("brake");
+    call(
+        &mut app,
+        "drive.set",
+        json!({"control": "brake", "value": 1.0}),
+    )
+    .expect("brake");
     app.insert_resource(ModalActive(true));
     app.update();
     assert!(!app.world().resource::<RemoteControls>().is_active());
     app.insert_resource(ModalActive(false));
     app.update();
-    assert!(inputs(&mut app).1 < 0.01, "the held brake did not come back");
+    assert!(
+        inputs(&mut app).1 < 0.01,
+        "the held brake did not come back"
+    );
     // Bad values are invalid params, not gates.
-    let bad = call(&mut app, "drive.set", json!({"control": "throttle", "value": 2})).expect_err("range");
+    let bad = call(
+        &mut app,
+        "drive.set",
+        json!({"control": "throttle", "value": 2}),
+    )
+    .expect_err("range");
     assert_eq!(bad.code, code::INVALID_PARAMS);
-    let bad = call(&mut app, "drive.set", json!({"control": "gear", "value": "sideways"})).expect_err("gear");
+    let bad = call(
+        &mut app,
+        "drive.set",
+        json!({"control": "gear", "value": "sideways"}),
+    )
+    .expect_err("gear");
     assert_eq!(bad.code, code::INVALID_PARAMS);
 }
 
@@ -243,22 +303,38 @@ fn odometer_teleport_reset_and_state() {
         let mut q = app
             .world_mut()
             .query_filtered::<&mut VehicleController, With<PlayerVehicle>>();
-        q.iter_mut(app.world_mut()).next().unwrap().sim.chassis.position = Vec2::new(0.0, y);
+        q.iter_mut(app.world_mut())
+            .next()
+            .unwrap()
+            .sim
+            .chassis
+            .position = Vec2::new(0.0, y);
     };
     for i in 1..=10 {
         set_y(&mut app, i as f32);
         app.update();
     }
     let state = call(&mut app, "drive.state", json!({})).expect("state");
-    assert!((state["distance_m"].as_f64().unwrap() - 10.0).abs() < 0.5, "{state}");
-    assert!(state["route"].is_null() && state["stops"].is_null(), "timetable is not guessed");
+    assert!(
+        (state["distance_m"].as_f64().unwrap() - 10.0).abs() < 0.5,
+        "{state}"
+    );
+    assert!(
+        state["route"].is_null() && state["stops"].is_null(),
+        "timetable is not guessed"
+    );
     // A jump is a placement, not driving.
     set_y(&mut app, 500.0);
     app.update();
     let jumped = call(&mut app, "drive.state", json!({})).expect("state");
     assert!((jumped["distance_m"].as_f64().unwrap() - 10.0).abs() < 0.5);
     // Teleport: absolute coordinates, standing still, odometer restarts.
-    let t = call(&mut app, "vehicle.teleport", json!({"x": 200.0, "y": 100.0, "heading_deg": 90.0})).expect("tp");
+    let t = call(
+        &mut app,
+        "vehicle.teleport",
+        json!({"x": 200.0, "y": 100.0, "heading_deg": 90.0}),
+    )
+    .expect("tp");
     assert_eq!(t["ok"], true);
     app.update();
     let s = call(&mut app, "drive.state", json!({})).expect("state");
@@ -271,7 +347,10 @@ fn odometer_teleport_reset_and_state() {
     call(&mut app, "vehicle.reset", json!({})).expect("reset");
     app.update();
     let r = call(&mut app, "drive.state", json!({})).expect("state");
-    assert!(r["x"].as_f64().unwrap().abs() < 0.01 && r["y"].as_f64().unwrap().abs() < 0.01, "{r}");
+    assert!(
+        r["x"].as_f64().unwrap().abs() < 0.01 && r["y"].as_f64().unwrap().abs() < 0.01,
+        "{r}"
+    );
 }
 
 #[test]
@@ -298,10 +377,16 @@ fn wait_for_holds_on_conditions_and_times_out_with_the_last_value() {
     let bad = call(&mut app, "ui.wait_for", json!({"until": "soon"})).expect_err("bad");
     assert_eq!(bad.code, code::INVALID_PARAMS);
     assert!(bad.data.expect("data")["valid"].as_array().unwrap().len() > 10);
-    let missing = call(&mut app, "ui.wait_for", json!({"until": "speed_above"})).expect_err("number");
+    let missing =
+        call(&mut app, "ui.wait_for", json!({"until": "speed_above"})).expect_err("number");
     assert_eq!(missing.code, code::INVALID_PARAMS);
     // app_state is read case-insensitively.
-    let s = call(&mut app, "ui.wait_for", json!({"until": "app_state", "value": "loading"})).expect("state");
+    let s = call(
+        &mut app,
+        "ui.wait_for",
+        json!({"until": "app_state", "value": "loading"}),
+    )
+    .expect("state");
     assert_eq!(s["ok"], true);
 }
 
@@ -310,16 +395,24 @@ fn snapshot_collects_state_screen_drive_and_warnings_into_a_file() {
     let dir = scratch("snapshot");
     let mut app = base_app(vec![dir.clone()]);
     app.add_plugins(OptsVehiclePlugin);
-    app.world_mut()
-        .spawn((VehicleController::standard_bus(12_000.0, 5.9), PlayerVehicle));
+    app.world_mut().spawn((
+        VehicleController::standard_bus(12_000.0, 5.9),
+        PlayerVehicle,
+    ));
     app.update();
     let path = dir.join("snap.json");
-    let v = call(&mut app, "snapshot", json!({"path": path.display().to_string()})).expect("snapshot");
+    let v = call(
+        &mut app,
+        "snapshot",
+        json!({"path": path.display().to_string()}),
+    )
+    .expect("snapshot");
     for key in ["state", "screen", "drive", "camera", "sim", "warnings"] {
         assert!(v.get(key).is_some(), "snapshot has `{key}`: {v}");
     }
     assert_eq!(v["screen"]["app_state"], "Loading");
-    let on_disk: Value = serde_json::from_str(&std::fs::read_to_string(&path).expect("file")).expect("json");
+    let on_disk: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).expect("file")).expect("json");
     assert_eq!(on_disk["drive"]["gear"], v["drive"]["gear"]);
     // Writing outside the allowed directories is refused.
     let e = call(&mut app, "snapshot", json!({"path": "/proc/nope.json"})).expect_err("forbidden");
@@ -376,27 +469,48 @@ fn triggers_raise_script_events_with_aliases_holds_and_gates() {
     let (mut engine, _) = opts_sim::script::ScriptEngine::from_sources(&[("t.osc", SCRIPT)]);
     engine.run_init();
     let vehicle = {
-        let mut q = app.world_mut().query_filtered::<Entity, With<PlayerVehicle>>();
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<PlayerVehicle>>();
         q.iter(app.world()).next().expect("vehicle")
     };
     app.world_mut()
         .entity_mut(vehicle)
         .insert(opts_bevy::VehicleScripts::new(engine));
     // A held binding (the horn): `horn` now, `horn_off` after the hold, in simulation time.
-    let horn = call(&mut app, "drive.trigger", json!({"name": "horn", "hold_ms": 100})).expect("horn");
+    let horn = call(
+        &mut app,
+        "drive.trigger",
+        json!({"name": "horn", "hold_ms": 100}),
+    )
+    .expect("horn");
     assert_eq!(horn["handled"], true);
     assert_eq!(horn["held_ms"], 100);
     assert_eq!(variable(&mut app, "hornv"), Some(1.0));
     for _ in 0..10 {
         app.update();
     }
-    assert_eq!(variable(&mut app, "hornv"), Some(0.0), "horn_off followed the hold");
+    assert_eq!(
+        variable(&mut app, "hornv"),
+        Some(0.0),
+        "horn_off followed the hold"
+    );
     // A short name resolves to the vehicle's own trigger; `drive.set` takes trigger names too.
-    let door = call(&mut app, "drive.set", json!({"control": "door_front", "value": true})).expect("door");
+    let door = call(
+        &mut app,
+        "drive.set",
+        json!({"control": "door_front", "value": true}),
+    )
+    .expect("door");
     assert_eq!(door["name"], "bus_doorfront0");
     assert_eq!(variable(&mut app, "doorv"), Some(1.0));
     // A name no script handles is raised and reported as not handled.
-    let none = call(&mut app, "drive.trigger", json!({"name": "no_such_trigger"})).expect("raise");
+    let none = call(
+        &mut app,
+        "drive.trigger",
+        json!({"name": "no_such_trigger"}),
+    )
+    .expect("raise");
     assert_eq!(none["handled"], false);
     // The modal gate blocks triggers like a key press.
     app.insert_resource(ModalActive(true));
@@ -406,6 +520,10 @@ fn triggers_raise_script_events_with_aliases_holds_and_gates() {
     app.insert_resource(ModalActive(false));
     let listing = call(&mut app, "drive.controls", json!({})).expect("controls");
     let triggers = listing["triggers"].as_array().expect("triggers");
-    assert!(triggers.iter().any(|t| t["name"] == "bus_doorfront0" && t["alias"] == "door_front"));
-    assert!(triggers.iter().any(|t| t["name"] == "horn" && t["held"] == true));
+    assert!(triggers
+        .iter()
+        .any(|t| t["name"] == "bus_doorfront0" && t["alias"] == "door_front"));
+    assert!(triggers
+        .iter()
+        .any(|t| t["name"] == "horn" && t["held"] == true));
 }

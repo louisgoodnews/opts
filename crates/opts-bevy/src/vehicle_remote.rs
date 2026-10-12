@@ -220,7 +220,10 @@ mod tests {
         remote.apply(&mut inputs, 0.1);
         assert!(remote.throttle.is_some());
         remote.apply(&mut inputs, 0.1);
-        assert!(remote.throttle.is_none(), "0.3 s have run out the 0.25 s hold");
+        assert!(
+            remote.throttle.is_none(),
+            "0.3 s have run out the 0.25 s hold"
+        );
         assert!(remote.steer.is_some(), "an open-ended hold stays");
     }
 

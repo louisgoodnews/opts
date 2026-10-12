@@ -274,10 +274,19 @@ comparing versions.
 
 ## 9. Using the protocol from an AI agent
 
-**What an agent can do.** Start or find a running OPTS, load a map, put the camera anywhere, drive the
-bus with injected keys, pause and single-step time, look at the result (screenshot) and read what the game
-complained about (`log.filter`), edit a content file and have it reloaded, and file a report — all without
-a human at the keyboard.
+**What an agent can do.** Everything a player can: answer the first-run question, plan a drive in the wizard
+(map, vehicle, time), wait through loading, drive (throttle, brake, steering, gear, parking brake, doors,
+indicators, lights, horn), switch and turn the camera, open the pause overlay and the settings, scroll their
+lists, change a setting, leave the drive - all by id, through the same gates a person meets. Besides playing it
+can look at the result (`screenshot`, `snapshot`), read what the game complained about (`log.filter`), edit a
+content file and have it reloaded, and file a report.
+
+**The verified session.** `crates/opts-cli/examples/play_session.sh` plays exactly this against a real game (Berlin-Spandau,
+an MAN SD77 bus) and was run live for this page: Home, *Plan a drive* (`ui.select` on the map and vehicle lists, `Next`
+three times, `Drive`), the loading screen (`ui.screen` reports `loading.stage`; `screenshot` captures it), `drive.set` gear, parking
+brake and throttle, `ui.wait_for distance_above 100` (the bus had driven 100.2 m at 47 km/h), brake to a stop, `Escape` for
+the pause overlay, `pause.settings`, `ui.scroll to bottom` on the settings view, `ui.click` on a texture-filtering option
+(`settings.get` confirmed it), `pause.leave` and the confirmation, back on Home. Nothing in it sleeps: every step waits for a condition.
 
 **Connecting.** Start the game with `opts-game --cli-port 44201` (add `--cli-token <T>` if the port is
 reachable by others). The listening address is logged at `INFO` (`control server listening addr=…`), which is

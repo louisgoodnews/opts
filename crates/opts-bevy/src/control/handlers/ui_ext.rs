@@ -19,11 +19,7 @@ use opts_cli::protocol::{code, RpcError};
 use opts_gui::components::combobox::{ComboboxHeader, ComboboxMenuItem, M3Combobox};
 use opts_gui::components::modal::ModalRoot;
 use opts_gui::components::text_field::M3TextField;
-use opts_gui::interaction::{
-    activation::Activated,
-    focus::FocusEvent,
-    layer::FocusProxy,
-};
+use opts_gui::interaction::{activation::Activated, focus::FocusEvent, layer::FocusProxy};
 use opts_gui::patterns::master_detail::{
     MasterDetail, MasterDetailChosen, MasterDetailView, MasterList,
 };
@@ -176,7 +172,9 @@ pub fn collect_scrollables(world: &mut World) -> Vec<Scrollable> {
     let mut containers: Vec<Entity> = world
         .query::<(Entity, &Node, &ScrollPosition)>()
         .iter(world)
-        .filter(|(_, n, _)| n.overflow.x == OverflowAxis::Scroll || n.overflow.y == OverflowAxis::Scroll)
+        .filter(|(_, n, _)| {
+            n.overflow.x == OverflowAxis::Scroll || n.overflow.y == OverflowAxis::Scroll
+        })
         .map(|(e, ..)| e)
         .collect();
     containers.sort();
@@ -221,9 +219,10 @@ pub fn collect_scrollables(world: &mut World) -> Vec<Scrollable> {
         let Some(view) = world.get::<MasterDetailView>(root) else {
             continue;
         };
-        let id = world
-            .get::<UiId>(e)
-            .map_or_else(|| format!("{}/list", nearest_id(world, e).unwrap_or_default()), |u| u.0.to_string());
+        let id = world.get::<UiId>(e).map_or_else(
+            || format!("{}/list", nearest_id(world, e).unwrap_or_default()),
+            |u| u.0.to_string(),
+        );
         out.push(Scrollable {
             id,
             entity: e,
@@ -268,6 +267,14 @@ fn items_of(world: &mut World, s: &Scrollable) -> Vec<Value> {
             ids
         }
     }
+}
+
+/// How many items the scrollable `id` holds (`None` when there is no such view).
+pub fn scrollable_item_count(world: &mut World, id: &str) -> Option<usize> {
+    let s = collect_scrollables(world)
+        .into_iter()
+        .find(|s| s.id == id)?;
+    Some(items_of(world, &s).len())
 }
 
 fn scrollable_json(world: &mut World, s: &Scrollable, with_items: bool) -> Value {
@@ -321,10 +328,16 @@ fn scroll_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     let pages = opt_f64(params, "pages")?;
     let to = opt_str(params, "to")?;
     let item = opt_str(params, "item")?;
-    let chosen = [by.is_some(), dx.is_some(), pages.is_some(), to.is_some(), item.is_some()]
-        .iter()
-        .filter(|b| **b)
-        .count();
+    let chosen = [
+        by.is_some(),
+        dx.is_some(),
+        pages.is_some(),
+        to.is_some(),
+        item.is_some(),
+    ]
+    .iter()
+    .filter(|b| **b)
+    .count();
     if chosen != 1 {
         return Err(RpcError::invalid_params(
             "give exactly one of `by`, `dx`, `pages`, `to` or `item`",
@@ -332,16 +345,19 @@ fn scroll_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     }
     if let Some(t) = to {
         if !["top", "bottom", "left", "right"].contains(&t) {
-            return Err(RpcError::invalid_params("`to` is top, bottom, left or right")
-                .with_data(json!({ "valid": ["top", "bottom", "left", "right"] })));
+            return Err(
+                RpcError::invalid_params("`to` is top, bottom, left or right")
+                    .with_data(json!({ "valid": ["top", "bottom", "left", "right"] })),
+            );
         }
     }
     let all = collect_scrollables(world);
     let target = match opt_str(params, "target")? {
         Some(id) => all.iter().find(|s| s.id == id).cloned().ok_or_else(|| {
-            RpcError::new(code::NOT_FOUND, format!("no scrollable view `{id}`"))
-                .with_data(json!({ "valid": all.iter().map(|s| s.id.clone()).collect::<Vec<_>>(),
-                                   "hint": "`ui.scrollables` lists the views" }))
+            RpcError::new(code::NOT_FOUND, format!("no scrollable view `{id}`")).with_data(
+                json!({ "valid": all.iter().map(|s| s.id.clone()).collect::<Vec<_>>(),
+                                   "hint": "`ui.scrollables` lists the views" }),
+            )
         })?,
         None => default_target(world, &all).ok_or_else(|| {
             RpcError::new(code::NOT_READY, "there is no scrollable view on screen")
@@ -394,7 +410,11 @@ fn default_target(world: &mut World, all: &[Scrollable]) -> Option<Scrollable> {
         .iter(world)
         .next();
     if let Some(f) = focus {
-        if let Some(s) = all.iter().rev().find(|s| s.visible && is_inside(world, f, s.entity)) {
+        if let Some(s) = all
+            .iter()
+            .rev()
+            .find(|s| s.visible && is_inside(world, f, s.entity))
+        {
             return Some(s.clone());
         }
     }
@@ -402,7 +422,11 @@ fn default_target(world: &mut World, all: &[Scrollable]) -> Option<Scrollable> {
     let scoped = |w: &World, s: &&Scrollable| {
         modals.is_empty() || modals.iter().any(|m| is_inside(w, s.entity, *m))
     };
-    let usable: Vec<&Scrollable> = all.iter().filter(|s| s.visible).filter(|s| scoped(world, s)).collect();
+    let usable: Vec<&Scrollable> = all
+        .iter()
+        .filter(|s| s.visible)
+        .filter(|s| scoped(world, s))
+        .collect();
     usable
         .iter()
         .find(|s| s.max().length() > 0.5)
@@ -426,12 +450,18 @@ fn reveal_item(world: &mut World, target: &Scrollable, id: &str) -> Result<Vec2,
                         code::NOT_FOUND,
                         format!("`{id}` is not an entry of `{}`", target.id),
                     )
+                    .with_data(json!({
+                        "hint": "entry ids and titles are listed in `ui.scrollables` (`items`)",
+                    }))
                 })?;
             let view = world
                 .get::<MasterDetailView>(root)
                 .ok_or_else(|| not_found(id))?;
             let offset = view.reveal_offset(md, &entry.id).ok_or_else(|| {
-                RpcError::new(code::NOT_READY, format!("`{id}` is filtered out of the list"))
+                RpcError::new(
+                    code::NOT_READY,
+                    format!("`{id}` is filtered out of the list"),
+                )
             })?;
             Ok(Vec2::new(0.0, offset))
         }
@@ -444,7 +474,10 @@ fn reveal_item(world: &mut World, target: &Scrollable, id: &str) -> Result<Vec2,
                 ));
             }
             let (Some(item), Some(view)) = (rect_of(world, entity), target.rect) else {
-                return Err(RpcError::new(code::NOT_READY, format!("`{id}` has no layout yet")));
+                return Err(RpcError::new(
+                    code::NOT_READY,
+                    format!("`{id}` has no layout yet"),
+                ));
             };
             let mut next = target.offset;
             if item[1] < view[1] {
@@ -499,11 +532,16 @@ fn node_of(world: &mut World, id: &str) -> Result<UiNode, RpcError> {
 
 fn check_usable(node: &UiNode, id: &str) -> Result<(), RpcError> {
     if !node.state.visible {
-        return Err(RpcError::new(code::NOT_READY, format!("`{id}` is not visible")));
+        return Err(RpcError::new(
+            code::NOT_READY,
+            format!("`{id}` is not visible"),
+        ));
     }
     if let Some(reason) = &node.state.disabled {
-        return Err(RpcError::new(code::NOT_READY, format!("`{id}` is disabled"))
-            .with_data(json!({ "reason": reason })));
+        return Err(
+            RpcError::new(code::NOT_READY, format!("`{id}` is disabled"))
+                .with_data(json!({ "reason": reason })),
+        );
     }
     Ok(())
 }
@@ -524,13 +562,18 @@ fn text_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
         if submit {
             type_text(world, "\n");
         }
-        return Ok(Outcome::ok(json!({ "ok": true, "chars": text.chars().count() })));
+        return Ok(Outcome::ok(
+            json!({ "ok": true, "chars": text.chars().count() }),
+        ));
     };
     let entity = find_entity(world, &id).ok_or_else(|| not_found(&id))?;
     let node = node_of(world, &id)?;
     check_usable(&node, &id)?;
     if node.role != UiRole::Textbox {
-        return Err(RpcError::invalid_params(format!("`{id}` is a {}, not a text field", node.role.as_str())));
+        return Err(RpcError::invalid_params(format!(
+            "`{id}` is a {}, not a text field",
+            node.role.as_str()
+        )));
     }
     check_modal_scope(world, entity, "ui.text")?;
     let input = world.get::<FocusProxy>(entity).map_or(entity, |p| p.0);
@@ -548,8 +591,16 @@ fn text_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
             let window = primary_window_or_placeholder(world);
             for (code, key, state) in [
                 (KeyCode::ControlLeft, Key::Control, ButtonState::Pressed),
-                (KeyCode::KeyA, Key::Character("a".into()), ButtonState::Pressed),
-                (KeyCode::KeyA, Key::Character("a".into()), ButtonState::Released),
+                (
+                    KeyCode::KeyA,
+                    Key::Character("a".into()),
+                    ButtonState::Pressed,
+                ),
+                (
+                    KeyCode::KeyA,
+                    Key::Character("a".into()),
+                    ButtonState::Released,
+                ),
                 (KeyCode::ControlLeft, Key::Control, ButtonState::Released),
                 (KeyCode::Backspace, Key::Backspace, ButtonState::Pressed),
                 (KeyCode::Backspace, Key::Backspace, ButtonState::Released),
@@ -584,7 +635,10 @@ fn text_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
             return Some(Ok(json!({ "ok": true, "id": id, "value": value })));
         }
         (began.elapsed() > Duration::from_secs(2)).then(|| {
-            Err(RpcError::new(code::FAILED, "the field did not take the text").with_data(json!({ "value": value })))
+            Err(
+                RpcError::new(code::FAILED, "the field did not take the text")
+                    .with_data(json!({ "value": value })),
+            )
         })
     })))
 }
@@ -606,8 +660,13 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
     check_modal_scope(world, entity, "ui.select")?;
     // A master list: select the entry like a click on its row does.
     if let Some(list) = world.get::<MasterList>(entity).map(|l| l.0) {
-        let key = option.clone().ok_or_else(|| RpcError::invalid_params("`option` (entry id or title) is needed for a list"))?;
-        let md = world.get::<MasterDetail>(list).cloned().ok_or_else(|| not_found(&id))?;
+        let key = option.clone().ok_or_else(|| {
+            RpcError::invalid_params("`option` (entry id or title) is needed for a list")
+        })?;
+        let md = world
+            .get::<MasterDetail>(list)
+            .cloned()
+            .ok_or_else(|| not_found(&id))?;
         let entry = md
             .entries
             .iter()
@@ -619,21 +678,36 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
                     .with_data(json!({ "entries": md.entries.iter().take(200).map(|e| json!({"id": e.id, "title": e.title})).collect::<Vec<_>>() }))
             })?;
         let shown = {
-            let mut md_live = world.get::<MasterDetail>(list).cloned().ok_or_else(|| not_found(&id))?;
-            let mut view = world.get_mut::<MasterDetailView>(list).ok_or_else(|| not_found(&id))?;
+            let mut md_live = world
+                .get::<MasterDetail>(list)
+                .cloned()
+                .ok_or_else(|| not_found(&id))?;
+            let mut view = world
+                .get_mut::<MasterDetailView>(list)
+                .ok_or_else(|| not_found(&id))?;
             let ok = view.select_entry(&mut md_live, &entry);
             if ok {
-                *world.get_mut::<MasterDetail>(list).ok_or_else(|| not_found(&id))? = md_live;
+                *world
+                    .get_mut::<MasterDetail>(list)
+                    .ok_or_else(|| not_found(&id))? = md_live;
             }
             ok
         };
         if !shown {
-            return Err(RpcError::new(code::NOT_READY, format!("`{entry}` is filtered out of the list")));
+            return Err(RpcError::new(
+                code::NOT_READY,
+                format!("`{entry}` is filtered out of the list"),
+            ));
         }
         if opt_bool(params, "choose")?.unwrap_or(false) {
-            world.write_message(MasterDetailChosen { root: list, id: entry.clone() });
+            world.write_message(MasterDetailChosen {
+                root: list,
+                id: entry.clone(),
+            });
         }
-        return Ok(Outcome::ok(json!({ "ok": true, "id": id, "selected": entry })));
+        return Ok(Outcome::ok(
+            json!({ "ok": true, "id": id, "selected": entry }),
+        ));
     }
     // A combo box: open it, wait for the entries, activate the wanted one.
     let combo = world
@@ -641,14 +715,24 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
         .map(|h| h.0)
         .or_else(|| world.get::<M3Combobox>(entity).map(|_| entity));
     if let Some(combo) = combo {
-        let options = world.get::<M3Combobox>(combo).map(|c| c.options.clone()).unwrap_or_default();
+        let options = world
+            .get::<M3Combobox>(combo)
+            .map(|c| c.options.clone())
+            .unwrap_or_default();
         let wanted = match (&option, index) {
-            (Some(o), _) => options.iter().position(|x| x == o || x.eq_ignore_ascii_case(o)),
+            (Some(o), _) => options
+                .iter()
+                .position(|x| x == o || x.eq_ignore_ascii_case(o)),
             (None, Some(i)) => Some(i as usize).filter(|i| *i < options.len()),
-            (None, None) => return Err(RpcError::invalid_params("`option` or `index` is needed for a combo box")),
+            (None, None) => {
+                return Err(RpcError::invalid_params(
+                    "`option` or `index` is needed for a combo box",
+                ))
+            }
         }
         .ok_or_else(|| {
-            RpcError::new(code::NOT_FOUND, "no such option").with_data(json!({ "options": options }))
+            RpcError::new(code::NOT_FOUND, "no such option")
+                .with_data(json!({ "options": options }))
         })?;
         let header = world
             .query::<(Entity, &ComboboxHeader)>()
@@ -672,15 +756,23 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
                     world.write_message(Activated(item));
                     clicked = true;
                 } else if began.elapsed() > Duration::from_secs(2) {
-                    return Some(Err(RpcError::new(code::FAILED, "the drop-down did not open")));
+                    return Some(Err(RpcError::new(
+                        code::FAILED,
+                        "the drop-down did not open",
+                    )));
                 }
                 return None;
             }
             let Some(c) = world.get::<M3Combobox>(combo) else {
-                return Some(Err(RpcError::new(code::FAILED, "the combo box disappeared")));
+                return Some(Err(RpcError::new(
+                    code::FAILED,
+                    "the combo box disappeared",
+                )));
             };
             if c.selected == Some(wanted) {
-                return Some(Ok(json!({ "ok": true, "id": id, "selected": c.options.get(wanted) })));
+                return Some(Ok(
+                    json!({ "ok": true, "id": id, "selected": c.options.get(wanted) }),
+                ));
             }
             (began.elapsed() > Duration::from_secs(3)).then(|| {
                 Err(RpcError::new(code::FAILED, "the option was not taken")
@@ -690,7 +782,12 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
     }
     // Tabs, radios, list rows, options: a click selects them.
     match node.role {
-        UiRole::Tab | UiRole::Radio | UiRole::Listitem | UiRole::Treeitem | UiRole::Option | UiRole::Button => {
+        UiRole::Tab
+        | UiRole::Radio
+        | UiRole::Listitem
+        | UiRole::Treeitem
+        | UiRole::Option
+        | UiRole::Button => {
             world.write_message(Activated(entity));
             Ok(Outcome::ok(json!({ "ok": true, "id": id })))
         }
@@ -735,10 +832,16 @@ fn toggle_inner(world: &mut World, params: &Value) -> Result<Value, RpcError> {
 fn centre_of(world: &mut World, id: &str) -> Result<Vec2, RpcError> {
     let node = node_of(world, id)?;
     if !node.state.visible {
-        return Err(RpcError::new(code::NOT_READY, format!("`{id}` is not visible")));
+        return Err(RpcError::new(
+            code::NOT_READY,
+            format!("`{id}` is not visible"),
+        ));
     }
     let [x, y, w, h] = node.rect.ok_or_else(|| {
-        RpcError::new(code::NOT_READY, format!("`{id}` has no layout rectangle yet"))
+        RpcError::new(
+            code::NOT_READY,
+            format!("`{id}` has no layout rectangle yet"),
+        )
     })?;
     Ok(Vec2::new(x + w / 2.0, y + h / 2.0))
 }
@@ -787,7 +890,11 @@ fn key(world: &mut World, params: &Value) -> Outcome {
         let ms = opt_u64(params, "duration_ms")?.unwrap_or(50).min(600_000);
         let mut keys = Vec::new();
         let mut mods = Vec::new();
-        for (flag, key_name) in [("ctrl", "ControlLeft"), ("shift", "ShiftLeft"), ("alt", "AltLeft")] {
+        for (flag, key_name) in [
+            ("ctrl", "ControlLeft"),
+            ("shift", "ShiftLeft"),
+            ("alt", "AltLeft"),
+        ] {
             if opt_bool(params, flag)?.unwrap_or(false) {
                 if let Some(k) = parse_key(key_name) {
                     keys.push(k);
@@ -807,10 +914,17 @@ fn key(world: &mut World, params: &Value) -> Outcome {
                 window,
             });
         }
-        let at = world.resource::<bevy::time::Time<bevy::time::Real>>().elapsed_secs_f64() + ms as f64 / 1000.0;
+        let at = world
+            .resource::<bevy::time::Time<bevy::time::Real>>()
+            .elapsed_secs_f64()
+            + ms as f64 / 1000.0;
         let mut state = world.resource_mut::<ControlState>();
         for k in keys.into_iter().rev() {
-            state.releases.push(Release { key: Some(k), mouse: None, at });
+            state.releases.push(Release {
+                key: Some(k),
+                mouse: None,
+                at,
+            });
         }
         Ok::<_, RpcError>(json!({ "ok": true, "key": name, "modifiers": mods }))
     })();
@@ -830,7 +944,9 @@ fn drag_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
     let (dx, dy) = (opt_f64(params, "dx")?, opt_f64(params, "dy")?);
     let steps = opt_u64(params, "steps")?.unwrap_or(8).clamp(1, 120) as u32;
     if to.is_none() && dx.is_none() && dy.is_none() {
-        return Err(RpcError::invalid_params("give `to` or an offset (`dx`, `dy`)"));
+        return Err(RpcError::invalid_params(
+            "give `to` or an offset (`dx`, `dy`)",
+        ));
     }
     let entity = find_entity(world, &from).ok_or_else(|| not_found(&from))?;
     check_modal_scope(world, entity, "ui.drag")?;
@@ -845,7 +961,11 @@ fn drag_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
     Ok(Outcome::Wait(Box::new(move |world| {
         frame += 1;
         if frame == 1 {
-            world.write_message(MouseButtonInput { button: MouseButton::Left, state: ButtonState::Pressed, window });
+            world.write_message(MouseButtonInput {
+                button: MouseButton::Left,
+                state: ButtonState::Pressed,
+                window,
+            });
             return None;
         }
         let step = frame - 1;
@@ -853,11 +973,14 @@ fn drag_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
             move_cursor(world, start.lerp(end, step as f32 / steps as f32));
             return None;
         }
-        world.write_message(MouseButtonInput { button: MouseButton::Left, state: ButtonState::Released, window });
+        world.write_message(MouseButtonInput {
+            button: MouseButton::Left,
+            state: ButtonState::Released,
+            window,
+        });
         Some(Ok(json!({
             "ok": true, "from": from, "to": to,
             "from_pos": [start.x, start.y], "to_pos": [end.x, end.y],
         })))
     })))
 }
-

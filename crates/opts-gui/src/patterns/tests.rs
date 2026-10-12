@@ -377,7 +377,9 @@ fn programmatic_scroll_reveal_and_select_do_what_the_wheel_and_a_click_do() {
     assert!(view(&app, &parts).live_rows() < 60);
     // Revealing an entry and selecting it, as a click on its row would.
     let md = model(&app, &parts).clone();
-    let offset = view(&app, &parts).reveal_offset(&md, "id10").expect("shown");
+    let offset = view(&app, &parts)
+        .reveal_offset(&md, "id10")
+        .expect("shown");
     assert!(offset < max, "id10 is near the top: {offset}");
     let mut md = md;
     let ok = app
@@ -386,7 +388,9 @@ fn programmatic_scroll_reveal_and_select_do_what_the_wheel_and_a_click_do() {
         .expect("view")
         .select_entry(&mut md, "id10");
     assert!(ok);
-    *app.world_mut().get_mut::<MasterDetail>(parts.root).expect("model") = md;
+    *app.world_mut()
+        .get_mut::<MasterDetail>(parts.root)
+        .expect("model") = md;
     app.update();
     app.update();
     assert_eq!(model(&app, &parts).selected.as_deref(), Some("id10"));

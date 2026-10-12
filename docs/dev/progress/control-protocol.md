@@ -25,13 +25,18 @@ Branch `agent/control-protocol`, worktree `opts-wt-control-protocol`. Resume fro
 - [x] descriptor table extended, `commands`/`help` schemas, structured errors, 1009, reference generator
 - [x] `RemoteControls` + `drive.*`, `vehicle.teleport/reset`, `camera.look/move`, `snapshot`
 - [x] `ui.scrollables/scroll/text/select/toggle/hover/key/drag`, `ui.screen`, `ui.wait_for`, `ui.click count`
-- [ ] compile + unit tests green for all of the above
-- [ ] headless tests per command group (see tests/ listed below)
-- [ ] loading-screen screenshot (black?) investigated live
-- [ ] live e2e session (Berlin-Spandau, bus): Home -> plan -> start -> drive 100 m -> scroll settings -> change setting -> pause -> leave
+- [x] compile + unit tests green for all of the above
+- [x] headless tests per command group: `opts-bevy/tests/control_ui_ext.rs` (scroll, list, toggle, select, text, key, hover, gating), `opts-game/tests/control_protocol.rs` (table vs registry, help/commands, drive, gates, triggers, odometer, teleport, reset, wait_for, snapshot, screen), `opts-gui` master-list scroll API, `opts-cli` reference and protocol tests
+- [x] loading-screen screenshot investigated live: NOT black in this build (see findings)
+- [x] live e2e session verified step by step with opts-cli (Berlin-Spandau, MAN SD77); script `crates/opts-cli/examples/play_session.sh` (whole-script run: see findings)
 - [ ] docs: architecture/control-protocol.md updated, reference generated, link check, roadmap copy check
 - [ ] gates: fmt, clippy, test, doc, check_links, gen_roadmap_copy
 
 ## Live findings
 
-(none yet)
+- Real game, throwaway XDG under `~/.local/share/opts/benchmark/control-protocol/`, `--omsi-path nvme2n1 OMSI 2`:
+  first-run dialog (`ui.screen` lists its buttons) -> wizard (`ui.select` on `wizard.where.list` / `wizard.what.list`, `wizard.footer.next`, `wizard.footer.drive`) -> loading (`ui.screen.loading`) -> HUD (`ui.wait_for hud_ready`) -> `drive.set gear drive`, `parking_brake false`, `throttle 0.7`, `ui.wait_for distance_above 100` (100.2 m at 47 km/h after 12.6 s) -> brake to 0.5 km/h -> `ui.key Escape` (pause overlay, `sim.get paused true`) -> `pause.settings` -> `ui.scroll to bottom` (132 px) and `item` -> `ui.click texture_filtering/option-8` (`settings.get` = 8), `ui.toggle vsync` -> `settings-overlay.close` -> `pause.leave` -> `dialog.pause.leave.home` -> MainMenu.
+  Also live: `drive.trigger` door_front / indicator_left / lights / horn (all `handled: true`), `camera.set_mode free`, `camera.move`, `camera.look` (yaw/pitch and dx/dy in cockpit), `vehicle.teleport`, `vehicle.reset`, `drive.set` refused with 1009 in free roam, with the pause overlay open and with the vehicle menu open (`ui.key AltLeft`), `menu.do close`.
+- **Loading-screen screenshot**: three captures during `BuildTerrain`/`SpawnVehicle` show the "Preparing your drive" screen with progress bar, not black. The earlier black result was fixed upstream by the MenuCamera change (`deactivate_menu_camera` only once a scene camera is active); I could not reproduce black. `ui.screen.loading` and `snapshot` also work while loading.
+- **App race found (not caused by the protocol)**: when the first-run dialog is answered with *Pick a map and a vehicle* before the first catalogue scan has finished (~8 s on a fresh config), the wizard can stay on *No maps found* (0 entries) although `home` later says 43 maps; leaving and re-entering Drive fills it. Seen 3 of 5 fresh runs. In two of those runs a `ui.navigate home` from the stale wizard panicked the app (`Entity despawned` in a deferred command, `bevy_ecs` command error handler); not reproduced with an idle wait.
+- `ui.navigate` used to work while a dialog was open (first-run dialog); it now answers 1009 like a blocked rail click.

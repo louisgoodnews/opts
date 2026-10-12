@@ -259,6 +259,13 @@ fn ui_navigate(world: &mut World, params: &Value) -> Outcome {
         Ok(t) => t.to_string(),
         Err(e) => return Outcome::err(e),
     };
+    // The rail is behind an open dialog for a person; the command is too.
+    if !opts_bevy::control::handlers::ui_ext::open_modals(world).is_empty() {
+        return Outcome::err(RpcError::new(
+            code::GATED,
+            "a dialog is open and blocks navigation (answer it first: `ui.screen` lists its buttons)",
+        ));
+    }
     let (id, _) = crate::shell::nav::parse_target(&target);
     let known = world
         .get_resource::<crate::shell::ScreenRegistry>()
