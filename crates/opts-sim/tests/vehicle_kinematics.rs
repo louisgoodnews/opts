@@ -24,6 +24,8 @@ fn make_test_manifest(mass_tonnes: Option<f32>, wheel_diameter: Option<f32>) -> 
         mass_tonnes,
         bounding_box: None,
         vehicle_type: None,
+        bogie_half_span: None,
+        couple_back_reversed: false,
         axles: vec![
             BusAxle {
                 longitudinal_m: 3.25,

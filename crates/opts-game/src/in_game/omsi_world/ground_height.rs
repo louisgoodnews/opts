@@ -115,7 +115,8 @@ impl GroundIndex {
     #[must_use]
     pub fn height_at(&self, x: f32, y: f32, near_z: f32) -> Option<f32> {
         let (cx, cy) = cell_of(x, y);
-        let mut best: Option<(f32, f32)> = None; // (|dz|, z)
+        // Road samples the point lies on: (distance, height).
+        let mut on_road: Vec<(f32, f32)> = Vec::new();
         for dx in -1..=1 {
             for dy in -1..=1 {
                 for (_, s) in self.cells.get(&(cx + dx, cy + dy)).into_iter().flatten() {
@@ -123,15 +124,31 @@ impl GroundIndex {
                     // Samples are 2 m apart: a point is on the road within its half width plus
                     // half a sample step.
                     if d <= s.half_width + SAMPLE_STEP_M * 0.5 {
-                        let dz = (s.z - near_z).abs();
-                        if best.is_none_or(|b| dz < b.0) {
-                            best = Some((dz, s.z));
-                        }
+                        on_road.push((d, s.z));
                     }
                 }
             }
         }
-        best.map(|b| b.1).or_else(|| self.terrain_at(x, y))
+        // Of overlapping surfaces (bridges) the one closest to `near_z`; its height is blended
+        // from the samples around the point, so the height is continuous along the road instead
+        // of stepping from sample to sample (which made the vehicle pitch and bob).
+        let best = on_road
+            .iter()
+            .map(|(_, z)| *z)
+            .min_by(|a, b| (a - near_z).abs().total_cmp(&(b - near_z).abs()));
+        match best {
+            Some(z0) => {
+                let (mut num, mut den) = (0.0_f32, 0.0_f32);
+                for (d, z) in on_road.iter().filter(|(_, z)| (z - z0).abs() < 0.6) {
+                    // Only the samples nearest to the point along the road count.
+                    let w = 1.0 / (d + 0.5).powi(3);
+                    num += w * z;
+                    den += w;
+                }
+                Some(num / den)
+            }
+            None => self.terrain_at(x, y),
+        }
     }
 }
 

@@ -16,6 +16,7 @@ use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
+mod collision;
 mod ground;
 mod ground_height;
 mod job;
@@ -30,6 +31,10 @@ mod traffic;
 mod trees;
 mod vehicle;
 
+pub use collision::{
+    attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
+    VehicleCollider,
+};
 use ground::GroundArray;
 pub use ground_height::{follow_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
@@ -179,6 +184,8 @@ pub struct WorldLoadJob {
     /// Map-wide spline lookup for attachments, built on first use.
     spline_index: Option<Arc<SplineIndex>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// Bounding boxes of collision meshes in Bevy's local axes, by file.
+    collision_bounds: collision::BoundsCache,
     /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
     parklist: Option<Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,

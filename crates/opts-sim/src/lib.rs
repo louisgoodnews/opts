@@ -10,6 +10,7 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod collision;
 pub mod pedestrian;
 pub mod rail;
 pub mod script;

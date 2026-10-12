@@ -278,6 +278,7 @@ fn spawn_object(
         roll = ?obj.roll_deg,
         "placing scenery object"
     );
+    super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
     if let Some(cfg_rel) = &sco.model_cfg {
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
@@ -497,6 +498,7 @@ pub fn stream_world_tiles(
             super::ground_height::unregister(&mut commands, key);
             super::rail::unregister_tile(&mut commands, key);
             super::rail::unregister_bike_tile(&mut commands, key);
+            super::collision::unregister_tile(&mut commands, key);
             super::traffic::unregister_tile(&mut commands, key);
             tracing::debug!(tile = ?key, "tile unloaded");
         }

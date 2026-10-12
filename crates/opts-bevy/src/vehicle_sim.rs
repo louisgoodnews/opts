@@ -21,13 +21,20 @@ use crate::coords::omsi_to_bevy_pos;
 pub struct VehicleController {
     /// Authoritative simulation instance from `opts-sim`.
     pub sim: VehicleSimulation,
+    /// The chassis pose before the last fixed step `(position, heading, elevation)`: the rendered
+    /// pose interpolates from it to the current one by the fraction of the next step that has
+    /// elapsed, so motion is smooth at any frame rate (the simulation steps at a fixed rate).
+    pub render_prev: Option<(Vec2, f32, f32)>,
 }
 
 impl VehicleController {
     /// Constructs a new controller wrapping an existing [`VehicleSimulation`].
     #[must_use]
     pub fn new(sim: VehicleSimulation) -> Self {
-        Self { sim }
+        Self {
+            sim,
+            render_prev: None,
+        }
     }
 
     /// Constructs a controller with a standard 12-meter transit bus configuration.
@@ -35,6 +42,7 @@ impl VehicleController {
     pub fn standard_bus(mass_kg: f32, wheelbase_m: f32) -> Self {
         Self {
             sim: VehicleSimulation::new_standard_bus(mass_kg, wheelbase_m),
+            render_prev: None,
         }
     }
 
@@ -43,6 +51,7 @@ impl VehicleController {
     pub fn from_manifest(manifest: &BusManifest) -> Self {
         Self {
             sim: VehicleSimulation::from_manifest(manifest),
+            render_prev: None,
         }
     }
 
@@ -257,22 +266,38 @@ pub fn vehicle_physics_step_system(time: Res<Time>, mut query: Query<&mut Vehicl
     }
 
     for mut controller in &mut query {
+        let ch = &controller.sim.chassis;
+        controller.render_prev = Some((ch.position, ch.heading_rad, ch.elevation_z));
         controller.sim.step(dt);
     }
 }
 
 /// System synchronizing chassis simulation coordinates to Bevy [`Transform`] components.
-pub fn vehicle_transform_sync_system(mut query: Query<(&VehicleController, &mut Transform)>) {
+pub fn vehicle_transform_sync_system(
+    fixed: Res<Time<Fixed>>,
+    mut query: Query<(&VehicleController, &mut Transform)>,
+) {
+    let alpha = fixed.overstep_fraction().clamp(0.0, 1.0);
     for (controller, mut transform) in &mut query {
-        let sim_pos = controller.sim.chassis.position;
-        let sim_elevation = controller.sim.chassis.elevation_z;
+        let ch = &controller.sim.chassis;
+        // Between two fixed steps the pose is interpolated from the previous to the current one
+        // (the heights come from the ground follower at the frame rate and are not blended).
+        let (sim_pos, heading_rad) = match controller.render_prev {
+            Some((p0, h0, _)) => {
+                let dh = (ch.heading_rad - h0 + std::f32::consts::PI)
+                    .rem_euclid(std::f32::consts::TAU)
+                    - std::f32::consts::PI;
+                (p0.lerp(ch.position, alpha), h0 + dh * alpha)
+            }
+            None => (ch.position, ch.heading_rad),
+        };
+        let sim_elevation = ch.elevation_z;
 
         // Convert OMSI simulation position (Z-up) to Bevy space (Y-up)
         let bevy_pos = omsi_to_bevy_pos(Vec3::new(sim_pos.x, sim_pos.y, sim_elevation));
         transform.translation = bevy_pos;
 
         // Yaw heading: In OMSI, +yaw turns left around Z; in Bevy, -rotation turns right around +Y
-        let heading_rad = controller.sim.chassis.heading_rad;
         transform.rotation = Quat::from_rotation_y(-heading_rad);
     }
 }

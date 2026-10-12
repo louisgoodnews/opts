@@ -103,6 +103,10 @@ pub enum VehicleCameraMode {
 
 ## 3. Scheduling & Determinism
 
+### Smooth presentation (2026-10-12)
+
+The simulation steps at a fixed rate while frames come at any rate, so a transform written once per fixed step shows as judder ("choppy" motion at 144 Hz or with vsync). The rendered pose is therefore **interpolated**: `VehicleController::render_prev` keeps the chassis pose before the last step and `vehicle_transform_sync_system` blends it with the current one by `Time<Fixed>::overstep_fraction()`; articulated segments keep their last two fixed-step poses and `articulation_render_system` (PostUpdate) blends them; the rail player's drawn train runs the elapsed part of the step ahead (`speed · overstep`). The ground height is sampled at the frame rate and blended between neighbouring road samples (inverse-distance weights) so it does not step from sample to sample.
+
 ### Timestep Decoupling
 Display frame rates fluctuate (30–144+ FPS). To ensure simulation determinism and eliminate numerical drift:
 1. **Inputs are polled in `Update`**: Player keypresses and gamepad axes are translated into `VehicleInputs` on `VehicleController`.

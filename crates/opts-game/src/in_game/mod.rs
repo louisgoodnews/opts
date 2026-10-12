@@ -43,6 +43,7 @@ impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
+            .init_resource::<omsi_world::CollisionIndex>()
             .init_resource::<omsi_world::RailNetwork>()
             .init_resource::<omsi_world::BikeNetwork>()
             .init_resource::<omsi_world::BikeSettings>()
@@ -78,12 +79,27 @@ impl Plugin for InGamePlugin {
                 .run_if(in_state(AppState::InGame)),
         );
         app.add_systems(
+            FixedUpdate,
+            omsi_world::player_collisions
+                .after(opts_bevy::vehicle_physics_step_system)
+                .after(opts_bevy::RailSet)
+                .before(opts_bevy::articulation_system)
+                .run_if(in_state(AppState::InGame)),
+        );
+        app.add_systems(
+            Update,
+            omsi_world::attach_traffic_colliders.run_if(in_state(AppState::InGame)),
+        );
+        app.add_systems(
             OnEnter(AppState::InGame),
             (
                 deactivate_menu_camera,
                 setup_in_game_session,
                 omsi_world::configure_pedestrians,
                 omsi_world::configure_rail,
+                |mut i: ResMut<omsi_world::CollisionIndex>| {
+                    *i = omsi_world::CollisionIndex::default()
+                },
                 omsi_world::configure_traffic,
             ),
         )

@@ -58,6 +58,10 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 
 > The research on how OMSI uses scripts and the route to the active bridge (torque, brakes, doors, displays, sound, AI) is in [Vehicle Scripts: How OMSI Does It and the Route](vehicle-scripts-route.md).
 
+## Status 2026-10-12
+
+Measured on the installed corpus: **6,146** `.osc` files compile (84,071 blocks, **0 errors**, 4,821 leniency warnings); **1,218 of 1,487** `.bus` files have scripts, all load and run `{init}` plus 60 frames (38 files referenced by `[script]` lists are missing in the installation); **median 80 µs, p90 126 µs, max 332 µs per frame** (0.8 % of a 60 Hz frame for the median vehicle). In the game the head unit's scripts run every fixed step; their outputs drive mesh animations, lights (`Spot_Select`, interior lights, light maps) and mesh visibility, and keys and cockpit hot-spots raise their triggers. Not connected: torque and brakes (`M_Wheel`, `Brakeforce`), doors and passengers (`PAX_*`), sound events, the 42 callbacks (no-ops), script textures, per-part engines for coupled units, AI vehicles. Route and acceptance: [vehicle scripts route](vehicle-scripts-route.md).
+
 ## Not done yet (M-0026 follow-ups)
 
 - Remaining predefined variables (wheel speeds, axle suspension, AI, passengers) and the active bridge — script outputs driving `M_Wheel`, lights, doors and indicators through `model_cfg` animations; trigger input from keys and hot-spots; events to audio: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.

@@ -37,6 +37,10 @@ pub struct ArticulatedSegment {
     pub reversed: bool,
     /// The kinematic state, created on the first step from the leader's pose.
     state: Option<TrailerKinematics>,
+    /// Pose after the previous and the last fixed step `(x, y, heading)` in simulation space; the
+    /// rendered pose interpolates between them.
+    prev_pose: Option<(Vec2, f32)>,
+    curr_pose: Option<(Vec2, f32)>,
 }
 
 impl ArticulatedSegment {
@@ -50,7 +54,24 @@ impl ArticulatedSegment {
             max_alpha_deg,
             reversed: false,
             state: None,
+            prev_pose: None,
+            curr_pose: None,
         }
+    }
+
+    /// Position and heading (compass, rad) of the segment's own frame after the last fixed step
+    /// (a reversed segment's frame is turned half a circle against the kinematic one).
+    #[must_use]
+    pub fn simulated_pose(&self) -> Option<(Vec2, f32)> {
+        let (p, h) = self.curr_pose?;
+        Some((
+            p,
+            if self.reversed {
+                h + std::f32::consts::PI
+            } else {
+                h
+            },
+        ))
     }
 
     /// The yaw angle against the leader in degrees, once the segment has been stepped.
@@ -111,18 +132,14 @@ pub fn articulation_system(
                 )
             });
             let st = kin.step(leader.0, leader.1, dt);
-            // The chain is flat: the segment keeps the height of the root unit.
-            tf.translation = omsi_to_bevy_pos(Vec3::new(
-                st.origin.x as f32,
-                st.origin.y as f32,
-                root_tf.translation.y,
-            ));
-            let turn = if seg.reversed {
-                std::f32::consts::PI
-            } else {
-                0.0
-            };
-            tf.rotation = Quat::from_rotation_y(-(st.heading as f32) - turn);
+            let now = (
+                Vec2::new(st.origin.x as f32, st.origin.y as f32),
+                st.heading as f32,
+            );
+            seg.prev_pose = seg.curr_pose.or(Some(now));
+            seg.curr_pose = Some(now);
+            // The placement happens in `articulation_render_system`, interpolated.
+            let _ = (&mut tf, root_tf);
             alphas.push(st.alpha.to_degrees());
             leader = (st.origin, st.heading);
         }
@@ -134,6 +151,36 @@ pub fn articulation_system(
                     engine.set(&format!("articulation_{k}_gamma"), 0.0);
                 }
             }
+        }
+    }
+}
+
+/// Places the segments every frame between their last two fixed-step poses (smooth at any frame
+/// rate), at the height of the root unit (the chain is flat).
+pub fn articulation_render_system(
+    fixed: Res<Time<Fixed>>,
+    roots: Query<(&Transform, &ArticulatedChain)>,
+    mut segments: Query<(&ArticulatedSegment, &mut Transform), Without<ArticulatedChain>>,
+) {
+    let alpha = fixed.overstep_fraction().clamp(0.0, 1.0);
+    for (root_tf, chain) in &roots {
+        for &e in &chain.segments {
+            let Ok((seg, mut tf)) = segments.get_mut(e) else {
+                continue;
+            };
+            let (Some((p0, h0)), Some((p1, h1))) = (seg.prev_pose, seg.curr_pose) else {
+                continue;
+            };
+            let dh = (h1 - h0 + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
+                - std::f32::consts::PI;
+            let (p, h) = (p0.lerp(p1, alpha), h0 + dh * alpha);
+            tf.translation = omsi_to_bevy_pos(Vec3::new(p.x, p.y, root_tf.translation.y));
+            let turn = if seg.reversed {
+                std::f32::consts::PI
+            } else {
+                0.0
+            };
+            tf.rotation = Quat::from_rotation_y(-h - turn);
         }
     }
 }
@@ -150,6 +197,11 @@ impl Plugin for ArticulationPlugin {
                 .after(crate::vehicle_sim::vehicle_physics_step_system)
                 .after(crate::RailSet)
                 .before(crate::vehicle_script::vehicle_script_system),
+        )
+        // After the ground follower of the game (Update) has set the root's height.
+        .add_systems(
+            PostUpdate,
+            articulation_render_system.before(TransformSystems::Propagate),
         );
     }
 }

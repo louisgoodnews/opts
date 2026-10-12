@@ -331,7 +331,7 @@ pub fn rail_player_step(
             continue;
         };
         // The chassis is the head body: midpoint and heading of its two bogies on the track.
-        if let Some((mid, heading, _)) = unit_frame(train, &net.0, rail.span, rail.span) {
+        if let Some((mid, heading, _)) = unit_frame(train, &net.0, rail.span, rail.span, 0.0) {
             ch.position = Vec2::new(mid.x, mid.y);
             ch.heading_rad = heading;
             ch.elevation_z = mid.z;
@@ -358,6 +358,8 @@ pub struct Part {
     pub meshes: usize,
     /// Vertices of the part's meshes.
     pub vertices: usize,
+    /// The part's footprint for collisions (`[boundingbox]` of its `.bus`).
+    pub body: Option<super::BodyBox>,
 }
 
 /// The sub parts of a composed vehicle, resolved once at spawn: the head and the coupled units
@@ -408,6 +410,16 @@ impl VehicleComposition {
     }
 }
 
+/// Pose `d` metres behind the train's head point; a negative `d` is ahead of it, extrapolated along
+/// the tangent (the rendered pose runs a fraction of a fixed step ahead of the simulated one).
+fn pose_at(train: &Train, net: &PedestrianNet, d: f32) -> Option<(Vec3, f32)> {
+    if d >= 0.0 {
+        return train.pose_behind(net, d);
+    }
+    let (p, h) = train.pose_behind(net, 0.0)?;
+    Some((p + Vec3::new(h.sin(), h.cos(), 0.0) * -d, h))
+}
+
 /// Smallest half span used for the chord of a unit without bogie data (m).
 const MIN_HALF_SPAN: f32 = 1.0;
 
@@ -420,21 +432,22 @@ fn unit_frame(
     net: &PedestrianNet,
     centre: f32,
     half_span: f32,
+    shift: f32,
 ) -> Option<(Vec3, f32, f32)> {
     let span = if half_span > 0.0 {
         half_span
     } else {
         MIN_HALF_SPAN
     };
-    let front = train.pose_behind(net, (centre - span).max(0.0))?.0;
-    let rear = train.pose_behind(net, centre + span)?.0;
+    let front = pose_at(train, net, centre - span - shift)?.0;
+    let rear = pose_at(train, net, centre + span - shift)?.0;
     let mid = (front + rear) * 0.5;
     let (dx, dy) = (front.x - rear.x, front.y - rear.y);
     let run = dx.hypot(dy);
     if run > 0.1 {
         Some((mid, dx.atan2(dy), ((front.z - rear.z) / run).atan()))
     } else {
-        Some((mid, train.pose_behind(net, centre)?.1, 0.0))
+        Some((mid, pose_at(train, net, centre - shift)?.1, 0.0))
     }
 }
 
@@ -445,8 +458,9 @@ fn unit_pose(
     centre: f32,
     half_span: f32,
     reversed: bool,
+    shift: f32,
 ) -> Option<Transform> {
-    let (mid, heading, pitch) = unit_frame(train, net, centre, half_span)?;
+    let (mid, heading, pitch) = unit_frame(train, net, centre, half_span, shift)?;
     let turn = if reversed { std::f32::consts::PI } else { 0.0 };
     Some(Transform {
         translation: omsi_to_bevy_pos(mid),
@@ -460,6 +474,7 @@ fn unit_pose(
 /// Places the player's tram (head and following units) on the track, and writes the joint angles
 /// the models' bellows read.
 pub fn rail_player_pose(
+    fixed: Res<Time<Fixed>>,
     net: Res<RailNetwork>,
     mut players: Query<(
         &RailPlayer,
@@ -474,7 +489,10 @@ pub fn rail_player_pose(
             continue;
         };
         let head_span = rail.span;
-        if let Some(t) = unit_pose(train, &net.0, head_span, head_span, false) {
+        // The simulation steps at a fixed rate: the drawn train runs the elapsed part of the next
+        // step ahead, so its motion is smooth at any frame rate.
+        let shift = rail.speed * fixed.overstep().as_secs_f32();
+        if let Some(t) = unit_pose(train, &net.0, head_span, head_span, false, shift) {
             *tf = t;
         }
         let Some(layout) = layout else { continue };
@@ -488,6 +506,7 @@ pub fn rail_player_pose(
                 part.behind + head_span,
                 part.half_span,
                 reversed,
+                shift,
             ) else {
                 continue;
             };
@@ -835,6 +854,7 @@ fn try_spawn(
         reversed: u.2,
         meshes: u.4,
         vertices: 0,
+        body: None,
     };
     let composition = VehicleComposition {
         head: part(0, &units[0]),
@@ -900,6 +920,7 @@ pub fn move_ai_trains(
                 part.behind + head_span,
                 part.half_span,
                 reversed,
+                0.0,
             ) else {
                 continue;
             };
@@ -929,6 +950,7 @@ mod tests {
             reversed: false,
             meshes: 1,
             vertices: 3,
+            body: None,
         }
     }
 

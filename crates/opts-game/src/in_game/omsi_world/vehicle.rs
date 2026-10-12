@@ -476,6 +476,9 @@ pub(super) fn spawn_trailer_chain(
             reversed,
             meshes: count,
             vertices: verts,
+            body: manifest
+                .bounding_box
+                .map(|(size, centre)| super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
         if reversed {
@@ -506,6 +509,9 @@ pub(super) fn spawn_trailer_chain(
                     reversed: false,
                     meshes: 0,
                     vertices: 0,
+                    body: tractor
+                        .bounding_box
+                        .map(|(size, centre)| super::BodyBox::from_bounding_box(size, centre)),
                 },
                 followers: layout,
             },));
@@ -664,6 +670,13 @@ pub fn load_player_vehicle(
     commands
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
+    if let Some((size, centre)) = manifest.bounding_box {
+        commands
+            .entity(root)
+            .insert(super::PlayerBox(super::BodyBox::from_bounding_box(
+                size, centre,
+            )));
+    }
     if super::is_rail(&manifest) {
         // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`); the
         // coupled units are placed on the track too, not by trailer kinematics.
