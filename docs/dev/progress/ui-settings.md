@@ -23,7 +23,7 @@ Runs: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` throwaway under the run dir, `XDG_CACHE_
 | D3 Category pages | done: `AppState::Settings` now shows the registry page; old tabs removed; Content/Advanced/Controls info, folder chooser, rescan, cache clear, language/log/developer-panel/traffic/pedestrian effects |
 | D4 Messages and German | done: theme/accent/density labels are `opts-gui` keys (`l10n::keys::theme`), markers removed; page messages en+de, completeness/literal/colour tests; pseudo-locale screenshot |
 | D5 Control protocol, generated docs | done: `settings.list/get/set/reset` (`settings_registry/protocol.rs`, `opts-cli` commands, `control-protocol.md`), `docs/src/reference/settings.md` generated and checked by a test |
-| D6 Tests, screenshots, docs | todo |
+| D6 Tests, screenshots, docs | done: tests (acceptance one-descriptor, migrations, revert, search, keyboard, rules, l10n, pseudo-locale), screenshots looked at, M-0063/BOARD/ROADMAP/crate docs updated |
 
 ## Results
 - D0: spec written (`settings-registry.md`). Design: legacy `GameSettings` fields bridged through the loader's parser; new keys in `GameSettings::extra`.
@@ -36,7 +36,12 @@ Runs: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` throwaway under the run dir, `XDG_CACHE_
 
 - D4/D5 findings: (1) rebuilding the whole pane on every change loses keyboard focus, so values are now refreshed in place (`refresh_rows`) and only language/path changes rebuild, with focus restored by `UiId`; (2) a first version of the focus restore rebuilt every frame (state change detection) and was caught by the keyboard test: rebuilds now only follow `dirty`; (3) the library traversal helper presses the category buttons too and then skips the controls of other categories silently, so the page has its own per-category keyboard test (`every_control_of_every_category_can_be_used_with_the_keyboard`).
 
+- D6 live check (real game, throwaway dirs, deleted): `settings.get/set` answer; `ui_scale 999` gives -32602 with the range; `audio.master` gives 1001 "Feature not available yet! (M-0027)"; `interface.language de` and `theme_mode light` applied live to the open page; clicking Borderless opened the revert prompt ("Keep these display settings?", countdown 14 s, *Go back* focused). Screens: `shots/fin_*.png`, `dark1080_*`, `light640s150_*`, `de1080_*`, `pseudo640_*`.
+
 ## Open problems
+- Rebinding (M-0035), audio (M-0027), view distance (M-0029), time scale (M-0064) are registered "not available yet" places only.
+- The OMSI folder row shows *Not set* when OPTS found OMSI through `--omsi-path`/`$OMSI_PATH` (only a saved choice is stored).
+- Not verified: the real window-mode/size change on a display (only the fake display in tests; the revert prompt was seen in the real game with the window backend, but the compositor here ignores size requests); no scroll-into-view on keyboard focus (pane scrolls by wheel only); revert modal card is taller than its content.
 - `PLACES` in `opts-gui/src/not_yet.rs` is now a multi-line list: expect a trivial merge conflict with agents S and W if they add places.
 - `lib.rs`: one line added (`SettingsRegistryPlugin`) plus `pub mod settings_registry;`.
 - Page text in `settings_registry/messages_{en,de}.ftl`, merged through the new `Localization::extend` (opts-gui `l10n/mod.rs`).
