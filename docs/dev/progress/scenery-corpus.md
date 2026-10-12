@@ -8,7 +8,7 @@ Branch `agent/scenery-corpus` (from `agent/scenery-integration`), worktree `/hom
 | :--- | :--- |
 | D0 Orient | done |
 | D1 Full run | done |
-| D2 Triage | pending |
+| D2 Triage | done |
 | E1..En Fixes | pending |
 | F Close-out | pending |
 
@@ -39,6 +39,11 @@ Tier referenced (31,181): pass 26,664, fail 3,406, unknown 1,111. `dev-corpus/st
 
 D0: release build 12m40s cold; all six gates green on the base. Preflight of the whole corpus 28 s (`dev-corpus/preflight.jsonl`): 55,664 objects; tiers referenced 31,181, attachment 1,448, unreferenced 23,035; classes standalone 42,354, surface 8,415, editor-only 3,351, spline-attachment 1,448, tree 941, no-geometry 638, help-arrow 268, vehicle-model 19, carpark-marker 5; F-SCO-PARSE 4. Identical to the spec.
 
+D2: triage report `docs/src/meta/scenery-benchmark-triage-2026-10-12.md`, BOARD items added (one per category). Viewed contact sheets (24 objects each, `dev-corpus/sheets/`, made with `dev-corpus/csheet.py`) for TEX-MISSING, PROTECTED, TEXT-NOT-SHOWN, GEOM-PARTIAL, GEOM-OUTSIDE, RENDER-EMPTY, XFORM-SCALE (17), LOAD-ERROR and unknown. Findings: about 2,586 of 3,055 F-TEX-MISSING are a loader bug (own `Texture` folder not found: `find_in` skips the catalogue when the base path is spelled differently from the catalogue root, then the disk fallback is case-sensitive); GEOM-PARTIAL/RENDER-EMPTY are `[matl_alpha] 0` with alpha textures; GEOM-OUTSIDE and XFORM-SCALE are harness false verdicts; PROTECTED is decoder research (M-0038).
+
+Fix plan (largest map-referenced count first): E1 texture lookup (1,414 referenced), E2 matl_alpha 0 (172+ referenced plus unknown), E3 named-string text (191), E4 harness false verdicts (63), E5 parse errors / v10 tiles. PROTECTED and MESH-MISSING are not fixed here.
+
 ## Open problems
 
-(none yet)
+- F-MESH-PROTECTED 1,644 (1,488 referenced): decoder research, M-0038.
+- F-CAPTURE 6, F-XFORM-OFFSET 10 not yet examined.

@@ -215,6 +215,7 @@
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Bug: Spline Winding / Road Hidden by Terrain (2026-10-10)](meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md)
 - [Audit 5037f89a (2026-10-10)](meta/audits/5037f89a-28fb-4408-8196-c2c0e3b3dd8c_2026-10-10_14-59-54.md)
+- [Scenery Benchmark Triage (2026-10-12)](meta/scenery-benchmark-triage-2026-10-12.md)
 - [F1 Reporting Final Report (2026-10-10)](meta/f1-reporting-2026-10-10.md)
 - [Modularization Final Report (2026-10-09)](meta/modularization-2026-10-09.md)
 - [Critical Review (2026-10-08)](meta/critical-review-2026-10-08.md)
