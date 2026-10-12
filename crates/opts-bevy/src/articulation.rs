@@ -21,6 +21,11 @@ use crate::coords::omsi_to_bevy_pos;
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::VehicleController;
 
+/// A leader position change larger than `max(|v|·dt·2, JUMP_THRESHOLD_M)` in one step is a
+/// position jump, not motion: larger than any per-step displacement the simulation produces at
+/// any speed, below the 0.5 m steps of the spawn placement.
+pub const JUMP_THRESHOLD_M: f32 = 0.3;
+
 /// Geometry of a following segment, taken from the `.bus` files of the two units.
 #[derive(Component, Debug, Clone)]
 pub struct ArticulatedSegment {
@@ -161,7 +166,9 @@ pub struct ArticulatedChain {
 /// Advances all chains by one fixed step.
 pub fn articulation_system(
     time: Res<Time>,
+    mut last_leader: Local<std::collections::HashMap<Entity, Vec2>>,
     roots: Query<(
+        Entity,
         &VehicleController,
         &Transform,
         &ArticulatedChain,
@@ -173,8 +180,15 @@ pub fn articulation_system(
     if dt <= 0.0 {
         return;
     }
-    for (controller, root_tf, chain, scripts) in &roots {
+    for (root, controller, root_tf, chain, scripts) in &roots {
         let chassis = &controller.sim.chassis;
+        // A position change the speed cannot explain is a jump (spawn placement, collision
+        // push-out, reset), not motion: the segments are re-seeded behind the leader and their
+        // wheels keep their last speed (`docs/src/architecture/chain-assembly.md`).
+        let jumped = last_leader.insert(root, chassis.position).is_none_or(|prev| {
+            let moved = (chassis.position - prev).length();
+            moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
+        });
         let mut leader = (
             DVec2::new(f64::from(chassis.position.x), f64::from(chassis.position.y)),
             f64::from(chassis.heading_rad),
@@ -188,6 +202,10 @@ pub fn articulation_system(
             let (hitch, front) = (seg.hitch_local, seg.front_local);
             let axle_distance = f64::from((front.y - seg.rear_axle_y).max(1.0));
             let max_alpha = f64::from(seg.max_alpha_deg);
+            if jumped {
+                seg.state = None;
+                seg.curr_pose = None;
+            }
             let kin = seg.state.get_or_insert_with(|| {
                 TrailerKinematics::new(
                     DVec2::new(f64::from(hitch.x), f64::from(hitch.y)),
@@ -208,7 +226,9 @@ pub fn articulation_system(
                 // not the tractor's speed).
                 seg.roll(p0, now.0, now.1)
             });
-            wheel_vars.push((seg.first_axle, travelled / dt as f32, seg.wheels.clone()));
+            if !jumped {
+                wheel_vars.push((seg.first_axle, travelled / dt as f32, seg.wheels.clone()));
+            }
             seg.prev_pose = seg.curr_pose.or(Some(now));
             seg.curr_pose = Some(now);
             // The placement happens in `articulation_render_system`, interpolated.

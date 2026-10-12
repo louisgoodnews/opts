@@ -153,3 +153,66 @@ fn trailer_wheels_roll_with_the_segments_own_travel() {
         assert!(spin != 0.0);
     }
 }
+
+/// Moves the leader by `by` metres in one step (a spawn placement, a collision push-out, a reset).
+fn teleport(app: &mut App, root: Entity, by: Vec2) {
+    let mut e = app.world_mut().entity_mut(root);
+    let mut c = e.get_mut::<VehicleController>().unwrap();
+    c.sim.chassis.position += by;
+}
+
+#[test]
+fn spawn_displacement_of_the_leader_does_not_jackknife_the_segment() {
+    let mut app = app();
+    let (root, _) = spawn_articulated(&mut app, 0.0);
+    app.world_mut()
+        .get_mut::<VehicleController>(root)
+        .unwrap()
+        .inputs_mut()
+        .set_throttle(0.0);
+    app.update();
+    app.update();
+    // The game places the vehicle after the chain exists.
+    teleport(&mut app, root, Vec2::new(4.0, -3.0));
+    for _ in 0..10 {
+        app.update();
+    }
+    let engine = app
+        .world()
+        .get::<VehicleScripts>(root)
+        .unwrap()
+        .engine
+        .lock()
+        .unwrap();
+    for var in ["articulation_0_alpha", "articulation_0_beta", "articulation_0_gamma"] {
+        assert!(engine.get(var).abs() < 0.01, "{var} = {}", engine.get(var));
+    }
+}
+
+#[test]
+fn a_leader_jump_does_not_spin_the_segment_wheels() {
+    let mut app = app();
+    let (root, _) = spawn_articulated(&mut app, 0.0);
+    for _ in 0..240 {
+        app.update();
+    }
+    let rpm_of = |app: &App| {
+        let e = app.world().get::<VehicleScripts>(root).unwrap().engine.lock().unwrap();
+        (e.get("wheel_rotationspeed_2_l"), e.get("articulation_0_alpha"))
+    };
+    let speed = app
+        .world()
+        .get::<VehicleController>(root)
+        .unwrap()
+        .sim
+        .chassis
+        .forward_speed_m_s();
+    let plausible = speed / 0.5 * 60.0 / std::f32::consts::TAU * 1.5 + 1.0;
+    teleport(&mut app, root, Vec2::new(3.0, 2.0));
+    for _ in 0..30 {
+        app.update();
+        let (rpm, alpha) = rpm_of(&app);
+        assert!(rpm.abs() <= plausible, "rpm {rpm} above {plausible}");
+        assert!(alpha.abs() < 5.0, "alpha {alpha}");
+    }
+}
