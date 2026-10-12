@@ -194,6 +194,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](phase-4/M-0025.md); F-004, F-007, F-008).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../meta/critical-review-2026-10-11.md))**
   - [ ] Articulated vehicle completion: one articulation model for physics and rendering, pitch from terrain, `[couple_front]`, trailers for AI and parked vehicles — [M-0053](phase-4/M-0053.md) (F-002, F-003).
+  - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](phase-4/M-0057.md).
+  - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](phase-4/M-0058.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
 
 ---

@@ -138,13 +138,14 @@ fn macros_can_be_called_before_they_are_defined_and_across_files() {
 }
 
 #[test]
-fn macros_have_their_own_registers() {
+fn macros_share_the_registers_of_their_caller() {
+    // Macros take arguments and return results in the registers (`bremse_druckausgleich`).
     let (mut e, _) = ScriptEngine::from_sources(&[(
         "t.osc",
-        "{macro:m}\n99 s0\n{end}\n{init}\n5 s0 (M.L.m) l0 (S.L.x)\n{end}",
+        "{macro:m}\nl0 2 * s1\n{end}\n{init}\n5 s0 (M.L.m) l1 (S.L.x)\n{end}",
     )]);
     e.run_init();
-    assert_eq!(e.get("x"), 5.0);
+    assert_eq!(e.get("x"), 10.0);
 }
 
 #[test]
@@ -263,13 +264,14 @@ fn external_macros_reach_the_host() {
         let b = st.numbers.pop().unwrap_or(0.0);
         let a = st.numbers.pop().unwrap_or(0.0);
         st.numbers.push(a * b);
+        true
     }));
     e.run_init();
 }
 
 #[test]
 fn random_is_deterministic_for_a_seed() {
-    let src = [("t.osc", "{init}\nrandom (S.L.a) random (S.L.b)\n{end}")];
+    let src = [("t.osc", "{init}\n1 random (S.L.a) 1 random (S.L.b)\n{end}")];
     let mut values = Vec::new();
     for _ in 0..2 {
         let (mut e, _) = ScriptEngine::from_sources(&src);
@@ -339,4 +341,26 @@ fn vehicle_loader_reads_scripts_varlists_and_constfiles() {
     e.run_frame(0.016, false);
     assert_eq!(e.get("out"), 12.0);
     let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn t_osc_001c_register_store_keeps_the_value() {
+    // `5 s0 3 +` leaves 8 (5 stays below the 3 it is added to... the store did not pop).
+    let e = run("2 s0 3 + (S.L.x) l0 (S.L.y)");
+    assert_eq!(e.get("x"), 5.0);
+    assert_eq!(e.get("y"), 2.0);
+    let e = run("4 s1 (L.L.z) + (S.L.x)");
+    assert_eq!(
+        e.get("x"),
+        4.0,
+        "the stored 4 is still there to add to z (= 0)"
+    );
+}
+
+#[test]
+fn random_scales_by_the_value_below_it() {
+    let e = run("1000 random (S.L.x)");
+    assert!((0.0..1000.0).contains(&e.get("x")));
+    let e = run("0 random (S.L.x)");
+    assert_eq!(e.get("x"), 0.0);
 }

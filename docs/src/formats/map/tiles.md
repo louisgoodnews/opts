@@ -307,6 +307,20 @@ Many map authors paint markings, pavements, paths and puddles straight into the 
 
 OPTS now composites these layers per tile on the CPU (`opts_bevy::ground`, BC1/2/3 decoding included) into one texture over the whole tile; tiles without masks keep the single repeating base layer. `[spline_terrain_align*]`, the `.LM.bmp` light maps and the winter variants (second path of a `[groundtex]`) are not used yet.
 
+## Terrain against spline heights per map (2026-10-12)
+
+`cargo run -p opts-core --example spline_vs_terrain -- <map dir>` compares each spline's start height with the terrain grid beneath it (`BY_PROFILE=1` groups by profile). Share of splines within 30 cm of the terrain:
+
+| Map | Splines | Within 30 cm | Reading |
+| :--- | ---: | ---: | :--- |
+| Hohenkirchen - Herrenhof | 16,349 | 84.8 % | terrain baked to the roads |
+| Bad Hügelsdorf 2020 | 10,565 | 88.2 % | baked |
+| Gladbeck | 87,375 | 90.6 % | baked |
+| Grundorf | 60 | 96.7 % | baked |
+| **Aachen Linie 33** | 1,389 | **14.5 %** | **not baked**: median +0.65 m, p5 −3.8 m, p95 +6.8 m; asphalt profiles median +1.1 m, p10 −1.8 m, p90 +8 m |
+
+Aachen's roads therefore rely on their own height profiles and on the terrain **not** being carved to them. Splines with a `[heightprofile]` carve the terrain (so cuttings work); flat surfaces without one only where the terrain covers them by at most 0.4 m (pavements 8 cm below the grid at Fuchserde). Splines lying 1–3 m *below* the terrain without a height profile (some pavements, walls) stay hidden under it; whether OMSI hides them too is unverified ❓ (no OMSI screenshot to compare). `map_probe <map dir> <tx> <ty> <x> <y> [radius]` lists the splines near a point.
+
 ## Spline attachments (`[splineAttachement]`, `[splineAttachement_repeater]`)
 
 Street lights, fences, shrubs, parking bays and similar objects that follow a road are stored as

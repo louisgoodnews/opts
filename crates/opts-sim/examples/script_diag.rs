@@ -36,11 +36,64 @@ fn main() {
         find_ci(&dir, rel).or_else(|| find_ci(&root, rel))
     });
     for d in &diags {
-        println!("load: {:?} {} {}", d.severity, d.file, d.message);
+        println!("load: {:?} {}:{} {}", d.severity, d.file, d.line, d.message);
     }
     engine.run_init();
-    for _ in 0..30 {
+    // `SCRIPT_TRIGGERS=a,b` raise triggers, `SCRIPT_SET=x=1,y=2` set variables before the frames,
+    // `SCRIPT_WATCH=n,m` prints those variables every 30 frames.
+    // Triggers are `name` (before the first frame) or `name@frame`.
+    let triggers: Vec<(String, usize)> = std::env::var("SCRIPT_TRIGGERS")
+        .unwrap_or_default()
+        .split(',')
+        .filter(|t| !t.is_empty())
+        .map(|t| match t.split_once('@') {
+            Some((n, f)) => (n.to_owned(), f.parse().unwrap_or(0)),
+            None => (t.to_owned(), 0),
+        })
+        .collect();
+    for kv in std::env::var("SCRIPT_SET")
+        .unwrap_or_default()
+        .split(',')
+        .filter(|t| !t.is_empty())
+    {
+        if let Some((k, v)) = kv.split_once('=') {
+            engine.set(k, v.parse().unwrap_or(0.0));
+        }
+    }
+    let frames: usize = std::env::var("SCRIPT_FRAMES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(30);
+    let watch: Vec<String> = std::env::var("SCRIPT_WATCH")
+        .unwrap_or_default()
+        .split(',')
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
+        .collect();
+    for f in 0..frames {
+        for (t, at) in &triggers {
+            if *at == f {
+                // `name` raises a trigger, `M:name` calls a macro.
+                match t.strip_prefix("M:") {
+                    Some(m) => println!("frame {f}: macro {m}: {}", engine.call_macro(m)),
+                    None => println!("frame {f}: trigger {t}: {}", engine.trigger(t)),
+                }
+            }
+        }
         engine.run_frame(1.0 / 60.0, false);
+        if !watch.is_empty()
+            && f % std::env::var("SCRIPT_EVERY")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(30usize)
+                == 0
+        {
+            let vals: Vec<String> = watch
+                .iter()
+                .map(|w| format!("{w}={:.2}", engine.get(w)))
+                .collect();
+            println!("frame {f}: {}", vals.join(" "));
+        }
     }
     for d in engine.drain_diagnostics() {
         println!("run: {:?} {} {}", d.severity, d.file, d.message);

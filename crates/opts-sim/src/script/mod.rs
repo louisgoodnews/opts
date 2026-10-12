@@ -26,7 +26,9 @@ pub use vehicle::load_vehicle_scripts;
 
 /// Handler for `(M.V.name)` macros of vehicle-external systems: receives the name and both
 /// operand stacks.
-pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) + Send>;
+/// Handler of the `(M.V.name)` callbacks of the host (name in lower case, arguments on the stacks).
+/// Returns `false` for a callback it does not implement; that is reported once.
+pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) -> bool + Send>;
 
 /// An event raised by a script with `(T.x.name)`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,6 +304,18 @@ impl ScriptEngine {
         (0..names.len() as u32)
             .map(|i| (names.name(i).to_owned(), self.vars.string(i).to_owned()))
             .collect()
+    }
+
+    /// Runs the macro `name` once on a fresh stack (diagnostics and tests).
+    pub fn call_macro(&mut self, name: &str) -> bool {
+        let Some(id) = self.program.names.macros.get(name) else {
+            return false;
+        };
+        let Some(block) = self.program.macros.get(&id).copied() else {
+            return false;
+        };
+        self.run_top(block);
+        true
     }
 
     /// Readable listing of the blocks whose name contains `name` (diagnostics).

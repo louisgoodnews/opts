@@ -252,6 +252,9 @@ pub struct Program {
 struct IfFrame {
     jump_if_zero: usize,
     else_jump: Option<usize>,
+    /// Jumps of further `{else}` of the same `{if}` (broken scripts have them); they end the
+    /// branch before them and the code after them never runs.
+    extra_else: Vec<usize>,
     line: usize,
 }
 
@@ -402,6 +405,7 @@ impl Compiler {
                 block.ifs.push(IfFrame {
                     jump_if_zero: here,
                     else_jump: None,
+                    extra_else: Vec::new(),
                     line,
                 });
             }
@@ -412,13 +416,29 @@ impl Compiler {
                     block.ops.push(Op::Jump(0));
                     block.ops[jz] = Op::JumpIfZero(here as u32 + 1);
                 }
-                _ => self.warn(file, line, "{else} without a matching {if} ignored".into()),
+                Some(f) => {
+                    // A second `{else}` (`{if} A {else} B {else} C {endif}`): OMSI's interpreter
+                    // runs B, skips to `{endif}` at the second `{else}` and never runs C.
+                    f.extra_else.push(here);
+                    block.ops.push(Op::Jump(0));
+                    self.warn(
+                        file,
+                        line,
+                        "second {else} of one {if}: its branch never runs".into(),
+                    );
+                }
+                None => self.warn(file, line, "{else} without a matching {if} ignored".into()),
             },
             _ => match block.ifs.pop() {
-                Some(f) => match f.else_jump {
-                    Some(j) => block.ops[j] = Op::Jump(here as u32),
-                    None => block.ops[f.jump_if_zero] = Op::JumpIfZero(here as u32),
-                },
+                Some(f) => {
+                    for j in &f.extra_else {
+                        block.ops[*j] = Op::Jump(here as u32);
+                    }
+                    match f.else_jump {
+                        Some(j) => block.ops[j] = Op::Jump(here as u32),
+                        None => block.ops[f.jump_if_zero] = Op::JumpIfZero(here as u32),
+                    }
+                }
                 None => self.warn(file, line, "{endif} without a matching {if} ignored".into()),
             },
         }
@@ -437,6 +457,9 @@ impl Compiler {
                 ),
             );
             let end = block.ops.len() as u32;
+            for j in &f.extra_else {
+                block.ops[*j] = Op::Jump(end);
+            }
             match f.else_jump {
                 Some(j) => block.ops[j] = Op::Jump(end),
                 None => block.ops[f.jump_if_zero] = Op::JumpIfZero(end),
@@ -512,21 +535,29 @@ impl Compiler {
     }
 }
 
+/// Number of registers.
+pub const REGISTERS: usize = 32;
+
 fn word_op(word: &str) -> Option<Op> {
     use BinOp as B;
     use StrOp as S;
     use UnOp as U;
     let bytes = word.as_bytes();
-    if bytes.len() == 2
+    // Registers `s0`…`s31` / `l0`…`l31` (the corpus uses up to `s9`; the documented eight are
+    // not the limit of OMSI's scripts).
+    if (bytes.len() == 2 || bytes.len() == 3)
         && (bytes[0] == b's' || bytes[0] == b'l')
-        && (b'0'..=b'7').contains(&bytes[1])
+        && bytes[1..].iter().all(u8::is_ascii_digit)
     {
-        let r = bytes[1] - b'0';
-        return Some(if bytes[0] == b's' {
-            Op::StoreReg(r)
-        } else {
-            Op::LoadReg(r)
-        });
+        if let Ok(r) = word[1..].parse::<u8>() {
+            if r < REGISTERS as u8 {
+                return Some(if bytes[0] == b's' {
+                    Op::StoreReg(r)
+                } else {
+                    Op::LoadReg(r)
+                });
+            }
+        }
     }
     Some(match word {
         "+" => Op::Bin(B::Add),
@@ -571,7 +602,8 @@ fn word_op(word: &str) -> Option<Op> {
         "$*" => Op::Str(S::Repeat),
         "$length" => Op::Str(S::Length),
         "$setlengthl" => Op::Str(S::SetLengthL),
-        "$setlengthc" => Op::Str(S::SetLengthC),
+        // `$SetLengthM` (mittig) appears in the BVG ATRON scripts: the centred variant.
+        "$setlengthc" | "$setlengthm" => Op::Str(S::SetLengthC),
         "$setlengthr" => Op::Str(S::SetLengthR),
         "$removespaces" => Op::Str(S::RemoveSpaces),
         "$inttostr" => Op::Str(S::IntToStr),

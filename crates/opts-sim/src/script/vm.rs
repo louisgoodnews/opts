@@ -93,12 +93,11 @@ impl ScriptEngine {
             );
             return;
         }
-        let mut regs = [0.0f32; 8];
         let mut pc = 0usize;
         while let Some(op) = self.program.blocks[index].ops.get(pc).copied() {
             pc += 1;
             self.ops_executed += 1;
-            if let Some(target) = self.step(op, index, pc - 1, depth, &mut regs, st) {
+            if let Some(target) = self.step(op, index, pc - 1, depth, st) {
                 pc = target;
             }
             // Values the scripts leave behind pile up at the bottom; the oldest are dropped.
@@ -116,17 +115,6 @@ impl ScriptEngine {
     fn pop(&mut self, st: &mut Stacks, block: usize, pc: usize) -> f32 {
         match st.numbers.pop() {
             Some(v) => v,
-            None => {
-                self.report_underflow(block, pc);
-                0.0
-            }
-        }
-    }
-
-    /// The top of the float stack without removing it (`s0`…`s7`).
-    fn peek(&mut self, st: &mut Stacks, block: usize, pc: usize) -> f32 {
-        match st.numbers.last() {
-            Some(v) => *v,
             None => {
                 self.report_underflow(block, pc);
                 0.0
@@ -154,7 +142,6 @@ impl ScriptEngine {
         block: usize,
         pc: usize,
         depth: usize,
-        regs: &mut [f32; 8],
         st: &mut Stacks,
     ) -> Option<usize> {
         match op {
@@ -165,9 +152,11 @@ impl ScriptEngine {
                 st.numbers.extend([v, v]);
             }
             Op::PushPi => st.numbers.push(std::f32::consts::PI),
+            // `x random`: a pseudo-random number from 0 up to `x` (`500000 random 400000 +`).
             Op::Random => {
+                let range = self.pop(st, block, pc);
                 let v = self.next_random();
-                st.numbers.push(v);
+                st.numbers.push(v * range);
             }
             Op::Bin(b) => {
                 let y = self.pop(st, block, pc);
@@ -194,8 +183,14 @@ impl ScriptEngine {
                 }
             }
             Op::Jump(t) => return Some(t as usize),
-            Op::LoadReg(r) => st.numbers.push(regs[usize::from(r)]),
-            Op::StoreReg(r) => regs[usize::from(r)] = self.peek(st, block, pc),
+            Op::LoadReg(r) => st.numbers.push(st.regs[usize::from(r)]),
+            // Like a variable store, a register store leaves the value on the stack
+            // (`X s2 (L.L.y) +` adds `y` to `X`).
+            Op::StoreReg(r) => {
+                let v = self.pop(st, block, pc);
+                st.regs[usize::from(r)] = v;
+                st.numbers.push(v);
+            }
             other => self.step_data(other, depth, st, block, pc),
         }
         None
@@ -209,8 +204,9 @@ impl ScriptEngine {
             // (the idiom runs through the original scripts; with a popping store the second
             // variable would read an empty stack).
             Op::Store(id) => {
-                let v = self.peek(st, block, pc);
+                let v = self.pop(st, block, pc);
                 self.vars.set_float(id, v);
+                st.numbers.push(v);
             }
             Op::LoadStr(id) => st.strings.push(self.vars.string(id).to_owned()),
             Op::StoreStr(id) => {
@@ -281,7 +277,14 @@ impl ScriptEngine {
     fn call_external(&mut self, id: u32, st: &mut Stacks) {
         let name = self.program.names.externals.name(id).to_owned();
         match self.external.as_mut() {
-            Some(handler) => handler(&name, st),
+            Some(handler) => {
+                if !handler(&name, st) {
+                    self.warn_once(
+                        format!("external {name}"),
+                        format!("external macro `{name}` is not implemented by the host; ignored"),
+                    );
+                }
+            }
             None => self.warn_once(
                 format!("external {name}"),
                 format!("external macro `{name}` has no handler; ignored"),

@@ -540,13 +540,31 @@ pub fn spawn_traffic(
         pool.rng = Some(rng);
         return;
     };
-    let lod = variant
-        .model
-        .lods
-        .iter()
-        .find(|l| l.threshold == 0.0)
-        .or_else(|| variant.model.lods.first())
-        .cloned();
+    // Cars: the plain `[LOD] 0` body. Buses: the full-detail group seen from outside, with the
+    // AI-only meshes (`[viewpoint]` 4: interiors of the AI model) and without the cockpit-only
+    // ones; their stand-in at `[LOD] 0` is a single mesh without bellows or trailer.
+    let lod = if variant.has_cabin {
+        variant.model.detail_lod().map(|mut lod| {
+            lod.meshes.retain(|m| {
+                let raw = m.viewpoint.raw();
+                raw == 0 || raw & 1 != 0 || raw & 4 != 0
+            });
+            for m in &mut lod.meshes {
+                if m.viewpoint.raw() & 4 != 0 {
+                    m.viewpoint = opts_core::formats::vehicles::model::ViewpointFlags::ALWAYS;
+                }
+            }
+            lod
+        })
+    } else {
+        variant
+            .model
+            .lods
+            .iter()
+            .find(|l| l.threshold == 0.0)
+            .or_else(|| variant.model.lods.first())
+            .cloned()
+    };
     let Some(lod) = lod else {
         pool.slots[slot].state = SlotState::Failed;
         pool.rng = Some(rng);

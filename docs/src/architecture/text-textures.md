@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟢 Implemented for static strings (M-0039); script-driven text waits for M-0026 |
+| **Status** | 🟢 Scenery strings (M-0039); 🟡 vehicle text textures from script string variables (2026-10-12), their content waits for the host callbacks of [M-0057](../roadmap/phase-4/M-0057.md) |
 | **Code** | `opts_core::formats::oft`, `opts_bevy::text_texture`, `opts-game` tile loader |
 | **Last Updated** | 2026-10-10 |
 
@@ -34,7 +34,9 @@ The string comes from the object **instance**: `MapObjectInstance::string_vars[n
 | Runtime references (`\S:n`, `Textfeld_*`) and script-driven text (`STTextOut`) | Wait for the script VM (M-0026). |
 | Exact OMSI alignment when text overflows (shrink vs clip) and vertical placement | Unverified ❓; shrink-to-fit and centring chosen. Compare with an OMSI screenshot to confirm. |
 | Grid flag of `[texttexture_enh]` | Ignored. |
-| Vehicles (`model.cfg` `[texttexture]`) | Same parser types, but not wired into vehicle loading yet. |
+| Vehicles (`model.cfg` `[texttexture]`) | **Wired 2026-10-12** (`opts-game` `omsi_world/vehicle_text.rs`): `[useTextTexture] n` binds the n-th declaration to the mesh; each declaration owns one image (created blank, no placeholder file is loaded, so the `Mtx_*.bmp` "texture not found" errors are gone) and a `VehicleTextTexture` entity that reads the declaration's **string variable** (`(S.$.Mtx_Linie)`) from the owner's script engine and redraws the image when the text changes (at most 8 redraws per frame). Fonts come from the same registry as the scenery. Empty strings give a transparent image. |
+| Content of the vehicle strings | The scripts fill them from the timetable, termini and bus stops through host callbacks (`GetTerminusString`, `GetTTLineString`, …) that OPTS does not implement yet ([M-0057](../roadmap/phase-4/M-0057.md)); `number`, `ident`, `yard`, `SetLineTo` are predefined strings the game must set. Until then displays stay blank; strings that scripts fill themselves (clock, gear, temperature of the NLC cockpit) draw. |
+| Script textures (`[scripttexture]`, `ST*` callbacks) | [M-0058](../roadmap/phase-4/M-0058.md). |
 
 ## Tests
 

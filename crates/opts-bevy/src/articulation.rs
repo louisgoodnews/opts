@@ -41,6 +41,20 @@ pub struct ArticulatedSegment {
     /// rendered pose interpolates between them.
     prev_pose: Option<(Vec2, f32)>,
     curr_pose: Option<(Vec2, f32)>,
+    /// Height, pitch and roll of the segment on the ground under it, set by the game each frame
+    /// (`None`: the segment keeps the root's height and stays level).
+    pub ground: Option<SegmentGround>,
+}
+
+/// How a segment lies on the ground (see [`ArticulatedSegment::ground`]).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct SegmentGround {
+    /// Height of the segment's origin above the datum (m).
+    pub elevation: f32,
+    /// Pitch of the segment's body, nose up positive (rad).
+    pub pitch: f32,
+    /// Roll of the segment's body, right side up positive (rad).
+    pub roll: f32,
 }
 
 impl ArticulatedSegment {
@@ -56,7 +70,15 @@ impl ArticulatedSegment {
             state: None,
             prev_pose: None,
             curr_pose: None,
+            ground: None,
         }
+    }
+
+    /// Position and heading of the segment in the kinematic frame (its mirrored frame when
+    /// `reversed`): the frame its coupling points and rear axle are given in.
+    #[must_use]
+    pub fn kinematic_pose(&self) -> Option<(Vec2, f32)> {
+        self.curr_pose
     }
 
     /// Position and heading (compass, rad) of the segment's own frame after the last fixed step
@@ -145,10 +167,10 @@ pub fn articulation_system(
         }
         if let Some(scripts) = scripts {
             if let Ok(mut engine) = scripts.engine.lock() {
+                // `beta` (pitch) and `gamma` (roll) follow the ground under the segments and are set
+                // by the game each frame (`follow_ground_chain`); the kinematics only know yaw.
                 for (k, a) in alphas.iter().enumerate() {
                     engine.set(&format!("articulation_{k}_alpha"), *a as f32);
-                    engine.set(&format!("articulation_{k}_beta"), 0.0);
-                    engine.set(&format!("articulation_{k}_gamma"), 0.0);
                 }
             }
         }
@@ -174,13 +196,20 @@ pub fn articulation_render_system(
             let dh = (h1 - h0 + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let (p, h) = (p0.lerp(p1, alpha), h0 + dh * alpha);
-            tf.translation = omsi_to_bevy_pos(Vec3::new(p.x, p.y, root_tf.translation.y));
+            let ground = seg.ground;
+            let z = ground.map_or(root_tf.translation.y, |g| g.elevation);
+            tf.translation = omsi_to_bevy_pos(Vec3::new(p.x, p.y, z));
             let turn = if seg.reversed {
                 std::f32::consts::PI
             } else {
                 0.0
             };
-            tf.rotation = Quat::from_rotation_y(-h - turn);
+            // A reversed segment's model faces the other way: its pitch and roll flip.
+            let flip = if seg.reversed { -1.0 } else { 1.0 };
+            let (pitch, roll) = ground.map_or((0.0, 0.0), |g| (g.pitch * flip, g.roll * flip));
+            tf.rotation = Quat::from_rotation_y(-h - turn)
+                * Quat::from_rotation_x(pitch)
+                * Quat::from_rotation_z(roll);
         }
     }
 }

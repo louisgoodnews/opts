@@ -24,6 +24,7 @@ pub mod coords;
 pub mod descramble_cache;
 pub mod ground;
 pub mod ground_material;
+pub mod host_callbacks;
 pub mod hot_reload;
 pub mod human;
 pub mod install;
@@ -50,7 +51,7 @@ pub mod vehicle_triggers;
 
 pub use ai_variables::{AiVariables, VariableSource};
 pub use articulation::{
-    articulation_system, ArticulatedChain, ArticulatedSegment, ArticulationPlugin,
+    articulation_system, ArticulatedChain, ArticulatedSegment, ArticulationPlugin, SegmentGround,
 };
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
