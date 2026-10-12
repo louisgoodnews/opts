@@ -1,5 +1,18 @@
 # 🎨 OPTS GUI Design System — Material Design 3 Specification
 
+> **Revision in progress (M-0061 part A, 2026-10-12).** This page is being brought in line with the code and with the Phase 9 decisions ([phase page](../roadmap/phase-9/README.md), [design language](../roadmap/phase-9/design-language.md)). Where this page and the Phase 9 documents disagree, **the Phase 9 documents win**. The sections below are updated batch by batch (progress: [`docs/dev/progress/ui-theme.md`](../dev/progress/ui-theme.md)); the status of each topic is in the table.
+>
+> | Topic | Decision | Status of this page |
+> | :--- | :--- | :--- |
+> | Colour roles | the 34 M3 roles plus status roles `Success`, `Warning`, `Info` (3 × 4 = 12 more) | §3.1 says 26: outdated |
+> | Default theme | **Dark**; modes Dark / Light / System / Auto (clock); High-contrast theme | §6 outdated |
+> | Typeface | one family, ≥ 4 weights, tabular figures, 9 styles with line height and tracking applied, nothing below 12 px | §3.2 outdated |
+> | Shape | radius 8 (controls) / 12 (cards) / 16 (sheets) | §3.4 outdated |
+> | Elevation | real `BoxShadow` plus tonal tint in both themes | §3.3 partly outdated |
+> | Scale and density | UI scale 75-200 %, density Comfortable / Compact / Dense, layout classes, minimum window 1024×640 | missing |
+> | Accent | generated presets with a contrast guard; **no** per-widget colours | §6.3 outdated |
+> | Instruments | separate instrument token set (day/night) | missing |
+
 ## 1. Executive Summary
 
 This document specifies the design system and architecture for `opts-gui`, the user interface widget library for the Open Public Transport Simulator (OPTS). Built natively on Bevy UI (`bevy_ui`) and adhering strictly to Google Material Design 3 (M3) principles, `opts-gui` provides a modern, accessible, modular, and themeable UI foundation for menus, vehicle selectors, route/timetable managers, in-cab HUD displays, and future visual world-editing tools.
