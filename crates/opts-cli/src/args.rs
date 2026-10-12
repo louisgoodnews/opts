@@ -57,6 +57,11 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub fullscreen: bool,
 
+    /// Let the vehicles' own scripts drive them: `M_Wheel` and the brake forces replace the
+    /// built-in drivetrain (the scripts' engine is started automatically). Experimental.
+    #[arg(long)]
+    pub script_drive: bool,
+
     /// Synchronise frames with the display (V-Sync). By default the frame rate is not capped: it
     /// is limited by the hardware only.
     #[arg(long)]
@@ -139,6 +144,7 @@ impl Default for CliArgs {
             fullscreen: false,
             windowed: false,
             vsync: false,
+            script_drive: false,
             window_size: "1920x1080".to_string(),
             headless: false,
             cli_port: None,

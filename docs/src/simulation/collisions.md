@@ -18,6 +18,18 @@
 
 Fixed step after the physics, before the articulation: up to four passes push the chassis out of the deepest overlap (at most 0.5 m per step), then the velocity loses its component into the obstacle (bounce 0.05), 8 % of the sliding speed is scraped off and the yaw rate is damped. Checked on Hohenkirchen: a bus driven into a shelter at 26 km/h stops within the step.
 
+## Implementation strategy for the open features
+
+Ordered by value over effort; each step is one commit with a test on the pure `opts_sim::collision` layer where possible.
+
+1. **AI traffic sees the player.** Register the player's `PlayerBox` (all parts of the chain) as a dynamic obstacle in the traffic crate's neighbour query (`opts-traffic`: the agents already look ahead for other agents; add a "foreign body" list filled each fixed step from `CollisionIndex`/`PlayerBox`). Agents then brake for the player like for a leading agent (distance along their lane within the lookahead, lateral overlap with the lane corridor). Player contact does not push agents; a hit stops the agent (kinematic) for a few seconds. Acceptance: a bus parked across a lane stops the following AI vehicle instead of driving through it.
+2. **Contact events and `coll_energy`.** `player_collisions` emits `CollisionEvent { other, point, normal, energy }` (energy = 0.5·m·v_n², v_n is the removed normal velocity component). The bridge writes `coll_energy` and raises the script trigger `collision` (the scripts of the 21C already define `{trigger:collision}`). Damage reads the same event: a per-vehicle `Damage` component (sum of energy over a threshold) for the later `[malfunction]`/dent features; no mesh deformation.
+3. **Sound.** The events feed the audio layer's one-shot channel (`ev_*` events from the script, plus a generic impact sample chosen by energy class when the vehicle has no collision sound). Missing sample: log ERROR and stay silent (no placeholder).
+4. **Trailers pushed.** `player_collisions` currently pushes the head only. Distribute the push over the chain: a contact on part *k* moves part *k* by the push and re-solves the chain constraint (the coupling distance to its neighbours, as `articulation` does for the pose) so that the head follows; contacts of the trailer run through the same loop with the part's own `Obb`. Prerequisite: the articulated pose solver gets a "pushed pose" input instead of only the simulated pose.
+5. **Protected collision meshes.** `[collision_mesh]` of scrambled `.sco` cannot be decoded; use the object's own `[boundingbox]` if it has one, else the bounding box of its visual mesh bounds with the object's scale (marked `approx` in the index and logged once per object, not silently).
+6. **Trees.** Trees have no collision mesh in OMSI either; give trunks a small round box from the tree definition (`.sco` of the tree: trunk radius from the mesh bounds at 1 m height) only if the map file marks them solid; otherwise leave them ghosts, as in OMSI.
+7. **Per-wheel kerb climbing and terrain roll/pitch.** Sample the ground under each wheel (`GroundIndex::height_at`), derive pitch/roll from the wheel heights, let the body ride on the springs (a second-order lag) and block only when a single wheel meets a step above the climb limit (0.3 m). This also fixes the sinking into embankments next to platforms (the 9.6 m apron falling to 1.4 m terrain).
+
 ## Not yet
 
-Damage and sound (`coll_energy`, `collision` trigger of the scripts: the data is there, the events are not raised), pedestrians, AI reaction to the player (the traffic agents do not see the player), trailer pivots reacting to the push (the push moves the head only), per-wheel curb climbing, tree trunks, `[crashmode_pole]`, collision meshes of protected objects.
+Everything above; pedestrians; `[crashmode_pole]`.

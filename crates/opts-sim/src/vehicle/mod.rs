@@ -23,6 +23,22 @@ use glam::Vec2;
 use opts_core::formats::vehicles::bus::BusManifest;
 use serde::{Deserialize, Serialize};
 
+/// Drive torque and brake force the vehicle's own scripts hand to the physics (`M_Wheel`,
+/// `Brakeforce`/`Axle_Brakeforce_*`); when set, they replace the built-in drivetrain's traction
+/// and braking for the step (resistance, adhesion and the chassis stay with the physics).
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
+pub struct ScriptDrive {
+    /// Torque at the driven wheels, summed over the axles (N·m; the unit of `M_Wheel`, see
+    /// `docs/src/architecture/vehicle-scripts-route.md`, Q-VS-2). Negative drives backwards.
+    pub wheel_torque_nm: f32,
+    /// Total brake force at the wheels (N, never negative).
+    pub brake_force_n: f32,
+}
+
+/// Friction coefficient between tyres and road that limits traction and braking of a road
+/// vehicle (dry asphalt).
+pub const ROAD_FRICTION: f32 = 0.85;
+
 /// High-level vehicle physics simulation orchestrator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VehicleSimulation {
@@ -40,6 +56,10 @@ pub struct VehicleSimulation {
     pub inputs: VehicleInputs,
     /// Effective wheelbase between front steering axle and rear reference axle in meters.
     pub wheelbase_m: f32,
+    /// Torque and brake force from the vehicle's scripts for the next steps (`None`: the
+    /// built-in drivetrain decides).
+    #[serde(default)]
+    pub script_drive: Option<ScriptDrive>,
 }
 
 impl Default for VehicleSimulation {
@@ -96,6 +116,7 @@ impl VehicleSimulation {
             articulation: None,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
+            script_drive: None,
         }
     }
 
@@ -136,6 +157,7 @@ impl VehicleSimulation {
             articulation,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
+            script_drive: None,
         }
     }
 
@@ -158,12 +180,24 @@ impl VehicleSimulation {
         }
 
         // 2. Drivetrain & braking forces
-        let forces = self.drivetrain.step(
+        let mut forces = self.drivetrain.step(
             &self.inputs,
             speed,
             first_wheel_radius,
             self.chassis.total_mass_kg,
         );
+        if let Some(d) = self.script_drive {
+            // The scripts' torque and brakes, limited by what the tyres can carry.
+            let limit = ROAD_FRICTION * self.chassis.total_mass_kg * 9.81;
+            let driven_radius = self
+                .axles
+                .iter()
+                .find(|a| a.config.is_driven)
+                .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
+                .max(0.1);
+            forces.tractive_force_n = (d.wheel_torque_nm / driven_radius).clamp(-limit, limit);
+            forces.braking_force_n = d.brake_force_n.clamp(0.0, limit);
+        }
 
         let net_longitudinal_force =
             if speed.abs() < 0.01 && !self.inputs.is_braking() && forces.tractive_force_n == 0.0 {

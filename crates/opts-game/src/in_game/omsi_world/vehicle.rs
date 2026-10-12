@@ -1005,9 +1005,10 @@ fn attach_scripts(
     for (var, value) in &job.config.setvars {
         engine.set(var, *value as f32);
     }
-    commands
-        .entity(root)
-        .insert(opts_bevy::VehicleScripts::new(engine));
+    commands.entity(root).insert((
+        opts_bevy::VehicleScripts::new(engine),
+        opts_bevy::ScriptStartup::default(),
+    ));
 }
 
 /// Loads the installation's `Inputs/keyboard.cfg` into [`opts_bevy::ScriptKeyBindings`], so the

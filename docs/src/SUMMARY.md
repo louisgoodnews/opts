@@ -84,6 +84,7 @@
 - [Articulated Vehicles](architecture/articulation.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Collisions](simulation/collisions.md)
+- [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)

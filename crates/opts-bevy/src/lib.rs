@@ -103,7 +103,10 @@ pub use vehicle_lights::{
     vehicle_light_map_system, vehicle_light_system, LightMapBinding, LightSwitch, ScriptLight,
     VehicleLightPlugin,
 };
-pub use vehicle_script::{vehicle_script_system, VehicleScriptPlugin, VehicleScripts};
+pub use vehicle_script::{
+    script_drive_system, script_startup_system, vehicle_script_system, ScriptDriveEnabled,
+    ScriptStartup, VehicleScriptPlugin, VehicleScripts,
+};
 pub use vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,
     vehicle_transform_sync_system, wheel_transform_sync_system, PlayerVehicle, VehicleCameraMode,

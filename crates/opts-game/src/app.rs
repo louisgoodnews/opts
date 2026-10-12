@@ -86,6 +86,7 @@ pub fn build_app(args: CliArgs) -> App {
         let _ = settings.save();
     }
     app.insert_resource(settings);
+    app.insert_resource(opts_bevy::ScriptDriveEnabled(args.script_drive));
 
     // Remote control (opt-in: `--cli-port`).
     if args.cli_port.is_some() {

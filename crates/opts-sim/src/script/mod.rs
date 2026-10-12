@@ -157,6 +157,20 @@ impl ScriptEngine {
         self.sys[id] = value;
     }
 
+    /// Whether any block of the scripts stores to float variable `name` (`(S.L.name)`): the
+    /// scripts *produce* the variable (e.g. `M_Wheel`), so the host can rely on it.
+    #[must_use]
+    pub fn writes(&self, name: &str) -> bool {
+        let Some(id) = self.program.names.vars.get(name) else {
+            return false;
+        };
+        self.program.blocks.iter().any(|b| {
+            b.ops
+                .iter()
+                .any(|op| matches!(op, Op::Store(i) if *i == id))
+        })
+    }
+
     /// Reads float variable `name` (`0` if the scripts never touched it).
     #[must_use]
     pub fn get(&self, name: &str) -> f32 {

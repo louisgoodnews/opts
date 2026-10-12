@@ -62,6 +62,16 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 
 Measured on the installed corpus: **6,146** `.osc` files compile (84,071 blocks, **0 errors**, 4,821 leniency warnings); **1,218 of 1,487** `.bus` files have scripts, all load and run `{init}` plus 60 frames (38 files referenced by `[script]` lists are missing in the installation); **median 80 µs, p90 126 µs, max 332 µs per frame** (0.8 % of a 60 Hz frame for the median vehicle). In the game the head unit's scripts run every fixed step; their outputs drive mesh animations, lights (`Spot_Select`, interior lights, light maps) and mesh visibility, and keys and cockpit hot-spots raise their triggers. Not connected: torque and brakes (`M_Wheel`, `Brakeforce`), doors and passengers (`PAX_*`), sound events, the 42 callbacks (no-ops), script textures, per-part engines for coupled units, AI vehicles. Route and acceptance: [vehicle scripts route](vehicle-scripts-route.md).
 
+### Script drive (experimental, `--script-drive`, 2026-10-12)
+
+With the flag, `M_Wheel` (torque at the driven wheels) and `Brakeforce` from the scripts replace the built-in tractive and brake forces (`ScriptDrive` in `VehicleSimulation`, limited by road friction 0.85). `script_startup_system` plays the cockpit start sequence on the head unit: battery switch (`cp_batterietrennschalter_toggle`, then `_off`) raises `elec_busbar_main`; the selector is forced to neutral (`antrieb_getr_gangvorwahl` = `antrieb_getr_gangwahl` = 1); `kw_m_enginestart` sets `engine_starter`/`engine_injection_on`; later `automatic_D/N/R` follow the player's gear.
+
+**Where it stops (MAN NLC 21C, Voith):** the battery, busbar and starter flags come up, but `engine_n` and `engine_M` stay 0, so `engine_on` never rises and the bus does not move. Findings for the next step:
+
+* `antrieb_getr_gangvorwahl` reads 30 after the first frames although no script writes 30 to it (cause not found; it blocks `engine_starter` because the start needs it to be 1). The start sequence overwrites it with 1.
+* The torque chain is `engine_moment` (adds the starter torque `exp(-n/n_halbwert)·engine_starterM·busbar`) → `engine_acceleration` (integrates `engine_n`), both called from the gearbox script (`Voith_DIWA6.osc`) inside the `{frame}`. `engine_M` stays 0 with the starter on, so either a constant (`engine_starterM`, `engine_J`) is not loaded from the engine's `.txt`/constfile or a branch before `(M.L.engine_moment)` is not taken. Check the constants first (`D1556_constfile`/`D1556.txt` vs. `[const]` loading).
+* Acceptance once it runs: SD200 0-50 km/h in 8-14 s, `M_Wheel` unit calibration, brake force plausibility.
+
 ## Not done yet (M-0026 follow-ups)
 
 - Remaining predefined variables (wheel speeds, axle suspension, AI, passengers) and the active bridge — script outputs driving `M_Wheel`, lights, doors and indicators through `model_cfg` animations; trigger input from keys and hot-spots; events to audio: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.
