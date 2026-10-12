@@ -2,7 +2,7 @@
 
 *Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference.*
 
-**Status:** 🟡 Decided 2026-10-12 — documentation written, implementation not started
+**Status:** 🟡 Decided 2026-10-12 — first stage implemented (sampler, uncompressed mip chains, image-metrics tool, looks); awaiting the project lead's test. DXT chains and the cache (M-0058 phase C), coverage mips (M-0059) and the physical calibration (M-0060 step 2) are open.
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
@@ -17,10 +17,10 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 
 ## Milestones
 
-- [M-0057 — Texture Filtering and Measurement Harness](M-0057.md) — ⏳ Planned (shared sampler with trilinear + anisotropy, image-metrics tool, reference views)
-- [M-0058 — Mipmaps: Generation, Derived Cache and the 2-Minute Budget](M-0058.md) — ⏳ Planned
+- [M-0057 — Texture Filtering and Measurement Harness](M-0057.md) — 🟡 In progress (sampler and image-metrics tool done)
+- [M-0058 — Mipmaps: Generation, Derived Cache and the 2-Minute Budget](M-0058.md) — 🟡 Phase B done
 - [M-0059 — Foliage and Cutout Coverage](M-0059.md) — ⏳ Planned (coverage-preserving mips, alpha-to-coverage)
-- [M-0060 — Realistic Colour and Looks](M-0060.md) — ⏳ Planned (physical light calibration, Vivid default, look presets)
+- [M-0060 — Realistic Colour and Looks](M-0060.md) — 🟡 Step 1 implemented (physical light calibration, Vivid default, look presets)
 
 ## Checklist
 
@@ -29,13 +29,13 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 *Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference. Decisions of 2026-10-12: reality as reference, Vivid default, hard limit of 2 minutes of added first-run time. Background: [Texture Quality and Colour](../../architecture/texture-quality.md).*
 
 - [ ] **🔬 Texture Filtering & Measurement Harness** — [M-0057](M-0057.md)
-  - [ ] Image-metrics tool, reference views and a scripted A/B run (results outside the repository).
-  - [ ] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry.
+  - [~] Image-metrics tool (done), reference views and a scripted A/B run (minimal set done: `scripts/visual-ab.sh`; more views open); results outside the repository.
+  - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry.
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](M-0058.md)
-  - [ ] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload.
+  - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload.
   - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time**.
 - [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](M-0059.md)
   - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](M-0060.md)
-  - [ ] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted.
+  - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; the project lead's testing decides the default; *Natural* equals *Bevy default* until the calibration).
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.

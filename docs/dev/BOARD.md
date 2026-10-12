@@ -101,6 +101,10 @@ _Work actively being executed in the current session._
 _Work completed but not yet marked Done — awaiting human or agent review._
 
 - `[ ]` 🟡 **Articulated trailers follow kinematically; joint angle to scripts; bellows skinned** (M-0022 addendum, code) — `f20ff5f` + parts of `7f24124`; spec [articulation.md](../src/architecture/articulation.md). Needs an in-game look at an articulated bus; follow-ups in M-0053.
+- `[ ]` 🔴 **Shared object-texture sampler (trilinear, anisotropy Off/4/8/16, default 16×) with settings entry and `--texture-filter`** (M-0057, code) — agent/visual-quality; needs the project lead's look at textures and signs; test guide in [progress/visual-quality.md](progress/visual-quality.md).
+- `[ ]` 🔴 **Looks setting *Vivid* (default) / *Natural* / *Bevy default*, live, persisted, `render.look`, `--look`** (M-0060 step 1, code) — agent/visual-quality; the project lead's testing decides the default.
+- `[ ]` 🔴 **Mip chains for uncompressed textures at load and in hot reload; dropped DDS chains fixed (2,727 → 0)** (M-0058 phase B, code) — agent/visual-quality; +6.5 % load time on Bad Hügelsdorf.
+- `[ ]` 🔴 **`opts-tools image-metrics`, `scripts/visual-ab.sh`, A/B procedure** (M-0057 phase A minimal, code) — agent/visual-quality.
 - `[ ]` 🟡 **Repaints applied in game, `--livery`** (M-0032, code) — `7f24124`; needs a review against [repaints.md](../src/formats/text/repaints.md) Q-RP01/Q-RP02.
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
@@ -111,9 +115,6 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [ ] 🔴 **Shared object-texture sampler: trilinear, anisotropy 16× default, settings entry** (M-0057, code) — root cause of the blocky textures (`repeat_sampler` uses Bevy's nearest default).
-- [ ] 🔴 **Looks setting with *Vivid* (default), *Natural*, *Bevy default*, live switch and persistence** (M-0060 step 1, code) — provisional Vivid values from the proposal.
-- [ ] 🔴 **Mipmap chains for uncompressed textures (sRGB-correct), load time and hot reload** (M-0058 phase B, code)
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
 - [ ] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`; the code (`stream_world_tiles`) has run without a spec since before 2026-10-10 (F-012).
 - [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
@@ -148,7 +149,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
 
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
-- [ ] 🔴 **Image-metrics tool, reference views, scripted A/B run** (M-0057, code) — results outside the repository.
+- [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.
 - [ ] 🔴 **DXT mip chains through a derived cache with the hard 120 s first-run budget** (M-0058 phase C, code)
 - [ ] 🟠 **Coverage-preserving alpha mips and alpha-to-coverage** (M-0059, code)
 - [ ] 🟠 **Physical light calibration with cited reference values; reference-surface test; *Natural* look** (M-0060 step 2, spec + code)

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Direction decided 2026-10-12 ([Phase 8](../roadmap/phase-8/README.md)); implementation not started |
+| **Status** | ✅ Direction decided 2026-10-12 ([Phase 8](../roadmap/phase-8/README.md)); first stage implemented (T0 minimal, T1, T2, M-0060 step 1) |
 | **Date** | 2026-10-12 |
 | **Trigger** | Project lead, 2026-10-12: textures look "too compressed and a little washed out" |
 | **Code involved** | `crates/opts-bevy/src/model.rs` (`repeat_sampler`, `ContentLoader::texture`), `texture.rs`, `material.rs`, `ground_material.rs`, `crates/opts-game/src/in_game/sky.rs`, `vehicle_spawner.rs` |
@@ -173,7 +173,7 @@ Keep MSAA 4×. Evaluate SMAA for shader and specular aliasing, and contrast-adap
 | :--- | :--- | :--- |
 | Q-TQ01 | What does OMSI itself show at the same position and time? | ✅ dropped 2026-10-12: OMSI is not the reference; physical references are ([M-0060](../roadmap/phase-8/M-0060.md)) |
 | Q-TQ02 | Which filtering does OMSI use? | ✅ dropped 2026-10-12 (irrelevant: 16× anisotropic is the default) |
-| Q-TQ03 | How many DDS chains does `dds_to_bevy_image` drop today? | ⏳ T0 |
+| Q-TQ03 | How many DDS chains does `dds_to_bevy_image` drop today? | ✅ 2026-10-12: **2,727 of 35,004** DDS files with a declared chain (7.8 %, all block-compressed files whose size is not a multiple of 4: the loader rounds the extent to the 4×4 block size, the file's chain follows the unrounded size, so the level layouts diverge from some level on). Fixed: the chain is re-laid out for the rounded extent (`texture/dds_chain.rs`); a rescan of the whole corpus drops 0. Counter: `texture::dropped_dds_chains()`, tool: `examples/texture_scan.rs`. |
 | Q-TQ04 | VRAM and load-time budget on the weakest supported GPU. | ⏳ T0 |
 | Q-TQ05 | Does OMSI treat `[matl_alpha]` cutouts with a different threshold than 0.5? | ✅ replaced by visual coverage criteria in [M-0059](../roadmap/phase-8/M-0059.md) |
 | Q-TQ06 | Should night scenes keep the current ambient floor? | ⏳ T4 |

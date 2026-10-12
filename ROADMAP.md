@@ -264,15 +264,15 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference. Decisions of 2026-10-12: reality as reference, Vivid default, hard limit of 2 minutes of added first-run time. Background: [Texture Quality and Colour](docs/src/architecture/texture-quality.md).*
 
 - [ ] **🔬 Texture Filtering & Measurement Harness** — [M-0057](docs/src/roadmap/phase-8/M-0057.md)
-  - [ ] Image-metrics tool, reference views and a scripted A/B run (results outside the repository).
-  - [ ] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry.
+  - [~] Image-metrics tool (done), reference views and a scripted A/B run (minimal set done: `scripts/visual-ab.sh`; more views open); results outside the repository.
+  - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry.
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](docs/src/roadmap/phase-8/M-0058.md)
-  - [ ] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload.
+  - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload.
   - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time**.
 - [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](docs/src/roadmap/phase-8/M-0059.md)
   - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](docs/src/roadmap/phase-8/M-0060.md)
-  - [ ] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted.
+  - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; the project lead's testing decides the default; *Natural* equals *Bevy default* until the calibration).
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
 
 ---
