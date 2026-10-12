@@ -25,7 +25,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | S2 Home | done |
 | S3 First run | done |
 | S4 Pause, leave, summary | done |
-| S5 Help and About, F1 | open |
+| S5 Help and About, F1 | done |
 | S6 Notifications | open |
 | S7 Tests, screenshots, docs | open |
 
@@ -55,3 +55,6 @@ Note: the *compact* rail (icons only) needs a logical width < 900 px, i.e. UI sc
 
 ### S4
 `pause/` (overlay, stats, leave), `session_summary/`; `escape_to_menu_in_game` removed, HUD *Exit to Menu* is now *Pause [Esc]* (neutral colours). `Controls` and `Settings` in the overlay are not-yet places (`pause.controls` M-0064, `pause.settings` M-0063). Welcome closes when Home is left. Verified live (shots `pause_dark`, `pause_leave_dialog_dark`, `summary_dark`): Esc opens the overlay with Resume focused at 38 km/h, the leave dialog names the consequence with Cancel focused, Home shows the summary (duration, distance, top speed, 1 problem logged = an error-level log entry during the drive). The old test `test_escape_key_in_game_returns_to_main_menu` was replaced by `pause::tests`.
+
+### S5
+`help/` (page with four tabs, controls table, About, overlay, F1), report dialog in `opts-bevy` localised with title, inline + toast errors, `request_report`; the F1 trigger of the report is gone. Pause -> Controls opens the overlay (the `pause.controls` place was removed). New not-yet places: `help.guides`, `help.controls-generated` (the table is handwritten from the HUD's key hints).

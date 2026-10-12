@@ -13,7 +13,7 @@ use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
 use opts_gui::components::modal::{ModalBuilder, ModalEvent, ModalRoot};
 use opts_gui::interaction::activation::Activated;
 use opts_gui::l10n::{L10nArgs, L10nKey};
-use opts_gui::not_yet::{Availability, PAUSE_CONTROLS, PAUSE_SETTINGS};
+use opts_gui::not_yet::{Availability, PAUSE_SETTINGS};
 use opts_gui::prelude::*;
 
 pub use stats::SessionStats;
@@ -90,7 +90,7 @@ fn item(
     button
 }
 
-fn spawn_overlay(commands: &mut Commands) -> Entity {
+pub(crate) fn spawn_overlay(commands: &mut Commands) -> Entity {
     let (root, card) = ModalBuilder::new()
         .with_size_percent(30.0, 50.0)
         .with_width_range(320.0, 420.0)
@@ -113,8 +113,7 @@ fn spawn_overlay(commands: &mut Commands) -> Entity {
         item(c, PauseItem::Vehicle, keys::PAUSE_VEHICLE, "vehicle");
         let settings = item(c, PauseItem::Settings, keys::PAUSE_SETTINGS, "settings");
         Availability::NotYet(&PAUSE_SETTINGS).apply(&mut c.commands().entity(settings));
-        let controls = item(c, PauseItem::Controls, keys::PAUSE_CONTROLS, "controls");
-        Availability::NotYet(&PAUSE_CONTROLS).apply(&mut c.commands().entity(controls));
+        item(c, PauseItem::Controls, keys::PAUSE_CONTROLS, "controls");
         item(c, PauseItem::Report, keys::PAUSE_REPORT, "report");
         c.spawn(Node {
             height: Val::Px(1.0),
@@ -254,7 +253,14 @@ pub fn pause_items(
                     commands.queue(|world: &mut World| leave_to_home(world));
                 }
             }
-            PauseItem::Controls | PauseItem::Settings => {}
+            PauseItem::Controls => {
+                // One dialog at a time: the overlay steps aside and returns when Help closes.
+                if let Some(root) = pause.root.take() {
+                    commands.entity(root).try_despawn();
+                }
+                crate::help::open_overlay(&mut commands);
+            }
+            PauseItem::Settings => {}
         }
     }
 }

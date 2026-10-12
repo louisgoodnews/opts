@@ -91,7 +91,7 @@ Centred panel over the paused scene (`Modal`); simulation paused (`Time<Virtual>
 | **Resume** (default focus) | `pause-resume` | closes, restores pause state and cursor |
 | Vehicle | `pause-vehicle` | closes the pause panel and opens the vehicle menu (L-Alt menu); Esc there returns to the game |
 | Settings | `pause-settings` | red *Feature not available yet!* until the settings registry offers an embeddable pane (see below) |
-| Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal); red *Feature not available yet!* (`pause.controls`, M-0064) until that overlay exists |
+| Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal); the Help overlay |
 | Report an issue | `pause-report` | the report dialog |
 | ─── separator | | |
 | **Leave drive…** | `pause-leave` | confirmation dialog |
@@ -129,7 +129,7 @@ Left list (tabs) **Controls · Guides · Report an issue · About** and a right 
 | **Report an issue** (`help-report`) | what is sent (screenshot, log excerpt, the text), the **Report an issue** button that opens the existing report dialog; a failure produces an error toast and a banner on the page |
 | **About** (`help-about`) | `OPTS`, version, `help-about-licence` (MIT or Apache-2.0), the third-party notices (Bevy, Rust, Noto Sans, JetBrains Mono, Material Icons: from [legal-licensing](../../contributing/legal-licensing.md)), the clean-room statement, project link |
 
-F1 opens Help (D-UI-06) from anywhere with a window; in game it opens the same page as an overlay. The control-protocol command `report` is unchanged.
+F1 opens Help (D-UI-06) from anywhere with a window: the page in the shell, an overlay (controls table, *Close*, *Report an issue*) over the paused scene during a drive; closing the overlay returns to the pause menu. Pause → *Controls* opens the same overlay. The report dialog has a title, a visible screenshot preview with a caption, localised texts, and a failure to save (no reports folder, I/O error) is shown inline in the dialog and as a toast. The control-protocol command `report` is unchanged. Deep links: `screen:help/about` (tabs `controls`, `guides`, `report`, `about`).
 
 ## 7. Notifications
 
@@ -147,9 +147,8 @@ F1 opens Help (D-UI-06) from anywhere with a window; in game it opens the same p
 | `nav.workshop` | rail, Workshop | M-0051 |
 | `home.load-game` | Home, Load game | M-0062 |
 | `help.guides` | Help, Guides | M-0064 |
-| `help.controls-generated` | Help, Controls (generated list) | M-0064 |
+| `help.controls-generated` | Help, Controls (generated list; the table is handwritten from the HUD hints) | M-0064 |
 | `pause.settings` | Pause, Settings | M-0063 |
-| `pause.controls` | Pause, Controls | M-0064 |
 | `home.rescan` | Home banner, Rescan | M-0063 |
 
 ## 9. Test matrix (S7)

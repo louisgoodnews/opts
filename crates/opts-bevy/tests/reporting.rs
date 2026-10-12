@@ -1,6 +1,7 @@
-//! F1 reporting: formatting, file saving, and the headless state machine / pause behaviour.
+//! Reporting (`request_report`): formatting, file saving, and the headless state machine / pause behaviour.
 
 use bevy::asset::RenderAssetUsages;
+use bevy::ecs::system::RunSystemOnce;
 use bevy::input::InputPlugin;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -105,21 +106,18 @@ fn state(app: &App) -> ReportModalState {
     *app.world().resource::<State<ReportModalState>>().get()
 }
 
+/// Asks for a report the way the pause menu, Help and the session summary do.
 fn press_f1(app: &mut App) {
-    let window = app
-        .world_mut()
-        .query_filtered::<Entity, With<PrimaryWindow>>()
-        .single(app.world())
-        .unwrap();
     app.world_mut()
-        .write_message(bevy::input::keyboard::KeyboardInput {
-            key_code: KeyCode::F1,
-            logical_key: bevy::input::keyboard::Key::F1,
-            state: bevy::input::ButtonState::Pressed,
-            text: None,
-            repeat: false,
-            window,
-        });
+        .run_system_once(
+            |time: Res<Time<Virtual>>,
+             mut data: ResMut<opts_bevy::reporting::ReportModalData>,
+             state: Res<State<ReportModalState>>,
+             mut next: ResMut<NextState<ReportModalState>>| {
+                opts_bevy::reporting::request_report(&time, &mut data, &state, &mut next);
+            },
+        )
+        .expect("request");
     app.update();
     app.update();
 }

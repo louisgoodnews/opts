@@ -10,5 +10,6 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 | Navigation rail, Library | `nav.library` | M-0062 | The Library needs the master-detail pattern of the Plan a drive wizard and its detail panels. |
 | Navigation rail, Workshop | `nav.workshop` | M-0051 | Editor projects, installed mods and packaging need the editor and mod system. |
 | Pause overlay, Settings | `pause.settings` | M-0063 | The settings pages build into the shell, which is hidden during a drive; they need an embeddable pane. |
-| Pause overlay, Controls | `pause.controls` | M-0064 | The in-game controls page opens with the Help overlay of the HUD milestone. |
+| Help, Guides | `help.guides` | M-0064 | The short guides are written with the HUD and help overlay of the HUD milestone. |
+| Help, Controls (generated from the bindings) | `help.controls-generated` | M-0064 | The table is written by hand from the HUD's key hints until the in-game controls source exists. |
 | New game, Live Device Location, Refresh | `newgame.live-weather-refresh` | M-0062 | The location query is never called; the panel shows placeholder values. |

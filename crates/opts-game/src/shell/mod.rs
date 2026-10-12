@@ -193,7 +193,10 @@ mod tests {
             {
                 let key = line.split(" = ").next().unwrap_or_default();
                 assert!(
-                    keys::ALL.contains(&key),
+                    keys::ALL.contains(&key)
+                        || opts_bevy::reporting::keys::ALL
+                            .iter()
+                            .any(|(k, _)| *k == key),
                     "`{key}` is in a table but not in keys::ALL"
                 );
             }

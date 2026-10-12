@@ -64,12 +64,20 @@ pub const PAUSE_SETTINGS: NotYetPlace = NotYetPlace {
     missing: "The settings pages build into the shell, which is hidden during a drive; they need an embeddable pane.",
 };
 
-/// Pause overlay, *Controls*.
-pub const PAUSE_CONTROLS: NotYetPlace = NotYetPlace {
-    id: "pause.controls",
-    place: "Pause overlay, Controls",
+/// Help, *Guides*.
+pub const HELP_GUIDES: NotYetPlace = NotYetPlace {
+    id: "help.guides",
+    place: "Help, Guides",
     milestone: "M-0064",
-    missing: "The in-game controls page opens with the Help overlay of the HUD milestone.",
+    missing: "The short guides are written with the HUD and help overlay of the HUD milestone.",
+};
+
+/// Help, the generated list of controls.
+pub const HELP_CONTROLS_GENERATED: NotYetPlace = NotYetPlace {
+    id: "help.controls-generated",
+    place: "Help, Controls (generated from the bindings)",
+    milestone: "M-0064",
+    missing: "The table is written by hand from the HUD's key hints until the in-game controls source exists.",
 };
 
 /// New game screen, live weather *Refresh*.
@@ -86,7 +94,8 @@ pub const PLACES: &[&NotYetPlace] = &[
     &NAV_LIBRARY,
     &NAV_WORKSHOP,
     &PAUSE_SETTINGS,
-    &PAUSE_CONTROLS,
+    &HELP_GUIDES,
+    &HELP_CONTROLS_GENERATED,
     &LIVE_WEATHER_REFRESH,
 ];
 

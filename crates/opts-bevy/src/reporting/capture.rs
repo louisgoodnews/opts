@@ -80,8 +80,19 @@ pub fn request_screenshot(
     spawn_capture(&mut commands, window, channel.tx.clone());
 }
 
+/// Nothing opens when the capture fails, so say so (a toast; there is no screen to put it on).
+fn capture_failed(commands: &mut Commands, loc: Option<&opts_gui::l10n::Localization>) {
+    let text = super::modal::tr(loc, super::keys::CAPTURE_FAILED, &[]);
+    let toast = opts_gui::prelude::ToastBuilder::new(text)
+        .with_duration(8.0)
+        .spawn(commands);
+    commands.entity(toast).insert(GlobalZIndex(2000));
+}
+
 /// Collects the frame, encodes it off-thread, then opens the modal.
 pub fn poll_capture(
+    mut commands: Commands,
+    loc: Option<Res<opts_gui::l10n::Localization>>,
     channel: Res<CaptureChannel>,
     mut task: ResMut<EncodeTask>,
     mut data: ResMut<ReportModalData>,
@@ -90,6 +101,7 @@ pub fn poll_capture(
 ) {
     if data.capture_started_at.elapsed() > CAPTURE_TIMEOUT {
         tracing::error!("report: screenshot did not arrive in time; report cancelled");
+        capture_failed(&mut commands, loc.as_deref());
         task.0 = None;
         next.set(ReportModalState::Inactive);
         return;
@@ -97,7 +109,13 @@ pub fn poll_capture(
     if task.0.is_none() {
         let frame = channel.rx.lock().ok().and_then(|rx| rx.try_recv().ok());
         let Some(frame) = frame else { return };
-        data.screenshot = Some(images.add(frame.clone()));
+        // A captured frame is not made to be drawn: give the copy the usages a UI texture needs.
+        let mut preview = frame.clone();
+        preview.texture_descriptor.usage =
+            bevy::render::render_resource::TextureUsages::TEXTURE_BINDING
+                | bevy::render::render_resource::TextureUsages::COPY_DST;
+        preview.asset_usage = bevy::asset::RenderAssetUsages::default();
+        data.screenshot = Some(images.add(preview));
         task.0 = Some(AsyncComputeTaskPool::get().spawn(async move { encode_png(&frame) }));
         return;
     }
@@ -111,6 +129,7 @@ pub fn poll_capture(
             }
             None => {
                 tracing::error!("report: could not encode the screenshot as PNG");
+                capture_failed(&mut commands, loc.as_deref());
                 next.set(ReportModalState::Inactive);
             }
         }

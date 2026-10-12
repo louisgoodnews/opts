@@ -31,6 +31,8 @@ pub struct ReportModalData {
     pub paused_by_report: bool,
     /// When the capture was requested (timeout detection).
     pub capture_started_at: Instant,
+    /// Why the last attempt to save failed (already in the user's language); shown inline.
+    pub error: Option<String>,
 }
 
 impl Default for ReportModalData {
@@ -42,6 +44,7 @@ impl Default for ReportModalData {
             was_running_before: true,
             paused_by_report: false,
             capture_started_at: Instant::now(),
+            error: None,
         }
     }
 }
@@ -54,6 +57,7 @@ impl ReportModalData {
         self.text.clear();
         self.was_running_before = was_running;
         self.capture_started_at = Instant::now();
+        self.error = None;
     }
 }
 
