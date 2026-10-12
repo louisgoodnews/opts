@@ -121,7 +121,15 @@ impl DriveHistory {
     #[must_use]
     pub fn load() -> Self {
         Self::path()
-            .and_then(|p| std::fs::read_to_string(p).ok())
+            .map(|p| Self::load_from(&p))
+            .unwrap_or_default()
+    }
+
+    /// Reads the history from `path`; a missing or unreadable file gives an empty history.
+    #[must_use]
+    pub fn load_from(path: &std::path::Path) -> Self {
+        std::fs::read_to_string(path)
+            .ok()
             .and_then(|s| serde_json::from_str(&s).ok())
             .unwrap_or_default()
     }
@@ -131,9 +139,17 @@ impl DriveHistory {
     /// # Errors
     /// Returns the I/O error when the file cannot be written.
     pub fn save(&self) -> std::io::Result<()> {
-        let Some(path) = Self::path() else {
-            return Ok(());
-        };
+        match Self::path() {
+            Some(path) => self.save_to(&path),
+            None => Ok(()),
+        }
+    }
+
+    /// Writes the history to `path`, creating its directory.
+    ///
+    /// # Errors
+    /// Returns the I/O error when the file cannot be written.
+    pub fn save_to(&self, path: &std::path::Path) -> std::io::Result<()> {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)?;
         }

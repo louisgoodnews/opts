@@ -48,16 +48,17 @@ pub const LOAD_GAME_SCREEN: NotYetPlace = NotYetPlace {
     missing: "Loading a saved session needs the save system.",
 };
 
-/// New game screen, live weather *Refresh*.
-pub const LIVE_WEATHER_REFRESH: NotYetPlace = NotYetPlace {
-    id: "newgame.live-weather-refresh",
-    place: "New game, Live Device Location, Refresh",
+/// *Plan a drive*, step *When*, the *Live weather* card.
+pub const LIVE_WEATHER: NotYetPlace = NotYetPlace {
+    id: "wizard.live-weather",
+    place: "Plan a drive, When, Live weather",
     milestone: "M-0062",
-    missing: "The location query is never called; the panel shows placeholder values.",
+    missing:
+        "The weather query is never called; live conditions need an explicit, explained opt-in.",
 };
 
 /// Every registered place. Add new ones here; the generated list and the tests follow.
-pub const PLACES: &[&NotYetPlace] = &[&LOAD_LAST_GAME, &LOAD_GAME_SCREEN, &LIVE_WEATHER_REFRESH];
+pub const PLACES: &[&NotYetPlace] = &[&LOAD_LAST_GAME, &LOAD_GAME_SCREEN, &LIVE_WEATHER];
 
 /// What a control offers right now.
 #[derive(Debug, Clone, PartialEq, Eq)]

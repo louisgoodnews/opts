@@ -332,3 +332,21 @@ fn the_selection_is_announced_at_the_start_and_on_every_change() {
         vec![Some("id1".to_string()), Some("id2".to_string())]
     );
 }
+
+#[test]
+fn a_selection_far_down_is_scrolled_into_view_when_the_list_appears() {
+    let mut app = layout_app();
+    let parts = spawn(
+        &mut app,
+        MasterDetail::new(entries(500), Some("id400".into())),
+    );
+    let v = view(&app, &parts);
+    let cursor = v.cursor().expect("cursor");
+    let top = cursor as f32 * 56.0;
+    assert!(
+        top >= v.scroll() && top + 56.0 <= v.scroll() + 560.0,
+        "row {cursor} at {top} not visible at scroll {}",
+        v.scroll()
+    );
+    assert!(v.scroll() > 20_000.0);
+}

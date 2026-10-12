@@ -114,10 +114,10 @@ pub struct MasterDetailView {
     pub(super) chip_entities: Vec<Entity>,
     pub(super) version: u64,
     pub(super) announced: Option<Option<String>>,
+    pub(super) reveal_pending: bool,
     pub(super) typed: String,
     pub(super) typed_at: f32,
     pub(super) last_click: Option<(String, f32)>,
-    pub(super) placeholder_count: Option<usize>,
 }
 
 /// What the row entities currently show (change detection of the renderer).
@@ -130,6 +130,11 @@ pub(super) struct Rendered {
 }
 
 impl MasterDetailView {
+    /// The entities of the pattern.
+    pub fn parts(&self) -> MasterDetailParts {
+        self.parts
+    }
+
     /// Number of row entities that currently exist (a test and diagnostics hook).
     pub fn live_rows(&self) -> usize {
         self.row_entities.len()
@@ -267,6 +272,7 @@ pub fn spawn_master_detail(
     let track = commands.spawn_empty().id();
     let thumb = commands.spawn_empty().id();
     let detail = commands.spawn_empty().id();
+    let panel = commands.spawn_empty().id();
     let args = vec![("count".to_string(), model.entries.len().into())]; // l10n-ok: id or variable name
     let search = TextFieldBuilder::outlined(loc.t_args(md::SEARCH_LABEL, &[]))
         .with_placeholder(loc.t_args(config.search_key, &args))
@@ -314,20 +320,19 @@ pub fn spawn_master_detail(
             chip_entities: Vec::new(),
             version: 0,
             announced: None,
+            reveal_pending: false,
             typed: String::new(),
             typed_at: f32::NEG_INFINITY,
             last_click: None,
-            placeholder_count: None,
         },
         Name::new("MasterDetail"),
     ));
     spawn_list_column(commands, parts, wrap, prefix);
     super::master_detail_input::attach_pointer_observers(commands, root, list, thumb);
-    commands.entity(detail).insert((
+    commands.entity(panel).insert((
         Node {
             flex_grow: 1.0,
             padding: UiRect::all(Val::Px(16.0)),
-            row_gap: Val::Px(12.0),
             overflow: Overflow::scroll_y(),
             ..container(FlexDirection::Column)
         },
@@ -336,16 +341,28 @@ pub fn spawn_master_detail(
         FocusRegion(Landmark::Detail),
         Name::new("MasterDetailPanel"),
     ));
-    super::scroll::wheel_scroll(commands, detail);
-    commands.entity(root).add_children(&[list_col, detail]);
+    // The screen fills this inner node; it never shrinks, so the panel scrolls instead.
+    commands.entity(detail).insert((
+        Node {
+            flex_shrink: 0.0,
+            width: Val::Percent(100.0),
+            row_gap: Val::Px(12.0),
+            ..container(FlexDirection::Column)
+        },
+        Name::new("MasterDetailContent"),
+    ));
+    commands.entity(panel).add_child(detail);
+    super::scroll::wheel_scroll(commands, panel);
+    commands.entity(root).add_children(&[list_col, panel]);
     parts
 }
 
 fn spawn_list_column(commands: &mut Commands, p: MasterDetailParts, wrap: Entity, prefix: &str) {
     commands.entity(p.list_col).insert((
         Node {
-            width: Val::Percent(36.0),
-            min_width: Val::Px(280.0),
+            width: Val::Percent(40.0),
+            min_width: Val::Px(320.0),
+            max_width: Val::Px(520.0),
             row_gap: Val::Px(8.0),
             ..container(FlexDirection::Column)
         },

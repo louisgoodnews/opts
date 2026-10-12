@@ -10,7 +10,7 @@ use opts_game::{
         InGameSessionInfo, LoadingScreenRoot, PauseMenuBtn, ProgressBarFill, ProgressPercentText,
         SimulationLoadState, SpeedometerText, StageIndicatorText, StatusTickerText,
     },
-    new_game_screen::{LaunchGameBtn, NewGameMenuPlugin, NewGameSetup},
+    new_game_screen::{FooterButton, NewGameMenuPlugin, NewGameSetup, PlannerHistory},
     settings::GameSettings,
 };
 use opts_gui::{interaction::events::ButtonClicked, prelude::*};
@@ -30,6 +30,7 @@ fn setup_test_app() -> App {
         .init_state::<AppState>()
         .add_plugins(OptsGuiPlugin)
         .insert_resource(opts_game::catalogue_service::testing::fixture_lists())
+        .insert_resource(PlannerHistory::at(None))
         .add_plugins(NewGameMenuPlugin)
         .add_plugins(InGamePlugin);
 
@@ -49,24 +50,32 @@ fn test_post_new_game_launch_spawns_loading_screen_and_widgets() {
     // Configure test parameters
     {
         let mut setup = app.world_mut().resource_mut::<NewGameSetup>();
-        setup.selected_map = "Berlin-Spandau 1989".to_string();
-        setup.selected_entry_point = "Freudstr. Terminal".to_string();
-        setup.selected_vehicle = "MAN SD77".to_string();
+        setup.selected_map = "Berlin-Spandau".to_string();
+        setup.selected_entry_point = "Rathaus Spandau".to_string();
+        setup.selected_vehicle = "MAN SD200 SD77".to_string();
         setup.selected_livery = "BVG Traditional Sandgelb".to_string();
         setup.weather_preset = "Clear Summer Day".to_string();
         setup.hour = 8;
         setup.minute = 30;
     }
 
-    // Find Launch Simulation button and click it
+    // The review step offers *Drive*; activating it starts the session.
+    app.world_mut()
+        .resource_mut::<opts_game::new_game_screen::PlannerState>()
+        .step = opts_game::new_game_screen::PlannerStep::Review;
+    for _ in 0..3 {
+        app.update();
+    }
     let launch_entity = app
         .world_mut()
-        .query_filtered::<Entity, With<LaunchGameBtn>>()
+        .query::<(Entity, &FooterButton)>()
         .iter(app.world())
-        .next()
-        .expect("LaunchGameBtn must be present in menu");
+        .find(|(_, k)| **k == FooterButton::Drive)
+        .map(|(e, _)| e)
+        .expect("the footer has a Drive button");
 
-    app.world_mut().write_message(ButtonClicked(launch_entity));
+    app.world_mut()
+        .write_message(opts_gui::interaction::Activated(launch_entity));
     app.update();
     app.update();
 
@@ -132,9 +141,9 @@ fn test_post_new_game_launch_spawns_loading_screen_and_widgets() {
 
     // Verify session info resource captured configured params
     let session = app.world().resource::<InGameSessionInfo>();
-    assert_eq!(session.map_name, "Berlin-Spandau 1989");
-    assert_eq!(session.entry_point, "Freudstr. Terminal");
-    assert_eq!(session.vehicle_name, "MAN SD77");
+    assert_eq!(session.map_name, "Berlin-Spandau");
+    assert_eq!(session.entry_point, "Rathaus Spandau");
+    assert_eq!(session.vehicle_name, "MAN SD200 SD77");
     assert_eq!(session.livery_name, "BVG Traditional Sandgelb");
     assert_eq!(session.start_hour, 8);
     assert_eq!(session.start_minute, 30);

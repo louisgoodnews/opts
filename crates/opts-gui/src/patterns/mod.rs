@@ -20,6 +20,7 @@ pub use master_detail::{
     spawn_master_detail, Chip, MasterDetail, MasterDetailChosen, MasterDetailConfig,
     MasterDetailFavourite, MasterDetailParts, MasterDetailSelected, MasterDetailView, RowThumb,
 };
+pub use master_detail_rows::ThumbGlyph;
 
 /// Registers the systems of every pattern; added by [`OptsGuiPlugin`](crate::OptsGuiPlugin).
 #[derive(Default)]

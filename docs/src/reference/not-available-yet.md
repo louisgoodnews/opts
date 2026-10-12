@@ -8,4 +8,4 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 | :--- | :--- | :--- | :--- |
 | Main menu, Load Last Game | `menu.load-last-game` | M-0062 | There is no save system; the shell offers Continue for the last drive. |
 | Load Saved Game screen | `screen.load-game` | M-0062 | Loading a saved session needs the save system. |
-| New game, Live Device Location, Refresh | `newgame.live-weather-refresh` | M-0062 | The location query is never called; the panel shows placeholder values. |
+| Plan a drive, When, Live weather | `wizard.live-weather` | M-0062 | The weather query is never called; live conditions need an explicit, explained opt-in. |

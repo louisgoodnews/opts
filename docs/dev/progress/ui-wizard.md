@@ -22,8 +22,8 @@ Game runs: `XDG_CONFIG_HOME=<wizard>/run-N/config XDG_DATA_HOME=<wizard>/run-N/d
 | :--- | :--- |
 | W0 Orient + specs (`docs/src/roadmap/phase-9/wizard-and-loading.md`) | done |
 | W1 Master-detail pattern (`opts-gui/src/patterns/`) | done (18 tests in the real layout; gates green for opts-gui, catalogue, audit) |
-| W2 Stepper and the four steps | open |
-| W3 Thumbnails and images | open |
+| W2 Stepper and the four steps | done (10 headless tests in the real layout; visual check at 1280x720 only so far) |
+| W3 Thumbnails and images | done (service, cache with cap, map pictures, livery swatches; 4 unit tests) |
 | W4 Loading screen | open |
 | W5 Tests, screenshots, docs, close-out | open |
 
@@ -48,4 +48,12 @@ Spec in `docs/src/roadmap/phase-9/wizard-and-loading.md`.
 - Pointer scroll uses `PointerScroll` observers; scroll bar thumb drag with `PointerDrag`.
 - `opts-catalogue`: `VehicleRecord.class` (road/rail/aircraft) added.
 - Search filters on every change (no 150 ms debounce: filtering is instant for thousands of entries).
-- Parking lot: the W2 code is written but not committed in this batch (stashed while W1 was committed).
+
+
+### W2 + W3 (one commit)
+- The module keeps its name `new_game_screen` (other branches import `types`, `repaints`, `NewGameSetup`); 18 legacy UI files and 3 legacy test files removed, `types.rs` slimmed (no `N/A` fields, `class`/`mass_tonnes` added), `DeviceLocationWeather` and the `curl wttr.in` query gone.
+- Wizard files: `planner.rs` (pure logic), `screen.rs` (header, stepper, summary, footer), `step_{where,what,when,review}.rs`, `systems.rs`, `choice.rs`, `livery.rs` (off-thread repaint discovery), `options.rs` (equipment modal), `history.rs`, `thumbnails.rs`, `texts.rs`, `weather.rs`, `ui.rs`.
+- Weather presets limited to the five the simulator really renders differently (clear, overcast, rain, snow, fog); "Night Service" and "Thunderstorm & Gale" dropped (no effect in the sim); old ids in history fall back to clear.
+- `vehicle_menu.rs` (in-game) no longer shows the six N/A facts, only the empty weight when known.
+- Seen in the running game (1280x720, dark): all four steps, real map pictures as thumbnails and hero, livery swatches coloured from textures, live weather card red marker. Not yet seen: light theme, 1024x640, 150 % scale, Compact stacking in the real game.
+- Environment note: other agents' games run on the same desktop; check `pgrep -fa wizard/target/debug/opts-game` for stale instances before taking screenshots (a stale instance shares `run-1/game.log`).

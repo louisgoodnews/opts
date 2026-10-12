@@ -3,10 +3,10 @@
 use bevy::prelude::*;
 
 use crate::components::button::ButtonBuilder;
-use crate::components::text_field::{M3TextField, TextFieldPlaceholder};
+use crate::components::text_field::M3TextField;
 use crate::icons::icon_text;
 use crate::interaction::state::Disabled;
-use crate::l10n::{wizard_keys::md, L10nArgs, L10nKey};
+use crate::l10n::{wizard_keys::md, L10nArgs, L10nKey, Localization};
 use crate::patterns::glyphs;
 use crate::patterns::list_model::{first_item, RowLayout};
 use crate::patterns::master_detail::{
@@ -48,6 +48,7 @@ pub(super) fn sync_model(
         }
         if view.announced.as_ref() != Some(&model.selected) {
             view.announced = Some(model.selected.clone());
+            view.reveal_pending = true;
             selected.write(MasterDetailSelected {
                 root,
                 id: model.selected.clone(),
@@ -73,7 +74,7 @@ pub(super) fn render(
     computed: Query<&ComputedNode>,
     mut nodes: Query<&mut Node>,
     mut texts: Query<(&mut L10nKey, &mut L10nArgs)>,
-    fields: Query<(Entity, &TextFieldPlaceholder)>,
+    loc: Res<Localization>,
     mut text_fields: Query<&mut M3TextField>,
 ) {
     for (root, model, mut view) in &mut roots {
@@ -84,6 +85,12 @@ pub(super) fn render(
         }
         let max = view.layout.max_scroll(height);
         view.scroll = view.scroll.clamp(0.0, max);
+        if view.reveal_pending && height > 8.0 && !view.layout.is_empty() {
+            if let Some(c) = view.cursor {
+                view.scroll = view.layout.reveal(c, view.scroll, height).clamp(0.0, max);
+            }
+            view.reveal_pending = false;
+        }
         let range = view.layout.visible_range(view.scroll, height);
         let sig = Rendered {
             range: range.clone(),
@@ -112,7 +119,7 @@ pub(super) fn render(
         }
         place_content(&mut nodes, &view, parts, height);
         update_notice(&mut nodes, &mut texts, model, &view);
-        update_placeholder(&mut commands, &mut view, model, &fields, &mut text_fields);
+        update_placeholder(&loc, &view, model, &mut text_fields);
         render_chips(&mut commands, root, &mut view, model);
     }
 }
@@ -189,24 +196,16 @@ fn update_notice(
 }
 
 fn update_placeholder(
-    commands: &mut Commands,
-    view: &mut MasterDetailView,
+    loc: &Localization,
+    view: &MasterDetailView,
     model: &MasterDetail,
-    fields: &Query<(Entity, &TextFieldPlaceholder)>,
     text_fields: &mut Query<&mut M3TextField>,
 ) {
-    let n = model.entries.len();
-    if view.placeholder_count == Some(n) {
-        return;
-    }
-    let search = view.parts.search;
-    if let Some((e, _)) = fields.iter().find(|(_, p)| p.0 == search) {
-        view.placeholder_count = Some(n);
-        commands
-            .entity(e)
-            .insert((L10nKey(view.config.search_key), L10nArgs::one("count", n))); // l10n-ok: id or variable name
-        if let Ok(mut f) = text_fields.get_mut(search) {
-            f.placeholder = String::new();
+    let args = [("count".to_string(), model.entries.len().into())]; // l10n-ok: variable name
+    let want = loc.t_args(view.config.search_key, &args);
+    if let Ok(mut f) = text_fields.get_mut(view.parts.search) {
+        if f.placeholder != want {
+            f.placeholder = want;
         }
     }
 }
@@ -285,7 +284,7 @@ pub(super) fn adapt_layout(
                 if compact {
                     Val::Percent(100.0)
                 } else {
-                    Val::Percent(36.0)
+                    Val::Percent(40.0)
                 },
             );
             set_if(
@@ -293,7 +292,7 @@ pub(super) fn adapt_layout(
                 if compact {
                     Val::Px(0.0)
                 } else {
-                    Val::Px(280.0)
+                    Val::Px(320.0)
                 },
             );
             set_if(
