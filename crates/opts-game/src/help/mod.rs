@@ -89,6 +89,7 @@ impl Plugin for HelpPlugin {
     fn build(&self, app: &mut App) {
         crate::pause::ensure_report_state(app);
         app.init_resource::<HelpState>()
+            .init_resource::<Pause>()
             .add_systems(OnEnter(AppState::Help), spawn_help)
             .add_systems(OnExit(AppState::Help), despawn_help)
             .add_systems(
