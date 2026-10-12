@@ -65,7 +65,8 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
 
 1. **Signs of `beta` and `gamma`** are a convention (nose up, right side up positive; `beta` = the follower's pitch minus the leader's). Q-ART-02: compare a bellows over a crest with OMSI.
 2. **AI and parked articulated vehicles** have no trailers ([M-0053](../roadmap/phase-4/M-0053.md)); the AI loader uses the full model of the head only.
-3. **`min_beta`/`max_beta`** of `[coupling_front_character]` are not applied (the joint is only limited in yaw); `[couple_front]` push-pull units do not load.
+3. **`min_beta`/`max_beta`** of `[coupling_front_character]` clamp `articulation_<k>_beta` (P-1011; corpus: ±20 on 234 files, ±50 20, ±10 10, ±25 7, ±30 4, ±15 2, (-80,45) 2; three files list them as `20, -20`, so min/max are sorted). Test `beta_is_limited_to_the_coupling_character`.
+4. **`[couple_front]` push-pull units:** no vehicle file in the installation uses a `[couple_front]` block (the only three matches, `TH_RS1.ovh`, `BR232_DB-VR.ovh`, `BR232_random.ovh`, contain it in a help comment `[couple_front]/[couple_back]`), so there is nothing to load and no test data; implementing it would be speculation. Open as a follow-up if a third-party vehicle needs it.
 4. **Physics** ignores the articulation: the trailers do not load the tractor, brakes and steering are the head's alone.
 5. **Sounds** of the joint (creaks, buzzer) are variables without an audio consumer.
 6. The ground under a trailer comes from the same height query as the head; where the trailer stands on a different surface (a ramp on one side) roll is only as good as the four samples.

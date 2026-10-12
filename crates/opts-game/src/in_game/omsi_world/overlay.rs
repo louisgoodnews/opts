@@ -213,23 +213,29 @@ pub fn update_wheel_vars_overlay(
         return;
     };
     let mut out = String::from("wheel variables (rad | rpm)\n");
-    let mut line = |label: &str, n: usize| {
-        out.push_str(&format!(
+    let line = |label: &str, n: usize| -> String {
+        format!(
             "{label} axle {n}: rot L {:.2} R {:.2} | speed l {:.1} r {:.1}\n",
             engine.get(&format!("wheel_rotation_{n}_l")),
             engine.get(&format!("wheel_rotation_{n}_r")),
             engine.get(&format!("wheel_rotationspeed_{n}_l")),
             engine.get(&format!("wheel_rotationspeed_{n}_r")),
-        ));
+        )
     };
     for n in 0..controller.sim.axles.len() {
-        line("head", n);
+        out.push_str(&line("head", n));
     }
     if let Some(chain) = chain {
         for (k, &e) in chain.segments.iter().enumerate() {
+            out.push_str(&format!(
+                "joint {k}: alpha {:.2} beta {:.2} gamma {:.2} deg\n",
+                engine.get(&format!("articulation_{k}_alpha")),
+                engine.get(&format!("articulation_{k}_beta")),
+                engine.get(&format!("articulation_{k}_gamma")),
+            ));
             if let Ok(seg) = segments.get(e) {
                 for j in 0..seg.wheels.len() {
-                    line(&format!("trailer {}", k + 1), seg.first_axle + j);
+                    out.push_str(&line(&format!("trailer {}", k + 1), seg.first_axle + j));
                 }
             }
         }

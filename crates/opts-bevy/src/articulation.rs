@@ -37,6 +37,9 @@ pub struct ArticulatedSegment {
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
     pub max_alpha_deg: f32,
+    /// Limits of the pitch `β` in degrees `(min, max)` (`[coupling_front_character]`); the
+    /// `articulation_<k>_beta` variable is clamped to them. `None`: unlimited.
+    pub beta_limits_deg: Option<(f32, f32)>,
     /// The segment hangs backwards (its model is turned by 180°). Its coupling points and rear
     /// axle are then given mirrored (`-x`, `-y`) and the model is rotated half a turn.
     pub reversed: bool,
@@ -85,6 +88,7 @@ impl ArticulatedSegment {
             front_local,
             rear_axle_y,
             max_alpha_deg,
+            beta_limits_deg: None,
             reversed: false,
             state: None,
             prev_pose: None,
@@ -93,6 +97,13 @@ impl ArticulatedSegment {
             first_axle: 0,
             wheels: Vec::new(),
         }
+    }
+
+    /// `beta` (degrees) limited to the joint's pitch range.
+    #[must_use]
+    pub fn clamp_beta_deg(&self, beta: f32) -> f32 {
+        self.beta_limits_deg
+            .map_or(beta, |(lo, hi)| beta.clamp(lo, hi))
     }
 
     /// Gives the segment its wheels: `first_axle` is the consist-wide index of its first axle and

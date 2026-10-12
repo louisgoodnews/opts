@@ -161,6 +161,7 @@ fn teleport(app: &mut App, root: Entity, by: Vec2) {
     c.sim.chassis.position += by;
 }
 
+/// Only alpha is exercised: beta and gamma need terrain in the harness (deferred to Phase E).
 #[test]
 fn spawn_displacement_of_the_leader_does_not_jackknife_the_segment() {
     let mut app = app();
@@ -215,4 +216,14 @@ fn a_leader_jump_does_not_spin_the_segment_wheels() {
         assert!(rpm.abs() <= plausible, "rpm {rpm} above {plausible}");
         assert!(alpha.abs() < 5.0, "alpha {alpha}");
     }
+}
+
+#[test]
+fn beta_is_limited_to_the_coupling_character() {
+    let mut seg = ArticulatedSegment::new(Vec2::ZERO, Vec2::ZERO, -5.0, 52.5);
+    assert_eq!(seg.clamp_beta_deg(35.0), 35.0, "unlimited without limits");
+    seg.beta_limits_deg = Some((-20.0, 20.0));
+    assert_eq!(seg.clamp_beta_deg(35.0), 20.0);
+    assert_eq!(seg.clamp_beta_deg(-35.0), -20.0);
+    assert_eq!(seg.clamp_beta_deg(5.0), 5.0);
 }
