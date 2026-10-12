@@ -21,7 +21,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | Batch | Status |
 | :--- | :--- |
 | S0 Orient + screen specs | done (`docs/src/roadmap/phase-9/screens.md`) |
-| S1 Shell frame, registry, back stack, Esc | open |
+| S1 Shell frame, registry, back stack, Esc | done (pending commit hash in Results) |
 | S2 Home | open |
 | S3 First run | open |
 | S4 Pause, leave, summary | open |
@@ -31,7 +31,12 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 
 ## Design decisions
 
-(see below, filled per batch)
+- The shell lives in `crates/opts-game/src/shell/` (`registry`, `nav`, `frame`, `esc`, `dialog`, `footer`, `keys`, `icons`, `l10n/shell-{en,de}.ftl`). The shell messages are NOT in `opts-gui`'s tables (to avoid merge conflicts with the other two agents): `Localization::extend(locale, source)` (new, in `opts-gui/src/l10n/mod.rs`) merges them at plugin build.
+- `AppState` now has `MainMenu` (= Home), `VehicleSelection` (= Drive), `Settings`, `Help`, `InGame`; `LoadGame` and `Credits` are gone (Load game is a not-yet entry on Home, Credits is Help -> About).
+- The frame is spawned once at Startup; `ShellContent` is `None` and the frame `Display::None` during `InGame` (set on `OnTransition{exited: X, entered: InGame}`), restored on `OnExit(InGame)`. Full-window overlays (loading, HUD) therefore build as roots with `spawn_screen_root`.
+- Esc: `EscGate` is computed in `PreUpdate` (modal, report/menu modal, open combobox, focused text entry, focused toast); `shell_back_system` sends `NavigateBack` only when the gate is open. Dialogs close themselves on `ModalEvent::CancelRequested`.
+- `menu/` keeps `glass.rs` (used by many screens) and `background.rs` (scrim, used by Home's hero); the sidebar menu files are deleted.
+- New not-yet places in `opts-gui/src/not_yet.rs`: `home.load-game`, `nav.library`, `nav.workshop` (replace `menu.load-last-game` and `screen.load-game`).
 
 ## Results
 

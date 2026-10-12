@@ -46,15 +46,13 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/loading_pipeline.rs",
     "opts-game/src/in_game/mod.rs",
     "opts-game/src/in_game/omsi_world/overlay.rs",
-    "opts-game/src/menu/systems.rs",
-    "opts-game/src/menu/theme_toggle.rs",
+    "opts-game/src/shell/footer.rs",
     "opts-game/src/new_game_screen/picker_systems.rs",
     "opts-game/src/new_game_screen/scroll_systems.rs",
     "opts-game/src/new_game_screen/search_systems.rs",
     "opts-game/src/new_game_screen/setvars_modal.rs",
     "opts-game/src/new_game_screen/systems.rs",
     "opts-game/src/settings_screen/systems.rs",
-    "opts-game/src/stub_screens/mod.rs",
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",
@@ -113,10 +111,9 @@ fn gated_registrations_still_use_the_run_condition() {
         ("opts-bevy/src/camera/plugin.rs", 6),
         ("opts-bevy/src/vehicle_sim.rs", 1),
         ("opts-bevy/src/vehicle_triggers.rs", 2),
-        ("opts-game/src/menu/plugin.rs", 1),
+        ("opts-game/src/shell/mod.rs", 1),
         ("opts-game/src/new_game_screen/mod.rs", 2),
         ("opts-game/src/settings_screen/mod.rs", 1),
-        ("opts-game/src/stub_screens/mod.rs", 1),
         ("opts-game/src/in_game/mod.rs", 1),
     ] {
         let src = std::fs::read_to_string(root.join(file)).expect(file);

@@ -6,6 +6,7 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 
 | Place | Id | Milestone | What is missing |
 | :--- | :--- | :--- | :--- |
-| Main menu, Load Last Game | `menu.load-last-game` | M-0062 | There is no save system; the shell offers Continue for the last drive. |
-| Load Saved Game screen | `screen.load-game` | M-0062 | Loading a saved session needs the save system. |
+| Home, Load game | `home.load-game` | M-0062 | There is no save system; Home offers Continue for the last drive. |
+| Navigation rail, Library | `nav.library` | M-0062 | The Library needs the master-detail pattern of the Plan a drive wizard and its detail panels. |
+| Navigation rail, Workshop | `nav.workshop` | M-0051 | Editor projects, installed mods and packaging need the editor and mod system. |
 | New game, Live Device Location, Refresh | `newgame.live-weather-refresh` | M-0062 | The location query is never called; the panel shows placeholder values. |

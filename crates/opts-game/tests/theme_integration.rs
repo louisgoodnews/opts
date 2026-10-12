@@ -144,17 +144,17 @@ fn a_theme_inserted_before_the_plugin_is_kept() {
 /// The screens rebuilt later by other milestones must not carry literal colours: they use role
 /// tokens (and the instrument token set for the HUD readouts).
 #[test]
-fn loading_screen_hud_and_stub_screens_carry_no_literal_colours() {
+fn loading_screen_hud_and_shell_screens_carry_no_literal_colours() {
     for (name, source) in [
         (
             "loading_ui.rs",
             include_str!("../src/in_game/loading_ui.rs"),
         ),
         ("hud.rs", include_str!("../src/in_game/hud.rs")),
-        (
-            "stub_screens/mod.rs",
-            include_str!("../src/stub_screens/mod.rs"),
-        ),
+        ("home/mod.rs", include_str!("../src/home/mod.rs")),
+        ("help/mod.rs", include_str!("../src/help/mod.rs")),
+        ("shell/frame.rs", include_str!("../src/shell/frame.rs")),
+        ("shell/dialog.rs", include_str!("../src/shell/dialog.rs")),
         (
             "instruments.rs",
             include_str!("../src/in_game/instruments.rs"),

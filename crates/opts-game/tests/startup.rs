@@ -2,8 +2,7 @@
 
 use bevy::prelude::*;
 use opts_game::{
-    app_state::AppState, build_app, menu::layout::MainMenuRoot, settings::GameSettings, AppArgs,
-    CliArgs,
+    app_state::AppState, build_app, home::HomeRoot, settings::GameSettings, AppArgs, CliArgs,
 };
 use std::path::PathBuf;
 
@@ -33,12 +32,10 @@ fn test_headless_startup_and_state_transition() {
         &AppState::MainMenu
     );
 
-    // Verify MainMenuRoot UI hierarchy spawned
-    let mut root_query = app
-        .world_mut()
-        .query_filtered::<Entity, With<MainMenuRoot>>();
+    // Verify HomeRoot UI hierarchy spawned
+    let mut root_query = app.world_mut().query_filtered::<Entity, With<HomeRoot>>();
     let root_count = root_query.iter(app.world()).count();
-    assert_eq!(root_count, 1, "MainMenuRoot entity must be present");
+    assert_eq!(root_count, 1, "HomeRoot entity must be present");
 
     // Verify AppArgs resource is registered
     let stored_args = app.world().resource::<AppArgs>();
