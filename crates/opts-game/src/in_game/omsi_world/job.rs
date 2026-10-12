@@ -129,6 +129,7 @@ pub fn resolve_session_config(
         vehicle_path,
         entry_point: req.selected_entry_point.to_string(),
         livery: req.selected_livery.to_string(),
+        setvars: Vec::new(),
         human_path,
         lookup: service.map(CatalogueService::path_lookup),
         name_lookup: service.map(CatalogueService::name_lookup),
@@ -325,6 +326,37 @@ impl WorldLoadJob {
         )
     }
 
+    /// Absolute OMSI position of the session frame's origin (the start tile's corner).
+    #[must_use]
+    pub fn session_origin(&self) -> (f32, f32) {
+        tile_origin(self.start_tile)
+    }
+
+    /// The map's entry points `(record number, name)`, in `global.cfg` order.
+    #[must_use]
+    pub fn entry_records(&self) -> Vec<(u32, String)> {
+        self.manifest
+            .entry_points
+            .iter()
+            .map(|e| (e.id, e.name.clone()))
+            .collect()
+    }
+
+    /// The `.bus` file the session's vehicle was loaded from.
+    #[must_use]
+    pub fn vehicle_file(&self) -> Option<&Path> {
+        self.config.vehicle_path.as_deref()
+    }
+
+    /// The `.bus` file of a catalogue vehicle (`bus_file` is relative to the OMSI root).
+    #[must_use]
+    pub fn bus_file(&self, rel: &str) -> Option<PathBuf> {
+        if rel.is_empty() {
+            return None;
+        }
+        self.install.find_file(rel)
+    }
+
     /// Tile the player starts on.
     #[must_use]
     pub fn start_tile(&self) -> (i32, i32) {
@@ -498,6 +530,29 @@ impl WorldLoadJob {
             })
             .or_else(|| eps.first())?
             .clone();
+        self.find_entry_spawn_of(&ep, keys)
+    }
+
+    /// [`Self::find_entry_spawn`] for the entry record with this number.
+    pub(super) fn find_entry_spawn_by_id(
+        &mut self,
+        id: u32,
+        keys: &[(i32, i32)],
+    ) -> Option<((i32, i32), (Vec3, f32))> {
+        let ep = self
+            .manifest
+            .entry_points
+            .iter()
+            .find(|e| e.id == id)?
+            .clone();
+        self.find_entry_spawn_of(&ep, keys)
+    }
+
+    fn find_entry_spawn_of(
+        &mut self,
+        ep: &opts_core::formats::map::MapEntryPoint,
+        keys: &[(i32, i32)],
+    ) -> Option<((i32, i32), (Vec3, f32))> {
         for &key in keys {
             let Some(tile) = self.read_tile(key) else {
                 continue;

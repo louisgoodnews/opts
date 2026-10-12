@@ -25,12 +25,15 @@ use crate::in_game::loading_pipeline::{
 use crate::in_game::loading_ui::spawn_loading_screen_ui;
 use crate::new_game_screen::types::NewGameSetup;
 
+mod vehicle_menu;
+
 pub use camera::MenuCamera;
 pub use types::{
     CancelLoadingBtn, InGameCamera, InGameEntity, InGameHudRoot, InGameSessionInfo, LoadStage,
     LoadingScreenRoot, PauseMenuBtn, ProgressBarFill, ProgressPercentText, SimulationLoadState,
     SpeedometerText, StageIndicatorText, StartDrivingBtn, StatusTickerText, TachometerText,
 };
+pub use vehicle_menu::{MenuCommands, VehicleMenu, VehicleMenuPlugin};
 
 /// Bevy plugin managing the active transit simulation lifecycle, loading sequence, and driving HUD.
 #[derive(Default)]
@@ -60,6 +63,11 @@ impl Plugin for InGamePlugin {
                 overlay_visible: true,
                 ..default()
             });
+
+        app.add_plugins(VehicleMenuPlugin).add_systems(
+            Update,
+            omsi_world::handle_vehicle_requests.run_if(in_state(AppState::InGame)),
+        );
 
         // Lifecycle hooks for entering/exiting AppState::InGame
         app.add_systems(

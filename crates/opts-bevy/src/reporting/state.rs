@@ -61,12 +61,20 @@ impl ReportModalData {
 #[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct ModalActive(pub bool);
 
-/// Run condition for every input-driven system that must not react while the report modal
-/// is up. The modal's own systems and the F1 trigger do not use it. A missing resource (no
-/// `ReportingPlugin`, e.g. in tests) counts as "not active".
+/// `true` while the in-game vehicle menu (Left Alt) is open: the cursor is free and the driving,
+/// camera and cockpit inputs stand still, like during the report modal.
+#[derive(Resource, Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct MenuModalActive(pub bool);
+
+/// Run condition for every input-driven system that must not react while the report modal or
+/// the in-game menu is up. The modals' own systems and the F1 trigger do not use it. A missing
+/// resource (no `ReportingPlugin`, e.g. in tests) counts as "not active".
 #[must_use]
-pub fn not_modal_active(modal: Option<Res<ModalActive>>) -> bool {
-    !modal.is_some_and(|m| m.0)
+pub fn not_modal_active(
+    modal: Option<Res<ModalActive>>,
+    menu: Option<Res<MenuModalActive>>,
+) -> bool {
+    !modal.is_some_and(|m| m.0) && !menu.is_some_and(|m| m.0)
 }
 
 /// Best-effort facts about the running session, filled in by the application (`opts-game`)

@@ -21,7 +21,10 @@ use bevy::prelude::*;
 pub use format::{format_report, ReportMeta};
 pub use modal::ReportsDir;
 pub use save::{ensure_reports_dir, reports_dir, save_report, SavedReport};
-pub use state::{not_modal_active, ModalActive, ReportContext, ReportModalData, ReportModalState};
+pub use state::{
+    not_modal_active, MenuModalActive, ModalActive, ReportContext, ReportModalData,
+    ReportModalState,
+};
 pub use trigger::REPORT_KEY;
 
 /// Registers the reporting feature.
@@ -33,6 +36,7 @@ impl Plugin for ReportingPlugin {
         app.init_state::<ReportModalState>()
             .init_resource::<ReportModalData>()
             .init_resource::<ModalActive>()
+            .init_resource::<MenuModalActive>()
             .init_resource::<ReportContext>()
             .init_resource::<capture::CaptureChannel>()
             .init_resource::<capture::EncodeTask>()

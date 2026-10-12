@@ -954,6 +954,9 @@ fn attach_scripts(
             }
         }
     }
+    for (var, value) in &job.config.setvars {
+        engine.set(var, *value as f32);
+    }
     commands
         .entity(root)
         .insert(opts_bevy::VehicleScripts::new(engine));
@@ -980,4 +983,18 @@ fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
         "vehicle script key bindings loaded"
     );
     commands.insert_resource(bindings);
+}
+
+#[cfg(test)]
+mod bone_tests {
+    use super::is_bone_stem;
+
+    #[test]
+    fn bone_dummies_are_bone_underscore_letter() {
+        assert!(is_bone_stem("bone_a"));
+        assert!(is_bone_stem("bone_d"));
+        assert!(!is_bone_stem("bone_ab"));
+        assert!(!is_bone_stem("bone_1"));
+        assert!(!is_bone_stem("gn_dum_gelenk_a"));
+    }
 }

@@ -445,6 +445,25 @@ fn parse_usize(s: &str, field: &'static str, line: usize) -> Result<usize, Scene
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn flat_width_counts_only_level_strips() {
+        let pt = |x: f32, z: f32| SplineProfilePoint {
+            x,
+            z,
+            u: 0.0,
+            v_slope: 0.0,
+        };
+        let mut sli = SplineProfile::default();
+        // A paved area: 10 m flat; a kerb: 0.15 m wide with 0.15 m rise; a wall: vertical.
+        sli.graphical_profiles.push(SplineGraphicalProfile {
+            texture_index: 0,
+            points: vec![pt(-5.0, 0.0), pt(5.0, 0.0), pt(5.0, 0.4)],
+        });
+        assert!((sli.flat_width() - 10.0).abs() < 1e-4);
+        sli.graphical_profiles[0].points = vec![pt(0.0, 0.0), pt(0.0, 2.0), pt(0.2, 2.0)];
+        assert!(sli.flat_width() < 0.5);
+    }
+
     use super::*;
 
     #[test]

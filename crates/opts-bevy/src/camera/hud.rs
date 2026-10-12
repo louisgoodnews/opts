@@ -30,7 +30,7 @@ pub fn camera_hint_text(
         parts.push(label);
     }
     let cursor = if matches!(state.mode, CameraMode::FreeRoam | CameraMode::Ego) {
-        "   [Alt] Cursor"
+        "   [L-Alt] Vehicle menu"
     } else {
         ""
     };

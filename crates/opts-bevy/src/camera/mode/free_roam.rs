@@ -91,6 +91,7 @@ pub fn manage_free_roam_cursor(
     keys: Res<ButtonInput<KeyCode>>,
     cameras: Query<(), With<Camera3d>>,
     modal: Option<Res<crate::reporting::ModalActive>>,
+    menu: Option<Res<crate::reporting::MenuModalActive>>,
     mut windows: Query<&mut CursorOptions, With<PrimaryWindow>>,
     mut locked: Local<bool>,
 ) {
@@ -98,6 +99,7 @@ pub fn manage_free_roam_cursor(
     let want_lock = matches!(state.mode, CameraMode::FreeRoam | CameraMode::Ego)
         && !cameras.is_empty()
         && !modal.is_some_and(|m| m.0)
+        && !menu.is_some_and(|m| m.0)
         && !keys.pressed(KeyCode::AltLeft);
     if want_lock == *locked {
         return;

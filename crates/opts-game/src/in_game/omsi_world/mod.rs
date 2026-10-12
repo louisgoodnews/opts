@@ -23,6 +23,7 @@ mod overlay;
 mod pedestrians;
 pub(crate) mod rail;
 mod reload;
+mod respawn;
 mod tile;
 mod tile_ground;
 mod traffic;
@@ -45,6 +46,9 @@ pub use rail::{
     RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
 };
 pub use reload::ReloadPlan;
+pub use respawn::{
+    handle_vehicle_requests, DespawnVehicleRequest, EntryIndex, ResolvedEntry, SpawnVehicleRequest,
+};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
@@ -80,6 +84,9 @@ pub struct OmsiSessionConfig {
     pub entry_point: String,
     /// Repaint of the player's vehicle (empty: the default of its `.bus`).
     pub livery: String,
+    /// Equipment options (`[setvar]`-style script variables) set on the vehicle's scripts after
+    /// the repaint's own.
+    pub setvars: Vec<(String, i32)>,
     /// `.hum` profile of the player's character, if the installation has one.
     pub human_path: Option<PathBuf>,
     /// Cached path index (the SQLite catalogue), if available.

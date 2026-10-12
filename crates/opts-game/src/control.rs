@@ -36,6 +36,8 @@ impl Plugin for GameControlPlugin {
         registry.register("vehicle.script_vars", script_vars);
         registry.register("vehicle.get", vehicle_get);
         registry.register("camera.teleport", teleport);
+        registry.register("menu.do", menu_do);
+        registry.register("menu.state", menu_state);
         app.add_systems(Update, allow_session_reads);
     }
 }
@@ -243,6 +245,27 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
             json!({ "translation": [position.x, position.y, position.z] }),
         ))
     }))
+}
+
+/// `menu.do {command}`: drives the in-game vehicle menu (`MenuCommands`).
+fn menu_do(world: &mut World, params: &Value) -> Outcome {
+    let command = match str_param(params, "command") {
+        Ok(c) => c.to_string(),
+        Err(e) => return Outcome::err(e),
+    };
+    let Some(mut q) = world.get_resource_mut::<crate::in_game::MenuCommands>() else {
+        return Outcome::err(RpcError::new(code::NOT_READY, "the menu is not running"));
+    };
+    q.0.push(command.clone());
+    Outcome::ok(json!({ "queued": command }))
+}
+
+/// `menu.state`: page, choices and the free entry points of the vehicle menu.
+fn menu_state(world: &mut World, _: &Value) -> Outcome {
+    match world.get_resource::<crate::in_game::VehicleMenu>() {
+        Some(m) => Outcome::ok(m.describe()),
+        None => Outcome::err(RpcError::new(code::NOT_READY, "the menu is not running")),
+    }
 }
 
 /// `vehicle.script_vars {contains?}`: the player vehicle's script variables (name → value),
