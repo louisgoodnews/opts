@@ -13,6 +13,7 @@ use crate::actions::UiAction;
 use crate::interaction::activation::Activated;
 use crate::interaction::state::{Disabled, DisabledReason};
 use crate::not_yet::NotAvailableYet;
+use crate::theme::contrast::{composite_over, contrast_ratio};
 use crate::testing::{act, focused};
 use crate::ui_id::UiId;
 use crate::ui_tree::{role_of, snapshot, UiRole};
@@ -191,6 +192,254 @@ pub fn disabled_without_reason(world: &mut World) -> Vec<String> {
                 "{} is disabled without a reason",
                 id.map_or(format!("{e:?}"), |i| i.0.to_string())
             ));
+        }
+    }
+    out
+}
+
+/// Result of [`text_contrast`].
+#[derive(Debug, Default)]
+pub struct ContrastReport {
+    /// Text and border pairs that fall below the threshold.
+    pub violations: Vec<String>,
+    /// Pairs measured.
+    pub checked: usize,
+    /// Texts drawn over an image: not measurable from the tree (the scrim rule and the screenshots
+    /// cover them).
+    pub over_image: usize,
+}
+
+/// Is `entity` or an ancestor hidden (`Display::None` or `Visibility::Hidden`)?
+fn hidden(world: &World, entity: Entity) -> bool {
+    let mut cur = Some(entity);
+    while let Some(e) = cur {
+        if world
+            .get::<Node>(e)
+            .is_some_and(|n| n.display == Display::None)
+            || world
+                .get::<Visibility>(e)
+                .is_some_and(|v| *v == Visibility::Hidden)
+        {
+            return true;
+        }
+        cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    }
+    false
+}
+
+/// Is `entity` or an ancestor disabled (WCAG exempts inactive components, except the red
+/// not-available-yet marker, which must stay readable)?
+fn inactive(world: &World, entity: Entity) -> bool {
+    let mut cur = Some(entity);
+    while let Some(e) = cur {
+        if world.get::<NotAvailableYet>(e).is_some() {
+            return false;
+        }
+        if world.get::<Disabled>(e).is_some() {
+            return true;
+        }
+        cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    }
+    false
+}
+
+/// The opaque colour behind `entity`: its ancestors' `BackgroundColor`s composited from the root
+/// (`root` is the window background), `None` when an image sits in the chain.
+fn resolved_background(world: &World, entity: Entity, root: Color) -> Option<Color> {
+    let mut chain = Vec::new();
+    let mut cur = world.get::<ChildOf>(entity).map(|c| c.parent());
+    while let Some(e) = cur {
+        if world.get::<ImageNode>(e).is_some() {
+            return None;
+        }
+        if let Some(bg) = world.get::<BackgroundColor>(e) {
+            if bg.0.alpha() > 0.0 {
+                chain.push(bg.0);
+            }
+        }
+        cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    }
+    Some(
+        chain
+            .into_iter()
+            .rev()
+            .fold(root, |below, above| composite_over(above, below)),
+    )
+}
+
+/// WCAG contrast of every visible, enabled text against the colour behind it, and of every
+/// visible control border (`BorderColor` on a focusable element) against its own surroundings.
+///
+/// `root` is the colour of the window behind the whole tree (the theme's `Background`);
+/// `text_min` and `control_min` are the thresholds of the theme under test
+/// ([`crate::theme::accent::text_min`], [`crate::theme::accent::control_min`]). Text of 24 px and
+/// above counts as large text and needs 3:1 (4.5:1 in high contrast, where `text_min` is 7).
+pub fn text_contrast(world: &mut World, root: Color, text_min: f32, control_min: f32) -> ContrastReport {
+    let mut report = ContrastReport::default();
+    let mut q = world.query::<(Entity, &Text, &TextColor, &TextFont)>();
+    let texts: Vec<(Entity, String, Color, f32)> = q
+        .iter(world)
+        .filter(|(_, t, ..)| !t.0.trim().is_empty())
+        .map(|(e, t, c, f)| {
+            let size = match f.font_size {
+                FontSize::Px(p) => p,
+                _ => 14.0,
+            };
+            (e, t.0.clone(), c.0, size)
+        })
+        .collect();
+    for (e, text, fg, size) in texts {
+        if hidden(world, e) || inactive(world, e) {
+            continue;
+        }
+        let Some(bg) = resolved_background(world, e, root) else {
+            report.over_image += 1;
+            continue;
+        };
+        let fg = composite_over(fg, bg);
+        let need = if size >= 24.0 {
+            if text_min > 4.5 {
+                4.5
+            } else {
+                3.0
+            }
+        } else {
+            text_min
+        };
+        let ratio = contrast_ratio(fg, bg);
+        report.checked += 1;
+        if ratio + 1e-3 < need {
+            let id = world.get::<UiId>(e).map(|u| u.0.to_string());
+            report.violations.push(format!(
+                "text {text:?} ({} px) {} is {ratio:.2}:1, needs {need}",
+                size,
+                id.unwrap_or_else(|| format!("{e:?}"))
+            ));
+        }
+    }
+    let mut q = world.query::<(Entity, &BorderColor, &Node, Has<crate::interaction::focus::Focusable>)>();
+    let borders: Vec<(Entity, Color)> = q
+        .iter(world)
+        .filter(|(_, b, n, focusable)| {
+            *focusable
+                && b.top.alpha() > 0.0
+                && (n.border.left != Val::ZERO || n.border.top != Val::ZERO)
+        })
+        .map(|(e, b, ..)| (e, b.top))
+        .collect();
+    for (e, border) in borders {
+        if hidden(world, e) || inactive(world, e) {
+            continue;
+        }
+        let Some(bg) = resolved_background(world, e, root) else {
+            continue;
+        };
+        let ratio = contrast_ratio(composite_over(border, bg), bg);
+        report.checked += 1;
+        if ratio + 1e-3 < control_min {
+            report.violations.push(format!(
+                "border of {} is {ratio:.2}:1, needs {control_min}",
+                world
+                    .get::<UiId>(e)
+                    .map_or(format!("{e:?}"), |u| u.0.to_string())
+            ));
+        }
+    }
+    report
+}
+
+/// Text that does not fit: wider than its container, cut by a clipping ancestor, outside the
+/// window, or overlapping another text. Ellipsis with a tooltip is the only allowed truncation
+/// (design language section 5 and expandability section 7.4), so a text that already carries
+/// [`Tooltip`](crate::interaction::tooltip::Tooltip) and a single line is exempt from the
+/// "wider than container" check.
+///
+/// Meant for the pseudo-locale (`en-XA`, 40 % longer) and long German strings: the same screen is
+/// laid out in the locale under test and checked at the window size given.
+pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
+    use crate::ui_tree::rect_of;
+    let mut q = world.query::<(Entity, &Text)>();
+    let texts: Vec<(Entity, String)> = q
+        .iter(world)
+        .filter(|(_, t)| !t.0.trim().is_empty())
+        .map(|(e, t)| (e, t.0.clone()))
+        .collect();
+    let mut rects: Vec<(Entity, String, [f32; 4])> = Vec::new();
+    let mut out = Vec::new();
+    for (e, text) in texts {
+        if hidden(world, e) {
+            continue;
+        }
+        let Some(r) = rect_of(world, e) else { continue };
+        let name = world
+            .get::<UiId>(e)
+            .map_or(format!("{text:?}"), |u| format!("{text:?} ({})", u.0));
+        // Nearest ancestor that clips, and the direct parent's box.
+        let mut clip: Option<[f32; 4]> = None;
+        let mut scrolls_y = false;
+        let mut cur = world.get::<ChildOf>(e).map(|c| c.parent());
+        let parent_rect = cur.and_then(|p| rect_of(world, p));
+        while let Some(a) = cur {
+            if let Some(n) = world.get::<Node>(a) {
+                if n.overflow.x != OverflowAxis::Visible || n.overflow.y != OverflowAxis::Visible {
+                    clip = rect_of(world, a);
+                    scrolls_y = n.overflow.y == OverflowAxis::Scroll;
+                    break;
+                }
+            }
+            cur = world.get::<ChildOf>(a).map(|c| c.parent());
+        }
+        let tolerance = 1.5;
+        let has_tooltip = world
+            .get::<crate::interaction::tooltip::Tooltip>(e)
+            .is_some();
+        if let Some(p) = parent_rect {
+            if !has_tooltip && r[0] + r[2] > p[0] + p[2] + tolerance {
+                out.push(format!(
+                    "{name} sticks out of its container by {:.0} px (right)",
+                    r[0] + r[2] - p[0] - p[2]
+                ));
+            }
+        }
+        if let Some(c) = clip {
+            if !has_tooltip && (r[0] < c[0] - tolerance || r[0] + r[2] > c[0] + c[2] + tolerance) {
+                out.push(format!("{name} is cut by a clipping container"));
+            }
+        }
+        if clip.is_none() || !scrolls_y {
+            if r[0] < -tolerance
+                || r[1] < -tolerance
+                || r[0] + r[2] > window.x + tolerance
+                || r[1] + r[3] > window.y + tolerance
+            {
+                out.push(format!(
+                    "{name} leaves the {}x{} window ({:.0},{:.0} {:.0}x{:.0})",
+                    window.x, window.y, r[0], r[1], r[2], r[3]
+                ));
+            }
+        }
+        rects.push((e, name, r));
+    }
+    for (i, (ea, na, a)) in rects.iter().enumerate() {
+        for (eb, nb, b) in &rects[i + 1..] {
+            let w = (a[0] + a[2]).min(b[0] + b[2]) - a[0].max(b[0]);
+            let h = (a[1] + a[3]).min(b[1] + b[3]) - a[1].max(b[1]);
+            if w > 2.0 && h > 2.0 {
+                // Texts on different layers (a dialog over a page) are expected to overlap.
+                let layer = |e: Entity| {
+                    let mut cur = Some(e);
+                    while let Some(x) = cur {
+                        if world.get::<crate::components::modal::ModalRoot>(x).is_some() {
+                            return Some(x);
+                        }
+                        cur = world.get::<ChildOf>(x).map(|c| c.parent());
+                    }
+                    None
+                };
+                if layer(*ea) == layer(*eb) {
+                    out.push(format!("{na} overlaps {nb} ({w:.0}x{h:.0} px)"));
+                }
+            }
         }
     }
     out

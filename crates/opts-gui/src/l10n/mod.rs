@@ -152,6 +152,46 @@ impl Localization {
             .unwrap_or_default()
     }
 
+    /// Keys of the own table of `locale` (no fallback), sorted.
+    pub fn keys_of(&self, locale: &str) -> Vec<&str> {
+        let mut v: Vec<&str> = self
+            .bundles
+            .get(locale)
+            .map(|b| b.messages.keys().map(String::as_str).collect())
+            .unwrap_or_default();
+        v.sort_unstable();
+        v
+    }
+
+    /// The variables (`$name`, selectors included) and message references the pattern of `key`
+    /// in the own table of `locale` uses, sorted; `None` when the table lacks the key. German
+    /// and English must agree on them, or a variable is lost in translation.
+    pub fn variables_of(&self, locale: &str, key: &str) -> Option<Vec<String>> {
+        fn walk(p: &fluent::Pattern, out: &mut std::collections::BTreeSet<String>) {
+            for part in p {
+                match part {
+                    fluent::Part::Text(_) => {}
+                    fluent::Part::Var(v) => {
+                        out.insert(format!("${v}"));
+                    }
+                    fluent::Part::Ref(r) => {
+                        out.insert(r.clone());
+                    }
+                    fluent::Part::Select { var, variants, .. } => {
+                        out.insert(format!("${var}"));
+                        for (_, v) in variants {
+                            walk(v, out);
+                        }
+                    }
+                }
+            }
+        }
+        let pattern = self.bundles.get(locale)?.messages.get(key)?;
+        let mut out = std::collections::BTreeSet::new();
+        walk(pattern, &mut out);
+        Some(out.into_iter().collect())
+    }
+
     /// Whether `locale` has its own table with `key`.
     pub fn has(&self, locale: &str, key: &str) -> bool {
         self.bundles

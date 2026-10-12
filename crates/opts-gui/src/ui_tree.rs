@@ -343,7 +343,7 @@ fn value_of(world: &World, entity: Entity) -> Option<String> {
         })
 }
 
-fn rect_of(world: &World, entity: Entity) -> Option<[f32; 4]> {
+pub(crate) fn rect_of(world: &World, entity: Entity) -> Option<[f32; 4]> {
     let computed = world.get::<ComputedNode>(entity)?;
     let transform = world.get::<UiGlobalTransform>(entity)?;
     let size = computed.size();
