@@ -234,7 +234,7 @@ pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &Instru
                 position_type: PositionType::Absolute,
                 left: Val::Px(20.0),
                 bottom: Val::Px(20.0),
-                max_width: Val::Percent(28.0),
+                max_width: Val::Percent(36.0),
                 ..default()
             })
             .with_children(|row| {

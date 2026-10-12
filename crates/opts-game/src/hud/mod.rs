@@ -1,6 +1,6 @@
 //! The HUD: widgets from a registry, placed by profiles (`docs/src/architecture/hud-registry.md`).
 //!
-//! * [`widget`]: slots, vehicle kinds and the [`HudWidget`](widget::HudWidget) descriptors.
+//! * [`widget`]: slots, vehicle kinds and the [`HudWidget`] descriptors.
 //! * [`profile`]: RON profiles per vehicle kind, with user overrides.
 //! * [`build`]: spawns the HUD of the player's vehicle; [`update`]: change-driven updates.
 //! * [`alerts`]: the one-at-a-time alert line (UI-P13); [`fade`]: status bar, hints and the

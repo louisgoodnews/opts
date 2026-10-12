@@ -160,7 +160,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟡 **Settings registry and generic settings page** (M-0063, code) — done 2026-10-12: descriptors, `settings.db` bridge, seven-category page with search, *Reset* and the 15 s revert prompt, `settings.*` in the control protocol, generated reference; see [progress](progress/ui-settings.md).
 - [ ] 🟡 **Key, gamepad and wheel rebinding** (M-0035, code) — the *Controls* page lists the menu keys read-only; rebinding is marked "Feature not available yet!".
 - [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; colour-blind simulation in the contrast test; remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).
-- [ ] 🟡 **Instrument HUD, HUD registry, help overlay, developer panel** (M-0064, code)
+- [x] 🟡 **HUD registry, profiles, alerts, camera label, Details dialog, developer panel setting** (M-0064, code) — done 2026-10-12 on `agent/ui-hud`; see [progress](progress/ui-hud.md).
+- [ ] 🟡 **Help overlay generated from the bindings; Pause → Vehicle; HUD review** (M-0064, code)
 - [ ] 🟡 **WCAG audit, gamepad navigation, German/English, usability test** (M-0065, test)
 
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)

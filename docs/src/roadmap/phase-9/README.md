@@ -39,7 +39,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0061 — UI Foundations](M-0061.md) — 🟡 In progress: **part A done** (theme foundations: dark default, modes, typography, scale, density, accents with contrast guard, one theme everywhere); part B open (states, focus, action layer, UI ids)
 - [M-0062 — App Shell and Flow](M-0062.md) — ⏳ Planned (shell, Home, Plan a drive, loading, pause)
 - [M-0063 — Settings System](M-0063.md) — 🟡 Started (registry, generic page, real settings and `settings.*` done; rebinding, audio, view distance, time scale shown as not available yet)
-- [M-0064 — HUD and In-Game UI](M-0064.md) — ⏳ Planned (instrument HUD, registry, help, developer panel)
+- [M-0064 — HUD and In-Game UI](M-0064.md) — 🟡 Started (HUD registry, profiles, slots, alerts, developer panel done; generated help overlay open)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — ⏳ Planned (WCAG audit, gamepad, de/en, usability test)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -86,6 +86,7 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
   - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](M-0064.md)
-  - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
+  - [x] HUD from registered widgets and vehicle-type profiles (RON), widget switches in Settings, alerts, 1.5 s camera label, Details dialog, developer panel off by default (2026-10-12, `agent/ui-hud`).
+  - [ ] Help overlay generated from the bindings; *Pause → Vehicle*; HUD review sign-off.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](M-0065.md)
   - [ ] WCAG 2.2 AA audit, gamepad/wheel navigation, German and English complete, moderated usability test.

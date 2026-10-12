@@ -115,18 +115,18 @@ pub fn gear_text(gear: GearPosition) -> String {
     }
 }
 
+/// What the sampler reads of the player's vehicle.
+type PlayerParts = (
+    &'static VehicleController,
+    Has<RailPlayer>,
+    Has<ArticulatedChain>,
+    Option<&'static BusVehicle>,
+);
+
 /// Samples the player's vehicle and the camera.
 pub fn sample_values(
     camera: Res<CameraState>,
-    vehicle: Query<
-        (
-            &VehicleController,
-            Has<RailPlayer>,
-            Has<ArticulatedChain>,
-            Option<&BusVehicle>,
-        ),
-        With<PlayerVehicle>,
-    >,
+    vehicle: Query<PlayerParts, With<PlayerVehicle>>,
     mut values: ResMut<HudValues>,
 ) {
     let mut next = HudValues {
