@@ -42,6 +42,39 @@ impl WorldLoadJob {
         self.queue.is_empty()
     }
 
+    /// Tiles loaded so far and tiles asked for (the 3x3 neighbourhood), for the loading screen.
+    #[must_use]
+    pub fn tile_counts(&self) -> (usize, usize) {
+        (
+            self.total_tiles.saturating_sub(self.queue.len()),
+            self.total_tiles,
+        )
+    }
+
+    /// The first `limit` files that could not be read, for the loading report.
+    #[must_use]
+    pub fn failed_files(&self, limit: usize) -> Vec<String> {
+        self.cache
+            .stats
+            .failures
+            .iter()
+            .take(limit)
+            .cloned()
+            .collect()
+    }
+
+    /// Tiles around the start that the map lists but whose file is missing.
+    #[must_use]
+    pub fn tiles_listed_missing(&self) -> usize {
+        self.missing_listed
+    }
+
+    /// Whether the session names a vehicle file (otherwise the map's AI list supplies one).
+    #[must_use]
+    pub fn has_vehicle_file(&self) -> bool {
+        self.config.vehicle_path.is_some()
+    }
+
     /// Next tile to load, for status messages.
     #[must_use]
     pub fn next_tile(&self) -> Option<(i32, i32)> {
@@ -226,6 +259,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         spawn: None,
         repaint: None,
         start_tile: (0, 0),
+        missing_listed: 0,
         camera: None,
         camera_std_index: 0,
     };
@@ -295,6 +329,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
             if job.tile_path(key).is_some() {
                 job.queue.push_back(key);
             } else {
+                if job.manifest.tiles.iter().any(|t| (t.x, t.y) == key) {
+                    job.missing_listed += 1;
+                }
                 tracing::debug!(tile = ?key, "neighbour tile not present in map");
             }
         }

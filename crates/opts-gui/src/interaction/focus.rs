@@ -26,6 +26,11 @@ pub struct Focusable {
     pub tab_index: usize,
 }
 
+/// A control that keeps the up and down arrow keys for itself (a list box moves its own
+/// selection with them); left and right still move focus.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct OwnsVerticalArrows;
+
 /// A control that is operated by the pointer only and never takes focus (the in-game HUD:
 /// `interaction-and-feel.md` section 8).
 #[derive(Component, Debug, Clone, Copy, Default)]
@@ -151,17 +156,18 @@ type ArrowOwners = (
     Has<TextArea>,
     Has<M3TextField>,
     Has<EditableText>,
+    Has<OwnsVerticalArrows>,
 );
 
 fn control_owns_arrow(
     owners: Option<<ArrowOwners as bevy::ecs::query::QueryData>::Item<'_, '_>>,
     dir: Direction,
 ) -> bool {
-    let Some((tree, combo, area, field, editable)) = owners else {
+    let Some((tree, combo, area, field, editable, list)) = owners else {
         return false;
     };
     let horizontal = matches!(dir, Direction::Left | Direction::Right);
-    (horizontal && (tree || area || field || editable)) || (!horizontal && (combo || area))
+    (horizontal && (tree || area || field || editable)) || (!horizontal && (combo || area || list))
 }
 
 /// Reconciles [`Focused`] and [`InputFocus`]; drops focus from controls that disappeared or were

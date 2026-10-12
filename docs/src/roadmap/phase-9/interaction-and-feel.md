@@ -106,7 +106,7 @@ Errors follow one template and one of three placements.
 | **Dialog** | the action can't continue and needs a decision |
 | **Toast** | a finished background event with no decision; max 3 visible, stacked, never overlapping; errors are never *only* a toast |
 
-**Load results are never overwritten** (F03): the loading screen ends in *Ready*, *Ready with N problems* (with *Details* and *Continue*) or *Failed* (with *Retry*, *Choose another*, *Back*).
+**Load results are never overwritten** (F03): the loading screen ends in *Ready*, *Ready with N problems* (with *Details* and *Continue*) or *Failed* (with *Retry*, *Choose another*, *Back*). Problems have a **severity** (one table in `in_game::load_report::severity_of`): **blocking** = the map, a map tile or the player vehicle did not load; **minor** = individual assets (textures, scenery meshes, fonts, text sources, protected meshes without a twin). Only blocking problems stop the screen; minor ones are kept in the `LoadReport`, the drive starts by itself, ONE toast "Loaded with N minor problems" with *Details* follows the first HUD frame, and the F10 panel shows the count.
 
 ## 6. Control, confirmation, undo
 

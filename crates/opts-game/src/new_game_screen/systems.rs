@@ -1,439 +1,295 @@
-//! Event-handling systems and dynamic updates for the Start New Game screen.
+//! Event handling of the wizard: buttons, `Esc`, list events, the start point selector.
 
 use bevy::prelude::*;
-use opts_gui::interaction::events::ButtonClicked;
+use opts_gui::actions::UiAction;
+use opts_gui::components::combobox::M3Combobox;
+use opts_gui::components::modal::ModalRoot;
+use opts_gui::interaction::events::ComboboxSelected;
+use opts_gui::interaction::handlers::TextEntry;
+use opts_gui::interaction::state::Focused;
+use opts_gui::interaction::Activated;
+use opts_gui::l10n::Localization;
+use opts_gui::patterns::master_detail::{
+    MasterDetailChosen, MasterDetailFavourite, MasterDetailSelected,
+};
+use opts_gui::patterns::MasterDetailView;
 use opts_gui::prelude::*;
 
+use super::history::PlannerHistory;
+use super::livery::LiveryState;
+use super::options::{close_options, open_options, OptionsModal};
+use super::planner::{quick_time_of, step_field, validate, PlannerState, PlannerStep, QUICK_TIMES};
+use super::screen::step_invalid;
+use super::step_what::fill_what_detail;
+use super::step_where::{fill_empty_detail, fill_where_detail, StartPointBox, StepList};
+use super::types::{GameCatalogue, NewGameSetup};
+use super::ui::{Act, PlannerAction};
+use super::BuildCtx;
 use crate::app_state::AppState;
-use crate::new_game_screen::live_weather::populate_weather_details_inner;
-use crate::new_game_screen::map_panel::populate_map_details_inner;
-use crate::new_game_screen::types::{
-    AdjustTimeBtn, ApplyLiveWeatherBtn, BackToMenuBtn, DepartureTimeDisplayText,
-    DeviceLocationWeather, GameCatalogue, LaunchGameBtn, LaunchSummaryText, MapDetailPanelRoot,
-    NewGameScreenRoot, NewGameSetup, RefreshWeatherBtn, SelectEntryPointBtn, SelectLiveryBtn,
-    SelectMapBtn, SelectVehicleBtn, SelectWeatherBtn, TabSummaryText, VehicleDetailPanelRoot,
-    WeatherDetailPanelRoot,
-};
-use crate::new_game_screen::vehicle_panel::populate_vehicle_details_inner;
 
-/// System returning to the main menu when the back button is clicked.
-pub fn handle_back_button(
-    mut events: MessageReader<ButtonClicked>,
-    back_query: Query<&BackToMenuBtn>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    for event in events.read() {
-        if back_query.contains(event.0) {
-            tracing::info!("Returning to Main Menu from Start New Game");
-            next_state.set(AppState::MainMenu);
-        }
+/// Seconds since the unix epoch (the time stamp of a drive).
+fn now_unix() -> i64 {
+    chrono::Utc::now().timestamp()
+}
+
+/// The wall clock's hour and minute.
+fn wall_clock() -> (u32, u32) {
+    use chrono::Timelike;
+    let t = chrono::Local::now().time();
+    (t.hour(), t.minute())
+}
+
+/// Parameters shared by the action handlers.
+#[derive(bevy::ecs::system::SystemParam)]
+pub struct Env<'w, 's> {
+    state: ResMut<'w, PlannerState>,
+    setup: ResMut<'w, NewGameSetup>,
+    catalogue: Res<'w, GameCatalogue>,
+    history: ResMut<'w, PlannerHistory>,
+    liveries: Res<'w, LiveryState>,
+    loc: Res<'w, Localization>,
+    next_state: ResMut<'w, NextState<AppState>>,
+    modals: Query<'w, 's, Entity, With<OptionsModal>>,
+}
+
+fn go(env: &mut Env, step: PlannerStep) {
+    if env.state.step != step {
+        env.state.step = step;
     }
 }
 
-/// System launching simulation when the launch button is clicked.
-pub fn handle_launch_button(
-    mut events: MessageReader<ButtonClicked>,
-    launch_query: Query<&LaunchGameBtn>,
-    setup: Res<NewGameSetup>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    for event in events.read() {
-        if launch_query.contains(event.0) {
-            tracing::info!(
-                map = ?setup.selected_map,
-                entry_point = ?setup.selected_entry_point,
-                vehicle = ?setup.selected_vehicle,
-                weather = ?setup.weather_preset,
-                time = format!("{:02}:{:02}", setup.hour, setup.minute),
-                "Launching simulation session with configured parameters"
-            );
-            next_state.set(AppState::InGame);
-        }
-    }
-}
-
-/// System updating selected map, updating list highlights, and repopulating the 70% right frame.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_map_selection(
+/// Applies the action of an activated wizard button.
+pub fn handle_actions(
+    mut activated: MessageReader<Activated>,
+    acts: Query<&Act>,
+    mut env: Env,
     mut commands: Commands,
-    mut events: MessageReader<ButtonClicked>,
-    map_btn_query: Query<&SelectMapBtn>,
-    mut card_query: Query<(&SelectMapBtn, &mut BorderColor, &mut BackgroundColor)>,
-    detail_panel_query: Query<Entity, With<MapDetailPanelRoot>>,
-    catalogue: Res<GameCatalogue>,
-    theme: Res<MaterialTheme>,
-    mut setup: ResMut<NewGameSetup>,
-    mut summary_query: Query<&mut Text, (With<LaunchSummaryText>, Without<TabSummaryText>)>,
-    mut tab_summary_query: Query<&mut Text, (With<TabSummaryText>, Without<LaunchSummaryText>)>,
 ) {
-    let mut selected_id = None;
-    for event in events.read() {
-        if let Ok(btn) = map_btn_query.get(event.0) {
-            selected_id = Some(btn.map_id.clone());
-        }
-    }
-
-    if let Some(map_id) = selected_id {
-        if let Some(map) = catalogue
-            .maps
-            .iter()
-            .find(|m| m.id == map_id || m.name == map_id || m.friendly_name == map_id)
-        {
-            setup.selected_map = map.friendly_name.clone();
-            if let Some(first_ep) = map.entry_points.first() {
-                setup.selected_entry_point = first_ep.clone();
+    for Activated(e) in activated.read() {
+        let Ok(Act(action)) = acts.get(*e) else {
+            continue;
+        };
+        match action.clone() {
+            PlannerAction::Back => back(&mut env),
+            PlannerAction::Next => next(&mut env),
+            PlannerAction::Skip => {
+                if validate(&env.setup, &env.catalogue).is_ok() {
+                    go(&mut env, PlannerStep::Review);
+                }
             }
-            tracing::info!(map = map.friendly_name, "Selected simulation map");
-
-            // Update border & background on left list cards
-            for (btn, mut border, mut bg) in &mut card_query {
-                let is_selected = btn.map_id == map.id;
-                *border = BorderColor::all(if is_selected {
-                    theme.scheme.get(ColorRole::Primary)
-                } else {
-                    theme.scheme.get(ColorRole::OutlineVariant)
-                });
-                *bg = BackgroundColor(if is_selected {
-                    theme.scheme.get(ColorRole::PrimaryContainer)
-                } else {
-                    theme.scheme.get(ColorRole::SurfaceContainerLow)
-                });
+            PlannerAction::Drive => drive(&mut env, &mut commands),
+            PlannerAction::GoStep(s) => go(&mut env, s),
+            PlannerAction::Quick(i) => {
+                let (h, m) = quick_time_of(&QUICK_TIMES[i.min(4)], wall_clock());
+                env.setup.hour = h;
+                env.setup.minute = m;
             }
-
-            // Repopulate 70% right frame details
-            for detail_entity in &detail_panel_query {
-                commands.entity(detail_entity).despawn_related::<Children>();
-                commands.entity(detail_entity).with_children(|right_col| {
-                    populate_map_details_inner(right_col, &theme, map, &setup);
-                });
+            PlannerAction::Weather(id) => id.clone_into(&mut env.setup.weather_preset),
+            PlannerAction::Step(field, delta) => {
+                step_field(&mut env.setup, field, delta, false);
             }
-
-            update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
+            PlannerAction::Livery(name) => env.setup.selected_livery = name,
+            PlannerAction::OpenOptions => open_options(
+                &mut commands,
+                &env.loc,
+                &env.catalogue,
+                &env.setup,
+                &env.liveries,
+            ),
+            PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
+            PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
+            PlannerAction::OpenSettings => env.next_state.set(AppState::Settings),
         }
     }
 }
 
-/// System updating selected spawn entrypoint and chip styling.
-pub fn handle_entrypoint_selection(
-    mut events: MessageReader<ButtonClicked>,
-    ep_btn_query: Query<&SelectEntryPointBtn>,
-    mut chip_query: Query<(&SelectEntryPointBtn, &mut BorderColor, &mut BackgroundColor)>,
-    theme: Res<MaterialTheme>,
-    mut setup: ResMut<NewGameSetup>,
-    mut summary_query: Query<&mut Text, (With<LaunchSummaryText>, Without<TabSummaryText>)>,
-    mut tab_summary_query: Query<&mut Text, (With<TabSummaryText>, Without<LaunchSummaryText>)>,
-) {
-    let mut selected_ep = None;
-    for event in events.read() {
-        if let Ok(btn) = ep_btn_query.get(event.0) {
-            selected_ep = Some(btn.entry_point.clone());
-        }
-    }
-
-    if let Some(ep) = selected_ep {
-        setup.selected_entry_point = ep.clone();
-        tracing::info!(entrypoint = ep, "Selected starting spawn terminal");
-
-        for (btn, mut border, mut bg) in &mut chip_query {
-            let is_selected = btn.entry_point == ep;
-            *border = BorderColor::all(if is_selected {
-                theme.scheme.get(ColorRole::Primary)
-            } else {
-                theme.scheme.get(ColorRole::OutlineVariant)
-            });
-            *bg = BackgroundColor(if is_selected {
-                theme.scheme.get(ColorRole::PrimaryContainer)
-            } else {
-                theme.scheme.get(ColorRole::SurfaceContainerHigh)
-            });
-        }
-
-        update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
+fn back(env: &mut Env) {
+    match env.state.step.prev() {
+        Some(prev) => env.state.step = prev,
+        None => env.next_state.set(AppState::MainMenu),
     }
 }
 
-/// System updating selected vehicle, updating list highlights, and repopulating 70% right frame.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_vehicle_selection(
-    mut commands: Commands,
-    mut events: MessageReader<ButtonClicked>,
-    veh_btn_query: Query<&SelectVehicleBtn>,
-    mut card_query: Query<(&SelectVehicleBtn, &mut BorderColor, &mut BackgroundColor)>,
-    detail_panel_query: Query<Entity, With<VehicleDetailPanelRoot>>,
-    catalogue: Res<GameCatalogue>,
-    theme: Res<MaterialTheme>,
-    mut setup: ResMut<NewGameSetup>,
-    mut summary_query: Query<&mut Text, (With<LaunchSummaryText>, Without<TabSummaryText>)>,
-    mut tab_summary_query: Query<&mut Text, (With<TabSummaryText>, Without<LaunchSummaryText>)>,
-) {
-    let mut selected_id = None;
-    for event in events.read() {
-        if let Ok(btn) = veh_btn_query.get(event.0) {
-            selected_id = Some(btn.vehicle_id.clone());
-        }
+fn next(env: &mut Env) {
+    if step_invalid(env.state.step, &env.setup, &env.catalogue).is_some() {
+        return;
     }
-
-    if let Some(veh_id) = selected_id {
-        if let Some(veh) = catalogue
-            .vehicles
-            .iter()
-            .find(|v| v.id == veh_id || v.model == veh_id || v.full_name == veh_id)
-        {
-            setup.selected_vehicle = veh.full_name.clone();
-            setup.selected_livery = veh.default_livery.clone();
-            tracing::info!(vehicle = veh.full_name, "Selected simulation vehicle");
-
-            for (btn, mut border, mut bg) in &mut card_query {
-                let is_selected = btn.vehicle_id == veh.id;
-                *border = BorderColor::all(if is_selected {
-                    theme.scheme.get(ColorRole::Primary)
-                } else {
-                    theme.scheme.get(ColorRole::OutlineVariant)
-                });
-                *bg = BackgroundColor(if is_selected {
-                    theme.scheme.get(ColorRole::PrimaryContainer)
-                } else {
-                    theme.scheme.get(ColorRole::SurfaceContainerLow)
-                });
-            }
-
-            for detail_entity in &detail_panel_query {
-                commands.entity(detail_entity).despawn_related::<Children>();
-                commands.entity(detail_entity).with_children(|right_col| {
-                    populate_vehicle_details_inner(right_col, &theme, veh, &setup);
-                });
-            }
-
-            update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
-        }
+    if let Some(n) = env.state.step.next() {
+        env.state.step = n;
     }
 }
 
-pub use crate::new_game_screen::scroll_systems::{handle_mouse_scroll, handle_scroll_buttons};
-
-/// System updating selected vehicle repaint / livery.
-pub fn handle_livery_selection(
-    mut events: MessageReader<ButtonClicked>,
-    query: Query<&SelectLiveryBtn>,
-    mut card_query: Query<(&SelectLiveryBtn, &mut BorderColor, &mut BackgroundColor)>,
-    theme: Res<MaterialTheme>,
-    mut setup: ResMut<NewGameSetup>,
-    mut summary_query: Query<&mut Text, (With<LaunchSummaryText>, Without<TabSummaryText>)>,
-    mut tab_summary_query: Query<&mut Text, (With<TabSummaryText>, Without<LaunchSummaryText>)>,
-) {
-    let mut changed = false;
-    for event in events.read() {
-        if let Ok(btn) = query.get(event.0) {
-            setup.selected_livery = btn.livery.clone();
-            tracing::info!(livery = btn.livery, "Selected vehicle livery");
-            changed = true;
-        }
+fn drive(env: &mut Env, commands: &mut Commands) {
+    if validate(&env.setup, &env.catalogue).is_err() {
+        return;
     }
-
-    if changed {
-        for (btn, mut border, mut bg) in &mut card_query {
-            let is_selected = btn.livery == setup.selected_livery;
-            *border = BorderColor::all(if is_selected {
-                theme.scheme.get(ColorRole::Primary)
-            } else {
-                theme.scheme.get(ColorRole::OutlineVariant)
-            });
-            *bg = BackgroundColor(if is_selected {
-                theme.scheme.get(ColorRole::PrimaryContainer)
-            } else {
-                theme.scheme.get(ColorRole::SurfaceContainerLow)
-            });
-        }
-        update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
+    let setup = env.setup.clone();
+    if let Err(e) = env.history.record_drive(&setup, now_unix()) {
+        tracing::warn!("cannot save the drive history: {e}");
+        let path = env
+            .history
+            .path
+            .as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        ToastBuilder::new(
+            env.loc
+                .t_args("wiz-save-failed", &[("path".to_string(), path.into())]),
+        )
+        .with_duration(6.0)
+        .spawn(commands);
     }
-}
-
-/// System updating selected weather preset and highlighting button.
-#[allow(clippy::too_many_arguments)]
-pub fn handle_weather_selection(
-    mut commands: Commands,
-    mut events: MessageReader<ButtonClicked>,
-    query: Query<&SelectWeatherBtn>,
-    mut preset_query: Query<(&SelectWeatherBtn, &mut BorderColor, &mut BackgroundColor)>,
-    refresh_query: Query<&RefreshWeatherBtn>,
-    apply_live_query: Query<&ApplyLiveWeatherBtn>,
-    detail_panel_query: Query<Entity, With<WeatherDetailPanelRoot>>,
-    theme: Res<MaterialTheme>,
-    mut setup: ResMut<NewGameSetup>,
-    live_weather: Res<DeviceLocationWeather>,
-    mut summary_query: Query<&mut Text, (With<LaunchSummaryText>, Without<TabSummaryText>)>,
-    mut tab_summary_query: Query<&mut Text, (With<TabSummaryText>, Without<LaunchSummaryText>)>,
-) {
-    let mut changed = false;
-    for event in events.read() {
-        if let Ok(btn) = query.get(event.0) {
-            setup.weather_preset = btn.preset_name.to_string();
-            tracing::info!(weather = btn.preset_name, "Selected weather preset");
-            changed = true;
-        } else if refresh_query.get(event.0).is_ok() {
-            tracing::info!("Refreshed live device-location weather");
-            changed = true;
-        } else if apply_live_query.get(event.0).is_ok() {
-            setup.weather_preset = "Real-Time Local Weather".to_string();
-            tracing::info!("Applied real-time local weather to setup");
-            changed = true;
-        }
-    }
-
-    if changed {
-        for (btn, mut border, mut bg) in &mut preset_query {
-            let is_selected = btn.preset_name == setup.weather_preset;
-            *border = BorderColor::all(if is_selected {
-                theme.scheme.get(ColorRole::Primary)
-            } else {
-                theme.scheme.get(ColorRole::OutlineVariant)
-            });
-            *bg = BackgroundColor(if is_selected {
-                theme.scheme.get(ColorRole::PrimaryContainer)
-            } else {
-                theme.scheme.get(ColorRole::SurfaceContainerLow)
-            });
-        }
-
-        for detail_entity in &detail_panel_query {
-            commands.entity(detail_entity).despawn_related::<Children>();
-            commands.entity(detail_entity).with_children(|center_col| {
-                populate_weather_details_inner(center_col, &theme, &setup, &live_weather);
-            });
-        }
-
-        update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
-    }
-}
-
-/// System adjusting departure time and updating display text.
-#[allow(clippy::type_complexity)]
-pub fn handle_time_adjustment(
-    mut events: MessageReader<ButtonClicked>,
-    query: Query<&AdjustTimeBtn>,
-    mut setup: ResMut<NewGameSetup>,
-    mut departure_query: Query<
-        &mut Text,
-        (
-            With<DepartureTimeDisplayText>,
-            Without<LaunchSummaryText>,
-            Without<TabSummaryText>,
-        ),
-    >,
-    mut summary_query: Query<
-        &mut Text,
-        (
-            With<LaunchSummaryText>,
-            Without<DepartureTimeDisplayText>,
-            Without<TabSummaryText>,
-        ),
-    >,
-    mut tab_summary_query: Query<
-        &mut Text,
-        (
-            With<TabSummaryText>,
-            Without<DepartureTimeDisplayText>,
-            Without<LaunchSummaryText>,
-        ),
-    >,
-) {
-    let mut changed = false;
-    for event in events.read() {
-        if let Ok(btn) = query.get(event.0) {
-            let mut new_hour = (setup.hour as i32) + btn.hour_offset;
-            while new_hour < 0 {
-                new_hour += 24;
-            }
-            setup.hour = (new_hour % 24) as u32;
-            tracing::info!(hour = setup.hour, "Adjusted simulation start hour");
-            changed = true;
-        }
-    }
-
-    if changed {
-        for mut text in departure_query.iter_mut() {
-            text.0 = format!(
-                "Departure Time: {:02}:{:02} (Date: {:04}-{:02}-{:02})",
-                setup.hour, setup.minute, setup.year, setup.month, setup.day
-            );
-        }
-        update_all_summaries(&setup, &mut summary_query, &mut tab_summary_query);
-    }
-}
-
-/// Helper synchronizing both footer summary text and all tab summary cards.
-pub fn update_all_summaries<
-    F1: bevy::ecs::query::QueryFilter,
-    F2: bevy::ecs::query::QueryFilter,
->(
-    setup: &NewGameSetup,
-    launch_summary_query: &mut Query<&mut Text, F1>,
-    tab_summary_query: &mut Query<&mut Text, F2>,
-) {
-    let summary_str = format!(
-        "Map: {} ({}) | Bus: {} ({}) | Weather: {} | {:02}:{:02}",
-        setup.selected_map,
-        setup.selected_entry_point,
-        setup.selected_vehicle,
-        setup.selected_livery,
-        setup.weather_preset,
-        setup.hour,
-        setup.minute
+    tracing::info!(
+        map = %setup.selected_map,
+        vehicle = %setup.selected_vehicle,
+        "starting the drive"
     );
-
-    for mut text in launch_summary_query.iter_mut() {
-        text.0 = summary_str.clone();
-    }
-    for mut text in tab_summary_query.iter_mut() {
-        text.0 = summary_str.clone();
-    }
+    env.next_state.set(AppState::InGame);
 }
 
-/// Helper synchronizing footer summary text.
-pub fn update_summary_text<F: bevy::ecs::query::QueryFilter>(
-    setup: &NewGameSetup,
-    summary_query: &mut Query<&mut Text, F>,
+/// `Esc` / `Back`: one step back, then out. Dialogs, open drop-downs and text fields keep the
+/// first press (the library handles it).
+#[allow(clippy::too_many_arguments)]
+pub fn handle_back_action(
+    mut actions: MessageReader<UiAction>,
+    modals: Query<(), With<ModalRoot>>,
+    combos: Query<&M3Combobox>,
+    text_focus: Query<(), (With<Focused>, TextEntry)>,
+    mut env: Env,
 ) {
-    for mut text in summary_query.iter_mut() {
-        text.0 = format!(
-            "Map: {} ({}) | Bus: {} ({}) | Weather: {} | {:02}:{:02}",
-            setup.selected_map,
-            setup.selected_entry_point,
-            setup.selected_vehicle,
-            setup.selected_livery,
-            setup.weather_preset,
-            setup.hour,
-            setup.minute
-        );
+    for action in actions.read() {
+        if *action == UiAction::Back
+            && modals.is_empty()
+            && text_focus.is_empty()
+            && !combos.iter().any(|c| c.is_open)
+        {
+            back(&mut env);
+        }
     }
 }
 
-/// System cleaning up new game menu entities on state exit.
-pub fn cleanup_new_game_screen(
+/// `]` and `[` switch steps like tabs.
+pub fn handle_tab_actions(mut actions: MessageReader<UiAction>, mut env: Env) {
+    for action in actions.read() {
+        match action {
+            UiAction::NextTab => next(&mut env),
+            UiAction::PrevTab => {
+                if let Some(p) = env.state.step.prev() {
+                    env.state.step = p;
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// The start point selector changed.
+pub fn handle_start_point(
+    mut events: MessageReader<ComboboxSelected>,
+    boxes: Query<(), With<StartPointBox>>,
+    mut setup: ResMut<NewGameSetup>,
+) {
+    for ev in events.read() {
+        if boxes.contains(ev.entity) && setup.selected_entry_point != ev.selected_value {
+            setup.selected_entry_point.clone_from(&ev.selected_value);
+        }
+    }
+}
+
+/// Selection, stars and *Enter* of the two lists.
+#[allow(clippy::too_many_arguments)]
+pub fn handle_list_events(
+    mut selected: MessageReader<MasterDetailSelected>,
+    mut favourites: MessageReader<MasterDetailFavourite>,
+    mut chosen: MessageReader<MasterDetailChosen>,
+    lists: Query<(&StepList, &MasterDetailView)>,
+    mut setup: ResMut<NewGameSetup>,
+    catalogue: Res<GameCatalogue>,
+    mut history: ResMut<PlannerHistory>,
+    mut liveries: ResMut<LiveryState>,
+    mut state: ResMut<PlannerState>,
+    loc: Res<Localization>,
     mut commands: Commands,
-    query: Query<Entity, With<NewGameScreenRoot>>,
 ) {
-    for entity in &query {
-        commands.entity(entity).despawn();
+    for ev in selected.read() {
+        let Ok((StepList(step), view)) = lists.get(ev.root) else {
+            continue;
+        };
+        let detail = view.parts().detail;
+        commands.entity(detail).despawn_related::<Children>();
+        match (step, &ev.id) {
+            (PlannerStep::Where, Some(id)) => {
+                let Some(map) = catalogue.maps.iter().find(|m| &m.id == id) else {
+                    continue;
+                };
+                choose_map(&mut setup, map, &history);
+                let ctx = BuildCtx {
+                    loc: &loc,
+                    catalogue: &catalogue,
+                    setup: &setup,
+                    history: &history,
+                    notes: &state.notes,
+                };
+                fill_where_detail(&mut commands, detail, &ctx, map);
+            }
+            (PlannerStep::What, Some(id)) => {
+                let Some(vehicle) = catalogue.vehicles.iter().find(|v| &v.id == id) else {
+                    continue;
+                };
+                let key = catalogue.vehicle_key(vehicle);
+                if setup.selected_vehicle != key {
+                    setup.selected_vehicle = key;
+                    setup.selected_livery.clear();
+                    setup.custom_setvars.clear();
+                }
+                fill_what_detail(
+                    &mut commands,
+                    detail,
+                    &loc,
+                    &state.notes,
+                    &setup,
+                    &mut liveries,
+                    vehicle,
+                );
+            }
+            (PlannerStep::Where, None) => {
+                fill_empty_detail(&mut commands, detail, "wiz-where-empty")
+            }
+            (PlannerStep::What, None) => fill_empty_detail(&mut commands, detail, "wiz-what-empty"),
+            _ => {}
+        }
+    }
+    for ev in favourites.read() {
+        let Ok((StepList(step), _)) = lists.get(ev.root) else {
+            continue;
+        };
+        let vehicle = *step == PlannerStep::What;
+        if let Err(e) = history.set_favourite(vehicle, &ev.id, ev.favourite) {
+            tracing::warn!("cannot save favourites: {e}");
+        }
+    }
+    for ev in chosen.read() {
+        if lists.contains(ev.root) && step_invalid(state.step, &setup, &catalogue).is_none() {
+            if let Some(n) = state.step.next() {
+                state.step = n;
+            }
+        }
     }
 }
-
-/// Escape key listener returning to the Main Menu.
-///
-/// Escape in a text field only leaves the field (the library `Back` handling drops its focus);
-/// this system runs before the action layer so it still sees that focus on the same frame.
-pub fn escape_to_menu_system(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    text_focus: Query<
-        (),
-        (
-            With<opts_gui::interaction::state::Focused>,
-            opts_gui::interaction::handlers::TextEntry,
-        ),
-    >,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    if keyboard.just_pressed(KeyCode::Escape) && text_focus.is_empty() {
-        next_state.set(AppState::MainMenu);
+/// Makes `map` the chosen one, keeping a valid start point or picking the remembered/first one.
+fn choose_map(setup: &mut NewGameSetup, map: &super::types::MapItem, history: &PlannerHistory) {
+    if setup.selected_map != map.friendly_name {
+        setup.selected_map.clone_from(&map.friendly_name);
     }
+    if map.entry_points.contains(&setup.selected_entry_point) {
+        return;
+    }
+    let remembered = history
+        .entry_point_for(&map.friendly_name)
+        .filter(|e| map.entry_points.iter().any(|p| p == e))
+        .map(str::to_string);
+    let pick = remembered
+        .or_else(|| map.entry_points.first().cloned())
+        .unwrap_or_default();
+    setup.selected_entry_point = pick;
 }

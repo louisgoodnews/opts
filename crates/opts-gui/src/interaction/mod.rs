@@ -18,7 +18,8 @@ pub use events::{
     ToplevelClosed, TreeNodeSelected, TreeNodeToggled,
 };
 pub use focus::{
-    DefaultFocus, FocusEvent, FocusPlugin, FocusRegion, Focusable, Landmark, PointerOnly,
+    DefaultFocus, FocusEvent, FocusPlugin, FocusRegion, Focusable, Landmark, OwnsVerticalArrows,
+    PointerOnly,
 };
 pub use layer::StateLayerRole;
 pub use state::{

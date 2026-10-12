@@ -154,6 +154,8 @@ pub struct WorldStats {
     pub vehicle_meshes: usize,
     pub vehicle_vertices: usize,
     pub asset_failures: usize,
+    /// Problems recorded by the loading screen (blocking and minor).
+    pub load_problems: usize,
     /// Scrambled meshes recovered by the decoder / replaced by a plain twin / still decoding.
     pub meshes_decoded: usize,
     pub meshes_twin: usize,
@@ -215,6 +217,8 @@ pub struct WorldLoadJob {
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
+    /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
+    missing_listed: usize,
     /// Camera parameters, set once the vehicle is loaded.
     pub camera: Option<CameraSetup>,
     /// `[set_camera_std]` index of the loaded vehicle.

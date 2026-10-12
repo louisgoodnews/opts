@@ -29,6 +29,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 | 3 | [design-language](design-language.md) | how should it **look**? |
 | 4 | [interaction-and-feel](interaction-and-feel.md) | how should it **feel**? |
 | 5 | [flow](flow.md) | how should it **flow**? |
+| 5b | [wizard-and-loading](wizard-and-loading.md) | what exactly do *Plan a drive* and the loading screen contain? |
 | 5a | [theme-auto-switch](theme-auto-switch.md) | should the theme follow day and night? |
 | 6 | [expandability](expandability.md) | how does it **grow**? |
 

@@ -113,7 +113,6 @@ pub fn load_menu_lists(cat: &Catalogue) -> GameCatalogue {
             entry_points: m.entry_points,
         })
         .collect();
-    let na = || "N/A".to_string();
     let vehicles = cat
         .playable_vehicles()
         .unwrap_or_default()
@@ -130,12 +129,8 @@ pub fn load_menu_lists(cat: &Catalogue) -> GameCatalogue {
             default_livery: v.livery,
             bus_file: v.marker_file,
             description: v.description,
-            engine_power: na(),
-            transmission: na(),
-            capacity: na(),
-            length_m: na(),
-            max_speed_kmh: na(),
-            passenger_doors: na(),
+            class: v.class.unwrap_or_default(),
+            mass_tonnes: v.mass_tonnes,
         })
         .collect();
     GameCatalogue { maps, vehicles }
@@ -250,25 +245,17 @@ pub fn poll_catalogue_discovery(
 
 /// Keeps the current menu selection valid after the lists change.
 pub fn reconcile_selection(lists: &GameCatalogue, setup: &mut NewGameSetup) {
-    if !lists
-        .vehicles
-        .iter()
-        .any(|v| v.full_name == setup.selected_vehicle)
-    {
+    if lists.find_vehicle(&setup.selected_vehicle).is_none() {
         if let Some(v) = lists
             .vehicles
             .iter()
             .find(|v| v.id.eq_ignore_ascii_case("MAN_SD77"))
             .or_else(|| lists.vehicles.first())
         {
-            setup.selected_vehicle.clone_from(&v.full_name);
+            setup.selected_vehicle = lists.vehicle_key(v);
         }
     }
-    if let Some(v) = lists
-        .vehicles
-        .iter()
-        .find(|v| v.full_name == setup.selected_vehicle)
-    {
+    if let Some(v) = lists.find_vehicle(&setup.selected_vehicle) {
         if !crate::new_game_screen::repaints::vehicle_repaints(v)
             .names
             .contains(&setup.selected_livery)
@@ -276,14 +263,13 @@ pub fn reconcile_selection(lists: &GameCatalogue, setup: &mut NewGameSetup) {
             setup.selected_livery.clone_from(&v.default_livery);
         }
     }
-    if !lists
-        .maps
-        .iter()
-        .any(|m| m.friendly_name == setup.selected_map)
-    {
-        if let Some(m) = lists.maps.first() {
-            setup.selected_map.clone_from(&m.friendly_name);
+    if let Some(map) = lists.map_by_name(&setup.selected_map) {
+        if !map.entry_points.is_empty() && !map.entry_points.contains(&setup.selected_entry_point) {
+            setup.selected_entry_point.clone_from(&map.entry_points[0]);
         }
+    } else if let Some(m) = lists.maps.first() {
+        setup.selected_map.clone_from(&m.friendly_name);
+        setup.selected_entry_point = m.entry_points.first().cloned().unwrap_or_default();
     }
 }
 

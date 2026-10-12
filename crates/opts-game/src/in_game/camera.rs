@@ -6,11 +6,21 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct MenuCamera;
 
-/// Deactivates the 2D menu camera when entering active 3D in-game simulation.
-pub fn deactivate_menu_camera(mut query: Query<&mut Camera, With<MenuCamera>>) {
+/// Deactivates the 2D menu camera once a 3D scene camera exists. Until then the menu camera is
+/// the only thing that draws the loading screen (and its *Failed* outcome, which never gets a
+/// scene camera); switching it off on entering the session left the window black while loading.
+pub fn deactivate_menu_camera(
+    scene: Query<&Camera, (With<Camera3d>, Without<MenuCamera>)>,
+    mut query: Query<&mut Camera, With<MenuCamera>>,
+) {
+    if !scene.iter().any(|c| c.is_active) {
+        return;
+    }
     for mut camera in &mut query {
-        camera.is_active = false;
-        tracing::debug!("Deactivated 2D MenuCamera for 3D simulation session");
+        if camera.is_active {
+            camera.is_active = false;
+            tracing::debug!("Deactivated 2D MenuCamera for 3D simulation session");
+        }
     }
 }
 

@@ -48,10 +48,6 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/omsi_world/overlay.rs",
     "opts-game/src/menu/systems.rs",
     "opts-game/src/menu/theme_toggle.rs",
-    "opts-game/src/new_game_screen/picker_systems.rs",
-    "opts-game/src/new_game_screen/scroll_systems.rs",
-    "opts-game/src/new_game_screen/search_systems.rs",
-    "opts-game/src/new_game_screen/setvars_modal.rs",
     "opts-game/src/new_game_screen/systems.rs",
     "opts-game/src/settings_screen/systems.rs",
     "opts-game/src/stub_screens/mod.rs",
@@ -77,6 +73,8 @@ const REVIEWED: &[&str] = &[
     "opts-gui/src/interaction/layer.rs",
     "opts-gui/src/interaction/mod.rs",
     "opts-gui/src/interaction/state.rs",
+    // Patterns: keyboard only while their list has focus (focus is trapped by modals).
+    "opts-gui/src/patterns/master_detail_input.rs",
 ];
 
 #[test]

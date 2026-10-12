@@ -27,7 +27,7 @@ use crate::in_game::omsi_world::{
 };
 use crate::in_game::types::SimulationLoadState;
 use crate::new_game_screen::repaints::{vehicle_repaints, VehicleRepaints};
-use crate::new_game_screen::setvars_modal::get_vehicle_setvars;
+use crate::new_game_screen::setvars_discovery::get_vehicle_setvars;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
 
 /// AI vehicles closer than this to an entry point block it (m).
@@ -825,21 +825,14 @@ fn detail_column(c: &mut ChildSpawnerCommands, menu: &VehicleMenu, v: &VehicleIt
         12.0,
         ColorRole::OnSurfaceVariant,
     );
-    let facts = [
-        ("Length", &v.length_m),
-        ("Capacity", &v.capacity),
-        ("Engine", &v.engine_power),
-        ("Transmission", &v.transmission),
-        ("Top speed", &v.max_speed_kmh),
-        ("Passenger doors", &v.passenger_doors),
-    ];
-    let line: Vec<String> = facts
-        .iter()
-        .filter(|(_, x)| !x.is_empty())
-        .map(|(k, x)| format!("{k}: {x}"))
-        .collect();
-    if !line.is_empty() {
-        label(c, line.join("  ·  "), 12.0, ColorRole::OnSurface);
+    // Only facts the content provides are shown (no "N/A" rows).
+    if let Some(t) = v.mass_tonnes {
+        label(
+            c,
+            format!("Empty weight: {t:.1} t"),
+            12.0,
+            ColorRole::OnSurface,
+        );
     }
     scroll_list(c, 3, menu.scroll[3], Val::Px(110.0), |list| {
         label(list, v.description.clone(), 12.0, ColorRole::OnSurface);

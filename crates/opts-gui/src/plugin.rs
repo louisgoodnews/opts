@@ -71,6 +71,7 @@ impl Plugin for OptsGuiPlugin {
             .add_message::<ThemeChanged>();
 
         crate::actions::build(app);
+        app.add_plugins(crate::patterns::PatternsPlugin);
 
         // Bundled fonts: the UI family as the default text font, Material Icons as `ICON_FONT`
         app.add_systems(Startup, crate::fonts::install_fonts);

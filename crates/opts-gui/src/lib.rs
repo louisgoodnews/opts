@@ -18,6 +18,7 @@ pub mod interaction;
 pub mod l10n;
 pub mod layout;
 pub mod not_yet;
+pub mod patterns;
 pub mod plugin;
 pub mod prelude;
 pub mod showcase;
