@@ -4,7 +4,9 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::{events::ComboboxSelected, focus::Focusable, state::Disabled},
+    interaction::{
+        activation::Activated, events::ComboboxSelected, focus::Focusable, state::Disabled,
+    },
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -294,11 +296,12 @@ fn populate_combobox_children(
 
 /// System handling clicks on the header button to toggle dropdown visibility.
 pub fn combobox_header_system(
-    mut header_query: Query<(&ComboboxHeader, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    header_query: Query<&ComboboxHeader>,
     mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
 ) {
-    for (header, interaction) in &mut header_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(header) = header_query.get(*entity) {
             if let Ok(mut combo) = combo_query.get_mut(header.0) {
                 combo.is_open = !combo.is_open;
             }
@@ -308,12 +311,13 @@ pub fn combobox_header_system(
 
 /// System handling clicks on dropdown menu items to select options.
 pub fn combobox_item_system(
-    mut item_query: Query<(&ComboboxMenuItem, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    item_query: Query<&ComboboxMenuItem>,
     mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
     mut events: MessageWriter<ComboboxSelected>,
 ) {
-    for (item, interaction) in &mut item_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(item) = item_query.get(*entity) {
             if let Ok(mut combo) = combo_query.get_mut(item.combobox_entity) {
                 combo.selected = Some(item.index);
                 combo.is_open = false;

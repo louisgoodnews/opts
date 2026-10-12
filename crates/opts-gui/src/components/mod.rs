@@ -18,6 +18,7 @@ pub mod text_field;
 pub mod toast;
 pub mod toplevel;
 pub mod treeview;
+pub mod virtual_list;
 
 pub use button::{Button, ButtonBuilder, ButtonPlugin, ButtonVariant, M3Button, OnClickCallback};
 pub use card::{CardBuilder, CardPlugin, CardVariant, M3Card};

@@ -4,7 +4,7 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::NotebookTabSelected,
+    interaction::{activation::Activated, events::NotebookTabSelected, state::Disabled},
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -269,12 +269,13 @@ fn populate_notebook_children(
 
 /// System handling clicks on tab headers to switch the active tab.
 pub fn notebook_tab_click_system(
-    mut header_query: Query<(&NotebookTabHeader, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    header_query: Query<&NotebookTabHeader, Without<Disabled>>,
     mut notebook_query: Query<&mut M3Notebook>,
     mut events: MessageWriter<NotebookTabSelected>,
 ) {
-    for (header, interaction) in &mut header_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(header) = header_query.get(*entity) {
             if let Ok(mut nb) = notebook_query.get_mut(header.notebook) {
                 if nb.active_tab != header.index {
                     nb.active_tab = header.index;

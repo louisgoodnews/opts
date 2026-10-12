@@ -4,7 +4,9 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::{events::SwitchToggled, focus::Focusable, state::Disabled},
+    interaction::{
+        activation::Activated, events::SwitchToggled, focus::Focusable, state::Disabled,
+    },
     theme::{color::ColorRole, shape::RadiusLevel, spacing::SpacingScale, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -269,19 +271,17 @@ impl SwitchBuilder {
     }
 }
 
-/// Query item alias for switch click interaction.
-pub type SwitchClickItem<'a> = (Entity, &'a Interaction, &'a mut M3Switch);
-
-/// System handling click interactions on switches and toggling their state.
+/// System toggling a switch when it is [`Activated`].
 pub fn switch_toggle_system(
-    mut interaction_query: Query<SwitchClickItem, (Without<Disabled>, Changed<Interaction>)>,
+    mut activated: MessageReader<Activated>,
+    mut switches: Query<&mut M3Switch, Without<Disabled>>,
     mut events: MessageWriter<SwitchToggled>,
 ) {
-    for (entity, interaction, mut switch) in &mut interaction_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(mut switch) = switches.get_mut(*entity) {
             switch.is_on = !switch.is_on;
             events.write(SwitchToggled {
-                entity,
+                entity: *entity,
                 is_on: switch.is_on,
             });
         }
@@ -353,6 +353,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<SwitchToggled>()
+            .add_message::<Activated>()
             .add_systems(Update, switch_toggle_system);
 
         let entity = {
@@ -362,10 +363,7 @@ mod tests {
 
         app.update();
 
-        // Simulate press interaction
-        if let Some(mut interaction) = app.world_mut().get_mut::<Interaction>(entity) {
-            *interaction = Interaction::Pressed;
-        }
+        app.world_mut().write_message(Activated(entity));
 
         app.update();
 

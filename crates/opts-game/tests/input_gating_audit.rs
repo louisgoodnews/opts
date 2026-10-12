@@ -46,7 +46,6 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/loading_pipeline.rs",
     "opts-game/src/in_game/mod.rs",
     "opts-game/src/in_game/omsi_world/overlay.rs",
-    "opts-game/src/menu/interactions.rs",
     "opts-game/src/menu/systems.rs",
     "opts-game/src/menu/theme_toggle.rs",
     "opts-game/src/new_game_screen/picker_systems.rs",
@@ -72,7 +71,9 @@ const REVIEWED: &[&str] = &[
     "opts-gui/src/components/toast.rs",
     "opts-gui/src/components/toplevel.rs",
     "opts-gui/src/components/treeview.rs",
+    "opts-gui/src/interaction/activation.rs",
     "opts-gui/src/interaction/focus.rs",
+    "opts-gui/src/interaction/layer.rs",
     "opts-gui/src/interaction/mod.rs",
     "opts-gui/src/interaction/state.rs",
 ];

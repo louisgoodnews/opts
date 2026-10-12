@@ -109,8 +109,6 @@ impl ModalBuilder {
                     FocusPolicy::Block,
                     GlobalZIndex(self.z_index),
                 ),
-                // Interaction makes the backdrop swallow pointer events beneath it.
-                Interaction::default(),
                 ModalRoot,
                 Name::new("ModalRoot"),
             ))
@@ -130,7 +128,6 @@ impl ModalBuilder {
                     },
                     FocusPolicy::Block,
                 ),
-                Interaction::default(),
                 ModalContent,
                 BackgroundRole(ColorRole::SurfaceContainerHigh),
                 RadiusToken(RadiusLevel::Large),

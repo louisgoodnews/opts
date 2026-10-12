@@ -18,6 +18,7 @@ use crate::{
         treeview::{treeview_click_system, treeview_sync_system},
     },
     interaction::{
+        activation::ActivationSet,
         events::{
             ButtonClicked, CheckboxToggled, ComboboxSelected, DateSelected, DateTimeSelected,
             NotebookTabSelected, RadioSelected, SwitchToggled, TextChanged, ThemeChanged,
@@ -41,6 +42,8 @@ impl Plugin for OptsGuiPlugin {
         if !app.world().contains_resource::<MaterialTheme>() {
             app.init_resource::<MaterialTheme>();
         }
+
+        app.add_plugins(crate::interaction::InteractionPlugin);
 
         // Register widget event streams
         app.add_message::<ButtonClicked>()
@@ -102,7 +105,8 @@ impl Plugin for OptsGuiPlugin {
                 switch_sync_system,
                 radio_select_system,
                 radio_sync_system,
-            ),
+            )
+                .after(ActivationSet),
         );
 
         // Register advanced navigation and container widget systems
@@ -119,7 +123,8 @@ impl Plugin for OptsGuiPlugin {
                 toplevel_close_system,
                 treeview_click_system,
                 treeview_sync_system,
-            ),
+            )
+                .after(ActivationSet),
         );
     }
 }

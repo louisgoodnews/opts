@@ -4,7 +4,9 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::{events::RadioSelected, focus::Focusable, state::Disabled},
+    interaction::{
+        activation::Activated, events::RadioSelected, focus::Focusable, state::Disabled,
+    },
     theme::{color::ColorRole, shape::RadiusLevel, spacing::SpacingScale, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -273,32 +275,28 @@ impl RadioBuilder {
     }
 }
 
-/// Query item alias for radio button click interaction.
-pub type RadioClickItem<'a> = (Entity, &'a Interaction, &'a mut M3Radio);
-
-/// System handling radio button click selection and mutual exclusion within groups.
-#[allow(clippy::type_complexity)]
+/// System handling radio button selection (on [`Activated`]) and mutual exclusion within groups.
 pub fn radio_select_system(
-    mut params: ParamSet<(
-        Query<RadioClickItem, (Without<Disabled>, Changed<Interaction>)>,
-        Query<(Entity, &mut M3Radio), Without<Disabled>>,
-    )>,
+    mut activated: MessageReader<Activated>,
+    mut radios: Query<(Entity, &mut M3Radio), Without<Disabled>>,
     mut events: MessageWriter<RadioSelected>,
 ) {
     let mut selected_entities = Vec::new();
 
-    for (entity, interaction, mut radio) in &mut params.p0() {
-        if *interaction == Interaction::Pressed && !radio.is_selected {
-            radio.is_selected = true;
-            selected_entities.push((entity, radio.group_id));
-            events.write(RadioSelected { entity });
+    for Activated(entity) in activated.read() {
+        if let Ok((entity, mut radio)) = radios.get_mut(*entity) {
+            if !radio.is_selected {
+                radio.is_selected = true;
+                selected_entities.push((entity, radio.group_id));
+                events.write(RadioSelected { entity });
+            }
         }
     }
 
     // Mutual exclusion: deselect other radios in same group
     for (clicked_entity, group_id) in selected_entities {
         if let Some(gid) = group_id {
-            for (other_entity, mut other_radio) in &mut params.p1() {
+            for (other_entity, mut other_radio) in &mut radios {
                 if other_entity != clicked_entity && other_radio.group_id == Some(gid) {
                     other_radio.is_selected = false;
                 }
@@ -376,6 +374,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<RadioSelected>()
+            .add_message::<Activated>()
             .add_systems(Update, radio_select_system);
 
         let entity_a = {
@@ -396,10 +395,7 @@ mod tests {
 
         app.update();
 
-        // Simulate press on Option B
-        if let Some(mut interaction) = app.world_mut().get_mut::<Interaction>(entity_b) {
-            *interaction = Interaction::Pressed;
-        }
+        app.world_mut().write_message(Activated(entity_b));
 
         app.update();
 

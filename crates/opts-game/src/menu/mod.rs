@@ -3,7 +3,6 @@
 pub mod background;
 pub mod entries;
 pub mod glass;
-pub mod interactions;
 pub mod layout;
 pub mod plugin;
 pub mod systems;

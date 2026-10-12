@@ -4,7 +4,12 @@ use bevy::prelude::*;
 use std::sync::Arc;
 
 use crate::{
-    interaction::{events::ButtonClicked, focus::Focusable, state::Disabled},
+    interaction::{
+        activation::Activated,
+        events::ButtonClicked,
+        focus::Focusable,
+        state::{Disabled, Hovered},
+    },
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -13,13 +18,12 @@ use crate::{
     },
 };
 
-/// Marker for a clickable UI node: the role Bevy's `Button` had before 0.20 (it requires `Node`,
-/// blocks focus below it and carries the legacy [`Interaction`] state that `ui_focus_system`
-/// keeps current). Bevy 0.20 deprecated its own `Button`/`Interaction` in favour of the headless
-/// `ui_widgets::Button` plus `Pressed`/`Hovered`; the migration is tracked as a follow-up of M-0047.
+/// Marker for an interactive control: every widget root carries it. It requires the pointer
+/// state Bevy's picking keeps current ([`Hovered`]) and `Node`; the state layer, focus ring and
+/// disabled treatment of [`crate::interaction::layer`] attach to it, and pointer release inside
+/// the control sends [`Activated`].
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[allow(deprecated)]
-#[require(Node, bevy::ui::FocusPolicy::Block, Interaction)]
+#[require(Node, bevy::ui::FocusPolicy::Block, Hovered)]
 pub struct Button;
 
 /// Button variants supported by Material Design 3.
@@ -348,23 +352,19 @@ impl ButtonBuilder {
     }
 }
 
-/// Query item alias for button interaction queries.
-pub type ButtonInteractionItem<'a> = (Entity, &'a Interaction, Option<&'a OnClickCallback>);
-
-/// Query filter alias for active button interaction events.
-pub type ButtonInteractionFilter = (With<Button>, Without<Disabled>, Changed<Interaction>);
-
-/// System detecting clicks on every [`Button`] (M3 or hand-built) and firing events & callbacks.
+/// System turning [`Activated`] on every [`Button`] (M3 or hand-built) into [`ButtonClicked`]
+/// events and callbacks.
 pub fn button_click_system(
     mut commands: Commands,
-    interaction_query: Query<ButtonInteractionItem, ButtonInteractionFilter>,
+    mut activated: MessageReader<Activated>,
+    buttons: Query<Option<&OnClickCallback>, (With<Button>, Without<Disabled>)>,
     mut click_events: MessageWriter<ButtonClicked>,
 ) {
-    for (entity, interaction, callback) in &interaction_query {
-        if *interaction == Interaction::Pressed {
-            click_events.write(ButtonClicked(entity));
+    for Activated(entity) in activated.read() {
+        if let Ok(callback) = buttons.get(*entity) {
+            click_events.write(ButtonClicked(*entity));
             if let Some(cb) = callback {
-                (cb.0)(&mut commands, entity);
+                (cb.0)(&mut commands, *entity);
             }
         }
     }
@@ -376,9 +376,8 @@ pub struct ButtonPlugin;
 
 impl Plugin for ButtonPlugin {
     fn build(&self, app: &mut App) {
-        if !app.world().contains_resource::<Messages<ButtonClicked>>() {
-            app.add_message::<ButtonClicked>();
-        }
+        app.add_message::<ButtonClicked>()
+            .add_message::<Activated>();
         app.add_systems(Update, button_click_system);
     }
 }
@@ -393,6 +392,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<ButtonClicked>()
+            .add_message::<Activated>()
             .add_systems(Update, button_click_system);
 
         let clicked = Arc::new(AtomicBool::new(false));
@@ -409,11 +409,8 @@ mod tests {
 
         app.update();
 
-        // Simulate button press
-        {
-            let mut entity_mut = app.world_mut().entity_mut(button_entity);
-            entity_mut.insert(Interaction::Pressed);
-        }
+        // Simulate an activation (pointer release inside, Confirm, `ui.click`)
+        app.world_mut().write_message(Activated(button_entity));
 
         app.update();
 

@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use opts_gui::components::Button;
 use opts_gui::{
-    interaction::events::ThemeChanged,
+    interaction::{activation::Activated, events::ThemeChanged},
     theme::{color::ColorRole, theme::MaterialTheme},
     tokens::components::{ForegroundRole, RadiusToken},
 };
@@ -71,7 +71,8 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
 /// System that handles theme toggle clicks or the `F2` hotkey to switch palettes at runtime.
 pub fn theme_toggle_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<ThemeToggleBtn>)>,
+    mut activated: MessageReader<Activated>,
+    toggle_buttons: Query<(), With<ThemeToggleBtn>>,
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
     mut theme_events: MessageWriter<ThemeChanged>,
@@ -79,10 +80,9 @@ pub fn theme_toggle_system(
 ) {
     let mut should_toggle = keyboard.just_pressed(KeyCode::F2);
 
-    for interaction in &interaction_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if toggle_buttons.contains(*entity) {
             should_toggle = true;
-            break;
         }
     }
 

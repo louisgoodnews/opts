@@ -4,7 +4,11 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::{TreeNodeSelected, TreeNodeToggled},
+    interaction::{
+        activation::Activated,
+        events::{TreeNodeSelected, TreeNodeToggled},
+        state::Disabled,
+    },
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -241,13 +245,14 @@ impl TreeviewBuilder {
 
 /// System handling clicks on tree node rows to expand/collapse and select nodes.
 pub fn treeview_click_system(
-    mut click_query: Query<(Entity, &Interaction, &mut M3TreeNode), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    mut click_query: Query<&mut M3TreeNode, Without<Disabled>>,
     mut tree_query: Query<&mut M3Treeview>,
     mut select_events: MessageWriter<TreeNodeSelected>,
     mut toggle_events: MessageWriter<TreeNodeToggled>,
 ) {
-    for (_entity, interaction, mut node) in &mut click_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(mut node) = click_query.get_mut(*entity) {
             // Selection event
             if let Ok(mut tree) = tree_query.get_mut(node.tree_entity) {
                 tree.selected_node_id = Some(node.node_id.clone());

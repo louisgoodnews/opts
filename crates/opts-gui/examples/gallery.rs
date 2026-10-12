@@ -1,4 +1,3 @@
-#![allow(deprecated)]
 //! Comprehensive gallery demonstrating all Material Design 3 widgets in OPTS GUI.
 
 use bevy::prelude::*;
@@ -384,10 +383,11 @@ fn theme_hotkey_toggle_system(
 
 fn spawn_dialog_system(
     mut commands: Commands,
-    query: Query<&Interaction, (Changed<Interaction>, With<SpawnDialogButton>)>,
+    mut activated: MessageReader<Activated>,
+    query: Query<(), With<SpawnDialogButton>>,
 ) {
-    for interaction in &query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if query.contains(*entity) {
             ToplevelBuilder::new("Vehicle Dispatch Parameters")
                 .with_size(440.0, 260.0)
                 .modal(true)
@@ -398,10 +398,11 @@ fn spawn_dialog_system(
 
 fn spawn_toast_system(
     mut commands: Commands,
-    query: Query<&Interaction, (Changed<Interaction>, With<SpawnToastButton>)>,
+    mut activated: MessageReader<Activated>,
+    query: Query<(), With<SpawnToastButton>>,
 ) {
-    for interaction in &query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if query.contains(*entity) {
             ToastBuilder::new("Timetable schedule synchronized successfully")
                 .with_duration(3.5)
                 .with_action("OK")

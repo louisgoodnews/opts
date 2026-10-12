@@ -5,9 +5,6 @@ use bevy::prelude::*;
 use crate::app_state::AppState;
 use crate::menu::{
     entries::quit_button_action_system,
-    interactions::{
-        menu_focus_visual_system, menu_interaction_state_system, menu_keyboard_activation_system,
-    },
     systems::{
         enter_main_menu_system, exit_main_menu_system, initial_focus_system,
         menu_escape_exit_system,
@@ -28,9 +25,6 @@ impl Plugin for MainMenuPlugin {
         app.add_systems(
             Update,
             (
-                menu_focus_visual_system,
-                menu_keyboard_activation_system,
-                menu_interaction_state_system,
                 theme_toggle_system,
                 initial_focus_system,
                 menu_escape_exit_system,

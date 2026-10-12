@@ -4,7 +4,7 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::ToastDismissed,
+    interaction::{activation::Activated, events::ToastDismissed, state::Disabled},
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -265,11 +265,12 @@ pub fn toast_timer_system(
 /// System handling clicks on toast action buttons.
 pub fn toast_action_click_system(
     mut commands: Commands,
-    mut action_query: Query<(&ToastActionButton, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    action_query: Query<&ToastActionButton, Without<Disabled>>,
     mut events: MessageWriter<ToastDismissed>,
 ) {
-    for (action, interaction) in &mut action_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(action) = action_query.get(*entity) {
             events.write(ToastDismissed { entity: action.0 });
             commands.entity(action.0).despawn();
         }

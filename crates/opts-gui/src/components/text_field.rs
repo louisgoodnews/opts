@@ -4,7 +4,11 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::{events::TextChanged, focus::Focusable, state::Disabled},
+    interaction::{
+        events::TextChanged,
+        focus::Focusable,
+        state::{Disabled, Pressed},
+    },
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -211,20 +215,12 @@ impl TextFieldBuilder {
     }
 }
 
-/// Query item alias for text field interaction query.
-pub type TextFieldInteractionItem<'a> = (Entity, &'a Interaction, &'a mut M3TextField);
-
-/// Query filter alias for active text field interactions.
-pub type TextFieldInteractionFilter = (Without<Disabled>, Changed<Interaction>);
-
-/// System managing focus and click activation for [`M3TextField`] entities.
+/// System managing focus for [`M3TextField`] entities (pressing one focuses it).
 pub fn text_field_interaction_system(
-    mut interaction_query: Query<TextFieldInteractionItem, TextFieldInteractionFilter>,
+    mut fields: Query<&mut M3TextField, (Without<Disabled>, Added<Pressed>)>,
 ) {
-    for (_entity, interaction, mut field) in &mut interaction_query {
-        if *interaction == Interaction::Pressed {
-            field.is_focused = true;
-        }
+    for mut field in &mut fields {
+        field.is_focused = true;
     }
 }
 

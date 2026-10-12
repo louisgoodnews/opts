@@ -5,7 +5,10 @@ use bevy::input::ButtonState;
 use bevy::prelude::*;
 
 use super::{TextArea, TextClipboard};
-use crate::interaction::{focus::FocusEvent, state::Focused};
+use crate::interaction::{
+    focus::FocusEvent,
+    state::{Focused, Pressed},
+};
 
 /// Lines moved by PageUp / PageDown.
 const PAGE_LINES: isize = 10;
@@ -21,11 +24,11 @@ pub struct TextAreaChanged {
 
 /// Focuses a text area on click and mirrors the shared [`Focused`] marker into `TextArea::focused`.
 pub fn text_area_focus_system(
-    mut areas: Query<(Entity, &Interaction, &mut TextArea, Has<Focused>)>,
+    mut areas: Query<(Entity, Has<Pressed>, &mut TextArea, Has<Focused>)>,
     mut focus: MessageWriter<FocusEvent>,
 ) {
-    for (entity, interaction, mut area, has_focus) in &mut areas {
-        if *interaction == Interaction::Pressed && !has_focus {
+    for (entity, pressed, mut area, has_focus) in &mut areas {
+        if pressed && !has_focus {
             focus.write(FocusEvent::Set(entity));
         }
         if area.focused != has_focus {
