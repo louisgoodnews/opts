@@ -106,3 +106,66 @@ fn a_gamepad_alone_reaches_every_control_of_every_screen() {
     }
     assert!(findings.is_empty(), "not reachable by directions alone:\n{}", findings.join("\n"));
 }
+
+#[test]
+fn every_control_has_an_accessible_name_and_node() {
+    let mut findings = Vec::new();
+    for screen in Screen::ALL {
+        for locale in ["en", "de"] {
+            let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+            // the accessibility sync is throttled to 10 per second of real time
+            app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(150),
+            ));
+            set_locale(&mut app, locale);
+            for _ in 0..3 {
+                app.update();
+            }
+            for f in rules::unnamed_controls(app.world_mut())
+                .into_iter()
+                .chain(rules::missing_accessibility_nodes(app.world_mut()))
+            {
+                findings.push(format!("{} {locale}: {f}", screen.name()));
+            }
+        }
+    }
+    assert!(findings.is_empty(), "{}", findings.join("\n"));
+}
+
+#[test]
+fn the_dialog_and_summary_screens_really_show_their_content() {
+    for screen in [
+        Screen::FirstRunFound,
+        Screen::FirstRunChoose,
+        Screen::Welcome,
+    ] {
+        let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+        let modals = app
+            .world_mut()
+            .query::<&opts_gui::components::modal::ModalRoot>()
+            .iter(app.world())
+            .count();
+        assert!(modals >= 1, "{} shows no dialog", screen.name());
+    }
+    // the session summary is a card on Home, not a dialog
+    let mut app = build(Screen::Summary, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+    let cards = app
+        .world_mut()
+        .query::<&opts_game::session_summary::SummaryCard>()
+        .iter(app.world())
+        .count();
+    assert_eq!(cards, 1, "the summary card is missing");
+}
+
+#[test]
+fn every_screen_has_something_to_operate() {
+    for screen in Screen::ALL {
+        let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+        let focusable = opts_gui::ui_tree::snapshot(app.world_mut())
+            .flatten()
+            .iter()
+            .filter(|n| n.focusable && n.state.visible)
+            .count();
+        assert!(focusable >= 2, "{}: {focusable} focusable elements", screen.name());
+    }
+}

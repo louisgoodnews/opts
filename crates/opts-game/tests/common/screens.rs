@@ -76,15 +76,23 @@ pub enum Screen {
     Settings,
     Wizard,
     Pause,
+    FirstRunFound,
+    FirstRunChoose,
+    Welcome,
+    Summary,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 5] = [
+    pub const ALL: [Screen; 9] = [
         Screen::Home,
         Screen::Help,
         Screen::Settings,
         Screen::Wizard,
         Screen::Pause,
+        Screen::FirstRunFound,
+        Screen::FirstRunChoose,
+        Screen::Welcome,
+        Screen::Summary,
     ];
 
     pub fn name(self) -> &'static str {
@@ -94,6 +102,10 @@ impl Screen {
             Screen::Settings => "settings",
             Screen::Wizard => "wizard",
             Screen::Pause => "pause",
+            Screen::FirstRunFound => "first-run-found",
+            Screen::FirstRunChoose => "first-run-choose",
+            Screen::Welcome => "welcome",
+            Screen::Summary => "summary",
         }
     }
 }
@@ -181,8 +193,35 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
         .persist = false;
     resize(&mut app, w, h);
     app.update();
+    {
+        use opts_game::first_run::{FirstRun, Step};
+        let step = match screen {
+            Screen::FirstRunFound => Some(Step::Found(std::path::PathBuf::from("/fixture/game"))),
+            Screen::FirstRunChoose => Some(Step::Choose),
+            Screen::Welcome => Some(Step::Welcome),
+            _ => None,
+        };
+        if step.is_some() {
+            app.world_mut().resource_mut::<FirstRun>().step = step;
+        }
+        if screen == Screen::Summary {
+            app.insert_resource(opts_game::session_summary::LastSession::new(
+                &Default::default(),
+                opts_game::pause::SessionStats {
+                    duration_s: 90.0,
+                    distance_m: 800.0,
+                    max_speed_m_s: 9.0,
+                    errors_at_start: 0,
+                    errors_now: 2,
+                },
+            ));
+        }
+    }
     let state = match screen {
-        Screen::Home => AppState::MainMenu,
+        Screen::Home | Screen::FirstRunFound | Screen::FirstRunChoose | Screen::Welcome => {
+            AppState::MainMenu
+        }
+        Screen::Summary => AppState::MainMenu,
         Screen::Help => AppState::Help,
         Screen::Settings => AppState::Settings,
         Screen::Wizard => AppState::VehicleSelection,

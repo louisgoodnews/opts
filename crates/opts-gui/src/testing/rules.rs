@@ -494,6 +494,45 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
     out
 }
 
+/// Interactive elements a screen reader could not name: no accessible label (UI-P10, WCAG 4.1.2).
+/// Text entries are named by their placeholder or label; icon-only buttons need a tooltip or key.
+pub fn unnamed_controls(world: &mut World) -> Vec<String> {
+    let snap = snapshot(world);
+    snap.flatten()
+        .into_iter()
+        .filter(|n| n.focusable && n.state.visible && is_target(n.role))
+        .filter(|n| n.label.trim().is_empty())
+        .map(|n| format!("{} ({}) has no accessible name", n.id, n.role.as_str()))
+        .collect()
+}
+
+/// Every focusable element has an [`AccessibilityNode`](bevy::a11y::AccessibilityNode) with the
+/// same name the tree reports (what the platform's accessibility API receives).
+pub fn missing_accessibility_nodes(world: &mut World) -> Vec<String> {
+    let snap = snapshot(world);
+    let mut out = Vec::new();
+    for n in snap
+        .flatten()
+        .into_iter()
+        .filter(|n| n.focusable && n.state.visible && is_target(n.role))
+    {
+        let Some(e) = crate::ui_tree::find_entity(world, &n.id) else {
+            continue;
+        };
+        match world.get::<bevy::a11y::AccessibilityNode>(e) {
+            None => out.push(format!("{} has no AccessibilityNode", n.id)),
+            Some(a) if a.label().unwrap_or_default() != n.label => out.push(format!(
+                "{}: accessibility label {:?} differs from {:?}",
+                n.id,
+                a.label(),
+                n.label
+            )),
+            Some(_) => {}
+        }
+    }
+    out
+}
+
 /// What a keyboard-only traversal achieved.
 #[derive(Debug, Default)]
 pub struct Traversal {
