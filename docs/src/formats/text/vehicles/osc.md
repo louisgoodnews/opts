@@ -147,7 +147,7 @@ Eight local scratch registers hold values across expression parts.
 
 | Token | Operation |
 | :--- | :--- |
-| `s0` … `s7` | Pop and store into register N. |
+| `s0` … `s7` | Store the top of the stack into register N; **the value stays on the stack** like after a variable store (`X s2 (L.L.y) +` is `X + y`; verified 2026-10-12, together with the store rule: **0 underflows in 1,218 vehicles**). |
 | `l0` … `l7` | Push register N. |
 
 `s0 0.8 > l0 0.2 < ||` stores the top, then tests it twice. Registers are **local to a block run** and not preserved between triggers or frames.

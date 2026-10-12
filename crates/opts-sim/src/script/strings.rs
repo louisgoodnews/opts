@@ -12,6 +12,9 @@ pub struct Stacks {
     pub numbers: Vec<f32>,
     /// String stack.
     pub strings: Vec<String>,
+    /// The eight registers `s0`…`s7` / `l0`…`l7`: shared by a block and every macro it calls (macros
+    /// take their arguments in registers, `(L.L.x) s1 … (M.L.druckausgleich)`).
+    pub regs: [f32; 8],
 }
 
 /// Keeps the first `n` characters, padding with spaces on the right (`$SetLengthL`).

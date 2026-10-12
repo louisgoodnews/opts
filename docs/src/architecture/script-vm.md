@@ -74,7 +74,13 @@ With the flag, `M_Wheel` (torque at the driven wheels) and `Brakeforce` from the
 
 ### Store keeps its value (2026-10-12)
 
-`(S.L.x)` / `(S.$.x)` leave the stored value on the stack. The VM popped it before, so every chained store (`1 (S.L.a) (S.L.b)`, 100,000s of uses) wrote 0 into all but the first variable and logged a stack underflow: engine, gearbox, doors, lights and the IBIS of nearly every vehicle ran with wrong state (this is also why the engine of the NLC never started). Measured with `cargo run --release -p opts-sim --example vehicle_scripts -- <OMSI>`: **233,472 underflow sites in 1,207 vehicles before, 348 in 28 after**. The rest: the string operators of the GPM buses (Q-OSC-003, the exact stack effects of the `$` family), `engine_frame` of the S200 series, `Kurven.osc` of the M5 tram, `{init}` of the C2 AI scripts. `script_diag <OMSI> <.bus> [block]` prints one vehicle's diagnostics and disassembles blocks; `SHOW_STRINGS=1` lists the string variables.
+`(S.L.x)` / `(S.$.x)` leave the stored value on the stack. The VM popped it before, so every chained store (`1 (S.L.a) (S.L.b)`, 100,000s of uses) wrote 0 into all but the first variable and logged a stack underflow: engine, gearbox, doors, lights and the IBIS of nearly every vehicle ran with wrong state (this is also why the engine of the NLC never started). Measured with `cargo run --release -p opts-sim --example vehicle_scripts -- <OMSI>`: **233,472 underflow sites in 1,207 vehicles before, 348 in 28 after**; the remaining ones were register stores: `s0`…`s7` keep their value on the stack too (`… * s2 (L.L.engine_M) + (S.L.engine_M)`), and with that **0 underflows in all 1,218 scripted vehicles** (string operators included, Q-OSC-003 stays open for their exact semantics but no longer underflows). `script_diag <OMSI> <.bus> [block]` prints one vehicle's diagnostics and disassembles blocks; `SHOW_STRINGS=1` lists the string variables.
+
+### Registers are shared, `random` takes a range (2026-10-12)
+
+* `s0`…`s7` / `l0`…`l7` belong to the whole run, not to a macro: macros take their arguments in registers and return results in them (`(L.L.p1) s1 (L.L.p2) s2 … (M.L.bremse_druckausgleich) l1 (S.L.bremse_p_Tank01)`). With one register file per macro call the whole brake system never moved: cylinder pressures stayed 0 and the spring brakes kept the bus braked at 90 kN.
+* `x random` pushes a number from 0 up to `x` (`500000 random 400000 +` is the random initial tank pressure); it pushed 0…1 and left `x` below before.
+* Result for the NLC: engine starts in 1.6 s, gear D engages (interlock: brake pressed, emulated for the selection), the compressor fills the four brake circuits in about 2 minutes (the initial pressure is random 4–9 bar, as in OMSI), then the spring brakes release and the bus drives with `--script-drive`.
 
 ## Not done yet (M-0026 follow-ups)
 

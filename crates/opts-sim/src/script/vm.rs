@@ -93,12 +93,11 @@ impl ScriptEngine {
             );
             return;
         }
-        let mut regs = [0.0f32; 8];
         let mut pc = 0usize;
         while let Some(op) = self.program.blocks[index].ops.get(pc).copied() {
             pc += 1;
             self.ops_executed += 1;
-            if let Some(target) = self.step(op, index, pc - 1, depth, &mut regs, st) {
+            if let Some(target) = self.step(op, index, pc - 1, depth, st) {
                 pc = target;
             }
             // Values the scripts leave behind pile up at the bottom; the oldest are dropped.
@@ -143,7 +142,6 @@ impl ScriptEngine {
         block: usize,
         pc: usize,
         depth: usize,
-        regs: &mut [f32; 8],
         st: &mut Stacks,
     ) -> Option<usize> {
         match op {
@@ -154,9 +152,11 @@ impl ScriptEngine {
                 st.numbers.extend([v, v]);
             }
             Op::PushPi => st.numbers.push(std::f32::consts::PI),
+            // `x random`: a pseudo-random number from 0 up to `x` (`500000 random 400000 +`).
             Op::Random => {
+                let range = self.pop(st, block, pc);
                 let v = self.next_random();
-                st.numbers.push(v);
+                st.numbers.push(v * range);
             }
             Op::Bin(b) => {
                 let y = self.pop(st, block, pc);
@@ -183,8 +183,14 @@ impl ScriptEngine {
                 }
             }
             Op::Jump(t) => return Some(t as usize),
-            Op::LoadReg(r) => st.numbers.push(regs[usize::from(r)]),
-            Op::StoreReg(r) => regs[usize::from(r)] = self.pop(st, block, pc),
+            Op::LoadReg(r) => st.numbers.push(st.regs[usize::from(r)]),
+            // Like a variable store, a register store leaves the value on the stack
+            // (`X s2 (L.L.y) +` adds `y` to `X`).
+            Op::StoreReg(r) => {
+                let v = self.pop(st, block, pc);
+                st.regs[usize::from(r)] = v;
+                st.numbers.push(v);
+            }
             other => self.step_data(other, depth, st, block, pc),
         }
         None

@@ -27,6 +27,8 @@ pub struct ScriptStartup {
     mark: f32,
     stage: u8,
     gear: Option<opts_sim::GearPosition>,
+    /// The parking brake state last handed to the scripts (they start with it applied).
+    parking: Option<bool>,
 }
 
 /// A vehicle's script engine and whether `{init}` has run.
@@ -132,6 +134,7 @@ pub fn vehicle_script_system(
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
     enabled: Res<ScriptDriveEnabled>,
+    mut ticks: Local<u32>,
     mut query: Query<(&mut VehicleController, &VehicleScripts)>,
 ) {
     for (mut controller, scripts) in &mut query {
@@ -146,21 +149,38 @@ pub fn script_drive_system(
             controller.sim.script_drive = None;
             continue;
         }
-        // `Brakeforce` is the total; vehicles that write per-wheel forces use those (the two are
-        // never mixed, 📚).
-        let brake = if engine.writes("brakeforce") {
-            engine.get("brakeforce")
+        // Player vehicles write the force of every wheel (`Axle_Brakeforce_<n>_<l|r>`); the
+        // total `Brakeforce` belongs to the AI scripts (`{frame_ai}`), so the wheel forces win.
+        let wheel_names: Vec<String> = (0..8)
+            .flat_map(|i| {
+                [
+                    format!("axle_brakeforce_{i}_l"),
+                    format!("axle_brakeforce_{i}_r"),
+                ]
+            })
+            .collect();
+        let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
+            wheel_names.iter().map(|n| engine.get(n)).sum()
         } else {
-            (0..8)
-                .flat_map(|i| {
-                    [
-                        format!("axle_brakeforce_{i}_l"),
-                        format!("axle_brakeforce_{i}_r"),
-                    ]
-                })
-                .map(|n| engine.get(&n))
-                .sum()
+            engine.get("brakeforce")
         };
+        *ticks = ticks.wrapping_add(1);
+        if *ticks % 64 == 0 {
+            tracing::debug!(
+                m_wheel = engine.get("m_wheel"),
+                brake,
+                engine_n = engine.get("engine_n"),
+                throttle = engine.get("throttle"),
+                gear_pre = engine.get("antrieb_getr_gangvorwahl"),
+                gear_sel = engine.get("antrieb_getr_gangwahl"),
+                gear_act = engine.get("antrieb_getr_aktugang"),
+                parking = engine.get("bremse_feststell"),
+                tank = engine.get("bremse_p_tank01"),
+                f0r = engine.get("axle_brakeforce_0_r"),
+                f3l = engine.get("axle_brakeforce_3_l"),
+                "script drive"
+            );
+        }
         controller.sim.script_drive = Some(opts_sim::vehicle::ScriptDrive {
             wheel_torque_nm: engine.get("m_wheel"),
             brake_force_n: brake.max(0.0),
@@ -185,6 +205,7 @@ pub fn script_startup_system(
         // Battery switch (pressed and released), then the engine start key once the busbar has
         // voltage, held until the engine runs (OMSI's standard `keyboard.cfg` vehicle triggers).
         let busbar_ok = engine.get("elec_busbar_main") > 0.3;
+        let before = st.stage;
         match st.stage {
             0 if st.elapsed > 0.5 => {
                 engine.trigger("cp_batterietrennschalter_toggle");
@@ -197,9 +218,6 @@ pub fn script_startup_system(
                 st.mark = st.elapsed;
             }
             2 if busbar_ok && st.elapsed - st.mark > 1.0 => {
-                // The selector variables read 30 after init (cause not found); neutral is the real start state.
-                engine.set("antrieb_getr_gangvorwahl", 1.0);
-                engine.set("antrieb_getr_gangwahl", 1.0);
                 engine.trigger("kw_m_enginestart");
                 st.stage = 3;
                 st.mark = st.elapsed;
@@ -212,6 +230,16 @@ pub fn script_startup_system(
                 st.gear = None;
             }
             _ => {}
+        }
+        if st.stage != before {
+            tracing::debug!(
+                stage = st.stage,
+                busbar = engine.get("elec_busbar_main"),
+                gear_select = engine.get("antrieb_getr_gangwahl"),
+                engine_n = engine.get("engine_n"),
+                engine_on = engine.get("engine_on"),
+                "script start-up"
+            );
         }
         let gear = controller.sim.inputs.gear();
         // The gear selector follows the player once the engine is up (before: neutral/park).
@@ -227,8 +255,21 @@ pub fn script_startup_system(
                 opts_sim::GearPosition::Reverse => "automatic_r",
                 opts_sim::GearPosition::Neutral => "automatic_n",
             };
+            // The automatic only leaves neutral with the brake pressed (an interlock of the
+            // scripts); the player's selection stands for that press.
+            let brake = engine.get("brake");
+            engine.set("brake", 1.0);
             engine.trigger(name);
+            engine.set("brake", brake);
         }
+        // The parking brake of the scripts follows the player's (`parking_brake_toggle` is the
+        // standard trigger of the `.` key); a toggle takes a step to show, so ask once per change.
+        let parking = controller.sim.inputs.is_parking_brake_engaged();
+        let applied = engine.get("bremse_feststell") > 0.5;
+        if parking != applied && st.parking != Some(parking) {
+            engine.trigger("parking_brake_toggle");
+        }
+        st.parking = Some(parking);
     }
 }
 

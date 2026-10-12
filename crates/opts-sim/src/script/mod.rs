@@ -256,6 +256,18 @@ impl ScriptEngine {
             .collect()
     }
 
+    /// Runs the macro `name` once on a fresh stack (diagnostics and tests).
+    pub fn call_macro(&mut self, name: &str) -> bool {
+        let Some(id) = self.program.names.macros.get(name) else {
+            return false;
+        };
+        let Some(block) = self.program.macros.get(&id).copied() else {
+            return false;
+        };
+        self.run_top(block);
+        true
+    }
+
     /// Readable listing of the blocks whose name contains `name` (diagnostics).
     #[must_use]
     pub fn disassemble(&self, name: &str) -> Vec<String> {
