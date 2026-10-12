@@ -86,6 +86,9 @@ pub fn expected_masks(tris: &[ExpectedTri], placement: &Placement, view: &View) 
             continue;
         };
         let p = [a, b, c];
+        if !t.flags.two_sided && !is_front(p, placement.mirror_x) {
+            continue;
+        }
         fill_triangle(&mut m.all, p);
         if t.flags.base {
             fill_triangle(&mut m.base, p);
@@ -98,6 +101,15 @@ pub fn expected_masks(tris: &[ExpectedTri], placement: &Placement, view: &View) 
         }
     }
     m
+}
+
+/// Whether a triangle faces the camera. OMSI meshes are left-handed: the front is the
+/// clockwise side in a right-handed frame, which is the positive side in image coordinates
+/// (y down). The loader culls back faces (`opts-bevy` model material), so back-facing
+/// triangles are not expected on screen. A mirrored placement flips the winding.
+fn is_front(p: [Vec2; 3], mirrored: bool) -> bool {
+    let area = (p[1] - p[0]).perp_dot(p[2] - p[0]);
+    (area > 0.0) != mirrored
 }
 
 fn ratio(num: usize, den: usize) -> Option<f32> {

@@ -140,6 +140,18 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
     } else {
         unknown = geometry_rules(t, ev, &mut cats);
     }
+    // Skipped or missing meshes explain the geometry shortfalls that follow from them.
+    if cats
+        .iter()
+        .any(|c| c == "F-MESH-PROTECTED" || c == "F-MESH-MISSING")
+    {
+        cats.retain(|c| {
+            !matches!(
+                c.as_str(),
+                "F-RENDER-EMPTY" | "F-GEOM-PARTIAL" | "F-XFORM-SCALE" | "F-XFORM-OFFSET"
+            )
+        });
+    }
     // An invisible object is explained by its missing texture; a text check needs the texture.
     if cats.iter().any(|c| c == "F-TEX-MISSING") {
         cats.retain(|c| c != "F-RENDER-EMPTY" && c != "F-TEXT-NOT-SHOWN");

@@ -51,6 +51,8 @@ pub struct TriFlags {
     pub alpha: bool,
     /// Carries a text texture.
     pub text: bool,
+    /// Drawn from both sides (tree billboards); every other triangle is back-face culled.
+    pub two_sided: bool,
 }
 
 /// One expected triangle in object space.
@@ -252,7 +254,12 @@ fn add_model(
         if ok {
             tris.push(ExpectedTri {
                 v,
-                flags: TriFlags { base, alpha, text },
+                flags: TriFlags {
+                    base,
+                    alpha,
+                    text,
+                    two_sided: false,
+                },
             });
         }
     }
@@ -266,6 +273,7 @@ fn tree_billboard(height: f32, width: f32) -> Vec<ExpectedTri> {
             base: true,
             alpha: true,
             text: false,
+            two_sided: true,
         };
         [
             ExpectedTri {
