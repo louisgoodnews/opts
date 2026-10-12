@@ -243,12 +243,21 @@ fn inactive(world: &World, entity: Entity) -> bool {
     false
 }
 
-/// The opaque colour behind `entity`: its ancestors' `BackgroundColor`s composited from the root
+/// The opaque colour behind `entity` (its own fill included when `include_self`): its ancestors' `BackgroundColor`s composited from the root
 /// (`root` is the window background), `None` when an image sits in the chain.
-fn resolved_background(world: &World, entity: Entity, root: Color) -> Option<Color> {
+fn resolved_background(
+    world: &World,
+    entity: Entity,
+    root: Color,
+    include_self: bool,
+) -> Option<Color> {
     let mut chain = Vec::new();
     // The element's own fill counts too (a label with its own chip).
-    let mut cur = Some(entity);
+    let mut cur = if include_self {
+        Some(entity)
+    } else {
+        world.get::<ChildOf>(entity).map(|c| c.parent())
+    };
     while let Some(e) = cur {
         if world.get::<ImageNode>(e).is_some() {
             return None;
@@ -282,16 +291,16 @@ fn resolved_background(world: &World, entity: Entity, root: Color) -> Option<Col
 /// WCAG contrast of every visible, enabled text against the colour behind it, and of every
 /// visible control border (`BorderColor` on a focusable element) against its own surroundings.
 ///
-/// `root` is the colour of the window behind the whole tree (the theme's `Background`);
-/// `text_min` and `control_min` are the thresholds of the theme under test
-/// ([`crate::theme::accent::text_min`], [`crate::theme::accent::control_min`]). Text of 24 px and
+/// `scheme` is the colour scheme under test: its `Surface` is the window behind the whole tree
+/// and its kind selects the thresholds ([`crate::theme::accent::text_min`],
+/// [`crate::theme::accent::control_min`]). Borders in `OutlineVariant` are decorative (design
+/// language section 4) and exempt. Text of 24 px and
 /// above counts as large text and needs 3:1 (4.5:1 in high contrast, where `text_min` is 7).
-pub fn text_contrast(
-    world: &mut World,
-    root: Color,
-    text_min: f32,
-    control_min: f32,
-) -> ContrastReport {
+pub fn text_contrast(world: &mut World, scheme: &crate::theme::ColorScheme) -> ContrastReport {
+    let root = scheme.get(crate::theme::ColorRole::Surface);
+    let text_min = crate::theme::accent::text_min(scheme.kind);
+    let control_min = crate::theme::accent::control_min(scheme.kind);
+    let decorative = scheme.get(crate::theme::ColorRole::OutlineVariant);
     let mut report = ContrastReport::default();
     let mut q = world.query::<(Entity, &Text, &TextColor, &TextFont)>();
     let texts: Vec<(Entity, String, Color, f32)> = q
@@ -309,7 +318,7 @@ pub fn text_contrast(
         if hidden(world, e) || inactive(world, e) {
             continue;
         }
-        let Some(bg) = resolved_background(world, e, root) else {
+        let Some(bg) = resolved_background(world, e, root, true) else {
             report.over_image += 1;
             continue;
         };
@@ -347,6 +356,7 @@ pub fn text_contrast(
         .filter(|(_, b, n, focusable)| {
             *focusable
                 && b.top.alpha() > 0.0
+                && b.top != decorative
                 && (n.border.left != Val::ZERO || n.border.top != Val::ZERO)
         })
         .map(|(e, b, ..)| (e, b.top))
@@ -355,7 +365,7 @@ pub fn text_contrast(
         if hidden(world, e) || inactive(world, e) {
             continue;
         }
-        let Some(bg) = resolved_background(world, e, root) else {
+        let Some(bg) = resolved_background(world, e, root, false) else {
             continue;
         };
         let ratio = contrast_ratio(composite_over(border, bg), bg);
@@ -398,17 +408,16 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
         let name = world
             .get::<UiId>(e)
             .map_or(format!("{text:?}"), |u| format!("{text:?} ({})", u.0));
-        // Nearest ancestor that clips, and the direct parent's box.
-        let mut clip: Option<[f32; 4]> = None;
-        let mut scrolls_y = false;
+        // Every clipping ancestor, and the direct parent's box.
+        let mut clips: Vec<([f32; 4], Overflow)> = Vec::new();
         let mut cur = world.get::<ChildOf>(e).map(|c| c.parent());
         let parent_rect = cur.and_then(|p| rect_of(world, p));
         while let Some(a) = cur {
             if let Some(n) = world.get::<Node>(a) {
                 if n.overflow.x != OverflowAxis::Visible || n.overflow.y != OverflowAxis::Visible {
-                    clip = rect_of(world, a);
-                    scrolls_y = n.overflow.y == OverflowAxis::Scroll;
-                    break;
+                    if let Some(c) = rect_of(world, a) {
+                        clips.push((c, n.overflow));
+                    }
                 }
             }
             cur = world.get::<ChildOf>(a).map(|c| c.parent());
@@ -417,31 +426,44 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
         let has_tooltip = world
             .get::<crate::interaction::tooltip::Tooltip>(e)
             .is_some();
-        if let Some(p) = parent_rect {
-            if !has_tooltip && r[0] + r[2] > p[0] + p[2] + tolerance {
+        // What a player can see of the text: its box cut by every clipping ancestor.
+        let mut seen = r;
+        for (c, _) in &clips {
+            let x0 = seen[0].max(c[0]);
+            let y0 = seen[1].max(c[1]);
+            let x1 = (seen[0] + seen[2]).min(c[0] + c[2]);
+            let y1 = (seen[1] + seen[3]).min(c[1] + c[3]);
+            seen = [x0, y0, (x1 - x0).max(0.0), (y1 - y0).max(0.0)];
+        }
+        if seen[2] <= 0.0 || seen[3] <= 0.0 {
+            continue; // scrolled out of view
+        }
+        let cut_sideways = clips.iter().any(|(c, o)| {
+            o.x != OverflowAxis::Visible
+                && o.x != OverflowAxis::Scroll
+                && (r[0] < c[0] - tolerance || r[0] + r[2] > c[0] + c[2] + tolerance)
+        });
+        if cut_sideways && !has_tooltip {
+            out.push(format!("{name} is cut sideways by a clipping container"));
+        } else if let Some(p) = parent_rect {
+            if !has_tooltip && clips.is_empty() && r[0] + r[2] > p[0] + p[2] + tolerance {
                 out.push(format!(
                     "{name} sticks out of its container by {:.0} px (right)",
                     r[0] + r[2] - p[0] - p[2]
                 ));
             }
         }
-        if let Some(c) = clip {
-            if !has_tooltip && (r[0] < c[0] - tolerance || r[0] + r[2] > c[0] + c[2] + tolerance) {
-                out.push(format!("{name} is cut by a clipping container"));
-            }
+        if seen[0] < -tolerance
+            || seen[1] < -tolerance
+            || seen[0] + seen[2] > window.x + tolerance
+            || seen[1] + seen[3] > window.y + tolerance
+        {
+            out.push(format!(
+                "{name} leaves the {}x{} window ({:.0},{:.0} {:.0}x{:.0})",
+                window.x, window.y, seen[0], seen[1], seen[2], seen[3]
+            ));
         }
-        if clip.is_none() || !scrolls_y {
-            if r[0] < -tolerance
-                || r[1] < -tolerance
-                || r[0] + r[2] > window.x + tolerance
-                || r[1] + r[3] > window.y + tolerance
-            {
-                out.push(format!(
-                    "{name} leaves the {}x{} window ({:.0},{:.0} {:.0}x{:.0})",
-                    window.x, window.y, r[0], r[1], r[2], r[3]
-                ));
-            }
-        }
+        let r = seen;
         rects.push((e, name, r));
     }
     for (i, (ea, na, a)) in rects.iter().enumerate() {

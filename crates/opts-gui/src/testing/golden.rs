@@ -264,29 +264,50 @@ pub fn paint(world: &mut World, width: u32, height: u32, background: Color) -> R
         let center = t.translation;
         let min = center - size / 2.0;
         let max = center + size / 2.0;
+        let clip = clip_of(world, e);
         let radius = c.border_radius();
         let background = world.get::<BackgroundColor>(e).map(|b| to_rgba(b.0));
-        let border = world.get::<BorderColor>(e).map(|b| to_rgba(b.top));
+        let border = world.get::<BorderColor>(e).map(|b| {
+            [
+                to_rgba(b.top),
+                to_rgba(b.right),
+                to_rgba(b.bottom),
+                to_rgba(b.left),
+            ]
+        });
         let b = c.border();
         let inner_min = min + Vec2::new(b.min_inset.x, b.min_inset.y);
         let inner_max = max - Vec2::new(b.max_inset.x, b.max_inset.y);
-        let has_border = border.is_some_and(|c| c[3] > 0.0)
+        let has_border = border.is_some_and(|c| c.iter().any(|s| s[3] > 0.0))
             && (b.min_inset != Vec2::ZERO || b.max_inset != Vec2::ZERO);
+        let shrink = |v: Vec2, d: Vec2| (v - d).max(Vec2::ZERO);
+        let inner_radius = bevy::ui::ResolvedBorderRadius {
+            top_left: shrink(radius.top_left, b.min_inset),
+            top_right: shrink(radius.top_right, Vec2::new(b.max_inset.x, b.min_inset.y)),
+            bottom_right: shrink(radius.bottom_right, b.max_inset),
+            bottom_left: shrink(radius.bottom_left, Vec2::new(b.min_inset.x, b.max_inset.y)),
+        };
         if background.is_some_and(|c| c[3] > 0.0) || has_border {
             for y in (min.y.floor() as i64)..(max.y.ceil() as i64) {
                 for x in (min.x.floor() as i64)..(max.x.ceil() as i64) {
                     let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
-                    if !inside_rounded(p, min, max, &radius) {
+                    if !inside_rounded(p, min, max, &radius) || !in_clip(clip, x, y) {
                         continue;
                     }
-                    let in_border = has_border
-                        && (p.x < inner_min.x
-                            || p.y < inner_min.y
-                            || p.x >= inner_max.x
-                            || p.y >= inner_max.y);
+                    let in_border =
+                        has_border && !inside_rounded(p, inner_min, inner_max, &inner_radius);
                     if in_border {
-                        if let Some(col) = border {
-                            blend(&mut img, x, y, col, 1.0);
+                        if let Some(sides) = border {
+                            let d = [
+                                p.y - min.y,
+                                max.x - p.x,
+                                max.y - p.y,
+                                p.x - min.x,
+                            ];
+                            let side = (0..4)
+                                .min_by(|a, b| d[*a].total_cmp(&d[*b]))
+                                .unwrap_or(0);
+                            blend(&mut img, x, y, sides[side], 1.0);
                         }
                     } else if let Some(col) = background {
                         blend(&mut img, x, y, col, 1.0);
@@ -294,12 +315,55 @@ pub fn paint(world: &mut World, width: u32, height: u32, background: Color) -> R
                 }
             }
         }
-        paint_text(world, e, &mut img);
+        paint_text(world, e, &mut img, clip);
     }
     img
 }
 
-fn paint_text(world: &World, e: Entity, img: &mut RgbaImage) {
+/// The rectangle (physical pixels) every pixel of `e` is clipped to by its ancestors, if any.
+fn clip_of(world: &World, e: Entity) -> Option<(Vec2, Vec2)> {
+    let mut clip: Option<(Vec2, Vec2)> = None;
+    let mut cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    while let Some(a) = cur {
+        if let (Some(n), Some(c), Some(t)) = (
+            world.get::<Node>(a),
+            world.get::<ComputedNode>(a),
+            world.get::<UiGlobalTransform>(a),
+        ) {
+            let (cx, cy) = (
+                n.overflow.x != OverflowAxis::Visible,
+                n.overflow.y != OverflowAxis::Visible,
+            );
+            if cx || cy {
+                let mut lo = t.translation - c.size() / 2.0;
+                let mut hi = t.translation + c.size() / 2.0;
+                if !cx {
+                    lo.x = f32::MIN;
+                    hi.x = f32::MAX;
+                }
+                if !cy {
+                    lo.y = f32::MIN;
+                    hi.y = f32::MAX;
+                }
+                clip = Some(match clip {
+                    Some((l, h)) => (l.max(lo), h.min(hi)),
+                    None => (lo, hi),
+                });
+            }
+        }
+        cur = world.get::<ChildOf>(a).map(|c| c.parent());
+    }
+    clip
+}
+
+fn in_clip(clip: Option<(Vec2, Vec2)>, x: i64, y: i64) -> bool {
+    clip.is_none_or(|(lo, hi)| {
+        let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
+        p.x >= lo.x && p.y >= lo.y && p.x < hi.x && p.y < hi.y
+    })
+}
+
+fn paint_text(world: &World, e: Entity, img: &mut RgbaImage, clip: Option<(Vec2, Vec2)>) {
     let (Some(layout), Some(color), Some(c), Some(t)) = (
         world.get::<bevy::text::TextLayoutInfo>(e),
         world.get::<TextColor>(e),
@@ -331,13 +395,13 @@ fn paint_text(world: &World, e: Entity, img: &mut RgbaImage) {
                 };
                 let s = px.to_srgba();
                 let coverage = if red_only { s.red } else { s.alpha };
-                blend(
-                    img,
+                let (x, y) = (
                     top_left.x.round() as i64 + i64::from(gx),
                     top_left.y.round() as i64 + i64::from(gy),
-                    src,
-                    coverage,
                 );
+                if in_clip(clip, x, y) {
+                    blend(img, x, y, src, coverage);
+                }
             }
         }
     }
