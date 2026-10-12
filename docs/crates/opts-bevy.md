@@ -106,6 +106,10 @@ Its primary responsibilities are:
 - **`extrude_spline_profile(profile, length_m) -> Vec<(usize, Mesh)>`:**
   - Procedurally extrudes 2D spline cross-section profiles into 3D Bevy `Mesh` assets with UVs, normals, and texture slot bindings.
 
+### 6a. Scenery Object Runtime (`opts_bevy::scenery_runtime`)
+- `[LOD]` bands (`SceneryLod`, `SceneryLodMode`), `[visible]`/`[newanim]` mesh rules (`SceneryMeshRule`), one script engine per placed object (`SceneryScripts`), light coronas and light maps, driven by `SceneryClock` and `SceneryVariableOverrides`; `TrafficLightPhase` comes from the object's `opts_traffic::SignalProgram`.
+- `SceneryRuntimePlugin` ticks objects by distance band under a per-frame budget; `advance_scenery(world, dt)` is the deterministic step for hosts that drive time themselves (the scenery benchmark). Spec and API: [scenery-runtime.md](../src/architecture/scenery-runtime.md). Corpus probe: `examples/scenery_scripts.rs`.
+
 ### 6b. Runtime OMSI Content (`opts_bevy::install`, `model`, `terrain`)
 
 - `OmsiInstall` — case-insensitive, backslash-tolerant path resolution (`find_file`, `find_in`, `root_from_map_dir`).

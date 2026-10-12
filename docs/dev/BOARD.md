@@ -85,7 +85,7 @@ _Work actively being executed in the current session._
 
 > ⚠️ WIP is 4 (target ≤ 1): several milestones are active at once (critical review 2026-10-11, F-014). Listed as they are, not as they should be.
 
-- `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; these are the open Phase C/D items.
+- `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12); these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
 - `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
@@ -200,7 +200,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🔴 **Supervisor: shards, crash/hang restart, resume, isolated settings** (M-0054, code) — Phase B (Q-SB-08, Q-SB-09).
 - [ ] 🟠 **Missing-texture sentinel and per-object diagnostics capture** (M-0054, code) — Phase B.
 - [ ] 🟠 **Measure 1,000-object sample; calibrate thresholds on 200 labelled objects** (M-0054, test) — Phase B (Q-SB-02).
-- [ ] 🟡 **Decide the owner of the scenery-script runtime** (M-0054/M-0026, decision) — blocks Phase C (Q-SB-11).
+- [x] 🟡 **Decide the owner of the scenery-script runtime** (M-0054/M-0026, decision) — done 2026-10-12: `opts_bevy::scenery_runtime` on the shared `opts_sim` VM ([spec](../src/architecture/scenery-runtime.md)).
 - [ ] 🟡 **Script-effect checks S0–S5; audio recorded only** (M-0054, code) — Phase C.
 - [ ] 🟡 **Full corpus run and triage report; one BOARD item per failure category** (M-0054, docs) — Phase D.
 

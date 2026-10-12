@@ -27,9 +27,9 @@ Game runs: always `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d) XDG_C
 | R3 Script runtime and host interface | done (API below) |
 | R4 Traffic-light signals | done in code (links to `opts_traffic::SignalProgram`); M-0049 updated; visual check in R7 |
 | R5 Corpus probe | done (numbers below) |
-| R6 Lights | pending |
-| R7 Game check | pending |
-| R8 Close-out | pending |
+| R6 Lights | done in code (corona sprites, variable-driven light maps); seen in the night screenshot; `[nightmapmode]`, `[matl_nightmap]` not done |
+| R7 Game check | done (Grundorf; see below) |
+| R8 Close-out | done |
 
 ## R0 triage (what the snapshot contains)
 
@@ -54,8 +54,14 @@ R3 public API for the harness (all in `opts_bevy::scenery_runtime`, re-exported 
 
 R5 corpus probe (`cargo run --release -p opts-bevy --example scenery_scripts -- "<OMSI dir>" 50`; raw output `~/.local/share/opts/benchmark/dev-runtime/probe.txt`): 55,664 `.sco`, 4 unparsable, 2,822 with scripts, 270 distinct first scripts. Compile errors: 0. Missing files: 107 objects in 11 script names; checked independently: 138 referenced script/varlist/stringvar files really do not exist in the install (e.g. `Verkehrszeichen_MC\script\ampel1.osc` referenced by 20 objects), so these are broken packs, not loader bugs. Run-time diagnostics 339 in 53 scripts: 324 are `getarrbus*` external macros (bus stop displays: `busstopdisplay`, `bot_display`, `dfi*`; need a timetable host, open item), 15 stack underflows, 8 of them `peopleHC.osc` whose `{frame}` is malformed in the pack itself (`||` with one operand; substituted 0). All 2,822 objects change a variable over the 20 simulated seconds. Mean cost 0.22 microseconds per tick (host feed plus `{frame}`) over 3.4 M ticks, release build, ampel1 0.22 us.
 
+R7 game check (Grundorf, `OPTS_DEV_LOOK_AT=ampel --camera free --traffic 0 --pedestrians 0`, throwaway XDG dirs, PNGs in `~/.local/share/opts/benchmark/dev-runtime/g_*.png`): the first signal head shows green at 12:00:04/12/20, amber at 12:00:35 and green at 12:01:30 (junction cycle about 90 s); at 22:00 the head is dark apart from the lit lamp's corona; the day sky and lamp meshes differ between 12:00 and 22:00 as expected. Cost: `tests/scenery_runtime_budget.rs`, 3,000 heads: 6.0 ms per full step = 2.0 us per head including effects (release). Default `max_ticks_per_frame` lowered from 4,000 to 1,000 (about 2 ms worst case).
+
 ## Open problems
 
 - Bus-stop display macros (`getarrbusline`, `getarrbusterminus`, `getarrbustimediff`) have no host.
 
 none yet.
+- Two of about 17 game launches stalled during loading (log ends at tile parsing or at "Initiating simulation loading") and were killed by `timeout`; four back-to-back repeats of the same command all finished in 14 s. The machine's load average was above 20 (other agents). Not reproduced, not attributed to the runtime.
+- `[nightmapmode]` schedules, `[matl_nightmap]`, `[matl_change]`, script-driven text refresh, `[mouseevent]` for scenery (Q-SR-05..07).
+- Vehicle models are not wired to the new `ScoLight` parser (M-0045 item).
+- The in-game head at Grundorf was checked with one head only; no pedestrian/tram heads, no `[varparent]`-less crossing.

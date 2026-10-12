@@ -38,7 +38,7 @@ impl Default for SceneryRuntimeSettings {
             mid_m: 1_000.0,
             mid_interval_s: 0.25,
             far_interval_s: MAX_STEP_S,
-            max_ticks_per_frame: 4_000,
+            max_ticks_per_frame: 1_000,
         }
     }
 }

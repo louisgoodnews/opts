@@ -98,7 +98,7 @@ The head's `TrafficLightPhase` is `opts_traffic::SignalProgram::state_at(clock)`
 | mid | ≤ 1,000 m | every 0.25 s with the accumulated step |
 | far | > 1,000 m | every 2 s with the accumulated step |
 
-Accumulated steps are capped at 2 s. A frame ticks at most `max_ticks_per_frame` (default 4,000) objects; the rest wait for the next frame (round-robin), so a map with thousands of heads cannot stall a frame. After a tick, the object's mesh rules, lights and light maps are updated from its variables (only for ticked objects). Objects without a script are evaluated once at spawn and again when a host value changes (night switch, every 2 s at most).
+Accumulated steps are capped at 2 s. A frame ticks at most `max_ticks_per_frame` (default 1,000, about 2 ms at the measured cost) objects; the rest wait for the next frame (round-robin), so a map with thousands of heads cannot stall a frame. After a tick, the object's mesh rules, lights and light maps are updated from its variables (only for ticked objects). Objects without a script are evaluated once at spawn and again when a host value changes (night switch, every 2 s at most).
 
 **Targets** (release build): ≤ 2 µs per scripted traffic-light head per tick including the effect update, ≤ 1 ms per frame for a busy map view. Measured numbers are in [Status](#status).
 
@@ -135,7 +135,11 @@ A scenario is then: insert `SceneryClock::at(…)` with `follow_session = false`
 
 ## Status
 
-Implemented in branch `agent/scenery-runtime` (2026-10-11): everything above except what is listed as "not done". Verification and measurements are recorded in [M-0054](../roadmap/phase-5/M-0054.md) Notes.
+Implemented in branch `agent/scenery-runtime` (2026-10-12): everything above except what is listed as "not done". Verification:
+
+- **Corpus** (`cargo run --release -p opts-bevy --example scenery_scripts -- "<OMSI>" 50`): 2,822 of 55,664 `.sco` have scripts (270 distinct first scripts); all compile (0 errors) and all run and change a variable. 138 referenced script, variable-list and string-list files do not exist in the install (broken pack paths such as `..\..\Verkehrszeichen_MC\script\ampel1.osc`), so 107 objects start without their script. 339 run-time diagnostics in 53 scripts: 324 are the missing bus-stop timetable macros (`getarrbusline`, `getarrbusterminus`, `getarrbustimediff`; bus-stop displays and `dfi*`), 15 are stack underflows (8 in `peopleHC.osc`, whose `{frame}` is malformed in the pack itself).
+- **Cost** (release, `crates/opts-bevy/tests/scenery_runtime_budget.rs`): 3,000 scripted signal heads with three `[visible]` lamps and three lights cost 6.0 ms for a full step, 2.0 microseconds per head including the effect update; the bare host feed plus `{frame}` costs 0.22 microseconds per tick over the corpus (3.4 million ticks). Per-frame budget: `max_ticks_per_frame = 1,000` (about 2 ms worst case, round-robin); a busy view has a few hundred heads within 250 m (about 1 ms).
+- **Game** (Grundorf, `OPTS_DEV_LOOK_AT=ampel --camera free`, throwaway config): the head at the first junction shows green at 12:00:04, 12:00:12 and 12:00:20, amber at 12:00:35 and green again at 12:01:30 (cycle about 90 s, the junction program); at 22:00 the head is dark except the corona of the lit lamp. Screenshots are kept outside the repository.
 
 ## Open questions
 
