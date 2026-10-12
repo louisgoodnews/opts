@@ -9,7 +9,9 @@ Branch `agent/scenery-corpus` (from `agent/scenery-integration`), worktree `/hom
 | D0 Orient | done |
 | D1 Full run | done |
 | D2 Triage | done |
-| E1..En Fixes | pending |
+| E1 texture lookup (symlinked root, base case) | done (gates pending at this line, see Results) |
+| E2 `[matl_alpha] 0` opaque | in progress |
+| E3.. | pending |
 | F Close-out | pending |
 
 ## Commands
@@ -42,6 +44,8 @@ D0: release build 12m40s cold; all six gates green on the base. Preflight of the
 D2: triage report `docs/src/meta/scenery-benchmark-triage-2026-10-12.md`, BOARD items added (one per category). Viewed contact sheets (24 objects each, `dev-corpus/sheets/`, made with `dev-corpus/csheet.py`) for TEX-MISSING, PROTECTED, TEXT-NOT-SHOWN, GEOM-PARTIAL, GEOM-OUTSIDE, RENDER-EMPTY, XFORM-SCALE (17), LOAD-ERROR and unknown. Findings: about 2,586 of 3,055 F-TEX-MISSING are a loader bug (own `Texture` folder not found: `find_in` skips the catalogue when the base path is spelled differently from the catalogue root, then the disk fallback is case-sensitive); GEOM-PARTIAL/RENDER-EMPTY are `[matl_alpha] 0` with alpha textures; GEOM-OUTSIDE and XFORM-SCALE are harness false verdicts; PROTECTED is decoder research (M-0038).
 
 Fix plan (largest map-referenced count first): E1 texture lookup (1,414 referenced), E2 matl_alpha 0 (172+ referenced plus unknown), E3 named-string text (191), E4 harness false verdicts (63), E5 parse errors / v10 tiles. PROTECTED and MESH-MISSING are not fixed here.
+
+E1 (texture lookup; commit follows this note): `OmsiInstall::find_in` now strips the resolved root as well and resolves the base folder's case; unit tests `find_in_resolves_folder_case_of_the_base`, `find_in_uses_the_index_through_a_symlinked_root`. Binary `dev-corpus/opts-benchmark-e1`. Rerun of the 3,055 F-TEX-MISSING objects (run `20261012T062933Z-131680e`): fixed fail->pass 2,069, fail->unknown 234, still failing 752 (515 genuinely missing textures, 103 now F-RENDER-EMPTY and 60 F-GEOM-PARTIAL = the `[matl_alpha] 0` bug that the missing textures had hidden, 20 F-TEXT-NOT-SHOWN, rest derived), newly failing 0. Regression sample of 3,968 baseline-pass objects (run `20261012T063106Z-131680e`): 3,968 still pass. Compare tool: `python3 dev-corpus/cmp.py <base-run> <new-run>`.
 
 ## Open problems
 
