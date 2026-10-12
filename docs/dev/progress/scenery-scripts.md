@@ -38,6 +38,13 @@ Plan (spec: `docs/src/architecture/scenery-benchmark.md`, "Script-effect check",
 
 ## Results / open problems
 
+### C4 run log (data under `~/.local/share/opts/benchmark/dev-scripts/`)
+
+- `scripted.list` = 2,822 scripted objects (from `scenery preflight`, `[script]` in `unsupported`); `catalogue.db` = copy of the game's; decoder cache copy in `cache/`; helper scripts `an.py` (verdict/status counts), `byscript.py`, `sheet.sh` (contact sheet of the captured states, needs `--keep-images all`).
+- Run command: `target/release/opts-benchmark scenery run --omsi-path "$OMSI" --out $D/runs --list $D/scripted.list --scripts --keep-images all --workers 3 --catalogue $D/catalogue.db --cache-dir $D/cache` (with throwaway `XDG_*`).
+- Baseline run 1 (`runs/20261012T053133Z-9ba98a3`, first thresholds, 5.0 min with 3 workers): pass 655, fail 819, unknown 1348. Findings that led to harness fixes: S4 phases must be state numbers 0/3/6/9/12 not 0..3 (919 `S-INERT`); directional lights are hidden outside their cone as seen from V1 (script scenarios now use a light-axis view); `[onlyeditor]` objects spawn nothing (70 false `S-NOT-RUN`); recall on rule-driven meshes ignores occlusion (false `S-RENDER-MISMATCH`); the changed-share liveness metric dilutes tiny meshes (changed-pixel count against the mesh's own area now); `Switch`-driven scripts need S6.
+
+
 - C1-C3 were implemented together and committed as one change (the gates were green for the whole).
 - Seeded fault is `--seed-fault script-effect-off` (the brief's `S-NO-EFFECT` = spec's `S-EFFECT-NOT-SHOWN`).
 - Thresholds are the uncalibrated first values (spec table); calibration is C4.

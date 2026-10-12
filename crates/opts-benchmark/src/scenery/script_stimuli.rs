@@ -6,7 +6,7 @@
 use bevy::math::Vec3;
 
 use super::framing::IMAGE_SIZE;
-use super::metrics::{changed_share, Matte};
+use super::metrics::Matte;
 use super::raster::Mask;
 use super::script_judge::{var, Judge, Judgement};
 use super::script_run::State;
@@ -49,16 +49,57 @@ fn quantise(v: f32, step: f32) -> i64 {
     }
 }
 
-/// Whether the pixels of `region` changed between two states in either view.
-fn live_pair(j: &Judge<'_>, a: usize, b: usize, regions: &[Mask; 2], share: f32) -> Option<bool> {
+/// A channel element's region in both views and what counts as a change there.
+struct Element {
+    /// Where to look.
+    regions: [Mask; 2],
+    /// The element's own area in each view (pixels); a view with fewer than
+    /// `min_region_px` cannot judge it.
+    area: [usize; 2],
+    /// Changed pixels needed in each view.
+    need: [usize; 2],
+}
+
+/// Pixels of `region` that differ between two renders: only one shows the object there, or a
+/// colour channel differs by at least `delta`.
+fn changed_px(a: &Matte, b: &Matte, region: &Mask, delta: u8) -> usize {
+    (0..region.px.len())
+        .filter(|&i| {
+            region.px[i]
+                && (a.mask.px[i] || b.mask.px[i])
+                && (a.mask.px[i] != b.mask.px[i]
+                    || (0..3).any(|c| a.rgb[i][c].abs_diff(b.rgb[i][c]) >= delta))
+        })
+        .count()
+}
+
+/// A mesh element (`visible` flips, animations): its own area decides how much must change.
+fn mesh_element(j: &Judge<'_>, i: usize, dilate: usize) -> Element {
+    let area = [0, 1].map(|v| j.masks[v][i].all.count());
+    Element {
+        regions: [0, 1].map(|v| {
+            if dilate == 0 {
+                j.masks[v][i].all.clone()
+            } else {
+                j.masks[v][i].all.dilate(dilate)
+            }
+        }),
+        area,
+        need: area
+            .map(|a| ((j.th.live_area_frac * a as f32).ceil() as usize).max(j.th.live_min_px)),
+    }
+}
+
+/// Whether the pixels of the element's region changed between two states in either view;
+/// `None` when no view can judge it.
+fn live_pair(j: &Judge<'_>, a: usize, b: usize, e: &Element) -> Option<bool> {
     let mut judged = false;
-    for (v, region) in regions.iter().enumerate() {
-        if region.count() < j.th.min_region_px {
+    for (v, region) in e.regions.iter().enumerate() {
+        if e.area[v] < j.th.min_region_px {
             continue;
         }
         judged = true;
-        let c = changed_share(&j.mattes[a][v], &j.mattes[b][v], region, j.th.delta);
-        if c.is_some_and(|c| c >= share) {
+        if changed_px(&j.mattes[a][v], &j.mattes[b][v], region, j.th.delta) >= e.need[v] {
             return Some(true);
         }
     }
@@ -67,10 +108,10 @@ fn live_pair(j: &Judge<'_>, a: usize, b: usize, regions: &[Mask; 2], share: f32)
 
 /// Judges one element given the representative states of its value classes. Returns `None`
 /// when its region is too small in both views.
-fn element_live(j: &Judge<'_>, reps: &[usize], regions: &[Mask; 2], share: f32) -> Option<bool> {
+fn element_live(j: &Judge<'_>, reps: &[usize], e: &Element) -> Option<bool> {
     let mut judged = false;
     for &r in &reps[1..] {
-        match live_pair(j, reps[0], r, regions, share) {
+        match live_pair(j, reps[0], r, e) {
             Some(true) => return Some(true),
             Some(false) => judged = true,
             None => {}
@@ -118,8 +159,7 @@ fn mesh_stimuli(j: &Judge<'_>, t: &mut Tally) {
                 .collect();
             let reps = classes(&keys);
             if reps.len() > 1 {
-                let regions = [0, 1].map(|v| j.masks[v][i].all.clone());
-                let live = element_live(j, &reps, &regions, j.th.live_changed_share);
+                let live = element_live(j, &reps, &mesh_element(j, i, 0));
                 record(t, live, format!("visible:{i}"));
             }
         }
@@ -128,8 +168,7 @@ fn mesh_stimuli(j: &Judge<'_>, t: &mut Tally) {
             let keys: Vec<Vec<i64>> = states.iter().map(|s| anim_key(j, i, s)).collect();
             let reps = classes(&keys);
             if reps.len() > 1 {
-                let regions = [0, 1].map(|v| j.masks[v][i].all.dilate(ANIM_REGION_PX));
-                let live = element_live(j, &reps, &regions, j.th.live_changed_share_anim);
+                let live = element_live(j, &reps, &mesh_element(j, i, ANIM_REGION_PX));
                 record(t, live, format!("anim:{i}"));
             }
         }
@@ -168,7 +207,18 @@ fn lightmap_stimuli(j: &Judge<'_>, t: &mut Tally) {
             }
             m
         });
-        let live = element_live(j, &reps, &regions, j.th.live_changed_share);
+        let area = [regions[0].count(), regions[1].count()];
+        let need = area
+            .map(|a| ((j.th.live_changed_share * a as f32).ceil() as usize).max(j.th.live_min_px));
+        let live = element_live(
+            j,
+            &reps,
+            &Element {
+                regions,
+                area,
+                need,
+            },
+        );
         record(t, live, format!("lightmap:{k}"));
     }
 }

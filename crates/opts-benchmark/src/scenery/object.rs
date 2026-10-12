@@ -151,7 +151,7 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
         _ => Expected::default(),
     };
     timing.preflight += ms(t);
-    let (_, views) = frame(&exp, &expect_place);
+    let (bounds, views) = frame(&exp, &expect_place);
     let t = Instant::now();
     let pixels = h.capture(&views);
     timing.render = ms(t);
@@ -173,14 +173,20 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
 
     let diagnostics = super::Diagnostics { stats, events };
     judge(h, &mut record, &pre, &exp, diagnostics, text);
-    if h.config.scripts && script_check::is_scripted(&pre) {
+    let editor_only = record.class.iter().any(|c| c == "editor-only")
+        && !record.class.iter().any(|c| c == "tree");
+    if h.config.scripts && script_check::is_scripted(&pre) && editor_only {
+        // The loader spawns nothing for `[onlyeditor]` objects: there is no script to run.
+        record.tags.script = Some("editor-only".into());
+    } else if h.config.scripts && script_check::is_scripted(&pre) {
+        let script_views = script_check::views(&bounds, expect_place.heading_deg, &pre, &views);
         let thresholds = h.config.thresholds.script.clone();
         let ctx = script_run::Ctx {
             entry,
             pre: &pre,
             strings: &strings_a,
             tile_place,
-            views: &views,
+            views: &script_views,
             deadline: t0 + h.config.object_timeout,
             thresholds: &thresholds,
             effects_off: h.config.seed_fault.as_deref() == Some("script-effect-off"),

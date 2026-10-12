@@ -292,7 +292,7 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
         for v in 0..2 {
             let r = rendered(j, si, v);
             let vis_all = j.union(v, false, fixed);
-            let vis_solid = j.union(v, true, fixed);
+            let vis_solid = j.union(v, true, |i| fixed(i) && j.meshes[i].visible.is_none());
             let moving = j
                 .union(v, false, |i| {
                     j.meshes[i].top && !j.meshes[i].anim.is_empty()
@@ -305,6 +305,7 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
                         .push(format!("{} v{} {text}", state.name, v + 1));
                 }
             };
+            // Only meshes without a `[visible]` rule: a rule-driven mesh may sit behind others.
             let n = vis_solid.count();
             let alpha = vis_all.minus_count(&vis_solid) as f32 / vis_all.count().max(1) as f32;
             if n >= 200 && alpha <= 0.5 {

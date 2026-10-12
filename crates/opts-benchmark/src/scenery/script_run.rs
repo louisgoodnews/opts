@@ -28,6 +28,17 @@ use super::ObjectEntry;
 
 /// Frames of a 2 s scenario at `dt = 1/60`.
 pub const SCENARIO_STEPS: usize = 120;
+/// `TrafficLightPhase` states of S4: red, red and yellow, green, yellow, off (the ranges of
+/// `sco.md`, one value of each).
+pub const TRAFFIC_STATES: [f32; 5] = [0.0, 3.0, 6.0, 9.0, 12.0];
+/// Scenery inputs S6 drives when the script (or its variable list) mentions them (lower case).
+pub const INPUT_VARIABLES: [&str; 5] = [
+    "switch",
+    "signal",
+    "nextsignal",
+    "trafficlightapproach",
+    "colorscheme",
+];
 /// Extra frames of S1 (10 s).
 pub const S1_EXTRA_STEPS: usize = 600;
 
@@ -155,12 +166,33 @@ fn scenarios(h: &mut Harness, ctx: &Ctx<'_>, out: &mut Outcome) -> Result<()> {
     snap(h, ctx, "s3", out)?;
     if has_traffic_light(ctx.pre) {
         fresh(h, ctx, noon, out)?;
-        for phase in 0..4 {
+        for phase in TRAFFIC_STATES {
             let mut o = SceneryVariableOverrides::default();
-            o.0.insert("TrafficLightPhase".into(), phase as f32);
+            o.0.insert("TrafficLightPhase".into(), phase);
             h.world_mut().insert_resource(o);
             step(h, SCENARIO_STEPS, ctx);
             snap(h, ctx, &format!("s4_{phase}"), out)?;
+        }
+    }
+    let inputs: Vec<&str> = INPUT_VARIABLES
+        .iter()
+        .copied()
+        .filter(|n| {
+            out.states
+                .first()
+                .is_some_and(|s| s.probe.vars.contains_key(*n))
+        })
+        .collect();
+    if !inputs.is_empty() {
+        fresh(h, ctx, noon, out)?;
+        for name in inputs {
+            for value in 0..3 {
+                let mut o = SceneryVariableOverrides::default();
+                o.0.insert(name.into(), value as f32);
+                h.world_mut().insert_resource(o);
+                step(h, SCENARIO_STEPS, ctx);
+                snap(h, ctx, &format!("s6_{name}_{value}"), out)?;
+            }
         }
     }
     fresh(h, ctx, noon, out)?;

@@ -25,8 +25,10 @@ pub enum Scenario {
     S2Night,
     /// 15 January (winter).
     S3Winter,
-    /// `TrafficLightPhase` 0 → 1 → 2 → 3.
+    /// `TrafficLightPhase` 0, 3, 6, 9, 12 (red, red+yellow, green, yellow, off).
     S4TrafficLight,
+    /// Other scenery inputs the script reads (`Switch`, `Signal`, …) set to 0, 1, 2.
+    S6Inputs,
     /// S0 again on a fresh placement (determinism).
     S0Repeat,
 }
@@ -67,10 +69,13 @@ const UNSUPPORTED_CHANNELS: &[&str] = &[
 pub struct ScriptThresholds {
     /// Step of `advance_scenery` (seconds).
     pub dt_s: f32,
-    /// Changed share of the region that makes a `visible` or `lightmap` stimulus live.
+    /// Changed share of the whole silhouette that makes a `lightmap` stimulus live.
     pub live_changed_share: f32,
-    /// The same for an `anim` stimulus.
-    pub live_changed_share_anim: f32,
+    /// A `visible` or `anim` stimulus is live when at least this share of the mesh's own area
+    /// (in pixels) changed inside its region …
+    pub live_area_frac: f32,
+    /// … and at least this many pixels.
+    pub live_min_px: usize,
     /// Share of stimuli that must be live.
     pub live_fraction: f32,
     /// A hidden mesh leaks when this share of its own area is drawn.
@@ -94,7 +99,8 @@ impl Default for ScriptThresholds {
         Self {
             dt_s: 1.0 / 60.0,
             live_changed_share: 0.02,
-            live_changed_share_anim: 0.01,
+            live_area_frac: 0.15,
+            live_min_px: 4,
             live_fraction: 0.5,
             leak_share: 0.5,
             leak_min_px: 30,
@@ -164,6 +170,33 @@ pub fn unsupported_channels(pre: &Preflight) -> Vec<String> {
         .filter(|k| pre.keywords.contains(**k))
         .map(|k| format!("[{k}]"))
         .collect()
+}
+
+/// The views of the script scenarios: V1 is the usual oblique view, unless the object has a
+/// directional light; then V1 looks along the first such light's shining direction (the
+/// runtime hides a directional light outside its cone, as seen from the first capture camera).
+#[must_use]
+pub fn views(
+    bounds: &super::framing::Bounds,
+    heading_deg: f32,
+    pre: &Preflight,
+    base: &[super::framing::View; 2],
+) -> [super::framing::View; 2] {
+    let light = pre.object.as_ref().and_then(|o| {
+        o.lights
+            .iter()
+            .find(|l| !l.omni && l.direction.length() > 0.1)
+    });
+    let Some(l) = light else {
+        return *base;
+    };
+    let d = l.direction.normalize();
+    let azimuth = heading_deg + d.x.atan2(d.y).to_degrees();
+    let elevation = d.z.clamp(-1.0, 1.0).asin().to_degrees().clamp(3.0, 60.0);
+    [
+        super::framing::view_from(bounds, azimuth, elevation),
+        base[1],
+    ]
 }
 
 /// Whether the object has `[trafficlight]` (scenario S4 applies).

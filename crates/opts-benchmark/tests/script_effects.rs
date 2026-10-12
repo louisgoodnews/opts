@@ -103,8 +103,8 @@ fn build_root(root: &Path) {
     add_script(
         root,
         "head.osc",
-        "{frame}\n (L.L.TrafficLightPhase) 0 = (S.L.red)\n (L.L.TrafficLightPhase) 1 = (S.L.yellow)\n \
-         (L.L.TrafficLightPhase) 2 = (S.L.green)\n{end}\n",
+        "{frame}\n (L.L.TrafficLightPhase) 0 = (S.L.red)\n (L.L.TrafficLightPhase) 3 = (S.L.yellow)\n \
+         (L.L.TrafficLightPhase) 6 = (S.L.green)\n{end}\n",
     );
     add_sco(
         root,
@@ -220,7 +220,7 @@ fn script_effects_are_checked() {
         "{:?} {check:?}",
         live_cats(&head)
     );
-    assert!(check.states.contains(&"s4_3".to_string()), "{check:?}");
+    assert!(check.states.contains(&"s4_12".to_string()), "{check:?}");
     assert_eq!((check.stimuli, check.live), (3, 3), "{check:?}");
 
     let lamp = run(&mut h, "lamp", None);

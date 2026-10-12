@@ -132,7 +132,14 @@ impl Bounds {
 /// field of view, the bounding sphere filling 80 % of the image height.
 #[must_use]
 pub fn oblique_view(bounds: &Bounds, heading_deg: f32) -> View {
-    let (azimuth, elevation) = ((heading_deg + 35.0).to_radians(), 25f32.to_radians());
+    view_from(bounds, heading_deg + 35.0, 25.0)
+}
+
+/// The camera looks at the bounds from `azimuth_deg` (clockwise from north) and
+/// `elevation_deg` above the horizon, framed like V1.
+#[must_use]
+pub fn view_from(bounds: &Bounds, azimuth_deg: f32, elevation_deg: f32) -> View {
+    let (azimuth, elevation) = (azimuth_deg.to_radians(), elevation_deg.to_radians());
     let fov_y = 40f32.to_radians();
     let r = bounds.radius();
     // Angular radius of the sphere = 80 % of the half field of view (in tangent space).
