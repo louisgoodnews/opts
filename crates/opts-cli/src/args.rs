@@ -258,6 +258,6 @@ mod tests {
         assert_eq!(args.window_size, "1920x1080");
         assert!(!args.headless);
         assert!(!args.fullscreen);
-        assert_eq!(args.parse_dimensions(), (1280.0, 720.0));
+        assert_eq!(args.parse_dimensions(), (1920.0, 1080.0));
     }
 }
