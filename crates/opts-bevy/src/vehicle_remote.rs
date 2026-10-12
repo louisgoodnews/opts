@@ -154,6 +154,18 @@ pub fn release_trigger_system(
     }
 }
 
+/// The negation of the run conditions of the vehicle input system (no vehicle input now).
+#[must_use]
+pub fn vehicle_input_closed(
+    camera: Option<Res<crate::camera::CameraState>>,
+    modal: Option<Res<crate::reporting::state::ModalActive>>,
+    menu: Option<Res<crate::reporting::state::MenuModalActive>>,
+) -> bool {
+    let accepts = camera.is_none_or(|s| s.mode != crate::camera::CameraMode::FreeRoam);
+    let open = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
+    !accepts || open
+}
+
 /// Drops held controls while the input gates are closed, so nothing fires when they reopen.
 pub fn flush_remote_when_gated(mut remote: ResMut<RemoteControls>) {
     if remote.is_active() {

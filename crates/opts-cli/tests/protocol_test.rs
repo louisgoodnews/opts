@@ -151,7 +151,11 @@ fn server_errors_keep_code_and_data() {
         panic!("expected an rpc error");
     };
     assert_eq!(e.code, code::NOT_FOUND);
-    assert_eq!(e.data, Some(json!({"id": 9})));
+    // The caller's data is kept; the wire adds the symbolic name and the retry hint.
+    let data = e.data.expect("data");
+    assert_eq!(data["id"], 9);
+    assert_eq!(data["name"], "NOT_FOUND");
+    assert_eq!(data["retryable"], false);
     let unknown = c.call("nope", Value::Null).expect_err("unknown");
     assert_eq!(unknown.exit_code(), 1);
 }

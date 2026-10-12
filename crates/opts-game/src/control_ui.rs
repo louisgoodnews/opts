@@ -296,7 +296,7 @@ fn eval(world: &mut World, c: &Cond) -> (bool, Value) {
     }
 }
 
-fn wait_for(world: &mut World, params: &Value) -> Outcome {
+fn wait_for(_world: &mut World, params: &Value) -> Outcome {
     let parsed = (|| -> Result<(Cond, u64), RpcError> {
         let cond = Cond {
             until: str_param(params, "until")?.to_string(),

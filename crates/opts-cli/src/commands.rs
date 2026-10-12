@@ -727,7 +727,8 @@ fn coerce(kind: Kind, name: &str, raw: &str) -> Result<Value, String> {
             "false" | "0" | "off" | "no" => Ok(json!(false)),
             _ => Err(bad("true or false")),
         },
-        Kind::Json => serde_json::from_str(raw).map_err(|_| bad("JSON")),
+        // A word that is not JSON (`drive`, `toggle`) is a string, so `drive.set gear drive` works.
+        Kind::Json => Ok(serde_json::from_str(raw).unwrap_or_else(|_| json!(raw))),
     }
 }
 

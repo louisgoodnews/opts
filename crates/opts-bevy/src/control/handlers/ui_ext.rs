@@ -676,8 +676,16 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
                 }
                 return None;
             }
-            let c = world.get::<M3Combobox>(combo)?;
-            (c.selected == Some(wanted)).then(|| Ok(json!({ "ok": true, "id": id, "selected": c.options.get(wanted) })))
+            let Some(c) = world.get::<M3Combobox>(combo) else {
+                return Some(Err(RpcError::new(code::FAILED, "the combo box disappeared")));
+            };
+            if c.selected == Some(wanted) {
+                return Some(Ok(json!({ "ok": true, "id": id, "selected": c.options.get(wanted) })));
+            }
+            (began.elapsed() > Duration::from_secs(3)).then(|| {
+                Err(RpcError::new(code::FAILED, "the option was not taken")
+                    .with_data(json!({ "selected": c.selected.and_then(|i| c.options.get(i)) })))
+            })
         })));
     }
     // Tabs, radios, list rows, options: a click selects them.

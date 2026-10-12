@@ -294,7 +294,15 @@ mod tests {
         let resp = Response::err(json!(1), e.clone());
         let line = serde_json::to_string(&resp).unwrap();
         let back: Response = serde_json::from_str(&line).unwrap();
-        assert_eq!(back.into_result().unwrap_err(), e);
+        // The wire form adds the symbolic name and the retry hint; the caller's data stays.
+        let got = back.into_result().unwrap_err();
+        assert_eq!(got, e.structured());
+        let data = got.data.expect("data");
+        assert_eq!(data["id"], 9);
+        assert_eq!(data["name"], "NOT_FOUND");
+        assert_eq!(data["retryable"], false);
+        let gated = RpcError::new(code::GATED, "blocked").structured();
+        assert_eq!(gated.data.expect("data")["retryable"], true);
     }
 
     #[test]

@@ -1,0 +1,384 @@
+<!-- Generated from the command table of opts-cli (crates/opts-cli/src/commands.rs) by the test `reference_page_is_up_to_date`; regenerate with `UPDATE_CONTROL_DOC=1 cargo test -p opts-cli reference`. -->
+
+# Control Protocol Reference
+
+Protocol version **1.1.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+
+*Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
+
+## Errors
+
+Every error carries `data.name` (the symbolic code) and `data.retryable`.
+
+| Code | Name | Retry | Meaning |
+| ---: | :--- | :--- | :--- |
+| -32700 | `PARSE_ERROR` | no | the line is not valid JSON |
+| -32600 | `INVALID_REQUEST` | no | not a JSON-RPC request object |
+| -32601 | `METHOD_NOT_FOUND` | no | unknown method (see `commands`) |
+| -32602 | `INVALID_PARAMS` | no | missing, mistyped or out-of-range parameter |
+| -32603 | `INTERNAL_ERROR` | no | handler panicked or failed unexpectedly |
+| 1001 | `NOT_READY` | later | the app is not in a state in which the command makes sense (no session, wrong screen, element hidden or disabled) |
+| 1002 | `FORBIDDEN_PATH` | no | path outside the allowed read/write roots |
+| 1003 | `UNAUTHORIZED` | no | token missing or wrong |
+| 1004 | `NOT_FOUND` | no | entity, element, asset or file does not exist |
+| 1005 | `TIMEOUT` | later | the app (or a `ui.wait_for` condition) did not answer in time |
+| 1006 | `BUSY` | later | rate limit exceeded or command queue full |
+| 1007 | `UNSUPPORTED` | no | specified but not implemented in this build |
+| 1008 | `FAILED` | no | the operation ran and failed (`data` carries the cause) |
+| 1009 | `GATED` | later | the input layer refused the command because a dialog or another gate blocks it, exactly as it would swallow a key press |
+
+## Group `meta`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `ping` | - | 1.0 | Check that the server answers |
+| `version` | - | 1.0 | App and protocol version |
+| [`help`](#help) | `command?` (string) | 1.0 | Describe one command (or list all) |
+| `capabilities` | - | 1.0 | List all commands by group |
+| `auth` | `token` (string) | 1.0 | Authenticate with the server token |
+| `shutdown` | `force?` (boolean) | 1.0 | Exit the application |
+| [`commands`](#commands) | `group?` (string) | 1.1 | Every command with its argument schema, result and documentation |
+| [`batch`](#batch) | `commands` (json)<br>`stop_on_error?` (boolean) | 1.0 | Run several commands in order in one round trip |
+
+### `help`
+
+Describe one command (or list all).
+
+**Result:** `{command, group, summary, since, args, result, doc, debug, implemented}`; without `command` a list of `{method, summary}`
+
+### `commands`
+
+Every command with its argument schema, result and documentation.
+
+**Result:** `{protocol_version, count, commands:[{method, group, summary, since, args, result, doc, debug, implemented}]}`
+
+The machine-readable form of the generated reference. `args` entries are `{name, type, required, position, aliases, values?}`; `debug` marks commands that skip the input layer on purpose.
+
+### `batch`
+
+Run several commands in order in one round trip.
+
+**Result:** `{results:[{result}|{error}]}` in command order
+
+At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.load_map`, `ui.drag`) finishes before the next one starts, so a batch is a script: act, wait, observe.
+
+## Group `query`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `state` | - | 1.0 | App state, camera mode, fps, frame |
+| `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
+| `camera.get` | - | 1.0 | Camera mode and transform |
+| `sim.get` | - | 1.0 | Pause state, simulation time, time scale |
+| `log.tail` | `n?` (integer) | 1.0 | Last N log lines |
+| `log.filter` | `target?` (string)<br>`level?` (string)<br>`contains?` (string)<br>`n?` (integer) | 1.0 | Filtered log lines |
+| `entity.list` | `filter?` (string) | 1.0 | List entities |
+| `entity.get` | `id` (integer) | 1.0 | Components of one entity |
+| `resource.list` | - | 1.0 | List resource types |
+| `resource.get` | `name` (string) | 1.0 | Value of one resource |
+| `asset.list` | `kind?` (string) | 1.0 | List loaded assets |
+| `asset.get` | `path` (string) | 1.0 | Metadata of one asset |
+| `hud.state` | - | 1.0 | What the HUD shows: widgets, texts, alert, speed, gear |
+| [`vehicle.get`](#vehicleget) | - | 1.0 | Position, heading and speed of the player vehicle (absolute OMSI coordinates) |
+| `vehicle.script_vars` | `contains?` (string) | 1.0 | Script variables of the player vehicle (substring filter) |
+| `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
+
+### `vehicle.get`
+
+Position, heading and speed of the player vehicle (absolute OMSI coordinates).
+
+**Result:** `{x, y, z, heading_deg, speed_kmh}`
+
+## Group `ui`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `ui.tree` | `visible_only?` (boolean) | 1.0 | The UI as a tree: id, role, label, state, rect, focusable |
+| [`ui.click`](#uiclick) | `id` (string)<br>`count?` (integer) | 1.0 | Activate an element by id (a text field gets focus) |
+| `ui.focus` | `id` (string) | 1.0 | Move keyboard focus to an element |
+| `ui.action` | `action` (string)<br>`arg?` (string) | 1.0 | Send a UI action (navigate right, confirm, back, ...) |
+| `ui.state` | `id` (string) | 1.0 | State of one element by id |
+| [`ui.screen`](#uiscreen) | - | 1.1 | Where the app is: state, screen, open dialogs, toasts, focus, scrollables |
+| [`ui.scrollables`](#uiscrollables) | `visible_only?` (boolean) | 1.1 | List the scrollable views with offset, content size and position |
+| [`ui.scroll`](#uiscroll) | `target?` (string)<br>`by?` (number)<br>`dx?` (number)<br>`pages?` (number)<br>`to?` (string = top \| bottom \| left \| right)<br>`item?` (string) | 1.1 | Scroll a view by an amount, by pages, to the top or bottom, or to an item |
+| [`ui.text`](#uitext) | `text` (string)<br>`id?` (string)<br>`replace?` (boolean)<br>`submit?` (boolean) | 1.1 | Type text into a text field (optionally by id; replaces the content by default) |
+| [`ui.select`](#uiselect) | `id` (string)<br>`option?` (string)<br>`index?` (integer) | 1.1 | Choose an option of a combo box, a tab, a radio or a list row |
+| [`ui.toggle`](#uitoggle) | `id` (string)<br>`value?` (boolean) | 1.1 | Set a switch, check box or radio to on or off (or flip it) |
+| [`ui.hover`](#uihover) | `id` (string) | 1.1 | Move the pointer over an element (tooltips, hover states) |
+| [`ui.key`](#uikey) | `key` (string)<br>`ctrl?` (boolean)<br>`shift?` (boolean)<br>`alt?` (boolean)<br>`duration_ms?` (integer) | 1.1 | Press a key with modifiers (Ctrl, Shift, Alt) through the input layer |
+| [`ui.drag`](#uidrag) | `from` (string)<br>`to?` (string)<br>`dx?` (number)<br>`dy?` (number)<br>`steps?` (integer) | 1.1 | Drag from one element to another element or by an offset |
+| [`ui.wait_for`](#uiwait_for) | `until` (string = exists \| visible \| gone \| enabled \| disabled \| focused \| checked \| text \| screen \| dialog \| no_dialog \| app_state \| hud_ready \| speed_above \| speed_below \| distance_above \| paused \| running \| sim_time_above)<br>`id?` (string)<br>`value?` (string)<br>`number?` (number)<br>`timeout_ms?` (integer) | 1.1 | Wait until a condition holds (element, screen, dialog, app state, speed, ...) |
+| [`ui.navigate`](#uinavigate) | `screen` (string) | 1.0 | Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics) |
+
+### `ui.click`
+
+Activate an element by id (a text field gets focus).
+
+`count` activates the element that many times (stepper buttons like `settings/<category>/<key>/up`); each activation is a separate message, as separate clicks would be.
+
+### `ui.screen`
+
+Where the app is: state, screen, open dialogs, toasts, focus, scrollables.
+
+**Result:** `{app_state, screen, modal_open, dialogs:[{id, tag?, title, buttons}], toasts:[...], focus, back_stack, scrollables}`
+
+One call that answers "what is on screen and what can I do now". `dialogs` lists every open modal with the ids of its buttons, so a script can answer a confirmation without reading the whole tree.
+
+### `ui.scrollables`
+
+List the scrollable views with offset, content size and position.
+
+**Result:** `{count, scrollables:[{id, owner, rect, offset, viewport, content, max, at_top, at_bottom, items:[id...]}]}`
+
+`id` is what `ui.scroll target` takes: the element's own id, else `<nearest id>/scroll` (suffix `-2`, `-3` for duplicates). `items` are the ids of the elements inside the view in layout order, so `ui.scroll item` can reveal any of them.
+
+### `ui.scroll`
+
+Scroll a view by an amount, by pages, to the top or bottom, or to an item.
+
+**Result:** the scrollable after the move (as in `ui.scrollables`) plus `moved`
+
+Without `target` the view under focus is used, else the first visible one; while a dialog is open only views inside it can be scrolled (`1009` otherwise). Exactly one of `by` (logical pixels, positive scrolls down), `dx`, `pages` (viewport heights), `to` or `item` is needed. `item` reveals the element with that id (the same effect as focusing it); `1004` when the item is not inside the view.
+
+### `ui.text`
+
+Type text into a text field (optionally by id; replaces the content by default).
+
+**Result:** `{ok, id, value}` - the field's content once the text has arrived
+
+Focuses the field `id` (like a click), clears it when `replace` is true (the default) and types the text as keyboard events, so validation, search-as-you-type and the settings search react exactly as for a person. `submit` presses Enter afterwards. Without `id` the focused field receives the text. `1001` when the field is disabled, hidden or behind a dialog.
+
+### `ui.select`
+
+Choose an option of a combo box, a tab, a radio or a list row.
+
+**Result:** `{ok, id, selected}`
+
+For a combo box `option` is the visible text (or `index` the position): the drop-down is opened and the entry activated like clicks. For a tab, radio or list row no option is needed. Disabled targets answer `1001` with the reason.
+
+### `ui.toggle`
+
+Set a switch, check box or radio to on or off (or flip it).
+
+**Result:** `{ok, id, checked, changed}`
+
+Only activates the element when its state differs from `value`; without `value` it flips. Settings with a revert prompt open the prompt as for a click.
+
+### `ui.hover`
+
+Move the pointer over an element (tooltips, hover states).
+
+**Result:** `{ok, id, pos}` with the pointer position in logical pixels
+
+Places the cursor at the centre of the element's rectangle and reports it to the window like a mouse move, so picking, hover states and tooltips behave as for a person. `1001` for an element without a rectangle (not laid out or hidden).
+
+### `ui.key`
+
+Press a key with modifiers (Ctrl, Shift, Alt) through the input layer.
+
+**Result:** `{ok, key, modifiers}`
+
+Presses the modifiers, then the key, and releases everything after `duration_ms` (default 50). The events are ordinary keyboard events, so shortcuts (`Ctrl+F`, `Ctrl+Tab`) and gating are the same as for a keyboard.
+
+### `ui.drag`
+
+Drag from one element to another element or by an offset.
+
+**Result:** `{ok, from, to?, from_pos, to_pos}` once the button is released
+
+Presses the left button on the centre of `from`, moves the cursor in `steps` frames (default 8) to the centre of `to` or by `(dx, dy)` logical pixels and releases. Answers after the release.
+
+### `ui.wait_for`
+
+Wait until a condition holds (element, screen, dialog, app state, speed, ...).
+
+**Result:** `{ok, until, waited_ms}` on success; error `1005` with `data.last` (the last observed value) when `timeout_ms` (default 10000, at most 120000) passes first
+
+Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time. Use it instead of sleeping.
+
+### `ui.navigate`
+
+Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics).
+
+Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet.
+
+## Group `input`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `input.key` | `key` (string)<br>`duration_ms?` (integer) | 1.0 | Press and release a key |
+| `input.key_hold` | `key` (string) | 1.0 | Press a key and keep it down |
+| `input.key_release` | `key` (string) | 1.0 | Release a key |
+| `input.text` | `text` (string) | 1.0 | Type text into the focused field |
+| `input.mouse.move` | `dx` (number)<br>`dy` (number) | 1.0 | Move the mouse relatively |
+| `input.mouse.click` | `button` (string)<br>`x?` (number)<br>`y?` (number) | 1.0 | Click a mouse button |
+| `input.mouse.scroll` | `delta` (number) | 1.0 | Scroll the wheel |
+
+## Group `sim`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`sim.pause`](#simpause) | - | 1.0 | Pause the simulation |
+| `sim.resume` | - | 1.0 | Resume the simulation |
+| `sim.step` | `frames` (integer) | 1.0 | Advance N frames while paused |
+| `sim.time_scale` | `factor` (number) | 1.0 | Set the simulation speed |
+| `sim.set_time` | `seconds` (number) | 1.0 | Set the session clock |
+
+### `sim.pause`
+
+Pause the simulation.
+
+Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause overlay; the overlay is reached with `ui.action menu` or `ui.key Escape`.
+
+## Group `scene`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`scene.load_map`](#sceneload_map) *(debug)* | `path` (string)<br>`entry?` (string) | 1.0 | Start a session on a map |
+| [`scene.unload`](#sceneunload) *(debug)* | - | 1.0 | Return to the main menu |
+| `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
+| `camera.teleport` *(debug)* | `x` (number)<br>`y` (number)<br>`z` (number)<br>`yaw?` (number)<br>`pitch?` (number) | 1.0 | Move the camera (OMSI coordinates) |
+| `render.look` | `look?` (string) | 1.0 | Get or set the colour look (vivid, natural, bevy) |
+| `vehicle.set` *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
+| `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
+| `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
+| `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
+| [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
+| [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
+| [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...) |
+
+### `scene.load_map`
+
+Start a session on a map.
+
+A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).
+
+### `scene.unload`
+
+Return to the main menu.
+
+A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
+
+### `camera.look`
+
+Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external).
+
+**Result:** `{mode, yaw_deg, pitch_deg}`
+
+`dx`/`dy` are mouse-motion pixels delivered like a right-drag; `yaw`/`pitch` (degrees, compass yaw) set the free-roam camera directly and answer `1001` in other modes.
+
+### `camera.move`
+
+Move the free camera forward/right/up for a duration, like the movement keys.
+
+**Result:** `{ok, mode, duration_ms}`
+
+Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`.
+
+### `menu.do`
+
+Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...).
+
+Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`.
+
+## Group `settings`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `settings.list` | `category?` (string) | 1.0 | List the settings with their values (optionally one category) |
+| `settings.get` | `key` (string) | 1.0 | Value, default and options of one setting |
+| `settings.set` | `key` (string)<br>`value` (string) | 1.0 | Change a setting (validated like the settings page, saved) |
+| `settings.reset` | `key` (string) | 1.0 | Restore the default of a setting |
+
+## Group `reload`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `reload.asset` | `path` (string) | 1.0 | Force a reload of one file |
+| `reload.scene` | - | 1.0 | Reload every resident tile and the vehicle |
+| `reload.config` | `path` (string) | 1.0 | Reload one configuration file |
+| `watch.add` | `path` (string) | 1.0 | Watch another path |
+| `watch.remove` | `path` (string) | 1.0 | Stop watching a path |
+| `watch.list` | - | 1.0 | List watched paths |
+
+## Group `debug`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `debug.wireframe` | `enabled` (boolean) | 1.0 | Toggle wireframe rendering |
+| `debug.normals` | `enabled` (boolean) | 1.0 | Toggle normal visualisation |
+| `debug.stats` | - | 1.0 | Render and loader statistics |
+| `hud.alert` *(debug)* | `severity?` (string = info \| warning \| critical)<br>`clear?` (boolean) | 1.0 | Raise or clear a test alert on the HUD |
+| `hud.toast` *(debug)* | `message` (string)<br>`details?` (string) | 1.0 | Show a test toast |
+
+## Group `output`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| `screenshot` | `path?` (string) | 1.0 | Save a screenshot |
+| `report` | `text` (string) | 1.0 | File a report (screenshot + text) |
+| [`snapshot`](#snapshot) | `path?` (string)<br>`screenshot?` (boolean)<br>`warnings?` (integer) | 1.1 | One call that returns everything an agent needs to judge the state, optionally with a screenshot |
+
+### `snapshot`
+
+One call that returns everything an agent needs to judge the state, optionally with a screenshot.
+
+**Result:** `{state, screen, drive?, hud?, camera, sim, warnings:[log lines], screenshot?}`
+
+`path` writes the JSON to a file below the reports directory (or an allowed directory). `screenshot` also saves a PNG (the loading screen included) and returns its path. `warnings` is the number of recent `warn`/`error` log lines (default 20).
+
+## Group `drive`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`drive.controls`](#drivecontrols) | - | 1.1 | List every vehicle control by name with its kind, range and current value |
+| [`drive.set`](#driveset) | `control` (string)<br>`value` (json)<br>`hold_ms?` (integer) | 1.1 | Set a vehicle control by name, optionally held for a duration |
+| `drive.release` | `control?` (string) | 1.1 | Release held controls (one by name, or all) |
+| [`drive.trigger`](#drivetrigger) | `name` (string)<br>`hold_ms?` (integer) | 1.1 | Raise a vehicle script trigger (doors, lights, indicators, horn, ...) |
+| [`drive.state`](#drivestate) | - | 1.1 | Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state |
+| [`vehicle.teleport`](#vehicleteleport) *(debug)* | `x` (number)<br>`y` (number)<br>`heading_deg?` (number) | 1.1 | Place the player vehicle at an absolute OMSI position and heading, standing still |
+| [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
+
+### `drive.controls`
+
+List every vehicle control by name with its kind, range and current value.
+
+**Result:** `{vehicle, controls:[{name, kind, range?, value, bound?}], triggers:[{name, key, held}]}`
+
+`throttle`, `brake`, `steer`, `gear`, `parking_brake` are built in; `triggers` are the script triggers the vehicle's keyboard bindings can raise (doors, lights, indicators, horn, ... named as in the vehicle's scripts), usable with `drive.trigger` and `drive.set`.
+
+### `drive.set`
+
+Set a vehicle control by name, optionally held for a duration.
+
+**Result:** `{ok, control, value, hold_ms?}`
+
+`throttle`/`brake` take 0..1, `steer` -1 (left)..1 (right), `gear` `drive|neutral|reverse`, `parking_brake` true/false/`toggle`; any other name is raised as a script trigger (`horn`, `bus_doorfront0`, ...). Analog values stay set for `hold_ms` of **simulation time** (while the sim is paused the time does not run) or, without it, until set again or released with `drive.release`. The values reach the vehicle through the same system as the keyboard, so they are ignored while a dialog is open or the vehicle does not take input (`1009`).
+
+### `drive.trigger`
+
+Raise a vehicle script trigger (doors, lights, indicators, horn, ...).
+
+**Result:** `{ok, name, handled, held_ms?}`
+
+Raises `<name>`; for a binding that is held (like the horn) `<name>_off` follows after `hold_ms` of simulation time (default 200). `handled` says whether a script of the vehicle reacted. An unbound name is raised as is. Gated like a key press.
+
+### `drive.state`
+
+Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state.
+
+**Result:** `{speed_kmh, signed_speed_kmh, x, y, z, heading_deg, gear, throttle, brake, steer, parking_brake, rpm?, distance_m, camera, paused, time_scale, sim_time, alert?, route, stops}`
+
+`distance_m` is the path length driven since the session (or the last `vehicle.reset`) started. `route` and `stops` are `null`: the timetable is not implemented yet (`not available yet`); `alert` is the HUD alert on screen, if any.
+
+### `vehicle.teleport`
+
+Place the player vehicle at an absolute OMSI position and heading, standing still.
+
+A debug command: it moves the vehicle directly (speed zero, controls neutral) without any gate. Coordinates are absolute OMSI metres as in `vehicle.get`.
+
+### `vehicle.reset`
+
+Put the player vehicle back where the session placed it, standing still.
+
+A debug command: restores the start position, zeroes speed and the controls and the distance counter.

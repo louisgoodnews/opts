@@ -378,10 +378,8 @@ impl Plugin for OptsVehiclePlugin {
                     vehicle_input_system
                         .run_if(crate::camera::vehicle_accepts_input)
                         .run_if(crate::reporting::not_modal_active),
-                    crate::vehicle_remote::flush_remote_when_gated.run_if(
-                        not(crate::camera::vehicle_accepts_input
-                            .and(crate::reporting::not_modal_active)),
-                    ),
+                    crate::vehicle_remote::flush_remote_when_gated
+                        .run_if(crate::vehicle_remote::vehicle_input_closed),
                     crate::vehicle_remote::release_trigger_system,
                     crate::vehicle_remote::odometer_system,
                     vehicle_transform_sync_system,

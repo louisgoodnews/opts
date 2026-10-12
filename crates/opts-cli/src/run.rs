@@ -75,7 +75,19 @@ pub fn out(text: &str) {
 fn is_slow(method: &str) -> bool {
     matches!(
         method,
-        "sim.step" | "scene.load_map" | "scene.unload" | "vehicle.set"
+        "sim.step"
+            | "scene.load_map"
+            | "scene.unload"
+            | "vehicle.set"
+            | "ui.wait_for"
+            | "ui.drag"
+            | "ui.text"
+            | "ui.select"
+            | "camera.look"
+            | "snapshot"
+            | "screenshot"
+            | "report"
+            | "batch"
     )
 }
 
@@ -208,7 +220,7 @@ pub fn run(cli: &Cli) -> u8 {
     let mode = cli.mode();
     let first = cli.words.first().map(String::as_str);
     match first {
-        Some("list" | "commands") => {
+        Some("list") => {
             print_list();
             0
         }
