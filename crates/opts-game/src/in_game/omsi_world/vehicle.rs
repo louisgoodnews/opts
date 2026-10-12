@@ -389,14 +389,24 @@ fn mesh_pivot(
     rel: &str,
     model_dir: &Path,
     mesh_def: &opts_core::formats::vehicles::model::ModelMesh,
-) -> Option<Vec3> {
+) -> Option<opts_bevy::MeshPivot> {
     if !mesh_def.anims.iter().any(|a| a.origin_from_mesh) {
         return None;
     }
     let path = job.install.find_in(model_dir, rel)?;
     let o3d = opts_core::formats::o3d::parse(&std::fs::read(path).ok()?).ok()?;
     let m = o3d.transform?;
-    Some(Vec3::new(m[3][0], m[3][2], m[3][1]))
+    // The rotation part is the y/z swap when row y is (0,0,±1) and row z is (0,±1,0).
+    let swaps_yz = m[1][0].abs() < 0.01
+        && m[1][1].abs() < 0.01
+        && m[1][2].abs() > 0.9
+        && m[2][0].abs() < 0.01
+        && m[2][1].abs() > 0.9
+        && m[2][2].abs() < 0.01;
+    Some(opts_bevy::MeshPivot {
+        origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
+        swaps_yz,
+    })
 }
 
 /// Binds skinned meshes of a vehicle to the dummy meshes that carry their bones' animation.

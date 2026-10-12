@@ -97,7 +97,7 @@ pub use texture::{
     TextureError,
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
-pub use vehicle_anim::{
+pub use vehicle_anim::{MeshPivot, 
     animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation, VehicleAnimationPlugin,
 };
 pub use vehicle_lights::{

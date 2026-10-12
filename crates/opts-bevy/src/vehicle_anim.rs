@@ -19,7 +19,7 @@
 //!   (the wiki: `maxspeed` = 1 ÷ duration in seconds); the first update snaps to the value.
 //!   `delay` (damping near the end) is not applied yet ❓.
 
-use bevy::math::{Mat4, Vec3};
+use bevy::math::{Mat4, Vec3, Vec4};
 use bevy::prelude::*;
 use opts_core::formats::vehicles::model::{AnimAction, ModelAnim, ModelMesh};
 
@@ -54,23 +54,69 @@ pub struct MeshAnimation {
     pub shown: Vec<f32>,
 }
 
-fn frame_of(a: &ModelAnim, pivot: Option<Vec3>) -> Mat4 {
+/// The mesh's own origin (for `origin_from_mesh`) and whether its `.o3d` matrix swaps the y and z
+/// axes (the matrix of the wheel meshes of the MAN New Lion's City family).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MeshPivot {
+    /// Origin in OMSI vehicle axes.
+    pub origin: Vec3,
+    /// The matrix rotation is the y/z swap `[1,0,0|0,0,1|0,1,0]`.
+    pub swaps_yz: bool,
+}
+
+/// The y/z swap as a matrix in OMSI axes.
+fn swap_yz() -> Mat4 {
+    Mat4::from_cols(
+        Vec3::X.extend(0.0),
+        Vec3::Z.extend(0.0),
+        Vec3::Y.extend(0.0),
+        Vec4::W,
+    )
+}
+
+/// Whether a rotation animation needs the mesh matrix to get its vertical axis: with
+/// `origin_from_mesh` on a y/z-swapping mesh, the origin rotation gives a horizontal axis that
+/// the swap turns vertical (`origin_rot_z 90`: forward, then up). Axes that are vertical or
+/// stay horizontal are left alone (`docs/src/architecture/animation-axes.md`).
+fn needs_matrix(a: &ModelAnim, pivot: Option<MeshPivot>) -> bool {
+    if !a.origin_from_mesh || a.origin_trans.is_some() || a.anim_rot.is_none() {
+        return false;
+    }
+    if !pivot.is_some_and(|p| p.swaps_yz) {
+        return false;
+    }
+    let axis = origin_rotation(a).transform_vector3(Vec3::X);
+    axis.z.abs() < 0.5 && (swap_yz().transform_vector3(axis)).z.abs() > 0.97
+}
+
+fn origin_rotation(a: &ModelAnim) -> Mat4 {
+    Mat4::from_rotation_x(a.origin_rot.x.to_radians())
+        * Mat4::from_rotation_y(a.origin_rot.y.to_radians())
+        * Mat4::from_rotation_z(a.origin_rot.z.to_radians())
+}
+
+fn frame_of(a: &ModelAnim, pivot: Option<MeshPivot>, with_matrix: bool) -> Mat4 {
     // An explicit `origin_trans` wins; `origin_from_mesh` takes the mesh's own origin (the
     // translation of its matrix chunk, e.g. a wheel's centre).
     let origin = a
         .origin_trans
-        .or_else(|| a.origin_from_mesh.then_some(pivot).flatten())
+        .or_else(|| a.origin_from_mesh.then_some(pivot.map(|p| p.origin)).flatten())
         .unwrap_or(Vec3::ZERO);
-    let rot = Mat4::from_rotation_x(a.origin_rot.x.to_radians())
-        * Mat4::from_rotation_y(a.origin_rot.y.to_radians())
-        * Mat4::from_rotation_z(a.origin_rot.z.to_radians());
-    Mat4::from_translation(origin) * rot
+    let rot = origin_rotation(a);
+    // The mesh matrix follows the origin rotation (the frame's axes are the rotated, then swapped).
+    let matrix = if with_matrix { swap_yz() } else { Mat4::IDENTITY };
+    Mat4::from_translation(origin) * matrix * rot
 }
 
-fn steps_of(anim: &ModelAnim, pivot: Option<Vec3>) -> Vec<AnimStep> {
-    let frame = frame_of(anim, pivot);
+fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
+    let frame = frame_of(anim, pivot, false);
+    let rot_frame = if needs_matrix(anim, pivot) {
+        frame_of(anim, pivot, true)
+    } else {
+        frame
+    };
     let mk = |a: &AnimAction, translate: bool| AnimStep {
-        frame,
+        frame: if translate { frame } else { rot_frame },
         variable: a.variable.clone(),
         factor: a.factor,
         translate,
@@ -84,12 +130,32 @@ fn steps_of(anim: &ModelAnim, pivot: Option<Vec3>) -> Vec<AnimStep> {
         .collect()
 }
 
+/// Logs once per mesh that its steering/rotation axis was composed with the mesh matrix.
+fn warn_matrix_once(mesh: &str) {
+    use std::collections::HashSet;
+    use std::sync::{Mutex, OnceLock};
+    static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+    let seen = SEEN.get_or_init(Mutex::default);
+    if seen
+        .lock()
+        .is_ok_and(|mut s| s.insert(mesh.to_lowercase()))
+    {
+        tracing::warn!(
+            mesh,
+            "origin_from_mesh rotation axis composed with the mesh's y/z-swap matrix (animation-axes.md)"
+        );
+    }
+}
+
 impl MeshAnimation {
     /// Builds the rules of `mesh`; `None` when it has neither animation nor visibility rules.
     /// `pivot` is the mesh's own origin in OMSI vehicle axes (the matrix of its `.o3d`), used by
     /// animations declared `origin_from_mesh`.
     #[must_use]
-    pub fn from_mesh(owner: Entity, mesh: &ModelMesh, pivot: Option<Vec3>) -> Option<Self> {
+    pub fn from_mesh(owner: Entity, mesh: &ModelMesh, pivot: Option<MeshPivot>) -> Option<Self> {
+        if mesh.anims.iter().any(|a| needs_matrix(a, pivot)) {
+            warn_matrix_once(&mesh.path);
+        }
         let steps: Vec<AnimStep> = mesh.anims.iter().flat_map(|a| steps_of(a, pivot)).collect();
         let visible: Vec<(String, f32)> = mesh
             .visibility
@@ -301,5 +367,57 @@ mod tests {
     fn zero_variables_leave_the_mesh_in_place() {
         let m = animation_matrix(&[spin("w")], |_| 0.0);
         assert!(m.abs_diff_eq(Mat4::IDENTITY, 1e-6));
+    }
+
+    /// Excerpts of the steering blocks of MAN_SD200 `model_SD77.cfg` (explicit `origin_trans`) and
+    /// MAN_NewLionsCity `model_21C_4door_main.cfg` (`origin_from_mesh`, y/z-swap mesh matrix).
+    const SD77: &str = "[mesh]\nwheel.o3d\n\n[newanim]\norigin_trans\n-0.95\n2.943\n0.495\norigin_rot_y\n90\nanim_rot\nAxle_Steering_0_L\n57.29578\n\n++++++\n";
+    const NLC: &str = "[mesh]\nsolo\\rad_vl_felge.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_z\n90\nanim_rot\nAxle_Steering_0_L\n57.29578\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n90\nanim_rot\nAxle_Steering_0_L\n4\n\n++++++\n";
+
+    fn steering_mesh(cfg: &str, pivot: Option<MeshPivot>) -> MeshAnimation {
+        let model = opts_core::formats::vehicles::model::ModelConfig::parse(cfg).expect("parses");
+        MeshAnimation::from_mesh(Entity::PLACEHOLDER, &model.lods[0].meshes[0], pivot)
+            .expect("animated")
+    }
+
+    /// Steering by 0.2 rad: a point 1 m ahead of the hub must move sideways and keep its height
+    /// (a vertical steering axis), where a roll axis would leave it on the axis.
+    fn steers_about_vertical(steps: &[AnimStep], hub: Vec3) -> bool {
+        // Only the main steering step (the first).
+        let m = animation_matrix(&steps[..1], |_| 0.2);
+        let p = bevy(hub + Vec3::Y);
+        let moved = m.transform_point3(p);
+        (moved.x - p.x).abs() > 0.1 && (moved.y - p.y).abs() < 1e-4
+    }
+
+    #[test]
+    fn explicit_origin_steering_is_vertical_sd77() {
+        let hub = Vec3::new(-0.95, 2.943, 0.495);
+        let anim = steering_mesh(SD77, None);
+        assert!(steers_about_vertical(&anim.steps, hub));
+    }
+
+    #[test]
+    fn swapped_matrix_mesh_steers_about_the_vertical_nlc() {
+        let hub = Vec3::new(-1.0, 3.0, 0.5);
+        let swapped = MeshPivot { origin: hub, swaps_yz: true };
+        let anim = steering_mesh(NLC, Some(swapped));
+        assert!(steers_about_vertical(&anim.steps, hub));
+        // Without the swap (no matrix) the same data rolls about the forward axis (the bug).
+        let plain = MeshPivot { origin: hub, swaps_yz: false };
+        let anim = steering_mesh(NLC, Some(plain));
+        assert!(!steers_about_vertical(&anim.steps, hub));
+    }
+
+    #[test]
+    fn the_matrix_is_left_out_where_the_axis_is_already_vertical() {
+        // The class `origin_rot_y 90` on a swapped mesh is not changed (the side-effect entry).
+        let swapped = MeshPivot { origin: Vec3::ZERO, swaps_yz: true };
+        let anim = steering_mesh(NLC, Some(swapped));
+        // (factor 4: the variable is raised so that the angle is clearly measurable)
+        let m = animation_matrix(&anim.steps[1..2], |_| 5.0);
+        let p = bevy(Vec3::Y);
+        let moved = m.transform_point3(p);
+        assert!((moved.x - p.x).abs() > 0.1 && (moved.y - p.y).abs() < 1e-4);
     }
 }
