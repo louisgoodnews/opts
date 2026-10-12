@@ -21,6 +21,8 @@ arboard = { workspace = true }
 chrono = { workspace = true }
 # AccessKit node types; same version as `bevy_a11y` (Bevy does not re-export them)
 accesskit = "0.24"
+# PNG goldens of the testing module
+image = { workspace = true, features = ["png"] }
 serde = { workspace = true, optional = true }
 ron = { workspace = true, optional = true }
 

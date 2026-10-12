@@ -12,6 +12,7 @@ use bevy::prelude::*;
 
 use crate::OptsGuiPlugin;
 
+pub mod golden;
 pub mod rules;
 
 /// A minimal app with the whole GUI plugin and the resources widgets read.

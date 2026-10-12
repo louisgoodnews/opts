@@ -129,6 +129,12 @@ fn background_color(
     elevation: Option<&ElevationToken>,
 ) -> Color {
     let base = theme.scheme.get(role);
+    // The high-contrast theme has no tonal tint: the tint moves the surface off the colour the
+    // contrast audit guarantees (inverse accent on the inverse surface measured 6.89:1 against
+    // the required 7:1 with it); shadows and outlines carry the elevation there.
+    if theme.scheme.kind == crate::theme::mode::ThemeKind::HighContrast {
+        return base;
+    }
     match elevation {
         Some(level) => level
             .0

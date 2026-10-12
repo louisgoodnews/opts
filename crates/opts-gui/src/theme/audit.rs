@@ -83,6 +83,13 @@ pub fn rules() -> Vec<ContrastRule> {
             kind: RuleKind::Control,
         });
     }
+    // Snackbar actions: the inverse accent on the inverse surface (found by the rendered-tree
+    // contrast test, M-0065).
+    v.push(ContrastRule {
+        fg: ColorRole::InversePrimary,
+        bg: ColorRole::InverseSurface,
+        kind: RuleKind::Text,
+    });
     v
 }
 

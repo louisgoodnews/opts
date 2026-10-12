@@ -119,12 +119,13 @@ fn every_text_and_border_has_contrast_in_every_theme_and_accent() {
     for kind in [ThemeKind::Dark, ThemeKind::Light, ThemeKind::HighContrast] {
         for preset in AccentPreset::ALL {
             let theme = MaterialTheme::new(kind, preset);
-            let root = theme.scheme.get(ColorRole::Background);
+            let root = theme.scheme.get(ColorRole::Surface);
             app.insert_resource(theme);
             for _ in 0..3 {
                 app.update();
             }
-            let report = rules::text_contrast(app.world_mut(), root, text_min(kind), control_min(kind));
+            let report =
+                rules::text_contrast(app.world_mut(), root, text_min(kind), control_min(kind));
             total += report.checked;
             assert!(
                 report.violations.is_empty(),

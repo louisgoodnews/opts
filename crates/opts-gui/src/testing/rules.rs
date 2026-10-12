@@ -13,8 +13,8 @@ use crate::actions::UiAction;
 use crate::interaction::activation::Activated;
 use crate::interaction::state::{Disabled, DisabledReason};
 use crate::not_yet::NotAvailableYet;
-use crate::theme::contrast::{composite_over, contrast_ratio};
 use crate::testing::{act, focused};
+use crate::theme::contrast::{composite_over, contrast_ratio};
 use crate::ui_id::UiId;
 use crate::ui_tree::{role_of, snapshot, UiRole};
 
@@ -247,10 +247,22 @@ fn inactive(world: &World, entity: Entity) -> bool {
 /// (`root` is the window background), `None` when an image sits in the chain.
 fn resolved_background(world: &World, entity: Entity, root: Color) -> Option<Color> {
     let mut chain = Vec::new();
-    let mut cur = world.get::<ChildOf>(entity).map(|c| c.parent());
+    // The element's own fill counts too (a label with its own chip).
+    let mut cur = Some(entity);
     while let Some(e) = cur {
         if world.get::<ImageNode>(e).is_some() {
             return None;
+        }
+        // The not-yet label is drawn above the disabled scrim of its control, so the scrim lies
+        // between the control's fill and the label.
+        if world.get::<crate::not_yet::NotYetLabel>(entity).is_some() {
+            if let Some(link) = world.get::<crate::interaction::layer::StateLayerLink>(e) {
+                if let Some(scrim) = world.get::<BackgroundColor>(link.scrim) {
+                    if scrim.0.alpha() > 0.0 {
+                        chain.push(scrim.0);
+                    }
+                }
+            }
         }
         if let Some(bg) = world.get::<BackgroundColor>(e) {
             if bg.0.alpha() > 0.0 {
@@ -274,7 +286,12 @@ fn resolved_background(world: &World, entity: Entity, root: Color) -> Option<Col
 /// `text_min` and `control_min` are the thresholds of the theme under test
 /// ([`crate::theme::accent::text_min`], [`crate::theme::accent::control_min`]). Text of 24 px and
 /// above counts as large text and needs 3:1 (4.5:1 in high contrast, where `text_min` is 7).
-pub fn text_contrast(world: &mut World, root: Color, text_min: f32, control_min: f32) -> ContrastReport {
+pub fn text_contrast(
+    world: &mut World,
+    root: Color,
+    text_min: f32,
+    control_min: f32,
+) -> ContrastReport {
     let mut report = ContrastReport::default();
     let mut q = world.query::<(Entity, &Text, &TextColor, &TextFont)>();
     let texts: Vec<(Entity, String, Color, f32)> = q
@@ -311,13 +328,20 @@ pub fn text_contrast(world: &mut World, root: Color, text_min: f32, control_min:
         if ratio + 1e-3 < need {
             let id = world.get::<UiId>(e).map(|u| u.0.to_string());
             report.violations.push(format!(
-                "text {text:?} ({} px) {} is {ratio:.2}:1, needs {need}",
+                "text {text:?} ({} px) {} is {ratio:.2}:1, needs {need} ({} on {})",
                 size,
-                id.unwrap_or_else(|| format!("{e:?}"))
+                id.unwrap_or_else(|| format!("{e:?}")),
+                crate::theme::contrast::to_hex(fg),
+                crate::theme::contrast::to_hex(bg)
             ));
         }
     }
-    let mut q = world.query::<(Entity, &BorderColor, &Node, Has<crate::interaction::focus::Focusable>)>();
+    let mut q = world.query::<(
+        Entity,
+        &BorderColor,
+        &Node,
+        Has<crate::interaction::focus::Focusable>,
+    )>();
     let borders: Vec<(Entity, Color)> = q
         .iter(world)
         .filter(|(_, b, n, focusable)| {
@@ -429,7 +453,10 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
                 let layer = |e: Entity| {
                     let mut cur = Some(e);
                     while let Some(x) = cur {
-                        if world.get::<crate::components::modal::ModalRoot>(x).is_some() {
+                        if world
+                            .get::<crate::components::modal::ModalRoot>(x)
+                            .is_some()
+                        {
                             return Some(x);
                         }
                         cur = world.get::<ChildOf>(x).map(|c| c.parent());
