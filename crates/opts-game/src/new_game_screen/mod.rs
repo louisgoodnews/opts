@@ -23,8 +23,8 @@ pub mod weather;
 
 mod screen;
 mod systems;
-mod texts;
-mod ui;
+pub(crate) mod texts;
+pub(crate) mod ui;
 
 use bevy::prelude::*;
 use opts_gui::interaction::focus::FocusEvent;

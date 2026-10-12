@@ -115,3 +115,53 @@ wiz-option-vis_wimpel_invisible = Wimpel vorn
 wiz-option-wimpel_visibility = Fahnenhalterung
 wiz-option-vis_grill_invisible = Grillabdeckung
 wiz-option-ident_visible = Betreiberkennzeichnung
+
+# --- Ladebildschirm ---
+load-title = Deine Fahrt wird vorbereitet
+load-tile-map = KARTE
+load-tile-vehicle = FAHRZEUG
+load-tile-when = ZEIT UND WETTER
+load-stage-catalogue = Dein OMSI-Inhalt wird gelesen (nur beim ersten Start)…
+load-stage-resolve = Karte und Fahrzeug werden gesucht…
+load-stage-map = Karte wird geladen: { $done } von { $total } Kacheln
+load-stage-light = Licht und Wetter werden eingerichtet…
+load-stage-vehicle = Fahrzeug wird vorbereitet…
+load-stage-vehicle-meshes = Fahrzeug wird vorbereitet: noch { $left } geschützte Modelle
+load-stage-start = Fahrt wird startklar gemacht…
+load-stage-ready = Bereit
+load-stage-failed = Laden abgebrochen
+load-cancel = Abbrechen
+load-cancel-title = Laden abbrechen?
+load-cancel-body = Du kehrst zur Fahrtplanung zurück. Nichts geht verloren; deine Auswahl bleibt.
+load-cancel-keep = Weiter laden
+load-cancel-yes = Laden abbrechen
+load-ready-problems =
+    { $count ->
+        [one] Bereit mit 1 Problem
+       *[other] Bereit mit { $count } Problemen
+    }
+load-failed = Die Fahrt konnte nicht geladen werden
+load-details = Details
+load-continue = Weiter
+load-retry = Erneut versuchen
+load-choose-another = Andere Auswahl
+load-back = Zurück
+load-problem-map = Die Karte { $name } konnte nicht geladen werden
+load-problem-vehicle = Das Fahrzeug { $name } konnte nicht geladen werden
+load-problem-no-model = Das Fahrzeug { $name } hat keine Modelldatei in deinem OMSI-Ordner
+load-problem-tiles = { $count } von { $total } Kartenkacheln fehlen
+load-problem-objects = { $count } Szenerieobjekte konnten nicht gebaut werden
+load-problem-files = { $count } Dateien konnten nicht gelesen werden
+load-cause-map-unreadable = Der Kartenordner oder seine Hauptdatei konnte nicht gelesen werden.
+load-cause-no-tiles = Keine der Kacheln der Karte konnte gelesen werden.
+load-cause-no-vehicle-file = Stattdessen wird ein Fahrzeug aus den Listen der Karte verwendet.
+load-cause-vehicle-unreadable = Die Modelldatei fehlt oder ist nicht lesbar.
+load-controls-title = STEUERUNG
+load-controls-accelerate = Beschleunigen
+load-controls-brake = Bremsen
+load-controls-steer = Lenken
+load-controls-parking = Feststellbremse
+load-controls-gears = Fahren, Neutral, Rückwärts
+load-controls-cameras = Kameraansichten
+load-controls-pause = Pause
+load-controls-menu = Menü

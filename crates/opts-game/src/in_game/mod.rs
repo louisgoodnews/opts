@@ -5,6 +5,7 @@ pub mod camera;
 pub mod hot_reload;
 pub mod hud;
 pub mod instruments;
+pub mod load_report;
 pub mod loading_pipeline;
 pub mod loading_ui;
 pub mod omsi_world;
@@ -15,14 +16,11 @@ pub mod vehicle_spawner;
 pub mod world;
 
 use bevy::prelude::*;
-use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
 use crate::in_game::camera::{deactivate_menu_camera, reactivate_menu_camera};
 use crate::in_game::hud::{handle_camera_shortcuts, handle_hud_interactions, update_in_game_hud};
-use crate::in_game::loading_pipeline::{
-    handle_loading_interactions, update_loading_progress, update_loading_ui,
-};
+use crate::in_game::loading_pipeline::{handle_loading_interactions, update_loading_progress};
 use crate::in_game::loading_ui::spawn_loading_screen_ui;
 use crate::new_game_screen::types::NewGameSetup;
 
@@ -31,8 +29,8 @@ mod vehicle_menu;
 pub use camera::MenuCamera;
 pub use types::{
     CancelLoadingBtn, InGameCamera, InGameEntity, InGameHudRoot, InGameSessionInfo, LoadStage,
-    LoadingScreenRoot, PauseMenuBtn, ProgressBarFill, ProgressPercentText, SimulationLoadState,
-    SpeedometerText, StageIndicatorText, StartDrivingBtn, StatusTickerText, TachometerText,
+    LoadingScreenRoot, PauseMenuBtn, ProgressBarFill, SimulationLoadState, SpeedometerText,
+    TachometerText,
 };
 pub use vehicle_menu::{MenuCommands, VehicleMenu, VehicleMenuPlugin};
 
@@ -94,7 +92,6 @@ impl Plugin for InGamePlugin {
         app.add_systems(
             OnEnter(AppState::InGame),
             (
-                deactivate_menu_camera,
                 setup_in_game_session,
                 omsi_world::configure_pedestrians,
                 omsi_world::configure_rail,
@@ -115,6 +112,8 @@ impl Plugin for InGamePlugin {
                 .chain(),
         );
 
+        loading_ui::build(app);
+
         // HUD instrument colours: day/night palette by the sky's time of day
         app.add_systems(
             Update,
@@ -131,7 +130,7 @@ impl Plugin for InGamePlugin {
             Update,
             (
                 update_loading_progress,
-                update_loading_ui,
+                deactivate_menu_camera,
                 update_in_game_hud,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
@@ -177,7 +176,9 @@ impl Plugin for InGamePlugin {
                 handle_loading_interactions,
                 omsi_world::update_debug_overlay,
                 handle_hud_interactions,
-                escape_to_menu_in_game,
+                // While the loading screen is up, Esc asks to cancel (`loading_ui`).
+                escape_to_menu_in_game
+                    .run_if(|screen: Query<(), With<LoadingScreenRoot>>| screen.is_empty()),
             )
                 .run_if(in_state(AppState::InGame))
                 .run_if(opts_bevy::reporting::not_modal_active),
@@ -190,8 +191,9 @@ fn setup_in_game_session(
     mut commands: Commands,
     mut load_state: ResMut<SimulationLoadState>,
     mut session: ResMut<InGameSessionInfo>,
+    mut report: ResMut<load_report::LoadReport>,
     setup: Res<NewGameSetup>,
-    theme: Res<MaterialTheme>,
+    shell: Option<Res<crate::shell::ShellContent>>,
 ) {
     tracing::info!(
         map = ?setup.selected_map,
@@ -201,6 +203,7 @@ fn setup_in_game_session(
 
     // Reset loading state machine
     *load_state = SimulationLoadState::default();
+    report.reset();
 
     // Populate session config
     session.map_name = setup.selected_map.clone();
@@ -213,7 +216,10 @@ fn setup_in_game_session(
     session.sim_elapsed_seconds = 0.0;
 
     // Spawn Material Design 3 loading screen overlay
-    spawn_loading_screen_ui(&mut commands, &theme, &setup);
+    spawn_loading_screen_ui(
+        &mut commands,
+        &shell.as_deref().copied().unwrap_or_default(),
+    );
 }
 
 /// Despawns all entities associated with the in-game session on exiting [`AppState::InGame`].

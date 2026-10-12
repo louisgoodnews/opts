@@ -215,6 +215,8 @@ pub struct WorldLoadJob {
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
+    /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
+    missing_listed: usize,
     /// Camera parameters, set once the vehicle is loaded.
     pub camera: Option<CameraSetup>,
     /// `[set_camera_std]` index of the loaded vehicle.

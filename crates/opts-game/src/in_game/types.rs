@@ -28,6 +28,8 @@ pub enum LoadStage {
     CalibrateControls,
     /// World fully synthesized and ready for immediate driver control.
     Ready,
+    /// Nothing usable was loaded; the loading screen offers retry, another choice and back.
+    Failed,
 }
 
 /// Resource tracking asynchronous loading progression, telemetry text, and phase transitions.
@@ -39,8 +41,14 @@ pub struct SimulationLoadState {
     pub progress: f32,
     /// Seconds elapsed in the active stage.
     pub stage_elapsed: f32,
-    /// Human-readable telemetry log message.
-    pub status_message: String,
+    /// Map tiles loaded so far.
+    pub tiles_done: usize,
+    /// Map tiles asked for.
+    pub tiles_total: usize,
+    /// Protected vehicle models still being decoded.
+    pub meshes_left: usize,
+    /// The catalogue is still being built (first start); nothing can be resolved yet.
+    pub waiting_for_catalogue: bool,
     /// Whether all simulation assets and entities have been successfully synthesized.
     pub is_complete: bool,
     /// Grace period timer before auto-transitioning from ready to active simulation.
@@ -62,7 +70,10 @@ impl Default for SimulationLoadState {
             stage: LoadStage::InitEngine,
             progress: 0.05,
             stage_elapsed: 0.0,
-            status_message: "Initializing 3D simulation engine & coordinates...".to_string(),
+            tiles_done: 0,
+            tiles_total: 0,
+            meshes_left: 0,
+            waiting_for_catalogue: false,
             is_complete: false,
             auto_launch_delay: 0.6,
             world_spawned: false,
@@ -100,22 +111,6 @@ pub struct LoadingScreenRoot;
 /// Marker component for the filled visual bar inside the linear progress indicator.
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct ProgressBarFill;
-
-/// Marker component for the text displaying numerical percentage (e.g., "75%").
-#[derive(Component, Debug, Clone, Copy, Default)]
-pub struct ProgressPercentText;
-
-/// Marker component for the live telemetry status message readout.
-#[derive(Component, Debug, Clone, Copy, Default)]
-pub struct StatusTickerText;
-
-/// Marker component for the stage indicator chip text (e.g., "STAGE 3/5").
-#[derive(Component, Debug, Clone, Copy, Default)]
-pub struct StageIndicatorText;
-
-/// Marker component for the "Start Driving Now" button.
-#[derive(Component, Debug, Clone, Copy, Default)]
-pub struct StartDrivingBtn;
 
 /// Marker component for the "Cancel & Return to Menu" button on the loading screen.
 #[derive(Component, Debug, Clone, Copy, Default)]

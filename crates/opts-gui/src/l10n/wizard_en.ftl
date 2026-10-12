@@ -115,3 +115,53 @@ wiz-option-vis_wimpel_invisible = Pennant on the front
 wiz-option-wimpel_visibility = Flag mount
 wiz-option-vis_grill_invisible = Grille cover
 wiz-option-ident_visible = Operator identification
+
+# --- Loading screen ---
+load-title = Preparing your drive
+load-tile-map = MAP
+load-tile-vehicle = VEHICLE
+load-tile-when = TIME AND WEATHER
+load-stage-catalogue = Reading your OMSI content (first start only)…
+load-stage-resolve = Finding your map and vehicle…
+load-stage-map = Loading the map: { $done } of { $total } tiles
+load-stage-light = Setting up light and weather…
+load-stage-vehicle = Preparing the vehicle…
+load-stage-vehicle-meshes = Preparing the vehicle: { $left } protected models left
+load-stage-start = Getting ready to drive…
+load-stage-ready = Ready
+load-stage-failed = Loading stopped
+load-cancel = Cancel
+load-cancel-title = Cancel loading?
+load-cancel-body = You go back to Plan a drive. Nothing is lost; your choices stay.
+load-cancel-keep = Keep loading
+load-cancel-yes = Cancel loading
+load-ready-problems =
+    { $count ->
+        [one] Ready with 1 problem
+       *[other] Ready with { $count } problems
+    }
+load-failed = Couldn't load the drive
+load-details = Details
+load-continue = Continue
+load-retry = Retry
+load-choose-another = Choose another
+load-back = Back
+load-problem-map = Couldn't load the map { $name }
+load-problem-vehicle = Couldn't load the vehicle { $name }
+load-problem-no-model = The vehicle { $name } has no model file in your OMSI folder
+load-problem-tiles = { $count } of { $total } map tiles are missing
+load-problem-objects = { $count } scenery objects could not be built
+load-problem-files = { $count } files could not be read
+load-cause-map-unreadable = The map folder or its main file could not be read.
+load-cause-no-tiles = None of the map's tiles could be read.
+load-cause-no-vehicle-file = A vehicle from the map's own lists is used instead.
+load-cause-vehicle-unreadable = The model file is missing or unreadable.
+load-controls-title = CONTROLS
+load-controls-accelerate = Accelerate
+load-controls-brake = Brake
+load-controls-steer = Steer
+load-controls-parking = Parking brake
+load-controls-gears = Drive, neutral, reverse
+load-controls-cameras = Camera views
+load-controls-pause = Pause
+load-controls-menu = Menu
