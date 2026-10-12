@@ -15,7 +15,9 @@ use super::metrics::{self, ExpectedMasks, Matte};
 use super::preflight::{self, Preflight};
 use super::verdict::{decide, Evidence};
 use super::worker::Harness;
-use super::{diag, images, script_check, Audio, ObjectEntry, Record, Tags, TextCheck, Timing};
+use super::{
+    diag, images, script_check, script_run, Audio, ObjectEntry, Record, Tags, TextCheck, Timing,
+};
 
 /// Milliseconds since `t`.
 fn ms(t: Instant) -> u64 {
@@ -171,6 +173,26 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
 
     let diagnostics = super::Diagnostics { stats, events };
     judge(h, &mut record, &pre, &exp, diagnostics, text);
+    if h.config.scripts && script_check::is_scripted(&pre) {
+        let thresholds = h.config.thresholds.script.clone();
+        let ctx = script_run::Ctx {
+            entry,
+            pre: &pre,
+            strings: &strings_a,
+            tile_place,
+            views: &views,
+            deadline: t0 + h.config.object_timeout,
+            thresholds: &thresholds,
+            effects_off: h.config.seed_fault.as_deref() == Some("script-effect-off"),
+        };
+        analysis.text_shots.extend(script_check::stage(
+            h,
+            &ctx,
+            &exp,
+            &expect_place,
+            &mut record,
+        ));
+    }
     images::keep(h, &mut record, &analysis);
     timing.total = ms(t0);
     record.timing_ms = timing;

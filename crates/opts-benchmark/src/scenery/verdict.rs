@@ -42,6 +42,9 @@ pub struct Thresholds {
     pub text_delta: u8,
     /// The text check needs at least this many text pixels in a view.
     pub text_min_px: usize,
+    /// Script-effect check thresholds.
+    #[serde(default)]
+    pub script: super::script_check::ScriptThresholds,
 }
 
 impl Default for Thresholds {
@@ -62,6 +65,7 @@ impl Default for Thresholds {
             text_changed_share: 0.002,
             text_delta: 16,
             text_min_px: 20,
+            script: super::script_check::ScriptThresholds::default(),
         }
     }
 }

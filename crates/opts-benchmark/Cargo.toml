@@ -21,12 +21,13 @@ required-features = ["scenery"]
 default = ["scenery"]
 # The scenery harness renders objects with the game's loader; it pulls in Bevy's renderer.
 # `--no-default-features` builds only the renderer-free parts (for M-0028's Criterion benches).
-scenery = ["dep:opts-game", "dep:opts-bevy", "dep:opts-catalogue", "dep:bevy"]
+scenery = ["dep:opts-game", "dep:opts-bevy", "dep:opts-sim", "dep:opts-catalogue", "dep:bevy"]
 
 [dependencies]
 opts-core = { workspace = true }
 opts-game = { workspace = true, optional = true }
 opts-bevy = { workspace = true, optional = true }
+opts-sim = { workspace = true, optional = true }
 opts-catalogue = { workspace = true, optional = true }
 bevy = { workspace = true, optional = true }
 

@@ -62,6 +62,8 @@ pub struct ExpectedTri {
     pub v: [Vec3; 3],
     /// Mask membership.
     pub flags: TriFlags,
+    /// Index of the `[mesh]` of the `.sco` the triangle belongs to (0 for trees).
+    pub mesh: usize,
 }
 
 /// Keyed (scrambled) meshes and how they were resolved.
@@ -116,7 +118,7 @@ pub fn build(install: &OmsiInstall, sco_path: &Path, sco: &SceneryObject) -> Exp
     distinct.sort_by(f32::total_cmp);
     distinct.dedup();
     out.lod_groups = distinct.len();
-    for mesh in &sco.meshes {
+    for (mesh_index, mesh) in sco.meshes.iter().enumerate() {
         let Some(path) = install.find_in(&model_dir, &mesh.file) else {
             push_unique(&mut out.categories, "F-MESH-MISSING");
             // The loader gives up on the whole object at the first missing mesh.
@@ -133,7 +135,7 @@ pub fn build(install: &OmsiInstall, sco_path: &Path, sco: &SceneryObject) -> Exp
         };
         let overrides = overrides(sco, mesh);
         for model in &models {
-            add_model(&mut out.tris, model, mesh, &overrides, base);
+            add_model(&mut out.tris, model, mesh_index, &overrides, base);
         }
     }
     out
@@ -213,7 +215,7 @@ fn overrides(sco: &SceneryObject, mesh: &ScoMesh) -> Vec<(TextureOverride, bool)
 fn add_model(
     tris: &mut Vec<ExpectedTri>,
     model: &O3d,
-    _mesh: &ScoMesh,
+    mesh: usize,
     overrides: &[(TextureOverride, bool)],
     base: bool,
 ) {
@@ -260,6 +262,7 @@ fn add_model(
                     text,
                     two_sided: false,
                 },
+                mesh,
             });
         }
     }
@@ -279,10 +282,12 @@ fn tree_billboard(height: f32, width: f32) -> Vec<ExpectedTri> {
             ExpectedTri {
                 v: [a, b, c],
                 flags,
+                mesh: 0,
             },
             ExpectedTri {
                 v: [a, c, d],
                 flags,
+                mesh: 0,
             },
         ]
     };

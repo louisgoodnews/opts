@@ -5275,6 +5275,7 @@ dependencies = [
  "opts-catalogue",
  "opts-core",
  "opts-game",
+ "opts-sim",
  "serde",
  "serde_json",
  "sha2",

@@ -17,7 +17,7 @@ use bevy::render::renderer::RenderDevice;
 use bevy::render::RenderPlugin;
 use bevy::window::ExitCondition;
 use bevy::winit::WinitPlugin;
-use opts_bevy::OmsiInstall;
+use opts_bevy::{OmsiInstall, SceneryClock, SceneryLodMode, SceneryRuntimeSettings};
 use opts_game::in_game::omsi_world::{
     begin_world_load, load_next_tile, OmsiSessionConfig, WorldLoadJob, WorldStats,
 };
@@ -48,7 +48,10 @@ pub struct WorkerConfig {
     pub object_timeout: Duration,
     /// Which images to keep: `none`, `fail` (non-pass) or `all`.
     pub keep_images: String,
-    /// Deliberate fault for the seeded-fault tests (`heading-mirror`, `offset-10m`, `scale-2x`).
+    /// Run the script-effect check on scripted objects.
+    pub scripts: bool,
+    /// Deliberate fault for the seeded-fault tests (`heading-mirror`, `offset-10m`, `scale-2x`,
+    /// `script-effect-off`).
     pub seed_fault: Option<String>,
     /// Decision thresholds.
     pub thresholds: super::verdict::Thresholds,
@@ -93,6 +96,15 @@ impl Harness {
                 .disable::<bevy::audio::AudioPlugin>()
                 .disable::<bevy::gilrs::GilrsPlugin>(),
         );
+        // The scenery runtime is driven by hand (`advance_scenery`); the static views see every
+        // LOD group, as before the runtime existed.
+        app.add_plugins(opts_bevy::SceneryRuntimePlugin)
+            .insert_resource(SceneryRuntimeSettings {
+                automatic: false,
+                ..default()
+            })
+            .insert_resource(SceneryLodMode::All)
+            .insert_resource(SceneryClock::at(2026, 6, 29, 12.0 * 3600.0));
         app.finish();
         app.cleanup();
         let mut apps = std::mem::take(app.sub_apps_mut());
@@ -136,6 +148,11 @@ impl Harness {
         }
         h.baseline = Baseline::from_events(&h.drain_events());
         Ok(h)
+    }
+
+    /// The main world (scenario engine and probes).
+    pub fn world_mut(&mut self) -> &mut World {
+        self.apps.main.world_mut()
     }
 
     /// Runs one frame and waits for the GPU.

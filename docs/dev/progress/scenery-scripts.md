@@ -19,9 +19,9 @@ XDG_CONFIG_HOME=$(mktemp -d -p $D) XDG_DATA_HOME=$(mktemp -d -p $D) XDG_CACHE_HO
 | Batch | Status | Commit |
 | :--- | :--- | :--- |
 | C0 Orient | spec rewritten, plan below | (this commit) |
-| C1 Scenario engine | todo | |
-| C2 Effect judgement | todo | |
-| C3 Tests | todo | |
+| C1 Scenario engine | done (`script_run.rs`, worker plugin, `--scripts`) | commit below |
+| C2 Effect judgement | done (`script_judge.rs`, `script_stimuli.rs`) | commit below |
+| C3 Tests | done (`tests/script_effects.rs`, passes on the RTX 3060: toggle, slider, traffic head, lamp, seeded fault, S-MISSING, S-INERT) | commit below |
 | C4 Corpus run + calibration | todo | |
 | C5 Close-out | todo | |
 
@@ -38,4 +38,6 @@ Plan (spec: `docs/src/architecture/scenery-benchmark.md`, "Script-effect check",
 
 ## Results / open problems
 
-(none yet)
+- C1-C3 were implemented together and committed as one change (the gates were green for the whole).
+- Seeded fault is `--seed-fault script-effect-off` (the brief's `S-NO-EFFECT` = spec's `S-EFFECT-NOT-SHOWN`).
+- Thresholds are the uncalibrated first values (spec table); calibration is C4.

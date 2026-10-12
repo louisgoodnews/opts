@@ -60,6 +60,43 @@ impl Mask {
             .count()
     }
 
+    /// Adds every pixel of `other`.
+    pub fn union_with(&mut self, other: &Mask) {
+        for (a, b) in self.px.iter_mut().zip(&other.px) {
+            *a |= *b;
+        }
+    }
+
+    /// The pixels covered here but not in `other`.
+    #[must_use]
+    pub fn minus(&self, other: &Mask) -> Mask {
+        Mask {
+            width: self.width,
+            height: self.height,
+            px: self
+                .px
+                .iter()
+                .zip(&other.px)
+                .map(|(a, b)| *a && !*b)
+                .collect(),
+        }
+    }
+
+    /// Covers the pixels within `radius` of `centre` (pixel coordinates).
+    pub fn add_disc(&mut self, centre: Vec2, radius: f32) {
+        let (w, h) = (self.width as i64, self.height as i64);
+        let r = radius.ceil() as i64;
+        let (cx, cy) = (centre.x.floor() as i64, centre.y.floor() as i64);
+        for y in (cy - r).max(0)..=(cy + r).min(h - 1) {
+            for x in (cx - r).max(0)..=(cx + r).min(w - 1) {
+                let d = Vec2::new(x as f32 + 0.5, y as f32 + 0.5) - centre;
+                if d.length() <= radius {
+                    self.px[(y * w + x) as usize] = true;
+                }
+            }
+        }
+    }
+
     /// Pixels covered here but not in `other`.
     #[must_use]
     pub fn minus_count(&self, other: &Mask) -> usize {

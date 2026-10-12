@@ -276,6 +276,7 @@ mod tests {
                 two_sided,
                 ..TriFlags::default()
             },
+            mesh: 0,
         };
         let a = [
             Vec3::new(-1.0, 0.0, -1.0),

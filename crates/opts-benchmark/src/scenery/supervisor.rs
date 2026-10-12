@@ -54,6 +54,9 @@ pub struct RunOptions {
     pub catalogue: Option<PathBuf>,
     /// `XDG_CACHE_HOME` for the workers (decode cache); inherited when `None`.
     pub cache_dir: Option<PathBuf>,
+    /// Run the script-effect check on scripted objects.
+    #[serde(default)]
+    pub scripts: bool,
     /// Seeded fault for the acceptance tests.
     pub seed_fault: Option<String>,
     /// Decision thresholds.
