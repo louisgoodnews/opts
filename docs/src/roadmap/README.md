@@ -287,7 +287,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design approved 2026-10-12 (decisions D-UI-01 to D-UI-11 answered; unavailable features stay visible with the red text "Feature not available yet!"); implementation in progress. Documents: [phase page](phase-9/README.md), [ADR-0009](../adr/0009-ui-architecture.md).*
 
 - [ ] **🧱 UI Foundations** — [M-0061](phase-9/M-0061.md)
-  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget; one theme for all screens; UI scale 75–200 %; accent presets with a contrast guard.
+  - [x] Theme foundations (part A, 2026-10-12): dark default with Light, System, Auto (clock) and High-contrast themes; Noto Sans type scale; UI scale 75–200 %, density, layout classes, 1024×640 minimum window; status roles, shadows, motion with reduced motion; accent presets with a contrast guard and RON theme files; one theme for loading screen, HUD and stubs; instrument tokens.
+  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B).
   - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
 - [ ] **🧭 App Shell & Flow** — [M-0062](phase-9/M-0062.md)
   - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.

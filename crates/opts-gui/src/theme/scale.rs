@@ -127,6 +127,29 @@ mod tests {
         assert_eq!(px(&app, big), 20.0);
     }
 
+    fn layout_class_of(width: f32, scale: f32) -> LayoutClass {
+        let mut app = App::new();
+        let mut window = Window::default();
+        window.resolution.set(width, 700.0);
+        app.insert_resource(UiScale(scale))
+            .init_resource::<LayoutClass>()
+            .add_systems(Update, update_layout_class);
+        app.world_mut().spawn((window, PrimaryWindow));
+        app.update();
+        *app.world().resource::<LayoutClass>()
+    }
+
+    #[test]
+    fn the_layout_class_follows_the_window_width_in_layout_pixels() {
+        assert_eq!(layout_class_of(800.0, 1.0), LayoutClass::Compact);
+        assert_eq!(layout_class_of(1024.0, 1.0), LayoutClass::Medium);
+        assert_eq!(layout_class_of(1920.0, 1.0), LayoutClass::Expanded);
+        // 1920 physical-ish pixels at 200 % scale leave 960 layout pixels: medium
+        assert_eq!(layout_class_of(1920.0, 2.0), LayoutClass::Medium);
+        // 1024 at 125 % leave 819 layout pixels: compact
+        assert_eq!(layout_class_of(1024.0, 1.25), LayoutClass::Compact);
+    }
+
     #[test]
     fn ui_scale_follows_the_setting() {
         let mut app = App::new();

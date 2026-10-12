@@ -169,6 +169,7 @@ pub fn track_system_theme(
     }
     if let Some(kind) = reported {
         if system.0 != Some(kind) {
+            tracing::info!(?kind, "the operating system reports its colour scheme");
             system.0 = Some(kind);
         }
     }
@@ -341,6 +342,50 @@ mod tests {
             app.world().resource::<MaterialTheme>().kind(),
             ThemeKind::HighContrast
         );
+    }
+
+    #[test]
+    fn the_window_theme_is_read_into_the_system_scheme() {
+        let mut app = App::new();
+        app.init_resource::<SystemColorScheme>()
+            .add_message::<WindowThemeChanged>()
+            .add_systems(Update, track_system_theme);
+        let window = app
+            .world_mut()
+            .spawn((
+                Window {
+                    window_theme: Some(WindowTheme::Light),
+                    ..default()
+                },
+                PrimaryWindow,
+            ))
+            .id();
+        app.update();
+        assert_eq!(
+            app.world().resource::<SystemColorScheme>().0,
+            Some(ThemeKind::Light)
+        );
+        // a change message wins over the stored value
+        app.world_mut().write_message(WindowThemeChanged {
+            window,
+            theme: WindowTheme::Dark,
+        });
+        app.update();
+        assert_eq!(
+            app.world().resource::<SystemColorScheme>().0,
+            Some(ThemeKind::Dark)
+        );
+    }
+
+    #[test]
+    fn a_window_that_reports_nothing_leaves_the_scheme_unknown() {
+        let mut app = App::new();
+        app.init_resource::<SystemColorScheme>()
+            .add_message::<WindowThemeChanged>()
+            .add_systems(Update, track_system_theme);
+        app.world_mut().spawn((Window::default(), PrimaryWindow));
+        app.update();
+        assert_eq!(app.world().resource::<SystemColorScheme>().0, None);
     }
 
     #[test]

@@ -5,13 +5,18 @@
 
 use std::collections::BTreeMap;
 
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::time::Duration;
+
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 use chrono::NaiveTime;
 use opts_gui::theme::{
     mode::{format_time, parse_time, DEFAULT_DARK_FROM, DEFAULT_LIGHT_FROM},
     motion::MotionPreference,
-    AccentPreset, Density, ThemeMode, ThemePreferences, ThemeSwitchLock, UiScalePercent,
+    AccentPreset, Density, SystemColorScheme, ThemeKind, ThemeMode, ThemePreferences,
+    ThemeSwitchLock, UiScalePercent,
 };
 
 use crate::app_state::AppState;
@@ -151,6 +156,92 @@ pub fn os_reduced_motion_hint() -> bool {
     false
 }
 
+/// The colour scheme a `gsettings` answer (`'prefer-dark'`, `'prefer-light'`, `'default'`) means;
+/// `'default'` is "no preference", so nothing is reported (the theme then falls back to dark).
+pub fn parse_gsettings_scheme(answer: &str) -> Option<ThemeKind> {
+    match answer.trim().trim_matches('\'') {
+        "prefer-dark" => Some(ThemeKind::Dark),
+        "prefer-light" => Some(ThemeKind::Light),
+        _ => None,
+    }
+}
+
+/// Asks the desktop for its colour-scheme preference (best effort, Linux/GNOME `gsettings`).
+/// Needed because winit does not report a window theme on every desktop (it reports none on
+/// Wayland/GNOME at start-up).
+pub fn os_color_scheme_hint() -> Option<ThemeKind> {
+    #[cfg(target_os = "linux")]
+    {
+        let out = std::process::Command::new("gsettings")
+            .args(["get", "org.gnome.desktop.interface", "color-scheme"])
+            .output()
+            .ok()?;
+        parse_gsettings_scheme(&String::from_utf8_lossy(&out.stdout))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+
+/// Polls the desktop's colour scheme on a worker thread while the *System* theme mode is active
+/// and the window itself reports nothing: at once when the mode is chosen, then once a minute.
+pub struct OsSchemePoll {
+    timer: Timer,
+    tx: Sender<Option<ThemeKind>>,
+    rx: std::sync::Mutex<Receiver<Option<ThemeKind>>>,
+    in_flight: bool,
+}
+
+impl Default for OsSchemePoll {
+    fn default() -> Self {
+        let (tx, rx) = channel();
+        let mut timer = Timer::new(Duration::from_secs(60), TimerMode::Repeating);
+        timer.set_elapsed(Duration::from_secs(60)); // poll immediately
+        Self {
+            timer,
+            tx,
+            rx: std::sync::Mutex::new(rx),
+            in_flight: false,
+        }
+    }
+}
+
+/// Feeds the polled desktop preference into [`SystemColorScheme`].
+pub fn poll_os_color_scheme(
+    time: Res<Time<Real>>,
+    prefs: Res<ThemePreferences>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    mut poll: Local<OsSchemePoll>,
+    mut system: ResMut<SystemColorScheme>,
+) {
+    let answers: Vec<_> = poll
+        .rx
+        .lock()
+        .map(|rx| rx.try_iter().collect())
+        .unwrap_or_default();
+    for answer in answers {
+        poll.in_flight = false;
+        if let Some(kind) = answer {
+            if system.0 != Some(kind) {
+                tracing::info!(?kind, "the desktop prefers this colour scheme (gsettings)");
+                system.0 = Some(kind);
+            }
+        }
+    }
+    let window_reports = windows.iter().any(|w| w.window_theme.is_some());
+    if prefs.mode != ThemeMode::System || window_reports {
+        return;
+    }
+    if poll.timer.tick(time.delta()).just_finished() && !poll.in_flight {
+        poll.in_flight = true;
+        let tx = poll.tx.clone();
+        std::thread::spawn(move || {
+            let _ = tx.send(os_color_scheme_hint());
+        });
+    }
+}
+
 /// Copies changed [`GameSettings`] into the `opts-gui` resources: theme preferences, UI scale,
 /// density and the motion preference. Only differing values are written, so change detection of
 /// the receiving resources stays meaningful.
@@ -212,6 +303,24 @@ mod tests {
         let mut s = GameSettings::default();
         s.apply_from_connection(&conn).expect("load");
         s
+    }
+
+    #[test]
+    fn gsettings_answers_are_understood() {
+        assert_eq!(
+            parse_gsettings_scheme("'prefer-dark'\n"),
+            Some(ThemeKind::Dark)
+        );
+        assert_eq!(
+            parse_gsettings_scheme("'prefer-light'"),
+            Some(ThemeKind::Light)
+        );
+        assert_eq!(
+            parse_gsettings_scheme("'default'"),
+            None,
+            "no preference falls back"
+        );
+        assert_eq!(parse_gsettings_scheme(""), None);
     }
 
     #[test]

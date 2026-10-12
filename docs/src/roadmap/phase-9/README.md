@@ -2,7 +2,7 @@
 
 *Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows with the editor, mods, passengers, audio and more languages without rewrites.*
 
-**Status:** 🟡 Design **approved 2026-10-12** (decisions below); implementation in progress
+**Status:** 🟡 Design **approved 2026-10-12** (decisions below); implementation in progress (M-0061 part A, the theme foundations, done 2026-10-12)
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its documents and milestones.
 
@@ -34,7 +34,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0061 — UI Foundations](M-0061.md) — ⏳ Planned (states, focus, one theme, UI scale, action layer, UI ids)
+- [M-0061 — UI Foundations](M-0061.md) — 🟡 In progress: **part A done** (theme foundations: dark default, modes, typography, scale, density, accents with contrast guard, one theme everywhere); part B open (states, focus, action layer, UI ids)
 - [M-0062 — App Shell and Flow](M-0062.md) — ⏳ Planned (shell, Home, Plan a drive, loading, pause)
 - [M-0063 — Settings System](M-0063.md) — ⏳ Planned (declarative registry, real settings, controls)
 - [M-0064 — HUD and In-Game UI](M-0064.md) — ⏳ Planned (instrument HUD, registry, help, developer panel)
@@ -50,7 +50,7 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 | :--- | :--- | :--- | :--- |
 | D-UI-01 | Keep M3 as token vocabulary, not as the look | **yes** | [design language §2](design-language.md#2-keep-the-token-architecture-change-its-expression) |
 | D-UI-02 | Default theme | **Dark** stays the default (+ Light, High contrast, System). **Plus** an investigated and implemented mode *Auto (clock)* that follows day and night of the device's timezone ([investigation](theme-auto-switch.md)) | [§3](design-language.md#3-theme) |
-| D-UI-03 | Typeface family | **delegated**: decided in M-0061 after a rendered comparison, licence permitting | [§5](design-language.md#5-typography) |
+| D-UI-03 | Typeface family | **delegated**: decided in M-0061 after a rendered comparison: **Noto Sans** (OFL; Regular/Medium/Bold) with DejaVu Sans fallback and JetBrains Mono, see [design system §3.2](../../architecture/gui-design-system.md#32-typography) | [§5](design-language.md#5-typography) |
 | D-UI-04 | Minimum window size | **1024×640** (recommendation accepted) | [§6](design-language.md#6-space-density-scale) |
 | D-UI-05 | Drop per-widget colour swatches | **yes** | [§11](design-language.md#11-decisions-for-you) |
 | D-UI-06 | F1 = Help (with *Report an issue*), not the report dialog | **yes** | [interaction §9](interaction-and-feel.md#9-proposed-global-shortcuts) |
@@ -74,7 +74,8 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 *Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design approved 2026-10-12 (decisions D-UI-01 to D-UI-11 answered; unavailable features stay visible with the red text "Feature not available yet!"); implementation in progress. Documents: [phase page](README.md), [ADR-0009](../../adr/0009-ui-architecture.md).*
 
 - [ ] **🧱 UI Foundations** — [M-0061](M-0061.md)
-  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget; one theme for all screens; UI scale 75–200 %; accent presets with a contrast guard.
+  - [x] Theme foundations (part A, 2026-10-12): dark default with Light, System, Auto (clock) and High-contrast themes; Noto Sans type scale; UI scale 75–200 %, density, layout classes, 1024×640 minimum window; status roles, shadows, motion with reduced motion; accent presets with a contrast guard and RON theme files; one theme for loading screen, HUD and stubs; instrument tokens.
+  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B).
   - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
 - [ ] **🧭 App Shell & Flow** — [M-0062](M-0062.md)
   - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.

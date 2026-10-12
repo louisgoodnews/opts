@@ -369,4 +369,91 @@ mod tests {
             "BackgroundColor must update when MaterialTheme changes"
         );
     }
+
+    fn app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<MaterialTheme>()
+            .add_systems(Update, (sync_typestyle_tokens, sync_elevation_shadows));
+        app
+    }
+
+    #[test]
+    fn a_type_token_applies_size_line_height_tracking_weight_and_family() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((Text::new("Title"), TypeStyleToken(TypeScale::TitleLarge)))
+            .id();
+        app.update();
+        let w = app.world();
+        let font = w.get::<TextFont>(e).expect("font");
+        assert_eq!(font.font_size, FontSize::Px(20.0));
+        assert_eq!(font.weight, FontWeight(700));
+        assert_eq!(font.font, crate::fonts::ui_font_source());
+        assert_eq!(
+            w.get::<LineHeight>(e),
+            Some(&LineHeight::RelativeToFont(28.0 / 20.0))
+        );
+        assert_eq!(w.get::<LetterSpacing>(e), Some(&LetterSpacing::Px(0.0)));
+    }
+
+    #[test]
+    fn tabular_styles_switch_on_tabular_figures_and_other_styles_do_not() {
+        let mut app = app();
+        let speed = app
+            .world_mut()
+            .spawn((Text::new("48"), TypeStyleToken(TypeScale::NumericLarge)))
+            .id();
+        let body = app
+            .world_mut()
+            .spawn((Text::new("x"), TypeStyleToken(TypeScale::BodyMedium)))
+            .id();
+        app.update();
+        let tabular = FontFeatures::builder()
+            .enable(FontFeatureTag::TABULAR_FIGURES)
+            .build();
+        assert_eq!(
+            app.world().get::<TextFont>(speed).expect("f").font_features,
+            tabular
+        );
+        assert_eq!(
+            app.world().get::<TextFont>(body).expect("f").font_features,
+            FontFeatures::default()
+        );
+    }
+
+    #[test]
+    fn the_icon_font_keeps_its_font_but_gets_the_size() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((
+                Text::new("x"),
+                TextFont {
+                    font: crate::fonts::ICON_FONT.into(),
+                    ..default()
+                },
+                TypeStyleToken(TypeScale::BodyLarge),
+            ))
+            .id();
+        app.update();
+        let font = app.world().get::<TextFont>(e).expect("font");
+        assert_eq!(font.font, FontSource::Handle(crate::fonts::ICON_FONT));
+        assert_eq!(font.font_size, FontSize::Px(16.0));
+    }
+
+    #[test]
+    fn raised_entities_get_a_shadow_and_flat_ones_lose_it() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((Node::default(), ElevationToken(ElevationLevel::Level3)))
+            .id();
+        app.update();
+        assert!(app.world().get::<BoxShadow>(e).is_some());
+        app.world_mut().get_mut::<ElevationToken>(e).expect("t").0 = ElevationLevel::Level0;
+        app.update();
+        assert!(app.world().get::<BoxShadow>(e).is_none());
+    }
 }

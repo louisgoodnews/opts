@@ -83,11 +83,13 @@ impl Plugin for OptsGamePlugin {
         // Register global glass surface theme synchronization
         app.add_systems(Update, menu::glass::sync_glass_surfaces);
 
-        // Settings -> theme, scale, density, motion; no automatic theme switch while loading or driving
+        // Settings -> theme, scale, density, motion; the desktop's colour scheme for the System mode;
+        // no automatic theme switch while loading or driving
         app.add_systems(
             PreUpdate,
             (
                 settings_theme::sync_theme_settings,
+                settings_theme::poll_os_color_scheme,
                 settings_theme::lock_theme_switching,
             )
                 .before(opts_gui::theme::runtime::resolve_theme),
