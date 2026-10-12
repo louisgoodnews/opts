@@ -12,7 +12,9 @@
 
 use std::collections::HashMap;
 
+use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input::mouse::MouseWheel;
+use bevy::input::ButtonState;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use opts_bevy::reporting::{MenuModalActive, ModalActive};
@@ -66,8 +68,11 @@ pub struct VehicleMenu {
     /// Name of the vehicle spawned through the menu.
     current: String,
     built: Option<(Page, bool)>,
-    /// The entry index had finished in the last build.
-    index_ready: bool,
+    /// Entries resolved and whether the index has finished, in the last build.
+    index_progress: (usize, bool),
+    entry_total: usize,
+    /// Text typed into the vehicle search field.
+    search: String,
 }
 
 impl VehicleMenu {
@@ -132,6 +137,7 @@ impl Plugin for VehicleMenuPlugin {
                 Update,
                 (
                     toggle_menu,
+                    search_input,
                     start_entry_index,
                     menu_actions,
                     refresh_entries,
@@ -205,11 +211,12 @@ fn toggle_menu(
 
 /// Starts resolving the entry points when the menu is first needed.
 fn start_entry_index(
-    menu: Res<VehicleMenu>,
+    load: Res<SimulationLoadState>,
     job: Option<Res<WorldLoadJob>>,
     mut entries: ResMut<EntryIndex>,
 ) {
-    if menu.page == Page::Closed {
+    // Started as soon as the session is up, so the index is ready by the time the menu opens.
+    if !load.is_complete {
         return;
     }
     if let Some(job) = job {
@@ -372,6 +379,61 @@ fn menu_setvar_value(menu: &VehicleMenu, catalogue: Option<&GameCatalogue>, var:
         .map_or(0, |s| s.value)
 }
 
+/// Whether a vehicle matches every word of the search text (name, id, make, model, repaint).
+fn matches_search(v: &VehicleItem, search: &str) -> bool {
+    let hay = format!(
+        "{} {} {} {} {}",
+        v.full_name, v.id, v.manufacturer, v.model, v.default_livery
+    )
+    .to_lowercase();
+    search
+        .to_lowercase()
+        .split_whitespace()
+        .all(|w| hay.contains(w))
+}
+
+/// Typing into the vehicle search field (while the Select Vehicle page is up).
+fn search_input(
+    mut keys: MessageReader<KeyboardInput>,
+    mut menu: ResMut<VehicleMenu>,
+    mut commands_in: ResMut<MenuCommands>,
+) {
+    let typing = menu.page == Page::Select && !menu.config_open;
+    let mut changed = false;
+    let mut search = menu.search.clone();
+    for e in keys.read() {
+        if !typing || e.state != ButtonState::Pressed {
+            continue;
+        }
+        if e.logical_key == Key::Backspace {
+            changed |= search.pop().is_some();
+        } else if let Some(t) = &e.text {
+            for ch in t.chars().filter(|c| !c.is_control()) {
+                search.push(ch);
+                changed = true;
+            }
+        }
+    }
+    // `menu.do search <text>` sets the field (an empty text clears it).
+    let mut remote = Vec::new();
+    commands_in.0.retain(|line| {
+        if let Some(rest) = line.strip_prefix("search") {
+            remote.push(rest.trim().to_string());
+            false
+        } else {
+            true
+        }
+    });
+    for text in remote {
+        search = text;
+        changed = true;
+    }
+    if changed && search != menu.search {
+        menu.search = search;
+        menu.scroll[0] = 0.0;
+    }
+}
+
 /// Entry points of the map that no AI vehicle stands on, with unique labels.
 fn free_entries(
     job: &WorldLoadJob,
@@ -420,10 +482,14 @@ fn refresh_entries(
         return;
     }
     let Some(job) = job else { return };
+    let total = job.entry_records().len();
+    if menu.entry_total != total {
+        menu.entry_total = total;
+    }
     let free = free_entries(&job, &index, &traffic);
-    let ready = index.entries().is_some();
-    if ready != menu.index_ready {
-        menu.index_ready = ready;
+    let progress = (index.entries().len(), index.is_done());
+    if progress != menu.index_progress {
+        menu.index_progress = progress;
     }
     if free != menu.shown_entries {
         menu.shown_entries = free;
@@ -519,7 +585,7 @@ fn rebuild_menu(
                 &theme,
                 &menu,
                 &cat,
-                index.entries().is_some(),
+                (index.entries().len(), index.is_done()),
             );
             if menu.config_open {
                 if let Some(v) = menu.vehicle.and_then(|i| cat.vehicles.get(i)) {
@@ -614,7 +680,7 @@ fn build_select(
     _theme: &MaterialTheme,
     menu: &VehicleMenu,
     cat: &GameCatalogue,
-    entries_resolved: bool,
+    entries_resolved: (usize, bool),
 ) {
     let (root, content) = ModalBuilder::new()
         .with_size_percent(94.0, 92.0)
@@ -636,14 +702,49 @@ fn build_select(
             // Column 1: vehicles.
             let c1 = column(row, 30.0);
             row.commands().entity(c1).with_children(|c| {
+                let shown: Vec<usize> = cat
+                    .vehicles
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, v)| matches_search(v, &menu.search))
+                    .map(|(i, _)| i)
+                    .collect();
                 label(
                     c,
-                    format!("Vehicles ({})", cat.vehicles.len()),
+                    if menu.search.is_empty() {
+                        format!("Vehicles ({})", cat.vehicles.len())
+                    } else {
+                        format!("Vehicles ({} of {})", shown.len(), cat.vehicles.len())
+                    },
                     15.0,
                     ColorRole::Primary,
                 );
+                // The search field: type to filter, Backspace deletes (Escape steps back).
+                c.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..default()
+                    },
+                    BorderRole(ColorRole::Outline),
+                    BackgroundRole(ColorRole::SurfaceContainerLowest),
+                    RadiusToken(RadiusLevel::Small),
+                ))
+                .with_children(|f| {
+                    let text = if menu.search.is_empty() {
+                        "Search: type to filter…".to_string()
+                    } else {
+                        format!("Search: {}|", menu.search)
+                    };
+                    label(f, text, 13.0, ColorRole::OnSurface);
+                });
                 scroll_list(c, 0, menu.scroll[0], Val::Auto, |list| {
-                    for (i, v) in cat.vehicles.iter().enumerate() {
+                    if shown.is_empty() {
+                        label(list, "No vehicle matches.", 12.0, ColorRole::OnSurfaceVariant);
+                    }
+                    for i in shown {
+                        let v = &cat.vehicles[i];
                         let selected = menu.vehicle == Some(i);
                         button(list, &v.full_name, selected, Action::PickVehicle(i));
                     }
@@ -667,10 +768,13 @@ fn build_select(
             let c3 = column(row, 30.0);
             row.commands().entity(c3).with_children(|c| {
                 label(c, "Entry points", 15.0, ColorRole::Primary);
-                if !entries_resolved {
+                if !entries_resolved.1 {
                     label(
                         c,
-                        "Locating entry points…",
+                        format!(
+                            "Locating entry points… {} of {} found; the others cannot be checked for blocking yet",
+                            entries_resolved.0, menu.entry_total
+                        ),
                         12.0,
                         ColorRole::OnSurfaceVariant,
                     );

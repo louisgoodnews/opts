@@ -156,7 +156,7 @@ Define the CLI surface. Required arguments:
 | `--log-level <LEVEL>` | Override log level (trace/debug/info/warn/error) | `info` |
 | `--log-file <PATH>` | Override log directory | from config |
 | `--windowed` / `--fullscreen` | Window mode | windowed |
-| `--window-size <W>x<H>` | Initial window size | 1280x720 |
+| `--window-size <W>x<H>` | Initial window size | 1920x1080 |
 | `--headless` | Run without a window (for CI tests) | false |
 | `--recent-map <PATH>` | Persist this path as the last-loaded map | none |
 

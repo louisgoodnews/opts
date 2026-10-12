@@ -28,7 +28,7 @@ pub fn spawn_display_tab(parent: &mut ChildSpawnerCommands, theme: &MaterialThem
 
             section.spawn((
                 (
-                    Text::new("Resolution: 1280x720 (Default) · VSync: AutoVsync · Backend: WGPU"),
+                    Text::new("Resolution: 1920x1080 (Default) · VSync: AutoVsync · Backend: WGPU"),
                     TextFont {
                         font_size: FontSize::Px(13.0),
                         ..default()

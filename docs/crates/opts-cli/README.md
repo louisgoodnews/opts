@@ -33,7 +33,7 @@ let (width, height) = args.parse_dimensions();
 | `--log-file <PATH>` | `Option<PathBuf>` | Platform default | Directory where subsystem log files are written |
 | `--fullscreen` | `bool` | `false` | Launch window in borderless fullscreen mode |
 | `--windowed` | `bool` | `false` | Explicitly request windowed mode (overrides fullscreen) |
-| `--window-size <WxH>` | `String` | `"1280x720"` | Initial window dimension (e.g. `1920x1080`) |
+| `--window-size <WxH>` | `String` | `"1920x1080"` | Initial window dimension (e.g. `1920x1080`) |
 | `--headless` | `bool` | `false` | Run without opening an OS display window (ideal for CI testing) |
 | `--cli-port`, `--cli-bind`, `--cli-token`, `--cli-allow-dir` | | off | Control server (see the [manual](../opts-cli.md)) |
 | `--no-hot-reload`, `--hot-reload-root`, `--hot-reload-debounce-ms` | | on, 250 ms | Hot reload of edited content |

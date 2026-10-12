@@ -106,3 +106,7 @@ Each phase updates the docs it touches (`script-vm.md`, `predefined-variables.md
 - **Frame budget:** a 23-part consist with ≈ 20 small script instances is ≈ 0.5–1 ms per step (per-part medians of 71 µs for large sets, far less for 1-script joints); AI vehicles at ≤ 40 scripted ≈ 3 ms; the budget is enforced by LOD and logged when exceeded.
 - **Callback coverage:** displays are the visible part of the scripts; tier A and B must ship together or boards stay blank (shown as ERROR with the vehicle and script, never as placeholder text).
 - **Clean room:** all facts above come from the shipped text files, the community wiki and measurements; behaviours are validated by plausibility tests, not by inspecting OMSI's code ([ADR-0002](../adr/0002-clean-room-policy.md)).
+
+## 8. Tooling: generating script sets
+
+The standard subsystem scripts differ between vehicles mostly in their numbers. A typed vehicle specification (mass, wheel radius, torque curve, gear ratios, brake force, doors, lights, …) can derive a default script set, validated by the VM and the rig of VS0; a visual editor presents it. Specification: [script generator](script-generator.md); milestones [M-0054](../roadmap/phase-6/M-0054.md) (`opts-script_engine`), [M-0055](../roadmap/phase-6/M-0055.md) (`opts-script_editor`), [M-0056](../roadmap/phase-6/M-0056.md) (`opts-visual_script_editor`).

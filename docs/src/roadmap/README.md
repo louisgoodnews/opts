@@ -170,7 +170,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [~] **🚶 Pedestrians** — [M-0050](phase-4/M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md` — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
-  - [ ] Implement bus stop logic and passenger boarding/alighting.
+  - [ ] Implement bus stop logic and passenger boarding/alighting. *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](../simulation/rail-vehicles.md)).*
   - [ ] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`).
 - [~] **🎮 The Game Binary** *(status corrected 2026-10-11, critical review F-014)*
   - [x] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App` (`crates/opts-game/src/app.rs`).
@@ -234,6 +234,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Specify mod directory layout, virtual filesystem mounting, and load priority rules in `docs/src/architecture/modding-vfs.md` (M-0031).
   - [~] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032). *Repaint discovery, selection in the new-game screen, texture replacement at load time and `[setvar]` equipment shipped in Phase 4 (`c00c3fc`, `7f24124`); switching at runtime and the `opts-bevy` home are open (critical review 2026-10-11 F-022).*
 - [ ] **✏️ Editor Mode** — [M-0051](phase-6/M-0051.md): specification in [docs/src/editor](../editor/README.md); implementation phases E1–E6 open.
+- [ ] **📜 Script Generator & Visual Script Editor** — specification in [docs/src/architecture/script-generator.md](../architecture/script-generator.md), derived from [vehicle-scripts-route.md](../architecture/vehicle-scripts-route.md): a typed vehicle specification (mass, wheel radius, torque curve, gear ratios, brake force, doors, lights …) becomes a default script set (`.osc`, `*_constfile.txt`, `*_varlist.txt`, `.bus` script block) written to the OPTS export folder, validated by the VM and a headless rig, and edited visually.
+  - [ ] [M-0054](phase-6/M-0054.md) `opts-script_engine`: the script runtime (lexer, compiler, VM, headless rig) as a Bevy-free crate; `opts-sim::script` re-exports it.
+  - [ ] [M-0055](phase-6/M-0055.md) `opts-script_editor`: `VehicleSpec`, subsystem generators with original templates, export writer, validator, `opts-tools script gen|validate`, presets (city bus, articulated bus, tram).
+  - [ ] [M-0056](phase-6/M-0056.md) `opts-visual_script_editor`: spec forms, generated-file viewer, live rig plots, subsystem graph, export; embedded in the editor mode's vehicle workspace.
 - [ ] **📘 Creator Documentation & Tooling** — [M-0033](phase-6/README.md)
   - [ ] Author `docs/src/modding/overview.md` and `docs/src/modding/asset-pipeline.md`.
   - [ ] Author vehicle and map creation guides for content authors.

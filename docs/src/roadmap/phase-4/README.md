@@ -46,7 +46,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [~] **🚶 Pedestrians** — [M-0050](M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
   - [ ] Document the passenger simulation model in `docs/src/simulation/passengers.md` — prerequisite for M-0050's stop/boarding items (critical review 2026-10-11 F-023).
-  - [ ] Implement bus stop logic and passenger boarding/alighting.
+  - [ ] Implement bus stop logic and passenger boarding/alighting. *Requirement from rail operation (2026-10-12): a stop evaluates the leading head's direction of travel and door side, so a tram arriving B-head first is recognised without a mirrored second stop cube ([rail-vehicles §8–9](../../simulation/rail-vehicles.md)).*
   - [ ] Implement a basic routing algorithm (e.g., RAPTOR or Dijkstra via `petgraph`).
 - [~] **🎮 The Game Binary** *(status corrected 2026-10-11, critical review F-014)*
   - [x] Assemble `opts-game/src/main.rs` by adding the `opts-bevy` and `opts-sim` plugins to the Bevy `App` (`crates/opts-game/src/app.rs`).

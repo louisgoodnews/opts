@@ -62,6 +62,9 @@
 - [Phase 6: Modding Ecosystem](roadmap/phase-6/README.md)
   - [M-0032: Repaints & Liveries](roadmap/phase-6/M-0032.md)
   - [M-0051: Editor Mode](roadmap/phase-6/M-0051.md)
+  - [M-0054: opts-script_engine](roadmap/phase-6/M-0054.md)
+  - [M-0055: opts-script_editor](roadmap/phase-6/M-0055.md)
+  - [M-0056: opts-visual_script_editor](roadmap/phase-6/M-0056.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
 
 ---
@@ -76,6 +79,7 @@
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
+- [Script Generator and Visual Script Editor](architecture/script-generator.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)

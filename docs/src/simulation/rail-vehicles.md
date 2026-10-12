@@ -146,3 +146,8 @@ Sources shipped with the install (read 2026-10-12, facts restated, nothing copie
 4. Points with lock state fed by the signal group; refusal instead of coupling break.
 5. Contact-shoe query and `GetHeightAbovePoint`; then the control-cable bridge and per-part scripts ([vehicle scripts route](../architecture/vehicle-scripts-route.md)).
 6. Ride-feel oscillations (`[sinus]`, `[rail_body_osc]`) last.
+
+### 9.1 Status of the rules (2026-10-12)
+
+* **Variants through `[setvar]`: works.** Choosing the NF6D repaint *Schoenau (Kurvenradius 27m)* in the vehicle menu sets `CTI_Drehgestelle = 1` on the head's script engine (checked with `vehicle.script_vars`); the coupled parts read their variables from the head engine (the OPTS form of `[scriptshare]`), so the standard-gauge bogies show on every part. Per-part script engines (route VS1) will give each part its own copy, set from the same repaint entries; the `_DT` texture slots of a double traction already follow the repaint's per-slot textures.
+* **Two-headed operation and stop cubes: not yet implementable.** OPTS has no stop/passenger system yet (M-0050 open): there is no stop cube to mirror. The rule stands as a requirement for it: a stop evaluates the *leading head's direction of travel* and door side, so a train arriving with the B head first is recognised without a second, 180°-turned cube and invisible trip.

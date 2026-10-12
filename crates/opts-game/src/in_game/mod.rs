@@ -212,10 +212,12 @@ fn escape_to_menu_in_game(
 /// running). Ignored while the F1 report modal is open, whose text field takes the key.
 fn toggle_pause(
     keyboard: Res<ButtonInput<KeyCode>>,
+    menu: Res<opts_bevy::reporting::MenuModalActive>,
     report: Res<State<opts_bevy::reporting::ReportModalState>>,
     mut time: ResMut<Time<Virtual>>,
 ) {
     if *report.get() != opts_bevy::reporting::ReportModalState::Inactive
+        || menu.0
         || !keyboard.just_pressed(KeyCode::KeyP)
     {
         return;

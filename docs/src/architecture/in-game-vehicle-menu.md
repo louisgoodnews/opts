@@ -20,8 +20,16 @@
 
 The control protocol has no absolute mouse position, so the menu can be driven by `menu.do {command}` (queued, executed next frame): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <variable>`, `done`, `confirm`, `despawn`, `back` (texts match names case-insensitively by substring). `menu.state` returns the page, choices and the free entry points. See [control protocol](control-protocol.md).
 
+## Search and the entry index (2026-10-12)
+
+* The vehicle list has a **search field**: type to filter (every word must occur in name, id, make, model or repaint), Backspace deletes; `menu.do search <text>` sets it. The counter shows `n of 947`. While the menu is open, `P` no longer pauses.
+* The entry index starts when the session is up (not when the menu opens), reads the nearest tiles first and **publishes entries as it finds them**; the *blocked* filter applies to every entry resolved so far, and the list says how many are still being located. Entries on spline attachments cannot be checked for blocking (they are resolved when chosen).
+
 ## Not done
 
-* No search field in the vehicle list (947 entries on the reference install).
 * Rail vehicles spawn on the nearest track within 12 m of the entry point (`rail-vehicles.md` §8); an entry far from any track keeps the vehicle a road vehicle with an ERROR.
 * A new repaint's textures for coupled parts follow the same repaint-name rules as a session start.
+
+## Theme
+
+The menus follow the persisted *dark/light* setting. Several OPTS instances (a game, a test run, another worktree) share one `settings.db`; each used to write **all** settings on exit, so an instance that had loaded an older value undid the other's choice (the menu colours seemed to flip between runs). `GameSettings::save` now writes only the values that differ from what the process loaded or saved last.

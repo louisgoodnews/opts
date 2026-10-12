@@ -27,14 +27,24 @@ pub struct ResolvedEntry {
     pub heading_deg: f32,
 }
 
-type SharedEntries = Arc<Mutex<Option<Vec<ResolvedEntry>>>>;
+/// What the worker has found so far, and whether it has finished.
+#[derive(Default)]
+struct Found {
+    entries: Vec<ResolvedEntry>,
+    done: bool,
+}
+
+type SharedEntries = Arc<Mutex<Found>>;
 
 /// The map's entry points with their positions, built once per session on a worker thread (every
-/// tile is read to find the placed entry objects).
+/// tile is read to find the placed entry objects, nearest tiles first). Results are published as
+/// they are found, so the entries near the player can be checked long before the last tile is
+/// read.
 #[derive(Resource, Default)]
 pub struct EntryIndex {
     shared: Option<SharedEntries>,
-    ready: Option<Vec<ResolvedEntry>>,
+    found: Vec<ResolvedEntry>,
+    done: bool,
     map: Option<PathBuf>,
 }
 
@@ -50,55 +60,63 @@ impl EntryIndex {
             return;
         }
         self.map = Some(job.config.map_dir.clone());
-        self.ready = None;
-        let tiles: Vec<((i32, i32), PathBuf)> = job
+        self.found.clear();
+        self.done = false;
+        let start = job.start_tile;
+        let mut tiles: Vec<((i32, i32), PathBuf)> = job
             .tile_files
             .keys()
             .filter_map(|k| job.tile_path(*k).map(|p| (*k, p)))
             .collect();
+        tiles.sort_by_key(|((x, y), _)| (x - start.0).abs().max((y - start.1).abs()));
         let entries = job.manifest.entry_points.clone();
-        let shared: SharedEntries = Arc::new(Mutex::new(None));
+        let shared: SharedEntries = Arc::new(Mutex::new(Found::default()));
         self.shared = Some(shared.clone());
-        std::thread::spawn(move || {
-            let out = resolve_entries(&tiles, &entries);
-            if let Ok(mut s) = shared.lock() {
-                *s = Some(out);
-            }
-        });
+        std::thread::spawn(move || resolve_entries(&tiles, &entries, &shared));
     }
 
-    /// Takes the worker's result once it is there.
+    /// Takes what the worker has found so far.
     pub fn poll(&mut self) {
-        if self.ready.is_some() {
+        if self.done {
             return;
         }
         if let Some(shared) = &self.shared {
-            if let Ok(mut s) = shared.lock() {
-                self.ready = s.take();
+            if let Ok(f) = shared.lock() {
+                if f.entries.len() != self.found.len() || f.done != self.done {
+                    self.found = f.entries.clone();
+                    self.done = f.done;
+                }
             }
         }
     }
 
-    /// The resolved entries, once the worker has finished.
+    /// The entries resolved so far.
     #[must_use]
-    pub fn entries(&self) -> Option<&[ResolvedEntry]> {
-        self.ready.as_deref()
+    pub fn entries(&self) -> &[ResolvedEntry] {
+        &self.found
+    }
+
+    /// Whether every tile has been read.
+    #[must_use]
+    pub fn is_done(&self) -> bool {
+        self.done
     }
 
     /// The resolved entry with that record number.
     #[must_use]
     pub fn find(&self, id: u32) -> Option<&ResolvedEntry> {
-        self.ready.as_ref()?.iter().find(|e| e.id == id)
+        self.found.iter().find(|e| e.id == id)
     }
 }
 
-/// Reads every tile and finds the placed object of each entry record (the same rule as
+/// Reads the tiles and finds the placed object of each entry record (the same rule as
 /// `WorldLoadJob::find_entry_spawn`; entries on spline attachments are left out).
 fn resolve_entries(
     tiles: &[((i32, i32), PathBuf)],
     entries: &[MapEntryPoint],
-) -> Vec<ResolvedEntry> {
-    let mut out: Vec<ResolvedEntry> = Vec::new();
+    shared: &SharedEntries,
+) {
+    let mut found = 0usize;
     for (key, path) in tiles {
         let Ok(bytes) = std::fs::read(path) else {
             continue;
@@ -107,16 +125,14 @@ fn resolve_entries(
             continue;
         };
         let origin = tile_origin(*key);
+        let mut fresh = Vec::new();
         for ep in entries {
-            if out.iter().any(|r| r.id == ep.id) {
-                continue;
-            }
             if let Some(obj) = tile
                 .objects
                 .iter()
                 .find(|o| o.id_code == u64::from(ep.id_code))
             {
-                out.push(ResolvedEntry {
+                fresh.push(ResolvedEntry {
                     id: ep.id,
                     name: ep.name.clone(),
                     world: Vec3::new(
@@ -128,11 +144,23 @@ fn resolve_entries(
                 });
             }
         }
-        if out.len() == entries.len() {
+        if !fresh.is_empty() {
+            if let Ok(mut f) = shared.lock() {
+                for r in fresh {
+                    if !f.entries.iter().any(|e| e.id == r.id) {
+                        f.entries.push(r);
+                        found += 1;
+                    }
+                }
+            }
+        }
+        if found >= entries.len() {
             break;
         }
     }
-    out
+    if let Ok(mut f) = shared.lock() {
+        f.done = true;
+    }
 }
 
 /// Request to remove the player's vehicle.
