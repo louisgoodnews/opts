@@ -33,7 +33,6 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 2. Load Last Game Button (Tonal, Disabled if no saved game)
         load_btn = ButtonBuilder::tonal("Load Last Game")
-            .with_disabled(true)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Load Game");
                 cmd.insert_resource(NextState::Pending(AppState::LoadGame));
@@ -65,47 +64,48 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
             .spawn_child(parent);
     });
 
-    // Apply glassmorphic surface overrides and sequential tab indices
-    commands
-        .entity(shutdown_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            QuitButton,
-            GlassSurface::new(ColorRole::ErrorContainer, 0.45),
-            Focusable { tab_index: 0 },
+    // Glassmorphic surfaces (the library state layer takes its tint from the glass colour) and
+    // stable ids; "Start New Game" is the safest sensible default focus (never Shutdown).
+    let glass = [
+        (
+            shutdown_btn,
+            "menu.shutdown",
+            ColorRole::ErrorContainer,
+            0.45,
+        ),
+        (
+            load_btn,
+            "menu.load-last-game",
+            ColorRole::SecondaryContainer,
+            0.55,
+        ),
+        (start_btn, "menu.start-new-game", ColorRole::Primary, 0.85),
+        (
+            settings_btn,
+            "menu.settings",
+            ColorRole::SurfaceContainerHigh,
+            0.60,
+        ),
+        (
+            credits_btn,
+            "menu.credits",
+            ColorRole::SurfaceContainerHigh,
+            0.45,
+        ),
+    ];
+    for (button, id, role, alpha) in glass {
+        commands.entity(button).remove::<BackgroundRole>().insert((
+            GlassSurface::new(role, alpha),
+            StateLayerRole(opts_gui::interaction::layer::on_color(role)),
+            UiId::new(id),
         ));
-
+    }
+    commands.entity(shutdown_btn).insert(QuitButton);
+    // Visible and marked, not a silently greyed button (decision D-UI-09).
     commands
         .entity(load_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SecondaryContainer, 0.55),
-            Focusable { tab_index: 1 },
-        ));
-
-    commands
-        .entity(start_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::Primary, 0.85),
-            Focusable { tab_index: 2 },
-        ));
-
-    commands
-        .entity(settings_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.60),
-            Focusable { tab_index: 3 },
-        ));
-
-    commands
-        .entity(credits_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.45),
-            Focusable { tab_index: 4 },
-        ));
+        .insert(NotAvailableYet::new(&opts_gui::not_yet::LOAD_LAST_GAME));
+    commands.entity(start_btn).insert(DefaultFocus);
 }
 
 /// System that exits the application when the shutdown button is clicked.

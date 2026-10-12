@@ -290,6 +290,7 @@
 - [opts-sim API]()
 - [opts-tools CLI]()
 - [Error Catalogue]()
+- [Features Not Available Yet](reference/not-available-yet.md)
 
 ---
 

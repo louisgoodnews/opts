@@ -25,7 +25,7 @@ Runs of the game/tools: `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d)
 | B2 Focus and action layer | done |
 | B3 TextField | done |
 | B4 UI ids and `ui.*` protocol | done |
-| B5 NotAvailableYet + registry | todo |
+| B5 NotAvailableYet + registry | done |
 | B6 Localisation scaffold | todo |
 | B7 CI rules, gallery, docs | todo |
 
@@ -75,3 +75,10 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 - `opts-bevy/src/control/handlers/ui.rs`: `ui.tree`, `ui.click`, `ui.focus`, `ui.action`, `ui.state`; `opts-cli` command table (54 methods); `control-protocol.md` section 4.9.
 - Tests: `opts-gui/tests/ui_tree.rs`, `opts-bevy/tests/control_ui.rs` (real socket, headless app).
 - `l10n/mod.rs` is a stub (`L10nKey`, `key_of`) until B6.
+
+### B5
+- `not_yet.rs`: `MESSAGE`, `NotYetPlace`, `PLACES` (Load Last Game, Load Game screen, live weather Refresh; all M-0062), `Availability`, `NotAvailableYet` (+ `without_label`), `spawn_label`, startup log in debug builds, generated page `docs/src/reference/not-available-yet.md` with drift test, milestone-complete test.
+- Main menu: Load Last Game uses it; ids `menu.*` set explicitly; default focus is *Start New Game* (was Shutdown by accident of `tab_index`); `initial_focus_system` removed.
+- Verified live (screenshot `widgets/shots/menu_not_yet.png`): red label under the dimmed button, `ui.click` answers 1001 with the reason.
+- Fix found while verifying: `InputFocusVisible` started `false` (Bevy default) so no focus ring showed initially; now `true` at startup.
+- Open: the red label is `LabelSmall` (11 px in today's typography; part A raises the floor to 12 px).

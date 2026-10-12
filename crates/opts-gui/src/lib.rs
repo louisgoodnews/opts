@@ -17,6 +17,7 @@ pub mod icons;
 pub mod interaction;
 pub mod l10n;
 pub mod layout;
+pub mod not_yet;
 pub mod plugin;
 pub mod prelude;
 pub mod testing;

@@ -284,9 +284,13 @@ pub fn update_error_border(
 
 /// Registers the state layer systems.
 pub fn build(app: &mut App) {
-    if !app.world().contains_resource::<InputFocusVisible>() {
-        app.insert_resource(InputFocusVisible(true));
-    }
+    // A fresh screen shows where focus is; a pointer press hides the ring (Bevy's click-to-focus).
+    app.insert_resource(InputFocusVisible(true));
+    app.add_systems(Startup, |visible: Option<ResMut<InputFocusVisible>>| {
+        if let Some(mut v) = visible {
+            v.0 = true;
+        }
+    });
     app.add_systems(
         Update,
         (

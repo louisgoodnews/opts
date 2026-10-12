@@ -34,7 +34,12 @@ impl Plugin for StubScreensPlugin {
     }
 }
 
-fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'static str) {
+fn spawn_generic_stub(
+    commands: &mut Commands,
+    title: &'static str,
+    subtitle: &'static str,
+    not_yet: bool,
+) {
     let root = commands
         .spawn((
             (
@@ -93,6 +98,10 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));
 
+                if not_yet {
+                    opts_gui::not_yet::spawn_label(content);
+                }
+
                 DividerBuilder::horizontal().spawn_child(content);
 
                 content.spawn((
@@ -123,7 +132,8 @@ fn spawn_load_game(mut commands: Commands) {
     spawn_generic_stub(
         &mut commands,
         "Load Saved Game",
-        "Saved transit session loading is not yet available.",
+        "Saved transit session loading needs a save system.",
+        true,
     );
 }
 
@@ -135,6 +145,7 @@ fn spawn_credits(mut commands: Commands) {
          research; no OMSI code or assets are included.\n\
          Built with Bevy, Rust and the Material Design 3 type and colour system.\n\
          Content is read from your own OMSI 2 installation; OMSI is a trademark of its authors.",
+        false,
     );
 }
 

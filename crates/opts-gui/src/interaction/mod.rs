@@ -20,6 +20,7 @@ pub use events::{
 pub use focus::{
     DefaultFocus, FocusEvent, FocusPlugin, FocusRegion, Focusable, Landmark, PointerOnly,
 };
+pub use layer::StateLayerRole;
 pub use state::{
     CheckState, Disabled, DisabledReason, ErrorState, Focused, Hovered, Pressed, Selected, UiState,
 };
@@ -39,5 +40,6 @@ impl Plugin for InteractionPlugin {
         focus::build(app);
         handlers::build(app);
         crate::ui_id::build(app);
+        crate::not_yet::build(app);
     }
 }

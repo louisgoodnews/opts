@@ -354,6 +354,10 @@ pub fn populate_weather_details_inner(
                             BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
                         ),
                         M3Button::default(),
+                        opts_gui::not_yet::NotAvailableYet::new(
+                            &opts_gui::not_yet::LIVE_WEATHER_REFRESH,
+                        )
+                        .without_label(),
                         RefreshWeatherBtn,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
                         Focusable { tab_index: 0 },
@@ -401,6 +405,9 @@ pub fn populate_weather_details_inner(
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
+
+                    // The Refresh button above is marked; its label sits beside the buttons.
+                    opts_gui::not_yet::spawn_label(btns);
                 });
         });
 }
