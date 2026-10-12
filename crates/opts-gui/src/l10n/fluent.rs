@@ -374,7 +374,7 @@ mod tests {
         ] {
             let b = parse(src);
             assert!(b.errors.is_empty(), "{name}: {:?}", b.errors);
-            assert!(b.messages.len() > 10);
+            assert!(b.messages.len() >= 5);
         }
     }
 }

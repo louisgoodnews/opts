@@ -68,6 +68,7 @@ fn shell_is_fully_keyboard_operable() {
         "shell.theme-toggle",
         "shell.quit",
         "home.new-drive",
+        "home.quick-drive",
         "home.load-game",
     ] {
         assert!(
@@ -87,7 +88,7 @@ fn shell_is_fully_keyboard_operable() {
 fn home_starts_on_the_safe_default_and_never_on_quit() {
     let mut app = menu_app();
     let snap = opts_gui::ui_tree::snapshot(app.world_mut());
-    assert_eq!(snap.focus.as_deref(), Some("home.new-drive"));
+    assert_eq!(snap.focus.as_deref(), Some("home.quick-drive"));
 }
 
 #[test]

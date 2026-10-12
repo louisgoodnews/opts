@@ -93,6 +93,8 @@ fn item_node() -> Node {
     Node {
         min_height: Val::Px(48.0),
         padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+        flex_wrap: FlexWrap::Wrap,
+        align_content: AlignContent::Center,
         column_gap: Val::Px(12.0),
         align_items: AlignItems::Center,
         ..default()
@@ -118,32 +120,31 @@ fn spawn_entry(
     ));
     entry.with_children(|item| {
         item.spawn(icon_node(icon));
-        item.spawn(Node {
-            flex_direction: FlexDirection::Column,
-            flex_grow: 1.0,
-            ..default()
-        })
-        .insert(RailWideOnly)
-        .with_children(|col| {
-            col.spawn(text_node(
-                title_key,
-                ColorRole::OnSurface,
-                TypeScale::BodyMedium,
-            ));
-            col.spawn((
-                Text::new(opts_gui::not_yet::MESSAGE),
-                L10nKey(opts_gui::l10n::keys::NOT_AVAILABLE),
-                TextColor::default(),
-                ForegroundRole(ColorRole::Error),
-                TypeStyleToken(TypeScale::Label),
-                ZIndex(2),
-                RailNotYet,
-                Node {
-                    display: Display::None,
-                    ..default()
-                },
-            ));
-        });
+        item.spawn((
+            text_node(title_key, ColorRole::OnSurface, TypeScale::BodyMedium),
+            RailWideOnly,
+            Node {
+                flex_grow: 1.0,
+                ..default()
+            },
+        ));
+        // A direct child of the entry, so it sits above the disabled scrim (z 1) and stays red.
+        item.spawn((
+            Text::new(opts_gui::not_yet::MESSAGE),
+            L10nKey(opts_gui::l10n::keys::NOT_AVAILABLE),
+            TextColor::default(),
+            ForegroundRole(ColorRole::Error),
+            TypeStyleToken(TypeScale::Label),
+            ZIndex(2),
+            RailNotYet,
+            opts_gui::ui_tree::A11yHidden,
+            Node {
+                display: Display::None,
+                flex_basis: Val::Percent(100.0),
+                margin: UiRect::left(Val::Px(36.0)),
+                ..default()
+            },
+        ));
     });
     entry.id()
 }
@@ -418,7 +419,8 @@ pub fn sync_rail_not_yet_labels(
     entries: Query<Has<NotAvailableYet>, With<RailItem>>,
     items: Query<Entity, With<RailItem>>,
     children: Query<&Children>,
-    mut labels: Query<&mut Node, With<RailNotYet>>,
+    mut labels: Query<(Entity, &mut Node), With<RailNotYet>>,
+    mut commands: Commands,
     changed: Query<(), NotYetChanged>,
 ) {
     if !class.is_changed() && changed.is_empty() {
@@ -427,12 +429,17 @@ pub fn sync_rail_not_yet_labels(
     for entity in &items {
         let not_yet = entries.get(entity).unwrap_or(false);
         for child in children.iter_descendants(entity) {
-            if let Ok(mut node) = labels.get_mut(child) {
-                node.display = if not_yet && *class != LayoutClass::Compact {
-                    Display::Flex
+            if let Ok((label, mut node)) = labels.get_mut(child) {
+                let shown = not_yet && *class != LayoutClass::Compact;
+                node.display = if shown { Display::Flex } else { Display::None };
+                // A hidden marker must not be part of the entry's accessible name.
+                if shown {
+                    commands
+                        .entity(label)
+                        .remove::<opts_gui::ui_tree::A11yHidden>();
                 } else {
-                    Display::None
-                };
+                    commands.entity(label).insert(opts_gui::ui_tree::A11yHidden);
+                }
             }
         }
     }

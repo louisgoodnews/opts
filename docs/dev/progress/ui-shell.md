@@ -22,7 +22,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | :--- | :--- |
 | S0 Orient + screen specs | done (`docs/src/roadmap/phase-9/screens.md`) |
 | S1 Shell frame, registry, back stack, Esc | done (pending commit hash in Results) |
-| S2 Home | open |
+| S2 Home | done |
 | S3 First run | open |
 | S4 Pause, leave, summary | open |
 | S5 Help and About, F1 | open |
@@ -41,3 +41,11 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 ## Results
 
 ## Open problems
+
+### S1
+Commit e290a4e. Rail from the registry, nav/back stack/deep links, Esc gate, dialogs, footer (theme F2, quit with confirmation), `ui.navigate`. Tests: `tests/shell_tests.rs` (8), `tests/ui_rules.rs` (5). Gates green.
+
+### S2
+Home with Continue/Quick drive/Recent/New drive/Load game (not-yet), status chip, banners (`shell/banner.rs`), hero with `cover` crop, `StartDrive` message. Old `menu-*` copy keys removed from opts-gui tables (kept: `menu-shutdown`, `menu-settings`, used by opts-gui's own tests). Verified by screenshots (dark/light 1920x1080, 1024x640) in `~/.local/share/opts/benchmark/dev-ui-impl/shell/shots/`.
+Observed: a cold catalogue scan takes 40-60 s here (the chip says *Reading content...*; the drive buttons are disabled with a reason meanwhile).
+Note: the *compact* rail (icons only) needs a logical width < 900 px, i.e. UI scale >= 115 % at the 1024 px minimum window; at 1024x640 and 100 % the layout class is Medium.

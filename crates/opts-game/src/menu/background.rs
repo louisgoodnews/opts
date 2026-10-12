@@ -128,7 +128,7 @@ pub fn spawn_menu_background(
 }
 
 /// Attempts to load `picture.jpg` from the specified map directory.
-fn load_map_picture(
+pub fn load_map_picture(
     dir: &Path,
     images: &mut ResMut<Assets<Image>>,
 ) -> Option<(Handle<Image>, ImageLuminance)> {

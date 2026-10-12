@@ -50,10 +50,10 @@ fn plurals_and_variables_work_in_both_languages() {
     loc.set_locale("de");
     assert_eq!(loc.t_args(keys::ITEMS, &n(1)), "1 Element");
     assert_eq!(loc.t_args(keys::ITEMS, &n(0)), "0 Elemente");
-    let path = vec![("path".to_string(), Arg::from("Berlin"))];
+    let milestone = vec![("milestone".to_string(), Arg::from("M-0062"))];
     assert_eq!(
-        loc.t_args(keys::menu::CARD_MAP_PREVIEW, &path),
-        "Kartenvorschau: Berlin"
+        loc.t_args(keys::NOT_AVAILABLE_REASON, &milestone),
+        "Funktion noch nicht verfügbar! (M-0062)"
     );
 }
 
@@ -87,10 +87,10 @@ fn the_pseudo_locale_is_forty_percent_longer_and_keeps_variables() {
     }
     assert!(xa
         .t_args(
-            keys::menu::CARD_MAP_PREVIEW,
-            &[("path".into(), "Berlin".into())]
+            keys::NOT_AVAILABLE_REASON,
+            &[("milestone".into(), "M-0062".into())]
         )
-        .contains("Berlin"));
+        .contains("M-0062"));
 }
 
 #[test]

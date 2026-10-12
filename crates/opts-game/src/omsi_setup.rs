@@ -81,7 +81,7 @@ pub fn resolve_omsi_on_startup(
     }
 }
 
-fn spawn_prompt(commands: &mut Commands) {
+pub(crate) fn spawn_prompt(commands: &mut Commands) {
     let (root, content) = ModalBuilder::new()
         .with_size_percent(50.0, 40.0)
         .spawn(commands);

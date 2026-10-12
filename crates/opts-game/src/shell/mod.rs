@@ -10,6 +10,7 @@
 //! * [`esc`]: the one implementation of Esc / Back.
 //! * [`dialog`]: confirmation dialogs; [`footer`]: theme toggle and quit.
 
+pub mod banner;
 pub mod dialog;
 pub mod esc;
 pub mod footer;
@@ -91,6 +92,7 @@ impl Plugin for ShellPlugin {
             .add_message::<Navigate>()
             .add_message::<NavigateBack>()
             .add_message::<NavigationRefused>();
+        banner::build(app);
         dialog::build(app);
         esc::build(app);
 
