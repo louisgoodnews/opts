@@ -107,7 +107,7 @@ Position, heading and speed of the player vehicle (absolute OMSI coordinates).
 | [`ui.hover`](#uihover) | `id` (string) | 1.1 | Move the pointer over an element (tooltips, hover states) |
 | [`ui.key`](#uikey) | `key` (string)<br>`ctrl?` (boolean)<br>`shift?` (boolean)<br>`alt?` (boolean)<br>`duration_ms?` (integer) | 1.1 | Press a key with modifiers (Ctrl, Shift, Alt) through the input layer |
 | [`ui.drag`](#uidrag) | `from` (string)<br>`to?` (string)<br>`dx?` (number)<br>`dy?` (number)<br>`steps?` (integer) | 1.1 | Drag from one element to another element or by an offset |
-| [`ui.wait_for`](#uiwait_for) | `until` (string = exists \| visible \| gone \| enabled \| disabled \| focused \| checked \| text \| screen \| dialog \| no_dialog \| app_state \| hud_ready \| speed_above \| speed_below \| distance_above \| paused \| running \| sim_time_above)<br>`id?` (string)<br>`value?` (string)<br>`number?` (number)<br>`timeout_ms?` (integer) | 1.1 | Wait until a condition holds (element, screen, dialog, app state, speed, ...) |
+| [`ui.wait_for`](#uiwait_for) | `until` (string = exists \| visible \| gone \| enabled \| disabled \| focused \| checked \| text \| screen \| dialog \| no_dialog \| app_state \| hud_ready \| speed_above \| speed_below \| distance_above \| paused \| running \| sim_time_above \| items_above)<br>`id?` (string)<br>`value?` (string)<br>`number?` (number)<br>`timeout_ms?` (integer) | 1.1 | Wait until a condition holds (element, screen, dialog, app state, speed, ...) |
 | [`ui.navigate`](#uinavigate) | `screen` (string) | 1.0 | Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics) |
 
 ### `ui.click`
@@ -120,9 +120,9 @@ Activate an element by id (a text field gets focus).
 
 Where the app is: state, screen, open dialogs, toasts, focus, scrollables.
 
-**Result:** `{app_state, screen, modal_open, dialogs:[{id, tag?, title, buttons}], toasts:[...], focus, back_stack, scrollables}`
+**Result:** `{app_state, screen, loading?, modal_open, dialogs:[{id, tag?, label, visible, controls:[{id, label, role, enabled, focused}]}], toasts:[{id, label}], focus, back_stack, scrollables}`
 
-One call that answers "what is on screen and what can I do now". `dialogs` lists every open modal with the ids of its buttons, so a script can answer a confirmation without reading the whole tree.
+One call that answers "what is on screen and what can I do now". `dialogs` lists every open modal (confirmations, the pause overlay, settings) with the ids of its controls, so a script can answer a confirmation without reading the whole tree; `loading` (stage and progress) is present while a drive loads, which is when the screen has nothing to click.
 
 ### `ui.scrollables`
 
@@ -194,13 +194,13 @@ Wait until a condition holds (element, screen, dialog, app state, speed, ...).
 
 **Result:** `{ok, until, waited_ms}` on success; error `1005` with `data.last` (the last observed value) when `timeout_ms` (default 10000, at most 120000) passes first
 
-Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time. Use it instead of sleeping.
+Polled once per frame on the main thread. `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused` and `checked` need `id`; `text` needs `id` and `value` (the field or label contains it); `screen` takes the shell id in `value` (`settings`), `dialog` a dialog tag or id in `value` (`no_dialog` when none is open); `app_state` takes `MainMenu`, `Loading`, `InGame`, ...; `speed_above`/`speed_below` take km/h in `number`, `distance_above` the metres driven since the session started (see `drive.state`), `sim_time_above` seconds of simulation time, `items_above` the number of entries a scrollable `id` lists (a list fills in after the catalogue scan). Use it instead of sleeping.
 
 ### `ui.navigate`
 
 Open a shell destination or deep link (home, drive, settings, help, screen:settings/graphics).
 
-Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet.
+Sends the same `Navigate` message as a rail click; the shell may refuse a destination that is not available yet. While a dialog is open (the first-run question, a confirmation) the rail is behind it for a person, so the command answers `1009`.
 
 ## Group `input`
 

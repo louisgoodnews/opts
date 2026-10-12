@@ -188,12 +188,12 @@ From the shell: `opts-cli ui.tree --visible_only true`, `opts-cli ui.click menu.
 
 ### 4.10 Operating every screen (protocol 1.1)
 
-`ui.tree` and `ui.click` (§4.9) are joined by the commands an agent needs to *finish* a task on any screen. All of them address elements by id, send the messages a person would cause, and answer `1009` for anything behind an open dialog (the dialog owns focus, so it owns the commands too).
+`ui.tree` and `ui.click` (§4.9) are joined by the commands an agent needs to *finish* a task on any screen. All of them address elements by id and send the messages a person would cause. A command that targets an element answers `1009` when the element is behind an open dialog (the dialog owns focus, so it owns the commands too); keys are not gated at the command but at the systems that read them, as for a keyboard.
 
 | Need | Command | Notes |
 | :--- | :--- | :--- |
 | Where am I, what can I do now? | `ui.screen` | app state, shell screen id, open dialogs *with their button ids and tag*, toasts, focus, back stack, visible scrollable views |
-| Wait instead of sleeping | `ui.wait_for` | `until` = `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused`, `checked`, `text`, `screen`, `dialog`, `no_dialog`, `app_state`, `hud_ready`, `speed_above`, `speed_below`, `distance_above`, `paused`, `running`, `sim_time_above`; `timeout_ms` (default 10 s); a timeout is `1005` with the last observed value in `data.last` |
+| Wait instead of sleeping | `ui.wait_for` | `until` = `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused`, `checked`, `text`, `screen`, `dialog`, `no_dialog`, `app_state`, `hud_ready`, `speed_above`, `speed_below`, `distance_above`, `paused`, `running`, `sim_time_above`, `items_above` (a list has more than N entries); `timeout_ms` (default 10 s); a timeout is `1005` with the last observed value in `data.last` |
 | What can scroll, and what is in it? | `ui.scrollables` | every scroll container and master list: `id`, `offset`, `viewport`, `content`, `max`, `at_top`, `at_bottom` and `items` (for a windowed list *all* entries, not only the rows that exist as entities right now) |
 | Scroll | `ui.scroll` | exactly one of `by` (pixels), `dx`, `pages`, `to` (`top`, `bottom`, `left`, `right`) or `item` (an element id inside the view, or an entry id/title of a list); `target` defaults to the view under focus |
 | Type | `ui.text` | into the field `id` (focus, replace or append, optional `submit`); the field's own change message fires, so search-as-you-type and validation react |
@@ -224,7 +224,7 @@ The vehicle is operated by *named controls*; the names are discovered with `driv
 
 **One action path.** Values go into `RemoteControls`, which `vehicle_input_system` merges *inside the keyboard system*, under its run conditions (the vehicle must take input - not in free roam - and no dialog or vehicle menu may be open). The handler tests the same conditions when the command arrives and answers `1009` instead of queueing a command that would never run; a value still queued when a gate closes is dropped. Triggers pass the modal gate like a bound key. The two *debug* commands (`vehicle.teleport`, `vehicle.reset`) write the chassis directly and say so in the reference.
 
-**Driving 100 m** is a loop, not a sleep: `drive.set gear drive`, `drive.set parking_brake false`, `drive.set throttle 0.6`, `ui.wait_for distance_above number=100`, `drive.set throttle 0`, `drive.set brake 1`, `ui.wait_for speed_below number=1`.
+**Driving 100 m** is a loop, not a sleep: `drive.set gear drive`, `drive.set parking_brake false`, `drive.set throttle 0.6`, `opts-cli ui.wait_for distance_above --number 100`, `drive.set throttle 0`, `drive.set brake 1`, `opts-cli ui.wait_for speed_below --number 1`.
 
 ### 4.12 Camera (protocol 1.1)
 

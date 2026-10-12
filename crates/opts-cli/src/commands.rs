@@ -898,6 +898,56 @@ mod tests {
     }
 
     #[test]
+    fn new_commands_parse_words_into_typed_params() {
+        // A JSON parameter that is not JSON is a string: `drive.set gear drive`.
+        assert_eq!(
+            params("drive.set", &["gear", "drive"]).unwrap(),
+            json!({"control": "gear", "value": "drive"})
+        );
+        assert_eq!(
+            params("drive.set", &["throttle", "0.5", "--hold_ms", "300"]).unwrap(),
+            json!({"control": "throttle", "value": 0.5, "hold_ms": 300})
+        );
+        assert_eq!(
+            params("drive.set", &["parking_brake", "false"]).unwrap(),
+            json!({"control": "parking_brake", "value": false})
+        );
+        assert_eq!(
+            params("ui.scroll", &["--target", "settings", "--to", "bottom"]).unwrap(),
+            json!({"target": "settings", "to": "bottom"})
+        );
+        assert_eq!(
+            params("ui.wait_for", &["distance_above", "--number", "100"]).unwrap(),
+            json!({"until": "distance_above", "number": 100.0})
+        );
+        assert_eq!(
+            params("ui.key", &["F", "--ctrl"]).unwrap(),
+            json!({"key": "F", "ctrl": true})
+        );
+        assert!(params("ui.wait_for", &[]).unwrap_err().contains("until"));
+    }
+
+    #[test]
+    fn every_enum_value_list_is_parsed() {
+        for c in COMMANDS {
+            for a in c.args_schema().as_array().expect("array") {
+                // A declared value list is never empty and has no stray separators.
+                if let Some(v) = a.get("values") {
+                    assert!(
+                        v.as_array()
+                            .expect("values")
+                            .iter()
+                            .all(|x| x.as_str().is_some_and(|s| !s.is_empty())),
+                        "{} / {}",
+                        c.method,
+                        a["name"]
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
     fn parameterless_commands_send_no_params() {
         assert_eq!(params("ping", &[]).unwrap(), Value::Null);
     }
