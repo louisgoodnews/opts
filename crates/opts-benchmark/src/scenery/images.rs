@@ -10,6 +10,7 @@ use std::path::Path;
 use image::{Rgb, RgbImage};
 
 use super::framing::IMAGE_SIZE;
+use super::metrics::Matte;
 use super::object::Analysis;
 use super::raster::Mask;
 use super::worker::Harness;
@@ -43,23 +44,30 @@ pub fn keep(h: &Harness, record: &mut Record, analysis: &Analysis) {
 
 fn write_all(dir: &Path, a: &Analysis) -> image::ImageResult<()> {
     std::fs::create_dir_all(dir)?;
+    for (name, matte) in &a.text_shots {
+        rgb_image(matte).save(dir.join(format!("{name}_rgb.png")))?;
+    }
     for (i, (matte, exp)) in a.mattes.iter().zip(&a.expected).enumerate() {
         let v = format!("v{}", i + 1);
-        let size = IMAGE_SIZE;
-        let rgb = RgbImage::from_fn(size, size, |x, y| {
-            let idx = (y * size + x) as usize;
-            if matte.mask.px[idx] {
-                Rgb(matte.rgb[idx])
-            } else {
-                Rgb([128, 128, 128])
-            }
-        });
-        rgb.save(dir.join(format!("{v}_rgb.png")))?;
+        rgb_image(matte).save(dir.join(format!("{v}_rgb.png")))?;
         mask_image(&matte.mask).save(dir.join(format!("{v}_mask.png")))?;
         mask_image(&exp.all).save(dir.join(format!("{v}_expected.png")))?;
         diff_image(&matte.mask, &exp.all).save(dir.join(format!("{v}_diff.png")))?;
     }
     Ok(())
+}
+
+/// The object over mid grey.
+fn rgb_image(matte: &Matte) -> RgbImage {
+    let size = IMAGE_SIZE;
+    RgbImage::from_fn(size, size, |x, y| {
+        let idx = (y * size + x) as usize;
+        if matte.mask.px[idx] {
+            Rgb(matte.rgb[idx])
+        } else {
+            Rgb([128, 128, 128])
+        }
+    })
 }
 
 fn mask_image(m: &Mask) -> RgbImage {

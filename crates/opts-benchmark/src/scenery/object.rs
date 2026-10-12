@@ -161,10 +161,13 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
     };
 
     let t = Instant::now();
-    let analysis = analyse(&pixels, &exp, &expect_place, &views);
+    let mut analysis = analyse(&pixels, &exp, &expect_place, &views);
     record.views = analysis.metrics.clone();
     timing.analyse = ms(t);
-    let text = text_check(h, entry, &pre, &exp, &expect_place, tile_place);
+    let text = text_check(h, entry, &pre, &exp, &expect_place, tile_place).map(|(c, shots)| {
+        analysis.text_shots = shots;
+        c
+    });
 
     let diagnostics = super::Diagnostics { stats, events };
     judge(h, &mut record, &pre, &exp, diagnostics, text);
@@ -268,6 +271,8 @@ pub struct Analysis {
     pub expected: Vec<ExpectedMasks>,
     /// Per-view metrics.
     pub metrics: BTreeMap<String, super::ViewMetrics>,
+    /// Text close-ups (`t1_a`, `t1_b`, `t2_a`, `t2_b`), kept as images on request.
+    pub text_shots: Vec<(String, Matte)>,
 }
 
 fn analyse(px: &[ViewPixels; 2], exp: &Expected, place: &Placement, views: &[View; 2]) -> Analysis {
@@ -275,6 +280,7 @@ fn analyse(px: &[ViewPixels; 2], exp: &Expected, place: &Placement, views: &[Vie
         mattes: Vec::new(),
         expected: Vec::new(),
         metrics: BTreeMap::new(),
+        text_shots: Vec::new(),
     };
     for (i, (p, view)) in px.iter().zip(views).enumerate() {
         let matte = metrics::matte(&p.black, &p.white);
@@ -333,7 +339,7 @@ fn text_check(
     exp: &Expected,
     place: &Placement,
     tile_place: mapgen::Placement,
-) -> Option<TextCheck> {
+) -> Option<(TextCheck, Vec<(String, Matte)>)> {
     if !pre.has_text() {
         return None;
     }
@@ -354,6 +360,7 @@ fn text_check(
     let b = h.capture(&views).ok()?;
     let delta = h.config.thresholds.text_delta;
     let mut check = TextCheck::default();
+    let mut shots = Vec::new();
     for (i, view) in views.iter().enumerate() {
         let (ma, mb) = (
             metrics::matte(&a[i].black, &a[i].white),
@@ -366,8 +373,10 @@ fn text_check(
             check.mean_diff.insert(name.clone(), d);
         }
         if let Some(c) = metrics::changed_share(&ma, &mb, &region, delta) {
-            check.changed_share.insert(name, c);
+            check.changed_share.insert(name.clone(), c);
         }
+        shots.push((format!("{name}_a"), ma));
+        shots.push((format!("{name}_b"), mb));
     }
-    Some(check)
+    Some((check, shots))
 }

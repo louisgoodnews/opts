@@ -31,8 +31,6 @@ pub struct Thresholds {
     /// Mostly alpha-tested objects: below this recall the verdict is `unknown` (the coverage
     /// of an alpha texture is not predictable from the mesh).
     pub recall_alpha: f32,
-    /// Mostly alpha-tested objects: `F-XFORM-OFFSET` above this centroid offset.
-    pub centroid_offset_alpha: f32,
     /// An object is mostly alpha-tested above this alpha share.
     pub alpha_share: f32,
     /// `F-TEX-MISSING` above this sentinel share.
@@ -58,7 +56,6 @@ impl Default for Thresholds {
             scale: 1.25,
             recall: 0.6,
             recall_alpha: 0.02,
-            centroid_offset_alpha: 0.25,
             alpha_share: 0.5,
             sentinel_share: 0.02,
             text_changed_share: 0.01,
@@ -146,7 +143,7 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
     // An invisible object is explained by its missing texture; a text check needs the texture.
     if cats.iter().any(|c| c == "F-TEX-MISSING") {
         cats.retain(|c| c != "F-RENDER-EMPTY" && c != "F-TEXT-NOT-SHOWN");
-    } else {
+    } else if !has_class("help-arrow") {
         text_rule(t, ev, &mut cats);
     }
     let verdict = if !cats.is_empty() {
@@ -205,14 +202,9 @@ fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> 
             }
         }
     }
-    let offset = |v: &ViewMetrics| {
-        let limit = if alpha(v) {
-            t.centroid_offset_alpha
-        } else {
-            t.centroid_offset
-        };
-        v.centroid_offset.is_some_and(|c| c > limit)
-    };
+    // The visible part of an alpha texture (glyphs, leaves) sits anywhere in its quad.
+    let offset =
+        |v: &ViewMetrics| !alpha(v) && v.centroid_offset.is_some_and(|c| c > t.centroid_offset);
     if judged.iter().all(|v| offset(v)) {
         push(cats, "F-XFORM-OFFSET");
     }

@@ -183,9 +183,19 @@ pub fn top_view(bounds: &Bounds) -> View {
 #[must_use]
 pub fn text_views(tris: &[[Vec3; 3]]) -> Option<[View; 2]> {
     let bounds = Bounds::of(tris.iter().flatten().copied())?;
+    // Back-to-back duplicates would cancel: align every normal with the largest triangle's.
+    let normals: Vec<Vec3> = tris
+        .iter()
+        .map(|t| (t[1] - t[0]).cross(t[2] - t[0]))
+        .collect();
+    let reference = normals
+        .iter()
+        .copied()
+        .max_by(|a, b| a.length().total_cmp(&b.length()))
+        .unwrap_or(Vec3::Z);
     let mut n = Vec3::ZERO;
-    for t in tris {
-        n += (t[1] - t[0]).cross(t[2] - t[0]);
+    for v in normals {
+        n += if v.dot(reference) < 0.0 { -v } else { v };
     }
     let n = if n.length() > 1e-6 {
         n.normalize()
@@ -243,6 +253,11 @@ mod tests {
         let c = map_to_bevy(Vec3::new(2.0, 0.0, 1.0));
         assert!(a.project(c).unwrap().distance(Vec2::splat(256.0)) < 40.0);
         assert!(text_views(&[]).is_none());
+        // A back-to-back duplicate must not cancel the normal.
+        let mut both = wall.to_vec();
+        both.push([wall[0][0], wall[0][2], wall[0][1]]);
+        let [c, _] = text_views(&both).unwrap();
+        assert!((c.eye - a.eye).length() < 1e-3 || (c.eye - b.eye).length() < 1e-3);
     }
 
     #[test]

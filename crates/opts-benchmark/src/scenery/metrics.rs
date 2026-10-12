@@ -164,21 +164,33 @@ pub fn mean_colour_diff(a: &Matte, b: &Matte, region: &Mask) -> Option<f32> {
     (n > 0).then(|| (sum / n as f64) as f32)
 }
 
-/// Share of the pixels in `region` (where both renders show the object) whose colour differs by
-/// at least `delta` (0..255) in some channel.
+/// Share of the pixels in `region` that differ between two renders: a pixel counts when only
+/// one render shows the object there, or when both do and a colour channel differs by at least
+/// `delta` (0..255). Pixels where neither render shows the object are ignored (a transparent
+/// board with different glyphs changes only where either set has ink). `Some(0.0)` when the
+/// region is not empty but neither render shows anything in it; `None` for an empty region.
 #[must_use]
 pub fn changed_share(a: &Matte, b: &Matte, region: &Mask, delta: u8) -> Option<f32> {
+    if region.count() == 0 {
+        return None;
+    }
     let (mut changed, mut n) = (0usize, 0usize);
     for i in 0..region.px.len() {
-        if !(region.px[i] && a.mask.px[i] && b.mask.px[i]) {
+        let (ia, ib) = (a.mask.px[i], b.mask.px[i]);
+        if !region.px[i] || !(ia || ib) {
             continue;
         }
         n += 1;
-        if (0..3).any(|c| a.rgb[i][c].abs_diff(b.rgb[i][c]) >= delta) {
+        let differs = ia != ib || (0..3).any(|c| a.rgb[i][c].abs_diff(b.rgb[i][c]) >= delta);
+        if differs {
             changed += 1;
         }
     }
-    (n > 0).then(|| changed as f32 / n as f32)
+    Some(if n == 0 {
+        0.0
+    } else {
+        changed as f32 / n as f32
+    })
 }
 
 #[cfg(test)]
@@ -210,6 +222,25 @@ mod tests {
                 if colour == [255, 0, 255] { 3 } else { 0 }
             );
         }
+    }
+
+    #[test]
+    fn changed_share_sees_moved_glyphs_and_ignores_empty_background() {
+        let region = Mask {
+            width: 512,
+            height: 512,
+            px: vec![true; 512 * 512],
+        };
+        let (b1, w1) = buffers(&[10, 11], [0, 0, 0]);
+        let (b2, w2) = buffers(&[12, 13], [0, 0, 0]);
+        let (ma, mb) = (matte(&b1, &w1), matte(&b2, &w2));
+        assert_eq!(changed_share(&ma, &mb, &region, 40), Some(1.0));
+        assert_eq!(changed_share(&ma, &ma, &region, 40), Some(0.0));
+        let (b0, w0) = buffers(&[], [0, 0, 0]);
+        let blank = matte(&b0, &w0);
+        assert_eq!(changed_share(&blank, &blank, &region, 40), Some(0.0));
+        let empty = Mask::new(512, 512);
+        assert_eq!(changed_share(&ma, &mb, &empty, 40), None);
     }
 
     #[test]
