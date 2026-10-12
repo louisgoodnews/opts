@@ -116,7 +116,7 @@ Accessors are written in parentheses as `(<op>.<scope>.<name>)`.
 | Accessor | Operation |
 | :--- | :--- |
 | `(L.L.name)` | **Load** local float variable, push. |
-| `(S.L.name)` | **Store**: pop, write local float variable. |
+| `(S.L.name)` | **Store**: write the top of the stack to the local float variable; **the value stays on the stack**, so `1 (S.L.a) (S.L.b)` sets both (the idiom of the original scripts; verified 2026-10-12: a popping store produced 233,472 stack underflows in 1,207 of 1,218 scripted vehicles, a keeping store 348 in 28). |
 | `(C.L.name)` | Push scalar **constant** from a constfile. |
 | `(F.L.name)` | Pop x, evaluate constant **curve** `name`, push y. |
 | `(M.L.name)` | **Call** macro `name`. |
@@ -124,7 +124,7 @@ Accessors are written in parentheses as `(<op>.<scope>.<name>)`.
 | `(T.F.name)` | Raise event to the **front** (e.g. announcements to the sound engine). |
 | `(L.S.name)` | Load **system** value (see below). |
 | `(M.V.name)` | Call a macro of a **vehicle-external** system (e.g. `GiveChangeCoin`, used by the cash desk). |
-| `(S.$.name)` | Store string variable (pop from string stack). |
+| `(S.$.name)` | Store string variable; like the float store it leaves the string on the stack. |
 | `(L.$.name)` | Load string variable (push to string stack). |
 
 The string forms `(S.$.x)` and `(L.$.x)` are the only accessors that touch string variables.

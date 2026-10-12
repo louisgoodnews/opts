@@ -200,17 +200,9 @@ impl FontRegistry {
         }
     }
 
-    /// Renders `spec` (or returns the cached image). `None` when the font or its bitmaps cannot
-    /// be loaded; the error is logged once per font.
-    pub fn render(
-        &mut self,
-        install: &OmsiInstall,
-        images: &mut Assets<Image>,
-        spec: &TextSpec,
-    ) -> Option<Handle<Image>> {
-        if let Some(h) = self.rendered.get(spec) {
-            return Some(h.clone());
-        }
+    /// Rasterises `spec` to RGBA8 pixels (`width × height`). `None` when the font or its bitmaps
+    /// cannot be loaded; the error is logged once per font.
+    pub fn render_data(&mut self, install: &OmsiInstall, spec: &TextSpec) -> Option<Vec<u8>> {
         let key = spec.font.to_lowercase();
         let Some((path, font)) = self.index(install).get(&key).cloned() else {
             self.report_once(key, "font not found in Fonts/");
@@ -228,24 +220,44 @@ impl FontRegistry {
             self.bitmaps.insert(key.clone(), loaded);
         }
         let bmp = self.bitmaps.get(&key)?.clone()?;
-        let data = render_rgba(&font, &bmp, spec);
-        let mut image = Image::new(
-            Extent3d {
-                width: spec.width.max(1),
-                height: spec.height.max(1),
-                depth_or_array_layers: 1,
-            },
-            TextureDimension::D2,
-            data,
-            TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::default(),
-        );
-        // Mesh UVs may lie outside 0..1 (negative V is common): wrap like every OMSI texture.
-        image.sampler = crate::model::repeat_sampler();
-        let handle = images.add(image);
+        Some(render_rgba(&font, &bmp, spec))
+    }
+
+    /// Renders `spec` (or returns the cached image). `None` when the font or its bitmaps cannot
+    /// be loaded; the error is logged once per font.
+    pub fn render(
+        &mut self,
+        install: &OmsiInstall,
+        images: &mut Assets<Image>,
+        spec: &TextSpec,
+    ) -> Option<Handle<Image>> {
+        if let Some(h) = self.rendered.get(spec) {
+            return Some(h.clone());
+        }
+        let data = self.render_data(install, spec)?;
+        let handle = images.add(text_image(spec.width, spec.height, data));
         self.rendered.insert(spec.clone(), handle.clone());
         Some(handle)
     }
+}
+
+/// An RGBA8 image holding rendered text. Mesh UVs may lie outside 0..1 (negative V is common):
+/// the sampler wraps like every OMSI texture.
+#[must_use]
+pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
+    let mut image = Image::new(
+        Extent3d {
+            width: width.max(1),
+            height: height.max(1),
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    image.sampler = crate::model::repeat_sampler();
+    image
 }
 
 fn collect_oft(dir: &Path, out: &mut Vec<PathBuf>) {

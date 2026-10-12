@@ -132,6 +132,7 @@ impl Plugin for InGamePlugin {
                 omsi_world::move_ai_trains,
                 omsi_world::rail_player_pose.after(opts_bevy::vehicle_transform_sync_system),
                 omsi_world::follow_ground.after(opts_bevy::vehicle_transform_sync_system),
+                omsi_world::update_vehicle_text_textures,
                 (
                     omsi_world::load_variants,
                     omsi_world::spawn_pedestrians,

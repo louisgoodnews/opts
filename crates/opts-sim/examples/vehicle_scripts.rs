@@ -44,6 +44,8 @@ fn main() {
     files.sort();
     let (mut loaded, mut with_scripts, mut missing, mut undeclared) = (0, 0, 0, 0);
     let (mut frame_us, mut ops) = (Vec::new(), 0u64);
+    let mut underflow_sites = 0usize;
+    let mut underflow_vehicles = std::collections::HashSet::new();
     for f in &files {
         let Ok(bytes) = std::fs::read(f) else {
             continue;
@@ -75,6 +77,20 @@ fn main() {
         }
         frame_us.push(t.elapsed().as_secs_f64() * 1e6 / 60.0);
         ops += engine.ops_executed();
+        for d in engine.drain_diagnostics() {
+            if d.message.starts_with("stack underflow") {
+                underflow_sites += 1;
+                underflow_vehicles.insert(f.clone());
+                if std::env::var_os("SHOW_UNDERFLOW").is_some() {
+                    println!(
+                        "{} :: {} :: {}",
+                        f.display(),
+                        d.file.rsplit('/').next().unwrap_or(""),
+                        d.message
+                    );
+                }
+            }
+        }
     }
     frame_us.sort_by(f64::total_cmp);
     let pct = |p: f64| {
@@ -84,6 +100,10 @@ fn main() {
             .unwrap_or(0.0)
     };
     println!("{} .bus files, {loaded} parsed, {with_scripts} with scripts, {missing} missing files, {undeclared} with undeclared variables", files.len());
+    println!(
+        "stack underflow: {underflow_sites} sites in {} vehicles",
+        underflow_vehicles.len()
+    );
     println!(
         "frame time µs: median {:.0}, p90 {:.0}, max {:.0}; {ops} ops total",
         pct(0.5),

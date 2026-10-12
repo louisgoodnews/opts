@@ -20,6 +20,16 @@ fn t_osc_001_arithmetic_and_store() {
 }
 
 #[test]
+fn t_osc_001b_store_keeps_the_value_for_chained_stores() {
+    let e = run("7 (S.L.a) (S.L.b) (S.L.c)");
+    assert_eq!((e.get("a"), e.get("b"), e.get("c")), (7.0, 7.0, 7.0));
+    // Strings chain the same way.
+    let e = run("\"hi\" (S.$.s1) (S.$.s2)");
+    assert_eq!(e.get_string("s1"), "hi");
+    assert_eq!(e.get_string("s2"), "hi");
+}
+
+#[test]
 fn t_osc_002_if_taken() {
     assert_eq!(run("1 {if} 7 (S.L.x) {endif}").get("x"), 7.0);
 }

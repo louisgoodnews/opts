@@ -247,6 +247,39 @@ impl ScriptEngine {
             .collect()
     }
 
+    /// All string variables the scripts know, with their current values (diagnostics).
+    #[must_use]
+    pub fn string_variables(&self) -> Vec<(String, String)> {
+        let names = &self.program.names.strvars;
+        (0..names.len() as u32)
+            .map(|i| (names.name(i).to_owned(), self.vars.string(i).to_owned()))
+            .collect()
+    }
+
+    /// Readable listing of the blocks whose name contains `name` (diagnostics).
+    #[must_use]
+    pub fn disassemble(&self, name: &str) -> Vec<String> {
+        use compiler::Op;
+        let n = &self.program.names;
+        let mut out = Vec::new();
+        for b in self.program.blocks.iter().filter(|b| b.name.contains(name)) {
+            out.push(format!("== {} ({})", b.name, b.file));
+            for (i, op) in b.ops.iter().enumerate() {
+                let text = match *op {
+                    Op::Load(v) => format!("L {}", n.vars.name(v)),
+                    Op::Store(v) => format!("S {}", n.vars.name(v)),
+                    Op::LoadStr(v) => format!("L$ {}", n.strvars.name(v)),
+                    Op::StoreStr(v) => format!("S$ {}", n.strvars.name(v)),
+                    Op::Const(v) => format!("C {}", n.consts.name(v)),
+                    Op::Call(v) => format!("M {}", n.macros.name(v)),
+                    other => format!("{other:?}"),
+                };
+                out.push(format!("{i:>4} {text}"));
+            }
+        }
+        out
+    }
+
     /// Instructions executed so far (profiling).
     #[must_use]
     pub fn ops_executed(&self) -> u64 {

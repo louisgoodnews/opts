@@ -30,6 +30,7 @@ mod tile_ground;
 mod traffic;
 mod trees;
 mod vehicle;
+mod vehicle_text;
 
 pub use collision::{
     attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
@@ -60,6 +61,7 @@ pub use traffic::{
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
+pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 #[derive(bevy::ecs::system::SystemParam)]
@@ -191,6 +193,9 @@ pub struct WorldLoadJob {
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
     /// Bitmap fonts and rendered text textures (`[texttexture]`).
     fonts: opts_bevy::text_texture::FontRegistry,
+    /// `[texttexture]` declarations of the vehicle model being loaded (set by its loader; the
+    /// segment loader binds `[useTextTexture]` indices against them).
+    vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
     ground_material: Option<Handle<StandardMaterial>>,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,

@@ -440,6 +440,7 @@ fn spawn_vehicle_model(
     let root = commands
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
+    job.vehicle_text_defs = model.text_textures.clone();
     let (count, verts, _, _) = super::vehicle::load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );

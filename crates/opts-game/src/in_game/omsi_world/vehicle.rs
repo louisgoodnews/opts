@@ -114,6 +114,10 @@ fn load_segment_meshes_for(
     let mut mesh_count = 0usize;
     let mut vertex_count = 0usize;
     let (mut min, mut max) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+    // Dynamic text textures of this segment: one image per `[texttexture]` index, redrawn when the
+    // script string variable it shows changes (`vehicle_text.rs`).
+    let text_defs = job.vehicle_text_defs.clone();
+    let mut text_images: std::collections::HashMap<usize, Handle<Image>> = Default::default();
     // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
     // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.
     let mut dummies: Vec<(String, Entity)> = Vec::new();
@@ -192,7 +196,28 @@ fn load_segment_meshes_for(
                 alpha: m.alpha_mode,
                 hidden_by_variable: m.alpha_scale_var.is_some(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
-                image: None,
+                image: m.text_texture_index.and_then(|i| {
+                    if let Some(h) = text_images.get(&i) {
+                        return Some(h.clone());
+                    }
+                    let Some(def) = text_defs.get(i) else {
+                        tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useTextTexture] names a text texture the model does not declare");
+                        return None;
+                    };
+                    let (w, h) = (def.width.max(1), def.height.max(1));
+                    let handle = images.add(opts_bevy::text_texture::text_image(
+                        w,
+                        h,
+                        vec![0; (w * h * 4) as usize],
+                    ));
+                    commands.spawn((
+                        super::vehicle_text::VehicleTextTexture::new(owner, def, handle.clone()),
+                        Name::new(format!("text_texture_{i}_{}", def.variable)),
+                        ChildOf(root),
+                    ));
+                    text_images.insert(i, handle.clone());
+                    Some(handle)
+                }),
                 light_map: m.light_map.clone(),
             })
             .collect();
@@ -427,6 +452,7 @@ pub(super) fn spawn_trailer_chain(
             break;
         };
         let lod0 = &detail;
+        job.vehicle_text_defs = model.text_textures.clone();
         // Both coupling points are in their own vehicle frame; the segment follows its leader
         // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
         let reversed = parent_manifest.couple_back_reversed;
@@ -585,6 +611,7 @@ pub fn prewarm_vehicle_meshes(
         return Vec::new();
     };
     let lod0 = &detail;
+    job.vehicle_text_defs = model.text_textures.clone();
     let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
     let tex_dirs = vec![
         job.install
@@ -655,6 +682,7 @@ pub fn load_player_vehicle(
         ModelConfig::parse_bytes(&cfg_bytes).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
     let detail = model.detail_lod().ok_or("model config has no meshes")?;
     let lod0 = &detail;
+    job.vehicle_text_defs = model.text_textures.clone();
     tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
 
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();

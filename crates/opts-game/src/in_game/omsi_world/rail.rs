@@ -829,6 +829,7 @@ fn try_spawn(
                 opts_bevy::AiVariables::default(),
             ))
             .id();
+        job.vehicle_text_defs.clear();
         let (count, ..) = load_segment_meshes(
             job,
             commands,

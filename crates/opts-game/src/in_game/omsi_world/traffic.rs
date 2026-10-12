@@ -557,6 +557,7 @@ pub fn spawn_traffic(
             InGameEntity,
         ))
         .id();
+    job.vehicle_text_defs = variant.model.text_textures.clone();
     let (count, _, min, max) = load_segment_meshes(
         &mut job,
         &mut commands,

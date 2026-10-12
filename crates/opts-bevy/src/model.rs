@@ -67,6 +67,8 @@ pub struct ModelPart {
     /// Script variable that scales the material's light map (`[matl_lightmap]`); `None` when the
     /// material has no light map or the map names no variable.
     pub light_variable: Option<String>,
+    /// The ready-made image that replaced the material's texture (rendered text), if any.
+    pub image: Option<Handle<Image>>,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.
@@ -653,6 +655,7 @@ impl ContentLoader<'_> {
                     material: self.materials.add(material),
                     vertices,
                     light_variable,
+                    image: over.and_then(|o| o.image.clone()),
                 });
             }
         }

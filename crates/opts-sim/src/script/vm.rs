@@ -101,8 +101,14 @@ impl ScriptEngine {
             if let Some(target) = self.step(op, index, pc - 1, depth, &mut regs, st) {
                 pc = target;
             }
-            if st.numbers.len() > MAX_STACK {
-                st.numbers.truncate(MAX_STACK);
+            // Values the scripts leave behind pile up at the bottom; the oldest are dropped.
+            if st.numbers.len() > 2 * MAX_STACK {
+                let extra = st.numbers.len() - MAX_STACK;
+                st.numbers.drain(..extra);
+            }
+            if st.strings.len() > 2 * MAX_STACK {
+                let extra = st.strings.len() - MAX_STACK;
+                st.strings.drain(..extra);
             }
         }
     }
@@ -188,14 +194,19 @@ impl ScriptEngine {
     fn step_data(&mut self, op: Op, depth: usize, st: &mut Stacks, block: usize, pc: usize) {
         match op {
             Op::Load(id) => st.numbers.push(self.vars.float(id)),
+            // A store leaves its value on the stack: `1 (S.L.a) (S.L.b)` sets both variables
+            // (the idiom runs through the original scripts; with a popping store the second
+            // variable would read an empty stack).
             Op::Store(id) => {
                 let v = self.pop(st, block, pc);
                 self.vars.set_float(id, v);
+                st.numbers.push(v);
             }
             Op::LoadStr(id) => st.strings.push(self.vars.string(id).to_owned()),
             Op::StoreStr(id) => {
                 let s = st.strings.pop().unwrap_or_default();
-                self.vars.set_string(id, s);
+                self.vars.set_string(id, s.clone());
+                st.strings.push(s);
             }
             Op::Const(id) => {
                 let v = self.resolved_consts.get(id as usize).copied().flatten();
