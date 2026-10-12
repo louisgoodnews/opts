@@ -62,3 +62,28 @@ firstrun-quick = Schnelle Fahrt
 home-stage-files = Dateien werden gesucht …
 home-stage-content = Karten und Fahrzeuge werden gelesen …
 home-stage-saving = Katalog wird gespeichert …
+pause-title = Pause
+pause-resume = Weiterfahren
+pause-vehicle = Fahrzeug
+pause-settings = Einstellungen
+pause-controls = Steuerung
+pause-report = Problem melden
+pause-leave = Fahrt verlassen …
+leave-title = Fahrt verlassen?
+leave-body = Ihr Fortschritt auf dieser Strecke geht verloren.
+leave-home = Zum Start
+leave-quit = OPTS beenden
+summary-title = Fahrt beendet
+summary-duration = Dauer { $time }
+summary-distance = Strecke { $km } km
+summary-max-speed = Höchstgeschwindigkeit { $kmh } km/h
+summary-problems =
+    { $count ->
+        [one] { $count } Problem protokolliert
+       *[other] { $count } Probleme protokolliert
+    }
+summary-report = Melden
+summary-again = Nochmal fahren
+summary-change-vehicle = Fahrzeug wechseln
+summary-home = Start
+summary-distance-m = Strecke { $m } m

@@ -56,6 +56,22 @@ pub const NAV_WORKSHOP: NotYetPlace = NotYetPlace {
     missing: "Editor projects, installed mods and packaging need the editor and mod system.",
 };
 
+/// Pause overlay, *Settings*.
+pub const PAUSE_SETTINGS: NotYetPlace = NotYetPlace {
+    id: "pause.settings",
+    place: "Pause overlay, Settings",
+    milestone: "M-0063",
+    missing: "The settings pages build into the shell, which is hidden during a drive; they need an embeddable pane.",
+};
+
+/// Pause overlay, *Controls*.
+pub const PAUSE_CONTROLS: NotYetPlace = NotYetPlace {
+    id: "pause.controls",
+    place: "Pause overlay, Controls",
+    milestone: "M-0064",
+    missing: "The in-game controls page opens with the Help overlay of the HUD milestone.",
+};
+
 /// New game screen, live weather *Refresh*.
 pub const LIVE_WEATHER_REFRESH: NotYetPlace = NotYetPlace {
     id: "newgame.live-weather-refresh",
@@ -69,6 +85,8 @@ pub const PLACES: &[&NotYetPlace] = &[
     &HOME_LOAD_GAME,
     &NAV_LIBRARY,
     &NAV_WORKSHOP,
+    &PAUSE_SETTINGS,
+    &PAUSE_CONTROLS,
     &LIVE_WEATHER_REFRESH,
 ];
 

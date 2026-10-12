@@ -16,6 +16,7 @@ fn record(map: &str, vehicle: &str, hour: u32) -> DriveRecord {
 }
 
 fn home_app(history: &[DriveRecord]) -> App {
+    crate::isolation::isolate_user_dirs();
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)

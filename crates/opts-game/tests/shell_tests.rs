@@ -10,6 +10,7 @@ use opts_gui::not_yet::NotAvailableYet;
 use opts_gui::prelude::*;
 
 fn shell_app() -> App {
+    opts_game::isolation::isolate_user_dirs();
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
@@ -19,6 +20,10 @@ fn shell_app() -> App {
         .insert_resource(GameSettings::default())
         .insert_resource(MaterialTheme::dark())
         .init_state::<AppState>()
+        .insert_resource(opts_game::home::HomeDrives {
+            persist: false,
+            ..Default::default()
+        })
         .add_plugins(OptsGuiPlugin)
         .add_plugins(ShellPlugin)
         .add_plugins(HomePlugin)

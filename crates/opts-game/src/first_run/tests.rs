@@ -7,6 +7,7 @@ use crate::shell::ShellPlugin;
 use opts_gui::prelude::*;
 
 fn app() -> App {
+    crate::isolation::isolate_user_dirs();
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)

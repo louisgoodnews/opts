@@ -124,6 +124,48 @@ keys! {
     HOME_STAGE_CONTENT = "home-stage-content",
     /// Message `home-stage-saving`.
     HOME_STAGE_SAVING = "home-stage-saving",
+    /// Message `pause-title`.
+    PAUSE_TITLE = "pause-title",
+    /// Message `pause-resume`.
+    PAUSE_RESUME = "pause-resume",
+    /// Message `pause-vehicle`.
+    PAUSE_VEHICLE = "pause-vehicle",
+    /// Message `pause-settings`.
+    PAUSE_SETTINGS = "pause-settings",
+    /// Message `pause-controls`.
+    PAUSE_CONTROLS = "pause-controls",
+    /// Message `pause-report`.
+    PAUSE_REPORT = "pause-report",
+    /// Message `pause-leave`.
+    PAUSE_LEAVE = "pause-leave",
+    /// Message `leave-title`.
+    LEAVE_TITLE = "leave-title",
+    /// Message `leave-body`.
+    LEAVE_BODY = "leave-body",
+    /// Message `leave-home`.
+    LEAVE_HOME = "leave-home",
+    /// Message `leave-quit`.
+    LEAVE_QUIT = "leave-quit",
+    /// Message `summary-title`.
+    SUMMARY_TITLE = "summary-title",
+    /// Message `summary-duration`.
+    SUMMARY_DURATION = "summary-duration",
+    /// Message `summary-distance`.
+    SUMMARY_DISTANCE = "summary-distance",
+    /// Message `summary-max-speed`.
+    SUMMARY_MAX_SPEED = "summary-max-speed",
+    /// Message `summary-problems`.
+    SUMMARY_PROBLEMS = "summary-problems",
+    /// Message `summary-report`.
+    SUMMARY_REPORT = "summary-report",
+    /// Message `summary-again`.
+    SUMMARY_AGAIN = "summary-again",
+    /// Message `summary-change-vehicle`.
+    SUMMARY_CHANGE_VEHICLE = "summary-change-vehicle",
+    /// Message `summary-home`.
+    SUMMARY_HOME = "summary-home",
+    /// Message `summary-distance-m`.
+    SUMMARY_DISTANCE_M = "summary-distance-m",
     /// Home: New drive.
     HOME_NEW_DRIVE = "home-new-drive",
     /// Home: Load game.

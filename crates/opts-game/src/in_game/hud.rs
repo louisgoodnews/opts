@@ -9,7 +9,6 @@ use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::prelude::*;
 use opts_sim::vehicle::inputs::GearPosition;
 
-use crate::app_state::AppState;
 use crate::in_game::instruments::{InstrumentInk, InstrumentPanel};
 use crate::in_game::types::{
     CameraModeText, GearIndicatorText, HandbrakeIndicatorText, HudClockText, InGameEntity,
@@ -162,9 +161,12 @@ pub fn spawn_in_game_hud(
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            BorderColor::all(theme.scheme.get(ColorRole::Error)),
+                            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
                             BackgroundColor(
-                                theme.scheme.get(ColorRole::ErrorContainer).with_alpha(0.85),
+                                theme
+                                    .scheme
+                                    .get(ColorRole::SurfaceContainerHigh)
+                                    .with_alpha(0.85),
                             ),
                         ),
                         M3Button::default(),
@@ -175,12 +177,12 @@ pub fn spawn_in_game_hud(
                     .with_children(|btn| {
                         btn.spawn((
                             (
-                                Text::new("Exit to Menu [Esc]"),
+                                Text::new("Pause [Esc]"),
                                 TextFont {
                                     font_size: FontSize::Px(12.0),
                                     ..default()
                                 },
-                                TextColor(theme.scheme.get(ColorRole::OnErrorContainer)),
+                                TextColor(theme.scheme.get(ColorRole::OnSurface)),
                             ),
                             TypeStyleToken(TypeScale::Label),
                         ));
@@ -436,16 +438,16 @@ pub fn update_in_game_hud(
     }
 }
 
-/// Handles interactions with HUD buttons (such as Exit to Menu).
+/// Handles interactions with HUD buttons (the pause button opens the pause overlay).
 pub fn handle_hud_interactions(
     mut events: MessageReader<ButtonClicked>,
     pause_query: Query<&PauseMenuBtn>,
-    mut next_state: ResMut<NextState<AppState>>,
+    mut pause: MessageWriter<crate::pause::PauseRequest>,
 ) {
     for event in events.read() {
         if pause_query.contains(event.0) {
-            tracing::info!("User requested exit to Main Menu from in-game HUD");
-            next_state.set(AppState::MainMenu);
+            tracing::info!("HUD pause button: opening the pause overlay");
+            pause.write(crate::pause::PauseRequest);
         }
     }
 }

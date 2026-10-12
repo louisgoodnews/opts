@@ -9,4 +9,6 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 | Home, Load game | `home.load-game` | M-0062 | There is no save system; Home offers Continue for the last drive. |
 | Navigation rail, Library | `nav.library` | M-0062 | The Library needs the master-detail pattern of the Plan a drive wizard and its detail panels. |
 | Navigation rail, Workshop | `nav.workshop` | M-0051 | Editor projects, installed mods and packaging need the editor and mod system. |
+| Pause overlay, Settings | `pause.settings` | M-0063 | The settings pages build into the shell, which is hidden during a drive; they need an embeddable pane. |
+| Pause overlay, Controls | `pause.controls` | M-0064 | The in-game controls page opens with the Help overlay of the HUD milestone. |
 | New game, Live Device Location, Refresh | `newgame.live-weather-refresh` | M-0062 | The location query is never called; the panel shows placeholder values. |

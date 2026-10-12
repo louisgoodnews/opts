@@ -46,6 +46,7 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/loading_pipeline.rs",
     "opts-game/src/in_game/mod.rs",
     "opts-game/src/in_game/omsi_world/overlay.rs",
+    "opts-game/src/pause/mod.rs",
     "opts-game/src/shell/footer.rs",
     "opts-game/src/new_game_screen/picker_systems.rs",
     "opts-game/src/new_game_screen/scroll_systems.rs",

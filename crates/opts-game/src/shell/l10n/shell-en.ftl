@@ -62,3 +62,28 @@ firstrun-quick = Quick drive
 home-stage-files = Scanning files…
 home-stage-content = Reading maps and vehicles…
 home-stage-saving = Saving the catalogue…
+pause-title = Paused
+pause-resume = Resume
+pause-vehicle = Vehicle
+pause-settings = Settings
+pause-controls = Controls
+pause-report = Report an issue
+pause-leave = Leave drive…
+leave-title = Leave the drive?
+leave-body = Your progress on this route is lost.
+leave-home = Leave to Home
+leave-quit = Quit OPTS
+summary-title = Drive finished
+summary-duration = Duration { $time }
+summary-distance = Distance { $km } km
+summary-max-speed = Top speed { $kmh } km/h
+summary-problems =
+    { $count ->
+        [one] { $count } problem logged
+       *[other] { $count } problems logged
+    }
+summary-report = Report
+summary-again = Drive again
+summary-change-vehicle = Change vehicle
+summary-home = Home
+summary-distance-m = Distance { $m } m

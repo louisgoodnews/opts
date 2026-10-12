@@ -25,7 +25,7 @@ pub use state::{
     not_modal_active, MenuModalActive, ModalActive, ReportContext, ReportModalData,
     ReportModalState,
 };
-pub use trigger::REPORT_KEY;
+pub use trigger::{request_report, REPORT_KEY};
 
 /// Registers the reporting feature.
 #[derive(Default)]

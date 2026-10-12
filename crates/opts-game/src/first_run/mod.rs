@@ -307,6 +307,13 @@ pub fn welcome_system(
     }
 }
 
+/// Starting a drive (or any other way out of Home) ends the welcome: it never comes back.
+pub fn close_welcome_on_leaving_home(mut first_run: ResMut<FirstRun>) {
+    if first_run.step == Some(Step::Welcome) {
+        first_run.finish_welcome();
+    }
+}
+
 /// First-run plugin.
 pub struct FirstRunPlugin;
 
@@ -321,6 +328,7 @@ impl Plugin for FirstRunPlugin {
             .init_resource::<NewGameSetup>()
             .add_message::<OmsiFolderChosen>()
             .add_message::<StartDrive>()
+            .add_systems(OnExit(AppState::MainMenu), close_welcome_on_leaving_home)
             .add_systems(
                 Update,
                 (

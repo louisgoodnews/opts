@@ -91,12 +91,14 @@ Centred panel over the paused scene (`Modal`); simulation paused (`Time<Virtual>
 | **Resume** (default focus) | `pause-resume` | closes, restores pause state and cursor |
 | Vehicle | `pause-vehicle` | closes the pause panel and opens the vehicle menu (L-Alt menu); Esc there returns to the game |
 | Settings | `pause-settings` | red *Feature not available yet!* until the settings registry offers an embeddable pane (see below) |
-| Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal) |
+| Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal); red *Feature not available yet!* (`pause.controls`, M-0064) until that overlay exists |
 | Report an issue | `pause-report` | the report dialog |
 | ─── separator | | |
 | **Leave drive…** | `pause-leave` | confirmation dialog |
 
 *Settings in the pause panel*: the settings pages build into the shell's content area, which is hidden in game. Until the settings registry provides an embeddable pane, *Settings* in the pause panel is a registered not-yet place (`pause.settings`, M-0063) with the red text. This is recorded rather than faked.
+
+**Behaviour as built.** Esc while the drive is still loading cancels the load (the loading screen of the wizard agent owns that later); Backspace never opens the overlay (a vehicle uses it); the overlay steps aside while the leave dialog is open and returns on *Cancel*; *Report an issue* closes the overlay, takes the screenshot of the game, and the overlay returns when the report dialog closes. The HUD's top-right button reads *Pause [Esc]* and opens the overlay.
 
 **Leave dialog**: title `leave-title` ("Leave the drive?"), body `leave-body` ("Your progress on this route is lost."), actions **Leave to Home** (`leave-home`, destructive styling), **Quit OPTS** (`leave-quit`), **Cancel** (`leave-cancel`, default focus). Skipped when the session has not started moving (nothing is lost): *Leave drive…* then goes straight to the summary-free Home.
 
@@ -147,6 +149,7 @@ F1 opens Help (D-UI-06) from anywhere with a window; in game it opens the same p
 | `help.guides` | Help, Guides | M-0064 |
 | `help.controls-generated` | Help, Controls (generated list) | M-0064 |
 | `pause.settings` | Pause, Settings | M-0063 |
+| `pause.controls` | Pause, Controls | M-0064 |
 | `home.rescan` | Home banner, Rescan | M-0063 |
 
 ## 9. Test matrix (S7)

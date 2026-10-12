@@ -22,3 +22,17 @@ pub fn trigger_report_system(
         next.set(ReportModalState::Capturing);
     }
 }
+
+/// Opens the report dialog from code (the pause menu, the Help page, a banner), exactly as F1
+/// did: the screenshot is taken first, then the dialog opens.
+pub fn request_report(
+    time: &Time<Virtual>,
+    data: &mut ReportModalData,
+    state: &State<ReportModalState>,
+    next: &mut NextState<ReportModalState>,
+) {
+    if *state.get() == ReportModalState::Inactive {
+        data.reset_for_new_report(!time.is_paused());
+        next.set(ReportModalState::Capturing);
+    }
+}

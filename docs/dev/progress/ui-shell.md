@@ -24,7 +24,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | S1 Shell frame, registry, back stack, Esc | done (pending commit hash in Results) |
 | S2 Home | done |
 | S3 First run | done |
-| S4 Pause, leave, summary | open |
+| S4 Pause, leave, summary | done |
 | S5 Help and About, F1 | open |
 | S6 Notifications | open |
 | S7 Tests, screenshots, docs | open |
@@ -52,3 +52,6 @@ Note: the *compact* rail (icons only) needs a logical width < 900 px, i.e. UI sc
 
 ### S3
 `first_run/` (decision, dialogs, picker, welcome), `omsi_setup.rs` rewritten, `omsi_root::require_confirmation`. Dialog buttons: first button has `DefaultFocus`. Verified by screenshots (choose, found, welcome; `shots/firstrun_*`) and 13 unit tests. Count during scan not available from the catalogue (stage only). NOTE: test windows opened by `shot.py` appear on the user's display and were repeatedly operated by a human (Settings, Drive, Quit were clicked): screenshots must be taken fast; this also showed that the rail, Settings/Drive navigation and the Quit confirmation work with a real mouse. `settings_screen`/`new_game_screen` still have their own Escape/back handlers (other agents' files).
+
+### S4
+`pause/` (overlay, stats, leave), `session_summary/`; `escape_to_menu_in_game` removed, HUD *Exit to Menu* is now *Pause [Esc]* (neutral colours). `Controls` and `Settings` in the overlay are not-yet places (`pause.controls` M-0064, `pause.settings` M-0063). Welcome closes when Home is left. Verified live (shots `pause_dark`, `pause_leave_dialog_dark`, `summary_dark`): Esc opens the overlay with Resume focused at 38 km/h, the leave dialog names the consequence with Cancel focused, Home shows the summary (duration, distance, top speed, 1 problem logged = an error-level log entry during the drive). The old test `test_escape_key_in_game_returns_to_main_menu` was replaced by `pause::tests`.

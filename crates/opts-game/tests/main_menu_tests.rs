@@ -24,6 +24,7 @@ fn test_game_settings_defaults_and_toml_roundtrip() {
 
 #[test]
 fn test_theme_toggle_flips_color_scheme() {
+    opts_game::isolation::isolate_user_dirs();
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins)
