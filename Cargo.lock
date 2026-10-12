@@ -5298,6 +5298,7 @@ dependencies = [
  "opts-gui",
  "opts-logging",
  "opts-sim",
+ "opts-traffic",
  "serde_json",
  "smol_str",
  "thiserror 1.0.69",

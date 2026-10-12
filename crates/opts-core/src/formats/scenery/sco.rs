@@ -9,7 +9,9 @@
 use glam::Vec3;
 
 use super::error::SceneryParseError;
+use super::light::{parse_light_enh, parse_light_enh_2, ScoLight};
 use crate::formats::text::{decode_bytes, parse_float, scan_blocks, OmsiBlock};
+use crate::formats::vehicles::model::{parse_newanim, ModelAnim};
 
 /// Billboard tree helper (`[tree]`): texture plus default height and width-ratio ranges.
 ///
@@ -53,6 +55,9 @@ pub struct ScoMaterial {
     pub env_map_mask: bool,
     /// Lightmap bitmap filename.
     pub light_map: Option<String>,
+    /// Variable that switches the light map (second line of `[matl_lightmap]`); `None` when the
+    /// map names none (then it follows the night lighting).
+    pub light_map_variable: Option<String>,
     /// Night texture filename.
     pub night_map: Option<String>,
     /// Whether material transparency scales with `[alphascale]`.
@@ -83,6 +88,7 @@ impl ScoMaterial {
             env_map: None,
             env_map_mask: false,
             light_map: None,
+            light_map_variable: None,
             night_map: None,
             trans_map: false,
             no_z_write: false,
@@ -93,13 +99,6 @@ impl ScoMaterial {
             text_texture: None,
         }
     }
-}
-
-/// Animation definition block (`[newanim]`).
-#[derive(Debug, Clone, PartialEq)]
-pub struct ScoAnimation {
-    /// Animation sub-commands and their string parameters.
-    pub commands: Vec<(String, Vec<String>)>,
 }
 
 /// 3D mesh attachment in a scenery object (`[mesh]`).
@@ -119,8 +118,8 @@ pub struct ScoMesh {
     pub mouse_event: Option<String>,
     /// Text texture slots bound to this mesh (`[useTextTexture]`).
     pub text_texture_indices: Vec<usize>,
-    /// Animation definitions attached to this mesh.
-    pub animations: Vec<ScoAnimation>,
+    /// Animation definitions attached to this mesh (`[newanim]`, same layout as in `model.cfg`).
+    pub animations: Vec<ModelAnim>,
 }
 
 impl SceneryObject {
@@ -354,6 +353,8 @@ pub struct SceneryObject {
     pub spline_helpers: Vec<ScoSplineHelper>,
     /// Map light sources.
     pub map_lights: Vec<ScoMapLight>,
+    /// Light effects (`[light_enh]`, `[light_enh_2]`) in declaration order.
+    pub lights: Vec<ScoLight>,
     /// Traffic light controller groups.
     pub traffic_light_groups: Vec<ScoTrafficLightGroup>,
     /// Text texture render definitions.
@@ -375,6 +376,9 @@ pub struct SceneryObject {
     pub sound: Option<String>,
     /// Passenger cabin layout file (`passengercabin.cfg`).
     pub passenger_cabin: Option<String>,
+    /// Problems that did not stop parsing (malformed `[newanim]` or light blocks, which are
+    /// skipped).
+    pub warnings: Vec<String>,
 }
 
 impl SceneryObject {
@@ -587,10 +591,12 @@ impl SceneryObject {
                         if let Some(mesh) = obj.meshes.last_mut() {
                             if let Some(mat) = mesh.materials.last_mut() {
                                 mat.light_map = Some(val.clone());
+                                mat.light_map_variable = light_map_variable(&block.parameters);
                             }
                         }
                     }
                 }
+                "light_enh" | "light_enh_2" => add_light(&mut obj, block, current_lod),
                 "matl_nightmap" => {
                     if let Some(val) = block.parameters.first() {
                         if let Some(mesh) = obj.meshes.last_mut() {
@@ -683,12 +689,17 @@ impl SceneryObject {
                         }
                     }
                 }
-                "newanim" => {
-                    if let Some(mesh) = obj.meshes.last_mut() {
-                        let anim = parse_anim_block(block)?;
-                        mesh.animations.push(anim);
+                "newanim" => match parse_newanim(block) {
+                    Ok(anim) => {
+                        if let Some(mesh) = obj.meshes.last_mut() {
+                            mesh.animations.push(anim);
+                        }
                     }
-                }
+                    Err(e) => obj.warnings.push(format!(
+                        "[newanim] skipped (line {}): {e}",
+                        block.line_number
+                    )),
+                },
                 "collision_mesh" | "collisionsmesh" | "collisionmesh" | "collisioionsmesh" => {
                     if let Some(file) = block.parameters.first() {
                         obj.collision_meshes.push(file.clone());
@@ -1035,27 +1046,34 @@ fn parse_counted_list(
     Ok(())
 }
 
-fn parse_anim_block(block: &OmsiBlock) -> Result<ScoAnimation, SceneryParseError> {
-    let mut commands = Vec::new();
-    let mut current_cmd: Option<(String, Vec<String>)> = None;
+/// The variable of a `[matl_lightmap]`: its second line when that is a name (not a number, a file
+/// or a comment).
+fn light_map_variable(params: &[String]) -> Option<String> {
+    let v = params.get(1)?.trim();
+    let looks_like_name = v
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+        && !v.contains(' ')
+        && !v.contains('.');
+    looks_like_name.then(|| v.to_owned())
+}
 
-    for param in &block.parameters {
-        if param.starts_with("anim_") || param.starts_with("origin_") {
-            if let Some(prev) = current_cmd.take() {
-                commands.push(prev);
-            }
-            current_cmd = Some((param.clone(), Vec::new()));
-        } else if let Some(ref mut cmd) = current_cmd {
-            cmd.1.push(param.clone());
-        } else {
-            commands.push((param.clone(), Vec::new()));
+/// Parses a light effect block and records which mesh and LOD group it follows.
+fn add_light(obj: &mut SceneryObject, block: &OmsiBlock, lod: Option<f32>) {
+    let parsed = if block.keyword == "light_enh" {
+        parse_light_enh(block)
+    } else {
+        parse_light_enh_2(block)
+    };
+    match parsed {
+        Ok(mut light) => {
+            light.after_mesh = obj.meshes.len().checked_sub(1);
+            light.lod_threshold = lod;
+            obj.lights.push(light);
         }
+        Err(e) => obj.warnings.push(e),
     }
-    if let Some(cmd) = current_cmd {
-        commands.push(cmd);
-    }
-
-    Ok(ScoAnimation { commands })
 }
 
 fn parse_f32(s: &str, field: &'static str, line: usize) -> Result<f32, SceneryParseError> {

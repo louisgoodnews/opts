@@ -7,6 +7,7 @@
 
 mod compiler;
 mod lexer;
+mod load;
 mod strings;
 mod variables;
 mod vehicle;
@@ -18,6 +19,7 @@ pub use compiler::{
     BinOp, Block, Compiler, Diagnostic, EventKind, Names, Op, Program, Severity, StrOp, UnOp,
 };
 pub use lexer::{tokenize, Token};
+pub use load::{load_scenery_scripts, load_script_files, SceneryScriptSet, ScriptFiles};
 pub use strings::Stacks;
 pub use variables::{ConstTable, Curve, Interner, VariableStore};
 pub use vehicle::load_vehicle_scripts;
@@ -150,11 +152,51 @@ impl ScriptEngine {
 
     /// Sets a system value read by `(L.S.name)`.
     pub fn set_system(&mut self, name: &str, value: f32) {
-        let id = self.program.names.sys.intern(name) as usize;
+        let id = self.system_id(name);
+        self.set_system_id(id, value);
+    }
+
+    /// Index of system value `name` for [`Self::set_system_id`] (hosts that set the same values
+    /// every frame resolve the names once).
+    pub fn system_id(&mut self, name: &str) -> u32 {
+        self.program.names.sys.intern(name)
+    }
+
+    /// Sets the system value with index `id` (from [`Self::system_id`]).
+    pub fn set_system_id(&mut self, id: u32, value: f32) {
+        let id = id as usize;
         if self.sys.len() <= id {
             self.sys.resize(id + 1, 0.0);
         }
         self.sys[id] = value;
+    }
+
+    /// Index of float variable `name` for [`Self::get_id`] / [`Self::set_id`].
+    pub fn variable_id(&mut self, name: &str) -> u32 {
+        self.program.names.vars.intern(name)
+    }
+
+    /// Reads the float variable with index `id` (from [`Self::variable_id`]).
+    #[must_use]
+    pub fn get_id(&self, id: u32) -> f32 {
+        self.vars.float(id)
+    }
+
+    /// Writes the float variable with index `id` (from [`Self::variable_id`]).
+    pub fn set_id(&mut self, id: u32, value: f32) {
+        self.vars.set_float(id, value);
+    }
+
+    /// A fresh engine running the same compiled program with the same constants and variable
+    /// declarations, but its own (zeroed) variables, events and generator state. Hosts that
+    /// place one script set many times compile it once and fork it per instance.
+    #[must_use]
+    pub fn fork(&self) -> Self {
+        let mut e = Self::new(self.program.clone());
+        e.consts = self.consts.clone();
+        e.declared = self.declared.clone();
+        e.rng = self.rng;
+        e
     }
 
     /// Reads float variable `name` (`0` if the scripts never touched it).
@@ -191,7 +233,8 @@ impl ScriptEngine {
 
     /// Runs every `{init}` block once.
     pub fn run_init(&mut self) {
-        for b in self.program.init.clone() {
+        for i in 0..self.program.init.len() {
+            let b = self.program.init[i];
             self.run_top(b);
         }
     }
@@ -202,12 +245,17 @@ impl ScriptEngine {
         self.time += dt;
         self.set_system("timegap", dt);
         self.set_system("gettime", self.time);
-        let blocks = if ai {
-            self.program.frame_ai.clone()
+        let count = if ai {
+            self.program.frame_ai.len()
         } else {
-            self.program.frame.clone()
+            self.program.frame.len()
         };
-        for b in blocks {
+        for i in 0..count {
+            let b = if ai {
+                self.program.frame_ai[i]
+            } else {
+                self.program.frame[i]
+            };
             self.run_top(b);
         }
     }

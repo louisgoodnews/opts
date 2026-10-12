@@ -93,6 +93,7 @@
 - [Control Protocol](architecture/control-protocol.md)
 - [Hot Reload](architecture/hot-reload.md)
 - [Scenery Object Load Verification](architecture/scenery-benchmark.md)
+- [Scenery Object Runtime](architecture/scenery-runtime.md)
 
 
 ---
