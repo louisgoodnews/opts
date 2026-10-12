@@ -9,7 +9,7 @@ use opts_game::in_game::omsi_world::WorldStats;
 
 use super::capture::ViewPixels;
 use super::expected::{self, Expected, Placement};
-use super::framing::{oblique_view, top_view, Bounds, View};
+use super::framing::{oblique_view, text_views, top_view, Bounds, View};
 use super::mapgen::{self, OBJECT_HEADING_DEG, OBJECT_POS};
 use super::metrics::{self, ExpectedMasks, Matte};
 use super::preflight::{self, Preflight};
@@ -164,7 +164,7 @@ pub fn process(h: &mut Harness, entry: &ObjectEntry) -> (Record, bool) {
     let analysis = analyse(&pixels, &exp, &expect_place, &views);
     record.views = analysis.metrics.clone();
     timing.analyse = ms(t);
-    let text = text_check(h, entry, &pre, &exp, &views, &analysis, tile_place);
+    let text = text_check(h, entry, &pre, &exp, &expect_place, tile_place);
 
     let diagnostics = super::Diagnostics { stats, events };
     judge(h, &mut record, &pre, &exp, diagnostics, text);
@@ -192,6 +192,9 @@ fn judge(
     if exp.keyed.total > 0 {
         record.class.push("keyed".into());
     }
+    if record.class.iter().any(|c| c == "editor-only") && record.class.iter().any(|c| c == "tree") {
+        record.tags.info.push("I-EDITOR-TREE".into());
+    }
     if exp.lod_groups > 1 {
         record.tags.info.push("F-LOD-OVERDRAW".into());
     }
@@ -205,7 +208,7 @@ fn judge(
             has_expected,
             no_expected_reason: reason,
             views: &record.views,
-            text: text.as_ref().map(|t| (&t.mean_diff, &t.px_text)),
+            text: text.as_ref().map(|t| (&t.changed_share, &t.px_text)),
         },
     );
     record.verdict = decision.verdict;
@@ -321,35 +324,49 @@ fn best_rotation(
         .max_by(|a, b| a.1.total_cmp(&b.1))
 }
 
-/// Renders string set B and compares the text regions with set A.
-#[allow(clippy::too_many_arguments)]
+/// Looks at the text-textured triangles from both sides with string set A and again with set B
+/// and measures how much of the text region changed. Placement A must still be loaded.
 fn text_check(
     h: &mut Harness,
     entry: &ObjectEntry,
     pre: &Preflight,
     exp: &Expected,
-    views: &[View; 2],
-    a: &Analysis,
+    place: &Placement,
     tile_place: mapgen::Placement,
 ) -> Option<TextCheck> {
-    if !pre.has_text() || !exp.tris.iter().any(|t| t.flags.text) {
+    if !pre.has_text() {
         return None;
     }
+    let text_tris: Vec<[Vec3; 3]> = exp
+        .tris
+        .iter()
+        .filter(|t| t.flags.text)
+        .map(|t| t.v.map(|v| place.to_map(v)))
+        .collect();
+    let views = text_views(&text_tris)?;
+    let a = h.capture(&views).ok()?;
     let strings_b = pre.strings.strings('B');
     h.place(Some((&entry.sco, &strings_b, tile_place))).ok()?;
     let deadline = Instant::now() + h.config.object_timeout;
     if !h.settle(deadline).unwrap_or(false) {
         return None;
     }
-    let px = h.capture(views).ok()?;
+    let b = h.capture(&views).ok()?;
+    let delta = h.config.thresholds.text_delta;
     let mut check = TextCheck::default();
-    for (i, p) in px.iter().enumerate() {
-        let b = metrics::matte(&p.black, &p.white);
-        let region = &a.expected[i].text;
-        let name = format!("v{}", i + 1);
+    for (i, view) in views.iter().enumerate() {
+        let (ma, mb) = (
+            metrics::matte(&a[i].black, &a[i].white),
+            metrics::matte(&b[i].black, &b[i].white),
+        );
+        let region = metrics::expected_masks(&exp.tris, place, view).text;
+        let name = format!("t{}", i + 1);
         check.px_text.insert(name.clone(), region.count());
-        if let Some(d) = metrics::mean_colour_diff(&a.mattes[i], &b, region) {
-            check.mean_diff.insert(name, d);
+        if let Some(d) = metrics::mean_colour_diff(&ma, &mb, &region) {
+            check.mean_diff.insert(name.clone(), d);
+        }
+        if let Some(c) = metrics::changed_share(&ma, &mb, &region, delta) {
+            check.changed_share.insert(name, c);
         }
     }
     Some(check)

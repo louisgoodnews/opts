@@ -164,6 +164,23 @@ pub fn mean_colour_diff(a: &Matte, b: &Matte, region: &Mask) -> Option<f32> {
     (n > 0).then(|| (sum / n as f64) as f32)
 }
 
+/// Share of the pixels in `region` (where both renders show the object) whose colour differs by
+/// at least `delta` (0..255) in some channel.
+#[must_use]
+pub fn changed_share(a: &Matte, b: &Matte, region: &Mask, delta: u8) -> Option<f32> {
+    let (mut changed, mut n) = (0usize, 0usize);
+    for i in 0..region.px.len() {
+        if !(region.px[i] && a.mask.px[i] && b.mask.px[i]) {
+            continue;
+        }
+        n += 1;
+        if (0..3).any(|c| a.rgb[i][c].abs_diff(b.rgb[i][c]) >= delta) {
+            changed += 1;
+        }
+    }
+    (n > 0).then(|| changed as f32 / n as f32)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

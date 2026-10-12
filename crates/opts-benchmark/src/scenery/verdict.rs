@@ -28,14 +28,19 @@ pub struct Thresholds {
     pub scale: f32,
     /// `F-GEOM-PARTIAL` below this recall.
     pub recall: f32,
-    /// Recall threshold for mostly alpha-tested objects; between it and `recall` is `unknown`.
+    /// Mostly alpha-tested objects: below this recall the verdict is `unknown` (the coverage
+    /// of an alpha texture is not predictable from the mesh).
     pub recall_alpha: f32,
+    /// Mostly alpha-tested objects: `F-XFORM-OFFSET` above this centroid offset.
+    pub centroid_offset_alpha: f32,
     /// An object is mostly alpha-tested above this alpha share.
     pub alpha_share: f32,
     /// `F-TEX-MISSING` above this sentinel share.
     pub sentinel_share: f32,
-    /// `F-TEXT-NOT-SHOWN` below this mean colour difference.
-    pub text_diff: f32,
+    /// `F-TEXT-NOT-SHOWN` below this share of changed text pixels (in both close-ups).
+    pub text_changed_share: f32,
+    /// A text pixel counts as changed when a channel differs by at least this much (0..255).
+    pub text_delta: u8,
     /// The text check needs at least this many text pixels in a view.
     pub text_min_px: usize,
 }
@@ -52,10 +57,12 @@ impl Default for Thresholds {
             centroid_offset: 0.10,
             scale: 1.25,
             recall: 0.6,
-            recall_alpha: 0.2,
+            recall_alpha: 0.02,
+            centroid_offset_alpha: 0.25,
             alpha_share: 0.5,
             sentinel_share: 0.02,
-            text_diff: 0.02,
+            text_changed_share: 0.01,
+            text_delta: 40,
             text_min_px: 20,
         }
     }
@@ -108,9 +115,20 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
     let has_class = |c: &str| ev.classes.iter().any(|x| x == c);
     let rendered = ev.views.values().map(|v| v.px_rendered).max().unwrap_or(0);
     let mut unknown = None;
-    if has_class("editor-only") {
+    // A `[tree]` billboard is drawn although the file says `[onlyeditor]` (Q-SB-13).
+    if has_class("editor-only") && !has_class("tree") {
         if rendered >= t.empty_px {
             push(&mut cats, "F-EDITOR-RENDERED");
+        }
+    } else if has_class("help-arrow") {
+        // Route arrows are drawn only when OMSI's helper arrows are switched on: no rendering
+        // is required, but a missing texture still counts.
+        if ev
+            .views
+            .values()
+            .any(|v| v.sentinel_share > t.sentinel_share)
+        {
+            push(&mut cats, "F-TEX-MISSING");
         }
     } else if !ev.has_expected {
         let expect_nothing = has_class("no-geometry") || has_class("carpark-marker");
@@ -125,7 +143,12 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
     } else {
         unknown = geometry_rules(t, ev, &mut cats);
     }
-    text_rule(t, ev, &mut cats);
+    // An invisible object is explained by its missing texture; a text check needs the texture.
+    if cats.iter().any(|c| c == "F-TEX-MISSING") {
+        cats.retain(|c| c != "F-RENDER-EMPTY" && c != "F-TEXT-NOT-SHOWN");
+    } else {
+        text_rule(t, ev, &mut cats);
+    }
     let verdict = if !cats.is_empty() {
         Verdict::Fail
     } else if unknown.is_some() {
@@ -144,7 +167,7 @@ pub fn decide(t: &Thresholds, ev: &Evidence<'_>) -> Decision {
     }
 }
 
-/// The silhouette rules; returns an `unknown` reason for borderline alpha-tested recall.
+/// The silhouette rules; returns an `unknown` reason when alpha coverage cannot be verified.
 fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> Option<String> {
     let judged: Vec<&ViewMetrics> = ev
         .views
@@ -154,7 +177,11 @@ fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> 
     if judged.is_empty() {
         return Some("expected silhouette too small to judge".into());
     }
+    let alpha = |v: &ViewMetrics| v.alpha_share > t.alpha_share;
     if judged.iter().all(|v| v.px_rendered < t.empty_px) {
+        if judged.iter().all(|v| alpha(v)) {
+            return Some("alpha-tested object rendered nothing (coverage not verifiable)".into());
+        }
         push(cats, "F-RENDER-EMPTY");
         return None;
     }
@@ -169,25 +196,31 @@ fn geometry_rules(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) -> 
             push(cats, "F-TEX-MISSING");
         }
         if let Some(r) = v.recall {
-            if v.alpha_share > t.alpha_share {
+            if alpha(v) {
                 if r < t.recall_alpha {
-                    push(cats, "F-GEOM-PARTIAL");
-                } else if r < t.recall {
-                    unknown = Some("alpha-tested object with borderline recall".to_string());
+                    unknown = Some("alpha-tested object with almost no coverage".to_string());
                 }
             } else if r < t.recall {
                 push(cats, "F-GEOM-PARTIAL");
             }
         }
     }
-    let all = |f: &dyn Fn(&ViewMetrics) -> bool| judged.iter().all(|v| f(v));
-    if all(&|v| v.centroid_offset.is_some_and(|c| c > t.centroid_offset)) {
+    let offset = |v: &ViewMetrics| {
+        let limit = if alpha(v) {
+            t.centroid_offset_alpha
+        } else {
+            t.centroid_offset
+        };
+        v.centroid_offset.is_some_and(|c| c > limit)
+    };
+    if judged.iter().all(|v| offset(v)) {
         push(cats, "F-XFORM-OFFSET");
     }
-    let off_scale = |r: f32| r > t.scale || r < 1.0 / t.scale;
-    if all(&|v| {
+    // The visible part of an alpha texture may be much smaller than its quad: only growth counts.
+    let off_scale = |v: &ViewMetrics, r: f32| r > t.scale || (!alpha(v) && r < 1.0 / t.scale);
+    if judged.iter().all(|v| {
         v.size_ratio
-            .is_some_and(|s| off_scale(s[0]) || off_scale(s[1]))
+            .is_some_and(|s| off_scale(v, s[0]) || off_scale(v, s[1]))
     }) {
         push(cats, "F-XFORM-SCALE");
     }
@@ -211,7 +244,8 @@ fn text_rule(t: &Thresholds, ev: &Evidence<'_>, cats: &mut Vec<String>) {
         .filter(|(view, _)| px.get(*view).is_some_and(|n| *n >= t.text_min_px))
         .map(|(_, d)| *d)
         .collect();
-    if !judged.is_empty() && judged.iter().all(|d| *d < t.text_diff) {
+    // Shown when the text changed in at least one close-up (front or back).
+    if !judged.is_empty() && judged.iter().all(|d| *d < t.text_changed_share) {
         push(cats, "F-TEXT-NOT-SHOWN");
     }
 }

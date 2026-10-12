@@ -238,7 +238,9 @@ fn add_model(
             .and_then(|o| plain.iter().position(|p| std::ptr::eq(p, o)))
             .is_some_and(|i| overrides[i].1);
         let diffuse_alpha = model.materials.get(slot).map_or(1.0, |m| m.diffuse[3]);
-        let alpha = over.and_then(|o| o.alpha).is_some() || diffuse_alpha < 0.999;
+        // `[matl_alpha] 0` is opaque (sco.md); text textures cover only their glyphs.
+        let alpha =
+            over.and_then(|o| o.alpha).is_some_and(|a| a != 0) || diffuse_alpha < 0.999 || text;
         let mut v = [Vec3::ZERO; 3];
         let mut ok = true;
         for (k, &idx) in face.iter().enumerate() {

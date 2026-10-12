@@ -175,6 +175,40 @@ pub fn top_view(bounds: &Bounds) -> View {
     }
 }
 
+/// Two orthographic close-ups of the text-textured triangles, looking at their front and at
+/// their back along the area-weighted normal (the winding decides what is "front", and the
+/// harness does not know the loader's convention, so it looks from both sides). Things between
+/// the eye and the text beyond 1.5 radii are clipped away, so an occluding part cannot hide
+/// the text. `None` without triangles.
+#[must_use]
+pub fn text_views(tris: &[[Vec3; 3]]) -> Option<[View; 2]> {
+    let bounds = Bounds::of(tris.iter().flatten().copied())?;
+    let mut n = Vec3::ZERO;
+    for t in tris {
+        n += (t[1] - t[0]).cross(t[2] - t[0]);
+    }
+    let n = if n.length() > 1e-6 {
+        n.normalize()
+    } else {
+        Vec3::Z
+    };
+    let c = bounds.centre();
+    let r = bounds.radius();
+    let dist = r * 1.5 + 0.5;
+    let up_map = if n.z.abs() > 0.9 { Vec3::Y } else { Vec3::Z };
+    let make = |dir: Vec3| View {
+        eye: map_to_bevy(c + dir * dist),
+        target: map_to_bevy(c),
+        up: map_to_bevy(up_map),
+        projection: Projection::Orthographic {
+            extent: r * 2.2,
+            near: 0.0,
+            far: dist + r * 1.5 + 0.5,
+        },
+    };
+    Some([make(n), make(-n)])
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -195,6 +229,20 @@ mod tests {
         assert!((centre - Vec2::splat(256.0)).length() < 1e-3);
         assert!(east.x > centre.x && (east.y - centre.y).abs() < 1e-3);
         assert!(north.y < centre.y && (north.x - centre.x).abs() < 1e-3);
+    }
+
+    #[test]
+    fn text_views_look_at_both_sides_of_a_wall() {
+        let wall = [[
+            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(4.0, 0.0, 0.0),
+            Vec3::new(4.0, 0.0, 2.0),
+        ]];
+        let [a, b] = text_views(&wall).unwrap();
+        assert!((a.eye - b.eye).length() > 1.0);
+        let c = map_to_bevy(Vec3::new(2.0, 0.0, 1.0));
+        assert!(a.project(c).unwrap().distance(Vec2::splat(256.0)) < 40.0);
+        assert!(text_views(&[]).is_none());
     }
 
     #[test]

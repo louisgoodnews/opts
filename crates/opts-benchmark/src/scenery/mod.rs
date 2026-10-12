@@ -156,8 +156,13 @@ pub struct Audio {
 /// Result of the text-texture check.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct TextCheck {
-    /// Mean colour difference between string sets A and B inside the text regions, per view.
+    /// Mean colour difference between string sets A and B inside the text regions, per view
+    /// (`t1` looks at the text triangles' front, `t2` at their back).
     pub mean_diff: BTreeMap<String, f32>,
+    /// Share of text-region pixels whose colour changed by more than the threshold delta
+    /// between the two string sets, per view.
+    #[serde(default)]
+    pub changed_share: BTreeMap<String, f32>,
     /// Text-region pixels per view.
     pub px_text: BTreeMap<String, usize>,
 }
