@@ -302,7 +302,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](docs/src/roadmap/phase-9/M-0064.md)
   - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](docs/src/roadmap/phase-9/M-0065.md)
-  - [ ] WCAG 2.2 AA audit, gamepad/wheel navigation, German and English complete, moderated usability test.
+  - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
+  - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
 
 ---
 
