@@ -1,5 +1,6 @@
 //! Material Design 3 loading screen UI hierarchy and progress indicators.
 
+use bevy::color::Alpha;
 use bevy::prelude::*;
 use opts_gui::components::Button;
 use opts_gui::prelude::*;
@@ -32,7 +33,7 @@ pub fn spawn_loading_screen_ui(
                     padding: UiRect::all(Val::Px(32.0)),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.98)),
+                BackgroundColor(theme.scheme.get(ColorRole::Surface).with_alpha(0.98)),
                 GlobalZIndex(100),
             ),
             InGameEntity,
@@ -52,7 +53,7 @@ pub fn spawn_loading_screen_ui(
                 border: UiRect::bottom(Val::Px(1.0)),
                 ..default()
             },
-            BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.25)),
+            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
         ))
         .with_children(|bar| {
             bar.spawn(Node {
@@ -132,7 +133,7 @@ pub fn spawn_loading_screen_ui(
                     padding: UiRect::all(Val::Px(32.0)),
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
-                }, BorderColor::all(Color::srgba(0.3, 0.45, 0.6, 0.35)), BackgroundColor(Color::srgba(0.10, 0.13, 0.18, 0.85))),
+                }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh).with_alpha(0.85))),
             GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.85),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
         ))
@@ -146,13 +147,13 @@ pub fn spawn_loading_screen_ui(
                 })
             .with_children(|head| {
                 head.spawn((
-                    (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
+                    (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                     TypeStyleToken(TypeScale::HeadlineMedium),
                     ForegroundRole(ColorRole::OnSurface),
                 ));
 
                 head.spawn((
-                    (Text::new("Synthesizing scenario geometry, vehicle mechanics, and environmental lighting"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(Color::srgb(0.7, 0.75, 0.82))),
+                    (Text::new("Synthesizing scenario geometry, vehicle mechanics, and environmental lighting"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));
@@ -170,29 +171,32 @@ pub fn spawn_loading_screen_ui(
                 // Card 1: Map & Terminal
                 spawn_manifest_tile(
                     manifest_row,
+                    theme,
                     "SCENARIO MAP",
                     &setup.selected_map,
                     &setup.selected_entry_point,
-                    Color::srgb(0.2, 0.6, 0.9),
+                    theme.scheme.get(ColorRole::Info),
                 );
 
                 // Card 2: Vehicle & Livery
                 spawn_manifest_tile(
                     manifest_row,
+                    theme,
                     "FLEET VEHICLE",
                     &setup.selected_vehicle,
                     &setup.selected_livery,
-                    Color::srgb(0.9, 0.65, 0.2),
+                    theme.scheme.get(ColorRole::Warning),
                 );
 
                 // Card 3: Environment & Clock
                 let time_str = format!("{:02}:{:02} ({:04}-{:02}-{:02})", setup.hour, setup.minute, setup.year, setup.month, setup.day);
                 spawn_manifest_tile(
                     manifest_row,
+                    theme,
                     "ENVIRONMENT",
                     &setup.weather_preset,
                     &time_str,
-                    Color::srgb(0.3, 0.8, 0.5),
+                    theme.scheme.get(ColorRole::Success),
                 );
             });
 
@@ -215,7 +219,7 @@ pub fn spawn_loading_screen_ui(
                         })
                     .with_children(|row| {
                         row.spawn((
-                            (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.65, 0.72, 0.80))),
+                            (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
                             TypeStyleToken(TypeScale::LabelMedium),
                             ForegroundRole(ColorRole::Outline),
                         ));
@@ -237,7 +241,7 @@ pub fn spawn_loading_screen_ui(
                                 border: UiRect::all(Val::Px(1.0)),
                                 overflow: Overflow::clip(),
                                 ..default()
-                            }, BorderColor::all(Color::srgba(0.35, 0.45, 0.55, 0.5)), BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.9))),
+                            }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh).with_alpha(0.9))),
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
                     ))
                     .with_children(|track| {
@@ -264,12 +268,12 @@ pub fn spawn_loading_screen_ui(
                         border: UiRect::all(Val::Px(1.0)),
                         align_items: AlignItems::Center,
                         ..default()
-                    }, BorderColor::all(Color::srgba(0.25, 0.35, 0.45, 0.4)), BackgroundColor(Color::srgba(0.06, 0.08, 0.11, 0.95))),
+                    }, BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)), BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerLowest).with_alpha(0.95))),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
             ))
             .with_children(|ticker| {
                 ticker.spawn((
-                    (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(Color::srgb(0.75, 0.85, 0.95))),
+                    (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                     StatusTickerText,
                     TypeStyleToken(TypeScale::BodySmall),
                 ));
@@ -297,8 +301,13 @@ pub fn spawn_loading_screen_ui(
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    BorderColor::all(Color::srgba(0.4, 0.45, 0.55, 0.5)),
-                    BackgroundColor(Color::srgba(0.12, 0.15, 0.20, 0.8)),
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(
+                        theme
+                            .scheme
+                            .get(ColorRole::SurfaceContainerHigh)
+                            .with_alpha(0.8),
+                    ),
                 ),
                 M3Button::default(),
                 CancelLoadingBtn,
@@ -313,7 +322,7 @@ pub fn spawn_loading_screen_ui(
                             font_size: FontSize::Px(13.0),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.85, 0.88, 0.92)),
+                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
@@ -360,6 +369,7 @@ pub fn spawn_loading_screen_ui(
 
 fn spawn_manifest_tile(
     parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
     category: &'static str,
     title: &str,
     subtitle: &str,
@@ -377,8 +387,13 @@ fn spawn_manifest_tile(
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
                 },
-                BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.3)),
-                BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.8)),
+                BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                BackgroundColor(
+                    theme
+                        .scheme
+                        .get(ColorRole::SurfaceContainerLow)
+                        .with_alpha(0.8),
+                ),
             ),
             RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
         ))
@@ -402,7 +417,7 @@ fn spawn_manifest_tile(
                         font_size: FontSize::Px(15.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 TypeStyleToken(TypeScale::TitleSmall),
             ));
@@ -414,7 +429,7 @@ fn spawn_manifest_tile(
                         font_size: FontSize::Px(12.0),
                         ..default()
                     },
-                    TextColor(Color::srgb(0.68, 0.72, 0.78)),
+                    TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
                 TypeStyleToken(TypeScale::BodySmall),
             ));

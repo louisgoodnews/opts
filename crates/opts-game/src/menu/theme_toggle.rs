@@ -1,9 +1,12 @@
 //! Floating theme toggle button and hotkey system for runtime light/dark switching.
+//!
+//! The toggle flips between the fixed modes Dark and Light (it is the quick switch; System and
+//! Auto (clock) are chosen in the settings). Choosing it leaves the high-contrast switch alone.
 
 use bevy::prelude::*;
 use opts_gui::components::Button;
+use opts_gui::theme::{ThemeKind, ThemeMode};
 use opts_gui::{
-    interaction::events::ThemeChanged,
     theme::{color::ColorRole, theme::MaterialTheme},
     tokens::components::{ForegroundRole, RadiusToken},
 };
@@ -19,13 +22,18 @@ pub struct ThemeToggleBtn;
 #[derive(Component)]
 pub struct ThemeToggleGlyph;
 
-/// Spawns the floating circular theme toggle button in the top-right corner.
-pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Entity {
-    let glyph = if theme.scheme.is_dark() {
+/// The label of the toggle: the mode a click switches **to**.
+fn glyph_for(kind: ThemeKind) -> &'static str {
+    if kind.is_dark() {
         "Light"
     } else {
         "Dark"
-    };
+    }
+}
+
+/// Spawns the floating circular theme toggle button in the top-right corner.
+pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Entity {
+    let glyph = glyph_for(theme.kind());
 
     let btn = commands
         .spawn((
@@ -68,14 +76,12 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
     btn
 }
 
-/// System that handles theme toggle clicks or the `F2` hotkey to switch palettes at runtime.
+/// System that handles theme toggle clicks or the `F2` hotkey to switch Dark and Light at runtime.
 pub fn theme_toggle_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     interaction_query: Query<&Interaction, (Changed<Interaction>, With<ThemeToggleBtn>)>,
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
-    mut theme_events: MessageWriter<ThemeChanged>,
-    mut glyph_query: Query<&mut Text, With<ThemeToggleGlyph>>,
 ) {
     let mut should_toggle = keyboard.just_pressed(KeyCode::F2);
 
@@ -87,21 +93,32 @@ pub fn theme_toggle_system(
     }
 
     if should_toggle {
-        let new_is_dark = !theme.scheme.is_dark();
-        tracing::info!(new_is_dark = new_is_dark, "Toggling application theme");
-
-        theme_events.write(ThemeChanged {
-            is_dark: new_is_dark,
-        });
-        settings.is_dark_theme = new_is_dark;
+        let mode = if theme.kind().is_dark() {
+            ThemeMode::Light
+        } else {
+            ThemeMode::Dark
+        };
+        tracing::info!(?mode, "Toggling application theme");
+        settings.theme_mode = mode;
+        settings.high_contrast = false;
         if let Err(err) = settings.save() {
             tracing::warn!(err = ?err, "Failed to persist theme preference");
         }
+    }
+}
 
-        // Update glyph display
-        let next_glyph = if new_is_dark { "Light" } else { "Dark" };
-        for mut text in &mut glyph_query {
-            text.0 = next_glyph.to_string();
+/// Keeps the toggle's label in step with the active theme (whoever changed it).
+pub fn sync_theme_toggle_glyph(
+    theme: Res<MaterialTheme>,
+    mut glyphs: Query<&mut Text, With<ThemeToggleGlyph>>,
+) {
+    if !theme.is_changed() {
+        return;
+    }
+    let next = glyph_for(theme.kind());
+    for mut text in &mut glyphs {
+        if text.0 != next {
+            text.0 = next.to_string();
         }
     }
 }

@@ -4,6 +4,7 @@ pub mod attachments;
 pub mod camera;
 pub mod hot_reload;
 pub mod hud;
+pub mod instruments;
 pub mod loading_pipeline;
 pub mod loading_ui;
 pub mod omsi_world;
@@ -112,6 +113,17 @@ impl Plugin for InGamePlugin {
                 reactivate_menu_camera,
             )
                 .chain(),
+        );
+
+        // HUD instrument colours: day/night palette by the sky's time of day
+        app.add_systems(
+            Update,
+            (
+                instruments::update_instrument_variant,
+                instruments::sync_instrument_tokens,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
         );
 
         // Active simulation frame updates

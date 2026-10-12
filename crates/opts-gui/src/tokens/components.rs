@@ -4,6 +4,7 @@
 //! radii, and typography) updated reactively when [`MaterialTheme`] changes.
 
 use bevy::prelude::*;
+use bevy::text::{FontFeatureTag, FontFeatures, LetterSpacing, LineHeight};
 
 use crate::theme::{
     color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, theme::MaterialTheme,
@@ -120,6 +121,22 @@ pub type BackgroundSyncItem<'a> = (
     Option<&'a ElevationToken>,
 );
 
+/// The colour of a background role at an optional elevation: the role colour with the tonal tint
+/// of the level mixed in (in **both** themes).
+fn background_color(
+    theme: &MaterialTheme,
+    role: ColorRole,
+    elevation: Option<&ElevationToken>,
+) -> Color {
+    let base = theme.scheme.get(role);
+    match elevation {
+        Some(level) => level
+            .0
+            .apply_tonal_elevation(base, theme.scheme.get(ColorRole::Primary)),
+        None => base,
+    }
+}
+
 /// System that synchronizes [`BackgroundColor`] with [`BackgroundRole`].
 pub fn sync_background_roles(
     theme: Res<MaterialTheme>,
@@ -131,34 +148,54 @@ pub fn sync_background_roles(
     mut commands: Commands,
 ) {
     for (entity, role, elevation) in &uninitialized {
-        let base_color = theme.scheme.get(role.0);
-        let final_color = if let Some(elev) = elevation {
-            if theme.scheme.is_dark() {
-                let primary = theme.scheme.get(ColorRole::Primary);
-                elev.0.apply_tonal_elevation(base_color, primary)
-            } else {
-                base_color
-            }
-        } else {
-            base_color
-        };
-        commands.entity(entity).insert(BackgroundColor(final_color));
+        commands
+            .entity(entity)
+            .insert(BackgroundColor(background_color(&theme, role.0, elevation)));
     }
 
     let theme_changed = theme.is_changed();
     for (role, mut bg, elevation) in &mut query {
         if theme_changed || role.is_changed() {
-            let base_color = theme.scheme.get(role.0);
-            bg.0 = if let Some(elev) = elevation {
-                if theme.scheme.is_dark() {
-                    let primary = theme.scheme.get(ColorRole::Primary);
-                    elev.0.apply_tonal_elevation(base_color, primary)
-                } else {
-                    base_color
+            bg.0 = background_color(&theme, role.0, elevation);
+        }
+    }
+}
+
+/// Query item alias for elevation shadow synchronization.
+pub type ElevationSyncItem<'a> = (Entity, Ref<'a, ElevationToken>, Option<&'a BoxShadow>);
+
+/// Query item alias for text style synchronization.
+pub type TypeStyleSyncItem<'a> = (
+    Entity,
+    Ref<'a, TypeStyleToken>,
+    &'a mut TextFont,
+    Option<&'a mut LineHeight>,
+    Option<&'a mut LetterSpacing>,
+    Option<&'a TypeWeight>,
+);
+
+/// System that gives every raised entity (an [`ElevationToken`] above level 0) its drop
+/// shadow, and refreshes it when the level or the theme changes.
+pub fn sync_elevation_shadows(
+    theme: Res<MaterialTheme>,
+    mut commands: Commands,
+    query: Query<ElevationSyncItem, With<Node>>,
+) {
+    let theme_changed = theme.is_changed();
+    for (entity, level, current) in &query {
+        if !(theme_changed || level.is_changed()) && current.is_some() {
+            continue;
+        }
+        match level.0.shadow(&theme.scheme) {
+            Some(shadow) => {
+                if current != Some(&shadow) {
+                    commands.entity(entity).insert(shadow);
                 }
-            } else {
-                base_color
-            };
+            }
+            None if current.is_some() => {
+                commands.entity(entity).remove::<BoxShadow>();
+            }
+            None => {}
         }
     }
 }
@@ -206,16 +243,59 @@ pub fn sync_radius_tokens(mut query: Query<(Ref<RadiusToken>, &mut Node)>) {
     }
 }
 
-/// System that synchronizes [`Text`] typography font size and line height with [`TypeStyleToken`].
+/// Overrides the weight of a [`TypeStyleToken`] text (otherwise the style's own weight applies).
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypeWeight(pub u16);
+
+/// System that applies a [`TypeStyleToken`]'s full style to its text: size, line height, letter
+/// spacing, weight, family and tabular figures.
+///
+/// Text whose font is neither the default one nor the UI family (the icon font, for instance)
+/// keeps its font and only receives size, line height and tracking.
 pub fn sync_typestyle_tokens(
     theme: Res<MaterialTheme>,
-    mut query: Query<(Ref<TypeStyleToken>, &mut TextFont)>,
+    mut commands: Commands,
+    mut query: Query<TypeStyleSyncItem>,
 ) {
     let theme_changed = theme.is_changed();
-    for (token, mut font) in &mut query {
-        if theme_changed || token.is_changed() {
-            let style = theme.typography.get(token.0);
-            font.font_size = FontSize::Px(style.font_size);
+    for (entity, token, mut font, line_height, spacing, weight) in &mut query {
+        if !(theme_changed || token.is_changed()) {
+            continue;
+        }
+        let style = theme.typography.resolve(token.0);
+        font.font_size = FontSize::Px(style.font_size);
+        if crate::fonts::is_ui_font(&font.font) {
+            font.font = crate::fonts::ui_font_source();
+            font.weight = FontWeight(weight.map_or(style.weight, |w| w.0));
+            font.font_features = if style.tabular {
+                FontFeatures::builder()
+                    .enable(FontFeatureTag::TABULAR_FIGURES)
+                    .build()
+            } else {
+                FontFeatures::default()
+            };
+        }
+        let ratio = LineHeight::RelativeToFont(style.line_height_ratio());
+        match line_height {
+            Some(mut lh) => {
+                if *lh != ratio {
+                    *lh = ratio;
+                }
+            }
+            None => {
+                commands.entity(entity).insert(ratio);
+            }
+        }
+        let tracking = LetterSpacing::Px(style.tracking);
+        match spacing {
+            Some(mut ls) => {
+                if *ls != tracking {
+                    *ls = tracking;
+                }
+            }
+            None => {
+                commands.entity(entity).insert(tracking);
+            }
         }
     }
 }

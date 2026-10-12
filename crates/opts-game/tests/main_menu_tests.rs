@@ -19,7 +19,10 @@ use opts_gui::prelude::*;
 fn test_game_settings_defaults_and_toml_roundtrip() {
     let default_settings = GameSettings::default();
     assert!(default_settings.recent_map_path.is_none());
-    assert!(!default_settings.is_dark_theme);
+    assert_eq!(
+        default_settings.theme_mode,
+        opts_gui::theme::ThemeMode::Dark
+    );
 
     let serialized = toml::to_string(&default_settings).expect("Serialization failed");
     let deserialized: GameSettings = toml::from_str(&serialized).expect("Deserialization failed");
@@ -27,7 +30,7 @@ fn test_game_settings_defaults_and_toml_roundtrip() {
         default_settings.recent_map_path,
         deserialized.recent_map_path
     );
-    assert_eq!(default_settings.is_dark_theme, deserialized.is_dark_theme);
+    assert_eq!(default_settings.theme_mode, deserialized.theme_mode);
 }
 
 #[test]

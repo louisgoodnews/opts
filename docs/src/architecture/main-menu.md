@@ -65,8 +65,8 @@ RootNode (fills viewport: 100vw × 100vh)
 ```
 
 ### 3.2 Responsive Behavior & Sizing Constraints
-- **Minimum Window Resolution:** 800 × 600.
-- **Default Window Resolution:** 1280 × 800.
+- **Minimum Window Resolution:** 1024 × 640 (D-UI-04; was 800 × 600).
+- **Default Window Resolution:** 1920 × 1080.
 - **Menu Card:** Clamped to width `Val::Px(360.0)`, max width `Val::Percent(90.0)`.
 - **Button Geometry:** Width `Val::Percent(100.0)`, min height `Val::Px(44.0)` (exceeds 48px touch target guidelines when combined with 12px stack gap).
 - **Corner Radii:** Buttons use `RadiusLevel::Full` (pill shape); Card uses `RadiusLevel::Large` (16px); Theme toggle uses `RadiusLevel::Full` (circle).

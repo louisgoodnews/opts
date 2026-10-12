@@ -2,7 +2,7 @@
 //!
 //! # Architecture & Features
 //! - Uses [`opts_gui::components::notebook::NotebookBuilder`] to organize settings into tabs.
-//! - **UI Tab:** Per-widget color role customizers, theme preset selections, and dark mode toggle.
+//! - **UI Tab:** Theme mode (dark, light, system, auto by clock), high contrast, accent preset, UI scale, density and reduced motion.
 //! - **General Tab:** Displays SQLite storage connection, discovery frequency settings, and manual discovery trigger.
 //! - **Display & Audio Tab:** Resolution, window mode, and volume presets.
 //! - Persists all active selections to SQLite `settings.db` while leaving `settings.toml` as an immutable reference.
@@ -11,6 +11,7 @@ pub mod display_tab;
 pub mod general_tab;
 pub mod render_choice;
 pub mod systems;
+pub mod theme_choice;
 pub mod types;
 pub mod ui_tab;
 
@@ -27,12 +28,12 @@ pub use general_tab::spawn_general_tab;
 pub use render_choice::handle_render_choice_clicks;
 pub use systems::{
     cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu,
-    handle_color_swatch_clicks, handle_dark_mode_toggle_clicks, handle_discovery_interval_clicks,
-    handle_run_discovery_clicks, handle_theme_preset_clicks,
+    handle_discovery_interval_clicks, handle_run_discovery_clicks,
 };
+pub use theme_choice::{handle_theme_choice_clicks, handle_theme_file_clicks};
 pub use types::{
-    BackToMenuButton, ColorSwatchButton, DarkModeToggleButton, DiscoveryIntervalButton,
-    RunDiscoveryNowButton, SettingsScreenRoot, ThemePresetButton,
+    BackToMenuButton, DiscoveryIntervalButton, RunDiscoveryNowButton, SettingsScreenRoot,
+    ThemeChoice, ThemeChoiceButton, ThemeFileButton,
 };
 pub use ui_tab::spawn_ui_tab;
 
@@ -49,9 +50,8 @@ impl Plugin for SettingsScreenPlugin {
                 Update,
                 (
                     handle_back_to_menu,
-                    handle_theme_preset_clicks,
-                    handle_color_swatch_clicks,
-                    handle_dark_mode_toggle_clicks,
+                    handle_theme_choice_clicks,
+                    handle_theme_file_clicks,
                     handle_discovery_interval_clicks,
                     handle_render_choice_clicks,
                     handle_run_discovery_clicks,

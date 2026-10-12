@@ -25,7 +25,7 @@ use crate::{
         },
         focus::{focus_event_handler_system, keyboard_focus_navigation_system, FocusEvent},
     },
-    theme::{ColorScheme, MaterialTheme},
+    theme::{MaterialTheme, ThemeMode, ThemePreferences},
     tokens::{
         sync_background_roles, sync_border_roles, sync_foreground_roles, sync_radius_tokens,
         sync_typestyle_tokens,
@@ -65,8 +65,11 @@ impl Plugin for OptsGuiPlugin {
             (keyboard_focus_navigation_system, focus_event_handler_system),
         );
 
-        // Bundled fonts: DejaVu Sans as the default text font, Material Icons as `IconFont`
+        // Bundled fonts: the UI family as the default text font, Material Icons as `ICON_FONT`
         app.add_systems(Startup, crate::fonts::install_fonts);
+
+        // Theme state: preferences, modes, scale, density, layout class, motion
+        app.add_plugins(crate::theme::ThemePlugin);
 
         // Modal dialogs and the multiline text area
         app.add_plugins((
@@ -74,11 +77,16 @@ impl Plugin for OptsGuiPlugin {
             crate::components::text_area::TextAreaPlugin,
         ));
 
+        // A `ThemeChanged` message becomes a preference change before the theme is resolved
+        app.add_systems(
+            PreUpdate,
+            theme_change_listener.before(crate::theme::runtime::resolve_theme),
+        );
+
         // Register core theme and token synchronization systems
         app.add_systems(
             Update,
             (
-                theme_change_listener,
                 sync_background_roles,
                 sync_border_roles,
                 sync_foreground_roles,
@@ -124,16 +132,21 @@ impl Plugin for OptsGuiPlugin {
     }
 }
 
-/// System responding to [`ThemeChanged`] events by updating [`MaterialTheme`].
+/// System responding to [`ThemeChanged`] events: an explicit light/dark choice sets the theme
+/// mode (kept for code that still sends the event; new code changes `ThemePreferences`).
 fn theme_change_listener(
     mut events: MessageReader<ThemeChanged>,
-    mut theme: ResMut<MaterialTheme>,
+    mut prefs: ResMut<ThemePreferences>,
 ) {
     for event in events.read() {
-        theme.scheme = if event.is_dark {
-            ColorScheme::dark()
+        let mode = if event.is_dark {
+            ThemeMode::Dark
         } else {
-            ColorScheme::light()
+            ThemeMode::Light
         };
+        if prefs.mode != mode || prefs.high_contrast {
+            prefs.mode = mode;
+            prefs.high_contrast = false;
+        }
     }
 }

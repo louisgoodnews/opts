@@ -16,7 +16,7 @@ path = "src/main.rs"
 opts-core = { workspace = true }
 opts-bevy = { workspace = true }
 rfd = { workspace = true }
-opts-gui = { workspace = true }
+opts-gui = { workspace = true, features = ["serde"] }
 opts-sim = { workspace = true }
 opts-traffic = { workspace = true }
 opts-catalogue = { workspace = true }
@@ -32,6 +32,7 @@ directories = "5.0"
 toml = "0.8"
 image = { workspace = true }
 rusqlite = { workspace = true }
+chrono = { workspace = true }
 
 # Logging & Error Handling
 anyhow = { workspace = true }

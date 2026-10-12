@@ -1,6 +1,6 @@
 # 🎨 OPTS GUI Design System — Material Design 3 Specification
 
-> **Revision in progress (M-0061 part A, 2026-10-12).** This page is being brought in line with the code and with the Phase 9 decisions ([phase page](../roadmap/phase-9/README.md), [design language](../roadmap/phase-9/design-language.md)). Where this page and the Phase 9 documents disagree, **the Phase 9 documents win**. The sections below are updated batch by batch (progress: [`docs/dev/progress/ui-theme.md`](../dev/progress/ui-theme.md)); the status of each topic is in the table.
+> **Revision in progress (M-0061 part A, 2026-10-12).** This page is being brought in line with the code and with the Phase 9 decisions ([phase page](../roadmap/phase-9/README.md), [design language](../roadmap/phase-9/design-language.md)). Where this page and the Phase 9 documents disagree, **the Phase 9 documents win**. The sections below are updated batch by batch (progress: [`docs/dev/progress/ui-theme.md`](../../dev/progress/ui-theme.md)); the status of each topic is in the table.
 >
 > | Topic | Decision | Status of this page |
 > | :--- | :--- | :--- |
@@ -94,27 +94,50 @@ Material Design 3 defines 26 standard color roles across 6 semantic groups. Ever
 | | `OutlineVariant` | Subtle card dividers, decorative rules | `#C4C6D0` | `#44474E` |
 | | `Scrim` | Full-screen modal overlay backdrops | `#000000` | `#000000` |
 
-### 3.2 Typography Scale
+### 3.2 Typography
 
-Material Design 3 defines 15 baseline typography styles across 5 roles (Display, Headline, Title, Body, Label) and 3 scales (Large, Medium, Small).
+*Decision D-UI-03, taken in M-0061 after a rendered comparison.*
 
-| Type Style | Font Size | Line Height | Tracking | Weight | Intended Purpose |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `DisplayLarge` | 57 px | 64 px | -0.25 px | Regular (400) | Fullscreen intro screens, splash titles |
-| `DisplayMedium` | 45 px | 52 px | 0.00 px | Regular (400) | Primary splash headers, timetable displays |
-| `DisplaySmall` | 36 px | 44 px | 0.00 px | Regular (400) | Secondary display headers |
-| `HeadlineLarge` | 32 px | 40 px | 0.00 px | Regular (400) | Top-level screen titles (e.g. Map Browser) |
-| `HeadlineMedium` | 28 px | 36 px | 0.00 px | Regular (400) | Major section headings, bus depot titles |
-| `HeadlineSmall` | 24 px | 32 px | 0.00 px | Regular (400) | Sub-section headings, card group titles |
-| `TitleLarge` | 22 px | 28 px | 0.00 px | Regular (400) | Dialog titles, drawer headings |
-| `TitleMedium` | 16 px | 24 px | +0.15 px | Medium (500) | Card titles, list header items |
-| `TitleSmall` | 14 px | 20 px | +0.10 px | Medium (500) | Compact card titles, table headers |
-| `BodyLarge` | 16 px | 24 px | +0.50 px | Regular (400) | Long-form reading, vehicle description text |
-| `BodyMedium` | 14 px | 20 px | +0.25 px | Regular (400) | Standard UI body text, list subtitles |
-| `BodySmall` | 12 px | 16 px | +0.40 px | Regular (400) | Secondary metadata, timestamps, hints |
-| `LabelLarge` | 14 px | 20 px | +0.10 px | Medium (500) | Button labels, tabs, chip text |
-| `LabelMedium` | 12 px | 16 px | +0.50 px | Medium (500) | Secondary button labels, tooltips |
-| `LabelSmall` | 11 px | 16 px | +0.50 px | Medium (500) | Badge numbers, tiny status pills |
+#### The typeface
+
+| | |
+| :--- | :--- |
+| **UI family** | **Noto Sans** (SIL OFL 1.1): Regular 400, Medium 500, Bold 700 bundled |
+| **Fallback** | DejaVu Sans Regular behind it in the family stack, for glyphs Noto Sans lacks (arrows `→ ↔`, geometric shapes, check marks) |
+| **Monospaced companion** | JetBrains Mono Regular (SIL OFL 1.1): diagnostics and logs |
+| **Icons** | Material Icons (Apache 2.0), a separate font |
+| **Family stack** | `fonts::UI_FONT_STACK = "Noto Sans, DejaVu Sans"`; text selects the face by family and `FontWeight` |
+
+**How it was decided.** The font files had to be obtainable offline, so the candidates were the licensed fonts present on the build machine: Noto Sans (full static weight set), Inter (only Regular and SemiBold available, from the JetBrains Runtime), DejaVu Sans and Open Sans; IBM Plex Sans was not available. `crates/opts-gui/examples/font_compare.rs` draws the same specimen lines (German text, sizes 12, 13, 16, 20 px, the four weights, numerals, instrument readouts) in each candidate with the real Bevy text stack and saves a PNG; the result was inspected at 14 px:
+
+| Candidate | What the rendering showed |
+| :--- | :--- |
+| **Noto Sans** | clean at 12-16 px; Regular, Medium and Bold are distinct faces (600 resolves to Bold); digits already tabular (`1111111111` and `8888888888` align); lacks the arrow `→` (hence the fallback) |
+| Inter | the most refined small-size rendering and complete symbols, but only two weights could be had offline (400 and 600; 500 renders as 400, 700 as 600); fails the weight criterion until the full family is added |
+| DejaVu Sans | very wide, utilitarian; Medium and Regular look identical; good symbol coverage (kept as fallback) |
+| Open Sans | similar to Noto Sans but no arrows and a narrower weight set in the local copy |
+
+Noto Sans was chosen for: three distinct weights plus 600 -> Bold, OFL licence compatible with the repository, German diacritics and a path to Greek and Cyrillic (the same family covers them) and to further scripts, tabular figures by default, and good rendering under Bevy's text stack. **Limitation:** four distinct weights (400/500/600/700) were not obtainable offline; three are bundled and a 600 request renders as 700. **Upgrade path:** add the Inter or Noto Sans *variable* font from the upstream release (OFL) to `assets/fonts/`, register it in `fonts::install_fonts` and change `UI_FAMILY`/`UI_FONT_STACK`; nothing else changes, because every size, weight and figure style lives in the type scale table and `FontVariations` can select any weight. The licences are listed in [legal and licensing](../contributing/legal-licensing.md#bundled-fonts-m-0061).
+
+#### The scale
+
+Nine styles (the former 15 Material styles are deprecated aliases that resolve to them, see `TypeScale::canonical`). Sizes are logical pixels at UI scale 100 %; Bevy multiplies them by the UI scale.
+
+| Style | Size / line height | Tracking | Weight | Use |
+| :--- | :--- | :--- | :--- | :--- |
+| `Display` | 40 / 48 | -0.5 | 700 | hero titles only |
+| `Headline` | 28 / 36 | -0.25 | 700 | screen titles |
+| `TitleLarge` | 20 / 28 | 0 | 700 | dialog and section titles |
+| `TitleMedium` | 16 / 24 | +0.1 | 500 | card and list titles |
+| `BodyLarge` | 16 / 24 | +0.1 | 400 | long text |
+| `BodyMedium` | 14 / 20 | +0.15 | 400 | standard UI text |
+| `Label` | 12 / 16 | +0.4 | 500 | labels, chips, overline, hints |
+| `NumericLarge` | 48 / 56 | 0 | 700, tabular | speed readout |
+| `NumericMedium` | 32 / 40 | 0 | 700, tabular | gear and secondary readouts |
+
+`sync_typestyle_tokens` applies **all** of it to the text of a `TypeStyleToken`: size, `LineHeight` (as a multiple of the size, so it scales), `LetterSpacing`, weight, family and the `tnum` feature of tabular styles. Text with the icon font keeps its font. Old aliases: `DisplayX` -> `Display`, `HeadlineX` -> `Headline`, `TitleSmall` and `LabelLarge` -> `BodyMedium` at weight 500, `LabelMedium`, `LabelSmall` and `BodySmall` -> `Label`.
+
+**Minimum size.** No text renders below 12 logical px: the scale has no smaller style, and the interim `MinTextSize` clamp (`clamp_text_size`) raises every literal `FontSize::Px` below 12 to 12 (UI scale multiplies afterwards, so the floor is 12 px times the scale). It is a temporary guard for screens that still contain literal sizes of 10 and 11 px; it disappears when they have migrated to the scale (M-0062 and later).
 
 ### 3.3 Elevation & Shadows
 
