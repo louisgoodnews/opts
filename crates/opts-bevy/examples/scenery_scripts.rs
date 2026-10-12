@@ -110,7 +110,9 @@ fn main() {
         let mut scripts = SceneryScripts::new(set.engine, &set.string_names, &[], Vec::new());
         let (diags, live, ticks, nanos) = run(&mut scripts);
         for d in scripts.diagnostics() {
-            *messages.entry(format!("{} [{}]", d.message, entry_key)).or_default() += 1;
+            *messages
+                .entry(format!("{} [{}]", d.message, entry_key))
+                .or_default() += 1;
         }
         entry.runtime_diags += diags;
         entry.live += usize::from(live);
