@@ -107,6 +107,7 @@ fn config(dir: &Path, root: &Path, fault: Option<&str>) -> WorkerConfig {
         max_objects: 100,
         object_timeout: std::time::Duration::from_secs(60),
         keep_images: "none".into(),
+        scripts: false,
         seed_fault: fault.map(String::from),
         thresholds: opts_benchmark::scenery::verdict::Thresholds::default(),
     }

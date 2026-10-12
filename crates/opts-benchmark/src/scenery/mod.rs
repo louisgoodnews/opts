@@ -24,6 +24,9 @@ pub mod protocol;
 pub mod raster;
 pub mod report;
 pub mod script_check;
+pub mod script_judge;
+pub mod script_run;
+pub mod script_stimuli;
 pub mod supervisor;
 pub mod verdict;
 pub mod worker;
@@ -108,7 +111,7 @@ pub struct ViewMetrics {
 pub struct Tags {
     /// Keywords the object uses that OPTS does not implement for scenery.
     pub unsupported: Vec<String>,
-    /// Script-effect status (`S-NOT-RUN` until a scenery-script runtime exists).
+    /// Script-effect status (`not-checked`, `ok`, `no-channel`, `unobservable` or an `S-*` category).
     pub script: Option<String>,
     /// Phase C effect channels found by preflight.
     pub effect_channels: Vec<String>,
@@ -149,7 +152,7 @@ pub struct Audio {
     pub sound_cfg: Option<String>,
     /// Whether that file exists.
     pub resolves: Option<bool>,
-    /// Sound triggers raised by scripts (empty until Phase C).
+    /// Sound triggers raised by scripts (not collected yet: the runtime drops them).
     pub triggers: Vec<String>,
 }
 
@@ -211,6 +214,9 @@ pub struct Record {
     pub text_check: Option<TextCheck>,
     /// Loader diagnostics.
     pub diagnostics: Diagnostics,
+    /// Script-effect check (scripted objects, `--scripts`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub script_check: Option<script_check::ScriptCheck>,
     /// Audio block.
     pub audio: Audio,
     /// Timing.

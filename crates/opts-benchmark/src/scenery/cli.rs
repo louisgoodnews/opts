@@ -54,7 +54,7 @@ pub struct RunArgs {
     /// At most this many objects.
     #[arg(long)]
     pub limit: Option<usize>,
-    /// Run the script-effect check (Phase C; reports `S-NOT-RUN` until scenery scripts run).
+    /// Run the script-effect check on scripted objects (Phase C; without it they report `not-checked`).
     #[arg(long)]
     pub scripts: bool,
     /// Images to keep: `none`, `fail` (non-pass) or `all`.
@@ -185,11 +185,6 @@ impl RunArgs {
                 .clone()
                 .or_else(|| default_catalogue(&self.omsi_path))
         };
-        if self.scripts {
-            tracing::warn!(
-                "--scripts: scenery scripts do not run yet; scripted objects report S-NOT-RUN"
-            );
-        }
         RunOptions {
             omsi_root: self.omsi_path.clone(),
             out: self.out.clone().unwrap_or_else(supervisor::default_out),
@@ -206,6 +201,7 @@ impl RunArgs {
             recycle: self.recycle,
             catalogue,
             cache_dir: self.cache_dir.clone(),
+            scripts: self.scripts,
             seed_fault: self.seed_fault.clone(),
             thresholds: Thresholds::default(),
         }
@@ -229,6 +225,7 @@ pub fn worker_config(args: &WorkerArgs) -> Result<WorkerConfig> {
         max_objects: o.recycle.max(1),
         object_timeout: Duration::from_secs(o.timeout_s),
         keep_images: o.keep_images,
+        scripts: o.scripts,
         seed_fault: o.seed_fault,
         thresholds: o.thresholds,
     })

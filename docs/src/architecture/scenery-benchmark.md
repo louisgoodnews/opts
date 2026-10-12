@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Phase B harness implemented; verification, calibration and sample run in progress (see M-0054); Phase C blocked (Q-SB-11) |
+| **Status** | 🟡 Phase B harness implemented; verification, calibration and sample run in progress (see M-0054); Phase C (script-effect check) in progress, see [Script-effect check](#script-effect-check) |
 | **Milestone** | [M-0054](../roadmap/phase-5/M-0054.md) |
 | **Code** | `crates/opts-benchmark` (`opts-benchmark scenery …`, guide: [`opts-benchmark`](../../crates/opts-benchmark.md)); reuses `opts_game::in_game::omsi_world`, `opts_bevy`, `opts_core::formats::{scenery, o3d, map}` |
 | **Related** | [Hot Reload](hot-reload.md), [Control Protocol](control-protocol.md), [Text Textures](text-textures.md), [Script VM](script-vm.md), [`.sco` format](../formats/text/sco.md), [Scenery scripts](../formats/text/scenery-scripts.md) |
@@ -43,7 +43,7 @@ The benchmark checks **self-consistency**: OPTS's renderer against OPTS's own re
 - `ScoAnimation` is untyped (`crates/opts-core/src/formats/scenery/sco.rs:100`); the vehicle animation system needs a typed `ModelAnim`.
 - The scenery predefined variables (`TrafficLightPhase`, `Switch`, `NightlightA`, `Refresh_Strings`, …) are listed in `docs/src/formats/text/vehicles/predefined-variables.md:242-252`.
 
-The script-effect check ([Phase C](#script-effect-check)) is therefore specified now but will report `S-NOT-RUN` for every scripted object until a scenery-script runtime exists ([Q-SB-11](#open-questions)).
+*(Historical, before 2026-10-12.)* The script-effect check ([Phase C](#script-effect-check)) was specified first and reported `S-NOT-RUN` for every scripted object until the scenery-script runtime ([scenery-runtime.md](scenery-runtime.md)) existed ([Q-SB-11](#open-questions)).
 
 ### Screenshots (question D)
 
@@ -190,30 +190,71 @@ No false positive and no false negative; the six `unknown` cases are alpha objec
 
 ## Script-effect check
 
-Phase C. Applies to the 2,828 objects with `[script]`.
+Phase C, implemented in `script_check.rs` (types, thresholds, judgement), `script_run.rs` (scenario engine) and `script_judge.rs`. Runs for objects with `[script]` when the run was started with `--scripts`; without the flag a scripted object is tagged `script: "not-checked"`. The scenery runtime it drives is specified in [Scenery Object Runtime](scenery-runtime.md#interface-for-the-benchmark-stage-3).
 
-**Effect channels** found by preflight: `[visible]` variables, `[newanim]` variables, `[light_enh]`/`[light_enh_2]` variables, `[matl_change]`, `[alphascale]`, string variables with `Refresh_Strings`, `[CTC]`, `[particle_emitter]`/`[smoke]`, and `[sound]`.
+**Runtime setup.** The worker adds `SceneryRuntimePlugin` once. For the static views (Phase B) it keeps `SceneryRuntimeSettings.automatic = false` and `SceneryLodMode::All`, so scripted objects are captured exactly as before (nothing ticks; every LOD group is drawn, `E_all` as defined above). For the script scenarios it switches to `SceneryLodMode::Finest` (the largest-threshold group: the deterministic image regardless of framing) and drives time with `advance_scenery(world, 1/60)`.
 
-**Stimulus scenarios**, each run deterministically with a fixed `dt = 1/60` from `run_init`:
+**Effect channels** (what the script can show), found from the `.sco`:
 
-| ID | Scenario | Drives |
+| Channel | Bound variables | Judged |
 | :--- | :--- | :--- |
-| S0 | 12:00, day 180, 2 s | baseline |
-| S1 | S0 + 10 s | blinkers, time-driven animation |
-| S2 | 23:00 | `NightlightA`, lights, `[matl_change]` |
-| S3 | day 15 (winter) | `sommerhalbjahr`, `snow_visible` |
-| S4 | `TrafficLightPhase` 0 → 1 → 2 → 3 (objects with `[trafficlight]`) | signal heads |
-| S5 | each `[mouseevent]` trigger fired once | switches, doors |
+| `visible` | `[visible] <var> <value>` of each mesh | yes |
+| `anim` | the variables of each mesh's `[newanim]` steps | yes (liveness only) |
+| `light` | `[light_enh]`/`[light_enh_2]` variables | yes |
+| `lightmap` | `[matl_lightmap]` variables (`NightlightA` when none is named) | yes |
+| `text` | string variables with `Refresh_Strings`, scripts feeding `[texttexture_enh]` | **no**: `unknown` (Q-SR-06) |
+| `mouseevent` | `[mouseevent]` triggers | **no**: `unknown` (Q-SR-07; S5 is not run) |
+| `matl_change`, `alphascale`, `ctc`, `particle_emitter`, `smoke` | | **no**: not implemented by the runtime, tagged `unsupported` |
+| `sound` | | recorded only ([audio](#script-effect-check)) |
 
-For each captured state the worker reads the VM variables bound to the effect channels and checks:
-1. **Consistency.** The expected silhouette is recomputed from the variable values: `[visible]` meshes in or out (equality or non-zero rule, [Q-SB-04](#open-questions)) and `[newanim]` transforms applied. The rendered mask must match it with the static thresholds. Otherwise `S-RENDER-MISMATCH`.
-2. **Liveness.** If a bound variable changed between two states but the pixels inside the affected meshes' expected region did not (mean difference < 2 %), the result is `S-EFFECT-NOT-SHOWN`. If no bound variable changes in any scenario, the result is `unknown` / `S-INERT`: the script may need inputs the scenarios do not model.
-3. **Lights.** For every `[light_enh*]` point whose variable is non-zero in S2, the brightness in a 9 × 9 pixel window around its projection must exceed the S0 value by 10 %. Otherwise `S-LIGHT-NOT-SHOWN`.
-4. **Errors.** VM load or runtime diagnostics give `S-ERROR`; an unresolved script path gives `S-MISSING` (52 objects today, mostly `..` paths into other packs, Q-SC03).
+**Stimulus scenarios.** Every scenario starts from a **fresh placement** (the tile is rebuilt, so the engine is a new fork and `{init}` is still pending), with string set A, `SceneryVariableOverrides` empty, then the clock is set with `SceneryClock::at` and `advance_scenery` is called with `dt = 1/60`:
 
-Until the scenery-script runtime exists, every scripted object gets `S-NOT-RUN` and the channels are reported as tags.
+| ID | Scenario | States captured |
+| :--- | :--- | :--- |
+| S0 | 2026-06-29 (day 180) 12:00:00, 120 steps | `s0` (12:00:02) |
+| S1 | continues S0 for 600 more steps | `s1` (12:00:12) |
+| S2 | 2026-06-29 23:00:00, 120 steps (night: `NightlightA` 1, lights) | `s2` |
+| S3 | 2026-01-15 12:00:00, 120 steps (winter: `Month` 1, `DayOfYear` 15) | `s3` |
+| S4 | objects with `[trafficlight]`: S0's clock, then override `TrafficLightPhase` = 0, 3, 6, 9, 12 (red, red and yellow, green, yellow, off: one state of each range of [`sco.md`](../formats/text/sco.md)) with 120 steps each | `s4_0`, `s4_3`, `s4_6`, `s4_9`, `s4_12` |
+| S6 | scripts that mention `Switch`, `Signal`, `NextSignal`, `TrafficLightApproach` or `Colorscheme` (host inputs that default to 0): S0's clock, then each such variable overridden to 0, 1, 2 with 120 steps each | `s6_<variable>_<value>` |
+| S5 | `[mouseevent]` triggers: **not run** (no scenery trigger path, Q-SR-07); recorded as `unsupported: [mouseevent]` | none |
+| S0′ | S0 once more on a fresh placement | `s0b` (determinism) |
 
-**Audio is recorded, not verified.** The record's `audio` block lists the `[sound]` file, whether it resolves and parses, and the sound triggers the script raised during the scenarios. Its status is always `recorded`; it never changes the verdict.
+Each state is captured in **three views**: V1 (oblique) and V2 (top) as in a static render, and V3, a front view (8° above the horizon, square on to the object's front: signal lamps and displays face forward and sit inside visors that hide them from the oblique view; an early run flagged 110 signal heads as dead because only V1 and V2 existed). Lights are drawn by the runtime for the first of the four capture cameras (V1 over black), and a directional light is hidden outside its cone: for objects with a directional light the script scenarios therefore replace V1 by a view along the first such light's shining direction (at least 3° above the horizon); a light that is still hidden is not required to show.
+
+**Probes.** At each state the worker records, from the object's runtime: the values of all bound variables (`SceneryScripts::with_engine`), each animated mesh's shown values (`SceneryMeshRule.anim.shown`), each light's level and visibility, each light map's applied brightness, and the script diagnostics.
+
+**Checks**, per object, over the states:
+
+1. **Consistency, `S-RENDER-MISMATCH`.** The expected silhouette of a state is recomputed from the variable values: the triangles of meshes whose `[visible]` rule holds (equality, |v − value| < 10⁻³, [Q-SB-04](#open-questions) settled by the runtime page), top LOD group only, animated meshes left out (their position is not predicted), light-sprite discs removed from the rendered mask. Two tests per view (all three views): **leak** (a mesh the rule hides covers ≥ 50 % of its own area, minus the area covered by visible meshes, in the rendered mask, with ≥ 30 such pixels) and **missing** (the solid expected area of the meshes *without* a `[visible]` rule and without animation has `recall < 0.6`, as in the static check; skipped for mostly alpha objects; rule-driven meshes are left out because the expected masks have no depth test and such a mesh may sit behind another). `precision` (< 0.90) is added only for objects without `[newanim]`. The object fails when either view fails in any state.
+2. **Liveness, `S-EFFECT-NOT-SHOWN`.** A *stimulus* is a channel element (a `[visible]` mesh, an animated mesh, a light map) whose bound value takes at least two distinct values over the captured states: the `[visible]` flag (from the script variable), the animation values the runtime shows (`SceneryMeshRule.anim.shown`; the variables times their factors when the runtime shows none), the light map's applied brightness (steps of 0.05). One representative state per distinct value is compared with the first. A stimulus is *live* when enough pixels of the element's region changed (a pixel changes when only one render has the object there, or a channel differs by ≥ 16) in any view: for `visible` and `anim` at least `live_area_frac` of the mesh's own expected area (and `live_min_px` pixels) inside the mesh's mask (`visible`) or its rest pose dilated by 12 pixels (`anim`); for `lightmap` `live_changed_share` of the whole expected silhouette. Elements whose region has fewer than 10 pixels in both views cannot be judged and are not counted. The object fails when it has judged stimuli and fewer than half are live.
+3. **Lights, `S-LIGHT-NOT-SHOWN`.** A light's expected level is `clamp(variable × factor, 0, 1)` from the script variable. A light that is on in some state and off in another is a stimulus; the on state is judged where the runtime applied a level above 0.01 *and* shows the sprite (the runtime hides it outside its cone and beyond 1,500 m, as seen from the first capture camera; such lights cannot be judged and count as unobservable). A light whose variable says on but whose applied level stays 0 is dead. A shown light must make the mean brightness (largest channel) of the 9 × 9 window around its projection exceed the off state's by 10 % (at least 8 of 255) in any view. The object fails when it has light stimuli and fewer than half are live.
+4. **Inertness, `S-INERT`.** The object has judgeable channels but no stimulus in any scenario (nothing the scenarios change is bound): verdict `unknown`, not a failure; the script may need inputs the scenarios do not model. An object with no judgeable channel (text or sound only) reports `unknown` and `script: "no-channel"`. An `[onlyeditor]` object has no spawned instance (the loader skips it): `script: "editor-only"`, nothing is run.
+5. **Errors.** A script diagnostic of severity error (compile or run time) is `S-ERROR` (the 324 missing bus-stop timetable macros and the malformed `peopleHC.osc` are expected members); a "file not found" for a script, varlist or constfile is `S-MISSING`; a scripted object that spawned without an engine is `S-NOT-RUN`.
+6. **Determinism, `S-NONDETERMINISTIC`.** State `s0b` must equal `s0`: the raw captures differ in at most 0.1 % of the pixels. Scripts that use a random generator are expected to be seeded by the engine; a mismatch is a harness or runtime bug, not a script bug.
+
+**Verdict.** `S-*` failures make the object `fail` and add their category; `S-INERT` turns a `pass` into `unknown` (reason recorded); a static `fail` stays and keeps its `F-*` categories. Objects whose static check could not render (no expected silhouette) still run the variable-level checks (4, 5) and skip the pixel checks. The record's `script_check` block holds the status, the states captured, the stimuli and which were live, the changed variables and the diagnostics; `tags.script` is `ok`, `not-checked`, `no-channel` or the category.
+
+**Audio is recorded, not verified.** The record's `audio` block lists the `[sound]` file and whether it resolves; its status is always `recorded`; it never changes the verdict. Sound triggers raised by scripts are not collected yet (the runtime drops them, [scenery-runtime.md](scenery-runtime.md)); `triggers` stays empty.
+
+**Seeded fault** (`--seed-fault script-effect-off`, used by the test): after placement the harness detaches the object's mesh rules, lights and light maps from the runtime, so the script still runs and its variables change but nothing is applied. The check must report `S-EFFECT-NOT-SHOWN` (the stage brief called this "S-NO-EFFECT"; the category keeps the name used throughout this page).
+
+**Thresholds** (the constants live in `script_check::ScriptThresholds` and are written into `run.json`; first values, calibrated in [Calibration of the script check](#calibration-of-the-script-check)):
+
+| Constant | Value |
+| :--- | ---: |
+| steps `dt` | 1/60 s |
+| `live_area_frac` / `live_min_px` (`visible`, `anim`) | 0.15 / 4 |
+| `live_changed_share` (`lightmap`) | 0.02 |
+| `delta` (pixel changed) / `min_region_px` | 16 / 10 |
+| `live_fraction` (stimuli that must be live) | 0.5 |
+| `leak_share` / `leak_min_px` | 0.5 / 30 |
+| `light_gain` / `light_gain_abs` | 0.10 / 8 |
+| `det_max_diff` | 0.001 |
+
+### Calibration of the script check
+
+*Pending (C4).*
 
 ## Report format
 
@@ -347,14 +388,14 @@ Most common scripts by file name (all packs together, objects using them): `ampe
 | Q-SB-01 | Does a Bevy 0.20 app with `primary_window: None` and only image render targets run on this Wayland workstation and on a GPU-less CI runner (software Vulkan)? If not, a hidden 64 × 64 window is the fallback. | ✅ **Workstation: yes, no window at all** (verified 2026-10-11 with `crates/opts-benchmark/examples/offscreen_probe.rs`, also with `DISPLAY` and `WAYLAND_DISPLAY` unset; NVIDIA RTX 3060, Vulkan): `DefaultPlugins` minus `WinitPlugin`, `primary_window: None`, `ExitCondition::DontExit`, `synchronous_pipeline_compilation`, app driven by `SubApps::update` (pattern of Bevy's `externally_driven_headless_renderer` example). ✅ Re-verified 2026-10-12 through the harness itself (`scenery run` over a building, a tree, an editor-only anchor and a carpark marker with `DISPLAY` and `WAYLAND_DISPLAY` unset: all pass, no window). 🟡 **GPU-less CI: not verified** — no software Vulkan driver (lavapipe) is installed here, and `WGPU_BACKEND=gl` panics because the build has no GL backend. CI needs `mesa-vulkan-drivers` (lavapipe). |
 | Q-SB-02 | Final thresholds; needs a hand-labelled sample of 200 objects. | ✅ [Calibration](#calibration) (2026-10-12): 145 labels on a 265-object set; geometric thresholds are defaults, not calibrated (no object triggered them) |
 | Q-SB-03 | `[LOD]` semantics (Q-SCO-003) decide which meshes belong in `E_base`. | 🟡 |
-| Q-SB-04 | `[visible]`: equality with the flag (vehicle code, `vehicle_anim.rs:178`) or non-zero (`sco.md:179`)? | 🟡 Phase C |
+| Q-SB-04 | `[visible]`: equality with the flag (vehicle code, `vehicle_anim.rs:178`) or non-zero (`sco.md:179`)? | ✅ Equality ([scenery-runtime.md](scenery-runtime.md#visibility-visible-and-animation-newanim): 3,770 `[visible]` lines, values `0`, `2`, `-1`, … occur); the script check uses it |
 | Q-SB-05 | Which `[visible]` meshes OMSI shows when no script runs (variables at 0)? Affects `E_base`. | 🟡 |
 | Q-SB-06 | Are standalone results meaningful for spline-dependent objects (2,131 attachment-only, 4,020 `[splinehelper]`, 7,859 `[surface]`)? A later version may place them on a generated spline. | 🟡 |
 | Q-SB-07 | Script paths with `..` across packs (Q-SC03): 52 objects unresolved. | 🟢 |
 | Q-SB-08 | Read-only, concurrent use of the SQLite catalogue by several workers; settings isolation (the game writes `recent_map_path` on shutdown). | ✅ `Catalogue::open_read_only` (no migration, no writes) in every worker; isolated `XDG_CONFIG_HOME`/`XDG_DATA_HOME` per worker; the worker never loads `GameSettings`. 3 workers ran concurrently without errors. |
 | Q-SB-09 | Asset-cache and GPU memory growth over thousands of tile rebuilds; is 2,000 objects per worker the right recycle interval? | 🟡 Phase B |
 | Q-SB-10 | Self-consistency only: fidelity to OMSI needs a human or OMSI-side comparison, which cannot be automated here (no OMSI screenshots in the repository). | 🟢 Known limitation |
-| Q-SB-11 | Who builds the scenery-script runtime (VM per placed object, scenery variables, typed `[newanim]`, `[visible]`, `[light_enh*]`)? Reopen the scenery half of M-0026, or a new milestone? Project-lead decision. | 🔴 Blocks Phase C |
+| Q-SB-11 | Who builds the scenery-script runtime (VM per placed object, scenery variables, typed `[newanim]`, `[visible]`, `[light_enh*]`)? Reopen the scenery half of M-0026, or a new milestone? Project-lead decision. | ✅ Built: [scenery-runtime.md](scenery-runtime.md) (branch `agent/scenery-runtime`); Phase C implemented on top of it |
 | Q-SB-12 | Is the confident decoder deterministic across runs (random restarts)? Cached results make reruns stable; cold runs may differ. | 🟢 |
 | Q-SB-13 | Does OMSI draw a `[tree]` billboard whose `.sco` also says `[onlyeditor]` (79 of the 1,018-object sample, e.g. bushes with a helper `[mesh]`)? OPTS draws it; the harness accepts that and tags `I-EDITOR-TREE`. | 🟡 |
 

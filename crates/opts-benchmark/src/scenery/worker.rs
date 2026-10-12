@@ -17,7 +17,7 @@ use bevy::render::renderer::RenderDevice;
 use bevy::render::RenderPlugin;
 use bevy::window::ExitCondition;
 use bevy::winit::WinitPlugin;
-use opts_bevy::OmsiInstall;
+use opts_bevy::{OmsiInstall, SceneryClock, SceneryLodMode, SceneryRuntimeSettings};
 use opts_game::in_game::omsi_world::{
     begin_world_load, load_next_tile, OmsiSessionConfig, WorldLoadJob, WorldStats,
 };
@@ -48,7 +48,10 @@ pub struct WorkerConfig {
     pub object_timeout: Duration,
     /// Which images to keep: `none`, `fail` (non-pass) or `all`.
     pub keep_images: String,
-    /// Deliberate fault for the seeded-fault tests (`heading-mirror`, `offset-10m`, `scale-2x`).
+    /// Run the script-effect check on scripted objects.
+    pub scripts: bool,
+    /// Deliberate fault for the seeded-fault tests (`heading-mirror`, `offset-10m`, `scale-2x`,
+    /// `script-effect-off`).
     pub seed_fault: Option<String>,
     /// Decision thresholds.
     pub thresholds: super::verdict::Thresholds,
@@ -93,6 +96,15 @@ impl Harness {
                 .disable::<bevy::audio::AudioPlugin>()
                 .disable::<bevy::gilrs::GilrsPlugin>(),
         );
+        // The scenery runtime is driven by hand (`advance_scenery`); the static views see every
+        // LOD group, as before the runtime existed.
+        app.add_plugins(opts_bevy::SceneryRuntimePlugin)
+            .insert_resource(SceneryRuntimeSettings {
+                automatic: false,
+                ..default()
+            })
+            .insert_resource(SceneryLodMode::All)
+            .insert_resource(SceneryClock::at(2026, 6, 29, 12.0 * 3600.0));
         app.finish();
         app.cleanup();
         let mut apps = std::mem::take(app.sub_apps_mut());
@@ -137,6 +149,11 @@ impl Harness {
         }
         h.baseline = Baseline::from_events(&h.drain_events());
         Ok(h)
+    }
+
+    /// The main world (scenario engine and probes).
+    pub fn world_mut(&mut self) -> &mut World {
+        self.apps.main.world_mut()
     }
 
     /// Runs one frame and waits for the GPU.
@@ -227,11 +244,37 @@ impl Harness {
         Ok(false)
     }
 
+    /// Renders one frame through the capture cameras without reading it back. Entities that
+    /// were hidden until now (light sprites) have their meshes and materials prepared for the
+    /// GPU only once they are drawn, which takes one frame; a capture right after they appear
+    /// would miss them.
+    pub fn warm_up(&mut self, views: &[View]) {
+        let world = self.apps.main.world_mut();
+        self.rig.aim(world, views);
+        self.rig.set_active(world, true);
+        self.update();
+        let world = self.apps.main.world_mut();
+        self.rig.set_active(world, false);
+    }
+
     /// Renders both views over black and white and reads them back.
     ///
     /// # Errors
     /// The readbacks do not arrive within a few frames.
     pub fn capture(&mut self, views: &[View; 2]) -> Result<[ViewPixels; 2]> {
+        let [a, b]: [ViewPixels; 2] = self
+            .capture_views(views)?
+            .try_into()
+            .map_err(|_| anyhow!("unexpected number of views"))?;
+        Ok([a, b])
+    }
+
+    /// Renders up to [`super::capture::MAX_VIEWS`] views over black and white and reads them
+    /// back.
+    ///
+    /// # Errors
+    /// The readbacks do not arrive within a few frames.
+    pub fn capture_views(&mut self, views: &[View]) -> Result<Vec<ViewPixels>> {
         let world = self.apps.main.world_mut();
         self.rig.aim(world, views);
         let readers = self.rig.request(world);
