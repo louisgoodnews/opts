@@ -6,7 +6,7 @@
 //! summary on stderr.
 use std::path::Path;
 
-use opts_core::formats::map::{MapTerrain, MapTile};
+use opts_core::formats::map::{MapManifest, MapTerrain, MapTile};
 
 fn main() {
     let root = std::path::PathBuf::from(std::env::args().nth(1).expect("omsi root"));
@@ -18,6 +18,14 @@ fn main() {
     maps.sort_by_key(std::fs::DirEntry::file_name);
     for m in maps {
         let mname = m.file_name().to_string_lossy().into_owned();
+        match std::fs::read(m.path().join("global.cfg")).map_err(|e| e.to_string()).and_then(|b| MapManifest::parse(&b).map_err(|e| e.to_string())) {
+            Err(err) => println!("{mname}\tglobal.cfg\tGLOBAL_PARSE_ERROR\t{err}"),
+            Ok(g) => {
+                if g.entry_points.is_empty() {
+                    println!("{mname}\tglobal.cfg\tNO_ENTRYPOINTS\t");
+                }
+            }
+        }
         let Ok(rd) = std::fs::read_dir(m.path()) else {
             continue;
         };
