@@ -160,6 +160,7 @@ impl Plugin for InGamePlugin {
             (
                 handle_loading_interactions,
                 omsi_world::update_debug_overlay,
+                omsi_world::update_wheel_vars_overlay,
                 handle_hud_interactions,
                 escape_to_menu_in_game,
             )

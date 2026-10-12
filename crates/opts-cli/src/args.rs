@@ -62,6 +62,11 @@ pub struct CliArgs {
     #[arg(long)]
     pub script_drive: bool,
 
+    /// Show an overlay with the wheel animation variables (`wheel_rotation_<n>_L/R`,
+    /// `wheel_rotationspeed_<n>_l/r`) of every axle of the player's vehicle and its trailers.
+    #[arg(long)]
+    pub debug_wheel_vars: bool,
+
     /// Synchronise frames with the display (V-Sync). By default the frame rate is not capped: it
     /// is limited by the hardware only.
     #[arg(long)]
@@ -151,6 +156,7 @@ impl Default for CliArgs {
             vsync: false,
             physics_hz: 64.0,
             script_drive: false,
+            debug_wheel_vars: false,
             window_size: "1920x1080".to_string(),
             headless: false,
             cli_port: None,
