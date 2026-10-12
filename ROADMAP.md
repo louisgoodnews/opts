@@ -300,7 +300,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
   - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](docs/src/roadmap/phase-9/M-0064.md)
-  - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
+  - [x] HUD from registered widgets and vehicle-type profiles (RON), widget switches in Settings, alerts, 1.5 s camera label, Details dialog, developer panel off by default (2026-10-12, `agent/ui-hud`).
+  - [ ] Help overlay generated from the bindings; *Pause → Vehicle*; HUD review sign-off.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](docs/src/roadmap/phase-9/M-0065.md)
   - [ ] WCAG 2.2 AA audit, gamepad/wheel navigation, German and English complete, moderated usability test.
 

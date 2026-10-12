@@ -73,6 +73,7 @@ Esc never quits and never leaves a drive without the pause overlay and one confi
 | `pause/` | pause overlay, leave confirmation, `SessionStats` |
 | `session_summary/` | the end-of-drive card on Home |
 | `help/` | Help page, controls table, About, overlay in a drive, F1 |
+| `hud/` | HUD registry: widgets, RON profiles per vehicle kind, slots, alerts, camera label, Details dialog ([design](../src/architecture/hud-registry.md)) |
 | `menu/` | what is left of the old menu: `glass` tint and `background` (map picture with its computed scrim) |
 | `isolation.rs` | `isolate_user_dirs()` keeps tests out of `~/.config/opts` |
 

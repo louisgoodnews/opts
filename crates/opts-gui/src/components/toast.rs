@@ -53,6 +53,15 @@ impl ToastSeverity {
             Self::Error => (ColorRole::ErrorContainer, ColorRole::OnErrorContainer),
         }
     }
+
+    /// Colour of the action label: the accent of the inverse surface for information, the text
+    /// colour of the container otherwise (the inverse accent is unreadable on those).
+    fn action_role(self) -> ColorRole {
+        match self {
+            Self::Info => ColorRole::InversePrimary,
+            Self::Warning | Self::Error => self.roles().1,
+        }
+    }
 }
 
 /// Spawn order of a toast (stacking order; the newest has the highest number).
@@ -220,7 +229,7 @@ impl ToastBuilder {
                             },
                             BackgroundColor(Color::NONE),
                         ),
-                        StateLayerRole(ColorRole::InverseOnSurface),
+                        StateLayerRole(self.severity.roles().1),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
@@ -233,7 +242,7 @@ impl ToastBuilder {
                                 },
                                 TextColor::default(),
                             ),
-                            ForegroundRole(ColorRole::InversePrimary),
+                            ForegroundRole(self.severity.action_role()),
                             TypeStyleToken(TypeScale::BodyMedium),
                         ));
                     });
@@ -314,7 +323,7 @@ impl ToastBuilder {
                             },
                             BackgroundColor(Color::NONE),
                         ),
-                        StateLayerRole(ColorRole::InverseOnSurface),
+                        StateLayerRole(self.severity.roles().1),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
@@ -327,7 +336,7 @@ impl ToastBuilder {
                                 },
                                 TextColor::default(),
                             ),
-                            ForegroundRole(ColorRole::InversePrimary),
+                            ForegroundRole(self.severity.action_role()),
                             TypeStyleToken(TypeScale::BodyMedium),
                         ));
                     });

@@ -40,6 +40,7 @@ impl Plugin for GameControlPlugin {
         registry.register("ui.navigate", ui_navigate);
         registry.register("menu.do", menu_do);
         registry.register("menu.state", menu_state);
+        crate::hud::protocol::register(&mut registry);
         app.add_systems(Update, allow_session_reads);
     }
 }

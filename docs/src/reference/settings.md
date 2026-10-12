@@ -46,6 +46,13 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `interface.language` | Language | `en`, `de` | `en` | at once | available | The language of menus and messages. Content from OMSI keeps its own language. |
 | `interface.units` | Units | `kmh`, `mph` | `kmh` | at once | available | Speeds are shown in kilometres or miles per hour. |
 | `interface.hud_hints` | Show hints | on / off | `true` | at once | available | Short tips next to controls and in the cab. |
+| `hud.speed` | Speed | on / off | `true` | at once | available | Show the speed readout. |
+| `hud.gear` | Gear | on / off | `true` | at once | available | Show the selected gear. |
+| `hud.rpm` | Engine speed | on / off | `true` | at once | available | Show the engine speed when the simulation provides it. |
+| `hud.parking_brake` | Parking brake lamp | on / off | `true` | at once | available | Show the parking brake state. |
+| `hud.session_info` | Map and entry point | on / off | `true` | at once | available | Show where the drive takes place; it fades after a few seconds. |
+| `hud.clock` | Clock and weather | on / off | `true` | at once | available | Show the session clock and the weather; it fades after a few seconds. |
+| `hud.camera_label` | Camera name | on / off | `true` | at once | available | Show the name of the camera for a moment after you change it. |
 
 ## Gameplay
 

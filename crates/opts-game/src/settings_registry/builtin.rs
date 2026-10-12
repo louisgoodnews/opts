@@ -484,11 +484,36 @@ fn content() -> Vec<D> {
     ]
 }
 
+/// The on/off switches of the HUD widgets (`hud.<name>`), one per widget of the HUD registry
+/// (`crate::hud::widget::WIDGETS`); the hints widget uses the older `interface.hud_hints`.
+fn hud() -> Vec<D> {
+    crate::hud::widget::WIDGETS
+        .iter()
+        .filter_map(|w| w.switch.as_ref())
+        .filter(|sw| sw.key.starts_with("hud."))
+        .enumerate()
+        .map(|(i, sw)| {
+            D::new(
+                sw.key,
+                K::Bool,
+                if sw.default_on { "true" } else { "false" },
+                C::Interface,
+                100 + u16::try_from(i).unwrap_or(0) * 5,
+                sw.label_key,
+                sw.description_key,
+            )
+            .keywords(&["hud", "instrument", "display", "widget"])
+            .since("0.2")
+        })
+        .collect()
+}
+
 /// Every built-in descriptor.
 #[must_use]
 pub fn all() -> Vec<D> {
     let mut v = graphics();
     v.extend(interface());
+    v.extend(hud());
     v.extend(content());
     v
 }

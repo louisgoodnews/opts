@@ -30,18 +30,43 @@ pub enum InstrumentInk {
     Alarm,
 }
 
+/// Opacity factor of an instrument text or panel (the fade of the status bar, hints and labels).
+/// Absent means fully opaque.
+#[derive(Component, Debug, Clone, Copy, PartialEq)]
+pub struct InstrumentFade(pub f32);
+
+fn faded(color: Color, fade: Option<&Ref<InstrumentFade>>) -> Color {
+    match fade {
+        Some(f) if f.0 < 1.0 => {
+            let a = color.alpha();
+            color.with_alpha(a * f.0.clamp(0.0, 1.0))
+        }
+        _ => color,
+    }
+}
+
 /// Paints instrument panels and texts from the active palette.
+#[allow(clippy::type_complexity)]
 pub fn sync_instrument_tokens(
     theme: Res<MaterialTheme>,
     variant: Res<InstrumentVariant>,
-    mut texts: Query<(Ref<InstrumentInk>, &mut TextColor)>,
-    mut panels: Query<(Ref<InstrumentPanel>, &mut BackgroundColor, &mut BorderColor)>,
+    mut texts: Query<(
+        Ref<InstrumentInk>,
+        Option<Ref<InstrumentFade>>,
+        &mut TextColor,
+    )>,
+    mut panels: Query<(
+        Ref<InstrumentPanel>,
+        Option<Ref<InstrumentFade>>,
+        &mut BackgroundColor,
+        &mut BorderColor,
+    )>,
 ) {
     let changed = theme.is_changed() || variant.is_changed();
     let palette = theme.instrument(*variant);
-    for (ink, mut color) in &mut texts {
-        if changed || ink.is_changed() {
-            color.0 = match *ink {
+    for (ink, fade, mut color) in &mut texts {
+        if changed || ink.is_changed() || fade.as_ref().is_some_and(Ref::is_changed) {
+            let base = match *ink {
                 InstrumentInk::Text => palette.text,
                 InstrumentInk::TextDim => palette.text_dim,
                 InstrumentInk::Needle => palette.needle,
@@ -49,12 +74,13 @@ pub fn sync_instrument_tokens(
                 InstrumentInk::Warning => palette.warning,
                 InstrumentInk::Alarm => palette.alarm,
             };
+            color.0 = faded(base, fade.as_ref());
         }
     }
-    for (panel, mut bg, mut border) in &mut panels {
-        if changed || panel.is_added() {
-            bg.0 = palette.panel;
-            *border = BorderColor::all(palette.panel_border);
+    for (panel, fade, mut bg, mut border) in &mut panels {
+        if changed || panel.is_added() || fade.as_ref().is_some_and(Ref::is_changed) {
+            bg.0 = faded(palette.panel, fade.as_ref());
+            *border = BorderColor::all(faded(palette.panel_border, fade.as_ref()));
         }
     }
 }

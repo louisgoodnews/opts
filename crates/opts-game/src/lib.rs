@@ -8,6 +8,7 @@ pub mod drive_history;
 pub mod first_run;
 pub mod help;
 pub mod home;
+pub mod hud;
 pub mod in_game;
 pub mod isolation;
 pub mod look;
@@ -80,6 +81,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)
             .add_plugins(pause::PausePlugin)
+            .add_plugins(hud::HudPlugin)
             .add_plugins(session_summary::SessionSummaryPlugin)
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)

@@ -11,43 +11,70 @@ use super::{PositionReadout, WorldPos, WorldStats};
 #[derive(Component)]
 pub struct DebugOverlayText;
 
-/// Spawns the (initially visible) diagnostic overlay.
+/// Spawns the developer panel (hidden unless *Settings → Advanced → Developer tools* is on). It
+/// uses the instrument tokens like the rest of the HUD.
 pub fn spawn_debug_overlay(commands: &mut Commands) {
     commands.spawn((
         (
             Text::new(""),
             TextFont {
-                font_size: FontSize::Px(14.0),
+                font_size: FontSize::Px(13.0),
                 ..default()
             },
-            TextColor(Color::srgb(0.85, 1.0, 0.85)),
+            TextColor::default(),
             Node {
                 position_type: PositionType::Absolute,
-                top: Val::Px(70.0),
-                left: Val::Px(12.0),
+                top: Val::Px(96.0),
+                left: Val::Px(20.0),
+                padding: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
+            BackgroundColor(Color::NONE),
+            BorderColor::all(Color::NONE),
+            Visibility::Hidden,
         ),
+        crate::in_game::instruments::InstrumentPanel,
+        crate::in_game::instruments::InstrumentInk::Text,
         DebugOverlayText,
         InGameEntity,
     ));
 }
 
-/// Refreshes the overlay text; F3 toggles visibility.
-pub fn update_debug_overlay(
+/// F10 switches the developer panel by changing its setting (so the page and the key agree and
+/// the choice is remembered).
+pub fn toggle_developer_panel(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut stats: ResMut<WorldStats>,
+    mut api: crate::settings_registry::SettingsApi,
+) {
+    if !keyboard.just_pressed(KeyCode::F10) {
+        return;
+    }
+    let on = api.text("advanced.developer_panel") == "true";
+    let next = if on { "false" } else { "true" };
+    if let Err(e) = api.change(
+        "advanced.developer_panel",
+        Some(next),
+        crate::settings_registry::ChangeSource::Page,
+        true,
+    ) {
+        tracing::warn!("developer panel setting: {e}");
+    }
+}
+
+/// Refreshes the developer panel text while it is visible.
+pub fn update_debug_overlay(
+    stats: Res<WorldStats>,
     mut query: Query<(&mut Text, &mut Visibility), With<DebugOverlayText>>,
 ) {
-    if keyboard.just_pressed(KeyCode::F10) {
-        stats.overlay_visible = !stats.overlay_visible;
-    }
     for (mut text, mut vis) in &mut query {
         *vis = if stats.overlay_visible {
             Visibility::Visible
         } else {
             Visibility::Hidden
         };
+        if !stats.overlay_visible {
+            continue;
+        }
         text.0 = format!(
             "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {} | load problems: {}\nscrambled meshes: decoded {}, plain twins {}, decoding {}",
             stats.map_name,

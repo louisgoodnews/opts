@@ -19,7 +19,7 @@ use bevy::prelude::*;
 
 use crate::app_state::AppState;
 use crate::in_game::camera::{deactivate_menu_camera, reactivate_menu_camera};
-use crate::in_game::hud::{handle_camera_shortcuts, handle_hud_interactions, update_in_game_hud};
+use crate::in_game::hud::handle_hud_interactions;
 use crate::in_game::loading_pipeline::{handle_loading_interactions, update_loading_progress};
 use crate::in_game::loading_ui::spawn_loading_screen_ui;
 use crate::new_game_screen::types::NewGameSetup;
@@ -60,7 +60,8 @@ impl Plugin for InGamePlugin {
             .init_resource::<opts_bevy::CameraState>()
             .init_resource::<opts_bevy::CameraAvailability>()
             .insert_resource(omsi_world::WorldStats {
-                overlay_visible: true,
+                // The developer panel is off unless the setting says otherwise.
+                overlay_visible: false,
                 ..default()
             });
 
@@ -132,7 +133,6 @@ impl Plugin for InGamePlugin {
             (
                 update_loading_progress,
                 deactivate_menu_camera,
-                update_in_game_hud,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
                 toggle_pause,
@@ -165,9 +165,17 @@ impl Plugin for InGamePlugin {
                     .run_if(resource_exists::<opts_bevy::SceneryClock>)
                     .before(opts_bevy::scenery_runtime::SceneryRuntimeSet),
                 screenshot::capture_screenshot_when_ready,
-                handle_camera_shortcuts,
             )
                 .run_if(in_state(AppState::InGame)),
+        );
+
+        // F10 changes the developer panel setting (needs the settings registry).
+        app.add_systems(
+            Update,
+            omsi_world::toggle_developer_panel
+                .run_if(in_state(AppState::InGame))
+                .run_if(opts_bevy::reporting::not_modal_active)
+                .run_if(resource_exists::<crate::settings_registry::SettingsRegistry>),
         );
 
         // Input-driven systems stand still while the report modal is open.
