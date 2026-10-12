@@ -26,7 +26,7 @@ Runs of the game/tools: `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d)
 | B3 TextField | done |
 | B4 UI ids and `ui.*` protocol | done |
 | B5 NotAvailableYet + registry | done |
-| B6 Localisation scaffold | todo |
+| B6 Localisation scaffold | done |
 | B7 CI rules, gallery, docs | todo |
 
 ## Design decisions (all batches)
@@ -82,3 +82,11 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 - Verified live (screenshot `widgets/shots/menu_not_yet.png`): red label under the dimmed button, `ui.click` answers 1001 with the reason.
 - Fix found while verifying: `InputFocusVisible` started `false` (Bevy default) so no focus ring showed initially; now `true` at startup.
 - Open: the red label is `LabelSmall` (11 px in today's typography; part A raises the floor to 12 px).
+
+### B6
+- No Fluent crates in the offline registry (checked `~/.cargo/registry/src`: none) -> own Fluent-subset parser `l10n/fluent.rs` (messages, `{ $var }`, `{ message }` references, plural/value selectors with `*[default]`; no terms/attributes/functions), upgrade path documented in the module header (`fluent-bundle` reads the same `.ftl`).
+- `Localization` resource (locale from `OPTS_LOCALE`, default `en`; chain locale -> language -> `en`; missing key shows `⟦key⟧`), `en.ftl`, `de.ftl`, pseudo-locale `en-XA` (accents, +40 % `~` padding, brackets, variables kept), `L10nKey`/`L10nArgs`/`L10nTooltip` + `localize_system` (live switch), `keys.rs` table, tests (key completeness en/de, fallback, plurals, pseudo length, live switch, literal ban with a planted-literal check done by hand).
+- Library strings converted: combobox placeholder, clear tooltip, the not-yet marker and its reason. Main menu fully on keys (buttons via `ButtonBuilder::with_key`, texts, theme toggle swaps its key).
+- Verified live with `OPTS_LOCALE=en-XA` (screenshot `widgets/shots/menu_pseudo_locale.png`): all menu texts bracketed/padded, buttons wrap to two lines but nothing is cut off.
+- No settings key for the language yet (part A owns settings/theme; the language setting belongs with the settings milestone M-0063): env var only.
+- /tmp note: the game writes a 250 MB `catalogue.db` per fresh `XDG_DATA_HOME`; tests/other runs filled /tmp (16 GB tmpfs) once. `widgets/run_game.sh` now keeps throwaway dirs under the benchmark dir and deletes them on exit.

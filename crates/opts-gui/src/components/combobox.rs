@@ -5,6 +5,8 @@ use bevy::prelude::*;
 
 use bevy::input_focus::InputFocusVisible;
 
+use crate::l10n::Localization;
+
 use crate::{
     actions::{Direction, UiAction},
     interaction::{
@@ -77,7 +79,7 @@ impl ComboboxBuilder {
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
-            placeholder: "Select option...".into(),
+            placeholder: String::new(),
             options: Vec::new(),
             selected: None,
             disabled: false,
@@ -371,12 +373,17 @@ pub fn combobox_sync_system(
     visible: Option<Res<InputFocusVisible>>,
     items: Query<(Entity, &ComboboxMenuItem)>,
     mut focus: MessageWriter<FocusEvent>,
-    combo_query: Query<(Entity, &M3Combobox), Changed<M3Combobox>>,
+    loc: Option<Res<Localization>>,
+    combo_query: Query<(Entity, Ref<M3Combobox>)>,
     mut menu_query: Query<(&ComboboxMenu, &mut Node)>,
     mut text_query: Query<(&ComboboxLabelText, &mut Text)>,
 ) {
+    let loc_changed = loc.as_ref().is_some_and(|l| l.is_changed());
     for (entity, combo) in &combo_query {
-        if combo.is_open && visible.as_ref().is_none_or(|v| v.0) {
+        if !combo.is_changed() && !loc_changed {
+            continue;
+        }
+        if combo.is_changed() && combo.is_open && visible.as_ref().is_none_or(|v| v.0) {
             let wanted = combo.selected.unwrap_or(0);
             if let Some((item, _)) = items
                 .iter()
@@ -399,7 +406,15 @@ pub fn combobox_sync_system(
             .selected
             .and_then(|idx| combo.options.get(idx))
             .cloned()
-            .unwrap_or_else(|| combo.placeholder.clone());
+            .unwrap_or_else(|| {
+                if combo.placeholder.is_empty() {
+                    loc.as_ref()
+                        .map(|l| l.t(crate::l10n::keys::COMBOBOX_PLACEHOLDER))
+                        .unwrap_or_default()
+                } else {
+                    combo.placeholder.clone()
+                }
+            });
 
         for (lbl, mut text) in &mut text_query {
             if lbl.0 == entity {

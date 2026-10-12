@@ -28,6 +28,7 @@ use crate::{
         state::{Disabled, DisabledReason, Focused, Hovered},
         tooltip::Tooltip,
     },
+    l10n::L10nTooltip,
     theme::{color::ColorRole, shape::RadiusLevel, theme::MaterialTheme, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -293,7 +294,8 @@ impl TextFieldBuilder {
             },
             BackgroundRole(bg_role),
             RadiusToken(RadiusLevel::Full),
-            Tooltip::new("Clear"),
+            Tooltip::new(""),
+            L10nTooltip(crate::l10n::keys::CLEAR),
             TextFieldClear(root),
             Name::new("TextFieldClear"),
         ));

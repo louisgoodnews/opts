@@ -52,6 +52,7 @@ impl Plugin for OptsGuiPlugin {
         }
 
         app.add_plugins(crate::interaction::InteractionPlugin);
+        crate::l10n::build(app);
 
         // Register widget event streams
         app.add_message::<ButtonClicked>()

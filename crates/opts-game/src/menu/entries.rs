@@ -2,6 +2,7 @@
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use opts_gui::l10n::keys::menu as keys;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
@@ -26,13 +27,16 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
     commands.entity(sidebar_entity).with_children(|parent| {
         // 1. (Top Left Corner) Shutdown Button
-        shutdown_btn = ButtonBuilder::tonal("Shutdown").spawn_child(parent);
+        shutdown_btn = ButtonBuilder::tonal("Shutdown")
+            .with_key(keys::SHUTDOWN)
+            .spawn_child(parent);
 
         // Subtle divider separating top-corner shutdown from game flow
         DividerBuilder::horizontal().spawn_child(parent);
 
         // 2. Load Last Game Button (Tonal, Disabled if no saved game)
         load_btn = ButtonBuilder::tonal("Load Last Game")
+            .with_key(keys::LOAD_LAST_GAME)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Load Game");
                 cmd.insert_resource(NextState::Pending(AppState::LoadGame));
@@ -41,6 +45,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 3. Start New Game Button (Primary Filled Highlight)
         start_btn = ButtonBuilder::filled("Start New Game")
+            .with_key(keys::START_NEW_GAME)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Vehicle Selection (New Game)");
                 cmd.insert_resource(NextState::Pending(AppState::VehicleSelection));
@@ -49,6 +54,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 4. Settings Button
         settings_btn = ButtonBuilder::outlined("Settings")
+            .with_key(keys::SETTINGS)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Settings");
                 cmd.insert_resource(NextState::Pending(AppState::Settings));
@@ -57,6 +63,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 5. Credits Button
         credits_btn = ButtonBuilder::text("Credits")
+            .with_key(keys::CREDITS)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Credits");
                 cmd.insert_resource(NextState::Pending(AppState::Credits));

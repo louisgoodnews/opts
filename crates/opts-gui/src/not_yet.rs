@@ -12,11 +12,12 @@ use std::borrow::Cow;
 use bevy::prelude::*;
 
 use crate::interaction::state::{Disabled, DisabledReason};
+use crate::l10n::L10nKey;
 use crate::theme::{color::ColorRole, typography::TypeScale};
 use crate::tokens::components::{ForegroundRole, TypeStyleToken};
 
 /// The text, exactly as the decision words it.
-pub const MESSAGE: &str = "Feature not available yet!";
+pub const MESSAGE: &str = "Feature not available yet!"; // l10n-ok: the decision wording, also the `en` message
 
 /// One place in the UI that waits for a feature.
 #[derive(Debug, PartialEq, Eq)]
@@ -128,6 +129,7 @@ pub struct NotYetLabel;
 fn label_bundle() -> impl Bundle {
     (
         Text::new(MESSAGE),
+        L10nKey(crate::l10n::keys::NOT_AVAILABLE),
         TextColor(Color::WHITE),
         ForegroundRole(ColorRole::Error),
         TypeStyleToken(TypeScale::LabelSmall),

@@ -11,6 +11,7 @@ use crate::{
         layer::StateLayered,
         state::{Disabled, Hovered},
     },
+    l10n::L10nKey,
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -74,6 +75,8 @@ pub struct ButtonBuilder {
     pub icon: Option<Handle<Image>>,
     pub is_disabled: bool,
     pub on_click: Option<ButtonClickHandler>,
+    /// Message key of the label: the text follows the active locale.
+    pub label_key: Option<&'static str>,
 }
 
 impl ButtonBuilder {
@@ -85,6 +88,7 @@ impl ButtonBuilder {
             icon: None,
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
     }
 
@@ -96,6 +100,7 @@ impl ButtonBuilder {
             icon: None,
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
     }
 
@@ -107,6 +112,7 @@ impl ButtonBuilder {
             icon: None,
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
     }
 
@@ -118,6 +124,7 @@ impl ButtonBuilder {
             icon: None,
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
     }
 
@@ -129,6 +136,7 @@ impl ButtonBuilder {
             icon: None,
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
     }
 
@@ -140,7 +148,14 @@ impl ButtonBuilder {
             icon: Some(icon),
             is_disabled: false,
             on_click: None,
+            label_key: None,
         }
+    }
+
+    /// Makes the label a message key (`label` stays the fallback text until it is resolved).
+    pub fn with_key(mut self, key: &'static str) -> Self {
+        self.label_key = Some(key);
+        self
     }
 
     /// Attaches an optional leading icon asset.
@@ -269,8 +284,9 @@ impl ButtonBuilder {
 
         if !self.label.is_empty() {
             let label_text = self.label;
+            let key = self.label_key;
             commands.entity(button_entity).with_children(|parent| {
-                parent.spawn((
+                let mut label = parent.spawn((
                     (
                         Text::new(label_text),
                         TextFont {
@@ -282,6 +298,9 @@ impl ButtonBuilder {
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),
                 ));
+                if let Some(key) = key {
+                    label.insert(L10nKey(key));
+                }
             });
         }
 
@@ -297,6 +316,7 @@ impl ButtonBuilder {
         let is_outlined = self.variant == ButtonVariant::Outlined;
         let is_disabled = self.is_disabled;
         let on_click = self.on_click;
+        let label_key = self.label_key;
 
         let mut entity_commands = parent.spawn((
             (Button, style),
@@ -334,7 +354,7 @@ impl ButtonBuilder {
             }
 
             if !label_text.is_empty() {
-                child_parent.spawn((
+                let mut label = child_parent.spawn((
                     (
                         Text::new(label_text),
                         TextFont {
@@ -346,6 +366,9 @@ impl ButtonBuilder {
                     TypeStyleToken(TypeScale::LabelLarge),
                     ForegroundRole(fg_role),
                 ));
+                if let Some(key) = label_key {
+                    label.insert(L10nKey(key));
+                }
             }
         });
 

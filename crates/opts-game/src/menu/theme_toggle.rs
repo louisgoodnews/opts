@@ -2,6 +2,7 @@
 
 use bevy::prelude::*;
 use opts_gui::components::Button;
+use opts_gui::l10n::{keys::menu as keys, L10nKey};
 use opts_gui::{
     interaction::{activation::Activated, events::ThemeChanged},
     theme::{color::ColorRole, theme::MaterialTheme},
@@ -19,13 +20,18 @@ pub struct ThemeToggleBtn;
 #[derive(Component)]
 pub struct ThemeToggleGlyph;
 
+/// The message key of the toggle: it offers the theme the user is not in.
+fn theme_glyph_key(is_dark: bool) -> &'static str {
+    if is_dark {
+        keys::THEME_LIGHT
+    } else {
+        keys::THEME_DARK
+    }
+}
+
 /// Spawns the floating circular theme toggle button in the top-right corner.
 pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Entity {
-    let glyph = if theme.scheme.is_dark() {
-        "Light"
-    } else {
-        "Dark"
-    };
+    let glyph = theme_glyph_key(theme.scheme.is_dark());
 
     let btn = commands
         .spawn((
@@ -53,6 +59,7 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
             parent.spawn((
                 (
                     Text::new(glyph),
+                    L10nKey(glyph),
                     TextFont {
                         font_size: FontSize::Px(14.0),
                         ..default()
@@ -76,7 +83,7 @@ pub fn theme_toggle_system(
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
     mut theme_events: MessageWriter<ThemeChanged>,
-    mut glyph_query: Query<&mut Text, With<ThemeToggleGlyph>>,
+    mut glyph_query: Query<&mut L10nKey, With<ThemeToggleGlyph>>,
 ) {
     let mut should_toggle = keyboard.just_pressed(KeyCode::F2);
 
@@ -99,9 +106,8 @@ pub fn theme_toggle_system(
         }
 
         // Update glyph display
-        let next_glyph = if new_is_dark { "Light" } else { "Dark" };
-        for mut text in &mut glyph_query {
-            text.0 = next_glyph.to_string();
+        for mut key in &mut glyph_query {
+            key.0 = theme_glyph_key(new_is_dark);
         }
     }
 }
