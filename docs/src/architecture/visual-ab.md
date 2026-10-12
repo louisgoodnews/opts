@@ -23,40 +23,42 @@ All values use the sRGB-encoded pixel values (`0..1`), as in a screenshot:
 | `laplacian` | standard deviation of the 4-neighbour Laplacian of the luma: **high-frequency energy** (real detail *and* aliasing noise; after filtering a lower value means less noise) |
 | `difference` | for two images of equal size: mean absolute error, RMSE, PSNR |
 
-`--crop` leaves out the HUD (for a 1920×1080 screenshot, `0,0,1920,900` cuts the bottom strip). The absolute Laplacian values differ from the ImageMagick numbers of the [proposal](texture-quality.md) (other kernel and scale); **compare ratios only**.
+`--crop` leaves out the HUD (the screenshots of `visual-ab.sh` are 1920×1013; `0,0,1920,860` cuts the bottom HUD strip). The absolute Laplacian values differ from the ImageMagick numbers of the [proposal](texture-quality.md) (other kernel and scale); **compare ratios only**.
 
-## 2. One screenshot
+## 2. Deterministic screenshots: `scripts/visual-ab.sh`
 
-`scripts/visual-shot.sh <name> <map> <vehicle> [opts-game args…]` starts the game with a throw-away configuration (`XDG_CONFIG_HOME`/`XDG_DATA_HOME` are fresh temporary directories, so the user's settings are untouched), a **copy** of the decoder cache, no traffic and no hot reload, waits `DELAY` seconds and writes `<name>.png` and `<name>.log` below `OUT`.
+`scripts/visual-ab.sh <config> <map> <vehicle> [opts-game args…]` starts the game with a throw-away configuration (`XDG_CONFIG_HOME`/`XDG_DATA_HOME` are fresh temporary directories, so the user's settings are untouched), a **copy** of the decoder cache, no traffic and no hot reload, and the control server on port 44251 (not the default 44201, so a game you are running is not disturbed). It waits for the session, **pauses the simulation**, flies the free camera to fixed poses relative to the player vehicle (`driver`, `road_grazing`, `foliage`, `far`, `sign_close`; override with `POSES`) and writes `<OUT>/<config>_<pose>.png`. Identical poses on a paused simulation give identical frames, so differences are caused by the setting under test only (the plain `--screenshot` flag is *not* deterministic: the ego camera sometimes starts inside the cockpit).
+
+With `LOOKS="vivid natural bevy"` every pose is shot once per look **inside one run** (`render.look` is switched live), which compares looks on exactly the same frame:
 
 ```sh
-cargo build -p opts-game -p opts-tools
-export OPTS_BIN=$PWD/target/debug/opts-game
+cargo build -p opts-game -p opts-cli -p opts-tools
+export OPTS_BIN=$PWD/target/debug/opts-game OPTS_CLI=$PWD/target/debug/opts-cli
 # the cache directory must be a COPY: cp -r ~/.cache/opts/descramble <dir>/opts/descramble
 export DECODER_CACHE=<dir>
-HOUR=12 scripts/visual-shot.sh bhd_noon_vivid Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus
-HOUR=12 scripts/visual-shot.sh bhd_noon_bevy  Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus --look bevy
-HOUR=12 scripts/visual-shot.sh bhd_noon_nofilter Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus --texture-filter off
+HOUR=12 LOOKS="vivid natural bevy" scripts/visual-ab.sh bhd12_f16 Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus --texture-filter 16
+HOUR=12 LOOKS="bevy"               scripts/visual-ab.sh bhd12_off Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus --texture-filter off
+HOUR=21 LOOKS="vivid bevy"         scripts/visual-ab.sh bhd21_f16 Bad_Huegelsdorf_2020 MAN_SD200/MAN_SD77.bus --texture-filter 16
 ```
 
-`--look vivid|natural|bevy` and `--texture-filter off|4|8|16` override the stored settings **for this run only** (they are not persisted). The vehicle path is relative to `Vehicles/` of the OMSI installation; `HOUR`, `CAM`, `DELAY`, `OMSI` and `OUT` are described at the top of the script.
+Filtering has no live switch, so it needs one run per setting (`bhd12_f16_bevy_*` against `bhd12_off_bevy_*`). `--look vivid|natural|bevy` and `--texture-filter off|4|8|16` override the stored settings **for that run only** (not persisted). The vehicle path is relative to `Vehicles/` of the OMSI installation; `HOUR`, `WARM`, `OMSI`, `OUT`, `PORT` are described at the top of the script. `scripts/visual-shot.sh` is the simpler variant with the built-in `--screenshot` (one frame per run, no pose control).
 
 ## 3. Reference views
 
-Fixed view for the first stage (more are added with [M-0057](../roadmap/phase-8/M-0057.md) phase A):
+The poses are relative to the vehicle, so the same set works on every map. The first stage uses:
 
-| View | Map | Vehicle | Camera | Hour |
-| :--- | :--- | :--- | :--- | :--- |
-| Driver's view, noon | `Bad_Huegelsdorf_2020` | `MAN_SD200/MAN_SD77.bus` | `ego` | 12 |
-| Driver's view, night | same | same | `ego` | 21 |
-| Open view | `Grundorf` | any | `external` | 12 |
+| View | Map | Vehicle | Hour |
+| :--- | :--- | :--- | :--- |
+| Driver's view, noon | `Bad_Huegelsdorf_2020` | `MAN_SD200/MAN_SD77.bus` | 12 |
+| Driver's view, dusk (19) and night (21) | same | same | 19, 21 |
+| Open field and trees | `Grundorf` | same | 12 |
 
-For other poses use the control protocol (`camera.teleport`, `screenshot`) on a running game with a throw-away configuration.
+The sweep over 6-8 views on three maps with a data file (M-0057 phase A) is still open.
 
 ## 4. Comparing
 
 ```sh
-opts-tools image-metrics --crop 0,0,1920,900 a.png b.png
+opts-tools image-metrics --crop 0,0,1920,860 a.png b.png
 ```
 
 Run the same view twice on the same build: the numbers must agree within 1 % (the harness reproduces itself). Then compare before and after, and **look at both images**: metrics do not see shimmer in motion, soft text or a blown-out sky.

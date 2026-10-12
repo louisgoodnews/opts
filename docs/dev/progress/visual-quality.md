@@ -20,7 +20,7 @@ Gates (before each commit): `cargo fmt --all -- --check`; `cargo clippy --worksp
 | V1 Sampler | done |
 | V2 Mipmaps (uncompressed) | done |
 | V3 Looks | done |
-| V4 Verification and hand-over | open |
+| V4 Verification and hand-over | done |
 
 ## Baseline gate failures (present on `agent/texture-proposal` before this work; not mine, not fixed)
 
@@ -45,6 +45,50 @@ Gates (before each commit): `cargo fmt --all -- --check`; `cargo clippy --worksp
 - V3 (looks): `look.rs` (Look, LookParams, ActiveLook, LookPlugin, `effective_ambient_scale`), settings keys, settings screen rows, `render.look`, `--look`. Deviation found by looking at night images: ambient x0.5 darkened dusk/night to near black, so the ambient scale **fades to 1 below 25 degrees of sun elevation** (smoothstep), i.e. Vivid changes the ambient only in daylight. Also fixed: `vehicle.get` returned tile-local coordinates although the protocol says absolute (needed by `scripts/visual-ab.sh`).
 - Gates after V2+V3: fmt ok, clippy ok, link check 0 broken, roadmap copy up to date; tests and rustdoc fail only in the baseline list above (no new failure).
 
-## Open problems
+- V4 (verification), screenshots `~/.local/share/opts/benchmark/dev-visual/shots/` (not in the repository), made with `scripts/visual-ab.sh` (deterministic: paused simulation, fixed poses; a second run of the same build reproduces the metrics within 0.03 %, acceptance +-1 %). Metrics on the crop `0,0,1920,860` (HUD strip cut), five poses per configuration (`driver`, `road_grazing`, `foliage`, `far`, `sign_close`):
 
-(none yet)
+  | Comparison (same frames) | Result, mean of the 5 poses (per pose in brackets) |
+  | :--- | :--- |
+  | Filtering Off -> 16x, Bad Hügelsdorf noon, high-frequency energy (Laplacian) | **-17.2 %** (-15.5, -18.8, -15.3, -21.7, -14.4) |
+  | Filtering Off -> 16x, Grundorf noon | **-27.9 %** (-15.8, -27.9, -18.3, -44.8, -32.4) |
+  | Vivid vs Bevy default, Bad Hügelsdorf noon | saturation **+46.8 %**, luma std (contrast) **+19.8 %**, mean luma -5.9 %, darkest pixel -39 % (0.108 -> 0.066) |
+  | Vivid vs Bevy default, Grundorf noon | saturation +50.3 %, contrast +19.0 %, mean luma -0.6 % |
+  | Vivid vs Bevy default, Bad Hügelsdorf 21:00 | saturation +9.4 %, mean luma **-11.6 %**, darkest pixel -20 % (0.009 -> 0.005, both near black) |
+  | Vivid vs Bevy default, Bad Hügelsdorf 19:00 (dusk, 2 poses) | mean luma -8 to -9 %, saturation +12 % |
+  | Natural vs Bevy default | identical (same parameters until the calibration) |
+
+  What I saw (I looked at the images): **Filtering** removes the blocky, pixelated foliage, glass and kerb textures of the Off setting (clearly visible in `road_grazing`), asphalt is calmer at the grazing angle, tree and hedge cutouts keep their silhouettes (no visible thinning at the distance of the `far` pose, thanks to the cutout coverage rule), text on the VBBH stop sign and the timetable stays readable. No shimmer test in motion was possible (stills only): that is for the project lead's test. **Vivid** gives clearly richer greens, a deeper blue sky and more contrast; it is a little darker overall, shadows are deeper (this is the intended trade-off of the proposal). **Night/dusk:** with the ambient factor fading out below 25 degrees of sun elevation the scene stays readable, but Vivid is still 8-12 % darker than Bevy default because the tonemapper and post-saturation differ; at 21:00 both are almost black (the bus's headlights are off at the start of a session, so they could not be compared; the stop sign of the night driver pose is just visible in both). I regard the night result as acceptable, not as a pass: see open problems.
+
+## Test guide for the project lead
+
+Build and run from the worktree (this uses your real settings; that is what you want to test; the first change in the settings screen writes the new `texture_filtering` and `look` keys, an existing `settings.db` without them defaults to 16x and Vivid):
+
+```sh
+cd /home/louisgoodnews/Dokumente/opts-wt-visual-quality
+cargo run -p opts-game --release -- \
+  --omsi-path "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2" \
+  --map-path  "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/maps/Bad_Huegelsdorf_2020" \
+  --vehicle-path "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2/Vehicles/MAN_SD200/MAN_SD77.bus" \
+  --autostart --camera ego --cli-port 44201
+```
+
+1. **Look (live):** in another terminal `cargo run -q -p opts-cli -- render.look natural` (also `vivid`, `bevy`; without an argument it prints the current one). Compare `vivid` and `bevy` on the same view; try Left Alt vehicle menu / time of day to see dusk and night. The choice is saved in the settings.
+2. **Settings screen:** Main menu -> Settings -> tab *Display & Sound*: two rows of buttons, *Texture filtering* (Off / 4x / 8x / 16x (default)) and *Colour look* (Vivid (default) / Natural / Bevy default). The look applies at once; the filtering applies to textures loaded **afterwards** (start a new session, or edit/touch a texture file to see the hot-reload path).
+3. **One-run overrides without touching the settings:** `--texture-filter off|4|8|16` and `--look vivid|natural|bevy` on the game command line.
+4. **What to judge:** blocky or shimmering textures while driving (Off vs 16x), hedges/trees at a distance (do they thin out or flicker?), asphalt at grazing angles, signs and bus-stop text, the Vivid grade (too saturated? too dark in shadow?), dusk and night, load time (the log line `generated mip chains {textures, millis}` appears when the HUD comes up; I measured +0.7 s on Bad Hügelsdorf).
+5. **Reproduce my numbers:** `scripts/visual-ab.sh` and `opts-tools image-metrics`, see [Visual A/B](../../src/architecture/visual-ab.md). `cargo run --release -p opts-bevy --example texture_scan -- <dir> --generate` prints the DDS-chain and mip-cost numbers for a texture folder.
+
+## Open problems and questions
+
+- Night/dusk: Vivid is 8-12 % darker than Bevy default at 19:00-21:00 (tonemapper and saturation, not ambient). Options for the project lead: accept, or let Vivid keep the Bevy default tonemapper below some sun elevation (a visible switch at dusk), or raise exposure at night. Headlights were not compared (off at session start); check with the lights on.
+- *Natural* equals *Bevy default* until M-0060 step 2.
+- Foliage/cutouts: the provisional heuristic `looks_like_cutout` (loader does not know the material's alpha mode when it creates a texture) instead of the real cutoff; M-0059 replaces it. Textures that are alpha-blended AND look like cutouts get a coverage-adjusted alpha (harmless).
+- Block-compressed (DXT) textures without a chain (46,543) are untouched: they still alias at a distance (anisotropic filtering still applies). M-0058 phase C.
+- Alpha-to-coverage is not done (M-0059); cutout edges are still hard but no longer pixelated.
+- Moving shimmer, VRAM use of the extra levels (+33 % per uncompressed texture) and the weakest-GPU case were not measured (Q-TQ04).
+- The ground shader keeps its own fixed anisotropy 8 sampler; it does not follow the setting.
+- Final gates: fmt ok, clippy `-D warnings` ok, link check 0 broken, roadmap copy up to date; `cargo test --workspace`: 667 passed, 7 failed = exactly the baseline failures (cli default window size, input gating audit for rail.rs/vehicle_menu.rs, 5 loading-screen tests); rustdoc: exactly the baseline link errors. No new failure.
+- Existing baseline failures of the gates (see above) are untouched.
+- The plain `--screenshot` flag is not deterministic (ego camera sometimes starts in the cockpit): found while measuring, worth its own issue; `scripts/visual-ab.sh` avoids it.
+- `vehicle.get` returned tile-local coordinates although the protocol documents absolute ones: fixed here.
+
