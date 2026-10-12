@@ -23,7 +23,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | S0 Orient + screen specs | done (`docs/src/roadmap/phase-9/screens.md`) |
 | S1 Shell frame, registry, back stack, Esc | done (pending commit hash in Results) |
 | S2 Home | done |
-| S3 First run | open |
+| S3 First run | done |
 | S4 Pause, leave, summary | open |
 | S5 Help and About, F1 | open |
 | S6 Notifications | open |
@@ -49,3 +49,6 @@ Commit e290a4e. Rail from the registry, nav/back stack/deep links, Esc gate, dia
 Home with Continue/Quick drive/Recent/New drive/Load game (not-yet), status chip, banners (`shell/banner.rs`), hero with `cover` crop, `StartDrive` message. Old `menu-*` copy keys removed from opts-gui tables (kept: `menu-shutdown`, `menu-settings`, used by opts-gui's own tests). Verified by screenshots (dark/light 1920x1080, 1024x640) in `~/.local/share/opts/benchmark/dev-ui-impl/shell/shots/`.
 Observed: a cold catalogue scan takes 40-60 s here (the chip says *Reading content...*; the drive buttons are disabled with a reason meanwhile).
 Note: the *compact* rail (icons only) needs a logical width < 900 px, i.e. UI scale >= 115 % at the 1024 px minimum window; at 1024x640 and 100 % the layout class is Medium.
+
+### S3
+`first_run/` (decision, dialogs, picker, welcome), `omsi_setup.rs` rewritten, `omsi_root::require_confirmation`. Dialog buttons: first button has `DefaultFocus`. Verified by screenshots (choose, found, welcome; `shots/firstrun_*`) and 13 unit tests. Count during scan not available from the catalogue (stage only). NOTE: test windows opened by `shot.py` appear on the user's display and were repeatedly operated by a human (Settings, Drive, Quit were clicked): screenshots must be taken fast; this also showed that the rail, Settings/Drive navigation and the Quit confirmation work with a real mouse. `settings_screen`/`new_game_screen` still have their own Escape/back handlers (other agents' files).

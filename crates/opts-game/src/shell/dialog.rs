@@ -48,13 +48,20 @@ pub struct DialogSpec {
     pub body_args: L10nArgs,
     /// The buttons, safe choice first.
     pub buttons: Vec<DialogButtonSpec>,
+    /// Choices that report [`DialogChoice`] but leave the dialog open (a folder chooser that
+    /// has not answered yet).
+    pub keep_open: Vec<&'static str>,
+    /// An inline error under the body: message key and its variables.
+    pub error: Option<(&'static str, L10nArgs)>,
 }
 
 /// Marker on the backdrop of a dialog.
-#[derive(Component, Debug, Clone, Copy)]
+#[derive(Component, Debug, Clone)]
 pub struct ConfirmDialog {
     /// The dialog's tag.
     pub tag: &'static str,
+    /// Choices that leave the dialog open.
+    pub keep_open: Vec<&'static str>,
 }
 
 /// A button of a dialog.
@@ -81,9 +88,10 @@ pub fn spawn_confirm_dialog(commands: &mut Commands, spec: DialogSpec) -> Entity
         .with_size_percent(40.0, 40.0)
         .with_width_range(420.0, 560.0)
         .spawn(commands);
-    commands
-        .entity(root)
-        .insert(ConfirmDialog { tag: spec.tag });
+    commands.entity(root).insert(ConfirmDialog {
+        tag: spec.tag,
+        keep_open: spec.keep_open.clone(),
+    });
     commands.queue(move |world: &mut World| {
         if let Some(mut node) = world.entity_mut(content).get_mut::<Node>() {
             node.height = Val::Auto;
@@ -106,6 +114,17 @@ pub fn spawn_confirm_dialog(commands: &mut Commands, spec: DialogSpec) -> Entity
             TypeStyleToken(TypeScale::BodyMedium),
             ForegroundRole(ColorRole::OnSurfaceVariant),
         ));
+        if let Some((key, args)) = spec.error.clone() {
+            card.spawn((
+                Text::new(key),
+                L10nKey(key),
+                args,
+                TextColor::default(),
+                TypeStyleToken(TypeScale::BodyMedium),
+                ForegroundRole(ColorRole::Error),
+                UiId::new(format!("dialog.{}.error", spec.tag)),
+            ));
+        }
         card.spawn(Node {
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::FlexEnd,
@@ -115,7 +134,7 @@ pub fn spawn_confirm_dialog(commands: &mut Commands, spec: DialogSpec) -> Entity
             ..default()
         })
         .with_children(|row| {
-            for button in &spec.buttons {
+            for (index, button) in spec.buttons.iter().enumerate() {
                 let builder = match button.style {
                     DialogButtonStyle::Quiet => ButtonBuilder::text(button.label_key),
                     DialogButtonStyle::Primary | DialogButtonStyle::Destructive => {
@@ -132,6 +151,9 @@ pub fn spawn_confirm_dialog(commands: &mut Commands, spec: DialogSpec) -> Entity
                     },
                     UiId::new(format!("dialog.{}.{}", spec.tag, button.choice)),
                 ));
+                if index == 0 {
+                    commands.entity(entity).insert(DefaultFocus);
+                }
                 if button.style == DialogButtonStyle::Destructive {
                     recolor_destructive(&mut commands, entity);
                 }
@@ -177,7 +199,9 @@ pub fn dialog_button_system(
                 tag: dialog.tag,
                 choice: button.choice,
             });
-            commands.entity(button.dialog).try_despawn();
+            if !dialog.keep_open.contains(&button.choice) {
+                commands.entity(button.dialog).try_despawn();
+            }
         }
     }
 }

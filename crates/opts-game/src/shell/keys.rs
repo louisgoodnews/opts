@@ -84,6 +84,46 @@ keys! {
     HOME_TIME_WEATHER = "home-time-weather",
     /// Home text `home-vehicle-livery`.
     HOME_VEHICLE_LIVERY = "home-vehicle-livery",
+    /// Message `firstrun-found-title`.
+    FIRSTRUN_FOUND_TITLE = "firstrun-found-title",
+    /// Message `firstrun-found-body`.
+    FIRSTRUN_FOUND_BODY = "firstrun-found-body",
+    /// Message `firstrun-use`.
+    FIRSTRUN_USE = "firstrun-use",
+    /// Message `firstrun-other`.
+    FIRSTRUN_OTHER = "firstrun-other",
+    /// Message `firstrun-quit`.
+    FIRSTRUN_QUIT = "firstrun-quit",
+    /// Message `firstrun-choose-title`.
+    FIRSTRUN_CHOOSE_TITLE = "firstrun-choose-title",
+    /// Message `firstrun-choose-body`.
+    FIRSTRUN_CHOOSE_BODY = "firstrun-choose-body",
+    /// Message `firstrun-choose-action`.
+    FIRSTRUN_CHOOSE_ACTION = "firstrun-choose-action",
+    /// Message `firstrun-wrong-folder`.
+    FIRSTRUN_WRONG_FOLDER = "firstrun-wrong-folder",
+    /// Message `firstrun-cancelled`.
+    FIRSTRUN_CANCELLED = "firstrun-cancelled",
+    /// Message `firstrun-error-title`.
+    FIRSTRUN_ERROR_TITLE = "firstrun-error-title",
+    /// Message `firstrun-save-failed-title`.
+    FIRSTRUN_SAVE_FAILED_TITLE = "firstrun-save-failed-title",
+    /// Message `firstrun-save-failed-body`.
+    FIRSTRUN_SAVE_FAILED_BODY = "firstrun-save-failed-body",
+    /// Message `firstrun-welcome-title`.
+    FIRSTRUN_WELCOME_TITLE = "firstrun-welcome-title",
+    /// Message `firstrun-welcome-body`.
+    FIRSTRUN_WELCOME_BODY = "firstrun-welcome-body",
+    /// Message `firstrun-pick`.
+    FIRSTRUN_PICK = "firstrun-pick",
+    /// Message `firstrun-quick`.
+    FIRSTRUN_QUICK = "firstrun-quick",
+    /// Message `home-stage-files`.
+    HOME_STAGE_FILES = "home-stage-files",
+    /// Message `home-stage-content`.
+    HOME_STAGE_CONTENT = "home-stage-content",
+    /// Message `home-stage-saving`.
+    HOME_STAGE_SAVING = "home-stage-saving",
     /// Home: New drive.
     HOME_NEW_DRIVE = "home-new-drive",
     /// Home: Load game.

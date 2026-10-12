@@ -19,7 +19,7 @@ use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
 pub use hero::{cover_rect, HeroImage};
-pub use model::{CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
+pub use model::{stage_key, CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
 
 use crate::app_state::AppState;
 use crate::catalogue_service::{CatalogueService, DiscoveryStatus};
@@ -139,7 +139,11 @@ fn despawn_home(mut commands: Commands, roots: Query<Entity, With<HomeRoot>>) {
 /// What Home depends on, read from the world.
 fn current_inputs(service: Option<&CatalogueService>, lists: &GameCatalogue) -> HomeInputs {
     let omsi_found = service.is_some() || crate::omsi_root::known_omsi_root().is_some();
-    let refreshing = service.is_some_and(|s| matches!(s.status(), DiscoveryStatus::Running(_)));
+    let stage = service.and_then(|s| match s.status() {
+        DiscoveryStatus::Running(stage) => Some(stage),
+        _ => None,
+    });
+    let refreshing = stage.is_some();
     let has_content = !lists.maps.is_empty() && !lists.vehicles.is_empty();
     let catalogue = match service {
         None => CatalogueStatus::Unavailable,
@@ -153,6 +157,7 @@ fn current_inputs(service: Option<&CatalogueService>, lists: &GameCatalogue) -> 
         omsi_found,
         catalogue,
         refreshing,
+        stage,
     }
 }
 
@@ -202,7 +207,13 @@ pub fn sync_home_status(
 
     for (entity, mut key) in &mut chips {
         let (new_key, args) = match (inputs.refreshing, inputs.catalogue) {
-            (true, _) => (keys::HOME_STATUS_REFRESHING, L10nArgs::default()),
+            (true, _) => (
+                inputs
+                    .stage
+                    .and_then(stage_key)
+                    .unwrap_or(keys::HOME_STATUS_REFRESHING),
+                L10nArgs::default(),
+            ),
             (false, CatalogueStatus::Ready { maps, vehicles }) => (
                 keys::HOME_STATUS_READY,
                 L10nArgs(vec![
@@ -213,7 +224,7 @@ pub fn sync_home_status(
             _ => (keys::HOME_STATUS_NONE, L10nArgs::default()),
         };
         key.0 = new_key;
-        commands.entity(entity).insert(args);
+        commands.entity(entity).try_insert(args);
     }
 
     let block = inputs.drive_block();
@@ -224,10 +235,10 @@ pub fn sync_home_status(
         let mut e = commands.entity(entity);
         match block_reason_key(block) {
             None => {
-                e.remove::<(Disabled, DisabledReason)>();
+                e.try_remove::<(Disabled, DisabledReason)>();
             }
             Some(key) => {
-                e.insert((Disabled, DisabledReason(loc.t(key).into())));
+                e.try_insert((Disabled, DisabledReason(loc.t(key).into())));
             }
         }
     }
@@ -266,14 +277,10 @@ pub fn sync_home_status(
 }
 
 /// *Choose folder* in a banner opens the folder prompt.
-fn banner_actions(
-    mut commands: Commands,
-    mut actions: MessageReader<BannerAction>,
-    prompt: Option<Res<crate::omsi_setup::OmsiSetupPrompt>>,
-) {
+fn banner_actions(mut commands: Commands, mut actions: MessageReader<BannerAction>) {
     for action in actions.read() {
-        if action.action == ACTION_CHOOSE && prompt.is_none() {
-            crate::omsi_setup::spawn_prompt(&mut commands);
+        if action.action == ACTION_CHOOSE {
+            crate::first_run::choose_omsi_folder(&mut commands);
         }
     }
 }

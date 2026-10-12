@@ -3,6 +3,7 @@
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use opts_gui::interaction::activation::Activated;
+use opts_gui::interaction::tooltip::Tooltip;
 use opts_gui::l10n::{L10nArgs, L10nKey, L10nTooltip};
 use opts_gui::prelude::*;
 use opts_gui::theme::ThemeMode;
@@ -50,6 +51,7 @@ pub fn theme_toggle_system(
 }
 
 /// The footer toggle offers the mode a click switches **to**.
+#[allow(clippy::too_many_arguments)]
 pub fn sync_theme_toggle(
     theme: Res<MaterialTheme>,
     toggles: Query<(Entity, &RailAction)>,
@@ -58,6 +60,7 @@ pub fn sync_theme_toggle(
     mut labels: Query<&mut L10nKey, Without<RailIcon>>,
     mut commands: Commands,
     added: Query<(), Added<RailAction>>,
+    loc: Res<opts_gui::l10n::Localization>,
 ) {
     if !theme.is_changed() && added.is_empty() {
         return;
@@ -71,7 +74,9 @@ pub fn sync_theme_toggle(
         if *action != RailAction::ThemeToggle {
             continue;
         }
-        commands.entity(entity).insert(L10nTooltip(key));
+        commands
+            .entity(entity)
+            .insert((L10nTooltip(key), Tooltip::new(loc.t(key))));
         for child in children.iter_descendants(entity) {
             if let Ok(mut text) = icons_q.get_mut(child) {
                 if text.0 != glyph {
@@ -106,6 +111,8 @@ pub fn quit_dialog_spec() -> DialogSpec {
                 style: DialogButtonStyle::Destructive,
             },
         ],
+        keep_open: Vec::new(),
+        error: None,
     }
 }
 

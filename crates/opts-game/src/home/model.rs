@@ -25,6 +25,8 @@ pub struct HomeInputs {
     pub catalogue: CatalogueStatus,
     /// Whether a scan is running (the chip says so even when the lists already hold content).
     pub refreshing: bool,
+    /// The scan's current stage as the catalogue names it (`scanning files`, ...).
+    pub stage: Option<&'static str>,
 }
 
 /// A problem Home reports in a banner.
@@ -47,6 +49,17 @@ pub enum DriveBlock {
     Reading,
     /// The catalogue has no maps or no vehicles.
     Empty,
+}
+
+/// The message key of a scan stage, if it is one the catalogue reports.
+pub fn stage_key(stage: &str) -> Option<&'static str> {
+    use crate::shell::keys;
+    Some(match stage {
+        "scanning files" => keys::HOME_STAGE_FILES,
+        "reading content" => keys::HOME_STAGE_CONTENT,
+        "saving" => keys::HOME_STAGE_SAVING,
+        _ => return None,
+    })
 }
 
 impl HomeInputs {
@@ -88,6 +101,7 @@ mod tests {
             omsi_found,
             catalogue,
             refreshing: false,
+            stage: None,
         }
     }
 

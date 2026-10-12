@@ -139,15 +139,3 @@ fn new_drive_opens_the_drive_destination_with_a_way_back() {
         vec!["home".to_owned()]
     );
 }
-
-#[test]
-fn a_missing_installation_shows_the_banner_with_its_action_and_blocks_driving() {
-    let mut app = home_app(&[record("Berlin", "MAN SD77", 12)]);
-    let ids = ids(&mut app);
-    // The test machine may or may not have OMSI; the banner appears exactly when none is known.
-    let known = crate::omsi_root::known_omsi_root().is_some();
-    assert_eq!(
-        ids.iter().any(|i| i == "banner.home.no-omsi.choose-folder"),
-        !known
-    );
-}

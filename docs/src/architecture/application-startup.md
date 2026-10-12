@@ -2,8 +2,6 @@
 
 This document specifies the startup lifecycle, plugin composition, CLI interface, and shutdown protocol for the primary OPTS game executable (`opts-game`).
 
-> **Changing (M-0062).** A found OMSI folder is no longer adopted silently: the first-run flow asks for confirmation ([screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup)). The *OMSI Installation Check* section is updated with that batch.
-
 ---
 
 ## 🏛️ Overview & Architectural Role
@@ -106,15 +104,16 @@ When `--headless` is **true**:
 
 ## 📂 OMSI Installation Check (Startup)
 
-`OmsiSetupPlugin` (`opts-game/src/omsi_setup.rs`) runs before the catalogue service and resolves the installation in this order: `--omsi-path` (or the root above `--map-path`), `$OMSI_PATH`, the `omsi_path` remembered in the settings (`settings.db`, key `omsi_path`), the default Steam locations below `$HOME`. A folder counts as an installation when it contains `maps` and `Vehicles`.
+`OmsiSetupPlugin` (`opts-game/src/omsi_setup.rs`) runs before the catalogue service and decides with the pure function `first_run::decide`:
 
-- **Found without an override** (no `--omsi-path`/`--map-path`/`$OMSI_PATH`): the path is saved to the settings, so later runs use the same installation.
-- **Not found** (interactive start, no `--headless`/`--autostart`): a modal asks for the folder. **Browse…** opens the native folder dialog (`rfd`; the XDG desktop portal on Linux, so no GTK is needed) on its own thread; **Quit** leaves. A chosen folder (or a sub-folder such as `maps/Grundorf`, resolved to the installation above it) is validated, saved to the settings, and the catalogue starts at once. An invalid or cancelled choice shows a message and the dialog stays.
-- **Not found without a window** (`--headless`, `--autostart`): a warning, empty catalogue, no dialog.
+| Source | Treatment |
+| :--- | :--- |
+| `--omsi-path` (or the root above `--map-path`), `$OMSI_PATH` | explicit: used as is, not saved |
+| the folder the user **confirmed** earlier (`omsi_path` in `settings.db`) | used as is |
+| an installation in a default Steam location | a *candidate*: with a window the first-run dialog **offers it for confirmation** (*Use this folder* / *Choose another folder…* / *Quit*); without a window (`--headless`, `--autostart`) it is used and saved, as before |
+| nothing | with a window the first-run dialog asks to choose a folder with the native dialog (`rfd`, own thread); a wrong folder is explained inline (it needs `maps` and `Vehicles`; a picked `maps/<Map>` resolves to the installation above it); without a window the catalogue stays empty |
 
-The saved path is changed by choosing another installation (delete the `omsi_path` row or pass `--omsi-path` to override for one run).
-
----
+While confirmation is required (`omsi_root::require_confirmation`), `locate_omsi_root` ignores the Steam candidates, so nothing is scanned before the user agrees. A confirmed folder is saved (`first_run::adopt_root`) and the catalogue starts at once. The same function `first_run::choose_omsi_folder` serves the Home banner *Choose folder* and `Settings -> Content`; its result is the message `OmsiFolderChosen`. After the first scan, with no drive history, one welcome dialog offers *Pick a map and a vehicle* or *Quick drive* (remembered in `first_run.json`). Details: [screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup). Progress of the scan is the stage the catalogue reports (scanning files, reading content, saving) in the Home status chip; the catalogue offers no item counts during a scan, the counts appear when it is done.
 
 ## 🗄️ Catalogue Discovery (Startup)
 
