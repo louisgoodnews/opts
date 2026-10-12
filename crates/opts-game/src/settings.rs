@@ -71,6 +71,17 @@ pub struct GameSettings {
     /// The colour look (Vivid/Natural/Bevy default); default Vivid. Absent in older databases.
     #[serde(default)]
     pub look: crate::look::Look,
+    /// Settings registered through the settings registry that have no typed field: key to stored
+    /// text (see `docs/src/architecture/settings-registry.md`). Unknown keys of a database are
+    /// kept here too, so a newer version's keys survive.
+    #[serde(default)]
+    pub extra: BTreeMap<String, String>,
+    /// Keys that were present in the database this process loaded (used by `migrate_from`).
+    #[serde(skip)]
+    pub loaded_keys: std::collections::BTreeSet<String>,
+    /// Where `save` writes instead of the user's configuration directory (tests).
+    #[serde(skip)]
+    pub db_path_override: Option<PathBuf>,
     /// The values as they were on disk when this process loaded them. Saving writes only what
     /// differs, so an instance that merely exits (or loaded stale values while another instance
     /// changed the file) cannot undo another instance's choices, e.g. the theme.
@@ -136,6 +147,9 @@ impl Default for GameSettings {
             discovery_interval_days: 1,
             texture_filtering: opts_bevy::TextureFiltering::default(),
             look: crate::look::Look::default(),
+            extra: BTreeMap::new(),
+            loaded_keys: std::collections::BTreeSet::new(),
+            db_path_override: None,
             baseline: Baseline::default(),
         }
     }
@@ -212,34 +226,77 @@ impl GameSettings {
         for row in rows {
             let (key, value) = row?;
             has_mode |= key == "theme_mode";
-            match key.as_str() {
-                "recent_map_path" => {
-                    if value.trim().is_empty() {
-                        self.recent_map_path = None;
-                    } else {
-                        self.recent_map_path = Some(PathBuf::from(value));
-                    }
-                }
-                "omsi_path" => {
-                    self.omsi_path = (!value.trim().is_empty()).then(|| PathBuf::from(value));
-                }
-                "discovery_interval_days" => {
-                    self.discovery_interval_days = value.parse::<u32>().unwrap_or(1);
-                }
-                "texture_filtering" => {
-                    self.texture_filtering =
-                        opts_bevy::TextureFiltering::parse(&value).unwrap_or_default();
-                }
-                "look" => {
-                    self.look = crate::look::Look::parse(&value).unwrap_or_default();
-                }
-                other => {
-                    self.apply_theme_key(other, &value);
-                }
-            }
+            self.apply_key(&key, &value);
+            self.loaded_keys.insert(key);
         }
         self.migrate_legacy_theme(has_mode);
         Ok(())
+    }
+
+    /// The keys that have a typed field of their own; all others live in [`Self::extra`].
+    pub const FIELD_KEYS: [&'static str; 14] = [
+        "recent_map_path",
+        "omsi_path",
+        "discovery_interval_days",
+        "texture_filtering",
+        "look",
+        "theme_mode",
+        "auto_light_from",
+        "auto_dark_from",
+        "high_contrast",
+        "active_theme",
+        "theme_file",
+        "ui_scale",
+        "density",
+        "reduced_motion",
+    ];
+
+    /// Applies one stored key (the loader's parser): a typed field, or [`Self::extra`] for any
+    /// other key. Unreadable values of a field leave its default.
+    pub fn apply_key(&mut self, key: &str, value: &str) {
+        match key {
+            "recent_map_path" => {
+                self.recent_map_path = (!value.trim().is_empty()).then(|| PathBuf::from(value));
+            }
+            "omsi_path" => {
+                self.omsi_path = (!value.trim().is_empty()).then(|| PathBuf::from(value));
+            }
+            "discovery_interval_days" => {
+                self.discovery_interval_days = value.parse::<u32>().unwrap_or(1);
+            }
+            "texture_filtering" => {
+                self.texture_filtering =
+                    opts_bevy::TextureFiltering::parse(value).unwrap_or_default();
+            }
+            "look" => {
+                self.look = crate::look::Look::parse(value).unwrap_or_default();
+            }
+            other => {
+                if !self.apply_theme_key(other, value) {
+                    self.extra.insert(other.to_string(), value.to_string());
+                }
+            }
+        }
+    }
+
+    /// The stored text of `key` (a field or an extra key), `None` when nothing is stored.
+    #[must_use]
+    pub fn raw(&self, key: &str) -> Option<String> {
+        if Self::FIELD_KEYS.contains(&key) {
+            self.entries().get(key).cloned()
+        } else {
+            self.extra.get(key).cloned()
+        }
+    }
+
+    /// Stores `value` under `key` without validation (see the registry for validated writes).
+    pub fn set_raw(&mut self, key: &str, value: &str) {
+        self.apply_key(key, value);
+    }
+
+    /// Removes an extra key (a typed field is reset by the registry writing its default).
+    pub fn remove_extra(&mut self, key: &str) {
+        self.extra.remove(key);
     }
 
     /// Saves configuration state to an SQLite connection (every key).
@@ -298,6 +355,9 @@ impl GameSettings {
         );
         m.insert("look".into(), self.look.key().to_string());
         m.extend(self.theme_entries());
+        for (k, v) in &self.extra {
+            m.entry(k.clone()).or_insert_with(|| v.clone());
+        }
         m
     }
 
@@ -313,7 +373,7 @@ impl GameSettings {
     /// several instances share the file, and an instance must not overwrite a choice it did not
     /// make.
     pub fn save(&self) -> Result<(), rusqlite::Error> {
-        let Some(path) = Self::database_path() else {
+        let Some(path) = self.db_path_override.clone().or_else(Self::database_path) else {
             tracing::warn!("Unable to determine platform config directory for SQLite database");
             return Ok(());
         };

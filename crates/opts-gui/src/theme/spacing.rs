@@ -128,12 +128,13 @@ impl Density {
         }
     }
 
-    /// Display label.
-    pub const fn label(self) -> &'static str {
+    /// The message key of the display name (`crate::l10n::keys::theme`).
+    pub const fn label_key(self) -> &'static str {
+        use crate::l10n::keys::theme as k;
         match self {
-            Self::Comfortable => "Comfortable", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Compact => "Compact", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Dense => "Dense", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Comfortable => k::DENSITY_COMFORTABLE,
+            Self::Compact => k::DENSITY_COMPACT,
+            Self::Dense => k::DENSITY_DENSE,
         }
     }
 

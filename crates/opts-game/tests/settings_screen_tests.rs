@@ -1,98 +1,27 @@
-//! Automated integration tests validating the interactive Settings screen, Notebook tabs, and SQLite persistence.
+//! Integration tests of the Settings screen (`AppState::Settings`): the page appears, the
+//! categories and the back button exist, and a click on a control changes the typed settings.
 
 use bevy::prelude::*;
 use opts_game::{
     app_state::AppState,
     settings::GameSettings,
-    settings_screen::{
-        BackToMenuButton, SettingsScreenPlugin, SettingsScreenRoot, ThemeChoice, ThemeChoiceButton,
-    },
+    settings_screen::{BackToMenuButton, SettingsScreenPlugin, SettingsScreenRoot},
 };
-use opts_gui::{components::notebook::M3Notebook, interaction::events::ButtonClicked, prelude::*};
+use opts_gui::{interaction::events::ButtonClicked, prelude::*};
 
-#[test]
-fn test_settings_screen_spawns_notebook_and_tabs() {
-    let mut app = App::new();
-
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .add_plugins(bevy::input::InputPlugin)
-        .add_plugins(AssetPlugin::default())
-        .init_asset::<Image>()
-        .insert_resource(GameSettings::default())
-        .insert_resource(MaterialTheme::light())
-        .init_state::<AppState>()
-        .add_plugins(OptsGuiPlugin)
-        .add_plugins(SettingsScreenPlugin);
-
-    // Transition to Settings
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Settings);
-    app.update();
-
-    // Verify SettingsScreenRoot is spawned
-    let root_count = app
-        .world_mut()
-        .query_filtered::<Entity, With<SettingsScreenRoot>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(root_count, 1, "SettingsScreenRoot must exist");
-
-    // Verify Notebook container is spawned with 3 tabs
-    let mut nb_query = app.world_mut().query::<&M3Notebook>();
-    let nb = nb_query
-        .iter(app.world())
-        .next()
-        .expect("Notebook must be present");
-    assert_eq!(nb.tab_count, 3, "Notebook must have 3 tabs");
-    assert_eq!(
-        nb.active_tab, 0,
-        "Notebook initial active tab must be 0 (UI & Themes)"
-    );
-
-    // Verify the theme choices exist: 4 modes, 5 accents, 6 scales, 3 densities
-    let choices: Vec<ThemeChoice> = app
-        .world_mut()
-        .query::<&ThemeChoiceButton>()
-        .iter(app.world())
-        .map(|b| b.0)
-        .collect();
-    for (name, n) in [
-        ("modes", 4),
-        ("accents", 5),
-        ("scales", 6),
-        ("densities", 3),
-    ] {
-        let count = choices
-            .iter()
-            .filter(|c| match name {
-                "modes" => matches!(c, ThemeChoice::Mode(_)),
-                "accents" => matches!(c, ThemeChoice::Accent(_)),
-                "scales" => matches!(c, ThemeChoice::Scale(_)),
-                _ => matches!(c, ThemeChoice::Density(_)),
-            })
-            .count();
-        assert_eq!(count, n, "{name}");
-    }
-
-    // Verify Back button exists
-    let back_count = app
-        .world_mut()
-        .query_filtered::<Entity, With<BackToMenuButton>>()
-        .iter(app.world())
-        .count();
-    assert_eq!(back_count, 1, "Must have BackToMenuButton");
-}
-
-fn settings_app() -> App {
+fn settings_app(name: &str) -> App {
+    let dir = std::env::temp_dir().join(format!("opts-settings-it-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let _ = std::fs::create_dir_all(&dir);
+    let mut settings = GameSettings::default();
+    settings.db_path_override = Some(dir.join("settings.db"));
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .add_plugins(bevy::input::InputPlugin)
         .add_plugins(AssetPlugin::default())
         .init_asset::<Image>()
-        .insert_resource(GameSettings::default())
+        .insert_resource(settings)
         .insert_resource(MaterialTheme::dark())
         .init_state::<AppState>()
         .add_plugins(OptsGuiPlugin)
@@ -100,33 +29,74 @@ fn settings_app() -> App {
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::Settings);
-    app.update();
+    for _ in 0..4 {
+        app.update();
+    }
     app
 }
 
-fn click(app: &mut App, choice: ThemeChoice) {
-    let entity = app
-        .world_mut()
-        .query::<(Entity, &ThemeChoiceButton)>()
+fn by_id(app: &mut App, id: &str) -> Option<Entity> {
+    app.world_mut()
+        .query::<(Entity, &UiId)>()
         .iter(app.world())
-        .find(|(_, b)| b.0 == choice)
+        .find(|(_, u)| u.0 == id)
         .map(|(e, _)| e)
-        .expect("button for the choice");
-    app.world_mut().write_message(ButtonClicked(entity));
-    app.update();
+}
+
+fn click(app: &mut App, id: &str) {
+    let e = by_id(app, id).unwrap_or_else(|| panic!("no element {id}"));
+    app.world_mut().write_message(ButtonClicked(e));
+    for _ in 0..3 {
+        app.update();
+    }
 }
 
 #[test]
-fn clicking_a_mode_stores_it_and_a_scale_is_clamped_into_the_settings() {
-    let mut app = settings_app();
-    click(
-        &mut app,
-        ThemeChoice::Mode(opts_gui::theme::ThemeMode::Light),
-    );
+fn the_settings_screen_has_the_page_the_categories_and_a_back_button() {
+    let mut app = settings_app("spawn");
+    let roots = app
+        .world_mut()
+        .query_filtered::<Entity, With<SettingsScreenRoot>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(roots, 1);
+    for cat in [
+        "graphics",
+        "audio",
+        "controls",
+        "interface",
+        "gameplay",
+        "content",
+        "advanced",
+    ] {
+        assert!(
+            by_id(&mut app, &format!("settings/category/{cat}")).is_some(),
+            "{cat}"
+        );
+    }
+    let back = app
+        .world_mut()
+        .query_filtered::<Entity, With<BackToMenuButton>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(back, 1);
+}
+
+#[test]
+fn a_click_on_the_interface_page_changes_the_typed_settings() {
+    let mut app = settings_app("click");
+    click(&mut app, "settings/category/interface");
+    click(&mut app, "settings/interface/theme_mode/option-light");
     assert_eq!(
         app.world().resource::<GameSettings>().theme_mode,
         opts_gui::theme::ThemeMode::Light
     );
-    click(&mut app, ThemeChoice::Scale(150));
-    assert_eq!(app.world().resource::<GameSettings>().ui_scale, 150);
+    click(&mut app, "settings/interface/ui_scale/up");
+    assert_eq!(app.world().resource::<GameSettings>().ui_scale, 125);
+    click(&mut app, "settings/interface/theme_mode/reset");
+    assert_eq!(
+        app.world().resource::<GameSettings>().theme_mode,
+        opts_gui::theme::ThemeMode::Dark,
+        "Reset returns to the dark default"
+    );
 }

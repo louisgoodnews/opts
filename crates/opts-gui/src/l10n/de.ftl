@@ -24,3 +24,17 @@ menu-card-no-map = Keine Karte geladen · „Neues Spiel starten“ wählen, um 
 menu-card-map-preview = Kartenvorschau: { $path }
 menu-card-storage = Speicher: SQLite (WAL) · Oberfläche: Material Design 3 Glassmorphismus
 menu-footer = OPTS v0.1.0-alpha · Saubere Architektur
+
+theme-mode-dark = Dunkel
+theme-mode-light = Hell
+theme-mode-system = System
+theme-mode-auto = Auto (Uhrzeit)
+theme-high-contrast = Hoher Kontrast
+theme-accent-default = Nahverkehrsblau
+theme-accent-amber = Bernstein
+theme-accent-violet = Violett
+theme-accent-emerald = Smaragd
+theme-accent-teal = Petrol
+theme-density-comfortable = Großzügig
+theme-density-compact = Kompakt
+theme-density-dense = Dicht

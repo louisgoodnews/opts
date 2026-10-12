@@ -57,8 +57,48 @@ pub const LIVE_WEATHER: NotYetPlace = NotYetPlace {
         "The weather query is never called; live conditions need an explicit, explained opt-in.",
 };
 
+/// Settings, Audio: the volume settings.
+pub const SETTINGS_AUDIO: NotYetPlace = NotYetPlace {
+    id: "settings.audio",
+    place: "Settings, Audio, volumes",
+    milestone: "M-0027",
+    missing: "There is no audio engine; the volume settings appear with it.",
+};
+
+/// Settings, Graphics: view distance.
+pub const SETTINGS_VIEW_DISTANCE: NotYetPlace = NotYetPlace {
+    id: "settings.view-distance",
+    place: "Settings, Graphics, View distance",
+    milestone: "M-0029",
+    missing: "Tiles and objects are loaded at a fixed distance; a user setting needs the LOD and culling system.",
+};
+
+/// Settings, Gameplay: time scale of the session clock.
+pub const SETTINGS_TIME_SCALE: NotYetPlace = NotYetPlace {
+    id: "settings.time-scale",
+    place: "Settings, Gameplay, Time scale",
+    milestone: "M-0064",
+    missing: "The session clock cannot be sped up or slowed down from the interface yet.",
+};
+
+/// Settings, Controls: rebinding of keys, gamepad and wheel.
+pub const SETTINGS_REBIND: NotYetPlace = NotYetPlace {
+    id: "settings.rebind",
+    place: "Settings, Controls, Change a binding",
+    milestone: "M-0035",
+    missing: "Vehicle and camera keys are fixed in code; the list shows them, rebinding needs the vehicle control layer.",
+};
+
 /// Every registered place. Add new ones here; the generated list and the tests follow.
-pub const PLACES: &[&NotYetPlace] = &[&LOAD_LAST_GAME, &LOAD_GAME_SCREEN, &LIVE_WEATHER];
+pub const PLACES: &[&NotYetPlace] = &[
+    &LOAD_LAST_GAME,
+    &LOAD_GAME_SCREEN,
+    &LIVE_WEATHER,
+    &SETTINGS_AUDIO,
+    &SETTINGS_VIEW_DISTANCE,
+    &SETTINGS_TIME_SCALE,
+    &SETTINGS_REBIND,
+];
 
 /// What a control offers right now.
 #[derive(Debug, Clone, PartialEq, Eq)]

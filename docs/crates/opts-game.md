@@ -17,7 +17,7 @@
 2. The global lifecycle state machine (`AppState`).
 3. The interactive **Main Menu** featuring Material Design 3 styling, glassmorphic translucent surfaces, and dynamic map-backed background loading.
 4. Destination screen routing with return navigation.
-5. User settings persistence (`GameSettings`) via platform standard paths (`settings.toml` baseline, `settings.db` authoritative). Theme and interface keys (`theme_mode`, `auto_light_from`, `auto_dark_from`, `high_contrast`, `active_theme`, `theme_file`, `ui_scale`, `density`, `reduced_motion`) and the migration from `is_dark_theme` are in `settings_theme.rs`; RON theme files in `theme_files.rs`; the design is in the [GUI design system](../src/architecture/gui-design-system.md#64-settings-keys-and-migration).
+5. User settings persistence (`GameSettings`) via platform standard paths (`settings.toml` baseline, `settings.db` authoritative). Theme and interface keys (`theme_mode`, `auto_light_from`, `auto_dark_from`, `high_contrast`, `active_theme`, `theme_file`, `ui_scale`, `density`, `reduced_motion`) and the migration from `is_dark_theme` are in `settings_theme.rs`; RON theme files in `theme_files.rs`; every setting is declared once in the **settings registry** (`settings_registry/`, [design](../src/architecture/settings-registry.md)): descriptors, validation, `migrate_from`, search, the display backend for window settings, live effects, the control-protocol `settings.*` methods and the generated [reference](../src/reference/settings.md); the Settings screen is the generic page in `settings_screen/` (`spawn_settings_page`); the design is in the [GUI design system](../src/architecture/gui-design-system.md#64-settings-keys-and-migration).
 
 ---
 

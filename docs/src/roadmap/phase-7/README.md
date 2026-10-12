@@ -9,7 +9,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 ## Milestones
 
 - M-0034 — Cross-Platform CI Matrix & Release Build Automation (`.github`, CI) — ⏳ Planned (Windows & Linux matrix, binary stripping, artifact generation)
-- M-0035 — End-User Documentation & Control Configuration UI (`docs`, `opts-gui`) — ⏳ Planned (input rebinding menu, audio/graphic settings panel, user manual)
+- M-0035 — End-User Documentation & Control Configuration UI (`docs`, `opts-gui`) — ⏳ Planned (input rebinding, user manual; the settings panel moved to [M-0063](../phase-9/M-0063.md))
 - M-0036 — OPTS v0.1.0-alpha Milestone & Binary Distribution — ⏳ Planned (alpha release tagging, checksum verification, release notes)
 
 ## Checklist
@@ -23,6 +23,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Implement automated release workflow generating compressed binary packages with SHA-256 checksums.
 - [ ] **📖 User Documentation & Settings UI** — [M-0035](README.md)
   - [ ] Author end-user installation, controls, and troubleshooting manuals (`docs/src/user/`).
-  - [ ] Implement in-game settings dialog in `opts-gui` for graphics preferences, audio volume, and input rebinding (M-0035).
+  - [x] In-game settings dialog for graphics preferences: delivered by the settings page of M-0063 (2026-10-12); audio volume appears with M-0027.
+  - [ ] Input rebinding (M-0035): the *Controls* page shows it as "Feature not available yet!".
 - [ ] **🏁 Milestone Release** — [M-0036](README.md)
   - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).

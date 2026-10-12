@@ -46,7 +46,7 @@ fn main() {
             }
             println!(
                 "| {kind:?} | {} | {} | {} | {:.2} ({}) | {:.2} ({}) |",
-                preset.label(),
+                preset.key(),
                 rules().len(),
                 audit(&s).len(),
                 low_text.0,

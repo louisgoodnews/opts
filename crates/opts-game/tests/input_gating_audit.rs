@@ -49,6 +49,7 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/menu/systems.rs",
     "opts-game/src/menu/theme_toggle.rs",
     "opts-game/src/new_game_screen/systems.rs",
+    "opts-game/src/settings_screen/page.rs",
     "opts-game/src/settings_screen/systems.rs",
     "opts-game/src/stub_screens/mod.rs",
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.

@@ -129,6 +129,10 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `menu.do` | `{command}` | drives the in-game vehicle menu (Left Alt): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <var>`, `done`, `confirm`, `despawn`, `back`; see [vehicle menu](in-game-vehicle-menu.md) | P2 |
 | `menu.state` | — | page, chosen vehicle/repaint/entry and the free entry points of the vehicle menu | P2 |
 | `render.look` | `[look]` | `{look, previous, available}`; without `look` it reads the colour look, with `look` ∈ `vivid, natural, bevy` it sets it: live on every camera and the sky, and saved in the settings; unknown names answer `-32602` | P1 |
+| `settings.list` | `[category]` | `{count, settings:[{key, category, kind, value, default, options, apply, available, hidden}]}`; `category` is one of `graphics, audio, controls, interface, gameplay, content, advanced` (`-32602` otherwise). `apply` is `live`, `restart` or `{revert_after_s}`; `available` is `yes`, `{needs}` or `{not_yet: milestone}`. The same registry feeds the settings screen and [the generated reference](../reference/settings.md) | P1 |
+| `settings.get` | `{key}` | one entry as above; `1004` for an unknown key | P1 |
+| `settings.set` | `{key, value}` | the entry after the change plus `previous`; `value` may be a string, number or boolean and is validated against the setting (`-32602` with what is expected); a planned setting answers `1001` with "Feature not available yet!"; saved at once and announced like a change on the page; **risky settings (window mode, size) skip the 15 s revert prompt** because a script is not a person | P1 |
+| `settings.reset` | `{key}` | the entry after the change plus `previous`; `1004` for an unknown key | P1 |
 | `vehicle.get` | — | `{x, y, z, heading_deg, speed_kmh}` of the player vehicle (absolute OMSI coordinates) | P1 |
 | `vehicle.script_vars` | `{contains?}` | the player vehicle's script variables `{count, variables, ops_executed}` (substring filter) | P1 |
 | `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |

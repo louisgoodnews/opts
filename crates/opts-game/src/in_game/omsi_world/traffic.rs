@@ -262,12 +262,15 @@ pub(super) fn unregister_tile(commands: &mut Commands, key: (i32, i32)) {
 /// Reads `--traffic` and resets the per-session state when a session starts.
 pub fn configure_traffic(
     args: Option<Res<crate::AppArgs>>,
+    user: Option<Res<crate::settings::GameSettings>>,
     mut settings: ResMut<TrafficSettings>,
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
 ) {
+    // The command line wins for this run; then the setting *Road traffic*; then the default.
     settings.max = args
         .and_then(|a| a.0.traffic)
+        .or_else(|| user.and_then(|u| u.raw("gameplay.traffic")?.parse().ok()))
         .unwrap_or(DEFAULT_MAX_TRAFFIC);
     *state = TrafficState::default();
     *pool = TrafficPool::default();
