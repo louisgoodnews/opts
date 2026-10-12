@@ -194,3 +194,43 @@ fn ui_scale_from_75_to_200_percent_keeps_text_inside_at_three_window_sizes() {
     }
     assert!(findings.is_empty(), "{} findings:\n{}", findings.len(), findings.join("\n"));
 }
+
+#[test]
+fn the_language_can_be_chosen_on_every_first_run_step_and_back() {
+    use opts_gui::interaction::Activated;
+    use opts_gui::l10n::Localization;
+    for screen in [
+        Screen::FirstRunFound,
+        Screen::FirstRunChoose,
+        Screen::Welcome,
+    ] {
+        let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+        let id = opts_gui::ui_tree::snapshot(app.world_mut())
+            .flatten()
+            .iter()
+            .find(|n| n.id.ends_with("language"))
+            .map(|n| n.id.clone())
+            .unwrap_or_else(|| panic!("{}: no language button", screen.name()));
+        let before = app.world().resource::<Localization>().locale().to_string();
+        assert_eq!(before, "en");
+        for expected in ["de", "en"] {
+            let e = opts_gui::ui_tree::find_entity(app.world_mut(), &id).expect("button");
+            app.world_mut().write_message(Activated(e));
+            for _ in 0..4 {
+                app.update();
+            }
+            assert_eq!(
+                app.world().resource::<Localization>().locale(),
+                expected,
+                "{}",
+                screen.name()
+            );
+            // the dialog is still open (the choice keeps it open)
+            assert!(
+                opts_gui::ui_tree::find_entity(app.world_mut(), &id).is_some(),
+                "{}: the dialog closed",
+                screen.name()
+            );
+        }
+    }
+}

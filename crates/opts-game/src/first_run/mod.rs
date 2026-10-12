@@ -254,6 +254,7 @@ pub fn first_run_choices(
     mut choices: MessageReader<DialogChoice>,
     mut first_run: ResMut<FirstRun>,
     mut settings: ResMut<GameSettings>,
+    mut loc: ResMut<opts_gui::l10n::Localization>,
     setup: Res<NewGameSetup>,
     mut navigate: MessageWriter<Navigate>,
     mut start: MessageWriter<StartDrive>,
@@ -264,6 +265,17 @@ pub fn first_run_choices(
             (view::USE, Some(Step::Found(root))) => {
                 adopt_root(&mut commands, &mut settings, &root, first_run.persist);
                 first_run.step = None;
+            }
+            (view::LANGUAGE, _) => {
+                // Offered on every step (M-0065): the other language, kept like the setting.
+                let next = if loc.locale().starts_with("de") { "en" } else { "de" };
+                loc.set_locale(next);
+                settings.set_raw("interface.language", next);
+                if first_run.persist {
+                    if let Err(e) = settings.save() {
+                        tracing::warn!("could not save the language: {e}");
+                    }
+                }
             }
             (view::OTHER | view::CHOOSE, _) => choose_omsi_folder(&mut commands),
             (view::QUIT, _) => {

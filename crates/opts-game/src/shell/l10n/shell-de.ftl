@@ -46,6 +46,7 @@ firstrun-found-title = Diesen OMSI-2-Ordner verwenden?
 firstrun-found-body = OPTS hat eine OMSI-2-Installation in { $path } gefunden. OPTS liest nur daraus; nichts wird verändert oder kopiert.
 firstrun-use = Diesen Ordner verwenden
 firstrun-other = Anderen Ordner wählen …
+firstrun-language = English
 firstrun-quit = Beenden
 firstrun-choose-title = Wo liegt OMSI 2?
 firstrun-choose-body = OPTS liest Karten und Fahrzeuge aus Ihrer eigenen OMSI-2-Installation. Ein gültiger Ordner enthält die Ordner "maps" und "Vehicles". Die Wahl wird gespeichert und lässt sich in den Einstellungen ändern.

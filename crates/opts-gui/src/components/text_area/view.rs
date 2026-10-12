@@ -149,6 +149,13 @@ mod tests {
     use super::*;
     use crate::components::text_area::TextBuffer;
 
+    /// WCAG 2.3.1: nothing flashes more than three times a second. The caret is the only
+    /// periodic visual change of the text widgets; it flashes once per period.
+    #[test]
+    fn the_caret_flashes_well_below_three_times_a_second() {
+        assert!(1.0 / BLINK_PERIOD <= 2.0, "{} per second", 1.0 / BLINK_PERIOD);
+    }
+
     #[test]
     fn cursor_line_accounts_for_wrapping() {
         let area = TextArea {
