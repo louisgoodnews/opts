@@ -70,3 +70,68 @@ Verifiable from the twins: every rule above can be scored per vertex with `uv_tr
 - **Feasibility:** the scrambler's chain `s` (data-dependent state) is still unknown (Addendum 5). Without it no decoder can
   be *provably* exact on a mesh that has no twin; what is possible is a better inference with a quality flag per vertex
   and twin/joint-copy preference. See the checkpoint proposal.
+
+## Phase B1 - inference with the 881k truth set
+All numbers: 2,476 pairs, 881,573 vertices, UV step with the true positions (`uv_step_eval`), tolerance 1e-4.
+
+| Change | Exact |
+|---|---|
+| baseline (Phase A) | 77.07 % |
+| smooth prior 0.4 -> 0.3 (measured optimum; 0.1: 71.96, 0.6: 76.35) | 78.42 % |
+| + welded hinges (corners that share a position join the hinge graph; 13 % of vertices still have no hinge) | 78.05 % alone, 78.42 % with the prior |
+| + `min_clean` 3 -> 6 (plane patches need 6 jitter-free anchors) | 78.97 % |
+| + 4 annealing restarts, lowest energy wins | **79.55 %** (non-5\|n meshes 87.7 %, 5\|n 41.4 %) |
+| vertex-order chain as post-correction (forward-backward, trained on even pairs, held-out odd) | +0.35 points only (75.57 -> 75.92 on the odd pairs) |
+| vertex-order chain as an energy term inside the smooth stage | **no gain** (79.51 -> 79.57 at best, worse at weights >= 0.3) |
+| smooth stage alone (no plane/pool/hinge stages), 80 / 300 / 1000 sweeps | 64.6 / 66.4 / 67.2 % |
+
+Target 85 %: **not reached; 79.55 % is where this evidence stalls.**
+
+**Stage accuracy** (new defaults): plane 24.4 % of vertices at 94.4 % exact; pool 13.4 % at 92.7 %; hinge 0.6 % at 88 %; smooth 61.7 % at 70.8 %.
+The smooth stage is the weak link and it settles most vertices.
+
+**Ceiling of the evidence (the "top-K" question).** With every other vertex at its true offset, the best of the 79 candidates
+under the smooth model (hinge + prior) is the true one for **87.2 %** of the vertices (5|n meshes 86.5 %); the true offset is
+within the best 3 for 92.6 %, 5: 93.5 %, 10: 95.3 %. 13 % of the vertices touch no hinge at all and can only use the prior.
+The search is what falls short of that ceiling: on 1,007 of 2,468 meshes the *true* assignment scores a lower energy than the decoded one
+(search failure), on 1,135 the decoded one is lower (model failure), 326 equal.
+
+**Offset prior (measured).** 79 offsets occur and nothing else (`(u, v) = ((k/20)^2, (m/50)^2)`); 50.1 % of the vertices are jittered.
+Most frequent (share of all jittered vertices): (k=10) 5.0 %, 12: 4.2 %, 8: 4.2 %, 16: 4.2 %, 4: 4.1 %, then (k,m) = (4,20) 2.1 %, (16,30) 2.1 %, (12,10) 2.1 %, (8,40) 2.0 %,
+18/14/6/2 (u only) 1.8-1.7 %, (0,36), (0,46), (0,12), (0,22), (0,26), (0,18), (0,42) (v only) 1.7 % each: u offsets with k divisible by 4 and 10 are
+about 2.5x as frequent as odd k.
+**Neighbour structure.** Consecutive vertices share the same offset pair 30.0 % of the time (u-only: k equal 22.7 %). P(next has u-jitter) is 53 % after a vertex
+with u-jitter and 19 % after one without. The difference `(k_i - k_(i-1)) mod 20` is 19.6 % at 0, 8.5 % at each of 4/8/12/16, 6.4 % at 10, about 2 % at odd values:
+the offsets of neighbours agree mostly modulo 4. Using this as a prior did not help (above).
+
+**Negative result - a single hinge cannot be solved exactly** (`uv_hinge_solve`, 204 hinges that are affine across the shared edge, 46 % of all): the true offsets of its four vertices are always among the solutions of
+`uv(x) = w . [uv(b), uv(c), uv(d)]` but only 2 hinges have a unique solution, 186 have more than 20 (a common shift of all four offsets is always a solution,
+plus coincidences). Exactness needs region-level joint solving, not local solving.
+
+## Phase B2 - the 5 | n lead
+- **No group-of-5 structure.** Exactness by `vertex index mod 5` inside 5|n meshes is flat (41.4 % for each residue); errors do not cluster at positions 0, 5, 10... and no chunk-level difference exists (chunk tags are identical in all pairs).
+- **It is arithmetic, and a bootstrap problem.** The scrambler's state is `q = n * s (mod 8000)` (Addendum 5). With `5 | n` every `q` is divisible by 5, so the u-jitter `(q mod 100 / 100)^2`
+  is visible on every vertex: u-jitter on 76.7 % of the vertices against 17.8 % otherwise (v-jitter 22.3 % / 32.3 %, independent of `n mod 3`). For these meshes `k = (n/5 * s) mod 20`: P(k = 0) is 1.0 for
+  `n/5 = 0 mod 20`, 0.56 for `n/5 = 10 mod 20`, 0.25 for 5, 0.05 for `n/5` coprime to 20 - the observed values match the arithmetic, with `s` close to uniform.
+- **Why the decoder fails there.** With 77 % of the vertices jittered there are almost no jitter-free anchors, so the plane stage (which needs them) finds nothing and the smooth stage has to bootstrap from nothing:
+  41 % exact. The *information* is there: the single-vertex ceiling of 5|n meshes is 86.5 %, the same as for other meshes. This is a search/anchor problem, not an information problem.
+- **Conclusion:** structural finding is the arithmetic above; the group-of-5 hypothesis is a negative result. A decoder for these meshes needs region-level joint solving over the lattice of allowed offsets
+  (all offsets are non-negative and drawn from a sparse set, so the common-shift ambiguity disappears over a few vertices). Not implemented.
+
+## Calibration of the evidence (basis for `UvQuality`)
+Precision of a vertex given its stage and evidence strength, measured on the 881,573 truth vertices (previous defaults, `min_clean` 3):
+
+| Evidence | Share of all vertices | Precision |
+|---|---|---|
+| plane, >= 6 anchors | 22.3 % | 95.0 % |
+| plane, >= 10 | 11.9 % | 97.4 % |
+| plane, >= 20 | 5.5 % | 98.5 % |
+| plane, >= 40 | 2.4 % | 99.7 % |
+| pool | 10.0 % | 92.9 % |
+| smooth, margin >= 2 | 4.8 % | 93.0 % |
+| smooth, margin >= 4 | 2.9 % | 98.2 % |
+| smooth, margin >= 8 | 1.1 % | 98.9 % |
+
+So at >= 99 % precision only about 2-5 % of the vertices of a mesh without a twin can be certified; at >= 90 % about a third.
+For the MAN NL/NG folder (325 meshes, all keyed) only 5 have a plain copy elsewhere and 31 more have keyed copies elsewhere
+(`uv_copies`): about 89 % of its meshes depend on inference alone.

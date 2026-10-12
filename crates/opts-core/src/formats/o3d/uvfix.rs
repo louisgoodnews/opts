@@ -16,7 +16,7 @@ use super::O3d;
 
 const JITTER_TOLERANCE: f32 = 1e-4;
 const MIN_PATCH_VERTICES: usize = 4;
-const MIN_CLEAN: usize = 3;
+const MIN_CLEAN: usize = 6;
 const POOL_ALL: bool = true;
 const POOL_MIN: u32 = 3;
 const MIN_CLEAN_PERCENT: usize = 40;
@@ -126,6 +126,116 @@ fn is_jitter(du: f32, dv: f32, pairs: &[(f32, f32)], tol: f32) -> bool {
         .any(|(a, b)| (du - a).abs() <= tol && (dv - b).abs() <= tol)
 }
 
+/// Tunable parameters of the planar-patch stage and the value-pool stage of [`unjitter_uv`]. The
+/// defaults are the evaluated configuration; `uv_truth` / `uv_step_eval` score a setting against
+/// the plain/keyed twins of an installation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct UvFixParams {
+    /// Fewest vertices a patch needs.
+    pub min_patch_vertices: usize,
+    /// Fewest jitter-free vertices a patch needs.
+    pub min_clean: usize,
+    /// Share (percent) of a patch's inliers that must be jitter-free.
+    pub min_clean_percent: usize,
+    /// Planes tried per round.
+    pub trials: usize,
+    /// Residual (texture units) below which a vertex counts as jitter-free.
+    pub clean_tolerance: f32,
+    /// Times a value must occur for the pool stage to trust it.
+    pub pool_min: u32,
+    /// Independent annealing runs of the smooth stage (the lowest energy wins).
+    pub restarts: usize,
+    /// Join vertices that share a position when building the smooth stage's hinges (flat-shaded
+    /// meshes repeat every corner).
+    pub weld: bool,
+    /// Skip the planar-patch, pool and hinge stages (experiments).
+    pub smooth_only: bool,
+    /// Gibbs sweeps of the smooth stage.
+    pub smooth_sweeps: usize,
+    /// Width of the robust hinge residual (texture units).
+    pub smooth_sigma: f32,
+    /// Weight of the offset prior against the hinge residuals.
+    pub smooth_prior: f32,
+    /// Starting temperature of the Gibbs sampling.
+    pub smooth_t0: f32,
+}
+
+impl Default for UvFixParams {
+    fn default() -> Self {
+        Self {
+            min_patch_vertices: MIN_PATCH_VERTICES,
+            min_clean: MIN_CLEAN,
+            min_clean_percent: MIN_CLEAN_PERCENT,
+            trials: 40,
+            clean_tolerance: 6e-5,
+            pool_min: POOL_MIN,
+            restarts: 4,
+            weld: true,
+            smooth_only: false,
+            smooth_sweeps: SMOOTH_SWEEPS,
+            smooth_sigma: SMOOTH_SIGMA,
+            smooth_prior: SMOOTH_PRIOR,
+            smooth_t0: SMOOTH_T0,
+        }
+    }
+}
+
+impl UvFixParams {
+    /// Applies developer overrides (`UVFIX_MIN_CLEAN`, `UVFIX_MIN_CLEAN_PERCENT`, `UVFIX_TRIALS`, ...)
+    /// from whatever lookup the binary passes; the library never reads the environment.
+    #[must_use]
+    pub fn with_overrides(mut self, lookup: impl Fn(&str) -> Option<String>) -> Self {
+        let num = |k: &str| lookup(k).and_then(|v| v.parse::<f64>().ok());
+        if let Some(v) = num("UVFIX_MIN_PATCH") {
+            self.min_patch_vertices = v as usize;
+        }
+        if let Some(v) = num("UVFIX_MIN_CLEAN") {
+            self.min_clean = v as usize;
+        }
+        if let Some(v) = num("UVFIX_MIN_CLEAN_PERCENT") {
+            self.min_clean_percent = v as usize;
+        }
+        if let Some(v) = num("UVFIX_TRIALS") {
+            self.trials = v as usize;
+        }
+        if let Some(v) = num("UVFIX_CLEAN_TOL") {
+            self.clean_tolerance = v as f32;
+        }
+        if let Some(v) = num("UVFIX_RESTARTS") {
+            self.restarts = (v as usize).max(1);
+        }
+        if let Some(v) = num("UVFIX_WELD") {
+            self.weld = v > 0.0;
+        }
+        if let Some(v) = num("UVFIX_SMOOTH_ONLY") {
+            self.smooth_only = v > 0.0;
+        }
+        if let Some(v) = num("UVFIX_SWEEPS") {
+            self.smooth_sweeps = v as usize;
+        }
+        if let Some(v) = num("UVFIX_SIGMA") {
+            self.smooth_sigma = v as f32;
+        }
+        if let Some(v) = num("UVFIX_PRIOR") {
+            self.smooth_prior = v as f32;
+        }
+        if let Some(v) = num("UVFIX_T0") {
+            self.smooth_t0 = v as f32;
+        }
+        if let Some(v) = num("UVFIX_POOL_MIN") {
+            self.pool_min = v as u32;
+        }
+        self
+    }
+}
+
+/// The 79 offsets the scrambler can add to a vertex's texture coordinates, in the order the
+/// smooth stage's tables use (index 0 is "no jitter").
+#[must_use]
+pub fn jitter_offsets() -> Vec<(f32, f32)> {
+    jitter_pairs()
+}
+
 /// Removes texture jitter where a planar UV model proves it; returns what was done.
 pub fn unjitter_uv(o: &mut O3d) -> UvFixReport {
     unjitter_uv_with_hints(o, &[])
@@ -134,11 +244,63 @@ pub fn unjitter_uv(o: &mut O3d) -> UvFixReport {
 /// [`unjitter_uv`] with texture coordinates already known for some vertices (`hints[i]`, e.g. from
 /// jointly decoded copies): those are applied first and serve as clean anchors.
 pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFixReport {
+    unjitter_uv_params(o, hints, &UvFixParams::default())
+}
+
+/// Which stage settled a vertex's texture coordinate (the evidence behind it).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum UvStage {
+    /// Not settled by any stage.
+    #[default]
+    Unresolved,
+    /// Given: known from jointly decoded copies.
+    Hint,
+    /// Fitted by a plane-affine UV model through jitter-free anchors.
+    Plane,
+    /// Equal to values that repeat elsewhere in the mesh.
+    Pool,
+    /// Predicted across a hinge from resolved neighbours.
+    Hinge,
+    /// Chosen by the smooth stage's global energy.
+    Smooth,
+}
+
+/// Result of [`unjitter_uv_staged`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct UvFixOutcome {
+    /// Counters of the run.
+    pub report: UvFixReport,
+    /// The stage that settled each vertex.
+    pub stages: Vec<UvStage>,
+    /// Evidence strength per vertex, in the unit of its stage: jitter-free anchors of the plane
+    /// patch (`Plane`), 1 (`Pool`, `Hint`, `Hinge`), energy margin to the runner-up in the smooth
+    /// stage's model (`Smooth`, larger is safer).
+    pub confidence: Vec<f32>,
+}
+
+/// [`unjitter_uv_with_hints`] with explicit parameters.
+pub fn unjitter_uv_params(
+    o: &mut O3d,
+    hints: &[Option<glam::Vec2>],
+    params: &UvFixParams,
+) -> UvFixReport {
+    unjitter_uv_staged(o, hints, params).report
+}
+
+/// [`unjitter_uv_params`] that also reports, per vertex, the stage that settled it.
+pub fn unjitter_uv_staged(
+    o: &mut O3d,
+    hints: &[Option<glam::Vec2>],
+    params: &UvFixParams,
+) -> UvFixOutcome {
     let n = o.vertices.len();
+    let mut stages = vec![UvStage::Unresolved; n];
+    let mut confidence = vec![0.0f32; n];
+    let orig: Vec<[f32; 2]> = o.vertices.iter().map(|v| [v.uv.x, v.uv.y]).collect();
     let mut report = UvFixReport::default();
-    if n < MIN_PATCH_VERTICES || o.indices.is_empty() {
+    if n < params.min_patch_vertices || o.indices.is_empty() {
         report.unresolved = n;
-        return report;
+        return UvFixOutcome { report, stages, confidence };
     }
     let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
     let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
@@ -162,6 +324,16 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
             remaining -= 1;
         }
     }
+    let mut labelled = done.clone();
+    let label = |done: &[bool], stage: UvStage, labelled: &mut Vec<bool>, stages: &mut Vec<UvStage>| {
+        for i in 0..n {
+            if done[i] && !labelled[i] {
+                labelled[i] = true;
+                stages[i] = stage;
+            }
+        }
+    };
+    label(&done, UvStage::Hint, &mut labelled, &mut stages);
     let mut rng = 0x2545_F491_u32 ^ n as u32;
     let mut next = |bound: usize| {
         rng ^= rng << 13;
@@ -169,10 +341,14 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
         rng ^= rng << 5;
         rng as usize % bound.max(1)
     };
-    let trials = 40usize;
-    let max_rounds = (WORK_BUDGET / (trials * n)).clamp(4, 400);
+    let trials = params.trials;
+    let max_rounds = if params.smooth_only {
+        0
+    } else {
+        (WORK_BUDGET / (trials * n)).clamp(4, 400)
+    };
     for _ in 0..max_rounds {
-        if remaining < MIN_PATCH_VERTICES {
+        if remaining < params.min_patch_vertices {
             break;
         }
         let mut best: Option<(usize, Plane)> = None;
@@ -196,7 +372,7 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
                 }
                 let (pu, pv) = plane.predict(pos[i]);
                 let (ru, rv) = (o.vertices[i].uv.x - pu, o.vertices[i].uv.y - pv);
-                if ru.abs() <= 6e-5 && rv.abs() <= 6e-5 {
+                if ru.abs() <= params.clean_tolerance && rv.abs() <= params.clean_tolerance {
                     inliers += 1;
                     clean += 1;
                 } else if is_jitter(ru, rv, &pairs, JITTER_TOLERANCE) {
@@ -205,7 +381,7 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
             }
             // A patch must be mostly explained without correction: coincidental jitter matches
             // (texture-atlas offsets alias with the jitter sets) must not outvote the evidence.
-            let score = if clean * 100 >= inliers * MIN_CLEAN_PERCENT && clean >= MIN_CLEAN {
+            let score = if clean * 100 >= inliers * params.min_clean_percent && clean >= params.min_clean {
                 inliers
             } else {
                 0
@@ -217,33 +393,46 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
         let Some((count, plane)) = best else {
             continue;
         };
-        if count < MIN_PATCH_VERTICES {
+        if count < params.min_patch_vertices {
             continue;
         }
+        let patch_clean = (0..n)
+            .filter(|&i| {
+                if done[i] || (pos[i] - plane.origin).dot(plane.n).abs() > plane_tol {
+                    return false;
+                }
+                let (pu, pv) = plane.predict(pos[i]);
+                (o.vertices[i].uv.x - pu).abs() <= params.clean_tolerance
+                    && (o.vertices[i].uv.y - pv).abs() <= params.clean_tolerance
+            })
+            .count() as f32;
         for i in 0..n {
             if done[i] || (pos[i] - plane.origin).dot(plane.n).abs() > plane_tol {
                 continue;
             }
             let (pu, pv) = plane.predict(pos[i]);
             let (ru, rv) = (o.vertices[i].uv.x - pu, o.vertices[i].uv.y - pv);
-            if ru.abs() <= 6e-5 && rv.abs() <= 6e-5 {
+            if ru.abs() <= params.clean_tolerance && rv.abs() <= params.clean_tolerance {
                 done[i] = true;
+                confidence[i] = patch_clean;
                 remaining -= 1;
                 report.clean += 1;
             } else if is_jitter(ru, rv, &pairs, JITTER_TOLERANCE) {
                 o.vertices[i].uv.x -= ru;
                 o.vertices[i].uv.y -= rv;
                 done[i] = true;
+                confidence[i] = patch_clean;
                 remaining -= 1;
                 report.corrected += 1;
             }
         }
     }
+    label(&done, UvStage::Plane, &mut labelled, &mut stages);
     // Second pass: texture coordinates of real models repeat (box and planar mappings share
     // u or v values). A leftover vertex is fixed when exactly one offset makes *both* of its
     // coordinates equal values already confirmed elsewhere.
     let key = |x: f32| (x * 1.0e5).round() as i64;
-    for _pass in 0..6 {
+    for _pass in 0..if params.smooth_only { 0 } else { 6 } {
         let mut pool_u: std::collections::HashMap<i64, u32> = std::collections::HashMap::new();
         let mut pool_v: std::collections::HashMap<i64, u32> = std::collections::HashMap::new();
         let before = remaining;
@@ -264,9 +453,9 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
                 for &(ju, jv) in &pairs {
                     let (cu, cv) = (u - ju, v - jv);
                     let mu = (key(cu) - 1..=key(cu) + 1)
-                        .any(|k| pool_u.get(&k).is_some_and(|c| *c >= POOL_MIN));
+                        .any(|k| pool_u.get(&k).is_some_and(|c| *c >= params.pool_min));
                     let mv = (key(cv) - 1..=key(cv) + 1)
-                        .any(|k| pool_v.get(&k).is_some_and(|c| *c >= POOL_MIN));
+                        .any(|k| pool_v.get(&k).is_some_and(|c| *c >= params.pool_min));
                     if mu && mv {
                         if ju == 0.0 && jv == 0.0 {
                             hit = None;
@@ -293,19 +482,24 @@ pub fn unjitter_uv_with_hints(o: &mut O3d, hints: &[Option<glam::Vec2>]) -> UvFi
             break;
         }
     }
-    remaining -= hinge_pass(o, &mut done, &pairs, &mut report);
-    remaining -= smooth_pass(o, &mut done, &pairs, &mut report);
+    label(&done, UvStage::Pool, &mut labelled, &mut stages);
+    if !params.smooth_only {
+        remaining -= hinge_pass(o, &mut done, &pairs, &mut report);
+    }
+    label(&done, UvStage::Hinge, &mut labelled, &mut stages);
+    let margins = smooth_pass(o, &mut done, &pairs, &mut report, params, &orig);
+    remaining -= margins.len();
+    for (i, m) in margins {
+        confidence[i] = m;
+    }
+    label(&done, UvStage::Smooth, &mut labelled, &mut stages);
+    for i in 0..n {
+        if matches!(stages[i], UvStage::Pool | UvStage::Hint | UvStage::Hinge) {
+            confidence[i] = 1.0;
+        }
+    }
     report.unresolved = remaining;
-    report
-}
-
-/// Two triangles sharing an edge: `x` and `d` are the apexes, `b`/`c` the shared edge.
-struct Hinge {
-    v: [u32; 4], // b, c, x, d
-    /// Weights predicting `uv(x)` from `b, c, d` (they sum to 1).
-    wx: [f32; 3],
-    /// Weights predicting `uv(d)` from `b, c, x`.
-    wd: [f32; 3],
+    UvFixOutcome { report, stages, confidence }
 }
 
 /// Barycentric-style weights predicting the apex `x` across edge `bc` from the triangle `b, c, d`
@@ -354,9 +548,188 @@ const SMOOTH_SWEEPS: usize = 80;
 /// Width of the robust residual (texture units).
 const SMOOTH_SIGMA: f32 = 0.01;
 /// Weight of the measured offset prior against the hinge residuals.
-const SMOOTH_PRIOR: f32 = 0.4;
+const SMOOTH_PRIOR: f32 = 0.3;
 /// Starting temperature of the Gibbs sampling.
 const SMOOTH_T0: f32 = 0.6;
+
+/// Two triangles sharing an edge, possibly through *different vertices at the same positions*
+/// (flat-shaded meshes repeat every corner): `b1, c1, x` and `b2, c2, d` with `b1`/`b2` and
+/// `c1`/`c2` at equal positions.
+struct WHinge {
+    v: [u32; 6], // b1, c1, b2, c2, x, d
+    /// Weights predicting `uv(x)` from `b2, c2, d`.
+    wx: [f32; 3],
+    /// Weights predicting `uv(d)` from `b1, c1, x`.
+    wd: [f32; 3],
+}
+
+/// Hinges of the mesh. With `weld` an edge is identified by the positions of its end points, so
+/// triangles that do not share vertex indices but touch along an edge are joined; without it only
+/// shared indices count (the earlier behaviour).
+fn build_whinges(o: &O3d, weld: bool) -> Vec<WHinge> {
+    use std::collections::HashMap;
+    let n = o.vertices.len();
+    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
+    let q = |x: f32| (x * 1.0e4).round() as i64;
+    let mut group: Vec<u32> = (0..n as u32).collect();
+    if weld {
+        let mut ids: HashMap<(i64, i64, i64), u32> = HashMap::new();
+        for (i, p) in pos.iter().enumerate() {
+            let next = ids.len() as u32;
+            group[i] = *ids.entry((q(p.x), q(p.y), q(p.z))).or_insert(next);
+        }
+    }
+    let mut edge_faces: HashMap<(u32, u32), Vec<(u32, u32, u32)>> = HashMap::new();
+    for (fi, f) in o.indices.iter().enumerate() {
+        for k in 0..3 {
+            let (a, b) = (f[k], f[(k + 1) % 3]);
+            if a as usize >= n || b as usize >= n {
+                continue;
+            }
+            let (ga, gb) = (group[a as usize], group[b as usize]);
+            if ga == gb {
+                continue;
+            }
+            edge_faces
+                .entry((ga.min(gb), ga.max(gb)))
+                .or_default()
+                .push((fi as u32, a, b));
+        }
+    }
+    let mut hinges = Vec::new();
+    for entries in edge_faces.values() {
+        let [(f1, a1, e1), (f2, a2, e2)] = entries[..] else {
+            continue;
+        };
+        if f1 == f2 {
+            continue;
+        }
+        let (b1, c1) = (a1, e1);
+        let (b2, c2) = if group[a2 as usize] == group[b1 as usize] { (a2, e2) } else { (e2, a2) };
+        let apex = |fi: u32, p: u32, r: u32| {
+            o.indices[fi as usize].iter().copied().find(|&v| v != p && v != r)
+        };
+        let (Some(x), Some(d)) = (apex(f1, b1, c1), apex(f2, b2, c2)) else {
+            continue;
+        };
+        if x as usize >= n || d as usize >= n || group[x as usize] == group[d as usize] {
+            continue;
+        }
+        let (pb, pc, px, pd) = (pos[b1 as usize], pos[c1 as usize], pos[x as usize], pos[d as usize]);
+        let (Some(wx), Some(wd)) = (hinge_weights(pb, pc, pd, px), hinge_weights(pb, pc, px, pd)) else {
+            continue;
+        };
+        hinges.push(WHinge { v: [b1, c1, b2, c2, x, d], wx, wd });
+    }
+    hinges
+}
+
+fn whinge_energy(h: &WHinge, uv: &dyn Fn(usize) -> [f32; 2], robust: &dyn Fn([f32; 2]) -> f32) -> f32 {
+    let [b1, c1, b2, c2, x, d] = h.v.map(|v| v as usize);
+    let (ub1, uc1, ub2, uc2, ux, ud) = (uv(b1), uv(c1), uv(b2), uv(c2), uv(x), uv(d));
+    let mix = |w: [f32; 3], p: [f32; 2], q: [f32; 2], r: [f32; 2]| {
+        [
+            w[0] * p[0] + w[1] * q[0] + w[2] * r[0],
+            w[0] * p[1] + w[1] * q[1] + w[2] * r[1],
+        ]
+    };
+    let px = mix(h.wx, ub2, uc2, ud);
+    let pd = mix(h.wd, ub1, uc1, ux);
+    robust([ux[0] - px[0], ux[1] - px[1]]) + robust([ud[0] - pd[0], ud[1] - pd[1]])
+}
+
+/// Energy of a complete texture-coordinate assignment under the smooth stage's model: `(hinge
+/// energy, prior energy)`, `None` when a vertex's assignment is not the stored value minus an
+/// allowed offset. Used to tell search failures (the true assignment scores lower than the decoded
+/// one) from model failures (it does not).
+#[must_use]
+pub fn assignment_energy(
+    o: &O3d,
+    uv: &[glam::Vec2],
+    params: &UvFixParams,
+) -> Option<(f32, f32)> {
+    let n = o.vertices.len();
+    let pairs = jitter_pairs();
+    let hinges = build_whinges(o, params.weld);
+    let mut chosen = Vec::with_capacity(n);
+    for i in 0..n {
+        let (du, dv) = (o.vertices[i].uv.x - uv[i].x, o.vertices[i].uv.y - uv[i].y);
+        chosen.push(
+            pairs
+                .iter()
+                .position(|&(ju, jv)| (du - ju).abs() < 2e-4 && (dv - jv).abs() < 2e-4)?,
+        );
+    }
+    let sigma = params.smooth_sigma;
+    let robust = |r: [f32; 2]| {
+        let q = r[0] * r[0] + r[1] * r[1];
+        q / (q + sigma * sigma)
+    };
+    let uvf = |i: usize| [uv[i].x, uv[i].y];
+    let hinge_sum: f32 = hinges.iter().map(|h| whinge_energy(h, &uvf, &robust)).sum();
+    let table: &[f32; 79] = if n.is_multiple_of(5) { &PRIOR_FIVE } else { &PRIOR_NOT5 };
+    let prior_sum: f32 = chosen.iter().map(|&k| params.smooth_prior * table[k]).sum();
+    Some((hinge_sum, prior_sum))
+}
+
+/// Ceiling of the smooth stage's model: with every *other* vertex at its true offset, how many
+/// vertices pick their own true offset by minimising the local energy? `(right, total, ambiguous)`
+/// where `ambiguous` counts vertices without any hinge. A diagnostic for the model, not a decoder.
+#[must_use]
+pub fn single_vertex_ceiling(o: &O3d, truth: &[glam::Vec2], params: &UvFixParams) -> Option<(usize, usize, usize, [usize; 4])> {
+    let n = o.vertices.len();
+    let pairs = jitter_pairs();
+    let hinges = build_whinges(o, params.weld);
+    let mut of: Vec<Vec<u32>> = vec![Vec::new(); n];
+    for (hi, h) in hinges.iter().enumerate() {
+        let mut ids = h.v;
+        ids.sort_unstable();
+        for (j, &v) in ids.iter().enumerate() {
+            if j == 0 || ids[j - 1] != v {
+                of[v as usize].push(hi as u32);
+            }
+        }
+    }
+    let stored: Vec<[f32; 2]> = o.vertices.iter().map(|v| [v.uv.x, v.uv.y]).collect();
+    let mut k = Vec::with_capacity(n);
+    for i in 0..n {
+        let (du, dv) = (stored[i][0] - truth[i].x, stored[i][1] - truth[i].y);
+        k.push(pairs.iter().position(|&(ju, jv)| (du - ju).abs() < 2e-4 && (dv - jv).abs() < 2e-4)?);
+    }
+    let sigma = params.smooth_sigma;
+    let robust = |r: [f32; 2]| {
+        let q = r[0] * r[0] + r[1] * r[1];
+        q / (q + sigma * sigma)
+    };
+    let table: &[f32; 79] = if n.is_multiple_of(5) { &PRIOR_FIVE } else { &PRIOR_NOT5 };
+    let (mut right, mut ambiguous) = (0, 0);
+    let mut top = [0usize; 4]; // true offset within the best 1, 3, 5, 10 candidates
+    let mut kk = k.clone();
+    for i in 0..n {
+        if of[i].is_empty() {
+            ambiguous += 1;
+        }
+        let mut best = (f32::MAX, 0usize);
+        let mut all = Vec::with_capacity(pairs.len());
+        for c in 0..pairs.len() {
+            kk[i] = c;
+            let uvk = |j: usize| [stored[j][0] - pairs[kk[j]].0, stored[j][1] - pairs[kk[j]].1];
+            let e: f32 = params.smooth_prior * table[c]
+                + of[i].iter().map(|&h| whinge_energy(&hinges[h as usize], &uvk, &robust)).sum::<f32>();
+            all.push(e);
+            if e < best.0 {
+                best = (e, c);
+            }
+        }
+        kk[i] = k[i];
+        right += usize::from(best.1 == k[i]);
+        let rank = all.iter().filter(|&&e| e < all[k[i]] - 1e-6).count();
+        for (slot, limit) in [1usize, 3, 5, 10].into_iter().enumerate() {
+            top[slot] += usize::from(rank < limit);
+        }
+    }
+    Some((right, n, ambiguous, top))
+}
 
 /// Fourth pass: Gibbs sampling over the jitter offset of every still unresolved vertex. Energy:
 /// per hinge, how badly the (corrected) texture coordinates of one apex disagree with the affine
@@ -367,68 +740,38 @@ fn smooth_pass(
     done: &mut [bool],
     pairs: &[(f32, f32)],
     report: &mut UvFixReport,
-) -> usize {
-    use std::collections::HashMap;
+    params: &UvFixParams,
+    orig: &[[f32; 2]],
+) -> Vec<(usize, f32)> {
     let n = o.vertices.len();
     let unresolved: Vec<usize> = (0..n).filter(|&i| !done[i]).collect();
     if unresolved.is_empty() {
-        return 0;
+        return Vec::new();
     }
-    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
-    let mut edge_faces: HashMap<(u32, u32), Vec<u32>> = HashMap::new();
-    for (fi, f) in o.indices.iter().enumerate() {
-        for k in 0..3 {
-            let (a, b) = (f[k], f[(k + 1) % 3]);
-            edge_faces
-                .entry((a.min(b), a.max(b)))
-                .or_default()
-                .push(fi as u32);
-        }
-    }
-    let mut hinges: Vec<Hinge> = Vec::new();
-    for (&(b, c), faces) in &edge_faces {
-        if faces.len() != 2 || b as usize >= n || c as usize >= n {
-            continue;
-        }
-        let apex = |fi: u32| {
-            o.indices[fi as usize]
-                .iter()
-                .copied()
-                .find(|&v| v != b && v != c)
-        };
-        let (Some(x), Some(d)) = (apex(faces[0]), apex(faces[1])) else {
-            continue;
-        };
-        if x as usize >= n || d as usize >= n || x == d {
-            continue;
-        }
-        let (pb, pc, px, pd) = (
-            pos[b as usize],
-            pos[c as usize],
-            pos[x as usize],
-            pos[d as usize],
-        );
-        let (Some(wx), Some(wd)) = (hinge_weights(pb, pc, pd, px), hinge_weights(pb, pc, px, pd))
-        else {
-            continue;
-        };
-        // Only hinges that touch an unresolved vertex matter.
-        if [b, c, x, d].iter().any(|&v| !done[v as usize]) {
-            hinges.push(Hinge {
-                v: [b, c, x, d],
-                wx,
-                wd,
-            });
-        }
-    }
+    let hinges = build_whinges(o, params.weld);
     let mut of: Vec<Vec<u32>> = vec![Vec::new(); n];
     for (hi, h) in hinges.iter().enumerate() {
-        for &v in &h.v {
-            of[v as usize].push(hi as u32);
+        let mut ids = h.v;
+        ids.sort_unstable();
+        for (j, &v) in ids.iter().enumerate() {
+            if j == 0 || ids[j - 1] != v {
+                of[v as usize].push(hi as u32);
+            }
         }
     }
-    let stored: Vec<[f32; 2]> = o.vertices.iter().map(|v| [v.uv.x, v.uv.y]).collect();
+    // Every vertex is a variable of the model with its stored (scrambled) value; vertices settled by
+    // earlier stages keep the offset those stages removed.
+    let stored: Vec<[f32; 2]> = orig.to_vec();
     let mut k = vec![0usize; n]; // chosen offset index per vertex
+    for i in 0..n {
+        if done[i] {
+            let (du, dv) = (orig[i][0] - o.vertices[i].uv.x, orig[i][1] - o.vertices[i].uv.y);
+            k[i] = pairs
+                .iter()
+                .position(|&(ju, jv)| (du - ju).abs() < 2e-4 && (dv - jv).abs() < 2e-4)
+                .unwrap_or(0);
+        }
+    }
     let off = |kk: usize| pairs[kk];
     let uv_of = |k: &[usize], i: usize| {
         let (ju, jv) = off(k[i]);
@@ -439,23 +782,19 @@ fn smooth_pass(
     } else {
         &PRIOR_NOT5
     };
-    let (sweeps, sigma, prior, t0) = (SMOOTH_SWEEPS, SMOOTH_SIGMA, SMOOTH_PRIOR, SMOOTH_T0);
+    let (sweeps, sigma, prior, t0) = (
+        params.smooth_sweeps,
+        params.smooth_sigma,
+        params.smooth_prior,
+        params.smooth_t0,
+    );
     let robust = |r: [f32; 2]| {
         let q = r[0] * r[0] + r[1] * r[1];
         q / (q + sigma * sigma)
     };
-    let hinge_energy = |k: &[usize], h: &Hinge| {
-        let [b, c, x, d] = h.v.map(|v| v as usize);
-        let (ub, uc, ux, ud) = (uv_of(k, b), uv_of(k, c), uv_of(k, x), uv_of(k, d));
-        let mix = |w: [f32; 3], p: [f32; 2], q: [f32; 2], r: [f32; 2]| {
-            [
-                w[0] * p[0] + w[1] * q[0] + w[2] * r[0],
-                w[0] * p[1] + w[1] * q[1] + w[2] * r[1],
-            ]
-        };
-        let px = mix(h.wx, ub, uc, ud);
-        let pd = mix(h.wd, ub, uc, ux);
-        robust([ux[0] - px[0], ux[1] - px[1]]) + robust([ud[0] - pd[0], ud[1] - pd[1]])
+    let hinge_energy = |k: &[usize], h: &WHinge| {
+        let uvk = |i: usize| uv_of(k, i);
+        whinge_energy(h, &uvk, &robust)
     };
     let mut rng = 0x9E37_79B9_u32 ^ n as u32;
     let mut next = || {
@@ -464,6 +803,10 @@ fn smooth_pass(
         rng ^= rng << 5;
         rng
     };
+    let base = k.clone();
+    let mut best: Option<(f32, Vec<usize>)> = None;
+    for _restart in 0..params.restarts {
+    k = base.clone();
     let mut order = unresolved.clone();
     for sweep in 0..sweeps {
         let t = (t0 * (1.0 - sweep as f32 / sweeps as f32)).max(0.0);
@@ -500,8 +843,32 @@ fn smooth_pass(
             k[i] = pick;
         }
     }
-    let mut settled = 0;
+    let total: f32 = unresolved.iter().map(|&i| prior * table[k[i]]).sum::<f32>()
+        + hinges.iter().map(|h| hinge_energy(&k, h)).sum::<f32>();
+    if best.as_ref().is_none_or(|b| total < b.0) {
+        best = Some((total, k.clone()));
+    }
+    }
+    if let Some((_, kb)) = best {
+        k = kb;
+    }
+    let mut settled = Vec::with_capacity(unresolved.len());
     for &i in &unresolved {
+        // Margin: energy gap between the chosen offset and the best alternative, others fixed.
+        let mut energies = vec![0.0f32; pairs.len()];
+        let keep = k[i];
+        for (kk, e) in energies.iter_mut().enumerate() {
+            k[i] = kk;
+            *e = prior * table[kk] + of[i].iter().map(|&hi| hinge_energy(&k, &hinges[hi as usize])).sum::<f32>();
+        }
+        k[i] = keep;
+        let best = energies[keep];
+        let second = energies
+            .iter()
+            .enumerate()
+            .filter(|(kk, _)| *kk != keep)
+            .map(|(_, &e)| e)
+            .fold(f32::MAX, f32::min);
         let (ju, jv) = off(k[i]);
         if ju != 0.0 || jv != 0.0 {
             o.vertices[i].uv.x -= ju;
@@ -511,7 +878,7 @@ fn smooth_pass(
             report.clean += 1;
         }
         done[i] = true;
-        settled += 1;
+        settled.push((i, second - best));
     }
     settled
 }
