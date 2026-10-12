@@ -311,7 +311,16 @@ pub fn o3d_to_bevy_meshes_by_material_slots(
             }
         }
         if recompute {
-            out.push((slot, smooth_normal_mesh(positions, uvs, indices)));
+            let mut mesh = smooth_normal_mesh(positions, uvs, indices);
+            // The vertex order is kept, so a skinned character with cycled axes keeps its weights.
+            if skin.is_some() {
+                mesh.insert_attribute(
+                    Mesh::ATTRIBUTE_JOINT_INDEX,
+                    bevy::mesh::VertexAttributeValues::Uint16x4(joint_idx),
+                );
+                mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_w);
+            }
+            out.push((slot, mesh));
             continue;
         }
         let mut mesh = Mesh::new(
