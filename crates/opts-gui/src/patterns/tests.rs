@@ -350,3 +350,48 @@ fn a_selection_far_down_is_scrolled_into_view_when_the_list_appears() {
     );
     assert!(v.scroll() > 20_000.0);
 }
+
+#[test]
+fn programmatic_scroll_reveal_and_select_do_what_the_wheel_and_a_click_do() {
+    let mut app = layout_app();
+    let parts = spawn(&mut app, MasterDetail::new(entries(500), None));
+    let (viewport, max) = {
+        let v = view(&app, &parts);
+        (v.viewport(), v.max_scroll())
+    };
+    assert!(viewport > 100.0 && max > viewport, "{viewport} / {max}");
+    // Scrolling is clamped to the content, like the wheel.
+    app.world_mut()
+        .get_mut::<MasterDetailView>(parts.root)
+        .expect("view")
+        .scroll_by(-500.0);
+    assert_eq!(view(&app, &parts).scroll(), 0.0);
+    app.world_mut()
+        .get_mut::<MasterDetailView>(parts.root)
+        .expect("view")
+        .scroll_to(f32::MAX);
+    assert_eq!(view(&app, &parts).scroll(), max);
+    // The listing covers every entry, not only the rows that exist as entities.
+    let shown = view(&app, &parts).shown_entries(model(&app, &parts)).len();
+    assert_eq!(shown, 500);
+    assert!(view(&app, &parts).live_rows() < 60);
+    // Revealing an entry and selecting it, as a click on its row would.
+    let md = model(&app, &parts).clone();
+    let offset = view(&app, &parts).reveal_offset(&md, "id10").expect("shown");
+    assert!(offset < max, "id10 is near the top: {offset}");
+    let mut md = md;
+    let ok = app
+        .world_mut()
+        .get_mut::<MasterDetailView>(parts.root)
+        .expect("view")
+        .select_entry(&mut md, "id10");
+    assert!(ok);
+    *app.world_mut().get_mut::<MasterDetail>(parts.root).expect("model") = md;
+    app.update();
+    app.update();
+    assert_eq!(model(&app, &parts).selected.as_deref(), Some("id10"));
+    assert!(view(&app, &parts).scroll() <= offset + 1.0);
+    // An entry that is not shown cannot be revealed or selected.
+    let md = model(&app, &parts).clone();
+    assert!(view(&app, &parts).reveal_offset(&md, "nope").is_none());
+}

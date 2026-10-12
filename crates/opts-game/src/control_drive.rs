@@ -318,7 +318,9 @@ pub fn drive_state_json(world: &mut World) -> Option<Value> {
     let signed = ch.forward_speed_km_h();
     let virt = world.resource::<Time<Virtual>>();
     let (paused, scale, sim_time) = (virt.is_paused(), virt.relative_speed(), virt.elapsed_secs_f64());
-    let distance = world.resource::<RemoteControls>().odometer_m;
+    let distance = world
+        .get_resource::<RemoteControls>()
+        .map_or(0.0, |r| r.odometer_m);
     let alert = world
         .get_resource::<crate::hud::alerts::AlertQueue>()
         .and_then(|q| q.visible().map(|a| json!({ "id": a.id, "severity": a.severity.id() })));
@@ -398,8 +400,8 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
 fn reset(world: &mut World, _: &Value) -> Outcome {
     let res = (|| {
         let pose = world
-            .resource::<RemoteControls>()
-            .start_pose
+            .get_resource::<RemoteControls>()
+            .and_then(|r| r.start_pose)
             .ok_or_else(|| RpcError::new(code::NOT_READY, "there is no player vehicle (no drive is running)"))?;
         place(world, pose.0, Some(pose.1), Some(pose.2))?;
         let (x, y) = absolute_position(world, pose.0);

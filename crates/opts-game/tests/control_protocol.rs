@@ -75,6 +75,8 @@ fn drive_app() -> App {
     app.add_plugins(OptsVehiclePlugin);
     app.world_mut()
         .spawn((VehicleController::standard_bus(12_000.0, 5.9), PlayerVehicle));
+    // Free roam is the default camera and takes the vehicle's input away; drive from outside.
+    app.world_mut().resource_mut::<CameraState>().mode = CameraMode::External;
     app.update();
     app
 }
@@ -197,7 +199,7 @@ fn drive_controls_are_refused_by_the_same_gates_as_keys() {
     app.insert_resource(ModalActive(true));
     let e = call(&mut app, "drive.set", json!({"control": "throttle", "value": 1.0})).expect_err("gated");
     assert_eq!(e.code, code::GATED);
-    assert_eq!(e.data.expect("data")["name"], "GATED");
+    assert_eq!(e.structured().data.expect("data")["name"], "GATED");
     app.insert_resource(ModalActive(false));
     // Free roam: the vehicle takes no input.
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::FreeRoam;
@@ -291,7 +293,7 @@ fn wait_for_holds_on_conditions_and_times_out_with_the_last_value() {
         Ok(v) => panic!("should time out: {v}"),
     };
     assert_eq!(e.code, code::TIMEOUT);
-    assert_eq!(e.data.expect("data")["name"], "TIMEOUT");
+    assert_eq!(e.structured().data.expect("data")["name"], "TIMEOUT");
     // Invalid conditions are rejected up front, with the valid ones listed.
     let bad = call(&mut app, "ui.wait_for", json!({"until": "soon"})).expect_err("bad");
     assert_eq!(bad.code, code::INVALID_PARAMS);
@@ -335,4 +337,75 @@ fn screen_reports_state_without_dialogs() {
     app.insert_resource(ModalActive(true));
     let s = call(&mut app, "ui.screen", json!({})).expect("screen");
     assert_eq!(s["modal_open"], true, "the report modal counts");
+}
+
+fn variable(app: &mut App, name: &str) -> Option<f32> {
+    let mut q = app
+        .world_mut()
+        .query_filtered::<&opts_bevy::VehicleScripts, With<PlayerVehicle>>();
+    let scripts = q.iter(app.world()).next()?;
+    let engine = scripts.engine.lock().ok()?;
+    engine
+        .variables()
+        .into_iter()
+        .find(|(n, _)| n.eq_ignore_ascii_case(name))
+        .map(|(_, v)| v)
+}
+
+const SCRIPT: &str = "\
+{trigger:horn}
+    1 (S.L.hornv)
+{end}
+
+{trigger:horn_off}
+    0 (S.L.hornv)
+{end}
+
+{trigger:bus_doorfront0}
+    1 (S.L.doorv)
+{end}
+";
+
+#[test]
+fn triggers_raise_script_events_with_aliases_holds_and_gates() {
+    let mut app = drive_app();
+    let keyboard = opts_core::formats::engine_config::KeyboardConfig::parse(
+        b"[vehicles]\n[entry]\nbus_doorfront0\n181\n0\n[entry]\nhorn\n35\n1\n",
+    );
+    app.insert_resource(ScriptKeyBindings::from_config(&keyboard));
+    let (mut engine, _) = opts_sim::script::ScriptEngine::from_sources(&[("t.osc", SCRIPT)]);
+    engine.run_init();
+    let vehicle = {
+        let mut q = app.world_mut().query_filtered::<Entity, With<PlayerVehicle>>();
+        q.iter(app.world()).next().expect("vehicle")
+    };
+    app.world_mut()
+        .entity_mut(vehicle)
+        .insert(opts_bevy::VehicleScripts::new(engine));
+    // A held binding (the horn): `horn` now, `horn_off` after the hold, in simulation time.
+    let horn = call(&mut app, "drive.trigger", json!({"name": "horn", "hold_ms": 100})).expect("horn");
+    assert_eq!(horn["handled"], true);
+    assert_eq!(horn["held_ms"], 100);
+    assert_eq!(variable(&mut app, "hornv"), Some(1.0));
+    for _ in 0..10 {
+        app.update();
+    }
+    assert_eq!(variable(&mut app, "hornv"), Some(0.0), "horn_off followed the hold");
+    // A short name resolves to the vehicle's own trigger; `drive.set` takes trigger names too.
+    let door = call(&mut app, "drive.set", json!({"control": "door_front", "value": true})).expect("door");
+    assert_eq!(door["name"], "bus_doorfront0");
+    assert_eq!(variable(&mut app, "doorv"), Some(1.0));
+    // A name no script handles is raised and reported as not handled.
+    let none = call(&mut app, "drive.trigger", json!({"name": "no_such_trigger"})).expect("raise");
+    assert_eq!(none["handled"], false);
+    // The modal gate blocks triggers like a key press.
+    app.insert_resource(ModalActive(true));
+    let gated = call(&mut app, "drive.trigger", json!({"name": "horn"})).expect_err("gated");
+    assert_eq!(gated.code, code::GATED);
+    // The listing shows the bound triggers with their aliases.
+    app.insert_resource(ModalActive(false));
+    let listing = call(&mut app, "drive.controls", json!({})).expect("controls");
+    let triggers = listing["triggers"].as_array().expect("triggers");
+    assert!(triggers.iter().any(|t| t["name"] == "bus_doorfront0" && t["alias"] == "door_front"));
+    assert!(triggers.iter().any(|t| t["name"] == "horn" && t["held"] == true));
 }

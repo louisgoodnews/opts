@@ -29,6 +29,39 @@ fn watch_chord(keys: Res<ButtonInput<KeyCode>>, chord: Res<Chord>) {
     }
 }
 
+/// A windowed list of 300 entries beside the other fixtures (the wizard's map list is one).
+fn spawn_list(app: &mut App) -> Entity {
+    use opts_gui::l10n::{wizard_keys::md, Localization};
+    use opts_gui::patterns::list_model::ListEntry;
+    use opts_gui::patterns::master_detail::{
+        spawn_master_detail, MasterDetail, MasterDetailConfig,
+    };
+    let loc = app.world().resource::<Localization>().clone();
+    let entries: Vec<ListEntry> = (0..300)
+        .map(|i| ListEntry::new(format!("id{i}"), format!("Entry {i:05}")))
+        .collect();
+    let mut commands = app.world_mut().commands();
+    let parts = spawn_master_detail(
+        &mut commands,
+        &loc,
+        MasterDetailConfig {
+            prefix: "maps",
+            empty_key: md::NO_RESULTS,
+            search_key: md::SEARCH,
+        },
+        MasterDetail::new(entries, None),
+    );
+    let frame = commands
+        .spawn(Node {
+            width: Val::Px(900.0),
+            height: Val::Px(500.0),
+            ..default()
+        })
+        .id();
+    commands.entity(frame).add_child(parts.root);
+    parts.root
+}
+
 struct Fixture {
     app: App,
     port: u16,
@@ -88,6 +121,7 @@ fn fixture() -> Fixture {
         let field = TextFieldBuilder::outlined("Search").spawn(&mut commands);
         commands.entity(field).insert(UiId::new("opt.search"));
     }
+    spawn_list(&mut app);
     for _ in 0..6 {
         app.update();
     }
@@ -341,4 +375,30 @@ fn hover_moves_the_pointer_to_the_element() {
         c.call("ui.hover", json!({"id": "nope"})).expect_err("missing")
     });
     assert_eq!(rpc(missing).0, code::NOT_FOUND);
+}
+
+#[test]
+fn a_windowed_list_lists_all_entries_scrolls_to_one_and_selects_it() {
+    let mut f = fixture();
+    let (before, moved, selected) = with_client(&mut f.app, f.port, |c| {
+        let before = c.call("ui.scrollables", json!({})).expect("scrollables");
+        let moved = c
+            .call("ui.scroll", json!({"target": "maps.list", "item": "id250"}))
+            .expect("scroll to entry");
+        settle(60);
+        let selected = c
+            .call("ui.select", json!({"id": "maps.list", "option": "Entry 00042"}))
+            .expect("select by title");
+        (before, moved, selected)
+    });
+    let list = before["scrollables"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["id"] == "maps.list")
+        .expect("list is scrollable");
+    assert_eq!(list["kind"], "list");
+    assert_eq!(list["items"].as_array().unwrap().len(), 300, "every entry, not only live rows");
+    assert!(moved["offset"][1].as_f64().unwrap() > 1000.0, "{moved}");
+    assert_eq!(selected["selected"], "id42");
 }
