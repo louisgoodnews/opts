@@ -9,7 +9,7 @@
 use glam::Vec3;
 
 use super::error::MapParseError;
-use crate::formats::text::{decode_bytes, parse_float, scan_blocks};
+use crate::formats::text::{decode_bytes, parse_float, scan_blocks, OmsiBlock};
 
 /// Placed scenery object instance on a tile (`[object]`).
 #[derive(Debug, Clone, PartialEq)]
@@ -306,6 +306,29 @@ impl MapTile {
                     }
                 }
                 "spline" | "spline_h" => {
+                    // Version 10 (older editor, 556 tiles of Neuendorf, Rheinhausen and Ahlheim 5)
+                    // has one connection field instead of two and gives the placement only when
+                    // that field is `-1`; `0` means "continues the previous spline" and carries
+                    // zeros for the pose (P-1014, MI-0021). A virtual second connection `0` brings
+                    // the record into the version 14 layout.
+                    let is_v10 = tile.version == Some(10);
+                    let chained_v10 = is_v10
+                        && block
+                            .parameters
+                            .get(3)
+                            .is_some_and(|c| c.trim() != "-1");
+                    let normalised: Vec<String> = if is_v10 && block.parameters.len() >= 4 {
+                        let mut v = block.parameters.clone();
+                        v.insert(4, "0".to_string());
+                        v
+                    } else {
+                        block.parameters.clone()
+                    };
+                    let block = &OmsiBlock {
+                        keyword: block.keyword.clone(),
+                        line_number: block.line_number,
+                        parameters: normalised,
+                    };
                     if block.parameters.len() >= 11 {
                         let has_h = block.keyword == "spline_h";
                         let flag =
@@ -313,9 +336,9 @@ impl MapTile {
                         let sli = block.parameters[1].clone();
                         let id = parse_u64(&block.parameters[2], "spline id", block.line_number)?;
                         let c1 =
-                            parse_u64(&block.parameters[3], "spline conn1", block.line_number)?;
+                            parse_conn(&block.parameters[3], "spline conn1", block.line_number)?;
                         let c2 =
-                            parse_u64(&block.parameters[4], "spline conn2", block.line_number)?;
+                            parse_conn(&block.parameters[4], "spline conn2", block.line_number)?;
                         let px = parse_f32(&block.parameters[5], "spline x", block.line_number)?;
                         // CRITICAL: Line 6 is vertical elevation Z, Line 7 is horizontal Y
                         let pz = parse_f32(
@@ -348,6 +371,14 @@ impl MapTile {
                             .unwrap_or(0.0)
                             / 100.0;
 
+                        let (mut px, mut py, mut pz, mut heading) = (px, py, pz, heading);
+                        if chained_v10 {
+                            let Some(prev) = tile.splines.last() else {
+                                continue; // nothing to continue: the pose is unknown
+                            };
+                            let end = spline_end_pose(prev);
+                            (px, py, pz, heading) = (end.0, end.1, end.2, end.3);
+                        }
                         rule_owner = Some(RuleOwner::Spline {
                             index: tile.splines.len(),
                             id_code: id,
@@ -375,7 +406,9 @@ impl MapTile {
                     }
                 }
                 "rule" => {
-                    if block.parameters.len() >= 4 {
+                    // Version 10 rules have no flag line (index, type, value only).
+                    let v10_rule = tile.version == Some(10);
+                    if block.parameters.len() >= 4 || (v10_rule && block.parameters.len() >= 3) {
                         let idx = parse_usize(
                             &block.parameters[0],
                             "rule path_index",
@@ -383,7 +416,15 @@ impl MapTile {
                         )?;
                         let rtype = block.parameters[1].clone();
                         let val = parse_f32(&block.parameters[2], "rule value", block.line_number)?;
-                        let flag = parse_u32(&block.parameters[3], "rule flag", block.line_number)?;
+                        let flag = if v10_rule {
+                            block
+                                .parameters
+                                .get(3)
+                                .and_then(|p| p.trim().parse::<u32>().ok())
+                                .unwrap_or(0)
+                        } else {
+                            parse_u32(&block.parameters[3], "rule flag", block.line_number)?
+                        };
                         tile.rules.push(MapTrafficRule {
                             owner: rule_owner,
                             path_index: idx,
@@ -462,6 +503,37 @@ fn parse_u32(s: &str, field: &'static str, line: usize) -> Result<u32, MapParseE
             value: s.to_string(),
             line,
         })
+}
+
+/// End pose `(x, y, z, heading_deg)` of a spline: straight or circular arc (`radius_m != 0`),
+/// the end height rises by `length * (g_start + g_end) / 2`.
+fn spline_end_pose(s: &MapSplineInstance) -> (f32, f32, f32, f32) {
+    let phi = f64::from(s.heading_deg).to_radians();
+    let len = f64::from(s.length_m);
+    let r = f64::from(s.radius_m);
+    let (x0, y0) = (f64::from(s.position.x), f64::from(s.position.y));
+    let (h1, x1, y1) = if r.abs() > 1e-3 {
+        let h = phi + len / r;
+        (h, x0 - r * (h.cos() - phi.cos()), y0 + r * (h.sin() - phi.sin()))
+    } else {
+        (phi, x0 + len * phi.sin(), y0 + len * phi.cos())
+    };
+    let dz = len * f64::from(s.gradient_start + s.gradient_end) / 2.0;
+    (
+        x1 as f32,
+        y1 as f32,
+        (f64::from(s.position.z) + dz) as f32,
+        h1.to_degrees().rem_euclid(360.0) as f32,
+    )
+}
+
+/// A connection id: `0` means unconnected, and some editors write `-1` for the same thing (all
+/// 61 tiles of Neuendorf, Rheinhausen and Ahlheim 5 that failed to parse did).
+fn parse_conn(s: &str, field: &'static str, line: usize) -> Result<u64, MapParseError> {
+    match s.trim().parse::<i64>() {
+        Ok(v) if v < 0 => Ok(0),
+        _ => parse_u64(s, field, line),
+    }
 }
 
 fn parse_u64(s: &str, field: &'static str, line: usize) -> Result<u64, MapParseError> {
@@ -552,5 +624,43 @@ Splines\Example\road.sli
         assert_eq!(spl.heading_deg, 180.0);
         assert_eq!(spl.length_m, 50.0);
         assert_eq!(spl.radius_m, 0.0);
+    }
+
+    /// MI-0021: a version 10 tile has one connection field; `-1` places the spline, `0` continues
+    /// the previous one (all pose fields are zero).
+    #[test]
+    fn test_version_10_splines_are_placed_or_continue_the_previous() {
+        let rec = |id: u32, conn: &str, x: &str, y: &str, h: &str, len: &str| {
+            format!(
+                "[spline]\n0\nSplines\\a.sli\n{id}\n{conn}\n{x}\n0\n{y}\n{h}\n{len}\n0\n0\n0\n0\n0\n\n"
+            )
+        };
+        let text = format!(
+            "File created\n\n[version]\n10\n\n{}{}",
+            rec(1, "-1", "100", "200", "90", "30"),
+            rec(2, "0", "0", "0", "0", "10")
+        ) + "[rule]\n0\ntrafficdensity\n3.000\n\n[rule]\n1\nspeedlimit\n30\nObject Nr. 0\n";
+        let tile = MapTile::from_text(&text).expect("v10 tile parses");
+        assert_eq!(tile.rules.len(), 2, "v10 rules have no flag line");
+        assert_eq!(tile.rules[1].flag, 0);
+        assert_eq!(tile.splines.len(), 2);
+        assert_eq!(tile.splines[0].position.x, 100.0);
+        assert_eq!(tile.splines[0].position.y, 200.0);
+        assert_eq!(tile.splines[0].length_m, 30.0);
+        // heading 90 degrees runs towards +x: the second spline starts 30 m east of the first
+        let second = &tile.splines[1];
+        assert!((second.position.x - 130.0).abs() < 1e-3, "{:?}", second.position);
+        assert!((second.position.y - 200.0).abs() < 1e-3);
+        assert!((second.heading_deg - 90.0).abs() < 1e-3);
+        assert_eq!(second.length_m, 10.0);
+    }
+
+    #[test]
+    fn test_spline_connection_minus_one_means_unconnected() {
+        let text = "[version]\n14\n\n[spline]\n0\nSplines\\a.sli\n77\n-1\n-1\n1.0\n2.0\n3.0\n0.0\n10.0\n0.0\n";
+        let tile = MapTile::from_text(text).expect("-1 connections parse");
+        assert_eq!(tile.splines.len(), 1);
+        assert_eq!(tile.splines[0].conn_id_1, 0);
+        assert_eq!(tile.splines[0].conn_id_2, 0);
     }
 }
