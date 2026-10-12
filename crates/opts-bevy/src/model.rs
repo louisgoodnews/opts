@@ -12,7 +12,7 @@ use bevy::asset::{Assets, Handle};
 use bevy::ecs::entity::Entity;
 use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
-use bevy::image::{Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::image::{Image, ImageSampler};
 use bevy::mesh::Mesh;
 use bevy::mesh::Mesh3d;
 use bevy::pbr::MeshMaterial3d;
@@ -94,15 +94,11 @@ pub struct ContentStats {
     pub failures: Vec<String>,
 }
 
-/// The sampler of OMSI textures: repeating on all axes.
+/// The sampler of OMSI textures: repeating on all axes, filtered per the "Texture filtering"
+/// setting (see [`crate::texture_filter`]).
 #[must_use]
 pub fn repeat_sampler() -> ImageSampler {
-    ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        address_mode_w: ImageAddressMode::Repeat,
-        ..Default::default()
-    })
+    crate::texture_filter::current_object_sampler()
 }
 
 /// Caches shared across a loading session.
@@ -272,7 +268,7 @@ impl ContentLoader<'_> {
         let handle = match std::fs::read(&path) {
             Ok(bytes) => match load_bevy_image(&bytes) {
                 Ok(mut image) => {
-                    image.sampler = repeat_sampler();
+                    crate::texture_filter::prepare_object_texture(&mut image);
                     self.cache.stats.textures += 1;
                     tracing::debug!(path = %path.display(), "loaded texture");
                     Some(self.images.add(image))
@@ -744,6 +740,7 @@ pub fn attach_model_parts(
 
 /// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
 /// resampled). Bases and maps may be RGBA8 or block-compressed (BC1-3); an R8 map is read directly.
+/// Only level 0 of either input is read; the result gets a fresh mip chain like any loaded texture.
 fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     // DDS textures stay block-compressed on the GPU; the texel values are needed here.
     let base = crate::texture::decode_to_rgba8(base)?;
@@ -758,17 +755,19 @@ fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     if !matches!(
         base.texture_descriptor.format,
         F::Rgba8UnormSrgb | F::Rgba8Unorm
-    ) || base_data.len() != bw * bh * 4
+    ) || base_data.len() < bw * bh * 4
         || tw == 0
         || th == 0
     {
         return None;
     }
     let sample: Box<dyn Fn(usize) -> u8> = match trans.texture_descriptor.format {
-        F::R8Unorm if trans_data.len() == tw * th => Box::new(|i| trans_data[i]),
-        F::Rgba8UnormSrgb | F::Rgba8Unorm if trans_data.len() == tw * th * 4 => {
+        F::R8Unorm if trans_data.len() >= tw * th => Box::new(|i| trans_data[i]),
+        F::Rgba8UnormSrgb | F::Rgba8Unorm if trans_data.len() >= tw * th * 4 => {
             // Use the alpha channel if the map has one, else its luminance.
-            let has_alpha = trans_data.chunks_exact(4).any(|p| p[3] != 255);
+            let has_alpha = trans_data[..tw * th * 4]
+                .chunks_exact(4)
+                .any(|p| p[3] != 255);
             Box::new(move |i| {
                 let p = &trans_data[i * 4..i * 4 + 4];
                 if has_alpha {
@@ -781,12 +780,15 @@ fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
         _ => return None,
     };
     let mut out = base.clone();
+    out.texture_descriptor.mip_level_count = 1;
     let out_data = out.data.as_mut()?;
+    out_data.truncate(bw * bh * 4);
     for y in 0..bh {
         for x in 0..bw {
             let (tx, ty) = (x * tw / bw, y * th / bh);
             out_data[(y * bw + x) * 4 + 3] = sample(ty * tw + tx);
         }
     }
+    crate::texture_filter::prepare_object_texture(&mut out);
     Some(out)
 }

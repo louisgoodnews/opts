@@ -51,6 +51,17 @@ Its primary responsibilities are:
 - **`load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError>`:**
   - Unified loader combining content sniffing with appropriate decoder routing.
 
+### 2b. Shared Texture Sampler (`opts_bevy::texture_filter`) — M-0057
+- **`TextureFiltering`** (`Off`, `X4`, `X8`, `X16`; default `X16`) is the user setting *Texture filtering*; `key()`/`parse()` give the stable text form used in settings, `--texture-filter` and the control protocol.
+- **`object_sampler(TextureFiltering) -> ImageSampler`** builds the one sampler of all object textures: repeat addressing, linear magnification/minification/mipmap filtering and the anisotropy of the setting (`Off` = nearest, anisotropy 1, no generated mip chain). Every field is stated; nothing is left to Bevy's nearest-filter defaults.
+- **`set_texture_filtering` / `texture_filtering` / `current_object_sampler`:** the process-wide current choice (loader threads have no ECS access). `model::repeat_sampler()` returns `current_object_sampler()`; `ContentLoader::texture`, hot reload and text textures all go through it (test `tests/shared_sampler.rs`). A change applies to textures loaded afterwards and to hot-reloaded ones. The terrain shader keeps its own array-texture sampler (trilinear, anisotropy 8).
+
+### 2c. Mip Chains (`opts_bevy::texture::generate_mip_chain`) — M-0058 phase B
+- **`generate_mip_chain(&mut Image, MipOptions) -> bool`** appends the missing levels to an uncompressed `Rgba8UnormSrgb` image (JPEG/BMP/PNG/TGA and uncompressed DDS that arrive without a chain). Averaging is in linear light (a black/white checker gives 188, not 128); level `n` is `max(1, size >> n)` per axis, so non-power-of-two sizes need no padding (fractional area weights); alpha is the plain average unless `MipOptions::alpha_cutoff` is set (coverage mode: colours weighted by alpha, alpha rescaled so the share above the cutoff stays that of the base; M-0059 will pass the material's real cutoff). `weight_colour_by_alpha` is for glyph and sign textures. Images that already have a chain, block-compressed images, `R8` masks and 1x1 images are left alone (`false`).
+- **`prepare_object_texture` / `prepare_text_texture`** (in `texture_filter`) are what the loader, hot reload and text textures call: shared sampler plus chain, skipped when *Texture filtering* is Off. Until M-0059 the loader decides *cutout or not* with `looks_like_cutout` (most non-opaque texels clearly transparent) because it creates the texture before it knows the material's alpha mode.
+- `texture::dropped_dds_chains()` counts DDS files whose declared chain disagreed with the data and was reduced to the base level (Q-TQ03); `texture::mip_stats()` totals the generated chains (count, microseconds); both are logged when the HUD appears and at a requested screenshot. `examples/texture_scan.rs` scans a directory for the same numbers.
+- Cost: an integer fast path handles the common exact 2x2 step (about 2 ms per megabyte of base data at the dev profile, i.e. ~7 ms for a 1024x1024 texture, <2 ms for 512x512); other ratios use the exact general path.
+
 ### 3. Material Conversion Bridge (`opts_bevy::material`)
 - **`o3d_material_to_standard_material(mat: &Material, texture: Option<Handle<Image>>) -> StandardMaterial`:**
   - Translates OMSI `.o3d` material properties into Bevy `StandardMaterial`.

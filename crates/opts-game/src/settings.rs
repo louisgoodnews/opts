@@ -34,6 +34,12 @@ pub struct GameSettings {
     /// Per-widget color customizations: maps `widget_type.role` -> hex color string.
     #[serde(default)]
     pub widget_colors: BTreeMap<String, String>,
+    /// Quality of texture filtering (Off/4x/8x/16x); default 16x. Absent in older databases.
+    #[serde(default)]
+    pub texture_filtering: opts_bevy::TextureFiltering,
+    /// The colour look (Vivid/Natural/Bevy default); default Vivid. Absent in older databases.
+    #[serde(default)]
+    pub look: crate::look::Look,
     /// The values as they were on disk when this process loaded them. Saving writes only what
     /// differs, so an instance that merely exits (or loaded stale values while another instance
     /// changed the file) cannot undo another instance's choices, e.g. the theme.
@@ -78,6 +84,8 @@ impl Default for GameSettings {
             active_theme: "Default".to_string(),
             discovery_interval_days: 1,
             widget_colors: BTreeMap::new(),
+            texture_filtering: opts_bevy::TextureFiltering::default(),
+            look: crate::look::Look::default(),
             baseline: Baseline::default(),
         }
     }
@@ -176,6 +184,13 @@ impl GameSettings {
                 "discovery_interval_days" => {
                     self.discovery_interval_days = value.parse::<u32>().unwrap_or(1);
                 }
+                "texture_filtering" => {
+                    self.texture_filtering =
+                        opts_bevy::TextureFiltering::parse(&value).unwrap_or_default();
+                }
+                "look" => {
+                    self.look = crate::look::Look::parse(&value).unwrap_or_default();
+                }
                 _ => {}
             }
         }
@@ -244,6 +259,17 @@ impl GameSettings {
             params![self.discovery_interval_days.to_string()],
         )?;
 
+        for (k, v) in [
+            ("texture_filtering", self.texture_filtering.key()),
+            ("look", self.look.key()),
+        ] {
+            tx.execute(
+                "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                params![k, v],
+            )?;
+        }
+
         // Write widget color overrides
         for (k, v) in &self.widget_colors {
             tx.execute(
@@ -302,6 +328,11 @@ impl GameSettings {
             "discovery_interval_days".into(),
             self.discovery_interval_days.to_string(),
         );
+        m.insert(
+            "texture_filtering".into(),
+            self.texture_filtering.key().to_string(),
+        );
+        m.insert("look".into(), self.look.key().to_string());
         for (k, v) in &self.widget_colors {
             m.insert(format!("widget:{k}"), v.clone());
         }
@@ -505,6 +536,8 @@ mod tests {
             active_theme: "Amber".to_string(),
             discovery_interval_days: 1,
             widget_colors: BTreeMap::new(),
+            texture_filtering: opts_bevy::TextureFiltering::X4,
+            look: crate::look::Look::Natural,
             baseline: Baseline::default(),
         };
         settings.set_widget_color("Button", "Primary", "#FFB300");
@@ -522,9 +555,53 @@ mod tests {
         assert_eq!(loaded.omsi_path, Some(PathBuf::from("/games/OMSI 2")));
         assert!(loaded.is_dark_theme);
         assert_eq!(loaded.active_theme, "Amber");
+        assert_eq!(loaded.texture_filtering, opts_bevy::TextureFiltering::X4);
+        assert_eq!(loaded.look, crate::look::Look::Natural);
         assert_eq!(
             loaded.widget_colors.get("Button.Primary"),
             Some(&"#FFB300".to_string())
         );
+    }
+
+    #[test]
+    fn new_keys_default_when_absent_from_an_old_database() {
+        // A database written before the keys existed: only the old ones are present.
+        let conn = Connection::open_in_memory().expect("In-memory SQLite connection");
+        GameSettings::init_database(&conn).expect("schema");
+        conn.execute(
+            "INSERT INTO app_settings (key, value) VALUES ('active_theme', 'Amber')",
+            [],
+        )
+        .expect("insert");
+        let mut s = GameSettings::default();
+        s.apply_from_connection(&conn).expect("load");
+        assert_eq!(s.active_theme, "Amber");
+        assert_eq!(s.texture_filtering, opts_bevy::TextureFiltering::X16);
+        assert_eq!(s.look, crate::look::Look::Vivid);
+        // Unreadable values fall back to the defaults too.
+        conn.execute(
+            "INSERT INTO app_settings (key, value) VALUES ('look', 'garbage'), ('texture_filtering', '3')",
+            [],
+        )
+        .expect("insert");
+        s.apply_from_connection(&conn).expect("load");
+        assert_eq!(s.look, crate::look::Look::Vivid);
+        assert_eq!(s.texture_filtering, opts_bevy::TextureFiltering::X16);
+    }
+
+    #[test]
+    fn changing_the_new_settings_marks_only_them_as_changed() {
+        let mut s = GameSettings::default();
+        s.remember_baseline();
+        s.look = crate::look::Look::BevyDefault;
+        s.texture_filtering = opts_bevy::TextureFiltering::Off;
+        let before = s.baseline.0.lock().unwrap().clone().unwrap();
+        let changed: Vec<_> = s
+            .entries()
+            .into_iter()
+            .filter(|(k, v)| before.get(k) != Some(v))
+            .map(|(k, _)| k)
+            .collect();
+        assert_eq!(changed, ["look", "texture_filtering"]);
     }
 }

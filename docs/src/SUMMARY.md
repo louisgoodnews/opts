@@ -66,6 +66,11 @@
   - [M-0055: opts-script_editor](roadmap/phase-6/M-0055.md)
   - [M-0056: opts-visual_script_editor](roadmap/phase-6/M-0056.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
+- [Phase 8: Visual Quality & Realism](roadmap/phase-8/README.md)
+  - [M-0057: Texture Filtering & Measurement](roadmap/phase-8/M-0057.md)
+  - [M-0058: Mipmaps, Cache & 2-Minute Budget](roadmap/phase-8/M-0058.md)
+  - [M-0059: Foliage & Cutout Coverage](roadmap/phase-8/M-0059.md)
+  - [M-0060: Realistic Colour & Looks](roadmap/phase-8/M-0060.md)
 
 ---
 
@@ -78,6 +83,8 @@
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Performance Profiling and Frame Pacing](architecture/performance-profiling.md)
+- [Texture Quality and Colour (Proposal)](architecture/texture-quality.md)
+- [Visual A/B Procedure and Image Metrics](architecture/visual-ab.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)

@@ -25,6 +25,7 @@ directories = { workspace = true }
 chrono = { workspace = true }
 
 # Serialization (control protocol)
+serde = { workspace = true }
 serde_json = { workspace = true }
 smol_str = "0.2"
 notify = { workspace = true }

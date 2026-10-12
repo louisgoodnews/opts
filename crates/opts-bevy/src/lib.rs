@@ -38,6 +38,7 @@ pub mod scenery;
 pub mod terrain;
 pub mod text_texture;
 pub mod texture;
+pub mod texture_filter;
 pub mod vehicle;
 pub mod vehicle_anim;
 pub mod vehicle_lights;
@@ -94,6 +95,10 @@ pub use terrain::{
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,
     TextureError,
+};
+pub use texture_filter::{
+    current_object_sampler, object_sampler, set_texture_filtering, texture_filtering,
+    TextureFiltering,
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{

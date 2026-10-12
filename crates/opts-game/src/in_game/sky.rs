@@ -290,6 +290,7 @@ pub fn update_sky(
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
     mut ambient: Option<ResMut<GlobalAmbientLight>>,
+    look: Option<Res<crate::look::ActiveLook>>,
     cameras: Query<&GlobalTransform, (With<Camera3d>, Without<SkyDome>)>,
     mut dome: Query<
         &mut Transform,
@@ -334,7 +335,12 @@ pub fn update_sky(
         t.translation = cam;
         t.rotation = Quat::from_rotation_y(-azimuth.to_radians());
     }
-    if now - sky.last_refresh >= REFRESH_S {
+    // A new look changes the ambient scale: refresh at once instead of at the next interval.
+    let look_changed = look.as_ref().is_some_and(|l| l.is_changed());
+    let ambient_scale = look.as_ref().map_or(1.0, |l| {
+        crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
+    });
+    if look_changed || now - sky.last_refresh >= REFRESH_S {
         sky.last_refresh = now;
         let weights = sky.config.sky_weights(elevation);
         let data = blended_sky(&sky, weights);
@@ -354,7 +360,7 @@ pub fn update_sky(
         let peak = amb.iter().copied().fold(0.001_f32, f32::max);
         if let Some(ambient) = ambient.as_mut() {
             ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
-            ambient.brightness = AMBIENT_BRIGHTNESS * peak.min(1.0) * att.max(0.8);
+            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * att.max(0.8);
         }
         // Colour of the sky at the horizon fills anything the dome does not cover.
         let h = sky.textures[0].height - 1;

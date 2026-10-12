@@ -120,6 +120,14 @@ pub struct CliArgs {
     #[arg(long, value_name = "N")]
     pub traffic: Option<usize>,
 
+    /// Texture filtering for this run only, not saved: `off`, `4`, `8` or `16` (default: the setting).
+    #[arg(long, value_name = "LEVEL")]
+    pub texture_filter: Option<String>,
+
+    /// Colour look for this run only, not saved: `vivid`, `natural` or `bevy` (default: the setting).
+    #[arg(long, value_name = "LOOK")]
+    pub look: Option<String>,
+
     /// Disable the file watcher that hot-reloads edited OMSI content.
     #[arg(long, default_value_t = false)]
     pub no_hot_reload: bool,
@@ -162,6 +170,8 @@ impl Default for CliArgs {
             livery: None,
             traffic: None,
             cli_allow_dir: Vec::new(),
+            texture_filter: None,
+            look: None,
             no_hot_reload: false,
             hot_reload_root: Vec::new(),
             hot_reload_debounce_ms: 250,
@@ -258,6 +268,6 @@ mod tests {
         assert_eq!(args.window_size, "1920x1080");
         assert!(!args.headless);
         assert!(!args.fullscreen);
-        assert_eq!(args.parse_dimensions(), (1280.0, 720.0));
+        assert_eq!(args.parse_dimensions(), (1920.0, 1080.0));
     }
 }

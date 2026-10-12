@@ -26,6 +26,8 @@ opts-cli state                         # app state, camera mode, fps, map, vehic
 opts-cli scene                         # tiles, entity and asset counts, loader statistics
 opts-cli camera.set_mode free          # ego | cockpit | external | pax | free  (or 1-5)
 opts-cli camera.teleport 3910 3580 5 --yaw 90 --pitch -10
+opts-cli render.look                   # read the colour look (vivid | natural | bevy)
+opts-cli render.look natural           # switch it live (also saved in the settings)
 opts-cli input.key W --duration 2000   # press W for two seconds
 opts-cli sim.pause && opts-cli sim.step 60
 opts-cli screenshot                    # saved in the reports directory

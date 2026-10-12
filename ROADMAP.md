@@ -20,6 +20,7 @@
 | ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20 merged to `master` 2026-10-11; CI written but never run (no hosted repository, M-0052); DLSS planned | [`phase-5/`](docs/src/roadmap/phase-5/README.md) |
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](docs/src/roadmap/phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](docs/src/roadmap/phase-7/README.md) |
+| 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 decided 2026-10-12, not started | [`phase-8/`](docs/src/roadmap/phase-8/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -256,6 +257,23 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement in-game settings dialog in `opts-gui` for graphics preferences, audio volume, and input rebinding (M-0035).
 - [ ] **🏁 Milestone Release** — [M-0036](docs/src/roadmap/phase-7/README.md)
   - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).
+
+---
+
+## 🖼️ Phase 8: Visual Quality & Realism
+*Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference. Decisions of 2026-10-12: reality as reference, Vivid default, hard limit of 2 minutes of added first-run time. Background: [Texture Quality and Colour](docs/src/architecture/texture-quality.md).*
+
+- [ ] **🔬 Texture Filtering & Measurement Harness** — [M-0057](docs/src/roadmap/phase-8/M-0057.md)
+  - [~] Image-metrics tool (done), reference views and a scripted A/B run (minimal set done: `scripts/visual-ab.sh`; more views open); results outside the repository.
+  - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry.
+- [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](docs/src/roadmap/phase-8/M-0058.md)
+  - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload.
+  - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time**.
+- [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](docs/src/roadmap/phase-8/M-0059.md)
+  - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
+- [ ] **🌞 Realistic Colour & Looks** — [M-0060](docs/src/roadmap/phase-8/M-0060.md)
+  - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; the project lead's testing decides the default; *Natural* equals *Bevy default* until the calibration).
+  - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
 
 ---
 

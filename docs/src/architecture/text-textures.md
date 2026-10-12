@@ -18,7 +18,7 @@ The string comes from the object **instance**: `MapObjectInstance::string_vars[n
 2. `FontRegistry` maps lower-case font name → font. Same name twice: the first file in path order wins (Q-FN01 stays open). Colour and alpha bitmaps are decoded once per font; the alpha bitmap's red channel is the coverage.
 3. `resolve_text` picks the string (by number; by name only with a name list, see limits).
 4. `render_rgba` lays the string out on one line: each glyph is the cell `[x_start, x_end) × [y_top, y_top + line_height)`, advance = cell width (the cell already includes the gap). Text wider or taller than the texture is shrunk uniformly (never enlarged); it is aligned by orientation horizontally and centred vertically. Mono: text colour from the `.sco`, alpha from the alpha bitmap. Original colours: the colour bitmap's pixels. Background stays transparent.
-5. The result is an `Image` (RGBA8, **repeating sampler** — mesh UVs of text fields are often negative) cached per (font, text, size, colour, orientation). `TextureOverride::image` hands it to the model loader, which uses it instead of the material's file texture.
+5. The result is an `Image` (RGBA8, **repeating sampler** — mesh UVs of text fields are often negative; since Phase 8 the shared filtered sampler of [`texture_filter`](texture-quality.md), with a generated mip chain whose colours are averaged weighted by alpha) cached per (font, text, size, colour, orientation). `TextureOverride::image` hands it to the model loader, which uses it instead of the material's file texture.
 
 ## Corpus findings that shaped the rules
 

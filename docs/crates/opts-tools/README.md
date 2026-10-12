@@ -15,6 +15,13 @@
 
 Implementations of the asset tooling suite — inspect, convert, validate, graph — as plain library functions that return structured reports. Front ends (`opts-cli`, later `opts-editor`) render them.
 
+## 🖼️ Implemented commands (the binary today)
+
+| Command | Purpose |
+| :--- | :--- |
+| `opts-tools inspect <file>...` | Parses OMSI files with the real parsers, one line per file |
+| `opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]` | Mean saturation, luma mean/std/min, Laplacian energy of screenshots and the difference of two of them (module `metrics`); procedure in [Visual A/B](../../src/architecture/visual-ab.md) |
+
 ## 📤 Public API (high level)
 
 > [!NOTE]

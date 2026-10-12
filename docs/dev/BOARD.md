@@ -101,6 +101,10 @@ _Work actively being executed in the current session._
 _Work completed but not yet marked Done — awaiting human or agent review._
 
 - `[ ]` 🟡 **Articulated trailers follow kinematically; joint angle to scripts; bellows skinned** (M-0022 addendum, code) — `f20ff5f` + parts of `7f24124`; spec [articulation.md](../src/architecture/articulation.md). Needs an in-game look at an articulated bus; follow-ups in M-0053.
+- `[ ]` 🔴 **Shared object-texture sampler (trilinear, anisotropy Off/4/8/16, default 16×) with settings entry and `--texture-filter`** (M-0057, code) — agent/visual-quality; needs the project lead's look at textures and signs; test guide in [progress/visual-quality.md](progress/visual-quality.md).
+- `[ ]` 🔴 **Looks setting *Vivid* (default) / *Natural* / *Bevy default*, live, persisted, `render.look`, `--look`** (M-0060 step 1, code) — agent/visual-quality; the project lead's testing decides the default.
+- `[ ]` 🔴 **Mip chains for uncompressed textures at load and in hot reload; dropped DDS chains fixed (2,727 → 0)** (M-0058 phase B, code) — agent/visual-quality; +6.5 % load time on Bad Hügelsdorf.
+- `[ ]` 🔴 **`opts-tools image-metrics`, `scripts/visual-ab.sh`, A/B procedure** (M-0057 phase A minimal, code) — agent/visual-quality.
 - `[ ]` 🟡 **Repaints applied in game, `--livery`** (M-0032, code) — `7f24124`; needs a review against [repaints.md](../src/formats/text/repaints.md) Q-RP01/Q-RP02.
 
 > 📝 Items arrive here when P-005 finishes but P-006 has not yet run.
@@ -143,6 +147,13 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0052 — Repository Hosting, CI Activation & Commit Gate
 - [ ] 🟠 **CI triggers on all branches and pull requests** (M-0052, chore) — today `[main, master]` only (F-019).
 - [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
+
+#### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
+- [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.
+- [ ] 🔴 **DXT mip chains through a derived cache with the hard 120 s first-run budget** (M-0058 phase C, code)
+- [ ] 🟠 **Coverage-preserving alpha mips and alpha-to-coverage** (M-0059, code)
+- [ ] 🟠 **Physical light calibration with cited reference values; reference-surface test; *Natural* look** (M-0060 step 2, spec + code)
+- [ ] 🟡 **Cold-cache first-run measurement on the three reference maps** (M-0058, test)
 
 #### M-0053 — Articulated Vehicle Completion
 - [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test)

@@ -46,6 +46,12 @@ pub fn capture_screenshot_when_ready(
     commands
         .spawn(Screenshot::window(window))
         .observe(save_to_disk(path.clone()));
-    tracing::info!(path = %path.display(), "screenshot requested");
+    let mips = opts_bevy::texture::mip_stats();
+    tracing::info!(
+        path = %path.display(),
+        mip_textures = mips.textures,
+        mip_millis = mips.micros / 1000,
+        "screenshot requested"
+    );
     *requested = true;
 }

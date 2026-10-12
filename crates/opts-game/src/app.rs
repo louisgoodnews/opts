@@ -85,6 +85,7 @@ pub fn build_app(args: CliArgs) -> App {
         settings.recent_map_path = Some(path.clone());
         let _ = settings.save();
     }
+    crate::look::apply_startup_render_options(&mut app, &settings, &args);
     app.insert_resource(settings);
     app.insert_resource(opts_bevy::ScriptDriveEnabled(args.script_drive));
     // Fixed simulation step; a long frame replays at most 50 ms of it (no catch-up spiral).

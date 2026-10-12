@@ -256,7 +256,8 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::default(),
     );
-    image.sampler = crate::model::repeat_sampler();
+    // Mesh UVs may lie outside 0..1 (negative V is common): wrap like every OMSI texture.
+    crate::texture_filter::prepare_text_texture(&mut image);
     image
 }
 
