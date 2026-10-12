@@ -21,7 +21,7 @@
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](phase-7/README.md) |
 | 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 decided 2026-10-12, not started | [`phase-8/`](phase-8/README.md) |
-| 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 📝 design proposed 2026-10-12, awaiting review | [`phase-9/`](phase-9/README.md) |
+| 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 🟡 design approved 2026-10-12, implementation in progress | [`phase-9/`](phase-9/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -284,7 +284,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ---
 
 ## 🧭 Phase 9: User Interface & Experience
-*Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design proposed 2026-10-12, awaiting project-lead review; decisions D-UI-01 to D-UI-11 are open. Documents: [phase page](phase-9/README.md), [ADR-0009](../adr/0009-ui-architecture.md).*
+*Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design approved 2026-10-12 (decisions D-UI-01 to D-UI-11 answered; unavailable features stay visible with the red text "Feature not available yet!"); implementation in progress. Documents: [phase page](phase-9/README.md), [ADR-0009](../adr/0009-ui-architecture.md).*
 
 - [ ] **🧱 UI Foundations** — [M-0061](phase-9/M-0061.md)
   - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget; one theme for all screens; UI scale 75–200 %; accent presets with a contrast guard.

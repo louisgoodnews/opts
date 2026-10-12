@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed — for project-lead review; decisions marked **D-UI-nn** need an answer |
+| **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
 | **Builds on** | [GUI design system](../../architecture/gui-design-system.md) (token architecture), [Phase 8](../phase-8/README.md) (realism, looks), [audit](current-ui-audit.md), [principles](report-analysis.md#4-the-principles) |
 
@@ -39,10 +39,11 @@ The three-tier token system (reference → system → component) is sound and li
 
 | Theme | Use |
 | :--- | :--- |
-| **Dark** *(proposed default)* | a simulator played in dim rooms and at night; matches the loading screen and HUD already in use; photos and the 3D scene read better against it |
+| **Dark** *(default, decided 2026-10-12)* | a simulator played in dim rooms and at night; matches the loading screen and HUD already in use; photos and the 3D scene read better against it |
 | **Light** | for bright rooms and presentations |
 | **High contrast** | contrast ≥ 7:1 for text, 4.5:1 for controls; the accessibility theme (UI-P10) |
 | **System** | follows the operating system |
+| **Auto (clock)** | light by day, dark by night using the device's local time and timezone, with configurable switch hours ([investigation](theme-auto-switch.md)) |
 
 - **One theme for the whole application**, including loading screen, HUD chrome and dialogs (UI-P06, F10). Today's mix of a light application with dark hard-coded screens disappears.
 - The instrument cluster in the HUD has its own **instrument token set** (§9), independent of the app theme but never hard-coded in widgets.

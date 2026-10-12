@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed — for project-lead review; decisions **D-UI-10, D-UI-11** need an answer; formal record: [ADR-0009](../../adr/0009-ui-architecture.md) |
+| **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
 | **Builds on** | [audit](current-ui-audit.md) (F13, F14, F23), [flow](flow.md), [editor workspace UI](../../editor/workspace-ui.md), [control protocol](../../architecture/control-protocol.md) |
 
@@ -64,12 +64,12 @@ ScreenDescriptor {
   icon          Icon::Settings
   group         Main | Utility
   order         u16
-  availability  fn(&World) -> Hidden | Disabled(reason) | Enabled
+  availability  fn(&World) -> NotYet{milestone} | Disabled(reason) | Enabled
   content       the plugin/system that builds the page
 }
 ```
 
-- The **rail is generated from the registry**; availability makes "hidden until it works" (D-UI-09) a one-line rule instead of a hard-coded `.with_disabled(true)`.
+- The **rail is generated from the registry**; `NotYet{milestone}` renders the entry disabled with the red text **"Feature not available yet!"** (D-UI-09), a one-line rule instead of a hard-coded `.with_disabled(true)`. Every `NotYet` is **collected into a generated list** (`docs/src/reference/not-available-yet.md`: where, which milestone) and printed at debug startup, so promised features cannot be forgotten; a test fails if a `NotYet` refers to a milestone that is marked complete.
 - The shell owns the **back stack** and Esc semantics, so no screen re-implements "Escape returns to the menu".
 - **Deep links** (`screen:settings/graphics`) serve the control protocol (`ui.navigate`), the Help overlay ("Open this setting") and tests.
 - Adding a screen = **one module and one registration**. A checklist test confirms a registered screen has a title key, an icon, keyboard reachability and a golden screenshot.

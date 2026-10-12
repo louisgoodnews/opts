@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed — for project-lead review; decisions **D-UI-07 … D-UI-09** need an answer |
+| **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
 | **Builds on** | [principles](report-analysis.md#4-the-principles), [audit](current-ui-audit.md), [design language](design-language.md), [interaction](interaction-and-feel.md) |
 
@@ -14,12 +14,12 @@ OPTS becomes **one application shell** with a persistent **navigation rail** on 
 | :--- | :--- | :--- | :--- |
 | **Main** (≤ 5, UI-P02) | **Home** | continue the last drive, recent drives, quick actions, status of the installation | now |
 | | **Drive** | *Plan a drive*: where, what, when, review | now |
-| | **Library** | browse maps, vehicles, liveries, scenery with thumbnails and details; favourites | after M-0062 |
-| | **Workshop** | editor projects, installed mods, packaging | **hidden until Phase 6** |
+| | **Library** | browse maps, vehicles, liveries, scenery with thumbnails and details; favourites | after M-0062; marked until then |
+| | **Workshop** | editor projects, installed mods, packaging | **visible, marked "Feature not available yet!"** until Phase 6 |
 | **Utility** | **Settings** | categorised, searchable | now |
 | | **Help** | controls, guides, report an issue, about and licences | now |
 
-Rules: a destination **does not appear before it works** (UI-P11), so there is no *Load Game*, *Timetable* or *Workshop* placeholder in a release build; future destinations (timetables, career, multiplayer) join *Main* only while there are ≤ 5 items, otherwise they group under an existing one.
+Rules: a destination or control that does **not work yet stays visible but honest** (UI-P11, decision D-UI-09): it is disabled and carries the red text **"Feature not available yet!"** (component `NotAvailableYet`, one style everywhere), so nobody mistakes it for a bug and nobody forgets it. Every such place is registered with its milestone and appears in a generated list ([expandability §4](expandability.md#4-screen-and-navigation-registry)). Future destinations (timetables, career, multiplayer) join *Main* only while there are ≤ 5 items, otherwise they group under an existing one.
 
 ## 2. Navigation map
 
@@ -198,7 +198,7 @@ All use the templates of [interaction §5](interaction-and-feel.md#5-errors): *O
 | Main menu (sidebar, 6 controls) | **Home** + navigation rail | Escape no longer quits; *Shutdown* moves into the rail footer / pause confirm |
 | Start New Game (3 free tabs) | **Drive → Plan a drive** (stepper, summary, remembered choices) | the footer summary and the duplicate in-panel summary merge into one |
 | Settings (3 tabs, static text) | **Settings** (7 categories, real controls, search) | *General & Storage* text moves to *Advanced*; *UI & Themes* → *Interface* |
-| Load Game (stub) | removed until a save system exists | *Continue* covers "resume the last drive" |
+| Load Game (stub) | stays as an entry marked **"Feature not available yet!"** until a save system exists | *Continue* covers "resume the last drive" |
 | Credits (stub) | **Help → About** | |
 | Loading screen | **Loading** (themed, real stages, errors kept) | |
 | HUD, F10 block | **HUD**, developer panel off by default | |
@@ -212,4 +212,4 @@ All use the templates of [interaction §5](interaction-and-feel.md#5-errors): *O
 | :--- | :--- | :--- |
 | **D-UI-07** | Navigation structure: left rail with Home / Drive / Library (+ Workshop later) and Settings / Help | yes |
 | **D-UI-08** | Keep Escape as *back / pause* and never *quit/leave* without a confirmation | yes |
-| **D-UI-09** | Hide unavailable features instead of showing disabled stubs | yes |
+| **D-UI-09** | Show unavailable features with red "Feature not available yet!" instead of hiding them | **decided 2026-10-12** (changed from the recommendation to hide) |

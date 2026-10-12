@@ -2,7 +2,7 @@
 
 *Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows with the editor, mods, passengers, audio and more languages without rewrites.*
 
-**Status:** 📝 Proposed design — written for project-lead review on 2026-10-12; nothing implemented; the decisions below are open
+**Status:** 🟡 Design **approved 2026-10-12** (decisions below); implementation in progress
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its documents and milestones.
 
@@ -29,6 +29,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 | 3 | [design-language](design-language.md) | how should it **look**? |
 | 4 | [interaction-and-feel](interaction-and-feel.md) | how should it **feel**? |
 | 5 | [flow](flow.md) | how should it **flow**? |
+| 5a | [theme-auto-switch](theme-auto-switch.md) | should the theme follow day and night? |
 | 6 | [expandability](expandability.md) | how does it **grow**? |
 
 ## Milestones
@@ -41,26 +42,28 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
 
-## Decisions for the project lead
+## Decisions
 
-| ID | Decision | Recommendation | Where |
+Answered by the project lead on 2026-10-12. Where the answer differs from the original recommendation it is stated in the *Decision* column.
+
+| ID | Question | Decision | Where |
 | :--- | :--- | :--- | :--- |
-| D-UI-01 | Keep M3 as token vocabulary, not as the look | yes | [design language §2](design-language.md#2-keep-the-token-architecture-change-its-expression) |
-| D-UI-02 | Default theme | Dark (+ Light, High contrast, System) | [§3](design-language.md#3-theme) |
-| D-UI-03 | Typeface family | decide after a rendered comparison in M-0061 | [§5](design-language.md#5-typography) |
-| D-UI-04 | Minimum window size | 1024×640 | [§6](design-language.md#6-space-density-scale) |
-| D-UI-05 | Drop per-widget colour swatches | yes | [§11](design-language.md#11-decisions-for-you) |
-| D-UI-06 | F1 = Help (with *Report an issue*), not the report dialog | yes | [interaction §9](interaction-and-feel.md#9-proposed-global-shortcuts) |
-| D-UI-07 | Left navigation rail: Home / Drive / Library (+ Workshop later), Settings, Help | yes | [flow §1](flow.md#1-information-architecture) |
-| D-UI-08 | Esc = back/pause, never quit/leave without confirmation | yes | [flow §6](flow.md#6-decisions-for-you) |
-| D-UI-09 | Hide unavailable features instead of showing stubs | yes | [flow §6](flow.md#6-decisions-for-you) |
-| D-UI-10 | Data-driven registries | yes | [expandability §10](expandability.md#10-risks-and-decisions) |
-| D-UI-11 | One toolkit (Bevy UI via `opts-gui`), no egui | yes | [expandability §10](expandability.md#10-risks-and-decisions) |
+| D-UI-01 | Keep M3 as token vocabulary, not as the look | **yes** | [design language §2](design-language.md#2-keep-the-token-architecture-change-its-expression) |
+| D-UI-02 | Default theme | **Dark** stays the default (+ Light, High contrast, System). **Plus** an investigated and implemented mode *Auto (clock)* that follows day and night of the device's timezone ([investigation](theme-auto-switch.md)) | [§3](design-language.md#3-theme) |
+| D-UI-03 | Typeface family | **delegated**: decided in M-0061 after a rendered comparison, licence permitting | [§5](design-language.md#5-typography) |
+| D-UI-04 | Minimum window size | **1024×640** (recommendation accepted) | [§6](design-language.md#6-space-density-scale) |
+| D-UI-05 | Drop per-widget colour swatches | **yes** | [§11](design-language.md#11-decisions-for-you) |
+| D-UI-06 | F1 = Help (with *Report an issue*), not the report dialog | **yes** | [interaction §9](interaction-and-feel.md#9-proposed-global-shortcuts) |
+| D-UI-07 | Left navigation rail: Home / Drive / Library (+ Workshop later), Settings, Help | **yes** | [flow §1](flow.md#1-information-architecture) |
+| D-UI-08 | Esc = back/pause, never quit/leave without confirmation | **yes** | [flow §6](flow.md#6-decisions-for-you) |
+| D-UI-09 | Unavailable features | **changed**: *not hidden*. Every unimplemented feature stays visible and carries the red warning text **"Feature not available yet!"**, registered centrally and listed in a generated report so none is forgotten | [flow §6](flow.md#6-decisions-for-you) |
+| D-UI-10 | Data-driven registries | **yes** | [expandability §10](expandability.md#10-risks-and-decisions) |
+| D-UI-11 | One toolkit (Bevy UI via `opts-gui`), no egui | **yes** | [expandability §10](expandability.md#10-risks-and-decisions) |
 
 ## Relationship to other phases
 
 - **Phase 8** (visual quality): the *Look* and *Texture filtering* settings migrate into the Settings system; the UI is not affected by the 3D look.
-- **Phase 6 / M-0051** (editor, mods): consume the components and patterns built here; the *Workshop* destination stays hidden until they exist.
+- **Phase 6 / M-0051** (editor, mods): consume the components and patterns built here; the *Workshop* destination is visible from the start and marked **"Feature not available yet!"** until they exist.
 - **M-0035** (settings UI and input rebinding): absorbed by M-0063.
 - **M-0046** (world-loader extraction) and the loading pipeline: M-0062 depends on loading reporting real stages and problems.
 
@@ -68,7 +71,7 @@ Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the paus
 
 *Mirrored from the [roadmap](../README.md), which is canonical; update it there first.*
 
-*Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design proposed 2026-10-12, awaiting project-lead review; decisions D-UI-01 to D-UI-11 are open. Documents: [phase page](README.md), [ADR-0009](../../adr/0009-ui-architecture.md).*
+*Goal: Design and build the user interface of OPTS around evidence-based rules: how it should look, feel and flow, and how it grows without rewrites. Status: design approved 2026-10-12 (decisions D-UI-01 to D-UI-11 answered; unavailable features stay visible with the red text "Feature not available yet!"); implementation in progress. Documents: [phase page](README.md), [ADR-0009](../../adr/0009-ui-architecture.md).*
 
 - [ ] **🧱 UI Foundations** — [M-0061](M-0061.md)
   - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget; one theme for all screens; UI scale 75–200 %; accent presets with a contrast guard.

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed — for project-lead review; decision **D-UI-06** needs an answer |
+| **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
 | **Builds on** | [principles](report-analysis.md#4-the-principles), [audit](current-ui-audit.md) (F01, F02, F11, F19, F20), [design language](design-language.md) |
 
@@ -62,7 +62,7 @@ Every interactive control defines the same seven states with **state layers** ov
 | **Error** | error border + icon + message | fields and rows |
 
 - **Pointer activation happens on release** inside the control; pressing and dragging away cancels (today it fires on press, F19).
-- A control that cannot work **is not shown** unless the explanation is the point (UI-P11): no permanently disabled *Load Last Game*.
+- A control that **cannot work yet** is shown disabled with the red text **"Feature not available yet!"** (decision D-UI-09), never as a silently greyed button. A control that is *temporarily* unavailable shows its reason instead ("Needs a saved game").
 - **Tooltips** after 600 ms hover or on keyboard focus; icon-only buttons always have one; they repeat the shortcut.
 
 ## 4. Timing and progress

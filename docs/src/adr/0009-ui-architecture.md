@@ -1,6 +1,6 @@
 # ADR-0009: UI architecture — one shell, layered library, registries, evidence-based principles
 
-* **Status:** Proposed (2026-10-12)
+* **Status:** Accepted (2026-10-12); decision D-UI-09 amended: unavailable features stay visible with the red text "Feature not available yet!" instead of being hidden
 * **Context:** The current UI is a set of separate full-screen screens built from hand-written node trees (16 builders of 150–345 lines). Hover, focus and keyboard activation exist only on the main menu; two visual systems coexist (themed screens and hard-coded dark screens); settings are hand-wired in five places; there is no localisation, UI scale, gamepad or accessibility support ([audit](../roadmap/phase-9/current-ui-audit.md)). Growth is certain: editor, mods, passengers, audio, more languages and input devices. A human-factors report supplied by the project lead provides the design rules ([analysis](../roadmap/phase-9/report-analysis.md)).
 * **Decision:**
   1. **One application shell** with a navigation rail (≤ 5 main destinations plus Settings and Help); destinations appear only when they work.

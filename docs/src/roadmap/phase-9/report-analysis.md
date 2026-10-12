@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed — for project-lead review |
+| **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
 | **Input** | *Clinical Report: Evidence-Based Design Rules for Modern Graphical User Interfaces* (2026), supplied by the project lead as `docs/src/Clinical Report: Evidence-Based Design Rules for Modern Graphical User Interfaces.md` (not yet committed to the repository) |
 | **Output** | Principles **UI-P01 … UI-P13**, used as the checklist of [audit](current-ui-audit.md), [design language](design-language.md), [interaction](interaction-and-feel.md), [flow](flow.md) and every Phase 9 milestone |
@@ -46,7 +46,7 @@ Each principle has an ID, the report section it rests on, the OPTS rule and a **
 | **UI-P08** | Recognise, don't recall; shortcuts for experts | Nielsen 6–7 | key hints in context, a help overlay, full keyboard operation, later a command palette | every interactive element reachable and activatable by keyboard (automated traversal test) | M H E |
 | **UI-P09** | Group by proximity and hierarchy | Gestalt §5 | spacing from tokens; related controls adjacent; clear figure/ground; never colour alone | spacing audit against the 4-px grid; status never conveyed by colour alone | M H E |
 | **UI-P10** | Accessible by design | WCAG 2.2 AA §6 | contrast ≥ 4.5/3, visible focus, keyboard, UI scale 75–200 %, reduced motion, no flashing, colour-blind-safe status | contrast tests over every theme and preset; scale and reduced-motion tests | M H E |
-| **UI-P11** | Honest defaults | Dark patterns §7 | no network request, data sharing or nag without an explicit, understandable choice; no feature shown that does not work | no outgoing request at startup (test); no "not yet available" screens in a release build | M |
+| **UI-P11** | Honest defaults | Dark patterns §7 | no network request, data sharing or nag without an explicit, understandable choice; **a feature that does not work yet is never presented as working**: it stays visible, disabled, with the red text "Feature not available yet!" and no placeholder data | no outgoing request at startup (test); every not-yet-implemented feature is registered as `NotYet` and appears in the generated list; a test fails on controls that are disabled without a reason or marker | M |
 | **UI-P12** | Make the peak and the end good | Peak-end, aesthetic-usability §8 | invest in the moment the drive begins (loading → first frame) and in leaving a session (summary); polished first impression | reviewed with users in the usability test (M-0065) | M |
 | **UI-P13** | **Driving-safe** *(added; not in the report)* | automotive HMI practice (to be sourced) | while driving the UI is glanceable: fixed positions, large tabular numerals, no layout shifts, no modal interruptions, no steal of input focus; everything else waits for a pause | HUD review checklist in [M-0064](M-0064.md); glance times measured in the usability test | H |
 
