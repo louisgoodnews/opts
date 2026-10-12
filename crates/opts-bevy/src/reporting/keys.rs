@@ -44,4 +44,5 @@ pub const ALL: &[(&str, &str)] = &[
     NO_TARGET,
     SAVED,
     FAILED,
+    CAPTURE_FAILED,
 ];
