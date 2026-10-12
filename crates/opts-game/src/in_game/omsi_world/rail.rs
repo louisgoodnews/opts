@@ -213,19 +213,21 @@ pub struct RailPlayer {
     train: Option<Train>,
     speed: f32,
     dynamics: RailDynamics,
-    pitch: f32,
+    /// Half bogie span of the head: the train point is its front bogie, its origin lies this far
+    /// behind it.
+    span: f32,
     gave_up: bool,
 }
 
 impl RailPlayer {
     /// A tram of `mass_kg` waiting for its track.
     #[must_use]
-    pub fn new(mass_kg: f32) -> Self {
+    pub fn new(mass_kg: f32, span: f32) -> Self {
         Self {
             train: None,
             speed: 0.0,
             dynamics: RailDynamics::tram(mass_kg),
-            pitch: 0.0,
+            span,
             gave_up: false,
         }
     }
@@ -278,7 +280,11 @@ pub fn rail_player_step(
                     let along = (h - ch.heading_rad).cos();
                     let dir = if along >= 0.0 { 1 } else { -1 };
                     tracing::info!(lane, s, dist, dir, "rail vehicle placed on the track");
-                    rail.train = Some(Train::new(lane, s, dir));
+                    let mut train = Train::new(lane, s, dir);
+                    // The chassis position is the body's origin; the train point (front bogie)
+                    // lies one half span ahead of it.
+                    train.advance(rail.span, &net.0);
+                    rail.train = Some(train);
                 }
                 None => {
                     tracing::error!(
@@ -324,44 +330,97 @@ pub fn rail_player_step(
         let Some(train) = rail.train.as_ref() else {
             continue;
         };
-        if let Some((p, h)) = train.pose(&net.0) {
-            ch.position = Vec2::new(p.x, p.y);
-            ch.heading_rad = h;
-            ch.elevation_z = p.z;
+        // The chassis is the head body: midpoint and heading of its two bogies on the track.
+        if let Some((mid, heading, _)) = unit_frame(train, &net.0, rail.span, rail.span) {
+            ch.position = Vec2::new(mid.x, mid.y);
+            ch.heading_rad = heading;
+            ch.elevation_z = mid.z;
             ch.local_velocity = Vec2::new(0.0, rail.speed);
             ch.yaw_rate_rad_s = 0.0;
-        }
-        if let Some((b, _)) = train.pose_behind(&net.0, 6.0) {
-            let z = ch.elevation_z;
-            rail.pitch = ((z - b.z) / 6.0).atan();
         }
     }
 }
 
-/// The units behind a rail-bound player's head: `(entity, origin distance behind the head's
-/// origin, hangs backwards, half bogie span)`. They are placed on the track, not by trailer
-/// kinematics.
-#[derive(Component, Default)]
-pub struct RailChainLayout {
-    /// Segment entities in coupling order.
-    pub units: Vec<(Entity, f32, bool, f32)>,
-    /// Half bogie span of the head unit (its origin lies this far behind the track point).
-    pub head_span: f32,
+/// One sub part of a composed vehicle (a car, a bogie, an articulation joint, a coupler).
+#[derive(Debug, Clone)]
+pub struct Part {
+    /// The entity carrying the part's meshes and transform (the root for the head part).
+    pub entity: Entity,
+    /// Name of the part (its `.bus` file name; the head: the vehicle's model name).
+    pub name: String,
+    /// Distance of the part's origin behind the head's origin along the vehicle axis (m).
+    pub behind: f32,
+    /// Half distance between the part's bogies (`[boogies]`), 0 when unknown.
+    pub half_span: f32,
+    /// The part hangs backwards (coupled with the `true` flag).
+    pub reversed: bool,
+    /// Meshes spawned for the part (0 for the head, which is counted with the vehicle).
+    pub meshes: usize,
+    /// Vertices of the part's meshes.
+    pub vertices: usize,
+}
+
+/// The sub parts of a composed vehicle, resolved once at spawn: the head and the coupled units
+/// behind it in order. Lookups by name or index need no `[couple_back]` walk or file access.
+#[derive(Component, Debug, Clone)]
+pub struct VehicleComposition {
+    /// The leading unit (the vehicle's root entity).
+    pub head: Part,
+    /// The coupled units behind the head, front to back.
+    pub followers: Vec<Part>,
+}
+
+impl VehicleComposition {
+    /// All parts, head first.
+    pub fn parts(&self) -> impl Iterator<Item = &Part> {
+        std::iter::once(&self.head).chain(self.followers.iter())
+    }
+
+    /// The first part with this name (case-insensitive, with or without `.bus`/`.ovh`).
+    #[must_use]
+    pub fn find(&self, name: &str) -> Option<&Part> {
+        let bare = |n: &str| {
+            n.trim_end_matches(".bus")
+                .trim_end_matches(".ovh")
+                .to_string()
+        };
+        let want = bare(name);
+        self.parts()
+            .find(|p| bare(&p.name).eq_ignore_ascii_case(&want))
+    }
+
+    /// Number of parts including the head.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        1 + self.followers.len()
+    }
+
+    /// Always false: a composition has a head.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        false
+    }
+
+    /// Distance from the head's origin to the origin of the last part (m).
+    #[must_use]
+    pub fn length(&self) -> f32 {
+        self.followers.last().map_or(0.0, |p| p.behind)
+    }
 }
 
 /// Smallest half span used for the chord of a unit without bogie data (m).
 const MIN_HALF_SPAN: f32 = 1.0;
 
-/// Pose of a unit whose origin is `centre` metres behind the track point of the train: its two
-/// bogies (`±half_span` about the origin) sit on the track, the body spans the chord between
-/// them, pitched with the gradient. A unit without bogie data uses a 2 m chord.
-fn unit_pose(
+/// Frame of a unit whose origin is `centre` metres behind the train's track point: its two bogies
+/// (`±half_span` about the origin) sit on the track; the origin is the midpoint, the heading the
+/// chord between them and the pitch the gradient along it. Without bogie data a 2 m chord is used.
+/// Returns the OMSI position, heading and pitch.
+fn unit_frame(
     train: &Train,
     net: &PedestrianNet,
     centre: f32,
     half_span: f32,
-    reversed: bool,
-) -> Option<Transform> {
+) -> Option<(Vec3, f32, f32)> {
     let span = if half_span > 0.0 {
         half_span
     } else {
@@ -372,11 +431,22 @@ fn unit_pose(
     let mid = (front + rear) * 0.5;
     let (dx, dy) = (front.x - rear.x, front.y - rear.y);
     let run = dx.hypot(dy);
-    let (heading, pitch) = if run > 0.1 {
-        (dx.atan2(dy), ((front.z - rear.z) / run).atan())
+    if run > 0.1 {
+        Some((mid, dx.atan2(dy), ((front.z - rear.z) / run).atan()))
     } else {
-        (train.pose_behind(net, centre)?.1, 0.0)
-    };
+        Some((mid, train.pose_behind(net, centre)?.1, 0.0))
+    }
+}
+
+/// [`unit_frame`] as a transform (OMSI to Bevy), turned half a circle for a reversed unit.
+fn unit_pose(
+    train: &Train,
+    net: &PedestrianNet,
+    centre: f32,
+    half_span: f32,
+    reversed: bool,
+) -> Option<Transform> {
+    let (mid, heading, pitch) = unit_frame(train, net, centre, half_span)?;
     let turn = if reversed { std::f32::consts::PI } else { 0.0 };
     Some(Transform {
         translation: omsi_to_bevy_pos(mid),
@@ -394,7 +464,7 @@ pub fn rail_player_pose(
     mut players: Query<(
         &RailPlayer,
         &mut Transform,
-        Option<&RailChainLayout>,
+        Option<&VehicleComposition>,
         Option<&opts_bevy::VehicleScripts>,
     )>,
     mut units: Query<&mut Transform, Without<RailPlayer>>,
@@ -403,15 +473,22 @@ pub fn rail_player_pose(
         let Some(train) = rail.train.as_ref() else {
             continue;
         };
-        let head_span = layout.map_or(0.0, |l| l.head_span);
+        let head_span = rail.span;
         if let Some(t) = unit_pose(train, &net.0, head_span, head_span, false) {
             *tf = t;
         }
         let Some(layout) = layout else { continue };
         let mut previous = tf.rotation.to_euler(EulerRot::YXZ).0;
-        let mut alphas = Vec::with_capacity(layout.units.len());
-        for &(e, behind, reversed, span) in &layout.units {
-            let Some(pose) = unit_pose(train, &net.0, behind + head_span, span, reversed) else {
+        let mut alphas = Vec::with_capacity(layout.followers.len());
+        for part in &layout.followers {
+            let (e, reversed) = (part.entity, part.reversed);
+            let Some(pose) = unit_pose(
+                train,
+                &net.0,
+                part.behind + head_span,
+                part.half_span,
+                reversed,
+            ) else {
                 continue;
             };
             let yaw = pose.rotation.to_euler(EulerRot::YXZ).0;
@@ -482,9 +559,8 @@ pub struct AiTrain {
     bike: bool,
     train: Train,
     speed: f32,
-    units: Vec<(Entity, f32, bool, f32)>,
+    composition: VehicleComposition,
     /// Half bogie span of the head unit.
-    head_span: f32,
     wheel_angle: f32,
 }
 
@@ -751,12 +827,29 @@ fn try_spawn(
     }
     tracing::info!(vehicle = %spec.name, units = spec.units.len(), lane, bike, "AI rail/cycle vehicle spawned");
     let head = units[0].0;
+    let part = |i: usize, u: &(Entity, f32, bool, f32, usize)| Part {
+        entity: u.0,
+        name: spec.units[i].name.clone(),
+        behind: u.1,
+        half_span: u.3,
+        reversed: u.2,
+        meshes: u.4,
+        vertices: 0,
+    };
+    let composition = VehicleComposition {
+        head: part(0, &units[0]),
+        followers: units
+            .iter()
+            .enumerate()
+            .skip(1)
+            .map(|(i, u)| part(i, u))
+            .collect(),
+    };
     commands.entity(head).insert(AiTrain {
         bike,
         train: Train::new(lane, s, dir),
         speed: 0.0,
-        units: units.iter().map(|u| (u.0, u.1, u.2, u.3)).collect(),
-        head_span: spec.units[0].span,
+        composition,
         wheel_angle: 0.0,
     });
 }
@@ -789,18 +882,25 @@ pub fn move_ai_trains(
                 .is_some_and(|(p, _)| c.distance(omsi_to_bevy_pos(p)) > AI_DESPAWN_M)
         });
         if end || far || t.train.pose(net).is_none() {
-            for (e, ..) in &t.units {
-                commands.entity(*e).despawn();
+            for p in t.composition.parts() {
+                commands.entity(p.entity).despawn();
             }
             let _ = head;
             continue;
         }
         t.wheel_angle += step / 0.29;
         let angle = t.wheel_angle;
-        let list = t.units.clone();
-        let head_span = t.head_span;
-        for (e, behind, reversed, span) in list {
-            let Some(pose) = unit_pose(&t.train, net, behind + head_span, span, reversed) else {
+        let head_span = t.composition.head.half_span;
+        let list: Vec<Part> = t.composition.parts().cloned().collect();
+        for part in list {
+            let (e, reversed) = (part.entity, part.reversed);
+            let Some(pose) = unit_pose(
+                &t.train,
+                net,
+                part.behind + head_span,
+                part.half_span,
+                reversed,
+            ) else {
                 continue;
             };
             if let Ok((mut tf, mut vis, mut vars)) = units.get_mut(e) {
@@ -813,5 +913,35 @@ pub fn move_ai_trains(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn part(name: &str, behind: f32) -> Part {
+        Part {
+            entity: Entity::PLACEHOLDER,
+            name: name.into(),
+            behind,
+            half_span: 1.0,
+            reversed: false,
+            meshes: 1,
+            vertices: 3,
+        }
+    }
+
+    #[test]
+    fn composition_finds_parts_by_name_and_reports_length() {
+        let c = VehicleComposition {
+            head: part("NF6D", 0.0),
+            followers: vec![part("NF6D_C.bus", 12.5), part("NF6D_B_User.bus", 30.0)],
+        };
+        assert_eq!(c.len(), 3);
+        assert!((c.length() - 30.0).abs() < 1e-6);
+        assert_eq!(c.find("nf6d_c").map(|p| p.behind), Some(12.5));
+        assert!(c.find("missing").is_none());
+        assert_eq!(c.parts().count(), 3);
     }
 }

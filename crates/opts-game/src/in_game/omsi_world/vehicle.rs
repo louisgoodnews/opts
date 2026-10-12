@@ -407,12 +407,6 @@ pub(super) fn spawn_trailer_chain(
         chain.push(seg);
         // Origin of the segment behind the root's origin along the vehicle's axis (for rails).
         behind += f.y - b.y;
-        layout.push((
-            seg,
-            behind,
-            reversed,
-            manifest.bogie_half_span.unwrap_or(0.0),
-        ));
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
             job.install
@@ -428,6 +422,15 @@ pub(super) fn spawn_trailer_chain(
         job.cache.expected_bounds = None;
         job.cache.texture_replacements.clear();
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
+        layout.push(super::rail::Part {
+            entity: seg,
+            name: name.clone(),
+            behind,
+            half_span: manifest.bogie_half_span.unwrap_or(0.0),
+            reversed,
+            meshes: count,
+            vertices: verts,
+        });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
         if reversed {
             // The chain of a reversed head leads back into this consist (the NF6D's B head
@@ -437,13 +440,29 @@ pub(super) fn spawn_trailer_chain(
         (parent_dir, parent_manifest) = (dir, manifest);
     }
     if !chain.is_empty() {
-        commands.entity(root).insert((
-            opts_bevy::ArticulatedChain { segments: chain },
-            super::RailChainLayout {
-                units: layout,
-                head_span: tractor.bogie_half_span.unwrap_or(0.0),
-            },
-        ));
+        if !super::is_rail(tractor) {
+            commands
+                .entity(root)
+                .insert(opts_bevy::ArticulatedChain { segments: chain });
+        }
+        commands
+            .entity(root)
+            .insert((super::rail::VehicleComposition {
+                head: super::rail::Part {
+                    entity: root,
+                    name: tractor
+                        .friendly_name
+                        .as_ref()
+                        .map(|f| f.model.clone())
+                        .unwrap_or_default(),
+                    behind: 0.0,
+                    half_span: tractor.bogie_half_span.unwrap_or(0.0),
+                    reversed: false,
+                    meshes: 0,
+                    vertices: 0,
+                },
+                followers: layout,
+            },));
     }
     cams
 }
@@ -600,12 +619,13 @@ pub fn load_player_vehicle(
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
     if super::is_rail(&manifest) {
-        // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`).
+        // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`); the
+        // coupled units are placed on the track too, not by trailer kinematics.
         let mass = commands_mass(&manifest);
-        commands
-            .entity(root)
-            .remove::<opts_bevy::ArticulatedChain>()
-            .insert(super::RailPlayer::new(mass));
+        commands.entity(root).insert(super::RailPlayer::new(
+            mass,
+            manifest.bogie_half_span.unwrap_or(0.0),
+        ));
     }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);

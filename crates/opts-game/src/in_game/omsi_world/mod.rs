@@ -21,7 +21,7 @@ mod ground_height;
 mod job;
 mod overlay;
 mod pedestrians;
-mod rail;
+pub(crate) mod rail;
 mod reload;
 mod tile;
 mod tile_ground;
@@ -41,8 +41,8 @@ pub use pedestrians::{
 };
 pub use rail::{
     configure_rail, is_rail, load_rail_variants, move_ai_trains, rail_player_pose,
-    rail_player_step, spawn_ai_trains, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, RailAiPool,
-    RailChainLayout, RailNetwork, RailPlayer, RailSettings,
+    rail_player_step, spawn_ai_trains, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, Part,
+    RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
 };
 pub use reload::ReloadPlan;
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
