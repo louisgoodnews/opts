@@ -9,6 +9,8 @@
 //!
 //! Spec: `docs/src/architecture/texture-quality.md` §3.2 and `docs/src/roadmap/phase-8/M-0060.md`.
 
+use bevy::prelude::*;
+use bevy::render::view::{ColorGrading, Tonemapping};
 use serde::{Deserialize, Serialize};
 
 /// A named colour look.
@@ -60,15 +62,54 @@ impl Look {
     }
 }
 
+/// What a [`Look`] does to the camera and the sky.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LookParams {
+    /// Tonemapper of every `Camera3d`.
+    pub tonemapping: Tonemapping,
+    /// Saturation applied after tonemapping (`1.0` = unchanged).
+    pub post_saturation: f32,
+    /// Contrast of shadows, midtones and highlights (`1.0` = unchanged).
+    pub contrast: f32,
+    /// Factor on the ambient light the sky system computes (`1.0` = unchanged).
+    pub ambient_scale: f32,
+}
+
+impl Look {
+    /// The parameters of this look (provisional values, M-0060 step 1).
+    ///
+    /// *Natural* and *Bevy default* are identical until the physical calibration of step 2 gives
+    /// *Natural* its own sun, sky and exposure.
+    #[must_use]
+    pub fn params(self) -> LookParams {
+        match self {
+            // Measured on the reference view (texture-quality.md 3.2): +40 % mean saturation,
+            // +20 % contrast against the Bevy default.
+            Self::Vivid => LookParams {
+                tonemapping: Tonemapping::SomewhatBoringDisplayTransform,
+                post_saturation: 1.1,
+                contrast: 1.0,
+                ambient_scale: 0.5,
+            },
+            Self::Natural | Self::BevyDefault => LookParams {
+                tonemapping: Tonemapping::default(),
+                post_saturation: 1.0,
+                contrast: 1.0,
+                ambient_scale: 1.0,
+            },
+        }
+    }
+}
+
 /// The look in effect. Starts as the setting (or the `--look` override of this run) and changes
 /// live through the settings screen and the control protocol.
-#[derive(bevy::prelude::Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ActiveLook(pub Look);
 
 /// Applies the render options at start: the stored settings, overridden for this run by
 /// `--texture-filter` / `--look` (the overrides are not persisted).
 pub fn apply_startup_render_options(
-    app: &mut bevy::prelude::App,
+    app: &mut App,
     settings: &crate::settings::GameSettings,
     args: &opts_cli::CliArgs,
 ) {
@@ -99,4 +140,117 @@ pub fn apply_startup_render_options(
         "render options"
     );
     app.insert_resource(ActiveLook(look));
+}
+
+/// The colour grading of `params`; everything else (exposure, temperature, ...) stays at Bevy's
+/// defaults so switching looks never leaves residue.
+#[must_use]
+pub fn grading_for(params: LookParams) -> ColorGrading {
+    let mut g = ColorGrading::default();
+    g.global.post_saturation = params.post_saturation;
+    for section in [&mut g.shadows, &mut g.midtones, &mut g.highlights] {
+        section.contrast = params.contrast;
+    }
+    g
+}
+
+/// Applies the active look to every `Camera3d`: all of them when the look changed, new ones when
+/// they appear.
+pub fn apply_look_to_cameras(
+    look: Res<ActiveLook>,
+    cameras: Query<(Entity, Has<LookApplied>), With<Camera3d>>,
+    mut commands: Commands,
+) {
+    let params = look.0.params();
+    let changed = look.is_changed();
+    for (entity, applied) in &cameras {
+        if changed || !applied {
+            commands
+                .entity(entity)
+                .insert((params.tonemapping, grading_for(params), LookApplied));
+        }
+    }
+}
+
+/// Marks a camera that already carries the active look.
+#[derive(Component)]
+pub struct LookApplied;
+
+/// Registers [`ActiveLook`] and the system that applies it.
+pub struct LookPlugin;
+
+impl Plugin for LookPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<ActiveLook>()
+            .add_systems(Update, apply_look_to_cameras);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vivid_is_the_default_and_keys_round_trip() {
+        assert_eq!(Look::default(), Look::Vivid);
+        for look in Look::ALL {
+            assert_eq!(Look::parse(look.key()), Some(look));
+        }
+        assert_eq!(Look::parse(" Bevy_Default "), Some(Look::BevyDefault));
+        assert_eq!(Look::parse("sepia"), None);
+    }
+
+    #[test]
+    fn bevy_default_is_exactly_todays_behaviour() {
+        let p = Look::BevyDefault.params();
+        assert_eq!(p.tonemapping, Tonemapping::default());
+        assert_eq!(grading_for(p), ColorGrading::default());
+        assert_eq!(p.ambient_scale, 1.0);
+        assert_eq!(Look::Natural.params(), p, "until the calibration of step 2");
+    }
+
+    #[test]
+    fn vivid_uses_the_provisional_values() {
+        let p = Look::Vivid.params();
+        assert_eq!(p.tonemapping, Tonemapping::SomewhatBoringDisplayTransform);
+        assert_eq!(p.ambient_scale, 0.5);
+        let g = grading_for(p);
+        assert!((g.global.post_saturation - 1.1).abs() < 1e-6);
+    }
+
+    fn app_with_look(look: Look) -> App {
+        let mut app = App::new();
+        app.insert_resource(ActiveLook(look));
+        app.add_plugins(LookPlugin);
+        app
+    }
+
+    #[test]
+    fn cameras_follow_the_active_look_live() {
+        let mut app = app_with_look(Look::Vivid);
+        let cam = app.world_mut().spawn((Camera3d::default(),)).id();
+        app.update();
+        let tm = *app.world().get::<Tonemapping>(cam).expect("tonemapping");
+        assert_eq!(tm, Tonemapping::SomewhatBoringDisplayTransform);
+        let g = app.world().get::<ColorGrading>(cam).expect("grading");
+        assert!((g.global.post_saturation - 1.1).abs() < 1e-6);
+
+        app.world_mut().resource_mut::<ActiveLook>().0 = Look::BevyDefault;
+        app.update();
+        assert_eq!(
+            *app.world().get::<Tonemapping>(cam).expect("tonemapping"),
+            Tonemapping::default()
+        );
+        assert_eq!(
+            *app.world().get::<ColorGrading>(cam).expect("grading"),
+            ColorGrading::default()
+        );
+        // A camera spawned later gets the current look although the look did not change.
+        let late = app.world_mut().spawn(Camera3d::default()).id();
+        app.update();
+        assert_eq!(
+            *app.world().get::<Tonemapping>(late).expect("tonemapping"),
+            Tonemapping::default()
+        );
+    }
 }

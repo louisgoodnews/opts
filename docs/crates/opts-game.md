@@ -140,6 +140,7 @@ Application startup is decoupled into composition (`build_app`) and execution:
 - **Game Binary (`crates/opts-game/src/main.rs`):** Dedicated entrypoint for running the game package directly.
 - **Composition Root (`crates/opts-game/src/app.rs`):** `build_app(args: CliArgs) -> App` builds a complete Bevy app configured with `WindowPlugin` (or headless runner), settings, assets, UI, and stub plugins.
 - **Graceful Degradation (`crates/opts-game/src/stubs/`):** Missing subsystems (like `opts-discovery`) register lightweight stub plugins emitting non-blocking warnings and fallback resources.
+- **Render options (`crates/opts-game/src/look.rs`, `settings_screen/render_choice.rs`):** two persisted settings in the Display & Sound tab. *Texture filtering* (`texture_filtering`: off/4/8/16, default 16) feeds `opts_bevy::set_texture_filtering`; the *colour look* (`look`: vivid/natural/bevy, default Vivid) is the `ActiveLook` resource, which `LookPlugin` applies live to the `Tonemapping`/`ColorGrading` of every `Camera3d` and which `sky.rs` reads for the ambient scale. Both default when the key is absent from `settings.db`. `--texture-filter` and `--look` override them for one run without saving; the control protocol exposes `render.look`.
 - **Shutdown Persistence (`crates/opts-game/src/shutdown.rs`):** Intercepts `AppExit` events to persist `GameSettings` to disk prior to process termination.
 
 ---

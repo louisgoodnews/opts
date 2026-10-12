@@ -66,6 +66,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)
             .add_plugins(StubScreensPlugin)
+            .add_plugins(look::LookPlugin)
             .add_plugins(InGamePlugin);
 
         // Register global glass surface theme synchronization

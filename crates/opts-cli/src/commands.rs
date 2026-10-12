@@ -151,6 +151,12 @@ pub const COMMANDS: &[CommandSpec] = &[
         "x:f@0 y:f@1 z:f@2 yaw:f? pitch:f?",
     ),
     c(
+        "render.look",
+        "scene",
+        "Get or set the colour look (vivid, natural, bevy)",
+        "look:s@0?",
+    ),
+    c(
         "vehicle.set",
         "scene",
         "Replace the player vehicle",

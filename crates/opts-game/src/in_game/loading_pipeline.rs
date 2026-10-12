@@ -417,6 +417,13 @@ fn transition_to_active_simulation(
     if !state.hud_spawned {
         spawn_in_game_hud(commands, theme, session);
         state.hud_spawned = true;
+        let mips = opts_bevy::texture::mip_stats();
+        tracing::info!(
+            textures = mips.textures,
+            millis = mips.micros / 1000,
+            dropped_dds_chains = opts_bevy::texture::dropped_dds_chains(),
+            "generated mip chains"
+        );
         tracing::info!("Simulation viewport active; driving HUD instantiated");
     }
 }

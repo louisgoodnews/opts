@@ -1,5 +1,5 @@
 //! Game-specific methods of the control protocol: `state`, `scene`, `scene.load_map`,
-//! `scene.unload`, `vehicle.set`, `camera.teleport`. The generic ones live in
+//! `scene.unload`, `vehicle.set`, `camera.teleport`, `render.look`. The generic ones live in
 //! `opts_bevy::control`; see `docs/src/architecture/control-protocol.md`.
 
 use std::path::PathBuf;
@@ -36,6 +36,7 @@ impl Plugin for GameControlPlugin {
         registry.register("vehicle.script_vars", script_vars);
         registry.register("vehicle.get", vehicle_get);
         registry.register("camera.teleport", teleport);
+        registry.register("render.look", render_look);
         registry.register("menu.do", menu_do);
         registry.register("menu.state", menu_state);
         app.add_systems(Update, allow_session_reads);
@@ -312,4 +313,70 @@ fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
         "heading_deg": ch.heading_rad.to_degrees(),
         "speed_kmh": ch.forward_speed_km_h(),
     }))
+}
+
+/// `render.look {look?}`: reads the colour look, or sets it (`vivid`, `natural`, `bevy`). A set
+/// takes effect at once on every camera and the sky, and is saved in the settings.
+fn render_look(world: &mut World, params: &Value) -> Outcome {
+    let current = world.resource::<crate::look::ActiveLook>().0;
+    let requested = match opt_str(params, "look") {
+        Ok(r) => r,
+        Err(e) => return Outcome::err(e),
+    };
+    let look = match requested {
+        None => current,
+        Some(text) => match crate::look::Look::parse(text) {
+            Some(l) => l,
+            None => {
+                return Outcome::err(RpcError::invalid_params(format!(
+                    "unknown look `{text}` (vivid, natural, bevy)"
+                )))
+            }
+        },
+    };
+    if requested.is_some() {
+        world.resource_mut::<crate::look::ActiveLook>().0 = look;
+        if let Some(mut settings) = world.get_resource_mut::<crate::settings::GameSettings>() {
+            settings.look = look;
+            if let Err(err) = settings.save() {
+                tracing::warn!(err = ?err, "Failed to persist the look");
+            }
+        }
+    }
+    let available: Vec<&str> = crate::look::Look::ALL.iter().map(|l| l.key()).collect();
+    Outcome::ok(json!({ "look": look.key(), "previous": current.key(), "available": available }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::look::{ActiveLook, Look};
+
+    fn answer(outcome: Outcome) -> Result<Value, RpcError> {
+        match outcome {
+            Outcome::Done(r) => r,
+            Outcome::Wait(_) => panic!("render.look answers immediately"),
+        }
+    }
+
+    #[test]
+    fn render_look_gets_sets_and_rejects() {
+        let mut world = World::new();
+        world.insert_resource(ActiveLook::default());
+        // get: Vivid is the default.
+        let got = answer(render_look(&mut world, &json!({}))).expect("get");
+        assert_eq!(got["look"], "vivid");
+        assert_eq!(got["available"], json!(["vivid", "natural", "bevy"]));
+        // set: takes effect on the resource.
+        let set = answer(render_look(&mut world, &json!({ "look": "bevy" }))).expect("set");
+        assert_eq!(
+            (set["look"].as_str(), set["previous"].as_str()),
+            (Some("bevy"), Some("vivid"))
+        );
+        assert_eq!(world.resource::<ActiveLook>().0, Look::BevyDefault);
+        // unknown names are invalid parameters and change nothing.
+        let err = answer(render_look(&mut world, &json!({ "look": "sepia" }))).expect_err("bad");
+        assert_eq!(err.code, opts_cli::protocol::code::INVALID_PARAMS);
+        assert_eq!(world.resource::<ActiveLook>().0, Look::BevyDefault);
+    }
 }

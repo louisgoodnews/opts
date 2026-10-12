@@ -128,6 +128,7 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `camera.teleport` | `{x,y,z,yaw?,pitch?}` | switches to free roam and moves the camera to the **absolute** OMSI world position (metres; tile `(i,j)` starts at `300·i`, `300·j`); `yaw` is a compass heading in degrees (0 = north, clockwise), `pitch` degrees up | P1 |
 | `menu.do` | `{command}` | drives the in-game vehicle menu (Left Alt): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <var>`, `done`, `confirm`, `despawn`, `back`; see [vehicle menu](in-game-vehicle-menu.md) | P2 |
 | `menu.state` | — | page, chosen vehicle/repaint/entry and the free entry points of the vehicle menu | P2 |
+| `render.look` | `[look]` | `{look, previous, available}`; without `look` it reads the colour look, with `look` ∈ `vivid, natural, bevy` it sets it: live on every camera and the sky, and saved in the settings; unknown names answer `-32602` | P1 |
 | `vehicle.get` | — | `{x, y, z, heading_deg, speed_kmh}` of the player vehicle (absolute OMSI coordinates) | P1 |
 | `vehicle.script_vars` | `{contains?}` | the player vehicle's script variables `{count, variables, ops_executed}` (substring filter) | P1 |
 | `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |
