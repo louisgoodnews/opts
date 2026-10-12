@@ -48,14 +48,16 @@ fn main() {
             a1[0] * r[2][0] + a1[1] * r[2][1] + a1[2] * r[2][2],
         ];
         let vertical = |v: V3| norm(v)[2].abs() > 0.97;
-        let class = format!("rot=({rx},{ry},{rz}) matrix=[{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}]", r[0][0], r[0][1], r[0][2], r[1][0], r[1][1], r[1][2], r[2][0], r[2][1], r[2][2]);
+        // Optional fifth column: the animation factor; separates the main steering (about 57) from small side effects.
+        let big = f.get(4).and_then(|x| x.parse::<f32>().ok()).map_or("", |x| if x.abs() > 20.0 { " factor~57" } else { " factor small" });
+        let class = format!("rot=({rx},{ry},{rz}){big} matrix=[{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}]", r[0][0], r[0][1], r[0][2], r[1][0], r[1][1], r[1][2], r[2][0], r[2][1], r[2][2]);
         let e = tally.entry(class).or_default();
         e[0] += 1;
         e[1] += usize::from(vertical(a1));
         e[2] += usize::from(vertical(h2));
         e[3] += usize::from(vertical(h3));
     }
-    println!("{:70} {:>5} {:>4} {:>4} {:>4}", "frame rotation + matrix rotation", "n", "H1", "H2", "H3");
+    println!("{:90} {:>5} {:>4} {:>4} {:>4}", "frame rotation + matrix rotation", "n", "H1", "H2", "H3");
     let mut v: Vec<_> = tally.into_iter().collect();
     v.sort_by_key(|e| std::cmp::Reverse(e.1[0]));
     let tot = v.iter().fold([0usize; 4], |mut a, e| {
@@ -67,5 +69,5 @@ fn main() {
     for (k, e) in v.iter().take(18) {
         println!("{k:70} {:5} {:4} {:4} {:4}", e[0], e[1], e[2], e[3]);
     }
-    println!("{:70} {:5} {:4} {:4} {:4}", "TOTAL", tot[0], tot[1], tot[2], tot[3]);
+    println!("{:90} {:5} {:4} {:4} {:4}", "TOTAL", tot[0], tot[1], tot[2], tot[3]);
 }
