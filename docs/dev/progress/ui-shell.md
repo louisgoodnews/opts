@@ -75,3 +75,7 @@ Screenshots (all under `~/.local/share/opts/benchmark/dev-ui-impl/shell/shots/`,
 - The HUD still has hand-set literal text (M-0064); only its pause button was changed.
 - Test windows opened for screenshots were operated by a human at the machine several times (Settings, Drive and Quit were clicked, windows closed); this affected timing, not results.
 - Not verified: gamepad input, screen reader output, IME, real mouse hover states, German text lengths on screen (the pseudo-locale check of the library covers the shell tables only through `Localization::extend`).
+
+## Follow-up
+
+The wiring gaps listed above (pause Settings, leave confirmation, OMSI folder button, screens' own Esc handlers, handwritten controls table) are closed in [ui-wiring](ui-wiring.md).

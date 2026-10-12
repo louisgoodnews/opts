@@ -55,7 +55,8 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/new_game_screen/setvars_modal.rs",
     "opts-game/src/new_game_screen/systems.rs",
     "opts-game/src/settings_screen/page.rs",
-    "opts-game/src/settings_screen/systems.rs",
+    // Esc closes the overlay; it never coexists with the report dialog (opened from the pause panel).
+    "opts-game/src/settings_screen/overlay.rs",
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",

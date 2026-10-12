@@ -8,6 +8,8 @@ use opts_gui::prelude::*;
 use crate::shell::keys;
 
 /// One binding: what is shown, the keys behind it, what it does and where it is handled.
+// `keys` and `source` document the binding and are checked by the tests below.
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Debug, Clone, Copy)]
 pub struct Binding {
     /// The keys as printed (key names are not translated).

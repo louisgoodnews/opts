@@ -65,7 +65,7 @@ Esc never quits and never leaves a drive without the pause overlay and one confi
 | `shell/registry.rs` | `ScreenDescriptor`, `ScreenRegistry`, `App::register_screen`; the built-in destinations |
 | `shell/frame.rs` | rail (icons only in *Compact*), banner area, content area (`ShellContent`), theme toggle (F2) and *Quit OPTS* in the footer |
 | `shell/nav.rs` | `Navigate`, `NavigateBack`, `BackStack`, `PendingDeepLink`, `NavigationRefused` |
-| `shell/esc.rs` | the one implementation of Esc / Back (`EscGate`) |
+| `shell/esc.rs` | the one implementation of Esc / Back (`EscGate`; `ScreenBackSteps` / `ScreenBack` for a screen's own inner steps, used by *Plan a drive*) |
 | `shell/dialog.rs`, `shell/banner.rs`, `shell/notify.rs` | confirmation dialogs, banners, toasts with a required durable place for errors |
 | `shell/keys.rs`, `shell/l10n/` | message keys and the English and German tables (merged with `Localization::extend`) |
 | `home/` | Home page (`view`, `model`, `hero` with the `cover` crop, `StartDrive`) |
@@ -111,7 +111,7 @@ impl Plugin for VehicleSelectPlugin {
 ```
 
 ### Step 3: Register the Screen
-1. Register the destination with `app.register_screen(ScreenDescriptor { id, title_key, icon, group, order, availability, state })`; the rail follows. Build the page with `spawn_screen_root` (it is placed in the shell's content area) and keep Esc out of it: the shell owns it.
+1. Register the destination with `app.register_screen(ScreenDescriptor { id, title_key, icon, group, order, availability, state })`; the rail follows. Build the page with `spawn_screen_root` (it is placed in the shell's content area) and keep Esc out of it: the shell owns it (a screen with inner steps sets `ScreenBackSteps` and answers `ScreenBack`).
 2. In `crates/opts-game/src/lib.rs`, add your plugin to `OptsGamePlugin`. A feature that does not work yet is registered as a not-yet place (`opts_gui::not_yet`) and carries the red marker.
 
 ---
