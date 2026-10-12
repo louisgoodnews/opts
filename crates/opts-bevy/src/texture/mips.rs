@@ -105,8 +105,125 @@ fn for_each_weight(start: f32, end: f32, src: u32, mut f: impl FnMut(usize, f32)
 /// One premultiplied-linear RGBA texel: colour channels (weighted) and alpha.
 type Texel = [f32; 4];
 
+const ENC_STEPS: usize = 16384;
+
+/// sRGB byte -> linear light as 16-bit integer (for the integer fast path).
+fn srgb_to_linear16() -> &'static [u16; 256] {
+    static LUT: OnceLock<[u16; 256]> = OnceLock::new();
+    LUT.get_or_init(|| {
+        let f = srgb_to_linear_lut();
+        let mut lut = [0u16; 256];
+        for (o, v) in lut.iter_mut().zip(f) {
+            *o = (v * 65535.0 + 0.5) as u16;
+        }
+        lut
+    })
+}
+
+/// 14-bit linear light -> sRGB byte.
+fn linear14_to_srgb() -> &'static [u8; ENC_STEPS + 1] {
+    static LUT: OnceLock<[u8; ENC_STEPS + 1]> = OnceLock::new();
+    LUT.get_or_init(|| {
+        let mut lut = [0u8; ENC_STEPS + 1];
+        for (i, v) in lut.iter_mut().enumerate() {
+            let l = i as f32 / ENC_STEPS as f32;
+            let c = if l <= 0.003_130_8 {
+                l * 12.92
+            } else {
+                1.055 * l.powf(1.0 / 2.4) - 0.055
+            };
+            *v = (c * 255.0 + 0.5).clamp(0.0, 255.0) as u8;
+        }
+        lut
+    })
+}
+
+/// Integer fast path of the most common step: plain 2x2 mean of a level whose width and height
+/// both halve exactly (colour averaged in linear light, alpha as the plain mean).
+fn downsample_2x2_plain(src: &[u8], sw: usize, dw: usize, dh: usize) -> Vec<u8> {
+    let (lin, enc) = (srgb_to_linear16(), linear14_to_srgb());
+    let mut out = vec![0u8; dw * dh * 4];
+    for (y, orow) in out.chunks_exact_mut(dw * 4).enumerate() {
+        let r0 = &src[(2 * y) * sw * 4..][..sw * 4];
+        let r1 = &src[(2 * y + 1) * sw * 4..][..sw * 4];
+        for ((o, a), b) in orow
+            .chunks_exact_mut(4)
+            .zip(r0.chunks_exact(8))
+            .zip(r1.chunks_exact(8))
+        {
+            for c in 0..3 {
+                let sum = u32::from(lin[a[c] as usize])
+                    + u32::from(lin[a[c + 4] as usize])
+                    + u32::from(lin[b[c] as usize])
+                    + u32::from(lin[b[c + 4] as usize]);
+                // mean (sum / 4) in 16 bit -> 14 bit index, rounded.
+                o[c] = enc[(((sum + 8) >> 4) as usize).min(ENC_STEPS)];
+            }
+            let alpha = u32::from(a[3]) + u32::from(a[7]) + u32::from(b[3]) + u32::from(b[7]);
+            o[3] = ((alpha + 2) >> 2) as u8;
+        }
+    }
+    out
+}
+
+/// Fast path for the common case that each axis shrinks by exactly 1 or 2: every destination
+/// texel is the mean of a 1/2 x 1/2 block (the exact area weights of [`downsample_general`]).
+fn downsample_exact(
+    src: &[u8],
+    sw: u32,
+    dw: u32,
+    dh: u32,
+    k: (usize, usize),
+    weighted: bool,
+) -> Vec<u8> {
+    let lut = srgb_to_linear_lut();
+    let (kx, ky) = k;
+    let sw = sw as usize;
+    let mut out = vec![0u8; (dw * dh * 4) as usize];
+    for y in 0..dh as usize {
+        for x in 0..dw as usize {
+            let (mut acc, mut plain) = ([0.0f32; 3], [0.0f32; 3]);
+            let (mut alpha, mut wsum) = (0.0f32, 0.0f32);
+            for j in 0..ky {
+                let row = ((y * ky + j) * sw + x * kx) * 4;
+                for p in src[row..row + kx * 4].chunks_exact(4) {
+                    let a = f32::from(p[3]);
+                    let w = if weighted { a } else { 1.0 };
+                    alpha += a;
+                    wsum += w;
+                    for c in 0..3 {
+                        let l = lut[p[c] as usize];
+                        acc[c] += l * w;
+                        plain[c] += l;
+                    }
+                }
+            }
+            let n = (kx * ky) as f32;
+            let o = (y * dw as usize + x) * 4;
+            let (sum, div) = if wsum > 1e-6 { (acc, wsum) } else { (plain, n) };
+            for c in 0..3 {
+                out[o + c] = encode_srgb(sum[c] / div);
+            }
+            out[o + 3] = (alpha / n + 0.5) as u8;
+        }
+    }
+    out
+}
+
 /// Builds the next level from `src` (`sw` x `sh` RGBA8 sRGB) with exact area weights.
 fn downsample(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32, weighted: bool) -> Vec<u8> {
+    let exact = |s: u32, d: u32| (s == d || s == 2 * d).then_some((s / d) as usize);
+    if let (Some(kx), Some(ky)) = (exact(sw, dw), exact(sh, dh)) {
+        if !weighted && kx == 2 && ky == 2 {
+            return downsample_2x2_plain(src, sw as usize, dw as usize, dh as usize);
+        }
+        return downsample_exact(src, sw, dw, dh, (kx, ky), weighted);
+    }
+    downsample_general(src, sw, sh, dw, dh, weighted)
+}
+
+/// Any size ratio: every destination texel averages the exact (fractional) source area it covers.
+fn downsample_general(src: &[u8], sw: u32, sh: u32, dw: u32, dh: u32, weighted: bool) -> Vec<u8> {
     let lut = srgb_to_linear_lut();
     // Horizontal pass: sw x sh -> dw x sh, in linear light. Channels 0..3 are colour (times the
     // alpha weight in coverage mode), channel 3 is alpha; the weight sum is kept per texel.
@@ -212,12 +329,12 @@ pub fn rgba8_srgb_chain(
     let target = options.alpha_cutoff.map(|c| coverage(base, c, 1.0));
     let mut out = Vec::with_capacity(base.len() + base.len() / 3 + 16);
     out.extend_from_slice(base);
-    let mut prev = base.to_vec();
+    let mut prev: Option<Vec<u8>> = None;
     let (mut pw, mut ph) = (width, height);
     for level in 1..levels {
         let (nw, nh) = level_size(width, height, level);
         let mut next = downsample(
-            &prev,
+            prev.as_deref().unwrap_or(base),
             pw,
             ph,
             nw,
@@ -228,7 +345,7 @@ pub fn rgba8_srgb_chain(
             match_coverage(&mut next, cutoff, target);
         }
         out.extend_from_slice(&next);
-        prev = next;
+        prev = Some(next);
         (pw, ph) = (nw, nh);
     }
     Some(out)
