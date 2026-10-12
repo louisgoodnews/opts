@@ -11,6 +11,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use opts_core::formats::vehicles::BusCamera;
 
+use crate::articulation::ArticulatedSegment;
 use crate::camera::state::{cycle_index, CameraMode, CameraState};
 use crate::coords::{camera_preset_to_bevy_transform, omsi_to_bevy_pos};
 use crate::vehicle::BusVehicle;
@@ -195,6 +196,7 @@ pub fn update_passenger_camera(
 pub fn update_external_camera(
     state: Res<CameraState>,
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
+    segments: Query<&GlobalTransform, (With<ArticulatedSegment>, Without<Camera3d>)>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     if state.mode != CameraMode::External {
@@ -212,7 +214,16 @@ pub fn update_external_camera(
     let orbit =
         vrot * Quat::from_euler(EulerRot::YXZ, state.external_yaw, state.external_pitch, 0.0);
     // The camera sits behind the centre looking forward: +Z (back) rotated by the orbit.
-    tf.translation = centre + orbit * Vec3::Z * state.external_zoom;
+    // Articulated chains reach far behind the head unit: stay outside of every segment.
+    let reach = segments
+        .iter()
+        .map(|g| g.translation().distance(centre))
+        .filter(|d| *d < 25.0)
+        .fold(0.0_f32, f32::max);
+    let distance = state
+        .external_zoom
+        .max(if reach > 0.0 { reach + 6.0 } else { 0.0 });
+    tf.translation = centre + orbit * Vec3::Z * distance;
     tf.look_at(centre, Vec3::Y);
     set_fov(&mut proj, DEFAULT_FOV_Y);
 }

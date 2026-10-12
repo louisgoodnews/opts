@@ -65,7 +65,7 @@ Roughly 2 % of the 244,711 references in the install point to a path that does n
 
 ## Material alpha
 
-`[matl_alpha]` mode 1 is a cutout (alpha test), mode 2 blends; `[matl_transmap]` supplies a separate alpha texture that is composed into the material texture (nearest-neighbour resample); materials with `[alphascale]` (dirt, rain overlays) are scaled by a script variable whose default of 0 makes them invisible, so they are skipped.
+`[matl_alpha]` mode 1 is a cutout (alpha test), mode 2 blends; `[matl_transmap]` supplies a separate alpha texture that is composed into the material texture (nearest-neighbour resample; both textures are decoded from BC1/BC2/BC3 to RGBA8 first, `texture::decode_to_rgba8` — before 2026-10-12 a block-compressed base made the composition silently fail and the decal overlay of the MAN NLC bodies, which sits over the windows, rendered opaque: dark, non-transparent windows); materials with `[alphascale]` (dirt, rain overlays) are scaled by a script variable whose default of 0 makes them invisible, so they are skipped.
 
 ## Known gaps
 

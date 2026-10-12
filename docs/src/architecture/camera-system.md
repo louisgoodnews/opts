@@ -65,4 +65,4 @@ Cockpit and passenger cameras are **per-vehicle data**: `BusManifest::driver_cam
 
 Trailers named by `[couple_back]` are spawned as child segments (offset = tractor `[coupling_back]` − trailer `[coupling_front]`, chain depth ≤ 4). Their `[add_camera_pax]` presets are appended to the 4 list after the tractor's presets and are evaluated in the frame of their own segment (`BusVehicle::pax_camera`). Segments are rigid for now: no articulation angle is simulated.
 
-> **Key change (F1 reporting decision):** F1 now belongs to the report modal (`reporting-feature.md`). Camera modes moved from F2–F6 to the number keys 1–5 and "previous mode" from F1 to 0. The gear selector's digit aliases (1/2/3) were removed to avoid the clash; gears are E/N/R only. The debug overlay stays on F10.
+> **Key change (F1 reporting decision):** F1 now belongs to the report modal (`reporting-feature.md`). Camera modes moved from F2–F6 to the number keys 1–5 and "previous mode" from F1 to 0. The gear selector's digit aliases (1/2/3) were removed to avoid the clash; gears are D/N/R (D was E while A/D steered; steering is now on the arrow keys). The debug overlay stays on F10.

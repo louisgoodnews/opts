@@ -224,9 +224,9 @@ pub fn vehicle_input_system(
             inputs.set_service_brake((current_brake - config.brake_rate * 2.5 * dt).max(0.0));
         }
 
-        // 3. Steering wheel (A/D or ArrowLeft/ArrowRight)
-        let steer_left = keyboard.pressed(KeyCode::KeyA) || keyboard.pressed(KeyCode::ArrowLeft);
-        let steer_right = keyboard.pressed(KeyCode::KeyD) || keyboard.pressed(KeyCode::ArrowRight);
+        // 3. Steering wheel (ArrowLeft/ArrowRight; A and D belong to the gear selector)
+        let steer_left = keyboard.pressed(KeyCode::ArrowLeft);
+        let steer_right = keyboard.pressed(KeyCode::ArrowRight);
         let current_steer = inputs.steering();
 
         if steer_left && !steer_right {
@@ -239,16 +239,14 @@ pub fn vehicle_input_system(
             inputs.set_steering((current_steer + config.steering_return_rate * dt).min(0.0));
         }
 
-        // 4. Parking brake toggle (Space)
-        // Shift+Space is the camera reset chord, not the parking brake.
-        let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-        if keyboard.just_pressed(KeyCode::Space) && !shift {
+        // 4. Parking brake toggle (`.`)
+        if keyboard.just_pressed(KeyCode::Period) {
             let current_park = inputs.is_parking_brake_engaged();
             inputs.set_parking_brake(!current_park);
         }
 
-        // 5. Gear selector (E = Drive, N = Neutral, R = Reverse; digits belong to the camera modes)
-        if keyboard.just_pressed(KeyCode::KeyE) {
+        // 5. Gear selector (D = Drive, N = Neutral, R = Reverse; digits belong to the camera modes)
+        if keyboard.just_pressed(KeyCode::KeyD) {
             inputs.set_gear(GearPosition::Drive);
         } else if keyboard.just_pressed(KeyCode::KeyN) {
             inputs.set_gear(GearPosition::Neutral);

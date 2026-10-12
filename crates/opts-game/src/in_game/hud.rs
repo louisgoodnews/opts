@@ -249,7 +249,7 @@ pub fn spawn_in_game_hud(
                         ));
 
                         gear_box.spawn((
-                            (Text::new("GEAR [E/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("GEAR [D/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -269,7 +269,7 @@ pub fn spawn_in_game_hud(
                         ));
 
                         brake_box.spawn((
-                            (Text::new("PARK [Space]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("PARK [.]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -286,7 +286,7 @@ pub fn spawn_in_game_hud(
             ))
             .with_children(|legend| {
                 legend.spawn((
-                    (Text::new("[W/S] Throttle/Brake  •  [A/D] Steer  •  [Space] Handbrake  •  [E/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
+                    (Text::new("[W/S] Throttle/Brake  •  [←/→] Steer  •  [.] Parking brake  •  [D/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
             });

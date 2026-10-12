@@ -10,7 +10,7 @@ F1 anywhere in the application captures the primary window, opens a modal with t
 
 ## A1 — F1 conflict (resolved)
 
-**Decision: option A.** F1 is reporting. The camera modes moved from F2–F6 to the number keys **1–5** (Ego, Cockpit, External, Passenger, Free roam) and "previous mode" moved from F1 to **0**. The gear selector lost its digit aliases (1/2/3); gears are E/N/R. Implemented in `opts-bevy/src/camera/input.rs`, `state.rs::key_number`, `hud.rs`, `vehicle_sim.rs`; see [camera-system.md](camera-system.md). F2 in the main menu still toggles the theme (`menu/theme_toggle.rs`) and is unrelated to the camera.
+**Decision: option A.** F1 is reporting. The camera modes moved from F2–F6 to the number keys **1–5** (Ego, Cockpit, External, Passenger, Free roam) and "previous mode" moved from F1 to **0**. The gear selector lost its digit aliases (1/2/3); gears are D/N/R (steering moved to the arrow keys, parking brake to `.`). Implemented in `opts-bevy/src/camera/input.rs`, `state.rs::key_number`, `hud.rs`, `vehicle_sim.rs`; see [camera-system.md](camera-system.md). F2 in the main menu still toggles the theme (`menu/theme_toggle.rs`) and is unrelated to the camera.
 
 ## Preconditions (verified)
 

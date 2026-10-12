@@ -2,10 +2,12 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📋 Analysis (2026-10-12), not implemented |
+| **Status** | 🟡 Road scheme implemented 2026-10-12 (arrows steer, A/D free, D/N/R gears, `.` parking brake); rail scheme (lever, direction) not yet |
 | **Code today** | `opts-bevy` `vehicle_sim.rs` `vehicle_input_system` (one scheme for all vehicles) |
 
-## Today
+## Today (after 2026-10-12)
+
+Road vehicles: W/↑ throttle, S/↓ brake, ←/→ steering, `.` parking brake, D/N/R gear. Rail players still use this scheme until C2. Before the change it was:
 
 One scheme for every player vehicle: W/↑ throttle, S/↓ service brake, A/D or ←/→ steering, Space parking brake, E/N/R gear (Drive/Neutral/Reverse). Rail players use the same keys, so a tram gets a parking brake it does not have and no directional lever.
 

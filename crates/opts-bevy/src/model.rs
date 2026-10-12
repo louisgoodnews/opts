@@ -737,8 +737,13 @@ pub fn attach_model_parts(
 }
 
 /// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
-/// resampled). Works for RGBA8 bases and R8 / RGBA8 transparency maps; `None` otherwise.
+/// resampled). Bases and maps may be RGBA8 or block-compressed (BC1-3); an R8 map is read directly.
 fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
+    // DDS textures stay block-compressed on the GPU; the texel values are needed here.
+    let base = crate::texture::decode_to_rgba8(base)?;
+    let trans_decoded = crate::texture::decode_to_rgba8(trans);
+    let trans = trans_decoded.as_ref().unwrap_or(trans);
+    let base = &base;
     use bevy::render::render_resource::TextureFormat as F;
     let (bw, bh) = (base.width() as usize, base.height() as usize);
     let (tw, th) = (trans.width() as usize, trans.height() as usize);
