@@ -147,6 +147,7 @@ pub fn handle_vehicle_view_drag(
 pub fn update_cockpit_camera(
     state: Res<CameraState>,
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
+    head: Query<&GlobalTransform, With<crate::human::PlayerHead>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
@@ -160,6 +161,10 @@ pub fn update_cockpit_camera(
         return;
     };
     *tf = preset_world_transform(gt, cam, state.view_yaw, state.view_pitch);
+    // The preset gives the viewing direction; the eyes are the player character's.
+    if let Ok(eyes) = head.single() {
+        tf.translation = eyes.translation();
+    }
     set_fov(
         &mut proj,
         fov_y_from_horizontal(cam.fov_deg, window_aspect(&windows)),

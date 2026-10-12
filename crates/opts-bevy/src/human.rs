@@ -90,35 +90,21 @@ pub struct AlignEyes {
     pub wait: u8,
 }
 
-/// Shifts the player's human to the driver camera (see [`AlignEyes`]).
+/// Marks the player's head as the eye position once the hierarchy is propagated (see [`AlignEyes`]).
 pub fn align_driver_eyes(
     mut commands: bevy::prelude::Commands,
-    mut humans: bevy::prelude::Query<(
-        Entity,
-        &Human,
-        &mut AlignEyes,
-        &mut Transform,
-        &bevy::prelude::ChildOf,
-    )>,
+    mut humans: bevy::prelude::Query<(Entity, &Human, &mut AlignEyes)>,
     globals: bevy::prelude::Query<&bevy::prelude::GlobalTransform>,
 ) {
-    for (e, human, mut align, mut tf, parent) in &mut humans {
+    for (e, human, mut align) in &mut humans {
         if align.wait > 0 {
             align.wait -= 1;
             continue;
         }
-        let (Ok(head), Ok(vehicle)) = (
-            globals.get(human.rig.head_anchor),
-            globals.get(parent.parent()),
-        ) else {
+        if globals.get(human.rig.head_anchor).is_err() {
             continue;
-        };
-        let want = vehicle.transform_point(align.target);
-        let delta = vehicle
-            .affine()
-            .inverse()
-            .transform_vector3(want - head.translation());
-        tf.translation += delta;
+        }
+        // The human stays on the seat (`[drivpos]`); the cockpit and ego cameras go to its eyes.
         commands.entity(e).remove::<AlignEyes>();
         commands.entity(human.rig.head_anchor).insert(PlayerHead);
     }

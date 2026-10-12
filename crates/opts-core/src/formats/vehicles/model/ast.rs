@@ -418,6 +418,27 @@ impl ModelConfig {
         Self::default()
     }
 
+    /// The meshes drawn at close range: those before the first `[LOD]` (always visible) together
+    /// with the first explicit `[LOD]` group (the full-detail level). Later groups are simplified
+    /// stand-ins for distance. A file whose first group is already an explicit `[LOD]` yields that
+    /// group alone.
+    ///
+    /// The implicit group before the first marker is recognised by its threshold of 0 followed by
+    /// an explicit group with a positive threshold (`[LOD] 0.07` ... `[LOD] 0` in the Aachen
+    /// Citaro files).
+    #[must_use]
+    pub fn detail_lod(&self) -> Option<ModelLod> {
+        let first = self.lods.first()?;
+        match self.lods.get(1) {
+            Some(second) if first.threshold <= 0.0 && second.threshold > 0.0 => {
+                let mut merged = second.clone();
+                merged.meshes.splice(0..0, first.meshes.iter().cloned());
+                Some(merged)
+            }
+            _ => Some(first.clone()),
+        }
+    }
+
     /// Returns the total count of meshes across all LOD tiers.
     #[must_use]
     pub fn total_mesh_count(&self) -> usize {

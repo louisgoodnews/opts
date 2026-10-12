@@ -486,6 +486,8 @@ The `[LOD]` keyword is a **state switch**, not a mesh property. Everything decla
 
 Order of LOD levels in the file appears to be high-to-low. A mesh declared under `[LOD] 0.1` is rendered at close range; a mesh declared under `[LOD] 0` is rendered at far distance.
 
+> **Implicit group (2026-10-12).** Meshes listed *before* the first `[LOD]` are always visible; they form a group of their own (threshold 0 in the parser). The Aachen Citaro files have 4 such meshes (the bellows dummies), then `[LOD] 0.07` (289 meshes: the full vehicle) and `[LOD] 0` (one stand-in mesh). A loader that takes only the first group draws a vehicle of 4 invisible meshes. `ModelConfig::detail_lod()` returns the implicit group plus the first explicit group; later groups are distance stand-ins. (Parked and AI vehicles still use the `[LOD] 0` stand-in.)
+
 > ⚠️ **Open Question:** The exact distance thresholds are unclear. Does `0.1` mean "0.1 × some reference distance"? **Needs verification.**
 
 > ⚠️ **Open Question:** Are LOD levels cumulative or exclusive? I.e., if a mesh is at `[LOD] 0.1`, is it also visible at `[LOD] 0`? **Needs verification.**

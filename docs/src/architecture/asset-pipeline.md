@@ -73,3 +73,7 @@ Roughly 2 % of the 244,711 references in the install point to a path that does n
 - `[tree]` billboards are crossed quads (static, not camera-facing).
 - `[onlyeditor]` helpers, animations, LOD switching and text textures are not rendered.
 - Entry points from `global.cfg` are used (id code → `entrypoint_*.sco` object); the bus origin is placed on the object origin, facing the object's heading.
+
+## Flat ground surfaces and the terrain grid (2026-10-12)
+
+Splines with a `[heightprofile]` carve the terrain below their surface. Flat surfaces *without* one (pavements, plazas, bus bays laid on the ground, flat width ≥ 2 m) are authored a few centimetres below the 5 m grid too (Aachen, Fuchserde: pavement 230.70, terrain 230.78) and were covered by it. They now carve as well, but only where the terrain lies at most 0.4 m above the surface (`RoadFootprint::max_cover`), so a hill over a tunnel stays.

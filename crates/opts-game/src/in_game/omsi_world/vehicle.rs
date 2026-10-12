@@ -423,9 +423,10 @@ pub(super) fn spawn_trailer_chain(
                 break;
             }
         };
-        let Some(lod0) = model.lods.first() else {
+        let Some(detail) = model.detail_lod() else {
             break;
         };
+        let lod0 = &detail;
         // Both coupling points are in their own vehicle frame; the segment follows its leader
         // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
         let reversed = parent_manifest.couple_back_reversed;
@@ -580,9 +581,10 @@ pub fn prewarm_vehicle_meshes(
     let Some((bus_dir, cfg, model, bounds, manifest)) = loaded else {
         return Vec::new();
     };
-    let Some(lod0) = model.lods.first() else {
+    let Some(detail) = model.detail_lod() else {
         return Vec::new();
     };
+    let lod0 = &detail;
     let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
     let tex_dirs = vec![
         job.install
@@ -651,7 +653,8 @@ pub fn load_player_vehicle(
     let cfg_bytes = std::fs::read(&cfg_path).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
     let model =
         ModelConfig::parse_bytes(&cfg_bytes).map_err(|e| format!("{}: {e}", cfg_path.display()))?;
-    let lod0 = model.lods.first().ok_or("model config has no meshes")?;
+    let detail = model.detail_lod().ok_or("model config has no meshes")?;
+    let lod0 = &detail;
     tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
 
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();

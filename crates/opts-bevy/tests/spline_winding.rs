@@ -193,7 +193,30 @@ fn terrain_never_covers_a_road() {
 
 #[test]
 fn splines_without_height_profile_leave_terrain_alone() {
-    let mut prof = profile(vec![pt(-4.0, 0.1), pt(4.0, 0.1)]);
+    // A narrow flat spline (a kerb line) does not deform the terrain.
+    let mut prof = profile(vec![pt(-0.5, 0.1), pt(0.5, 0.1)]);
     prof.height_profiles.clear();
     assert!(road_footprint(&prof, &instance(0.0, 0.0, 0.0, false)).is_none());
+}
+
+#[test]
+fn flat_ground_surfaces_are_not_covered_but_cuttings_stay() {
+    // An 8 m pavement without height profile, terrain 8 cm above it: lowered onto it.
+    let mut prof = profile(vec![pt(-4.0, 0.0), pt(4.0, 0.0)]);
+    prof.height_profiles.clear();
+    let footprint = road_footprint(&prof, &instance(0.0, 0.0, 0.0, false)).expect("flat surface");
+    let dim = 61;
+    let near = MapTerrain {
+        grid_cells: 60,
+        heights: vec![10.08; dim * dim],
+    };
+    let carved = carve_terrain_under_roads(&near, &[footprint.clone()]);
+    assert!(carved.heights.iter().any(|h| *h < 10.05));
+    // Terrain 2 m above it (a hill over a tunnel) stays as authored.
+    let hill = MapTerrain {
+        grid_cells: 60,
+        heights: vec![12.0; dim * dim],
+    };
+    let carved = carve_terrain_under_roads(&hill, &[footprint]);
+    assert!(carved.heights.iter().all(|h| *h == 12.0));
 }

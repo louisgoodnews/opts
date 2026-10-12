@@ -111,12 +111,23 @@ pub struct RoadFootprint {
     pub half_width: f32,
     /// Lowest profile point height relative to the centreline datum (m).
     pub min_surface_z: f32,
+    /// Terrain further than this above the surface is left alone (a cutting or tunnel roof, not a
+    /// grid that merely covers the surface): infinite for roads with a height profile.
+    pub max_cover: f32,
 }
+
+/// Narrowest flat spline (m) that is treated as a ground surface the terrain must not cover.
+const FLAT_SURFACE_MIN_WIDTH_M: f32 = 2.0;
+/// How far above a flat surface the terrain may lie and still be lowered onto it (m).
+const FLAT_SURFACE_MAX_COVER_M: f32 = 0.4;
 
 /// Footprint of a placed spline, or `None` when it does not deform the terrain (no height profile).
 #[must_use]
 pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Option<RoadFootprint> {
-    if profile.height_profiles.is_empty() {
+    // Flat surfaces without a height profile (pavements, plazas, bus bays laid on the ground) are
+    // authored a few centimetres below the terrain grid and would be covered by it.
+    let flat_surface = !profile.only_editor && profile.flat_width() >= FLAT_SURFACE_MIN_WIDTH_M;
+    if profile.height_profiles.is_empty() && !flat_surface {
         return None;
     }
     let points = || profile.graphical_profiles.iter().flat_map(|g| &g.points);
@@ -137,6 +148,11 @@ pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Opti
         centreline,
         half_width,
         min_surface_z,
+        max_cover: if profile.height_profiles.is_empty() {
+            FLAT_SURFACE_MAX_COVER_M
+        } else {
+            f32::INFINITY
+        },
     })
 }
 
@@ -175,7 +191,9 @@ pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) 
                     }
                     let ceiling = a[2] + t * (b[2] - a[2]) + road.min_surface_z - CLEARANCE_M;
                     let h = &mut out.heights[j * dim + i];
-                    *h = h.min(ceiling);
+                    if *h - ceiling <= road.max_cover {
+                        *h = h.min(ceiling);
+                    }
                 }
             }
         }
