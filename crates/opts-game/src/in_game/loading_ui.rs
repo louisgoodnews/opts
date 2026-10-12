@@ -84,7 +84,7 @@ pub fn spawn_loading_screen_ui(
                         },
                         TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                     ),
-                    TypeStyleToken(TypeScale::LabelSmall),
+                    TypeStyleToken(TypeScale::Label),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
                 ));
             });
@@ -114,7 +114,7 @@ pub fn spawn_loading_screen_ui(
                         TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                     ),
                     StageIndicatorText,
-                    TypeStyleToken(TypeScale::LabelSmall),
+                    TypeStyleToken(TypeScale::Label),
                     ForegroundRole(ColorRole::OnPrimaryContainer),
                 ));
             });
@@ -148,7 +148,7 @@ pub fn spawn_loading_screen_ui(
             .with_children(|head| {
                 head.spawn((
                     (Text::new("Preparing Transit Session"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
-                    TypeStyleToken(TypeScale::HeadlineMedium),
+                    TypeStyleToken(TypeScale::Headline),
                     ForegroundRole(ColorRole::OnSurface),
                 ));
 
@@ -220,14 +220,14 @@ pub fn spawn_loading_screen_ui(
                     .with_children(|row| {
                         row.spawn((
                             (Text::new("ASSET COMPILATION & WORLD SYNTHESIS"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
-                            TypeStyleToken(TypeScale::LabelMedium),
+                            TypeStyleToken(TypeScale::Label),
                             ForegroundRole(ColorRole::Outline),
                         ));
 
                         row.spawn((
                             (Text::new("5%"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
                             ProgressPercentText,
-                            TypeStyleToken(TypeScale::TitleSmall),
+                            TypeStyleToken(TypeScale::BodyMedium),
                             ForegroundRole(ColorRole::Primary),
                         ));
                     });
@@ -275,7 +275,7 @@ pub fn spawn_loading_screen_ui(
                 ticker.spawn((
                     (Text::new("> Initializing 3D simulation engine & coordinates..."), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
                     StatusTickerText,
-                    TypeStyleToken(TypeScale::BodySmall),
+                    TypeStyleToken(TypeScale::Label),
                 ));
             });
         })
@@ -324,7 +324,7 @@ pub fn spawn_loading_screen_ui(
                         },
                         TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
-                    TypeStyleToken(TypeScale::LabelMedium),
+                    TypeStyleToken(TypeScale::Label),
                 ));
             });
 
@@ -355,7 +355,7 @@ pub fn spawn_loading_screen_ui(
                         },
                         TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                     ),
-                    TypeStyleToken(TypeScale::TitleSmall),
+                    TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnPrimary),
                 ));
             });
@@ -407,7 +407,7 @@ fn spawn_manifest_tile(
                     },
                     TextColor(accent),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
             ));
 
             tile.spawn((
@@ -419,7 +419,7 @@ fn spawn_manifest_tile(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
             ));
 
             tile.spawn((
@@ -431,7 +431,7 @@ fn spawn_manifest_tile(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::BodySmall),
+                TypeStyleToken(TypeScale::Label),
             ));
         });
 }

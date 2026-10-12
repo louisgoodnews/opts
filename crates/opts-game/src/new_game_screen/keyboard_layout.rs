@@ -2,7 +2,9 @@
 //!
 //! Detects system keyboard layout (e.g. German QWERTZ vs US QWERTY) from Linux
 //! system configuration (`/etc/default/keyboard`, `setxkbmap`, environment variables)
-//! and provides character translation for search inputs and text spinboxes.
+//! and provides character translation for text spinboxes and key-label hints. The catalogue search
+//! fields no longer use it: they type through the library `TextField` (platform layout, IME, caret,
+//! paste; M-0061 B3).
 
 use std::fs;
 use std::process::Command;

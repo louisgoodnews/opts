@@ -113,7 +113,7 @@ pub fn spawn_meridian_btn(
                         theme.scheme.get(ColorRole::OnSurfaceVariant)
                     }),
                 ),
-                TypeStyleToken(TypeScale::LabelMedium),
+                TypeStyleToken(TypeScale::Label),
             ));
         });
 }
@@ -154,7 +154,7 @@ pub fn spawn_minute_step_btn(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
             ));
         });
 }
@@ -184,7 +184,7 @@ pub fn spawn_clock_action_btn(parent: &mut ChildSpawnerCommands, label: &str, te
                     },
                     TextColor(teal),
                 ),
-                TypeStyleToken(TypeScale::LabelLarge),
+                TypeStyleToken(TypeScale::BodyMedium),
             ));
         });
 }

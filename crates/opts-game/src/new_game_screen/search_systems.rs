@@ -1,127 +1,28 @@
-//! Systems handling searchbar focus, typing, clearing, cursor blinking, and live list filtering.
+//! Systems feeding the catalogue search from the library text fields and filtering the cards live.
 
 use bevy::prelude::*;
-use opts_gui::interaction::events::ButtonClicked;
+use opts_gui::interaction::events::TextChanged;
 
-use crate::new_game_screen::keyboard_layout::SystemKeyboardLayout;
 use crate::new_game_screen::types::{
-    CatalogueSearchState, ClearSearchBtn, MapCardItem, ScrollKind, ScrollableContainer,
-    SearchInputBox, SearchInputText, VehicleCardItem,
+    CatalogueSearchState, MapCardItem, ScrollKind, ScrollableContainer, SearchInputBox,
+    VehicleCardItem,
 };
 
-/// System toggling cursor blinking timer every ~500ms.
-pub fn handle_cursor_blink(time: Res<Time>, mut search_state: ResMut<CatalogueSearchState>) {
-    if !search_state.map_focused && !search_state.vehicle_focused {
-        return;
-    }
-    search_state.cursor_timer += time.delta_secs();
-    if search_state.cursor_timer >= 0.50 {
-        search_state.cursor_timer = 0.0;
-        search_state.cursor_visible = !search_state.cursor_visible;
-    }
-}
-
-/// System managing searchbar focus on click.
-pub fn handle_search_focus(
-    mut events: MessageReader<ButtonClicked>,
-    box_query: Query<&SearchInputBox>,
+/// Copies what the user typed into the search fields (library `TextField`) into
+/// [`CatalogueSearchState`].
+pub fn sync_search_queries(
+    mut changed: MessageReader<TextChanged>,
+    boxes: Query<&SearchInputBox>,
     mut search_state: ResMut<CatalogueSearchState>,
 ) {
-    for event in events.read() {
-        if let Ok(box_item) = box_query.get(event.0) {
-            match box_item.kind {
-                ScrollKind::Maps => {
-                    search_state.map_focused = true;
-                    search_state.vehicle_focused = false;
-                    search_state.cursor_visible = true;
-                    search_state.cursor_timer = 0.0;
-                }
-                ScrollKind::Vehicles => {
-                    search_state.vehicle_focused = true;
-                    search_state.map_focused = false;
-                    search_state.cursor_visible = true;
-                    search_state.cursor_timer = 0.0;
-                }
+    for event in changed.read() {
+        if let Ok(search_box) = boxes.get(event.entity) {
+            match search_box.kind {
+                ScrollKind::Maps => search_state.map_query.clone_from(&event.text),
+                ScrollKind::Vehicles => search_state.vehicle_query.clone_from(&event.text),
                 _ => {}
             }
         }
-    }
-}
-
-/// System handling the clear / reset search button ("✖").
-pub fn handle_clear_search(
-    mut events: MessageReader<ButtonClicked>,
-    clear_query: Query<&ClearSearchBtn>,
-    mut search_state: ResMut<CatalogueSearchState>,
-) {
-    for event in events.read() {
-        if let Ok(clear_btn) = clear_query.get(event.0) {
-            match clear_btn.kind {
-                ScrollKind::Maps => {
-                    search_state.map_query.clear();
-                    search_state.map_focused = true;
-                    search_state.cursor_visible = true;
-                    search_state.cursor_timer = 0.0;
-                }
-                ScrollKind::Vehicles => {
-                    search_state.vehicle_query.clear();
-                    search_state.vehicle_focused = true;
-                    search_state.cursor_visible = true;
-                    search_state.cursor_timer = 0.0;
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
-/// System capturing user keyboard typing into the active searchbar using system keyboard layout.
-pub fn handle_search_typing(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    layout: Res<SystemKeyboardLayout>,
-    mut search_state: ResMut<CatalogueSearchState>,
-) {
-    if !search_state.map_focused && !search_state.vehicle_focused {
-        return;
-    }
-
-    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    let is_map = search_state.map_focused;
-
-    if keyboard.just_pressed(KeyCode::Enter) || keyboard.just_pressed(KeyCode::Escape) {
-        search_state.map_focused = false;
-        search_state.vehicle_focused = false;
-        return;
-    }
-
-    if keyboard.just_pressed(KeyCode::Backspace) {
-        if is_map {
-            search_state.map_query.pop();
-        } else {
-            search_state.vehicle_query.pop();
-        }
-        search_state.cursor_visible = true;
-        search_state.cursor_timer = 0.0;
-        return;
-    }
-
-    let mut typed = Vec::new();
-    for &key in keyboard.get_just_pressed() {
-        if let Some(ch) = layout.map_key_to_char(key, shift) {
-            typed.push(ch);
-        }
-    }
-
-    if !typed.is_empty() {
-        for ch in typed {
-            if is_map {
-                search_state.map_query.push(ch);
-            } else {
-                search_state.vehicle_query.push(ch);
-            }
-        }
-        search_state.cursor_visible = true;
-        search_state.cursor_timer = 0.0;
     }
 }
 
@@ -131,11 +32,6 @@ pub fn filter_search_cards(
     search_state: Res<CatalogueSearchState>,
     mut map_cards_query: Query<(&MapCardItem, &mut Node), Without<VehicleCardItem>>,
     mut veh_cards_query: Query<(&VehicleCardItem, &mut Node), Without<MapCardItem>>,
-    mut text_query: Query<(&SearchInputText, &mut Text)>,
-    mut clear_btns_query: Query<
-        (&ClearSearchBtn, &mut Node),
-        (Without<MapCardItem>, Without<VehicleCardItem>),
-    >,
     mut container_query: Query<&mut ScrollableContainer>,
 ) {
     // 1. Filter Map Cards
@@ -164,58 +60,7 @@ pub fn filter_search_cards(
         };
     }
 
-    // 3. Update search input text labels with live cursor indicator
-    for (input_text, mut text) in &mut text_query {
-        match input_text.kind {
-            ScrollKind::Maps => {
-                let cursor_sym = if search_state.map_focused && search_state.cursor_visible {
-                    "|"
-                } else {
-                    ""
-                };
-                text.0 = if search_state.map_query.is_empty() {
-                    if search_state.map_focused {
-                        format!("Search 42 maps...{cursor_sym}")
-                    } else {
-                        "Search 42 maps...".to_string()
-                    }
-                } else {
-                    format!("{}{cursor_sym}", search_state.map_query)
-                };
-            }
-            ScrollKind::Vehicles => {
-                let cursor_sym = if search_state.vehicle_focused && search_state.cursor_visible {
-                    "|"
-                } else {
-                    ""
-                };
-                text.0 = if search_state.vehicle_query.is_empty() {
-                    if search_state.vehicle_focused {
-                        format!("Search 956 vehicles...{cursor_sym}")
-                    } else {
-                        "Search 956 vehicles...".to_string()
-                    }
-                } else {
-                    format!("{}{cursor_sym}", search_state.vehicle_query)
-                };
-            }
-            _ => {}
-        }
-    }
-
-    // 4. Update clear / reset button visibility
-    for (clear_btn, mut style) in &mut clear_btns_query {
-        let show = match clear_btn.kind {
-            ScrollKind::Maps => search_state.map_focused || !search_state.map_query.is_empty(),
-            ScrollKind::Vehicles => {
-                search_state.vehicle_focused || !search_state.vehicle_query.is_empty()
-            }
-            _ => false,
-        };
-        style.display = if show { Display::Flex } else { Display::None };
-    }
-
-    // 5. Update container max scroll heights based on visible cards
+    // 3. Update container max scroll heights based on visible cards
     let item_height = 58.0;
     let viewport_height = 470.0;
     for mut container in &mut container_query {

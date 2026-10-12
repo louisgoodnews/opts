@@ -419,11 +419,21 @@ pub fn cleanup_new_game_screen(
 }
 
 /// Escape key listener returning to the Main Menu.
+///
+/// Escape in a text field only leaves the field (the library `Back` handling drops its focus);
+/// this system runs before the action layer so it still sees that focus on the same frame.
 pub fn escape_to_menu_system(
     keyboard: Res<ButtonInput<KeyCode>>,
+    text_focus: Query<
+        (),
+        (
+            With<opts_gui::interaction::state::Focused>,
+            opts_gui::interaction::handlers::TextEntry,
+        ),
+    >,
     mut next_state: ResMut<NextState<AppState>>,
 ) {
-    if keyboard.just_pressed(KeyCode::Escape) {
+    if keyboard.just_pressed(KeyCode::Escape) && text_focus.is_empty() {
         next_state.set(AppState::MainMenu);
     }
 }

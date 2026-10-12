@@ -162,6 +162,20 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 Commands run sequentially in order; at most 100 per batch. Because each command completes in the frame in
 which it is executed (except `sim.step` and `scene.load_map`), a batch of 20 usually costs 1–3 frames.
 
+### 4.9 UI by id
+
+The UI can be read and driven without coordinates. Every interactive element has a **stable path id** (`menu.start`, or an automatic `parent/role:slug` such as `button:start-drive`; duplicates get `-2`, `-3`). Screens that must survive copy changes and language switches set explicit ids; the automatic slug comes from the message key when there is one, else from the label text. The actions send exactly the messages a pointer release, a keyboard or a gamepad would, so they pass the same gating, and they answer at once - the effect is visible one or two frames later (read it back with `ui.state`).
+
+| Method | Params | Result | Priority |
+| :--- | :--- | :--- | :--- |
+| `ui.tree` | `{visible_only?=false}` | `{focus, count, tree:[node]}` where a node is `{id, role, label, value?, state, rect, focusable, children}`; `role` is one of `button, checkbox, radio, switch, textbox, combobox, option, tablist, tab, tabpanel, tree, treeitem, listitem, dialog, toast, region`; `state` is `{hovered, focused, pressed, selected, checked, expanded, disabled, disabled_reason, error, visible}`; `rect` is `[x, y, w, h]` in logical pixels or `null` before layout | P1 |
+| `ui.state` | `{id}` | one node without children; `1004` for an unknown id | P1 |
+| `ui.click` | `{id}` | activates the element (a text field gets focus); `1001` when it is hidden or disabled (`data.reason` carries the reason), `1004` for an unknown id | P1 |
+| `ui.focus` | `{id}` | moves keyboard focus; `1001` when the element cannot take focus now (hidden, disabled without a reason, behind a dialog) | P1 |
+| `ui.action` | `{action, arg?}` | sends a `UiAction`: `navigate up\|down\|left\|right`, `next-region`, `prev-region`, `next`, `previous`, `next-tab`, `prev-tab`, `confirm`, `back`, `search`, `menu`, `help`, `scroll page-up\|page-down\|home\|end\|up\|down`; `-32602` with the valid spellings in `data` otherwise | P1 |
+
+From the shell: `opts-cli ui.tree --visible_only true`, `opts-cli ui.click menu.start`, `opts-cli ui.action navigate right`. A scripted keyboard traversal is `ui.action next` repeated while reading `ui.tree`'s `focus`.
+
 ## 5. Rate limiting
 
 Per connection: token bucket of 200 requests/s with a burst of 400; beyond that `1006 Busy`. The Bevy side

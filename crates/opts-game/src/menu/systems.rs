@@ -2,8 +2,6 @@
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use opts_gui::interaction::focus::Focusable;
-use opts_gui::interaction::state::Focused;
 use opts_gui::theme::theme::MaterialTheme;
 
 use crate::menu::layout::{cleanup_main_menu, spawn_main_menu};
@@ -31,20 +29,6 @@ pub fn exit_main_menu_system(
     query: Query<Entity, With<crate::menu::layout::MainMenuRoot>>,
 ) {
     cleanup_main_menu(commands, query);
-}
-
-/// System that ensures the "Play" button (tab_index: 0) acquires initial focus on entry.
-pub fn initial_focus_system(
-    mut commands: Commands,
-    query: Query<(Entity, &Focusable), Added<Focusable>>,
-) {
-    for (entity, focusable) in &query {
-        if focusable.tab_index != 0 {
-            continue;
-        }
-        commands.entity(entity).insert(Focused);
-        break;
-    }
 }
 
 /// System that handles pressing `Escape` in [`crate::app_state::AppState::MainMenu`] to exit the application.

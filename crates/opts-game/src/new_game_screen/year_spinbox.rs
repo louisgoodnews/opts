@@ -111,7 +111,7 @@ pub fn spawn_year_spinbox(
                                     },
                                     TextColor(theme.scheme.get(ColorRole::Primary)),
                                 ),
-                                TypeStyleToken(TypeScale::LabelSmall),
+                                TypeStyleToken(TypeScale::Label),
                             ));
                         });
 
@@ -143,7 +143,7 @@ pub fn spawn_year_spinbox(
                                     },
                                     TextColor(theme.scheme.get(ColorRole::Primary)),
                                 ),
-                                TypeStyleToken(TypeScale::LabelSmall),
+                                TypeStyleToken(TypeScale::Label),
                             ));
                         });
                 });

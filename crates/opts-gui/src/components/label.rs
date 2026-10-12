@@ -19,7 +19,7 @@ pub struct M3Label;
 ///
 /// fn setup_header(mut commands: Commands) {
 ///     LabelBuilder::new("Map Browser")
-///         .with_style(TypeScale::HeadlineLarge)
+///         .with_style(TypeScale::Headline)
 ///         .spawn(&mut commands);
 /// }
 /// ```
@@ -61,7 +61,7 @@ impl LabelBuilder {
                     font_size: FontSize::Px(14.0),
                     ..default()
                 },
-                TextColor(Color::WHITE),
+                TextColor::default(),
             ),
             M3Label,
             TypeStyleToken(self.style),

@@ -6,7 +6,7 @@
 | **Layer** | Engine GUI / Presentation Layer |
 | **Kind** | Library (`lib.rs`) |
 | **Status** | 🟢 Fully Implemented (Foundation Complete) |
-| **Last Updated** | 2026-10-12 (theme foundations, M-0061 part A) |
+| **Last Updated** | 2026-10-12 (theme foundations, widget states, focus and actions, UI ids, localisation: M-0061) |
 
 ---
 
@@ -51,7 +51,7 @@ Examples: `font_compare` (rendered typeface comparison), `theme_dump` (prints th
 - **`IconBuilder`**: Vector/glyph icon container supporting Small (18dp), Medium (24dp), and Large (32dp) sizes.
 - **`CardBuilder`**: Elevated, Filled, and Outlined container cards with customizable padding.
 - **`DividerBuilder`**: Horizontal and vertical 1dp line separators bound to `OutlineVariant`.
-- **`TextFieldBuilder`**: Outlined and Filled text input fields with label, placeholder, and `TextChanged` event streaming.
+- **`TextFieldBuilder`** (`M3TextField`, `TextFieldInput`): Outlined and Filled single-line fields on Bevy's `TextInput`/`EditableText` (platform layout, IME, caret, selection, clipboard) with placeholder, clear button, `compact()`, `full_width()`, error/disabled treatment, a two-way `M3TextField::text` and `TextChanged`.
 - **`CheckboxBuilder`**: Tristate checkbox (Checked, Unchecked, Indeterminate) with visual indicator synchronization and `CheckboxToggled` event.
 - **`SwitchBuilder`**: Pill-track toggle switch with animated thumb state and `SwitchToggled` event.
 - **`RadioBuilder`**: Mutually exclusive radio option button with group ID binding and `RadioSelected` event.
@@ -61,17 +61,24 @@ Examples: `font_compare` (rendered typeface comparison), `theme_dump` (prints th
 - **`NotebookBuilder`**: Tabbed container with interactive tab header bar, active underline indicator, panel switching, and `NotebookTabSelected` event.
 - **`ToastBuilder`**: Snackbar notification banner with auto-dismiss duration timer, action button, and `ToastDismissed` event.
 - **`ToplevelBuilder`**: Floating modal window dialog with title bar, close button, body container, modal scrim overlay, and `ToplevelClosed` event.
-- **`ModalBuilder`** (`ModalRoot`, `ModalContent`, `ModalEvent`): full-screen scrim (60 % black) with a centred card (70 % × 90 % of the viewport, 600–1200 px wide). The backdrop blocks pointer input beneath it and clicking it does nothing; Escape emits `ModalEvent::CancelRequested`; Tab / Shift+Tab cycle only through focusables inside the card (the global focus navigation is suspended while a modal exists).
+- **`ModalBuilder`** (`ModalRoot`, `ModalContent`, `ModalEvent`): full-screen scrim (60 % black) with a centred card (70 % × 90 % of the viewport, 600–1200 px wide). The backdrop blocks pointer input beneath it and clicking it does nothing; Escape emits `ModalEvent::CancelRequested`; focus navigation considers only the focusables inside the card while it exists and focus returns to the previous control when it closes.
 - **`TextAreaBuilder`** (`TextArea`, `TextBuffer`, `TextAreaChanged`): multiline input. Layout-aware typing (umlauts, dead keys), Enter = newline, arrows, Home/End (Ctrl = document), PageUp/PageDown, Backspace/Delete, Shift-selection, `Ctrl+A/C/X/V` through `arboard` (falls back to an in-app clipboard with a `WARN` when no system clipboard exists), word-boundary wrapping, vertical scrolling that follows the cursor (wrapped-line count is estimated from glyph width), blinking cursor on `Time<Real>` so it keeps blinking while virtual time is paused. Tab is not consumed. Glyphs come from the active font: Bevy's built-in font is an ASCII-only Fira Mono subset, so apps must install a full-coverage TTF/OTF as the default font (`Assets<Font>::insert(Handle::<Font>::default().id(), font)`, see the `modal_text_area` example's `OPTS_EXAMPLE_FONT`). Bevy 0.14 has no font fallback or colour emoji; a single font must cover every glyph used.
 - **`TreeviewBuilder` & `TreeNode`**: Hierarchical tree navigation with recursive nesting, expand/collapse chevron toggle, and `TreeNodeToggled`/`TreeNodeSelected` events.
 - **`DateSelectBuilder` & `DateTimeSelectBuilder`**: Transit timetable and chronotimed event date/datetime selectors emitting `DateSelected` and `DateTimeSelected`.
 
 ### 5. Interaction & Focus Navigation (`opts_gui::interaction`)
-- **`Focusable`**: Component marking an entity eligible for keyboard and gamepad focus.
+- **`Focusable`**: Component marking an entity eligible for keyboard and gamepad focus (every `Button` has it; `tab_index` is no longer consulted).
 - **`FocusEvent`**: Programmatic navigation events (`Next`, `Previous`, `Set(Entity)`, `Clear`).
-- **`FocusPlugin`**: Keyboard listener handling `Tab` (forward) and `Shift+Tab` (backward) cycling.
-
----
+- **`FocusPlugin`**: registers the focus systems; Tab, arrows and gamepad arrive as `UiAction`s (section 6).
+### 6. Interaction layer (M-0061 part B)
+Full description: [GUI Interaction Layer and Components](../src/architecture/gui-interaction-layer.md).
+- **States**: `interaction::layer` (state layer, disabled scrim, focus ring, `ErrorState`, `ForcedState`), `interaction::state` (`Hovered`/`Pressed` are Bevy's; `Focused`, `Disabled`, `DisabledReason`, `Selected`, `ErrorState`), `Tooltip` (600 ms hover or keyboard focus).
+- **Activation**: `Activated(Entity)` message, produced by pointer release inside a control, `Confirm` and `ui.click`; widgets react to it.
+- **Focus and actions**: `UiAction` (`actions.rs`; keyboard and gamepad tables), `FocusGraph`, `FocusEvent`, `FocusRegion`/`Landmark`, `DefaultFocus`, `PointerOnly`, modal scope and restore.
+- **Ids and tree**: `UiId`, `UiRole`, `ui_tree::snapshot`, accessibility nodes (`accesskit` 0.24), control commands `ui.tree`, `ui.click`, `ui.focus`, `ui.action`, `ui.state` ([protocol](../src/architecture/control-protocol.md#49-ui-by-id)).
+- **Not available yet**: `not_yet::{NotAvailableYet, Availability, NotYetPlace, PLACES}`, generated [list](../src/reference/not-available-yet.md).
+- **Localisation**: `l10n::{Localization, L10nKey, L10nArgs, L10nTooltip, keys}`, `en.ftl`/`de.ftl`, pseudo-locale `en-XA`, `OPTS_LOCALE`.
+- **Tests and demos**: `testing::{headless_app, layout_app, click, act, rules::*}`, `showcase::spawn_showcase`, example `gallery` (`OPTS_GALLERY_SHOT=path.png`, `OPTS_GALLERY_LIGHT=1`), `components::virtual_list::ListGeometry` (windowing arithmetic of the future virtualised list).
 
 ## 🚀 Running Examples
 

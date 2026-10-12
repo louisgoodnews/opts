@@ -3,6 +3,8 @@
 use crate::interaction::events::DateTimeSelected;
 use bevy::prelude::*;
 
+use crate::{theme::color::ColorRole, tokens::components::ForegroundRole};
+
 /// Marker component for an M3 date and time selector.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct M3DateTimeSelect {
@@ -81,7 +83,8 @@ impl DateTimeSelectBuilder {
                     font_size: FontSize::Px(14.0),
                     ..default()
                 },
-                TextColor(Color::WHITE),
+                TextColor::default(),
+                ForegroundRole(ColorRole::OnSurface),
             ));
         });
 
@@ -121,7 +124,8 @@ impl DateTimeSelectBuilder {
                     font_size: FontSize::Px(14.0),
                     ..default()
                 },
-                TextColor(Color::WHITE),
+                TextColor::default(),
+                ForegroundRole(ColorRole::OnSurface),
             ));
         });
 

@@ -29,18 +29,18 @@ impl ThemeKind {
     /// Stable key used in settings and theme files.
     pub const fn key(self) -> &'static str {
         match self {
-            Self::Dark => "dark",
-            Self::Light => "light",
-            Self::HighContrast => "high_contrast",
+            Self::Dark => "dark",   // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Light => "light", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::HighContrast => "high_contrast", // l10n-ok: stored identifier or diagnostic, not UI copy
         }
     }
 
     /// Parses [`ThemeKind::key`] (case-insensitive).
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
-            "dark" => Some(Self::Dark),
-            "light" => Some(Self::Light),
-            "high_contrast" | "high-contrast" | "highcontrast" => Some(Self::HighContrast),
+            "dark" => Some(Self::Dark), // l10n-ok: stored identifier or diagnostic, not UI copy
+            "light" => Some(Self::Light), // l10n-ok: stored identifier or diagnostic, not UI copy
+            "high_contrast" | "high-contrast" | "highcontrast" => Some(Self::HighContrast), // l10n-ok: stored identifier or diagnostic, not UI copy
             _ => None,
         }
     }
@@ -70,20 +70,20 @@ impl ThemeMode {
     /// Stable key used in the `theme_mode` setting.
     pub const fn key(self) -> &'static str {
         match self {
-            Self::Dark => "dark",
-            Self::Light => "light",
-            Self::System => "system",
-            Self::AutoClock => "auto",
+            Self::Dark => "dark",   // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Light => "light", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::System => "system", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::AutoClock => "auto", // l10n-ok: stored identifier or diagnostic, not UI copy
         }
     }
 
     /// Parses [`ThemeMode::key`] (case-insensitive); `None` for anything else.
     pub fn parse(s: &str) -> Option<Self> {
         match s.trim().to_ascii_lowercase().as_str() {
-            "dark" => Some(Self::Dark),
-            "light" => Some(Self::Light),
-            "system" => Some(Self::System),
-            "auto" | "auto_clock" | "autoclock" => Some(Self::AutoClock),
+            "dark" => Some(Self::Dark), // l10n-ok: stored identifier or diagnostic, not UI copy
+            "light" => Some(Self::Light), // l10n-ok: stored identifier or diagnostic, not UI copy
+            "system" => Some(Self::System), // l10n-ok: stored identifier or diagnostic, not UI copy
+            "auto" | "auto_clock" | "autoclock" => Some(Self::AutoClock), // l10n-ok: stored identifier or diagnostic, not UI copy
             _ => None,
         }
     }
@@ -91,10 +91,10 @@ impl ThemeMode {
     /// Display label for the settings page.
     pub const fn label(self) -> &'static str {
         match self {
-            Self::Dark => "Dark",
-            Self::Light => "Light",
-            Self::System => "System",
-            Self::AutoClock => "Auto (clock)",
+            Self::Dark => "Dark", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Light => "Light", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::System => "System", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::AutoClock => "Auto (clock)", // l10n-ok: UI label until the settings page uses message keys (M-0063)
         }
     }
 

@@ -42,10 +42,7 @@ pub use picker_systems::{
     handle_calendar_interaction, handle_clock_picker_interaction, handle_scroll_to_top,
     handle_year_spinbox, update_clock_picker_visuals, update_scrollbar_thumbs,
 };
-pub use search_systems::{
-    filter_search_cards, handle_clear_search, handle_cursor_blink, handle_search_focus,
-    handle_search_typing,
-};
+pub use search_systems::{filter_search_cards, sync_search_queries};
 pub use systems::{
     cleanup_new_game_screen, escape_to_menu_system, handle_back_button,
     handle_entrypoint_selection, handle_launch_button, handle_livery_selection,
@@ -54,17 +51,16 @@ pub use systems::{
 };
 pub use types::{
     AdjustMinuteBtn, AdjustTimeBtn, ApplyLiveWeatherBtn, BackToMenuBtn, CalendarHeaderDateText,
-    CalendarMonthYearText, CatalogueSearchState, ClearSearchBtn, ClockDigitalDisplayText,
-    CloseSetvarsModalBtn, DepartureTimeDisplayText, DeviceLocationWeather, EntryPointCardItem,
-    GameCatalogue, LaunchGameBtn, LaunchSummaryText, MapCardItem, MapDetailPanelRoot, MapItem,
-    NewGameScreenRoot, NewGameSetup, NextMonthBtn, OpenSetvarsModalBtn, PrevMonthBtn,
-    RefreshWeatherBtn, RepaintCardItem, ResetSetvarsBtn, ScrollContent, ScrollDownBtn, ScrollKind,
-    ScrollToTopBtn, ScrollUpBtn, ScrollableContainer, ScrollbarThumb, ScrollbarTrack,
-    SelectCalendarDayBtn, SelectClockHourBtn, SelectClockMeridianBtn, SelectEntryPointBtn,
-    SelectLiveryBtn, SelectMapBtn, SelectVehicleBtn, SelectWeatherBtn, SetvarStepBtn,
-    SetvarsModalRoot, TabSummaryText, VehicleCardItem, VehicleDetailPanelRoot, VehicleItem,
-    WeatherCardItem, WeatherDetailPanelRoot, YearDecrementBtn, YearIncrementBtn, YearInputBox,
-    YearInputText,
+    CalendarMonthYearText, CatalogueSearchState, ClockDigitalDisplayText, CloseSetvarsModalBtn,
+    DepartureTimeDisplayText, DeviceLocationWeather, EntryPointCardItem, GameCatalogue,
+    LaunchGameBtn, LaunchSummaryText, MapCardItem, MapDetailPanelRoot, MapItem, NewGameScreenRoot,
+    NewGameSetup, NextMonthBtn, OpenSetvarsModalBtn, PrevMonthBtn, RefreshWeatherBtn,
+    RepaintCardItem, ResetSetvarsBtn, ScrollContent, ScrollDownBtn, ScrollKind, ScrollToTopBtn,
+    ScrollUpBtn, ScrollableContainer, ScrollbarThumb, ScrollbarTrack, SelectCalendarDayBtn,
+    SelectClockHourBtn, SelectClockMeridianBtn, SelectEntryPointBtn, SelectLiveryBtn, SelectMapBtn,
+    SelectVehicleBtn, SelectWeatherBtn, SetvarStepBtn, SetvarsModalRoot, TabSummaryText,
+    VehicleCardItem, VehicleDetailPanelRoot, VehicleItem, WeatherCardItem, WeatherDetailPanelRoot,
+    YearDecrementBtn, YearIncrementBtn, YearInputBox, YearInputText,
 };
 pub use vehicle_panel::spawn_vehicle_selection_tab;
 pub use weather_panel::spawn_weather_datetime_tab;
@@ -88,6 +84,7 @@ impl Plugin for NewGameMenuPlugin {
             app.init_resource::<CatalogueSearchState>();
         }
 
+        // Key *labels* only (vehicle-controls hints); text input no longer uses the detector.
         if !app.world().contains_resource::<SystemKeyboardLayout>() {
             app.insert_resource(SystemKeyboardLayout::detect());
         }
@@ -119,10 +116,7 @@ impl Plugin for NewGameMenuPlugin {
             .add_systems(
                 Update,
                 (
-                    handle_search_focus,
-                    handle_clear_search,
-                    handle_cursor_blink,
-                    handle_search_typing,
+                    sync_search_queries,
                     filter_search_cards,
                     handle_scroll_to_top,
                     update_scrollbar_thumbs,
@@ -133,7 +127,7 @@ impl Plugin for NewGameMenuPlugin {
                         .after(handle_clock_picker_interaction)
                         .after(handle_time_adjustment),
                     setvars_modal::handle_setvars_modal_interactions,
-                    escape_to_menu_system,
+                    escape_to_menu_system.before(opts_gui::actions::ActionInput),
                 )
                     .run_if(in_state(AppState::VehicleSelection))
                     .run_if(opts_bevy::reporting::not_modal_active),
@@ -205,7 +199,7 @@ pub fn spawn_new_game_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
-                        TypeStyleToken(TypeScale::HeadlineSmall),
+                        TypeStyleToken(TypeScale::Headline),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
@@ -220,7 +214,7 @@ pub fn spawn_new_game_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
-                        TypeStyleToken(TypeScale::LabelMedium),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
                 });
@@ -253,7 +247,7 @@ pub fn spawn_new_game_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSecondaryContainer)),
                         ),
-                        TypeStyleToken(TypeScale::LabelMedium),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnSecondaryContainer),
                     ));
                 });
@@ -348,7 +342,7 @@ pub fn spawn_new_game_screen(
                         TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
                     LaunchSummaryText,
-                    TypeStyleToken(TypeScale::TitleSmall),
+                    TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
                 ));
 
@@ -380,7 +374,7 @@ pub fn spawn_new_game_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                         ),
-                        TypeStyleToken(TypeScale::TitleSmall),
+                        TypeStyleToken(TypeScale::BodyMedium),
                         ForegroundRole(ColorRole::OnPrimary),
                     ));
                 });

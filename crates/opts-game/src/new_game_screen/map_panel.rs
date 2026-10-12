@@ -47,14 +47,7 @@ pub fn spawn_map_selection_tab(
             ))
             .with_children(|left_col| {
                 // Top Search Bar
-                spawn_search_bar(
-                    left_col,
-                    theme,
-                    ScrollKind::Maps,
-                    "Search 42 maps...",
-                    "",
-                    false,
-                );
+                spawn_search_bar(left_col, ScrollKind::Maps, "Search 42 maps...", "");
 
                 // Header with total count
                 left_col.spawn((
@@ -179,7 +172,7 @@ pub fn spawn_map_selection_tab(
                                                     theme.scheme.get(ColorRole::OnSurface)
                                                 }),
                                             ),
-                                            TypeStyleToken(TypeScale::LabelLarge),
+                                            TypeStyleToken(TypeScale::BodyMedium),
                                             ForegroundRole(ColorRole::OnSurface),
                                         ));
 
@@ -195,7 +188,7 @@ pub fn spawn_map_selection_tab(
                                                 },
                                                 TextColor(theme.scheme.get(ColorRole::Outline)),
                                             ),
-                                            TypeStyleToken(TypeScale::LabelSmall),
+                                            TypeStyleToken(TypeScale::Label),
                                             ForegroundRole(ColorRole::Outline),
                                         ));
                                     });
@@ -267,7 +260,7 @@ pub fn populate_map_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::Primary)),
         ),
-        TypeStyleToken(TypeScale::HeadlineMedium),
+        TypeStyleToken(TypeScale::Headline),
         ForegroundRole(ColorRole::Primary),
     ));
 
@@ -284,7 +277,7 @@ pub fn populate_map_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
         ),
-        TypeStyleToken(TypeScale::BodySmall),
+        TypeStyleToken(TypeScale::Label),
         ForegroundRole(ColorRole::OnSurfaceVariant),
     ));
 
@@ -332,7 +325,7 @@ pub fn populate_map_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::LabelLarge),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
 
@@ -378,7 +371,7 @@ pub fn populate_map_details_inner(
                                     },
                                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                                 ),
-                                TypeStyleToken(TypeScale::BodySmall),
+                                TypeStyleToken(TypeScale::Label),
                                 ForegroundRole(ColorRole::OnSurface),
                             ));
                         });

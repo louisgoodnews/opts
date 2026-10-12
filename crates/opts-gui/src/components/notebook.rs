@@ -4,7 +4,12 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::NotebookTabSelected,
+    actions::UiAction,
+    interaction::{
+        activation::Activated,
+        events::NotebookTabSelected,
+        state::{Disabled, Focused},
+    },
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{BackgroundRole, BorderRole, ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -191,14 +196,14 @@ fn populate_notebook_children(
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(if is_active {
                                 ColorRole::Primary
                             } else {
                                 ColorRole::OnSurfaceVariant
                             }),
-                            TypeStyleToken(TypeScale::TitleSmall),
+                            TypeStyleToken(TypeScale::BodyMedium),
                         ));
 
                         // Active indicator underline
@@ -269,12 +274,13 @@ fn populate_notebook_children(
 
 /// System handling clicks on tab headers to switch the active tab.
 pub fn notebook_tab_click_system(
-    mut header_query: Query<(&NotebookTabHeader, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    header_query: Query<&NotebookTabHeader, Without<Disabled>>,
     mut notebook_query: Query<&mut M3Notebook>,
     mut events: MessageWriter<NotebookTabSelected>,
 ) {
-    for (header, interaction) in &mut header_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(header) = header_query.get(*entity) {
             if let Ok(mut nb) = notebook_query.get_mut(header.notebook) {
                 if nb.active_tab != header.index {
                     nb.active_tab = header.index;
@@ -283,6 +289,59 @@ pub fn notebook_tab_click_system(
                         tab_index: header.index,
                     });
                 }
+            }
+        }
+    }
+}
+
+/// [`UiAction::NextTab`] / [`UiAction::PrevTab`] switch the notebook that holds focus (else the
+/// first one), wrapping around.
+pub fn notebook_action_system(
+    mut actions: MessageReader<UiAction>,
+    focused: Query<&NotebookTabHeader, With<Focused>>,
+    mut notebooks: Query<(Entity, &mut M3Notebook)>,
+    mut events: MessageWriter<NotebookTabSelected>,
+) {
+    for action in actions.read() {
+        let step: isize = match action {
+            UiAction::NextTab => 1,
+            UiAction::PrevTab => -1,
+            _ => continue,
+        };
+        let target = focused
+            .iter()
+            .next()
+            .map(|h| h.notebook)
+            .or_else(|| notebooks.iter().map(|(e, _)| e).min());
+        let Some((entity, mut nb)) = target.and_then(|t| notebooks.get_mut(t).ok()) else {
+            continue;
+        };
+        if nb.tab_count == 0 {
+            continue;
+        }
+        let count = nb.tab_count as isize;
+        nb.active_tab = (nb.active_tab as isize + step).rem_euclid(count) as usize;
+        events.write(NotebookTabSelected {
+            entity,
+            tab_index: nb.active_tab,
+        });
+    }
+}
+
+/// Moving focus onto a tab header with the keyboard selects that tab (automatic activation).
+pub fn notebook_focus_selects_system(
+    headers: Query<&NotebookTabHeader, (Added<Focused>, Without<Disabled>)>,
+    mut notebooks: Query<&mut M3Notebook>,
+    mut events: MessageWriter<NotebookTabSelected>,
+) {
+    for header in &headers {
+        if let Ok(mut nb) = notebooks.get_mut(header.notebook) {
+            if nb.active_tab != header.index {
+                nb.active_tab = header.index;
+                events.write(NotebookTabSelected {
+                    entity: header.notebook,
+                    tab_index: header.index,
+                });
             }
         }
     }
@@ -329,7 +388,15 @@ impl Plugin for NotebookPlugin {
         {
             app.add_message::<NotebookTabSelected>();
         }
-        app.add_systems(Update, (notebook_tab_click_system, notebook_sync_system));
+        app.add_systems(
+            Update,
+            (
+                notebook_tab_click_system,
+                notebook_action_system,
+                notebook_focus_selects_system,
+                notebook_sync_system,
+            ),
+        );
     }
 }
 

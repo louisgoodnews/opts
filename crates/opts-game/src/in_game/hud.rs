@@ -90,7 +90,7 @@ pub fn spawn_in_game_hud(
                         },
                         TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
-                    TypeStyleToken(TypeScale::TitleSmall),
+                    TypeStyleToken(TypeScale::BodyMedium),
                 ));
 
                 pill.spawn((
@@ -106,7 +106,7 @@ pub fn spawn_in_game_hud(
                         TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                     ),
                     HudClockText,
-                    TypeStyleToken(TypeScale::BodySmall),
+                    TypeStyleToken(TypeScale::Label),
                 ));
             });
 
@@ -148,7 +148,7 @@ pub fn spawn_in_game_hud(
                                 TextColor(theme.scheme.get(ColorRole::Primary)),
                             ),
                             CameraModeText,
-                            TypeStyleToken(TypeScale::LabelMedium),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
 
@@ -169,6 +169,7 @@ pub fn spawn_in_game_hud(
                         ),
                         M3Button::default(),
                         PauseMenuBtn,
+                        opts_gui::interaction::focus::PointerOnly,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     ))
                     .with_children(|btn| {
@@ -181,7 +182,7 @@ pub fn spawn_in_game_hud(
                                 },
                                 TextColor(theme.scheme.get(ColorRole::OnErrorContainer)),
                             ),
-                            TypeStyleToken(TypeScale::LabelMedium),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
             });
@@ -224,13 +225,13 @@ pub fn spawn_in_game_hud(
                             (Text::new("0.0"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(ink.needle)),
                             SpeedometerText,
                             InstrumentInk::Needle,
-                            TypeStyleToken(TypeScale::HeadlineLarge),
+                            TypeStyleToken(TypeScale::Headline),
                         ));
 
                         speed_box.spawn((
                             (Text::new("KM/H"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
                             InstrumentInk::TextDim,
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
 
@@ -246,13 +247,13 @@ pub fn spawn_in_game_hud(
                             (Text::new("--"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(ink.text)),
                             TachometerText,
                             InstrumentInk::Text,
-                            TypeStyleToken(TypeScale::HeadlineSmall),
+                            TypeStyleToken(TypeScale::Headline),
                         ));
 
                         rpm_box.spawn((
                             (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
                             InstrumentInk::TextDim,
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
 
@@ -268,13 +269,13 @@ pub fn spawn_in_game_hud(
                             (Text::new("--"), TextFont { font_size: FontSize::Px(28.0), ..default() }, TextColor(ink.ok)),
                             GearIndicatorText,
                             InstrumentInk::Ok,
-                            TypeStyleToken(TypeScale::HeadlineMedium),
+                            TypeStyleToken(TypeScale::Headline),
                         ));
 
                         gear_box.spawn((
                             (Text::new("GEAR [D/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
                             InstrumentInk::TextDim,
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
 
@@ -290,13 +291,13 @@ pub fn spawn_in_game_hud(
                             (Text::new("--"), TextFont { font_size: FontSize::Px(14.0), ..default() }, TextColor(ink.ok)),
                             HandbrakeIndicatorText,
                             InstrumentInk::Ok,
-                            TypeStyleToken(TypeScale::TitleSmall),
+                            TypeStyleToken(TypeScale::BodyMedium),
                         ));
 
                         brake_box.spawn((
                             (Text::new("PARK [.]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
                             InstrumentInk::TextDim,
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
             });
@@ -315,7 +316,7 @@ pub fn spawn_in_game_hud(
                 legend.spawn((
                     (Text::new("[W/S] Throttle/Brake  •  [←/→] Steer  •  [.] Parking brake  •  [D/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(ink.text)),
                     InstrumentInk::Text,
-                    TypeStyleToken(TypeScale::LabelMedium),
+                    TypeStyleToken(TypeScale::Label),
                 ));
             });
         })

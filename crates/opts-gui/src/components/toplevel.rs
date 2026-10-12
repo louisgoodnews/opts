@@ -4,7 +4,7 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::ToplevelClosed,
+    interaction::{activation::Activated, events::ToplevelClosed, state::Disabled},
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -181,7 +181,7 @@ fn populate_toplevel_children(
                                 font_size: FontSize::Px(20.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         ForegroundRole(ColorRole::OnSurface),
                         TypeStyleToken(TypeScale::TitleMedium),
@@ -212,10 +212,10 @@ fn populate_toplevel_children(
                                         font_size: FontSize::Px(16.0),
                                         ..default()
                                     },
-                                    TextColor(Color::WHITE),
+                                    TextColor::default(),
                                 ),
                                 ForegroundRole(ColorRole::OnSurfaceVariant),
-                                TypeStyleToken(TypeScale::LabelLarge),
+                                TypeStyleToken(TypeScale::BodyMedium),
                             ));
                         });
                 });
@@ -237,11 +237,12 @@ fn populate_toplevel_children(
 /// System handling clicks on the toplevel close button and despawning the window.
 pub fn toplevel_close_system(
     mut commands: Commands,
-    mut close_query: Query<(&ToplevelCloseButton, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    close_query: Query<&ToplevelCloseButton, Without<Disabled>>,
     mut events: MessageWriter<ToplevelClosed>,
 ) {
-    for (btn, interaction) in &mut close_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(btn) = close_query.get(*entity) {
             events.write(ToplevelClosed { entity: btn.0 });
             commands.entity(btn.0).despawn();
         }

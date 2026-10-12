@@ -1,0 +1,11 @@
+<!-- Generated from `crates/opts-gui/src/not_yet.rs` by the test `reference_page_is_up_to_date`; regenerate with `UPDATE_NOT_YET=1 cargo test -p opts-gui not_yet`. -->
+
+# Features Marked "Feature not available yet!"
+
+Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature that does not work yet stays visible and carries the red text *Feature not available yet!*. Every place is registered in `opts_gui::not_yet::PLACES`; a test fails when a place waits for a milestone that is already complete, so this list can only shrink by shipping the feature.
+
+| Place | Id | Milestone | What is missing |
+| :--- | :--- | :--- | :--- |
+| Main menu, Load Last Game | `menu.load-last-game` | M-0062 | There is no save system; the shell offers Continue for the last drive. |
+| Load Saved Game screen | `screen.load-game` | M-0062 | Loading a saved session needs the save system. |
+| New game, Live Device Location, Refresh | `newgame.live-weather-refresh` | M-0062 | The location query is never called; the panel shows placeholder values. |

@@ -5389,6 +5389,7 @@ name = "opts-gui"
 version = "0.1.0"
 dependencies = [
  "ab_glyph",
+ "accesskit",
  "arboard",
  "bevy",
  "chrono",

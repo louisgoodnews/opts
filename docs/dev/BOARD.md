@@ -151,10 +151,10 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0061–M-0065 — Phase 9: User Interface & Experience (design proposed 2026-10-12, awaiting review)
 - [ ] 🟠 **Review the Phase 9 design and answer decisions D-UI-01 … D-UI-11** (Phase 9, decision) — [phase page](../src/roadmap/phase-9/README.md#decisions-for-the-project-lead); blocks everything below.
-- [ ] 🔴 **Spikes: text input/IME, accessibility tree, virtualised list** (M-0061, research) — typeface comparison done 2026-10-12 (Noto Sans).
-- [x] 🔴 **Theme foundations: dark default, modes, typography, UI scale/density, accents with contrast guard, one theme everywhere, instrument tokens** (M-0061 part A, code) — done 2026-10-12, branch `agent/ui-theme`.
-- [ ] 🔴 **States, focus ring and keyboard operability in every `opts-gui` widget** (M-0061 part B, code)
-- [ ] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, contrast, traversal** (M-0061, code)
+- [x] 🔴 **Spikes: text input/IME, accessibility tree, virtualised list, typeface comparison** (M-0061, research) — done 2026-10-12 (`ui-spikes.md`; typeface: Noto Sans).
+- [x] 🔴 **Theme foundations: dark default, modes, typography, UI scale/density, accents with contrast guard, one theme everywhere, instrument tokens** (M-0061 part A, code) — done 2026-10-12.
+- [x] 🔴 **States, focus ring, keyboard operability, action layer, TextField, NotAvailableYet, localisation scaffold** (M-0061 part B, code) — done 2026-10-12.
+- [x] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, text size, traversal, disabled reasons** (M-0061, code) — done 2026-10-12; the contrast rule is covered by the theme audit.
 - [ ] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code)
 - [ ] 🟡 **Settings registry and generic settings page** (M-0063, code) — the theme/interface keys, their migration and the UI & Themes tab exist since M-0061 part A; M-0063 moves them into the registry.
 - [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; colour-blind simulation in the contrast test; remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).
@@ -542,3 +542,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — M-0049 phase D started: geometric conflict zones (`opts_traffic::conflict`) and turn-taking at crossings/merges, scenario tests with a negative control; priority rules and signals remain.
 - `2026-10-11` — Startup routine for the OMSI path: saved in `settings.db`, folder dialog (`rfd`) when nothing is found; verified with a clean config on the real system.
 - `2026-10-11` — Critical review 2026-10-11 ([report](../src/meta/critical-review-2026-10-11.md)): board reconciled (In Progress shows the four active milestones, stale Ready/Backlog items archived, Blocked shows the hosting dependency), M-0052 and M-0053 added, M-0032 file created, Deferred Cleanup items from the 2026-10-08 review closed or pointed at M-0040/M-0042. WIP = 4 (red flag, recorded rather than hidden).
+- `2026-10-12` — M-0061 part B (`agent/ui-widgets`): one state mechanism (state layer, focus ring, scrim), activation on release, `UiAction` layer, layout-order focus with regions, keyboard-operable widgets, `TextField` on Bevy `TextInput`, stable UI ids + `ui.*` control commands, `NotAvailableYet` with generated list, localisation scaffold (en, de, en-XA), CI rules and the component gallery. Open: builders still have two spawn forms; legacy screens still have small targets/text (recorded in `docs/dev/progress/ui-widgets.md`).

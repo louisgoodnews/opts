@@ -46,7 +46,7 @@ pub fn spawn_repaint_scrollable_selection(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
 
@@ -80,7 +80,7 @@ pub fn spawn_repaint_scrollable_selection(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                         ),
-                        TypeStyleToken(TypeScale::LabelMedium),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnPrimaryContainer),
                     ));
                 });
@@ -210,7 +210,7 @@ pub fn spawn_repaint_scrollable_selection(
                                                             theme.scheme.get(ColorRole::Primary),
                                                         ),
                                                     ),
-                                                    TypeStyleToken(TypeScale::LabelMedium),
+                                                    TypeStyleToken(TypeScale::Label),
                                                 ));
 
                                                 row.spawn((
@@ -228,7 +228,7 @@ pub fn spawn_repaint_scrollable_selection(
                                                             theme.scheme.get(ColorRole::OnSurface)
                                                         }),
                                                     ),
-                                                    TypeStyleToken(TypeScale::LabelMedium),
+                                                    TypeStyleToken(TypeScale::Label),
                                                     ForegroundRole(ColorRole::OnSurface),
                                                 ));
                                             },
@@ -251,7 +251,7 @@ pub fn spawn_repaint_scrollable_selection(
                                                     theme.scheme.get(ColorRole::Outline)
                                                 }),
                                             ),
-                                            TypeStyleToken(TypeScale::LabelSmall),
+                                            TypeStyleToken(TypeScale::Label),
                                             ForegroundRole(ColorRole::Outline),
                                         ));
                                     });

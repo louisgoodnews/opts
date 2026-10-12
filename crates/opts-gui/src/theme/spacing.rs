@@ -122,18 +122,18 @@ impl Density {
     /// Stable key of the `density` setting.
     pub const fn key(self) -> &'static str {
         match self {
-            Self::Comfortable => "comfortable",
-            Self::Compact => "compact",
-            Self::Dense => "dense",
+            Self::Comfortable => "comfortable", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Compact => "compact", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Dense => "dense",     // l10n-ok: stored identifier or diagnostic, not UI copy
         }
     }
 
     /// Display label.
     pub const fn label(self) -> &'static str {
         match self {
-            Self::Comfortable => "Comfortable",
-            Self::Compact => "Compact",
-            Self::Dense => "Dense",
+            Self::Comfortable => "Comfortable", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Compact => "Compact", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Dense => "Dense", // l10n-ok: UI label until the settings page uses message keys (M-0063)
         }
     }
 

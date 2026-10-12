@@ -54,7 +54,7 @@ pub fn spawn_scrollbar(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme,
                         },
                         TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
-                    TypeStyleToken(TypeScale::LabelSmall),
+                    TypeStyleToken(TypeScale::Label),
                     ForegroundRole(ColorRole::Primary),
                 ));
             });
@@ -128,7 +128,7 @@ pub fn spawn_scrollbar(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme,
                         },
                         TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
-                    TypeStyleToken(TypeScale::LabelSmall),
+                    TypeStyleToken(TypeScale::Label),
                     ForegroundRole(ColorRole::Primary),
                 ));
             });

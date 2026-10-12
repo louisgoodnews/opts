@@ -42,7 +42,7 @@ fn setup_scene(mut commands: Commands) {
     // 1. Headers Section
     commands.entity(root).with_children(|parent| {
         LabelBuilder::new("Material Design 3 Widgets")
-            .with_style(TypeScale::HeadlineLarge)
+            .with_style(TypeScale::Headline)
             .with_color(ColorRole::Primary)
             .spawn_child(parent);
 
@@ -112,7 +112,7 @@ fn setup_scene(mut commands: Commands) {
                     .spawn_child(card);
 
                 LabelBuilder::new("Headline Medium (28px)")
-                    .with_style(TypeScale::HeadlineMedium)
+                    .with_style(TypeScale::Headline)
                     .spawn_child(card);
 
                 LabelBuilder::new(
@@ -123,7 +123,7 @@ fn setup_scene(mut commands: Commands) {
                 .spawn_child(card);
 
                 LabelBuilder::new("Label Small — badge or micro metadata tag")
-                    .with_style(TypeScale::LabelSmall)
+                    .with_style(TypeScale::Label)
                     .with_color(ColorRole::OnSurfaceVariant)
                     .spawn_child(card);
             });

@@ -60,7 +60,7 @@ pub fn spawn_setvars_modal(
 
                     dialog.spawn((
                         (Text::new(format!("Vehicle: {} · Livery: {}", vehicle.full_name, setup.selected_livery)), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
-                        TypeStyleToken(TypeScale::BodySmall),
+                        TypeStyleToken(TypeScale::Label),
                     ));
 
                     if setvars.is_empty() {
@@ -127,7 +127,7 @@ pub fn spawn_setvars_modal(
                                 .with_children(|btn| {
                                     btn.spawn((
                                         (Text::new("↺ Reset Defaults"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
-                                        TypeStyleToken(TypeScale::LabelMedium),
+                                        TypeStyleToken(TypeScale::Label),
                                     ));
                                 });
 
@@ -146,7 +146,7 @@ pub fn spawn_setvars_modal(
                                 .with_children(|btn| {
                                     btn.spawn((
                                         (Text::new("Apply & Close"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
-                                        TypeStyleToken(TypeScale::LabelLarge),
+                                        TypeStyleToken(TypeScale::BodyMedium),
                                     ));
                                 });
                         });
@@ -186,7 +186,7 @@ fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, it
                         },
                         TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
-                    TypeStyleToken(TypeScale::LabelLarge),
+                    TypeStyleToken(TypeScale::BodyMedium),
                 ));
 
                 col.spawn((
@@ -198,7 +198,7 @@ fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, it
                         },
                         TextColor(theme.scheme.get(ColorRole::Outline)),
                     ),
-                    TypeStyleToken(TypeScale::BodySmall),
+                    TypeStyleToken(TypeScale::Label),
                 ));
             });
 
@@ -220,7 +220,7 @@ fn spawn_setvar_row(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, it
                         },
                         TextColor(theme.scheme.get(ColorRole::Primary)),
                     ),
-                    TypeStyleToken(TypeScale::LabelLarge),
+                    TypeStyleToken(TypeScale::BodyMedium),
                 ));
 
                 spawn_stepper_btn(ctrl, theme, "+", item.name.clone(), 1);
@@ -264,7 +264,7 @@ fn spawn_stepper_btn(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
             ));
         });
 }

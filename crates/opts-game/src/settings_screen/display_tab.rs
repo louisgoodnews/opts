@@ -87,7 +87,7 @@ fn spawn_choice_row(
                         } else {
                             ColorRole::OnSurface
                         })),
-                        TypeStyleToken(TypeScale::LabelMedium),
+                        TypeStyleToken(TypeScale::Label),
                     ));
                 });
             }

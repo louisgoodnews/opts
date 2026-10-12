@@ -66,7 +66,7 @@ pub fn spawn_weather_datetime_tab(
                         .with_children(|col1| {
                             col1.spawn((
                                 (Text::new("Atmospheric Presets (Scrollable):"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
-                                TypeStyleToken(TypeScale::TitleSmall),
+                                TypeStyleToken(TypeScale::BodyMedium),
                                 ForegroundRole(ColorRole::Primary),
                             ));
 
@@ -179,7 +179,7 @@ pub fn spawn_weather_datetime_tab(
                                                                             } else {
                                                                                 theme.scheme.get(ColorRole::OnSurface)
                                                                             })),
-                                                                    TypeStyleToken(TypeScale::LabelMedium),
+                                                                    TypeStyleToken(TypeScale::Label),
                                                                 ));
                                                             });
 
@@ -189,7 +189,7 @@ pub fn spawn_weather_datetime_tab(
                                                                         } else {
                                                                             theme.scheme.get(ColorRole::Outline)
                                                                         })),
-                                                                TypeStyleToken(TypeScale::LabelSmall),
+                                                                TypeStyleToken(TypeScale::Label),
                                                             ));
                                                         });
                                                 }
@@ -256,7 +256,7 @@ pub fn spawn_weather_datetime_tab(
                             col3.spawn((
                                 (Text::new(departure_str), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Secondary))),
                                 DepartureTimeDisplayText,
-                                TypeStyleToken(TypeScale::TitleSmall),
+                                TypeStyleToken(TypeScale::BodyMedium),
                                 ForegroundRole(ColorRole::Secondary),
                             ));
 
@@ -284,7 +284,7 @@ pub fn spawn_weather_datetime_tab(
                                         .with_children(|btn| {
                                             btn.spawn((
                                                 (Text::new(label), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
-                                                TypeStyleToken(TypeScale::LabelSmall),
+                                                TypeStyleToken(TypeScale::Label),
                                                 ForegroundRole(ColorRole::OnSurface),
                                             ));
                                         });

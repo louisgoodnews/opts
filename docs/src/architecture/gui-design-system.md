@@ -501,3 +501,5 @@ commands.spawn(
 - Complex spring physics simulations for motion.
 - Accessibility extensions beyond Bevy defaults.
 - Concrete simulation UI screens (menus, vehicle selectors, in-cab HUDs).
+
+> **Components and interaction (M-0061 part B).** States, activation, focus, actions, text input, UI ids, "Feature not available yet!", localisation and the CI rules are specified in [GUI Interaction Layer and Components](gui-interaction-layer.md); that page overrides the component sections above where they differ.

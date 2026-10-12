@@ -1,6 +1,7 @@
 //! Main menu screen hierarchy, responsive container layout, and branding nodes.
 
 use bevy::prelude::*;
+use opts_gui::l10n::{keys::menu as keys, L10nArgs, L10nKey};
 use opts_gui::prelude::*;
 use std::path::Path;
 
@@ -61,14 +62,15 @@ pub fn spawn_main_menu(
         .with_children(|parent| {
             parent.spawn((
                 (
-                    Text::new("OPTS v0.1.0-alpha · Clean-Room Architecture"),
+                    Text::new(keys::FOOTER),
+                    L10nKey(keys::FOOTER),
                     TextFont {
                         font_size: FontSize::Px(12.0),
                         ..default()
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
         })
@@ -145,20 +147,22 @@ pub fn spawn_main_menu(
                 .with_children(|brand| {
                     brand.spawn((
                         (
-                            Text::new("OPTS"),
+                            Text::new(keys::TITLE),
+                            L10nKey(keys::TITLE),
                             TextFont {
                                 font_size: FontSize::Px(64.0),
                                 ..default()
                             },
                             TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
-                        TypeStyleToken(TypeScale::DisplayLarge),
+                        TypeStyleToken(TypeScale::Display),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
                     brand.spawn((
                         (
-                            Text::new("Open Public Transport Simulator"),
+                            Text::new(keys::SUBTITLE),
+                            L10nKey(keys::SUBTITLE),
                             TextFont {
                                 font_size: FontSize::Px(18.0),
                                 ..default()
@@ -191,48 +195,52 @@ pub fn spawn_main_menu(
                 .with_children(|card| {
                     card.spawn((
                         (
-                            Text::new("Clean-Room Simulation Engine"),
+                            Text::new(keys::CARD_TITLE),
+                            L10nKey(keys::CARD_TITLE),
                             TextFont {
                                 font_size: FontSize::Px(15.0),
                                 ..default()
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSurface)),
                         ),
-                        TypeStyleToken(TypeScale::TitleSmall),
+                        TypeStyleToken(TypeScale::BodyMedium),
                         ForegroundRole(ColorRole::OnSurface),
                     ));
 
-                    let map_text = if let Some(path) = map_dir {
-                        format!("Map Preview: {}", path.display())
-                    } else {
-                        "No map loaded · Select Start New Game to begin.".to_string()
+                    let (map_key, map_args) = match map_dir {
+                        Some(path) => (
+                            keys::CARD_MAP_PREVIEW,
+                            L10nArgs::one("path", path.display().to_string()),
+                        ),
+                        None => (keys::CARD_NO_MAP, L10nArgs::default()),
                     };
 
                     card.spawn((
+                        map_args,
                         (
-                            Text::new(map_text),
+                            Text::new(map_key),
+                            L10nKey(map_key),
                             TextFont {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
-                        TypeStyleToken(TypeScale::BodySmall),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
 
                     card.spawn((
                         (
-                            Text::new(
-                                "Storage: SQLite (WAL) · UI: Material Design 3 Glassmorphism",
-                            ),
+                            Text::new(keys::CARD_STORAGE),
+                            L10nKey(keys::CARD_STORAGE),
                             TextFont {
-                                font_size: FontSize::Px(11.0),
+                                font_size: FontSize::Px(12.0),
                                 ..default()
                             },
                             TextColor(theme.scheme.get(ColorRole::Outline)),
                         ),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::Outline),
                     ));
                 });

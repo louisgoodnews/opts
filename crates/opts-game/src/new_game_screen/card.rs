@@ -80,7 +80,7 @@ pub fn spawn_selection_card<T: Component>(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::BodySmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
 
@@ -93,7 +93,7 @@ pub fn spawn_selection_card<T: Component>(
                     },
                     TextColor(theme.scheme.get(ColorRole::Outline)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::Outline),
             ));
         });
@@ -127,7 +127,7 @@ pub fn spawn_stat_chip(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurfaceVariant),
             ));
             chip.spawn((
@@ -139,7 +139,7 @@ pub fn spawn_stat_chip(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
         });
@@ -178,7 +178,7 @@ pub fn spawn_scroll_btn<T: Component>(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
-                TypeStyleToken(TypeScale::LabelSmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurface),
             ));
         });
@@ -227,7 +227,7 @@ pub fn spawn_tab_summary_card(
                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
                 crate::new_game_screen::types::TabSummaryText,
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::OnSurface),
             ));
         });

@@ -77,7 +77,7 @@ pub fn spawn_general_tab(
                 .with_children(|disc_box| {
                     disc_box.spawn((
                         (Text::new("Vehicle Catalogue Discovery & SQLite Sync:"), TextFont { font_size: FontSize::Px(15.0), ..default() }, TextColor(theme.scheme.get(ColorRole::Primary))),
-                        TypeStyleToken(TypeScale::TitleSmall),
+                        TypeStyleToken(TypeScale::BodyMedium),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
@@ -96,13 +96,13 @@ pub fn spawn_general_tab(
                                 "OMSI catalogue (SQLite): {} files · {} entities · {}",
                                 files, entities, last_time_str
                             )), TextFont { font_size: FontSize::Px(12.5), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurface))),
-                        TypeStyleToken(TypeScale::BodySmall),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnSurface),
                     ));
 
                     disc_box.spawn((
                         (Text::new("Periodic Discovery Interval (Runs on Game Startup):"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant))),
-                        TypeStyleToken(TypeScale::LabelLarge),
+                        TypeStyleToken(TypeScale::BodyMedium),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
 
@@ -159,7 +159,7 @@ pub fn spawn_general_tab(
                                                     } else {
                                                         theme.scheme.get(ColorRole::OnSurface)
                                                     })),
-                                            TypeStyleToken(TypeScale::LabelMedium),
+                                            TypeStyleToken(TypeScale::Label),
                                         ));
                                     });
                             }
@@ -184,7 +184,7 @@ pub fn spawn_general_tab(
                         .with_children(|btn| {
                             btn.spawn((
                                 (Text::new("Run Discovery Now"), TextFont { font_size: FontSize::Px(13.0), ..default() }, TextColor(theme.scheme.get(ColorRole::OnPrimary))),
-                                TypeStyleToken(TypeScale::LabelLarge),
+                                TypeStyleToken(TypeScale::BodyMedium),
                                 ForegroundRole(ColorRole::OnPrimary),
                             ));
                         });

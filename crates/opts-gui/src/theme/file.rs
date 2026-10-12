@@ -86,18 +86,16 @@ pub enum ThemeFileError {
 impl std::fmt::Display for ThemeFileError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Parse(e) => write!(f, "not a valid theme file: {e}"),
-            Self::UnsupportedVersion(v) => {
-                write!(f, "theme file version {v} is not supported (this build reads {THEME_FILE_VERSION})")
-            }
+            Self::Parse(e) => write!(f, "not a valid theme file: {e}"), // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::UnsupportedVersion(v) => write!(f, "unsupported theme file version {v}"), // l10n-ok: diagnostic
             Self::BadColor { key, value } => {
-                write!(f, "{key}: \"{value}\" is not a #RRGGBB colour")
+                write!(f, "{key}: \"{value}\" is not a #RRGGBB colour") // l10n-ok: stored identifier or diagnostic, not UI copy
             }
-            Self::UnknownRole(r) => write!(f, "unknown colour role \"{r}\""),
+            Self::UnknownRole(r) => write!(f, "unknown colour role \"{r}\""), // l10n-ok: stored identifier or diagnostic, not UI copy
             Self::Unfixable { kind, fg, bg } => {
                 write!(
                     f,
-                    "{kind:?}: {fg:?} on {bg:?} cannot reach the required contrast"
+                    "{kind:?}: {fg:?} on {bg:?} cannot reach the required contrast" // l10n-ok: stored identifier or diagnostic, not UI copy
                 )
             }
         }
@@ -159,7 +157,7 @@ pub fn parse_theme_file(text: &str) -> Result<CustomTheme, ThemeFileError> {
     }
     let accent = match &file.accent {
         Some(hex) => Some(parse_hex(hex).ok_or_else(|| ThemeFileError::BadColor {
-            key: "accent".into(),
+            key: "accent".into(), // l10n-ok: stored identifier or diagnostic, not UI copy
             value: hex.clone(),
         })?),
         None => None,
@@ -178,7 +176,7 @@ pub fn parse_theme_file(text: &str) -> Result<CustomTheme, ThemeFileError> {
     }
     let [dark, light, hc]: [ColorScheme; 3] = schemes
         .try_into()
-        .map_err(|_| ThemeFileError::Parse("internal: three schemes expected".into()))?;
+        .map_err(|_| ThemeFileError::Parse("internal: three schemes expected".into()))?; // l10n-ok: stored identifier or diagnostic, not UI copy
     Ok(CustomTheme {
         name: file.name,
         accent,

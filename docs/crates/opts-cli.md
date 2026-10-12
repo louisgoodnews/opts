@@ -30,7 +30,7 @@ line-editor dependency.
 | `protocol` | `Request`, `Response`, `RpcError`, `code::*`, `parse_line`, `PROTOCOL_VERSION`, limits |
 | `transport` | blocking TCP, one JSON message per line, 1 MiB line cap |
 | `client` | `Client::call`, `Client::batch`; request ids, `auth`, one reconnect after a broken connection |
-| `commands` | the table of all 49 methods (`COMMANDS`) and `build_params` (command-line words → JSON) |
+| `commands` | the table of all 54 methods (incl. the five `ui.*` commands) (`COMMANDS`) and `build_params` (command-line words → JSON) |
 | `output` | human and JSON rendering of results and errors |
 | `repl` | interactive mode (`rustyline`): completion, history, multi-line JSON |
 | `run` | argument handling and exit codes of the binary |

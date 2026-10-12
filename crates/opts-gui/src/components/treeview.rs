@@ -4,7 +4,13 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::{TreeNodeSelected, TreeNodeToggled},
+    actions::{Direction, UiAction},
+    interaction::{
+        activation::Activated,
+        events::{TreeNodeSelected, TreeNodeToggled},
+        focus::FocusEvent,
+        state::{Disabled, Focused},
+    },
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{ForegroundRole, RadiusToken, TypeStyleToken},
 };
@@ -204,11 +210,12 @@ impl TreeviewBuilder {
                         font_size: FontSize::Px(12.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 TreeNodeChevron(row_entity),
+                crate::ui_tree::A11yHidden,
                 ForegroundRole(ColorRole::OnSurfaceVariant),
-                TypeStyleToken(TypeScale::LabelMedium),
+                TypeStyleToken(TypeScale::Label),
             ));
 
             // Node label text
@@ -219,7 +226,7 @@ impl TreeviewBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::OnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -241,13 +248,14 @@ impl TreeviewBuilder {
 
 /// System handling clicks on tree node rows to expand/collapse and select nodes.
 pub fn treeview_click_system(
-    mut click_query: Query<(Entity, &Interaction, &mut M3TreeNode), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    mut click_query: Query<&mut M3TreeNode, Without<Disabled>>,
     mut tree_query: Query<&mut M3Treeview>,
     mut select_events: MessageWriter<TreeNodeSelected>,
     mut toggle_events: MessageWriter<TreeNodeToggled>,
 ) {
-    for (_entity, interaction, mut node) in &mut click_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(mut node) = click_query.get_mut(*entity) {
             // Selection event
             if let Ok(mut tree) = tree_query.get_mut(node.tree_entity) {
                 tree.selected_node_id = Some(node.node_id.clone());
@@ -265,6 +273,59 @@ pub fn treeview_click_system(
                     node_id: node.node_id.clone(),
                     is_expanded: node.is_expanded,
                 });
+            }
+        }
+    }
+}
+
+/// Left/Right on a focused tree row: Right expands (a collapsed parent), Left collapses (an
+/// expanded parent) or moves focus to the parent row.
+pub fn treeview_arrow_system(
+    mut actions: MessageReader<UiAction>,
+    mut nodes: Query<(Entity, &mut M3TreeNode, Has<Focused>)>,
+    mut toggle_events: MessageWriter<TreeNodeToggled>,
+    mut focus: MessageWriter<FocusEvent>,
+) {
+    for action in actions.read() {
+        let dir = match action {
+            UiAction::Navigate(d @ (Direction::Left | Direction::Right)) => *d,
+            _ => continue,
+        };
+        let Some((_, tree, id, parent_id, has_children, expanded)) =
+            nodes.iter().find(|(_, _, f)| *f).map(|(e, n, _)| {
+                (
+                    e,
+                    n.tree_entity,
+                    n.node_id.clone(),
+                    n.parent_id.clone(),
+                    n.has_children,
+                    n.is_expanded,
+                )
+            })
+        else {
+            continue;
+        };
+        let wants_toggle = match dir {
+            Direction::Right => has_children && !expanded,
+            _ => has_children && expanded,
+        };
+        if wants_toggle {
+            for (_, mut node, _) in &mut nodes {
+                if node.tree_entity == tree && node.node_id == id {
+                    node.is_expanded = !expanded;
+                    toggle_events.write(TreeNodeToggled {
+                        tree_entity: tree,
+                        node_id: id.clone(),
+                        is_expanded: node.is_expanded,
+                    });
+                }
+            }
+        } else if dir == Direction::Left {
+            if let Some(parent) = nodes
+                .iter()
+                .find(|(_, n, _)| n.tree_entity == tree && Some(&n.node_id) == parent_id.as_ref())
+            {
+                focus.write(FocusEvent::Set(parent.0));
             }
         }
     }
@@ -323,7 +384,14 @@ impl Plugin for TreeviewPlugin {
         if !app.world().contains_resource::<Messages<TreeNodeToggled>>() {
             app.add_message::<TreeNodeToggled>();
         }
-        app.add_systems(Update, (treeview_click_system, treeview_sync_system));
+        app.add_systems(
+            Update,
+            (
+                treeview_click_system,
+                treeview_arrow_system,
+                treeview_sync_system,
+            ),
+        );
     }
 }
 

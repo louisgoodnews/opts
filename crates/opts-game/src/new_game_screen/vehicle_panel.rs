@@ -47,14 +47,7 @@ pub fn spawn_vehicle_selection_tab(
             ))
             .with_children(|left_col| {
                 // Top Search Bar
-                spawn_search_bar(
-                    left_col,
-                    theme,
-                    ScrollKind::Vehicles,
-                    "Search 956 vehicles...",
-                    "",
-                    false,
-                );
+                spawn_search_bar(left_col, ScrollKind::Vehicles, "Search 956 vehicles...", "");
 
                 // Header with total count and scroll controls
                 // Header with total count
@@ -183,7 +176,7 @@ pub fn spawn_vehicle_selection_tab(
                                                     theme.scheme.get(ColorRole::OnSurface)
                                                 }),
                                             ),
-                                            TypeStyleToken(TypeScale::LabelLarge),
+                                            TypeStyleToken(TypeScale::BodyMedium),
                                             ForegroundRole(ColorRole::OnSurface),
                                         ));
 
@@ -199,7 +192,7 @@ pub fn spawn_vehicle_selection_tab(
                                                 },
                                                 TextColor(theme.scheme.get(ColorRole::Outline)),
                                             ),
-                                            TypeStyleToken(TypeScale::LabelSmall),
+                                            TypeStyleToken(TypeScale::Label),
                                             ForegroundRole(ColorRole::Outline),
                                         ));
                                     });
@@ -273,7 +266,7 @@ pub fn populate_vehicle_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::Primary)),
         ),
-        TypeStyleToken(TypeScale::HeadlineMedium),
+        TypeStyleToken(TypeScale::Headline),
         ForegroundRole(ColorRole::Primary),
     ));
 
@@ -290,7 +283,7 @@ pub fn populate_vehicle_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
         ),
-        TypeStyleToken(TypeScale::BodySmall),
+        TypeStyleToken(TypeScale::Label),
         ForegroundRole(ColorRole::OnSurfaceVariant),
     ));
 
@@ -350,7 +343,7 @@ pub fn populate_vehicle_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::LabelLarge),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
 
@@ -363,7 +356,7 @@ pub fn populate_vehicle_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
-                TypeStyleToken(TypeScale::BodySmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnSurface),
             ));
         });

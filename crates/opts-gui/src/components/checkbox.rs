@@ -5,6 +5,7 @@ use bevy::prelude::*;
 
 use crate::{
     interaction::{
+        activation::Activated,
         events::CheckboxToggled,
         focus::Focusable,
         state::{CheckState, Disabled},
@@ -173,11 +174,12 @@ impl CheckboxBuilder {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         CheckboxGlyph(root),
+                        crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::Label),
                     ));
                 });
 
@@ -190,7 +192,7 @@ impl CheckboxBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -255,11 +257,12 @@ impl CheckboxBuilder {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor::default(),
                         ),
                         CheckboxGlyph(root),
+                        crate::ui_tree::A11yHidden,
                         ForegroundRole(fg_role),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::Label),
                     ));
                 });
 
@@ -272,7 +275,7 @@ impl CheckboxBuilder {
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor::default(),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurface),
@@ -284,23 +287,21 @@ impl CheckboxBuilder {
     }
 }
 
-/// Query item alias for checkbox click interaction.
-pub type CheckboxClickItem<'a> = (Entity, &'a Interaction, &'a mut M3Checkbox);
-
-/// System handling click interactions on checkboxes and toggling their state.
+/// System toggling a checkbox when it is [`Activated`].
 pub fn checkbox_toggle_system(
-    mut interaction_query: Query<CheckboxClickItem, (Without<Disabled>, Changed<Interaction>)>,
+    mut activated: MessageReader<Activated>,
+    mut checkboxes: Query<&mut M3Checkbox, Without<Disabled>>,
     mut events: MessageWriter<CheckboxToggled>,
 ) {
-    for (entity, interaction, mut checkbox) in &mut interaction_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(mut checkbox) = checkboxes.get_mut(*entity) {
             checkbox.state = match checkbox.state {
                 CheckState::Unchecked => CheckState::Checked,
                 CheckState::Checked => CheckState::Unchecked,
                 CheckState::Indeterminate => CheckState::Checked,
             };
             events.write(CheckboxToggled {
-                entity,
+                entity: *entity,
                 state: checkbox.state,
             });
         }
@@ -371,6 +372,7 @@ mod tests {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .add_message::<CheckboxToggled>()
+            .add_message::<Activated>()
             .add_systems(Update, checkbox_toggle_system);
 
         let entity = {
@@ -380,10 +382,7 @@ mod tests {
 
         app.update();
 
-        // Simulate press interaction
-        if let Some(mut interaction) = app.world_mut().get_mut::<Interaction>(entity) {
-            *interaction = Interaction::Pressed;
-        }
+        app.world_mut().write_message(Activated(entity));
 
         app.update();
 

@@ -136,7 +136,7 @@ pub fn spawn_material_clock_picker(
                                     },
                                     TextColor(hour_col),
                                 ),
-                                TypeStyleToken(TypeScale::DisplaySmall),
+                                TypeStyleToken(TypeScale::Display),
                             ));
                         });
 
@@ -149,7 +149,7 @@ pub fn spawn_material_clock_picker(
                             },
                             TextColor(Color::WHITE),
                         ),
-                        TypeStyleToken(TypeScale::DisplaySmall),
+                        TypeStyleToken(TypeScale::Display),
                     ));
 
                     let min_col = if setup.clock_mode == ClockPickerMode::Minutes {
@@ -181,7 +181,7 @@ pub fn spawn_material_clock_picker(
                                     },
                                     TextColor(min_col),
                                 ),
-                                TypeStyleToken(TypeScale::DisplaySmall),
+                                TypeStyleToken(TypeScale::Display),
                             ));
                         });
 

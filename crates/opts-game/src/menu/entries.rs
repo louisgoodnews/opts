@@ -2,6 +2,7 @@
 
 use bevy::app::AppExit;
 use bevy::prelude::*;
+use opts_gui::l10n::keys::menu as keys;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
@@ -26,14 +27,16 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
     commands.entity(sidebar_entity).with_children(|parent| {
         // 1. (Top Left Corner) Shutdown Button
-        shutdown_btn = ButtonBuilder::tonal("Shutdown").spawn_child(parent);
+        shutdown_btn = ButtonBuilder::tonal("Shutdown")
+            .with_key(keys::SHUTDOWN)
+            .spawn_child(parent);
 
         // Subtle divider separating top-corner shutdown from game flow
         DividerBuilder::horizontal().spawn_child(parent);
 
         // 2. Load Last Game Button (Tonal, Disabled if no saved game)
         load_btn = ButtonBuilder::tonal("Load Last Game")
-            .with_disabled(true)
+            .with_key(keys::LOAD_LAST_GAME)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Load Game");
                 cmd.insert_resource(NextState::Pending(AppState::LoadGame));
@@ -42,6 +45,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 3. Start New Game Button (Primary Filled Highlight)
         start_btn = ButtonBuilder::filled("Start New Game")
+            .with_key(keys::START_NEW_GAME)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Vehicle Selection (New Game)");
                 cmd.insert_resource(NextState::Pending(AppState::VehicleSelection));
@@ -50,6 +54,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 4. Settings Button
         settings_btn = ButtonBuilder::outlined("Settings")
+            .with_key(keys::SETTINGS)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Settings");
                 cmd.insert_resource(NextState::Pending(AppState::Settings));
@@ -58,6 +63,7 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
 
         // 5. Credits Button
         credits_btn = ButtonBuilder::text("Credits")
+            .with_key(keys::CREDITS)
             .on_click(|cmd, _entity| {
                 tracing::info!("Navigating to Credits");
                 cmd.insert_resource(NextState::Pending(AppState::Credits));
@@ -65,47 +71,48 @@ pub fn spawn_menu_entries(sidebar_entity: Entity, commands: &mut Commands) {
             .spawn_child(parent);
     });
 
-    // Apply glassmorphic surface overrides and sequential tab indices
-    commands
-        .entity(shutdown_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            QuitButton,
-            GlassSurface::new(ColorRole::ErrorContainer, 0.45),
-            Focusable { tab_index: 0 },
+    // Glassmorphic surfaces (the library state layer takes its tint from the glass colour) and
+    // stable ids; "Start New Game" is the safest sensible default focus (never Shutdown).
+    let glass = [
+        (
+            shutdown_btn,
+            "menu.shutdown",
+            ColorRole::ErrorContainer,
+            0.45,
+        ),
+        (
+            load_btn,
+            "menu.load-last-game",
+            ColorRole::SecondaryContainer,
+            0.55,
+        ),
+        (start_btn, "menu.start-new-game", ColorRole::Primary, 0.85),
+        (
+            settings_btn,
+            "menu.settings",
+            ColorRole::SurfaceContainerHigh,
+            0.60,
+        ),
+        (
+            credits_btn,
+            "menu.credits",
+            ColorRole::SurfaceContainerHigh,
+            0.45,
+        ),
+    ];
+    for (button, id, role, alpha) in glass {
+        commands.entity(button).remove::<BackgroundRole>().insert((
+            GlassSurface::new(role, alpha),
+            StateLayerRole(opts_gui::interaction::layer::on_color(role)),
+            UiId::new(id),
         ));
-
+    }
+    commands.entity(shutdown_btn).insert(QuitButton);
+    // Visible and marked, not a silently greyed button (decision D-UI-09).
     commands
         .entity(load_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SecondaryContainer, 0.55),
-            Focusable { tab_index: 1 },
-        ));
-
-    commands
-        .entity(start_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::Primary, 0.85),
-            Focusable { tab_index: 2 },
-        ));
-
-    commands
-        .entity(settings_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.60),
-            Focusable { tab_index: 3 },
-        ));
-
-    commands
-        .entity(credits_btn)
-        .remove::<BackgroundRole>()
-        .insert((
-            GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.45),
-            Focusable { tab_index: 4 },
-        ));
+        .insert(NotAvailableYet::new(&opts_gui::not_yet::LOAD_LAST_GAME));
+    commands.entity(start_btn).insert(DefaultFocus);
 }
 
 /// System that exits the application when the shutdown button is clicked.

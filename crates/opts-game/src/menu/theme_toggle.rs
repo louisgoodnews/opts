@@ -5,8 +5,10 @@
 
 use bevy::prelude::*;
 use opts_gui::components::Button;
+use opts_gui::l10n::{keys::menu as keys, L10nKey};
 use opts_gui::theme::{ThemeKind, ThemeMode};
 use opts_gui::{
+    interaction::activation::Activated,
     theme::{color::ColorRole, theme::MaterialTheme},
     tokens::components::{ForegroundRole, RadiusToken},
 };
@@ -22,18 +24,18 @@ pub struct ThemeToggleBtn;
 #[derive(Component)]
 pub struct ThemeToggleGlyph;
 
-/// The label of the toggle: the mode a click switches **to**.
-fn glyph_for(kind: ThemeKind) -> &'static str {
+/// The message key of the toggle: it offers the mode a click switches **to**.
+fn theme_glyph_key(kind: ThemeKind) -> &'static str {
     if kind.is_dark() {
-        "Light"
+        keys::THEME_LIGHT
     } else {
-        "Dark"
+        keys::THEME_DARK
     }
 }
 
 /// Spawns the floating circular theme toggle button in the top-right corner.
 pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Entity {
-    let glyph = glyph_for(theme.kind());
+    let glyph = theme_glyph_key(theme.kind());
 
     let btn = commands
         .spawn((
@@ -61,6 +63,7 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
             parent.spawn((
                 (
                     Text::new(glyph),
+                    L10nKey(glyph),
                     TextFont {
                         font_size: FontSize::Px(14.0),
                         ..default()
@@ -79,16 +82,16 @@ pub fn spawn_theme_toggle(commands: &mut Commands, theme: &MaterialTheme) -> Ent
 /// System that handles theme toggle clicks or the `F2` hotkey to switch Dark and Light at runtime.
 pub fn theme_toggle_system(
     keyboard: Res<ButtonInput<KeyCode>>,
-    interaction_query: Query<&Interaction, (Changed<Interaction>, With<ThemeToggleBtn>)>,
+    mut activated: MessageReader<Activated>,
+    toggle_buttons: Query<(), With<ThemeToggleBtn>>,
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
 ) {
     let mut should_toggle = keyboard.just_pressed(KeyCode::F2);
 
-    for interaction in &interaction_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if toggle_buttons.contains(*entity) {
             should_toggle = true;
-            break;
         }
     }
 
@@ -110,15 +113,15 @@ pub fn theme_toggle_system(
 /// Keeps the toggle's label in step with the active theme (whoever changed it).
 pub fn sync_theme_toggle_glyph(
     theme: Res<MaterialTheme>,
-    mut glyphs: Query<&mut Text, With<ThemeToggleGlyph>>,
+    mut glyphs: Query<&mut L10nKey, With<ThemeToggleGlyph>>,
 ) {
     if !theme.is_changed() {
         return;
     }
-    let next = glyph_for(theme.kind());
-    for mut text in &mut glyphs {
-        if text.0 != next {
-            text.0 = next.to_string();
+    let next = theme_glyph_key(theme.kind());
+    for mut key in &mut glyphs {
+        if key.0 != next {
+            key.0 = next;
         }
     }
 }

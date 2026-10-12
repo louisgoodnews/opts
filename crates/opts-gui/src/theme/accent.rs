@@ -42,22 +42,22 @@ impl AccentPreset {
     /// The key stored in the `active_theme` setting (the old preset names are kept).
     pub const fn key(self) -> &'static str {
         match self {
-            Self::TransitBlue => "Default",
-            Self::Amber => "Amber",
-            Self::Violet => "Violet",
-            Self::Emerald => "Emerald",
-            Self::Teal => "Teal",
+            Self::TransitBlue => "Default", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Amber => "Amber",         // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Violet => "Violet",       // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Emerald => "Emerald",     // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Teal => "Teal",           // l10n-ok: stored identifier or diagnostic, not UI copy
         }
     }
 
     /// Display name.
     pub const fn label(self) -> &'static str {
         match self {
-            Self::TransitBlue => "Transit blue",
-            Self::Amber => "Amber",
-            Self::Violet => "Violet",
-            Self::Emerald => "Emerald",
-            Self::Teal => "Teal",
+            Self::TransitBlue => "Transit blue", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Amber => "Amber", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Violet => "Violet", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Emerald => "Emerald", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Teal => "Teal", // l10n-ok: UI label until the settings page uses message keys (M-0063)
         }
     }
 
@@ -73,8 +73,8 @@ impl AccentPreset {
     pub fn color(self) -> Color {
         let hex = match self {
             Self::TransitBlue => "#0061A4",
-            Self::Amber => "#F59E0B",
-            Self::Violet => "#8B5CF6",
+            Self::Amber => "#F59E0B", // l10n-ok: stored identifier or diagnostic, not UI copy
+            Self::Violet => "#8B5CF6", // l10n-ok: stored identifier or diagnostic, not UI copy
             Self::Emerald => "#10B981",
             Self::Teal => "#0E94A8",
         };

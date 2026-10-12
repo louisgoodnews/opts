@@ -126,7 +126,7 @@ pub fn spawn_settings_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::Primary)),
                         ),
-                        TypeStyleToken(TypeScale::HeadlineSmall),
+                        TypeStyleToken(TypeScale::Headline),
                         ForegroundRole(ColorRole::Primary),
                     ));
 
@@ -139,7 +139,7 @@ pub fn spawn_settings_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                         ),
-                        TypeStyleToken(TypeScale::LabelMedium),
+                        TypeStyleToken(TypeScale::Label),
                         ForegroundRole(ColorRole::OnSurfaceVariant),
                     ));
                 });
@@ -171,7 +171,7 @@ pub fn spawn_settings_screen(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnSecondaryContainer)),
                         ),
-                        TypeStyleToken(TypeScale::LabelLarge),
+                        TypeStyleToken(TypeScale::BodyMedium),
                         ForegroundRole(ColorRole::OnSecondaryContainer),
                     ));
                 });

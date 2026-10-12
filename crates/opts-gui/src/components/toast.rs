@@ -4,7 +4,11 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
-    interaction::events::ToastDismissed,
+    interaction::{activation::Activated, events::ToastDismissed, state::Disabled},
+    interaction::{
+        focus::{FocusRegion, Landmark},
+        layer::StateLayerRole,
+    },
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -103,6 +107,7 @@ impl ToastBuilder {
                     message: self.message.clone(),
                     timer,
                 },
+                FocusRegion(Landmark::Toasts),
                 BackgroundRole(ColorRole::InverseSurface),
                 RadiusToken(RadiusLevel::ExtraSmall),
                 ElevationToken(ElevationLevel::Level3),
@@ -118,7 +123,7 @@ impl ToastBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -131,11 +136,16 @@ impl ToastBuilder {
                         (
                             Button,
                             Node {
-                                padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                                min_width: Val::Px(48.0),
+                                min_height: Val::Px(32.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),
                         ),
+                        StateLayerRole(ColorRole::InverseOnSurface),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
@@ -146,10 +156,10 @@ impl ToastBuilder {
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
-                            TypeStyleToken(TypeScale::LabelLarge),
+                            TypeStyleToken(TypeScale::BodyMedium),
                         ));
                     });
             }
@@ -187,6 +197,7 @@ impl ToastBuilder {
                 message: self.message.clone(),
                 timer,
             },
+            FocusRegion(Landmark::Toasts),
             BackgroundRole(ColorRole::InverseSurface),
             RadiusToken(RadiusLevel::ExtraSmall),
             ElevationToken(ElevationLevel::Level3),
@@ -203,7 +214,7 @@ impl ToastBuilder {
                         font_size: FontSize::Px(14.0),
                         ..default()
                     },
-                    TextColor(Color::WHITE),
+                    TextColor::default(),
                 ),
                 ForegroundRole(ColorRole::InverseOnSurface),
                 TypeStyleToken(TypeScale::BodyMedium),
@@ -216,11 +227,16 @@ impl ToastBuilder {
                         (
                             Button,
                             Node {
-                                padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(4.0)),
+                                min_width: Val::Px(48.0),
+                                min_height: Val::Px(32.0),
+                                align_items: AlignItems::Center,
+                                justify_content: JustifyContent::Center,
                                 ..default()
                             },
                             BackgroundColor(Color::NONE),
                         ),
+                        StateLayerRole(ColorRole::InverseOnSurface),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
@@ -231,10 +247,10 @@ impl ToastBuilder {
                                     font_size: FontSize::Px(14.0),
                                     ..default()
                                 },
-                                TextColor(Color::WHITE),
+                                TextColor::default(),
                             ),
                             ForegroundRole(ColorRole::InversePrimary),
-                            TypeStyleToken(TypeScale::LabelLarge),
+                            TypeStyleToken(TypeScale::BodyMedium),
                         ));
                     });
             }
@@ -265,11 +281,12 @@ pub fn toast_timer_system(
 /// System handling clicks on toast action buttons.
 pub fn toast_action_click_system(
     mut commands: Commands,
-    mut action_query: Query<(&ToastActionButton, &Interaction), Changed<Interaction>>,
+    mut activated: MessageReader<Activated>,
+    action_query: Query<&ToastActionButton, Without<Disabled>>,
     mut events: MessageWriter<ToastDismissed>,
 ) {
-    for (action, interaction) in &mut action_query {
-        if *interaction == Interaction::Pressed {
+    for Activated(entity) in activated.read() {
+        if let Ok(action) = action_query.get(*entity) {
             events.write(ToastDismissed { entity: action.0 });
             commands.entity(action.0).despawn();
         }

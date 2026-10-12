@@ -211,7 +211,7 @@ pub fn populate_weather_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::Primary)),
         ),
-        TypeStyleToken(TypeScale::HeadlineMedium),
+        TypeStyleToken(TypeScale::Headline),
         ForegroundRole(ColorRole::Primary),
     ));
 
@@ -225,7 +225,7 @@ pub fn populate_weather_details_inner(
             },
             TextColor(theme.scheme.get(ColorRole::OnSurface)),
         ),
-        TypeStyleToken(TypeScale::BodySmall),
+        TypeStyleToken(TypeScale::Label),
         ForegroundRole(ColorRole::OnSurface),
     ));
 
@@ -253,7 +253,7 @@ pub fn populate_weather_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::Primary)),
                 ),
-                TypeStyleToken(TypeScale::LabelLarge),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::Primary),
             ));
 
@@ -310,7 +310,7 @@ pub fn populate_weather_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                 ),
-                TypeStyleToken(TypeScale::TitleSmall),
+                TypeStyleToken(TypeScale::BodyMedium),
                 ForegroundRole(ColorRole::OnPrimaryContainer),
             ));
 
@@ -330,7 +330,7 @@ pub fn populate_weather_details_inner(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnPrimaryContainer)),
                 ),
-                TypeStyleToken(TypeScale::BodySmall),
+                TypeStyleToken(TypeScale::Label),
                 ForegroundRole(ColorRole::OnPrimaryContainer),
             ));
 
@@ -354,6 +354,10 @@ pub fn populate_weather_details_inner(
                             BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
                         ),
                         M3Button::default(),
+                        opts_gui::not_yet::NotAvailableYet::new(
+                            &opts_gui::not_yet::LIVE_WEATHER_REFRESH,
+                        )
+                        .without_label(),
                         RefreshWeatherBtn,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
                         Focusable { tab_index: 0 },
@@ -368,7 +372,7 @@ pub fn populate_weather_details_inner(
                                 },
                                 TextColor(theme.scheme.get(ColorRole::Primary)),
                             ),
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
 
@@ -398,9 +402,12 @@ pub fn populate_weather_details_inner(
                                 },
                                 TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                             ),
-                            TypeStyleToken(TypeScale::LabelSmall),
+                            TypeStyleToken(TypeScale::Label),
                         ));
                     });
+
+                    // The Refresh button above is marked; its label sits beside the buttons.
+                    opts_gui::not_yet::spawn_label(btns);
                 });
         });
 }
@@ -429,7 +436,7 @@ fn spawn_metric_row(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                 ),
-                TypeStyleToken(TypeScale::BodySmall),
+                TypeStyleToken(TypeScale::Label),
             ));
 
             row.spawn((
@@ -441,7 +448,7 @@ fn spawn_metric_row(
                     },
                     TextColor(theme.scheme.get(ColorRole::OnSurface)),
                 ),
-                TypeStyleToken(TypeScale::LabelMedium),
+                TypeStyleToken(TypeScale::Label),
             ));
         });
 }

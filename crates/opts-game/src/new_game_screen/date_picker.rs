@@ -131,7 +131,7 @@ pub fn spawn_material_date_picker(
                             },
                             TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                         ),
-                        TypeStyleToken(TypeScale::LabelSmall),
+                        TypeStyleToken(TypeScale::Label),
                     ));
 
                     header
@@ -153,7 +153,7 @@ pub fn spawn_material_date_picker(
                                     TextColor(theme.scheme.get(ColorRole::OnPrimary)),
                                 ),
                                 CalendarHeaderDateText,
-                                TypeStyleToken(TypeScale::HeadlineSmall),
+                                TypeStyleToken(TypeScale::Headline),
                             ));
 
                             date_row.spawn((
@@ -213,7 +213,7 @@ pub fn spawn_material_date_picker(
                                         TextColor(theme.scheme.get(ColorRole::OnSurface)),
                                     ),
                                     CalendarMonthYearText,
-                                    TypeStyleToken(TypeScale::TitleSmall),
+                                    TypeStyleToken(TypeScale::BodyMedium),
                                 ));
                                 spawn_nav_arrow(month_box, theme, ">", NextMonthBtn);
                             });
@@ -247,7 +247,7 @@ pub fn spawn_material_date_picker(
                                         ..default()
                                     },
                                 ),
-                                TypeStyleToken(TypeScale::LabelMedium),
+                                TypeStyleToken(TypeScale::Label),
                             ));
                         }
                     });

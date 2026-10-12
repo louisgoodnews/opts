@@ -126,7 +126,7 @@ pub fn parse_hex(hex: &str) -> Option<Color> {
 pub fn to_hex(color: Color) -> String {
     let c = color.to_srgba();
     let b = |v: f32| (v.clamp(0.0, 1.0) * 255.0).round() as u8;
-    format!("#{:02X}{:02X}{:02X}", b(c.red), b(c.green), b(c.blue))
+    format!("#{:02X}{:02X}{:02X}", b(c.red), b(c.green), b(c.blue)) // l10n-ok: stored identifier or diagnostic, not UI copy
 }
 
 #[cfg(test)]
