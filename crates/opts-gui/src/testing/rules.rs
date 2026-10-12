@@ -227,6 +227,21 @@ fn hidden(world: &World, entity: Entity) -> bool {
     false
 }
 
+/// Is `entity` inside the floating tooltip?
+fn in_tooltip(world: &World, entity: Entity) -> bool {
+    let mut cur = Some(entity);
+    while let Some(e) = cur {
+        if world
+            .get::<crate::interaction::tooltip::TooltipNode>(e)
+            .is_some()
+        {
+            return true;
+        }
+        cur = world.get::<ChildOf>(e).map(|c| c.parent());
+    }
+    false
+}
+
 /// Is `entity` or an ancestor disabled (WCAG exempts inactive components, except the red
 /// not-available-yet marker, which must stay readable)?
 fn inactive(world: &World, entity: Entity) -> bool {
@@ -401,8 +416,8 @@ pub fn text_overflow(world: &mut World, window: Vec2) -> Vec<String> {
     let mut rects: Vec<(Entity, String, [f32; 4])> = Vec::new();
     let mut out = Vec::new();
     for (e, text) in texts {
-        if hidden(world, e) {
-            continue;
+        if hidden(world, e) || in_tooltip(world, e) {
+            continue; // a tooltip floats over the page by design
         }
         let Some(r) = rect_of(world, e) else { continue };
         let name = world

@@ -120,6 +120,9 @@ impl ModalBuilder {
                         height: Val::Percent(self.height_percent),
                         min_width: Val::Px(self.min_width),
                         max_width: Val::Px(self.max_width),
+                        // never taller than the window: a long dialog scrolls (UI scale 200 %)
+                        max_height: Val::Percent(96.0),
+                        overflow: Overflow::scroll_y(),
                         padding: UiRect::all(Val::Px(20.0)),
                         row_gap: Val::Px(12.0),
                         ..default()
@@ -133,6 +136,7 @@ impl ModalBuilder {
                 Name::new("ModalContent"),
             ))
             .id();
+        crate::patterns::scroll::wheel_scroll(commands, content);
         commands.entity(root).add_child(content);
         (root, content)
     }

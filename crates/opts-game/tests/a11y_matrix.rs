@@ -169,3 +169,28 @@ fn every_screen_has_something_to_operate() {
         assert!(focusable >= 2, "{}: {focusable} focusable elements", screen.name());
     }
 }
+
+#[test]
+fn ui_scale_from_75_to_200_percent_keeps_text_inside_at_three_window_sizes() {
+    let mut findings = Vec::new();
+    for (w, h) in [(1024, 640), (1280, 720), (1920, 1080)] {
+        for scale in [0.75_f32, 1.0, 1.5, 2.0] {
+            for screen in Screen::ALL {
+                let mut app = build(screen, w, h, ThemeKind::Dark, AccentPreset::default());
+                app.insert_resource(bevy::ui::UiScale(scale));
+                for _ in 0..6 {
+                    app.update();
+                }
+                let logical = Vec2::new(w as f32 / scale, h as f32 / scale);
+                let what = format!("{} {w}x{h} at {}%", screen.name(), (scale * 100.0) as u32);
+                for f in rules::text_overflow(app.world_mut(), logical) {
+                    findings.push(format!("{what}: {f}"));
+                }
+                for f in rules::small_targets(app.world_mut()) {
+                    findings.push(format!("{what}: {f}"));
+                }
+            }
+        }
+    }
+    assert!(findings.is_empty(), "{} findings:\n{}", findings.len(), findings.join("\n"));
+}

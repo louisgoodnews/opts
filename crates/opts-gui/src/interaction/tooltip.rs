@@ -81,6 +81,7 @@ pub fn tooltip_system(
     existing: Query<(Entity, &TooltipNode)>,
     geometry: Query<(&ComputedNode, &UiGlobalTransform)>,
     windows: Query<&Window, With<PrimaryWindow>>,
+    ui_scale: Res<UiScale>,
 ) {
     let focus_visible = visible.is_none_or(|v| v.0);
     let mut hovered_target = None;
@@ -136,8 +137,11 @@ pub fn tooltip_system(
         left = center.x - size.x / 2.0;
         top = center.y + size.y / 2.0 + 6.0;
         if let Ok(window) = windows.single() {
-            left = left.min(window.width() - TOOLTIP_MAX_WIDTH - 8.0).max(8.0);
-            if top + 40.0 > window.height() {
+            // Node coordinates are in UI units: the window's logical size divided by `UiScale`
+            // (at 200 % the window is 512 units wide, not 1024).
+            let (width, height) = (window.width() / ui_scale.0, window.height() / ui_scale.0);
+            left = left.min(width - TOOLTIP_MAX_WIDTH - 8.0).max(8.0);
+            if top + 40.0 > height {
                 top = (center.y - size.y / 2.0 - 40.0).max(8.0);
             }
         }
