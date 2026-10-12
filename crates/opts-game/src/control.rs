@@ -306,9 +306,14 @@ fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
         return Outcome::err(RpcError::new(code::NOT_READY, "there is no player vehicle"));
     };
     let ch = &c.sim.chassis;
+    // The chassis position is local to the start tile; the protocol speaks absolute coordinates
+    // (the same as `camera.teleport`).
+    let (tx, ty) = world
+        .get_resource::<WorldStats>()
+        .map_or((0, 0), |s| s.start_tile);
     Outcome::ok(json!({
-        "x": ch.position.x,
-        "y": ch.position.y,
+        "x": f64::from(ch.position.x) + f64::from(tx) * f64::from(opts_bevy::tile_size()),
+        "y": f64::from(ch.position.y) + f64::from(ty) * f64::from(opts_bevy::tile_size()),
         "z": ch.elevation_z,
         "heading_deg": ch.heading_rad.to_degrees(),
         "speed_kmh": ch.forward_speed_km_h(),

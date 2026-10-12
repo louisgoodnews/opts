@@ -52,9 +52,11 @@ fn main() {
         let Ok(bytes) = std::fs::read(f) else {
             continue;
         };
-        let declared = (bytes.starts_with(b"DDS ") && bytes.len() > 32)
-            .then(|| u32::from_le_bytes([bytes[28], bytes[29], bytes[30], bytes[31]]))
-            .unwrap_or(0);
+        let declared = if bytes.starts_with(b"DDS ") && bytes.len() > 32 {
+            u32::from_le_bytes([bytes[28], bytes[29], bytes[30], bytes[31]])
+        } else {
+            0
+        };
         let t = Instant::now();
         let image = load_bevy_image(&bytes);
         decode_time += t.elapsed().as_secs_f64();

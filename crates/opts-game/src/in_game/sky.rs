@@ -337,7 +337,9 @@ pub fn update_sky(
     }
     // A new look changes the ambient scale: refresh at once instead of at the next interval.
     let look_changed = look.as_ref().is_some_and(|l| l.is_changed());
-    let ambient_scale = look.as_ref().map_or(1.0, |l| l.0.params().ambient_scale);
+    let ambient_scale = look.as_ref().map_or(1.0, |l| {
+        crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
+    });
     if look_changed || now - sky.last_refresh >= REFRESH_S {
         sky.last_refresh = now;
         let weights = sky.config.sky_weights(elevation);

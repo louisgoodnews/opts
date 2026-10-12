@@ -142,6 +142,22 @@ pub fn apply_startup_render_options(
     app.insert_resource(ActiveLook(look));
 }
 
+/// How much of the day's light is up: 0 at and below the horizon, 1 from 25 degrees of sun
+/// elevation on (smooth in between).
+#[must_use]
+pub fn daylight(sun_elevation_deg: f32) -> f32 {
+    let t = (sun_elevation_deg / 25.0).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// The ambient scale of a look at the given sun elevation. A look darkens the ambient light to
+/// deepen shadows in daylight; at dusk and night the base ambient stays (the ambient floor is what
+/// keeps the scene readable), so the scale fades to 1 as the sun sets.
+#[must_use]
+pub fn effective_ambient_scale(look_scale: f32, sun_elevation_deg: f32) -> f32 {
+    1.0 + (look_scale - 1.0) * daylight(sun_elevation_deg)
+}
+
 /// The colour grading of `params`; everything else (exposure, temperature, ...) stays at Bevy's
 /// defaults so switching looks never leaves residue.
 #[must_use]
@@ -216,6 +232,21 @@ mod tests {
         assert_eq!(p.ambient_scale, 0.5);
         let g = grading_for(p);
         assert!((g.global.post_saturation - 1.1).abs() < 1e-6);
+    }
+
+    #[test]
+    fn ambient_scale_fades_out_at_dusk_and_night() {
+        assert_eq!(effective_ambient_scale(0.5, 60.0), 0.5);
+        assert_eq!(effective_ambient_scale(0.5, 25.0), 0.5);
+        assert_eq!(effective_ambient_scale(0.5, 0.0), 1.0);
+        assert_eq!(effective_ambient_scale(0.5, -30.0), 1.0);
+        let dusk = effective_ambient_scale(0.5, 8.0);
+        assert!(dusk > 0.5 && dusk < 1.0);
+        assert_eq!(
+            effective_ambient_scale(1.0, 40.0),
+            1.0,
+            "Bevy default never changes it"
+        );
     }
 
     fn app_with_look(look: Look) -> App {

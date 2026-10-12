@@ -8,6 +8,7 @@
 
 #![deny(unsafe_code)]
 
+mod dds_chain;
 mod mips;
 pub use mips::{
     full_chain_levels, generate_mip_chain, level_size, looks_like_cutout, mip_stats,
@@ -176,6 +177,19 @@ pub fn dds_to_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
         TextureFormat::R8Unorm => (1, 1, 1),
         _ => (1, 1, 4),
     };
+    // Block-compressed files with a size that is not a multiple of 4 store their chain for the
+    // file's own size; re-lay it out for the rounded extent the GPU expects.
+    if mips > 1 && block_width == 4 && (dds.header.width, dds.header.height) != (width, height) {
+        if let Some(chain) = dds_chain::relayout_chain(
+            &data,
+            (dds.header.width, dds.header.height),
+            (width, height),
+            mips,
+            block_bytes,
+        ) {
+            data = chain;
+        }
+    }
     let level_bytes = |w: u32, h: u32| {
         (w.div_ceil(block_width).max(1) as usize)
             * (h.div_ceil(block_height).max(1) as usize)
@@ -405,124 +419,4 @@ pub fn load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_sniff_magic_bytes() {
-        assert_eq!(sniff_image_format(b"DDS \x00\x00"), ImageFormat::Dds);
-        assert_eq!(sniff_image_format(b"BM\x00\x00"), ImageFormat::Bmp);
-        assert_eq!(
-            sniff_image_format(b"\x89PNG\r\n\x1a\n\x00\x00"),
-            ImageFormat::Png
-        );
-        assert_eq!(
-            sniff_image_format(&[0xFF, 0xD8, 0xFF, 0xE0]),
-            ImageFormat::Jpeg
-        );
-        assert_eq!(sniff_image_format(b"RIFF\x00\x00"), ImageFormat::Unknown);
-        assert_eq!(sniff_image_format(b""), ImageFormat::Unknown);
-    }
-
-    #[test]
-    fn test_empty_buffer_returns_error() {
-        assert!(matches!(
-            load_bevy_image(&[]),
-            Err(TextureError::EmptyBuffer)
-        ));
-    }
-
-    /// Builds a DXT5 DDS whose mip chain follows `height` exactly like the files in the wild.
-    fn dxt5_dds(width: u32, height: u32, mips: u32) -> Vec<u8> {
-        let mut b = Vec::new();
-        let mut put = |v: u32| b.extend_from_slice(&v.to_le_bytes());
-        put(0x2053_4444); // "DDS "
-        put(124);
-        put(0x0002_1007 | 0x0008_0000);
-        put(height);
-        put(width);
-        put(0);
-        put(0);
-        put(mips);
-        for _ in 0..11 {
-            put(0);
-        }
-        put(32);
-        put(4); // DDPF_FOURCC
-        put(u32::from_le_bytes(*b"DXT5"));
-        for _ in 0..5 {
-            put(0);
-        }
-        put(0x1000);
-        for _ in 0..4 {
-            put(0);
-        }
-        let (mut w, mut h) = (width, height);
-        for _ in 0..mips {
-            let n = (w.div_ceil(4).max(1) * h.div_ceil(4).max(1) * 16) as usize;
-            b.extend(std::iter::repeat_n(0u8, n));
-            w = (w / 2).max(1);
-            h = (h / 2).max(1);
-        }
-        b
-    }
-
-    #[test]
-    fn block_compressed_extent_and_mips_stay_consistent() {
-        let img = dds_to_bevy_image(&dxt5_dds(64, 533, 7)).expect("decodes");
-        assert_eq!(img.texture_descriptor.size.height, 536);
-        assert_eq!(img.texture_descriptor.mip_level_count, 7);
-        // A header that claims more levels than the data holds falls back to the base level.
-        let mut bytes = dxt5_dds(64, 64, 3);
-        bytes[28..32].copy_from_slice(&7u32.to_le_bytes());
-        let img = dds_to_bevy_image(&bytes).expect("decodes");
-        assert_eq!(img.texture_descriptor.mip_level_count, 1);
-        assert_eq!(img.data.as_ref().unwrap().len(), 16 * 16 * 16);
-    }
-
-    #[test]
-    fn test_non_block_aligned_mip_chain_fallback() {
-        // Dimensions like hochspannungsmast.dds (256x1025, 11 mips).
-        // Rounding 1025 to 1028 shifts intermediate mip sizes such that wgpu expected size (351376)
-        // exceeds the file data size (350608). The loader must fall back to base level (mips = 1)
-        // and truncate data to 263168, preventing wgpu slice out-of-range panics.
-        let bytes = dxt5_dds(256, 1025, 11);
-        assert_eq!(bytes.len(), 128 + 350608);
-        let img = dds_to_bevy_image(&bytes).expect("decodes without panic");
-        assert_eq!(img.texture_descriptor.size.width, 256);
-        assert_eq!(img.texture_descriptor.size.height, 1028);
-        assert_eq!(img.texture_descriptor.mip_level_count, 1);
-        assert_eq!(img.data.as_ref().unwrap().len(), 263168);
-    }
-
-    #[test]
-    fn test_dds_with_trailing_bytes_truncated() {
-        let mut bytes = dxt5_dds(64, 64, 3);
-        bytes.extend_from_slice(&[0xCC; 256]); // 256 trailing bytes
-        let img = dds_to_bevy_image(&bytes).expect("decodes");
-        assert_eq!(img.texture_descriptor.mip_level_count, 3);
-        assert_eq!(
-            img.data.as_ref().unwrap().len(),
-            (16 * 16 + 8 * 8 + 4 * 4) * 16
-        );
-    }
-}
-
-#[cfg(test)]
-mod tga_repair_tests {
-    use super::*;
-
-    #[test]
-    fn a_24_bit_tga_claiming_alpha_bits_decodes() {
-        // 2x1 uncompressed true-colour TGA, 24 bpp, descriptor 0x08 (as written by some tools).
-        let mut tga = vec![0u8; 18];
-        tga[2] = 2;
-        tga[12] = 2;
-        tga[14] = 1;
-        tga[16] = 24;
-        tga[17] = 0x08;
-        tga.extend_from_slice(&[0, 0, 255, 0, 255, 0]);
-        let img = decode_with(&tga, Some(image::ImageFormat::Tga)).expect("decodes");
-        assert_eq!((img.width(), img.height()), (2, 1));
-    }
-}
+mod tests;
