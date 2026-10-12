@@ -80,7 +80,21 @@ pub fn o3d_to_bevy_mesh(o3d: &O3d) -> Mesh {
 /// influences, normalised to sum to 1; vertices without influence bind fully to joint 0.
 #[must_use]
 pub fn skin_table(o3d: &O3d) -> Option<Vec<([u16; 4], [f32; 4])>> {
+    skin_table_slots(o3d, None)
+}
+
+/// [`skin_table`] with the joint numbers of the model's `[setbone]` entries: a bone named there
+/// uses the given joint, any other bone of the file (the base bone of a bellows, e.g.
+/// `Armature1_Bone`) uses the extra joint after the highest one, which stays on the vehicle
+/// (identity). Without this a vertex bound to a bone the model does not list would point
+/// past the joint list and be thrown far away.
+#[must_use]
+pub fn skin_table_slots(
+    o3d: &O3d,
+    slots: Option<&[(String, u16)]>,
+) -> Option<Vec<([u16; 4], [f32; 4])>> {
     let bones = o3d.bone_influences()?;
+    let extra = slots.map_or(0, |s| s.iter().map(|b| b.1 + 1).max().unwrap_or(0));
     // Human meshes use the 13 canonical bones; index them in a fixed order so one skeleton
     // fits every character regardless of the order in the file. Other skinned meshes
     // (articulation bellows) keep the order of the chunk.
@@ -89,7 +103,14 @@ pub fn skin_table(o3d: &O3d) -> Option<Vec<([u16; 4], [f32; 4])>> {
         .all(|b| crate::human::HUMAN_BONES.contains(&b.name.as_str()));
     let mut per_vertex: Vec<Vec<(u16, f32)>> = vec![Vec::new(); o3d.vertices.len()];
     for (chunk_idx, bone) in bones.iter().enumerate() {
-        let bone_idx = if human {
+        let mapped = slots.map(|s| {
+            s.iter()
+                .find(|(n, _)| n.eq_ignore_ascii_case(&bone.name))
+                .map_or(usize::from(extra), |(_, i)| usize::from(*i))
+        });
+        let bone_idx = if let Some(i) = mapped {
+            i
+        } else if human {
             crate::human::HUMAN_BONES
                 .iter()
                 .position(|n| *n == bone.name)
@@ -141,6 +162,16 @@ pub const APPLY_O3D_MATRIX: bool = false;
 /// handedness conversion as [`o3d_to_bevy_mesh`].
 #[must_use]
 pub fn o3d_to_bevy_meshes_by_material(o3d: &O3d) -> Vec<(usize, Mesh)> {
+    o3d_to_bevy_meshes_by_material_slots(o3d, None)
+}
+
+/// [`o3d_to_bevy_meshes_by_material`] with `[setbone]` joint numbers for the skin
+/// (see [`skin_table_slots`]).
+#[must_use]
+pub fn o3d_to_bevy_meshes_by_material_slots(
+    o3d: &O3d,
+    slots: Option<&[(String, u16)]>,
+) -> Vec<(usize, Mesh)> {
     use std::collections::BTreeMap;
 
     let mut groups: BTreeMap<usize, Vec<[u32; 3]>> = BTreeMap::new();
@@ -204,7 +235,7 @@ pub fn o3d_to_bevy_meshes_by_material(o3d: &O3d) -> Vec<(usize, Mesh)> {
                 | opts_core::formats::o3d::VertexLayout::Unreadable
         );
 
-    let skin = skin_table(o3d);
+    let skin = skin_table_slots(o3d, slots);
     let mut out = Vec::with_capacity(groups.len());
     for (slot, tris) in groups {
         let mut joint_idx: Vec<[u16; 4]> = Vec::new();

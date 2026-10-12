@@ -587,3 +587,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - [.osc — Scripts](osc.md)
 - [Variable Lists](varnamelist.md)
 - [Predefined Variables](predefined-variables.md)
+
+## Addendum (2026-10-12): `[setbone]` joint numbers and bone dummies
+
+`[smoothskin]` + `[setbone] <name> <n>` (articulation bellows, pantograph arms): `<name>` is a bone of the mesh's `0x54` chunk, `<n>` the number of the joint that moves it. The joints are the **`bone_<letter>` dummy meshes** declared just before the skinned mesh (`Exterieur\bone_A.o3d` … `bone_D.o3d`, each an empty 24-vertex mesh with `[newanim]`s of `articulation_0_alpha/beta` at fractions 0.25, 0.5, 0.75, 1.0 of the joint angle): joint `n` is the `n`-th dummy of that run (Heuliez GX 437: bellows bones 0, 1 → `bone_A`, `bone_B`; the pantograph's `Armature_bone_A…D` → 0…3). Older vehicles name the dummy in its file (`GN_Dum_Gelenk_A.o3d` for bone `Gelenk_A`): a name match wins. **A bone of the file that `[setbone]` does not list** (the bellows' `Armature1_Bone`, which carries the weight-1.0 vertices of the fixed end) is the fixed body: it must map to an identity joint, not to a joint index past the list (that threw the bellows 20 m away in OPTS until 2026-10-12).

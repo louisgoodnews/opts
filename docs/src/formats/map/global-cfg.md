@@ -210,3 +210,7 @@ tile_0_0.map
 - [`.sco`](../text/sco.md) — keyword grammar shared with this page
 - [Textures](../textures.md)
 - [Ticket Packs](../text/ticketpacks.md)
+
+## Addendum (2026-10-12): entry-point elevation and paved areas
+
+An entry point's elevation (record field 5, e.g. `9.7` for `849 - Hohenkirchen, Bahnhof`) is the height of the road or platform *surface*, which can lie metres above the terrain mesh (`1.4` there): the bus station stands on spline-built paving. Paved areas are splines **without** `[path]` lanes (`10m_Pflaster1_op`, `10m_Asphalt7_op`, `6m_Asphalt3_op`, `Concrete01_6m_op`, …): OPTS treats any spline whose profile lays at least 3.5 m of flat surface (`SplineProfile::flat_width`) as ground the player's vehicle can stand on, in addition to road and rail lanes; otherwise the ground follower snapped the vehicle down to the terrain.

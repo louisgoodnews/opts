@@ -20,6 +20,9 @@ use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{LoadAssets, WorldLoadJob, WorldStats};
 
+/// Flat width from which a spline without lanes (paved area, apron) carries vehicles (m).
+const SURFACE_MIN_WIDTH_M: f32 = 3.5;
+
 /// Loads the next queued tile: terrain, splines and scenery objects.
 pub fn load_next_tile(
     job: &mut WorldLoadJob,
@@ -91,10 +94,11 @@ pub fn load_next_tile(
                 continue;
             };
             if !profile.only_editor
-                && profile
+                && (profile
                     .paths
                     .iter()
                     .any(|p| p.path_type == 0 || p.path_type == 2)
+                    || profile.flat_width() >= SURFACE_MIN_WIDTH_M)
                 && !profile.graphical_profiles.is_empty()
             {
                 roads.push((inst.clone(), (*profile).clone()));

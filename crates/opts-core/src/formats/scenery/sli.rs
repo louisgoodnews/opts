@@ -186,6 +186,25 @@ impl SplineProfile {
         out
     }
 
+    /// Total width of the widest near-horizontal strip of the profile's cross-sections (m): how
+    /// much flat surface a spline lays down. Paved areas without lanes (`10m_Pflaster1_op`,
+    /// `10m_Asphalt7_op`, …) have none of the `[path]`s of a road but carry vehicles; kerbs,
+    /// walls and fences have almost none.
+    #[must_use]
+    pub fn flat_width(&self) -> f32 {
+        const FLAT_DZ: f32 = 0.15;
+        self.graphical_profiles
+            .iter()
+            .map(|g| {
+                g.points
+                    .windows(2)
+                    .filter(|w| (w[1].z - w[0].z).abs() < FLAT_DZ)
+                    .map(|w| (w[1].x - w[0].x).abs())
+                    .sum::<f32>()
+            })
+            .fold(0.0, f32::max)
+    }
+
     /// Whether the profile carries bike lanes.
     #[must_use]
     pub fn has_bike_lane(&self, name: &str) -> bool {

@@ -298,7 +298,7 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None)
     }
 
     /// Like [`Self::o3d_parts`], but keeps the bone-weight vertex attributes (for meshes that
@@ -309,7 +309,20 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, None)
+    }
+
+    /// [`Self::o3d_skinned_parts`] for a vehicle mesh whose `[setbone]` entries give the joint
+    /// numbers (`(bone name, joint)`); bones the model does not list use the joint after the
+    /// highest one.
+    pub fn o3d_skinned_parts_slots(
+        &mut self,
+        o3d_path: &Path,
+        tex_dirs: &[PathBuf],
+        overrides: &[TextureOverride],
+        slots: &[(String, u16)],
+    ) -> Vec<ModelPart> {
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, Some(slots))
     }
 
     fn o3d_parts_impl(
@@ -318,12 +331,13 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
         keep_skin: bool,
+        slots: Option<&[(String, u16)]>,
     ) -> Vec<ModelPart> {
         let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
         repaint.sort();
         let key = (
             o3d_path.to_path_buf(),
-            format!("{overrides:?}{keep_skin}{repaint:?}"),
+            format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}"),
         );
         if let Some(parts) = self.cache.parts.get(&key) {
             if self.cache.protected.contains(o3d_path) {
@@ -534,7 +548,8 @@ impl ContentLoader<'_> {
 
         let mut parts = Vec::new();
         for model in &models {
-            for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material(model) {
+            for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
+            {
                 // Static model parts carry no skeleton: joint attributes without a `SkinnedMesh`
                 // component make the render pipeline layouts disagree (fatal wgpu validation error).
                 if !keep_skin {

@@ -117,10 +117,11 @@ fn load_segment_meshes_for(
     // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
     // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.
     let mut dummies: Vec<(String, Entity)> = Vec::new();
-    let mut skins: Vec<(
-        Vec<Entity>,
-        Vec<opts_core::formats::vehicles::model::MeshBone>,
-    )> = Vec::new();
+    let mut skins: Vec<SkinBinding> = Vec::new();
+    // Runs of `bone_<letter>` dummies: a skinned mesh numbers its bones (`[setbone] name n`)
+    // along the run of dummies declared before it (the NF6D-style bellows of the Heuliez GX).
+    let mut bone_runs: Vec<Vec<Entity>> = Vec::new();
+    let mut previous_was_bone = false;
     for mesh_def in &lod0.meshes {
         // Shadow-only and AI-only meshes are not part of the visible player model.
         let vp = mesh_def.viewpoint;
@@ -142,7 +143,12 @@ fn load_segment_meshes_for(
             .file_stem()
             .map(|s| s.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        if stem.contains("dum") && mesh_def.anims.iter().any(|a| a.driver_variable().is_some()) {
+        let is_bone_dummy = is_bone_stem(&stem);
+        let carries_animation = mesh_def.anims.iter().any(|a| a.driver_variable().is_some());
+        if !is_bone_dummy {
+            previous_was_bone = false;
+        }
+        if (stem.contains("dum") || is_bone_dummy) && carries_animation {
             let mut joint = commands.spawn((
                 Name::new(format!("joint_{stem}")),
                 Transform::IDENTITY,
@@ -154,6 +160,16 @@ fn load_segment_meshes_for(
             let id = joint.id();
             commands.entity(root).add_child(id);
             dummies.push((stem.clone(), id));
+            if is_bone_dummy {
+                if previous_was_bone {
+                    if let Some(run) = bone_runs.last_mut() {
+                        run.push(id);
+                    }
+                } else {
+                    bone_runs.push(vec![id]);
+                }
+                previous_was_bone = true;
+            }
         }
         let Some(o3d_path) = job.install.find_in(model_dir, &mesh_def.path) else {
             tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, "vehicle o3d not found");
@@ -185,7 +201,12 @@ fn load_segment_meshes_for(
         };
         let skinned = mesh_def.smoothskin && !mesh_def.bones.is_empty();
         let parts = if skinned {
-            loader.o3d_skinned_parts(&o3d_path, tex_dirs, &overrides)
+            let slots: Vec<(String, u16)> = mesh_def
+                .bones
+                .iter()
+                .filter_map(|b| u16::try_from(b.index).ok().map(|i| (b.name.clone(), i)))
+                .collect();
+            loader.o3d_skinned_parts_slots(&o3d_path, tex_dirs, &overrides, &slots)
         } else {
             loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
         };
@@ -221,7 +242,11 @@ fn load_segment_meshes_for(
             .map(str::trim)
             .filter(|t| !t.is_empty());
         if skinned {
-            skins.push((spawned.clone(), mesh_def.bones.clone()));
+            skins.push(SkinBinding {
+                entities: spawned.clone(),
+                bones: mesh_def.bones.clone(),
+                run: bone_runs.last().cloned().unwrap_or_default(),
+            });
         }
         for (e, part) in spawned.iter().copied().zip(&parts) {
             let mut entity = commands.entity(e);
@@ -243,6 +268,20 @@ fn load_segment_meshes_for(
     (mesh_count, vertex_count, min, max)
 }
 
+/// A skinned mesh waiting for its bones: its entities, its `[setbone]` list and the run of
+/// `bone_<letter>` dummies declared before it.
+struct SkinBinding {
+    entities: Vec<Entity>,
+    bones: Vec<opts_core::formats::vehicles::model::MeshBone>,
+    run: Vec<Entity>,
+}
+
+/// Whether a mesh file stem names a bone dummy of a bellows (`bone_a` … `bone_f`).
+fn is_bone_stem(stem: &str) -> bool {
+    stem.strip_prefix("bone_")
+        .is_some_and(|rest| rest.len() == 1 && rest.chars().all(|c| c.is_ascii_alphabetic()))
+}
+
 /// Binds skinned meshes of a vehicle to the dummy meshes that carry their bones' animation.
 ///
 /// OMSI names a bone in `[setbone] <name> <index>`; the dummy mesh of that bone is the one whose
@@ -253,12 +292,14 @@ fn bind_skins(
     commands: &mut Commands,
     root: Entity,
     dummies: &[(String, Entity)],
-    skins: Vec<(
-        Vec<Entity>,
-        Vec<opts_core::formats::vehicles::model::MeshBone>,
-    )>,
+    skins: Vec<SkinBinding>,
 ) {
-    for (entities, bones) in skins {
+    for SkinBinding {
+        entities,
+        bones,
+        run,
+    } in skins
+    {
         let n = bones
             .iter()
             .map(|b| usize::try_from(b.index).map_or(0, |i| i + 1))
@@ -267,7 +308,9 @@ fn bind_skins(
         if n == 0 {
             continue;
         }
-        let mut joints = vec![root; n];
+        // One extra joint after the highest: bones of the file the model does not list (the
+        // base bone of a bellows) stay on the vehicle.
+        let mut joints = vec![root; n + 1];
         for b in &bones {
             let Ok(i) = usize::try_from(b.index) else {
                 continue;
@@ -275,9 +318,12 @@ fn bind_skins(
             let name = b.name.to_lowercase();
             match dummies.iter().find(|(stem, _)| stem.contains(&name)) {
                 Some((_, e)) => joints[i] = *e,
-                None => {
-                    tracing::warn!(bone = %b.name, "no dummy mesh for bone; it stays on the root")
-                }
+                None => match run.get(i) {
+                    Some(e) => joints[i] = *e,
+                    None => {
+                        tracing::warn!(bone = %b.name, "no dummy mesh for bone; it stays on the root");
+                    }
+                },
             }
         }
         commands.queue(move |world: &mut World| {
