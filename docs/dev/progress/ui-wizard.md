@@ -21,7 +21,7 @@ Game runs: `XDG_CONFIG_HOME=<wizard>/run-N/config XDG_DATA_HOME=<wizard>/run-N/d
 | Batch | Status |
 | :--- | :--- |
 | W0 Orient + specs (`docs/src/roadmap/phase-9/wizard-and-loading.md`) | done |
-| W1 Master-detail pattern (`opts-gui/src/patterns/`) | open |
+| W1 Master-detail pattern (`opts-gui/src/patterns/`) | done (18 tests in the real layout; gates green for opts-gui, catalogue, audit) |
 | W2 Stepper and the four steps | open |
 | W3 Thumbnails and images | open |
 | W4 Loading screen | open |
@@ -40,4 +40,12 @@ Game runs: `XDG_CONFIG_HOME=<wizard>/run-N/config XDG_DATA_HOME=<wizard>/run-N/d
 
 ## Results
 
-(per batch below)
+### W0
+Spec in `docs/src/roadmap/phase-9/wizard-and-loading.md`.
+
+### W1
+- `opts_gui::patterns::{list_model, master_detail, scroll, glyphs}`; messages `MasterDetailSelected/Chosen/Favourite`; keys in `l10n/wizard_keys.rs` + `wizard_{en,de}.ftl`; `OwnsVerticalArrows` marker in `interaction/focus.rs`.
+- Pointer scroll uses `PointerScroll` observers; scroll bar thumb drag with `PointerDrag`.
+- `opts-catalogue`: `VehicleRecord.class` (road/rail/aircraft) added.
+- Search filters on every change (no 150 ms debounce: filtering is instant for thousands of entries).
+- Parking lot: the W2 code is written but not committed in this batch (stashed while W1 was committed).

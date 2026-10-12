@@ -77,6 +77,8 @@ const REVIEWED: &[&str] = &[
     "opts-gui/src/interaction/layer.rs",
     "opts-gui/src/interaction/mod.rs",
     "opts-gui/src/interaction/state.rs",
+    // Patterns: keyboard only while their list has focus (focus is trapped by modals).
+    "opts-gui/src/patterns/master_detail_input.rs",
 ];
 
 #[test]

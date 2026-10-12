@@ -152,6 +152,8 @@ pub struct VehicleRecord {
     pub description: String,
     /// Curb mass in tonnes.
     pub mass_tonnes: Option<f64>,
+    /// Vehicle class (`road`, `rail`, `aircraft`) when the content says it.
+    pub class: Option<String>,
 }
 
 /// Handle to the catalogue database (thread-safe).
@@ -431,7 +433,7 @@ impl Catalogue {
         self.with(|c| {
             let mut st = c.prepare(
                 "SELECT e.entity_id, f.rel_path, f.file_name, v.manufacturer, v.model, v.livery,
-                        v.description, v.mass_tonnes
+                        v.description, v.mass_tonnes, e.vehicle_class
                  FROM entities e JOIN vehicle_info v ON v.entity_id = e.entity_id
                  JOIN files f ON f.file_id = e.marker_file_id
                  WHERE e.category = 'vehicle' AND e.is_playable = 1 AND e.alias_of_id IS NULL
@@ -450,6 +452,7 @@ impl Catalogue {
                     livery: r.get(5)?,
                     description: r.get(6)?,
                     mass_tonnes: r.get(7)?,
+                    class: r.get(8)?,
                 })
             })?;
             rows.collect()

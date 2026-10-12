@@ -14,6 +14,7 @@ use bevy::prelude::*;
 pub mod fluent;
 pub mod keys;
 pub mod pseudo;
+pub mod wizard_keys;
 
 use fluent::{Arg, Args, Table};
 
@@ -55,8 +56,8 @@ impl Default for Localization {
 impl Localization {
     /// Loads the shipped tables and selects `locale`.
     pub fn new(locale: &str) -> Self {
-        let en = fluent::parse(include_str!("en.ftl"));
-        let de = fluent::parse(include_str!("de.ftl"));
+        let en = merged(include_str!("en.ftl"), include_str!("wizard_en.ftl"));
+        let de = merged(include_str!("de.ftl"), include_str!("wizard_de.ftl"));
         let mut bundles = HashMap::new();
         bundles.insert(pseudo::PSEUDO_TAG.to_string(), pseudo::pseudo_table(&en));
         bundles.insert("en".to_string(), en);
@@ -140,6 +141,16 @@ impl Localization {
             .get(locale)
             .is_some_and(|b| b.messages.contains_key(key))
     }
+}
+
+/// A table parsed from `base` with the messages of `extra` added (the wizard's own file: three
+/// parallel branches each own one table file instead of sharing one).
+fn merged(base: &str, extra: &str) -> Table {
+    let mut table = fluent::parse(base);
+    let more = fluent::parse(extra);
+    table.errors.extend(more.errors);
+    table.messages.extend(more.messages);
+    table
 }
 
 /// The key of an element or of one of its direct children (the label of a control). The

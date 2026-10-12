@@ -1,0 +1,117 @@
+# Assistent, Master-Detail-Muster und Ladebildschirm (Deutsch).
+
+md-search-label = Suche
+md-search = { $count } Einträge durchsuchen…
+md-section-recent = Zuletzt
+md-section-favourites = Favoriten
+md-section-all = Alle
+md-no-results = Keine Treffer für „{ $query }“
+md-clear-filter = Filter löschen
+md-star-add = Zu Favoriten hinzufügen (Strg+D)
+md-star-remove = Aus Favoriten entfernen (Strg+D)
+
+# --- Fahrt planen ---
+wiz-title = Fahrt planen
+wiz-step-where = Wo
+wiz-step-what = Was
+wiz-step-when = Wann
+wiz-step-review = Prüfen
+wiz-back = Zurück
+wiz-next = Weiter
+wiz-skip = Zur Übersicht
+wiz-drive = Losfahren
+wiz-change = Ändern
+wiz-open-settings = Einstellungen öffnen
+wiz-reason-no-map = Wähle zuerst eine Karte
+wiz-reason-no-start = Wähle zuerst einen Startpunkt
+wiz-reason-no-vehicle = Wähle zuerst ein Fahrzeug
+wiz-save-failed = Deine Auswahl konnte nicht nach { $path } gespeichert werden. Die Fahrt startet trotzdem.
+wiz-date = { $day }. { $month } { $year }
+
+wiz-where-search = { $count } Karten durchsuchen…
+wiz-where-empty = Keine Karten gefunden. Prüfe den OMSI-Ordner oder suche neu.
+wiz-where-start = Startpunkt
+wiz-where-no-starts = Diese Karte hat keine benannten Startpunkte.
+wiz-where-description = Beschreibung der Karte, in ihrer Originalsprache
+wiz-where-remembered-missing = Deine letzte Karte ist nicht mehr installiert.
+wiz-fact-years = Spielt { $years }
+wiz-fact-tiles =
+    { $count ->
+        [one] { $count } Kachel
+       *[other] { $count } Kacheln
+    }
+wiz-fact-starts =
+    { $count ->
+        [one] { $count } Startpunkt
+       *[other] { $count } Startpunkte
+    }
+wiz-fact-depot = Betriebshof: { $depot }
+
+wiz-what-search = { $count } Fahrzeuge durchsuchen…
+wiz-what-empty = Keine Fahrzeuge gefunden. Prüfe den OMSI-Ordner oder suche neu.
+wiz-class-road = Straßenfahrzeug
+wiz-class-rail = Schienenfahrzeug
+wiz-class-aircraft = Luftfahrzeug
+wiz-fact-mass = Leergewicht: { $tonnes } t
+wiz-what-livery = Lackierung
+wiz-what-livery-default = Standard
+wiz-what-livery-loading = Lackierungen werden gelesen…
+wiz-what-livery-none = Dieses Fahrzeug hat keine weiteren Lackierungen.
+wiz-what-configure = Konfigurieren…
+wiz-what-no-options = Dieses Fahrzeug hat keine Ausstattungsoptionen.
+wiz-what-options-changed =
+    { $count ->
+        [one] 1 Option geändert
+       *[other] { $count } Optionen geändert
+    }
+wiz-what-remembered-missing = Dein letztes Fahrzeug ist nicht mehr installiert.
+wiz-options-title = Ausstattung
+wiz-options-reset = Zurücksetzen
+wiz-options-done = Fertig
+
+wiz-when-quick = Tageszeit
+wiz-when-exact = Datum und Uhrzeit
+wiz-when-weather = Wetter
+wiz-when-now = Jetzt
+wiz-when-morning = Morgen
+wiz-when-noon = Mittag
+wiz-when-evening = Abend
+wiz-when-night = Nacht
+wiz-when-day = Tag
+wiz-when-month = Monat
+wiz-when-year = Jahr
+wiz-when-hour = Stunde
+wiz-when-minute = Minute
+wiz-step-less = Verringern
+wiz-step-more = Erhöhen
+wiz-when-era-hint = Diese Karte spielt { $from }–{ $to }.
+wiz-month-1 = Januar
+wiz-month-2 = Februar
+wiz-month-3 = März
+wiz-month-4 = April
+wiz-month-5 = Mai
+wiz-month-6 = Juni
+wiz-month-7 = Juli
+wiz-month-8 = August
+wiz-month-9 = September
+wiz-month-10 = Oktober
+wiz-month-11 = November
+wiz-month-12 = Dezember
+wiz-weather-clear = Klarer Tag
+wiz-weather-clear-effect = Klarer Himmel, volles Sonnenlicht
+wiz-weather-overcast = Bedeckt
+wiz-weather-overcast-effect = Wolkendecke, weicheres Licht
+wiz-weather-rain = Regen
+wiz-weather-rain-effect = Dunkleres, diffuses Licht; Regen selbst wird noch nicht gezeigt
+wiz-weather-snow = Schnee
+wiz-weather-snow-effect = Dunkleres, diffuses Licht; Schneefall selbst wird noch nicht gezeigt
+wiz-weather-fog = Nebel
+wiz-weather-fog-effect = Dunkleres, diffuses Licht; Nebel selbst wird noch nicht gezeigt
+wiz-weather-live = Live-Wetter
+
+wiz-review-title = Bereit zur Fahrt?
+
+wiz-option-vis_wimpel_invisible = Wimpel vorn
+wiz-option-wimpel_visibility = Fahnenhalterung
+wiz-option-vis_grill_invisible = Grillabdeckung
+wiz-option-ident_visible = Betreiberkennzeichnung
