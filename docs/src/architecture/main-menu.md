@@ -9,6 +9,8 @@
 | **Author** | Dev Agent |
 | **Date** | 2026-10-08 |
 
+> **Superseded (M-0062).** The sidebar menu described below is replaced by the application shell (navigation rail) and **Home**; see [screen specifications](../roadmap/phase-9/screens.md) and [flow](../roadmap/phase-9/flow.md). This page is rewritten as the shell lands.
+
 ---
 
 ## 1. Executive Summary

@@ -2,6 +2,8 @@
 
 This document specifies the startup lifecycle, plugin composition, CLI interface, and shutdown protocol for the primary OPTS game executable (`opts-game`).
 
+> **Changing (M-0062).** A found OMSI folder is no longer adopted silently: the first-run flow asks for confirmation ([screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup)). The *OMSI Installation Check* section is updated with that batch.
+
 ---
 
 ## 🏛️ Overview & Architectural Role
