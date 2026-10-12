@@ -12,7 +12,7 @@ use bevy::asset::{Assets, Handle};
 use bevy::ecs::entity::Entity;
 use bevy::ecs::name::Name;
 use bevy::ecs::system::Commands;
-use bevy::image::{Image, ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
+use bevy::image::{Image, ImageSampler};
 use bevy::mesh::Mesh;
 use bevy::mesh::Mesh3d;
 use bevy::pbr::MeshMaterial3d;
@@ -92,15 +92,11 @@ pub struct ContentStats {
     pub failures: Vec<String>,
 }
 
-/// The sampler of OMSI textures: repeating on all axes.
+/// The sampler of OMSI textures: repeating on all axes, filtered per the "Texture filtering"
+/// setting (see [`crate::texture_filter`]).
 #[must_use]
 pub fn repeat_sampler() -> ImageSampler {
-    ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::Repeat,
-        address_mode_w: ImageAddressMode::Repeat,
-        ..Default::default()
-    })
+    crate::texture_filter::current_object_sampler()
 }
 
 /// Caches shared across a loading session.

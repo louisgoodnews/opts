@@ -51,6 +51,11 @@ Its primary responsibilities are:
 - **`load_bevy_image(bytes: &[u8]) -> Result<Image, TextureError>`:**
   - Unified loader combining content sniffing with appropriate decoder routing.
 
+### 2b. Shared Texture Sampler (`opts_bevy::texture_filter`) — M-0057
+- **`TextureFiltering`** (`Off`, `X4`, `X8`, `X16`; default `X16`) is the user setting *Texture filtering*; `key()`/`parse()` give the stable text form used in settings, `--texture-filter` and the control protocol.
+- **`object_sampler(TextureFiltering) -> ImageSampler`** builds the one sampler of all object textures: repeat addressing, linear magnification/minification/mipmap filtering and the anisotropy of the setting (`Off` = nearest, anisotropy 1, no generated mip chain). Every field is stated; nothing is left to Bevy's nearest-filter defaults.
+- **`set_texture_filtering` / `texture_filtering` / `current_object_sampler`:** the process-wide current choice (loader threads have no ECS access). `model::repeat_sampler()` returns `current_object_sampler()`; `ContentLoader::texture`, hot reload and text textures all go through it (test `tests/shared_sampler.rs`). A change applies to textures loaded afterwards and to hot-reloaded ones. The terrain shader keeps its own array-texture sampler (trilinear, anisotropy 8).
+
 ### 3. Material Conversion Bridge (`opts_bevy::material`)
 - **`o3d_material_to_standard_material(mat: &Material, texture: Option<Handle<Image>>) -> StandardMaterial`:**
   - Translates OMSI `.o3d` material properties into Bevy `StandardMaterial`.

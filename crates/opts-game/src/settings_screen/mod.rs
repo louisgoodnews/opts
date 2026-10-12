@@ -9,6 +9,7 @@
 
 pub mod display_tab;
 pub mod general_tab;
+pub mod render_choice;
 pub mod systems;
 pub mod types;
 pub mod ui_tab;
@@ -23,6 +24,7 @@ use crate::settings::GameSettings;
 
 pub use display_tab::spawn_display_tab;
 pub use general_tab::spawn_general_tab;
+pub use render_choice::handle_render_choice_clicks;
 pub use systems::{
     cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu,
     handle_color_swatch_clicks, handle_dark_mode_toggle_clicks, handle_discovery_interval_clicks,
@@ -40,7 +42,8 @@ pub struct SettingsScreenPlugin;
 
 impl Plugin for SettingsScreenPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
+        app.init_resource::<crate::look::ActiveLook>()
+            .add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
             .add_systems(OnExit(AppState::Settings), cleanup_settings_screen)
             .add_systems(
                 Update,
@@ -50,6 +53,7 @@ impl Plugin for SettingsScreenPlugin {
                     handle_color_swatch_clicks,
                     handle_dark_mode_toggle_clicks,
                     handle_discovery_interval_clicks,
+                    handle_render_choice_clicks,
                     handle_run_discovery_clicks,
                     escape_to_menu_system,
                 )
@@ -215,7 +219,7 @@ pub fn spawn_settings_screen(
     // Tab 2: Display & Sound Panel
     if let Some(&disp_panel) = panels.get(2) {
         commands.entity(disp_panel).with_children(|tab| {
-            spawn_display_tab(tab, &theme);
+            spawn_display_tab(tab, &theme, &settings);
         });
     }
 }

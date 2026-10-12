@@ -85,6 +85,7 @@ pub fn build_app(args: CliArgs) -> App {
         settings.recent_map_path = Some(path.clone());
         let _ = settings.save();
     }
+    crate::look::apply_startup_render_options(&mut app, &settings, &args);
     app.insert_resource(settings);
 
     // Remote control (opt-in: `--cli-port`).

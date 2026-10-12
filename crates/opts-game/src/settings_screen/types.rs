@@ -38,3 +38,42 @@ pub struct DiscoveryIntervalButton {
 /// Marker component for the "Run Discovery Now" button.
 #[derive(Component)]
 pub struct RunDiscoveryNowButton;
+
+/// One option of a rendering setting (see `render_choice.rs`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderChoice {
+    /// Texture filtering quality.
+    Filtering(opts_bevy::TextureFiltering),
+    /// Colour look.
+    Look(crate::look::Look),
+}
+
+impl RenderChoice {
+    /// Whether two choices belong to the same setting (radio group).
+    #[must_use]
+    pub fn same_group(self, other: Self) -> bool {
+        std::mem::discriminant(&self) == std::mem::discriminant(&other)
+    }
+
+    /// The label of the button.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Filtering(f) => f.label(),
+            Self::Look(l) => l.label(),
+        }
+    }
+
+    /// Whether this option is the one stored in `settings`.
+    #[must_use]
+    pub fn is_selected(self, settings: &crate::settings::GameSettings) -> bool {
+        match self {
+            Self::Filtering(f) => settings.texture_filtering == f,
+            Self::Look(l) => settings.look == l,
+        }
+    }
+}
+
+/// Marker component of a button choosing a [`RenderChoice`].
+#[derive(Component)]
+pub struct RenderChoiceButton(pub RenderChoice);

@@ -17,7 +17,7 @@ Gates (before each commit): `cargo fmt --all -- --check`; `cargo clippy --worksp
 | Batch | Status |
 | :--- | :--- |
 | V0 Orient + metrics tool | done |
-| V1 Sampler | open |
+| V1 Sampler | done |
 | V2 Mipmaps (uncompressed) | open |
 | V3 Looks | open |
 | V4 Verification and hand-over | open |
@@ -38,6 +38,8 @@ Gates (before each commit): `cargo fmt --all -- --check`; `cargo clippy --worksp
 ## Results
 
 - V0: `opts-tools image-metrics` works (reproduces the proposal's trend on its saved screenshots: Laplacian a0_base 0.1637 -> a4_aniso_mips 0.1453, -11 %; saturation unchanged).
+
+- V1: shared sampler (`opts_bevy::texture_filter`), settings keys `texture_filtering` / `look` (absent keys default to 16x / Vivid, test with an old database), Display & Sound tab rows for both, `--texture-filter`/`--look` run-only overrides. Text textures: same sampler and (V2) a generated chain; revert to anisotropy 1 only if signs lose legibility (V4 checks). Tests: `tests/shared_sampler.rs`, `texture_filter` unit tests, settings round trip, `render_choice` tests.
 
 ## Open problems
 
