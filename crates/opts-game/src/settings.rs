@@ -79,6 +79,9 @@ pub struct GameSettings {
     /// Keys that were present in the database this process loaded (used by `migrate_from`).
     #[serde(skip)]
     pub loaded_keys: std::collections::BTreeSet<String>,
+    /// Where `save` writes instead of the user's configuration directory (tests).
+    #[serde(skip)]
+    pub db_path_override: Option<PathBuf>,
     /// The values as they were on disk when this process loaded them. Saving writes only what
     /// differs, so an instance that merely exits (or loaded stale values while another instance
     /// changed the file) cannot undo another instance's choices, e.g. the theme.
@@ -146,6 +149,7 @@ impl Default for GameSettings {
             look: crate::look::Look::default(),
             extra: BTreeMap::new(),
             loaded_keys: std::collections::BTreeSet::new(),
+            db_path_override: None,
             baseline: Baseline::default(),
         }
     }
@@ -369,7 +373,7 @@ impl GameSettings {
     /// several instances share the file, and an instance must not overwrite a choice it did not
     /// make.
     pub fn save(&self) -> Result<(), rusqlite::Error> {
-        let Some(path) = Self::database_path() else {
+        let Some(path) = self.db_path_override.clone().or_else(Self::database_path) else {
             tracing::warn!("Unable to determine platform config directory for SQLite database");
             return Ok(());
         };

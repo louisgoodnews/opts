@@ -18,8 +18,8 @@ Runs: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` throwaway under the run dir, `XDG_CACHE_
 | Batch | Status |
 | :--- | :--- |
 | D0 Orient + registry spec | done |
-| D1 Registry core + porting | todo |
-| D2 Generic page, search, revert | todo |
+| D1 Registry core + porting | done (code in `settings_registry/`, legacy keys bridged, 26 descriptors, tests) |
+| D2 Generic page, search, revert | done (`settings_screen/{page,rows,input}.rs`; page not yet shown in `AppState::Settings`: the switch-over happens at the end of D3) |
 | D3 Category pages | todo |
 | D4 Messages and German | todo |
 | D5 Control protocol, generated docs | todo |
@@ -28,5 +28,10 @@ Runs: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` throwaway under the run dir, `XDG_CACHE_
 ## Results
 - D0: spec written (`settings-registry.md`). Design: legacy `GameSettings` fields bridged through the loader's parser; new keys in `GameSettings::extra`.
 
+- D1/D2: `GameSettings` gained `extra` (registry-only keys, unknown keys kept), `loaded_keys`, `db_path_override` (tests), `raw/set_raw/apply_key`. Revert prompt tested with a fake display (`DisplayBackend`). Category buttons stay alive across category changes (keyboard traversal rule).
+- Resume D3: switch `AppState::Settings` to `spawn_settings_page`, port content (OMSI folder chooser, rescan, cache, locations info), language apply, developer panel/log level/traffic/pedestrian consumers, controls list.
+
 ## Open problems
-(none yet)
+- `PLACES` in `opts-gui/src/not_yet.rs` is now a multi-line list: expect a trivial merge conflict with agents S and W if they add places.
+- `lib.rs`: one line added (`SettingsRegistryPlugin`) plus `pub mod settings_registry;`.
+- Page text in `settings_registry/messages_{en,de}.ftl`, merged through the new `Localization::extend` (opts-gui `l10n/mod.rs`).

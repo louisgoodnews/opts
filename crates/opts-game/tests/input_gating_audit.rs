@@ -53,6 +53,7 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/new_game_screen/search_systems.rs",
     "opts-game/src/new_game_screen/setvars_modal.rs",
     "opts-game/src/new_game_screen/systems.rs",
+    "opts-game/src/settings_screen/page.rs",
     "opts-game/src/settings_screen/systems.rs",
     "opts-game/src/stub_screens/mod.rs",
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.

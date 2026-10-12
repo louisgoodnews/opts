@@ -9,7 +9,10 @@
 
 pub mod display_tab;
 pub mod general_tab;
+pub mod input;
+pub mod page;
 pub mod render_choice;
+pub mod rows;
 pub mod systems;
 pub mod theme_choice;
 pub mod types;
@@ -25,6 +28,8 @@ use crate::settings::GameSettings;
 
 pub use display_tab::spawn_display_tab;
 pub use general_tab::spawn_general_tab;
+pub use input::{PendingRevert, SettingActionRequested};
+pub use page::{spawn_settings_page, SettingsPageState};
 pub use render_choice::handle_render_choice_clicks;
 pub use systems::{
     cleanup_settings_screen, escape_to_menu_system, handle_back_to_menu,
@@ -43,6 +48,7 @@ pub struct SettingsScreenPlugin;
 
 impl Plugin for SettingsScreenPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(page::SettingsPagePlugin);
         app.init_resource::<crate::look::ActiveLook>()
             .add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
             .add_systems(OnExit(AppState::Settings), cleanup_settings_screen)
@@ -223,3 +229,6 @@ pub fn spawn_settings_screen(
         });
     }
 }
+
+#[cfg(test)]
+mod tests;

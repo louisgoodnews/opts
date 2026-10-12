@@ -118,3 +118,20 @@ set-opt-log-debug = Detailed
 
 set-fixture = Wheel sensitivity
 set-fixture-desc = Test fixture.
+
+settings-title = Settings
+settings-search-placeholder = Search settings
+settings-reset = Reset
+settings-reset-disabled = Already at the default value
+settings-no-results = No settings match your search. Try another word.
+settings-restart-note = Takes effect after a restart.
+settings-needs = Needs { $what }, which this computer does not have.
+settings-step-down = −
+settings-step-up = +
+settings-choose = Choose...
+settings-path-none = Not set
+settings-theme-file-builtin = Built-in
+settings-keep-title = Keep these display settings?
+settings-keep-body = Going back to the old settings in { $seconds } seconds.
+settings-keep = Keep
+settings-revert = Go back
