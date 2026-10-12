@@ -125,6 +125,13 @@ fn load_segment_meshes_for(
     // Runs of `bone_<letter>` dummies: a skinned mesh numbers its bones (`[setbone] name n`)
     // along the run of dummies declared before it (the NF6D-style bellows of the Heuliez GX).
     let mut bone_runs: Vec<Vec<Entity>> = Vec::new();
+    // Names of the bones the skinned meshes of this model list (`[setbone]`): a mesh with that
+    // file name is the dummy that carries the bone's animation (`Gelenk_A.o3d` for `Gelenk_A`).
+    let bone_names: std::collections::HashSet<String> = lod0
+        .meshes
+        .iter()
+        .flat_map(|m| m.bones.iter().map(|b| b.name.to_lowercase()))
+        .collect();
     let mut previous_was_bone = false;
     for mesh_def in &lod0.meshes {
         // Shadow-only and AI-only meshes are not part of the visible player model.
@@ -152,7 +159,9 @@ fn load_segment_meshes_for(
         if !is_bone_dummy {
             previous_was_bone = false;
         }
-        if (stem.contains("dum") || is_bone_dummy) && carries_animation {
+        if (stem.contains("dum") || is_bone_dummy || bone_names.contains(&stem))
+            && carries_animation
+        {
             let mut joint = commands.spawn((
                 Name::new(format!("joint_{stem}")),
                 Transform::IDENTITY,
