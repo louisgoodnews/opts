@@ -27,7 +27,7 @@ use crate::interaction::{
     state::{CheckState, DisabledReason, ErrorState},
     tooltip::Tooltip,
 };
-use crate::not_yet::{NotAvailableYet, LOAD_LAST_GAME};
+use crate::not_yet::{NotAvailableYet, HOME_LOAD_GAME};
 use crate::theme::typography::TypeScale;
 use crate::ui_id::UiId;
 
@@ -100,7 +100,7 @@ impl Pin {
                 ));
             }
             Pin::NotYet => {
-                e.insert(NotAvailableYet::new(&LOAD_LAST_GAME));
+                e.insert(NotAvailableYet::new(&HOME_LOAD_GAME));
             }
         }
     }

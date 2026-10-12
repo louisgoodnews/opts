@@ -8,16 +8,14 @@ pub enum AppState {
     /// Initial asset and resource loading phase.
     #[default]
     Loading,
-    /// Interactive main menu entry screen.
+    /// Home, the first screen of the shell.
     MainMenu,
-    /// Bus and livery selection screen (destination stub).
+    /// *Drive*: planning a drive (map, vehicle, time).
     VehicleSelection,
-    /// Saved game loader (destination stub).
-    LoadGame,
-    /// Simulation and audio/display settings (destination stub).
+    /// Simulation and audio/display settings.
     Settings,
-    /// Attributions, licensing, and contributor roster (destination stub).
-    Credits,
+    /// Help: controls, guides, report an issue, About.
+    Help,
     /// Active 3D driving simulation gameplay.
     InGame,
 }

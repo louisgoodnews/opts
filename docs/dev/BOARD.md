@@ -155,7 +155,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🔴 **Theme foundations: dark default, modes, typography, UI scale/density, accents with contrast guard, one theme everywhere, instrument tokens** (M-0061 part A, code) — done 2026-10-12.
 - [x] 🔴 **States, focus ring, keyboard operability, action layer, TextField, NotAvailableYet, localisation scaffold** (M-0061 part B, code) — done 2026-10-12.
 - [x] 🟠 **UI ids and `ui.tree`/`ui.click` in the control protocol; CI rules for target size, text size, traversal, disabled reasons** (M-0061, code) — done 2026-10-12; the contrast rule is covered by the theme audit.
-- [~] 🟠 **App shell, Home, Plan a drive, honest loading, pause overlay** (M-0062, code) — wizard, master-detail pattern and loading screen done on `agent/ui-wizard`; shell, Home, pause pending
+- [x] 🟠 **App shell, Home, first run, pause overlay, session summary, Help/About, notifications** (M-0062 shell part, code) — done 2026-10-12 on `agent/ui-shell`.
+- [x] 🟠 **Plan a drive wizard, honest loading, master-detail pattern** (M-0062 wizard part, code) — done 2026-10-12 on `agent/ui-wizard` (minor load problems no longer block).
 - [x] 🟡 **Settings registry and generic settings page** (M-0063, code) — done 2026-10-12: descriptors, `settings.db` bridge, seven-category page with search, *Reset* and the 15 s revert prompt, `settings.*` in the control protocol, generated reference; see [progress](progress/ui-settings.md).
 - [ ] 🟡 **Key, gamepad and wheel rebinding** (M-0035, code) — the *Controls* page lists the menu keys read-only; rebinding is marked "Feature not available yet!".
 - [ ] 🟢 **Open from M-0061 part A:** first-run UI scale suggestion from the display; light high-contrast variant; colour-blind simulation in the contrast test; remove the interim `MinTextSize` clamp when screens migrate; loading-screen capture through the control protocol (black on the baseline too).

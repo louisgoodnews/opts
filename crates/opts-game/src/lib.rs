@@ -5,20 +5,25 @@ pub mod app_state;
 pub mod catalogue_service;
 pub mod control;
 pub mod drive_history;
+pub mod first_run;
+pub mod help;
+pub mod home;
 pub mod in_game;
+pub mod isolation;
 pub mod look;
 pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
 pub mod omsi_setup;
+pub mod pause;
 pub mod report_context;
+pub mod session_summary;
 pub mod settings;
 pub mod settings_registry;
 pub mod settings_screen;
 pub mod settings_theme;
 pub mod shell;
 pub mod shutdown;
-pub mod stub_screens;
 pub mod theme_files;
 
 use bevy::prelude::*;
@@ -27,13 +32,11 @@ use opts_gui::prelude::*;
 pub use app::{build_app, AppArgs};
 pub use app_state::AppState;
 pub use in_game::{InGamePlugin, MenuCamera};
-pub use menu::MainMenuPlugin;
 pub use new_game_screen::{NewGameMenuPlugin, NewGameSetup};
 pub use opts_cli::CliArgs;
 pub use settings::GameSettings;
 pub use settings_screen::SettingsScreenPlugin;
 pub use shutdown::ShutdownPlugin;
-pub use stub_screens::StubScreensPlugin;
 
 /// Root game plugin adding state machine, GUI engine, main menu, and stub screens.
 pub struct OptsGamePlugin;
@@ -73,10 +76,13 @@ impl Plugin for OptsGamePlugin {
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
-            .add_plugins(MainMenuPlugin)
+            .add_plugins(shell::ShellPlugin)
+            .add_plugins(home::HomePlugin)
+            .add_plugins(help::HelpPlugin)
+            .add_plugins(pause::PausePlugin)
+            .add_plugins(session_summary::SessionSummaryPlugin)
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)
-            .add_plugins(StubScreensPlugin)
             .add_plugins(look::LookPlugin)
             .add_plugins(InGamePlugin);
 

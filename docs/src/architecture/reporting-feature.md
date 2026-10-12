@@ -1,4 +1,6 @@
-# F1 Reporting Feature — Design
+# Reporting Feature — Design
+
+> **Changed (M-0062, decision D-UI-06).** F1 no longer opens the report dialog: **F1 opens Help**, where *Report an issue* is a button (also in the pause menu and in the session summary). The dialog is opened by code with `opts_bevy::reporting::request_report`; the control-protocol command `report` is unchanged. The dialog has a title and its texts are message keys (`reporting::keys`, tables in `opts-game/src/shell/l10n`); a failure to save is shown inline and as a toast, never only as a toast. The sections below still describe the capture, modal and gating mechanics; read "F1" there as "a request to report".
 
 > Status: **implemented (Parts A–C), awaiting verification sign-off (Part D).** Code: `crates/opts-bevy/src/reporting/`, widgets in `opts-gui` (`Modal`, `TextArea`), wiring in `opts-game/src/app.rs`. File format: [report-format.md](../formats/text/report-format.md).
 

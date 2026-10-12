@@ -76,6 +76,18 @@ pub struct VehicleMenu {
 }
 
 impl VehicleMenu {
+    /// Opens the main page (*Despawn* / *Spawn* / *Close*), as Left Alt does.
+    pub fn open_main(&mut self) {
+        self.page = Page::Main;
+        self.status.clear();
+    }
+
+    /// Whether any page is open.
+    #[must_use]
+    pub fn is_open(&self) -> bool {
+        self.page != Page::Closed
+    }
+
     /// The state as JSON (`menu.state`).
     #[must_use]
     pub fn describe(&self) -> serde_json::Value {
@@ -163,6 +175,7 @@ fn reset_menu(
     active.0 = false;
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Left Alt opens and closes the menu; Escape steps back (the modals emit it).
 fn toggle_menu(
     keys: Res<ButtonInput<KeyCode>>,
@@ -172,6 +185,7 @@ fn toggle_menu(
     mut active: ResMut<MenuModalActive>,
     mut cancels: MessageReader<ModalEvent>,
     mut grace: Local<u8>,
+    pause: Option<Res<crate::pause::Pause>>,
 ) {
     let mut step_back = false;
     for ModalEvent::CancelRequested(_) in cancels.read() {
@@ -204,7 +218,7 @@ fn toggle_menu(
     } else if *grace > 0 {
         *grace -= 1;
     }
-    let open = *grace > 0;
+    let open = *grace > 0 || pause.is_some_and(|p| p.open);
     if active.0 != open {
         active.0 = open;
     }

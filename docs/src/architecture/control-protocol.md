@@ -177,6 +177,7 @@ The UI can be read and driven without coordinates. Every interactive element has
 | `ui.click` | `{id}` | activates the element (a text field gets focus); `1001` when it is hidden or disabled (`data.reason` carries the reason), `1004` for an unknown id | P1 |
 | `ui.focus` | `{id}` | moves keyboard focus; `1001` when the element cannot take focus now (hidden, disabled without a reason, behind a dialog) | P1 |
 | `ui.action` | `{action, arg?}` | sends a `UiAction`: `navigate up\|down\|left\|right`, `next-region`, `prev-region`, `next`, `previous`, `next-tab`, `prev-tab`, `confirm`, `back`, `search`, `menu`, `help`, `scroll page-up\|page-down\|home\|end\|up\|down`; `-32602` with the valid spellings in `data` otherwise | P1 |
+| `ui.navigate` | `{screen}` | opens a shell destination (`home`, `drive`, `settings`, `help`) or deep link (`screen:settings/graphics`) like a rail click; `1004` for an unknown id; a destination that is *not available yet* is refused by the shell (read `ui.tree` to see the state) | P1 |
 
 From the shell: `opts-cli ui.tree --visible_only true`, `opts-cli ui.click menu.start`, `opts-cli ui.action navigate right`. A scripted keyboard traversal is `ui.action next` repeated while reading `ui.tree`'s `focus`.
 

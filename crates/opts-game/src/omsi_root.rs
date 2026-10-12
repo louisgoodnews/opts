@@ -5,6 +5,7 @@
 //! When none is found the startup dialog asks the user ([`crate::omsi_setup`]).
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 /// The installation found with an explicit `--omsi-path`, remembered for UI code that has no
@@ -13,6 +14,23 @@ static KNOWN_ROOT: OnceLock<PathBuf> = OnceLock::new();
 
 /// The path stored in the settings (set at startup, replaced when the user picks another).
 static SAVED_ROOT: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// While set, the default Steam locations are only *candidates* for the first-run question and
+/// are not used silently (an interactive start asks the user to confirm them).
+static CONFIRMATION_REQUIRED: AtomicBool = AtomicBool::new(false);
+
+/// Requires the user to confirm an installation found in a default location.
+pub fn require_confirmation(required: bool) {
+    CONFIRMATION_REQUIRED.store(required, Ordering::Relaxed);
+}
+
+/// The first installation in a default Steam location, if any (a candidate, not a decision).
+#[must_use]
+pub fn candidate_root() -> Option<PathBuf> {
+    steam_candidates()
+        .into_iter()
+        .find(|p| p.join("maps").is_dir())
+}
 
 /// Whether `dir` looks like an OMSI 2 installation: it has the `maps` and `Vehicles` folders.
 #[must_use]
@@ -66,7 +84,11 @@ pub fn locate_omsi_root(explicit: Option<&Path>) -> Option<PathBuf> {
         .into_iter()
         .chain(env)
         .chain(saved_root())
-        .chain(steam_candidates())
+        .chain(if CONFIRMATION_REQUIRED.load(Ordering::Relaxed) {
+            Vec::new()
+        } else {
+            steam_candidates()
+        })
         .find(|p| p.join("maps").is_dir());
     if let (Some(root), Some(_)) = (&found, explicit) {
         let _ = KNOWN_ROOT.set(root.clone());

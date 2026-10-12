@@ -64,6 +64,7 @@ impl Plugin for InGamePlugin {
                 ..default()
             });
 
+        app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins(VehicleMenuPlugin).add_systems(
             Update,
             omsi_world::handle_vehicle_requests.run_if(in_state(AppState::InGame)),
@@ -176,9 +177,6 @@ impl Plugin for InGamePlugin {
                 handle_loading_interactions,
                 omsi_world::update_debug_overlay,
                 handle_hud_interactions,
-                // While the loading screen is up, Esc asks to cancel (`loading_ui`).
-                escape_to_menu_in_game
-                    .run_if(|screen: Query<(), With<LoadingScreenRoot>>| screen.is_empty()),
             )
                 .run_if(in_state(AppState::InGame))
                 .run_if(opts_bevy::reporting::not_modal_active),
@@ -237,17 +235,6 @@ fn cleanup_in_game_session(
     commands.remove_resource::<sky::Sky>();
 
     *load_state = SimulationLoadState::default();
-}
-
-/// Escape key listener returning immediately to the Main Menu from in-game simulation.
-fn escape_to_menu_in_game(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut next_state: ResMut<NextState<AppState>>,
-) {
-    if keyboard.just_pressed(KeyCode::Escape) {
-        tracing::info!("User pressed [Escape] - exiting in-game session to Main Menu");
-        next_state.set(AppState::MainMenu);
-    }
 }
 
 /// `P` pauses and resumes the simulation (virtual time; the free camera and the HUD keep

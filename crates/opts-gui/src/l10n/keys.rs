@@ -12,36 +12,12 @@ pub const NOT_AVAILABLE_REASON: &str = "widget-not-available-yet-reason";
 /// Item count with plural (variable: `count`).
 pub const ITEMS: &str = "widget-items";
 
-/// Main menu keys (the main menu is the first screen converted).
+/// Keys of the former main menu that the library tests still use.
 pub mod menu {
     /// Shutdown button.
     pub const SHUTDOWN: &str = "menu-shutdown";
-    /// Load Last Game button.
-    pub const LOAD_LAST_GAME: &str = "menu-load-last-game";
-    /// Start New Game button.
-    pub const START_NEW_GAME: &str = "menu-start-new-game";
     /// Settings button.
     pub const SETTINGS: &str = "menu-settings";
-    /// Credits button.
-    pub const CREDITS: &str = "menu-credits";
-    /// Theme toggle, offers the light theme.
-    pub const THEME_LIGHT: &str = "menu-theme-light";
-    /// Theme toggle, offers the dark theme.
-    pub const THEME_DARK: &str = "menu-theme-dark";
-    /// Big title.
-    pub const TITLE: &str = "menu-title";
-    /// Subtitle.
-    pub const SUBTITLE: &str = "menu-subtitle";
-    /// Info card title.
-    pub const CARD_TITLE: &str = "menu-card-title";
-    /// Info card, no map.
-    pub const CARD_NO_MAP: &str = "menu-card-no-map";
-    /// Info card, map preview (variable: `path`).
-    pub const CARD_MAP_PREVIEW: &str = "menu-card-map-preview";
-    /// Info card, storage line.
-    pub const CARD_STORAGE: &str = "menu-card-storage";
-    /// Footer line.
-    pub const FOOTER: &str = "menu-footer";
 }
 
 /// Names of the theme choices (settings page, theme previews).
@@ -82,19 +58,7 @@ pub const ALL: &[&str] = &[
     NOT_AVAILABLE_REASON,
     ITEMS,
     menu::SHUTDOWN,
-    menu::LOAD_LAST_GAME,
-    menu::START_NEW_GAME,
     menu::SETTINGS,
-    menu::CREDITS,
-    menu::THEME_LIGHT,
-    menu::THEME_DARK,
-    menu::TITLE,
-    menu::SUBTITLE,
-    menu::CARD_TITLE,
-    menu::CARD_NO_MAP,
-    menu::CARD_MAP_PREVIEW,
-    menu::CARD_STORAGE,
-    menu::FOOTER,
     theme::MODE_DARK,
     theme::MODE_LIGHT,
     theme::MODE_SYSTEM,

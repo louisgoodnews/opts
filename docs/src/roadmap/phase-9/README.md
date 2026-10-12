@@ -30,6 +30,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 | 4 | [interaction-and-feel](interaction-and-feel.md) | how should it **feel**? |
 | 5 | [flow](flow.md) | how should it **flow**? |
 | 5b | [wizard-and-loading](wizard-and-loading.md) | what exactly do *Plan a drive* and the loading screen contain? |
+| 5c | [screens](screens.md) | what exactly do the shell, Home, first run, pause, session end and Help show, and say? |
 | 5a | [theme-auto-switch](theme-auto-switch.md) | should the theme follow day and night? |
 | 6 | [expandability](expandability.md) | how does it **grow**? |
 
@@ -79,7 +80,8 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B).
   - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
 - [ ] **🧭 App Shell & Flow** — [M-0062](M-0062.md)
-  - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.
+  - [x] Shell part (2026-10-12, `agent/ui-shell`): navigation rail and screen registry, Home with *Continue*, first run, pause overlay, end-of-session summary, Help and About with F1, notifications; stubs and developer copy removed.
+  - [ ] Four-step *Plan a drive*, honest loading screen, master-detail pattern (wizard part).
 - [ ] **⚙️ Settings System** — [M-0063](M-0063.md)
   - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
   - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.

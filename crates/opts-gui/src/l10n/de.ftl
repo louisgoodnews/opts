@@ -11,20 +11,7 @@ widget-items =
     }
 
 menu-shutdown = Beenden
-menu-load-last-game = Letztes Spiel laden
-menu-start-new-game = Neues Spiel starten
 menu-settings = Einstellungen
-menu-credits = Mitwirkende
-menu-theme-light = Hell
-menu-theme-dark = Dunkel
-menu-title = OPTS
-menu-subtitle = Open Public Transport Simulator
-menu-card-title = Simulationsengine aus sauberer Quelle
-menu-card-no-map = Keine Karte geladen · „Neues Spiel starten“ wählen, um zu beginnen.
-menu-card-map-preview = Kartenvorschau: { $path }
-menu-card-storage = Speicher: SQLite (WAL) · Oberfläche: Material Design 3 Glassmorphismus
-menu-footer = OPTS v0.1.0-alpha · Saubere Architektur
-
 theme-mode-dark = Dunkel
 theme-mode-light = Hell
 theme-mode-system = System

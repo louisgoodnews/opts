@@ -37,6 +37,7 @@ impl Plugin for GameControlPlugin {
         registry.register("vehicle.get", vehicle_get);
         registry.register("camera.teleport", teleport);
         registry.register("render.look", render_look);
+        registry.register("ui.navigate", ui_navigate);
         registry.register("menu.do", menu_do);
         registry.register("menu.state", menu_state);
         app.add_systems(Update, allow_session_reads);
@@ -246,6 +247,24 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
             json!({ "translation": [position.x, position.y, position.z] }),
         ))
     }))
+}
+
+/// `ui.navigate {screen}`: opens a shell destination or deep link (`settings`,
+/// `screen:settings/graphics`) exactly like a rail click; the effect shows a frame later.
+fn ui_navigate(world: &mut World, params: &Value) -> Outcome {
+    let target = match str_param(params, "screen") {
+        Ok(t) => t.to_string(),
+        Err(e) => return Outcome::err(e),
+    };
+    let (id, _) = crate::shell::nav::parse_target(&target);
+    let known = world
+        .get_resource::<crate::shell::ScreenRegistry>()
+        .is_some_and(|r| r.get(id).is_some());
+    if !known {
+        return Outcome::err(RpcError::new(code::NOT_FOUND, format!("no screen `{id}`")));
+    }
+    world.write_message(crate::shell::Navigate::to(target.clone()));
+    Outcome::ok(json!({ "ok": true, "screen": target }))
 }
 
 /// `menu.do {command}`: drives the in-game vehicle menu (`MenuCommands`).

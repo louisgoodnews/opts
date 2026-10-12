@@ -1,6 +1,6 @@
-//! F1 reporting: capture the window, show a modal with a text area, save PNG + `.report`.
+//! Reporting: capture the window, show a modal with a text area, save PNG + `.report`.
 //!
-//! Flow (`docs/src/architecture/reporting-feature.md`): F1 → [`ReportModalState::Capturing`]
+//! Flow (`docs/src/architecture/reporting-feature.md`): [`request_report`] → [`ReportModalState::Capturing`]
 //! (pause virtual time, gate input, request screenshot) → [`ReportModalState::Open`] (modal) →
 //! Report / Cancel / Escape → [`ReportModalState::Inactive`] (resume). The application fills
 //! [`ReportContext`] with session facts; systems that read input should run with
@@ -10,6 +10,7 @@
 
 pub mod capture;
 pub mod format;
+pub mod keys;
 pub mod modal;
 pub mod pause;
 pub mod save;
@@ -25,7 +26,7 @@ pub use state::{
     not_modal_active, MenuModalActive, ModalActive, ReportContext, ReportModalData,
     ReportModalState,
 };
-pub use trigger::REPORT_KEY;
+pub use trigger::request_report;
 
 /// Registers the reporting feature.
 #[derive(Default)]
@@ -43,7 +44,6 @@ impl Plugin for ReportingPlugin {
             .init_resource::<modal::SaveTask>()
             .init_resource::<modal::ReportsDir>()
             .add_systems(Startup, init_reports_dir)
-            .add_systems(Update, trigger::trigger_report_system)
             .add_systems(
                 Update,
                 capture::poll_capture.run_if(in_state(ReportModalState::Capturing)),
@@ -54,6 +54,7 @@ impl Plugin for ReportingPlugin {
                     modal::sync_text,
                     modal::handle_modal_actions,
                     modal::poll_save,
+                    modal::sync_error,
                 )
                     .chain()
                     .run_if(in_state(ReportModalState::Open)),

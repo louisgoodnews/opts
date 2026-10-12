@@ -32,20 +32,52 @@ pub struct NotYetPlace {
     pub missing: &'static str,
 }
 
-/// Main menu, *Load Last Game*.
-pub const LOAD_LAST_GAME: NotYetPlace = NotYetPlace {
-    id: "menu.load-last-game",
-    place: "Main menu, Load Last Game",
+/// Home, *Load game*.
+pub const HOME_LOAD_GAME: NotYetPlace = NotYetPlace {
+    id: "home.load-game",
+    place: "Home, Load game",
     milestone: "M-0062",
-    missing: "There is no save system; the shell offers Continue for the last drive.",
+    missing: "There is no save system; Home offers Continue for the last drive.",
 };
 
-/// The *Load Saved Game* stub screen.
-pub const LOAD_GAME_SCREEN: NotYetPlace = NotYetPlace {
-    id: "screen.load-game",
-    place: "Load Saved Game screen",
+/// Rail, *Library*.
+pub const NAV_LIBRARY: NotYetPlace = NotYetPlace {
+    id: "nav.library",
+    place: "Navigation rail, Library",
     milestone: "M-0062",
-    missing: "Loading a saved session needs the save system.",
+    missing: "The Library needs the master-detail pattern of the Plan a drive wizard and its detail panels.",
+};
+
+/// Rail, *Workshop*.
+pub const NAV_WORKSHOP: NotYetPlace = NotYetPlace {
+    id: "nav.workshop",
+    place: "Navigation rail, Workshop",
+    milestone: "M-0051",
+    missing: "Editor projects, installed mods and packaging need the editor and mod system.",
+};
+
+/// Pause overlay, *Settings*.
+pub const PAUSE_SETTINGS: NotYetPlace = NotYetPlace {
+    id: "pause.settings",
+    place: "Pause overlay, Settings",
+    milestone: "M-0063",
+    missing: "The settings pages build into the shell, which is hidden during a drive; they need an embeddable pane.",
+};
+
+/// Help, *Guides*.
+pub const HELP_GUIDES: NotYetPlace = NotYetPlace {
+    id: "help.guides",
+    place: "Help, Guides",
+    milestone: "M-0064",
+    missing: "The short guides are written with the HUD and help overlay of the HUD milestone.",
+};
+
+/// Help, the generated list of controls.
+pub const HELP_CONTROLS_GENERATED: NotYetPlace = NotYetPlace {
+    id: "help.controls-generated",
+    place: "Help, Controls (generated from the bindings)",
+    milestone: "M-0064",
+    missing: "The table is written by hand from the HUD's key hints until the in-game controls source exists.",
 };
 
 /// *Plan a drive*, step *When*, the *Live weather* card.
@@ -91,8 +123,12 @@ pub const SETTINGS_REBIND: NotYetPlace = NotYetPlace {
 
 /// Every registered place. Add new ones here; the generated list and the tests follow.
 pub const PLACES: &[&NotYetPlace] = &[
-    &LOAD_LAST_GAME,
-    &LOAD_GAME_SCREEN,
+    &HOME_LOAD_GAME,
+    &NAV_LIBRARY,
+    &NAV_WORKSHOP,
+    &PAUSE_SETTINGS,
+    &HELP_GUIDES,
+    &HELP_CONTROLS_GENERATED,
     &LIVE_WEATHER,
     &SETTINGS_AUDIO,
     &SETTINGS_VIEW_DISTANCE,
@@ -304,7 +340,7 @@ mod tests {
         let e = app.world_mut().spawn_empty().id();
         {
             let mut commands = app.world_mut().commands();
-            Availability::NotYet(&LOAD_LAST_GAME).apply(&mut commands.entity(e));
+            Availability::NotYet(&HOME_LOAD_GAME).apply(&mut commands.entity(e));
         }
         app.update();
         app.update();
@@ -333,7 +369,7 @@ mod tests {
         app.update();
         app.world_mut()
             .entity_mut(button)
-            .insert(NotAvailableYet::new(&LOAD_LAST_GAME));
+            .insert(NotAvailableYet::new(&HOME_LOAD_GAME));
         app.update();
         app.update();
         let labels: Vec<String> = app

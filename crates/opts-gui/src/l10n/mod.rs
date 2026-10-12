@@ -68,24 +68,21 @@ impl Localization {
         }
     }
 
-    /// Adds the messages of `source` (Fluent text) to the table of `locale` (`en` or `de`); a
-    /// feature crate ships its own `.ftl` files this way. Existing keys are kept (first wins).
-    /// An English extension also extends the pseudo-locale.
-    pub fn extend(&mut self, locale: &str, source: &str) {
-        let add = fluent::parse(source);
+    /// Adds the messages of `source` (Fluent subset) to the table of `locale`, so a crate can ship
+    /// its own `.ftl` files next to its screens. Existing keys are replaced; the pseudo-locale
+    /// follows the English table. Returns the parse problems (empty for a clean file).
+    pub fn extend(&mut self, locale: &str, source: &str) -> Vec<String> {
+        let parsed = fluent::parse(source);
+        let errors = parsed.errors.clone();
+        let table = self.bundles.entry(locale.to_string()).or_default();
+        table.messages.extend(parsed.messages);
         if locale == "en" {
-            let pseudo = pseudo::pseudo_table(&add);
-            if let Some(b) = self.bundles.get_mut(pseudo::PSEUDO_TAG) {
-                for (k, v) in pseudo.messages {
-                    b.messages.entry(k).or_insert(v);
-                }
+            if let Some(en) = self.bundles.get("en") {
+                let pseudo = pseudo::pseudo_table(en);
+                self.bundles.insert(pseudo::PSEUDO_TAG.to_string(), pseudo);
             }
         }
-        if let Some(b) = self.bundles.get_mut(locale) {
-            for (k, v) in add.messages {
-                b.messages.entry(k).or_insert(v);
-            }
-        }
+        errors
     }
 
     /// The locale from [`LOCALE_ENV`], else English.
