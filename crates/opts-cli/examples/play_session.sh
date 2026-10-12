@@ -21,8 +21,7 @@ c version | grep protocol_version
 
 echo "== Home"
 # A fresh configuration scans the OMSI folder first (about 8 s) and Home says "43 maps" when it is done.
-
-# see the architecture page), so wait until Home shows the counts.
+# Waiting until Home shows the counts keeps the session simple (the wizard also fills late).
 for _ in $(seq 1 120); do
   "${CLI[@]}" --json ui.tree --visible_only true | jq -e '[.. | objects | .label? // empty | select(test("[0-9]+ maps"))] | length > 0' >/dev/null && break
   sleep 1
