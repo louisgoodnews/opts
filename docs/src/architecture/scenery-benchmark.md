@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Phase B implemented (harness, static checks); thresholds calibrated on a sample; Phase C blocked (Q-SB-11) |
+| **Status** | 🟡 Phase B harness implemented; verification, calibration and sample run in progress (see M-0054); Phase C blocked (Q-SB-11) |
 | **Milestone** | [M-0054](../roadmap/phase-5/M-0054.md) |
 | **Code** | `crates/opts-benchmark` (`opts-benchmark scenery …`, guide: [`opts-benchmark`](../../crates/opts-benchmark.md)); reuses `opts_game::in_game::omsi_world`, `opts_bevy`, `opts_core::formats::{scenery, o3d, map}` |
 | **Related** | [Hot Reload](hot-reload.md), [Control Protocol](control-protocol.md), [Text Textures](text-textures.md), [Script VM](script-vm.md), [`.sco` format](../formats/text/sco.md), [Scenery scripts](../formats/text/scenery-scripts.md) |
