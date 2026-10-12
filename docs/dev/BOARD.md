@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-12 by Agent (M-0054 Phase B harness finished)_
+_Last updated: 2026-10-12 by Agent (M-0054 Phase D corpus triage)_
 
 ---
 
@@ -223,7 +223,14 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟠 **Measure 1,000-object sample; calibrate thresholds on 200 labelled objects** (M-0054, test) — Phase B (Q-SB-02). **Done 2026-10-12** (1,018 objects: 2:44 with 1 worker, 26 s with 3; 145 labels).
 - [x] 🟡 **Decide the owner of the scenery-script runtime** (M-0054/M-0026, decision) — done 2026-10-12: `opts_bevy::scenery_runtime` on the shared `opts_sim` VM ([spec](../src/architecture/scenery-runtime.md)).
 - [ ] 🟡 **Script-effect checks S0–S5; audio recorded only** (M-0054, code) — Phase C.
-- [ ] 🟡 **Full corpus run and triage report; one BOARD item per failure category** (M-0054, docs) — Phase D.
+- [x] 🟡 **Full corpus run and triage report** (M-0054, docs) — Phase D. **Done 2026-10-12**: 55,664 objects in 33 min, [triage](../src/meta/scenery-benchmark-triage-2026-10-12.md).
+- [ ] 🟠 **`F-TEX-MISSING` (3,055): texture folders resolved case-sensitively when the catalogue root differs from the spelled root** (M-0054, code) — owner: E1, M-0054 Phase E.
+- [ ] 🟠 **`F-GEOM-PARTIAL` / `F-RENDER-EMPTY` (236) and the silent `unknown` ones: `[matl_alpha] 0` must ignore texture alpha** (M-0054, code) — owner: E2, M-0054 Phase E.
+- [ ] 🟠 **`F-TEXT-NOT-SHOWN` (408): text textures fed by named string variables; missing font bitmaps are asset defects** (M-0054, code) — owner: E3, M-0054 Phase E.
+- [ ] 🟠 **`F-GEOM-OUTSIDE` / `F-XFORM-SCALE` (104): harness false verdicts on thin silhouettes and glass** (M-0054, harness) — owner: E4, M-0054 Phase E.
+- [ ] 🟠 **`F-SCO-PARSE` / `F-MESH-PARSE` (13) and 61 version-10 map tiles** (M-0054, code) — owner: E5, M-0054 Phase E.
+- [ ] 🟠 **`F-MESH-PROTECTED` (1,644): keyed meshes without twin that the decoder rejects** (M-0054, research) — owner: M-0038 (decoder research).
+- [ ] 🟠 **`F-MESH-MISSING` (343): `.o3d` absent from the installation (data defect); optional repair by name** (M-0054, decision) — owner: none (data), open question.
 
 #### Phase 4 — Simulation & Transit Follow-ups
 - [ ] 🟡 **Passenger path network graph representation** — Construct waypoint graph from `paths.cfg` and spline paths for passenger traversal in `opts-sim` (Phase 4, code) — after `passengers.md` (M-0050).

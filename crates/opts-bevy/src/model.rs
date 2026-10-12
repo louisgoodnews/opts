@@ -600,7 +600,9 @@ impl ContentLoader<'_> {
                         }
                     }
                 }
-                if over.and_then(|o| o.alpha).is_none() && !blended_by_map {
+                if !crate::material::uses_texture_alpha(over.and_then(|o| o.alpha))
+                    && !blended_by_map
+                {
                     tex = tex.map(|h| self.opaque_variant(&h));
                 }
                 let textured = tex.is_some();
@@ -610,7 +612,10 @@ impl ContentLoader<'_> {
                     // fixed-function multiplier that is white in practice.
                     material.base_color = bevy::color::Color::srgba(1.0, 1.0, 1.0, base.diffuse[3]);
                 }
-                if let Some(mode) = over.and_then(|o| o.alpha) {
+                if let Some(mode) = over
+                    .and_then(|o| o.alpha)
+                    .filter(|m| crate::material::uses_texture_alpha(Some(*m)))
+                {
                     // Mode 2 blends (glass, smoke); anything else is a hard cutout (foliage, fences).
                     material.alpha_mode = if mode == 2 {
                         AlphaMode::Blend

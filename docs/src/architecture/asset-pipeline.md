@@ -32,6 +32,7 @@ The session needs an OMSI root, a map folder and a vehicle. Each comes from, in 
 - Scene coordinates are relative to the start tile (floating origin); real maps reach 3·10⁶ m, beyond f32 precision.
 - `[object]` height is relative to the terrain; `[spline]` height is absolute.
 - Spline textures resolve in the `.sli`'s pack folder (`Splines/<Pack>/texture`), then the global `Texture/` folder; alternative image extensions are tried.
+- Scenery textures resolve in `<sco folder>/texture` (any case: the folder is usually `Texture`), then the map's `texture` folder, the global `Texture/` folder and the root. `OmsiInstall::find_in` accepts a base folder spelled through the installation root or through the root with symlinks resolved (the catalogue stores paths in the resolved spelling) and matches the base's folder names case-insensitively; before 2026-10-12 a symlinked root or a `texture`/`Texture` mismatch made 2,586 of 55,664 corpus objects lose textures that were in their own folder (found by the [corpus triage](../meta/scenery-benchmark-triage-2026-10-12.md)).
 
 ## Vertex layouts: standard, axis-cycled, unreadable
 

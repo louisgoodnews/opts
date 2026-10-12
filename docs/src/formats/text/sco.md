@@ -163,7 +163,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[LOD]` | 1 | Starts a **level-of-detail group**: value is the *size threshold* (see [LOD](#lod)). `0` ends the group. |
 | `[texture]` | 1 | Preloads a texture (as in `.sli`). |
 | `[matl]` | 2 | `<texture>`, `<material-index>`. Index of the **material in the mesh** the texture is assigned to. |
-| `[matl_alpha]` | 1 | Alpha mode. Whole-corpus values (25,508 uses): `2` ×12,119, `1` ×10,290, `0` ×2,201, `3` ×896, `16` ×2 *(the earlier statement here, "`1` in 99 %", does not hold corpus-wide)*. The community wiki lists `0` opaque, `1` full transparency, `2` partial transparency 📚; `3` and `16` are undocumented. Behaviour unverified ([Q-SCO-001](#-open-questions)). |
+| `[matl_alpha]` | 1 | Alpha mode. Whole-corpus values (25,508 uses): `2` ×12,119, `1` ×10,290, `0` ×2,201, `3` ×896, `16` ×2 *(the earlier statement here, "`1` in 99 %", does not hold corpus-wide)*. The community wiki lists `0` opaque, `1` full transparency, `2` partial transparency 📚; `3` and `16` are undocumented. OPTS reads `0` as opaque (the texture's alpha channel is ignored); corpus evidence 2026-10-12: the `Ampelmast_*` and `P_*` objects, which stand on the maps, have fully transparent textures and `[matl_alpha] 0`, so reading `0` as a cutout made them invisible ([triage](../../meta/scenery-benchmark-triage-2026-10-12.md)). Other modes unverified ([Q-SCO-001](#-open-questions)). |
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
 | `[matl_lightmap]` | 1 | Lightmap bitmap. |
@@ -556,7 +556,7 @@ streetlight_large.o3d
 
 | ID | Question | Status |
 | :--- | :--- | :--- |
-| Q-SCO-001 | Exact `[matl_alpha]` mode meanings. | Corpus: `2` and `1` dominate, `0`/`3`/`16` exist; wiki lists 0–2 📚; behaviour untested (see `community-crosscheck.md` Q-CC02). |
+| Q-SCO-001 | Exact `[matl_alpha]` mode meanings. | Corpus: `2` and `1` dominate, `0`/`3`/`16` exist; wiki lists 0–2 📚; behaviour untested (see `community-crosscheck.md` Q-CC02); mode `0` = opaque is consistent with the corpus (inference, no OMSI comparison). |
 | Q-SCO-002 | ~~`[rendertype]` numeric values 0–4~~ — resolved: `presurface` before terrain, `surface` with terrain, `on_surface` after terrain, `1` before normal objects, `2` normal (default), `3` after normal objects, `4` after vehicles/pedestrians (📚 M-0006). | ✅ |
 | Q-SCO-003 | `[LOD]` threshold direction. | Provisional. |
 | Q-SCO-004 | ~~Length of `[light_enh_2]` (23 or 24 lines in the wild)~~ — resolved: 23 lines without effect bitmap, 24 with optional bitmap name (`sco-sli-audit.md`). | ✅ |
