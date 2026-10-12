@@ -35,6 +35,7 @@ pub mod plugin;
 pub mod position_tag;
 pub mod reporting;
 pub mod scenery;
+pub mod scenery_runtime;
 pub mod terrain;
 pub mod text_texture;
 pub mod texture;
@@ -87,6 +88,11 @@ pub use scenery::{
     extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, SceneryLoaderError,
     SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
+pub use scenery_runtime::{
+    advance_scenery, build_scenery_object, SceneryClock, SceneryLodMode, SceneryMeshRule,
+    SceneryObjectRuntime, SceneryRuntimePlugin, SceneryRuntimeSettings, SceneryRuntimeStats,
+    SceneryScripts, SceneryVariableOverrides,
+};
 pub use terrain::{
     build_terrain_mesh, carve_terrain_under_roads, road_footprint, sample_terrain, set_tile_size,
     terrain_cell, terrain_material, tile_size, RoadFootprint, TERRAIN_CELL_M, TILE_SIZE_M,
@@ -97,7 +103,8 @@ pub use texture::{
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{
-    animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation, VehicleAnimationPlugin,
+    anim_steps, animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation,
+    VehicleAnimationPlugin,
 };
 pub use vehicle_lights::{
     vehicle_light_map_system, vehicle_light_system, LightMapBinding, LightSwitch, ScriptLight,

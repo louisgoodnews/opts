@@ -63,7 +63,17 @@ fn frame_of(a: &ModelAnim) -> Mat4 {
 }
 
 fn steps_of(anim: &ModelAnim) -> Vec<AnimStep> {
-    let frame = frame_of(anim);
+    anim_steps(anim, None)
+}
+
+/// The steps of one `[newanim]` block; `origin` (OMSI axes) replaces `origin_trans` when given
+/// (scenery `origin_from_mesh` uses the mesh file's pivot).
+#[must_use]
+pub fn anim_steps(anim: &ModelAnim, origin: Option<Vec3>) -> Vec<AnimStep> {
+    let mut frame = frame_of(anim);
+    if let Some(o) = origin {
+        frame.w_axis = o.extend(1.0);
+    }
     let mk = |a: &AnimAction, translate: bool| AnimStep {
         frame,
         variable: a.variable.clone(),

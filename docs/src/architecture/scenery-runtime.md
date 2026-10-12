@@ -47,7 +47,7 @@ Evidence: 1,022 objects use `[LOD]`; the common shapes are `0.15 0`, `0.1 0`, `0
 
 ## Visibility (`[visible]`) and animation (`[newanim]`)
 
-**`[visible] <variable> <value>`**: the mesh is drawn while the variable **equals** the value (|v − value| < 10⁻³), the rule the vehicle runtime already uses (`opts_bevy::vehicle_anim`). This settles Q-SB-04 by corpus evidence: of 3,770 `[visible]` lines, 101 use `0`, 31 use `2`, 10 use `-1`, 10 use `-2`, 4 use `3`, 4 use `4` and one `30`; "non-zero" could not express those. A mesh may have several `[visible]` lines; all must hold.
+**`[visible] <variable> <value>`**: the mesh is drawn while the variable **equals** the value (|v − value| < 10⁻³), the rule the vehicle runtime already uses (`opts_bevy::vehicle_anim`). This settles Q-SB-04 by corpus evidence: of 3,770 `[visible]` lines, 101 use `0`, 31 use `2`, 10 use `-1`, 10 use `-2`, 4 use `3`, 4 use `4` and one `30`; "non-zero" could not express those. The parser keeps one `[visible]` per mesh (a later line replaces an earlier one).
 
 **`[newanim]`** is now parsed with the vehicle parser into the typed `ModelAnim` (`opts_core::formats::vehicles::model::ModelAnim`); `ScoMesh::animations` holds `Vec<ModelAnim>` and the untyped `ScoAnimation` is gone. Malformed blocks are skipped with a warning in `SceneryObject::warnings` instead of failing the whole object. The motion rules are those of `opts_bevy::vehicle_anim` (frame from `origin_trans` and `origin_rot_*`, rotation about and translation along the frame's X axis, blocks applied in order, `maxspeed` limiting the follow speed); scenery reuses `AnimStep`, `MeshAnimation::follow` and `animation_matrix_from_values`.
 
@@ -106,7 +106,7 @@ Accumulated steps are capped at 2 s. A frame ticks at most `max_ticks_per_frame`
 
 **Parsing.** `ScoLight` keeps position, direction, colour, size, the brightness variable and the factor; `[light_enh_2]` adds `omni`, the cone angles, `timeconst` and the optional bitmap. Layouts per [`.sco`](../formats/text/sco.md#light_enh_2): `[light_enh]` is x, y, z, r, g, b, size, *variable*, …; `[light_enh_2]` has 23 or 24 values with the variable at position 18 (1-based) and the factor at 19. A light whose numbers do not parse is skipped with a warning.
 
-**Rendering.** A light is a small emissive sphere (shared mesh, one unlit additive material per colour) of diameter `size`, scaled by `clamp(variable × factor, 0, 1)` and hidden at 0. A directional light (`omni = 0`) fades with the angle between its direction and the line to the camera: full inside the inner cone, nothing outside the outer cone. No Bevy light source is created (thousands of heads would cost too much); objects are lit by the light only through their own light maps. `timeconst` smoothing is not applied ❓.
+**Rendering.** A light is a small emissive sphere (shared mesh, one unlit additive material per colour) of diameter `size × √level`, with `level = clamp(variable × factor, 0, 1)`, hidden at 0 and beyond 1,500 m. A directional light (`omni = 0`) fades with the angle between its direction and the line to the camera: full inside the inner cone, nothing outside the outer cone. The direction is the shining direction (vehicle models: 8,788 front lights point to +y and 7,480 rear lights to −y); the cone values are read as full angles, as for Direct3D spotlights ❓ (Q-SR-08). No Bevy light source is created (thousands of heads would cost too much); objects are lit by the light only through their own light maps. `timeconst` smoothing is not applied ❓.
 
 **Light maps.** `[matl_lightmap] <texture> [<variable>]`: the texture becomes the part's emissive map, scaled by the variable. Variable-less maps (1,235 of 1,358 uses, building windows and street lamps) are switched by `NightlightA`; `[nightmapmode]` schedules (office, school, …) are not applied yet ❓ (Q-SR-05). Global maps share one material per texture; script-driven maps get a private material copy per object.
 
@@ -128,6 +128,10 @@ All items are in `opts_bevy::scenery_runtime` (re-exported at the crate root). T
 | `SceneryMeshRule` (component) | Per-mesh rules (`visible`, animation steps) and the values last shown. |
 
 A scenario is then: insert `SceneryClock::at(…)` with `follow_session = false`, set `automatic = false`, call `advance_scenery` for the scenario's duration, render. The script-effect check reads the variables through `SceneryScripts` and the expected visibility through `SceneryMeshRule`.
+
+## Developer aid
+
+`OPTS_DEV_LOOK_AT=<.sco substring>` with `--camera free` puts the free camera 12 m in front of the first placed object whose `.sco` path contains the substring (the object's +y side), for screenshots of signal heads and similar objects. Combine with `OPTS_DEV_HOUR` and `OPTS_DEV_ENTRY`.
 
 ## Status
 
