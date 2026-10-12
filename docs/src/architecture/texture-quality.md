@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Proposal — research done, nothing implemented, no decision taken |
+| **Status** | ✅ Direction decided 2026-10-12 ([Phase 8](../roadmap/phase-8/README.md)); implementation not started |
 | **Date** | 2026-10-12 |
 | **Trigger** | Project lead, 2026-10-12: textures look "too compressed and a little washed out" |
 | **Code involved** | `crates/opts-bevy/src/model.rs` (`repeat_sampler`, `ContentLoader::texture`), `texture.rs`, `material.rs`, `ground_material.rs`, `crates/opts-game/src/in_game/sky.rs`, `vehicle_spawner.rs` |
@@ -18,7 +18,14 @@ The impression has **two independent causes**, and the first is a plain bug:
 
 Both can be improved substantially without touching a single OMSI file. Measured on one scene, fixing the sampler and mipmaps cuts high-frequency noise by about 15–20 %, and a different tonemapper with less ambient light raises mean saturation by about 40 % and local contrast by about 20 %. The texture *sources* (many are 256–512 px DXT1) stay what they are; this proposal does not try to invent detail.
 
-**Recommendation:** do phases T0–T3 (measurement harness, sampler, mipmaps, foliage coverage), then decide the colour look (T4) with side-by-side screenshots and, ideally, OMSI reference screenshots. Section 6 lists the decisions needed.
+**Decisions (project lead, 2026-10-12)** — recorded in [Phase 8](../roadmap/phase-8/README.md):
+1. The proposal is accepted; the phases T0–T4 become milestones [M-0057](../roadmap/phase-8/M-0057.md) to [M-0060](../roadmap/phase-8/M-0060.md).
+2. **Reality is the colour reference, not OMSI** (OMSI's graphics are outdated). The calibration against OMSI's formula in P4 is replaced by a calibration against physical and photographic references.
+3. **The default look is *Vivid*;** *Natural* (physically calibrated, no boost) and *Bevy default* stay selectable.
+4. **Hard limit of 2 minutes** for added first-run time (cache building); enforced by a time budget in code ([M-0058](../roadmap/phase-8/M-0058.md)).
+5. Anisotropy defaults to **16×** (settings: Off/4×/8×/16×).
+
+The sections below keep the research as written; where they mention OMSI as a reference (P4 step 1, Q-TQ01, Q-TQ02, Q-TQ05, decisions 2 and 3 of §6), the decisions above supersede them.
 
 ## 2. Findings
 
@@ -158,17 +165,17 @@ Keep MSAA 4×. Evaluate SMAA for shader and specular aliasing, and contrast-adap
 | **T3** Mips, BC + cache; foliage (P2, P3) | encoder choice, cache with versioning, coverage-preserving alpha, alpha-to-coverage | cached start as fast as today; tree/fence coverage within 3 % of the base level at 100 m |
 | **T4** Colour (P4) | calibration, presets | reference surfaces within a stated ΔE of the OMSI formula; default chosen with you |
 
-**Decisions needed from you:** (1) go-ahead for T0–T3; (2) OMSI reference screenshots (or permission to compute the reference from the documented formula only); (3) whether the default look should be *Authentic* (as close to OMSI as calibration allows) or *Vivid*; (4) acceptable first-run cost for building the derived mip cache.
+**Decisions asked (answered 2026-10-12):** (1) go-ahead: yes; (2) OMSI reference: **no, use reality**; (3) default look: **Vivid** (the preset names become *Vivid / Natural / Bevy default*; "Authentic" is dropped); (4) first-run cost: **hard limit of 2 minutes**.
 
 ### Open questions
 
 | ID | Question | Status |
 | :--- | :--- | :--- |
-| Q-TQ01 | What does OMSI itself show at the same position and time (colour, shadow depth)? No reference screenshot exists. | ❓ open, needs input |
-| Q-TQ02 | Which filtering does OMSI use (bilinear, trilinear, anisotropic)? Not documented. | ❓ open |
+| Q-TQ01 | What does OMSI itself show at the same position and time? | ✅ dropped 2026-10-12: OMSI is not the reference; physical references are ([M-0060](../roadmap/phase-8/M-0060.md)) |
+| Q-TQ02 | Which filtering does OMSI use? | ✅ dropped 2026-10-12 (irrelevant: 16× anisotropic is the default) |
 | Q-TQ03 | How many DDS chains does `dds_to_bevy_image` drop today? | ⏳ T0 |
 | Q-TQ04 | VRAM and load-time budget on the weakest supported GPU. | ⏳ T0 |
-| Q-TQ05 | Does OMSI treat `[matl_alpha]` cutouts with a different threshold than 0.5? | ❓ open |
+| Q-TQ05 | Does OMSI treat `[matl_alpha]` cutouts with a different threshold than 0.5? | ✅ replaced by visual coverage criteria in [M-0059](../roadmap/phase-8/M-0059.md) |
 | Q-TQ06 | Should night scenes keep the current ambient floor? | ⏳ T4 |
 
 ## Provenance

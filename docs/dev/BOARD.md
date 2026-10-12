@@ -111,6 +111,9 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
+- [ ] 🔴 **Shared object-texture sampler: trilinear, anisotropy 16× default, settings entry** (M-0057, code) — root cause of the blocky textures (`repeat_sampler` uses Bevy's nearest default).
+- [ ] 🔴 **Looks setting with *Vivid* (default), *Natural*, *Bevy default*, live switch and persistence** (M-0060 step 1, code) — provisional Vivid values from the proposal.
+- [ ] 🔴 **Mipmap chains for uncompressed textures (sRGB-correct), load time and hot reload** (M-0058 phase B, code)
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
 - [ ] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`; the code (`stream_world_tiles`) has run without a spec since before 2026-10-10 (F-012).
 - [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
@@ -143,6 +146,13 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0052 — Repository Hosting, CI Activation & Commit Gate
 - [ ] 🟠 **CI triggers on all branches and pull requests** (M-0052, chore) — today `[main, master]` only (F-019).
 - [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
+
+#### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
+- [ ] 🔴 **Image-metrics tool, reference views, scripted A/B run** (M-0057, code) — results outside the repository.
+- [ ] 🔴 **DXT mip chains through a derived cache with the hard 120 s first-run budget** (M-0058 phase C, code)
+- [ ] 🟠 **Coverage-preserving alpha mips and alpha-to-coverage** (M-0059, code)
+- [ ] 🟠 **Physical light calibration with cited reference values; reference-surface test; *Natural* look** (M-0060 step 2, spec + code)
+- [ ] 🟡 **Cold-cache first-run measurement on the three reference maps** (M-0058, test)
 
 #### M-0053 — Articulated Vehicle Completion
 - [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test)

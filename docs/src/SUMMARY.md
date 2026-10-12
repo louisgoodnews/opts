@@ -66,6 +66,11 @@
   - [M-0055: opts-script_editor](roadmap/phase-6/M-0055.md)
   - [M-0056: opts-visual_script_editor](roadmap/phase-6/M-0056.md)
 - [Phase 7: Release & Distribution](roadmap/phase-7/README.md)
+- [Phase 8: Visual Quality & Realism](roadmap/phase-8/README.md)
+  - [M-0057: Texture Filtering & Measurement](roadmap/phase-8/M-0057.md)
+  - [M-0058: Mipmaps, Cache & 2-Minute Budget](roadmap/phase-8/M-0058.md)
+  - [M-0059: Foliage & Cutout Coverage](roadmap/phase-8/M-0059.md)
+  - [M-0060: Realistic Colour & Looks](roadmap/phase-8/M-0060.md)
 
 ---
 
