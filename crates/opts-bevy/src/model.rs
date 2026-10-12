@@ -574,8 +574,11 @@ impl ContentLoader<'_> {
                 if over.is_some_and(|o| o.hidden_by_variable) {
                     continue;
                 }
+                // An entry without a texture (a `[matl_change]` or `[matl_item]` that only sets
+                // switches) keeps the material's own texture.
                 let tex_name = over
                     .map(|o| o.texture.clone())
+                    .filter(|t| !t.trim().is_empty())
                     .or_else(|| base.primary_texture().map(str::to_owned));
                 let mut tex = match over.and_then(|o| o.image.clone()) {
                     Some(h) => Some(h),

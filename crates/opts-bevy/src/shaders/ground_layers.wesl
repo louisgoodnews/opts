@@ -24,6 +24,10 @@ import bevy_pbr::render::{
 @group(constants::MATERIAL_BIND_GROUP) @binding(104) var<uniform> repeats_a: vec4<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(105) var<uniform> repeats_b: vec4<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(106) var<uniform> layer_count: vec4<u32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(107) var detail_tex: texture_2d_array<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(108) var detail_smp: sampler;
+@group(constants::MATERIAL_BIND_GROUP) @binding(109) var<uniform> detail_repeats_a: vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(110) var<uniform> detail_repeats_b: vec4<f32>;
 
 fn repeats(i: u32) -> f32 {
     if i < 4u {
@@ -32,12 +36,26 @@ fn repeats(i: u32) -> f32 {
     return repeats_b[i - 4u];
 }
 
+fn detail_repeats(i: u32) -> f32 {
+    if i < 4u {
+        return detail_repeats_a[i];
+    }
+    return detail_repeats_b[i - 4u];
+}
+
+// A layer is its texture (`repeats` times across the tile) multiplied by its detail texture
+// (`detail_repeats` times): the second and third numbers of `[groundtex]`.
+fn layer_color(uv: vec2<f32>, i: u32) -> vec3<f32> {
+    let t = textureSample(layer_tex, layer_smp, uv * repeats(i), i).rgb;
+    let d = textureSample(detail_tex, detail_smp, uv * detail_repeats(i), i).rgb;
+    return t * d;
+}
+
 fn ground_color(uv: vec2<f32>) -> vec4<f32> {
-    var color = textureSample(layer_tex, layer_smp, uv * repeats(0u), 0).rgb;
+    var color = layer_color(uv, 0u);
     for (var i = 1u; i < layer_count.x; i = i + 1u) {
         let w = textureSample(mask_tex, mask_smp, uv, i).r;
-        let t = textureSample(layer_tex, layer_smp, uv * repeats(i), i).rgb;
-        color = mix(color, t, w);
+        color = mix(color, layer_color(uv, i), w);
     }
     return vec4<f32>(color, 1.0);
 }

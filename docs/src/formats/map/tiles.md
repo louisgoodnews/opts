@@ -301,7 +301,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 
 Many map authors paint markings, pavements, paths and puddles straight into the terrain instead of placing splines. This lives outside the `.map` file:
 
-- `global.cfg` lists the **ground layers** (`[groundtex]`, layer 0 = base). Parameter 3 of the three trailing numbers is the number of repeats of the layer across the 300 m tile (`60` = one repeat per 5 m cell for the base; `100`/`120` for asphalt/pavement layers).
+- `global.cfg` lists the **ground layers** (`[groundtex]`, layer 0 = base): texture, detail texture, then three numbers `mode r_tex r_detail`. **`r_tex` is the number of repeats of the texture across the 300 m tile, `r_detail` that of the detail texture, which multiplies the layer** (corrected 2026-10-12; before, `r_detail` was used for the texture). Evidence: Aachen `Wege.bmp` (256 px) `20 / 1`, `Erde.bmp` (64 px) `1 / 60`, `Gehweg.bmp` (512 px) `120 / 120`; a path texture stretched once over 300 m is what rendered as blurry smears. Detail textures are near-white noise (`noise_low.bmp`, mean 241/255) or a grass pattern (`gras_det.bmp`, mean 179).
 - A tile may carry one **A8 alpha mask per layer**: `texture/map/tile_<x>_<y>.map.<N>.dds` (Berlin) or `texture/tile_<x>_<y>.map.<N>.dds` (Bremen), 64²…1024²; mask `N` is the blend weight of layer `N` over everything below it (`N` ≥ 1 matches the 8–11 `[groundtex]` entries; Bremen-Nord has masks 1–10 on 764 files).
 - Row 0 of a mask is the **north** edge (assumed from the orientation of the editor's 2-D view; not independently verified against an in-game screenshot).
 

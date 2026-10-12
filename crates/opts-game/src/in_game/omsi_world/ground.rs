@@ -15,8 +15,12 @@ pub(super) fn tile_origin(key: (i32, i32)) -> (f32, f32) {
 /// Layer textures of a map shared by all its tiles (one GPU array with mip chains).
 pub(super) struct GroundArray {
     layers: Handle<Image>,
-    /// Repeats per tile edge of each array layer.
+    /// Detail textures (white where a layer has none), same layer order.
+    details: Handle<Image>,
+    /// Repeats per tile edge of each array layer (`[groundtex]` parameter 2).
     repeats: Vec<f32>,
+    /// Repeats per tile edge of each detail texture (`[groundtex]` parameter 3).
+    detail_repeats: Vec<f32>,
     /// Whether the layer's texture decoded; layers that did not are never blended in.
     usable: Vec<bool>,
 }
@@ -96,9 +100,39 @@ pub(super) fn compose_tile_material(
             .map(|d| d.as_ref().unwrap_or(&base))
             .collect();
         let layers = images.add(layer_array(&refs, size));
+        // Detail textures modulate their layer; a missing one is white (no change).
+        let white = CpuImage {
+            width: 1,
+            height: 1,
+            rgba: vec![255; 4],
+        };
+        let mut detail_images: Vec<CpuImage> = Vec::new();
+        for n in 0..layer_count {
+            let name = job.manifest.ground_textures[n].detail_texture.clone();
+            let img = if name.trim().is_empty() {
+                None
+            } else {
+                let mut loader = ContentLoader {
+                    install: &job.install,
+                    cache: &mut job.cache,
+                    meshes,
+                    materials,
+                    images,
+                };
+                loader.texture(&name, &dirs)
+            }
+            .and_then(|h| images.get(&h).and_then(CpuImage::from_image));
+            detail_images.push(img.unwrap_or_else(|| white.clone()));
+        }
+        let detail_refs: Vec<&CpuImage> = detail_images.iter().collect();
+        let details = images.add(layer_array(&detail_refs, 256));
         job.ground_array = Some(GroundArray {
             layers,
+            details,
             repeats: (0..layer_count)
+                .map(|n| job.manifest.ground_textures[n].params[1].max(1.0))
+                .collect(),
+            detail_repeats: (0..layer_count)
                 .map(|n| job.manifest.ground_textures[n].params[2].max(1.0))
                 .collect(),
             usable: decoded.iter().map(Option::is_some).collect(),
@@ -126,6 +160,12 @@ pub(super) fn compose_tile_material(
     let mask_handle = images.add(mask_array(&mask_refs, size));
     Some(ground_materials.add(GroundMaterial {
         base: terrain_material(None),
-        extension: ground_extension(array.layers.clone(), mask_handle, &array.repeats),
+        extension: ground_extension(
+            array.layers.clone(),
+            array.details.clone(),
+            mask_handle,
+            &array.repeats,
+            &array.detail_repeats,
+        ),
     }))
 }

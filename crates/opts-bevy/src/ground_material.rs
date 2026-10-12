@@ -40,6 +40,16 @@ pub struct GroundExtension {
     /// Number of layers in use (x component).
     #[uniform(106)]
     pub layer_count: UVec4,
+    /// Detail textures, one per layer (white where a layer has none); they modulate the layer.
+    #[texture(107, dimension = "2d_array")]
+    #[sampler(108)]
+    pub details: Handle<Image>,
+    /// Detail repeats per tile edge of layers 0–3.
+    #[uniform(109)]
+    pub detail_repeats_a: Vec4,
+    /// Detail repeats per tile edge of layers 4–7.
+    #[uniform(110)]
+    pub detail_repeats_b: Vec4,
 }
 
 impl MaterialExtension for GroundExtension {
@@ -187,16 +197,22 @@ pub fn mask_array(masks: &[Option<&CpuImage>], size: usize) -> Image {
 #[must_use]
 pub fn ground_extension(
     layers: Handle<Image>,
+    details: Handle<Image>,
     masks: Handle<Image>,
     repeats: &[f32],
+    detail_repeats: &[f32],
 ) -> GroundExtension {
     let r = |i: usize| repeats.get(i).copied().unwrap_or(1.0);
+    let d = |i: usize| detail_repeats.get(i).copied().unwrap_or(1.0);
     GroundExtension {
         layers,
         masks,
         repeats_a: Vec4::new(r(0), r(1), r(2), r(3)),
         repeats_b: Vec4::new(r(4), r(5), r(6), r(7)),
         layer_count: UVec4::new(repeats.len().min(MAX_GROUND_LAYERS) as u32, 0, 0, 0),
+        details,
+        detail_repeats_a: Vec4::new(d(0), d(1), d(2), d(3)),
+        detail_repeats_b: Vec4::new(d(4), d(5), d(6), d(7)),
     }
 }
 
