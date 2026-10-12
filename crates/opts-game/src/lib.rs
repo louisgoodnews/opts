@@ -14,6 +14,7 @@ pub mod report_context;
 pub mod settings;
 pub mod settings_screen;
 pub mod settings_theme;
+pub mod shell;
 pub mod shutdown;
 pub mod stub_screens;
 pub mod theme_files;
