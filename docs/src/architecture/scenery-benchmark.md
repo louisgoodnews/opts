@@ -277,6 +277,8 @@ opts-benchmark scenery report --run-dir <dir> [--compare <other-run-dir>]
 
 `--list` takes relative `.sco` paths (one per line), `--sample n` picks about `n` objects spread evenly over the key order (deterministic). `--seed-fault` makes the tile disagree with the expected placement (mirrored heading, 10 m east, or a 2× scale through a half-size expectation) for the acceptance tests. Worker options travel in `run.json`; the worker reads them from there. The layout differs from the plan in three files: `lookups.rs` (catalogue lookups), `object.rs` (the per-object loop) and `protocol.rs` (supervisor–worker lines); `diag.rs`'s capture layer is installed by `src/logging.rs`.
 
+**Seeded-fault test** (`crates/opts-benchmark/tests/seeded_faults.rs`): a self-authored `.sco` with a hand-written L-shaped `.x` mesh and a generated texture lives in a temporary installation. The test runs the real worker pipeline over it: the clean object passes; `heading-mirror` gives `F-XFORM-ROTATION`, `scale-2x` gives `F-XFORM-SCALE`, `offset-10m` gives `F-XFORM-OFFSET`; deleting the texture file gives `F-TEX-MISSING` and deleting the mesh gives `F-MESH-MISSING` (these two are file faults, not CLI flags). The test needs a GPU adapter and passes with a message when there is none.
+
 `report --compare` lists objects whose verdict changed between two runs, which is how Phase E proves that a fix worked and broke nothing.
 
 ## Performance budget

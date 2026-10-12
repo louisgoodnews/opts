@@ -272,4 +272,49 @@ mod tests {
         let d = decide_views(a.clone(), a);
         assert!(d.categories.contains(&"F-XFORM-OFFSET".to_string()));
     }
+
+    #[test]
+    fn scale_needs_both_views_and_outside_is_caught() {
+        let mut a = view(900, 0.95, 0.95);
+        a.size_ratio = Some([2.0, 2.0]);
+        let d = decide_views(a.clone(), a);
+        assert!(d.categories.contains(&"F-XFORM-SCALE".to_string()));
+        let d = decide_views(view(900, 0.5, 0.95), view(900, 0.95, 0.95));
+        assert!(d.categories.contains(&"F-GEOM-OUTSIDE".to_string()));
+    }
+
+    #[test]
+    fn rotation_uses_the_alternative_orientation() {
+        let mut v2 = view(900, 0.95, 0.95);
+        v2.iou = Some(0.2);
+        v2.best_rotation = Some(("heading-mirrored".into(), 0.95));
+        let d = decide_views(view(900, 0.95, 0.95), v2);
+        assert!(d.categories.contains(&"F-XFORM-ROTATION".to_string()));
+    }
+
+    #[test]
+    fn sentinel_pixels_mean_a_missing_texture() {
+        let mut v = view(900, 0.95, 0.95);
+        v.sentinel_share = 0.3;
+        let d = decide_views(v.clone(), v);
+        assert!(d.categories.contains(&"F-TEX-MISSING".to_string()));
+    }
+
+    #[test]
+    fn unchanged_text_is_reported() {
+        let classes = vec!["standalone".to_string()];
+        let views: BTreeMap<String, ViewMetrics> = [("v1".into(), view(900, 0.99, 0.97))].into();
+        let diff: BTreeMap<String, f32> = [("v1".into(), 0.0)].into();
+        let px: BTreeMap<String, usize> = [("v1".into(), 500)].into();
+        let ev = Evidence {
+            classes: &classes,
+            load_categories: &[],
+            has_expected: true,
+            no_expected_reason: None,
+            views: &views,
+            text: Some((&diff, &px)),
+        };
+        let d = decide(&Thresholds::default(), &ev);
+        assert!(d.categories.contains(&"F-TEXT-NOT-SHOWN".to_string()));
+    }
 }
