@@ -47,7 +47,8 @@ use ground::GroundArray;
 pub use ground_height::{follow_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{
-    log_final_position, spawn_debug_overlay, track_position, update_debug_overlay, DebugOverlayText,
+    log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,
+    update_debug_overlay, DebugOverlayText,
 };
 pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,

@@ -1,0 +1,15 @@
+// HUD profile of a trolleybus (docs/src/architecture/hud-registry.md).
+HudProfile(
+    kind: Trolleybus,
+    widgets: [
+        (id: "session", order: 10),
+        (id: "clock", order: 20),
+        (id: "camera-label", order: 10),
+        (id: "alerts", order: 10),
+        (id: "speed", order: 10),
+        (id: "gear", order: 20),
+        (id: "rpm", order: 30),
+        (id: "parking-brake", order: 40),
+        (id: "controls-hint", order: 10),
+    ],
+)

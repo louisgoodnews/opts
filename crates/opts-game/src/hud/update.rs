@@ -1,0 +1,261 @@
+//! Change-driven updates of the HUD: texts, visibility by switch and condition, the alert line
+//! and the camera label.
+
+use std::collections::HashMap;
+
+use bevy::prelude::*;
+use opts_bevy::CameraMode;
+use opts_gui::l10n::fluent::Arg;
+use opts_gui::l10n::Localization;
+
+use super::alerts::{AlertQueue, AlertSeverity};
+use super::build::{AlertPill, HudSlot, HudText, HudWidgetNode, Part};
+use super::fade::{FadeKind, HudFade};
+use super::keys;
+use super::values::{HudValues, SpeedUnit, RPM_PROVIDED};
+use super::widget::{switch_on, widget, Binding, Slot};
+use crate::in_game::instruments::InstrumentInk;
+use crate::in_game::types::InGameSessionInfo;
+use crate::settings::GameSettings;
+
+/// The last camera state that the label announced, and what it says.
+#[derive(Resource, Debug, Default, Clone, PartialEq)]
+pub struct CameraLabel {
+    /// Last seen mode and sub camera; `None` before the first sample (no label at the start).
+    pub last: Option<(CameraMode, usize)>,
+    /// What the label says now (kept while it fades out).
+    pub shown: Option<(CameraMode, usize, usize)>,
+}
+
+/// Message key of the label of a camera mode.
+#[must_use]
+pub const fn camera_key(mode: CameraMode) -> &'static str {
+    match mode {
+        CameraMode::Ego => keys::CAMERA_EGO,
+        CameraMode::Cockpit => keys::CAMERA_COCKPIT,
+        CameraMode::External => keys::CAMERA_EXTERNAL,
+        CameraMode::Passenger => keys::CAMERA_PASSENGER,
+        CameraMode::FreeRoam => keys::CAMERA_FREE,
+    }
+}
+
+/// The clock text of the session in seconds since midnight.
+#[must_use]
+pub fn clock_text(session: &InGameSessionInfo) -> String {
+    let total = (session.start_hour * 3600 + session.start_minute * 60) as f32
+        + session.sim_elapsed_seconds;
+    let h = ((total / 3600.0) as u32) % 24;
+    let m = (((total % 3600.0) / 60.0) as u32) % 60;
+    let s = ((total % 60.0) as u32) % 60;
+    format!("{h:02}:{m:02}:{s:02}")
+}
+
+/// Advances the session clock with the virtual time (paused with the game).
+pub fn tick_session_clock(time: Res<Time>, mut session: ResMut<InGameSessionInfo>) {
+    session.sim_elapsed_seconds += time.delta_secs();
+}
+
+fn set_text(text: &mut Text, new: String) {
+    if text.0 != new {
+        text.0 = new;
+    }
+}
+
+/// Writes the value and caption texts of the widgets.
+#[allow(clippy::too_many_arguments)]
+pub fn update_texts(
+    values: Res<HudValues>,
+    settings: Res<GameSettings>,
+    session: Res<InGameSessionInfo>,
+    loc: Res<Localization>,
+    label: Res<CameraLabel>,
+    mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
+) {
+    let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
+    for (hud, mut text, ink) in &mut texts {
+        let new = match (hud.binding, hud.part) {
+            (Binding::Speed, Part::Value) => format!("{:.0}", unit.convert(values.speed_kmh)),
+            (Binding::Speed, Part::Caption) => loc.t(unit.caption_key()),
+            (Binding::Gear, Part::Value) => {
+                if values.gear.is_empty() {
+                    "-".to_owned()
+                } else {
+                    values.gear.clone()
+                }
+            }
+            (Binding::Rpm, Part::Value) => values
+                .rpm
+                .map_or_else(String::new, |r| format!("{:.0}", r.round())),
+            (Binding::ParkingBrake, Part::Value) => {
+                let on = values.parking_brake;
+                if let Some(mut ink) = ink {
+                    let want = if on {
+                        InstrumentInk::Alarm
+                    } else {
+                        InstrumentInk::Ok
+                    };
+                    if *ink != want {
+                        *ink = want;
+                    }
+                }
+                loc.t(if on { keys::BRAKE_ON } else { keys::BRAKE_OFF })
+            }
+            (Binding::SessionInfo, Part::Value) => loc.t_args(
+                keys::SESSION,
+                &[
+                    ("map".to_owned(), Arg::from(session.map_name.as_str())),
+                    ("entry".to_owned(), Arg::from(session.entry_point.as_str())),
+                ],
+            ),
+            (Binding::SessionClock, Part::Value) => loc.t_args(
+                keys::CLOCK,
+                &[
+                    ("time".to_owned(), Arg::from(clock_text(&session))),
+                    (
+                        "weather".to_owned(),
+                        Arg::from(session.weather_preset.as_str()),
+                    ),
+                ],
+            ),
+            (Binding::ControlsHint, Part::Value) => loc.t(keys::HINT_CONTROLS),
+            (Binding::CameraLabel, Part::Value) => label.shown.map_or_else(String::new, |s| {
+                let (mode, index, total) = s;
+                let name = loc.t(camera_key(mode));
+                if total > 1 {
+                    loc.t_args(
+                        keys::CAMERA_SUB,
+                        &[
+                            ("name".to_owned(), Arg::from(name)),
+                            ("index".to_owned(), Arg::from(index + 1)),
+                            ("total".to_owned(), Arg::from(total)),
+                        ],
+                    )
+                } else {
+                    name
+                }
+            }),
+            // The captions with a message key are written by `L10nKey`; the alert line has its
+            // own system.
+            _ => continue,
+        };
+        set_text(&mut text, new);
+    }
+}
+
+/// Shows, hides and removes widgets: the user's switch, the vehicle kind, the engine speed and the
+/// camera mode. A slot without a visible widget is removed from the layout.
+pub fn update_widget_display(
+    values: Res<HudValues>,
+    settings: Res<GameSettings>,
+    mut nodes: Query<(&HudWidgetNode, &mut Node, Option<&mut Visibility>), Without<HudSlot>>,
+    mut slots: Query<(&HudSlot, &mut Node), Without<HudWidgetNode>>,
+) {
+    let mut any: HashMap<Slot, bool> = HashMap::new();
+    for (hud, mut node, vis) in &mut nodes {
+        let Some(w) = widget(hud.id) else { continue };
+        let on = w
+            .switch
+            .as_ref()
+            .is_none_or(|sw| switch_on(sw, settings.raw(sw.key).as_deref()))
+            && (w.when.kinds.is_empty() || w.when.kinds.contains(&values.kind))
+            && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()));
+        let display = if on { Display::Flex } else { Display::None };
+        if node.display != display {
+            node.display = display;
+        }
+        if let Some(mut vis) = vis {
+            let hidden = w.when.hidden_in.contains(&values.camera);
+            let want = if hidden {
+                Visibility::Hidden
+            } else {
+                Visibility::Inherited
+            };
+            if *vis != want {
+                *vis = want;
+            }
+        }
+        *any.entry(hud.slot).or_default() |= on;
+    }
+    for (slot, mut node) in &mut slots {
+        let display = if any.get(&slot.0).copied().unwrap_or(true) {
+            Display::Flex
+        } else {
+            Display::None
+        };
+        if node.display != display {
+            node.display = display;
+        }
+    }
+}
+
+/// Shows the alert of the queue in the alert slot; the pill is hidden when there is none.
+pub fn update_alert_slot(
+    queue: Res<AlertQueue>,
+    loc: Res<Localization>,
+    mut pills: Query<&mut Visibility, With<AlertPill>>,
+    mut texts: Query<(&HudText, &mut Text, &mut InstrumentInk)>,
+) {
+    let shown = queue.visible();
+    for mut vis in &mut pills {
+        let want = if shown.is_some() {
+            Visibility::Inherited
+        } else {
+            Visibility::Hidden
+        };
+        if *vis != want {
+            *vis = want;
+        }
+    }
+    let Some(alert) = shown else { return };
+    let args: Vec<(String, Arg)> = alert
+        .args
+        .iter()
+        .map(|(k, v)| ((*k).to_owned(), Arg::from(v.as_str())))
+        .collect();
+    let line = loc.t_args(
+        keys::ALERT_LINE,
+        &[
+            (
+                "word".to_owned(),
+                Arg::from(loc.t(alert.severity.word_key())),
+            ),
+            ("text".to_owned(), Arg::from(loc.t_args(alert.key, &args))),
+        ],
+    );
+    let ink = match alert.severity {
+        AlertSeverity::Critical => InstrumentInk::Alarm,
+        AlertSeverity::Warning => InstrumentInk::Warning,
+        AlertSeverity::Info => InstrumentInk::Text,
+    };
+    for (hud, mut text, mut i) in &mut texts {
+        if hud.binding == Binding::Alerts {
+            set_text(&mut text, line.clone());
+            if *i != ink {
+                *i = ink;
+            }
+        }
+    }
+}
+
+/// Announces a camera or mode change for 1.5 s. The first sample (the start of the drive) is no
+/// change.
+pub fn camera_label_changes(
+    values: Res<HudValues>,
+    mut label: ResMut<CameraLabel>,
+    mut pills: Query<(&FadeKind, &mut HudFade)>,
+) {
+    let now = (values.camera, values.sub_camera);
+    match label.last {
+        None => label.last = Some(now),
+        Some(last) if last != now => {
+            label.last = Some(now);
+            label.shown = Some((now.0, now.1, values.sub_total));
+            for (kind, mut fade) in &mut pills {
+                if *kind == FadeKind::CameraLabel {
+                    fade.show();
+                }
+            }
+        }
+        Some(_) => {}
+    }
+}

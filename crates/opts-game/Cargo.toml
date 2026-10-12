@@ -28,6 +28,7 @@ bevy = { workspace = true }
 # Serialization & Assets
 serde = { workspace = true }
 serde_json = { workspace = true }
+ron = { workspace = true }
 directories = "5.0"
 toml = "0.8"
 image = { workspace = true }

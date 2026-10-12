@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 const MODULES: &[&str] = &[
     "shell",
     "home",
+    "hud",
     "help",
     "first_run",
     "pause",
