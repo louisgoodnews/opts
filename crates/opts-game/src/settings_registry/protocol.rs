@@ -1,0 +1,261 @@
+//! Control-protocol methods `settings.list`, `settings.get`, `settings.set`, `settings.reset`
+//! (`docs/src/architecture/control-protocol.md`). They use the same validation and the same
+//! effects as the settings page.
+
+use bevy::prelude::*;
+use opts_bevy::control::params::{opt_str, str_param};
+use opts_bevy::control::state::{ControlRegistry, Outcome};
+use opts_cli::protocol::{code, RpcError};
+use serde_json::{json, Value};
+
+use super::{
+    apply_change, Apply, Available, ChangeSource, SettingDescriptor, SettingError, SettingKind,
+    SettingsRegistry,
+};
+use crate::settings::GameSettings;
+
+/// Registers the methods when the control server exists.
+pub fn register(app: &mut App) {
+    let Some(mut registry) = app.world_mut().get_resource_mut::<ControlRegistry>() else {
+        return;
+    };
+    registry.register("settings.list", list);
+    registry.register("settings.get", get);
+    registry.register("settings.set", set);
+    registry.register("settings.reset", reset);
+}
+
+fn error(e: SettingError) -> Outcome {
+    let (c, m) = match &e {
+        SettingError::Unknown(_) => (code::NOT_FOUND, e.to_string()),
+        SettingError::Invalid(_) => (code::INVALID_PARAMS, e.to_string()),
+        SettingError::Unavailable(_) => (code::NOT_READY, e.to_string()),
+    };
+    Outcome::err(RpcError::new(c, m))
+}
+
+fn kind_name(k: &SettingKind) -> &'static str {
+    match k {
+        SettingKind::Bool => "bool",
+        SettingKind::Enum(_) => "enum",
+        SettingKind::Int { .. } => "int",
+        SettingKind::Float { .. } => "float",
+        SettingKind::Text => "text",
+        SettingKind::Path => "path",
+        SettingKind::Time => "time",
+        SettingKind::Binding => "binding",
+        SettingKind::Action => "action",
+    }
+}
+
+fn describe(d: &SettingDescriptor, value: Option<String>) -> Value {
+    let options: Vec<&str> = match d.kind {
+        SettingKind::Enum(o) => o.iter().map(|o| o.value).collect(),
+        _ => Vec::new(),
+    };
+    let apply = match d.apply {
+        Apply::Live => json!("live"),
+        Apply::OnRestart => json!("restart"),
+        Apply::WithRevert(s) => json!({ "revert_after_s": s }),
+    };
+    let available = match d.available {
+        Available::Always => json!("yes"),
+        Available::Capability(c) => json!({ "needs": c }),
+        Available::NotYet(p) => json!({ "not_yet": p.milestone }),
+    };
+    json!({
+        "key": d.key,
+        "category": d.category.id(),
+        "kind": kind_name(&d.kind),
+        "value": value,
+        "default": d.default,
+        "options": options,
+        "apply": apply,
+        "available": available,
+        "hidden": d.hidden,
+    })
+}
+
+fn one(world: &World, key: &str) -> Result<Value, SettingError> {
+    let registry = world.resource::<SettingsRegistry>();
+    let d = registry
+        .get(key)
+        .ok_or_else(|| SettingError::Unknown(key.to_string()))?;
+    let value = registry.text(world.resource::<GameSettings>(), key);
+    Ok(describe(d, value.filter(|_| d.is_stored())))
+}
+
+pub(crate) fn list(world: &mut World, params: &Value) -> Outcome {
+    let cat = match opt_str(params, "category") {
+        Ok(c) => c,
+        Err(e) => return Outcome::err(e),
+    };
+    let filter = match cat.map(|c| (c, super::Category::parse(c))) {
+        Some((c, None)) => {
+            return Outcome::err(RpcError::invalid_params(format!(
+                "unknown category `{c}` (graphics, audio, controls, interface, gameplay, content, advanced)"
+            )))
+        }
+        Some((_, Some(c))) => Some(c),
+        None => None,
+    };
+    let keys: Vec<&'static str> = world
+        .resource::<SettingsRegistry>()
+        .all()
+        .into_iter()
+        .filter(|d| filter.is_none_or(|c| d.category == c))
+        .map(|d| d.key)
+        .collect();
+    let items: Vec<Value> = keys.iter().filter_map(|k| one(world, k).ok()).collect();
+    Outcome::ok(json!({ "count": items.len(), "settings": items }))
+}
+
+pub(crate) fn get(world: &mut World, params: &Value) -> Outcome {
+    match str_param(params, "key") {
+        Ok(k) => one(world, k).map_or_else(error, Outcome::ok),
+        Err(e) => Outcome::err(e),
+    }
+}
+
+/// A parameter value as the text a setting stores (numbers and booleans are accepted too).
+fn value_text(params: &Value) -> Result<String, RpcError> {
+    match params.get("value") {
+        Some(Value::String(s)) => Ok(s.clone()),
+        Some(Value::Bool(b)) => Ok(b.to_string()),
+        Some(Value::Number(n)) => Ok(n.to_string()),
+        Some(_) => Err(RpcError::invalid_params(
+            "parameter `value` must be a string, number or boolean",
+        )),
+        None => Err(RpcError::invalid_params("missing parameter `value`")),
+    }
+}
+
+fn changed(world: &mut World, key: &str, value: Option<&str>) -> Outcome {
+    match apply_change(world, key, value, ChangeSource::Protocol) {
+        Ok(c) => match one(world, key) {
+            Ok(mut v) => {
+                v["previous"] = json!(c.old);
+                Outcome::ok(v)
+            }
+            Err(e) => error(e),
+        },
+        Err(e) => error(e),
+    }
+}
+
+pub(crate) fn set(world: &mut World, params: &Value) -> Outcome {
+    let key = match str_param(params, "key") {
+        Ok(k) => k.to_string(),
+        Err(e) => return Outcome::err(e),
+    };
+    match value_text(params) {
+        Ok(v) => changed(world, &key, Some(&v)),
+        Err(e) => Outcome::err(e),
+    }
+}
+
+pub(crate) fn reset(world: &mut World, params: &Value) -> Outcome {
+    match str_param(params, "key") {
+        Ok(k) => {
+            let key = k.to_string();
+            changed(world, &key, None)
+        }
+        Err(e) => Outcome::err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings_registry::{SettingChanged, SettingsCapabilities};
+
+    fn world(name: &str) -> World {
+        let mut w = World::new();
+        let dir =
+            std::env::temp_dir().join(format!("opts-settings-proto-{}-{name}", std::process::id()));
+        let _ = std::fs::create_dir_all(&dir);
+        let mut s = GameSettings::default();
+        s.db_path_override = Some(dir.join("settings.db"));
+        w.insert_resource(s);
+        w.insert_resource(SettingsRegistry::with_builtin());
+        w.insert_resource(SettingsCapabilities::default());
+        w.init_resource::<Messages<SettingChanged>>();
+        w
+    }
+
+    fn ok(o: Outcome) -> Value {
+        match o {
+            Outcome::Done(r) => r.expect("ok"),
+            Outcome::Wait(_) => panic!("answers at once"),
+        }
+    }
+
+    fn err(o: Outcome) -> RpcError {
+        match o {
+            Outcome::Done(r) => r.expect_err("error"),
+            Outcome::Wait(_) => panic!("answers at once"),
+        }
+    }
+
+    #[test]
+    fn list_get_set_reset_round_trip() {
+        let mut w = world("rt");
+        let all = ok(list(&mut w, &json!({})));
+        assert!(all["count"].as_u64().unwrap_or(0) >= 20);
+        let g = ok(list(&mut w, &json!({ "category": "graphics" })));
+        assert!(g["settings"]
+            .as_array()
+            .is_some_and(|a| a.iter().all(|s| s["category"] == "graphics")));
+        assert_eq!(ok(get(&mut w, &json!({ "key": "look" })))["value"], "vivid");
+        let s = ok(set(&mut w, &json!({ "key": "look", "value": "natural" })));
+        assert_eq!(
+            (s["value"].as_str(), s["previous"].as_str()),
+            (Some("natural"), Some("vivid"))
+        );
+        assert_eq!(
+            w.resource::<GameSettings>().look,
+            crate::look::Look::Natural
+        );
+        assert_eq!(w.resource::<Messages<SettingChanged>>().len(), 1);
+        let r = ok(reset(&mut w, &json!({ "key": "look" })));
+        assert_eq!(r["value"], "vivid");
+        // numbers and booleans are accepted for numeric and boolean settings
+        ok(set(&mut w, &json!({ "key": "ui_scale", "value": 150 })));
+        ok(set(
+            &mut w,
+            &json!({ "key": "high_contrast", "value": true }),
+        ));
+        assert_eq!(w.resource::<GameSettings>().ui_scale, 150);
+        assert!(w.resource::<GameSettings>().high_contrast);
+    }
+
+    #[test]
+    fn errors_use_the_standard_codes() {
+        let mut w = world("err");
+        assert_eq!(
+            err(get(&mut w, &json!({ "key": "nope" }))).code,
+            code::NOT_FOUND
+        );
+        assert_eq!(
+            err(set(&mut w, &json!({ "key": "ui_scale", "value": "999" }))).code,
+            code::INVALID_PARAMS
+        );
+        assert_eq!(
+            err(set(&mut w, &json!({ "key": "audio.master", "value": "5" }))).code,
+            code::NOT_READY
+        );
+        assert_eq!(
+            err(set(&mut w, &json!({ "key": "look" }))).code,
+            code::INVALID_PARAMS
+        );
+        assert_eq!(
+            err(list(&mut w, &json!({ "category": "nope" }))).code,
+            code::INVALID_PARAMS
+        );
+        assert_eq!(
+            w.resource::<GameSettings>().ui_scale,
+            100,
+            "nothing changed"
+        );
+    }
+}

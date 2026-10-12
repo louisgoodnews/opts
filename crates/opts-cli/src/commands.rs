@@ -177,6 +177,30 @@ pub const COMMANDS: &[CommandSpec] = &[
         "look:s@0?",
     ),
     c(
+        "settings.list",
+        "settings",
+        "List the settings with their values (optionally one category)",
+        "category:s@0?",
+    ),
+    c(
+        "settings.get",
+        "settings",
+        "Value, default and options of one setting",
+        "key:s@0",
+    ),
+    c(
+        "settings.set",
+        "settings",
+        "Change a setting (validated like the settings page, saved)",
+        "key:s@0 value:s@1",
+    ),
+    c(
+        "settings.reset",
+        "settings",
+        "Restore the default of a setting",
+        "key:s@0",
+    ),
+    c(
         "vehicle.set",
         "scene",
         "Replace the player vehicle",

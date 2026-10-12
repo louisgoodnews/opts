@@ -74,6 +74,19 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
                 &[("theme", ctx.loc.t(theme_kind))],
                 TypeScale::BodyMedium,
             );
+            c.queue(|world: &mut World| {
+                // The last spawned text of the page is the line above: mark it so it follows
+                // the theme while the page is open.
+                let mut q = world.query::<(Entity, &opts_gui::l10n::L10nKey)>();
+                let found: Vec<Entity> = q
+                    .iter(world)
+                    .filter(|(_, k)| k.0 == "settings-info-theme-now")
+                    .map(|(e, _)| e)
+                    .collect();
+                for e in found {
+                    world.entity_mut(e).insert(super::page::ThemeNowText);
+                }
+            });
         }
         Category::Content => {
             let summary = crate::catalogue_service::catalogue_db_path()

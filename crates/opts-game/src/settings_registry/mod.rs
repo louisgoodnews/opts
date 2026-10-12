@@ -18,6 +18,7 @@ pub mod builtin;
 pub mod descriptor;
 pub mod display;
 pub mod live;
+pub mod protocol;
 pub mod reference;
 pub mod search;
 pub mod value;
@@ -321,6 +322,7 @@ impl Plugin for SettingsRegistryPlugin {
                 ),
             )
             .add_systems(Startup, live::apply_saved_language);
+        protocol::register(app);
     }
 }
 

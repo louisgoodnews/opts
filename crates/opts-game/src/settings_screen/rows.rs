@@ -47,8 +47,9 @@ pub fn label(
 }
 
 /// A plain value text (a number, a time, a path).
-fn value_text(c: &mut Commands, parent: Entity, text: String) -> Entity {
+fn value_text(c: &mut Commands, parent: Entity, key: &'static str, text: String) -> Entity {
     c.spawn((
+        SettingValueText(key),
         Text::new(text),
         TextColor::default(),
         TypeStyleToken(TypeScale::BodyMedium),
@@ -109,11 +110,7 @@ fn button(
     op: SettingOp,
     u: &Usable,
 ) -> Entity {
-    let mut b = if selected {
-        ButtonBuilder::filled("")
-    } else {
-        ButtonBuilder::outlined("")
-    };
+    let mut b = ButtonBuilder::outlined("");
     b.label = label_key.unwrap_or(text).to_string();
     if let Some(k) = label_key {
         b = b.with_key(k);
@@ -124,9 +121,37 @@ fn button(
         UiId::new(format!("settings/{}/{}/{role}", d.category.id(), d.key)),
         ChildOf(parent),
     ));
+    if selected {
+        c.entity(e).insert((
+            BackgroundRole(ROLES_SELECTED.0),
+            BorderRole(ROLES_SELECTED.2),
+        ));
+        c.queue(move |world: &mut World| {
+            let kids: Vec<Entity> = world
+                .get::<Children>(e)
+                .map(|k| k.iter().collect())
+                .unwrap_or_default();
+            for k in kids {
+                if let Some(mut fg) = world.get_mut::<ForegroundRole>(k) {
+                    fg.0 = ROLES_SELECTED.1;
+                }
+            }
+        });
+    }
     mark(c, e, u);
     e
 }
+
+/// Background, label and border roles of the selected option of a group.
+pub const ROLES_SELECTED: (ColorRole, ColorRole, ColorRole) =
+    (ColorRole::Primary, ColorRole::OnPrimary, ColorRole::Primary);
+/// The same for the other options.
+pub const ROLES_PLAIN: (ColorRole, ColorRole, ColorRole) =
+    (ColorRole::Surface, ColorRole::Primary, ColorRole::Outline);
+
+/// The current value of a stepper or text value, kept current by the page.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SettingValueText(pub &'static str);
 
 /// The control group of a setting, below `parent`.
 pub fn spawn_control(
@@ -196,7 +221,7 @@ pub fn spawn_control(
                 },
                 &u,
             );
-            value_text(c, group, cur.to_string());
+            value_text(c, group, d.key, cur.to_string());
             button(
                 c,
                 group,
@@ -219,7 +244,7 @@ pub fn spawn_control(
                     ColorRole::OnSurfaceVariant,
                 );
             } else {
-                value_text(c, group, cur.to_string());
+                value_text(c, group, d.key, cur.to_string());
             }
             if matches!(d.kind, SettingKind::Path) {
                 button(
@@ -275,7 +300,7 @@ pub fn spawn_control(
                     }
                 }
             } else {
-                value_text(c, group, cur.to_string());
+                value_text(c, group, d.key, cur.to_string());
             }
         }
         SettingKind::Action => {

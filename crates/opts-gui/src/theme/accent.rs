@@ -50,14 +50,15 @@ impl AccentPreset {
         }
     }
 
-    /// Display name.
-    pub const fn label(self) -> &'static str {
+    /// The message key of the display name (`crate::l10n::keys::theme`).
+    pub const fn label_key(self) -> &'static str {
+        use crate::l10n::keys::theme as k;
         match self {
-            Self::TransitBlue => "Transit blue", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Amber => "Amber", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Violet => "Violet", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Emerald => "Emerald", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Teal => "Teal", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::TransitBlue => k::ACCENT_DEFAULT,
+            Self::Amber => k::ACCENT_AMBER,
+            Self::Violet => k::ACCENT_VIOLET,
+            Self::Emerald => k::ACCENT_EMERALD,
+            Self::Teal => k::ACCENT_TEAL,
         }
     }
 
@@ -66,7 +67,12 @@ impl AccentPreset {
         let key = key.trim();
         Self::ALL
             .into_iter()
-            .find(|p| p.key().eq_ignore_ascii_case(key) || p.label().eq_ignore_ascii_case(key))
+            .find(|p| p.key().eq_ignore_ascii_case(key))
+            // The English display name was stored by one earlier version.
+            .or_else(|| {
+                key.eq_ignore_ascii_case("Transit blue") // l10n-ok: stored identifier of earlier versions
+                    .then_some(Self::TransitBlue)
+            })
     }
 
     /// The seed colour of the preset.
@@ -224,10 +230,9 @@ mod tests {
     use crate::theme::contrast::contrast_ratio;
 
     #[test]
-    fn presets_parse_by_key_and_label() {
+    fn presets_parse_by_key() {
         for p in AccentPreset::ALL {
             assert_eq!(AccentPreset::parse(p.key()), Some(p));
-            assert_eq!(AccentPreset::parse(p.label()), Some(p));
         }
         assert_eq!(AccentPreset::parse("Pink"), None);
         assert_eq!(AccentPreset::default(), AccentPreset::TransitBlue);

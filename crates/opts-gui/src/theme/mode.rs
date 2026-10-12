@@ -88,13 +88,14 @@ impl ThemeMode {
         }
     }
 
-    /// Display label for the settings page.
-    pub const fn label(self) -> &'static str {
+    /// The message key of the display name (`crate::l10n::keys::theme`).
+    pub const fn label_key(self) -> &'static str {
+        use crate::l10n::keys::theme as k;
         match self {
-            Self::Dark => "Dark", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::Light => "Light", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::System => "System", // l10n-ok: UI label until the settings page uses message keys (M-0063)
-            Self::AutoClock => "Auto (clock)", // l10n-ok: UI label until the settings page uses message keys (M-0063)
+            Self::Dark => k::MODE_DARK,
+            Self::Light => k::MODE_LIGHT,
+            Self::System => k::MODE_SYSTEM,
+            Self::AutoClock => k::MODE_AUTO,
         }
     }
 

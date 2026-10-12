@@ -23,7 +23,13 @@ fn kind_text(k: &SettingKind) -> String {
 /// The reference page for `registry`, in English.
 #[must_use]
 pub fn markdown(registry: &SettingsRegistry) -> String {
-    let loc = super::localization("en");
+    markdown_with(registry, &super::localization("en"))
+}
+
+/// The reference page with the messages of `loc` (a feature that registers its own settings also
+/// extends the localization; the page always shows the active table, English for the docs).
+#[must_use]
+pub fn markdown_with(registry: &SettingsRegistry, loc: &opts_gui::l10n::Localization) -> String {
     let mut out = String::from(
         "<!-- Generated from the settings registry by the test `reference_page_is_up_to_date`; \
          regenerate with `UPDATE_SETTINGS_DOC=1 cargo test -p opts-game settings_registry`. -->\n\n\

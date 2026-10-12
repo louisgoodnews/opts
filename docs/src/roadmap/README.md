@@ -260,7 +260,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement automated release workflow generating compressed binary packages with SHA-256 checksums.
 - [ ] **📖 User Documentation & Settings UI** — [M-0035](phase-7/README.md)
   - [ ] Author end-user installation, controls, and troubleshooting manuals (`docs/src/user/`).
-  - [ ] Implement in-game settings dialog in `opts-gui` for graphics preferences, audio volume, and input rebinding (M-0035).
+  - [x] In-game settings dialog for graphics preferences: delivered by the settings page of M-0063 (2026-10-12); audio volume appears with M-0027.
+  - [ ] Input rebinding (M-0035): the *Controls* page shows it as "Feature not available yet!".
 - [ ] **🏁 Milestone Release** — [M-0036](phase-7/README.md)
   - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).
 
@@ -293,7 +294,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧭 App Shell & Flow** — [M-0062](phase-9/M-0062.md)
   - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.
 - [ ] **⚙️ Settings System** — [M-0063](phase-9/M-0063.md)
-  - [ ] Declarative setting registry; Graphics, Interface, Content, Controls, Advanced pages with real controls and search; absorbs the settings part of M-0035.
+  - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
+  - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](phase-9/M-0064.md)
   - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](phase-9/M-0065.md)

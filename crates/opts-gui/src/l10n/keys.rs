@@ -44,6 +44,36 @@ pub mod menu {
     pub const FOOTER: &str = "menu-footer";
 }
 
+/// Names of the theme choices (settings page, theme previews).
+pub mod theme {
+    /// Theme mode: dark.
+    pub const MODE_DARK: &str = "theme-mode-dark";
+    /// Theme mode: light.
+    pub const MODE_LIGHT: &str = "theme-mode-light";
+    /// Theme mode: follow the desktop.
+    pub const MODE_SYSTEM: &str = "theme-mode-system";
+    /// Theme mode: by the clock.
+    pub const MODE_AUTO: &str = "theme-mode-auto";
+    /// The high-contrast theme.
+    pub const HIGH_CONTRAST: &str = "theme-high-contrast";
+    /// Accent preset: Transit blue.
+    pub const ACCENT_DEFAULT: &str = "theme-accent-default";
+    /// Accent preset: Amber.
+    pub const ACCENT_AMBER: &str = "theme-accent-amber";
+    /// Accent preset: Violet.
+    pub const ACCENT_VIOLET: &str = "theme-accent-violet";
+    /// Accent preset: Emerald.
+    pub const ACCENT_EMERALD: &str = "theme-accent-emerald";
+    /// Accent preset: Teal.
+    pub const ACCENT_TEAL: &str = "theme-accent-teal";
+    /// Density: comfortable.
+    pub const DENSITY_COMFORTABLE: &str = "theme-density-comfortable";
+    /// Density: compact.
+    pub const DENSITY_COMPACT: &str = "theme-density-compact";
+    /// Density: dense.
+    pub const DENSITY_DENSE: &str = "theme-density-dense";
+}
+
 /// Every key above; the completeness tests iterate it.
 pub const ALL: &[&str] = &[
     CLEAR,
@@ -65,4 +95,17 @@ pub const ALL: &[&str] = &[
     menu::CARD_MAP_PREVIEW,
     menu::CARD_STORAGE,
     menu::FOOTER,
+    theme::MODE_DARK,
+    theme::MODE_LIGHT,
+    theme::MODE_SYSTEM,
+    theme::MODE_AUTO,
+    theme::HIGH_CONTRAST,
+    theme::ACCENT_DEFAULT,
+    theme::ACCENT_AMBER,
+    theme::ACCENT_VIOLET,
+    theme::ACCENT_EMERALD,
+    theme::ACCENT_TEAL,
+    theme::DENSITY_COMFORTABLE,
+    theme::DENSITY_COMPACT,
+    theme::DENSITY_DENSE,
 ];

@@ -209,6 +209,7 @@ pub fn handle_page_input(
     for t in texts.read() {
         if search.contains(t.entity) && state.query != t.text {
             state.query.clone_from(&t.text);
+            state.dirty = true;
         }
     }
     for t in toggles.read() {
@@ -243,6 +244,7 @@ pub fn handle_page_input(
                     state.category = *cat;
                     state.query.clear();
                     state.clear_search_field = true;
+                    state.dirty = true;
                 }
             }
         }

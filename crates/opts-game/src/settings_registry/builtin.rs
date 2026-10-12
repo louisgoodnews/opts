@@ -1,6 +1,7 @@
 //! The settings the game itself registers: the keys of earlier versions (their stored names and
 //! values are unchanged) and the new ones of M-0063.
 
+use opts_gui::l10n::keys::theme;
 use opts_gui::not_yet::{
     SETTINGS_AUDIO, SETTINGS_REBIND, SETTINGS_TIME_SCALE, SETTINGS_VIEW_DISTANCE,
 };
@@ -38,24 +39,24 @@ const LOOKS: &[super::EnumOption] = &[
 ];
 
 const THEME_MODES: &[super::EnumOption] = &[
-    opt("dark", "set-opt-theme-dark"),
-    opt("light", "set-opt-theme-light"),
-    opt("system", "set-opt-theme-system"),
-    opt("auto", "set-opt-theme-auto"),
+    opt("dark", theme::MODE_DARK),
+    opt("light", theme::MODE_LIGHT),
+    opt("system", theme::MODE_SYSTEM),
+    opt("auto", theme::MODE_AUTO),
 ];
 
 const ACCENTS: &[super::EnumOption] = &[
-    opt("Default", "set-opt-accent-default"),
-    opt("Amber", "set-opt-accent-amber"),
-    opt("Violet", "set-opt-accent-violet"),
-    opt("Emerald", "set-opt-accent-emerald"),
-    opt("Teal", "set-opt-accent-teal"),
+    opt("Default", theme::ACCENT_DEFAULT),
+    opt("Amber", theme::ACCENT_AMBER),
+    opt("Violet", theme::ACCENT_VIOLET),
+    opt("Emerald", theme::ACCENT_EMERALD),
+    opt("Teal", theme::ACCENT_TEAL),
 ];
 
 const DENSITIES: &[super::EnumOption] = &[
-    opt("comfortable", "set-opt-density-comfortable"),
-    opt("compact", "set-opt-density-compact"),
-    opt("dense", "set-opt-density-dense"),
+    opt("comfortable", theme::DENSITY_COMFORTABLE),
+    opt("compact", theme::DENSITY_COMPACT),
+    opt("dense", theme::DENSITY_DENSE),
 ];
 
 const LANGUAGES: &[super::EnumOption] =

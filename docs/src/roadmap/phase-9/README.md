@@ -36,7 +36,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - [M-0061 — UI Foundations](M-0061.md) — 🟡 In progress: **part A done** (theme foundations: dark default, modes, typography, scale, density, accents with contrast guard, one theme everywhere); part B open (states, focus, action layer, UI ids)
 - [M-0062 — App Shell and Flow](M-0062.md) — ⏳ Planned (shell, Home, Plan a drive, loading, pause)
-- [M-0063 — Settings System](M-0063.md) — ⏳ Planned (declarative registry, real settings, controls)
+- [M-0063 — Settings System](M-0063.md) — 🟡 Started (registry, generic page, real settings and `settings.*` done; rebinding, audio, view distance, time scale shown as not available yet)
 - [M-0064 — HUD and In-Game UI](M-0064.md) — ⏳ Planned (instrument HUD, registry, help, developer panel)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — ⏳ Planned (WCAG audit, gamepad, de/en, usability test)
 
@@ -64,7 +64,7 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 
 - **Phase 8** (visual quality): the *Look* and *Texture filtering* settings migrate into the Settings system; the UI is not affected by the 3D look.
 - **Phase 6 / M-0051** (editor, mods): consume the components and patterns built here; the *Workshop* destination is visible from the start and marked **"Feature not available yet!"** until they exist.
-- **M-0035** (settings UI and input rebinding): absorbed by M-0063.
+- **M-0035** (settings UI and input rebinding): the settings UI is absorbed by M-0063 (done); input rebinding stays with [M-0035](../phase-7/M-0035.md).
 - **M-0046** (world-loader extraction) and the loading pipeline: M-0062 depends on loading reporting real stages and problems.
 
 ## Checklist
@@ -80,7 +80,8 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 - [ ] **🧭 App Shell & Flow** — [M-0062](M-0062.md)
   - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.
 - [ ] **⚙️ Settings System** — [M-0063](M-0063.md)
-  - [ ] Declarative setting registry; Graphics, Interface, Content, Controls, Advanced pages with real controls and search; absorbs the settings part of M-0035.
+  - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
+  - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](M-0064.md)
   - [ ] Instrument HUD from registered widgets and vehicle-type profiles; help overlay; developer panel off by default.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](M-0065.md)
