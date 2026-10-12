@@ -4,6 +4,7 @@ pub mod app;
 pub mod app_state;
 pub mod catalogue_service;
 pub mod control;
+pub mod drive_history;
 pub mod in_game;
 pub mod look;
 pub mod menu;
