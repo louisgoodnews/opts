@@ -18,6 +18,7 @@ pub mod frame;
 pub mod icons;
 pub mod keys;
 pub mod nav;
+pub mod notify;
 pub mod registry;
 
 use bevy::prelude::*;
@@ -94,6 +95,7 @@ impl Plugin for ShellPlugin {
             .add_message::<NavigationRefused>();
         banner::build(app);
         dialog::build(app);
+        app.add_systems(Update, notify::refusal_toasts);
         esc::build(app);
 
         app.add_systems(Startup, frame::spawn_shell_frame);

@@ -137,6 +137,7 @@ impl Plugin for OptsGuiPlugin {
                 notebook_focus_selects_system,
                 notebook_sync_system,
                 toast_timer_system,
+                crate::components::toast_stack::stack_toasts,
                 toast_action_click_system,
                 toplevel_close_system,
                 treeview_click_system,

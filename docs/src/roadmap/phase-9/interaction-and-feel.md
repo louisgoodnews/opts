@@ -104,7 +104,7 @@ Errors follow one template and one of three placements.
 | **Inline** (next to the field or row) | validation, a failed list item |
 | **Banner** at the top of the screen | the screen can't do its job (empty catalogue, missing OMSI folder), stays until resolved |
 | **Dialog** | the action can't continue and needs a decision |
-| **Toast** | a finished background event with no decision; max 3 visible, stacked, never overlapping; errors are never *only* a toast |
+| **Toast** | a finished background event with no decision; max 3 visible, stacked, never overlapping; errors are never *only* a toast. *As built:* `opts_gui::components::toast_stack` orders toasts by spawn sequence, shows the first three (the rest wait, hidden, with a stopped timer), puts the newest at the bottom with an 8 px gap, merges identical toasts (same dedupe key) into the oldest with a counter ("×3") and a restarted timer, and keeps them above content and below modals. Severity sets colours and duration (information 4 s, warning and error 10 s). The game side is `shell::notify`: `Commands::notify` for a toast and `Commands::notify_error`, which **takes the durable place as a required argument** (`Durable::Banner(spec)`, `Inline`, `Dialog`), so an error cannot be raised as a toast alone |
 
 **Load results are never overwritten** (F03): the loading screen ends in *Ready*, *Ready with N problems* (with *Details* and *Continue*) or *Failed* (with *Retry*, *Choose another*, *Back*).
 

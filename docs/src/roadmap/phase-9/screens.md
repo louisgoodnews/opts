@@ -133,11 +133,14 @@ F1 opens Help (D-UI-06) from anywhere with a window: the page in the shell, an o
 
 ## 7. Notifications
 
+Implemented as described in [interaction and feel §5](interaction-and-feel.md#5-errors) (*Toast* row).
+
 | Kind | Rule |
 | :--- | :--- |
-| **Toast** | `NotificationService::toast(kind, key, args)`; max 3 visible, newest at the bottom, stacked with a 8 px gap, no overlap; identical (same key and args) toasts within 4 s are merged (counter), z-order below modals, above content. Auto-dismiss 5 s for info/success; warnings and errors stay 10 s and dismiss on Esc. |
-| **Error** | an error is **never only a toast**: the owner also shows it inline, as a banner or in a dialog. `NotificationService::error` takes the *durable* place as an argument and refuses (debug assertion) to be called without one. |
-| **Banner** | `Banner { id, severity, title_key, body_key, action }` per screen; shown at the top of the content area; stays until resolved or dismissed by the action; de-duplicated by `id`. |
+| **Toast** | `Commands::notify(severity, key, args)`; at most 3 visible, newest at the bottom, 8 px gap, no overlap; identical toasts (same key and variables) are merged into one with a counter; below modals, above content. Information 4 s, warnings and errors 10 s; Esc dismisses a focused toast (library). |
+| **Error** | `Commands::notify_error(key, args, Durable)`: the durable place is a required argument (`Banner` is shown by the service; `Inline` and `Dialog` are put there by the owner). Used by the first-run flow, the report dialog (inline text and toast) and the navigation guard. |
+| **Banner** | `shell::banner::show_banner(BannerSpec { id, severity, title_key, body_key, args, action, owner })` per screen, at the top of the content area; de-duplicated by `id`; removed when the owning screen is left or by `dismiss_banner`; the action arrives as the message `BannerAction`. |
+| **Refused navigation** | a toast names the destination (`shell-nav-refused`); the rail entry itself already shows the red marker or the reason. |
 
 ## 8. Registered not-yet places added here
 

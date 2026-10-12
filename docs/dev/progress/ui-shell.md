@@ -25,7 +25,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | S2 Home | done |
 | S3 First run | done |
 | S4 Pause, leave, summary | done |
-| S5 Help and About, F1 | done |
+| S5 Help and About, F1 | done (gates re-run after the follow-up commits) |
 | S6 Notifications | open |
 | S7 Tests, screenshots, docs | open |
 
