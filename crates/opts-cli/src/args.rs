@@ -3,6 +3,9 @@
 use clap::Parser;
 use std::path::PathBuf;
 
+/// The smallest window the interface is designed for, in logical pixels (width, height).
+pub const MIN_WINDOW_SIZE: (f32, f32) = (1024.0, 640.0);
+
 /// Command-line arguments for the Open Public Transport Simulator (`opts`).
 #[derive(Parser, Debug, Clone, PartialEq)]
 #[command(
@@ -76,7 +79,8 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub windowed: bool,
 
-    /// Initial window dimensions formatted as `WIDTHxHEIGHT` (e.g. 1920x1080).
+    /// Initial window dimensions formatted as `WIDTHxHEIGHT` (e.g. 1920x1080); values below the
+    /// minimum window size of 1024x640 are raised to it.
     #[arg(long, value_name = "WxH", default_value = "1920x1080")]
     pub window_size: String,
 
@@ -186,7 +190,7 @@ impl CliArgs {
     }
 
     /// Parses window resolution width and height from the `--window-size` flag.
-    /// Falls back to 1920x1080 if invalid.
+    /// Falls back to 1920x1080 if invalid; a valid size below [`MIN_WINDOW_SIZE`] is raised to it.
     pub fn parse_dimensions(&self) -> (f32, f32) {
         let parts: Vec<&str> = self.window_size.split('x').collect();
         if parts.len() == 2 {
@@ -195,7 +199,7 @@ impl CliArgs {
                 parts[1].trim().parse::<f32>(),
             ) {
                 if w >= 400.0 && h >= 300.0 {
-                    return (w, h);
+                    return (w.max(MIN_WINDOW_SIZE.0), h.max(MIN_WINDOW_SIZE.1));
                 }
             }
         }
@@ -206,6 +210,14 @@ impl CliArgs {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn small_windows_are_raised_to_the_minimum() {
+        let args = CliArgs::try_parse_from(["opts", "--window-size", "800x600"]).expect("parse");
+        assert_eq!(args.parse_dimensions(), MIN_WINDOW_SIZE);
+        let args = CliArgs::try_parse_from(["opts", "--window-size", "1280x720"]).expect("parse");
+        assert_eq!(args.parse_dimensions(), (1280.0, 720.0));
+    }
 
     #[test]
     fn test_cli_parsing_custom_flags() {

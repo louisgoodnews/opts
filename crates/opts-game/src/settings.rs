@@ -2,7 +2,15 @@
 //!
 //! # Storage Architecture
 //! - **`settings.toml`**: Immutable baseline reference. Read on startup, never overwritten by application logic.
-//! - **`settings.db`**: Authoritative SQLite database storing active user preferences, per-widget colorizations, and custom themes.
+//! - **`settings.db`**: Authoritative SQLite database storing the active user preferences.
+//!
+//! Theme and interface keys (M-0061): `theme_mode` (`dark`/`light`/`system`/`auto`, default dark),
+//! `auto_light_from` / `auto_dark_from` (`HH:MM`, 07:00 / 19:00), `high_contrast`, `active_theme`
+//! (the accent preset), `theme_file` (a RON theme file, see `theme_files`), `ui_scale` (75-200 percent), `density`, `reduced_motion`. A database
+//! without `theme_mode` is migrated from the old `is_dark_theme` key (true: dark, false: light);
+//! with neither key the theme is dark. The per-widget colour overrides and the `custom_themes`
+//! table of earlier versions are no longer read (theme files in the config directory replace
+//! them, see `theme_files`).
 
 use bevy::prelude::*;
 use directories::ProjectDirs;
@@ -22,18 +30,41 @@ pub struct GameSettings {
     /// later runs; `--omsi-path` and `$OMSI_PATH` override it.
     #[serde(default)]
     pub omsi_path: Option<PathBuf>,
-    /// Whether dark mode is enabled (defaults to false for M3 baseline light).
+    /// The legacy light/dark flag of versions before M-0061. Only read, to migrate a settings
+    /// file without `theme_mode`; never written.
+    #[serde(default, skip_serializing)]
+    pub is_dark_theme: Option<bool>,
+    /// How the theme is chosen: dark (default), light, system or auto by the clock.
     #[serde(default)]
-    pub is_dark_theme: bool,
-    /// Name of the active theme preset (e.g. "Default", "Amber", "Violet", "Teal").
+    pub theme_mode: opts_gui::theme::ThemeMode,
+    /// Local time (`HH:MM`) the light theme starts in the auto mode.
+    #[serde(default = "default_light_from")]
+    pub auto_light_from: String,
+    /// Local time (`HH:MM`) the dark theme starts in the auto mode.
+    #[serde(default = "default_dark_from")]
+    pub auto_dark_from: String,
+    /// Use the high-contrast theme (overrides `theme_mode`; never switched automatically).
+    #[serde(default)]
+    pub high_contrast: bool,
+    /// Name of the accent preset (`Default` = Transit blue, `Amber`, `Violet`, `Emerald`, `Teal`).
     #[serde(default = "default_active_theme")]
     pub active_theme: String,
+    /// Name (file stem) of the theme file in the `themes/` folder of the configuration directory
+    /// to use, empty for none.
+    #[serde(default)]
+    pub theme_file: String,
+    /// Interface scale in percent (75-200).
+    #[serde(default = "default_ui_scale")]
+    pub ui_scale: u32,
+    /// Information density of the interface.
+    #[serde(default)]
+    pub density: opts_gui::theme::Density,
+    /// Reduce motion (transitions become instant); the OS hint is added to this.
+    #[serde(default)]
+    pub reduced_motion: bool,
     /// Vehicle catalogue discovery interval in days (default: 1 = daily).
     #[serde(default = "default_discovery_interval_days")]
     pub discovery_interval_days: u32,
-    /// Per-widget color customizations: maps `widget_type.role` -> hex color string.
-    #[serde(default)]
-    pub widget_colors: BTreeMap<String, String>,
     /// Quality of texture filtering (Off/4x/8x/16x); default 16x. Absent in older databases.
     #[serde(default)]
     pub texture_filtering: opts_bevy::TextureFiltering,
@@ -71,6 +102,18 @@ fn default_active_theme() -> String {
     "Default".to_string()
 }
 
+fn default_light_from() -> String {
+    "07:00".to_string()
+}
+
+fn default_dark_from() -> String {
+    "19:00".to_string()
+}
+
+fn default_ui_scale() -> u32 {
+    100
+}
+
 fn default_discovery_interval_days() -> u32 {
     1
 }
@@ -80,10 +123,17 @@ impl Default for GameSettings {
         Self {
             recent_map_path: None,
             omsi_path: None,
-            is_dark_theme: false,
+            is_dark_theme: None,
+            theme_mode: opts_gui::theme::ThemeMode::Dark,
+            auto_light_from: default_light_from(),
+            auto_dark_from: default_dark_from(),
+            high_contrast: false,
             active_theme: "Default".to_string(),
+            theme_file: String::new(),
+            ui_scale: 100,
+            density: opts_gui::theme::Density::Comfortable,
+            reduced_motion: false,
             discovery_interval_days: 1,
-            widget_colors: BTreeMap::new(),
             texture_filtering: opts_bevy::TextureFiltering::default(),
             look: crate::look::Look::default(),
             baseline: Baseline::default(),
@@ -111,7 +161,11 @@ impl GameSettings {
 
         match fs::read_to_string(&path) {
             Ok(content) => match toml::from_str::<Self>(&content) {
-                Ok(settings) => {
+                Ok(mut settings) => {
+                    let has_mode = content
+                        .parse::<toml::Table>()
+                        .is_ok_and(|t| t.contains_key("theme_mode"));
+                    settings.migrate_legacy_theme(has_mode);
                     tracing::info!(path = ?path, "Loaded immutable baseline settings from settings.toml");
                     Some(settings)
                 }
@@ -128,22 +182,15 @@ impl GameSettings {
     }
 
     /// Initializes required database tables in SQLite.
+    ///
+    /// The tables `widget_color_overrides` and `custom_themes` of earlier versions are left alone
+    /// if they exist (nothing reads them any more) and are not created.
     pub fn init_database(conn: &Connection) -> Result<(), rusqlite::Error> {
         conn.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS app_settings (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS widget_color_overrides (
-                widget_key TEXT PRIMARY KEY,
-                hex_color TEXT NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS custom_themes (
-                name TEXT PRIMARY KEY,
-                theme_json TEXT NOT NULL
             );
             "#,
         )?;
@@ -154,7 +201,6 @@ impl GameSettings {
     pub fn apply_from_connection(&mut self, conn: &Connection) -> Result<(), rusqlite::Error> {
         Self::init_database(conn)?;
 
-        // 1. Read app_settings key-values
         let mut stmt = conn.prepare("SELECT key, value FROM app_settings")?;
         let rows = stmt.query_map([], |row| {
             let key: String = row.get(0)?;
@@ -162,8 +208,10 @@ impl GameSettings {
             Ok((key, value))
         })?;
 
+        let mut has_mode = false;
         for row in rows {
             let (key, value) = row?;
+            has_mode |= key == "theme_mode";
             match key.as_str() {
                 "recent_map_path" => {
                     if value.trim().is_empty() {
@@ -175,12 +223,6 @@ impl GameSettings {
                 "omsi_path" => {
                     self.omsi_path = (!value.trim().is_empty()).then(|| PathBuf::from(value));
                 }
-                "is_dark_theme" => {
-                    self.is_dark_theme = value.parse::<bool>().unwrap_or(false);
-                }
-                "active_theme" => {
-                    self.active_theme = value;
-                }
                 "discovery_interval_days" => {
                     self.discovery_interval_days = value.parse::<u32>().unwrap_or(1);
                 }
@@ -191,94 +233,26 @@ impl GameSettings {
                 "look" => {
                     self.look = crate::look::Look::parse(&value).unwrap_or_default();
                 }
-                _ => {}
+                other => {
+                    self.apply_theme_key(other, &value);
+                }
             }
         }
-
-        // 2. Read widget_color_overrides
-        let mut widget_stmt =
-            conn.prepare("SELECT widget_key, hex_color FROM widget_color_overrides")?;
-        let widget_rows = widget_stmt.query_map([], |row| {
-            let k: String = row.get(0)?;
-            let v: String = row.get(1)?;
-            Ok((k, v))
-        })?;
-
-        for row in widget_rows {
-            let (k, v) = row?;
-            self.widget_colors.insert(k, v);
-        }
-
+        self.migrate_legacy_theme(has_mode);
         Ok(())
     }
 
-    /// Saves configuration state to an SQLite connection.
+    /// Saves configuration state to an SQLite connection (every key).
     pub fn save_to_connection(&self, conn: &mut Connection) -> Result<(), rusqlite::Error> {
         Self::init_database(conn)?;
-
         let tx = conn.transaction()?;
-
-        // Write app_settings
-        let map_str = self
-            .recent_map_path
-            .as_ref()
-            .and_then(|p| p.to_str())
-            .unwrap_or("");
-
-        tx.execute(
-            "INSERT INTO app_settings (key, value) VALUES ('recent_map_path', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![map_str],
-        )?;
-
-        tx.execute(
-            "INSERT INTO app_settings (key, value) VALUES ('omsi_path', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![self
-                .omsi_path
-                .as_ref()
-                .and_then(|p| p.to_str())
-                .unwrap_or("")],
-        )?;
-
-        tx.execute(
-            "INSERT INTO app_settings (key, value) VALUES ('is_dark_theme', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![self.is_dark_theme.to_string()],
-        )?;
-
-        tx.execute(
-            "INSERT INTO app_settings (key, value) VALUES ('active_theme', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![&self.active_theme],
-        )?;
-
-        tx.execute(
-            "INSERT INTO app_settings (key, value) VALUES ('discovery_interval_days', ?1)
-             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            params![self.discovery_interval_days.to_string()],
-        )?;
-
-        for (k, v) in [
-            ("texture_filtering", self.texture_filtering.key()),
-            ("look", self.look.key()),
-        ] {
+        for (k, v) in self.entries() {
             tx.execute(
                 "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
                  ON CONFLICT(key) DO UPDATE SET value = excluded.value",
                 params![k, v],
             )?;
         }
-
-        // Write widget color overrides
-        for (k, v) in &self.widget_colors {
-            tx.execute(
-                "INSERT INTO widget_color_overrides (widget_key, hex_color) VALUES (?1, ?2)
-                 ON CONFLICT(widget_key) DO UPDATE SET hex_color = excluded.hex_color",
-                params![k, v],
-            )?;
-        }
-
         tx.commit()?;
         Ok(())
     }
@@ -303,27 +277,17 @@ impl GameSettings {
         settings
     }
 
-    /// The persisted values as key/value pairs (`widget:<key>` for colour overrides).
+    /// The persisted values as key/value pairs.
     fn entries(&self) -> BTreeMap<String, String> {
+        let path = |p: &Option<PathBuf>| {
+            p.as_ref()
+                .and_then(|p| p.to_str())
+                .unwrap_or("")
+                .to_string()
+        };
         let mut m = BTreeMap::new();
-        m.insert(
-            "recent_map_path".into(),
-            self.recent_map_path
-                .as_ref()
-                .and_then(|p| p.to_str())
-                .unwrap_or("")
-                .to_string(),
-        );
-        m.insert(
-            "omsi_path".into(),
-            self.omsi_path
-                .as_ref()
-                .and_then(|p| p.to_str())
-                .unwrap_or("")
-                .to_string(),
-        );
-        m.insert("is_dark_theme".into(), self.is_dark_theme.to_string());
-        m.insert("active_theme".into(), self.active_theme.clone());
+        m.insert("recent_map_path".into(), path(&self.recent_map_path));
+        m.insert("omsi_path".into(), path(&self.omsi_path));
         m.insert(
             "discovery_interval_days".into(),
             self.discovery_interval_days.to_string(),
@@ -333,9 +297,7 @@ impl GameSettings {
             self.texture_filtering.key().to_string(),
         );
         m.insert("look".into(), self.look.key().to_string());
-        for (k, v) in &self.widget_colors {
-            m.insert(format!("widget:{k}"), v.clone());
-        }
+        m.extend(self.theme_entries());
         m
     }
 
@@ -374,19 +336,11 @@ impl GameSettings {
                     Self::init_database(&conn)?;
                     let tx = conn.transaction()?;
                     for (k, v) in &changed {
-                        if let Some(widget) = k.strip_prefix("widget:") {
-                            tx.execute(
-                                "INSERT INTO widget_color_overrides (widget_key, hex_color) VALUES (?1, ?2)
-                                 ON CONFLICT(widget_key) DO UPDATE SET hex_color = excluded.hex_color",
-                                params![widget, v],
-                            )?;
-                        } else {
-                            tx.execute(
-                                "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
-                                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                                params![k, v],
-                            )?;
-                        }
+                        tx.execute(
+                            "INSERT INTO app_settings (key, value) VALUES (?1, ?2)
+                             ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                            params![k, v],
+                        )?;
                     }
                     tx.commit()?;
                 }
@@ -396,151 +350,47 @@ impl GameSettings {
         self.remember_baseline();
         Ok(())
     }
-
-    /// Helper to set or update a specific per-widget color override.
-    pub fn set_widget_color(&mut self, widget_name: &str, role: &str, hex: &str) {
-        let key = format!("{}.{}", widget_name, role);
-        self.widget_colors.insert(key, hex.to_string());
-    }
-
-    /// Helper to save a single custom theme JSON into SQLite.
-    pub fn save_custom_theme(&self, name: &str, theme_json: &str) -> Result<(), rusqlite::Error> {
-        let Some(path) = Self::database_path() else {
-            return Ok(());
-        };
-        let conn = Connection::open(&path)?;
-        Self::init_database(&conn)?;
-        conn.execute(
-            "INSERT INTO custom_themes (name, theme_json) VALUES (?1, ?2)
-             ON CONFLICT(name) DO UPDATE SET theme_json = excluded.theme_json",
-            params![name, theme_json],
-        )?;
-        Ok(())
-    }
-
-    /// Helper to load a custom theme JSON from SQLite.
-    pub fn load_custom_theme(name: &str) -> Option<String> {
-        let path = Self::database_path()?;
-        let conn = Connection::open(&path).ok()?;
-        Self::init_database(&conn).ok()?;
-        let mut stmt = conn
-            .prepare("SELECT theme_json FROM custom_themes WHERE name = ?1")
-            .ok()?;
-        stmt.query_row(params![name], |row| row.get(0)).ok()
-    }
-
-    /// Synchronizes a `MaterialTheme` with active settings: mode (dark/light), preset, and widget overrides.
-    pub fn apply_to_theme(&self, theme: &mut opts_gui::theme::theme::MaterialTheme) {
-        let mut scheme = if self.is_dark_theme {
-            opts_gui::theme::color::ColorScheme::dark()
-        } else {
-            opts_gui::theme::color::ColorScheme::light()
-        };
-
-        match self.active_theme.as_str() {
-            "Amber" => {
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Primary,
-                    Color::srgb(0.96, 0.62, 0.04),
-                );
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Secondary,
-                    Color::srgb(0.85, 0.45, 0.10),
-                );
-            }
-            "Violet" => {
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Primary,
-                    Color::srgb(0.55, 0.36, 0.96),
-                );
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Secondary,
-                    Color::srgb(0.40, 0.20, 0.80),
-                );
-            }
-            "Emerald" => {
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Primary,
-                    Color::srgb(0.06, 0.72, 0.51),
-                );
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Secondary,
-                    Color::srgb(0.04, 0.55, 0.38),
-                );
-            }
-            "Teal" => {
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Primary,
-                    Color::srgb(0.08, 0.65, 0.75),
-                );
-                scheme.set(
-                    opts_gui::theme::color::ColorRole::Secondary,
-                    Color::srgb(0.05, 0.50, 0.60),
-                );
-            }
-            _ => {}
-        }
-
-        for (key, hex) in &self.widget_colors {
-            if let Some(color) = Self::hex_to_color(hex) {
-                if key.ends_with(".Primary") {
-                    scheme.set(opts_gui::theme::color::ColorRole::Primary, color);
-                } else if key.ends_with(".SecondaryContainer") {
-                    scheme.set(opts_gui::theme::color::ColorRole::SecondaryContainer, color);
-                }
-            }
-        }
-
-        theme.scheme = scheme;
-    }
-
-    fn hex_to_color(hex: &str) -> Option<Color> {
-        let hex = hex.strip_prefix('#').unwrap_or(hex);
-        if hex.len() == 6 {
-            let r = u8::from_str_radix(&hex[0..2], 16).ok()? as f32 / 255.0;
-            let g = u8::from_str_radix(&hex[2..4], 16).ok()? as f32 / 255.0;
-            let b = u8::from_str_radix(&hex[4..6], 16).ok()? as f32 / 255.0;
-            Some(Color::srgb(r, g, b))
-        } else {
-            None
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use opts_gui::theme::{Density, ThemeMode};
 
     #[test]
     fn baseline_tracks_what_changed_since_the_load() {
         let mut s = GameSettings::default();
         s.remember_baseline();
         let before = s.baseline.0.lock().unwrap().clone().unwrap();
-        s.is_dark_theme = true;
+        s.theme_mode = ThemeMode::Light;
         let now = s.entries();
         let changed: Vec<_> = now
             .iter()
             .filter(|(k, v)| before.get(*k) != Some(*v))
             .collect();
         assert_eq!(changed.len(), 1);
-        assert_eq!(changed[0].0, "is_dark_theme");
+        assert_eq!(changed[0].0, "theme_mode");
     }
 
     #[test]
     fn test_sqlite_settings_roundtrip() {
         let mut conn = Connection::open_in_memory().expect("In-memory SQLite connection");
-        let mut settings = GameSettings {
+        let settings = GameSettings {
             recent_map_path: Some(PathBuf::from("/maps/Berlin")),
             omsi_path: Some(PathBuf::from("/games/OMSI 2")),
-            is_dark_theme: true,
+            theme_mode: ThemeMode::AutoClock,
+            auto_light_from: "06:30".into(),
+            auto_dark_from: "20:15".into(),
+            high_contrast: true,
             active_theme: "Amber".to_string(),
+            ui_scale: 150,
+            density: Density::Compact,
+            reduced_motion: true,
             discovery_interval_days: 1,
-            widget_colors: BTreeMap::new(),
             texture_filtering: opts_bevy::TextureFiltering::X4,
             look: crate::look::Look::Natural,
-            baseline: Baseline::default(),
+            ..GameSettings::default()
         };
-        settings.set_widget_color("Button", "Primary", "#FFB300");
 
         settings
             .save_to_connection(&mut conn)
@@ -553,14 +403,16 @@ mod tests {
 
         assert_eq!(loaded.recent_map_path, Some(PathBuf::from("/maps/Berlin")));
         assert_eq!(loaded.omsi_path, Some(PathBuf::from("/games/OMSI 2")));
-        assert!(loaded.is_dark_theme);
+        assert_eq!(loaded.theme_mode, ThemeMode::AutoClock);
+        assert_eq!(loaded.auto_light_from, "06:30");
+        assert_eq!(loaded.auto_dark_from, "20:15");
+        assert!(loaded.high_contrast);
         assert_eq!(loaded.active_theme, "Amber");
+        assert_eq!(loaded.ui_scale, 150);
+        assert_eq!(loaded.density, Density::Compact);
+        assert!(loaded.reduced_motion);
         assert_eq!(loaded.texture_filtering, opts_bevy::TextureFiltering::X4);
         assert_eq!(loaded.look, crate::look::Look::Natural);
-        assert_eq!(
-            loaded.widget_colors.get("Button.Primary"),
-            Some(&"#FFB300".to_string())
-        );
     }
 
     #[test]
@@ -578,6 +430,12 @@ mod tests {
         assert_eq!(s.active_theme, "Amber");
         assert_eq!(s.texture_filtering, opts_bevy::TextureFiltering::X16);
         assert_eq!(s.look, crate::look::Look::Vivid);
+        // Neither theme_mode nor is_dark_theme: the default theme, dark.
+        assert_eq!(s.theme_mode, ThemeMode::Dark);
+        assert_eq!(s.ui_scale, 100);
+        assert_eq!(s.density, Density::Comfortable);
+        assert_eq!(s.auto_light_from, "07:00");
+        assert_eq!(s.auto_dark_from, "19:00");
         // Unreadable values fall back to the defaults too.
         conn.execute(
             "INSERT INTO app_settings (key, value) VALUES ('look', 'garbage'), ('texture_filtering', '3')",

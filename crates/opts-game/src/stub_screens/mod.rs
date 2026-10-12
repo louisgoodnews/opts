@@ -47,7 +47,7 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
                     row_gap: Val::Px(24.0),
                     ..default()
                 },
-                BackgroundColor(Color::srgba(0.08, 0.09, 0.11, 0.95)),
+                BackgroundRole(ColorRole::Surface),
             ),
             StubScreenRoot,
         ))
@@ -74,7 +74,6 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
                             font_size: FontSize::Px(26.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
                     ),
                     TypeStyleToken(TypeScale::HeadlineSmall),
                     ForegroundRole(ColorRole::Primary),
@@ -87,7 +86,6 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.7, 0.7, 0.7)),
                     ),
                     TypeStyleToken(TypeScale::BodyMedium),
                     ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -102,7 +100,6 @@ fn spawn_generic_stub(commands: &mut Commands, title: &'static str, subtitle: &'
                             font_size: FontSize::Px(13.0),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.6, 0.6, 0.6)),
                     ),
                     TypeStyleToken(TypeScale::LabelMedium),
                     ForegroundRole(ColorRole::Outline),

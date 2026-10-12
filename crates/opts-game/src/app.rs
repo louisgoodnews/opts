@@ -63,8 +63,8 @@ pub fn build_app(args: CliArgs) -> App {
                             bevy::window::PresentMode::AutoNoVsync
                         },
                         resize_constraints: bevy::window::WindowResizeConstraints {
-                            min_width: 800.0,
-                            min_height: 600.0,
+                            min_width: opts_cli::MIN_WINDOW_SIZE.0,
+                            min_height: opts_cli::MIN_WINDOW_SIZE.1,
                             ..default()
                         },
                         ..default()

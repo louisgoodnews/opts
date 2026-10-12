@@ -10,24 +10,38 @@ pub struct SettingsScreenRoot;
 #[derive(Component)]
 pub struct BackToMenuButton;
 
-/// Marker component for Theme preset buttons.
-#[derive(Component)]
-pub struct ThemePresetButton {
-    pub preset_name: &'static str,
+/// One option of the theme and interface settings (see `theme_choice.rs`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThemeChoice {
+    /// Dark, Light, System or Auto (clock).
+    Mode(opts_gui::theme::ThemeMode),
+    /// The high-contrast theme off or on.
+    HighContrast(bool),
+    /// An accent preset.
+    Accent(opts_gui::theme::AccentPreset),
+    /// UI scale in percent.
+    Scale(u32),
+    /// Interface density.
+    Density(opts_gui::theme::Density),
+    /// Reduced motion off or on.
+    ReducedMotion(bool),
+    /// Moves the "light from" time of the auto mode by this many minutes.
+    LightFromStep(i32),
+    /// Moves the "dark from" time of the auto mode by this many minutes.
+    DarkFromStep(i32),
 }
 
-/// Marker component for per-widget color swatch buttons.
+/// Marker component of a button choosing a [`ThemeChoice`].
 #[derive(Component)]
-pub struct ColorSwatchButton {
-    pub widget_type: &'static str,
-    pub role_name: &'static str,
-    pub hex: &'static str,
-    pub color: Color,
-}
+pub struct ThemeChoiceButton(pub ThemeChoice);
 
-/// Marker component for toggling Dark / Light theme mode in settings.
+/// Marker component of a button choosing a theme file (`None`: the built-in theme).
 #[derive(Component)]
-pub struct DarkModeToggleButton;
+pub struct ThemeFileButton(pub Option<String>);
+
+/// Marker of the text showing an auto-mode switch time (`true`: light from, `false`: dark from).
+#[derive(Component)]
+pub struct AutoTimeLabel(pub bool);
 
 /// Marker component for setting the vehicle discovery interval in days.
 #[derive(Component)]

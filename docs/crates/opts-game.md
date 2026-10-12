@@ -17,7 +17,7 @@
 2. The global lifecycle state machine (`AppState`).
 3. The interactive **Main Menu** featuring Material Design 3 styling, glassmorphic translucent surfaces, and dynamic map-backed background loading.
 4. Destination screen routing with return navigation.
-5. User settings persistence (`GameSettings`) via platform standard paths (`settings.toml`).
+5. User settings persistence (`GameSettings`) via platform standard paths (`settings.toml` baseline, `settings.db` authoritative). Theme and interface keys (`theme_mode`, `auto_light_from`, `auto_dark_from`, `high_contrast`, `active_theme`, `theme_file`, `ui_scale`, `density`, `reduced_motion`) and the migration from `is_dark_theme` are in `settings_theme.rs`; RON theme files in `theme_files.rs`; the design is in the [GUI design system](../src/architecture/gui-design-system.md#64-settings-keys-and-migration).
 
 ---
 
@@ -69,10 +69,10 @@ The main menu subsystem is isolated under `crates/opts-game/src/menu/`:
 | **Plugin** | `menu/plugin.rs` | Registers lifecycle hooks (`OnEnter`, `OnExit`) and update systems conditioned to `in_state(AppState::MainMenu)`. |
 | **Layout** | `menu/layout.rs` | Builds viewport hierarchy: background (`z=0`), content (`z=1`), floating controls (`z=2`). |
 | **Entries** | `menu/entries.rs` | Spawns canonical entries (Play, Load, Settings, Credits, Quit), sets tab indices, and handles quit actions. |
-| **Background** | `menu/background.rs` | Loads `<recent_map_path>/picture.jpg` into Bevy `Image` texture, overlays 45% contrast scrim, and falls back to solid `ColorRole::Surface`. |
+| **Background** | `menu/background.rs` | Loads `<recent_map_path>/picture.jpg` into Bevy `Image` texture, overlays a contrast scrim computed from the picture and the theme (`menu_scrim_color`, text keeps 4.5:1 over bright and dark pictures), and falls back to the `Surface` role. |
 | **Glass Surfaces** | `menu/glass.rs` | Manages `GlassSurface` component; `sync_glass_surfaces` system dynamically applies translucent alpha (0.25–0.80) from theme tokens. |
 | **Interactions** | `menu/interactions.rs` | Focus ring visualizer (2px solid outline), hover/pressed state luminance adjustments, and [Enter]/[Space] keyboard button activation. |
-| **Theme Toggle** | `menu/theme_toggle.rs` | Floating circular button (top-right) and [F2] hotkey dispatching `ThemeChanged` for live theme swapping. |
+| **Theme Toggle** | `menu/theme_toggle.rs` | Floating button (top-right) and [F2] hotkey flipping Dark/Light by changing `GameSettings::theme_mode`; `settings_theme::sync_theme_settings` moves it into the `opts-gui` resources. |
 | **Systems** | `menu/systems.rs` | Setup/teardown triggers and initial keyboard focus management. |
 
 ---

@@ -4,6 +4,7 @@
 //! radii, and typography) updated reactively when [`MaterialTheme`] changes.
 
 use bevy::prelude::*;
+use bevy::text::{FontFeatureTag, FontFeatures, LetterSpacing, LineHeight};
 
 use crate::theme::{
     color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, theme::MaterialTheme,
@@ -120,6 +121,22 @@ pub type BackgroundSyncItem<'a> = (
     Option<&'a ElevationToken>,
 );
 
+/// The colour of a background role at an optional elevation: the role colour with the tonal tint
+/// of the level mixed in (in **both** themes).
+fn background_color(
+    theme: &MaterialTheme,
+    role: ColorRole,
+    elevation: Option<&ElevationToken>,
+) -> Color {
+    let base = theme.scheme.get(role);
+    match elevation {
+        Some(level) => level
+            .0
+            .apply_tonal_elevation(base, theme.scheme.get(ColorRole::Primary)),
+        None => base,
+    }
+}
+
 /// System that synchronizes [`BackgroundColor`] with [`BackgroundRole`].
 pub fn sync_background_roles(
     theme: Res<MaterialTheme>,
@@ -131,34 +148,54 @@ pub fn sync_background_roles(
     mut commands: Commands,
 ) {
     for (entity, role, elevation) in &uninitialized {
-        let base_color = theme.scheme.get(role.0);
-        let final_color = if let Some(elev) = elevation {
-            if theme.scheme.is_dark() {
-                let primary = theme.scheme.get(ColorRole::Primary);
-                elev.0.apply_tonal_elevation(base_color, primary)
-            } else {
-                base_color
-            }
-        } else {
-            base_color
-        };
-        commands.entity(entity).insert(BackgroundColor(final_color));
+        commands
+            .entity(entity)
+            .insert(BackgroundColor(background_color(&theme, role.0, elevation)));
     }
 
     let theme_changed = theme.is_changed();
     for (role, mut bg, elevation) in &mut query {
         if theme_changed || role.is_changed() {
-            let base_color = theme.scheme.get(role.0);
-            bg.0 = if let Some(elev) = elevation {
-                if theme.scheme.is_dark() {
-                    let primary = theme.scheme.get(ColorRole::Primary);
-                    elev.0.apply_tonal_elevation(base_color, primary)
-                } else {
-                    base_color
+            bg.0 = background_color(&theme, role.0, elevation);
+        }
+    }
+}
+
+/// Query item alias for elevation shadow synchronization.
+pub type ElevationSyncItem<'a> = (Entity, Ref<'a, ElevationToken>, Option<&'a BoxShadow>);
+
+/// Query item alias for text style synchronization.
+pub type TypeStyleSyncItem<'a> = (
+    Entity,
+    Ref<'a, TypeStyleToken>,
+    &'a mut TextFont,
+    Option<&'a mut LineHeight>,
+    Option<&'a mut LetterSpacing>,
+    Option<&'a TypeWeight>,
+);
+
+/// System that gives every raised entity (an [`ElevationToken`] above level 0) its drop
+/// shadow, and refreshes it when the level or the theme changes.
+pub fn sync_elevation_shadows(
+    theme: Res<MaterialTheme>,
+    mut commands: Commands,
+    query: Query<ElevationSyncItem, With<Node>>,
+) {
+    let theme_changed = theme.is_changed();
+    for (entity, level, current) in &query {
+        if !(theme_changed || level.is_changed()) && current.is_some() {
+            continue;
+        }
+        match level.0.shadow(&theme.scheme) {
+            Some(shadow) => {
+                if current != Some(&shadow) {
+                    commands.entity(entity).insert(shadow);
                 }
-            } else {
-                base_color
-            };
+            }
+            None if current.is_some() => {
+                commands.entity(entity).remove::<BoxShadow>();
+            }
+            None => {}
         }
     }
 }
@@ -206,16 +243,59 @@ pub fn sync_radius_tokens(mut query: Query<(Ref<RadiusToken>, &mut Node)>) {
     }
 }
 
-/// System that synchronizes [`Text`] typography font size and line height with [`TypeStyleToken`].
+/// Overrides the weight of a [`TypeStyleToken`] text (otherwise the style's own weight applies).
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TypeWeight(pub u16);
+
+/// System that applies a [`TypeStyleToken`]'s full style to its text: size, line height, letter
+/// spacing, weight, family and tabular figures.
+///
+/// Text whose font is neither the default one nor the UI family (the icon font, for instance)
+/// keeps its font and only receives size, line height and tracking.
 pub fn sync_typestyle_tokens(
     theme: Res<MaterialTheme>,
-    mut query: Query<(Ref<TypeStyleToken>, &mut TextFont)>,
+    mut commands: Commands,
+    mut query: Query<TypeStyleSyncItem>,
 ) {
     let theme_changed = theme.is_changed();
-    for (token, mut font) in &mut query {
-        if theme_changed || token.is_changed() {
-            let style = theme.typography.get(token.0);
-            font.font_size = FontSize::Px(style.font_size);
+    for (entity, token, mut font, line_height, spacing, weight) in &mut query {
+        if !(theme_changed || token.is_changed()) {
+            continue;
+        }
+        let style = theme.typography.resolve(token.0);
+        font.font_size = FontSize::Px(style.font_size);
+        if crate::fonts::is_ui_font(&font.font) {
+            font.font = crate::fonts::ui_font_source();
+            font.weight = FontWeight(weight.map_or(style.weight, |w| w.0));
+            font.font_features = if style.tabular {
+                FontFeatures::builder()
+                    .enable(FontFeatureTag::TABULAR_FIGURES)
+                    .build()
+            } else {
+                FontFeatures::default()
+            };
+        }
+        let ratio = LineHeight::RelativeToFont(style.line_height_ratio());
+        match line_height {
+            Some(mut lh) => {
+                if *lh != ratio {
+                    *lh = ratio;
+                }
+            }
+            None => {
+                commands.entity(entity).insert(ratio);
+            }
+        }
+        let tracking = LetterSpacing::Px(style.tracking);
+        match spacing {
+            Some(mut ls) => {
+                if *ls != tracking {
+                    *ls = tracking;
+                }
+            }
+            None => {
+                commands.entity(entity).insert(tracking);
+            }
         }
     }
 }
@@ -288,5 +368,92 @@ mod tests {
             updated_bg.map(|b| b.0),
             "BackgroundColor must update when MaterialTheme changes"
         );
+    }
+
+    fn app() -> App {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<MaterialTheme>()
+            .add_systems(Update, (sync_typestyle_tokens, sync_elevation_shadows));
+        app
+    }
+
+    #[test]
+    fn a_type_token_applies_size_line_height_tracking_weight_and_family() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((Text::new("Title"), TypeStyleToken(TypeScale::TitleLarge)))
+            .id();
+        app.update();
+        let w = app.world();
+        let font = w.get::<TextFont>(e).expect("font");
+        assert_eq!(font.font_size, FontSize::Px(20.0));
+        assert_eq!(font.weight, FontWeight(700));
+        assert_eq!(font.font, crate::fonts::ui_font_source());
+        assert_eq!(
+            w.get::<LineHeight>(e),
+            Some(&LineHeight::RelativeToFont(28.0 / 20.0))
+        );
+        assert_eq!(w.get::<LetterSpacing>(e), Some(&LetterSpacing::Px(0.0)));
+    }
+
+    #[test]
+    fn tabular_styles_switch_on_tabular_figures_and_other_styles_do_not() {
+        let mut app = app();
+        let speed = app
+            .world_mut()
+            .spawn((Text::new("48"), TypeStyleToken(TypeScale::NumericLarge)))
+            .id();
+        let body = app
+            .world_mut()
+            .spawn((Text::new("x"), TypeStyleToken(TypeScale::BodyMedium)))
+            .id();
+        app.update();
+        let tabular = FontFeatures::builder()
+            .enable(FontFeatureTag::TABULAR_FIGURES)
+            .build();
+        assert_eq!(
+            app.world().get::<TextFont>(speed).expect("f").font_features,
+            tabular
+        );
+        assert_eq!(
+            app.world().get::<TextFont>(body).expect("f").font_features,
+            FontFeatures::default()
+        );
+    }
+
+    #[test]
+    fn the_icon_font_keeps_its_font_but_gets_the_size() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((
+                Text::new("x"),
+                TextFont {
+                    font: crate::fonts::ICON_FONT.into(),
+                    ..default()
+                },
+                TypeStyleToken(TypeScale::BodyLarge),
+            ))
+            .id();
+        app.update();
+        let font = app.world().get::<TextFont>(e).expect("font");
+        assert_eq!(font.font, FontSource::Handle(crate::fonts::ICON_FONT));
+        assert_eq!(font.font_size, FontSize::Px(16.0));
+    }
+
+    #[test]
+    fn raised_entities_get_a_shadow_and_flat_ones_lose_it() {
+        let mut app = app();
+        let e = app
+            .world_mut()
+            .spawn((Node::default(), ElevationToken(ElevationLevel::Level3)))
+            .id();
+        app.update();
+        assert!(app.world().get::<BoxShadow>(e).is_some());
+        app.world_mut().get_mut::<ElevationToken>(e).expect("t").0 = ElevationLevel::Level0;
+        app.update();
+        assert!(app.world().get::<BoxShadow>(e).is_none());
     }
 }

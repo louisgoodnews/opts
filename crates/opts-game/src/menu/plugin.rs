@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 use crate::app_state::AppState;
 use crate::menu::{
+    background::sync_menu_scrim,
     entries::quit_button_action_system,
     interactions::{
         menu_focus_visual_system, menu_interaction_state_system, menu_keyboard_activation_system,
@@ -12,7 +13,7 @@ use crate::menu::{
         enter_main_menu_system, exit_main_menu_system, initial_focus_system,
         menu_escape_exit_system,
     },
-    theme_toggle::theme_toggle_system,
+    theme_toggle::{sync_theme_toggle_glyph, theme_toggle_system},
 };
 
 /// Plugin managing the lifecycle, rendering, and interaction systems for the OPTS Main Menu.
@@ -32,6 +33,8 @@ impl Plugin for MainMenuPlugin {
                 menu_keyboard_activation_system,
                 menu_interaction_state_system,
                 theme_toggle_system,
+                sync_theme_toggle_glyph,
+                sync_menu_scrim,
                 initial_focus_system,
                 menu_escape_exit_system,
                 quit_button_action_system,

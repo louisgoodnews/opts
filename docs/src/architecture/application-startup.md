@@ -69,7 +69,7 @@ The CLI is powered by `clap` with derive macros. All options are optional and pr
 | `--log-level <LEVEL>` | `Option<String>` | `"info"` | Global log filter level (`error`, `warn`, `info`, `debug`, `trace`) |
 | `--log-file <PATH>` | `Option<PathBuf>` | Platform default | Directory where subsystem log files are written |
 | `--fullscreen` | `bool` | `false` | Launch window in borderless fullscreen mode |
-| `--window-size <WxH>` | `Option<String>` | `"1920x1080"` | Initial window dimension (e.g. `1920x1080`) |
+| `--window-size <WxH>` | `Option<String>` | `"1920x1080"` | Initial window dimension (e.g. `1920x1080`); raised to the 1024x640 minimum if smaller |
 | `--headless` | `bool` | `false` | Run without opening a window (for automated testing & CI) |
 
 ---
@@ -78,8 +78,8 @@ The CLI is powered by `clap` with derive macros. All options are optional and pr
 
 When `--headless` is **false**:
 - **Title:** `"OPTS — Open Public Transport Simulator"`
-- **Default Resolution:** 1280×720 (or overridden by `--window-size <W>x<H>`)
-- **Resize Constraints:** Minimum 800×600, resizable enabled.
+- **Default Resolution:** 1920×1080 (or overridden by `--window-size <W>x<H>`; sizes below the minimum are raised to it)
+- **Resize Constraints:** Minimum **1024×640** logical pixels (`opts_cli::MIN_WINDOW_SIZE`, the Phase 9 decision D-UI-04; before M-0061 it was 800×600), resizable enabled.
 - **Present Mode:** `AutoVsync` (smooth tear-free frame presentation).
 - **Window Mode:** `Windowed` (or `BorderlessFullscreen` when `--fullscreen` is passed).
 

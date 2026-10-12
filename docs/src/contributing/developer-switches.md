@@ -13,6 +13,7 @@ Environment variables and flags that change behaviour for development, tests and
 | `OPTS_HIDE_MESH` | Comma-separated substrings; vehicle meshes whose name matches are not spawned (bisecting rendering problems). |
 | `OPTS_NO_DESCRAMBLE` | Disables the scrambled-mesh decoder (meshes without a plain twin are skipped). |
 | `OPTS_DECODE_SCRAMBLED` | Experimental: runs the older heuristic descrambler instead of the confident one (`o3d.md`, Addendum 4). |
+| `OPTS_REDUCED_MOTION` | `1` or `true` forces *reduced motion* (as if the desktop asked for it; the OS hint is otherwise read once from `gsettings` on Linux/GNOME). |
 | `OPTS_REPORTS_DIR` | Where F1 reports and screenshots are saved (default `~/.local/share/opts/reports`). |
 | `XDG_CACHE_HOME` | Base of the descrambler cache (`<base>/opts/descramble`, capped at 256 MiB). |
 
@@ -38,6 +39,7 @@ Environment variables and flags that change behaviour for development, tests and
 | :--- | :--- |
 | `OPTS_X_FIXTURES` | Folder with the `.x`/`.o3d` mutation fixtures (`Sceneryobjects/OPTS_Test/model`); tests skip without fixtures. |
 | `OPTS_EXAMPLE_TEXT`, `OPTS_EXAMPLE_SCREENSHOT`, `OPTS_EXAMPLE_MODAL_SHOT` | Example inputs/outputs of the GUI and reporting examples. |
+| `OPTS_FONT_COMPARE_OUT`, `OPTS_FONT_COMPARE_SIZE` | Output PNG and base size of `cargo run -p opts-gui --example font_compare` (rendered typeface comparison; reads candidate fonts from system locations, none of them bundled). `cargo run -p opts-gui --example theme_dump` prints the colour tables of the design-system page. |
 | `CENSUS_ALL`, `LIMIT`, `FILTER`, `COV_FILTER` | Scope limits of the corpus-census examples. |
 
 Tests that need an installation never hardcode a path: set `OMSI_PATH`.

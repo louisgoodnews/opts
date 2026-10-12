@@ -14,7 +14,7 @@ mod macros;
 pub mod args;
 pub mod protocol;
 
-pub use args::CliArgs;
+pub use args::{CliArgs, MIN_WINDOW_SIZE};
 
 #[cfg(feature = "client")]
 pub mod client;

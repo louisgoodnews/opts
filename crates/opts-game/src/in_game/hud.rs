@@ -10,11 +10,14 @@ use opts_gui::prelude::*;
 use opts_sim::vehicle::inputs::GearPosition;
 
 use crate::app_state::AppState;
+use crate::in_game::instruments::{InstrumentInk, InstrumentPanel};
 use crate::in_game::types::{
     CameraModeText, GearIndicatorText, HandbrakeIndicatorText, HudClockText, InGameEntity,
     InGameHudRoot, InGameSessionInfo, PauseMenuBtn, SpeedometerText, TachometerText,
 };
 use crate::menu::glass::GlassSurface;
+use bevy::color::Alpha;
+use opts_gui::theme::InstrumentVariant;
 
 /// Spawns the in-game driving telemetry overlay HUD.
 pub fn spawn_in_game_hud(
@@ -22,6 +25,9 @@ pub fn spawn_in_game_hud(
     theme: &MaterialTheme,
     session: &InGameSessionInfo,
 ) {
+    // First colours; `instruments::sync_instrument_tokens` keeps them in step with the day/night
+    // variant and the theme through the `InstrumentPanel` / `InstrumentInk` markers.
+    let ink = *theme.instrument(InstrumentVariant::Day);
     let root = commands
         .spawn((
             (
@@ -63,8 +69,13 @@ pub fn spawn_in_game_hud(
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
                     },
-                    BorderColor::all(Color::srgba(0.3, 0.45, 0.6, 0.35)),
-                    BackgroundColor(Color::srgba(0.08, 0.10, 0.14, 0.85)),
+                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                    BackgroundColor(
+                        theme
+                            .scheme
+                            .get(ColorRole::SurfaceContainerHigh)
+                            .with_alpha(0.85),
+                    ),
                 ),
                 GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.8),
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
@@ -77,7 +88,7 @@ pub fn spawn_in_game_hud(
                             font_size: FontSize::Px(14.0),
                             ..default()
                         },
-                        TextColor(Color::WHITE),
+                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
                     ),
                     TypeStyleToken(TypeScale::TitleSmall),
                 ));
@@ -92,7 +103,7 @@ pub fn spawn_in_game_hud(
                             font_size: FontSize::Px(12.0),
                             ..default()
                         },
-                        TextColor(Color::srgb(0.7, 0.8, 0.9)),
+                        TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
                     ),
                     HudClockText,
                     TypeStyleToken(TypeScale::BodySmall),
@@ -116,8 +127,13 @@ pub fn spawn_in_game_hud(
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.3)),
-                            BackgroundColor(Color::srgba(0.1, 0.12, 0.16, 0.85)),
+                            BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
+                            BackgroundColor(
+                                theme
+                                    .scheme
+                                    .get(ColorRole::SurfaceContainerHigh)
+                                    .with_alpha(0.85),
+                            ),
                         ),
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     ))
@@ -146,8 +162,10 @@ pub fn spawn_in_game_hud(
                                 border: UiRect::all(Val::Px(1.0)),
                                 ..default()
                             },
-                            BorderColor::all(Color::srgba(0.5, 0.3, 0.3, 0.5)),
-                            BackgroundColor(Color::srgba(0.2, 0.08, 0.08, 0.85)),
+                            BorderColor::all(theme.scheme.get(ColorRole::Error)),
+                            BackgroundColor(
+                                theme.scheme.get(ColorRole::ErrorContainer).with_alpha(0.85),
+                            ),
                         ),
                         M3Button::default(),
                         PauseMenuBtn,
@@ -161,7 +179,7 @@ pub fn spawn_in_game_hud(
                                     font_size: FontSize::Px(12.0),
                                     ..default()
                                 },
-                                TextColor(Color::srgb(1.0, 0.7, 0.7)),
+                                TextColor(theme.scheme.get(ColorRole::OnErrorContainer)),
                             ),
                             TypeStyleToken(TypeScale::LabelMedium),
                         ));
@@ -189,8 +207,8 @@ pub fn spawn_in_game_hud(
                         align_items: AlignItems::Center,
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    }, BorderColor::all(Color::srgba(0.35, 0.5, 0.65, 0.4)), BackgroundColor(Color::srgba(0.06, 0.08, 0.12, 0.90))),
-                GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.85),
+                    }, BorderColor::all(ink.panel_border), BackgroundColor(ink.panel)),
+                InstrumentPanel,
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Large),
             ))
             .with_children(|cluster| {
@@ -203,13 +221,15 @@ pub fn spawn_in_game_hud(
                         })
                     .with_children(|speed_box| {
                         speed_box.spawn((
-                            (Text::new("0.0"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(Color::srgb(0.2, 0.85, 0.95))),
+                            (Text::new("0.0"), TextFont { font_size: FontSize::Px(38.0), ..default() }, TextColor(ink.needle)),
                             SpeedometerText,
+                            InstrumentInk::Needle,
                             TypeStyleToken(TypeScale::HeadlineLarge),
                         ));
 
                         speed_box.spawn((
-                            (Text::new("KM/H"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("KM/H"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
+                            InstrumentInk::TextDim,
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -223,13 +243,15 @@ pub fn spawn_in_game_hud(
                         })
                     .with_children(|rpm_box| {
                         rpm_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(Color::WHITE)),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(26.0), ..default() }, TextColor(ink.text)),
                             TachometerText,
+                            InstrumentInk::Text,
                             TypeStyleToken(TypeScale::HeadlineSmall),
                         ));
 
                         rpm_box.spawn((
-                            (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("ENGINE RPM"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
+                            InstrumentInk::TextDim,
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -243,13 +265,15 @@ pub fn spawn_in_game_hud(
                         })
                     .with_children(|gear_box| {
                         gear_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px(28.0), ..default() }, TextColor(Color::srgb(0.3, 0.9, 0.4))),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(28.0), ..default() }, TextColor(ink.ok)),
                             GearIndicatorText,
+                            InstrumentInk::Ok,
                             TypeStyleToken(TypeScale::HeadlineMedium),
                         ));
 
                         gear_box.spawn((
-                            (Text::new("GEAR [D/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("GEAR [D/N/R]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
+                            InstrumentInk::TextDim,
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -263,13 +287,15 @@ pub fn spawn_in_game_hud(
                         })
                     .with_children(|brake_box| {
                         brake_box.spawn((
-                            (Text::new("--"), TextFont { font_size: FontSize::Px(14.0), ..default() }, TextColor(Color::srgb(0.4, 0.8, 0.5))),
+                            (Text::new("--"), TextFont { font_size: FontSize::Px(14.0), ..default() }, TextColor(ink.ok)),
                             HandbrakeIndicatorText,
+                            InstrumentInk::Ok,
                             TypeStyleToken(TypeScale::TitleSmall),
                         ));
 
                         brake_box.spawn((
-                            (Text::new("PARK [.]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(Color::srgb(0.6, 0.7, 0.8))),
+                            (Text::new("PARK [.]"), TextFont { font_size: FontSize::Px(11.0), ..default() }, TextColor(ink.text_dim)),
+                            InstrumentInk::TextDim,
                             TypeStyleToken(TypeScale::LabelSmall),
                         ));
                     });
@@ -281,12 +307,14 @@ pub fn spawn_in_game_hud(
                         padding: UiRect::axes(Val::Px(20.0), Val::Px(6.0)),
                         border: UiRect::all(Val::Px(1.0)),
                         ..default()
-                    }, BorderColor::all(Color::srgba(0.3, 0.4, 0.5, 0.2)), BackgroundColor(Color::srgba(0.04, 0.06, 0.08, 0.75))),
+                    }, BorderColor::all(ink.panel_border), BackgroundColor(ink.panel)),
+                InstrumentPanel,
                 RadiusToken(opts_gui::theme::shape::RadiusLevel::Full),
             ))
             .with_children(|legend| {
                 legend.spawn((
-                    (Text::new("[W/S] Throttle/Brake  •  [←/→] Steer  •  [.] Parking brake  •  [D/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(Color::srgb(0.75, 0.82, 0.90))),
+                    (Text::new("[W/S] Throttle/Brake  •  [←/→] Steer  •  [.] Parking brake  •  [D/N/R] Gears  •  [1-5] Camera  •  [P] Pause  •  [Esc] Menu"), TextFont { font_size: FontSize::Px(12.0), ..default() }, TextColor(ink.text)),
+                    InstrumentInk::Text,
                     TypeStyleToken(TypeScale::LabelMedium),
                 ));
             });
@@ -331,7 +359,7 @@ pub fn update_in_game_hud(
         ),
     >,
     mut brake_query: Query<
-        (&mut Text, &mut TextColor),
+        (&mut Text, &mut InstrumentInk),
         (
             With<HandbrakeIndicatorText>,
             Without<SpeedometerText>,
@@ -381,13 +409,13 @@ pub fn update_in_game_hud(
 
     // 4. Parking brake
     let is_park = controller.inputs().is_parking_brake_engaged();
-    for (mut text, mut text_color) in &mut brake_query {
+    for (mut text, mut ink) in &mut brake_query {
         if is_park {
             text.0 = "[PARK]".to_string();
-            text_color.0 = Color::srgb(0.95, 0.35, 0.3);
+            *ink = InstrumentInk::Alarm;
         } else {
             text.0 = "RELEASED".to_string();
-            text_color.0 = Color::srgb(0.35, 0.85, 0.45);
+            *ink = InstrumentInk::Ok;
         }
     }
 

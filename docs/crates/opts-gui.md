@@ -6,7 +6,7 @@
 | **Layer** | Engine GUI / Presentation Layer |
 | **Kind** | Library (`lib.rs`) |
 | **Status** | 🟢 Fully Implemented (Foundation Complete) |
-| **Last Updated** | 2026-10-08 |
+| **Last Updated** | 2026-10-12 (theme foundations, M-0061 part A) |
 
 ---
 
@@ -15,7 +15,7 @@
 `opts-gui` provides the canonical Material Design 3 (M3) user interface component library and design system engine for the Open Public Transport Simulator (OPTS). It translates Material Design 3 specifications into idiomatic, performant Bevy ECS UI hierarchies.
 
 ### Architectural Commitments
-1. **Strict Token Consumption:** Zero hardcoded colors (`Color::srgb(...)` is forbidden in widget declarations). All styling is driven by semantic design tokens (`BackgroundRole`, `BorderRole`, `ForegroundRole`, `RadiusToken`, `ElevationToken`, `TypeStyleToken`) that reactively re-evaluate on theme changes.
+1. **Strict Token Consumption:** Zero hardcoded colors (`Color::srgb(...)` is forbidden in widget declarations; a test enforces it for the loading screen, HUD and stub screens). All styling is driven by semantic design tokens (`BackgroundRole`, `BorderRole`, `ForegroundRole`, `RadiusToken`, `ElevationToken`, `TypeStyleToken`) that reactively re-evaluate on theme changes.
 2. **Safety & Robustness:** `#![deny(unsafe_code)]`, zero bare `.unwrap()` calls across library code, all files strictly under 500 lines, functions under 80 lines.
 3. **Ergonomic Dual-Spawn Pattern:** Every widget builder implements both `.spawn(&mut Commands) -> Entity` (top-level nodes) and `.spawn_child(&mut ChildBuilder) -> Entity` (nested flex hierarchies).
 4. **Decoupled Architecture:** Crate depends strictly on `bevy` and `opts-core` (zero dependency on `opts-bevy` or `opts-sim` to eliminate dependency cycles).
@@ -26,13 +26,19 @@
 ## 📦 Public API Surface
 
 ### 1. Theme Engine & Tokens (`opts_gui::theme`, `opts_gui::tokens`)
-- **`MaterialTheme`**: Root resource managing active theme state with light/dark runtime hot-swapping.
-- **`ColorScheme`**: 25+ semantic color roles conforming to WCAG 2.1 AA relative luminance contrast ratios ($\ge 4.5:1$).
-- **`TypographyTokens`**: All 15 Material 3 typography scale definitions (`DisplayLarge` through `LabelSmall`).
-- **`ElevationTokens`**: Levels 0 through 5 shadow and container elevation definitions.
-- **`ShapeTokens`**: Corner radius scales from `None` (0dp) to `Full` (pill/circle).
-- **`SpacingTokens`**: 4dp/8dp grid step scales (`None` to `ExtraLarge`).
-- **Token Components**: `BackgroundRole`, `BorderRole`, `ForegroundRole`, `RadiusToken`, `ElevationToken`, `TypeStyleToken`.
+
+Full specification: [GUI design system](../src/architecture/gui-design-system.md).
+
+- **`MaterialTheme`**: root resource (`scheme`, `typography`, `elevation`, `shape`, `spacing`, `motion`, `instruments`); `MaterialTheme::new(kind, accent)`, `dark()` (the default), `light()`, `high_contrast()`.
+- **`ColorRole` / `ColorScheme`**: **46 roles** (34 Material roles plus the status families `Success`, `Warning`, `Info`), three palettes (`ThemeKind::{Dark, Light, HighContrast}`), generated from an accent with a contrast guarantee (`theme::accent`, `theme::audit`, `theme::contrast`). `AccentPreset`: Transit blue, Amber, Violet, Emerald, Teal.
+- **Modes**: `ThemeMode::{Dark, Light, System, AutoClock}`, the pure `theme_for(time, light_from, dark_from)`, `ThemePreferences`, `ThemeSwitchLock`, `ThemeClock`; `ThemePlugin` resolves them once per minute and never during a modal dialog, loading or a drive.
+- **`TypographyTokens`**: **9 styles** (`Display`, `Headline`, `TitleLarge`, `TitleMedium`, `BodyLarge`, `BodyMedium`, `Label`, `NumericLarge`, `NumericMedium`); the 15 Material names are deprecated aliases. Noto Sans family (`fonts::UI_FONT_STACK`), line height, tracking, weight and tabular figures are applied; nothing below 12 px (`MinTextSize`).
+- **`ElevationLevel`**: tonal tint and a real `BoxShadow` in both themes. **`ShapeTokens`**: radius 8/12/16 for controls/cards/sheets. **`SpacingScale`** (10 steps) with **`Density`** (Comfortable/Compact/Dense) and **`LayoutClass`** (Compact/Medium/Expanded); **`UiScalePercent`** (75-200 %).
+- **Motion**: `DurationToken`, `MotionRole`, `EasingCurve`, `BackgroundTransition`, `MotionPreference` (setting or OS hint turns transitions into instant changes).
+- **`InstrumentTokens`** (day/night) for HUD instruments; **`scrim_for_text`** for text over images; **`CustomTheme`** and (feature `serde`) RON **theme files** (`theme::file`).
+- **Token components**: `BackgroundRole`, `BorderRole`, `ForegroundRole`, `RadiusToken`, `ElevationToken`, `TypeStyleToken` (+ `TypeWeight`).
+
+Examples: `font_compare` (rendered typeface comparison), `theme_dump` (prints the colour tables of the design-system page).
 
 ### 2. Layout Primitives (`opts_gui::layout`)
 - **`StackBuilder`**: Vertical flex-column container with M3 spacing tokens.

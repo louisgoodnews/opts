@@ -18,11 +18,13 @@ bevy = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 arboard = { workspace = true }
+chrono = { workspace = true }
 serde = { workspace = true, optional = true }
+ron = { workspace = true, optional = true }
 
 [features]
 default = []
-serde = ["dep:serde"]
+serde = ["dep:serde", "dep:ron"]
 
 [dev-dependencies]
 ab_glyph = "0.2"

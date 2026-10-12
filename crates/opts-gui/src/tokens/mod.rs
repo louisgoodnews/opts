@@ -8,7 +8,7 @@ pub mod colors;
 pub mod components;
 
 pub use components::{
-    sync_background_roles, sync_border_roles, sync_foreground_roles, sync_radius_tokens,
-    sync_typestyle_tokens, BackgroundRole, BorderRole, ElevationToken, ForegroundRole, RadiusToken,
-    TypeStyleToken,
+    sync_background_roles, sync_border_roles, sync_elevation_shadows, sync_foreground_roles,
+    sync_radius_tokens, sync_typestyle_tokens, BackgroundRole, BorderRole, ElevationToken,
+    ForegroundRole, RadiusToken, TypeStyleToken, TypeWeight,
 };

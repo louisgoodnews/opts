@@ -1,4 +1,6 @@
-//! UI & Themes settings tab implementation.
+//! UI & Themes settings tab: theme mode, auto-switch times, accent, scale, density, motion.
+//!
+//! Every choice is a [`ThemeChoiceButton`]; `theme_choice.rs` applies it.
 
 use bevy::prelude::*;
 use opts_gui::components::Button;
@@ -6,270 +8,271 @@ use opts_gui::prelude::*;
 
 use crate::menu::glass::GlassSurface;
 use crate::settings::GameSettings;
-use crate::settings_screen::types::{ColorSwatchButton, DarkModeToggleButton, ThemePresetButton};
+use crate::settings_screen::display_tab::choice_colors;
+use crate::settings_screen::types::{
+    AutoTimeLabel, ThemeChoice, ThemeChoiceButton, ThemeFileButton,
+};
+use opts_gui::theme::mode::format_time;
 
-/// Spawns the UI & Themes tab content.
+fn heading(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, text: &str) {
+    parent.spawn((
+        (
+            Text::new(text),
+            TextColor(theme.scheme.get(ColorRole::OnSurface)),
+        ),
+        TypeStyleToken(TypeScale::TitleMedium),
+        ForegroundRole(ColorRole::OnSurface),
+    ));
+}
+
+fn hint(parent: &mut ChildSpawnerCommands, theme: &MaterialTheme, text: &str) {
+    parent.spawn((
+        (
+            Text::new(text),
+            TextColor(theme.scheme.get(ColorRole::OnSurfaceVariant)),
+        ),
+        TypeStyleToken(TypeScale::Label),
+        ForegroundRole(ColorRole::OnSurfaceVariant),
+    ));
+}
+
+fn choice_button(
+    row: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    settings: &GameSettings,
+    choice: ThemeChoice,
+) {
+    let selected = choice.is_selected(settings);
+    let (border, bg) = choice_colors(theme, selected);
+    row.spawn((
+        (
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                border: UiRect::all(Val::Px(if selected { 2.0 } else { 1.0 })),
+                ..default()
+            },
+            BorderColor::all(border),
+            BackgroundColor(bg),
+        ),
+        M3Button::default(),
+        ThemeChoiceButton(choice),
+        GlassSurface::new(
+            if selected {
+                ColorRole::PrimaryContainer
+            } else {
+                ColorRole::SurfaceContainerHigh
+            },
+            0.60,
+        ),
+        RadiusToken(RadiusLevel::Small),
+        Focusable { tab_index: 0 },
+    ))
+    .with_children(|btn| {
+        btn.spawn((
+            Text::new(choice.label()),
+            TextColor(theme.scheme.get(if selected {
+                ColorRole::OnPrimaryContainer
+            } else {
+                ColorRole::OnSurface
+            })),
+            TypeStyleToken(TypeScale::BodyMedium),
+        ));
+    });
+}
+
+fn choice_row(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    settings: &GameSettings,
+    choices: &[ThemeChoice],
+) {
+    parent
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(10.0),
+            row_gap: Val::Px(8.0),
+            flex_wrap: FlexWrap::Wrap,
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            for &c in choices {
+                choice_button(row, theme, settings, c);
+            }
+        });
+}
+
+fn time_row(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    settings: &GameSettings,
+    title: &str,
+    light: bool,
+) {
+    let (back, forward, time) = if light {
+        (
+            ThemeChoice::LightFromStep(-super::theme_choice::TIME_STEP_MINUTES),
+            ThemeChoice::LightFromStep(super::theme_choice::TIME_STEP_MINUTES),
+            settings.light_from(),
+        )
+    } else {
+        (
+            ThemeChoice::DarkFromStep(-super::theme_choice::TIME_STEP_MINUTES),
+            ThemeChoice::DarkFromStep(super::theme_choice::TIME_STEP_MINUTES),
+            settings.dark_from(),
+        )
+    };
+    parent
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(10.0),
+            align_items: AlignItems::Center,
+            ..default()
+        })
+        .with_children(|row| {
+            row.spawn((
+                Text::new(title),
+                TextColor(theme.scheme.get(ColorRole::OnSurface)),
+                TypeStyleToken(TypeScale::BodyMedium),
+                ForegroundRole(ColorRole::OnSurface),
+                Node {
+                    min_width: Val::Px(110.0),
+                    ..default()
+                },
+            ));
+            choice_button(row, theme, settings, back);
+            row.spawn((
+                Text::new(format_time(time)),
+                TextColor(theme.scheme.get(ColorRole::OnSurface)),
+                TypeStyleToken(TypeScale::TitleLarge),
+                ForegroundRole(ColorRole::OnSurface),
+                AutoTimeLabel(light),
+            ));
+            choice_button(row, theme, settings, forward);
+        });
+}
+
+fn theme_file_row(
+    parent: &mut ChildSpawnerCommands,
+    theme: &MaterialTheme,
+    settings: &GameSettings,
+) {
+    let mut options: Vec<Option<String>> = vec![None];
+    options.extend(
+        crate::theme_files::discover_theme_files()
+            .into_iter()
+            .map(Some),
+    );
+    parent
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(10.0),
+            row_gap: Val::Px(8.0),
+            flex_wrap: FlexWrap::Wrap,
+            ..default()
+        })
+        .with_children(|row| {
+            for option in options {
+                let selected = option.clone().unwrap_or_default() == settings.theme_file;
+                let (border, bg) = choice_colors(theme, selected);
+                let label = option.clone().unwrap_or_else(|| "Built-in".to_string());
+                row.spawn((
+                    (
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            border: UiRect::all(Val::Px(if selected { 2.0 } else { 1.0 })),
+                            ..default()
+                        },
+                        BorderColor::all(border),
+                        BackgroundColor(bg),
+                    ),
+                    M3Button::default(),
+                    ThemeFileButton(option),
+                    RadiusToken(RadiusLevel::Small),
+                    Focusable { tab_index: 0 },
+                ))
+                .with_children(|btn| {
+                    btn.spawn((
+                        Text::new(label),
+                        TextColor(theme.scheme.get(ColorRole::OnSurface)),
+                        TypeStyleToken(TypeScale::BodyMedium),
+                    ));
+                });
+            }
+        });
+}
+
+/// Spawns the UI & Themes tab content in two columns (themes on the left, interface on the right).
 pub fn spawn_ui_tab(
     parent: &mut ChildSpawnerCommands,
     theme: &MaterialTheme,
     settings: &GameSettings,
 ) {
-    // Section 1: Dark Mode Toggle
+    let column = || Node {
+        flex_direction: FlexDirection::Column,
+        row_gap: Val::Px(8.0),
+        flex_basis: Val::Px(420.0),
+        flex_grow: 1.0,
+        flex_shrink: 1.0,
+        max_width: Val::Px(560.0),
+        ..default()
+    };
     parent
         .spawn(Node {
             flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
-            column_gap: Val::Px(16.0),
-            margin: UiRect::bottom(Val::Px(16.0)),
-            ..default()
-        })
-        .with_children(|row| {
-            row.spawn((
-                (
-                    Text::new("Theme Mode:"),
-                    TextFont {
-                        font_size: FontSize::Px(15.0),
-                        ..default()
-                    },
-                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
-                ),
-                TypeStyleToken(TypeScale::TitleSmall),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
-
-            let mode_label = if settings.is_dark_theme {
-                "Dark Mode (Active)"
-            } else {
-                "Light Mode (Active)"
-            };
-
-            row.spawn((
-                (
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
-                        border: UiRect::all(Val::Px(1.0)),
-                        ..default()
-                    },
-                    BorderColor::all(theme.scheme.get(ColorRole::OutlineVariant)),
-                    BackgroundColor(theme.scheme.get(ColorRole::SurfaceContainerHigh)),
-                ),
-                DarkModeToggleButton,
-                GlassSurface::new(ColorRole::SurfaceContainerHigh, 0.65),
-                RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
-                Focusable { tab_index: 0 },
-            ))
-            .with_children(|btn| {
-                btn.spawn((
-                    (
-                        Text::new(mode_label),
-                        TextFont {
-                            font_size: FontSize::Px(13.0),
-                            ..default()
-                        },
-                        TextColor(theme.scheme.get(ColorRole::Primary)),
-                    ),
-                    TypeStyleToken(TypeScale::LabelLarge),
-                    ForegroundRole(ColorRole::Primary),
-                ));
-            });
-        });
-
-    // Section 2: Preset Themes
-    parent
-        .spawn(Node {
-            flex_direction: FlexDirection::Column,
+            flex_wrap: FlexWrap::Wrap,
+            column_gap: Val::Px(32.0),
             row_gap: Val::Px(8.0),
-            margin: UiRect::bottom(Val::Px(20.0)),
+            align_items: AlignItems::FlexStart,
             ..default()
         })
-        .with_children(|section| {
-            section.spawn((
-                (
-                    Text::new("Curated Theme Presets:"),
-                    TextFont {
-                        font_size: FontSize::Px(15.0),
-                        ..default()
-                    },
-                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
-                ),
-                TypeStyleToken(TypeScale::TitleSmall),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
+        .with_children(|page| {
+            page.spawn(column()).with_children(|col| {
+                heading(col, theme, "Theme");
+                choice_row(col, theme, settings, &ThemeChoice::modes());
+                hint(
+                    col,
+                    theme,
+                    "System follows your desktop; Auto (clock) switches by the time of day on this device.",
+                );
+                time_row(col, theme, settings, "Light from", true);
+                time_row(col, theme, settings, "Dark from", false);
 
-            section
-                .spawn(Node {
-                    flex_direction: FlexDirection::Row,
-                    column_gap: Val::Px(12.0),
-                    flex_wrap: FlexWrap::Wrap,
-                    ..default()
-                })
-                .with_children(|buttons| {
-                    let presets = [
-                        ("Default", "Standard Material"),
-                        ("Amber", "Amber Transit"),
-                        ("Violet", "Deep Violet"),
-                        ("Emerald", "Emerald Metro"),
-                        ("Teal", "Teal Coast"),
-                    ];
+                heading(col, theme, "High contrast");
+                choice_row(
+                    col,
+                    theme,
+                    settings,
+                    &[ThemeChoice::HighContrast(false), ThemeChoice::HighContrast(true)],
+                );
+                hint(col, theme, "Maximum contrast; never switched on automatically.");
 
-                    for (name, label) in presets {
-                        let is_active = settings.active_theme == name;
-                        buttons
-                            .spawn((
-                                (
-                                    Button,
-                                    Node {
-                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
-                                        border: UiRect::all(Val::Px(if is_active {
-                                            2.0
-                                        } else {
-                                            1.0
-                                        })),
-                                        ..default()
-                                    },
-                                    BorderColor::all(if is_active {
-                                        theme.scheme.get(ColorRole::Primary)
-                                    } else {
-                                        theme.scheme.get(ColorRole::OutlineVariant)
-                                    }),
-                                    BackgroundColor(
-                                        theme.scheme.get(ColorRole::SurfaceContainerLow),
-                                    ),
-                                ),
-                                ThemePresetButton { preset_name: name },
-                                GlassSurface::new(ColorRole::SurfaceContainerLow, 0.60),
-                                RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
-                                Focusable { tab_index: 0 },
-                            ))
-                            .with_children(|btn| {
-                                btn.spawn((
-                                    (
-                                        Text::new(label),
-                                        TextFont {
-                                            font_size: FontSize::Px(13.0),
-                                            ..default()
-                                        },
-                                        TextColor(if is_active {
-                                            theme.scheme.get(ColorRole::Primary)
-                                        } else {
-                                            theme.scheme.get(ColorRole::OnSurface)
-                                        }),
-                                    ),
-                                    TypeStyleToken(TypeScale::LabelMedium),
-                                    ForegroundRole(ColorRole::OnSurface),
-                                ));
-                            });
-                    }
-                });
-        });
+                heading(col, theme, "Accent colour");
+                choice_row(col, theme, settings, &ThemeChoice::accents());
+            });
+            page.spawn(column()).with_children(|col| {
+                heading(col, theme, "Interface size");
+                choice_row(col, theme, settings, &ThemeChoice::scales());
+                heading(col, theme, "Density");
+                choice_row(col, theme, settings, &ThemeChoice::densities());
 
-    // Section 3: Per-Widget Color Customization Palette
-    parent
-        .spawn(Node {
-            flex_direction: FlexDirection::Column,
-            row_gap: Val::Px(10.0),
-            margin: UiRect::bottom(Val::Px(16.0)),
-            ..default()
-        })
-        .with_children(|section| {
-            section.spawn((
-                (
-                    Text::new("Per-Widget Colorization (Click Swatch to Apply & Persist):"),
-                    TextFont {
-                        font_size: FontSize::Px(15.0),
-                        ..default()
-                    },
-                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
-                ),
-                TypeStyleToken(TypeScale::TitleSmall),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
+                heading(col, theme, "Reduce motion");
+                choice_row(
+                    col,
+                    theme,
+                    settings,
+                    &[ThemeChoice::ReducedMotion(false), ThemeChoice::ReducedMotion(true)],
+                );
 
-            spawn_swatch_row(
-                section,
-                theme,
-                "Button Primary Accent:",
-                "Button",
-                "Primary",
-                &[
-                    ("#F59E0B", Color::srgb(0.96, 0.62, 0.04)),
-                    ("#8B5CF6", Color::srgb(0.55, 0.36, 0.96)),
-                    ("#10B981", Color::srgb(0.06, 0.72, 0.51)),
-                    ("#0EA5E9", Color::srgb(0.05, 0.65, 0.91)),
-                    ("#EF4444", Color::srgb(0.93, 0.27, 0.27)),
-                ],
-            );
-
-            spawn_swatch_row(
-                section,
-                theme,
-                "Card & Container Role:",
-                "Card",
-                "SecondaryContainer",
-                &[
-                    ("#FDE68A", Color::srgb(0.99, 0.90, 0.54)),
-                    ("#DDD6FE", Color::srgb(0.87, 0.84, 0.99)),
-                    ("#A7F3D0", Color::srgb(0.65, 0.95, 0.82)),
-                    ("#BAE6FD", Color::srgb(0.73, 0.90, 0.99)),
-                    ("#FECACA", Color::srgb(0.99, 0.79, 0.79)),
-                ],
-            );
-        });
-}
-
-fn spawn_swatch_row(
-    parent: &mut ChildSpawnerCommands,
-    theme: &MaterialTheme,
-    title: &'static str,
-    widget: &'static str,
-    role: &'static str,
-    colors: &[(&'static str, Color)],
-) {
-    parent
-        .spawn(Node {
-            flex_direction: FlexDirection::Row,
-            align_items: AlignItems::Center,
-            column_gap: Val::Px(12.0),
-            margin: UiRect::vertical(Val::Px(4.0)),
-            ..default()
-        })
-        .with_children(|row| {
-            row.spawn((
-                (
-                    Text::new(title),
-                    TextFont {
-                        font_size: FontSize::Px(13.0),
-                        ..default()
-                    },
-                    TextColor(theme.scheme.get(ColorRole::OnSurface)),
-                ),
-                TypeStyleToken(TypeScale::LabelLarge),
-                ForegroundRole(ColorRole::OnSurface),
-            ));
-
-            for &(hex, color) in colors {
-                row.spawn((
-                    (
-                        Button,
-                        Node {
-                            width: Val::Px(24.0),
-                            height: Val::Px(24.0),
-                            border: UiRect::all(Val::Px(1.0)),
-                            ..default()
-                        },
-                        BorderColor::all(Color::WHITE.with_alpha(0.4)),
-                        BackgroundColor(color),
-                    ),
-                    ColorSwatchButton {
-                        widget_type: widget,
-                        role_name: role,
-                        hex,
-                        color,
-                    },
-                    RadiusToken(opts_gui::theme::shape::RadiusLevel::Small),
-                    Focusable { tab_index: 0 },
-                ));
-            }
+                heading(col, theme, "Theme file");
+                theme_file_row(col, theme, settings);
+                hint(
+                    col,
+                    theme,
+                    "RON files in the themes folder of the configuration directory; colours that fail the contrast rules are corrected.",
+                );
+            });
         });
 }

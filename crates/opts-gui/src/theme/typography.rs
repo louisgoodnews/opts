@@ -1,114 +1,202 @@
-//! Material Design 3 typography system and type scale.
+//! The OPTS type scale: nine styles (the Phase 9 decision, `design-language.md` section 5), each
+//! with a size, a line height, a tracking, a weight and optionally tabular figures.
 //!
-//! Provides the 15 baseline typography styles across Display, Headline,
-//! Title, Body, and Label roles, along with the [`TypographyTokens`] struct.
+//! The style table is applied by `sync_typestyle_tokens`: **size, line height, letter spacing,
+//! weight, family and figure style** all reach the text, not only the size as before. No size is
+//! below 12 px at 100 % UI scale ([`MIN_TEXT_PX`]).
+//!
+//! The 15 Material names of the old scale still exist as deprecated aliases that resolve to one
+//! of the nine styles ([`TypeScale::canonical`]), so existing screens keep compiling while they
+//! migrate.
 
-use bevy::prelude::*;
+/// The smallest text size, in logical pixels before UI scale (accessibility floor, UI-P10).
+pub const MIN_TEXT_PX: f32 = 12.0;
 
-/// 15 baseline typography roles defined by Material Design 3.
+/// The type scale roles.
+///
+/// The first nine variants are the scale; the remaining ones are deprecated aliases of the old
+/// 15-step Material scale (see [`TypeScale::canonical`] for where each one lands).
+#[allow(deprecated)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TypeScale {
-    DisplayLarge,
-    DisplayMedium,
-    DisplaySmall,
-    HeadlineLarge,
-    HeadlineMedium,
-    HeadlineSmall,
+    /// 40 px, hero titles only.
+    Display,
+    /// 28 px, screen titles.
+    Headline,
+    /// 20 px, dialog and section titles.
     TitleLarge,
+    /// 16 px medium, card and list titles.
     TitleMedium,
-    TitleSmall,
+    /// 16 px, long text.
     BodyLarge,
+    /// 14 px, standard UI text.
     BodyMedium,
-    BodySmall,
+    /// 12 px medium, labels, chips, overlines, hints.
+    Label,
+    /// 48 px tabular, the speed readout.
+    NumericLarge,
+    /// 32 px tabular, secondary instrument readouts.
+    NumericMedium,
+
+    // ---- deprecated aliases of the former 15 styles -------------------------------------
+    /// Deprecated: use [`TypeScale::Display`].
+    #[deprecated(note = "use TypeScale::Display")]
+    DisplayLarge,
+    /// Deprecated: use [`TypeScale::Display`].
+    #[deprecated(note = "use TypeScale::Display")]
+    DisplayMedium,
+    /// Deprecated: use [`TypeScale::Display`].
+    #[deprecated(note = "use TypeScale::Display")]
+    DisplaySmall,
+    /// Deprecated: use [`TypeScale::Headline`].
+    #[deprecated(note = "use TypeScale::Headline")]
+    HeadlineLarge,
+    /// Deprecated: use [`TypeScale::Headline`].
+    #[deprecated(note = "use TypeScale::Headline")]
+    HeadlineMedium,
+    /// Deprecated: use [`TypeScale::Headline`].
+    #[deprecated(note = "use TypeScale::Headline")]
+    HeadlineSmall,
+    /// Deprecated: use [`TypeScale::BodyMedium`] (medium weight).
+    #[deprecated(note = "use TypeScale::BodyMedium")]
+    TitleSmall,
+    /// Deprecated: use [`TypeScale::BodyMedium`] (medium weight).
+    #[deprecated(note = "use TypeScale::BodyMedium")]
     LabelLarge,
+    /// Deprecated: use [`TypeScale::Label`].
+    #[deprecated(note = "use TypeScale::Label")]
     LabelMedium,
+    /// Deprecated: use [`TypeScale::Label`].
+    #[deprecated(note = "use TypeScale::Label")]
     LabelSmall,
+    /// Deprecated: use [`TypeScale::Label`] (the old 12 px body-small).
+    #[deprecated(note = "use TypeScale::Label")]
+    BodySmall,
 }
 
+#[allow(deprecated)]
 impl TypeScale {
-    /// Returns a static slice of all 15 type scale roles.
+    /// The nine styles of the scale.
     pub const fn all() -> &'static [TypeScale] {
         &[
-            TypeScale::DisplayLarge,
-            TypeScale::DisplayMedium,
-            TypeScale::DisplaySmall,
-            TypeScale::HeadlineLarge,
-            TypeScale::HeadlineMedium,
-            TypeScale::HeadlineSmall,
+            TypeScale::Display,
+            TypeScale::Headline,
             TypeScale::TitleLarge,
             TypeScale::TitleMedium,
-            TypeScale::TitleSmall,
             TypeScale::BodyLarge,
             TypeScale::BodyMedium,
-            TypeScale::BodySmall,
-            TypeScale::LabelLarge,
-            TypeScale::LabelMedium,
-            TypeScale::LabelSmall,
+            TypeScale::Label,
+            TypeScale::NumericLarge,
+            TypeScale::NumericMedium,
         ]
+    }
+
+    /// The scale style a (possibly deprecated) role resolves to.
+    pub const fn canonical(self) -> TypeScale {
+        match self {
+            Self::DisplayLarge | Self::DisplayMedium | Self::DisplaySmall => Self::Display,
+            Self::HeadlineLarge | Self::HeadlineMedium | Self::HeadlineSmall => Self::Headline,
+            Self::TitleSmall | Self::LabelLarge => Self::BodyMedium,
+            Self::LabelMedium | Self::LabelSmall | Self::BodySmall => Self::Label,
+            other => other,
+        }
+    }
+
+    /// A weight the deprecated alias asks for on top of its canonical style (the old
+    /// `TitleSmall` and `LabelLarge` were medium weight).
+    const fn legacy_weight(self) -> Option<u16> {
+        match self {
+            Self::TitleSmall | Self::LabelLarge => Some(500),
+            _ => None,
+        }
+    }
+
+    const fn index(self) -> usize {
+        match self.canonical() {
+            Self::Display => 0,
+            Self::Headline => 1,
+            Self::TitleLarge => 2,
+            Self::TitleMedium => 3,
+            Self::BodyLarge => 4,
+            Self::BodyMedium => 5,
+            Self::Label => 6,
+            Self::NumericLarge => 7,
+            _ => 8,
+        }
     }
 }
 
-/// Specifications for a typography style.
-#[derive(Debug, Clone, PartialEq)]
+/// Specification of one text style.
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TypeStyle {
-    /// Nominal font size in physical/logical pixels.
+    /// Nominal font size in logical pixels (before UI scale).
     pub font_size: f32,
-    /// Line height in pixels.
+    /// Line height in logical pixels (before UI scale).
     pub line_height: f32,
-    /// Tracking / letter spacing in pixels.
+    /// Letter spacing in logical pixels (before UI scale).
     pub tracking: f32,
-    /// Optional font asset handle override.
-    pub font: Option<Handle<Font>>,
+    /// CSS-style weight: 400 regular, 500 medium, 700 bold (the bundled faces; 600 would resolve
+    /// to bold).
+    pub weight: u16,
+    /// Use tabular (fixed-width) figures so values do not jitter.
+    pub tabular: bool,
 }
 
 impl TypeStyle {
-    /// Creates a new type style specification.
+    /// Creates a regular-weight, proportional-figure style.
     pub const fn new(font_size: f32, line_height: f32, tracking: f32) -> Self {
         Self {
             font_size,
             line_height,
             tracking,
-            font: None,
+            weight: 400,
+            tabular: false,
         }
+    }
+
+    /// The same style with another weight.
+    pub const fn weight(mut self, weight: u16) -> Self {
+        self.weight = weight;
+        self
+    }
+
+    /// The same style with tabular figures.
+    pub const fn tabular(mut self) -> Self {
+        self.tabular = true;
+        self
+    }
+
+    /// Line height as a multiple of the font size (what the text system takes, so it scales).
+    pub fn line_height_ratio(&self) -> f32 {
+        self.line_height / self.font_size
     }
 }
 
-/// Token collection providing specifications for all 15 type scale variants.
+/// The table of the nine styles.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypographyTokens {
-    styles: [TypeStyle; 15],
+    styles: [TypeStyle; 9],
 }
 
 impl TypographyTokens {
-    /// Maps a [`TypeScale`] role to its array index.
-    const fn scale_to_index(scale: TypeScale) -> usize {
-        match scale {
-            TypeScale::DisplayLarge => 0,
-            TypeScale::DisplayMedium => 1,
-            TypeScale::DisplaySmall => 2,
-            TypeScale::HeadlineLarge => 3,
-            TypeScale::HeadlineMedium => 4,
-            TypeScale::HeadlineSmall => 5,
-            TypeScale::TitleLarge => 6,
-            TypeScale::TitleMedium => 7,
-            TypeScale::TitleSmall => 8,
-            TypeScale::BodyLarge => 9,
-            TypeScale::BodyMedium => 10,
-            TypeScale::BodySmall => 11,
-            TypeScale::LabelLarge => 12,
-            TypeScale::LabelMedium => 13,
-            TypeScale::LabelSmall => 14,
-        }
-    }
-
-    /// Retrieves the style corresponding to the given scale role.
+    /// The style of a role (deprecated aliases give their canonical style).
     pub fn get(&self, scale: TypeScale) -> &TypeStyle {
-        &self.styles[Self::scale_to_index(scale)]
+        &self.styles[scale.index()]
     }
 
-    /// Mutably retrieves the style corresponding to the given scale role.
+    /// Mutable access to the style of a role (aliases edit their canonical style).
     pub fn get_mut(&mut self, scale: TypeScale) -> &mut TypeStyle {
-        &mut self.styles[Self::scale_to_index(scale)]
+        &mut self.styles[scale.index()]
+    }
+
+    /// The style a role is drawn with: [`get`](Self::get) plus the weight a deprecated alias asks
+    /// for.
+    pub fn resolve(&self, scale: TypeScale) -> TypeStyle {
+        let mut style = *self.get(scale);
+        if let Some(w) = scale.legacy_weight() {
+            style.weight = w;
+        }
+        style
     }
 }
 
@@ -116,46 +204,71 @@ impl Default for TypographyTokens {
     fn default() -> Self {
         Self {
             styles: [
-                TypeStyle::new(57.0, 64.0, -0.25), // DisplayLarge
-                TypeStyle::new(45.0, 52.0, 0.0),   // DisplayMedium
-                TypeStyle::new(36.0, 44.0, 0.0),   // DisplaySmall
-                TypeStyle::new(32.0, 40.0, 0.0),   // HeadlineLarge
-                TypeStyle::new(28.0, 36.0, 0.0),   // HeadlineMedium
-                TypeStyle::new(24.0, 32.0, 0.0),   // HeadlineSmall
-                TypeStyle::new(22.0, 28.0, 0.0),   // TitleLarge
-                TypeStyle::new(16.0, 24.0, 0.15),  // TitleMedium
-                TypeStyle::new(14.0, 20.0, 0.10),  // TitleSmall
-                TypeStyle::new(16.0, 24.0, 0.50),  // BodyLarge
-                TypeStyle::new(14.0, 20.0, 0.25),  // BodyMedium
-                TypeStyle::new(12.0, 16.0, 0.40),  // BodySmall
-                TypeStyle::new(14.0, 20.0, 0.10),  // LabelLarge
-                TypeStyle::new(12.0, 16.0, 0.50),  // LabelMedium
-                TypeStyle::new(11.0, 16.0, 0.50),  // LabelSmall
+                TypeStyle::new(40.0, 48.0, -0.5).weight(700),  // Display
+                TypeStyle::new(28.0, 36.0, -0.25).weight(700), // Headline
+                TypeStyle::new(20.0, 28.0, 0.0).weight(700),   // TitleLarge
+                TypeStyle::new(16.0, 24.0, 0.1).weight(500),   // TitleMedium
+                TypeStyle::new(16.0, 24.0, 0.1),               // BodyLarge
+                TypeStyle::new(14.0, 20.0, 0.15),              // BodyMedium
+                TypeStyle::new(MIN_TEXT_PX, 16.0, 0.4).weight(500), // Label
+                TypeStyle::new(48.0, 56.0, 0.0).weight(700).tabular(), // NumericLarge
+                TypeStyle::new(32.0, 40.0, 0.0).weight(700).tabular(), // NumericMedium
             ],
         }
     }
 }
 
 #[cfg(test)]
+#[allow(deprecated)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_typography_scale_has_all_15_styles() {
+    fn the_scale_has_nine_styles_none_below_the_floor() {
         let typography = TypographyTokens::default();
-        let all_scales = TypeScale::all();
-        assert_eq!(all_scales.len(), 15);
-
-        for &scale in all_scales {
+        assert_eq!(TypeScale::all().len(), 9);
+        for &scale in TypeScale::all() {
             let style = typography.get(scale);
-            assert!(
-                style.font_size > 0.0,
-                "Style {scale:?} font_size must be positive"
-            );
-            assert!(
-                style.line_height >= style.font_size,
-                "Style {scale:?} line_height must be >= font_size"
-            );
+            assert!(style.font_size >= MIN_TEXT_PX, "{scale:?}");
+            assert!(style.line_height >= style.font_size, "{scale:?}");
         }
+    }
+
+    #[test]
+    fn the_scale_matches_the_design_language() {
+        let t = TypographyTokens::default();
+        let sizes: Vec<f32> = TypeScale::all()
+            .iter()
+            .map(|&s| t.get(s).font_size)
+            .collect();
+        assert_eq!(
+            sizes,
+            [40.0, 28.0, 20.0, 16.0, 16.0, 14.0, 12.0, 48.0, 32.0]
+        );
+        assert!(t.get(TypeScale::NumericLarge).tabular);
+        assert!(!t.get(TypeScale::BodyMedium).tabular);
+    }
+
+    #[test]
+    fn deprecated_aliases_land_on_a_scale_style_and_never_below_the_floor() {
+        let t = TypographyTokens::default();
+        for old in [
+            TypeScale::DisplayLarge,
+            TypeScale::DisplayMedium,
+            TypeScale::DisplaySmall,
+            TypeScale::HeadlineLarge,
+            TypeScale::HeadlineMedium,
+            TypeScale::HeadlineSmall,
+            TypeScale::TitleSmall,
+            TypeScale::LabelLarge,
+            TypeScale::LabelMedium,
+            TypeScale::LabelSmall,
+            TypeScale::BodySmall,
+        ] {
+            assert!(TypeScale::all().contains(&old.canonical()), "{old:?}");
+            assert!(t.resolve(old).font_size >= MIN_TEXT_PX, "{old:?}");
+        }
+        assert_eq!(t.resolve(TypeScale::LabelLarge).weight, 500);
+        assert_eq!(t.resolve(TypeScale::BodyMedium).weight, 400);
     }
 }

@@ -5,8 +5,7 @@ use opts_game::{
     app_state::AppState,
     settings::GameSettings,
     settings_screen::{
-        BackToMenuButton, ColorSwatchButton, DarkModeToggleButton, SettingsScreenPlugin,
-        SettingsScreenRoot, ThemePresetButton,
+        BackToMenuButton, SettingsScreenPlugin, SettingsScreenRoot, ThemeChoice, ThemeChoiceButton,
     },
 };
 use opts_gui::{components::notebook::M3Notebook, interaction::events::ButtonClicked, prelude::*};
@@ -52,21 +51,30 @@ fn test_settings_screen_spawns_notebook_and_tabs() {
         "Notebook initial active tab must be 0 (UI & Themes)"
     );
 
-    // Verify Theme Preset buttons exist
-    let preset_count = app
+    // Verify the theme choices exist: 4 modes, 5 accents, 6 scales, 3 densities
+    let choices: Vec<ThemeChoice> = app
         .world_mut()
-        .query_filtered::<Entity, With<ThemePresetButton>>()
+        .query::<&ThemeChoiceButton>()
         .iter(app.world())
-        .count();
-    assert!(preset_count >= 4, "Must have theme preset buttons");
-
-    // Verify Color Swatches exist
-    let swatch_count = app
-        .world_mut()
-        .query_filtered::<Entity, With<ColorSwatchButton>>()
-        .iter(app.world())
-        .count();
-    assert!(swatch_count >= 5, "Must have color swatch buttons");
+        .map(|b| b.0)
+        .collect();
+    for (name, n) in [
+        ("modes", 4),
+        ("accents", 5),
+        ("scales", 6),
+        ("densities", 3),
+    ] {
+        let count = choices
+            .iter()
+            .filter(|c| match name {
+                "modes" => matches!(c, ThemeChoice::Mode(_)),
+                "accents" => matches!(c, ThemeChoice::Accent(_)),
+                "scales" => matches!(c, ThemeChoice::Scale(_)),
+                _ => matches!(c, ThemeChoice::Density(_)),
+            })
+            .count();
+        assert_eq!(count, n, "{name}");
+    }
 
     // Verify Back button exists
     let back_count = app
@@ -77,81 +85,48 @@ fn test_settings_screen_spawns_notebook_and_tabs() {
     assert_eq!(back_count, 1, "Must have BackToMenuButton");
 }
 
-#[test]
-fn test_settings_screen_color_swatch_updates_state() {
+fn settings_app() -> App {
     let mut app = App::new();
-
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
         .add_plugins(bevy::input::InputPlugin)
         .add_plugins(AssetPlugin::default())
         .init_asset::<Image>()
         .insert_resource(GameSettings::default())
-        .insert_resource(MaterialTheme::light())
+        .insert_resource(MaterialTheme::dark())
         .init_state::<AppState>()
         .add_plugins(OptsGuiPlugin)
         .add_plugins(SettingsScreenPlugin);
-
-    // Transition to Settings
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::Settings);
     app.update();
+    app
+}
 
-    // Find the first color swatch
-    let (swatch_entity, swatch_data) = {
-        let mut query = app.world_mut().query::<(Entity, &ColorSwatchButton)>();
-        let (e, s) = query.iter(app.world()).next().expect("At least one swatch");
-        (e, (s.widget_type, s.role_name, s.hex))
-    };
-
-    // Simulate clicking the swatch
-    app.world_mut().write_message(ButtonClicked(swatch_entity));
+fn click(app: &mut App, choice: ThemeChoice) {
+    let entity = app
+        .world_mut()
+        .query::<(Entity, &ThemeChoiceButton)>()
+        .iter(app.world())
+        .find(|(_, b)| b.0 == choice)
+        .map(|(e, _)| e)
+        .expect("button for the choice");
+    app.world_mut().write_message(ButtonClicked(entity));
     app.update();
-
-    // Verify GameSettings has the color override
-    let settings = app.world().resource::<GameSettings>();
-    let expected_key = format!("{}.{}", swatch_data.0, swatch_data.1);
-    assert_eq!(
-        settings.widget_colors.get(&expected_key),
-        Some(&swatch_data.2.to_string())
-    );
 }
 
 #[test]
-fn test_settings_screen_dark_mode_toggle() {
-    let mut app = App::new();
-
-    app.add_plugins(MinimalPlugins)
-        .add_plugins(bevy::state::app::StatesPlugin)
-        .add_plugins(bevy::input::InputPlugin)
-        .add_plugins(AssetPlugin::default())
-        .init_asset::<Image>()
-        .insert_resource(GameSettings::default())
-        .insert_resource(MaterialTheme::light())
-        .init_state::<AppState>()
-        .add_plugins(OptsGuiPlugin)
-        .add_plugins(SettingsScreenPlugin);
-
-    app.world_mut()
-        .resource_mut::<NextState<AppState>>()
-        .set(AppState::Settings);
-    app.update();
-
-    let toggle_entity = app
-        .world_mut()
-        .query_filtered::<Entity, With<DarkModeToggleButton>>()
-        .iter(app.world())
-        .next()
-        .expect("Toggle button must exist");
-
-    // Click dark mode toggle
-    app.world_mut().write_message(ButtonClicked(toggle_entity));
-    app.update();
-
-    let settings = app.world().resource::<GameSettings>();
-    assert!(
-        settings.is_dark_theme,
-        "Dark mode must be enabled after toggle click"
+fn clicking_a_mode_stores_it_and_a_scale_is_clamped_into_the_settings() {
+    let mut app = settings_app();
+    click(
+        &mut app,
+        ThemeChoice::Mode(opts_gui::theme::ThemeMode::Light),
     );
+    assert_eq!(
+        app.world().resource::<GameSettings>().theme_mode,
+        opts_gui::theme::ThemeMode::Light
+    );
+    click(&mut app, ThemeChoice::Scale(150));
+    assert_eq!(app.world().resource::<GameSettings>().ui_scale, 150);
 }
