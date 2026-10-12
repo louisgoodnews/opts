@@ -143,6 +143,14 @@ pub struct UvFixParams {
     pub clean_tolerance: f32,
     /// Times a value must occur for the pool stage to trust it.
     pub pool_min: u32,
+    /// Run the lattice stage (offset-aware plane seeding) first.
+    pub lattice: bool,
+    /// Also run the lattice stage on meshes whose vertex count is not a multiple of 5 (slow, small gain).
+    pub lattice_all: bool,
+    /// Seeds tried per lattice round.
+    pub lattice_trials: usize,
+    /// Verified vertices a lattice hypothesis needs besides its seed triangle.
+    pub lattice_min: usize,
     /// Independent annealing runs of the smooth stage (the lowest energy wins).
     pub restarts: usize,
     /// Join vertices that share a position when building the smooth stage's hinges (flat-shaded
@@ -169,6 +177,10 @@ impl Default for UvFixParams {
             trials: 40,
             clean_tolerance: 6e-5,
             pool_min: POOL_MIN,
+            lattice: true,
+            lattice_all: true,
+            lattice_trials: 24,
+            lattice_min: 4,
             restarts: 4,
             weld: true,
             smooth_only: false,
@@ -200,6 +212,18 @@ impl UvFixParams {
         }
         if let Some(v) = num("UVFIX_CLEAN_TOL") {
             self.clean_tolerance = v as f32;
+        }
+        if let Some(v) = num("UVFIX_LATTICE") {
+            self.lattice = v > 0.0;
+        }
+        if let Some(v) = num("UVFIX_LATTICE_ALL") {
+            self.lattice_all = v > 0.0;
+        }
+        if let Some(v) = num("UVFIX_LATTICE_TRIALS") {
+            self.lattice_trials = v as usize;
+        }
+        if let Some(v) = num("UVFIX_LATTICE_MIN") {
+            self.lattice_min = v as usize;
         }
         if let Some(v) = num("UVFIX_RESTARTS") {
             self.restarts = (v as usize).max(1);
@@ -257,6 +281,9 @@ pub enum UvStage {
     Hint,
     /// Fitted by a plane-affine UV model through jitter-free anchors.
     Plane,
+    /// Found by the lattice stage: an affine UV model whose seed offsets were searched, verified
+    /// by many vertices whose residuals all land on allowed offsets.
+    Lattice,
     /// Equal to values that repeat elsewhere in the mesh.
     Pool,
     /// Predicted across a hinge from resolved neighbours.
@@ -334,6 +361,11 @@ pub fn unjitter_uv_staged(
         }
     };
     label(&done, UvStage::Hint, &mut labelled, &mut stages);
+    if params.lattice && n.is_multiple_of(5) {
+        let settled = lattice_stage(o, &mut done, &pairs, params, &mut confidence, &mut report, plane_tol, true);
+        remaining -= settled;
+        label(&done, UvStage::Lattice, &mut labelled, &mut stages);
+    }
     let mut rng = 0x2545_F491_u32 ^ n as u32;
     let mut next = |bound: usize| {
         rng ^= rng << 13;
@@ -483,8 +515,13 @@ pub fn unjitter_uv_staged(
         }
     }
     label(&done, UvStage::Pool, &mut labelled, &mut stages);
+    if params.lattice && params.lattice_all && !n.is_multiple_of(5) {
+        let settled = lattice_stage(o, &mut done, &pairs, params, &mut confidence, &mut report, plane_tol, false);
+        remaining -= settled;
+        label(&done, UvStage::Lattice, &mut labelled, &mut stages);
+    }
     if !params.smooth_only {
-        remaining -= hinge_pass(o, &mut done, &pairs, &mut report);
+        remaining -= hinge_pass(o, &mut done, &pairs, &mut report, false);
     }
     label(&done, UvStage::Hinge, &mut labelled, &mut stages);
     let margins = smooth_pass(o, &mut done, &pairs, &mut report, params, &orig);
@@ -493,6 +530,33 @@ pub fn unjitter_uv_staged(
         confidence[i] = m;
     }
     label(&done, UvStage::Smooth, &mut labelled, &mut stages);
+    if params.lattice && params.lattice_all {
+        // Second look: what the smooth stage guessed may be provable from the vertices settled
+        // since. Its guesses become unknowns again; whatever the lattice stage cannot verify keeps
+        // the guess. (A wrong guess used as a seed corner cannot produce a verified hypothesis.)
+        let smooth_set: Vec<usize> = (0..n).filter(|&i| stages[i] == UvStage::Smooth).collect();
+        let saved: Vec<([f32; 2], f32)> = smooth_set
+            .iter()
+            .map(|&i| ([o.vertices[i].uv.x, o.vertices[i].uv.y], confidence[i]))
+            .collect();
+        for &i in &smooth_set {
+            done[i] = false;
+            o.vertices[i].uv.x = orig[i][0];
+            o.vertices[i].uv.y = orig[i][1];
+        }
+        // Settled corners other than the guesses are the anchors.
+        lattice_stage(o, &mut done, &pairs, params, &mut confidence, &mut report, plane_tol, false);
+        for (&i, (uv, conf)) in smooth_set.iter().zip(saved) {
+            if done[i] {
+                stages[i] = UvStage::Lattice;
+            } else {
+                o.vertices[i].uv.x = uv[0];
+                o.vertices[i].uv.y = uv[1];
+                confidence[i] = conf;
+                done[i] = true;
+            }
+        }
+    }
     for i in 0..n {
         if matches!(stages[i], UvStage::Pool | UvStage::Hint | UvStage::Hinge) {
             confidence[i] = 1.0;
@@ -500,6 +564,318 @@ pub fn unjitter_uv_staged(
     }
     report.unresolved = remaining;
     UvFixOutcome { report, stages, confidence }
+}
+
+/// Fast hasher for the small integer keys of [`OffsetGrid`].
+#[derive(Default)]
+struct CellHasher(u64);
+
+impl std::hash::Hasher for CellHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0 ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3);
+        }
+    }
+    fn write_i64(&mut self, v: i64) {
+        self.0 = (self.0 ^ v as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15).rotate_left(29);
+    }
+}
+
+/// Lookup of "is this `(u, v)` one of the allowed offsets" in constant time.
+struct OffsetGrid {
+    cells: std::collections::HashMap<(i64, i64), Vec<u8>, std::hash::BuildHasherDefault<CellHasher>>,
+}
+
+const GRID_CELL: f32 = 1.0e-4;
+
+impl OffsetGrid {
+    fn new(pairs: &[(f32, f32)]) -> Self {
+        let mut cells: std::collections::HashMap<(i64, i64), Vec<u8>, _> = Default::default();
+        for (i, &(u, v)) in pairs.iter().enumerate() {
+            let (cu0, cu1) = (((u - JITTER_TOLERANCE) / GRID_CELL).floor() as i64, ((u + JITTER_TOLERANCE) / GRID_CELL).floor() as i64);
+            let (cv0, cv1) = (((v - JITTER_TOLERANCE) / GRID_CELL).floor() as i64, ((v + JITTER_TOLERANCE) / GRID_CELL).floor() as i64);
+            for cu in cu0..=cu1 {
+                for cv in cv0..=cv1 {
+                    cells.entry((cu, cv)).or_default().push(i as u8);
+                }
+            }
+        }
+        Self { cells }
+    }
+
+    fn find(&self, pairs: &[(f32, f32)], u: f32, v: f32) -> Option<usize> {
+        let key = ((u / GRID_CELL).floor() as i64, (v / GRID_CELL).floor() as i64);
+        self.cells.get(&key)?.iter().map(|&i| i as usize).find(|&i| {
+            (u - pairs[i].0).abs() < JITTER_TOLERANCE && (v - pairs[i].1).abs() < JITTER_TOLERANCE
+        })
+    }
+}
+
+/// A verified lattice hypothesis: the seed triangle, its offsets and the vertices of the plane whose
+/// residuals land on allowed offsets.
+struct LatticeHit {
+    evidence: usize,
+    prior: f32,
+    seed: [usize; 3],
+    offs: [usize; 3],
+    members: Vec<usize>,
+}
+
+/// Lattice stage: plane seeding that does not need jitter-free vertices. A seed triangle's three
+/// offsets are *searched* (all combinations of the allowed offsets; vertices settled earlier keep
+/// theirs); the affine texture map they define predicts every other vertex of the plane, and the
+/// right combination is the one for which the residuals of many vertices all land on allowed
+/// offsets (an accident has probability about 10^-6 per vertex). Common shifts of all offsets leave
+/// the equations satisfied but move most residuals off the sparse offset set, and among equally
+/// supported hypotheses the one with the smallest prior energy (fewest jittered vertices) wins.
+/// Seeds next to settled vertices are cheap (few unknowns) and are tried exhaustively; seeds
+/// without any are sampled. Returns the vertices settled.
+#[allow(clippy::too_many_arguments)]
+fn lattice_stage(
+    o: &mut O3d,
+    done: &mut [bool],
+    pairs: &[(f32, f32)],
+    params: &UvFixParams,
+    confidence: &mut [f32],
+    report: &mut UvFixReport,
+    plane_tol: f32,
+    sampled: bool,
+) -> usize {
+    let n = o.vertices.len();
+    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
+    let stored: Vec<[f32; 2]> = o.vertices.iter().map(|v| [v.uv.x, v.uv.y]).collect();
+    let five = n.is_multiple_of(5);
+    let table: &[f32; 79] = if five { &PRIOR_FIVE } else { &PRIOR_NOT5 };
+    // Offsets that can occur in this mesh (multiples of 5 never carry v-only jitter).
+    let allowed: Vec<usize> = (0..pairs.len()).filter(|&i| table[i] < 11.0).collect();
+    let grid = OffsetGrid::new(pairs);
+    let mut rng = 0x1B87_3593_u32 ^ n as u32;
+    let mut next = |bound: usize| {
+        rng ^= rng << 13;
+        rng ^= rng >> 17;
+        rng ^= rng << 5;
+        rng as usize % bound.max(1)
+    };
+    // Offset index of a settled vertex (stored minus current value).
+    let known_offset = |o: &O3d, done: &[bool], i: usize| -> Option<Option<usize>> {
+        done[i].then(|| {
+            let (du, dv) = (stored[i][0] - o.vertices[i].uv.x, stored[i][1] - o.vertices[i].uv.y);
+            grid.find(pairs, du, dv)
+                .or_else(|| (du.abs() < JITTER_TOLERANCE && dv.abs() < JITTER_TOLERANCE).then_some(0))
+        })
+    };
+
+    let evaluate = |o: &O3d, done: &[bool], seed: [usize; 3]| -> Option<LatticeHit> {
+        if seed.iter().any(|&i| i >= n) || seed.iter().all(|&i| done[i]) {
+            return None;
+        }
+        let mut known = [None; 3];
+        for k in 0..3 {
+            match known_offset(o, done, seed[k]) {
+                Some(Some(i)) => known[k] = Some(i),
+                Some(None) => return None,
+                None => {}
+            }
+        }
+        let nknown = known.iter().flatten().count();
+        let nrm = (pos[seed[1]] - pos[seed[0]]).cross(pos[seed[2]] - pos[seed[0]]);
+        if nrm.length_squared() < 1e-10 {
+            return None;
+        }
+        let nrm = nrm.normalize();
+        let e1 = (pos[seed[1]] - pos[seed[0]]).normalize();
+        let e2 = nrm.cross(e1);
+        let st = |q: Vec3| ((q - pos[seed[0]]).dot(e1), (q - pos[seed[0]]).dot(e2));
+        let (b, c) = (st(pos[seed[1]]), st(pos[seed[2]]));
+        let det = b.0 * c.1 - b.1 * c.0;
+        if det.abs() < 1e-9 {
+            return None;
+        }
+        let min_evidence = params.lattice_min.saturating_sub(2 * nknown).max(3);
+        let mut members: Vec<(usize, [f32; 3], [f32; 2])> = Vec::new();
+        for i in 0..n {
+            if done[i] || seed.contains(&i) || (pos[i] - pos[seed[0]]).dot(nrm).abs() > plane_tol {
+                continue;
+            }
+            let (s, t) = st(pos[i]);
+            let l1 = (s * c.1 - t * c.0) / det;
+            let l2 = (b.0 * t - b.1 * s) / det;
+            let lam = [1.0 - l1 - l2, l1, l2];
+            if lam.iter().any(|x| x.abs() > 6.0) {
+                continue;
+            }
+            let base = [
+                stored[i][0] - (0..3).map(|k| lam[k] * stored[seed[k]][0]).sum::<f32>(),
+                stored[i][1] - (0..3).map(|k| lam[k] * stored[seed[k]][1]).sum::<f32>(),
+            ];
+            members.push((i, lam, base));
+        }
+        if members.len() < min_evidence {
+            return None;
+        }
+        members.sort_by(|x, y| {
+            let mx = x.1.iter().map(|l| l.abs()).sum::<f32>();
+            let my = y.1.iter().map(|l| l.abs()).sum::<f32>();
+            mx.total_cmp(&my)
+        });
+        let tests: Vec<&(usize, [f32; 3], [f32; 2])> = members.iter().take(24).collect();
+        let need = min_evidence.min(tests.len());
+        let max_miss = tests.len() - need;
+        let choices = |k: usize| -> Vec<usize> {
+            match known[k] {
+                Some(i) => vec![i],
+                None => allowed.clone(),
+            }
+        };
+        let (ca, cb, cc) = (choices(0), choices(1), choices(2));
+        let mut best: Option<LatticeHit> = None;
+        for &ia in &ca {
+            for &ib in &cb {
+                for &ic in &cc {
+                    let off = [pairs[ia], pairs[ib], pairs[ic]];
+                    let (mut miss, mut hits) = (0usize, 0usize);
+                    for t in &tests {
+                        let w = [
+                            t.2[0] + t.1[0] * off[0].0 + t.1[1] * off[1].0 + t.1[2] * off[2].0,
+                            t.2[1] + t.1[0] * off[0].1 + t.1[1] * off[1].1 + t.1[2] * off[2].1,
+                        ];
+                        if grid.find(pairs, w[0], w[1]).is_some() {
+                            hits += 1;
+                        } else {
+                            miss += 1;
+                            if miss > max_miss {
+                                break;
+                            }
+                        }
+                    }
+                    if miss > max_miss || hits < need {
+                        continue;
+                    }
+                    // Full evidence of a survivor: every member of the plane.
+                    let (mut evidence, mut prior) = (0usize, table[ia] + table[ib] + table[ic]);
+                    let mut ok_members = Vec::new();
+                    for m in &members {
+                        let w = [
+                            m.2[0] + m.1[0] * off[0].0 + m.1[1] * off[1].0 + m.1[2] * off[2].0,
+                            m.2[1] + m.1[0] * off[0].1 + m.1[1] * off[1].1 + m.1[2] * off[2].1,
+                        ];
+                        if let Some(k) = grid.find(pairs, w[0], w[1]) {
+                            evidence += 1;
+                            prior += table[k];
+                            ok_members.push(m.0);
+                        }
+                    }
+                    let better = best.as_ref().is_none_or(|b| evidence > b.evidence || (evidence == b.evidence && prior < b.prior));
+                    if better && evidence >= min_evidence {
+                        best = Some(LatticeHit { evidence, prior, seed, offs: [ia, ib, ic], members: ok_members });
+                    }
+                }
+            }
+        }
+        best
+    };
+
+    let mut settled = 0usize;
+    let apply = |hit: &LatticeHit, o: &mut O3d, done: &mut [bool], confidence: &mut [f32], report: &mut UvFixReport| -> usize {
+        let seed = hit.seed;
+        let off = [pairs[hit.offs[0]], pairs[hit.offs[1]], pairs[hit.offs[2]]];
+        let nrm = (pos[seed[1]] - pos[seed[0]]).cross(pos[seed[2]] - pos[seed[0]]).normalize();
+        let e1 = (pos[seed[1]] - pos[seed[0]]).normalize();
+        let e2 = nrm.cross(e1);
+        let st = |q: Vec3| ((q - pos[seed[0]]).dot(e1), (q - pos[seed[0]]).dot(e2));
+        let (b, c) = (st(pos[seed[1]]), st(pos[seed[2]]));
+        let det = b.0 * c.1 - b.1 * c.0;
+        let mut count = 0;
+        let mut set = |i: usize, (ju, jv): (f32, f32), o: &mut O3d, done: &mut [bool], confidence: &mut [f32], report: &mut UvFixReport| {
+            o.vertices[i].uv.x = stored[i][0] - ju;
+            o.vertices[i].uv.y = stored[i][1] - jv;
+            done[i] = true;
+            confidence[i] = hit.evidence as f32;
+            if ju != 0.0 || jv != 0.0 {
+                report.corrected += 1;
+            } else {
+                report.clean += 1;
+            }
+            count += 1;
+        };
+        for k in 0..3 {
+            if !done[seed[k]] {
+                set(seed[k], off[k], o, done, confidence, report);
+            }
+        }
+        for &i in &hit.members {
+            if done[i] {
+                continue;
+            }
+            let (s, t) = st(pos[i]);
+            let (l1, l2) = ((s * c.1 - t * c.0) / det, (b.0 * t - b.1 * s) / det);
+            let lam = [1.0 - l1 - l2, l1, l2];
+            let w = [
+                stored[i][0] - (0..3).map(|k| lam[k] * (stored[seed[k]][0] - off[k].0)).sum::<f32>(),
+                stored[i][1] - (0..3).map(|k| lam[k] * (stored[seed[k]][1] - off[k].1)).sum::<f32>(),
+            ];
+            if let Some(k) = grid.find(pairs, w[0], w[1]) {
+                set(i, pairs[k], o, done, confidence, report);
+            }
+        }
+        count
+    };
+
+    let mut stalled = 0;
+    for _round in 0..200 {
+        if stalled >= 3 {
+            break;
+        }
+        let mut progress = 0usize;
+        // Cheap seeds next to settled vertices: every face with one or two settled corners.
+        let mut tiered: Vec<[usize; 3]> = Vec::new();
+        for f in &o.indices {
+            let seed = [f[0] as usize, f[1] as usize, f[2] as usize];
+            if seed.iter().any(|&i| i >= n) {
+                continue;
+            }
+            let k = seed.iter().filter(|&&i| done[i]).count();
+            if k == 1 || k == 2 {
+                tiered.push(seed);
+            }
+        }
+        tiered.sort_by_key(|s| std::cmp::Reverse(s.iter().filter(|&&i| done[i]).count()));
+        tiered.truncate(600);
+        for seed in tiered {
+            if let Some(hit) = evaluate(o, done, seed) {
+                let c = apply(&hit, o, done, confidence, report);
+                progress += c;
+                settled += c;
+            }
+        }
+        if progress == 0 && sampled {
+            // Sampled seeds without settled corners; the best hypothesis of the round wins.
+            let mut best: Option<LatticeHit> = None;
+            for _ in 0..params.lattice_trials {
+                let f = o.indices[next(o.indices.len())];
+                let seed = [f[0] as usize, f[1] as usize, f[2] as usize];
+                if let Some(hit) = evaluate(o, done, seed) {
+                    if best.as_ref().is_none_or(|b| hit.evidence > b.evidence || (hit.evidence == b.evidence && hit.prior < b.prior)) {
+                        best = Some(hit);
+                    }
+                }
+            }
+            if let Some(hit) = best {
+                let c = apply(&hit, o, done, confidence, report);
+                progress += c;
+                settled += c;
+            }
+        }
+        if progress == 0 {
+            stalled += 1;
+        } else {
+            stalled = 0;
+        }
+    }
+    settled
 }
 
 /// Barycentric-style weights predicting the apex `x` across edge `bc` from the triangle `b, c, d`
@@ -563,6 +939,9 @@ struct WHinge {
     wd: [f32; 3],
 }
 
+/// Welded edge (group ids of its end points) to the faces carrying it, with the end vertices as stored.
+type EdgeFaces = std::collections::HashMap<(u32, u32), Vec<(u32, u32, u32)>>;
+
 /// Hinges of the mesh. With `weld` an edge is identified by the positions of its end points, so
 /// triangles that do not share vertex indices but touch along an edge are joined; without it only
 /// shared indices count (the earlier behaviour).
@@ -579,7 +958,7 @@ fn build_whinges(o: &O3d, weld: bool) -> Vec<WHinge> {
             group[i] = *ids.entry((q(p.x), q(p.y), q(p.z))).or_insert(next);
         }
     }
-    let mut edge_faces: HashMap<(u32, u32), Vec<(u32, u32, u32)>> = HashMap::new();
+    let mut edge_faces: EdgeFaces = HashMap::new();
     for (fi, f) in o.indices.iter().enumerate() {
         for k in 0..3 {
             let (a, b) = (f[k], f[(k + 1) % 3]);
@@ -896,24 +1275,36 @@ fn hinge_pass(
     done: &mut [bool],
     pairs: &[(f32, f32)],
     report: &mut UvFixReport,
+    weld: bool,
 ) -> usize {
     use std::collections::HashMap;
     let n = o.vertices.len();
+    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
+    // Vertices at equal positions form one group when welding (flat-shaded meshes repeat corners).
+    let mut group: Vec<u32> = (0..n as u32).collect();
+    if weld {
+        let q = |x: f32| (x * 1.0e4).round() as i64;
+        let mut ids: HashMap<(i64, i64, i64), u32> = HashMap::new();
+        for (i, p) in pos.iter().enumerate() {
+            let next = ids.len() as u32;
+            group[i] = *ids.entry((q(p.x), q(p.y), q(p.z))).or_insert(next);
+        }
+    }
     let mut edge_faces: HashMap<(u32, u32), Vec<u32>> = HashMap::new();
     let mut vfaces: Vec<Vec<u32>> = vec![Vec::new(); n];
     for (fi, f) in o.indices.iter().enumerate() {
         for k in 0..3 {
             let (a, b) = (f[k], f[(k + 1) % 3]);
-            edge_faces
-                .entry((a.min(b), a.max(b)))
-                .or_default()
-                .push(fi as u32);
-            if (a as usize) < n {
-                vfaces[a as usize].push(fi as u32);
+            if a as usize >= n || b as usize >= n {
+                continue;
             }
+            let (ga, gb) = (group[a as usize], group[b as usize]);
+            if ga != gb {
+                edge_faces.entry((ga.min(gb), ga.max(gb))).or_default().push(fi as u32);
+            }
+            vfaces[a as usize].push(fi as u32);
         }
     }
-    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
     let mut resolved = 0usize;
     for _sweep in 0..10 {
         let mut changed = 0usize;
@@ -929,10 +1320,11 @@ fn hinge_pass(
                     continue;
                 }
                 let (b, c) = (others[0], others[1]);
-                if b as usize >= n || c as usize >= n || !done[b as usize] || !done[c as usize] {
+                if b as usize >= n || c as usize >= n {
                     continue;
                 }
-                let Some(list) = edge_faces.get(&(b.min(c), b.max(c))) else {
+                let (gb, gc) = (group[b as usize], group[c as usize]);
+                let Some(list) = edge_faces.get(&(gb.min(gc), gb.max(gc))) else {
                     continue;
                 };
                 for &gi in list {
@@ -940,14 +1332,14 @@ fn hinge_pass(
                         continue;
                     }
                     let g = o.indices[gi as usize];
-                    let Some(&d) = g.iter().find(|&&v| v != b && v != c) else {
-                        continue;
-                    };
-                    if d as usize >= n || !done[d as usize] {
+                    // The neighbouring triangle's own copies of the shared edge and its apex.
+                    let Some(&b2) = g.iter().find(|&&v| group[v as usize] == gb) else { continue };
+                    let Some(&c2) = g.iter().find(|&&v| group[v as usize] == gc) else { continue };
+                    let Some(&d) = g.iter().find(|&&v| v != b2 && v != c2) else { continue };
+                    if [b2, c2, d].iter().any(|&v| v as usize >= n || !done[v as usize]) {
                         continue;
                     }
-                    let (pb, pc, pd, pa) =
-                        (pos[b as usize], pos[c as usize], pos[d as usize], pos[a]);
+                    let (pb, pc, pd, pa) = (pos[b as usize], pos[c as usize], pos[d as usize], pos[a]);
                     let len = (pc - pb).length();
                     if len < 1e-6 {
                         continue;
@@ -963,8 +1355,8 @@ fn hinge_pass(
                     let sa = ra.dot(e);
                     let ta = -(ra - e * sa).length();
                     let (ub, uc, ud) = (
-                        o.vertices[b as usize].uv,
-                        o.vertices[c as usize].uv,
+                        o.vertices[b2 as usize].uv,
+                        o.vertices[c2 as usize].uv,
                         o.vertices[d as usize].uv,
                     );
                     let da = (uc - ub) / len;

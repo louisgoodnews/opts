@@ -33,7 +33,7 @@ fn main() {
     let energy = Mutex::new((0usize, 0usize, 0usize, 0usize));
     let gap = Mutex::new([0.0f64; 3]);
     let calib: Mutex<Vec<(u8, f32, bool)>> = Mutex::new(Vec::new());
-    let stage_acc = Mutex::new([(0usize, 0usize); 6]);
+    let stage_acc = Mutex::new([(0usize, 0usize); 7]);
     let top = Mutex::new([0usize; 4]);
     let oracle = Mutex::new((0usize, 0usize, 0usize, 0usize, 0usize));
     let next = AtomicUsize::new(0);
@@ -42,6 +42,9 @@ fn main() {
             s.spawn(|| loop {
                 let i = next.fetch_add(1, Ordering::Relaxed);
                 let Some((pp, kp)) = pairs.get(i) else { break };
+                if std::env::var_os("EVAL_FIVE_ONLY").is_some() && pp.is_empty() {
+                    continue;
+                }
                 let (Ok(po), Ok(ko)) = (
                     parse(&std::fs::read(pp).unwrap()),
                     parse(&std::fs::read(kp).unwrap()),
@@ -56,6 +59,9 @@ fn main() {
                 let outcome = unjitter_uv_staged(&mut t, &[], &params);
                 let (rep, stages) = (outcome.report, outcome.stages.clone());
                 let n = po.vertices.len();
+                if std::env::var_os("EVAL_FIVE_ONLY").is_some() && n % 5 != 0 {
+                    continue;
+                }
                 {
                     let mut st = stage_acc.lock().unwrap();
                     for v in 0..n {
@@ -138,8 +144,9 @@ fn main() {
         let total = calib.len() as f64;
         println!("calibration (evidence strength -> precision, share of all vertices):");
         for (stage, name, cuts) in [
-            (2u8, "plane  (anchors)", vec![3.0f32, 6.0, 10.0, 20.0, 40.0, 80.0]),
-            (5u8, "smooth (margin) ", vec![0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0]),
+            (2u8, "plane  (anchors)", vec![6.0f32, 10.0, 20.0, 40.0, 80.0]),
+            (3u8, "lattice(verified)", vec![3.0f32, 4.0, 6.0, 8.0, 12.0, 20.0, 40.0]),
+            (6u8, "smooth (margin) ", vec![0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0]),
         ] {
             for cut in cuts {
                 let sel: Vec<_> = calib.iter().filter(|e| e.0 == stage && e.1 >= cut).collect();
@@ -149,7 +156,7 @@ fn main() {
         }
     }
     let st = stage_acc.into_inner().unwrap();
-    let names = ["unresolved", "hint", "plane", "pool", "hinge", "smooth"];
+    let names = ["unresolved", "hint", "plane", "lattice", "pool", "hinge", "smooth"];
     let total: usize = st.iter().map(|e| e.0).sum();
     for (i, e) in st.iter().enumerate() {
         if e.0 > 0 {
