@@ -21,8 +21,8 @@ use crate::app_state::AppState;
 use crate::in_game::types::SimulationLoadState;
 use crate::in_game::VehicleMenu;
 use crate::new_game_screen::types::NewGameSetup;
-use crate::settings_screen::SettingsOverlay;
 use crate::session_summary::LastSession;
+use crate::settings_screen::SettingsOverlay;
 use crate::shell::dialog::{
     spawn_confirm_dialog, DialogButtonSpec, DialogButtonStyle, DialogChoice, DialogSpec, CANCEL,
 };
@@ -216,7 +216,7 @@ pub fn pause_items(
     mut report: ResMut<ReportModalData>,
     report_state: Res<State<ReportModalState>>,
     mut report_next: ResMut<NextState<ReportModalState>>,
-    ) {
+) {
     for Activated(entity) in activated.read() {
         let Ok(which) = items.get(*entity) else {
             continue;

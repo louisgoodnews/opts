@@ -59,6 +59,7 @@ fn spawn_overlay(commands: &mut Commands) {
             .spawn_child(c);
         c.commands().entity(close).insert((
             SettingsOverlayClose,
+            DefaultFocus,
             UiId::new("settings-overlay.close"),
             Node {
                 align_self: AlignSelf::FlexEnd,
@@ -80,8 +81,12 @@ pub fn close_overlay(
     mut activated: MessageReader<Activated>,
     overlays: Query<Entity, With<SettingsOverlay>>,
     close: Query<(), With<SettingsOverlayClose>>,
+    keys: Res<ButtonInput<KeyCode>>,
+    revert: Option<Res<super::input::PendingRevert>>,
 ) {
-    let mut done = false;
+    // Esc closes the overlay even when another (hidden) modal is the library's "topmost" one, but
+    // not while the revert prompt of a risky change is open: Esc answers that prompt.
+    let mut done = keys.just_pressed(KeyCode::Escape) && revert.is_none();
     for ModalEvent::CancelRequested(modal) in cancels.read() {
         done |= overlays.contains(*modal);
     }

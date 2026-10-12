@@ -6,8 +6,8 @@ use opts_gui::components::toast::ToastBuilder;
 use opts_gui::l10n::Localization;
 
 use super::input::SettingActionRequested;
-use crate::first_run::OmsiFolderChosen;
 use crate::catalogue_service::{spawn_discovery, CatalogueService};
+use crate::first_run::OmsiFolderChosen;
 use crate::settings_registry::{ChangeSource, SettingsApi};
 
 fn toast(commands: &mut Commands, loc: &Localization, key: &str) {

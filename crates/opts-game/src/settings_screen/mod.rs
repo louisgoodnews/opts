@@ -23,8 +23,8 @@ use opts_gui::prelude::*;
 use crate::app_state::AppState;
 use crate::shell::{spawn_screen_root, ShellContent};
 
-pub use overlay::{open_settings_overlay, SettingsOverlay};
 pub use input::{PendingRevert, SettingActionRequested};
+pub use overlay::{open_settings_overlay, SettingsOverlay};
 pub use page::{spawn_settings_page, SettingsPageState};
 pub use systems::{cleanup_settings_screen, handle_back_to_menu};
 pub use types::{BackToMenuButton, SettingsScreenRoot};
@@ -49,10 +49,13 @@ impl Plugin for SettingsScreenPlugin {
                     handle_back_to_menu,
                     content::run_actions,
                     content::sync_chosen_folder,
-                    overlay::close_overlay,
                 )
                     .run_if(any_with_component::<page::SettingsPage>)
                     .run_if(opts_bevy::reporting::not_modal_active),
+            )
+            .add_systems(
+                Update,
+                overlay::close_overlay.run_if(any_with_component::<SettingsOverlay>),
             );
     }
 }

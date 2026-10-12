@@ -352,14 +352,19 @@ fn content_app(name: &str) -> (App, std::path::PathBuf) {
 #[test]
 fn the_omsi_folder_button_starts_the_shells_folder_flow() {
     let (mut app, _) = content_app("omsi-flow");
-    assert!(!app.world().resource::<crate::first_run::FolderPicker>().is_open());
+    assert!(!app
+        .world()
+        .resource::<crate::first_run::FolderPicker>()
+        .is_open());
     let b = by_id(&mut app, "settings/content/omsi_path/choose").expect("choose button");
     click(&mut app, b);
     for _ in 0..3 {
         app.update();
     }
     assert!(
-        app.world().resource::<crate::first_run::FolderPicker>().is_open(),
+        app.world()
+            .resource::<crate::first_run::FolderPicker>()
+            .is_open(),
         "first_run::choose_omsi_folder ran"
     );
 }
@@ -379,9 +384,10 @@ fn a_folder_the_shell_flow_adopted_reaches_the_registry() {
 #[test]
 fn a_refused_folder_changes_nothing() {
     let (mut app, db) = content_app("omsi-bad");
-    app.world_mut().write_message(crate::first_run::OmsiFolderChosen(Err(
-        crate::first_run::ChooseError::Cancelled,
-    )));
+    app.world_mut()
+        .write_message(crate::first_run::OmsiFolderChosen(Err(
+            crate::first_run::ChooseError::Cancelled,
+        )));
     for _ in 0..3 {
         app.update();
     }

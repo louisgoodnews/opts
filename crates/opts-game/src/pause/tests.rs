@@ -172,7 +172,11 @@ fn an_unused_drive_also_asks_and_leaves_without_a_summary() {
     let mut app = app();
     esc(&mut app);
     click(&mut app, "pause.leave");
-    assert_eq!(state(&app), AppState::InGame, "nothing happens before the answer");
+    assert_eq!(
+        state(&app),
+        AppState::InGame,
+        "nothing happens before the answer"
+    );
     click(&mut app, "dialog.pause.leave.home");
     for _ in 0..3 {
         app.update();
@@ -190,7 +194,10 @@ fn esc_cancels_the_leave_dialog_and_the_pause_overlay_returns() {
     esc(&mut app);
     assert!(!ids(&mut app).contains(&"dialog.pause.leave.cancel".to_owned()));
     assert_eq!(state(&app), AppState::InGame);
-    assert!(ids(&mut app).contains(&"pause.resume".to_owned()), "overlay is back");
+    assert!(
+        ids(&mut app).contains(&"pause.resume".to_owned()),
+        "overlay is back"
+    );
 }
 
 #[test]
@@ -205,7 +212,10 @@ fn settings_in_the_pause_overlay_opens_the_page_and_esc_returns_to_the_pause_men
     esc(&mut app);
     let back = ids(&mut app);
     assert!(!back.contains(&"settings/search".to_owned()), "{back:?}");
-    assert!(back.contains(&"pause.resume".to_owned()), "pause menu is back");
+    assert!(
+        back.contains(&"pause.resume".to_owned()),
+        "pause menu is back"
+    );
     assert!(app.world().resource::<Pause>().open);
     assert!(paused(&app));
 }

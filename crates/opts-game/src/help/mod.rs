@@ -98,8 +98,7 @@ impl Plugin for HelpPlugin {
             )
             .add_systems(
                 Update,
-                (f1_opens_help, overlay::overlay_actions)
-                    .run_if(not(in_state(AppState::Loading))),
+                (f1_opens_help, overlay::overlay_actions).run_if(not(in_state(AppState::Loading))),
             );
     }
 }
