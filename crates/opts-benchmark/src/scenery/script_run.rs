@@ -250,6 +250,7 @@ fn step(h: &mut Harness, n: usize, ctx: &Ctx<'_>) {
 
 /// Captures the views and the probe of the current step and collects new diagnostics.
 fn snap(h: &mut Harness, ctx: &Ctx<'_>, name: &str, out: &mut Outcome) -> Result<()> {
+    h.warm_up(ctx.views);
     let pixels = h.capture(ctx.views)?;
     let Some(sco) = ctx.pre.object.as_ref() else {
         return Err(anyhow!("no parsed object"));

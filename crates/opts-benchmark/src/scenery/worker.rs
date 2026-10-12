@@ -243,6 +243,19 @@ impl Harness {
         Ok(false)
     }
 
+    /// Renders one frame through the capture cameras without reading it back. Entities that
+    /// were hidden until now (light sprites) have their meshes and materials prepared for the
+    /// GPU only once they are drawn, which takes one frame; a capture right after they appear
+    /// would miss them.
+    pub fn warm_up(&mut self, views: &[View; 2]) {
+        let world = self.apps.main.world_mut();
+        self.rig.aim(world, views);
+        self.rig.set_active(world, true);
+        self.update();
+        let world = self.apps.main.world_mut();
+        self.rig.set_active(world, false);
+    }
+
     /// Renders both views over black and white and reads them back.
     ///
     /// # Errors

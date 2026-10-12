@@ -183,6 +183,7 @@ pub fn judge(
     out.check.states = outcome.states.iter().map(|s| s.name.clone()).collect();
     errors(&j, &mut out);
     changed_vars(&j, &mut out.check);
+    bound_vars(&j, &mut out.check);
     if !j.masks.is_empty() {
         consistency(&j, &mut out);
     }
@@ -236,6 +237,28 @@ fn errors(j: &Judge<'_>, out: &mut Judgement) {
     }
 }
 
+/// The bound variables and their values per state.
+fn bound_vars(j: &Judge<'_>, check: &mut ScriptCheck) {
+    let mut names: Vec<String> = Vec::new();
+    for m in &j.meshes {
+        names.extend(m.visible.iter().map(|v| v.0.to_lowercase()));
+        names.extend(m.anim.iter().map(|a| a.0.to_lowercase()));
+    }
+    names.extend(
+        j.sco
+            .lights
+            .iter()
+            .filter(|l| !l.variable.trim().is_empty())
+            .map(|l| l.variable.trim().to_lowercase()),
+    );
+    names.sort();
+    names.dedup();
+    for n in names.into_iter().take(12) {
+        let vals = j.outcome.states.iter().map(|s| var(s, &n)).collect();
+        check.bound.insert(n, vals);
+    }
+}
+
 fn changed_vars(j: &Judge<'_>, check: &mut ScriptCheck) {
     let mut names: Vec<&String> = j
         .outcome
@@ -260,8 +283,8 @@ fn changed_vars(j: &Judge<'_>, check: &mut ScriptCheck) {
     }
 }
 
-/// Rendered mask of a state without the light sprites' discs.
-fn rendered(j: &Judge<'_>, si: usize, v: usize) -> Mask {
+/// Where the runtime draws light sprites in a state (pixels that say nothing about meshes).
+fn sprite_discs(j: &Judge<'_>, si: usize, v: usize) -> Mask {
     let state = &j.outcome.states[si];
     let mut discs = Mask::new(IMAGE_SIZE as usize, IMAGE_SIZE as usize);
     for l in &state.probe.lights {
@@ -273,10 +296,11 @@ fn rendered(j: &Judge<'_>, si: usize, v: usize) -> Mask {
             let edge = view
                 .project(l.pos + bevy::math::Vec3::X * l.size_m)
                 .unwrap_or(c);
-            discs.add_disc(c, (edge - c).length() * 1.2 + 4.0);
+            // `size_m` is the sprite's diameter.
+            discs.add_disc(c, (edge - c).length() * 0.6 + 3.0);
         }
     }
-    j.mattes[si][v].mask.minus(&discs)
+    discs
 }
 
 /// Check 1: the rendered silhouette follows the `[visible]` rules.
@@ -290,9 +314,12 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
         let shown = |i: usize| j.meshes[i].top && j.visible(i, state);
         let fixed = |i: usize| shown(i) && j.meshes[i].anim.is_empty();
         for v in 0..2 {
-            let r = rendered(j, si, v);
-            let vis_all = j.union(v, false, fixed);
-            let vis_solid = j.union(v, true, |i| fixed(i) && j.meshes[i].visible.is_none());
+            let discs = sprite_discs(j, si, v);
+            let r = j.mattes[si][v].mask.minus(&discs);
+            let vis_all = j.union(v, false, fixed).minus(&discs);
+            let vis_solid = j
+                .union(v, true, |i| fixed(i) && j.meshes[i].visible.is_none())
+                .minus(&discs);
             let moving = j
                 .union(v, false, |i| {
                     j.meshes[i].top && !j.meshes[i].anim.is_empty()
@@ -311,7 +338,11 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
             if n >= 200 && alpha <= 0.5 {
                 let recall = r.dilate(3).and_count(&vis_solid) as f32 / n as f32;
                 if recall < 0.6 {
-                    note(format!("missing (recall {recall:.2})"));
+                    note(format!(
+                        "missing (recall {recall:.2}, expected {n} px, rendered {} of {} px)",
+                        r.count(),
+                        j.mattes[si][v].mask.count()
+                    ));
                 }
             }
             if !has_anim && r.count() >= 50 && vis_all.count() > 0 {
@@ -330,7 +361,7 @@ fn consistency(j: &Judge<'_>, out: &mut Judgement) {
                 if !hidden {
                     continue;
                 }
-                let own = j.masks[v][i].all.minus(&covered);
+                let own = j.masks[v][i].all.minus(&covered).minus(&discs);
                 if own.count() >= th.leak_min_px
                     && r.and_count(&own) as f32 / own.count() as f32 >= th.leak_share
                 {
@@ -364,6 +395,14 @@ fn determinism(j: &Judge<'_>, out: &mut Judgement) {
     }
     let share = diff as f32 / total.max(1) as f32;
     out.check.nondeterministic = Some(share);
+    out.check.nondeterministic_vars = a
+        .probe
+        .vars
+        .iter()
+        .filter(|(k, v)| (b.probe.vars.get(*k).copied().unwrap_or(0.0) - **v).abs() > 1e-4)
+        .map(|(k, v)| format!("{k}={v}/{}", b.probe.vars.get(k).copied().unwrap_or(0.0)))
+        .take(10)
+        .collect();
     if share > j.th.det_max_diff {
         add(out, "S-NONDETERMINISTIC");
     }

@@ -134,6 +134,10 @@ pub struct ScriptCheck {
     pub dead: Vec<String>,
     /// Consistency failures (`s2 v1 leak mesh 3`, `s0 v2 missing`, …).
     pub mismatches: Vec<String>,
+    /// The bound variables (`[visible]`, `[newanim]`, lights) with their value in each state,
+    /// in the order of `states` (at most 12 variables).
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub bound: std::collections::BTreeMap<String, Vec<f32>>,
     /// Script variables whose value differs between states (first 40).
     pub changed_vars: Vec<String>,
     /// Script diagnostics (messages of severity error, run-time messages, missing files).
@@ -142,6 +146,9 @@ pub struct ScriptCheck {
     pub unsupported: Vec<String>,
     /// Share of pixels that differ between the two runs of S0.
     pub nondeterministic: Option<f32>,
+    /// Script variables whose value differs between the two runs of S0.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub nondeterministic_vars: Vec<String>,
     /// Wall-clock milliseconds of the whole check.
     pub ms: u64,
 }
