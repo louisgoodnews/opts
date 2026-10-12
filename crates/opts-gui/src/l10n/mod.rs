@@ -67,6 +67,26 @@ impl Localization {
         }
     }
 
+    /// Adds the messages of `source` (Fluent text) to the table of `locale` (`en` or `de`); a
+    /// feature crate ships its own `.ftl` files this way. Existing keys are kept (first wins).
+    /// An English extension also extends the pseudo-locale.
+    pub fn extend(&mut self, locale: &str, source: &str) {
+        let add = fluent::parse(source);
+        if locale == "en" {
+            let pseudo = pseudo::pseudo_table(&add);
+            if let Some(b) = self.bundles.get_mut(pseudo::PSEUDO_TAG) {
+                for (k, v) in pseudo.messages {
+                    b.messages.entry(k).or_insert(v);
+                }
+            }
+        }
+        if let Some(b) = self.bundles.get_mut(locale) {
+            for (k, v) in add.messages {
+                b.messages.entry(k).or_insert(v);
+            }
+        }
+    }
+
     /// The locale from [`LOCALE_ENV`], else English.
     pub fn detect() -> Self {
         Self::new(&std::env::var(LOCALE_ENV).unwrap_or_else(|_| "en".into()))

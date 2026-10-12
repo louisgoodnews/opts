@@ -13,6 +13,7 @@ pub mod omsi_root;
 pub mod omsi_setup;
 pub mod report_context;
 pub mod settings;
+pub mod settings_registry;
 pub mod settings_screen;
 pub mod settings_theme;
 pub mod shell;
@@ -71,6 +72,7 @@ impl Plugin for OptsGamePlugin {
         // Register core states and plugins
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
+            .add_plugins(settings_registry::SettingsRegistryPlugin)
             .add_plugins(MainMenuPlugin)
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)
