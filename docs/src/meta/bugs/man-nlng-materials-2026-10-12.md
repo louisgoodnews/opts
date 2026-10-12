@@ -6,8 +6,8 @@ Tools (this branch): `o3d_materials`, `vehicle_material_audit`, `scrambled_uv_re
 
 ## Preconditions
 1. **Reproduced** with GN92 main + trail on Aachen Linie 33 (cockpit, passenger and external cameras, release build of
-   `fix/vehicle-animations` 29b6690). Not seen on the three screenshots of the task (they were not part of the
-   material I was given), so the table below describes what the same views show here.
+   `fix/vehicle-animations` 29b6690). The three screenshots of the task arrived after the first draft of this report
+   and are covered in A1 (they match the views reproduced here).
 2. Reproducible: the same places on every start (the decode is deterministic and cached).
 3. **Comparison vehicles:** MAN_SD200 SD77 (5 of 165 meshes keyed), MAN_NewLionsCity 21C (0 of 797 keyed). Neither shows
    the artifacts.
@@ -24,6 +24,16 @@ Tools (this branch): `o3d_materials`, `vehicle_material_audit`, `scrambled_uv_re
 | Passenger | red/yellow patches on grab poles | `GN92_main_innenraum` slot 2 (`GN92_1.tga`, 16 faces) | wrong UV region (samples the exterior livery atlas where the poles' colour is) |
 | Passenger | ceiling, side panels | `Decke.bmp` slot | render correctly in this run |
 | Cockpit | missing switch/lever parts | 33 skipped meshes (`GN92_Panel_Hub_Up`, `Gangwahl_*`, ...) | not decoded (logged `scrambled; skipped`), not a material problem |
+
+### The three task screenshots
+| Screenshot | Artifact | What the pixels are |
+|---|---|---|
+| Cockpit | pink/purple glyphs on the wheel rim | patches of the `GN92_Panel.bmp` atlas (labels, pink LEDs) |
+| Cockpit | the driver's right console (IBIS keypad, ticket printer) covered in blue/yellow/black shards | parts of the panel atlas stretched over the wrong faces |
+| Interior (looking up in the driver area) | large panels showing yellow/black stripes, wood grain, a vent grille and the red emergency button | **not the exterior livery**: these are regions of the *interior* atlas `GN92_2.bmp` (yellow stripe along its top edge, wood panels, vent, red button), shown at the wrong place and scale; `GN92_1.tga` (the livery base) is almost white |
+| External | none | renders correctly |
+
+So the interior "livery" report is the same class as the cockpit: the **right texture** with the **wrong UV region**.
 
 No artifact is a missing-texture fallback, a wrong slot index or a geometry overlap that I could show.
 
@@ -79,4 +89,4 @@ Evidence that the artifacts are residual UV jitter (`scrambled_uv_report`):
 
 **Root cause candidate for Phase B:** the artifacts are not a material-binding fault. They are undecoded texture jitter
 on scrambled meshes (Candidate 5/UV, not 1-4). Whether the interior "exterior livery" is the same effect (poles sampling
-the livery atlas) has to be confirmed against your screenshots.
+the livery atlas) is answered by the screenshots: the interior panels show `GN92_2.bmp`, the interior atlas, so the cause is the same as in the cockpit.
