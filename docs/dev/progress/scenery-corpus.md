@@ -7,7 +7,7 @@ Branch `agent/scenery-corpus` (from `agent/scenery-integration`), worktree `/hom
 | Batch | Status |
 | :--- | :--- |
 | D0 Orient | done |
-| D1 Full run | pending |
+| D1 Full run | running |
 | D2 Triage | pending |
 | E1..En Fixes | pending |
 | F Close-out | pending |
@@ -22,6 +22,14 @@ set -x XDG_CONFIG_HOME (mktemp -d); set -x XDG_DATA_HOME (mktemp -d); set -x XDG
 cargo build --release -p opts-benchmark
 target/release/opts-benchmark scenery run --omsi-path "/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2" --workers 3 --catalogue $D/catalogue.db
 ```
+
+## Runs
+
+| Run | Binary / commit | Output | Status |
+| :--- | :--- | :--- | :--- |
+| full1 (baseline) | `dev-corpus/opts-benchmark-base` (copy of release build at b1ddbe6) | `~/.local/share/opts/benchmark/20261012T051528Z-b1ddbe6/`, log `dev-corpus/full1.log`, memory `dev-corpus/mem_full1.csv` | started 05:15 UTC |
+
+Resume (if the run died): `D=~/.local/share/opts/benchmark/dev-corpus; $D/runfull.sh $D/opts-benchmark-base full1_resume --resume 20261012T051528Z-b1ddbe6` (script sets throwaway XDG dirs, cache copy and catalogue copy; use `nohup ... &`).
 
 ## Results
 
