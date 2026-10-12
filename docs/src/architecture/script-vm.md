@@ -56,6 +56,8 @@ Run the unmodified `.osc` logic of OMSI vehicles and objects (engine, gearbox, d
 
 `opts_bevy::VehicleScriptPlugin` runs a `VehicleScripts` component in `FixedUpdate` after the physics step: it feeds `velocity` (km/h ❓), `throttle`, `brake`, `ai` from the `VehicleController`, runs `{init}` once and `{frame}` every step, logs run-time diagnostics and drops raised events (no consumer yet). `opts-game` attaches the engine when the player vehicle loads (`attach_scripts`); the MAN SD200 loads 24 scripts without errors and runs 731 variables at a steady 60 fps. `opts-cli vehicle.script_vars [contains=…]` reads them. The bridge is passive: nothing the scripts compute drives the physics, lights or doors yet.
 
+> The research on how OMSI uses scripts and the route to the active bridge (torque, brakes, doors, displays, sound, AI) is in [Vehicle Scripts: How OMSI Does It and the Route](vehicle-scripts-route.md).
+
 ## Not done yet (M-0026 follow-ups)
 
 - Remaining predefined variables (wheel speeds, axle suspension, AI, passengers) and the active bridge — script outputs driving `M_Wheel`, lights, doors and indicators through `model_cfg` animations; trigger input from keys and hot-spots; events to audio: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.

@@ -75,6 +75,7 @@
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Script VM](architecture/script-vm.md)
+- [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
