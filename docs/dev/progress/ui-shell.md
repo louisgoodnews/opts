@@ -27,7 +27,7 @@ Runs of the game: `XDG_CONFIG_HOME`/`XDG_DATA_HOME` = fresh dirs under `~/.local
 | S4 Pause, leave, summary | done |
 | S5 Help and About, F1 | done (gates re-run after the follow-up commits) |
 | S6 Notifications | open |
-| S7 Tests, screenshots, docs | open |
+| S7 Tests, screenshots, docs | done |
 
 ## Design decisions
 
@@ -58,3 +58,20 @@ Note: the *compact* rail (icons only) needs a logical width < 900 px, i.e. UI sc
 
 ### S5
 `help/` (page with four tabs, controls table, About, overlay, F1), report dialog in `opts-bevy` localised with title, inline + toast errors, `request_report`; the F1 trigger of the report is gone. Pause -> Controls opens the overlay (the `pause.controls` place was removed). New not-yet places: `help.guides`, `help.controls-generated` (the table is handwritten from the HUD's key hints).
+
+### S7
+Tests: `tests/shell_tests.rs` (9, incl. compact rail), `tests/shell_sources.rs` (no string literals / colours / >500 lines in the shell modules), `tests/ui_rules.rs` (shell, Home, Help, pause overlay, first-run dialogs, summary: target >= 32 px, text >= 12 px, disabled reasons, keyboard reachability), unit tests in `home`, `first_run`, `pause`, `session_summary`, `help`, `shell`, `opts-gui::toast_stack`. Docs: `docs/crates/opts-game.md`, `main-menu.md`, `application-startup.md`, `screens.md`, M-0062 checklist, BOARD, ROADMAP + generated copies, `reference/not-available-yet.md` (generated).
+
+Screenshots (all under `~/.local/share/opts/benchmark/dev-ui-impl/shell/shots/`, looked at, not committed): `home_dark_1920`, `home_light_1920`, `home_dark_1024` (1024x640, 100 %: layout class Medium), `home_compact_dark` + `help_compact_dark` (1024x640 at UI scale 125 %: layout class Compact, icons-only rail), `firstrun_choose_dark`, `firstrun_found_dark`, `firstrun_welcome_dark`, `pause_dark`, `pause_leave_dialog_dark`, `summary_dark`, `help_controls_dark`, `help_about_dark`, `report_dialog_dark`, `toasts_dark`.
+
+## Open problems and honest limits
+
+- The compact rail needs a logical width under 900 px: at the 1024 px minimum window that means UI scale >= 115 %; this was verified with a screenshot at 125 %.
+- Drive history, first-run flag and settings were verified through unit tests with `persist: false` and throwaway XDG dirs; the real file writes were exercised only in the throwaway runs.
+- The catalogue scan reports a stage but no item counts; the chip shows the stage and, when done, the counts.
+- Settings and Drive pages still carry their own Esc handlers (other agents' files); with the shell both fire and go Home, which agrees with the shell unless the back stack is non-empty. They should drop them when they migrate.
+- `Settings -> Content` must call `first_run::choose_omsi_folder(&mut commands)` and may listen for `first_run::OmsiFolderChosen`.
+- Pause -> *Settings* is a not-yet place (`pause.settings`, M-0063).
+- The HUD still has hand-set literal text (M-0064); only its pause button was changed.
+- Test windows opened for screenshots were operated by a human at the machine several times (Settings, Drive and Quit were clicked, windows closed); this affected timing, not results.
+- Not verified: gamepad input, screen reader output, IME, real mouse hover states, German text lengths on screen (the pseudo-locale check of the library covers the shell tables only through `Localization::extend`).

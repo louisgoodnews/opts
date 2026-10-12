@@ -291,7 +291,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B).
   - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
 - [ ] **🧭 App Shell & Flow** — [M-0062](docs/src/roadmap/phase-9/M-0062.md)
-  - [ ] Navigation shell, Home with *Continue*, four-step *Plan a drive*, honest loading screen, pause overlay, end-of-session summary; stubs and developer copy removed.
+  - [x] Shell part (2026-10-12, `agent/ui-shell`): navigation rail and screen registry, Home with *Continue*, first run, pause overlay, end-of-session summary, Help and About with F1, notifications; stubs and developer copy removed.
+  - [ ] Four-step *Plan a drive*, honest loading screen, master-detail pattern (wizard part).
 - [ ] **⚙️ Settings System** — [M-0063](docs/src/roadmap/phase-9/M-0063.md)
   - [ ] Declarative setting registry; Graphics, Interface, Content, Controls, Advanced pages with real controls and search; absorbs the settings part of M-0035.
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](docs/src/roadmap/phase-9/M-0064.md)

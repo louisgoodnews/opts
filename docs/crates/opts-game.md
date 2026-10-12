@@ -5,8 +5,8 @@
 | **Layer** | L6 · Application |
 | **Role** | Application Composition Root & Consumer UI Screens |
 | **Kind** | Binary (`opts-game`) + Library (`opts_game`) |
-| **Status** | 🟢 Implemented (Main Menu & Lifecycle State Machine) |
-| **Last Updated** | 2026-10-08 |
+| **Status** | 🟢 Implemented (application shell, Home, first run, pause, Help; M-0062 shell part) |
+| **Last Updated** | 2026-10-12 |
 
 ---
 
@@ -15,8 +15,8 @@
 `opts-game` is the primary executable and presentation orchestrator for the Open Public Transport Simulator. It provides:
 1. Top-level application initialization, logging setup, and window configuration.
 2. The global lifecycle state machine (`AppState`).
-3. The interactive **Main Menu** featuring Material Design 3 styling, glassmorphic translucent surfaces, and dynamic map-backed background loading.
-4. Destination screen routing with return navigation.
+3. The **application shell** (navigation rail, screen registry, back stack, Esc, dialogs, banners, notifications) and its pages: **Home** (Continue, Quick drive, recent drives), **Help** (controls, guides, report, About), the **first-run** flow, the **pause overlay** and the **session summary**.
+4. Screen routing through the registry: `Navigate` messages, deep links (`screen:settings/graphics`), the control-protocol command `ui.navigate`.
 5. User settings persistence (`GameSettings`) via platform standard paths (`settings.toml` baseline, `settings.db` authoritative). Theme and interface keys (`theme_mode`, `auto_light_from`, `auto_dark_from`, `high_contrast`, `active_theme`, `theme_file`, `ui_scale`, `density`, `reduced_motion`) and the migration from `is_dark_theme` are in `settings_theme.rs`; RON theme files in `theme_files.rs`; the design is in the [GUI design system](../src/architecture/gui-design-system.md#64-settings-keys-and-migration).
 
 ---
@@ -30,11 +30,10 @@ Navigation and simulation execution are governed deterministically by the Bevy `
 pub enum AppState {
     #[default]
     Loading,
-    MainMenu,
-    VehicleSelection,
-    LoadGame,
+    MainMenu,         // Home
+    VehicleSelection, // Drive (Plan a drive)
     Settings,
-    Credits,
+    Help,
     InGame,
 }
 ```
@@ -44,36 +43,40 @@ pub enum AppState {
 stateDiagram-v2
     [*] --> Loading
     Loading --> MainMenu: Assets & Plugins Ready
-    
-    MainMenu --> VehicleSelection: Play
-    MainMenu --> LoadGame: Load (Disabled if no save)
-    MainMenu --> Settings: Settings
-    MainMenu --> Credits: Credits
-    MainMenu --> [*]: Quit (AppExit)
-    
-    VehicleSelection --> MainMenu: Escape / Back Button
-    LoadGame --> MainMenu: Escape / Back Button
-    Settings --> MainMenu: Escape / Back Button
-    Credits --> MainMenu: Escape / Back Button
+    MainMenu --> VehicleSelection: New drive / rail
+    MainMenu --> Settings: rail
+    MainMenu --> Help: rail / F1
+    MainMenu --> InGame: Continue / Quick drive / recent drive
+    VehicleSelection --> InGame: Launch
+    InGame --> MainMenu: Leave drive (Esc, Pause, Leave drive, Leave to Home)
+    VehicleSelection --> MainMenu: Esc / Back
+    Settings --> MainMenu: Esc / Back
+    Help --> MainMenu: Esc / Back
 ```
+
+Esc never quits and never leaves a drive without the pause overlay and one confirmation; the rest of the rules are in [screens](../src/roadmap/phase-9/screens.md).
 
 ---
 
-## 📂 Menu Module Hierarchy
+## 📂 Shell Module Hierarchy
 
-The main menu subsystem is isolated under `crates/opts-game/src/menu/`:
+| Module | Role |
+| :--- | :--- |
+| `shell/registry.rs` | `ScreenDescriptor`, `ScreenRegistry`, `App::register_screen`; the built-in destinations |
+| `shell/frame.rs` | rail (icons only in *Compact*), banner area, content area (`ShellContent`), theme toggle (F2) and *Quit OPTS* in the footer |
+| `shell/nav.rs` | `Navigate`, `NavigateBack`, `BackStack`, `PendingDeepLink`, `NavigationRefused` |
+| `shell/esc.rs` | the one implementation of Esc / Back (`EscGate`) |
+| `shell/dialog.rs`, `shell/banner.rs`, `shell/notify.rs` | confirmation dialogs, banners, toasts with a required durable place for errors |
+| `shell/keys.rs`, `shell/l10n/` | message keys and the English and German tables (merged with `Localization::extend`) |
+| `home/` | Home page (`view`, `model`, `hero` with the `cover` crop, `StartDrive`) |
+| `first_run/` | confirm or choose the OMSI folder (`choose_omsi_folder` is the function Settings calls), catalogue stage, welcome |
+| `pause/` | pause overlay, leave confirmation, `SessionStats` |
+| `session_summary/` | the end-of-drive card on Home |
+| `help/` | Help page, controls table, About, overlay in a drive, F1 |
+| `menu/` | what is left of the old menu: `glass` tint and `background` (map picture with its computed scrim) |
+| `isolation.rs` | `isolate_user_dirs()` keeps tests out of `~/.config/opts` |
 
-| Module | File | Role & Implementation |
-| :--- | :--- | :--- |
-| **Module Root** | `menu/mod.rs` | Exposes public API and `MainMenuPlugin`. |
-| **Plugin** | `menu/plugin.rs` | Registers lifecycle hooks (`OnEnter`, `OnExit`) and update systems conditioned to `in_state(AppState::MainMenu)`. |
-| **Layout** | `menu/layout.rs` | Builds viewport hierarchy: background (`z=0`), content (`z=1`), floating controls (`z=2`). |
-| **Entries** | `menu/entries.rs` | Spawns canonical entries (Play, Load, Settings, Credits, Quit), sets tab indices, and handles quit actions. |
-| **Background** | `menu/background.rs` | Loads `<recent_map_path>/picture.jpg` into Bevy `Image` texture, overlays a contrast scrim computed from the picture and the theme (`menu_scrim_color`, text keeps 4.5:1 over bright and dark pictures), and falls back to the `Surface` role. |
-| **Glass Surfaces** | `menu/glass.rs` | Manages `GlassSurface` component; `sync_glass_surfaces` system dynamically applies translucent alpha (0.25–0.80) from theme tokens. |
-| **Interactions** | `menu/interactions.rs` | Focus ring visualizer (2px solid outline), hover/pressed state luminance adjustments, and [Enter]/[Space] keyboard button activation. |
-| **Theme Toggle** | `menu/theme_toggle.rs` | Floating button (top-right) and [F2] hotkey flipping Dark/Light by changing `GameSettings::theme_mode`; `settings_theme::sync_theme_settings` moves it into the `opts-gui` resources. |
-| **Systems** | `menu/systems.rs` | Setup/teardown triggers and initial keyboard focus management. |
+Specifications: [screens](../src/roadmap/phase-9/screens.md), [Home and shell](../src/architecture/main-menu.md), [startup](../src/architecture/application-startup.md).
 
 ---
 
@@ -107,12 +110,9 @@ impl Plugin for VehicleSelectPlugin {
 }
 ```
 
-### Step 3: Retire the Destination Stub & Register Plugin
-1. In `crates/opts-game/src/stub_screens/mod.rs`, remove the stub registration for that state.
-2. In `crates/opts-game/src/lib.rs`, add your new plugin to `OptsGamePlugin`:
-```rust
-app.add_plugins(VehicleSelectPlugin);
-```
+### Step 3: Register the Screen
+1. Register the destination with `app.register_screen(ScreenDescriptor { id, title_key, icon, group, order, availability, state })`; the rail follows. Build the page with `spawn_screen_root` (it is placed in the shell's content area) and keep Esc out of it: the shell owns it.
+2. In `crates/opts-game/src/lib.rs`, add your plugin to `OptsGamePlugin`. A feature that does not work yet is registered as a not-yet place (`opts_gui::not_yet`) and carries the red marker.
 
 ---
 
