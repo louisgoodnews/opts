@@ -74,3 +74,27 @@ The scripts add behaviour on top: the anti-jackknife protection (`articulation_k
 ## Method
 
 `scripts/bellows_census.py` parses every `.bus` and its model `.cfg` (case-insensitive paths), collects the meshes with `[smoothskin]`/`[setbone]` and the `[newanim]` drivers that start with `articulation_`, groups numbered dummies and reports the bones that find no dummy. The in-game check starts each family on Hohenkirchen and counts `no dummy mesh for bone` warnings (0 for all verified vehicles; before the generalisation the AGG300, Citybus 60LF and NG313 each logged some, and the census counted 2,871 unbound bones, from the Chicago, Bremen, VA GS and Polish families among others).
+
+## Sign Verification (P-1011)
+
+**Question:** is `articulation_<k>_beta` = follower pitch minus leader pitch (nose up positive) the right sign?
+
+**Argument (numeric, no terrain needed):**
+- The bellows dummies are `[newanim]` blocks with `anim_rot articulation_<k>_beta` and a positive factor in the
+  large majority (1,312 of ~1,400 beta animations; no origin rotation, so the axis is the lateral X axis). OPTS
+  applies `anim_rot` as a right-handed rotation by `-variable·factor` about the frame X axis; this is the same rule
+  that makes the wheel top move forward for a growing `Wheel_Rotation` and that gives clockwise `alpha`.
+- The end of the bellows joined to the follower (behind the joint) must land where the follower's front lands. A
+  follower pitched nose up by `p` (rotation by `+p` about the lateral axis) moves points behind the joint **down**.
+  The dummy with `beta = +p` moves them **up** (rotation by `-p`). So with the old definition the bellows bent
+  against the body on every slope; the end only matches for `beta = leader_pitch - pitch`.
+- Test `bellows_beta_moves_the_follower_end_like_the_follower_body` fails with the old sign (bellows end at
+  y +0.278, body at y -0.278) and passes with the new one. The same test for gamma
+  (`bellows_gamma_rolls_the_follower_end_like_the_follower_body`, frame `(0,90,90)`) already agrees, so gamma is unchanged.
+- At a crest the front unit points down and the rear one up, so the follower is pitched nose up relative to the
+  leader: `beta` is now negative there.
+
+**Limits:** this is a geometric argument from OPTS's own `anim_rot` convention, not an OMSI comparison; it holds
+if OMSI's bellows meshes were authored against the same convention that the wheels and `alpha` follow. The flat
+start road of the Aachen map gives |beta| < 0.5 degrees, so no slope screenshot exists yet; confirm with an OMSI
+reference or a slope when one is available.

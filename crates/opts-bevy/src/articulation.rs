@@ -167,6 +167,16 @@ impl ArticulatedSegment {
     }
 }
 
+/// The bellows variable `articulation_<k>_beta` (degrees) for a unit pitched `pitch` (rad, nose up
+/// positive) behind a unit pitched `leader_pitch`. The bellows dummies turn about the lateral axis
+/// by `-beta·factor` (right-handed, the `anim_rot` convention of wheels and `alpha`), so the end of
+/// the bellows joined to the follower (behind the joint) only follows it when a nose-up follower
+/// gives a **negative** beta (`docs/src/architecture/bellows-census.md`, Sign Verification).
+#[must_use]
+pub fn joint_beta_deg(leader_pitch: f32, pitch: f32) -> f32 {
+    (leader_pitch - pitch).to_degrees()
+}
+
 /// The segments behind the root unit, front to back.
 #[derive(Component, Debug, Clone, Default)]
 pub struct ArticulatedChain {
