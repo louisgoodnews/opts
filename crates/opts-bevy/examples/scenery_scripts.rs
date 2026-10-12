@@ -94,6 +94,7 @@ fn main() {
             .to_lowercase();
         let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
         let set = load_scenery_scripts(&sco, |rel| install.find_in(&dir, rel));
+        let entry_key = key.clone();
         let entry = per.entry(key).or_default();
         entry.objects += 1;
         entry.compile_errors += set
@@ -109,7 +110,7 @@ fn main() {
         let mut scripts = SceneryScripts::new(set.engine, &set.string_names, &[], Vec::new());
         let (diags, live, ticks, nanos) = run(&mut scripts);
         for d in scripts.diagnostics() {
-            *messages.entry(d.message.clone()).or_default() += 1;
+            *messages.entry(format!("{} [{}]", d.message, entry_key)).or_default() += 1;
         }
         entry.runtime_diags += diags;
         entry.live += usize::from(live);

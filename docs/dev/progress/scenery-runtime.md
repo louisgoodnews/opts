@@ -23,10 +23,10 @@ Game runs: always `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d) XDG_C
 | :--- | :--- |
 | R0 Triage the WIP | done |
 | R1 Split into logical commits | done (core, sim, bevy, game; each commit checked compiling alone) |
-| R2 LOD + `[visible]` + `[newanim]` | pending |
-| R3 Script runtime and host interface | pending |
-| R4 Traffic-light signals | pending |
-| R5 Corpus probe | pending |
+| R2 LOD + `[visible]` + `[newanim]` | done (covered by `crates/opts-bevy/tests/scenery_runtime.rs`, `opts-core/tests/scenery_runtime_parse.rs`) |
+| R3 Script runtime and host interface | done (API below) |
+| R4 Traffic-light signals | done in code (links to `opts_traffic::SignalProgram`); M-0049 updated; visual check in R7 |
+| R5 Corpus probe | done (numbers below) |
 | R6 Lights | pending |
 | R7 Game check | pending |
 | R8 Close-out | pending |
@@ -50,6 +50,12 @@ Known gaps from the spec: `[nightmapmode]`, `[matl_nightmap]`, `[matl_change]`, 
 
 R0: all gates green after fixes.
 
+R3 public API for the harness (all in `opts_bevy::scenery_runtime`, re-exported at the crate root; details in the spec, "Interface for the benchmark"): `SceneryRuntimePlugin`, `SceneryClock::at(y, m, d, seconds)` with `follow_session = false`, `SceneryRuntimeSettings { automatic: false, .. }`, `SceneryVariableOverrides`, `SceneryLodMode::{Camera, Finest, All}`, `advance_scenery(&mut World, dt)`, components `SceneryScripts`, `SceneryObjectRuntime`, `SceneryMeshRule`. Headless proof: `the_script_switches_the_lamp_by_time_of_day`, `the_animated_mesh_moves_with_simulated_time`.
+
+R5 corpus probe (`cargo run --release -p opts-bevy --example scenery_scripts -- "<OMSI dir>" 50`; raw output `~/.local/share/opts/benchmark/dev-runtime/probe.txt`): 55,664 `.sco`, 4 unparsable, 2,822 with scripts, 270 distinct first scripts. Compile errors: 0. Missing files: 107 objects in 11 script names; checked independently: 138 referenced script/varlist/stringvar files really do not exist in the install (e.g. `Verkehrszeichen_MC\script\ampel1.osc` referenced by 20 objects), so these are broken packs, not loader bugs. Run-time diagnostics 339 in 53 scripts: 324 are `getarrbus*` external macros (bus stop displays: `busstopdisplay`, `bot_display`, `dfi*`; need a timetable host, open item), 15 stack underflows, 8 of them `peopleHC.osc` whose `{frame}` is malformed in the pack itself (`||` with one operand; substituted 0). All 2,822 objects change a variable over the 20 simulated seconds. Mean cost 0.22 microseconds per tick (host feed plus `{frame}`) over 3.4 M ticks, release build, ampel1 0.22 us.
+
 ## Open problems
+
+- Bus-stop display macros (`getarrbusline`, `getarrbusterminus`, `getarrbustimediff`) have no host.
 
 none yet.
