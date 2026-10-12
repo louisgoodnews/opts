@@ -154,7 +154,11 @@ fn load_segment_meshes_for(
                 Transform::IDENTITY,
                 Visibility::Inherited,
             ));
-            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(owner, mesh_def) {
+            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(
+                owner,
+                mesh_def,
+                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
+            ) {
                 joint.insert(anim);
             }
             let id = joint.id();
@@ -235,7 +239,11 @@ fn load_segment_meshes_for(
         let spawned = attach_model_parts(commands, root, &parts, &mesh_def.path);
         // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
         // maps; a click on it raises its `[mouseevent]` trigger.
-        let anim = opts_bevy::MeshAnimation::from_mesh(owner, mesh_def);
+        let anim = opts_bevy::MeshAnimation::from_mesh(
+            owner,
+            mesh_def,
+            mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
+        );
         let hot_spot = mesh_def
             .mouseevent
             .as_deref()
@@ -278,8 +286,28 @@ struct SkinBinding {
 
 /// Whether a mesh file stem names a bone dummy of a bellows (`bone_a` … `bone_f`).
 fn is_bone_stem(stem: &str) -> bool {
-    stem.strip_prefix("bone_")
-        .is_some_and(|rest| rest.len() == 1 && rest.chars().all(|c| c.is_ascii_alphabetic()))
+    // `bone_a` … `bone_d` (Heuliez), `dummya` … `dummyd` (MAN New Lion's City), `dummy_a`.
+    ["bone_", "dummy_", "dummy"].iter().any(|prefix| {
+        stem.strip_prefix(prefix)
+            .is_some_and(|rest| rest.len() == 1 && rest.chars().all(|c| c.is_ascii_alphabetic()))
+    })
+}
+
+/// The mesh's own origin in OMSI vehicle axes, for animations with `origin_from_mesh`: the
+/// translation row of the `.o3d` matrix chunk (o3d axes x lateral, y up, z longitudinal).
+fn mesh_pivot(
+    job: &WorldLoadJob,
+    rel: &str,
+    model_dir: &Path,
+    mesh_def: &opts_core::formats::vehicles::model::ModelMesh,
+) -> Option<Vec3> {
+    if !mesh_def.anims.iter().any(|a| a.origin_from_mesh) {
+        return None;
+    }
+    let path = job.install.find_in(model_dir, rel)?;
+    let o3d = opts_core::formats::o3d::parse(&std::fs::read(path).ok()?).ok()?;
+    let m = o3d.transform?;
+    Some(Vec3::new(m[3][0], m[3][2], m[3][1]))
 }
 
 /// Binds skinned meshes of a vehicle to the dummy meshes that carry their bones' animation.
@@ -698,26 +726,6 @@ pub fn load_player_vehicle(
             }
         });
     }
-    match load_driver_human(
-        job,
-        commands,
-        meshes,
-        materials,
-        images,
-        bindposes,
-        root,
-        &bus_dir,
-        manifest.passengercabin_cfg.as_deref(),
-    ) {
-        Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
-        Err(e) => {
-            tracing::error!(at = %opts_bevy::position_tag(), "cannot load the player character: {e}")
-        }
-    }
-
-    tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
-    let length = (max.z - min.z).abs().max(1.0);
-    let height = (max.y - min.y).abs().max(1.0);
     let driver_cam = manifest
         .driver_cameras
         .get(manifest.std_camera_index.unwrap_or(0))
@@ -733,7 +741,28 @@ pub fn load_player_vehicle(
             )
             .translation
         })
-        .unwrap_or(Vec3::new(0.0, height * 0.8, 0.0));
+        .unwrap_or(Vec3::new(0.0, 1.2, 0.0));
+    match load_driver_human(
+        job,
+        commands,
+        meshes,
+        materials,
+        images,
+        bindposes,
+        root,
+        &bus_dir,
+        manifest.passengercabin_cfg.as_deref(),
+        cockpit_offset,
+    ) {
+        Ok(name) => tracing::info!(human = %name, "player character seated at the driver position"),
+        Err(e) => {
+            tracing::error!(at = %opts_bevy::position_tag(), "cannot load the player character: {e}")
+        }
+    }
+
+    tracing::debug!(min = ?min, max = ?max, "vehicle bounding box (Bevy space)");
+    let length = (max.z - min.z).abs().max(1.0);
+    let height = (max.y - min.y).abs().max(1.0);
     let chase_distance = length * 1.3;
     let chase_height = height * 1.6;
     job.camera_std_index = manifest.std_camera_index.unwrap_or(0);
@@ -852,6 +881,7 @@ pub(super) fn load_driver_human(
     vehicle_root: Entity,
     bus_dir: &Path,
     cabin_rel: Option<&str>,
+    eye_target: Vec3,
 ) -> Result<String, String> {
     use opts_bevy::{hip_offset, spawn_human, HumanPose};
     use opts_core::formats::humans::HumanProfile;
@@ -916,6 +946,11 @@ pub(super) fn load_driver_human(
         scale: Vec3::ONE,
     });
     commands.entity(vehicle_root).add_child(human);
+    // The eyes go where the vehicle's driver camera is (set once the camera is known).
+    commands.entity(human).insert(opts_bevy::AlignEyes {
+        target: eye_target,
+        wait: 3,
+    });
     Ok(name)
 }
 
@@ -1006,6 +1041,8 @@ mod bone_tests {
     fn bone_dummies_are_bone_underscore_letter() {
         assert!(is_bone_stem("bone_a"));
         assert!(is_bone_stem("bone_d"));
+        assert!(is_bone_stem("dummya"));
+        assert!(is_bone_stem("dummy_c"));
         assert!(!is_bone_stem("bone_ab"));
         assert!(!is_bone_stem("bone_1"));
         assert!(!is_bone_stem("gn_dum_gelenk_a"));

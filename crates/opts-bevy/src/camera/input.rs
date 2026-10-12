@@ -5,7 +5,7 @@ use bevy::math::{EulerRot, Vec3};
 use bevy::prelude::*;
 
 use crate::camera::state::{CameraAvailability, CameraMode, CameraState, FREE_ROAM_MIN_SPEED};
-use crate::human::HumanHead;
+use crate::human::PlayerHead;
 use crate::vehicle::BusVehicle;
 use crate::vehicle_sim::{PlayerVehicle, VehicleCameraMode, VehicleCameraRig};
 
@@ -20,7 +20,7 @@ const MODE_KEYS: [(KeyCode, CameraMode); 5] = [
 /// Refreshes which modes can be entered. Modes without a backing implementation stay unavailable.
 pub fn update_camera_availability(
     vehicles: Query<&BusVehicle, With<PlayerVehicle>>,
-    humans: Query<(), With<HumanHead>>,
+    humans: Query<(), With<PlayerHead>>,
     mut avail: ResMut<CameraAvailability>,
 ) {
     let bus = vehicles.single().ok();

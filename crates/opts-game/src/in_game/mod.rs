@@ -124,6 +124,9 @@ impl Plugin for InGamePlugin {
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
                 toggle_pause,
+                debug_frame_log
+                    .after(omsi_world::follow_ground)
+                    .after(omsi_world::rail_player_pose),
                 omsi_world::load_rail_variants,
                 omsi_world::spawn_ai_trains,
                 omsi_world::move_ai_trains,
@@ -244,5 +247,42 @@ fn toggle_pause(
     } else {
         time.pause();
         tracing::info!("simulation paused [P]");
+    }
+}
+
+/// Developer aid: `OPTS_DBG_FRAMES=<file>` appends one CSV line per frame (real time, frame time,
+/// player position, speed, fixed steps so far) to measure how smooth the motion is.
+fn debug_frame_log(
+    time: Res<Time<Real>>,
+    fixed: Res<Time<Fixed>>,
+    player: Query<(&Transform, &opts_bevy::VehicleController), With<opts_bevy::PlayerVehicle>>,
+    mut file: Local<Option<std::fs::File>>,
+    mut steps: Local<u64>,
+    mut last_fixed: Local<f64>,
+) {
+    use std::io::Write;
+    let Some(path) = std::env::var_os("OPTS_DBG_FRAMES") else {
+        return;
+    };
+    let Ok((tf, c)) = player.single() else { return };
+    if file.is_none() {
+        *file = std::fs::File::create(path).ok();
+    }
+    let elapsed = fixed.elapsed_secs_f64();
+    if elapsed != *last_fixed {
+        *steps += ((elapsed - *last_fixed) / fixed.timestep().as_secs_f64()).round() as u64;
+        *last_fixed = elapsed;
+    }
+    if let Some(f) = file.as_mut() {
+        let _ = writeln!(
+            f,
+            "{:.5},{:.5},{:.4},{:.4},{:.3},{}",
+            time.elapsed_secs_f64(),
+            time.delta_secs_f64(),
+            tf.translation.x,
+            tf.translation.z,
+            c.sim.chassis.forward_speed_m_s(),
+            *steps
+        );
     }
 }

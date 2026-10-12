@@ -55,6 +55,13 @@ pub fn build_app(args: CliArgs) -> App {
                             height as u32,
                         ),
                         mode,
+                        // No artificial cap: frames are limited by the hardware (`--vsync`
+                        // follows the display instead).
+                        present_mode: if args.vsync {
+                            bevy::window::PresentMode::AutoVsync
+                        } else {
+                            bevy::window::PresentMode::AutoNoVsync
+                        },
                         resize_constraints: bevy::window::WindowResizeConstraints {
                             min_width: 800.0,
                             min_height: 600.0,

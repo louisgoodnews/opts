@@ -6,7 +6,7 @@ use bevy::math::{EulerRot, Quat};
 use bevy::prelude::*;
 
 use crate::camera::state::{CameraMode, CameraState};
-use crate::human::HumanHead;
+use crate::human::PlayerHead;
 
 /// Mouse look relative to the head (yaw ±120°, pitch ±80°). Hold Left Alt to free the cursor.
 pub fn update_ego_look(
@@ -32,7 +32,7 @@ pub fn update_ego_look(
 /// Places the camera on the head anchor, rotated by the ego look angles.
 pub fn update_ego_camera(
     state: Res<CameraState>,
-    head: Query<&GlobalTransform, With<HumanHead>>,
+    head: Query<&GlobalTransform, With<PlayerHead>>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
 ) {
     if state.mode != CameraMode::Ego {

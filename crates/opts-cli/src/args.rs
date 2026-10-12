@@ -57,12 +57,17 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub fullscreen: bool,
 
+    /// Synchronise frames with the display (V-Sync). By default the frame rate is not capped: it
+    /// is limited by the hardware only.
+    #[arg(long)]
+    pub vsync: bool,
+
     /// Explicitly request windowed mode (overrides fullscreen if both present).
     #[arg(long, default_value_t = false)]
     pub windowed: bool,
 
     /// Initial window dimensions formatted as `WIDTHxHEIGHT` (e.g. 1920x1080).
-    #[arg(long, value_name = "WxH", default_value = "1280x720")]
+    #[arg(long, value_name = "WxH", default_value = "1920x1080")]
     pub window_size: String,
 
     /// Run the application headlessly without spawning an OS display window (ideal for CI testing).
@@ -133,7 +138,8 @@ impl Default for CliArgs {
             log_file: None,
             fullscreen: false,
             windowed: false,
-            window_size: "1280x720".to_string(),
+            vsync: false,
+            window_size: "1920x1080".to_string(),
             headless: false,
             cli_port: None,
             cli_bind: "127.0.0.1".to_string(),
@@ -158,7 +164,7 @@ impl CliArgs {
     }
 
     /// Parses window resolution width and height from the `--window-size` flag.
-    /// Falls back to 1280x720 if invalid.
+    /// Falls back to 1920x1080 if invalid.
     pub fn parse_dimensions(&self) -> (f32, f32) {
         let parts: Vec<&str> = self.window_size.split('x').collect();
         if parts.len() == 2 {
@@ -171,7 +177,7 @@ impl CliArgs {
                 }
             }
         }
-        (1280.0, 720.0)
+        (1920.0, 1080.0)
     }
 }
 
@@ -237,7 +243,7 @@ mod tests {
         let args = CliArgs::try_parse_from(["opts"]).expect("Defaults should parse");
 
         assert_eq!(args.log_level, "info");
-        assert_eq!(args.window_size, "1280x720");
+        assert_eq!(args.window_size, "1920x1080");
         assert!(!args.headless);
         assert!(!args.fullscreen);
         assert_eq!(args.parse_dimensions(), (1280.0, 720.0));

@@ -70,9 +70,62 @@ pub struct Human {
     pub rig: HumanRig,
 }
 
-/// Marker for the eye anchor entity of the player's human.
+/// Marker for the eye anchor entity of every human (the player's and the pedestrians').
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct HumanHead;
+
+/// Marker for the eye anchor of the **player's** human: the ego camera attaches here.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct PlayerHead;
+
+/// On the root of the player's human (a child of the vehicle): once its pose is in place, the
+/// character is shifted so that its eyes lie at `target` (vehicle-local Bevy space), where the
+/// vehicle's driver camera is. The camera and the head then coincide, in the cockpit view and in
+/// the ego view alike.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct AlignEyes {
+    /// The eye position in the vehicle's frame.
+    pub target: Vec3,
+    /// Frames to wait for the first transform propagation of the new hierarchy.
+    pub wait: u8,
+}
+
+/// Shifts the player's human to the driver camera (see [`AlignEyes`]).
+pub fn align_driver_eyes(
+    mut commands: bevy::prelude::Commands,
+    mut humans: bevy::prelude::Query<(
+        Entity,
+        &Human,
+        &mut AlignEyes,
+        &mut Transform,
+        &bevy::prelude::ChildOf,
+    )>,
+    globals: bevy::prelude::Query<&bevy::prelude::GlobalTransform>,
+) {
+    for (e, human, mut align, mut tf, parent) in &mut humans {
+        if align.wait > 0 {
+            align.wait -= 1;
+            continue;
+        }
+        let (Ok(head), Ok(vehicle)) = (
+            globals.get(human.rig.head_anchor),
+            globals.get(parent.parent()),
+        ) else {
+            continue;
+        };
+        let want = vehicle.transform_point(align.target);
+        let delta = vehicle
+            .affine()
+            .inverse()
+            .transform_vector3(want - head.translation());
+        tf.translation += delta;
+        commands.entity(e).remove::<AlignEyes>();
+        commands.entity(human.rig.head_anchor).insert(PlayerHead);
+    }
+}
+
+/// How far the eyes (the nose bridge) lie in front of the head's centre line (m).
+pub const EYES_FORWARD_M: f32 = 0.09;
 
 /// Pivot of each bone in Bevy space (rest pose, character origin on the ground).
 ///
@@ -174,10 +227,12 @@ pub fn spawn_human(
         joints.push(id);
     }
 
+    // The eyes lie at the nose bridge, a little in front of the head's centre line (forward is
+    // -Z in the character's frame).
     let eye_rel = Vec3::new(
         0.0,
         (profile.height_m - EYE_BELOW_CROWN_M) - profile.links.neck.y,
-        0.0,
+        -EYES_FORWARD_M,
     );
     let head_anchor = commands
         .spawn((

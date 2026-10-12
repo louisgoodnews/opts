@@ -129,7 +129,7 @@ fn app() -> (App, Entity, Entity) {
         .insert((VehicleScripts::new(engine), PlayerVehicle));
     let mesh_def = &model.lods[0].meshes[0];
     assert_eq!(mesh_def.mouseevent.as_deref(), Some("bus_doorfront0"));
-    let anim = MeshAnimation::from_mesh(root, mesh_def).expect("mesh is animated");
+    let anim = MeshAnimation::from_mesh(root, mesh_def, None).expect("mesh is animated");
     let door = world
         .spawn((anim, Transform::IDENTITY, Visibility::Inherited))
         .id();

@@ -54,16 +54,21 @@ pub struct MeshAnimation {
     pub shown: Vec<f32>,
 }
 
-fn frame_of(a: &ModelAnim) -> Mat4 {
-    let origin = a.origin_trans.unwrap_or(Vec3::ZERO);
+fn frame_of(a: &ModelAnim, pivot: Option<Vec3>) -> Mat4 {
+    // An explicit `origin_trans` wins; `origin_from_mesh` takes the mesh's own origin (the
+    // translation of its matrix chunk, e.g. a wheel's centre).
+    let origin = a
+        .origin_trans
+        .or_else(|| a.origin_from_mesh.then_some(pivot).flatten())
+        .unwrap_or(Vec3::ZERO);
     let rot = Mat4::from_rotation_x(a.origin_rot.x.to_radians())
         * Mat4::from_rotation_y(a.origin_rot.y.to_radians())
         * Mat4::from_rotation_z(a.origin_rot.z.to_radians());
     Mat4::from_translation(origin) * rot
 }
 
-fn steps_of(anim: &ModelAnim) -> Vec<AnimStep> {
-    let frame = frame_of(anim);
+fn steps_of(anim: &ModelAnim, pivot: Option<Vec3>) -> Vec<AnimStep> {
+    let frame = frame_of(anim, pivot);
     let mk = |a: &AnimAction, translate: bool| AnimStep {
         frame,
         variable: a.variable.clone(),
@@ -81,9 +86,11 @@ fn steps_of(anim: &ModelAnim) -> Vec<AnimStep> {
 
 impl MeshAnimation {
     /// Builds the rules of `mesh`; `None` when it has neither animation nor visibility rules.
+    /// `pivot` is the mesh's own origin in OMSI vehicle axes (the matrix of its `.o3d`), used by
+    /// animations declared `origin_from_mesh`.
     #[must_use]
-    pub fn from_mesh(owner: Entity, mesh: &ModelMesh) -> Option<Self> {
-        let steps: Vec<AnimStep> = mesh.anims.iter().flat_map(steps_of).collect();
+    pub fn from_mesh(owner: Entity, mesh: &ModelMesh, pivot: Option<Vec3>) -> Option<Self> {
+        let steps: Vec<AnimStep> = mesh.anims.iter().flat_map(|a| steps_of(a, pivot)).collect();
         let visible: Vec<(String, f32)> = mesh
             .visibility
             .iter()

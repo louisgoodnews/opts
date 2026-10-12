@@ -43,6 +43,7 @@ impl Plugin for OptsCameraPlugin {
             .add_systems(
                 Update,
                 (
+                    crate::human::align_driver_eyes,
                     update_camera_availability,
                     handle_camera_key_input.run_if(not_modal_active),
                     handle_camera_reset_input.run_if(not_modal_active),
