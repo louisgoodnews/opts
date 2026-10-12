@@ -131,6 +131,7 @@ pub struct VehicleMenuPlugin;
 impl Plugin for VehicleMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<VehicleMenu>()
+            .init_resource::<MenuModalActive>()
             .init_resource::<MenuCommands>()
             .init_resource::<EntryIndex>()
             .add_systems(

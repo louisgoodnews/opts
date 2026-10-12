@@ -57,6 +57,9 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/settings_screen/systems.rs",
     "opts-game/src/stub_screens/mod.rs",
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.
+    // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
+    "opts-game/src/in_game/omsi_world/rail.rs",
+    "opts-game/src/in_game/vehicle_menu.rs",
     "opts-gui/src/components/button.rs",
     "opts-gui/src/components/checkbox.rs",
     "opts-gui/src/components/combobox.rs",

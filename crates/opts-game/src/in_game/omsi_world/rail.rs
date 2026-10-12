@@ -244,9 +244,13 @@ pub fn is_rail(manifest: &BusManifest) -> bool {
 pub fn rail_player_step(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    modal: Option<Res<opts_bevy::reporting::ModalActive>>,
+    menu: Option<Res<opts_bevy::reporting::MenuModalActive>>,
     net: Res<RailNetwork>,
     mut players: Query<(&mut VehicleController, &mut RailPlayer)>,
 ) {
+    // Typing in a modal must not switch points.
+    let typing = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
     let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
@@ -307,7 +311,8 @@ pub fn rail_player_step(
             continue;
         };
         // Route choice at the next point: Z left, X straight, C right.
-        if keyboard.just_pressed(KeyCode::KeyZ) {
+        if typing {
+        } else if keyboard.just_pressed(KeyCode::KeyZ) {
             train.branch = Branch::Left;
         } else if keyboard.just_pressed(KeyCode::KeyX) {
             train.branch = Branch::Straight;

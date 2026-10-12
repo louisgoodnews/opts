@@ -67,6 +67,11 @@ pub struct CliArgs {
     #[arg(long)]
     pub vsync: bool,
 
+    /// Rate of the fixed simulation step in Hz (physics, collisions, scripts). Rendering is
+    /// independent of it and interpolated, so the frame rate stays uncapped.
+    #[arg(long, value_name = "HZ", default_value_t = 64.0)]
+    pub physics_hz: f64,
+
     /// Explicitly request windowed mode (overrides fullscreen if both present).
     #[arg(long, default_value_t = false)]
     pub windowed: bool,
@@ -144,6 +149,7 @@ impl Default for CliArgs {
             fullscreen: false,
             windowed: false,
             vsync: false,
+            physics_hz: 64.0,
             script_drive: false,
             window_size: "1920x1080".to_string(),
             headless: false,

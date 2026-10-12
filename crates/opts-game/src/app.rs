@@ -87,6 +87,9 @@ pub fn build_app(args: CliArgs) -> App {
     }
     app.insert_resource(settings);
     app.insert_resource(opts_bevy::ScriptDriveEnabled(args.script_drive));
+    // Fixed simulation step; a long frame replays at most 50 ms of it (no catch-up spiral).
+    app.insert_resource(Time::<Fixed>::from_hz(args.physics_hz.clamp(20.0, 1000.0)));
+    app.insert_resource(Time::<Virtual>::from_max_delta(Duration::from_millis(50)));
 
     // Remote control (opt-in: `--cli-port`).
     if args.cli_port.is_some() {

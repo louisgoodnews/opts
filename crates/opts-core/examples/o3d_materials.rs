@@ -9,7 +9,11 @@ fn main() {
         let Ok(o) = parse(&b) else { continue };
         println!("{p}");
         for (i, m) in o.materials.iter().enumerate() {
-            let tris = o.face_materials.iter().filter(|f| **f as usize == i).count();
+            let tris = o
+                .face_materials
+                .iter()
+                .filter(|f| **f as usize == i)
+                .count();
             let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
             for (t, fm) in o.indices.iter().zip(&o.face_materials) {
                 if *fm as usize != i {

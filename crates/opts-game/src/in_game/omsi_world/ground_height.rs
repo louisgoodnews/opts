@@ -178,35 +178,115 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
     });
 }
 
-/// Puts the player's vehicle on the ground: elevation under its centre, pitch from the heights
-/// 3 m ahead and behind.
+/// Gravity for a vehicle that has left the ground (m/s²).
+const GRAVITY: f32 = 9.81;
+/// A wheel whose ground lies this far below the chassis carries no load (m): the vehicle hangs
+/// on the other wheels (a road edge, a kerb) until the ground under all wheels is lower.
+const UNSUPPORTED_DROP_M: f32 = 0.6;
+/// Largest pitch and roll of the body (rad).
+const MAX_TILT_RAD: f32 = 0.35;
+/// Response rates of the body (1/s): rising onto the ground, pitch and roll.
+const RISE_RATE: f32 = 25.0;
+const TILT_RATE: f32 = 10.0;
+
+/// The player's vertical motion between frames.
+#[derive(Default)]
+pub struct BodyMotion {
+    /// Falling speed (m/s, positive down).
+    fall: f32,
+    pitch: f32,
+    roll: f32,
+}
+
+/// Puts the player's vehicle on the ground: the height under each of its four wheel positions
+/// gives elevation, pitch and roll. Wheels over a drop carry nothing; when all wheels leave the
+/// ground the vehicle falls under gravity instead of snapping down.
 pub fn follow_ground(
+    time: Res<Time>,
     index: Res<GroundIndex>,
+    mut motion: Local<BodyMotion>,
     mut vehicles: Query<(&mut VehicleController, &mut Transform), GroundBound>,
 ) {
+    let dt = time.delta_secs().min(0.1);
     for (mut controller, mut tf) in &mut vehicles {
+        let (front, rear, track) = {
+            let axles = &controller.sim.axles;
+            let track = axles
+                .iter()
+                .map(|a| a.config.track_width_m)
+                .fold(0.0_f32, f32::max);
+            let ends = axles
+                .iter()
+                .map(|a| a.config.longitudinal_m)
+                .fold((f32::MIN, f32::MAX), |(hi, lo), l| (hi.max(l), lo.min(l)));
+            let (hi, lo) = ends;
+            (
+                (hi > f32::MIN).then_some(hi),
+                (lo < f32::MAX).then_some(lo),
+                if track > 0.5 { track } else { 2.0 },
+            )
+        };
+        let (front, rear) = (
+            front.unwrap_or(PITCH_BASE_M * 0.5),
+            rear.unwrap_or(-PITCH_BASE_M * 0.5),
+        );
         let ch = &mut controller.sim.chassis;
         let (px, py) = (ch.position.x, ch.position.y);
         let h = ch.heading_rad;
         let (sin, cos) = h.sin_cos();
         let z = ch.elevation_z;
-        let at = |d: f32| index.height_at(px + sin * d, py + cos * d, z);
-        let (Some(mid), front, rear) = (at(0.0), at(PITCH_BASE_M * 0.5), at(-PITCH_BASE_M * 0.5))
-        else {
+        // Ground height under the wheel at `lon` along and `side` (±1) across the vehicle.
+        let at = |lon: f32, side: f32| {
+            let lat = side * track * 0.5;
+            index.height_at(px + sin * lon + cos * lat, py + cos * lon - sin * lat, z)
+        };
+        let (Some(fl), Some(fr), Some(rl), Some(rr)) = (
+            at(front, -1.0),
+            at(front, 1.0),
+            at(rear, -1.0),
+            at(rear, 1.0),
+        ) else {
             continue;
         };
-        // Smooth steps (kerbs, ramps between a road and the terrain) instead of snapping.
-        let new_z = if (mid - z).abs() > 3.0 {
-            mid
+        let heights = [fl, fr, rl, rr];
+        let supported: Vec<f32> = heights
+            .iter()
+            .copied()
+            .filter(|g| *g >= z - UNSUPPORTED_DROP_M)
+            .collect();
+        let target = if supported.len() >= 2 {
+            supported.iter().sum::<f32>() / supported.len() as f32
         } else {
-            z + (mid - z) * 0.4
+            // Nothing carries the vehicle: it falls towards the highest ground below it.
+            heights.iter().copied().fold(f32::MIN, f32::max)
         };
-        ch.elevation_z = new_z;
-        let pitch = match (front, rear) {
-            (Some(f), Some(r)) if (f - r).abs() < 2.0 => ((f - r) / PITCH_BASE_M).atan(),
-            _ => 0.0,
-        };
-        tf.translation.y = new_z;
-        tf.rotation = Quat::from_rotation_y(-h) * Quat::from_rotation_x(pitch);
+        if (target - z).abs() > 12.0 {
+            // Teleports (respawn, tile change): no motion between the two heights.
+            ch.elevation_z = target;
+            motion.fall = 0.0;
+        } else if target < z - 0.02 {
+            motion.fall += GRAVITY * dt;
+            ch.elevation_z = (z - motion.fall * dt).max(target);
+            if ch.elevation_z <= target {
+                motion.fall = 0.0;
+            }
+        } else {
+            motion.fall = 0.0;
+            ch.elevation_z = z + (target - z) * (1.0 - (-RISE_RATE * dt).exp());
+        }
+        let wheelbase = (front - rear).max(1.0);
+        let pitch_goal = (((fl + fr) - (rl + rr)) * 0.5 / wheelbase)
+            .atan()
+            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
+        let roll_goal = (((fr + rr) - (fl + rl)) * 0.5 / track)
+            .atan()
+            .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
+        let blend = 1.0 - (-TILT_RATE * dt).exp();
+        motion.pitch += (pitch_goal - motion.pitch) * blend;
+        motion.roll += (roll_goal - motion.roll) * blend;
+        tf.translation.y = ch.elevation_z;
+        tf.rotation = Quat::from_rotation_y(-h)
+            * Quat::from_rotation_x(motion.pitch)
+            * Quat::from_rotation_z(motion.roll);
     }
 }

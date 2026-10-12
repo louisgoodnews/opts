@@ -602,9 +602,9 @@ pub fn decode_to_rgba8(image: &Image) -> Option<Image> {
                     u32::from(c & 31),
                 );
                 [
-                    (r * 255 / 31) as u32,
-                    (g * 255 / 63) as u32,
-                    (b * 255 / 31) as u32,
+                    r * 255 / 31,
+                    g * 255 / 63,
+                    b * 255 / 31,
                 ]
             };
             let (p0, p1) = (expand(c0), expand(c1));

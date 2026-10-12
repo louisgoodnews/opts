@@ -155,3 +155,7 @@ Default desktop keyboard mappings for `PlayerVehicle`:
 
 Automatic centering applies to steering when neither steering key is pressed:
 $$\text{steering} \to 0.0 \quad \text{at rate } k_{\text{return}} \cdot \Delta t$$
+
+## Ground following (2026-10-12)
+
+`follow_ground` samples the ground under the four wheel positions (outer axles, widest track of the `.bus`): elevation is the mean of the supported wheels, pitch comes from front against rear, roll from right against left (each limited to 20° and smoothed at 10 /s). A wheel whose ground lies more than 0.6 m below the chassis carries nothing, so a vehicle with two wheels over a road edge hangs on the others and tips; when no wheel is supported (driving off a platform or bridge) the chassis **falls under gravity** (9.81 m/s²) and lands on the highest ground below instead of snapping down. Jumps above 12 m (respawn, tile change) are teleports. Articulated segments still follow only the head's height.

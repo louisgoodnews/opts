@@ -45,6 +45,8 @@ clap = { workspace = true }
 [features]
 # Fixtures for integration tests (miniature OMSI installation); not part of the shipped game.
 test-support = []
+# Bevy system spans plus `OPTS_SYSTEM_TIMING=<seconds>` per-system timing (profiling builds).
+profile = ["bevy/trace", "bevy/debug"]
 
 [dev-dependencies]
 # Enables the fixtures for this crate's own integration tests.

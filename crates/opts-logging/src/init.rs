@@ -164,6 +164,13 @@ pub fn init(config: LogConfig) -> LogResult<LogGuard> {
         crate::layer::ring::RingLayer.with_filter(Targets::new().with_default(default_level)),
     ));
 
+    // Optional per-system timing for profiling (needs Bevy's `trace` spans).
+    if let Some(timing) = crate::layer::timing::SystemTimingLayer::from_env() {
+        layers.push(Box::new(
+            timing.with_filter(Targets::new().with_target("bevy_ecs", Level::INFO)),
+        ));
+    }
+
     // Register with Tracing Subscriber Registry
     tracing_subscriber::registry()
         .with(layers)

@@ -61,7 +61,7 @@ const FUNCTION: [(KeyCode, Key); 12] = [
 ];
 
 /// Names that are not single characters or function keys.
-const NAMED: [&str; 17] = [
+const NAMED: [&str; 18] = [
     "Escape",
     "Enter",
     "Space",
@@ -79,6 +79,7 @@ const NAMED: [&str; 17] = [
     "ShiftLeft",
     "ControlLeft",
     "AltLeft",
+    "Period",
 ];
 
 fn named(name: &str) -> Option<(KeyCode, Key)> {
@@ -100,6 +101,7 @@ fn named(name: &str) -> Option<(KeyCode, Key)> {
         "ShiftLeft" => (KeyCode::ShiftLeft, Key::Shift),
         "ControlLeft" => (KeyCode::ControlLeft, Key::Control),
         "AltLeft" => (KeyCode::AltLeft, Key::Alt),
+        "Period" => (KeyCode::Period, Key::Character(".".into())),
         _ => return None,
     })
 }
