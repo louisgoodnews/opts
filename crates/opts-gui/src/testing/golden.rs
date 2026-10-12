@@ -189,9 +189,9 @@ fn blend(img: &mut RgbaImage, x: i64, y: i64, src: [f32; 4], coverage: f32) {
         return;
     }
     let p = img.get_pixel_mut(x as u32, y as u32);
-    for i in 0..3 {
-        let below = f32::from(p.0[i]) / 255.0;
-        p.0[i] = ((src[i] * a + below * (1.0 - a)) * 255.0)
+    for (channel, from) in p.0.iter_mut().zip(src).take(3) {
+        let below = f32::from(*channel) / 255.0;
+        *channel = ((from * a + below * (1.0 - a)) * 255.0)
             .round()
             .clamp(0.0, 255.0) as u8;
     }
@@ -317,15 +317,8 @@ pub fn paint(world: &mut World, width: u32, height: u32, background: Color) -> R
                         has_border && !inside_rounded(p, inner_min, inner_max, &inner_radius);
                     if in_border {
                         if let Some(sides) = border {
-                            let d = [
-                                p.y - min.y,
-                                max.x - p.x,
-                                max.y - p.y,
-                                p.x - min.x,
-                            ];
-                            let side = (0..4)
-                                .min_by(|a, b| d[*a].total_cmp(&d[*b]))
-                                .unwrap_or(0);
+                            let d = [p.y - min.y, max.x - p.x, max.y - p.y, p.x - min.x];
+                            let side = (0..4).min_by(|a, b| d[*a].total_cmp(&d[*b])).unwrap_or(0);
                             blend(&mut img, x, y, sides[side], 1.0);
                         }
                     } else if let Some(col) = background {

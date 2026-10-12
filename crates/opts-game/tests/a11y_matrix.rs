@@ -68,7 +68,12 @@ fn text_survives_the_pseudo_locale_and_german_at_three_window_sizes() {
             }
         }
     }
-    assert!(findings.is_empty(), "{} findings:\n{}", findings.len(), findings.join("\n"));
+    assert!(
+        findings.is_empty(),
+        "{} findings:\n{}",
+        findings.len(),
+        findings.join("\n")
+    );
 }
 
 #[test]
@@ -104,7 +109,11 @@ fn a_gamepad_alone_reaches_every_control_of_every_screen() {
             findings.push(format!("{}: {id}", screen.name()));
         }
     }
-    assert!(findings.is_empty(), "not reachable by directions alone:\n{}", findings.join("\n"));
+    assert!(
+        findings.is_empty(),
+        "not reachable by directions alone:\n{}",
+        findings.join("\n")
+    );
 }
 
 #[test]
@@ -148,7 +157,13 @@ fn the_dialog_and_summary_screens_really_show_their_content() {
         assert!(modals >= 1, "{} shows no dialog", screen.name());
     }
     // the session summary is a card on Home, not a dialog
-    let mut app = build(Screen::Summary, 1280, 720, ThemeKind::Dark, AccentPreset::default());
+    let mut app = build(
+        Screen::Summary,
+        1280,
+        720,
+        ThemeKind::Dark,
+        AccentPreset::default(),
+    );
     let cards = app
         .world_mut()
         .query::<&opts_game::session_summary::SummaryCard>()
@@ -166,7 +181,11 @@ fn every_screen_has_something_to_operate() {
             .iter()
             .filter(|n| n.focusable && n.state.visible)
             .count();
-        assert!(focusable >= 2, "{}: {focusable} focusable elements", screen.name());
+        assert!(
+            focusable >= 2,
+            "{}: {focusable} focusable elements",
+            screen.name()
+        );
     }
 }
 
@@ -192,7 +211,12 @@ fn ui_scale_from_75_to_200_percent_keeps_text_inside_at_three_window_sizes() {
             }
         }
     }
-    assert!(findings.is_empty(), "{} findings:\n{}", findings.len(), findings.join("\n"));
+    assert!(
+        findings.is_empty(),
+        "{} findings:\n{}",
+        findings.len(),
+        findings.join("\n")
+    );
 }
 
 #[test]

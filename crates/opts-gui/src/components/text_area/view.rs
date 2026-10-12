@@ -153,7 +153,7 @@ mod tests {
     /// periodic visual change of the text widgets; it flashes once per period.
     #[test]
     fn the_caret_flashes_well_below_three_times_a_second() {
-        assert!(1.0 / BLINK_PERIOD <= 2.0, "{} per second", 1.0 / BLINK_PERIOD);
+        const { assert!(1.0 / BLINK_PERIOD <= 2.0) };
     }
 
     #[test]

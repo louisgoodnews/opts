@@ -268,7 +268,11 @@ pub fn first_run_choices(
             }
             (view::LANGUAGE, _) => {
                 // Offered on every step (M-0065): the other language, kept like the setting.
-                let next = if loc.locale().starts_with("de") { "en" } else { "de" };
+                let next = if loc.locale().starts_with("de") {
+                    "en"
+                } else {
+                    "de"
+                };
                 loc.set_locale(next);
                 settings.set_raw("interface.language", next);
                 if first_run.persist {

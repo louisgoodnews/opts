@@ -227,7 +227,7 @@ const REGION_CROSSING_COST: f32 = 200.0;
 
 /// The target of a [`Direction`] move: geometric when the layout has run, otherwise by layout
 /// order (right/down = next, left/up = previous). Prefers the current region (another region's
-/// controls cost [`REGION_CROSSING_COST`] extra), but **crosses into another region when that is
+/// controls cost 200 logical px of extra distance), but **crosses into another region when that is
 /// clearly the nearer target or the region has none in that direction**, so a gamepad or a wheel's
 /// D-pad (which have no `Tab`) can reach the rail from the content and back (M-0065).
 pub fn move_focus(
@@ -352,7 +352,11 @@ mod tests {
         ];
         assert_eq!(move_focus(&c, Some(e(1)), Direction::Right), Some(e(2)));
         assert_eq!(move_focus(&c, Some(e(2)), Direction::Left), Some(e(1)));
-        assert_eq!(move_focus(&c, Some(e(1)), Direction::Up), None, "nothing above");
+        assert_eq!(
+            move_focus(&c, Some(e(1)), Direction::Up),
+            None,
+            "nothing above"
+        );
     }
 
     #[test]

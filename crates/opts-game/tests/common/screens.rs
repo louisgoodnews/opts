@@ -48,7 +48,11 @@ pub fn fixture_catalogue() -> opts_game::new_game_screen::types::GameCatalogue {
         entry_points: points.iter().map(|p| (*p).to_string()).collect(),
     };
     let mut maps = vec![
-        map("fixture_valley", "Fixture Valley", &["Depot", "Market square"]),
+        map(
+            "fixture_valley",
+            "Fixture Valley",
+            &["Depot", "Market square"],
+        ),
         map("fixture_harbour", "Fixture Harbour", &["Pier", "Station"]),
     ];
     maps.extend((1..=8).map(|i| {
@@ -63,7 +67,11 @@ pub fn fixture_catalogue() -> opts_game::new_game_screen::types::GameCatalogue {
         VehicleItem::named("fixture_bus_b", "Fixture", "City Bus B"),
     ];
     vehicles.extend((1..=6).map(|i| {
-        VehicleItem::named(&format!("test_coach_{i:02}"), "Test", &format!("Coach {i:02}"))
+        VehicleItem::named(
+            &format!("test_coach_{i:02}"),
+            "Test",
+            &format!("Coach {i:02}"),
+        )
     }));
     GameCatalogue { maps, vehicles }
 }
@@ -155,7 +163,10 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
     opts_game::isolation::isolate_user_dirs();
     let mut app = layout_base();
     let mut settings = GameSettings::default();
-    let db = std::env::temp_dir().join(format!(
+    // under the isolated data directory (set by `isolate_user_dirs`), never the system temp dir
+    let base =
+        std::env::var_os("XDG_DATA_HOME").map_or_else(std::env::temp_dir, std::path::PathBuf::from);
+    let db = base.join(format!(
         "opts-a11y-{}-{}-{w}",
         std::process::id(),
         screen.name()
@@ -232,9 +243,21 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
         .set(state);
     for i in 0..8 {
         if std::env::var_os("DBG_NEG").is_some() {
-            let mut q = app.world_mut().query::<(Entity, &ComputedNode, &Node, Option<&Name>)>();
+            let mut q = app
+                .world_mut()
+                .query::<(Entity, &ComputedNode, &Node, Option<&Name>)>();
             for (e, c, n, name) in q.iter(app.world()) {
-                if c.size().min_element() < 0.0 || n.border_radius != BorderRadius::ZERO && c.size().min_element() <= 0.0 { eprintln!("frame {i}: {e:?} {name:?} size {:?} radius {:?} w {:?} h {:?}", c.size(), n.border_radius, n.width, n.height); }
+                if c.size().min_element() < 0.0
+                    || n.border_radius != BorderRadius::ZERO && c.size().min_element() <= 0.0
+                {
+                    eprintln!(
+                        "frame {i}: {e:?} {name:?} size {:?} radius {:?} w {:?} h {:?}",
+                        c.size(),
+                        n.border_radius,
+                        n.width,
+                        n.height
+                    );
+                }
             }
         }
         app.update();

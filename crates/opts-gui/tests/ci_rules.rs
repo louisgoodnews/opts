@@ -123,8 +123,7 @@ fn every_text_and_border_has_contrast_in_every_theme_and_accent() {
             for _ in 0..3 {
                 app.update();
             }
-            let report =
-                rules::text_contrast(app.world_mut(), &scheme);
+            let report = rules::text_contrast(app.world_mut(), &scheme);
             total += report.checked;
             assert!(
                 report.violations.is_empty(),

@@ -41,18 +41,46 @@ struct Scene {
 }
 
 const SCENES: &[Scene] = &[
-    Scene { name: "home", screen: Screen::Home, steps: &[] },
-    Scene { name: "help", screen: Screen::Help, steps: &[] },
-    Scene { name: "settings-graphics", screen: Screen::Settings, steps: &[] },
+    Scene {
+        name: "home",
+        screen: Screen::Home,
+        steps: &[],
+    },
+    Scene {
+        name: "help",
+        screen: Screen::Help,
+        steps: &[],
+    },
+    Scene {
+        name: "settings-graphics",
+        screen: Screen::Settings,
+        steps: &[],
+    },
     Scene {
         name: "settings-interface",
         screen: Screen::Settings,
         steps: &["settings/category/interface"],
     },
-    Scene { name: "plan-1-where", screen: Screen::Wizard, steps: &[] },
-    Scene { name: "plan-2-what", screen: Screen::Wizard, steps: &["wizard.stepper.what"] },
-    Scene { name: "plan-4-review", screen: Screen::Wizard, steps: &["wizard.stepper.review"] },
-    Scene { name: "pause", screen: Screen::Pause, steps: &[] },
+    Scene {
+        name: "plan-1-where",
+        screen: Screen::Wizard,
+        steps: &[],
+    },
+    Scene {
+        name: "plan-2-what",
+        screen: Screen::Wizard,
+        steps: &["wizard.stepper.what"],
+    },
+    Scene {
+        name: "plan-4-review",
+        screen: Screen::Wizard,
+        steps: &["wizard.stepper.review"],
+    },
+    Scene {
+        name: "pause",
+        screen: Screen::Pause,
+        steps: &[],
+    },
 ];
 
 fn render(scene: &Scene, w: u32, h: u32, kind: ThemeKind) -> image::RgbaImage {
@@ -71,7 +99,10 @@ fn render(scene: &Scene, w: u32, h: u32, kind: ThemeKind) -> image::RgbaImage {
 
 fn run(w: u32, h: u32, only: &[&str]) {
     let mut failures = Vec::new();
-    for scene in SCENES.iter().filter(|s| only.is_empty() || only.contains(&s.name)) {
+    for scene in SCENES
+        .iter()
+        .filter(|s| only.is_empty() || only.contains(&s.name))
+    {
         for (kind, tag) in [(ThemeKind::Dark, "dark"), (ThemeKind::Light, "light")] {
             let img = render(scene, w, h, kind);
             let name = format!("{}-{w}x{h}-{tag}", scene.name);
@@ -90,7 +121,11 @@ fn screens_match_their_goldens_at_1280x720() {
 
 #[test]
 fn key_screens_match_their_goldens_at_1920x1080() {
-    run(1920, 1080, &["home", "settings-graphics", "plan-1-where", "pause"]);
+    run(
+        1920,
+        1080,
+        &["home", "settings-graphics", "plan-1-where", "pause"],
+    );
 }
 
 #[test]
