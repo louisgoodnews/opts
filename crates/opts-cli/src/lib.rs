@@ -21,6 +21,7 @@ pub mod client;
 pub mod commands;
 #[cfg(feature = "client")]
 pub mod output;
+pub mod reference;
 #[cfg(feature = "client")]
 pub mod repl;
 #[cfg(feature = "client")]

@@ -29,7 +29,7 @@ const DOUBLE_CLICK: f32 = 0.4;
 type Roots<'w, 's> = Query<'w, 's, (&'static mut MasterDetail, &'static mut MasterDetailView)>;
 
 /// Selects `row` (an item row): selection, cursor and scroll.
-fn select_row(md: &mut MasterDetail, view: &mut MasterDetailView, row: usize) {
+pub(super) fn select_row(md: &mut MasterDetail, view: &mut MasterDetailView, row: usize) {
     let Some(entry) = view.rows.get(row).and_then(|r| r.entry()) else {
         return;
     };

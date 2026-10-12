@@ -16,7 +16,7 @@ pub fn register(r: &mut ControlRegistry) {
 fn entry(result: Result<Value, RpcError>) -> Value {
     match result {
         Ok(v) => json!({ "result": v }),
-        Err(e) => json!({ "error": e }),
+        Err(e) => json!({ "error": e.structured() }),
     }
 }
 

@@ -1,10 +1,11 @@
 # 🎛️ Control Protocol
 
-**Status:** 🟡 Draft (design for M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
+**Status:** 🟢 Implemented (protocol 1.1; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
 
-A running OPTS instance can be driven from outside: a human at a terminal or an AI agent in a loop can inject
-input, query state, move the camera, pause and step the simulation, capture screenshots, file reports and
-trigger reloads. The server is **opt-in** and **loopback-only by default**.
+A running OPTS instance can be driven from outside: a human at a terminal or an AI agent in a loop can operate every screen by id,
+play the simulation (throttle, brake, steering, gear, doors, lights, camera), query state, pause and step
+the simulation, capture screenshots and state snapshots, file reports and trigger reloads. **The complete command list with argument
+schemas is the generated [Control Protocol Reference](../reference/control-protocol.md)**; this page explains the design. The server is **opt-in** and **loopback-only by default**.
 
 ## 1. Transport
 
@@ -54,6 +55,9 @@ error `1005`. Socket I/O can therefore never block rendering.
 | 1006 | Busy | rate limit exceeded or command queue full |
 | 1007 | Unsupported | the command exists in the protocol but this build does not implement it |
 | 1008 | Failed | the operation ran and failed (`data` carries the cause) |
+| 1009 | Gated | the input layer refused the command: a dialog or the vehicle menu is open, or the camera is in free roam so the vehicle takes no input - exactly the gate that would swallow the same key press |
+
+Every error object carries `data.name` (the symbolic name in the table: `NOT_READY`, `GATED`, ...) and `data.retryable` (`true` for 1001, 1005, 1006 and 1009: the same call can succeed later without a change), next to command-specific details such as `valid` (the accepted spellings), `reason` (why an element is disabled) or `last` (the last value a `ui.wait_for` saw). An agent can branch on `data.name` and `data.retryable` without parsing messages.
 
 ## 4. Command surface
 
@@ -67,8 +71,9 @@ specified and answers `1007` until implemented.
 | :--- | :--- | :--- | :--- |
 | `ping` | — | `{pong:true, uptime_secs}` | P1 |
 | `version` | — | `{version, git_hash, build_date, protocol_version}` | P1 |
-| `help` | `[command]` | `{command, summary, params, result}` | P1 |
-| `capabilities` | — | `{groups:{name:[{method,since,priority}]}}` | P1 |
+| `help` | `[command]` | the descriptor of one command: `{command, group, summary, since, args:[{name,type,required,position,aliases,values?}], result, doc, debug, implemented}` | P1 |
+| `commands` | `[group]` | every descriptor as above plus the error table; the machine-readable twin of the [reference page](../reference/control-protocol.md) (protocol 1.1) | P1 |
+| `capabilities` | — | `{groups:{name:[{method,since,implemented}]}}` | P1 |
 | `auth` | `{token}` | `{ok:true}` — required first when `--cli-token` is set | P1 |
 | `shutdown` | `[force]` | `{ok:true}` then the app exits (`force` skips the clean shutdown path) | P1 |
 
@@ -106,7 +111,7 @@ systems — including the modal gating — as a physical keyboard.
 | `input.mouse.scroll` | `{delta}` | wheel lines | P1 |
 
 Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`, `Backspace`, `ArrowUp/Down/Left/Right`,
-`ShiftLeft`, `ControlLeft`, `AltLeft`; unknown names fail with `-32602` and the list of valid names in `data`.
+`ShiftLeft/Right`, `ControlLeft/Right`, `AltLeft/Right`, `Period`, `Slash`, `Comma`, `Minus`, `Equal`, brackets, `Numpad0`-`Numpad9`, `NumpadAdd` and friends; unknown names fail with `-32602` and the list of valid names in `data`.
 
 ### 4.4 Simulation control
 
@@ -181,6 +186,58 @@ The UI can be read and driven without coordinates. Every interactive element has
 
 From the shell: `opts-cli ui.tree --visible_only true`, `opts-cli ui.click menu.start`, `opts-cli ui.action navigate right`. A scripted keyboard traversal is `ui.action next` repeated while reading `ui.tree`'s `focus`.
 
+### 4.10 Operating every screen (protocol 1.1)
+
+`ui.tree` and `ui.click` (§4.9) are joined by the commands an agent needs to *finish* a task on any screen. All of them address elements by id and send the messages a person would cause. A command that targets an element answers `1009` when the element is behind an open dialog (the dialog owns focus, so it owns the commands too); keys are not gated at the command but at the systems that read them, as for a keyboard.
+
+| Need | Command | Notes |
+| :--- | :--- | :--- |
+| Where am I, what can I do now? | `ui.screen` | app state, shell screen id, open dialogs *with their button ids and tag*, toasts, focus, back stack, visible scrollable views |
+| Wait instead of sleeping | `ui.wait_for` | `until` = `exists`, `visible`, `gone`, `enabled`, `disabled`, `focused`, `checked`, `text`, `screen`, `dialog`, `no_dialog`, `app_state`, `hud_ready`, `speed_above`, `speed_below`, `distance_above`, `paused`, `running`, `sim_time_above`, `items_above` (a list has more than N entries); `timeout_ms` (default 10 s); a timeout is `1005` with the last observed value in `data.last` |
+| What can scroll, and what is in it? | `ui.scrollables` | every scroll container and master list: `id`, `offset`, `viewport`, `content`, `max`, `at_top`, `at_bottom` and `items` (for a windowed list *all* entries, not only the rows that exist as entities right now) |
+| Scroll | `ui.scroll` | exactly one of `by` (pixels), `dx`, `pages`, `to` (`top`, `bottom`, `left`, `right`) or `item` (an element id inside the view, or an entry id/title of a list); `target` defaults to the view under focus |
+| Type | `ui.text` | into the field `id` (focus, replace or append, optional `submit`); the field's own change message fires, so search-as-you-type and validation react |
+| Choose | `ui.select` | combo box (by text or index), tab, radio, list row; for a master list `option` is an entry id or title and `choose:true` double-clicks it |
+| Switch | `ui.toggle` | sets a switch, check box or radio to a wanted state, idempotent; without `value` it flips |
+| Steppers ("sliders") | `ui.click` with `count` | numeric settings are `down`/`up` buttons (`settings/<category>/<key>/up`); `count` presses them N times. `settings.set` sets the value directly through the same registry |
+| Pointer | `ui.hover`, `ui.drag` | move the cursor over an element (tooltips, hover states); drag between elements or by an offset over several frames |
+| Keyboard | `ui.key` | a key with `ctrl`/`shift`/`alt` held, as ordinary keyboard events (`Ctrl+F`, `Alt` for the vehicle menu) |
+
+**Scrolling is the wheel's effect, not a bypass.** A scroll container's `ScrollPosition` and a master list's offset are set to the value the wheel handler would produce, clamped to the content. `item` reveals an element with the least movement, exactly like keyboard focus does (`scroll_focus_into_view`).
+
+### 4.11 Driving (protocol 1.1)
+
+The vehicle is operated by *named controls*; the names are discovered with `drive.controls` (they depend on the vehicle).
+
+| Command | What it does |
+| :--- | :--- |
+| `drive.controls` | built-in controls with kind, range and current value, plus the script triggers the vehicle's key bindings can raise (`bus_doorfront0`, `blinker_left_set`, `horn`, ...) with their standard short aliases (`door_front`, `indicator_left`, `lights`) |
+| `drive.set control value [hold_ms]` | `throttle`, `brake` 0..1, `steer` -1..1, `gear` `drive`/`neutral`/`reverse`, `parking_brake` true/false/`toggle`; any other name is a script trigger |
+| `drive.release [control]` | drops held values (the keyboard decays the pedals as usual) |
+| `drive.trigger name [hold_ms]` | raises a script trigger: doors, lights, indicators, horn; held bindings (the horn) get their `_off` after `hold_ms` |
+| `drive.state` | speed (signed and absolute), absolute position, heading, gear, pedals, parking brake, **distance driven**, camera, pause and time scale, HUD alert; `route` and `stops` are `null` because the timetable does not exist yet |
+| `vehicle.teleport`, `vehicle.reset` | *debug* placement: absolute OMSI position and heading, or back to the session's start pose, standing still |
+| `vehicle.get`, `vehicle.script_vars` | position/speed and the scripts' variables (route, stop and ticket variables live there) |
+| `menu.do`, `menu.state` | the in-game vehicle menu (spawn, vehicle, repaint, entry, done) |
+
+**Hold semantics.** An analog value stays in force for `hold_ms` of *simulation time* (it does not run down while paused, which keeps *pause - act - step N - observe* deterministic) or, without `hold_ms`, until it is set again or released. The pedals are overridden on their axis only while held; when the hold ends the keyboard model takes over and the pedal decays like a released key.
+
+**One action path.** Values go into `RemoteControls`, which `vehicle_input_system` merges *inside the keyboard system*, under its run conditions (the vehicle must take input - not in free roam - and no dialog or vehicle menu may be open). The handler tests the same conditions when the command arrives and answers `1009` instead of queueing a command that would never run; a value still queued when a gate closes is dropped. Triggers pass the modal gate like a bound key. The two *debug* commands (`vehicle.teleport`, `vehicle.reset`) write the chassis directly and say so in the reference.
+
+**Driving 100 m** is a loop, not a sleep: `drive.set gear drive`, `drive.set parking_brake false`, `drive.set throttle 0.6`, `opts-cli ui.wait_for distance_above --number 100`, `drive.set throttle 0`, `drive.set brake 1`, `opts-cli ui.wait_for speed_below --number 1`.
+
+### 4.12 Camera (protocol 1.1)
+
+`camera.set_mode` switches the mode (it presses the number key, so unavailable modes answer `1001`); `camera.look` turns the view (`yaw`/`pitch` in free roam, `dx`/`dy` as mouse motion with the button a person holds in that mode: right in the cockpit, left outside); `camera.move` holds the movement keys of the free camera for `duration_ms`; `camera.teleport` places it absolutely (debug); `camera.get` reads it.
+
+### 4.13 Snapshots and screenshots
+
+`screenshot` saves the window; `snapshot` returns, in one call, the app state, `ui.screen`, `drive.state`, the HUD, camera, simulation clock and the last warnings, optionally with a screenshot and as a file. It is the call an agent makes after every few actions to *see* what happened.
+
+### 4.14 Discovery
+
+`help <command>` returns the descriptor of one command; `commands [group]` returns all of them with the argument schema (`name`, `type`, `required`, `position`, `values`), result, documentation, `since`, `debug` and whether this build implements it, plus the table of error codes. `capabilities` groups the names. All three come from the same table in `crates/opts-cli/src/commands.rs`, which also drives the `opts-cli` argument parser and generates the [reference page](../reference/control-protocol.md); a test fails when the page is stale and another when a registered handler has no descriptor (or a descriptor promises something no build registers). A new command is one table entry plus one handler.
+
 ## 5. Rate limiting
 
 Per connection: token bucket of 200 requests/s with a burst of 400; beyond that `1006 Busy`. The Bevy side
@@ -189,7 +246,7 @@ executes at most 64 commands per frame; the rest wait in the queue (bounded at 1
 
 ## 6. Versioning
 
-`version` reports `protocol_version` (semver). Minor versions only **add** methods, optional parameters and
+`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`). Minor versions only **add** methods, optional parameters and
 result members; clients ignore unknown result members and servers ignore unknown parameters. A breaking change
 bumps the major version and changes the default port. `capabilities` lets a client feature-detect instead of
 comparing versions.
@@ -217,10 +274,19 @@ comparing versions.
 
 ## 9. Using the protocol from an AI agent
 
-**What an agent can do.** Start or find a running OPTS, load a map, put the camera anywhere, drive the
-bus with injected keys, pause and single-step time, look at the result (screenshot) and read what the game
-complained about (`log.filter`), edit a content file and have it reloaded, and file a report — all without
-a human at the keyboard.
+**What an agent can do.** Everything a player can: answer the first-run question, plan a drive in the wizard
+(map, vehicle, time), wait through loading, drive (throttle, brake, steering, gear, parking brake, doors,
+indicators, lights, horn), switch and turn the camera, open the pause overlay and the settings, scroll their
+lists, change a setting, leave the drive - all by id, through the same gates a person meets. Besides playing it
+can look at the result (`screenshot`, `snapshot`), read what the game complained about (`log.filter`), edit a
+content file and have it reloaded, and file a report.
+
+**The verified session.** `crates/opts-cli/examples/play_session.sh` plays exactly this against a real game (Berlin-Spandau,
+an MAN SD77 bus) and was run live for this page: Home, *Plan a drive* (`ui.select` on the map and vehicle lists, `Next`
+three times, `Drive`), the loading screen (`ui.screen` reports `loading.stage`; `screenshot` captures it), `drive.set` gear, parking
+brake and throttle, `ui.wait_for distance_above 100` (the bus had driven 100.2 m at 47 km/h), brake to a stop, `Escape` for
+the pause overlay, `pause.settings`, `ui.scroll to bottom` on the settings view, `ui.click` on a texture-filtering option
+(`settings.get` confirmed it), `pause.leave` and the confirmation, back on Home. Nothing in it sleeps: every step waits for a condition.
 
 **Connecting.** Start the game with `opts-game --cli-port 44201` (add `--cli-token <T>` if the port is
 reachable by others). The listening address is logged at `INFO` (`control server listening addr=…`), which is
@@ -265,10 +331,18 @@ As one batch, steps 4–12 cost a single round trip:
 **Deterministic loops.** Prefer *pause → act → `sim.step N` → observe* over sleeping: with the simulation
 paused, input injected before a step takes effect in exactly those frames.
 
+**Known limits of what an agent can do (honest list).**
+
+- `route` and `stops` in `drive.state` are `null`: the timetable (route, stops, tickets) is not implemented in OPTS yet; the vehicle scripts' own variables are readable with `vehicle.script_vars`.
+- Numeric settings are `-`/`+` steppers, not sliders: use `ui.click ... count` or set the value directly with `settings.set`.
+- `ui.drag` and `ui.hover` move the cursor and press the left button like a person; they were exercised against the test UI and the real game's hover, but no real screen needs a drag yet.
+- A freshly installed OPTS scans the OMSI folder for about 8 s. Answering the first-run question before the scan has ended can leave the wizard's lists empty; `ui.wait_for items_above wizard.where.list` shows it, and leaving the Drive screen and entering it again fills them.
+- Control commands that skip the gates are marked *debug* in the reference (`scene.load_map`, `scene.unload`, `vehicle.set`, `vehicle.teleport`, `vehicle.reset`, `camera.teleport`, `hud.alert`, `hud.toast`); everything else is refused with `1009` where a key press would be swallowed.
+
 **When a command fails** (error `code`): `-32602` — fix the parameter (the message names it; `input.key`
 lists valid keys in `data`); `1001` — the app is in the wrong state (load a map first, or the camera mode is
 unavailable); `1002` — the path is outside the allowed directories (use `--cli-allow-dir` when starting the
-game); `1004` — nothing there; `1005` — the app did not answer: it is frozen or loading, retry after
+game); `1009` — a dialog or the vehicle menu is open, or the camera is in free roam: answer or close it first (`ui.screen` lists the dialog's buttons), or `camera.set_mode external`; `1004` — nothing there; `1005` — the app did not answer: it is frozen or loading, retry after
 `ping`; `1006` — slow down or batch; `1007` — not implemented in this build (`capabilities` shows which);
 `1008` — the operation ran and failed (reload of a broken file: the previous content is still in the game).
 Connection errors (exit code 2) mean the game is not running or the port differs.

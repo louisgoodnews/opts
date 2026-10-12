@@ -65,6 +65,14 @@ impl ControlRegistry {
         self.handlers.get(method).copied()
     }
 
+    /// Every registered method name, sorted.
+    #[must_use]
+    pub fn methods(&self) -> Vec<&'static str> {
+        let mut m: Vec<&'static str> = self.handlers.keys().copied().collect();
+        m.sort_unstable();
+        m
+    }
+
     /// Whether `method` is implemented in this build.
     #[must_use]
     pub fn contains(&self, method: &str) -> bool {

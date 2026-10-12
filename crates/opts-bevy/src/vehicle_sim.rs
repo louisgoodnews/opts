@@ -192,6 +192,7 @@ impl Default for VehicleCameraRig {
 pub fn vehicle_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
+    mut remote: ResMut<crate::vehicle_remote::RemoteControls>,
     mut query: Query<(&mut VehicleController, Option<&VehicleInputConfig>), With<PlayerVehicle>>,
 ) {
     let dt = time.delta_secs();
@@ -253,6 +254,10 @@ pub fn vehicle_input_system(
         } else if keyboard.just_pressed(KeyCode::KeyR) {
             inputs.set_gear(GearPosition::Reverse);
         }
+
+        // 6. Remote controls (control protocol `drive.*`): held pedals override the keyboard on
+        // their axis, gear and parking brake requests are applied once. Same system, same gates.
+        remote.apply(inputs, dt);
     }
 }
 
@@ -365,13 +370,18 @@ pub struct OptsVehiclePlugin;
 
 impl Plugin for OptsVehiclePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, vehicle_physics_step_system)
+        app.init_resource::<crate::vehicle_remote::RemoteControls>()
+            .add_systems(FixedUpdate, vehicle_physics_step_system)
             .add_systems(
                 Update,
                 (
                     vehicle_input_system
                         .run_if(crate::camera::vehicle_accepts_input)
                         .run_if(crate::reporting::not_modal_active),
+                    crate::vehicle_remote::flush_remote_when_gated
+                        .run_if(crate::vehicle_remote::vehicle_input_closed),
+                    crate::vehicle_remote::release_trigger_system,
+                    crate::vehicle_remote::odometer_system,
                     vehicle_transform_sync_system,
                     wheel_transform_sync_system,
                 ),
