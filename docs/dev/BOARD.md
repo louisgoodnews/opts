@@ -87,7 +87,7 @@ _Work actively being executed in the current session._
 
 - `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
-- `[~]` 🟠 **Bevy 0.20: merge decision and merge to `master`** (M-0047, chore) — 14 commits only on `bevy-0.20` (F-019).
+- `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution
@@ -114,7 +114,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
 - [ ] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`; the code (`stream_world_tiles`) has run without a spec since before 2026-10-10 (F-012).
 - [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
-- [ ] 🟠 **Pre-commit hook building the staged tree; worktree-per-session rule** (M-0052, chore) — F-001.
+- [ ] 🟠 **Pre-commit hook building the staged tree** (M-0052, chore) — F-001. (The worktree-per-session rule is done: CONTRIBUTING, guardrail 7, `scripts/agent-worktree.sh`.)
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 - [ ] 🟡 **Extend articulation.md with the coupled physics model and pitch rule** (M-0053, spec) — F-002, F-003.
 - [ ] 🟡 **Specify the passenger model (`docs/src/simulation/passengers.md`)** (M-0050, spec) — before any stop/boarding code (F-023).

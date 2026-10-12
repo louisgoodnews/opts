@@ -26,7 +26,7 @@ cargo run -p opts-game                          # asks for the OMSI folder on fi
 cargo run -p opts-game -- --omsi-path "/path/to/OMSI 2"
 ```
 
-The installation is also found through `$OMSI_PATH` and the default Steam folders. Developer switches are listed in the [developer switches reference](docs/src/contributing/developer-switches.md). The Rust toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml); the engine is **Bevy 0.20** on the `bevy-0.20` branch, where current development happens, and Bevy 0.19 on `master` until the merge ([M-0047](docs/src/roadmap/phase-5/M-0047.md)). The CI workflows in `.github/workflows/` have not run yet: the repository is not hosted ([M-0052](docs/src/roadmap/phase-5/M-0052.md)).
+The installation is also found through `$OMSI_PATH` and the default Steam folders. Developer switches are listed in the [developer switches reference](docs/src/contributing/developer-switches.md). The Rust toolchain is pinned in [`rust-toolchain.toml`](rust-toolchain.toml); the engine is **Bevy 0.20** (on `master` since 2026-10-11, [M-0047](docs/src/roadmap/phase-5/M-0047.md)). The CI workflows in `.github/workflows/` have not run yet: the repository is not hosted ([M-0052](docs/src/roadmap/phase-5/M-0052.md)).
 
 ## 📖 Documentation first
 

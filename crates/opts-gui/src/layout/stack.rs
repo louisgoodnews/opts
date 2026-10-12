@@ -7,7 +7,7 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone, Default)]
 pub struct Stack;
 
-/// Fluent builder for constructing a vertical stack [`NodeBundle`].
+/// Fluent builder for constructing a vertical stack `Node`.
 ///
 /// # Example
 /// ```rust
@@ -63,7 +63,7 @@ impl StackBuilder {
         self
     }
 
-    /// Builds a Bevy [`NodeBundle`] configured for vertical flex stacking.
+    /// Builds a Bevy `Node` configured for vertical flex stacking.
     pub fn build(self) -> impl Bundle {
         Node {
             display: Display::Flex,

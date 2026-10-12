@@ -7,7 +7,7 @@ use bevy::prelude::*;
 #[derive(Component, Debug, Clone, Default)]
 pub struct Row;
 
-/// Fluent builder for constructing a horizontal row [`NodeBundle`].
+/// Fluent builder for constructing a horizontal row `Node`.
 ///
 /// # Example
 /// ```rust
@@ -63,7 +63,7 @@ impl RowBuilder {
         self
     }
 
-    /// Builds a Bevy [`NodeBundle`] configured for horizontal row flex.
+    /// Builds a Bevy `Node` configured for horizontal row flex.
     pub fn build(self) -> impl Bundle {
         Node {
             display: Display::Flex,

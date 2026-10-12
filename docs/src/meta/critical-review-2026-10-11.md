@@ -552,3 +552,12 @@ The user asked for the `.md` files to be updated to the current project status. 
 | M-0042 | ⏳ Planned | 🟡 Written; blocked on a remote (M-0052) | 3 of 4 items ticked |
 | M-0049 | 🟡 "game integration open" | 🟡 Traffic running in game; debug tooling, speed limits, `[splinehelper]` arms open | phases C/D ticked |
 | ROADMAP "Game Binary" | `[ ]` | `[x]` / `[~]` | `opts-game` has a menu, loading pipeline and HUD (`menu/`, `loading_pipeline.rs`, `hud.rs`) |
+
+---
+
+## 🔄 Post-Review Note (2026-10-11, evening)
+
+- **F-019 overtaken by events.** `master` was fast-forwarded to `bevy-0.20` (`2df8287`) at 21:44, so `master` represents the project again. The CI trigger part of F-019 remains (M-0052).
+- **F-007 and F-018 (gate failures):** fixed on branch `agent/premerge-review` (`fmt`, `sort_by_key`, the 10 rustdoc links); every gate passes there. They stay open on `master` until that branch is merged.
+- **F-001:** the project lead ruled "one work station per agent": every session gets its own `git worktree` and branch (CONTRIBUTING, prompt guardrail 7, `scripts/agent-worktree.sh`). The pre-commit hook part remains open (M-0052).
+

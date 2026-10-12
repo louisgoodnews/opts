@@ -84,6 +84,21 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 - Write unit tests for your code. For parsers, use self-authored (non-copyrighted) test fixtures.
 - Run `cargo fmt` and `cargo clippy` before committing.
 
+### 🤖 AI Agent Sessions: One Work Station Each
+
+Several agent sessions may work on the repository at the same time. **Each session must have its own work station**: a separate `git worktree` with its own branch.
+
+```sh
+scripts/agent-worktree.sh <topic> [base-branch]   # creates ../opts-wt-<topic> on branch agent/<topic>
+```
+
+- Never edit or build in the main checkout while another session might be using it, and never check out a branch that another worktree holds.
+- Commit only files your session changed. Before committing, check `git status` and `git diff --cached` for hunks that aren't yours.
+- When done, hand the branch back (merge or pull request); the maintainer merges it into the main line. Remove the worktree afterwards (`git worktree remove ../opts-wt-<topic>`).
+- Build directories are large (the shared `target/` was 116 GB on 2026-10-11). A worktree gets its own `target/` by default; point `CARGO_TARGET_DIR` at a shared directory only when no other session is building, because Cargo serialises builds on one directory.
+
+Background: on 2026-10-11 two sessions shared one working tree, and one of them committed the other's unfinished hunks, which did not compile (`7f24124`). See the [critical review 2026-10-11](docs/src/meta/critical-review-2026-10-11.md) (F-001) and [M-0052](docs/src/roadmap/phase-5/M-0052.md).
+
 ---
 
 ## ⚖️ Legal & Ethical Guidelines (Crucial)
