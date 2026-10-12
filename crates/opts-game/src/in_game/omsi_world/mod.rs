@@ -154,6 +154,8 @@ pub struct WorldStats {
     pub vehicle_meshes: usize,
     pub vehicle_vertices: usize,
     pub asset_failures: usize,
+    /// Problems recorded by the loading screen (blocking and minor).
+    pub load_problems: usize,
     /// Scrambled meshes recovered by the decoder / replaced by a plain twin / still decoding.
     pub meshes_decoded: usize,
     pub meshes_twin: usize,

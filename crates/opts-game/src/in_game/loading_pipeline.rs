@@ -339,6 +339,7 @@ fn stage_controls(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         .unwrap_or_default();
     problems_from_counts(&mut env.report, &map, c, &failures);
     env.report.finish();
+    env.stats.load_problems = env.report.count();
     state.progress = 1.0;
     state.stage = LoadStage::Ready;
     state.is_complete = true;

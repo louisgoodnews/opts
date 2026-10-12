@@ -92,7 +92,17 @@ pub(super) fn render(
             view.reveal_pending = false;
         }
         let range = view.layout.visible_range(view.scroll, height);
+        let list_w = computed
+            .get(parts.list)
+            .map(|c| c.size().x * c.inverse_scale_factor)
+            .ok()
+            .filter(|w| *w > 40.0)
+            .unwrap_or(320.0);
+        // Row chrome: marker, thumbnail, star, gaps and padding take about 190 px; a title
+        // character is about 9 px wide.
+        let chars = (((list_w - 190.0) / 9.0).floor() as usize).max(8);
         let sig = Rendered {
+            chars,
             range: range.clone(),
             version: view.version,
             selected: model.selected.clone(),
@@ -114,6 +124,7 @@ pub(super) fn render(
                 &layout,
                 range,
                 parts.content,
+                chars,
             );
             view.rendered = Some(sig);
         }

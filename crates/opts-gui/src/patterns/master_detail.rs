@@ -127,6 +127,7 @@ pub(super) struct Rendered {
     pub version: u64,
     pub selected: Option<String>,
     pub favourites: Vec<String>,
+    pub chars: usize,
 }
 
 impl MasterDetailView {

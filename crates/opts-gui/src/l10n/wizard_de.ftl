@@ -165,3 +165,10 @@ load-controls-gears = Fahren, Neutral, Rückwärts
 load-controls-cameras = Kameraansichten
 load-controls-pause = Pause
 load-controls-menu = Menü
+load-minor-toast =
+    { $count ->
+        [one] Mit 1 kleinen Problem geladen
+       *[other] Mit { $count } kleinen Problemen geladen
+    }
+load-minor-title = Kleine Ladeprobleme
+load-close = Schließen

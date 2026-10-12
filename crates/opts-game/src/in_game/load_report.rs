@@ -4,6 +4,25 @@
 
 use bevy::prelude::*;
 
+/// How much a problem matters for the drive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Severity {
+    /// The map, a map tile, or the player's vehicle did not load: the screen waits for the user.
+    Blocking,
+    /// Individual assets (textures, scenery meshes, fonts, text sources) are missing: the drive
+    /// starts by itself and the problems are announced afterwards.
+    Minor,
+}
+
+/// The one place that says which kind of problem blocks the screen.
+pub fn severity_of(key: &str) -> Severity {
+    match key {
+        "load-problem-objects" | "load-problem-files" => Severity::Minor,
+        // load-problem-map, -vehicle, -no-model, -tiles and anything unknown block.
+        _ => Severity::Blocking,
+    }
+}
+
 /// One thing that did not load.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoadProblem {
@@ -20,6 +39,11 @@ pub struct LoadProblem {
 }
 
 impl LoadProblem {
+    /// How much this problem matters.
+    pub fn severity(&self) -> Severity {
+        severity_of(self.key)
+    }
+
     /// A problem with one variable.
     pub fn new(fatal: bool, key: &'static str, name: &str, detail: impl Into<String>) -> Self {
         Self {
@@ -83,6 +107,8 @@ pub struct LoadReport {
     pub continue_requested: bool,
     /// The details view is open.
     pub details_open: bool,
+    /// The announcement of minor problems after the first HUD frame was made.
+    pub minor_announced: bool,
     /// The user pressed *Retry*; the pipeline starts over at its next step.
     pub retry_requested: bool,
 }
@@ -92,6 +118,19 @@ impl LoadReport {
     pub fn add(&mut self, problem: LoadProblem) {
         tracing::warn!(problem = problem.key, detail = %problem.detail, "load problem");
         self.problems.push(problem);
+    }
+
+    /// Problems that stop the screen.
+    pub fn blocking_count(&self) -> usize {
+        self.problems
+            .iter()
+            .filter(|p| p.severity() == Severity::Blocking)
+            .count()
+    }
+
+    /// Problems that only get announced after the drive has started.
+    pub fn minor_count(&self) -> usize {
+        self.count() - self.blocking_count()
     }
 
     /// Whether a fatal problem was recorded.
@@ -109,7 +148,7 @@ impl LoadReport {
     pub fn finish(&mut self) {
         self.outcome = if self.has_fatal() {
             LoadOutcome::Failed
-        } else if self.problems.is_empty() {
+        } else if self.blocking_count() == 0 {
             LoadOutcome::Ready
         } else {
             LoadOutcome::ReadyWithProblems
@@ -206,6 +245,33 @@ mod tests {
         r.add(LoadProblem::new(true, "load-problem-map", "Berlin", "y"));
         r.finish();
         assert_eq!(r.outcome, LoadOutcome::Failed);
+    }
+
+    #[test]
+    fn severity_table_blocking_vs_minor() {
+        for (key, want) in [
+            ("load-problem-map", Severity::Blocking),
+            ("load-problem-vehicle", Severity::Blocking),
+            ("load-problem-no-model", Severity::Blocking),
+            ("load-problem-tiles", Severity::Blocking),
+            ("load-problem-objects", Severity::Minor),
+            ("load-problem-files", Severity::Minor),
+            ("something-new", Severity::Blocking),
+        ] {
+            assert_eq!(severity_of(key), want, "{key}");
+        }
+    }
+
+    #[test]
+    fn only_minor_problems_still_end_ready_and_are_kept() {
+        let mut r = LoadReport::default();
+        r.add(LoadProblem::counted("load-problem-files", 3, 0, "a.tga"));
+        r.finish();
+        assert_eq!(r.outcome, LoadOutcome::Ready);
+        assert_eq!((r.blocking_count(), r.minor_count()), (0, 1));
+        r.add(LoadProblem::counted("load-problem-tiles", 1, 4, "t"));
+        r.finish();
+        assert_eq!(r.outcome, LoadOutcome::ReadyWithProblems);
     }
 
     #[test]

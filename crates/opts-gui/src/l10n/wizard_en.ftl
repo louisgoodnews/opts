@@ -165,3 +165,10 @@ load-controls-gears = Drive, neutral, reverse
 load-controls-cameras = Camera views
 load-controls-pause = Pause
 load-controls-menu = Menu
+load-minor-toast =
+    { $count ->
+        [one] Loaded with 1 minor problem
+       *[other] Loaded with { $count } minor problems
+    }
+load-minor-title = Minor loading problems
+load-close = Close

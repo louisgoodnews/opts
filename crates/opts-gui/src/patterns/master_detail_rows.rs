@@ -50,6 +50,7 @@ pub(super) fn spawn_rows(
     layout: &RowLayout,
     range: std::ops::Range<usize>,
     content: Entity,
+    max_chars: usize,
 ) -> Vec<Entity> {
     let mut out = Vec::with_capacity(range.len());
     for i in range {
@@ -65,6 +66,7 @@ pub(super) fn spawn_rows(
                 i,
                 section,
                 top,
+                max_chars,
             ),
         };
         out.push(e);
@@ -112,6 +114,7 @@ fn spawn_item(
     row: usize,
     section: Section,
     top: f32,
+    max_chars: usize,
 ) -> Entity {
     let selected = model.selected.as_deref() == Some(entry.id.as_str());
     let favourite = model.favourites.contains(&entry.id);
@@ -132,7 +135,9 @@ fn spawn_item(
             Name::new("MasterRow"),
         ))
         .id();
-    let button = spawn_row_button(commands, root, prefix, entry, row, section, selected, &key);
+    let button = spawn_row_button(
+        commands, root, prefix, entry, row, section, selected, &key, max_chars,
+    );
     let star = spawn_star(commands, root, prefix, entry, section, favourite, &key);
     commands.entity(wrap).add_children(&[button, star]);
     wrap
@@ -148,6 +153,7 @@ fn spawn_row_button(
     section: Section,
     selected: bool,
     key: &str,
+    max_chars: usize,
 ) -> Entity {
     let mut button = commands.spawn((
         crate::components::button::Button,
@@ -171,6 +177,10 @@ fn spawn_row_button(
         },
         UiId::new(format!("{prefix}.{}.{key}", section_key(section))),
     ));
+    if entry.title.chars().count() > max_chars {
+        // Cut titles say their full text on hover and focus.
+        button.insert(Tooltip::new(entry.title.clone()));
+    }
     if selected {
         button.insert((Selected, BackgroundRole(ColorRole::SecondaryContainer)));
     }
@@ -198,7 +208,7 @@ fn spawn_row_button(
             .insert(BackgroundRole(ColorRole::Primary));
     }
     let thumb = spawn_thumb(commands, root, entry);
-    let texts = spawn_texts(commands, entry, fg);
+    let texts = spawn_texts(commands, entry, fg, max_chars);
     commands
         .entity(button)
         .add_children(&[marker, thumb, texts]);
@@ -242,7 +252,22 @@ fn spawn_thumb(commands: &mut Commands, root: Entity, entry: &ListEntry) -> Enti
     slot
 }
 
-fn spawn_texts(commands: &mut Commands, entry: &ListEntry, fg: ColorRole) -> Entity {
+/// `text` cut to `max` characters with an ellipsis.
+fn ellipsize(text: &str, max: usize) -> String {
+    if text.chars().count() <= max {
+        return text.to_string();
+    }
+    let mut out: String = text.chars().take(max.saturating_sub(1)).collect();
+    out.push('…');
+    out
+}
+
+fn spawn_texts(
+    commands: &mut Commands,
+    entry: &ListEntry,
+    fg: ColorRole,
+    max_chars: usize,
+) -> Entity {
     let col = commands
         .spawn((
             Node {
@@ -257,7 +282,7 @@ fn spawn_texts(commands: &mut Commands, entry: &ListEntry, fg: ColorRole) -> Ent
         .id();
     let title = commands
         .spawn((
-            Text::new(entry.title.clone()),
+            Text::new(ellipsize(&entry.title, max_chars)),
             TextLayout {
                 linebreak: LineBreak::NoWrap,
                 ..default()
@@ -271,7 +296,7 @@ fn spawn_texts(commands: &mut Commands, entry: &ListEntry, fg: ColorRole) -> Ent
     if !entry.subtitle.is_empty() {
         let sub = commands
             .spawn((
-                Text::new(entry.subtitle.clone()),
+                Text::new(ellipsize(&entry.subtitle, max_chars + 6)),
                 TextLayout {
                     linebreak: LineBreak::NoWrap,
                     ..default()
@@ -347,4 +372,16 @@ fn spawn_star(
         .id();
     commands.entity(star).add_child(glyph);
     star
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ellipsize;
+
+    #[test]
+    fn long_titles_are_cut_with_an_ellipsis_and_short_ones_are_kept() {
+        assert_eq!(ellipsize("Berlin", 20), "Berlin");
+        assert_eq!(ellipsize("Aachener Stadtbus Variante", 10), "Aachener …");
+        assert_eq!(ellipsize("äöü", 3), "äöü");
+    }
 }

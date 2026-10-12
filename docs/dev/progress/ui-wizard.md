@@ -65,3 +65,7 @@ Spec in `docs/src/roadmap/phase-9/wizard-and-loading.md`.
 - Retry runs inside the pipeline system (a deferred remove in another system was flushed after the insert).
 - Screenshots in `~/.local/share/opts/benchmark/dev-ui-impl/wizard/shots/`: `d1920-*`, `d1024-*` (real 1024x640), `l1280-*` (light), `d1024s150-*` (taken at 1920x1013, 150 % scale applied; not a 1024x640 window), `after-loading-hud.png`. NOT obtained: a screenshot of the loading screen itself (the control screenshot is black or times out during loading; another process sent stray keys to the game window and moved it out of the flow). The loading screen is verified by tests and `ui.tree` only.
 - Run directory `run-1` (with a 250 MB catalogue) is deleted at close-out.
+
+### Follow-up: severity and ellipsis
+- `load_report::severity_of` (table, unit-tested): objects/files = minor, everything else blocking. Minor-only loads end Ready, auto-continue, keep the problems in `LoadReport`, show one toast with *Details* (dialog) after the first HUD frame; F10 shows `load problems`.
+- List titles are cut with an ellipsis (width estimate) and carry the full title as tooltip.

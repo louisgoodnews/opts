@@ -115,6 +115,12 @@ pub mod load {
     pub const LOAD_CONTROLS_PAUSE: &str = "load-controls-pause";
     /// `load-controls-menu`.
     pub const LOAD_CONTROLS_MENU: &str = "load-controls-menu";
+    /// `load-minor-toast`.
+    pub const LOAD_MINOR_TOAST: &str = "load-minor-toast";
+    /// `load-minor-title`.
+    pub const LOAD_MINOR_TITLE: &str = "load-minor-title";
+    /// `load-close`.
+    pub const LOAD_CLOSE: &str = "load-close";
 }
 
 /// Every key above and below; the completeness tests iterate it.
@@ -130,6 +136,9 @@ pub const ALL: &[&str] = &[
     md::STAR_REMOVE,
     wiz::WIZ_OPTION_IDENT_VISIBLE,
     load::LOAD_TITLE,
+    load::LOAD_MINOR_TOAST,
+    load::LOAD_MINOR_TITLE,
+    load::LOAD_CLOSE,
     load::LOAD_TILE_MAP,
     load::LOAD_TILE_VEHICLE,
     load::LOAD_TILE_WHEN,

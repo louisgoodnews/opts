@@ -49,7 +49,7 @@ pub fn update_debug_overlay(
             Visibility::Hidden
         };
         text.0 = format!(
-            "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {}\nscrambled meshes: decoded {}, plain twins {}, decoding {}",
+            "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {} | load problems: {}\nscrambled meshes: decoded {}, plain twins {}, decoding {}",
             stats.map_name,
             stats.start_tile,
             format_pos("camera ", stats.position.camera),
@@ -71,6 +71,7 @@ pub fn update_debug_overlay(
             stats.vehicle_vertices,
             stats.scene_vertices,
             stats.asset_failures,
+            stats.load_problems,
             stats.meshes_decoded,
             stats.meshes_twin,
             stats.meshes_decoding,
