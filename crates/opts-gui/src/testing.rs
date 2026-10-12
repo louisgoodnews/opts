@@ -66,3 +66,41 @@ pub fn click(app: &mut App, entity: Entity) {
     release(app.world_mut(), entity);
     app.update();
 }
+
+/// Sends one [`UiAction`](crate::actions::UiAction) and runs two frames (action, then reaction).
+pub fn act(app: &mut App, action: crate::actions::UiAction) {
+    app.world_mut().write_message(action);
+    app.update();
+    app.update();
+}
+
+/// The entity that currently carries [`Focused`](crate::interaction::state::Focused).
+pub fn focused(app: &mut App) -> Option<Entity> {
+    app.world_mut()
+        .query_filtered::<Entity, With<crate::interaction::state::Focused>>()
+        .iter(app.world())
+        .next()
+}
+
+/// Spawns a column of `n` filled buttons labelled `B0..`, returns their entities.
+pub fn button_column(app: &mut App, n: usize) -> Vec<Entity> {
+    let ids = {
+        let mut commands = app.world_mut().commands();
+        let root = commands
+            .spawn(Node {
+                flex_direction: FlexDirection::Column,
+                ..default()
+            })
+            .id();
+        let ids: Vec<Entity> = (0..n)
+            .map(|i| {
+                crate::components::button::ButtonBuilder::filled(format!("B{i}"))
+                    .spawn(&mut commands)
+            })
+            .collect();
+        commands.entity(root).add_children(&ids);
+        ids
+    };
+    app.update();
+    ids
+}

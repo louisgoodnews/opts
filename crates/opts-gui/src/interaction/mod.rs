@@ -5,7 +5,9 @@ use bevy::prelude::*;
 pub mod activation;
 pub mod events;
 pub mod focus;
+pub mod handlers;
 pub mod layer;
+pub mod navigation;
 pub mod state;
 pub mod tooltip;
 
@@ -15,7 +17,9 @@ pub use events::{
     NotebookTabSelected, RadioSelected, SwitchToggled, TextChanged, ThemeChanged, ToastDismissed,
     ToplevelClosed, TreeNodeSelected, TreeNodeToggled,
 };
-pub use focus::{FocusEvent, FocusPlugin, Focusable};
+pub use focus::{
+    DefaultFocus, FocusEvent, FocusPlugin, FocusRegion, Focusable, Landmark, PointerOnly,
+};
 pub use state::{
     CheckState, Disabled, DisabledReason, ErrorState, Focused, Hovered, Pressed, Selected, UiState,
 };
@@ -32,5 +36,7 @@ impl Plugin for InteractionPlugin {
         activation::build(app);
         layer::build(app);
         tooltip::build(app);
+        focus::build(app);
+        handlers::build(app);
     }
 }

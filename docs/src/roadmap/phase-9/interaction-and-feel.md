@@ -31,6 +31,15 @@ Input never talks to widgets directly. A thin **action layer** translates device
 | `Help` | F1 *(D-UI-06)* | Select | context help |
 | `Scroll` | PgUp/PgDn, Home/End | right stick | list scrolling |
 
+**Implementation (`opts-gui`, M-0061 part B).** `opts_gui::actions::UiAction` is a Bevy message; `key_action` and `button_action` are the two tables above, the only place a binding lives. Notes where the code is more precise than the table:
+
+- Tab means *next region*; on a screen with fewer than two landmark regions (every screen until the shell exists) it falls back to the next control in layout order, so Tab always works. `FocusNext`/`FocusPrevious` (control protocol: `ui.action next|previous`) ignore regions and exist for tests.
+- Backspace, `/`, `[`, `]`, Space and PgUp/PgDn/Home/End are *text* while a text entry has focus and produce no action then.
+- `Esc` produces `Back` everywhere; `Menu` comes from the gamepad Start button, and an in-game screen maps `Back` to the pause overlay itself. `F1` stays the report dialog until the Help milestone and is reserved for `Help`.
+- The right stick produces `Scroll(Line)`; the left stick is edge-triggered at 60 % deflection. There is no repeat for the D-pad yet (keyboard repeat comes from the OS key events).
+- `Confirm`, `Back` (open combobox, focused toast, focused text entry outside a modal), `Search`, `NextTab`/`PrevTab` (notebooks) and the arrows (tree rows, combobox headers, tab headers, spatial moves) are handled by the library; everything else is left to the screen, which reads `UiAction` too.
+- The in-game HUD carries `PointerOnly` and never takes focus (section 8).
+
 The existing control protocol gains the same actions (`ui.action navigate right`) so tests drive the UI exactly as users do ([expandability](expandability.md#7-testing)).
 
 ## 2. Focus and keyboard navigation
@@ -39,6 +48,7 @@ The existing control protocol gains the same actions (`ui.action navigate right`
 
 1. **A focus ring is always visible** when focus came from keyboard or gamepad (hidden after a mouse click, as in most systems). 2 px, `Secondary` role, 3:1 against the control and its surroundings. Today it exists only on the main menu (F01).
 2. **Focus order is visual order**, left→right, top→bottom within a region; `tab_index` is not used to hand-order controls. Hidden, collapsed and filtered-out controls never take focus (today they can).
+2a. *Implementation note:* "visual order" is the order of the layout tree (a depth-first walk, which is the reading order of the library's flex builders); arrow keys use the real screen geometry of the nodes, restricted to the current region. `tab_index` is ignored. Disabled controls take focus only when they carry a reason (`DisabledReason` or the *not available yet* marker) so the reason can be read; a hidden control (`Display::None`/`Visibility::Hidden` on it or an ancestor) never does, and a focused control that gets hidden loses focus.
 3. **Regions (landmarks)**: *navigation rail*, *content*, *detail panel*, *footer actions*, *toasts*. Tab jumps between regions; arrows move inside one. Lists and grids: arrows move item to item, `Home/End` jump, type-ahead selects by first letters.
 4. **Every control is reachable and activatable by keyboard**: tabs, tree items, combo boxes, switches, sliders, the theme toggle, HUD buttons. This is checked by an automated traversal test (UI-P08).
 5. **Default focus** goes to the safest sensible control: the primary action when it is harmless, the search field on list screens, *Cancel* on destructive dialogs; never *Quit*.

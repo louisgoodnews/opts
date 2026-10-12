@@ -151,6 +151,7 @@ pub fn spawn_in_game_hud(
                         ),
                         M3Button::default(),
                         PauseMenuBtn,
+                        opts_gui::interaction::focus::PointerOnly,
                         RadiusToken(opts_gui::theme::shape::RadiusLevel::Medium),
                     ))
                     .with_children(|btn| {

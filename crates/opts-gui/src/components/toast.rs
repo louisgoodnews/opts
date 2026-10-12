@@ -5,6 +5,10 @@ use bevy::prelude::*;
 
 use crate::{
     interaction::{activation::Activated, events::ToastDismissed, state::Disabled},
+    interaction::{
+        focus::{FocusRegion, Landmark},
+        layer::StateLayerRole,
+    },
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
     },
@@ -103,6 +107,7 @@ impl ToastBuilder {
                     message: self.message.clone(),
                     timer,
                 },
+                FocusRegion(Landmark::Toasts),
                 BackgroundRole(ColorRole::InverseSurface),
                 RadiusToken(RadiusLevel::ExtraSmall),
                 ElevationToken(ElevationLevel::Level3),
@@ -136,6 +141,7 @@ impl ToastBuilder {
                             },
                             BackgroundColor(Color::NONE),
                         ),
+                        StateLayerRole(ColorRole::InverseOnSurface),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {
@@ -187,6 +193,7 @@ impl ToastBuilder {
                 message: self.message.clone(),
                 timer,
             },
+            FocusRegion(Landmark::Toasts),
             BackgroundRole(ColorRole::InverseSurface),
             RadiusToken(RadiusLevel::ExtraSmall),
             ElevationToken(ElevationLevel::Level3),
@@ -221,6 +228,7 @@ impl ToastBuilder {
                             },
                             BackgroundColor(Color::NONE),
                         ),
+                        StateLayerRole(ColorRole::InverseOnSurface),
                         ToastActionButton(root),
                     ))
                     .with_children(|btn_parent| {

@@ -3,16 +3,14 @@
 //! The backdrop blocks pointer interaction with everything beneath it (`FocusPolicy::Block`) and
 //! clicking it does **nothing** by design (closing by backdrop click would discard user input).
 //! Escape emits [`ModalEvent::CancelRequested`]; the owner of the modal decides what that means.
-//! While a modal exists, Tab / Shift+Tab cycle only through the focusable widgets inside it.
+//! While a modal exists, focus navigation considers only the focusable widgets inside it
+//! (`FocusGraph` scope) and focus returns to the previous control when it closes.
 
 use bevy::prelude::*;
 use bevy::ui::FocusPolicy;
 
 use crate::{
-    interaction::{
-        focus::{FocusEvent, Focusable},
-        state::{Disabled, Focused},
-    },
+    interaction::focus::FocusEvent,
     theme::{color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel},
     tokens::components::{BackgroundRole, ElevationToken, RadiusToken},
 };
@@ -153,54 +151,6 @@ pub fn modal_escape_system(
     }
 }
 
-fn is_inside(mut entity: Entity, ancestor: Entity, parents: &Query<&ChildOf>) -> bool {
-    while let Ok(p) = parents.get(entity) {
-        entity = p.parent();
-        if entity == ancestor {
-            return true;
-        }
-    }
-    false
-}
-
-/// Keeps Tab / Shift+Tab inside the modal: cycles the [`Focusable`]s below [`ModalContent`].
-pub fn modal_focus_trap_system(
-    keys: Res<ButtonInput<KeyCode>>,
-    content: Query<Entity, With<ModalContent>>,
-    focusables: Query<(Entity, &Focusable), Without<Disabled>>,
-    focused: Query<Entity, With<Focused>>,
-    parents: Query<&ChildOf>,
-    mut events: MessageWriter<FocusEvent>,
-) {
-    if !keys.just_pressed(KeyCode::Tab) {
-        return;
-    }
-    let Some(content) = content.iter().last() else {
-        return;
-    };
-    let mut inside: Vec<(usize, Entity)> = focusables
-        .iter()
-        .filter(|(e, _)| is_inside(*e, content, &parents))
-        .map(|(e, f)| (f.tab_index, e))
-        .collect();
-    if inside.is_empty() {
-        return;
-    }
-    inside.sort();
-    let backwards = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
-    let current = focused
-        .iter()
-        .find_map(|f| inside.iter().position(|(_, e)| *e == f));
-    let len = inside.len();
-    let next = match (current, backwards) {
-        (Some(i), false) => (i + 1) % len,
-        (Some(i), true) => (i + len - 1) % len,
-        (None, false) => 0,
-        (None, true) => len - 1,
-    };
-    events.write(FocusEvent::Set(inside[next].1));
-}
-
 /// Plugin registering the modal systems and [`ModalEvent`].
 #[derive(Default)]
 pub struct ModalPlugin;
@@ -209,7 +159,7 @@ impl Plugin for ModalPlugin {
     fn build(&self, app: &mut App) {
         app.add_message::<ModalEvent>()
             .add_message::<FocusEvent>()
-            .add_systems(Update, (modal_escape_system, modal_focus_trap_system));
+            .add_systems(Update, modal_escape_system);
     }
 }
 
@@ -248,34 +198,5 @@ mod tests {
         let events = app.world().resource::<Messages<ModalEvent>>();
         let got: Vec<_> = events.get_cursor().read(events).copied().collect();
         assert_eq!(got, vec![ModalEvent::CancelRequested(root)]);
-    }
-
-    #[test]
-    fn tab_stays_inside_the_modal() {
-        let mut app = App::new();
-        app.add_plugins(MinimalPlugins)
-            .init_resource::<ButtonInput<KeyCode>>()
-            .add_message::<FocusEvent>()
-            .add_systems(Update, modal_focus_trap_system);
-        let content = app.world_mut().spawn(ModalContent).id();
-        let a = app
-            .world_mut()
-            .spawn(Focusable { tab_index: 0 })
-            .insert(ChildOf(content))
-            .id();
-        let b = app
-            .world_mut()
-            .spawn(Focusable { tab_index: 1 })
-            .insert(ChildOf(content))
-            .id();
-        let _outside = app.world_mut().spawn(Focusable { tab_index: 0 }).id();
-        app.world_mut().entity_mut(b).insert(Focused);
-        app.world_mut()
-            .resource_mut::<ButtonInput<KeyCode>>()
-            .press(KeyCode::Tab);
-        app.update();
-        let events = app.world().resource::<Messages<FocusEvent>>();
-        let got: Vec<_> = events.get_cursor().read(events).copied().collect();
-        assert_eq!(got, vec![FocusEvent::Set(a)]);
     }
 }

@@ -17,7 +17,6 @@
 use bevy::input_focus::InputFocusVisible;
 use bevy::prelude::*;
 
-use crate::components::button::Button;
 use crate::interaction::state::{
     Disabled, ErrorState, Focused, Hovered, Pressed, UiState, DISABLED_CONTENT,
 };
@@ -49,6 +48,16 @@ pub struct StateLayerRole(pub ColorRole);
 /// Remembers the border role a control had before an [`ErrorState`] replaced it (internal).
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SavedBorderRole(pub Option<ColorRole>);
+
+/// Gives a control that is *not* a [`Button`] the state layer, scrim and focus ring (frames of
+/// composite controls such as the text field). [`Button`] requires it.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct StateLayered;
+
+/// The frame of a composite control shows the focus of the entity it points to (the text field's
+/// input): the ring and the focus layer are drawn on the frame.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FocusProxy(pub Entity);
 
 /// Width of the focus ring.
 pub const FOCUS_RING_WIDTH: f32 = 2.0;
@@ -86,7 +95,7 @@ fn overlay_node() -> Node {
 /// Gives every new control its state layer and scrim.
 pub fn spawn_state_layers(
     mut commands: Commands,
-    controls: Query<Entity, (Added<Button>, Without<StateLayerLink>)>,
+    controls: Query<Entity, (Added<StateLayered>, Without<StateLayerLink>)>,
 ) {
     for control in &controls {
         let layer = commands
@@ -149,6 +158,7 @@ type ControlItem<'a> = (
     Option<&'a StateLayerRole>,
     Option<&'a BackgroundRole>,
     &'a Node,
+    Option<&'a FocusProxy>,
 );
 
 /// Applies the state layer tint, the disabled scrim and the border radius to the helper nodes.
@@ -156,12 +166,22 @@ pub fn update_state_layers(
     theme: Res<MaterialTheme>,
     visible: Option<Res<InputFocusVisible>>,
     controls: Query<ControlItem>,
+    focus_holders: Query<(), With<Focused>>,
     mut nodes: Query<(&mut BackgroundColor, &mut Node), Without<StateLayerLink>>,
 ) {
     let ring_visible = visible.is_none_or(|v| v.0);
-    for (link, hovered, pressed, focused, disabled, error, role, bg_role, control_node) in &controls
+    for (link, hovered, pressed, focused, disabled, error, role, bg_role, control_node, proxy) in
+        &controls
     {
-        let state = ui_state(hovered, pressed, focused, disabled, error, ring_visible);
+        let proxied = proxy.is_some_and(|p| focus_holders.contains(p.0));
+        let state = ui_state(
+            hovered,
+            pressed,
+            focused || proxied,
+            disabled,
+            error,
+            ring_visible || proxy.is_some(),
+        );
         let tint_role = role
             .map(|r| r.0)
             .unwrap_or_else(|| bg_role.map_or(ColorRole::OnSurface, |b| on_color(b.0)));
@@ -188,7 +208,12 @@ pub fn update_state_layers(
 }
 
 /// Query item of [`update_focus_ring`].
-type FocusRingItem<'a> = (Entity, Has<Focused>, Option<&'a Outline>);
+type FocusRingItem<'a> = (
+    Entity,
+    Has<Focused>,
+    Option<&'a Outline>,
+    Option<&'a FocusProxy>,
+);
 
 /// Draws and removes the focus ring.
 pub fn update_focus_ring(
@@ -196,11 +221,13 @@ pub fn update_focus_ring(
     theme: Res<MaterialTheme>,
     visible: Option<Res<InputFocusVisible>>,
     controls: Query<FocusRingItem, With<StateLayerLink>>,
+    focus_holders: Query<(), With<Focused>>,
 ) {
     let ring_visible = visible.is_none_or(|v| v.0);
     let color = theme.scheme.get(ColorRole::Secondary);
-    for (entity, focused, outline) in &controls {
-        let want = focused && ring_visible;
+    for (entity, focused, outline, proxy) in &controls {
+        let proxied = proxy.is_some_and(|p| focus_holders.contains(p.0));
+        let want = (focused && ring_visible) || proxied;
         match (want, outline) {
             (true, Some(o)) if o.color == color => {}
             (true, _) => {

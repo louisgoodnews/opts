@@ -10,6 +10,7 @@
 //! - **Ergonomic Builders:** High-level fluent builders for UI layout and widgets.
 
 #![deny(unsafe_code)]
+pub mod actions;
 pub mod components;
 pub mod fonts;
 pub mod icons;

@@ -47,14 +47,7 @@ pub fn spawn_vehicle_selection_tab(
             ))
             .with_children(|left_col| {
                 // Top Search Bar
-                spawn_search_bar(
-                    left_col,
-                    theme,
-                    ScrollKind::Vehicles,
-                    "Search 956 vehicles...",
-                    "",
-                    false,
-                );
+                spawn_search_bar(left_col, ScrollKind::Vehicles, "Search 956 vehicles...", "");
 
                 // Header with total count and scroll controls
                 // Header with total count

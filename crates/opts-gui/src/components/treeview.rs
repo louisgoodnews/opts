@@ -4,10 +4,12 @@ use crate::components::Button;
 use bevy::prelude::*;
 
 use crate::{
+    actions::{Direction, UiAction},
     interaction::{
         activation::Activated,
         events::{TreeNodeSelected, TreeNodeToggled},
-        state::Disabled,
+        focus::FocusEvent,
+        state::{Disabled, Focused},
     },
     theme::{color::ColorRole, shape::RadiusLevel, typography::TypeScale},
     tokens::components::{ForegroundRole, RadiusToken, TypeStyleToken},
@@ -275,6 +277,59 @@ pub fn treeview_click_system(
     }
 }
 
+/// Left/Right on a focused tree row: Right expands (a collapsed parent), Left collapses (an
+/// expanded parent) or moves focus to the parent row.
+pub fn treeview_arrow_system(
+    mut actions: MessageReader<UiAction>,
+    mut nodes: Query<(Entity, &mut M3TreeNode, Has<Focused>)>,
+    mut toggle_events: MessageWriter<TreeNodeToggled>,
+    mut focus: MessageWriter<FocusEvent>,
+) {
+    for action in actions.read() {
+        let dir = match action {
+            UiAction::Navigate(d @ (Direction::Left | Direction::Right)) => *d,
+            _ => continue,
+        };
+        let Some((_, tree, id, parent_id, has_children, expanded)) =
+            nodes.iter().find(|(_, _, f)| *f).map(|(e, n, _)| {
+                (
+                    e,
+                    n.tree_entity,
+                    n.node_id.clone(),
+                    n.parent_id.clone(),
+                    n.has_children,
+                    n.is_expanded,
+                )
+            })
+        else {
+            continue;
+        };
+        let wants_toggle = match dir {
+            Direction::Right => has_children && !expanded,
+            _ => has_children && expanded,
+        };
+        if wants_toggle {
+            for (_, mut node, _) in &mut nodes {
+                if node.tree_entity == tree && node.node_id == id {
+                    node.is_expanded = !expanded;
+                    toggle_events.write(TreeNodeToggled {
+                        tree_entity: tree,
+                        node_id: id.clone(),
+                        is_expanded: node.is_expanded,
+                    });
+                }
+            }
+        } else if dir == Direction::Left {
+            if let Some(parent) = nodes
+                .iter()
+                .find(|(_, n, _)| n.tree_entity == tree && Some(&n.node_id) == parent_id.as_ref())
+            {
+                focus.write(FocusEvent::Set(parent.0));
+            }
+        }
+    }
+}
+
 /// System synchronizing chevron symbols and child visibility when a node expands/collapses.
 pub fn treeview_sync_system(
     changed_nodes: Query<(Entity, &M3TreeNode), Changed<M3TreeNode>>,
@@ -328,7 +383,14 @@ impl Plugin for TreeviewPlugin {
         if !app.world().contains_resource::<Messages<TreeNodeToggled>>() {
             app.add_message::<TreeNodeToggled>();
         }
-        app.add_systems(Update, (treeview_click_system, treeview_sync_system));
+        app.add_systems(
+            Update,
+            (
+                treeview_click_system,
+                treeview_arrow_system,
+                treeview_sync_system,
+            ),
+        );
     }
 }
 

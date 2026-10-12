@@ -3,9 +3,15 @@
 use crate::components::Button;
 use bevy::prelude::*;
 
+use bevy::input_focus::InputFocusVisible;
+
 use crate::{
+    actions::{Direction, UiAction},
     interaction::{
-        activation::Activated, events::ComboboxSelected, focus::Focusable, state::Disabled,
+        activation::Activated,
+        events::ComboboxSelected,
+        focus::FocusEvent,
+        state::{Disabled, Focused},
     },
     theme::{
         color::ColorRole, elevation::ElevationLevel, shape::RadiusLevel, typography::TypeScale,
@@ -130,7 +136,6 @@ impl ComboboxBuilder {
                 placeholder: self.placeholder.clone(),
                 is_open: false,
             },
-            Focusable { tab_index: 0 },
         )
     }
 
@@ -147,7 +152,7 @@ impl ComboboxBuilder {
         let root = root_cmd.id();
 
         commands.entity(root).with_children(|parent| {
-            populate_combobox_children(parent, root, &display_text, &options);
+            populate_combobox_children(parent, root, &display_text, &options, disabled);
         });
 
         root
@@ -166,7 +171,7 @@ impl ComboboxBuilder {
         let root = root_cmd.id();
 
         root_cmd.with_children(|child_parent| {
-            populate_combobox_children(child_parent, root, &display_text, &options);
+            populate_combobox_children(child_parent, root, &display_text, &options, disabled);
         });
 
         root
@@ -178,56 +183,59 @@ fn populate_combobox_children(
     root: Entity,
     display_text: &str,
     options: &[String],
+    disabled: bool,
 ) {
     // Header button
-    parent
-        .spawn((
+    let mut header = parent.spawn((
+        (
+            Button,
+            Node {
+                display: Display::Flex,
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
+                padding: UiRect::axes(Val::Px(16.0), Val::Px(12.0)),
+                min_height: Val::Px(48.0),
+                border: UiRect::all(Val::Px(1.0)),
+                ..default()
+            },
+        ),
+        ComboboxHeader(root),
+        BackgroundRole(ColorRole::Surface),
+        BorderRole(ColorRole::Outline),
+        RadiusToken(RadiusLevel::ExtraSmall),
+    ));
+    if disabled {
+        header.insert(Disabled);
+    }
+    header.with_children(|header_parent| {
+        header_parent.spawn((
             (
-                Button,
-                Node {
-                    display: Display::Flex,
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    padding: UiRect::axes(Val::Px(16.0), Val::Px(12.0)),
-                    min_height: Val::Px(48.0),
-                    border: UiRect::all(Val::Px(1.0)),
+                Text::new(display_text),
+                TextFont {
+                    font_size: FontSize::Px(14.0),
                     ..default()
                 },
+                TextColor(Color::WHITE),
             ),
-            ComboboxHeader(root),
-            BackgroundRole(ColorRole::Surface),
-            BorderRole(ColorRole::Outline),
-            RadiusToken(RadiusLevel::ExtraSmall),
-        ))
-        .with_children(|header_parent| {
-            header_parent.spawn((
-                (
-                    Text::new(display_text),
-                    TextFont {
-                        font_size: FontSize::Px(14.0),
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ),
-                ComboboxLabelText(root),
-                ForegroundRole(ColorRole::OnSurface),
-                TypeStyleToken(TypeScale::BodyMedium),
-            ));
+            ComboboxLabelText(root),
+            ForegroundRole(ColorRole::OnSurface),
+            TypeStyleToken(TypeScale::BodyMedium),
+        ));
 
-            header_parent.spawn((
-                (
-                    Text::new("▼"),
-                    TextFont {
-                        font_size: FontSize::Px(12.0),
-                        ..default()
-                    },
-                    TextColor(Color::WHITE),
-                ),
-                ForegroundRole(ColorRole::OnSurfaceVariant),
-                TypeStyleToken(TypeScale::LabelMedium),
-            ));
-        });
+        header_parent.spawn((
+            (
+                Text::new("▼"),
+                TextFont {
+                    font_size: FontSize::Px(12.0),
+                    ..default()
+                },
+                TextColor(Color::WHITE),
+            ),
+            ForegroundRole(ColorRole::OnSurfaceVariant),
+            TypeStyleToken(TypeScale::LabelMedium),
+        ));
+    });
 
     // Dropdown menu (initially hidden)
     parent
@@ -313,8 +321,10 @@ pub fn combobox_header_system(
 pub fn combobox_item_system(
     mut activated: MessageReader<Activated>,
     item_query: Query<&ComboboxMenuItem>,
+    headers: Query<(Entity, &ComboboxHeader)>,
     mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
     mut events: MessageWriter<ComboboxSelected>,
+    mut focus: MessageWriter<FocusEvent>,
 ) {
     for Activated(entity) in activated.read() {
         if let Ok(item) = item_query.get(*entity) {
@@ -327,18 +337,53 @@ pub fn combobox_item_system(
                     selected_index: item.index,
                     selected_value: val,
                 });
+                if let Some((header, _)) = headers.iter().find(|(_, h)| h.0 == item.combobox_entity)
+                {
+                    focus.write(FocusEvent::Set(header));
+                }
             }
         }
     }
 }
 
-/// System updating visibility of dropdown menu and updating display text.
+/// Up/Down on a focused, closed combobox header opens the list (the arrows are the header's own,
+/// see `ArrowOwners` in the focus module).
+pub fn combobox_arrow_system(
+    mut actions: MessageReader<UiAction>,
+    focused: Query<&ComboboxHeader, With<Focused>>,
+    mut combo_query: Query<&mut M3Combobox, Without<Disabled>>,
+) {
+    for action in actions.read() {
+        if matches!(action, UiAction::Navigate(Direction::Down | Direction::Up)) {
+            if let Some(header) = focused.iter().next() {
+                if let Ok(mut combo) = combo_query.get_mut(header.0) {
+                    combo.is_open = true;
+                }
+            }
+        }
+    }
+}
+
+/// System updating visibility of dropdown menu and updating display text. A list that opens
+/// while keyboard focus is visible moves focus onto the selected (else first) item.
 pub fn combobox_sync_system(
+    visible: Option<Res<InputFocusVisible>>,
+    items: Query<(Entity, &ComboboxMenuItem)>,
+    mut focus: MessageWriter<FocusEvent>,
     combo_query: Query<(Entity, &M3Combobox), Changed<M3Combobox>>,
     mut menu_query: Query<(&ComboboxMenu, &mut Node)>,
     mut text_query: Query<(&ComboboxLabelText, &mut Text)>,
 ) {
     for (entity, combo) in &combo_query {
+        if combo.is_open && visible.as_ref().is_none_or(|v| v.0) {
+            let wanted = combo.selected.unwrap_or(0);
+            if let Some((item, _)) = items
+                .iter()
+                .find(|(_, i)| i.combobox_entity == entity && i.index == wanted)
+            {
+                focus.write(FocusEvent::Set(item));
+            }
+        }
         for (menu, mut style) in &mut menu_query {
             if menu.0 == entity {
                 style.display = if combo.is_open {
@@ -379,6 +424,7 @@ impl Plugin for ComboboxPlugin {
             Update,
             (
                 combobox_header_system,
+                combobox_arrow_system,
                 combobox_item_system,
                 combobox_sync_system,
             ),

@@ -195,27 +195,11 @@ impl Default for NewGameSetup {
 pub struct CatalogueSearchState {
     pub map_query: String,
     pub vehicle_query: String,
-    pub map_focused: bool,
-    pub vehicle_focused: bool,
-    pub cursor_visible: bool,
-    pub cursor_timer: f32,
 }
 
 /// Search input box entity marker.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SearchInputBox {
-    pub kind: ScrollKind,
-}
-
-/// Text entity inside search bar showing current query or placeholder.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SearchInputText {
-    pub kind: ScrollKind,
-}
-
-/// Button clearing current search input.
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ClearSearchBtn {
     pub kind: ScrollKind,
 }
 

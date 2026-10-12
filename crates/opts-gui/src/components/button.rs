@@ -8,6 +8,7 @@ use crate::{
         activation::Activated,
         events::ButtonClicked,
         focus::Focusable,
+        layer::StateLayered,
         state::{Disabled, Hovered},
     },
     theme::{
@@ -23,7 +24,7 @@ use crate::{
 /// disabled treatment of [`crate::interaction::layer`] attach to it, and pointer release inside
 /// the control sends [`Activated`].
 #[derive(Component, Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[require(Node, bevy::ui::FocusPolicy::Block, Hovered)]
+#[require(Node, bevy::ui::FocusPolicy::Block, Hovered, Focusable, StateLayered)]
 pub struct Button;
 
 /// Button variants supported by Material Design 3.

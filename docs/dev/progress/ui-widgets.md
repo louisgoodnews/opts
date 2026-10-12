@@ -22,8 +22,8 @@ Runs of the game/tools: `XDG_CONFIG_HOME=$(mktemp -d) XDG_DATA_HOME=$(mktemp -d)
 | :--- | :--- |
 | B0 Orient + spikes | done (`docs/src/architecture/ui-spikes.md`) |
 | B1 State mechanism, release activation, tooltips | done |
-| B2 Focus and action layer | todo |
-| B3 TextField | todo |
+| B2 Focus and action layer | done |
+| B3 TextField | done |
 | B4 UI ids and `ui.*` protocol | todo |
 | B5 NotAvailableYet + registry | todo |
 | B6 Localisation scaffold | todo |
@@ -55,3 +55,16 @@ Spike verdicts in `docs/src/architecture/ui-spikes.md`. Bevy 0.20 has `EditableT
 - Disabled treatment: scrim of `Surface` at 62 % (content 38 %); container fades by the same factor (12 % container of M3 is a documented simplification).
 - Not yet verified visually (screenshots in B7).
 - Gates: fmt, clippy, test --workspace, doc, links, roadmap copy all green at the B1 commit.
+
+### B2
+- `actions.rs`: `UiAction`, `Direction`, `ScrollStep`, `key_action`/`button_action` tables, `keyboard_actions`/`gamepad_actions` systems, `UiAction::parse` (protocol spelling). Documented in `interaction-and-feel.md` section 1.
+- `interaction/navigation.rs`: `FocusGraph` (candidates: visible, enabled-or-with-reason, modal scope, layout-tree order, rects), `next_linear`, `next_region`, `pick_directional`, `move_focus` (pure, unit-tested).
+- `interaction/focus.rs` rewritten: `InputFocus` <-> `Focused` reconciliation, `FocusEvent` handler (also consumes focus-moving actions), `FocusRegion`/`Landmark`, `DefaultFocus`, `PointerOnly` (HUD exit button), modal focus restore, arrow-owner rules (tree/combobox/text). `Focusable` now `#[require(TabIndex)]`; every `Button` is focusable; `tab_index` field unused.
+- `interaction/handlers.rs`: `Back` (combobox close, toast dismiss, text entry drops focus), `Search`.
+- Widgets: notebook next/prev tab + focus selects, tree Left/Right, combobox Up/Down open + focus item + restore, toast region + keyboard dismiss, modal trap replaced by `FocusGraph` scope.
+- `escape_to_menu_system` of the new game screen ignores Esc while a text entry has focus.
+- Tests: `tests/keyboard_operability.rs`, focus unit tests, navigation unit tests.
+- Deviation: tab order = layout-tree order, not geometric reading order (documented in interaction-and-feel 2a).
+### B3
+- `TextField` on `TextInput`/`EditableText`, new-game search bars migrated, `handle_search_typing` and friends deleted. `keyboard_layout.rs` kept for label hints.
+- Headless typing is simulated with queued `TextEdit`s (no fonts, no key dispatch); real key dispatch and IME are NOT verified here.

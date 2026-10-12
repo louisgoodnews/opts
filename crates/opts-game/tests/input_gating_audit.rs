@@ -59,6 +59,7 @@ const REVIEWED: &[&str] = &[
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",
     "opts-game/src/in_game/vehicle_menu.rs",
+    "opts-gui/src/actions.rs",
     "opts-gui/src/components/button.rs",
     "opts-gui/src/components/checkbox.rs",
     "opts-gui/src/components/combobox.rs",

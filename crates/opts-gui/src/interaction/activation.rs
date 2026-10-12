@@ -8,6 +8,7 @@ use bevy::picking::events::{PointerPress, PointerRelease};
 use bevy::picking::pointer::PointerButton;
 use bevy::prelude::*;
 
+use crate::actions::{ActionInput, UiAction};
 use crate::components::button::Button;
 use crate::interaction::state::{Disabled, Focused, Pressed};
 
@@ -67,19 +68,18 @@ pub fn cancel_stale_presses(
     }
 }
 
-/// Enter and Space activate the focused control.
-pub fn keyboard_confirm_system(
-    keyboard: Option<Res<ButtonInput<KeyCode>>>,
+/// [`UiAction::Confirm`] (Enter, Space, gamepad A, `ui.action confirm`) activates the focused
+/// control.
+pub fn confirm_system(
+    mut actions: MessageReader<UiAction>,
     focused: Query<Entity, EnabledFocused>,
     mut activated: MessageWriter<Activated>,
 ) {
-    let Some(keyboard) = keyboard else { return };
-    if keyboard.just_pressed(KeyCode::Enter)
-        || keyboard.just_pressed(KeyCode::NumpadEnter)
-        || keyboard.just_pressed(KeyCode::Space)
-    {
-        for entity in &focused {
-            activated.write(Activated(entity));
+    for action in actions.read() {
+        if *action == UiAction::Confirm {
+            for entity in &focused {
+                activated.write(Activated(entity));
+            }
         }
     }
 }
@@ -93,7 +93,7 @@ pub fn build(app: &mut App) {
             Update,
             (
                 cancel_stale_presses,
-                keyboard_confirm_system.in_set(ActivationSet),
+                confirm_system.in_set(ActivationSet).after(ActionInput),
             ),
         );
 }

@@ -6,16 +6,25 @@ use crate::{
     components::{
         button::button_click_system,
         checkbox::{checkbox_sync_system, checkbox_toggle_system},
-        combobox::{combobox_header_system, combobox_item_system, combobox_sync_system},
+        combobox::{
+            combobox_arrow_system, combobox_header_system, combobox_item_system,
+            combobox_sync_system,
+        },
         date_select::date_select_system,
         datetime_select::datetime_select_system,
-        notebook::{notebook_sync_system, notebook_tab_click_system},
+        notebook::{
+            notebook_action_system, notebook_focus_selects_system, notebook_sync_system,
+            notebook_tab_click_system,
+        },
         radio::{radio_select_system, radio_sync_system},
         switch::{switch_sync_system, switch_toggle_system},
-        text_field::{text_field_change_system, text_field_interaction_system},
+        text_field::{
+            text_field_chrome_system, text_field_clear_system, text_field_cursor_style_system,
+            text_field_disabled_system, text_field_sync_system,
+        },
         toast::{toast_action_click_system, toast_timer_system},
         toplevel::toplevel_close_system,
-        treeview::{treeview_click_system, treeview_sync_system},
+        treeview::{treeview_arrow_system, treeview_click_system, treeview_sync_system},
     },
     interaction::{
         activation::ActivationSet,
@@ -24,7 +33,6 @@ use crate::{
             NotebookTabSelected, RadioSelected, SwitchToggled, TextChanged, ThemeChanged,
             ToastDismissed, ToplevelClosed, TreeNodeSelected, TreeNodeToggled,
         },
-        focus::{focus_event_handler_system, keyboard_focus_navigation_system, FocusEvent},
     },
     theme::{ColorScheme, MaterialTheme},
     tokens::{
@@ -59,14 +67,9 @@ impl Plugin for OptsGuiPlugin {
             .add_message::<ToplevelClosed>()
             .add_message::<TreeNodeSelected>()
             .add_message::<TreeNodeToggled>()
-            .add_message::<ThemeChanged>()
-            .add_message::<FocusEvent>();
+            .add_message::<ThemeChanged>();
 
-        // Register focus navigation systems
-        app.add_systems(
-            Update,
-            (keyboard_focus_navigation_system, focus_event_handler_system),
-        );
+        crate::actions::build(app);
 
         // Bundled fonts: DejaVu Sans as the default text font, Material Icons as `IconFont`
         app.add_systems(Startup, crate::fonts::install_fonts);
@@ -97,8 +100,11 @@ impl Plugin for OptsGuiPlugin {
                 button_click_system,
                 date_select_system,
                 datetime_select_system,
-                text_field_interaction_system,
-                text_field_change_system,
+                text_field_sync_system,
+                text_field_chrome_system,
+                text_field_clear_system,
+                text_field_disabled_system,
+                text_field_cursor_style_system,
                 checkbox_toggle_system,
                 checkbox_sync_system,
                 switch_toggle_system,
@@ -114,14 +120,18 @@ impl Plugin for OptsGuiPlugin {
             Update,
             (
                 combobox_header_system,
+                combobox_arrow_system,
                 combobox_item_system,
                 combobox_sync_system,
                 notebook_tab_click_system,
+                notebook_action_system,
+                notebook_focus_selects_system,
                 notebook_sync_system,
                 toast_timer_system,
                 toast_action_click_system,
                 toplevel_close_system,
                 treeview_click_system,
+                treeview_arrow_system,
                 treeview_sync_system,
             )
                 .after(ActivationSet),

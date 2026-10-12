@@ -47,14 +47,7 @@ pub fn spawn_map_selection_tab(
             ))
             .with_children(|left_col| {
                 // Top Search Bar
-                spawn_search_bar(
-                    left_col,
-                    theme,
-                    ScrollKind::Maps,
-                    "Search 42 maps...",
-                    "",
-                    false,
-                );
+                spawn_search_bar(left_col, ScrollKind::Maps, "Search 42 maps...", "");
 
                 // Header with total count
                 left_col.spawn((
