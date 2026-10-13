@@ -20,7 +20,7 @@ fn main() {
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "OPTS — Scenery Object Loader Example".into(),
-                resolution: bevy::window::WindowResolution::new(1280, 720),
+                resolution: bevy::window::WindowResolution::new(1920, 1080),
                 ..default()
             }),
             ..default()
