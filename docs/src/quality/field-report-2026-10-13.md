@@ -59,7 +59,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-30 | A **debug mode** (setting or command line, usable by agents through the protocol) in which OPTS tracks and logs **which mesh is located where on which tile** | tooling / content | [M-0087](../roadmap/phase-5/M-0087.md) | 📝 open |
+| R-30 | A **debug mode** (setting or command line, usable by agents through the protocol) in which OPTS tracks and logs **which mesh is located where on which tile** | tooling / content | [M-0087](../roadmap/phase-5/M-0087.md) | ✅ done (scene trace, [design](../architecture/scene-trace.md)) |
 
 ## Follow-up findings (2026-10-13, sixth message)
 
