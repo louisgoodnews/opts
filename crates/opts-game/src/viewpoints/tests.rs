@@ -142,6 +142,7 @@ fn edit_save_respawn_loaded() {
     let mut app = app(path.clone());
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
     let first = spawn_vehicle(&mut app, "man_sd77");
+    app.world_mut().resource_mut::<ViewpointState>().default_fov_deg = 70.0;
     app.update();
     assert!(app.world().resource::<ViewpointState>().active.is_default());
 

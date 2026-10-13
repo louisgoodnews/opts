@@ -13,7 +13,9 @@ use opts_bevy::camera::viewpoint::{ViewpointRow, ViewpointState};
 use opts_bevy::{BusVehicle, PlayerVehicle};
 use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::interaction::focus::PointerOnly;
-use opts_gui::l10n::{Arg, L10nKey, Localization};
+use opts_gui::interaction::state::Pressed;
+use opts_gui::l10n::fluent::Arg;
+use opts_gui::l10n::{L10nKey, Localization};
 use opts_gui::prelude::*;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
@@ -191,7 +193,8 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
                         },
                         BackgroundColor(palette.track),
                         BorderColor::all(palette.panel_border),
-                        Interaction::default(),
+                        Button,
+                        PointerOnly,
                         RelativeCursorPosition::default(),
                         ViewpointTrack(row),
                         ViewpointPaint(false),
@@ -425,16 +428,13 @@ pub fn panel_buttons(
 
 /// Click or drag on a track sets the row to the position under the cursor.
 pub fn panel_tracks(
-    tracks: Query<(&ViewpointTrack, &Interaction, &RelativeCursorPosition)>,
+    tracks: Query<(&ViewpointTrack, &RelativeCursorPosition), With<Pressed>>,
     mut state: ResMut<ViewpointState>,
 ) {
     if !state.editing {
         return;
     }
-    for (track, interaction, cursor) in &tracks {
-        if *interaction != Interaction::Pressed {
-            continue;
-        }
+    for (track, cursor) in &tracks {
         if let Some(pos) = cursor.normalized {
             state.row = track.0;
             state.set_fraction(track.0, pos.x + 0.5);
