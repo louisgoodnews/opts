@@ -12,8 +12,14 @@ use opts_bevy::{sample_terrain, tile_size, VehicleController};
 use opts_core::formats::map::{MapSplineInstance, MapTerrain};
 use opts_core::formats::scenery::SplineProfile;
 
-/// Player vehicles that follow the ground (rail-bound ones follow their track instead).
-type GroundBound = (With<opts_bevy::PlayerVehicle>, Without<super::RailPlayer>);
+/// Session vehicles (active or parked) that follow the ground (rail-bound ones follow their track instead).
+type GroundBound = (
+    Or<(
+        With<crate::session_vehicles::SessionVehicle>,
+        With<opts_bevy::PlayerVehicle>,
+    )>,
+    Without<super::RailPlayer>,
+);
 
 /// Spacing of the road centre-line samples (m).
 const SAMPLE_STEP_M: f32 = 2.0;
@@ -181,6 +187,7 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
 /// What `follow_ground` reads and writes of a player vehicle: its simulation, its transform and,
 /// for articulated ones, the chain and the scripts the bellows angles go to.
 type GroundBody = (
+    Entity,
     &'static mut VehicleController,
     &'static mut Transform,
     Option<&'static opts_bevy::ArticulatedChain>,
@@ -199,7 +206,7 @@ const RISE_RATE: f32 = 25.0;
 const TILT_RATE: f32 = 10.0;
 
 /// The player's vertical motion between frames.
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 pub struct BodyMotion {
     /// Falling speed (m/s, positive down).
     fall: f32,
@@ -213,13 +220,15 @@ pub struct BodyMotion {
 pub fn follow_ground(
     time: Res<Time>,
     index: Res<GroundIndex>,
-    mut motion: Local<BodyMotion>,
+    mut motions: Local<std::collections::HashMap<Entity, BodyMotion>>,
     mut vehicles: Query<GroundBody, GroundBound>,
     mut segments: Query<&mut opts_bevy::ArticulatedSegment>,
     mut chain_motion: Local<std::collections::HashMap<Entity, (f32, f32, f32)>>,
 ) {
     let dt = time.delta_secs().min(0.1);
-    for (mut controller, mut tf, chain, scripts) in &mut vehicles {
+    motions.retain(|e, _| vehicles.contains(*e));
+    for (entity, mut controller, mut tf, chain, scripts) in &mut vehicles {
+        let motion = motions.entry(entity).or_default();
         let (front, rear, track) = {
             let axles = &controller.sim.axles;
             let track = axles

@@ -62,6 +62,7 @@ impl Plugin for HudPlugin {
             .init_resource::<HudValues>()
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
+            .init_resource::<crate::session_vehicles::PlaceLabel>()
             .init_resource::<details::DetailsStore>()
             .add_message::<RaiseAlert>()
             .add_message::<ClearAlert>()
@@ -71,6 +72,7 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     values::sample_values,
+                    rebuild_for_kind,
                     (
                         update::tick_session_clock,
                         update::camera_label_changes,
@@ -98,6 +100,25 @@ impl Plugin for HudPlugin {
                 ),
             );
     }
+}
+
+/// The HUD follows the active vehicle: when another kind of vehicle becomes active the HUD is
+/// rebuilt with the profile of that kind.
+fn rebuild_for_kind(
+    mut commands: Commands,
+    values: Res<HudValues>,
+    active: Option<Res<build::ActiveProfile>>,
+    roots: Query<Entity, With<build::HudRoot>>,
+    theme: Res<opts_gui::prelude::MaterialTheme>,
+) {
+    let Some(active) = active else { return };
+    if !values.has_vehicle || active.kind == values.kind {
+        return;
+    }
+    for root in &roots {
+        commands.entity(root).despawn();
+    }
+    build::queue_spawn(&mut commands, &theme);
 }
 
 /// A new drive starts without the alerts, label and values of the last one.

@@ -12,7 +12,8 @@ pub mod ops;
 pub mod registry;
 
 use bevy::prelude::*;
-use opts_gui::l10n::{Arg, L10nArgs, Localization};
+use opts_gui::l10n::fluent::Arg;
+use opts_gui::l10n::{L10nArgs, Localization};
 
 pub use ops::{OpError, PLACE_LABEL_HIDE_DISTANCE_M};
 pub use registry::{
@@ -172,6 +173,7 @@ impl Plugin for SessionVehiclesPlugin {
         app.init_resource::<SessionVehicles>()
             .init_resource::<PlaceLabel>()
             .init_resource::<PendingDespawn>()
+            .add_message::<DialogChoice>()
             .add_systems(
                 Update,
                 (

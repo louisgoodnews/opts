@@ -65,6 +65,7 @@ impl Plugin for InGamePlugin {
                 ..default()
             });
 
+        app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
         app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins(VehicleMenuPlugin).add_systems(
             Update,
@@ -201,6 +202,8 @@ fn setup_in_game_session(
     mut report: ResMut<load_report::LoadReport>,
     setup: Res<NewGameSetup>,
     shell: Option<Res<crate::shell::ShellContent>>,
+    catalogue: Option<Res<crate::new_game_screen::types::GameCatalogue>>,
+    args: Option<Res<crate::AppArgs>>,
 ) {
     tracing::info!(
         map = ?setup.selected_map,
@@ -215,8 +218,29 @@ fn setup_in_game_session(
     // Populate session config
     session.map_name = setup.selected_map.clone();
     session.entry_point = setup.selected_entry_point.clone();
-    session.vehicle_name = setup.selected_vehicle.clone();
-    session.livery_name = setup.selected_livery.clone();
+    // The vehicle line is decided here, once, from the selection that came with the load request,
+    // so the loading screen shows it from its first frame and it never changes (M-0076).
+    let cli_vehicle = args.as_ref().and_then(|a| a.0.vehicle_path.as_deref());
+    let cli_livery = args.as_ref().and_then(|a| a.0.livery.clone());
+    let default_catalogue = crate::new_game_screen::types::GameCatalogue::default();
+    let catalogue = catalogue.as_deref().unwrap_or(&default_catalogue);
+    (session.vehicle_name, session.vehicle_none, session.livery_name) = match cli_vehicle {
+        Some(path) => (
+            path.file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            false,
+            cli_livery.unwrap_or_default(),
+        ),
+        None if setup.no_vehicle => (String::new(), true, String::new()),
+        None => (
+            crate::new_game_screen::texts::vehicle_name(catalogue, &setup),
+            false,
+            cli_livery.unwrap_or_else(|| {
+                crate::new_game_screen::texts::livery_name(catalogue, &setup)
+            }),
+        ),
+    };
     session.weather_preset = setup.weather_preset.clone();
     session.start_hour = setup.hour;
     session.start_minute = setup.minute;

@@ -253,4 +253,6 @@ pub struct SessionRequest<'a> {
     pub selected_entry_point: &'a str,
     /// Repaint chosen in the New Game screen (empty: the vehicle's default).
     pub selected_livery: &'a str,
+    /// The session starts with the map only: no vehicle file is resolved and none is warned about.
+    pub no_vehicle: bool,
 }

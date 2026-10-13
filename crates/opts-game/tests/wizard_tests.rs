@@ -165,6 +165,7 @@ fn the_last_drive_is_applied_when_the_wizard_opens() {
         map: "Grundorf".into(),
         entry_point: "Bauernhof".into(),
         vehicle: "MAN SD200 SD77".into(),
+        no_vehicle: false,
         livery: String::new(),
         weather_preset: "Rainy Afternoon".into(),
         year: 1975,

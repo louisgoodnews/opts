@@ -606,6 +606,51 @@ pub const COMMANDS: &[CommandSpec] = &[
         "contains:s@0?",
     ),
     c(
+        "session.vehicles",
+        "query",
+        "The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker",
+        "",
+    )
+    .since("1.2")
+    .result("`{active, count, vehicles:[{id, name, catalogue_id, repaint, setvars, spawn_entry_name, spawn_point, lifecycle (spawning|alive|despawned|failed), despawn_reason, error, active, trailers}], place_label}`")
+    .doc("The registry of the vehicles the user spawned (the wizard's choice, the pause menu, `session.spawn`); parked and AI vehicles are not listed. Despawned vehicles stay in the list as history. `place_label` is what the HUD shows for the active vehicle (the entry point it was spawned at) or `null`."),
+    c(
+        "session.spawn",
+        "scene",
+        "Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists",
+        "vehicle:s@0 repaint:s? setvars:j? entry:s? entry_id:i?",
+    )
+    .since("1.2")
+    .result("`{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)")
+    .doc("`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on)."),
+    c(
+        "session.switch",
+        "scene",
+        "Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow)",
+        "id:i@0? step:i?",
+    )
+    .since("1.2")
+    .result("`{ok, active}`")
+    .doc("`id` names the vehicle; `step` (1 next, -1 previous) cycles through the living ones like the F8 key. The vehicle that was active keeps its state with the parking brake on. Answers `1004` for an unknown id and `1001` when the vehicle is not in the world."),
+    c(
+        "session.despawn",
+        "scene",
+        "Remove a session vehicle with its trailers (default: the active one)",
+        "id:i@0?",
+    )
+    .since("1.2")
+    .result("`{ok, active, removed}`: the vehicle that is active afterwards (`null`: none, free camera) and the entities removed")
+    .doc("No confirmation (the confirmation dialog belongs to the pause menu). Despawning the active vehicle makes the most recently spawned other vehicle active, or none."),
+    c(
+        "session.respawn",
+        "scene",
+        "Put a session vehicle back at its spawn point, at rest (default: the active one)",
+        "id:i@0?",
+    )
+    .since("1.2")
+    .result("`{ok, id}`")
+    .doc("Shows the HUD place label again. Answers `1001` when the vehicle is not in the world."),
+    c(
         "menu.do",
         "scene",
         "Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...)",

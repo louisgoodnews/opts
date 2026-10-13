@@ -201,7 +201,10 @@ type PlayerCollide = (
 );
 
 /// Road vehicles of the player (rail vehicles are ghosts).
-type GroundPlayer = (With<PlayerVehicle>, Without<RailPlayer>);
+type GroundPlayer = (
+    Or<(With<crate::session_vehicles::SessionVehicle>, With<PlayerVehicle>)>,
+    Without<RailPlayer>,
+);
 
 /// Measures the box of AI vehicles from their meshes once these have bounds.
 pub fn attach_traffic_colliders(
