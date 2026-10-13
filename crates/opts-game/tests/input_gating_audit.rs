@@ -39,6 +39,8 @@ const REVIEWED: &[&str] = &[
     "opts-bevy/src/camera/mode/ego.rs",
     "opts-bevy/src/camera/mode/free_roam.rs",
     "opts-bevy/src/camera/mode/vehicle_views.rs",
+    // Tab opens the viewpoint editor of the driver's view; gated in the camera plugin.
+    "opts-bevy/src/camera/viewpoint.rs",
     "opts-bevy/src/reporting/trigger.rs",
     "opts-bevy/src/vehicle_sim.rs",
     "opts-bevy/src/vehicle_triggers.rs",
@@ -115,7 +117,7 @@ fn every_input_reading_file_has_been_reviewed() {
 fn gated_registrations_still_use_the_run_condition() {
     let root = workspace_root().join("crates");
     for (file, min) in [
-        ("opts-bevy/src/camera/plugin.rs", 6),
+        ("opts-bevy/src/camera/plugin.rs", 7),
         ("opts-bevy/src/vehicle_sim.rs", 1),
         ("opts-bevy/src/vehicle_triggers.rs", 2),
         ("opts-game/src/shell/mod.rs", 1),

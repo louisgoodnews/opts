@@ -840,6 +840,12 @@ pub fn load_player_vehicle(
     commands
         .entity(root)
         .insert((controller, PlayerVehicle, InGameEntity));
+    // The catalogue identity of the vehicle keys its stored viewpoints.
+    if let Some(key) = crate::viewpoints::key_of_bus_file(&bus_path) {
+        commands
+            .entity(root)
+            .insert(crate::viewpoints::ViewpointKey(key));
+    }
     if let Some((size, centre)) = manifest.bounding_box {
         commands
             .entity(root)

@@ -198,6 +198,8 @@ keys! {
     HELP_KEY_CAMERA_PREV = "help-key-camera-prev",
     /// Message `help-key-camera-reset`.
     HELP_KEY_CAMERA_RESET = "help-key-camera-reset",
+    /// Message `help-key-viewpoint`.
+    HELP_KEY_VIEWPOINT = "help-key-viewpoint",
     /// Message `help-key-pause-menu`.
     HELP_KEY_PAUSE_MENU = "help-key-pause-menu",
     /// Message `help-key-sim-pause`.

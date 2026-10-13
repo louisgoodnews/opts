@@ -103,6 +103,7 @@ help-key-tram = Choose the tram route
 help-key-camera = Ego, cockpit, external, passenger, free camera
 help-key-camera-prev = Previous camera
 help-key-camera-reset = Reset the camera
+help-key-viewpoint = Driver's view: edit the viewpoint (eye position and field of view); Tab again saves, Esc cancels
 help-key-pause-menu = Pause menu
 help-key-sim-pause = Pause or resume the simulation
 help-key-vehicle-menu = Vehicle menu (hold or tap)

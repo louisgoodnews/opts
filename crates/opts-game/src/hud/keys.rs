@@ -88,4 +88,38 @@ keys! {
     DETAILS_CLOSE = "hud-details-close",
     /// Toast after Copy.
     DETAILS_COPIED = "hud-details-copied",
+    /// Alert: the viewpoint was stored.
+    ALERT_VIEWPOINT_SAVED = "hud-alert-viewpoint-saved",
+    /// Alert: the viewpoint could not be written.
+    ALERT_VIEWPOINT_FAILED = "hud-alert-viewpoint-failed",
+    /// Viewpoint editor: title.
+    VIEWPOINT_TITLE = "hud-viewpoint-title",
+    /// Viewpoint editor: the vehicle's view being edited (`index`, `total`).
+    VIEWPOINT_SUBTITLE = "hud-viewpoint-subtitle",
+    /// Viewpoint editor: sideways row.
+    VIEWPOINT_X = "hud-viewpoint-x",
+    /// Viewpoint editor: height row.
+    VIEWPOINT_Y = "hud-viewpoint-y",
+    /// Viewpoint editor: forward row.
+    VIEWPOINT_Z = "hud-viewpoint-z",
+    /// Viewpoint editor: field of view row.
+    VIEWPOINT_FOV = "hud-viewpoint-fov",
+    /// Viewpoint editor: an offset in centimetres (`value`).
+    VIEWPOINT_OFFSET = "hud-viewpoint-offset",
+    /// Viewpoint editor: an angle in degrees (`value`).
+    VIEWPOINT_ANGLE = "hud-viewpoint-angle",
+    /// Viewpoint editor: the decrease button.
+    VIEWPOINT_DECREASE = "hud-viewpoint-decrease",
+    /// Viewpoint editor: the increase button.
+    VIEWPOINT_INCREASE = "hud-viewpoint-increase",
+    /// Viewpoint editor: reset button.
+    VIEWPOINT_RESET = "hud-viewpoint-reset",
+    /// Viewpoint editor: cancel button.
+    VIEWPOINT_CANCEL = "hud-viewpoint-cancel",
+    /// Viewpoint editor: save button.
+    VIEWPOINT_SAVE = "hud-viewpoint-save",
+    /// Viewpoint editor: keyboard hint.
+    VIEWPOINT_HINT = "hud-viewpoint-hint",
+    /// Viewpoint editor: marker for unsaved changes.
+    VIEWPOINT_UNSAVED = "hud-viewpoint-unsaved",
 }

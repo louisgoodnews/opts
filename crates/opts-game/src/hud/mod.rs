@@ -17,6 +17,7 @@ pub mod parts;
 pub mod profile;
 pub mod protocol;
 pub mod update;
+pub mod viewpoint;
 pub mod values;
 pub mod widget;
 
@@ -63,6 +64,7 @@ impl Plugin for HudPlugin {
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<details::DetailsStore>()
+            .init_resource::<opts_bevy::ViewpointState>()
             .add_message::<RaiseAlert>()
             .add_message::<ClearAlert>()
             .add_message::<ShowDetailsToast>()
@@ -87,6 +89,20 @@ impl Plugin for HudPlugin {
                 )
                     .chain()
                     .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
+                (
+                    viewpoint::sync_panel,
+                    viewpoint::update_panel,
+                    viewpoint::panel_buttons,
+                    viewpoint::panel_tracks,
+                )
+                    .chain()
+                    .run_if(in_state(AppState::InGame))
+                    .run_if(opts_bevy::reporting::not_modal_active)
+                    .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+                    .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
             )
             .add_systems(
                 Update,
