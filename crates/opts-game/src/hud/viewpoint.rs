@@ -122,7 +122,7 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
                 Node {
                     position_type: PositionType::Absolute,
                     right: Val::Px(20.0),
-                    top: Val::Px(140.0),
+                    top: Val::Px(68.0),
                     width: Val::Px(380.0),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(8.0),

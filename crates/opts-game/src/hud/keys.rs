@@ -32,6 +32,16 @@ keys! {
     CLOCK = "hud-clock",
     /// Hints: the most used keys.
     HINT_CONTROLS = "hud-hint-controls",
+    /// Hints in a compact layout: the same keys, shorter.
+    HINT_CONTROLS_COMPACT = "hud-hint-controls-compact",
+    /// Mini map: scale and orientation line (`metres`, `mode`).
+    MINIMAP_CAPTION = "hud-minimap-caption",
+    /// Mini map: north points up.
+    MINIMAP_NORTH_UP = "hud-minimap-north-up",
+    /// Mini map: the heading points up.
+    MINIMAP_HEADING_UP = "hud-minimap-heading-up",
+    /// Widget name.
+    WIDGET_MINIMAP = "hud-widget-minimap",
     /// The pause button of the HUD.
     PAUSE_BUTTON = "hud-pause-button",
     /// Camera label: the human character.

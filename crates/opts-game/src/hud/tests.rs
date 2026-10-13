@@ -9,7 +9,7 @@ use opts_gui::interaction::activation::Activated;
 use opts_gui::interaction::focus::{Focusable, PointerOnly};
 use opts_gui::prelude::*;
 
-use super::build::{HudRoot, HudSlot, HudText, HudWidgetNode};
+use super::build::{HudRoot, HudText, HudWidgetNode};
 use super::fade::{FadeKind, HudFade, CAMERA_LABEL_SECONDS};
 use super::profile::{unplaced, HudProfile, HudProfiles, ProfileProblem};
 use super::update::CameraLabel;
@@ -100,7 +100,7 @@ fn the_tram_profile_has_no_rpm_and_orders_the_brake_before_the_gear() {
     let profiles = HudProfiles::load(None);
     let tram = profiles.get(VehicleKind::Tram).expect("tram");
     let ids: Vec<_> = tram
-        .in_slot(Slot::Instruments)
+        .in_row(widget::Row::Instruments)
         .iter()
         .map(|(_, w)| w.id)
         .collect();
@@ -108,15 +108,33 @@ fn the_tram_profile_has_no_rpm_and_orders_the_brake_before_the_gear() {
 }
 
 #[test]
+fn profiles_written_for_the_old_slots_still_load_into_the_cluster() {
+    let text = r#"HudProfile(kind: Bus, widgets: [
+        (id: "speed", slot: Some(Instruments)), (id: "controls-hint", slot: Some(Hints)),
+        (id: "alerts", slot: Some(Alerts)),
+    ])"#;
+    let (p, problems) = HudProfile::parse(text).expect("parses");
+    assert!(problems.is_empty(), "{problems:?}");
+    assert_eq!(p.widgets.len(), 3);
+    assert!(p
+        .widgets
+        .iter()
+        .all(|e| e.slot == Some(Slot::ClusterBottomLeft)));
+}
+
+#[test]
 fn bad_profile_entries_are_dropped_and_reported() {
     let text = r#"HudProfile(kind: Bus, widgets: [
-        (id: "speed"), (id: "speed"), (id: "nope"), (id: "gear", slot: Some(Hints)),
+        (id: "speed"), (id: "speed"), (id: "nope"), (id: "gear", slot: Some(MiniMap)),
     ])"#;
     let (p, problems) = HudProfile::parse(text).expect("parses");
     assert_eq!(p.widgets.len(), 1);
     assert!(problems.contains(&ProfileProblem::Duplicate("speed".into())));
     assert!(problems.contains(&ProfileProblem::UnknownWidget("nope".into())));
-    assert!(problems.contains(&ProfileProblem::SlotNotAllowed("gear".into(), Slot::Hints)));
+    assert!(problems.contains(&ProfileProblem::SlotNotAllowed(
+        "gear".into(),
+        Slot::MiniMap
+    )));
     assert!(matches!(
         HudProfile::parse("not ron"),
         Err(ProfileProblem::Syntax(_))
@@ -237,15 +255,15 @@ fn switching_a_widget_off_removes_it_and_an_empty_slot_leaves_the_layout() {
     app.update();
     let cluster = app
         .world_mut()
-        .query::<(&HudSlot, &Node)>()
+        .query::<(&build::HudRow, &Node)>()
         .iter(app.world())
-        .find(|(s, _)| s.0 == Slot::Instruments)
+        .find(|(s, _)| s.0 == widget::Row::Instruments)
         .map(|(_, n)| n.display);
     assert_eq!(cluster, Some(Display::None));
 }
 
 #[test]
-fn the_alert_slot_has_a_fixed_height_and_the_alert_cannot_be_switched_off() {
+fn the_alert_row_has_a_fixed_minimum_height_and_the_alert_cannot_be_switched_off() {
     let mut app = app();
     build(&mut app, VehicleKind::Bus);
     let fixed = app
@@ -253,7 +271,9 @@ fn the_alert_slot_has_a_fixed_height_and_the_alert_cannot_be_switched_off() {
         .query::<(&Node, &Children)>()
         .iter(app.world())
         .any(|(n, c)| {
-            n.height == Val::Px(44.0) && c.iter().any(|e| app.world().get::<HudSlot>(e).is_some())
+            n.min_height == Val::Px(44.0)
+                && c.iter()
+                    .any(|e| app.world().get::<build::AlertPill>(e).is_some())
         });
     assert!(fixed, "the alert line sits in a box of fixed height");
     assert!(widget::widget("alerts").is_some_and(|w| w.switch.is_none()));

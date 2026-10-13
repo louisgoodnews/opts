@@ -64,6 +64,18 @@ const UNITS: &[super::EnumOption] = &[
     opt("mph", "set-opt-units-mph"),
 ];
 
+const MINIMAP_ZOOMS: &[super::EnumOption] = &[
+    opt("100", "set-opt-minimap-zoom-100"),
+    opt("200", "set-opt-minimap-zoom-200"),
+    opt("500", "set-opt-minimap-zoom-500"),
+    opt("1000", "set-opt-minimap-zoom-1000"),
+];
+
+const MINIMAP_ORIENTATIONS: &[super::EnumOption] = &[
+    opt("heading", "set-opt-minimap-heading"),
+    opt("north", "set-opt-minimap-north"),
+];
+
 const LOG_LEVELS: &[super::EnumOption] = &[
     opt("error", "set-opt-log-error"),
     opt("warn", "set-opt-log-warn"),
@@ -516,12 +528,41 @@ fn hud() -> Vec<D> {
         .collect()
 }
 
+/// The mini map's own settings (its on/off switch is `hud.minimap`, generated with the widgets).
+fn minimap() -> Vec<D> {
+    vec![
+        D::new(
+            "hud.minimap_zoom",
+            K::Enum(MINIMAP_ZOOMS),
+            "200",
+            C::Interface,
+            160,
+            "set-hud-minimap-zoom",
+            "set-hud-minimap-zoom-desc",
+        )
+        .keywords(&["map", "mini map", "zoom", "scale", "radius"])
+        .since("0.3"),
+        D::new(
+            "hud.minimap_orientation",
+            K::Enum(MINIMAP_ORIENTATIONS),
+            "heading",
+            C::Interface,
+            165,
+            "set-hud-minimap-orientation",
+            "set-hud-minimap-orientation-desc",
+        )
+        .keywords(&["map", "mini map", "north", "heading", "rotate"])
+        .since("0.3"),
+    ]
+}
+
 /// Every built-in descriptor.
 #[must_use]
 pub fn all() -> Vec<D> {
     let mut v = graphics();
     v.extend(interface());
     v.extend(hud());
+    v.extend(minimap());
     v.extend(content());
     v
 }
