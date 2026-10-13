@@ -61,16 +61,14 @@ pub use rail::{
     RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
 };
 pub use reload::ReloadPlan;
-pub use respawn::{
-    handle_vehicle_requests, DespawnVehicleRequest, EntryIndex, ResolvedEntry, SpawnVehicleRequest,
-};
+pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
-pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
+pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle};
 pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -229,6 +227,12 @@ pub struct WorldLoadJob {
     pub camera: Option<CameraSetup>,
     /// `[set_camera_std]` index of the loaded vehicle.
     pub camera_std_index: usize,
+    /// The session starts with the map only (no vehicle is loaded at the start).
+    pub no_vehicle: bool,
+    /// The entry record found by the last [`WorldLoadJob::find_entry_spawn`] search.
+    resolved_entry: Option<(u32, String)>,
+    /// The entry the session started at (`None`: the start fell back to a road spline).
+    start_entry: Option<(u32, String)>,
 }
 
 /// Inputs for [`resolve_session_config`]: CLI overrides plus the menu selection.
@@ -248,4 +252,6 @@ pub struct SessionRequest<'a> {
     pub selected_entry_point: &'a str,
     /// Repaint chosen in the New Game screen (empty: the vehicle's default).
     pub selected_livery: &'a str,
+    /// The session starts with the map only: no vehicle file is resolved and none is warned about.
+    pub no_vehicle: bool,
 }

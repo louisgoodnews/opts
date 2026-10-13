@@ -16,7 +16,7 @@ use super::livery::LiveryState;
 use super::options::{close_options, open_options, OptionsModal};
 use super::planner::{quick_time_of, step_field, validate, PlannerState, PlannerStep, QUICK_TIMES};
 use super::screen::step_invalid;
-use super::step_what::fill_what_detail;
+use super::step_what::{fill_none_detail, fill_what_detail, NONE_ID};
 use super::step_where::{fill_empty_detail, fill_where_detail, StartPointBox, StepList};
 use super::types::{GameCatalogue, NewGameSetup};
 use super::ui::{Act, PlannerAction};
@@ -98,6 +98,11 @@ pub fn handle_actions(
             ),
             PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
             PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
+            PlannerAction::NoVehicle => {
+                env.setup.no_vehicle = true;
+                env.setup.custom_setvars.clear();
+                next(&mut env);
+            }
             PlannerAction::OpenSettings => {
                 // A step into a sub-page: Back returns here.
                 env.navigate.write(Navigate::push("settings"));
@@ -230,7 +235,17 @@ pub fn handle_list_events(
                 };
                 fill_where_detail(&mut commands, detail, &ctx, map);
             }
+            (PlannerStep::What, Some(id)) if id == NONE_ID => {
+                if !setup.no_vehicle {
+                    setup.no_vehicle = true;
+                    setup.custom_setvars.clear();
+                }
+                fill_none_detail(&mut commands, detail);
+            }
             (PlannerStep::What, Some(id)) => {
+                if setup.no_vehicle {
+                    setup.no_vehicle = false;
+                }
                 let Some(vehicle) = catalogue.vehicles.iter().find(|v| &v.id == id) else {
                     continue;
                 };

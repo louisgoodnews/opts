@@ -68,8 +68,35 @@ set-reduced-motion = Bewegung reduzieren
 set-reduced-motion-desc = Übergänge und Animationen erfolgen sofort.
 set-language = Sprache
 set-language-desc = Die Sprache von Menüs und Meldungen. Inhalte aus OMSI behalten ihre eigene Sprache.
-set-opt-lang-en = English
-set-opt-lang-de = Deutsch
+set-language-reload = Sprachen neu laden
+set-language-reload-desc = Sucht den Sprachordner erneut, damit ein neues oder geändertes Sprachpaket ohne Neustart erscheint.
+set-lang-info = { $percent } % übersetzt, von { $authors }
+set-lang-info-unsigned = { $percent } % übersetzt
+set-lang-gaps =
+    { $count ->
+        [one] Ein Text ist noch nicht übersetzt und erscheint auf Englisch.
+       *[other] { $count } Texte sind noch nicht übersetzt und erscheinen auf Englisch.
+    }
+set-lang-outdated = Für eine ältere Fassung der Texte erstellt.
+set-lang-problems =
+    { $count ->
+        [one] Ein Problem in diesem Paket; der fehlerhafte Text erscheint auf Englisch.
+       *[other] { $count } Probleme in diesem Paket; die fehlerhaften Texte erscheinen auf Englisch.
+    }
+set-lang-rtl = Schrift von rechts nach links wird noch nicht unterstützt; diese Sprache lässt sich daher nicht wählen.
+set-lang-fonts = Der mitgelieferten Schrift fehlt { $scripts }; diese Zeichen fehlen in der Anzeige.
+set-lang-folder = Für eine weitere Sprache einen Ordner mit pack.json und Textdateien in { $path } ablegen.
+settings-toast-languages-reloaded =
+    { $count ->
+        [0] Keine Sprachpakete gefunden.
+        [one] Ein Sprachpaket geladen.
+       *[other] { $count } Sprachpakete geladen.
+    }
+settings-toast-languages-problems =
+    { $count ->
+        [one] Ein Problem gefunden; siehe Protokoll oder den Befehl l10n.report.
+       *[other] { $count } Probleme gefunden; siehe Protokoll oder den Befehl l10n.report.
+    }
 set-units = Einheiten
 set-units-desc = Geschwindigkeiten werden in Kilometern oder Meilen pro Stunde angezeigt.
 set-opt-units-kmh = km/h

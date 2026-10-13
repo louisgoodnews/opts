@@ -1,6 +1,6 @@
 # 🎛️ Control Protocol
 
-**Status:** 🟢 Implemented (protocol 1.1; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
+**Status:** 🟢 Implemented (protocol 1.2; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
 
 A running OPTS instance can be driven from outside: a human at a terminal or an AI agent in a loop can operate every screen by id,
 play the simulation (throttle, brake, steering, gear, doors, lights, camera), query state, pause and step
@@ -138,6 +138,10 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `settings.get` | `{key}` | one entry as above; `1004` for an unknown key | P1 |
 | `settings.set` | `{key, value}` | the entry after the change plus `previous`; `value` may be a string, number or boolean and is validated against the setting (`-32602` with what is expected); a planned setting answers `1001` with "Feature not available yet!"; saved at once and announced like a change on the page; **risky settings (window mode, size) skip the 15 s revert prompt** because a script is not a person | P1 |
 | `settings.reset` | `{key}` | the entry after the change plus `previous`; `1004` for an unknown key | P1 |
+| `l10n.languages` | none | `{current, packs_dir, languages:[{code, name, native_name, direction, builtin, from_pack, authors, version, total, translated, copied, missing, percent, errors, warnings, outdated, missing_fonts, selectable, current, dir}], problems:[{folder, issues}]}`: built-in languages and installed [language packs](localisation-packs.md) with completeness | P1 |
+| `l10n.set` | `{code}` | `{current, previous}`; saved like `settings.set`; `1004` for a language that is not installed, `1007` for a right-to-left pack | P1 |
+| `l10n.reload` | none | the `l10n.languages` result plus `{usable, broken, errors}`; scans `<data dir>/lang` again, never fails because of a bad pack | P1 |
+| `l10n.report` | `[code]` | `{language, missing_keys, copied_keys, issues:[{severity, code, file, line, key, message}], issue_lines}` for `code` (default: the current language) | P1 |
 | `vehicle.get` | — | `{x, y, z, heading_deg, speed_kmh}` of the player vehicle (absolute OMSI coordinates) | P1 |
 | `vehicle.script_vars` | `{contains?}` | the player vehicle's script variables `{count, variables, ops_executed}` (substring filter) | P1 |
 | `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |
@@ -230,6 +234,18 @@ The vehicle is operated by *named controls*; the names are discovered with `driv
 
 `camera.set_mode` switches the mode (it presses the number key, so unavailable modes answer `1001`); `camera.look` turns the view (`yaw`/`pitch` in free roam, `dx`/`dy` as mouse motion with the button a person holds in that mode: right in the cockpit, left outside); `camera.move` holds the movement keys of the free camera for `duration_ms`; `camera.teleport` places it absolutely (debug); `camera.get` reads it.
 
+### 4.12a Session vehicles (protocol 1.2)
+
+| Method | Params | Result |
+| :--- | :--- | :--- |
+| `session.vehicles` | - | `{active, count, vehicles:[...], place_label}` the registry of [session vehicles](session-vehicles.md) |
+| `session.spawn` | `vehicle` (absolute `.bus` path or catalogue id/name), `repaint?`, `setvars?` (object), `entry?` (name) or `entry_id?` | `{id, queued:true}`; asynchronous, poll `session.vehicles` |
+| `session.switch` | `id?` or `step?` (1 next, -1 previous) | `{ok, active}` |
+| `session.despawn` | `id?` (default: the active vehicle) | `{ok, active, removed}`; no confirmation |
+| `session.respawn` | `id?` (default: the active vehicle) | `{ok, id}` |
+
+Unknown ids answer `1004`, vehicles that are not in the world `1001`. `hud.state` also reports `place_label` and `has_vehicle`.
+
 ### 4.13 Snapshots and screenshots
 
 `screenshot` saves the window; `snapshot` returns, in one call, the app state, `ui.screen`, `drive.state`, the HUD, camera, simulation clock and the last warnings, optionally with a screenshot and as a file. It is the call an agent makes after every few actions to *see* what happened.
@@ -246,7 +262,7 @@ executes at most 64 commands per frame; the rest wait in the queue (bounded at 1
 
 ## 6. Versioning
 
-`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`). Minor versions only **add** methods, optional parameters and
+`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`; **1.2.0**: the session vehicles `session.vehicles|spawn|switch|despawn|respawn` and `place_label` in `hud.state`). Minor versions only **add** methods, optional parameters and
 result members; clients ignore unknown result members and servers ignore unknown parameters. A breaking change
 bumps the major version and changes the default port. `capabilities` lets a client feature-detect instead of
 comparing versions.

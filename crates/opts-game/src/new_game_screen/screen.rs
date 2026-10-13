@@ -329,7 +329,7 @@ pub fn refresh_chrome(
     for (part, mut text) in &mut summary {
         let new = match part.0 {
             PlannerStep::Where => where_text(&setup),
-            PlannerStep::What => what_text(&catalogue, &setup),
+            PlannerStep::What => what_text(&loc, &catalogue, &setup),
             _ => when_text(&loc, &setup),
         };
         if text.0 != new {

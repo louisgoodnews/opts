@@ -69,6 +69,7 @@ pub fn update_texts(
     session: Res<InGameSessionInfo>,
     loc: Res<Localization>,
     label: Res<CameraLabel>,
+    place: Res<crate::session_vehicles::PlaceLabel>,
     mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
 ) {
     let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
@@ -100,13 +101,21 @@ pub fn update_texts(
                 }
                 loc.t(if on { keys::BRAKE_ON } else { keys::BRAKE_OFF })
             }
-            (Binding::SessionInfo, Part::Value) => loc.t_args(
-                keys::SESSION,
-                &[
-                    ("map".to_owned(), Arg::from(session.map_name.as_str())),
-                    ("entry".to_owned(), Arg::from(session.entry_point.as_str())),
-                ],
-            ),
+            // The map, and the entry point the active vehicle was spawned at while it still stands
+            // there (the place label; none without a vehicle).
+            (Binding::SessionInfo, Part::Value) => match place.0.as_deref() {
+                Some(entry) => loc.t_args(
+                    keys::SESSION,
+                    &[
+                        ("map".to_owned(), Arg::from(session.map_name.as_str())),
+                        ("entry".to_owned(), Arg::from(entry)),
+                    ],
+                ),
+                None => loc.t_args(
+                    keys::SESSION_MAP,
+                    &[("map".to_owned(), Arg::from(session.map_name.as_str()))],
+                ),
+            },
             (Binding::SessionClock, Part::Value) => loc.t_args(
                 keys::CLOCK,
                 &[
@@ -157,6 +166,8 @@ pub fn update_widget_display(
             .switch
             .as_ref()
             .is_none_or(|sw| switch_on(sw, settings.raw(sw.key).as_deref()))
+            // Without a vehicle there are no instruments.
+            && (values.has_vehicle || w.slot != Slot::Instruments)
             && (w.when.kinds.is_empty() || w.when.kinds.contains(&values.kind))
             && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()));
         let display = if on { Display::Flex } else { Display::None };

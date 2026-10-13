@@ -65,3 +65,4 @@
 #![deny(unsafe_code)]
 
 pub mod formats;
+pub mod l10n;

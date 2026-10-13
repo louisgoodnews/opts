@@ -30,8 +30,21 @@ pub fn vehicle_name(catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
         .map_or_else(|| setup.selected_vehicle.clone(), |v| v.full_name.clone())
 }
 
-/// The livery in use: the chosen one or the vehicle's default (may be empty).
+/// The vehicle line of a drive: the vehicle's name, or *No vehicle* for a map-only start.
+pub fn vehicle_line(loc: &Localization, catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
+    if setup.no_vehicle {
+        loc.t("wiz-no-vehicle")
+    } else {
+        vehicle_name(catalogue, setup)
+    }
+}
+
+/// The livery in use: the chosen one or the vehicle's default (may be empty; always empty
+/// without a vehicle).
 pub fn livery_name(catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
+    if setup.no_vehicle {
+        return String::new();
+    }
     if !setup.selected_livery.is_empty() {
         return setup.selected_livery.clone();
     }
@@ -51,8 +64,8 @@ pub fn where_text(setup: &NewGameSetup) -> String {
 }
 
 /// Part ②: vehicle and livery.
-pub fn what_text(catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
-    let name = vehicle_name(catalogue, setup);
+pub fn what_text(loc: &Localization, catalogue: &GameCatalogue, setup: &NewGameSetup) -> String {
+    let name = vehicle_line(loc, catalogue, setup);
     let livery = livery_name(catalogue, setup);
     if livery.is_empty() {
         name
@@ -90,7 +103,7 @@ mod tests {
             ..NewGameSetup::default()
         };
         assert_eq!(where_text(&s), "Berlin · Rathaus");
-        assert_eq!(what_text(&cat, &s), "MAN SD77 · Beige");
+        assert_eq!(what_text(&loc, &cat, &s), "MAN SD77 · Beige");
         assert_eq!(date_text(&loc, &s), "9 October 1989");
         assert_eq!(when_text(&loc, &s), "9 October 1989 08:30 · Clear day");
         let de = Localization::new("de");

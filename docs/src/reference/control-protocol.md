@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.1.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.2.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -81,6 +81,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `hud.state` | - | 1.0 | What the HUD shows: widgets, texts, alert, speed, gear |
 | [`vehicle.get`](#vehicleget) | - | 1.0 | Position, heading and speed of the player vehicle (absolute OMSI coordinates) |
 | `vehicle.script_vars` | `contains?` (string) | 1.0 | Script variables of the player vehicle (substring filter) |
+| [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
 | `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
 
 ### `vehicle.get`
@@ -88,6 +89,14 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 Position, heading and speed of the player vehicle (absolute OMSI coordinates).
 
 **Result:** `{x, y, z, heading_deg, speed_kmh}`
+
+### `session.vehicles`
+
+The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker.
+
+**Result:** `{active, count, vehicles:[{id, name, catalogue_id, repaint, setvars, spawn_entry_name, spawn_point, lifecycle (spawning|alive|despawned|failed), despawn_reason, error, active, trailers}], place_label}`
+
+The registry of the vehicles the user spawned (the wizard's choice, the pause menu, `session.spawn`); parked and AI vehicles are not listed. Despawned vehicles stay in the list as history. `place_label` is what the HUD shows for the active vehicle (the entry point it was spawned at) or `null`.
 
 ## Group `ui`
 
@@ -245,6 +254,10 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
 | [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
 | [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
+| [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
+| [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
+| [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
+| [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
 | [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...) |
 
 ### `scene.load_map`
@@ -275,6 +288,38 @@ Move the free camera forward/right/up for a duration, like the movement keys.
 
 Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`.
 
+### `session.spawn`
+
+Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists.
+
+**Result:** `{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)
+
+`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on).
+
+### `session.switch`
+
+Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow).
+
+**Result:** `{ok, active}`
+
+`id` names the vehicle; `step` (1 next, -1 previous) cycles through the living ones like the F8 key. The vehicle that was active keeps its state with the parking brake on. Answers `1004` for an unknown id and `1001` when the vehicle is not in the world.
+
+### `session.despawn`
+
+Remove a session vehicle with its trailers (default: the active one).
+
+**Result:** `{ok, active, removed}`: the vehicle that is active afterwards (`null`: none, free camera) and the entities removed
+
+No confirmation (the confirmation dialog belongs to the pause menu). Despawning the active vehicle makes the most recently spawned other vehicle active, or none.
+
+### `session.respawn`
+
+Put a session vehicle back at its spawn point, at rest (default: the active one).
+
+**Result:** `{ok, id}`
+
+Shows the HUD place label again. Answers `1001` when the vehicle is not in the world.
+
 ### `menu.do`
 
 Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...).
@@ -289,6 +334,47 @@ Queues one command of the vehicle menu (see the in-game vehicle menu page); read
 | `settings.get` | `key` (string) | 1.0 | Value, default and options of one setting |
 | `settings.set` | `key` (string)<br>`value` (string) | 1.0 | Change a setting (validated like the settings page, saved) |
 | `settings.reset` | `key` (string) | 1.0 | Restore the default of a setting |
+
+## Group `l10n`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`l10n.languages`](#l10nlanguages) | - | 1.1 | List the languages (built in and installed packs) with completeness, authors and problems |
+| [`l10n.set`](#l10nset) | `code` (string) | 1.1 | Switch the interface language (saved like a setting) |
+| [`l10n.reload`](#l10nreload) | - | 1.1 | Scan the language folder again (new or edited packs) |
+| [`l10n.report`](#l10nreport) | `code?` (string) | 1.1 | Completeness and every finding of one language |
+
+### `l10n.languages`
+
+List the languages (built in and installed packs) with completeness, authors and problems.
+
+**Result:** `{current, packs_dir, languages:[{code, name, native_name, direction, builtin, from_pack, authors, version, total, translated, copied, missing, percent, errors, warnings, outdated, missing_fonts, selectable, current, dir}], problems:[{folder, issues}]}`
+
+`translated` counts messages that are really translated, `copied` those that are still the English text, `missing` those that show English. `selectable` is false for right-to-left packs. `problems` lists pack folders that cannot be used (no valid `pack.json`). Packs are files in `<data dir>/lang/<code>/`, see the localisation packs page.
+
+### `l10n.set`
+
+Switch the interface language (saved like a setting).
+
+**Result:** `{current, previous}`
+
+`1004` for a language that is not installed, `1007` for a right-to-left pack (not supported yet). Stores `interface.language` and updates every text at once.
+
+### `l10n.reload`
+
+Scan the language folder again (new or edited packs).
+
+**Result:** the `l10n.languages` result plus `{usable, broken, errors}`
+
+The same as the *Reload languages* button. A pack that cannot be used or a file with errors never fails the call: read `problems` and `l10n.report`. If the active language is gone the game shows English.
+
+### `l10n.report`
+
+Completeness and every finding of one language.
+
+**Result:** `{language, missing_keys, copied_keys, issues:[{severity, code, file, line, key, message}], issue_lines}`
+
+Without `code` the current language. `issue_lines` are the same findings as `file:line: error[code]: message` text, as `opts-tools l10n check` prints them.
 
 ## Group `reload`
 
