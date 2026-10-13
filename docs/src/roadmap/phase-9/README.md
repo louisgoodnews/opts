@@ -45,7 +45,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0075 — HUD Place Label from the Spawn Entry Point](M-0075.md) — ✅ Implemented 2026-10-13 (R-12)
 - [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — ✅ Implemented 2026-10-13 (R-13)
 - [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 🟡 Implemented (R-25); trial in the running app with a real second language open
-- [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — 🟡 Scrolling fixed, search planned (R-24, R-28)
+- [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — ✅ Implemented on `feat/combobox-search` (R-24, R-28, R-29)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -108,6 +108,7 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 - [ ] **🌍 Language Packs** — [M-0083](M-0083.md)
   - [x] Contributors and AI agents add languages as validated files in the user folder (`<data>/lang/<code>/`); `opts-tools l10n export|check|new|import|stats`; discovery at start and on reload; language list with completeness; `l10n.*` control methods (R-25, 2026-10-13, `feat/language-packs`, [architecture](../../architecture/localisation-packs.md)).
   - [ ] Trial in the running app with a real second language; right-to-left layout and fonts beyond Latin, Greek and Cyrillic.
-- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](M-0086.md)
+- [x] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
-  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
+  - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
+  - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).

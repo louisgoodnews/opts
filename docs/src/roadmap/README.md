@@ -332,9 +332,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🌍 Language Packs** — [M-0083](phase-9/M-0083.md)
   - [x] Contributors and AI agents add languages as validated files in the user folder (`<data>/lang/<code>/`); `opts-tools l10n export|check|new|import|stats`; discovery at start and on reload; language list with completeness; `l10n.*` control methods (R-25, 2026-10-13, `feat/language-packs`, [architecture](../architecture/localisation-packs.md)).
   - [ ] Trial in the running app with a real second language; right-to-left layout and fonts beyond Latin, Greek and Cyrillic.
-- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](phase-9/M-0086.md)
+- [x] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](phase-9/M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
-  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
+  - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
+  - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
 
 ---
 

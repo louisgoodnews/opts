@@ -148,6 +148,7 @@ const LITERAL_OK_FILES: &[&str] = &[
     "patterns/glyphs.rs",  // icon code points
     "l10n/mod.rs",         // `⟦key⟧` marker and the env name
     "l10n/pseudo.rs",      // transformation tables
+    "l10n/fold.rs",        // diacritics folding tables
     "l10n/fluent.rs",      // parser
 ];
 

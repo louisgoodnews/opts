@@ -147,6 +147,10 @@ impl Plugin for OptsGuiPlugin {
             )
                 .after(ActivationSet),
         );
+        app.add_systems(
+            Update,
+            crate::components::combobox::combobox_search_systems().after(ActivationSet),
+        );
     }
 }
 

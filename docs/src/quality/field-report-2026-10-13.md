@@ -48,11 +48,12 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-24 | *Settings → Content* shows '679543 Dateien, 75313 Karten, Fahrzeuge und weitere Inhalte'; '75K maps does not add up' (are those tiles?) | settings | [M-0086](../roadmap/phase-9/M-0086.md) | 🔎 analysed: the number is the total of catalogue entities of all kinds (not maps, not tiles); wording misleading, breakdown to be shown |
+| R-24 | *Settings → Content* shows '679543 Dateien, 75313 Karten, Fahrzeuge und weitere Inhalte'; '75K maps does not add up' (are those tiles?) | settings | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ fixed on `feat/combobox-search`: the number was the total of catalogue entities of all kinds (not maps, not tiles); Settings → Content now shows maps, vehicles, scenery objects, splines and other entries (maps and vehicles equal Home) and explains files versus entries |
 | R-25 | A system where **localisation can be added by other human or AI contributors** conveniently, with JSON or other formatted files | UI / i18n | [M-0083](../roadmap/phase-9/M-0083.md) | 📝 open |
 | R-26 | **Viewpoint editor** (Tab) in the driver's view: camera height, X/Y/Z position and FOV, saved per vehicle and loaded as that view's default | camera | [M-0084](../roadmap/phase-4/M-0084.md) | 🟡 core done |
 | R-27 | **Research reflections** in mirrors and glass, and in future wet surfaces | rendering | [M-0085](../roadmap/phase-5/M-0085.md) (branch `research/reflections`) | 🔬 started |
-| R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | scroll fixed on `fix/dropdown-scroll`; search open |
+| R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ scroll fixed on `fix/dropdown-scroll`; search field added on `feat/combobox-search` (menus with more than 8 options) |
+| R-29 | Next to *Scan now* show **when the last scan was** and a green / yellow / red status saying whether a manual scan is recommended | settings | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ done on `feat/combobox-search`: status chip (icon + word + reason), rules in M-0086 |
 
 ## Suggestion (2026-10-13, fifth message)
 
