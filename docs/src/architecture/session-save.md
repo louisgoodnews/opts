@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟢 Implemented (2026-10-13), live verification in the [progress file](../dev/progress/session-save.md) |
+| **Status** | 🟢 Implemented (2026-10-13), live verification in the progress file `docs/dev/progress/session-save.md` |
 | **Milestone** | [M-0069](../roadmap/phase-10/M-0069.md) (field report R-05) |
 | **Decision** | [ADR-0011](../adr/0011-session-save-format.md) |
 | **Code** | `crates/opts-game/src/save/` (`container.rs`, `store.rs`, `registry.rs`, `sections.rs`, `ops.rs`, `restore.rs`, `quick.rs`, `fingerprint.rs`, `ui/`), `session_vehicles/state.rs`, `control_save.rs` |
