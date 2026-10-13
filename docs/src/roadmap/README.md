@@ -327,6 +327,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [ ] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](phase-10/M-0066.md)
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
+- [ ] **🔬 UV Decoder Fleet Validation** — [M-0079](phase-10/M-0079.md) — ⏸ deferred by the project lead 2026-10-13
+  - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
 - [ ] **🌊 Water Rendering** — [M-0067](phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [ ] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)
