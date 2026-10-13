@@ -303,7 +303,7 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
         Text::new(""),
         L10nKey("scan-chip"),
         TextColor::default(),
-        TypeStyleToken(TypeScale::LabelLarge),
+        TypeStyleToken(TypeScale::BodyMedium),
         ForegroundRole(fg),
         ScanChipLabel,
         ChildOf(chip),
@@ -318,6 +318,13 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
         ChildOf(wrap),
     ));
 }
+
+type ReasonQuery<'w, 's> = Query<
+    'w,
+    's,
+    (&'static mut L10nKey, &'static mut L10nArgs),
+    (With<ScanChipReason>, Without<ScanChipLabel>),
+>;
 
 type ChipParts<'w, 's> = (
     Query<
@@ -358,10 +365,7 @@ pub fn refresh_scan_chip(
     mut since: Local<f32>,
     mut last: Local<Option<(ScanInputs, String)>>,
     mut parts: ChipParts,
-    mut reasons: Query<
-        (&mut L10nKey, &mut L10nArgs),
-        (With<ScanChipReason>, Without<ScanChipLabel>),
-    >,
+    mut reasons: ReasonQuery,
 ) {
     *since += time.delta_secs();
     if last.is_some() && *since < 3.0 && !loc.is_changed() {
@@ -382,7 +386,7 @@ pub fn refresh_scan_chip(
     let (bg, fg, glyph) = look(status.level);
     let when = inputs
         .last_scan
-        .map_or_else(|| loc.t("scan-never"), |t| super::info::local_time(t));
+        .map_or_else(|| loc.t("scan-never"), super::info::local_time);
     let reason = reason_key(status.reason);
     for (mut b, mut tip) in &mut parts.0 {
         b.0 = bg;
