@@ -859,6 +859,12 @@ pub fn load_player_vehicle(
         crate::session_vehicles::SessionVehicle(session_id),
         InGameEntity,
     ));
+    // The catalogue identity of the vehicle keys its stored viewpoints.
+    if let Some(key) = crate::viewpoints::key_of_bus_file(&bus_path) {
+        commands
+            .entity(root)
+            .insert(crate::viewpoints::ViewpointKey(key));
+    }
     if activate {
         commands.entity(root).insert(PlayerVehicle);
     }

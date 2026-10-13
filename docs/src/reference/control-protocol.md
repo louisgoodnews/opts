@@ -254,6 +254,10 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
 | [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
 | [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
+| [`camera.viewpoint.get`](#cameraviewpointget) | - | 1.2 | The driver's-view viewpoint: offsets, field of view, stored value, editor state |
+| [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
+| [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
+| [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
@@ -287,6 +291,38 @@ Move the free camera forward/right/up for a duration, like the movement keys.
 **Result:** `{ok, mode, duration_ms}`
 
 Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`.
+
+### `camera.viewpoint.get`
+
+The driver's-view viewpoint: offsets, field of view, stored value, editor state.
+
+**Result:** `{editing, dirty, row, vehicle, camera, cameras, viewpoint:{x,y,z,fov_deg}, stored:{x,y,z,fov_deg}, fov_deg, default_fov_deg, limits, file}`
+
+Offsets are metres from the vehicle's own `[add_camera_driver]` eye: `x` right, `y` up, `z` forward (limit +-0.6). `fov_deg` in the viewpoint is `null` while the vehicle's own field of view is used; the top-level `fov_deg` is the one shown. `vehicle` is the catalogue identity (the `.bus` file stem, lower case) the viewpoint is stored under, `camera` the driver camera index.
+
+### `camera.viewpoint.set`
+
+Change the driver's-view viewpoint live (opens the editor; not stored until saved).
+
+**Result:** the `camera.viewpoint.get` result
+
+Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6 m, `fov_deg` 30..120) instead of being clamped. Answers `1001` unless the driver's view (`camera.set_mode cockpit`) is active and `1009` while a dialog or menu is open. Equivalent to the editor panel: the camera shows the change at once; `camera.viewpoint.save` stores it, leaving the view or changing the sub camera cancels it.
+
+### `camera.viewpoint.save`
+
+Store the shown viewpoint for this vehicle and camera and close the editor.
+
+**Result:** the `camera.viewpoint.get` result
+
+Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active.
+
+### `camera.viewpoint.reset`
+
+Back to the vehicle's own viewpoint and remove the stored one.
+
+**Result:** the `camera.viewpoint.get` result
+
+Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active.
 
 ### `session.spawn`
 

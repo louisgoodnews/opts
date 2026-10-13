@@ -2,7 +2,7 @@
 
 | Page | Content |
 | :--- | :--- |
-| [Field report 2026-10-13](field-report-2026-10-13.md) | Twenty-eight items reported by the project lead after hands-on testing, each traced to a milestone (R-01 … R-28). |
+| [Field report 2026-10-13](field-report-2026-10-13.md) | Forty-three items reported by the project lead after hands-on testing, each traced to a milestone (R-01 … R-43). |
 | [Content issue registry](content-issue-registry.md) | Splines, scenery objects, meshes, vehicle scripts, vehicles and textures that log a warning or an error, with counts, context and status. Generated; the full list is the [CSV](content-issue-registry.csv). |
 
 ## How the registry is built

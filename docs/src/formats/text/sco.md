@@ -364,6 +364,8 @@ RPB Haupt
 
 Reading: 43 s state 6, 3 s state 10, 52 s state 0; total ≈ 98 s (the group cycle is 99.99 s).
 
+**Programs share the group's period (M-0025 follow-up, 2026-10-13, census of 5,012 groups).** Only 4,805 programs sum exactly to their group's cycle time; 21,404 are *shorter* (typically ending in a state `0` phase, very often with duration `0` = "the rest of the cycle") and 1,267 in 946 groups are *longer* (median excess 1 s, p90 21 s, max 100 s). Final declared states: `0` 20,621×, `6` 3,424×, `12` 1,455×, `3` 659×, `9` 421×. Example `Kreuz_Heer_Wilhelm.sco` (group 83 s): `Main` 3/2 s, 6/40 s, 9/3 s, 0/0 (sum 45); `Side` 0/54 s, 3/2, 6/21, 9/3, 0/0 (sum 80); `Main_Ped` 6/30, 0/0 (sum 30); `Side_Ped` 0/54, 6/18, 0/0 (sum 72). Looping each program on its own sum (what OPTS did before) drifts the programs apart within a minute, so pedestrians and cars got green together; on one 83 s clock `Side` and `Side_Ped` start together at 54 s and `Main` is red for them. Rule used: **period = max(group cycle, longest program sum)**; a program shorter than the period **holds the state of its last declared phase** to the period's end. For programs *longer* than the cycle OMSI's behaviour is unverified ❓ (truncation at the cycle would be the alternative; OPTS keeps every phase). Regression test: `crates/opts-traffic/tests/signal_groups.rs`.
+
 The `[visible]` keyword binds a mesh to the light variable for signal heads:
 
 ```
@@ -531,7 +533,7 @@ streetlight_large.o3d
 | Short `[path]` | Fill missing values with `0`; `WARN`. |
 | `[use_traffic_light]` index out of range | `WARN`; treat the path as uncontrolled. |
 | Duplicate `[friendlyname]` / `[groups]` | Last wins. |
-| Phases not summing to the group cycle time | Valid; use the sum of phases and `WARN`. |
+| Phases not summing to the group cycle time | Valid, and the normal case. All programs of a group run on **one period** (see below): the group cycle time, or the longest program when that is longer. |
 | Encoding errors | Decode leniently, never fail. |
 
 ---

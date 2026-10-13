@@ -132,6 +132,7 @@ Errors follow one template and one of three placements.
 ## 7. Text, lists, scrolling
 
 - **Text fields** support typing with the platform's layout and IME, caret movement, selection, copy and paste, and clear (×); the Linux-only layout detector goes away (F11). Search filters as you type with a 150 ms debounce and keeps the selection when still visible.
+- **Drop-down menus** with more than 8 options (configurable per control) put a search field at the top of the open menu, focused when the menu opens. It filters as you type (case- and diacritics-insensitive, all words must match, 150 ms debounce), keeps the selection, shows a *No match* row and a clear button; Down moves into the list, Enter picks the first match, Esc clears the filter first and closes the menu second. The selected option is scrolled into view when the menu opens ([M-0086](M-0086.md)).
 - **Long lists are virtualised**: only visible rows exist as entities (today 956 vehicle cards are spawned and hidden); keyboard type-ahead and a scroll bar with a minimum 24 px thumb; wheel, drag and keyboard scrolling all work.
 - **Selection** is a single, obvious state (fill + marker); double-click or Enter activates; the detail panel follows the selection without a second click.
 - **Empty states** explain and offer an action ("No vehicles match 'xyz' — clear the filter").

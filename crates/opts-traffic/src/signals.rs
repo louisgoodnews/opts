@@ -60,6 +60,23 @@ impl SignalProgram {
         })
     }
 
+    /// Like [`new`](Self::new), but the program repeats every `period` seconds (the cycle time
+    /// of its `[traffic_lights_group]`): the last phase's state is held until the period ends.
+    /// Programs of one group thereby stay in step although their phase sums differ. A `period`
+    /// shorter than the phases is ignored (nothing is cut off).
+    #[must_use]
+    pub fn in_period(phases: Vec<(u32, f64)>, period: f64, approach: f64) -> Option<Self> {
+        let last = phases.last().map(|p| p.0);
+        let mut p = Self::new(phases, approach)?;
+        if let (Some(state), true) = (last, period > p.cycle) {
+            // Held to the end of the period: the last *declared* phase (often `0` seconds,
+            // meaning "the rest of the cycle").
+            p.phases.push((state, period - p.cycle));
+            p.cycle = period;
+        }
+        Some(p)
+    }
+
     /// Length of one cycle in seconds.
     #[must_use]
     pub fn cycle(&self) -> f64 {
@@ -76,6 +93,7 @@ impl SignalProgram {
             }
             x -= dur;
         }
+        // Past the last phase (the program is shorter than its period): hold its final state.
         self.phases.last().map_or(12, |p| p.0)
     }
 
@@ -89,6 +107,26 @@ impl SignalProgram {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn programs_of_a_group_share_the_period() {
+        // Car green 10..20 s, pedestrian green 30..40 s, both in a 60 s group; the pedestrian
+        // program sums to only 40 s and holds its final red.
+        let car = SignalProgram::in_period(vec![(0, 10.0), (6, 10.0), (0, 40.0)], 60.0, 0.0);
+        let ped = SignalProgram::in_period(vec![(0, 30.0), (6, 10.0), (0, 0.0)], 60.0, 0.0);
+        let (car, ped) = (car.unwrap(), ped.unwrap());
+        assert_eq!(ped.cycle(), 60.0);
+        for k in 0..3 {
+            let base = 60.0 * f64::from(k);
+            for t in 0..60 {
+                let t = base + f64::from(t) + 0.5;
+                let both = car.aspect_at(t) == Aspect::Go && ped.aspect_at(t) == Aspect::Go;
+                assert!(!both, "t={t}");
+            }
+            assert_eq!(ped.state_at(base + 45.0), 0, "final state held");
+            assert_eq!(ped.state_at(base + 35.0), 6);
+        }
+    }
 
     #[test]
     fn state_ranges_follow_the_signal_head_script() {

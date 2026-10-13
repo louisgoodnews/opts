@@ -5,6 +5,12 @@
 pub const CLEAR: &str = "widget-clear";
 /// Default placeholder of a combobox.
 pub const COMBOBOX_PLACEHOLDER: &str = "widget-combobox-placeholder";
+/// Placeholder of the search field of a long combobox menu.
+pub const COMBOBOX_SEARCH: &str = "widget-combobox-search";
+/// Accessible name of that search field.
+pub const COMBOBOX_SEARCH_LABEL: &str = "widget-combobox-search-label";
+/// Row shown when the search matches no option.
+pub const COMBOBOX_NO_MATCH: &str = "widget-combobox-no-match";
 /// The red marker text.
 pub const NOT_AVAILABLE: &str = "widget-not-available-yet";
 /// Tooltip text of a not-yet control (variable: `milestone`).
@@ -54,6 +60,9 @@ pub mod theme {
 pub const ALL: &[&str] = &[
     CLEAR,
     COMBOBOX_PLACEHOLDER,
+    COMBOBOX_SEARCH,
+    COMBOBOX_SEARCH_LABEL,
+    COMBOBOX_NO_MATCH,
     NOT_AVAILABLE,
     NOT_AVAILABLE_REASON,
     ITEMS,

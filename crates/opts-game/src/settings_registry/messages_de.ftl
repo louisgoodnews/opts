@@ -163,7 +163,8 @@ settings-keep = Behalten
 settings-revert = Zurück
 
 settings-info-theme-now = Gerade wird das Farbschema „{ $theme }“ angezeigt.
-settings-info-catalogue = Katalog: { $files } Dateien, { $entities } Karten, Fahrzeuge und weitere Inhalte gefunden.
+settings-info-catalogue = Katalog: { $maps } Karten, { $vehicles } Fahrzeuge, { $scenery } Szenerieobjekte, { $splines } Splines und { $other } weitere Einträge (Anhänger und KI-Fahrzeuge, Schriften, Menschen und mehr).
+settings-info-catalogue-total = Insgesamt { $entities } Einträge, aufgebaut aus { $files } Dateien. Eine Datei ist eine Datei auf der Festplatte; ein Eintrag ist eine Sache aus einer oder mehreren Dateien, etwa eine Karte oder ein Fahrzeug. Karten und Fahrzeuge werden gezählt wie auf der Startseite.
 settings-info-last-scan = Letzte Suche: { $when }.
 settings-info-never-scanned = Der Katalog wurde noch nicht durchsucht.
 settings-info-cache = Texturspeicher: { $files } Dateien, { $size } MB.
@@ -231,3 +232,17 @@ hw-dlss-no-os_unsupported = auf diesem Betriebssystem nicht möglich
 hw-dlss-no-backend_unsupported = mit dieser Grafikschnittstelle nicht möglich
 hw-dlss-no-no_ray_tracing = nicht möglich, die Karte hat kein Raytracing
 hw-dlss-no-no_runtime = nicht möglich, die DLSS-Dateien fehlen
+
+scan-never = nie
+scan-chip = { $status } · Letzte Suche: { $when }
+scan-level-good = Aktuell
+scan-level-recommended = Suche empfohlen
+scan-level-needed = Suche nötig
+scan-why-recent = Vor Kurzem durchsucht, und der OMSI-Ordner hat sich seitdem nicht geändert. Nichts zu tun.
+scan-why-older = Die letzte Suche ist älter als dein automatisches Suchintervall ({ $days } Tag(e)). Mit „Jetzt suchen“ werden neue Inhalte gefunden.
+scan-why-changed = Der OMSI-Ordner wurde nach der letzten Suche verändert, vermutlich gibt es neue oder entfernte Inhalte. Drücke „Jetzt suchen“.
+scan-why-running = Im Hintergrund läuft eine Suche. Die Zahlen unten aktualisieren sich danach.
+scan-why-never = Der OMSI-Ordner wurde noch nicht durchsucht. Drücke „Jetzt suchen“.
+scan-why-failed = Die letzte Suche ist fehlgeschlagen. Prüfe oben den OMSI-Ordner und drücke dann „Jetzt suchen“.
+scan-why-empty = Die letzte Suche hat keine Karten oder Fahrzeuge gefunden. Prüfe oben den OMSI-Ordner und drücke dann „Jetzt suchen“.
+scan-why-folder-missing = Der OMSI-Ordner ist nicht festgelegt oder nicht auffindbar. Wähle ihn oben aus und drücke dann „Jetzt suchen“.

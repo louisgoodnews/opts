@@ -118,6 +118,10 @@ visible alert and the developer panel; `hud.alert {severity}` / `{clear: true}` 
 alert; `hud.toast {message, details}` spawns a details toast. They exist because the HUD has no
 focusable elements, so `ui.tree` alone cannot show what it says.
 
+## 8a. Viewpoint panel
+
+The viewpoint editor of the driver's view (Tab, M-0084) draws its panel in this look (`hud/viewpoint.rs`): instrument tokens, `PointerOnly` buttons, spawned only while the editor is open, no focus taken. See [camera system](camera-system.md).
+
 ## 9. Not done yet
 
 - The *Help and controls* overlay generated from the bindings and the vehicle type, and *Pause → Vehicle*

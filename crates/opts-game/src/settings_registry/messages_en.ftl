@@ -164,7 +164,8 @@ settings-keep = Keep
 settings-revert = Go back
 
 settings-info-theme-now = Right now the { $theme } theme is shown.
-settings-info-catalogue = Catalogue: { $files } files, { $entities } maps, vehicles and other items found.
+settings-info-catalogue = Catalogue: { $maps } maps, { $vehicles } vehicles, { $scenery } scenery objects, { $splines } splines and { $other } other entries (trailers and AI vehicles, fonts, humans and more).
+settings-info-catalogue-total = { $entities } entries in total, built from { $files } files. A file is one file on disk; an entry is one thing made of one or more files, such as a map or a vehicle. Maps and vehicles are counted as on the Home screen.
 settings-info-last-scan = Last scan: { $when }.
 settings-info-never-scanned = The catalogue has not been scanned yet.
 settings-info-cache = Texture cache: { $files } files, { $size } MB.
@@ -232,3 +233,17 @@ hw-dlss-no-os_unsupported = not possible on this operating system
 hw-dlss-no-backend_unsupported = not possible with this graphics interface
 hw-dlss-no-no_ray_tracing = not possible, the card has no ray tracing
 hw-dlss-no-no_runtime = not possible, the DLSS files are missing
+
+scan-never = never
+scan-chip = { $status } · Last scan: { $when }
+scan-level-good = Up to date
+scan-level-recommended = Scan recommended
+scan-level-needed = Scan needed
+scan-why-recent = Scanned recently and the OMSI folder has not changed since. Nothing to do.
+scan-why-older = The last scan is older than your automatic scan interval ({ $days } day(s)). Press "Scan now" to pick up new content.
+scan-why-changed = The OMSI folder was modified after the last scan, so there is probably new or removed content. Press "Scan now".
+scan-why-running = A scan is running in the background. The numbers below update when it is done.
+scan-why-never = The OMSI folder has not been scanned yet. Press "Scan now".
+scan-why-failed = The last scan failed. Check the OMSI folder above, then press "Scan now".
+scan-why-empty = The last scan found no maps or vehicles. Check the OMSI folder above, then press "Scan now".
+scan-why-folder-missing = The OMSI folder is not set or cannot be found. Choose it above, then press "Scan now".
