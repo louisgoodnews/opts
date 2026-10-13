@@ -53,7 +53,11 @@ const SETTINGS: &str = "menu-settings";
 fn a_pack_adds_a_language_and_gaps_show_english() {
     let root = scratch("add");
     write(&root, "fr/pack.json", &meta("fr", "French", "Français", ""));
-    write(&root, "fr/gui.ftl", "widget-clear = Effacer\nmenu-settings = Paramètres\n");
+    write(
+        &root,
+        "fr/gui.ftl",
+        "widget-clear = Effacer\nmenu-settings = Paramètres\n",
+    );
     let mut loc = full_localization();
     assert_eq!(loc.load_packs(&root), 1);
     loc.set_locale("fr");
@@ -61,7 +65,11 @@ fn a_pack_adds_a_language_and_gaps_show_english() {
     assert_eq!(loc.t(SETTINGS), "Paramètres");
     // Not translated: English, per key, and the gap is counted.
     assert_eq!(loc.t("menu-shutdown"), "Shutdown");
-    let fr = loc.languages().into_iter().find(|l| l.code == "fr").expect("fr listed");
+    let fr = loc
+        .languages()
+        .into_iter()
+        .find(|l| l.code == "fr")
+        .expect("fr listed");
     assert_eq!(fr.native_name, "Français");
     assert_eq!(fr.translated, 2);
     assert_eq!(fr.missing, fr.total - 2);
@@ -86,8 +94,16 @@ fn a_pack_with_a_built_in_tag_overrides_single_messages() {
     loc.load_packs(&root);
     loc.set_locale("de");
     assert_eq!(loc.t(CLEAR), "Leeren");
-    assert_eq!(loc.t(SETTINGS), before.format_in("de", SETTINGS), "the rest stays German");
-    let de = loc.languages().into_iter().find(|l| l.code == "de").expect("de");
+    assert_eq!(
+        loc.t(SETTINGS),
+        before.format_in("de", SETTINGS),
+        "the rest stays German"
+    );
+    let de = loc
+        .languages()
+        .into_iter()
+        .find(|l| l.code == "de")
+        .expect("de");
     assert!(de.builtin && de.from_pack);
     assert!(de.percent() > 95.0);
     // Dropping the packs restores the shipped text.
@@ -124,14 +140,14 @@ fn broken_files_never_crash_and_good_messages_survive() {
     assert_eq!(usable, 1, "only xx is usable");
     loc.set_locale("xx");
     assert_eq!(loc.t(CLEAR), "Gut");
-    assert_eq!(loc.t("widget-not-available-yet"), "Feature not available yet!", "skipped: English");
+    assert_eq!(
+        loc.t("widget-not-available-yet"),
+        "Feature not available yet!",
+        "skipped: English"
+    );
     assert_eq!(loc.t("menu-shutdown"), "Shutdown");
     let r = loc.language_report("xx").expect("report");
-    let codes: Vec<(&str, &str)> = r
-        .issues
-        .iter()
-        .map(|i| (i.file.as_str(), i.code))
-        .collect();
+    let codes: Vec<(&str, &str)> = r.issues.iter().map(|i| (i.file.as_str(), i.code)).collect();
     for want in [
         ("a.ftl", "syntax"),
         ("a.ftl", "unknown-key"),
@@ -143,7 +159,11 @@ fn broken_files_never_crash_and_good_messages_survive() {
     ] {
         assert!(codes.contains(&want), "{want:?} not in {codes:?}");
     }
-    let syntax = r.issues.iter().find(|i| i.code == "syntax" && i.file == "a.ftl").expect("syntax");
+    let syntax = r
+        .issues
+        .iter()
+        .find(|i| i.code == "syntax" && i.file == "a.ftl")
+        .expect("syntax");
     assert_eq!(syntax.line, Some(2), "line of the faulty message");
     assert_eq!(syntax.key.as_deref(), Some("widget-not-available-yet"));
     let problems: Vec<String> = loc.pack_problems().into_iter().map(|(f, _)| f).collect();
@@ -162,7 +182,11 @@ fn reload_picks_up_changes_and_a_removed_active_pack_falls_back_to_english() {
     let root = scratch("reload");
     let mut loc = full_localization();
     assert_eq!(language_packs::scan_dir(&mut loc, &root).usable, 0);
-    write(&root, "it/pack.json", &meta("it", "Italian", "Italiano", ""));
+    write(
+        &root,
+        "it/pack.json",
+        &meta("it", "Italian", "Italiano", ""),
+    );
     write(&root, "it/s.ftl", "widget-clear = Cancella\n");
     assert_eq!(language_packs::scan_dir(&mut loc, &root).usable, 1);
     loc.set_locale("it");
@@ -180,7 +204,11 @@ fn reload_picks_up_changes_and_a_removed_active_pack_falls_back_to_english() {
 #[test]
 fn right_to_left_and_uncovered_scripts_are_reported_not_hidden() {
     let root = scratch("rtl");
-    write(&root, "ar/pack.json", &meta("ar", "Arabic", "العربية", ",\"direction\":\"rtl\""));
+    write(
+        &root,
+        "ar/pack.json",
+        &meta("ar", "Arabic", "العربية", ",\"direction\":\"rtl\""),
+    );
     write(&root, "ar/s.ftl", "widget-clear = مسح\n");
     write(&root, "ja/pack.json", &meta("ja", "Japanese", "日本語", ""));
     write(&root, "ja/s.ftl", "widget-clear = クリア\n");
@@ -192,7 +220,10 @@ fn right_to_left_and_uncovered_scripts_are_reported_not_hidden() {
     assert!(ar.missing_fonts.iter().any(|s| s == "Arabic"));
     assert!(!loc.can_select("ar"));
     let ja = l.iter().find(|x| x.code == "ja").expect("ja");
-    assert!(ja.selectable, "left to right is selectable even without a font");
+    assert!(
+        ja.selectable,
+        "left to right is selectable even without a font"
+    );
     assert!(ja.missing_fonts.iter().any(|s| s == "Kana"));
     let _ = std::fs::remove_dir_all(&root);
 }
@@ -217,7 +248,11 @@ fn plurals_follow_the_rules_of_the_pack_language() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-fn call(world: &mut World, method: &str, params: Value) -> Result<Value, opts_cli::protocol::RpcError> {
+fn call(
+    world: &mut World,
+    method: &str,
+    params: Value,
+) -> Result<Value, opts_cli::protocol::RpcError> {
     let mut registry = ControlRegistry::default();
     language_packs::register(&mut registry);
     let handler = registry.get(method).expect("registered");
@@ -235,7 +270,11 @@ fn the_control_methods_list_set_reload_and_report() {
     let lang = root.join("opts/lang");
     write(&lang, "fr/pack.json", &meta("fr", "French", "Français", ""));
     write(&lang, "fr/s.ftl", "widget-clear = Effacer\n");
-    write(&lang, "ar/pack.json", &meta("ar", "Arabic", "العربية", ",\"direction\":\"rtl\""));
+    write(
+        &lang,
+        "ar/pack.json",
+        &meta("ar", "Arabic", "العربية", ",\"direction\":\"rtl\""),
+    );
     write(&lang, "ar/s.ftl", "widget-clear = مسح\n");
     write(&lang, "broken/x.ftl", "a = b\n");
 
@@ -271,7 +310,10 @@ fn the_control_methods_list_set_reload_and_report() {
     assert_eq!(set["current"], "fr");
     assert_eq!(world.resource::<Localization>().t(CLEAR), "Effacer");
     assert_eq!(
-        world.resource::<GameSettings>().raw("interface.language").as_deref(),
+        world
+            .resource::<GameSettings>()
+            .raw("interface.language")
+            .as_deref(),
         Some("fr"),
         "saved like a settings change"
     );

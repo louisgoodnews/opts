@@ -88,7 +88,13 @@ impl std::fmt::Display for Issue {
             Some(l) => write!(f, "{}:{l}: ", self.file)?,
             None => write!(f, "{}: ", self.file)?,
         }
-        write!(f, "{}[{}]: {}", self.severity.name(), self.code, self.message)?;
+        write!(
+            f,
+            "{}[{}]: {}",
+            self.severity.name(),
+            self.code,
+            self.message
+        )?;
         if let Some(k) = &self.key {
             write!(f, " (key `{k}`)")?;
         }
@@ -252,7 +258,10 @@ fn collect_texts(p: &Pattern, out: &mut String) {
 fn selects(p: &Pattern, out: &mut Vec<(String, Vec<String>)>) {
     for part in p {
         if let Part::Select { var, variants, .. } = part {
-            out.push((var.clone(), variants.iter().map(|(k, _)| k.clone()).collect()));
+            out.push((
+                var.clone(),
+                variants.iter().map(|(k, _)| k.clone()).collect(),
+            ));
             for (_, v) in variants {
                 selects(v, out);
             }
@@ -269,7 +278,11 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
     for d in &parsed.diagnostics {
         let dup = d.message.starts_with("duplicate key");
         out.issues.push(Issue::new(
-            if dup { Severity::Warning } else { Severity::Error },
+            if dup {
+                Severity::Warning
+            } else {
+                Severity::Error
+            },
             if dup { "duplicate-key" } else { "syntax" },
             file,
             Some(d.line),
@@ -277,7 +290,10 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
             if dup {
                 d.message.clone()
             } else {
-                format!("{}; the message is skipped and English shows instead", d.message)
+                format!(
+                    "{}; the message is skipped and English shows instead",
+                    d.message
+                )
             },
         ));
     }
@@ -288,8 +304,14 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
         let pattern = &parsed.messages[key];
         let line = parsed.lines.get(key).copied();
         let mut bad = |code: &'static str, message: String| {
-            out.issues
-                .push(Issue::new(Severity::Error, code, file, line, Some(key), message));
+            out.issues.push(Issue::new(
+                Severity::Error,
+                code,
+                file,
+                line,
+                Some(key),
+                message,
+            ));
         };
         let Some(source) = reference.table.messages.get(key) else {
             bad(
@@ -330,20 +352,35 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
         let have = fluent::variables(pattern);
         let want = reference.variables_of(key).cloned().unwrap_or_default();
         let is_var = |s: &&String| s.starts_with('$');
-        let lost: Vec<&String> = want.iter().filter(is_var).filter(|v| !have.contains(*v)).collect();
-        let added: Vec<&String> = have.iter().filter(is_var).filter(|v| !want.contains(*v)).collect();
+        let lost: Vec<&String> = want
+            .iter()
+            .filter(is_var)
+            .filter(|v| !have.contains(*v))
+            .collect();
+        let added: Vec<&String> = have
+            .iter()
+            .filter(is_var)
+            .filter(|v| !want.contains(*v))
+            .collect();
         if !lost.is_empty() || !added.is_empty() {
             let mut why = String::new();
             if !lost.is_empty() {
                 why.push_str(&format!(
                     "missing {}; ",
-                    lost.iter().map(|s| format!("`{{ {s} }}`")).collect::<Vec<_>>().join(", ")
+                    lost.iter()
+                        .map(|s| format!("`{{ {s} }}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ));
             }
             if !added.is_empty() {
                 why.push_str(&format!(
                     "unknown {}; ",
-                    added.iter().map(|s| format!("`{{ {s} }}`")).collect::<Vec<_>>().join(", ")
+                    added
+                        .iter()
+                        .map(|s| format!("`{{ {s} }}`"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ));
             }
             bad(
@@ -403,7 +440,9 @@ pub fn validate(parsed: &Table, file: &str, lang: &str, reference: &Reference) -
                 .filter(|c| !variants.iter().any(|v| v == **c))
                 .collect();
             let has_default_other = variants.iter().any(|v| v == "other");
-            if !missing.is_empty() && !(missing.len() == 1 && *missing[0] == "other" && !has_default_other) {
+            if !missing.is_empty()
+                && !(missing.len() == 1 && *missing[0] == "other" && !has_default_other)
+            {
                 warn(
                     "plural-forms",
                     format!(
@@ -549,17 +588,17 @@ mod tests {
 
     #[test]
     fn a_good_translation_passes_clean() {
-        let c = check("hello = Salut { $who }\nplain = Enregistre le fichier maintenant\n", "fr");
+        let c = check(
+            "hello = Salut { $who }\nplain = Enregistre le fichier maintenant\n",
+            "fr",
+        );
         assert!(c.issues.is_empty(), "{:?}", c.issues);
         assert_eq!(c.table.messages.len(), 2);
     }
 
     #[test]
     fn unknown_empty_and_mismatched_messages_are_skipped_with_their_line() {
-        let c = check(
-            "hello = Salut\nnope = x\nplain =\nitems = x\n",
-            "fr",
-        );
+        let c = check("hello = Salut\nnope = x\nplain =\nitems = x\n", "fr");
         let found: Vec<(&str, Option<usize>)> = c.issues.iter().map(|i| (i.code, i.line)).collect();
         assert!(found.contains(&("variable-mismatch", Some(1))), "{found:?}");
         assert!(found.contains(&("unknown-key", Some(2))), "{found:?}");
@@ -588,7 +627,10 @@ mod tests {
     fn issue_display_is_editor_clickable() {
         let c = check("hello = Salut\n", "fr");
         let text = c.issues[0].to_string();
-        assert!(text.starts_with("t.ftl:1: error[variable-mismatch]:"), "{text}");
+        assert!(
+            text.starts_with("t.ftl:1: error[variable-mismatch]:"),
+            "{text}"
+        );
     }
 
     #[test]

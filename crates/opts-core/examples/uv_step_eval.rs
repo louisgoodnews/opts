@@ -120,10 +120,13 @@ fn main() {
                     // What the Unreliable tier gets wrong, by kind (stored = keyed value).
                     let mut u = unrel.lock().unwrap();
                     for v in 0..n {
-                        if outcome.quality[v] != opts_core::formats::o3d::uvfix::UvQuality::Unreliable {
+                        if outcome.quality[v]
+                            != opts_core::formats::o3d::uvfix::UvQuality::Unreliable
+                        {
                             continue;
                         }
-                        let (st, dec, tru) = (ko.vertices[v].uv, t.vertices[v].uv, po.vertices[v].uv);
+                        let (st, dec, tru) =
+                            (ko.vertices[v].uv, t.vertices[v].uv, po.vertices[v].uv);
                         let guess_none = (st - dec).abs().max_element() < 1e-6;
                         let truth_none = (st - tru).abs().max_element() < 1e-6;
                         let right = (dec - tru).abs().max_element() < 1e-4;

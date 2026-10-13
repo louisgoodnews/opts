@@ -323,7 +323,11 @@ impl Plugin for SettingsRegistryPlugin {
             )
             .add_systems(
                 Startup,
-                (crate::language_packs::load_startup, live::apply_saved_language).chain(),
+                (
+                    crate::language_packs::load_startup,
+                    live::apply_saved_language,
+                )
+                    .chain(),
             )
             .add_systems(Update, crate::language_packs::reload_action);
         protocol::register(app);

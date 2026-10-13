@@ -246,7 +246,13 @@ fn language_list(
                 );
             }
             if l.outdated {
-                note(c, col, "set-lang-outdated", Vec::new(), ColorRole::OnSurfaceVariant);
+                note(
+                    c,
+                    col,
+                    "set-lang-outdated",
+                    Vec::new(),
+                    ColorRole::OnSurfaceVariant,
+                );
             }
             if l.errors > 0 {
                 note(

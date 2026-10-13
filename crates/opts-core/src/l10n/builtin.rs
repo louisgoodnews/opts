@@ -10,10 +10,7 @@ use super::pack::{Direction, PackMeta};
 
 /// English sources: `(pack file name, text)`. The name is also the file name a scaffold gets.
 pub const ENGLISH: &[(&str, &str)] = &[
-    (
-        "gui.ftl",
-        include_str!("../../../opts-gui/src/l10n/en.ftl"),
-    ),
+    ("gui.ftl", include_str!("../../../opts-gui/src/l10n/en.ftl")),
     (
         "wizard.ftl",
         include_str!("../../../opts-gui/src/l10n/wizard_en.ftl"),
@@ -34,10 +31,7 @@ pub const ENGLISH: &[(&str, &str)] = &[
 
 /// German sources, same names as [`ENGLISH`].
 pub const GERMAN: &[(&str, &str)] = &[
-    (
-        "gui.ftl",
-        include_str!("../../../opts-gui/src/l10n/de.ftl"),
-    ),
+    ("gui.ftl", include_str!("../../../opts-gui/src/l10n/de.ftl")),
     (
         "wizard.ftl",
         include_str!("../../../opts-gui/src/l10n/wizard_de.ftl"),
@@ -117,7 +111,11 @@ mod tests {
         for (lang, sources) in [("en", ENGLISH), ("de", GERMAN)] {
             for (name, text) in sources {
                 let t = fluent::parse(text);
-                assert!(t.diagnostics.is_empty(), "{lang} {name}: {:?}", t.diagnostics);
+                assert!(
+                    t.diagnostics.is_empty(),
+                    "{lang} {name}: {:?}",
+                    t.diagnostics
+                );
             }
         }
     }

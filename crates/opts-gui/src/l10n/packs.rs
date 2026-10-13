@@ -9,8 +9,8 @@ use opts_core::l10n::check::{self, Issue, Reference};
 use opts_core::l10n::fluent::Table;
 use opts_core::l10n::pack::{self, Direction};
 
-use super::{LanguageInfo, LanguageReport, LoadedPack, Localization};
 use super::pseudo::PSEUDO_TAG;
+use super::{LanguageInfo, LanguageReport, LoadedPack, Localization};
 
 impl Localization {
     /// The English source as a reference for checks (all tables the application has added).
@@ -79,21 +79,25 @@ impl Localization {
             .iter()
             .find(|p| p.pack.meta.as_ref().is_some_and(|m| m.code == code));
         let builtin_meta = builtin::meta_of(code);
-        let meta = builtin_meta.clone().or_else(|| loaded.and_then(|p| p.pack.meta.clone()))?;
+        let meta = builtin_meta
+            .clone()
+            .or_else(|| loaded.and_then(|p| p.pack.meta.clone()))?;
         let table = self.effective(code);
         let stats = check::stats(reference, &table, code);
-        let (errors, warnings, outdated, missing_fonts, dir) = loaded.map_or(
-            (0, 0, false, Vec::new(), None),
-            |p| {
+        let (errors, warnings, outdated, missing_fonts, dir) =
+            loaded.map_or((0, 0, false, Vec::new(), None), |p| {
                 (
                     p.pack.errors(),
                     p.pack.warnings(),
                     p.pack.outdated,
-                    p.pack.missing_fonts.iter().map(|s| (*s).to_string()).collect(),
+                    p.pack
+                        .missing_fonts
+                        .iter()
+                        .map(|s| (*s).to_string())
+                        .collect(),
                     Some(p.pack.dir.clone()),
                 )
-            },
-        );
+            });
         let direction = loaded
             .and_then(|p| p.pack.meta.as_ref().map(|m| m.direction))
             .filter(|_| builtin_meta.is_none())
@@ -184,6 +188,8 @@ impl Localization {
         if code == PSEUDO_TAG {
             return true;
         }
-        self.languages().iter().any(|l| l.code == code && l.selectable)
+        self.languages()
+            .iter()
+            .any(|l| l.code == code && l.selectable)
     }
 }

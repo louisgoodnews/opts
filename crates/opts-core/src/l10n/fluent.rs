@@ -140,9 +140,9 @@ pub fn parse(source: &str) -> Table {
         let lineno = n + 1;
         let indented = line.starts_with(char::is_whitespace);
         let starts_entry = !indented
-            && line.split_once('=').is_some_and(|(id, _)| {
-                !id.is_empty() && id.trim_end().chars().all(is_id_char)
-            });
+            && line
+                .split_once('=')
+                .is_some_and(|(id, _)| !id.is_empty() && id.trim_end().chars().all(is_id_char));
         if !indented && line.trim_start().starts_with('#') {
             if let Some(done) = current.take() {
                 entries.push(done);

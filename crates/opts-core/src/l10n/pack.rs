@@ -123,7 +123,14 @@ pub fn parse_meta(text: &str, folder: &str) -> (Option<PackMeta>, Vec<Issue>) {
         }
     };
     let Some(obj) = value.as_object() else {
-        issues.push(Issue::new(Severity::Error, "pack-json", FILE, Some(1), None, "the top level must be an object `{ ... }`"));
+        issues.push(Issue::new(
+            Severity::Error,
+            "pack-json",
+            FILE,
+            Some(1),
+            None,
+            "the top level must be an object `{ ... }`",
+        ));
         return (None, issues);
     };
     let line_of = |field: &str| interchange::line_of_json_key(text, field, 0);
@@ -174,27 +181,43 @@ pub fn parse_meta(text: &str, folder: &str) -> (Option<PackMeta>, Vec<Issue>) {
             .collect(),
         None => Vec::new(),
         Some(_) => {
-            fail("authors", "must be a list of names, for example [\"Jane Doe\"]");
+            fail(
+                "authors",
+                "must be a list of names, for example [\"Jane Doe\"]",
+            );
             Vec::new()
         }
     };
     if !code.is_empty() {
         if !valid_code(&code) {
-            fail("code", "must look like `fr` or `pt-BR` (lower-case language, optional region)");
+            fail(
+                "code",
+                "must look like `fr` or `pt-BR` (lower-case language, optional region)",
+            );
         } else if code != folder {
             fail(
                 "code",
                 &format!("is `{code}` but the folder is `{folder}`; they must be equal"),
             );
         } else if code == "en-XA" || code.eq_ignore_ascii_case("en-xa") {
-            fail("code", "`en-XA` is the pseudo-locale of the tests and cannot be a pack");
+            fail(
+                "code",
+                "`en-XA` is the pseudo-locale of the tests and cannot be a pack",
+            );
         }
     }
     if issues.iter().any(|i| i.severity == Severity::Error) {
         return (None, issues);
     }
     if authors.is_empty() {
-        issues.push(Issue::new(Severity::Warning, "pack-json", FILE, line_of("authors"), None, "`authors` is empty; name the people (or tools) behind the translation"));
+        issues.push(Issue::new(
+            Severity::Warning,
+            "pack-json",
+            FILE,
+            line_of("authors"),
+            None,
+            "`authors` is empty; name the people (or tools) behind the translation",
+        ));
     }
     if license != EXPECTED_LICENSE {
         issues.push(Issue::new(
@@ -246,13 +269,19 @@ impl Pack {
     /// Number of errors.
     #[must_use]
     pub fn errors(&self) -> usize {
-        self.issues.iter().filter(|i| i.severity == Severity::Error).count()
+        self.issues
+            .iter()
+            .filter(|i| i.severity == Severity::Error)
+            .count()
     }
 
     /// Number of warnings.
     #[must_use]
     pub fn warnings(&self) -> usize {
-        self.issues.iter().filter(|i| i.severity == Severity::Warning).count()
+        self.issues
+            .iter()
+            .filter(|i| i.severity == Severity::Warning)
+            .count()
     }
 
     /// `true` when the pack has an identity and can be offered.
@@ -268,7 +297,13 @@ fn read_text(path: &Path, shown: &str, issues: &mut Vec<Issue>) -> Option<String
     };
     match std::fs::metadata(path) {
         Ok(m) if m.len() > MAX_FILE_BYTES => {
-            fail(issues, format!("larger than {} KiB; the file is skipped", MAX_FILE_BYTES / 1024));
+            fail(
+                issues,
+                format!(
+                    "larger than {} KiB; the file is skipped",
+                    MAX_FILE_BYTES / 1024
+                ),
+            );
             return None;
         }
         Ok(_) => {}
@@ -327,7 +362,9 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
         .flatten()
         .filter(|e| e.path().is_file())
         .map(|e| e.file_name().to_string_lossy().into_owned())
-        .filter(|n| !n.starts_with('.') && (n.ends_with(".ftl") || n.ends_with(".json")) && n != "pack.json")
+        .filter(|n| {
+            !n.starts_with('.') && (n.ends_with(".ftl") || n.ends_with(".json")) && n != "pack.json"
+        })
         .collect();
     names.sort();
     if names.len() > MAX_FILES {
@@ -337,11 +374,17 @@ pub fn load_pack_dir(dir: &Path, reference: &Reference) -> Pack {
             ".",
             None,
             None,
-            format!("{} string files; only the first {MAX_FILES} are read", names.len()),
+            format!(
+                "{} string files; only the first {MAX_FILES} are read",
+                names.len()
+            ),
         ));
         names.truncate(MAX_FILES);
     }
-    let lang = meta.as_ref().map_or(folder.as_str(), |m| m.code.as_str()).to_string();
+    let lang = meta
+        .as_ref()
+        .map_or(folder.as_str(), |m| m.code.as_str())
+        .to_string();
     let mut table = Table::default();
     let mut origin: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     let mut files = Vec::new();
@@ -500,9 +543,20 @@ mod tests {
             "fr",
         );
         assert!(m.is_none());
-        let at: Vec<(Option<usize>, &str)> = issues.iter().map(|i| (i.line, i.message.as_str())).collect();
-        assert!(at.iter().any(|(l, m)| *l == Some(4) && m.contains("native_name")), "{at:?}");
-        assert!(at.iter().any(|(l, m)| *l == Some(7) && m.contains("direction")), "{at:?}");
+        let at: Vec<(Option<usize>, &str)> = issues
+            .iter()
+            .map(|i| (i.line, i.message.as_str()))
+            .collect();
+        assert!(
+            at.iter()
+                .any(|(l, m)| *l == Some(4) && m.contains("native_name")),
+            "{at:?}"
+        );
+        assert!(
+            at.iter()
+                .any(|(l, m)| *l == Some(7) && m.contains("direction")),
+            "{at:?}"
+        );
         let (_, broken) = parse_meta("{ \"code\": ", "fr");
         assert_eq!(broken[0].code, "pack-json");
     }

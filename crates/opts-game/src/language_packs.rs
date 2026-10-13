@@ -103,10 +103,7 @@ pub fn load_startup(mut loc: ResMut<Localization>) {
 }
 
 /// The *Reload languages* button of the settings page.
-pub fn reload_action(
-    mut requests: MessageReader<SettingActionRequested>,
-    mut commands: Commands,
-) {
+pub fn reload_action(mut requests: MessageReader<SettingActionRequested>, mut commands: Commands) {
     if requests.read().any(|r| r.key == RELOAD_KEY) {
         commands.queue(|world: &mut World| {
             let summary = {
@@ -126,7 +123,9 @@ pub fn reload_action(
                 ));
             }
             let mut commands = world.commands();
-            ToastBuilder::new(text).with_duration(5.0).spawn(&mut commands);
+            ToastBuilder::new(text)
+                .with_duration(5.0)
+                .spawn(&mut commands);
         });
     }
 }
@@ -175,7 +174,11 @@ fn problems_json(loc: &Localization) -> Value {
 fn languages_value(world: &World) -> Value {
     let loc = world.resource::<Localization>();
     let current = loc.locale().to_string();
-    let list: Vec<Value> = loc.languages().iter().map(|l| info_json(l, &current)).collect();
+    let list: Vec<Value> = loc
+        .languages()
+        .iter()
+        .map(|l| info_json(l, &current))
+        .collect();
     json!({
         "current": current,
         "packs_dir": packs_dir().map(|d| d.display().to_string()),

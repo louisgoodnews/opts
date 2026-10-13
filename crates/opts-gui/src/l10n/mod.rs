@@ -159,7 +159,9 @@ impl Localization {
         let parsed = fluent::parse(source);
         let errors = parsed.errors.clone();
         let table = self.bundles.entry(locale.to_string()).or_default();
+        append_order(table, &parsed.order, &parsed.messages);
         table.messages.extend(parsed.messages);
+        table.comments.extend(parsed.comments);
         if locale == "en" {
             if let Some(en) = self.bundles.get("en") {
                 let pseudo = pseudo::pseudo_table(en);
@@ -293,13 +295,24 @@ impl Localization {
     }
 }
 
+/// Adds the ids of a later file to the table's file order (each once).
+fn append_order(table: &mut Table, order: &[String], new: &HashMap<String, fluent::Pattern>) {
+    for k in order {
+        if !table.messages.contains_key(k) && new.contains_key(k) {
+            table.order.push(k.clone());
+        }
+    }
+}
+
 /// A table parsed from `base` with the messages of `extra` added (the wizard's own file: three
 /// parallel branches each own one table file instead of sharing one).
 fn merged(base: &str, extra: &str) -> Table {
     let mut table = fluent::parse(base);
     let more = fluent::parse(extra);
     table.errors.extend(more.errors);
+    append_order(&mut table, &more.order, &more.messages);
     table.messages.extend(more.messages);
+    table.comments.extend(more.comments);
     table
 }
 

@@ -137,7 +137,9 @@ fn export(args: &[String]) -> Result<Output, String> {
     let a = Args::parse(args, &["lang", "format", "pack", "out"], &["missing"])?;
     let lang = a.value("lang").ok_or("--lang <code> is required")?;
     if !pack::valid_code(lang) {
-        return Err(format!("`{lang}` is not a language tag (like `fr` or `pt-BR`)"));
+        return Err(format!(
+            "`{lang}` is not a language tag (like `fr` or `pt-BR`)"
+        ));
     }
     let format = a.value("format").unwrap_or("json");
     let reference = builtin::english();
@@ -220,7 +222,11 @@ impl Findings {
     }
 
     fn to_json(&self) -> String {
-        let issues: Vec<String> = self.issues.iter().map(|i| i.to_json().to_string()).collect();
+        let issues: Vec<String> = self
+            .issues
+            .iter()
+            .map(|i| i.to_json().to_string())
+            .collect();
         let meta = self.meta.as_ref().map_or("null".to_string(), |m| {
             serde_json::json!({
                 "code": m.code, "name": m.name, "native_name": m.native_name,
@@ -283,10 +289,7 @@ fn check_cmd(args: &[String]) -> Result<Output, String> {
     let revision = reference.revision();
     let findings = if path.is_dir() {
         let p = pack::load_pack_dir(path, &reference);
-        let lang = p
-            .meta
-            .as_ref()
-            .map_or(p.folder.clone(), |m| m.code.clone());
+        let lang = p.meta.as_ref().map_or(p.folder.clone(), |m| m.code.clone());
         Findings {
             label: target.clone(),
             lang,
@@ -303,15 +306,25 @@ fn check_cmd(args: &[String]) -> Result<Output, String> {
     };
     let min = a
         .value("min-percent")
-        .map(|v| v.parse::<f64>().map_err(|_| format!("--min-percent: `{v}` is not a number")))
+        .map(|v| {
+            v.parse::<f64>()
+                .map_err(|_| format!("--min-percent: `{v}` is not a number"))
+        })
         .transpose()?;
-    let (errors, warnings) = (findings.count(Severity::Error), findings.count(Severity::Warning));
+    let (errors, warnings) = (
+        findings.count(Severity::Error),
+        findings.count(Severity::Warning),
+    );
     let failed = errors > 0
         || (a.flag("strict") && warnings > 0)
         || min.is_some_and(|m| findings.stats.percent() < m);
     Ok(Output {
         code: i32::from(failed),
-        out: if a.flag("json") { findings.to_json() } else { findings.to_text() },
+        out: if a.flag("json") {
+            findings.to_json()
+        } else {
+            findings.to_text()
+        },
         err: String::new(),
     })
 }
@@ -365,7 +378,9 @@ fn new_cmd(args: &[String]) -> Result<Output, String> {
         return Err("new needs one language tag, for example `opts-tools l10n new fr`".into());
     };
     if !pack::valid_code(code) {
-        return Err(format!("`{code}` is not a language tag (like `fr` or `pt-BR`)"));
+        return Err(format!(
+            "`{code}` is not a language tag (like `fr` or `pt-BR`)"
+        ));
     }
     if builtin::CODES.contains(&code.as_str()) {
         return Err(format!(
@@ -374,7 +389,10 @@ fn new_cmd(args: &[String]) -> Result<Output, String> {
     }
     let dir = root_of(&a)?.join(code);
     if dir.exists() && !a.flag("force") {
-        return Err(format!("{} exists; use --force to overwrite its files", dir.display()));
+        return Err(format!(
+            "{} exists; use --force to overwrite its files",
+            dir.display()
+        ));
     }
     let reference = builtin::english();
     let meta = PackMeta {
@@ -390,7 +408,12 @@ fn new_cmd(args: &[String]) -> Result<Output, String> {
     std::fs::create_dir_all(&dir).map_err(|e| io_err(&dir, &e))?;
     let mut written = vec![dir.join("pack.json")];
     std::fs::write(&written[0], meta.to_json()).map_err(|e| io_err(&written[0], &e))?;
-    for (name, text) in interchange::export_ftl(&reference, &Table::default(), code, ExportOptions::default()) {
+    for (name, text) in interchange::export_ftl(
+        &reference,
+        &Table::default(),
+        code,
+        ExportOptions::default(),
+    ) {
         let p = dir.join(name);
         std::fs::write(&p, text).map_err(|e| io_err(&p, &e))?;
         written.push(p);
@@ -436,11 +459,18 @@ fn import(args: &[String]) -> Result<Output, String> {
         .count();
     if errors > 0 && !a.flag("lenient") {
         let _ = writeln!(out, "{file}: {errors} error(s); nothing written (fix them, or use --lenient to skip the faulty messages)");
-        return Ok(Output { code: 1, out, err: String::new() });
+        return Ok(Output {
+            code: 1,
+            out,
+            err: String::new(),
+        });
     }
     let dir = root_of(&a)?.join(&lang);
     if dir.exists() && !a.flag("force") {
-        return Err(format!("{} exists; use --force to overwrite its files", dir.display()));
+        return Err(format!(
+            "{} exists; use --force to overwrite its files",
+            dir.display()
+        ));
     }
     // pack.json from the file's `pack` object, else from nothing.
     let meta_text = imported
@@ -453,8 +483,15 @@ fn import(args: &[String]) -> Result<Output, String> {
         for i in &meta_issues {
             let _ = writeln!(out, "{file} (pack): {}", i.message);
         }
-        let _ = writeln!(out, "{file}: the `pack` object is incomplete; nothing written");
-        return Ok(Output { code: 1, out, err: String::new() });
+        let _ = writeln!(
+            out,
+            "{file}: the `pack` object is incomplete; nothing written"
+        );
+        return Ok(Output {
+            code: 1,
+            out,
+            err: String::new(),
+        });
     };
     if let Some(b) = &imported.base_version {
         meta.base_version.clone_from(b);
@@ -479,7 +516,11 @@ fn import(args: &[String]) -> Result<Output, String> {
         p.errors(),
         p.warnings()
     );
-    Ok(Output { code: i32::from(p.errors() > 0), out, err: String::new() })
+    Ok(Output {
+        code: i32::from(p.errors() > 0),
+        out,
+        err: String::new(),
+    })
 }
 
 fn stats(args: &[String]) -> Result<Output, String> {
@@ -510,7 +551,17 @@ fn stats(args: &[String]) -> Result<Output, String> {
             || (p.folder.clone(), String::new(), String::new()),
             |m| (m.code.clone(), m.name.clone(), m.native_name.clone()),
         );
-        rows.push((code, name, native, false, p.stats.clone(), p.errors(), p.warnings(), p.outdated, p.dir.display().to_string()));
+        rows.push((
+            code,
+            name,
+            native,
+            false,
+            p.stats.clone(),
+            p.errors(),
+            p.warnings(),
+            p.outdated,
+            p.dir.display().to_string(),
+        ));
     }
     let mut out = String::new();
     if a.flag("json") {
@@ -532,14 +583,27 @@ fn stats(args: &[String]) -> Result<Output, String> {
             langs.join(",")
         );
     } else {
-        let _ = writeln!(out, "English revision {revision}, {} messages; packs in {}", reference.len(), root.display());
-        let _ = writeln!(out, "{:<10} {:<22} {:>8} {:>7} {:>8} {:>6} {:>6}", "code", "name", "done", "copied", "missing", "errors", "warn");
+        let _ = writeln!(
+            out,
+            "English revision {revision}, {} messages; packs in {}",
+            reference.len(),
+            root.display()
+        );
+        let _ = writeln!(
+            out,
+            "{:<10} {:<22} {:>8} {:>7} {:>8} {:>6} {:>6}",
+            "code", "name", "done", "copied", "missing", "errors", "warn"
+        );
         for (c, n, nn, b, s, e, w, o, _) in &rows {
             let _ = writeln!(
                 out,
                 "{:<10} {:<22} {:>7.1}% {:>7} {:>8} {:>6} {:>6}{}{}",
                 c,
-                if nn.is_empty() { n.clone() } else { format!("{n} ({nn})") },
+                if nn.is_empty() {
+                    n.clone()
+                } else {
+                    format!("{n} ({nn})")
+                },
                 s.percent(),
                 s.copied,
                 s.missing.len(),
@@ -550,7 +614,11 @@ fn stats(args: &[String]) -> Result<Output, String> {
             );
         }
     }
-    Ok(Output { code: 0, out, err: String::new() })
+    Ok(Output {
+        code: 0,
+        out,
+        err: String::new(),
+    })
 }
 
 #[cfg(test)]
@@ -576,7 +644,18 @@ mod tests {
     fn new_check_and_stats_work_together() {
         let root = scratch("new-check");
         let r = root.to_str().unwrap();
-        let o = run(&["new", "fr", "--root", r, "--name", "French", "--native-name", "Français", "--author", "Tester"]);
+        let o = run(&[
+            "new",
+            "fr",
+            "--root",
+            r,
+            "--name",
+            "French",
+            "--native-name",
+            "Français",
+            "--author",
+            "Tester",
+        ]);
         assert_eq!(o.code, 0, "{}{}", o.out, o.err);
         let pack = root.join("fr");
         let c = run(&["check", pack.to_str().unwrap(), "--json"]);
@@ -592,7 +671,10 @@ mod tests {
         let settings = std::fs::read_to_string(pack.join("gui.ftl")).unwrap();
         let edited = settings
             .replace("widget-clear = Clear", "widget-clear = Effacer")
-            .replace("widget-not-available-yet = Feature not available yet!", "widget-not-available-yet = { $oops");
+            .replace(
+                "widget-not-available-yet = Feature not available yet!",
+                "widget-not-available-yet = { $oops",
+            );
         std::fs::write(pack.join("gui.ftl"), edited).unwrap();
         let c = run(&["check", pack.to_str().unwrap()]);
         assert_eq!(c.code, 1);
@@ -618,9 +700,20 @@ mod tests {
         assert_eq!(o.code, 0, "{}", o.err);
         // The pack object of a built-in language is complete, so import works as is.
         let packs = root.join("packs");
-        let i = run(&["import", json.to_str().unwrap(), "--root", packs.to_str().unwrap()]);
+        let i = run(&[
+            "import",
+            json.to_str().unwrap(),
+            "--root",
+            packs.to_str().unwrap(),
+        ]);
         assert_eq!(i.code, 0, "{}", i.out);
-        let c = run(&["check", packs.join("de").to_str().unwrap(), "--json", "--min-percent", "98"]);
+        let c = run(&[
+            "check",
+            packs.join("de").to_str().unwrap(),
+            "--json",
+            "--min-percent",
+            "98",
+        ]);
         assert_eq!(c.code, 0, "{}", c.out);
         let v: serde_json::Value = serde_json::from_str(&c.out).unwrap();
         assert_eq!(v["missing"], 0);

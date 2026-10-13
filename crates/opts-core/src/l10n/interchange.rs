@@ -74,7 +74,10 @@ fn push_diag(table: &mut Table, line: usize, key: Option<&str>, message: impl In
     });
 }
 
-fn plural_pattern(var: &str, forms: &serde_json::Map<String, serde_json::Value>) -> Result<Pattern, String> {
+fn plural_pattern(
+    var: &str,
+    forms: &serde_json::Map<String, serde_json::Value>,
+) -> Result<Pattern, String> {
     let mut variants = Vec::new();
     let mut filled = 0;
     let mut empty = Vec::new();
@@ -129,13 +132,24 @@ pub fn parse_json(text: &str) -> Imported {
         }
     };
     let Some(top) = value.as_object() else {
-        push_diag(&mut out.table, 1, None, "the top level must be an object `{ ... }`");
+        push_diag(
+            &mut out.table,
+            1,
+            None,
+            "the top level must be an object `{ ... }`",
+        );
         return out;
     };
     let structured = top.contains_key("messages") || top.contains_key("format");
     let (messages, base) = if structured {
-        out.language = top.get("language").and_then(|v| v.as_str()).map(str::to_string);
-        out.base_version = top.get("base_version").and_then(|v| v.as_str()).map(str::to_string);
+        out.language = top
+            .get("language")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+        out.base_version = top
+            .get("base_version")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
         out.pack = top.get("pack").cloned();
         if let Some(f) = top.get("format").and_then(|v| v.as_str()) {
             if f != FORMAT {
@@ -148,7 +162,12 @@ pub fn parse_json(text: &str) -> Imported {
             }
         }
         let Some(m) = top.get("messages").and_then(|m| m.as_object()) else {
-            push_diag(&mut out.table, 1, None, "`messages` must be an object of key to entry");
+            push_diag(
+                &mut out.table,
+                1,
+                None,
+                "`messages` must be an object of key to entry",
+            );
             return out;
         };
         (m, text.find("\"messages\"").unwrap_or(0))
@@ -170,7 +189,10 @@ pub fn parse_json(text: &str) -> Imported {
                             Err(m) if m.is_empty() => Ok(None),
                             Err(m) => Err(m),
                         },
-                        None => Err("`forms` needs a `variable` (the name of the number, without `$`)".into()),
+                        None => Err(
+                            "`forms` needs a `variable` (the name of the number, without `$`)"
+                                .into(),
+                        ),
                     }
                 } else {
                     match o.get("text") {
@@ -192,7 +214,12 @@ pub fn parse_json(text: &str) -> Imported {
             Err(m) => push_diag(&mut out.table, line, Some(key), m),
         }
     }
-    out.table.errors = out.table.diagnostics.iter().map(ToString::to_string).collect();
+    out.table.errors = out
+        .table
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .collect();
     out
 }
 
@@ -262,10 +289,16 @@ pub fn export_json(
     out.push_str("{\n");
     out.push_str(&format!("  \"format\": {},\n", q(FORMAT)));
     out.push_str(&format!("  \"language\": {},\n", q(lang)));
-    out.push_str(&format!("  \"base_version\": {},\n", q(&reference.revision())));
+    out.push_str(&format!(
+        "  \"base_version\": {},\n",
+        q(&reference.revision())
+    ));
     let pack = meta.to_json();
     let pack_indented: Vec<String> = pack.trim_end().lines().map(|l| format!("  {l}")).collect();
-    out.push_str(&format!("  \"pack\": {},\n", pack_indented.join("\n").trim_start()));
+    out.push_str(&format!(
+        "  \"pack\": {},\n",
+        pack_indented.join("\n").trim_start()
+    ));
     out.push_str("  \"messages\": {");
     let mut first = true;
     for key in reference.keys() {
@@ -295,7 +328,10 @@ pub fn export_json(
                 .iter()
                 .map(|(k, p)| format!("{}: {}", q(k), q(&fluent::to_source(p))))
                 .collect();
-            fields.push(format!("      \"source_forms\": {{ {} }}", forms.join(", ")));
+            fields.push(format!(
+                "      \"source_forms\": {{ {} }}",
+                forms.join(", ")
+            ));
             let mut keys: Vec<String> = variants
                 .iter()
                 .map(|(k, _)| k.clone())
@@ -304,7 +340,11 @@ pub fn export_json(
             keys.extend(categories.iter().map(|c| (*c).to_string()));
             let have_forms: BTreeMap<String, String> = have
                 .and_then(|p| as_plural(p))
-                .map(|(_, vs)| vs.iter().map(|(k, p)| (k.clone(), fluent::to_source(p))).collect())
+                .map(|(_, vs)| {
+                    vs.iter()
+                        .map(|(k, p)| (k.clone(), fluent::to_source(p)))
+                        .collect()
+                })
                 .unwrap_or_default();
             for k in have_forms.keys() {
                 if !keys.contains(k) {
@@ -315,11 +355,20 @@ pub fn export_json(
             keys.retain(|k| seen.insert(k.clone()));
             let filled: Vec<String> = keys
                 .iter()
-                .map(|k| format!("{}: {}", q(k), q(have_forms.get(k).map_or("", String::as_str))))
+                .map(|k| {
+                    format!(
+                        "{}: {}",
+                        q(k),
+                        q(have_forms.get(k).map_or("", String::as_str))
+                    )
+                })
                 .collect();
             fields.push(format!("      \"forms\": {{ {} }}", filled.join(", ")));
         } else {
-            fields.push(format!("      \"source\": {}", q(&fluent::to_source(source))));
+            fields.push(format!(
+                "      \"source\": {}",
+                q(&fluent::to_source(source))
+            ));
             let text = have.map(fluent::to_source).unwrap_or_default();
             fields.push(format!("      \"text\": {}", q(&text)));
         }
@@ -352,7 +401,12 @@ pub fn export_ftl(
             .unwrap_or_else(|| "strings.ftl".into());
         let source = &reference.table.messages[key];
         let have = translation.messages.get(key);
-        let mut comment = reference.table.comments.get(key).cloned().unwrap_or_default();
+        let mut comment = reference
+            .table
+            .comments
+            .get(key)
+            .cloned()
+            .unwrap_or_default();
         let vars = variable_names(reference, key);
         if !vars.is_empty() {
             if !comment.is_empty() {
@@ -360,7 +414,10 @@ pub fn export_ftl(
             }
             comment.push_str(&format!(
                 "Variables (keep them): {}",
-                vars.iter().map(|v| format!("$ {v}").replace("$ ", "$")).collect::<Vec<_>>().join(", ")
+                vars.iter()
+                    .map(|v| format!("$ {v}").replace("$ ", "$"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             ));
         }
         if have.is_some_and(|p| p != source) || lang == "en" {
@@ -371,7 +428,10 @@ pub fn export_ftl(
             if !comment.is_empty() {
                 comment.push('\n');
             }
-            comment.push_str(&format!("English: {}", eng.split_whitespace().collect::<Vec<_>>().join(" ")));
+            comment.push_str(&format!(
+                "English: {}",
+                eng.split_whitespace().collect::<Vec<_>>().join(" ")
+            ));
         }
         let entry = fluent::to_ftl_entry(key, have.unwrap_or(source), &comment);
         match files.iter_mut().find(|(n, _)| *n == name) {
@@ -399,7 +459,11 @@ pub fn import_to_ftl(imported: &Imported) -> Vec<(String, String)> {
         let group = imported
             .file_of
             .get(key)
-            .map(|f| f.chars().filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_').collect::<String>())
+            .map(|f| {
+                f.chars()
+                    .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
+                    .collect::<String>()
+            })
             .filter(|f| !f.is_empty())
             .unwrap_or_else(|| "strings".into());
         let name = format!("{group}.ftl");
@@ -432,8 +496,16 @@ mod tests {
             let meta = builtin::meta_of(lang).unwrap();
             let json = export_json(&reference, &table, lang, &meta, ExportOptions::default());
             let imported = parse_json(&json);
-            assert!(imported.table.diagnostics.is_empty(), "{lang}: {:?}", imported.table.diagnostics);
-            assert_eq!(imported.table.messages.len(), table.messages.len(), "{lang}");
+            assert!(
+                imported.table.diagnostics.is_empty(),
+                "{lang}: {:?}",
+                imported.table.diagnostics
+            );
+            assert_eq!(
+                imported.table.messages.len(),
+                table.messages.len(),
+                "{lang}"
+            );
             for (k, p) in &table.messages {
                 assert_eq!(imported.table.messages.get(k), Some(p), "{lang}: {k}");
             }
@@ -451,7 +523,12 @@ mod tests {
     #[test]
     fn the_ftl_template_parses_and_is_complete() {
         let reference = builtin::english();
-        for (name, text) in export_ftl(&reference, &Table::default(), "fr", ExportOptions::default()) {
+        for (name, text) in export_ftl(
+            &reference,
+            &Table::default(),
+            "fr",
+            ExportOptions::default(),
+        ) {
             let t = fluent::parse(&text);
             assert!(t.diagnostics.is_empty(), "{name}: {:?}", t.diagnostics);
             for k in &t.order {
@@ -460,7 +537,10 @@ mod tests {
         }
         let de = builtin::table_of("de").unwrap();
         let files = export_ftl(&reference, &de, "de", ExportOptions::default());
-        let total: usize = files.iter().map(|(_, t)| fluent::parse(t).messages.len()).sum();
+        let total: usize = files
+            .iter()
+            .map(|(_, t)| fluent::parse(t).messages.len())
+            .sum();
         assert_eq!(total, reference.len());
     }
 
@@ -504,7 +584,13 @@ mod tests {
             "e.ftl",
             "# Count.\nn =\n    { $c ->\n        [one] { $c } item\n       *[other] { $c } items\n    }\n",
         )]);
-        let json = export_json(&reference, &Table::default(), "ru", &de_meta(), ExportOptions::default());
+        let json = export_json(
+            &reference,
+            &Table::default(),
+            "ru",
+            &de_meta(),
+            ExportOptions::default(),
+        );
         assert!(json.contains("\"few\""), "{json}");
         assert!(json.contains("\"context\": \"Count.\""), "{json}");
         let _ = parse_json(&json);
