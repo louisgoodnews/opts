@@ -255,6 +255,8 @@ fn load_segment_meshes_for(
             loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
         };
         for part in &parts {
+            job.cache.stats.uv_scope.0 += part.vertices;
+            job.cache.stats.uv_scope.1 += part.uv_unreliable;
             if let Some(mesh) = meshes.get(&part.mesh) {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
@@ -389,14 +391,23 @@ fn mesh_pivot(
     rel: &str,
     model_dir: &Path,
     mesh_def: &opts_core::formats::vehicles::model::ModelMesh,
-) -> Option<Vec3> {
+) -> Option<opts_bevy::MeshPivot> {
     if !mesh_def.anims.iter().any(|a| a.origin_from_mesh) {
         return None;
     }
     let path = job.install.find_in(model_dir, rel)?;
     let o3d = opts_core::formats::o3d::parse(&std::fs::read(path).ok()?).ok()?;
     let m = o3d.transform?;
-    Some(Vec3::new(m[3][0], m[3][2], m[3][1]))
+    // Rotation part of the matrix: normalised rows (images of the local axes, o3d coordinates).
+    let row = |i: usize| {
+        let v = Vec3::new(m[i][0], m[i][1], m[i][2]);
+        let v = v.try_normalize().unwrap_or(Vec3::ZERO);
+        [v.x, v.y, v.z]
+    };
+    Some(opts_bevy::MeshPivot {
+        origin: Vec3::new(m[3][0], m[3][2], m[3][1]),
+        rows: [row(0), row(1), row(2)],
+    })
 }
 
 /// Binds skinned meshes of a vehicle to the dummy meshes that carry their bones' animation.
@@ -499,6 +510,8 @@ pub(super) fn spawn_trailer_chain(
     let mut chain = Vec::new();
     let mut layout = Vec::new();
     let mut behind = 0.0_f32;
+    // Axles counted so far: trailer models number theirs after the head's (`Wheel_Rotation_2_L`).
+    let mut axle_base = tractor.axles.len();
     let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
     for _ in 0..MAX_SEGMENTS {
         let Some(name) = parent_manifest.couple_back.clone() else {
@@ -581,12 +594,27 @@ pub(super) fn spawn_trailer_chain(
                         max_alpha,
                     );
                     s.reversed = reversed;
+                    // The bus files list min and max in either order (3 files have 20,-20).
+                    s.beta_limits_deg = manifest.coupling_front_limits.map(|l| {
+                        (
+                            l.min_beta_deg.min(l.max_beta_deg),
+                            l.min_beta_deg.max(l.max_beta_deg),
+                        )
+                    });
+                    s.set_wheels(
+                        axle_base,
+                        manifest
+                            .axles
+                            .iter()
+                            .map(|a| a.wheel_diameter_m.filter(|&d| d > 0.1).unwrap_or(0.98) * 0.5),
+                    );
                     s
                 },
                 InGameEntity,
             ))
             .id();
         chain.push(seg);
+        axle_base += manifest.axles.len();
         // Origin of the segment behind the root's origin along the vehicle's axis (for rails).
         behind += f.y - b.y;
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -793,6 +821,7 @@ pub fn load_player_vehicle(
     ensure_repaints(job, &bus_path, &manifest);
     job.cache.expected_bounds = manifest_bounds(&manifest);
     job.cache.texture_replacements = repaint_map(job, &model);
+    job.cache.stats.uv_scope = (0, 0);
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
@@ -899,6 +928,17 @@ pub fn load_player_vehicle(
                 .to_string_lossy()
                 .into_owned()
         });
+    // Texture coordinates the decoder could not prove (scrambled meshes): named once per vehicle.
+    let (uv_all, uv_bad) = job.cache.stats.uv_scope;
+    if uv_all > 0 && uv_bad * 10 > uv_all {
+        tracing::warn!(
+            vehicle = %stats.vehicle_name,
+            unreliable_percent = (100 * uv_bad / uv_all) as u64,
+            unreliable_vertices = uv_bad,
+            vertices = uv_all,
+            "vehicle: more than 10% of the texture coordinates are unreliable (see docs/src/architecture/uv-decoder.md)"
+        );
+    }
     stats.vehicle_meshes = mesh_count;
     stats.vehicle_vertices = vertex_count;
     stats.scene_vertices += vertex_count;
@@ -907,6 +947,8 @@ pub fn load_player_vehicle(
         vehicle = %stats.vehicle_name,
         meshes = mesh_count,
         vertices = vertex_count,
+        uv_vertices = uv_all,
+        uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
     Ok(())

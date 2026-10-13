@@ -22,6 +22,7 @@
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](docs/src/roadmap/phase-7/README.md) |
 | 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 decided 2026-10-12, not started | [`phase-8/`](docs/src/roadmap/phase-8/README.md) |
 | 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 🟡 design approved 2026-10-12, implementation in progress | [`phase-9/`](docs/src/roadmap/phase-9/README.md) |
+| 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 📝 planned 2026-10-13 from the project lead's field report | [`phase-10/`](docs/src/roadmap/phase-10/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -233,8 +234,13 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement the harness with static checks and calibrate thresholds (Phase B).
   - [ ] Script-effect checks; audio recorded only (Phase C, needs a scenery-script runtime).
   - [ ] Full corpus run and triage report (Phase D); fixes by failure category (Phase E).
+- [ ] **🛠️ Settings and Configuration through the Control Protocol** — [M-0072](docs/src/roadmap/phase-5/M-0072.md)
+  - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
+- [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](docs/src/roadmap/phase-5/M-0074.md)
+  - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
 
 ---
+
 
 ## 🌐 Phase 6: Modding Ecosystem & Community Content
 *Goal: Empower content creators to build, package, validate, and share vehicles, scenery objects, maps, and repaints.*
@@ -305,6 +311,34 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](docs/src/roadmap/phase-9/M-0065.md)
   - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
   - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
+- [ ] **🕗 Start Time Defaults from the Map** — [M-0070](docs/src/roadmap/phase-9/M-0070.md)
+  - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
+- [ ] **🗺️ HUD Layout Rework** — [M-0071](docs/src/roadmap/phase-9/M-0071.md)
+  - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
+- [ ] **📍 HUD Place Label** — [M-0075](docs/src/roadmap/phase-9/M-0075.md)
+  - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
+- [ ] **⏳ Loading Screen Vehicle** — [M-0076](docs/src/roadmap/phase-9/M-0076.md)
+  - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+
+---
+
+## 🧩 Phase 10: Sessions, World Completeness & Vehicle Dynamics
+*Goal: Turn the driving demo into a session-based simulator: water and correct content in the world, sessions with several user vehicles that can be saved and restored, and vehicles whose own mass, axles, suspension and brakes are respected by a shared world physics. Status: planned 2026-10-13 from the project lead's [field report](docs/src/quality/field-report-2026-10-13.md); not started. Documents: [phase page](docs/src/roadmap/phase-10/README.md).*
+
+- [ ] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](docs/src/roadmap/phase-10/M-0066.md)
+  - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
+- [ ] **🌊 Water Rendering** — [M-0067](docs/src/roadmap/phase-10/M-0067.md)
+  - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
+- [ ] **🚌 Session Vehicles** — [M-0068](docs/src/roadmap/phase-10/M-0068.md)
+  - [ ] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
+- [ ] **💾 Session Save and Restore** — [M-0069](docs/src/roadmap/phase-10/M-0069.md)
+  - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
+- [ ] **🧰 Bus Configurations** — [M-0077](docs/src/roadmap/phase-10/M-0077.md)
+  - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
+- [ ] **🎛️ Setvars** — [M-0078](docs/src/roadmap/phase-10/M-0078.md)
+  - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
+- [ ] **⚙️ Vehicle Dynamics** — [M-0073](docs/src/roadmap/phase-10/M-0073.md)
+  - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
 
 ---
 

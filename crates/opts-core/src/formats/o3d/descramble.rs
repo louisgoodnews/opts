@@ -860,6 +860,8 @@ pub struct ConfidentReport {
     pub dropped_faces: usize,
     /// Texture-jitter report of the UV step.
     pub uv: super::uvfix::UvFixReport,
+    /// Quality of every vertex's texture coordinates (empty when the mesh was rejected).
+    pub quality: Vec<super::uvfix::UvQuality>,
 }
 
 /// Two independent runs (belief-propagation seeded and random) must agree; returns the labels and
@@ -953,6 +955,7 @@ pub fn decode_joint_bounded(
         coherence: 0.0,
         dropped_faces: 0,
         uv: super::uvfix::UvFixReport::default(),
+        quality: Vec::new(),
     };
     let none = |n: usize| vec![rejected(0.0); n];
     if copies.len() < 2 {
@@ -1009,14 +1012,19 @@ pub fn decode_joint_bounded(
                 .unwrap_or(*t);
         }
         let dropped = drop_spike_faces(c);
-        let uv = super::uvfix::unjitter_uv_with_hints(c, &uv_hints[ci]);
+        let fixed = super::uvfix::unjitter_uv_staged(
+            c,
+            &uv_hints[ci],
+            &super::uvfix::UvFixParams::default(),
+        );
         c.descrambled = true;
         out.push(ConfidentReport {
             accepted: true,
             agreement: agree,
             coherence: 1.0,
             dropped_faces: dropped,
-            uv,
+            uv: fixed.report,
+            quality: fixed.quality,
         });
     }
     out
@@ -1205,6 +1213,7 @@ fn decode_confident_masked(
         coherence,
         dropped_faces: 0,
         uv: super::uvfix::UvFixReport::default(),
+        quality: Vec::new(),
     };
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
@@ -1228,7 +1237,8 @@ fn decode_confident_masked(
     // (big flat panels), so only extreme spikes go: see `drop_spike_faces`.
     let _ = verdicts;
     let dropped = drop_spike_faces(&mut trial);
-    let uv = super::uvfix::unjitter_uv(&mut trial);
+    let fixed =
+        super::uvfix::unjitter_uv_staged(&mut trial, &[], &super::uvfix::UvFixParams::default());
     trial.descrambled = true;
     *o = trial;
     ConfidentReport {
@@ -1236,7 +1246,8 @@ fn decode_confident_masked(
         agreement: agree,
         coherence,
         dropped_faces: dropped,
-        uv,
+        uv: fixed.report,
+        quality: fixed.quality,
     }
 }
 

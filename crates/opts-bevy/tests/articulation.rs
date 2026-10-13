@@ -23,18 +23,26 @@ fn app() -> App {
 }
 
 fn spawn_articulated(app: &mut App, steering: f32) -> (Entity, Entity) {
+    spawn_articulated_with(app, steering, false)
+}
+
+fn spawn_articulated_with(app: &mut App, steering: f32, reversed: bool) -> (Entity, Entity) {
     let mut controller = VehicleController::standard_bus(11_500.0, 5.85);
     controller.inputs_mut().set_parking_brake(false);
     controller.inputs_mut().set_gear(GearPosition::Drive);
     controller.inputs_mut().set_throttle(0.5);
     controller.inputs_mut().set_steering(steering);
     let (engine, _) = ScriptEngine::from_sources(&[("t.osc", "{frame}\n{end}")]);
+    let mut seg = ArticulatedSegment::new(Vec2::new(0.0, -5.0), Vec2::new(0.0, 1.0), -5.0, 52.5);
+    seg.reversed = reversed;
+    // One trailer axle numbered after the head's two, wheel radius 0.5 m.
+    seg.set_wheels(2, [0.5]);
     let segment = app
         .world_mut()
         .spawn((
             // Hitch 1.5 m behind the leader's origin; front coupling 1 m ahead of the segment's
             // origin; rear axle 6 m behind that.
-            ArticulatedSegment::new(Vec2::new(0.0, -5.0), Vec2::new(0.0, 1.0), -5.0, 52.5),
+            seg,
             Transform::default(),
         ))
         .id();
@@ -113,4 +121,178 @@ fn driving_straight_keeps_the_segment_in_line() {
         .lock()
         .unwrap();
     assert!(engine.get("articulation_0_alpha").abs() < 0.5);
+}
+
+#[test]
+fn trailer_wheels_roll_with_the_segments_own_travel() {
+    for reversed in [false, true] {
+        let mut app = app();
+        let (root, _) = spawn_articulated_with(&mut app, 0.0, reversed);
+        for _ in 0..300 {
+            app.update();
+        }
+        let engine = app
+            .world()
+            .get::<VehicleScripts>(root)
+            .unwrap()
+            .engine
+            .lock()
+            .unwrap();
+        // Axle 2 is the trailer's; both sides spin alike and the speed matches rolling at 0.5 m.
+        let spin = engine.get("wheel_rotation_2_l");
+        assert_eq!(spin, engine.get("wheel_rotation_2_r"));
+        let rpm = engine.get("wheel_rotationspeed_2_l");
+        let speed = app
+            .world()
+            .get::<VehicleController>(root)
+            .unwrap()
+            .sim
+            .chassis
+            .forward_speed_m_s();
+        let expected = speed / 0.5 * 60.0 / std::f32::consts::TAU;
+        // A segment hanging backwards rolls the other way along its model.
+        let expected = if reversed { -expected } else { expected };
+        assert!(
+            (rpm - expected).abs() < expected.abs() * 0.1 + 1.0,
+            "reversed={reversed}: {rpm} rpm, expected {expected}"
+        );
+        assert!(spin != 0.0);
+    }
+}
+
+/// Moves the leader by `by` metres in one step (a spawn placement, a collision push-out, a reset).
+fn teleport(app: &mut App, root: Entity, by: Vec2) {
+    let mut e = app.world_mut().entity_mut(root);
+    let mut c = e.get_mut::<VehicleController>().unwrap();
+    c.sim.chassis.position += by;
+}
+
+/// Only alpha is exercised: beta and gamma need terrain in the harness (deferred to Phase E).
+#[test]
+fn spawn_displacement_of_the_leader_does_not_jackknife_the_segment() {
+    let mut app = app();
+    let (root, _) = spawn_articulated(&mut app, 0.0);
+    app.world_mut()
+        .get_mut::<VehicleController>(root)
+        .unwrap()
+        .inputs_mut()
+        .set_throttle(0.0);
+    app.update();
+    app.update();
+    // The game places the vehicle after the chain exists.
+    teleport(&mut app, root, Vec2::new(4.0, -3.0));
+    for _ in 0..10 {
+        app.update();
+    }
+    let engine = app
+        .world()
+        .get::<VehicleScripts>(root)
+        .unwrap()
+        .engine
+        .lock()
+        .unwrap();
+    for var in [
+        "articulation_0_alpha",
+        "articulation_0_beta",
+        "articulation_0_gamma",
+    ] {
+        assert!(engine.get(var).abs() < 0.01, "{var} = {}", engine.get(var));
+    }
+}
+
+#[test]
+fn a_leader_jump_does_not_spin_the_segment_wheels() {
+    let mut app = app();
+    let (root, _) = spawn_articulated(&mut app, 0.0);
+    for _ in 0..240 {
+        app.update();
+    }
+    let rpm_of = |app: &App| {
+        let e = app
+            .world()
+            .get::<VehicleScripts>(root)
+            .unwrap()
+            .engine
+            .lock()
+            .unwrap();
+        (
+            e.get("wheel_rotationspeed_2_l"),
+            e.get("articulation_0_alpha"),
+        )
+    };
+    let speed = app
+        .world()
+        .get::<VehicleController>(root)
+        .unwrap()
+        .sim
+        .chassis
+        .forward_speed_m_s();
+    let plausible = speed / 0.5 * 60.0 / std::f32::consts::TAU * 1.5 + 1.0;
+    teleport(&mut app, root, Vec2::new(3.0, 2.0));
+    for _ in 0..30 {
+        app.update();
+        let (rpm, alpha) = rpm_of(&app);
+        assert!(rpm.abs() <= plausible, "rpm {rpm} above {plausible}");
+        assert!(alpha.abs() < 5.0, "alpha {alpha}");
+    }
+}
+
+#[test]
+fn beta_is_limited_to_the_coupling_character() {
+    let mut seg = ArticulatedSegment::new(Vec2::ZERO, Vec2::ZERO, -5.0, 52.5);
+    assert_eq!(seg.clamp_beta_deg(35.0), 35.0, "unlimited without limits");
+    seg.beta_limits_deg = Some((-20.0, 20.0));
+    assert_eq!(seg.clamp_beta_deg(35.0), 20.0);
+    assert_eq!(seg.clamp_beta_deg(-35.0), -20.0);
+    assert_eq!(seg.clamp_beta_deg(5.0), 5.0);
+}
+
+/// The bellows' follower end (behind the joint) must land where the follower's body puts it: a
+/// follower pitched nose up by `p` lowers its front-rear points behind the joint, and the bellows
+/// dummy (`anim_rot articulation_0_beta`, no origin rotation, factor 1) must do the same.
+#[test]
+fn bellows_beta_moves_the_follower_end_like_the_follower_body() {
+    use opts_bevy::{animation_matrix, joint_beta_deg, AnimStep};
+    let p = 8.0_f32.to_radians();
+    let step = AnimStep {
+        frame: Mat4::IDENTITY,
+        variable: "articulation_0_beta".into(),
+        factor: 1.0,
+        translate: false,
+        maxspeed: None,
+    };
+    let beta = joint_beta_deg(0.0, p);
+    let end_by_bellows =
+        animation_matrix(&[step], |_| beta).transform_point3(Vec3::new(0.0, 0.0, 2.0));
+    // Bevy axes: -z forward, nose-up pitch is a positive rotation about x.
+    let end_by_body = Quat::from_rotation_x(p) * Vec3::new(0.0, 0.0, 2.0);
+    assert!(
+        end_by_bellows.distance(end_by_body) < 1e-4,
+        "bellows {end_by_bellows:?}, body {end_by_body:?}"
+    );
+}
+
+/// Gamma (roll, right side up positive) uses the frame `origin_rot (0,90,90)` of the census: the
+/// bellows end must roll like the body (no sign change needed).
+#[test]
+fn bellows_gamma_rolls_the_follower_end_like_the_follower_body() {
+    use opts_bevy::{animation_matrix, AnimStep};
+    let r = 6.0_f32.to_radians();
+    let frame = Mat4::from_rotation_x(0.0)
+        * Mat4::from_rotation_y(90.0_f32.to_radians())
+        * Mat4::from_rotation_z(90.0_f32.to_radians());
+    let step = AnimStep {
+        frame,
+        variable: "articulation_0_gamma".into(),
+        factor: 1.0,
+        translate: false,
+        maxspeed: None,
+    };
+    let gamma = (r - 0.0).to_degrees();
+    let by_bellows = animation_matrix(&[step], |_| gamma).transform_point3(Vec3::X);
+    let by_body = Quat::from_rotation_z(r) * Vec3::X;
+    assert!(
+        by_bellows.distance(by_body) < 1e-4,
+        "{by_bellows:?} vs {by_body:?}"
+    );
 }

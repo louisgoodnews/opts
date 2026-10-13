@@ -42,6 +42,7 @@ The parsing rules are the same as `.bus`:
 | **Everything else is a comment** | Including bare numbers and prose. |
 | **Order matters** | Unlike `.bus`, order is **significant** in `.cfg`. See [Stateful Keywords](#-stateful-keywords). |
 | **Windows-1252 encoding** | Confirmed via mojibake observation. |
+| **A blank parameter line is an empty value** (P-1013) | For keywords with a fixed number of parameter lines the lines after the keyword are taken literally, a blank line being an empty parameter; free text after them (up to the next keyword) is not a parameter. Implemented for `[matl_transmap]` (one line; blank = no map) and the flags without parameters (`[matl_item]`, `[matl_noZwrite]`, `[matl_noZcheck]`, `[matl_texadress_clamp]`, `[isshadow]`, `[shadow]`, `[smoothskin]`, `[nocollision]`, `[nodistancecheck]`); all other keywords keep the free-form reading. Evidence: in the installed model files a blank line follows `[matl_item]`, `[isshadow]`, `[smoothskin]`... 95-100 % of the time (they take nothing) and `[matl_transmap]` in 25 % of 11,461 uses (2,839, an empty map), while `[mesh]`, `[viewpoint]`, `[visible]` are never followed by a blank. The old reading made `model_GN92_trail.cfg` use the note `Rauchsystem` as a transparency map (22 meshes of `MAN_GN92_main` logged `texture not found: =====...`). |
 
 ---
 

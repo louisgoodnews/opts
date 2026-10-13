@@ -112,28 +112,42 @@ pub struct OmsiBlock {
 /// Scans OMSI text into structured [`OmsiBlock`] instances.
 ///
 /// Lines preceding the first keyword and lines beginning with comment
-/// indicators outside parameter blocks are ignored.
+/// indicators outside parameter blocks are ignored. Every non-blank line after a keyword up to the
+/// next keyword is one of its parameters; see [`scan_blocks_with`] for keywords whose parameter
+/// count is known.
 #[must_use]
 pub fn scan_blocks(text: &str) -> Vec<OmsiBlock> {
+    scan_blocks_with(text, |_| None)
+}
+
+/// [`scan_blocks`] for formats in which some keywords take a fixed number of parameter *lines*.
+///
+/// `arity(keyword)` returns that number (lower-case keyword). For such a keyword exactly that many
+/// lines after it belong to it, **a blank line counting as an empty parameter**; further lines
+/// up to the next keyword are free text between blocks (author notes without a comment marker) and are
+/// dropped instead of becoming parameters. A keyword with `Some(0)` takes none. Comment lines (`//`,
+/// `#`) are never parameters. Keywords with `None` behave as in [`scan_blocks`].
+#[must_use]
+pub fn scan_blocks_with(text: &str, arity: impl Fn(&str) -> Option<usize>) -> Vec<OmsiBlock> {
     let mut blocks = Vec::new();
     let mut current_block: Option<OmsiBlock> = None;
+    // Parameter lines the current keyword still takes literally (`None`: free-form).
+    let mut literal: Option<usize> = None;
 
     for (line_idx, raw_line) in text.lines().enumerate() {
         let line_number = line_idx + 1;
         let line = raw_line.trim_end_matches(['\r', '\n']).trim();
 
-        if line.is_empty() {
-            continue;
-        }
-
         // Check for keyword beginning line
-        if raw_line.starts_with('[') && raw_line.trim_end().ends_with(']') {
+        if !line.is_empty() && raw_line.starts_with('[') && raw_line.trim_end().ends_with(']') {
             if let Some(kw) = parse_keyword(raw_line.trim_end()) {
                 if let Some(prev) = current_block.take() {
                     blocks.push(prev);
                 }
+                let keyword = kw.to_ascii_lowercase();
+                literal = arity(&keyword);
                 current_block = Some(OmsiBlock {
-                    keyword: kw.to_ascii_lowercase(),
+                    keyword,
                     line_number,
                     parameters: Vec::new(),
                 });
@@ -141,15 +155,28 @@ pub fn scan_blocks(text: &str) -> Vec<OmsiBlock> {
             }
         }
 
-        // If inside a block, record line as parameter
-        if let Some(ref mut block) = current_block {
-            // Lines starting with obvious comment markers outside quotes can still be ignored
-            // if desired, but parameters in OMSI may be free-form text. We only ignore standard comment lines
-            // if they look like header banners or comments.
-            if line.starts_with("//") || line.starts_with('#') {
-                continue;
+        let Some(block) = current_block.as_mut() else {
+            continue;
+        };
+        if line.is_empty() {
+            // A blank line is an empty parameter only where the keyword takes lines literally.
+            if let Some(left) = literal.as_mut().filter(|l| **l > 0) {
+                block.parameters.push(String::new());
+                *left -= 1;
             }
-            block.parameters.push(line.to_string());
+            continue;
+        }
+        // Lines starting with obvious comment markers are never parameters.
+        if line.starts_with("//") || line.starts_with('#') {
+            continue;
+        }
+        match literal.as_mut() {
+            Some(0) => {} // free text between blocks
+            Some(left) => {
+                block.parameters.push(line.to_string());
+                *left -= 1;
+            }
+            None => block.parameters.push(line.to_string()),
         }
     }
 
@@ -186,6 +213,48 @@ pub fn parse_vec3(slice: &[String]) -> Result<Vec3, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn blank_parameter_line_is_an_empty_value_not_the_next_text() {
+        let text =
+            "[mesh]\na.o3d\n\n[matl_transmap]\n\n\n########\n\nRauchsystem\n\n[smoke]\n-1.16\n";
+        let arity = |k: &str| match k {
+            "matl_transmap" => Some(1),
+            "isshadow" => Some(0),
+            _ => None,
+        };
+        let blocks = scan_blocks_with(text, arity);
+        let t = blocks
+            .iter()
+            .find(|b| b.keyword == "matl_transmap")
+            .unwrap();
+        assert_eq!(
+            t.parameters,
+            vec![String::new()],
+            "empty value, not 'Rauchsystem'"
+        );
+        // The old reading took the prose as the value.
+        let old = scan_blocks(text);
+        assert_eq!(old[1].parameters, vec!["Rauchsystem".to_string()]);
+        // Following keywords are untouched.
+        assert_eq!(blocks.last().unwrap().parameters, vec!["-1.16".to_string()]);
+    }
+
+    #[test]
+    fn zero_parameter_keywords_take_no_following_text() {
+        let text = "[isshadow]\nnote about the mesh\n[mesh]\nb.o3d\n";
+        let blocks = scan_blocks_with(text, |k| (k == "isshadow").then_some(0));
+        assert!(blocks[0].parameters.is_empty());
+        assert_eq!(blocks[1].parameters, vec!["b.o3d".to_string()]);
+    }
+
+    #[test]
+    fn a_texture_name_after_transmap_is_still_read() {
+        let blocks = scan_blocks_with("[matl_transmap]\nmask.bmp\nstray\n", |k| {
+            (k == "matl_transmap").then_some(1)
+        });
+        assert_eq!(blocks[0].parameters, vec!["mask.bmp".to_string()]);
+    }
 
     #[test]
     fn test_decode_utf8_and_cp1252() {

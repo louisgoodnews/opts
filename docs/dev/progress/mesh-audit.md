@@ -16,9 +16,9 @@ Branch `agent/mesh-audit`, worktree `/home/louisgoodnews/Dokumente/opts-wt-mesh-
 | C fixes: v1 count wrap, non-finite faces, spike faces, entrypoint `#` names, v10 tiles | done, with tests |
 | D1 live map sweep pass 1 (cold decode cache, old binary) | done: 5 of 43 failed to load, all explained |
 | D2 live map sweep pass 2 (new binary, warm cache) | done: 43 of 43 loaded |
-| D3 live vehicle sweep (188 of 947 `.bus`, 79 of 79 folders, Berlin-Spandau) | running (`vehicle_sweep.sh veh_sample.txt`, resumable) |
+| D3 live vehicle sweep on DBC_Map (fixed pose, 4 views) | 125 of 188 sampled `.bus` photographed (sample = first/middle/last of each of the 79 folders, alphabetical order, interrupted by a restart); remaining 63 not done |
 | E wizard empty lists + Entity despawned crash | fixed with test |
-| F gates, docs, close-out | pending |
+| F gates, docs, close-out | done (merged master 2026-10-13, field-report items R-01/R-09/R-17/R-18 added as MI-0037..0040) |
 
 ## Commands
 
@@ -33,3 +33,6 @@ target/release/examples/mesh_audit "<OMSI dir>" --threads 14 [--decode] > raw.ts
 * Twin ground truth: 301 of 1,826 accepted decodes (16.5 %) have wrong vertices; generic detectors find 12 % of them.
 * Fixed OPTS bugs: v1 `u16` count wrap (`HBF_Koeln`), non-finite faces, spike faces of decodes, entry point names starting with `#` (2 maps did not load), version 10 tiles (61 tiles of 3 maps did not parse), wizard lists empty during the first scan and the *Entity despawned* panic when leaving it.
 * A load with problems waits for *Continue* on the loading screen (`loading.continue`); `scene.load_map` does not return until then (Tram, Wuppertal_639).
+
+* `[alphascale]` on opaque base materials hid whole bodies/buildings (MI-0029, fixed): Crealis bodies and the Chicago skyline reappear.
+* Coverage: 43 of 43 maps loaded and photographed (4 views each) and contact sheets inspected; 125 of 947 vehicle `.bus` files (about 3 per folder) photographed, visual review of about 60 of them; offline: 180,988 meshes, 13,250 tiles.

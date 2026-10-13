@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-12 by Agent (M-0054 Phase D corpus triage)_
+_Last updated: 2026-10-13 by Agent (field report intake, Phase 10)_
 
 ---
 
@@ -88,7 +88,7 @@ _Work actively being executed in the current session._
 - `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12); these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
 - `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
-- `[~]` 🟠 **Scrambled mesh audit and fix: offline corpus audit (`mesh_audit`, `tile_audit`), live sweeps, [Mesh Issue Registry](../src/quality/mesh-issue-registry.md)** (M-0038, test/code) — task [P-1014](tasks/P-1014%20-%20Scrambled%20Mesh%20Audit%20and%20Fix.md), progress [mesh-audit.md](progress/mesh-audit.md); branch `agent/mesh-audit`.
+- `[~]` 🟠 **Scrambled mesh audit and fix: offline corpus audit (`mesh_audit`, `tile_audit`), live sweeps, [Mesh Issue Registry](../src/quality/mesh-issue-registry.md)** (M-0038, test/code) — task [P-1014](tasks/P-1014 - Scrambled Mesh Audit and Fix.md), progress [mesh-audit.md](progress/mesh-audit.md); branch `agent/mesh-audit`.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution
@@ -166,6 +166,21 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟡 **WCAG audit (automatic part), gamepad navigation, German/English completeness, golden screenshots** (M-0065, test) — done 2026-10-12 on `agent/ui-a11y`; see [accessibility audit](../src/roadmap/phase-9/accessibility-audit.md) and [progress](progress/ui-a11y.md).
 - [ ] 🟠 **Run the moderated usability test (5 participants, 6 tasks)** (M-0065, test) — [protocol](../src/meta/usability-test-protocol.md) written; needs people; acceptance criterion unmet until then.
 - [ ] 🟡 **Open from the accessibility audit:** screen reader and hardware gamepad/wheel checks; `Help`/`Menu` gamepad actions; text over pictures; HUD, loading screen and report dialog in the rule matrix; language packs from the user directory (A9–A12, section 5).
+
+#### Field report 2026-10-13 — Phase 10 and related (planned, from the project lead; [report](../src/quality/field-report-2026-10-13.md))
+- [ ] 🔴 **Mesh fidelity: parked cars, BRT Citaro, buildings (flipped/misaligned), lantern posts** (M-0066, code) — R-01, R-09, R-17, R-18; discovery by the P-1014 mesh audit (running).
+- [ ] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02; the `.water` spec has open questions ❓.
+- [ ] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04.
+- [ ] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05.
+- [ ] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07.
+- [ ] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08.
+- [ ] 🟠 **Control protocol: complete settings control for AI agents** (M-0072, code) — R-10; reproduce the gap first (`settings.*` exists in 1.1.0).
+- [ ] 🔴 **Vehicle dynamics: per-vehicle mass, axles, suspension, brakes on a world physics** (M-0073, spec + code) — R-11.
+- [ ] 🟠 **HUD place label from the spawn entry point (no hard-coded string)** (M-0075, code) — R-12.
+- [ ] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13.
+- [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
+- [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
+- [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
 - [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.

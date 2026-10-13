@@ -122,6 +122,7 @@ fn app() -> App {
                         light_variable: None,
                         image: None,
                         pivot: None,
+                        uv_unreliable: 0,
                     }]
                 })
                 .collect();
