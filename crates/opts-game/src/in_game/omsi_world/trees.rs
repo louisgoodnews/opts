@@ -69,14 +69,17 @@ pub(super) fn spawn_tree(
     );
     let mesh = tree_billboard_mesh(height, height * ratio);
     stats.scene_vertices += mesh.count_vertices();
-    let material = job.cache.pool.material(materials, StandardMaterial {
-        base_color_texture: Some(handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        double_sided: true,
-        cull_mode: None,
-        perceptual_roughness: 1.0,
-        ..default()
-    });
+    let material = job.cache.pool.material(
+        materials,
+        StandardMaterial {
+            base_color_texture: Some(handle),
+            alpha_mode: AlphaMode::Mask(0.5),
+            double_sided: true,
+            cull_mode: None,
+            perceptual_roughness: 1.0,
+            ..default()
+        },
+    );
     let transform = Transform::from_translation(omsi_to_bevy_pos(world))
         .with_rotation(omsi_euler_to_bevy_quat(-obj.heading_deg, 0.0, 0.0));
     // `OPTS_INSTANCING=merge`: the billboard is baked into the tile's merged mesh.

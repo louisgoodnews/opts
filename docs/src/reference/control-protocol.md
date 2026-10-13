@@ -239,6 +239,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
 | `camera.teleport` *(debug)* | `x` (number)<br>`y` (number)<br>`z` (number)<br>`yaw?` (number)<br>`pitch?` (number) | 1.0 | Move the camera (OMSI coordinates) |
 | `render.look` | `look?` (string) | 1.0 | Get or set the colour look (vivid, natural, bevy) |
+| [`render.stats`](#renderstats) | `reset?` (boolean)<br>`parts?` (boolean) | 1.0 | Frame times, draw counts per render phase, memory |
 | `vehicle.set` *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
 | `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
 | `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
@@ -258,6 +259,12 @@ A debug shortcut around the plan-a-drive wizard: it starts a session directly. T
 Return to the main menu.
 
 A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
+
+### `render.stats`
+
+Frame times, draw counts per render phase, memory.
+
+`frame_times` covers the frames since the last reset (average, median, 99th percentile, 1 % low rate); `phases` the latest frame's batch sets, bins and entities of Bevy's render phases summed over all views (one `multidraw_sets` entry is one multi-draw call, a batchable bin one instanced draw, every unbatchable entity one draw); `parts` (opt-in, scans the world) the visible mesh entities with their distinct meshes, materials and pairs; `gpu_diagnostics_ms` needs `OPTS_RENDER_DIAG=1`. `reset` clears the frame-time window after reading.
 
 ### `camera.look`
 

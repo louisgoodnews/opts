@@ -42,7 +42,7 @@ env "${envs[@]}" "$BIN" --omsi-path "$OMSI" --map-path "$OMSI/maps/$map" --vehic
 pid=$!
 trap cleanup EXIT
 ready=0
-for _ in $(seq 1 1200); do
+for _ in $(seq 1 3600); do
   if cli state 2>/dev/null | jq -e '.result.loading.ready == true' >/dev/null 2>&1; then ready=1; break; fi
   sleep 0.25
 done
@@ -51,6 +51,14 @@ t1=$(date +%s.%N)
 load_s=$(python3 -I -c "print(round($t1-$t0,2))")
 sleep "${WARM:-20}"
 cli sim.pause >/dev/null
+# wait until the streaming has settled: the number of mesh entities is unchanged for 3 polls (5 s apart)
+same=0; last=-1
+for _ in $(seq 1 40); do
+  n=$(cli render.stats --parts true | jq -r '.result.parts.mesh_entities')
+  if [ "$n" = "$last" ]; then same=$((same+1)); else same=0; fi
+  last=$n; [ "$same" -ge 3 ] && break
+  sleep 5
+done
 v=$(cli vehicle.get)
 x=$(jq -r '.result.x' <<<"$v"); y=$(jq -r '.result.y' <<<"$v"); z=$(jq -r '.result.z' <<<"$v")
 h=$(jq -r '.result.heading_deg' <<<"$v")
@@ -68,8 +76,13 @@ PY
   cli camera.teleport "$px" "$py" "$pz" --yaw "$yaw" --pitch "$p" >/dev/null
   sleep "${SETTLE:-4}"
   cli render.stats --reset true >/dev/null
+  cpu0=$(awk '{print $14+$15}' "/proc/$pid/stat")
   sleep "${SAMPLE:-10}"
   stats=$(cli render.stats --parts true | jq -c '.result')
+  cpu1=$(awk '{print $14+$15}' "/proc/$pid/stat")
+  # process CPU time (clock ticks of 10 ms) spent in the sample window, per frame: less sensitive to
+  # other load on the machine than the wall-clock frame time
+  stats=$(jq -c --argjson c "$((cpu1-cpu0))" '.cpu_ticks = $c | .cpu_ms_per_frame = (if .frame_times.frames > 0 then ($c * 10 / .frame_times.frames) else null end)' <<<"$stats")
   cli screenshot --path "$OUT/$pose.png" >/dev/null
   poses_json=$(jq -c --arg n "$pose" --argjson s "$stats" '. + [{pose: $n, stats: $s}]' <<<"$poses_json")
   echo "$label $pose done"

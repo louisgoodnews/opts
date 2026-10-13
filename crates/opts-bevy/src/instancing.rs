@@ -175,13 +175,13 @@ pub fn merge_cell_m() -> f32 {
 }
 
 use bevy::asset::AssetId;
+use bevy::asset::RenderAssetUsages;
 use bevy::ecs::entity::Entity;
-use bevy::ecs::system::Commands;
 use bevy::ecs::name::Name;
+use bevy::ecs::system::Commands;
 use bevy::mesh::{Mesh3d, PrimitiveTopology, VertexAttributeValues};
 use bevy::pbr::MeshMaterial3d;
 use bevy::prelude::AlphaMode;
-use bevy::asset::RenderAssetUsages;
 use bevy::transform::components::Transform;
 
 /// Vertices per merged mesh at most (keeps one entity's bounds and draw size reasonable).
@@ -309,15 +309,19 @@ impl StaticMerger {
             if g.positions.len() + pos.len() <= MERGE_VERTEX_CAP || g.positions.is_empty() {
                 g.material.get_or_insert_with(|| material.clone());
                 let base = g.positions.len() as u32;
-                g.positions
-                    .extend(pos.iter().map(|p| xf.transform_point((*p).into()).to_array()));
+                g.positions.extend(
+                    pos.iter()
+                        .map(|p| xf.transform_point((*p).into()).to_array()),
+                );
                 g.normals.extend(
                     nor.iter()
                         .map(|n| (xf.rotation * bevy::math::Vec3::from(*n)).to_array()),
                 );
                 g.uvs.extend_from_slice(uv);
                 match m.indices() {
-                    Some(Indices::U16(v)) => g.indices.extend(v.iter().map(|i| base + u32::from(*i))),
+                    Some(Indices::U16(v)) => {
+                        g.indices.extend(v.iter().map(|i| base + u32::from(*i)))
+                    }
                     Some(Indices::U32(v)) => g.indices.extend(v.iter().map(|i| base + *i)),
                     None => {}
                 }
@@ -336,7 +340,10 @@ impl StaticMerger {
         groups.sort_by_key(|(k, _)| (k.1, k.2, k.3));
         for (_, g) in groups {
             let Some(material) = g.material else { continue };
-            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default());
+            let mut mesh = Mesh::new(
+                PrimitiveTopology::TriangleList,
+                RenderAssetUsages::default(),
+            );
             mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, g.positions);
             mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, g.normals);
             mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, g.uvs);

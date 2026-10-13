@@ -231,9 +231,10 @@ fn main() {
                                 })
                         });
                     let lod = sco.meshes.iter().any(|m| m.lod_threshold.is_some());
-                    let text_textures = sco.meshes.iter().any(|m| {
-                        m.materials.iter().any(|x| x.text_texture.is_some())
-                    });
+                    let text_textures = sco
+                        .meshes
+                        .iter()
+                        .any(|m| m.materials.iter().any(|x| x.text_texture.is_some()));
                     Some(ScoInfo {
                         sco,
                         meshes,
@@ -296,15 +297,18 @@ fn main() {
                     *entry = (*entry).max(mesh.slots.len());
                     for (si, slot) in mesh.slots.iter().enumerate() {
                         // The `[matl]` entry of this slot changes texture, alpha and light map.
-                        let over = mesh_def
-                            .materials
-                            .iter()
-                            .find(|m| base_name(&m.texture) == slot.texture || m.material_index == si);
+                        let over = mesh_def.materials.iter().find(|m| {
+                            base_name(&m.texture) == slot.texture || m.material_index == si
+                        });
                         let content = format!(
                             "{}|{:?}|alpha={:?}|lm={:?}/{:?}|tm={}|tt={:?}",
                             over.map_or(slot.texture.clone(), |o| {
                                 let t = base_name(&o.texture);
-                                if t.is_empty() { slot.texture.clone() } else { t }
+                                if t.is_empty() {
+                                    slot.texture.clone()
+                                } else {
+                                    t
+                                }
                             }),
                             slot.numbers,
                             over.and_then(|o| o.alpha_mode),
@@ -368,23 +372,43 @@ fn report(map: &str, t: &Totals, top: usize) {
         "| placed objects (all / trees / vehicle-model / no mesh / sco missing) | {} / {} / {} / {} / {} |",
         t.objects, t.tree_objects, t.vehicle_objects, t.no_mesh, t.missing_sco
     );
-    println!("| parts (mesh entities: slot with triangles, per placed object) | {} |", t.parts);
+    println!(
+        "| parts (mesh entities: slot with triangles, per placed object) | {} |",
+        t.parts
+    );
     println!(
         "| parts in flat static objects / LOD-only objects / dynamic objects | {} / {} / {} |",
         t.parts_flat, t.parts_lod_only, t.parts_dynamic
     );
-    println!("| of which tree billboards / parts of objects with a rendered text texture | {} / {} |", t.parts_trees, t.parts_text);
-    println!("| unique mesh files / unique mesh contents | {} / {} |", t.mesh_paths.len(), t.mesh_content.len());
+    println!(
+        "| of which tree billboards / parts of objects with a rendered text texture | {} / {} |",
+        t.parts_trees, t.parts_text
+    );
+    println!(
+        "| unique mesh files / unique mesh contents | {} / {} |",
+        t.mesh_paths.len(),
+        t.mesh_content.len()
+    );
     println!(
         "| current handle keys (.o3d + `[matl]`) → unique mesh handles (parts) | {} → {} |",
         t.handle_keys.len(),
         handle_meshes
     );
     println!("| unique material contents | {} |", t.material_keys.len());
-    println!("| unique (mesh part, material) pairs: all / flat static only | {} / {} |", t.pair_keys.len(), t.pair_keys_flat.len());
-    println!("| repeat factor parts / pairs: whole map; median per tile | {:.1} ; {:.1} |", repeat_map, median);
+    println!(
+        "| unique (mesh part, material) pairs: all / flat static only | {} / {} |",
+        t.pair_keys.len(),
+        t.pair_keys_flat.len()
+    );
+    println!(
+        "| repeat factor parts / pairs: whole map; median per tile | {:.1} ; {:.1} |",
+        repeat_map, median
+    );
     println!("| triangles drawn (all parts) | {} |", t.triangles);
-    println!("| parts of scrambled (unreadable) meshes | {} |", t.scrambled_parts);
+    println!(
+        "| parts of scrambled (unreadable) meshes | {} |",
+        t.scrambled_parts
+    );
     let mut best: Vec<_> = t.per_sco.iter().collect();
     best.sort_by_key(|(_, (_, p))| std::cmp::Reverse(*p));
     println!("\nMost repeated objects (placed / parts):\n");
