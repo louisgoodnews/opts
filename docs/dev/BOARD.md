@@ -186,6 +186,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [~] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28.
+- [ ] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

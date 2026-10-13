@@ -54,6 +54,12 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-27 | **Research reflections** in mirrors and glass, and in future wet surfaces | rendering | [M-0085](../roadmap/phase-5/M-0085.md) (branch `research/reflections`) | 🔬 started |
 | R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | scroll fixed on `fix/dropdown-scroll`; search open |
 
+## Suggestion (2026-10-13, fifth message)
+
+| ID | Report | Area | Milestone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| R-30 | A **debug mode** (setting or command line, usable by agents through the protocol) in which OPTS tracks and logs **which mesh is located where on which tile** | tooling / content | [M-0087](../roadmap/phase-5/M-0087.md) | 📝 open |
+
 ## Notes
 
 - **R-01, R-09** overlap with the running mesh audit (P-1014, branch `agent/mesh-audit`); its registry feeds M-0066.
