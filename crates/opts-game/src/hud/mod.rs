@@ -93,7 +93,6 @@ impl Plugin for HudPlugin {
             .add_systems(
                 Update,
                 (
-                    viewpoint::sync_panel,
                     viewpoint::update_panel,
                     viewpoint::panel_buttons,
                     viewpoint::panel_tracks,
@@ -101,6 +100,15 @@ impl Plugin for HudPlugin {
                     .chain()
                     .run_if(in_state(AppState::InGame))
                     .run_if(opts_bevy::reporting::not_modal_active)
+                    .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+                    .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+            )
+            // The panel is spawned after the frame's input, in `PostUpdate`: a spawn system in
+            // `Update` would add a sync point that reorders the toast systems below.
+            .add_systems(
+                PostUpdate,
+                viewpoint::sync_panel
+                    .run_if(in_state(AppState::InGame))
                     .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
                     .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
             )
