@@ -993,7 +993,11 @@ mod tests {
             Some("Vehicles/Bus1/Bus1.bus")
         );
         let counts = cat.kind_counts().unwrap();
-        assert_eq!(counts.maps, maps.len() as i64, "same number as the maps list");
+        assert_eq!(
+            counts.maps,
+            maps.len() as i64,
+            "same number as the maps list"
+        );
         assert_eq!(
             counts.vehicles,
             vehicles.len() as i64,

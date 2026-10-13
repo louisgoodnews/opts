@@ -257,14 +257,8 @@ mod tests {
 
     fn render(locale: &str, key: &str, args: &Args) -> String {
         let mut loc = Localization::new(locale);
-        loc.extend(
-            "en",
-            include_str!("../settings_registry/messages_en.ftl"),
-        );
-        loc.extend(
-            "de",
-            include_str!("../settings_registry/messages_de.ftl"),
-        );
+        loc.extend("en", include_str!("../settings_registry/messages_en.ftl"));
+        loc.extend("de", include_str!("../settings_registry/messages_de.ftl"));
         let a: Vec<(String, opts_gui::l10n::fluent::Arg)> = args
             .iter()
             .map(|(k, v)| ((*k).to_string(), v.clone().into()))
@@ -289,7 +283,10 @@ mod tests {
             for n in ["43", "947", "20000", "1500", "52823"] {
                 assert!(line.contains(n), "{locale}: `{line}` lacks {n}");
             }
-            assert!(!line.contains("⟦"), "{locale}: missing variable in `{line}`");
+            assert!(
+                !line.contains("⟦"),
+                "{locale}: missing variable in `{line}`"
+            );
             let t = render(locale, "settings-info-catalogue-total", &total);
             assert!(t.contains("75313") && t.contains("679543"), "{locale}: {t}");
             assert!(!t.contains("⟦"));

@@ -8,6 +8,7 @@ use bevy::prelude::*;
 
 use bevy::input_focus::InputFocusVisible;
 
+pub use crate::l10n::fold::{fold, matches_query};
 use crate::l10n::Localization;
 
 use crate::{
@@ -242,7 +243,14 @@ impl ComboboxBuilder {
         let root = root_cmd.id();
 
         root_cmd.with_children(|child_parent| {
-            populate_combobox_children(child_parent, root, &display_text, &options, disabled, search);
+            populate_combobox_children(
+                child_parent,
+                root,
+                &display_text,
+                &options,
+                disabled,
+                search,
+            );
         });
 
         root
@@ -423,64 +431,6 @@ fn populate_combobox_children(
                 ));
             }
         });
-}
-
-/// Lower-case text without diacritics, for matching: `Süd` and `sud`, `Café` and `cafe`, `ß` and
-/// `ss` compare equal.
-pub fn fold(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        match c {
-            '\u{0300}'..='\u{036f}' => {}
-            'ß' => out.push_str("ss"),
-            'æ' | 'Æ' => out.push_str("ae"),
-            'œ' | 'Œ' => out.push_str("oe"),
-            _ => {
-                for l in c.to_lowercase() {
-                    out.push(base_letter(l));
-                }
-            }
-        }
-    }
-    out
-}
-
-/// The unaccented base of a precomposed Latin letter (other characters stay).
-fn base_letter(c: char) -> char {
-    const TABLE: &[(&str, char)] = &[
-        ("àáâãäåāăą", 'a'),
-        ("çćĉċč", 'c'),
-        ("ďđ", 'd'),
-        ("èéêëēĕėęě", 'e'),
-        ("ĝğġģ", 'g'),
-        ("ĥħ", 'h'),
-        ("ìíîïĩīĭįı", 'i'),
-        ("ĵ", 'j'),
-        ("ķ", 'k'),
-        ("ĺļľŀł", 'l'),
-        ("ñńņňŉ", 'n'),
-        ("òóôõöøōŏő", 'o'),
-        ("ŕŗř", 'r'),
-        ("śŝşš", 's'),
-        ("ţťŧ", 't'),
-        ("ùúûüũūŭůűų", 'u'),
-        ("ŵ", 'w'),
-        ("ýÿŷ", 'y'),
-        ("źżž", 'z'),
-    ];
-    TABLE
-        .iter()
-        .find(|(set, _)| set.contains(c))
-        .map_or(c, |(_, base)| *base)
-}
-
-/// Whether `option` matches `query`: every whitespace-separated word of the query occurs in it
-/// (case- and diacritics-insensitive). An empty query matches everything.
-pub fn matches_query(option: &str, query: &str) -> bool {
-    let hay = fold(option);
-    fold(query)
-        .split_whitespace()
-        .all(|word| hay.contains(word))
 }
 
 /// Mouse-wheel scrolling of the open menu (the event does not travel on to the page behind it).
@@ -667,8 +617,6 @@ pub fn combobox_search_text_system(
 /// it still matches, else the first match. Both wait for the filter to be applied first.
 pub fn combobox_search_keys_system(
     mut actions: MessageReader<UiAction>,
-    mut activated: MessageReader<Activated>,
-    inputs: Query<&TextFieldInput>,
     focused: Query<&TextFieldInput, With<Focused>>,
     searches: Query<&ComboboxSearch>,
     mut filters: Query<&mut ComboboxFilter>,
@@ -686,15 +634,13 @@ pub fn combobox_search_keys_system(
         }
     };
     for action in actions.read() {
-        if matches!(action, UiAction::Navigate(Direction::Down)) {
-            if let Some(input) = focused.iter().next() {
-                request(input.0, false);
-            }
-        }
-    }
-    for Activated(entity) in activated.read() {
-        if let Ok(input) = inputs.get(*entity) {
-            request(input.0, true);
+        let choose = match action {
+            UiAction::Navigate(Direction::Down) => false,
+            UiAction::Confirm => true,
+            _ => continue,
+        };
+        if let Some(input) = focused.iter().next() {
+            request(input.0, choose);
         }
     }
 }
@@ -937,6 +883,14 @@ mod search_tests {
     const STEP_MS: u64 = 50;
 
     fn app_with(options: usize, selected: Option<usize>) -> (App, Entity) {
+        app_with_id(options, selected, None)
+    }
+
+    fn app_with_id(
+        options: usize,
+        selected: Option<usize>,
+        id: Option<&'static str>,
+    ) -> (App, Entity) {
         let mut app = headless_app();
         app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
             Duration::from_millis(STEP_MS),
@@ -948,7 +902,11 @@ mod search_tests {
             if let Some(i) = selected {
                 b = b.with_selected(i);
             }
-            b.spawn(&mut commands)
+            let e = b.spawn(&mut commands);
+            if let Some(id) = id {
+                commands.entity(e).insert(crate::ui_id::UiId::new(id));
+            }
+            e
         };
         for _ in 0..3 {
             app.update();
@@ -963,7 +921,10 @@ mod search_tests {
     }
 
     fn open(app: &mut App, combo: Entity) {
-        app.world_mut().get_mut::<M3Combobox>(combo).unwrap().is_open = true;
+        app.world_mut()
+            .get_mut::<M3Combobox>(combo)
+            .unwrap()
+            .is_open = true;
         frames(app, 4);
     }
 
@@ -1162,7 +1123,10 @@ mod search_tests {
         open(&mut app, combo);
         type_into(&mut app, "point 1");
         frames(&mut app, 4);
-        app.world_mut().get_mut::<M3Combobox>(combo).unwrap().is_open = false;
+        app.world_mut()
+            .get_mut::<M3Combobox>(combo)
+            .unwrap()
+            .is_open = false;
         frames(&mut app, 4);
         assert_eq!(shown(&mut app).len(), 16);
     }
@@ -1192,14 +1156,15 @@ mod search_tests {
 
     #[test]
     fn the_search_field_has_a_stable_id_in_every_language() {
-        let (mut app, combo) = app_with(16, None);
-        app.world_mut()
-            .entity_mut(combo)
-            .insert(crate::ui_id::UiId::new("wizard.where.start-point"));
+        let (mut app, combo) = app_with_id(16, None, Some("wizard.where.start-point"));
         open(&mut app, combo);
         frames(&mut app, 2);
         let field = search_field(&mut app);
-        let id = |app: &App| app.world().get::<crate::ui_id::UiId>(field).map(|i| i.0.to_string());
+        let id = |app: &App| {
+            app.world()
+                .get::<crate::ui_id::UiId>(field)
+                .map(|i| i.0.to_string())
+        };
         let en = id(&app);
         assert_eq!(
             en.as_deref(),
@@ -1252,7 +1217,10 @@ mod reveal_tests {
         for _ in 0..4 {
             app.update();
         }
-        app.world_mut().get_mut::<M3Combobox>(combo).unwrap().is_open = true;
+        app.world_mut()
+            .get_mut::<M3Combobox>(combo)
+            .unwrap()
+            .is_open = true;
         for _ in 0..8 {
             app.update();
         }

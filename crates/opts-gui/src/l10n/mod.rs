@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 pub mod fluent;
+pub mod fold;
 pub mod keys;
 pub mod pseudo;
 pub mod wizard_keys;
