@@ -116,6 +116,11 @@ jobs:
       - name: Check the hardware probe
         run: cargo check -p opts-hardware --all-targets
 
+      # The repository pins the toolchain (rust-toolchain.toml): targets must be added to the
+      # pinned toolchain, i.e. from inside the checkout, not to `stable` by the setup action.
+      - name: Add the Intel mac target to the pinned toolchain
+        run: rustup target add x86_64-apple-darwin
+
       - name: Check the hardware probe for Intel macs
         run: cargo check -p opts-hardware --all-targets --target x86_64-apple-darwin
 
@@ -138,6 +143,13 @@ jobs:
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
+
+      - name: Add the targets to the pinned toolchain
+        run: |
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-gnu x86_64-pc-windows-msvc aarch64-pc-windows-msvc aarch64-apple-darwin x86_64-apple-darwin; do
+            rustup target add "$t"
+          done
+          rustup component add clippy
 
       - name: Clippy for every supported target (opts-hardware only; nothing is run)
         run: |
