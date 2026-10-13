@@ -2,6 +2,9 @@
 
 widget-clear = Leeren
 widget-combobox-placeholder = Option wählen ...
+widget-combobox-search = Suchen ...
+widget-combobox-search-label = Optionen filtern
+widget-combobox-no-match = Kein Treffer
 widget-not-available-yet = Funktion noch nicht verfügbar!
 widget-not-available-yet-reason = { widget-not-available-yet } ({ $milestone })
 widget-items =

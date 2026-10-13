@@ -512,6 +512,50 @@ impl Catalogue {
         Ok((get("total_files")?, get("total_entities")?))
     }
 
+    /// The catalogue broken down by kind, with the same rules the menus use: `maps` and
+    /// `vehicles` are exactly the lists of [`Catalogue::maps`] and [`Catalogue::playable_vehicles`]
+    /// (what Home and the wizard show); `entities` counts every entry of every category.
+    ///
+    /// # Errors
+    /// SQLite failures.
+    pub fn kind_counts(&self) -> Result<KindCounts> {
+        let (files, _) = self.totals()?;
+        let (maps, vehicles, entities) = self.with(|c| {
+            let maps: i64 = c.query_row(
+                "SELECT count(*) FROM entities e JOIN map_info m ON m.entity_id = e.entity_id
+                 JOIN directories d ON d.dir_id = e.entity_dir_id WHERE e.category = 'map'",
+                [],
+                |r| r.get(0),
+            )?;
+            let vehicles: i64 = c.query_row(
+                "SELECT count(*) FROM entities e JOIN vehicle_info v ON v.entity_id = e.entity_id
+                 JOIN files f ON f.file_id = e.marker_file_id
+                 WHERE e.category = 'vehicle' AND e.is_playable = 1 AND e.alias_of_id IS NULL",
+                [],
+                |r| r.get(0),
+            )?;
+            let entities: i64 = c.query_row("SELECT count(*) FROM entities", [], |r| r.get(0))?;
+            Ok((maps, vehicles, entities))
+        })?;
+        let by_category = self.category_counts()?;
+        let of = |name: &str| {
+            by_category
+                .iter()
+                .find(|(c, _)| c == name)
+                .map_or(0, |(_, n)| *n)
+        };
+        let (scenery_objects, splines) = (of("sceneryobject"), of("spline"));
+        Ok(KindCounts {
+            files,
+            entities,
+            maps,
+            vehicles,
+            scenery_objects,
+            splines,
+            other: (entities - maps - vehicles - scenery_objects - splines).max(0),
+        })
+    }
+
     /// Counts per entity category (diagnostics).
     ///
     /// # Errors
@@ -525,6 +569,26 @@ impl Catalogue {
             rows.collect()
         })
     }
+}
+
+/// The catalogue by kind (see [`Catalogue::kind_counts`]); `other` is everything that is not one
+/// of the four named kinds (textures, sounds, humans, trailers, AI vehicles, weather, ...).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct KindCounts {
+    /// Files counted by the last scan.
+    pub files: i64,
+    /// Entries of every kind.
+    pub entities: i64,
+    /// Maps (as listed on Home and in the wizard).
+    pub maps: i64,
+    /// Player-selectable vehicles (as listed on Home and in the wizard).
+    pub vehicles: i64,
+    /// Scenery objects (`.sco`).
+    pub scenery_objects: i64,
+    /// Splines (`.sli`).
+    pub splines: i64,
+    /// All other entries.
+    pub other: i64,
 }
 
 /// Number of leading path components shared by two `/`-separated paths (case-insensitive).
@@ -928,6 +992,20 @@ mod tests {
             cat.vehicle_marker("bus1").unwrap().as_deref(),
             Some("Vehicles/Bus1/Bus1.bus")
         );
+        let counts = cat.kind_counts().unwrap();
+        assert_eq!(counts.maps, maps.len() as i64, "same number as the maps list");
+        assert_eq!(
+            counts.vehicles,
+            vehicles.len() as i64,
+            "same number as the vehicle list"
+        );
+        assert!(counts.entities >= counts.maps + counts.vehicles);
+        assert_eq!(
+            counts.maps + counts.vehicles + counts.scenery_objects + counts.splines + counts.other,
+            counts.entities,
+            "the kinds add up to the entries"
+        );
+        assert!(counts.files >= 4);
         let _ = fs::remove_dir_all(&root);
     }
 

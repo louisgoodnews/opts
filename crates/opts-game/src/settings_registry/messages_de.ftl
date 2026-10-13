@@ -136,7 +136,8 @@ settings-keep = Behalten
 settings-revert = Zurück
 
 settings-info-theme-now = Gerade wird das Farbschema „{ $theme }“ angezeigt.
-settings-info-catalogue = Katalog: { $files } Dateien, { $entities } Karten, Fahrzeuge und weitere Inhalte gefunden.
+settings-info-catalogue = Katalog: { $maps } Karten, { $vehicles } Fahrzeuge, { $scenery } Szenerieobjekte, { $splines } Splines und { $other } weitere Einträge (Texturen, Menschen, Anhänger und mehr).
+settings-info-catalogue-total = Insgesamt { $entities } Einträge, aufgebaut aus { $files } Dateien. Eine Datei ist eine Datei auf der Festplatte; ein Eintrag ist eine Sache aus einer oder mehreren Dateien, etwa eine Karte oder ein Fahrzeug. Karten und Fahrzeuge werden gezählt wie auf der Startseite.
 settings-info-last-scan = Letzte Suche: { $when }.
 settings-info-never-scanned = Der Katalog wurde noch nicht durchsucht.
 settings-info-cache = Texturspeicher: { $files } Dateien, { $size } MB.

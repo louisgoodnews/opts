@@ -63,6 +63,25 @@ fn dir_usage(dir: &std::path::Path) -> (usize, u64) {
     n
 }
 
+/// Variables of the two catalogue lines: the breakdown by kind and the files-versus-entries line.
+type Args = Vec<(&'static str, String)>;
+
+fn catalogue_args(c: &opts_catalogue::KindCounts) -> (Args, Args) {
+    (
+        vec![
+            ("maps", c.maps.to_string()),
+            ("vehicles", c.vehicles.to_string()),
+            ("scenery", c.scenery_objects.to_string()),
+            ("splines", c.splines.to_string()),
+            ("other", c.other.to_string()),
+        ],
+        vec![
+            ("entities", c.entities.to_string()),
+            ("files", c.files.to_string()),
+        ],
+    )
+}
+
 /// Information that belongs to `cat`, below the rows.
 pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, theme_kind: &str) {
     match cat {
@@ -89,24 +108,29 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
             });
         }
         Category::Content => {
-            let summary = crate::catalogue_service::catalogue_db_path()
+            let (counts, last) = crate::catalogue_service::catalogue_db_path()
                 .filter(|p| p.exists())
                 .and_then(|p| opts_catalogue::Catalogue::open(&p).ok())
                 .map(|cat| {
                     (
-                        cat.totals().unwrap_or((0, 0)),
+                        cat.kind_counts().unwrap_or_default(),
                         cat.last_scan().ok().flatten(),
                     )
-                });
-            let ((files, entities), last) = summary.unwrap_or(((0, 0), None));
+                })
+                .unwrap_or_default();
+            let (kinds, total) = catalogue_args(&counts);
             line(
                 c,
                 pane,
                 "settings-info-catalogue",
-                &[
-                    ("files", files.to_string()),
-                    ("entities", entities.to_string()),
-                ],
+                &kinds,
+                TypeScale::BodyMedium,
+            );
+            line(
+                c,
+                pane,
+                "settings-info-catalogue-total",
+                &total,
                 TypeScale::BodyMedium,
             );
             line(
@@ -225,3 +249,54 @@ pub const KEY_LINES: [&str; 9] = [
     "settings-key-menu",
     "settings-key-developer",
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use opts_gui::l10n::Localization;
+
+    fn render(locale: &str, key: &str, args: &Args) -> String {
+        let mut loc = Localization::new(locale);
+        loc.extend(
+            "en",
+            include_str!("../settings_registry/messages_en.ftl"),
+        );
+        loc.extend(
+            "de",
+            include_str!("../settings_registry/messages_de.ftl"),
+        );
+        let a: Vec<(String, opts_gui::l10n::fluent::Arg)> = args
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), v.clone().into()))
+            .collect();
+        loc.t_args(key, &a)
+    }
+
+    #[test]
+    fn the_catalogue_summary_names_each_kind_and_explains_files_versus_entries() {
+        let counts = opts_catalogue::KindCounts {
+            files: 679_543,
+            entities: 75_313,
+            maps: 43,
+            vehicles: 947,
+            scenery_objects: 20_000,
+            splines: 1_500,
+            other: 52_823,
+        };
+        let (kinds, total) = catalogue_args(&counts);
+        for locale in ["en", "de"] {
+            let line = render(locale, "settings-info-catalogue", &kinds);
+            for n in ["43", "947", "20000", "1500", "52823"] {
+                assert!(line.contains(n), "{locale}: `{line}` lacks {n}");
+            }
+            assert!(!line.contains("⟦"), "{locale}: missing variable in `{line}`");
+            let t = render(locale, "settings-info-catalogue-total", &total);
+            assert!(t.contains("75313") && t.contains("679543"), "{locale}: {t}");
+            assert!(!t.contains("⟦"));
+        }
+        assert!(render("en", "settings-info-catalogue", &kinds).contains("43 maps, 947 vehicles"));
+        assert!(
+            render("de", "settings-info-catalogue", &kinds).contains("43 Karten, 947 Fahrzeuge")
+        );
+    }
+}
