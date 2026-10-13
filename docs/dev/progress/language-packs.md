@@ -22,11 +22,7 @@ Gates: `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --a
 
 | Batch | Status |
 | :--- | :--- |
-| L1 opts-core l10n: parser move + diagnostics, plural rules, check/pack/interchange/builtin | done (21+2 unit tests green) |
-| L2 opts-gui Localization overlay (`l10n/packs.rs`), language catalogue | code written, compile check pending (machine load 80+) |
-| L3 opts-game: `language_packs.rs`, language row in settings page, reload action, `l10n.*` methods, descriptors in opts-cli | code written, compile/test pending; tests in `tests/language_packs.rs` |
-| L4 opts-tools `l10n export/check/new/import/stats` (`crates/opts-tools/src/l10n.rs`) | code written, tests pending |
-| L5 docs: localisation-packs.md, translating.md, control-protocol (architecture table done; regenerate reference with UPDATE_CONTROL_DOC=1, UPDATE_SETTINGS_DOC=1), M-0083/ROADMAP/BOARD | docs written; M-0083/ROADMAP/BOARD/reference regeneration todo |
-| L6 gates, final commit | todo |
+| L1-L5 core, gui overlay, game integration, tools, docs | done |
+| L6 gates | done 2026-10-13: fmt, clippy -D warnings, `cargo test --workspace --all-features --no-fail-fast` (no failures), rustdoc -D warnings, check_links, gen_roadmap_copy --check |
 
 ## Results
