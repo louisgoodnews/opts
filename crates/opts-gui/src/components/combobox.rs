@@ -1,6 +1,8 @@
 //! Material Design 3 Combobox / Dropdown selection widget.
 
 use crate::components::Button;
+use bevy::input::mouse::MouseScrollUnit;
+use bevy::picking::events::PointerScroll;
 use bevy::prelude::*;
 
 use bevy::input_focus::InputFocusVisible;
@@ -254,9 +256,12 @@ fn populate_combobox_children(
                     max_height: Val::Px(240.0),
                     border: UiRect::all(Val::Px(1.0)),
                     padding: UiRect::all(Val::Px(4.0)),
-                    overflow: Overflow::clip_y(),
+                    // Long lists (a map with 16 start points) scroll with the wheel; the
+                    // focused item is kept in view by `scroll_into_view`.
+                    overflow: Overflow::scroll_y(),
                     ..default()
                 },
+                ScrollPosition::default(),
                 GlobalZIndex(50),
             ),
             ComboboxMenu(root),
@@ -265,6 +270,7 @@ fn populate_combobox_children(
             RadiusToken(RadiusLevel::ExtraSmall),
             ElevationToken(ElevationLevel::Level2),
         ))
+        .observe(menu_wheel_scroll)
         .with_children(|menu_parent| {
             for (i, opt) in options.iter().enumerate() {
                 menu_parent
@@ -303,6 +309,19 @@ fn populate_combobox_children(
                     });
             }
         });
+}
+
+/// Mouse-wheel scrolling of the open menu (the event does not travel on to the page behind it).
+fn menu_wheel_scroll(mut ev: On<PointerScroll>, mut positions: Query<&mut ScrollPosition>) {
+    let Ok(mut pos) = positions.get_mut(ev.entity) else {
+        return;
+    };
+    let amount = match ev.unit {
+        MouseScrollUnit::Line => ev.y * 24.0,
+        MouseScrollUnit::Pixel => ev.y,
+    };
+    pos.y = (pos.y - amount).max(0.0);
+    ev.propagate(false);
 }
 
 /// System handling clicks on the header button to toggle dropdown visibility.
@@ -468,5 +487,28 @@ mod tests {
         let combo = app.world().get::<M3Combobox>(entity);
         assert_eq!(combo.map(|c| c.selected), Some(Some(1)));
         assert_eq!(combo.map(|c| c.is_open), Some(false));
+    }
+
+    #[test]
+    fn a_long_menu_scrolls_instead_of_clipping() {
+        let mut app = App::new();
+        let options: Vec<String> = (0..16).map(|i| format!("Start point {i}")).collect();
+        {
+            let mut commands = app.world_mut().commands();
+            ComboboxBuilder::new("Start")
+                .with_options(options)
+                .spawn(&mut commands);
+        }
+        app.update();
+
+        let mut menus = app
+            .world_mut()
+            .query_filtered::<(&Node, &ScrollPosition), With<ComboboxMenu>>();
+        let (node, _) = menus.single(app.world()).expect("one menu");
+        assert_eq!(
+            node.overflow.y,
+            OverflowAxis::Scroll,
+            "a menu taller than max_height must scroll (the 16 start points of Berlin-Spandau)"
+        );
     }
 }
