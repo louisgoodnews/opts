@@ -244,6 +244,10 @@ impl Plugin for ReflectionsResearchPlugin {
             .init_resource::<GlassDone>()
             .init_resource::<WetState>()
             .init_resource::<FrameStats>();
+        if sw.ssr {
+            // SSR only reflects what is rendered by the deferred path.
+            app.insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::deferred());
+        }
         if std::env::var_os("OPTS_REFLECT_GPU").is_some() {
             app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
         }
