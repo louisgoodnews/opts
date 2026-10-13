@@ -5,7 +5,7 @@
 //! in [`HardwareState`] and offers it to the settings page and the control protocol. Nothing
 //! leaves the machine.
 
-mod protocol;
+pub mod protocol;
 mod settings;
 pub mod view;
 
