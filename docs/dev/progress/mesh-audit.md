@@ -36,3 +36,10 @@ target/release/examples/mesh_audit "<OMSI dir>" --threads 14 [--decode] > raw.ts
 
 * `[alphascale]` on opaque base materials hid whole bodies/buildings (MI-0029, fixed): Crealis bodies and the Chicago skyline reappear.
 * Coverage: 43 of 43 maps loaded and photographed (4 views each) and contact sheets inspected; 125 of 947 vehicle `.bus` files (about 3 per folder) photographed, visual review of about 60 of them; offline: 180,988 meshes, 13,250 tiles.
+
+## Session 3 (2026-10-13/14): lifted decoder restriction, protocol fix, vehicles
+
+* Merged origin/master twice (decoder work incl. cache v8 -> v9 with the spike filter; lint-allow duplicates removed). Gates green, pushed.
+* MI-0036 done: `scene.load_map` / `vehicle.set` answer `1008` at once for a failed load and answer (with `waiting_for_continue: true`) while the loading screen waits for *Continue*; tests `restart_waiter_tests`; reference regenerated.
+* Wrong-vertices experiments (twin truth set, 1,826 accepted, baseline 299-301 wrong): (a) settle only above 0.98 agreement, trying all six runs: 310 wrong (the extra runs agree on wrong solutions); (b) majority vote over six runs: 310 wrong. Negative results, code not kept. Of the 301 wrong meshes 31 are wrong by one global axis permutation/mirror (R-17 "flipped" candidates), the rest have wrong individual vertices.
+* Vehicle sweep re-run on DBC_Map with the fixed pose (all 188 sampled buses) because the earlier screenshots were deleted; resumable via `vehicle_sweep.sh`.
