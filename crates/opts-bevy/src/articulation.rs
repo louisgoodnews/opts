@@ -21,6 +21,11 @@ use crate::coords::omsi_to_bevy_pos;
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::VehicleController;
 
+/// A leader position change larger than `max(|v|·dt·2, JUMP_THRESHOLD_M)` in one step is a
+/// position jump, not motion: larger than any per-step displacement the simulation produces at
+/// any speed, below the 0.5 m steps of the spawn placement.
+pub const JUMP_THRESHOLD_M: f32 = 0.3;
+
 /// Geometry of a following segment, taken from the `.bus` files of the two units.
 #[derive(Component, Debug, Clone)]
 pub struct ArticulatedSegment {
@@ -32,6 +37,9 @@ pub struct ArticulatedSegment {
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
     pub max_alpha_deg: f32,
+    /// Limits of the pitch `β` in degrees `(min, max)` (`[coupling_front_character]`); the
+    /// `articulation_<k>_beta` variable is clamped to them. `None`: unlimited.
+    pub beta_limits_deg: Option<(f32, f32)>,
     /// The segment hangs backwards (its model is turned by 180°). Its coupling points and rear
     /// axle are then given mirrored (`-x`, `-y`) and the model is rotated half a turn.
     pub reversed: bool,
@@ -44,6 +52,20 @@ pub struct ArticulatedSegment {
     /// Height, pitch and roll of the segment on the ground under it, set by the game each frame
     /// (`None`: the segment keeps the root's height and stays level).
     pub ground: Option<SegmentGround>,
+    /// Index of the segment's first axle in the consist-wide numbering the model uses
+    /// (`Wheel_Rotation_<index>_L`: the head's axles come first, then each trailer's).
+    pub first_axle: usize,
+    /// The wheels of the segment's own axles (radius, spin), rolling with the segment's travel.
+    pub wheels: Vec<SegmentWheel>,
+}
+
+/// One axle of a following segment: both wheels roll alike.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SegmentWheel {
+    /// Wheel radius (m).
+    pub radius: f32,
+    /// Accumulated spin (rad), growing while the segment rolls forward along its model.
+    pub rotation_rad: f32,
 }
 
 /// How a segment lies on the ground (see [`ArticulatedSegment::ground`]).
@@ -66,12 +88,50 @@ impl ArticulatedSegment {
             front_local,
             rear_axle_y,
             max_alpha_deg,
+            beta_limits_deg: None,
             reversed: false,
             state: None,
             prev_pose: None,
             curr_pose: None,
             ground: None,
+            first_axle: 0,
+            wheels: Vec::new(),
         }
+    }
+
+    /// `beta` (degrees) limited to the joint's pitch range.
+    #[must_use]
+    pub fn clamp_beta_deg(&self, beta: f32) -> f32 {
+        self.beta_limits_deg
+            .map_or(beta, |(lo, hi)| beta.clamp(lo, hi))
+    }
+
+    /// Gives the segment its wheels: `first_axle` is the consist-wide index of its first axle and
+    /// `radii` the wheel radii of its axles in order.
+    pub fn set_wheels(&mut self, first_axle: usize, radii: impl IntoIterator<Item = f32>) {
+        self.first_axle = first_axle;
+        self.wheels = radii
+            .into_iter()
+            .map(|radius| SegmentWheel {
+                radius: radius.max(0.05),
+                rotation_rad: 0.0,
+            })
+            .collect();
+    }
+
+    /// Rolls the wheels by the segment's own travel `from -> to` (simulation space, kinematic
+    /// frame, heading `heading` compass rad) and returns the signed distance along the model's
+    /// forward direction.
+    fn roll(&mut self, from: Vec2, to: Vec2, heading: f32) -> f32 {
+        let forward = Vec2::new(heading.sin(), heading.cos());
+        let mut d = (to - from).dot(forward);
+        if self.reversed {
+            d = -d;
+        }
+        for w in &mut self.wheels {
+            w.rotation_rad = (w.rotation_rad + d / w.radius).rem_euclid(std::f32::consts::TAU);
+        }
+        d
     }
 
     /// Position and heading of the segment in the kinematic frame (its mirrored frame when
@@ -107,6 +167,16 @@ impl ArticulatedSegment {
     }
 }
 
+/// The bellows variable `articulation_<k>_beta` (degrees) for a unit pitched `pitch` (rad, nose up
+/// positive) behind a unit pitched `leader_pitch`. The bellows dummies turn about the lateral axis
+/// by `-beta·factor` (right-handed, the `anim_rot` convention of wheels and `alpha`), so the end of
+/// the bellows joined to the follower (behind the joint) only follows it when a nose-up follower
+/// gives a **negative** beta (`docs/src/architecture/bellows-census.md`, Sign Verification).
+#[must_use]
+pub fn joint_beta_deg(leader_pitch: f32, pitch: f32) -> f32 {
+    (leader_pitch - pitch).to_degrees()
+}
+
 /// The segments behind the root unit, front to back.
 #[derive(Component, Debug, Clone, Default)]
 pub struct ArticulatedChain {
@@ -117,7 +187,9 @@ pub struct ArticulatedChain {
 /// Advances all chains by one fixed step.
 pub fn articulation_system(
     time: Res<Time>,
+    mut last_leader: Local<std::collections::HashMap<Entity, Vec2>>,
     roots: Query<(
+        Entity,
         &VehicleController,
         &Transform,
         &ArticulatedChain,
@@ -129,13 +201,21 @@ pub fn articulation_system(
     if dt <= 0.0 {
         return;
     }
-    for (controller, root_tf, chain, scripts) in &roots {
+    for (root, controller, root_tf, chain, scripts) in &roots {
         let chassis = &controller.sim.chassis;
+        // A position change the speed cannot explain is a jump (spawn placement, collision
+        // push-out, reset), not motion: the segments are re-seeded behind the leader and their
+        // wheels keep their last speed (`docs/src/architecture/chain-assembly.md`).
+        let jumped = last_leader.insert(root, chassis.position).is_none_or(|prev| {
+            let moved = (chassis.position - prev).length();
+            moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
+        });
         let mut leader = (
             DVec2::new(f64::from(chassis.position.x), f64::from(chassis.position.y)),
             f64::from(chassis.heading_rad),
         );
         let mut alphas = Vec::with_capacity(chain.segments.len());
+        let mut wheel_vars: Vec<(usize, f32, Vec<SegmentWheel>)> = Vec::new();
         for &e in &chain.segments {
             let Ok((mut seg, mut tf)) = segments.get_mut(e) else {
                 break;
@@ -143,6 +223,10 @@ pub fn articulation_system(
             let (hitch, front) = (seg.hitch_local, seg.front_local);
             let axle_distance = f64::from((front.y - seg.rear_axle_y).max(1.0));
             let max_alpha = f64::from(seg.max_alpha_deg);
+            if jumped {
+                seg.state = None;
+                seg.curr_pose = None;
+            }
             let kin = seg.state.get_or_insert_with(|| {
                 TrailerKinematics::new(
                     DVec2::new(f64::from(hitch.x), f64::from(hitch.y)),
@@ -158,6 +242,14 @@ pub fn articulation_system(
                 Vec2::new(st.origin.x as f32, st.origin.y as f32),
                 st.heading as f32,
             );
+            let travelled = seg.curr_pose.map_or(0.0, |(p0, _)| {
+                // Rolled along the heading half-way through the step (the segment's own motion,
+                // not the tractor's speed).
+                seg.roll(p0, now.0, now.1)
+            });
+            if !jumped {
+                wheel_vars.push((seg.first_axle, travelled / dt as f32, seg.wheels.clone()));
+            }
             seg.prev_pose = seg.curr_pose.or(Some(now));
             seg.curr_pose = Some(now);
             // The placement happens in `articulation_render_system`, interpolated.
@@ -171,6 +263,20 @@ pub fn articulation_system(
                 // by the game each frame (`follow_ground_chain`); the kinematics only know yaw.
                 for (k, a) in alphas.iter().enumerate() {
                     engine.set(&format!("articulation_{k}_alpha"), *a as f32);
+                }
+                // The trailers' wheel variables under the consist-wide axle numbers.
+                for (first, speed, wheels) in &wheel_vars {
+                    for (j, w) in wheels.iter().enumerate() {
+                        let i = first + j;
+                        let rpm = speed / w.radius * 60.0 / std::f32::consts::TAU;
+                        for side in ["L", "R"] {
+                            engine.set(&format!("wheel_rotation_{i}_{side}"), w.rotation_rad);
+                            engine.set(&format!("axle_steering_{i}_{side}"), 0.0);
+                            engine.set(&format!("axle_suspension_{i}_{side}"), 0.0);
+                        }
+                        engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
+                        engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
+                    }
                 }
             }
         }

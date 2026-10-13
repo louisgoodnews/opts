@@ -356,8 +356,11 @@ pub fn follow_ground(
                 pitch: state.1,
                 roll: state.2,
             });
+            let beta = opts_bevy::joint_beta_deg(previous.0, state.1);
+            // The joint cannot pitch beyond `[coupling_front_character]` min/max beta.
+            let beta = seg.clamp_beta_deg(beta);
             betas.push((
-                (state.1 - previous.0).to_degrees(),
+                beta,
                 (state.2 - previous.1).to_degrees(),
             ));
             previous = (state.1, state.2);
