@@ -46,6 +46,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — ✅ Implemented 2026-10-13 (R-13)
 - [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 🟡 Implemented (R-25); trial in the running app with a real second language open
 - [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — ✅ Implemented on `feat/combobox-search` (R-24, R-28, R-29)
+- [M-0088 — No Blocking Work on the Main Thread (Settings Content Page Freeze)](M-0088.md) — 📝 Planned, 🔴 high (R-31)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -112,3 +113,5 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
   - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
+- [ ] **🧊 No Blocking Work on the Main Thread** — [M-0088](M-0088.md)
+  - [ ] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).

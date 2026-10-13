@@ -187,6 +187,11 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [x] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28; done on `feat/combobox-search`, awaiting merge.
 - [ ] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30.
+- [ ] 🔴 **Settings Content page freeze: no blocking work on the main thread; UI-wide audit** (M-0088, code) — R-31.
+- [ ] 🔴 **Tile streaming performance: measure, rank, implement** (M-0089, research + code) — R-32, R-36.
+- [ ] 🔴 **Content fidelity pass: pedestrians, parked/driving cars, Hamburg, Wuppertal stations and T-crossings** (M-0090, code) — R-34 … R-42.
+- [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40.
+- [ ] 🟠 **Shift+Space resets each view to its default position** (M-0084 addendum, code) — R-33.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

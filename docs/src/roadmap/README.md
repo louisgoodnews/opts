@@ -202,6 +202,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
 - [~] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
   - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
+- [ ] **🌀 Tile Streaming Performance** — [M-0089](phase-4/M-0089.md)
+  - [ ] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36).
 
 ---
 
@@ -299,6 +301,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](phase-8/M-0060.md)
   - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; the project lead's testing decides the default; *Natural* equals *Bevy default* until the calibration).
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
+- [ ] **🌑 Shadow Quality and Realism** — [M-0091](phase-8/M-0091.md)
+  - [ ] Assess and improve shadows with presets and measurements (R-40).
 
 ---
 
@@ -336,6 +340,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
   - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
+- [ ] **🧊 No Blocking Work on the Main Thread** — [M-0088](phase-9/M-0088.md)
+  - [ ] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
 
 ---
 
@@ -358,6 +364,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [ ] **⚙️ Vehicle Dynamics** — [M-0073](phase-10/M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
+- [ ] **🏙️ Content Fidelity Pass** — [M-0090](phase-10/M-0090.md)
+  - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
 
 ---
 
