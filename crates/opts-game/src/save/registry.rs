@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(new.sections["future_section"].data, json!({"keep": 1}));
         assert!(new.sections.contains_key("newer_known"));
 
-        let sections = [section("known", 1, None), section("newer_known", 2, None)];
+        let sections = [section("known", 1, None), section("newer_known", 9, None)];
         let mut again = file_with(&[]);
         carry_over_foreign(&sections, &old, &mut again);
         assert!(!again.sections.contains_key("newer_known"), "known and not newer: not foreign");

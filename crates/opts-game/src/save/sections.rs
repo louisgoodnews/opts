@@ -48,8 +48,13 @@ pub fn resolve_bus_file(saved: &str, rel: Option<&str>, root: Option<&Path>) -> 
     if direct.is_file() {
         return Some(direct);
     }
-    let found = root?.join(rel?);
-    found.is_file().then_some(found)
+    let root = root?;
+    // A relative saved path, or the recorded relative one, below the installation.
+    [Some(Path::new(saved)).filter(|p| p.is_relative()), rel.map(Path::new)]
+        .into_iter()
+        .flatten()
+        .map(|p| root.join(p))
+        .find(|p| p.is_file())
 }
 
 // ---- session ---------------------------------------------------------------------------------
@@ -70,14 +75,15 @@ pub struct SessionData {
 }
 
 fn session_capture(world: &mut World) -> Result<Option<Value>, String> {
-    let job = world
-        .get_resource::<WorldLoadJob>()
-        .ok_or("no map is loaded")?;
-    let map_folder = job
-        .map_dir()
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .ok_or("the map folder has no name")?;
+    let map_folder = match world.get_resource::<WorldLoadJob>() {
+        Some(job) => job
+            .map_dir()
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .ok_or("the map folder has no name")?,
+        // No loader (a headless test world): the setup's map is the folder.
+        None => world.resource::<NewGameSetup>().selected_map.clone(),
+    };
     let info = world.resource::<InGameSessionInfo>();
     to_value(&SessionData {
         map_folder,
