@@ -239,7 +239,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
 | `camera.teleport` *(debug)* | `x` (number)<br>`y` (number)<br>`z` (number)<br>`yaw?` (number)<br>`pitch?` (number) | 1.0 | Move the camera (OMSI coordinates) |
 | `render.look` | `look?` (string) | 1.0 | Get or set the colour look (vivid, natural, bevy) |
-| `vehicle.set` *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
+| [`vehicle.set`](#vehicleset) *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
 | `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
 | `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
@@ -251,13 +251,19 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 
 Start a session on a map.
 
-A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).
+A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): click `loading.continue` (`ui.click`) to start the drive.
 
 ### `scene.unload`
 
 Return to the main menu.
 
 A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
+
+### `vehicle.set`
+
+Replace the player vehicle.
+
+Restarts the session with the vehicle and answers like `scene.load_map` (including `1008` for a failed load and `waiting_for_continue` for a load with problems).
 
 ### `camera.look`
 
