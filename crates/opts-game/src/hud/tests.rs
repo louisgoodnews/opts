@@ -40,6 +40,11 @@ fn app() -> App {
         .add_plugins(OptsGuiPlugin)
         .add_plugins(ShellPlugin)
         .add_plugins(HudPlugin);
+    // A drive with a vehicle: without one the HUD shows no instruments.
+    app.world_mut().spawn((
+        opts_bevy::VehicleController::standard_bus(12_000.0, 5.9),
+        opts_bevy::PlayerVehicle,
+    ));
     app.update();
     app.world_mut()
         .resource_mut::<NextState<AppState>>()

@@ -72,7 +72,6 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     values::sample_values,
-                    rebuild_for_kind,
                     (
                         update::tick_session_clock,
                         update::camera_label_changes,
@@ -92,12 +91,24 @@ impl Plugin for HudPlugin {
             )
             .add_systems(
                 Update,
+                rebuild_for_kind
+                    .after(values::sample_values)
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
                 (
                     details::spawn_details_toasts,
-                    details::open_details,
+                    // Before the toast's own click handler despawns the toast with the action
+                    // button that was clicked.
+                    details::open_details
+                        .before(opts_gui::components::toast::toast_action_click_system),
                     details::forget_dismissed,
                     details::details_choices,
-                ),
+                )
+                    // In order, with the commands applied in between: `forget_dismissed` must not
+                    // see a toast that `spawn_details_toasts` has only just queued as gone.
+                    .chain(),
             );
     }
 }
@@ -109,9 +120,11 @@ fn rebuild_for_kind(
     values: Res<HudValues>,
     active: Option<Res<build::ActiveProfile>>,
     roots: Query<Entity, With<build::HudRoot>>,
-    theme: Res<opts_gui::prelude::MaterialTheme>,
+    theme: Option<Res<opts_gui::prelude::MaterialTheme>>,
 ) {
-    let Some(active) = active else { return };
+    let (Some(active), Some(theme)) = (active, theme) else {
+        return;
+    };
     if !values.has_vehicle || active.kind == values.kind {
         return;
     }
