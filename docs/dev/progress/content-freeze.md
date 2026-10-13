@@ -10,7 +10,7 @@ Gates: fmt, clippy (-D warnings, all targets/features), test --workspace --all-f
 Final: merge master into branch, re-gate, push, ff-merge into master in the project folder, push, remove worktree (keep branch).
 
 ## Checklist
-- [ ] S1 diagnostic: `state.frame_ms_max` (worst frame of the last 10 s) in the control protocol
+- [x] S1 diagnostic: `state.frame_ms_max` (worst frame of the last 10 s) in the control protocol
 - [ ] S2 baseline measurement on the full catalogue (679,543 files / 75,313 entries)
 - [ ] S3 background provider for catalogue stats / scan inputs / cache usage (cached, invalidated, 'Calculating...')
 - [ ] S4 audit of other UI systems and fixes
@@ -19,3 +19,7 @@ Final: merge master into branch, re-gate, push, ff-merge into master in the proj
 - [ ] S7 docs (M-0088, ROADMAP, BOARD, R-31), gates, merge
 
 ## Findings
+
+- Design: `content_facts.rs` (ContentFactsStore, FactsProvider, worker thread + channel, light/heavy facts, `WantsContentFacts` marker, theme file list), info lines `ContentLine` + `fill_content_lines`, scan chip uses facts ("Checking..."), Home hero decoded in IoTaskPool (`home/hero.rs`), drive history loaded at Startup, settings saves via `GameSettings::save_in_background` (shared Baseline Arc), thumbnails probe in tasks (`Probe`), lint `tests/no_blocking_ui.rs`, budget test in `settings_screen/tests.rs`, standards 3.13.
+- STATE (after container restart): all of the above written but NOT yet compiled. Next: build base (worktree `~/.local/share/opts/benchmark/content-freeze/base`, detached HEAD 9b06d56) release to measure baseline; compile+fix mine; run tests.
+- Baseline build log `.../content-freeze/build-base.log`; target `.../content-freeze/target`.

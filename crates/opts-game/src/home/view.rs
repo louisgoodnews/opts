@@ -101,14 +101,11 @@ pub(super) fn map_names(record: &DriveRecord, lists: &GameCatalogue) -> (String,
 pub(super) fn spawn_home(
     mut commands: Commands,
     shell: Res<ShellContent>,
-    mut images: ResMut<Assets<Image>>,
     lists: Res<GameCatalogue>,
     class: Res<LayoutClass>,
     mut drives: ResMut<HomeDrives>,
 ) {
-    if drives.persist {
-        drives.history = DriveHistory::load();
-    }
+    // The history is read once at startup (`load_drive_history`) and kept in memory.
     drives.last = drives.history.last().cloned();
     drives.recents = drives.history.recents.iter().skip(1).cloned().collect();
 
@@ -128,15 +125,9 @@ pub(super) fn spawn_home(
     ));
     let last = drives.last.clone();
     let recents = drives.recents.clone();
-    let hero = last.as_ref().and_then(|r| {
-        let folder = map_names(r, &lists).1?;
-        let dir = crate::omsi_root::known_omsi_root()?
-            .join("maps")
-            .join(folder);
-        let (handle, stats) = load_map_picture(&dir, &mut images)?;
-        let size = images.get(&handle).map(Image::size_f32)?;
-        Some((handle, stats, size))
-    });
+    // The picture is decoded on a worker thread and put into the card when it is ready
+    // (`hero::start_hero_loads` / `finish_hero_loads`): building Home never waits for a JPEG.
+    let hero_folder = last.as_ref().and_then(|r| map_names(r, &lists).1);
     commands.entity(root).with_children(|page| {
         page.spawn(Node {
             justify_content: JustifyContent::SpaceBetween,
@@ -169,11 +160,12 @@ pub(super) fn spawn_home(
                             ColorRole::OnSurfaceVariant,
                         ),
                         StatusChip,
+                        crate::content_facts::WantsContentFacts,
                     ));
                 });
         });
         match &last {
-            Some(record) => spawn_continue(page, record, &lists, hero),
+            Some(record) => spawn_continue(page, record, &lists, hero_folder),
             None => spawn_quick(page),
         }
         spawn_recents(page, &recents, &lists, last.is_some());
@@ -199,7 +191,7 @@ fn spawn_continue(
     page: &mut ChildSpawnerCommands,
     record: &DriveRecord,
     lists: &GameCatalogue,
-    hero: Option<(Handle<Image>, opts_gui::theme::ImageLuminance, Vec2)>,
+    hero_folder: Option<String>,
 ) {
     let (map_name, _) = map_names(record, lists);
     let card = page
@@ -215,6 +207,9 @@ fn spawn_continue(
             Name::new("ContinueCard"),
         ))
         .id();
+    if let Some(folder) = hero_folder {
+        page.commands().entity(card).insert(HeroPending { folder });
+    }
     let fill = Node {
         position_type: PositionType::Absolute,
         left: Val::Px(0.0),
@@ -224,21 +219,6 @@ fn spawn_continue(
         ..default()
     };
     page.commands().entity(card).with_children(|c| {
-        if let Some((handle, stats, size)) = hero {
-            c.spawn((
-                ImageNode::new(handle),
-                fill.clone(),
-                RadiusToken(RadiusLevel::Large),
-                HeroImage { size },
-                opts_gui::ui_tree::A11yHidden,
-            ));
-            c.spawn((
-                fill.clone(),
-                RadiusToken(RadiusLevel::Large),
-                BackgroundColor(Color::NONE),
-                MenuBackgroundScrim(stats),
-            ));
-        }
         c.spawn(Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),

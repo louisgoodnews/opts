@@ -298,9 +298,7 @@ pub fn first_run_choices(
                 loc.set_locale(next);
                 settings.set_raw("interface.language", next);
                 if first_run.persist {
-                    if let Err(e) = settings.save() {
-                        tracing::warn!("could not save the language: {e}");
-                    }
+                    settings.save_in_background();
                 }
             }
             (view::OTHER | view::CHOOSE, _) => choose_omsi_folder(&mut commands),

@@ -24,6 +24,8 @@ use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::catalogue_service::{CatalogueService, DiscoveryStatus};
+pub use crate::content_facts::RootState;
+use crate::content_facts::{ContentFactsStore, WantsContentFacts};
 use crate::settings::GameSettings;
 use crate::shell::icons;
 
@@ -66,17 +68,6 @@ pub struct ScanStatus {
     pub level: ScanLevel,
     /// The reason shown to the user.
     pub reason: ScanReason,
-}
-
-/// What the OMSI folder looks like from here.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RootState {
-    /// Not set and not found.
-    Unset,
-    /// Set but not a folder.
-    Missing,
-    /// There.
-    Present,
 }
 
 /// Everything [`assess`] looks at.
@@ -163,42 +154,26 @@ fn now_secs() -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
 }
 
-/// Reads the inputs from the world.
-fn gather(settings: &GameSettings, service: Option<&CatalogueService>) -> ScanInputs {
-    let root = service
-        .map(|s| s.root.clone())
-        .or_else(|| settings.omsi_path.clone())
-        .or_else(crate::omsi_root::known_omsi_root);
-    let root_state = match &root {
-        None => RootState::Unset,
-        Some(r) if r.is_dir() => RootState::Present,
-        Some(_) => RootState::Missing,
-    };
-    // The service exists once OMSI is known; without it (a catalogue that was current at start)
-    // the database file is read directly, like the info lines do.
-    let (last_scan, entities) = match service {
-        Some(s) => (
-            s.catalogue.last_scan().ok().flatten(),
-            s.catalogue.totals().map_or(0, |t| t.1),
-        ),
-        None => crate::catalogue_service::catalogue_db_path()
-            .filter(|p| p.exists())
-            .and_then(|p| opts_catalogue::Catalogue::open(&p).ok())
-            .map_or((None, 0), |c| {
-                (c.last_scan().ok().flatten(), c.totals().map_or(0, |t| t.1))
-            }),
-    };
+/// Builds the inputs from the background facts and what is cheap to read here (the settings and
+/// the service's status, which is a mutex around an enum). `None` while the facts are not there
+/// yet: the chip then shows its "Checking..." state.
+fn gather(
+    settings: &GameSettings,
+    service: Option<&CatalogueService>,
+    store: &ContentFactsStore,
+) -> Option<ScanInputs> {
+    let light = store.light()?;
     let status = service.map(CatalogueService::status);
-    ScanInputs {
+    Some(ScanInputs {
         now: now_secs(),
-        last_scan,
-        entities,
+        last_scan: light.last_scan,
+        entities: light.entities,
         interval_days: settings.discovery_interval_days,
-        root: root_state,
-        folder_changed: matches!((&root, last_scan), (Some(r), Some(t)) if r.is_dir() && folder_changed_since(r, t)),
+        root: light.root,
+        folder_changed: light.folder_changed,
         failed: matches!(status, Some(DiscoveryStatus::Failed(_))),
         running: matches!(status, Some(DiscoveryStatus::Running(_))),
-    }
+    })
 }
 
 /// Colours and icon of a level: the status container roles, with the icon and the word beside
@@ -290,6 +265,7 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
             RadiusToken(RadiusLevel::Full),
             Tooltip::new(""),
             ScanChip,
+            WantsContentFacts,
             UiId::new("settings.content.scan-status"),
             ChildOf(wrap),
         ))
@@ -365,37 +341,62 @@ type ChipParts<'w, 's> = (
     >,
 );
 
-/// Recomputes the verdict every few seconds (and when the language changes) and updates the chip.
+/// Recomputes the verdict when its inputs change (the facts arrived, a scan started or ended, the
+/// language changed) and at least every few seconds (the age of the last scan moves), and updates
+/// the chip. While the background facts are not there yet the chip says it is checking.
 #[allow(clippy::too_many_arguments)]
 pub fn refresh_scan_chip(
     time: Res<Time>,
     loc: Res<Localization>,
     settings: Option<Res<GameSettings>>,
     service: Option<Res<CatalogueService>>,
+    facts: Res<ContentFactsStore>,
     fresh: Query<(), Added<ScanChip>>,
     mut since: Local<f32>,
-    mut last: Local<Option<(ScanInputs, String)>>,
+    mut last: Local<Option<(Option<ScanInputs>, String)>>,
     mut parts: ChipParts,
     mut reasons: ReasonQuery,
 ) {
     *since += time.delta_secs();
     let rebuilt = !fresh.is_empty();
-    if !rebuilt && last.is_some() && *since < 3.0 && !loc.is_changed() {
+    let Some(settings) = settings else { return };
+    let inputs = gather(&settings, service.as_deref(), &facts);
+    let key = (inputs, loc.locale().to_owned());
+    // `now` moves every call: compare the rest.
+    let same = last.as_ref().is_some_and(|(i, l)| {
+        l == &key.1
+            && i.map(|i| ScanInputs { now: 0, ..i }) == inputs.map(|i| ScanInputs { now: 0, ..i })
+    });
+    if !rebuilt && same && *since < 3.0 {
         return;
     }
     *since = 0.0;
-    let Some(settings) = settings else { return };
-    let inputs = gather(&settings, service.as_deref());
-    let key = (inputs, loc.locale().to_owned());
-    // `now` moves every call: compare the rest.
-    if !rebuilt
-        && last.as_ref().is_some_and(|(i, l)| {
-            l == &key.1 && ScanInputs { now: 0, ..*i } == ScanInputs { now: 0, ..inputs }
-        })
-    {
+    if !rebuilt && same && inputs.is_none() {
         return;
     }
-    *last = Some(key);
+    let Some(inputs) = inputs else {
+        // Not known yet: a quiet neutral chip, never a verdict we cannot back up.
+        *last = Some(key);
+        for (mut b, mut tip) in &mut parts.0 {
+            b.0 = ColorRole::SurfaceVariant;
+            tip.0 = loc.t("scan-why-pending").into();
+        }
+        for (mut t, mut f) in &mut parts.1 {
+            t.0 = icons::REFRESH.to_owned();
+            f.0 = ColorRole::OnSurfaceVariant;
+        }
+        for (mut k, mut a, mut f) in &mut parts.2 {
+            k.0 = "scan-chip-pending";
+            a.0.clear();
+            f.0 = ColorRole::OnSurfaceVariant;
+        }
+        for (mut k, mut a) in &mut reasons {
+            k.0 = "scan-why-pending";
+            a.0.clear();
+        }
+        return;
+    };
+    *last = Some((Some(inputs), loc.locale().to_owned()));
     let status = assess(&inputs);
     let (bg, fg, glyph) = look(status.level);
     let when = inputs

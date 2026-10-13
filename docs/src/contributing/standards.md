@@ -756,6 +756,35 @@ A short, non-exhaustive list of things OPTS does **not** do:
 | `println!` in library code | `tracing` events |
 | Files over 500 lines | Split into submodules |
 | Functions over 80 lines | Extract helpers |
+| File-system, database or image work in a UI system | A worker task and a "Calculating…" placeholder (§3.13) |
+
+### 3.13 No Blocking Work on the Main Thread
+
+Systems that run every frame (`Update`, `PostUpdate`, and everything that builds or
+refreshes UI) **never touch the file system or a database, never decode images and never
+walk folders**. Opening *Settings → Content* once froze the application for seconds because
+the page build counted 75,000 catalogue entries, walked the OMSI folder and listed the
+texture cache (M-0088, field report R-31). The frame budget is 1 ms per UI system
+(interaction §10); a single `stat` on a network disk can exceed it.
+
+- **Allowed on the main thread:** reading memory (resources, components), cached results,
+  and work at **startup** or **exit**.
+- **Everything else goes to a worker** and comes back as a resource or message:
+  `content_facts::ContentFactsStore` for facts about the user's content (counts, last
+  scan, folder state, cache size, theme files), `IoTaskPool` tasks polled with
+  `check_ready` for pictures and discovery, a thread with a channel for writes
+  (`GameSettings::save_in_background`, the drive history).
+- **Show a placeholder, never wait.** A value that is not there yet reads "Calculating…"
+  (de/en messages `…-pending`); the line fills in when the answer arrives. Cache results and
+  invalidate them explicitly (a scan finished, the cache was cleared, a folder changed) —
+  never recompute per frame or per page build.
+- **Tests:** give the page a slow fake provider and assert that every frame stays far below
+  the provider's delay (`settings_screen::tests`, "the content page builds within a frame…").
+- **Enforced by `crates/opts-game/tests/no_blocking_ui.rs`:** it scans the UI modules for
+  `std::fs`, `read_dir`, `.exists()`, `Connection::open`, `kind_counts`, `image::open`,
+  `known_omsi_root` and the other blocking calls. A new hit fails the test unless it is
+  added to the `ALLOWED` table with the reason it is fine (it runs on a worker, at startup
+  or exit, or is a tiny user-initiated write). Stale entries fail too.
 
 ---
 

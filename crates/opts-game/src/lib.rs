@@ -3,6 +3,7 @@
 pub mod app;
 pub mod app_state;
 pub mod catalogue_service;
+pub mod content_facts;
 pub mod control;
 pub mod control_drive;
 pub mod control_session;

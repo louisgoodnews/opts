@@ -22,6 +22,7 @@ pub fn run_actions(
     mut requests: MessageReader<SettingActionRequested>,
     loc: Res<Localization>,
     service: Option<Res<CatalogueService>>,
+    mut facts: ResMut<crate::content_facts::ContentFactsStore>,
 ) {
     for r in requests.read() {
         match r.key {
@@ -35,8 +36,12 @@ pub fn run_actions(
                 None => toast(&mut commands, &loc, "settings-toast-no-omsi"),
             },
             "content.clear_cache" => {
-                let removed = opts_bevy::descramble_cache::prune(0);
-                tracing::info!(removed, "texture cache cleared from the settings page");
+                // Deleting thousands of files takes its time: off the main thread; the cache
+                // line recounts when it is done.
+                facts.run_then_invalidate(|| {
+                    let removed = opts_bevy::descramble_cache::prune(0);
+                    tracing::info!(removed, "texture cache cleared from the settings page");
+                });
                 toast(&mut commands, &loc, "settings-toast-cache-cleared");
             }
             _ => {}

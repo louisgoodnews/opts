@@ -1,4 +1,4 @@
-//! Map-backed background image loading with contrast scrim and solid fallback.
+//! Map picture decoding and the contrast scrim over it.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::color::Alpha;
@@ -6,12 +6,7 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_gui::theme::color::ColorRole;
 use opts_gui::theme::{luminance_stats, scrim_for_text, ImageLuminance, MaterialTheme};
-use opts_gui::tokens::BackgroundRole;
 use std::path::Path;
-
-/// Marker component for the main menu background container.
-#[derive(Component)]
-pub struct MenuBackgroundRoot;
 
 /// The contrast scrim over the background picture. It carries the picture's lightness statistics;
 /// [`sync_menu_scrim`] derives its colour and strength from them and from the theme, so text keeps
@@ -43,128 +38,39 @@ pub fn sync_menu_scrim(
     }
 }
 
-/// Spawns the main menu background layer.
-///
-/// If `map_path` contains a readable `picture.jpg`, loads and displays it across the viewport.
-/// Otherwise, falls back to a solid `ColorRole::Surface` background.
-/// Over a picture a scrim node is inserted whose strength is computed from the picture and the
-/// theme ([`menu_scrim_color`]) to guarantee WCAG 2.1 AA text legibility.
-pub fn spawn_menu_background(
-    commands: &mut Commands,
-    map_dir: Option<&Path>,
-    images: &mut ResMut<Assets<Image>>,
-    theme: &MaterialTheme,
-) -> Entity {
-    let root = commands
-        .spawn((
-            (
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    right: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    bottom: Val::Px(0.0),
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                ZIndex(0),
-            ),
-            MenuBackgroundRoot,
-        ))
-        .id();
-
-    let image_handle = map_dir.and_then(|dir| load_map_picture(dir, images));
-
-    if let Some((handle, stats)) = image_handle {
-        tracing::info!("Map background picture successfully attached to main menu");
-        commands.entity(root).with_children(|parent| {
-            // Background image layer (scaled to fill)
-            parent.spawn((
-                ImageNode::new(handle),
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(0.0),
-                    right: Val::Px(0.0),
-                    top: Val::Px(0.0),
-                    bottom: Val::Px(0.0),
-                    width: Val::Percent(100.0),
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-            ));
-
-            // Contrast scrim layer (z=1 relative to background root)
-            parent.spawn((
-                (
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        right: Val::Px(0.0),
-                        top: Val::Px(0.0),
-                        bottom: Val::Px(0.0),
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        ..default()
-                    },
-                    BackgroundColor(menu_scrim_color(theme, stats)),
-                    ZIndex(1),
-                ),
-                MenuBackgroundScrim(stats),
-            ));
-        });
-    } else {
-        tracing::info!(
-            "No map background picture provided or found; rendering solid theme surface"
-        );
-        // A role, not a copy of the colour: the surface follows theme changes.
-        commands.entity(root).insert((
-            BackgroundColor(theme.scheme.get(ColorRole::Surface)),
-            BackgroundRole(ColorRole::Surface),
-        ));
-    }
-
-    root
+/// A decoded `picture.jpg`: RGBA pixels and the lightness statistics the scrim needs. Plain
+/// data, so it can be produced on a worker thread.
+#[derive(Debug, Clone)]
+pub struct DecodedPicture {
+    /// Width in pixels.
+    pub width: u32,
+    /// Height in pixels.
+    pub height: u32,
+    /// RGBA8 pixels.
+    pub rgba: Vec<u8>,
+    /// Lightness statistics for the contrast scrim.
+    pub stats: ImageLuminance,
 }
 
-/// Attempts to load `picture.jpg` from the specified map directory.
-pub fn load_map_picture(
-    dir: &Path,
-    images: &mut ResMut<Assets<Image>>,
-) -> Option<(Handle<Image>, ImageLuminance)> {
+/// Reads and decodes `picture.jpg` of a map folder. Takes tens of milliseconds for a large
+/// picture: call it from a worker thread only (M-0088).
+pub fn decode_map_picture(dir: &Path) -> Option<DecodedPicture> {
     let picture_path = dir.join("picture.jpg");
-    tracing::info!(path = ?picture_path, "Attempting to load map background image");
-
     if !picture_path.exists() {
         tracing::warn!(path = ?picture_path, "Map picture.jpg does not exist");
         return None;
     }
-
     match image::open(&picture_path) {
         Ok(dyn_img) => {
             let rgba = dyn_img.to_rgba8();
             let (width, height) = rgba.dimensions();
             let stats = luminance_stats(rgba.as_raw(), 4);
-
-            let bevy_image = Image::new(
-                Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                rgba.into_raw(),
-                TextureFormat::Rgba8UnormSrgb,
-                RenderAssetUsages::default(),
-            );
-
-            let handle = images.add(bevy_image);
-            tracing::info!(
-                width = width,
-                height = height,
-                "Loaded picture.jpg texture successfully"
-            );
-            Some((handle, stats))
+            Some(DecodedPicture {
+                width,
+                height,
+                rgba: rgba.into_raw(),
+                stats,
+            })
         }
         Err(err) => {
             tracing::warn!(
@@ -177,12 +83,31 @@ pub fn load_map_picture(
     }
 }
 
+/// Puts a decoded picture into the image assets.
+pub fn upload_picture(
+    pic: DecodedPicture,
+    images: &mut Assets<Image>,
+) -> (Handle<Image>, ImageLuminance) {
+    let image = Image::new(
+        Extent3d {
+            width: pic.width,
+            height: pic.height,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        pic.rgba,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    (images.add(image), pic.stats)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use opts_gui::theme::contrast::{composite_over, contrast_ratio};
 
-    /// A flat grey image's stats, as `load_map_picture` would measure them.
+    /// A flat grey image's stats, as `decode_map_picture` would measure them.
     fn grey_stats(v: u8) -> ImageLuminance {
         let px: Vec<u8> = (0..400).flat_map(|_| [v, v, v, 255]).collect();
         luminance_stats(&px, 4)

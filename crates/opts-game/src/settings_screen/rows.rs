@@ -26,6 +26,8 @@ pub struct Ctx<'a> {
     pub loc: &'a Localization,
     /// What the machine can do.
     pub caps: &'a SettingsCapabilities,
+    /// Theme files found by the background facts (never read from disk while building).
+    pub theme_files: &'a [String],
 }
 
 /// A localized text element.
@@ -411,7 +413,7 @@ pub fn spawn_control(
         SettingKind::Text => {
             if d.key == "theme_file" {
                 let mut names = vec![String::new()];
-                names.extend(crate::theme_files::discover_theme_files());
+                names.extend(ctx.theme_files.iter().cloned());
                 for n in names {
                     let sel = n == cur;
                     if n.is_empty() {

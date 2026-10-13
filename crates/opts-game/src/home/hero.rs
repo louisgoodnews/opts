@@ -3,7 +3,94 @@
 //! Bevy stretches an image to its node, so the picture is cropped to the node's aspect ratio
 //! with the `rect` of the [`ImageNode`], centred, and re-cropped whenever the node is resized.
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
+use bevy::tasks::{futures::check_ready, IoTaskPool, Task};
+use opts_gui::tokens::{RadiusLevel, RadiusToken};
+
+use crate::menu::background::{decode_map_picture, upload_picture, DecodedPicture};
+use crate::menu::background::MenuBackgroundScrim;
+
+/// A card that wants the picture of this map folder (a folder of `OMSI/maps`).
+#[derive(Component, Debug, Clone)]
+pub struct HeroPending {
+    /// The map's folder name.
+    pub folder: String,
+}
+
+/// The decodes in flight, by card.
+#[derive(Resource, Default)]
+pub struct HeroLoads(HashMap<Entity, Task<Option<DecodedPicture>>>);
+
+/// Starts the decode for each new [`HeroPending`] card on the IO pool.
+pub fn start_hero_loads(
+    mut loads: ResMut<HeroLoads>,
+    cards: Query<(Entity, &HeroPending), Added<HeroPending>>,
+) {
+    for (card, pending) in &cards {
+        let folder = pending.folder.clone();
+        let task = IoTaskPool::get_or_init(bevy::tasks::TaskPool::new).spawn(async move {
+            let dir = crate::omsi_root::known_omsi_root()?.join("maps").join(folder);
+            decode_map_picture(&dir)
+        });
+        loads.0.insert(card, task);
+    }
+}
+
+/// Puts finished pictures behind the text of their card.
+pub fn finish_hero_loads(
+    mut commands: Commands,
+    mut loads: ResMut<HeroLoads>,
+    mut images: ResMut<Assets<Image>>,
+    cards: Query<(), With<HeroPending>>,
+) {
+    let mut done = Vec::new();
+    for (card, task) in &mut loads.0 {
+        if cards.get(*card).is_err() {
+            done.push((*card, None));
+        } else if let Some(result) = check_ready(task) {
+            done.push((*card, result));
+        }
+    }
+    for (card, picture) in done {
+        loads.0.remove(&card);
+        let Some(mut card_cmd) = commands.get_entity(card).ok() else {
+            continue;
+        };
+        card_cmd.remove::<HeroPending>();
+        let Some(pic) = picture else { continue };
+        let (handle, stats) = upload_picture(pic, &mut images);
+        let size = images.get(&handle).map_or(Vec2::ONE, Image::size_f32);
+        let fill = Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            top: Val::Px(0.0),
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            ..default()
+        };
+        let image = commands
+            .spawn((
+                ImageNode::new(handle),
+                fill.clone(),
+                RadiusToken(RadiusLevel::Large),
+                HeroImage { size },
+                opts_gui::ui_tree::A11yHidden,
+            ))
+            .id();
+        let scrim = commands
+            .spawn((
+                fill,
+                RadiusToken(RadiusLevel::Large),
+                BackgroundColor(Color::NONE),
+                MenuBackgroundScrim(stats),
+            ))
+            .id();
+        // Before the text, so the picture stays behind it.
+        commands.entity(card).insert_children(0, &[image, scrim]);
+    }
+}
 
 /// The picture's size in pixels; present on the image node of a hero.
 #[derive(Component, Debug, Clone, Copy)]

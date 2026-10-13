@@ -44,9 +44,7 @@ pub fn theme_toggle_system(
         tracing::info!(?mode, "Toggling application theme");
         settings.theme_mode = mode;
         settings.high_contrast = false;
-        if let Err(err) = settings.save() {
-            tracing::warn!(err = ?err, "Failed to persist theme preference");
-        }
+        settings.save_in_background();
     }
 }
 

@@ -123,6 +123,34 @@ impl ThumbnailService {
         self.entries.insert(id.to_string(), Entry::Pending(task));
     }
 
+    /// Like [`ThumbnailService::request`], but the source file is looked for on the worker
+    /// thread (a stat per map, a folder listing per vehicle: far too slow for the frame that
+    /// builds a list of hundreds of rows).
+    pub fn request_probe(
+        &mut self,
+        id: &str,
+        root: PathBuf,
+        probe: Option<Probe>,
+        size: (u32, u32),
+    ) {
+        if self.entries.contains_key(id) {
+            return;
+        }
+        let Some(probe) = probe else {
+            self.entries
+                .insert(id.to_string(), Entry::Ready(None, None));
+            return;
+        };
+        let cache = self.cache_dir.clone();
+        let cap = self.cap_bytes;
+        let key = id.to_string();
+        let task = IoTaskPool::get_or_init(bevy::tasks::TaskPool::new).spawn(async move {
+            let source = probe.resolve(&root)?;
+            load_thumb(&cache, &key, &source, size, cap)
+        });
+        self.entries.insert(id.to_string(), Entry::Pending(task));
+    }
+
     /// Collects finished decodes into images.
     pub fn poll(&mut self, images: &mut Assets<Image>) {
         for entry in self.entries.values_mut() {
@@ -288,18 +316,41 @@ pub fn vehicle_preview(root: &Path, bus_file: &str) -> Option<PathBuf> {
     None
 }
 
-/// The source file of thumbnail key `key` (`map:<folder>`, `veh:<id>`).
-pub fn source_of(key: &str, catalogue: &GameCatalogue, root: &Path) -> Option<PathBuf> {
+/// What to look for when a thumbnail is asked for; resolved on a worker thread.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Probe {
+    /// `picture.jpg` of a map folder.
+    Map(String),
+    /// A preview image next to a vehicle's `.bus` file (path relative to the OMSI root).
+    Vehicle(String),
+}
+
+impl Probe {
+    /// The file on disk, if there is one. Touches the file system.
+    pub fn resolve(&self, root: &Path) -> Option<PathBuf> {
+        match self {
+            Self::Map(folder) => {
+                let p = root.join("maps").join(folder).join("picture.jpg");
+                p.is_file().then_some(p)
+            }
+            Self::Vehicle(bus_file) => vehicle_preview(root, bus_file),
+        }
+    }
+}
+
+/// What thumbnail key `key` (`map:<folder>`, `veh:<id>`) needs; no file system access.
+pub fn probe_of(key: &str, catalogue: &GameCatalogue) -> Option<Probe> {
     if let Some(folder) = key.strip_prefix("map:") {
-        let p = root.join("maps").join(folder).join("picture.jpg");
-        return p.is_file().then_some(p);
+        return Some(Probe::Map(folder.to_string()));
     }
     let id = key.strip_prefix("veh:")?;
     let v = catalogue.vehicles.iter().find(|v| v.id == id)?;
-    if v.bus_file.is_empty() {
-        return None;
-    }
-    vehicle_preview(root, &v.bus_file)
+    (!v.bus_file.is_empty()).then(|| Probe::Vehicle(v.bus_file.clone()))
+}
+
+/// The source file of thumbnail key `key` (`map:<folder>`, `veh:<id>`).
+pub fn source_of(key: &str, catalogue: &GameCatalogue, root: &Path) -> Option<PathBuf> {
+    probe_of(key, catalogue)?.resolve(root)
 }
 
 fn size_for(key: &str, hero: bool) -> (u32, u32) {
@@ -328,9 +379,28 @@ pub fn fill_thumbnails(
     children: Query<&Children>,
     glyphs: Query<(), Or<(With<HeroGlyph>, With<ThumbGlyph>)>>,
     mut commands: Commands,
+    service_root: Option<Res<crate::catalogue_service::CatalogueService>>,
+    mut known_root: Local<Option<PathBuf>>,
+    mut wait: Local<u32>,
 ) {
     service.poll(&mut images);
-    let Some(root) = crate::omsi_root::known_omsi_root() else {
+    let slots_waiting = !rows.is_empty() || !heroes.is_empty() || !swatches.is_empty();
+    if !slots_waiting {
+        return;
+    }
+    // The root comes from the catalogue service (no file system access); without a service the
+    // search is repeated at most every 120 frames.
+    *wait = wait.saturating_sub(1);
+    if known_root.is_none() && *wait == 0 {
+        *known_root = service_root
+            .as_deref()
+            .map(|s| s.root.clone())
+            .or_else(|| {
+                *wait = 120;
+                None
+            });
+    }
+    let Some(root) = known_root.clone() else {
         return;
     };
     let mut slots: Vec<(Entity, String, bool)> = Vec::new();
@@ -339,8 +409,8 @@ pub fn fill_thumbnails(
     for (entity, key, hero) in slots {
         let id = slot_id(&key, hero);
         if service.lookup(&id).is_none() {
-            let src = source_of(&key, &catalogue, &root);
-            service.request(&id, src, size_for(&key, hero), false);
+            let probe = probe_of(&key, &catalogue);
+            service.request_probe(&id, root.clone(), probe, size_for(&key, hero));
         }
         match service.lookup(&id) {
             Some(Lookup::Image(handle)) => {

@@ -22,9 +22,8 @@ pub fn change_in(
         None => registry.reset(settings, caps, key)?,
     };
     if save && old != new {
-        if let Err(err) = settings.save() {
-            tracing::warn!(err = ?err, "could not save settings");
-        }
+        // Off the main thread: a click never waits for SQLite.
+        settings.save_in_background();
     }
     Ok(SettingChanged {
         key: key.to_string(),
@@ -79,8 +78,6 @@ impl SettingsApi<'_> {
 
     /// Writes the settings file (after a confirmed risky change).
     pub fn save(&mut self) {
-        if let Err(err) = self.settings.save() {
-            tracing::warn!(err = ?err, "could not save settings");
-        }
+        self.settings.save_in_background();
     }
 }
