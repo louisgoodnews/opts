@@ -131,7 +131,10 @@ pub fn fill_content_lines(
         };
         let (k, a) = content_line_text(which, &facts);
         key.0 = k;
-        args.0 = a.into_iter().map(|(n, v)| (n.to_string(), v.into())).collect();
+        args.0 = a
+            .into_iter()
+            .map(|(n, v)| (n.to_string(), v.into()))
+            .collect();
     }
 }
 
@@ -147,7 +150,8 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
                 TypeScale::BodyMedium,
             );
             // The theme file list comes from the background facts.
-            c.entity(now).insert(crate::content_facts::WantsContentFacts);
+            c.entity(now)
+                .insert(crate::content_facts::WantsContentFacts);
             c.queue(|world: &mut World| {
                 // The last spawned text of the page is the line above: mark it so it follows
                 // the theme while the page is open.
@@ -171,7 +175,13 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
                 (ContentLine::LastScan, "settings-info-last-scan-pending"),
                 (ContentLine::Cache, "settings-info-cache-pending"),
             ] {
-                let e = label(c, pane, key, TypeScale::BodyMedium, ColorRole::OnSurfaceVariant);
+                let e = label(
+                    c,
+                    pane,
+                    key,
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                );
                 c.entity(e).insert((
                     which,
                     L10nArgs::default(),

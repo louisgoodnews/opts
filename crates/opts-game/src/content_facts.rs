@@ -104,10 +104,7 @@ pub struct DiskFacts;
 
 impl FactsProvider for DiskFacts {
     fn light(&self, req: &FactsRequest) -> LightFacts {
-        let root = req
-            .root
-            .clone()
-            .or_else(crate::omsi_root::known_omsi_root);
+        let root = req.root.clone().or_else(crate::omsi_root::known_omsi_root);
         let root_state = match &root {
             None => RootState::Unset,
             Some(r) if r.is_dir() => RootState::Present,
@@ -214,13 +211,15 @@ impl ContentFactsStore {
     /// The light facts, once known.
     #[must_use]
     pub fn light(&self) -> Option<LightFacts> {
-        self.light_ready.then(|| self.current.unwrap_or_default().light)
+        self.light_ready
+            .then(|| self.current.unwrap_or_default().light)
     }
 
     /// The heavy facts, once known (a stale value stays visible until the new one arrives).
     #[must_use]
     pub fn heavy(&self) -> Option<HeavyFacts> {
-        self.heavy_ready.then(|| self.current.unwrap_or_default().heavy)
+        self.heavy_ready
+            .then(|| self.current.unwrap_or_default().heavy)
     }
 
     /// The theme files found at the last heavy refresh (empty until then).
@@ -272,7 +271,9 @@ impl ContentFactsStore {
             return;
         };
         let heavy_asked = *heavy;
-        let received = rx.lock().map_or(Err(TryRecvError::Disconnected), |rx| rx.try_recv());
+        let received = rx
+            .lock()
+            .map_or(Err(TryRecvError::Disconnected), |rx| rx.try_recv());
         match received {
             Ok((light, h)) => {
                 let mut f = self.current.unwrap_or_default();
@@ -369,7 +370,9 @@ pub fn drive_content_facts(
             .or_else(|| settings.and_then(|s| s.omsi_path.clone())),
         heavy: false,
     };
-    store.bypass_change_detection().maybe_start(time.delta(), req);
+    store
+        .bypass_change_detection()
+        .maybe_start(time.delta(), req);
 }
 
 /// Registers the store and its driver.

@@ -145,7 +145,9 @@ fn ui_modules_do_not_block_the_main_thread() {
     let mut used = vec![false; ALLOWED.len()];
     let mut violations = Vec::new();
     for file in &all {
-        let Some(body) = production(file) else { continue };
+        let Some(body) = production(file) else {
+            continue;
+        };
         let rel = file
             .strip_prefix(src())
             .unwrap_or(file)
@@ -176,7 +178,11 @@ fn ui_modules_do_not_block_the_main_thread() {
         .filter(|(_, u)| !**u)
         .map(|((f, n, _), _)| format!("{f}: `{n}`"))
         .collect();
-    assert!(stale.is_empty(), "stale allowances, delete them:\n{}", stale.join("\n"));
+    assert!(
+        stale.is_empty(),
+        "stale allowances, delete them:\n{}",
+        stale.join("\n")
+    );
 }
 
 /// The lint itself works: a file with a forbidden call is caught.

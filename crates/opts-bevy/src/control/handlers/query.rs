@@ -31,7 +31,11 @@ pub fn base_state(world: &World) -> Map<String, Value> {
         "fps".into(),
         json!((f64::from(control.fps) * 10.0).round() / 10.0),
     );
-    let worst = control.frame_log.iter().map(|(_, ms)| *ms).fold(0.0, f32::max);
+    let worst = control
+        .frame_log
+        .iter()
+        .map(|(_, ms)| *ms)
+        .fold(0.0, f32::max);
     m.insert(
         "frame_ms_max".into(),
         json!((f64::from(worst) * 10.0).round() / 10.0),

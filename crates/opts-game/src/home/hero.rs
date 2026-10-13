@@ -9,8 +9,8 @@ use bevy::prelude::*;
 use bevy::tasks::{futures::check_ready, IoTaskPool, Task};
 use opts_gui::prelude::{RadiusLevel, RadiusToken};
 
-use crate::menu::background::{decode_map_picture, upload_picture, DecodedPicture};
 use crate::menu::background::MenuBackgroundScrim;
+use crate::menu::background::{decode_map_picture, upload_picture, DecodedPicture};
 
 /// A card that wants the picture of this map folder (a folder of `OMSI/maps`).
 #[derive(Component, Debug, Clone)]
@@ -31,7 +31,9 @@ pub fn start_hero_loads(
     for (card, pending) in &cards {
         let folder = pending.folder.clone();
         let task = IoTaskPool::get_or_init(bevy::tasks::TaskPool::new).spawn(async move {
-            let dir = crate::omsi_root::known_omsi_root()?.join("maps").join(folder);
+            let dir = crate::omsi_root::known_omsi_root()?
+                .join("maps")
+                .join(folder);
             decode_map_picture(&dir)
         });
         loads.0.insert(card, task);

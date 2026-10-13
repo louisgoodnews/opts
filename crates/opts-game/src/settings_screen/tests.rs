@@ -794,10 +794,9 @@ fn the_scan_chip_says_it_is_checking_until_the_facts_arrive() {
         Arc::new(SlowFacts(Duration::from_millis(600))),
     );
     let label = |app: &mut App| {
-        let mut q = app.world_mut().query_filtered::<
-            &opts_gui::l10n::L10nKey,
-            With<super::scan_status::ScanChipLabel>,
-        >();
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&opts_gui::l10n::L10nKey, With<super::scan_status::ScanChipLabel>>();
         q.iter(app.world()).next().map(|k| k.0)
     };
     assert_eq!(label(&mut app), Some("scan-chip-pending"));

@@ -392,13 +392,10 @@ pub fn fill_thumbnails(
     // search is repeated at most every 120 frames.
     *wait = wait.saturating_sub(1);
     if known_root.is_none() && *wait == 0 {
-        *known_root = service_root
-            .as_deref()
-            .map(|s| s.root.clone())
-            .or_else(|| {
-                *wait = 120;
-                None
-            });
+        *known_root = service_root.as_deref().map(|s| s.root.clone()).or_else(|| {
+            *wait = 120;
+            None
+        });
     }
     let Some(root) = known_root.clone() else {
         return;
