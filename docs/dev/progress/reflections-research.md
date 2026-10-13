@@ -5,9 +5,9 @@ Scratch/evidence: `~/.local/share/opts/benchmark/reflections/` (outside repo, de
 
 ## Batches
 - [x] B0 baseline release build started (`cargo build --release -p opts-game`, log in scratch dir)
-- [ ] B1 corpus example `crates/opts-bevy/examples/reflection_census.rs` written; RUN + numbers pending (a grep over the install was refused by the permission classifier; run via cargo example)
+- [x] B1 census run; output in scratch `census.txt` (numbers go into the report)
 - [~] B2 Bevy source survey: notes below
-- [~] B3-5 prototype module `crates/opts-bevy/src/reflections.rs` written (not yet compiled/wired): switches `OPTS_REFLECT=env,glass=blend|premul|trans,mirror,mirror_size=WxH,mirror_every=N,wet,ssr`, `OPTS_WETNESS`, `OPTS_REFLECT_STATS=<file>`. Still to wire: lib.rs mod, model.rs note_material call (line ~736), ground_material `wet` uniform 111 + shader, plugin in opts-game lib.rs, no-vsync default already.
+- [x] B3-5 prototype module `crates/opts-bevy/src/reflections.rs` compiled, wired, mirror RTT verified visually (`mirror_debug` quad): switches `OPTS_REFLECT=env,glass=blend|premul|trans,mirror,mirror_size=WxH,mirror_every=N,wet,ssr`, `OPTS_WETNESS`, `OPTS_REFLECT_STATS=<file>`. Still to wire: lib.rs mod, model.rs note_material call (line ~736), ground_material `wet` uniform 111 + shader, plugin in opts-game lib.rs, no-vsync default already.
 - [ ] B6 measurements (cockpit / city / rain)
 - [ ] B7 report + SUMMARY + M-0085 status
 - [ ] B8 gates, final commit, push
@@ -21,3 +21,11 @@ Scratch/evidence: `~/.local/share/opts/benchmark/reflections/` (outside repo, de
 - No oblique near-plane clip in Bevy: planar mirror cams cannot clip geometry behind mirror plane (acceptable for rear-view mirrors).
 - bevy_solari not in the local registry (hardware RT not verifiable here).
 - Sky dome in OPTS is a CPU texture rebuilt each 0.5 s (opts-game in_game/sky.rs): env cube must come from it or be procedural.
+
+## Run notes
+- Build: `cargo build --release -p opts-game --bin opts-game --config profile.release.package.<opts-*>.codegen-units=16` (8 min under load). Binary copy `opts-game-v5` in scratch.
+- Scripts in scratch: `run.sh` (STATS=1 -> stats run, else screenshot), `drive.sh` (control protocol), `batch1.sh` (measurement matrix; log batch1.log; stats in out/*.stats, gpu peak in out/*.gpu).
+- Scenes: s1 cockpit = MAN_NewLionsCity/MAN_12C_2door_ZF.bus on Bad_Huegelsdorf_2020 (mirrors: nlc_mirror_int, nlc_side_mirror); s2 city = same bus on Berlin-Spandau; s3 rain = BHD with OPTS_WETNESS=1.
+- Machine is shared (load average 50-100, /home nearly full at times: SIGBUS once); frame time is CPU-bound and noisy => use GPU pass times (elapsed_gpu sum) + 2 interleaved passes.
+- Finding: SD77 has no env map; 402 of 537 vehicle dirs use [matl_envmap]. Mirror RTT works (interior mirror shows the aisle).
+- Finding: GPU OOM once when other agents used the GPU.

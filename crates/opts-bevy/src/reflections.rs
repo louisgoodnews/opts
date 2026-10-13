@@ -218,6 +218,10 @@ struct MirrorCamera {
     normal: Vec3,
 }
 
+/// Marks the debug picture-in-picture quad.
+#[derive(Component)]
+struct DebugQuad;
+
 /// Marks a mirror mesh that has its camera.
 #[derive(Component)]
 struct MirrorDone;
@@ -248,7 +252,7 @@ impl Plugin for ReflectionsResearchPlugin {
             app.add_systems(Update, spawn_mirror_cameras)
                 .add_systems(
                     PostUpdate,
-                    update_mirror_cameras.before(bevy::transform::TransformSystems::Propagate),
+                    (update_mirror_cameras, follow_debug_quad).before(bevy::transform::TransformSystems::Propagate),
                 )
                 // The camera systems of the game query `With<Camera3d>` and assume exactly one;
                 // the mirror cameras are `Camera3d` only while the frame is extracted.
@@ -550,13 +554,13 @@ fn spawn_mirror_cameras(
                 unlit: true,
                 ..default()
             });
-            for cam in &main_cams {
-                commands.entity(cam).with_child((
-                    Mesh3d(quad.clone()),
-                    MeshMaterial3d(mat.clone()),
-                    Transform::from_xyz(0.0, -0.22, -0.9),
-                ));
-            }
+            let _ = &main_cams;
+            commands.spawn((
+                Mesh3d(quad.clone()),
+                MeshMaterial3d(mat.clone()),
+                Transform::default(),
+                DebugQuad,
+            ));
         }
         commands.entity(entity).insert(MirrorDone);
         commands.spawn((
@@ -610,6 +614,16 @@ fn update_mirror_cameras(
         t.translation = c + n * 0.05;
         t.look_to(r, Vec3::Y);
         cam.is_active = *frame % sw.mirror_every == 0;
+    }
+}
+
+fn follow_debug_quad(
+    main: Query<&Transform, (With<Camera3d>, Without<MirrorCamera>, Without<DebugQuad>)>,
+    mut quad: Query<&mut Transform, With<DebugQuad>>,
+) {
+    let Some(cam) = main.iter().next() else { return };
+    for mut t in &mut quad {
+        *t = *cam * Transform::from_xyz(0.0, -0.2, -0.9);
     }
 }
 
