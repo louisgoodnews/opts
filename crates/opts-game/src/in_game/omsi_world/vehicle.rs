@@ -921,6 +921,8 @@ pub fn load_player_vehicle(
         vehicle = %stats.vehicle_name,
         meshes = mesh_count,
         vertices = vertex_count,
+        uv_vertices = uv_all,
+        uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
     Ok(())
