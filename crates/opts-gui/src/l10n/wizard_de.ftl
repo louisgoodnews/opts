@@ -48,6 +48,9 @@ wiz-fact-starts =
 wiz-fact-depot = Betriebshof: { $depot }
 
 wiz-what-search = { $count } Fahrzeuge durchsuchen…
+wiz-what-none = Ohne Fahrzeug fahren
+wiz-what-none-sub = Nur die Karte, freie Kamera
+wiz-what-none-body = Starten Sie auf der Karte mit freier Kamera und ohne Instrumente. Die Simulation läuft. Ein Fahrzeug können Sie jederzeit im Pause-Menü unter Fahrzeug setzen.
 wiz-what-empty = Keine Fahrzeuge gefunden. Prüfe den OMSI-Ordner oder suche neu.
 wiz-class-road = Straßenfahrzeug
 wiz-class-rail = Schienenfahrzeug
@@ -119,6 +122,8 @@ wiz-option-ident_visible = Betreiberkennzeichnung
 # --- Ladebildschirm ---
 load-title = Deine Fahrt wird vorbereitet
 load-tile-map = KARTE
+wiz-no-vehicle = Kein Fahrzeug
+load-no-vehicle-sub = Freie Kamera
 load-tile-vehicle = FAHRZEUG
 load-tile-when = ZEIT UND WETTER
 load-stage-catalogue = Dein OMSI-Inhalt wird gelesen (nur beim ersten Start)…

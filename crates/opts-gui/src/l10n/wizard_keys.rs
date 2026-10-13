@@ -33,6 +33,8 @@ pub mod load {
     pub const LOAD_TILE_MAP: &str = "load-tile-map";
     /// `load-tile-vehicle`.
     pub const LOAD_TILE_VEHICLE: &str = "load-tile-vehicle";
+    /// `load-no-vehicle-sub`.
+    pub const LOAD_NO_VEHICLE_SUB: &str = "load-no-vehicle-sub";
     /// `load-tile-when`.
     pub const LOAD_TILE_WHEN: &str = "load-tile-when";
     /// `load-stage-catalogue`.
@@ -141,6 +143,7 @@ pub const ALL: &[&str] = &[
     load::LOAD_CLOSE,
     load::LOAD_TILE_MAP,
     load::LOAD_TILE_VEHICLE,
+    load::LOAD_NO_VEHICLE_SUB,
     load::LOAD_TILE_WHEN,
     load::LOAD_STAGE_CATALOGUE,
     load::LOAD_STAGE_RESOLVE,
@@ -213,6 +216,10 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_FACT_DEPOT,
     wiz::WIZ_WHAT_SEARCH,
     wiz::WIZ_WHAT_EMPTY,
+    wiz::WIZ_WHAT_NONE,
+    wiz::WIZ_WHAT_NONE_SUB,
+    wiz::WIZ_WHAT_NONE_BODY,
+    wiz::WIZ_NO_VEHICLE,
     wiz::WIZ_CLASS_ROAD,
     wiz::WIZ_CLASS_RAIL,
     wiz::WIZ_CLASS_AIRCRAFT,
@@ -328,6 +335,14 @@ pub mod wiz {
     pub const WIZ_WHAT_SEARCH: &str = "wiz-what-search";
     /// `wiz-what-empty`.
     pub const WIZ_WHAT_EMPTY: &str = "wiz-what-empty";
+    /// `wiz-what-none`.
+    pub const WIZ_WHAT_NONE: &str = "wiz-what-none";
+    /// `wiz-what-none-sub`.
+    pub const WIZ_WHAT_NONE_SUB: &str = "wiz-what-none-sub";
+    /// `wiz-what-none-body`.
+    pub const WIZ_WHAT_NONE_BODY: &str = "wiz-what-none-body";
+    /// `wiz-no-vehicle`.
+    pub const WIZ_NO_VEHICLE: &str = "wiz-no-vehicle";
     /// `wiz-class-road`.
     pub const WIZ_CLASS_ROAD: &str = "wiz-class-road";
     /// `wiz-class-rail`.

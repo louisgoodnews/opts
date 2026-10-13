@@ -133,6 +133,7 @@ pub fn resolve_session_config(
 
     let vehicle_path = match req.vehicle_path {
         Some(p) => Some(p.to_path_buf()),
+        None if req.no_vehicle => None,
         None => {
             let id = catalogue
                 .and_then(|c| {
@@ -149,7 +150,7 @@ pub fn resolve_session_config(
             })
         }
     };
-    if vehicle_path.is_none() {
+    if vehicle_path.is_none() && !req.no_vehicle {
         tracing::warn!(
             selected = req.selected_vehicle,
             "selected vehicle has no .bus file in the installation; falling back to the map's ailists.cfg"
@@ -262,6 +263,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         missing_listed: 0,
         camera: None,
         camera_std_index: 0,
+        no_vehicle: false,
+        resolved_entry: None,
+        start_entry: None,
     };
 
     // Tile size: 300 m, except for maps with world coordinates (measured from the splines).
@@ -290,6 +294,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
     let mut keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
     keys.dedup();
     let mut start = job.find_entry_spawn(&keys);
+    job.start_entry = job.resolved_entry.take();
     if start.is_none() {
         tracing::warn!(
             entry = %job.config.entry_point,
@@ -380,6 +385,69 @@ impl WorldLoadJob {
             .iter()
             .map(|e| (e.id, e.name.clone()))
             .collect()
+    }
+
+    /// Where the next vehicle is put: session-frame position (OMSI axes) and compass heading.
+    #[must_use]
+    pub fn spawn_point(&self) -> Option<(Vec3, f32)> {
+        self.spawn
+    }
+
+    /// The repaint the next vehicle is built with (empty: the vehicle's default).
+    #[must_use]
+    pub fn config_livery(&self) -> &str {
+        &self.config.livery
+    }
+
+    /// The equipment options the next vehicle is built with.
+    #[must_use]
+    pub fn config_setvars(&self) -> &[(String, i32)] {
+        &self.config.setvars
+    }
+
+    /// The entry point the session started at: `(record number, name)`; `None` when the start
+    /// fell back to the first road spline (no entry point resolved).
+    #[must_use]
+    pub fn start_entry(&self) -> Option<(u32, &str)> {
+        self.start_entry.as_ref().map(|(id, n)| (*id, n.as_str()))
+    }
+
+    /// The entry record whose name equals `name` (case-insensitive), else the only one that
+    /// contains it. `None` when none or several match.
+    #[must_use]
+    pub fn entry_by_name(&self, name: &str) -> Option<(u32, String)> {
+        let wanted = name.trim().to_lowercase();
+        let eps = &self.manifest.entry_points;
+        eps.iter()
+            .find(|e| e.name.to_lowercase() == wanted)
+            .map(|e| (e.id, e.name.clone()))
+            .or_else(|| {
+                let mut hits = eps.iter().filter(|e| e.name.to_lowercase().contains(&wanted));
+                let first = hits.next()?;
+                hits.next().is_none().then(|| (first.id, first.name.clone()))
+            })
+    }
+
+    /// Name of the entry record with this number.
+    #[must_use]
+    pub fn entry_name(&self, id: u32) -> Option<String> {
+        self.manifest
+            .entry_points
+            .iter()
+            .find(|e| e.id == id)
+            .map(|e| e.name.clone())
+    }
+
+    /// The entry record the session was asked to start at: by name from the setup, else the first.
+    #[must_use]
+    pub fn configured_entry(&self) -> Option<(u32, String)> {
+        self.entry_by_name(&self.config.entry_point.clone())
+            .or_else(|| {
+                self.manifest
+                    .entry_points
+                    .first()
+                    .map(|e| (e.id, e.name.clone()))
+            })
     }
 
     /// The `.bus` file the session's vehicle was loaded from.
@@ -605,6 +673,7 @@ impl WorldLoadJob {
                 let o = tile_origin(key);
                 let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
                 tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved");
+                self.resolved_entry = Some((ep.id, ep.name.clone()));
                 return Some((key, (pos, obj.heading_deg)));
             }
             // The entry-point object may be attached to a spline (`[splineAttachement]`, e.g.
@@ -627,6 +696,7 @@ impl WorldLoadJob {
                     let o = tile_origin(key);
                     let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
                     tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved (spline attachment)");
+                    self.resolved_entry = Some((ep.id, ep.name.clone()));
                     return Some((key, (pos, obj.heading_deg)));
                 }
             }

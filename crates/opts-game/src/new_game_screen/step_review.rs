@@ -7,7 +7,7 @@ use opts_gui::prelude::*;
 
 use super::planner::{validate, Invalid, PlannerStep};
 use super::step_where::HeroImage;
-use super::texts::{date_text, livery_name, vehicle_name, weather_name};
+use super::texts::{date_text, livery_name, vehicle_line, weather_name};
 use super::ui::{
     action_button, column, glyph, keyed, keyed_args, plain, row, Emphasis, PlannerAction,
 };
@@ -142,10 +142,13 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         map.map(|m| format!("map:{}", m.id)),
         where_lines,
     );
-    let vehicle = ctx.catalogue.find_vehicle(&s.selected_vehicle);
+    let vehicle = ctx
+        .catalogue
+        .find_vehicle(&s.selected_vehicle)
+        .filter(|_| !s.no_vehicle);
     let mut what_lines = vec![commands
         .spawn(plain(
-            vehicle_name(ctx.catalogue, s),
+            vehicle_line(ctx.loc, ctx.catalogue, s),
             TypeScale::TitleMedium,
             ColorRole::OnSurface,
         ))

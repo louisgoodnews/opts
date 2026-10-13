@@ -78,6 +78,13 @@ pub struct HumanHead;
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct PlayerHead;
 
+/// Marker for the eye anchor of the human that sits in **a** session vehicle's driver seat (the
+/// active one or a parked one). [`sync_player_head`] keeps [`PlayerHead`] on the one whose vehicle
+/// is the [`crate::vehicle_sim::PlayerVehicle`], so the ego and cockpit cameras always find exactly
+/// one head.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct DriverHead;
+
 /// On the root of the player's human (a child of the vehicle): once its pose is in place, the
 /// character is shifted so that its eyes lie at `target` (vehicle-local Bevy space), where the
 /// vehicle's driver camera is. The camera and the head then coincide, in the cockpit view and in
@@ -106,7 +113,24 @@ pub fn align_driver_eyes(
         }
         // The human stays on the seat (`[drivpos]`); the cockpit and ego cameras go to its eyes.
         commands.entity(e).remove::<AlignEyes>();
-        commands.entity(human.rig.head_anchor).insert(PlayerHead);
+        commands.entity(human.rig.head_anchor).insert(DriverHead);
+    }
+}
+
+/// Puts [`PlayerHead`] on the [`DriverHead`] whose vehicle is the active one and nowhere else.
+pub fn sync_player_head(
+    mut commands: bevy::prelude::Commands,
+    heads: bevy::prelude::Query<(Entity, bevy::prelude::Has<PlayerHead>), bevy::prelude::With<DriverHead>>,
+    parents: bevy::prelude::Query<&bevy::prelude::ChildOf>,
+    players: bevy::prelude::Query<(), bevy::prelude::With<crate::vehicle_sim::PlayerVehicle>>,
+) {
+    for (head, has) in &heads {
+        let active = players.contains(parents.root_ancestor(head));
+        if active && !has {
+            commands.entity(head).insert(PlayerHead);
+        } else if !active && has {
+            commands.entity(head).remove::<PlayerHead>();
+        }
     }
 }
 
