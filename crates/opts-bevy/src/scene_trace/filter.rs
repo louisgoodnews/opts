@@ -73,10 +73,11 @@ pub fn glob_match(pattern: &str, text: &str) -> bool {
             continue;
         }
         if i == 0 {
-            let Some(r) = rest.strip_prefix(part) else {
+            // Not anchored at the start: `house*.sco` finds `sceneryobjects/x/house_01.sco`.
+            let Some(at) = rest.find(part) else {
                 return false;
             };
-            rest = r;
+            rest = &rest[at + part.len()..];
         } else if i == parts.len() - 1 {
             return rest.ends_with(part);
         } else {
