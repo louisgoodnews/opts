@@ -144,6 +144,13 @@ set-opt-log-error = Nur Fehler
 set-opt-log-warn = Warnungen
 set-opt-log-info = Normal
 set-opt-log-debug = Ausführlich
+set-trace-scene = Szenen-Trace
+set-trace-scene-desc = Entwicklerwerkzeug: protokolliert in einer Datei neben den Logs, welche Mesh-Datei wo steht (Kachel, Position, Dekodierqualität). Zusammenfassung hält Zähler und Probleme fest, Alles hält jedes Objekt fest. Wirkt ab dem nächsten Laden einer Karte. Kostet nichts, solange es aus ist.
+set-opt-trace-off = Aus
+set-opt-trace-summary = Zusammenfassung
+set-opt-trace-full = Alles
+set-trace-overlay = Szenen-Trace-Überlagerung
+set-trace-overlay-desc = Entwicklerwerkzeug: zeichnet um jedes verfolgte Objekt in Kameranähe einen Kasten, eingefärbt nach Dekodierqualität (rot = fehlgeschlagen, orange = unsicher, gelb = dekodiert). Braucht den Szenen-Trace.
 
 settings-title = Einstellungen
 settings-search-placeholder = Einstellungen durchsuchen

@@ -32,8 +32,10 @@ pub fn apply_live_changes(
     mut changes: MessageReader<SettingChanged>,
     mut loc: ResMut<Localization>,
     active: Option<ResMut<ActiveLook>>,
+    overlay: Option<ResMut<crate::control_trace::TraceOverlay>>,
 ) {
     let mut active = active;
+    let mut overlay = overlay;
     for c in changes.read() {
         match c.key.as_str() {
             "texture_filtering" => {
@@ -47,6 +49,16 @@ pub fn apply_live_changes(
                 }
             }
             "interface.language" => loc.set_locale(&c.new),
+            "advanced.trace_scene" => {
+                if let Some(mode) = opts_bevy::scene_trace::Mode::parse(&c.new) {
+                    opts_bevy::scene_trace::set_mode(mode);
+                }
+            }
+            "advanced.trace_overlay" => {
+                if let Some(o) = overlay.as_mut() {
+                    o.enabled = c.new == "true";
+                }
+            }
             "advanced.log_level" => {
                 for t in LOG_TARGETS {
                     let _ = opts_logging::set_level(t, level_of(&c.new));
@@ -81,5 +93,24 @@ pub fn sync_developer_panel(
     if stats.is_added() || *last != Some(want) {
         stats.overlay_visible = want;
         *last = Some(want);
+    }
+}
+
+/// Start-up: the saved scene trace mode (unless `--trace-scene` chose one for this run) and overlay.
+pub fn apply_saved_trace(
+    settings: Res<GameSettings>,
+    args: Option<Res<crate::app::AppArgs>>,
+    overlay: Option<ResMut<crate::control_trace::TraceOverlay>>,
+) {
+    if args.is_none_or(|a| a.0.trace_scene.is_none()) {
+        if let Some(mode) = settings
+            .raw("advanced.trace_scene")
+            .and_then(|m| opts_bevy::scene_trace::Mode::parse(&m))
+        {
+            opts_bevy::scene_trace::set_mode(mode);
+        }
+    }
+    if let Some(mut o) = overlay {
+        o.enabled = settings.raw("advanced.trace_overlay").as_deref() == Some("true");
     }
 }

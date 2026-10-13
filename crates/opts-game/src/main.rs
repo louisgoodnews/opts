@@ -11,6 +11,16 @@ fn main() {
     }
     // Incident files of meshes the decoder could not prove go next to the logs.
     opts_bevy::uv_incident::set_directory(config.files.directory.join("incidents"));
+    // Scene trace files go next to the logs (`--trace-scene` switches the mode on for this run).
+    opts_bevy::scene_trace::set_directory(config.files.directory.join("trace"));
+    if let Some(text) = args.trace_scene.as_deref() {
+        match opts_bevy::scene_trace::Mode::parse(text) {
+            Some(mode) => {
+                opts_bevy::scene_trace::set_mode(mode);
+            }
+            None => eprintln!("--trace-scene: `{text}` is not off, summary or full"),
+        }
+    }
     let _guard = opts_logging::init(config).ok();
 
     tracing::info!("OPTS application starting up");

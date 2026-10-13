@@ -115,6 +115,7 @@
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
+- [Scene Trace (which mesh is where)](architecture/scene-trace.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
 - [Collisions](simulation/collisions.md)

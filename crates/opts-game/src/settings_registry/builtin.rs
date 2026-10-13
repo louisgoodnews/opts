@@ -71,6 +71,12 @@ const LOG_LEVELS: &[super::EnumOption] = &[
     opt("debug", "set-opt-log-debug"),
 ];
 
+const TRACE_MODES: &[super::EnumOption] = &[
+    opt("off", "set-opt-trace-off"),
+    opt("summary", "set-opt-trace-summary"),
+    opt("full", "set-opt-trace-full"),
+];
+
 /// Part 1: graphics, audio, controls.
 fn graphics() -> Vec<D> {
     vec![
@@ -489,6 +495,36 @@ fn content() -> Vec<D> {
         )
         .keywords(&["logging", "diagnostics", "debug"])
         .since("0.2"),
+        D::new(
+            "advanced.trace_scene",
+            K::Enum(TRACE_MODES),
+            "off",
+            C::Advanced,
+            30,
+            "set-trace-scene",
+            "set-trace-scene-desc",
+        )
+        .keywords(&[
+            "developer",
+            "debug",
+            "mesh",
+            "trace",
+            "asset",
+            "tile",
+            "jsonl",
+        ])
+        .since("0.3"),
+        D::new(
+            "advanced.trace_overlay",
+            K::Bool,
+            "false",
+            C::Advanced,
+            40,
+            "set-trace-overlay",
+            "set-trace-overlay-desc",
+        )
+        .keywords(&["developer", "debug", "boxes", "overlay", "trace"])
+        .since("0.3"),
     ]
 }
 

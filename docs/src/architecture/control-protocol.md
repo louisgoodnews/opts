@@ -1,6 +1,6 @@
 # 🎛️ Control Protocol
 
-**Status:** 🟢 Implemented (protocol 1.2; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
+**Status:** 🟢 Implemented (protocol 1.3; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
 
 A running OPTS instance can be driven from outside: a human at a terminal or an AI agent in a loop can operate every screen by id,
 play the simulation (throttle, brake, steering, gear, doors, lights, camera), query state, pause and step
@@ -246,6 +246,10 @@ The vehicle is operated by *named controls*; the names are discovered with `driv
 
 Unknown ids answer `1004`, vehicles that are not in the world `1001`. `hud.state` also reports `place_label` and `has_vehicle`.
 
+### 4.12b Scene trace (protocol 1.3)
+
+`trace.set`, `trace.pick`, `trace.tile`, `trace.find`, `trace.region` and `trace.export` query the scene trace (M-0087): which mesh file is placed where, with decode stage and texture-coordinate quality. They answer `1001` while the trace is off. `trace.pick` takes the pixel of a screenshot (or the crosshair) and returns the nearest object's full record with its parents. Full description, record schema and the screenshot-to-asset recipe: [scene trace](scene-trace.md).
+
 ### 4.13 Snapshots and screenshots
 
 `screenshot` saves the window; `snapshot` returns, in one call, the app state, `ui.screen`, `drive.state`, the HUD, camera, simulation clock and the last warnings, optionally with a screenshot and as a file. It is the call an agent makes after every few actions to *see* what happened.
@@ -262,7 +266,7 @@ executes at most 64 commands per frame; the rest wait in the queue (bounded at 1
 
 ## 6. Versioning
 
-`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`; **1.2.0**: the session vehicles `session.vehicles|spawn|switch|despawn|respawn` and `place_label` in `hud.state`). Minor versions only **add** methods, optional parameters and
+`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`; **1.2.0**: the session vehicles `session.vehicles|spawn|switch|despawn|respawn` and `place_label` in `hud.state`; **1.3.0**: the scene trace `trace.set|pick|tile|find|region|export`, see [scene trace](scene-trace.md)). Minor versions only **add** methods, optional parameters and
 result members; clients ignore unknown result members and servers ignore unknown parameters. A breaking change
 bumps the major version and changes the default port. `capabilities` lets a client feature-detect instead of
 comparing versions.
