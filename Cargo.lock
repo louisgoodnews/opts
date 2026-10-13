@@ -5403,6 +5403,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "opts-hardware"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sysinfo",
+]
+
+[[package]]
 name = "opts-logging"
 version = "0.1.0"
 dependencies = [

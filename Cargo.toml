@@ -27,6 +27,7 @@ members = [
     "crates/opts-cli",
     "crates/opts-core",
     "crates/opts-game",
+    "crates/opts-hardware",
     "crates/opts-gui",
     "crates/opts-logging",
     "crates/opts-sim",
@@ -53,6 +54,7 @@ opts-catalogue = { path = "crates/opts-catalogue" }
 opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-core = { path = "crates/opts-core" }
 opts-game = { path = "crates/opts-game" }
+opts-hardware = { path = "crates/opts-hardware" }
 opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }
