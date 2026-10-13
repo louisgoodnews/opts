@@ -23,6 +23,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
 - [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 📝 Planned (R-20, R-21)
+- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 📝 Planned (R-26)
 - [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003)
 
 ## Checklist
@@ -74,3 +75,5 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
+- [ ] **🎥 Viewpoint Editor** — [M-0084](M-0084.md)
+  - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).

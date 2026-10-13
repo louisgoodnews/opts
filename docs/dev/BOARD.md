@@ -182,6 +182,10 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
 - [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
+- [ ] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25.
+- [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.
+- [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
+- [~] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

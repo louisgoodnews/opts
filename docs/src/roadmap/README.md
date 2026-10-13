@@ -200,6 +200,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
+- [ ] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
+  - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 
 ---
 
@@ -244,6 +246,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
 - [ ] **🧬 Mesh Instancing Research** — [M-0082](phase-5/M-0082.md)
   - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).
+- [ ] **🪞 Reflections Research** — [M-0085](phase-5/M-0085.md)
+  - [ ] Research branch `research/reflections`: mirrors, glass, later wet surfaces; prototype, measurements, recommendation (R-27).
 
 ---
 
@@ -325,6 +329,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
 - [ ] **⏳ Loading Screen Vehicle** — [M-0076](phase-9/M-0076.md)
   - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [ ] **🌍 Language Packs** — [M-0083](phase-9/M-0083.md)
+  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](phase-9/M-0086.md)
+  - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
+  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
 
 ---
 
