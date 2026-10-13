@@ -112,9 +112,7 @@ pub fn switch_to(world: &mut World, id: VehicleId) -> Result<(), OpError> {
         world.entity_mut(e).remove::<PlayerVehicle>();
     }
     world.entity_mut(entity).insert(PlayerVehicle);
-    world
-        .resource_mut::<SessionVehicles>()
-        .set_active(Some(id));
+    world.resource_mut::<SessionVehicles>().set_active(Some(id));
     if let Some(mut remote) = world.get_resource_mut::<RemoteControls>() {
         // Held pedals of the old vehicle must not drive the new one.
         remote.release_all();

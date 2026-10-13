@@ -4,8 +4,16 @@
 use std::collections::HashMap;
 
 fn km(du: f32, dv: f32) -> (i32, i32) {
-    let k = if du.abs() > 1e-6 { (du.max(0.0) * 400.0).sqrt().round() as i32 } else { 0 };
-    let m = if dv.abs() > 1e-6 { (dv.max(0.0) * 2500.0).sqrt().round() as i32 } else { 0 };
+    let k = if du.abs() > 1e-6 {
+        (du.max(0.0) * 400.0).sqrt().round() as i32
+    } else {
+        0
+    };
+    let m = if dv.abs() > 1e-6 {
+        (dv.max(0.0) * 2500.0).sqrt().round() as i32
+    } else {
+        0
+    };
     (k, m)
 }
 
@@ -38,9 +46,18 @@ fn main() {
         let t = km(du, dv);
         let s = km((du - sdu).max(0.0), (dv - sdv).max(0.0));
         // a wrongly shifted vertex has a negative removed offset: treated as "other" = (-1,-1)
-        let s = if du - sdu < -1e-6 || dv - sdv < -1e-6 { (-1, -1) } else { s };
+        let s = if du - sdu < -1e-6 || dv - sdv < -1e-6 {
+            (-1, -1)
+        } else {
+            s
+        };
         let (ti, si) = (id_of(t, &mut ids), id_of(s, &mut ids));
-        verts.push(V { pair: f[0].parse().unwrap(), n: f[2].parse().unwrap(), truth: ti, seen: si });
+        verts.push(V {
+            pair: f[0].parse().unwrap(),
+            n: f[2].parse().unwrap(),
+            truth: ti,
+            seen: si,
+        });
     }
     let s = ids.len();
     eprintln!("{} vertices, {} states (incl. other)", verts.len(), s);
@@ -79,7 +96,8 @@ fn main() {
         let z: f64 = emit[a].iter().sum();
         emit[a].iter_mut().for_each(|x| *x /= z);
     }
-    let (mut tot, mut base, mut post, mut hi_conf, mut hi_conf_ok) = (0usize, 0usize, 0usize, 0usize, 0usize);
+    let (mut tot, mut base, mut post, mut hi_conf, mut hi_conf_ok) =
+        (0usize, 0usize, 0usize, 0usize, 0usize);
     let mut by_class = [[0usize; 3]; 2];
     for m in meshes.iter().filter(|m| !train(&m)) {
         let c = class(m.1);
@@ -123,7 +141,10 @@ fn main() {
         for i in 0..len {
             let mut p: Vec<f64> = (0..s).map(|a| alpha[i][a] * beta[i][a]).collect();
             norm(&mut p);
-            let (best, pb) = p.iter().enumerate().fold((0, 0.0), |b, (k, &x)| if x > b.1 { (k, x) } else { b });
+            let (best, pb) = p
+                .iter()
+                .enumerate()
+                .fold((0, 0.0), |b, (k, &x)| if x > b.1 { (k, x) } else { b });
             tot += 1;
             base += usize::from(m.2[i].0 == m.2[i].1);
             let ok = best == m.2[i].0;
@@ -137,9 +158,24 @@ fn main() {
             }
         }
     }
-    println!("test vertices {tot}: decoder exact {:.4}, chain posterior exact {:.4}", base as f64 / tot as f64, post as f64 / tot as f64);
+    println!(
+        "test vertices {tot}: decoder exact {:.4}, chain posterior exact {:.4}",
+        base as f64 / tot as f64,
+        post as f64 / tot as f64
+    );
     for c in 0..2 {
-        println!("class {}: n {} decoder {:.4} posterior {:.4}", if c == 1 { "5|n" } else { "other" }, by_class[c][0], by_class[c][1] as f64 / by_class[c][0] as f64, by_class[c][2] as f64 / by_class[c][0] as f64);
+        println!(
+            "class {}: n {} decoder {:.4} posterior {:.4}",
+            if c == 1 { "5|n" } else { "other" },
+            by_class[c][0],
+            by_class[c][1] as f64 / by_class[c][0] as f64,
+            by_class[c][2] as f64 / by_class[c][0] as f64
+        );
     }
-    println!("posterior >0.95: {} vertices ({:.3}), of which right {:.4}", hi_conf, hi_conf as f64 / tot as f64, hi_conf_ok as f64 / hi_conf.max(1) as f64);
+    println!(
+        "posterior >0.95: {} vertices ({:.3}), of which right {:.4}",
+        hi_conf,
+        hi_conf as f64 / tot as f64,
+        hi_conf_ok as f64 / hi_conf.max(1) as f64
+    );
 }

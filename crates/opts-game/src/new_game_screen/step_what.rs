@@ -231,5 +231,12 @@ pub fn fill_what_detail(
         ));
     }
     kids.push(spawn_livery_section(commands, liveries, setup, vehicle));
+    kids.push(super::ui::action_button(
+        commands,
+        "wiz-what-none",
+        super::ui::Emphasis::Quiet,
+        super::ui::PlannerAction::NoVehicle,
+        "wizard.what.none".to_owned(),
+    ));
     commands.entity(detail).add_children(&kids);
 }

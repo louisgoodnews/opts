@@ -280,11 +280,14 @@ pub fn handle_vehicle_requests(
         tracing::error!(at = %opts_bevy::position_tag(), entry = ?rec.entry, "entry point not found; no vehicle spawned");
         return;
     };
-    let placed = entries.find(entry_id).map(|e| (e.world, e.heading_deg)).or_else(|| {
-        let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
-        job.find_entry_spawn_by_id(entry_id, &keys)
-            .map(|(_, (p, h))| (p, h))
-    });
+    let placed = entries
+        .find(entry_id)
+        .map(|e| (e.world, e.heading_deg))
+        .or_else(|| {
+            let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
+            job.find_entry_spawn_by_id(entry_id, &keys)
+                .map(|(_, (p, h))| (p, h))
+        });
     let Some((world, heading)) = placed else {
         registry.mark_failed(id, format!("entry point `{entry_name}` cannot be placed"));
         tracing::error!(at = %opts_bevy::position_tag(), entry = %entry_id, "entry point cannot be placed; no vehicle spawned");

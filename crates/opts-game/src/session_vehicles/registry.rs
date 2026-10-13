@@ -412,7 +412,10 @@ impl SessionVehicles {
             return Err(format!("unsupported session_vehicles version {version:?}"));
         }
         let records: Vec<SessionVehicleRecord> = serde_json::from_value(
-            section.get("vehicles").cloned().unwrap_or(Value::Array(vec![])),
+            section
+                .get("vehicles")
+                .cloned()
+                .unwrap_or(Value::Array(vec![])),
         )
         .map_err(|e| e.to_string())?;
         let next_id = section
@@ -520,7 +523,10 @@ mod tests {
         assert_eq!(reg.next_pending(Some(a)), Some(b));
         reg.mark_failed(a, "no such file");
         assert_eq!(reg.next_pending(None), Some(b));
-        assert_eq!(reg.get(a).and_then(|r| r.error.as_deref()), Some("no such file"));
+        assert_eq!(
+            reg.get(a).and_then(|r| r.error.as_deref()),
+            Some("no such file")
+        );
     }
 
     #[test]
@@ -541,7 +547,11 @@ mod tests {
         assert_eq!(back.active_id(), Some(b));
         let r = back.get(b).expect("record");
         assert_eq!(r.spawn_entry_name, "Entry B");
-        assert_eq!(r.lifecycle, Lifecycle::Spawning, "restored vehicles are rebuilt");
+        assert_eq!(
+            r.lifecycle,
+            Lifecycle::Spawning,
+            "restored vehicles are rebuilt"
+        );
         assert_eq!(r.entity, None);
         let c = {
             let mut back = back;

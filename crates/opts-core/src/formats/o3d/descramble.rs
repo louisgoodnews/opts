@@ -1011,7 +1011,11 @@ pub fn decode_joint_bounded(
                 .find(|p| close(*p, *t))
                 .unwrap_or(*t);
         }
-        let fixed = super::uvfix::unjitter_uv_staged(c, &uv_hints[ci], &super::uvfix::UvFixParams::default());
+        let fixed = super::uvfix::unjitter_uv_staged(
+            c,
+            &uv_hints[ci],
+            &super::uvfix::UvFixParams::default(),
+        );
         c.descrambled = true;
         out.push(ConfidentReport {
             accepted: true,
@@ -1187,7 +1191,8 @@ fn decode_confident_masked(
     // correct (big flat panels), so it punched holes into bodies to remove a few spikes.
     let _ = verdicts;
     let dropped = 0;
-    let fixed = super::uvfix::unjitter_uv_staged(&mut trial, &[], &super::uvfix::UvFixParams::default());
+    let fixed =
+        super::uvfix::unjitter_uv_staged(&mut trial, &[], &super::uvfix::UvFixParams::default());
     trial.descrambled = true;
     *o = trial;
     ConfidentReport {

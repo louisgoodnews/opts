@@ -48,7 +48,8 @@ pub use ground_height::{follow_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,
-    update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText, DebugWheelVars, WheelVarsText,
+    update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText, DebugWheelVars,
+    WheelVarsText,
 };
 pub use pedestrians::{
     configure_pedestrians, load_variants, move_pedestrians, spawn_pedestrians, Pedestrian,
@@ -67,9 +68,7 @@ pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
-pub use vehicle::{
-    decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle,
-};
+pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle};
 pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).

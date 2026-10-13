@@ -27,15 +27,24 @@ fn main() {
     let dir = cfg.parent().unwrap().to_path_buf();
     let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).unwrap()).unwrap();
     let lod = model.detail_lod().unwrap();
-    let (mut n, mut accepted, mut v_total, mut v_clean, mut v_fixed, mut v_unres) = (0, 0, 0usize, 0usize, 0usize, 0usize);
+    let (mut n, mut accepted, mut v_total, mut v_clean, mut v_fixed, mut v_unres) =
+        (0, 0, 0usize, 0usize, 0usize, 0usize);
     let mut seen = std::collections::HashSet::new();
     println!("mesh | vertices | accepted | agreement | uv clean/corrected/unresolved");
     for m in &lod.meshes {
-        if filter.as_ref().is_some_and(|f| !m.path.to_lowercase().contains(f)) || !seen.insert(m.path.to_lowercase()) {
+        if filter
+            .as_ref()
+            .is_some_and(|f| !m.path.to_lowercase().contains(f))
+            || !seen.insert(m.path.to_lowercase())
+        {
             continue;
         }
-        let Some(path) = find_ci(&dir, &m.path) else { continue };
-        let Ok(mut o) = parse(&std::fs::read(path).unwrap()) else { continue };
+        let Some(path) = find_ci(&dir, &m.path) else {
+            continue;
+        };
+        let Ok(mut o) = parse(&std::fs::read(path).unwrap()) else {
+            continue;
+        };
         if o.encryption_key.is_none() {
             continue;
         }
@@ -58,23 +67,46 @@ fn main() {
         if filter.is_some() {
             let mut h: std::collections::BTreeMap<(i32, i32), usize> = Default::default();
             for v in &o.vertices {
-                *h.entry(((v.uv.x * 1000.0).round() as i32, (v.uv.y * 1000.0).round() as i32)).or_default() += 1;
+                *h.entry((
+                    (v.uv.x * 1000.0).round() as i32,
+                    (v.uv.y * 1000.0).round() as i32,
+                ))
+                .or_default() += 1;
             }
             let mut top: Vec<_> = h.iter().collect();
             top.sort_by_key(|e| std::cmp::Reverse(*e.1));
             let (b, _) = top[0];
-            println!("  {} distinct uvs; most common (thousandths) and offsets from it:", h.len());
+            println!(
+                "  {} distinct uvs; most common (thousandths) and offsets from it:",
+                h.len()
+            );
             for (k, c) in top.iter().take(12) {
-                println!("    {:?} x{} offset ({:+.3}, {:+.3})", k, c, (k.0 - b.0) as f32 / 1000.0, (k.1 - b.1) as f32 / 1000.0);
+                println!(
+                    "    {:?} x{} offset ({:+.3}, {:+.3})",
+                    k,
+                    c,
+                    (k.0 - b.0) as f32 / 1000.0,
+                    (k.1 - b.1) as f32 / 1000.0
+                );
             }
             let mut us: Vec<f32> = o.vertices.iter().map(|v| v.uv.x).collect();
             let mut vs: Vec<f32> = o.vertices.iter().map(|v| v.uv.y).collect();
             us.sort_by(f32::total_cmp);
             vs.sort_by(f32::total_cmp);
             let (mu, mv) = (us[us.len() / 2], vs[vs.len() / 2]);
-            let far = o.vertices.iter().filter(|v| (v.uv.x - mu).abs() > 0.2 || (v.uv.y - mv).abs() > 0.2).count();
-            println!("  median uv ({mu:.3}, {mv:.3}); {far} of {} vertices farther than 0.2 from it", o.vertices.len());
-            println!("  uv after decoding: u {:.3}..{:.3} v {:.3}..{:.3}", lo[0], hi[0], lo[1], hi[1]);
+            let far = o
+                .vertices
+                .iter()
+                .filter(|v| (v.uv.x - mu).abs() > 0.2 || (v.uv.y - mv).abs() > 0.2)
+                .count();
+            println!(
+                "  median uv ({mu:.3}, {mv:.3}); {far} of {} vertices farther than 0.2 from it",
+                o.vertices.len()
+            );
+            println!(
+                "  uv after decoding: u {:.3}..{:.3} v {:.3}..{:.3}",
+                lo[0], hi[0], lo[1], hi[1]
+            );
         }
         println!(
             "{} | {} | {} | {:.2} | {}/{}/{}",

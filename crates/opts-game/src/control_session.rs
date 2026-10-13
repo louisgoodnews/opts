@@ -75,18 +75,13 @@ fn vehicles(world: &mut World, _: &Value) -> Outcome {
         ));
     }
     let mut out = world.resource::<SessionVehicles>().describe();
-    let label = world
-        .get_resource::<PlaceLabel>()
-        .and_then(|p| p.0.clone());
+    let label = world.get_resource::<PlaceLabel>().and_then(|p| p.0.clone());
     out["place_label"] = json!(label);
     Outcome::ok(out)
 }
 
 /// The `.bus` file a `vehicle` parameter names, with the catalogue entry it came from.
-fn resolve_vehicle(
-    world: &World,
-    text: &str,
-) -> Result<(String, String, PathBuf), RpcError> {
+fn resolve_vehicle(world: &World, text: &str) -> Result<(String, String, PathBuf), RpcError> {
     let as_path = PathBuf::from(text);
     let looks_like_file = text.to_lowercase().ends_with(".bus") || as_path.is_absolute();
     if looks_like_file {
@@ -158,14 +153,16 @@ fn spawn(world: &mut World, params: &Value) -> Outcome {
             (None, Some(n)) => EntrySel::Name(n.to_owned()),
             (None, None) => EntrySel::Default,
         };
-        let id = world.resource_mut::<SessionVehicles>().request_spawn(SpawnParams {
-            catalogue_id,
-            name,
-            bus_file: file.display().to_string(),
-            repaint: opt_str(params, "repaint")?.unwrap_or_default().to_owned(),
-            setvars,
-            entry,
-        });
+        let id = world
+            .resource_mut::<SessionVehicles>()
+            .request_spawn(SpawnParams {
+                catalogue_id,
+                name,
+                bus_file: file.display().to_string(),
+                repaint: opt_str(params, "repaint")?.unwrap_or_default().to_owned(),
+                setvars,
+                entry,
+            });
         Ok(json!({ "id": id, "queued": true }))
     })();
     result.into()
@@ -174,7 +171,10 @@ fn spawn(world: &mut World, params: &Value) -> Outcome {
 fn switch(world: &mut World, params: &Value) -> Outcome {
     let result = (|| -> Result<Value, RpcError> {
         session_up(world)?;
-        let id = match (id_param(params)?, params.get("step").and_then(Value::as_i64)) {
+        let id = match (
+            id_param(params)?,
+            params.get("step").and_then(Value::as_i64),
+        ) {
             (Some(id), _) => {
                 ops::switch_to(world, id).map_err(op_error)?;
                 id

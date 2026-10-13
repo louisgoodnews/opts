@@ -224,7 +224,11 @@ fn setup_in_game_session(
     let cli_livery = args.as_ref().and_then(|a| a.0.livery.clone());
     let default_catalogue = crate::new_game_screen::types::GameCatalogue::default();
     let catalogue = catalogue.as_deref().unwrap_or(&default_catalogue);
-    (session.vehicle_name, session.vehicle_none, session.livery_name) = match cli_vehicle {
+    (
+        session.vehicle_name,
+        session.vehicle_none,
+        session.livery_name,
+    ) = match cli_vehicle {
         Some(path) => (
             path.file_stem()
                 .map(|s| s.to_string_lossy().into_owned())
@@ -236,9 +240,8 @@ fn setup_in_game_session(
         None => (
             crate::new_game_screen::texts::vehicle_name(catalogue, &setup),
             false,
-            cli_livery.unwrap_or_else(|| {
-                crate::new_game_screen::texts::livery_name(catalogue, &setup)
-            }),
+            cli_livery
+                .unwrap_or_else(|| crate::new_game_screen::texts::livery_name(catalogue, &setup)),
         ),
     };
     session.weather_preset = setup.weather_preset.clone();

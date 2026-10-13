@@ -595,9 +595,12 @@ pub(super) fn spawn_trailer_chain(
                     );
                     s.reversed = reversed;
                     // The bus files list min and max in either order (3 files have 20,-20).
-                    s.beta_limits_deg = manifest
-                        .coupling_front_limits
-                        .map(|l| (l.min_beta_deg.min(l.max_beta_deg), l.min_beta_deg.max(l.max_beta_deg)));
+                    s.beta_limits_deg = manifest.coupling_front_limits.map(|l| {
+                        (
+                            l.min_beta_deg.min(l.max_beta_deg),
+                            l.min_beta_deg.max(l.max_beta_deg),
+                        )
+                    });
                     s.set_wheels(
                         axle_base,
                         manifest

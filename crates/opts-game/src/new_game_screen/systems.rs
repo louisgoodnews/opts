@@ -98,6 +98,11 @@ pub fn handle_actions(
             ),
             PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
             PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
+            PlannerAction::NoVehicle => {
+                env.setup.no_vehicle = true;
+                env.setup.custom_setvars.clear();
+                next(&mut env);
+            }
             PlannerAction::OpenSettings => {
                 // A step into a sub-page: Back returns here.
                 env.navigate.write(Navigate::push("settings"));

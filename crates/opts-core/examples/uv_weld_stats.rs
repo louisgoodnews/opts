@@ -14,11 +14,15 @@ fn main() {
         if f.len() < 8 || f[7] != "true" {
             continue;
         }
-        let Ok(o) = parse(&std::fs::read(f[1]).unwrap()) else { continue };
+        let Ok(o) = parse(&std::fs::read(f[1]).unwrap()) else {
+            continue;
+        };
         let q = |x: f32| (x * 1e4).round() as i64;
         let mut by: HashMap<(i64, i64, i64), Vec<usize>> = HashMap::new();
         for (i, v) in o.vertices.iter().enumerate() {
-            by.entry((q(v.position.x), q(v.position.y), q(v.position.z))).or_default().push(i);
+            by.entry((q(v.position.x), q(v.position.y), q(v.position.z)))
+                .or_default()
+                .push(i);
         }
         let mut used = vec![0u32; o.vertices.len()];
         for t in &o.indices {
@@ -36,7 +40,9 @@ fn main() {
             for &i in g {
                 sp += 1;
                 let uv = o.vertices[i].uv;
-                if g.iter().any(|&j| j != i && (o.vertices[j].uv - uv).abs().max_element() < 1e-4) {
+                if g.iter()
+                    .any(|&j| j != i && (o.vertices[j].uv - uv).abs().max_element() < 1e-4)
+                {
                     su += 1;
                 } else {
                     sd += 1;
@@ -54,6 +60,9 @@ fn main() {
     let p = |x: usize| 100.0 * x as f64 / total as f64;
     println!("meshes {meshes}, vertices {total}");
     println!("vertices sharing their position with another vertex: {:.1}% (same uv {:.1}%, different uv {:.1}%)", p(shared_pos), p(same_uv), p(diff_uv));
-    println!("vertices used by more than one triangle (index sharing): {:.1}%", p(idx_shared));
+    println!(
+        "vertices used by more than one triangle (index sharing): {:.1}%",
+        p(idx_shared)
+    );
     println!("meshes where more than half of the vertices are position duplicates: {meshes_hi}");
 }

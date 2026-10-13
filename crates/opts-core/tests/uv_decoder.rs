@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use glam::{Vec2, Vec3};
 use opts_core::formats::o3d::uvfix::{jitter_offsets, unjitter_uv_staged, UvFixParams, UvQuality};
-use opts_core::formats::o3d::{parse, Vertex, O3d};
+use opts_core::formats::o3d::{parse, O3d, Vertex};
 
 fn params() -> UvFixParams {
     UvFixParams::default().with_overrides(|k| std::env::var(k).ok())
@@ -109,7 +109,10 @@ fn every_vertex_gets_a_quality_and_exact_ones_are_right() {
     for (i, q) in out.quality.iter().enumerate() {
         if *q == UvQuality::Exact {
             assert!(
-                (keyed.vertices[i].uv - plain.vertices[i].uv).abs().max_element() < 1e-4,
+                (keyed.vertices[i].uv - plain.vertices[i].uv)
+                    .abs()
+                    .max_element()
+                    < 1e-4,
                 "vertex {i} is Exact but wrong"
             );
         }
@@ -117,37 +120,111 @@ fn every_vertex_gets_a_quality_and_exact_ones_are_right() {
 }
 
 fn omsi_root() -> Option<PathBuf> {
-    let p = std::env::var("OPTS_OMSI_PATH")
-        .map_or_else(|_| PathBuf::from("/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2"), PathBuf::from);
+    let p = std::env::var("OPTS_OMSI_PATH").map_or_else(
+        |_| PathBuf::from("/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2"),
+        PathBuf::from,
+    );
     p.is_dir().then_some(p)
 }
 
 /// Twin pairs (plain file, keyed file) of the installation, relative to its root.
 const PAIRS: &[(&str, &str)] = &[
-    ("Sceneryobjects/HafenCityHamburg/model/jbp_kontor.o3d", "Sceneryobjects/HamburgLinie109/model/jbp_kontor.o3d"),
-    ("Sceneryobjects/HafenCityHamburgObjects/model/ADAM3.o3d", "Sceneryobjects/HamburgLi20Objects/model/ADAM3.o3d"),
-    ("Vehicles/HH20_HHA_DT4/model/DT4.5_1/DT4.5_Innen_F.o3d", "Vehicles/HC_HHA_DT4/model/DT4.5_1/DT4.5_Innen_F.o3d"),
-    ("Sceneryobjects/HafenCityHamburgObjects/model/ADFM3.o3d", "Sceneryobjects/HamburgLi20Objects/model/ADFM3.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/mbs_ew_karstadt.o3d", "Sceneryobjects/HamburgLinie109/model/mbs_ew_karstadt.o3d"),
-    ("Vehicles/HH20_HHA_DT4/model/DT4.5_1/DT4.5_Schaku.o3d", "Vehicles/HC_HHA_DT4/model/DT4.5_1/DT4.5_Schaku.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/kia_background.o3d", "Sceneryobjects/HamburgLinie109/model/kia_background.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/kns_ew_2+1_1.o3d", "Sceneryobjects/HamburgLinie109/model/kns_ew_2+1_1.o3d"),
-    ("Vehicles/HH_EBus2019/Model/19_aussen_weich2_#low.o3d", "Vehicles/HC_EBus2019_parked/Model/19_aussen_weich2_#low.o3d"),
-    ("Vehicles/HH20_Volvo7900H/Model/V18_scheiben_innen_wisch.o3d", "Vehicles/HC_Volvo7900H/Model/V18_scheiben_innen_wisch.o3d"),
-    ("Vehicles/HH20_Volvo7900H/Model/V18_tuer1.o3d", "Vehicles/HC_Volvo7900H/Model/V18_tuer1.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/kia_52-57.o3d", "Sceneryobjects/HamburgLinie109/model/kia_52-57.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/bd_ecke.o3d", "Sceneryobjects/HamburgLinie109/model/bd_ecke.o3d"),
-    ("Vehicles/HH20_HHA_DT4/model/DT4.5_2/DT4.5_Fenster_A.o3d", "Vehicles/HC_HHA_DT4/model/DT4.5_2/DT4.5_Fenster_A.o3d"),
-    ("Vehicles/HH20_HHA_DT4/model/DT4.3_2/DT4.3_Fenster_A.o3d", "Vehicles/HC_HHA_DT4/model/DT4.3_2/DT4.3_Fenster_A.o3d"),
-    ("Vehicles/HH20_C2_parked/Model/NL_fensaus.o3d", "Vehicles/Gladbeck_Stadtbus/Model/NL_fensaus.o3d"),
-    ("Vehicles/HH20_C2_parked/Model/VW_fensaus_parked.o3d", "Vehicles/HC_C2_parked/Model/VW_fensaus_parked.o3d"),
-    ("Vehicles/HH20_C2_parked/Model/VW_fensin.o3d", "Vehicles/HC_C2_parked/Model/VW_fensin.o3d"),
-    ("Vehicles/HH20_C2_parked/Model/C2_rad_HL.o3d", "Vehicles/HC_C2_parked/Model/C2_rad_HL.o3d"),
-    ("Vehicles/HH20_Volvo7900H/Model/V18_T_tuer4.o3d", "Vehicles/HC_Volvo7900H/Model/V18_T_tuer4.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/2_K_jungfernstieg_berg_mark.o3d", "Sceneryobjects/HamburgLinie109/model/2_K_jungfernstieg_berg_mark.o3d"),
-    ("Sceneryobjects/HafenCityHamburg/model/ggw_1.o3d", "Sceneryobjects/HamburgLinie109/model/ggw_1.o3d"),
-    ("Vehicles/HH20_C2_parked/Model/C2_VW_aussensp_aussen.o3d", "Vehicles/HC_C2_parked/Model/C2_VW_aussensp_aussen.o3d"),
-    ("Sceneryobjects/HamburgLi20/model/3_K_jahn_uebersee_west_mark.o3d", "Sceneryobjects/HafenCityHamburg/model/3_K_jahn_uebersee_west_mark.o3d"),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/jbp_kontor.o3d",
+        "Sceneryobjects/HamburgLinie109/model/jbp_kontor.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburgObjects/model/ADAM3.o3d",
+        "Sceneryobjects/HamburgLi20Objects/model/ADAM3.o3d",
+    ),
+    (
+        "Vehicles/HH20_HHA_DT4/model/DT4.5_1/DT4.5_Innen_F.o3d",
+        "Vehicles/HC_HHA_DT4/model/DT4.5_1/DT4.5_Innen_F.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburgObjects/model/ADFM3.o3d",
+        "Sceneryobjects/HamburgLi20Objects/model/ADFM3.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/mbs_ew_karstadt.o3d",
+        "Sceneryobjects/HamburgLinie109/model/mbs_ew_karstadt.o3d",
+    ),
+    (
+        "Vehicles/HH20_HHA_DT4/model/DT4.5_1/DT4.5_Schaku.o3d",
+        "Vehicles/HC_HHA_DT4/model/DT4.5_1/DT4.5_Schaku.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/kia_background.o3d",
+        "Sceneryobjects/HamburgLinie109/model/kia_background.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/kns_ew_2+1_1.o3d",
+        "Sceneryobjects/HamburgLinie109/model/kns_ew_2+1_1.o3d",
+    ),
+    (
+        "Vehicles/HH_EBus2019/Model/19_aussen_weich2_#low.o3d",
+        "Vehicles/HC_EBus2019_parked/Model/19_aussen_weich2_#low.o3d",
+    ),
+    (
+        "Vehicles/HH20_Volvo7900H/Model/V18_scheiben_innen_wisch.o3d",
+        "Vehicles/HC_Volvo7900H/Model/V18_scheiben_innen_wisch.o3d",
+    ),
+    (
+        "Vehicles/HH20_Volvo7900H/Model/V18_tuer1.o3d",
+        "Vehicles/HC_Volvo7900H/Model/V18_tuer1.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/kia_52-57.o3d",
+        "Sceneryobjects/HamburgLinie109/model/kia_52-57.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/bd_ecke.o3d",
+        "Sceneryobjects/HamburgLinie109/model/bd_ecke.o3d",
+    ),
+    (
+        "Vehicles/HH20_HHA_DT4/model/DT4.5_2/DT4.5_Fenster_A.o3d",
+        "Vehicles/HC_HHA_DT4/model/DT4.5_2/DT4.5_Fenster_A.o3d",
+    ),
+    (
+        "Vehicles/HH20_HHA_DT4/model/DT4.3_2/DT4.3_Fenster_A.o3d",
+        "Vehicles/HC_HHA_DT4/model/DT4.3_2/DT4.3_Fenster_A.o3d",
+    ),
+    (
+        "Vehicles/HH20_C2_parked/Model/NL_fensaus.o3d",
+        "Vehicles/Gladbeck_Stadtbus/Model/NL_fensaus.o3d",
+    ),
+    (
+        "Vehicles/HH20_C2_parked/Model/VW_fensaus_parked.o3d",
+        "Vehicles/HC_C2_parked/Model/VW_fensaus_parked.o3d",
+    ),
+    (
+        "Vehicles/HH20_C2_parked/Model/VW_fensin.o3d",
+        "Vehicles/HC_C2_parked/Model/VW_fensin.o3d",
+    ),
+    (
+        "Vehicles/HH20_C2_parked/Model/C2_rad_HL.o3d",
+        "Vehicles/HC_C2_parked/Model/C2_rad_HL.o3d",
+    ),
+    (
+        "Vehicles/HH20_Volvo7900H/Model/V18_T_tuer4.o3d",
+        "Vehicles/HC_Volvo7900H/Model/V18_T_tuer4.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/2_K_jungfernstieg_berg_mark.o3d",
+        "Sceneryobjects/HamburgLinie109/model/2_K_jungfernstieg_berg_mark.o3d",
+    ),
+    (
+        "Sceneryobjects/HafenCityHamburg/model/ggw_1.o3d",
+        "Sceneryobjects/HamburgLinie109/model/ggw_1.o3d",
+    ),
+    (
+        "Vehicles/HH20_C2_parked/Model/C2_VW_aussensp_aussen.o3d",
+        "Vehicles/HC_C2_parked/Model/C2_VW_aussensp_aussen.o3d",
+    ),
+    (
+        "Sceneryobjects/HamburgLi20/model/3_K_jahn_uebersee_west_mark.o3d",
+        "Sceneryobjects/HafenCityHamburg/model/3_K_jahn_uebersee_west_mark.o3d",
+    ),
 ];
 
 fn load(root: &Path, rel: &str) -> Option<O3d> {
@@ -176,7 +253,11 @@ fn real_twin_pairs_decode_to_the_calibrated_exactness() {
             v.position = truth.position;
         }
         let out = unjitter_uv_staged(&mut t, &[], &p);
-        assert_eq!(out.quality.len(), t.vertices.len(), "{keyed_rel}: a vertex without quality");
+        assert_eq!(
+            out.quality.len(),
+            t.vertices.len(),
+            "{keyed_rel}: a vertex without quality"
+        );
         let n = t.vertices.len();
         let r = exact(&t, &plain);
         total += n;
@@ -188,7 +269,12 @@ fn real_twin_pairs_decode_to_the_calibrated_exactness() {
         for (i, q) in out.quality.iter().enumerate() {
             if *q == UvQuality::Exact {
                 exact_total += 1;
-                exact_right += usize::from((t.vertices[i].uv - plain.vertices[i].uv).abs().max_element() < 1e-4);
+                exact_right += usize::from(
+                    (t.vertices[i].uv - plain.vertices[i].uv)
+                        .abs()
+                        .max_element()
+                        < 1e-4,
+                );
             }
         }
     }
@@ -200,7 +286,10 @@ fn real_twin_pairs_decode_to_the_calibrated_exactness() {
     let five_rate = five_right as f64 / five_total.max(1) as f64;
     eprintln!("exact {rate:.3} ({total} vertices), 5|n {five_rate:.3} ({five_total}), Exact-tier precision {:.4} ({exact_total})", exact_right as f64 / exact_total.max(1) as f64);
     assert!(rate >= 0.64, "overall exactness {rate:.3} (the pre-fix decoder reaches 0.58 on this sample, the fixed one 0.68)");
-    assert!(five_rate >= 0.40, "5|n exactness {five_rate:.3} (pre-fix 0.30 on this sample, fixed 0.47)");
+    assert!(
+        five_rate >= 0.40,
+        "5|n exactness {five_rate:.3} (pre-fix 0.30 on this sample, fixed 0.47)"
+    );
     assert!(
         exact_right as f64 / exact_total.max(1) as f64 >= 0.97,
         "Exact tier is wrong too often: {exact_right}/{exact_total}"
@@ -221,7 +310,17 @@ fn a_keyed_mesh_without_twin_reports_unreliable_vertices() {
     let report = opts_core::formats::o3d::descramble::decode_confident(&mut wheel);
     assert!(report.accepted);
     assert_eq!(report.quality.len(), wheel.vertices.len());
-    let unreliable = report.quality.iter().filter(|q| **q == UvQuality::Unreliable).count();
-    assert!(unreliable > 0, "no vertex flagged: the silent failure is back");
-    assert_eq!(report.uv.unresolved, 0, "the old counter stays 0; the quality carries the truth");
+    let unreliable = report
+        .quality
+        .iter()
+        .filter(|q| **q == UvQuality::Unreliable)
+        .count();
+    assert!(
+        unreliable > 0,
+        "no vertex flagged: the silent failure is back"
+    );
+    assert_eq!(
+        report.uv.unresolved, 0,
+        "the old counter stays 0; the quality carries the truth"
+    );
 }

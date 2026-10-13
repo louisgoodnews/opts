@@ -116,12 +116,7 @@ pub const GROUPS: &[Group] = &[
             bind("Esc", &[KeyCode::Escape], keys::HELP_KEY_PAUSE_MENU, PAUSE),
             bind("P", &[KeyCode::KeyP], keys::HELP_KEY_SIM_PAUSE, SIM_PAUSE),
             bind("Alt", &[KeyCode::AltLeft], keys::HELP_KEY_VEHICLE_MENU, EGO),
-            bind(
-                "F8",
-                &[KeyCode::F8],
-                keys::HELP_KEY_SWITCH_VEHICLE,
-                SESSION,
-            ),
+            bind("F8", &[KeyCode::F8], keys::HELP_KEY_SWITCH_VEHICLE, SESSION),
             bind("F1", &[KeyCode::F1], keys::HELP_KEY_HELP, HELP),
             bind("F2", &[KeyCode::F2], keys::HELP_KEY_THEME, THEME),
             bind("F10", &[KeyCode::F10], keys::HELP_KEY_DEV, DEV),

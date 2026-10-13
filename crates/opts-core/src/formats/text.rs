@@ -216,15 +216,23 @@ mod tests {
 
     #[test]
     fn blank_parameter_line_is_an_empty_value_not_the_next_text() {
-        let text = "[mesh]\na.o3d\n\n[matl_transmap]\n\n\n########\n\nRauchsystem\n\n[smoke]\n-1.16\n";
+        let text =
+            "[mesh]\na.o3d\n\n[matl_transmap]\n\n\n########\n\nRauchsystem\n\n[smoke]\n-1.16\n";
         let arity = |k: &str| match k {
             "matl_transmap" => Some(1),
             "isshadow" => Some(0),
             _ => None,
         };
         let blocks = scan_blocks_with(text, arity);
-        let t = blocks.iter().find(|b| b.keyword == "matl_transmap").unwrap();
-        assert_eq!(t.parameters, vec![String::new()], "empty value, not 'Rauchsystem'");
+        let t = blocks
+            .iter()
+            .find(|b| b.keyword == "matl_transmap")
+            .unwrap();
+        assert_eq!(
+            t.parameters,
+            vec![String::new()],
+            "empty value, not 'Rauchsystem'"
+        );
         // The old reading took the prose as the value.
         let old = scan_blocks(text);
         assert_eq!(old[1].parameters, vec!["Rauchsystem".to_string()]);
@@ -242,7 +250,9 @@ mod tests {
 
     #[test]
     fn a_texture_name_after_transmap_is_still_read() {
-        let blocks = scan_blocks_with("[matl_transmap]\nmask.bmp\nstray\n", |k| (k == "matl_transmap").then_some(1));
+        let blocks = scan_blocks_with("[matl_transmap]\nmask.bmp\nstray\n", |k| {
+            (k == "matl_transmap").then_some(1)
+        });
         assert_eq!(blocks[0].parameters, vec!["mask.bmp".to_string()]);
     }
 

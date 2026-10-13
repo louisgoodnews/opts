@@ -23,13 +23,13 @@ use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::prelude::*;
 
 use crate::in_game::omsi_world::{EntryIndex, TrafficVehicle, WorldLoadJob};
-use crate::session_vehicles::{
-    ops, DespawnReason, EntrySel, SessionVehicles, SpawnParams, VehicleId,
-};
 use crate::in_game::types::SimulationLoadState;
 use crate::new_game_screen::repaints::{vehicle_repaints, VehicleRepaints};
 use crate::new_game_screen::setvars_discovery::get_vehicle_setvars;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
+use crate::session_vehicles::{
+    ops, DespawnReason, EntrySel, SessionVehicles, SpawnParams, VehicleId,
+};
 
 /// AI vehicles closer than this to an entry point block it (m).
 const ENTRY_BLOCK_RADIUS_M: f32 = 12.0;

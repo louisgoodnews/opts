@@ -32,7 +32,9 @@ fn dot(a: V3, b: V3) -> f32 {
 /// Direction of least variance by Jacobi eigen decomposition of the covariance.
 fn flat_normal(points: &[V3]) -> V3 {
     let n = points.len() as f32;
-    let mean = points.iter().fold([0.0; 3], |a, p| [a[0] + p[0] / n, a[1] + p[1] / n, a[2] + p[2] / n]);
+    let mean = points.iter().fold([0.0; 3], |a, p| {
+        [a[0] + p[0] / n, a[1] + p[1] / n, a[2] + p[2] / n]
+    });
     let mut c = [[0.0f32; 3]; 3];
     for p in points {
         let d = [p[0] - mean[0], p[1] - mean[1], p[2] - mean[2]];
@@ -79,10 +81,17 @@ fn main() {
         if f.len() < 5 {
             continue;
         }
-        let (rx, ry, rz): (f32, f32, f32) = (f[1].parse().unwrap(), f[2].parse().unwrap(), f[3].parse().unwrap());
+        let (rx, ry, rz): (f32, f32, f32) = (
+            f[1].parse().unwrap(),
+            f[2].parse().unwrap(),
+            f[3].parse().unwrap(),
+        );
         let Ok(b) = std::fs::read(f[0]) else { continue };
         let Ok(mut o) = parse(&b) else { continue };
-        if std::env::var_os("AXIS_SKIP_SCRAMBLED").is_some() && o.encryption_key.is_some() && !o.descrambled {
+        if std::env::var_os("AXIS_SKIP_SCRAMBLED").is_some()
+            && o.encryption_key.is_some()
+            && !o.descrambled
+        {
             continue;
         }
         if o.encryption_key.is_some() && !o.descrambled {
@@ -93,10 +102,18 @@ fn main() {
             continue;
         }
         // o3d (x lateral, y up, z forward) -> vehicle axes (x lateral, y forward, z up)
-        let pts: Vec<V3> = o.vertices.iter().map(|v| [v.position.x, v.position.z, v.position.y]).collect();
+        let pts: Vec<V3> = o
+            .vertices
+            .iter()
+            .map(|v| [v.position.x, v.position.z, v.position.y])
+            .collect();
         let n = flat_normal(&pts);
         let a1 = rot(rx, ry, rz, [1.0, 0.0, 0.0]);
-        let r = [norm([m[0][0], m[0][1], m[0][2]]), norm([m[1][0], m[1][1], m[1][2]]), norm([m[2][0], m[2][1], m[2][2]])];
+        let r = [
+            norm([m[0][0], m[0][1], m[0][2]]),
+            norm([m[1][0], m[1][1], m[1][2]]),
+            norm([m[2][0], m[2][1], m[2][2]]),
+        ];
         let h2 = [
             a1[0] * r[0][0] + a1[1] * r[1][0] + a1[2] * r[2][0],
             a1[0] * r[0][1] + a1[1] * r[1][1] + a1[2] * r[2][1],
@@ -118,32 +135,56 @@ fn main() {
         // the origin axis to o3d, express it in the parent with the rows, convert back.
         let c = |v: V3| [v[0], v[2], v[1]];
         let ca = c(a1);
-        let h4 = c([ca[0] * r[0][0] + ca[1] * r[1][0] + ca[2] * r[2][0], ca[0] * r[0][1] + ca[1] * r[1][1] + ca[2] * r[2][1], ca[0] * r[0][2] + ca[1] * r[1][2] + ca[2] * r[2][2]]);
+        let h4 = c([
+            ca[0] * r[0][0] + ca[1] * r[1][0] + ca[2] * r[2][0],
+            ca[0] * r[0][1] + ca[1] * r[1][1] + ca[2] * r[2][1],
+            ca[0] * r[0][2] + ca[1] * r[1][2] + ca[2] * r[2][2],
+        ]);
         let ok = |a: V3| dot(norm(a), n).abs() > 0.95;
         let class = format!(
             "{} rot=({rx},{ry},{rz}) matrix=[{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}]",
             f[4], r[0][0], r[0][1], r[0][2], r[1][0], r[1][1], r[1][2], r[2][0], r[2][1], r[2][2]
         );
-        let det = dot(r[0], [r[1][1] * r[2][2] - r[1][2] * r[2][1], r[1][2] * r[2][0] - r[1][0] * r[2][2], r[1][0] * r[2][1] - r[1][1] * r[2][0]]);
-        let ident = (0..3).all(|i| (0..3).all(|j| (r[i][j] - f32::from(u8::from(i == j))).abs() < 0.02));
+        let det = dot(
+            r[0],
+            [
+                r[1][1] * r[2][2] - r[1][2] * r[2][1],
+                r[1][2] * r[2][0] - r[1][0] * r[2][2],
+                r[1][0] * r[2][1] - r[1][1] * r[2][0],
+            ],
+        );
+        let ident =
+            (0..3).all(|i| (0..3).all(|j| (r[i][j] - f32::from(u8::from(i == j))).abs() < 0.02));
         let group = format!(
             "AGG {} {}",
             f[4],
-            if ident { "identity" } else if det > 0.0 { "rotation (det +1)" } else { "reflection (det -1)" }
+            if ident {
+                "identity"
+            } else if det > 0.0 {
+                "rotation (det +1)"
+            } else {
+                "reflection (det -1)"
+            }
         );
         for key in [group, class] {
-        let e = tally.entry(key).or_default();
-        e[0] += 1;
-        e[1] += usize::from(ok(a1));
-        e[2] += usize::from(ok(h2));
-        e[3] += usize::from(ok(h3));
-        e[4] += usize::from(ok(h4));
+            let e = tally.entry(key).or_default();
+            e[0] += 1;
+            e[1] += usize::from(ok(a1));
+            e[2] += usize::from(ok(h2));
+            e[3] += usize::from(ok(h3));
+            e[4] += usize::from(ok(h4));
         }
     }
-    println!("{:96} {:>5} {:>4} {:>4} {:>4} {:>4}", "label rotation matrix", "n", "H1", "H2", "H3", "H4");
+    println!(
+        "{:96} {:>5} {:>4} {:>4} {:>4} {:>4}",
+        "label rotation matrix", "n", "H1", "H2", "H3", "H4"
+    );
     let mut v: Vec<_> = tally.into_iter().collect();
     v.sort_by_key(|e| std::cmp::Reverse(e.1[0]));
     for (k, e) in v.iter().take(100000) {
-        println!("{k:96} {:5} {:4} {:4} {:4} {:4}", e[0], e[1], e[2], e[3], e[4]);
+        println!(
+            "{k:96} {:5} {:4} {:4} {:4} {:4}",
+            e[0], e[1], e[2], e[3], e[4]
+        );
     }
 }

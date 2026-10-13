@@ -120,7 +120,10 @@ pub fn align_driver_eyes(
 /// Puts [`PlayerHead`] on the [`DriverHead`] whose vehicle is the active one and nowhere else.
 pub fn sync_player_head(
     mut commands: bevy::prelude::Commands,
-    heads: bevy::prelude::Query<(Entity, bevy::prelude::Has<PlayerHead>), bevy::prelude::With<DriverHead>>,
+    heads: bevy::prelude::Query<
+        (Entity, bevy::prelude::Has<PlayerHead>),
+        bevy::prelude::With<DriverHead>,
+    >,
     parents: bevy::prelude::Query<&bevy::prelude::ChildOf>,
     players: bevy::prelude::Query<(), bevy::prelude::With<crate::vehicle_sim::PlayerVehicle>>,
 ) {

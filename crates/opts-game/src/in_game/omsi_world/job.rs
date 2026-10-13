@@ -422,9 +422,13 @@ impl WorldLoadJob {
             .find(|e| e.name.to_lowercase() == wanted)
             .map(|e| (e.id, e.name.clone()))
             .or_else(|| {
-                let mut hits = eps.iter().filter(|e| e.name.to_lowercase().contains(&wanted));
+                let mut hits = eps
+                    .iter()
+                    .filter(|e| e.name.to_lowercase().contains(&wanted));
                 let first = hits.next()?;
-                hits.next().is_none().then(|| (first.id, first.name.clone()))
+                hits.next()
+                    .is_none()
+                    .then(|| (first.id, first.name.clone()))
             })
     }
 

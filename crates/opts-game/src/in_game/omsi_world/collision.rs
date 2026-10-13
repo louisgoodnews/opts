@@ -202,7 +202,10 @@ type PlayerCollide = (
 
 /// Road vehicles of the player (rail vehicles are ghosts).
 type GroundPlayer = (
-    Or<(With<crate::session_vehicles::SessionVehicle>, With<PlayerVehicle>)>,
+    Or<(
+        With<crate::session_vehicles::SessionVehicle>,
+        With<PlayerVehicle>,
+    )>,
     Without<RailPlayer>,
 );
 

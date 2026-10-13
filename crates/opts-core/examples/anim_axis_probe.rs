@@ -31,12 +31,20 @@ fn main() {
         if f.len() < 4 {
             continue;
         }
-        let (rx, ry, rz): (f32, f32, f32) = (f[1].parse().unwrap(), f[2].parse().unwrap(), f[3].parse().unwrap());
+        let (rx, ry, rz): (f32, f32, f32) = (
+            f[1].parse().unwrap(),
+            f[2].parse().unwrap(),
+            f[3].parse().unwrap(),
+        );
         let Ok(b) = std::fs::read(f[0]) else { continue };
         let Ok(o) = parse(&b) else { continue };
         let Some(m) = o.transform else { continue };
         let a1 = rot(rx, ry, rz, [1.0, 0.0, 0.0]);
-        let r = [norm([m[0][0], m[0][1], m[0][2]]), norm([m[1][0], m[1][1], m[1][2]]), norm([m[2][0], m[2][1], m[2][2]])];
+        let r = [
+            norm([m[0][0], m[0][1], m[0][2]]),
+            norm([m[1][0], m[1][1], m[1][2]]),
+            norm([m[2][0], m[2][1], m[2][2]]),
+        ];
         let h2 = [
             a1[0] * r[0][0] + a1[1] * r[1][0] + a1[2] * r[2][0],
             a1[0] * r[0][1] + a1[1] * r[1][1] + a1[2] * r[2][1],
@@ -49,7 +57,16 @@ fn main() {
         ];
         let vertical = |v: V3| norm(v)[2].abs() > 0.97;
         // Optional fifth column: the animation factor; separates the main steering (about 57) from small side effects.
-        let big = f.get(4).and_then(|x| x.parse::<f32>().ok()).map_or("", |x| if x.abs() > 20.0 { " factor~57" } else { " factor small" });
+        let big = f
+            .get(4)
+            .and_then(|x| x.parse::<f32>().ok())
+            .map_or("", |x| {
+                if x.abs() > 20.0 {
+                    " factor~57"
+                } else {
+                    " factor small"
+                }
+            });
         let class = format!("rot=({rx},{ry},{rz}){big} matrix=[{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}|{:.0},{:.0},{:.0}]", r[0][0], r[0][1], r[0][2], r[1][0], r[1][1], r[1][2], r[2][0], r[2][1], r[2][2]);
         let e = tally.entry(class).or_default();
         e[0] += 1;
@@ -57,7 +74,10 @@ fn main() {
         e[2] += usize::from(vertical(h2));
         e[3] += usize::from(vertical(h3));
     }
-    println!("{:90} {:>5} {:>4} {:>4} {:>4}", "frame rotation + matrix rotation", "n", "H1", "H2", "H3");
+    println!(
+        "{:90} {:>5} {:>4} {:>4} {:>4}",
+        "frame rotation + matrix rotation", "n", "H1", "H2", "H3"
+    );
     let mut v: Vec<_> = tally.into_iter().collect();
     v.sort_by_key(|e| std::cmp::Reverse(e.1[0]));
     let tot = v.iter().fold([0usize; 4], |mut a, e| {
@@ -69,5 +89,8 @@ fn main() {
     for (k, e) in v.iter().take(18) {
         println!("{k:70} {:5} {:4} {:4} {:4}", e[0], e[1], e[2], e[3]);
     }
-    println!("{:90} {:5} {:4} {:4} {:4}", "TOTAL", tot[0], tot[1], tot[2], tot[3]);
+    println!(
+        "{:90} {:5} {:4} {:4} {:4}",
+        "TOTAL", tot[0], tot[1], tot[2], tot[3]
+    );
 }
