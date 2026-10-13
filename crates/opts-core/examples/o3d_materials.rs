@@ -29,7 +29,10 @@ fn main() {
                 uhi[k] = uhi[k].max(c);
             }
         }
-        println!("  uv range u {:.3}..{:.3} v {:.3}..{:.3}", ulo[0], uhi[0], ulo[1], uhi[1]);
+        println!(
+            "  uv range u {:.3}..{:.3} v {:.3}..{:.3}",
+            ulo[0], uhi[0], ulo[1], uhi[1]
+        );
         let mut faces = vec![0usize; o.materials.len().max(1)];
         let mut out_of_range = 0;
         for m in &o.face_materials {

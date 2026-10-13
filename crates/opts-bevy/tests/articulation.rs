@@ -142,7 +142,13 @@ fn trailer_wheels_roll_with_the_segments_own_travel() {
         let spin = engine.get("wheel_rotation_2_l");
         assert_eq!(spin, engine.get("wheel_rotation_2_r"));
         let rpm = engine.get("wheel_rotationspeed_2_l");
-        let speed = app.world().get::<VehicleController>(root).unwrap().sim.chassis.forward_speed_m_s();
+        let speed = app
+            .world()
+            .get::<VehicleController>(root)
+            .unwrap()
+            .sim
+            .chassis
+            .forward_speed_m_s();
         let expected = speed / 0.5 * 60.0 / std::f32::consts::TAU;
         // A segment hanging backwards rolls the other way along its model.
         let expected = if reversed { -expected } else { expected };
@@ -185,7 +191,11 @@ fn spawn_displacement_of_the_leader_does_not_jackknife_the_segment() {
         .engine
         .lock()
         .unwrap();
-    for var in ["articulation_0_alpha", "articulation_0_beta", "articulation_0_gamma"] {
+    for var in [
+        "articulation_0_alpha",
+        "articulation_0_beta",
+        "articulation_0_gamma",
+    ] {
         assert!(engine.get(var).abs() < 0.01, "{var} = {}", engine.get(var));
     }
 }
@@ -198,8 +208,17 @@ fn a_leader_jump_does_not_spin_the_segment_wheels() {
         app.update();
     }
     let rpm_of = |app: &App| {
-        let e = app.world().get::<VehicleScripts>(root).unwrap().engine.lock().unwrap();
-        (e.get("wheel_rotationspeed_2_l"), e.get("articulation_0_alpha"))
+        let e = app
+            .world()
+            .get::<VehicleScripts>(root)
+            .unwrap()
+            .engine
+            .lock()
+            .unwrap();
+        (
+            e.get("wheel_rotationspeed_2_l"),
+            e.get("articulation_0_alpha"),
+        )
     };
     let speed = app
         .world()
@@ -243,7 +262,8 @@ fn bellows_beta_moves_the_follower_end_like_the_follower_body() {
         maxspeed: None,
     };
     let beta = joint_beta_deg(0.0, p);
-    let end_by_bellows = animation_matrix(&[step], |_| beta).transform_point3(Vec3::new(0.0, 0.0, 2.0));
+    let end_by_bellows =
+        animation_matrix(&[step], |_| beta).transform_point3(Vec3::new(0.0, 0.0, 2.0));
     // Bevy axes: -z forward, nose-up pitch is a positive rotation about x.
     let end_by_body = Quat::from_rotation_x(p) * Vec3::new(0.0, 0.0, 2.0);
     assert!(
@@ -271,5 +291,8 @@ fn bellows_gamma_rolls_the_follower_end_like_the_follower_body() {
     let gamma = (r - 0.0).to_degrees();
     let by_bellows = animation_matrix(&[step], |_| gamma).transform_point3(Vec3::X);
     let by_body = Quat::from_rotation_z(r) * Vec3::X;
-    assert!(by_bellows.distance(by_body) < 1e-4, "{by_bellows:?} vs {by_body:?}");
+    assert!(
+        by_bellows.distance(by_body) < 1e-4,
+        "{by_bellows:?} vs {by_body:?}"
+    );
 }

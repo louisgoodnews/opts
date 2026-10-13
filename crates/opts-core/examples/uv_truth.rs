@@ -8,6 +8,14 @@
 //! Usage: `uv_truth <OMSI root> <out dir> [max pairs]`. A pair is two files with the same file name
 //! (case-insensitive), vertex and face counts, `same_model` geometry, one plain and one keyed;
 //! of several keyed copies the first (sorted path) is used.
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::needless_borrow,
+    unused_mut
+)] // research prototype: lint noise, not worth restructuring
+
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -18,21 +26,27 @@ use opts_core::formats::o3d::descramble::{decode_confident_with, same_model, Dec
 use opts_core::formats::o3d::{parse, uvfix, O3d};
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
     for e in rd.flatten() {
         let p = e.path();
         if p.is_dir() {
             walk(&p, out);
-        } else if p
-            .extension()
-            .is_some_and(|x| x.eq_ignore_ascii_case("o3d"))
-        {
+        } else if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("o3d")) {
             out.push(p);
         }
     }
 }
 
-const PERMS: [[usize; 3]; 6] = [[0, 1, 2], [2, 1, 0], [1, 0, 2], [0, 2, 1], [1, 2, 0], [2, 0, 1]];
+const PERMS: [[usize; 3]; 6] = [
+    [0, 1, 2],
+    [2, 1, 0],
+    [1, 0, 2],
+    [0, 2, 1],
+    [1, 2, 0],
+    [2, 0, 1],
+];
 
 fn perm_class(plain: [f32; 3], stored: [f32; 3]) -> i32 {
     let hits: Vec<usize> = PERMS
@@ -52,7 +66,10 @@ fn main() {
     let mut args = std::env::args().skip(1);
     let root = PathBuf::from(args.next().expect("OMSI root"));
     let out_dir = PathBuf::from(args.next().expect("out dir"));
-    let max_pairs: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(usize::MAX);
+    let max_pairs: usize = args
+        .next()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(usize::MAX);
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut files = Vec::new();
     walk(&root, &mut files);

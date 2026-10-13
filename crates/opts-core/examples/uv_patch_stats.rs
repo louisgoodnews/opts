@@ -15,7 +15,9 @@ fn main() {
         if f.len() < 8 || f[7] != "true" {
             continue;
         }
-        let Ok(o) = parse(&std::fs::read(f[1]).unwrap()) else { continue };
+        let Ok(o) = parse(&std::fs::read(f[1]).unwrap()) else {
+            continue;
+        };
         let n = o.vertices.len();
         if (five_only && n % 5 != 0) || n > 6000 {
             continue;
@@ -62,13 +64,25 @@ fn main() {
             }
         }
         for &b in &best {
-            let k = match b { 0..=2 => 0, 3..=5 => 1, 6..=11 => 2, 12..=23 => 3, 24..=47 => 4, 48..=99 => 5, _ => 6 };
+            let k = match b {
+                0..=2 => 0,
+                3..=5 => 1,
+                6..=11 => 2,
+                12..=23 => 3,
+                24..=47 => 4,
+                48..=99 => 5,
+                _ => 6,
+            };
             hist[k] += 1;
             total += 1;
         }
     }
     let names = ["1-2", "3-5", "6-11", "12-23", "24-47", "48-99", "100+"];
     for (i, h) in hist.iter().take(7).enumerate() {
-        println!("largest affine patch of the vertex {:>6}: {:5.1}% of vertices", names[i], 100.0 * *h as f64 / total as f64);
+        println!(
+            "largest affine patch of the vertex {:>6}: {:5.1}% of vertices",
+            names[i],
+            100.0 * *h as f64 / total as f64
+        );
     }
 }

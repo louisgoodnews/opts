@@ -10,7 +10,10 @@ use opts_core::formats::o3d::uvfix::{unjitter_uv_staged, UvFixParams, UvStage};
 fn main() {
     let mut args = std::env::args().skip(1);
     let text = std::fs::read_to_string(args.next().unwrap()).unwrap();
-    let max: usize = args.next().and_then(|s| s.parse().ok()).unwrap_or(usize::MAX);
+    let max: usize = args
+        .next()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(usize::MAX);
     // EVAL_PARITY=odd|even keeps only pairs the chain tables were (not) trained on.
     let parity = std::env::var("EVAL_PARITY").ok();
     let parity_ok = |id: &str| match (parity.as_deref(), id.parse::<u32>()) {
@@ -23,7 +26,8 @@ fn main() {
         .skip(1)
         .filter_map(|l| {
             let f: Vec<&str> = l.split('\t').collect();
-            (f.len() > 7 && f[7] == "true" && parity_ok(f[0])).then(|| (f[1].to_owned(), f[2].to_owned()))
+            (f.len() > 7 && f[7] == "true" && parity_ok(f[0]))
+                .then(|| (f[1].to_owned(), f[2].to_owned()))
         })
         .take(max)
         .collect();
@@ -67,7 +71,8 @@ fn main() {
                 {
                     let mut st = stage_acc.lock().unwrap();
                     for v in 0..n {
-                        let ok = (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4 && (t.vertices[v].uv.y - po.vertices[v].uv.y).abs() < 1e-4;
+                        let ok = (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4
+                            && (t.vertices[v].uv.y - po.vertices[v].uv.y).abs() < 1e-4;
                         let e = &mut st[stages[v] as usize];
                         e.0 += 1;
                         e.1 += usize::from(ok);
@@ -76,7 +81,8 @@ fn main() {
                 {
                     let mut c = calib.lock().unwrap();
                     for v in 0..n {
-                        let ok = (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4 && (t.vertices[v].uv.y - po.vertices[v].uv.y).abs() < 1e-4;
+                        let ok = (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4
+                            && (t.vertices[v].uv.y - po.vertices[v].uv.y).abs() < 1e-4;
                         c.push((outcome.stages[v] as u8, outcome.confidence[v], ok));
                         let q = &mut qual.lock().unwrap()[outcome.quality[v].code() as usize];
                         q.0 += 1;
@@ -85,8 +91,13 @@ fn main() {
                 }
                 {
                     let uvs: Vec<glam::Vec2> = t.vertices.iter().map(|v| v.uv).collect();
-                    let trusted: Vec<bool> = outcome.quality.iter().map(|q| *q != opts_core::formats::o3d::uvfix::UvQuality::Unreliable).collect();
-                    let fb = opts_core::formats::o3d::uvfix::hinge_fallback(&t, &uvs, &trusted, 5e-3);
+                    let trusted: Vec<bool> = outcome
+                        .quality
+                        .iter()
+                        .map(|q| *q != opts_core::formats::o3d::uvfix::UvQuality::Unreliable)
+                        .collect();
+                    let fb =
+                        opts_core::formats::o3d::uvfix::hinge_fallback(&t, &uvs, &trusted, 5e-3);
                     let mut f = fallback.lock().unwrap();
                     for v in 0..n {
                         if trusted[v] {
@@ -112,7 +123,9 @@ fn main() {
                     .count();
                 if std::env::var_os("UV_ORACLE").is_some() {
                     let truth: Vec<glam::Vec2> = po.vertices.iter().map(|v| v.uv).collect();
-                    if let Some(c) = opts_core::formats::o3d::uvfix::single_vertex_ceiling(&kt, &truth, &params) {
+                    if let Some(c) =
+                        opts_core::formats::o3d::uvfix::single_vertex_ceiling(&kt, &truth, &params)
+                    {
                         let mut o = oracle.lock().unwrap();
                         for (a, b) in top.lock().unwrap().iter_mut().zip(c.3) {
                             *a += b;
@@ -129,8 +142,10 @@ fn main() {
                 if std::env::var_os("UV_ENERGY").is_some() {
                     let truth: Vec<glam::Vec2> = po.vertices.iter().map(|v| v.uv).collect();
                     let decoded: Vec<glam::Vec2> = t.vertices.iter().map(|v| v.uv).collect();
-                    let et = opts_core::formats::o3d::uvfix::assignment_energy(&kt, &truth, &params);
-                    let ed = opts_core::formats::o3d::uvfix::assignment_energy(&kt, &decoded, &params);
+                    let et =
+                        opts_core::formats::o3d::uvfix::assignment_energy(&kt, &truth, &params);
+                    let ed =
+                        opts_core::formats::o3d::uvfix::assignment_energy(&kt, &decoded, &params);
                     if let (Some(et), Some(ed)) = (et, ed) {
                         let (tt, dd) = (et.0 + et.1, ed.0 + ed.1);
                         {
@@ -171,30 +186,66 @@ fn main() {
     let qual = qual.into_inner().unwrap();
     let qtotal: usize = qual.iter().map(|q| q.0).sum();
     for (i, name) in ["Exact", "Recovered", "Unreliable"].iter().enumerate() {
-        println!("quality {name:10} {:6.2}% of vertices, precision {:.4}", 100.0 * qual[i].0 as f64 / qtotal.max(1) as f64, qual[i].1 as f64 / qual[i].0.max(1) as f64);
+        println!(
+            "quality {name:10} {:6.2}% of vertices, precision {:.4}",
+            100.0 * qual[i].0 as f64 / qtotal.max(1) as f64,
+            qual[i].1 as f64 / qual[i].0.max(1) as f64
+        );
     }
     let calib = calib.into_inner().unwrap();
     {
         let total = calib.len() as f64;
         println!("calibration (evidence strength -> precision, share of all vertices):");
         for (stage, name, cuts) in [
-            (2u8, "plane  (anchors)", vec![6.0f32, 10.0, 20.0, 40.0, 80.0]),
-            (3u8, "lattice(verified)", vec![3.0f32, 4.0, 6.0, 8.0, 12.0, 20.0, 40.0]),
-            (6u8, "smooth (margin) ", vec![0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0]),
+            (
+                2u8,
+                "plane  (anchors)",
+                vec![6.0f32, 10.0, 20.0, 40.0, 80.0],
+            ),
+            (
+                3u8,
+                "lattice(verified)",
+                vec![3.0f32, 4.0, 6.0, 8.0, 12.0, 20.0, 40.0],
+            ),
+            (
+                6u8,
+                "smooth (margin) ",
+                vec![0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0],
+            ),
         ] {
             for cut in cuts {
-                let sel: Vec<_> = calib.iter().filter(|e| e.0 == stage && e.1 >= cut).collect();
+                let sel: Vec<_> = calib
+                    .iter()
+                    .filter(|e| e.0 == stage && e.1 >= cut)
+                    .collect();
                 let ok = sel.iter().filter(|e| e.2).count();
-                println!("  {name} >= {cut:5}: {:6.2}% of vertices, precision {:.4}", 100.0 * sel.len() as f64 / total, ok as f64 / sel.len().max(1) as f64);
+                println!(
+                    "  {name} >= {cut:5}: {:6.2}% of vertices, precision {:.4}",
+                    100.0 * sel.len() as f64 / total,
+                    ok as f64 / sel.len().max(1) as f64
+                );
             }
         }
     }
     let st = stage_acc.into_inner().unwrap();
-    let names = ["unresolved", "hint", "plane", "lattice", "pool", "hinge", "smooth"];
+    let names = [
+        "unresolved",
+        "hint",
+        "plane",
+        "lattice",
+        "pool",
+        "hinge",
+        "smooth",
+    ];
     let total: usize = st.iter().map(|e| e.0).sum();
     for (i, e) in st.iter().enumerate() {
         if e.0 > 0 {
-            println!("stage {:10} {:6.2}% of vertices, exact {:.4}", names[i], 100.0 * e.0 as f64 / total as f64, e.1 as f64 / e.0 as f64);
+            println!(
+                "stage {:10} {:6.2}% of vertices, exact {:.4}",
+                names[i],
+                100.0 * e.0 as f64 / total as f64,
+                e.1 as f64 / e.0 as f64
+            );
         }
     }
     let _ = UvStage::Hint;
@@ -208,7 +259,11 @@ fn main() {
     }
     let g = gap.into_inner().unwrap();
     if g[2] > 0.0 {
-        println!("mean per vertex (truth minus decoded): hinge energy {:+.4}, prior energy {:+.4}", g[0] / g[2], g[1] / g[2]);
+        println!(
+            "mean per vertex (truth minus decoded): hinge energy {:+.4}, prior energy {:+.4}",
+            g[0] / g[2],
+            g[1] / g[2]
+        );
     }
     let a = acc.into_inner().unwrap();
     println!(

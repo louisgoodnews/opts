@@ -41,8 +41,16 @@ fn require_params(block: &OmsiBlock, expected: usize) -> Result<&[String], Model
 fn model_arity(keyword: &str) -> Option<usize> {
     match keyword {
         "matl_transmap" => Some(1),
-        "matl_item" | "matl_nozwrite" | "matl_nozcheck" | "matl_nowrite" | "matl_texadress_clamp"
-        | "isshadow" | "shadow" | "smoothskin" | "nocollision" | "nodistancecheck" => Some(0),
+        "matl_item"
+        | "matl_nozwrite"
+        | "matl_nozcheck"
+        | "matl_nowrite"
+        | "matl_texadress_clamp"
+        | "isshadow"
+        | "shadow"
+        | "smoothskin"
+        | "nocollision"
+        | "nodistancecheck" => Some(0),
         _ => None,
     }
 }

@@ -53,7 +53,8 @@ pub mod vehicle_triggers;
 
 pub use ai_variables::{AiVariables, VariableSource};
 pub use articulation::{
-    articulation_system, joint_beta_deg, ArticulatedChain, ArticulatedSegment, ArticulationPlugin, SegmentGround,
+    articulation_system, joint_beta_deg, ArticulatedChain, ArticulatedSegment, ArticulationPlugin,
+    SegmentGround,
 };
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
@@ -112,8 +113,8 @@ pub use texture_filter::{
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{
-    anim_steps, anim_steps_with, animation_matrix, vehicle_animation_system, AnimStep, MeshAnimation,
-    MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
+    anim_steps, anim_steps_with, animation_matrix, vehicle_animation_system, AnimStep,
+    MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
 };
 pub use vehicle_lights::{
     vehicle_light_map_system, vehicle_light_system, LightMapBinding, LightSwitch, ScriptLight,

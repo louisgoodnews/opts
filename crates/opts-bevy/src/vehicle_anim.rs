@@ -123,7 +123,10 @@ fn swap_yz() -> Mat4 {
 ///   result is the mesh's own axis (checked against the vertices of 575 steering wheels).
 fn matrix_rotation(a: &ModelAnim, pivot: Option<MeshPivot>) -> Option<Mat4> {
     let pivot = pivot?;
-    if !a.origin_from_mesh || a.origin_trans.is_some() || a.anim_rot.is_none() || pivot.is_identity()
+    if !a.origin_from_mesh
+        || a.origin_trans.is_some()
+        || a.anim_rot.is_none()
+        || pivot.is_identity()
     {
         return None;
     }
@@ -152,7 +155,11 @@ fn frame_of(a: &ModelAnim, pivot: Option<MeshPivot>, with_matrix: bool) -> Mat4 
     // translation of its matrix chunk, e.g. a wheel's centre).
     let origin = a
         .origin_trans
-        .or_else(|| a.origin_from_mesh.then_some(pivot.map(|p| p.origin)).flatten())
+        .or_else(|| {
+            a.origin_from_mesh
+                .then_some(pivot.map(|p| p.origin))
+                .flatten()
+        })
         .unwrap_or(Vec3::ZERO);
     let rot = origin_rotation(a);
     // The mesh matrix follows the origin rotation (the frame's axes are the rotated, then swapped).
@@ -206,16 +213,12 @@ fn warn_matrix_once(mesh: &str) {
     use std::sync::{Mutex, OnceLock};
     static SEEN: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
     let seen = SEEN.get_or_init(Mutex::default);
-    if seen
-        .lock()
-        .is_ok_and(|mut s| s.insert(mesh.to_lowercase()))
-    {
+    if seen.lock().is_ok_and(|mut s| s.insert(mesh.to_lowercase())) {
         tracing::warn!(
             mesh,
             "origin_from_mesh rotation axis composed with the mesh matrix rotation (animation-axes.md)"
         );
     }
-
 }
 
 impl MeshAnimation {
@@ -471,7 +474,10 @@ mod tests {
     #[test]
     fn swapped_matrix_mesh_steers_about_the_vertical_nlc() {
         let hub = Vec3::new(-1.0, 3.0, 0.5);
-        let swapped = MeshPivot { origin: hub, rows: SWAP_YZ_ROWS };
+        let swapped = MeshPivot {
+            origin: hub,
+            rows: SWAP_YZ_ROWS,
+        };
         let anim = steering_mesh(NLC, Some(swapped));
         assert!(steers_about_vertical(&anim.steps, hub));
         // Without the swap (no matrix) the same data rolls about the forward axis (the bug).
@@ -483,7 +489,10 @@ mod tests {
     #[test]
     fn the_matrix_is_left_out_where_the_axis_is_already_vertical() {
         // The class `origin_rot_y 90` on a swapped mesh is not changed (the side-effect entry).
-        let swapped = MeshPivot { origin: Vec3::ZERO, rows: SWAP_YZ_ROWS };
+        let swapped = MeshPivot {
+            origin: Vec3::ZERO,
+            rows: SWAP_YZ_ROWS,
+        };
         let anim = steering_mesh(NLC, Some(swapped));
         // (factor 4: the variable is raised so that the angle is clearly measurable)
         let m = animation_matrix(&anim.steps[1..2], |_| 5.0);
