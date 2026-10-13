@@ -140,7 +140,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "token:s@0",
     ),
     c("shutdown", "meta", "Exit the application", "force:b?"),
-    c("state", "query", "App state, camera mode, fps, frame", ""),
+    c("state", "query", "App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame", ""),
     c(
         "scene",
         "query",
