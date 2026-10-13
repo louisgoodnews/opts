@@ -44,7 +44,8 @@ pub struct TextureOverride {
     /// `[matl_alpha]` mode: `1` = cutout (alpha test), `2` = blend; `None` = opaque.
     pub alpha: Option<u32>,
     /// The material's alpha is scaled by a script variable (`[alphascale]`), whose default of 0
-    /// makes it invisible (dirt, rain and condensation overlays).
+    /// makes it invisible (dirt, rain and condensation overlays). Only a material that *uses* alpha
+    /// is an overlay, see [`TextureOverride::is_variable_hidden`].
     pub hidden_by_variable: bool,
     /// `[matl_transmap]` texture: its values become the alpha channel of the material's texture.
     pub trans_map: Option<String>,
@@ -54,6 +55,21 @@ pub struct TextureOverride {
     /// the material's emissive texture with an emissive strength of 0; the variable is reported
     /// in [`ModelPart::light_variable`] for the runtime to drive (`crate::vehicle_lights`).
     pub light_map: Option<LightMap>,
+}
+
+impl TextureOverride {
+    /// Whether the slot is an overlay hidden by its `[alphascale]` variable.
+    ///
+    /// `[alphascale]` also appears on opaque base materials (`Envir_Brightness` on the body of a
+    /// Crealis bus, on the night-lit skyline blocks of the Chicago map): alpha-scaling something
+    /// that does not use alpha is no reason to drop the surface, the whole body of such a vehicle
+    /// vanished (P-1014, MI-0029). Only materials with a `[matl_alpha]` mode other than 0 or a
+    /// `[matl_transmap]` texture are overlays.
+    #[must_use]
+    pub fn is_variable_hidden(&self) -> bool {
+        self.hidden_by_variable
+            && (crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some())
+    }
 }
 
 /// One renderable submesh of a model: geometry bound to a single material.
@@ -102,6 +118,9 @@ pub struct ContentStats {
     pub deferred_meshes: usize,
     /// Meshes read with the axis-cycled layout (coherent positions, unusable stored normals).
     pub axis_cycled_meshes: usize,
+    /// Material slots left out because a script variable scales their alpha (`[alphascale]`):
+    /// an object whose slots are all of that kind has nothing to draw, which is not a load failure.
+    pub hidden_parts: usize,
     /// Human-readable descriptions of assets that failed to load.
     pub failures: Vec<String>,
 }
@@ -634,7 +653,8 @@ impl ContentLoader<'_> {
                         textures: Vec::new(),
                     });
                 let over = find_override(&model.materials, slot, overrides);
-                if over.is_some_and(|o| o.hidden_by_variable) {
+                if over.is_some_and(TextureOverride::is_variable_hidden) {
+                    self.cache.stats.hidden_parts += 1;
                     continue;
                 }
                 let failures_before = self.cache.stats.failures.len();
@@ -909,4 +929,52 @@ fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     }
     crate::texture_filter::prepare_object_texture(&mut out);
     Some(out)
+}
+
+#[cfg(test)]
+mod alphascale_tests {
+    use super::TextureOverride;
+
+    fn over(alpha: Option<u32>, trans: Option<&str>, scaled: bool) -> TextureOverride {
+        TextureOverride {
+            slot: 0,
+            texture: "t.tga".into(),
+            alpha,
+            hidden_by_variable: scaled,
+            trans_map: trans.map(str::to_owned),
+            light_map: None,
+            image: None,
+        }
+    }
+
+    /// MI-0029: `[alphascale] Envir_Brightness` on an opaque base material (380 materials of the
+    /// corpus: Crealis bodies, the Chicago skyline) must not hide the surface; overlays that use
+    /// alpha (rain, dirt, condensation: 43,968 materials) stay hidden by their variable.
+    #[test]
+    fn only_alpha_overlays_are_hidden_by_their_variable() {
+        assert!(
+            !over(None, None, true).is_variable_hidden(),
+            "opaque body stays"
+        );
+        assert!(
+            !over(Some(0), None, true).is_variable_hidden(),
+            "mode 0 is opaque"
+        );
+        assert!(
+            over(Some(2), None, true).is_variable_hidden(),
+            "blended overlay"
+        );
+        assert!(
+            over(Some(1), None, true).is_variable_hidden(),
+            "cutout overlay"
+        );
+        assert!(
+            over(None, Some("mask.bmp"), true).is_variable_hidden(),
+            "transmap overlay"
+        );
+        assert!(
+            !over(Some(2), None, false).is_variable_hidden(),
+            "no variable: visible"
+        );
+    }
 }

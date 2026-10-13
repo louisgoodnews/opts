@@ -106,6 +106,7 @@
 - [Visual A/B Procedure and Image Metrics](architecture/visual-ab.md)
 - [Content Quality](quality/README.md)
   - [Content Issue Registry](quality/content-issue-registry.md)
+  - [Mesh Issue Registry](quality/mesh-issue-registry.md)
   - [Field Report 2026-10-13](quality/field-report-2026-10-13.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)

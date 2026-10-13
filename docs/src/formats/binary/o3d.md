@@ -476,3 +476,28 @@ In the game, 7 of 38 scrambled meshes of Ruhrau V2 had copies; the cars and most
 ## 📎 Addendum 10 — 2026-10-11: stray vertices, size limit
 
 After a labelling is chosen, vertices that lie outside the 2 %–98 % range of their axis widened by 30 % of the span are moved to a permutation that fits inside (`refine_outliers`): exact meshes on twins 1,494 → 1,504 of 1,817 accepted. The plausibility limit for decoded meshes is 400 m (was 150 m): the goods shed `Gueterschuppen_Spandau` is 153 m long and was dropped as "implausible"; the 70s housing block `bw_70s_01A` is 190 m. Cache version 5. Small meshes (signs, lamp heads, towers with ≤ 200 vertices) still fail the two-run agreement (0.57–0.88) and stay out rather than being drawn wrong.
+
+## 📎 Addendum 11 — 2026-10-13: mesh audit (P-1014): wrapped counts, spike faces, non-finite vertices
+
+Result of a corpus-wide audit (`mesh_audit` example, 172,434 `.o3d` files of the installed corpus; registry: [Mesh Issue Registry](../../quality/mesh-issue-registry.md)).
+
+**Version 1 counts wrap at 65,536.** Version 1 stores the vertex and face counts as `u16`. `Sceneryobjects/PAD-Labs/Buildings/model/HBF_Koeln.o3d` (2.5 MB) declares 4,391 vertices but holds 69,927 (`declared + 65,536`); the chunk that should have been the face chunk (`0x49`) was vertex data. `parse` now probes `declared + k * 65,536` for the vertex count (and likewise for the face count) until the face tag follows the vertices and the material tag follows the faces, re-frames the stream with 32-bit counts and parses it normally (`version` stays 1). Face indices stay 16-bit, so only the first 65,536 vertices can be referenced; the rest is unused.
+
+**Non-finite vertices.** Five vehicles ship `kfznhalterung.o3d` with `inf` coordinates. A single non-finite coordinate makes the mesh bounding box NaN. The converter skips faces that use a vertex with a non-finite position or texture coordinate.
+
+**Spike faces of decoded meshes.** An accepted decode has wrong vertices in about 18 % of the meshes (301 of 1,826 accepted twins have < 98 % of their positions right, `mesh_detector_eval`). The generic offline detectors find few of them (recall 12 %; the texture-chaos detector has 7 % precision and was retired as a defect signal); without a plain twin a wrongly decoded mesh is mostly not detectable. The one rule with usable precision is the edge length: faces whose longest edge exceeds 40 times the median edge (and 1 m) touch a wrongly labelled vertex in 69 % of the cases (2,303 wrong against 1,049 correct faces of 592,012; the 6x rule of Addendum 7 dropped two correct faces for every wrong one). `descramble::drop_spike_faces` removes them in `decode_confident` and `decode_joint` and reports the number as `dropped_faces`; the decode cache version is 6.
+
+**The two-run agreement does predict correctness, down to its acceptance limit** (twin ground truth, 1,826 accepted meshes, `mesh_detector_eval`; Addendum 7 looked at coherence and edge-length gates, not at the agreement itself):
+
+| Agreement of the two runs | Accepted | Wrong (< 98 % of the positions) |
+| :--- | ---: | ---: |
+| 0.90 – 0.92 | 72 | 41 (57 %) |
+| 0.92 – 0.94 | 59 | 41 (69 %) |
+| 0.94 – 0.96 | 63 | 33 (52 %) |
+| 0.96 – 0.98 | 90 | 44 (49 %) |
+| 0.98 – 1.00 | 161 | 19 (12 %) |
+| 1.00 | 1,381 | 123 (9 %) |
+
+So the 284 meshes accepted *only because* the limit was lowered from 0.98 to 0.9 (Addendum 9) are wrong in 56 % of the cases (159 of the 301 wrong meshes), against 9–12 % above 0.98. Visible examples in the game: the DDR blocks `ddr_house_medium_06.o3d` (agreement 0.94) of the map `Kbergbahn` show floating balcony slabs, and the grey zig-zag panels seen on `Grundorf` are consistent with its houses decoded at 0.93-0.95 (not traced to one mesh). Raising `CONFIDENT_MIN_AGREEMENT` back to 0.98 would trade those meshes for missing objects (15 % of the accepted decodes); this is a product decision and was **not changed** (developer switch `OPTS_CONF_AGREE`).
+
+**Still open.** 714 of 22,395 keyed meshes (3.2 %) are rejected by the confident decoder and stay skipped; accepted decodes remain wrong in about 18 % of the meshes (see Addendum 7 for the causes); none of the generic detectors can find them without a twin.

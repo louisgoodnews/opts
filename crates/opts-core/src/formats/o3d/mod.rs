@@ -3,6 +3,7 @@
 //! Corresponds to `docs/src/formats/binary/o3d.md` and
 //! `docs/src/formats/binary/o3d-chunks.md`.
 
+pub mod audit;
 pub mod chunks;
 pub mod descramble;
 pub mod error;

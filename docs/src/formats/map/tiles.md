@@ -74,6 +74,11 @@ Line counts above include trailing comment/blank lines; true parameter counts ar
 
 Observed values **10** (556 files), **11** (24), **12** (10), **13** (1), **14** (13,347). The version changes the `[object]` record layout (below). Whether other blocks change is ❓ ([Q-M05](#-open-questions)). 655 files have two lines after `[version]` ❓.
 
+**Version 10 also changes `[spline]` and `[rule]`** (P-1014, found because 61 tiles of `Neuendorf`, `Rheinhausen` and `Ahlheim 5` did not parse; [C] over all 556 version-10 tiles):
+
+* `[spline]` has **one** connection field instead of two: `flag`, `.sli`, `ID`, `connection`, `x`, `z`, `y`, `heading`, `length`, `radius`, gradients (14, 15 or 17 lines). `connection` is `-1` when the record carries its own pose (`x z y heading` follow) and `0` when the record **continues the previous spline** of the tile and all four pose fields are `0`. OPTS places such a record at the end pose of the preceding `[spline]` (arc geometry as in `spline_audit`; end height `length * (g0 + g1) / 2` higher); without a predecessor it is skipped. Version 14 files may also store `-1` for an unconnected spline (treated as `0`).
+* `[rule]` has **three** lines (`index`, `type`, `value`), no flag line; a following `Object Nr. N` comment line is not a flag.
+
 ---
 
 ## 📚 Field Reference

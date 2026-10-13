@@ -257,7 +257,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Start a session on a map",
         "path:s@0 entry:s?",
     )
-    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).")
+    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): click `loading.continue` (`ui.click`) to start the drive.")
     .debug(),
     c("scene.unload", "scene", "Return to the main menu", "")
     .doc("A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).")
@@ -347,6 +347,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Replace the player vehicle",
         "path:s@0",
     )
+    .doc("Restarts the session with the vehicle and answers like `scene.load_map` (including `1008` for a failed load and `waiting_for_continue` for a load with problems).")
     .debug(),
     c(
         "entity.spawn",

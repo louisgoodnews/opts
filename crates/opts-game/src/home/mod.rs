@@ -105,10 +105,13 @@ impl Plugin for HomePlugin {
                     banner_actions,
                     sync_menu_scrim,
                     hero::sync_hero_crop,
-                    rebuild_when_content_arrives,
                 )
                     .run_if(in_state(AppState::MainMenu)),
             )
+            // Not state-gated: change detection must see every reload of the lists, otherwise a
+            // reload that happened in another screen counts as new on the return to Home and the
+            // freshly built page is torn down while other systems still hold its entities.
+            .add_systems(Update, rebuild_when_content_arrives)
             .add_systems(Update, start_drive_system);
     }
 }
