@@ -14,7 +14,9 @@ use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::parse;
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
     for e in rd.flatten() {
         let p = e.path();
         match e.file_type() {
@@ -37,7 +39,8 @@ fn main() {
     let mut files = Vec::new();
     walk(&root, &mut files);
     files.sort();
-    let mut by: HashMap<(String, usize, usize), (Option<PathBuf>, Option<PathBuf>)> = HashMap::new();
+    let mut by: HashMap<(String, usize, usize), (Option<PathBuf>, Option<PathBuf>)> =
+        HashMap::new();
     for p in &files {
         let Ok(b) = std::fs::read(p) else { continue };
         if b.len() < 8 || b[0] != 0x84 || b[1] != 0x19 || b[2] < 4 {
@@ -57,10 +60,7 @@ fn main() {
             e.0.get_or_insert(p.clone());
         }
     }
-    let pairs: Vec<(PathBuf, PathBuf)> = by
-        .into_values()
-        .filter_map(|(a, b)| a.zip(b))
-        .collect();
+    let pairs: Vec<(PathBuf, PathBuf)> = by.into_values().filter_map(|(a, b)| a.zip(b)).collect();
     eprintln!("{} candidate pairs", pairs.len());
     let next = AtomicUsize::new(0);
     // per code: (wrong flagged, right flagged); totals
@@ -123,7 +123,10 @@ fn main() {
                     let mut edges: Vec<f32> = Vec::new();
                     let tri_edge = |t: &[u32; 3]| {
                         let p = t.map(|k| eo.vertices[k as usize].position);
-                        (p[1] - p[0]).length().max((p[2] - p[0]).length()).max((p[2] - p[1]).length())
+                        (p[1] - p[0])
+                            .length()
+                            .max((p[2] - p[0]).length())
+                            .max((p[2] - p[1]).length())
                     };
                     for t in &eo.indices {
                         edges.push(tri_edge(t));
@@ -136,13 +139,20 @@ fn main() {
                         for (ti, t) in eo.indices.iter().enumerate() {
                             if edges[ti] > med * k && edges[ti] > 1.0 {
                                 let bad = t.iter().any(|&v| {
-                                    (eo.vertices[v as usize].position - po.vertices[v as usize].position).length() > tol
+                                    (eo.vertices[v as usize].position
+                                        - po.vertices[v as usize].position)
+                                        .length()
+                                        > tol
                                 });
-                                if bad { r[ki].0 += 1 } else { r[ki].1 += 1 }
+                                if bad {
+                                    r[ki].0 += 1
+                                } else {
+                                    r[ki].1 += 1
+                                }
                             }
                         }
                     }
-                    r[5].0 += eo.indices.len() as usize;
+                    r[5].0 += eo.indices.len();
                 }
                 if wrong {
                     t.2 += 1;
@@ -172,7 +182,11 @@ fn main() {
                     }
                 }
                 if wrong {
-                    listing.lock().unwrap().push(format!("{}\t{ok:.2}\t{}", ep.display(), codes.join(",")));
+                    listing.lock().unwrap().push(format!(
+                        "{}\t{ok:.2}\t{}",
+                        ep.display(),
+                        codes.join(",")
+                    ));
                 }
             });
         }
@@ -180,9 +194,15 @@ fn main() {
     let t = totals.into_inner().unwrap();
     let r = rule.into_inner().unwrap();
     for (ki, k) in [6, 10, 15, 25, 40].iter().enumerate() {
-        println!("long-edge rule > {k}x median: dropped bad {} good {} (of {} faces)", r[ki].0, r[ki].1, r[5].0);
+        println!(
+            "long-edge rule > {k}x median: dropped bad {} good {} (of {} faces)",
+            r[ki].0, r[ki].1, r[5].0
+        );
     }
-    println!("twin pairs {} accepted {} wrong(<98% positions) {}", t.0, t.1, t.2);
+    println!(
+        "twin pairs {} accepted {} wrong(<98% positions) {}",
+        t.0, t.1, t.2
+    );
     println!("code\tflagged_wrong\tflagged_right\trecall\tprecision");
     for (c, (w, r)) in tally.into_inner().unwrap() {
         println!(

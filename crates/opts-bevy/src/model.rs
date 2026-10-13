@@ -95,6 +95,9 @@ pub struct ContentStats {
     pub deferred_meshes: usize,
     /// Meshes read with the axis-cycled layout (coherent positions, unusable stored normals).
     pub axis_cycled_meshes: usize,
+    /// Material slots left out because a script variable scales their alpha (`[alphascale]`):
+    /// an object whose slots are all of that kind has nothing to draw, which is not a load failure.
+    pub hidden_parts: usize,
     /// Human-readable descriptions of assets that failed to load.
     pub failures: Vec<String>,
 }
@@ -553,6 +556,7 @@ impl ContentLoader<'_> {
                     });
                 let over = find_override(&model.materials, slot, overrides);
                 if over.is_some_and(|o| o.hidden_by_variable) {
+                    self.cache.stats.hidden_parts += 1;
                     continue;
                 }
                 let failures_before = self.cache.stats.failures.len();

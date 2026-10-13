@@ -84,7 +84,10 @@ fn wrapped_v1_counts(bytes: &[u8]) -> Option<O3d> {
         if bytes.get(faces_at) != Some(&0x49) || bytes.len() < faces_at + 3 {
             continue;
         }
-        let declared_f = usize::from(u16::from_le_bytes([bytes[faces_at + 1], bytes[faces_at + 2]]));
+        let declared_f = usize::from(u16::from_le_bytes([
+            bytes[faces_at + 1],
+            bytes[faces_at + 2],
+        ]));
         for kf in 0..=MAX_WRAPS {
             if kv == 0 && kf == 0 {
                 continue;
@@ -298,7 +301,9 @@ mod tests {
         }
         b.push(0x26);
         b.extend_from_slice(&1u16.to_le_bytes());
-        for f in [0.8f32, 0.8, 0.8, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 96.0] {
+        for f in [
+            0.8f32, 0.8, 0.8, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 96.0,
+        ] {
             b.extend_from_slice(&f.to_le_bytes());
         }
         b.push(0);

@@ -289,6 +289,7 @@ fn spawn_object(
     }
     let protected_before = job.cache.stats.protected_meshes;
     let deferred_before = job.cache.stats.deferred_meshes;
+    let hidden_before = job.cache.stats.hidden_parts;
     // Scripts and string-variable names (`[texttexture_enh]` sources given by name).
     let template = job.script_template(&sco_path, &sco);
     let string_names = template
@@ -371,6 +372,11 @@ fn spawn_object(
             stats.objects_no_geometry += 1;
         } else if job.cache.stats.deferred_meshes > deferred_before {
             tracing::debug!(sco = %sco_path.display(), tile = ?key, "object waits for background mesh decoding");
+        } else if job.cache.stats.hidden_parts > hidden_before {
+            // Every slot is scaled by a script variable (`[alphascale]`, e.g. a night overlay):
+            // nothing to draw, which is not a failure (P-1014, MI-0029).
+            tracing::debug!(sco = %sco_path.display(), "object has only variable-hidden slots");
+            stats.objects_no_geometry += 1;
         } else if job.cache.stats.protected_meshes > protected_before {
             stats.objects_protected += 1;
             tracing::warn!(sco = %sco_path.display(), tile = ?key, pos = ?obj.position, "object skipped: all meshes are scrambled");

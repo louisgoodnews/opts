@@ -18,7 +18,10 @@ fn main() {
     maps.sort_by_key(std::fs::DirEntry::file_name);
     for m in maps {
         let mname = m.file_name().to_string_lossy().into_owned();
-        match std::fs::read(m.path().join("global.cfg")).map_err(|e| e.to_string()).and_then(|b| MapManifest::parse(&b).map_err(|e| e.to_string())) {
+        match std::fs::read(m.path().join("global.cfg"))
+            .map_err(|e| e.to_string())
+            .and_then(|b| MapManifest::parse(&b).map_err(|e| e.to_string()))
+        {
             Err(err) => println!("{mname}\tglobal.cfg\tGLOBAL_PARSE_ERROR\t{err}"),
             Ok(g) => {
                 if g.entry_points.is_empty() {
@@ -37,7 +40,10 @@ fn main() {
             tiles += 1;
             let report = |code: &str, detail: String| println!("{mname}\t{name}\t{code}\t{detail}");
             let base = e.path();
-            match std::fs::read(&base).map_err(|e| e.to_string()).and_then(|b| MapTile::parse(&b).map_err(|e| e.to_string())) {
+            match std::fs::read(&base)
+                .map_err(|e| e.to_string())
+                .and_then(|b| MapTile::parse(&b).map_err(|e| e.to_string()))
+            {
                 Err(err) => report("TILE_PARSE_ERROR", err),
                 Ok(t) => {
                     for o in &t.objects {
@@ -57,20 +63,37 @@ fn main() {
                             report("SPLINE_PLACEMENT", format!("{} at {p:?}", s.sli_file));
                         }
                         if !s.length_m.is_finite() || s.length_m <= 0.0 || s.length_m > 2000.0 {
-                            report("SPLINE_LENGTH", format!("{} length {}", s.sli_file, s.length_m));
+                            report(
+                                "SPLINE_LENGTH",
+                                format!("{} length {}", s.sli_file, s.length_m),
+                            );
                         }
-                        if !s.radius_m.is_finite() || (s.radius_m != 0.0 && s.radius_m.abs() < 1.0) {
-                            report("SPLINE_RADIUS", format!("{} radius {}", s.sli_file, s.radius_m));
+                        if !s.radius_m.is_finite() || (s.radius_m != 0.0 && s.radius_m.abs() < 1.0)
+                        {
+                            report(
+                                "SPLINE_RADIUS",
+                                format!("{} radius {}", s.sli_file, s.radius_m),
+                            );
                         }
-                        if !s.gradient_start.is_finite() || !s.gradient_end.is_finite() || s.gradient_start.abs() > 1.0 || s.gradient_end.abs() > 1.0 {
-                            report("SPLINE_GRADIENT", format!("{} {} {}", s.sli_file, s.gradient_start, s.gradient_end));
+                        if !s.gradient_start.is_finite()
+                            || !s.gradient_end.is_finite()
+                            || s.gradient_start.abs() > 1.0
+                            || s.gradient_end.abs() > 1.0
+                        {
+                            report(
+                                "SPLINE_GRADIENT",
+                                format!("{} {} {}", s.sli_file, s.gradient_start, s.gradient_end),
+                            );
                         }
                     }
                 }
             }
             let tpath = format!("{}.terrain", base.display());
             if Path::new(&tpath).exists() {
-                match std::fs::read(&tpath).map_err(|e| e.to_string()).and_then(|b| MapTerrain::parse(&b).map_err(|e| e.to_string())) {
+                match std::fs::read(&tpath)
+                    .map_err(|e| e.to_string())
+                    .and_then(|b| MapTerrain::parse(&b).map_err(|e| e.to_string()))
+                {
                     Err(err) => report("TERRAIN_PARSE_ERROR", err),
                     Ok(t) => {
                         terrains += 1;

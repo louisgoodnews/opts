@@ -24,7 +24,11 @@ fn main() {
             }
         }
         let maxidx = o.indices.iter().flatten().max();
-        println!("{a}: nv={} nt={} repeated={rep} zero_area={zero} tiny={tiny} max_index={maxidx:?}", o.vertices.len(), o.indices.len());
+        println!(
+            "{a}: nv={} nt={} repeated={rep} zero_area={zero} tiny={tiny} max_index={maxidx:?}",
+            o.vertices.len(),
+            o.indices.len()
+        );
         for e in ex {
             println!("   {e:?}");
         }

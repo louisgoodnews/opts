@@ -312,11 +312,8 @@ impl MapTile {
                     // zeros for the pose (P-1014, MI-0021). A virtual second connection `0` brings
                     // the record into the version 14 layout.
                     let is_v10 = tile.version == Some(10);
-                    let chained_v10 = is_v10
-                        && block
-                            .parameters
-                            .get(3)
-                            .is_some_and(|c| c.trim() != "-1");
+                    let chained_v10 =
+                        is_v10 && block.parameters.get(3).is_some_and(|c| c.trim() != "-1");
                     let normalised: Vec<String> = if is_v10 && block.parameters.len() >= 4 {
                         let mut v = block.parameters.clone();
                         v.insert(4, "0".to_string());
@@ -514,7 +511,11 @@ fn spline_end_pose(s: &MapSplineInstance) -> (f32, f32, f32, f32) {
     let (x0, y0) = (f64::from(s.position.x), f64::from(s.position.y));
     let (h1, x1, y1) = if r.abs() > 1e-3 {
         let h = phi + len / r;
-        (h, x0 - r * (h.cos() - phi.cos()), y0 + r * (h.sin() - phi.sin()))
+        (
+            h,
+            x0 - r * (h.cos() - phi.cos()),
+            y0 + r * (h.sin() - phi.sin()),
+        )
     } else {
         (phi, x0 + len * phi.sin(), y0 + len * phi.cos())
     };
@@ -639,7 +640,8 @@ Splines\Example\road.sli
             "File created\n\n[version]\n10\n\n{}{}",
             rec(1, "-1", "100", "200", "90", "30"),
             rec(2, "0", "0", "0", "0", "10")
-        ) + "[rule]\n0\ntrafficdensity\n3.000\n\n[rule]\n1\nspeedlimit\n30\nObject Nr. 0\n";
+        )
+            + "[rule]\n0\ntrafficdensity\n3.000\n\n[rule]\n1\nspeedlimit\n30\nObject Nr. 0\n";
         let tile = MapTile::from_text(&text).expect("v10 tile parses");
         assert_eq!(tile.rules.len(), 2, "v10 rules have no flag line");
         assert_eq!(tile.rules[1].flag, 0);
@@ -649,7 +651,11 @@ Splines\Example\road.sli
         assert_eq!(tile.splines[0].length_m, 30.0);
         // heading 90 degrees runs towards +x: the second spline starts 30 m east of the first
         let second = &tile.splines[1];
-        assert!((second.position.x - 130.0).abs() < 1e-3, "{:?}", second.position);
+        assert!(
+            (second.position.x - 130.0).abs() < 1e-3,
+            "{:?}",
+            second.position
+        );
         assert!((second.position.y - 200.0).abs() < 1e-3);
         assert!((second.heading_deg - 90.0).abs() < 1e-3);
         assert_eq!(second.length_m, 10.0);

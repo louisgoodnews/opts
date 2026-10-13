@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::audit::check;
+use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::{parse, VertexLayout};
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>, names: &mut HashSet<String>) {
@@ -102,7 +102,13 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
         let ms = t0.elapsed().as_millis();
         metrics.push(format!(
             "dec_acc={} agree={:.2} dropped={} uv={}/{}/{} dec_ms={}",
-            r.accepted, r.agreement, r.dropped_faces, r.uv.clean, r.uv.corrected, r.uv.unresolved, ms
+            r.accepted,
+            r.agreement,
+            r.dropped_faces,
+            r.uv.clean,
+            r.uv.corrected,
+            r.uv.unresolved,
+            ms
         ));
         if r.accepted {
             codes.push("DECODED".into());
@@ -117,7 +123,7 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
             codes.push("DECODE_REJECTED".into());
         }
     }
-    
+
     (rel, codes.join(","), metrics.join(" "))
 }
 
@@ -147,9 +153,14 @@ fn main() {
             s.spawn(|| loop {
                 let i = next.fetch_add(1, Ordering::Relaxed);
                 let Some(p) = files.get(i) else { break };
-                let r = std::panic::catch_unwind(|| audit(p, &names, decode)).unwrap_or_else(|_| {
-                    (p.to_string_lossy().into_owned(), "PANIC".into(), String::new())
-                });
+                let r =
+                    std::panic::catch_unwind(|| audit(p, &names, decode)).unwrap_or_else(|_| {
+                        (
+                            p.to_string_lossy().into_owned(),
+                            "PANIC".into(),
+                            String::new(),
+                        )
+                    });
                 out.lock().unwrap().push(r);
                 if i % 5000 == 4999 {
                     eprintln!("{} done", i + 1);

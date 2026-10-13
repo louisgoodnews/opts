@@ -1036,7 +1036,11 @@ pub const SPIKE_MIN_EDGE: f32 = 1.0;
 /// whole model is far more conspicuous than a missing thin triangle, hence the trade.
 pub fn drop_spike_faces(o: &mut O3d) -> usize {
     let edge = |o: &O3d, t: &[u32; 3]| {
-        let p = t.map(|k| o.vertices.get(k as usize).map_or(Vec3::ZERO, |v| v.position));
+        let p = t.map(|k| {
+            o.vertices
+                .get(k as usize)
+                .map_or(Vec3::ZERO, |v| v.position)
+        });
         (p[1] - p[0])
             .length()
             .max((p[2] - p[0]).length())

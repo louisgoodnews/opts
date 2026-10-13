@@ -66,7 +66,8 @@ fn render(o: &O3d, cell: usize) -> Vec<[u8; 3]> {
         ) else {
             continue;
         };
-        let n3 = (pts[t[1] as usize] - pts[t[0] as usize]).cross(pts[t[2] as usize] - pts[t[0] as usize]);
+        let n3 = (pts[t[1] as usize] - pts[t[0] as usize])
+            .cross(pts[t[2] as usize] - pts[t[0] as usize]);
         let nl = n3.length();
         if nl < 1e-12 {
             continue;
@@ -78,15 +79,29 @@ fn render(o: &O3d, cell: usize) -> Vec<[u8; 3]> {
         let back = area < 0.0;
         let shade = (n.dot(light).abs() * 0.7 + 0.3).clamp(0.0, 1.0);
         let col = if back {
-            [(200.0 * shade) as u8, (50.0 * shade) as u8, (50.0 * shade) as u8]
+            [
+                (200.0 * shade) as u8,
+                (50.0 * shade) as u8,
+                (50.0 * shade) as u8,
+            ]
         } else {
-            [(120.0 * shade) as u8, (150.0 * shade) as u8, (200.0 * shade) as u8]
+            [
+                (120.0 * shade) as u8,
+                (150.0 * shade) as u8,
+                (200.0 * shade) as u8,
+            ]
         };
         if area.abs() < 1e-6 {
             continue;
         }
-        let (minx, maxx) = (pa.x.min(pb.x).min(pc.x).floor().max(0.0), pa.x.max(pb.x).max(pc.x).ceil().min(cell as f32 - 1.0));
-        let (miny, maxy) = (pa.y.min(pb.y).min(pc.y).floor().max(0.0), pa.y.max(pb.y).max(pc.y).ceil().min(cell as f32 - 1.0));
+        let (minx, maxx) = (
+            pa.x.min(pb.x).min(pc.x).floor().max(0.0),
+            pa.x.max(pb.x).max(pc.x).ceil().min(cell as f32 - 1.0),
+        );
+        let (miny, maxy) = (
+            pa.y.min(pb.y).min(pc.y).floor().max(0.0),
+            pa.y.max(pb.y).max(pc.y).ceil().min(cell as f32 - 1.0),
+        );
         if minx > maxx || miny > maxy {
             continue;
         }
@@ -123,7 +138,11 @@ fn main() {
             _ => {}
         }
     }
-    let paths: Vec<String> = std::io::stdin().lock().lines().map_while(Result::ok).collect();
+    let paths: Vec<String> = std::io::stdin()
+        .lock()
+        .lines()
+        .map_while(Result::ok)
+        .collect();
     let rows = paths.len().div_ceil(cols).max(1);
     let (w, h) = (cols * cell, rows * cell);
     let mut sheet = vec![[0u8, 0, 0]; w * h];
@@ -151,7 +170,11 @@ fn main() {
         for y in 0..cell {
             for x in 0..cell {
                 let edge = x == 0 || y == 0;
-                sheet[(cy + y) * w + cx + x] = if edge { [255, 255, 0] } else { img[y * cell + x] };
+                sheet[(cy + y) * w + cx + x] = if edge {
+                    [255, 255, 0]
+                } else {
+                    img[y * cell + x]
+                };
             }
         }
         println!("{k}\t{p}\t{status}");

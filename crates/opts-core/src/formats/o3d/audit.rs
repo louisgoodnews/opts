@@ -30,14 +30,20 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
     {
         codes.push(format!("{tag}NONFINITE"));
     }
-    if o.indices.iter().any(|t| t.iter().any(|&i| i as usize >= nv)) {
+    if o.indices
+        .iter()
+        .any(|t| t.iter().any(|&i| i as usize >= nv))
+    {
         codes.push(format!("{tag}INDEX_OOR"));
         return;
     }
     if o.face_materials.len() != nt {
         codes.push(format!("{tag}FACEMAT_LEN"));
     }
-    if !o.materials.is_empty() && o.face_materials.iter().any(|&m| m as usize >= o.materials.len())
+    if !o.materials.is_empty()
+        && o.face_materials
+            .iter()
+            .any(|&m| m as usize >= o.materials.len())
     {
         codes.push(format!("{tag}MATIDX_OOR"));
     }
@@ -97,7 +103,10 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
             degen += 1;
             continue;
         }
-        let maxe = e1.length().max(e2.length()).max((c.position - b.position).length());
+        let maxe = e1
+            .length()
+            .max(e2.length())
+            .max((c.position - b.position).length());
         edges.push(maxe);
         tri_edges.push(maxe);
         let g = e1.cross(e2) / area;
@@ -111,7 +120,10 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
                 }
             }
         }
-        let uvm = (b.uv - a.uv).length().max((c.uv - a.uv).length()).max((c.uv - b.uv).length());
+        let uvm = (b.uv - a.uv)
+            .length()
+            .max((c.uv - a.uv).length())
+            .max((c.uv - b.uv).length());
         if maxe > 1e-4 {
             uv_ratio.push(uvm / maxe);
         }
@@ -144,7 +156,10 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
     // uv chaos
     if uv_ratio.len() >= 8 {
         let m = percentile(&mut uv_ratio.clone(), 0.5).max(1e-6);
-        let bad = uv_ratio.iter().filter(|&&r| r > m * 40.0 && r > 2.0).count();
+        let bad = uv_ratio
+            .iter()
+            .filter(|&&r| r > m * 40.0 && r > 2.0)
+            .count();
         let frac = bad as f32 / uv_ratio.len() as f32;
         metrics.push(format!("{tag}uvchaos={frac:.2}"));
         if frac > 0.10 {
@@ -155,4 +170,3 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
         codes.push(format!("{tag}UV_HUGE"));
     }
 }
-
