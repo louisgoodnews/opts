@@ -108,6 +108,7 @@ pub fn measure(
 }
 
 /// Applies the layout to the HUD's nodes (cheap: only differing values are written).
+#[allow(clippy::type_complexity)]
 pub fn apply(
     layout: Res<HudLayout>,
     mut roots: Query<&mut Node, (With<HudRoot>, Without<MapBox>, Without<ReadoutBox>)>,

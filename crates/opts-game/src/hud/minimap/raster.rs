@@ -104,10 +104,9 @@ impl Canvas {
             return;
         }
         let c = coverage;
-        for k in 0..3 {
-            let old = f32::from(self.data[i + k]);
-            let new = f32::from(color[k]);
-            self.data[i + k] = (old + (new - old) * c).round() as u8;
+        for (dst, src) in self.data[i..i + 3].iter_mut().zip(color) {
+            let old = f32::from(*dst);
+            *dst = (old + (f32::from(src) - old) * c).round() as u8;
         }
         self.data[i + 3] = 255;
     }
@@ -142,17 +141,6 @@ impl Projection {
             self.centre - up * self.px_per_m,
         )
     }
-}
-
-fn segment_distance(p: Vec2, a: Vec2, b: Vec2) -> f32 {
-    let ab = b - a;
-    let len2 = ab.length_squared();
-    let t = if len2 <= f32::EPSILON {
-        0.0
-    } else {
-        ((p - a).dot(ab) / len2).clamp(0.0, 1.0)
-    };
-    p.distance(a + ab * t)
 }
 
 /// An anti-aliased line of `width_px`: only the pixels near the line are visited (a few per step

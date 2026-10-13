@@ -159,6 +159,7 @@ pub fn update_texts(
 
 /// Shows, hides and removes widgets: the user's switch, the vehicle kind, the engine speed and the
 /// camera mode. A row or slot without a visible widget is removed from the layout.
+#[allow(clippy::type_complexity)]
 pub fn update_widget_display(
     values: Res<HudValues>,
     settings: Res<GameSettings>,

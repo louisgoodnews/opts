@@ -633,7 +633,7 @@ use std::time::Duration;
 
 use super::minimap::{
     FixtureRoads, MiniMapConfig, MiniMapImage, MiniMapState, Orientation, SETTING_ENABLED,
-    SETTING_ORIENTATION, SETTING_ZOOM,
+    SETTING_ORIENTATION,
 };
 use serde_json::{json, Value};
 
