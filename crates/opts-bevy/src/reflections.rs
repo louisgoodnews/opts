@@ -68,6 +68,8 @@ pub struct ReflectionSwitches {
     pub wet: bool,
     /// Screen-space reflections (deferred).
     pub ssr: bool,
+    /// Show the first mirror texture on a quad in front of the main camera (debug aid).
+    pub mirror_debug: bool,
     /// Environment intensity (cd/m2).
     pub env_intensity: f32,
 }
@@ -85,6 +87,7 @@ impl ReflectionSwitches {
             mirror_max: 2,
             wet: false,
             ssr: false,
+            mirror_debug: false,
             env_intensity: 3000.0,
         };
         for item in text.split(',').map(str::trim).filter(|i| !i.is_empty()) {
@@ -110,6 +113,7 @@ impl ReflectionSwitches {
                 "mirror_max" => s.mirror_max = value.parse().unwrap_or(2),
                 "wet" => s.wet = true,
                 "ssr" => s.ssr = true,
+                "mirror_debug" => s.mirror_debug = true,
                 "env_intensity" => s.env_intensity = value.parse().unwrap_or(3000.0),
                 _ => {}
             }
@@ -475,8 +479,9 @@ fn spawn_mirror_cameras(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    meshes: Res<Assets<Mesh>>,
     existing: Query<(), With<MirrorCamera>>,
+    main_cams: Query<Entity, (With<Camera3d>, Without<MirrorCamera>)>,
+    mut meshes_add: ResMut<Assets<Mesh>>,
     candidates: Query<
         (Entity, &MeshMaterial3d<StandardMaterial>, &Mesh3d, &GlobalTransform),
         Without<MirrorDone>,
@@ -494,7 +499,7 @@ fn spawn_mirror_cameras(
         if gt.affine() == bevy::math::Affine3A::IDENTITY {
             continue;
         }
-        let Some(mesh) = meshes.get(&mesh.0) else { continue };
+        let Some(mesh) = meshes_add.get(&mesh.0) else { continue };
         let (Some(pos), Some(nor)) = (
             mesh.attribute(Mesh::ATTRIBUTE_POSITION).and_then(|a| a.as_float3()),
             mesh.attribute(Mesh::ATTRIBUTE_NORMAL).and_then(|a| a.as_float3()),
@@ -536,7 +541,23 @@ fn spawn_mirror_cameras(
                 Vec2::new(1.0, 0.0),
             );
         }
-        bevy::log::info!(texture = %note.texture, ?size, ?normal, "reflections: mirror camera created");
+        bevy::log::info!(texture = %note.texture, ?size, ?normal, centre = ?gt.transform_point(centre), "reflections: mirror camera created");
+        if sw.mirror_debug && count == 0 {
+            // A picture-in-picture of the first mirror, to judge the render without finding the mirror.
+            let quad = meshes_add.add(Rectangle::new(0.6, 0.3));
+            let mat = materials.add(StandardMaterial {
+                base_color_texture: Some(handle.clone()),
+                unlit: true,
+                ..default()
+            });
+            for cam in &main_cams {
+                commands.entity(cam).with_child((
+                    Mesh3d(quad.clone()),
+                    MeshMaterial3d(mat.clone()),
+                    Transform::from_xyz(0.0, -0.22, -0.9),
+                ));
+            }
+        }
         commands.entity(entity).insert(MirrorDone);
         commands.spawn((
             Camera3d::default(),
