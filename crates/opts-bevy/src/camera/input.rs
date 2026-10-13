@@ -4,7 +4,7 @@ use bevy::input::ButtonInput;
 use bevy::math::{EulerRot, Vec3};
 use bevy::prelude::*;
 
-use crate::camera::state::{CameraAvailability, CameraMode, CameraState, FREE_ROAM_MIN_SPEED};
+use crate::camera::state::{CameraAvailability, CameraMode, CameraState};
 use crate::human::PlayerHead;
 use crate::vehicle::BusVehicle;
 use crate::vehicle_sim::{PlayerVehicle, VehicleCameraMode, VehicleCameraRig};
@@ -119,55 +119,18 @@ pub fn sync_vehicle_rig_mode(state: Res<CameraState>, mut rigs: Query<&mut Vehic
     }
 }
 
-/// Shift+Space: resets the current view to its default without changing mode or `previous_mode`.
+/// Shift+Space: resets the current view to its default without changing mode, `previous_mode` or
+/// the sub camera (see [`crate::camera::reset`]).
 pub fn handle_camera_reset_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<CameraState>,
+    mut viewpoint: ResMut<crate::camera::viewpoint::ViewpointState>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
-    vehicle: Query<&BusVehicle, With<PlayerVehicle>>,
 ) {
-    let std_index = vehicle.single().ok().map(|b| b.std_camera_index);
     let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     if !(shift && keys.just_pressed(KeyCode::Space)) {
         return;
     }
-    match state.mode {
-        CameraMode::FreeRoam => {
-            let before = (
-                state.free_roam_speed,
-                state.free_roam_yaw,
-                state.free_roam_pitch,
-            );
-            state.free_roam_yaw = 0.0;
-            state.free_roam_pitch = 0.0;
-            state.free_roam_speed = FREE_ROAM_MIN_SPEED;
-            if let Ok(mut tf) = camera.single_mut() {
-                tf.translation = state.free_roam_spawn;
-                tf.rotation = Quat::IDENTITY;
-            }
-            tracing::debug!(?before, spawn = ?state.free_roam_spawn, "free-roam view reset");
-        }
-        CameraMode::External => {
-            state.external_yaw = 0.0;
-            state.external_pitch = -15.0_f32.to_radians();
-            state.external_zoom = 8.0;
-            state.pan_offset = Vec3::ZERO;
-            tracing::debug!("external view reset");
-        }
-        CameraMode::Ego => {
-            state.ego_yaw = 0.0;
-            state.ego_pitch = 0.0;
-            tracing::debug!("ego view reset to the head's forward direction");
-        }
-        mode => {
-            state.sub_camera_index = if mode == CameraMode::Cockpit {
-                std_index.unwrap_or(0)
-            } else {
-                0
-            };
-            state.view_yaw = 0.0;
-            state.view_pitch = 0.0;
-            tracing::debug!(?mode, "view reset");
-        }
-    }
+    let mut tf = camera.single_mut().ok();
+    crate::camera::reset::reset_view(&mut state, tf.as_deref_mut(), &mut viewpoint);
 }

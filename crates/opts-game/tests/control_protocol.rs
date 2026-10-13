@@ -855,3 +855,43 @@ fn camera_viewpoint_get_set_save_reset() {
     let e = call(&mut app, "camera.viewpoint.set", json!({"x": 0.1})).expect_err("gated");
     assert_eq!(e.code, code::GATED);
 }
+
+#[test]
+fn camera_reset_resets_the_current_view_and_follows_the_gates() {
+    let mut app = drive_app();
+    {
+        let mut s = app.world_mut().resource_mut::<CameraState>();
+        s.mode = CameraMode::External;
+        s.external_yaw = 2.0;
+        s.external_zoom = 33.0;
+    }
+    let r = call(&mut app, "camera.reset", json!({})).expect("reset external");
+    assert_eq!(r["mode"], "external");
+    let s = app.world().resource::<CameraState>();
+    assert_eq!((s.external_yaw, s.external_zoom), (0.0, 8.0));
+
+    {
+        let mut s = app.world_mut().resource_mut::<CameraState>();
+        s.mode = CameraMode::Cockpit;
+        s.sub_camera_index = 2;
+        s.view_yaw = 1.0;
+    }
+    let r = call(&mut app, "camera.reset", json!({})).expect("reset cockpit");
+    assert_eq!((r["mode"].as_str(), r["sub_camera"].as_u64()), (Some("cockpit"), Some(2)));
+    assert_eq!(app.world().resource::<CameraState>().view_yaw, 0.0);
+
+    {
+        let mut s = app.world_mut().resource_mut::<CameraState>();
+        s.mode = CameraMode::FreeRoam;
+        s.free_roam_speed = 80.0;
+    }
+    call(&mut app, "camera.reset", json!({})).expect("reset free");
+    assert_eq!(
+        app.world().resource::<CameraState>().free_roam_speed,
+        opts_bevy::FREE_ROAM_MIN_SPEED
+    );
+
+    app.insert_resource(ModalActive(true));
+    let e = call(&mut app, "camera.reset", json!({})).expect_err("gated");
+    assert_eq!(e.code, code::GATED);
+}

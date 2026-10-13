@@ -566,6 +566,15 @@ pub const COMMANDS: &[CommandSpec] = &[
     .doc("A debug command: restores the start position, zeroes speed and the controls and the distance counter.")
     .debug(),
     c(
+        "camera.reset",
+        "scene",
+        "Reset the current camera view to its default, like Shift+Space",
+        "",
+    )
+    .since("1.2")
+    .result("`{mode, sub_camera}`")
+    .doc("Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open."),
+    c(
         "camera.look",
         "scene",
         "Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external)",
