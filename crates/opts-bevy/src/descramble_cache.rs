@@ -229,7 +229,11 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
 
 /// Captures the result of decoding `decoded` from the original `original` mesh.
 #[must_use]
-pub fn capture(original: &O3d, decoded: &O3d, report: &opts_core::formats::o3d::descramble::ConfidentReport) -> Cached {
+pub fn capture(
+    original: &O3d,
+    decoded: &O3d,
+    report: &opts_core::formats::o3d::descramble::ConfidentReport,
+) -> Cached {
     // `decode_confident` keeps vertex order and only removes triangles: record which survive.
     let mut remaining = decoded.indices.iter().peekable();
     let mut kept = Vec::with_capacity(original.indices.len());

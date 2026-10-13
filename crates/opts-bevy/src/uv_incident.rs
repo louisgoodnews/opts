@@ -124,7 +124,10 @@ pub fn write(i: &UvIncident<'_>) -> Option<PathBuf> {
     let stem = i
         .mesh
         .file_stem()
-        .map(|s| s.to_string_lossy().replace(|c: char| !c.is_ascii_alphanumeric(), "_"))
+        .map(|s| {
+            s.to_string_lossy()
+                .replace(|c: char| !c.is_ascii_alphanumeric(), "_")
+        })
         .unwrap_or_default();
     let mut tag = 0xcbf2_9ce4_8422_2325_u64;
     for b in i.mesh.to_string_lossy().bytes().chain(i.context.bytes()) {
@@ -143,29 +146,65 @@ pub fn write(i: &UvIncident<'_>) -> Option<PathBuf> {
     let _ = writeln!(out, "OPTS incident: unreliable texture coordinates");
     let _ = writeln!(out, "time: {} (unix {now})", utc(now));
     let _ = writeln!(out, "mesh: {}", i.mesh.display());
-    let _ = writeln!(out, "context: {}", if i.context.is_empty() { "(none)" } else { i.context });
-    let _ = writeln!(out, "model in file: {}   file size: {} bytes", i.model_index, i.file_bytes);
+    let _ = writeln!(
+        out,
+        "context: {}",
+        if i.context.is_empty() {
+            "(none)"
+        } else {
+            i.context
+        }
+    );
+    let _ = writeln!(
+        out,
+        "model in file: {}   file size: {} bytes",
+        i.model_index, i.file_bytes
+    );
     let _ = writeln!(
         out,
         "header: version {} flags {} key {}",
         i.header.0,
         i.header.1,
-        i.header.2.map_or("none".to_string(), |k| format!("{k:#010x}"))
+        i.header
+            .2
+            .map_or("none".to_string(), |k| format!("{k:#010x}"))
     );
-    let _ = writeln!(out, "vertices: {}   triangles: {}   vertex count mod 5: {}", i.vertices, i.triangles, i.vertices % 5);
-    let _ = writeln!(out, "decoding source: {}   decoder parameter fingerprint: {:08x}", i.source, i.fingerprint);
-    let _ = writeln!(out, "other files with this name in the installation: {}", i.siblings);
+    let _ = writeln!(
+        out,
+        "vertices: {}   triangles: {}   vertex count mod 5: {}",
+        i.vertices,
+        i.triangles,
+        i.vertices % 5
+    );
+    let _ = writeln!(
+        out,
+        "decoding source: {}   decoder parameter fingerprint: {:08x}",
+        i.source, i.fingerprint
+    );
+    let _ = writeln!(
+        out,
+        "other files with this name in the installation: {}",
+        i.siblings
+    );
     let _ = writeln!(out);
     let _ = writeln!(out, "== Result ==");
     for (c, name) in ["Exact", "Recovered", "Unreliable"].iter().enumerate() {
-        let _ = writeln!(out, "{name:11} {:7} vertices ({:5.1} %)", counts[c], pct(counts[c]));
+        let _ = writeln!(
+            out,
+            "{name:11} {:7} vertices ({:5.1} %)",
+            counts[c],
+            pct(counts[c])
+        );
     }
     let _ = writeln!(
         out,
         "\nA mesh is reported when more than 10 % of its vertices are Unreliable. The texture coordinates\nof those vertices are the decoder's best guess; on the twin data about 71 % of them are right."
     );
     let _ = writeln!(out);
-    let _ = writeln!(out, "== What settled the vertices (stage: vertices, share, unreliable among them) ==");
+    let _ = writeln!(
+        out,
+        "== What settled the vertices (stage: vertices, share, unreliable among them) =="
+    );
     let mut per_stage = [[0usize; 2]; 7];
     for v in 0..n {
         let s = usize::from(stage[v]).min(6);
@@ -174,7 +213,14 @@ pub fn write(i: &UvIncident<'_>) -> Option<PathBuf> {
     }
     for (s, c) in per_stage.iter().enumerate() {
         if c[0] > 0 {
-            let _ = writeln!(out, "{:22} {:7} {:5.1} %   unreliable {:7}", UvStage::from_code(s as u8).name(), c[0], pct(c[0]), c[1]);
+            let _ = writeln!(
+                out,
+                "{:22} {:7} {:5.1} %   unreliable {:7}",
+                UvStage::from_code(s as u8).name(),
+                c[0],
+                pct(c[0]),
+                c[1]
+            );
         }
     }
     let _ = writeln!(out);
@@ -195,7 +241,7 @@ pub fn write(i: &UvIncident<'_>) -> Option<PathBuf> {
     for (r, c) in &reasons {
         let _ = writeln!(out, "{c:7} vertices: {r}");
     }
-    if i.vertices % 5 == 0 {
+    if i.vertices.is_multiple_of(5) {
         let _ = writeln!(out, "note: the vertex count is a multiple of 5, so most vertices carry a u offset and there are few jitter-free anchors; these meshes are decoded worst (see docs/src/architecture/uv-decoder.md, section 1).");
     }
     if i.siblings == 0 {
@@ -233,7 +279,9 @@ pub fn write(i: &UvIncident<'_>) -> Option<PathBuf> {
 
 /// Removes the oldest incident files beyond [`MAX_INCIDENT_FILES`].
 fn trim(dir: &Path) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
     let mut files: Vec<(SystemTime, PathBuf)> = rd
         .flatten()
         .filter(|e| e.file_name().to_string_lossy().starts_with("uv-"))
@@ -288,7 +336,10 @@ mod tests {
         .expect("file written");
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(text.contains("Panel.o3d") && text.contains("vehicle MAN NG272"));
-        assert!(text.contains("Unreliable") && text.contains("66.7 %"), "{text}");
+        assert!(
+            text.contains("Unreliable") && text.contains("66.7 %"),
+            "{text}"
+        );
         assert!(text.contains("energy margin below 2"), "{text}");
         assert!(text.contains("no other file with this name"), "{text}");
         // vertex 1: stored 0.35, guess 0.3: offset 0.05 removed

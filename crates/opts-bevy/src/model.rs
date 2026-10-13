@@ -404,19 +404,20 @@ impl ContentLoader<'_> {
                     }
                     let bounds = self.cache.expected_bounds;
                     let ckey = crate::descramble_cache::key_bounded(&bytes, mi, bounds);
-                    let pool_result = self
-                        .cache
-                        .decode_pool
-                        .as_ref()
-                        .and_then(|p| p.result(ckey));
+                    let pool_result = self.cache.decode_pool.as_ref().and_then(|p| p.result(ckey));
                     let from_pool = pool_result.is_some();
-                    let cached = pool_result
-                        .or_else(|| crate::descramble_cache::load(ckey, fingerprint));
+                    let cached =
+                        pool_result.or_else(|| crate::descramble_cache::load(ckey, fingerprint));
                     // What the incident file needs, taken before the decoding replaces it.
-                    let stored_uv: Vec<[f32; 2]> = m.vertices.iter().map(|v| v.uv.to_array()).collect();
+                    let stored_uv: Vec<[f32; 2]> =
+                        m.vertices.iter().map(|v| v.uv.to_array()).collect();
                     let header = (m.version, m.header_flags, m.encryption_key);
                     let triangles_before = m.indices.len();
-                    let mut source = if from_pool { "background decode" } else { "decode cache" };
+                    let mut source = if from_pool {
+                        "background decode"
+                    } else {
+                        "decode cache"
+                    };
                     let mut fresh: Option<crate::descramble_cache::Cached> = None;
                     let applied = match &cached {
                         Some(c) => {
@@ -490,7 +491,9 @@ impl ContentLoader<'_> {
                                 let siblings = o3d_path
                                     .file_name()
                                     .map(|n| self.install.files_named(&n.to_string_lossy()))
-                                    .map_or(0, |f| f.iter().filter(|p| p.as_path() != o3d_path).count());
+                                    .map_or(0, |f| {
+                                        f.iter().filter(|p| p.as_path() != o3d_path).count()
+                                    });
                                 let incident = decoded.and_then(|d| {
                                     crate::uv_incident::write(&crate::uv_incident::UvIncident {
                                         mesh: o3d_path,
