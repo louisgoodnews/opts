@@ -17,7 +17,7 @@ use std::sync::Mutex;
 
 use opts_core::formats::o3d::audit::check;
 use opts_core::formats::o3d::descramble::decode_confident;
-use opts_core::formats::o3d::{parse, VertexLayout};
+use opts_core::formats::o3d::{parse, O3d, VertexLayout};
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>, names: &mut HashSet<String>) {
     let Ok(rd) = std::fs::read_dir(dir) else {
@@ -30,13 +30,64 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>, names: &mut HashSet<String>) {
             walk(&p, out, names);
         } else {
             let n = e.file_name().to_string_lossy().to_lowercase();
-            if n.ends_with(".o3d") {
+            if n.ends_with(".o3d") || n.ends_with(".x") {
                 out.push(p);
             } else {
                 names.insert(n);
             }
         }
     }
+}
+
+/// Flattens a DirectX `.x` file into [`O3d`] sub-meshes (frame transforms are not applied: the
+/// audit looks at the geometry of each sub-mesh).
+fn x_submeshes(bytes: &[u8]) -> Result<Vec<O3d>, String> {
+    use opts_core::formats::x::{parse_x, XFrame, XSubMesh};
+    fn conv(sub: &XSubMesh, global: &[opts_core::formats::x::XMaterial]) -> O3d {
+        let palette = if sub.materials.is_empty() { global } else { &sub.materials };
+        O3d {
+            version: 0,
+            header_flags: 0,
+            vertices: sub
+                .vertices
+                .iter()
+                .map(|v| opts_core::formats::o3d::Vertex {
+                    position: v.position,
+                    normal: v.normal,
+                    uv: v.uv,
+                    color: None,
+                })
+                .collect(),
+            indices: sub.indices.clone(),
+            face_materials: sub.face_materials.iter().map(|&m| m as u16).collect(),
+            materials: palette
+                .iter()
+                .map(|m| opts_core::formats::o3d::Material {
+                    diffuse: m.diffuse,
+                    specular: m.specular,
+                    emissive: m.emissive,
+                    power: m.power,
+                    textures: m.texture_filename.clone().into_iter().collect(),
+                })
+                .collect(),
+            transform: None,
+            unknown_chunks: Vec::new(),
+            encryption_key: None,
+            descrambled: false,
+        }
+    }
+    fn walk_frame(f: &XFrame, global: &[opts_core::formats::x::XMaterial], out: &mut Vec<O3d>) {
+        out.extend(f.meshes.iter().map(|m| conv(m, global)));
+        for c in &f.children {
+            walk_frame(c, global, out);
+        }
+    }
+    let x = parse_x(bytes).map_err(|e| e.to_string())?;
+    let mut out: Vec<O3d> = x.top_level_meshes.iter().map(|m| conv(m, &x.global_materials)).collect();
+    for f in &x.frames {
+        walk_frame(f, &x.global_materials, &mut out);
+    }
+    Ok(out)
 }
 
 fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, String, String) {
@@ -47,6 +98,22 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
         Ok(b) => b,
         Err(_) => return (rel, "UNREADABLE".into(), String::new()),
     };
+    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("x")) {
+        let subs = match x_submeshes(&bytes) {
+            Ok(s) if !s.is_empty() => s,
+            Ok(_) => return (rel, "EMPTY".into(), "x".into()),
+            Err(e) => return (rel, "PARSE_ERROR(x)".into(), e),
+        };
+        metrics.push(format!("x subs={}", subs.len()));
+        for (i, o) in subs.iter().enumerate() {
+            let tag = if i == 0 { String::new() } else { format!("s{i}_") };
+            let _ = tag;
+            check(o, "", &mut codes, &mut metrics);
+        }
+        codes.sort();
+        codes.dedup();
+        return (rel, codes.join(","), metrics.join(" "));
+    }
     let o = match parse(&bytes) {
         Ok(o) => o,
         Err(e) => {
@@ -56,8 +123,9 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
         }
     };
     metrics.push(format!(
-        "v{} nv={} nt={} nm={}",
+        "v{} {:?} nv={} nt={} nm={}",
         o.version,
+        o.vertex_layout(),
         o.vertices.len(),
         o.indices.len(),
         o.materials.len()

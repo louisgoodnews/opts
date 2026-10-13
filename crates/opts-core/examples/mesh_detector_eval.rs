@@ -68,6 +68,7 @@ fn main() {
     let totals = Mutex::new((0usize, 0usize, 0usize)); // pairs, accepted, wrong
     let listing = Mutex::new(Vec::new());
     let rule = Mutex::new([(0usize, 0usize); 6]);
+    let agree = Mutex::new([(0usize, 0usize); 6]);
     std::thread::scope(|s| {
         for _ in 0..threads {
             s.spawn(|| loop {
@@ -118,6 +119,14 @@ fn main() {
                     .count() as f32
                     / po.vertices.len() as f32;
                 let wrong = ok < 0.98;
+                {
+                    let b = ((rep.agreement.clamp(0.9, 1.0) - 0.9) * 50.0).floor() as usize; // 0.02 buckets, 5 = exactly 1
+                    let mut a = agree.lock().unwrap();
+                    a[b.min(5)].0 += 1;
+                    if wrong {
+                        a[b.min(5)].1 += 1;
+                    }
+                }
                 {
                     // long-edge rule evaluation: faces dropped, split by truth
                     let mut edges: Vec<f32> = Vec::new();
@@ -192,6 +201,11 @@ fn main() {
         }
     });
     let t = totals.into_inner().unwrap();
+    let a = agree.into_inner().unwrap();
+    for (i, (n, w)) in a.iter().enumerate() {
+        let lo = 0.9 + 0.02 * i as f32;
+        println!("agreement {:.2}..{:.2}: accepted {n}, wrong {w} ({:.0} %)", lo, lo + 0.02, 100.0 * *w as f32 / (*n).max(1) as f32);
+    }
     let r = rule.into_inner().unwrap();
     for (ki, k) in [6, 10, 15, 25, 40].iter().enumerate() {
         println!(
