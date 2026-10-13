@@ -376,6 +376,15 @@ Queues one command of the vehicle menu (see the in-game vehicle menu page); read
 | `settings.get` | `key` (string) | 1.0 | Value, default and options of one setting |
 | `settings.set` | `key` (string)<br>`value` (string) | 1.0 | Change a setting (validated like the settings page, saved) |
 | `settings.reset` | `key` (string) | 1.0 | Restore the default of a setting |
+| [`hardware.profile`](#hardwareprofile) | `redetect?` (boolean) | 1.2 | The detected hardware profile and the recommended defaults (local, no identifiers) |
+
+### `hardware.profile`
+
+The detected hardware profile and the recommended defaults (local, no identifiers).
+
+**Result:** { probing, stored, allow_in_reports, profile, recommendations }
+
+`profile` is the versioned `opts-hardware` document (every fact is `{known: v}` or `{unknown: reason}`; `null` until the first probe finished). `redetect: true` starts a new probe in the background; poll again. Nothing is stored by this call. See the hardware probe charter.
 
 ## Group `l10n`
 

@@ -559,5 +559,6 @@ pub fn all() -> Vec<D> {
     v.extend(interface());
     v.extend(hud());
     v.extend(content());
+    v.extend(crate::hardware::descriptors());
     v
 }
