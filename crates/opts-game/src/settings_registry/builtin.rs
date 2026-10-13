@@ -130,6 +130,21 @@ fn graphics() -> Vec<D> {
         )
         .keywords(&["colour", "color", "tonemapping", "saturation"]),
         D::new(
+            "graphics.default_fov",
+            K::Int {
+                min: 0,
+                max: 120,
+                step: 5,
+            },
+            "0",
+            C::Graphics,
+            55,
+            "set-default-fov",
+            "set-default-fov-desc",
+        )
+        .keywords(&["field of view", "fov", "camera", "driver view", "zoom"])
+        .since("0.3"),
+        D::new(
             "graphics.view_distance",
             K::Int {
                 min: 1,

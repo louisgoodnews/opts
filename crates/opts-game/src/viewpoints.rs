@@ -36,6 +36,16 @@ const MAX_KEY_LEN: usize = 128;
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
 pub struct ViewpointKey(pub String);
 
+/// The model of the player's vehicle (the folder of its `.bus` file, lower case), on its root.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct ViewpointModel(pub String);
+
+/// The model key of a `.bus` file: its folder name in lower case.
+#[must_use]
+pub fn model_of_bus_file(path: &Path) -> Option<String> {
+    normalise_key(&path.parent()?.file_name()?.to_string_lossy())
+}
+
 /// The key of a `.bus` file: its stem in lower case.
 #[must_use]
 pub fn key_of_bus_file(path: &Path) -> Option<String> {
@@ -53,9 +63,14 @@ pub fn normalise_key(key: &str) -> Option<String> {
 /// Every stored viewpoint.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ViewpointStore {
-    /// Viewpoints by vehicle key and driver camera index.
+    /// Viewpoints by vehicle key and driver camera index. An entry equal to the default is an
+    /// explicit "the vehicle's own view" that overrides a model entry.
     pub vehicles: BTreeMap<String, BTreeMap<usize, Viewpoint>>,
+    /// Viewpoints for every vehicle of a model (the vehicle's folder), by camera index.
+    pub models: BTreeMap<String, BTreeMap<usize, Viewpoint>>,
 }
+
+type Section = BTreeMap<String, BTreeMap<usize, Viewpoint>>;
 
 /// What reading a file found.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -79,11 +94,20 @@ impl ViewpointStore {
         self.vehicles.get(key)?.get(&index).copied()
     }
 
-    /// Stores a viewpoint; the default (the vehicle's own view) removes the entry.
-    pub fn set(&mut self, key: &str, index: usize, vp: Viewpoint) {
+    /// The viewpoint that applies to a vehicle: its own entry, else its model's.
+    #[must_use]
+    pub fn lookup(&self, key: &str, model: Option<&str>, index: usize) -> Option<Viewpoint> {
+        self.get(key, index)
+            .or_else(|| self.models.get(model?)?.get(&index).copied())
+    }
+
+    /// Stores a vehicle's viewpoint; the default removes the entry unless the vehicle's model has
+    /// a viewpoint for this camera (then the default is kept as an explicit override).
+    pub fn set_vehicle(&mut self, key: &str, model: Option<&str>, index: usize, vp: Viewpoint) {
         let vp = vp.clamped();
-        if vp.is_default() {
-            self.remove(key, index);
+        let model_has = model.is_some_and(|m| self.models.get(m).is_some_and(|c| c.contains_key(&index)));
+        if vp.is_default() && !model_has {
+            Self::remove_from(&mut self.vehicles, key, index);
         } else {
             self.vehicles
                 .entry(key.to_owned())
@@ -92,14 +116,82 @@ impl ViewpointStore {
         }
     }
 
-    /// Removes an entry (and the vehicle when it has no camera left).
+    /// Stores a viewpoint for a whole model and drops the vehicle's own override, so that the
+    /// vehicle shows it too. Other vehicles' overrides stay.
+    pub fn set_model(&mut self, key: &str, model: &str, index: usize, vp: Viewpoint) {
+        let vp = vp.clamped();
+        Self::remove_from(&mut self.vehicles, key, index);
+        if vp.is_default() {
+            Self::remove_from(&mut self.models, model, index);
+        } else {
+            self.models
+                .entry(model.to_owned())
+                .or_default()
+                .insert(index, vp);
+        }
+    }
+
+    /// Stores a viewpoint; the default (the vehicle's own view) removes the entry.
+    pub fn set(&mut self, key: &str, index: usize, vp: Viewpoint) {
+        self.set_vehicle(key, None, index, vp);
+    }
+
+    /// Removes a vehicle's entry (and the vehicle when it has no camera left).
     pub fn remove(&mut self, key: &str, index: usize) {
-        if let Some(cams) = self.vehicles.get_mut(key) {
+        Self::remove_from(&mut self.vehicles, key, index);
+    }
+
+    fn remove_from(section: &mut Section, key: &str, index: usize) {
+        if let Some(cams) = section.get_mut(key) {
             cams.remove(&index);
             if cams.is_empty() {
-                self.vehicles.remove(key);
+                section.remove(key);
             }
         }
+    }
+
+    /// Reads one section (`vehicles` or `models`) of the file.
+    fn parse_section(
+        raw: Option<&Value>,
+        name: &str,
+        keep_default: bool,
+        report: &mut LoadReport,
+    ) -> Section {
+        let mut out = Section::new();
+        let Some(Value::Object(entries)) = raw else {
+            return out;
+        };
+        for (raw_key, entry) in entries {
+            let Some(key) = normalise_key(raw_key) else {
+                report
+                    .problems
+                    .push(format!("{name} key {raw_key:?} is not valid"));
+                continue;
+            };
+            let Some(cameras) = entry.get("cameras").and_then(Value::as_object) else {
+                report.problems.push(format!("{key}: no cameras object"));
+                continue;
+            };
+            for (raw_index, value) in cameras {
+                let Ok(index) = raw_index.parse::<usize>() else {
+                    report
+                        .problems
+                        .push(format!("{key}: camera index {raw_index:?} is not a number"));
+                    continue;
+                };
+                match serde_json::from_value::<Viewpoint>(value.clone()) {
+                    Ok(vp) if vp.is_valid() && (keep_default || !vp.is_default()) => {
+                        out.entry(key.clone()).or_default().insert(index, vp.clamped());
+                    }
+                    Ok(vp) if vp.is_valid() => {}
+                    Ok(_) => report
+                        .problems
+                        .push(format!("{key} camera {index}: a value is out of range")),
+                    Err(e) => report.problems.push(format!("{key} camera {index}: {e}")),
+                }
+            }
+        }
+        out
     }
 
     /// Parses file text; never fails. Invalid entries are dropped and listed in the report.
@@ -121,62 +213,32 @@ impl ViewpointStore {
                 return (store, report);
             }
         }
-        let Some(Value::Object(vehicles)) = root.get("vehicles") else {
-            return (store, report);
-        };
-        for (raw_key, entry) in vehicles {
-            let Some(key) = normalise_key(raw_key) else {
-                report
-                    .problems
-                    .push(format!("vehicle key {raw_key:?} is not valid"));
-                continue;
-            };
-            let Some(cameras) = entry.get("cameras").and_then(Value::as_object) else {
-                report.problems.push(format!("{key}: no cameras object"));
-                continue;
-            };
-            for (raw_index, value) in cameras {
-                let Ok(index) = raw_index.parse::<usize>() else {
-                    report
-                        .problems
-                        .push(format!("{key}: camera index {raw_index:?} is not a number"));
-                    continue;
-                };
-                match serde_json::from_value::<Viewpoint>(value.clone()) {
-                    Ok(vp) if vp.is_valid() && !vp.is_default() => {
-                        store
-                            .vehicles
-                            .entry(key.clone())
-                            .or_default()
-                            .insert(index, vp.clamped());
-                    }
-                    Ok(vp) if vp.is_default() => {}
-                    Ok(_) => report
-                        .problems
-                        .push(format!("{key} camera {index}: a value is out of range")),
-                    Err(e) => report.problems.push(format!("{key} camera {index}: {e}")),
-                }
-            }
-        }
+        store.vehicles = Self::parse_section(root.get("vehicles"), "vehicle", true, &mut report);
+        store.models = Self::parse_section(root.get("models"), "model", false, &mut report);
         (store, report)
     }
 
     /// The file text.
     #[must_use]
     pub fn to_json(&self) -> String {
-        let vehicles: serde_json::Map<String, Value> = self
-            .vehicles
-            .iter()
-            .map(|(key, cams)| {
-                let cams: serde_json::Map<String, Value> = cams
-                    .iter()
-                    .map(|(i, vp)| (i.to_string(), vp_json(vp)))
-                    .collect();
-                (key.clone(), json!({ "cameras": cams }))
-            })
-            .collect();
-        serde_json::to_string_pretty(&json!({ "version": FILE_VERSION, "vehicles": vehicles }))
-            .unwrap_or_default()
+        let section = |section: &Section| -> serde_json::Map<String, Value> {
+            section
+                .iter()
+                .map(|(key, cams)| {
+                    let cams: serde_json::Map<String, Value> = cams
+                        .iter()
+                        .map(|(i, vp)| (i.to_string(), vp_json(vp)))
+                        .collect();
+                    (key.clone(), json!({ "cameras": cams }))
+                })
+                .collect()
+        };
+        serde_json::to_string_pretty(&json!({
+            "version": FILE_VERSION,
+            "vehicles": section(&self.vehicles),
+            "models": section(&self.models),
+        }))
+        .unwrap_or_default()
     }
 
     /// Reads `path`. A missing file is an empty store; an unusable one is moved aside.
@@ -250,19 +312,28 @@ impl Viewpoints {
         }
     }
 
-    /// Stores a viewpoint and writes the file.
+    /// Stores a viewpoint (for the vehicle, or for its whole model) and writes the file.
     ///
     /// # Errors
     /// The I/O error when the file cannot be written; the in-memory store is updated anyway.
-    pub fn save(&mut self, key: &str, index: usize, vp: Viewpoint) -> std::io::Result<()> {
+    pub fn save(
+        &mut self,
+        key: &str,
+        model: Option<&str>,
+        index: usize,
+        vp: Viewpoint,
+        whole_model: bool,
+    ) -> std::io::Result<()> {
         // Another run may have written other vehicles meanwhile: merge into the file's content.
-        if let Some(p) = &self.path {
-            let mut fresh = ViewpointStore::load_from(p);
-            fresh.set(key, index, vp);
-            self.store = fresh;
-        } else {
-            self.store.set(key, index, vp);
+        let mut store = self
+            .path
+            .as_deref()
+            .map_or_else(|| self.store.clone(), ViewpointStore::load_from);
+        match (whole_model, model) {
+            (true, Some(m)) => store.set_model(key, m, index, vp),
+            _ => store.set_vehicle(key, model, index, vp),
         }
+        self.store = store;
         match &self.path {
             Some(p) => self.store.save_to(p),
             None => Ok(()),
@@ -274,12 +345,17 @@ impl Viewpoints {
 /// driver's view is entered. An open editor is never touched.
 pub fn load_viewpoint(
     camera: Res<CameraState>,
-    vehicle: Query<&ViewpointKey, With<PlayerVehicle>>,
+    vehicle: Query<(&ViewpointKey, Option<&ViewpointModel>), With<PlayerVehicle>>,
     mut viewpoints: ResMut<Viewpoints>,
     mut state: ResMut<ViewpointState>,
     mut was_cockpit: Local<bool>,
 ) {
-    let key = vehicle.single().ok().map(|k| k.0.clone());
+    let found = vehicle.single().ok();
+    let key = found.map(|(k, _)| k.0.clone());
+    let model = found.and_then(|(_, m)| m.map(|m| m.0.clone()));
+    if state.model_key != model {
+        state.model_key.clone_from(&model);
+    }
     let entered = camera.mode == CameraMode::Cockpit && !*was_cockpit;
     *was_cockpit = camera.mode == CameraMode::Cockpit;
     if state.vehicle_key != key {
@@ -297,7 +373,7 @@ pub fn load_viewpoint(
     }
     let vp = target
         .as_ref()
-        .and_then(|(k, i)| viewpoints.store.get(k, *i))
+        .and_then(|(k, i)| viewpoints.store.lookup(k, model.as_deref(), *i))
         .unwrap_or_default();
     if let Some((k, i)) = &target {
         tracing::debug!(vehicle = %k, camera = i, viewpoint = ?vp, "viewpoint loaded");
@@ -308,23 +384,48 @@ pub fn load_viewpoint(
     state.loaded_for = target;
 }
 
+/// Hands the *Driver's view: field of view* setting to the viewpoint state (0 or below 30 keeps
+/// each vehicle's own field of view).
+pub fn sync_default_fov(
+    registry: Res<crate::settings_registry::SettingsRegistry>,
+    settings: Res<crate::settings::GameSettings>,
+    mut state: ResMut<ViewpointState>,
+) {
+    let fov = registry
+        .text(&settings, "graphics.default_fov")
+        .and_then(|t| t.parse::<f32>().ok())
+        .filter(|f| *f >= opts_bevy::camera::viewpoint::FOV_RANGE_DEG.0)
+        .map(|f| f.min(opts_bevy::camera::viewpoint::FOV_RANGE_DEG.1));
+    if state.user_default_fov_deg != fov {
+        state.user_default_fov_deg = fov;
+    }
+}
+
 /// Writes what the editor saved (an exclusive system, so the protocol can run it on the spot).
 pub fn persist_viewpoint(world: &mut World) {
-    let Some(ViewpointRequest::Save(vp)) = world.resource::<ViewpointState>().request else {
-        return;
+    let (vp, whole_model) = match world.resource::<ViewpointState>().request {
+        Some(ViewpointRequest::Save(vp)) => (vp, false),
+        Some(ViewpointRequest::SaveModel(vp)) => (vp, true),
+        None => return,
     };
-    let (key, index) = {
+    let (key, model, index) = {
         let mut state = world.resource_mut::<ViewpointState>();
         state.request = None;
-        (state.vehicle_key.clone(), state.camera_index)
+        (
+            state.vehicle_key.clone(),
+            state.model_key.clone(),
+            state.camera_index,
+        )
     };
     let Some(key) = key else {
         return;
     };
-    let result = world.resource_mut::<Viewpoints>().save(&key, index, vp);
+    let result = world
+        .resource_mut::<Viewpoints>()
+        .save(&key, model.as_deref(), index, vp, whole_model);
     let (severity, text) = match result {
         Ok(()) => {
-            tracing::info!(vehicle = %key, camera = index, viewpoint = ?vp, "viewpoint saved");
+            tracing::info!(vehicle = %key, camera = index, whole_model, viewpoint = ?vp, "viewpoint saved");
             (AlertSeverity::Info, hud_keys::ALERT_VIEWPOINT_SAVED)
         }
         Err(e) => {
@@ -351,6 +452,9 @@ impl Plugin for ViewpointPlugin {
         app.add_systems(
             Update,
             (
+                sync_default_fov
+                    .run_if(resource_exists::<crate::settings_registry::SettingsRegistry>)
+                    .run_if(resource_exists::<crate::settings::GameSettings>),
                 load_viewpoint.after(opts_bevy::camera::input::handle_camera_key_input),
                 persist_viewpoint.after(opts_bevy::camera::viewpoint::handle_viewpoint_keys),
             )

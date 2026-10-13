@@ -613,12 +613,12 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "camera.viewpoint.save",
         "scene",
-        "Store the shown viewpoint for this vehicle and camera and close the editor",
-        "",
+        "Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor",
+        "scope:s[vehicle|model]@0?",
     )
     .since("1.2")
     .result("the `camera.viewpoint.get` result")
-    .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active."),
+    .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active."),
     c(
         "camera.viewpoint.reset",
         "scene",

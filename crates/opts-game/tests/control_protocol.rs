@@ -835,6 +835,11 @@ fn camera_viewpoint_get_set_save_reset() {
     assert_eq!(set["viewpoint"]["fov_deg"], 85.0);
     assert!(!path.exists(), "nothing is stored before save");
 
+    let e = call(&mut app, "camera.viewpoint.save", json!({"scope": "model"}))
+        .expect_err("the model is unknown");
+    assert_eq!(e.code, code::NOT_READY);
+    let e = call(&mut app, "camera.viewpoint.save", json!({"scope": "galaxy"})).expect_err("scope");
+    assert_eq!(e.code, code::INVALID_PARAMS);
     let saved = call(&mut app, "camera.viewpoint.save", json!({})).expect("save");
     assert_eq!(saved["editing"], false);
     assert_eq!(saved["dirty"], false);
@@ -894,4 +899,29 @@ fn camera_reset_resets_the_current_view_and_follows_the_gates() {
     app.insert_resource(ModalActive(true));
     let e = call(&mut app, "camera.reset", json!({})).expect_err("gated");
     assert_eq!(e.code, code::GATED);
+}
+
+#[test]
+fn camera_viewpoint_save_for_the_model_is_written_to_the_models_section() {
+    let mut app = drive_app();
+    let path = scratch("viewpoint-model").join("viewpoints.json");
+    app.init_resource::<opts_bevy::ViewpointState>()
+        .add_message::<opts_game::hud::RaiseAlert>()
+        .insert_resource(opts_game::viewpoints::Viewpoints {
+            path: Some(path.clone()),
+            store: opts_game::viewpoints::ViewpointStore::default(),
+        });
+    app.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
+    {
+        let mut st = app.world_mut().resource_mut::<opts_bevy::ViewpointState>();
+        st.vehicle_key = Some("man_sd77".to_owned());
+        st.model_key = Some("man_sd200".to_owned());
+    }
+    call(&mut app, "camera.viewpoint.set", json!({"z": 0.1})).expect("set");
+    let got = call(&mut app, "camera.viewpoint.save", json!({"scope": "model"})).expect("save");
+    assert_eq!(got["model"], "man_sd200");
+    let text = std::fs::read_to_string(&path).expect("file");
+    let v: Value = serde_json::from_str(&text).expect("json");
+    assert_eq!(v["models"]["man_sd200"]["cameras"]["0"]["z"], 0.1);
+    assert!(v["vehicles"].as_object().expect("vehicles").is_empty());
 }

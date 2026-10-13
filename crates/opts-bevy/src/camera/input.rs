@@ -1,7 +1,7 @@
 //! Number-key mode switching, availability tracking and Shift+Space reset.
 
 use bevy::input::ButtonInput;
-use bevy::math::{EulerRot, Vec3};
+use bevy::math::EulerRot;
 use bevy::prelude::*;
 
 use crate::camera::state::{CameraAvailability, CameraMode, CameraState};

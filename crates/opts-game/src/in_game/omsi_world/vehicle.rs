@@ -865,6 +865,11 @@ pub fn load_player_vehicle(
             .entity(root)
             .insert(crate::viewpoints::ViewpointKey(key));
     }
+    if let Some(model) = crate::viewpoints::model_of_bus_file(&bus_path) {
+        commands
+            .entity(root)
+            .insert(crate::viewpoints::ViewpointModel(model));
+    }
     if activate {
         commands.entity(root).insert(PlayerVehicle);
     }

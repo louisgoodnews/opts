@@ -124,4 +124,8 @@ keys! {
     VIEWPOINT_HINT = "hud-viewpoint-hint",
     /// Viewpoint editor: marker for unsaved changes.
     VIEWPOINT_UNSAVED = "hud-viewpoint-unsaved",
+    /// Viewpoint editor: the save scope is this vehicle.
+    VIEWPOINT_SCOPE_VEHICLE = "hud-viewpoint-scope-vehicle",
+    /// Viewpoint editor: the save scope is every vehicle of the model.
+    VIEWPOINT_SCOPE_MODEL = "hud-viewpoint-scope-model",
 }
