@@ -109,6 +109,13 @@ impl RemoteControls {
         }
     }
 
+    /// Continues the odometer from `metres` (a restored save): the next frame only records the
+    /// vehicle's position, so the move to the restored place is not counted as driving.
+    pub fn set_odometer(&mut self, metres: f64) {
+        self.odometer_m = metres;
+        self.last_position = None;
+    }
+
     /// Resets the odometer to the current pose of the vehicle.
     pub fn restart_odometer(&mut self) {
         self.odometer_m = 0.0;

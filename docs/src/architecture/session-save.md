@@ -44,7 +44,7 @@ Feature code registers a `SaveSection` (`App::register_save_section`, like the s
 | `apply(&mut World, &Value)` | optional; JSON to the running session, in a `stage` |
 | `migrate(from, data)` | older version to the current one |
 | `check(&Value, &CheckEnv) -> Vec<Issue>` | optional; reports missing or changed content (for the list's warning and the load's refusal) |
-| `stage`, `order` | `Stage::World` (world and HUD are up, before the saved vehicles are rebuilt) or `Stage::Settled` (all vehicles are back); `order` sorts within a stage |
+| `stage`, `order` | `Stage::World` (world and HUD are up, before the saved vehicles are rebuilt), `Stage::Vehicles` (every vehicle exists, before their state is put back) or `Stage::Settled` (states applied); `order` sorts within a stage |
 | `required` | a section whose failure stops a save or load (`session`) |
 
 The save system (`container`, `store`, `registry`, `ops`, `restore`) never names a section. `tests/save_tests.rs::a_section_registered_in_a_test_needs_no_change_to_the_save_system` registers a section from inside a test and runs it through capture, file, restore.
@@ -76,10 +76,10 @@ A write: (1) full text to `.tmp`, `fsync`; (2) old main file to `.bak`; (3) `.tm
 | Section | Holds | Restored by |
 | :--- | :--- | :--- |
 | `session` | map folder and name, start point, mode (`drive`), play time | `prepare`: `NewGameSetup`, `PlayClock` |
-| `time` | date, clock base (start hour and minute), simulated seconds since the start | `prepare` (date, base); `apply` sets the session clock (the sky and instruments follow it) |
+| `time` | date, clock base (start hour and minute), simulated seconds since the start | `prepare` (date, base); `apply` (Settled, so the clock does not run on while vehicles are rebuilt) sets the session clock; the sky and instruments follow it |
 | `weather` | weather preset | `prepare` |
 | `session_vehicles` (v2) | the registry (see [session vehicles](session-vehicles.md) §7) with, per vehicle: absolute pose, heading, velocity, yaw rate, steering, throttle, brake, retarder, parking brake, gear, rpm, **every non-zero script variable** (doors, lights, switches, destination, counters), and the `.bus` path relative to the installation | `apply` (World): the records come back as spawn requests; the spawner rebuilds each vehicle **through the normal spawn path** at its entry point, then `session_vehicles::state::apply_pending` puts the state on it once its scripts have run `{init}` and no vehicle is still spawning |
-| `active_vehicle` | which vehicle the driver is in | `Settled`: `ops::switch_to` |
+| `active_vehicle` | which vehicle the driver is in | `Vehicles` stage: `ops::switch_to`, before any state is applied (activating a vehicle parks the previous one) |
 | `camera` | mode, previous mode, sub-camera, free camera pose (absolute), orbit and look offsets | `Settled` (falls back to the free camera when the saved mode is not offered) |
 | `counters` | odometer, session duration, distance, top speed | `Settled`; the odometer continues across the activation restart (`RemoteControls::pending_odometer`) |
 | `simulation` | paused, time scale | `Settled`, last. The pause overlay's own pause is not counted as the player's pause |
@@ -108,8 +108,9 @@ begin_restore(id)
   └─ NextState(InGame)  (from Home: a normal start; from a drive: the same state is left and entered again)
 the normal loading screen (map, sky, camera over the start point)
   └─ HUD up: Stage::World sections  ->  vehicles queued
-       └─ spawner builds each vehicle  ->  state applied after {init}
-            └─ nothing spawning, nothing waiting: Stage::Settled sections, toast "Loaded …", LastRestore = Done
+       └─ spawner builds each vehicle (10 quiet frames after the last one)
+            └─ Stage::Vehicles (active vehicle)  ->  every vehicle's state applied once its {init} has run
+                 └─ nothing waiting: Stage::Settled sections (time, camera, counters, paused), toast "Loaded …", LastRestore = Done
 ```
 
 Sections that fail to apply are logged and counted as warnings (toast "Loaded with N problems"); only a `required` section failing in `prepare` refuses the load. A restore that never settles (a vehicle stuck) gives up after 120 s and settles without it. A failed loading screen ends the restore (`LastRestore = Failed`).

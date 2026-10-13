@@ -4,7 +4,7 @@
 //! | id | holds | restored |
 //! | :-- | :-- | :-- |
 //! | `session` | map folder and name, start point, mode, play time | before the session starts |
-//! | `time` | date, clock base, simulated seconds since the start | before; clock when the world is up |
+//! | `time` | date, clock base, simulated seconds since the start | date and base before; the clock when everything is back |
 //! | `weather` | weather preset | before |
 //! | `session_vehicles` | the registry with every vehicle's live state | vehicles rebuilt by the spawner |
 //! | `active_vehicle` | which vehicle the driver is in | when all vehicles exist |
@@ -380,7 +380,9 @@ pub fn register(app: &mut App) {
     })
     .register_save_section(SaveSection {
         id: "time",
-        order: 10,
+        // Last of the clock's users: the clock ran while the vehicles were rebuilt.
+        stage: Stage::Settled,
+        order: 5,
         capture: time_capture,
         prepare: Some(time_prepare),
         apply: Some(time_apply),

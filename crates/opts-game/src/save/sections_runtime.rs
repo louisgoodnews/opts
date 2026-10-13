@@ -162,7 +162,7 @@ pub(super) fn counters_apply(world: &mut World, data: &Value) -> Result<(), Stri
         stats.max_speed_m_s = d.max_speed_m_s;
     }
     if let Some(mut remote) = world.get_resource_mut::<RemoteControls>() {
-        remote.odometer_m = d.odometer_m;
+        remote.set_odometer(d.odometer_m);
         // Activating the vehicle restarts the odometer a frame later; it continues from here.
         remote.pending_odometer = Some((d.odometer_m, 5));
     }
