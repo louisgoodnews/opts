@@ -356,7 +356,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)
   - [x] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
-- [ ] **💾 Session Save and Restore** — [M-0069](phase-10/M-0069.md)
+- [x] **💾 Session Save and Restore** — [M-0069](phase-10/M-0069.md)
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [ ] **🧰 Bus Configurations** — [M-0077](phase-10/M-0077.md)
   - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
