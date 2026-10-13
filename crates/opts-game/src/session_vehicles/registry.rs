@@ -139,6 +139,10 @@ pub struct SessionVehicleRecord {
     /// was spawned or last respawned: the label stays hidden.
     #[serde(skip)]
     pub place_dismissed: bool,
+    /// Frames the entity has been missing since the record became alive (a vehicle that was just
+    /// built exists only once the spawner's commands are applied).
+    #[serde(skip)]
+    pub missing_frames: u32,
 }
 
 impl SessionVehicleRecord {
@@ -259,6 +263,7 @@ impl SessionVehicles {
             trailers: Vec::new(),
             camera: None,
             place_dismissed: false,
+            missing_frames: 0,
         });
         id
     }
@@ -294,6 +299,7 @@ impl SessionVehicles {
             r.spawn_point = point;
             r.camera = camera;
             r.place_dismissed = false;
+            r.missing_frames = 0;
             r.error = None;
         }
     }

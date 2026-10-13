@@ -321,7 +321,7 @@ fn a_vehicle_that_vanishes_is_noticed_and_never_dangles() {
     let (b, eb) = add(&mut app, "B", "x", Vec2::ZERO);
     ops::switch_to(app.world_mut(), b).expect("b");
     app.world_mut().entity_mut(eb).despawn();
-    run(&mut app, 2);
+    run(&mut app, 6);
     let reg = app.world().resource::<SessionVehicles>();
     assert_eq!(
         reg.get(b).map(|r| r.despawn_reason),

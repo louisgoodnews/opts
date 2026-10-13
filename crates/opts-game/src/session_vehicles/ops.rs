@@ -317,15 +317,30 @@ pub fn respawn(world: &mut World, id: VehicleId) -> Result<(), OpError> {
 /// they are marked [`DespawnReason::Lost`], the next vehicle becomes active and a warning toast
 /// names the vehicle. No entity of a lost vehicle is left dangling (its trailer parts go too).
 pub fn sync_lost(world: &mut World) {
-    let lost: Vec<VehicleId> = {
+    /// Frames an entity may be missing before it counts as gone: a vehicle that was just built
+    /// exists only once the spawner's commands have been applied.
+    const GRACE_FRAMES: u32 = 3;
+    let alive: Vec<(VehicleId, bool)> = {
         let reg = world.resource::<SessionVehicles>();
         reg.records()
             .iter()
             .filter(|r| r.lifecycle == Lifecycle::Alive)
-            .filter(|r| r.entity.is_none_or(|e| world.get_entity(e).is_err()))
-            .map(|r| r.id)
+            .map(|r| (r.id, r.entity.is_some_and(|e| world.get_entity(e).is_ok())))
             .collect()
     };
+    let mut lost = Vec::new();
+    for (id, present) in alive {
+        let missing = world
+            .resource_mut::<SessionVehicles>()
+            .get_mut(id)
+            .map(|r| {
+                r.missing_frames = if present { 0 } else { r.missing_frames + 1 };
+                r.missing_frames
+            });
+        if missing.is_some_and(|m| m > GRACE_FRAMES) {
+            lost.push(id);
+        }
+    }
     for id in lost {
         let (name, trailers) = {
             let reg = world.resource::<SessionVehicles>();
