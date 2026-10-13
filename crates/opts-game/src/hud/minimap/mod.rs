@@ -447,42 +447,20 @@ pub fn update_caption(
     }
 }
 
-/// The viewpoint editor's panel owns the right edge while it is open. When it would reach the map
-/// (a low window or a large UI scale) the map steps aside: it is hidden, not removed, so nothing
-/// moves, and it comes back when the editor closes.
-pub fn avoid_viewpoint_panel(world: &mut World) {
-    let panel = world
-        .query_filtered::<Entity, With<super::viewpoint::ViewpointPanel>>()
-        .iter(world)
-        .next();
-    let maps: Vec<Entity> = world
-        .query_filtered::<Entity, With<super::parts::MapBox>>()
-        .iter(world)
-        .collect();
-    for map in maps {
-        let overlap = panel.is_some_and(|p| {
-            match (
-                opts_gui::ui_tree::rect_of(world, p),
-                opts_gui::ui_tree::rect_of(world, map),
-            ) {
-                (Some(a), Some(b)) => {
-                    a[0] < b[0] + b[2]
-                        && b[0] < a[0] + a[2]
-                        && a[1] < b[1] + b[3]
-                        && b[1] < a[1] + a[3]
-                }
-                _ => false,
-            }
-        });
-        let want = if overlap {
-            Visibility::Hidden
-        } else {
-            Visibility::Inherited
-        };
-        if let Some(mut vis) = world.get_mut::<Visibility>(map) {
-            if *vis != want {
-                *vis = want;
-            }
+/// The viewpoint editor's panel owns the right edge while it is open, so the map steps aside: it
+/// is hidden (not removed, so nothing moves) and comes back when the editor closes.
+pub fn avoid_viewpoint_panel(
+    editor: Option<Res<opts_bevy::ViewpointState>>,
+    mut maps: Query<&mut Visibility, With<super::parts::MapBox>>,
+) {
+    let want = if editor.is_some_and(|e| e.editing) {
+        Visibility::Hidden
+    } else {
+        Visibility::Inherited
+    };
+    for mut vis in &mut maps {
+        if *vis != want {
+            *vis = want;
         }
     }
 }

@@ -162,6 +162,7 @@ pub fn update_texts(
 pub fn update_widget_display(
     values: Res<HudValues>,
     settings: Res<GameSettings>,
+    layout: Res<HudLayout>,
     mut nodes: Query<
         (&HudWidgetNode, &mut Node, Option<&mut Visibility>),
         (Without<HudSlot>, Without<HudRow>),
@@ -205,7 +206,8 @@ pub fn update_widget_display(
     }
     let cluster_on = any_row.values().any(|on| *on);
     for (row, mut node) in &mut rows {
-        let display = if any_row.get(&row.0).copied().unwrap_or(true) {
+        let room = row.0 != Row::Hints || layout.hints;
+        let display = if room && any_row.get(&row.0).copied().unwrap_or(true) {
             Display::Flex
         } else {
             Display::None

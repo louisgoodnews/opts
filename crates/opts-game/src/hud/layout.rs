@@ -30,6 +30,9 @@ pub struct HudLayout {
     pub map_side: f32,
     /// Width of the layout area.
     pub width: f32,
+    /// The hint row has room (a low layout area drops it: the cluster would reach the camera
+    /// label, and the hints are on the Help page).
+    pub hints: bool,
     /// The viewpoint editor is open: its panel takes the right edge.
     pub editor: bool,
     /// Padding of the HUD root (distance from the window edges).
@@ -50,6 +53,7 @@ impl HudLayout {
         Self {
             compact,
             width,
+            hints: height >= COMPACT_BELOW_HEIGHT,
             editor: false,
             map_side: (height * MAP_HEIGHT_SHARE).clamp(MAP_SIDE_RANGE.0, MAP_SIDE_RANGE.1),
             margin: if compact { 12.0 } else { 20.0 },
@@ -67,9 +71,19 @@ impl HudLayout {
         } else {
             self.map_side + 12.0
         };
-        (self.width - right - 2.0 * self.margin).max(120.0)
+        let room = (self.width - right - 2.0 * self.margin).max(120.0);
+        // With the editor open the cluster is only as wide as its instrument row, so that the
+        // toasts at the bottom edge stay clear of it.
+        if self.editor {
+            room.min(EDITOR_CLUSTER_WIDTH)
+        } else {
+            room
+        }
     }
 }
+
+/// The widest the cluster is while the viewpoint editor is open (layout px).
+pub const EDITOR_CLUSTER_WIDTH: f32 = 300.0;
 
 /// Width of the viewpoint editor's panel (layout px), see `hud::viewpoint`.
 pub const VIEWPOINT_PANEL_WIDTH: f32 = 380.0;
@@ -89,6 +103,7 @@ pub fn measure(
     }
     let mut next = HudLayout::for_area(w, h);
     next.editor = viewpoint.is_some_and(|v| v.editing);
+    next.hints = next.hints && !next.editor;
     layout.set_if_neq(next);
 }
 
@@ -146,7 +161,7 @@ const TOAST_MIN_WIDTH: f32 = 280.0;
 /// `0` (the cluster alone is clear of the toasts when it stays left of them).
 pub fn toast_inset(
     layout: Res<HudLayout>,
-    maps: Query<(&ComputedNode, &Node), With<MapBox>>,
+    maps: Query<(&ComputedNode, &Node, &Visibility), With<MapBox>>,
     clusters: Query<(&HudSlot, &ComputedNode, &UiGlobalTransform, &Node)>,
     toasts: Query<&ComputedNode, With<opts_gui::components::toast::M3Toast>>,
     mut inset: ResMut<opts_gui::components::toast_stack::ToastInset>,
@@ -155,8 +170,8 @@ pub fn toast_inset(
     let k = |c: &ComputedNode| c.inverse_scale_factor();
     let map_height = maps
         .iter()
-        .find(|(_, n)| n.display != Display::None)
-        .map_or(0.0, |(c, _)| c.size().y * k(c));
+        .find(|(_, n, v)| n.display != Display::None && **v != Visibility::Hidden)
+        .map_or(0.0, |(c, _, _)| c.size().y * k(c));
     // The cluster: its right edge and height.
     let cluster = clusters
         .iter()
@@ -171,7 +186,8 @@ pub fn toast_inset(
         .fold(TOAST_MIN_WIDTH, f32::max);
     let toast_left = layout.width - MARGIN - widest;
     let mut height = map_height;
-    if let Some((right, cluster_height)) = cluster {
+    // While the editor's panel is open the toasts stay at the bottom edge, below the panel.
+    if let (Some((right, cluster_height)), false) = (cluster, layout.editor) {
         if right + TOAST_GAP > toast_left {
             height = height.max(cluster_height);
         }

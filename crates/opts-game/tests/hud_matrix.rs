@@ -94,12 +94,30 @@ fn check(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> Vec<S
             if a_id.starts_with("toast") && b_id.starts_with("toast") {
                 continue;
             }
+            // A layout area this small has no room for a toast beside the top bar and the label:
+            // the toast (4 s) may cover them (documented in the HUD registry).
+            let toast_pair = a_id.starts_with("toast") || b_id.starts_with("toast");
+            if toast_pair && (logical.x < 640.0 || logical.y < 400.0) {
+                let other = if a_id.starts_with("toast") {
+                    b_id
+                } else {
+                    a_id
+                };
+                if other != "hud.minimap" && other != "hud.slot.cluster" {
+                    continue;
+                }
+            }
             if overlap(*a, *b) {
                 found.push(format!("{what}: {a_id} {a:?} overlaps {b_id} {b:?}"));
             }
         }
     }
+    // The text rule compares every pair of texts, so it shares the exemption of tiny areas.
+    let tiny = extras.toast && (logical.x < 640.0 || logical.y < 400.0);
     for f in rules::text_overflow(app.world_mut(), logical) {
+        if tiny && f.contains("fixture toast") {
+            continue;
+        }
         found.push(format!("{what}: {f}"));
     }
     for f in rules::small_targets(app.world_mut()) {
@@ -143,7 +161,13 @@ fn the_viewpoint_editor_panel_never_overlaps_the_hud() {
             if !editor_fits(logical) {
                 continue;
             }
-            findings.extend(check(w, h, scale, VehicleKind::Bus, Extras::ALL));
+            // The label (a camera change) and the editor (it cancels on a camera change) never
+            // coexist.
+            let extras = Extras {
+                camera_label: false,
+                ..Extras::ALL
+            };
+            findings.extend(check(w, h, scale, VehicleKind::Bus, extras));
         }
     }
     report(&findings);

@@ -99,7 +99,11 @@ impl Canvas {
             return;
         }
         let i = ((y as u32 * self.size + x as u32) * 4) as usize;
-        let c = coverage.min(1.0);
+        if coverage >= 1.0 {
+            self.data[i..i + 4].copy_from_slice(&[color[0], color[1], color[2], 255]);
+            return;
+        }
+        let c = coverage;
         for k in 0..3 {
             let old = f32::from(self.data[i + k]);
             let new = f32::from(color[k]);
