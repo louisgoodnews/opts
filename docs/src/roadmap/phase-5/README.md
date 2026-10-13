@@ -19,6 +19,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Merged to `master` 2026-10-11; `Interaction` follow-up open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
+- [M-0072 — Settings and Configuration through the Control Protocol](M-0072.md) — 📝 Planned (R-10)
+- [M-0074 — Roadmap Adherence and Expansion](M-0074.md) — 📝 Planned, 🔴 high (R-06)
 - [M-0054 — Scenery Object Load Verification (`opts-benchmark`)](M-0054.md) — 🟡 Spec done (Phase A), harness planned, 🔴 high
 
 ## Checklist
@@ -57,3 +59,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Implement the harness with static checks and calibrate thresholds (Phase B).
   - [ ] Script-effect checks; audio recorded only (Phase C, needs a scenery-script runtime).
   - [ ] Full corpus run and triage report (Phase D); fixes by failure category (Phase E).
+- [ ] **🛠️ Settings and Configuration through the Control Protocol** — [M-0072](M-0072.md)
+  - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
+- [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](M-0074.md)
+  - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
