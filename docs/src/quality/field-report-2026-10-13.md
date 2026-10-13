@@ -12,8 +12,8 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | :--- | :--- | :--- | :--- | :--- |
 | R-01 | Some **parked car** meshes are not loaded correctly: scrambled, missing or transparent meshes | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) (discovery: P-1014 mesh audit) | 📝 open |
 | R-02 | OPTS **cannot load water**, although `.water` files lie next to the tiles; they need to be handled | world | [M-0067](../roadmap/phase-10/M-0067.md) | 📝 open |
-| R-03 | The simulation must be **startable without a bus**: the vehicle selection needs a way to load only the map | session / UI | [M-0068](../roadmap/phase-10/M-0068.md) | 📝 open |
-| R-04 | OPTS must **track the user vehicles spawned in a session**, let the user **change the active bus** and **despawn any** previously spawned, still existing bus (follow-up 2026-10-13: *despawn*, not *respawn*, was meant; the active bus keeps its respawn) | session | [M-0068](../roadmap/phase-10/M-0068.md) | 📝 open |
+| R-03 | The simulation must be **startable without a bus**: the vehicle selection needs a way to load only the map | session / UI | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
+| R-04 | OPTS must **track the user vehicles spawned in a session**, let the user **change the active bus** and **despawn any** previously spawned, still existing bus (follow-up 2026-10-13: *despawn*, not *respawn*, was meant; the active bus keeps its respawn) | session | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
 | R-05 | **Session persistence**: save the current session and restore it; expandable for weather, timetables and more | session | [M-0069](../roadmap/phase-10/M-0069.md) | 📝 open |
 | R-06 | **Adhere to the roadmap** again and **expand it** | process | [M-0074](../roadmap/phase-5/M-0074.md) | 📝 open |
 | R-07 | The date/time step of a new game must **default to the map's defined time**, otherwise the **current date and time** | UI / wizard | [M-0070](../roadmap/phase-9/M-0070.md) | 📝 open |
@@ -26,9 +26,9 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-12 | The HUD always shows the fixed string 'Spandau Westerwaldstraße/Siegener Str.' (hard-coded). It must show the **entry point name where the active vehicle spawned**, disappear when the bus has moved away or is despawned, and return with a new spawn | HUD | [M-0075](../roadmap/phase-9/M-0075.md) (data from [M-0068](../roadmap/phase-10/M-0068.md)) | 📝 open |
-| R-13 | The loading screen first shows the **MAN SD77** (hard-coded) and switches to the selected vehicle at about 70 %; the selection (or none) should be known from the start | loading | [M-0076](../roadmap/phase-9/M-0076.md) | 📝 open |
-| R-14 | Correction of R-04: the wish was to **despawn** any session vehicle, not respawn | session | [M-0068](../roadmap/phase-10/M-0068.md) | 📝 specified |
+| R-12 | The HUD always shows the fixed string 'Spandau Westerwaldstraße/Siegener Str.' (hard-coded). It must show the **entry point name where the active vehicle spawned**, disappear when the bus has moved away or is despawned, and return with a new spawn | HUD | [M-0075](../roadmap/phase-9/M-0075.md) (data from [M-0068](../roadmap/phase-10/M-0068.md)) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
+| R-13 | The loading screen first shows the **MAN SD77** (hard-coded) and switches to the selected vehicle at about 70 %; the selection (or none) should be known from the start | loading | [M-0076](../roadmap/phase-9/M-0076.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
+| R-14 | Correction of R-04: the wish was to **despawn** any session vehicle, not respawn | session | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
 | R-15 | **Bus configurations** (bus, repaint, setvars) that can be saved and quick-loaded | session / UI | [M-0077](../roadmap/phase-10/M-0077.md) | 📝 open |
 | R-16 | **Setvar implementation**: derive each bus's setvar list from its `.cti` files, the Add-on **PDFs** and the **varnamelists** (lists named *visible* can hold setvars) | vehicles | [M-0078](../roadmap/phase-10/M-0078.md) | 📝 open |
 | R-17 | Several **building meshes are flipped** along an axis and/or have **misaligned textures** | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |

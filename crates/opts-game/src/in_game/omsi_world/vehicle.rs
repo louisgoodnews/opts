@@ -769,7 +769,7 @@ pub struct SpawnedVehicle {
 }
 
 /// Loads a user vehicle from its `.bus` file and spawns it at the session's spawn point
-/// ([`WorldLoadJob::spawn`]), as session vehicle `session_id`. With `activate` it also becomes the
+/// ([`WorldLoadJob::spawn_point`]), as session vehicle `session_id`. With `activate` it also becomes the
 /// player's vehicle (`PlayerVehicle`, the HUD and `WorldStats` follow it); without, it is built
 /// as a parked session vehicle and the caller switches to it when it wants to.
 #[allow(clippy::too_many_arguments)]

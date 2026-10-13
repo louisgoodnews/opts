@@ -15,5 +15,6 @@ Gates: fmt, clippy -D warnings, `cargo test --workspace --all-features`, `RUSTDO
 - opts-bevy: `DriverHead` + `sync_player_head` keep exactly one `PlayerHead`.
 
 ## Status
-Done (uncommitted until first WIP commit, not yet compiled): registry, ops, plugin, spawner rewrite, loading pipeline registration, wizard none entry, l10n keys.
-TODO: compile fixes; InGamePlugin adds SessionVehiclesPlugin + `pub mod session_vehicles` in lib.rs; ground_height/collision use SessionVehicle + per-entity BodyMotion; HUD (place label in session widget, no instruments without vehicle, rebuild on kind change, hud.state place_label, source test no map literals); M-0076 loading line (InGameSessionInfo.vehicle_name/none set once in setup_in_game_session, LoadingUi uses it, test first frame x3+none, source test no default); vehicle menu list/switch/despawn(dialog)/respawn; control protocol session.* (+docs regen, protocol 1.2.0); headless tests (vehicle-less N frames, per command); live verification; docs (M-0068/75/76, READMEs, ROADMAP, BOARD, field report, architecture/session-vehicles.md); gates.
+All code, tests, docs done and committed on the branch; live verification done (map-only start, two buses via session.spawn, switch, 85 m drive with the place label vanishing at ~25 m, despawn inactive and active, pause menu rows, F8, despawn dialog). Scratch deleted.
+Remaining: final gates (fmt, clippy of own crates, workspace tests, rustdoc, links, roadmap copy) and the report.
+Pre-existing, not from this branch: clippy errors in `opts-core` examples and `tests/uv_decoder.rs`; `opts-benchmark --test run_control crash_hang_recycle_and_resume` (checked separately).

@@ -10,7 +10,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 📝 Planned, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
-- [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — 📝 Planned, 🔴 high (R-03, R-04)
+- [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
 - [M-0069 — Session Save and Restore](M-0069.md) — 📝 Planned, 🔴 high (R-05)
 - [M-0073 — Vehicle Dynamics: Individual Mass, Axles, Suspension and Brakes](M-0073.md) — 📝 Planned, 🔴 high (R-11)
 - [M-0077 — Bus Configurations (Quick-Load Presets)](M-0077.md) — 📝 Planned (R-15)
@@ -30,8 +30,8 @@ Suggested order: M-0068 (sessions) before M-0069 (save needs the registry); M-00
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
 - [ ] **🌊 Water Rendering** — [M-0067](M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
-- [ ] **🚌 Session Vehicles** — [M-0068](M-0068.md)
-  - [ ] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
+- [x] **🚌 Session Vehicles** — [M-0068](M-0068.md)
+  - [x] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
 - [ ] **💾 Session Save and Restore** — [M-0069](M-0069.md)
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [ ] **🧰 Bus Configurations** — [M-0077](M-0077.md)
