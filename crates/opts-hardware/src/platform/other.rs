@@ -16,7 +16,10 @@ impl PlatformProbe for Native {
         Fact::Unknown(Reason::NotOnThisPlatform)
     }
     fn cpu_caches_kib(&self) -> (Fact<u32>, Fact<u32>) {
-        (Fact::Unknown(Reason::NotOnThisPlatform), Fact::Unknown(Reason::NotOnThisPlatform))
+        (
+            Fact::Unknown(Reason::NotOnThisPlatform),
+            Fact::Unknown(Reason::NotOnThisPlatform),
+        )
     }
     fn gpu_fallback(&self) -> GpuInfo {
         super::gpu_needs_renderer()

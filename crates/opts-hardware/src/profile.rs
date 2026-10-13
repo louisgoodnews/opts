@@ -281,7 +281,10 @@ impl std::fmt::Display for LoadError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Parse(e) => write!(f, "hardware profile unreadable: {e}"),
-            Self::TooNew(v) => write!(f, "hardware profile schema {v} is newer than {SCHEMA_VERSION}"),
+            Self::TooNew(v) => write!(
+                f,
+                "hardware profile schema {v} is newer than {SCHEMA_VERSION}"
+            ),
         }
     }
 }
@@ -312,7 +315,9 @@ impl HardwareProfile {
     /// class; it is used only to decide whether cached benchmarks still apply.
     #[must_use]
     pub fn class_hash(&self) -> String {
-        let bucket = |v: Option<u64>, base: u64| v.map_or(0, |x| 64 - (x / base.max(1)).leading_zeros() as u64);
+        let bucket = |v: Option<u64>, base: u64| {
+            v.map_or(0, |x| 64 - (x / base.max(1)).leading_zeros() as u64)
+        };
         let parts = [
             format!("{:?}", self.os.family.get()),
             format!("{:?}", self.cpu.arch.get()),
@@ -345,17 +350,58 @@ macro_rules! all_unknown {
     };
 }
 
-all_unknown!(OsInfo { family, version, display_server, environment });
-all_unknown!(CpuInfo { arch, vendor, physical_cores, logical_cores, features, cache_l2_kib, cache_l3_kib });
-all_unknown!(MemoryInfo { total_mib, available_mib });
+all_unknown!(OsInfo {
+    family,
+    version,
+    display_server,
+    environment
+});
+all_unknown!(CpuInfo {
+    arch,
+    vendor,
+    physical_cores,
+    logical_cores,
+    features,
+    cache_l2_kib,
+    cache_l3_kib
+});
+all_unknown!(MemoryInfo {
+    total_mib,
+    available_mib
+});
 all_unknown!(GpuInfo {
-    vendor, device_class, vram_mib, backend, max_texture_2d, max_buffer_mib, features, ray_tracing,
+    vendor,
+    device_class,
+    vram_mib,
+    backend,
+    max_texture_2d,
+    max_buffer_mib,
+    features,
+    ray_tracing,
     dlss_runtime
 });
-all_unknown!(DisplayInfo { count, width, height, refresh_hz, scale_percent, hdr });
+all_unknown!(DisplayInfo {
+    count,
+    width,
+    height,
+    refresh_hz,
+    scale_percent,
+    hdr
+});
 all_unknown!(StorageInfo { class, free_gib });
-all_unknown!(AudioInfo { device_present, channels });
-all_unknown!(InputInfo { gamepad_present, wheel_present });
+all_unknown!(AudioInfo {
+    device_present,
+    channels
+});
+all_unknown!(InputInfo {
+    gamepad_present,
+    wheel_present
+});
 all_unknown!(Benchmarks {
-    cpu_single_mops, cpu_multi_mops, memory_mib_s, storage_read_mib_s, gpu_fill, measured_for_class
+    cpu_single_mops,
+    cpu_multi_mops,
+    memory_mib_s,
+    storage_read_mib_s,
+    gpu_fill,
+    measured_for_class
 });

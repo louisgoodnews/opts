@@ -3,7 +3,10 @@
 //! Compiled on every platform so the table is tested everywhere.
 #![cfg_attr(
     not(any(target_os = "linux", test)),
-    allow(dead_code, reason = "only the Linux probe reads files; the table is tested everywhere")
+    allow(
+        dead_code,
+        reason = "only the Linux probe reads files; the table is tested everywhere"
+    )
 )]
 
 use std::fs;
@@ -19,11 +22,26 @@ pub const READ: &[(&str, &str)] = &[
     ("/proc/self/cgroup", "container keywords only"),
     ("/proc/asound/cards", "number of sound cards only"),
     ("/proc/bus/input/devices", "number of `js*` handlers only"),
-    ("/sys/devices/system/cpu/cpu0/cache/index*/level", "cache level"),
-    ("/sys/devices/system/cpu/cpu0/cache/index*/type", "cache type"),
-    ("/sys/devices/system/cpu/cpu0/cache/index*/size", "cache size"),
-    ("/sys/class/drm/card*/device/vendor", "PCI vendor id, classified"),
-    ("/sys/class/drm/card*/device/mem_info_vram_total", "video memory (amdgpu)"),
+    (
+        "/sys/devices/system/cpu/cpu0/cache/index*/level",
+        "cache level",
+    ),
+    (
+        "/sys/devices/system/cpu/cpu0/cache/index*/type",
+        "cache type",
+    ),
+    (
+        "/sys/devices/system/cpu/cpu0/cache/index*/size",
+        "cache size",
+    ),
+    (
+        "/sys/class/drm/card*/device/vendor",
+        "PCI vendor id, classified",
+    ),
+    (
+        "/sys/class/drm/card*/device/mem_info_vram_total",
+        "video memory (amdgpu)",
+    ),
     ("/sys/class/drm/card*-*/status", "connected or not"),
     ("/sys/class/drm/card*-*/modes", "preferred resolution only"),
     ("/sys/class/dmi/id/sys_vendor", "hypervisor keyword only"),

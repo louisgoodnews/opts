@@ -6,9 +6,7 @@ use super::PlatformProbe;
 use crate::allowlist;
 use crate::fact::{Fact, Reason};
 use crate::parse;
-use crate::profile::{
-    AudioInfo, DisplayInfo, DisplayServer, Environment, GpuInfo, InputInfo,
-};
+use crate::profile::{AudioInfo, DisplayInfo, DisplayServer, Environment, GpuInfo, InputInfo};
 
 /// The probe of this platform.
 pub struct Native;
@@ -90,16 +88,18 @@ impl PlatformProbe for Native {
             return g;
         };
         // The first card (`cardN`, no connector suffix) with a readable vendor id wins.
-        for card in entries.iter().filter(|e| e.starts_with("card") && !e.contains('-')) {
+        for card in entries
+            .iter()
+            .filter(|e| e.starts_with("card") && !e.contains('-'))
+        {
             let Ok(id) = allowlist::read(&format!("/sys/class/drm/{card}/device/vendor")) else {
                 continue;
             };
             g.vendor = Fact::Known(parse::pci_vendor(&id));
-            if let Some(b) = allowlist::read(&format!(
-                "/sys/class/drm/{card}/device/mem_info_vram_total"
-            ))
-            .ok()
-            .and_then(|t| t.trim().parse::<u64>().ok())
+            if let Some(b) =
+                allowlist::read(&format!("/sys/class/drm/{card}/device/mem_info_vram_total"))
+                    .ok()
+                    .and_then(|t| t.trim().parse::<u64>().ok())
             {
                 g.vram_mib = Fact::Known(parse::mib(b));
             }
@@ -115,7 +115,10 @@ impl PlatformProbe for Native {
         };
         let mut count = 0u32;
         let mut first = None;
-        for c in entries.iter().filter(|e| e.starts_with("card") && e.contains('-')) {
+        for c in entries
+            .iter()
+            .filter(|e| e.starts_with("card") && e.contains('-'))
+        {
             let connected = allowlist::read(&format!("/sys/class/drm/{c}/status"))
                 .is_ok_and(|s| s.trim() == "connected");
             if !connected {
@@ -161,9 +164,18 @@ mod tests {
 
     #[test]
     fn session_type_wins_then_sockets() {
-        assert_eq!(display_server_from(Some("wayland"), false, true), DisplayServer::Wayland);
-        assert_eq!(display_server_from(Some("tty"), false, true), DisplayServer::X11);
-        assert_eq!(display_server_from(None, true, true), DisplayServer::Wayland);
+        assert_eq!(
+            display_server_from(Some("wayland"), false, true),
+            DisplayServer::Wayland
+        );
+        assert_eq!(
+            display_server_from(Some("tty"), false, true),
+            DisplayServer::X11
+        );
+        assert_eq!(
+            display_server_from(None, true, true),
+            DisplayServer::Wayland
+        );
         assert_eq!(display_server_from(None, false, false), DisplayServer::None);
     }
 
@@ -171,6 +183,11 @@ mod tests {
     fn probes_never_panic_here() {
         let n = Native;
         let _ = (n.display_server(), n.environment(), n.cpu_caches_kib());
-        let _ = (n.gpu_fallback(), n.display_fallback(), n.audio_fallback(), n.input_fallback());
+        let _ = (
+            n.gpu_fallback(),
+            n.display_fallback(),
+            n.audio_fallback(),
+            n.input_fallback(),
+        );
     }
 }

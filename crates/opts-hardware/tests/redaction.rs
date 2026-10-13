@@ -17,7 +17,9 @@ fn has_mac(text: &str) -> bool {
     (0..b.len().saturating_sub(16)).any(|i| {
         let w = &text[i..i + 17];
         w.is_ascii()
-            && [2, 5, 8, 11, 14].iter().all(|k| matches!(w.as_bytes()[*k], b':' | b'-'))
+            && [2, 5, 8, 11, 14]
+                .iter()
+                .all(|k| matches!(w.as_bytes()[*k], b':' | b'-'))
             && [0, 3, 6, 9, 12, 15].iter().all(|k| is_hex(&w[*k..*k + 2]))
     })
 }
@@ -29,13 +31,22 @@ fn has_uuid(text: &str) -> bool {
         let w = &text[i..i + 36];
         w.is_ascii()
             && [8, 13, 18, 23].iter().all(|k| w.as_bytes()[*k] == b'-')
-            && [(0, 8), (9, 13), (14, 18), (19, 23), (24, 36)].iter().all(|(a, z)| is_hex(&w[*a..*z]))
+            && [(0, 8), (9, 13), (14, 18), (19, 23), (24, 36)]
+                .iter()
+                .all(|(a, z)| is_hex(&w[*a..*z]))
     })
 }
 
 fn identity_words() -> Vec<String> {
     let mut v = Vec::new();
-    for key in ["USER", "USERNAME", "LOGNAME", "HOSTNAME", "COMPUTERNAME", "HOME"] {
+    for key in [
+        "USER",
+        "USERNAME",
+        "LOGNAME",
+        "HOSTNAME",
+        "COMPUTERNAME",
+        "HOME",
+    ] {
         if let Ok(x) = std::env::var(key) {
             v.push(x);
         }
@@ -52,13 +63,24 @@ fn identity_words() -> Vec<String> {
 
 fn allowed_words() -> Vec<String> {
     let mut v: Vec<String> = Reason::ALL.iter().map(|r| r.key().to_owned()).collect();
-    v.extend(ISA_FEATURES.iter().chain(GPU_FEATURES).map(|s| (*s).to_owned()));
+    v.extend(
+        ISA_FEATURES
+            .iter()
+            .chain(GPU_FEATURES)
+            .map(|s| (*s).to_owned()),
+    );
     // Enum keys: take them from the generated vocabulary of the reference page.
     v.extend(
         opts_hardware::reference::render()
             .lines()
             .filter(|l| l.starts_with("* `"))
-            .flat_map(|l| l.split('`').skip(1).step_by(2).map(str::to_owned).collect::<Vec<_>>()),
+            .flat_map(|l| {
+                l.split('`')
+                    .skip(1)
+                    .step_by(2)
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>()
+            }),
     );
     v
 }
@@ -72,7 +94,9 @@ fn assert_closed_vocabulary(v: &Value, allowed: &[String]) {
             "string {s:?} is outside the vocabulary"
         ),
         Value::Array(a) => a.iter().for_each(|x| assert_closed_vocabulary(x, allowed)),
-        Value::Object(m) => m.values().for_each(|x| assert_closed_vocabulary(x, allowed)),
+        Value::Object(m) => m
+            .values()
+            .for_each(|x| assert_closed_vocabulary(x, allowed)),
         _ => {}
     }
 }
@@ -98,13 +122,30 @@ fn hostile() -> ProbeInputs {
             vram_mib: Some(8192),
             max_texture_2d: Some(16384),
             max_buffer_bytes: Some(1 << 32),
-            features: vec![evil.to_owned(), "texture_compression_bc".to_owned(), format!("{evil}timestamp_query")],
+            features: vec![
+                evil.to_owned(),
+                "texture_compression_bc".to_owned(),
+                format!("{evil}timestamp_query"),
+            ],
             ray_tracing: Some(true),
             dlss_runtime: Some(false),
         }),
-        display: Some(DisplayInput { count: 2, width: 2560, height: 1440, refresh_millihertz: Some(143_981), scale_factor: Some(1.0), hdr: Some(false) }),
-        audio: Some(AudioInput { device_present: true, channels: Some(2) }),
-        input: Some(InputDevicesInput { gamepads: 1, wheels: Some(0) }),
+        display: Some(DisplayInput {
+            count: 2,
+            width: 2560,
+            height: 1440,
+            refresh_millihertz: Some(143_981),
+            scale_factor: Some(1.0),
+            hdr: Some(false),
+        }),
+        audio: Some(AudioInput {
+            device_present: true,
+            channels: Some(2),
+        }),
+        input: Some(InputDevicesInput {
+            gamepads: 1,
+            wheels: Some(0),
+        }),
         ..ProbeInputs::default()
     }
 }
@@ -118,7 +159,11 @@ fn real_profile_contains_no_identifiers() {
 fn profile_with_hostile_renderer_strings_contains_no_identifiers() {
     let p = probe_with(&hostile());
     check(&p);
-    assert_eq!(p.gpu.features.known().map(Vec::len), Some(1), "only the allowlisted feature survives");
+    assert_eq!(
+        p.gpu.features.known().map(Vec::len),
+        Some(1),
+        "only the allowlisted feature survives"
+    );
     assert_eq!(p.display.refresh_hz.get(), Some(144));
 }
 
@@ -135,6 +180,8 @@ fn the_scanners_detect_what_they_should() {
     assert!(has_mac("x aa:bb:cc:dd:ee:ff y"));
     assert!(has_mac("AA-BB-CC-DD-EE-FF"));
     assert!(!has_mac("aa:bb:cc"));
-    assert!(has_uuid("{\"id\":\"123e4567-e89b-12d3-a456-426614174000\"}"));
+    assert!(has_uuid(
+        "{\"id\":\"123e4567-e89b-12d3-a456-426614174000\"}"
+    ));
     assert!(!has_uuid("not-a-uuid-at-all"));
 }

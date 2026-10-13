@@ -3,7 +3,10 @@
 //! the input text (which may contain model names or identifiers) is dropped by the caller.
 #![cfg_attr(
     not(any(target_os = "linux", test)),
-    allow(dead_code, reason = "the Linux parsers are compiled everywhere to be tested everywhere")
+    allow(
+        dead_code,
+        reason = "the Linux parsers are compiled everywhere to be tested everywhere"
+    )
 )]
 
 use crate::profile::{Arch, CpuVendor, Environment, GpuBackend, GpuClass, GpuVendor, VersionClass};
@@ -126,7 +129,15 @@ pub fn cgroup_container(text: &str) -> bool {
 #[must_use]
 pub fn dmi_virtual(text: &str) -> bool {
     const WORDS: [&str; 9] = [
-        "qemu", "kvm", "vmware", "virtualbox", "xen", "bochs", "parallels", "hyper-v", "virtual machine",
+        "qemu",
+        "kvm",
+        "vmware",
+        "virtualbox",
+        "xen",
+        "bochs",
+        "parallels",
+        "hyper-v",
+        "virtual machine",
     ];
     let l = text.to_ascii_lowercase();
     WORDS.iter().any(|w| l.contains(w))
@@ -213,7 +224,10 @@ mod tests {
 
     #[test]
     fn vendors() {
-        assert_eq!(cpu_vendor("GenuineIntel", "Intel(R) Core(TM) i7"), CpuVendor::Intel);
+        assert_eq!(
+            cpu_vendor("GenuineIntel", "Intel(R) Core(TM) i7"),
+            CpuVendor::Intel
+        );
         assert_eq!(cpu_vendor("AuthenticAMD", "AMD Ryzen 5"), CpuVendor::Amd);
         assert_eq!(cpu_vendor("", "Apple M2 Pro"), CpuVendor::Apple);
         assert_eq!(cpu_vendor("0x41", "Cortex-A76"), CpuVendor::Arm);
@@ -247,8 +261,12 @@ mod tests {
 
     #[test]
     fn environment_evidence() {
-        assert!(cpuinfo_hypervisor("processor : 0\nflags : fpu vme hypervisor lm\n"));
-        assert!(!cpuinfo_hypervisor("flags : fpu vme lm\nmodel name : hypervisor inc\n"));
+        assert!(cpuinfo_hypervisor(
+            "processor : 0\nflags : fpu vme hypervisor lm\n"
+        ));
+        assert!(!cpuinfo_hypervisor(
+            "flags : fpu vme lm\nmodel name : hypervisor inc\n"
+        ));
         assert!(cgroup_container("0::/docker/abc\n"));
         assert!(cgroup_container("12:cpu:/kubepods/burstable\n"));
         assert!(!cgroup_container("0::/user.slice/session-1.scope\n"));

@@ -75,7 +75,12 @@ pub struct BenchOptions {
 
 impl Default for BenchOptions {
     fn default() -> Self {
-        Self { cpu_time: Duration::from_millis(250), memory_mib: 64, storage_dir: None, storage_mib: 64 }
+        Self {
+            cpu_time: Duration::from_millis(250),
+            memory_mib: 64,
+            storage_dir: None,
+            storage_mib: 64,
+        }
     }
 }
 
@@ -103,7 +108,9 @@ fn cpu(threads: usize, time: Duration, cancel: &CancelToken) -> Fact<u32> {
     let start = Instant::now();
     let until = start + time;
     let ops: u64 = std::thread::scope(|s| {
-        let handles: Vec<_> = (0..threads.max(1)).map(|_| s.spawn(|| spin(until, cancel))).collect();
+        let handles: Vec<_> = (0..threads.max(1))
+            .map(|_| s.spawn(|| spin(until, cancel)))
+            .collect();
         handles.into_iter().map(|h| h.join().unwrap_or(0)).sum()
     });
     if cancel.is_cancelled() {
@@ -196,10 +203,12 @@ pub fn run(
             Step::CpuMulti => b.cpu_multi_mops = cpu(threads, opts.cpu_time, cancel),
             Step::Memory => b.memory_mib_s = memory(opts.memory_mib, cancel),
             Step::Storage => {
-                b.storage_read_mib_s = opts.storage_dir.as_deref().map_or(
-                    Fact::Unknown(Reason::NotRequested),
-                    |d| storage(d, opts.storage_mib, cancel),
-                );
+                b.storage_read_mib_s = opts
+                    .storage_dir
+                    .as_deref()
+                    .map_or(Fact::Unknown(Reason::NotRequested), |d| {
+                        storage(d, opts.storage_mib, cancel)
+                    });
             }
         }
     }
@@ -213,20 +222,30 @@ mod tests {
     use super::*;
 
     fn quick() -> BenchOptions {
-        BenchOptions { cpu_time: Duration::from_millis(20), memory_mib: 4, storage_dir: None, storage_mib: 2 }
+        BenchOptions {
+            cpu_time: Duration::from_millis(20),
+            memory_mib: 4,
+            storage_dir: None,
+            storage_mib: 2,
+        }
     }
 
     #[test]
     fn runs_and_reports_progress() {
         let mut p = HardwareProfile::default();
         let mut seen = Vec::new();
-        run(&mut p, &quick(), &CancelToken::new(), &mut |s, i, n| seen.push((s, i, n)));
+        run(&mut p, &quick(), &CancelToken::new(), &mut |s, i, n| {
+            seen.push((s, i, n))
+        });
         assert_eq!(seen.len(), 4);
         assert_eq!(seen[3], (Step::Storage, 3, 4));
         assert!(p.bench.cpu_single_mops.get().is_some_and(|v| v > 0));
         assert!(p.bench.cpu_multi_mops.get().is_some());
         assert!(p.bench.memory_mib_s.get().is_some_and(|v| v > 0));
-        assert_eq!(p.bench.storage_read_mib_s, Fact::Unknown(Reason::NotRequested));
+        assert_eq!(
+            p.bench.storage_read_mib_s,
+            Fact::Unknown(Reason::NotRequested)
+        );
         assert_eq!(p.bench.measured_for_class, Fact::Known(p.class_hash()));
     }
 
@@ -234,7 +253,10 @@ mod tests {
     fn storage_step_leaves_no_file_behind() {
         let dir = std::env::temp_dir().join(format!("opts-hw-bench-test-{}", std::process::id()));
         let mut p = HardwareProfile::default();
-        let o = BenchOptions { storage_dir: Some(dir.clone()), ..quick() };
+        let o = BenchOptions {
+            storage_dir: Some(dir.clone()),
+            ..quick()
+        };
         run(&mut p, &o, &CancelToken::new(), &mut |_, _, _| {});
         assert!(p.bench.storage_read_mib_s.get().is_some());
         assert_eq!(fs::read_dir(&dir).map(Iterator::count).unwrap_or(0), 0);

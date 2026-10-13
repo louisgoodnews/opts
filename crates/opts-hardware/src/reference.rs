@@ -25,8 +25,18 @@ pub struct Field {
     pub source: &'static str,
 }
 
-const fn f(path: &'static str, value: &'static str, used_for: &'static str, source: &'static str) -> Field {
-    Field { path, value, used_for, source }
+const fn f(
+    path: &'static str,
+    value: &'static str,
+    used_for: &'static str,
+    source: &'static str,
+) -> Field {
+    Field {
+        path,
+        value,
+        used_for,
+        source,
+    }
 }
 
 /// Every field of [`crate::HardwareProfile`] (except `schema` and `probe_ms`, listed separately).
@@ -74,7 +84,10 @@ pub const FIELDS: &[Field] = &[
 ];
 
 fn keys<T: Copy>(all: &[T], key: impl Fn(T) -> &'static str) -> String {
-    all.iter().map(|v| format!("`{}`", key(*v))).collect::<Vec<_>>().join(", ")
+    all.iter()
+        .map(|v| format!("`{}`", key(*v)))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 /// The generated page.
@@ -93,12 +106,19 @@ pub fn render() -> String {
          ## Fields\n\n| Field | Value | Used for | Source |\n| :--- | :--- | :--- | :--- |"
     );
     for x in FIELDS {
-        let _ = writeln!(s, "| `{}` | {} | {} | {} |", x.path, x.value, x.used_for, x.source);
+        let _ = writeln!(
+            s,
+            "| `{}` | {} | {} | {} |",
+            x.path, x.value, x.used_for, x.source
+        );
     }
     let _ = writeln!(s, "\n## Closed value sets\n");
     let sets: [(&str, String); 11] = [
         ("os.family", keys(OsFamily::ALL, OsFamily::key)),
-        ("os.display_server", keys(DisplayServer::ALL, DisplayServer::key)),
+        (
+            "os.display_server",
+            keys(DisplayServer::ALL, DisplayServer::key),
+        ),
         ("os.environment", keys(Environment::ALL, Environment::key)),
         ("cpu.arch", keys(Arch::ALL, Arch::key)),
         ("cpu.vendor", keys(CpuVendor::ALL, CpuVendor::key)),
@@ -106,8 +126,18 @@ pub fn render() -> String {
         ("gpu.device_class", keys(GpuClass::ALL, GpuClass::key)),
         ("gpu.backend", keys(GpuBackend::ALL, GpuBackend::key)),
         ("storage.class", keys(StorageClass::ALL, StorageClass::key)),
-        ("audio.channels", keys(ChannelLayout::ALL, ChannelLayout::key)),
-        ("cpu.features", ISA_FEATURES.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", ")),
+        (
+            "audio.channels",
+            keys(ChannelLayout::ALL, ChannelLayout::key),
+        ),
+        (
+            "cpu.features",
+            ISA_FEATURES
+                .iter()
+                .map(|x| format!("`{x}`"))
+                .collect::<Vec<_>>()
+                .join(", "),
+        ),
     ];
     for (name, v) in sets {
         let _ = writeln!(s, "* `{name}`: {v}");
@@ -115,9 +145,16 @@ pub fn render() -> String {
     let _ = writeln!(
         s,
         "* `gpu.features`: {}",
-        GPU_FEATURES.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", ")
+        GPU_FEATURES
+            .iter()
+            .map(|x| format!("`{x}`"))
+            .collect::<Vec<_>>()
+            .join(", ")
     );
-    let _ = writeln!(s, "\n## Reasons for unknown values\n\n| Reason | Meaning |\n| :--- | :--- |");
+    let _ = writeln!(
+        s,
+        "\n## Reasons for unknown values\n\n| Reason | Meaning |\n| :--- | :--- |"
+    );
     for r in Reason::ALL {
         let _ = writeln!(s, "| `{}` | {} |", r.key(), r.describe());
     }
@@ -132,8 +169,16 @@ pub fn render() -> String {
     let _ = writeln!(
         s,
         "\nExistence only: {}. Directory listings (names): {}.\n",
-        allowlist::EXISTS.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", "),
-        allowlist::LIST.iter().map(|x| format!("`{x}`")).collect::<Vec<_>>().join(", ")
+        allowlist::EXISTS
+            .iter()
+            .map(|x| format!("`{x}`"))
+            .collect::<Vec<_>>()
+            .join(", "),
+        allowlist::LIST
+            .iter()
+            .map(|x| format!("`{x}`"))
+            .collect::<Vec<_>>()
+            .join(", ")
     );
     s
 }
@@ -143,7 +188,10 @@ mod tests {
     use super::*;
 
     /// Path of the generated page, relative to this crate.
-    const PAGE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../docs/src/reference/hardware-fields.md");
+    const PAGE: &str = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../docs/src/reference/hardware-fields.md"
+    );
     use serde_json::Value;
 
     fn leaves(prefix: &str, v: &Value, out: &mut Vec<String>) {
@@ -154,7 +202,11 @@ mod tests {
             return;
         }
         for (k, v) in m {
-            let p = if prefix.is_empty() { k.clone() } else { format!("{prefix}.{k}") };
+            let p = if prefix.is_empty() {
+                k.clone()
+            } else {
+                format!("{prefix}.{k}")
+            };
             leaves(&p, v, out);
         }
     }
@@ -178,6 +230,9 @@ mod tests {
             return;
         }
         let have = std::fs::read_to_string(PAGE).unwrap_or_default();
-        assert_eq!(have, want, "run: UPDATE_HARDWARE_DOC=1 cargo test -p opts-hardware reference");
+        assert_eq!(
+            have, want,
+            "run: UPDATE_HARDWARE_DOC=1 cargo test -p opts-hardware reference"
+        );
     }
 }

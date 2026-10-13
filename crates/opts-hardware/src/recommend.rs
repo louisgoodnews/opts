@@ -30,7 +30,10 @@ pub struct MapStats {
 
 impl Default for MapStats {
     fn default() -> Self {
-        Self { max_radius: 8, tile_mib: 120 }
+        Self {
+            max_radius: 8,
+            tile_mib: 120,
+        }
     }
 }
 
@@ -39,7 +42,9 @@ impl Default for MapStats {
 pub fn gpu_tier(p: &HardwareProfile) -> GpuTier {
     let vendor = p.gpu.vendor.get();
     let class = p.gpu.device_class.get();
-    if vendor == Some(GpuVendor::Software) || matches!(class, Some(GpuClass::Software | GpuClass::Virtual)) {
+    if vendor == Some(GpuVendor::Software)
+        || matches!(class, Some(GpuClass::Software | GpuClass::Virtual))
+    {
         return GpuTier::Low;
     }
     if vendor == Some(GpuVendor::Apple) {
@@ -63,7 +68,8 @@ pub fn gpu_tier(p: &HardwareProfile) -> GpuTier {
 }
 
 fn is_software(p: &HardwareProfile) -> bool {
-    p.gpu.vendor.get() == Some(GpuVendor::Software) || p.gpu.device_class.get() == Some(GpuClass::Software)
+    p.gpu.vendor.get() == Some(GpuVendor::Software)
+        || p.gpu.device_class.get() == Some(GpuClass::Software)
 }
 
 /// Tiles around the centre tile that fit the machine (1 = 3x3, 2 = 5x5, ...), at least 1 and at
@@ -91,7 +97,11 @@ pub fn recommended_tile_radius(p: &HardwareProfile, map: &MapStats) -> u32 {
         Some(c) if c < 8 => 4,
         _ => u32::MAX,
     };
-    let by_disk = if p.storage.class.get() == Some(StorageClass::Hdd) { 3 } else { u32::MAX };
+    let by_disk = if p.storage.class.get() == Some(StorageClass::Hdd) {
+        3
+    } else {
+        u32::MAX
+    };
     by_memory
         .min(by_gpu)
         .min(by_cpu)
@@ -128,7 +138,10 @@ pub fn recommended_look(p: &HardwareProfile) -> &'static str {
 /// windowing layer applies: it depends on the *logical* height (pixels divided by the OS scale).
 #[must_use]
 pub fn recommended_ui_scale(p: &HardwareProfile) -> u32 {
-    let (Some(h), scale) = (p.display.height.get(), p.display.scale_percent.get().unwrap_or(100)) else {
+    let (Some(h), scale) = (
+        p.display.height.get(),
+        p.display.scale_percent.get().unwrap_or(100),
+    ) else {
         return 100;
     };
     let logical = u64::from(h) * 100 / u64::from(scale.max(25));
@@ -220,7 +233,10 @@ pub fn safe_resident_mib(p: &HardwareProfile) -> Option<u64> {
 /// Is the program in a container or VM (defaults then lean conservative in callers)?
 #[must_use]
 pub fn is_virtualised(p: &HardwareProfile) -> bool {
-    matches!(p.os.environment.get(), Some(Environment::Container | Environment::Vm))
+    matches!(
+        p.os.environment.get(),
+        Some(Environment::Container | Environment::Vm)
+    )
 }
 
 #[cfg(test)]
@@ -248,7 +264,11 @@ mod tests {
         p.gpu.device_class = Fact::Known(gpu.1);
         p.gpu.vram_mib = Fact::from_option(gpu.2, crate::fact::Reason::NeedsRenderer);
         p.storage.class = Fact::Known(storage);
-        p.display = DisplayInfo { width: Fact::Known(screen.0), height: Fact::Known(screen.1), ..DisplayInfo::default() };
+        p.display = DisplayInfo {
+            width: Fact::Known(screen.0),
+            height: Fact::Known(screen.1),
+            ..DisplayInfo::default()
+        };
         p
     }
 
@@ -258,7 +278,10 @@ mod tests {
 
     #[test]
     fn tile_radius_table() {
-        let map = MapStats { max_radius: 8, tile_mib: 120 };
+        let map = MapStats {
+            max_radius: 8,
+            tile_mib: 120,
+        };
         let gib = 1024;
         let rows = [
             // gpu, available MiB, cores, storage, expected radius
@@ -274,30 +297,76 @@ mod tests {
         ];
         for (gpu, avail, cores, st, want) in rows {
             let p = machine(gpu, avail, cores, st, (1920, 1080));
-            assert_eq!(recommended_tile_radius(&p, &map), want, "{gpu:?} {avail} MiB {cores} cores {st:?}");
+            assert_eq!(
+                recommended_tile_radius(&p, &map),
+                want,
+                "{gpu:?} {avail} MiB {cores} cores {st:?}"
+            );
         }
     }
 
     #[test]
     fn tile_radius_reacts_to_profile_changes_and_map() {
         let map = MapStats::default();
-        let mut p = machine((Nvidia, Discrete, Some(12 * 1024)), 48 * 1024, 16, Ssd, (1920, 1080));
+        let mut p = machine(
+            (Nvidia, Discrete, Some(12 * 1024)),
+            48 * 1024,
+            16,
+            Ssd,
+            (1920, 1080),
+        );
         let big = recommended_tile_radius(&p, &map);
         p.memory.available_mib = Fact::Known(2 * 1024);
         assert!(recommended_tile_radius(&p, &map) < big);
         p.memory.available_mib = Fact::Known(48 * 1024);
-        assert_eq!(recommended_tile_radius(&p, &MapStats { max_radius: 2, ..map }), 2);
-        assert_eq!(recommended_tile_radius(&p, &MapStats { max_radius: 0, ..map }), 1);
+        assert_eq!(
+            recommended_tile_radius(
+                &p,
+                &MapStats {
+                    max_radius: 2,
+                    ..map
+                }
+            ),
+            2
+        );
+        assert_eq!(
+            recommended_tile_radius(
+                &p,
+                &MapStats {
+                    max_radius: 0,
+                    ..map
+                }
+            ),
+            1
+        );
         // Unknown everything: a safe middle value.
         assert!((1..=3).contains(&recommended_tile_radius(&HardwareProfile::default(), &map)));
     }
 
     #[test]
     fn filtering_and_look_follow_the_tier() {
-        let high = machine((Nvidia, Discrete, Some(12 * 1024)), 8192, 8, Ssd, (1920, 1080));
-        let mid = machine((Nvidia, Discrete, Some(4 * 1024)), 8192, 8, Ssd, (1920, 1080));
+        let high = machine(
+            (Nvidia, Discrete, Some(12 * 1024)),
+            8192,
+            8,
+            Ssd,
+            (1920, 1080),
+        );
+        let mid = machine(
+            (Nvidia, Discrete, Some(4 * 1024)),
+            8192,
+            8,
+            Ssd,
+            (1920, 1080),
+        );
         let low = machine((Intel, Integrated, None), 8192, 8, Ssd, (1920, 1080));
-        let mut soft = machine((GpuVendor::Software, GpuClass::Software, None), 8192, 8, Ssd, (1920, 1080));
+        let mut soft = machine(
+            (GpuVendor::Software, GpuClass::Software, None),
+            8192,
+            8,
+            Ssd,
+            (1920, 1080),
+        );
         assert_eq!(gpu_tier(&high), GpuTier::High);
         assert_eq!(gpu_tier(&mid), GpuTier::Mid);
         assert_eq!(gpu_tier(&low), GpuTier::Low);
@@ -306,7 +375,10 @@ mod tests {
         assert_eq!(recommended_texture_filtering(&mid), "8");
         assert_eq!(recommended_texture_filtering(&low), "4");
         assert_eq!(recommended_texture_filtering(&soft), "off");
-        assert_eq!(recommended_texture_filtering(&HardwareProfile::default()), "8");
+        assert_eq!(
+            recommended_texture_filtering(&HardwareProfile::default()),
+            "8"
+        );
         assert_eq!(recommended_look(&high), "vivid");
         assert_eq!(recommended_look(&low), "bevy");
         soft.gpu.device_class = Fact::Known(Discrete);
@@ -318,7 +390,13 @@ mod tests {
 
     #[test]
     fn apple_silicon_tier_follows_unified_memory() {
-        let mut p = machine((GpuVendor::Apple, Integrated, None), 8192, 8, Ssd, (3024, 1964));
+        let mut p = machine(
+            (GpuVendor::Apple, Integrated, None),
+            8192,
+            8,
+            Ssd,
+            (3024, 1964),
+        );
         p.memory.total_mib = Fact::Known(16 * 1024);
         assert_eq!(gpu_tier(&p), GpuTier::High);
         p.memory.total_mib = Fact::Known(8 * 1024);
@@ -348,8 +426,18 @@ mod tests {
 
     #[test]
     fn dlss_table() {
-        let mut p = machine((Nvidia, Discrete, Some(8 * 1024)), 8192, 8, Ssd, (1920, 1080));
-        assert_eq!(dlss_available(&p), Availability::Unknown, "ray tracing unknown");
+        let mut p = machine(
+            (Nvidia, Discrete, Some(8 * 1024)),
+            8192,
+            8,
+            Ssd,
+            (1920, 1080),
+        );
+        assert_eq!(
+            dlss_available(&p),
+            Availability::Unknown,
+            "ray tracing unknown"
+        );
         p.gpu.ray_tracing = Fact::Known(true);
         p.gpu.backend = Fact::Known(GpuBackend::Vulkan);
         assert_eq!(dlss_available(&p), Availability::Yes);
@@ -360,14 +448,20 @@ mod tests {
         assert_eq!(dlss_available(&p), Availability::No(DlssNo::NoRayTracing));
         p.gpu.ray_tracing = Fact::Known(true);
         p.gpu.backend = Fact::Known(GpuBackend::Metal);
-        assert_eq!(dlss_available(&p), Availability::No(DlssNo::BackendUnsupported));
+        assert_eq!(
+            dlss_available(&p),
+            Availability::No(DlssNo::BackendUnsupported)
+        );
         p.gpu.backend = Fact::Known(GpuBackend::Vulkan);
         p.os.family = Fact::Known(OsFamily::Macos);
         assert_eq!(dlss_available(&p), Availability::No(DlssNo::OsUnsupported));
         p.os.family = Fact::Known(OsFamily::Windows);
         p.gpu.vendor = Fact::Known(Amd);
         assert_eq!(dlss_available(&p), Availability::No(DlssNo::NotNvidia));
-        assert_eq!(dlss_available(&HardwareProfile::default()), Availability::Unknown);
+        assert_eq!(
+            dlss_available(&HardwareProfile::default()),
+            Availability::Unknown
+        );
     }
 
     #[test]

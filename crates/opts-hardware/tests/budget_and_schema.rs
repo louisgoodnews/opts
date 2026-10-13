@@ -19,7 +19,10 @@ fn full_probe_stays_within_the_time_budget() {
 
 #[test]
 fn exhausted_budget_skips_stages_with_a_timeout_reason() {
-    let p = probe_with(&ProbeInputs { budget: Duration::ZERO, ..ProbeInputs::default() });
+    let p = probe_with(&ProbeInputs {
+        budget: Duration::ZERO,
+        ..ProbeInputs::default()
+    });
     assert_eq!(p.cpu.logical_cores, Fact::Unknown(Reason::Timeout));
     assert_eq!(p.memory.total_mib, Fact::Unknown(Reason::Timeout));
     assert_eq!(p.storage.free_gib, Fact::Unknown(Reason::Timeout));
@@ -69,7 +72,11 @@ fn class_hash_is_stable_and_coarse() {
     let mut b = a.clone();
     b.memory.total_mib = Fact::Known(16_300);
     b.memory.available_mib = Fact::Known(3);
-    assert_eq!(a.class_hash(), b.class_hash(), "same RAM bucket, same class");
+    assert_eq!(
+        a.class_hash(),
+        b.class_hash(),
+        "same RAM bucket, same class"
+    );
     b.memory.total_mib = Fact::Known(64_000);
     assert_ne!(a.class_hash(), b.class_hash());
     assert_eq!(a.class_hash().len(), 16);

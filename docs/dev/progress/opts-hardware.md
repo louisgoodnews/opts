@@ -11,17 +11,19 @@ Goal: M-0081. Worktree `opts-wt-hardware`, branch `feat/opts-hardware`. Resume f
 - Probe budget 500 ms: stages check a deadline and mark the rest `Unknown(Timeout)`.
 
 ## Checklist
-- [ ] ADR-0010 + charter `architecture/hardware-probe.md`
-- [ ] crate skeleton, Fact, profile schema
-- [ ] probes (common, linux, macos, windows, other)
-- [ ] benchmarks + store
-- [ ] recommendations + tests
-- [ ] generated field reference + test
-- [ ] redaction / no-network / budget tests
+- [x] ADR-0010 + charter `architecture/hardware-probe.md`
+- [x] crate skeleton, Fact, profile schema
+- [x] probes (common, linux, macos, windows, other)
+- [x] benchmarks + store
+- [x] recommendations + tests
+- [x] generated field reference + test
+- [x] redaction / no-network / budget tests
 - [ ] opts-tools hardware report
 - [ ] control protocol hardware.profile
 - [ ] settings registry Advanced -> Hardware page, de/en
 - [ ] CI macOS job, Windows tests
-- [ ] cross-target checks
+- [x] cross-target checks
 - [ ] docs: M-0081, ROADMAP, BOARD, R-22, SUMMARY, crate graph
 - [ ] gates
+
+Notes: cross-target clippy -D warnings clean for x86_64/aarch64 windows-msvc, x86_64/aarch64 apple-darwin, linux musl, aarch64 linux gnu (targets installed via rustup, network available).

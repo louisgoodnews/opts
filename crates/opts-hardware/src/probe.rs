@@ -14,8 +14,8 @@ use crate::inputs::{AudioInput, DisplayInput, GpuInput, InputDevicesInput, Probe
 use crate::parse;
 use crate::platform::{Native, PlatformProbe};
 use crate::profile::{
-    AudioInfo, Benchmarks, ChannelLayout, CpuInfo, DisplayInfo, GpuInfo, HardwareProfile, InputInfo,
-    MemoryInfo, OsFamily, OsInfo, StorageClass, StorageInfo, SCHEMA_VERSION,
+    AudioInfo, Benchmarks, ChannelLayout, CpuInfo, DisplayInfo, GpuInfo, HardwareProfile,
+    InputInfo, MemoryInfo, OsFamily, OsInfo, StorageClass, StorageInfo, SCHEMA_VERSION,
 };
 
 /// Every ISA feature name the probe may report (x86_64 and aarch64).
@@ -66,7 +66,10 @@ fn probe_os(p: &dyn PlatformProbe) -> OsInfo {
     };
     OsInfo {
         family: Fact::Known(os_family()),
-        version: Fact::from_option(text.as_deref().and_then(parse::version_class), Reason::Unavailable),
+        version: Fact::from_option(
+            text.as_deref().and_then(parse::version_class),
+            Reason::Unavailable,
+        ),
         display_server: p.display_server(),
         environment: p.environment(),
     }
@@ -108,7 +111,10 @@ fn probe_cpu(p: &dyn PlatformProbe) -> CpuInfo {
             first.map(|c| parse::cpu_vendor(c.vendor_id(), c.brand())),
             Reason::Unavailable,
         ),
-        physical_cores: Fact::from_option(System::physical_core_count().and_then(to_u32), Reason::Unavailable),
+        physical_cores: Fact::from_option(
+            System::physical_core_count().and_then(to_u32),
+            Reason::Unavailable,
+        ),
         logical_cores: Fact::from_option(logical.and_then(to_u32), Reason::Unavailable),
         features: Fact::Known(isa_features()),
         cache_l2_kib: l2,
@@ -127,8 +133,17 @@ fn probe_memory() -> MemoryInfo {
             avail = cg.free_memory.min(total);
         }
     }
-    let known = |b: u64| if b == 0 { Fact::Unknown(Reason::Unavailable) } else { Fact::Known(parse::mib(b)) };
-    MemoryInfo { total_mib: known(total), available_mib: known(avail) }
+    let known = |b: u64| {
+        if b == 0 {
+            Fact::Unknown(Reason::Unavailable)
+        } else {
+            Fact::Known(parse::mib(b))
+        }
+    };
+    MemoryInfo {
+        total_mib: known(total),
+        available_mib: known(avail),
+    }
 }
 
 fn probe_storage(dir: Option<&Path>) -> StorageInfo {
@@ -187,7 +202,9 @@ fn display_from(i: &DisplayInput) -> DisplayInfo {
         width: nz(i.width),
         height: nz(i.height),
         refresh_hz: Fact::from_option(
-            i.refresh_millihertz.map(|m| (m + 500) / 1000).filter(|v| *v > 0),
+            i.refresh_millihertz
+                .map(|m| (m + 500) / 1000)
+                .filter(|v| *v > 0),
             Reason::NeedsRenderer,
         ),
         scale_percent: Fact::from_option(
@@ -239,11 +256,18 @@ pub fn probe_with(inputs: &ProbeInputs) -> HardwareProfile {
 /// the deadline is skipped and its facts are `Unknown(timeout)`.
 #[must_use]
 pub fn probe_on(p: &dyn PlatformProbe, inputs: &ProbeInputs) -> HardwareProfile {
-    let clock = Clock { start: Instant::now(), budget: inputs.budget };
+    let clock = Clock {
+        start: Instant::now(),
+        budget: inputs.budget,
+    };
     let t = Reason::Timeout;
     macro_rules! stage {
         ($ty:ident, $e:expr) => {
-            if clock.left() { $e } else { $ty::unknown(t) }
+            if clock.left() {
+                $e
+            } else {
+                $ty::unknown(t)
+            }
         };
     }
     let mut out = HardwareProfile {
@@ -251,13 +275,28 @@ pub fn probe_on(p: &dyn PlatformProbe, inputs: &ProbeInputs) -> HardwareProfile 
         os: stage!(OsInfo, probe_os(p)),
         cpu: stage!(CpuInfo, probe_cpu(p)),
         memory: stage!(MemoryInfo, probe_memory()),
-        gpu: stage!(GpuInfo, inputs.gpu.as_ref().map_or_else(|| p.gpu_fallback(), gpu_from)),
+        gpu: stage!(
+            GpuInfo,
+            inputs
+                .gpu
+                .as_ref()
+                .map_or_else(|| p.gpu_fallback(), gpu_from)
+        ),
         display: stage!(
             DisplayInfo,
-            inputs.display.as_ref().map_or_else(|| p.display_fallback(), display_from)
+            inputs
+                .display
+                .as_ref()
+                .map_or_else(|| p.display_fallback(), display_from)
         ),
-        audio: stage!(AudioInfo, inputs.audio.map_or_else(|| p.audio_fallback(), audio_from)),
-        input: stage!(InputInfo, inputs.input.map_or_else(|| p.input_fallback(), input_from)),
+        audio: stage!(
+            AudioInfo,
+            inputs.audio.map_or_else(|| p.audio_fallback(), audio_from)
+        ),
+        input: stage!(
+            InputInfo,
+            inputs.input.map_or_else(|| p.input_fallback(), input_from)
+        ),
         storage: stage!(StorageInfo, probe_storage(inputs.content_dir.as_deref())),
         bench: Benchmarks::unknown(Reason::NotRequested),
         ..HardwareProfile::default()

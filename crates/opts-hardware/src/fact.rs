@@ -64,7 +64,9 @@ impl Reason {
         match self {
             Self::NotProbed => "not probed (older profile or probe not run)",
             Self::NotOnThisPlatform => "no probe exists on this platform",
-            Self::NeedsRenderer => "supplied by the renderer or audio layer, which was not available",
+            Self::NeedsRenderer => {
+                "supplied by the renderer or audio layer, which was not available"
+            }
             Self::Unavailable => "the interface that holds it is absent",
             Self::Unreadable => "the interface could not be read",
             Self::Unparsed => "the content was not understood",

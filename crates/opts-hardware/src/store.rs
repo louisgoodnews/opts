@@ -5,7 +5,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::profile::{HardwareProfile, LoadError};
+use crate::profile::HardwareProfile;
 
 /// File name inside the folder.
 pub const FILE_NAME: &str = "hardware.json";
@@ -32,10 +32,7 @@ pub fn save(dir: &Path, profile: &HardwareProfile) -> io::Result<()> {
 #[must_use]
 pub fn load(dir: &Path) -> Option<HardwareProfile> {
     let text = fs::read_to_string(path(dir)).ok()?;
-    match HardwareProfile::from_json(&text) {
-        Ok(p) => Some(p),
-        Err(LoadError::Parse(_) | LoadError::TooNew(_)) => None,
-    }
+    HardwareProfile::from_json(&text).ok()
 }
 
 /// Deletes the stored profile; `true` when a file was removed.
@@ -47,10 +44,17 @@ pub fn delete(dir: &Path) -> bool {
 /// Keeps the benchmark results of `cached` when they were measured on the same hardware class as
 /// `fresh`.
 #[must_use]
-pub fn with_cached_bench(mut fresh: HardwareProfile, cached: Option<&HardwareProfile>) -> HardwareProfile {
+pub fn with_cached_bench(
+    mut fresh: HardwareProfile,
+    cached: Option<&HardwareProfile>,
+) -> HardwareProfile {
     if let Some(c) = cached {
         let class = fresh.class_hash();
-        if c.bench.measured_for_class.known().is_some_and(|h| *h == class) {
+        if c.bench
+            .measured_for_class
+            .known()
+            .is_some_and(|h| *h == class)
+        {
             fresh.bench = c.bench.clone();
         }
     }
@@ -101,6 +105,11 @@ mod tests {
         assert_eq!(same.bench.cpu_single_mops, Fact::Known(900));
         let mut other = HardwareProfile::default();
         other.memory.total_mib = Fact::Known(65536);
-        assert_eq!(with_cached_bench(other, Some(&cached)).bench.cpu_single_mops, Fact::default());
+        assert_eq!(
+            with_cached_bench(other, Some(&cached))
+                .bench
+                .cpu_single_mops,
+            Fact::default()
+        );
     }
 }
