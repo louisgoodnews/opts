@@ -147,7 +147,7 @@ pub fn begin_restore(world: &mut World, id: &str) -> Result<RestoreStarted, Rest
     }
     let root = world
         .get_resource::<crate::in_game::omsi_world::WorldLoadJob>()
-        .map(|j| j.config.root.clone())
+        .map(|j| j.omsi_root().to_path_buf())
         .or_else(crate::omsi_root::known_omsi_root);
     let issues = preflight(
         &sections,

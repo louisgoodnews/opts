@@ -74,8 +74,7 @@ fn session_capture(world: &mut World) -> Result<Option<Value>, String> {
         .get_resource::<WorldLoadJob>()
         .ok_or("no map is loaded")?;
     let map_folder = job
-        .config
-        .map_dir
+        .map_dir()
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .ok_or("the map folder has no name")?;
@@ -198,7 +197,7 @@ fn weather_prepare(world: &mut World, data: &Value) -> Result<(), String> {
 fn root_of(world: &World) -> Option<std::path::PathBuf> {
     world
         .get_resource::<WorldLoadJob>()
-        .map(|j| j.config.root.clone())
+        .map(|j| j.omsi_root().to_path_buf())
         .or_else(crate::omsi_root::known_omsi_root)
 }
 

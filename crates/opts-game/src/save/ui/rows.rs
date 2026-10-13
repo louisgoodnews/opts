@@ -35,7 +35,7 @@ fn issue_line(i: &Issue) -> (&'static str, ColorRole) {
 fn line(
     parent: &mut ChildSpawnerCommands,
     key: &'static str,
-    args: Vec<(String, opts_gui::l10n::fluent::Arg<'static>)>,
+    args: Vec<(String, opts_gui::l10n::fluent::Arg)>,
     scale: TypeScale,
     role: ColorRole,
 ) {
@@ -216,7 +216,7 @@ pub fn rebuild_list(
     ui.dirty = false;
     let entries = storage.0.as_ref().map(|s| s.list()).unwrap_or_default();
     let root = job
-        .map(|j| j.config.root.clone())
+        .map(|j| j.omsi_root().to_path_buf())
         .or_else(crate::omsi_root::known_omsi_root);
     let in_session = *state.get() == crate::app_state::AppState::InGame;
     let mode = ui.mode;

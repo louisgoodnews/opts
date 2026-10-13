@@ -118,7 +118,7 @@ fn saves(world: &mut World, _: &Value) -> Outcome {
         let registry = world.resource::<SaveRegistry>().clone();
         let root = world
             .get_resource::<crate::in_game::omsi_world::WorldLoadJob>()
-            .map(|j| j.config.root.clone())
+            .map(|j| j.omsi_root().to_path_buf())
             .or_else(crate::omsi_root::known_omsi_root);
         let list: Vec<Value> = store
             .list()

@@ -67,7 +67,7 @@ fn now_unix() -> i64 {
 fn session_fingerprint(world: &World) -> Fingerprint {
     let mut f = Fingerprint::default();
     if let Some(job) = world.get_resource::<WorldLoadJob>() {
-        let dir = &job.config.map_dir;
+        let dir = job.map_dir();
         let name = dir
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())

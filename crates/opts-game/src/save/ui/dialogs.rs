@@ -187,7 +187,7 @@ fn open_error(world: &mut World, name: &str, error: &RestoreError) {
     let mut body_args = vec![("name".to_owned(), Arg::from(name.to_owned()))];
     let body = match error {
         RestoreError::Save(SaveError::NewerFormat { found, .. }) => {
-            body_args.push(("found".to_owned(), Arg::from(i64::from(*found))));
+            body_args.push(("found".to_owned(), Arg::from(found.to_string())));
             keys::LOAD_ERR_NEWER
         }
         RestoreError::Save(SaveError::Corrupt(_) | SaveError::NotASave) => {
