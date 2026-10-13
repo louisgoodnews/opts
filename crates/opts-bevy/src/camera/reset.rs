@@ -149,7 +149,10 @@ mod tests {
         assert_eq!(s.sub_camera_index, 3, "the sub camera stays");
         assert_eq!(r.sub_camera, 3);
         assert!(!vp.editing, "an open editor is cancelled");
-        assert_eq!(vp.active, stored, "the draft is gone, the stored viewpoint stays");
+        assert_eq!(
+            vp.active, stored,
+            "the draft is gone, the stored viewpoint stays"
+        );
     }
 
     #[test]

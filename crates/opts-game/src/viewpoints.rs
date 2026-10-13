@@ -105,7 +105,8 @@ impl ViewpointStore {
     /// a viewpoint for this camera (then the default is kept as an explicit override).
     pub fn set_vehicle(&mut self, key: &str, model: Option<&str>, index: usize, vp: Viewpoint) {
         let vp = vp.clamped();
-        let model_has = model.is_some_and(|m| self.models.get(m).is_some_and(|c| c.contains_key(&index)));
+        let model_has =
+            model.is_some_and(|m| self.models.get(m).is_some_and(|c| c.contains_key(&index)));
         if vp.is_default() && !model_has {
             Self::remove_from(&mut self.vehicles, key, index);
         } else {
@@ -181,7 +182,9 @@ impl ViewpointStore {
                 };
                 match serde_json::from_value::<Viewpoint>(value.clone()) {
                     Ok(vp) if vp.is_valid() && (keep_default || !vp.is_default()) => {
-                        out.entry(key.clone()).or_default().insert(index, vp.clamped());
+                        out.entry(key.clone())
+                            .or_default()
+                            .insert(index, vp.clamped());
                     }
                     Ok(vp) if vp.is_valid() => {}
                     Ok(_) => report
@@ -420,9 +423,10 @@ pub fn persist_viewpoint(world: &mut World) {
     let Some(key) = key else {
         return;
     };
-    let result = world
-        .resource_mut::<Viewpoints>()
-        .save(&key, model.as_deref(), index, vp, whole_model);
+    let result =
+        world
+            .resource_mut::<Viewpoints>()
+            .save(&key, model.as_deref(), index, vp, whole_model);
     let (severity, text) = match result {
         Ok(()) => {
             tracing::info!(vehicle = %key, camera = index, whole_model, viewpoint = ?vp, "viewpoint saved");

@@ -213,7 +213,10 @@ fn shift_space_resets_the_external_view_to_its_defaults() {
     }
     shift_space(&mut app);
     let s = app.world().resource::<CameraState>();
-    assert_eq!((s.external_yaw, s.external_zoom, s.pan_offset), (0.0, 8.0, Vec3::ZERO));
+    assert_eq!(
+        (s.external_yaw, s.external_zoom, s.pan_offset),
+        (0.0, 8.0, Vec3::ZERO)
+    );
     assert!((s.external_pitch + 15f32.to_radians()).abs() < 1e-6);
     assert_eq!(s.mode, CameraMode::External);
 }
@@ -239,10 +242,17 @@ fn shift_space_in_the_driver_view_keeps_the_sub_camera_and_the_stored_viewpoint(
     }
     shift_space(&mut app);
     let s = app.world().resource::<CameraState>();
-    assert_eq!((s.sub_camera_index, s.view_yaw, s.view_pitch), (0, 0.0, 0.0));
+    assert_eq!(
+        (s.sub_camera_index, s.view_yaw, s.view_pitch),
+        (0, 0.0, 0.0)
+    );
     let vp = app.world().resource::<opts_bevy::ViewpointState>();
     assert!(!vp.editing);
-    assert_eq!((vp.active.x, vp.active.y), (0.0, 0.05), "the draft goes, the saved viewpoint stays");
+    assert_eq!(
+        (vp.active.x, vp.active.y),
+        (0.0, 0.05),
+        "the draft goes, the saved viewpoint stays"
+    );
 }
 
 #[test]
@@ -258,7 +268,10 @@ fn shift_space_in_the_passenger_view_keeps_the_sub_camera() {
     }
     shift_space(&mut app);
     let s = app.world().resource::<CameraState>();
-    assert_eq!((s.mode, s.view_yaw, s.view_pitch), (CameraMode::Passenger, 0.0, 0.0));
+    assert_eq!(
+        (s.mode, s.view_yaw, s.view_pitch),
+        (CameraMode::Passenger, 0.0, 0.0)
+    );
 }
 
 #[test]

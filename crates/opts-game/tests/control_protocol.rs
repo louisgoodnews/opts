@@ -838,7 +838,12 @@ fn camera_viewpoint_get_set_save_reset() {
     let e = call(&mut app, "camera.viewpoint.save", json!({"scope": "model"}))
         .expect_err("the model is unknown");
     assert_eq!(e.code, code::NOT_READY);
-    let e = call(&mut app, "camera.viewpoint.save", json!({"scope": "galaxy"})).expect_err("scope");
+    let e = call(
+        &mut app,
+        "camera.viewpoint.save",
+        json!({"scope": "galaxy"}),
+    )
+    .expect_err("scope");
     assert_eq!(e.code, code::INVALID_PARAMS);
     let saved = call(&mut app, "camera.viewpoint.save", json!({})).expect("save");
     assert_eq!(saved["editing"], false);
@@ -882,7 +887,10 @@ fn camera_reset_resets_the_current_view_and_follows_the_gates() {
         s.view_yaw = 1.0;
     }
     let r = call(&mut app, "camera.reset", json!({})).expect("reset cockpit");
-    assert_eq!((r["mode"].as_str(), r["sub_camera"].as_u64()), (Some("cockpit"), Some(2)));
+    assert_eq!(
+        (r["mode"].as_str(), r["sub_camera"].as_u64()),
+        (Some("cockpit"), Some(2))
+    );
     assert_eq!(app.world().resource::<CameraState>().view_yaw, 0.0);
 
     {

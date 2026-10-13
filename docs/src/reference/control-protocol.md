@@ -252,11 +252,12 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
 | `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
+| [`camera.reset`](#camerareset) | - | 1.2 | Reset the current camera view to its default, like Shift+Space |
 | [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
 | [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
 | [`camera.viewpoint.get`](#cameraviewpointget) | - | 1.2 | The driver's-view viewpoint: offsets, field of view, stored value, editor state |
 | [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
-| [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
+| [`camera.viewpoint.save`](#cameraviewpointsave) | `scope?` (string = vehicle \| model) | 1.2 | Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor |
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
@@ -275,6 +276,14 @@ A debug shortcut around the plan-a-drive wizard: it starts a session directly. T
 Return to the main menu.
 
 A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
+
+### `camera.reset`
+
+Reset the current camera view to its default, like Shift+Space.
+
+**Result:** `{mode, sub_camera}`
+
+Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open.
 
 ### `camera.look`
 
@@ -310,11 +319,11 @@ Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6
 
 ### `camera.viewpoint.save`
 
-Store the shown viewpoint for this vehicle and camera and close the editor.
+Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor.
 
 **Result:** the `camera.viewpoint.get` result
 
-Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active.
+Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active.
 
 ### `camera.viewpoint.reset`
 

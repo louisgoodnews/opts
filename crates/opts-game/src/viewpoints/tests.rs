@@ -106,8 +106,10 @@ fn saving_merges_with_what_another_run_wrote() {
         store: ViewpointStore::default(),
     };
     let mut b = a.clone();
-    a.save("bus_a", None, 0, vp(0.1, None), false).expect("save a");
-    b.save("bus_b", None, 1, vp(0.2, None), false).expect("save b");
+    a.save("bus_a", None, 0, vp(0.1, None), false)
+        .expect("save a");
+    b.save("bus_b", None, 1, vp(0.2, None), false)
+        .expect("save b");
     let all = ViewpointStore::load_from(&path);
     assert!(all.get("bus_a", 0).is_some() && all.get("bus_b", 1).is_some());
     let _ = std::fs::remove_dir_all(dir);
@@ -266,7 +268,11 @@ fn model_entries_apply_to_every_vehicle_of_the_model_and_a_vehicle_entry_wins() 
     s.set_model("sd77", "man_sd200", 0, vp(0.1, None));
     assert_eq!(s.lookup("sd77", Some("man_sd200"), 0), Some(vp(0.1, None)));
     assert_eq!(s.lookup("sd80", Some("man_sd200"), 0), Some(vp(0.1, None)));
-    assert_eq!(s.lookup("sd80", Some("other"), 0), None, "another model is untouched");
+    assert_eq!(
+        s.lookup("sd80", Some("other"), 0),
+        None,
+        "another model is untouched"
+    );
     assert_eq!(s.lookup("sd80", None, 0), None);
 
     // sd80 gets its own view: it wins over the model's.
@@ -276,7 +282,10 @@ fn model_entries_apply_to_every_vehicle_of_the_model_and_a_vehicle_entry_wins() 
 
     // "Vehicle default" on sd80 must not fall back to the model: an explicit default is kept.
     s.set_vehicle("sd80", Some("man_sd200"), 0, Viewpoint::default());
-    assert_eq!(s.lookup("sd80", Some("man_sd200"), 0), Some(Viewpoint::default()));
+    assert_eq!(
+        s.lookup("sd80", Some("man_sd200"), 0),
+        Some(Viewpoint::default())
+    );
 
     // Saving for the model again drops sd80's own entry, so it shows the model's viewpoint.
     s.set_model("sd80", "man_sd200", 0, vp(0.3, None));
@@ -304,7 +313,9 @@ fn the_editor_saves_for_the_model_when_asked() {
     let mut a = app(path.clone());
     a.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
     let e = spawn_vehicle(&mut a, "sd77");
-    a.world_mut().entity_mut(e).insert(ViewpointModel("man_sd200".into()));
+    a.world_mut()
+        .entity_mut(e)
+        .insert(ViewpointModel("man_sd200".into()));
     a.update();
     edit_and_save(&mut a, |s| {
         s.adjust(opts_bevy::ViewpointRow::Y, 6.0);
@@ -316,14 +327,18 @@ fn the_editor_saves_for_the_model_when_asked() {
     let mut b = app(path.clone());
     b.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
     let e = spawn_vehicle(&mut b, "sd80");
-    b.world_mut().entity_mut(e).insert(ViewpointModel("man_sd200".into()));
+    b.world_mut()
+        .entity_mut(e)
+        .insert(ViewpointModel("man_sd200".into()));
     b.update();
     assert_eq!(b.world().resource::<ViewpointState>().active.y, 0.06);
     // A vehicle of another model does not.
     let mut c = app(path);
     c.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
     let e = spawn_vehicle(&mut c, "other");
-    c.world_mut().entity_mut(e).insert(ViewpointModel("other_model".into()));
+    c.world_mut()
+        .entity_mut(e)
+        .insert(ViewpointModel("other_model".into()));
     c.update();
     assert!(c.world().resource::<ViewpointState>().active.is_default());
     let _ = std::fs::remove_dir_all(dir);
