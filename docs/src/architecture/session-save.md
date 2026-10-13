@@ -94,9 +94,23 @@ Version history: `session_vehicles` v1 held the registry only; v2 adds `saved_st
 * **Script state beyond variables** (a script's internal random generator, the elapsed-time counter) restarts; scripts that keep their state in variables (all of the OMSI scripts examined so far) continue.
 * **Held keys and remote controls** are released.
 
-### Tolerances (per field)
+### Tolerances (per field), as measured live
 
-Positions, headings and velocities are stored as JSON decimals and come back to `f32` precision (the unit tests compare exactly). A restored vehicle is placed, then the physics continues from that state, so what a player sees after the first fixed step is: pose within centimetres, speed within 0.1 km/h, the ground height re-derived from the loaded tiles (the saved height is used until they are there). Script variables are exact; scripts react to them on their next frame. The simulated clock is exact to the saved second; the sky follows it. The odometer and the session counters are exact. The AI traffic is not (see above).
+Live check on Berlin-Spandau (three MAN SD buses, one driven 81 m, one driving at 3.6 km/h, a door trigger raised; saved while paused, left to Home, loaded from *Home → Load game*, saved again and compared; also F5 then F9 inside a running drive):
+
+| Field | Result |
+| :--- | :--- |
+| Position, height, heading of every vehicle | identical (0.000 m, JSON round trip is exact for `f32`) |
+| Velocity, yaw rate, steering, pedals, gear, parking brake, rpm | identical |
+| Script variables (120 to 149 per vehicle, doors, lights, timers) | identical |
+| Active vehicle, camera mode and sub-camera | identical |
+| Simulated clock, odometer, session distance, duration, top speed | identical (the clock and odometer are set last; an earlier build drifted by 0.4 s and 48 m, fixed) |
+| Paused, time scale | identical |
+| AI traffic, pedestrians | **not restored** (re-seeded) |
+
+In a running game the physics steps on from the restored state, so a restored *moving* vehicle is in the same state at the first step and diverges only as any simulation does. The ground height is re-derived from the loaded tiles after the first step.
+
+The viewpoint editor's viewpoints (`viewpoints.json`) are a per-vehicle user preference stored beside the settings, not state of a session, so they are deliberately not in a save: a save restores into whatever viewpoint the user has configured now.
 
 ## 5. Restore
 

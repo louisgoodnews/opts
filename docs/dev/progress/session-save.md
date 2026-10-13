@@ -16,8 +16,4 @@ Gates: fmt, clippy -D warnings, `cargo test --workspace --all-features`, `RUSTDO
 - Viewpoint store is not on master: no `viewpoint` section yet.
 
 ## Status
-- [x] core (container, store, registry), sections, ops, restore, quick keys, UI, protocol written
-- [ ] compile + unit tests green
-- [ ] docs (architecture page, M-0069, ROADMAP, BOARD, field report R-05, screens.md, reference)
-- [ ] live verification on Berlin-Spandau
-- [ ] merge master, gates
+Done: code, tests (unit, `tests/save_tests.rs`, protocol, pause-overlay UI), docs, live verification (see `docs/src/architecture/session-save.md` section 4 for the measured table), gates run. Live scratch (`~/.local/share/opts/benchmark/session-save/live`) deleted.
