@@ -135,28 +135,44 @@ fn every_section_round_trips() {
     let w = other.world();
     let setup = w.resource::<NewGameSetup>();
     assert_eq!(
-        (setup.selected_map.as_str(), setup.selected_entry_point.as_str()),
+        (
+            setup.selected_map.as_str(),
+            setup.selected_entry_point.as_str()
+        ),
         ("Berlin-Spandau", "Depot")
     );
     assert!(setup.no_vehicle, "vehicles come back through the spawner");
     assert_eq!(setup.weather_preset, "Rain");
     assert_eq!((setup.year, setup.month, setup.day), (1990, 3, 4));
     assert_eq!((setup.hour, setup.minute), (17, 45));
-    assert_eq!(w.resource::<InGameSessionInfo>().sim_elapsed_seconds, 1234.5);
+    assert_eq!(
+        w.resource::<InGameSessionInfo>().sim_elapsed_seconds,
+        1234.5
+    );
     assert_eq!(w.resource::<PlayClock>().played_s, 99.5);
     let cam = w.resource::<CameraState>();
     assert_eq!(cam.mode, CameraMode::Cockpit);
     assert_eq!(cam.previous_mode, CameraMode::External);
-    assert_eq!((cam.sub_camera_index, cam.external_zoom, cam.view_yaw), (2, 14.0, 0.3));
+    assert_eq!(
+        (cam.sub_camera_index, cam.external_zoom, cam.view_yaw),
+        (2, 14.0, 0.3)
+    );
     let stats = w.resource::<SessionStats>();
-    assert_eq!((stats.duration_s, stats.distance_m, stats.max_speed_m_s), (80.0, 912.0, 13.5));
+    assert_eq!(
+        (stats.duration_s, stats.distance_m, stats.max_speed_m_s),
+        (80.0, 912.0, 13.5)
+    );
     assert_eq!(w.resource::<RemoteControls>().odometer_m, 912.25);
     let time = w.resource::<Time<Virtual>>();
     assert!(time.is_paused());
     assert_eq!(time.relative_speed(), 4.0);
     let reg = w.resource::<SessionVehicles>();
     assert_eq!(reg.records().len(), 1);
-    assert_eq!(reg.records()[0].lifecycle, Lifecycle::Spawning, "rebuilt by the spawner");
+    assert_eq!(
+        reg.records()[0].lifecycle,
+        Lifecycle::Spawning,
+        "rebuilt by the spawner"
+    );
 }
 
 #[test]
@@ -165,8 +181,16 @@ fn a_vehicle_state_round_trips_with_its_script_variables() {
     let (engine, _) = opts_sim::script::ScriptEngine::from_sources(&[("x.osc", "")]);
     let mut scripts = opts_bevy::vehicle_script::VehicleScripts::new(engine);
     scripts.initialised = true;
-    scripts.engine.lock().expect("engine").set("door_front", 1.0);
-    scripts.engine.lock().expect("engine").set_string("destination", "Spandau");
+    scripts
+        .engine
+        .lock()
+        .expect("engine")
+        .set("door_front", 1.0);
+    scripts
+        .engine
+        .lock()
+        .expect("engine")
+        .set_string("destination", "Spandau");
     let mut c = VehicleController::standard_bus(12_000.0, 5.9);
     c.sim.chassis.position = Vec2::new(120.5, -40.25);
     c.sim.chassis.heading_rad = 1.25;
@@ -174,7 +198,8 @@ fn a_vehicle_state_round_trips_with_its_script_variables() {
     c.sim.chassis.local_velocity = Vec2::new(0.0, 8.0);
     c.inputs_mut().set_parking_brake(false);
     c.inputs_mut().set_throttle(0.4);
-    c.inputs_mut().set_gear(opts_sim::vehicle::inputs::GearPosition::Drive);
+    c.inputs_mut()
+        .set_gear(opts_sim::vehicle::inputs::GearPosition::Drive);
     let entity = app.world_mut().spawn((c, scripts)).id();
     let saved = state::capture(app.world(), entity).expect("state");
     assert_eq!(saved.script_floats, vec![("door_front".to_owned(), 1.0)]);
@@ -188,7 +213,10 @@ fn a_vehicle_state_round_trips_with_its_script_variables() {
             fresh
         }))
         .id();
-    assert!(!state::apply(app.world_mut(), other, &saved), "waits for the scripts' init");
+    assert!(
+        !state::apply(app.world_mut(), other, &saved),
+        "waits for the scripts' init"
+    );
     app.world_mut()
         .get_mut::<opts_bevy::vehicle_script::VehicleScripts>(other)
         .expect("scripts")
@@ -196,8 +224,16 @@ fn a_vehicle_state_round_trips_with_its_script_variables() {
     assert!(state::apply(app.world_mut(), other, &saved));
     let again = state::capture(app.world(), other).expect("state");
     assert_eq!(again, saved);
-    let ch = &app.world().get::<VehicleController>(other).expect("c").sim.chassis;
-    assert_eq!((ch.position, ch.elevation_z, ch.local_velocity.y), (Vec2::new(120.5, -40.25), 33.5, 8.0));
+    let ch = &app
+        .world()
+        .get::<VehicleController>(other)
+        .expect("c")
+        .sim
+        .chassis;
+    assert_eq!(
+        (ch.position, ch.elevation_z, ch.local_velocity.y),
+        (Vec2::new(120.5, -40.25), 33.5, 8.0)
+    );
 }
 
 #[test]
@@ -210,7 +246,10 @@ fn an_old_version_fixture_migrates_and_unknown_sections_are_kept() {
     assert!(plan.warnings.is_empty(), "{:?}", plan.warnings);
     assert_eq!(plan.unknown, ["from_the_future"]);
     for absent in ["time", "weather", "camera", "counters", "simulation"] {
-        assert!(plan.missing.iter().any(|m| m == absent), "{absent} takes its defaults");
+        assert!(
+            plan.missing.iter().any(|m| m == absent),
+            "{absent} takes its defaults"
+        );
     }
     let (_, vehicles) = plan
         .steps
@@ -220,7 +259,10 @@ fn an_old_version_fixture_migrates_and_unknown_sections_are_kept() {
     assert_eq!(vehicles["version"], SAVE_SECTION_VERSION);
     let reg = SessionVehicles::from_section(vehicles).expect("reads");
     assert_eq!(reg.records().len(), 1);
-    assert!(reg.records()[0].saved_state.is_none(), "version 1 has no live state");
+    assert!(
+        reg.records()[0].saved_state.is_none(),
+        "version 1 has no live state"
+    );
 
     // The unknown section survives an overwrite by this build.
     let store = SaveStore::new(dir("fixture"));
@@ -229,7 +271,10 @@ fn an_old_version_fixture_migrates_and_unknown_sections_are_kept() {
     opts_game::save::registry::carry_over_foreign(&sections, &file, &mut next);
     store.write("old", &next).expect("overwrite");
     let back = store.read("old").expect("read").file;
-    assert_eq!(back.sections["from_the_future"].data, json!({"anything": [1, 2, 3]}));
+    assert_eq!(
+        back.sections["from_the_future"].data,
+        json!({"anything": [1, 2, 3]})
+    );
 }
 
 fn noop_capture(_: &mut World) -> Result<Option<Value>, String> {
@@ -269,7 +314,12 @@ fn a_section_registered_in_a_test_needs_no_change_to_the_save_system() {
     // Another build without the section keeps it as unknown.
     let plan = plan_restore(other.world().resource::<SaveRegistry>().all(), &loaded);
     assert_eq!(plan.unknown, ["test_lamps"]);
-    other.register_save_section(*app.world().resource::<SaveRegistry>().get("test_lamps").expect("registered"));
+    other.register_save_section(
+        *app.world()
+            .resource::<SaveRegistry>()
+            .get("test_lamps")
+            .expect("registered"),
+    );
     restore(&mut other, &loaded);
     assert_eq!(other.world().resource::<Lamps>().0, 3);
 }
@@ -278,7 +328,11 @@ fn a_section_registered_in_a_test_needs_no_change_to_the_save_system() {
 fn damaged_and_newer_files_are_reported_not_loaded() {
     let store = SaveStore::new(dir("damaged"));
     std::fs::create_dir_all(store.dir()).expect("dir");
-    std::fs::write(store.dir().join("bad.save.json"), "{\"magic\": \"OPTS-SAVE\", \"for").expect("write");
+    std::fs::write(
+        store.dir().join("bad.save.json"),
+        "{\"magic\": \"OPTS-SAVE\", \"for",
+    )
+    .expect("write");
     std::fs::write(
         store.dir().join("new.save.json"),
         json!({"magic": "OPTS-SAVE", "format_version": 42}).to_string(),
@@ -290,14 +344,18 @@ fn damaged_and_newer_files_are_reported_not_loaded() {
         .iter()
         .map(|e| e.state.as_ref().err().map(opts_game::save::SaveError::kind))
         .collect();
-    assert!(kinds.contains(&Some("corrupt")) && kinds.contains(&Some("newer_format")), "{kinds:?}");
+    assert!(
+        kinds.contains(&Some("corrupt")) && kinds.contains(&Some("newer_format")),
+        "{kinds:?}"
+    );
 }
 
 #[test]
 fn missing_content_is_found_before_anything_is_applied() {
     let app = session_world();
     let sections = app.world().resource::<SaveRegistry>().all().to_vec();
-    let file = SaveFile::decode(include_str!("fixtures/saves/v1-vehicles.save.json")).expect("fixture");
+    let file =
+        SaveFile::decode(include_str!("fixtures/saves/v1-vehicles.save.json")).expect("fixture");
     let root = dir("no-omsi");
     std::fs::create_dir_all(root.join("maps")).expect("maps");
     let issues = preflight(
@@ -308,9 +366,15 @@ fn missing_content_is_found_before_anything_is_applied() {
             fingerprint: &file.fingerprint,
         },
     );
-    let map = issues.iter().find(|i| i.kind == IssueKind::MissingMap).expect("map");
+    let map = issues
+        .iter()
+        .find(|i| i.kind == IssueKind::MissingMap)
+        .expect("map");
     assert!(map.blocking);
-    let vehicle = issues.iter().find(|i| i.kind == IssueKind::MissingVehicle).expect("vehicle");
+    let vehicle = issues
+        .iter()
+        .find(|i| i.kind == IssueKind::MissingVehicle)
+        .expect("vehicle");
     assert!(vehicle.blocking, "the only vehicle is missing");
 
     // With the map and one of two vehicles present the save still loads (with a warning).
@@ -318,7 +382,10 @@ fn missing_content_is_found_before_anything_is_applied() {
     std::fs::create_dir_all(root.join("Vehicles/A")).expect("vehicles");
     std::fs::write(root.join("Vehicles/A/bus_a.bus"), "x").expect("bus");
     let mut two = file.clone();
-    two.sections.get_mut("session_vehicles").expect("section").data["vehicles"]
+    two.sections
+        .get_mut("session_vehicles")
+        .expect("section")
+        .data["vehicles"]
         .as_array_mut()
         .expect("array")
         .push(json!({
@@ -336,5 +403,7 @@ fn missing_content_is_found_before_anything_is_applied() {
         },
     );
     assert!(issues.iter().all(|i| !i.blocking), "{issues:?}");
-    assert!(issues.iter().any(|i| i.kind == IssueKind::MissingVehicle && i.subject == "Bus B"));
+    assert!(issues
+        .iter()
+        .any(|i| i.kind == IssueKind::MissingVehicle && i.subject == "Bus B"));
 }

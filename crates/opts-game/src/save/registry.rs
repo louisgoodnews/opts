@@ -186,8 +186,12 @@ pub fn plan_restore(sections: &[SaveSection], file: &SaveFile) -> RestorePlan {
                 s.id, blob.version, s.version
             ))
         } else if let Some(migrate) = s.migrate {
-            migrate(blob.version, blob.data.clone())
-                .map_err(|e| format!("section `{}` v{} cannot be migrated: {e}", s.id, blob.version))
+            migrate(blob.version, blob.data.clone()).map_err(|e| {
+                format!(
+                    "section `{}` v{} cannot be migrated: {e}",
+                    s.id, blob.version
+                )
+            })
         } else {
             Err(format!(
                 "section `{}` is version {} and has no migration to {}: ignored",
@@ -226,7 +230,11 @@ impl RestorePlan {
     /// The steps that have a `prepare`, in `order`.
     #[must_use]
     pub fn prepare_steps(&self) -> Vec<&(SaveSection, Value)> {
-        let mut steps: Vec<_> = self.steps.iter().filter(|(s, _)| s.prepare.is_some()).collect();
+        let mut steps: Vec<_> = self
+            .steps
+            .iter()
+            .filter(|(s, _)| s.prepare.is_some())
+            .collect();
         steps.sort_by_key(|(s, _)| s.order);
         steps
     }
@@ -331,7 +339,11 @@ mod tests {
         let b = section("b", 1, None);
         let mut c = section("c", 1, None);
         c.order = -1;
-        let file = file_with(&[("a", 1, json!({})), ("b", 1, json!({})), ("c", 1, json!({}))]);
+        let file = file_with(&[
+            ("a", 1, json!({})),
+            ("b", 1, json!({})),
+            ("c", 1, json!({})),
+        ]);
         let plan = plan_restore(&[a, b, c], &file);
         assert_eq!(
             plan.steps.iter().map(|(s, _)| s.id).collect::<Vec<_>>(),
@@ -356,6 +368,9 @@ mod tests {
         let sections = [section("known", 1, None), section("newer_known", 9, None)];
         let mut again = file_with(&[]);
         carry_over_foreign(&sections, &old, &mut again);
-        assert!(!again.sections.contains_key("newer_known"), "known and not newer: not foreign");
+        assert!(
+            !again.sections.contains_key("newer_known"),
+            "known and not newer: not foreign"
+        );
     }
 }

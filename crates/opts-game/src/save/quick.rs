@@ -54,7 +54,12 @@ pub fn fixed_save(world: &mut World, id: &str, name_key: &'static str, ok_key: &
 
 /// F5: save to the quick slot.
 pub fn quick_save(world: &mut World) {
-    fixed_save(world, QUICK_ID, keys::SAVE_QUICK_NAME, keys::SAVE_SAVED_TOAST);
+    fixed_save(
+        world,
+        QUICK_ID,
+        keys::SAVE_QUICK_NAME,
+        keys::SAVE_SAVED_TOAST,
+    );
 }
 
 /// F9: load the quick slot.
@@ -113,7 +118,12 @@ pub fn autosave(
     *since = 0.0;
     commands.queue(|world: &mut World| {
         if session_running(world) && !world.contains_resource::<PendingRestore>() {
-            fixed_save(world, AUTO_ID, keys::SAVE_AUTO_NAME, keys::SAVE_AUTOSAVED_TOAST);
+            fixed_save(
+                world,
+                AUTO_ID,
+                keys::SAVE_AUTO_NAME,
+                keys::SAVE_AUTOSAVED_TOAST,
+            );
         }
     });
 }

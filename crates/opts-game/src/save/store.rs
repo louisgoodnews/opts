@@ -108,7 +108,8 @@ impl SaveStore {
     }
 
     fn read_file(path: &Path) -> Result<SaveFile, SaveError> {
-        let meta = fs::metadata(path).map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
+        let meta =
+            fs::metadata(path).map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
         if meta.len() > MAX_FILE_BYTES {
             return Err(SaveError::TooLarge(format!(
                 "{} is {} bytes (limit {MAX_FILE_BYTES})",
@@ -116,8 +117,10 @@ impl SaveStore {
                 meta.len()
             )));
         }
-        let bytes = fs::read(path).map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
-        let text = String::from_utf8(bytes).map_err(|_| SaveError::Corrupt("not UTF-8 text".to_owned()))?;
+        let bytes =
+            fs::read(path).map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
+        let text = String::from_utf8(bytes)
+            .map_err(|_| SaveError::Corrupt("not UTF-8 text".to_owned()))?;
         SaveFile::decode(&text)
     }
 
@@ -210,7 +213,8 @@ impl SaveStore {
             self.with_suffix(id, "tmp"),
         ] {
             if path.exists() {
-                fs::remove_file(&path).map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
+                fs::remove_file(&path)
+                    .map_err(|e| SaveError::Io(format!("{}: {e}", path.display())))?;
                 found = true;
             }
         }
@@ -335,7 +339,10 @@ mod tests {
         assert_eq!(store.find("erste-fahrt").as_deref(), Some("erste-fahrt"));
         store.delete("zweite").expect("delete");
         assert!(matches!(store.read("zweite"), Err(SaveError::NotFound(_))));
-        assert!(matches!(store.delete("zweite"), Err(SaveError::NotFound(_))));
+        assert!(matches!(
+            store.delete("zweite"),
+            Err(SaveError::NotFound(_))
+        ));
         assert!(matches!(store.read("../x"), Err(SaveError::InvalidName(_))));
     }
 
@@ -345,8 +352,9 @@ mod tests {
         store.write("a", &file("A", 1)).expect("first");
         store.write("a", &file("A", 2)).expect("second");
         assert_eq!(store.read("a").expect("read").file.meta.saved_unix, 2);
-        let bak = SaveFile::decode(&fs::read_to_string(store.with_suffix("a", "bak")).expect("bak"))
-            .expect("bak decodes");
+        let bak =
+            SaveFile::decode(&fs::read_to_string(store.with_suffix("a", "bak")).expect("bak"))
+                .expect("bak decodes");
         assert_eq!(bak.meta.saved_unix, 1);
     }
 
@@ -397,7 +405,10 @@ mod tests {
         assert!(matches!(store.read("a"), Err(SaveError::Corrupt(_))));
         let list = store.list();
         assert_eq!(list.len(), 1);
-        assert!(list[0].state.is_err(), "a damaged save is listed with its error");
+        assert!(
+            list[0].state.is_err(),
+            "a damaged save is listed with its error"
+        );
     }
 
     #[test]
@@ -410,7 +421,10 @@ mod tests {
             json!({"magic": crate::save::container::MAGIC, "format_version": 7}).to_string(),
         )
         .expect("newer");
-        assert!(matches!(store.read("a"), Err(SaveError::NewerFormat { found: 7, .. })));
+        assert!(matches!(
+            store.read("a"),
+            Err(SaveError::NewerFormat { found: 7, .. })
+        ));
     }
 
     #[test]

@@ -800,9 +800,13 @@ fn save_app(tag: &str) -> App {
         .init_resource::<opts_game::save::SaveRegistry>()
         .init_resource::<opts_bevy::CameraAvailability>()
         .init_resource::<SimulationLoadState>()
-        .insert_resource(SaveStorage(Some(SaveStore::new(scratch(tag).join("saves")))));
+        .insert_resource(SaveStorage(Some(SaveStore::new(
+            scratch(tag).join("saves"),
+        ))));
     opts_game::save::sections::register(&mut app);
-    app.world_mut().resource_mut::<SimulationLoadState>().is_complete = true;
+    app.world_mut()
+        .resource_mut::<SimulationLoadState>()
+        .is_complete = true;
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
         .set(AppState::InGame);
@@ -825,7 +829,14 @@ fn session_save_list_rename_delete_and_the_command_table() {
         .iter()
         .filter_map(|s| s["id"].as_str())
         .collect();
-    for id in ["session", "time", "weather", "session_vehicles", "camera", "counters"] {
+    for id in [
+        "session",
+        "time",
+        "weather",
+        "session_vehicles",
+        "camera",
+        "counters",
+    ] {
         assert!(ids.contains(&id), "{id} not registered: {ids:?}");
     }
 
@@ -847,7 +858,13 @@ fn session_save_list_rename_delete_and_the_command_table() {
     let list = call(&mut app, "session.saves", json!({})).expect("saves");
     assert_eq!(list["saves"].as_array().map(Vec::len), Some(1));
     assert_eq!(list["saves"][0]["name"], "Erste Fahrt");
-    assert!(list["saves"][0]["sections"].as_array().expect("sections").len() >= 6);
+    assert!(
+        list["saves"][0]["sections"]
+            .as_array()
+            .expect("sections")
+            .len()
+            >= 6
+    );
 
     call(
         &mut app,
@@ -859,9 +876,15 @@ fn session_save_list_rename_delete_and_the_command_table() {
     assert_eq!(list["saves"][0]["name"], "Umbenannt");
     assert_eq!(list["saves"][0]["id"], "erste-fahrt");
 
-    let missing = call(&mut app, "session.delete_save", json!({"name": "nope"})).expect_err("missing");
+    let missing =
+        call(&mut app, "session.delete_save", json!({"name": "nope"})).expect_err("missing");
     assert_eq!(missing.code, code::NOT_FOUND);
-    call(&mut app, "session.delete_save", json!({"name": "umbenannt"})).expect("delete");
+    call(
+        &mut app,
+        "session.delete_save",
+        json!({"name": "umbenannt"}),
+    )
+    .expect("delete");
     let list = call(&mut app, "session.saves", json!({})).expect("saves");
     assert_eq!(list["saves"], json!([]));
 }
@@ -869,7 +892,9 @@ fn session_save_list_rename_delete_and_the_command_table() {
 #[test]
 fn session_save_needs_a_running_drive() {
     let mut app = save_app("save-idle");
-    app.world_mut().resource_mut::<SimulationLoadState>().is_complete = false;
+    app.world_mut()
+        .resource_mut::<SimulationLoadState>()
+        .is_complete = false;
     let e = call(&mut app, "session.save", json!({"name": "x"})).expect_err("loading");
     assert_eq!(e.code, code::NOT_READY);
 }
@@ -893,7 +918,11 @@ fn session_load_refuses_damaged_newer_and_missing_content_and_starts_a_good_save
         .expect("store")
         .dir()
         .to_path_buf();
-    std::fs::write(dir.join("kaputt.save.json"), "{\"magic\": \"OPTS-SAVE\", \"for").expect("bad");
+    std::fs::write(
+        dir.join("kaputt.save.json"),
+        "{\"magic\": \"OPTS-SAVE\", \"for",
+    )
+    .expect("bad");
     std::fs::write(
         dir.join("neu.save.json"),
         json!({"magic": "OPTS-SAVE", "format_version": 9}).to_string(),
@@ -910,14 +939,20 @@ fn session_load_refuses_damaged_newer_and_missing_content_and_starts_a_good_save
     std::fs::remove_dir_all(root.join("maps/Testmap")).expect("remove map");
     let e = call(&mut app, "session.load", json!({"name": "Gut"})).expect_err("missing map");
     assert_eq!(e.data.as_ref().expect("data")["kind"], "missing_content");
-    assert_eq!(e.data.as_ref().expect("data")["issues"][0]["kind"], "MissingMap");
+    assert_eq!(
+        e.data.as_ref().expect("data")["issues"][0]["kind"],
+        "MissingMap"
+    );
 
     std::fs::create_dir_all(root.join("maps/Testmap")).expect("map back");
     std::fs::write(root.join("maps/Testmap/global.cfg"), "x").expect("cfg");
     app.world_mut().resource_mut::<NewGameSetup>().selected_map = "Other".into();
     let ok = call(&mut app, "session.load", json!({"name": "Gut"})).expect("load");
     assert_eq!(ok["started"], true);
-    assert_eq!(app.world().resource::<NewGameSetup>().selected_map, "Testmap");
+    assert_eq!(
+        app.world().resource::<NewGameSetup>().selected_map,
+        "Testmap"
+    );
     let list = call(&mut app, "session.saves", json!({})).expect("saves");
     assert_eq!(list["restore"]["state"], "loading");
     let busy = call(&mut app, "session.load", json!({"name": "Gut"})).expect_err("busy");

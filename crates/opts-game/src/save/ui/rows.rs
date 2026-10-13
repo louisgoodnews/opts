@@ -165,7 +165,14 @@ fn spawn_row(
         })
         .with_children(|buttons| {
             if entry.state.is_ok() {
-                row_button(buttons, keys::SAVES_LOAD, id, RowAction::Load, "load", false);
+                row_button(
+                    buttons,
+                    keys::SAVES_LOAD,
+                    id,
+                    RowAction::Load,
+                    "load",
+                    false,
+                );
                 if mode == SavesMode::Save && in_session {
                     row_button(
                         buttons,
@@ -242,7 +249,11 @@ pub fn rebuild_list(
     });
 }
 
-fn issues_of(registry: &SaveRegistry, file: &SaveFile, root: Option<&std::path::Path>) -> Vec<Issue> {
+fn issues_of(
+    registry: &SaveRegistry,
+    file: &SaveFile,
+    root: Option<&std::path::Path>,
+) -> Vec<Issue> {
     preflight(
         registry.all(),
         file,
@@ -252,4 +263,3 @@ fn issues_of(registry: &SaveRegistry, file: &SaveFile, root: Option<&std::path::
         },
     )
 }
-

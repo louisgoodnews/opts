@@ -141,9 +141,7 @@ pub fn save_session(world: &mut World, request: &SaveRequest) -> Result<Saved, S
     let now = now_unix();
     let mut file = SaveFile::new(SaveMeta {
         name: name.clone(),
-        created_unix: existing
-            .as_ref()
-            .map_or(now, |l| l.file.meta.created_unix),
+        created_unix: existing.as_ref().map_or(now, |l| l.file.meta.created_unix),
         saved_unix: now,
         play_time_s: world
             .get_resource::<PlayClock>()

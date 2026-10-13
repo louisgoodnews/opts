@@ -285,12 +285,10 @@ fn answer(world: &mut World, choice: DialogChoice) {
                 Err(e) => save_failed(world, &e),
             }
         }
-        Some(Pending::Delete(id)) => {
-            match store(world).and_then(|s| s.delete(&id)) {
-                Ok(()) => world.resource_mut::<SavesUi>().dirty = true,
-                Err(e) => save_failed(world, &e),
-            }
-        }
+        Some(Pending::Delete(id)) => match store(world).and_then(|s| s.delete(&id)) {
+            Ok(()) => world.resource_mut::<SavesUi>().dirty = true,
+            Err(e) => save_failed(world, &e),
+        },
         Some(Pending::Load(id)) if session_running(world) => load(world, &id),
         _ => {}
     }

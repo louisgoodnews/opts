@@ -13,9 +13,7 @@ use opts_gui::components::toast::ToastSeverity;
 
 use super::container::SaveError;
 use super::ops::store;
-use super::registry::{
-    plan_restore, preflight, CheckEnv, Issue, RestorePlan, SaveRegistry, Stage,
-};
+use super::registry::{plan_restore, preflight, CheckEnv, Issue, RestorePlan, SaveRegistry, Stage};
 use crate::app_state::AppState;
 use crate::in_game::omsi_world::SpawnVehicleRequest;
 use crate::in_game::types::{LoadStage, SimulationLoadState};
@@ -164,12 +162,17 @@ pub fn begin_restore(world: &mut World, id: &str) -> Result<RestoreStarted, Rest
     warnings.extend(issues.iter().map(issue_text));
     for (section, data) in plan.prepare_steps().into_iter().map(|s| (&s.0, &s.1)) {
         if let Some(prepare) = section.prepare {
-            prepare(world, data).map_err(|e| {
-                SaveError::Corrupt(format!("section `{}`: {e}", section.id))
-            })?;
+            prepare(world, data)
+                .map_err(|e| SaveError::Corrupt(format!("section `{}`: {e}", section.id)))?;
         }
     }
-    let vehicle_label = loaded.file.meta.vehicles.first().cloned().unwrap_or_default();
+    let vehicle_label = loaded
+        .file
+        .meta
+        .vehicles
+        .first()
+        .cloned()
+        .unwrap_or_default();
     let started = RestoreStarted {
         id: id.to_owned(),
         name: loaded.file.meta.name.clone(),
@@ -189,7 +192,9 @@ pub fn begin_restore(world: &mut World, id: &str) -> Result<RestoreStarted, Rest
     });
     world.insert_resource(LastRestore(None));
     // A running session is left and entered again (the same state: the transition re-runs).
-    world.resource_mut::<NextState<AppState>>().set(AppState::InGame);
+    world
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::InGame);
     tracing::info!(%id, "restoring a save");
     Ok(started)
 }
@@ -208,7 +213,10 @@ fn run_stage(world: &mut World, stage: Stage) {
         if let Err(e) = apply(world, &data) {
             let message = format!("section `{}` could not be restored: {e}", section.id);
             tracing::warn!("{message}");
-            world.resource_mut::<PendingRestore>().warnings.push(message);
+            world
+                .resource_mut::<PendingRestore>()
+                .warnings
+                .push(message);
         }
     }
 }
@@ -255,7 +263,9 @@ pub fn drive_restore(world: &mut World) {
         if pending.waited_s < SETTLE_TIMEOUT_S {
             return;
         }
-        pending.warnings.push("some vehicles did not come back in time".to_owned());
+        pending
+            .warnings
+            .push("some vehicles did not come back in time".to_owned());
     }
     run_stage(world, Stage::Settled);
     let Some(done) = world.remove_resource::<PendingRestore>() else {
@@ -269,7 +279,11 @@ pub fn drive_restore(world: &mut World) {
         .map(|r| r.name.clone())
         .collect();
     let mut warnings = done.warnings;
-    warnings.extend(failed.iter().map(|n| format!("vehicle `{n}` could not be rebuilt")));
+    warnings.extend(
+        failed
+            .iter()
+            .map(|n| format!("vehicle `{n}` could not be rebuilt")),
+    );
     tracing::info!(id = %done.id, warnings = warnings.len(), "save restored");
     toast(
         world,

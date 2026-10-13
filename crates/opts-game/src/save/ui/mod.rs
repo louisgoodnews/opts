@@ -348,7 +348,11 @@ pub fn sync_name_row(
     }
     let visible = ui.mode == SavesMode::Save || ui.renaming.is_some();
     for mut node in &mut rows {
-        node.display = if visible { Display::Flex } else { Display::None };
+        node.display = if visible {
+            Display::Flex
+        } else {
+            Display::None
+        };
     }
     for mut node in &mut errors {
         node.display = if ui.name_error.is_some() {

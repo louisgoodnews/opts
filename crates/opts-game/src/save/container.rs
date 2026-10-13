@@ -181,7 +181,8 @@ impl SaveFile {
                 )));
             }
         }
-        let text = serde_json::to_string_pretty(self).map_err(|e| SaveError::Corrupt(e.to_string()))?;
+        let text =
+            serde_json::to_string_pretty(self).map_err(|e| SaveError::Corrupt(e.to_string()))?;
         if text.len() as u64 > MAX_FILE_BYTES {
             return Err(SaveError::TooLarge(format!(
                 "the save is {} bytes (limit {MAX_FILE_BYTES})",
@@ -301,7 +302,10 @@ mod tests {
     #[test]
     fn a_file_round_trips() {
         let f = sample();
-        assert_eq!(SaveFile::decode(&f.encode().expect("encode")).expect("decode"), f);
+        assert_eq!(
+            SaveFile::decode(&f.encode().expect("encode")).expect("decode"),
+            f
+        );
     }
 
     #[test]
@@ -320,7 +324,10 @@ mod tests {
     fn other_json_and_garbage_are_told_apart() {
         assert_eq!(SaveFile::decode("[1,2]"), Err(SaveError::NotASave));
         assert_eq!(SaveFile::decode("{\"a\":1}"), Err(SaveError::NotASave));
-        assert!(matches!(SaveFile::decode("{\"magic\": \"OPTS-"), Err(SaveError::Corrupt(_))));
+        assert!(matches!(
+            SaveFile::decode("{\"magic\": \"OPTS-"),
+            Err(SaveError::Corrupt(_))
+        ));
         assert!(matches!(
             SaveFile::decode(&json!({"magic": MAGIC}).to_string()),
             Err(SaveError::Corrupt(_))
@@ -344,7 +351,10 @@ mod tests {
     fn names_are_cleaned_and_slugged() {
         assert_eq!(clean_name("  Fahrt\u{0}\n 1 ").as_deref(), Ok("Fahrt 1"));
         assert!(clean_name("   ").is_err());
-        assert_eq!(clean_name(&"a".repeat(100)).map(|n| n.chars().count()), Ok(MAX_NAME_CHARS));
+        assert_eq!(
+            clean_name(&"a".repeat(100)).map(|n| n.chars().count()),
+            Ok(MAX_NAME_CHARS)
+        );
         assert_eq!(slug("Meine Fahrt, Nr. 1!"), "meine-fahrt-nr-1");
         assert_eq!(slug("???"), "save");
         assert!(valid_id(&slug("../../etc/passwd")));

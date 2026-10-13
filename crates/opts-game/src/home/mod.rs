@@ -318,7 +318,10 @@ fn home_actions(
                 }
             }
             HomeButton::LoadGame => {
-                crate::save::ui::open_saves_overlay(&mut commands, crate::save::ui::SavesMode::Load);
+                crate::save::ui::open_saves_overlay(
+                    &mut commands,
+                    crate::save::ui::SavesMode::Load,
+                );
             }
             HomeButton::Quick => {
                 start.write(StartDrive(DriveRecord::from_setup(

@@ -10,7 +10,9 @@ use serde_json::{json, Value};
 use crate::save::container::SaveError;
 use crate::save::ops::{self, SaveRequest};
 use crate::save::registry::{preflight, CheckEnv, SaveRegistry};
-use crate::save::restore::{begin_restore, LastRestore, PendingRestore, RestoreError, RestoreOutcome};
+use crate::save::restore::{
+    begin_restore, LastRestore, PendingRestore, RestoreError, RestoreOutcome,
+};
 
 /// Registers the methods.
 pub fn register(registry: &mut ControlRegistry) {
@@ -34,14 +36,16 @@ fn save_error(e: &SaveError) -> RpcError {
 fn restore_error(e: &RestoreError) -> RpcError {
     match e {
         RestoreError::Save(s) => save_error(s),
-        RestoreError::Blocked(issues) => RpcError::new(code::FAILED, e.to_string()).with_data(json!({
-            "kind": e.kind(),
-            "issues": issues.iter().map(|i| json!({
-                "kind": format!("{:?}", i.kind),
-                "subject": i.subject,
-                "blocking": i.blocking,
-            })).collect::<Vec<_>>(),
-        })),
+        RestoreError::Blocked(issues) => {
+            RpcError::new(code::FAILED, e.to_string()).with_data(json!({
+                "kind": e.kind(),
+                "issues": issues.iter().map(|i| json!({
+                    "kind": format!("{:?}", i.kind),
+                    "subject": i.subject,
+                    "blocking": i.blocking,
+                })).collect::<Vec<_>>(),
+            }))
+        }
     }
 }
 
@@ -56,7 +60,9 @@ fn save(world: &mut World, params: &Value) -> Outcome {
         let saved = ops::save_session(world, &request).map_err(|e| match e {
             SaveError::Exists(id) => RpcError::new(
                 code::FAILED,
-                format!("a save called `{name}` exists (`{id}`); pass overwrite=true to replace it"),
+                format!(
+                    "a save called `{name}` exists (`{id}`); pass overwrite=true to replace it"
+                ),
             )
             .with_data(json!({ "kind": "exists", "id": id })),
             other => save_error(&other),
@@ -82,7 +88,10 @@ fn resolve(world: &World, params: &Value) -> Result<String, RpcError> {
 fn load(world: &mut World, params: &Value) -> Outcome {
     let result = (|| {
         if world.contains_resource::<PendingRestore>() {
-            return Err(RpcError::new(code::BUSY, "a save is being restored already"));
+            return Err(RpcError::new(
+                code::BUSY,
+                "a save is being restored already",
+            ));
         }
         let id = resolve(world, params)?;
         let started = begin_restore(world, &id).map_err(|e| restore_error(&e))?;
@@ -103,7 +112,10 @@ fn restore_status(world: &World) -> Value {
     if world.contains_resource::<PendingRestore>() {
         return json!({ "state": "loading" });
     }
-    match world.get_resource::<LastRestore>().and_then(|l| l.0.clone()) {
+    match world
+        .get_resource::<LastRestore>()
+        .and_then(|l| l.0.clone())
+    {
         Some(RestoreOutcome::Done { id, warnings }) => {
             json!({ "state": "done", "id": id, "warnings": warnings })
         }
