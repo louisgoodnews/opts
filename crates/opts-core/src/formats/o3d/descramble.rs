@@ -862,6 +862,10 @@ pub struct ConfidentReport {
     pub uv: super::uvfix::UvFixReport,
     /// Quality of every vertex's texture coordinates (empty when the mesh was rejected).
     pub quality: Vec<super::uvfix::UvQuality>,
+    /// The stage that settled each vertex's texture coordinates (empty when rejected).
+    pub stages: Vec<super::uvfix::UvStage>,
+    /// Evidence strength per vertex in the unit of its stage (see [`super::uvfix::UvFixOutcome`]).
+    pub confidence: Vec<f32>,
 }
 
 /// Two independent runs (belief-propagation seeded and random) must agree; returns the labels and
@@ -956,6 +960,8 @@ pub fn decode_joint_bounded(
         dropped_faces: 0,
         uv: super::uvfix::UvFixReport::default(),
         quality: Vec::new(),
+        stages: Vec::new(),
+        confidence: Vec::new(),
     };
     let none = |n: usize| vec![rejected(0.0); n];
     if copies.len() < 2 {
@@ -1024,6 +1030,8 @@ pub fn decode_joint_bounded(
             dropped_faces: 0,
             uv: fixed.report,
             quality: fixed.quality,
+            stages: fixed.stages,
+            confidence: fixed.confidence,
         });
     }
     out
@@ -1168,6 +1176,8 @@ fn decode_confident_masked(
         dropped_faces: 0,
         uv: super::uvfix::UvFixReport::default(),
         quality: Vec::new(),
+        stages: Vec::new(),
+        confidence: Vec::new(),
     };
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
@@ -1202,6 +1212,8 @@ fn decode_confident_masked(
         dropped_faces: dropped,
         uv: fixed.report,
         quality: fixed.quality,
+        stages: fixed.stages,
+        confidence: fixed.confidence,
     }
 }
 

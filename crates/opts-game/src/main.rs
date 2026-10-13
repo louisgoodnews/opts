@@ -9,6 +9,8 @@ fn main() {
     if let Some(ref dir) = args.log_file {
         config.files.directory = dir.clone();
     }
+    // Incident files of meshes the decoder could not prove go next to the logs.
+    opts_bevy::uv_incident::set_directory(config.files.directory.join("incidents"));
     let _guard = opts_logging::init(config).ok();
 
     tracing::info!("OPTS application starting up");

@@ -158,7 +158,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
 - [ ] **🗺️ World & Map Loading** — [M-0024](phase-4/M-0024.md) & [M-0025](phase-4/M-0025.md)
-  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
+  - [x] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). *Done 2026-10-13: written from the code as it runs; limits L1-L8 and open questions Q-MS-01..05 listed.* 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
   - [~] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018). *Paging runs in `opts-game` (`stream_world_tiles`); async jobs and the `opts-bevy` module are open.*
   - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh and elevation sampling done; water and a ground-height query for vehicles open.*
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](phase-4/M-0022.md) & [M-0023](phase-4/M-0023.md)
@@ -198,6 +198,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](phase-4/M-0057.md).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](phase-4/M-0058.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
+- [ ] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
+  - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
+- [ ] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
+  - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 
 ---
 
@@ -238,6 +242,12 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
 - [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](phase-5/M-0074.md)
   - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
+- [ ] **🖥️ `opts-hardware`** — [M-0081](phase-5/M-0081.md)
+  - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
+- [ ] **🧬 Mesh Instancing Research** — [M-0082](phase-5/M-0082.md)
+  - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).
+- [ ] **🪞 Reflections Research** — [M-0085](phase-5/M-0085.md)
+  - [ ] Research branch `research/reflections`: mirrors, glass, later wet surfaces; prototype, measurements, recommendation (R-27).
 
 ---
 
@@ -319,6 +329,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
 - [x] **⏳ Loading Screen Vehicle** — [M-0076](phase-9/M-0076.md)
   - [x] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [ ] **🌍 Language Packs** — [M-0083](phase-9/M-0083.md)
+  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](phase-9/M-0086.md)
+  - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
+  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
 
 ---
 
@@ -327,6 +342,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [ ] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](phase-10/M-0066.md)
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
+- [ ] **🔬 UV Decoder Fleet Validation** — [M-0079](phase-10/M-0079.md) — ⏸ deferred by the project lead 2026-10-13
+  - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
 - [ ] **🌊 Water Rendering** — [M-0067](phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)

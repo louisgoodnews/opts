@@ -2,6 +2,14 @@
 //! `<.o3d path> <rx> <ry> <rz>`; prints, per hypothesis, whether the resulting X axis of the frame
 //! is vertical (vehicle z) — H1: frame in vehicle axes, matrix ignored; H2: matrix rotation
 //! (rows = images of the local axes) applied after the origin rotation; H3: its transpose.
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::needless_borrow,
+    unused_mut
+)] // research prototype: lint noise, not worth restructuring
+
 use std::collections::BTreeMap;
 use std::io::BufRead;
 

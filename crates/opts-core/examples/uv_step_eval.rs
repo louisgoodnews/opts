@@ -37,6 +37,7 @@ fn main() {
     let energy = Mutex::new((0usize, 0usize, 0usize, 0usize));
     let gap = Mutex::new([0.0f64; 3]);
     let fallback = Mutex::new([0usize; 7]);
+    let unrel = Mutex::new([0usize; 7]);
     let qual = Mutex::new([(0usize, 0usize); 3]);
     let calib: Mutex<Vec<(u8, f32, bool)>> = Mutex::new(Vec::new());
     let stage_acc = Mutex::new([(0usize, 0usize); 7]);
@@ -115,6 +116,31 @@ fn main() {
                         }
                     }
                 }
+                {
+                    // What the Unreliable tier gets wrong, by kind (stored = keyed value).
+                    let mut u = unrel.lock().unwrap();
+                    for v in 0..n {
+                        if outcome.quality[v]
+                            != opts_core::formats::o3d::uvfix::UvQuality::Unreliable
+                        {
+                            continue;
+                        }
+                        let (st, dec, tru) =
+                            (ko.vertices[v].uv, t.vertices[v].uv, po.vertices[v].uv);
+                        let guess_none = (st - dec).abs().max_element() < 1e-6;
+                        let truth_none = (st - tru).abs().max_element() < 1e-6;
+                        let right = (dec - tru).abs().max_element() < 1e-4;
+                        u[0] += 1;
+                        u[1] += usize::from(right);
+                        u[2] += usize::from(truth_none);
+                        u[3] += usize::from(guess_none);
+                        if !right {
+                            u[4] += usize::from(guess_none && !truth_none); // left jittered
+                            u[5] += usize::from(!guess_none && truth_none); // shifted a clean vertex
+                            u[6] += usize::from(!guess_none && !truth_none); // wrong offset
+                        }
+                    }
+                }
                 let exact = (0..n)
                     .filter(|&v| {
                         (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4
@@ -180,6 +206,8 @@ fn main() {
     if e.0 > 0 {
         println!("energy check on {} meshes: truth lower (search failure) {}, equal {}, decoded lower (model failure) {}", e.0, e.1, e.2, e.3);
     }
+    let u = unrel.into_inner().unwrap();
+    println!("unreliable tier: {} vertices, right {:.3}; truly jittered {:.3}; best guess leaves the value unchanged for {:.3}; of the wrong ones: left jittered {:.3}, clean vertex shifted {:.3}, wrong offset {:.3}", u[0], u[1] as f64 / u[0] as f64, 1.0 - u[2] as f64 / u[0] as f64, u[3] as f64 / u[0] as f64, u[4] as f64 / (u[0] - u[1]) as f64, u[5] as f64 / (u[0] - u[1]) as f64, u[6] as f64 / (u[0] - u[1]) as f64);
     let f = fallback.into_inner().unwrap();
     println!("fallback on {} unreliable vertices: best guess exact {:.3}, within 0.01 {:.3}; hinge prediction exists for {} ({:.1}%): exact {:.3}, within 0.01 {:.3} (the guess on the same vertices: within 0.01 {:.3})",
         f[0], f[1] as f64 / f[0] as f64, f[2] as f64 / f[0] as f64, f[3], 100.0 * f[3] as f64 / f[0] as f64, f[4] as f64 / f[3].max(1) as f64, f[5] as f64 / f[3].max(1) as f64, f[6] as f64 / f[3].max(1) as f64);

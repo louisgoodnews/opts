@@ -44,6 +44,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0071 — HUD Layout Rework: Bottom-Left Cluster, Bottom-Right Mini Map](M-0071.md) — 📝 Planned (R-08)
 - [M-0075 — HUD Place Label from the Spawn Entry Point](M-0075.md) — ✅ Implemented 2026-10-13 (R-12)
 - [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — ✅ Implemented 2026-10-13 (R-13)
+- [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 📝 Planned (R-25)
+- [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — 🟡 Scrolling fixed, search planned (R-24, R-28)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -103,3 +105,8 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
 - [x] **⏳ Loading Screen Vehicle** — [M-0076](M-0076.md)
   - [x] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [ ] **🌍 Language Packs** — [M-0083](M-0083.md)
+  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](M-0086.md)
+  - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
+  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).

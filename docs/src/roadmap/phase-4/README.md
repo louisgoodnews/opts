@@ -22,6 +22,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
+- [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 📝 Planned (R-20, R-21)
+- [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 📝 Planned (R-26)
 - [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003)
 
 ## Checklist
@@ -31,7 +33,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
 - [ ] **🗺️ World & Map Loading** — [M-0024](M-0024.md) & [M-0025](M-0025.md)
-  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
+  - [x] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). *Done 2026-10-13: written from the code as it runs; limits L1-L8 and open questions Q-MS-01..05 listed.* 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
   - [~] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018). *Paging runs in `opts-game` (`stream_world_tiles`); async jobs and the `opts-bevy` module are open.*
   - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh and elevation sampling done; water and a ground-height query for vehicles open.*
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](M-0022.md) & [M-0023](M-0023.md)
@@ -71,3 +73,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](M-0057.md).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](M-0058.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
+- [ ] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
+  - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
+- [ ] **🎥 Viewpoint Editor** — [M-0084](M-0084.md)
+  - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).

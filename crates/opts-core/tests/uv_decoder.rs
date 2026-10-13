@@ -58,7 +58,7 @@ fn grid(w: usize, h: usize) -> O3d {
 fn jitter(plain: &O3d, share: u32, seed: u32) -> (O3d, Vec<usize>) {
     let offsets = jitter_offsets();
     let n = plain.vertices.len();
-    let allowed: Vec<usize> = if n % 5 == 0 {
+    let allowed: Vec<usize> = if n.is_multiple_of(5) {
         (1..39).collect() // u-only and u+v offsets
     } else {
         (1..offsets.len()).collect()
