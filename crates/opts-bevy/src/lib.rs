@@ -58,7 +58,8 @@ pub use articulation::{
 };
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
-    OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState, FREE_ROAM_MIN_SPEED,
+    OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState,
+    FREE_ROAM_MIN_SPEED,
 };
 pub use coords::{
     bevy_quat_to_omsi_euler, bevy_to_omsi_pos, bevy_to_omsi_transform,

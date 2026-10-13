@@ -9,10 +9,12 @@ Design: offsets (X right, Y up, Z forward, metres, limit +-0.6) and horizontal F
 (vehicle key = `.bus` file stem lowercase, driver camera index), applied on top of the vehicle preset.
 
 ## Batches
-- [ ] A: opts-bevy `camera/viewpoint.rs` (model, state, keys, camera apply, gating)
-- [ ] B: opts-game store (`viewpoints.rs`, JSON v1 next to drive_history.json), load on spawn/enter, persist
-- [ ] C: panel UI (HUD style), l10n de/en, Help row, gating audit
-- [ ] D: control protocol camera.viewpoint.get/set/save/reset + reference doc
-- [ ] E: tests
-- [ ] F: docs (camera-system, M-0084, ROADMAP, BOARD)
-- [ ] G: live verification, gates
+- [x] A: opts-bevy `camera/viewpoint.rs` (model, state, keys, camera apply, gating)
+- [x] B: opts-game store (`viewpoints.rs`, JSON v1 next to drive_history.json), load on spawn/enter, persist
+- [x] C: panel UI (HUD style), l10n de/en, Help row, gating audit
+- [x] D: control protocol camera.viewpoint.get/set/save/reset + reference doc
+- [x] E: tests
+- [x] F: docs (camera-system, M-0084, ROADMAP, BOARD)
+- [x] G: live verification, gates
+
+All batches done and live-verified; remaining: full gates (fmt, clippy, workspace tests, doc, links, roadmap copy) then push. Open: model-wide viewpoints, export/import, FOV setting.

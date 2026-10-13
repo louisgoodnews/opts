@@ -183,7 +183,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
 - [ ] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25.
-- [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.
+- [~] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26. Core done on `feat/viewpoint-editor` (not merged): editor, storage, protocol, tests; open: model-wide viewpoints, export/import, FOV setting.
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [~] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.

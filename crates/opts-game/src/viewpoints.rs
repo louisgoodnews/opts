@@ -18,7 +18,9 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
-use opts_bevy::{CameraMode, CameraState, PlayerVehicle, Viewpoint, ViewpointRequest, ViewpointState};
+use opts_bevy::{
+    CameraMode, CameraState, PlayerVehicle, Viewpoint, ViewpointRequest, ViewpointState,
+};
 use serde_json::{json, Value};
 
 use crate::app_state::AppState;
@@ -107,17 +109,15 @@ impl ViewpointStore {
         let mut report = LoadReport::default();
         let Ok(Value::Object(root)) = serde_json::from_str::<Value>(text) else {
             report.unreadable = true;
-            report
-                .problems
-                .push("not a JSON object".to_owned());
+            report.problems.push("not a JSON object".to_owned());
             return (store, report);
         };
         match root.get("version").and_then(Value::as_u64) {
             Some(v) if v <= FILE_VERSION => {}
             other => {
-                report
-                    .problems
-                    .push(format!("unsupported version {other:?}; its entries are ignored"));
+                report.problems.push(format!(
+                    "unsupported version {other:?}; its entries are ignored"
+                ));
                 return (store, report);
             }
         }
@@ -126,7 +126,9 @@ impl ViewpointStore {
         };
         for (raw_key, entry) in vehicles {
             let Some(key) = normalise_key(raw_key) else {
-                report.problems.push(format!("vehicle key {raw_key:?} is not valid"));
+                report
+                    .problems
+                    .push(format!("vehicle key {raw_key:?} is not valid"));
                 continue;
             };
             let Some(cameras) = entry.get("cameras").and_then(Value::as_object) else {
@@ -152,9 +154,7 @@ impl ViewpointStore {
                     Ok(_) => report
                         .problems
                         .push(format!("{key} camera {index}: a value is out of range")),
-                    Err(e) => report
-                        .problems
-                        .push(format!("{key} camera {index}: {e}")),
+                    Err(e) => report.problems.push(format!("{key} camera {index}: {e}")),
                 }
             }
         }
@@ -170,7 +170,7 @@ impl ViewpointStore {
             .map(|(key, cams)| {
                 let cams: serde_json::Map<String, Value> = cams
                     .iter()
-                    .map(|(i, vp)| (i.to_string(), serde_json::to_value(vp).unwrap_or(Value::Null)))
+                    .map(|(i, vp)| (i.to_string(), vp_json(vp)))
                     .collect();
                 (key.clone(), json!({ "cameras": cams }))
             })
@@ -192,7 +192,9 @@ impl ViewpointStore {
         if report.unreadable {
             let bad = path.with_extension("json.bad");
             match std::fs::rename(path, &bad) {
-                Ok(()) => tracing::warn!(moved_to = %bad.display(), "viewpoints: the file was unusable"),
+                Ok(()) => {
+                    tracing::warn!(moved_to = %bad.display(), "viewpoints: the file was unusable")
+                }
                 Err(e) => tracing::warn!("viewpoints: cannot move the unusable file aside: {e}"),
             }
         }
@@ -211,6 +213,13 @@ impl ViewpointStore {
         std::fs::write(&tmp, self.to_json())?;
         std::fs::rename(&tmp, path)
     }
+}
+
+/// A viewpoint as JSON with the f32 noise rounded away (0.08, not 0.07999999821186066).
+#[must_use]
+pub fn vp_json(vp: &Viewpoint) -> Value {
+    let r = |v: f32| (f64::from(v) * 10_000.0).round() / 10_000.0;
+    json!({ "x": r(vp.x), "y": r(vp.y), "z": r(vp.z), "fov_deg": vp.fov_deg.map(r) })
 }
 
 /// The store and where it lives (`None` when no user data directory is known).

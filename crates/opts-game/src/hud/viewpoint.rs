@@ -336,7 +336,11 @@ pub fn update_panel(
 ) {
     let palette = theme.instrument(*variant);
     for (paint, mut bg) in &mut paints {
-        let want = if paint.0 { palette.needle } else { palette.track };
+        let want = if paint.0 {
+            palette.needle
+        } else {
+            palette.track
+        };
         if bg.0 != want {
             bg.0 = want;
         }

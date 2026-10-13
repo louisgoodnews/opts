@@ -66,7 +66,11 @@ fn corrupt_entries_are_dropped_and_the_rest_survives() {
     assert_eq!(s.get("far", 0), None, "out of range");
     assert_eq!(s.get("far", 1), None, "fov out of range");
     assert_eq!(s.get("far", 2), None, "wrong type");
-    assert_eq!(s.get("far", 3).map(|v| v.z), Some(-0.2), "a neighbour survives");
+    assert_eq!(
+        s.get("far", 3).map(|v| v.z),
+        Some(-0.2),
+        "a neighbour survives"
+    );
     assert!(report.problems.len() >= 5, "{report:?}");
     assert!(!report.unreadable);
 }
@@ -75,7 +79,9 @@ fn corrupt_entries_are_dropped_and_the_rest_survives() {
 fn garbage_and_newer_files_give_an_empty_store() {
     let (s, r) = ViewpointStore::parse("this is not json");
     assert!(s.vehicles.is_empty() && r.unreadable);
-    let (s, r) = ViewpointStore::parse(r#"{"version": 99, "vehicles": {"a": {"cameras": {"0": {"x": 0.1}}}}}"#);
+    let (s, r) = ViewpointStore::parse(
+        r#"{"version": 99, "vehicles": {"a": {"cameras": {"0": {"x": 0.1}}}}}"#,
+    );
     assert!(s.vehicles.is_empty() && !r.unreadable && !r.problems.is_empty());
 }
 
@@ -142,7 +148,9 @@ fn edit_save_respawn_loaded() {
     let mut app = app(path.clone());
     app.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
     let first = spawn_vehicle(&mut app, "man_sd77");
-    app.world_mut().resource_mut::<ViewpointState>().default_fov_deg = 70.0;
+    app.world_mut()
+        .resource_mut::<ViewpointState>()
+        .default_fov_deg = 70.0;
     app.update();
     assert!(app.world().resource::<ViewpointState>().active.is_default());
 
@@ -158,7 +166,10 @@ fn edit_save_respawn_loaded() {
     app.update();
     let mut fresh = self::app(path.clone());
     fresh.world_mut().resource_mut::<CameraState>().mode = CameraMode::Cockpit;
-    fresh.world_mut().resource_mut::<ViewpointState>().default_fov_deg = 70.0;
+    fresh
+        .world_mut()
+        .resource_mut::<ViewpointState>()
+        .default_fov_deg = 70.0;
     spawn_vehicle(&mut fresh, "man_sd77");
     fresh.update();
     let st = fresh.world().resource::<ViewpointState>();

@@ -108,12 +108,7 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_CAMERA_RESET,
                 CAMERA,
             ),
-            bind(
-                "Tab",
-                &[KeyCode::Tab],
-                keys::HELP_KEY_VIEWPOINT,
-                VIEWPOINT,
-            ),
+            bind("Tab", &[KeyCode::Tab], keys::HELP_KEY_VIEWPOINT, VIEWPOINT),
         ],
     ),
     (

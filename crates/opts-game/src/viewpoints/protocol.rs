@@ -3,9 +3,9 @@
 //! sees exactly what a player gets.
 
 use bevy::prelude::*;
+use opts_bevy::camera::viewpoint::{FOV_RANGE_DEG, OFFSET_LIMIT_M};
 use opts_bevy::control::params::opt_f64;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
-use opts_bevy::camera::viewpoint::{FOV_RANGE_DEG, OFFSET_LIMIT_M};
 use opts_bevy::{BusVehicle, CameraMode, CameraState, PlayerVehicle, Viewpoint, ViewpointState};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
@@ -21,7 +21,7 @@ pub fn register(registry: &mut ControlRegistry) {
 }
 
 fn json_of(vp: &Viewpoint) -> Value {
-    json!({ "x": vp.x, "y": vp.y, "z": vp.z, "fov_deg": vp.fov_deg })
+    super::vp_json(vp)
 }
 
 fn describe(world: &mut World) -> Value {
@@ -46,7 +46,7 @@ fn describe(world: &mut World) -> Value {
         "fov_deg": state.effective_fov_deg(),
         "default_fov_deg": state.default_fov_deg,
         "limits": {
-            "offset_m": OFFSET_LIMIT_M,
+            "offset_m": (f64::from(OFFSET_LIMIT_M) * 100.0).round() / 100.0,
             "fov_deg": [FOV_RANGE_DEG.0, FOV_RANGE_DEG.1],
         },
         "file": path,

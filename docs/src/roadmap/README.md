@@ -200,7 +200,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
-- [ ] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
+- [~] **🎥 Viewpoint Editor** — [M-0084](phase-4/M-0084.md)
   - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 
 ---

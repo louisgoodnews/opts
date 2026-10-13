@@ -17,8 +17,8 @@ pub mod parts;
 pub mod profile;
 pub mod protocol;
 pub mod update;
-pub mod viewpoint;
 pub mod values;
+pub mod viewpoint;
 pub mod widget;
 
 use bevy::prelude::*;
