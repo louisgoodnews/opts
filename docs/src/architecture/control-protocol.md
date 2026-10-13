@@ -138,6 +138,10 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `settings.get` | `{key}` | one entry as above; `1004` for an unknown key | P1 |
 | `settings.set` | `{key, value}` | the entry after the change plus `previous`; `value` may be a string, number or boolean and is validated against the setting (`-32602` with what is expected); a planned setting answers `1001` with "Feature not available yet!"; saved at once and announced like a change on the page; **risky settings (window mode, size) skip the 15 s revert prompt** because a script is not a person | P1 |
 | `settings.reset` | `{key}` | the entry after the change plus `previous`; `1004` for an unknown key | P1 |
+| `l10n.languages` | none | `{current, packs_dir, languages:[{code, name, native_name, direction, builtin, from_pack, authors, version, total, translated, copied, missing, percent, errors, warnings, outdated, missing_fonts, selectable, current, dir}], problems:[{folder, issues}]}`: built-in languages and installed [language packs](localisation-packs.md) with completeness | P1 |
+| `l10n.set` | `{code}` | `{current, previous}`; saved like `settings.set`; `1004` for a language that is not installed, `1007` for a right-to-left pack | P1 |
+| `l10n.reload` | none | the `l10n.languages` result plus `{usable, broken, errors}`; scans `<data dir>/lang` again, never fails because of a bad pack | P1 |
+| `l10n.report` | `[code]` | `{language, missing_keys, copied_keys, issues:[{severity, code, file, line, key, message}], issue_lines}` for `code` (default: the current language) | P1 |
 | `vehicle.get` | — | `{x, y, z, heading_deg, speed_kmh}` of the player vehicle (absolute OMSI coordinates) | P1 |
 | `vehicle.script_vars` | `{contains?}` | the player vehicle's script variables `{count, variables, ops_executed}` (substring filter) | P1 |
 | `vehicle.set` | `{path}` | takes a `.bus` file and restarts the session with it (answers when it is up) | P1 |

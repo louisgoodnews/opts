@@ -129,6 +129,7 @@
 - [UI Foundations Spikes](architecture/ui-spikes.md)
 - [GUI Interaction Layer and Components](architecture/gui-interaction-layer.md)
 - [Settings Registry](architecture/settings-registry.md)
+- [Localisation Packs](architecture/localisation-packs.md)
 - [HUD Registry](architecture/hud-registry.md)
 - [Vehicle ECS Simulation Bridge](architecture/vehicle-ecs-bridge.md)
 - [Main Menu Architecture](architecture/main-menu.md)

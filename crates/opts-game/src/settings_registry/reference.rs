@@ -63,7 +63,11 @@ pub fn markdown_with(registry: &SettingsRegistry, loc: &opts_gui::l10n::Localiza
                 "| `{}` | {} | {} | {} | {} | {} | {} |\n",
                 d.key,
                 loc.t(d.label_key),
-                kind_text(&d.kind),
+                if d.key == "interface.language" {
+                    "language tag (`en`, `de`, or an installed pack such as `fr`; see `l10n.languages`)".to_string()
+                } else {
+                    kind_text(&d.kind)
+                },
                 default,
                 applies,
                 status,

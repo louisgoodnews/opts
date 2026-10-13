@@ -41,6 +41,7 @@ impl Plugin for GameControlPlugin {
         registry.register("menu.do", menu_do);
         registry.register("menu.state", menu_state);
         crate::hud::protocol::register(&mut registry);
+        crate::language_packs::register(&mut registry);
         crate::control_ui::register(&mut registry);
         crate::control_drive::register(&mut registry);
         app.add_systems(Update, allow_session_reads);

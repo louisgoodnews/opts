@@ -5440,6 +5440,7 @@ dependencies = [
  "ddsfile",
  "image",
  "opts-core",
+ "serde_json",
 ]
 
 [[package]]

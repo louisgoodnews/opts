@@ -17,6 +17,7 @@ pub mod look;
 pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
+pub mod language_packs;
 pub mod omsi_setup;
 pub mod pause;
 pub mod report_context;
