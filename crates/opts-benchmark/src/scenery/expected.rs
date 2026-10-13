@@ -235,7 +235,7 @@ fn add_model(
     for (i, face) in model.indices.iter().enumerate() {
         let slot = model.face_materials.get(i).copied().unwrap_or(0) as usize;
         let over = find_override(&model.materials, slot, &plain);
-        if over.is_some_and(|o| o.hidden_by_variable) {
+        if over.is_some_and(TextureOverride::is_variable_hidden) {
             continue;
         }
         let text = over

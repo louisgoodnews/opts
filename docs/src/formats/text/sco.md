@@ -174,7 +174,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_freetex]` | 1 | Texture assigned at runtime (via script / CTC). |
 | `[matl_item]` | — | Starts a material variant block for night/day. |
 | `[matl_change]` | 3 | `<texture>`, `<material-index>`, `<variable>`. Replaces the material while the variable is nonzero (`NightlightA` for night). |
-| `[alphascale]` | 1 | Variable (e.g. `Envir_Brightness`) that drives overall alpha. |
+| `[alphascale]` | 1 | Variable (e.g. `Envir_Brightness`) that drives overall alpha. Of the 44,348 materials in vehicle models and scenery objects that carry it, 43,968 use alpha (`[matl_alpha]` ≠ 0 or a `[matl_transmap]` texture: rain, dirt, condensation, window overlays; OPTS hides them, their variable is 0 by default) and **380 are opaque base materials, all `Envir_Brightness`** (the body of the Crealis bus family, the skyline blocks of the Chicago map, `O405` bodies). OPTS drew nothing for those until 2026-10-13 (P-1014, MI-0029): whole vehicle bodies and a whole map's buildings were missing. They are drawn now. |
 | `[shadow]` / `[noshadow]` | — | Mesh casts / does not cast a shadow. |
 | `[visible]` | 2 | `<variable>`, `<flag>`. Mesh visible only while the variable is nonzero (`red`, `green`, `yellow`, `blink_visible`, `snow_visible`, `sommerhalbjahr`, …). |
 | `[rendertype]` | 1 | Render pass: `0`–`4`, or `surface`, `presurface`, `on_surface`. |
