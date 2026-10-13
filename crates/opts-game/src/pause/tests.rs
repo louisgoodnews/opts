@@ -270,7 +270,8 @@ fn the_save_list_saves_asks_before_overwriting_renames_and_deletes() {
     // An empty name is refused inline.
     click(&mut app, "saves.save");
     assert_eq!(save_files(&app), 0);
-    assert!(ids(&mut app).contains(&"saves.name-error".to_owned()));
+    let now = ids(&mut app);
+    assert!(now.contains(&"saves.name-error".to_owned()), "{now:?}");
 
     set_name(&mut app, "Erste Fahrt");
     click(&mut app, "saves.save");
@@ -334,5 +335,6 @@ fn loading_a_save_whose_map_is_missing_shows_the_error_template() {
     assert!(shown.contains(&"dialog.saves.error.back".to_owned()));
     assert_eq!(state(&app), AppState::InGame, "nothing was left");
     click(&mut app, "dialog.saves.error.another");
-    assert!(ids(&mut app).contains(&"saves.row.karte-weg".to_owned()), "the list stays");
+    let now = ids(&mut app);
+    assert!(now.contains(&"saves.row.karte-weg".to_owned()), "the list stays: {now:?}");
 }
