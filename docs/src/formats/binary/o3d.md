@@ -487,4 +487,17 @@ Result of a corpus-wide audit (`mesh_audit` example, 172,434 `.o3d` files of the
 
 **Spike faces of decoded meshes.** An accepted decode has wrong vertices in about 18 % of the meshes (301 of 1,826 accepted twins have < 98 % of their positions right, `mesh_detector_eval`). The generic offline detectors find few of them (recall 12 %; the texture-chaos detector has 7 % precision and was retired as a defect signal); without a plain twin a wrongly decoded mesh is mostly not detectable. The one rule with usable precision is the edge length: faces whose longest edge exceeds 40 times the median edge (and 1 m) touch a wrongly labelled vertex in 69 % of the cases (2,303 wrong against 1,049 correct faces of 592,012; the 6x rule of Addendum 7 dropped two correct faces for every wrong one). `descramble::drop_spike_faces` removes them in `decode_confident` and `decode_joint` and reports the number as `dropped_faces`; the decode cache version is 6.
 
+**The two-run agreement does predict correctness, down to its acceptance limit** (twin ground truth, 1,826 accepted meshes, `mesh_detector_eval`; Addendum 7 looked at coherence and edge-length gates, not at the agreement itself):
+
+| Agreement of the two runs | Accepted | Wrong (< 98 % of the positions) |
+| :--- | ---: | ---: |
+| 0.90 – 0.92 | 72 | 41 (57 %) |
+| 0.92 – 0.94 | 59 | 41 (69 %) |
+| 0.94 – 0.96 | 63 | 33 (52 %) |
+| 0.96 – 0.98 | 90 | 44 (49 %) |
+| 0.98 – 1.00 | 161 | 19 (12 %) |
+| 1.00 | 1,381 | 123 (9 %) |
+
+So the 284 meshes accepted *only because* the limit was lowered from 0.98 to 0.9 (Addendum 9) are wrong in 56 % of the cases (159 of the 301 wrong meshes), against 9–12 % above 0.98. Visible examples in the game: the DDR blocks `ddr_house_medium_06.o3d` (agreement 0.94) of the map `Kbergbahn` show floating balcony slabs, and the grey zig-zag panels on `Grundorf` come from houses and signals decoded at 0.93-0.95. Raising `CONFIDENT_MIN_AGREEMENT` back to 0.98 would trade those meshes for missing objects (15 % of the accepted decodes); this is a product decision and was **not changed** (developer switch `OPTS_CONF_AGREE`).
+
 **Still open.** 714 of 22,395 keyed meshes (3.2 %) are rejected by the confident decoder and stay skipped; accepted decodes remain wrong in about 18 % of the meshes (see Addendum 7 for the causes); none of the generic detectors can find them without a twin.
