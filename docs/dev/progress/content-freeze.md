@@ -12,10 +12,10 @@ Final: merge master into branch, re-gate, push, ff-merge into master in the proj
 ## Checklist
 - [x] S1 diagnostic: `state.frame_ms_max` (worst frame of the last 10 s) in the control protocol
 - [x] S2 baseline measurement on the full catalogue (679,543 files / 75,313 entries)
-- [ ] S3 background provider for catalogue stats / scan inputs / cache usage (cached, invalidated, 'Calculating...')
+- [x] S3 background provider for catalogue stats / scan inputs / cache usage (cached, invalidated, 'Calculating...')
 - [ ] S4 audit of other UI systems and fixes
 - [ ] S5 regression guards (slow-provider frame test, source lint) and standards rule
-- [ ] S6 live after-measurement
+- [x] S6 live after-measurement
 - [ ] S7 docs (M-0088, ROADMAP, BOARD, R-31), gates, merge
 
 ## Findings
@@ -28,3 +28,7 @@ Final: merge master into branch, re-gate, push, ff-merge into master in the proj
 Opening Settings -> Content (3 repetitions): worst frame 257 ms, 350 ms, 213 ms (first open 233 ms); idle frames 17-21 ms.
 Run: `opts-base --headless --cli-port 44777 --omsi-path <OMSI>`, XDG dirs under `.../content-freeze/xdg-base`, script: click `shell.nav.settings`, `settings/category/content`, poll `state.frame_ms_max`.
 (The project lead sees a longer freeze: cold caches / slower disk / scan running; the blocking calls are the same.)
+
+## After (S6), same setup, new binary, xdg-new (copy of the catalogue)
+Content page opened 4 times: worst frame 17.8, 16.2, 17.0, 17.2 ms (idle 16-17 ms; baseline 213-350 ms). Rescan started with the page open: worst 20.3 ms; back to Settings from Home: 24.0 ms. Numbers fill in ("Catalogue: 45 maps, 947 vehicles ...", chip "Up to date").
+Gates are next (S4 audit done in code: Home hero/history, thumbnails probes, settings saves, theme list; lint lists the rest).
