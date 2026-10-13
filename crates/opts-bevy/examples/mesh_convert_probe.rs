@@ -25,8 +25,13 @@ fn main() {
                     .and_then(|a| a.as_float3())
                     .map(<[_]>::to_vec)
                     .unwrap_or_default();
-                let idx: Vec<u32> = mesh.indices().map(|i| i.iter().map(|x| x as u32).collect()).unwrap_or_default();
-                let c = pos.iter().fold(bevy::math::Vec3::ZERO, |a, p| a + bevy::math::Vec3::from(*p)) / pos.len().max(1) as f32;
+                let idx: Vec<u32> = mesh
+                    .indices()
+                    .map(|i| i.iter().map(|x| x as u32).collect())
+                    .unwrap_or_default();
+                let c = pos.iter().fold(bevy::math::Vec3::ZERO, |a, p| {
+                    a + bevy::math::Vec3::from(*p)
+                }) / pos.len().max(1) as f32;
                 let (mut outward, mut total) = (0usize, 0usize);
                 for t in idx.chunks_exact(3) {
                     let p = |i: u32| bevy::math::Vec3::from(pos[i as usize]);
@@ -39,7 +44,10 @@ fn main() {
                         }
                     }
                 }
-                println!("   slot {slot}: {outward}/{total} faces outward ({:.0} %)", 100.0 * outward as f32 / total.max(1) as f32);
+                println!(
+                    "   slot {slot}: {outward}/{total} faces outward ({:.0} %)",
+                    100.0 * outward as f32 / total.max(1) as f32
+                );
             }
             println!(
                 "{a}: v={} t={} keyed={} decode={:?} layout={:?} -> {} submeshes {:?}",

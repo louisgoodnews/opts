@@ -869,11 +869,29 @@ mod alphascale_tests {
     /// alpha (rain, dirt, condensation: 43,968 materials) stay hidden by their variable.
     #[test]
     fn only_alpha_overlays_are_hidden_by_their_variable() {
-        assert!(!over(None, None, true).is_variable_hidden(), "opaque body stays");
-        assert!(!over(Some(0), None, true).is_variable_hidden(), "mode 0 is opaque");
-        assert!(over(Some(2), None, true).is_variable_hidden(), "blended overlay");
-        assert!(over(Some(1), None, true).is_variable_hidden(), "cutout overlay");
-        assert!(over(None, Some("mask.bmp"), true).is_variable_hidden(), "transmap overlay");
-        assert!(!over(Some(2), None, false).is_variable_hidden(), "no variable: visible");
+        assert!(
+            !over(None, None, true).is_variable_hidden(),
+            "opaque body stays"
+        );
+        assert!(
+            !over(Some(0), None, true).is_variable_hidden(),
+            "mode 0 is opaque"
+        );
+        assert!(
+            over(Some(2), None, true).is_variable_hidden(),
+            "blended overlay"
+        );
+        assert!(
+            over(Some(1), None, true).is_variable_hidden(),
+            "cutout overlay"
+        );
+        assert!(
+            over(None, Some("mask.bmp"), true).is_variable_hidden(),
+            "transmap overlay"
+        );
+        assert!(
+            !over(Some(2), None, false).is_variable_hidden(),
+            "no variable: visible"
+        );
     }
 }
