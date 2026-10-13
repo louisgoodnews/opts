@@ -10,12 +10,14 @@
 
 pub mod ops;
 pub mod registry;
+pub mod state;
 
 use bevy::prelude::*;
 use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::{L10nArgs, Localization};
 
 pub use ops::{OpError, PLACE_LABEL_HIDE_DISTANCE_M};
+pub use state::VehicleState;
 pub use registry::{
     DespawnReason, EntrySel, Lifecycle, SessionVehicle, SessionVehicleRecord, SessionVehicles,
     SpawnParams, SpawnPoint, VehicleId, SAVE_SECTION, SAVE_SECTION_VERSION,
@@ -127,6 +129,7 @@ pub fn quick_switch(keyboard: Res<ButtonInput<KeyCode>>, mut commands: Commands)
 fn maintain(world: &mut World) {
     ops::sync_lost(world);
     ops::refresh_records(world);
+    state::apply_pending(world);
 }
 
 /// Publishes the place label.

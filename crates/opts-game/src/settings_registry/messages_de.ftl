@@ -164,3 +164,5 @@ settings-toast-omsi-restart = OMSI-Ordner gespeichert. Starte OPTS neu, um seine
 settings-toast-omsi-invalid = Dieser Ordner sieht nicht nach einer OMSI-2-Installation aus (er braucht die Ordner maps und Vehicles).
 
 settings-back = Zurück
+set-autosave = Automatisch speichern
+set-autosave-desc = Speichert die Fahrt alle so viele Spielminuten im Slot für die automatische Speicherung. 0 schaltet es aus.

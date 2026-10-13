@@ -247,6 +247,39 @@ impl ScriptEngine {
         self.vars.set_string(id, value.to_owned());
     }
 
+    /// The state of the scripts as data: every float and string variable that is not zero or
+    /// empty, by name, sorted. Together with the compiled program this is all a vehicle's scripts
+    /// remember between frames (a session save stores it, see
+    /// `docs/src/architecture/session-save.md`).
+    #[must_use]
+    pub fn export_variables(&self) -> (Vec<(String, f32)>, Vec<(String, String)>) {
+        let names = &self.program.names;
+        let mut floats: Vec<(String, f32)> = self
+            .vars
+            .nonzero_floats()
+            .map(|(i, v)| (names.vars.name(i).to_owned(), v))
+            .collect();
+        let mut strings: Vec<(String, String)> = self
+            .vars
+            .nonempty_strings()
+            .map(|(i, v)| (names.strvars.name(i).to_owned(), v.to_owned()))
+            .collect();
+        floats.sort_by(|a, b| a.0.cmp(&b.0));
+        strings.sort_by(|a, b| a.0.cmp(&b.0));
+        (floats, strings)
+    }
+
+    /// Writes variables captured by [`Self::export_variables`] back; names this program does not
+    /// have are created (hosts read them by name), so nothing is lost.
+    pub fn import_variables(&mut self, floats: &[(String, f32)], strings: &[(String, String)]) {
+        for (name, value) in floats {
+            self.set(name, *value);
+        }
+        for (name, value) in strings {
+            self.set_string(name, value);
+        }
+    }
+
     /// Runs every `{init}` block once.
     pub fn run_init(&mut self) {
         for i in 0..self.program.init.len() {

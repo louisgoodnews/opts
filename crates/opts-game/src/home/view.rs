@@ -189,7 +189,7 @@ pub(super) fn spawn_home(
                 justify_content: JustifyContent::Center,
                 ..default()
             },
-            NotAvailableYet::new(&HOME_LOAD_GAME),
+            HomeButton::LoadGame,
             UiId::new("home.load-game"),
         ));
     });

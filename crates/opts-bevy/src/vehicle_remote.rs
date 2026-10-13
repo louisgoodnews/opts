@@ -56,6 +56,9 @@ pub struct RemoteControls {
     last_position: Option<Vec2>,
     /// Pose the session placed the vehicle at: `(position, heading_rad, elevation)`.
     pub start_pose: Option<(Vec2, f32, f32)>,
+    /// A distance (m) a restored save wants the odometer to continue from, and the frames it may
+    /// still wait for the vehicle to be activated (which restarts the odometer).
+    pub pending_odometer: Option<(f64, u32)>,
 }
 
 impl RemoteControls {
@@ -186,6 +189,15 @@ pub fn odometer_system(
     if !added.is_empty() || remote.start_pose.is_none() {
         remote.start_pose = Some((ch.position, ch.heading_rad, ch.elevation_z));
         remote.restart_odometer();
+        if let Some((metres, _)) = remote.pending_odometer.take() {
+            remote.odometer_m = metres;
+        }
+    }
+    if let Some((_, frames)) = &mut remote.pending_odometer {
+        *frames = frames.saturating_sub(1);
+        if *frames == 0 {
+            remote.pending_odometer = None;
+        }
     }
     if let Some(last) = remote.last_position {
         let d = ch.position.distance(last);

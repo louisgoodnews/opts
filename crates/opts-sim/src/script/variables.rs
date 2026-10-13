@@ -86,6 +86,24 @@ impl VariableStore {
         }
         self.strings[i] = value;
     }
+
+    /// Every float variable that is not zero, as `(index, value)`.
+    pub fn nonzero_floats(&self) -> impl Iterator<Item = (u32, f32)> + '_ {
+        self.floats
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| **v != 0.0)
+            .map(|(i, v)| (i as u32, *v))
+    }
+
+    /// Every string variable that is not empty, as `(index, value)`.
+    pub fn nonempty_strings(&self) -> impl Iterator<Item = (u32, &str)> + '_ {
+        self.strings
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(i, v)| (i as u32, v.as_str()))
+    }
 }
 
 /// A one-dimensional piecewise-linear curve (`[newcurve]` of a constant file); clamped outside

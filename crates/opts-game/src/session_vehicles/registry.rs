@@ -20,7 +20,7 @@ pub type VehicleId = u32;
 /// Name of the registry's section in the session save (M-0069).
 pub const SAVE_SECTION: &str = "session_vehicles";
 /// Format version of the section.
-pub const SAVE_SECTION_VERSION: u32 = 1;
+pub const SAVE_SECTION_VERSION: u32 = 2;
 
 /// Component on the root entity of every session vehicle. It is the link from an entity back to its
 /// registry record; the *active* vehicle additionally carries [`opts_bevy::PlayerVehicle`].
@@ -126,6 +126,14 @@ pub struct SessionVehicleRecord {
     pub despawn_reason: Option<DespawnReason>,
     /// What went wrong when `lifecycle` is [`Lifecycle::Failed`].
     pub error: Option<String>,
+    /// The vehicle's live state: written by the session save, and, after a restore, waiting to be
+    /// put onto the rebuilt vehicle (cleared once applied).
+    #[serde(default)]
+    pub saved_state: Option<super::state::VehicleState>,
+    /// Path of the `.bus` file relative to the OMSI installation, when it lies below it (a save
+    /// moved to another computer finds the vehicle again through it).
+    #[serde(default)]
+    pub bus_rel: Option<String>,
     /// The root entity while alive.
     #[serde(skip)]
     pub entity: Option<Entity>,
@@ -259,6 +267,8 @@ impl SessionVehicles {
             lifecycle,
             despawn_reason: None,
             error: None,
+            saved_state: None,
+            bus_rel: None,
             entity: None,
             trailers: Vec::new(),
             camera: None,
@@ -565,5 +575,9 @@ mod tests {
         };
         assert!(c > b, "ids continue after a restore");
         assert!(SessionVehicles::from_section(&json!({ "version": 99 })).is_err());
+        assert!(
+            SessionVehicles::from_section(&json!({ "version": 1 })).is_err(),
+            "an old version goes through the migration first"
+        );
     }
 }
