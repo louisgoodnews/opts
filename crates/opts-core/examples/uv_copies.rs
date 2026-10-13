@@ -7,7 +7,9 @@ use std::path::{Path, PathBuf};
 use opts_core::formats::o3d::parse;
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
     for e in rd.flatten() {
         let p = e.path();
         if p.is_dir() {
@@ -28,7 +30,12 @@ fn main() {
     walk(&root, &mut all);
     let key = |p: &Path, bytes: &[u8]| {
         let o = parse(bytes).ok()?;
-        Some((p.file_name()?.to_string_lossy().to_lowercase(), o.vertices.len(), o.indices.len(), o.encryption_key.is_some()))
+        Some((
+            p.file_name()?.to_string_lossy().to_lowercase(),
+            o.vertices.len(),
+            o.indices.len(),
+            o.encryption_key.is_some(),
+        ))
     };
     let mut want: HashMap<(String, usize, usize), (bool, usize, usize)> = HashMap::new(); // keyed?, other keyed copies, plain copies
     for p in &mine {

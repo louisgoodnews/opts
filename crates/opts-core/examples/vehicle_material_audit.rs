@@ -50,14 +50,17 @@ fn main() {
     }
     let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).unwrap()).unwrap();
     let lod = model.detail_lod().expect("lod");
-    let (mut meshes, mut scrambled, mut slot_mismatch, mut missing_tex, mut jittered) = (0, 0, 0, 0, 0);
+    let (mut meshes, mut scrambled, mut slot_mismatch, mut missing_tex, mut jittered) =
+        (0, 0, 0, 0, 0);
     println!("mesh | slots(o3d) cfg-entries | scrambled | uv outside | problems");
     for m in &lod.meshes {
         let Some(path) = find_ci(&model_dir, &m.path) else {
             println!("{} | o3d not found", m.path);
             continue;
         };
-        let Ok(o) = parse(&std::fs::read(&path).unwrap()) else { continue };
+        let Ok(o) = parse(&std::fs::read(&path).unwrap()) else {
+            continue;
+        };
         meshes += 1;
         let keyed = o.encryption_key.is_some();
         scrambled += usize::from(keyed);
@@ -96,7 +99,10 @@ fn main() {
             .count();
         if used > o.materials.len() {
             slot_mismatch += 1;
-            problems.push(format!("{used} cfg entries for {} o3d slots", o.materials.len()));
+            problems.push(format!(
+                "{used} cfg entries for {} o3d slots",
+                o.materials.len()
+            ));
         }
         missing_tex += usize::from(problems.iter().any(|p| p.contains("missing")));
         jittered += usize::from(keyed && share > 0.02);

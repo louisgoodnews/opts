@@ -206,10 +206,12 @@ pub fn articulation_system(
         // A position change the speed cannot explain is a jump (spawn placement, collision
         // push-out, reset), not motion: the segments are re-seeded behind the leader and their
         // wheels keep their last speed (`docs/src/architecture/chain-assembly.md`).
-        let jumped = last_leader.insert(root, chassis.position).is_none_or(|prev| {
-            let moved = (chassis.position - prev).length();
-            moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
-        });
+        let jumped = last_leader
+            .insert(root, chassis.position)
+            .is_none_or(|prev| {
+                let moved = (chassis.position - prev).length();
+                moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
+            });
         let mut leader = (
             DVec2::new(f64::from(chassis.position.x), f64::from(chassis.position.y)),
             f64::from(chassis.heading_rad),
