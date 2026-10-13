@@ -39,6 +39,9 @@ pub struct ScriptEvent {
     pub name: String,
 }
 
+/// Float and string variables of an engine by name ([`ScriptEngine::export_variables`]).
+pub type ExportedVariables = (Vec<(String, f32)>, Vec<(String, String)>);
+
 /// One vehicle's scripts, variables and constants.
 pub struct ScriptEngine {
     pub(crate) program: Program,
@@ -252,7 +255,7 @@ impl ScriptEngine {
     /// remember between frames (a session save stores it, see
     /// `docs/src/architecture/session-save.md`).
     #[must_use]
-    pub fn export_variables(&self) -> (Vec<(String, f32)>, Vec<(String, String)>) {
+    pub fn export_variables(&self) -> ExportedVariables {
         let names = &self.program.names;
         let mut floats: Vec<(String, f32)> = self
             .vars
