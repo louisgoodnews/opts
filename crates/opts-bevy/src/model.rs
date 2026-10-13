@@ -69,6 +69,9 @@ pub struct ModelPart {
     pub light_variable: Option<String>,
     /// The ready-made image that replaced the material's texture (rendered text), if any.
     pub image: Option<Handle<Image>>,
+    /// Vertices of this part whose texture coordinates are `Unreliable` (scrambled meshes whose
+    /// jitter the decoder could not prove; the unreliable share of the model, scaled to the part).
+    pub uv_unreliable: usize,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.
@@ -86,6 +89,10 @@ pub struct ContentStats {
     pub twin_meshes: usize,
     /// Scrambled meshes recovered by the confident geometric decoder.
     pub decoded_meshes: usize,
+    /// Texture-coordinate quality of the decoded meshes' vertices: exact, recovered, unreliable.
+    pub uv_quality: [usize; 3],
+    /// Vertices and unreliable vertices of the parts used since the last reset (a vehicle load).
+    pub uv_scope: (usize, usize),
     /// Meshes left out for now because their background decoding is still running.
     pub deferred_meshes: usize,
     /// Meshes read with the axis-cycled layout (coherent positions, unusable stored normals).
@@ -113,6 +120,8 @@ pub struct ContentCache {
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
+    /// Scrambled meshes already reported for unreliable texture coordinates.
+    pub(crate) uv_warned: std::collections::HashSet<PathBuf>,
     /// Parameters of the scrambled-mesh decoder.
     pub decode_params: opts_core::formats::o3d::descramble::DecodeParams,
     /// Background decoder; without it meshes are decoded on the calling thread.
@@ -366,6 +375,7 @@ impl ContentLoader<'_> {
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
         let mut deferred_here = false;
+        let mut model_quality: HashMap<usize, [usize; 3]> = HashMap::new();
         if is_o3d {
             let unreadable = models
                 .iter()
@@ -405,6 +415,7 @@ impl ContentLoader<'_> {
                 let fingerprint = self.cache.decode_params.fingerprint();
                 deferred_here = false;
                 for (mi, m) in models.iter_mut().enumerate() {
+                    let counts: Option<[usize; 3]>;
                     if !matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable) {
                         continue;
                     }
@@ -417,7 +428,10 @@ impl ContentLoader<'_> {
                         .and_then(|p| p.result(ckey))
                         .or_else(|| crate::descramble_cache::load(ckey, fingerprint));
                     let applied = match &cached {
-                        Some(c) => crate::descramble_cache::apply(m, c),
+                        Some(c) => {
+                            counts = crate::descramble_cache::quality_counts(c);
+                            crate::descramble_cache::apply(m, c)
+                        }
                         None => {
                             if let Some(pool) = &self.cache.decode_pool {
                                 // Decode in the background; the tile is rebuilt when it is done.
@@ -457,16 +471,38 @@ impl ContentLoader<'_> {
                                 "scrambled mesh decoded"
                             );
                             let outcome = if report.accepted {
-                                crate::descramble_cache::capture(&before, m)
+                                crate::descramble_cache::capture(&before, m, &report.quality)
                             } else {
                                 crate::descramble_cache::Cached::Rejected
                             };
+                            counts = crate::descramble_cache::quality_counts(&outcome);
                             crate::descramble_cache::store(ckey, fingerprint, &outcome);
                             report.accepted
                         }
                     };
                     if applied {
                         self.cache.stats.decoded_meshes += 1;
+                        if let Some(c) = counts {
+                            for (total, n) in self.cache.stats.uv_quality.iter_mut().zip(c) {
+                                *total += n;
+                            }
+                            let all: usize = c.iter().sum();
+                            model_quality.insert(mi, c);
+                            // Every mesh whose texture coordinates are largely guesses is named once.
+                            if all > 0
+                                && c[2] * 10 > all
+                                && self.cache.uv_warned.insert(o3d_path.to_path_buf())
+                            {
+                                tracing::warn!(
+                                    path = %o3d_path.display(),
+                                    unreliable_percent = (100 * c[2] / all) as u64,
+                                    exact = c[0],
+                                    recovered = c[1],
+                                    unreliable = c[2],
+                                    "scrambled mesh: texture coordinates partly unreliable (best guess used)"
+                                );
+                            }
+                        }
                     }
                 }
             }
@@ -549,7 +585,16 @@ impl ContentLoader<'_> {
         }
 
         let mut parts = Vec::new();
-        for model in &models {
+        for (model_index, model) in models.iter().enumerate() {
+            // Unreliable share of this model's texture coordinates (0 for plain meshes and twins).
+            let unreliable_share = model_quality.get(&model_index).map_or(0.0, |c| {
+                let all: usize = c.iter().sum();
+                if all == 0 {
+                    0.0
+                } else {
+                    c[2] as f32 / all as f32
+                }
+            });
             for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
             {
                 // Static model parts carry no skeleton: joint attributes without a `SkinnedMesh`
@@ -659,6 +704,7 @@ impl ContentLoader<'_> {
                     vertices,
                     light_variable,
                     image: over.and_then(|o| o.image.clone()),
+                    uv_unreliable: (vertices as f32 * unreliable_share).round() as usize,
                 });
             }
         }

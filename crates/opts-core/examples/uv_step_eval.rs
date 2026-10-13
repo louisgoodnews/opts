@@ -32,6 +32,8 @@ fn main() {
     let acc = Mutex::new([0usize; 5]);
     let energy = Mutex::new((0usize, 0usize, 0usize, 0usize));
     let gap = Mutex::new([0.0f64; 3]);
+    let fallback = Mutex::new([0usize; 7]);
+    let qual = Mutex::new([(0usize, 0usize); 3]);
     let calib: Mutex<Vec<(u8, f32, bool)>> = Mutex::new(Vec::new());
     let stage_acc = Mutex::new([(0usize, 0usize); 7]);
     let top = Mutex::new([0usize; 4]);
@@ -76,6 +78,30 @@ fn main() {
                     for v in 0..n {
                         let ok = (t.vertices[v].uv.x - po.vertices[v].uv.x).abs() < 1e-4 && (t.vertices[v].uv.y - po.vertices[v].uv.y).abs() < 1e-4;
                         c.push((outcome.stages[v] as u8, outcome.confidence[v], ok));
+                        let q = &mut qual.lock().unwrap()[outcome.quality[v].code() as usize];
+                        q.0 += 1;
+                        q.1 += usize::from(ok);
+                    }
+                }
+                {
+                    let uvs: Vec<glam::Vec2> = t.vertices.iter().map(|v| v.uv).collect();
+                    let trusted: Vec<bool> = outcome.quality.iter().map(|q| *q != opts_core::formats::o3d::uvfix::UvQuality::Unreliable).collect();
+                    let fb = opts_core::formats::o3d::uvfix::hinge_fallback(&t, &uvs, &trusted, 5e-3);
+                    let mut f = fallback.lock().unwrap();
+                    for v in 0..n {
+                        if trusted[v] {
+                            continue;
+                        }
+                        f[0] += 1;
+                        let truth = po.vertices[v].uv;
+                        f[1] += usize::from((uvs[v] - truth).abs().max_element() < 1e-4);
+                        f[2] += usize::from((uvs[v] - truth).abs().max_element() < 1e-2);
+                        if let Some(p) = fb[v] {
+                            f[3] += 1;
+                            f[4] += usize::from((p - truth).abs().max_element() < 1e-4);
+                            f[5] += usize::from((p - truth).abs().max_element() < 1e-2);
+                            f[6] += usize::from((uvs[v] - truth).abs().max_element() < 1e-2);
+                        }
                     }
                 }
                 let exact = (0..n)
@@ -138,6 +164,14 @@ fn main() {
     let e = energy.into_inner().unwrap();
     if e.0 > 0 {
         println!("energy check on {} meshes: truth lower (search failure) {}, equal {}, decoded lower (model failure) {}", e.0, e.1, e.2, e.3);
+    }
+    let f = fallback.into_inner().unwrap();
+    println!("fallback on {} unreliable vertices: best guess exact {:.3}, within 0.01 {:.3}; hinge prediction exists for {} ({:.1}%): exact {:.3}, within 0.01 {:.3} (the guess on the same vertices: within 0.01 {:.3})",
+        f[0], f[1] as f64 / f[0] as f64, f[2] as f64 / f[0] as f64, f[3], 100.0 * f[3] as f64 / f[0] as f64, f[4] as f64 / f[3].max(1) as f64, f[5] as f64 / f[3].max(1) as f64, f[6] as f64 / f[3].max(1) as f64);
+    let qual = qual.into_inner().unwrap();
+    let qtotal: usize = qual.iter().map(|q| q.0).sum();
+    for (i, name) in ["Exact", "Recovered", "Unreliable"].iter().enumerate() {
+        println!("quality {name:10} {:6.2}% of vertices, precision {:.4}", 100.0 * qual[i].0 as f64 / qtotal.max(1) as f64, qual[i].1 as f64 / qual[i].0.max(1) as f64);
     }
     let calib = calib.into_inner().unwrap();
     {

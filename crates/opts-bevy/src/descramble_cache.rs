@@ -15,11 +15,12 @@ use opts_core::formats::o3d::descramble::{
     decode_confident_bounded, decode_confident_with, decode_joint_bounded, same_model,
     DecodeParams, ExpectedBounds,
 };
+use opts_core::formats::o3d::uvfix::UvQuality;
 use opts_core::formats::o3d::O3d;
 
 /// Bump when the decoder *algorithm* changes in a way that alters its output; parameter changes
 /// are covered by [`DecodeParams::fingerprint`], which is part of every entry's file name.
-const VERSION: u8 = 6;
+const VERSION: u8 = 7;
 /// Default size cap of the cache directory.
 pub const DEFAULT_MAX_BYTES: u64 = 256 * 1024 * 1024;
 
@@ -50,7 +51,22 @@ pub enum Cached {
         positions: Vec<[f32; 3]>,
         uvs: Vec<[f32; 2]>,
         kept: Vec<bool>,
+        /// Quality code per vertex's texture coordinates (`UvQuality::code`).
+        quality: Vec<u8>,
     },
+}
+
+/// `[exact, recovered, unreliable]` vertex counts of a cached decoding.
+#[must_use]
+pub fn quality_counts(cached: &Cached) -> Option<[usize; 3]> {
+    let Cached::Decoded { quality, .. } = cached else {
+        return None;
+    };
+    let mut c = [0usize; 3];
+    for q in quality {
+        c[usize::from(*q).min(2)] += 1;
+    }
+    Some(c)
 }
 
 fn fnv(bytes: &[u8]) -> u64 {
@@ -136,10 +152,12 @@ pub fn load(key: Key, fingerprint: u32) -> Option<Cached> {
         .iter()
         .map(|b| *b != 0)
         .collect();
+    let quality = data.get(at + 4 + faces..at + 4 + faces + n)?.to_vec();
     Some(Cached::Decoded {
         positions: pos.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect(),
         uvs: uv.chunks_exact(2).map(|c| [c[0], c[1]]).collect(),
         kept,
+        quality,
     })
 }
 
@@ -157,6 +175,7 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
             positions,
             uvs,
             kept,
+            quality,
         } => {
             out.push(1);
             out.extend_from_slice(&(positions.len() as u32).to_le_bytes());
@@ -172,6 +191,7 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
             }
             out.extend_from_slice(&(kept.len() as u32).to_le_bytes());
             out.extend(kept.iter().map(|k| u8::from(*k)));
+            out.extend_from_slice(quality);
         }
     }
     if let Some(parent) = path.parent() {
@@ -182,7 +202,7 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
 
 /// Captures the result of decoding `decoded` from the original `original` mesh.
 #[must_use]
-pub fn capture(original: &O3d, decoded: &O3d) -> Cached {
+pub fn capture(original: &O3d, decoded: &O3d, quality: &[UvQuality]) -> Cached {
     // `decode_confident` keeps vertex order and only removes triangles: record which survive.
     let mut remaining = decoded.indices.iter().peekable();
     let mut kept = Vec::with_capacity(original.indices.len());
@@ -202,6 +222,7 @@ pub fn capture(original: &O3d, decoded: &O3d) -> Cached {
             .collect(),
         uvs: decoded.vertices.iter().map(|v| v.uv.to_array()).collect(),
         kept,
+        quality: quality.iter().map(|q| q.code()).collect(),
     }
 }
 
@@ -211,6 +232,7 @@ pub fn apply(o: &mut O3d, cached: &Cached) -> bool {
         positions,
         uvs,
         kept,
+        ..
     } = cached
     else {
         return false;
@@ -410,7 +432,7 @@ fn decode_with_copies(
                     (
                         k,
                         if r.accepted {
-                            capture(b, d)
+                            capture(b, d, &r.quality)
                         } else {
                             Cached::Rejected
                         },
@@ -425,7 +447,7 @@ fn decode_with_copies(
         None => decode_confident_with(&mut single, params),
     };
     let outcome = if report.accepted {
-        capture(&model, &single)
+        capture(&model, &single, &report.quality)
     } else {
         Cached::Rejected
     };
@@ -450,6 +472,7 @@ mod tests {
             positions: vec![[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
             uvs: vec![[0.25, 0.5], [0.75, 1.0]],
             kept: vec![true, false, true],
+            quality: vec![0, 2],
         };
         store(key(b"file-a", 0), 7, &value);
         store(key(b"file-b", 1), 7, &Cached::Rejected);

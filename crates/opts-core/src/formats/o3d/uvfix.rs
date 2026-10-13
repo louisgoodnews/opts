@@ -292,6 +292,56 @@ pub enum UvStage {
     Smooth,
 }
 
+/// How far a decoded texture coordinate can be trusted (measured on the plain/keyed twins of an
+/// installation; `docs/src/architecture/uv-decoder.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
+pub enum UvQuality {
+    /// At least 99 % of such vertices are exact (or the mesh is a plain file or twin).
+    Exact,
+    /// 90-99 % of such vertices are exact: inferred from evidence, not certified.
+    Recovered,
+    /// Less than 90 % are exact: a best guess that must not be relied upon.
+    #[default]
+    Unreliable,
+}
+
+impl UvQuality {
+    /// Compact code for caches: 0, 1, 2.
+    #[must_use]
+    pub fn code(self) -> u8 {
+        match self {
+            UvQuality::Exact => 0,
+            UvQuality::Recovered => 1,
+            UvQuality::Unreliable => 2,
+        }
+    }
+
+    /// Inverse of [`UvQuality::code`]; unknown codes read as `Unreliable`.
+    #[must_use]
+    pub fn from_code(c: u8) -> Self {
+        match c {
+            0 => UvQuality::Exact,
+            1 => UvQuality::Recovered,
+            _ => UvQuality::Unreliable,
+        }
+    }
+}
+
+/// Quality of a vertex settled by `stage` with this `confidence` (see [`UvFixOutcome::confidence`]).
+/// Thresholds: the evidence strengths at which the truth set shows >= 99 % precision (`Exact`) and
+/// >= 90 % (`Recovered`).
+#[must_use]
+pub fn uv_quality_of(stage: UvStage, confidence: f32) -> UvQuality {
+    match stage {
+        UvStage::Plane if confidence >= 10.0 => UvQuality::Exact,
+        UvStage::Lattice if confidence >= 12.0 => UvQuality::Exact,
+        UvStage::Smooth if confidence >= 6.0 => UvQuality::Exact,
+        UvStage::Plane | UvStage::Lattice | UvStage::Pool | UvStage::Hint => UvQuality::Recovered,
+        UvStage::Smooth if confidence >= 2.0 => UvQuality::Recovered,
+        UvStage::Hinge | UvStage::Smooth | UvStage::Unresolved => UvQuality::Unreliable,
+    }
+}
+
 /// Result of [`unjitter_uv_staged`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct UvFixOutcome {
@@ -303,6 +353,8 @@ pub struct UvFixOutcome {
     /// patch (`Plane`), 1 (`Pool`, `Hint`, `Hinge`), energy margin to the runner-up in the smooth
     /// stage's model (`Smooth`, larger is safer).
     pub confidence: Vec<f32>,
+    /// Quality per vertex ([`uv_quality_of`]).
+    pub quality: Vec<UvQuality>,
 }
 
 /// [`unjitter_uv_with_hints`] with explicit parameters.
@@ -327,7 +379,8 @@ pub fn unjitter_uv_staged(
     let mut report = UvFixReport::default();
     if n < params.min_patch_vertices || o.indices.is_empty() {
         report.unresolved = n;
-        return UvFixOutcome { report, stages, confidence };
+        let quality = vec![UvQuality::Unreliable; n];
+        return UvFixOutcome { report, stages, confidence, quality };
     }
     let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
     let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
@@ -563,7 +616,8 @@ pub fn unjitter_uv_staged(
         }
     }
     report.unresolved = remaining;
-    UvFixOutcome { report, stages, confidence }
+    let quality = (0..n).map(|i| uv_quality_of(stages[i], confidence[i])).collect();
+    UvFixOutcome { report, stages, confidence, quality }
 }
 
 /// Fast hasher for the small integer keys of [`OffsetGrid`].
@@ -1416,6 +1470,98 @@ fn hinge_pass(
         }
     }
     resolved
+}
+
+/// Fallback value for vertices that stay `Unreliable`: the texture coordinate predicted across a
+/// shared edge from trusted neighbours (`trusted[i]`: `Exact` or `Recovered`), without snapping it to
+/// the offset set. `None` when no trusted triangle borders the vertex or the predictions disagree by
+/// more than `tolerance`. Pure geometry: it does not use the vertex's own stored value.
+#[must_use]
+pub fn hinge_fallback(o: &O3d, uv: &[glam::Vec2], trusted: &[bool], tolerance: f32) -> Vec<Option<glam::Vec2>> {
+    use std::collections::HashMap;
+    let n = o.vertices.len();
+    let pos: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
+    let q = |x: f32| (x * 1.0e4).round() as i64;
+    let mut ids: HashMap<(i64, i64, i64), u32> = HashMap::new();
+    let group: Vec<u32> = pos
+        .iter()
+        .map(|p| {
+            let next = ids.len() as u32;
+            *ids.entry((q(p.x), q(p.y), q(p.z))).or_insert(next)
+        })
+        .collect();
+    let mut edge_faces: HashMap<(u32, u32), Vec<u32>> = HashMap::new();
+    let mut vfaces: Vec<Vec<u32>> = vec![Vec::new(); n];
+    for (fi, f) in o.indices.iter().enumerate() {
+        for k in 0..3 {
+            let (a, b) = (f[k], f[(k + 1) % 3]);
+            if a as usize >= n || b as usize >= n {
+                continue;
+            }
+            let (ga, gb) = (group[a as usize], group[b as usize]);
+            if ga != gb {
+                edge_faces.entry((ga.min(gb), ga.max(gb))).or_default().push(fi as u32);
+            }
+            vfaces[a as usize].push(fi as u32);
+        }
+    }
+    let mut out = vec![None; n];
+    for a in 0..n {
+        if trusted[a] {
+            continue;
+        }
+        let mut preds: Vec<glam::Vec2> = Vec::new();
+        for &fi in &vfaces[a] {
+            let f = o.indices[fi as usize];
+            let others: Vec<u32> = f.iter().copied().filter(|&v| v as usize != a).collect();
+            if others.len() != 2 {
+                continue;
+            }
+            let (b, c) = (others[0], others[1]);
+            if b as usize >= n || c as usize >= n {
+                continue;
+            }
+            let (gb, gc) = (group[b as usize], group[c as usize]);
+            let Some(list) = edge_faces.get(&(gb.min(gc), gb.max(gc))) else { continue };
+            for &gi in list {
+                if gi == fi {
+                    continue;
+                }
+                let g = o.indices[gi as usize];
+                let Some(&b2) = g.iter().find(|&&v| group[v as usize] == gb) else { continue };
+                let Some(&c2) = g.iter().find(|&&v| group[v as usize] == gc) else { continue };
+                let Some(&d) = g.iter().find(|&&v| v != b2 && v != c2) else { continue };
+                if [b2, c2, d].iter().any(|&v| v as usize >= n || !trusted[v as usize]) {
+                    continue;
+                }
+                let (pb, pc, pd, pa) = (pos[b as usize], pos[c as usize], pos[d as usize], pos[a]);
+                let len = (pc - pb).length();
+                if len < 1e-6 {
+                    continue;
+                }
+                let e = (pc - pb) / len;
+                let rd = pd - pb;
+                let sd = rd.dot(e);
+                let td = (rd - e * sd).length();
+                if td < 1e-4 * len {
+                    continue;
+                }
+                let ra = pa - pb;
+                let sa = ra.dot(e);
+                let ta = -(ra - e * sa).length();
+                let (ub, uc, ud) = (uv[b2 as usize], uv[c2 as usize], uv[d as usize]);
+                let da = (uc - ub) / len;
+                let db = (ud - ub - da * sd) / td;
+                preds.push(ub + da * sa + db * ta);
+            }
+        }
+        if let Some(&first) = preds.first() {
+            if preds.iter().all(|p| (*p - first).abs().max_element() <= tolerance) {
+                out[a] = Some(preds.iter().copied().sum::<glam::Vec2>() / preds.len() as f32);
+            }
+        }
+    }
+    out
 }
 
 /// Per copy and vertex, the true texture coordinates when the copies determine them: candidates
