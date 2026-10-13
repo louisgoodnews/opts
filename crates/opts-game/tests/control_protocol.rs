@@ -596,7 +596,7 @@ fn camera_viewpoint_get_set_save_reset() {
     let got = call(&mut app, "camera.viewpoint.get", json!({})).expect("get");
     assert_eq!(got["editing"], false);
     assert_eq!(got["vehicle"], "man_sd77");
-    assert_eq!(got["limits"]["offset_m"], 0.6);
+    assert!((got["limits"]["offset_m"].as_f64().unwrap() - 0.6).abs() < 1e-6);
 
     // Limits are refused, not clamped.
     for bad in [
