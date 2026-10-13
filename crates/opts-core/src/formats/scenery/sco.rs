@@ -153,7 +153,12 @@ impl ScoTrafficLightGroup {
     pub fn period_sec(&self) -> f32 {
         self.programs
             .iter()
-            .map(|p| p.phases.iter().map(|ph| ph.duration_sec.max(0.0)).sum::<f32>())
+            .map(|p| {
+                p.phases
+                    .iter()
+                    .map(|ph| ph.duration_sec.max(0.0))
+                    .sum::<f32>()
+            })
             .fold(self.cycle_time_sec.max(0.0), f32::max)
     }
 }
