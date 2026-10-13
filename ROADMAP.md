@@ -158,7 +158,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 *Goal: Build the actual public transport simulation logic and the main executable.*
 
 - [ ] **🗺️ World & Map Loading** — [M-0024](docs/src/roadmap/phase-4/M-0024.md) & [M-0025](docs/src/roadmap/phase-4/M-0025.md)
-  - [ ] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
+  - [x] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). *Done 2026-10-13: written from the code as it runs; limits L1-L8 and open questions Q-MS-01..05 listed.* 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
   - [~] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018). *Paging runs in `opts-game` (`stream_world_tiles`); async jobs and the `opts-bevy` module are open.*
   - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh and elevation sampling done; water and a ground-height query for vehicles open.*
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md) & [M-0023](docs/src/roadmap/phase-4/M-0023.md)
@@ -200,6 +200,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](docs/src/roadmap/phase-4/M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](docs/src/roadmap/phase-4/M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
+- [ ] **🎥 Viewpoint Editor** — [M-0084](docs/src/roadmap/phase-4/M-0084.md)
+  - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 
 ---
 
@@ -244,6 +246,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
 - [ ] **🧬 Mesh Instancing Research** — [M-0082](docs/src/roadmap/phase-5/M-0082.md)
   - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).
+- [ ] **🪞 Reflections Research** — [M-0085](docs/src/roadmap/phase-5/M-0085.md)
+  - [ ] Research branch `research/reflections`: mirrors, glass, later wet surfaces; prototype, measurements, recommendation (R-27).
 
 ---
 
@@ -325,6 +329,11 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
 - [ ] **⏳ Loading Screen Vehicle** — [M-0076](docs/src/roadmap/phase-9/M-0076.md)
   - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [ ] **🌍 Language Packs** — [M-0083](docs/src/roadmap/phase-9/M-0083.md)
+  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+- [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](docs/src/roadmap/phase-9/M-0086.md)
+  - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
+  - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
 
 ---
 
