@@ -35,6 +35,15 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-18 | Several **lantern posts have scrambled meshes** in the simulation | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
 | R-19 | The files of `master` must be present in the project folder on the project lead's machine | process | — (done 2026-10-13: `master` checked out in `/home/louisgoodnews/Dokumente/opts`) | ✅ done |
 
+## Follow-up findings (2026-10-13, third message)
+
+| ID | Report | Area | Milestone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
+| R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
+| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 📝 open |
+| R-23 | **Research branch** for leveraging Bevy's **instancing** for repeatedly used meshes | performance | [M-0082](../roadmap/phase-5/M-0082.md) (branch `research/mesh-instancing`) | 🔬 started |
+
 ## Notes
 
 - **R-01, R-09** overlap with the running mesh audit (P-1014, branch `agent/mesh-audit`); its registry feeds M-0066.

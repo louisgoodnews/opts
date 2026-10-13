@@ -20,6 +20,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
 - [M-0072 — Settings and Configuration through the Control Protocol](M-0072.md) — 📝 Planned (R-10)
+- [M-0081 — `opts-hardware`: Privacy-Respecting Hardware Capability Probe](M-0081.md) — 📝 Planned (R-22)
+- [M-0082 — Mesh Instancing Research](M-0082.md) — 🔬 Research branch started (R-23)
 - [M-0074 — Roadmap Adherence and Expansion](M-0074.md) — 📝 Planned, 🔴 high (R-06)
 - [M-0054 — Scenery Object Load Verification (`opts-benchmark`)](M-0054.md) — 🟡 Spec done (Phase A), harness planned, 🔴 high
 
@@ -63,3 +65,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
 - [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](M-0074.md)
   - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
+- [ ] **🖥️ `opts-hardware`** — [M-0081](M-0081.md)
+  - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
+- [ ] **🧬 Mesh Instancing Research** — [M-0082](M-0082.md)
+  - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).

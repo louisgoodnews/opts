@@ -179,6 +179,9 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13.
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
+- [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
+- [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
+- [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

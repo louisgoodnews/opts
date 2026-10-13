@@ -22,6 +22,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0046 — World Loader in `opts-bevy`](M-0046.md) — ⏳ Planned (extraction refactor)
 - [M-0049 — AI Road Traffic (`opts-traffic`, `opts-bevy`)](M-0049.md) — 🟡 Running in game (lights, right of way, lane changes); debug tooling, speed limits, scheduled AI open
 - [M-0050 — Pedestrians](M-0050.md) — 🟡 Walking pedestrians done; crossings, stops and boarding open
+- [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 📝 Planned (R-20, R-21)
 - [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003)
 
 ## Checklist
@@ -71,3 +72,5 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](M-0057.md).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](M-0058.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
+- [ ] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
+  - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).

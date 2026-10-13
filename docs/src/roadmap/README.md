@@ -198,6 +198,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](phase-4/M-0057.md).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](phase-4/M-0058.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
+- [ ] **🗺️ Tile Loading Controls** — [M-0080](phase-4/M-0080.md)
+  - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
 
 ---
 
@@ -238,6 +240,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
 - [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](phase-5/M-0074.md)
   - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
+- [ ] **🖥️ `opts-hardware`** — [M-0081](phase-5/M-0081.md)
+  - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
+- [ ] **🧬 Mesh Instancing Research** — [M-0082](phase-5/M-0082.md)
+  - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).
 
 ---
 
