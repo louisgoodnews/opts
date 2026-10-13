@@ -118,6 +118,7 @@
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
+- [Map Streaming](architecture/map-streaming.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)
 - [Path Catalogue Schema](architecture/catalogue-schema.md)
