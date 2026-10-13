@@ -6,7 +6,6 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 
 | Place | Id | Milestone | What is missing |
 | :--- | :--- | :--- | :--- |
-| Home, Load game | `home.load-game` | M-0062 | There is no save system; Home offers Continue for the last drive. |
 | Navigation rail, Library | `nav.library` | M-0062 | The Library needs the master-detail pattern of the Plan a drive wizard and its detail panels. |
 | Navigation rail, Workshop | `nav.workshop` | M-0051 | Editor projects, installed mods and packaging need the editor and mod system. |
 | Help, Guides | `help.guides` | M-0064 | The short guides are written with the HUD and help overlay of the HUD milestone. |
