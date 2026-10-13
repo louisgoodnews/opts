@@ -371,6 +371,7 @@ struct GlassDone(HashSet<AssetId<StandardMaterial>>);
 fn apply_glass(
     sw: Res<ReflectionSwitches>,
     mut done: ResMut<GlassDone>,
+    mut glass_count: Local<(u32,)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if sw.glass == GlassMode::Off {
@@ -386,7 +387,11 @@ fn apply_glass(
         if !is_glass_name(texture_stem(&note)) || matches!(note.alpha, AlphaMode::Opaque) {
             continue;
         }
-        let Some(m) = materials.get_mut(id) else { continue };
+        let Some(mut m) = materials.get_mut(id) else { continue };
+        glass_count.0 += 1;
+        if glass_count.0 % 50 == 1 {
+            bevy::log::info!(count = glass_count.0, texture = %note.texture, "reflections: glass material treated");
+        }
         m.perceptual_roughness = 0.06;
         m.reflectance = 0.6;
         match sw.glass {
@@ -447,7 +452,7 @@ fn apply_wet(
         if !matches!(note.alpha, AlphaMode::Opaque) {
             continue;
         }
-        if let Some(m) = materials.get_mut(id) {
+        if let Some(mut m) = materials.get_mut(id) {
             let (c, r) = wet_standard(note.base_color, note.roughness, w);
             m.base_color = c;
             m.perceptual_roughness = r;
@@ -455,7 +460,7 @@ fn apply_wet(
     }
     let gids: Vec<_> = ground.ids().collect();
     for id in gids {
-        if let Some(m) = ground.get_mut(id) {
+        if let Some(mut m) = ground.get_mut(id) {
             m.extension.wet = Vec4::new(w, 0.45, 0.0, 0.0);
         }
     }
@@ -518,7 +523,7 @@ fn spawn_mirror_cameras(
         image.sampler = bevy::image::ImageSampler::linear();
         let handle = images.add(image);
         // The mirror shows the render unlit, mirrored horizontally.
-        if let Some(m) = materials.get_mut(material.0.id()) {
+        if let Some(mut m) = materials.get_mut(material.0.id()) {
             m.base_color_texture = Some(handle.clone());
             m.base_color = Color::WHITE;
             m.unlit = true;
@@ -531,6 +536,7 @@ fn spawn_mirror_cameras(
                 Vec2::new(1.0, 0.0),
             );
         }
+        bevy::log::info!(texture = %note.texture, ?size, ?normal, "reflections: mirror camera created");
         commands.entity(entity).insert(MirrorDone);
         commands.spawn((
             Camera3d::default(),
