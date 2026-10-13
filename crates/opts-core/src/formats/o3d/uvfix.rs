@@ -327,6 +327,42 @@ impl UvQuality {
     }
 }
 
+impl UvStage {
+    /// Compact code for caches.
+    #[must_use]
+    pub fn code(self) -> u8 {
+        self as u8
+    }
+
+    /// Inverse of [`UvStage::code`]; unknown codes read as `Unresolved`.
+    #[must_use]
+    pub fn from_code(c: u8) -> Self {
+        match c {
+            1 => UvStage::Hint,
+            2 => UvStage::Plane,
+            3 => UvStage::Lattice,
+            4 => UvStage::Pool,
+            5 => UvStage::Hinge,
+            6 => UvStage::Smooth,
+            _ => UvStage::Unresolved,
+        }
+    }
+
+    /// Short name for logs.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            UvStage::Unresolved => "unresolved",
+            UvStage::Hint => "hint (joint copies)",
+            UvStage::Plane => "plane",
+            UvStage::Lattice => "lattice",
+            UvStage::Pool => "pool",
+            UvStage::Hinge => "hinge",
+            UvStage::Smooth => "smooth",
+        }
+    }
+}
+
 /// Quality of a vertex settled by `stage` with this `confidence` (see [`UvFixOutcome::confidence`]).
 /// Thresholds: the evidence strengths at which the truth set shows >= 99 % precision (`Exact`) and
 /// >= 90 % (`Recovered`).

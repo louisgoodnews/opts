@@ -135,3 +135,10 @@ Precision of a vertex given its stage and evidence strength, measured on the 881
 So at >= 99 % precision only about 2-5 % of the vertices of a mesh without a twin can be certified; at >= 90 % about a third.
 For the MAN NL/NG folder (325 meshes, all keyed) only 5 have a plain copy elsewhere and 31 more have keyed copies elsewhere
 (`uv_copies`): about 89 % of its meshes depend on inference alone.
+
+## Phase C - implementation notes (2026-10-13)
+- Decoder: lattice stage, welded smooth stage, `UvQuality` per vertex, calibration tiers (Exact 16.9 % at 99.07 %, Recovered 43.2 % at 93.0 %, Unreliable 40.0 % at 70.8 % of the vertices); exactness 85.14 % (UV step) / 84.82 % (end to end), up from 77.07 % / 76.82 %.
+- Visible effect on MAN NG272 - GN92 (Aachen): passenger view clean; the IBIS/ticket console of the cockpit is still partly wrong; the vehicle load logs `47 % of the texture coordinates unreliable` (22,356 of 47,405 vertices).
+- **Incident files:** each mesh above 10 % unreliable gets a file in `<log directory>/incidents/` with the details of what the decoder knew (see `docs/src/architecture/uv-decoder.md`, section 6a).
+- Blank-parameter parse bug fixed (`[matl_transmap]` and flags read literally), with a test and a spec note.
+- Deferred by the project lead on 2026-10-13: the fleet-wide validation, the coverage report and `opts-cli validate-uvs` (milestone [M-0079](../../roadmap/phase-10/M-0079.md)).

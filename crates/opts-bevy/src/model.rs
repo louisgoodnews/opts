@@ -123,6 +123,8 @@ pub struct ContentCache {
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Scrambled meshes already reported for unreliable texture coordinates.
     pub(crate) uv_warned: std::collections::HashSet<PathBuf>,
+    /// What is being loaded (named in incident files); set by the caller, e.g. a vehicle's file.
+    pub uv_context: String,
     /// Parameters of the scrambled-mesh decoder.
     pub decode_params: opts_core::formats::o3d::descramble::DecodeParams,
     /// Background decoder; without it meshes are decoded on the calling thread.
@@ -402,12 +404,20 @@ impl ContentLoader<'_> {
                     }
                     let bounds = self.cache.expected_bounds;
                     let ckey = crate::descramble_cache::key_bounded(&bytes, mi, bounds);
-                    let cached = self
+                    let pool_result = self
                         .cache
                         .decode_pool
                         .as_ref()
-                        .and_then(|p| p.result(ckey))
+                        .and_then(|p| p.result(ckey));
+                    let from_pool = pool_result.is_some();
+                    let cached = pool_result
                         .or_else(|| crate::descramble_cache::load(ckey, fingerprint));
+                    // What the incident file needs, taken before the decoding replaces it.
+                    let stored_uv: Vec<[f32; 2]> = m.vertices.iter().map(|v| v.uv.to_array()).collect();
+                    let header = (m.version, m.header_flags, m.encryption_key);
+                    let triangles_before = m.indices.len();
+                    let mut source = if from_pool { "background decode" } else { "decode cache" };
+                    let mut fresh: Option<crate::descramble_cache::Cached> = None;
                     let applied = match &cached {
                         Some(c) => {
                             counts = crate::descramble_cache::quality_counts(c);
@@ -452,12 +462,14 @@ impl ContentLoader<'_> {
                                 "scrambled mesh decoded"
                             );
                             let outcome = if report.accepted {
-                                crate::descramble_cache::capture(&before, m, &report.quality)
+                                crate::descramble_cache::capture(&before, m, &report)
                             } else {
                                 crate::descramble_cache::Cached::Rejected
                             };
                             counts = crate::descramble_cache::quality_counts(&outcome);
                             crate::descramble_cache::store(ckey, fingerprint, &outcome);
+                            source = "decoded now";
+                            fresh = Some(outcome);
                             report.accepted
                         }
                     };
@@ -474,12 +486,34 @@ impl ContentLoader<'_> {
                                 && c[2] * 10 > all
                                 && self.cache.uv_warned.insert(o3d_path.to_path_buf())
                             {
+                                let decoded = fresh.as_ref().or(cached.as_ref());
+                                let siblings = o3d_path
+                                    .file_name()
+                                    .map(|n| self.install.files_named(&n.to_string_lossy()))
+                                    .map_or(0, |f| f.iter().filter(|p| p.as_path() != o3d_path).count());
+                                let incident = decoded.and_then(|d| {
+                                    crate::uv_incident::write(&crate::uv_incident::UvIncident {
+                                        mesh: o3d_path,
+                                        context: &self.cache.uv_context,
+                                        model_index: mi,
+                                        file_bytes: bytes.len(),
+                                        header,
+                                        vertices: stored_uv.len(),
+                                        triangles: triangles_before,
+                                        decoded: d,
+                                        stored_uv: &stored_uv,
+                                        fingerprint,
+                                        siblings,
+                                        source,
+                                    })
+                                });
                                 tracing::warn!(
                                     path = %o3d_path.display(),
                                     unreliable_percent = (100 * c[2] / all) as u64,
                                     exact = c[0],
                                     recovered = c[1],
                                     unreliable = c[2],
+                                    incident = incident.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
                                     "scrambled mesh: texture coordinates partly unreliable (best guess used)"
                                 );
                             }
