@@ -15,6 +15,7 @@ pub mod probe;
 pub mod profile;
 pub mod recommend;
 pub mod reference;
+pub mod report;
 pub mod store;
 
 pub use fact::{Fact, Reason};

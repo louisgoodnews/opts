@@ -3,10 +3,13 @@
 //! - `opts-tools inspect <file>...` validates OMSI files with the real parsers. The format is
 //!   chosen by file extension (`.o3d`, `.x`, `.sco`, `.sli`, `.oft`, `.terrain`, `.map` tiles).
 //!   Each file prints one line; the exit code is 1 if any file failed.
+//! - `opts-tools hardware report [--json] [--bench]` prints the hardware profile (local only, see
+//!   [`hardware`]).
 //! - `opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]` measures screenshots
 //!   (saturation, luminance, high-frequency energy) and the difference of two of them; see
 //!   [`metrics`].
 
+mod hardware;
 mod metrics;
 
 use std::path::Path;
@@ -159,7 +162,10 @@ fn image_metrics(args: &[String]) -> Result<(), String> {
     Ok(())
 }
 
-const USAGE: &str = "usage: opts-tools inspect <file>...\n       opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]";
+const USAGE: &str = concat!(
+    "usage: opts-tools inspect <file>...\n       opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]\n",
+    "       opts-tools hardware report [--json] [--bench] [--storage-dir <dir>] [--content-dir <dir>]"
+);
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -172,6 +178,15 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("image-metrics: {e}\n{USAGE}");
+                ExitCode::from(2)
+            }
+        };
+    }
+    if cmd == "hardware" {
+        return match hardware::run(files) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("hardware: {e}\n{USAGE}");
                 ExitCode::from(2)
             }
         };
