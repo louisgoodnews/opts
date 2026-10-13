@@ -1,4 +1,3 @@
-#![allow(clippy::type_complexity)]
 //! Identifiability of the scrambler's texture jitter from a single hinge (P-1013): two triangles
 //! `b c x` and `b c d` whose UV mapping is affine across the shared edge satisfy
 //! `uv(x) = w . [uv(b), uv(c), uv(d)]` with weights summing to 1. With the stored (jittered) values

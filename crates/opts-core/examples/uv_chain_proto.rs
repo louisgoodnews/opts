@@ -1,5 +1,3 @@
-#![allow(clippy::all, unused)]
-#![allow(unused_mut, clippy::type_complexity, clippy::manual_is_multiple_of)]
 //! Prototype (P-1013 B1): how much does a chain model over the vertex order add to the present
 //! decoder? Trains transition and confusion tables on even pairs of `uv_truth`'s `vertices.tsv`
 //! and scores the forward-backward posterior on odd pairs. Usage: `uv_chain_proto <vertices.tsv>`.

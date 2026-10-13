@@ -1,4 +1,3 @@
-#![allow(clippy::all, unused)]
 //! Ground truth for rotation axes of disc- or ring-shaped meshes (wheels, rims, steering wheels):
 //! the axis the part turns about is the normal of its flat shape, the direction of least
 //! variance of its vertices. Input lines (tab separated): `<.o3d path> <rx> <ry> <rz> <label>`;

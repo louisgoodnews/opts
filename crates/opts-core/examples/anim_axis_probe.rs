@@ -1,4 +1,3 @@
-#![allow(clippy::all, unused)]
 //! Tests where the animation axis of `origin_from_mesh` meshes points. Input lines (tab separated):
 //! `<.o3d path> <rx> <ry> <rz>`; prints, per hypothesis, whether the resulting X axis of the frame
 //! is vertical (vehicle z) — H1: frame in vehicle axes, matrix ignored; H2: matrix rotation

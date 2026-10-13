@@ -1,4 +1,3 @@
-#![allow(clippy::type_complexity)]
 //! Ground truth for the UV decoder (P-1013): finds every plain/keyed twin pair of `.o3d` files
 //! under an OMSI installation, compares texture coordinates vertex by vertex and writes
 //!
