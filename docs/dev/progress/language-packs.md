@@ -22,11 +22,11 @@ Gates: `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --a
 
 | Batch | Status |
 | :--- | :--- |
-| L1 opts-core l10n: parser move + diagnostics, plural rules, check/pack/interchange/builtin | in progress |
-| L2 opts-gui Localization overlay, discovery at start + reload, language catalogue | todo |
-| L3 opts-game: settings language list (dynamic), reload, RTL/font notes, control protocol l10n.* | todo |
-| L4 opts-tools `l10n export/check/new/import/stats` | todo |
-| L5 docs: localisation-packs.md, translating.md, control-protocol, M-0083/ROADMAP/BOARD | todo |
+| L1 opts-core l10n: parser move + diagnostics, plural rules, check/pack/interchange/builtin | done (21+2 unit tests green) |
+| L2 opts-gui Localization overlay (`l10n/packs.rs`), language catalogue | code written, compile check pending (machine load 80+) |
+| L3 opts-game: `language_packs.rs`, language row in settings page, reload action, `l10n.*` methods, descriptors in opts-cli | code written, compile/test pending; tests in `tests/language_packs.rs` |
+| L4 opts-tools `l10n export/check/new/import/stats` (`crates/opts-tools/src/l10n.rs`) | code written, tests pending |
+| L5 docs: localisation-packs.md, translating.md, control-protocol (architecture table done; regenerate reference with UPDATE_CONTROL_DOC=1, UPDATE_SETTINGS_DOC=1), M-0083/ROADMAP/BOARD | docs written; M-0083/ROADMAP/BOARD/reference regeneration todo |
 | L6 gates, final commit | todo |
 
 ## Results
