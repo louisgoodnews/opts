@@ -733,9 +733,14 @@ impl ContentLoader<'_> {
                     .transform
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
+                let material = self.materials.add(material);
+                if let Some(m) = self.materials.get(&material) {
+                    // Research prototype hook (M-0085); free unless `OPTS_REFLECT` is set.
+                    crate::reflections::note_material(&material, tex_name.as_deref(), m);
+                }
                 parts.push(ModelPart {
                     mesh: self.meshes.add(mesh),
-                    material: self.materials.add(material),
+                    material,
                     vertices,
                     light_variable,
                     image: over.and_then(|o| o.image.clone()),

@@ -29,6 +29,23 @@ import bevy_pbr::render::{
 @group(constants::MATERIAL_BIND_GROUP) @binding(109) var<uniform> detail_repeats_a: vec4<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var<uniform> detail_repeats_b: vec4<f32>;
 
+@group(constants::MATERIAL_BIND_GROUP) @binding(111) var<uniform> wet: vec4<f32>;
+
+fn hash21(p: vec2<f32>) -> f32 {
+    return fract(sin(dot(p, vec2<f32>(127.1, 311.7))) * 43758.5453);
+}
+
+fn value_noise(p: vec2<f32>) -> f32 {
+    let i = floor(p);
+    let f = fract(p);
+    let u = f * f * (3.0 - 2.0 * f);
+    let a = hash21(i);
+    let b = hash21(i + vec2<f32>(1.0, 0.0));
+    let c = hash21(i + vec2<f32>(0.0, 1.0));
+    let d = hash21(i + vec2<f32>(1.0, 1.0));
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
 fn repeats(i: u32) -> f32 {
     if i < 4u {
         return repeats_a[i];
@@ -64,6 +81,17 @@ fn ground_color(uv: vec2<f32>) -> vec4<f32> {
 fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> FragmentOutput {
     var pbr_input = pbr_input_from_standard_material(in, is_front);
     pbr_input.material.base_color = ground_color(in.uv);
+    if wet.x > 0.0 {
+        // Wet ground: darker, smoother; puddles (low-frequency noise above a threshold that
+        // falls with the coverage) are darker still and nearly mirror-smooth.
+        let p = in.world_position.xz;
+        let n = 0.65 * value_noise(p * 0.22) + 0.35 * value_noise(p * 0.9 + 17.0);
+        let puddle = smoothstep(1.0 - wet.y * wet.x, 1.0 - wet.y * wet.x + 0.08, n);
+        let dark = mix(1.0, 0.7, wet.x) * mix(1.0, 0.75, puddle);
+        pbr_input.material.base_color = vec4<f32>(pbr_input.material.base_color.rgb * dark, pbr_input.material.base_color.a);
+        let r = mix(pbr_input.material.perceptual_roughness, 0.35, wet.x);
+        pbr_input.material.perceptual_roughness = mix(r, 0.04, puddle);
+    }
     pbr_input.material.base_color = alpha_discard(
         pbr_input.material.flags,
         pbr_input.material.alpha_cutoff,

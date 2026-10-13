@@ -32,6 +32,7 @@ pub mod loader;
 pub mod material;
 pub mod mesh;
 pub mod model;
+pub mod reflections;
 pub mod plugin;
 pub mod position_tag;
 pub mod reporting;
