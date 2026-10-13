@@ -51,6 +51,7 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Digit9,
     KeyCode::F1,
     KeyCode::F2,
+    KeyCode::F8,
     KeyCode::F10,
     KeyCode::F12,
     KeyCode::Escape,

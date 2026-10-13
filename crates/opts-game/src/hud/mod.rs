@@ -63,6 +63,7 @@ impl Plugin for HudPlugin {
             .init_resource::<HudValues>()
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
+            .init_resource::<crate::session_vehicles::PlaceLabel>()
             .init_resource::<details::DetailsStore>()
             .init_resource::<opts_bevy::ViewpointState>()
             .add_message::<RaiseAlert>()
@@ -92,6 +93,12 @@ impl Plugin for HudPlugin {
             )
             .add_systems(
                 Update,
+                rebuild_for_kind
+                    .after(values::sample_values)
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
                 (
                     viewpoint::update_panel,
                     viewpoint::panel_buttons,
@@ -116,12 +123,39 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     details::spawn_details_toasts,
-                    details::open_details,
+                    // Before the toast's own click handler despawns the toast with the action
+                    // button that was clicked.
+                    details::open_details
+                        .before(opts_gui::components::toast::toast_action_click_system),
                     details::forget_dismissed,
                     details::details_choices,
-                ),
+                )
+                    // In order, with the commands applied in between: `forget_dismissed` must not
+                    // see a toast that `spawn_details_toasts` has only just queued as gone.
+                    .chain(),
             );
     }
+}
+
+/// The HUD follows the active vehicle: when another kind of vehicle becomes active the HUD is
+/// rebuilt with the profile of that kind.
+fn rebuild_for_kind(
+    mut commands: Commands,
+    values: Res<HudValues>,
+    active: Option<Res<build::ActiveProfile>>,
+    roots: Query<Entity, With<build::HudRoot>>,
+    theme: Option<Res<opts_gui::prelude::MaterialTheme>>,
+) {
+    let (Some(active), Some(theme)) = (active, theme) else {
+        return;
+    };
+    if !values.has_vehicle || active.kind == values.kind {
+        return;
+    }
+    for root in &roots {
+        commands.entity(root).despawn();
+    }
+    build::queue_spawn(&mut commands, &theme);
 }
 
 /// A new drive starts without the alerts, label and values of the last one.

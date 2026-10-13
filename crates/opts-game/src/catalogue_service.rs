@@ -245,7 +245,7 @@ pub fn poll_catalogue_discovery(
 
 /// Keeps the current menu selection valid after the lists change.
 pub fn reconcile_selection(lists: &GameCatalogue, setup: &mut NewGameSetup) {
-    if lists.find_vehicle(&setup.selected_vehicle).is_none() {
+    if !setup.no_vehicle && lists.find_vehicle(&setup.selected_vehicle).is_none() {
         if let Some(v) = lists
             .vehicles
             .iter()

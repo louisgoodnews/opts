@@ -37,6 +37,8 @@ pub enum PlannerAction {
     CloseOptions,
     /// Open the settings screen (empty catalogue help).
     OpenSettings,
+    /// *Drive without a vehicle*: map only, then on to the next step.
+    NoVehicle,
 }
 
 /// The action of a button.

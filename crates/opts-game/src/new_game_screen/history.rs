@@ -158,6 +158,7 @@ mod tests {
             map: map.into(),
             entry_point: "B".into(),
             vehicle: vehicle.into(),
+            no_vehicle: false,
             livery: "Beige".into(),
             weather_preset: "Rainy Afternoon".into(),
             year: 1990,

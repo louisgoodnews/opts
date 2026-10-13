@@ -306,6 +306,42 @@ pub const COMMANDS: &[CommandSpec] = &[
         "key:s@0",
     ),
     c(
+        "l10n.languages",
+        "l10n",
+        "List the languages (built in and installed packs) with completeness, authors and problems",
+        "",
+    )
+    .since("1.1")
+    .result("`{current, packs_dir, languages:[{code, name, native_name, direction, builtin, from_pack, authors, version, total, translated, copied, missing, percent, errors, warnings, outdated, missing_fonts, selectable, current, dir}], problems:[{folder, issues}]}`")
+    .doc("`translated` counts messages that are really translated, `copied` those that are still the English text, `missing` those that show English. `selectable` is false for right-to-left packs. `problems` lists pack folders that cannot be used (no valid `pack.json`). Packs are files in `<data dir>/lang/<code>/`, see the localisation packs page."),
+    c(
+        "l10n.set",
+        "l10n",
+        "Switch the interface language (saved like a setting)",
+        "code:s@0",
+    )
+    .since("1.1")
+    .result("`{current, previous}`")
+    .doc("`1004` for a language that is not installed, `1007` for a right-to-left pack (not supported yet). Stores `interface.language` and updates every text at once."),
+    c(
+        "l10n.reload",
+        "l10n",
+        "Scan the language folder again (new or edited packs)",
+        "",
+    )
+    .since("1.1")
+    .result("the `l10n.languages` result plus `{usable, broken, errors}`")
+    .doc("The same as the *Reload languages* button. A pack that cannot be used or a file with errors never fails the call: read `problems` and `l10n.report`. If the active language is gone the game shows English."),
+    c(
+        "l10n.report",
+        "l10n",
+        "Completeness and every finding of one language",
+        "code:s@0?",
+    )
+    .since("1.1")
+    .result("`{language, missing_keys, copied_keys, issues:[{severity, code, file, line, key, message}], issue_lines}`")
+    .doc("Without `code` the current language. `issue_lines` are the same findings as `file:line: error[code]: message` text, as `opts-tools l10n check` prints them."),
+    c(
         "vehicle.set",
         "scene",
         "Replace the player vehicle",
@@ -553,7 +589,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "The driver's-view viewpoint: offsets, field of view, stored value, editor state",
         "",
     )
-    .since("1.1")
+    .since("1.2")
     .result("`{editing, dirty, row, vehicle, camera, cameras, viewpoint:{x,y,z,fov_deg}, stored:{x,y,z,fov_deg}, fov_deg, default_fov_deg, limits, file}`")
     .doc("Offsets are metres from the vehicle's own `[add_camera_driver]` eye: `x` right, `y` up, `z` forward (limit +-0.6). `fov_deg` in the viewpoint is `null` while the vehicle's own field of view is used; the top-level `fov_deg` is the one shown. `vehicle` is the catalogue identity (the `.bus` file stem, lower case) the viewpoint is stored under, `camera` the driver camera index."),
     c(
@@ -562,7 +598,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Change the driver's-view viewpoint live (opens the editor; not stored until saved)",
         "x:f? y:f? z:f? fov_deg:f?",
     )
-    .since("1.1")
+    .since("1.2")
     .result("the `camera.viewpoint.get` result")
     .doc("Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6 m, `fov_deg` 30..120) instead of being clamped. Answers `1001` unless the driver's view (`camera.set_mode cockpit`) is active and `1009` while a dialog or menu is open. Equivalent to the editor panel: the camera shows the change at once; `camera.viewpoint.save` stores it, leaving the view or changing the sub camera cancels it."),
     c(
@@ -571,7 +607,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Store the shown viewpoint for this vehicle and camera and close the editor",
         "",
     )
-    .since("1.1")
+    .since("1.2")
     .result("the `camera.viewpoint.get` result")
     .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active."),
     c(
@@ -580,7 +616,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Back to the vehicle's own viewpoint and remove the stored one",
         "",
     )
-    .since("1.1")
+    .since("1.2")
     .result("the `camera.viewpoint.get` result")
     .doc("Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active."),
     c(
@@ -641,6 +677,51 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Script variables of the player vehicle (substring filter)",
         "contains:s@0?",
     ),
+    c(
+        "session.vehicles",
+        "query",
+        "The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker",
+        "",
+    )
+    .since("1.2")
+    .result("`{active, count, vehicles:[{id, name, catalogue_id, repaint, setvars, spawn_entry_name, spawn_point, lifecycle (spawning|alive|despawned|failed), despawn_reason, error, active, trailers}], place_label}`")
+    .doc("The registry of the vehicles the user spawned (the wizard's choice, the pause menu, `session.spawn`); parked and AI vehicles are not listed. Despawned vehicles stay in the list as history. `place_label` is what the HUD shows for the active vehicle (the entry point it was spawned at) or `null`."),
+    c(
+        "session.spawn",
+        "scene",
+        "Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists",
+        "vehicle:s@0 repaint:s? setvars:j? entry:s? entry_id:i?",
+    )
+    .since("1.2")
+    .result("`{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)")
+    .doc("`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on)."),
+    c(
+        "session.switch",
+        "scene",
+        "Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow)",
+        "id:i@0? step:i?",
+    )
+    .since("1.2")
+    .result("`{ok, active}`")
+    .doc("`id` names the vehicle; `step` (1 next, -1 previous) cycles through the living ones like the F8 key. The vehicle that was active keeps its state with the parking brake on. Answers `1004` for an unknown id and `1001` when the vehicle is not in the world."),
+    c(
+        "session.despawn",
+        "scene",
+        "Remove a session vehicle with its trailers (default: the active one)",
+        "id:i@0?",
+    )
+    .since("1.2")
+    .result("`{ok, active, removed}`: the vehicle that is active afterwards (`null`: none, free camera) and the entities removed")
+    .doc("No confirmation (the confirmation dialog belongs to the pause menu). Despawning the active vehicle makes the most recently spawned other vehicle active, or none."),
+    c(
+        "session.respawn",
+        "scene",
+        "Put a session vehicle back at its spawn point, at rest (default: the active one)",
+        "id:i@0?",
+    )
+    .since("1.2")
+    .result("`{ok, id}`")
+    .doc("Shows the HUD place label again. Answers `1001` when the vehicle is not in the world."),
     c(
         "menu.do",
         "scene",

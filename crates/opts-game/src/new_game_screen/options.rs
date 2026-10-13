@@ -53,7 +53,7 @@ pub fn open_options(
             ColorRole::OnSurface,
         ))
         .id();
-    let name = super::texts::what_text(catalogue, setup);
+    let name = super::texts::what_text(loc, catalogue, setup);
     let sub = commands
         .spawn(plain(
             name,

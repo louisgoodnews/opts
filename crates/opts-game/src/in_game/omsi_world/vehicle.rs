@@ -757,7 +757,22 @@ fn commands_mass(manifest: &BusManifest) -> f32 {
     (manifest.mass_tonnes.unwrap_or(0.0) * 1000.0).max(20_000.0)
 }
 
-/// Loads the player's vehicle from its `.bus` file and spawns it at the map's start point.
+/// A vehicle [`load_player_vehicle`] built.
+#[derive(Debug, Clone)]
+pub struct SpawnedVehicle {
+    /// The vehicle's root entity.
+    pub root: Entity,
+    /// Display name (manufacturer and model, else the `.bus` file's name).
+    pub name: String,
+    /// Camera parameters derived from the vehicle.
+    pub camera: CameraSetup,
+}
+
+/// Loads a user vehicle from its `.bus` file and spawns it at the session's spawn point
+/// ([`WorldLoadJob::spawn_point`]), as session vehicle `session_id`. With `activate` it also becomes the
+/// player's vehicle (`PlayerVehicle`, the HUD and `WorldStats` follow it); without, it is built
+/// as a parked session vehicle and the caller switches to it when it wants to.
+#[allow(clippy::too_many_arguments)]
 pub fn load_player_vehicle(
     job: &mut WorldLoadJob,
     stats: &mut WorldStats,
@@ -766,7 +781,9 @@ pub fn load_player_vehicle(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     bindposes: &mut Assets<bevy::mesh::skinning::SkinnedMeshInverseBindposes>,
-) -> Result<(), String> {
+    session_id: crate::session_vehicles::VehicleId,
+    activate: bool,
+) -> Result<SpawnedVehicle, String> {
     let bus_path = match job.config.vehicle_path.clone() {
         Some(p) => p,
         None => first_ai_list_vehicle(job)
@@ -837,14 +854,19 @@ pub fn load_player_vehicle(
     controller.sim.chassis.elevation_z = spawn_world.z;
     // The simulation uses compass-style heading (clockwise from +Y), like OMSI map headings.
     controller.sim.chassis.heading_rad = heading_deg.to_radians();
-    commands
-        .entity(root)
-        .insert((controller, PlayerVehicle, InGameEntity));
+    commands.entity(root).insert((
+        controller,
+        crate::session_vehicles::SessionVehicle(session_id),
+        InGameEntity,
+    ));
     // The catalogue identity of the vehicle keys its stored viewpoints.
     if let Some(key) = crate::viewpoints::key_of_bus_file(&bus_path) {
         commands
             .entity(root)
             .insert(crate::viewpoints::ViewpointKey(key));
+    }
+    if activate {
+        commands.entity(root).insert(PlayerVehicle);
     }
     if let Some((size, centre)) = manifest.bounding_box {
         commands
@@ -914,7 +936,7 @@ pub fn load_player_vehicle(
     let chase_distance = length * 1.3;
     let chase_height = height * 1.6;
     job.camera_std_index = manifest.std_camera_index.unwrap_or(0);
-    job.camera = Some(CameraSetup {
+    let camera = CameraSetup {
         start: Transform::from_translation(
             bevy_pos + root_tf.rotation * Vec3::new(0.0, chase_height, chase_distance),
         )
@@ -922,9 +944,10 @@ pub fn load_player_vehicle(
         chase_distance,
         chase_height,
         cockpit_offset,
-    });
+    };
+    job.camera = Some(camera);
 
-    stats.vehicle_name = manifest
+    let vehicle_name = manifest
         .friendly_name
         .as_ref()
         .map(|f| format!("{} {}", f.manufacturer, f.model))
@@ -935,12 +958,15 @@ pub fn load_player_vehicle(
                 .to_string_lossy()
                 .into_owned()
         });
+    if activate {
+        stats.vehicle_name.clone_from(&vehicle_name);
+    }
     job.cache.uv_context.clear();
     // Texture coordinates the decoder could not prove (scrambled meshes): named once per vehicle.
     let (uv_all, uv_bad) = job.cache.stats.uv_scope;
     if uv_all > 0 && uv_bad * 10 > uv_all {
         tracing::warn!(
-            vehicle = %stats.vehicle_name,
+            vehicle = %vehicle_name,
             unreliable_percent = (100 * uv_bad / uv_all) as u64,
             unreliable_vertices = uv_bad,
             vertices = uv_all,
@@ -952,14 +978,19 @@ pub fn load_player_vehicle(
     stats.scene_vertices += vertex_count;
     stats.asset_failures = job.cache.stats.failures.len();
     tracing::info!(
-        vehicle = %stats.vehicle_name,
+        vehicle = %vehicle_name,
+        session_id,
         meshes = mesh_count,
         vertices = vertex_count,
         uv_vertices = uv_all,
         uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
-    Ok(())
+    Ok(SpawnedVehicle {
+        root,
+        name: vehicle_name,
+        camera,
+    })
 }
 
 /// Loads the skinned meshes of a character: the first (highest-detail) LOD of its model manifest.

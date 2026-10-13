@@ -1,18 +1,21 @@
-//! Despawning and spawning the player's vehicle while a session runs (the in-game vehicle menu,
-//! `in_game/vehicle_menu.rs`): the entry points of the map resolved to world positions, and the
-//! requests that remove the current vehicle and build a new one at an entry point.
+//! Spawning session vehicles while a session runs (the in-game vehicle menu, the control protocol):
+//! the entry points of the map resolved to world positions, and the spawner that works down the
+//! spawn requests of the [`SessionVehicles`] registry and builds each vehicle at its entry point.
+//! Despawning, switching and respawning are in `crate::session_vehicles::ops`.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
-use opts_bevy::{ArticulatedChain, CameraMode, CameraState, PlayerVehicle};
+use opts_bevy::{CameraMode, CameraState};
 use opts_core::formats::map::{MapEntryPoint, MapTile};
 
 use super::ground::tile_origin;
-use super::rail::VehicleComposition;
 use super::vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
 use super::{LoadAssets, WorldLoadJob, WorldStats};
+use crate::session_vehicles::{ops, SessionVehicles, SpawnPoint, VehicleId};
+use opts_gui::l10n::Localization;
+use opts_gui::prelude::ToastBuilder;
 
 /// An `[entrypoints]` record resolved to the position of its placed `entrypoint_*.sco`.
 #[derive(Debug, Clone)]
@@ -163,169 +166,158 @@ fn resolve_entries(
     }
 }
 
-/// Request to remove the player's vehicle.
-#[derive(Resource)]
-pub struct DespawnVehicleRequest;
-
-/// Request to build a vehicle at an entry point (replacing the current one).
+/// The spawn request being worked on: its vehicle's meshes decode in the background, then it is
+/// built. One at a time; the others wait in the registry as [`Lifecycle::Spawning`] records.
+///
+/// [`Lifecycle::Spawning`]: crate::session_vehicles::Lifecycle::Spawning
 #[derive(Resource)]
 pub struct SpawnVehicleRequest {
-    /// The `.bus` file.
-    pub bus_path: PathBuf,
-    /// Chosen repaint (empty: the vehicle's default).
-    pub livery: String,
-    /// Equipment options set on the vehicle's scripts.
-    pub setvars: Vec<(String, i32)>,
-    /// Record number of the entry point.
-    pub entry: u32,
-    stage: SpawnStage,
+    /// The registry id of the vehicle being built.
+    pub id: VehicleId,
+    entry: (u32, String),
+    point: SpawnPoint,
+    keys: Vec<opts_bevy::descramble_cache::Key>,
 }
 
-impl SpawnVehicleRequest {
-    /// A request for `bus_path` at the entry named `entry`.
-    #[must_use]
-    pub fn new(bus_path: PathBuf, livery: String, setvars: Vec<(String, i32)>, entry: u32) -> Self {
-        Self {
-            bus_path,
-            livery,
-            setvars,
-            entry,
-            stage: SpawnStage::Remove,
-        }
-    }
-}
-
-enum SpawnStage {
-    /// Waiting for the old vehicle to be gone.
-    Remove,
-    /// The new vehicle's scrambled meshes decode in the background.
-    Decode(Vec<opts_bevy::descramble_cache::Key>),
-}
-
-/// Despawns a player vehicle with all its parts.
-fn despawn_vehicle(
-    commands: &mut Commands,
-    root: Entity,
-    chain: Option<&ArticulatedChain>,
-    composition: Option<&VehicleComposition>,
-) {
-    // The composition lists the chain's segments too: despawn each entity once.
-    let mut parts: std::collections::HashSet<Entity> = chain
-        .into_iter()
-        .flat_map(|c| c.segments.iter().copied())
-        .collect();
-    parts.extend(
-        composition
-            .into_iter()
-            .flat_map(VehicleComposition::parts)
-            .map(|p| p.entity),
-    );
-    parts.remove(&root);
-    for e in parts {
-        commands.entity(e).despawn();
-    }
-    commands.entity(root).despawn();
-}
-
-/// The root and the part lists of a player vehicle.
-type PlayerParts = (
-    Entity,
-    Option<&'static ArticulatedChain>,
-    Option<&'static VehicleComposition>,
-);
-
-/// Handles [`DespawnVehicleRequest`] and [`SpawnVehicleRequest`].
+/// Works down the spawn requests of the registry: places the vehicle at its entry point, waits for
+/// its scrambled meshes, builds it and makes it the active vehicle.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_vehicle_requests(
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
     mut stats: ResMut<WorldStats>,
     mut assets: LoadAssets,
-    despawn: Option<Res<DespawnVehicleRequest>>,
-    spawn: Option<ResMut<SpawnVehicleRequest>>,
+    mut registry: ResMut<SessionVehicles>,
+    flight: Option<Res<SpawnVehicleRequest>>,
     entries: Res<EntryIndex>,
     mut camera: ResMut<CameraState>,
-    players: Query<PlayerParts, With<PlayerVehicle>>,
+    loc: Option<Res<Localization>>,
 ) {
-    if despawn.is_some() {
-        commands.remove_resource::<DespawnVehicleRequest>();
-        for (root, chain, comp) in &players {
-            despawn_vehicle(&mut commands, root, chain, comp);
-        }
-        camera.mode = CameraMode::FreeRoam;
-        tracing::info!("player vehicle despawned");
-    }
-    let (Some(mut spawn), Some(mut job)) = (spawn, job) else {
+    let Some(mut job) = job else {
         return;
     };
-    match &mut spawn.stage {
-        SpawnStage::Remove => {
-            if despawn.is_none() && !players.is_empty() {
-                for (root, chain, comp) in &players {
-                    despawn_vehicle(&mut commands, root, chain, comp);
-                }
-                return; // the entities are gone from the next frame on
-            }
-            if !players.is_empty() {
-                return;
-            }
-            // Where: the resolved entry, or (entries on spline attachments) a search of the map.
-            let placed = entries
-                .find(spawn.entry)
-                .map(|e| (e.world, e.heading_deg))
-                .or_else(|| {
-                    let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
-                    job.find_entry_spawn_by_id(spawn.entry, &keys)
-                        .map(|(key, (p, h))| {
-                            let _ = key;
-                            (p, h)
-                        })
-                });
-            let Some((world, heading)) = placed else {
-                tracing::error!(at = %opts_bevy::position_tag(), entry = %spawn.entry, "entry point cannot be placed; no vehicle spawned");
-                commands.remove_resource::<SpawnVehicleRequest>();
-                return;
-            };
-            let abs = tile_origin(job.start_tile);
-            job.spawn = Some((
-                Vec3::new(world.x - abs.0, world.y - abs.1, world.z),
-                heading,
-            ));
-            job.config.vehicle_path = Some(spawn.bus_path.clone());
-            job.config.livery = spawn.livery.clone();
-            job.config.setvars = spawn.setvars.clone();
-            job.repaint = None;
-            let keys = prewarm_vehicle_meshes(
-                &mut job,
-                &mut commands,
-                &mut assets.meshes,
-                &mut assets.materials,
-                &mut assets.images,
-            );
-            spawn.stage = SpawnStage::Decode(keys);
-        }
-        SpawnStage::Decode(keys) => {
-            if decodes_pending(&job, keys) > 0 {
-                return;
-            }
-            match load_player_vehicle(
-                &mut job,
-                &mut stats,
-                &mut commands,
-                &mut assets.meshes,
-                &mut assets.materials,
-                &mut assets.images,
-                &mut assets.bindposes,
-            ) {
-                Ok(()) => {
-                    camera.mode = CameraMode::External;
-                    tracing::info!(entry = %spawn.entry, "player vehicle spawned");
-                }
-                Err(e) => {
-                    tracing::error!(at = %opts_bevy::position_tag(), "cannot spawn the vehicle: {e}");
-                }
-            }
+    let in_flight = flight.as_ref().map(|f| f.id);
+    if let Some(flight) = flight {
+        // Cancelled (despawned before it existed): drop the request.
+        let wanted = registry
+            .get(flight.id)
+            .is_some_and(|r| r.lifecycle == crate::session_vehicles::Lifecycle::Spawning);
+        if !wanted {
             commands.remove_resource::<SpawnVehicleRequest>();
+            return;
         }
+        if decodes_pending(&job, &flight.keys) > 0 {
+            return;
+        }
+        let id = flight.id;
+        match load_player_vehicle(
+            &mut job,
+            &mut stats,
+            &mut commands,
+            &mut assets.meshes,
+            &mut assets.materials,
+            &mut assets.images,
+            &mut assets.bindposes,
+            id,
+            false,
+        ) {
+            Ok(spawned) => {
+                registry.mark_alive(
+                    id,
+                    spawned.root,
+                    Some(flight.entry.clone()),
+                    Some(flight.point),
+                    Some(spawned.camera),
+                );
+                camera.mode = CameraMode::External;
+                tracing::info!(id, entry = %flight.entry.1, "session vehicle spawned");
+                commands.queue(move |world: &mut World| {
+                    if let Err(e) = ops::switch_to(world, id) {
+                        tracing::error!(at = %opts_bevy::position_tag(), "cannot activate the new vehicle: {e}");
+                    }
+                });
+            }
+            Err(e) => {
+                tracing::error!(at = %opts_bevy::position_tag(), "cannot spawn the vehicle: {e}");
+                let name = registry.get(id).map(|r| r.name.clone()).unwrap_or_default();
+                registry.mark_failed(id, e.clone());
+                if let Some(loc) = loc {
+                    ToastBuilder::new(loc.t_args(
+                        crate::shell::keys::SPAWN_FAILED,
+                        &[
+                            ("name".to_owned(), name.as_str().into()),
+                            ("error".to_owned(), e.as_str().into()),
+                        ],
+                    ))
+                    .with_duration(8.0)
+                    .spawn(&mut commands);
+                }
+            }
+        }
+        commands.remove_resource::<SpawnVehicleRequest>();
+        return;
     }
+    let Some(id) = registry.next_pending(in_flight) else {
+        return;
+    };
+    let Some(rec) = registry.get(id).cloned() else {
+        return;
+    };
+    let bus_path = PathBuf::from(&rec.bus_file);
+    if !bus_path.is_file() {
+        registry.mark_failed(id, format!("{}: no such vehicle file", rec.bus_file));
+        tracing::error!(at = %opts_bevy::position_tag(), file = %rec.bus_file, "vehicle file not found; nothing spawned");
+        return;
+    }
+    // Where: the resolved entry, or (entries on spline attachments) a search of the map.
+    let entry = match &rec.entry {
+        crate::session_vehicles::EntrySel::Id(i) => job.entry_name(*i).map(|n| (*i, n)),
+        crate::session_vehicles::EntrySel::Name(n) => job.entry_by_name(n),
+        crate::session_vehicles::EntrySel::Default => job.configured_entry(),
+    };
+    let Some((entry_id, entry_name)) = entry else {
+        registry.mark_failed(id, "no such entry point on this map".to_owned());
+        tracing::error!(at = %opts_bevy::position_tag(), entry = ?rec.entry, "entry point not found; no vehicle spawned");
+        return;
+    };
+    let placed = entries
+        .find(entry_id)
+        .map(|e| (e.world, e.heading_deg))
+        .or_else(|| {
+            let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
+            job.find_entry_spawn_by_id(entry_id, &keys)
+                .map(|(_, (p, h))| (p, h))
+        });
+    let Some((world, heading)) = placed else {
+        registry.mark_failed(id, format!("entry point `{entry_name}` cannot be placed"));
+        tracing::error!(at = %opts_bevy::position_tag(), entry = %entry_id, "entry point cannot be placed; no vehicle spawned");
+        return;
+    };
+    let abs = tile_origin(job.start_tile);
+    job.spawn = Some((
+        Vec3::new(world.x - abs.0, world.y - abs.1, world.z),
+        heading,
+    ));
+    job.config.vehicle_path = Some(bus_path);
+    job.config.livery = rec.repaint.clone();
+    job.config.setvars = rec.setvars.clone();
+    job.repaint = None;
+    let keys = prewarm_vehicle_meshes(
+        &mut job,
+        &mut commands,
+        &mut assets.meshes,
+        &mut assets.materials,
+        &mut assets.images,
+    );
+    commands.insert_resource(SpawnVehicleRequest {
+        id,
+        entry: (entry_id, entry_name),
+        point: SpawnPoint {
+            x: f64::from(world.x),
+            y: f64::from(world.y),
+            z: f64::from(world.z),
+            heading_deg: f64::from(heading),
+        },
+        keys,
+    });
 }
