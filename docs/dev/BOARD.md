@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-13 by Agent (field report intake, Phase 10)_
+_Last updated: 2026-10-13 by Agent (P-1013: UV decoder fleet validation deferred, M-0079)_
 
 ---
 
@@ -181,6 +181,12 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
+
+#### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)
+- [ ] 🟡 **Fleet decode of every keyed `.o3d`; coverage report with the per-mesh table (vehicle, mesh, vertices, exact %, unreliable %) and the top-50 known-broken list** (M-0079, code + docs) — P-1013 phase D; the decoder, `UvQuality` and the warnings are done and merged, only the fleet-wide run and report wait.
+- [ ] 🟡 **`opts-cli validate-uvs --input "<OMSI 2>"`** (M-0079, code) — P-1013 phase E3.
+- [ ] 🟡 **Visual spot-check of vehicles above 1 % unreliable vertices; MAN NG272 cockpit, interior and exterior confirmation** (M-0079, test) — state 2026-10-13: passenger view clean, IBIS/ticket console still partly wrong, 47 % of the vehicle's UVs unreliable.
+- [ ] 🟢 **Finish `uv-decoder.md`, the bug report and `docs/crates/opts-core.md`; CI item for the unreliable rate** (M-0079, docs) — P-1013 phases E1, E2, E4.
 
 #### M-0057–M-0060 — Phase 8: Visual Quality & Realism (decided 2026-10-12)
 - [ ] 🟠 **Reference-view sweep (6–8 views on three maps) for the scripted A/B run** (M-0057, code) — the minimal harness exists (`scripts/visual-ab.sh`); results outside the repository.

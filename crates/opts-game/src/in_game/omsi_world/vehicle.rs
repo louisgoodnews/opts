@@ -822,6 +822,7 @@ pub fn load_player_vehicle(
     job.cache.expected_bounds = manifest_bounds(&manifest);
     job.cache.texture_replacements = repaint_map(job, &model);
     job.cache.stats.uv_scope = (0, 0);
+    job.cache.uv_context = format!("vehicle {}", bus_path.display());
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
@@ -928,6 +929,7 @@ pub fn load_player_vehicle(
                 .to_string_lossy()
                 .into_owned()
         });
+    job.cache.uv_context.clear();
     // Texture coordinates the decoder could not prove (scrambled meshes): named once per vehicle.
     let (uv_all, uv_bad) = job.cache.stats.uv_scope;
     if uv_all > 0 && uv_bad * 10 > uv_all {

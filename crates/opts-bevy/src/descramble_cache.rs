@@ -15,7 +15,6 @@ use opts_core::formats::o3d::descramble::{
     decode_confident_bounded, decode_confident_with, decode_joint_bounded, same_model,
     DecodeParams, ExpectedBounds,
 };
-use opts_core::formats::o3d::uvfix::UvQuality;
 use opts_core::formats::o3d::O3d;
 
 /// Bump when the decoder *algorithm* changes in a way that alters its output; parameter changes
@@ -53,6 +52,10 @@ pub enum Cached {
         kept: Vec<bool>,
         /// Quality code per vertex's texture coordinates (`UvQuality::code`).
         quality: Vec<u8>,
+        /// Stage that settled each vertex's texture coordinates (`UvStage::code`).
+        stage: Vec<u8>,
+        /// Evidence strength per vertex (unit of its stage).
+        confidence: Vec<f32>,
     },
 }
 
@@ -159,12 +162,23 @@ pub fn load(key: Key, fingerprint: u32) -> Option<Cached> {
         .iter()
         .map(|b| *b != 0)
         .collect();
-    let quality = data.get(at + 4 + faces..at + 4 + faces + n)?.to_vec();
+    let mut at2 = at + 4 + faces;
+    let quality = data.get(at2..at2 + n)?.to_vec();
+    at2 += n;
+    let stage = data.get(at2..at2 + n)?.to_vec();
+    at2 += n;
+    let confidence = data
+        .get(at2..at2 + n * 4)?
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect();
     Some(Cached::Decoded {
         positions: pos.chunks_exact(3).map(|c| [c[0], c[1], c[2]]).collect(),
         uvs: uv.chunks_exact(2).map(|c| [c[0], c[1]]).collect(),
         kept,
         quality,
+        stage,
+        confidence,
     })
 }
 
@@ -183,6 +197,8 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
             uvs,
             kept,
             quality,
+            stage,
+            confidence,
         } => {
             out.push(1);
             out.extend_from_slice(&(positions.len() as u32).to_le_bytes());
@@ -199,6 +215,10 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
             out.extend_from_slice(&(kept.len() as u32).to_le_bytes());
             out.extend(kept.iter().map(|k| u8::from(*k)));
             out.extend_from_slice(quality);
+            out.extend_from_slice(stage);
+            for c in confidence {
+                out.extend_from_slice(&c.to_le_bytes());
+            }
         }
     }
     if let Some(parent) = path.parent() {
@@ -209,7 +229,11 @@ pub fn store(key: Key, fingerprint: u32, value: &Cached) {
 
 /// Captures the result of decoding `decoded` from the original `original` mesh.
 #[must_use]
-pub fn capture(original: &O3d, decoded: &O3d, quality: &[UvQuality]) -> Cached {
+pub fn capture(
+    original: &O3d,
+    decoded: &O3d,
+    report: &opts_core::formats::o3d::descramble::ConfidentReport,
+) -> Cached {
     // `decode_confident` keeps vertex order and only removes triangles: record which survive.
     let mut remaining = decoded.indices.iter().peekable();
     let mut kept = Vec::with_capacity(original.indices.len());
@@ -229,7 +253,9 @@ pub fn capture(original: &O3d, decoded: &O3d, quality: &[UvQuality]) -> Cached {
             .collect(),
         uvs: decoded.vertices.iter().map(|v| v.uv.to_array()).collect(),
         kept,
-        quality: quality.iter().map(|q| q.code()).collect(),
+        quality: report.quality.iter().map(|q| q.code()).collect(),
+        stage: report.stages.iter().map(|s| s.code()).collect(),
+        confidence: report.confidence.clone(),
     }
 }
 
@@ -439,7 +465,7 @@ fn decode_with_copies(
                     (
                         k,
                         if r.accepted {
-                            capture(b, d, &r.quality)
+                            capture(b, d, r)
                         } else {
                             Cached::Rejected
                         },
@@ -454,7 +480,7 @@ fn decode_with_copies(
         None => decode_confident_with(&mut single, params),
     };
     let outcome = if report.accepted {
-        capture(&model, &single, &report.quality)
+        capture(&model, &single, &report)
     } else {
         Cached::Rejected
     };
@@ -480,6 +506,8 @@ mod tests {
             uvs: vec![[0.25, 0.5], [0.75, 1.0]],
             kept: vec![true, false, true],
             quality: vec![0, 2],
+            stage: vec![2, 6],
+            confidence: vec![12.0, 0.5],
         };
         store(key(b"file-a", 0), 7, &value);
         store(key(b"file-b", 1), 7, &Cached::Rejected);

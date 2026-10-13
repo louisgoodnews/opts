@@ -67,9 +67,17 @@ the table is code (`uv_quality_of`), regenerated from `uv_step_eval` whenever th
 3. **Inference** - the pipeline above.
 Coverage in the installation: 2,476 meshes of the truth set have a twin; for `MAN_NL_NG` 5 of 325 meshes (all keyed) have a plain copy elsewhere and 31 more only keyed copies.
 
+## 6a. Incident files
+When more than 10 % of a scrambled mesh's vertices are `Unreliable` the loader writes, once per mesh and session, a text file `<log directory>/incidents/uv-<unix time>-<mesh>-<hash>.log` (the log directory is the one of `--log-file` or the default; the `WARN` line carries the path, at most 500 files are kept, the oldest go first). It records:
+- the mesh (path, model index, file size, header version/flags/key, vertex and triangle counts, `vertex count mod 5`), the context that was loading it (the vehicle's `.bus` file) and where the decoding came from (decoded now, decode cache or background decode), the decoder parameter fingerprint, and how many other files with the same name exist (the chances of a twin or copy);
+- the counts per quality and per stage (how many vertices each stage settled and how many of them are unreliable);
+- the reasons, grouped (for example *several offsets explained the neighbours about equally well, energy margin below 2*), with notes for the known hard cases (5 | n, no twin or copy);
+- the first 400 unreliable vertices: index, decoded position, stored (scrambled) texture coordinate, best-guess coordinate, the offset removed, the stage and its evidence strength.
+The decode cache (version 8) stores the stage and evidence per vertex so that cached meshes produce the same file. Code: `crates/opts-bevy/src/uv_incident.rs`.
+
 ## 7. Fallback for `Unreliable` vertices
 The value stays the decoder's best guess (smooth stage maximum). A hinge-interpolated value (prediction from `Exact`/`Recovered` neighbours without snapping to the offset set) will be evaluated against the truth set in Phase C and used only if it beats the guess;
-until then: one `WARN` per mesh with the unreliable share, no per-vertex special handling.
+evaluated 2026-10-13 on the twin truth set: worse than the best guess (51 % against 81 % within 0.01 on the 21 % of unreliable vertices where a prediction exists), so it is not used. One `WARN` and one incident file per mesh with the unreliable share; no per-vertex special handling.
 
 ## 8. Verification
 - `crates/opts-core/tests/uv_decoder.rs` (Phase C): for every twin pair available at run time, decode the keyed mesh with true positions and assert the quality contract: no `Exact` vertex is wrong beyond the calibrated rate (at most 1 % wrong among `Exact`, 10 % among `Recovered`), every vertex has a quality, no `Unreliable` on plain twins; and a regression case from the pre-fix code (the GN92 steering wheel is a keyed mesh without twin: its share of `Unreliable` is asserted > 0, i.e. the flag exists where the old code reported 0 %).
