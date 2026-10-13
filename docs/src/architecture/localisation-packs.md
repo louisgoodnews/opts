@@ -139,9 +139,10 @@ jump to the line.
 | `font-coverage` | warning | the text uses a script the bundled fonts (Latin, Greek, Cyrillic) lack |
 | `rtl-unsupported`, `direction` | warning | right-to-left pack or text that is not declared right-to-left |
 
-**Completeness** = messages that are present, valid and not an untouched copy of English prose, over
-all English messages. A freshly scaffolded pack is therefore 0 %, which is honest: it only *looks*
-translated.
+**Completeness** = messages that are present, valid and not an untouched copy of English *prose*
+(two words or more), over all English messages. One-word texts may legitimately equal English (names,
+loanwords), so they count as translated; every untouched sentence is a *copy* and counts as not done. A
+freshly scaffolded pack therefore shows well under half, never a flattering 100 %.
 
 **Right-to-left and fonts.** The interface lays text out left to right. A pack with
 `"direction": "rtl"` (or Arabic/Hebrew text) is listed with a red note and cannot be selected until

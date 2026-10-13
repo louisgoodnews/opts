@@ -290,6 +290,47 @@ Queues one command of the vehicle menu (see the in-game vehicle menu page); read
 | `settings.set` | `key` (string)<br>`value` (string) | 1.0 | Change a setting (validated like the settings page, saved) |
 | `settings.reset` | `key` (string) | 1.0 | Restore the default of a setting |
 
+## Group `l10n`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`l10n.languages`](#l10nlanguages) | - | 1.1 | List the languages (built in and installed packs) with completeness, authors and problems |
+| [`l10n.set`](#l10nset) | `code` (string) | 1.1 | Switch the interface language (saved like a setting) |
+| [`l10n.reload`](#l10nreload) | - | 1.1 | Scan the language folder again (new or edited packs) |
+| [`l10n.report`](#l10nreport) | `code?` (string) | 1.1 | Completeness and every finding of one language |
+
+### `l10n.languages`
+
+List the languages (built in and installed packs) with completeness, authors and problems.
+
+**Result:** `{current, packs_dir, languages:[{code, name, native_name, direction, builtin, from_pack, authors, version, total, translated, copied, missing, percent, errors, warnings, outdated, missing_fonts, selectable, current, dir}], problems:[{folder, issues}]}`
+
+`translated` counts messages that are really translated, `copied` those that are still the English text, `missing` those that show English. `selectable` is false for right-to-left packs. `problems` lists pack folders that cannot be used (no valid `pack.json`). Packs are files in `<data dir>/lang/<code>/`, see the localisation packs page.
+
+### `l10n.set`
+
+Switch the interface language (saved like a setting).
+
+**Result:** `{current, previous}`
+
+`1004` for a language that is not installed, `1007` for a right-to-left pack (not supported yet). Stores `interface.language` and updates every text at once.
+
+### `l10n.reload`
+
+Scan the language folder again (new or edited packs).
+
+**Result:** the `l10n.languages` result plus `{usable, broken, errors}`
+
+The same as the *Reload languages* button. A pack that cannot be used or a file with errors never fails the call: read `problems` and `l10n.report`. If the active language is gone the game shows English.
+
+### `l10n.report`
+
+Completeness and every finding of one language.
+
+**Result:** `{language, missing_keys, copied_keys, issues:[{severity, code, file, line, key, message}], issue_lines}`
+
+Without `code` the current language. `issue_lines` are the same findings as `file:line: error[code]: message` text, as `opts-tools l10n check` prints them.
+
 ## Group `reload`
 
 | Command | Arguments | Since | Summary |

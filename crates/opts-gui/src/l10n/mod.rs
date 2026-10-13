@@ -8,11 +8,11 @@
 //! noticed. A test forbids user-visible string literals in `opts-gui` outside this module.
 
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use bevy::prelude::*;
-use opts_core::l10n::check::{self, Issue, Reference, Severity};
-use opts_core::l10n::pack::{self, Direction, Pack};
+use opts_core::l10n::check::Issue;
+use opts_core::l10n::pack::{Direction, Pack};
 
 pub use opts_core::l10n::fluent;
 pub mod keys;

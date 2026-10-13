@@ -330,7 +330,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **⏳ Loading Screen Vehicle** — [M-0076](docs/src/roadmap/phase-9/M-0076.md)
   - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
 - [ ] **🌍 Language Packs** — [M-0083](docs/src/roadmap/phase-9/M-0083.md)
-  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+  - [x] Contributors and AI agents add languages as validated files in the user folder (`<data>/lang/<code>/`); `opts-tools l10n export|check|new|import|stats`; discovery at start and on reload; language list with completeness; `l10n.*` control methods (R-25, 2026-10-13, `feat/language-packs`, [architecture](docs/src/architecture/localisation-packs.md)).
+  - [ ] Trial in the running app with a real second language; right-to-left layout and fonts beyond Latin, Greek and Cyrillic.
 - [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](docs/src/roadmap/phase-9/M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).

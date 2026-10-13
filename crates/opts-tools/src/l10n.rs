@@ -583,8 +583,10 @@ mod tests {
         let v: serde_json::Value = serde_json::from_str(&c.out).unwrap();
         assert_eq!(c.code, 0, "{}", c.out);
         assert_eq!(v["errors"], 0);
-        assert_eq!(v["translated"], 0, "an untouched scaffold is all copies");
-        assert!(v["copied"].as_u64().unwrap() > 50);
+        // One-word texts may legitimately equal English (names, loanwords), so an untouched
+        // scaffold still counts them; every sentence is a copy.
+        assert!(v["percent"].as_f64().unwrap() < 50.0, "{}", c.out);
+        assert!(v["copied"].as_u64().unwrap() > 200, "{}", c.out);
         assert_eq!(v["outdated"], false);
         // Translate one message and break another.
         let settings = std::fs::read_to_string(pack.join("gui.ftl")).unwrap();
