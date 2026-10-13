@@ -52,6 +52,12 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::F1,
     KeyCode::F2,
     KeyCode::F8,
+    // The mini map: F9 shows it, Shift+F9 turns it, + and - zoom.
+    KeyCode::F9,
+    KeyCode::Minus,
+    KeyCode::Equal,
+    KeyCode::NumpadAdd,
+    KeyCode::NumpadSubtract,
     KeyCode::F10,
     KeyCode::F12,
     KeyCode::Escape,

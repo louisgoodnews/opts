@@ -64,6 +64,11 @@ impl Plugin for HudPlugin {
         app.insert_resource(HudProfiles::load(profile::user_dir().as_deref()))
             .init_resource::<HudValues>()
             .init_resource::<layout::HudLayout>()
+            .init_resource::<opts_gui::components::toast_stack::ToastInset>()
+            .add_systems(
+                Update,
+                layout::toast_inset.before(opts_gui::components::toast_stack::stack_toasts),
+            )
             .add_plugins(minimap::MiniMapPlugin)
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()

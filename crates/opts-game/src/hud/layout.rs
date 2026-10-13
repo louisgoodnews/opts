@@ -9,7 +9,8 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use super::parts::{ClusterBox, HudRoot, MapBox, ReadoutBox};
+use super::parts::{ClusterBox, HudRoot, HudSlot, MapBox, ReadoutBox};
+use super::widget::Slot;
 
 /// The layout area is narrower than this (logical px): compact.
 pub const COMPACT_BELOW_WIDTH: f32 = 760.0;
@@ -29,6 +30,8 @@ pub struct HudLayout {
     pub map_side: f32,
     /// Width of the layout area.
     pub width: f32,
+    /// The viewpoint editor is open: its panel takes the right edge.
+    pub editor: bool,
     /// Padding of the HUD root (distance from the window edges).
     pub margin: f32,
 }
@@ -47,6 +50,7 @@ impl HudLayout {
         Self {
             compact,
             width,
+            editor: false,
             map_side: (height * MAP_HEIGHT_SHARE).clamp(MAP_SIDE_RANGE.0, MAP_SIDE_RANGE.1),
             margin: if compact { 12.0 } else { 20.0 },
         }
@@ -57,14 +61,24 @@ impl HudLayout {
     /// The most the cluster may be wide: the area minus the map and the gaps.
     #[must_use]
     pub fn cluster_max_width(&self) -> f32 {
-        (self.width - self.map_side - 2.0 * self.margin - 12.0).max(120.0)
+        let right = if self.editor {
+            // The editor's panel is at the right edge (the map steps aside for it).
+            VIEWPOINT_PANEL_WIDTH + 12.0
+        } else {
+            self.map_side + 12.0
+        };
+        (self.width - right - 2.0 * self.margin).max(120.0)
     }
 }
+
+/// Width of the viewpoint editor's panel (layout px), see `hud::viewpoint`.
+pub const VIEWPOINT_PANEL_WIDTH: f32 = 380.0;
 
 /// Measures the layout area and keeps [`HudLayout`] current.
 pub fn measure(
     window: Query<&Window, With<PrimaryWindow>>,
     scale: Option<Res<UiScale>>,
+    viewpoint: Option<Res<opts_bevy::ViewpointState>>,
     mut layout: ResMut<HudLayout>,
 ) {
     let Ok(window) = window.single() else { return };
@@ -73,7 +87,8 @@ pub fn measure(
     if w < 1.0 || h < 1.0 {
         return;
     }
-    let next = HudLayout::for_area(w, h);
+    let mut next = HudLayout::for_area(w, h);
+    next.editor = viewpoint.is_some_and(|v| v.editing);
     layout.set_if_neq(next);
 }
 
@@ -116,5 +131,57 @@ pub fn apply(
         if node.min_width != want {
             node.min_width = want;
         }
+    }
+}
+
+/// Gap between the mini map (or the cluster) and the toast stack above it (layout px).
+pub const TOAST_GAP: f32 = 8.0;
+/// A toast is at least this wide (`opts_gui` toast), and never nearer to the right edge than
+/// [`opts_gui::components::toast_stack::MARGIN`].
+const TOAST_MIN_WIDTH: f32 = 280.0;
+
+/// Raises the toast stack above the HUD at the bottom: toasts live at the bottom right too, and
+/// must not cover the mini map. When the widest live toast would also reach into the cluster at the
+/// left (a narrow layout) the stack clears the cluster as well. Without a visible map the inset is
+/// `0` (the cluster alone is clear of the toasts when it stays left of them).
+pub fn toast_inset(
+    layout: Res<HudLayout>,
+    maps: Query<(&ComputedNode, &Node), With<MapBox>>,
+    clusters: Query<(&HudSlot, &ComputedNode, &UiGlobalTransform, &Node)>,
+    toasts: Query<&ComputedNode, With<opts_gui::components::toast::M3Toast>>,
+    mut inset: ResMut<opts_gui::components::toast_stack::ToastInset>,
+) {
+    use opts_gui::components::toast_stack::MARGIN;
+    let k = |c: &ComputedNode| c.inverse_scale_factor();
+    let map_height = maps
+        .iter()
+        .find(|(_, n)| n.display != Display::None)
+        .map_or(0.0, |(c, _)| c.size().y * k(c));
+    // The cluster: its right edge and height.
+    let cluster = clusters
+        .iter()
+        .find(|(s, _, _, n)| s.0 == Slot::ClusterBottomLeft && n.display != Display::None)
+        .map(|(_, c, t, _)| {
+            let right = (t.translation.x + c.size().x / 2.0) * k(c);
+            (right, c.size().y * k(c))
+        });
+    let widest = toasts
+        .iter()
+        .map(|c| c.size().x * k(c))
+        .fold(TOAST_MIN_WIDTH, f32::max);
+    let toast_left = layout.width - MARGIN - widest;
+    let mut height = map_height;
+    if let Some((right, cluster_height)) = cluster {
+        if right + TOAST_GAP > toast_left {
+            height = height.max(cluster_height);
+        }
+    }
+    let want = if height > 1.0 {
+        (layout.margin + height + TOAST_GAP - MARGIN).max(0.0)
+    } else {
+        0.0
+    };
+    if (inset.0 - want).abs() > 0.5 {
+        inset.0 = want;
     }
 }

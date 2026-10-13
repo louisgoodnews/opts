@@ -144,7 +144,8 @@ Errors follow one template and one of three placements.
 - **The HUD never takes input focus** and never moves; panels appear only in fixed regions. Opening any menu pauses the simulation and releases the cursor; closing restores both exactly (today L-Alt is a held modifier and P only logs).
 - **Cursor**: locked and hidden in free-look and driver views, visible in any overlay; a visible hint explains the key that frees it.
 - **Camera and mode changes** give a 1.5 s on-screen label ("External camera").
-- **Alerts** while driving are short, positioned at the instrument cluster, and may not cover the view ahead; sounds will support them when audio exists.
+- **Alerts** while driving are short, positioned in the bottom-left instrument cluster, and may not cover the view ahead; sounds will support them when audio exists.
+- **Mini map** (bottom right): F9 shows or hides it, Shift+F9 switches north-up and heading-up, `+` and `-` zoom from 100 m to 1 km. It never takes focus, updates at most ten times per second, and steps aside for the viewpoint editor and the toasts (toasts stack above it).
 - **Input gating** (already enforced by `not_modal_active` and an audit test) stays the single mechanism.
 
 ## 9. Proposed global shortcuts

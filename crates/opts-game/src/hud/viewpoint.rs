@@ -123,7 +123,7 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
                     position_type: PositionType::Absolute,
                     right: Val::Px(20.0),
                     top: Val::Px(68.0),
-                    width: Val::Px(380.0),
+                    width: Val::Px(super::layout::VIEWPOINT_PANEL_WIDTH),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(8.0),
                     padding: UiRect::all(Val::Px(14.0)),

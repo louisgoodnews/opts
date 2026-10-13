@@ -152,6 +152,10 @@ Implemented as described in [interaction and feel §5](interaction-and-feel.md#5
 | `help.guides` | Help, Guides | M-0064 |
 | `home.rescan` | Home banner, Rescan | M-0063 |
 
+## 8a. In-game HUD (M-0071)
+
+Not a screen of the shell but the overlay of a drive; see [HUD registry](../../architecture/hud-registry.md). Regions: status bar top left and *Pause [Esc]* top right, the camera label below the bar, the **cluster at the bottom left** (hints, alert line, speed / gear / parking brake) and the **mini map at the bottom right**. Toasts stack above the map. The HUD is laid out for 1024 x 640 up to 2560 x 1440 at a UI scale of 75 to 200 % (a compact layout below 760 x 420 layout px); `tests/hud_matrix.rs` and the golden `hud-1280x720` guard it.
+
 ## 9. Test matrix (S7)
 
 Rail from registry · availability rendering · Esc matrix (§1) · Continue → drive request · first-run decisions (found, wrong folder, cancelled, confirmed) · pause/leave flow · summary content · CI rules (target ≥ 32 px, text ≥ 12 px, keyboard traversal, no literal colours or strings) on every new module.

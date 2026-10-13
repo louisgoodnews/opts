@@ -117,7 +117,7 @@ fn minimap_json(world: &mut World) -> Value {
 
 /// `hud.minimap {zoom?, orientation?, enabled?}`: reads the mini map, or changes its settings
 /// (`hud.minimap`, `hud.minimap_zoom`, `hud.minimap_orientation`; saved like any setting).
-fn minimap(world: &mut World, params: &Value) -> Outcome {
+pub(super) fn minimap(world: &mut World, params: &Value) -> Outcome {
     use crate::settings_registry::{apply_change, ChangeSource};
     let invalid = |m: &str| Outcome::err(RpcError::new(code::INVALID_PARAMS, m));
     let zoom = match opt_f64(params, "zoom") {
@@ -160,6 +160,12 @@ fn minimap(world: &mut World, params: &Value) -> Outcome {
         }
     }
     Outcome::ok(minimap_json(world))
+}
+
+/// `hud.state` for the tests of this module tree.
+#[cfg(test)]
+pub(super) fn state_for_tests(world: &mut World) -> Outcome {
+    state(world, &Value::Null)
 }
 
 fn alert(world: &mut World, params: &Value) -> Outcome {

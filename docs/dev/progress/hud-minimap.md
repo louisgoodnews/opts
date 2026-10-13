@@ -29,7 +29,7 @@ Control reference: `UPDATE_CONTROL_DOC=1 cargo test -p opts-cli reference`.
 ## Steps
 | Step | Status |
 | :-- | :-- |
-| S1 slot model, layout, profiles, cluster, settings, messages | code written, compiling |
+| S1+S2 code, protocol, help keys, tests written, docs partly (committed) | needs test run |
 | S2 minimap widget (raster, source, systems) | code written, compiling |
 | S3 protocol `hud.minimap` + hud.state | todo |
 | S4 tests: raster, hud, a11y matrix, golden, no-overlap | todo |

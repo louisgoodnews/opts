@@ -12,6 +12,9 @@
 pub mod raster;
 pub mod source;
 
+#[cfg(test)]
+mod tests;
+
 use std::time::Duration;
 
 use bevy::asset::RenderAssetUsages;
@@ -175,6 +178,14 @@ pub struct MiniMapCanvas(Option<Canvas>);
 /// The image the surface shows.
 #[derive(Resource, Default)]
 pub struct MiniMapImage(Option<Handle<Image>>);
+
+impl MiniMapImage {
+    /// The texture, once the surface exists.
+    #[must_use]
+    pub fn handle(&self) -> Option<Handle<Image>> {
+        self.0.clone()
+    }
+}
 
 /// The node that shows the texture.
 #[derive(Component, Debug, Clone, Copy)]

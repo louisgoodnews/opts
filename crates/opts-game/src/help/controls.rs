@@ -50,6 +50,7 @@ const SIM_PAUSE: &str = "crates/opts-game/src/in_game/mod.rs";
 const HELP: &str = "crates/opts-game/src/help/mod.rs";
 const THEME: &str = "crates/opts-game/src/shell/footer.rs";
 const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
+const MINIMAP: &str = "crates/opts-game/src/hud/minimap/mod.rs";
 const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
 
 /// The single registry of the keyboard bindings that the Help page prints. The input systems keep
@@ -110,6 +111,29 @@ pub const GROUPS: &[Group] = &[
                 CAMERA,
             ),
             bind("Tab", &[KeyCode::Tab], keys::HELP_KEY_VIEWPOINT, VIEWPOINT),
+        ],
+    ),
+    (
+        keys::HELP_GROUP_MAP,
+        &[
+            bind("F9", &[KeyCode::F9], keys::HELP_KEY_MINIMAP, MINIMAP),
+            bind(
+                "Shift + F9",
+                &[KeyCode::ShiftLeft, KeyCode::F9],
+                keys::HELP_KEY_MINIMAP_ORIENTATION,
+                MINIMAP,
+            ),
+            bind(
+                "+ / -",
+                &[
+                    KeyCode::Equal,
+                    KeyCode::Minus,
+                    KeyCode::NumpadAdd,
+                    KeyCode::NumpadSubtract,
+                ],
+                keys::HELP_KEY_MINIMAP_ZOOM,
+                MINIMAP,
+            ),
         ],
     ),
     (
