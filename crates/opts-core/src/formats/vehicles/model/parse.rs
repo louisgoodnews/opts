@@ -2,7 +2,7 @@
 
 use glam::Vec3;
 
-use crate::formats::text::{scan_blocks, OmsiBlock};
+use crate::formats::text::{scan_blocks_with, OmsiBlock};
 use crate::formats::vehicles::model::anim::parse_newanim;
 use crate::formats::vehicles::model::ast::{
     BumpMap, CtcScheme, CtcTexture, EnvMap, FreeTex, InteriorLight, LightMap, MeshBone,
@@ -34,9 +34,22 @@ fn require_params(block: &OmsiBlock, expected: usize) -> Result<&[String], Model
     }
 }
 
+/// Keywords of `model.cfg` that take a fixed number of parameter lines (`docs/src/formats/text/vehicles/model_cfg.md`):
+/// zero for the flags, one for `[matl_transmap]` whose blank line is an empty value. Only these are read
+/// literally; text after them up to the next keyword is not a parameter. Everything else keeps the
+/// free-form reading (some keywords have optional parameters).
+fn model_arity(keyword: &str) -> Option<usize> {
+    match keyword {
+        "matl_transmap" => Some(1),
+        "matl_item" | "matl_nozwrite" | "matl_nozcheck" | "matl_nowrite" | "matl_texadress_clamp"
+        | "isshadow" | "shadow" | "smoothskin" | "nocollision" | "nodistancecheck" => Some(0),
+        _ => None,
+    }
+}
+
 /// Parses an OMSI `model.cfg` file into a structured [`ModelConfig`].
 pub fn parse_model(text: &str) -> Result<ModelConfig, ModelParseError> {
-    let blocks = scan_blocks(text);
+    let blocks = scan_blocks_with(text, model_arity);
     let mut config = ModelConfig::new();
     let mut current_lod_idx: Option<usize> = None;
     let mut current_mesh_idx: Option<usize> = None;
@@ -318,7 +331,11 @@ fn apply_material_modifier(
             });
         }
         "matl_transmap" => {
-            mat.trans_map = block.parameters.first().cloned();
+            mat.trans_map = block
+                .parameters
+                .first()
+                .filter(|p| !p.trim().is_empty())
+                .cloned();
         }
         "matl_freetex" => {
             let params = require_params(block, 2)?;

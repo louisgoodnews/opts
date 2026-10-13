@@ -422,3 +422,17 @@ fn test_citybus_facelift_model_cfg_live() {
         assert!(!config.lods[0].meshes.is_empty());
     }
 }
+
+/// A keyword with a blank parameter line takes the blank as its (empty) value; the next text is not
+/// its parameter (`model_GN92_trail.cfg`: `[matl_transmap]`, blank lines, `#####`, `Rauchsystem`).
+#[test]
+fn blank_transmap_value_does_not_swallow_the_next_text() {
+    let text = "[mesh]\nGN92\\x.o3d\n\n[matl]\nt.bmp\n0\n\n[matl_transmap]\n\n\n\n########################################\n\n\nRauchsystem\n\n[smoke]\n-1.16\n-3.5\n0.46\n-1\n";
+    let model = ModelConfig::parse(text).expect("parses");
+    let mesh = &model.lods[0].meshes[0];
+    assert_eq!(mesh.materials[0].trans_map, None, "empty value, not 'Rauchsystem'");
+    // a texture name on the next line is still read
+    let named = "[mesh]\nx.o3d\n[matl]\nt.bmp\n0\n[matl_transmap]\nmask.bmp\n";
+    let model = ModelConfig::parse(named).expect("parses");
+    assert_eq!(model.lods[0].meshes[0].materials[0].trans_map.as_deref(), Some("mask.bmp"));
+}
