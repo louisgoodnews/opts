@@ -270,13 +270,12 @@ fn the_save_list_saves_asks_before_overwriting_renames_and_deletes() {
     // An empty name is refused inline.
     click(&mut app, "saves.save");
     assert_eq!(save_files(&app), 0);
-    let now = ids(&mut app);
-    assert!(now.contains(&"saves.name-error".to_owned()), "{now:?}");
+    assert!(app.world().resource::<crate::save::ui::SavesUi>().name_error.is_some());
 
     set_name(&mut app, "Erste Fahrt");
     click(&mut app, "saves.save");
     assert_eq!(save_files(&app), 1);
-    assert!(ids(&mut app).contains(&"saves.row.erste-fahrt".to_owned()));
+    assert!(ids(&mut app).contains(&"saves.load.erste-fahrt".to_owned()));
 
     // The same name asks; Cancel keeps one file and the old content.
     set_name(&mut app, "Erste Fahrt");
@@ -307,7 +306,7 @@ fn the_save_list_saves_asks_before_overwriting_renames_and_deletes() {
     assert!(ids(&mut app).contains(&"dialog.saves.delete.yes".to_owned()));
     click(&mut app, "dialog.saves.delete.yes");
     assert_eq!(save_files(&app), 0);
-    assert!(!ids(&mut app).contains(&"saves.row.erste-fahrt".to_owned()));
+    assert!(!ids(&mut app).contains(&"saves.load.erste-fahrt".to_owned()));
 
     // Esc closes the list and the pause overlay returns.
     esc(&mut app);
@@ -336,5 +335,5 @@ fn loading_a_save_whose_map_is_missing_shows_the_error_template() {
     assert_eq!(state(&app), AppState::InGame, "nothing was left");
     click(&mut app, "dialog.saves.error.another");
     let now = ids(&mut app);
-    assert!(now.contains(&"saves.row.karte-weg".to_owned()), "the list stays: {now:?}");
+    assert!(now.contains(&"saves.load.karte-weg".to_owned()), "the list stays: {now:?}");
 }
