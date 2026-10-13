@@ -146,7 +146,7 @@ Principles:
 | `idm` | `IdmParams` (car, heavy), `acceleration` with speed cap and obstacle | 5 |
 | `conflict` | `LaneGraph::conflicts` (lazy per lane: crossing and merging zones with the other lane's zone) | 4 |
 | `rightofway` | `precedence` (priority rules, left turners, right before left) | 4 |
-| `signals` | `SignalProgram` (repeating cycle), `Aspect::from_state` | 3 |
+| `signals` | `SignalProgram` (repeating cycle on the group's period, `in_period`), `Aspect::from_state` | 3 |
 | `neighbours` | `LaneGraph::neighbours` (lazy parallel same-direction lanes with the position mapping) | 3 |
 | `lanechange` | MOBIL-like, target-lane priority, announcement | (agent tests) |
 | `agent` | `TrafficWorld` (spawn with free-room check, `step`, lane transitions, leaders across lane borders, dead-end events, `replace_graph` when tiles stream), `DriverCommand` (throttle/brake from acceleration, indicators from the next lane's turn) | 7 |

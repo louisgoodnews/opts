@@ -160,13 +160,17 @@ impl WorldLoadJob {
         sco: &SceneryObject,
     ) -> Option<SignalProgram> {
         let program_of = |s: &SceneryObject, i: usize| {
-            let (_, p) = s.traffic_light(i)?;
+            let (g, p) = s.traffic_light(i)?;
             let phases = p
                 .phases
                 .iter()
                 .map(|ph| (ph.state, f64::from(ph.duration_sec)))
                 .collect();
-            SignalProgram::new(phases, f64::from(p.approach_distance_m.unwrap_or(0.0)))
+            SignalProgram::in_period(
+                phases,
+                f64::from(g.period_sec()),
+                f64::from(p.approach_distance_m.unwrap_or(0.0)),
+            )
         };
         let Some(&(parent, index)) = self.scenery.links.get(&obj.id_code) else {
             return program_of(sco, 0);
