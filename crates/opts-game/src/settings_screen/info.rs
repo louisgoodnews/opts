@@ -2,7 +2,7 @@
 //! the current theme, the catalogue, the cache, the file locations and the menu keys.
 
 use bevy::prelude::*;
-use opts_gui::l10n::L10nArgs;
+use opts_gui::l10n::{L10nArgs, L10nKey};
 use opts_gui::prelude::*;
 
 use super::rows::{label, Ctx};

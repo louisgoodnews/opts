@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use bevy::tasks::{futures::check_ready, IoTaskPool, Task};
-use opts_gui::tokens::{RadiusLevel, RadiusToken};
+use opts_gui::prelude::{RadiusLevel, RadiusToken};
 
 use crate::menu::background::{decode_map_picture, upload_picture, DecodedPicture};
 use crate::menu::background::MenuBackgroundScrim;

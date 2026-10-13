@@ -18,7 +18,7 @@
 
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use bevy::prelude::*;
@@ -179,8 +179,8 @@ pub struct ContentFactsStore {
     light_ready: bool,
     heavy_ready: bool,
     heavy_stale: bool,
-    pending: Option<(Receiver<Answer>, bool)>,
-    jobs: Vec<Receiver<()>>,
+    pending: Option<(Mutex<Receiver<Answer>>, bool)>,
+    jobs: Vec<Mutex<Receiver<()>>>,
     themes: Vec<String>,
     since_light: Duration,
     /// Increments whenever new facts arrived (for change detection by readers).
@@ -247,7 +247,7 @@ impl ContentFactsStore {
                 let _ = tx.send(());
             });
         match spawned {
-            Ok(_) => self.jobs.push(rx),
+            Ok(_) => self.jobs.push(Mutex::new(rx)),
             Err(e) => tracing::warn!(err = %e, "cannot start the content job thread"),
         }
     }
@@ -261,7 +261,10 @@ impl ContentFactsStore {
     /// Takes a finished answer, if any. Never blocks.
     fn poll(&mut self) {
         let before = self.jobs.len();
-        self.jobs.retain(|rx| matches!(rx.try_recv(), Err(TryRecvError::Empty)));
+        self.jobs.retain(|rx| {
+            rx.lock()
+                .is_ok_and(|rx| matches!(rx.try_recv(), Err(TryRecvError::Empty)))
+        });
         if self.jobs.len() != before {
             self.invalidate();
         }
@@ -269,7 +272,8 @@ impl ContentFactsStore {
             return;
         };
         let heavy_asked = *heavy;
-        match rx.try_recv() {
+        let received = rx.lock().map_or(Err(TryRecvError::Disconnected), |rx| rx.try_recv());
+        match received {
             Ok((light, h)) => {
                 let mut f = self.current.unwrap_or_default();
                 f.light = light;
@@ -319,7 +323,7 @@ impl ContentFactsStore {
                 let _ = tx.send((light, h));
             });
         match spawned {
-            Ok(_) => self.pending = Some((rx, heavy)),
+            Ok(_) => self.pending = Some((Mutex::new(rx), heavy)),
             Err(e) => {
                 tracing::warn!(err = %e, "cannot start the content facts thread");
                 self.heavy_stale |= heavy;

@@ -210,14 +210,6 @@ fn spawn_continue(
     if let Some(folder) = hero_folder {
         page.commands().entity(card).insert(HeroPending { folder });
     }
-    let fill = Node {
-        position_type: PositionType::Absolute,
-        left: Val::Px(0.0),
-        top: Val::Px(0.0),
-        width: Val::Percent(100.0),
-        height: Val::Percent(100.0),
-        ..default()
-    };
     page.commands().entity(card).with_children(|c| {
         c.spawn(Node {
             width: Val::Percent(100.0),
