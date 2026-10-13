@@ -110,3 +110,4 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 - [x] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
+  - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).

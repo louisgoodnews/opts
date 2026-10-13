@@ -1113,10 +1113,10 @@ mod search_tests {
         assert_eq!(shown(&mut app).len(), 7);
         act(&mut app, UiAction::Back);
         frames(&mut app, 2);
-        assert_eq!(state(&app, combo).0, true, "first Esc keeps the list open");
+        assert!(state(&app, combo).0, "first Esc keeps the list open");
         assert_eq!(shown(&mut app).len(), 16, "and shows every option again");
         act(&mut app, UiAction::Back);
-        assert_eq!(state(&app, combo).0, false, "second Esc closes it");
+        assert!(!state(&app, combo).0, "second Esc closes it");
     }
 
     #[test]

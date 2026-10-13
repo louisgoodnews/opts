@@ -166,3 +166,17 @@ settings-toast-omsi-restart = OMSI folder saved. Restart OPTS to load its conten
 settings-toast-omsi-invalid = That folder does not look like an OMSI 2 installation (it needs the folders maps and Vehicles).
 
 settings-back = Back
+
+scan-never = never
+scan-chip = { $status } · Last scan: { $when }
+scan-level-good = Up to date
+scan-level-recommended = Scan recommended
+scan-level-needed = Scan needed
+scan-why-recent = Scanned recently and the OMSI folder has not changed since. Nothing to do.
+scan-why-older = The last scan is older than your automatic scan interval ({ $days } day(s)). Press "Scan now" to pick up new content.
+scan-why-changed = The OMSI folder was modified after the last scan, so there is probably new or removed content. Press "Scan now".
+scan-why-running = A scan is running in the background. The numbers below update when it is done.
+scan-why-never = The OMSI folder has not been scanned yet. Press "Scan now".
+scan-why-failed = The last scan failed. Check the OMSI folder above, then press "Scan now".
+scan-why-empty = The last scan found no maps or vehicles. Check the OMSI folder above, then press "Scan now".
+scan-why-folder-missing = The OMSI folder is not set or cannot be found. Choose it above, then press "Scan now".

@@ -165,3 +165,17 @@ settings-toast-omsi-restart = OMSI-Ordner gespeichert. Starte OPTS neu, um seine
 settings-toast-omsi-invalid = Dieser Ordner sieht nicht nach einer OMSI-2-Installation aus (er braucht die Ordner maps und Vehicles).
 
 settings-back = Zurück
+
+scan-never = nie
+scan-chip = { $status } · Letzte Suche: { $when }
+scan-level-good = Aktuell
+scan-level-recommended = Suche empfohlen
+scan-level-needed = Suche nötig
+scan-why-recent = Vor Kurzem durchsucht, und der OMSI-Ordner hat sich seitdem nicht geändert. Nichts zu tun.
+scan-why-older = Die letzte Suche ist älter als dein automatisches Suchintervall ({ $days } Tag(e)). Mit „Jetzt suchen“ werden neue Inhalte gefunden.
+scan-why-changed = Der OMSI-Ordner wurde nach der letzten Suche verändert, vermutlich gibt es neue oder entfernte Inhalte. Drücke „Jetzt suchen“.
+scan-why-running = Im Hintergrund läuft eine Suche. Die Zahlen unten aktualisieren sich danach.
+scan-why-never = Der OMSI-Ordner wurde noch nicht durchsucht. Drücke „Jetzt suchen“.
+scan-why-failed = Die letzte Suche ist fehlgeschlagen. Prüfe oben den OMSI-Ordner und drücke dann „Jetzt suchen“.
+scan-why-empty = Die letzte Suche hat keine Karten oder Fahrzeuge gefunden. Prüfe oben den OMSI-Ordner und drücke dann „Jetzt suchen“.
+scan-why-folder-missing = Der OMSI-Ordner ist nicht festgelegt oder nicht auffindbar. Wähle ihn oben aus und drücke dann „Jetzt suchen“.

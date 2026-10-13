@@ -30,7 +30,7 @@ fn path_text(p: Option<std::path::PathBuf>) -> String {
 }
 
 /// A Unix timestamp as local date and time.
-fn local_time<T: TryInto<i64>>(t: T) -> String {
+pub(super) fn local_time<T: TryInto<i64>>(t: T) -> String {
     t.try_into()
         .ok()
         .and_then(|t| chrono::DateTime::from_timestamp(t, 0))

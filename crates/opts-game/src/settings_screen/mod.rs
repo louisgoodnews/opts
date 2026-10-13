@@ -13,6 +13,7 @@ pub mod input;
 pub mod overlay;
 pub mod page;
 pub mod rows;
+pub mod scan_status;
 pub mod systems;
 pub mod types;
 
@@ -52,6 +53,10 @@ impl Plugin for SettingsScreenPlugin {
                 )
                     .run_if(any_with_component::<page::SettingsPage>)
                     .run_if(opts_bevy::reporting::not_modal_active),
+            )
+            .add_systems(
+                Update,
+                scan_status::refresh_scan_chip.run_if(any_with_component::<scan_status::ScanChip>),
             )
             .add_systems(
                 Update,
