@@ -8,6 +8,7 @@ pub mod control_drive;
 pub mod control_ui;
 pub mod drive_history;
 pub mod first_run;
+pub mod hardware;
 pub mod help;
 pub mod home;
 pub mod hud;
@@ -79,6 +80,7 @@ impl Plugin for OptsGamePlugin {
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
+            .add_plugins(hardware::HardwarePlugin)
             .add_plugins(shell::ShellPlugin)
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)

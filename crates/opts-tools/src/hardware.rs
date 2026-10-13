@@ -42,7 +42,8 @@ pub fn run(args: &[String]) -> Result<(), String> {
         // Enter cancels the run; the thread is detached and ends with the process.
         std::thread::spawn(move || {
             let mut line = String::new();
-            if std::io::stdin().read_line(&mut line).is_ok() {
+            // EOF (stdin closed or not a terminal) is not a cancel request.
+            if std::io::stdin().read_line(&mut line).is_ok_and(|n| n > 0) {
                 c.cancel();
             }
         });

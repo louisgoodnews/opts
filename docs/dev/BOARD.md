@@ -180,7 +180,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
 - [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
-- [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
+- [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Branch `feat/opts-hardware` (not merged): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
 - [ ] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25.
 - [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.

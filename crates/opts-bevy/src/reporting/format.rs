@@ -21,6 +21,8 @@ pub struct ReportMeta {
     pub vehicle: String,
     /// Widget that had focus when the report was sent.
     pub focused_ui: String,
+    /// Hardware profile text, present only when the user allowed it.
+    pub hardware: Option<String>,
 }
 
 fn or_none(v: &Option<String>) -> String {
@@ -43,6 +45,7 @@ impl ReportMeta {
             camera: or_none(&ctx.camera),
             vehicle: or_none(&ctx.vehicle),
             focused_ui: focused_ui.unwrap_or("(none)").to_owned(),
+            hardware: ctx.hardware.clone().filter(|h| !h.is_empty()),
         }
     }
 }
@@ -54,6 +57,12 @@ impl ReportMeta {
 #[must_use]
 pub fn format_report(meta: &ReportMeta, description: &str) -> String {
     let desc = description.replace("\r\n", "\n").replace('\r', "\n");
+    let hardware = meta.hardware.as_ref().map_or_else(String::new, |h| {
+        format!(
+            "\n--- Hardware profile (included because you allowed it in Settings > Advanced) ---\n\n{}\n",
+            h.trim_end()
+        )
+    });
     format!(
         "OPTS Report\n===========\n\n\
          Timestamp:   {}\n\
@@ -64,7 +73,7 @@ pub fn format_report(meta: &ReportMeta, description: &str) -> String {
          Camera:      {}\n\
          Vehicle:     {}\n\
          Focused UI:  {}\n\n\
-         --- Description ---\n\n{}\n",
+         --- Description ---\n\n{}\n{}",
         meta.timestamp,
         meta.version,
         meta.git,
@@ -73,7 +82,8 @@ pub fn format_report(meta: &ReportMeta, description: &str) -> String {
         meta.camera,
         meta.vehicle,
         meta.focused_ui,
-        desc
+        desc,
+        hardware
     )
 }
 
@@ -85,4 +95,21 @@ pub fn now_stamp() -> (String, String) {
         now.format("%Y-%m-%d_%H-%M-%S").to_string(),
         now.to_rfc3339_opts(chrono::SecondsFormat::Secs, false),
     )
+}
+
+#[cfg(test)]
+mod hardware_tests {
+    use super::*;
+
+    #[test]
+    fn hardware_section_only_when_the_context_carries_it() {
+        let mut ctx = ReportContext::default();
+        let plain = format_report(&ReportMeta::from_context(&ctx, "t".into(), None), "text");
+        assert!(!plain.contains("Hardware profile"));
+        ctx.hardware = Some("cpu.logical_cores  8\n".into());
+        let with = format_report(&ReportMeta::from_context(&ctx, "t".into(), None), "text");
+        assert!(with.contains("--- Hardware profile"));
+        assert!(with.ends_with("cpu.logical_cores  8\n"));
+        assert!(with.contains("text\n\n--- Hardware"));
+    }
 }

@@ -90,3 +90,57 @@ jobs:
 
       - name: Run tests
         run: cargo test --workspace
+
+      # M-0081: the hardware probe has Windows-specific code paths; run its tests explicitly so a
+      # failure here is named after the crate.
+      - name: Hardware probe tests (Windows)
+        run: cargo test -p opts-hardware
+
+  macos:
+    name: macOS build and hardware probe tests
+    # macos-latest is Apple Silicon (aarch64); the Intel target is only compile-checked below.
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check the hardware probe
+        run: cargo check -p opts-hardware --all-targets
+
+      - name: Check the hardware probe for Intel macs
+        run: cargo check -p opts-hardware --all-targets --target x86_64-apple-darwin
+
+      - name: Run tests (hardware probe and core)
+        run: cargo test -p opts-hardware -p opts-core
+
+  hardware-targets:
+    name: Hardware probe cross-target check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain with the other targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+          targets: x86_64-unknown-linux-musl,aarch64-unknown-linux-gnu,x86_64-pc-windows-msvc,aarch64-pc-windows-msvc,aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Clippy for every supported target (opts-hardware only; nothing is run)
+        run: |
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-gnu x86_64-pc-windows-msvc aarch64-pc-windows-msvc aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo clippy -p opts-hardware --all-targets --target "$t" -- -D warnings
+          done

@@ -22,6 +22,7 @@ pub fn run_actions(
     mut requests: MessageReader<SettingActionRequested>,
     loc: Res<Localization>,
     service: Option<Res<CatalogueService>>,
+    mut hardware: Option<ResMut<crate::hardware::HardwareState>>,
 ) {
     for r in requests.read() {
         match r.key {
@@ -38,6 +39,25 @@ pub fn run_actions(
                 let removed = opts_bevy::descramble_cache::prune(0);
                 tracing::info!(removed, "texture cache cleared from the settings page");
                 toast(&mut commands, &loc, "settings-toast-cache-cleared");
+            }
+            // Detect again and keep the result in the local profile file the user can delete.
+            "advanced.hardware_redetect" => {
+                if let Some(h) = hardware.as_mut() {
+                    h.start_probe(true, true);
+                }
+                toast(&mut commands, &loc, "settings-toast-hw-detecting");
+            }
+            "advanced.hardware_delete" => {
+                let removed = hardware.as_mut().is_some_and(|h| h.delete_stored());
+                toast(
+                    &mut commands,
+                    &loc,
+                    if removed {
+                        "settings-toast-hw-deleted"
+                    } else {
+                        "settings-toast-hw-nothing-stored"
+                    },
+                );
             }
             _ => {}
         }

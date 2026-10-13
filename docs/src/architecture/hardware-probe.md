@@ -38,7 +38,7 @@ Facts the renderer owns (GPU adapter info and limits, monitors, audio output, ga
 | OS family, version class | `std::env::consts`, `sysinfo` (kernel major.minor) | `sysinfo` (major.minor) | `sysinfo` (major.build class) |
 | Display server | `XDG_SESSION_TYPE`, `WAYLAND_DISPLAY`, `DISPLAY` (presence only) | `quartz` (fixed) | `win32` (fixed) |
 | Container / VM hint | `/proc/self/cgroup` keywords, `/run/.containerenv`, `/.dockerenv` (existence), `/proc/cpuinfo` `hypervisor` flag, `/sys/class/dmi/id/{sys_vendor,product_name}` classified then dropped | unknown | unknown |
-| CPU class, cores, ISA features | `sysinfo` + `/proc/cpuinfo`-free: `std::is_x86_feature_detected!`, aarch64 detection | same | same |
+| CPU class, cores, ISA features | `sysinfo` (vendor and brand classified, then dropped); features from `std::is_x86_feature_detected!` / `is_aarch64_feature_detected!` | same | same |
 | CPU caches | `/sys/devices/system/cpu/cpu0/cache/index*/{level,type,size}` | unknown | unknown |
 | RAM total/available | `sysinfo` (honours cgroup limits) | `sysinfo` | `sysinfo` |
 | GPU vendor/class/limits | from the renderer (`GpuInput`); fallback `/sys/class/drm/card*/device/vendor` (class only) | renderer only | renderer only |

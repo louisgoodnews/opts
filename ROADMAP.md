@@ -242,8 +242,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
 - [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](docs/src/roadmap/phase-5/M-0074.md)
   - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).
-- [ ] **🖥️ `opts-hardware`** — [M-0081](docs/src/roadmap/phase-5/M-0081.md)
-  - [ ] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22).
+- [~] **🖥️ `opts-hardware`** — [M-0081](docs/src/roadmap/phase-5/M-0081.md)
+  - [x] Privacy-respecting hardware capability probe crate (no identifiers, no network, auditable field list) and recommendation functions for tile radius, filtering, look, UI scale (R-22). Linux verified; macOS and Windows compile-checked in CI, untested on real hardware.
+  - [ ] Report dialog preview with checkbox; GPU benchmark.
 - [ ] **🧬 Mesh Instancing Research** — [M-0082](docs/src/roadmap/phase-5/M-0082.md)
   - [ ] Research branch `research/mesh-instancing`: inventory, Bevy mechanisms, prototype, measurements, recommendation (R-23).
 - [ ] **🪞 Reflections Research** — [M-0085](docs/src/roadmap/phase-5/M-0085.md)

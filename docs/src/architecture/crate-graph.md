@@ -72,8 +72,9 @@ graph TD
 | **`opts-traffic`** | L2 | AI road traffic: lane graph, car following, conflict zones, right of way | `opts-core` | `opts-game` | Pure Rust |
 | **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-game` | Pure Rust |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-core` | `opts-bevy`, `opts-game` | Bevy UI |
+| **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
 | **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-core`, `opts-sim`, `opts-gui`, `opts-cli`, `opts-logging` | `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-cli`, `opts-logging` | `opts` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-cli`, `opts-logging`, `opts-hardware` | `opts` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game`, `opts-cli`, `opts-logging` | *None (executable root)* | — |
 | **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core` | *None (executable root)* | CLI Tooling |
 
