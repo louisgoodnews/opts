@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 use opts_core::formats::o3d::audit::check;
-use opts_core::formats::o3d::descramble::decode_confident;
+use opts_core::formats::o3d::descramble::{decode_confident_with, DecodeParams};
 use opts_core::formats::o3d::parse;
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -30,6 +30,7 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
 fn main() {
     let mut args = std::env::args().skip(1);
     let root = PathBuf::from(args.next().expect("omsi root"));
+    let params = DecodeParams::default().with_overrides(|k| std::env::var(k).ok());
     let mut threads = 8usize;
     while let Some(a) = args.next() {
         if a == "--threads" {
@@ -69,6 +70,7 @@ fn main() {
     let listing = Mutex::new(Vec::new());
     let rule = Mutex::new([(0usize, 0usize); 6]);
     let agree = Mutex::new([(0usize, 0usize); 6]);
+    let global_err = Mutex::new((0usize, 0usize));
     std::thread::scope(|s| {
         for _ in 0..threads {
             s.spawn(|| loop {
@@ -98,7 +100,7 @@ fn main() {
                 if (same as f32) < 0.95 * po.vertices.len() as f32 {
                     continue;
                 }
-                let rep = decode_confident(&mut eo);
+                let rep = decode_confident_with(&mut eo, &params);
                 let mut t = totals.lock().unwrap();
                 t.0 += 1;
                 if !rep.accepted {
@@ -119,6 +121,51 @@ fn main() {
                     .count() as f32
                     / po.vertices.len() as f32;
                 let wrong = ok < 0.98;
+                if wrong {
+                    // is the whole mesh wrong in one simple way: a global axis permutation or a
+                    // mirror about the bounding-box centre of one axis (R-17 "flipped" buildings)?
+                    let centre = (lo + hi) * 0.5;
+                    let mut hit = None;
+                    'outer: for perm in [
+                        [0usize, 1, 2],
+                        [0, 2, 1],
+                        [1, 0, 2],
+                        [1, 2, 0],
+                        [2, 0, 1],
+                        [2, 1, 0],
+                    ] {
+                        for flip in 0..8u8 {
+                            if perm == [0, 1, 2] && flip == 0 {
+                                continue;
+                            }
+                            let good = eo
+                                .vertices
+                                .iter()
+                                .zip(&po.vertices)
+                                .filter(|(a, b)| {
+                                    let d = a.position - centre;
+                                    let mut q = glam::Vec3::new(d[perm[0]], d[perm[1]], d[perm[2]]);
+                                    for k in 0..3 {
+                                        if flip >> k & 1 == 1 {
+                                            q[k] = -q[k];
+                                        }
+                                    }
+                                    (q + centre - b.position).length() <= tol
+                                })
+                                .count() as f32
+                                / po.vertices.len() as f32;
+                            if good >= 0.9 {
+                                hit = Some((perm, flip));
+                                break 'outer;
+                            }
+                        }
+                    }
+                    let mut g = global_err.lock().unwrap();
+                    g.0 += 1;
+                    if hit.is_some() {
+                        g.1 += 1;
+                    }
+                }
                 {
                     let b = ((rep.agreement.clamp(0.9, 1.0) - 0.9) * 50.0).floor() as usize; // 0.02 buckets, 5 = exactly 1
                     let mut a = agree.lock().unwrap();
@@ -201,6 +248,8 @@ fn main() {
         }
     });
     let t = totals.into_inner().unwrap();
+    let g = global_err.into_inner().unwrap();
+    println!("wrong meshes {}, of which a single global axis permutation/mirror restores >= 90 % of the vertices: {}", g.0, g.1);
     let a = agree.into_inner().unwrap();
     for (i, (n, w)) in a.iter().enumerate() {
         let lo = 0.9 + 0.02 * i as f32;

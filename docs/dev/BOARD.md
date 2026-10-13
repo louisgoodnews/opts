@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-13 by Agent (P-1013: UV decoder fleet validation deferred, M-0079)_
+_Last updated: 2026-10-13 by Agent (M-0024 map streaming specification)_
 
 ---
 
@@ -117,7 +117,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
-- [ ] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`; the code (`stream_world_tiles`) has run without a spec since before 2026-10-10 (F-012).
+- [x] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`. **Done 2026-10-13** on `agent/map-streaming`: states, initial load, streaming loop, tile build order, unloading, decode rebuild, hot reload, measured Aachen example, limits L1-L8, open questions Q-MS-01..05; the vehicle/camera question (Q-MS-01) and memory growth (Q-MS-03) are the first things to test.
 - [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
 - [ ] 🟠 **Pre-commit hook building the staged tree** (M-0052, chore) — F-001. (The worktree-per-session rule is done: CONTRIBUTING, guardrail 7, `scripts/agent-worktree.sh`.)
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
@@ -180,6 +180,13 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13.
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
+- [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
+- [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
+- [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
+- [ ] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25.
+- [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.
+- [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
+- [~] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

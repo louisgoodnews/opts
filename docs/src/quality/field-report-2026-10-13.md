@@ -35,6 +35,25 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-18 | Several **lantern posts have scrambled meshes** in the simulation | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
 | R-19 | The files of `master` must be present in the project folder on the project lead's machine | process | — (done 2026-10-13: `master` checked out in `/home/louisgoodnews/Dokumente/opts`) | ✅ done |
 
+## Follow-up findings (2026-10-13, third message)
+
+| ID | Report | Area | Milestone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
+| R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
+| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 📝 open |
+| R-23 | **Research branch** for leveraging Bevy's **instancing** for repeatedly used meshes | performance | [M-0082](../roadmap/phase-5/M-0082.md) (branch `research/mesh-instancing`) | 🔬 started |
+
+## Follow-up findings (2026-10-13, fourth message)
+
+| ID | Report | Area | Milestone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| R-24 | *Settings → Content* shows '679543 Dateien, 75313 Karten, Fahrzeuge und weitere Inhalte'; '75K maps does not add up' (are those tiles?) | settings | [M-0086](../roadmap/phase-9/M-0086.md) | 🔎 analysed: the number is the total of catalogue entities of all kinds (not maps, not tiles); wording misleading, breakdown to be shown |
+| R-25 | A system where **localisation can be added by other human or AI contributors** conveniently, with JSON or other formatted files | UI / i18n | [M-0083](../roadmap/phase-9/M-0083.md) | 📝 open |
+| R-26 | **Viewpoint editor** (Tab) in the driver's view: camera height, X/Y/Z position and FOV, saved per vehicle and loaded as that view's default | camera | [M-0084](../roadmap/phase-4/M-0084.md) | 📝 open |
+| R-27 | **Research reflections** in mirrors and glass, and in future wet surfaces | rendering | [M-0085](../roadmap/phase-5/M-0085.md) (branch `research/reflections`) | 🔬 started |
+| R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | scroll fixed on `fix/dropdown-scroll`; search open |
+
 ## Notes
 
 - **R-01, R-09** overlap with the running mesh audit (P-1014, branch `agent/mesh-audit`); its registry feeds M-0066.
