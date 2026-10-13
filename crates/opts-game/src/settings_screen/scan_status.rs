@@ -174,12 +174,20 @@ fn gather(settings: &GameSettings, service: Option<&CatalogueService>) -> ScanIn
         Some(r) if r.is_dir() => RootState::Present,
         Some(_) => RootState::Missing,
     };
-    let (last_scan, entities) = service.map_or((None, 0), |s| {
-        (
+    // The service exists once OMSI is known; without it (a catalogue that was current at start)
+    // the database file is read directly, like the info lines do.
+    let (last_scan, entities) = match service {
+        Some(s) => (
             s.catalogue.last_scan().ok().flatten(),
             s.catalogue.totals().map_or(0, |t| t.1),
-        )
-    });
+        ),
+        None => crate::catalogue_service::catalogue_db_path()
+            .filter(|p| p.exists())
+            .and_then(|p| opts_catalogue::Catalogue::open(&p).ok())
+            .map_or((None, 0), |c| {
+                (c.last_scan().ok().flatten(), c.totals().map_or(0, |t| t.1))
+            }),
+    };
     let status = service.map(CatalogueService::status);
     ScanInputs {
         now: now_secs(),
@@ -302,6 +310,7 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
     c.spawn((
         Text::new(""),
         L10nKey("scan-chip"),
+        L10nArgs::default(),
         TextColor::default(),
         TypeStyleToken(TypeScale::BodyMedium),
         ForegroundRole(fg),
@@ -311,6 +320,7 @@ pub fn spawn_chip(c: &mut Commands, pane: Entity) {
     c.spawn((
         Text::new(""),
         L10nKey("scan-why-never"),
+        L10nArgs::default(),
         TextColor::default(),
         TypeStyleToken(TypeScale::BodyMedium),
         ForegroundRole(ColorRole::OnSurfaceVariant),
@@ -362,13 +372,15 @@ pub fn refresh_scan_chip(
     loc: Res<Localization>,
     settings: Option<Res<GameSettings>>,
     service: Option<Res<CatalogueService>>,
+    fresh: Query<(), Added<ScanChip>>,
     mut since: Local<f32>,
     mut last: Local<Option<(ScanInputs, String)>>,
     mut parts: ChipParts,
     mut reasons: ReasonQuery,
 ) {
     *since += time.delta_secs();
-    if last.is_some() && *since < 3.0 && !loc.is_changed() {
+    let rebuilt = !fresh.is_empty();
+    if !rebuilt && last.is_some() && *since < 3.0 && !loc.is_changed() {
         return;
     }
     *since = 0.0;
@@ -376,9 +388,11 @@ pub fn refresh_scan_chip(
     let inputs = gather(&settings, service.as_deref());
     let key = (inputs, loc.locale().to_owned());
     // `now` moves every call: compare the rest.
-    if last.as_ref().is_some_and(|(i, l)| {
-        l == &key.1 && ScanInputs { now: 0, ..*i } == ScanInputs { now: 0, ..inputs }
-    }) {
+    if !rebuilt
+        && last.as_ref().is_some_and(|(i, l)| {
+            l == &key.1 && ScanInputs { now: 0, ..*i } == ScanInputs { now: 0, ..inputs }
+        })
+    {
         return;
     }
     *last = Some(key);
