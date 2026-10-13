@@ -1,6 +1,6 @@
 # 🎛️ Control Protocol
 
-**Status:** 🟢 Implemented (protocol 1.1; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
+**Status:** 🟢 Implemented (protocol 1.2; design from M-0043) · **Decision record:** [ADR-0006](../adr/0006-control-protocol.md) · **Client:** `opts-cli` · **Server:** `opts-bevy::control`
 
 A running OPTS instance can be driven from outside: a human at a terminal or an AI agent in a loop can operate every screen by id,
 play the simulation (throttle, brake, steering, gear, doors, lights, camera), query state, pause and step
@@ -230,6 +230,18 @@ The vehicle is operated by *named controls*; the names are discovered with `driv
 
 `camera.set_mode` switches the mode (it presses the number key, so unavailable modes answer `1001`); `camera.look` turns the view (`yaw`/`pitch` in free roam, `dx`/`dy` as mouse motion with the button a person holds in that mode: right in the cockpit, left outside); `camera.move` holds the movement keys of the free camera for `duration_ms`; `camera.teleport` places it absolutely (debug); `camera.get` reads it.
 
+### 4.12a Session vehicles (protocol 1.2)
+
+| Method | Params | Result |
+| :--- | :--- | :--- |
+| `session.vehicles` | - | `{active, count, vehicles:[...], place_label}` the registry of [session vehicles](session-vehicles.md) |
+| `session.spawn` | `vehicle` (absolute `.bus` path or catalogue id/name), `repaint?`, `setvars?` (object), `entry?` (name) or `entry_id?` | `{id, queued:true}`; asynchronous, poll `session.vehicles` |
+| `session.switch` | `id?` or `step?` (1 next, -1 previous) | `{ok, active}` |
+| `session.despawn` | `id?` (default: the active vehicle) | `{ok, active, removed}`; no confirmation |
+| `session.respawn` | `id?` (default: the active vehicle) | `{ok, id}` |
+
+Unknown ids answer `1004`, vehicles that are not in the world `1001`. `hud.state` also reports `place_label` and `has_vehicle`.
+
 ### 4.13 Snapshots and screenshots
 
 `screenshot` saves the window; `snapshot` returns, in one call, the app state, `ui.screen`, `drive.state`, the HUD, camera, simulation clock and the last warnings, optionally with a screenshot and as a file. It is the call an agent makes after every few actions to *see* what happened.
@@ -246,7 +258,7 @@ executes at most 64 commands per frame; the rest wait in the queue (bounded at 1
 
 ## 6. Versioning
 
-`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`). Minor versions only **add** methods, optional parameters and
+`version` reports `protocol_version` (semver; **1.1.0**: operating every screen, driving, snapshots, structured errors, `commands`; **1.2.0**: the session vehicles `session.vehicles|spawn|switch|despawn|respawn` and `place_label` in `hud.state`). Minor versions only **add** methods, optional parameters and
 result members; clients ignore unknown result members and servers ignore unknown parameters. A breaking change
 bumps the major version and changes the default port. `capabilities` lets a client feature-detect instead of
 comparing versions.

@@ -64,6 +64,8 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/vehicle_menu.rs",
     // F8 switches the session vehicle; gated with `not_modal_active` where it is registered.
     "opts-game/src/session_vehicles/mod.rs",
+    // Test module: presses the key to test the system above.
+    "opts-game/src/session_vehicles/tests.rs",
     "opts-gui/src/actions.rs",
     "opts-gui/src/components/button.rs",
     "opts-gui/src/components/checkbox.rs",

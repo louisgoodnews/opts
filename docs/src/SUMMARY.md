@@ -114,6 +114,7 @@
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
+- [Session Vehicles](architecture/session-vehicles.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
