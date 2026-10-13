@@ -39,6 +39,7 @@ pub mod init;
 pub mod layer;
 pub mod panic;
 pub mod prelude;
+pub mod stream_trace;
 pub mod rotation;
 
 pub use config::{

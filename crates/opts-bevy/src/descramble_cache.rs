@@ -335,7 +335,10 @@ impl DecodePool {
                         return;
                     };
                     let t = std::time::Instant::now();
-                    let outcomes = decode_with_copies(key, *model, &candidates, bounds, &params);
+                    let outcomes = {
+                        let _t = opts_logging::stream_trace::span("decode.worker");
+                        decode_with_copies(key, *model, &candidates, bounds, &params)
+                    };
                     tracing::info!(
                         copies = outcomes.len(),
                         accepted = matches!(outcomes.first(), Some((_, Cached::Decoded { .. }))),

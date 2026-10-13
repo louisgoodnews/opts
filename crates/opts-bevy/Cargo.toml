@@ -35,6 +35,10 @@ notify = { workspace = true }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 
+[features]
+# Streaming pipeline timers (`opts_logging::stream_trace`, M-0089); zero cost when off.
+stream-trace = ["opts-logging/stream-trace"]
+
 [dev-dependencies]
 opts-cli = { workspace = true, features = ["client"] }
 serde_json = { workspace = true }

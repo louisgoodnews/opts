@@ -261,12 +261,22 @@ impl ContentLoader<'_> {
         if let Some(cached) = self.cache.textures.get(&path) {
             return cached.clone();
         }
-        let handle = match std::fs::read(&path) {
-            Ok(bytes) => match load_bevy_image(&bytes) {
+        let t_read = opts_logging::stream_trace::span("tex.read");
+        let read = std::fs::read(&path);
+        drop(t_read);
+        let handle = match read {
+            Ok(bytes) => match {
+                let _t = opts_logging::stream_trace::span("tex.decode");
+                load_bevy_image(&bytes)
+            } {
                 Ok(mut image) => {
-                    crate::texture_filter::prepare_object_texture(&mut image);
+                    {
+                        let _t = opts_logging::stream_trace::span("tex.prepare_mips");
+                        crate::texture_filter::prepare_object_texture(&mut image);
+                    }
                     self.cache.stats.textures += 1;
                     tracing::debug!(path = %path.display(), "loaded texture");
+                    let _t = opts_logging::stream_trace::span("tex.assets_add");
                     Some(self.images.add(image))
                 }
                 Err(e) => {
@@ -340,6 +350,8 @@ impl ContentLoader<'_> {
             return parts.clone();
         }
 
+        let _t_miss = opts_logging::stream_trace::span("o3d.parts_miss");
+        let t_parse = opts_logging::stream_trace::span("o3d.read_parse");
         let bytes = match std::fs::read(o3d_path) {
             Ok(b) => b,
             Err(e) => {
@@ -354,6 +366,7 @@ impl ContentLoader<'_> {
                 return Vec::new();
             }
         };
+        drop(t_parse);
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
@@ -382,7 +395,10 @@ impl ContentLoader<'_> {
             // A scrambled mesh often exists unscrambled in another add-on (same name, same
             // counts, same coordinates): use that exact geometry instead.
             if unreadable && !experimental {
-                if let Some((twin, from)) = self.plain_twin(o3d_path, &models) {
+                let t_twin = opts_logging::stream_trace::span("o3d.plain_twin");
+                let twin_found = self.plain_twin(o3d_path, &models);
+                drop(t_twin);
+                if let Some((twin, from)) = twin_found {
                     tracing::info!(
                         path = %o3d_path.display(),
                         twin = %from.display(),
@@ -406,8 +422,10 @@ impl ContentLoader<'_> {
                     let ckey = crate::descramble_cache::key_bounded(&bytes, mi, bounds);
                     let pool_result = self.cache.decode_pool.as_ref().and_then(|p| p.result(ckey));
                     let from_pool = pool_result.is_some();
+                    let t_dc = opts_logging::stream_trace::span("o3d.decode_cache_load");
                     let cached =
                         pool_result.or_else(|| crate::descramble_cache::load(ckey, fingerprint));
+                    drop(t_dc);
                     // What the incident file needs, taken before the decoding replaces it.
                     let stored_uv: Vec<[f32; 2]> =
                         m.vertices.iter().map(|v| v.uv.to_array()).collect();
@@ -613,8 +631,11 @@ impl ContentLoader<'_> {
                     c[2] as f32 / all as f32
                 }
             });
-            for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
-            {
+            let built = {
+                let _t = opts_logging::stream_trace::span("o3d.mesh_build");
+                crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
+            };
+            for (slot, mut mesh) in built {
                 // Static model parts carry no skeleton: joint attributes without a `SkinnedMesh`
                 // component make the render pipeline layouts disagree (fatal wgpu validation error).
                 if !keep_skin {
@@ -734,8 +755,14 @@ impl ContentLoader<'_> {
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
                 parts.push(ModelPart {
-                    mesh: self.meshes.add(mesh),
-                    material: self.materials.add(material),
+                    mesh: {
+                        let _t = opts_logging::stream_trace::span("o3d.meshes_add");
+                        self.meshes.add(mesh)
+                    },
+                    material: {
+                        let _t = opts_logging::stream_trace::span("o3d.materials_add");
+                        self.materials.add(material)
+                    },
                     vertices,
                     light_variable,
                     image: over.and_then(|o| o.image.clone()),
