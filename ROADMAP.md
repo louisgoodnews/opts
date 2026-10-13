@@ -315,20 +315,28 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [ ] **🗺️ HUD Layout Rework** — [M-0071](docs/src/roadmap/phase-9/M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
+- [ ] **📍 HUD Place Label** — [M-0075](docs/src/roadmap/phase-9/M-0075.md)
+  - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
+- [ ] **⏳ Loading Screen Vehicle** — [M-0076](docs/src/roadmap/phase-9/M-0076.md)
+  - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
 
 ---
 
 ## 🧩 Phase 10: Sessions, World Completeness & Vehicle Dynamics
 *Goal: Turn the driving demo into a session-based simulator: water and correct content in the world, sessions with several user vehicles that can be saved and restored, and vehicles whose own mass, axles, suspension and brakes are respected by a shared world physics. Status: planned 2026-10-13 from the project lead's [field report](docs/src/quality/field-report-2026-10-13.md); not started. Documents: [phase page](docs/src/roadmap/phase-10/README.md).*
 
-- [ ] **🚗 Vehicle and Parked-Car Mesh Fidelity** — [M-0066](docs/src/roadmap/phase-10/M-0066.md)
-  - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); fixes with regression tests, remaining content defects registered.
+- [ ] **🚗 Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns** — [M-0066](docs/src/roadmap/phase-10/M-0066.md)
+  - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
 - [ ] **🌊 Water Rendering** — [M-0067](docs/src/roadmap/phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [ ] **🚌 Session Vehicles** — [M-0068](docs/src/roadmap/phase-10/M-0068.md)
-  - [ ] Start with the map only; session vehicle registry; switch the active vehicle; respawn or remove any session vehicle (R-03, R-04).
+  - [ ] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
 - [ ] **💾 Session Save and Restore** — [M-0069](docs/src/roadmap/phase-10/M-0069.md)
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
+- [ ] **🧰 Bus Configurations** — [M-0077](docs/src/roadmap/phase-10/M-0077.md)
+  - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
+- [ ] **🎛️ Setvars** — [M-0078](docs/src/roadmap/phase-10/M-0078.md)
+  - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [ ] **⚙️ Vehicle Dynamics** — [M-0073](docs/src/roadmap/phase-10/M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
 

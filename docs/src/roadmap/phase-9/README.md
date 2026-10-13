@@ -42,6 +42,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0064 — HUD and In-Game UI](M-0064.md) — 🟡 Started (HUD registry, profiles, slots, alerts, developer panel done; Pause → Vehicle open)
 - [M-0070 — Start Time Defaults from the Map](M-0070.md) — 📝 Planned (R-07)
 - [M-0071 — HUD Layout Rework: Bottom-Left Cluster, Bottom-Right Mini Map](M-0071.md) — 📝 Planned (R-08)
+- [M-0075 — HUD Place Label from the Spawn Entry Point](M-0075.md) — 📝 Planned (R-12)
+- [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — 📝 Planned (R-13)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -97,3 +99,7 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [ ] **🗺️ HUD Layout Rework** — [M-0071](M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
+- [ ] **📍 HUD Place Label** — [M-0075](M-0075.md)
+  - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
+- [ ] **⏳ Loading Screen Vehicle** — [M-0076](M-0076.md)
+  - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
