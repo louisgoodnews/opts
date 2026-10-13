@@ -23,6 +23,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0081 — `opts-hardware`: Privacy-Respecting Hardware Capability Probe](M-0081.md) — 📝 Planned (R-22)
 - [M-0082 — Mesh Instancing Research](M-0082.md) — 🔬 Research branch started (R-23)
 - [M-0085 — Reflections Research](M-0085.md) — 🔬 Research branch planned (R-27)
+- [M-0087 — Scene Trace: Which Mesh Is Where (Debug Mode)](M-0087.md) — 📝 Planned (R-30)
 - [M-0074 — Roadmap Adherence and Expansion](M-0074.md) — 📝 Planned, 🔴 high (R-06)
 - [M-0054 — Scenery Object Load Verification (`opts-benchmark`)](M-0054.md) — 🟡 Spec done (Phase A), harness planned, 🔴 high
 

@@ -92,7 +92,10 @@ impl Default for SimulationLoadState {
 pub struct InGameSessionInfo {
     pub map_name: String,
     pub entry_point: String,
+    /// The vehicle line of the loading screen, fixed when the session is entered.
     pub vehicle_name: String,
+    /// The session starts without a vehicle (the loading screen says so).
+    pub vehicle_none: bool,
     pub livery_name: String,
     pub weather_preset: String,
     pub start_hour: u32,

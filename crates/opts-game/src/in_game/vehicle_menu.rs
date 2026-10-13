@@ -1,6 +1,7 @@
 //! The in-game menu on Left Alt: despawn the player's vehicle, or spawn another one.
 //!
-//! * **Main page:** *Despawn vehicle*, *Spawn vehicle…*, *Close*.
+//! * **Main page:** the session vehicles (name, repaint, spawn place, active marker) each with
+//!   *Switch*, *Respawn* and *Despawn* (the last asks first), then *Spawn vehicle…*, *Close*.
 //! * **Select Vehicle** (modal, three columns): the vehicles of the catalogue; the description of
 //!   the chosen one with its repaints and a button for its equipment configuration; the entry
 //!   points of the current map that no AI vehicle stands on. *Confirm* replaces the player's
@@ -18,17 +19,17 @@ use bevy::input::ButtonState;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use opts_bevy::reporting::{MenuModalActive, ModalActive};
-use opts_bevy::PlayerVehicle;
 use opts_gui::interaction::events::ButtonClicked;
 use opts_gui::prelude::*;
 
-use crate::in_game::omsi_world::{
-    DespawnVehicleRequest, EntryIndex, SpawnVehicleRequest, TrafficVehicle, WorldLoadJob,
-};
+use crate::in_game::omsi_world::{EntryIndex, TrafficVehicle, WorldLoadJob};
 use crate::in_game::types::SimulationLoadState;
 use crate::new_game_screen::repaints::{vehicle_repaints, VehicleRepaints};
 use crate::new_game_screen::setvars_discovery::get_vehicle_setvars;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
+use crate::session_vehicles::{
+    ops, DespawnReason, EntrySel, SessionVehicles, SpawnParams, VehicleId,
+};
 
 /// AI vehicles closer than this to an entry point block it (m).
 const ENTRY_BLOCK_RADIUS_M: f32 = 12.0;
@@ -73,7 +74,12 @@ pub struct VehicleMenu {
     entry_total: usize,
     /// Text typed into the vehicle search field.
     search: String,
+    /// The session vehicle rows shown in the last build of the main page (rebuild on change).
+    shown_rows: Vec<RowSig>,
 }
+
+/// What a row of the main page shows; a change rebuilds the page.
+type RowSig = (VehicleId, bool, String);
 
 impl VehicleMenu {
     /// Opens the main page (*Despawn* / *Spawn* / *Close*), as Left Alt does.
@@ -107,7 +113,14 @@ impl VehicleMenu {
 /// What a button of the menu does.
 #[derive(Component, Clone, Debug)]
 enum Action {
+    /// Despawns the active vehicle without asking (`menu.do despawn`).
     Despawn,
+    /// Makes a session vehicle the active one.
+    Switch(VehicleId),
+    /// Asks, then despawns a session vehicle.
+    DespawnId(VehicleId),
+    /// Puts a session vehicle back at its spawn point.
+    Respawn(VehicleId),
     OpenSelect,
     Close,
     PickVehicle(usize),
@@ -154,6 +167,7 @@ impl Plugin for VehicleMenuPlugin {
                     start_entry_index,
                     menu_actions,
                     refresh_entries,
+                    refresh_session_rows,
                     rebuild_menu,
                     scroll_lists,
                 )
@@ -248,7 +262,7 @@ fn menu_actions(
     catalogue: Option<Res<GameCatalogue>>,
     job: Option<Res<WorldLoadJob>>,
     mut commands: Commands,
-    players: Query<(), With<PlayerVehicle>>,
+    mut registry: ResMut<SessionVehicles>,
     mut remote: ResMut<MenuCommands>,
 ) {
     let mut todo: Vec<Action> = clicks
@@ -271,6 +285,12 @@ fn menu_actions(
             "done" => Some(Action::CloseConfig),
             "confirm" => Some(Action::Confirm),
             "despawn" => Some(Action::Despawn),
+            "switch" => registry
+                .records()
+                .iter()
+                .find(|r| r.is_alive() && (has(&r.name) || has(&r.repaint)))
+                .map(|r| Action::Switch(r.id)),
+            "respawn" => registry.active_id().map(Action::Respawn),
             "toggle" => Some(Action::Toggle(rest.clone())),
             "vehicle" => catalogue
                 .as_deref()
@@ -303,14 +323,36 @@ fn menu_actions(
     }
     for action in todo {
         match action {
-            Action::Despawn => {
-                if players.is_empty() {
-                    menu.status = "There is no vehicle to despawn.".into();
-                } else {
-                    commands.insert_resource(DespawnVehicleRequest);
+            Action::Despawn => match registry.active_id() {
+                None => menu.status = "There is no vehicle to despawn.".into(),
+                Some(id) => {
+                    commands.queue(move |w: &mut World| {
+                        if let Err(e) = ops::despawn(w, id, DespawnReason::User) {
+                            tracing::warn!("despawn refused: {e}");
+                        }
+                    });
                     menu.current.clear();
                     menu.status = "Vehicle despawned.".into();
                 }
+            },
+            Action::Switch(id) => {
+                commands.queue(move |w: &mut World| {
+                    if let Err(e) = ops::switch_to(w, id) {
+                        tracing::warn!("switch refused: {e}");
+                    }
+                });
+                menu.status.clear();
+            }
+            Action::DespawnId(id) => {
+                commands.queue(move |w: &mut World| crate::session_vehicles::ask_despawn(w, id));
+            }
+            Action::Respawn(id) => {
+                commands.queue(move |w: &mut World| {
+                    if let Err(e) = ops::respawn(w, id) {
+                        tracing::warn!("respawn refused: {e}");
+                    }
+                });
+                menu.status = "Vehicle put back at its spawn point.".into();
             }
             Action::OpenSelect => {
                 menu.page = Page::Select;
@@ -363,12 +405,14 @@ fn menu_actions(
                 let mut setvars: Vec<(String, i32)> =
                     menu.setvars.iter().map(|(k, v)| (k.clone(), *v)).collect();
                 setvars.sort();
-                commands.insert_resource(SpawnVehicleRequest::new(
-                    bus,
-                    menu.repaint.clone(),
+                registry.request_spawn(SpawnParams {
+                    catalogue_id: veh.id.clone(),
+                    name: veh.full_name.clone(),
+                    bus_file: bus.display().to_string(),
+                    repaint: menu.repaint.clone(),
                     setvars,
-                    entry,
-                ));
+                    entry: EntrySel::Id(entry),
+                });
                 menu.current = veh.full_name.clone();
                 menu.page = Page::Closed;
                 menu.config_open = false;
@@ -517,6 +561,33 @@ fn refresh_entries(
     }
 }
 
+/// Marks the main page changed when the list of session vehicles does.
+fn refresh_session_rows(
+    mut menu: ResMut<VehicleMenu>,
+    registry: Res<SessionVehicles>,
+    loc: Option<Res<opts_gui::l10n::Localization>>,
+) {
+    if menu.page != Page::Main {
+        return;
+    }
+    let rows: Vec<RowSig> = registry
+        .records()
+        .iter()
+        .filter(|r| r.is_alive())
+        .map(|r| {
+            let active = registry.active_id() == Some(r.id);
+            let text = match &loc {
+                Some(l) => crate::session_vehicles::row_text(l, r, active),
+                None => r.name.clone(),
+            };
+            (r.id, active, text)
+        })
+        .collect();
+    if rows != menu.shown_rows {
+        menu.shown_rows = rows;
+    }
+}
+
 type Roots<'w, 's> = Query<'w, 's, Entity, With<MenuRoot>>;
 
 #[allow(clippy::too_many_arguments)]
@@ -528,7 +599,7 @@ fn rebuild_menu(
     theme: Option<Res<MaterialTheme>>,
     catalogue: Option<Res<GameCatalogue>>,
     setup: Option<Res<NewGameSetup>>,
-    players: Query<(), With<PlayerVehicle>>,
+    registry: Res<SessionVehicles>,
     index: Res<EntryIndex>,
     job: Option<Res<WorldLoadJob>>,
 ) {
@@ -549,17 +620,24 @@ fn rebuild_menu(
         Page::Closed => {}
         Page::Main => {
             let status = if menu.status.is_empty() {
-                if players.is_empty() {
+                if registry.live_count() == 0 {
                     "No vehicle is spawned.".to_string()
-                } else if menu.current.is_empty() {
-                    "A vehicle is spawned.".to_string()
                 } else {
-                    format!("Vehicle: {}", menu.current)
+                    format!("Session vehicles: {}", registry.live_count())
                 }
             } else {
                 menu.status.clone()
             };
-            build_main(&mut commands, &theme, &status, !players.is_empty());
+            let rows: Vec<(RowSig, String)> = menu
+                .shown_rows
+                .iter()
+                .cloned()
+                .map(|sig| {
+                    let text = sig.2.clone();
+                    (sig, text)
+                })
+                .collect();
+            build_main(&mut commands, &theme, &status, &rows);
         }
         Page::Select => {
             let Some(cat) = catalogue else { return };
@@ -672,18 +750,41 @@ fn column(p: &mut ChildSpawnerCommands, width_percent: f32) -> Entity {
     .id()
 }
 
-fn build_main(commands: &mut Commands, _theme: &MaterialTheme, status: &str, has_vehicle: bool) {
+fn build_main(
+    commands: &mut Commands,
+    _theme: &MaterialTheme,
+    status: &str,
+    rows: &[(RowSig, String)],
+) {
     let (root, content) = ModalBuilder::new()
-        .with_size_percent(30.0, 38.0)
-        .with_width_range(360.0, 480.0)
+        .with_size_percent(40.0, 60.0)
+        .with_width_range(420.0, 640.0)
         .spawn(commands);
     commands.entity(root).insert(MenuRoot);
     commands.entity(content).with_children(|p| {
         label(p, "Vehicle", 22.0, ColorRole::Primary);
         label(p, status, 13.0, ColorRole::OnSurfaceVariant);
-        let despawn = button(p, "Despawn vehicle", false, Action::Despawn);
-        if !has_vehicle {
-            p.commands().entity(despawn).insert(Disabled);
+        for ((id, active, _), text) in rows {
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(6.0),
+                width: Val::Percent(100.0),
+                ..default()
+            })
+            .with_children(|row| {
+                let switch = button(row, text, *active, Action::Switch(*id));
+                row.commands()
+                    .entity(switch)
+                    .insert(UiId::new(format!("vehicle.session.{id}.switch")));
+                let respawn = button(row, "Respawn", false, Action::Respawn(*id));
+                row.commands()
+                    .entity(respawn)
+                    .insert(UiId::new(format!("vehicle.session.{id}.respawn")));
+                let despawn = button(row, "Despawn", false, Action::DespawnId(*id));
+                row.commands()
+                    .entity(despawn)
+                    .insert(UiId::new(format!("vehicle.session.{id}.despawn")));
+            });
         }
         button(p, "Spawn vehicle…", true, Action::OpenSelect);
         button(p, "Close", false, Action::Close);

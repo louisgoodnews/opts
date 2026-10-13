@@ -238,6 +238,20 @@ keys! {
     HELP_ABOUT = "help-about-text",
     /// Toast: a destination could not be opened (variable `screen`).
     NAV_REFUSED = "shell-nav-refused",
+    /// Despawn confirmation: title.
+    DESPAWN_TITLE = "despawn-title",
+    /// Despawn confirmation: the consequence (variable `name`).
+    DESPAWN_BODY = "despawn-body",
+    /// Despawn confirmation: the destructive button.
+    DESPAWN_CONFIRM = "despawn-confirm",
+    /// Toast: a session vehicle vanished (variable `name`).
+    VEHICLE_LOST = "session-vehicle-lost",
+    /// Toast: a vehicle could not be spawned (variables `name`, `error`).
+    SPAWN_FAILED = "session-spawn-failed",
+    /// Marker before the active vehicle in the vehicle list.
+    SESSION_ACTIVE_MARK = "session-active-mark",
+    /// Help: the quick-switch key of the session vehicles.
+    HELP_KEY_SWITCH_VEHICLE = "help-key-switch-vehicle",
 }
 
 /// The key of the rail label of a registered screen id, if the shell knows one.

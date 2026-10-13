@@ -63,7 +63,7 @@ pub fn apply_saved_language(settings: Res<GameSettings>, mut loc: ResMut<Localiz
         return;
     }
     if let Some(lang) = settings.raw("interface.language").filter(|l| !l.is_empty()) {
-        if lang != loc.locale() && (lang == "en" || lang == "de") {
+        if lang != loc.locale() && loc.can_select(&lang) {
             loc.set_locale(&lang);
         }
     }

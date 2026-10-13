@@ -325,12 +325,13 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [ ] **🗺️ HUD Layout Rework** — [M-0071](phase-9/M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
-- [ ] **📍 HUD Place Label** — [M-0075](phase-9/M-0075.md)
-  - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
-- [ ] **⏳ Loading Screen Vehicle** — [M-0076](phase-9/M-0076.md)
-  - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [x] **📍 HUD Place Label** — [M-0075](phase-9/M-0075.md)
+  - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
+- [x] **⏳ Loading Screen Vehicle** — [M-0076](phase-9/M-0076.md)
+  - [x] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
 - [ ] **🌍 Language Packs** — [M-0083](phase-9/M-0083.md)
-  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+  - [x] Contributors and AI agents add languages as validated files in the user folder (`<data>/lang/<code>/`); `opts-tools l10n export|check|new|import|stats`; discovery at start and on reload; language list with completeness; `l10n.*` control methods (R-25, 2026-10-13, `feat/language-packs`, [architecture](../architecture/localisation-packs.md)).
+  - [ ] Trial in the running app with a real second language; right-to-left layout and fonts beyond Latin, Greek and Cyrillic.
 - [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](phase-9/M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).
@@ -346,8 +347,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
 - [ ] **🌊 Water Rendering** — [M-0067](phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
-- [ ] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)
-  - [ ] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
+- [x] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)
+  - [x] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
 - [ ] **💾 Session Save and Restore** — [M-0069](phase-10/M-0069.md)
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [ ] **🧰 Bus Configurations** — [M-0077](phase-10/M-0077.md)
@@ -389,3 +390,6 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
 - [ ] Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)
 - [ ] Control protocol follow-ups (M-0043): `entity.*`/`resource.*`/`asset.*` via reflection or `bevy_remote`, `debug.*`, `sim.set_time`, event streaming (`opts-cli watch`), vehicle-state snapshot on hot reload
+- [ ] **🔎 Scene Trace** — [M-0087](phase-5/M-0087.md)
+  - [ ] Opt-in debug mode that records and logs which mesh is placed where (tile, record, file, position, materials, decode quality), with `trace.pick/tile/find` in the control protocol (R-30).
+

@@ -26,6 +26,8 @@ keys! {
     BRAKE_OFF = "hud-brake-off",
     /// Status bar: map and entry point (`map`, `entry`).
     SESSION = "hud-session",
+    /// Status bar: the map only, when no place label applies (`map`).
+    SESSION_MAP = "hud-session-map",
     /// Status bar: clock and weather (`time`, `weather`).
     CLOCK = "hud-clock",
     /// Hints: the most used keys.

@@ -8,9 +8,9 @@
 ## Behaviour
 
 * **Left Alt** (tap) opens and closes the menu while a session runs (the loading must be complete and no report modal open). While it is open the cursor is free and the driving, camera and cockpit inputs are gated through `opts_bevy::reporting::MenuModalActive` (the same run condition as the F1 report modal, `not_modal_active`). Escape steps back one page (configuration → select → main → closed) and does **not** leave the session; the gate stays up one frame longer than the menu so the same Escape press cannot reach the "back to the main menu" shortcut.
-* **Main page:** *Despawn vehicle* (removes the player's vehicle with all coupled parts), *Spawn vehicle…*, *Close*.
+* **Main page** (also *Pause → Vehicle*): the **session vehicles** ([session vehicles](session-vehicles.md)), one row each: name · repaint · spawn entry point, the active one marked and filled; per row *Respawn* (back to its spawn point) and *Despawn* (asks first through the shell's confirmation dialog; removes the vehicle with its trailers); a click on the name **switches** to it. Then *Spawn vehicle…* and *Close*. **F8** (Shift+F8) switches without the menu.
 * **Select Vehicle** (modal, three columns): (1) the vehicles of the catalogue, scrolled to the current vehicle; (2) its name, data, description, the repaints of its `Colorscheme` folders and *Configure vehicle…* (a second modal toggling the `[setvar]` equipment options the repaints declare; *Reset* restores the repaint's values); (3) the **entry points of the map that no AI vehicle stands on** (within 12 m). Entries share names on many maps; duplicates are numbered. *Confirm* is enabled once a vehicle and an entry are chosen.
-* **Confirm** replaces the player's vehicle: the old one is removed, the scrambled meshes of the new one decode in the background, then it is built at the entry point with the chosen repaint, its equipment options (set on the script engine after the repaint's own), and the camera switches to the external view. A vehicle spawned on a far entry point appears before its surroundings: the tiles around it stream in while the camera follows.
+* **Confirm** adds a vehicle to the session (it no longer replaces the active one): the scrambled meshes decode in the background, then it is built at the entry point with the chosen repaint and equipment options, becomes the active vehicle (the previous one is parked with its parking brake on) and the camera switches to the external view. A vehicle spawned on a far entry point appears before its surroundings: the tiles around it stream in while the camera follows.
 
 ## Entry points
 
@@ -18,7 +18,7 @@
 
 ## Automation
 
-The control protocol has no absolute mouse position, so the menu can be driven by `menu.do {command}` (queued, executed next frame): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <variable>`, `done`, `confirm`, `despawn`, `back` (texts match names case-insensitively by substring). `menu.state` returns the page, choices and the free entry points. See [control protocol](control-protocol.md).
+The control protocol has no absolute mouse position, so the menu can be driven by `menu.do {command}` (queued, executed next frame): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <variable>`, `done`, `confirm`, `despawn` (the active vehicle, no question), `switch <text>`, `respawn`, `back` (texts match names case-insensitively by substring). `menu.state` returns the page, choices and the free entry points; the session vehicles have their own commands `session.*`. The rows have the ids `vehicle.session.<id>.switch|respawn|despawn`. See [control protocol](control-protocol.md).
 
 ## Search and the entry index (2026-10-12)
 
