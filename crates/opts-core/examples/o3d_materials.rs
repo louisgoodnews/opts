@@ -1,57 +1,59 @@
-//! Prints per-material triangle counts, diffuse and textures of the `.o3d` files read from stdin.
-use std::io::BufRead;
-
+//! Prints the material table of `.o3d` files and how many faces use each slot.
+//! Usage: `o3d_materials <file.o3d>...`
 use opts_core::formats::o3d::parse;
 
 fn main() {
-    for p in std::io::stdin().lock().lines().map_while(Result::ok) {
-        let Ok(b) = std::fs::read(&p) else { continue };
-        let Ok(o) = parse(&b) else { continue };
-        println!("{p}");
-        for (i, m) in o.materials.iter().enumerate() {
-            let tris = o
-                .face_materials
-                .iter()
-                .filter(|f| **f as usize == i)
-                .count();
-            let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
-            for (t, fm) in o.indices.iter().zip(&o.face_materials) {
-                if *fm as usize != i {
-                    continue;
-                }
-                for &vi in t {
-                    let v = &o.vertices[vi as usize].position;
-                    for (k, c) in [v.x, v.y, v.z].into_iter().enumerate() {
-                        lo[k] = lo[k].min(c);
-                        hi[k] = hi[k].max(c);
-                    }
-                }
-            }
-            println!("  side-zone area {:.2} m2", side_area(&o, i));
-            println!(
-                "  mat {i}: tris={tris} diffuse={:?} tex={:?} bbox={lo:.2?}..{hi:.2?}",
-                m.diffuse,
-                m.primary_texture()
-            );
-        }
-    }
-}
-
-#[allow(dead_code)]
-fn side_area(o: &opts_core::formats::o3d::O3d, mat: usize) -> f32 {
-    let mut a = 0.0;
-    for (t, fm) in o.indices.iter().zip(&o.face_materials) {
-        if *fm as usize != mat {
+    for path in std::env::args().skip(1) {
+        let Ok(bytes) = std::fs::read(&path) else {
+            println!("{path}: unreadable");
             continue;
+        };
+        let o = match parse(&bytes) {
+            Ok(o) => o,
+            Err(e) => {
+                println!("{path}: {e}");
+                continue;
+            }
+        };
+        if std::env::var_os("O3D_DESCRAMBLE").is_some() {
+            // handled below (mutable copy)
         }
-        let p: Vec<_> = t.iter().map(|&i| o.vertices[i as usize].position).collect();
-        if p.iter().all(|v| v.x.abs() > 1.2 && v.y > 1.4 && v.y < 2.6) {
-            let (u, w) = (
-                [p[1].y - p[0].y, p[1].z - p[0].z],
-                [p[2].y - p[0].y, p[2].z - p[0].z],
+        let mut o = o;
+        if std::env::var_os("O3D_DESCRAMBLE").is_some() && o.encryption_key.is_some() {
+            opts_core::formats::o3d::descramble::descramble(&mut o);
+        }
+        let (mut ulo, mut uhi) = ([f32::MAX; 2], [f32::MIN; 2]);
+        for v in &o.vertices {
+            for (k, c) in [v.uv.x, v.uv.y].into_iter().enumerate() {
+                ulo[k] = ulo[k].min(c);
+                uhi[k] = uhi[k].max(c);
+            }
+        }
+        println!("  uv range u {:.3}..{:.3} v {:.3}..{:.3}", ulo[0], uhi[0], ulo[1], uhi[1]);
+        let mut faces = vec![0usize; o.materials.len().max(1)];
+        let mut out_of_range = 0;
+        for m in &o.face_materials {
+            match faces.get_mut(usize::from(*m)) {
+                Some(f) => *f += 1,
+                None => out_of_range += 1,
+            }
+        }
+        println!(
+            "{path}: v{} {} vertices, {} triangles, {} materials, scrambled={}",
+            o.version,
+            o.vertices.len(),
+            o.indices.len(),
+            o.materials.len(),
+            o.encryption_key.is_some()
+        );
+        for (i, m) in o.materials.iter().enumerate() {
+            println!(
+                "  slot {i}: faces {:5} texture {:?} diffuse {:?} emissive {:?}",
+                faces[i], m.textures, m.diffuse, m.emissive
             );
-            a += 0.5 * (u[0] * w[1] - u[1] * w[0]).abs();
+        }
+        if out_of_range > 0 {
+            println!("  {out_of_range} faces with a material index beyond the table");
         }
     }
-    a
 }

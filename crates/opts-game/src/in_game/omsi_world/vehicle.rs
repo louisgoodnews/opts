@@ -255,6 +255,8 @@ fn load_segment_meshes_for(
             loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
         };
         for part in &parts {
+            job.cache.stats.uv_scope.0 += part.vertices;
+            job.cache.stats.uv_scope.1 += part.uv_unreliable;
             if let Some(mesh) = meshes.get(&part.mesh) {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
@@ -816,6 +818,7 @@ pub fn load_player_vehicle(
     ensure_repaints(job, &bus_path, &manifest);
     job.cache.expected_bounds = manifest_bounds(&manifest);
     job.cache.texture_replacements = repaint_map(job, &model);
+    job.cache.stats.uv_scope = (0, 0);
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
@@ -922,6 +925,17 @@ pub fn load_player_vehicle(
                 .to_string_lossy()
                 .into_owned()
         });
+    // Texture coordinates the decoder could not prove (scrambled meshes): named once per vehicle.
+    let (uv_all, uv_bad) = job.cache.stats.uv_scope;
+    if uv_all > 0 && uv_bad * 10 > uv_all {
+        tracing::warn!(
+            vehicle = %stats.vehicle_name,
+            unreliable_percent = (100 * uv_bad / uv_all) as u64,
+            unreliable_vertices = uv_bad,
+            vertices = uv_all,
+            "vehicle: more than 10% of the texture coordinates are unreliable (see docs/src/architecture/uv-decoder.md)"
+        );
+    }
     stats.vehicle_meshes = mesh_count;
     stats.vehicle_vertices = vertex_count;
     stats.scene_vertices += vertex_count;
@@ -930,6 +944,8 @@ pub fn load_player_vehicle(
         vehicle = %stats.vehicle_name,
         meshes = mesh_count,
         vertices = vertex_count,
+        uv_vertices = uv_all,
+        uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
     Ok(())
