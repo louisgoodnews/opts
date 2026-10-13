@@ -204,7 +204,12 @@ fn main() {
     let a = agree.into_inner().unwrap();
     for (i, (n, w)) in a.iter().enumerate() {
         let lo = 0.9 + 0.02 * i as f32;
-        println!("agreement {:.2}..{:.2}: accepted {n}, wrong {w} ({:.0} %)", lo, lo + 0.02, 100.0 * *w as f32 / (*n).max(1) as f32);
+        println!(
+            "agreement {:.2}..{:.2}: accepted {n}, wrong {w} ({:.0} %)",
+            lo,
+            lo + 0.02,
+            100.0 * *w as f32 / (*n).max(1) as f32
+        );
     }
     let r = rule.into_inner().unwrap();
     for (ki, k) in [6, 10, 15, 25, 40].iter().enumerate() {

@@ -44,7 +44,11 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>, names: &mut HashSet<String>) {
 fn x_submeshes(bytes: &[u8]) -> Result<Vec<O3d>, String> {
     use opts_core::formats::x::{parse_x, XFrame, XSubMesh};
     fn conv(sub: &XSubMesh, global: &[opts_core::formats::x::XMaterial]) -> O3d {
-        let palette = if sub.materials.is_empty() { global } else { &sub.materials };
+        let palette = if sub.materials.is_empty() {
+            global
+        } else {
+            &sub.materials
+        };
         O3d {
             version: 0,
             header_flags: 0,
@@ -83,7 +87,11 @@ fn x_submeshes(bytes: &[u8]) -> Result<Vec<O3d>, String> {
         }
     }
     let x = parse_x(bytes).map_err(|e| e.to_string())?;
-    let mut out: Vec<O3d> = x.top_level_meshes.iter().map(|m| conv(m, &x.global_materials)).collect();
+    let mut out: Vec<O3d> = x
+        .top_level_meshes
+        .iter()
+        .map(|m| conv(m, &x.global_materials))
+        .collect();
     for f in &x.frames {
         walk_frame(f, &x.global_materials, &mut out);
     }
@@ -98,16 +106,17 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
         Ok(b) => b,
         Err(_) => return (rel, "UNREADABLE".into(), String::new()),
     };
-    if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("x")) {
+    if path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("x"))
+    {
         let subs = match x_submeshes(&bytes) {
             Ok(s) if !s.is_empty() => s,
             Ok(_) => return (rel, "EMPTY".into(), "x".into()),
             Err(e) => return (rel, "PARSE_ERROR(x)".into(), e),
         };
         metrics.push(format!("x subs={}", subs.len()));
-        for (i, o) in subs.iter().enumerate() {
-            let tag = if i == 0 { String::new() } else { format!("s{i}_") };
-            let _ = tag;
+        for o in &subs {
             check(o, "", &mut codes, &mut metrics);
         }
         codes.sort();
