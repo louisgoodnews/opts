@@ -29,11 +29,7 @@ Control reference: `UPDATE_CONTROL_DOC=1 cargo test -p opts-cli reference`.
 ## Steps
 | Step | Status |
 | :-- | :-- |
-| S1+S2 code, protocol, help keys, tests written, docs partly (committed) | needs test run |
-| S2 minimap widget (raster, source, systems) | code written, compiling |
-| S3 protocol `hud.minimap` + hud.state | todo |
-| S4 tests: raster, hud, a11y matrix, golden, no-overlap | todo |
-| S5 Help controls rows, reserved keys, input gating audit | todo |
-| S6 docs (hud-registry, design-language 9, interaction 8, screens, M-0071, ROADMAP, BOARD, field report) | todo |
-| S7 live verification Berlin-Spandau | todo |
-| S8 gates, merge into master, cleanup | todo |
+| S1-S5 code, protocol, help keys, tests, goldens | done, committed |
+| S6 docs, M-0071, ROADMAP, BOARD, field report | done |
+| S7 live verification Berlin-Spandau | done (heading agrees with vehicle.get, F9/+ keys, toast above the map) |
+| S8 merge master, full gates, ff-merge into master, remove worktree | in progress |

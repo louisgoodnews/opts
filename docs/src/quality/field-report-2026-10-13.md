@@ -17,7 +17,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-05 | **Session persistence**: save the current session and restore it; expandable for weather, timetables and more | session | [M-0069](../roadmap/phase-10/M-0069.md) | 📝 open |
 | R-06 | **Adhere to the roadmap** again and **expand it** | process | [M-0074](../roadmap/phase-5/M-0074.md) | 📝 open |
 | R-07 | The date/time step of a new game must **default to the map's defined time**, otherwise the **current date and time** | UI / wizard | [M-0070](../roadmap/phase-9/M-0070.md) | 📝 open |
-| R-08 | **HUD rework**: control information (hints, speed, gear, parking brake) in the **bottom-left**, a **mini map bottom-right**, in line with the UI standards | UI / HUD | [M-0071](../roadmap/phase-9/M-0071.md) | 📝 open |
+| R-08 | **HUD rework**: control information (hints, speed, gear, parking brake) in the **bottom-left**, a **mini map bottom-right**, in line with the UI standards | UI / HUD | [M-0071](../roadmap/phase-9/M-0071.md) | ✅ done 2026-10-13 |
 | R-09 | The **BRT Citaro** has UV/mesh issues | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
 | R-10 | The **control protocol** must allow AI agents to **set settings via the CLI** | tooling | [M-0072](../roadmap/phase-5/M-0072.md) (protocol 1.1.0 has `settings.*`; the exact gap is to be reproduced) | 📝 open |
 | R-11 | **Suspension, brakes and more**: every vehicle defines its own mass, axles etc., which must be respected; OPTS provides a world physics system, the vehicles their individual behaviour | simulation | [M-0073](../roadmap/phase-10/M-0073.md) | 📝 open |
@@ -77,7 +77,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-40 | **Shadows** (probably overall graphics) need to look more realistic | rendering | [M-0091](../roadmap/phase-8/M-0091.md) | 📝 open |
 | R-41 | **Schwebebahn stations** on the Wuppertal map do not load entirely | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
 | R-42 | On Wuppertal some **T-crossings are flipped by 90°** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-43 | M-0071 and directly related items: implemented on a branch by an agent that merges it and removes its worktree itself | UI / process | [M-0071](../roadmap/phase-9/M-0071.md) | 🔨 assigned |
+| R-43 | M-0071 and directly related items: implemented on a branch by an agent that merges it and removes its worktree itself | UI / process | [M-0071](../roadmap/phase-9/M-0071.md) | ✅ done 2026-10-13 |
 
 ## Notes
 
