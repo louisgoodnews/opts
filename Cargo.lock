@@ -5374,6 +5374,7 @@ dependencies = [
  "opts-core",
  "opts-game",
  "opts-gui",
+ "opts-hardware",
  "opts-logging",
  "opts-sim",
  "opts-traffic",
@@ -5402,6 +5403,15 @@ dependencies = [
  "serde",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "opts-hardware"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sysinfo",
 ]
 
 [[package]]
@@ -5440,6 +5450,7 @@ dependencies = [
  "ddsfile",
  "image",
  "opts-core",
+ "opts-hardware",
  "serde_json",
 ]
 

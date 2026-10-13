@@ -1,0 +1,14 @@
+[package]
+name = "opts-hardware"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Privacy-respecting hardware capability probe and default recommendations for OPTS (no network, no identifiers)."
+repository.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Cross-platform (Linux, macOS, Windows) memory, CPU and disk facts; only the two features we need.
+sysinfo = { version = "0.39", default-features = false, features = ["system", "disk"] }

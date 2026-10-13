@@ -65,6 +65,7 @@ fn base_app(allow: Vec<PathBuf>) -> App {
     }));
     app.add_plugins(GameControlPlugin);
     opts_game::settings_registry::protocol::register(&mut app);
+    opts_game::hardware::protocol::register(&mut app);
     app.init_resource::<ScriptKeyBindings>()
         .init_resource::<WorldStats>()
         .init_resource::<CameraState>();

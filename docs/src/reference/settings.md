@@ -80,3 +80,6 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `advanced.developer_panel` | Developer panel | on / off | `false` | at once | available | Shows statistics and debug information in the drive view (key F10). |
 | `advanced.log_level` | Log detail | `error`, `warn`, `info`, `debug` | `info` | at once | available | How much the game writes to its log file. More detail helps with bug reports. |
+| `advanced.hardware_redetect` | Detect hardware again | action (no stored value) | - | at once | available | Looks at your computer again and stores the result in a file on this computer. Nothing is sent anywhere. |
+| `advanced.hardware_delete` | Delete stored hardware profile | action (no stored value) | - | at once | available | Removes the file with the detected hardware from this computer. |
+| `advanced.hardware_allow_reports` | Allow including the hardware profile in reports | on / off | `false` | at once | available | When on, a bug report you save also lists the hardware shown below. You can read it in the report file before you share it. Off by default. |

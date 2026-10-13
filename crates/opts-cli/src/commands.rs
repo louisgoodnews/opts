@@ -306,6 +306,15 @@ pub const COMMANDS: &[CommandSpec] = &[
         "key:s@0",
     ),
     c(
+        "hardware.profile",
+        "settings",
+        "The detected hardware profile and the recommended defaults (local, no identifiers)",
+        "redetect:b?",
+    )
+    .since("1.2")
+    .result("{ probing, stored, allow_in_reports, profile, recommendations }")
+    .doc("`profile` is the versioned `opts-hardware` document (every fact is `{known: v}` or `{unknown: reason}`; `null` until the first probe finished). `redetect: true` starts a new probe in the background; poll again. Nothing is stored by this call. See the hardware probe charter."),
+    c(
         "l10n.languages",
         "l10n",
         "List the languages (built in and installed packs) with completeness, authors and problems",
