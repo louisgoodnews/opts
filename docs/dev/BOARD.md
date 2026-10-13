@@ -187,7 +187,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [x] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28; done on `feat/combobox-search`, awaiting merge.
 - [ ] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30.
-- [ ] 🔴 **Settings Content page freeze: no blocking work on the main thread; UI-wide audit** (M-0088, code) — R-31.
+- [x] 🔴 **Settings Content page freeze: no blocking work on the main thread; UI-wide audit** (M-0088, code) — R-31. Done on `fix/settings-content-freeze`: background content facts, async Home picture, source lint, standards 3.13; worst frame opening Content 213-350 ms -> 17 ms.
 - [ ] 🔴 **Tile streaming performance: measure, rank, implement** (M-0089, research + code) — R-32, R-36.
 - [ ] 🔴 **Content fidelity pass: pedestrians, parked/driving cars, Hamburg, Wuppertal stations and T-crossings** (M-0090, code) — R-34 … R-42.
 - [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40.
