@@ -160,8 +160,10 @@ pub fn vehicle_input_closed(
     camera: Option<Res<crate::camera::CameraState>>,
     modal: Option<Res<crate::reporting::state::ModalActive>>,
     menu: Option<Res<crate::reporting::state::MenuModalActive>>,
+    viewpoint: Option<Res<crate::camera::ViewpointState>>,
 ) -> bool {
-    let accepts = camera.is_none_or(|s| s.mode != crate::camera::CameraMode::FreeRoam);
+    let accepts = camera.is_none_or(|s| s.mode != crate::camera::CameraMode::FreeRoam)
+        && !viewpoint.is_some_and(|v| v.editing);
     let open = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
     !accepts || open
 }

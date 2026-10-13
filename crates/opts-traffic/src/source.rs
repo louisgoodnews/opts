@@ -61,15 +61,19 @@ pub fn signals_from_tile(
         let Some(groups) = source.sco_lights(&o.sco_file) else {
             continue;
         };
-        let programs = groups.iter().flat_map(|g| g.programs.iter());
-        for (i, p) in programs.enumerate() {
+        let programs = groups.iter().flat_map(|g| {
+            g.programs
+                .iter()
+                .map(move |p| (f64::from(g.period_sec()), p))
+        });
+        for (i, (period, p)) in programs.enumerate() {
             let phases = p
                 .phases
                 .iter()
                 .map(|ph| (ph.state, f64::from(ph.duration_sec)))
                 .collect();
             let approach = f64::from(p.approach_distance_m.unwrap_or(0.0));
-            if let Some(program) = SignalProgram::new(phases, approach) {
+            if let Some(program) = SignalProgram::in_period(phases, period, approach) {
                 out.push(((o.id_code, i), program));
             }
         }

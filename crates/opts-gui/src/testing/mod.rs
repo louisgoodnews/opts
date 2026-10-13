@@ -96,6 +96,21 @@ pub fn release(world: &mut World, entity: Entity) {
     world.flush();
 }
 
+/// Turns the mouse wheel by `lines` lines over `entity` (positive scrolls the content up, like a
+/// real wheel turned away from the user); the event bubbles like a real one.
+pub fn wheel(world: &mut World, entity: Entity, lines: f32) {
+    world.trigger(bevy::picking::events::PointerScroll {
+        entity,
+        pointer: pointer(),
+        unit: bevy::input::mouse::MouseScrollUnit::Line,
+        x: 0.0,
+        y: -lines,
+        hit: hit(),
+        phase: bevy::input::touch::TouchPhase::Moved,
+    });
+    world.flush();
+}
+
 /// A full click on `entity`: press, release, one frame.
 pub fn click(app: &mut App, entity: Entity) {
     press(app.world_mut(), entity);

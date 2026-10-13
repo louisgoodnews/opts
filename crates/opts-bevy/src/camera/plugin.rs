@@ -14,6 +14,7 @@ use crate::camera::mode::vehicle_views::{
     update_external_camera, update_passenger_camera,
 };
 use crate::camera::state::{CameraAvailability, CameraMode, CameraState};
+use crate::camera::viewpoint::{handle_viewpoint_keys, ViewpointState};
 use crate::reporting::not_modal_active;
 
 /// Whether the vehicle camera rig (cockpit / external) should drive the camera this frame.
@@ -26,8 +27,11 @@ pub fn rig_drives_camera(state: Option<Res<CameraState>>) -> bool {
 
 /// Whether driving keys should reach the vehicle (they must not while flying the free camera).
 #[must_use]
-pub fn vehicle_accepts_input(state: Option<Res<CameraState>>) -> bool {
-    state.is_none_or(|s| s.mode != CameraMode::FreeRoam)
+pub fn vehicle_accepts_input(
+    state: Option<Res<CameraState>>,
+    viewpoint: Option<Res<ViewpointState>>,
+) -> bool {
+    state.is_none_or(|s| s.mode != CameraMode::FreeRoam) && !viewpoint.is_some_and(|v| v.editing)
 }
 
 /// Registers [`CameraState`], mode switching, free roam and cursor handling.
@@ -40,6 +44,7 @@ impl Plugin for OptsCameraPlugin {
             .add_message::<MouseWheel>()
             .init_resource::<CameraState>()
             .init_resource::<CameraAvailability>()
+            .init_resource::<ViewpointState>()
             .add_systems(
                 Update,
                 (
@@ -48,6 +53,7 @@ impl Plugin for OptsCameraPlugin {
                     update_camera_availability,
                     handle_camera_key_input.run_if(not_modal_active),
                     handle_camera_reset_input.run_if(not_modal_active),
+                    handle_viewpoint_keys.run_if(not_modal_active),
                     update_free_roam_camera.run_if(not_modal_active),
                     update_ego_look.run_if(not_modal_active),
                     handle_vehicle_view_wheel.run_if(not_modal_active),

@@ -30,12 +30,18 @@ pub struct EscGate {
     pub text_focused: bool,
     /// A toast has the focus.
     pub toast_focused: bool,
+    /// The viewpoint editor of the driver's view is open (Esc cancels it).
+    pub viewpoint_open: bool,
 }
 
 impl EscGate {
     /// Whether the press belongs to something other than screen navigation.
     pub fn closed(&self) -> bool {
-        self.overlay_open || self.popup_open || self.text_focused || self.toast_focused
+        self.overlay_open
+            || self.popup_open
+            || self.text_focused
+            || self.toast_focused
+            || self.viewpoint_open
     }
 }
 
@@ -48,6 +54,7 @@ pub fn compute_esc_gate(
     combos: Query<&M3Combobox>,
     text: Query<(), (With<Focused>, TextEntry)>,
     toast: Query<(), (With<Focused>, With<ToastActionButton>)>,
+    viewpoint: Option<Res<opts_bevy::ViewpointState>>,
     mut gate: ResMut<EscGate>,
 ) {
     *gate = EscGate {
@@ -57,6 +64,7 @@ pub fn compute_esc_gate(
         popup_open: combos.iter().any(|c| c.is_open),
         text_focused: !text.is_empty(),
         toast_focused: !toast.is_empty(),
+        viewpoint_open: viewpoint.is_some_and(|v| v.editing),
     };
 }
 

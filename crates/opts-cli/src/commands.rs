@@ -585,6 +585,42 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("`{ok, mode, duration_ms}`")
     .doc("Switches nothing: answers `1001` unless the camera is in free roam (use `camera.set_mode free`). Positive values move forward, right and up; the movement keys are held for `duration_ms` (default 500) and released, so speed follows `free_roam_speed`."),
     c(
+        "camera.viewpoint.get",
+        "scene",
+        "The driver's-view viewpoint: offsets, field of view, stored value, editor state",
+        "",
+    )
+    .since("1.2")
+    .result("`{editing, dirty, row, vehicle, camera, cameras, viewpoint:{x,y,z,fov_deg}, stored:{x,y,z,fov_deg}, fov_deg, default_fov_deg, limits, file}`")
+    .doc("Offsets are metres from the vehicle's own `[add_camera_driver]` eye: `x` right, `y` up, `z` forward (limit +-0.6). `fov_deg` in the viewpoint is `null` while the vehicle's own field of view is used; the top-level `fov_deg` is the one shown. `vehicle` is the catalogue identity (the `.bus` file stem, lower case) the viewpoint is stored under, `camera` the driver camera index."),
+    c(
+        "camera.viewpoint.set",
+        "scene",
+        "Change the driver's-view viewpoint live (opens the editor; not stored until saved)",
+        "x:f? y:f? z:f? fov_deg:f?",
+    )
+    .since("1.2")
+    .result("the `camera.viewpoint.get` result")
+    .doc("Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6 m, `fov_deg` 30..120) instead of being clamped. Answers `1001` unless the driver's view (`camera.set_mode cockpit`) is active and `1009` while a dialog or menu is open. Equivalent to the editor panel: the camera shows the change at once; `camera.viewpoint.save` stores it, leaving the view or changing the sub camera cancels it."),
+    c(
+        "camera.viewpoint.save",
+        "scene",
+        "Store the shown viewpoint for this vehicle and camera and close the editor",
+        "",
+    )
+    .since("1.2")
+    .result("the `camera.viewpoint.get` result")
+    .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active."),
+    c(
+        "camera.viewpoint.reset",
+        "scene",
+        "Back to the vehicle's own viewpoint and remove the stored one",
+        "",
+    )
+    .since("1.2")
+    .result("the `camera.viewpoint.get` result")
+    .doc("Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active."),
+    c(
         "snapshot",
         "output",
         "One call that returns everything an agent needs to judge the state, optionally with a screenshot",
