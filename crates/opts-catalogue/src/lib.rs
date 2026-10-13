@@ -572,7 +572,7 @@ impl Catalogue {
 }
 
 /// The catalogue by kind (see [`Catalogue::kind_counts`]); `other` is everything that is not one
-/// of the four named kinds (textures, sounds, humans, trailers, AI vehicles, weather, ...).
+/// of the four named kinds (trailers and AI vehicles, fonts, humans, weather, ...).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct KindCounts {
     /// Files counted by the last scan.

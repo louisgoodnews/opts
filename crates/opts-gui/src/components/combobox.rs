@@ -868,6 +868,8 @@ mod tests {
         assert!(matches_query("Berlin Südkreuz", "SÜD kreuz"));
         assert!(matches_query("Kreuzberg", "kreuz berg"));
         assert!(!matches_query("Berlin Südkreuz", "nord"));
+        assert!(matches_query("U-Bhf. Ruhleben", "ubhf"));
+        assert!(matches_query("U-Bhf. Ruhleben", "bhf ruhl"));
         assert!(matches_query("anything", "   "));
     }
 }

@@ -50,10 +50,13 @@ fn base_letter(c: char) -> char {
 }
 
 /// Whether `option` matches `query`: every whitespace-separated word of the query occurs in it
-/// (case- and diacritics-insensitive). An empty query matches everything.
+/// (case- and diacritics-insensitive; punctuation may be left out, so `ubhf` finds `U-Bhf.`). An
+/// empty query matches everything.
 pub fn matches_query(option: &str, query: &str) -> bool {
     let hay = fold(option);
-    fold(query)
-        .split_whitespace()
-        .all(|word| hay.contains(word))
+    let squeezed: String = hay.chars().filter(|c| c.is_alphanumeric()).collect();
+    fold(query).split_whitespace().all(|word| {
+        let w: String = word.chars().filter(|c| c.is_alphanumeric()).collect();
+        hay.contains(word) || (!w.is_empty() && squeezed.contains(&w))
+    })
 }

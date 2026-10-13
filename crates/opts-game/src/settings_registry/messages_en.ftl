@@ -137,7 +137,7 @@ settings-keep = Keep
 settings-revert = Go back
 
 settings-info-theme-now = Right now the { $theme } theme is shown.
-settings-info-catalogue = Catalogue: { $maps } maps, { $vehicles } vehicles, { $scenery } scenery objects, { $splines } splines and { $other } other entries (textures, humans, trailers and more).
+settings-info-catalogue = Catalogue: { $maps } maps, { $vehicles } vehicles, { $scenery } scenery objects, { $splines } splines and { $other } other entries (trailers and AI vehicles, fonts, humans and more).
 settings-info-catalogue-total = { $entities } entries in total, built from { $files } files. A file is one file on disk; an entry is one thing made of one or more files, such as a map or a vehicle. Maps and vehicles are counted as on the Home screen.
 settings-info-last-scan = Last scan: { $when }.
 settings-info-never-scanned = The catalogue has not been scanned yet.
