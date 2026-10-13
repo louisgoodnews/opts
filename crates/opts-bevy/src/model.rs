@@ -120,6 +120,10 @@ pub struct ContentCache {
     /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
+    /// Shared handles by content (`OPTS_INSTANCING=dedupe`, see [`crate::instancing`]).
+    pub pool: crate::instancing::AssetPool,
+    /// Static parts of the tile being loaded (`OPTS_INSTANCING=merge`).
+    pub merger: crate::instancing::StaticMerger,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Scrambled meshes already reported for unreliable texture coordinates.
     pub(crate) uv_warned: std::collections::HashSet<PathBuf>,
@@ -734,8 +738,8 @@ impl ContentLoader<'_> {
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
                 parts.push(ModelPart {
-                    mesh: self.meshes.add(mesh),
-                    material: self.materials.add(material),
+                    mesh: self.cache.pool.mesh(self.meshes, mesh),
+                    material: self.cache.pool.material(self.materials, material),
                     vertices,
                     light_variable,
                     image: over.and_then(|o| o.image.clone()),

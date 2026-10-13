@@ -161,7 +161,7 @@ pub(super) fn spawn_splines(
                     loader.texture(&t.file, &tex_dirs)
                 });
                 let alpha = tex.is_some_and(|t| t.alpha_mode.is_some());
-                let m = materials.add(StandardMaterial {
+                let m = job.cache.pool.material(materials, StandardMaterial {
                     base_color_texture: handle,
                     perceptual_roughness: 0.9,
                     double_sided: true,
@@ -180,6 +180,16 @@ pub(super) fn spawn_splines(
                 m
             };
             stats.scene_vertices += mesh.count_vertices();
+            // `OPTS_INSTANCING=merge`: the ribbon (already in world space) joins the merged mesh.
+            if opts_bevy::instancing::merge()
+                && opts_bevy::instancing::StaticMerger::mesh_ok(&mesh)
+                && materials
+                    .get(&mat)
+                    .is_some_and(opts_bevy::instancing::StaticMerger::material_ok)
+                && job.cache.merger.bake(&mesh, &mat, &Transform::IDENTITY)
+            {
+                continue;
+            }
             children.push(
                 commands
                     .spawn((

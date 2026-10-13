@@ -159,6 +159,18 @@ pub fn load_next_tile(
         );
     }
 
+    if opts_bevy::instancing::merge() {
+        let merged = job.cache.merger.flush(commands, meshes);
+        children.extend(merged);
+        let st = job.cache.merger.stats;
+        tracing::info!(
+            tile = ?key,
+            parts_merged = st.parts_merged,
+            entities = st.entities,
+            refused = st.refused,
+            "static scenery merged (running totals)"
+        );
+    }
     let tile_root = commands
         .spawn((
             Transform::default(),
@@ -381,6 +393,23 @@ fn spawn_object(
         return;
     }
 
+    // Static scenery is baked into per-tile merged meshes (`OPTS_INSTANCING=merge`).
+    if opts_bevy::instancing::merge()
+        && WorldLoadJob::is_flat_static(&sco, &mesh_parts, template.as_ref())
+        && job.scenery.dev_look.is_idle()
+        && mesh_parts.iter().flatten().all(|p| {
+            opts_bevy::instancing::StaticMerger::can_merge(meshes, materials, &p.mesh, &p.material)
+        })
+    {
+        for p in mesh_parts.iter().flatten() {
+            job.cache
+                .merger
+                .add(meshes, materials, &p.mesh, &p.material, &transform);
+            stats.scene_vertices += p.vertices;
+        }
+        stats.objects_loaded += 1;
+        return;
+    }
     let name = sco
         .friendly_name
         .clone()

@@ -69,7 +69,7 @@ pub(super) fn spawn_tree(
     );
     let mesh = tree_billboard_mesh(height, height * ratio);
     stats.scene_vertices += mesh.count_vertices();
-    let material = materials.add(StandardMaterial {
+    let material = job.cache.pool.material(materials, StandardMaterial {
         base_color_texture: Some(handle),
         alpha_mode: AlphaMode::Mask(0.5),
         double_sided: true,
@@ -77,13 +77,26 @@ pub(super) fn spawn_tree(
         perceptual_roughness: 1.0,
         ..default()
     });
+    let transform = Transform::from_translation(omsi_to_bevy_pos(world))
+        .with_rotation(omsi_euler_to_bevy_quat(-obj.heading_deg, 0.0, 0.0));
+    // `OPTS_INSTANCING=merge`: the billboard is baked into the tile's merged mesh.
+    if opts_bevy::instancing::merge()
+        && opts_bevy::instancing::StaticMerger::mesh_ok(&mesh)
+        && materials
+            .get(&material)
+            .is_some_and(opts_bevy::instancing::StaticMerger::material_ok)
+        && job.cache.merger.bake(&mesh, &material, &transform)
+    {
+        stats.trees_loaded += 1;
+        stats.objects_loaded += 1;
+        return None;
+    }
     let id = commands
         .spawn((
             (
-                Mesh3d(meshes.add(mesh)),
+                Mesh3d(job.cache.pool.mesh(meshes, mesh)),
                 MeshMaterial3d(material),
-                Transform::from_translation(omsi_to_bevy_pos(world))
-                    .with_rotation(omsi_euler_to_bevy_quat(-obj.heading_deg, 0.0, 0.0)),
+                transform,
             ),
             Name::new(format!("Tree_{}", obj.id_code)),
         ))

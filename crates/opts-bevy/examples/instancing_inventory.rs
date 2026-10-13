@@ -78,11 +78,23 @@ fn mesh_info(path: &Path) -> Option<MeshInfo> {
     for m in &models {
         triangles += m.indices.len();
         vertices += m.vertices.len();
-        scrambled |= m.encryption_key.is_some()
-            && matches!(m.vertex_layout(), opts_core::formats::o3d::VertexLayout::Unreadable);
-        let used: BTreeSet<usize> = (0..m.indices.len())
-            .map(|i| m.face_materials.get(i).copied().unwrap_or(0) as usize)
-            .collect();
+        scrambled |= matches!(
+            m.vertex_layout(),
+            opts_core::formats::o3d::VertexLayout::Unreadable
+        );
+        let unreadable = matches!(
+            m.vertex_layout(),
+            opts_core::formats::o3d::VertexLayout::Unreadable
+        );
+        // Scrambled files: the per-face material ids are not trusted; assume every table entry
+        // is used (the decoder of the game recovers the real split).
+        let used: BTreeSet<usize> = if unreadable {
+            (0..m.materials.len().max(1)).collect()
+        } else {
+            (0..m.indices.len())
+                .map(|i| m.face_materials.get(i).copied().unwrap_or(0) as usize)
+                .collect()
+        };
         for s in used {
             let (texture, numbers) = match m.materials.get(s) {
                 Some(mat) => (
@@ -128,6 +140,7 @@ struct Totals {
     parts_lod_only: usize,
     parts_dynamic: usize,
     parts_text: usize,
+    parts_trees: usize,
     triangles: u64,
     scrambled_parts: usize,
     // distinct sets
@@ -233,8 +246,29 @@ fn main() {
                     t.missing_sco += 1;
                     continue;
                 };
-                if info.sco.tree.is_some() {
+                if let Some(tree) = &info.sco.tree {
+                    // One billboard part per tree: its own mesh (height, width) and material
+                    // handle today; the content key is the texture.
                     t.tree_objects += 1;
+                    let texture = obj
+                        .string_vars
+                        .first()
+                        .map(|s| s.trim())
+                        .filter(|s| !s.is_empty())
+                        .unwrap_or(&tree.texture)
+                        .to_lowercase();
+                    let content = format!("tree|{texture}");
+                    t.material_keys.insert(content.clone());
+                    let mut h = DefaultHasher::new();
+                    "tree-billboard".hash(&mut h);
+                    let pair = (h.finish(), 0, content);
+                    tile_pairs.insert(pair.clone());
+                    t.pair_keys_flat.insert(pair.clone());
+                    t.pair_keys.insert(pair);
+                    t.parts += 1;
+                    t.parts_flat += 1;
+                    t.parts_trees += 1;
+                    tile_parts += 1;
                     continue;
                 }
                 if info.sco.model_cfg.is_some() || info.sco.carpark_p {
@@ -339,7 +373,7 @@ fn report(map: &str, t: &Totals, top: usize) {
         "| parts in flat static objects / LOD-only objects / dynamic objects | {} / {} / {} |",
         t.parts_flat, t.parts_lod_only, t.parts_dynamic
     );
-    println!("| parts of objects with a rendered text texture | {} |", t.parts_text);
+    println!("| of which tree billboards / parts of objects with a rendered text texture | {} / {} |", t.parts_trees, t.parts_text);
     println!("| unique mesh files / unique mesh contents | {} / {} |", t.mesh_paths.len(), t.mesh_content.len());
     println!(
         "| current handle keys (.o3d + `[matl]`) → unique mesh handles (parts) | {} → {} |",
