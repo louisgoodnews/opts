@@ -7,6 +7,7 @@ hud-caption-park = PARKEN
 hud-brake-on = AN
 hud-brake-off = AUS
 hud-session = { $map } - { $entry }
+hud-session-map = { $map }
 hud-clock = Zeit { $time } | Wetter: { $weather }
 hud-hint-controls = W/S Gas und Bremse  -  Links/Rechts Lenken  -  . Feststellbremse  -  1-5 Kamera  -  Esc Pause  -  F1 Hilfe
 hud-pause-button = Pause [Esc]

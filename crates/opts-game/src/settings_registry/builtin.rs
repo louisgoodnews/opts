@@ -59,9 +59,6 @@ const DENSITIES: &[super::EnumOption] = &[
     opt("dense", theme::DENSITY_DENSE),
 ];
 
-const LANGUAGES: &[super::EnumOption] =
-    &[opt("en", "set-opt-lang-en"), opt("de", "set-opt-lang-de")];
-
 const UNITS: &[super::EnumOption] = &[
     opt("kmh", "set-opt-units-kmh"),
     opt("mph", "set-opt-units-mph"),
@@ -320,7 +317,7 @@ fn interface() -> Vec<D> {
         .keywords(&["animation", "accessibility", "transitions"]),
         D::new(
             "interface.language",
-            K::Enum(LANGUAGES),
+            K::Text,
             "en",
             C::Interface,
             70,
@@ -329,6 +326,17 @@ fn interface() -> Vec<D> {
         )
         .keywords(&["sprache", "deutsch", "german", "english", "locale"])
         .since("0.2"),
+        D::new(
+            "interface.language_reload",
+            K::Action,
+            "",
+            C::Interface,
+            71,
+            "set-language-reload",
+            "set-language-reload-desc",
+        )
+        .keywords(&["languages", "packs", "translation", "refresh", "rescan"])
+        .since("0.3"),
         D::new(
             "interface.units",
             K::Enum(UNITS),

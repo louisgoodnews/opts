@@ -56,7 +56,12 @@ fn state(world: &mut World, _: &Value) -> Outcome {
     let dev = world
         .get_resource::<WorldStats>()
         .map(|s| s.overlay_visible);
+    let place_label = world
+        .get_resource::<crate::session_vehicles::PlaceLabel>()
+        .and_then(|p| p.0.clone());
     Outcome::ok(json!({
+        "place_label": place_label,
+        "has_vehicle": values.has_vehicle,
         "kind": active.kind.id(),
         "speed_kmh": values.speed_kmh,
         "gear": values.gear,

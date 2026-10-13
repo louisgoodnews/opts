@@ -321,7 +321,15 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_developer_panel,
                 ),
             )
-            .add_systems(Startup, live::apply_saved_language);
+            .add_systems(
+                Startup,
+                (
+                    crate::language_packs::load_startup,
+                    live::apply_saved_language,
+                )
+                    .chain(),
+            )
+            .add_systems(Update, crate::language_packs::reload_action);
         protocol::register(app);
     }
 }

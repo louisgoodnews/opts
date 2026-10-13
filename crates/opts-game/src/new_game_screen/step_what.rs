@@ -33,12 +33,18 @@ fn class_glyph(class: &str) -> &'static str {
     }
 }
 
-/// The vehicle list entries: name and class, never file names.
+/// Id of the pinned list entry *Drive without a vehicle* (never a catalogue id: those are file
+/// stems and cannot contain a colon).
+pub const NONE_ID: &str = ":none";
+
+/// The vehicle list entries: *Drive without a vehicle* first, then the vehicles by name and class,
+/// never file names.
 pub fn vehicle_entries(ctx: &BuildCtx) -> Vec<ListEntry> {
-    ctx.catalogue
-        .vehicles
-        .iter()
-        .map(|v| {
+    let none = ListEntry::new(NONE_ID, ctx.loc.t("wiz-what-none"))
+        .with_glyph(glyphs::MAP)
+        .with_subtitle(ctx.loc.t("wiz-what-none-sub"));
+    std::iter::once(none)
+        .chain(ctx.catalogue.vehicles.iter().map(|v| {
             let mut e = ListEntry::new(v.id.clone(), v.full_name.clone())
                 .with_glyph(class_glyph(&v.class))
                 .with_thumb(format!("veh:{}", v.id))
@@ -47,7 +53,7 @@ pub fn vehicle_entries(ctx: &BuildCtx) -> Vec<ListEntry> {
                 e = e.with_subtitle(ctx.loc.t(k)).with_tags([v.class.clone()]);
             }
             e
-        })
+        }))
         .collect()
 }
 
@@ -68,10 +74,13 @@ fn class_chips(ctx: &BuildCtx) -> Vec<Chip> {
 
 /// Builds the step body: the pattern with the vehicle list.
 pub fn spawn_what(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
-    let selected = ctx
-        .catalogue
-        .find_vehicle(&ctx.setup.selected_vehicle)
-        .map(|v| v.id.clone());
+    let selected = if ctx.setup.no_vehicle {
+        Some(NONE_ID.to_owned())
+    } else {
+        ctx.catalogue
+            .find_vehicle(&ctx.setup.selected_vehicle)
+            .map(|v| v.id.clone())
+    };
     let mut model = MasterDetail::new(vehicle_entries(ctx), selected);
     model.chips = class_chips(ctx);
     model.recents = ctx
@@ -103,6 +112,25 @@ pub fn spawn_what(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
         .insert((StepList(PlannerStep::What), Name::new("WhatStep")));
     commands.entity(parts.list).insert(DefaultFocus);
     parts.root
+}
+
+/// The detail of *Drive without a vehicle*: what the session will be like.
+pub fn fill_none_detail(commands: &mut Commands, detail: Entity) {
+    let title = commands
+        .spawn(keyed(
+            "wiz-what-none",
+            TypeScale::TitleLarge,
+            ColorRole::OnSurface,
+        ))
+        .id();
+    let body = commands
+        .spawn(keyed(
+            "wiz-what-none-body",
+            TypeScale::BodyMedium,
+            ColorRole::OnSurfaceVariant,
+        ))
+        .id();
+    commands.entity(detail).add_children(&[title, body]);
 }
 
 /// The detail of a chosen vehicle.
@@ -203,5 +231,12 @@ pub fn fill_what_detail(
         ));
     }
     kids.push(spawn_livery_section(commands, liveries, setup, vehicle));
+    kids.push(super::ui::action_button(
+        commands,
+        "wiz-what-none",
+        super::ui::Emphasis::Quiet,
+        super::ui::PlannerAction::NoVehicle,
+        "wizard.what.none".to_owned(),
+    ));
     commands.entity(detail).add_children(&kids);
 }

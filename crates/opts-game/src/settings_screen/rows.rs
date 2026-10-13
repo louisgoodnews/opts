@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use opts_gui::components::button::ButtonBuilder;
 use opts_gui::components::switch::SwitchBuilder;
 use opts_gui::interaction::state::{Disabled, DisabledReason};
-use opts_gui::l10n::{L10nKey, Localization};
+use opts_gui::l10n::fluent::Args;
+use opts_gui::l10n::{L10nArgs, L10nKey, Localization};
 use opts_gui::not_yet::{spawn_label, NotAvailableYet};
 use opts_gui::prelude::*;
 
@@ -157,6 +158,146 @@ pub const ROLES_PLAIN: (ColorRole, ColorRole, ColorRole) =
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SettingValueText(pub &'static str);
 
+/// A small localized note with variables below a language.
+fn note(c: &mut Commands, parent: Entity, key: &'static str, args: Args, role: ColorRole) {
+    c.spawn((
+        Text::new(key),
+        L10nKey(key),
+        L10nArgs(args),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::Label),
+        ForegroundRole(role),
+        Node {
+            max_width: Val::Px(280.0),
+            ..default()
+        },
+        ChildOf(parent),
+    ));
+}
+
+/// The languages of the interface: one button each (named in its own language), and below a
+/// pack's button how complete it is, who made it and what is wrong with it. Right-to-left packs
+/// are shown but cannot be chosen.
+fn language_list(
+    c: &mut Commands,
+    group: Entity,
+    ctx: &Ctx,
+    d: &SettingDescriptor,
+    cur: &str,
+    u: &Usable,
+) {
+    for l in ctx.loc.languages() {
+        let col = c
+            .spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::FlexStart,
+                    row_gap: Val::Px(2.0),
+                    ..default()
+                },
+                ChildOf(group),
+            ))
+            .id();
+        let b = button(
+            c,
+            col,
+            d,
+            format!("option-{}", l.code),
+            None,
+            &l.native_name,
+            l.code == cur,
+            SettingOp::Set {
+                key: d.key,
+                value: l.code.clone(),
+            },
+            u,
+        );
+        if !l.selectable {
+            c.entity(b)
+                .insert((Disabled, DisabledReason(ctx.loc.t("set-lang-rtl").into())));
+            note(c, col, "set-lang-rtl", Vec::new(), ColorRole::Error);
+        }
+        if l.from_pack {
+            let percent = l.percent().round() as usize;
+            if l.authors.is_empty() {
+                note(
+                    c,
+                    col,
+                    "set-lang-info-unsigned",
+                    vec![("percent".into(), percent.into())],
+                    ColorRole::OnSurfaceVariant,
+                );
+            } else {
+                note(
+                    c,
+                    col,
+                    "set-lang-info",
+                    vec![
+                        ("percent".into(), percent.into()),
+                        ("authors".into(), l.authors.join(", ").into()),
+                    ],
+                    ColorRole::OnSurfaceVariant,
+                );
+            }
+            let gaps = l.missing + l.copied;
+            if gaps > 0 {
+                note(
+                    c,
+                    col,
+                    "set-lang-gaps",
+                    vec![("count".into(), gaps.into())],
+                    ColorRole::OnSurfaceVariant,
+                );
+            }
+            if l.outdated {
+                note(
+                    c,
+                    col,
+                    "set-lang-outdated",
+                    Vec::new(),
+                    ColorRole::OnSurfaceVariant,
+                );
+            }
+            if l.errors > 0 {
+                note(
+                    c,
+                    col,
+                    "set-lang-problems",
+                    vec![("count".into(), l.errors.into())],
+                    ColorRole::Error,
+                );
+            }
+        }
+        if !l.missing_fonts.is_empty() {
+            note(
+                c,
+                col,
+                "set-lang-fonts",
+                vec![("scripts".into(), l.missing_fonts.join(", ").into())],
+                ColorRole::Error,
+            );
+        }
+    }
+    if let Some(dir) = crate::language_packs::packs_dir() {
+        let e = c
+            .spawn((
+                Node {
+                    width: Val::Percent(100.0),
+                    ..default()
+                },
+                ChildOf(group),
+            ))
+            .id();
+        note(
+            c,
+            e,
+            "set-lang-folder",
+            vec![("path".into(), dir.display().to_string().into())],
+            ColorRole::OnSurfaceVariant,
+        );
+    }
+}
+
 /// The control group of a setting, below `parent`.
 pub fn spawn_control(
     c: &mut Commands,
@@ -267,6 +408,9 @@ pub fn spawn_control(
                     &u,
                 );
             }
+        }
+        SettingKind::Text if d.key == crate::language_packs::LANGUAGE_KEY => {
+            language_list(c, group, ctx, d, cur, &u);
         }
         SettingKind::Text => {
             if d.key == "theme_file" {

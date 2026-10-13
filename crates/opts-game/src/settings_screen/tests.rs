@@ -283,6 +283,7 @@ fn every_visible_setting_has_a_working_control() {
             })
             .to_string(),
             SettingKind::Time => "05:30".into(),
+            SettingKind::Text if d.key == "interface.language" => "fr".into(),
             SettingKind::Path | SettingKind::Text => "x".into(),
             SettingKind::Float { .. } | SettingKind::Binding | SettingKind::Action => continue,
         };

@@ -5,11 +5,14 @@
 //!   Each file prints one line; the exit code is 1 if any file failed.
 //! - `opts-tools hardware report [--json] [--bench]` prints the hardware profile (local only, see
 //!   [`hardware`]).
+//! - `opts-tools l10n export|check|new|import|stats` prepares, checks and measures language packs
+//!   (see [`l10n`] and `docs/src/architecture/localisation-packs.md`).
 //! - `opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]` measures screenshots
 //!   (saturation, luminance, high-frequency energy) and the difference of two of them; see
 //!   [`metrics`].
 
 mod hardware;
+mod l10n;
 mod metrics;
 
 use std::path::Path;
@@ -164,6 +167,7 @@ fn image_metrics(args: &[String]) -> Result<(), String> {
 
 const USAGE: &str = concat!(
     "usage: opts-tools inspect <file>...\n       opts-tools image-metrics [--crop x,y,w,h] [--json] <a.png> [<b.png>]\n",
+    "       opts-tools l10n export|check|new|import|stats ... (see `opts-tools l10n`)\n",
     "       opts-tools hardware report [--json] [--bench] [--storage-dir <dir>] [--content-dir <dir>]"
 );
 
@@ -173,6 +177,12 @@ fn main() -> ExitCode {
         eprintln!("{USAGE}");
         return ExitCode::from(2);
     };
+    if cmd == "l10n" {
+        let o = l10n::execute(files);
+        print!("{}", o.out);
+        eprint!("{}", o.err);
+        return ExitCode::from(u8::try_from(o.code).unwrap_or(2));
+    }
     if cmd == "image-metrics" {
         return match image_metrics(files) {
             Ok(()) => ExitCode::SUCCESS,

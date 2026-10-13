@@ -48,6 +48,9 @@ wiz-fact-starts =
 wiz-fact-depot = Depot: { $depot }
 
 wiz-what-search = Search { $count } vehicles…
+wiz-what-none = Drive without a vehicle
+wiz-what-none-sub = Map only, free camera
+wiz-what-none-body = Start on the map with a free camera and no instruments. The simulation runs. Spawn a vehicle whenever you like from the pause menu, under Vehicle.
 wiz-what-empty = No vehicles found. Check the OMSI folder or rescan.
 wiz-class-road = Road vehicle
 wiz-class-rail = Rail vehicle
@@ -119,6 +122,8 @@ wiz-option-ident_visible = Operator identification
 # --- Loading screen ---
 load-title = Preparing your drive
 load-tile-map = MAP
+wiz-no-vehicle = No vehicle
+load-no-vehicle-sub = Free camera
 load-tile-vehicle = VEHICLE
 load-tile-when = TIME AND WEATHER
 load-stage-catalogue = Reading your OMSI content (first start only)…

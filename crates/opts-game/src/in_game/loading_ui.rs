@@ -342,7 +342,11 @@ pub fn manifest_lines(
         ),
         (
             Tile::Vehicle,
-            [session.vehicle_name.clone(), session.livery_name.clone()],
+            if session.vehicle_none {
+                [loc.t("wiz-no-vehicle"), loc.t("load-no-vehicle-sub")]
+            } else {
+                [session.vehicle_name.clone(), session.livery_name.clone()]
+            },
         ),
         (
             Tile::When,
