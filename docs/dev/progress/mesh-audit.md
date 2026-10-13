@@ -16,7 +16,7 @@ Branch `agent/mesh-audit`, worktree `/home/louisgoodnews/Dokumente/opts-wt-mesh-
 | C fixes: v1 count wrap, non-finite faces, spike faces, entrypoint `#` names, v10 tiles | done, with tests |
 | D1 live map sweep pass 1 (cold decode cache, old binary) | done: 5 of 43 failed to load, all explained |
 | D2 live map sweep pass 2 (new binary, warm cache) | done: 43 of 43 loaded |
-| D3 live vehicle sweep on DBC_Map (fixed pose, 4 views) | 125 of 188 sampled `.bus` photographed (sample = first/middle/last of each of the 79 folders, alphabetical order, interrupted by a restart); remaining 63 not done |
+| D3 live vehicle sweep on DBC_Map (fixed pose, 4 views) | done: 187 of 188 sampled `.bus` photographed (79 of 79 folders), sheets reviewed for about half; 14 first attempts timed out or lost the app and were repeated |
 | E wizard empty lists + Entity despawned crash | fixed with test |
 | F gates, docs, close-out | done (merged master 2026-10-13, field-report items R-01/R-09/R-17/R-18 added as MI-0037..0040) |
 
@@ -43,3 +43,5 @@ target/release/examples/mesh_audit "<OMSI dir>" --threads 14 [--decode] > raw.ts
 * MI-0036 done: `scene.load_map` / `vehicle.set` answer `1008` at once for a failed load and answer (with `waiting_for_continue: true`) while the loading screen waits for *Continue*; tests `restart_waiter_tests`; reference regenerated.
 * Wrong-vertices experiments (twin truth set, 1,826 accepted, baseline 299-301 wrong): (a) settle only above 0.98 agreement, trying all six runs: 310 wrong (the extra runs agree on wrong solutions); (b) majority vote over six runs: 310 wrong. Negative results, code not kept. Of the 301 wrong meshes 31 are wrong by one global axis permutation/mirror (R-17 "flipped" candidates), the rest have wrong individual vertices.
 * Vehicle sweep re-run on DBC_Map with the fixed pose (all 188 sampled buses) because the earlier screenshots were deleted; resumable via `vehicle_sweep.sh`.
+
+**Cap (project lead, 2026-10-14):** visual vehicle sampling is limited to about 10 % of the fleet (~95 of 947). That limit was already exceeded when it arrived (187 sampled `.bus` photographed, 79 of 79 folders); no further vehicle sweeps are run.
