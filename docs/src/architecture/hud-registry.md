@@ -102,7 +102,7 @@ Code: `hud/minimap/`. A top-down **vector** drawing of the roads around the play
 | :--- | :--- |
 | Source | `MapSource::roads_near(centre, radius, out)`: a read-only list of road paths (straight or arc, width). The traffic crate's road paths implement it (`TrafficState` in `omsi_world/traffic.rs`: the lane segments of the resident tiles); `FixtureRoads` implements it for tests and the golden screenshot. The map never reads the tile or terrain code, so changes there do not touch it. Rails and terrain are **not** drawn. |
 | Centre | the active vehicle (`PlayerVehicle`); without a vehicle (map-only session) the free camera, which then is also the marker |
-| Markers | every session vehicle: the active one is a *filled* arrow with a ring in the `needle` token, the others are *hollow* arrows in the `warning` token (shape and a blue/amber pair, never red against green); a mark on the edge shows where north is |
+| Markers | every session vehicle: the active one is a *filled* arrow with a ring in the `text` token, the others are *hollow* arrows in the `warning` token (shape and lightness differ, never red against green); a mark on the edge shows where north is |
 | Zoom | the visible radius: 100, 200, 500 or 1000 m (setting `hud.minimap_zoom`, default 200); the keys `+` and `-` step through them |
 | Orientation | `hud.minimap_orientation`: `heading` (default, the vehicle's heading is up) or `north`; Shift+F9 switches |
 | Off | `hud.minimap` (F9); the widget then leaves the layout and nothing is drawn |

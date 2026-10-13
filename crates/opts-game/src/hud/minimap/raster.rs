@@ -151,22 +151,71 @@ fn segment_distance(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     p.distance(a + ab * t)
 }
 
+/// An anti-aliased line of `width_px`: only the pixels near the line are visited (a few per step
+/// along the major axis), with no square roots, so a redraw stays far below a millisecond.
 fn draw_line(canvas: &mut Canvas, a: Vec2, b: Vec2, width_px: f32, color: [u8; 4]) {
+    let d = b - a;
+    let len = d.length();
     let half = width_px / 2.0 + 0.5;
     let size = canvas.size as f32;
     let (min, max) = (a.min(b) - Vec2::splat(half), a.max(b) + Vec2::splat(half));
     if max.x < 0.0 || max.y < 0.0 || min.x > size || min.y > size {
         return;
     }
-    let x0 = min.x.floor().max(0.0) as i32;
-    let x1 = max.x.ceil().min(size - 1.0) as i32;
-    let y0 = min.y.floor().max(0.0) as i32;
-    let y1 = max.y.ceil().min(size - 1.0) as i32;
-    for y in y0..=y1 {
+    let (u, n) = if len > 1e-4 {
+        let u = d / len;
+        (u, Vec2::new(-u.y, u.x))
+    } else {
+        (Vec2::X, Vec2::Y)
+    };
+    // Extend the ends a little so chords of one arc join without notches.
+    let cap = (width_px / 2.0).min(2.0);
+    let coverage = |p: Vec2| {
+        let q = p - a;
+        let t = q.dot(u);
+        if t < -cap || t > len + cap {
+            return 0.0;
+        }
+        width_px / 2.0 + 0.5 - q.dot(n).abs()
+    };
+    if d.x.abs() >= d.y.abs() {
+        let x0 = min.x.floor().max(0.0) as i32;
+        let x1 = max.x.ceil().min(size - 1.0) as i32;
+        // Vertical reach of the line at a column: half / cos(angle).
+        let reach = half / u.x.abs().max(0.2);
         for x in x0..=x1 {
-            let p = Vec2::new(x as f32 + 0.5, y as f32 + 0.5);
-            let d = segment_distance(p, a, b);
-            canvas.blend(x, y, color, width_px / 2.0 + 0.5 - d);
+            let cx = x as f32 + 0.5;
+            let yc = if d.x.abs() > 1e-4 {
+                a.y + (cx - a.x) * d.y / d.x
+            } else {
+                a.y
+            };
+            let yc = yc.clamp(min.y, max.y);
+            let y0 = ((yc - reach).floor() as i32).max(0);
+            let y1 = ((yc + reach).ceil() as i32).min(size as i32 - 1);
+            for y in y0..=y1 {
+                let c = coverage(Vec2::new(cx, y as f32 + 0.5));
+                if c > 0.0 {
+                    canvas.blend(x, y, color, c);
+                }
+            }
+        }
+    } else {
+        let y0 = min.y.floor().max(0.0) as i32;
+        let y1 = max.y.ceil().min(size - 1.0) as i32;
+        let reach = half / u.y.abs().max(0.2);
+        for y in y0..=y1 {
+            let cy = y as f32 + 0.5;
+            let xc = a.x + (cy - a.y) * d.x / d.y;
+            let xc = xc.clamp(min.x, max.x);
+            let x0 = ((xc - reach).floor() as i32).max(0);
+            let x1 = ((xc + reach).ceil() as i32).min(size as i32 - 1);
+            for x in x0..=x1 {
+                let c = coverage(Vec2::new(x as f32 + 0.5, cy));
+                if c > 0.0 {
+                    canvas.blend(x, y, color, c);
+                }
+            }
         }
     }
 }
@@ -174,8 +223,8 @@ fn draw_line(canvas: &mut Canvas, a: Vec2, b: Vec2, width_px: f32, color: [u8; 4
 /// Fills a triangle (anti-aliased by the signed distance to its edges).
 fn fill_triangle(canvas: &mut Canvas, p: [Vec2; 3], color: [u8; 4], grow: f32) {
     let size = canvas.size as f32;
-    let min = p[0].min(p[1]).min(p[2]) - Vec2::splat(grow + 1.0);
-    let max = p[0].max(p[1]).max(p[2]) + Vec2::splat(grow + 1.0);
+    let min = p[0].min(p[1]).min(p[2]) - Vec2::splat(grow.abs() + 1.0);
+    let max = p[0].max(p[1]).max(p[2]) + Vec2::splat(grow.abs() + 1.0);
     let area = (p[1] - p[0]).perp_dot(p[2] - p[0]);
     if area.abs() < 1e-3 {
         return;

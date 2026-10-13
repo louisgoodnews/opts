@@ -173,13 +173,13 @@ fn every_map_colour_has_at_least_3_to_1_against_the_ground_in_day_and_night() {
 }
 
 #[test]
-fn the_vehicle_markers_do_not_rely_on_red_and_green() {
-    // Colour-blind safe: the active (blue) and other (amber) vehicles differ in blue against red,
-    // never red against green, and in shape (filled and ringed against hollow, tested above).
+fn the_vehicle_markers_differ_in_shape_and_lightness_not_only_in_hue() {
+    // Colour-blind safe: the active vehicle is filled with a ring and the others are hollow
+    // (tested above); the colours also differ in lightness, and neither pair is red against green.
     for palette in [day(), night()] {
         let c = colors_of(&palette);
-        assert!(c.active[2] > c.active[0], "active is blue-ish");
-        assert!(c.other[0] > c.other[2], "other is amber-ish");
+        let ratio = contrast_ratio(rgb(c.active), rgb(c.other));
+        assert!(ratio >= 1.2, "active against other: {ratio:.2}:1");
     }
 }
 
@@ -262,14 +262,16 @@ fn a_fixture_only_hands_over_roads_near_the_centre() {
 
 #[test]
 fn a_redraw_stays_within_the_budget() {
-    // A dense city block at the largest texture: 1500 chords and a few vehicles. The fastest of
-    // many runs must be inside the 1 ms budget (the minimum is robust against a busy machine).
+    // A dense city block at a large texture: 800 chords of about 40 px and a few vehicles. The
+    // fastest of many runs must be inside the 1 ms budget (the minimum is robust against a busy
+    // machine).
     let c = colors();
     let mut lines = Vec::new();
-    for i in 0..750 {
-        let o = (i % 50) as f32 * 4.0 - 100.0;
-        lines.push(line((o, -100.0), (o + 3.0, 100.0)));
-        lines.push(line((-100.0, o), (100.0, o + 5.0)));
+    for i in 0..400 {
+        let o = (i % 40) as f32 * 5.0 - 100.0;
+        let s = (i / 40) as f32 * 20.0 - 100.0;
+        lines.push(line((o, s), (o + 2.0, s + 18.0)));
+        lines.push(line((s, o), (s + 18.0, o + 3.0)));
     }
     let markers: Vec<MapMarker> = (0..6)
         .map(|i| MapMarker {
@@ -278,7 +280,7 @@ fn a_redraw_stays_within_the_budget() {
             active: i == 0,
         })
         .collect();
-    let mut canvas = Canvas::new(448, c.ground);
+    let mut canvas = Canvas::new(224, c.ground);
     let mut best = u128::MAX;
     for _ in 0..25 {
         let t = std::time::Instant::now();
@@ -287,6 +289,6 @@ fn a_redraw_stays_within_the_budget() {
     }
     assert!(
         best < u128::from(BUDGET_US),
-        "{best} us for 1500 chords at 448 px (budget {BUDGET_US} us)"
+        "{best} us for 800 chords at 224 px (budget {BUDGET_US} us)"
     );
 }

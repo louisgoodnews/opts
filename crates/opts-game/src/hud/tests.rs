@@ -890,19 +890,23 @@ fn north_up_keeps_north_up() {
 fn the_keys_change_the_settings() {
     let mut app = map_app();
     let press = |app: &mut App, keys: &[KeyCode]| {
-        {
-            let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
+        use bevy::input::keyboard::{Key, KeyboardInput};
+        use bevy::input::ButtonState;
+        for state in [ButtonState::Pressed, ButtonState::Released] {
             for k in keys {
-                input.press(*k);
+                app.world_mut().write_message(KeyboardInput {
+                    key_code: *k,
+                    logical_key: Key::Unidentified(bevy::input::keyboard::NativeKey::Unidentified),
+                    state,
+                    text: None,
+                    repeat: false,
+                    window: Entity::PLACEHOLDER,
+                });
+            }
+            for _ in 0..2 {
+                app.update();
             }
         }
-        app.update();
-        let mut input = app.world_mut().resource_mut::<ButtonInput<KeyCode>>();
-        for k in keys {
-            input.release(*k);
-        }
-        input.clear();
-        app.update();
     };
     let config = |app: &App| MiniMapConfig::read(app.world().resource::<GameSettings>());
     assert_eq!(config(&app).zoom_m, 200.0);

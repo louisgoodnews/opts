@@ -204,7 +204,7 @@ pub fn colors_of(palette: &InstrumentPalette) -> MapColors {
     MapColors {
         ground,
         road: u8s(palette.text_dim),
-        active: u8s(palette.needle),
+        active: u8s(palette.text),
         other: u8s(palette.warning),
         north: u8s(palette.text),
     }
