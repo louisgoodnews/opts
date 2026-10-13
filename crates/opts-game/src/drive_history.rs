@@ -18,8 +18,11 @@ pub struct DriveRecord {
     pub map: String,
     /// Start point name.
     pub entry_point: String,
-    /// Vehicle name as shown in the vehicle list.
+    /// Vehicle name as shown in the vehicle list (empty with `no_vehicle`).
     pub vehicle: String,
+    /// The drive started without a vehicle.
+    #[serde(default)]
+    pub no_vehicle: bool,
     /// Chosen repaint, empty for the default.
     pub livery: String,
     /// Weather preset name.
@@ -54,6 +57,7 @@ impl DriveRecord {
             map: setup.selected_map.clone(),
             entry_point: setup.selected_entry_point.clone(),
             vehicle: setup.selected_vehicle.clone(),
+            no_vehicle: setup.no_vehicle,
             livery: setup.selected_livery.clone(),
             weather_preset: setup.weather_preset.clone(),
             year: setup.year,
@@ -71,6 +75,7 @@ impl DriveRecord {
         setup.selected_map = self.map.clone();
         setup.selected_entry_point = self.entry_point.clone();
         setup.selected_vehicle = self.vehicle.clone();
+        setup.no_vehicle = self.no_vehicle;
         setup.selected_livery = self.livery.clone();
         setup.weather_preset = self.weather_preset.clone();
         setup.year = self.year;

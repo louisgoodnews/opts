@@ -97,10 +97,11 @@ pub fn validate(setup: &NewGameSetup, catalogue: &GameCatalogue) -> Result<(), I
     if !map.entry_points.is_empty() && !map.entry_points.contains(&setup.selected_entry_point) {
         return Err(Invalid::NoStartPoint);
     }
-    if !catalogue
-        .vehicles
-        .iter()
-        .any(|v| v.full_name == setup.selected_vehicle)
+    if !setup.no_vehicle
+        && !catalogue
+            .vehicles
+            .iter()
+            .any(|v| v.full_name == setup.selected_vehicle)
     {
         return Err(Invalid::NoVehicle);
     }
@@ -119,7 +120,7 @@ pub fn ensure_valid(setup: &mut NewGameSetup, catalogue: &GameCatalogue) {
         setup.selected_map.clone_from(&map.friendly_name);
         setup.selected_entry_point = map.entry_points.first().cloned().unwrap_or_default();
     }
-    if catalogue.find_vehicle(&setup.selected_vehicle).is_none() {
+    if !setup.no_vehicle && catalogue.find_vehicle(&setup.selected_vehicle).is_none() {
         if let Some(v) = catalogue
             .vehicles
             .iter()

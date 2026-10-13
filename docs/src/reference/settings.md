@@ -43,7 +43,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `ui_scale` | Interface size | whole number 75 to 200 | `100` | at once | available | Scales text and controls, in percent. |
 | `density` | Density | `comfortable`, `compact`, `dense` | `comfortable` | at once | available | How much space the interface leaves between elements. |
 | `reduced_motion` | Reduce motion | on / off | `false` | at once | available | Transitions and animations become instant. |
-| `interface.language` | Language | `en`, `de` | `en` | at once | available | The language of menus and messages. Content from OMSI keeps its own language. |
+| `interface.language` | Language | language tag (`en`, `de`, or an installed pack such as `fr`; see `l10n.languages`) | `en` | at once | available | The language of menus and messages. Content from OMSI keeps its own language. |
+| `interface.language_reload` | Reload languages | action (no stored value) | - | at once | available | Look in the language folder again, so a pack you added or edited shows up without restarting. |
 | `interface.units` | Units | `kmh`, `mph` | `kmh` | at once | available | Speeds are shown in kilometres or miles per hour. |
 | `interface.hud_hints` | Show hints | on / off | `true` | at once | available | Short tips next to controls and in the cab. |
 | `hud.speed` | Speed | on / off | `true` | at once | available | Show the speed readout. |

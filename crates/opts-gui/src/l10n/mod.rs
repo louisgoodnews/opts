@@ -8,11 +8,15 @@
 //! noticed. A test forbids user-visible string literals in `opts-gui` outside this module.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use bevy::prelude::*;
+use opts_core::l10n::check::Issue;
+use opts_core::l10n::pack::{Direction, Pack};
 
-pub mod fluent;
+pub use opts_core::l10n::fluent;
 pub mod keys;
+pub mod packs;
 pub mod pseudo;
 pub mod wizard_keys;
 
@@ -45,6 +49,84 @@ pub struct L10nTooltip(pub &'static str);
 pub struct Localization {
     locale: String,
     bundles: HashMap<String, Table>,
+    /// Messages of language packs from the user directory: looked up before the built-in table
+    /// of the same tag, so a pack overrides or extends it. Replaced as a whole on reload.
+    overlay: HashMap<String, Table>,
+    /// What the last pack scan found.
+    packs: Vec<LoadedPack>,
+}
+
+/// What the localisation keeps of a pack after loading it.
+#[derive(Debug, Clone)]
+struct LoadedPack {
+    pack: Pack,
+}
+
+/// A language the interface can be shown in (a built-in one or an installed pack).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LanguageInfo {
+    /// The tag (`de`, `fr`, `pt-BR`).
+    pub code: String,
+    /// English name.
+    pub name: String,
+    /// Name in the language itself.
+    pub native_name: String,
+    /// Writing direction.
+    pub direction: Direction,
+    /// `true` for `en` and `de` (shipped), `false` for a pack.
+    pub builtin: bool,
+    /// `true` when a pack changes or extends this language.
+    pub from_pack: bool,
+    /// Authors named by the pack (built-in languages: the project).
+    pub authors: Vec<String>,
+    /// Version of the pack.
+    pub version: String,
+    /// Number of English messages.
+    pub total: usize,
+    /// Messages really translated.
+    pub translated: usize,
+    /// Messages present but untouched copies of the English text.
+    pub copied: usize,
+    /// Messages that fall back to English (missing).
+    pub missing: usize,
+    /// Findings of the pack check.
+    pub errors: usize,
+    /// Warnings of the pack check.
+    pub warnings: usize,
+    /// The pack was made against an older English text.
+    pub outdated: bool,
+    /// Scripts used that the bundled fonts do not cover.
+    pub missing_fonts: Vec<String>,
+    /// The folder of the pack.
+    pub dir: Option<PathBuf>,
+    /// `false` for a right-to-left language (not supported yet).
+    pub selectable: bool,
+}
+
+impl LanguageInfo {
+    /// Percentage of English messages that are translated, 0 to 100.
+    #[must_use]
+    pub fn percent(&self) -> f64 {
+        if self.total == 0 {
+            100.0
+        } else {
+            self.translated as f64 * 100.0 / self.total as f64
+        }
+    }
+}
+
+/// The report of one language: completeness, the keys that fall back to English, and every
+/// finding of the pack check.
+#[derive(Debug, Clone)]
+pub struct LanguageReport {
+    /// The language.
+    pub info: LanguageInfo,
+    /// Keys that show English.
+    pub missing_keys: Vec<String>,
+    /// Keys present but identical to English prose.
+    pub copied_keys: Vec<String>,
+    /// Findings, `file:line` relative to the pack folder.
+    pub issues: Vec<Issue>,
 }
 
 impl Default for Localization {
@@ -65,6 +147,8 @@ impl Localization {
         Self {
             locale: locale.to_string(),
             bundles,
+            overlay: HashMap::new(),
+            packs: Vec::new(),
         }
     }
 
@@ -75,7 +159,9 @@ impl Localization {
         let parsed = fluent::parse(source);
         let errors = parsed.errors.clone();
         let table = self.bundles.entry(locale.to_string()).or_default();
+        append_order(table, &parsed.order, &parsed.messages);
         table.messages.extend(parsed.messages);
+        table.comments.extend(parsed.comments);
         if locale == "en" {
             if let Some(en) = self.bundles.get("en") {
                 let pseudo = pseudo::pseudo_table(en);
@@ -100,11 +186,25 @@ impl Localization {
         self.locale = locale.to_string();
     }
 
-    /// Locales with a table.
+    /// Locales with a table (built-in or from a pack).
     pub fn available(&self) -> Vec<&str> {
-        let mut v: Vec<&str> = self.bundles.keys().map(String::as_str).collect();
+        let mut v: Vec<&str> = self
+            .bundles
+            .keys()
+            .chain(self.overlay.keys())
+            .map(String::as_str)
+            .collect();
         v.sort_unstable();
+        v.dedup();
         v
+    }
+
+    /// The pattern of `key` in the own table of `tag`: the pack's first, then the built-in one.
+    fn pattern(&self, tag: &str, key: &str) -> Option<&fluent::Pattern> {
+        self.overlay
+            .get(tag)
+            .and_then(|t| t.messages.get(key))
+            .or_else(|| self.bundles.get(tag).and_then(|t| t.messages.get(key)))
     }
 
     /// The tables to try, best first: the locale, its language, English.
@@ -125,7 +225,7 @@ impl Localization {
 
     fn format_at(&self, key: &str, args: &[(String, Arg)], depth: usize) -> Option<String> {
         for tag in self.chain() {
-            if let Some(pattern) = self.bundles.get(tag).and_then(|b| b.messages.get(key)) {
+            if let Some(pattern) = self.pattern(tag, key) {
                 let lang = tag.split('-').next().unwrap_or("en");
                 let lookup = |k: &str| self.format_at(k, args, depth + 1);
                 return Some(fluent::format(pattern, lang, args, &lookup, depth));
@@ -153,7 +253,7 @@ impl Localization {
 
     fn format_in_at(&self, locale: &str, key: &str, depth: usize) -> Option<String> {
         let args: &[(String, Arg)] = &[];
-        let pattern = self.bundles.get(locale)?.messages.get(key)?;
+        let pattern = self.pattern(locale, key)?;
         let lang = locale.split('-').next().unwrap_or("en");
         let lookup = |k: &str| self.format_in_at(locale, k, depth + 1);
         Some(fluent::format(pattern, lang, args, &lookup, depth))
@@ -172,9 +272,12 @@ impl Localization {
         let mut v: Vec<&str> = self
             .bundles
             .get(locale)
-            .map(|b| b.messages.keys().map(String::as_str).collect())
-            .unwrap_or_default();
+            .into_iter()
+            .chain(self.overlay.get(locale))
+            .flat_map(|b| b.messages.keys().map(String::as_str))
+            .collect();
         v.sort_unstable();
+        v.dedup();
         v
     }
 
@@ -182,36 +285,22 @@ impl Localization {
     /// in the own table of `locale` uses, sorted; `None` when the table lacks the key. German
     /// and English must agree on them, or a variable is lost in translation.
     pub fn variables_of(&self, locale: &str, key: &str) -> Option<Vec<String>> {
-        fn walk(p: &fluent::Pattern, out: &mut std::collections::BTreeSet<String>) {
-            for part in p {
-                match part {
-                    fluent::Part::Text(_) => {}
-                    fluent::Part::Var(v) => {
-                        out.insert(format!("${v}"));
-                    }
-                    fluent::Part::Ref(r) => {
-                        out.insert(r.clone());
-                    }
-                    fluent::Part::Select { var, variants, .. } => {
-                        out.insert(format!("${var}"));
-                        for (_, v) in variants {
-                            walk(v, out);
-                        }
-                    }
-                }
-            }
-        }
-        let pattern = self.bundles.get(locale)?.messages.get(key)?;
-        let mut out = std::collections::BTreeSet::new();
-        walk(pattern, &mut out);
-        Some(out.into_iter().collect())
+        let pattern = self.pattern(locale, key)?;
+        Some(fluent::variables(pattern).into_iter().collect())
     }
 
     /// Whether `locale` has its own table with `key`.
     pub fn has(&self, locale: &str, key: &str) -> bool {
-        self.bundles
-            .get(locale)
-            .is_some_and(|b| b.messages.contains_key(key))
+        self.pattern(locale, key).is_some()
+    }
+}
+
+/// Adds the ids of a later file to the table's file order (each once).
+fn append_order(table: &mut Table, order: &[String], new: &HashMap<String, fluent::Pattern>) {
+    for k in order {
+        if !table.messages.contains_key(k) && new.contains_key(k) {
+            table.order.push(k.clone());
+        }
     }
 }
 
@@ -221,7 +310,9 @@ fn merged(base: &str, extra: &str) -> Table {
     let mut table = fluent::parse(base);
     let more = fluent::parse(extra);
     table.errors.extend(more.errors);
+    append_order(&mut table, &more.order, &more.messages);
     table.messages.extend(more.messages);
+    table.comments.extend(more.comments);
     table
 }
 

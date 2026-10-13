@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-13 by Agent (M-0024 map streaming specification)_
+_Last updated: 2026-10-13 by Agent (M-0083 language packs)_
 
 ---
 
@@ -170,23 +170,24 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### Field report 2026-10-13 — Phase 10 and related (planned, from the project lead; [report](../src/quality/field-report-2026-10-13.md))
 - [ ] 🔴 **Mesh fidelity: parked cars, BRT Citaro, buildings (flipped/misaligned), lantern posts** (M-0066, code) — R-01, R-09, R-17, R-18; discovery by the P-1014 mesh audit (running).
 - [ ] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02; the `.water` spec has open questions ❓.
-- [ ] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04.
+- [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (not merged), verified live; [architecture](../src/architecture/session-vehicles.md).
 - [ ] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05.
 - [ ] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07.
 - [ ] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08.
 - [ ] 🟠 **Control protocol: complete settings control for AI agents** (M-0072, code) — R-10; reproduce the gap first (`settings.*` exists in 1.1.0).
 - [ ] 🔴 **Vehicle dynamics: per-vehicle mass, axles, suspension, brakes on a world physics** (M-0073, spec + code) — R-11.
-- [ ] 🟠 **HUD place label from the spawn entry point (no hard-coded string)** (M-0075, code) — R-12.
-- [ ] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13.
+- [x] 🟠 **HUD place label from the spawn entry point (no hard-coded string)** (M-0075, code) — R-12. **Done 2026-10-13** with M-0068.
+- [x] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13. **Done 2026-10-13** with M-0068.
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
 - [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
 - [ ] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
-- [ ] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25.
+- [~] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25. *Implemented on `feat/language-packs` (not merged): [architecture](../src/architecture/localisation-packs.md), tooling, language list, `l10n.*`; trial in the running app and right-to-left/fonts open.*
 - [ ] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26.
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [~] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28.
+- [ ] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30.
 - [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)

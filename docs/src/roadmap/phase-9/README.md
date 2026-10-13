@@ -42,9 +42,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0064 — HUD and In-Game UI](M-0064.md) — 🟡 Started (HUD registry, profiles, slots, alerts, developer panel done; Pause → Vehicle open)
 - [M-0070 — Start Time Defaults from the Map](M-0070.md) — 📝 Planned (R-07)
 - [M-0071 — HUD Layout Rework: Bottom-Left Cluster, Bottom-Right Mini Map](M-0071.md) — 📝 Planned (R-08)
-- [M-0075 — HUD Place Label from the Spawn Entry Point](M-0075.md) — 📝 Planned (R-12)
-- [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — 📝 Planned (R-13)
-- [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 📝 Planned (R-25)
+- [M-0075 — HUD Place Label from the Spawn Entry Point](M-0075.md) — ✅ Implemented 2026-10-13 (R-12)
+- [M-0076 — Loading Screen Shows the Selected Vehicle from the Start](M-0076.md) — ✅ Implemented 2026-10-13 (R-13)
+- [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 🟡 Implemented (R-25); trial in the running app with a real second language open
 - [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — 🟡 Scrolling fixed, search planned (R-24, R-28)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
@@ -101,12 +101,13 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [ ] **🗺️ HUD Layout Rework** — [M-0071](M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
-- [ ] **📍 HUD Place Label** — [M-0075](M-0075.md)
-  - [ ] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
-- [ ] **⏳ Loading Screen Vehicle** — [M-0076](M-0076.md)
-  - [ ] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
+- [x] **📍 HUD Place Label** — [M-0075](M-0075.md)
+  - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
+- [x] **⏳ Loading Screen Vehicle** — [M-0076](M-0076.md)
+  - [x] Show the selected vehicle (or none) from the first frame; remove the MAN SD77 default (R-13).
 - [ ] **🌍 Language Packs** — [M-0083](M-0083.md)
-  - [ ] Contributors and AI agents add languages as validated files in the user folder; export/check/new tooling; pack discovery without recompiling (R-25).
+  - [x] Contributors and AI agents add languages as validated files in the user folder (`<data>/lang/<code>/`); `opts-tools l10n export|check|new|import|stats`; discovery at start and on reload; language list with completeness; `l10n.*` control methods (R-25, 2026-10-13, `feat/language-packs`, [architecture](../../architecture/localisation-packs.md)).
+  - [ ] Trial in the running app with a real second language; right-to-left layout and fonts beyond Latin, Greek and Cyrillic.
 - [ ] **🔎 Searchable Dropdowns & Honest Catalogue Counts** — [M-0086](M-0086.md)
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [ ] Search field in long dropdowns; catalogue summary with a breakdown by kind (R-24).

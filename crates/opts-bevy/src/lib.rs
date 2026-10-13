@@ -67,8 +67,8 @@ pub use coords::{
     sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
 };
 pub use human::{
-    apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, AlignEyes, Human, HumanHead,
-    HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
+    apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, sync_player_head, AlignEyes,
+    DriverHead, Human, HumanHead, HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
 };
 pub use install::OmsiInstall;
 pub use loader::{

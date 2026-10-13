@@ -101,6 +101,7 @@ pub fn pseudo_table(en: &Table) -> Table {
             .iter()
             .map(|(k, v)| (k.clone(), pseudo_pattern(v)))
             .collect(),
-        errors: Vec::new(),
+        order: en.order.clone(),
+        ..Table::default()
     }
 }

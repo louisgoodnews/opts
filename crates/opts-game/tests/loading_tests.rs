@@ -39,6 +39,17 @@ fn catalogue(map: &str, vehicle: &str) -> GameCatalogue {
 
 /// An app with the in-game plugin, a catalogue naming `map` and `vehicle`, and `args`.
 fn loading_app(map: &str, vehicle: &str, args: CliArgs) -> App {
+    let setup = NewGameSetup {
+        selected_map: map.into(),
+        selected_entry_point: "Mini start".into(),
+        selected_vehicle: vehicle.into(),
+        ..NewGameSetup::default()
+    };
+    loading_app_with(catalogue(map, vehicle), setup, args)
+}
+
+/// Like [`loading_app`], with the catalogue and the choices given.
+fn loading_app_with(catalogue: GameCatalogue, setup: NewGameSetup, args: CliArgs) -> App {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
         .add_plugins(bevy::state::app::StatesPlugin)
@@ -51,13 +62,8 @@ fn loading_app(map: &str, vehicle: &str, args: CliArgs) -> App {
         .insert_resource(MaterialTheme::dark())
         .init_state::<AppState>()
         .add_plugins(OptsGuiPlugin)
-        .insert_resource(catalogue(map, vehicle))
-        .insert_resource(NewGameSetup {
-            selected_map: map.into(),
-            selected_entry_point: "Mini start".into(),
-            selected_vehicle: vehicle.into(),
-            ..NewGameSetup::default()
-        })
+        .insert_resource(catalogue)
+        .insert_resource(setup)
         .insert_resource(AppArgs(args))
         .add_plugins(InGamePlugin);
     app.world_mut()
@@ -507,4 +513,106 @@ fn only_minor_problems_continue_by_themselves_and_are_announced_once() {
         .filter(|x| x.starts_with("Loaded with"))
         .count();
     assert!(n <= 1, "announced once");
+}
+
+// ---- the vehicle line (M-0076) and the map-only start (M-0068) ------------------------------------
+
+fn three_vehicles() -> GameCatalogue {
+    let mut c = catalogue("Mini", "MiniBus");
+    c.vehicles = vec![
+        VehicleItem::named("Alpha_Bus", "Alpha", "Solo"),
+        VehicleItem::named("Beta_Bus", "Beta", "Gelenk"),
+        VehicleItem::named("Gamma_Tram", "Gamma", "Tramino"),
+    ];
+    c
+}
+
+fn setup_for(vehicle: &str, no_vehicle: bool) -> NewGameSetup {
+    NewGameSetup {
+        selected_map: "Mini".into(),
+        selected_entry_point: "Mini start".into(),
+        selected_vehicle: vehicle.into(),
+        no_vehicle,
+        ..NewGameSetup::default()
+    }
+}
+
+/// Asserts that the vehicle tile names `expected` and none of the other vehicles.
+fn assert_vehicle_line(app: &mut App, expected: &str, when: &str) {
+    let all = texts(app);
+    assert!(
+        all.iter().any(|t| t == expected),
+        "{when}: `{expected}` missing in {all:?}"
+    );
+    for other in ["Alpha Solo", "Beta Gelenk", "Gamma Tramino", "No vehicle"] {
+        if other != expected {
+            assert!(
+                !all.iter().any(|t| t == other),
+                "{when}: `{other}` shown in {all:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn the_first_loading_frame_names_the_selected_vehicle_or_none_and_never_changes() {
+    let root = fresh_root("vehicle-line");
+    write_map(&root, &MiniMap::simple("Mini"));
+    let cases = [
+        ("Alpha Solo", false, "Alpha Solo"),
+        ("Beta Gelenk", false, "Beta Gelenk"),
+        ("Gamma Tramino", false, "Gamma Tramino"),
+        ("", true, "No vehicle"),
+    ];
+    for (vehicle, none, expected) in cases {
+        let mut app = loading_app_with(three_vehicles(), setup_for(vehicle, none), args_for(&root));
+        // `loading_app_with` ran exactly one frame: this is the first rendered loading frame.
+        assert_vehicle_line(&mut app, expected, "first frame");
+        // Through the whole load the line stays the same (it used to switch near 70 %).
+        for _ in 0..40 {
+            app.update();
+            if screen_count(&mut app) == 1 {
+                assert_vehicle_line(&mut app, expected, "during the load");
+            }
+        }
+    }
+    let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn a_session_without_a_vehicle_loads_and_runs_with_a_free_camera() {
+    let root = fresh_root("no-vehicle");
+    write_map(&root, &MiniMap::simple("Mini"));
+    let mut app = loading_app_with(three_vehicles(), setup_for("", true), args_for(&root));
+    run(&mut app, 60);
+    assert!(
+        app.world().resource::<SimulationLoadState>().hud_spawned,
+        "the drive started"
+    );
+    assert_eq!(screen_count(&mut app), 0);
+    // No vehicle anywhere.
+    let registry = app
+        .world()
+        .resource::<opts_game::session_vehicles::SessionVehicles>();
+    assert_eq!(registry.live_count(), 0);
+    let players = app
+        .world_mut()
+        .query_filtered::<Entity, With<opts_bevy::PlayerVehicle>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(players, 0);
+    assert_eq!(
+        app.world().resource::<opts_bevy::CameraState>().mode,
+        opts_bevy::CameraMode::FreeRoam
+    );
+    let cameras = app
+        .world_mut()
+        .query_filtered::<Entity, With<Camera3d>>()
+        .iter(app.world())
+        .count();
+    assert_eq!(cameras, 1, "the free camera exists");
+    // The simulation keeps running for many frames without a vehicle (no panic, no stall).
+    run(&mut app, 300);
+    assert!(app.world().resource::<SimulationLoadState>().hud_spawned);
+    let _ = std::fs::remove_dir_all(&root);
 }

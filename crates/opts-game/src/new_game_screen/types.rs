@@ -125,8 +125,11 @@ pub struct NewGameSetup {
     pub selected_map: String,
     /// Start point name.
     pub selected_entry_point: String,
-    /// Vehicle key (see [`GameCatalogue::vehicle_key`]).
+    /// Vehicle key (see [`GameCatalogue::vehicle_key`]); empty until one is chosen.
     pub selected_vehicle: String,
+    /// *Drive without a vehicle*: the session starts with the map only (free camera, no
+    /// instruments); `selected_vehicle` is then ignored.
+    pub no_vehicle: bool,
     /// Chosen repaint; empty for the default.
     pub selected_livery: String,
     /// Weather preset id.
@@ -149,8 +152,11 @@ impl Default for NewGameSetup {
     fn default() -> Self {
         Self {
             selected_map: "Berlin-Spandau".to_string(),
-            selected_entry_point: "Spandau Westerwaldstr./Siegener Str.".to_string(),
-            selected_vehicle: "MAN SD200 - SD77".to_string(),
+            // No map-specific default: the wizard picks the first start point of the chosen map
+            // and the preferred vehicle once the catalogue is there (`planner::ensure_valid`).
+            selected_entry_point: String::new(),
+            selected_vehicle: String::new(),
+            no_vehicle: false,
             selected_livery: String::new(),
             weather_preset: "Clear Summer Day".to_string(),
             year: 1989,

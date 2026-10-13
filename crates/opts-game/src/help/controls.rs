@@ -49,6 +49,7 @@ const SIM_PAUSE: &str = "crates/opts-game/src/in_game/mod.rs";
 const HELP: &str = "crates/opts-game/src/help/mod.rs";
 const THEME: &str = "crates/opts-game/src/shell/footer.rs";
 const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
+const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
 
 /// The single registry of the keyboard bindings that the Help page prints. The input systems keep
 /// reading keys directly (they are not driven by this table); the test in this module reads their
@@ -115,6 +116,7 @@ pub const GROUPS: &[Group] = &[
             bind("Esc", &[KeyCode::Escape], keys::HELP_KEY_PAUSE_MENU, PAUSE),
             bind("P", &[KeyCode::KeyP], keys::HELP_KEY_SIM_PAUSE, SIM_PAUSE),
             bind("Alt", &[KeyCode::AltLeft], keys::HELP_KEY_VEHICLE_MENU, EGO),
+            bind("F8", &[KeyCode::F8], keys::HELP_KEY_SWITCH_VEHICLE, SESSION),
             bind("F1", &[KeyCode::F1], keys::HELP_KEY_HELP, HELP),
             bind("F2", &[KeyCode::F2], keys::HELP_KEY_THEME, THEME),
             bind("F10", &[KeyCode::F10], keys::HELP_KEY_DEV, DEV),

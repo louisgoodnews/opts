@@ -28,6 +28,7 @@ use crate::in_game::types::{
 use crate::in_game::vehicle_spawner::{spawn_camera_rig, spawn_free_camera};
 use crate::in_game::world::spawn_atmosphere_and_lighting;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
+use crate::session_vehicles::{EntrySel, SessionVehicles, SpawnParams, SpawnPoint};
 use crate::AppArgs;
 use opts_bevy::{CameraMode, CameraState};
 
@@ -45,6 +46,7 @@ pub struct LoadEnv<'w, 's> {
     camera_state: ResMut<'w, CameraState>,
     session: ResMut<'w, InGameSessionInfo>,
     report: ResMut<'w, LoadReport>,
+    registry: ResMut<'w, SessionVehicles>,
 }
 
 /// Progress of the stages, as fractions of the bar.
@@ -115,13 +117,15 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
     let session = &mut env.session;
     session.map_name = setup.selected_map.clone();
     session.entry_point = setup.selected_entry_point.clone();
-    session.vehicle_name = setup.selected_vehicle.clone();
-    session.livery_name = setup.selected_livery.clone();
     session.weather_preset = setup.weather_preset.clone();
     session.start_hour = setup.hour;
     session.start_minute = setup.minute;
+    // The vehicle line of the loading screen was set once, when the session was entered
+    // (`in_game::setup_in_game_session`); it is not touched again, so it never changes while loading.
 
     let args = env.args.as_ref().map(|a| &a.0);
+    // An explicit `--vehicle-path` wins over *Drive without a vehicle*.
+    let no_vehicle = setup.no_vehicle && args.and_then(|a| a.vehicle_path.as_deref()).is_none();
     let resolved = resolve_session_config(
         SessionRequest {
             map_path: args.and_then(|a| a.map_path.as_deref()),
@@ -133,11 +137,17 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             selected_livery: args
                 .and_then(|a| a.livery.as_deref())
                 .unwrap_or(&setup.selected_livery),
+            no_vehicle,
         },
         env.catalogue.as_deref(),
         env.service.as_deref(),
     )
-    .and_then(|cfg| begin_world_load(cfg).map(|job| (job.map_name(), job)));
+    .and_then(|cfg| {
+        begin_world_load(cfg).map(|mut job| {
+            job.no_vehicle = no_vehicle;
+            (job.map_name(), job)
+        })
+    });
     let overlay = env.stats.overlay_visible;
     *env.stats = WorldStats {
         overlay_visible: overlay,
@@ -150,10 +160,7 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             env.stats.start_tile = job.start_tile();
             // The card shows the map that is really loading, not the one the menu chose (F17).
             env.session.map_name = name;
-            if let Some(livery) = args.and_then(|a| a.livery.clone()) {
-                env.session.livery_name = livery;
-            }
-            if !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
+            if !no_vehicle && !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
                 env.report.add(
                     LoadProblem::new(
                         false,
@@ -267,9 +274,10 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             stats,
             report,
             setup,
+            registry,
             ..
         } = env;
-        if let Some(job) = job.as_deref_mut() {
+        if let Some(job) = job.as_deref_mut().filter(|j| !j.no_vehicle) {
             // Scrambled vehicle meshes decode on background threads; the vehicle is built only
             // once they are all done.
             if !state.vehicle_prewarmed {
@@ -286,7 +294,25 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             if state.meshes_left > 0 {
                 return;
             }
-            if let Err(e) = load_player_vehicle(
+            let params = SpawnParams {
+                catalogue_id: job
+                    .vehicle_file()
+                    .and_then(|p| p.file_stem())
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                name: setup.selected_vehicle.clone(),
+                bus_file: job
+                    .vehicle_file()
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default(),
+                repaint: job.config_livery().to_owned(),
+                setvars: job.config_setvars().to_vec(),
+                entry: job
+                    .start_entry()
+                    .map_or(EntrySel::Default, |(_, n)| EntrySel::Name(n.to_owned())),
+            };
+            let id = registry.request_spawn(params);
+            match load_player_vehicle(
                 job,
                 stats,
                 commands,
@@ -294,18 +320,35 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 &mut assets.materials,
                 &mut assets.images,
                 &mut assets.bindposes,
+                id,
+                true,
             ) {
-                tracing::error!("cannot load player vehicle: {e}");
-                report.add(
-                    LoadProblem::new(false, "load-problem-vehicle", &setup.selected_vehicle, e)
-                        .because("load-cause-vehicle-unreadable"),
-                );
+                Ok(spawned) => {
+                    let origin = job.session_origin();
+                    let point = job.spawn_point().map(|(p, heading)| SpawnPoint {
+                        x: f64::from(origin.0 + p.x),
+                        y: f64::from(origin.1 + p.y),
+                        z: f64::from(p.z),
+                        heading_deg: f64::from(heading),
+                    });
+                    let entry = job.start_entry().map(|(i, n)| (i, n.to_owned()));
+                    if let Some(r) = registry.get_mut(id) {
+                        r.name.clone_from(&spawned.name);
+                    }
+                    registry.mark_alive(id, spawned.root, entry, point, Some(spawned.camera));
+                    registry.set_active(Some(id));
+                }
+                Err(e) => {
+                    tracing::error!("cannot load player vehicle: {e}");
+                    registry.mark_failed(id, e.clone());
+                    report.add(
+                        LoadProblem::new(false, "load-problem-vehicle", &setup.selected_vehicle, e)
+                            .because("load-cause-vehicle-unreadable"),
+                    );
+                }
             }
         }
         state.vehicle_spawned = true;
-    }
-    if !env.stats.vehicle_name.is_empty() {
-        env.session.vehicle_name = env.stats.vehicle_name.clone();
     }
     state.progress = P_VEHICLE;
     state.stage = LoadStage::CalibrateControls;
@@ -501,6 +544,7 @@ fn restart(
     }
     env.commands.remove_resource::<WorldLoadJob>();
     env.commands.remove_resource::<super::sky::Sky>();
+    env.registry.clear();
     *state = SimulationLoadState::default();
     env.report.reset();
 }
