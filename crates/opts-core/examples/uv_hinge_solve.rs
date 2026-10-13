@@ -6,6 +6,14 @@
 //! this counts the offset combinations that satisfy it (up to the common shift that any affine map
 //! allows) and whether the true combination is among them.
 //! Usage: `uv_hinge_solve <pairs.tsv> [hinges per mesh] [max meshes]`.
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::needless_borrow,
+    unused_mut
+)] // research prototype: lint noise, not worth restructuring
+
 use std::collections::HashMap;
 
 use glam::Vec3;

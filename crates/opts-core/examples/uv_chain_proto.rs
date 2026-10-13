@@ -3,6 +3,14 @@
 //! Prototype (P-1013 B1): how much does a chain model over the vertex order add to the present
 //! decoder? Trains transition and confusion tables on even pairs of `uv_truth`'s `vertices.tsv`
 //! and scores the forward-backward posterior on odd pairs. Usage: `uv_chain_proto <vertices.tsv>`.
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::needless_borrow,
+    unused_mut
+)] // research prototype: lint noise, not worth restructuring
+
 use std::collections::HashMap;
 
 fn km(du: f32, dv: f32) -> (i32, i32) {

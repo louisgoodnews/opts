@@ -9,6 +9,14 @@
 //! Usage: `uv_truth <OMSI root> <out dir> [max pairs]`. A pair is two files with the same file name
 //! (case-insensitive), vertex and face counts, `same_model` geometry, one plain and one keyed;
 //! of several keyed copies the first (sorted path) is used.
+#![allow(
+    clippy::type_complexity,
+    clippy::needless_range_loop,
+    clippy::manual_is_multiple_of,
+    clippy::needless_borrow,
+    unused_mut
+)] // research prototype: lint noise, not worth restructuring
+
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::{Path, PathBuf};

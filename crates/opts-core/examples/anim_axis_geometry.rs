@@ -5,6 +5,8 @@
 //! prints, per label and matrix class, how many animation axes agree (|cos| > 0.95) with the
 //! geometric normal under H1 (origin rotation only), H2 (matrix rows applied after the origin
 //! rotation) and H3 (its transpose).
+#![allow(clippy::needless_range_loop)] // research prototype
+
 use std::collections::BTreeMap;
 use std::io::BufRead;
 
