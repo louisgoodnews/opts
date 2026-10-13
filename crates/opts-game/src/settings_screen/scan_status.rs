@@ -402,7 +402,10 @@ pub fn refresh_scan_chip(
     }
     for (mut k, mut a) in &mut reasons {
         k.0 = reason;
-        a.0 = vec![("days".into(), inputs.interval_days.max(1).to_string().into())];
+        a.0 = vec![(
+            "days".into(),
+            inputs.interval_days.max(1).to_string().into(),
+        )];
     }
 }
 

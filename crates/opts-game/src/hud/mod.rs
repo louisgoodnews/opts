@@ -92,10 +92,16 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     details::spawn_details_toasts,
-                    details::open_details,
+                    // Before the toast's own click handler: that one despawns the toast (and its
+                    // action button) and the despawn may be applied before this system runs.
+                    details::open_details
+                        .before(opts_gui::components::toast::toast_action_click_system),
                     details::forget_dismissed,
                     details::details_choices,
-                ),
+                )
+                    // `forget_dismissed` must not run before `open_details` has taken the text of a
+                    // toast whose action was just pressed (the click despawns the toast).
+                    .chain(),
             );
     }
 }
