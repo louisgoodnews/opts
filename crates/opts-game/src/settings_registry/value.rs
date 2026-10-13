@@ -86,6 +86,17 @@ pub fn normalize(d: &SettingDescriptor, text: &str) -> Result<String, SettingErr
             }
         }
         SettingKind::Time => parse_hhmm(text).ok_or_else(|| bad("expected HH:MM".into())),
+        SettingKind::Text if d.key == "interface.language" => {
+            let tag = text.trim();
+            if opts_core::l10n::pack::valid_code(tag) || tag == "en-XA" {
+                Ok(tag.to_string())
+            } else {
+                Err(bad(
+                    "expected a language tag such as en, de or pt-BR (the installed ones are listed by `l10n.languages`)"
+                        .into(),
+                ))
+            }
+        }
         SettingKind::Text => {
             if text.chars().count() > 256 {
                 Err(bad("at most 256 characters".into()))

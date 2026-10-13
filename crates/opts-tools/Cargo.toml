@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dependencies]
 # Internal
 opts-core = { workspace = true }
+serde_json = { workspace = true }
 
 # CLI Argument Parsing (Add clap to workspace dependencies later)
 # clap = { version = "4.5", features = ["derive"] } 

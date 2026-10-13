@@ -14,6 +14,7 @@ pub mod home;
 pub mod hud;
 pub mod in_game;
 pub mod isolation;
+pub mod language_packs;
 pub mod look;
 pub mod menu;
 pub mod new_game_screen;
