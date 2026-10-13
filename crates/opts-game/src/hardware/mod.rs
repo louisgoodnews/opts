@@ -51,7 +51,10 @@ impl HardwareState {
     /// A state that stores its file in `dir`.
     #[must_use]
     pub fn with_dir(dir: Option<PathBuf>) -> Self {
-        Self { dir, ..Self::default() }
+        Self {
+            dir,
+            ..Self::default()
+        }
     }
 
     /// Is a probe running?
@@ -130,7 +133,10 @@ fn start(mut state: ResMut<HardwareState>) {
     state.start_probe(false, false);
 }
 
-fn finish(mut state: ResMut<HardwareState>, page: Option<ResMut<crate::settings_screen::SettingsPageState>>) {
+fn finish(
+    mut state: ResMut<HardwareState>,
+    page: Option<ResMut<crate::settings_screen::SettingsPageState>>,
+) {
     if state.poll() == Some(true) {
         // Rebuild the page so the new facts show.
         if let Some(mut p) = page {
@@ -168,7 +174,11 @@ fn collect_renderer_inputs(
             let limits = d.limits();
             gpu.max_texture_2d = Some(limits.max_texture_dimension_2d);
             gpu.max_buffer_bytes = Some(limits.max_buffer_size);
-            gpu.features = d.features().iter_names().map(|(n, _)| n.to_ascii_lowercase()).collect();
+            gpu.features = d
+                .features()
+                .iter_names()
+                .map(|(n, _)| n.to_ascii_lowercase())
+                .collect();
             gpu.ray_tracing = Some(gpu.features.iter().any(|f| f.contains("ray_query")));
         }
         state.inputs.gpu = Some(gpu);

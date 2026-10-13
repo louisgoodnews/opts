@@ -44,7 +44,9 @@ pub(crate) fn document(world: &World) -> Value {
 
 fn profile(world: &mut World, params: &Value) -> Outcome {
     if params.get("redetect").and_then(Value::as_bool) == Some(true) {
-        world.resource_mut::<HardwareState>().start_probe(false, true);
+        world
+            .resource_mut::<HardwareState>()
+            .start_probe(false, true);
     }
     Outcome::ok(document(world))
 }

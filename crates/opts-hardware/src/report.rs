@@ -21,7 +21,11 @@ fn leaf(v: &Value) -> String {
         }
         Value::String(s) => s.clone(),
         Value::Object(m) if m.contains_key("major") => {
-            format!("{}.{}", m["major"], m.get("minor").unwrap_or(&Value::from(0)))
+            format!(
+                "{}.{}",
+                m["major"],
+                m.get("minor").unwrap_or(&Value::from(0))
+            )
         }
         other => other.to_string(),
     }

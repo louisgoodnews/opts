@@ -59,7 +59,10 @@ pub fn lines(p: &HardwareProfile, loc: &Localization) -> Vec<Line> {
             "settings-info-hw-gpu",
             vec![
                 ("vendor", fx(&p.gpu.vendor, loc, |v| v.key().to_owned())),
-                ("class", fx(&p.gpu.device_class, loc, |v| v.key().to_owned())),
+                (
+                    "class",
+                    fx(&p.gpu.device_class, loc, |v| v.key().to_owned()),
+                ),
                 ("vram", fx(&p.gpu.vram_mib, loc, mib_as_gb)),
                 ("backend", fx(&p.gpu.backend, loc, |v| v.key().to_owned())),
             ],
@@ -82,7 +85,10 @@ pub fn lines(p: &HardwareProfile, loc: &Localization) -> Vec<Line> {
         (
             "settings-info-hw-recs",
             vec![
-                ("radius", recommended_tile_radius(p, &MapStats::default()).to_string()),
+                (
+                    "radius",
+                    recommended_tile_radius(p, &MapStats::default()).to_string(),
+                ),
                 ("filter", recommended_texture_filtering(p).to_owned()),
                 ("look", recommended_look(p).to_owned()),
                 ("scale", recommended_ui_scale(p).to_string()),

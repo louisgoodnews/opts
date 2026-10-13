@@ -18,12 +18,14 @@ Goal: M-0081. Worktree `opts-wt-hardware`, branch `feat/opts-hardware`. Resume f
 - [x] recommendations + tests
 - [x] generated field reference + test
 - [x] redaction / no-network / budget tests
-- [ ] opts-tools hardware report
-- [ ] control protocol hardware.profile
-- [ ] settings registry Advanced -> Hardware page, de/en
-- [ ] CI macOS job, Windows tests
+- [x] opts-tools hardware report
+- [x] control protocol hardware.profile
+- [x] settings registry Advanced -> Hardware page, de/en
+- [x] CI macOS job, Windows tests
 - [x] cross-target checks
-- [ ] docs: M-0081, ROADMAP, BOARD, R-22, SUMMARY, crate graph
+- [x] docs: M-0081, ROADMAP, BOARD, R-22, SUMMARY, crate graph
 - [ ] gates
 
 Notes: cross-target clippy -D warnings clean for x86_64/aarch64 windows-msvc, x86_64/aarch64 apple-darwin, linux musl, aarch64 linux gnu (targets installed via rustup, network available).
+
+Open / not done: report-dialog preview with checkbox (switch adds profile text to the saved report only), GPU benchmark, audio channel layout and wheel detection (need audio/input layers). Gates running: see final report. Game test run: `cargo test -p opts-game --lib -- hardware settings` 49 ok.

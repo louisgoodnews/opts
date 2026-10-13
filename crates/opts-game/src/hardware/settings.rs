@@ -1,6 +1,8 @@
 //! The settings of *Settings → Advanced → Hardware*: two actions and one switch (default off).
 
-use crate::settings_registry::descriptor::{Category as C, SettingDescriptor as D, SettingKind as K};
+use crate::settings_registry::descriptor::{
+    Category as C, SettingDescriptor as D, SettingKind as K,
+};
 
 /// The descriptors; the profile itself is shown below the rows by `view`.
 #[must_use]

@@ -7,7 +7,7 @@ use opts_hardware::{Fact, HardwareProfile};
 
 use super::*;
 use crate::settings::GameSettings;
-use crate::settings_registry::{SettingsRegistry, SettingKind};
+use crate::settings_registry::{SettingKind, SettingsRegistry};
 
 fn loc() -> Localization {
     let mut l = Localization::new("en");
@@ -76,21 +76,37 @@ fn page_lines_have_both_languages_for_known_and_unknown_profiles() {
     for p in [HardwareProfile::default(), known, opts_hardware::probe()] {
         for (key, vars) in view::lines(&p, &l) {
             assert!(l.has("en", key) && l.has("de", key), "{key}");
-            assert!(vars.iter().all(|(_, v)| !v.contains('⟦')), "{key}: unresolved message");
+            assert!(
+                vars.iter().all(|(_, v)| !v.contains('⟦')),
+                "{key}: unresolved message"
+            );
         }
     }
     for r in opts_hardware::Reason::ALL {
         let k = format!("hw-reason-{}", r.key());
         assert!(l.has("en", &k) && l.has("de", &k), "{k}");
     }
-    for k in ["yes", "unknown", "no-not_nvidia", "no-os_unsupported", "no-backend_unsupported", "no-no_ray_tracing", "no-no_runtime"] {
+    for k in [
+        "yes",
+        "unknown",
+        "no-not_nvidia",
+        "no-os_unsupported",
+        "no-backend_unsupported",
+        "no-no_ray_tracing",
+        "no-no_runtime",
+    ] {
         let k = format!("hw-dlss-{k}");
         assert!(l.has("en", &k) && l.has("de", &k), "{k}");
     }
     for k in [
-        "settings-info-hw-title", "settings-info-hw-privacy", "settings-info-hw-detecting",
-        "settings-info-hw-stored", "settings-info-hw-not-stored", "settings-toast-hw-detecting",
-        "settings-toast-hw-deleted", "settings-toast-hw-nothing-stored",
+        "settings-info-hw-title",
+        "settings-info-hw-privacy",
+        "settings-info-hw-detecting",
+        "settings-info-hw-stored",
+        "settings-info-hw-not-stored",
+        "settings-toast-hw-detecting",
+        "settings-toast-hw-deleted",
+        "settings-toast-hw-nothing-stored",
     ] {
         assert!(l.has("en", k) && l.has("de", k), "{k}");
     }
