@@ -408,6 +408,9 @@ pub fn rebuild_page(
             .filter(|d| !d.hidden)
         {
             spawn_row(&mut commands, pane, &ctx, d);
+            if d.key == "content.rescan" {
+                super::scan_status::spawn_chip(&mut commands, pane);
+            }
         }
         let kind = theme_name_key(theme.kind());
         super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);

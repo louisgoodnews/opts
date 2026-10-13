@@ -10,6 +10,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 - [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 📝 Planned, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
+- [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 📝 Planned, 🔴 high (R-34 … R-42)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
 - [M-0069 — Session Save and Restore](M-0069.md) — 📝 Planned, 🔴 high (R-05)
@@ -43,3 +44,5 @@ Suggested order: M-0068 (sessions) before M-0069 (save needs the registry); M-00
   - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [ ] **⚙️ Vehicle Dynamics** — [M-0073](M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
+- [ ] **🏙️ Content Fidelity Pass** — [M-0090](M-0090.md)
+  - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).

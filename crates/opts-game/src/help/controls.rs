@@ -43,6 +43,7 @@ const fn bind(
 const SIM: &str = "crates/opts-bevy/src/vehicle_sim.rs";
 const RAIL: &str = "crates/opts-game/src/in_game/omsi_world/rail.rs";
 const CAMERA: &str = "crates/opts-bevy/src/camera/input.rs";
+const VIEWPOINT: &str = "crates/opts-bevy/src/camera/viewpoint.rs";
 const EGO: &str = "crates/opts-bevy/src/camera/mode/ego.rs";
 const PAUSE: &str = "crates/opts-gui/src/actions.rs";
 const SIM_PAUSE: &str = "crates/opts-game/src/in_game/mod.rs";
@@ -109,6 +110,7 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_CAMERA_RESET,
                 CAMERA,
             ),
+            bind("Tab", &[KeyCode::Tab], keys::HELP_KEY_VIEWPOINT, VIEWPOINT),
         ],
     ),
     (

@@ -33,6 +33,8 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::KeyN,
     KeyCode::KeyR,
     KeyCode::Space,
+    // The viewpoint editor of the driver's view (Tab; Home resets inside it).
+    KeyCode::Tab,
     KeyCode::ArrowUp,
     KeyCode::ArrowDown,
     KeyCode::ArrowLeft,
@@ -378,8 +380,12 @@ impl Plugin for VehicleTriggerPlugin {
         app.init_resource::<ScriptKeyBindings>().add_systems(
             Update,
             (
-                script_key_trigger_system.run_if(crate::reporting::not_modal_active),
-                script_mouse_trigger_system.run_if(crate::reporting::not_modal_active),
+                script_key_trigger_system
+                    .run_if(crate::reporting::not_modal_active)
+                    .run_if(crate::camera::not_editing_viewpoint),
+                script_mouse_trigger_system
+                    .run_if(crate::reporting::not_modal_active)
+                    .run_if(crate::camera::not_editing_viewpoint),
             ),
         );
     }

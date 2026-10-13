@@ -655,7 +655,19 @@ fn select_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> 
     let option = opt_str(params, "option")?.map(str::to_string);
     let index = opt_u64(params, "index")?;
     let entity = find_entity(world, &id).ok_or_else(|| not_found(&id))?;
-    let node = node_of(world, &id)?;
+    // A screen puts its id on the combo box root, which is not a node of the tree: the tree knows
+    // the root's header (the control that is operated).
+    let node_id = if world.get::<M3Combobox>(entity).is_some() {
+        world
+            .query::<(Entity, &ComboboxHeader)>()
+            .iter(world)
+            .find(|(_, h)| h.0 == entity)
+            .and_then(|(e, _)| world.get::<UiId>(e))
+            .map_or_else(|| id.clone(), |u| u.0.to_string())
+    } else {
+        id.clone()
+    };
+    let node = node_of(world, &node_id)?;
     check_usable(&node, &id)?;
     check_modal_scope(world, entity, "ui.select")?;
     // A master list: select the entry like a click on its row does.
