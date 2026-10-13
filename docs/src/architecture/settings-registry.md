@@ -124,7 +124,11 @@ folder-chooser trait; Action: button. Every element has a `UiId` of the form
 the registry by the test `reference_page_is_up_to_date`
 (`UPDATE_SETTINGS_DOC=1 cargo test -p opts-game settings_registry`), checked like the roadmap copy.
 
-## 8. Decisions
+## 8. Registered by other modules
+
+`opts-game`'s `hardware` module adds the *Advanced → Hardware* rows (`advanced.hardware_redetect`, `advanced.hardware_delete`, `advanced.hardware_allow_reports`, default off) through `builtin::all()`; the profile itself is shown below the rows by `settings_screen/info.rs` ([hardware probe charter](hardware-probe.md)).
+
+## 9. Decisions
 
 - **Strings as the stored form**, descriptor as schema: no schema migration of the database, old files load unchanged.
 - **Legacy fields stay** (no flag-day): the registry bridges them through the loader's own parser.

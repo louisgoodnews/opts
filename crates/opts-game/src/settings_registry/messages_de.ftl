@@ -193,6 +193,46 @@ settings-toast-omsi-invalid = Dieser Ordner sieht nicht nach einer OMSI-2-Instal
 
 settings-back = Zurück
 
+# Hardware (M-0081)
+set-hw-redetect = Hardware neu erkennen
+set-hw-redetect-desc = Prüft deinen Computer erneut und speichert das Ergebnis in einer Datei auf diesem Computer. Nichts wird irgendwohin gesendet.
+set-hw-delete = Gespeichertes Hardware-Profil löschen
+set-hw-delete-desc = Entfernt die Datei mit der erkannten Hardware von diesem Computer.
+set-hw-reports = Hardware-Profil in Berichten erlauben
+set-hw-reports-desc = Wenn an, enthält ein gespeicherter Fehlerbericht auch die unten gezeigte Hardware. Du kannst sie in der Berichtsdatei lesen, bevor du sie teilst. Standardmäßig aus.
+settings-info-hw-title = Deine Hardware
+settings-info-hw-privacy = OPTS prüft deinen Computer nur, um gute Startwerte zu wählen. Das Ergebnis bleibt auf diesem Computer. Es enthält keine Seriennummern, Namen oder Adressen, und nichts wird irgendwohin gesendet. Die vollständige Liste: opts-tools hardware report.
+settings-info-hw-detecting = Hardware wird erkannt ...
+settings-info-hw-stored = Eine Kopie liegt in: { $path }
+settings-info-hw-not-stored = Auf diesem Computer ist keine Kopie gespeichert.
+settings-info-hw-os = System: { $os }
+settings-info-hw-cpu = Prozessor: { $vendor }, { $physical } Kerne, { $logical } Threads
+settings-info-hw-memory = Speicher: { $available } von { $total } GB frei
+settings-info-hw-gpu = Grafik: { $vendor }, { $class }, { $vram } GB Grafikspeicher, { $backend }
+settings-info-hw-display = Bildschirm: { $width } × { $height }, { $count } angeschlossen
+settings-info-hw-storage = Datenträger mit den Inhalten: { $class }, { $free } GB frei
+settings-info-hw-recs = Für diesen Computer gewählte Startwerte: { $radius } Kacheln um dich, Texturfilter { $filter }, Look { $look }, Oberflächengröße { $scale } %
+settings-info-hw-dlss = DLSS: { $dlss }
+settings-toast-hw-detecting = Hardware wird erkannt. Die Seite aktualisiert sich danach.
+settings-toast-hw-deleted = Das gespeicherte Hardware-Profil wurde gelöscht.
+settings-toast-hw-nothing-stored = Es war kein Hardware-Profil gespeichert.
+hw-reason-not_probed = noch nicht erkannt
+hw-reason-not_on_this_platform = auf diesem System nicht verfügbar
+hw-reason-needs_renderer = bekannt, sobald das Spielfenster offen ist
+hw-reason-unavailable = auf diesem Rechner nicht verfügbar
+hw-reason-unreadable = konnte nicht gelesen werden
+hw-reason-unparsed = nicht verstanden
+hw-reason-timeout = übersprungen, es dauerte zu lange
+hw-reason-not_requested = nicht gemessen
+hw-reason-cancelled = abgebrochen
+hw-dlss-yes = möglich
+hw-dlss-unknown = noch nicht bekannt
+hw-dlss-no-not_nvidia = nicht möglich, es braucht eine NVIDIA-Grafikkarte
+hw-dlss-no-os_unsupported = auf diesem Betriebssystem nicht möglich
+hw-dlss-no-backend_unsupported = mit dieser Grafikschnittstelle nicht möglich
+hw-dlss-no-no_ray_tracing = nicht möglich, die Karte hat kein Raytracing
+hw-dlss-no-no_runtime = nicht möglich, die DLSS-Dateien fehlen
+
 scan-never = nie
 scan-chip = { $status } · Letzte Suche: { $when }
 scan-level-good = Aktuell

@@ -95,6 +95,8 @@ pub struct ReportContext {
     pub camera: Option<String>,
     /// Player vehicle.
     pub vehicle: Option<String>,
+    /// The hardware profile as text; set only while the user allows it in *Settings → Advanced*.
+    pub hardware: Option<String>,
 }
 
 #[cfg(test)]

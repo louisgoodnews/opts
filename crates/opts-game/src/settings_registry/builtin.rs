@@ -564,5 +564,6 @@ pub fn all() -> Vec<D> {
     v.extend(hud());
     v.extend(minimap());
     v.extend(content());
+    v.extend(crate::hardware::descriptors());
     v
 }
