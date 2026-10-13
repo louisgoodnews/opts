@@ -408,7 +408,7 @@ pub fn register(app: &mut App) {
     })
     .register_save_section(SaveSection {
         id: "active_vehicle",
-        stage: Stage::Settled,
+        stage: Stage::Vehicles,
         order: 0,
         capture: active_capture,
         apply: Some(active_apply),

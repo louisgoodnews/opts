@@ -129,7 +129,6 @@ pub fn quick_switch(keyboard: Res<ButtonInput<KeyCode>>, mut commands: Commands)
 fn maintain(world: &mut World) {
     ops::sync_lost(world);
     ops::refresh_records(world);
-    state::apply_pending(world);
 }
 
 /// Publishes the place label.

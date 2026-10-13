@@ -105,8 +105,17 @@ pub fn open_saves_overlay(commands: &mut Commands, mode: SavesMode) {
             dirty: true,
             ..Default::default()
         };
+        let texts = world
+            .get_resource::<opts_gui::l10n::Localization>()
+            .map(|l| {
+                (
+                    l.t(keys::SAVES_NAME_LABEL),
+                    l.t(keys::SAVES_NAME_PLACEHOLDER),
+                )
+            })
+            .unwrap_or_default();
         let mut commands = world.commands();
-        spawn_overlay(&mut commands, mode);
+        spawn_overlay(&mut commands, mode, texts);
         world.flush();
     });
 }
@@ -127,7 +136,11 @@ fn label(
     .id()
 }
 
-fn spawn_overlay(commands: &mut Commands, mode: SavesMode) {
+fn spawn_overlay(
+    commands: &mut Commands,
+    mode: SavesMode,
+    (label_text, placeholder): (String, String),
+) {
     let (root, card) = ModalBuilder::new()
         .with_size_percent(80.0, 85.0)
         .with_width_range(560.0, 900.0)
@@ -165,8 +178,8 @@ fn spawn_overlay(commands: &mut Commands, mode: SavesMode) {
             ))
             .id();
         c.commands().entity(name_row).with_children(|r| {
-            let field = TextFieldBuilder::outlined(keys::SAVES_NAME_LABEL)
-                .with_placeholder(keys::SAVES_NAME_PLACEHOLDER)
+            let field = TextFieldBuilder::outlined(label_text)
+                .with_placeholder(placeholder)
                 .with_max_characters(super::container::MAX_NAME_CHARS)
                 .full_width()
                 .spawn_child(r);

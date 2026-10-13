@@ -36,7 +36,9 @@ fn app() -> App {
         .join(".local/share/opts/benchmark/session-save/ui-tests")
         .join(format!("{:?}", std::thread::current().id()).replace(['(', ')'], ""));
     let _ = std::fs::remove_dir_all(&dir);
-    app.insert_resource(crate::save::SaveStorage(Some(crate::save::SaveStore::new(dir))));
+    app.insert_resource(crate::save::SaveStorage(Some(crate::save::SaveStore::new(
+        dir,
+    ))));
     app.update();
     app.world_mut()
         .resource_mut::<NextState<AppState>>()
@@ -265,12 +267,19 @@ fn the_save_list_saves_asks_before_overwriting_renames_and_deletes() {
     click(&mut app, "pause.save");
     let open = ids(&mut app);
     assert!(open.contains(&"saves.name".to_owned()), "{open:?}");
-    assert!(!open.contains(&"pause.resume".to_owned()), "the overlay steps aside");
+    assert!(
+        !open.contains(&"pause.resume".to_owned()),
+        "the overlay steps aside"
+    );
 
     // An empty name is refused inline.
     click(&mut app, "saves.save");
     assert_eq!(save_files(&app), 0);
-    assert!(app.world().resource::<crate::save::ui::SavesUi>().name_error.is_some());
+    assert!(app
+        .world()
+        .resource::<crate::save::ui::SavesUi>()
+        .name_error
+        .is_some());
 
     set_name(&mut app, "Erste Fahrt");
     click(&mut app, "saves.save");
@@ -320,20 +329,34 @@ fn loading_a_save_whose_map_is_missing_shows_the_error_template() {
     click(&mut app, "pause.save");
     set_name(&mut app, "Karte weg");
     click(&mut app, "saves.save");
-    let store = app.world().resource::<crate::save::SaveStorage>().0.clone().expect("store");
+    let store = app
+        .world()
+        .resource::<crate::save::SaveStorage>()
+        .0
+        .clone()
+        .expect("store");
     let mut loaded = store.read("karte-weg").expect("saved").file;
-    loaded.sections.get_mut("session").expect("session").data["map_folder"] = "Gibt-es-nicht".into();
+    loaded.sections.get_mut("session").expect("session").data["map_folder"] =
+        "Gibt-es-nicht".into();
     store.write("karte-weg", &loaded).expect("edit");
     // Rebuild the list from the changed file.
-    app.world_mut().resource_mut::<crate::save::ui::SavesUi>().dirty = true;
+    app.world_mut()
+        .resource_mut::<crate::save::ui::SavesUi>()
+        .dirty = true;
     app.update();
     click(&mut app, "saves.load.karte-weg");
     click(&mut app, "dialog.saves.load.yes");
     let shown = ids(&mut app);
-    assert!(shown.contains(&"dialog.saves.error.another".to_owned()), "{shown:?}");
+    assert!(
+        shown.contains(&"dialog.saves.error.another".to_owned()),
+        "{shown:?}"
+    );
     assert!(shown.contains(&"dialog.saves.error.back".to_owned()));
     assert_eq!(state(&app), AppState::InGame, "nothing was left");
     click(&mut app, "dialog.saves.error.another");
     let now = ids(&mut app);
-    assert!(now.contains(&"saves.load.karte-weg".to_owned()), "the list stays: {now:?}");
+    assert!(
+        now.contains(&"saves.load.karte-weg".to_owned()),
+        "the list stays: {now:?}"
+    );
 }

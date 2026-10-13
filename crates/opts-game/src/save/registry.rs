@@ -55,6 +55,10 @@ pub type CheckFn = fn(&Value, &CheckEnv) -> Vec<Issue>;
 pub enum Stage {
     /// When the world is loaded and the HUD is up, before the saved vehicles are rebuilt.
     World,
+    /// When every saved vehicle exists (and has stood still for a few frames), before their saved
+    /// state is put back: the active vehicle is chosen here, because activating a vehicle parks
+    /// the previous one.
+    Vehicles,
     /// When every saved vehicle has been rebuilt (or has failed) and has received its state.
     Settled,
 }

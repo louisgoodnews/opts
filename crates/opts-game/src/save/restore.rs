@@ -23,6 +23,8 @@ use crate::shell::notify::NotifyExt;
 
 /// How long a restore waits for its vehicles before it settles without them (seconds).
 pub const SETTLE_TIMEOUT_S: f32 = 120.0;
+/// Frames without a spawning vehicle before the saved vehicle state is applied.
+pub const QUIET_FRAMES: u32 = 10;
 
 /// Why a load was refused or failed.
 #[derive(Debug, Clone, PartialEq)]
@@ -77,6 +79,8 @@ pub struct PendingRestore {
     pub vehicle_label: String,
     plan: RestorePlan,
     world_applied: bool,
+    vehicles_applied: bool,
+    quiet_frames: u32,
     waited_s: f32,
     /// Problems so far (sections that could not be applied, newer or unknown sections).
     pub warnings: Vec<String>,
@@ -186,6 +190,8 @@ pub fn begin_restore(world: &mut World, id: &str) -> Result<RestoreStarted, Rest
         vehicle_label,
         plan,
         world_applied: false,
+        vehicles_applied: false,
+        quiet_frames: 0,
         waited_s: 0.0,
         warnings,
         from_backup: loaded.from_backup,
@@ -249,23 +255,50 @@ pub fn drive_restore(world: &mut World) {
         world.resource_mut::<PendingRestore>().world_applied = true;
         return;
     }
-    let waiting = {
+    let spawning = {
         let reg = world.resource::<SessionVehicles>();
-        reg.records().iter().any(|r| {
-            r.lifecycle == Lifecycle::Spawning
-                || (r.lifecycle == Lifecycle::Alive && r.saved_state.is_some())
-        }) || world.contains_resource::<SpawnVehicleRequest>()
+        reg.records()
+            .iter()
+            .any(|r| r.lifecycle == Lifecycle::Spawning)
+            || world.contains_resource::<SpawnVehicleRequest>()
     };
-    if waiting {
-        let dt = world.resource::<Time<Real>>().delta_secs();
-        let pending = &mut world.resource_mut::<PendingRestore>();
+    let dt = world.resource::<Time<Real>>().delta_secs();
+    let mut timed_out = false;
+    {
+        let mut pending = world.resource_mut::<PendingRestore>();
         pending.waited_s += dt;
-        if pending.waited_s < SETTLE_TIMEOUT_S {
+        if spawning {
+            pending.quiet_frames = 0;
+        } else {
+            pending.quiet_frames += 1;
+        }
+        if pending.waited_s >= SETTLE_TIMEOUT_S {
+            timed_out = true;
+            pending
+                .warnings
+                .push("some vehicles did not come back in time".to_owned());
+        }
+    }
+    if !timed_out {
+        // Every vehicle exists; give the placement systems a few frames to finish with them.
+        if world.resource::<PendingRestore>().quiet_frames < QUIET_FRAMES {
             return;
         }
-        pending
-            .warnings
-            .push("some vehicles did not come back in time".to_owned());
+        if !world.resource::<PendingRestore>().vehicles_applied {
+            run_stage(world, Stage::Vehicles);
+            world.resource_mut::<PendingRestore>().vehicles_applied = true;
+            return;
+        }
+        // Each vehicle takes its state once its scripts have started.
+        crate::session_vehicles::state::apply_pending(world);
+        let waiting = world
+            .resource::<SessionVehicles>()
+            .records()
+            .iter()
+            .any(|r| r.lifecycle == Lifecycle::Alive && r.saved_state.is_some());
+        if waiting {
+            return;
+        }
     }
     run_stage(world, Stage::Settled);
     let Some(done) = world.remove_resource::<PendingRestore>() else {
