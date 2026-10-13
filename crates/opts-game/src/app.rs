@@ -123,7 +123,8 @@ pub fn build_app(args: CliArgs) -> App {
         .add_plugins(crate::omsi_setup::OmsiSetupPlugin)
         .add_plugins(crate::catalogue_service::CataloguePlugin)
         .add_plugins(ShutdownPlugin)
-        .add_plugins(crate::control::GameControlPlugin);
+        .add_plugins(crate::control::GameControlPlugin)
+        .add_plugins(opts_bevy::render_stats::RenderStatsPlugin);
 
     // F1 bug reports (screenshot + text); needs a window, so not in headless runs.
     if !args.headless {
