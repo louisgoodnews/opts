@@ -113,6 +113,7 @@
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
+- [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
@@ -257,6 +258,9 @@
 # 🔍 Meta & Audits
 
 - [Usability Test Protocol (Phase 9, not yet run)](meta/usability-test-protocol.md)
+- [UV Incident Files of the MAN NG272 (2026-10-13)](meta/uv-incidents-ng272-2026-10-13.md)
+- [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
+- [Bug: MAN NL/NG Material Artifacts (P-1012)](meta/bugs/man-nlng-materials-2026-10-12.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Bug: Spline Winding / Road Hidden by Terrain (2026-10-10)](meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md)
