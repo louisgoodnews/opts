@@ -28,7 +28,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Location:** [`crates/opts-core/src/formats/x/parse.rs:388`](../../../crates/opts-core/src/formats/x/parse.rs#L388)
 - **Description:** A bare `.unwrap()` is invoked on the result of `parse_face_indices` within `parse_mesh`, bypassing the crate's `Result<_, ParseError>` error-handling contract.
 - **Evidence:**
-  ```rust
+  ```rust,ignore
   let indices = parse_face_indices(tokens, &mut idx).unwrap();
   ```
 - **Impact:** Malformed or truncated DirectX `.x` files encountered during mesh loading will trigger a thread panic rather than returning a structured `ParseError`, crashing the calling application or ECS asset loader.
@@ -49,7 +49,7 @@ Furthermore, an investigation into the post-freeze documentation state reconcile
 - **Location:** [`crates/opts-bevy/tests/vehicle_sim_sync.rs:25-30`](../../../crates/opts-bevy/tests/vehicle_sim_sync.rs#L25-L30)
 - **Description:** In headless integration tests running `FixedUpdate` systems, standard `app.update()` calls do not advance virtual time unless `TimeUpdateStrategy::ManualDuration` is configured, creating silent test stalls or non-deterministic test behavior if neglected.
 - **Evidence:** Test harness required explicit workaround insertion:
-  ```rust
+  ```rust,ignore
   app.insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
       Duration::from_millis(16),
   ));

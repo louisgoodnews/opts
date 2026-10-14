@@ -25,7 +25,7 @@
 
 Sample `.report` (written by that run):
 
-```
+```text
 OPTS Report
 ===========
 
