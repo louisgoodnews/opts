@@ -7,6 +7,7 @@
 | **Date** | 2026-10-04 |
 | **Deciders** | Project Lead |
 | **Supersedes** | None |
+| **Revised** | 2026-10-14 — Added reference to Content Issue Registry as formal discovery log for undocumented keywords and asset edge cases. |
 
 ---
 
@@ -85,6 +86,8 @@ To create a defensible clean-room implementation, we separate reverse engineerin
 - If the spec is ambiguous, they submit a request to update the spec rather than "figuring it out" by looking at forbidden sources.
 
 For a solo contributor, this means **separating your discovery work from your implementation work into distinct sessions or commits**, with the spec committed *before* implementation begins. This establishes a documented trail proving the spec preceded the code.
+
+When undocumented keywords, asset edge cases, or parser failures are discovered during black-box observation, they must be recorded in the **Content Issue Registry** (`docs/src/quality/content-issue-registry.csv` and [`docs/src/quality/README.md`](../quality/README.md)) as a formal discovery log. Each logged defect links the observed anomaly in third-party assets to its corresponding specification entry (`Q-NNN`), maintaining a clear provenance trail before any parser implementation or fix is written.
 
 ### 4. 🚧 The GPL Contamination Problem
 

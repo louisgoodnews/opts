@@ -20,3 +20,27 @@ python3 scripts/content_issues.py --since <time of the sweep, UTC> --corpus corp
 `--since` drops older log lines, so entries of an earlier build do not pollute the list. Commit the regenerated files; a diff shows what was fixed (entry gone) and what regressed (new entry). The *Status* column of the markdown stays `open` for every entry the generator writes; resolved entries disappear instead of being closed by hand.
 
 Reading the entries: *Subject* is the content file (paths relative to the OMSI folder), *Message* the log message with numbers replaced by `N`, *Context* the vehicles or maps seen in. Entries of an `(script engine)` subject are host callbacks the scripts call that OPTS does not implement yet ([M-0093](../roadmap/phase-4/M-0093.md), [M-0094](../roadmap/phase-4/M-0094.md)); `stack underflow` entries would be VM bugs (there are none since 2026-10-12).
+
+## Defect Tracking Protocol (Dual Documentation)
+
+When encountering an undocumented asset edge case, scrambled mesh, unexpected keyword, or parser failure during development:
+
+The project adheres to a **dual-documentation protocol**:
+
+1. **Format Specification (Canonical Deep Record):**
+   - Add an entry to the relevant format specification's **Open Questions** table (`docs/src/formats/...`).
+   - Use the standard `Q-NNN` identifier with a priority/severity indicator (e.g., `🔴 Critical`, `🟡 Moderate`, `⚪ Low`).
+   - Detail the exact syntactic ambiguity, observed values, and expected failure mode or recovery strategy.
+
+2. **Quality Registry (Cross-Cutting Index & Discovery Log):**
+   - Log the occurrence in the content quality registry ([`content-issue-registry.csv`](content-issue-registry.csv) or [`mesh-issue-registry.csv`](mesh-issue-registry.csv) for mesh anomalies).
+   - Capture:
+     - `date`: Discovery timestamp (ISO 8601).
+     - `vehicle_or_map`: Context vehicle, map, or `(unknown)`.
+     - `asset_path`: Path relative to the OMSI root or descriptor.
+     - `format`: Format extension (`.o3d`, `.sco`, `.sli`, `.cfg`, etc.).
+     - `issue_class`: Category (`scrambled_uv`, `missing_texture`, `undocumented_keyword`, `parse_failure`, `other`).
+     - `status`: Lifecycle state (`open`, `investigating`, `fixed`, `wontfix`, `upstream`).
+     - `spec_reference`: Direct markdown link to the format specification file and its `Q-NNN` anchor.
+
+The registry serves as the cross-cutting inventory across maps and vehicles, while the format specification provides the authoritative technical reference. Both are required.

@@ -83,6 +83,7 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 - If you discover how an OMSI format works, document it in `docs/src/formats/`.
 - Follow the "Two-Phase" process outlined in [ADR-0002](docs/src/adr/0002-clean-room-policy.md).
 - Include a **Provenance** section at the bottom of your spec citing exactly how you learned the information.
+- Follow the **[Defect Tracking Protocol](docs/src/quality/README.md#defect-tracking-protocol-dual-documentation)** when logging undocumented keywords, scrambled meshes, or parser failures discovered in OMSI assets: document technical details in the format spec's Open Questions table (`Q-NNN`) and record the discovery in the content quality registry.
 
 ### 💻 Writing Code
 - Ensure there is an approved specification or issue for the code you are writing.
