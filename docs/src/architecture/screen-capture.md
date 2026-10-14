@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Design approved 2026-10-14 (Phase A); Phase B implemented; Phase C measured in the main menu only (see "Measurements") |
+| **Status** | ✅ Design approved 2026-10-14; implemented; frame-rate criterion measured on a loaded scene (see "Measurements") |
 | **Date** | 2026-10-14 |
 | **Branch** | `agent/screen-capture` |
 | **Decision record** | [ADR-0012](../adr/0012-screen-capture-encoding.md) |
@@ -276,7 +276,7 @@ How the design maps to the code:
 
 ## Measurements (Phase C, 2026-10-14, main menu only)
 
-Setup: `opts-game` debug build (dependencies at opt-level 3, our crates at opt-level 1), windowed 1920x1013, no OMSI content loaded (the menu), uncapped frame rate around 650 fps, 16-core machine with a load average of about 5, throw-away config and data directories. **No map or vehicle was loaded**, so the numbers below say how expensive capture is per frame, not how it behaves in a heavy scene; the acceptance runs on a loaded map are still open.
+Setup: `opts-game` debug build (dependencies at opt-level 3, our crates at opt-level 1), windowed 1920x1013, no OMSI content loaded (the menu), uncapped frame rate around 650 fps, 16-core machine with a load average of about 5, throw-away config and data directories. **No map or vehicle was loaded**, so the numbers below say how expensive capture is per frame, not how it behaves in a heavy scene; the criterion itself is measured on a loaded scene in the next subsection.
 
 | Setting (30 fps requested) | Captured fps | Dropped of requested | Per frame: readback / convert / encode (ms) |
 | :--- | ---: | ---: | :--- |

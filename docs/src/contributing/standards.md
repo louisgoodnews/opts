@@ -831,7 +831,15 @@ Before submitting a pull request, verify:
 
 ---
 
+## 🗑️ Generated Files and Test Artefacts
+
+* Output that a tool or a failing test writes (the mdBook output `docs/book/`, the actual and diff images of a failed golden-screen test in `crates/*/tests/golden/_failed/`) must be **ignored and not tracked**. A `.gitignore` entry alone does **not** stop a file that is already tracked: Git keeps reporting changes to it, and the next failing run overwrites the committed copy. When adding an ignore rule for a path that may already be in the index, also run `git rm -r --cached <path>` in the same commit and check with `git check-ignore -v <file>`.
+* `git add -A` after running `scripts/local-ci.sh` picks up `docs/book/` unless it is ignored; review `git status` before committing.
+
+---
+
 ## 📝 Changelog
 
+- `2026-10-14` — Added the rule on generated files and test artefacts.
 - `2026-10-04` — Initial version. Three-part structure: universal
   principles, Rust practices, OPTS design conventions.
