@@ -1034,9 +1034,9 @@ fn the_mini_map_radius_follows_the_speed_and_the_fixed_mode_ignores_it() {
     run(&mut app, 900);
     assert!((state(&app).radius_m / (200.0 / 3.0) - 1.0).abs() < 0.05);
     // Fixed mode: the speed does not matter.
-    let mut settings = app.world_mut().resource_mut::<GameSettings>();
-    settings.set_raw(minimap::SETTING_ZOOM_MODE, "fixed");
-    drop(settings);
+    app.world_mut()
+        .resource_mut::<GameSettings>()
+        .set_raw(minimap::SETTING_ZOOM_MODE, "fixed");
     set_speed(&mut app, 60.0);
     run(&mut app, 60);
     assert_eq!(state(&app).radius_m, 200.0);
