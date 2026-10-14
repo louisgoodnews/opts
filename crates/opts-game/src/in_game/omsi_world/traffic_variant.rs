@@ -11,6 +11,7 @@ use opts_core::formats::map::{
 };
 use opts_core::formats::vehicles::model::ModelConfig;
 use opts_core::formats::vehicles::{AiKind, AiProfile, BusManifest, VehicleDomain};
+use opts_sim::script::{load_vehicle_scripts, measure_ai_response, AiResponse};
 use opts_traffic::{VehicleClass, VehicleKind, VehicleTraits};
 
 use super::WorldLoadJob;
@@ -25,6 +26,10 @@ pub(super) struct Unit {
     pub model_dir: PathBuf,
     pub tex_dirs: Vec<PathBuf>,
     pub profile: AiProfile,
+    /// What the vehicle's own AI script makes of full throttle and full brake, measured when the
+    /// variant loads; `None` when the script gives neither (it needs inputs the host does not
+    /// feed yet, or the vehicle has none).
+    pub response: Option<AiResponse>,
     /// Body length and the distance from the model origin to its front bumper (m), measured when
     /// the meshes first load.
     pub size: Option<(f32, f32)>,
@@ -72,7 +77,13 @@ impl Variant {
         let brakes: Option<Vec<f64>> = self
             .units
             .iter()
-            .map(|u| u.profile.brake_max_n.map(f64::from))
+            .map(|u| {
+                u.response
+                    .as_ref()
+                    .map(|r| f64::from(r.brake_force))
+                    .filter(|b| *b > 0.0)
+                    .or(u.profile.brake_max_n.map(f64::from))
+            })
             .collect();
         VehicleTraits {
             kind: head.kind.map(vehicle_kind),
@@ -80,7 +91,12 @@ impl Variant {
             length,
             mass_kg,
             top_speed: head.top_speed_ms.map(f64::from),
-            drive_torque: head.gas_max.map(f64::from),
+            drive_torque: self.units[0]
+                .response
+                .as_ref()
+                .map(|r| f64::from(r.peak_torque()))
+                .filter(|t| *t > 0.0)
+                .or(head.gas_max.map(f64::from)),
             wheel_radius: head.wheel_radius_m.map(f64::from),
             brake_force: brakes
                 .map(|b| b.iter().sum())
@@ -126,6 +142,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         .map(|b| ConstFile::parse(&b))
         .collect();
     let profile = AiProfile::from_manifest(&manifest, &consts);
+    let response = measure_script(job, &manifest, &dir);
     let tex_dirs = vec![
         job.install
             .find_in(&dir, "texture")
@@ -141,6 +158,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         model_dir,
         tex_dirs,
         profile,
+        response,
         size: None,
         hitch: Vec2::ZERO,
         joint: Vec2::ZERO,
@@ -149,6 +167,15 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         reversed: false,
     };
     Ok((unit, manifest, dir))
+}
+
+/// Runs the vehicle's own AI script and records its response to full throttle and full brake.
+fn measure_script(job: &WorldLoadJob, manifest: &BusManifest, dir: &Path) -> Option<AiResponse> {
+    if manifest.scripts.is_empty() {
+        return None;
+    }
+    let (mut engine, _) = load_vehicle_scripts(manifest, |rel| job.install.find_in(dir, rel));
+    Some(measure_ai_response(&mut engine)).filter(AiResponse::is_live)
 }
 
 /// The joint data of a trailing unit behind `parent`, as the player's chain computes it.
@@ -361,6 +388,7 @@ mod tests {
             model: ModelConfig::default(),
             model_dir: PathBuf::new(),
             tex_dirs: vec![],
+            response: None,
             profile: {
                 let mut p =
                     AiProfile::from_manifest(&BusManifest::parse("[mass]\n1\n").unwrap(), &[]);

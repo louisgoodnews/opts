@@ -75,7 +75,7 @@ Proposed mapping, phase 1 (formulas, all clamped, all in `Calibration`):
 | `length` | from the profile |
 | `class` | from `kind`, else the existing heuristic |
 
-The units of `AI_M_gas_max` and the exact meaning of `AI_v_max` against `AI_v_max_erreich` are inferred from the AI script's `M_Wheel = Throttle · M_gas_max · (1 - v / v_reach)` ([ai-traffic.md](ai-traffic.md) §2.2) and are ❓. Phase 2 replaces the formulas for acceleration and braking by a **measured characterisation**: run the vehicle's own `main_AI.osc` in the script VM against `opts-sim` once per vehicle (full throttle to v_max, full brake from 50 km/h), cache `a(v)` and the stopping distance in the decoder cache, and feed those into `VehicleTraits`. This uses the real mass and the real constants without modelling every drivetrain, but depends on the consist-mass fix (M-0053) for articulated vehicles.
+The units of `AI_M_gas_max` and the exact meaning of `AI_v_max` against `AI_v_max_erreich` are inferred from the AI script's `M_Wheel = Throttle · M_gas_max · (1 - v / v_reach)` ([ai-traffic.md](ai-traffic.md) §2.2) and are ❓. *Phase 2 status (2026-10-14): implemented.* Phase 2 replaces the formulas for acceleration and braking by a **measured characterisation**: run the vehicle's own `main_AI.osc` in the script VM against `opts-sim` once per vehicle (full throttle to v_max, full brake from 50 km/h), cache `a(v)` and the stopping distance in the decoder cache, and feed those into `VehicleTraits`. This uses the real mass and the real constants without modelling every drivetrain, but depends on the consist-mass fix (M-0053) for articulated vehicles.
 
 ### D3: all groups, class, domain
 
@@ -169,3 +169,8 @@ Files read and commands run are listed in the [investigation report](../meta/ai-
 - [AI Road Traffic: Research and Integration Plan](ai-traffic.md), [M-0049](../roadmap/phase-4/M-0049.md)
 - [Vehicle scripts: the route for OPTS](vehicle-scripts-route.md), [`.bus` format](../formats/text/vehicles/bus.md), [`.const` files](../formats/text/vehicles/const.md)
 - Articulation physics design (branch `design/articulation-physics`, not yet on master)
+
+## Phase 2 results (2026-10-14)
+
+`opts_sim::script::measure_ai_response` runs a vehicle's script with the AI flags (`AI`, `AI_Engine`, `Throttle` 1) at eight speeds and with `Brake` 1 and records `M_Wheel` and `Brakeforce`; the spawner feeds the peak torque and the brake force into `VehicleTraits` when the script is live and keeps the constants-based values otherwise. Over the 426 vehicles of the map AI lists (`ai_response` example): **317 follow the shared car law** (so the measurement equals the constants-based value; on Waldhofen all 91 spawns of a headless run have identical parameters before and after), **85 deviate** (ships, trains, bicycles, scooters, lorries; for bicycles and scooters the measurement supplies the first real torque curve), **23 are inert** and 1 has no script. Most deviating lorries give zero torque with the inputs the measurement feeds: their scripts need the gearbox and engine inputs of the bus script work (the bus script integration strategy on branch `research/bus-script-integration`, phase P0), so the measurement doubles as a probe for the completeness of that input feed. A diagnostic log line `traffic state` (every 15 s, debug level) reports target, agents, road length, densities, vehicle slots and why spawn attempts were rejected.
+

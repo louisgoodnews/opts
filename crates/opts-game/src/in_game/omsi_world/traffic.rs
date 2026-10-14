@@ -421,6 +421,8 @@ fn pick_slot(pool: &TrafficPool, factors: &[f64], rng: &mut Rng) -> Option<usize
 pub fn spawn_traffic(
     time: Res<Time>,
     mut elapsed: Local<f32>,
+    mut since_log: Local<f32>,
+    mut rejected: Local<[u32; 5]>,
     mut commands: Commands,
     job: Option<ResMut<WorldLoadJob>>,
     mut state: ResMut<TrafficState>,
@@ -459,11 +461,30 @@ pub fn spawn_traffic(
     let target = ((state.road_length_m / METRES_OF_ROAD_PER_VEHICLE * factors.iter().sum::<f64>())
         as usize)
         .min(settings.max);
+    // A line every 15 s says why no vehicle appears (no road, no density, vehicles not loaded).
+    *since_log += SPAWN_INTERVAL_S;
+    if *since_log >= 15.0 {
+        *since_log = 0.0;
+        let count = |f: fn(&SlotState) -> bool| pool.slots.iter().filter(|s| f(&s.state)).count();
+        tracing::debug!(
+            target,
+            agents = state.world.agents().len(),
+            road_km = state.road_length_m / 1000.0,
+            density = ?factors,
+            ready = count(|s| matches!(s, SlotState::Ready(_))),
+            pending = count(|s| matches!(s, SlotState::Pending)),
+            failed = count(|s| matches!(s, SlotState::Failed)),
+            rejected = ?*rejected,
+            "traffic state"
+        );
+    }
     if state.world.agents().len() >= target {
         return;
     }
     let mut rng = pool.rng.take().unwrap_or_else(|| Rng::new(1));
-    let result = (|| {
+    // Why an attempt found no place, counted for the diagnostic line: no vehicle ready, no lane
+    // in the ring around the camera, lane gone, thinned by a density rule, in the camera's view.
+    let result = (|| -> Result<_, usize> {
         let centre = DVec2::new(
             f64::from(cam.translation().x),
             -f64::from(cam.translation().z),
@@ -471,39 +492,43 @@ pub fn spawn_traffic(
         let fwd = cam.forward();
         let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
         // The vehicle type comes first: bus and truck lanes admit only their own.
-        let slot = pick_slot(&pool, &factors, &mut rng)?;
+        let slot = pick_slot(&pool, &factors, &mut rng).ok_or(0_usize)?;
         let class = match &pool.slots[slot].state {
             SlotState::Ready(v) => v.class(),
             _ => VehicleClass::Car,
         };
-        let (lane_id, s) =
-            state
-                .world
-                .graph()
-                .random_spot(centre, SPAWN_MIN_M, SPAWN_MAX_M, &mut rng, |l| {
-                    l.kind == LaneKind::Road
-                        && l.length() > 6.0
-                        && l.rules.density != Some(0.0)
-                        && l.rules.allows(class)
-                })?;
-        let lane = state.world.graph().lane(lane_id)?;
+        let (lane_id, s) = state
+            .world
+            .graph()
+            .random_spot(centre, SPAWN_MIN_M, SPAWN_MAX_M, &mut rng, |l| {
+                l.kind == LaneKind::Road
+                    && l.length() > 6.0
+                    && l.rules.density != Some(0.0)
+                    && l.rules.allows(class)
+            })
+            .ok_or(1_usize)?;
+        let lane = state.world.graph().lane(lane_id).ok_or(2_usize)?;
         // A density rule below 1 thins out the lane (`0` was excluded above).
         if let Some(d) = lane.rules.density {
             if rng.next_f64() > d.min(1.0) {
-                return None;
+                return Err(3);
             }
         }
         let at = lane.geometry.point_at(s);
         // Not in plain view of the camera.
         let to = (at - centre).normalize_or_zero();
         if view.dot(to) > 0.5 && at.distance(centre) < 160.0 {
-            return None;
+            return Err(4);
         }
-        Some((lane_id, s, lane.speed_limit, slot, at))
+        Ok((lane_id, s, lane.speed_limit, slot, at))
     })();
-    let Some((lane_id, s, limit, slot, at)) = result else {
-        pool.rng = Some(rng);
-        return;
+    let (lane_id, s, limit, slot, at) = match result {
+        Ok(found) => found,
+        Err(reason) => {
+            rejected[reason] += 1;
+            pool.rng = Some(rng);
+            return;
+        }
     };
 
     let group_name = pool.groups[pool.slots[slot].group].name.clone();
@@ -615,6 +640,7 @@ pub fn spawn_traffic(
     let delta_height = head.profile.delta_height_m;
     let name = variant.name.clone();
     let fallbacks = head.profile.fallbacks.clone();
+    let measured = head.response.is_some();
     let chain: Vec<ChainUnit> = variant
         .units
         .iter()
@@ -647,6 +673,7 @@ pub fn spawn_traffic(
                 max_decel = params.max_decel,
                 class = ?params.class,
                 units = entities.len(),
+                measured,
                 fallbacks = ?fallbacks,
                 "AI vehicle spawned"
             );
