@@ -276,7 +276,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 
 ### Callbacks (called with `(M.V.name)`)
 
-Callbacks take their arguments from the stack and leave a result on it; the exact argument lists are ❓ (not in the shipped files). The names suggest groups: *terminus/bus-stop strings and indices* (`GetTerminusString`, `GetBusstopString`, `GetTerminusIndex`, …), *timetable queries* (`GetTT…`), *tickets and money* (`GetTicketName`, `GetTicketValue`, `GiveChangeCoin`), *passenger counts* (`GetHumanCountOnPathLink`, `GetHumanCountOnSeat`) and *geometry* (`GetHeightAbovePoint`).
+Callbacks take their arguments from the stack and leave a result on it; the exact argument lists are not in the shipped files. **Inferred signatures** for all 39 callbacks the vehicle scripts use (argument counts, result types, confidence) are in [Engine Callbacks: Inferred Signatures](callbacks.md) (2026-10-14). The names suggest groups: *terminus/bus-stop strings and indices* (`GetTerminusString`, `GetBusstopString`, `GetTerminusIndex`, …), *timetable queries* (`GetTT…`), *tickets and money* (`GetTicketName`, `GetTicketValue`, `GiveChangeCoin`), *passenger counts* (`GetHumanCountOnPathLink`, `GetHumanCountOnSeat`) and *geometry* (`GetHeightAbovePoint`).
 
 #### Vehicle callbacks (25)
 
