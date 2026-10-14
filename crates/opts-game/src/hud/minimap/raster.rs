@@ -94,6 +94,7 @@ impl Canvas {
         ]
     }
 
+    #[inline(always)]
     fn blend(&mut self, x: i32, y: i32, color: [u8; 4], coverage: f32) {
         if x < 0 || y < 0 || x >= self.size as i32 || y >= self.size as i32 || coverage <= 0.0 {
             return;
@@ -106,7 +107,7 @@ impl Canvas {
         let c = coverage;
         for (dst, src) in self.data[i..i + 3].iter_mut().zip(color) {
             let old = f32::from(*dst);
-            *dst = (old + (f32::from(src) - old) * c).round() as u8;
+            *dst = (old + (f32::from(src) - old) * c + 0.5) as u8;
         }
         self.data[i + 3] = 255;
     }
@@ -162,14 +163,25 @@ fn draw_line(canvas: &mut Canvas, a: Vec2, b: Vec2, width_px: f32, color: [u8; 4
     };
     // Extend the ends a little so chords of one arc join without notches.
     let cap = (width_px / 2.0).min(2.0);
-    let coverage = |p: Vec2| {
-        let q = p - a;
-        let t = q.dot(u);
+    // Plain scalars and `inline(always)`: this is the hot loop (about 100 pixels per chord), and
+    // the dev profile (opt-level 1 for this crate) does not inline `Vec2` operator calls here.
+    let (ax, ay, ux, uy, nx, ny) = (a.x, a.y, u.x, u.y, n.x, n.y);
+    let hw = width_px / 2.0 + 0.5;
+    #[inline(always)]
+    fn cover(
+        (px, py): (f32, f32),
+        (ax, ay, ux, uy, nx, ny): (f32, f32, f32, f32, f32, f32),
+        (len, cap, hw): (f32, f32, f32),
+    ) -> f32 {
+        let (qx, qy) = (px - ax, py - ay);
+        let t = qx * ux + qy * uy;
         if t < -cap || t > len + cap {
             return 0.0;
         }
-        width_px / 2.0 + 0.5 - q.dot(n).abs()
-    };
+        hw - (qx * nx + qy * ny).abs()
+    }
+    let frame = (ax, ay, ux, uy, nx, ny);
+    let ends = (len, cap, hw);
     if d.x.abs() >= d.y.abs() {
         let x0 = min.x.floor().max(0.0) as i32;
         let x1 = max.x.ceil().min(size - 1.0) as i32;
@@ -186,7 +198,7 @@ fn draw_line(canvas: &mut Canvas, a: Vec2, b: Vec2, width_px: f32, color: [u8; 4
             let y0 = ((yc - reach).floor() as i32).max(0);
             let y1 = ((yc + reach).ceil() as i32).min(size as i32 - 1);
             for y in y0..=y1 {
-                let c = coverage(Vec2::new(cx, y as f32 + 0.5));
+                let c = cover((cx, y as f32 + 0.5), frame, ends);
                 if c > 0.0 {
                     canvas.blend(x, y, color, c);
                 }
@@ -203,7 +215,7 @@ fn draw_line(canvas: &mut Canvas, a: Vec2, b: Vec2, width_px: f32, color: [u8; 4
             let x0 = ((xc - reach).floor() as i32).max(0);
             let x1 = ((xc + reach).ceil() as i32).min(size as i32 - 1);
             for x in x0..=x1 {
-                let c = coverage(Vec2::new(x as f32 + 0.5, cy));
+                let c = cover((x as f32 + 0.5, cy), frame, ends);
                 if c > 0.0 {
                     canvas.blend(x, y, color, c);
                 }

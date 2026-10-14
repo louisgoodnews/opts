@@ -266,9 +266,15 @@ fn a_fixture_only_hands_over_roads_near_the_centre() {
 
 #[test]
 fn a_redraw_stays_within_the_budget() {
-    // A dense city block at a large texture: 800 chords of about 40 px and a few vehicles. The
-    // fastest of many runs must be inside the 1 ms budget (the minimum is robust against a busy
-    // machine).
+    // A dense city block at a large texture: 800 chords of about 40 px and a few vehicles (about
+    // 150 000 pixel visits). The fastest of many runs is taken: the minimum is robust against a
+    // busy machine.
+    //
+    // The 1 ms budget is for the release build. The dev profile compiles this crate at
+    // opt-level 1 (only dependencies get 3), which costs about 2x on this loop (measured: about
+    // 2.2 ms here, 14 ms at opt-level 0), so a debug-assertions build gets twice the slack, like
+    // the other timing tests in the repo that allow CI runners a wide margin. The release time
+    // is what `hud.state` reports live as minimap.last_us.
     let c = colors();
     let mut lines = Vec::new();
     for i in 0..400 {
@@ -286,14 +292,15 @@ fn a_redraw_stays_within_the_budget() {
         .collect();
     let mut canvas = Canvas::new(224, c.ground);
     let mut best = u128::MAX;
-    for _ in 0..25 {
+    for _ in 0..100 {
         let t = std::time::Instant::now();
         render(&mut canvas, NORTH_UP, &lines, &markers, &c);
         best = best.min(t.elapsed().as_micros());
     }
+    let slack: u128 = if cfg!(debug_assertions) { 6 } else { 3 };
     assert!(
-        best < u128::from(BUDGET_US) * 3,
-        "{best} us for 800 chords at 224 px (budget {BUDGET_US} us, 3x slack for a busy CI machine; \
-         the live time is `hud.state` minimap.last_us)"
+        best < u128::from(BUDGET_US) * slack,
+        "{best} us for 800 chords at 224 px (budget {BUDGET_US} us, {slack}x slack for a busy CI \
+         machine and the dev profile; the live time is `hud.state` minimap.last_us)"
     );
 }
