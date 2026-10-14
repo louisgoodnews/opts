@@ -29,7 +29,9 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
   - `axles: Vec<AxleState>`: Ordered list of vehicle axles with wheel rotation and Ackermann angles.
   - `drivetrain: DrivetrainModel`: Powertrain engine, automatic transmission, and braking forces.
   - `suspension: SuspensionModel`: Static weight distribution and dynamic longitudinal load transfer.
-  - `articulation: Option<ArticulationJoint>`: Multi-unit articulated trailer hitch kinematic constraint.
+  - `consist: Vec<TrailerKinematics>`: the following units of an articulated bus or tram, stepped with the chassis and serialised with it (`#[serde(default)]`). `attach_trailer(..)` adds a unit, `consist_alpha_rad(k)` gives its joint angle.
+  - `trailer_loads: Vec<UnitLoad>`, `consist_mass_kg()`, `friction_loads_n()`, `hitch_force_n(k)`: the consist's mass and axles (`vehicle::consist`, M-0053 Part 2). The longitudinal equation acts on `Σ m`; script drive torque is limited by `ROAD_FRICTION` times the static load on the driven axles of all units, brake force by the load on all axles.
+  - `teleport(position, heading_rad)`: places the chassis and re-seeds the consist straight behind it; `teleports` counts the calls so readers can notice them. `reseed_consist()` does the re-seeding alone.
   - `inputs: VehicleInputs`: Active driver analog and digital control state.
 
 ### 2. Vehicle Controls (`opts_sim::VehicleInputs`, `GearPosition`)
@@ -60,10 +62,11 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
 - `compute_dynamic_loads(static_loads, axle_positions, mass_kg, accel_y) -> Vec<f32>`: Inertial weight transfer.
 - `update_axle_suspension(&self, axle, static_n, dynamic_n, dt)`: Spring deflection and damper forces.
 
-### 6. Articulation (`opts_sim::ArticulationJoint`, `ArticulationState`)
-- `ArticulationJoint`: Trailer hitch position computation, mechanical angle stops ($\pm 54^\circ$), and kinematic yaw tracking.
-- `UnitLoad`, `VehicleSimulation::{set_trailers, consist_mass_kg, head_mass_kg, driven_mass_kg}` (2026-10-14): the following units' mass and driven axles. The chassis mass that accelerates and brakes is the whole consist's; the head's own axle loads keep the head's mass; traction of script torque is limited by the mass on driven axles, braking by the whole consist. Filled by `spawn_trailer_chain` for road consists (a trailer without a stated mass takes the mass of the unit in front; rail consists keep their own dynamics).
-- `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). `ArticulationJoint` above still runs inside `VehicleSimulation` with fixed geometry; merging the two is [M-0053](../src/roadmap/phase-4/M-0053.md).
+### 6. Articulation (`opts_sim::TrailerKinematics`, `TrailerState`)
+- `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). The state is part of `VehicleSimulation` (`consist`) and serialisable (`reseed`, `alpha_against`); the older `ArticulationJoint` with fixed geometry was removed in [M-0053](../src/roadmap/phase-4/M-0053.md) Part 1.
+
+- `UnitLoad` (`vehicle::consist`; `from_manifest`/`from_manifest_or`, `with_axles`), `VehicleSimulation::{attach_trailer, set_trailers, consist_mass_kg, head_mass_kg, driven_mass_kg, friction_loads_n, hitch_force_n}` (2026-10-14, merged with the earlier consist-mass fix `655c8b6`): per following unit its mass and axle positions/driven flags. The chassis keeps the head's mass (its axle loads and suspension use it); the mass that accelerates and brakes is `consist_mass_kg()`; script traction is limited by μ times the static load on the driven axles of all units (a head with no axle marked driven counts as driven on all), braking by the whole consist. Filled by `spawn_trailer_chain` for road consists (a trailer without a stated mass takes the mass of the unit in front; rail consists keep their own dynamics).
+- Ground following (`vehicle::ground`, M-0053 Part 3): `ground_probes()` names the points to sample per unit, `apply_ground(samples, dt)` filters height/pitch/roll with the fixed step, `joint_angles_deg(k)` gives `(β, γ)`; `head_body`/`consist_bodies` are serialised.
 
 ### 7. OMSI Script Engine (`opts_sim::script`)
 - `ScriptEngine`: compiles a vehicle's `.osc` files to bytecode and runs them on a stack machine. Per frame the host sets system values, calls `run_frame`/`trigger`, reads variables and drains events. The engine is deterministic, apart from a seeded random generator.

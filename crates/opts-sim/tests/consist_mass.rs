@@ -12,11 +12,11 @@ fn solo(mass_kg: f32) -> VehicleSimulation {
 
 fn consist(head_kg: f32, trailer_kg: f32, trailer_driven_axles: usize) -> VehicleSimulation {
     let mut sim = solo(head_kg);
-    sim.set_trailers(vec![UnitLoad {
-        mass_kg: trailer_kg,
-        axles: 2,
-        driven_axles: trailer_driven_axles,
-    }]);
+    sim.set_trailers(vec![UnitLoad::with_axles(
+        trailer_kg,
+        2,
+        trailer_driven_axles,
+    )]);
     sim
 }
 
@@ -92,16 +92,8 @@ fn the_head_keeps_its_own_axle_loads_and_setting_units_again_replaces_them() {
     sim.set_trailers(Vec::new());
     assert_eq!(sim.consist_mass_kg(), 8_550.0);
     sim.set_trailers(vec![
-        UnitLoad {
-            mass_kg: 5_000.0,
-            axles: 1,
-            driven_axles: 0,
-        },
-        UnitLoad {
-            mass_kg: 5_000.0,
-            axles: 1,
-            driven_axles: 0,
-        },
+        UnitLoad::with_axles(5_000.0, 1, 0),
+        UnitLoad::with_axles(5_000.0, 1, 0),
     ]);
     assert_eq!(sim.consist_mass_kg(), 18_550.0);
 }

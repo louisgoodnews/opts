@@ -17,7 +17,6 @@ pub mod script;
 pub mod vehicle;
 
 // Convenient top-level re-exports
-pub use vehicle::articulation::{ArticulationJoint, ArticulationState};
 pub use vehicle::axle::{AxleConfig, AxleState, WheelState};
 pub use vehicle::chassis::ChassisState;
 pub use vehicle::drivetrain::{

@@ -106,12 +106,32 @@ impl ChassisState {
         is_braking: bool,
         dt: f32,
     ) {
+        self.integrate_with_mass(
+            net_longitudinal_force_n,
+            net_yaw_torque_nm,
+            is_braking,
+            dt,
+            self.total_mass_kg,
+        );
+    }
+
+    /// Like [`ChassisState::integrate`], but the longitudinal force acts on `moving_mass_kg`
+    /// instead of the chassis' own mass: the mass of the whole consist the chassis tows
+    /// (`Σ mᵢ`, see `consist`). Lateral damping and yaw keep the chassis' own mass and inertia.
+    pub fn integrate_with_mass(
+        &mut self,
+        net_longitudinal_force_n: f32,
+        net_yaw_torque_nm: f32,
+        is_braking: bool,
+        dt: f32,
+        moving_mass_kg: f32,
+    ) {
         if dt <= 0.0 {
             return;
         }
 
         // 1. Calculate accelerations
-        let accel_y = net_longitudinal_force_n / self.total_mass_kg;
+        let accel_y = net_longitudinal_force_n / moving_mass_kg.max(1.0);
         // High lateral tire damping keeps lateral slip negligible under standard road conditions
         let lateral_damping_force = -self.local_velocity.x * (self.total_mass_kg * 8.0);
         let accel_x = lateral_damping_force / self.total_mass_kg;

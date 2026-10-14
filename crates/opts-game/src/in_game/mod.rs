@@ -89,6 +89,15 @@ impl Plugin for InGamePlugin {
                 .run_if(in_state(AppState::InGame)),
         );
         app.add_systems(
+            FixedUpdate,
+            omsi_world::sample_consist_ground
+                .after(opts_bevy::vehicle_physics_step_system)
+                .after(opts_bevy::RailSet)
+                .after(omsi_world::player_collisions)
+                .before(opts_bevy::articulation_system)
+                .run_if(in_state(AppState::InGame)),
+        );
+        app.add_systems(
             Update,
             omsi_world::attach_traffic_colliders.run_if(in_state(AppState::InGame)),
         );

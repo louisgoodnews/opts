@@ -414,11 +414,9 @@ fn place(
             "there is no player vehicle (no drive is running)",
         ));
     };
+    let heading = heading_rad.unwrap_or(c.sim.chassis.heading_rad);
+    c.sim.teleport(local, heading);
     let ch = &mut c.sim.chassis;
-    ch.position = local;
-    if let Some(h) = heading_rad {
-        ch.heading_rad = h;
-    }
     if let Some(z) = elevation {
         ch.elevation_z = z;
     }

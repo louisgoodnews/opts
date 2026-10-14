@@ -184,14 +184,11 @@ pub(super) fn unregister(commands: &mut Commands, key: (i32, i32)) {
     });
 }
 
-/// What `follow_ground` reads and writes of a player vehicle: its simulation, its transform and,
-/// for articulated ones, the chain and the scripts the bellows angles go to.
+/// What `follow_ground` reads and writes of a player vehicle: its simulation and its transform.
 type GroundBody = (
     Entity,
     &'static mut VehicleController,
     &'static mut Transform,
-    Option<&'static opts_bevy::ArticulatedChain>,
-    Option<&'static opts_bevy::VehicleScripts>,
 );
 
 /// Gravity for a vehicle that has left the ground (m/s²).
@@ -199,11 +196,7 @@ const GRAVITY: f32 = 9.81;
 /// A wheel whose ground lies this far below the chassis carries no load (m): the vehicle hangs
 /// on the other wheels (a road edge, a kerb) until the ground under all wheels is lower.
 const UNSUPPORTED_DROP_M: f32 = 0.6;
-/// Largest pitch and roll of the body (rad).
-const MAX_TILT_RAD: f32 = 0.35;
-/// Response rates of the body (1/s): rising onto the ground, pitch and roll.
-const RISE_RATE: f32 = 25.0;
-const TILT_RATE: f32 = 10.0;
+use opts_sim::vehicle::ground::{GroundSample, MAX_TILT_RAD, RISE_RATE, TILT_RATE};
 
 /// The player's vertical motion between frames.
 #[derive(Default, Clone, Copy)]
@@ -222,12 +215,10 @@ pub fn follow_ground(
     index: Res<GroundIndex>,
     mut motions: Local<std::collections::HashMap<Entity, BodyMotion>>,
     mut vehicles: Query<GroundBody, GroundBound>,
-    mut segments: Query<&mut opts_bevy::ArticulatedSegment>,
-    mut chain_motion: Local<std::collections::HashMap<Entity, (f32, f32, f32)>>,
 ) {
     let dt = time.delta_secs().min(0.1);
     motions.retain(|e, _| vehicles.contains(*e));
-    for (entity, mut controller, mut tf, chain, scripts) in &mut vehicles {
+    for (entity, mut controller, mut tf) in &mut vehicles {
         let motion = motions.entry(entity).or_default();
         let (front, rear, track) = {
             let axles = &controller.sim.axles;
@@ -308,76 +299,44 @@ pub fn follow_ground(
         tf.rotation = Quat::from_rotation_y(-h)
             * Quat::from_rotation_x(motion.pitch)
             * Quat::from_rotation_z(motion.roll);
+    }
+}
 
-        // The following units lie on the ground under their own axles; the pitch and roll
-        // between neighbouring units are the bellows' `articulation_<k>_beta` and `_gamma`.
-        let Some(chain) = chain else { continue };
-        let head_z = ch.elevation_z;
-        let mut previous = (motion.pitch, motion.roll);
-        let mut betas = Vec::with_capacity(chain.segments.len());
-        for &e in &chain.segments {
-            let Ok(mut seg) = segments.get_mut(e) else {
-                break;
-            };
-            let Some((pos, heading)) = seg.kinematic_pose() else {
-                break;
-            };
-            let (sin, cos) = heading.sin_cos();
-            // In the kinematic frame the front joint lies ahead of the rear axle (reversed
-            // segments are given mirrored).
-            let (rear_y, front_y) = (seg.rear_axle_y, seg.front_local.y);
-            let length = (front_y - rear_y).max(1.0);
-            let sample = |ly: f32, side: f32| {
-                let lat = side * track * 0.5;
-                index.height_at(
-                    pos.x + sin * ly + cos * lat,
-                    pos.y + cos * ly - sin * lat,
-                    head_z,
-                )
-            };
-            let (Some(rl), Some(rr), Some(fl), Some(fr)) = (
-                sample(rear_y, -1.0),
-                sample(rear_y, 1.0),
-                sample(front_y, -1.0),
-                sample(front_y, 1.0),
-            ) else {
-                break;
-            };
-            let (g_rear, g_front) = ((rl + rr) * 0.5, (fl + fr) * 0.5);
-            // The origin lies between the axle and the front joint (or behind it).
-            let t = (0.0 - rear_y) / length;
-            let goal_z = g_rear + (g_front - g_rear) * t.clamp(-1.0, 2.0);
-            let goal_pitch = ((g_front - g_rear) / length)
-                .atan()
-                .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-            let goal_roll = (((fr + rr) - (fl + rl)) * 0.5 / track)
-                .atan()
-                .clamp(-MAX_TILT_RAD, MAX_TILT_RAD);
-            let state = chain_motion
-                .entry(e)
-                .or_insert((goal_z, goal_pitch, goal_roll));
-            let blend = 1.0 - (-TILT_RATE * dt).exp();
-            state.0 += (goal_z - state.0) * (1.0 - (-RISE_RATE * dt).exp());
-            state.1 += (goal_pitch - state.1) * blend;
-            state.2 += (goal_roll - state.2) * blend;
-            seg.ground = Some(opts_bevy::SegmentGround {
-                elevation: state.0,
-                pitch: state.1,
-                roll: state.2,
-            });
-            let beta = opts_bevy::joint_beta_deg(previous.0, state.1);
-            // The joint cannot pitch beyond `[coupling_front_character]` min/max beta.
-            let beta = seg.clamp_beta_deg(beta);
-            betas.push((beta, (state.2 - previous.1).to_degrees()));
-            previous = (state.1, state.2);
-        }
-        if let Some(scripts) = scripts {
-            if let Ok(mut engine) = scripts.engine.lock() {
-                for (k, (beta, gamma)) in betas.iter().enumerate() {
-                    engine.set(&format!("articulation_{k}_beta"), *beta);
-                    engine.set(&format!("articulation_{k}_gamma"), *gamma);
-                }
-            }
-        }
+/// Hands the simulation the ground under every unit of each articulated vehicle, once per fixed
+/// step (design D3): the pitch, roll and height of the chassis (for the joint variables) and of
+/// the following units are computed by `VehicleSimulation::apply_ground` with the fixed time
+/// step, so the joint variables `articulation_<k>_beta`/`_gamma` do not depend on the frame
+/// rate. The chassis' visible body motion stays in [`follow_ground`].
+///
+/// TEMPORARY (Q-ART-09): the heights come from the game's [`GroundIndex`]; they are replaced by
+/// the M-0025 ground query when that is merged.
+pub fn sample_consist_ground(
+    time: Res<Time>,
+    index: Res<GroundIndex>,
+    mut vehicles: Query<&mut VehicleController, (With<opts_bevy::ArticulatedChain>, GroundBound)>,
+) {
+    let dt = time.delta_secs();
+    if dt <= 0.0 {
+        return;
+    }
+    for mut controller in &mut vehicles {
+        let sim = &mut controller.sim;
+        // The height hint selects between layers (bridges): the fixed-step body of the chassis
+        // once it has one, else its own elevation.
+        let hint = sim
+            .head_body
+            .map_or(sim.chassis.elevation_z, |b| b.elevation);
+        let samples: Vec<Option<GroundSample>> = sim
+            .ground_probes()
+            .into_iter()
+            .map(|probe| {
+                let p = probe.points();
+                let h = |i: usize| index.height_at(p[i].x, p[i].y, hint);
+                let heights = [h(0)?, h(1)?, h(2)?, h(3)?];
+                let sample = GroundSample::from_heights(probe, heights);
+                Some(sample)
+            })
+            .collect();
+        sim.apply_ground(&samples, dt);
     }
 }

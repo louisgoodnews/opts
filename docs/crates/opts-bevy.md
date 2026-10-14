@@ -166,7 +166,7 @@ See [Asset Pipeline](../src/architecture/asset-pipeline.md).
 ### 8c. Articulated Vehicles (`opts_bevy::articulation`) — M-0022 addendum, 2026-10-11
 
 - `ArticulatedChain` (on the leading unit) lists the segment entities, front to back. Each segment carries an `ArticulatedSegment` (couplings, rear-axle position, joint limit).
-- `articulation_system` (`FixedUpdate`, after the physics step and before the scripts) advances each segment with `opts_sim::TrailerKinematics`, places it in world space and writes `articulation_<n>_alpha` (degrees) into the vehicle's script engine. `_beta` and `_gamma` stay 0 for now. `ArticulationPlugin` is part of `OptsAssetPlugin`.
+- `articulation_system` (`FixedUpdate`, after the physics step and before the scripts) *reads* the consist the simulation steps (`VehicleSimulation::consist`, M-0053), copies poses and ground state to the segments (placed interpolated in `PostUpdate`) and writes `articulation_<n>_alpha`, `_beta` and `_gamma` (degrees) into the vehicle's script engine; β and γ come from the simulation's fixed-step ground following (`apply_ground`) and are 0 without ground samples. It builds the simulation's consist from the segments' geometry once if it has none. `ArticulationPlugin` is part of `OptsAssetPlugin`.
 - Segments are top-level entities, not children of the leader, because a trailer's heading is integrated state. Specification: [Articulated Vehicles](../src/architecture/articulation.md). Test: `tests/articulation.rs`.
 
 ### 9. Engine Plugins (`opts_bevy::plugin`)
