@@ -124,6 +124,8 @@
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [AI Vehicle Configuration](architecture/ai-vehicle-config.md)
 - [AI Traffic Calibration Protocol](architecture/ai-calibration-protocol.md)
+- [OMSI Experiment Protocol (Bus Scripts)](architecture/omsi-experiment-protocol.md)
+- [Pending OMSI Verification](architecture/pending-omsi-verification.md)
 - [Bus Script Integration Strategy](architecture/bus-script-integration.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)

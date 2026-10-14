@@ -304,7 +304,10 @@ _Small items discovered during implementation that don't warrant a milestone._
 - `[ ]` 🟡 Provide `opts_bevy::testing::TestAppBuilder` helper for headless `FixedUpdate` time stepping (F-003)
 - `[ ]` 🟠 Decompose monolithic parser and `from_text` in `crates/opts-core/src/formats/scenery/sco.rs` (F-004) — superseded by M-0040 (now 1,243 lines / `from_text` 625) *(reconciled 2026-10-11, critical review)*
 - `[ ]` 🟡 Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005) — superseded by M-0040 *(reconciled 2026-10-11, critical review)*
-- `[ ]` 🟡 Split `bus.rs` (now 686 lines) to comply with the 500-line file limit (F-006; `world_parse.rs` no longer exists) — superseded by M-0040 *(reconciled 2026-10-11, critical review)*
+- `[ ]` 🟡 Split `bus.rs` (now 784 lines since the `VehicleExtras` keywords of M-0095; `parse` is 316 lines) to comply with the 500-line file limit (F-006) — superseded by M-0040 *(reconciled 2026-10-11, critical review; numbers updated 2026-10-14)*
+- `[ ]` 🟡 Split `opts-game/src/in_game/omsi_world/traffic.rs` (841 lines; `spawn_traffic` is far over 80 lines) — the pool, spawn and move systems are the natural parts; new AI code already lives in `traffic_variant.rs` and `traffic_chain.rs` (M-0095, 2026-10-14) — superseded by M-0040
+- `[ ]` 🟠 Pending OMSI verification: [list](../src/architecture/pending-omsi-verification.md) — Q-AIC-002 (`[rowdy_factor]`: Aachen median 45 km/h until measured), `M_Wheel` unit, `ST*` arguments, route data; run the batched sessions of the [experiment protocol](../src/architecture/omsi-experiment-protocol.md) (chore, needs the project lead and a running OMSI)
+- `[x]` 🟢 Ignore `crates/*/tests/golden/_failed/` and untrack the failed-golden images that a failing run overwrote (chore, 2026-10-14)
 - `[ ]` 🟢 Consolidate entity spawning boilerplate between `spawn` and `spawn_child` in `opts-gui` widgets (F-007)
 - `[x]` 🟠 Execute link normalization sweep across `docs/src/roadmap/README.md` and meta reports (F-011) — done (audit 5037f89a Phase D; 0 broken links) *(reconciled 2026-10-11, critical review)*
 - `[ ]` 🟡 Reconcile stale Open Questions in promoted specifications (`o3d.md`, `x.md`, `bus.md`) into Resolved Questions (F-012)
