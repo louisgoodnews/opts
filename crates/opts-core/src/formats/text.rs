@@ -98,6 +98,32 @@ pub fn parse_keyword(line: &str) -> Option<&str> {
     }
 }
 
+/// The keyword of a raw text line, if the line is one.
+///
+/// A line that starts with `[` and ends with `]` is a keyword line. A line **indented** by spaces
+/// or tabs is one too when what is between the brackets is a plain identifier (`[friendlyname]`,
+/// `[couple_back]`): add-on authors indent keywords in thousands of files (7,112 `.sco`, 1,338
+/// `.bus`, 1,128 `.ovh`, 1,354 `.cfg`, 524 `.sli` of the reference installation, see
+/// `docs/src/formats/text/keyword-indentation.md`), and the vehicles and objects they belong to
+/// work in OMSI. An indented line with other bracketed text (`[a] / [b]`, a note) stays what it is
+/// for a line at the start: a note is no keyword when indented, and keeps its old meaning when not.
+#[must_use]
+pub fn keyword_line(raw_line: &str) -> Option<&str> {
+    let trimmed_end = raw_line.trim_end();
+    if !trimmed_end.ends_with(']') {
+        return None;
+    }
+    if raw_line.starts_with('[') {
+        return parse_keyword(trimmed_end);
+    }
+    let inner = trimmed_end
+        .trim_start_matches([' ', '\t'])
+        .strip_prefix('[')?
+        .strip_suffix(']')?;
+    (!inner.is_empty() && inner.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'))
+        .then_some(inner)
+}
+
 /// Represents an extracted OMSI configuration block.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OmsiBlock {
@@ -138,21 +164,19 @@ pub fn scan_blocks_with(text: &str, arity: impl Fn(&str) -> Option<usize>) -> Ve
         let line_number = line_idx + 1;
         let line = raw_line.trim_end_matches(['\r', '\n']).trim();
 
-        // Check for keyword beginning line
-        if !line.is_empty() && raw_line.starts_with('[') && raw_line.trim_end().ends_with(']') {
-            if let Some(kw) = parse_keyword(raw_line.trim_end()) {
-                if let Some(prev) = current_block.take() {
-                    blocks.push(prev);
-                }
-                let keyword = kw.to_ascii_lowercase();
-                literal = arity(&keyword);
-                current_block = Some(OmsiBlock {
-                    keyword,
-                    line_number,
-                    parameters: Vec::new(),
-                });
-                continue;
+        // Check for a keyword line
+        if let Some(kw) = keyword_line(raw_line) {
+            if let Some(prev) = current_block.take() {
+                blocks.push(prev);
             }
+            let keyword = kw.to_ascii_lowercase();
+            literal = arity(&keyword);
+            current_block = Some(OmsiBlock {
+                keyword,
+                line_number,
+                parameters: Vec::new(),
+            });
+            continue;
         }
 
         let Some(block) = current_block.as_mut() else {
@@ -283,6 +307,29 @@ mod tests {
         assert_eq!(parse_keyword("[coin]\r\n"), Some("coin"));
         assert_eq!(parse_keyword("not_a_kw"), None);
         assert_eq!(parse_keyword(" [indented]"), None);
+    }
+
+    #[test]
+    fn indented_keywords_start_blocks() {
+        let text = "[friendlyname]\nBus\n\t[couple_back]\n..\\trailer.bus\ntrue\n  [mass]\n12.5\n";
+        let b = scan_blocks(text);
+        let names: Vec<_> = b.iter().map(|b| b.keyword.as_str()).collect();
+        assert_eq!(names, ["friendlyname", "couple_back", "mass"]);
+        assert_eq!(b[1].parameters, ["..\\trailer.bus", "true"]);
+        assert_eq!(b[2].parameters, ["12.5"]);
+    }
+
+    #[test]
+    fn an_indented_note_with_brackets_is_not_a_keyword() {
+        assert_eq!(keyword_line("\t[coupling_front] / [coupling_back]"), None);
+        assert_eq!(keyword_line("  [two words]"), None);
+        assert_eq!(keyword_line("  []"), None);
+        assert_eq!(keyword_line("text [a]"), None);
+        assert_eq!(keyword_line("[a] / [b]"), Some("a] / [b"));
+        assert_eq!(keyword_line("[mesh]\r"), Some("mesh"));
+        assert_eq!(keyword_line(" \t[mesh] \r"), Some("mesh"));
+        let b = scan_blocks("[mass]\n10\n\t[coupling_front] / [coupling_back]\n[x]\n");
+        assert_eq!(b[0].parameters, ["10", "[coupling_front] / [coupling_back]"]);
     }
 
     #[test]
