@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Design approved 2026-10-14 (Phase A); implementation in progress |
+| **Status** | ✅ Design approved 2026-10-14 (Phase A); Phase B implemented, Phase C (live verification) pending |
 | **Date** | 2026-10-14 |
 | **Branch** | `agent/screen-capture` |
 | **Decision record** | [ADR-0012](../adr/0012-screen-capture-encoding.md) |
@@ -251,3 +251,26 @@ Measured over a sliding 2 s window of the control `fps`:
 3. **`screenshot.path`/`name`:** `path` stays, restricted to the captures directory; `name` is the preferred relative form; both together are `INVALID_PARAMS`.
 4. **ADR number:** 0012.
 5. **Cursor:** not captured, not planned.
+
+## Implementation notes (Phase B)
+
+Code in `crates/opts-bevy/src/capture/`: `storage` (root, names, atomic writes, free space), `metadata`, `screenshot`, `backend` (frame source; tests inject synthetic frames), `jobs` (limits, the one-job rule, start rate), `burst`, `recording` (driver system, limits, degradation), `worker` (encoder thread), `record_cmd` (the three `capture.record.*` handlers), `encoder` (trait, PNG sequence), `av1` and `ivf`, `prune`. Handlers are registered by `capture::register`; the driver runs in `Update`.
+
+How the design maps to the code:
+
+* **Capture path.** `request_with` spawns Bevy's `Screenshot::window`; its observer hands the frame to a sink. A recording's sink does `try_send` into a queue of depth 3; a full queue drops the frame and counts it. At most 3 requests are in flight. The worker thread converts to RGB, scales, encodes and writes. The main thread only spawns the request and moves the image (the observer clones the frame bytes once).
+* **Limits** are in the `CaptureLimits` resource (defaults as in section A5, overridable by tests): duration, size, free disk checked once per second, in-flight cap, 45 fps degrade, 30 fps for 5 s stop, queue full for 3 s stop, no delivery for 5 s stop (`window`), 10 job starts per minute.
+* **Degradation** halves the capture interval while the smoothed frame rate is under 45 and stops with `stopped_by: "degraded"` as designed. A stall of the renderer (frames requested, none delivered) stops the recording with `window`.
+* **Recorder exit.** Dropping the `Recorder` resource (app exit) closes the queue and waits up to 3 s for the file to be finished.
+* **Frame size.** The first frame fixes the size of an AV1 recording (after `scale`); later frames of another size are resized to it.
+* **Remux.** `ffmpeg -c copy` of this writer's IVF output to MP4, MKV and WebM is covered by an integration test when `ffmpeg` is installed; `ffprobe` confirms codec `av1` and a packet count equal to the header's frame count.
+
+### Deviations from the design
+
+1. **Burst length.** `count` x `interval_ms` may not exceed 90 000 ms (the design said 5 minutes): the control server answers deferred commands within 120 s, and a burst is one deferred command.
+2. **`h264`** is accepted as a name but rejected with `INVALID_PARAMS`; the optional `capture-h264` feature is not implemented (ADR-0012 keeps the door open).
+3. **The 20 GB captures-directory soft limit** is not implemented; `capture.prune` is the tool for that.
+4. **Metadata `markers`** (open F1 report, trace on) are not included yet; `fixed_tick`, `app_state`, `map`, `tile`, `vehicle`, `camera_mode` are.
+5. **`capture.prune`** is implemented (the task's table did not list it, the design did).
+6. **`screenshot.path`** is restricted to the captures directory (decision 3 above); `report` and `snapshot` keep their own rules.
+

@@ -86,6 +86,8 @@ fn is_slow(method: &str) -> bool {
             | "camera.look"
             | "snapshot"
             | "screenshot"
+            | "capture.burst"
+            | "capture.record.stop"
             | "report"
             | "batch"
     )
@@ -107,6 +109,19 @@ fn split_method(words: &[String]) -> Option<(String, &[String])> {
     Some((first.clone(), rest))
 }
 
+/// Defaults that only the command-line client applies (the protocol's own defaults differ): a
+/// recording started from a terminal is for quick iteration, so it lasts 30 s, not 60 s.
+fn apply_cli_defaults(method: &str, params: &mut serde_json::Value) {
+    if method == "capture.record.start" {
+        if let Some(obj) = params.as_object_mut() {
+            obj.entry("duration_ms")
+                .or_insert(serde_json::json!(30_000));
+        } else if params.is_null() {
+            *params = serde_json::json!({"duration_ms": 30_000});
+        }
+    }
+}
+
 /// Runs one command from words and prints the outcome; returns the process exit code.
 pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
     let Some((method, rest)) = split_method(words) else {
@@ -125,6 +140,8 @@ pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
             return 1;
         }
     };
+    let mut params = params;
+    apply_cli_defaults(method, &mut params);
     if is_slow(method) {
         client.set_read_timeout(Duration::from_secs(120));
     }
@@ -266,7 +283,23 @@ mod tests {
         assert_eq!((m.as_str(), rest), ("trace.set", &w[2..]));
         let w = words(&["state"]);
         assert_eq!(split_method(&w).expect("method").0, "state");
+        let w = words(&["capture", "record", "start", "--fps", "15"]);
+        let (m, rest) = split_method(&w).expect("method");
+        assert_eq!((m.as_str(), rest.len()), ("capture.record.start", 2));
         let w = words(&["no", "such", "thing"]);
         assert_eq!(split_method(&w).expect("method").0, "no");
+    }
+
+    #[test]
+    fn a_cli_recording_defaults_to_30_seconds() {
+        let mut p = serde_json::Value::Null;
+        apply_cli_defaults("capture.record.start", &mut p);
+        assert_eq!(p["duration_ms"], 30_000);
+        let mut p = serde_json::json!({"duration_ms": 5000});
+        apply_cli_defaults("capture.record.start", &mut p);
+        assert_eq!(p["duration_ms"], 5000);
+        let mut p = serde_json::Value::Null;
+        apply_cli_defaults("state", &mut p);
+        assert!(p.is_null());
     }
 }

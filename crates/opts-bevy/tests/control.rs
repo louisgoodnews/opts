@@ -32,6 +32,10 @@ fn app(token: Option<&str>) -> (App, u16) {
         token: token.map(str::to_string),
         ..ControlConfig::default()
     }));
+    // Captures go to a throw-away directory, never the user's.
+    app.insert_resource(opts_bevy::capture::CaptureState::new(Some(
+        std::env::temp_dir().join(format!("opts_control_test_{}", std::process::id())),
+    )));
     app.update();
     let port = app.world().resource::<ControlAddr>().0.port();
     (app, port)

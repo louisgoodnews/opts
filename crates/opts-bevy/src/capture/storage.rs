@@ -19,6 +19,8 @@ pub struct CaptureState {
     pub root: Option<PathBuf>,
     /// Six hex digits identifying this process run, part of every generated name.
     pub session_id: String,
+    /// Free bytes on the volume holding a path (tests replace it to simulate a full disk).
+    pub free_space: fn(&Path) -> Option<u64>,
     counter: u32,
 }
 
@@ -38,6 +40,7 @@ impl CaptureState {
         Self {
             root,
             session_id: format!("{:06x}", (nanos ^ std::process::id()) & 0x00ff_ffff),
+            free_space: free_bytes,
             counter: 0,
         }
     }
@@ -72,6 +75,19 @@ impl CaptureState {
 #[must_use]
 pub fn default_root() -> Option<PathBuf> {
     directories::BaseDirs::new().map(|d| d.data_dir().join("opts").join("captures"))
+}
+
+/// Free bytes on the volume that holds `path`, or `None` when it cannot be determined.
+#[must_use]
+pub fn free_bytes(path: &Path) -> Option<u64> {
+    let real = path.canonicalize().ok()?;
+    let disks = sysinfo::Disks::new_with_refreshed_list();
+    disks
+        .list()
+        .iter()
+        .filter(|d| real.starts_with(d.mount_point()))
+        .max_by_key(|d| d.mount_point().as_os_str().len())
+        .map(sysinfo::Disk::available_space)
 }
 
 fn forbidden(name: &str, why: &str) -> CaptureError {
@@ -115,7 +131,29 @@ pub fn validate_relative(name: &str) -> Result<PathBuf, CaptureError> {
     Ok(out)
 }
 
-/// Resolves a relative `name` below `root` (created if missing), creating its parent directories.
+/// Creates the directories of `rel` below `root`, checking every existing step stays inside the
+/// canonical `root` (a symlink that leaves it is refused before anything is created through it).
+fn create_dirs_inside(root: &Path, rel: &Path, name: &str) -> Result<PathBuf, CaptureError> {
+    let mut cur = root.to_path_buf();
+    for seg in rel.components() {
+        let next = cur.join(seg);
+        if next.exists() {
+            let real = next
+                .canonicalize()
+                .map_err(|e| CaptureError::io("resolve", &next, &e))?;
+            if !real.starts_with(root) {
+                return Err(forbidden(name, "it leaves the captures directory"));
+            }
+            cur = real;
+        } else {
+            std::fs::create_dir(&next).map_err(|e| CaptureError::io("create", &next, &e))?;
+            cur = next;
+        }
+    }
+    Ok(cur)
+}
+
+/// Resolves a relative `name` below `root`, creating its parent directories.
 ///
 /// # Errors
 /// `Forbidden` when the name is not a plain relative path or a symlink inside the root leads out
@@ -125,19 +163,24 @@ pub fn resolve_name(root: &Path, name: &str) -> Result<PathBuf, CaptureError> {
     let root = root
         .canonicalize()
         .map_err(|e| CaptureError::io("resolve", root, &e))?;
-    let target = root.join(&rel);
-    let parent = target.parent().unwrap_or(&root);
-    std::fs::create_dir_all(parent).map_err(|e| CaptureError::io("create", parent, &e))?;
-    let real_parent = parent
-        .canonicalize()
-        .map_err(|e| CaptureError::io("resolve", parent, &e))?;
-    if !real_parent.starts_with(&root) {
-        return Err(forbidden(name, "it leaves the captures directory"));
-    }
-    let file = target
+    let file = rel
         .file_name()
-        .ok_or_else(|| forbidden(name, "it has no file name"))?;
-    Ok(real_parent.join(file))
+        .ok_or_else(|| forbidden(name, "it has no file name"))?
+        .to_owned();
+    let parent = create_dirs_inside(&root, rel.parent().unwrap_or(Path::new("")), name)?;
+    Ok(parent.join(file))
+}
+
+/// Resolves a relative directory `name` below `root` and creates it.
+///
+/// # Errors
+/// As [`resolve_name`].
+pub fn resolve_dir(root: &Path, name: &str) -> Result<PathBuf, CaptureError> {
+    let rel = validate_relative(name)?;
+    let root = root
+        .canonicalize()
+        .map_err(|e| CaptureError::io("resolve", root, &e))?;
+    create_dirs_inside(&root, &rel, name)
 }
 
 /// Resolves an explicit `path` (the legacy form): its directory must exist and lie inside `root`.
@@ -265,6 +308,15 @@ mod tests {
         assert_ne!(a, b);
         assert!(a.contains(&s.session_id));
         assert!(a.ends_with("_0001") && b.ends_with("_0002"));
+    }
+
+    #[test]
+    fn free_space_is_reported_for_an_existing_directory() {
+        let root = temp("g");
+        // CI containers may hide their mounts, so only a reported value is checked.
+        if let Some(free) = free_bytes(&root) {
+            assert!(free > 0);
+        }
     }
 
     #[test]

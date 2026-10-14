@@ -32,6 +32,10 @@ opts-cli input.key W --duration 2000   # press W for two seconds
 opts-cli sim.pause && opts-cli sim.step 60
 opts-cli screenshot                    # PNG + metadata sidecar in the captures directory
 opts-cli screenshot --name run1/jam.png --format jpeg --quality 80
+opts-cli capture burst 30 100          # 30 PNG frames, 100 ms apart, with manifest.json
+opts-cli capture record start --duration-ms 10000   # AV1 .ivf, off unless started (CLI default 30 s)
+opts-cli capture record status --id <recording-id>
+opts-cli capture record stop --id <recording-id>
 opts-cli report "the junction has no road surface"
 opts-cli log.filter --level warn --n 10
 opts-cli reload.asset "/path/to/object.sco"

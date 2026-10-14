@@ -1,0 +1,394 @@
+//! Continuous capture: the encoder worker thread, shared counters and the per-frame driver that
+//! enforces the limits and the degradation policy (design A5).
+//!
+//! Nothing here waits for the GPU or the disk on the main thread: frames arrive through the
+//! renderer's asynchronous readback, are handed to a bounded queue with `try_send`, and the
+//! worker thread converts, encodes and writes them.
+
+use std::path::PathBuf;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc::{self, SyncSender, TrySendError};
+use std::sync::Arc;
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
+
+use bevy::ecs::world::World;
+use bevy::prelude::{Image, Resource, Time, Virtual};
+use serde_json::{json, Value};
+
+use crate::control::state::ControlState;
+
+use super::backend::CaptureBackend;
+use super::encoder::FrameInfo;
+use super::error::CaptureError;
+use super::jobs::{CaptureJobs, CaptureLimits, Finished, JobGuard};
+use super::storage::CaptureState;
+use super::worker::{set_error, worker, Msg, Shared, WorkerPlan, FAILED, FINISHED};
+
+/// Recording formats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecFormat {
+    /// AV1 in an IVF container.
+    Av1,
+    /// One PNG per frame in a directory.
+    PngSequence,
+}
+
+impl RecFormat {
+    /// The `format` parameter value.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Av1 => "av1",
+            Self::PngSequence => "png_sequence",
+        }
+    }
+}
+
+/// A running recording, owned by [`Recorder`].
+pub struct Active {
+    /// Recording id.
+    pub id: String,
+    /// Output file or directory.
+    pub output: PathBuf,
+    /// Format.
+    pub format: RecFormat,
+    /// Requested frames per second.
+    pub fps: u32,
+    /// Duration limit in milliseconds.
+    pub duration_ms: u64,
+    /// Size limit in bytes.
+    pub max_bytes: u64,
+    /// Shared counters.
+    pub shared: Arc<Shared>,
+    started: f64,
+    next_due: f64,
+    requested: u64,
+    tx: Option<SyncSender<Msg>>,
+    handle: Option<JoinHandle<()>>,
+    stopped_by: Option<&'static str>,
+    stopped_after_ms: u64,
+    low_fps_since: Option<f64>,
+    last_disk_check: f64,
+    stop_request: bool,
+    forced_reason: Option<&'static str>,
+    _guard: JobGuard,
+}
+
+impl Active {
+    /// Whether frames are still being captured.
+    #[must_use]
+    pub fn capturing(&self) -> bool {
+        self.tx.is_some()
+    }
+
+    /// Asks the recording to stop at the next frame.
+    pub fn request_stop(&mut self) {
+        self.stop_request = true;
+    }
+}
+
+/// The active recording, if any.
+#[derive(Resource, Default)]
+pub struct Recorder {
+    /// The recording in progress or finishing.
+    pub active: Option<Active>,
+}
+
+impl Drop for Recorder {
+    /// Closes a running recording when the app exits: the queue is closed and the worker gets
+    /// three seconds to finish the file.
+    fn drop(&mut self) {
+        let Some(mut a) = self.active.take() else {
+            return;
+        };
+        a.tx = None;
+        let until = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < until && a.shared.state.load(Ordering::Acquire) < FINISHED {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+}
+
+/// Validated start parameters.
+pub struct StartPlan {
+    /// Format.
+    pub format: RecFormat,
+    /// Frames per second.
+    pub fps: u32,
+    /// Duration limit.
+    pub duration_ms: u64,
+    /// Size limit in bytes.
+    pub max_bytes: u64,
+    /// Encoder quality.
+    pub quality: u8,
+    /// Downscale factor.
+    pub scale: f32,
+}
+
+/// Starts the worker and registers the recording; the caller has validated everything.
+pub fn launch(
+    world: &mut World,
+    id: String,
+    guard: JobGuard,
+    plan: &StartPlan,
+    worker_plan: WorkerPlan,
+    limits: &CaptureLimits,
+) {
+    let shared = Shared::new();
+    let (tx, rx) = mpsc::sync_channel::<Msg>(limits.queue_depth);
+    let (w_shared, output) = (shared.clone(), worker_plan.output.clone());
+    let handle = std::thread::Builder::new()
+        .name("opts-capture-encoder".into())
+        .spawn(move || {
+            let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                worker(&rx, &worker_plan, &w_shared);
+            }));
+            if caught.is_err() {
+                set_error(
+                    &w_shared,
+                    &CaptureError::Failed("the encoder thread panicked".into()),
+                );
+                w_shared.state.store(FAILED, Ordering::Release);
+            }
+        })
+        .ok();
+    let now = world
+        .resource::<Time<bevy::time::Real>>()
+        .elapsed_secs_f64();
+    let active = Active {
+        id,
+        output,
+        format: plan.format,
+        fps: plan.fps,
+        duration_ms: plan.duration_ms,
+        max_bytes: plan.max_bytes,
+        shared,
+        started: now,
+        next_due: now,
+        requested: 0,
+        tx: handle.is_some().then_some(tx),
+        handle,
+        stopped_by: None,
+        stopped_after_ms: 0,
+        low_fps_since: None,
+        last_disk_check: now,
+        stop_request: false,
+        forced_reason: None,
+        _guard: guard,
+    };
+    world.resource_mut::<Recorder>().active = Some(active);
+}
+
+fn result_json(a: &Active, state: &str) -> Value {
+    let s = &a.shared;
+    let mut v = json!({
+        "recording_id": a.id,
+        "state": state,
+        "path": a.output.display().to_string(),
+        "format": a.format.name(),
+        "fps": a.fps,
+        "duration_ms": a.stopped_after_ms,
+        "frame_count": s.frames.load(Ordering::Relaxed),
+        "dropped": s.dropped.load(Ordering::Relaxed),
+        "bytes": s.bytes.load(Ordering::Relaxed),
+        "stopped_by": a.stopped_by,
+    });
+    if let Some(e) = s.error.lock().ok().and_then(|g| g.clone()) {
+        v["error"] = json!(e);
+    }
+    v
+}
+
+/// The status payload of the active recording.
+#[must_use]
+pub fn status_json(a: &Active, now: f64) -> Value {
+    let s = &a.shared;
+    let elapsed_ms = ((now - a.started) * 1000.0) as u64;
+    let state = if a.capturing() {
+        "recording"
+    } else {
+        "finishing"
+    };
+    let frames = s.frames.load(Ordering::Relaxed);
+    json!({
+        "recording_id": a.id,
+        "state": state,
+        "frame_count": frames,
+        "elapsed_ms": elapsed_ms,
+        "dropped": s.dropped.load(Ordering::Relaxed),
+        "bytes": s.bytes.load(Ordering::Relaxed),
+        "fps_measured": if elapsed_ms > 0 { (frames as f64 * 1000.0 / elapsed_ms as f64 * 10.0).round() / 10.0 } else { 0.0 },
+        "degraded": s.degraded.load(Ordering::Relaxed),
+        "stopped_by": a.stopped_by,
+    })
+}
+
+fn stop_reason(
+    world: &World,
+    a: &mut Active,
+    now: f64,
+    limits: &CaptureLimits,
+) -> Option<&'static str> {
+    let s = &a.shared;
+    let elapsed_ms = ((now - a.started) * 1000.0) as u64;
+    if a.stop_request {
+        return Some("request");
+    }
+    if s.state.load(Ordering::Acquire) == FAILED {
+        return Some("encoder_error");
+    }
+    if elapsed_ms >= a.duration_ms {
+        return Some("duration");
+    }
+    if s.bytes.load(Ordering::Relaxed) >= a.max_bytes {
+        return Some("size");
+    }
+    if now - a.last_disk_check >= 1.0 {
+        a.last_disk_check = now;
+        if let Some(state) = world.get_resource::<CaptureState>() {
+            let free = state.root.as_deref().and_then(|r| (state.free_space)(r));
+            if free.is_some_and(|f| f < limits.min_free_disk_mb * 1024 * 1024) {
+                return Some("disk");
+            }
+        }
+    }
+    let fps = world.get_resource::<ControlState>().map_or(0.0, |c| c.fps);
+    if fps > 0.0 {
+        s.degraded
+            .store(fps < limits.degrade_below_fps, Ordering::Relaxed);
+        if fps < limits.stop_below_fps {
+            let since = *a.low_fps_since.get_or_insert(now);
+            if now - since >= limits.stop_after.as_secs_f64() {
+                return Some("degraded");
+            }
+        } else {
+            a.low_fps_since = None;
+        }
+    }
+    let full = s.full_since_ms.load(Ordering::Relaxed);
+    if full > 0 && s.ms().saturating_sub(full) >= limits.queue_full_after.as_millis() as u64 {
+        return Some("degraded");
+    }
+    let last = s.last_delivery_ms.load(Ordering::Relaxed);
+    if s.in_flight.load(Ordering::Relaxed) > 0
+        && s.ms().saturating_sub(last) >= limits.no_delivery_after.as_millis() as u64
+    {
+        return Some("window");
+    }
+    None
+}
+
+fn tick(
+    world: &mut World,
+    a: &mut Active,
+    now: f64,
+    limits: &CaptureLimits,
+    backend: CaptureBackend,
+) {
+    let degraded = a.shared.degraded.load(Ordering::Relaxed);
+    let interval = f64::from(a.fps.max(1)).recip() * if degraded { 2.0 } else { 1.0 };
+    if now < a.next_due {
+        return;
+    }
+    let missed = ((now - a.next_due) / interval).floor() as u64;
+    a.shared.dropped.fetch_add(missed, Ordering::Relaxed);
+    a.next_due += interval * (missed + 1) as f64;
+    if a.shared.in_flight.load(Ordering::Relaxed) >= limits.max_in_flight {
+        a.shared.dropped.fetch_add(1, Ordering::Relaxed);
+        return;
+    }
+    let Some(tx) = a.tx.clone() else { return };
+    let info = FrameInfo {
+        index: a.requested,
+        sim_time: world
+            .get_resource::<Time<Virtual>>()
+            .map_or(0.0, |t| (t.elapsed_secs_f64() * 1000.0).round() / 1000.0),
+        frame: world.get_resource::<ControlState>().map_or(0, |c| c.frame),
+        wall_ms: ((now - a.started) * 1000.0) as u64,
+    };
+    a.requested += 1;
+    let shared = a.shared.clone();
+    shared.in_flight.fetch_add(1, Ordering::Relaxed);
+    let sink_shared = shared.clone();
+    let sink = Box::new(move |image: Image| {
+        let s = &sink_shared;
+        s.in_flight.fetch_sub(1, Ordering::Relaxed);
+        s.last_delivery_ms.store(s.ms(), Ordering::Relaxed);
+        match tx.try_send(Msg::Frame(image, info)) {
+            Ok(()) => s.full_since_ms.store(0, Ordering::Relaxed),
+            Err(TrySendError::Full(_)) => {
+                s.dropped.fetch_add(1, Ordering::Relaxed);
+                let _ = s.full_since_ms.compare_exchange(
+                    0,
+                    s.ms().max(1),
+                    Ordering::Relaxed,
+                    Ordering::Relaxed,
+                );
+            }
+            Err(TrySendError::Disconnected(_)) => {}
+        }
+    });
+    if let Err(e) = (backend.request)(world, sink) {
+        shared.in_flight.fetch_sub(1, Ordering::Relaxed);
+        shared.dropped.fetch_add(1, Ordering::Relaxed);
+        if matches!(e, CaptureError::NotReady(_)) {
+            a.forced_reason = Some("window");
+        }
+    }
+}
+
+/// Per-frame driver: enforces the limits, captures on schedule and collects finished jobs.
+pub fn drive(world: &mut World) {
+    if world
+        .get_resource::<Recorder>()
+        .is_none_or(|r| r.active.is_none())
+    {
+        return;
+    }
+    let limits = world
+        .get_resource::<CaptureLimits>()
+        .cloned()
+        .unwrap_or_default();
+    let backend = world
+        .get_resource::<CaptureBackend>()
+        .copied()
+        .unwrap_or_default();
+    let now = world
+        .resource::<Time<bevy::time::Real>>()
+        .elapsed_secs_f64();
+    world.resource_scope(|world, mut rec: bevy::prelude::Mut<Recorder>| {
+        let Some(a) = rec.active.as_mut() else { return };
+        if a.capturing() {
+            let reason = a
+                .forced_reason
+                .take()
+                .or_else(|| stop_reason(world, a, now, &limits));
+            if let Some(reason) = reason {
+                a.stopped_by = Some(reason);
+                a.stopped_after_ms = ((now - a.started) * 1000.0) as u64;
+                a.tx = None;
+            } else {
+                tick(world, a, now, &limits, backend);
+            }
+            return;
+        }
+        let state = a.shared.state.load(Ordering::Acquire);
+        if state >= FINISHED {
+            if let Some(h) = a.handle.take() {
+                let _ = h.join();
+            }
+            let label = if state == FAILED {
+                "failed"
+            } else {
+                "finished"
+            };
+            let result = result_json(a, label);
+            let id = a.id.clone();
+            rec.active = None;
+            world
+                .get_resource_or_insert_with(CaptureJobs::default)
+                .finish(Finished { id, result });
+        }
+    });
+}

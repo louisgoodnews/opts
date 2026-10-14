@@ -128,7 +128,7 @@ pub fn parse_options(params: &Value) -> Result<Options, RpcError> {
 }
 
 /// Why no frame can be requested right now (no renderer, nothing visible), if so.
-fn not_ready(world: &mut World) -> Option<CaptureError> {
+pub fn not_ready(world: &mut World) -> Option<CaptureError> {
     if !world.contains_resource::<CapturedScreenshots>() {
         return Some(CaptureError::NotReady(
             "there is no renderer to take a screenshot from".into(),
@@ -150,18 +150,39 @@ fn not_ready(world: &mut World) -> Option<CaptureError> {
 /// # Errors
 /// `NotReady` without a renderer or while the window is minimized.
 pub fn request_frame(world: &mut World) -> Result<mpsc::Receiver<Image>, CaptureError> {
+    let (tx, rx) = mpsc::channel();
+    request_with(
+        world,
+        Box::new(move |image| {
+            let _ = tx.send(image);
+        }),
+    )?;
+    Ok(rx)
+}
+
+/// Requests a frame of the primary window and hands it to `sink` when the renderer delivers it.
+///
+/// # Errors
+/// `NotReady` without a renderer or while the window is minimized.
+pub fn request_with(
+    world: &mut World,
+    sink: super::backend::FrameSink,
+) -> Result<(), CaptureError> {
     if let Some(e) = not_ready(world) {
         return Err(e);
     }
     let mut windows = world.query_filtered::<Entity, With<PrimaryWindow>>();
     let window = windows.iter(world).next().unwrap_or(Entity::PLACEHOLDER);
-    let (tx, rx) = mpsc::channel();
+    let sink = std::sync::Mutex::new(Some(sink));
     world.spawn(Screenshot::window(window)).observe(
         move |captured: bevy::ecs::observer::On<ScreenshotCaptured>| {
-            let _ = tx.send(captured.image.clone());
+            let taken = sink.lock().ok().and_then(|mut g| g.take());
+            if let Some(sink) = taken {
+                sink(captured.image.clone());
+            }
         },
     );
-    Ok(rx)
+    Ok(())
 }
 
 /// Encodes a frame (alpha dropped) as PNG or JPEG.
