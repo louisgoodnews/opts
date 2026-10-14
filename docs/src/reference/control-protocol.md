@@ -276,7 +276,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`session.load`](#sessionload) | `name` (string) | 1.3 | Restore a save (leaves the running drive); poll `session.saves` for the progress |
 | [`session.delete_save`](#sessiondelete_save) | `name` (string) | 1.3 | Delete a save and its backup (no confirmation) |
 | [`session.rename_save`](#sessionrename_save) | `name` (string)<br>`new_name` (string) | 1.3 | Change the name of a save (the file keeps its id) |
-| [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...) |
+| [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...) |
 
 ### `scene.load_map`
 
@@ -414,7 +414,7 @@ Change the name of a save (the file keeps its id).
 
 ### `menu.do`
 
-Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...).
+Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...).
 
 Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`.
 

@@ -159,15 +159,15 @@ Splines, scenery objects, meshes, vehicle scripts, vehicles and textures that lo
 
 | Subject | Sev | Message | Count | Context | Status |
 | :--- | :--- | :--- | ---: | :--- | :--- |
-| `maps/Ahlheim 5/global.cfg` | ERROR | cannot load OMSI world: <file>: invalid number for entrypoint id_code 'N' at line N | 1 |  | open |
-| `maps/HB_2017_Bremen-Nord_FIKTIV/global.cfg` | ERROR | cannot load OMSI world: <file>: invalid number for entrypoint id_code 'N' at line N | 1 |  | open |
+| `maps/Ahlheim 5/global.cfg` | ERROR | cannot load OMSI world: &lt;file&gt;: invalid number for entrypoint id_code 'N' at line N | 1 |  | open |
+| `maps/HB_2017_Bremen-Nord_FIKTIV/global.cfg` | ERROR | cannot load OMSI world: &lt;file&gt;: invalid number for entrypoint id_code 'N' at line N | 1 |  | open |
 
 ## Textures (2 entries, 2 events)
 
 | Subject | Sev | Message | Count | Context | Status |
 | :--- | :--- | :--- | ---: | :--- | :--- |
-| `Splines/Muenchen/texture/Goerresstr_50.dds` | ERROR | texture decode failed <file>: unsupported texture format: unsupported DDS pixel format with N bpp | 1 |  | open |
-| `Vehicles/Muenchen_KI/ap3/texture/hyundai_i20.dds` | ERROR | texture decode failed <file>: unsupported texture format: unsupported DDS pixel format with N bpp | 1 |  | open |
+| `Splines/Muenchen/texture/Goerresstr_50.dds` | ERROR | texture decode failed &lt;file&gt;: unsupported texture format: unsupported DDS pixel format with N bpp | 1 |  | open |
+| `Vehicles/Muenchen_KI/ap3/texture/hyundai_i20.dds` | ERROR | texture decode failed &lt;file&gt;: unsupported texture format: unsupported DDS pixel format with N bpp | 1 |  | open |
 
 ## Other (212 entries, 1596 events)
 
