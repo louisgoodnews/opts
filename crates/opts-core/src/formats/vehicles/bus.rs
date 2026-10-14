@@ -92,6 +92,32 @@ pub struct BusCamera {
     pub is_ticket_view: bool,
 }
 
+/// Keywords that shape how a vehicle drives or is driven by AI, beyond mass and axles.
+///
+/// Counts are files of the installation that declare the keyword (2,752 `.bus`/`.ovh` files).
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct VehicleExtras {
+    /// `[ai_veh_type]`: `0` passenger car, `1` cab, `2` bus, `3` truck (the legend in the vehicle
+    /// files themselves; 80 files).
+    pub ai_veh_type: Option<u32>,
+    /// `[ai_brakeperformance]`: the numbers of the block in file order, the first being the
+    /// brake multiplier (141 files; the others are unexplained).
+    pub ai_brake_performance: Vec<f32>,
+    /// `[rowdy_factor]`: `(low, high)`, a per-vehicle random draw between the two at creation
+    /// (539 files).
+    pub rowdy_factor: Option<(f32, f32)>,
+    /// `[ai_deltaheight]`: vertical offset when driven by AI, metres (1,485 files).
+    pub ai_delta_height: Option<f32>,
+    /// `[rollwiderstand]`: rolling resistance as a constant force, newtons (2,731 files).
+    pub roll_resistance_n: Option<f32>,
+    /// `[inv_min_turnradius]`: reciprocal of the smallest turning radius, 1/m (2,479 files).
+    pub inv_min_turn_radius: Option<f32>,
+    /// `[schwerpunkt]`: height of the centre of gravity, metres (1,908 files).
+    pub centre_of_gravity_height: Option<f32>,
+    /// `[rot_pnt_long]`: longitudinal coordinate of the rotation point, metres (2,731 files).
+    pub rotation_point_long: Option<f32>,
+}
+
 /// Parsed vehicle manifest configuration.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BusManifest {
@@ -159,6 +185,8 @@ pub struct BusManifest {
     pub std_camera_index: Option<usize>,
     /// Orbit pivot center for external exterior camera.
     pub outside_camera_center: Option<glam::Vec3>,
+    /// AI and physics keywords beyond mass and axles.
+    pub extras: VehicleExtras,
 }
 
 impl BusManifest {
@@ -199,6 +227,7 @@ impl BusManifest {
         let mut pax_cameras = Vec::new();
         let mut std_camera_index = None;
         let mut outside_camera_center = None;
+        let mut extras = VehicleExtras::default();
 
         for block in blocks {
             match block.keyword.as_str() {
@@ -400,6 +429,39 @@ impl BusManifest {
                     let z = parse_float(&block.parameters[2]).unwrap_or(0.0);
                     outside_camera_center = Some(glam::Vec3::new(x, y, z));
                 }
+                "ai_veh_type" => {
+                    extras.ai_veh_type = block
+                        .parameters
+                        .first()
+                        .and_then(|p| p.trim().parse::<u32>().ok());
+                }
+                "ai_brakeperformance" => {
+                    extras.ai_brake_performance = block
+                        .parameters
+                        .iter()
+                        .map_while(|p| parse_float(p).ok())
+                        .collect();
+                }
+                "rowdy_factor" => {
+                    let v: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .map_while(|p| parse_float(p).ok())
+                        .take(2)
+                        .collect();
+                    if let [lo, hi] = v[..] {
+                        extras.rowdy_factor = Some((lo.min(hi), lo.max(hi)));
+                    }
+                }
+                "ai_deltaheight" => extras.ai_delta_height = first_float(&block.parameters),
+                "rollwiderstand" => extras.roll_resistance_n = first_float(&block.parameters),
+                "inv_min_turnradius" => {
+                    extras.inv_min_turn_radius = first_float(&block.parameters);
+                }
+                "schwerpunkt" => {
+                    extras.centre_of_gravity_height = first_float(&block.parameters);
+                }
+                "rot_pnt_long" => extras.rotation_point_long = first_float(&block.parameters),
                 "view_schedule" => {
                     if let Some(cam) = driver_cameras.last_mut() {
                         cam.is_schedule_view = true;
@@ -445,6 +507,7 @@ impl BusManifest {
             pax_cameras,
             std_camera_index,
             outside_camera_center,
+            extras,
         })
     }
 
@@ -456,6 +519,10 @@ impl BusManifest {
         let text = decode_bytes(bytes);
         Self::parse(&text)
     }
+}
+
+fn first_float(params: &[String]) -> Option<f32> {
+    params.first().and_then(|p| parse_float(p).ok())
 }
 
 fn extract_counted_list(params: &[String], dest: &mut Vec<String>) {
