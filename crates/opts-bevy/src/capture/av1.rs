@@ -15,7 +15,7 @@ use super::ivf::IvfWriter;
 /// `rav1e` speed preset: 10 is the fastest; recording shares the CPU with the simulation.
 const SPEED: u8 = 10;
 /// Threads `rav1e` may use.
-const THREADS: usize = 2;
+const THREADS: usize = 4;
 
 /// Maps the 1..=100 `quality` parameter to a `rav1e` quantizer (lower is better).
 #[must_use]
@@ -76,7 +76,9 @@ pub struct Av1Ivf {
     out: IvfWriter,
     width: usize,
     height: usize,
-    sent: u64,
+    fps: u64,
+    /// Presentation time (in 1/fps units) of every frame sent, by input frame number.
+    pts: Vec<u64>,
 }
 
 impl Av1Ivf {
@@ -106,6 +108,12 @@ impl Av1Ivf {
         enc.quantizer = quantizer_for(quality);
         enc.low_latency = true;
         enc.max_key_frame_interval = u64::from(fps.max(1)) * 2;
+        // Tiles let several threads work on one frame; without assembly a 1080p frame is slow
+        // on one thread. Small frames stay in one tile.
+        if width >= 960 {
+            enc.tile_cols = 4;
+            enc.tile_rows = 1;
+        }
         let cfg = Config::new().with_encoder_config(enc).with_threads(THREADS);
         let ctx: Context<u8> = cfg.new_context().map_err(|e| fail("setup", e))?;
         let w16 = u16::try_from(width).map_err(|_| fail("setup", "frame wider than 65535"))?;
@@ -115,7 +123,8 @@ impl Av1Ivf {
             out: IvfWriter::create(path, b"AV01", w16, h16, fps.max(1))?,
             width: width as usize,
             height: height as usize,
-            sent: 0,
+            fps: u64::from(fps.max(1)),
+            pts: Vec::new(),
         })
     }
 
@@ -124,7 +133,12 @@ impl Av1Ivf {
         loop {
             match self.ctx.receive_packet() {
                 Ok(packet) => {
-                    bytes = self.out.write_frame(packet.input_frameno, &packet.data)?;
+                    let pts = self
+                        .pts
+                        .get(packet.input_frameno as usize)
+                        .copied()
+                        .unwrap_or(packet.input_frameno);
+                    bytes = self.out.write_frame(pts, &packet.data)?;
                 }
                 Err(EncoderStatus::Encoded) => {}
                 Err(EncoderStatus::NeedMoreData) if !flushing => return Ok(bytes),
@@ -136,7 +150,7 @@ impl Av1Ivf {
 }
 
 impl Encoder for Av1Ivf {
-    fn push(&mut self, frame: &RgbFrame, _info: &FrameInfo) -> Result<u64, CaptureError> {
+    fn push(&mut self, frame: &RgbFrame, info: &FrameInfo) -> Result<u64, CaptureError> {
         let frame = if (frame.width as usize, frame.height as usize) == (self.width, self.height) {
             std::borrow::Cow::Borrowed(frame)
         } else {
@@ -147,8 +161,12 @@ impl Encoder for Av1Ivf {
         f.planes[0].copy_from_raw_u8(&y, self.width, 1);
         f.planes[1].copy_from_raw_u8(&u, self.width.div_ceil(2), 1);
         f.planes[2].copy_from_raw_u8(&v, self.width.div_ceil(2), 1);
+        // Presentation time follows the capture clock, so dropped frames leave a gap instead of
+        // squeezing the video (variable frame rate); it never goes backwards.
+        let wanted = (info.wall_ms * self.fps + 500) / 1000;
+        let pts = self.pts.last().map_or(wanted, |last| wanted.max(last + 1));
+        self.pts.push(pts);
         self.ctx.send_frame(f).map_err(|e| fail("encoding", e))?;
-        self.sent += 1;
         let written = self.drain(false)?;
         Ok(written.max(self.out.frames().into()))
     }
@@ -177,6 +195,29 @@ mod tests {
             height: h,
             data,
         }
+    }
+
+    #[test]
+    fn dropped_frames_leave_a_gap_in_presentation_time() {
+        let path = std::env::temp_dir().join(format!("opts_av1_vfr_{}.ivf", std::process::id()));
+        let mut enc = Av1Ivf::create(&path, 64, 48, 30, 60).expect("create");
+        // 30 fps clock; frames 1 and 2 were dropped, so the third arrives at 100 ms.
+        for (i, wall_ms) in [0u64, 33, 133, 166].into_iter().enumerate() {
+            let info = FrameInfo {
+                index: i as u64,
+                sim_time: 0.0,
+                frame: 0,
+                wall_ms,
+            };
+            enc.push(&gradient(64, 48, i as u32), &info).expect("push");
+        }
+        Box::new(enc).finish().expect("finish");
+        let i = ivf::inspect(&std::fs::read(&path).expect("read")).expect("ivf");
+        assert_eq!(i.counted_frames, 4);
+        assert_eq!(
+            i.last_pts, 5,
+            "166 ms at 30 fps is tick 5, not frame number 3"
+        );
     }
 
     #[test]

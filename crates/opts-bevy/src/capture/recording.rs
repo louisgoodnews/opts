@@ -193,6 +193,7 @@ fn result_json(a: &Active, state: &str) -> Value {
         "dropped": s.dropped.load(Ordering::Relaxed),
         "bytes": s.bytes.load(Ordering::Relaxed),
         "stopped_by": a.stopped_by,
+        "timing_ms": timing_json(s),
     });
     if let Some(e) = s.error.lock().ok().and_then(|g| g.clone()) {
         v["error"] = json!(e);
@@ -221,6 +222,25 @@ pub fn status_json(a: &Active, now: f64) -> Value {
         "fps_measured": if elapsed_ms > 0 { (frames as f64 * 1000.0 / elapsed_ms as f64 * 10.0).round() / 10.0 } else { 0.0 },
         "degraded": s.degraded.load(Ordering::Relaxed),
         "stopped_by": a.stopped_by,
+        "timing_ms": timing_json(s),
+    })
+}
+
+/// Average cost per frame of each stage, in milliseconds: the renderer's readback, the
+/// conversion and the encoder. Diagnoses a recording that drops frames.
+fn timing_json(s: &Shared) -> Value {
+    let avg = |total: u64, n: u64| {
+        if n == 0 {
+            0.0
+        } else {
+            (total as f64 / n as f64 / 100.0).round() / 10.0
+        }
+    };
+    let encoded = s.frames.load(Ordering::Relaxed);
+    json!({
+        "delivery": avg(s.delivery_us.load(Ordering::Relaxed), s.delivered.load(Ordering::Relaxed)),
+        "convert": avg(s.convert_us.load(Ordering::Relaxed), encoded),
+        "encode": avg(s.encode_us.load(Ordering::Relaxed), encoded),
     })
 }
 
@@ -311,9 +331,13 @@ fn tick(
     let shared = a.shared.clone();
     shared.in_flight.fetch_add(1, Ordering::Relaxed);
     let sink_shared = shared.clone();
+    let requested_at = Instant::now();
     let sink = Box::new(move |image: Image| {
         let s = &sink_shared;
         s.in_flight.fetch_sub(1, Ordering::Relaxed);
+        s.delivery_us
+            .fetch_add(requested_at.elapsed().as_micros() as u64, Ordering::Relaxed);
+        s.delivered.fetch_add(1, Ordering::Relaxed);
         s.last_delivery_ms.store(s.ms(), Ordering::Relaxed);
         match tx.try_send(Msg::Frame(image, info)) {
             Ok(()) => s.full_since_ms.store(0, Ordering::Relaxed),

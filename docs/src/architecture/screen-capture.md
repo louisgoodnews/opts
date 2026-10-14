@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Design approved 2026-10-14 (Phase A); Phase B implemented, Phase C (live verification) pending |
+| **Status** | ✅ Design approved 2026-10-14 (Phase A); Phase B implemented; Phase C measured in the main menu only (see "Measurements") |
 | **Date** | 2026-10-14 |
 | **Branch** | `agent/screen-capture` |
 | **Decision record** | [ADR-0012](../adr/0012-screen-capture-encoding.md) |
@@ -83,7 +83,7 @@ The command is **asynchronous**: it returns the final result when the last frame
 | `duration_ms` | integer | 60 000 (the CLI defaults to 30 000) | 1..=1 800 000 (30 min) |
 | `max_size_mb` | integer | 512 | 1..=2 048 |
 | `quality` | 1..=100 | 70 | encoders only |
-| `scale` | 0.25..=1.0 | 1.0 | downscale before encoding (cheap way to cut cost) |
+| `scale` | 0.25..=1.0 | 0.5 | downscale before encoding, rounded to a whole reduction (1, 1/2, 1/3, 1/4); measured necessary, see "Measurements" |
 
 `png_sequence` is subject to the same size and disk limits; at 1080p it fills 512 MB in a few hundred frames, so a long `png_sequence` recording ends early with `stopped_by: "size"`. It exists for short, frame-exact captures; for several seconds of motion use `capture.burst` with a low rate or record `av1` and extract frames afterwards.
 
@@ -273,4 +273,24 @@ How the design maps to the code:
 4. **Metadata `markers`** (open F1 report, trace on) are not included yet; `fixed_tick`, `app_state`, `map`, `tile`, `vehicle`, `camera_mode` are.
 5. **`capture.prune`** is implemented (the task's table did not list it, the design did).
 6. **`screenshot.path`** is restricted to the captures directory (decision 3 above); `report` and `snapshot` keep their own rules.
+
+## Measurements (Phase C, 2026-10-14, main menu only)
+
+Setup: `opts-game` debug build (dependencies at opt-level 3, our crates at opt-level 1), windowed 1920x1013, no OMSI content loaded (the menu), uncapped frame rate around 650 fps, 16-core machine with a load average of about 5, throw-away config and data directories. **No map or vehicle was loaded**, so the numbers below say how expensive capture is per frame, not how it behaves in a heavy scene; the acceptance runs on a loaded map are still open.
+
+| Setting (30 fps requested) | Captured fps | Dropped of requested | Per frame: readback / convert / encode (ms) |
+| :--- | ---: | ---: | :--- |
+| `scale` 1.0 (1920x1013) | about 9 | 104 of 150 | 6.2 / 1.4 / 115 |
+| `scale` 0.5 (960x506), the default | about 23 | 33 of 150 | 6.3 / 7.9 / 34 |
+| `scale` 0.25 (480x253) | about 29 | 3 of 150 | 5.8 / 5.3 / 25 |
+
+* **Frame rate of the game** (before / during / after): default recording 694 / 588 / 667 and 668 / 594 / 676 fps (85 % and 89 % during), full size 687 / 606 / 659 (88 %). The acceptance bar is 80 % during; it holds in the menu. The cost is the observer's image clone and request on the main thread; the encode does not show up.
+* **The bottleneck is `rav1e`**, which is built without assembly. The renderer's readback (about 6 ms, asynchronous) is not a stall. A resize with a triangle filter cost 55-73 ms per frame and was replaced by an integer box filter (8 ms at 1/2), which is why `scale` is rounded to 1, 1/2, 1/3 or 1/4.
+* **Playback time.** The first live clip played 4 s of footage in 0.7 s because frames were numbered in sequence. IVF timestamps now follow the capture clock, so dropped frames leave gaps (variable frame rate) and the clip lasts as long as the recording did. Covered by `dropped_frames_leave_a_gap_in_presentation_time`.
+* **Readback and window-only.** The screenshot of the menu is the application window's content at its physical size (1920x1013), nothing from the desktop; a clip frame shows the same content at half size.
+* **Not measured:** frame rate in a loaded scene, behaviour of the degradation policy against a real low frame rate (covered by tests with synthetic limits), an occluded or minimized real window, fullscreen, and Wayland frame-callback behaviour.
+
+### What would make full-size 30 fps possible
+
+The encoder, not the capture path, is the limit. Options, none taken: build `rav1e` with its assembly (needs the `nasm` assembler, a system tool), an optional external `ffmpeg` backend, or accept lower resolution (the default). The current design keeps the dependency-free build and a documented default of half size.
 

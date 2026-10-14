@@ -38,6 +38,14 @@ pub struct Shared {
     pub state: AtomicU8,
     /// Whether the capture rate is currently halved.
     pub degraded: AtomicBool,
+    /// Total microseconds the worker spent converting frames (RGB, scaling).
+    pub convert_us: AtomicU64,
+    /// Total microseconds the worker spent in the encoder.
+    pub encode_us: AtomicU64,
+    /// Total microseconds between requesting a frame and its delivery.
+    pub delivery_us: AtomicU64,
+    /// Frames delivered by the renderer.
+    pub delivered: AtomicU64,
     /// Milliseconds since the start at which the last frame was delivered.
     pub last_delivery_ms: AtomicU64,
     /// Milliseconds since the start at which the queue became full (0 = not full).
@@ -57,6 +65,10 @@ impl Shared {
             in_flight: AtomicUsize::new(0),
             state: AtomicU8::new(RECORDING),
             degraded: AtomicBool::new(false),
+            convert_us: AtomicU64::new(0),
+            encode_us: AtomicU64::new(0),
+            delivery_us: AtomicU64::new(0),
+            delivered: AtomicU64::new(0),
             last_delivery_ms: AtomicU64::new(0),
             full_since_ms: AtomicU64::new(0),
             error: Mutex::new(None),
@@ -118,14 +130,22 @@ pub fn worker(rx: &Receiver<Msg>, plan: &WorkerPlan, shared: &Shared) {
     let mut failed = false;
     while let Ok(Msg::Frame(image, info)) = rx.recv() {
         let step = (|| {
+            let t0 = Instant::now();
             let mut frame = RgbFrame::from_image(image, plan.scale)?;
+            shared
+                .convert_us
+                .fetch_add(t0.elapsed().as_micros() as u64, Ordering::Relaxed);
             if encoder.is_none() {
                 size = (frame.width, frame.height);
                 encoder = Some(make_encoder(plan, &frame)?);
             } else if (frame.width, frame.height) != size {
                 frame = frame.fitted(size.0, size.1);
             }
+            let t1 = Instant::now();
             let bytes = encoder.as_mut().map_or(Ok(0), |e| e.push(&frame, &info))?;
+            shared
+                .encode_us
+                .fetch_add(t1.elapsed().as_micros() as u64, Ordering::Relaxed);
             Ok::<u64, CaptureError>(bytes)
         })();
         match step {

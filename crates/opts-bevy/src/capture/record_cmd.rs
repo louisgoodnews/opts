@@ -18,6 +18,10 @@ use super::recording::{launch, status_json, RecFormat, Recorder, StartPlan};
 use super::storage::{self, CaptureState};
 use super::worker::WorkerPlan;
 
+/// Default downscale of a recording. Measured on a 1920x1013 window: the pure-Rust AV1 encoder
+/// keeps about 9 fps at full size, 23 fps at 1/2 and 29 fps at 1/4 (design, Phase C).
+pub const DEFAULT_SCALE: f64 = 0.5;
+
 /// Registers the recording commands.
 pub fn register(r: &mut ControlRegistry) {
     r.register("capture.record.start", start);
@@ -63,7 +67,7 @@ fn parse(params: &Value, limits: &CaptureLimits) -> Result<StartPlan, RpcError> 
         Some(_) => return Err(RpcError::invalid_params("`quality` must be 1..=100")),
         None => 70,
     };
-    let scale = opt_f64(params, "scale")?.unwrap_or(1.0);
+    let scale = opt_f64(params, "scale")?.unwrap_or(DEFAULT_SCALE);
     if !(0.25..=1.0).contains(&scale) {
         return Err(RpcError::invalid_params("`scale` must be 0.25..=1.0"));
     }

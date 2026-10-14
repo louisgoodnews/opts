@@ -102,6 +102,8 @@ pub struct IvfInfo {
     pub header_frames: u32,
     /// Frames actually present (counted by walking the file).
     pub counted_frames: u32,
+    /// Presentation timestamp of the last frame (time-base units).
+    pub last_pts: u64,
 }
 
 /// Parses an IVF file, counting its frames.
@@ -117,8 +119,10 @@ pub fn inspect(bytes: &[u8]) -> Result<IvfInfo, String> {
         |o: usize| u32::from_le_bytes([bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]]);
     let mut pos = 32usize;
     let mut counted = 0u32;
+    let mut last_pts = 0u64;
     while pos + 12 <= bytes.len() {
         let size = u32_at(pos) as usize;
+        last_pts = u64::from(u32_at(pos + 4)) | (u64::from(u32_at(pos + 8)) << 32);
         pos += 12 + size;
         if pos > bytes.len() {
             return Err("truncated frame".into());
@@ -131,6 +135,7 @@ pub fn inspect(bytes: &[u8]) -> Result<IvfInfo, String> {
         height: u16_at(14),
         header_frames: u32_at(24),
         counted_frames: counted,
+        last_pts,
     })
 }
 
@@ -155,7 +160,8 @@ mod tests {
                 width: 320,
                 height: 180,
                 header_frames: 2,
-                counted_frames: 2
+                counted_frames: 2,
+                last_pts: 1
             }
         );
         assert!(

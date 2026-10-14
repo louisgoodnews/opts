@@ -20,25 +20,62 @@ pub struct RgbFrame {
 }
 
 impl RgbFrame {
-    /// Converts a captured frame (alpha dropped) and scales it by `scale` (0.25..=1.0).
+    /// Converts a captured frame (alpha dropped) and scales it down by `scale` (0.25..=1.0),
+    /// rounded to the nearest integer reduction (1, 1/2, 1/3 or 1/4) so a fast box filter can do
+    /// it.
     ///
     /// # Errors
     /// `Failed` when the pixel format cannot be converted.
     pub fn from_image(image: Image, scale: f32) -> Result<Self, CaptureError> {
-        let mut rgb = image
+        let rgb = image
             .try_into_dynamic()
             .map_err(|e| CaptureError::Failed(format!("the frame cannot be converted: {e}")))?
             .to_rgb8();
-        if scale < 0.999 {
-            let w = ((rgb.width() as f32 * scale) as u32).max(2);
-            let h = ((rgb.height() as f32 * scale) as u32).max(2);
-            rgb = image::imageops::resize(&rgb, w, h, image::imageops::FilterType::Triangle);
+        let factor = (1.0 / scale.clamp(0.25, 1.0)).round() as u32;
+        let (width, height) = (rgb.width(), rgb.height());
+        Ok(Self::box_reduce(
+            width,
+            height,
+            rgb.into_raw(),
+            factor.clamp(1, 4),
+        ))
+    }
+
+    /// Averages `factor` x `factor` blocks of an RGB buffer (`factor` 1 returns it unchanged).
+    #[must_use]
+    pub fn box_reduce(width: u32, height: u32, data: Vec<u8>, factor: u32) -> Self {
+        if factor <= 1 {
+            return Self {
+                width,
+                height,
+                data,
+            };
         }
-        Ok(Self {
-            width: rgb.width(),
-            height: rgb.height(),
-            data: rgb.into_raw(),
-        })
+        let (w, h) = ((width / factor).max(1), (height / factor).max(1));
+        let f = factor as usize;
+        let mut out = Vec::with_capacity((w * h * 3) as usize);
+        let stride = width as usize * 3;
+        let area = (f * f) as u32;
+        for y in 0..h as usize {
+            for x in 0..w as usize {
+                let mut sum = [0u32; 3];
+                for dy in 0..f {
+                    let row = (y * f + dy).min(height as usize - 1) * stride;
+                    for dx in 0..f {
+                        let i = row + (x * f + dx).min(width as usize - 1) * 3;
+                        sum[0] += u32::from(data[i]);
+                        sum[1] += u32::from(data[i + 1]);
+                        sum[2] += u32::from(data[i + 2]);
+                    }
+                }
+                out.extend(sum.map(|v| ((v + area / 2) / area) as u8));
+            }
+        }
+        Self {
+            width: w,
+            height: h,
+            data: out,
+        }
     }
 
     /// The frame resized to exactly `width` x `height` (a window resized mid-recording).
@@ -143,6 +180,16 @@ mod tests {
             height: h,
             data: (0..w * h * 3).map(|i| (i % 251) as u8).collect(),
         }
+    }
+
+    #[test]
+    fn box_reduction_averages_blocks() {
+        // 2x2 pixels: (0,0,0) (100,0,0) (0,200,0) (100,200,60) -> one pixel (50,100,15).
+        let data = vec![0, 0, 0, 100, 0, 0, 0, 200, 0, 100, 200, 60];
+        let f = RgbFrame::box_reduce(2, 2, data, 2);
+        assert_eq!((f.width, f.height, f.data), (1, 1, vec![50, 100, 15]));
+        let g = RgbFrame::box_reduce(7, 5, vec![9; 7 * 5 * 3], 3);
+        assert_eq!((g.width, g.height), (2, 1));
     }
 
     #[test]
