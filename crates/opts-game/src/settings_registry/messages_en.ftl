@@ -193,6 +193,9 @@ settings-toast-omsi-restart = OMSI folder saved. Restart OPTS to load its conten
 settings-toast-omsi-invalid = That folder does not look like an OMSI 2 installation (it needs the folders maps and Vehicles).
 
 settings-back = Back
+set-autosave = Autosave
+set-autosave-desc = Saves the drive to the autosave slot every this many minutes of play. 0 turns it off.
+
 
 # Hardware (M-0081)
 set-hw-redetect = Detect hardware again

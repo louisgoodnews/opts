@@ -51,6 +51,7 @@ const HELP: &str = "crates/opts-game/src/help/mod.rs";
 const THEME: &str = "crates/opts-game/src/shell/footer.rs";
 const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
 const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
+const QUICK_SAVE: &str = "crates/opts-game/src/save/quick.rs";
 
 /// The single registry of the keyboard bindings that the Help page prints. The input systems keep
 /// reading keys directly (they are not driven by this table); the test in this module reads their
@@ -119,6 +120,8 @@ pub const GROUPS: &[Group] = &[
             bind("P", &[KeyCode::KeyP], keys::HELP_KEY_SIM_PAUSE, SIM_PAUSE),
             bind("Alt", &[KeyCode::AltLeft], keys::HELP_KEY_VEHICLE_MENU, EGO),
             bind("F8", &[KeyCode::F8], keys::HELP_KEY_SWITCH_VEHICLE, SESSION),
+            bind("F5", &[KeyCode::F5], keys::HELP_KEY_QUICK_SAVE, QUICK_SAVE),
+            bind("F9", &[KeyCode::F9], keys::HELP_KEY_QUICK_LOAD, QUICK_SAVE),
             bind("F1", &[KeyCode::F1], keys::HELP_KEY_HELP, HELP),
             bind("F2", &[KeyCode::F2], keys::HELP_KEY_THEME, THEME),
             bind("F10", &[KeyCode::F10], keys::HELP_KEY_DEV, DEV),

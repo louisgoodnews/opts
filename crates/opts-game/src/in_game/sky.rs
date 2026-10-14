@@ -285,7 +285,7 @@ pub fn spawn_sky(
 /// Moves the dome with the camera and updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
-    time: Res<Time<Virtual>>,
+    session: Res<crate::in_game::types::InGameSessionInfo>,
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
@@ -325,7 +325,9 @@ pub fn update_sky(
     let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
         return;
     };
-    let now = time.elapsed_secs();
+    // The session clock (not the app's virtual time, which keeps running between sessions), so a
+    // restored save shows the sky of its saved time.
+    let now = session.sim_elapsed_seconds;
     let hour = sky.start_hour + now / 3600.0;
     let (elevation, azimuth) = sun_position(hour, sky.day_of_year);
     let sun_dir = direction(elevation, azimuth);
