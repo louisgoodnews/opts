@@ -262,7 +262,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
 | [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
-| [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...) |
+| [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...) |
 
 ### `scene.load_map`
 
@@ -364,7 +364,7 @@ Shows the HUD place label again. Answers `1001` when the vehicle is not in the w
 
 ### `menu.do`
 
-Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...).
+Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...).
 
 Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`.
 
