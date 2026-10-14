@@ -16,7 +16,6 @@ pub mod source;
 #[cfg(test)]
 mod tests;
 
-
 use bevy::asset::RenderAssetUsages;
 use bevy::math::DVec2;
 use bevy::prelude::*;
