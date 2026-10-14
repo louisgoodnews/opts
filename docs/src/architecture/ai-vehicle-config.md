@@ -57,7 +57,7 @@ Keep the kinematic traffic model and its pure-Rust boundary. Add one data type t
 
 New `BusManifest` fields are needed for `[ai_veh_type]`, `[ai_brakeperformance]`, `[rowdy_factor]` and `[ai_deltaheight]` (so the spawner stops scanning raw text). `[rollwiderstand]`, `[inv_min_turnradius]`, `[schwerpunkt]` and `[rot_pnt_long]` are added to the manifest in the same change because the profile and, later, the dynamic mode need them; the player simulation gains them for free.
 
-A corpus test (OMSI-gated, like `ai_lists_corpus`) builds a profile for every vehicle in every AI group and reports which fields fall back to a default; the accepted fallback list is part of the milestone's acceptance.
+A corpus test (OMSI-gated, like `ai_lists_corpus`) builds a profile for every vehicle in every AI group and reports which fields fall back to a default; the accepted fallback list is part of the milestone's acceptance. **Measured (2026-10-14):** over 426 distinct vehicles, mass falls back in 6, brake force in 33, drive torque in 60, top speed in 109 and wheel radius in 0; the test fails above 2 %, 10 %, 15 %, 30 % and 5 % of the vehicles respectively.
 
 ### D2: `VehicleTraits` and the mapping in `opts-traffic`
 
@@ -78,6 +78,8 @@ Proposed mapping, phase 1 (formulas, all clamped, all in `Calibration`):
 The units of `AI_M_gas_max` and the exact meaning of `AI_v_max` against `AI_v_max_erreich` are inferred from the AI script's `M_Wheel = Throttle · M_gas_max · (1 - v / v_reach)` ([ai-traffic.md](ai-traffic.md) §2.2) and are ❓. Phase 2 replaces the formulas for acceleration and braking by a **measured characterisation**: run the vehicle's own `main_AI.osc` in the script VM against `opts-sim` once per vehicle (full throttle to v_max, full brake from 50 km/h), cache `a(v)` and the stopping distance in the decoder cache, and feed those into `VehicleTraits`. This uses the real mass and the real constants without modelling every drivetrain, but depends on the consist-mass fix (M-0053) for articulated vehicles.
 
 ### D3: all groups, class, domain
+
+*Implemented as designed; one rule was added after the corpus census: a vehicle is a rail vehicle only when `[type]` is 2 **and** it declares `[boogies]` (860 of the 877 `[type] 2` files do), because two road scooters declare `[type] 2` without bogies.*
 
 The spawner builds its pool from every group of the map's `ailists.cfg` that `unsched_vehgroups.txt` marks with a non-zero density (per-group density through `unsched_trafficdens.txt`, which the pool already reads for one group). Entries whose `domain` is `Rail` or `Air` are never placed on road lanes. A group's own density decides how often its vehicles appear, so lorries and buses are rarer than cars where the map says so. Lane bans (`bus`, `trucks`, `no_cars`) use `kind`.
 
