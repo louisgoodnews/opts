@@ -91,3 +91,19 @@ Pan, rails, route line and path recognition (separate research task), a manual o
 | 2 | `V_FAST` | 60 km/h; configurable only in code in v1 |
 | 3 | Is `R_far` = user's step acceptable, or should speed mode ignore the step and use fixed 100-500 m? | `R_far` = user's step (keeps `+`/`-` meaningful) |
 | 4 | Key for the mode | Ctrl+F7 |
+
+## 7. Verification (2026-10-14)
+
+| Check | Result |
+| :--- | :--- |
+| Unit tests (`hud::minimap::tests::speed_zoom`, 10) | target at `V_SLOW`/`V_FAST`, monotone, floor of the near radius, first step without animation, convergence and steadiness (spread below 1 %), out faster than in, 8 s stop, tick-length independence within 3 %, jitter of 0-3 km/h moves the radius by less than 1 %, reset and teleport |
+| Real redraw system (`the_mini_map_radius_follows_the_speed_and_the_fixed_mode_ignores_it`) | controller speed 0 -> radius 67 m; 60 km/h -> 200 m within 5 %; 0 again -> 67 m; fixed mode -> exactly 200 m whatever the speed |
+| Live run (SD83 on Aachen Linie 33, zoom step 500 m, `hud.minimap` read every 0.5 s) | stopped: 164 m (target 167). Accelerating: radius 164 -> 175 -> 201 -> 232 -> 262 m while the speed rose 0 -> 32 km/h; braking: 262 -> 249 -> 232 -> 215 -> 203 -> 188 -> 176 -> 170 m, no overshoot, no reversal. Standing: 170 m, constant over 10 s. |
+
+The vehicle could not exceed about 32-39 km/h live because of obstacles on the straight at the start position; the 60 km/h end of the curve is covered by the test through the real system, not by the live run.
+
+![The mini map stopped (160 m), at about 17 km/h (180 m) and at about 30 km/h (240 m); step 500 m](img/minimap-speed-zoom.png)
+
+The strip is a crop of OPTS's own drawing (roads from the map's lane graph, no textures).
+
+Not covered: the free-camera speed path (no vehicle) is unit-tested (`camera_speed_kmh`) but was not driven live.
