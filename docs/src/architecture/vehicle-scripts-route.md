@@ -72,7 +72,7 @@ Principle: **the scripts are the specification of the vehicle's behaviour; the p
 4. **Callbacks in tiers by value**, each backed by data OPTS already parses: (A) route/terminus/bus-stop strings from `.hof`, the timetables and the AI schedule: these drive every destination display; (B) script textures: a CPU canvas per `[scripttexture]` implementing the 17 `ST*` calls with `.oft` fonts, uploaded as a Bevy `Image` only when a script marks it unlocked and changed; (C) passenger, ticket and cash services behind the passenger model; (D) `GetHeightAbovePoint` from the ground index; `NrSpecRandom` from the seeded generator.
 5. **Events to audio** once M-0027 provides the mixer: `(T.L/F/S)` events map to `sound_cfg` triggers 1:1.
 6. **AI vehicles run their (small) scripts, not a table, when near:** the AI planner writes `Throttle`/`Brake`/`AI_*` like OMSI's AI does, the 1-script `.ovh` set turns them into `M_Wheel`/`Brakeforce`, and the same physics step integrates it. Distant AI vehicles use the cheap kinematic/table path (LOD by distance and screen size), so the budget is bounded: scripts for ≤ 40 near vehicles ≈ 3 ms per step.
-7. **Deterministic by construction:** fixed 60 Hz step, `random` from a seeded generator per vehicle, no wall-clock reads except through `GetTime` fed by the simulation clock; replays record only inputs ([determinism](determinism-replays.md)).
+7. **Deterministic by construction:** fixed step (default 64 Hz, `--physics-hz`, clamped to 20–1000 Hz; `crates/opts-cli/src/args.rs`, `crates/opts-game/src/app.rs`), `random` from a seeded generator per vehicle, no wall-clock reads except through `GetTime` fed by the simulation clock; replays record only inputs ([determinism](determinism-replays.md)).
 
 ## 5. Route
 
