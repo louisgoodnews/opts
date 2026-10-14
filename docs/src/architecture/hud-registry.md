@@ -44,7 +44,7 @@ modes in which it is hidden).
 | `controls-hint` | ClusterBottomLeft (hints) | `interface.hud_hints` | fades after 12 s; the older *Show hints* setting is its switch; a short text in a compact layout |
 | `alerts` | ClusterBottomLeft (alerts) | none (alerts keep the driver safe) | one alert at a time |
 | `camera-label` | CameraLabel | `hud.camera_label` | 1.5 s after a camera or mode change |
-| `minimap` | MiniMap | `hud.minimap` (F9) | roads and vehicles around the player, see section 4a; also `hud.minimap_zoom` and `hud.minimap_orientation` |
+| `minimap` | MiniMap | `hud.minimap` (F7) | roads and vehicles around the player, see section 4a; also `hud.minimap_zoom` and `hud.minimap_orientation` |
 
 The switches are ordinary settings of the [settings registry](settings-registry.md) (Interface page,
 `settings.set`, reset, search): `settings_registry/builtin.rs` generates one descriptor per
@@ -104,11 +104,11 @@ Code: `hud/minimap/`. A top-down **vector** drawing of the roads around the play
 | Centre | the active vehicle (`PlayerVehicle`); without a vehicle (map-only session) the free camera, which then is also the marker |
 | Markers | every session vehicle: the active one is a *filled* arrow with a ring in the `text` token, the others are *hollow* arrows in the `warning` token (shape and lightness differ, never red against green); a mark on the edge shows where north is |
 | Zoom | the visible radius: 100, 200, 500 or 1000 m (setting `hud.minimap_zoom`, default 200); the keys `+` and `-` step through them |
-| Orientation | `hud.minimap_orientation`: `heading` (default, the vehicle's heading is up) or `north`; Shift+F9 switches |
-| Off | `hud.minimap` (F9); the widget then leaves the layout and nothing is drawn |
+| Orientation | `hud.minimap_orientation`: `heading` (default, the vehicle's heading is up) or `north`; Shift+F7 switches |
+| Off | `hud.minimap` (F7); the widget then leaves the layout and nothing is drawn |
 | Colours | all from the instrument tokens; the **ground is opaque** (`panel` without transparency) so the map reads over any scene, and every drawing colour has at least 3:1 against it in the day and the night palette (test) |
 
-The keys write the settings (`SettingsApi`), so the page, the keys, `settings.set` and `hud.minimap` agree and the choice is remembered. F9, `+`, `-` are in `OPTS_RESERVED_KEYS` (OMSI key bindings on them are dropped unless they need Ctrl) and in the Help controls table (`help::controls::GROUPS`, group *Mini map*).
+The keys write the settings (`SettingsApi`), so the page, the keys, `settings.set` and `hud.minimap` agree and the choice is remembered. F7, `+`, `-` are in `OPTS_RESERVED_KEYS` (OMSI key bindings on them are dropped unless they need Ctrl) and in the Help controls table (`help::controls::GROUPS`, group *Mini map*).
 
 ## 5. Alerts (UI-P13)
 

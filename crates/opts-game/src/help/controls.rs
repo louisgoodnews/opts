@@ -117,7 +117,7 @@ pub const GROUPS: &[Group] = &[
     (
         keys::HELP_GROUP_MAP,
         &[
-            bind("F9", &[KeyCode::F9], keys::HELP_KEY_MINIMAP, MINIMAP),
+            bind("F7", &[KeyCode::F7], keys::HELP_KEY_MINIMAP, MINIMAP),
             bind(
                 "+ / -",
                 &[

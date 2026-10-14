@@ -121,7 +121,7 @@ pub fn sync_config(settings: Res<GameSettings>, mut state: ResMut<MiniMapState>)
     }
 }
 
-/// F9 shows or hides the map, Shift+F9 switches north-up and heading-up, `+` and `-` zoom. The
+/// F7 shows or hides the map, Shift+F7 switches north-up and heading-up, `+` and `-` zoom. The
 /// keys change the settings, so the page and the keys agree and the choice is remembered.
 pub fn minimap_keys(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -130,7 +130,7 @@ pub fn minimap_keys(
     use crate::settings_registry::ChangeSource;
     let shift = keyboard.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     let config = MiniMapConfig::read(&api.settings);
-    let change = if keyboard.just_pressed(KeyCode::F9) {
+    let change = if keyboard.just_pressed(KeyCode::F7) {
         if shift {
             Some((
                 SETTING_ORIENTATION,

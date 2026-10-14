@@ -917,11 +917,11 @@ fn the_keys_change_the_settings() {
     press(&mut app, &[KeyCode::Minus]);
     press(&mut app, &[KeyCode::NumpadSubtract]);
     assert_eq!(config(&app).zoom_m, 500.0, "- zooms out");
-    press(&mut app, &[KeyCode::ShiftLeft, KeyCode::F9]);
+    press(&mut app, &[KeyCode::ShiftLeft, KeyCode::F7]);
     assert_eq!(config(&app).orientation, Orientation::North);
-    press(&mut app, &[KeyCode::F9]);
-    assert!(!config(&app).enabled, "F9 hides it");
-    press(&mut app, &[KeyCode::F9]);
+    press(&mut app, &[KeyCode::F7]);
+    assert!(!config(&app).enabled, "F7 hides it");
+    press(&mut app, &[KeyCode::F7]);
     assert!(config(&app).enabled, "and shows it again");
 }
 

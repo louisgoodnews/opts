@@ -50,7 +50,7 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/omsi_world/overlay.rs",
     "opts-game/src/help/mod.rs",
     "opts-game/src/hud/tests.rs",
-    // F9, Shift+F9, + and - drive the mini map settings; gated with `not_modal_active`.
+    // F7, Shift+F7, + and - drive the mini map settings; gated with `not_modal_active`.
     "opts-game/src/hud/minimap/mod.rs",
     "opts-game/src/pause/mod.rs",
     "opts-game/src/shell/footer.rs",
