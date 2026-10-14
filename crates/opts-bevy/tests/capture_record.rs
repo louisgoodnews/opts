@@ -198,7 +198,7 @@ fn an_av1_recording_is_a_well_formed_ivf_that_stops_at_the_duration_limit() {
         let start = c
             .call(
                 "capture.record.start",
-                json!({"name": "clip", "fps": 30, "duration_ms": 600}),
+                json!({"name": "clip", "fps": 30, "duration_ms": 600, "scale": 1.0}),
             )
             .expect("start");
         let id = start["recording_id"].as_str().expect("id").to_string();
