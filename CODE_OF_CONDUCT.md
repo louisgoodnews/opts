@@ -41,13 +41,15 @@ This Code of Conduct applies within all community spaces (including GitHub Issue
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **[conduct@opts-project.org]**.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement by using GitHub's private reporting mechanism:
 
-> 📝 **Note to maintainers:** Replace the placeholder email above with a real, monitored email address before publishing the repository. Consider using a dedicated address like `conduct@opts-project.org` rather than a personal email.
+https://github.com/louisgoodnews/opts/security/advisories/new
 
-All complaints will be reviewed and investigated promptly and fairly.
+The form is labeled "security advisory," but the channel is private and is monitored for conduct reports as well. Only repository maintainers can see submissions.
 
-All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+All complaints will be reviewed and investigated promptly and fairly. All community leaders are obligated to respect the privacy and security of the reporter of any incident.
+
+> *A dedicated conduct email address is planned for a future release. Until then, the private reporting mechanism above is the recommended channel.*
 
 ## Enforcement Guidelines
 
