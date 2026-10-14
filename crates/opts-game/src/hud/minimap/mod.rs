@@ -16,7 +16,6 @@ pub mod source;
 #[cfg(test)]
 mod tests;
 
-use std::time::Duration;
 
 use bevy::asset::RenderAssetUsages;
 use bevy::math::DVec2;
