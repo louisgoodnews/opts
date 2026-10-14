@@ -2,55 +2,66 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟢 Implemented (scanner rule); OMSI behaviour 🟡 inferred, not tested |
-| **Code** | `opts_core::formats::text::{keyword_line, scan_blocks_with}`; census `crates/opts-core/examples/keyword_indent_census.rs` |
-| **Date** | 2026-10-14 |
+| **Status** | 🟡 Investigated 2026-10-14: the scanner is **unchanged**; indented keywords are most likely comments or disabled blocks, not data |
+| **Code** | `opts_core::formats::text::scan_blocks_with` (keyword only at the start of a line); census `crates/opts-core/examples/keyword_indent_census.rs` |
 | **Related** | [`bus.md`](vehicles/bus.md) Q-003, design `articulation-physics.md` (branch `design/articulation-physics`) Q-ART-14 |
 
-## Finding
+## Question
 
-The shared block scanner accepted a keyword only when `[` was the **first character of the line**. Add-on authors indent keywords in many files, so every indented keyword was read as a *parameter line of the previous block*: the block it should have started never existed, and the previous block gained a stray parameter. Nothing was logged.
+The shared block scanner accepts a keyword only when `[` is the first character of the line. An indented `[keyword]` line is read as a parameter line of the previous block. The first census suggested that this drops real data: 7,112 `.sco`, 1,338 `.bus`, 1,128 `.ovh`, 1,354 `.cfg`, 524 `.sli`, 299 `.txt` files contain indented keyword lines. Is that a scanner bug?
 
-Measured on the reference installation (`keyword_indent_census`, a keyword line is a line that is exactly `[name]` after trimming; "lost" = raw keyword lines minus blocks the scanner returned):
+## Measurement
 
-| Extension | Files | With an indented keyword | Keyword lines lost before | after |
-| :--- | ---: | ---: | ---: | ---: |
-| `.sco` | 56,956 | 7,112 | 8,209 | 0 |
-| `.cfg` | 21,851 | 1,354 | 8,594 | 0 |
-| `.txt` (traffic and lists) | 10,647 | 299 | 3,969 | 0 |
-| `.ovh` | 1,255 | 1,128 | 2,162 | 0 |
-| `.bus` | 1,497 | 1,338 | 1,755 | 0 |
-| `.sli` | 16,531 | 524 | 968 | 0 |
-| `.hum` | 61 | 59 | 177 | 0 |
-| `.dsc` | 943 | 5 | 5 | 0 |
+`keyword_indent_census` (keyword line = exactly `[name]` after trimming; "not read" = raw keyword lines minus blocks the scanner returns):
 
-Most frequent lost keywords: `.sco` `nightmapmode` 5,250, `light_enh_2` 616, `texttexture` 585, `matl` 225, `mesh` 103, `collision_mesh` 97; `.cfg` `pnt` 944, `newanim` 717, `light_enh_2` 640, `mesh` 567, `ticket_sale*` ≈ 1,000; `.bus`/`.ovh` `registration_free` 997, `friendlyname` 1,350, `couple_back` 505, `boogies` 347, `rail_body_osc` 201; `.sli` `path` 415, `rail_enh` 344, `patchwork_chain` 91; `.txt` `set_day_of_week`/`trafficdensity` 1,570 each, `group` 783; `.hum` `humangeom`, `links`, `walk_param` in 59 of 61 files.
+| Extension | Files | With an indented keyword | Keyword lines not read |
+| :--- | ---: | ---: | ---: |
+| `.sco` | 56,956 | 7,112 | 8,209 |
+| `.cfg` | 21,851 | 1,354 | 8,594 |
+| `.txt` | 10,647 | 299 | 3,969 |
+| `.ovh` | 1,255 | 1,128 | 2,162 |
+| `.bus` | 1,497 | 1,338 | 1,755 |
+| `.sli` | 16,531 | 524 | 968 |
+| `.hum` | 61 | 59 | 177 |
+| `.dsc` | 943 | 5 | 5 |
 
-Consequence that was measured: of 1,035 vehicle files with a `[couple_back]` only 539 were read as having one (497 `.ovh` hold it indented); chains, trailer masses and the `bus.md` Q-003 evidence were all computed from the 539.
+Most frequent: `.sco` `nightmapmode` 5,250, `light_enh_2` 616, `texttexture` 585, `matl*` ≈ 650, `mesh` 103; `.cfg` `pnt` 944, `newanim` 717, `mesh` 567, `ticket_sale*` ≈ 1,050; `.bus`/`.ovh` `registration_free` 997, `friendlyname` 1,350, `couple_back` 505; `.txt` `set_day_of_week`/`trafficdensity` 1,570 each; `.hum` `humangeom`, `links`, `walk_param` in 59 of 61 files.
 
-## Rule
+## Evidence that they are not data
 
-A line is a keyword line when, after trimming trailing whitespace,
-- it starts with `[` at column 0 and ends with `]` (unchanged), **or**
-- it is indented by spaces or tabs and the text between the brackets is a plain identifier (`A–Z a–z 0–9 _`).
+1. **Editor help blocks.** The scenery-object template carries the help text of optional keywords as indented blocks, e.g. `Buildings_RUE/Haus02a.sco`:
 
-An indented line with other bracketed text (`\t[coupling_front] / [coupling_back]`, found in `Bm238/ABm225_ob.ovh`) is **not** a keyword: it stays a parameter or note, as before. The identifier test is deliberately narrower than the column-0 rule: only 14 indented bracket lines in the whole installation have a name that never occurs at the start of a line in a file of the same extension (7 in `.ovh`, 5 in `.dsc`, 2 in `.sco`), so the indented lines are overwhelmingly real keywords.
+   ```
+   <TAB>[NightMapMode]
+           Modus wie Nachtbeleuchtung eingeschaltet werden soll:
+   <TAB>0: wie Strassenbeleuchtung
+   <TAB>1: Gebaeude mit durchgehender Beleuchtung  …
 
-Tests: `text::tests::indented_keywords_start_blocks`, `an_indented_note_with_brackets_is_not_a_keyword`; corpus check: the census reports `raw == parsed` for every extension (`lost 0`).
+   [NightMapMode]
+   2
+   ```
+   The indented block is documentation, the real keyword follows at the start of a line. This is the 5,250 `nightmapmode` "losses". Reading the indented block as a keyword makes 371 of the 1,139 object types of the Rheinhausen map fail to parse (the prose line is not a number): measured with an experimental scanner that accepted indentation, which is why it was **reverted**.
+2. **Disabled references.** Do the files an indented keyword names exist, compared with the same keyword at the start of a line (`keyword_indent_census`, last section)?
 
-## Does OMSI honour indentation? (Q-KI-01, inferred, not tested)
+   | Keyword | At column 0 | Indented |
+   | :--- | :--- | :--- |
+   | `.ovh` `[couple_back]` | 166 of 168 exist (98.8 %) | **18 of 497 (3.6 %)** |
+   | `.ovh` `[sound]` | 1,028 of 1,153 (89.2 %) | 5 of 11 (45.5 %) |
+   | `.bus` `[couple_back]` | 357 of 357 | 8 of 8 |
+   | `.sco` `[mesh]` | 65,680 of 69,950 (93.9 %) | 89 of 103 (86.4 %) |
 
-No OMSI binary was inspected ([ADR-0002](../../adr/0002-clean-room-policy.md)) and no OMSI test was run. The evidence is indirect but strong:
-- In **1,350 vehicle files** (463 `.bus`, 887 `.ovh`) `[friendlyname]` occurs *only* indented; the same for `[registration_free]` in 997 files. If OMSI ignored those lines, these vehicles would list without a name; they are well-known add-ons (BR481, NF6D, Chicago L).
-- In **490 `.ovh` files** `[couple_back]` occurs only indented; the multi-car trams and coaches that use it work in OMSI.
-- 295 `.cfg` files hold `ticket_sale_change_point`/`ticket_sale_money_point` blocks only indented (working ticket machines).
+   The indented trailers of the rail coaches (`Bm238` family, `\t[couple_back]` naming `..\Bm238\Bm238.bus`, which does not exist) are dead references: a loader that honoured them would fail or attach nothing, and the add-ons evidently work. They look like blocks an author switched off by indenting them.
+3. Only 14 indented bracket lines in the installation have a name that never occurs at the start of a line in the same extension (7 `.ovh`, 5 `.dsc`, 2 `.sco`): indented lines are copies of real keywords, i.e. help or disabled text, not an independent vocabulary.
 
-An OMSI check is still wanted: pick a vehicle whose `friendlyname` is indented-only and read its name in OMSI's vehicle list. If OMSI ignored the keyword, the name would be missing there. **Q-KI-01: open** until someone with OMSI does it.
+## Decision
 
-## What changes for OPTS
+The scanner keeps its rule (keyword at the start of a line only). A test documents it (`text::tests::an_indented_keyword_stays_a_parameter_line`). The earlier hypothesis that OPTS loses real data here — recorded for a few hours as a "scanner bug", design Q-ART-14 and a risk row of M-0053 — is **not supported**; the corresponding notes are corrected.
 
-Everything the indented keywords describe is now read: night maps and light maps, text textures, materials, meshes and collision meshes of scenery objects, animations and viewpoints of vehicle models, ticket machines, rail bodies and bogies, trailers, spline paths and rails, traffic densities per day of the week, human geometry. Nothing was removed. Expect visible differences on maps whose objects use indented keywords; a before/after of Rheinhausen is in the scenery investigation.
+## What stays open (Q-KI-01)
 
-## Not covered
+The evidence is corpus-internal; no OMSI test was made and no OMSI binary inspected ([ADR-0002](../../adr/0002-clean-room-policy.md)). Minorities look like real data and could be honoured by OMSI: `.bus` `[couple_back]` 8 of 8 existing targets, `.sco` `[mesh]` 89 of 103, `.sli` `[path]` 415 (all valid), indented `[model]`/`[paths]` of vehicles (22 of 22), and the 18 existing indented `.ovh` trailers. Also unexplained: `[friendlyname]` occurs only indented in 1,350 vehicle files (under the "ignored" reading OMSI would show their file names). **Test to settle it**, needing OMSI: take a scenery object whose only `[mesh]` is indented and see whether OMSI draws it; take a vehicle whose `[friendlyname]` is indented-only and read its name in the vehicle list. Run `keyword_indent_census` for the candidates.
 
-`formats::map::global` reads `[entrypoints]` from raw lines and `formats::constfile` has its own trimmed scanner; neither used the column-0 rule for the data measured here. Parameter lines that happen to look like `[identifier]` would now start a block; the census found none that matter (see above) but a format that allows such values must pass an `arity` or be checked.
+## Consequences
+
+- `[couple_back]` counts: 539 files read, 1,035 on raw text; the 496 difference is mostly dead references (3.6 % resolve). The chain and mass figures computed from the 539 stand; the `consist_census` numbers in the design (480 pairs, median 0.90) are the OPTS-visible ones.
+- Nothing about the Rheinhausen missing/scrambled objects follows from indentation.

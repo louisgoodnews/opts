@@ -151,7 +151,7 @@
 
 - [Overview](formats/overview.md)
 - [Text Formats](formats/text/README.md)
-  - [Indented keywords](formats/text/keyword-indentation.md)
+  - [Indented keywords (investigation)](formats/text/keyword-indentation.md)
   - [`.sco` — Scenery Objects](formats/text/sco.md)
   - [`.sli` — Splines](formats/text/sli.md)
   - [`.report` — F1 bug reports](formats/text/report-format.md)
