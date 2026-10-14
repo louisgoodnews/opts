@@ -124,6 +124,27 @@ fn main() {
     for r in renamed.iter().take(15) {
         println!("    {r}");
     }
+    if let Ok(out) = std::env::var("COPIES_LIST") {
+        // path <TAB> other keyed copies <TAB> plain copies, for every keyed mesh.
+        let mut keyed_by_hash: HashMap<u64, usize> = HashMap::new();
+        for (h, k, _, _) in &rows {
+            if *k {
+                *keyed_by_hash.entry(*h).or_default() += 1;
+            }
+        }
+        let mut text = String::new();
+        for (h, k, _, p) in &rows {
+            if *k {
+                text.push_str(&format!(
+                    "{}\t{}\t{}\n",
+                    p.display(),
+                    keyed_by_hash[h] - 1,
+                    plain.get(h).map_or(0, Vec::len)
+                ));
+            }
+        }
+        std::fs::write(out, text).unwrap();
+    }
     let out = std::env::var("TWIN_LIST").ok();
     if let Some(out) = out {
         let mut s = String::new();
