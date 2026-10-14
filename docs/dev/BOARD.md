@@ -88,6 +88,7 @@ _Work actively being executed in the current session._
 - `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12); these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
 - `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
+- `[~]` 🟠 **Scrambled mesh audit and fix: offline corpus audit (`mesh_audit`, `tile_audit`), live sweeps, [Mesh Issue Registry](../src/quality/mesh-issue-registry.md)** (M-0038, test/code) — task [P-1014](tasks/P-1014 - Scrambled Mesh Audit and Fix.md), progress [mesh-audit.md](progress/mesh-audit.md); branch `agent/mesh-audit`.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution
@@ -170,7 +171,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🔴 **Mesh fidelity: parked cars, BRT Citaro, buildings (flipped/misaligned), lantern posts** (M-0066, code) — R-01, R-09, R-17, R-18; discovery by the P-1014 mesh audit (running).
 - [ ] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02; the `.water` spec has open questions ❓.
 - [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (not merged), verified live; [architecture](../src/architecture/session-vehicles.md).
-- [ ] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05.
+- [x] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05. **Done 2026-10-13** on `feat/session-save` (ADR-0011, [Session save](../src/architecture/session-save.md), protocol 1.3.0).
 - [ ] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07.
 - [x] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08. **Done 2026-10-13** on `feat/hud-minimap`, verified live; [HUD registry](../src/architecture/hud-registry.md#4a-the-mini-map-m-0071).
 - [ ] 🟠 **Control protocol: complete settings control for AI agents** (M-0072, code) — R-10; reproduce the gap first (`settings.*` exists in 1.1.0).

@@ -70,6 +70,8 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/session_vehicles/mod.rs",
     // Test module: presses the key to test the system above.
     "opts-game/src/session_vehicles/tests.rs",
+    // F5 / F9 (quick save and load); gated with `not_modal_active` where they are registered.
+    "opts-game/src/save/quick.rs",
     "opts-gui/src/actions.rs",
     "opts-gui/src/components/button.rs",
     "opts-gui/src/components/checkbox.rs",
@@ -132,6 +134,7 @@ fn gated_registrations_still_use_the_run_condition() {
         ("opts-game/src/in_game/mod.rs", 1),
         ("opts-game/src/session_vehicles/mod.rs", 1),
         ("opts-game/src/hud/minimap/mod.rs", 1),
+        ("opts-game/src/save/quick.rs", 1),
     ] {
         let src = std::fs::read_to_string(root.join(file)).expect(file);
         let n = src.matches("not_modal_active").count();

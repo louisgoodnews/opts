@@ -257,7 +257,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Start a session on a map",
         "path:s@0 entry:s?",
     )
-    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).")
+    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): click `loading.continue` (`ui.click`) to start the drive.")
     .debug(),
     c("scene.unload", "scene", "Return to the main menu", "")
     .doc("A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).")
@@ -356,6 +356,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Replace the player vehicle",
         "path:s@0",
     )
+    .doc("Restarts the session with the vehicle and answers like `scene.load_map` (including `1008` for a failed load and `waiting_for_continue` for a load with problems).")
     .debug(),
     c(
         "entity.spawn",
@@ -740,6 +741,49 @@ pub const COMMANDS: &[CommandSpec] = &[
     .since("1.2")
     .result("`{ok, id}`")
     .doc("Shows the HUD place label again. Answers `1001` when the vehicle is not in the world."),
+    c(
+        "session.save",
+        "scene",
+        "Save the running drive under a name",
+        "name:s@0 overwrite:b?",
+    )
+    .since("1.3")
+    .result("`{ok, id, name, overwritten}`")
+    .doc("Writes a session save (see the session-save page): every registered section is captured and the file is written atomically. Answers `1001` without a loaded drive, `1008` with `data.kind = \"exists\"` when a save of that name exists and `overwrite` is not set. The save is the same one the pause overlay's *Save game* writes."),
+    c(
+        "session.load",
+        "scene",
+        "Restore a save (leaves the running drive); poll `session.saves` for the progress",
+        "name:s@0",
+    )
+    .since("1.3")
+    .result("`{ok, started, id, name, unknown_sections, missing_sections, warnings}`")
+    .doc("`name` is a save's name or id. The restore goes through the normal loading screen and works from Home and from inside a drive. It is asynchronous: `session.saves` reports `restore.state` (`loading`, `done` with `warnings`, `failed`). Answers `1004` for an unknown save and `1008` for a damaged or newer file (`data.kind` `corrupt`, `newer_format`) or when the map or every vehicle is missing (`data.kind = \"missing_content\"`, `data.issues`)."),
+    c(
+        "session.saves",
+        "query",
+        "The list of saves, the registered save sections and the state of a restore",
+        "",
+    )
+    .since("1.3")
+    .result("`{dir, running, saves:[{id, name, map, vehicles, play_time_s, saved_unix, sections, unknown_sections, from_backup, issues}|{id, error}], sections:[{id, version, about}], restore:{state, id?, warnings?}}`")
+    .doc("Most recent first. A file that cannot be read is listed with its `error` (`kind`: `corrupt`, `newer_format`, ...). `issues` name missing or changed content (`MissingMap`, `MissingVehicle`, `Changed`)."),
+    c(
+        "session.delete_save",
+        "scene",
+        "Delete a save and its backup (no confirmation)",
+        "name:s@0",
+    )
+    .since("1.3")
+    .result("`{ok, id}`"),
+    c(
+        "session.rename_save",
+        "scene",
+        "Change the name of a save (the file keeps its id)",
+        "name:s@0 new_name:s",
+    )
+    .since("1.3")
+    .result("`{ok, id, name}`"),
     c(
         "menu.do",
         "scene",

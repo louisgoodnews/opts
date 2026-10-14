@@ -5,6 +5,7 @@ pub mod app_state;
 pub mod catalogue_service;
 pub mod control;
 pub mod control_drive;
+pub mod control_save;
 pub mod control_session;
 pub mod control_ui;
 pub mod drive_history;
@@ -23,6 +24,7 @@ pub mod omsi_root;
 pub mod omsi_setup;
 pub mod pause;
 pub mod report_context;
+pub mod save;
 pub mod session_summary;
 pub mod session_vehicles;
 pub mod settings;
@@ -89,6 +91,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)
             .add_plugins(pause::PausePlugin)
+            .add_plugins(save::SavePlugin)
             .add_plugins(hud::HudPlugin)
             .add_plugins(viewpoints::ViewpointPlugin)
             .add_plugins(session_summary::SessionSummaryPlugin)

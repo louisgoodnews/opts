@@ -14,7 +14,6 @@ use bevy::prelude::*;
 use opts_gui::interaction::activation::Activated;
 use opts_gui::interaction::state::{Disabled, DisabledReason};
 use opts_gui::l10n::{L10nArgs, L10nKey, Localization};
-use opts_gui::not_yet::{NotAvailableYet, HOME_LOAD_GAME};
 use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
@@ -44,6 +43,8 @@ pub enum HomeButton {
     NewDrive,
     /// A card of the recent drives (index into [`HomeDrives::recents`]).
     Recent(usize),
+    /// *Load game*: the list of saves.
+    LoadGame,
 }
 
 /// The installation status chip.
@@ -105,10 +106,13 @@ impl Plugin for HomePlugin {
                     banner_actions,
                     sync_menu_scrim,
                     hero::sync_hero_crop,
-                    rebuild_when_content_arrives,
                 )
                     .run_if(in_state(AppState::MainMenu)),
             )
+            // Not state-gated: change detection must see every reload of the lists, otherwise a
+            // reload that happened in another screen counts as new on the return to Home and the
+            // freshly built page is torn down while other systems still hold its entities.
+            .add_systems(Update, rebuild_when_content_arrives)
             .add_systems(Update, start_drive_system);
     }
 }
@@ -229,7 +233,7 @@ pub fn sync_home_status(
 
     let block = inputs.drive_block();
     for (entity, button) in &buttons {
-        if matches!(button, HomeButton::NewDrive) {
+        if matches!(button, HomeButton::NewDrive | HomeButton::LoadGame) {
             continue;
         }
         let mut e = commands.entity(entity);
@@ -293,6 +297,7 @@ fn home_actions(
     setup: Res<NewGameSetup>,
     mut navigate: MessageWriter<Navigate>,
     mut start: MessageWriter<StartDrive>,
+    mut commands: Commands,
 ) {
     for Activated(entity) in activated.read() {
         let Ok((button, disabled)) = buttons.get(*entity) else {
@@ -314,6 +319,12 @@ fn home_actions(
                 if let Some(record) = drives.recents.get(*i) {
                     start.write(StartDrive(record.clone()));
                 }
+            }
+            HomeButton::LoadGame => {
+                crate::save::ui::open_saves_overlay(
+                    &mut commands,
+                    crate::save::ui::SavesMode::Load,
+                );
             }
             HomeButton::Quick => {
                 start.write(StartDrive(DriveRecord::from_setup(

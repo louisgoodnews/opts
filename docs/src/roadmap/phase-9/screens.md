@@ -60,7 +60,7 @@ Layout (Expanded): header line *Welcome back* / *Welcome to OPTS*; status chip r
 | **Catalogue ready** | chip `home-status-ready` (`{ $maps } maps · { $vehicles } vehicles`) |
 | **OMSI not found** | banner `home-banner-no-omsi-title` / `-body` with action **Choose folder** (`home-banner-choose-folder`), drive buttons disabled with the reason `home-reason-no-omsi` |
 | **Empty catalogue** | banner `home-banner-empty-title` / `-body`, actions **Choose folder**, **Rescan** (not-yet until a rescan command exists) |
-| **Load game** | secondary entry `home-load-game`, red *Feature not available yet!* (place `home.load-game`, M-0062 → removed when a save system exists) |
+| **Load game** | secondary entry `home-load-game` (`home.load-game`): opens the save list overlay ([Session save](../../architecture/session-save.md) §6); the not-yet place is gone |
 
 Hero image: the photo fills the card at its aspect ratio with `object-fit: cover` semantics (the node is wider than the photo's crop: the image node uses `ImageNode` with a computed `Node` size and `overflow: clip` so no band is visible); a scrim whose strength is computed from the picture's lightness and the theme guarantees 4.5:1 for the text on it. Missing photo: a `SurfaceContainerHigh` card with the map initial.
 
@@ -90,6 +90,7 @@ Centred panel over the paused scene (`Modal`); simulation paused (`Time<Virtual>
 | title | `pause-title` | |
 | **Resume** (default focus) | `pause-resume` | closes, restores pause state and cursor |
 | Vehicle | `pause-vehicle` | closes the pause panel and opens the vehicle menu (L-Alt menu); Esc there returns to the game |
+| Save game… / Load game… | `pause-save`, `pause-load` | the pause panel steps aside and the save list opens as a modal (name field, *Save*, rows with *Load*, *Overwrite*, *Rename*, *Delete*); Esc returns to this panel. F5 and F9 quick save and load from the game |
 | Settings | `pause-settings` | opens the settings page as an overlay over the paused scene (`settings_screen::overlay`); Esc or *Close* returns to this panel |
 | Controls | `pause-controls` | opens *Help → Controls* as an overlay (the same page content, in a modal); the Help overlay |
 | Report an issue | `pause-report` | the report dialog |
@@ -148,7 +149,6 @@ Implemented as described in [interaction and feel §5](interaction-and-feel.md#5
 | :--- | :--- | :--- |
 | `nav.library` | rail, Library | M-0062 (Library, after the wizard's master–detail pattern) |
 | `nav.workshop` | rail, Workshop | M-0051 |
-| `home.load-game` | Home, Load game | M-0062 |
 | `help.guides` | Help, Guides | M-0064 |
 | `home.rescan` | Home banner, Rescan | M-0063 |
 

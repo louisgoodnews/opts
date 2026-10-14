@@ -503,3 +503,56 @@ fn the_wizard_and_loading_modules_hold_no_hard_coded_colours_or_visible_literals
     }
     assert!(bad.is_empty(), "{}", bad.join("\n"));
 }
+
+/// P-1014: a wizard opened while the first scan still runs (empty lists) must show the lists once
+/// the catalogue arrives, and leaving it afterwards must not touch despawned entities.
+#[test]
+fn a_wizard_opened_on_an_empty_catalogue_fills_when_the_lists_arrive() {
+    let tag = "late";
+    let _ = std::fs::remove_dir_all(history_path(tag).parent().expect("dir"));
+    let fixture = opts_game::catalogue_service::testing::fixture_lists();
+    let mut app = layout_app();
+    let frame = app
+        .world_mut()
+        .spawn(Node {
+            width: Val::Px(1280.0),
+            height: Val::Px(720.0),
+            ..default()
+        })
+        .id();
+    app.insert_resource(opts_game::shell::ShellContent(Some(frame)));
+    app.add_plugins(bevy::state::app::StatesPlugin)
+        .insert_resource(GameSettings::default())
+        .init_state::<AppState>()
+        .insert_resource(opts_game::new_game_screen::GameCatalogue::default())
+        .insert_resource(PlannerHistory::at(Some(history_path(tag))))
+        .add_plugins(NewGameMenuPlugin);
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::VehicleSelection);
+    for _ in 0..8 {
+        app.update();
+    }
+    let before = texts(&mut app);
+    assert!(
+        !before.iter().any(|x| x.starts_with("Search 42 maps")),
+        "empty catalogue: {before:?}"
+    );
+    *app.world_mut()
+        .resource_mut::<opts_game::new_game_screen::GameCatalogue>() = fixture;
+    for _ in 0..8 {
+        app.update();
+    }
+    let after = texts(&mut app);
+    assert!(
+        after.iter().any(|x| x.starts_with("Search 42 maps")),
+        "the list was built again: {after:?}"
+    );
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::MainMenu);
+    for _ in 0..8 {
+        app.update();
+    }
+    cleanup(tag);
+}

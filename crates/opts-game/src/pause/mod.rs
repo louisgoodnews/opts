@@ -59,6 +59,10 @@ pub enum PauseItem {
     Resume,
     /// Open the vehicle menu.
     Vehicle,
+    /// *Save game…*
+    Save,
+    /// *Load game…*
+    Load,
     /// The settings page as an overlay.
     Settings,
     /// Controls (Help).
@@ -111,6 +115,8 @@ pub(crate) fn spawn_overlay(commands: &mut Commands) -> Entity {
         let resume = item(c, PauseItem::Resume, keys::PAUSE_RESUME, "resume");
         c.commands().entity(resume).insert(DefaultFocus);
         item(c, PauseItem::Vehicle, keys::PAUSE_VEHICLE, "vehicle");
+        item(c, PauseItem::Save, keys::PAUSE_SAVE, "save");
+        item(c, PauseItem::Load, keys::PAUSE_LOAD, "load");
         item(c, PauseItem::Settings, keys::PAUSE_SETTINGS, "settings");
         item(c, PauseItem::Controls, keys::PAUSE_CONTROLS, "controls");
         item(c, PauseItem::Report, keys::PAUSE_REPORT, "report");
@@ -230,6 +236,18 @@ pub fn pause_items(
                 close_pause(&mut commands, &mut pause, &mut time, true);
                 menu.open_main();
             }
+            PauseItem::Save | PauseItem::Load => {
+                // One dialog at a time: the overlay steps aside and returns when the list closes.
+                if let Some(root) = pause.root.take() {
+                    commands.entity(root).try_despawn();
+                }
+                let mode = if *which == PauseItem::Save {
+                    crate::save::ui::SavesMode::Save
+                } else {
+                    crate::save::ui::SavesMode::Load
+                };
+                crate::save::ui::open_saves_overlay(&mut commands, mode);
+            }
             PauseItem::Report => {
                 // The report takes its screenshot of the game, not of the overlay; the overlay
                 // comes back when the dialog closes and the simulation stays paused.
@@ -338,11 +356,12 @@ pub fn leave_choices(
 pub fn return_after_overlay(
     mut closed: RemovedComponents<crate::help::HelpOverlay>,
     mut settings_closed: RemovedComponents<SettingsOverlay>,
+    mut saves_closed: RemovedComponents<crate::save::ui::SavesOverlay>,
     mut pause: ResMut<Pause>,
     reporting: Res<State<ReportModalState>>,
     mut commands: Commands,
 ) {
-    if closed.read().count() + settings_closed.read().count() == 0 {
+    if closed.read().count() + settings_closed.read().count() + saves_closed.read().count() == 0 {
         return;
     }
     // The report dialog (opened from the overlay) brings the pause overlay back itself.

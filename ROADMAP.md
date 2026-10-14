@@ -195,8 +195,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](docs/src/roadmap/phase-4/M-0025.md); F-004, F-007, F-008).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](docs/src/meta/critical-review-2026-10-11.md))**
   - [ ] Articulated vehicle completion: one articulation model for physics and rendering, pitch from terrain, `[couple_front]`, trailers for AI and parked vehicles — [M-0053](docs/src/roadmap/phase-4/M-0053.md) (F-002, F-003).
-  - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0057](docs/src/roadmap/phase-4/M-0057.md).
-  - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0058](docs/src/roadmap/phase-4/M-0058.md).
+  - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0093](docs/src/roadmap/phase-4/M-0093.md).
+  - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](docs/src/roadmap/phase-4/M-0094.md).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](docs/src/roadmap/phase-4/M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](docs/src/roadmap/phase-4/M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).
@@ -263,7 +263,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [~] Implement `.cti` repaint manifest parser and runtime livery material switcher in `opts-bevy` (M-0032). *Repaint discovery, selection in the new-game screen, texture replacement at load time and `[setvar]` equipment shipped in Phase 4 (`c00c3fc`, `7f24124`); switching at runtime and the `opts-bevy` home are open (critical review 2026-10-11 F-022).*
 - [ ] **✏️ Editor Mode** — [M-0051](docs/src/roadmap/phase-6/M-0051.md): specification in [docs/src/editor](docs/src/editor/README.md); implementation phases E1–E6 open.
 - [ ] **📜 Script Generator & Visual Script Editor** — specification in [docs/src/architecture/script-generator.md](docs/src/architecture/script-generator.md), derived from [vehicle-scripts-route.md](docs/src/architecture/vehicle-scripts-route.md): a typed vehicle specification (mass, wheel radius, torque curve, gear ratios, brake force, doors, lights …) becomes a default script set (`.osc`, `*_constfile.txt`, `*_varlist.txt`, `.bus` script block) written to the OPTS export folder, validated by the VM and a headless rig, and edited visually.
-  - [ ] [M-0054](docs/src/roadmap/phase-6/M-0054.md) `opts-script_engine`: the script runtime (lexer, compiler, VM, headless rig) as a Bevy-free crate; `opts-sim::script` re-exports it.
+  - [ ] [M-0092](docs/src/roadmap/phase-6/M-0092.md) `opts-script_engine`: the script runtime (lexer, compiler, VM, headless rig) as a Bevy-free crate; `opts-sim::script` re-exports it.
   - [ ] [M-0055](docs/src/roadmap/phase-6/M-0055.md) `opts-script_editor`: `VehicleSpec`, subsystem generators with original templates, export writer, validator, `opts-tools script gen|validate`, presets (city bus, articulated bus, tram).
   - [ ] [M-0056](docs/src/roadmap/phase-6/M-0056.md) `opts-visual_script_editor`: spec forms, generated-file viewer, live rig plots, subsystem graph, export; embedded in the editor mode's vehicle workspace.
 - [ ] **📘 Creator Documentation & Tooling** — [M-0033](docs/src/roadmap/phase-6/README.md)
@@ -357,7 +357,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](docs/src/roadmap/phase-10/M-0068.md)
   - [x] Start with the map only; session vehicle registry; switch the active vehicle; despawn any session vehicle (R-03, R-04).
-- [ ] **💾 Session Save and Restore** — [M-0069](docs/src/roadmap/phase-10/M-0069.md)
+- [x] **💾 Session Save and Restore** — [M-0069](docs/src/roadmap/phase-10/M-0069.md)
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [ ] **🧰 Bus Configurations** — [M-0077](docs/src/roadmap/phase-10/M-0077.md)
   - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).

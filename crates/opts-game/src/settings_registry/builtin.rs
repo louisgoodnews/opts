@@ -416,6 +416,21 @@ fn interface() -> Vec<D> {
         )
         .keywords(&["clock", "speed", "time"])
         .not_yet(&SETTINGS_TIME_SCALE),
+        D::new(
+            "gameplay.autosave_minutes",
+            K::Int {
+                min: 0,
+                max: 60,
+                step: 5,
+            },
+            "0",
+            C::Gameplay,
+            40,
+            "set-autosave",
+            "set-autosave-desc",
+        )
+        .keywords(&["save", "backup", "interval"])
+        .since("0.3"),
     ]
 }
 

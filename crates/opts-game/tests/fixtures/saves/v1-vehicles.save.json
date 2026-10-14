@@ -1,0 +1,27 @@
+{
+  "magic": "OPTS-SAVE",
+  "format_version": 1,
+  "opts_version": "0.1.0",
+  "meta": {
+    "name": "Old save",
+    "created_unix": 1760000000,
+    "saved_unix": 1760000100,
+    "play_time_s": 61.0,
+    "map": "Berlin-Spandau",
+    "vehicles": ["Bus A"]
+  },
+  "fingerprint": {},
+  "sections": {
+    "session": {"version": 1, "data": {"map_folder": "Berlin-Spandau", "map_name": "Berlin-Spandau", "entry_point": "Depot", "mode": "drive", "played_s": 61.0}},
+    "session_vehicles": {"version": 1, "data": {
+      "version": 1, "next_id": 1, "active": 1,
+      "vehicles": [{
+        "id": 1, "catalogue_id": "bus_a", "name": "Bus A", "bus_file": "Vehicles/A/bus_a.bus",
+        "repaint": "", "setvars": [], "entry": "default", "spawn_entry_id": 3, "spawn_entry_name": "Depot",
+        "spawn_point": {"x": 10.0, "y": 20.0, "z": 1.0, "heading_deg": 90.0},
+        "lifecycle": "alive", "despawn_reason": null, "error": null
+      }]
+    }},
+    "from_the_future": {"version": 4, "data": {"anything": [1, 2, 3]}}
+  }
+}

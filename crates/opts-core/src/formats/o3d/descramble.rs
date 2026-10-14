@@ -1017,6 +1017,7 @@ pub fn decode_joint_bounded(
                 .find(|p| close(*p, *t))
                 .unwrap_or(*t);
         }
+        let dropped = drop_spike_faces(c);
         let fixed = super::uvfix::unjitter_uv_staged(
             c,
             &uv_hints[ci],
@@ -1027,7 +1028,7 @@ pub fn decode_joint_bounded(
             accepted: true,
             agreement: agree,
             coherence: 1.0,
-            dropped_faces: 0,
+            dropped_faces: dropped,
             uv: fixed.report,
             quality: fixed.quality,
             stages: fixed.stages,
@@ -1035,6 +1036,51 @@ pub fn decode_joint_bounded(
         });
     }
     out
+}
+
+/// A decoded face whose longest edge is more than this many times the median edge (and longer than
+/// [`SPIKE_MIN_EDGE`]) is a spike made by a wrongly labelled vertex.
+pub const SPIKE_EDGE_FACTOR: f32 = 40.0;
+/// Edges up to this length (metres) are never spikes.
+pub const SPIKE_MIN_EDGE: f32 = 1.0;
+
+/// Removes the faces of a decoded mesh that reach across the model (longest edge more than
+/// [`SPIKE_EDGE_FACTOR`] times the median edge and longer than [`SPIKE_MIN_EDGE`]); returns how many
+/// were dropped. Measured on 1,826 accepted plain/keyed twins (`mesh_detector_eval`): faces beyond
+/// 40x the median edge are wrong (touch a mislabelled vertex) in 69 % of the cases, whereas the
+/// 6x rule that was used before dropped 2 correct faces for every wrong one. A spike across the
+/// whole model is far more conspicuous than a missing thin triangle, hence the trade.
+pub fn drop_spike_faces(o: &mut O3d) -> usize {
+    let edge = |o: &O3d, t: &[u32; 3]| {
+        let p = t.map(|k| {
+            o.vertices
+                .get(k as usize)
+                .map_or(Vec3::ZERO, |v| v.position)
+        });
+        (p[1] - p[0])
+            .length()
+            .max((p[2] - p[0]).length())
+            .max((p[2] - p[1]).length())
+    };
+    if o.indices.len() < 8 {
+        return 0;
+    }
+    let lens: Vec<f32> = o.indices.iter().map(|t| edge(o, t)).collect();
+    let mut sorted = lens.clone();
+    sorted.sort_by(f32::total_cmp);
+    let limit = (sorted[sorted.len() / 2] * SPIKE_EDGE_FACTOR).max(SPIKE_MIN_EDGE);
+    let keep: Vec<bool> = lens.iter().map(|&l| l.is_finite() && l <= limit).collect();
+    let dropped = keep.iter().filter(|k| !**k).count();
+    if dropped == 0 {
+        return 0;
+    }
+    let mut it = keep.iter();
+    o.indices.retain(|_| *it.next().unwrap_or(&true));
+    if o.face_materials.len() == keep.len() {
+        let mut it = keep.iter();
+        o.face_materials.retain(|_| *it.next().unwrap_or(&true));
+    }
+    dropped
 }
 
 /// Moves vertices that the labelling put far outside the bulk of the mesh back inside, when one
@@ -1197,10 +1243,10 @@ fn decode_confident_masked(
     if coherence < params.min_coherence {
         return rejected(agree, coherence);
     }
-    // Long-edge faces are kept: on plain/keyed twins 91 % of the faces such a filter drops are
-    // correct (big flat panels), so it punched holes into bodies to remove a few spikes.
+    // A long-edge filter at 6x the median edge dropped 91 % correct faces on plain/keyed twins
+    // (big flat panels), so only extreme spikes go: see `drop_spike_faces`.
     let _ = verdicts;
-    let dropped = 0;
+    let dropped = drop_spike_faces(&mut trial);
     let fixed =
         super::uvfix::unjitter_uv_staged(&mut trial, &[], &super::uvfix::UvFixParams::default());
     trial.descrambled = true;
@@ -1402,5 +1448,69 @@ mod bounds_tests {
         };
         assert_ne!(a.tag(), b.tag());
         assert_eq!(a.tag(), a.tag());
+    }
+}
+
+#[cfg(test)]
+mod spike_tests {
+    use super::*;
+    use crate::formats::o3d::Vertex;
+    use glam::{Vec2, Vec3};
+
+    fn grid(spike: bool) -> O3d {
+        let mut vertices = Vec::new();
+        let mut indices = Vec::new();
+        for j in 0..6u32 {
+            for i in 0..6u32 {
+                vertices.push(Vertex {
+                    position: Vec3::new(i as f32 * 0.5, 0.0, j as f32 * 0.5),
+                    normal: Vec3::Y,
+                    uv: Vec2::ZERO,
+                    color: None,
+                });
+            }
+        }
+        for j in 0..5u32 {
+            for i in 0..5u32 {
+                let q = j * 6 + i;
+                indices.push([q, q + 1, q + 6]);
+                indices.push([q + 1, q + 7, q + 6]);
+            }
+        }
+        if spike {
+            // one wrongly labelled vertex flung 80 m away
+            vertices[14].position = Vec3::new(80.0, 40.0, -60.0);
+        }
+        let n = indices.len();
+        O3d {
+            version: 7,
+            header_flags: 0,
+            vertices,
+            indices,
+            face_materials: (0..n as u16).collect(),
+            materials: Vec::new(),
+            transform: None,
+            encryption_key: Some(1),
+            descrambled: false,
+            unknown_chunks: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn spike_faces_of_a_flung_vertex_are_dropped_with_their_materials() {
+        let mut o = grid(true);
+        let before = o.indices.len();
+        let dropped = drop_spike_faces(&mut o);
+        assert!(dropped >= 3, "faces around the flung vertex go: {dropped}");
+        assert_eq!(o.indices.len(), before - dropped);
+        assert_eq!(o.face_materials.len(), o.indices.len());
+        assert!(o.indices.iter().all(|t| !t.contains(&14)));
+    }
+
+    #[test]
+    fn a_clean_mesh_loses_nothing() {
+        let mut o = grid(false);
+        assert_eq!(drop_spike_faces(&mut o), 0);
+        assert_eq!(o.indices.len(), 50);
     }
 }

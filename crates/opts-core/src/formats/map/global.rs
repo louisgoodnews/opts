@@ -206,9 +206,14 @@ impl MapManifest {
                     }
                 }
                 "entrypoints" => {
-                    if let Some(first) = block.parameters.first() {
+                    // The record is line-oriented: 11 numbers and a name, where the name may start
+                    // with `#` (a depot called `# Betriebshof ...`) or be empty. The generic block
+                    // scanner drops such lines and would shift every later record, so the block is
+                    // read from the raw lines (P-1014, MI-0020).
+                    let raw = raw_block_lines(text, block.line_number);
+                    if let Some(first) = raw.first() {
                         let count = parse_usize(first, "entrypoints count", block.line_number)?;
-                        let records = &block.parameters[1..];
+                        let records = &raw[1..];
                         for chunk in records.chunks_exact(12).take(count) {
                             let id = parse_u32(&chunk[0], "entrypoint id", block.line_number)?;
                             let id_code =
@@ -317,6 +322,24 @@ fn parse_i32(s: &str, field: &'static str, line: usize) -> Result<i32, MapParseE
         })
 }
 
+/// The lines after the keyword line `keyword_line` (1-based) up to the next keyword line, trimmed
+/// but otherwise untouched: blank lines and lines starting with `#` or `//` are kept.
+fn raw_block_lines(text: &str, keyword_line: usize) -> Vec<String> {
+    let mut out = Vec::new();
+    for raw in text.lines().skip(keyword_line) {
+        let t = raw.trim();
+        if raw.starts_with('[') && raw.trim_end().ends_with(']') {
+            break;
+        }
+        out.push(t.to_string());
+    }
+    // the first line is the count: skip blank lines before it, as the generic scanner does
+    while out.first().is_some_and(String::is_empty) {
+        out.remove(0);
+    }
+    out
+}
+
 fn parse_u32(s: &str, field: &'static str, line: usize) -> Result<u32, MapParseError> {
     s.trim()
         .parse::<u32>()
@@ -402,6 +425,30 @@ tile_0_-1.map
         assert_eq!(manifest.tiles[1].x, 0);
         assert_eq!(manifest.tiles[1].y, -1);
         assert_eq!(manifest.tiles[1].file_name, "tile_0_-1.map");
+    }
+
+    /// MI-0020: an entry point whose name starts with `#` or is empty must not shift the records
+    /// behind it (a map with such a depot failed to load: `invalid number for entrypoint id_code`).
+    #[test]
+    fn test_entrypoint_names_may_start_with_hash_or_be_empty() {
+        let rec = |id: u32, name: &str| {
+            format!(
+                "{id}\n5464087\n0\n47.929\n-0.010\n45.933\n0.000\n0.707\n0.000\n0.707\n464\n{name}\n"
+            )
+        };
+        let text = format!(
+            "[entrypoints]\n3\n{}{}{}\n[map]\n0\n0\ntile_0_0.map\n",
+            rec(1, "# Betriebshof Rostorf"),
+            rec(2, ""),
+            rec(3, "Haltestelle")
+        );
+        let m = MapManifest::from_text(&text).expect("parses");
+        let ids: Vec<u32> = m.entry_points.iter().map(|e| e.id).collect();
+        assert_eq!(ids, vec![1, 2, 3]);
+        assert_eq!(m.entry_points[0].name, "# Betriebshof Rostorf");
+        assert_eq!(m.entry_points[1].name, "");
+        assert_eq!(m.entry_points[2].name, "Haltestelle");
+        assert_eq!(m.tiles.len(), 1);
     }
 
     #[test]

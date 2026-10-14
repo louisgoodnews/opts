@@ -32,14 +32,6 @@ pub struct NotYetPlace {
     pub missing: &'static str,
 }
 
-/// Home, *Load game*.
-pub const HOME_LOAD_GAME: NotYetPlace = NotYetPlace {
-    id: "home.load-game",
-    place: "Home, Load game",
-    milestone: "M-0062",
-    missing: "There is no save system; Home offers Continue for the last drive.",
-};
-
 /// Rail, *Library*.
 pub const NAV_LIBRARY: NotYetPlace = NotYetPlace {
     id: "nav.library",
@@ -107,7 +99,6 @@ pub const SETTINGS_REBIND: NotYetPlace = NotYetPlace {
 
 /// Every registered place. Add new ones here; the generated list and the tests follow.
 pub const PLACES: &[&NotYetPlace] = &[
-    &HOME_LOAD_GAME,
     &NAV_LIBRARY,
     &NAV_WORKSHOP,
     &HELP_GUIDES,
@@ -330,7 +321,7 @@ mod tests {
         let e = app.world_mut().spawn_empty().id();
         {
             let mut commands = app.world_mut().commands();
-            Availability::NotYet(&HOME_LOAD_GAME).apply(&mut commands.entity(e));
+            Availability::NotYet(&NAV_LIBRARY).apply(&mut commands.entity(e));
         }
         app.update();
         app.update();
@@ -359,7 +350,7 @@ mod tests {
         app.update();
         app.world_mut()
             .entity_mut(button)
-            .insert(NotAvailableYet::new(&HOME_LOAD_GAME));
+            .insert(NotAvailableYet::new(&NAV_LIBRARY));
         app.update();
         app.update();
         let labels: Vec<String> = app

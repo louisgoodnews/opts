@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Git pre-commit hook for OPTS.
+# Runs fast validation checks (cargo fmt and cargo clippy) before committing.
+
+set -euo pipefail
+
+# Find repository root
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+echo "=== Running pre-commit checks ==="
+
+# 1. Check formatting
+echo "1. Checking formatting (cargo fmt)..."
+if ! cargo fmt --all -- --check; then
+    echo >&2 ""
+    echo >&2 "pre-commit hook: code formatting check failed."
+    echo >&2 "Run 'cargo fmt' to format code before committing."
+    exit 1
+fi
+
+# 2. Check Clippy
+echo "2. Checking Clippy warnings..."
+if ! cargo clippy --workspace --all-targets --all-features -- -D warnings; then
+    echo >&2 ""
+    echo >&2 "pre-commit hook: cargo clippy found warnings or errors."
+    exit 1
+fi
+
+echo "Pre-commit checks passed."
+exit 0

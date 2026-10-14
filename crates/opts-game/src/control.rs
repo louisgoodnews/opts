@@ -46,6 +46,7 @@ impl Plugin for GameControlPlugin {
         crate::control_drive::register(&mut registry);
         crate::viewpoints::protocol::register(&mut registry);
         crate::control_session::register(&mut registry);
+        crate::control_save::register(&mut registry);
         app.add_systems(Update, allow_session_reads);
     }
 }
@@ -132,10 +133,39 @@ pub(crate) fn restart_waiter(world: &mut World) -> Waiter {
                 .set(AppState::InGame);
             return None;
         }
-        let ready = app_state(world) == AppState::InGame
-            && world
-                .get_resource::<SimulationLoadState>()
-                .is_some_and(|s| s.hud_spawned);
+        if app_state(world) != AppState::InGame {
+            return None;
+        }
+        // A load that failed answers at once instead of timing out; a load with problems answers
+        // while the loading screen waits for *Continue* (the session is usable, `loading.continue`
+        // starts it), so a script is never blocked on a person's click.
+        if let Some(report) = world.get_resource::<crate::in_game::load_report::LoadReport>() {
+            use crate::in_game::load_report::LoadOutcome;
+            let details: Vec<String> = report.problems.iter().map(|p| p.detail.clone()).collect();
+            match report.outcome {
+                LoadOutcome::Failed => {
+                    return Some(Err(RpcError::new(
+                        code::FAILED,
+                        format!("the load failed: {}", details.join("; ")),
+                    )));
+                }
+                LoadOutcome::ReadyWithProblems => {
+                    let stats = world.resource::<WorldStats>();
+                    return Some(Ok(json!({
+                        "map": stats.map_name, "vehicle": stats.vehicle_name,
+                        "tiles_loaded": stats.tiles_loaded,
+                        "waiting_for_continue": !world
+                            .get_resource::<SimulationLoadState>()
+                            .is_some_and(|s| s.hud_spawned),
+                        "problems": details,
+                    })));
+                }
+                _ => {}
+            }
+        }
+        let ready = world
+            .get_resource::<SimulationLoadState>()
+            .is_some_and(|s| s.hud_spawned);
         ready.then(|| {
             let stats = world.resource::<WorldStats>();
             Ok(json!({ "map": stats.map_name, "vehicle": stats.vehicle_name, "tiles_loaded": stats.tiles_loaded }))
@@ -415,5 +445,57 @@ mod tests {
         let err = answer(render_look(&mut world, &json!({ "look": "sepia" }))).expect_err("bad");
         assert_eq!(err.code, opts_cli::protocol::code::INVALID_PARAMS);
         assert_eq!(world.resource::<ActiveLook>().0, Look::BevyDefault);
+    }
+}
+
+#[cfg(test)]
+mod restart_waiter_tests {
+    use super::*;
+    use crate::in_game::load_report::{LoadOutcome, LoadReport};
+
+    fn world_in(state: AppState) -> World {
+        let mut w = World::new();
+        w.insert_resource(State::new(state));
+        w.insert_resource(NextState::<AppState>::default());
+        w.init_resource::<LoadReport>();
+        w.init_resource::<SimulationLoadState>();
+        w.init_resource::<WorldStats>();
+        w
+    }
+
+    /// Runs the waiter through the menu and into a new session, with `outcome` as the load result.
+    fn answer(outcome: LoadOutcome) -> Option<Result<Value, RpcError>> {
+        let mut w = world_in(AppState::InGame);
+        let mut waiter = restart_waiter(&mut w);
+        assert!(waiter(&mut w).is_none(), "still in the old session");
+        w.insert_resource(State::new(AppState::MainMenu));
+        assert!(
+            waiter(&mut w).is_none(),
+            "left the session, new one requested"
+        );
+        w.insert_resource(State::new(AppState::InGame));
+        w.resource_mut::<LoadReport>().outcome = outcome;
+        waiter(&mut w)
+    }
+
+    /// MI-0036: a failed load answers `FAILED` at once.
+    #[test]
+    fn a_failed_load_answers_with_an_error() {
+        let r = answer(LoadOutcome::Failed).expect("answers");
+        assert_eq!(r.expect_err("error").code, code::FAILED);
+    }
+
+    /// MI-0036: a load with problems answers while the loading screen waits for Continue.
+    #[test]
+    fn a_load_with_problems_does_not_wait_for_continue() {
+        let r = answer(LoadOutcome::ReadyWithProblems)
+            .expect("answers")
+            .expect("ok");
+        assert_eq!(r["waiting_for_continue"], json!(true));
+    }
+
+    #[test]
+    fn a_load_in_progress_keeps_waiting() {
+        assert!(answer(LoadOutcome::Loading).is_none());
     }
 }

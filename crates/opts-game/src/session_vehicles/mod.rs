@@ -10,6 +10,7 @@
 
 pub mod ops;
 pub mod registry;
+pub mod state;
 
 use bevy::prelude::*;
 use opts_gui::l10n::fluent::Arg;
@@ -20,6 +21,7 @@ pub use registry::{
     DespawnReason, EntrySel, Lifecycle, SessionVehicle, SessionVehicleRecord, SessionVehicles,
     SpawnParams, SpawnPoint, VehicleId, SAVE_SECTION, SAVE_SECTION_VERSION,
 };
+pub use state::VehicleState;
 
 use crate::app_state::AppState;
 use crate::shell::dialog::{

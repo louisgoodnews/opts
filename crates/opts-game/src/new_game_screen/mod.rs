@@ -181,11 +181,17 @@ fn rebuild_body(
     setup: Res<NewGameSetup>,
     history: Res<PlannerHistory>,
     mut commands: Commands,
+    mut built_with: Local<(usize, usize)>,
 ) {
     let Ok(body) = body.single() else {
         return;
     };
-    if state.built == Some(state.step) {
+    // The catalogue may be (re)read while the wizard is open (the first scan of a fresh
+    // installation takes seconds): a step built from an empty or older list is built again.
+    let content = (catalogue.maps.len(), catalogue.vehicles.len());
+    let content_changed = *built_with != content;
+    *built_with = content;
+    if state.built == Some(state.step) && !content_changed {
         return;
     }
     state.built = Some(state.step);

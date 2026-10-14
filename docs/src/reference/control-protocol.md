@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.2.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.3.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -82,6 +82,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | [`vehicle.get`](#vehicleget) | - | 1.0 | Position, heading and speed of the player vehicle (absolute OMSI coordinates) |
 | `vehicle.script_vars` | `contains?` (string) | 1.0 | Script variables of the player vehicle (substring filter) |
 | [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
+| [`session.saves`](#sessionsaves) | - | 1.3 | The list of saves, the registered save sections and the state of a restore |
 | `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
 
 ### `vehicle.get`
@@ -97,6 +98,14 @@ The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, ac
 **Result:** `{active, count, vehicles:[{id, name, catalogue_id, repaint, setvars, spawn_entry_name, spawn_point, lifecycle (spawning|alive|despawned|failed), despawn_reason, error, active, trailers}], place_label}`
 
 The registry of the vehicles the user spawned (the wizard's choice, the pause menu, `session.spawn`); parked and AI vehicles are not listed. Despawned vehicles stay in the list as history. `place_label` is what the HUD shows for the active vehicle (the entry point it was spawned at) or `null`.
+
+### `session.saves`
+
+The list of saves, the registered save sections and the state of a restore.
+
+**Result:** `{dir, running, saves:[{id, name, map, vehicles, play_time_s, saved_unix, sections, unknown_sections, from_backup, issues}|{id, error}], sections:[{id, version, about}], restore:{state, id?, warnings?}}`
+
+Most recent first. A file that cannot be read is listed with its `error` (`kind`: `corrupt`, `newer_format`, ...). `issues` name missing or changed content (`MissingMap`, `MissingVehicle`, `Changed`).
 
 ## Group `ui`
 
@@ -248,7 +257,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
 | `camera.teleport` *(debug)* | `x` (number)<br>`y` (number)<br>`z` (number)<br>`yaw?` (number)<br>`pitch?` (number) | 1.0 | Move the camera (OMSI coordinates) |
 | `render.look` | `look?` (string) | 1.0 | Get or set the colour look (vivid, natural, bevy) |
-| `vehicle.set` *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
+| [`vehicle.set`](#vehicleset) *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
 | `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
 | `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
@@ -263,19 +272,29 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
 | [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
+| [`session.save`](#sessionsave) | `name` (string)<br>`overwrite?` (boolean) | 1.3 | Save the running drive under a name |
+| [`session.load`](#sessionload) | `name` (string) | 1.3 | Restore a save (leaves the running drive); poll `session.saves` for the progress |
+| [`session.delete_save`](#sessiondelete_save) | `name` (string) | 1.3 | Delete a save and its backup (no confirmation) |
+| [`session.rename_save`](#sessionrename_save) | `name` (string)<br>`new_name` (string) | 1.3 | Change the name of a save (the file keeps its id) |
 | [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...) |
 
 ### `scene.load_map`
 
 Start a session on a map.
 
-A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`).
+A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): click `loading.continue` (`ui.click`) to start the drive.
 
 ### `scene.unload`
 
 Return to the main menu.
 
 A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
+
+### `vehicle.set`
+
+Replace the player vehicle.
+
+Restarts the session with the vehicle and answers like `scene.load_map` (including `1008` for a failed load and `waiting_for_continue` for a load with problems).
 
 ### `camera.look`
 
@@ -364,6 +383,34 @@ Put a session vehicle back at its spawn point, at rest (default: the active one)
 **Result:** `{ok, id}`
 
 Shows the HUD place label again. Answers `1001` when the vehicle is not in the world.
+
+### `session.save`
+
+Save the running drive under a name.
+
+**Result:** `{ok, id, name, overwritten}`
+
+Writes a session save (see the session-save page): every registered section is captured and the file is written atomically. Answers `1001` without a loaded drive, `1008` with `data.kind = "exists"` when a save of that name exists and `overwrite` is not set. The save is the same one the pause overlay's *Save game* writes.
+
+### `session.load`
+
+Restore a save (leaves the running drive); poll `session.saves` for the progress.
+
+**Result:** `{ok, started, id, name, unknown_sections, missing_sections, warnings}`
+
+`name` is a save's name or id. The restore goes through the normal loading screen and works from Home and from inside a drive. It is asynchronous: `session.saves` reports `restore.state` (`loading`, `done` with `warnings`, `failed`). Answers `1004` for an unknown save and `1008` for a damaged or newer file (`data.kind` `corrupt`, `newer_format`) or when the map or every vehicle is missing (`data.kind = "missing_content"`, `data.issues`).
+
+### `session.delete_save`
+
+Delete a save and its backup (no confirmation).
+
+**Result:** `{ok, id}`
+
+### `session.rename_save`
+
+Change the name of a save (the file keeps its id).
+
+**Result:** `{ok, id, name}`
 
 ### `menu.do`
 
