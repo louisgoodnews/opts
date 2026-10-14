@@ -505,9 +505,13 @@ pub(super) fn spawn_trailer_chain(
     root: Entity,
     bus_dir: &Path,
     tractor: &BusManifest,
-) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
+) -> (
+    Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)>,
+    Vec<opts_sim::UnitLoad>,
+) {
     const MAX_SEGMENTS: usize = 40;
     let mut cams = Vec::new();
+    let mut units: Vec<opts_sim::UnitLoad> = Vec::new();
     let mut chain = Vec::new();
     let mut layout = Vec::new();
     let mut behind = 0.0_f32;
@@ -646,6 +650,14 @@ pub(super) fn spawn_trailer_chain(
                 .map(|(size, centre)| super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
+        let previous_kg = units.last().map_or_else(
+            || manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG),
+            |u| u.mass_kg,
+        );
+        if manifest_mass_kg(&manifest).is_none() {
+            tracing::warn!(trailer = %path.display(), assumed_kg = previous_kg, "trailer states no mass; the mass of the unit in front is used");
+        }
+        units.push(unit_load(&manifest, previous_kg));
         if reversed {
             // The chain of a reversed head leads back into this consist (the NF6D's B head
             // couples to the articulation joint again): the ring is closed here.
@@ -681,7 +693,29 @@ pub(super) fn spawn_trailer_chain(
                 followers: layout,
             },));
     }
-    cams
+    (cams, units)
+}
+
+/// Mass the simulation assumes for a head unit that states none (kg).
+const HEAD_MASS_DEFAULT_KG: f32 = 11_500.0;
+
+/// The mass a vehicle file states (kg); `None` when it states none or an implausible one.
+fn manifest_mass_kg(manifest: &BusManifest) -> Option<f32> {
+    manifest
+        .mass_tonnes
+        .filter(|&m| m > 0.5)
+        .map(|m| m * 1_000.0)
+}
+
+/// What a following unit adds to the consist: its stated mass, else `previous_kg` (the unit in
+/// front; the installed consists have a median trailer/head ratio of 0.90, `consist_census`), and
+/// its axles with those marked driven (`achse_antrieb`).
+fn unit_load(manifest: &BusManifest, previous_kg: f32) -> opts_sim::UnitLoad {
+    opts_sim::UnitLoad {
+        mass_kg: manifest_mass_kg(manifest).unwrap_or(previous_kg),
+        axles: manifest.axles.len(),
+        driven_axles: manifest.axles.iter().filter(|a| a.is_driven).count(),
+    }
 }
 
 /// Queues the background decoding of the vehicle's scrambled meshes and returns their keys.
@@ -889,9 +923,18 @@ pub fn load_player_vehicle(
     }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
-    let trailer_cams = spawn_trailer_chain(
+    let (trailer_cams, trailer_units) = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
+    if !trailer_units.is_empty() && !super::is_rail(&manifest) {
+        // The consist's mass accelerates and brakes with the head (rail consists have their own
+        // dynamics, `RailPlayer`).
+        commands.queue(move |world: &mut World| {
+            if let Some(mut c) = world.get_mut::<opts_bevy::VehicleController>(root) {
+                c.sim.set_trailers(trailer_units);
+            }
+        });
+    }
     if !trailer_cams.is_empty() {
         commands.queue(move |world: &mut World| {
             if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
@@ -1261,5 +1304,69 @@ mod bone_tests {
         assert!(!is_bone_stem("bone_ab"));
         assert!(!is_bone_stem("bone_1"));
         assert!(!is_bone_stem("gn_dum_gelenk_a"));
+    }
+}
+
+#[cfg(test)]
+mod consist_mass_tests {
+    use super::*;
+
+    fn bus(mass: Option<f32>, axles: &[bool]) -> BusManifest {
+        let mut text = String::new();
+        if let Some(m) = mass {
+            text.push_str(&format!("[mass]\n{m}\n\n"));
+        }
+        for driven in axles {
+            text.push_str(&format!(
+                "[newachse]\n\nachse_antrieb\n{}\n\n",
+                u8::from(*driven)
+            ));
+        }
+        BusManifest::parse(&text).expect("manifest")
+    }
+
+    #[test]
+    fn a_trailer_adds_its_stated_mass_and_driven_axles() {
+        let u = unit_load(&bus(Some(7.2), &[false, true]), 8_000.0);
+        assert_eq!(u.mass_kg, 7_200.0);
+        assert_eq!((u.axles, u.driven_axles), (2, 1));
+    }
+
+    #[test]
+    fn a_trailer_without_a_mass_takes_the_mass_of_the_unit_in_front() {
+        assert_eq!(unit_load(&bus(None, &[false]), 8_000.0).mass_kg, 8_000.0);
+        // An implausible mass counts as missing, like for the head.
+        assert_eq!(
+            unit_load(&bus(Some(0.1), &[false]), 8_000.0).mass_kg,
+            8_000.0
+        );
+    }
+
+    /// The MAN GN92 (the project's NG272 test vehicle) of the installed corpus: 8 t head and
+    /// 7.2 t trailer make a 15.2 t consist. Skipped without `OMSI_PATH`.
+    #[test]
+    fn the_gn92_consist_weighs_head_and_trailer() {
+        let Some(root) = std::env::var_os("OMSI_PATH").map(std::path::PathBuf::from) else {
+            return;
+        };
+        let dir = root.join("Vehicles/MAN_NL_NG");
+        let read = |f: &str| {
+            std::fs::read(dir.join(f))
+                .ok()
+                .and_then(|b| BusManifest::parse_bytes(&b).ok())
+        };
+        let (Some(main), Some(trail)) = (read("MAN_GN92_main.bus"), read("MAN_GN92_trail.bus"))
+        else {
+            return;
+        };
+        let head = manifest_mass_kg(&main).expect("head mass");
+        let mut sim = opts_sim::VehicleSimulation::from_manifest(&main);
+        sim.set_trailers(vec![unit_load(&trail, head)]);
+        assert!(
+            (sim.consist_mass_kg() - 15_200.0).abs() < 1.0,
+            "{}",
+            sim.consist_mass_kg()
+        );
+        assert!((sim.head_mass_kg() - 8_000.0).abs() < 1.0);
     }
 }

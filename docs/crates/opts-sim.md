@@ -62,6 +62,7 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
 
 ### 6. Articulation (`opts_sim::ArticulationJoint`, `ArticulationState`)
 - `ArticulationJoint`: Trailer hitch position computation, mechanical angle stops ($\pm 54^\circ$), and kinematic yaw tracking.
+- `UnitLoad`, `VehicleSimulation::{set_trailers, consist_mass_kg, head_mass_kg, driven_mass_kg}` (2026-10-14): the following units' mass and driven axles. The chassis mass that accelerates and brakes is the whole consist's; the head's own axle loads keep the head's mass; traction of script torque is limited by the mass on driven axles, braking by the whole consist. Filled by `spawn_trailer_chain` for road consists (a trailer without a stated mass takes the mass of the unit in front; rail consists keep their own dynamics).
 - `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). `ArticulationJoint` above still runs inside `VehicleSimulation` with fixed geometry; merging the two is [M-0053](../src/roadmap/phase-4/M-0053.md).
 
 ### 7. OMSI Script Engine (`opts_sim::script`)

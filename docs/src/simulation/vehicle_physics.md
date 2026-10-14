@@ -153,6 +153,12 @@ $$\Delta W_{\text{long}} = m \cdot a_y \cdot \frac{h_{\text{cg}}}{L}$$
 
 ---
 
+## ⚖️ Consist Mass
+
+A vehicle with following units (`[couple_back]`, road consists) accelerates, rolls and brakes with the **sum** of the units' masses; each unit states its `[mass]` (a unit without one takes the mass of the unit in front: the installed consists have a median trailer/head ratio of 0.90, `consist_census`). The head's own axle loads (load transfer, suspension) use the head's mass only. Drive force from the scripts is limited by $\mu \cdot g \cdot m_{\text{driven}}$, where $m_{\text{driven}}$ is the head's mass on its driven axles plus each following unit's mass times its driven axles over its axles (equal axle loads assumed); braking is limited by $\mu \cdot g \cdot \sum m$. The hitch force and the units' own load transfer are not modelled ([Articulation Physics](../architecture/articulation.md)). Rail consists have their own dynamics.
+
+---
+
 ## 🔗 Articulation Kinematics
 
 For articulated vehicles, the tractor and trailer units are connected at hitch position:
