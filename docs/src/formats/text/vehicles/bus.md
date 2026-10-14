@@ -358,7 +358,9 @@ The three legacy inertia values duplicate what `[momentofintertia]` provides. In
 
 ##### `[couple_back]` (Trailing Segment)
 
-> ✅ **Resolved:** The boolean flag indicates whether the coupled trailer has **its own further trailer** behind it.
+> ⚠️ **Contradicted by the corpus (2026-10-14):** an earlier reading said the boolean flag tells whether the coupled trailer has its own further trailer. In the 1,035 installed files with `[couple_back]` that fails: the flag is `false` on 158 links whose target has a `[couple_back]` itself and `true` on 37 links whose target is the last unit. OPTS reads it as *the trailer is coupled facing backwards* (`couple_back_reversed`, the NF6D "B" head), which is what the loader needs. The table below is the earlier reading, kept until Q-003 is settled with an OMSI test.
+>
+> The 1,035 raw occurrences against the 539 OPTS parses are mostly indented, disabled `[couple_back]` blocks whose target file does not exist (`keyword-indentation.md`, 3.6 % resolve); the scanner ignores them on purpose. The evidence against "has a further trailer" uses only the 539 column-0 links and the loader's behaviour.
 
 | Value | Meaning |
 | :--- | :--- |
@@ -412,7 +414,7 @@ For a **double-articulated bus**, you would see:
 
 The chain is A → B → C. Each segment is a fully-loaded OMSI vehicle in its own right, sharing a script system via `[scriptshare]`.
 
-> ✅ **Resolved — Chain depth:** There is **no cap** on the depth of a `[couple_back]` chain. A vehicle configuration may consist of an arbitrary number of segments linked end-to-end.
+> ℹ️ **Chain depth:** no cap is known for OMSI. The installed corpus has no non-looping chain longer than 4 units behind the head; OPTS stops at 40 segments (`MAX_SEGMENTS`) because 13 head files loop back on themselves (articulation.md, Q-ART-13).
 
 This has significant architectural consequences for OPTS:
 
@@ -579,7 +581,7 @@ All questions from the initial draft have been resolved.
 | :--- | :--- | :--- |
 | Q-001 | Does `[mass]` consume 1 line or 4? | **4 lines:** mass plus three legacy moments of inertia. |
 | Q-002 | Does `[boundingbox]` consume 6, 12, or unbounded lines? | **12 lines:** two bounding boxes of 6 lines each. |
-| Q-003 | What does the second parameter of `[couple_back]` mean? | **Boolean:** whether the referenced trailer has its own further trailer. |
+| Q-003 | What does the second parameter of `[couple_back]` mean? | ❓ Reopened 2026-10-14: the corpus contradicts "has a further trailer" (see the note at `[couple_back]`); OPTS treats it as "reversed". |
 | Q-004 | What are the unknown params in `[add_camera_reflexion_2]`? | **Unknown.** Store as `None`; revisit later. |
 | Q-005 | File encoding? | **Windows-1252 (CP1252).** |
 | Q-006 | Count-line mismatch? | **OMSI crashes; OPTS logs and proceeds.** |
