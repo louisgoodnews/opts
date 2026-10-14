@@ -41,18 +41,42 @@ impl UnitLoad {
     /// model turned by half a circle) has its axle positions mirrored.
     #[must_use]
     pub fn from_manifest(manifest: &BusManifest, reversed: bool) -> Self {
+        Self::from_manifest_or(manifest, reversed, DEFAULT_UNIT_MASS_KG)
+    }
+
+    /// Like [`UnitLoad::from_manifest`], but a unit that states no usable mass takes
+    /// `fallback_mass_kg`: the loader passes the mass of the unit in front (the installed
+    /// consists have a median trailer/head ratio of 0.90, `consist_census`).
+    #[must_use]
+    pub fn from_manifest_or(manifest: &BusManifest, reversed: bool, fallback_mass_kg: f32) -> Self {
         let sign = if reversed { -1.0 } else { 1.0 };
         Self {
             mass_kg: manifest
                 .mass_tonnes
                 .filter(|&m| m > 0.5)
-                .map_or(DEFAULT_UNIT_MASS_KG, |m| m * 1_000.0),
+                .map_or(fallback_mass_kg, |m| m * 1_000.0),
             axles: manifest
                 .axles
                 .iter()
                 .map(|a| UnitAxle {
                     longitudinal_m: a.longitudinal_m * sign,
                     is_driven: a.is_driven,
+                })
+                .collect(),
+        }
+    }
+
+    /// A unit of `axles` axles of which `driven` are driven, nominally 1.5 m apart behind the
+    /// origin (for tests and headless set-ups; real units come from
+    /// [`UnitLoad::from_manifest`]).
+    #[must_use]
+    pub fn with_axles(mass_kg: f32, axles: usize, driven: usize) -> Self {
+        Self {
+            mass_kg,
+            axles: (0..axles)
+                .map(|i| UnitAxle {
+                    longitudinal_m: -1.5 * i as f32,
+                    is_driven: i < driven,
                 })
                 .collect(),
         }
@@ -78,9 +102,7 @@ impl UnitLoad {
 }
 
 /// Summed normal force `(driven, braked)` in N over the given `(axle, load)` pairs. Every axle
-/// is taken as braked (the vehicle files carry no brake layout). When no axle of the consist
-/// is marked as driven the driven sum falls back to all axles: an unmarked layout must not take
-/// away all traction.
+/// is taken as braked (the vehicle files carry no brake layout).
 #[must_use]
 pub fn driven_and_braked_load_n(axles: &[(UnitAxle, f32)]) -> (f32, f32) {
     let braked: f32 = axles.iter().map(|(_, n)| n).sum();
@@ -89,11 +111,7 @@ pub fn driven_and_braked_load_n(axles: &[(UnitAxle, f32)]) -> (f32, f32) {
         .filter(|(a, _)| a.is_driven)
         .map(|(_, n)| n)
         .sum();
-    if axles.iter().any(|(a, _)| a.is_driven) {
-        (driven, braked)
-    } else {
-        (braked, braked)
-    }
+    (driven, braked)
 }
 
 #[cfg(test)]
@@ -126,13 +144,11 @@ mod tests {
     }
 
     #[test]
-    fn no_marked_driven_axle_keeps_traction() {
+    fn driven_and_braked_sums_follow_the_flags() {
         let a = |d| UnitAxle {
             longitudinal_m: 0.0,
             is_driven: d,
         };
-        let (driven, braked) = driven_and_braked_load_n(&[(a(false), 100.0), (a(false), 50.0)]);
-        assert_eq!((driven, braked), (150.0, 150.0));
         let (driven, braked) = driven_and_braked_load_n(&[(a(true), 100.0), (a(false), 50.0)]);
         assert_eq!((driven, braked), (100.0, 150.0));
     }

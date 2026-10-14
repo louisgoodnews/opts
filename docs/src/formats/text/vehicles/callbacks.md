@@ -34,7 +34,7 @@ Uses over all scripts; Buses = player `.bus` files that can reach the callback (
 | `GetTerminusString` | 4813 | 1055 | termIdx, col | – | str | high | .hof terminus table [addterminus*] (row index, string column 0..25) |
 | `TextLength` | 4287 | 934 | font | text:str | width:f | high | Font metrics of the .oft (char advance table) |
 | `GetTTBusstopIndex` | 3959 | 949 | – | – | idx:f | high | Active timetable / schedule: current stop position (0-based) |
-| `GiveChangeCoin` | 3486 | 981 | coinIdx | – | – | high | Cash desk: spawn a coin / bill from the currency of the vehicle (Money/<cur>/<cur>.cfg: [coin] then [bill]) |
+| `GiveChangeCoin` | 3486 | 981 | coinIdx | – | – | high | Cash desk: spawn a coin / bill from the currency of the vehicle (Money/&lt;cur&gt;/&lt;cur&gt;.cfg: [coin] then [bill]) |
 | `GetTTBusstopName` | 3292 | 479 | stopNo | – | str | high | Timetable stop name (map / schedule file), compared with hof idents |
 | `GetBusstopString` | 2933 | 1007 | busstopIdx, col | – | str | high | .hof [addbusstop*] row, string column 0..8 |
 | `NrSpecRandom` | 2688 | 905 | n | – | r:f | high | Seeded generator, keyed by n |
@@ -56,7 +56,7 @@ Uses over all scripts; Buses = player `.bus` files that can reach the callback (
 | `STFilter` | 1045 | 928 | tex | – | – | high | CPU canvas of tex |
 | `STNewTex` | 980 | 936 | tex | – | – | high | [scripttexture] canvas of the part (declared size) |
 | `GetTTDelay` | 828 | 879 | – | – | sec:f | high | Simulation clock minus timetable at the current stop |
-| `GetTicketValue` | 755 | 939 | ticketIdx | – | price:f | high | TicketPacks/<pack>/*.otp [ticket] {value} |
+| `GetTicketValue` | 755 | 939 | ticketIdx | – | price:f | high | TicketPacks/&lt;pack&gt;/*.otp [ticket] {value} |
 | `GetTTBusstopDep` | 731 | 864 | stopNo | – | sec:f | high | Timetable departure time at stop |
 | `GetTicketName` | 726 | 924 | ticketIdx | – | str | high | TicketPacks/*.otp [ticket] name or {displaystring} |
 | `GetHumanCountOnSeat` | 699 | 110 | seatIdx | – | n:f | high | Passenger system: occupant of seat (passengercabin [passpos] order; chain-wide on articulated buses) |
@@ -74,7 +74,7 @@ Notes that matter for implementation:
 
 * **Timetable group** (`GetTT*`): no arguments except the stop number; they read the *active* timetable of the vehicle. Times are seconds of the day (scripts divide by 3600 and take `% 24`). `GetTTDelay` is positive when late (below -30 s the scripts pick "too early" textures, 240-3600 s "too late").
 * **`.hof` group** (`GetTerminusString`, `GetBusstopString`, `GetRouteIndex`, `GetDepotStringGlobal`, …): `GetRouteIndex` takes `line × 100 + course` (route code `13001` = line 130, course 01); `GetTerminusString` takes `terminus index` then the string column (0-25); `GetBusstopString` takes the stop index then the column (0-8); `GetDepotStringGlobal` slot 0 is the map/hof name the scripts compare with literals, slots 3-5 are numeric strings fed to `$StrToFloat`. Layout of the data: [`.hof`](hof.md).
-* **`GiveChangeCoin`**: the index runs over the coins, then the bills, of the currency file of the vehicle (`Money/<cur>.cfg`); the same index is used by the different cash-desk triggers of a vehicle for the same coin.
+* **`GiveChangeCoin`**: the index runs over the coins, then the bills, of the currency file of the vehicle (`Money/&lt;cur&gt;.cfg`); the same index is used by the different cash-desk triggers of a vehicle for the same coin.
 * **`NrSpecRandom n`**: stable per vehicle and argument (a matrix display calls it every frame with the pixel number to choose dead pixels); returns a value in `[0, 1]`.
 * **Passenger counts**: seat indices fit the `[passpos]` count of the cabin in 25 of 28 vehicles; path-link indices exceed the per-file `[pathlink]` count in 18 of 79, so they may be chain-wide or path-point indices ❓.
 

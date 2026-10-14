@@ -25,4 +25,4 @@ pub use vehicle::drivetrain::{
 pub use vehicle::inputs::{GearPosition, VehicleInputs};
 pub use vehicle::suspension::SuspensionModel;
 pub use vehicle::trailer::{TrailerKinematics, TrailerState};
-pub use vehicle::VehicleSimulation;
+pub use vehicle::{UnitLoad, VehicleSimulation};

@@ -15,7 +15,8 @@ pub mod trailer;
 
 use self::axle::AxleState;
 use self::chassis::ChassisState;
-use self::consist::{driven_and_braked_load_n, UnitAxle, UnitLoad, GRAVITY};
+pub use self::consist::UnitLoad;
+use self::consist::{driven_and_braked_load_n, UnitAxle, GRAVITY};
 use self::drivetrain::DrivetrainModel;
 use self::ground::{joint_beta_deg, GroundProbe, GroundSample, UnitBody};
 use self::inputs::VehicleInputs;
@@ -435,6 +436,25 @@ impl VehicleSimulation {
         self.chassis.total_mass_kg + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
     }
 
+    /// Mass of the head unit alone (kg): the chassis' own mass.
+    #[must_use]
+    pub fn head_mass_kg(&self) -> f32 {
+        self.chassis.total_mass_kg
+    }
+
+    /// Mass standing on driven axles over all units (kg), `friction_loads_n().0 / g`.
+    #[must_use]
+    pub fn driven_mass_kg(&self) -> f32 {
+        self.friction_loads_n().0 / GRAVITY
+    }
+
+    /// Declares the loads of the following units *without* poses (headless dynamics, tests):
+    /// replaces `trailer_loads`. A consist with poses gets its loads through
+    /// [`VehicleSimulation::attach_trailer`], which keeps `consist` and `trailer_loads` in step.
+    pub fn set_trailers(&mut self, units: Vec<UnitLoad>) {
+        self.trailer_loads = units;
+    }
+
     /// Summed static normal force `(driven axles, braked axles)` over all units (N): what the
     /// tyres can transmit is `ROAD_FRICTION` times these. The chassis' axles carry its own mass
     /// (distributed by the suspension model), each following unit its own; every axle brakes.
@@ -444,6 +464,9 @@ impl VehicleSimulation {
         let head = self
             .suspension
             .compute_static_loads(&positions, self.chassis.total_mass_kg);
+        // A head without any axle marked driven counts as driven on all of them (the file does
+        // not say; do not take away all traction).
+        let head_has_driven = self.axles.iter().any(|a| a.config.is_driven);
         let mut axles: Vec<(UnitAxle, f32)> = self
             .axles
             .iter()
@@ -452,7 +475,7 @@ impl VehicleSimulation {
                 (
                     UnitAxle {
                         longitudinal_m: a.config.longitudinal_m,
-                        is_driven: a.config.is_driven,
+                        is_driven: a.config.is_driven || !head_has_driven,
                     },
                     n,
                 )
@@ -826,5 +849,17 @@ mod tests {
         let kept = sim.consist_body(0);
         sim.apply_ground(&[None, None], 1.0 / 64.0);
         assert_eq!(sim.consist_body(0), kept);
+    }
+
+    #[test]
+    fn a_head_with_no_driven_axle_counts_as_driven_on_all() {
+        let mut sim = VehicleSimulation::new_standard_bus(10_000.0, 5.0);
+        sim.axles
+            .iter_mut()
+            .for_each(|a| a.config.is_driven = false);
+        let (driven, braked) = sim.friction_loads_n();
+        assert!((driven - braked).abs() < 1.0);
+        sim.set_trailers(vec![UnitLoad::with_axles(5_000.0, 2, 2)]);
+        assert!((sim.driven_mass_kg() - 15_000.0).abs() < 1.0);
     }
 }
