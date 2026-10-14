@@ -1210,6 +1210,95 @@ pub(super) fn load_driver_human(
     Ok(name)
 }
 
+/// Discovers and loads the best matching depot file for the vehicle and current map.
+fn load_depot_file(
+    bus_dir: &Path,
+    omsi_root: &Path,
+    map_name: &str,
+) -> Option<opts_core::formats::hof::HofFile> {
+    let map_clean = map_name.trim().to_ascii_lowercase();
+
+    // 1. Look in the vehicle directory
+    if let Ok(entries) = std::fs::read_dir(bus_dir) {
+        let mut candidates = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
+            {
+                let stem = path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_ascii_lowercase();
+                if !map_clean.is_empty() && stem == map_clean {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                            return Some(hof);
+                        }
+                    }
+                }
+                candidates.push((stem, path));
+            }
+        }
+        if !map_clean.is_empty() {
+            for (stem, path) in &candidates {
+                if stem.contains(&map_clean) || map_clean.contains(stem.as_str()) {
+                    if let Ok(bytes) = std::fs::read(path) {
+                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                            return Some(hof);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_, path)) = candidates.first() {
+            if let Ok(bytes) = std::fs::read(path) {
+                if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                    return Some(hof);
+                }
+            }
+        }
+    }
+
+    // 2. Look in shared Vehicles folders in OMSI root
+    if !map_clean.is_empty() {
+        let shared_dirs = [
+            omsi_root.join("Vehicles"),
+            omsi_root.join("Vehicles/.hof Dateien"),
+        ];
+        for dir in shared_dirs {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
+                    {
+                        let stem = path
+                            .file_stem()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_ascii_lowercase();
+                        if stem == map_clean || stem.contains(&map_clean) {
+                            if let Ok(bytes) = std::fs::read(&path) {
+                                if let Ok(hof) =
+                                    opts_core::formats::hof::HofFile::parse_bytes(&bytes)
+                                {
+                                    return Some(hof);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
 /// A vehicle with `[scriptshare]` has none of its own and gets no engine.
 fn attach_scripts(
@@ -1244,7 +1333,62 @@ fn attach_scripts(
         "vehicle scripts loaded"
     );
     let mut engine = engine;
-    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks(root.to_bits()));
+    let map_name = job
+        .manifest
+        .friendly_name
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| {
+            job.config
+                .map_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+        });
+    let hof = load_depot_file(bus_dir, job.install.root(), map_name);
+
+    let mut active_route_index = None;
+    let mut active_line_string = String::new();
+
+    if let Some(h) = &hof {
+        tracing::info!(
+            depot_name = %h.name,
+            termini = h.termini.len(),
+            routes = h.routes.len(),
+            "depot (.hof) file loaded for vehicle"
+        );
+        engine.set_string("Yard", &h.name);
+
+        if let Some((idx, r)) = h
+            .routes
+            .iter()
+            .enumerate()
+            .find(|(_, r)| r.line_string == "33" || r.route_code / 100 == 33)
+            .or_else(|| h.routes.iter().enumerate().next())
+        {
+            active_route_index = Some(idx);
+            active_line_string = if r.line_string.chars().all(|c| c == 'X') {
+                (r.route_code / 100).to_string()
+            } else {
+                r.line_string.clone()
+            };
+            engine.set_string("SetLineTo", &active_line_string);
+            engine.set_string("Ident", &r.route_code.to_string());
+            engine.set("schedule_active", 1.0);
+        }
+    }
+
+    let ctx = opts_bevy::host_callbacks::VehicleHostContext {
+        seed: root.to_bits(),
+        hof: hof.map(std::sync::Arc::new),
+        active_route_index,
+        current_stop_index: 0,
+        delay_seconds: 0.0,
+        line_string: active_line_string,
+    };
+    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
+        ctx,
+    ));
     // Equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
     if let Some(r) = &job.repaint {
         let name = if job.config.livery.is_empty() {

@@ -4,6 +4,10 @@ pub mod constfile;
 pub mod cti;
 pub mod engine_config;
 pub mod envir;
+/// Depot (`.hof`) file parser and operational data models.
+pub mod hof {
+    pub use crate::formats::vehicles::hof::*;
+}
 pub mod humans;
 pub mod map;
 pub mod money;
