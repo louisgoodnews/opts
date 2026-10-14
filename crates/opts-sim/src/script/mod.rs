@@ -5,6 +5,7 @@
 //! [`ScriptEngine::trigger`], reads variables and drains events. Design:
 //! `docs/src/architecture/script-vm.md`; language: `docs/src/formats/text/vehicles/osc.md`.
 
+mod ai_response;
 mod compiler;
 mod lexer;
 mod load;
@@ -15,6 +16,7 @@ mod vm;
 
 use std::collections::HashSet;
 
+pub use ai_response::{measure_ai_response, AiResponse};
 pub use compiler::{
     BinOp, Block, Compiler, Diagnostic, EventKind, Names, Op, Program, Severity, StrOp, UnOp,
 };
