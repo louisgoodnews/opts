@@ -923,6 +923,20 @@ fn the_keys_change_the_settings() {
     assert!(!config(&app).enabled, "F7 hides it");
     press(&mut app, &[KeyCode::F7]);
     assert!(config(&app).enabled, "and shows it again");
+    assert_eq!(
+        config(&app).zoom_mode,
+        minimap::ZoomMode::Speed,
+        "speed zoom is the default"
+    );
+    press(&mut app, &[KeyCode::ControlLeft, KeyCode::F7]);
+    assert_eq!(
+        config(&app).zoom_mode,
+        minimap::ZoomMode::Fixed,
+        "Ctrl+F7 fixes the zoom"
+    );
+    assert!(config(&app).enabled, "and does not hide the map");
+    press(&mut app, &[KeyCode::ControlLeft, KeyCode::F7]);
+    assert_eq!(config(&app).zoom_mode, minimap::ZoomMode::Speed, "and back");
 }
 
 #[test]
@@ -936,6 +950,17 @@ fn hud_minimap_reads_and_changes_the_settings_and_hud_state_carries_the_map() {
     let got = call(&mut app, json!({})).expect("get");
     assert_eq!(got["enabled"], true);
     assert_eq!(got["zoom_m"], 200.0);
+    assert_eq!(got["zoom_mode"], "speed");
+    assert!(
+        got["radius_m"].is_number() && got["target_m"].is_number() && got["speed_kmh"].is_number()
+    );
+    let fixed = call(&mut app, json!({ "zoom_mode": "fixed" })).expect("zoom_mode");
+    assert_eq!(fixed["zoom_mode"], "fixed");
+    assert!(
+        call(&mut app, json!({ "zoom_mode": "x" })).is_err(),
+        "unknown mode is rejected"
+    );
+    call(&mut app, json!({ "zoom_mode": "speed" })).expect("back");
     assert_eq!(got["orientation"], "heading");
     assert_eq!(got["zoom_steps_m"], json!([100.0, 200.0, 500.0, 1000.0]));
     assert!(got["redraws"].as_u64().expect("n") > 0);

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Draft - Phase A design (speed zoom) awaiting approval; sections 1-2 describe the merged M-0071 code |
+| **Status** | 🟢 Implemented on `feat/minimap-speed-zoom` (design approved by the project lead 2026-10-14: default `speed`, `V_FAST` 60 km/h, Ctrl+F7); sections 1-2 describe the merged M-0071 code |
 | **Phase** | Phase 9 (M-0071), extension on `feat/minimap-speed-zoom` |
 | **Code** | `crates/opts-game/src/hud/minimap/` (`config.rs`, `mod.rs`, `raster.rs`, `source.rs`, `tests.rs`) |
 | **Related** | [HUD registry §4a](hud-registry.md#4a-the-mini-map-m-0071), minimap path recognition (separate research branch) |

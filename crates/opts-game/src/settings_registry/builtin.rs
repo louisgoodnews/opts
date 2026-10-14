@@ -76,6 +76,11 @@ const MINIMAP_ORIENTATIONS: &[super::EnumOption] = &[
     opt("north", "set-opt-minimap-north"),
 ];
 
+const MINIMAP_ZOOM_MODES: &[super::EnumOption] = &[
+    opt("speed", "set-opt-minimap-zoom-mode-speed"),
+    opt("fixed", "set-opt-minimap-zoom-mode-fixed"),
+];
+
 const LOG_LEVELS: &[super::EnumOption] = &[
     opt("error", "set-opt-log-error"),
     opt("warn", "set-opt-log-warn"),
@@ -592,6 +597,17 @@ fn minimap() -> Vec<D> {
             "set-hud-minimap-zoom-desc",
         )
         .keywords(&["map", "mini map", "zoom", "scale", "radius"])
+        .since("0.3"),
+        D::new(
+            "hud.minimap_zoom_mode",
+            K::Enum(MINIMAP_ZOOM_MODES),
+            "speed",
+            C::Interface,
+            162,
+            "set-hud-minimap-zoom-mode",
+            "set-hud-minimap-zoom-mode-desc",
+        )
+        .keywords(&["map", "mini map", "zoom", "speed", "automatic"])
         .since("0.3"),
         D::new(
             "hud.minimap_orientation",

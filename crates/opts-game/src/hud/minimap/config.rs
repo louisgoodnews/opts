@@ -11,6 +11,9 @@ pub const SETTING_ZOOM: &str = "hud.minimap_zoom";
 /// Setting: `north` or `heading`.
 pub const SETTING_ORIENTATION: &str = "hud.minimap_orientation";
 
+/// Setting: `speed` (the radius follows the speed) or `fixed` (the radius is the zoom step).
+pub const SETTING_ZOOM_MODE: &str = "hud.minimap_zoom_mode";
+
 /// The zoom steps: visible radius in metres, from 100 m to 1 km.
 pub const ZOOM_STEPS_M: [f32; 4] = [100.0, 200.0, 500.0, 1000.0];
 /// The zoom step used when the setting is missing or unreadable.
@@ -60,6 +63,46 @@ impl Orientation {
     }
 }
 
+/// How the visible radius is chosen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ZoomMode {
+    /// The radius follows the speed (see [`super::zoom`]); the zoom step is the largest radius.
+    #[default]
+    Speed,
+    /// The radius is the zoom step.
+    Fixed,
+}
+
+impl ZoomMode {
+    /// Setting text.
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Speed => "speed",
+            Self::Fixed => "fixed",
+        }
+    }
+
+    /// From the setting text.
+    #[must_use]
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "speed" => Some(Self::Speed),
+            "fixed" => Some(Self::Fixed),
+            _ => None,
+        }
+    }
+
+    /// The other one.
+    #[must_use]
+    pub const fn toggled(self) -> Self {
+        match self {
+            Self::Speed => Self::Fixed,
+            Self::Fixed => Self::Speed,
+        }
+    }
+}
+
 /// The user's choices, read from the settings.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MiniMapConfig {
@@ -69,6 +112,8 @@ pub struct MiniMapConfig {
     pub zoom_m: f32,
     /// What points up.
     pub orientation: Orientation,
+    /// How the radius is chosen.
+    pub zoom_mode: ZoomMode,
 }
 
 impl Default for MiniMapConfig {
@@ -77,12 +122,13 @@ impl Default for MiniMapConfig {
             enabled: true,
             zoom_m: DEFAULT_ZOOM_M,
             orientation: Orientation::default(),
+            zoom_mode: ZoomMode::default(),
         }
     }
 }
 
 impl MiniMapConfig {
-    /// Reads the three settings (missing or unreadable values give the defaults).
+    /// Reads the four settings (missing or unreadable values give the defaults).
     #[must_use]
     pub fn read(settings: &GameSettings) -> Self {
         let d = Self::default();
@@ -99,6 +145,10 @@ impl MiniMapConfig {
                 .raw(SETTING_ORIENTATION)
                 .and_then(|v| Orientation::parse(&v))
                 .unwrap_or(d.orientation),
+            zoom_mode: settings
+                .raw(SETTING_ZOOM_MODE)
+                .and_then(|v| ZoomMode::parse(&v))
+                .unwrap_or(d.zoom_mode),
         }
     }
 }

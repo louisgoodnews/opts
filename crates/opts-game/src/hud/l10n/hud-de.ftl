@@ -58,6 +58,7 @@ hud-viewpoint-hint = Auf/Ab Zeile  -  Links/Rechts ändern (Umschalt: x10)  -  P
 hud-viewpoint-unsaved = Noch nicht gespeichert
 hud-hint-controls-compact = W/S Fahren  -  Links/Rechts Lenken  -  . Bremse  -  Esc Pause
 hud-minimap-caption = { $metres } m - { $mode }
+hud-minimap-caption-auto = { $metres } m (automatisch) - { $mode }
 hud-minimap-north-up = Norden oben
 hud-minimap-heading-up = Fahrtrichtung oben
 hud-widget-minimap = Minikarte
