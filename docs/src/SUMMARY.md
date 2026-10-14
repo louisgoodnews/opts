@@ -48,6 +48,7 @@
   - [M-0045: Script-Driven Animation](roadmap/phase-4/M-0045.md)
   - [M-0046: World Loader Extraction](roadmap/phase-4/M-0046.md)
   - [M-0049: AI Road Traffic](roadmap/phase-4/M-0049.md)
+  - [M-0095: AI Vehicle Profiles](roadmap/phase-4/M-0095.md)
   - [M-0050: Pedestrians](roadmap/phase-4/M-0050.md)
   - [M-0053: Articulated Vehicle Completion](roadmap/phase-4/M-0053.md)
   - [M-0093: Host Callbacks (Timetable, IBIS)](roadmap/phase-4/M-0093.md)
@@ -113,6 +114,7 @@
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
+- [AI Vehicle Configuration](architecture/ai-vehicle-config.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
@@ -269,6 +271,7 @@
 
 - [Usability Test Protocol (Phase 9, not yet run)](meta/usability-test-protocol.md)
 - [UV Incident Files of the MAN NG272 (2026-10-13)](meta/uv-incidents-ng272-2026-10-13.md)
+- [AI Vehicle Configuration Investigation (2026-10-14)](meta/ai-vehicle-config-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
 - [Bug: MAN NL/NG Material Artifacts (P-1012)](meta/bugs/man-nlng-materials-2026-10-12.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
