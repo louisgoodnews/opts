@@ -579,6 +579,7 @@ pub fn spawn_traffic(
         ))
         .id();
     job.vehicle_text_defs = variant.model.text_textures.clone();
+    super::trace::begin_frame();
     let (count, _, min, max) = load_segment_meshes(
         &mut job,
         &mut commands,
@@ -590,6 +591,7 @@ pub fn spawn_traffic(
         &variant.model_dir.clone(),
         &variant.tex_dirs.clone(),
     );
+    let trace_frame = super::trace::end_frame();
     if count == 0 {
         // Meshes still decoding in the background, or unreadable: try again a few times.
         commands.entity(root).despawn();
@@ -644,6 +646,18 @@ pub fn spawn_traffic(
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             tracing::debug!(agent = id.0, vehicle = %name, speed, "AI vehicle spawned");
+            if opts_bevy::scene_trace::enabled() {
+                super::trace::spawned(
+                    opts_bevy::scene_trace::kind::TRAFFIC,
+                    &name,
+                    &name,
+                    root,
+                    &Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3())),
+                    &trace_frame,
+                    "ok",
+                    serde_json::json!({"lane": format!("{lane_id:?}"), "speed": speed, "heavy": heavy}),
+                );
+            }
             // Seats: the driver is nearly always there, further passengers by chance.
             let mut pax = 0u8;
             for (i, p) in [0.9, 0.35, 0.2, 0.1].into_iter().enumerate() {

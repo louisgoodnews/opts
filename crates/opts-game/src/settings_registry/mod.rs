@@ -326,6 +326,7 @@ impl Plugin for SettingsRegistryPlugin {
                 (
                     crate::language_packs::load_startup,
                     live::apply_saved_language,
+                    live::apply_saved_trace,
                 )
                     .chain(),
             )

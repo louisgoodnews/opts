@@ -7,6 +7,7 @@ pub mod control;
 pub mod control_drive;
 pub mod control_save;
 pub mod control_session;
+pub mod control_trace;
 pub mod control_ui;
 pub mod drive_history;
 pub mod first_run;

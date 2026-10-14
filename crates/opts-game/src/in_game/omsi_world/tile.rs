@@ -44,6 +44,7 @@ pub fn load_next_tile(
         return;
     };
     opts_bevy::set_loading_tile(Some(key));
+    opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();
     let origin = {
         let (a, b) = (tile_origin(key), tile_origin(job.start_tile));
@@ -74,6 +75,7 @@ pub fn load_next_tile(
         origin,
         &mut children,
     );
+    let splines_failed_before = stats.splines_failed;
     spawn_splines(
         job,
         stats,
@@ -85,6 +87,11 @@ pub fn load_next_tile(
         origin,
         &mut children,
     );
+
+    if opts_bevy::scene_trace::enabled() {
+        let failed = stats.splines_failed.saturating_sub(splines_failed_before);
+        super::trace::tile_content(job, &tile, key, origin, terrain.is_some(), failed);
+    }
 
     // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and terrain.
     {
@@ -140,9 +147,15 @@ pub fn load_next_tile(
     let placements = tile
         .objects
         .iter()
-        .map(|o| (o, None))
-        .chain(attached.iter().map(|(o, z)| (o, Some(*z))));
-    for (obj, attached_z) in placements {
+        .enumerate()
+        .map(|(i, o)| (o, None, "objects", i))
+        .chain(
+            attached
+                .iter()
+                .enumerate()
+                .map(|(i, (o, z))| (o, Some(*z), "attachments", i)),
+        );
+    for (obj, attached_z, list, index) in placements {
         spawn_object(
             job,
             stats,
@@ -156,6 +169,12 @@ pub fn load_next_tile(
             key,
             origin,
             &mut children,
+            &tile,
+            super::trace::Site {
+                list,
+                index,
+                marker: None,
+            },
         );
     }
 
@@ -188,10 +207,11 @@ pub fn load_next_tile(
     }
     stats.tiles_loaded = job.resident.len();
     stats.asset_failures = job.cache.stats.failures.len();
+    opts_bevy::scene_trace::end_tile(key);
     opts_bevy::set_loading_tile(None);
 }
 
-/// Places one scenery object (or tree) of a tile.
+/// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
 #[allow(clippy::too_many_arguments)]
 fn spawn_object(
     job: &mut WorldLoadJob,
@@ -206,12 +226,60 @@ fn spawn_object(
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
+    tile: &opts_core::formats::map::MapTile,
+    site: super::trace::Site<'_>,
+) {
+    if !opts_bevy::scene_trace::enabled() {
+        spawn_object_inner(
+            job, stats, commands, meshes, materials, images, obj, attached_z, terrain, key, origin,
+            children, tile, site,
+        );
+        return;
+    }
+    let started = std::time::Instant::now();
+    let before = super::trace::Counters::of(job, stats);
+    let first = children.len();
+    super::trace::begin_frame();
+    spawn_object_inner(
+        job, stats, commands, meshes, materials, images, obj, attached_z, terrain, key, origin,
+        children, tile, site,
+    );
+    let frame = super::trace::end_frame();
+    let entity = children.get(first).copied();
+    super::trace::object(
+        job, stats, before, frame, obj, site, tile, key, origin, entity, started,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn spawn_object_inner(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    obj: &MapObjectInstance,
+    attached_z: Option<f32>,
+    terrain: Option<&MapTerrain>,
+    key: (i32, i32),
+    origin: (f32, f32),
+    children: &mut Vec<Entity>,
+    tile: &opts_core::formats::map::MapTile,
+    site: super::trace::Site<'_>,
 ) {
     let Some((sco_path, sco)) = job.sco(&obj.sco_file) else {
         stats.objects_failed += 1;
+        super::trace::warn(|| {
+            format!(
+                "scenery object file not found or unreadable: {}",
+                obj.sco_file
+            )
+        });
         return;
     };
     if let Some(tree) = &sco.tree {
+        super::trace::set_kind(opts_bevy::scene_trace::kind::TREE);
         children.extend(spawn_tree(
             job, stats, commands, meshes, materials, images, tree, obj, origin, terrain,
         ));
@@ -226,10 +294,26 @@ fn spawn_object(
         let is_marker = job
             .sco(&replaced.sco_file)
             .is_some_and(|(_, s)| s.carpark_p);
+        super::trace::skip_record();
         if !is_marker {
             spawn_object(
-                job, stats, commands, meshes, materials, images, &replaced, attached_z, terrain,
-                key, origin, children,
+                job,
+                stats,
+                commands,
+                meshes,
+                materials,
+                images,
+                &replaced,
+                attached_z,
+                terrain,
+                key,
+                origin,
+                children,
+                tile,
+                super::trace::Site {
+                    marker: Some(&obj.sco_file),
+                    ..site
+                },
             );
         }
         return;
@@ -280,7 +364,9 @@ fn spawn_object(
         "placing scenery object"
     );
     super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
+    super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
+        super::trace::set_model_cfg(cfg_rel);
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
             transform, children,
@@ -302,6 +388,7 @@ fn spawn_object(
         if let Some(p) = &found {
             job.loading_deps
                 .insert(opts_bevy::hot_reload::cache::normalize(p));
+            super::trace::mesh_used(p);
         }
         let Some(o3d_path) = found else {
             job.cache
@@ -309,6 +396,7 @@ fn spawn_object(
                 .failures
                 .push(format!("o3d not found: {}", mesh_def.file));
             tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), mesh = %mesh_def.file, "o3d not found");
+            super::trace::warn(|| format!("o3d not found: {}", mesh_def.file));
             return;
         };
         let overrides: Vec<TextureOverride> = mesh_def
@@ -422,6 +510,7 @@ fn spawn_vehicle_model(
 ) {
     let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
         tracing::error!(at = %opts_bevy::position_tag(), sco = %sco_path.display(), cfg = cfg_rel, "vehicle model config not found");
+        super::trace::warn(|| format!("vehicle model config not found: {cfg_rel}"));
         stats.objects_failed += 1;
         return;
     };
@@ -520,6 +609,7 @@ pub fn stream_world_tiles(
             super::rail::unregister_bike_tile(&mut commands, key);
             super::collision::unregister_tile(&mut commands, key);
             super::traffic::unregister_tile(&mut commands, key);
+            opts_bevy::scene_trace::forget_tile(key);
             tracing::debug!(tile = ?key, "tile unloaded");
         }
     }

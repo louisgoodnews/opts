@@ -29,6 +29,7 @@ mod respawn;
 mod scenery_objects;
 mod tile;
 mod tile_ground;
+pub(crate) mod trace;
 mod traffic;
 #[cfg(test)]
 pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;

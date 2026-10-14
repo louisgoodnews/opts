@@ -268,6 +268,8 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         start_entry: None,
     };
 
+    opts_bevy::scene_trace::begin_session(&job.map_name(), job.install.root());
+
     // Tile size: 300 m, except for maps with world coordinates (measured from the splines).
     {
         let mut sample = Vec::new();

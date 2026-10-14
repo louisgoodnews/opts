@@ -144,6 +144,13 @@ set-opt-log-error = Errors only
 set-opt-log-warn = Warnings
 set-opt-log-info = Normal
 set-opt-log-debug = Detailed
+set-trace-scene = Scene trace
+set-trace-scene-desc = Developer tool: records which mesh file is placed where (tile, position, decode quality) in a file next to the logs. Summary keeps counts and problems, Full keeps everything. Takes effect for the next map load. Costs nothing when off.
+set-opt-trace-off = Off
+set-opt-trace-summary = Summary
+set-opt-trace-full = Everything
+set-trace-overlay = Scene trace overlay
+set-trace-overlay-desc = Developer tool: draws a box around every traced object near the camera, coloured by decode quality (red = failed, orange = unreliable, yellow = decoded). Needs the scene trace.
 
 
 settings-title = Settings

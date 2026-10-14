@@ -35,6 +35,7 @@ pub mod model;
 pub mod plugin;
 pub mod position_tag;
 pub mod reporting;
+pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;
 pub mod terrain;

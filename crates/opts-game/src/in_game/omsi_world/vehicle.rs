@@ -243,6 +243,7 @@ fn load_segment_meshes_for(
             materials,
             images,
         };
+        super::trace::mesh_used(&o3d_path);
         let skinned = mesh_def.smoothskin && !mesh_def.bones.is_empty();
         let parts = if skinned {
             let slots: Vec<(String, u16)> = mesh_def
@@ -840,9 +841,11 @@ pub fn load_player_vehicle(
     job.cache.texture_replacements = repaint_map(job, &model);
     job.cache.stats.uv_scope = (0, 0);
     job.cache.uv_context = format!("vehicle {}", bus_path.display());
+    super::trace::begin_frame();
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
+    let trace_frame = super::trace::end_frame();
     job.cache.expected_bounds = None;
     job.cache.texture_replacements.clear();
     if mesh_count == 0 {
@@ -986,6 +989,22 @@ pub fn load_player_vehicle(
         uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
+    if opts_bevy::scene_trace::enabled() {
+        super::trace::spawned(
+            opts_bevy::scene_trace::kind::VEHICLE,
+            &vehicle_name,
+            &opts_bevy::scene_trace::relative(&bus_path),
+            root,
+            &root_tf,
+            &trace_frame,
+            "ok",
+            serde_json::json!({
+                "session_id": session_id, "active": activate,
+                "model_cfg": opts_bevy::scene_trace::relative(&cfg_path),
+                "meshes": mesh_count, "vertices": vertex_count,
+            }),
+        );
+    }
     Ok(SpawnedVehicle {
         root,
         name: vehicle_name,
@@ -1051,6 +1070,7 @@ pub(super) fn load_human_parts(
             materials,
             images,
         };
+        super::trace::mesh_used(&o3d_path);
         parts.extend(loader.o3d_skinned_parts(&o3d_path, &tex_dirs, &overrides));
     }
     if parts.is_empty() {

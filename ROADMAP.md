@@ -400,6 +400,6 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016)
 - [ ] Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017)
 - [ ] Control protocol follow-ups (M-0043): `entity.*`/`resource.*`/`asset.*` via reflection or `bevy_remote`, `debug.*`, `sim.set_time`, event streaming (`opts-cli watch`), vehicle-state snapshot on hot reload
-- [ ] **🔎 Scene Trace** — [M-0087](docs/src/roadmap/phase-5/M-0087.md)
+- [x] **🔎 Scene Trace** — [M-0087](docs/src/roadmap/phase-5/M-0087.md)
   - [ ] Opt-in debug mode that records and logs which mesh is placed where (tile, record, file, position, materials, decode quality), with `trace.pick/tile/find` in the control protocol (R-30).
 
