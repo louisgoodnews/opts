@@ -113,6 +113,7 @@
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)
 - [AI Road Traffic](architecture/ai-traffic.md)
 - [Articulated Vehicles](architecture/articulation.md)
+- [Articulation Physics (design)](architecture/articulation-physics.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
