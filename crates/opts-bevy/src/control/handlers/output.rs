@@ -1,4 +1,4 @@
-//! `screenshot` and `report`.
+//! `report` (and the registration of `screenshot`, implemented in `capture::screenshot`).
 
 use std::path::PathBuf;
 use std::sync::mpsc;
@@ -24,26 +24,13 @@ const CAPTURE_WAIT: Duration = Duration::from_secs(5);
 
 /// Registers the output methods.
 pub fn register(r: &mut ControlRegistry) {
-    r.register("screenshot", screenshot);
+    r.register("screenshot", crate::capture::screenshot::handle);
     r.register("report", report);
 }
 
-/// Requests a frame; the returned waiter yields it (or an error after [`CAPTURE_WAIT`]).
+/// Requests a frame; the returned receiver yields it.
 fn capture(world: &mut World) -> Result<mpsc::Receiver<Image>, RpcError> {
-    let window = primary_window_or_placeholder(world);
-    if !world.contains_resource::<CapturedScreenshots>() {
-        return Err(RpcError::new(
-            code::NOT_READY,
-            "there is no renderer to take a screenshot from",
-        ));
-    }
-    let (tx, rx) = mpsc::channel();
-    world.spawn(Screenshot::window(window)).observe(
-        move |captured: bevy::ecs::observer::On<ScreenshotCaptured>| {
-            let _ = tx.send(captured.image.clone());
-        },
-    );
-    Ok(rx)
+    crate::capture::screenshot::request_frame(world).map_err(RpcError::from)
 }
 
 fn wait_for_png(
@@ -65,39 +52,6 @@ fn wait_for_png(
             "the screenshot did not arrive in time",
         ))),
     })
-}
-
-fn screenshot(world: &mut World, params: &Value) -> Outcome {
-    let requested = match opt_str(params, "path") {
-        Ok(p) => p,
-        Err(e) => return Outcome::err(e),
-    };
-    let path: PathBuf = match requested {
-        Some(p) => PathBuf::from(p),
-        None => {
-            let Some(dir) = reports_dir() else {
-                return Outcome::err(RpcError::new(code::FAILED, "there is no reports directory"));
-            };
-            let _ = std::fs::create_dir_all(&dir);
-            dir.join(format!("screenshot_{}.png", now_stamp().0))
-        }
-    };
-    let path = match world.resource::<PathPolicy>().check_write(&path) {
-        Ok(p) => p,
-        Err(e) => return Outcome::err(e),
-    };
-    match capture(world) {
-        Ok(rx) => Outcome::Wait(wait_for_png(rx, move |png| {
-            std::fs::write(&path, png).map_err(|e| {
-                RpcError::new(
-                    code::FAILED,
-                    format!("cannot write {}: {e}", path.display()),
-                )
-            })?;
-            Ok(json!({ "path": path.display().to_string() }))
-        })),
-        Err(e) => Outcome::err(e),
-    }
 }
 
 fn report(world: &mut World, params: &Value) -> Outcome {
