@@ -12,6 +12,7 @@
 pub mod config;
 pub mod raster;
 pub mod source;
+pub mod zoom;
 
 #[cfg(test)]
 mod tests;
@@ -27,11 +28,12 @@ use opts_gui::prelude::MaterialTheme;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
 pub use config::{
-    step_zoom, MiniMapConfig, Orientation, BUDGET_US, DEFAULT_ZOOM_M, SETTING_ENABLED,
-    SETTING_ORIENTATION, SETTING_ZOOM, UPDATE_INTERVAL, ZOOM_STEPS_M,
+    step_zoom, MiniMapConfig, Orientation, ZoomMode, BUDGET_US, DEFAULT_ZOOM_M, SETTING_ENABLED,
+    SETTING_ORIENTATION, SETTING_ZOOM, SETTING_ZOOM_MODE, UPDATE_INTERVAL, ZOOM_STEPS_M,
 };
 pub use raster::{Canvas, MapColors, MapLine, MapMarker, MapView};
 pub use source::{may_touch, push_chords, FixtureRoads, MapRoad, MapSource};
+pub use zoom::ZoomFilter;
 
 use super::keys;
 use crate::in_game::omsi_world::TrafficState;
@@ -59,6 +61,14 @@ pub struct MiniMapState {
     pub up_heading_deg: f32,
     /// Side of the texture in pixels.
     pub texture_px: u32,
+    /// The radius drawn by the last redraw, metres (the zoom step in `fixed` mode).
+    pub radius_m: f32,
+    /// The radius the speed asks for, metres (equals `radius_m` in `fixed` mode).
+    pub target_m: f32,
+    /// The filtered speed that drives the zoom, km/h.
+    pub speed_kmh: f32,
+    /// The zoom smoothing.
+    pub filter: ZoomFilter,
     /// Seconds (real time) since the last redraw.
     since: f32,
 }
@@ -120,7 +130,8 @@ pub fn sync_config(settings: Res<GameSettings>, mut state: ResMut<MiniMapState>)
     }
 }
 
-/// F7 shows or hides the map, Shift+F7 switches north-up and heading-up, `+` and `-` zoom. The
+/// F7 shows or hides the map, Shift+F7 switches north-up and heading-up, Ctrl+F7 switches the
+/// speed zoom on and off, `+` and `-` zoom. The
 /// keys change the settings, so the page and the keys agree and the choice is remembered.
 pub fn minimap_keys(
     keyboard: Res<ButtonInput<KeyCode>>,
@@ -128,9 +139,15 @@ pub fn minimap_keys(
 ) {
     use crate::settings_registry::ChangeSource;
     let shift = keyboard.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
+    let ctrl = keyboard.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
     let config = MiniMapConfig::read(&api.settings);
     let change = if keyboard.just_pressed(KeyCode::F7) {
-        if shift {
+        if ctrl {
+            Some((
+                SETTING_ZOOM_MODE,
+                config.zoom_mode.toggled().id().to_owned(),
+            ))
+        } else if shift {
             Some((
                 SETTING_ORIENTATION,
                 config.orientation.toggled().id().to_owned(),
@@ -224,6 +241,7 @@ pub fn redraw(
     cameras: Query<&GlobalTransform, With<Camera3d>>,
     traffic: Option<Res<TrafficState>>,
     fixture: Option<Res<FixtureRoads>>,
+    hud: Option<Res<super::HudValues>>,
 ) {
     state.since += time.delta_secs();
     if !state.config.enabled || state.since < UPDATE_INTERVAL.as_secs_f32() {
@@ -233,9 +251,11 @@ pub fn redraw(
         return;
     };
     let started = std::time::Instant::now();
+    let tick_dt = state.since;
     state.since = 0.0;
 
     let mut scene = Scene::default();
+    let mut has_player = false;
     for (t, session, is_player) in &vehicles {
         if session.is_none() && !is_player {
             continue;
@@ -244,6 +264,7 @@ pub fn redraw(
         if is_player {
             scene.centre = Some(pos);
             scene.heading = heading;
+            has_player = true;
         }
         scene.markers.push((pos, heading, is_player));
     }
@@ -267,8 +288,38 @@ pub fn redraw(
                 t.instrument(*variant)
             }),
     );
+    // The radius: the zoom step, or what the speed asks for (the head unit's road speed; the
+    // free camera's own speed when there is no vehicle).
+    let moved = state.centre.map(|prev| (centre - prev).length());
+    let speed_in = if has_player {
+        hud.as_ref().map(|h| h.speed_kmh)
+    } else {
+        moved.and_then(|m| zoom::camera_speed_kmh(m, tick_dt))
+    };
+    if moved.is_some_and(|m| m > zoom::JUMP_M) {
+        state.filter.reset();
+    }
+    let (radius_m, target_m) = match config.zoom_mode {
+        ZoomMode::Fixed => {
+            state.filter.reset();
+            (config.zoom_m, config.zoom_m)
+        }
+        ZoomMode::Speed => {
+            let held = state.filter.speed_kmh;
+            let r = state
+                .filter
+                .step(tick_dt, speed_in.unwrap_or(held), config.zoom_m);
+            (
+                r,
+                zoom::target_radius(state.filter.speed_kmh, config.zoom_m),
+            )
+        }
+    };
+    state.radius_m = radius_m;
+    state.target_m = target_m;
+    state.speed_kmh = state.filter.speed_kmh;
     let view = MapView {
-        radius_m: config.zoom_m,
+        radius_m,
         up_heading: match config.orientation {
             Orientation::North => 0.0,
             Orientation::Heading => scene.heading,
@@ -325,10 +376,22 @@ pub fn update_caption(
         Orientation::North => keys::MINIMAP_NORTH_UP,
         Orientation::Heading => keys::MINIMAP_HEADING_UP,
     };
+    // Speed zoom: the radius being drawn (to 10 m), marked as automatic.
+    let (key, metres) = match state.config.zoom_mode {
+        ZoomMode::Fixed => (keys::MINIMAP_CAPTION, state.config.zoom_m as i32),
+        ZoomMode::Speed => (
+            keys::MINIMAP_CAPTION_AUTO,
+            if state.radius_m > 0.0 {
+                (state.radius_m / 10.0).round() as i32 * 10
+            } else {
+                state.config.zoom_m as i32
+            },
+        ),
+    };
     let line = loc.t_args(
-        keys::MINIMAP_CAPTION,
+        key,
         &[
-            ("metres".to_owned(), Arg::from(state.config.zoom_m as i32)),
+            ("metres".to_owned(), Arg::from(metres)),
             ("mode".to_owned(), Arg::from(loc.t(mode))),
         ],
     );

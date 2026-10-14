@@ -133,6 +133,9 @@ pub struct DrivetrainForces {
     pub active_gear: u8,
 }
 
+/// Rolling resistance coefficient of the road vehicle (force = coefficient · weight).
+pub const ROLLING_RESISTANCE_COEFF: f32 = 0.012;
+
 /// High-level powertrain and brake simulator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DrivetrainModel {
@@ -266,7 +269,7 @@ impl DrivetrainModel {
 
         // 5. Resistances
         let drag_force_n = self.aero.compute_drag_force(abs_speed);
-        let rolling_resistance_n = 0.012 * vehicle_mass_kg * g;
+        let rolling_resistance_n = ROLLING_RESISTANCE_COEFF * vehicle_mass_kg * g;
 
         DrivetrainForces {
             tractive_force_n: tractive_force,

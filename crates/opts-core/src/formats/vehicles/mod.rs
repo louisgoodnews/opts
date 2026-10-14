@@ -1,8 +1,9 @@
-//! Vehicle configuration and operational network formats (`.bus`, `paths.cfg`, `model.cfg`).
+//! Vehicle configuration and operational network formats (`.bus`, `paths.cfg`, `model.cfg`, `.hof`).
 
 pub mod ai_profile;
 pub mod bus;
 pub mod error;
+pub mod hof;
 pub mod model;
 pub mod paths;
 
@@ -12,6 +13,7 @@ pub use bus::{
     VehicleExtras,
 };
 pub use error::{BusParseError, PathsParseError};
+pub use hof::{HofBusStop, HofFile, HofParseError, HofRoute, HofTerminus};
 pub use model::{
     parse_model, MaterialModifier, ModelAnim, ModelConfig, ModelLod, ModelMaterial, ModelMesh,
     ModelParseError, ViewpointFlags,

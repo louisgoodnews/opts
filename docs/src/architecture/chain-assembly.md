@@ -17,6 +17,7 @@ One detection, one response:
   motion. The threshold (`JUMP_THRESHOLD_M`) is a heuristic: it is above any per-step displacement the simulation
   produces at any speed (the first term scales with speed) and below the 0.5 m steps of the spawn placement.
   The first step of a chain counts as a jump (nothing to compare with).
+- **Explicit path (since M-0053 Part 1):** callers that place a vehicle call `VehicleSimulation::teleport(pos, heading)`, which re-seeds the consist and bumps a counter the system reads; the heuristic below stays as a safety net for direct writes to the chassis and logs (debug) when it fires.
 - **Response:** the segments are re-seeded behind the leader's current pose (joint angle 0), interpolation
   poses are reset, and the segments' wheel variables keep their last values for that step (no spin from the jump).
 

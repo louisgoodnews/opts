@@ -99,6 +99,10 @@ fn minimap_json(world: &mut World) -> Value {
         "enabled": config.enabled,
         "shown": shown.unwrap_or(false),
         "zoom_m": config.zoom_m,
+        "zoom_mode": config.zoom_mode.id(),
+        "radius_m": state.radius_m,
+        "target_m": state.target_m,
+        "speed_kmh": state.speed_kmh,
         "orientation": config.orientation.id(),
         "zoom_steps_m": super::minimap::ZOOM_STEPS_M,
         "texture_px": state.texture_px,
@@ -115,8 +119,9 @@ fn minimap_json(world: &mut World) -> Value {
     })
 }
 
-/// `hud.minimap {zoom?, orientation?, enabled?}`: reads the mini map, or changes its settings
-/// (`hud.minimap`, `hud.minimap_zoom`, `hud.minimap_orientation`; saved like any setting).
+/// `hud.minimap {zoom?, zoom_mode?, orientation?, enabled?}`: reads the mini map, or changes its
+/// settings (`hud.minimap`, `hud.minimap_zoom`, `hud.minimap_zoom_mode`, `hud.minimap_orientation`;
+/// saved like any setting).
 pub(super) fn minimap(world: &mut World, params: &Value) -> Outcome {
     use crate::settings_registry::{apply_change, ChangeSource};
     let invalid = |m: &str| Outcome::err(RpcError::new(code::INVALID_PARAMS, m));
@@ -126,6 +131,10 @@ pub(super) fn minimap(world: &mut World, params: &Value) -> Outcome {
     };
     let orientation = match opt_str(params, "orientation") {
         Ok(o) => o,
+        Err(e) => return Outcome::err(e),
+    };
+    let zoom_mode = match opt_str(params, "zoom_mode") {
+        Ok(m) => m,
         Err(e) => return Outcome::err(e),
     };
     let enabled = match opt_bool(params, "enabled") {
@@ -150,6 +159,12 @@ pub(super) fn minimap(world: &mut World, params: &Value) -> Outcome {
             return invalid("orientation is north or heading");
         }
         changes.push((super::minimap::SETTING_ORIENTATION, o.to_owned()));
+    }
+    if let Some(m) = zoom_mode {
+        if super::minimap::ZoomMode::parse(m).is_none() {
+            return invalid("zoom_mode is speed or fixed");
+        }
+        changes.push((super::minimap::SETTING_ZOOM_MODE, m.to_owned()));
     }
     if let Some(e) = enabled {
         changes.push((super::minimap::SETTING_ENABLED, e.to_string()));

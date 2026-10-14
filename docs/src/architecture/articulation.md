@@ -2,11 +2,11 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Implemented for the player vehicle (flat, kinematic trailers); pitch/roll, AI vehicles and physics coupling open |
+| **Status** | 🟡 Implemented for the player vehicle (kinematic trailers, shared simulation state, consist mass, fixed-step pitch/roll); AI vehicles and signs against OMSI open |
 | **Milestone** | [M-0022](../roadmap/phase-4/M-0022.md), addendum 2026-10-11 |
 | **Code** | `opts_core::formats::vehicles::bus` (`CouplingLimits`), `opts_sim::vehicle::trailer`, `opts_bevy::articulation`, `opts-game` `omsi_world/vehicle.rs` |
 | **Probe** | `cargo run -p opts-core --example articulation_vars -- <OMSI root>` |
-| **Last Updated** | 2026-10-11 |
+| **Last Updated** | 2026-10-14 |
 
 This chapter covers how OPTS loads, moves and animates multi-segment vehicles: articulated buses, double-articulated buses and multi-car trams. The file keywords are specified in [`bus.md` → Coupling & Articulation](../formats/text/vehicles/bus.md#-coupling--articulation). This chapter covers what happens at runtime.
 
@@ -41,19 +41,19 @@ Provenance: these figures come from the probe above and a `grep` over the instal
    - Each segment becomes a **top-level** entity carrying an `ArticulatedSegment`. It holds the leader's rear coupling `(x, y)`, its own front coupling `(x, y)`, the `y` of its rearmost axle (the front coupling `y − 6 m` if it has no axles) and `max_alpha`, which falls back to 52.5° (the most common value).
    - The root vehicle gets an `ArticulatedChain` listing the segments front to back.
    - The segment's meshes take their animations, light maps and hot spots from the **root's** scripts, the OPTS form of `[scriptshare]`.
-3. **Kinematics** (`opts_sim::TrailerKinematics`, independent of Bevy):
+3. **Kinematics** (`opts_sim::TrailerKinematics`, independent of Bevy; the state is `VehicleSimulation::consist`, stepped by `VehicleSimulation::step` right after the chassis and serialised with it; `VehicleSimulation::teleport` re-seeds it):
    - The segment's front coupling is pinned to the leader's hitch `H`, and its rear axle rolls without side slip, so `dψ/dt = (v_H · r) / L`.
    - `r` is the segment's right-hand unit vector and `L` the distance from the hitch to the rear axle (at least 1 m).
    - The step is split into sub-steps of at most 50 ms.
    - Afterwards `α = wrap(ψ − ψ_leader)` is clamped to `±max_alpha`, and the origin is placed so that the front coupling lies exactly on `H`.
    - Headings are compass angles (clockwise from north) in world `x` east, `y` north.
-4. **ECS** (`opts_bevy::articulation_system`):
+4. **ECS** (`opts_bevy::articulation_system`, a *reader* of the simulation's consist; it builds the consist from the segments' geometry once if the simulation has none):
    - Runs in `FixedUpdate`, after `vehicle_physics_step_system` and before `vehicle_script_system`.
    - Each segment follows the one in front of it, starting with the root's simulated chassis pose.
-   - Each segment's transform is then written in Bevy space, at the height, pitch and roll of the ground under its own axles (`follow_ground`, 2026-10-12; a segment without a ground pose, e.g. AI or parked, stays level at the root's height).
+   - Each segment's transform is then written in Bevy space (`articulation_render_system`, interpolated between the last two fixed steps), at the height, pitch and roll the simulation computed for it from the ground under its own axles (see item 5; a segment without a ground sample, e.g. AI or parked, stays level at the root's height).
 5. **Script variables.**
    - For joint `k` the system writes `articulation_<k>_alpha` in **degrees**, positive when the segment is turned clockwise relative to its leader, so it lags on a right-hand curve.
-   - `articulation_<k>_beta` and `articulation_<k>_gamma` (since 2026-10-12) are the **pitch and roll of a unit against its leader in degrees**: `follow_ground` lays every unit on the ground under its rear axle and its front joint (the head: under its four wheels), smooths pitch and roll, and writes the difference of neighbouring units each frame. Pitch is nose up positive, roll right side up positive. The signs against OMSI are unverified (Q-ART-02).
+   - `articulation_<k>_beta` and `articulation_<k>_gamma` (since 2026-10-12) are the **pitch and roll of a unit against its leader in degrees**: each fixed step `opts_game::sample_consist_ground` (TEMPORARY until the M-0025 ground query, Q-ART-09) samples four ground heights per unit (rear axle and front joint, both sides; the head: its four wheel positions) and hands them to `VehicleSimulation::apply_ground`, which lays every unit on the ground, filters height, pitch and roll with the **fixed** time step (`opts_sim::vehicle::ground`) and gives `joint_angles_deg`; `articulation_system` publishes them (β clamped to the joint's limits). They are therefore a function of the fixed step, not of the frame rate (test `articulation_frame_rate`: bit-identical at 30, 60 and 144 fps). The head's visible body motion (`follow_ground`, per frame) is separate from the head pitch used for β. Pitch is nose up positive, roll right side up positive. The signs against OMSI are unverified (Q-ART-02).
    - The variables go into the root's script engine, so the scripts see them in the same fixed step.
 6. **Bellows skinning** (`bind_skins`):
    - A mesh whose file stem contains `dum` and that has a driven `[newanim]` becomes a joint entity of its own, animated like any other mesh.
@@ -72,17 +72,19 @@ Provenance: these figures come from the probe above and a `grep` over the instal
 | :--- | :--- |
 | `opts-core` `coupling_front_character_is_parsed` | All four values and the coupling point are read. |
 | `opts-sim` `trailer::tests::*` (5) | Driving straight keeps `α = 0` and the coupling closed. A circle reaches a steady `α` with the expected sign, and the rear axle tracks inside the hitch. Mirrored curves give mirrored angles. The joint limit holds. A standing vehicle does not drift. |
-| `opts-bevy` `tests/articulation.rs` (2) | In a headless app the segment stays coupled (gap < 5 cm) while turning, `articulation_0_alpha` is published within the limit and `beta` is 0. Driving straight keeps `α` near 0. |
+| `opts-bevy` `tests/articulation.rs` | In a headless app the segment stays coupled (gap < 5 cm) while turning, `articulation_0_alpha` is published within the limit and equals the simulation's own joint angle at every step (S-curve); `beta` is 0 without ground samples. Driving straight keeps `α` near 0. Explicit `teleport` re-seeds. |
+| `opts-sim` `vehicle::tests`, `trailer::tests`, `ground::tests`, `consist::tests` | Closed form `sin α = L/R_h`, serialisation round trip, teleport, consist mass and friction caps, hitch force, fixed-step ground following (zero on flat, grade difference). |
+| `opts-game` `tests/articulation_frame_rate.rs` | α, β, γ per fixed step are identical at 30, 60 and 144 fps; flat ground gives β = γ = 0. |
 
 ## Limits and open questions
 
 | ID | Question / limit | Status |
 | :--- | :--- | :--- |
 | Q-ART-01 | Does OMSI's sign of `articulation_<n>_alpha` match OPTS's (positive = segment clockwise relative to its leader)? This needs a mutation or screenshot comparison of a bellows in a right-hand curve. | ❓ open |
-| Q-ART-02 | `articulation_0_beta` is used more often than `_alpha`, but OPTS keeps it at 0 because the chain is flat. Pitch follows from terrain under each segment's axles and requires ground-height queries ([M-0025](../roadmap/phase-4/M-0025.md)). | ⏳ waits for M-0025 |
+| Q-ART-02 | Is the sign of `articulation_<n>_beta` (`β = leader pitch − pitch`) the one OMSI's bellows meshes expect? Pitch now comes from the terrain under each unit's axles in the fixed step (since M-0053 Part 3); the sign still needs the screenshot check on a slope. | ❓ open |
 | Q-ART-03 | What do `positive_/negative_articulation_offset` and `articulation_positive_/negative_offset` mean, and who writes them (script or engine)? | ❓ open |
 | Q-ART-04 | Do the outlier `[coupling_front_character]` sets (β limits reversed, truck `kind 0`) mean something different, or are they author errors? OPTS uses only `max_alpha` today. | ❓ open |
-| L-ART-01 | Trailers are kinematic. The older `opts_sim::vehicle::articulation::ArticulationJoint` inside `VehicleSimulation` does not feed into rendering; merging the two models is follow-up work. **Mass (2026-10-14):** the trailers' mass now acts in the longitudinal dynamics (`VehicleSimulation::set_trailers`, [`UnitLoad`](../../crates/opts-sim.md)): the GN92 consist weighs 8 t + 7.2 t instead of 8 t, and accelerates accordingly. | 🔧 partly done |
+| L-ART-01 | Trailers are kinematic, and since M-0053 Part 1 their state is one: `VehicleSimulation::consist` (`ArticulationJoint` is gone). The trailers' mass and axles load the longitudinal dynamics (`UnitLoad`, M-0053 Part 2; GN92: 8 t + 7.2 t instead of 8 t). | 🟢 resolved by M-0053 Parts 1–2 |
 | L-ART-02 | `[couple_front]` (push-pull, reversed units) and chains deeper than 40 segments are not loaded (none exists in the corpus without a loop; see Q-ART-13). AI and parked vehicles show only their leading unit. | 🔧 follow-up |
 | Q-ART-13 | What does the second line of `[couple_back]` mean, and what does OMSI do with a chain that refers back to an earlier unit? The corpus contradicts "has a further trailer" (see above); 13 head files (e.g. the `LTrain`/`MTrain` family, `4020.ovh`, `NF6D_KI.bus`) have a looping chain, and 489 links do not resolve to any `.bus`/`.ovh` file; the coaches of the `Bm238` folder, for example, name `..\Bm238\Bm238.bus`, but the folder holds `Bm238.ovh`. OPTS builds 40 segments for a loop. | ❓ open |
 | L-ART-03 | A bone is matched to its dummy by a substring of the file name. Dummies with unrelated names leave the bone static. | ⚠️ heuristic |

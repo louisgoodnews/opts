@@ -47,7 +47,7 @@ pub use collision::{
 };
 pub use dev_look::place_dev_camera;
 use ground::GroundArray;
-pub use ground_height::{follow_ground, GroundIndex};
+pub use ground_height::{follow_ground, sample_consist_ground, GroundIndex};
 pub use job::{begin_world_load, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,

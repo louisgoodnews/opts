@@ -194,7 +194,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](phase-4/M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](phase-4/M-0025.md); F-004, F-007, F-008).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../meta/critical-review-2026-10-11.md))**
-  - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0093](phase-4/M-0093.md).
+  - [x] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0093](phase-4/M-0093.md) (complete 2026-10-14).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](phase-4/M-0094.md).
   - [ ] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](../architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](phase-4/M-0053.md) (F-002, F-003).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](phase-4/M-0046.md); F-009).
@@ -353,6 +353,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Parked cars: no scrambled, missing or transparent meshes (R-01); BRT Citaro UV/mesh issues (R-09); flipped or misaligned building meshes (R-17); scrambled lantern posts (R-18); fixes with regression tests, remaining content defects registered.
 - [ ] **🔬 UV Decoder Fleet Validation** — [M-0079](phase-10/M-0079.md) — ⏸ deferred by the project lead 2026-10-13
   - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
+- [ ] **🧪 UV Decoder Texture Evidence** — [M-0104](phase-10/M-0104.md) — ✅ approved 2026-10-14
+  - [ ] Feasibility first: does the plain texture atlas rank the true scrambler offset on the twin truth set; integrate into the smooth stage only on a go ([design](../architecture/uv-decoder-texture-evidence.md)).
 - [ ] **🌊 Water Rendering** — [M-0067](phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](phase-10/M-0068.md)

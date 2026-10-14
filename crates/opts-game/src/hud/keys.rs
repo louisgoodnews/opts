@@ -36,6 +36,8 @@ keys! {
     HINT_CONTROLS_COMPACT = "hud-hint-controls-compact",
     /// Mini map: scale and orientation line (`metres`, `mode`).
     MINIMAP_CAPTION = "hud-minimap-caption",
+    /// Mini map: scale line while the radius follows the speed (`metres`, `mode`).
+    MINIMAP_CAPTION_AUTO = "hud-minimap-caption-auto",
     /// Mini map: north points up.
     MINIMAP_NORTH_UP = "hud-minimap-north-up",
     /// Mini map: the heading points up.

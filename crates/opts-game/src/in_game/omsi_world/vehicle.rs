@@ -513,13 +513,11 @@ pub(super) fn spawn_trailer_chain(
     root: Entity,
     bus_dir: &Path,
     tractor: &BusManifest,
-) -> (
-    Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)>,
-    Vec<opts_sim::UnitLoad>,
-) {
+) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
     const MAX_SEGMENTS: usize = 40;
     let mut cams = Vec::new();
-    let mut units: Vec<opts_sim::UnitLoad> = Vec::new();
+    // Mass of the unit in front: what a trailer without a stated mass is assumed to weigh.
+    let mut previous_kg = manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG);
     let mut chain = Vec::new();
     let mut layout = Vec::new();
     let mut behind = 0.0_f32;
@@ -594,6 +592,11 @@ pub(super) fn spawn_trailer_chain(
         let max_alpha = manifest
             .coupling_front_limits
             .map_or(52.5, |l| l.max_alpha_deg);
+        if manifest_mass_kg(&manifest).is_none() {
+            tracing::warn!(trailer = %path.display(), assumed_kg = previous_kg, "trailer states no mass; the mass of the unit in front is used");
+        }
+        let load = unit_load(&manifest, reversed, previous_kg);
+        previous_kg = load.mass_kg;
         let seg = commands
             .spawn((
                 Name::new(name.clone()),
@@ -607,6 +610,7 @@ pub(super) fn spawn_trailer_chain(
                         max_alpha,
                     );
                     s.reversed = reversed;
+                    s.load = Some(load.clone());
                     // The bus files list min and max in either order (3 files have 20,-20).
                     s.beta_limits_deg = manifest.coupling_front_limits.map(|l| {
                         (
@@ -658,14 +662,6 @@ pub(super) fn spawn_trailer_chain(
                 .map(|(size, centre)| super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
-        let previous_kg = units.last().map_or_else(
-            || manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG),
-            |u| u.mass_kg,
-        );
-        if manifest_mass_kg(&manifest).is_none() {
-            tracing::warn!(trailer = %path.display(), assumed_kg = previous_kg, "trailer states no mass; the mass of the unit in front is used");
-        }
-        units.push(unit_load(&manifest, previous_kg));
         if reversed {
             // The chain of a reversed head leads back into this consist (the NF6D's B head
             // couples to the articulation joint again): the ring is closed here.
@@ -701,7 +697,7 @@ pub(super) fn spawn_trailer_chain(
                 followers: layout,
             },));
     }
-    (cams, units)
+    cams
 }
 
 /// Mass the simulation assumes for a head unit that states none (kg).
@@ -718,12 +714,8 @@ fn manifest_mass_kg(manifest: &BusManifest) -> Option<f32> {
 /// What a following unit adds to the consist: its stated mass, else `previous_kg` (the unit in
 /// front; the installed consists have a median trailer/head ratio of 0.90, `consist_census`), and
 /// its axles with those marked driven (`achse_antrieb`).
-fn unit_load(manifest: &BusManifest, previous_kg: f32) -> opts_sim::UnitLoad {
-    opts_sim::UnitLoad {
-        mass_kg: manifest_mass_kg(manifest).unwrap_or(previous_kg),
-        axles: manifest.axles.len(),
-        driven_axles: manifest.axles.iter().filter(|a| a.is_driven).count(),
-    }
+fn unit_load(manifest: &BusManifest, reversed: bool, previous_kg: f32) -> opts_sim::UnitLoad {
+    opts_sim::UnitLoad::from_manifest_or(manifest, reversed, previous_kg)
 }
 
 /// Queues the background decoding of the vehicle's scrambled meshes and returns their keys.
@@ -931,18 +923,9 @@ pub fn load_player_vehicle(
     }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
-    let (trailer_cams, trailer_units) = spawn_trailer_chain(
+    let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
-    if !trailer_units.is_empty() && !super::is_rail(&manifest) {
-        // The consist's mass accelerates and brakes with the head (rail consists have their own
-        // dynamics, `RailPlayer`).
-        commands.queue(move |world: &mut World| {
-            if let Some(mut c) = world.get_mut::<opts_bevy::VehicleController>(root) {
-                c.sim.set_trailers(trailer_units);
-            }
-        });
-    }
     if !trailer_cams.is_empty() {
         commands.queue(move |world: &mut World| {
             if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
@@ -1218,6 +1201,95 @@ pub(super) fn load_driver_human(
     Ok(name)
 }
 
+/// Discovers and loads the best matching depot file for the vehicle and current map.
+fn load_depot_file(
+    bus_dir: &Path,
+    omsi_root: &Path,
+    map_name: &str,
+) -> Option<opts_core::formats::hof::HofFile> {
+    let map_clean = map_name.trim().to_ascii_lowercase();
+
+    // 1. Look in the vehicle directory
+    if let Ok(entries) = std::fs::read_dir(bus_dir) {
+        let mut candidates = Vec::new();
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
+            {
+                let stem = path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_ascii_lowercase();
+                if !map_clean.is_empty() && stem == map_clean {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                            return Some(hof);
+                        }
+                    }
+                }
+                candidates.push((stem, path));
+            }
+        }
+        if !map_clean.is_empty() {
+            for (stem, path) in &candidates {
+                if stem.contains(&map_clean) || map_clean.contains(stem.as_str()) {
+                    if let Ok(bytes) = std::fs::read(path) {
+                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                            return Some(hof);
+                        }
+                    }
+                }
+            }
+        }
+        if let Some((_, path)) = candidates.first() {
+            if let Ok(bytes) = std::fs::read(path) {
+                if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
+                    return Some(hof);
+                }
+            }
+        }
+    }
+
+    // 2. Look in shared Vehicles folders in OMSI root
+    if !map_clean.is_empty() {
+        let shared_dirs = [
+            omsi_root.join("Vehicles"),
+            omsi_root.join("Vehicles/.hof Dateien"),
+        ];
+        for dir in shared_dirs {
+            if let Ok(entries) = std::fs::read_dir(dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path
+                        .extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
+                    {
+                        let stem = path
+                            .file_stem()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .to_ascii_lowercase();
+                        if stem == map_clean || stem.contains(&map_clean) {
+                            if let Ok(bytes) = std::fs::read(&path) {
+                                if let Ok(hof) =
+                                    opts_core::formats::hof::HofFile::parse_bytes(&bytes)
+                                {
+                                    return Some(hof);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
 /// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
 /// A vehicle with `[scriptshare]` has none of its own and gets no engine.
 fn attach_scripts(
@@ -1252,7 +1324,62 @@ fn attach_scripts(
         "vehicle scripts loaded"
     );
     let mut engine = engine;
-    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks(root.to_bits()));
+    let map_name = job
+        .manifest
+        .friendly_name
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| {
+            job.config
+                .map_dir
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+        });
+    let hof = load_depot_file(bus_dir, job.install.root(), map_name);
+
+    let mut active_route_index = None;
+    let mut active_line_string = String::new();
+
+    if let Some(h) = &hof {
+        tracing::info!(
+            depot_name = %h.name,
+            termini = h.termini.len(),
+            routes = h.routes.len(),
+            "depot (.hof) file loaded for vehicle"
+        );
+        engine.set_string("Yard", &h.name);
+
+        if let Some((idx, r)) = h
+            .routes
+            .iter()
+            .enumerate()
+            .find(|(_, r)| r.line_string == "33" || r.route_code / 100 == 33)
+            .or_else(|| h.routes.iter().enumerate().next())
+        {
+            active_route_index = Some(idx);
+            active_line_string = if r.line_string.chars().all(|c| c == 'X') {
+                (r.route_code / 100).to_string()
+            } else {
+                r.line_string.clone()
+            };
+            engine.set_string("SetLineTo", &active_line_string);
+            engine.set_string("Ident", &r.route_code.to_string());
+            engine.set("schedule_active", 1.0);
+        }
+    }
+
+    let ctx = opts_bevy::host_callbacks::VehicleHostContext {
+        seed: root.to_bits(),
+        hof: hof.map(std::sync::Arc::new),
+        active_route_index,
+        current_stop_index: 0,
+        delay_seconds: 0.0,
+        line_string: active_line_string,
+    };
+    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
+        ctx,
+    ));
     // Equipment options of the chosen repaint (`[setvar]` of its `.cti` items).
     if let Some(r) = &job.repaint {
         let name = if job.config.livery.is_empty() {
@@ -1335,17 +1462,21 @@ mod consist_mass_tests {
 
     #[test]
     fn a_trailer_adds_its_stated_mass_and_driven_axles() {
-        let u = unit_load(&bus(Some(7.2), &[false, true]), 8_000.0);
+        let u = unit_load(&bus(Some(7.2), &[false, true]), false, 8_000.0);
         assert_eq!(u.mass_kg, 7_200.0);
-        assert_eq!((u.axles, u.driven_axles), (2, 1));
+        assert_eq!(u.axles.len(), 2);
+        assert_eq!(u.axles.iter().filter(|a| a.is_driven).count(), 1);
     }
 
     #[test]
     fn a_trailer_without_a_mass_takes_the_mass_of_the_unit_in_front() {
-        assert_eq!(unit_load(&bus(None, &[false]), 8_000.0).mass_kg, 8_000.0);
+        assert_eq!(
+            unit_load(&bus(None, &[false]), false, 8_000.0).mass_kg,
+            8_000.0
+        );
         // An implausible mass counts as missing, like for the head.
         assert_eq!(
-            unit_load(&bus(Some(0.1), &[false]), 8_000.0).mass_kg,
+            unit_load(&bus(Some(0.1), &[false]), false, 8_000.0).mass_kg,
             8_000.0
         );
     }
@@ -1369,7 +1500,7 @@ mod consist_mass_tests {
         };
         let head = manifest_mass_kg(&main).expect("head mass");
         let mut sim = opts_sim::VehicleSimulation::from_manifest(&main);
-        sim.set_trailers(vec![unit_load(&trail, head)]);
+        sim.set_trailers(vec![unit_load(&trail, false, head)]);
         assert!(
             (sim.consist_mass_kg() - 15_200.0).abs() < 1.0,
             "{}",
