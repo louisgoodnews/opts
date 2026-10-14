@@ -25,7 +25,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 📝 Planned (R-20, R-21)
 - [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 🟡 Core done (R-26)
 - [M-0089 — Tile Streaming Performance: Investigation and Improvements](M-0089.md) — 📝 Planned, 🔴 high (R-32)
-- [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003)
+- [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003; scope revised 2026-10-14 from the [design](../../architecture/articulation-physics.md))
 
 ## Checklist
 
@@ -70,9 +70,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Extract the world loader into `opts-bevy` and decouple `opts-bevy` from `opts-gui` (appended to [M-0024](M-0024.md); F-015, F-016).
   - [ ] Verify spline-attachment repeaters, fix floating objects, read weather/fog (appended to [M-0025](M-0025.md); F-004, F-007, F-008).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../../meta/critical-review-2026-10-11.md))**
-  - [ ] Articulated vehicle completion: one articulation model for physics and rendering, pitch from terrain, `[couple_front]`, trailers for AI and parked vehicles — [M-0053](M-0053.md) (F-002, F-003).
   - [ ] Host callbacks of the vehicle scripts — timetable, termini, bus stops, tickets, IBIS (`NrSpecRandom` done): destination displays and cabin monitors show their text — [M-0093](M-0093.md).
   - [ ] Script textures (`[scripttexture]`, `ST*` callbacks) for dash TFTs, tachographs, printers — [M-0094](M-0094.md).
+  - [ ] Articulated vehicle completion: one articulation model with one serialised state in `opts-sim`, consist mass in the longitudinal dynamics, β/γ in the fixed step ([design](../../architecture/articulation-physics.md); scope proposed 2026-10-14), `[couple_front]`, trailers for AI and parked vehicles — [M-0053](M-0053.md) (F-002, F-003).
   - [ ] Move traffic, pedestrian, articulation and repaint loading out of `opts-game` with the world loader (appended to [M-0046](M-0046.md); F-009).
 - [ ] **🗺️ Tile Loading Controls** — [M-0080](M-0080.md)
   - [ ] *Load all tiles on start* (force-loaded and kept resident), exposed in the wizard summary; *Tile radius* around the centre tile with a hardware-derived default (R-20, R-21).

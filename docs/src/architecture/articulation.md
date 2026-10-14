@@ -12,7 +12,7 @@ This chapter covers how OPTS loads, moves and animates multi-segment vehicles: a
 
 ## What OMSI does
 
-- **Segments are vehicles.** Each segment is a `.bus`/`.ovh` file with its own `[model]`, axles and cameras. The leading unit names the next one with `[couple_back] <file> <has further trailer>`, and the chain continues recursively from there.
+- **Segments are vehicles.** Each segment is a `.bus`/`.ovh` file with its own `[model]`, axles and cameras. The leading unit names the next one with `[couple_back] <file> <flag>`, and the chain continues recursively from there. The flag is **not** "the trailer has a further trailer" as `bus.md` once stated: in the 1,035 installed files with `[couple_back]` it is `false` on 158 links whose target has a `[couple_back]` of its own and `true` on 37 links whose target is the last unit. OPTS reads it as "the trailer is coupled facing backwards" (`BusManifest::couple_back_reversed`; Q-ART-13). Counts: [M] scan of 2026-10-14, see [articulation-physics.md](articulation-physics.md).
 - **Coupling points.** `[coupling_back] x y z` (on the leader) and `[coupling_front] x y z` (on the follower) are points in each unit's own frame. When the vehicle is assembled, the two points coincide.
 - **Joint limits.** The follower's `[coupling_front_character]` holds `max_alpha`, `min_beta`, `max_beta` and `kind`, with angles in degrees. `kind` is `1` for a bus joint and `0` for a truck coupling.
 - **Joint variables.** The joint angles reach the models through script variables named `articulation_<n>_alpha`, `_beta` and `_gamma`, where `<n>` is the joint index, starting at 0 for the first joint behind the leader. Models rotate the bellows rings and joint dummies by them with `[newanim] … anim_rot articulation_0_alpha <factor>`. The factors in the corpus are fractions such as `0.25`, `0.5`, `0.75`, `1`, and also `-0.5`, which spreads the angle over the rings of the bellows.
@@ -37,7 +37,7 @@ Provenance: these figures come from the probe above and a `grep` over the instal
 
 1. **Parsing.** `BusManifest` reads `coupling_front`, `coupling_back`, `couple_back` and `coupling_front_limits: Option<CouplingLimits>`. It accepts a `[coupling_front_character]` only when all four of its values parse.
 2. **Loading** (`spawn_trailer_chain`, player vehicle only):
-   - The loader follows `[couple_back]` for at most 4 segments.
+   - The loader follows `[couple_back]` for at most 40 segments (`MAX_SEGMENTS`, `spawn_trailer_chain`); a chain that loops back on itself is not detected and runs to that cap (Q-ART-13). The longest non-looping chain in the installed corpus has 4 units behind the head.
    - Each segment becomes a **top-level** entity carrying an `ArticulatedSegment`. It holds the leader's rear coupling `(x, y)`, its own front coupling `(x, y)`, the `y` of its rearmost axle (the front coupling `y − 6 m` if it has no axles) and `max_alpha`, which falls back to 52.5° (the most common value).
    - The root vehicle gets an `ArticulatedChain` listing the segments front to back.
    - The segment's meshes take their animations, light maps and hot spots from the **root's** scripts, the OPTS form of `[scriptshare]`.
@@ -83,6 +83,7 @@ Provenance: these figures come from the probe above and a `grep` over the instal
 | Q-ART-03 | What do `positive_/negative_articulation_offset` and `articulation_positive_/negative_offset` mean, and who writes them (script or engine)? | ❓ open |
 | Q-ART-04 | Do the outlier `[coupling_front_character]` sets (β limits reversed, truck `kind 0`) mean something different, or are they author errors? OPTS uses only `max_alpha` today. | ❓ open |
 | L-ART-01 | Trailers are kinematic. The older `opts_sim::vehicle::articulation::ArticulationJoint` inside `VehicleSimulation` does not feed into rendering, and the trailers' mass and axles do not load the physics. Merging the two models is follow-up work. | 🔧 follow-up |
-| L-ART-02 | `[couple_front]` (push-pull, reversed units) and chains deeper than 4 segments are not loaded. AI and parked vehicles show only their leading unit. | 🔧 follow-up |
+| L-ART-02 | `[couple_front]` (push-pull, reversed units) and chains deeper than 40 segments are not loaded (none exists in the corpus without a loop; see Q-ART-13). AI and parked vehicles show only their leading unit. | 🔧 follow-up |
+| Q-ART-13 | What does the second line of `[couple_back]` mean, and what does OMSI do with a chain that refers back to an earlier unit? The corpus contradicts "has a further trailer" (see above); 13 head files (e.g. the `LTrain`/`MTrain` family, `4020.ovh`, `NF6D_KI.bus`) have a looping chain, and 489 links do not resolve to any `.bus`/`.ovh` file; the coaches of the `Bm238` folder, for example, name `..\Bm238\Bm238.bus`, but the folder holds `Bm238.ovh`. OPTS builds 40 segments for a loop. | ❓ open |
 | L-ART-03 | A bone is matched to its dummy by a substring of the file name. Dummies with unrelated names leave the bone static. | ⚠️ heuristic |
 | Q-ART-05 | How does OMSI resolve a `[setbone]` name? The MAN NG313 (`model_NG313_main_4.cfg`) names `Armature_Gelenk_A`–`D`, but no mesh file contains those names (its candidates are `NG313_Gelenk*.o3d`, `NL263_Dummy_*.o3d`). The names may refer to bones stored inside the skinned `.o3d`, or to a mesh's `[newanim]` rather than its file name. Found in the 2026-10-11 smoke run. | ❓ open |

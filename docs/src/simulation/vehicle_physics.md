@@ -161,8 +161,10 @@ $$\mathbf{P}_{\text{hitch}} = \mathbf{P}_{\text{tractor}} + \mathbf{R}_{\text{tr
 - **Hitch Angle ($\psi_{\text{art}}$):** Relative angle between tractor heading $\psi_{\text{tractor}}$ and trailer heading $\psi_{\text{trailer}}$:
   $$\psi_{\text{art}} = \psi_{\text{tractor}} - \psi_{\text{trailer}}$$
 - **Mechanical Limit:** Articulation turntable stops prevent rotation past $|\psi_{\text{art}}| \le 54^\circ$ ($0.942\text{ rad}$).
-- **Kinematic Following:** The trailer front coupling point is constrained to $\mathbf{P}_{\text{hitch}}$, with trailer yaw velocity $\dot{\psi}_{\text{trailer}}$ governed by:
-  $$\dot{\psi}_{\text{trailer}} = \frac{v_{\text{tractor}} \cdot \sin(\psi_{\text{art}})}{L_{\text{trailer}}}$$
+- **Kinematic Following (as implemented):** The trailer front coupling point is constrained to $\mathbf{P}_{\text{hitch}}$ and its rear axle rolls without side slip, so the yaw rate is
+  $$\dot{\psi}_{\text{trailer}} = \frac{\mathbf{v}_{\text{hitch}} \cdot \mathbf{r}_{\text{trailer}}}{L}$$
+  with $\mathbf{v}_{\text{hitch}}$ the velocity of the hitch point (finite difference of its position), $\mathbf{r}_{\text{trailer}}$ the trailer's right-hand unit vector and $L$ the distance from the hitch to the trailer's rearmost axle (at least 1 m); see `opts_sim::vehicle::trailer` and [Articulated Vehicles](../architecture/articulation.md). The formula this page carried before, $v_{\text{tractor}}\sin(\psi_{\text{art}})/L_{\text{trailer}}$, is the special case of a hitch on the tractor's rear axle; it differs when the hitch lies behind that axle, and is not what the code does (Q-VP-01).
+  The integrator step is the configured `--physics-hz` (default 64 Hz), not a fixed 60 or 120 Hz.
 
 ---
 
@@ -179,3 +181,11 @@ $$\theta(t + \Delta t) = \theta(t) + \omega(t + \Delta t) \cdot \Delta t$$
 
 To prevent perpetual micro-jitter when the vehicle comes to a complete standstill under braking:
 $$\text{If } |\mathbf{v}| < 10^{-4}\text{ m/s and BrakeInput} > 0.05 \implies \mathbf{v} = \mathbf{0}, \quad \omega = 0$$
+
+---
+
+## ❓ Open Questions
+
+| ID | Question | Status |
+| :--- | :--- | :--- |
+| Q-VP-01 | Is the hitch-velocity formulation of the implemented trailer follower (above) what OMSI does, or is the `sin(ψ_art)` form closer? No OMSI reference of a joint angle at a known manoeuvre exists in the repository; the design for a test is in [Articulation Physics](../architecture/articulation-physics.md). | ❓ open |

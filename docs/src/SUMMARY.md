@@ -128,6 +128,7 @@
 - [Pending OMSI Verification](architecture/pending-omsi-verification.md)
 - [Bus Script Integration Strategy](architecture/bus-script-integration.md)
 - [Articulated Vehicles](architecture/articulation.md)
+- [Articulation Physics (design)](architecture/articulation-physics.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
 - [Scene Trace (which mesh is where)](architecture/scene-trace.md)
