@@ -3,9 +3,9 @@
 | Metadata | Value |
 | :--- | :--- |
 | **ADR ID** | 0012 |
-| **Status** | 🟡 Proposed |
+| **Status** | ✅ Accepted |
 | **Date** | 2026-10-14 |
-| **Deciders** | Project lead (approval pending), Claude (design in [screen capture](../architecture/screen-capture.md)) |
+| **Deciders** | Project lead (approved 2026-10-14), Claude (design in [screen capture](../architecture/screen-capture.md)) |
 | **Supersedes** | None |
 | **Superseded by** | None |
 
@@ -22,13 +22,13 @@ The control protocol gets bounded recordings of the application window ([design]
 
 ## 🎯 Decision
 
-**We will ship two built-in recording formats and one optional one.**
+**`capture.record` produces AV1 in an IVF container by default; `capture.burst` produces a PNG sequence; H.264/MP4 exists only behind an optional cargo feature.**
 
-1. **Frame sequence** (`frames`, default): `000001.png`… plus `manifest.json`. No new dependency.
-2. **AV1 in IVF** (`av1`): encoded with the `rav1e` already in the tree, muxed by a small hand-written IVF writer (32-byte file header, 12-byte frame headers).
-3. **H.264 in MP4** (`h264`): only behind the cargo feature `capture-h264`, off by default, using `openh264` with the downloaded Cisco binary. Without the feature the format is rejected with `INVALID_PARAMS` and a message naming the feature.
+1. **AV1 in IVF** (`format: "av1"`, the default of `capture.record`): encoded with the `rav1e` already in the tree, muxed by a small hand-written IVF writer (32-byte file header, 12-byte frame headers). *Why `rav1e` and not `openh264`:* no new crate, no C++ toolchain, no download, no patent-encumbered codec. *Why IVF:* it needs no muxer dependency, it is trivially appendable while recording (a crash leaves a playable file), and FFmpeg remuxes it without re-encoding.
+2. **PNG sequence** (`capture.burst`, and `format: "png_sequence"` for recordings): individual frames plus a manifest. It is a separate mode because it serves a different consumer, an agent looking at single frames, and because it is not a sensible *recording* default: 30 s at 60 fps is 1 800 files of 1.5-3 MB each, far above the 512 MB budget. As a recording format it is opt-in and the size cap ends it early.
+3. **H.264 in MP4** (`format: "h264"`): only with the cargo feature `capture-h264`, off by default, using `openh264` with Cisco's downloaded binary. Without the feature the format is rejected with `INVALID_PARAMS` naming the feature.
 
-Encoding runs on dedicated worker threads fed through a bounded queue; frames that do not fit are dropped, never waited for.
+Encoding runs on dedicated worker threads fed through a bounded queue; frames that do not fit are dropped, never waited for. Users who need MP4, MKV or WebM remux without re-encoding: `ffmpeg -i x.ivf -c copy x.mp4` (verified 2026-10-14 with FFmpeg n9.0.2, see the design).
 
 ## ⚖️ Alternatives considered
 
@@ -38,6 +38,7 @@ Encoding runs on dedicated worker threads fed through a bounded queue; frames th
 | **Pipe raw frames to an `ffmpeg` binary** | Forbidden as a hard dependency; allowed only as optional. It would still work well for users who have it, but it needs process management and a second code path. Left as a possible later optional backend. |
 | **AV1 in WebM or MP4** | Needs a muxer; the available crates wrap C++ libraries (`libwebm`) or are young. IVF needs about 80 lines and is understood by FFmpeg, mpv, VLC and browsers' tooling. WebM/MP4 can be added later by remuxing without re-encoding. |
 | **MJPEG in AVI** | Easy and universal, but large, and it adds a second lossy path next to PNG and AV1. |
+| **No recording, bursts only** | An agent investigating timing needs continuous footage; a burst at 60 Hz is a PNG flood and cannot exceed 300 frames. |
 | **GIF or APNG** | Palette or size problems at 1080p; no advantage for agents over the frame sequence. |
 | **Platform capture APIs** (X11, PipeWire, Windows Graphics Capture) | Violates the window-only and no-system-codec goals and differs per OS. |
 

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design proposal (Phase A), not implemented |
+| **Status** | ✅ Design approved 2026-10-14 (Phase A); implementation in progress |
 | **Date** | 2026-10-14 |
 | **Branch** | `agent/screen-capture` |
 | **Decision record** | [ADR-0012](../adr/0012-screen-capture-encoding.md) |
@@ -39,9 +39,10 @@ All new capture commands are in a new group `capture` (protocol minor bump, addi
 
 ### Paths
 
-* `screenshot.path` keeps today's meaning (any path inside the existing write roots) so existing scripts do not break. It is documented as legacy.
-* New parameter `name` (string, optional): a **relative** file name or subpath below the captures directory (§A6), e.g. `run1/shot.png`. Absolute paths, drive letters, `..` and empty segments are rejected with `FORBIDDEN_PATH` before any filesystem access. `path` and `name` are mutually exclusive.
-* `capture.*` commands accept only the relative form (`name` for files, `dir` for a burst or frame sequence). They never accept `--allow-dir` directories: captures live in one directory, nothing else.
+* `screenshot.path` keeps its meaning as an explicit path, but is now **restricted to the captures directory** (§A6): a screenshot's purpose is the captures directory, so the old reach into the reports directory and `--allow-dir` directories ends for this command (a deliberate tightening; the other commands that write there, `report` and `snapshot`, are unchanged). Anything that resolves outside it is `FORBIDDEN_PATH`.
+* New parameter `name` (string, optional), preferred for new code: a **relative** file name or subpath below the captures directory, e.g. `run1/shot.png`; equivalent to `path: <captures_dir>/<name>`. Absolute paths, drive letters, `..` and empty segments are rejected with `FORBIDDEN_PATH` before any filesystem access.
+* `path` and `name` are **mutually exclusive**; giving both is `INVALID_PARAMS`. `path` is the escape hatch for legacy scripts that already know the directory.
+* `capture.*` commands accept only the relative form (`name` for files, `dir` for a burst or frame directory). `--allow-dir` directories never apply to them: captures live in one directory, nothing else.
 * Omitted: the server generates `{datetime}_{session_id}_{counter}.{ext}` (§A6).
 
 ### `screenshot` (extended)
@@ -59,6 +60,8 @@ Blocking: the reply waits for the frame, as today (a control `Waiter`, never the
 
 ### `capture.burst`
 
+A burst is the **PNG-sequence** command: individual frames, the format an agent can inspect one by one.
+
 | Param | Type | Default | Limit |
 | :--- | :--- | :--- | :--- |
 | `count` | integer | required | 1..=300 |
@@ -75,12 +78,14 @@ The command is **asynchronous**: it returns the final result when the last frame
 | Param | Type | Default | Limit |
 | :--- | :--- | :--- | :--- |
 | `name` | relative path | generated | stem; the extension follows `format` |
-| `format` | `frames` or `av1` (`h264` only if built with the optional feature) | `frames` | see §A4 |
+| `format` | `av1` or `png_sequence` (`h264` only if built with the optional feature) | `av1` | see §A4 |
 | `fps` | integer | 30 | 1..=60 |
-| `duration_ms` | integer | 30 000 | 1..=1 800 000 (30 min) |
+| `duration_ms` | integer | 60 000 (the CLI defaults to 30 000) | 1..=1 800 000 (30 min) |
 | `max_size_mb` | integer | 512 | 1..=2 048 |
 | `quality` | 1..=100 | 70 | encoders only |
 | `scale` | 0.25..=1.0 | 1.0 | downscale before encoding (cheap way to cut cost) |
+
+`png_sequence` is subject to the same size and disk limits; at 1080p it fills 512 MB in a few hundred frames, so a long `png_sequence` recording ends early with `stopped_by: "size"`. It exists for short, frame-exact captures; for several seconds of motion use `capture.burst` with a low rate or record `av1` and extract frames afterwards.
 
 A stop condition is **mandatory**: `duration_ms` and `max_size_mb` always have defaults and hard caps, and the recording also stops when free disk space falls below 1 GiB. A request without any of them gets the defaults; a request above a cap is refused (`INVALID_PARAMS`), not silently clamped.
 Result: `{recording_id, path, format, fps, effective_limits: {duration_ms, max_size_mb, min_free_disk_mb}}`. The id is returned immediately; the recording runs in the background.
@@ -144,13 +149,16 @@ Sources: `sim_time` is `Time<Virtual>` elapsed seconds (so it excludes paused ti
 | Use | Format | Notes |
 | :--- | :--- | :--- |
 | Screenshot | PNG (default), JPEG | PNG drops alpha like the F1 report does. |
-| Frame sequence | `frames`: `dir/000001.png`, … + `manifest.json` | Default recording format. Zero new dependencies, each frame is independently decodable, best for agents that inspect individual frames, the largest on disk (about 1.5-3 MB per 1080p frame; the size cap protects the disk). |
-| Video | `av1`: AV1 in an IVF container (`.ivf`) | Encoded by `rav1e`, **already in the dependency tree** through `image`'s AVIF support. IVF is a 32-byte header plus 12 bytes per frame and is written by hand (about 80 lines); ffmpeg, mpv, VLC and browsers via `ffmpeg` play it. No system dependency, no patent-encumbered codec. |
+| Burst | PNG sequence (`capture.burst`): `dir/0001.png`, … + `manifest.json`; JPEG optional | The default for bursts. Zero new dependencies; every frame is independently decodable. |
+| Recording | `av1`: AV1 in an IVF container (`.ivf`) | **The default for `capture.record`.** Encoded by `rav1e`, **already in the dependency tree** through `image`'s AVIF support. IVF is a 32-byte header plus 12 bytes per frame and is written by hand (about 80 lines). No system dependency, no patent-encumbered codec. |
+| Recording | `png_sequence` | Explicit opt-in for short, frame-exact recordings; large on disk (about 1.5-3 MB per 1080p frame), so the size cap ends it early. |
 | Video (optional) | `h264`: H.264 in MP4 via `openh264` | **Not built by default.** Behind a cargo feature `capture-h264`. See ADR-0012 for why this is not the default. |
 
-**When to use what.** Frame sequence for an agent that wants to look at frames (cheapest on CPU: PNG encode only, no inter-frame work). AV1/IVF when a human wants to watch a minute of footage or an agent wants a compact artefact. H.264/MP4 only where a viewer cannot play IVF and the build includes the feature.
+**When to use what.** `capture.burst` when an agent wants to look at individual frames. `capture.record` (AV1/IVF) when a human wants to watch footage or an agent wants a compact artefact of several seconds. `png_sequence` recordings only for a few seconds of frame-exact material. H.264/MP4 only where a viewer cannot play IVF and the build includes the feature.
 
-**This differs from the task text's recommendation** (H.264 MP4 as the default video, PNG sequence for agents). The reasons are in [ADR-0012](../adr/0012-screen-capture-encoding.md): the `openh264` crate either downloads a Cisco binary at build time or compiles C++ sources (a system toolchain dependency and H.264 licensing questions), and there is no pure-Rust MP4 plus H.264 combination in the tree. This is the main point to approve or overrule at the Phase A checkpoint.
+**Remuxing.** IVF is not a container most players or browsers open directly. Verified on 2026-10-14 with FFmpeg n9.0.2 on an AV1 IVF test stream: `ffmpeg -i x.ivf -c copy x.mp4`, `-c copy x.mkv` and `-c copy x.webm` all succeed without re-encoding and keep every frame (30 of 30), and `ffmpeg -i x.ivf %04d.png` extracts frames. The test stream came from libaom, so Phase B repeats the check on the output of our own writer and the result goes into the report; if a remux fails there, the documented path changes to whatever works.
+
+**This differs from the original task text's recommendation** (H.264 MP4 as the default video); the departure was approved at the Phase A checkpoint. The reasons are in [ADR-0012](../adr/0012-screen-capture-encoding.md): the `openh264` crate either downloads a Cisco binary at build time or compiles C++ sources (a system toolchain dependency and H.264 licensing questions), and there is no pure-Rust MP4 plus H.264 combination in the tree. This is the main point to approve or overrule at the Phase A checkpoint.
 
 ## A5. Performance
 
@@ -192,7 +200,7 @@ Measured over a sliding 2 s window of the control `fps`:
 
 | Resource | Default | Hard cap |
 | :--- | :--- | :--- |
-| Duration | 30 s (burst: 5 min) | 30 min |
+| Duration | 60 s protocol default, 30 s CLI default (burst: 5 min total) | 30 min |
 | File or directory size | 512 MB | 2 GB |
 | Free disk space | stop below 1 GiB | not configurable below 256 MiB |
 | Concurrent jobs | 1 | 1 |
@@ -209,7 +217,7 @@ Measured over a sliding 2 s window of the control `fps`:
 ## A7. Security
 
 * **Path restrictions:** new commands take a relative subpath. Validation happens in this order: reject absolute paths, drive prefixes, `..` and empty or `.` segments and control characters; join below the captures root; create parent directories **inside** the root; canonicalise the existing parent and require it to start with the canonical root (symlinks that leave the root are rejected). Tests cover `../../etc/passwd`, `/etc/passwd`, `C:\x`, a symlink inside the directory pointing out, and `a/../../b`.
-* **Rate limiting:** one job at a time; a start request while a job runs returns `BUSY`; at most 10 job starts per rolling minute (`BUSY` with `retry_after_ms`); screenshots limited as in §A2. Defaults (30 s, 512 MB) are lower than the caps the task suggests (30 min, 2 GB) because an agent that forgets to set limits should not fill a disk.
+* **Rate limiting:** one job at a time; a start request while a job runs returns `BUSY`; at most 10 job starts per rolling minute (`BUSY` with `retry_after_ms`); screenshots limited as in §A2. Defaults (60 s, 512 MB) are lower than the hard caps (30 min, 2 GB) because an agent that forgets to set limits should not fill a disk. The CLI defaults to 30 s for quick iteration; a protocol client that omits `duration_ms` gets 60 s (about 20-50 MB of AV1 at 1080p, to be measured).
 * **Window-only enforcement:** there is nothing to enforce in the fullscreen case, because the mechanism reads the application's own texture (§A1). The invariant is covered by a test that renders a known pattern and asserts the captured size equals the window's physical size.
 * **Authentication:** the existing control token and bind rules apply; capture commands are not exempt.
 
@@ -236,9 +244,10 @@ Measured over a sliding 2 s window of the control `fps`:
 
 `crates/opts-bevy/src/capture/` with `mod.rs`, `screenshot.rs`, `burst.rs`, `recording.rs`, `encoder.rs` (trait plus the PNG-sequence and AV1/IVF encoders), `ivf.rs`, `metadata.rs`, `storage.rs` (root, naming, validation, disk checks, prune) and `error.rs`. Handlers in `control/handlers/capture.rs`, CLI subcommands in `opts-cli`, protocol group `capture`, tests as listed in the task (screenshot dimensions and metadata, burst count and spacing, playable IVF header and frame count, disk-threshold refusal, automatic stop at the duration limit, dropped frames under load, path traversal, second recording rejected). Each file stays under 500 lines.
 
-## Open decisions for the Phase A checkpoint
+## Decisions (approved 2026-10-14)
 
-1. **Video format.** Approve AV1/IVF plus the frame sequence as the built-in formats with H.264/MP4 as an optional feature (recommended, [ADR-0012](../adr/0012-screen-capture-encoding.md)), or require H.264/MP4 by default (adds `openh264`, a C++ build step and the licensing questions in the ADR).
-2. **Defaults.** 30 s and 512 MB defaults with the 30 min and 2 GB caps (recommended), or the caps as defaults.
-3. **`screenshot.path`.** Keep the legacy any-allowed-directory meaning and add `name` (recommended, compatible), or make `path` relative-to-captures and break existing scripts and the `snapshot` documentation.
-4. **Cursor.** Not capturable and not planned; say so if an agent workflow needs it drawn.
+1. **Video format:** AV1 in IVF is the built-in video format and the default for `capture.record`; `png_sequence` is an explicit recording format; `capture.burst` writes PNG sequences; H.264/MP4 is an optional cargo feature ([ADR-0012](../adr/0012-screen-capture-encoding.md)).
+2. **Defaults:** protocol default duration 60 s, CLI default 30 s, default size 512 MB, hard caps 30 min and 2 GB.
+3. **`screenshot.path`/`name`:** `path` stays, restricted to the captures directory; `name` is the preferred relative form; both together are `INVALID_PARAMS`.
+4. **ADR number:** 0012.
+5. **Cursor:** not captured, not planned.
