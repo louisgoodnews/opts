@@ -153,6 +153,7 @@
 - [Settings Registry](architecture/settings-registry.md)
 - [Localisation Packs](architecture/localisation-packs.md)
 - [HUD Registry](architecture/hud-registry.md)
+- [The Mini Map and Speed-Based Zoom](architecture/minimap.md)
 - [Vehicle ECS Simulation Bridge](architecture/vehicle-ecs-bridge.md)
 - [Main Menu Architecture](architecture/main-menu.md)
 - [Application Startup & Wiring](architecture/application-startup.md)

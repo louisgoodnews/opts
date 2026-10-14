@@ -58,6 +58,7 @@ hud-viewpoint-hint = Up/Down row  -  Left/Right adjust (Shift: x10)  -  Home def
 hud-viewpoint-unsaved = Not saved yet
 hud-hint-controls-compact = W/S Drive  -  Left/Right Steer  -  . Brake  -  Esc Pause
 hud-minimap-caption = { $metres } m - { $mode }
+hud-minimap-caption-auto = { $metres } m (auto) - { $mode }
 hud-minimap-north-up = North up
 hud-minimap-heading-up = Heading up
 hud-widget-minimap = Mini map
