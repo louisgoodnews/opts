@@ -292,6 +292,9 @@ Attachments are mount points for dynamic objects such as ticket printers, destin
 | `[rot_pnt_long]` | 1 | Longitudinal coordinate of the vehicle's rotation point (used when turning). |
 | `[inv_min_turnradius]` | 1 | Reciprocal of the minimum turning radius. |
 | `[ai_deltaheight]` | 1 | Vertical offset applied to the vehicle when driven by AI. |
+| `[ai_veh_type]` | 1 | Kind of AI vehicle; the vehicle files carry the legend in a comment: `0` normal passenger car, `1` cab, `2` bus, `3` truck (80 files). Parsed into `VehicleExtras::ai_veh_type`. |
+| `[ai_brakeperformance]` | up to 5 | Brake multiplier for AI driving; the first number is read (`1.0`–`1.3` in the files that state it), the others are unexplained (141 files). |
+| `[rowdy_factor]` | 2 | Range of the "rowdy" factor; the file comment says it is drawn at random per vehicle between the first and the second value at creation (539 files; `0 0.5` in 150, `0 0` in 91). What it scales is open. |
 
 #### `[mass]` — Parameter Layout
 

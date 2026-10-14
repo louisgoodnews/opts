@@ -2,34 +2,35 @@
 //!
 //! Lanes come from the type-0 `[path]` records of splines and scenery objects
 //! ([`opts_traffic::segments_from_tile`]) and join geometrically; vehicles are drawn from the map's
-//! `ailists.cfg` (group `NormalCars`, falling back to the first group) and driven by the
-//! Intelligent Driver Model. The vehicle models are placed on the lane (no scripts, physics or
-//! wheel spin yet). Plan and limits: `docs/src/architecture/ai-traffic.md`.
+//! `ailists.cfg` (every group that `unsched_vehgroups.txt` lets take part) and driven by the
+//! Intelligent Driver Model with parameters derived from each vehicle's own files
+//! ([`opts_traffic::IdmParams::from_traits`]). The vehicle models are placed on the lane (no
+//! scripts or physics); coupled vehicles pull their trailing units behind them
+//! (`traffic_chain.rs`). Plan and limits: `docs/src/architecture/ai-traffic.md`,
+//! `docs/src/architecture/ai-vehicle-config.md`.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_core::formats::map::lists::day;
-use opts_core::formats::map::{
-    parse_unsched_trafficdens, AiLists, GroupDensity, MapObjectInstance, MapTerrain, MapTile,
-};
+use opts_core::formats::map::{MapObjectInstance, MapTerrain, MapTile};
 use opts_core::formats::scenery::sco::{ScoPath, ScoTrafficLightGroup};
 use opts_core::formats::scenery::{SceneryObject, SplinePath, SplineProfile};
-use opts_core::formats::text::{decode_bytes, scan_blocks};
-use opts_core::formats::vehicles::model::ModelConfig;
-use opts_core::formats::vehicles::BusManifest;
+use opts_core::formats::vehicles::model::ModelLod;
 use opts_traffic::{
-    segments_from_tile, signals_from_tile, AgentId, ConnectParams, IdmParams, LaneGraph, LaneKind,
-    LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld, VehicleClass,
+    segments_from_tile, signals_from_tile, AgentId, Calibration, ConnectParams, IdmParams,
+    LaneGraph, LaneKind, LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld,
+    VehicleClass,
 };
 
 use crate::in_game::types::{InGameEntity, InGameSessionInfo};
 
-use super::vehicle::load_segment_meshes;
+use super::traffic_chain::{despawn_chain, ChainUnit, TrafficChain};
+use super::traffic_variant::{load_variant, read_groups, PoolGroup, Slot, SlotState, Unit};
+use super::vehicle::load_segment_meshes_for;
 use super::WorldLoadJob;
 
 /// Default cap on simultaneously driving AI vehicles.
@@ -106,54 +107,12 @@ impl crate::hud::minimap::MapSource for TrafficState {
     }
 }
 
-/// A vehicle type of the map's AI list.
-struct Variant {
-    name: String,
-    model: ModelConfig,
-    model_dir: PathBuf,
-    tex_dirs: Vec<PathBuf>,
-    /// `[ai_deltaheight]`: vertical offset applied when driven by AI (m).
-    delta_height: f32,
-    /// Body length and the distance from the model origin to its front bumper (m), measured when
-    /// the meshes first load.
-    size: Option<(f32, f32)>,
-    /// The vehicle has a passenger cabin (`[passengercabin]`): a bus.
-    has_cabin: bool,
-}
-
-impl Variant {
-    /// Class for lane restrictions: a bus when it has a passenger cabin, a truck when it is long
-    /// without one, else a car.
-    fn class(&self) -> VehicleClass {
-        match (self.has_cabin, self.size) {
-            (true, _) => VehicleClass::Bus,
-            (false, Some((len, _))) if len > 7.5 => VehicleClass::Truck,
-            _ => VehicleClass::Car,
-        }
-    }
-}
-
-enum SlotState {
-    /// Not parsed yet.
-    Pending,
-    Ready(Box<Variant>),
-    Failed,
-}
-
-struct Slot {
-    file: String,
-    weight: f32,
-    /// Spawn attempts whose meshes were not ready (still decoding, or unreadable).
-    fails: u32,
-    state: SlotState,
-}
-
-/// Vehicle types of the map's `ailists.cfg`, loaded on demand.
+/// Groups and vehicle types of the map's AI lists, loaded on demand.
 #[derive(Resource, Default)]
 pub struct TrafficPool {
     started: bool,
+    groups: Vec<PoolGroup>,
     slots: Vec<Slot>,
-    density: Option<GroupDensity>,
     rng: Option<Rng>,
     frames: u32,
 }
@@ -165,7 +124,8 @@ pub struct TrafficVehicle {
     /// Distance from the model origin to the front bumper (m).
     front_offset: f32,
     delta_height: f32,
-    /// Wheel radius (m) and wheelbase (m) used for the wheel variables.
+    /// Wheel radius (m) and wheelbase (m) used for the wheel variables (from the vehicle's
+    /// axles when the file gives them).
     wheel_radius: f32,
     wheelbase: f32,
     /// Accumulated wheel rotation (rad).
@@ -174,6 +134,32 @@ pub struct TrafficVehicle {
     pax: u8,
     /// Phase offset of the indicator flash (s), so vehicles do not blink in unison.
     blink_phase: f32,
+    /// Pose of the model origin in the OMSI frame, set every frame; trailing units follow it.
+    pub(super) origin: DVec2,
+    /// Compass heading (radians).
+    pub(super) heading: f64,
+    /// Height of the model origin including `[ai_deltaheight]`.
+    pub(super) height: f32,
+}
+
+#[cfg(test)]
+impl TrafficVehicle {
+    /// A vehicle standing at a pose, for the tests of the systems that follow it.
+    pub(super) fn at(origin: DVec2, heading: f64, height: f32) -> Self {
+        Self {
+            id: AgentId(0),
+            front_offset: 0.0,
+            delta_height: 0.0,
+            wheel_radius: 0.31,
+            wheelbase: 2.6,
+            wheel_angle: 0.0,
+            pax: 0,
+            blink_phase: 0.0,
+            origin,
+            heading,
+            height,
+        }
+    }
 }
 
 /// Path data for [`segments_from_tile`], read through the load job's caches.
@@ -333,52 +319,7 @@ pub fn update_traffic_graph(mut state: ResMut<TrafficState>) {
     );
 }
 
-fn load_variant(job: &WorldLoadJob, rel: &str) -> Result<Variant, String> {
-    let path = job.install.find_file(rel).ok_or("file not found")?;
-    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-    let manifest = BusManifest::parse_bytes(&bytes).map_err(|e| e.to_string())?;
-    let dir = path
-        .parent()
-        .map(std::path::Path::to_path_buf)
-        .unwrap_or_default();
-    let cfg_rel = manifest.model_cfg.clone().ok_or("no [model] entry")?;
-    let cfg = job
-        .install
-        .find_in(&dir, &cfg_rel)
-        .ok_or_else(|| format!("model config not found: {cfg_rel}"))?;
-    let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
-    let model_dir = cfg
-        .parent()
-        .map(std::path::Path::to_path_buf)
-        .unwrap_or_default();
-    let delta_height = scan_blocks(&decode_bytes(&bytes))
-        .iter()
-        .find(|b| b.keyword == "ai_deltaheight")
-        .and_then(|b| b.parameters.first())
-        .and_then(|p| p.trim().replace(',', ".").parse::<f32>().ok())
-        .unwrap_or(0.0);
-    let tex_dirs = vec![
-        job.install
-            .find_in(&dir, "texture")
-            .unwrap_or_else(|| dir.join("texture")),
-        model_dir.join("texture"),
-    ];
-    Ok(Variant {
-        name: path
-            .file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_default(),
-        model,
-        model_dir,
-        tex_dirs,
-        delta_height,
-        size: None,
-        has_cabin: manifest.passengercabin_cfg.is_some(),
-    })
-}
-
-/// Reads the map's AI list once and parses one vehicle type every few frames.
+/// Reads the map's AI lists once and parses one vehicle type every few frames.
 pub fn load_traffic_variants(
     job: Option<ResMut<WorldLoadJob>>,
     settings: Res<TrafficSettings>,
@@ -391,44 +332,9 @@ pub fn load_traffic_variants(
     if !pool.started {
         pool.started = true;
         pool.rng = Some(Rng::new(0xA11_CA45));
-        let lists = job
-            .install
-            .find_in(&job.config.map_dir, "ailists.cfg")
-            .and_then(|p| std::fs::read(p).ok())
-            .map(|b| AiLists::parse(&b))
-            .unwrap_or_default();
-        let group = lists
-            .group("NormalCars")
-            .or_else(|| lists.groups.first())
-            .cloned();
-        match group {
-            Some(g) => {
-                tracing::info!(group = %g.name, vehicles = g.entries.len(), "AI traffic group chosen");
-                pool.density = job
-                    .install
-                    .find_in(&job.config.map_dir, "unsched_trafficdens.txt")
-                    .and_then(|p| std::fs::read(p).ok())
-                    .map(|b| parse_unsched_trafficdens(&b))
-                    .and_then(|d| d.into_iter().find(|x| x.name.eq_ignore_ascii_case(&g.name)));
-                pool.slots = g
-                    .entries
-                    .into_iter()
-                    .filter(|e| {
-                        let f = e.vehicle.to_ascii_lowercase();
-                        f.ends_with(".bus") || f.ends_with(".ovh")
-                    })
-                    .map(|e| Slot {
-                        file: e.vehicle,
-                        weight: e.weight.unwrap_or(1.0).max(0.0),
-                        fails: 0,
-                        state: SlotState::Pending,
-                    })
-                    .collect();
-            }
-            None => {
-                tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no AI group in ailists.cfg; no traffic");
-            }
-        }
+        let (groups, slots) = read_groups(&job);
+        pool.groups = groups;
+        pool.slots = slots;
     }
     pool.frames += 1;
     if !pool.frames.is_multiple_of(10) {
@@ -449,6 +355,65 @@ pub fn load_traffic_variants(
             pool.slots[i].state = SlotState::Failed;
         }
     }
+}
+
+/// The meshes of one unit: the plain `[LOD] 0` body for cars; for buses the full-detail group
+/// seen from outside, with the AI-only meshes (`[viewpoint]` 4: interiors of the AI model) and
+/// without the cockpit-only ones.
+fn unit_lod(unit: &Unit) -> Option<ModelLod> {
+    if unit.profile.has_cabin {
+        unit.model.detail_lod().map(|mut lod| {
+            lod.meshes.retain(|m| {
+                let raw = m.viewpoint.raw();
+                raw == 0 || raw & 1 != 0 || raw & 4 != 0
+            });
+            for m in &mut lod.meshes {
+                if m.viewpoint.raw() & 4 != 0 {
+                    m.viewpoint = opts_core::formats::vehicles::model::ViewpointFlags::ALWAYS;
+                }
+            }
+            lod
+        })
+    } else {
+        unit.model
+            .lods
+            .iter()
+            .find(|l| l.threshold == 0.0)
+            .or_else(|| unit.model.lods.first())
+            .cloned()
+    }
+}
+
+/// Picks the group by its density at `hour`, then a vehicle of it by weight.
+fn pick_slot(pool: &TrafficPool, factors: &[f64], rng: &mut Rng) -> Option<usize> {
+    let ready = |s: &Slot| matches!(s.state, SlotState::Ready(_)) && s.weight > 0.0;
+    let live: Vec<usize> = (0..pool.groups.len())
+        .filter(|&g| factors[g] > 0.0 && pool.slots.iter().any(|s| s.group == g && ready(s)))
+        .collect();
+    let total: f64 = live.iter().map(|&g| factors[g]).sum();
+    let mut pick = rng.next_f64() * total;
+    let mut group = *live.first()?;
+    for &g in &live {
+        if pick < factors[g] {
+            group = g;
+            break;
+        }
+        pick -= factors[g];
+    }
+    let in_group: Vec<usize> = (0..pool.slots.len())
+        .filter(|&i| pool.slots[i].group == group && ready(&pool.slots[i]))
+        .collect();
+    let weight: f32 = in_group.iter().map(|&i| pool.slots[i].weight).sum();
+    let mut pick = rng.next_f64() as f32 * weight;
+    let mut slot = *in_group.first()?;
+    for &i in &in_group {
+        if pick < pool.slots[i].weight {
+            slot = i;
+            break;
+        }
+        pick -= pool.slots[i].weight;
+    }
+    Some(slot)
 }
 
 /// Spawns vehicles on lanes around the camera up to the density-derived target.
@@ -475,29 +440,26 @@ pub fn spawn_traffic(
     let (Some(mut job), Ok(cam)) = (job, camera.single()) else {
         return;
     };
-    // Target count: road length × the group's density at the session's time of day.
+    // Target count: road length × the summed density of the groups at the session's time of day.
     let hour = session.map_or(12.0, |s| {
         s.start_hour as f32 + s.start_minute as f32 / 60.0 + s.sim_elapsed_seconds / 3600.0
     });
-    let factor = f64::from(
-        pool.density
-            .as_ref()
-            .map_or(1.0, |d| d.density(day::WEEKDAY, hour))
-            .clamp(0.0, 2.0),
-    );
-    let target =
-        ((state.road_length_m / METRES_OF_ROAD_PER_VEHICLE * factor) as usize).min(settings.max);
-    if state.world.agents().len() >= target {
-        return;
-    }
-    let ready: Vec<usize> = pool
-        .slots
+    let factors: Vec<f64> = pool
+        .groups
         .iter()
-        .enumerate()
-        .filter(|(_, s)| matches!(s.state, SlotState::Ready(_)) && s.weight > 0.0)
-        .map(|(i, _)| i)
+        .map(|g| {
+            f64::from(
+                g.density
+                    .as_ref()
+                    .map_or(1.0, |d| d.density(day::WEEKDAY, hour))
+                    .clamp(0.0, 2.0),
+            )
+        })
         .collect();
-    if ready.is_empty() {
+    let target = ((state.road_length_m / METRES_OF_ROAD_PER_VEHICLE * factors.iter().sum::<f64>())
+        as usize)
+        .min(settings.max);
+    if state.world.agents().len() >= target {
         return;
     }
     let mut rng = pool.rng.take().unwrap_or_else(|| Rng::new(1));
@@ -509,16 +471,7 @@ pub fn spawn_traffic(
         let fwd = cam.forward();
         let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
         // The vehicle type comes first: bus and truck lanes admit only their own.
-        let total: f32 = ready.iter().map(|&i| pool.slots[i].weight).sum();
-        let mut pick = rng.next_f64() as f32 * total;
-        let mut slot = ready[0];
-        for &i in &ready {
-            if pick < pool.slots[i].weight {
-                slot = i;
-                break;
-            }
-            pick -= pool.slots[i].weight;
-        }
+        let slot = pick_slot(&pool, &factors, &mut rng)?;
         let class = match &pool.slots[slot].state {
             SlotState::Ready(v) => v.class(),
             _ => VehicleClass::Car,
@@ -546,78 +499,77 @@ pub fn spawn_traffic(
         if view.dot(to) > 0.5 && at.distance(centre) < 160.0 {
             return None;
         }
-        let limit = lane.speed_limit;
-        Some((lane_id, s, limit, slot, at))
+        Some((lane_id, s, lane.speed_limit, slot, at))
     })();
     let Some((lane_id, s, limit, slot, at)) = result else {
         pool.rng = Some(rng);
         return;
     };
 
-    // Build the model (parts are cached, so repeated types are cheap).
-    let SlotState::Ready(variant) = &mut pool.slots[slot].state else {
+    let group_name = pool.groups[pool.slots[slot].group].name.clone();
+    // Build the models of every unit (parts are cached, so repeated types are cheap).
+    let SlotState::Ready(variant) = &pool.slots[slot].state else {
         pool.rng = Some(rng);
         return;
     };
-    // Cars: the plain `[LOD] 0` body. Buses: the full-detail group seen from outside, with the
-    // AI-only meshes (`[viewpoint]` 4: interiors of the AI model) and without the cockpit-only
-    // ones; their stand-in at `[LOD] 0` is a single mesh without bellows or trailer.
-    let lod = if variant.has_cabin {
-        variant.model.detail_lod().map(|mut lod| {
-            lod.meshes.retain(|m| {
-                let raw = m.viewpoint.raw();
-                raw == 0 || raw & 1 != 0 || raw & 4 != 0
-            });
-            for m in &mut lod.meshes {
-                if m.viewpoint.raw() & 4 != 0 {
-                    m.viewpoint = opts_core::formats::vehicles::model::ViewpointFlags::ALWAYS;
-                }
-            }
-            lod
+    let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
+    let entities: Vec<Entity> = variant
+        .units
+        .iter()
+        .map(|u| {
+            commands
+                .spawn((
+                    origin,
+                    Visibility::Hidden,
+                    Name::new(u.name.clone()),
+                    InGameEntity,
+                ))
+                .id()
         })
-    } else {
-        variant
-            .model
-            .lods
-            .iter()
-            .find(|l| l.threshold == 0.0)
-            .or_else(|| variant.model.lods.first())
-            .cloned()
-    };
-    let Some(lod) = lod else {
-        pool.slots[slot].state = SlotState::Failed;
-        pool.rng = Some(rng);
-        return;
-    };
-    let root = commands
-        .spawn((
-            Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3())),
-            Visibility::Hidden,
-            Name::new(variant.name.clone()),
-            InGameEntity,
-        ))
-        .id();
-    job.vehicle_text_defs = variant.model.text_textures.clone();
+        .collect();
+    let root = entities[0];
     super::trace::begin_frame();
-    let (count, _, min, max) = load_segment_meshes(
-        &mut job,
-        &mut commands,
-        &mut meshes,
-        &mut materials,
-        &mut images,
-        root,
-        &lod,
-        &variant.model_dir.clone(),
-        &variant.tex_dirs.clone(),
-    );
+    let mut bounds = Vec::with_capacity(entities.len());
+    let mut failed = None;
+    for (unit, &entity) in variant.units.iter().zip(&entities) {
+        let Some(lod) = unit_lod(unit) else {
+            failed = Some(true);
+            break;
+        };
+        job.vehicle_text_defs = unit.model.text_textures.clone();
+        let (count, _, min, max) = load_segment_meshes_for(
+            &mut job,
+            &mut commands,
+            &mut meshes,
+            &mut materials,
+            &mut images,
+            entity,
+            root,
+            &lod,
+            &unit.model_dir.clone(),
+            &unit.tex_dirs.clone(),
+        );
+        if count == 0 {
+            failed = Some(false);
+            break;
+        }
+        bounds.push((min, max));
+    }
     let trace_frame = super::trace::end_frame();
-    if count == 0 {
-        // Meshes still decoding in the background, or unreadable: try again a few times.
-        commands.entity(root).despawn();
-        tracing::debug!(vehicle = %variant.name, "AI vehicle meshes not ready");
-        pool.slots[slot].fails += 1;
-        if pool.slots[slot].fails >= MAX_LOAD_TRIES {
+    if let Some(unusable) = failed {
+        // No usable meshes (unusable), or still decoding in the background: try again a few times.
+        let name = variant.name.clone();
+        for e in entities {
+            commands.entity(e).despawn();
+        }
+        tracing::debug!(vehicle = %name, "AI vehicle meshes not ready");
+        if unusable {
             pool.slots[slot].state = SlotState::Failed;
+        } else {
+            pool.slots[slot].fails += 1;
+            if pool.slots[slot].fails >= MAX_LOAD_TRIES {
+                pool.slots[slot].state = SlotState::Failed;
+            }
         }
         pool.rng = Some(rng);
         return;
@@ -625,22 +577,18 @@ pub fn spawn_traffic(
     let SlotState::Ready(variant) = &mut pool.slots[slot].state else {
         return;
     };
-    let size = *variant.size.get_or_insert_with(|| {
-        let len = max.z - min.z;
-        if min.z.is_finite() && (2.0..25.0).contains(&len) {
-            (len, (-min.z).clamp(0.0, len + 2.0))
-        } else {
-            (4.4, 2.2)
-        }
-    });
-    let heavy = size.0 > 7.5;
-    let mut params = if heavy {
-        IdmParams::heavy()
-    } else {
-        IdmParams::default()
-    };
-    params.length = f64::from(size.0);
-    params.class = variant.class();
+    for (unit, (min, max)) in variant.units.iter_mut().zip(&bounds) {
+        unit.size.get_or_insert_with(|| {
+            let len = max.z - min.z;
+            if min.z.is_finite() && (2.0..25.0).contains(&len) {
+                (len, (-min.z).clamp(0.0, len + 2.0))
+            } else {
+                (4.4, 2.2)
+            }
+        });
+    }
+    let traits = variant.traits();
+    let params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64(), limit);
     // The vehicle may not use the lane it was placed on (its length was unknown before).
     if state
         .world
@@ -648,33 +596,75 @@ pub fn spawn_traffic(
         .lane(lane_id)
         .is_some_and(|l| !l.rules.allows(params.class))
     {
-        commands.entity(root).despawn();
+        for e in entities {
+            commands.entity(e).despawn();
+        }
         pool.rng = Some(rng);
         return;
     }
-    // Drivers differ a little; the lane's speed limit caps the desired speed.
-    params.desired_speed *= 0.9 + 0.2 * rng.next_f64();
-    if let Some(l) = limit {
-        params.desired_speed = params.desired_speed.min(l);
-    }
     let speed = params.desired_speed * 0.8;
-    let delta_height = variant.delta_height;
+    let head = &variant.units[0];
+    let size = head.size.unwrap_or((4.4, 2.2));
+    let heavy = params.class != VehicleClass::Car;
+    let (wheel_radius, wheelbase) = (
+        head.profile
+            .wheel_radius_m
+            .unwrap_or(if heavy { 0.5 } else { 0.31 }),
+        head.profile.wheelbase_m.unwrap_or(size.0 * 0.6),
+    );
+    let delta_height = head.profile.delta_height_m;
     let name = variant.name.clone();
+    let fallbacks = head.profile.fallbacks.clone();
+    let chain: Vec<ChainUnit> = variant
+        .units
+        .iter()
+        .zip(&entities)
+        .skip(1)
+        .map(|(u, &e)| {
+            ChainUnit::new(
+                e,
+                u.hitch,
+                u.joint,
+                u.rear_axle_y,
+                u.max_alpha_deg,
+                u.reversed,
+            )
+        })
+        .collect();
     let mut rng_pax = Rng::new(rng.next_u64());
     pool.rng = Some(rng);
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
-            tracing::debug!(agent = id.0, vehicle = %name, speed, "AI vehicle spawned");
+            tracing::debug!(
+                agent = id.0,
+                vehicle = %name,
+                group = %group_name,
+                speed,
+                mass_kg = traits.mass_kg,
+                desired_kmh = params.desired_speed * 3.6,
+                accel = params.max_accel,
+                comfort = params.comfort_decel,
+                max_decel = params.max_decel,
+                class = ?params.class,
+                units = entities.len(),
+                fallbacks = ?fallbacks,
+                "AI vehicle spawned"
+            );
             if opts_bevy::scene_trace::enabled() {
                 super::trace::spawned(
                     opts_bevy::scene_trace::kind::TRAFFIC,
                     &name,
                     &name,
                     root,
-                    &Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3())),
+                    &origin,
                     &trace_frame,
                     "ok",
-                    serde_json::json!({"lane": format!("{lane_id:?}"), "speed": speed, "heavy": heavy}),
+                    serde_json::json!({
+                        "lane": format!("{lane_id:?}"),
+                        "speed": speed,
+                        "class": format!("{:?}", params.class),
+                        "units": entities.len(),
+                    }),
                 );
             }
             // Seats: the driver is nearly always there, further passengers by chance.
@@ -689,16 +679,26 @@ pub fn spawn_traffic(
                     id,
                     front_offset: size.1,
                     delta_height,
-                    wheel_radius: if heavy { 0.5 } else { 0.31 },
-                    wheelbase: size.0 * 0.6,
+                    wheel_radius,
+                    wheelbase,
                     wheel_angle: 0.0,
                     pax,
                     blink_phase: rng_pax.next_f64() as f32 * 0.7,
+                    origin: at,
+                    heading: 0.0,
+                    height: delta_height,
                 },
                 opts_bevy::AiVariables::default(),
             ));
+            if !chain.is_empty() {
+                commands.entity(root).insert(TrafficChain { units: chain });
+            }
         }
-        Err(_) => commands.entity(root).despawn(),
+        Err(_) => {
+            for e in entities {
+                commands.entity(e).despawn();
+            }
+        }
     }
 }
 
@@ -783,7 +783,13 @@ pub fn move_traffic(
     session: Option<Res<InGameSessionInfo>>,
     mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
-    mut vehicles: Query<(Entity, &TrafficVehicle, &mut Transform, &mut Visibility)>,
+    mut vehicles: Query<(
+        Entity,
+        &mut TrafficVehicle,
+        &mut Transform,
+        &mut Visibility,
+        Option<&TrafficChain>,
+    )>,
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
     // The lights follow the session's time of day.
@@ -802,29 +808,27 @@ pub fn move_traffic(
     state.world.drain_events();
     let cam = camera.single().ok().map(GlobalTransform::translation);
     let mut far = Vec::new();
-    for (entity, v, mut transform, mut visibility) in &mut vehicles {
+    for (entity, mut v, mut transform, mut visibility, chain) in &mut vehicles {
         let graph = state.world.graph();
         let pose = state.world.agent(v.id).and_then(|a| {
             let (p, h) = a.pose(graph)?;
             Some((p, h, a.height(graph)?))
         });
         let Some((front, heading, z)) = pose else {
-            commands.entity(entity).despawn();
+            despawn_chain(&mut commands, entity, chain);
             continue;
         };
         // The model origin sits `front_offset` behind the front bumper.
         let dir = DVec2::new(heading.sin(), heading.cos());
         let origin = front - dir * f64::from(v.front_offset);
-        let bevy = omsi_to_bevy_pos(Vec3::new(
-            origin.x as f32,
-            origin.y as f32,
-            z as f32 + v.delta_height,
-        ));
+        let height = z as f32 + v.delta_height;
+        let bevy = omsi_to_bevy_pos(Vec3::new(origin.x as f32, origin.y as f32, height));
         if cam.is_some_and(|c| c.distance(bevy) > DESPAWN_M) {
             far.push(v.id);
-            commands.entity(entity).despawn();
+            despawn_chain(&mut commands, entity, chain);
             continue;
         }
+        (v.origin, v.heading, v.height) = (origin, heading, height);
         transform.translation = bevy;
         transform.rotation = omsi_euler_to_bevy_quat(-(heading.to_degrees() as f32), 0.0, 0.0);
         if *visibility != Visibility::Inherited {

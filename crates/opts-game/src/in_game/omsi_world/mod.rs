@@ -31,6 +31,8 @@ mod tile;
 mod tile_ground;
 pub(crate) mod trace;
 mod traffic;
+mod traffic_chain;
+mod traffic_variant;
 #[cfg(test)]
 pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;
 #[cfg(test)]
@@ -69,6 +71,7 @@ pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
+pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle};
 pub use vehicle_text::update_vehicle_text_textures;
 

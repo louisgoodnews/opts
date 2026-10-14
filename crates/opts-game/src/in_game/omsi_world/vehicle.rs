@@ -99,7 +99,7 @@ pub(super) fn load_segment_meshes(
 /// [`load_segment_meshes`] for a segment whose animations, light maps and hot spots read the
 /// variables of `owner` (the leading unit: trailers share its scripts, `[scriptshare]`).
 #[allow(clippy::too_many_arguments)]
-fn load_segment_meshes_for(
+pub(super) fn load_segment_meshes_for(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
