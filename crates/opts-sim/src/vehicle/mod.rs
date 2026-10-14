@@ -8,6 +8,7 @@ pub mod axle;
 pub mod chassis;
 pub mod consist;
 pub mod drivetrain;
+pub mod ground;
 pub mod inputs;
 pub mod suspension;
 pub mod trailer;
@@ -16,6 +17,7 @@ use self::axle::AxleState;
 use self::chassis::ChassisState;
 use self::consist::{driven_and_braked_load_n, UnitAxle, UnitLoad, GRAVITY};
 use self::drivetrain::DrivetrainModel;
+use self::ground::{joint_beta_deg, GroundProbe, GroundSample, UnitBody};
 use self::inputs::VehicleInputs;
 use self::suspension::SuspensionModel;
 use self::trailer::TrailerKinematics;
@@ -61,6 +63,14 @@ pub struct VehicleSimulation {
     /// load counts as massless.
     #[serde(default)]
     pub trailer_loads: Vec<UnitLoad>,
+    /// Height, pitch and roll of the chassis as the fixed step sees them (`None` until the first
+    /// ground sample): the leader value of the first joint's `β`/`γ`. The visible body motion of
+    /// the chassis is separate (`opts-game` `follow_ground`).
+    #[serde(default)]
+    pub head_body: Option<UnitBody>,
+    /// The same for each following unit, in the order of [`VehicleSimulation::consist`].
+    #[serde(default)]
+    pub consist_bodies: Vec<Option<UnitBody>>,
     /// Number of [`VehicleSimulation::teleport`] calls so far (wrapping). Readers that keep
     /// per-step state of their own compare it with the last value they saw to learn that the
     /// consist was re-seeded.
@@ -129,6 +139,8 @@ impl VehicleSimulation {
             suspension,
             consist: Vec::new(),
             trailer_loads: Vec::new(),
+            head_body: None,
+            consist_bodies: Vec::new(),
             teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
@@ -168,6 +180,8 @@ impl VehicleSimulation {
             suspension: SuspensionModel::new(1.15, 0.0),
             consist: Vec::new(),
             trailer_loads: Vec::new(),
+            head_body: None,
+            consist_bodies: Vec::new(),
             teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
@@ -317,16 +331,101 @@ impl VehicleSimulation {
             pos,
             heading,
         ));
+        self.consist_bodies.push(None);
         self.trailer_loads.push(load.unwrap_or(UnitLoad {
             mass_kg: 0.0,
             axles: Vec::new(),
         }));
     }
 
+    /// The points to sample the ground at, one probe per unit: the chassis first, then each
+    /// following unit (see [`ground`]).
+    #[must_use]
+    pub fn ground_probes(&self) -> Vec<GroundProbe> {
+        let ends = self
+            .axles
+            .iter()
+            .map(|a| a.config.longitudinal_m)
+            .fold((f32::MIN, f32::MAX), |(hi, lo), y| (hi.max(y), lo.min(y)));
+        let track = self
+            .axles
+            .iter()
+            .map(|a| a.config.track_width_m)
+            .fold(0.0_f32, f32::max);
+        let track_m = if track > 0.5 { track } else { 2.0 };
+        let (front_y, rear_y) = if ends.0 > f32::MIN {
+            (ends.0, ends.1)
+        } else {
+            (3.0, -3.0)
+        };
+        let mut probes = vec![GroundProbe {
+            origin: self.chassis.position,
+            heading: self.chassis.heading_rad,
+            rear_y,
+            front_y,
+            track_m,
+        }];
+        probes.extend(self.consist.iter().map(|u| GroundProbe {
+            origin: Vec2::new(u.origin.x as f32, u.origin.y as f32),
+            heading: u.heading as f32,
+            rear_y: u.front_local.y as f32 - u.axle_distance as f32,
+            front_y: u.front_local.y as f32,
+            track_m,
+        }));
+        probes
+    }
+
+    /// Takes one fixed step of ground following: `samples[0]` is the chassis, `samples[k + 1]`
+    /// consist unit `k` (`None`: no ground there, the unit keeps its state). A unit without a
+    /// state yet starts on its goal. The filters run with `dt`, the fixed step, so the result
+    /// depends on nothing else.
+    pub fn apply_ground(&mut self, samples: &[Option<GroundSample>], dt: f32) {
+        let settle = |body: &mut Option<UnitBody>, sample: &Option<GroundSample>| {
+            let Some(sample) = sample else { return };
+            let goal = sample.goal();
+            match body {
+                Some(b) => b.settle(goal, dt),
+                None => *body = Some(goal),
+            }
+        };
+        if let Some(s) = samples.first() {
+            settle(&mut self.head_body, s);
+        }
+        for (k, body) in self.consist_bodies.iter_mut().enumerate() {
+            if let Some(s) = samples.get(k + 1) {
+                settle(body, s);
+            }
+        }
+    }
+
+    /// The fixed-step body of consist unit `k` (`None` before the first ground sample).
+    #[must_use]
+    pub fn consist_body(&self, k: usize) -> Option<UnitBody> {
+        self.consist_bodies.get(k).copied().flatten()
+    }
+
+    /// `(β, γ)` in degrees of joint `k` (unit `k` against the unit ahead), the values behind
+    /// `articulation_<k>_beta` and `_gamma` before the joint's `β` limits; `None` until both
+    /// units have a body.
+    #[must_use]
+    pub fn joint_angles_deg(&self, k: usize) -> Option<(f32, f32)> {
+        let leader = match k.checked_sub(1) {
+            Some(j) => self.consist_body(j)?,
+            None => self.head_body?,
+        };
+        let unit = self.consist_body(k)?;
+        Some((
+            joint_beta_deg(leader.pitch, unit.pitch),
+            (unit.roll - leader.roll).to_degrees(),
+        ))
+    }
+
     /// Removes all following units.
     pub fn clear_consist(&mut self) {
         self.consist.clear();
         self.trailer_loads.clear();
+        self.consist_bodies.clear();
+        self.head_body = None;
     }
 
     /// Mass of the whole consist the longitudinal dynamics act on (kg): the chassis' own mass
@@ -397,6 +496,9 @@ impl VehicleSimulation {
             let (pos, heading) = self.leader_pose_of(k);
             self.consist[k].reseed(pos, heading);
         }
+        // The next ground sample seeds the bodies on the new ground.
+        self.head_body = None;
+        self.consist_bodies.iter_mut().for_each(|b| *b = None);
     }
 
     /// Places the chassis at `position` heading `heading_rad` (compass radians) and re-seeds the
@@ -664,5 +766,65 @@ mod tests {
         let back: VehicleSimulation =
             bincode::deserialize(&bincode::serialize(&sim).unwrap()).unwrap();
         assert_eq!(sim, back);
+    }
+
+    /// Samples a plane `z = slope · y` under every probe.
+    fn samples_on_slope(sim: &VehicleSimulation, slope: f32) -> Vec<Option<GroundSample>> {
+        sim.ground_probes()
+            .into_iter()
+            .map(|probe| {
+                let h = probe.points().map(|p| p.y * slope);
+                Some(GroundSample::from_heights(probe, h))
+            })
+            .collect()
+    }
+
+    /// Acceptance 3 and the NG272 target in the harness: on flat ground pitch and roll stay 0;
+    /// on a constant grade every unit takes the grade angle and `β` is 0, and a unit that stands
+    /// on a different grade shows the difference of the two angles.
+    #[test]
+    fn fixed_step_ground_following_gives_zero_on_flat_and_the_grade_difference_on_a_step() {
+        let mut sim = articulated();
+        sim.inputs.set_throttle(0.0);
+        sim.apply_ground(&samples_on_slope(&sim, 0.0), 1.0 / 64.0);
+        let (beta, gamma) = sim.joint_angles_deg(0).unwrap();
+        assert!(beta.abs() < 0.01 && gamma.abs() < 0.01);
+        for _ in 0..200 {
+            let s = samples_on_slope(&sim, 0.1);
+            sim.apply_ground(&s, 1.0 / 64.0);
+        }
+        let grade_deg = 0.1_f32.atan().to_degrees();
+        let (beta, _) = sim.joint_angles_deg(0).unwrap();
+        // Chassis and unit both settle on the grade: β returns to 0 (the head was sampled on
+        // flat ground first, so it has to catch up; after 3 s both agree).
+        assert!(beta.abs() < 0.05, "{beta}");
+        assert!((sim.consist_body(0).unwrap().pitch.to_degrees() - grade_deg).abs() < 0.05);
+        // Unit on the grade, chassis still level: β is minus the grade angle (nose-up follower).
+        let mut flat_head = articulated();
+        let mut s = samples_on_slope(&flat_head, 0.0);
+        s[1] = samples_on_slope(&flat_head, 0.1)[1];
+        flat_head.apply_ground(&s, 1.0 / 64.0);
+        let (beta, _) = flat_head.joint_angles_deg(0).unwrap();
+        assert!((beta + grade_deg).abs() < 0.2, "{beta} vs {grade_deg}");
+    }
+
+    #[test]
+    fn ground_state_is_reseeded_by_teleport_and_serialised() {
+        let mut sim = articulated();
+        sim.apply_ground(&samples_on_slope(&sim, 0.05), 1.0 / 64.0);
+        let back: VehicleSimulation =
+            bincode::deserialize(&bincode::serialize(&sim).unwrap()).unwrap();
+        assert_eq!(sim, back);
+        assert!(sim.joint_angles_deg(0).is_some());
+        sim.teleport(Vec2::new(10.0, 10.0), 0.0);
+        assert!(
+            sim.joint_angles_deg(0).is_none(),
+            "no body until the next sample"
+        );
+        // A missing sample keeps the state.
+        sim.apply_ground(&samples_on_slope(&sim, 0.05), 1.0 / 64.0);
+        let kept = sim.consist_body(0);
+        sim.apply_ground(&[None, None], 1.0 / 64.0);
+        assert_eq!(sim.consist_body(0), kept);
     }
 }

@@ -12,7 +12,8 @@
 //! * `articulation_<n>_alpha` — yaw of segment `n + 1` against the unit ahead, **degrees**,
 //!   positive when the segment is turned clockwise (the models rotate the bellows dummies by
 //!   fractions `0.25 … 1.0` of it with factors in degrees);
-//! * `articulation_<n>_beta` / `_gamma` — pitch and roll; `0` for now (flat chain).
+//! * `articulation_<n>_beta` / `_gamma` — pitch and roll of the unit against the one ahead,
+//!   degrees, from the simulation's fixed-step ground following (`0` without ground samples).
 
 use bevy::math::{DVec2, Vec2, Vec3};
 use bevy::prelude::*;
@@ -49,9 +50,11 @@ pub struct ArticulatedSegment {
     /// rendered pose interpolates between them.
     prev_pose: Option<(Vec2, f32)>,
     curr_pose: Option<(Vec2, f32)>,
-    /// Height, pitch and roll of the segment on the ground under it, set by the game each frame
-    /// (`None`: the segment keeps the root's height and stays level).
-    pub ground: Option<SegmentGround>,
+    /// Height, pitch and roll of the segment on the ground after the previous and the last fixed
+    /// step (from the simulation's ground following; `None`: no ground sample yet, the segment
+    /// keeps the root's height and stays level). The rendered pose interpolates between them.
+    prev_ground: Option<SegmentGround>,
+    curr_ground: Option<SegmentGround>,
     /// Index of the segment's first axle in the consist-wide numbering the model uses
     /// (`Wheel_Rotation_<index>_L`: the head's axles come first, then each trailer's).
     pub first_axle: usize,
@@ -93,7 +96,8 @@ impl ArticulatedSegment {
             reversed: false,
             prev_pose: None,
             curr_pose: None,
-            ground: None,
+            prev_ground: None,
+            curr_ground: None,
             first_axle: 0,
             wheels: Vec::new(),
         }
@@ -134,6 +138,12 @@ impl ArticulatedSegment {
         d
     }
 
+    /// How the segment lies on the ground after the last fixed step, if it has been sampled.
+    #[must_use]
+    pub fn ground(&self) -> Option<SegmentGround> {
+        self.curr_ground
+    }
+
     /// Position and heading of the segment in the kinematic frame (its mirrored frame when
     /// `reversed`): the frame its coupling points and rear axle are given in.
     #[must_use]
@@ -164,7 +174,7 @@ impl ArticulatedSegment {
 /// gives a **negative** beta (`docs/src/architecture/bellows-census.md`, Sign Verification).
 #[must_use]
 pub fn joint_beta_deg(leader_pitch: f32, pitch: f32) -> f32 {
-    (leader_pitch - pitch).to_degrees()
+    opts_sim::vehicle::ground::joint_beta_deg(leader_pitch, pitch)
 }
 
 /// The segments behind the root unit, front to back.
@@ -243,6 +253,7 @@ pub fn articulation_system(
         }
         let jumped = announced || unannounced;
         let mut alphas = Vec::with_capacity(chain.segments.len());
+        let mut joints: Vec<(usize, f32, f32)> = Vec::new();
         let mut wheel_vars: Vec<(usize, f32, Vec<SegmentWheel>)> = Vec::new();
         for (k, &e) in chain.segments.iter().enumerate() {
             let Ok((mut seg, mut tf)) = segments.get_mut(e) else {
@@ -253,6 +264,21 @@ pub fn articulation_system(
             };
             if jumped {
                 seg.curr_pose = None;
+                seg.curr_ground = None;
+            }
+            // Pitch, roll and height from the simulation's fixed-step ground following.
+            seg.prev_ground = seg.curr_ground;
+            seg.curr_ground = sim.consist_body(k).map(|b| SegmentGround {
+                elevation: b.elevation,
+                pitch: b.pitch,
+                roll: b.roll,
+            });
+            if seg.prev_ground.is_none() {
+                seg.prev_ground = seg.curr_ground;
+            }
+            if let Some((beta, gamma)) = sim.joint_angles_deg(k) {
+                // The joint cannot pitch beyond `[coupling_front_character]` min/max beta.
+                joints.push((k, seg.clamp_beta_deg(beta), gamma));
             }
             let now = (
                 Vec2::new(unit.origin.x as f32, unit.origin.y as f32),
@@ -274,8 +300,12 @@ pub fn articulation_system(
         }
         if let Some(scripts) = scripts {
             if let Ok(mut engine) = scripts.engine.lock() {
-                // `beta` (pitch) and `gamma` (roll) follow the ground under the segments and are set
-                // by the game each frame (`follow_ground_chain`); the kinematics only know yaw.
+                // `beta` (pitch) and `gamma` (roll) come from the simulation's fixed-step ground
+                // following (the game hands it the sampled heights); without samples they stay 0.
+                for (k, beta, gamma) in &joints {
+                    engine.set(&format!("articulation_{k}_beta"), *beta);
+                    engine.set(&format!("articulation_{k}_gamma"), *gamma);
+                }
                 for (k, a) in alphas.iter().enumerate() {
                     engine.set(&format!("articulation_{k}_alpha"), *a as f32);
                 }
@@ -317,7 +347,15 @@ pub fn articulation_render_system(
             let dh = (h1 - h0 + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU)
                 - std::f32::consts::PI;
             let (p, h) = (p0.lerp(p1, alpha), h0 + dh * alpha);
-            let ground = seg.ground;
+            // Height, pitch and roll interpolate between the last two fixed steps like the pose.
+            let ground = match (seg.prev_ground, seg.curr_ground) {
+                (Some(a), Some(c)) => Some(SegmentGround {
+                    elevation: a.elevation + (c.elevation - a.elevation) * alpha,
+                    pitch: a.pitch + (c.pitch - a.pitch) * alpha,
+                    roll: a.roll + (c.roll - a.roll) * alpha,
+                }),
+                (_, c) => c,
+            };
             let z = ground.map_or(root_tf.translation.y, |g| g.elevation);
             tf.translation = omsi_to_bevy_pos(Vec3::new(p.x, p.y, z));
             let turn = if seg.reversed {
