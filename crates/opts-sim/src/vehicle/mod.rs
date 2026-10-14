@@ -39,6 +39,33 @@ pub struct ScriptDrive {
 /// vehicle (dry asphalt).
 pub const ROAD_FRICTION: f32 = 0.85;
 
+/// What a following unit (a trailer or further car of a consist) adds to the vehicle's dynamics.
+///
+/// Only the mass and how it is carried matter for the longitudinal equation: the unit's mass
+/// accelerates and brakes with the head, and the share of it that stands on driven axles carries
+/// traction. Its pose is the business of [`trailer::TrailerKinematics`].
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct UnitLoad {
+    /// Mass of the unit in kilograms.
+    pub mass_kg: f32,
+    /// Number of axles of the unit.
+    pub axles: usize,
+    /// How many of them are driven (`achse_antrieb`).
+    pub driven_axles: usize,
+}
+
+impl UnitLoad {
+    /// Mass standing on driven axles, assuming the axles carry equal loads.
+    #[must_use]
+    pub fn driven_mass_kg(&self) -> f32 {
+        if self.axles == 0 {
+            0.0
+        } else {
+            self.mass_kg * self.driven_axles.min(self.axles) as f32 / self.axles as f32
+        }
+    }
+}
+
 /// High-level vehicle physics simulation orchestrator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VehicleSimulation {
@@ -60,6 +87,13 @@ pub struct VehicleSimulation {
     /// built-in drivetrain decides).
     #[serde(default)]
     pub script_drive: Option<ScriptDrive>,
+    /// The following units of the consist (see [`UnitLoad`]); empty for a solo vehicle.
+    #[serde(default)]
+    pub trailers: Vec<UnitLoad>,
+    /// Mass of the head unit alone (kg); `0` until [`Self::set_trailers`] has run, then the
+    /// chassis mass is the whole consist's.
+    #[serde(default)]
+    pub head_mass_kg: f32,
 }
 
 impl Default for VehicleSimulation {
@@ -117,6 +151,8 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
+            trailers: Vec::new(),
+            head_mass_kg: 0.0,
         }
     }
 
@@ -158,7 +194,63 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
+            trailers: Vec::new(),
+            head_mass_kg: 0.0,
         }
+    }
+
+    /// Mass of the head unit alone (kg).
+    #[must_use]
+    pub fn head_mass_kg(&self) -> f32 {
+        if self.head_mass_kg > 0.0 {
+            self.head_mass_kg
+        } else {
+            self.chassis.total_mass_kg
+        }
+    }
+
+    /// Mass of the whole consist (kg): the head and every following unit.
+    #[must_use]
+    pub fn consist_mass_kg(&self) -> f32 {
+        self.chassis.total_mass_kg
+    }
+
+    /// Declares the following units of the consist. The chassis mass, which accelerates and
+    /// brakes, becomes the sum of the head's and the units' masses; the head's own axle loads
+    /// keep using the head's mass. Calling it again replaces the units.
+    pub fn set_trailers(&mut self, units: Vec<UnitLoad>) {
+        let head = self.head_mass_kg();
+        self.head_mass_kg = head;
+        self.chassis.total_mass_kg = head + units.iter().map(|u| u.mass_kg.max(0.0)).sum::<f32>();
+        self.trailers = units;
+    }
+
+    /// Mass standing on driven axles (kg): the head's share by its static axle loads (all of it
+    /// when no axle is marked driven) plus the driven share of every following unit.
+    #[must_use]
+    pub fn driven_mass_kg(&self) -> f32 {
+        let head = self.head_mass_kg();
+        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
+        let loads = self.suspension.compute_static_loads(&positions, head);
+        let total: f32 = loads.iter().sum();
+        let driven: f32 = self
+            .axles
+            .iter()
+            .zip(&loads)
+            .filter(|(a, _)| a.config.is_driven)
+            .map(|(_, l)| *l)
+            .sum();
+        let head_share = if driven > 0.0 && total > 0.0 {
+            driven / total
+        } else {
+            1.0
+        };
+        head * head_share
+            + self
+                .trailers
+                .iter()
+                .map(UnitLoad::driven_mass_kg)
+                .sum::<f32>()
     }
 
     /// Steps the vehicle simulation by a fixed time delta `dt`.
@@ -187,15 +279,18 @@ impl VehicleSimulation {
             self.chassis.total_mass_kg,
         );
         if let Some(d) = self.script_drive {
-            // The scripts' torque and brakes, limited by what the tyres can carry.
+            // The scripts' torque and brakes, limited by what the tyres can carry: traction by the
+            // mass on driven axles (head and following units), braking by the whole consist.
             let limit = ROAD_FRICTION * self.chassis.total_mass_kg * 9.81;
+            let traction_limit = ROAD_FRICTION * self.driven_mass_kg() * 9.81;
             let driven_radius = self
                 .axles
                 .iter()
                 .find(|a| a.config.is_driven)
                 .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
                 .max(0.1);
-            forces.tractive_force_n = (d.wheel_torque_nm / driven_radius).clamp(-limit, limit);
+            forces.tractive_force_n =
+                (d.wheel_torque_nm / driven_radius).clamp(-traction_limit, traction_limit);
             forces.braking_force_n = d.brake_force_n.clamp(0.0, limit);
         }
 
@@ -238,11 +333,11 @@ impl VehicleSimulation {
         let axle_positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
         let static_loads = self
             .suspension
-            .compute_static_loads(&axle_positions, self.chassis.total_mass_kg);
+            .compute_static_loads(&axle_positions, self.head_mass_kg());
         let dynamic_loads = self.suspension.compute_dynamic_loads(
             &static_loads,
             &axle_positions,
-            self.chassis.total_mass_kg,
+            self.head_mass_kg(),
             self.chassis.local_acceleration.y,
         );
 
