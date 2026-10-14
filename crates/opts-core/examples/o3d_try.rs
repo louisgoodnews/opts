@@ -1,0 +1,14 @@
+fn main() {
+    for a in std::env::args().skip(1) {
+        let b = std::fs::read(&a).unwrap();
+        match opts_core::formats::o3d::parse(&b) {
+            Ok(o) => println!(
+                "{a}: ok nv={} nt={} nm={}",
+                o.vertices.len(),
+                o.indices.len(),
+                o.materials.len()
+            ),
+            Err(e) => println!("{a}: {e}"),
+        }
+    }
+}

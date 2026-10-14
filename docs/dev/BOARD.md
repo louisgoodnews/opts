@@ -88,6 +88,7 @@ _Work actively being executed in the current session._
 - `[~]` 🟠 **AI road traffic: debug overlay, `traffic.*` control methods, F10 counts, speed limits from rules** (M-0049, code) — traffic runs in game; signal heads follow the junction programs (2026-10-12); these are the open Phase C/D items.
 - `[~]` 🟠 **Pedestrians: crossings and signals, `[trafficdensity_passenger]`, separation/LOD** (M-0050, code)
 - `[~]` 🟡 **Bevy 0.20 follow-up: replace legacy `Interaction` with `Hovered`/`Pressed`; remove crate-wide `#![allow(deprecated)]`** (M-0047, refactor) — merged to `master` 2026-10-11.
+- `[~]` 🟠 **Scrambled mesh audit and fix: offline corpus audit (`mesh_audit`, `tile_audit`), live sweeps, [Mesh Issue Registry](../src/quality/mesh-issue-registry.md)** (M-0038, test/code) — task [P-1014](tasks/P-1014 - Scrambled Mesh Audit and Fix.md), progress [mesh-audit.md](progress/mesh-audit.md); branch `agent/mesh-audit`.
 - `[~]` 🟡 **Script-driven animation: SD200 screenshot check, `[matl_nightmap]`, `[light_enh_2]`** (M-0045, test/code)
 
 > 📝 The agent populates this column only after starting execution

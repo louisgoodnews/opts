@@ -176,6 +176,16 @@ pub fn o3d_to_bevy_meshes_by_material_slots(
 
     let mut groups: BTreeMap<usize, Vec<[u32; 3]>> = BTreeMap::new();
     for (i, tri) in o3d.indices.iter().enumerate() {
+        // A non-finite coordinate (observed: `kfznhalterung.o3d` of five vehicles stores `inf`)
+        // would make the bounding box of the whole mesh NaN and the entity unculled or invisible;
+        // the faces that use such a vertex are skipped (mesh audit P-1014, MI-0005).
+        if tri.iter().any(|&vi| {
+            o3d.vertices
+                .get(vi as usize)
+                .is_some_and(|v| !v.position.is_finite() || !v.uv.is_finite())
+        }) {
+            continue;
+        }
         let slot = o3d.face_materials.get(i).copied().unwrap_or(0) as usize;
         groups.entry(slot).or_default().push(*tri);
     }
@@ -341,6 +351,47 @@ pub fn o3d_to_bevy_meshes_by_material_slots(
         out.push((slot, mesh));
     }
     out
+}
+
+#[cfg(test)]
+mod finite_tests {
+    use super::*;
+    use bevy::math::{Vec2, Vec3};
+    use opts_core::formats::o3d::Vertex;
+
+    fn vertex(p: Vec3) -> Vertex {
+        Vertex {
+            position: p,
+            normal: Vec3::Y,
+            uv: Vec2::ZERO,
+            color: None,
+        }
+    }
+
+    #[test]
+    fn faces_with_non_finite_vertices_are_skipped() {
+        let o = O3d {
+            version: 1,
+            header_flags: 0,
+            vertices: vec![
+                vertex(Vec3::ZERO),
+                vertex(Vec3::X),
+                vertex(Vec3::Z),
+                vertex(Vec3::new(f32::INFINITY, 0.0, 0.0)),
+            ],
+            indices: vec![[0, 1, 2], [0, 1, 3]],
+            face_materials: vec![0, 0],
+            materials: Vec::new(),
+            transform: None,
+            encryption_key: None,
+            descrambled: false,
+            unknown_chunks: Vec::new(),
+        };
+        let meshes = o3d_to_bevy_meshes_by_material(&o);
+        assert_eq!(meshes.len(), 1);
+        let n = meshes[0].1.indices().map_or(0, bevy::mesh::Indices::len);
+        assert_eq!(n, 3, "only the finite triangle remains");
+    }
 }
 
 /// Converts a single DirectX [`XSubMesh`] into a native Bevy [`Mesh`].

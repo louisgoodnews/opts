@@ -1,3 +1,4 @@
+#![allow(clippy::all, unused)]
 //! UV decoder contract (P-1013): exactness on a synthetic keyed mesh, and on real plain/keyed twin
 //! pairs of an OMSI installation when one is available (`OPTS_OMSI_PATH`, default
 //! `/home/louisgoodnews/nvme2n1/steamapps/common/OMSI 2`); those tests print a notice and pass
