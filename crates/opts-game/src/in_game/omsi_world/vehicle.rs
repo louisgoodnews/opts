@@ -595,6 +595,9 @@ pub(super) fn spawn_trailer_chain(
                         max_alpha,
                     );
                     s.reversed = reversed;
+                    s.load = Some(opts_sim::vehicle::consist::UnitLoad::from_manifest(
+                        &manifest, reversed,
+                    ));
                     // The bus files list min and max in either order (3 files have 20,-20).
                     s.beta_limits_deg = manifest.coupling_front_limits.map(|l| {
                         (

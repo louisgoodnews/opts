@@ -37,6 +37,8 @@ pub struct ArticulatedSegment {
     pub rear_axle_y: f32,
     /// Joint limit on `|α|` in degrees (`[coupling_front_character]`).
     pub max_alpha_deg: f32,
+    /// Mass and axles of the unit for the consist dynamics (`None`: the unit is massless).
+    pub load: Option<opts_sim::vehicle::consist::UnitLoad>,
     /// Limits of the pitch `β` in degrees `(min, max)` (`[coupling_front_character]`); the
     /// `articulation_<k>_beta` variable is clamped to them. `None`: unlimited.
     pub beta_limits_deg: Option<(f32, f32)>,
@@ -86,6 +88,7 @@ impl ArticulatedSegment {
             front_local,
             rear_axle_y,
             max_alpha_deg,
+            load: None,
             beta_limits_deg: None,
             reversed: false,
             prev_pose: None,
@@ -179,7 +182,7 @@ fn seed_consist(
     chain: &[Entity],
     segments: &Query<(&mut ArticulatedSegment, &mut Transform), Without<ArticulatedChain>>,
 ) {
-    sim.consist.clear();
+    sim.clear_consist();
     for &e in chain {
         let Ok((seg, _)) = segments.get(e) else {
             break;
@@ -190,6 +193,7 @@ fn seed_consist(
             DVec2::new(f64::from(front.x), f64::from(front.y)),
             f64::from((front.y - seg.rear_axle_y).max(1.0)),
             f64::from(seg.max_alpha_deg),
+            seg.load.clone(),
         );
     }
 }

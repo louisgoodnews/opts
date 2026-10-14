@@ -6,6 +6,7 @@
 
 pub mod axle;
 pub mod chassis;
+pub mod consist;
 pub mod drivetrain;
 pub mod inputs;
 pub mod suspension;
@@ -13,6 +14,7 @@ pub mod trailer;
 
 use self::axle::AxleState;
 use self::chassis::ChassisState;
+use self::consist::{driven_and_braked_load_n, UnitAxle, UnitLoad, GRAVITY};
 use self::drivetrain::DrivetrainModel;
 use self::inputs::VehicleInputs;
 use self::suspension::SuspensionModel;
@@ -54,6 +56,11 @@ pub struct VehicleSimulation {
     /// [`VehicleSimulation::step`] and serialised with it. Empty for a solitary vehicle.
     #[serde(default)]
     pub consist: Vec<TrailerKinematics>,
+    /// Mass and axles of each unit of [`VehicleSimulation::consist`] (same order; the chassis'
+    /// own mass and axles are `chassis.total_mass_kg` and `axles`). A unit attached without a
+    /// load counts as massless.
+    #[serde(default)]
+    pub trailer_loads: Vec<UnitLoad>,
     /// Number of [`VehicleSimulation::teleport`] calls so far (wrapping). Readers that keep
     /// per-step state of their own compare it with the last value they saw to learn that the
     /// consist was re-seeded.
@@ -121,6 +128,7 @@ impl VehicleSimulation {
             drivetrain: DrivetrainModel::new(),
             suspension,
             consist: Vec::new(),
+            trailer_loads: Vec::new(),
             teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
@@ -159,6 +167,7 @@ impl VehicleSimulation {
             drivetrain: DrivetrainModel::new(),
             suspension: SuspensionModel::new(1.15, 0.0),
             consist: Vec::new(),
+            trailer_loads: Vec::new(),
             teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
@@ -185,23 +194,23 @@ impl VehicleSimulation {
         }
 
         // 2. Drivetrain & braking forces
-        let mut forces = self.drivetrain.step(
-            &self.inputs,
-            speed,
-            first_wheel_radius,
-            self.chassis.total_mass_kg,
-        );
+        let moving_mass_kg = self.consist_mass_kg();
+        let mut forces =
+            self.drivetrain
+                .step(&self.inputs, speed, first_wheel_radius, moving_mass_kg);
         if let Some(d) = self.script_drive {
             // The scripts' torque and brakes, limited by what the tyres can carry.
-            let limit = ROAD_FRICTION * self.chassis.total_mass_kg * 9.81;
+            let (driven_n, braked_n) = self.friction_loads_n();
+            let (drive_limit, brake_limit) = (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
             let driven_radius = self
                 .axles
                 .iter()
                 .find(|a| a.config.is_driven)
                 .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
                 .max(0.1);
-            forces.tractive_force_n = (d.wheel_torque_nm / driven_radius).clamp(-limit, limit);
-            forces.braking_force_n = d.brake_force_n.clamp(0.0, limit);
+            forces.tractive_force_n =
+                (d.wheel_torque_nm / driven_radius).clamp(-drive_limit, drive_limit);
+            forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
         }
 
         let net_longitudinal_force =
@@ -232,11 +241,12 @@ impl VehicleSimulation {
             (yaw_rate - self.chassis.yaw_rate_rad_s) * self.chassis.yaw_inertia_kg_m2 * 10.0;
 
         // 4. Integrate chassis dynamics
-        self.chassis.integrate(
+        self.chassis.integrate_with_mass(
             net_longitudinal_force,
             yaw_torque,
             self.inputs.is_braking(),
             dt,
+            moving_mass_kg,
         );
 
         // 5. Axle rotation and suspension load compliance
@@ -288,13 +298,15 @@ impl VehicleSimulation {
     ///
     /// `hitch_local` is the rear coupling of the unit ahead and `front_local` the front coupling
     /// of the new unit, both `(x, y)` in their own frames; `axle_distance` is the distance from
-    /// the hitch to the new unit's rearmost axle and `max_alpha_deg` the joint limit.
+    /// the hitch to the new unit's rearmost axle and `max_alpha_deg` the joint limit. `load` is
+    /// the unit's mass and axles (`None`: the unit does not take part in the dynamics).
     pub fn attach_trailer(
         &mut self,
         hitch_local: DVec2,
         front_local: DVec2,
         axle_distance: f64,
         max_alpha_deg: f64,
+        load: Option<UnitLoad>,
     ) {
         let (pos, heading) = self.leader_pose_of(self.consist.len());
         self.consist.push(TrailerKinematics::new(
@@ -305,6 +317,70 @@ impl VehicleSimulation {
             pos,
             heading,
         ));
+        self.trailer_loads.push(load.unwrap_or(UnitLoad {
+            mass_kg: 0.0,
+            axles: Vec::new(),
+        }));
+    }
+
+    /// Removes all following units.
+    pub fn clear_consist(&mut self) {
+        self.consist.clear();
+        self.trailer_loads.clear();
+    }
+
+    /// Mass of the whole consist the longitudinal dynamics act on (kg): the chassis' own mass
+    /// plus the following units' (design D2, `Σ mᵢ`).
+    #[must_use]
+    pub fn consist_mass_kg(&self) -> f32 {
+        self.chassis.total_mass_kg + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
+    }
+
+    /// Summed static normal force `(driven axles, braked axles)` over all units (N): what the
+    /// tyres can transmit is `ROAD_FRICTION` times these. The chassis' axles carry its own mass
+    /// (distributed by the suspension model), each following unit its own; every axle brakes.
+    #[must_use]
+    pub fn friction_loads_n(&self) -> (f32, f32) {
+        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
+        let head = self
+            .suspension
+            .compute_static_loads(&positions, self.chassis.total_mass_kg);
+        let mut axles: Vec<(UnitAxle, f32)> = self
+            .axles
+            .iter()
+            .zip(head)
+            .map(|(a, n)| {
+                (
+                    UnitAxle {
+                        longitudinal_m: a.config.longitudinal_m,
+                        is_driven: a.config.is_driven,
+                    },
+                    n,
+                )
+            })
+            .collect();
+        for unit in &self.trailer_loads {
+            axles.extend(unit.axles.iter().copied().zip(unit.axle_loads_n()));
+        }
+        driven_and_braked_load_n(&axles)
+    }
+
+    /// Force the joint of consist unit `k` carries (N, report only; nothing is fed back): the
+    /// mass behind it accelerated with the chassis plus its rolling resistance,
+    /// `F = Σ_{j≥k} mⱼ (a + sign(v)·Crr·g)`. `None` for a missing unit.
+    #[must_use]
+    pub fn hitch_force_n(&self, k: usize) -> Option<f32> {
+        let behind: f32 = self
+            .trailer_loads
+            .get(k..)
+            .filter(|rest| !rest.is_empty())?
+            .iter()
+            .map(|u| u.mass_kg)
+            .sum();
+        let v = self.chassis.forward_speed_m_s();
+        let direction = if v.abs() > 0.01 { v.signum() } else { 0.0 };
+        let a = self.chassis.local_acceleration.y;
+        Some(behind * (a + direction * drivetrain::ROLLING_RESISTANCE_COEFF * GRAVITY))
     }
 
     /// Yaw angle of consist unit `k` against the unit ahead in radians (positive = turned
@@ -381,7 +457,7 @@ mod tests {
     /// 1 m ahead of the unit's origin, rear axle 6 m behind that.
     fn articulated() -> VehicleSimulation {
         let mut sim = VehicleSimulation::new_standard_bus(11_500.0, 5.85);
-        sim.attach_trailer(DVec2::new(0.0, -1.5), DVec2::new(0.0, 1.0), 7.0, 52.5);
+        sim.attach_trailer(DVec2::new(0.0, -1.5), DVec2::new(0.0, 1.0), 7.0, 52.5, None);
         sim.inputs.set_parking_brake(false);
         sim.inputs.set_gear(GearPosition::Drive);
         sim.inputs.set_throttle(0.4);
@@ -461,5 +537,132 @@ mod tests {
         sim.step(1.0 / 64.0);
         assert!((sim.consist[0].origin - before).length() < 1e-6);
         assert!(sim.consist_alpha_rad(0).unwrap().abs() < 1e-6);
+    }
+
+    fn unit(mass_kg: f32, axles: &[(f32, bool)]) -> UnitLoad {
+        UnitLoad {
+            mass_kg,
+            axles: axles
+                .iter()
+                .map(|&(y, is_driven)| UnitAxle {
+                    longitudinal_m: y,
+                    is_driven,
+                })
+                .collect(),
+        }
+    }
+
+    /// A bus of 11.5 t with a trailer of `trailer_kg` (none: solo), on a straight line.
+    fn towing(trailer_kg: Option<f32>, trailer_driven: bool) -> VehicleSimulation {
+        let mut sim = VehicleSimulation::new_standard_bus(11_500.0, 5.85);
+        if let Some(m) = trailer_kg {
+            let load = unit(m, &[(-4.0, trailer_driven)]);
+            sim.attach_trailer(
+                DVec2::new(0.0, -2.0),
+                DVec2::new(0.0, 1.0),
+                6.0,
+                52.5,
+                Some(load),
+            );
+        }
+        sim.inputs.set_parking_brake(false);
+        sim
+    }
+
+    /// Design V5 / acceptance 2: with the same wheel torque the acceleration scales with
+    /// `1 / Σm` within 2 %. The traction part is the difference to a run without torque from
+    /// the same state, so resistances cancel.
+    #[test]
+    fn script_torque_accelerates_the_whole_consist_mass() {
+        let accel = |trailer: Option<f32>, torque: f32| {
+            let mut sim = towing(trailer, false);
+            sim.chassis.local_velocity.y = 5.0;
+            sim.script_drive = Some(ScriptDrive {
+                wheel_torque_nm: torque,
+                brake_force_n: 0.0,
+            });
+            sim.step(1.0 / 64.0);
+            sim.chassis.local_acceleration.y
+        };
+        let traction = |trailer| accel(trailer, 4_000.0) - accel(trailer, 0.0);
+        let (solo, pair) = (traction(None), traction(Some(10_000.0)));
+        let expected = solo * 11_500.0 / 21_500.0;
+        assert!(
+            (pair - expected).abs() < 0.02 * expected,
+            "traction accel {pair} vs {expected}"
+        );
+        assert!((towing(Some(10_000.0), false).consist_mass_kg() - 21_500.0).abs() < 1e-3);
+    }
+
+    /// Plan step 4: stopping distance of head-only versus consist differs by the mass ratio
+    /// (here: not at all, since brake force is limited by friction, `μ·g` per kilogram).
+    #[test]
+    fn brake_limit_follows_the_summed_axle_loads() {
+        let stop = |sim: &mut VehicleSimulation| {
+            sim.chassis.local_velocity.y = 14.0; // ~50 km/h
+            sim.script_drive = Some(ScriptDrive {
+                wheel_torque_nm: 0.0,
+                brake_force_n: 1.0e9, // more than the tyres can carry
+            });
+            sim.inputs.set_service_brake(1.0);
+            let mut s = 0.0_f32;
+            for _ in 0..2000 {
+                let before = sim.chassis.position.y;
+                sim.step(1.0 / 64.0);
+                s += sim.chassis.position.y - before;
+                if sim.chassis.forward_speed_m_s() <= 0.0 {
+                    break;
+                }
+            }
+            s
+        };
+        let (solo, pair) = (
+            stop(&mut towing(None, false)),
+            stop(&mut towing(Some(10_000.0), false)),
+        );
+        // Same μ·g deceleration: the distance matches within 2 % (every axle brakes).
+        assert!((solo - pair).abs() < 0.02 * solo, "{solo} vs {pair}");
+        let ideal = 14.0_f32 * 14.0 / (2.0 * ROAD_FRICTION * GRAVITY);
+        assert!(solo > ideal * 0.95, "{solo} vs ideal {ideal}");
+    }
+
+    /// Plan step 5: the drive cap follows the driven axles of all units.
+    #[test]
+    fn drive_limit_follows_the_driven_axles_of_all_units() {
+        let head_only = towing(Some(10_000.0), false);
+        let all_driven = towing(Some(10_000.0), true);
+        let (d0, b0) = head_only.friction_loads_n();
+        let (d1, b1) = all_driven.friction_loads_n();
+        assert!((b0 - b1).abs() < 1.0, "braked load is the same");
+        assert!((b0 - 21_500.0 * GRAVITY).abs() < 5.0);
+        assert!((d1 - d0 - 10_000.0 * GRAVITY).abs() < 5.0, "{d0} -> {d1}");
+        // The head's rear axle carries half its weight on this symmetric bus.
+        assert!((d0 - 0.5 * 11_500.0 * GRAVITY).abs() < 5.0);
+    }
+
+    /// Plan step 6: on a straight run `F_h = m_last·a + resistances`.
+    #[test]
+    fn hitch_force_of_the_last_unit_is_mass_times_acceleration_plus_rolling() {
+        let mut sim = towing(Some(10_000.0), false);
+        sim.script_drive = Some(ScriptDrive {
+            wheel_torque_nm: 6_000.0,
+            brake_force_n: 0.0,
+        });
+        for _ in 0..64 {
+            sim.step(1.0 / 64.0);
+        }
+        let a = sim.chassis.local_acceleration.y;
+        let f = sim.hitch_force_n(0).unwrap();
+        let want = 10_000.0 * (a + drivetrain::ROLLING_RESISTANCE_COEFF * GRAVITY);
+        assert!(a > 0.1 && (f - want).abs() < 1.0, "{f} vs {want}");
+        assert_eq!(sim.hitch_force_n(1), None);
+    }
+
+    #[test]
+    fn loads_survive_serialisation() {
+        let sim = towing(Some(9_000.0), true);
+        let back: VehicleSimulation =
+            bincode::deserialize(&bincode::serialize(&sim).unwrap()).unwrap();
+        assert_eq!(sim, back);
     }
 }

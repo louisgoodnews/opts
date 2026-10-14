@@ -210,7 +210,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 #### M-0053 — Articulated Vehicle Completion
 - [ ] 🟡 **Q-ART-01 sign check (screenshot in a right-hand curve)** (M-0053, test)
-- [ ] 🟡 **Replace `ArticulationJoint` with `TrailerKinematics` in `VehicleSimulation`; trailer loads in physics** (M-0053, code) — F-002. D1 (state in `VehicleSimulation`, `ArticulationJoint` removed, `teleport`) done on `agent/articulation-physics-impl`, awaiting merge; D2 (loads) open.
+- [ ] 🟡 **Replace `ArticulationJoint` with `TrailerKinematics` in `VehicleSimulation`; trailer loads in physics** (M-0053, code) — F-002. D1 (state in `VehicleSimulation`, `ArticulationJoint` removed, `teleport`) done on `agent/articulation-physics-impl`, awaiting merge; D2 (consist mass, axle-load friction caps, hitch force) done on the same branch; D3 (fixed-step pitch/roll) open.
 - [ ] 🟡 **Segment pitch from the ground-height query; `articulation_<n>_beta`** (M-0053, code) — needs M-0025 query; F-003.
 - [ ] 🟢 **`[couple_front]`, chains > 4, trailers for AI and parked vehicles** (M-0053, code)
 

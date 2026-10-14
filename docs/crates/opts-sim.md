@@ -30,6 +30,7 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
   - `drivetrain: DrivetrainModel`: Powertrain engine, automatic transmission, and braking forces.
   - `suspension: SuspensionModel`: Static weight distribution and dynamic longitudinal load transfer.
   - `consist: Vec<TrailerKinematics>`: the following units of an articulated bus or tram, stepped with the chassis and serialised with it (`#[serde(default)]`). `attach_trailer(..)` adds a unit, `consist_alpha_rad(k)` gives its joint angle.
+  - `trailer_loads: Vec<UnitLoad>`, `consist_mass_kg()`, `friction_loads_n()`, `hitch_force_n(k)`: the consist's mass and axles (`vehicle::consist`, M-0053 Part 2). The longitudinal equation acts on `Σ m`; script drive torque is limited by `ROAD_FRICTION` times the static load on the driven axles of all units, brake force by the load on all axles.
   - `teleport(position, heading_rad)`: places the chassis and re-seeds the consist straight behind it; `teleports` counts the calls so readers can notice them. `reseed_consist()` does the re-seeding alone.
   - `inputs: VehicleInputs`: Active driver analog and digital control state.
 
