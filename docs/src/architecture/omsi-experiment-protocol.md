@@ -18,6 +18,17 @@ The point of this page is that a session can follow a checklist instead of impro
 5. **One change per run** where a script copy is edited; write the change into the README before running.
 6. **Say what you saw in one sentence per item** even with a recording; the sentence is the index.
 
+## Pre-flight (5 minutes, before session 1)
+
+Session 2 asks you to edit script copies, and a vehicle that OMSI rejects or that crashes would waste the whole session. So test the **simplest edit first, on one vehicle copy**, before session 1:
+
+1. Copy a vehicle folder (the NG272 or SD200) to a new name beside it, for example `MAN_NL_NG_EXP`.
+2. In the copy, change one `STTextOut` call of a display script by one argument (for example the last `0` to `1`), save it with the same encoding and line endings.
+3. Start OMSI, load the copy, look at the display, close OMSI.
+4. Write the result into the README of the session: *loads and the display changed / loads and nothing changed / rejected / crashed*, and what the log said.
+
+If it works, the edit approach of session 2 stands. If it does not, the approach needs revision (for example editing a copy of the `.osc` and pointing the copy's `[script]` list at it, or adding the change through a repaint `[setvar]`), and it is far cheaper to learn that in five minutes now.
+
 ## Session 1: route data and the `M_Wheel` unit (about 1 hour)
 
 Route data first: it is the first coverage cliff (96.8 % of the buses) and blocks the data layer (P3); `M_Wheel` blocks the physics contract (P1).
