@@ -171,7 +171,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🔴 **Mesh fidelity: parked cars, BRT Citaro, buildings (flipped/misaligned), lantern posts** (M-0066, code) — R-01, R-09, R-17, R-18; discovery by the P-1014 mesh audit (running).
 - [ ] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02; the `.water` spec has open questions ❓.
 - [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (not merged), verified live; [architecture](../src/architecture/session-vehicles.md).
-- [ ] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05.
+- [x] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05. **Done 2026-10-13** on `feat/session-save` (ADR-0011, [Session save](../src/architecture/session-save.md), protocol 1.3.0).
 - [ ] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07.
 - [ ] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08.
 - [ ] 🟠 **Control protocol: complete settings control for AI agents** (M-0072, code) — R-10; reproduce the gap first (`settings.*` exists in 1.1.0).

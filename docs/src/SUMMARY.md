@@ -118,6 +118,7 @@
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
+- [Session Save](architecture/session-save.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
@@ -229,6 +230,7 @@
 - [ADR-0007: Hot Reload](adr/0007-hot-reload.md)
 - [ADR-0008: Editor Mode](adr/0008-editor-mode.md)
 - [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
+- [ADR-0011: Session Save Format](adr/0011-session-save-format.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode

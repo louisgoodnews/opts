@@ -89,11 +89,11 @@ pub fn sync_instrument_tokens(
 /// vehicle lights are needed (sun lower than 3 degrees), day otherwise (also without a sky).
 pub fn update_instrument_variant(
     sky: Option<Res<crate::in_game::sky::Sky>>,
-    time: Res<Time<Virtual>>,
+    session: Res<crate::in_game::types::InGameSessionInfo>,
     mut variant: ResMut<InstrumentVariant>,
 ) {
     let wanted = match sky {
-        Some(sky) if sky.lights_needed(time.elapsed_secs()) => InstrumentVariant::Night,
+        Some(sky) if sky.lights_needed(session.sim_elapsed_seconds) => InstrumentVariant::Night,
         _ => InstrumentVariant::Day,
     };
     if *variant != wanted {

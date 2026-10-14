@@ -12,6 +12,7 @@ const MODULES: &[&str] = &[
     "first_run",
     "pause",
     "session_summary",
+    "save",
 ];
 
 fn rust_files(dir: &Path, out: &mut Vec<PathBuf>) {
