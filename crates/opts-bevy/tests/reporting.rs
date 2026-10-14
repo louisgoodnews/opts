@@ -23,6 +23,7 @@ fn meta() -> ReportMeta {
             map: Some("Berlin-Spandau".into()),
             camera: Some("3 External".into()),
             vehicle: None,
+            hardware: None,
         },
         "2026-10-10T14:30:52+02:00".into(),
         Some("TextArea"),

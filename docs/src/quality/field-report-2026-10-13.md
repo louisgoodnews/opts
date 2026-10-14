@@ -41,24 +41,43 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | :--- | :--- | :--- | :--- | :--- |
 | R-20 | A setting **Load all tiles on start**: all map tiles are force-loaded at start and stay loaded; it must also be exposed in the *summary screen* of the new-game menu where the user confirms the start | world / settings / wizard | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
 | R-21 | A setting for the **number of tiles around the centre tile** (the tile the player camera stands on) to load; the default is derived dynamically from the hardware capabilities | world / settings | [M-0080](../roadmap/phase-4/M-0080.md) | 📝 open |
-| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 📝 open |
+| R-22 | A new crate **`opts-hardware`** for deep research of the hardware **without spying on the system** | tooling | [M-0081](../roadmap/phase-5/M-0081.md) | 🟡 implemented on `feat/opts-hardware` (Linux verified; macOS/Windows untested; report-dialog preview and GPU benchmark open) |
 | R-23 | **Research branch** for leveraging Bevy's **instancing** for repeatedly used meshes | performance | [M-0082](../roadmap/phase-5/M-0082.md) (branch `research/mesh-instancing`) | 🔬 started |
 
 ## Follow-up findings (2026-10-13, fourth message)
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-24 | *Settings → Content* shows '679543 Dateien, 75313 Karten, Fahrzeuge und weitere Inhalte'; '75K maps does not add up' (are those tiles?) | settings | [M-0086](../roadmap/phase-9/M-0086.md) | 🔎 analysed: the number is the total of catalogue entities of all kinds (not maps, not tiles); wording misleading, breakdown to be shown |
+| R-24 | *Settings → Content* shows '679543 Dateien, 75313 Karten, Fahrzeuge und weitere Inhalte'; '75K maps does not add up' (are those tiles?) | settings | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ fixed on `feat/combobox-search`: the number was the total of catalogue entities of all kinds (not maps, not tiles); Settings → Content now shows maps, vehicles, scenery objects, splines and other entries (maps and vehicles equal Home) and explains files versus entries |
 | R-25 | A system where **localisation can be added by other human or AI contributors** conveniently, with JSON or other formatted files | UI / i18n | [M-0083](../roadmap/phase-9/M-0083.md) | 📝 open |
-| R-26 | **Viewpoint editor** (Tab) in the driver's view: camera height, X/Y/Z position and FOV, saved per vehicle and loaded as that view's default | camera | [M-0084](../roadmap/phase-4/M-0084.md) | 📝 open |
+| R-26 | **Viewpoint editor** (Tab) in the driver's view: camera height, X/Y/Z position and FOV, saved per vehicle and loaded as that view's default | camera | [M-0084](../roadmap/phase-4/M-0084.md) | 🟡 core done |
 | R-27 | **Research reflections** in mirrors and glass, and in future wet surfaces | rendering | [M-0085](../roadmap/phase-5/M-0085.md) (branch `research/reflections`) | 🔬 started |
-| R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | scroll fixed on `fix/dropdown-scroll`; search open |
+| R-28 | The start-point **dropdown cannot be scrolled**, and is not searchable | UI | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ scroll fixed on `fix/dropdown-scroll`; search field added on `feat/combobox-search` (menus with more than 8 options) |
+| R-29 | Next to *Scan now* show **when the last scan was** and a green / yellow / red status saying whether a manual scan is recommended | settings | [M-0086](../roadmap/phase-9/M-0086.md) | ✅ done on `feat/combobox-search`: status chip (icon + word + reason), rules in M-0086 |
 
 ## Suggestion (2026-10-13, fifth message)
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | R-30 | A **debug mode** (setting or command line, usable by agents through the protocol) in which OPTS tracks and logs **which mesh is located where on which tile** | tooling / content | [M-0087](../roadmap/phase-5/M-0087.md) | 📝 open |
+
+## Follow-up findings (2026-10-13, sixth message)
+
+| ID | Report | Area | Milestone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| R-31 | **Freeze when opening the content section of the settings**; any synchronous blocking task must run in another thread | UI / performance | [M-0088](../roadmap/phase-9/M-0088.md) | 📝 open |
+| R-32 | **Tile streaming** performs poorly, with noticeable freezes; investigate routes for improvement | performance | [M-0089](../roadmap/phase-4/M-0089.md) | 📝 open |
+| R-33 | **Default position per view**, reset with **Shift + Space** | camera | [M-0084](../roadmap/phase-4/M-0084.md) (addendum) | 📝 open |
+| R-34 | A few **pedestrians have scrambled meshes** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-35 | **Hamburg maps:** loading objects fails partially, leaving absent or scrambled objects | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-36 | **Objects take quite a bit of time to load** | performance | [M-0090](../roadmap/phase-10/M-0090.md), [M-0089](../roadmap/phase-4/M-0089.md) | 📝 open |
+| R-37 | Many **parked-car scenery objects are partially transparent** and show the interior | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-38 | **Driving cars have no wheel animations** | content / traffic | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-39 | **Driving cars on Wuppertal maps are transparent** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-40 | **Shadows** (probably overall graphics) need to look more realistic | rendering | [M-0091](../roadmap/phase-8/M-0091.md) | 📝 open |
+| R-41 | **Schwebebahn stations** on the Wuppertal map do not load entirely | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-42 | On Wuppertal some **T-crossings are flipped by 90°** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-43 | M-0071 and directly related items: implemented on a branch by an agent that merges it and removes its worktree itself | UI / process | [M-0071](../roadmap/phase-9/M-0071.md) | 🔨 assigned |
 
 ## Notes
 

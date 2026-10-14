@@ -319,6 +319,7 @@ pub fn rebuild_page(
     settings: Res<GameSettings>,
     caps: Res<SettingsCapabilities>,
     loc: Res<Localization>,
+    hardware: Option<Res<crate::hardware::HardwareState>>,
     focused: Query<&UiId, With<opts_gui::interaction::state::Focused>>,
     cats: Query<(Entity, Option<&Children>), With<PageCategories>>,
     panes: Query<(Entity, Option<&Children>), With<PagePane>>,
@@ -349,6 +350,11 @@ pub fn rebuild_page(
         settings: &settings,
         loc: &loc,
         caps: &caps,
+        hardware: hardware.as_ref().and_then(|h| h.profile.as_ref()),
+        hardware_file: hardware
+            .as_ref()
+            .filter(|h| h.is_stored())
+            .and_then(|h| h.dir.as_deref().map(opts_hardware::store::path)),
     };
     let searching = !state.query.trim().is_empty();
     for cat in registry
@@ -408,6 +414,9 @@ pub fn rebuild_page(
             .filter(|d| !d.hidden)
         {
             spawn_row(&mut commands, pane, &ctx, d);
+            if d.key == "content.rescan" {
+                super::scan_status::spawn_chip(&mut commands, pane);
+            }
         }
         let kind = theme_name_key(theme.kind());
         super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);

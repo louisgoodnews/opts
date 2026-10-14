@@ -118,6 +118,10 @@ fn fixture() -> Fixture {
             .with_selected(0)
             .spawn(&mut commands);
         let _ = combo;
+        let long = ComboboxBuilder::new("Start")
+            .with_options((0..12).map(|i| format!("Start point {i}")).collect())
+            .spawn(&mut commands);
+        commands.entity(long).insert(UiId::new("opt.start"));
         let field = TextFieldBuilder::outlined("Search").spawn(&mut commands);
         commands.entity(field).insert(UiId::new("opt.search"));
     }
@@ -374,6 +378,55 @@ fn select_chooses_a_combobox_option_by_text_or_index() {
     let (code_, data) = rpc(bad);
     assert_eq!(code_, code::NOT_FOUND);
     assert_eq!(data["options"], json!(["Sunny", "Rain", "Fog"]));
+}
+
+#[test]
+fn a_long_dropdown_is_searched_with_text_and_chosen_with_select() {
+    let mut f = fixture();
+    let root = f
+        .app
+        .world_mut()
+        .query::<(Entity, &opts_gui::components::combobox::M3Combobox)>()
+        .iter(f.app.world())
+        .find(|(_, c)| c.options.len() == 12)
+        .map(|(e, _)| e)
+        .expect("the long combobox");
+    f.app
+        .world_mut()
+        .get_mut::<opts_gui::components::combobox::M3Combobox>(root)
+        .expect("combobox")
+        .is_open = true;
+    for _ in 0..6 {
+        f.app.update();
+    }
+    let (typed, picked) = with_client(&mut f.app, f.port, |c| {
+        let typed = c
+            .call(
+                "ui.text",
+                json!({
+                    "id": "opt.start/textbox:widget-combobox-search-label",
+                    "text": "point 11"
+                }),
+            )
+            .expect("text into the search field");
+        settle(400);
+        let picked = c
+            .call(
+                "ui.select",
+                json!({"id": "opt.start", "option": "Start point 11"}),
+            )
+            .expect("select");
+        (typed, picked)
+    });
+    assert_eq!(typed["value"], "point 11");
+    assert_eq!(picked["selected"], "Start point 11");
+    let c = f
+        .app
+        .world()
+        .get::<opts_gui::components::combobox::M3Combobox>(root)
+        .expect("combobox");
+    assert_eq!(c.selected, Some(11));
+    assert!(!c.is_open);
 }
 
 #[test]

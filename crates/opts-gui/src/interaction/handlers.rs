@@ -9,7 +9,7 @@ use bevy::text::EditableText;
 
 use crate::actions::UiAction;
 use crate::components::{
-    combobox::{ComboboxHeader, M3Combobox},
+    combobox::{ComboboxHeader, ComboboxSearch, M3Combobox},
     modal::ModalRoot,
     text_area::TextArea,
     text_field::M3TextField,
@@ -27,6 +27,7 @@ pub type TextEntry = Or<(With<M3TextField>, With<TextArea>, With<EditableText>)>
 pub fn back_system(
     mut actions: MessageReader<UiAction>,
     mut combos: Query<(Entity, &mut M3Combobox)>,
+    mut searches: Query<(&ComboboxSearch, &mut M3TextField)>,
     headers: Query<(Entity, &ComboboxHeader)>,
     focused_toast: Query<&ToastActionButton, With<Focused>>,
     focused_text: Query<(), (With<Focused>, TextEntry)>,
@@ -42,6 +43,18 @@ pub fn back_system(
         let mut handled = false;
         for (combo, mut state) in &mut combos {
             if state.is_open {
+                // A search in progress goes first: Esc clears it, the next Esc closes the list.
+                let mut cleared = false;
+                for (search, mut field) in &mut searches {
+                    if search.0 == combo && !field.text.is_empty() {
+                        field.text.clear();
+                        cleared = true;
+                    }
+                }
+                if cleared {
+                    handled = true;
+                    continue;
+                }
                 state.is_open = false;
                 if let Some((header, _)) = headers.iter().find(|(_, h)| h.0 == combo) {
                     focus.write(FocusEvent::Set(header));

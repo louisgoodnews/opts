@@ -35,8 +35,17 @@ fn heer_wilhelm_cars_and_pedestrians_never_conflict() {
     let go = |p: &SignalProgram, t: f64| p.aspect_at(t) == Aspect::Go;
     for k in 0..4 * 83 * 2 {
         let t = f64::from(k) * 0.5 + 0.25;
-        assert!(!(go(&main, t) && go(&side, t)), "main/side green together at {t}");
-        assert!(!(go(&side, t) && go(&main_ped, t)), "side cars vs main ped at {t}");
-        assert!(!(go(&main, t) && go(&side_ped, t)), "main cars vs side ped at {t}");
+        assert!(
+            !(go(&main, t) && go(&side, t)),
+            "main/side green together at {t}"
+        );
+        assert!(
+            !(go(&side, t) && go(&main_ped, t)),
+            "side cars vs main ped at {t}"
+        );
+        assert!(
+            !(go(&main, t) && go(&side_ped, t)),
+            "main cars vs side ped at {t}"
+        );
     }
 }

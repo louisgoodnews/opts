@@ -102,6 +102,7 @@
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
 - [Performance Profiling and Frame Pacing](architecture/performance-profiling.md)
+- [Hardware Probe: Privacy Charter](architecture/hardware-probe.md)
 - [Texture Quality and Colour (Proposal)](architecture/texture-quality.md)
 - [Visual A/B Procedure and Image Metrics](architecture/visual-ab.md)
 - [Content Quality](quality/README.md)
@@ -228,6 +229,7 @@
 - [ADR-0007: Hot Reload](adr/0007-hot-reload.md)
 - [ADR-0008: Editor Mode](adr/0008-editor-mode.md)
 - [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
+- [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
 
@@ -336,5 +338,6 @@
 -->
 - [Settings (generated)](reference/settings.md)
 - [Control protocol (generated)](reference/control-protocol.md)
+- [Hardware profile fields (generated)](reference/hardware-fields.md)
 - [Input devices and profiles](reference/input-devices.md)
 - [Translating OPTS](reference/translating.md)

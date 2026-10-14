@@ -9,6 +9,7 @@ pub mod control_session;
 pub mod control_ui;
 pub mod drive_history;
 pub mod first_run;
+pub mod hardware;
 pub mod help;
 pub mod home;
 pub mod hud;
@@ -31,6 +32,7 @@ pub mod settings_theme;
 pub mod shell;
 pub mod shutdown;
 pub mod theme_files;
+pub mod viewpoints;
 
 use bevy::prelude::*;
 use opts_gui::prelude::*;
@@ -82,11 +84,13 @@ impl Plugin for OptsGamePlugin {
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
+            .add_plugins(hardware::HardwarePlugin)
             .add_plugins(shell::ShellPlugin)
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)
             .add_plugins(pause::PausePlugin)
             .add_plugins(hud::HudPlugin)
+            .add_plugins(viewpoints::ViewpointPlugin)
             .add_plugins(session_summary::SessionSummaryPlugin)
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)

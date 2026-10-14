@@ -13,6 +13,7 @@ use opts_core::formats::vehicles::BusCamera;
 
 use crate::articulation::ArticulatedSegment;
 use crate::camera::state::{cycle_index, CameraMode, CameraState};
+use crate::camera::viewpoint::ViewpointState;
 use crate::coords::{camera_preset_to_bevy_transform, omsi_to_bevy_pos};
 use crate::vehicle::BusVehicle;
 use crate::vehicle_sim::PlayerVehicle;
@@ -149,6 +150,7 @@ pub fn update_cockpit_camera(
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
     head: Query<&GlobalTransform, With<crate::human::PlayerHead>>,
     windows: Query<&Window, With<PrimaryWindow>>,
+    mut viewpoint: ResMut<ViewpointState>,
     mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
 ) {
     if state.mode != CameraMode::Cockpit {
@@ -165,9 +167,15 @@ pub fn update_cockpit_camera(
     if let Ok(eyes) = head.single() {
         tf.translation = eyes.translation();
     }
+    // The viewpoint editor's offset (right, up, forward in the driver's frame) and FOV.
+    if (viewpoint.default_fov_deg - cam.fov_deg).abs() > 1e-4 {
+        viewpoint.default_fov_deg = cam.fov_deg;
+    }
+    let (_, vrot, _) = gt.to_scale_rotation_translation();
+    tf.translation += vrot * viewpoint.active.local_offset();
     set_fov(
         &mut proj,
-        fov_y_from_horizontal(cam.fov_deg, window_aspect(&windows)),
+        fov_y_from_horizontal(viewpoint.effective_fov_deg(), window_aspect(&windows)),
     );
 }
 

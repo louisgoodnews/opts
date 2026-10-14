@@ -26,6 +26,10 @@ pub struct Ctx<'a> {
     pub loc: &'a Localization,
     /// What the machine can do.
     pub caps: &'a SettingsCapabilities,
+    /// The detected hardware, for the Advanced page.
+    pub hardware: Option<&'a opts_hardware::HardwareProfile>,
+    /// Folder of the stored hardware profile.
+    pub hardware_file: Option<std::path::PathBuf>,
 }
 
 /// A localized text element.

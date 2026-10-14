@@ -6,6 +6,8 @@
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
+- [M-0091 — Shadow Quality and Realism](M-0091.md) — 📝 Planned (R-40)
+
 ## Decisions (project lead, 2026-10-12)
 
 1. **Reality is the reference, not OMSI.** OMSI's graphics are outdated; colour, contrast and lighting are calibrated against real-world photographic and radiometric references, not against OMSI screenshots.
@@ -39,3 +41,5 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](M-0060.md)
   - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; the project lead's testing decides the default; *Natural* equals *Bevy default* until the calibration).
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
+- [ ] **🌑 Shadow Quality and Realism** — [M-0091](M-0091.md)
+  - [ ] Assess and improve shadows with presets and measurements (R-40).

@@ -61,9 +61,11 @@ pub fn signals_from_tile(
         let Some(groups) = source.sco_lights(&o.sco_file) else {
             continue;
         };
-        let programs = groups
-            .iter()
-            .flat_map(|g| g.programs.iter().map(move |p| (f64::from(g.period_sec()), p)));
+        let programs = groups.iter().flat_map(|g| {
+            g.programs
+                .iter()
+                .map(move |p| (f64::from(g.period_sec()), p))
+        });
         for (i, (period, p)) in programs.enumerate() {
             let phases = p
                 .phases

@@ -103,6 +103,7 @@ help-key-tram = Straßenbahn-Route wählen
 help-key-camera = Ego-, Cockpit-, Außen-, Fahrgast-, freie Kamera
 help-key-camera-prev = Vorherige Kamera
 help-key-camera-reset = Kamera zurücksetzen
+help-key-viewpoint = Fahrersicht: Blickpunkt bearbeiten (Augenposition und Sichtfeld); erneut Tab speichert, Esc bricht ab
 help-key-pause-menu = Pause-Menü
 help-key-sim-pause = Simulation anhalten oder fortsetzen
 help-key-vehicle-menu = Fahrzeugmenü (halten oder tippen)
