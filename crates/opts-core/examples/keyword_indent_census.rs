@@ -70,7 +70,9 @@ fn main() {
             .extension()
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        let Ok(bytes) = std::fs::read(p) else { continue };
+        let Ok(bytes) = std::fs::read(p) else {
+            continue;
+        };
         let text = decode_bytes(&bytes);
         for l in text.lines() {
             if l.starts_with('[') {
@@ -138,7 +140,10 @@ fn main() {
                 .join(", ")
         };
         println!("   lost keywords:        {}", top(&s.lost, 12));
-        println!("   only ever indented in the file: {}", top(&s.only_indented, 12));
+        println!(
+            "   only ever indented in the file: {}",
+            top(&s.only_indented, 12)
+        );
         println!(
             "   indented names never at column 0 in .{ext} (likely comments): {} distinct, {} lines: {}",
             s.foreign.len(),

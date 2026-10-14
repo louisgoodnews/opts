@@ -120,8 +120,11 @@ pub fn keyword_line(raw_line: &str) -> Option<&str> {
         .trim_start_matches([' ', '\t'])
         .strip_prefix('[')?
         .strip_suffix(']')?;
-    (!inner.is_empty() && inner.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'))
-        .then_some(inner)
+    (!inner.is_empty()
+        && inner
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_'))
+    .then_some(inner)
 }
 
 /// Represents an extracted OMSI configuration block.
@@ -329,7 +332,10 @@ mod tests {
         assert_eq!(keyword_line("[mesh]\r"), Some("mesh"));
         assert_eq!(keyword_line(" \t[mesh] \r"), Some("mesh"));
         let b = scan_blocks("[mass]\n10\n\t[coupling_front] / [coupling_back]\n[x]\n");
-        assert_eq!(b[0].parameters, ["10", "[coupling_front] / [coupling_back]"]);
+        assert_eq!(
+            b[0].parameters,
+            ["10", "[coupling_front] / [coupling_back]"]
+        );
     }
 
     #[test]
