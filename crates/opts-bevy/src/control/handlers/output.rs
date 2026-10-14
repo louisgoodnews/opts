@@ -1,18 +1,14 @@
 //! `report` (and the registration of `screenshot`, implemented in `capture::screenshot`).
 
-use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 use bevy::ecs::world::World;
 use bevy::prelude::Image;
-use bevy::render::view::screenshot::{CapturedScreenshots, Screenshot, ScreenshotCaptured};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
-use crate::control::handlers::input::primary_window_or_placeholder;
-use crate::control::params::{opt_str, str_param};
-use crate::control::paths::PathPolicy;
+use crate::control::params::str_param;
 use crate::control::state::{ControlRegistry, Outcome, Waiter};
 use crate::reporting::capture::encode_png;
 use crate::reporting::format::{format_report, now_stamp, ReportMeta};

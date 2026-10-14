@@ -67,7 +67,10 @@ pub fn collect(world: &mut World, subject: Subject<'_>) -> Map<String, Value> {
     }
     if let Some(c) = world.get_resource::<ControlState>() {
         m.insert("frame".into(), json!(c.frame));
-        m.insert("fps".into(), json!((f64::from(c.fps) * 10.0).round() / 10.0));
+        m.insert(
+            "fps".into(),
+            json!((f64::from(c.fps) * 10.0).round() / 10.0),
+        );
     }
     let ctx = world.get_resource::<ReportContext>().cloned();
     if let Some(ctx) = ctx {

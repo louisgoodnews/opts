@@ -10,7 +10,7 @@ use bevy::prelude::*;
 use bevy::render::view::screenshot::{CapturedScreenshots, Screenshot, ScreenshotCaptured};
 use bevy::tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task};
 use bevy::window::PrimaryWindow;
-use opts_cli::protocol::{code, RpcError};
+use opts_cli::protocol::RpcError;
 use serde_json::{json, Map, Value};
 
 use crate::control::params::{opt_bool, opt_str, opt_u64};
@@ -293,46 +293,41 @@ fn waiter(
     mut meta: Option<Map<String, Value>>,
 ) -> Waiter {
     let mut stage = Some(Stage::Waiting(rx, Instant::now()));
-    Box::new(move |_| {
-        match stage.take()? {
-            Stage::Waiting(rx, began) => match rx.try_recv() {
-                Ok(image) => {
-                    let (path, options, meta) = (path.clone(), options.clone(), meta.take());
-                    let pool = AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::default);
-                    stage = Some(Stage::Encoding(pool.spawn(async move {
-                        finish(image, &path, &options, meta)
-                    })));
-                    None
-                }
-                Err(mpsc::TryRecvError::Empty) if began.elapsed() < FRAME_WAIT => {
-                    stage = Some(Stage::Waiting(rx, began));
-                    None
-                }
-                Err(_) => Some(Err(CaptureError::Timeout(
-                    "the frame did not arrive in time (is the window occluded?)".into(),
-                )
-                .into())),
-            },
-            Stage::Encoding(mut task) => match block_on(future::poll_once(&mut task)) {
-                Some(result) => Some(result.map_err(RpcError::from)),
-                None => {
-                    stage = Some(Stage::Encoding(task));
-                    None
-                }
-            },
-        }
+    Box::new(move |_| match stage.take()? {
+        Stage::Waiting(rx, began) => match rx.try_recv() {
+            Ok(image) => {
+                let (path, options, meta) = (path.clone(), options.clone(), meta.take());
+                let pool = AsyncComputeTaskPool::get_or_init(bevy::tasks::TaskPool::default);
+                stage = Some(Stage::Encoding(
+                    pool.spawn(async move { finish(image, &path, &options, meta) }),
+                ));
+                None
+            }
+            Err(mpsc::TryRecvError::Empty) if began.elapsed() < FRAME_WAIT => {
+                stage = Some(Stage::Waiting(rx, began));
+                None
+            }
+            Err(_) => Some(Err(CaptureError::Timeout(
+                "the frame did not arrive in time (is the window occluded?)".into(),
+            )
+            .into())),
+        },
+        Stage::Encoding(mut task) => match block_on(future::poll_once(&mut task)) {
+            Some(result) => Some(result.map_err(RpcError::from)),
+            None => {
+                stage = Some(Stage::Encoding(task));
+                None
+            }
+        },
     })
 }
-
-/// Marker so `code` stays imported for doc links in the protocol reference.
-#[allow(dead_code)]
-const _TIMEOUT: i64 = code::TIMEOUT;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use bevy::asset::RenderAssetUsages;
     use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    use opts_cli::protocol::code;
 
     fn frame(w: u32, h: u32) -> Image {
         let mut data = Vec::new();
@@ -377,16 +372,14 @@ mod tests {
         let mut meta = Map::new();
         meta.insert("sim_time".into(), json!(12.5));
         meta.insert("frame".into(), json!(900));
-        let reply = finish(
-            frame(64, 48),
-            &path,
-            &options(StillFormat::Png),
-            Some(meta),
-        )
-        .expect("finish");
+        let reply =
+            finish(frame(64, 48), &path, &options(StillFormat::Png), Some(meta)).expect("finish");
         let png = image::open(&path).expect("decode");
         assert_eq!((png.width(), png.height()), (64, 48));
-        assert_eq!((reply["width"].as_u64(), reply["height"].as_u64()), (Some(64), Some(48)));
+        assert_eq!(
+            (reply["width"].as_u64(), reply["height"].as_u64()),
+            (Some(64), Some(48))
+        );
         let side: Value =
             serde_json::from_slice(&std::fs::read(sidecar_path(&path)).expect("sidecar"))
                 .expect("json");
@@ -400,7 +393,8 @@ mod tests {
     fn jpeg_and_no_metadata() {
         let dir = temp("jpg");
         let path = dir.join("shot.jpg");
-        let reply = finish(frame(32, 32), &path, &options(StillFormat::Jpeg), None).expect("finish");
+        let reply =
+            finish(frame(32, 32), &path, &options(StillFormat::Jpeg), None).expect("finish");
         assert_eq!(image::open(&path).expect("decode").width(), 32);
         assert!(reply.get("metadata").is_none());
         assert!(!sidecar_path(&path).exists());
@@ -420,8 +414,9 @@ mod tests {
             parse_options(&json!({"quality": 0})).unwrap_err().code,
             code::INVALID_PARAMS
         );
-        let o = parse_options(&json!({"name": "a/b.png", "format": "jpeg", "include_metadata": false}))
-            .expect("ok");
+        let o =
+            parse_options(&json!({"name": "a/b.png", "format": "jpeg", "include_metadata": false}))
+                .expect("ok");
         assert_eq!(o.target, Target::Name("a/b.png".into()));
         assert!(!o.include_metadata);
     }

@@ -89,8 +89,14 @@ pub fn validate_relative(name: &str) -> Result<PathBuf, CaptureError> {
     if name.len() > MAX_NAME_BYTES {
         return Err(forbidden(name, "it is too long"));
     }
-    if name.chars().any(|c| c.is_control() || c == '\\' && cfg!(unix)) {
-        return Err(forbidden(name, "it contains control or backslash characters"));
+    if name
+        .chars()
+        .any(|c| c.is_control() || c == '\\' && cfg!(unix))
+    {
+        return Err(forbidden(
+            name,
+            "it contains control or backslash characters",
+        ));
     }
     let mut out = PathBuf::new();
     for comp in Path::new(name).components() {

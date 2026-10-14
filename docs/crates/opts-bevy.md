@@ -240,3 +240,17 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 ## Reporting (`opts_bevy::reporting`)
 
 `ReportingPlugin` implements the F1 bug report: screenshot capture (`ScreenshotManager`), `ReportModalState` (`Inactive → Capturing → Open`), a modal with a multiline text area (from `opts-gui`), pause of `Time<Virtual>` (only if it was running), the `ModalActive` resource with the `not_modal_active` run condition for input systems, and asynchronous saving of `{datetime}.png` + `.report` ([format](../src/formats/text/report-format.md)). `ReportContext` carries version, git hash, map, camera and vehicle (filled by `opts-game`). Env `OPTS_REPORTS_DIR` overrides the reports directory. Example: `cargo run -p opts-bevy --example report_flow`.
+
+## Screen capture (`opts_bevy::capture`)
+
+Window-only capture for the control protocol; design in [screen capture](../src/architecture/screen-capture.md), decisions in [ADR-0012](../src/adr/0012-screen-capture-encoding.md). Implemented so far (M-capture phase B, first part):
+
+| Module | Content |
+| :--- | :--- |
+| `error` | `CaptureError`, mapped to the protocol codes (`-32602`, `1001` not ready, `1002` forbidden path, `1005` timeout, `1006` busy, `1008` failed). |
+| `storage` | `CaptureState` (captures root, session id, name counter), `validate_relative` / `resolve_name` / `resolve_explicit` (nothing leaves the canonical root, symlinks included), `write_atomic`. Default root `<user data dir>/opts/captures`. |
+| `metadata` | `collect` builds the per-capture metadata (simulation time from `Time<Virtual>`, frame, fixed tick, map, camera, vehicle, window, versions); `CaptureMetaHooks` lets `opts-game` add application state, map and tile. Never contains hardware data. |
+| `screenshot` | `screenshot` command: `request_frame` (Bevy `Screenshot::window`, `NotReady` without a renderer or while minimized), PNG or JPEG encoding and file writing on the async compute pool (never on the main thread), sidecar `<file>.json`. |
+
+Burst and recording (`burst`, `recording`, `encoder`) follow in the next step of phase B.
+

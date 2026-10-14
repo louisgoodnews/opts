@@ -405,7 +405,14 @@ pub const COMMANDS: &[CommandSpec] = &[
         "enabled:b@0",
     ),
     c("debug.stats", "debug", "Render and loader statistics", ""),
-    c("screenshot", "output", "Save a screenshot", "path:s@0?"),
+    c(
+        "screenshot",
+        "output",
+        "Save a screenshot of the application window, with metadata",
+        "path:s@0? name:s? format:s[png|jpeg]? quality:i? include_metadata:b?",
+    )
+    .result("`{path, width, height, format, bytes, sim_time, frame, metadata_path?, metadata?}`")
+    .doc("Captures the window's own render target: never the desktop, other windows or the cursor, in windowed and fullscreen mode alike. Files go below the captures directory (`<user data dir>/opts/captures`). `name` is a relative file name or subpath there (preferred); `path` is an explicit path that must lie inside the captures directory; both together are `-32602`, neither generates `{datetime}_{session_id}_{counter}.png`. `format` is `png` (default) or `jpeg` (with `quality` 1-100, default 90). With `include_metadata` (default true) a sidecar `<file>.json` is written and the metadata is returned: simulation time (`Time<Virtual>`, frozen while paused), render frame, fixed tick, map, camera mode, vehicle, window mode and size, versions. `1001` without a renderer or while the window is minimized, `1002` for a name or path outside the captures directory, `1005` when the frame does not arrive in 5 s. Extended in 1.5; the 1.0 call `{path}` still works for paths inside the captures directory."),
     c(
         "report",
         "output",

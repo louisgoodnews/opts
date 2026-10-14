@@ -50,6 +50,34 @@ impl Plugin for GameControlPlugin {
         crate::control_trace::register(&mut registry);
         crate::control_trace::add_overlay(app);
         app.add_systems(Update, allow_session_reads);
+        if let Some(mut hooks) = app
+            .world_mut()
+            .get_resource_mut::<opts_bevy::capture::CaptureMetaHooks>()
+        {
+            hooks.0.push(capture_metadata);
+        }
+    }
+}
+
+/// Adds the game's view of the world to the metadata of every capture: application state, map,
+/// vehicle and the tile the player (or, without a vehicle, the camera) is on.
+fn capture_metadata(world: &World, m: &mut serde_json::Map<String, Value>) {
+    m.insert("app_state".into(), json!(format!("{:?}", app_state(world))));
+    if let Some(stats) = world.get_resource::<WorldStats>() {
+        if !stats.map_name.is_empty() {
+            m.insert("map".into(), json!(stats.map_name));
+        }
+        if !stats.vehicle_name.is_empty() {
+            m.insert("vehicle".into(), json!(stats.vehicle_name));
+        }
+        let tile = stats
+            .position
+            .vehicle
+            .map(|(p, _)| p.tile)
+            .or(stats.position.camera.map(|p| p.tile));
+        if let Some((x, y)) = tile {
+            m.insert("tile".into(), json!([x, y]));
+        }
     }
 }
 

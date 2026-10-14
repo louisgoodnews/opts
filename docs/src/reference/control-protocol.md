@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.4.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.5.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -502,9 +502,17 @@ Without `code` the current language. `issue_lines` are the same findings as `fil
 
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
-| `screenshot` | `path?` (string) | 1.0 | Save a screenshot |
+| [`screenshot`](#screenshot) | `path?` (string)<br>`name?` (string)<br>`format?` (string = png \| jpeg)<br>`quality?` (integer)<br>`include_metadata?` (boolean) | 1.0 | Save a screenshot of the application window, with metadata |
 | `report` | `text` (string) | 1.0 | File a report (screenshot + text) |
 | [`snapshot`](#snapshot) | `path?` (string)<br>`screenshot?` (boolean)<br>`warnings?` (integer) | 1.1 | One call that returns everything an agent needs to judge the state, optionally with a screenshot |
+
+### `screenshot`
+
+Save a screenshot of the application window, with metadata.
+
+**Result:** `{path, width, height, format, bytes, sim_time, frame, metadata_path?, metadata?}`
+
+Captures the window's own render target: never the desktop, other windows or the cursor, in windowed and fullscreen mode alike. Files go below the captures directory (`<user data dir>/opts/captures`). `name` is a relative file name or subpath there (preferred); `path` is an explicit path that must lie inside the captures directory; both together are `-32602`, neither generates `{datetime}_{session_id}_{counter}.png`. `format` is `png` (default) or `jpeg` (with `quality` 1-100, default 90). With `include_metadata` (default true) a sidecar `<file>.json` is written and the metadata is returned: simulation time (`Time<Virtual>`, frozen while paused), render frame, fixed tick, map, camera mode, vehicle, window mode and size, versions. `1001` without a renderer or while the window is minimized, `1002` for a name or path outside the captures directory, `1005` when the frame does not arrive in 5 s. Extended in 1.5; the 1.0 call `{path}` still works for paths inside the captures directory.
 
 ### `snapshot`
 
