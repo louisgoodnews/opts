@@ -321,6 +321,13 @@ _Small items discovered during implementation that don't warrant a milestone._
 
 _Completed items from the last two cycles. Older items live in git history and milestone files._
 
+**2026-10-14 — M-0093 (Host Callbacks — Timetable, Termini, Bus Stops, Tickets / IBIS, complete)**
+
+- `[x]` 🟠 **Hof file parser** (M-0093, code) — Implemented `HofFile` parser in `opts_core::formats::hof` supporting `.hof` destination tables, bus stops, routes, global strings, and Windows-1252/UTF-8 decoding with indexed lookup methods.
+- `[x]` 🟠 **Vehicle host callbacks** (M-0093, code) — Implemented 25 vehicle callbacks in `opts_bevy::host_callbacks` (`GetTerminusIndex`, `GetTerminusString`, `GetTerminusCode`, `GetRouteIndex`, `GetRouteBusstopIdent`, `GetRouteTerminusIndex`, `GetBusstopIndex`, `GetBusstopString`, `GetBusstopCount`, `GetDepotStringGlobal`, `GetTT*`, tickets, passengers, geometry, font metrics) with stack preservation.
+- `[x]` 🟠 **Depot and schedule vehicle initialization** (M-0093, code) — Automatic `.hof` discovery by map name and Line 33 schedule initialization in `opts-game` vehicle setup.
+- `[x]` 🟠 **Aachen Line 33 and corpus integration tests** (M-0093, test) — Verified destination display and cabin monitor string resolution on Aachen Line 33; verified 0 unimplemented callbacks across SD200, NLC, and O530 families.
+
 **2026-10-11 — Critical review reconciliation** (items that were done but still listed as open)
 
 - `[x]` 🔴 **Author script VM bytecode and stack architecture specification** (M-0026, spec) — `docs/src/architecture/script-vm.md` exists; M-0026 🟢.
