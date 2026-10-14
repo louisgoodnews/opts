@@ -118,12 +118,6 @@ pub const GROUPS: &[Group] = &[
         &[
             bind("F9", &[KeyCode::F9], keys::HELP_KEY_MINIMAP, MINIMAP),
             bind(
-                "Shift + F9",
-                &[KeyCode::ShiftLeft, KeyCode::F9],
-                keys::HELP_KEY_MINIMAP_ORIENTATION,
-                MINIMAP,
-            ),
-            bind(
                 "+ / -",
                 &[
                     KeyCode::Equal,

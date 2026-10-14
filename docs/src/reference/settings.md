@@ -54,6 +54,9 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `hud.session_info` | Map and entry point | on / off | `true` | at once | available | Show where the drive takes place; it fades after a few seconds. |
 | `hud.clock` | Clock and weather | on / off | `true` | at once | available | Show the session clock and the weather; it fades after a few seconds. |
 | `hud.camera_label` | Camera name | on / off | `true` | at once | available | Show the name of the camera for a moment after you change it. |
+| `hud.minimap` | Mini map | on / off | `true` | at once | available | Show the map of the roads around you in the bottom right corner (F9). |
+| `hud.minimap_zoom` | Mini map scale | `100`, `200`, `500`, `1000` | `200` | at once | available | How far the mini map looks around you. The + and - keys change it while driving. |
+| `hud.minimap_orientation` | Mini map direction | `heading`, `north` | `heading` | at once | available | Heading up turns the map with you; north up keeps north at the top (Shift+F9). |
 
 ## Gameplay
 

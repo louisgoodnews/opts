@@ -186,8 +186,6 @@ keys! {
     HELP_GROUP_MAP = "help-group-map",
     /// Message `help-key-minimap`.
     HELP_KEY_MINIMAP = "help-key-minimap",
-    /// Message `help-key-minimap-orientation`.
-    HELP_KEY_MINIMAP_ORIENTATION = "help-key-minimap-orientation",
     /// Message `help-key-minimap-zoom`.
     HELP_KEY_MINIMAP_ZOOM = "help-key-minimap-zoom",
     /// Message `help-key-throttle`.
