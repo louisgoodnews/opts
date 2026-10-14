@@ -267,7 +267,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
 | [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
-| [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.2 | Read or change the HUD mini map: zoom (radius in metres), orientation, on/off |
+| [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), orientation, on/off |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
@@ -574,12 +574,12 @@ A debug command: restores the start position, zeroes speed and the controls and 
 
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
-| [`trace.set`](#traceset) | `mode?` (string)<br>`tiles?` (json)<br>`kinds?` (json)<br>`file?` (string)<br>`radius?` (number)<br>`center?` (json)<br>`size_cap_mb?` (integer)<br>`overlay?` (boolean)<br>`reset?` (boolean) | 1.3 | Scene trace: set the mode and filters, or read the status |
-| [`trace.pick`](#tracepick) | `x?` (number)<br>`y?` (number)<br>`limit?` (integer) | 1.3 | Scene trace: what is under a screen pixel or the crosshair |
-| [`trace.tile`](#tracetile) | `tile` (json)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: counts and records of one tile |
-| [`trace.find`](#tracefind) | `file?` (string)<br>`kind?` (string)<br>`stage?` (string)<br>`tile?` (json)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records by file pattern, kind, decode stage or tile |
-| [`trace.region`](#traceregion) | `radius` (number)<br>`x?` (number)<br>`z?` (number)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records within a radius of a ground point |
-| [`trace.export`](#traceexport) | `path` (string)<br>`file?` (string)<br>`kind?` (string)<br>`tile?` (json)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: write matching records as JSON Lines |
+| [`trace.set`](#traceset) | `mode?` (string)<br>`tiles?` (json)<br>`kinds?` (json)<br>`file?` (string)<br>`radius?` (number)<br>`center?` (json)<br>`size_cap_mb?` (integer)<br>`overlay?` (boolean)<br>`reset?` (boolean) | 1.4 | Scene trace: set the mode and filters, or read the status |
+| [`trace.pick`](#tracepick) | `x?` (number)<br>`y?` (number)<br>`limit?` (integer) | 1.4 | Scene trace: what is under a screen pixel or the crosshair |
+| [`trace.tile`](#tracetile) | `tile` (json)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: counts and records of one tile |
+| [`trace.find`](#tracefind) | `file?` (string)<br>`kind?` (string)<br>`stage?` (string)<br>`tile?` (json)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: records by file pattern, kind, decode stage or tile |
+| [`trace.region`](#traceregion) | `radius` (number)<br>`x?` (number)<br>`z?` (number)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: records within a radius of a ground point |
+| [`trace.export`](#traceexport) | `path` (string)<br>`file?` (string)<br>`kind?` (string)<br>`tile?` (json)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: write matching records as JSON Lines |
 
 ### `trace.set`
 
