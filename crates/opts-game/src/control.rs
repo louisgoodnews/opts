@@ -47,6 +47,8 @@ impl Plugin for GameControlPlugin {
         crate::viewpoints::protocol::register(&mut registry);
         crate::control_session::register(&mut registry);
         crate::control_save::register(&mut registry);
+        crate::control_trace::register(&mut registry);
+        crate::control_trace::add_overlay(app);
         app.add_systems(Update, allow_session_reads);
     }
 }

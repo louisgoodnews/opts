@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.3.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.4.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -560,3 +560,58 @@ A debug command: it moves the vehicle directly (speed zero, controls neutral) wi
 Put the player vehicle back where the session placed it, standing still.
 
 A debug command: restores the start position, zeroes speed and the controls and the distance counter.
+
+## Group `trace`
+
+| Command | Arguments | Since | Summary |
+| :--- | :--- | :--- | :--- |
+| [`trace.set`](#traceset) | `mode?` (string)<br>`tiles?` (json)<br>`kinds?` (json)<br>`file?` (string)<br>`radius?` (number)<br>`center?` (json)<br>`size_cap_mb?` (integer)<br>`overlay?` (boolean)<br>`reset?` (boolean) | 1.3 | Scene trace: set the mode and filters, or read the status |
+| [`trace.pick`](#tracepick) | `x?` (number)<br>`y?` (number)<br>`limit?` (integer) | 1.3 | Scene trace: what is under a screen pixel or the crosshair |
+| [`trace.tile`](#tracetile) | `tile` (json)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: counts and records of one tile |
+| [`trace.find`](#tracefind) | `file?` (string)<br>`kind?` (string)<br>`stage?` (string)<br>`tile?` (json)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records by file pattern, kind, decode stage or tile |
+| [`trace.region`](#traceregion) | `radius` (number)<br>`x?` (number)<br>`z?` (number)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records within a radius of a ground point |
+| [`trace.export`](#traceexport) | `path` (string)<br>`file?` (string)<br>`kind?` (string)<br>`tile?` (json)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: write matching records as JSON Lines |
+
+### `trace.set`
+
+Scene trace: set the mode and filters, or read the status.
+
+**Result:** `{mode, file, bytes, truncated, records, in_memory, issues, map, tiles, filters, overlay}`
+
+Mode `off` (default, free), `summary` (counts and issues) or `full` (every placed thing). Records are written as JSON Lines next to the run logs; switch the trace on before loading the map (meshes loaded earlier carry no decode information). `tiles` is `[[x, y], ...]`, `kinds` a list of `scenery`, `tree`, `attachment`, `parked`, `spline`, `terrain`, `traffic`, `human`, `vehicle`, `file` a substring or `*` pattern, `radius` metres around `center` (`[x, z]` in Bevy world coordinates, the camera by default). Without arguments the call is the status query. See `docs/src/architecture/scene-trace.md`.
+
+### `trace.pick`
+
+Scene trace: what is under a screen pixel or the crosshair.
+
+**Result:** `{hit, parents, candidates, ray, ground, pixel, view}`; `hit` is the full record of the nearest object on the ray
+
+`x`, `y` are physical pixels as in a `screenshot`; without them the centre of the view (the crosshair) is used. `hit.file` is the `.sco`, `hit.meshes[*].file` the `.o3d` with its decode `stage` and texture-coordinate quality. `candidates` lists the next objects on the ray; `ground.tile` names the tile under the pixel. Needs the trace on (`1001` otherwise).
+
+### `trace.tile`
+
+Scene trace: counts and records of one tile.
+
+**Result:** `{tile, summary, count, records}`
+
+### `trace.find`
+
+Scene trace: records by file pattern, kind, decode stage or tile.
+
+**Result:** `{count, records}`
+
+At least one criterion is required. `file` is matched against the placed thing's file and its mesh files (substring or `*`). `stage` is one of `plain`, `twin`, `decode-cache`, `decode-background`, `decoded-now`, `decode-deferred`, `rejected`, `extent`, `read-failed`, `parse-failed`, `hidden`, `cached`.
+
+### `trace.region`
+
+Scene trace: records within a radius of a ground point.
+
+**Result:** `{center, radius, count, records}`
+
+### `trace.export`
+
+Scene trace: write matching records as JSON Lines.
+
+**Result:** `{path, records}`
+
+Writes the records of the in-memory index (at most 150,000) to a path the control server may write to (`--cli-allow-dir`). The run file next to the logs holds everything.

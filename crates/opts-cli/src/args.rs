@@ -137,6 +137,18 @@ pub struct CliArgs {
     #[arg(long, value_name = "LOOK")]
     pub look: Option<String>,
 
+    /// Scene trace (debug): record which mesh is placed where, as JSON Lines next to the run logs.
+    /// `--trace-scene` or `--trace-scene=summary` keeps counts and issues, `--trace-scene=full`
+    /// every placed thing. See `docs/src/architecture/scene-trace.md`.
+    #[arg(
+        long,
+        value_name = "MODE",
+        num_args = 0..=1,
+        require_equals = true,
+        default_missing_value = "summary"
+    )]
+    pub trace_scene: Option<String>,
+
     /// Disable the file watcher that hot-reloads edited OMSI content.
     #[arg(long, default_value_t = false)]
     pub no_hot_reload: bool,
@@ -182,6 +194,7 @@ impl Default for CliArgs {
             cli_allow_dir: Vec::new(),
             texture_filter: None,
             look: None,
+            trace_scene: None,
             no_hot_reload: false,
             hot_reload_root: Vec::new(),
             hot_reload_debounce_ms: 250,

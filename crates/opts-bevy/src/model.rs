@@ -346,6 +346,30 @@ impl ContentLoader<'_> {
         keep_skin: bool,
         slots: Option<&[(String, u16)]>,
     ) -> Vec<ModelPart> {
+        let mut scratch = TraceScratch::new();
+        let parts = self.o3d_parts_core(
+            o3d_path,
+            tex_dirs,
+            overrides,
+            keep_skin,
+            slots,
+            &mut scratch,
+        );
+        if scratch.lap.active() {
+            scratch.finish(self.meshes, o3d_path, &parts);
+        }
+        parts
+    }
+
+    fn o3d_parts_core(
+        &mut self,
+        o3d_path: &Path,
+        tex_dirs: &[PathBuf],
+        overrides: &[TextureOverride],
+        keep_skin: bool,
+        slots: Option<&[(String, u16)]>,
+        sc: &mut TraceScratch,
+    ) -> Vec<ModelPart> {
         let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
         repaint.sort();
         let key = (
@@ -353,6 +377,7 @@ impl ContentLoader<'_> {
             format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}"),
         );
         if let Some(parts) = self.cache.parts.get(&key) {
+            sc.stage = "parts-cache";
             if self.cache.protected.contains(o3d_path) {
                 self.cache.stats.protected_meshes += 1;
             }
@@ -362,17 +387,24 @@ impl ContentLoader<'_> {
         let bytes = match std::fs::read(o3d_path) {
             Ok(b) => b,
             Err(e) => {
+                sc.stage = "read-failed";
+                sc.warn(|| format!("read failed: {e}"));
                 self.fail(format!("o3d read failed {}: {e}", o3d_path.display()));
                 return Vec::new();
             }
         };
+        sc.read_ms = sc.lap.split();
         let mut models: Vec<O3d> = match crate::mesh::parse_mesh_file(o3d_path, &bytes) {
             Ok(m) => m,
             Err(e) => {
+                sc.stage = "parse-failed";
+                sc.warn(|| format!("parse failed: {e}"));
                 self.fail(format!("mesh parse failed {}: {e}", o3d_path.display()));
                 return Vec::new();
             }
         };
+        sc.parse_ms = sc.lap.split();
+        sc.stage = "plain";
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
@@ -408,6 +440,7 @@ impl ContentLoader<'_> {
                         "scrambled mesh replaced by its plain twin"
                     );
                     self.cache.stats.twin_meshes += 1;
+                    sc.stage = "twin";
                     models = twin;
                 }
             }
@@ -494,12 +527,20 @@ impl ContentLoader<'_> {
                         }
                     };
                     if applied {
+                        sc.stage = match source {
+                            "decode cache" => "decode-cache",
+                            "background decode" => "decode-background",
+                            _ => "decoded-now",
+                        };
                         self.cache.stats.decoded_meshes += 1;
                         if let Some(c) = counts {
                             for (total, n) in self.cache.stats.uv_quality.iter_mut().zip(c) {
                                 *total += n;
                             }
                             let all: usize = c.iter().sum();
+                            for (t, n) in sc.uv.iter_mut().zip(c) {
+                                *t += n;
+                            }
                             model_quality.insert(mi, c);
                             // Every mesh whose texture coordinates are largely guesses is named once.
                             if all > 0
@@ -548,13 +589,16 @@ impl ContentLoader<'_> {
                 && models
                     .iter()
                     .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable));
+            sc.decode_ms = sc.lap.split();
             if unreadable && !experimental && deferred_here {
                 // Decoding runs in the background; the caller rebuilds the object when it ends.
+                sc.stage = "decode-deferred";
                 self.cache.stats.deferred_meshes += 1;
                 return Vec::new();
             }
             if unreadable && !experimental {
                 // Vertex positions are permuted per vertex; the geometry cannot be reconstructed.
+                sc.stage = "rejected";
                 self.cache.stats.protected_meshes += 1;
                 self.cache.protected.insert(o3d_path.to_path_buf());
                 tracing::warn!(
@@ -593,6 +637,8 @@ impl ContentLoader<'_> {
                 MAX_PLAUSIBLE_PLAIN_EXTENT_M
             };
             if extent > limit {
+                sc.stage = "extent";
+                sc.warn(|| format!("extent {extent:.0} m exceeds {limit:.0} m"));
                 self.cache.stats.protected_meshes += 1;
                 self.cache.protected.insert(o3d_path.to_path_buf());
                 tracing::warn!(path = %o3d_path.display(), extent, "mesh extent is implausible; skipped");
@@ -655,6 +701,7 @@ impl ContentLoader<'_> {
                 let over = find_override(&model.materials, slot, overrides);
                 if over.is_some_and(TextureOverride::is_variable_hidden) {
                     self.cache.stats.hidden_parts += 1;
+                    sc.hidden += 1;
                     continue;
                 }
                 let failures_before = self.cache.stats.failures.len();
@@ -748,6 +795,25 @@ impl ContentLoader<'_> {
                 if sentinel {
                     material = crate::texture_sentinel::sentinel_material();
                 }
+                if sc.lap.active() {
+                    sc.materials.push(crate::scene_trace::MaterialNote {
+                        slot,
+                        texture: tex_name.clone().unwrap_or_default(),
+                        alpha: match material.alpha_mode {
+                            AlphaMode::Blend => "blend",
+                            AlphaMode::Mask(_) => "mask",
+                            _ => "opaque",
+                        }
+                        .into(),
+                        textured,
+                    });
+                    if tex_name.is_some() && !textured {
+                        sc.warnings.push(format!(
+                            "texture not found: {}",
+                            tex_name.clone().unwrap_or_default()
+                        ));
+                    }
+                }
                 tracing::debug!(path = %o3d_path.display(), slot, vertices, textured, alpha = ?material.alpha_mode, texture = ?tex_name, "model part");
                 let pivot = model
                     .transform
@@ -764,8 +830,102 @@ impl ContentLoader<'_> {
                 });
             }
         }
+        sc.build_ms = sc.lap.split();
         self.cache.parts.insert(key, parts.clone());
         parts
+    }
+}
+
+/// What the scene trace learns while one mesh file loads (costs nothing when the trace is off:
+/// `Lap` is inactive and no string is built).
+struct TraceScratch {
+    lap: crate::scene_trace::Lap,
+    stage: &'static str,
+    read_ms: f32,
+    parse_ms: f32,
+    decode_ms: f32,
+    build_ms: f32,
+    uv: [usize; 3],
+    hidden: usize,
+    materials: Vec<crate::scene_trace::MaterialNote>,
+    warnings: Vec<String>,
+}
+
+impl TraceScratch {
+    fn new() -> Self {
+        Self {
+            lap: crate::scene_trace::Lap::start(),
+            stage: "",
+            read_ms: 0.0,
+            parse_ms: 0.0,
+            decode_ms: 0.0,
+            build_ms: 0.0,
+            uv: [0; 3],
+            hidden: 0,
+            materials: Vec::new(),
+            warnings: Vec::new(),
+        }
+    }
+
+    fn warn(&mut self, text: impl FnOnce() -> String) {
+        if self.lap.active() {
+            self.warnings.push(text());
+        }
+    }
+
+    /// Hands the finished note to the trace.
+    fn finish(self, meshes: &Assets<Mesh>, path: &Path, parts: &[ModelPart]) {
+        use crate::scene_trace as st;
+        let had_note = st::has_note(path);
+        if self.stage == "parts-cache" && had_note {
+            return;
+        }
+        let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
+        let mut any = false;
+        for p in parts {
+            let Some(pos) = meshes
+                .get(&p.mesh)
+                .and_then(|m| m.attribute(Mesh::ATTRIBUTE_POSITION))
+                .and_then(|a| a.as_float3())
+            else {
+                continue;
+            };
+            for v in pos {
+                any = true;
+                for i in 0..3 {
+                    lo[i] = lo[i].min(v[i]);
+                    hi[i] = hi[i].max(v[i]);
+                }
+            }
+        }
+        let mut warnings = self.warnings;
+        if self.hidden > 0 && parts.is_empty() {
+            warnings.clear();
+        }
+        let stage = if self.stage == "parts-cache" {
+            "cached"
+        } else if parts.is_empty() && self.hidden > 0 && self.stage == "plain" {
+            "hidden"
+        } else {
+            self.stage
+        };
+        st::note_mesh(
+            path,
+            st::MeshNote {
+                stage: stage.into(),
+                read_ms: self.read_ms,
+                parse_ms: self.parse_ms,
+                decode_ms: self.decode_ms,
+                build_ms: self.build_ms,
+                uv: self.uv,
+                vertices: parts.iter().map(|p| p.vertices).sum(),
+                parts: parts.len(),
+                materials: self.materials,
+                warnings,
+                bbox: any.then_some(st::TraceBounds { min: lo, max: hi }),
+                ..st::MeshNote::default()
+            },
+        );
     }
 }
 

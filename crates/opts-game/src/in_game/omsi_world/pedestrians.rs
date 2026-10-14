@@ -216,14 +216,17 @@ pub fn load_variants(
         .parent()
         .map(std::path::Path::to_path_buf)
         .unwrap_or_default();
-    match load_human_parts(
+    super::trace::begin_frame();
+    let loaded_parts = load_human_parts(
         &mut job,
         &mut meshes,
         &mut materials,
         &mut images,
         &profile,
         &dir,
-    ) {
+    );
+    let trace_frame = super::trace::end_frame();
+    match loaded_parts {
         Ok(parts)
             if parts.iter().any(|p| {
                 meshes
@@ -242,6 +245,7 @@ pub fn load_variants(
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
             tracing::info!(character = %name, parts = parts.len(), "pedestrian model loaded");
+            super::trace::remember_human(&name, &trace_frame);
             pool.slots[i].1 = Some(Variant {
                 name,
                 profile,
@@ -345,6 +349,25 @@ pub fn spawn_pedestrians(
         &v.name,
         HumanPose::Standing,
     );
+    if opts_bevy::scene_trace::enabled() {
+        let frame = super::trace::human_frame(&v.name);
+        let tf = Transform::from_translation(
+            walker
+                .pose(&net.0)
+                .map(|(p, _)| omsi_to_bevy_pos(p))
+                .unwrap_or_default(),
+        );
+        super::trace::spawned(
+            opts_bevy::scene_trace::kind::HUMAN,
+            &v.name,
+            &v.name,
+            root,
+            &tf,
+            &frame,
+            "ok",
+            serde_json::json!({}),
+        );
+    }
     commands.entity(root).insert((
         Pedestrian { walker, leg_m },
         Visibility::default(),
