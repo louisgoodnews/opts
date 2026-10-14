@@ -356,6 +356,8 @@ The three legacy inertia values duplicate what `[momentofintertia]` provides. In
 ##### `[couple_back]` (Trailing Segment)
 
 > ⚠️ **Contradicted by the corpus (2026-10-14):** an earlier reading said the boolean flag tells whether the coupled trailer has its own further trailer. In the 1,035 installed files with `[couple_back]` that fails: the flag is `false` on 158 links whose target has a `[couple_back]` itself and `true` on 37 links whose target is the last unit. OPTS reads it as *the trailer is coupled facing backwards* (`couple_back_reversed`, the NF6D "B" head), which is what the loader needs. The table below is the earlier reading, kept until Q-003 is settled with an OMSI test.
+>
+> The 1,035 raw occurrences against the 539 OPTS parses may be partly explained by the scanner indentation bug (articulation-physics.md Q-ART-14). Resolution of Q-003 depends on resolving Q-ART-14.
 
 | Value | Meaning |
 | :--- | :--- |
