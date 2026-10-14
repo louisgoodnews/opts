@@ -893,7 +893,7 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "menu.do",
         "scene",
-        "Drive the in-game vehicle menu (open, spawn, vehicle <text>, repaint <text>, done, ...)",
+        "Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...)",
         "command:s@0",
     )
     .doc("Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`."),
