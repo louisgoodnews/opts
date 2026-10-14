@@ -1,15 +1,18 @@
 // HUD profile of a single-body bus (docs/src/architecture/hud-registry.md).
+// Slots: the bottom-left cluster (hints, alerts, instruments: the rows are in a fixed order, `order`
+// sorts the widgets inside the instrument row), the mini map bottom right, status bar, camera label.
 HudProfile(
     kind: Bus,
     widgets: [
         (id: "session", order: 10),
         (id: "clock", order: 20),
         (id: "camera-label", order: 10),
-        (id: "alerts", order: 10),
-        (id: "speed", order: 10),
-        (id: "gear", order: 20),
-        (id: "rpm", order: 30),
-        (id: "parking-brake", order: 40),
         (id: "controls-hint", order: 10),
+        (id: "alerts", order: 20),
+        (id: "speed", order: 30),
+        (id: "gear", order: 40),
+        (id: "rpm", order: 50),
+        (id: "parking-brake", order: 60),
+        (id: "minimap", order: 10),
     ],
 )

@@ -102,6 +102,20 @@ impl HudProfile {
     }
 }
 
+impl HudProfile {
+    /// The widgets of one row of the bottom-left cluster, ordered.
+    #[must_use]
+    pub fn in_row(
+        &self,
+        row: super::widget::Row,
+    ) -> Vec<(&ProfileEntry, &'static super::widget::HudWidget)> {
+        self.in_slot(Slot::ClusterBottomLeft)
+            .into_iter()
+            .filter(|(_, w)| w.binding.row() == Some(row))
+            .collect()
+    }
+}
+
 /// The shipped profile text of a kind.
 #[must_use]
 pub const fn shipped(kind: VehicleKind) -> &'static str {

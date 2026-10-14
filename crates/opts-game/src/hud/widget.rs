@@ -9,39 +9,68 @@ use opts_bevy::CameraMode;
 use serde::{Deserialize, Serialize};
 
 /// A fixed region of the screen a widget lives in.
+///
+/// Profiles written before M-0071 may still say `Instruments`, `Hints` or `Alerts`: all three are
+/// the bottom-left cluster now (the rows inside it have a fixed order, see [`Row`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Slot {
-    /// Bottom centre: speed, gear, brake state.
-    Instruments,
     /// Top, fades after a few seconds.
     StatusBar,
-    /// Above the cluster: at most one alert, critical alerts stay.
-    Alerts,
-    /// Bottom left, fades.
-    Hints,
     /// Below the status bar: the camera or mode name for 1.5 s.
     CameraLabel,
+    /// Bottom left: control hints, alerts and the instruments (speed, gear, parking brake) in a
+    /// fixed vertical order.
+    #[serde(alias = "Instruments", alias = "Hints", alias = "Alerts")]
+    ClusterBottomLeft,
+    /// Bottom right: the mini map.
+    MiniMap,
 }
 
 impl Slot {
     /// All slots, in build order.
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 4] = [
         Self::StatusBar,
         Self::CameraLabel,
-        Self::Alerts,
-        Self::Instruments,
-        Self::Hints,
+        Self::ClusterBottomLeft,
+        Self::MiniMap,
     ];
 
     /// Stable id (`ui.tree`, logs, the generated reference).
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
-            Self::Instruments => "instruments",
             Self::StatusBar => "status-bar",
-            Self::Alerts => "alerts",
-            Self::Hints => "hints",
             Self::CameraLabel => "camera-label",
+            Self::ClusterBottomLeft => "cluster-bottom-left",
+            Self::MiniMap => "minimap",
+        }
+    }
+}
+
+/// The rows of the bottom-left cluster, top to bottom. The order is fixed: a profile cannot
+/// reorder rows (it orders the widgets inside the instrument row), so the driver finds the same
+/// thing in the same place in every vehicle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Row {
+    /// Control hints (fade after a while).
+    Hints,
+    /// The alert line (a fixed minimum height, nothing moves when an alert comes and goes).
+    Alerts,
+    /// Speed, gear, engine speed and parking brake.
+    Instruments,
+}
+
+impl Row {
+    /// All rows, top to bottom.
+    pub const ALL: [Self; 3] = [Self::Hints, Self::Alerts, Self::Instruments];
+
+    /// Stable id.
+    #[must_use]
+    pub const fn id(self) -> &'static str {
+        match self {
+            Self::Hints => "hints",
+            Self::Alerts => "alerts",
+            Self::Instruments => "instruments",
         }
     }
 }
@@ -104,6 +133,21 @@ pub enum Binding {
     Alerts,
     /// The camera label (set on camera or mode changes).
     CameraLabel,
+    /// The mini map (a top-down drawing of the roads around the player).
+    MiniMap,
+}
+
+impl Binding {
+    /// The row of the bottom-left cluster the binding is drawn in, if it belongs to the cluster.
+    #[must_use]
+    pub const fn row(self) -> Option<Row> {
+        match self {
+            Self::Speed | Self::Gear | Self::Rpm | Self::ParkingBrake => Some(Row::Instruments),
+            Self::ControlsHint => Some(Row::Hints),
+            Self::Alerts => Some(Row::Alerts),
+            Self::SessionInfo | Self::SessionClock | Self::CameraLabel | Self::MiniMap => None,
+        }
+    }
 }
 
 /// How a bound value is written.
@@ -118,6 +162,8 @@ pub enum Format {
     Text,
     /// A lamp: a word in the state colour (`ok`, `alarm`).
     Lamp,
+    /// A drawing (the mini map).
+    Graphic,
 }
 
 /// The switch that turns a widget on and off in *Settings → Interface*.
@@ -183,8 +229,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-speed",
         binding: Binding::Speed,
         format: Format::Number { precision: 0 },
-        slot: Slot::Instruments,
-        slots: &[Slot::Instruments],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 100,
         switch: Some(WidgetSwitch {
             key: "hud.speed",
@@ -199,8 +245,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-gear",
         binding: Binding::Gear,
         format: Format::Text,
-        slot: Slot::Instruments,
-        slots: &[Slot::Instruments],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 80,
         switch: Some(WidgetSwitch {
             key: "hud.gear",
@@ -215,8 +261,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-rpm",
         binding: Binding::Rpm,
         format: Format::Number { precision: 0 },
-        slot: Slot::Instruments,
-        slots: &[Slot::Instruments],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 60,
         switch: Some(WidgetSwitch {
             key: "hud.rpm",
@@ -235,8 +281,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-parking-brake",
         binding: Binding::ParkingBrake,
         format: Format::Lamp,
-        slot: Slot::Instruments,
-        slots: &[Slot::Instruments],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 90,
         switch: Some(WidgetSwitch {
             key: "hud.parking_brake",
@@ -283,8 +329,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-controls-hint",
         binding: Binding::ControlsHint,
         format: Format::Text,
-        slot: Slot::Hints,
-        slots: &[Slot::Hints],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 20,
         // The existing *Show hints* setting is this widget's switch.
         switch: Some(WidgetSwitch {
@@ -300,8 +346,8 @@ pub const WIDGETS: &[HudWidget] = &[
         title_key: "hud-widget-alerts",
         binding: Binding::Alerts,
         format: Format::Text,
-        slot: Slot::Alerts,
-        slots: &[Slot::Alerts],
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
         priority: 255,
         // Alerts keep the driver safe: there is no switch.
         switch: None,
@@ -319,6 +365,22 @@ pub const WIDGETS: &[HudWidget] = &[
             key: "hud.camera_label",
             label_key: "set-hud-camera-label",
             description_key: "set-hud-camera-label-desc",
+            default_on: true,
+        }),
+        when: Condition::ALWAYS,
+    },
+    HudWidget {
+        id: "minimap",
+        title_key: "hud-widget-minimap",
+        binding: Binding::MiniMap,
+        format: Format::Graphic,
+        slot: Slot::MiniMap,
+        slots: &[Slot::MiniMap],
+        priority: 70,
+        switch: Some(WidgetSwitch {
+            key: "hud.minimap",
+            label_key: "set-hud-minimap",
+            description_key: "set-hud-minimap-desc",
             default_on: true,
         }),
         when: Condition::ALWAYS,

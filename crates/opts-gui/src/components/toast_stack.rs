@@ -21,13 +21,24 @@ pub const MARGIN: f32 = 24.0;
 /// Height assumed before layout has measured a toast.
 const FALLBACK_HEIGHT: f32 = 48.0;
 
+/// Extra distance of the toast stack from the bottom edge, in logical pixels. A screen that has
+/// something at the bottom right (the HUD's mini map) sets it so toasts stack above that and never
+/// cover it; it is `0` everywhere else.
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Default)]
+pub struct ToastInset(pub f32);
+
 /// The stacking order and slots for `heights` of toasts sorted oldest first: the first
 /// [`MAX_VISIBLE`] are visible and get a `bottom` offset (newest lowest), the rest are queued
 /// (`None`).
 pub fn slots(heights: &[f32]) -> Vec<Option<f32>> {
+    slots_above(heights, 0.0)
+}
+
+/// [`slots`] with the whole stack raised by `inset`.
+pub fn slots_above(heights: &[f32], inset: f32) -> Vec<Option<f32>> {
     let visible = heights.len().min(MAX_VISIBLE);
     let mut out = vec![None; heights.len()];
-    let mut bottom = MARGIN;
+    let mut bottom = MARGIN + inset.max(0.0);
     for i in (0..visible).rev() {
         out[i] = Some(bottom);
         bottom += heights[i] + GAP;
@@ -52,7 +63,9 @@ pub fn stack_toasts(
     mut toasts: Query<ToastData>,
     children: Query<&Children>,
     mut texts: Query<&mut Text>,
+    inset: Option<Res<ToastInset>>,
 ) {
+    let inset = inset.map_or(0.0, |i| i.0);
     let mut order: Vec<_> = toasts.iter().map(|t| (t.1 .0, t.0)).collect();
     order.sort_unstable();
 
@@ -92,7 +105,7 @@ pub fn stack_toasts(
                 .unwrap_or(FALLBACK_HEIGHT)
         })
         .collect();
-    for (entity, slot) in alive.iter().zip(slots(&heights)) {
+    for (entity, slot) in alive.iter().zip(slots_above(&heights, inset)) {
         let Ok(mut t) = toasts.get_mut(*entity) else {
             continue;
         };

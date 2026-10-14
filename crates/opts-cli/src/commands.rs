@@ -714,6 +714,15 @@ pub const COMMANDS: &[CommandSpec] = &[
         "",
     ),
     c(
+        "hud.minimap",
+        "scene",
+        "Read or change the HUD mini map: zoom (radius in metres), orientation, on/off",
+        "zoom:i? orientation:s[north|heading]? enabled:b?",
+    )
+    .since("1.2")
+    .result("`{enabled, shown, zoom_m, orientation, zoom_steps_m, texture_px, side_px, compact, redraws, last_us, worst_us, budget_us, road_chords, markers, centre, up_heading_deg}`")
+    .doc("Without parameters it reads. `zoom` is the visible radius, one of 100, 200, 500, 1000 (m); `orientation` is `north` (north up) or `heading` (the player's heading up); `enabled` shows or hides the map. The three are the settings `hud.minimap_zoom`, `hud.minimap_orientation` and `hud.minimap` (changed and saved the same way; the keys F7, Shift+F7, `+` and `-` do the same). The map is centred on the player's vehicle, or on the free camera when there is no vehicle. `last_us` and `worst_us` are the time of the last and the slowest redraw (budget `budget_us`, at most 10 redraws per second); `hud.state` carries the same object as `minimap`. An unknown zoom or orientation answers `-32602`."),
+    c(
         "hud.alert",
         "debug",
         "Raise or clear a test alert on the HUD",

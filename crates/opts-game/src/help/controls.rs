@@ -50,6 +50,7 @@ const SIM_PAUSE: &str = "crates/opts-game/src/in_game/mod.rs";
 const HELP: &str = "crates/opts-game/src/help/mod.rs";
 const THEME: &str = "crates/opts-game/src/shell/footer.rs";
 const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
+const MINIMAP: &str = "crates/opts-game/src/hud/minimap/mod.rs";
 const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
 const QUICK_SAVE: &str = "crates/opts-game/src/save/quick.rs";
 
@@ -111,6 +112,23 @@ pub const GROUPS: &[Group] = &[
                 CAMERA,
             ),
             bind("Tab", &[KeyCode::Tab], keys::HELP_KEY_VIEWPOINT, VIEWPOINT),
+        ],
+    ),
+    (
+        keys::HELP_GROUP_MAP,
+        &[
+            bind("F7", &[KeyCode::F7], keys::HELP_KEY_MINIMAP, MINIMAP),
+            bind(
+                "+ / -",
+                &[
+                    KeyCode::Equal,
+                    KeyCode::Minus,
+                    KeyCode::NumpadAdd,
+                    KeyCode::NumpadSubtract,
+                ],
+                keys::HELP_KEY_MINIMAP_ZOOM,
+                MINIMAP,
+            ),
         ],
     ),
     (

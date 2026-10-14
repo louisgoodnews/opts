@@ -328,7 +328,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
 - [ ] **🕗 Start Time Defaults from the Map** — [M-0070](docs/src/roadmap/phase-9/M-0070.md)
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
-- [ ] **🗺️ HUD Layout Rework** — [M-0071](docs/src/roadmap/phase-9/M-0071.md)
+- [x] **🗺️ HUD Layout Rework** — [M-0071](docs/src/roadmap/phase-9/M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
 - [x] **📍 HUD Place Label** — [M-0075](docs/src/roadmap/phase-9/M-0075.md)
   - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).

@@ -7,9 +7,11 @@
 //! PNGs. A failure writes `<name>.actual.png` and `<name>.diff.png` to `$OPTS_GOLDEN_OUT`
 //! (default `tests/golden/_failed/`, git-ignored).
 //!
-//! Not covered (the painter is not the GPU): images, shadows, the focus ring, gradients. The HUD
-//! belongs to its own milestone (M-0064) and the loading screen needs an installation; both are
-//! open items of `docs/src/roadmap/phase-9/accessibility-audit.md`.
+//! The in-game HUD (M-0071: cluster at the bottom left, mini map slot at the bottom right) is
+//! painted over a bright and a dark backdrop, with fixture content only. Not covered (the painter
+//! is not the GPU): images (so the map's drawing itself, which is tested on pixels in
+//! `hud::minimap`), shadows, the focus ring, gradients. The loading screen needs an installation;
+//! it is an open item of `docs/src/roadmap/phase-9/accessibility-audit.md`.
 
 mod common;
 
@@ -126,6 +128,45 @@ fn key_screens_match_their_goldens_at_1920x1080() {
         1080,
         &["home", "settings-graphics", "plan-1-where", "pause"],
     );
+}
+
+fn render_hud(w: u32, h: u32, backdrop: Color) -> image::RgbaImage {
+    use common::hud::{build_hud, Extras};
+    let extras = Extras {
+        alert: true,
+        ..Extras::default()
+    };
+    let mut app = build_hud(w, h, 1.0, opts_game::hud::VehicleKind::Bus, extras);
+    paint(app.world_mut(), w, h, backdrop)
+}
+
+#[test]
+fn the_hud_matches_its_goldens_over_a_bright_and_a_dark_scene() {
+    let mut failures = Vec::new();
+    for (tag, backdrop) in [
+        ("bright", Color::srgb(0.78, 0.86, 0.95)),
+        ("dark", Color::srgb(0.04, 0.05, 0.07)),
+    ] {
+        let img = render_hud(1280, 720, backdrop);
+        if let Err(e) = check(
+            &golden_dir(),
+            &format!("hud-1280x720-{tag}"),
+            &img,
+            Tolerance::default(),
+        ) {
+            failures.push(e);
+        }
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+#[test]
+fn the_hud_painting_is_deterministic_and_the_backdrop_changes_the_picture() {
+    let a = render_hud(1280, 720, Color::srgb(0.78, 0.86, 0.95));
+    let b = render_hud(1280, 720, Color::srgb(0.78, 0.86, 0.95));
+    assert_eq!(a, b);
+    let dark = render_hud(1280, 720, Color::srgb(0.04, 0.05, 0.07));
+    assert_ne!(a, dark);
 }
 
 #[test]

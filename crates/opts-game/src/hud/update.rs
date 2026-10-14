@@ -9,11 +9,12 @@ use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::Localization;
 
 use super::alerts::{AlertQueue, AlertSeverity};
-use super::build::{AlertPill, HudSlot, HudText, HudWidgetNode, Part};
+use super::build::{AlertPill, HudRow, HudSlot, HudText, HudWidgetNode, Part};
 use super::fade::{FadeKind, HudFade};
 use super::keys;
+use super::layout::HudLayout;
 use super::values::{HudValues, SpeedUnit, RPM_PROVIDED};
-use super::widget::{switch_on, widget, Binding, Slot};
+use super::widget::{switch_on, widget, Binding, Row, Slot};
 use crate::in_game::instruments::InstrumentInk;
 use crate::in_game::types::InGameSessionInfo;
 use crate::settings::GameSettings;
@@ -69,6 +70,7 @@ pub fn update_texts(
     session: Res<InGameSessionInfo>,
     loc: Res<Localization>,
     label: Res<CameraLabel>,
+    layout: Res<HudLayout>,
     place: Res<crate::session_vehicles::PlaceLabel>,
     mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
 ) {
@@ -126,7 +128,11 @@ pub fn update_texts(
                     ),
                 ],
             ),
-            (Binding::ControlsHint, Part::Value) => loc.t(keys::HINT_CONTROLS),
+            (Binding::ControlsHint, Part::Value) => loc.t(if layout.compact {
+                keys::HINT_CONTROLS_COMPACT
+            } else {
+                keys::HINT_CONTROLS
+            }),
             (Binding::CameraLabel, Part::Value) => label.shown.map_or_else(String::new, |s| {
                 let (mode, index, total) = s;
                 let name = loc.t(camera_key(mode));
@@ -152,14 +158,21 @@ pub fn update_texts(
 }
 
 /// Shows, hides and removes widgets: the user's switch, the vehicle kind, the engine speed and the
-/// camera mode. A slot without a visible widget is removed from the layout.
+/// camera mode. A row or slot without a visible widget is removed from the layout.
+#[allow(clippy::type_complexity)]
 pub fn update_widget_display(
     values: Res<HudValues>,
     settings: Res<GameSettings>,
-    mut nodes: Query<(&HudWidgetNode, &mut Node, Option<&mut Visibility>), Without<HudSlot>>,
-    mut slots: Query<(&HudSlot, &mut Node), Without<HudWidgetNode>>,
+    layout: Res<HudLayout>,
+    mut nodes: Query<
+        (&HudWidgetNode, &mut Node, Option<&mut Visibility>),
+        (Without<HudSlot>, Without<HudRow>),
+    >,
+    mut slots: Query<(&HudSlot, &mut Node), (Without<HudWidgetNode>, Without<HudRow>)>,
+    mut rows: Query<(&HudRow, &mut Node), (Without<HudWidgetNode>, Without<HudSlot>)>,
 ) {
-    let mut any: HashMap<Slot, bool> = HashMap::new();
+    let mut any_slot: HashMap<Slot, bool> = HashMap::new();
+    let mut any_row: HashMap<Row, bool> = HashMap::new();
     for (hud, mut node, vis) in &mut nodes {
         let Some(w) = widget(hud.id) else { continue };
         let on = w
@@ -167,7 +180,7 @@ pub fn update_widget_display(
             .as_ref()
             .is_none_or(|sw| switch_on(sw, settings.raw(sw.key).as_deref()))
             // Without a vehicle there are no instruments.
-            && (values.has_vehicle || w.slot != Slot::Instruments)
+            && (values.has_vehicle || w.binding.row() != Some(Row::Instruments))
             && (w.when.kinds.is_empty() || w.when.kinds.contains(&values.kind))
             && (!w.when.needs_rpm || (RPM_PROVIDED && values.rpm.is_some()));
         let display = if on { Display::Flex } else { Display::None };
@@ -181,18 +194,35 @@ pub fn update_widget_display(
             } else {
                 Visibility::Inherited
             };
-            if *vis != want {
+            // The mini map's visibility belongs to its own system (it hides under the viewpoint
+            // editor).
+            if *vis != want && w.binding != Binding::MiniMap {
                 *vis = want;
             }
         }
-        *any.entry(hud.slot).or_default() |= on;
+        match w.binding.row() {
+            Some(row) => *any_row.entry(row).or_default() |= on,
+            None => *any_slot.entry(hud.slot).or_default() |= on,
+        }
     }
-    for (slot, mut node) in &mut slots {
-        let display = if any.get(&slot.0).copied().unwrap_or(true) {
+    let cluster_on = any_row.values().any(|on| *on);
+    for (row, mut node) in &mut rows {
+        let room = row.0 != Row::Hints || layout.hints;
+        let display = if room && any_row.get(&row.0).copied().unwrap_or(true) {
             Display::Flex
         } else {
             Display::None
         };
+        if node.display != display {
+            node.display = display;
+        }
+    }
+    for (slot, mut node) in &mut slots {
+        let on = match slot.0 {
+            Slot::ClusterBottomLeft => cluster_on,
+            other => any_slot.get(&other).copied().unwrap_or(true),
+        };
+        let display = if on { Display::Flex } else { Display::None };
         if node.display != display {
             node.display = display;
         }
