@@ -267,7 +267,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
 | [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
-| [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), orientation, on/off |
+| [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
@@ -346,11 +346,11 @@ Resets offsets and field of view, stores the default (which removes the entry) a
 
 ### `hud.minimap`
 
-Read or change the HUD mini map: zoom (radius in metres), orientation, on/off.
+Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off.
 
-**Result:** `{enabled, shown, zoom_m, orientation, zoom_steps_m, texture_px, side_px, compact, redraws, last_us, worst_us, budget_us, road_chords, markers, centre, up_heading_deg}`
+**Result:** `{enabled, shown, zoom_m, zoom_mode, radius_m, target_m, speed_kmh, orientation, zoom_steps_m, texture_px, side_px, compact, redraws, last_us, worst_us, budget_us, road_chords, markers, centre, up_heading_deg}`
 
-Without parameters it reads. `zoom` is the visible radius, one of 100, 200, 500, 1000 (m); `orientation` is `north` (north up) or `heading` (the player's heading up); `enabled` shows or hides the map. The three are the settings `hud.minimap_zoom`, `hud.minimap_orientation` and `hud.minimap` (changed and saved the same way; the keys F7, Shift+F7, `+` and `-` do the same). The map is centred on the player's vehicle, or on the free camera when there is no vehicle. `last_us` and `worst_us` are the time of the last and the slowest redraw (budget `budget_us`, at most 10 redraws per second); `hud.state` carries the same object as `minimap`. An unknown zoom or orientation answers `-32602`.
+Without parameters it reads. `zoom` is the visible radius, one of 100, 200, 500, 1000 (m); `zoom_mode` is `speed` (the radius follows the speed: `zoom` is then the largest radius, `radius_m` the radius drawn now, `target_m` what the speed asks for, `speed_kmh` the filtered speed) or `fixed`; `orientation` is `north` (north up) or `heading` (the player's heading up); `enabled` shows or hides the map. The three are the settings `hud.minimap_zoom`, `hud.minimap_orientation` and `hud.minimap` (changed and saved the same way; the keys F7, Shift+F7, `+` and `-` do the same). The map is centred on the player's vehicle, or on the free camera when there is no vehicle. `last_us` and `worst_us` are the time of the last and the slowest redraw (budget `budget_us`, at most 10 redraws per second); `hud.state` carries the same object as `minimap`. An unknown zoom or orientation answers `-32602`.
 
 ### `session.spawn`
 
