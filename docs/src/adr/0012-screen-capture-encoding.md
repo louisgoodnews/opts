@@ -45,6 +45,7 @@ Encoding runs on dedicated worker threads fed through a bounded queue; frames th
 ## ✅ Consequences
 
 * No new crate and no system dependency in the default build. The cost is that the most common video container (MP4) is not produced by default; users can remux an IVF with FFmpeg (`ffmpeg -i x.ivf -c copy x.mp4`) and the design documents this command.
+* `rav1e` is built here **without its assembly kernels** (the feature set `image` already uses; the assembly needs the `nasm` assembler, a system tool), which makes it noticeably slower than a normal `rav1e` build. `opts-bevy` depends on it directly with exactly that feature set, so nothing new is compiled.
 * `rav1e` is slow compared to hardware or x264-style encoders. At realtime speed presets it will not keep up with 1080p60 on a busy machine; the degradation policy (drop frames, stop on a persistently full queue) exists for that, and `scale` and `fps` are the knobs. Whether the 80 % frame-rate acceptance bar is met is measured in Phase C; if AV1 cannot meet it at 1080p30, `frames` stays the supported default and the finding goes into the report.
 * The optional H.264 feature keeps a path open without making the licensing question everyone's problem. It is not tested in CI.
 * Decoding a frame sequence is trivial for agents and tools, which is the main agent workflow.
