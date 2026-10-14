@@ -50,16 +50,21 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 | :--- | :---: | :--- | :--- |
 | `opts-logging` | L0 | Structured logging, non-blocking writers, subsystem routing, panic hook. | Zero internal OPTS dependencies |
 | `opts-core` | L1 | Pure data structures and parsers for OMSI formats. Zero Bevy, zero file I/O. | `nom`, `binrw`, `serde`, `glam`, `thiserror`, `opts-logging` |
-| `opts-sim` | L2 | Engine-agnostic vehicle simulation logic (kinematics, drivetrain). Zero Bevy. | `opts-core`, `petgraph`, `rayon`, `opts-logging` |
+| `opts-sim` | L2 | Engine-agnostic vehicle simulation logic, kinematics, drivetrain, script VM. Zero Bevy. | `opts-core`, `petgraph`, `rayon`, `opts-logging` |
+| `opts-traffic` | L2 | AI road traffic, lane graph from OMSI paths, car following, conflict zones. Zero Bevy. | `opts-core`, `opts-logging`, `glam`, `petgraph` |
+| `opts-catalogue` | L2 | Scans local OMSI directories into a searchable asset catalogue. Zero Bevy. | `opts-core`, `opts-logging`, `rusqlite` |
+| `opts-hardware` | L2 | Privacy-respecting hardware capability detection and preset defaults. Zero Bevy. | `opts-logging` |
 | `opts-gui` | L2 | Material Design 3 GUI widget library, design tokens, layout primitives. | `bevy`, `opts-core`, `opts-logging` |
-| `opts-bevy` | L2 | Bevy plugin, 3D asset loaders, coordinates, ECS vehicle physics bridge. | `opts-core`, `opts-sim`, `bevy`, `image`, `opts-logging` |
-| `opts-game` | L3 | The main interactive simulator executable that ties everything together. | `opts-core`, `opts-sim`, `opts-bevy`, `opts-gui`, `opts-logging`, `bevy` |
-| `opts-tools` | L3 | Unified CLI tools for inspecting, validating, and converting OMSI assets. | `opts-core`, `opts-logging`, `anyhow` |
+| `opts-bevy` | L2/L3 | Bevy plugin, 3D asset loaders, coordinates, ECS vehicle physics bridge, control server. | `opts-core`, `opts-sim`, `opts-traffic`, `bevy`, `image`, `ddsfile`, `opts-logging` |
+| `opts-game` | L3 | The main interactive simulator executable that ties everything together. | `opts-core`, `opts-sim`, `opts-bevy`, `opts-gui`, `opts-catalogue`, `opts-traffic`, `opts-logging`, `bevy` |
+| `opts-cli` | L3 | Command-line client for remote controlling a running simulator via JSON-RPC. | `opts-logging`, `clap`, `serde_json` |
+| `opts-tools` | L3 | Developer CLI utilities: asset validation (`opts inspect`), metrics, and localization. | `opts-core`, `opts-logging`, `clap`, `anyhow` |
+| `opts-benchmark` | L3 | Performance profiling harness and off-screen scenery object verification. | `opts-core`, `opts-bevy`, `opts-sim`, `opts-logging` |
 
 **⚠️ Important Boundary Invariants:**
-- `opts-core` and `opts-sim` must **never** depend on Bevy, and must not perform synchronous file I/O.
+- `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, and `opts-hardware` must **never** depend on Bevy, and must not perform synchronous file I/O.
 - `opts-logging` must **never** depend on any OPTS internal crate.
-- Only `opts-bevy`, `opts-gui`, and `opts-game` are permitted to depend on Bevy.
+- Only `opts-bevy`, `opts-gui`, `opts-game`, and `opts-benchmark` are permitted to depend on Bevy.
 
 ---
 
@@ -78,11 +83,21 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 - If you discover how an OMSI format works, document it in `docs/src/formats/`.
 - Follow the "Two-Phase" process outlined in [ADR-0002](docs/src/adr/0002-clean-room-policy.md).
 - Include a **Provenance** section at the bottom of your spec citing exactly how you learned the information.
+- Follow the **[Defect Tracking Protocol](docs/src/quality/README.md#defect-tracking-protocol-dual-documentation)** when logging undocumented keywords, scrambled meshes, or parser failures discovered in OMSI assets: document technical details in the format spec's Open Questions table (`Q-NNN`) and record the discovery in the content quality registry.
 
 ### 💻 Writing Code
 - Ensure there is an approved specification or issue for the code you are writing.
 - Write unit tests for your code. For parsers, use self-authored (non-copyrighted) test fixtures.
-- Run `cargo fmt` and `cargo clippy` before committing.
+- Run the local CI suite before submitting or committing:
+  ```bash
+  ./scripts/local-ci.sh      # Linux / macOS
+  .\scripts\local-ci.ps1     # Windows PowerShell
+  ```
+- **Optional Git pre-commit hook:** You can install the pre-commit hook to automatically verify code formatting and run Clippy checks before each commit:
+  ```bash
+  ln -s ../../scripts/pre-commit .git/hooks/pre-commit
+  ```
+  *(The hook is opt-in and is not installed automatically).*
 
 ### 🤖 AI Agent Sessions: One Work Station Each
 

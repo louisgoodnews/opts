@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Status** | 📝 Specification (2026-10-12); nothing implemented |
 | **Crates** | `opts-script_engine`, `opts-script_editor`, `opts-visual_script_editor` |
-| **Milestones** | [M-0054](../roadmap/phase-6/M-0054.md), [M-0055](../roadmap/phase-6/M-0055.md), [M-0056](../roadmap/phase-6/M-0056.md) |
+| **Milestones** | [M-0092](../roadmap/phase-6/M-0092.md), [M-0055](../roadmap/phase-6/M-0055.md), [M-0056](../roadmap/phase-6/M-0056.md) |
 | **Derived from** | [Vehicle scripts: how OMSI does it and the route](vehicle-scripts-route.md), [script sets](../formats/text/vehicles/script-sets.md), [`.osc`](../formats/text/vehicles/osc.md), [variable lists](../formats/text/vehicles/varnamelist.md), [constant files](../formats/text/vehicles/const.md) |
 
 ## 1. Why
