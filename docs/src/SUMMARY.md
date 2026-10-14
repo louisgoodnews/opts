@@ -130,6 +130,7 @@
 - [Articulated Vehicles](architecture/articulation.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
 - [UV Decoder (scrambled meshes, `UvQuality`)](architecture/uv-decoder.md)
+- [UV Decoder: Texture Evidence (design)](architecture/uv-decoder-texture-evidence.md)
 - [Scene Trace (which mesh is where)](architecture/scene-trace.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
@@ -286,6 +287,7 @@
 
 - [Usability Test Protocol (Phase 9, not yet run)](meta/usability-test-protocol.md)
 - [UV Incident Files of the MAN NG272 (2026-10-13)](meta/uv-incidents-ng272-2026-10-13.md)
+- [MAN NL/NG Reinvestigation (2026-10-14)](meta/man-nlng-reinvestigation-2026-10-14.md)
 - [AI Vehicle Configuration Investigation (2026-10-14)](meta/ai-vehicle-config-2026-10-14.md)
 - [Bus Script Integration Research (2026-10-14)](meta/bus-script-integration-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
