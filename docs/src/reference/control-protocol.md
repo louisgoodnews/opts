@@ -267,6 +267,7 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
 | [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
+| [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), orientation, on/off |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
@@ -342,6 +343,14 @@ Back to the vehicle's own viewpoint and remove the stored one.
 **Result:** the `camera.viewpoint.get` result
 
 Resets offsets and field of view, stores the default (which removes the entry) and closes the editor. Answers `1001` unless the driver's view is active.
+
+### `hud.minimap`
+
+Read or change the HUD mini map: zoom (radius in metres), orientation, on/off.
+
+**Result:** `{enabled, shown, zoom_m, orientation, zoom_steps_m, texture_px, side_px, compact, redraws, last_us, worst_us, budget_us, road_chords, markers, centre, up_heading_deg}`
+
+Without parameters it reads. `zoom` is the visible radius, one of 100, 200, 500, 1000 (m); `orientation` is `north` (north up) or `heading` (the player's heading up); `enabled` shows or hides the map. The three are the settings `hud.minimap_zoom`, `hud.minimap_orientation` and `hud.minimap` (changed and saved the same way; the keys F7, Shift+F7, `+` and `-` do the same). The map is centred on the player's vehicle, or on the free camera when there is no vehicle. `last_us` and `worst_us` are the time of the last and the slowest redraw (budget `budget_us`, at most 10 redraws per second); `hud.state` carries the same object as `minimap`. An unknown zoom or orientation answers `-32602`.
 
 ### `session.spawn`
 
@@ -565,12 +574,12 @@ A debug command: restores the start position, zeroes speed and the controls and 
 
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
-| [`trace.set`](#traceset) | `mode?` (string)<br>`tiles?` (json)<br>`kinds?` (json)<br>`file?` (string)<br>`radius?` (number)<br>`center?` (json)<br>`size_cap_mb?` (integer)<br>`overlay?` (boolean)<br>`reset?` (boolean) | 1.3 | Scene trace: set the mode and filters, or read the status |
-| [`trace.pick`](#tracepick) | `x?` (number)<br>`y?` (number)<br>`limit?` (integer) | 1.3 | Scene trace: what is under a screen pixel or the crosshair |
-| [`trace.tile`](#tracetile) | `tile` (json)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: counts and records of one tile |
-| [`trace.find`](#tracefind) | `file?` (string)<br>`kind?` (string)<br>`stage?` (string)<br>`tile?` (json)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records by file pattern, kind, decode stage or tile |
-| [`trace.region`](#traceregion) | `radius` (number)<br>`x?` (number)<br>`z?` (number)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: records within a radius of a ground point |
-| [`trace.export`](#traceexport) | `path` (string)<br>`file?` (string)<br>`kind?` (string)<br>`tile?` (json)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`limit?` (integer) | 1.3 | Scene trace: write matching records as JSON Lines |
+| [`trace.set`](#traceset) | `mode?` (string)<br>`tiles?` (json)<br>`kinds?` (json)<br>`file?` (string)<br>`radius?` (number)<br>`center?` (json)<br>`size_cap_mb?` (integer)<br>`overlay?` (boolean)<br>`reset?` (boolean) | 1.4 | Scene trace: set the mode and filters, or read the status |
+| [`trace.pick`](#tracepick) | `x?` (number)<br>`y?` (number)<br>`limit?` (integer) | 1.4 | Scene trace: what is under a screen pixel or the crosshair |
+| [`trace.tile`](#tracetile) | `tile` (json)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: counts and records of one tile |
+| [`trace.find`](#tracefind) | `file?` (string)<br>`kind?` (string)<br>`stage?` (string)<br>`tile?` (json)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: records by file pattern, kind, decode stage or tile |
+| [`trace.region`](#traceregion) | `radius` (number)<br>`x?` (number)<br>`z?` (number)<br>`kind?` (string)<br>`file?` (string)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`full?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: records within a radius of a ground point |
+| [`trace.export`](#traceexport) | `path` (string)<br>`file?` (string)<br>`kind?` (string)<br>`tile?` (json)<br>`stage?` (string)<br>`issues_only?` (boolean)<br>`limit?` (integer) | 1.4 | Scene trace: write matching records as JSON Lines |
 
 ### `trace.set`
 

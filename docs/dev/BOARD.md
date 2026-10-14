@@ -173,7 +173,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (not merged), verified live; [architecture](../src/architecture/session-vehicles.md).
 - [x] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05. **Done 2026-10-13** on `feat/session-save` (ADR-0011, [Session save](../src/architecture/session-save.md), protocol 1.3.0).
 - [ ] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07.
-- [ ] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08.
+- [x] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08. **Done 2026-10-13** on `feat/hud-minimap`, verified live; [HUD registry](../src/architecture/hud-registry.md#4a-the-mini-map-m-0071).
 - [ ] 🟠 **Control protocol: complete settings control for AI agents** (M-0072, code) — R-10; reproduce the gap first (`settings.*` exists in 1.1.0).
 - [ ] 🔴 **Vehicle dynamics: per-vehicle mass, axles, suspension, brakes on a world physics** (M-0073, spec + code) — R-11.
 - [x] 🟠 **HUD place label from the spawn entry point (no hard-coded string)** (M-0075, code) — R-12. **Done 2026-10-13** with M-0068.

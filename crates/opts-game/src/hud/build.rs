@@ -16,14 +16,19 @@ use super::fade::{
     STATUS_FADE, STATUS_HOLD,
 };
 use super::keys;
+use super::layout::HudLayout;
+use super::minimap::{MiniMapCaption, MiniMapSurface};
 use super::profile::{HudProfile, HudProfiles};
 use super::values::kind_of;
-use super::widget::{Slot, VehicleKind};
+use super::widget::{Row, Slot, VehicleKind};
 use crate::in_game::instruments::{InstrumentInk, InstrumentPanel};
 use crate::in_game::types::{InGameEntity, InGameHudRoot, PauseMenuBtn};
 
 use super::parts::{build_instrument, panel, panel_node, text_widget, texts};
-pub use super::parts::{ActiveProfile, AlertPill, HudRoot, HudSlot, HudText, HudWidgetNode, Part};
+pub use super::parts::{
+    ActiveProfile, AlertPill, ClusterBox, HudRoot, HudRow, HudSlot, HudText, HudWidgetNode, MapBox,
+    Part, ReadoutBox,
+};
 
 /// Spawns the whole HUD for `profile`.
 pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &InstrumentPalette) {
@@ -155,117 +160,208 @@ pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &Instru
             .id()
     });
 
-    // Bottom: the alert line above the instrument cluster.
+    // Bottom: the cluster at the left (hints, alerts, instruments in a fixed order, top to
+    // bottom) and the mini map at the right.
+    let layout = HudLayout::default();
     let bottom = commands
         .spawn(Node {
             width: Val::Percent(100.0),
-            flex_direction: FlexDirection::Column,
-            align_items: AlignItems::Center,
-            row_gap: Val::Px(10.0),
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::FlexEnd,
+            column_gap: Val::Px(12.0),
             ..default()
         })
-        .with_children(|dash| {
-            if !in_slot(Slot::Alerts).is_empty() {
-                // A fixed height: an alert appearing or leaving moves nothing.
-                dash.spawn(Node {
-                    height: Val::Px(44.0),
-                    justify_content: JustifyContent::Center,
-                    align_items: AlignItems::Center,
-                    ..default()
-                })
-                .with_children(|slot| {
-                    slot.spawn((
-                        panel(
-                            panel_node(
-                                UiRect::axes(Val::Px(20.0), Val::Px(8.0)),
-                                FlexDirection::Row,
-                                0.0,
-                            ),
-                            RadiusLevel::Full,
-                            palette,
-                        ),
-                        HudSlot(Slot::Alerts),
-                        AlertPill,
-                        Visibility::Hidden,
-                        UiId::new("hud.slot.alerts"),
-                    ))
-                    .with_children(|pill| {
-                        for (_, w) in in_slot(Slot::Alerts) {
-                            text_widget(
-                                pill,
-                                w,
-                                TypeScale::BodyLarge,
-                                InstrumentInk::Warning,
-                                palette,
-                            );
-                        }
-                    });
-                });
-            }
-            let instruments = in_slot(Slot::Instruments);
-            if !instruments.is_empty() {
-                dash.spawn((
-                    panel(
-                        panel_node(
-                            UiRect::axes(Val::Px(28.0), Val::Px(14.0)),
-                            FlexDirection::Row,
-                            36.0,
-                        ),
-                        RadiusLevel::Large,
-                        palette,
-                    ),
-                    HudSlot(Slot::Instruments),
-                    UiId::new("hud.slot.instruments"),
-                ))
-                .with_children(|cluster| {
-                    for (_, w) in &instruments {
-                        build_instrument(cluster, w, palette);
-                    }
-                });
-            }
+        .with_children(|bottom| {
+            spawn_cluster(bottom, profile, palette);
+            spawn_minimap(bottom, profile, palette, &layout);
         })
         .id();
 
-    // The hints: bottom left, fading.
-    let hints = in_slot(Slot::Hints);
-    let hint_pill = (!hints.is_empty()).then(|| {
-        commands
-            .spawn(Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(20.0),
-                bottom: Val::Px(20.0),
-                max_width: Val::Percent(36.0),
-                ..default()
-            })
-            .with_children(|row| {
-                row.spawn((
-                    panel(
-                        panel_node(
-                            UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
-                            FlexDirection::Column,
-                            0.0,
-                        ),
-                        RadiusLevel::Medium,
-                        palette,
-                    ),
-                    HudSlot(Slot::Hints),
-                    FadeKind::Hints,
-                    HudFade::shown(HINTS_HOLD, HINTS_FADE),
-                    UiId::new("hud.slot.hints"),
-                ))
-                .with_children(|pill| {
-                    for (_, w) in &hints {
-                        text_widget(pill, w, TypeScale::Label, InstrumentInk::Text, palette);
-                    }
-                });
-            })
-            .id()
-    });
-
     commands.entity(root).add_children(&[top, bottom]);
-    for extra in [camera_label, hint_pill].into_iter().flatten() {
-        commands.entity(root).add_child(extra);
+    if let Some(camera_label) = camera_label {
+        commands.entity(root).add_child(camera_label);
     }
+}
+
+/// The bottom-left cluster. Rows, top to bottom: the hints (fade), the alert line (a minimum
+/// height: an alert coming and going moves nothing below it) and the instruments.
+fn spawn_cluster(
+    bottom: &mut ChildSpawnerCommands,
+    profile: &HudProfile,
+    palette: &InstrumentPalette,
+) {
+    let has_row = |row: Row| !profile.in_row(row).is_empty();
+    if !Row::ALL.iter().any(|r| has_row(*r)) {
+        bottom.spawn(Node::default());
+        return;
+    }
+    bottom
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::FlexStart,
+                row_gap: Val::Px(8.0),
+                flex_shrink: 1.0,
+                ..default()
+            },
+            ClusterBox,
+            HudSlot(Slot::ClusterBottomLeft),
+            UiId::new("hud.slot.cluster"),
+        ))
+        .with_children(|cluster| {
+            let hints = profile.in_row(Row::Hints);
+            if !hints.is_empty() {
+                cluster
+                    .spawn((
+                        panel(
+                            panel_node(
+                                UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                                FlexDirection::Column,
+                                0.0,
+                            ),
+                            RadiusLevel::Medium,
+                            palette,
+                        ),
+                        ClusterBox,
+                        HudRow(Row::Hints),
+                        FadeKind::Hints,
+                        HudFade::shown(HINTS_HOLD, HINTS_FADE),
+                        UiId::new("hud.slot.hints"),
+                    ))
+                    .with_children(|pill| {
+                        for (_, w) in &hints {
+                            text_widget(pill, w, TypeScale::Label, InstrumentInk::Text, palette);
+                        }
+                    });
+            }
+            let alerts = profile.in_row(Row::Alerts);
+            if !alerts.is_empty() {
+                // A minimum height: an alert appearing or leaving moves nothing.
+                cluster
+                    .spawn((
+                        Node {
+                            min_height: Val::Px(44.0),
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        ClusterBox,
+                        HudRow(Row::Alerts),
+                    ))
+                    .with_children(|slot| {
+                        slot.spawn((
+                            panel(
+                                panel_node(
+                                    UiRect::axes(Val::Px(20.0), Val::Px(8.0)),
+                                    FlexDirection::Row,
+                                    0.0,
+                                ),
+                                RadiusLevel::Large,
+                                palette,
+                            ),
+                            ClusterBox,
+                            AlertPill,
+                            Visibility::Hidden,
+                            UiId::new("hud.slot.alerts"),
+                        ))
+                        .with_children(|pill| {
+                            for (_, w) in &alerts {
+                                text_widget(
+                                    pill,
+                                    w,
+                                    TypeScale::BodyLarge,
+                                    InstrumentInk::Warning,
+                                    palette,
+                                );
+                            }
+                        });
+                    });
+            }
+            let instruments = profile.in_row(Row::Instruments);
+            if !instruments.is_empty() {
+                cluster
+                    .spawn((
+                        panel(
+                            panel_node(
+                                UiRect::axes(Val::Px(24.0), Val::Px(12.0)),
+                                FlexDirection::Row,
+                                28.0,
+                            ),
+                            RadiusLevel::Large,
+                            palette,
+                        ),
+                        HudRow(Row::Instruments),
+                        UiId::new("hud.slot.instruments"),
+                    ))
+                    .with_children(|row| {
+                        for (_, w) in &instruments {
+                            build_instrument(row, w, palette);
+                        }
+                    });
+            }
+        });
+}
+
+/// The mini map slot, bottom right: a panel with the map texture and a caption.
+fn spawn_minimap(
+    bottom: &mut ChildSpawnerCommands,
+    profile: &HudProfile,
+    palette: &InstrumentPalette,
+    layout: &HudLayout,
+) {
+    let Some((_, w)) = profile.in_slot(Slot::MiniMap).into_iter().next() else {
+        bottom.spawn(Node::default());
+        return;
+    };
+    bottom
+        .spawn((
+            Node {
+                flex_shrink: 0.0,
+                ..default()
+            },
+            HudSlot(Slot::MiniMap),
+            UiId::new("hud.slot.minimap"),
+        ))
+        .with_children(|slot| {
+            slot.spawn((
+                panel(
+                    Node {
+                        width: Val::Px(layout.map_side),
+                        padding: UiRect::all(Val::Px(6.0)),
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(4.0),
+                        align_items: AlignItems::Stretch,
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..default()
+                    },
+                    RadiusLevel::Large,
+                    palette,
+                ),
+                MapBox,
+                HudWidgetNode {
+                    id: w.id,
+                    slot: w.slot,
+                },
+                UiId::new(format!("hud.{}", w.id)),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        aspect_ratio: Some(1.0),
+                        ..default()
+                    },
+                    ImageNode::default(),
+                    MiniMapSurface,
+                    UiId::new("hud.minimap.surface"),
+                ));
+                panel.spawn((
+                    texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
+                    MiniMapCaption,
+                    UiId::new("hud.minimap.caption"),
+                ));
+            });
+        });
 }
 
 /// Builds the HUD once the player's vehicle is known: picks the profile of its kind and spawns it.

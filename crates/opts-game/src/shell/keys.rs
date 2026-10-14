@@ -182,6 +182,12 @@ keys! {
     HELP_GROUP_CAMERA = "help-group-camera",
     /// Message `help-group-menus`.
     HELP_GROUP_MENUS = "help-group-menus",
+    /// Message `help-group-map`.
+    HELP_GROUP_MAP = "help-group-map",
+    /// Message `help-key-minimap`.
+    HELP_KEY_MINIMAP = "help-key-minimap",
+    /// Message `help-key-minimap-zoom`.
+    HELP_KEY_MINIMAP_ZOOM = "help-key-minimap-zoom",
     /// Message `help-key-throttle`.
     HELP_KEY_THROTTLE = "help-key-throttle",
     /// Message `help-key-steer`.

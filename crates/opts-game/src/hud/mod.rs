@@ -13,6 +13,8 @@ pub mod build;
 pub mod details;
 pub mod fade;
 pub mod keys;
+pub mod layout;
+pub mod minimap;
 pub mod parts;
 pub mod profile;
 pub mod protocol;
@@ -29,7 +31,7 @@ pub use alerts::{AlertQueue, AlertSeverity, ClearAlert, RaiseAlert};
 pub use details::ShowDetailsToast;
 pub use profile::{HudProfile, HudProfiles};
 pub use values::HudValues;
-pub use widget::{HudWidget, Slot, VehicleKind, WIDGETS};
+pub use widget::{HudWidget, Row, Slot, VehicleKind, WIDGETS};
 
 /// Merges the HUD message tables into the localisation.
 pub fn add_messages(loc: &mut opts_gui::l10n::Localization) {
@@ -61,6 +63,13 @@ impl Plugin for HudPlugin {
         );
         app.insert_resource(HudProfiles::load(profile::user_dir().as_deref()))
             .init_resource::<HudValues>()
+            .init_resource::<layout::HudLayout>()
+            .init_resource::<opts_gui::components::toast_stack::ToastInset>()
+            .add_systems(
+                Update,
+                layout::toast_inset.before(opts_gui::components::toast_stack::stack_toasts),
+            )
+            .add_plugins(minimap::MiniMapPlugin)
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<crate::session_vehicles::PlaceLabel>()
@@ -74,6 +83,7 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     values::sample_values,
+                    (layout::measure, layout::apply).chain(),
                     (
                         update::tick_session_clock,
                         update::camera_label_changes,

@@ -1,15 +1,17 @@
 // HUD profile of a trolleybus (docs/src/architecture/hud-registry.md).
+// Slots: bottom-left cluster (rows hints, alerts, instruments in a fixed order), mini map bottom right.
 HudProfile(
     kind: Trolleybus,
     widgets: [
         (id: "session", order: 10),
         (id: "clock", order: 20),
         (id: "camera-label", order: 10),
-        (id: "alerts", order: 10),
-        (id: "speed", order: 10),
-        (id: "gear", order: 20),
-        (id: "rpm", order: 30),
-        (id: "parking-brake", order: 40),
         (id: "controls-hint", order: 10),
+        (id: "alerts", order: 20),
+        (id: "speed", order: 30),
+        (id: "gear", order: 40),
+        (id: "rpm", order: 50),
+        (id: "parking-brake", order: 60),
+        (id: "minimap", order: 10),
     ],
 )

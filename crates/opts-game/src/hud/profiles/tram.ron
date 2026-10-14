@@ -1,14 +1,16 @@
-// HUD profile of a tram: no engine speed, the brake lamp before the gear.
+// HUD profile of a tram: no engine speed, the brake lamp before the gear (docs/src/architecture/hud-registry.md).
+// Slots: bottom-left cluster (rows hints, alerts, instruments in a fixed order), mini map bottom right.
 HudProfile(
     kind: Tram,
     widgets: [
         (id: "session", order: 10),
         (id: "clock", order: 20),
         (id: "camera-label", order: 10),
-        (id: "alerts", order: 10),
-        (id: "speed", order: 10),
-        (id: "parking-brake", order: 20),
-        (id: "gear", order: 30),
         (id: "controls-hint", order: 10),
+        (id: "alerts", order: 20),
+        (id: "speed", order: 30),
+        (id: "parking-brake", order: 40),
+        (id: "gear", order: 50),
+        (id: "minimap", order: 10),
     ],
 )

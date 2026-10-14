@@ -7,7 +7,7 @@ use opts_gui::theme::InstrumentPalette;
 
 use super::keys;
 use super::profile::HudProfile;
-use super::widget::{Binding, HudWidget, Slot, VehicleKind};
+use super::widget::{Binding, HudWidget, Row, Slot, VehicleKind};
 use crate::in_game::instruments::{InstrumentFade, InstrumentInk, InstrumentPanel};
 
 /// Marks the root of the HUD.
@@ -17,6 +17,41 @@ pub struct HudRoot;
 /// Marks the panel of a slot.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HudSlot(pub Slot);
+
+/// Marks the panel of a row of the bottom-left cluster.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct HudRow(pub Row);
+
+/// The bottom-left cluster and its rows: the layout caps their width so that the cluster never
+/// reaches the mini map.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct ClusterBox;
+
+/// Marks the mini map's panel: the layout sets its width.
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct MapBox;
+
+/// A readout column whose minimum width depends on the layout (fixed width, so values do not
+/// jitter; narrower in a compact layout).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ReadoutBox {
+    /// Width in a normal layout (layout px).
+    pub normal: f32,
+    /// Width in a compact layout.
+    pub compact: f32,
+}
+
+impl ReadoutBox {
+    /// The width for the layout.
+    #[must_use]
+    pub const fn width(&self, compact: bool) -> f32 {
+        if compact {
+            self.compact
+        } else {
+            self.normal
+        }
+    }
+}
 
 /// Marks the root node of a widget.
 #[derive(Component, Debug, Clone, Copy)]
@@ -116,18 +151,26 @@ pub(super) fn readout(
     caption_key: Option<&'static str>,
     palette: &InstrumentPalette,
 ) {
+    let width = match w.binding {
+        Binding::Speed => ReadoutBox {
+            normal: 92.0,
+            compact: 66.0,
+        },
+        _ => ReadoutBox {
+            normal: 56.0,
+            compact: 42.0,
+        },
+    };
     parent
         .spawn((
             Node {
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
                 // A fixed width keeps the value from jittering.
-                min_width: Val::Px(match w.binding {
-                    Binding::Speed => 92.0,
-                    _ => 56.0,
-                }),
+                min_width: Val::Px(width.normal),
                 ..default()
             },
+            width,
             HudWidgetNode {
                 id: w.id,
                 slot: w.slot,

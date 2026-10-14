@@ -87,6 +87,25 @@ impl Default for TrafficState {
     }
 }
 
+/// The mini map reads the road paths of the resident tiles (read-only, no copy of the lane graph).
+impl crate::hud::minimap::MapSource for TrafficState {
+    fn roads_near(
+        &self,
+        centre: DVec2,
+        radius_m: f64,
+        out: &mut Vec<crate::hud::minimap::MapRoad>,
+    ) {
+        for segment in self.segments.values().flatten() {
+            if crate::hud::minimap::may_touch(&segment.geometry, centre, radius_m) {
+                out.push(crate::hud::minimap::MapRoad {
+                    geometry: segment.geometry,
+                    width: segment.width,
+                });
+            }
+        }
+    }
+}
+
 /// A vehicle type of the map's AI list.
 struct Variant {
     name: String,
