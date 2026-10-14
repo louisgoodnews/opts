@@ -285,6 +285,22 @@ mod tests {
         assert_eq!(parse_keyword(" [indented]"), None);
     }
 
+    /// An indented `[keyword]` is not a keyword: OMSI's own editor templates carry indented help
+    /// blocks (`\t[NightMapMode]` followed by prose, in 5,250 `.sco` files, then the real
+    /// `[NightMapMode]` at the start of a line), and 505 indented `[couple_back]` lines name a
+    /// file that exists in only 5 % of the cases (99.6 % for those at the start of a line):
+    /// disabled blocks. See `docs/src/formats/text/keyword-indentation.md`.
+    #[test]
+    fn an_indented_keyword_stays_a_parameter_line() {
+        let text = "[mass]\n10\n\t[NightMapMode]\n        help text\n[NightMapMode]\n2\n";
+        let b = scan_blocks(text);
+        assert_eq!(b.len(), 2);
+        assert_eq!(b[0].keyword, "mass");
+        assert_eq!(b[0].parameters, ["10", "[NightMapMode]", "help text"]);
+        assert_eq!(b[1].keyword, "nightmapmode");
+        assert_eq!(b[1].parameters, ["2"]);
+    }
+
     #[test]
     fn test_scan_blocks() {
         let text = r#"
