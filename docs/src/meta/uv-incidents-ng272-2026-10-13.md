@@ -5,7 +5,7 @@ Run: `MAN_GN92_main.bus` on Aachen Linie 33, release build of the merged tree, c
 This page explains how to read one file, what the whole set shows, and what it means for what you see on screen.
 
 ## 1. How to read an incident file
-```
+```text
 mesh / context / header / vertices ...      which file, who loaded it, how big
 == Result ==                                vertices per quality: Exact, Recovered, Unreliable
 == What settled the vertices ==             per decoder stage: how many vertices, how many unreliable
