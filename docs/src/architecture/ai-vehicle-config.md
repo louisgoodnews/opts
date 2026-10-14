@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design proposal, not implemented |
+| **Status** | ✅ Implemented 2026-10-14 (phase 1: profile layer and formulas; the measured characterisation of phase 2 and the dynamic mode are open) |
 | **Date** | 2026-10-14 |
 | **Milestone** | [M-0095](../roadmap/phase-4/M-0095.md) (extends [M-0049](../roadmap/phase-4/M-0049.md)) |
 | **Evidence** | [investigation report](../meta/ai-vehicle-config-2026-10-14.md) |

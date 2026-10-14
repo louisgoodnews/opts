@@ -1,0 +1,392 @@
+//! The vehicle types of a map's AI lists: what each vehicle file says about the vehicle (its
+//! [`AiProfile`]), its model, and the trailing units of a coupled vehicle (M-0095,
+//! `docs/src/architecture/ai-vehicle-config.md`).
+
+use std::path::{Path, PathBuf};
+
+use bevy::math::Vec2;
+use opts_core::formats::constfile::ConstFile;
+use opts_core::formats::map::{
+    parse_unsched_trafficdens, parse_unsched_vehgroups, AiGroup, AiLists, GroupDensity,
+};
+use opts_core::formats::vehicles::model::ModelConfig;
+use opts_core::formats::vehicles::{AiKind, AiProfile, BusManifest, VehicleDomain};
+use opts_traffic::{VehicleClass, VehicleKind, VehicleTraits};
+
+use super::WorldLoadJob;
+
+/// Most units (head and trailers) of one AI vehicle.
+const MAX_UNITS: usize = 8;
+
+/// One unit of an AI vehicle: the head, or a trailing unit coupled behind its predecessor.
+pub(super) struct Unit {
+    pub name: String,
+    pub model: ModelConfig,
+    pub model_dir: PathBuf,
+    pub tex_dirs: Vec<PathBuf>,
+    pub profile: AiProfile,
+    /// Body length and the distance from the model origin to its front bumper (m), measured when
+    /// the meshes first load.
+    pub size: Option<(f32, f32)>,
+    /// Trailing units: the predecessor's rear coupling and this unit's own joint, both in their
+    /// own vehicle frames (x lateral, y longitudinal).
+    pub hitch: Vec2,
+    pub joint: Vec2,
+    /// Longitudinal position of the rearmost axle in this unit's frame.
+    pub rear_axle_y: f32,
+    /// Joint limit on the angle against the predecessor (degrees).
+    pub max_alpha_deg: f32,
+    /// The unit is coupled the other way round (its model faces backwards).
+    pub reversed: bool,
+}
+
+/// A vehicle type of the map's AI list: the head unit and its trailers.
+pub(super) struct Variant {
+    pub name: String,
+    pub units: Vec<Unit>,
+}
+
+impl Variant {
+    /// The traits the traffic model needs, from the profile of the head, the measured size of
+    /// every unit (when known) and the masses and brake forces of all units.
+    pub fn traits(&self) -> VehicleTraits {
+        let head = &self.units[0].profile;
+        let length: f64 = if self.units.iter().all(|u| u.size.is_some()) {
+            self.units
+                .iter()
+                .filter_map(|u| u.size)
+                .map(|(len, _)| f64::from(len))
+                .sum()
+        } else {
+            f64::from(head.body_length_m.unwrap_or(4.4))
+        };
+        let masses: Option<Vec<f64>> = self
+            .units
+            .iter()
+            .map(|u| u.profile.mass_kg.map(f64::from))
+            .collect();
+        let mass_kg = masses
+            .as_ref()
+            .map(|m| m.iter().sum())
+            .or(head.mass_kg.map(f64::from));
+        let brakes: Option<Vec<f64>> = self
+            .units
+            .iter()
+            .map(|u| u.profile.brake_max_n.map(f64::from))
+            .collect();
+        VehicleTraits {
+            kind: head.kind.map(vehicle_kind),
+            has_cabin: head.has_cabin,
+            length,
+            mass_kg,
+            top_speed: head.top_speed_ms.map(f64::from),
+            drive_torque: head.gas_max.map(f64::from),
+            wheel_radius: head.wheel_radius_m.map(f64::from),
+            brake_force: brakes
+                .map(|b| b.iter().sum())
+                .or(head.brake_max_n.map(f64::from)),
+            brake_performance: f64::from(head.brake_performance),
+            rowdy: (f64::from(head.rowdy.0), f64::from(head.rowdy.1)),
+        }
+    }
+
+    /// Class for lane restrictions (known before the meshes are measured).
+    pub fn class(&self) -> VehicleClass {
+        self.traits().class()
+    }
+}
+
+fn vehicle_kind(k: AiKind) -> VehicleKind {
+    match k {
+        AiKind::Car => VehicleKind::Car,
+        AiKind::Cab => VehicleKind::Cab,
+        AiKind::Bus => VehicleKind::Bus,
+        AiKind::Truck => VehicleKind::Truck,
+    }
+}
+
+/// Reads one vehicle file: manifest, constant files, profile and model.
+fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, PathBuf), String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let manifest = BusManifest::parse_bytes(&bytes).map_err(|e| e.to_string())?;
+    let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let cfg_rel = manifest.model_cfg.clone().ok_or("no [model] entry")?;
+    let cfg = job
+        .install
+        .find_in(&dir, &cfg_rel)
+        .ok_or_else(|| format!("model config not found: {cfg_rel}"))?;
+    let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?;
+    let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
+    let consts: Vec<ConstFile> = manifest
+        .constfiles
+        .iter()
+        .filter_map(|c| job.install.find_in(&dir, c))
+        .filter_map(|p| std::fs::read(p).ok())
+        .map(|b| ConstFile::parse(&b))
+        .collect();
+    let profile = AiProfile::from_manifest(&manifest, &consts);
+    let tex_dirs = vec![
+        job.install
+            .find_in(&dir, "texture")
+            .unwrap_or_else(|| dir.join("texture")),
+        model_dir.join("texture"),
+    ];
+    let unit = Unit {
+        name: path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default(),
+        model,
+        model_dir,
+        tex_dirs,
+        profile,
+        size: None,
+        hitch: Vec2::ZERO,
+        joint: Vec2::ZERO,
+        rear_axle_y: 0.0,
+        max_alpha_deg: 52.5,
+        reversed: false,
+    };
+    Ok((unit, manifest, dir))
+}
+
+/// The joint data of a trailing unit behind `parent`, as the player's chain computes it.
+fn attach(unit: &mut Unit, parent: &BusManifest, own: &BusManifest) -> Option<()> {
+    let reversed = parent.couple_back_reversed;
+    let own_joint = if reversed {
+        own.coupling_back.map(|c| -c)
+    } else {
+        own.coupling_front
+    };
+    let (b, f) = (parent.coupling_back?, own_joint?);
+    let axles = own.axles.iter().map(|a| a.longitudinal_m);
+    let rear = if reversed {
+        -axles.fold(f32::NEG_INFINITY, f32::max)
+    } else {
+        axles.fold(f32::INFINITY, f32::min)
+    };
+    unit.hitch = Vec2::new(b.x, b.y);
+    unit.joint = Vec2::new(f.x, f.y);
+    unit.rear_axle_y = if rear.is_finite() { rear } else { f.y - 6.0 };
+    unit.max_alpha_deg = own.coupling_front_limits.map_or(52.5, |l| l.max_alpha_deg);
+    unit.reversed = reversed;
+    Some(())
+}
+
+/// Loads a vehicle type of the AI list: the head and, through `[couple_back]`, its trailers.
+///
+/// A rail or air vehicle is refused (it does not belong on a road); a trailer that cannot be
+/// loaded or coupled leaves the vehicle without it.
+pub(super) fn load_variant(job: &WorldLoadJob, rel: &str) -> Result<Variant, String> {
+    let path = job.install.find_file(rel).ok_or("file not found")?;
+    let (head, mut manifest, mut dir) = load_unit(job, &path)?;
+    if head.profile.domain != VehicleDomain::Road {
+        return Err(format!("not a road vehicle ({:?})", head.profile.domain));
+    }
+    for note in &head.profile.notes {
+        tracing::debug!(vehicle = %head.name, "{note}");
+    }
+    let name = head.name.clone();
+    let mut units = vec![head];
+    while units.len() < MAX_UNITS {
+        let Some(next) = manifest.couple_back.clone() else {
+            break;
+        };
+        let Some(path) = job.install.find_in(&dir, &next) else {
+            tracing::debug!(vehicle = %name, trailer = %next, "AI trailer not found");
+            break;
+        };
+        let Ok((mut unit, child, child_dir)) = load_unit(job, &path) else {
+            tracing::debug!(vehicle = %name, trailer = %next, "AI trailer cannot be loaded");
+            break;
+        };
+        if unit.profile.domain != VehicleDomain::Road
+            || attach(&mut unit, &manifest, &child).is_none()
+        {
+            tracing::debug!(vehicle = %name, trailer = %next, "AI trailer not coupled");
+            break;
+        }
+        let reversed = unit.reversed;
+        units.push(unit);
+        if reversed {
+            break;
+        }
+        (manifest, dir) = (child, child_dir);
+    }
+    Ok(Variant { name, units })
+}
+
+/// A group of the map's AI lists that takes part in the traffic, with its density curve.
+pub(super) struct PoolGroup {
+    pub name: String,
+    pub density: Option<GroupDensity>,
+}
+
+/// A vehicle entry of a group.
+pub(super) struct Slot {
+    pub file: String,
+    pub weight: f32,
+    /// Index into the pool's groups.
+    pub group: usize,
+    /// Spawn attempts whose meshes were not ready (still decoding, or unreadable).
+    pub fails: u32,
+    pub state: SlotState,
+}
+
+pub(super) enum SlotState {
+    /// Not parsed yet.
+    Pending,
+    Ready(Box<Variant>),
+    Failed,
+}
+
+/// The groups that take part in the traffic: every group `unsched_vehgroups.txt` gives a default
+/// density of 1 or more (`0` = no traffic by default), else `NormalCars`, else the first group.
+pub(super) fn participating<'a>(
+    lists: &'a AiLists,
+    vehgroups: &[opts_core::formats::map::UnschedGroup],
+) -> Vec<&'a AiGroup> {
+    let by_name = |n: &str| lists.groups.iter().find(|g| g.name.eq_ignore_ascii_case(n));
+    let mut out: Vec<&AiGroup> = Vec::new();
+    for g in vehgroups.iter().filter(|g| g.default_density >= 1) {
+        if let Some(found) = by_name(&g.name) {
+            if !out.iter().any(|o| std::ptr::eq(*o, found)) {
+                out.push(found);
+            }
+        }
+    }
+    if out.is_empty() {
+        out.extend(by_name("NormalCars").or_else(|| lists.groups.first()));
+    }
+    out
+}
+
+/// Reads the map's AI lists and builds the groups and vehicle slots of the traffic pool.
+pub(super) fn read_groups(job: &WorldLoadJob) -> (Vec<PoolGroup>, Vec<Slot>) {
+    let read = |name: &str| {
+        job.install
+            .find_in(&job.config.map_dir, name)
+            .and_then(|p| std::fs::read(p).ok())
+    };
+    let lists = read("ailists.cfg")
+        .map(|b| AiLists::parse(&b))
+        .unwrap_or_default();
+    let vehgroups = read("unsched_vehgroups.txt")
+        .map(|b| parse_unsched_vehgroups(&b))
+        .unwrap_or_default();
+    let densities = read("unsched_trafficdens.txt")
+        .map(|b| parse_unsched_trafficdens(&b))
+        .unwrap_or_default();
+    let (mut groups, mut slots) = (Vec::new(), Vec::new());
+    for g in participating(&lists, &vehgroups) {
+        tracing::info!(group = %g.name, vehicles = g.entries.len(), "AI traffic group chosen");
+        let index = groups.len();
+        groups.push(PoolGroup {
+            name: g.name.clone(),
+            density: densities
+                .iter()
+                .find(|d| d.name.eq_ignore_ascii_case(&g.name))
+                .cloned(),
+        });
+        slots.extend(
+            g.entries
+                .iter()
+                .filter(|e| {
+                    let f = e.vehicle.to_ascii_lowercase();
+                    f.ends_with(".bus") || f.ends_with(".ovh")
+                })
+                .map(|e| Slot {
+                    file: e.vehicle.clone(),
+                    weight: e.weight.unwrap_or(1.0).max(0.0),
+                    group: index,
+                    fails: 0,
+                    state: SlotState::Pending,
+                }),
+        );
+    }
+    if groups.is_empty() {
+        tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no AI group in ailists.cfg; no traffic");
+    }
+    (groups, slots)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use opts_core::formats::map::UnschedGroup;
+
+    fn lists() -> AiLists {
+        AiLists::parse(
+            b"[aigroup_2]\nNormalCars\n\nvehicles\\a.bus\t5\n[end]\n\n[aigroup_2]\nTrucks\n\nvehicles\\b.bus\t1\n[end]\n\n\
+[aigroup_2]\nEmergency\n\nvehicles\\c.bus\t1\n[end]\n",
+        )
+    }
+
+    fn vg(name: &str, d: u32) -> UnschedGroup {
+        UnschedGroup {
+            name: name.into(),
+            default_density: d,
+        }
+    }
+
+    #[test]
+    fn groups_with_a_default_density_take_part_the_others_do_not() {
+        let l = lists();
+        let g = participating(
+            &l,
+            &[vg("NormalCars", 1), vg("trucks", 1), vg("Emergency", 0)],
+        );
+        let names: Vec<&str> = g.iter().map(|g| g.name.as_str()).collect();
+        assert_eq!(names, ["NormalCars", "Trucks"]);
+    }
+
+    #[test]
+    fn without_usable_group_data_the_old_choice_stays() {
+        let l = lists();
+        assert_eq!(participating(&l, &[])[0].name, "NormalCars");
+        assert_eq!(
+            participating(&l, &[vg("Emergency", 0)])[0].name,
+            "NormalCars"
+        );
+        let only = AiLists::parse(b"[aigroup_2]\nTaxi\n\nvehicles\\t.bus\t1\n[end]\n");
+        assert_eq!(participating(&only, &[])[0].name, "Taxi");
+        assert!(participating(&AiLists::default(), &[]).is_empty());
+    }
+
+    #[test]
+    fn traits_sum_the_units_of_a_coupled_vehicle() {
+        let unit = |mass: f32, brake: f32, len: f32| Unit {
+            name: "u".into(),
+            model: ModelConfig::default(),
+            model_dir: PathBuf::new(),
+            tex_dirs: vec![],
+            profile: {
+                let mut p =
+                    AiProfile::from_manifest(&BusManifest::parse("[mass]\n1\n").unwrap(), &[]);
+                p.mass_kg = Some(mass);
+                p.brake_max_n = Some(brake);
+                p
+            },
+            size: Some((len, 1.0)),
+            hitch: Vec2::ZERO,
+            joint: Vec2::ZERO,
+            rear_axle_y: 0.0,
+            max_alpha_deg: 52.5,
+            reversed: false,
+        };
+        let v = Variant {
+            name: "bus".into(),
+            units: vec![unit(11_000.0, 80_000.0, 11.0), unit(8000.0, 60_000.0, 7.0)],
+        };
+        let t = v.traits();
+        assert_eq!(t.mass_kg, Some(19_000.0));
+        assert_eq!(t.brake_force, Some(140_000.0));
+        assert!((t.length - 18.0).abs() < 1e-9);
+        assert_eq!(
+            v.class(),
+            VehicleClass::Truck,
+            "no kind and no cabin: by length"
+        );
+    }
+}
