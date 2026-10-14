@@ -85,6 +85,7 @@ impl Plugin for ControlPlugin {
             let _ = std::fs::create_dir_all(&dir);
             policy.write_roots.push(dir);
         }
+        crate::capture::install(app);
         app.insert_resource(registry)
             .insert_resource(policy)
             .insert_resource(self.config.clone())

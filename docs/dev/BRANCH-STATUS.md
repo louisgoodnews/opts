@@ -10,8 +10,9 @@ Rules that apply to every branch below: work in the branch's own worktree (never
 | :--- | :--- |
 | `feat/session-save` (M-0069) | Merged (gates green). |
 | `agent/mesh-audit` (P-1014) | Already merged into master by another session. |
-| `feat/scene-trace` (M-0087) | Being finished by a sub agent, see below. |
-| `feat/hud-minimap` (M-0071) | Being finished by a sub agent, see below. |
+| `feat/scene-trace` (M-0087) | Merged 2026-10-14 (gates green; protocol 1.4.0, `trace.*` since 1.4). Live check outstanding, M-0090 not started. |
+| `feat/hud-minimap` (M-0071) | Merged 2026-10-14 (gates green). Mini map moved from F9 to F7 because F9 is the quick load. |
+| `agent/screen-capture` | In progress: design approved, Phase B part 1 (screenshot) done. |
 
 ## Needs work
 

@@ -86,17 +86,49 @@ fn is_slow(method: &str) -> bool {
             | "camera.look"
             | "snapshot"
             | "screenshot"
+            | "capture.burst"
+            | "capture.record.stop"
             | "report"
             | "batch"
     )
 }
 
+/// Splits the command words into the method and its arguments. A method may be written with
+/// spaces instead of dots (`capture record start` for `capture.record.start`): the longest
+/// leading run of words whose dotted join is a known command wins.
+fn split_method(words: &[String]) -> Option<(String, &[String])> {
+    let (first, rest) = words.split_first()?;
+    if find(first).is_none() {
+        for n in (2..=words.len().min(3)).rev() {
+            let joined = words[..n].join(".");
+            if find(&joined).is_some() {
+                return Some((joined, &words[n..]));
+            }
+        }
+    }
+    Some((first.clone(), rest))
+}
+
+/// Defaults that only the command-line client applies (the protocol's own defaults differ): a
+/// recording started from a terminal is for quick iteration, so it lasts 30 s, not 60 s.
+fn apply_cli_defaults(method: &str, params: &mut serde_json::Value) {
+    if method == "capture.record.start" {
+        if let Some(obj) = params.as_object_mut() {
+            obj.entry("duration_ms")
+                .or_insert(serde_json::json!(30_000));
+        } else if params.is_null() {
+            *params = serde_json::json!({"duration_ms": 30_000});
+        }
+    }
+}
+
 /// Runs one command from words and prints the outcome; returns the process exit code.
 pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
-    let Some((method, rest)) = words.split_first() else {
+    let Some((method, rest)) = split_method(words) else {
         errln!("no command given; try `opts-cli list`");
         return 1;
     };
+    let method = method.as_str();
     let params = match find(method) {
         Some(spec) => build_params(spec, rest),
         None => build_params(&crate::commands::generic_spec(), rest),
@@ -108,6 +140,8 @@ pub fn execute(client: &mut Client, mode: OutputMode, words: &[String]) -> u8 {
             return 1;
         }
     };
+    let mut params = params;
+    apply_cli_defaults(method, &mut params);
     if is_slow(method) {
         client.set_read_timeout(Duration::from_secs(120));
     }
@@ -231,5 +265,41 @@ pub fn run(cli: &Cli) -> u8 {
             1
         }
         _ => execute(&mut Client::new(cli.config()), mode, &cli.words),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn words(w: &[&str]) -> Vec<String> {
+        w.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    #[test]
+    fn spaced_command_names_resolve_to_dotted_methods() {
+        let w = words(&["trace", "set", "full"]);
+        let (m, rest) = split_method(&w).expect("method");
+        assert_eq!((m.as_str(), rest), ("trace.set", &w[2..]));
+        let w = words(&["state"]);
+        assert_eq!(split_method(&w).expect("method").0, "state");
+        let w = words(&["capture", "record", "start", "--fps", "15"]);
+        let (m, rest) = split_method(&w).expect("method");
+        assert_eq!((m.as_str(), rest.len()), ("capture.record.start", 2));
+        let w = words(&["no", "such", "thing"]);
+        assert_eq!(split_method(&w).expect("method").0, "no");
+    }
+
+    #[test]
+    fn a_cli_recording_defaults_to_30_seconds() {
+        let mut p = serde_json::Value::Null;
+        apply_cli_defaults("capture.record.start", &mut p);
+        assert_eq!(p["duration_ms"], 30_000);
+        let mut p = serde_json::json!({"duration_ms": 5000});
+        apply_cli_defaults("capture.record.start", &mut p);
+        assert_eq!(p["duration_ms"], 5000);
+        let mut p = serde_json::Value::Null;
+        apply_cli_defaults("state", &mut p);
+        assert!(p.is_null());
     }
 }

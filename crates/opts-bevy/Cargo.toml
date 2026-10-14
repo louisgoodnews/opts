@@ -24,6 +24,10 @@ image = { workspace = true }
 ddsfile = { workspace = true }
 directories = { workspace = true }
 chrono = { workspace = true }
+# Screen capture: AV1 encoder (the feature set the image crate already builds: pure Rust, no nasm)
+# and free-disk-space checks.
+rav1e = { version = "0.8", default-features = false, features = ["threading"] }
+sysinfo = { version = "0.39", default-features = false, features = ["disk"] }
 
 # Serialization (control protocol)
 serde = { workspace = true }

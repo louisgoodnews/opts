@@ -240,3 +240,22 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 ## Reporting (`opts_bevy::reporting`)
 
 `ReportingPlugin` implements the F1 bug report: screenshot capture (`ScreenshotManager`), `ReportModalState` (`Inactive → Capturing → Open`), a modal with a multiline text area (from `opts-gui`), pause of `Time<Virtual>` (only if it was running), the `ModalActive` resource with the `not_modal_active` run condition for input systems, and asynchronous saving of `{datetime}.png` + `.report` ([format](../src/formats/text/report-format.md)). `ReportContext` carries version, git hash, map, camera and vehicle (filled by `opts-game`). Env `OPTS_REPORTS_DIR` overrides the reports directory. Example: `cargo run -p opts-bevy --example report_flow`.
+
+## Screen capture (`opts_bevy::capture`)
+
+Window-only capture for the control protocol: `screenshot`, `capture.burst`, `capture.record.start|stop|status` and `capture.prune`. Design in [screen capture](../src/architecture/screen-capture.md), encoder decision in [ADR-0012](../src/adr/0012-screen-capture-encoding.md). Capture reads the window's own render target, never the desktop; encoding and file I/O run off the main thread.
+
+| Module | Content |
+| :--- | :--- |
+| `error` | `CaptureError`, mapped to the protocol codes (`-32602`, `1001` not ready, `1002` forbidden path, `1005` timeout, `1006` busy, `1008` failed). |
+| `storage` | `CaptureState` (captures root `<user data dir>/opts/captures`, session id, name counter, free-space probe), name validation (`validate_relative`, `resolve_name`, `resolve_dir`, `resolve_explicit`: nothing leaves the canonical root, symlinks included, no directory is created through a symlink that leaves it), `write_atomic`. |
+| `metadata` | `collect`: simulation time (`Time<Virtual>`), frame, fixed tick, fps, map, camera mode, vehicle, window, versions; `CaptureMetaHooks` lets `opts-game` add application state, map and tile. Never hardware data. |
+| `backend` | `CaptureBackend`: where frames come from (Bevy screenshots; tests inject synthetic frames). |
+| `screenshot` | The `screenshot` command, PNG/JPEG encoding on the async compute pool, the `<file>.json` sidecar. |
+| `burst` | `capture.burst`: N frames at a fixed interval, `NNNN.png` plus `manifest.json`. |
+| `jobs` | `CaptureLimits`, `CaptureJobs`: one burst or recording at a time, 10 starts per minute, results of the last 8 recordings. |
+| `recording`, `worker`, `record_cmd` | A recording: driver system with limits and degradation, encoder thread with a bounded queue, the three commands. |
+| `encoder`, `av1`, `ivf` | The `Encoder` trait, the PNG sequence, AV1 through `rav1e` (pure Rust build, no `nasm`) and a hand-written IVF muxer. |
+| `prune` | `capture.prune` (dry run by default, only files with a sidecar or manifest). |
+
+Dependencies added for this module: `rav1e` (already in the build through `image`'s AVIF support, same feature set) and `sysinfo` (disk feature only, already used by `opts-hardware`) for the free-space check.

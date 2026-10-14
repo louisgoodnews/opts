@@ -19,6 +19,7 @@
 pub mod ai_variables;
 pub mod articulation;
 pub mod camera;
+pub mod capture;
 pub mod control;
 pub mod coords;
 pub mod descramble_cache;

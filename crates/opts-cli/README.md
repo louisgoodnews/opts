@@ -30,7 +30,12 @@ opts-cli render.look                   # read the colour look (vivid | natural |
 opts-cli render.look natural           # switch it live (also saved in the settings)
 opts-cli input.key W --duration 2000   # press W for two seconds
 opts-cli sim.pause && opts-cli sim.step 60
-opts-cli screenshot                    # saved in the reports directory
+opts-cli screenshot                    # PNG + metadata sidecar in the captures directory
+opts-cli screenshot --name run1/jam.png --format jpeg --quality 80
+opts-cli capture burst 30 100          # 30 PNG frames, 100 ms apart, with manifest.json
+opts-cli capture record start --duration-ms 10000   # AV1 .ivf, off unless started (CLI default 30 s)
+opts-cli capture record status --id <recording-id>
+opts-cli capture record stop --id <recording-id>
 opts-cli report "the junction has no road surface"
 opts-cli log.filter --level warn --n 10
 opts-cli reload.asset "/path/to/object.sco"
@@ -39,6 +44,8 @@ echo '[{"method":"sim.pause"},{"method":"state"}]' | opts-cli batch
 opts-cli repl                          # interactive, Tab completion, history
 opts-cli list                          # every command with a one-line description
 ```
+
+Commands with dots may be written with spaces (`opts-cli trace set full` is `trace.set`).
 
 Global flags go before the command: `--host`, `--port` (default 44201), `--token`, `--json`, `--quiet`,
 `--timeout-ms`. Exit codes: 0 success, 1 command error, 2 no connection, 3 protocol error.

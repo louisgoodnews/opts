@@ -1,4 +1,6 @@
 /target
 __pycache__/
+# mdBook output written by scripts/local-ci.sh
+/docs/book/
 # Golden-screen test failures: the actual and diff images of a mismatch (written by `opts_gui::testing::golden`)
 /crates/*/tests/golden/_failed/

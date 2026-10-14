@@ -134,6 +134,7 @@
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
 - [Session Save](architecture/session-save.md)
+- [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
@@ -248,6 +249,7 @@
 - [ADR-0008: Editor Mode](adr/0008-editor-mode.md)
 - [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
 - [ADR-0011: Session Save Format](adr/0011-session-save-format.md)
+- [ADR-0012: Screen Capture Encoding](adr/0012-screen-capture-encoding.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
@@ -290,6 +292,7 @@
 - [Bug: MAN NL/NG Material Artifacts (P-1012)](meta/bugs/man-nlng-materials-2026-10-12.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
+- [Screen Capture Report (2026-10-14)](meta/screen-capture-2026-10-14.md)
 - [Bug: Spline Winding / Road Hidden by Terrain (2026-10-10)](meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md)
 - [Audit 5037f89a (2026-10-10)](meta/audits/5037f89a-28fb-4408-8196-c2c0e3b3dd8c_2026-10-10_14-59-54.md)
 - [Scenery Benchmark Triage (2026-10-12)](meta/scenery-benchmark-triage-2026-10-12.md)

@@ -25,4 +25,5 @@ pub fn register_all(registry: &mut ControlRegistry) {
     ui::register(registry);
     ui_ext::register(registry);
     batch::register(registry);
+    crate::capture::register(registry);
 }
