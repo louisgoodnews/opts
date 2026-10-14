@@ -356,6 +356,7 @@ pub(super) fn tile_content(
 
 /// Records a vehicle or character that was spawned outside the tiles (traffic car, pedestrian,
 /// session vehicle).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn spawned(
     kind_name: &'static str,
     label: &str,

@@ -95,7 +95,11 @@ fn every_placed_object_has_a_record_and_off_leaves_no_state() {
         limit: 100,
         ..st::Query::default()
     });
-    assert_eq!(objects.len(), 4, "one record per placed object: {objects:#?}");
+    assert_eq!(
+        objects.len(),
+        4,
+        "one record per placed object: {objects:#?}"
+    );
     for r in &objects {
         assert_eq!(r.tile, Some([0, 0]));
         assert_eq!(r.list.as_deref(), Some("objects"));
@@ -108,13 +112,20 @@ fn every_placed_object_has_a_record_and_off_leaves_no_state() {
         assert!(r.is_issue());
     }
     let files: Vec<&str> = objects.iter().map(|r| r.file.as_str()).collect();
-    assert!(files.iter().any(|f| f.contains("missing_2.sco")), "{files:?}");
+    assert!(
+        files.iter().any(|f| f.contains("missing_2.sco")),
+        "{files:?}"
+    );
     let indexes: Vec<usize> = {
         let mut v: Vec<usize> = objects.iter().filter_map(|r| r.index).collect();
         v.sort_unstable();
         v
     };
-    assert_eq!(indexes, vec![0, 1, 2, 3], "record indexes follow the .map order");
+    assert_eq!(
+        indexes,
+        vec![0, 1, 2, 3],
+        "record indexes follow the .map order"
+    );
     // The tile has a terrain record and a summary that counts the objects.
     let tile = st::tile_summary((0, 0)).expect("tile summary");
     assert_eq!(tile.kinds.get("scenery"), Some(&4));
@@ -129,8 +140,16 @@ fn every_placed_object_has_a_record_and_off_leaves_no_state() {
     let first: serde_json::Value = serde_json::from_str(text.lines().next().unwrap()).unwrap();
     assert_eq!(first["type"], "header");
     assert!(first["map"].as_str().unwrap().contains("Mini"));
-    assert!(text.lines().filter(|l| l.contains("\"type\":\"record\"")).count() >= 4);
-    assert!(!text.contains(root.to_string_lossy().as_ref()), "no absolute paths in the file");
+    assert!(
+        text.lines()
+            .filter(|l| l.contains("\"type\":\"record\""))
+            .count()
+            >= 4
+    );
+    assert!(
+        !text.contains(root.to_string_lossy().as_ref()),
+        "no absolute paths in the file"
+    );
     let _ = std::fs::remove_dir_all(&logs);
     let _ = std::fs::remove_dir_all(&root);
 }

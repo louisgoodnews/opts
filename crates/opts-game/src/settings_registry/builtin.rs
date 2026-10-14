@@ -500,7 +500,7 @@ fn content() -> Vec<D> {
             K::Enum(TRACE_MODES),
             "off",
             C::Advanced,
-            30,
+            60,
             "set-trace-scene",
             "set-trace-scene-desc",
         )
@@ -519,7 +519,7 @@ fn content() -> Vec<D> {
             K::Bool,
             "false",
             C::Advanced,
-            40,
+            70,
             "set-trace-overlay",
             "set-trace-overlay-desc",
         )
