@@ -228,7 +228,8 @@ impl WorldLoadJob {
         };
         if !needs_runtime(&input) {
             let parts: Vec<ModelPart> = input.mesh_parts.into_iter().flatten().collect();
-            attach_model_parts(commands, root, &parts, "Mesh");
+            let spawned = attach_model_parts(commands, root, &parts, "Mesh");
+            opts_bevy::bind_alpha_scale(commands, &spawned, &parts);
             return;
         }
         if input.scripts.is_some() {

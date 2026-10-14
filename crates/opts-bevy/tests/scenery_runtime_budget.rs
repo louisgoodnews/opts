@@ -85,6 +85,7 @@ fn thousands_of_signal_heads_fit_the_frame_budget() {
                             material: material.clone(),
                             vertices: 24,
                             light_variable: None,
+                            alpha_variable: None,
                             image: None,
                             pivot: None,
                             uv_unreliable: 0,

@@ -201,7 +201,7 @@ fn overrides(sco: &SceneryObject, mesh: &ScoMesh) -> Vec<(TextureOverride, bool)
                     slot: m.material_index,
                     texture: m.texture.clone(),
                     alpha: m.alpha_mode,
-                    hidden_by_variable: m.alpha_scale.is_some(),
+                    alpha_variable: m.alpha_scale.clone(),
                     trans_map: None,
                     image: None,
                     light_map: None,

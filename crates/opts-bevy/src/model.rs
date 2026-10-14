@@ -43,10 +43,11 @@ pub struct TextureOverride {
     pub texture: String,
     /// `[matl_alpha]` mode: `1` = cutout (alpha test), `2` = blend; `None` = opaque.
     pub alpha: Option<u32>,
-    /// The material's alpha is scaled by a script variable (`[alphascale]`), whose default of 0
-    /// makes it invisible (dirt, rain and condensation overlays). Only a material that *uses* alpha
-    /// is an overlay, see [`TextureOverride::is_variable_hidden`].
-    pub hidden_by_variable: bool,
+    /// The script variable that scales the material's alpha (`[alphascale]`). An overlay that uses
+    /// alpha and whose variable OPTS never raises (rain, dirt) is not built at all, see
+    /// [`TextureOverride::is_variable_hidden`]; any other alpha-scaled material is built and
+    /// follows its variable at run time (`ModelPart::alpha_variable`).
+    pub alpha_variable: Option<String>,
     /// `[matl_transmap]` texture: its values become the alpha channel of the material's texture.
     pub trans_map: Option<String>,
     /// Ready-made image (rendered text) used instead of loading `texture`.
@@ -58,18 +59,46 @@ pub struct TextureOverride {
 }
 
 impl TextureOverride {
-    /// Whether the slot is an overlay hidden by its `[alphascale]` variable.
+    /// Whether the slot is an overlay that stays invisible because OPTS never raises its variable.
     ///
     /// `[alphascale]` also appears on opaque base materials (`Envir_Brightness` on the body of a
     /// Crealis bus, on the night-lit skyline blocks of the Chicago map): alpha-scaling something
     /// that does not use alpha is no reason to drop the surface, the whole body of such a vehicle
     /// vanished (P-1014, MI-0029). Only materials with a `[matl_alpha]` mode other than 0 or a
     /// `[matl_transmap]` texture are overlays.
+    ///
+    /// Of those, only the overlays of weather the simulation does not have ([`is_static_overlay`]:
+    /// rain on the windows, dirt) are dropped at load. The others — glass scaled by
+    /// `Envir_Brightness` (6,651 materials), `szyby`, `para_*` — belong on the vehicle and follow
+    /// their variable (MAN SD83 without window glass, 2026-10-14).
     #[must_use]
     pub fn is_variable_hidden(&self) -> bool {
-        self.hidden_by_variable
+        self.alpha_variable
+            .as_deref()
+            .is_some_and(is_static_overlay)
             && (crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some())
     }
+
+    /// The variable the part follows at run time: set for an alpha-using material scaled by a
+    /// variable that is not a static overlay.
+    #[must_use]
+    pub fn runtime_alpha_variable(&self) -> Option<&str> {
+        self.alpha_variable
+            .as_deref()
+            .filter(|v| !is_static_overlay(v))
+            .filter(|_| crate::material::uses_texture_alpha(self.alpha) || self.trans_map.is_some())
+    }
+}
+
+/// Variables of weather the simulation does not have: their overlays (rain on windows, dirt) are
+/// always 0 and not worth an entity (`Rain_Window_*_Wetness` 22,888 uses, `Dirt_*` 15,733 in the
+/// installed models). When weather or dirt is simulated they stop being static.
+#[must_use]
+pub fn is_static_overlay(variable: &str) -> bool {
+    let v = variable.trim().to_ascii_lowercase();
+    ["rain_window_", "dirt_", "precip_"]
+        .iter()
+        .any(|p| v.starts_with(p))
 }
 
 /// One renderable submesh of a model: geometry bound to a single material.
@@ -84,6 +113,9 @@ pub struct ModelPart {
     /// Script variable that scales the material's light map (`[matl_lightmap]`); `None` when the
     /// material has no light map or the map names no variable.
     pub light_variable: Option<String>,
+    /// Script variable that scales the material's alpha (`[alphascale]`), for parts that follow it
+    /// at run time (window glass); `None` for ordinary parts.
+    pub alpha_variable: Option<String>,
     /// The ready-made image that replaced the material's texture (rendered text), if any.
     pub image: Option<Handle<Image>>,
     /// Translation of the mesh file's own `0x79` matrix (the modelling tool's pivot) in Bevy
@@ -824,6 +856,9 @@ impl ContentLoader<'_> {
                     material: self.materials.add(material),
                     vertices,
                     light_variable,
+                    alpha_variable: over
+                        .and_then(|o| o.runtime_alpha_variable())
+                        .map(str::to_owned),
                     image: over.and_then(|o| o.image.clone()),
                     pivot,
                     uv_unreliable: (vertices as f32 * unreliable_share).round() as usize,
@@ -1096,15 +1131,48 @@ mod alphascale_tests {
     use super::TextureOverride;
 
     fn over(alpha: Option<u32>, trans: Option<&str>, scaled: bool) -> TextureOverride {
+        over_with(alpha, trans, scaled, "Dirt_Norm")
+    }
+
+    fn over_with(
+        alpha: Option<u32>,
+        trans: Option<&str>,
+        scaled: bool,
+        name: &str,
+    ) -> TextureOverride {
         TextureOverride {
             slot: 0,
             texture: "t.tga".into(),
             alpha,
-            hidden_by_variable: scaled,
+            alpha_variable: scaled.then(|| name.to_owned()),
             trans_map: trans.map(str::to_owned),
             light_map: None,
             image: None,
         }
+    }
+
+    /// MAN SD83: the window glass `Fenster.tga` is `[matl_alpha] 2` scaled by `Envir_Brightness`;
+    /// it follows the variable at run time instead of being dropped. Weather overlays stay out.
+    #[test]
+    fn glass_scaled_by_a_live_variable_is_built_and_follows_it() {
+        let glass = over_with(Some(2), None, true, "Envir_Brightness");
+        assert!(!glass.is_variable_hidden());
+        assert_eq!(glass.runtime_alpha_variable(), Some("Envir_Brightness"));
+        for weather in ["Rain_Window_Norm_Wetness", "Dirt_Wiped", "Precip_Mirror"] {
+            let o = over_with(Some(2), None, true, weather);
+            assert!(o.is_variable_hidden(), "{weather}");
+            assert_eq!(o.runtime_alpha_variable(), None);
+        }
+        // Script-set variables (`szyby`, `para_front`) follow the scripts.
+        assert_eq!(
+            over_with(Some(2), None, true, "szyby").runtime_alpha_variable(),
+            Some("szyby")
+        );
+        // An opaque material is not an overlay, whatever its variable.
+        assert_eq!(
+            over_with(None, None, true, "Envir_Brightness").runtime_alpha_variable(),
+            None
+        );
     }
 
     /// MI-0029: `[alphascale] Envir_Brightness` on an opaque base material (380 materials of the

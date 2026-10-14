@@ -406,7 +406,7 @@ fn spawn_object_inner(
                 slot: m.material_index,
                 texture: m.texture.clone(),
                 alpha: m.alpha_mode,
-                hidden_by_variable: m.alpha_scale.is_some(),
+                alpha_variable: m.alpha_scale.clone(),
                 trans_map: None,
                 light_map: super::scenery_objects::light_map_of(m),
                 image: m.text_texture.and_then(|i| {

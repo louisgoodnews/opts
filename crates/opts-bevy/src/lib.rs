@@ -98,9 +98,9 @@ pub use scenery::{
     SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
 pub use scenery_runtime::{
-    advance_scenery, build_scenery_object, SceneryClock, SceneryLodMode, SceneryMeshRule,
-    SceneryObjectRuntime, SceneryRuntimePlugin, SceneryRuntimeSettings, SceneryRuntimeStats,
-    SceneryScripts, SceneryVariableOverrides,
+    advance_scenery, bind_alpha_scale, build_scenery_object, SceneryAlphaScale, SceneryClock,
+    SceneryLodMode, SceneryMeshRule, SceneryObjectRuntime, SceneryRuntimePlugin,
+    SceneryRuntimeSettings, SceneryRuntimeStats, SceneryScripts, SceneryVariableOverrides,
 };
 pub use terrain::{
     build_terrain_mesh, carve_terrain_under_roads, road_footprint, sample_terrain, set_tile_size,
@@ -120,8 +120,8 @@ pub use vehicle_anim::{
     MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
 };
 pub use vehicle_lights::{
-    vehicle_light_map_system, vehicle_light_system, LightMapBinding, LightSwitch, ScriptLight,
-    VehicleLightPlugin,
+    vehicle_alpha_scale_system, vehicle_light_map_system, vehicle_light_system, AlphaScaleBinding,
+    LightMapBinding, LightSwitch, ScriptLight, VehicleLightPlugin,
 };
 pub use vehicle_script::{
     script_drive_system, script_startup_system, vehicle_script_system, ScriptDriveEnabled,

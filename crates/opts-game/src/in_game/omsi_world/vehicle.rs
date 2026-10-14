@@ -209,7 +209,7 @@ pub(super) fn load_segment_meshes_for(
                 slot: m.slot_index as usize,
                 texture: m.texture.clone(),
                 alpha: m.alpha_mode,
-                hidden_by_variable: m.alpha_scale_var.is_some(),
+                alpha_variable: m.alpha_scale_var.clone(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
                 image: m.text_texture_index.and_then(|i| {
                     if let Some(h) = text_images.get(&i) {
@@ -327,6 +327,14 @@ pub(super) fn load_segment_meshes_for(
             }
             if let Some(var) = &part.light_variable {
                 entity.insert(opts_bevy::LightMapBinding::new(owner, var.clone()));
+            }
+            if let Some(var) = &part.alpha_variable {
+                // Starts hidden: the variable decides on the first frame (glass scaled by a
+                // script variable that is 0 stays out; dirt and rain overlays are not built).
+                entity.insert((
+                    opts_bevy::AlphaScaleBinding::new(owner, var.clone()),
+                    Visibility::Hidden,
+                ));
             }
             if let Some(trigger) = hot_spot {
                 entity.insert(opts_bevy::MouseTrigger {
@@ -1100,7 +1108,7 @@ pub(super) fn load_human_parts(
                 slot: m.slot_index as usize,
                 texture: m.texture.clone(),
                 alpha: m.alpha_mode,
-                hidden_by_variable: m.alpha_scale_var.is_some(),
+                alpha_variable: m.alpha_scale_var.clone(),
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
                 image: None,
                 light_map: None,

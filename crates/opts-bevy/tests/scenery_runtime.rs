@@ -120,6 +120,7 @@ fn app() -> App {
                         material: material.clone(),
                         vertices: 24,
                         light_variable: None,
+                        alpha_variable: None,
                         image: None,
                         pivot: None,
                         uv_unreliable: 0,

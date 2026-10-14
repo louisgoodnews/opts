@@ -175,6 +175,7 @@ fn build_mesh(
         e
     };
     let spawned = attach_model_parts(commands, holder, parts, &def.file);
+    super::bind_alpha_scale(commands, &spawned, parts);
     for (e, part) in spawned.into_iter().zip(parts) {
         if let Some(var) = &part.light_variable {
             let in_place = var.eq_ignore_ascii_case(NIGHT_VARIABLE);

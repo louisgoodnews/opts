@@ -77,6 +77,17 @@ impl SceneryClock {
         START[m] + self.day + u32::from(leap && m >= 2)
     }
 
+    /// `Envir_Brightness`: the ambient brightness `0..=1` that vehicle scripts and `[alphascale]`
+    /// glass read. The stock scripts switch to night mode below 0.35 and back above 0.75; OPTS
+    /// maps the sun's elevation from civil-twilight end (−6°, 0) to 15° (1) with a smooth step,
+    /// so 0.35 falls at about 2° and 0.75 at about 8°. The mapping is a guess ❓
+    /// (`docs/src/formats/text/vehicles/predefined-variables.md`).
+    #[must_use]
+    pub fn envir_brightness(&self) -> f32 {
+        let t = ((self.sun_alt_deg + 6.0) / 21.0).clamp(0.0, 1.0);
+        t * t * (3.0 - 2.0 * t)
+    }
+
     /// Moves time on by `dt_s` and recomputes the sun and the night switch.
     pub fn advance(&mut self, dt_s: f32) {
         self.seconds_of_day += f64::from(dt_s);
@@ -145,6 +156,19 @@ pub enum VarRef {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn brightness_follows_the_sun() {
+        let b = |alt: f32| {
+            let mut c = super::SceneryClock::at(2026, 6, 29, 43_200.0);
+            c.sun_alt_deg = alt;
+            c.envir_brightness()
+        };
+        assert_eq!(b(-20.0), 0.0);
+        assert_eq!(b(40.0), 1.0);
+        assert!(b(0.0) > 0.0 && b(0.0) < 0.35, "{}", b(0.0));
+        assert!(b(9.0) > 0.75 && b(9.0) < 0.85, "{}", b(9.0));
+    }
+
     use super::*;
 
     #[test]

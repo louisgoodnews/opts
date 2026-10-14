@@ -103,8 +103,10 @@ pub fn feed_predefined(engine: &mut ScriptEngine, controller: &VehicleController
 /// Fixed-step system: initialises and advances every vehicle's scripts.
 pub fn vehicle_script_system(
     time: Res<Time>,
+    clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
     mut query: Query<(&VehicleController, &mut VehicleScripts)>,
 ) {
+    let brightness = clock.map(|c| c.envir_brightness());
     let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
@@ -116,6 +118,9 @@ pub fn vehicle_script_system(
             continue;
         };
         feed_predefined(&mut engine, controller);
+        if let Some(b) = brightness {
+            engine.set("envir_brightness", b);
+        }
         if first {
             engine.run_init();
         }

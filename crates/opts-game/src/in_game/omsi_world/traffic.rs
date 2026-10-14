@@ -742,9 +742,11 @@ pub fn update_ai_variables(
     state: Res<TrafficState>,
     sky: Option<Res<super::super::sky::Sky>>,
     session: Option<Res<InGameSessionInfo>>,
+    clock: Option<Res<opts_bevy::SceneryClock>>,
     mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
 ) {
     let dt = time.delta_secs().min(0.2);
+    let brightness = clock.map(|c| c.envir_brightness());
     let now = time.elapsed_secs();
     let dark = match (&sky, &session) {
         (Some(s), Some(i)) => s.lights_needed(i.sim_elapsed_seconds),
@@ -796,6 +798,9 @@ pub fn update_ai_variables(
         vars.set("lights_brems", brake);
         let light = if dark { 1.0 } else { 0.0 };
         vars.set("ai_light", light);
+        if let Some(b) = brightness {
+            vars.set("envir_brightness", b);
+        }
         vars.set("lights_ai", light);
         for i in 0..4 {
             vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));
