@@ -288,9 +288,9 @@ pub fn respawn(world: &mut World, id: VehicleId) -> Result<(), OpError> {
             "session vehicle {id} has no simulation"
         )));
     };
+    c.sim
+        .teleport(local, (point.heading_deg as f32).to_radians());
     let ch = &mut c.sim.chassis;
-    ch.position = local;
-    ch.heading_rad = (point.heading_deg as f32).to_radians();
     ch.elevation_z = point.z as f32;
     ch.local_velocity = Vec2::ZERO;
     ch.yaw_rate_rad_s = 0.0;

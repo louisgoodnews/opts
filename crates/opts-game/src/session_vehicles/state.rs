@@ -94,9 +94,9 @@ pub fn apply(world: &mut World, entity: Entity, state: &VehicleState) -> bool {
     let Some(mut c) = world.get_mut::<VehicleController>(entity) else {
         return false;
     };
+    c.sim
+        .teleport(local, (state.heading_deg as f32).to_radians());
     let ch = &mut c.sim.chassis;
-    ch.position = local;
-    ch.heading_rad = (state.heading_deg as f32).to_radians();
     ch.elevation_z = state.z as f32;
     ch.local_velocity = Vec2::new(state.velocity[0], state.velocity[1]);
     ch.yaw_rate_rad_s = state.yaw_rate;

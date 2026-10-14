@@ -41,13 +41,13 @@ Provenance: these figures come from the probe above and a `grep` over the instal
    - Each segment becomes a **top-level** entity carrying an `ArticulatedSegment`. It holds the leader's rear coupling `(x, y)`, its own front coupling `(x, y)`, the `y` of its rearmost axle (the front coupling `y − 6 m` if it has no axles) and `max_alpha`, which falls back to 52.5° (the most common value).
    - The root vehicle gets an `ArticulatedChain` listing the segments front to back.
    - The segment's meshes take their animations, light maps and hot spots from the **root's** scripts, the OPTS form of `[scriptshare]`.
-3. **Kinematics** (`opts_sim::TrailerKinematics`, independent of Bevy):
+3. **Kinematics** (`opts_sim::TrailerKinematics`, independent of Bevy; the state is `VehicleSimulation::consist`, stepped by `VehicleSimulation::step` right after the chassis and serialised with it; `VehicleSimulation::teleport` re-seeds it):
    - The segment's front coupling is pinned to the leader's hitch `H`, and its rear axle rolls without side slip, so `dψ/dt = (v_H · r) / L`.
    - `r` is the segment's right-hand unit vector and `L` the distance from the hitch to the rear axle (at least 1 m).
    - The step is split into sub-steps of at most 50 ms.
    - Afterwards `α = wrap(ψ − ψ_leader)` is clamped to `±max_alpha`, and the origin is placed so that the front coupling lies exactly on `H`.
    - Headings are compass angles (clockwise from north) in world `x` east, `y` north.
-4. **ECS** (`opts_bevy::articulation_system`):
+4. **ECS** (`opts_bevy::articulation_system`, a *reader* of the simulation's consist; it builds the consist from the segments' geometry once if the simulation has none):
    - Runs in `FixedUpdate`, after `vehicle_physics_step_system` and before `vehicle_script_system`.
    - Each segment follows the one in front of it, starting with the root's simulated chassis pose.
    - Each segment's transform is then written in Bevy space, at the height, pitch and roll of the ground under its own axles (`follow_ground`, 2026-10-12; a segment without a ground pose, e.g. AI or parked, stays level at the root's height).
@@ -82,7 +82,7 @@ Provenance: these figures come from the probe above and a `grep` over the instal
 | Q-ART-02 | `articulation_0_beta` is used more often than `_alpha`, but OPTS keeps it at 0 because the chain is flat. Pitch follows from terrain under each segment's axles and requires ground-height queries ([M-0025](../roadmap/phase-4/M-0025.md)). | ⏳ waits for M-0025 |
 | Q-ART-03 | What do `positive_/negative_articulation_offset` and `articulation_positive_/negative_offset` mean, and who writes them (script or engine)? | ❓ open |
 | Q-ART-04 | Do the outlier `[coupling_front_character]` sets (β limits reversed, truck `kind 0`) mean something different, or are they author errors? OPTS uses only `max_alpha` today. | ❓ open |
-| L-ART-01 | Trailers are kinematic. The older `opts_sim::vehicle::articulation::ArticulationJoint` inside `VehicleSimulation` does not feed into rendering, and the trailers' mass and axles do not load the physics. Merging the two models is follow-up work. | 🔧 follow-up |
+| L-ART-01 | Trailers are kinematic, and since M-0053 Part 1 their state is one: `VehicleSimulation::consist` (`ArticulationJoint` is gone). The trailers' mass and axles do not yet load the physics (M-0053 Part 2). | 🔧 partly done |
 | L-ART-02 | `[couple_front]` (push-pull, reversed units) and chains deeper than 40 segments are not loaded (none exists in the corpus without a loop; see Q-ART-13). AI and parked vehicles show only their leading unit. | 🔧 follow-up |
 | Q-ART-13 | What does the second line of `[couple_back]` mean, and what does OMSI do with a chain that refers back to an earlier unit? The corpus contradicts "has a further trailer" (see above); 13 head files (e.g. the `LTrain`/`MTrain` family, `4020.ovh`, `NF6D_KI.bus`) have a looping chain, and 489 links do not resolve to any `.bus`/`.ovh` file; the coaches of the `Bm238` folder, for example, name `..\Bm238\Bm238.bus`, but the folder holds `Bm238.ovh`. OPTS builds 40 segments for a loop. | ❓ open |
 | L-ART-03 | A bone is matched to its dummy by a substring of the file name. Dummies with unrelated names leave the bone static. | ⚠️ heuristic |

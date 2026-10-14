@@ -4,7 +4,6 @@
 //! Ackermann steering, longitudinal propulsion, braking systems, dynamic suspension
 //! compliance, and optional multi-unit trailer articulation.
 
-pub mod articulation;
 pub mod axle;
 pub mod chassis;
 pub mod drivetrain;
@@ -12,14 +11,14 @@ pub mod inputs;
 pub mod suspension;
 pub mod trailer;
 
-use self::articulation::ArticulationJoint;
 use self::axle::AxleState;
 use self::chassis::ChassisState;
 use self::drivetrain::DrivetrainModel;
 use self::inputs::VehicleInputs;
 use self::suspension::SuspensionModel;
+use self::trailer::TrailerKinematics;
 
-use glam::Vec2;
+use glam::{DVec2, Vec2};
 use opts_core::formats::vehicles::bus::BusManifest;
 use serde::{Deserialize, Serialize};
 
@@ -50,8 +49,16 @@ pub struct VehicleSimulation {
     pub drivetrain: DrivetrainModel,
     /// Vertical suspension and load distribution model.
     pub suspension: SuspensionModel,
-    /// Optional articulated trailer joint coupling.
-    pub articulation: Option<ArticulationJoint>,
+    /// The following units of an articulated bus or tram, front to back: unit `k` hangs on the
+    /// rear coupling of unit `k - 1` (the chassis for `k = 0`). Stepped with the chassis in
+    /// [`VehicleSimulation::step`] and serialised with it. Empty for a solitary vehicle.
+    #[serde(default)]
+    pub consist: Vec<TrailerKinematics>,
+    /// Number of [`VehicleSimulation::teleport`] calls so far (wrapping). Readers that keep
+    /// per-step state of their own compare it with the last value they saw to learn that the
+    /// consist was re-seeded.
+    #[serde(default)]
+    pub teleports: u32,
     /// Active driver control inputs.
     pub inputs: VehicleInputs,
     /// Effective wheelbase between front steering axle and rear reference axle in meters.
@@ -113,7 +120,8 @@ impl VehicleSimulation {
             axles: vec![front_axle, rear_axle],
             drivetrain: DrivetrainModel::new(),
             suspension,
-            articulation: None,
+            consist: Vec::new(),
+            teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -145,16 +153,13 @@ impl VehicleSimulation {
         let y_rear = axles.last().map_or(-3.0, |a| a.config.longitudinal_m);
         let wheelbase = (y_front - y_rear).abs().max(1.0);
 
-        let articulation = manifest
-            .coupling_back_y
-            .map(|coupling_y| ArticulationJoint::new(coupling_y, 1.2, 6.0));
-
         Self {
             chassis: ChassisState::new(mass_kg, Vec2::ZERO, 0.0),
             axles,
             drivetrain: DrivetrainModel::new(),
             suspension: SuspensionModel::new(1.15, 0.0),
-            articulation,
+            consist: Vec::new(),
+            teleports: 0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -254,15 +259,78 @@ impl VehicleSimulation {
                 .update_axle_suspension(axle, static_n, dynamic_n, dt);
         }
 
-        // 6. Articulation kinematics
-        if let Some(ref mut joint) = self.articulation {
-            let _ = joint.step(
-                self.chassis.position,
-                self.chassis.heading_rad,
-                self.chassis.forward_speed_m_s(),
-                dt,
-            );
+        // 6. Consist kinematics: every unit follows the one ahead, starting with the chassis.
+        let mut leader = self.chassis_pose();
+        for unit in &mut self.consist {
+            let st = unit.step(leader.0, leader.1, f64::from(dt));
+            leader = (st.origin, st.heading);
         }
+    }
+
+    /// Position and heading (compass radians) of the chassis in the precision of the consist.
+    fn chassis_pose(&self) -> (DVec2, f64) {
+        let p = self.chassis.position;
+        (
+            DVec2::new(f64::from(p.x), f64::from(p.y)),
+            f64::from(self.chassis.heading_rad),
+        )
+    }
+
+    /// Pose `(origin, heading)` of the unit ahead of consist unit `k`: the chassis for `k = 0`.
+    fn leader_pose_of(&self, k: usize) -> (DVec2, f64) {
+        match k.checked_sub(1).and_then(|j| self.consist.get(j)) {
+            Some(ahead) => (ahead.origin, ahead.heading),
+            None => self.chassis_pose(),
+        }
+    }
+
+    /// Adds a following unit behind the last one (or behind the chassis), hanging straight.
+    ///
+    /// `hitch_local` is the rear coupling of the unit ahead and `front_local` the front coupling
+    /// of the new unit, both `(x, y)` in their own frames; `axle_distance` is the distance from
+    /// the hitch to the new unit's rearmost axle and `max_alpha_deg` the joint limit.
+    pub fn attach_trailer(
+        &mut self,
+        hitch_local: DVec2,
+        front_local: DVec2,
+        axle_distance: f64,
+        max_alpha_deg: f64,
+    ) {
+        let (pos, heading) = self.leader_pose_of(self.consist.len());
+        self.consist.push(TrailerKinematics::new(
+            hitch_local,
+            front_local,
+            axle_distance,
+            max_alpha_deg,
+            pos,
+            heading,
+        ));
+    }
+
+    /// Yaw angle of consist unit `k` against the unit ahead in radians (positive = turned
+    /// clockwise), the value published as `articulation_<k>_alpha`; `None` for a missing unit.
+    #[must_use]
+    pub fn consist_alpha_rad(&self, k: usize) -> Option<f64> {
+        let unit = self.consist.get(k)?;
+        Some(unit.alpha_against(self.leader_pose_of(k).1))
+    }
+
+    /// Re-seeds every following unit straight behind its leader, without velocity.
+    pub fn reseed_consist(&mut self) {
+        for k in 0..self.consist.len() {
+            let (pos, heading) = self.leader_pose_of(k);
+            self.consist[k].reseed(pos, heading);
+        }
+    }
+
+    /// Places the chassis at `position` heading `heading_rad` (compass radians) and re-seeds the
+    /// consist behind it: the explicit response to a spawn, respawn or reset. Velocities of the
+    /// chassis are left to the caller.
+    pub fn teleport(&mut self, position: Vec2, heading_rad: f32) {
+        self.chassis.position = position;
+        self.chassis.heading_rad = heading_rad;
+        self.reseed_consist();
+        self.teleports = self.teleports.wrapping_add(1);
     }
 }
 
@@ -307,5 +375,91 @@ mod tests {
         assert_eq!(sim1.chassis.position, sim2.chassis.position);
         assert_eq!(sim1.chassis.local_velocity, sim2.chassis.local_velocity);
         assert_eq!(sim1.chassis.heading_rad, sim2.chassis.heading_rad);
+    }
+
+    /// A bus with one unit behind it: hitch 1.5 m behind the chassis origin, front coupling
+    /// 1 m ahead of the unit's origin, rear axle 6 m behind that.
+    fn articulated() -> VehicleSimulation {
+        let mut sim = VehicleSimulation::new_standard_bus(11_500.0, 5.85);
+        sim.attach_trailer(DVec2::new(0.0, -1.5), DVec2::new(0.0, 1.0), 7.0, 52.5);
+        sim.inputs.set_parking_brake(false);
+        sim.inputs.set_gear(GearPosition::Drive);
+        sim.inputs.set_throttle(0.4);
+        sim.inputs.set_steering(0.5);
+        sim
+    }
+
+    #[test]
+    fn the_consist_is_stepped_with_the_chassis_and_stays_hitched() {
+        let mut sim = articulated();
+        for _ in 0..600 {
+            sim.step(1.0 / 64.0);
+        }
+        let alpha = sim.consist_alpha_rad(0).unwrap();
+        assert!(alpha.abs() > 0.05 && alpha.abs() <= 52.5_f64.to_radians());
+        let unit = &sim.consist[0];
+        let (pos, heading) = sim.chassis_pose();
+        let hitch = unit.hitch(pos, heading);
+        let front = unit.origin
+            + DVec2::new(unit.heading.cos(), -unit.heading.sin()) * unit.front_local.x
+            + DVec2::new(unit.heading.sin(), unit.heading.cos()) * unit.front_local.y;
+        assert!((front - hitch).length() < 1e-6);
+        assert_eq!(sim.consist_alpha_rad(1), None);
+    }
+
+    /// Design V4: a consist driven into a circle, serialised, restored and driven on continues
+    /// exactly like the unbroken run (the acceptance asks for 1 mm and 0.01 degrees).
+    #[test]
+    fn a_serialised_consist_resumes_like_the_unbroken_run() {
+        let mut a = articulated();
+        for _ in 0..400 {
+            a.step(1.0 / 64.0);
+        }
+        let bytes = bincode::serialize(&a).unwrap();
+        let mut b: VehicleSimulation = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(a, b, "the restored state equals the saved one");
+        for _ in 0..200 {
+            a.step(1.0 / 64.0);
+            b.step(1.0 / 64.0);
+        }
+        assert_eq!(a, b);
+        let d = (a.consist[0].origin - b.consist[0].origin).length();
+        let dalpha = (a.consist_alpha_rad(0).unwrap() - b.consist_alpha_rad(0).unwrap()).abs();
+        assert!(d < 1e-3 && dalpha.to_degrees() < 0.01);
+        assert!(
+            a.consist_alpha_rad(0).unwrap().abs() > 0.05,
+            "it is in a curve"
+        );
+    }
+
+    #[test]
+    fn a_state_saved_without_a_consist_still_loads() {
+        // `consist` and `teleports` are `serde(default)`; a vehicle of that shape round-trips.
+        let solo = VehicleSimulation::default();
+        let back: VehicleSimulation =
+            bincode::deserialize(&bincode::serialize(&solo).unwrap()).unwrap();
+        assert!(back.consist.is_empty());
+        assert_eq!(solo, back);
+    }
+
+    #[test]
+    fn teleport_hangs_the_consist_straight_with_no_velocity() {
+        let mut sim = articulated();
+        for _ in 0..400 {
+            sim.step(1.0 / 64.0);
+        }
+        assert!(sim.consist_alpha_rad(0).unwrap().abs() > 0.05);
+        sim.teleport(Vec2::new(500.0, -300.0), 1.2);
+        assert_eq!(sim.teleports, 1);
+        assert!(sim.consist_alpha_rad(0).unwrap().abs() < 1e-12);
+        // Standing still after the jump: the unit does not move.
+        sim.inputs.set_throttle(0.0);
+        sim.inputs.set_steering(0.0);
+        sim.chassis.local_velocity = Vec2::ZERO;
+        sim.chassis.yaw_rate_rad_s = 0.0;
+        let before = sim.consist[0].origin;
+        sim.step(1.0 / 64.0);
+        assert!((sim.consist[0].origin - before).length() < 1e-6);
+        assert!(sim.consist_alpha_rad(0).unwrap().abs() < 1e-6);
     }
 }

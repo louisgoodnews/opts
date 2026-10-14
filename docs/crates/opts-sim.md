@@ -29,7 +29,8 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
   - `axles: Vec<AxleState>`: Ordered list of vehicle axles with wheel rotation and Ackermann angles.
   - `drivetrain: DrivetrainModel`: Powertrain engine, automatic transmission, and braking forces.
   - `suspension: SuspensionModel`: Static weight distribution and dynamic longitudinal load transfer.
-  - `articulation: Option<ArticulationJoint>`: Multi-unit articulated trailer hitch kinematic constraint.
+  - `consist: Vec<TrailerKinematics>`: the following units of an articulated bus or tram, stepped with the chassis and serialised with it (`#[serde(default)]`). `attach_trailer(..)` adds a unit, `consist_alpha_rad(k)` gives its joint angle.
+  - `teleport(position, heading_rad)`: places the chassis and re-seeds the consist straight behind it; `teleports` counts the calls so readers can notice them. `reseed_consist()` does the re-seeding alone.
   - `inputs: VehicleInputs`: Active driver analog and digital control state.
 
 ### 2. Vehicle Controls (`opts_sim::VehicleInputs`, `GearPosition`)
@@ -60,9 +61,8 @@ Per OPTS architectural rules (ADR-0001, ADR-0003), `opts-sim` is **completely de
 - `compute_dynamic_loads(static_loads, axle_positions, mass_kg, accel_y) -> Vec<f32>`: Inertial weight transfer.
 - `update_axle_suspension(&self, axle, static_n, dynamic_n, dt)`: Spring deflection and damper forces.
 
-### 6. Articulation (`opts_sim::ArticulationJoint`, `ArticulationState`)
-- `ArticulationJoint`: Trailer hitch position computation, mechanical angle stops ($\pm 54^\circ$), and kinematic yaw tracking.
-- `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). `ArticulationJoint` above still runs inside `VehicleSimulation` with fixed geometry; merging the two is [M-0053](../src/roadmap/phase-4/M-0053.md).
+### 6. Articulation (`opts_sim::TrailerKinematics`, `TrailerState`)
+- `TrailerKinematics`, `TrailerState` (`vehicle::trailer`, added 2026-10-11): the following segment of an articulated bus or tram. Its front coupling is pinned to the leader's rear coupling, and its rear axle rolls without side slip ($\dot\psi = (v_H \cdot r)/L$), with the joint limit taken from `[coupling_front_character]`. This is the model rendering uses; see [Articulated Vehicles](../src/architecture/articulation.md). The state is part of `VehicleSimulation` (`consist`) and serialisable (`reseed`, `alpha_against`); the older `ArticulationJoint` with fixed geometry was removed in [M-0053](../src/roadmap/phase-4/M-0053.md) Part 1.
 
 ### 7. OMSI Script Engine (`opts_sim::script`)
 - `ScriptEngine`: compiles a vehicle's `.osc` files to bytecode and runs them on a stack machine. Per frame the host sets system values, calls `run_frame`/`trigger`, reads variables and drains events. The engine is deterministic, apart from a seeded random generator.

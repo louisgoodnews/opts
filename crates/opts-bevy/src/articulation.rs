@@ -2,10 +2,11 @@
 //!
 //! The leading unit of a vehicle is the root entity driven by its [`VehicleController`]; every
 //! further segment is an entity of its own ([`ArticulatedSegment`]) listed in the root's
-//! [`ArticulatedChain`]. Each fixed step the segments are advanced one behind the other with
-//! [`opts_sim::TrailerKinematics`] (hitch on the leader's rear coupling, rear axle rolling
-//! without side slip) and placed in the world. The joint angles are written into the script
-//! engine of the vehicle as OMSI's models expect them
+//! [`ArticulatedChain`]. The state of the following units lives in the root's
+//! [`opts_sim::VehicleSimulation::consist`] (hitch on the leader's rear coupling, rear axle
+//! rolling without side slip), which the simulation steps with the chassis; this module only
+//! *reads* it each fixed step, hands the poses to the segment entities and writes the joint
+//! angles into the script engine of the vehicle as OMSI's models expect them
 //! (`docs/src/architecture/articulation.md`):
 //!
 //! * `articulation_<n>_alpha` — yaw of segment `n + 1` against the unit ahead, **degrees**,
@@ -15,7 +16,6 @@
 
 use bevy::math::{DVec2, Vec2, Vec3};
 use bevy::prelude::*;
-use opts_sim::TrailerKinematics;
 
 use crate::coords::omsi_to_bevy_pos;
 use crate::vehicle_script::VehicleScripts;
@@ -43,8 +43,6 @@ pub struct ArticulatedSegment {
     /// The segment hangs backwards (its model is turned by 180°). Its coupling points and rear
     /// axle are then given mirrored (`-x`, `-y`) and the model is rotated half a turn.
     pub reversed: bool,
-    /// The kinematic state, created on the first step from the leader's pose.
-    state: Option<TrailerKinematics>,
     /// Pose after the previous and the last fixed step `(x, y, heading)` in simulation space; the
     /// rendered pose interpolates between them.
     prev_pose: Option<(Vec2, f32)>,
@@ -90,7 +88,6 @@ impl ArticulatedSegment {
             max_alpha_deg,
             beta_limits_deg: None,
             reversed: false,
-            state: None,
             prev_pose: None,
             curr_pose: None,
             ground: None,
@@ -155,16 +152,6 @@ impl ArticulatedSegment {
             },
         ))
     }
-
-    /// The yaw angle against the leader in degrees, once the segment has been stepped.
-    #[must_use]
-    pub fn alpha_deg(&self, leader_heading: f64) -> Option<f64> {
-        let t = self.state.as_ref()?;
-        let d = (t.heading - leader_heading + std::f64::consts::PI)
-            .rem_euclid(std::f64::consts::TAU)
-            - std::f64::consts::PI;
-        Some(d.to_degrees())
-    }
 }
 
 /// The bellows variable `articulation_<k>_beta` (degrees) for a unit pitched `pitch` (rad, nose up
@@ -184,13 +171,38 @@ pub struct ArticulatedChain {
     pub segments: Vec<Entity>,
 }
 
-/// Advances all chains by one fixed step.
+/// Builds the consist of a root whose simulation has none (or a different number of units than
+/// its chain) from the geometry the segments carry. A restored simulation that already holds its
+/// consist is left alone.
+fn seed_consist(
+    sim: &mut opts_sim::VehicleSimulation,
+    chain: &[Entity],
+    segments: &Query<(&mut ArticulatedSegment, &mut Transform), Without<ArticulatedChain>>,
+) {
+    sim.consist.clear();
+    for &e in chain {
+        let Ok((seg, _)) = segments.get(e) else {
+            break;
+        };
+        let (hitch, front) = (seg.hitch_local, seg.front_local);
+        sim.attach_trailer(
+            DVec2::new(f64::from(hitch.x), f64::from(hitch.y)),
+            DVec2::new(f64::from(front.x), f64::from(front.y)),
+            f64::from((front.y - seg.rear_axle_y).max(1.0)),
+            f64::from(seg.max_alpha_deg),
+        );
+    }
+}
+
+/// Reads the consist of every chain after the physics step: copies the poses to the segments,
+/// rolls their wheels and writes the joint variables into the scripts. The state itself is the
+/// simulation's ([`opts_sim::VehicleSimulation::consist`]).
 pub fn articulation_system(
     time: Res<Time>,
-    mut last_leader: Local<std::collections::HashMap<Entity, Vec2>>,
-    roots: Query<(
+    mut last_leader: Local<std::collections::HashMap<Entity, (Vec2, u32)>>,
+    mut roots: Query<(
         Entity,
-        &VehicleController,
+        &mut VehicleController,
         &Transform,
         &ArticulatedChain,
         Option<&VehicleScripts>,
@@ -201,48 +213,46 @@ pub fn articulation_system(
     if dt <= 0.0 {
         return;
     }
-    for (root, controller, root_tf, chain, scripts) in &roots {
-        let chassis = &controller.sim.chassis;
-        // A position change the speed cannot explain is a jump (spawn placement, collision
-        // push-out, reset), not motion: the segments are re-seeded behind the leader and their
-        // wheels keep their last speed (`docs/src/architecture/chain-assembly.md`).
-        let jumped = last_leader
-            .insert(root, chassis.position)
-            .is_none_or(|prev| {
-                let moved = (chassis.position - prev).length();
-                moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
-            });
-        let mut leader = (
-            DVec2::new(f64::from(chassis.position.x), f64::from(chassis.position.y)),
-            f64::from(chassis.heading_rad),
-        );
+    for (root, mut controller, root_tf, chain, scripts) in &mut roots {
+        let sim = &mut controller.sim;
+        if sim.consist.len() != chain.segments.len() {
+            seed_consist(sim, &chain.segments, &segments);
+        }
+        let chassis = &sim.chassis;
+        // An explicit `teleport` (spawn, respawn, reset) re-seeded the consist already. A position
+        // change the speed cannot explain without one is a jump the caller did not announce
+        // (collision push-out, a direct write to the chassis): the consist is re-seeded behind the
+        // leader here and the segments' wheels keep their last speed
+        // (`docs/src/architecture/chain-assembly.md`).
+        let seen = last_leader.insert(root, (chassis.position, sim.teleports));
+        let announced = seen.is_none_or(|(_, n)| n != sim.teleports);
+        let unannounced = seen.is_some_and(|(prev, _)| {
+            let moved = (chassis.position - prev).length();
+            moved > (chassis.forward_speed_m_s().abs() * dt as f32 * 2.0).max(JUMP_THRESHOLD_M)
+        });
+        if unannounced && !announced {
+            tracing::debug!(
+                ?root,
+                "unannounced position jump of a chain leader; consist re-seeded"
+            );
+            sim.reseed_consist();
+        }
+        let jumped = announced || unannounced;
         let mut alphas = Vec::with_capacity(chain.segments.len());
         let mut wheel_vars: Vec<(usize, f32, Vec<SegmentWheel>)> = Vec::new();
-        for &e in &chain.segments {
+        for (k, &e) in chain.segments.iter().enumerate() {
             let Ok((mut seg, mut tf)) = segments.get_mut(e) else {
                 break;
             };
-            let (hitch, front) = (seg.hitch_local, seg.front_local);
-            let axle_distance = f64::from((front.y - seg.rear_axle_y).max(1.0));
-            let max_alpha = f64::from(seg.max_alpha_deg);
+            let (Some(unit), Some(alpha)) = (sim.consist.get(k), sim.consist_alpha_rad(k)) else {
+                break;
+            };
             if jumped {
-                seg.state = None;
                 seg.curr_pose = None;
             }
-            let kin = seg.state.get_or_insert_with(|| {
-                TrailerKinematics::new(
-                    DVec2::new(f64::from(hitch.x), f64::from(hitch.y)),
-                    DVec2::new(f64::from(front.x), f64::from(front.y)),
-                    axle_distance,
-                    max_alpha,
-                    leader.0,
-                    leader.1,
-                )
-            });
-            let st = kin.step(leader.0, leader.1, dt);
             let now = (
-                Vec2::new(st.origin.x as f32, st.origin.y as f32),
-                st.heading as f32,
+                Vec2::new(unit.origin.x as f32, unit.origin.y as f32),
+                unit.heading as f32,
             );
             let travelled = seg.curr_pose.map_or(0.0, |(p0, _)| {
                 // Rolled along the heading half-way through the step (the segment's own motion,
@@ -256,8 +266,7 @@ pub fn articulation_system(
             seg.curr_pose = Some(now);
             // The placement happens in `articulation_render_system`, interpolated.
             let _ = (&mut tf, root_tf);
-            alphas.push(st.alpha.to_degrees());
-            leader = (st.origin, st.heading);
+            alphas.push(alpha.to_degrees());
         }
         if let Some(scripts) = scripts {
             if let Ok(mut engine) = scripts.engine.lock() {
