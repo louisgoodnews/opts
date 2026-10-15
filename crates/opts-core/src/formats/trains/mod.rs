@@ -9,7 +9,7 @@ mod zug;
 
 use serde::{Deserialize, Serialize};
 
-pub use zug::{ZugError, ZugNote};
+pub use zug::{ZugError, ZugNote, MAX_CARS};
 
 /// A train: cars front to back.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
