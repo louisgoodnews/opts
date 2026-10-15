@@ -334,12 +334,13 @@ mod validation {
     }
 
     #[test]
-    fn groups_cannot_be_spawned_and_turned_chains_are_refused() {
+    fn groups_cannot_be_spawned_but_turned_multi_file_cars_can() {
         let l = lookup();
         let mut f = formation(&[("loco.ovh", Forward), ("unit.ovh", Backward)]);
         assert_eq!(
             f.validate(&l),
-            vec![FormationIssue::ChainTurned { index: 1 }]
+            vec![],
+            "a turned multi-file car is placed mirrored"
         );
         f.segments[1].vehicle = VehicleRef::Group("M-Train Cars".into());
         assert_eq!(f.validate(&l), vec![FormationIssue::Group { index: 1 }]);

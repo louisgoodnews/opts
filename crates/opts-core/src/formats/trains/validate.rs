@@ -23,7 +23,8 @@ pub struct VehicleInfo {
     /// The end of the car's own chain (the file itself when it has no `[couple_back]`) has
     /// `[coupling_back]`.
     pub back_coupling: bool,
-    /// Files in the car's own `[couple_back]` chain, itself included (1 for a self-contained car).
+    /// Files in the car's own `[couple_back]` chain, itself included (1 for a self-contained car);
+    /// a link flagged reversed ends the chain.
     pub parts: usize,
 }
 
@@ -95,11 +96,6 @@ pub enum FormationIssue {
         /// The end of the train it faces.
         end: End,
     },
-    /// A car made of several files is turned around (V6, v1 limit).
-    ChainTurned {
-        /// Car.
-        index: usize,
-    },
     /// The entry names a vehicle group, which needs a map (V7).
     Group {
         /// Car.
@@ -120,7 +116,6 @@ impl FormationIssue {
             Self::NotRail { .. } => "formation-err-not-rail",
             Self::NoCab => "formation-err-no-cab",
             Self::Coupling { .. } => "formation-err-coupling",
-            Self::ChainTurned { .. } => "formation-err-chain-turned",
             Self::Group { .. } => "formation-err-group",
             Self::HeadTurned => "formation-err-head-turned",
         }
@@ -133,7 +128,6 @@ impl FormationIssue {
             Self::Missing { index, .. }
             | Self::NotRail { index }
             | Self::Coupling { index, .. }
-            | Self::ChainTurned { index }
             | Self::Group { index } => Some(*index),
             Self::NoCab | Self::HeadTurned => Some(0),
             Self::TooShort | Self::TooManyParts { .. } => None,
@@ -159,11 +153,6 @@ impl fmt::Display for FormationIssue {
                     End::Front => "front",
                     End::Rear => "rear",
                 }
-            ),
-            Self::ChainTurned { index } => write!(
-                f,
-                "car {}: a vehicle made of several parts cannot be turned around yet",
-                index + 1
             ),
             Self::Group { index } => write!(
                 f,
@@ -214,9 +203,6 @@ impl TrainFormation {
                 if turned {
                     issues.push(FormationIssue::HeadTurned);
                 }
-            }
-            if turned && info.is_chain() {
-                issues.push(FormationIssue::ChainTurned { index: i });
             }
             // A car needs the point on the side that faces a neighbour; turning it swaps which of
             // its own points faces which end of the train.

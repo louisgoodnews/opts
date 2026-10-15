@@ -71,7 +71,7 @@ The referenced vehicles are almost all self-contained rail cars: 338 of the 347 
 | :--- | :--- |
 | Q-ZUG-01 | How OMSI resolves a group name that exists in no installed map (`U-Bahnwagen`): by a map or add-on that is not installed here, or by another mechanism? |
 | Q-ZUG-02 | Whether timetables (`.ttp`) can name a `.zug`. Not searched. |
-| Q-ZUG-03 | Orientation of a part-chain vehicle (a flipped chain rather than a flipped car). |
+| Q-ZUG-03 | Orientation of a multi-file vehicle (a flipped chain rather than a flipped car); no `.zug` of the corpus lists one. OPTS mirrors the whole unit. |
 
 ## 📝 Provenance
 

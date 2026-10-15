@@ -17,6 +17,7 @@ use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 mod collision;
+mod consist_plan;
 mod dev_look;
 mod ground;
 mod ground_height;

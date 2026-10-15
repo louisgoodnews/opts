@@ -101,7 +101,7 @@ Pure checks first (no installation), then checks against the installation (vehic
 | V3 | every `File` resolves to an existing file (case-insensitive) | `formation-err-missing` |
 | V4 | every file is a rail vehicle: `[type]` 2 and `[boogies]` (M-0095 rule) | `formation-err-not-rail` |
 | V5 | the first car has a driver workstation | `formation-err-no-cab` |
-| V6 | coupling: every car has the coupling point on each side that has a neighbour (`[coupling_front]` / `[coupling_back]`, flipped for `Backward`); a part-chain unit may not be `Backward` in v1 | `formation-err-coupling` |
+| V6 | coupling: every car has the coupling point on each side that has a neighbour (`[coupling_front]` / `[coupling_back]`, swapped for `Backward`). A multi-file car (a multiple unit such as the NF6D) **may** be turned: the unit is mirrored as a whole (`consist_plan.rs`) — this was a v1 exclusion in the draft and became possible once the placement was moved into a pure planner | `formation-err-coupling` |
 | V7 | no `Group` entries (v1) | `formation-err-group` |
 | V9 | the first car runs forward (the player drives it); *Reverse train* turns the whole formation | `formation-err-head-turned` |
 | V8 | length: the sum of the cars' lengths is at most the free track behind the spawn point **plus** a forward slide of 200 m; checked at spawn, not in the editor | `formation-err-track` |
@@ -188,7 +188,7 @@ formation (validated) ──▶ resolve each car (index) ──▶ UnitGeometry 
 - **Direction:** the head faces the entry point's heading; the cars extend *behind* it. If the track behind is shorter than the formation, the head slides forward along the track (at most 200 m, V8) so that all cars fit; otherwise the spawn is refused with the message of V8.
 - **No rail on the map:** the formation is not spawned; the editor says so (`formation-err-track`) and keeps the formation. A map without track never offers the Formation tab's Spawn.
 - **Orientation of a `Backward` car:** its coupling points are swapped and negated (the maths `load_spec` has for `reversed`); its model is rotated 180° about the vertical axis (`reversed` in `Part` already exists and is used by `rail_player_pose`).
-- **Chain units** (NF6D): the unit's parts are appended with the unit's inner `behind` offsets; the unit's end coupling point is the last part's `[coupling_back]`; flipping is refused (V6).
+- **Chain units** (NF6D): `consist_plan.rs` places every file of the head's chain and of each car's chain in one pure function (testable without a session). A unit is laid out in its own frame (first file at 0), then put into the train by `t + y` or, turned, `t - y` with every part turned and the order reversed. A chain whose `[couple_back]` link is flagged *reversed* (the NF6D's rear cab seen from behind) ends its unit there and the next car still follows; the unit's rear end is then that turned file's front coupling point.
 
 **Sub-phases (as in the brief):**
 
@@ -219,8 +219,8 @@ formation (validated) ──▶ resolve each car (index) ──▶ UnitGeometry 
 | ID | Question |
 | :--- | :--- |
 | Q-TF-01 | Which cars are *powered* in OMSI (driver workstation vs a traction constant in the vehicle's `.osc`/`.cfg`)? The cab heuristic is a stand-in; experiment protocol line needed. |
-| Q-TF-02 | Is the `[coupling_back]` of the last part of a part chain (`NF6D_B_User`) a usable end for the next unit? Needed for NF6D formations (stretch goal). |
-| Q-TF-03 | Orientation flag for chain units (a flipped chain, not a flipped car): semantics in OMSI unknown. |
-| Q-TF-04 | Max parts: 40 is the walker's limit; a long formation with chain units needs more. Raising it for formations to 64 is proposed; check the cost of 64 parts with models loaded. |
-| Q-TF-06 | A `.ovh` head loaded through `load_player_vehicle` (it reads any file in `.bus` syntax) has not been run; the catalogue and the playable filter know `.bus` heads only. First thing to try in C2. |
+| Q-TF-02 | ✅ Answered 2026-10-15: yes. The rear end of an NF6D unit is the front point of its turned last file; three NF6D units couple and spawn (35 files in all). |
+| Q-TF-03 | Orientation flag for chain units: OPTS mirrors the whole unit; OMSI's own meaning is unverified (no `.zug` of the corpus lists a multi-file head). |
+| Q-TF-04 | ✅ Max parts: 64 for a formation (40 for a single vehicle). An NF6D head chain has 11-13 files, three units about 35; the first count of 41 per unit was an artefact of following the ring without stopping at the reversed link (fixed in `JobLookup`). |
+| Q-TF-06 | ✅ A `.ovh` head loads and drives through `load_player_vehicle` (BR218 on Grundorf). |
 | Q-TF-05 | A formation as a *vehicle* in `ailists.cfg` is `Trains\x.zug`; OMSI's AI treats a `.zug` as one vehicle with one script set. The player formation does not have that script structure (M-0098). |
