@@ -296,6 +296,7 @@
 - [UV Incident Files of the MAN NG272 (2026-10-13)](meta/uv-incidents-ng272-2026-10-13.md)
 - [MAN NL/NG Reinvestigation (2026-10-14)](meta/man-nlng-reinvestigation-2026-10-14.md)
 - [Train Formation Research (2026-10-15)](meta/train-formation-research-2026-10-15.md)
+- [Train Formation Implementation (2026-10-15)](meta/train-formation-implementation-2026-10-15.md)
 - [AI Vehicle Configuration Investigation (2026-10-14)](meta/ai-vehicle-config-2026-10-14.md)
 - [Bus Script Integration Research (2026-10-14)](meta/bus-script-integration-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
