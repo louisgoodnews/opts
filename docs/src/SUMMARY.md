@@ -129,6 +129,7 @@
 - [Pending OMSI Verification](architecture/pending-omsi-verification.md)
 - [Bus Script Integration Strategy](architecture/bus-script-integration.md)
 - [Mini Map Path Recognition (research)](architecture/minimap-path-recognition.md)
+- [Train Formation Editor (design)](architecture/train-formation-editor.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Articulation Physics (design)](architecture/articulation-physics.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
@@ -255,6 +256,7 @@
 - [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
 - [ADR-0011: Session Save Format](adr/0011-session-save-format.md)
 - [ADR-0012: Screen Capture Encoding](adr/0012-screen-capture-encoding.md)
+- [ADR-0013: Train Formation Model](adr/0013-train-formation-model.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
