@@ -143,6 +143,8 @@ Pure checks first (no installation), then checks against the installation (vehic
 
 ## 8. Persistence (B6)
 
+**Implemented (C4):** `opts-game/src/formation/store.rs` (`FormationStore`, TOML schema v1 as below, atomic write, unique ids, damaged files listed and kept), protocol `formation.save/list/delete` and a `saved` parameter for `formation.validate/spawn`, the editor's *Saved* list, *Save* (over the file the train came from, else a new file made from its name), *Rename* and per-row delete, and the optional `formation` field of the session vehicle record. The list is newest first (the "recent formations" of the milestone).
+
 Directory: `<user data dir>/formations/<slug>.toml` where the user data dir is the one `save/store.rs` uses (`directories::ProjectDirs::from("org","opts","opts")`, on Linux `~/.local/share/opts`). Atomic write (temp file + rename), like the saves; a file that fails to parse is listed greyed with its error, never deleted.
 
 ```toml

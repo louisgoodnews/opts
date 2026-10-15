@@ -25,6 +25,8 @@ pub(super) enum ListKind {
     Cars,
     /// The `.zug` consists of the installation.
     Presets,
+    /// The formations the user saved.
+    Saved,
 }
 
 /// What a button of the page does.
@@ -37,6 +39,14 @@ pub(super) enum Act {
     List(ListKind),
     Pick(usize),
     PickPreset(usize),
+    /// Loads a saved formation.
+    PickSaved(usize),
+    /// Deletes a saved formation.
+    DeleteSaved(usize),
+    /// Saves the train.
+    Save,
+    /// Typing edits the name instead of the search.
+    Rename,
     Add,
     /// Adds the car with this path (the remote `add`).
     AddFile(String),
@@ -79,6 +89,14 @@ pub struct FormationEditor {
     pub(super) search: String,
     pub(super) cars: Vec<Car>,
     pub(super) presets: Vec<String>,
+    /// Saved formations: id, text, readable.
+    pub(super) saved: Vec<(String, String, bool)>,
+    /// The saved list needs reading again.
+    pub(super) saved_dirty: bool,
+    /// The id the train was loaded from or last saved as (Save then replaces that file).
+    pub(super) saved_id: Option<String>,
+    /// Typing edits the train's name.
+    pub(super) renaming: bool,
     pub(super) lists_loaded: bool,
     pub(super) scroll: [f32; 3],
     pub(super) status: String,
@@ -100,6 +118,10 @@ impl Default for FormationEditor {
             search: String::new(),
             cars: Vec::new(),
             presets: Vec::new(),
+            saved: Vec::new(),
+            saved_dirty: true,
+            saved_id: None,
+            renaming: false,
             lists_loaded: false,
             scroll: [0.0; 3],
             status: String::new(),
@@ -126,6 +148,7 @@ impl FormationEditor {
     /// Replaces the formation (a loaded one).
     pub fn set_formation(&mut self, formation: TrainFormation) {
         self.formation = formation;
+        self.saved_id = None;
         self.selected = None;
         self.scroll[1] = 0.0;
         self.touch();
@@ -155,6 +178,7 @@ impl FormationEditor {
                 .iter()
                 .map(|p| p.trim_start_matches("Trains/").to_owned())
                 .collect(),
+            ListKind::Saved => self.saved.iter().map(|(_, t, _)| t.clone()).collect(),
         };
         all.into_iter()
             .enumerate()

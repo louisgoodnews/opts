@@ -136,6 +136,11 @@ pub(super) fn build_formation(commands: &mut Commands, ed: &FormationEditor, ent
             id(&mut footer.commands(), reverse, "formation.reverse");
             let clear = button(footer, "Clear", false, Act::Clear);
             id(&mut footer.commands(), clear, "formation.clear");
+            let save = button(footer, "Save", false, Act::Save);
+            id(&mut footer.commands(), save, "formation.save");
+            if ed.formation.is_empty() {
+                footer.commands().entity(save).insert(Disabled);
+            }
             let spawn = button(footer, "✓ Spawn", true, Act::Spawn);
             id(&mut footer.commands(), spawn, "formation.spawn");
             if !ed.can_spawn(entries.chosen) {
@@ -166,6 +171,13 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
             Act::List(ListKind::Presets),
         );
         id(&mut tabs.commands(), presets, "formation.list.presets");
+        let saved = button(
+            tabs,
+            "Saved",
+            ed.list == ListKind::Saved,
+            Act::List(ListKind::Saved),
+        );
+        id(&mut tabs.commands(), saved, "formation.list.saved");
     });
     let shown = ed.shown_list();
     label(
@@ -173,6 +185,7 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
         match ed.list {
             ListKind::Cars => format!("Rail vehicles ({} of {})", shown.len(), ed.cars.len()),
             ListKind::Presets => format!("Consists ({} of {})", shown.len(), ed.presets.len()),
+            ListKind::Saved => format!("Saved trains ({} of {})", shown.len(), ed.saved.len()),
         },
         15.0,
         ColorRole::Primary,
@@ -204,8 +217,31 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
             let (act, selected) = match ed.list {
                 ListKind::Cars => (Act::Pick(i), ed.pick == Some(i)),
                 ListKind::Presets => (Act::PickPreset(i), false),
+                ListKind::Saved => (
+                    Act::PickSaved(i),
+                    ed.saved_id.as_deref() == ed.saved.get(i).map(|s| s.0.as_str()),
+                ),
             };
-            button(list, &text, selected, act);
+            if ed.list == ListKind::Saved {
+                list.spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(6.0),
+                    width: Val::Percent(100.0),
+                    ..default()
+                })
+                .with_children(|row| {
+                    let load = button(row, &text, selected, act);
+                    id(&mut row.commands(), load, &format!("formation.saved.{i}"));
+                    let del = button(row, "✕", false, Act::DeleteSaved(i));
+                    id(
+                        &mut row.commands(),
+                        del,
+                        &format!("formation.saved.{i}.delete"),
+                    );
+                });
+            } else {
+                button(list, &text, selected, act);
+            }
         }
     });
     if ed.list == ListKind::Cars {
@@ -218,12 +254,31 @@ fn catalogue_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
 }
 
 fn train_column(c: &mut ChildSpawnerCommands, ed: &FormationEditor) {
-    label(
-        c,
-        format!("Train: {}", ed.formation.name),
-        18.0,
-        ColorRole::Primary,
-    );
+    c.spawn(Node {
+        flex_direction: FlexDirection::Row,
+        align_items: AlignItems::Center,
+        column_gap: Val::Px(10.0),
+        ..default()
+    })
+    .with_children(|head| {
+        label(
+            head,
+            if ed.renaming {
+                format!("Name: {}|", ed.formation.name)
+            } else {
+                format!("Train: {}", ed.formation.name)
+            },
+            18.0,
+            ColorRole::Primary,
+        );
+        let rename = button(
+            head,
+            if ed.renaming { "Done" } else { "Rename" },
+            ed.renaming,
+            Act::Rename,
+        );
+        id(&mut head.commands(), rename, "formation.rename");
+    });
     label(
         c,
         match &ed.formation.source {

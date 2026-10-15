@@ -9,7 +9,8 @@ use opts_gui::interaction::events::ButtonClicked;
 
 use super::state::{Act, Car, FormationCommands, FormationEditor, ListKind, Summary};
 use crate::catalogue_service::CatalogueService;
-use crate::formation::{queue_spawn, resolve, JobLookup};
+use crate::formation::store::FormationStore;
+use crate::formation::{queue_spawn, resolve, FormationLibrary, JobLookup};
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::in_game::vehicle_menu::VehicleMenu;
 use crate::session_vehicles::{EntrySel, SessionVehicles};
@@ -18,12 +19,37 @@ fn normal(path: &str) -> String {
     path.replace('\\', "/").to_lowercase()
 }
 
+/// Reads the saved formations again.
+pub(super) fn refresh_saved(ed: &mut FormationEditor, store: Option<&FormationStore>) {
+    ed.saved = store
+        .map(|store| {
+            store
+                .list()
+                .into_iter()
+                .map(|s| match s.state {
+                    Ok(f) => {
+                        let text = format!("{}  ({} cars)", f.name, f.len());
+                        (s.id, text, true)
+                    }
+                    Err(e) => (s.id.clone(), format!("{} (unreadable: {e})", s.id), false),
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    ed.saved_dirty = false;
+    ed.touch();
+}
+
 /// Reads the rail cars and the consists from the catalogue when the page first opens.
 pub(super) fn load_lists(
     menu: Res<VehicleMenu>,
     service: Option<Res<CatalogueService>>,
+    library: Option<Res<FormationLibrary>>,
     mut ed: ResMut<FormationEditor>,
 ) {
+    if menu.formation_open() && ed.saved_dirty {
+        refresh_saved(&mut ed, library.as_deref().and_then(|l| l.0.as_ref()));
+    }
     if !menu.formation_open() || ed.lists_loaded {
         return;
     }
@@ -63,19 +89,36 @@ pub(super) fn search_input(
     mut ed: ResMut<FormationEditor>,
 ) {
     let typing = menu.formation_open();
-    let mut search = ed.search.clone();
+    let mut text = if ed.renaming {
+        ed.formation.name.clone()
+    } else {
+        ed.search.clone()
+    };
+    let mut done = false;
     for e in keys.read() {
         if !typing || e.state != ButtonState::Pressed {
             continue;
         }
         if e.logical_key == Key::Backspace {
-            search.pop();
+            text.pop();
+        } else if e.logical_key == Key::Enter && ed.renaming {
+            done = true;
         } else if let Some(t) = &e.text {
-            search.extend(t.chars().filter(|c| !c.is_control()));
+            text.extend(t.chars().filter(|c| !c.is_control()));
         }
     }
-    if search != ed.search {
-        ed.search = search;
+    if ed.renaming {
+        let text: String = text.chars().take(60).collect();
+        if text != ed.formation.name {
+            ed.formation.name = text;
+            ed.touch();
+        }
+        if done {
+            ed.renaming = false;
+            ed.touch();
+        }
+    } else if text != ed.search {
+        ed.search = text;
         ed.scroll[0] = 0.0;
         ed.touch();
     }
@@ -98,7 +141,9 @@ pub(super) fn formation_actions(
     mut menu: ResMut<VehicleMenu>,
     job: Option<Res<WorldLoadJob>>,
     mut registry: ResMut<SessionVehicles>,
+    library: Option<Res<FormationLibrary>>,
 ) {
+    let store = library.as_deref().and_then(|l| l.0.as_ref());
     let mut todo: Vec<Act> = clicks
         .read()
         .filter_map(|ButtonClicked(e)| acts.get(*e).ok().cloned())
@@ -118,6 +163,26 @@ pub(super) fn formation_actions(
                 }
             }
             "cars" => Some(Act::List(ListKind::Cars)),
+            "saved" => Some(Act::List(ListKind::Saved)),
+            "save" => Some(Act::Save),
+            "rename" => {
+                ed.formation.name = rest.chars().take(60).collect();
+                ed.touch();
+                None
+            }
+            "load" | "delete" => {
+                let t = rest.to_lowercase();
+                ed.saved
+                    .iter()
+                    .position(|(id, text, _)| id == &t || text.to_lowercase().contains(&t))
+                    .map(|i| {
+                        if word == "load" {
+                            Act::PickSaved(i)
+                        } else {
+                            Act::DeleteSaved(i)
+                        }
+                    })
+            }
             "trains" => Some(Act::List(ListKind::Presets)),
             "preset" => {
                 let t = rest.to_lowercase();
@@ -158,7 +223,12 @@ pub(super) fn formation_actions(
             Act::List(kind) => {
                 ed.list = kind;
                 ed.scroll[0] = 0.0;
+                ed.saved_dirty |= kind == ListKind::Saved;
             }
+            Act::Rename => ed.renaming = !ed.renaming,
+            Act::PickSaved(i) => load_saved(&mut ed, store, i),
+            Act::DeleteSaved(i) => delete_saved(&mut ed, store, i),
+            Act::Save => save(&mut ed, store),
             Act::Pick(i) => ed.pick = Some(i),
             Act::PickPreset(i) => load_preset(&mut ed, job.as_deref(), i),
             Act::Add => match ed.pick.and_then(|i| ed.cars.get(i)).map(|c| c.rel.clone()) {
@@ -199,12 +269,69 @@ pub(super) fn formation_actions(
             }
             Act::Clear => {
                 ed.formation = TrainFormation::custom("Formation");
+                ed.saved_id = None;
                 ed.selected = None;
             }
             Act::Entry(id) => menu.set_entry(id),
             Act::Spawn => spawn(&mut ed, &mut menu, job.as_deref(), &mut registry),
         }
         ed.touch();
+    }
+}
+
+fn load_saved(ed: &mut FormationEditor, store: Option<&FormationStore>, i: usize) {
+    let (Some(store), Some((id, _, _))) = (store, ed.saved.get(i).cloned()) else {
+        return;
+    };
+    match store.read(&id) {
+        Ok(f) => {
+            ed.set_formation(f);
+            ed.saved_id = Some(id);
+        }
+        Err(e) => ed.status = format!("{id}: {e}"),
+    }
+}
+
+fn delete_saved(ed: &mut FormationEditor, store: Option<&FormationStore>, i: usize) {
+    let (Some(store), Some((id, _, _))) = (store, ed.saved.get(i).cloned()) else {
+        return;
+    };
+    match store.delete(&id) {
+        Ok(()) => {
+            if ed.saved_id.as_deref() == Some(id.as_str()) {
+                ed.saved_id = None;
+            }
+            ed.saved_dirty = true;
+            ed.status = format!("Deleted {id}.");
+        }
+        Err(e) => ed.status = format!("{id}: {e}"),
+    }
+}
+
+/// Saves the train: over the file it came from, else as a new file made from its name.
+fn save(ed: &mut FormationEditor, store: Option<&FormationStore>) {
+    let Some(store) = store else {
+        ed.status = "There is no folder for saved formations.".into();
+        return;
+    };
+    if ed.formation.is_empty() {
+        ed.status = "An empty train is not saved.".into();
+        return;
+    }
+    if ed.formation.name == "Formation" {
+        ed.formation.name = ed.formation.suggested_name();
+    }
+    let result = match ed.saved_id.clone() {
+        Some(id) => store.write(&id, &ed.formation).map(|()| id),
+        None => store.save_new(&ed.formation),
+    };
+    match result {
+        Ok(id) => {
+            ed.status = format!("Saved as {id}.");
+            ed.saved_id = Some(id);
+            ed.saved_dirty = true;
+        }
+        Err(e) => ed.status = format!("Not saved: {e}"),
     }
 }
 
@@ -225,7 +352,7 @@ fn load_preset(ed: &mut FormationEditor, job: Option<&WorldLoadJob>, i: usize) {
         .and_then(|b| TrainFormation::from_zug(&b, &name, &rel).map_err(|e| e.to_string()))
     {
         Ok((f, notes)) => {
-            ed.set_formation(f);
+            ed.set_formation(f); // forgets the saved id
             if !notes.is_empty() {
                 ed.status = format!("{rel}: {} line(s) ignored.", notes.len());
             }

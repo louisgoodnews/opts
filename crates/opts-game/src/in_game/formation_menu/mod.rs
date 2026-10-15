@@ -30,6 +30,7 @@ impl Plugin for FormationMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<FormationEditor>()
             .init_resource::<FormationCommands>()
+            .init_resource::<crate::formation::FormationLibrary>()
             .add_systems(
                 Update,
                 (

@@ -851,20 +851,47 @@ pub const COMMANDS: &[CommandSpec] = &[
         "formation.validate",
         "scene",
         "Check a train formation against the installation (every problem is listed)",
-        "zug:s? cars:j? name:s? reverse:b?",
+        "saved:s? zug:s? cars:j? name:s? reverse:b?",
     )
     .since("1.6")
     .result("`{ok, name, cars, issues:[{key, car, message}]}`; `car` is the 0-based car or null")
-    .doc("The formation is a `.zug` of the installation (`zug`, a path relative to the OMSI root such as `Trains\\X10_112_IC-8.zug`) or `cars`, an array of vehicle files or `{vehicle, orientation, powered}` objects (`orientation` `forward` or `backward`; `powered` true or false says whether the car pulls, else the first car and every multi-file car pull and single-file cars behind the head are hauled). `reverse` runs the train the other way round (order reversed, every car turned). Rules: at least two cars; every file exists and is a rail vehicle (`[type]` 2 with `[boogies]`); the first car has a driver camera and is not turned; each car has the coupling point towards a neighbour; no vehicle group names; at most 64 vehicle files in total counting the parts of multi-file cars; a multi-file car cannot be turned. Needs a running session (the installation index)."),
+    .doc("The formation is a saved one (`saved`, its id from `formation.list`), a `.zug` of the installation (`zug`, a path relative to the OMSI root such as `Trains\\X10_112_IC-8.zug`) or `cars`, an array of vehicle files or `{vehicle, orientation, powered}` objects (`orientation` `forward` or `backward`; `powered` true or false says whether the car pulls, else the first car and every multi-file car pull and single-file cars behind the head are hauled). `reverse` runs the train the other way round (order reversed, every car turned). Rules: at least two cars; every file exists and is a rail vehicle (`[type]` 2 with `[boogies]`); the first car has a driver camera and is not turned; each car has the coupling point towards a neighbour; no vehicle group names; at most 64 vehicle files in total counting the parts of multi-file cars; a multi-file car cannot be turned. Needs a running session (the installation index)."),
     c(
         "formation.spawn",
         "scene",
         "Spawn a train formation at an entry point; its first car becomes the active vehicle",
-        "zug:s? cars:j? name:s? reverse:b? entry:s? entry_id:i?",
+        "saved:s? zug:s? cars:j? name:s? reverse:b? entry:s? entry_id:i?",
     )
     .since("1.6")
     .result("`{id, queued:true, cars}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)")
-    .doc("As `formation.validate` for the formation, then like `session.spawn`: the first car is the vehicle, the other cars are coupled behind it on the track the entry point lies on (within 12 m, else the train stays a road vehicle). A formation with problems answers `1002` with the problems in the message. The player drives the first car; the other cars are passive. The mass of the whole train acts on the dynamics (resistance and gradient on all cars, brakes on all, traction on the cars that pull)."),
+    .doc("As `formation.validate` for the formation, then like `session.spawn`: the first car is the vehicle, the other cars are coupled behind it on the track the entry point lies on (within 12 m, else the train stays a road vehicle). A formation with problems answers `-32602` with the problems in the message. The player drives the first car; the other cars are passive. The mass of the whole train acts on the dynamics (resistance and gradient on all cars, brakes on all, traction on the cars that pull)."),
+    c(
+        "formation.save",
+        "scene",
+        "Save a train formation in the user's formation folder",
+        "saved:s? zug:s? cars:j? name:s? reverse:b? id:s? overwrite:b?",
+    )
+    .since("1.6")
+    .result("`{ok, id, name, cars}`")
+    .doc("The formation is described as for `formation.validate`; `name` renames it. It is written as `<user data>/formations/<id>.toml`, the id made from the name and never one that exists (`name`, `name-2`, ...). `id` with `overwrite: true` replaces that file instead. An empty formation is refused. A formation with open problems can be saved (it can be fixed later)."),
+    c(
+        "formation.list",
+        "scene",
+        "List the saved train formations, newest first",
+        "",
+    )
+    .since("1.6")
+    .result("`{dir, formations:[{id, name, cars, modified} | {id, error, modified}]}`; `modified` is Unix seconds")
+    .doc("A file that cannot be read is listed with its `error` and kept."),
+    c(
+        "formation.delete",
+        "scene",
+        "Delete a saved train formation",
+        "id:s@0",
+    )
+    .since("1.6")
+    .result("`{ok, id}`")
+    .doc("Answers `1004` for an unknown id and `-32602` for an id that is not a formation id."),
     c(
         "session.save",
         "scene",

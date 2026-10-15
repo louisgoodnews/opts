@@ -2,6 +2,8 @@
 //! control-protocol methods `formation.validate` and `formation.spawn`.
 //! Design: `docs/src/architecture/train-formation-editor.md`, ADR-0013.
 
+pub mod store;
+
 use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
@@ -18,11 +20,25 @@ use serde_json::{json, Value};
 use crate::in_game::omsi_world::{FormationCar, WorldLoadJob};
 use crate::in_game::types::SimulationLoadState;
 use crate::session_vehicles::{EntrySel, SessionVehicles, SpawnParams};
+use store::{FormationStore, StoreError};
 
 /// Registers the methods.
 pub fn register(registry: &mut ControlRegistry) {
     registry.register("formation.validate", validate);
     registry.register("formation.spawn", spawn);
+    registry.register("formation.save", save);
+    registry.register("formation.list", list);
+    registry.register("formation.delete", delete);
+}
+
+/// Where the user's formations are kept. Replaced in tests; the default is the user data folder.
+#[derive(Resource, Debug, Clone)]
+pub struct FormationLibrary(pub Option<FormationStore>);
+
+impl Default for FormationLibrary {
+    fn default() -> Self {
+        Self(FormationStore::user())
+    }
 }
 
 /// Looks vehicles up through the installation of the running session.
@@ -155,7 +171,13 @@ fn orientation_of(text: Option<&str>) -> Result<Orientation, RpcError> {
 /// The formation a call describes: a `.zug` of the installation (`zug`), or `cars`, an array of
 /// vehicle files or `{vehicle, orientation}` objects. `reverse` turns the train around.
 fn formation_from(world: &World, params: &Value) -> Result<TrainFormation, RpcError> {
-    let mut formation = if let Some(zug) = opt_str(params, "zug")? {
+    let mut formation = if let Some(id) = opt_str(params, "saved")? {
+        let library = world.get_resource::<FormationLibrary>();
+        let store = library
+            .and_then(|l| l.0.as_ref())
+            .ok_or_else(|| RpcError::new(code::NOT_READY, "no user data folder for formations"))?;
+        store.read(id).map_err(store_error)?
+    } else if let Some(zug) = opt_str(params, "zug")? {
         let job = world
             .get_resource::<WorldLoadJob>()
             .ok_or_else(|| RpcError::new(code::NOT_READY, "no session has been started"))?;
@@ -207,7 +229,7 @@ fn formation_from(world: &World, params: &Value) -> Result<TrainFormation, RpcEr
             source: FormationSource::Custom,
         }
     } else {
-        return Err(RpcError::invalid_params("give `zug` or `cars`"));
+        return Err(RpcError::invalid_params("give `saved`, `zug` or `cars`"));
     };
     if params.get("reverse").and_then(Value::as_bool) == Some(true) {
         formation = formation.reversed();
@@ -350,4 +372,79 @@ mod tests {
             .as_str()
             .is_some_and(|m| m.contains("car 3")));
     }
+}
+
+fn store_error(e: StoreError) -> RpcError {
+    match e {
+        StoreError::NotFound(_) => RpcError::new(code::NOT_FOUND, e.to_string()),
+        StoreError::InvalidName(_) => RpcError::invalid_params(e.to_string()),
+        _ => RpcError::new(code::FAILED, e.to_string()),
+    }
+}
+
+fn library(world: &World) -> Result<FormationStore, RpcError> {
+    world
+        .get_resource::<FormationLibrary>()
+        .and_then(|l| l.0.clone())
+        .ok_or_else(|| RpcError::new(code::NOT_READY, "no user data folder for formations"))
+}
+
+/// `formation.save`: stores the formation the call describes under a new id made from its name
+/// (or under `id`, replacing that file, when `overwrite` is true).
+fn save(world: &mut World, params: &Value) -> Outcome {
+    let result = (|| -> Result<Value, RpcError> {
+        let mut formation = formation_from(world, params)?;
+        if formation.is_empty() {
+            return Err(RpcError::invalid_params("an empty formation is not saved"));
+        }
+        if let Some(name) = opt_str(params, "name")? {
+            formation.name = name.to_owned();
+        }
+        let store = library(world)?;
+        let id = match (
+            opt_str(params, "id")?,
+            params.get("overwrite").and_then(Value::as_bool) == Some(true),
+        ) {
+            (Some(id), true) => {
+                store.write(id, &formation).map_err(store_error)?;
+                id.to_owned()
+            }
+            (Some(_), false) => {
+                return Err(RpcError::invalid_params("`id` needs `overwrite: true`"))
+            }
+            (None, _) => store.save_new(&formation).map_err(store_error)?,
+        };
+        Ok(json!({ "ok": true, "id": id, "name": formation.name, "cars": formation.len() }))
+    })();
+    result.into()
+}
+
+/// One row of `formation.list`.
+fn saved_json(s: &store::SavedFormation) -> Value {
+    let modified = s
+        .modified
+        .and_then(|m| m.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs());
+    match &s.state {
+        Ok(f) => json!({ "id": s.id, "name": f.name, "cars": f.len(), "modified": modified }),
+        Err(e) => json!({ "id": s.id, "error": e.to_string(), "modified": modified }),
+    }
+}
+
+fn list(world: &mut World, _: &Value) -> Outcome {
+    let result = (|| -> Result<Value, RpcError> {
+        let store = library(world)?;
+        let saved: Vec<Value> = store.list().iter().map(saved_json).collect();
+        Ok(json!({ "dir": store.dir().display().to_string(), "formations": saved }))
+    })();
+    result.into()
+}
+
+fn delete(world: &mut World, params: &Value) -> Outcome {
+    let result = (|| -> Result<Value, RpcError> {
+        let id = opts_bevy::control::params::str_param(params, "id")?;
+        library(world)?.delete(id).map_err(store_error)?;
+        Ok(json!({ "ok": true, "id": id }))
+    })();
+    result.into()
 }
