@@ -66,6 +66,10 @@ const REVIEWED: &[&str] = &[
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",
     "opts-game/src/in_game/vehicle_menu.rs",
+    // The formation page of the vehicle menu: typing and the wheel act only while that page is
+    // open, and the open menu holds `MenuModalActive`, which gates driving and camera input.
+    "opts-game/src/in_game/formation_menu/mod.rs",
+    "opts-game/src/in_game/formation_menu/actions.rs",
     // F8 switches the session vehicle; gated with `not_modal_active` where it is registered.
     "opts-game/src/session_vehicles/mod.rs",
     // Test module: presses the key to test the system above.
