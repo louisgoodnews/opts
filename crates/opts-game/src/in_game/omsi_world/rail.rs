@@ -238,7 +238,7 @@ impl RailPlayer {
         }
     }
 
-    /// Looks for a track up to `metres` from the spawn point (a formation: [`FORMATION_SNAP_M`]).
+    /// Looks for a track up to `metres` from the spawn point (a formation: `FORMATION_SNAP_M`).
     #[must_use]
     pub fn with_snap(mut self, metres: f32) -> Self {
         self.snap_m = metres;
