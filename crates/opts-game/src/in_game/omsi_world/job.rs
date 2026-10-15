@@ -10,6 +10,7 @@ use opts_bevy::{ContentCache, OmsiInstall};
 use opts_core::formats::map::{MapManifest, MapTile};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
+use super::vehicle::FormationCar;
 use crate::catalogue_service::CatalogueService;
 use crate::in_game::attachments::SplineIndex;
 use crate::new_game_screen::types::GameCatalogue;
@@ -259,6 +260,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         ground_array: None,
         spawn: None,
         repaint: None,
+        formation_cars: Vec::new(),
         start_tile: (0, 0),
         missing_listed: 0,
         camera: None,
@@ -469,6 +471,18 @@ impl WorldLoadJob {
             return None;
         }
         self.install.find_file(rel)
+    }
+
+    /// A vehicle file named relative to `base` (`[couple_back]` and the like).
+    #[must_use]
+    pub fn find_vehicle_in(&self, base: &Path, rel: &str) -> Option<PathBuf> {
+        self.install.find_in(base, rel)
+    }
+
+    /// Sets the cars that follow the head of the train formation spawned next (cleared by the
+    /// loader when it has used them).
+    pub fn set_formation_cars(&mut self, cars: Vec<FormationCar>) {
+        self.formation_cars = cars;
     }
 
     /// Tile the player starts on.

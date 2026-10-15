@@ -5,10 +5,12 @@
 //! formation against an installation and spawning it happen in `opts-game`.
 //! Design: `docs/src/architecture/train-formation-editor.md`, ADR-0013.
 
+mod validate;
 mod zug;
 
 use serde::{Deserialize, Serialize};
 
+pub use validate::{End, FormationIssue, VehicleInfo, VehicleLookup, MAX_PARTS};
 pub use zug::{ZugError, ZugNote, MAX_CARS};
 
 /// A train: cars front to back.
@@ -29,6 +31,12 @@ pub struct FormationSegment {
     pub vehicle: VehicleRef,
     /// Whether the car runs forward or turned around.
     pub orientation: Orientation,
+    /// Whether the car pulls (adds traction and power). `None`: decided by the spawner, which
+    /// treats the first car and every car made of several files (a multiple unit) as powered and
+    /// single-file cars behind the head as hauled (`.zug` has no such information, and the
+    /// vehicle files do not tell a locomotive from a wagon: every rail `.ovh` has a driver camera).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub powered: Option<bool>,
 }
 
 /// What a `.zug` entry names.

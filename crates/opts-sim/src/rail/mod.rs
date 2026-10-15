@@ -8,5 +8,5 @@
 pub mod dynamics;
 pub mod train;
 
-pub use dynamics::{RailDynamics, RailInput};
+pub use dynamics::{ConsistLoad, RailDynamics, RailInput};
 pub use train::{Branch, Moved, Train};

@@ -25,6 +25,9 @@ use super::WorldLoadJob;
 const PATH_TYPE_RAIL: u32 = 2;
 /// A player vehicle spawned farther than this from any track is not put on rails (m).
 const SNAP_MAX_M: f32 = 12.0;
+/// A train formation is put on the nearest track within this distance of its entry point (m): the
+/// entry points of a map are road-oriented, a station track can lie some way off.
+pub const FORMATION_SNAP_M: f32 = 150.0;
 /// Default number of AI trains.
 pub const DEFAULT_MAX_TRAINS: usize = 3;
 /// Cruise speed of cyclists (m/s).
@@ -217,6 +220,8 @@ pub struct RailPlayer {
     /// behind it.
     span: f32,
     gave_up: bool,
+    /// How far from its spawn point a track is looked for (m).
+    snap_m: f32,
 }
 
 impl RailPlayer {
@@ -229,7 +234,28 @@ impl RailPlayer {
             dynamics: RailDynamics::tram(mass_kg),
             span,
             gave_up: false,
+            snap_m: SNAP_MAX_M,
         }
+    }
+
+    /// Looks for a track up to `metres` from the spawn point (a formation: [`FORMATION_SNAP_M`]).
+    #[must_use]
+    pub fn with_snap(mut self, metres: f32) -> Self {
+        self.snap_m = metres;
+        self
+    }
+}
+
+impl RailPlayer {
+    /// Replaces the dynamics by those of the whole consist (total, powered and braked mass).
+    pub fn set_consist(&mut self, load: opts_sim::rail::ConsistLoad) {
+        self.dynamics = RailDynamics::for_consist(load);
+    }
+
+    /// The mass the dynamics move (kg).
+    #[must_use]
+    pub fn mass_kg(&self) -> f32 {
+        self.dynamics.mass_kg
     }
 }
 
@@ -277,7 +303,7 @@ pub fn rail_player_step(
                 continue; // tiles still streaming in
             }
             let p = Vec3::new(ch.position.x, ch.position.y, ch.elevation_z);
-            match net.0.nearest(p, SNAP_MAX_M) {
+            match net.0.nearest(p, rail.snap_m) {
                 Some((lane, s, dist)) => {
                     let l = net.0.lane(lane).expect("lane exists");
                     let (_, h) = l.at(s);
@@ -291,9 +317,12 @@ pub fn rail_player_step(
                     rail.train = Some(train);
                 }
                 None => {
+                    let nearest = net.0.nearest(p, 5_000.0).map(|(_, _, d)| d);
                     tracing::error!(
                         at = %opts_bevy::position_tag(),
-                        "rail vehicle spawned more than {SNAP_MAX_M} m from any track; it stays a road vehicle"
+                        nearest_track_m = ?nearest,
+                        "rail vehicle spawned more than {} m from any track; it stays a road vehicle",
+                        rail.snap_m
                     );
                     rail.gave_up = true;
                     continue;
@@ -694,12 +723,7 @@ fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
             break;
         };
         let reversed = manifest.couple_back_reversed;
-        let own = if reversed {
-            m.coupling_back.map(|c| -c)
-        } else {
-            m.coupling_front
-        };
-        let (Some(b), Some(f)) = (manifest.coupling_back, own) else {
+        let Some((b, f)) = super::vehicle::coupling_joint(&manifest, false, &m, reversed) else {
             break;
         };
         // The next unit's origin lies at `b − f` in this unit's frame (y forward).

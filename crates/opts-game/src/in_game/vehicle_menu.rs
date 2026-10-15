@@ -412,6 +412,7 @@ fn menu_actions(
                     repaint: menu.repaint.clone(),
                     setvars,
                     entry: EntrySel::Id(entry),
+                    formation: None,
                 });
                 menu.current = veh.full_name.clone();
                 menu.page = Page::Closed;

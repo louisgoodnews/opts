@@ -72,7 +72,9 @@ pub use traffic::{
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 pub use traffic_chain::move_traffic_chains;
-pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle};
+pub use vehicle::{
+    decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, FormationCar, SpawnedVehicle,
+};
 pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -222,6 +224,8 @@ pub struct WorldLoadJob {
     /// Directories of the player vehicle; a changed file inside restarts the session.
     vehicle_dirs: Vec<PathBuf>,
     spawn: Option<(Vec3, f32)>,
+    /// The cars behind the head of a train formation about to be spawned (consumed by the loader).
+    formation_cars: Vec<vehicle::FormationCar>,
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),

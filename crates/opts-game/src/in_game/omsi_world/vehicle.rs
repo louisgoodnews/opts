@@ -501,7 +501,53 @@ fn bind_skins(
     }
 }
 
-/// Spawns the trailers named by `[couple_back]` (recursively) behind `root`. Returns the
+/// One car of a train formation behind the head: the vehicle file and whether it is turned
+/// around (see `opts_core::formats::trains`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormationCar {
+    /// The resolved vehicle file.
+    pub path: PathBuf,
+    /// The car runs turned around in the train.
+    pub turned: bool,
+    /// Whether the car pulls: `None` lets the loader decide (a car made of several files does).
+    pub powered: Option<bool>,
+}
+
+/// The most vehicle files one spawn follows: a single vehicle's `[couple_back]` chain, or a
+/// formation's cars with their own chains.
+fn max_parts(formation: bool) -> usize {
+    if formation {
+        opts_core::formats::trains::MAX_PARTS
+    } else {
+        40
+    }
+}
+
+/// The two coupling points that join a unit to the one in front of it, in the frame of the
+/// train (y forward): the rear point of the unit in front and the front point of the unit behind,
+/// each relative to its own vehicle's origin. A turned unit has its points negated and swapped
+/// (its model's front point faces the rear of the train). `None` when a point is missing.
+pub(super) fn coupling_joint(
+    parent: &BusManifest,
+    parent_turned: bool,
+    own: &BusManifest,
+    own_turned: bool,
+) -> Option<(Vec3, Vec3)> {
+    let rear_of_parent = if parent_turned {
+        parent.coupling_front.map(|c| -c)
+    } else {
+        parent.coupling_back
+    }?;
+    let front_of_own = if own_turned {
+        own.coupling_back.map(|c| -c)
+    } else {
+        own.coupling_front
+    }?;
+    Some((rear_of_parent, front_of_own))
+}
+
+/// Spawns the trailers named by `[couple_back]` (recursively) behind `root`, then the cars of a
+/// train formation (`job.formation_cars`), each with its own chain. Returns the
 /// passenger camera presets of all trailers with the segment entity they are defined in.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_trailer_chain(
@@ -514,7 +560,10 @@ pub(super) fn spawn_trailer_chain(
     bus_dir: &Path,
     tractor: &BusManifest,
 ) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
-    const MAX_SEGMENTS: usize = 40;
+    let formation: Vec<FormationCar> = std::mem::take(&mut job.formation_cars);
+    let mut next_car = formation.iter();
+    let limit = max_parts(!formation.is_empty());
+    let rail = super::is_rail(tractor);
     let mut cams = Vec::new();
     // Mass of the unit in front: what a trailer without a stated mass is assumed to weigh.
     let mut previous_kg = manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG);
@@ -524,14 +573,34 @@ pub(super) fn spawn_trailer_chain(
     // Axles counted so far: trailer models number theirs after the head's (`Wheel_Rotation_2_L`).
     let mut axle_base = tractor.axles.len();
     let (mut parent_dir, mut parent_manifest) = (bus_dir.to_path_buf(), tractor.clone());
-    for _ in 0..MAX_SEGMENTS {
-        let Some(name) = parent_manifest.couple_back.clone() else {
+    // Whether the unit in front runs turned around in the train (the head never does).
+    let mut parent_turned = false;
+    // Whether the unit being walked pulls (the head and its own chain do).
+    let mut unit_powered = true;
+    // Rail: the head's mass (at least 20 t), then the stated mass of every following unit and
+    // whether it pulls; a unit that states none adds nothing.
+    let head_kg = commands_mass(tractor);
+    let mut powered_kg = head_kg;
+    let mut total_kg = head_kg;
+    for _ in 0..limit {
+        // The next unit: the one the parent couples to, else the next car of the formation.
+        let (path, turned, from_formation, powered_override) = if let Some(name) =
+            parent_manifest.couple_back.clone()
+        {
+            let Some(path) = job.install.find_in(&parent_dir, &name) else {
+                tracing::error!(at = %opts_bevy::position_tag(), trailer = %name, "trailer .bus not found; vehicle stays without it");
+                break;
+            };
+            (path, parent_manifest.couple_back_reversed, false, None)
+        } else if let Some(car) = next_car.next() {
+            (car.path.clone(), car.turned, true, car.powered)
+        } else {
             break;
         };
-        let Some(path) = job.install.find_in(&parent_dir, &name) else {
-            tracing::error!(at = %opts_bevy::position_tag(), trailer = %name, "trailer .bus not found; vehicle stays without it");
-            break;
-        };
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let loaded = (|| -> Result<_, String> {
             let manifest =
                 BusManifest::parse_bytes(&std::fs::read(&path).map_err(|e| e.to_string())?)
@@ -559,14 +628,16 @@ pub(super) fn spawn_trailer_chain(
         let lod0 = &detail;
         job.vehicle_text_defs = model.text_textures.clone();
         // Both coupling points are in their own vehicle frame; the segment follows its leader
-        // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
-        let reversed = parent_manifest.couple_back_reversed;
-        let own_joint = if reversed {
-            manifest.coupling_back.map(|c| -c)
+        // with its front joint on the leader's rear joint (`opts_bevy::articulation`). A unit
+        // turned around has its points negated and swapped (`coupling_joint`).
+        let reversed = if from_formation {
+            turned
         } else {
-            manifest.coupling_front
+            // A `[couple_back]` link turns the trailer relative to its (unturned) leader.
+            turned != parent_turned
         };
-        let (Some(b), Some(f)) = (parent_manifest.coupling_back, own_joint) else {
+        let Some((b, f)) = coupling_joint(&parent_manifest, parent_turned, &manifest, reversed)
+        else {
             tracing::error!(at = %opts_bevy::position_tag(), trailer = %path.display(), "coupling points missing; trailer not attached");
             break;
         };
@@ -592,11 +663,25 @@ pub(super) fn spawn_trailer_chain(
         let max_alpha = manifest
             .coupling_front_limits
             .map_or(52.5, |l| l.max_alpha_deg);
-        if manifest_mass_kg(&manifest).is_none() {
+        // Road trailers assume the mass of the unit in front when they state none; rail cars
+        // (bogies, joints and couplers are vehicles of their own and state 0) add what they state.
+        let fallback_kg = if rail { 0.0 } else { previous_kg };
+        if !rail && manifest_mass_kg(&manifest).is_none() {
             tracing::warn!(trailer = %path.display(), assumed_kg = previous_kg, "trailer states no mass; the mass of the unit in front is used");
         }
-        let load = unit_load(&manifest, reversed, previous_kg);
+        let load = opts_sim::UnitLoad::from_manifest_or(&manifest, reversed, fallback_kg);
         previous_kg = load.mass_kg;
+        if from_formation {
+            // A new car of the formation: it pulls when told so, else when it is a multiple unit
+            // (made of several files). The parts of its own chain share its answer.
+            unit_powered = powered_override.unwrap_or(manifest.couple_back.is_some());
+        }
+        if rail {
+            total_kg += load.mass_kg;
+            if unit_powered {
+                powered_kg += load.mass_kg;
+            }
+        }
         let seg = commands
             .spawn((
                 Name::new(name.clone()),
@@ -662,12 +747,26 @@ pub(super) fn spawn_trailer_chain(
                 .map(|(size, centre)| super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
-        if reversed {
+        if reversed && !from_formation {
             // The chain of a reversed head leads back into this consist (the NF6D's B head
             // couples to the articulation joint again): the ring is closed here.
             break;
         }
+        parent_turned = reversed;
         (parent_dir, parent_manifest) = (dir, manifest);
+    }
+    if rail {
+        // The whole consist's masses for the dynamics (set once the head has its `RailPlayer`).
+        let load = opts_sim::rail::ConsistLoad {
+            total_kg,
+            powered_kg,
+            braked_kg: total_kg,
+        };
+        commands.queue(move |world: &mut World| {
+            if let Some(mut player) = world.get_mut::<super::rail::RailPlayer>(root) {
+                player.set_consist(load);
+            }
+        });
     }
     if !chain.is_empty() {
         if !super::is_rail(tractor) {
@@ -714,6 +813,7 @@ fn manifest_mass_kg(manifest: &BusManifest) -> Option<f32> {
 /// What a following unit adds to the consist: its stated mass, else `previous_kg` (the unit in
 /// front; the installed consists have a median trailer/head ratio of 0.90, `consist_census`), and
 /// its axles with those marked driven (`achse_antrieb`).
+#[cfg(test)]
 fn unit_load(manifest: &BusManifest, reversed: bool, previous_kg: f32) -> opts_sim::UnitLoad {
     opts_sim::UnitLoad::from_manifest_or(manifest, reversed, previous_kg)
 }
@@ -738,8 +838,56 @@ pub fn prewarm_vehicle_meshes(
     else {
         return Vec::new();
     };
+    let mut keys = prewarm_file(job, commands, meshes, materials, images, &bus_path, true);
+    // The units behind the head (its `[couple_back]` chain and the cars of a formation, each with
+    // its own chain) are built by the same loader and need their decoded meshes too.
+    let mut files: Vec<PathBuf> = Vec::new();
+    let heads: Vec<PathBuf> = std::iter::once(bus_path.clone())
+        .chain(job.formation_cars.iter().map(|c| c.path.clone()))
+        .collect();
+    for (n, head) in heads.iter().enumerate() {
+        let mut path = head.clone();
+        for step in 0..max_parts(true) {
+            if !(n == 0 && step == 0) {
+                files.push(path.clone());
+            }
+            let Some(next) = std::fs::read(&path)
+                .ok()
+                .and_then(|b| BusManifest::parse_bytes(&b).ok())
+                .and_then(|m| m.couple_back)
+            else {
+                break;
+            };
+            let Some(dir) = path.parent() else { break };
+            let Some(found) = job.install.find_in(dir, &next) else {
+                break;
+            };
+            path = found;
+        }
+    }
+    for f in files {
+        keys.extend(prewarm_file(
+            job, commands, meshes, materials, images, &f, false,
+        ));
+    }
+    keys.sort_unstable();
+    keys.dedup();
+    keys
+}
+
+/// Queues the decoding of one vehicle file's meshes (`head`: the player's vehicle, whose repaints
+/// are read as well).
+fn prewarm_file(
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    bus_path: &Path,
+    head: bool,
+) -> Vec<opts_bevy::descramble_cache::Key> {
     let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig, Option<_>, BusManifest)> {
-        let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
+        let manifest = BusManifest::parse_bytes(&std::fs::read(bus_path).ok()?).ok()?;
         let bus_dir = bus_path.parent()?.to_path_buf();
         let cfg = job
             .install
@@ -765,7 +913,9 @@ pub fn prewarm_vehicle_meshes(
     ];
     job.cache.take_deferred();
     let scratch = commands.spawn_empty().id();
-    ensure_repaints(job, &bus_path, &manifest);
+    if head {
+        ensure_repaints(job, bus_path, &manifest);
+    }
     job.cache.expected_bounds = bounds;
     job.cache.texture_replacements = repaint_map(job, &model);
     load_segment_meshes(
@@ -916,10 +1066,11 @@ pub fn load_player_vehicle(
         // Rail-bound: held on the track, speed from the rail dynamics (see `rail.rs`); the
         // coupled units are placed on the track too, not by trailer kinematics.
         let mass = commands_mass(&manifest);
-        commands.entity(root).insert(super::RailPlayer::new(
-            mass,
-            manifest.bogie_half_span.unwrap_or(0.0),
-        ));
+        let mut player = super::RailPlayer::new(mass, manifest.bogie_half_span.unwrap_or(0.0));
+        if !job.formation_cars.is_empty() {
+            player = player.with_snap(super::rail::FORMATION_SNAP_M);
+        }
+        commands.entity(root).insert(player);
     }
     attach_scripts(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
@@ -1507,5 +1658,88 @@ mod consist_mass_tests {
             sim.consist_mass_kg()
         );
         assert!((sim.head_mass_kg() - 8_000.0).abs() < 1.0);
+    }
+}
+
+#[cfg(test)]
+mod formation_tests {
+    use super::*;
+
+    /// A manifest with the two coupling points at `front_y` and `back_y` (x 0, z 1).
+    fn car(front_y: f32, back_y: f32) -> BusManifest {
+        BusManifest::parse(&format!(
+            "[coupling_front]\n0\n{front_y}\n1\n\n[coupling_back]\n0\n{back_y}\n1\n\n"
+        ))
+        .expect("manifest")
+    }
+
+    /// Distance of the follower's origin behind the leader's origin: the loader's `f.y - b.y`.
+    fn gap(parent: &BusManifest, pt: bool, own: &BusManifest, ot: bool) -> f32 {
+        let (b, f) = coupling_joint(parent, pt, own, ot).expect("points");
+        f.y - b.y
+    }
+
+    #[test]
+    fn two_unturned_cars_join_back_to_front() {
+        // Leader's rear coupling 10 m behind its origin, follower's front coupling 12 m ahead.
+        let (a, b) = (car(11.0, -10.0), car(12.0, -9.0));
+        assert!((gap(&a, false, &b, false) - 22.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_turned_follower_presents_its_back_point_as_its_front() {
+        let (a, b) = (car(11.0, -10.0), car(12.0, -9.0));
+        // Turned: its model's back point (-9) becomes the front point (+9).
+        assert!((gap(&a, false, &b, true) - 19.0).abs() < 1e-4);
+        let (b_pt, f_pt) = coupling_joint(&a, false, &b, true).expect("points");
+        assert_eq!((b_pt.y, f_pt.y), (-10.0, 9.0));
+    }
+
+    #[test]
+    fn a_turned_leader_presents_its_front_point_as_its_rear() {
+        let (a, b) = (car(11.0, -10.0), car(12.0, -9.0));
+        // Turned leader: its model's front point (+11) becomes the rear point (-11).
+        assert!((gap(&a, true, &b, false) - 23.0).abs() < 1e-4);
+        // Both turned: rear -11, follower front +9.
+        assert!((gap(&a, true, &b, true) - 20.0).abs() < 1e-4);
+    }
+
+    #[test]
+    fn a_symmetric_pair_is_the_same_whichever_way_it_is_turned() {
+        let (a, b) = (car(13.2, -13.2), car(13.2, -13.2));
+        for (pt, ot) in [(false, false), (false, true), (true, false), (true, true)] {
+            assert!((gap(&a, pt, &b, ot) - 26.4).abs() < 1e-4, "{pt} {ot}");
+        }
+    }
+
+    #[test]
+    fn a_missing_point_gives_no_joint() {
+        let a = car(11.0, -10.0);
+        let bare = BusManifest::parse("[mass]\n10\n").expect("manifest");
+        assert!(coupling_joint(&a, false, &bare, false).is_none());
+        assert!(coupling_joint(&bare, false, &a, false).is_none());
+    }
+
+    #[test]
+    fn the_ai_loader_and_the_formation_loader_agree_on_a_couple_back_link() {
+        // The old inline formula of `load_spec`/`spawn_trailer_chain` for a link flagged reversed.
+        let (a, b) = (car(11.0, -10.0), car(12.0, -9.0));
+        let old = |reversed: bool| {
+            let own = if reversed {
+                b.coupling_back.map(|c| -c)
+            } else {
+                b.coupling_front
+            };
+            own.expect("own").y - a.coupling_back.expect("back").y
+        };
+        for reversed in [false, true] {
+            assert!((gap(&a, false, &b, reversed) - old(reversed)).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn the_part_limit_is_forty_for_a_single_vehicle_and_the_formation_limit_otherwise() {
+        assert_eq!(max_parts(false), 40);
+        assert_eq!(max_parts(true), opts_core::formats::trains::MAX_PARTS);
     }
 }

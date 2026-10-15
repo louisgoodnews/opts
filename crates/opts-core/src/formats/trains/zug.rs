@@ -104,6 +104,7 @@ impl TrainFormation {
             segments.push(FormationSegment {
                 vehicle: VehicleRef::from_entry(vehicle),
                 orientation,
+                powered: None,
             });
         }
         Ok((
