@@ -459,6 +459,57 @@ impl Catalogue {
         })
     }
 
+    /// Every rail vehicle file (`.bus` and `.ovh`, playable or not, primary entities only), by
+    /// path: the cars a train formation can be made of.
+    ///
+    /// # Errors
+    /// SQLite failures.
+    pub fn rail_vehicles(&self) -> Result<Vec<VehicleRecord>> {
+        self.with(|c| {
+            let mut st = c.prepare(
+                "SELECT e.entity_id, f.rel_path, f.file_name, v.manufacturer, v.model, v.livery,
+                        v.description, v.mass_tonnes, e.vehicle_class
+                 FROM entities e JOIN vehicle_info v ON v.entity_id = e.entity_id
+                 JOIN files f ON f.file_id = e.marker_file_id
+                 WHERE e.category = 'vehicle' AND e.vehicle_class = 'rail' AND e.alias_of_id IS NULL
+                 ORDER BY f.rel_path COLLATE NOCASE",
+            )?;
+            let rows = st.query_map([], |r| {
+                let file: String = r.get(2)?;
+                Ok(VehicleRecord {
+                    entity_id: r.get(0)?,
+                    marker_file: r.get(1)?,
+                    id: file
+                        .rsplit_once('.')
+                        .map_or(file.clone(), |(s, _)| s.to_string()),
+                    manufacturer: r.get(3)?,
+                    model: r.get(4)?,
+                    livery: r.get(5)?,
+                    description: r.get(6)?,
+                    mass_tonnes: r.get(7)?,
+                    class: r.get(8)?,
+                })
+            })?;
+            rows.collect()
+        })
+    }
+
+    /// The train consist files (`.zug`) below `Trains/`, by path (relative to the OMSI root).
+    ///
+    /// # Errors
+    /// SQLite failures.
+    pub fn train_consists(&self) -> Result<Vec<String>> {
+        self.with(|c| {
+            let mut st = c.prepare(
+                "SELECT rel_path FROM files
+                 WHERE extension = 'zug' AND rel_path LIKE 'Trains/%'
+                 ORDER BY rel_path COLLATE NOCASE",
+            )?;
+            let rows = st.query_map([], |r| r.get::<_, String>(0))?;
+            rows.collect()
+        })
+    }
+
     /// Relative path of the `.bus` marker for a vehicle id (file stem), any case.
     ///
     /// # Errors
@@ -960,6 +1011,15 @@ mod tests {
     #[test]
     fn discovers_entities_and_resolves_paths_case_insensitively() {
         let root = fixture();
+        fs::create_dir_all(root.join("Vehicles/Rail")).unwrap();
+        fs::write(
+            root.join("Vehicles/Rail/Coach.ovh"),
+            "[type]\n2\n\n[model]\nmodel\\model.cfg\n\n[boogies]\n9.5\n\n[mass]\n40\n",
+        )
+        .unwrap();
+        fs::create_dir_all(root.join("Trains")).unwrap();
+        fs::write(root.join("Trains/b.zug"), "a.ovh\r\n0\r\nb.ovh\r\n1").unwrap();
+        fs::write(root.join("Trains/A.zug"), "a.ovh\r\n0\r\nb.ovh\r\n0").unwrap();
         let db = root.join("cat.db");
         let summary = discover(&db, &root, &|_| {}).unwrap();
         assert!(summary.files >= 4 && summary.entities >= 3);
@@ -977,6 +1037,24 @@ mod tests {
         );
         assert_eq!(vehicles[0].id, "Bus1");
         assert_eq!(vehicles[0].manufacturer, "ACME");
+
+        // Rail cars: every rail file, whether a player may select it or not.
+        let rail = cat.rail_vehicles().unwrap();
+        assert_eq!(rail.len(), 1, "{rail:?}");
+        assert_eq!(rail[0].id, "Coach");
+        assert_eq!(rail[0].marker_file, "Vehicles/Rail/Coach.ovh");
+        assert_eq!(rail[0].mass_tonnes, Some(40.0));
+        assert_eq!(rail[0].class.as_deref(), Some("rail"));
+        assert!(
+            !vehicles.iter().any(|v| v.id == "Coach"),
+            "an .ovh is never player-selectable"
+        );
+
+        assert_eq!(
+            cat.train_consists().unwrap(),
+            vec!["Trains/A.zug".to_string(), "Trains/b.zug".to_string()],
+            "consists by path, case-insensitively sorted"
+        );
 
         let ro = Catalogue::open_read_only(&db).unwrap();
         assert_eq!(ro.maps().unwrap().len(), 1);

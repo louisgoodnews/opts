@@ -129,6 +129,7 @@
 - [Pending OMSI Verification](architecture/pending-omsi-verification.md)
 - [Bus Script Integration Strategy](architecture/bus-script-integration.md)
 - [Mini Map Path Recognition (research)](architecture/minimap-path-recognition.md)
+- [Train Formation Editor (design)](architecture/train-formation-editor.md)
 - [Articulated Vehicles](architecture/articulation.md)
 - [Articulation Physics (design)](architecture/articulation-physics.md)
 - [Bellows Census and Capabilities](architecture/bellows-census.md)
@@ -175,6 +176,7 @@
   - [Indented keywords (investigation)](formats/text/keyword-indentation.md)
   - [`.sco` — Scenery Objects](formats/text/sco.md)
   - [`.sli` — Splines](formats/text/sli.md)
+  - [`.zug` — Train Consists](formats/text/zug.md)
   - [`.report` — F1 bug reports](formats/text/report-format.md)
   - [`.sco` / `.sli` Corpus Audit](formats/text/sco-sli-audit.md)
   - [`.bus` — Vehicle Definitions](formats/text/vehicles/bus.md)
@@ -255,6 +257,7 @@
 - [ADR-0009: UI Architecture](adr/0009-ui-architecture.md)
 - [ADR-0011: Session Save Format](adr/0011-session-save-format.md)
 - [ADR-0012: Screen Capture Encoding](adr/0012-screen-capture-encoding.md)
+- [ADR-0013: Train Formation Model](adr/0013-train-formation-model.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
@@ -292,6 +295,8 @@
 - [Usability Test Protocol (Phase 9, not yet run)](meta/usability-test-protocol.md)
 - [UV Incident Files of the MAN NG272 (2026-10-13)](meta/uv-incidents-ng272-2026-10-13.md)
 - [MAN NL/NG Reinvestigation (2026-10-14)](meta/man-nlng-reinvestigation-2026-10-14.md)
+- [Train Formation Research (2026-10-15)](meta/train-formation-research-2026-10-15.md)
+- [Train Formation Implementation (2026-10-15)](meta/train-formation-implementation-2026-10-15.md)
 - [AI Vehicle Configuration Investigation (2026-10-14)](meta/ai-vehicle-config-2026-10-14.md)
 - [Bus Script Integration Research (2026-10-14)](meta/bus-script-integration-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)

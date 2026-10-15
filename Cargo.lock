@@ -5385,6 +5385,7 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "thiserror 1.0.69",
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",

@@ -263,7 +263,27 @@ pub fn handle_vehicle_requests(
     let Some(rec) = registry.get(id).cloned() else {
         return;
     };
-    let bus_path = PathBuf::from(&rec.bus_file);
+    let mut bus_path = PathBuf::from(&rec.bus_file);
+    // A train formation: its first car is the vehicle, the others are coupled behind it by the loader.
+    let formation_cars = match &rec.formation {
+        Some(formation) => match crate::formation::resolve(formation, &job) {
+            Ok(resolved) => {
+                bus_path = resolved.head;
+                resolved.cars
+            }
+            Err(issues) => {
+                let text = issues
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                tracing::error!(at = %opts_bevy::position_tag(), formation = %formation.name, "formation cannot be spawned: {text}");
+                registry.mark_failed(id, text);
+                return;
+            }
+        },
+        None => Vec::new(),
+    };
     if !bus_path.is_file() {
         registry.mark_failed(id, format!("{}: no such vehicle file", rec.bus_file));
         tracing::error!(at = %opts_bevy::position_tag(), file = %rec.bus_file, "vehicle file not found; nothing spawned");
@@ -299,6 +319,7 @@ pub fn handle_vehicle_requests(
         heading,
     ));
     job.config.vehicle_path = Some(bus_path);
+    job.set_formation_cars(formation_cars);
     job.config.livery = rec.repaint.clone();
     job.config.setvars = rec.setvars.clone();
     job.repaint = None;

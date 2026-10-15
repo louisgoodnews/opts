@@ -25,11 +25,39 @@ pub struct RailInput {
     pub direction: i8,
 }
 
+/// What a consist weighs and what acts on it: resistance and gradient act on the total mass,
+/// brakes on the braked mass, traction and power on the powered mass (ADR-0013).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ConsistLoad {
+    /// Mass of every car (kg).
+    pub total_kg: f32,
+    /// Mass of the cars that drive (the head and the cars with a driver workstation), kg.
+    pub powered_kg: f32,
+    /// Mass of the cars that brake (all of them), kg.
+    pub braked_kg: f32,
+}
+
+impl ConsistLoad {
+    /// A single body: everything counts as powered and braked.
+    #[must_use]
+    pub fn single(mass_kg: f32) -> Self {
+        Self {
+            total_kg: mass_kg,
+            powered_kg: mass_kg,
+            braked_kg: mass_kg,
+        }
+    }
+}
+
 /// Vehicle constants.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct RailDynamics {
     /// Total mass (kg).
     pub mass_kg: f32,
+    /// Mass on driven axles (kg): limits traction through adhesion.
+    pub powered_mass_kg: f32,
+    /// Mass on braked axles (kg): limits braking through adhesion.
+    pub braked_mass_kg: f32,
     /// Maximum tractive effort at low speed (N).
     pub max_traction_n: f32,
     /// Continuous traction power (W).
@@ -55,13 +83,26 @@ impl RailDynamics {
     /// 70 km/h).
     #[must_use]
     pub fn tram(mass_kg: f32) -> Self {
-        let m = mass_kg.max(5_000.0);
+        Self::for_consist(ConsistLoad::single(mass_kg))
+    }
+
+    /// A consist: the tram constants per kilogram applied to the right mass for each effect.
+    /// Running resistance (rolling part) and gradient use the total mass, traction and power the
+    /// powered mass, service and emergency brakes the braked mass; the aerodynamic term is one
+    /// frontal area whatever the length. Masses below 5 t are raised to 5 t.
+    #[must_use]
+    pub fn for_consist(load: ConsistLoad) -> Self {
+        let m = load.total_kg.max(5_000.0);
+        let p = load.powered_kg.clamp(5_000.0, m);
+        let b = load.braked_kg.clamp(5_000.0, m);
         Self {
             mass_kg: m,
-            max_traction_n: 1.1 * m,
-            power_w: 14.0 * m * 1.0, // ≈ 14 W per kg: 420 kW for 30 t
-            brake_n: 1.3 * m,
-            emergency_n: 2.6 * m,
+            powered_mass_kg: p,
+            braked_mass_kg: b,
+            max_traction_n: 1.1 * p,
+            power_w: 14.0 * p, // ≈ 14 W per kg: 420 kW for 30 t
+            brake_n: 1.3 * b,
+            emergency_n: 2.6 * b,
             davis_a: 0.005 * m * G * 0.6,
             davis_b: 0.0,
             davis_c: 6.0,
@@ -75,7 +116,8 @@ impl RailDynamics {
     #[must_use]
     pub fn acceleration(&self, speed: f32, grade: f32, input: &RailInput) -> f32 {
         let v = speed.max(0.0);
-        let adhesion_limit = self.adhesion * self.mass_kg * G;
+        let traction_limit = self.adhesion * self.powered_mass_kg * G;
+        let brake_limit = self.adhesion * self.braked_mass_kg * G;
         let traction = if v >= self.max_speed {
             0.0
         } else {
@@ -83,14 +125,14 @@ impl RailDynamics {
                 * self
                     .max_traction_n
                     .min(self.power_w / v.max(self.power_w / self.max_traction_n)))
-            .min(adhesion_limit)
+            .min(traction_limit)
         };
         let brake = if input.emergency {
             self.emergency_n
         } else {
             input.brake.clamp(0.0, 1.0) * self.brake_n
         }
-        .min(adhesion_limit);
+        .min(brake_limit);
         let resist = self.davis_a + self.davis_b * v + self.davis_c * v * v;
         let slope = self.mass_kg * G * grade.atan().sin();
         (traction - brake - resist - slope) / self.mass_kg
@@ -101,7 +143,7 @@ impl RailDynamics {
     pub fn step(&self, speed: f32, grade: f32, input: &RailInput, dt: f32) -> f32 {
         let v = speed.max(0.0);
         if input.hold && input.traction <= 0.0 {
-            return (v - self.brake_n / self.mass_kg * dt).max(0.0);
+            return (v - self.brake_n / self.mass_kg * dt).max(0.0); // holding brake: the braked mass's force on the whole train
         }
         let a = self.acceleration(v, grade, input);
         let mut next = v + a * dt;
@@ -163,6 +205,110 @@ mod tests {
             ..d
         };
         assert!(wet.acceleration(0.1, 0.0, &go()) < 0.8);
+    }
+
+    fn freight() -> (RailDynamics, RailDynamics) {
+        // One 84 t locomotive and twenty 40 t wagons (884 t): what a long `.zug` is.
+        let train = RailDynamics::for_consist(ConsistLoad {
+            total_kg: 884_000.0,
+            powered_kg: 84_000.0,
+            braked_kg: 884_000.0,
+        });
+        (train, RailDynamics::tram(84_000.0))
+    }
+
+    #[test]
+    fn a_single_body_consist_is_the_old_tram() {
+        let a = RailDynamics::for_consist(ConsistLoad::single(30_000.0));
+        let b = RailDynamics::tram(30_000.0);
+        assert_eq!(a, b);
+        assert_eq!(a.powered_mass_kg, 30_000.0);
+        assert_eq!(a.braked_mass_kg, 30_000.0);
+    }
+
+    /// The force that produced `a` on `d` at speed `v`: mass times acceleration plus resistance.
+    fn pull_n(d: &RailDynamics, a: f32, v: f32) -> f32 {
+        a * d.mass_kg + d.davis_a + d.davis_b * v + d.davis_c * v * v
+    }
+
+    #[test]
+    fn a_heavy_consist_accelerates_with_the_traction_of_its_powered_cars_only() {
+        let (train, loco_alone) = freight();
+        let a_train = train.acceleration(0.1, 0.0, &go());
+        let a_loco = loco_alone.acceleration(0.1, 0.0, &go());
+        // The pull is the locomotive's 1.1 N/kg x 84 t in both; only the mass differs.
+        let f = 1.1 * 84_000.0;
+        assert!((pull_n(&train, a_train, 0.1) / f - 1.0).abs() < 0.01);
+        assert!((pull_n(&loco_alone, a_loco, 0.1) / f - 1.0).abs() < 0.01);
+        // 884 t with rolling resistance (26 kN): about 0.075 m/s², a fraction of the lone loco's 1.1.
+        assert!((0.06..0.09).contains(&a_train), "{a_train}");
+        assert!(a_loco / a_train > 10.0, "{a_loco} / {a_train}");
+    }
+
+    #[test]
+    fn acceleration_scales_with_one_over_total_mass_at_equal_traction() {
+        let build = |total| {
+            RailDynamics::for_consist(ConsistLoad {
+                total_kg: total,
+                powered_kg: 100_000.0,
+                braked_kg: total,
+            })
+        };
+        let (light, heavy) = (build(200_000.0), build(400_000.0));
+        assert_eq!(light.max_traction_n, heavy.max_traction_n);
+        let (a_l, a_h) = (
+            light.acceleration(0.1, 0.0, &go()),
+            heavy.acceleration(0.1, 0.0, &go()),
+        );
+        // Equal force on twice the mass: the force that accelerated them is the same within 2 %.
+        let (f_l, f_h) = (pull_n(&light, a_l, 0.1), pull_n(&heavy, a_h, 0.1));
+        assert!((f_l / f_h - 1.0).abs() < 0.02, "{f_l} vs {f_h}");
+        assert!(a_l > 1.7 * a_h && a_l < 2.6 * a_h, "{a_l} vs {a_h}");
+    }
+
+    #[test]
+    fn a_gradient_pulls_on_the_whole_train_but_traction_does_not_grow() {
+        let (train, _) = freight();
+        // 1 % uphill: 884 t x g x 0.01 = 87 kN, nearly all of the locomotive's 92 kN.
+        let on_grade = train.acceleration(5.0, 0.01, &go());
+        let flat = train.acceleration(5.0, 0.0, &go());
+        assert!(on_grade < flat - 0.08, "{on_grade} vs {flat}");
+    }
+
+    #[test]
+    fn braking_force_follows_the_braked_mass() {
+        let all = RailDynamics::for_consist(ConsistLoad {
+            total_kg: 400_000.0,
+            powered_kg: 100_000.0,
+            braked_kg: 400_000.0,
+        });
+        let head_only = RailDynamics::for_consist(ConsistLoad {
+            total_kg: 400_000.0,
+            powered_kg: 100_000.0,
+            braked_kg: 100_000.0,
+        });
+        let brake = RailInput {
+            brake: 1.0,
+            ..Default::default()
+        };
+        let (a_all, a_head) = (
+            all.acceleration(10.0, 0.0, &brake),
+            head_only.acceleration(10.0, 0.0, &brake),
+        );
+        assert!(a_all < -1.2, "{a_all}");
+        assert!((a_head / a_all - 0.25).abs() < 0.06, "{a_head} / {a_all}");
+    }
+
+    #[test]
+    fn masses_are_clamped_into_a_sensible_order() {
+        let d = RailDynamics::for_consist(ConsistLoad {
+            total_kg: 10_000.0,
+            powered_kg: 90_000.0,
+            braked_kg: 1.0,
+        });
+        assert_eq!(d.mass_kg, 10_000.0);
+        assert_eq!(d.powered_mass_kg, 10_000.0);
+        assert_eq!(d.braked_mass_kg, 5_000.0);
     }
 
     #[test]

@@ -162,6 +162,7 @@ fn spawn(world: &mut World, params: &Value) -> Outcome {
                 repaint: opt_str(params, "repaint")?.unwrap_or_default().to_owned(),
                 setvars,
                 entry,
+                formation: None,
             });
         Ok(json!({ "id": id, "queued": true }))
     })();

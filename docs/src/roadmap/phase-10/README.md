@@ -11,6 +11,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 📝 Planned, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
 - [M-0104 — UV Decoder Texture Evidence](M-0104.md) — ✅ Approved 2026-10-14 (feasibility first; from the MAN NL/NG reinvestigation)
+- [M-0106 — Train Formation Editor v1](M-0106.md) — 📝 Proposed 2026-10-15 (design awaiting approval)
 - [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 📝 Planned, 🔴 high (R-34 … R-42)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
@@ -35,6 +36,8 @@ Suggested order: M-0068 (sessions) before M-0069 (save needs the registry); M-00
   - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
 - [ ] **🧪 UV Decoder Texture Evidence** — [M-0104](M-0104.md) — ✅ approved 2026-10-14
   - [ ] Feasibility first: does the plain texture atlas rank the true scrambler offset on the twin truth set; integrate into the smooth stage only on a go ([design](../../architecture/uv-decoder-texture-evidence.md)).
+- [ ] **🚆 Train Formation Editor v1** — [M-0106](M-0106.md) — 📝 proposed 2026-10-15
+  - [ ] `.zug` parser and presets, formation editor in the spawn menu, consist spawner with summed mass, TOML store ([design](../../architecture/train-formation-editor.md)).
 - [ ] **🌊 Water Rendering** — [M-0067](M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
 - [x] **🚌 Session Vehicles** — [M-0068](M-0068.md)

@@ -84,6 +84,8 @@ A write: (1) full text to `.tmp`, `fsync`; (2) old main file to `.bak`; (3) `.tm
 | `counters` | odometer, session duration, distance, top speed | `Settled`; the odometer continues across the activation restart (`RemoteControls::pending_odometer`) |
 | `simulation` | paused, time scale | `Settled`, last. The pause overlay's own pause is not counted as the player's pause |
 
+A record of a train (M-0106) also carries `formation` (the `TrainFormation`: cars, orientations, `powered` overrides, template): the spawner rebuilds the whole train from it, the first car is the vehicle whose state is restored. The field is optional (`serde(default)`), so saves without it and without trains load unchanged and the section version stays 2.
+
 Version history: `session_vehicles` v1 held the registry only; v2 adds `saved_state` and `bus_rel` per record. The v1 to v2 migration changes the version number (both fields default to absent); the fixture `tests/fixtures/saves/v1-vehicles.save.json` tests it. The `viewpoint` section joins when the viewpoint store lands on master; nothing in the save system changes for it.
 
 ### Not restored yet (said so in the save list's note)

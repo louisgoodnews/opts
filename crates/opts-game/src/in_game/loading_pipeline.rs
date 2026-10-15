@@ -310,6 +310,7 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 entry: job
                     .start_entry()
                     .map_or(EntrySel::Default, |(_, n)| EntrySel::Name(n.to_owned())),
+                formation: None,
             };
             let id = registry.request_spawn(params);
             match load_player_vehicle(

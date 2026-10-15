@@ -11,6 +11,7 @@ pub mod control_trace;
 pub mod control_ui;
 pub mod drive_history;
 pub mod first_run;
+pub mod formation;
 pub mod hardware;
 pub mod help;
 pub mod home;

@@ -95,6 +95,8 @@ pub struct SpawnParams {
     pub setvars: Vec<(String, i32)>,
     /// The entry point to spawn at.
     pub entry: EntrySel,
+    /// A train formation: `bus_file` is then its first car and the other cars are coupled behind it.
+    pub formation: Option<opts_core::formats::trains::TrainFormation>,
 }
 
 /// One session vehicle.
@@ -134,6 +136,10 @@ pub struct SessionVehicleRecord {
     /// moved to another computer finds the vehicle again through it).
     #[serde(default)]
     pub bus_rel: Option<String>,
+    /// The train formation the vehicle was built from (`None` for a single vehicle); a save
+    /// restores the whole train from it.
+    #[serde(default)]
+    pub formation: Option<opts_core::formats::trains::TrainFormation>,
     /// The root entity while alive.
     #[serde(skip)]
     pub entity: Option<Entity>,
@@ -269,6 +275,7 @@ impl SessionVehicles {
             error: None,
             saved_state: None,
             bus_rel: None,
+            formation: params.formation,
             entity: None,
             trailers: Vec::new(),
             camera: None,

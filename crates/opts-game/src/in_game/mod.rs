@@ -24,9 +24,11 @@ use crate::in_game::loading_pipeline::{handle_loading_interactions, update_loadi
 use crate::in_game::loading_ui::spawn_loading_screen_ui;
 use crate::new_game_screen::types::NewGameSetup;
 
+mod formation_menu;
 mod vehicle_menu;
 
 pub use camera::MenuCamera;
+pub use formation_menu::{FormationCommands, FormationEditor, FormationMenuPlugin};
 pub use types::{
     CancelLoadingBtn, InGameCamera, InGameEntity, InGameHudRoot, InGameSessionInfo, LoadStage,
     LoadingScreenRoot, PauseMenuBtn, ProgressBarFill, SimulationLoadState, SpeedometerText,
@@ -67,10 +69,11 @@ impl Plugin for InGamePlugin {
 
         app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
         app.add_message::<crate::pause::PauseRequest>();
-        app.add_plugins(VehicleMenuPlugin).add_systems(
-            Update,
-            omsi_world::handle_vehicle_requests.run_if(in_state(AppState::InGame)),
-        );
+        app.add_plugins((VehicleMenuPlugin, FormationMenuPlugin))
+            .add_systems(
+                Update,
+                omsi_world::handle_vehicle_requests.run_if(in_state(AppState::InGame)),
+            );
 
         // Lifecycle hooks for entering/exiting AppState::InGame
         app.add_systems(

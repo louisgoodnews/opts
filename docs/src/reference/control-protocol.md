@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.5.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.6.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -272,6 +272,11 @@ Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause ov
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
 | [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
+| [`formation.validate`](#formationvalidate) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean) | 1.6 | Check a train formation against the installation (every problem is listed) |
+| [`formation.spawn`](#formationspawn) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.6 | Spawn a train formation at an entry point; its first car becomes the active vehicle |
+| [`formation.save`](#formationsave) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean)<br>`id?` (string)<br>`overwrite?` (boolean) | 1.6 | Save a train formation in the user's formation folder |
+| [`formation.list`](#formationlist) | - | 1.6 | List the saved train formations, newest first |
+| [`formation.delete`](#formationdelete) | `id` (string) | 1.6 | Delete a saved train formation |
 | [`session.save`](#sessionsave) | `name` (string)<br>`overwrite?` (boolean) | 1.3 | Save the running drive under a name |
 | [`session.load`](#sessionload) | `name` (string) | 1.3 | Restore a save (leaves the running drive); poll `session.saves` for the progress |
 | [`session.delete_save`](#sessiondelete_save) | `name` (string) | 1.3 | Delete a save and its backup (no confirmation) |
@@ -383,6 +388,46 @@ Put a session vehicle back at its spawn point, at rest (default: the active one)
 **Result:** `{ok, id}`
 
 Shows the HUD place label again. Answers `1001` when the vehicle is not in the world.
+
+### `formation.validate`
+
+Check a train formation against the installation (every problem is listed).
+
+**Result:** `{ok, name, cars, issues:[{key, car, message}]}`; `car` is the 0-based car or null
+
+The formation is a saved one (`saved`, its id from `formation.list`), a `.zug` of the installation (`zug`, a path relative to the OMSI root such as `Trains\X10_112_IC-8.zug`) or `cars`, an array of vehicle files or `{vehicle, orientation, powered}` objects (`orientation` `forward` or `backward`; `powered` true or false says whether the car pulls, else the first car and every multi-file car pull and single-file cars behind the head are hauled). `reverse` runs the train the other way round (order reversed, every car turned). Rules: at least two cars; every file exists and is a rail vehicle (`[type]` 2 with `[boogies]`); the first car has a driver camera and is not turned; each car has the coupling point towards a neighbour; no vehicle group names; at most 64 vehicle files in total counting the parts of multi-file cars; a multi-file car (a multiple unit) can be turned, mirrored as a whole. Needs a running session (the installation index).
+
+### `formation.spawn`
+
+Spawn a train formation at an entry point; its first car becomes the active vehicle.
+
+**Result:** `{id, queued:true, cars}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)
+
+As `formation.validate` for the formation, then like `session.spawn`: the first car is the vehicle, the other cars are coupled behind it on the track the entry point lies on (within 12 m, else the train stays a road vehicle). A formation with problems answers `-32602` with the problems in the message. The player drives the first car; the other cars are passive. The mass of the whole train acts on the dynamics (resistance and gradient on all cars, brakes on all, traction on the cars that pull).
+
+### `formation.save`
+
+Save a train formation in the user's formation folder.
+
+**Result:** `{ok, id, name, cars}`
+
+The formation is described as for `formation.validate`; `name` renames it. It is written as `<user data>/formations/<id>.toml`, the id made from the name and never one that exists (`name`, `name-2`, ...). `id` with `overwrite: true` replaces that file instead. An empty formation is refused. A formation with open problems can be saved (it can be fixed later).
+
+### `formation.list`
+
+List the saved train formations, newest first.
+
+**Result:** `{dir, formations:[{id, name, cars, modified} | {id, error, modified}]}`; `modified` is Unix seconds
+
+A file that cannot be read is listed with its `error` and kept.
+
+### `formation.delete`
+
+Delete a saved train formation.
+
+**Result:** `{ok, id}`
+
+Answers `1004` for an unknown id and `-32602` for an id that is not a formation id.
 
 ### `session.save`
 
