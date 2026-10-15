@@ -176,6 +176,7 @@
   - [Indented keywords (investigation)](formats/text/keyword-indentation.md)
   - [`.sco` — Scenery Objects](formats/text/sco.md)
   - [`.sli` — Splines](formats/text/sli.md)
+  - [`.zug` — Train Consists](formats/text/zug.md)
   - [`.report` — F1 bug reports](formats/text/report-format.md)
   - [`.sco` / `.sli` Corpus Audit](formats/text/sco-sli-audit.md)
   - [`.bus` — Vehicle Definitions](formats/text/vehicles/bus.md)

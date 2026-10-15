@@ -166,7 +166,7 @@ Language string table (42 files, `Languages/…`; 21 UTF-16LE, 14 CP1252, 7 UTF-
 
 ### `.zug`
 
-Train consist (208 files: **186 in `Trains/`**, 14 in `Vehicles/`, 8 in `Splines/` ✅). Plain list of **pairs**: a vehicle file (`.ovh`/`.bus`) and `0`/`1` = **orientation of that car in the consist: `0` forward, `1` reversed** (📚 train-traffic page), e.g. `vehicles\DUS_ET422\ET-422_1.ovh` / `0` twice for a two-car set. 207 of 208 files follow this; one contains script text (stray). [C]
+Train consist: pairs of a vehicle file and `0`/`1` (orientation). Specified on its own page: [`.zug` — Train Consists](zug.md).
 
 ### `.amf`
 
