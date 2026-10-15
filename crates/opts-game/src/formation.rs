@@ -100,6 +100,29 @@ pub fn resolve(
     })
 }
 
+/// Queues the spawn of a resolved formation at `entry` and returns the session vehicle's id.
+pub fn queue_spawn(
+    registry: &mut SessionVehicles,
+    formation: &TrainFormation,
+    resolved: &ResolvedFormation,
+    entry: EntrySel,
+) -> crate::session_vehicles::VehicleId {
+    let stem = resolved
+        .head
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    registry.request_spawn(SpawnParams {
+        catalogue_id: stem,
+        name: formation.name.clone(),
+        bus_file: resolved.head.display().to_string(),
+        repaint: String::new(),
+        setvars: Vec::new(),
+        entry,
+        formation: Some(formation.clone()),
+    })
+}
+
 fn session_up(world: &World) -> Result<(), RpcError> {
     if !world.contains_resource::<SessionVehicles>() {
         return Err(RpcError::new(
@@ -243,22 +266,12 @@ fn spawn(world: &mut World, params: &Value) -> Outcome {
             (None, Some(n)) => EntrySel::Name(n.to_owned()),
             (None, None) => EntrySel::Default,
         };
-        let stem = resolved
-            .head
-            .file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let id = world
-            .resource_mut::<SessionVehicles>()
-            .request_spawn(SpawnParams {
-                catalogue_id: stem,
-                name: formation.name.clone(),
-                bus_file: resolved.head.display().to_string(),
-                repaint: String::new(),
-                setvars: Vec::new(),
-                entry,
-                formation: Some(formation),
-            });
+        let id = queue_spawn(
+            &mut world.resource_mut::<SessionVehicles>(),
+            &formation,
+            &resolved,
+            entry,
+        );
         Ok(json!({ "id": id, "queued": true, "cars": resolved.cars.len() + 1 }))
     })();
     result.into()

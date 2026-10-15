@@ -44,6 +44,8 @@ pub enum Page {
     Main,
     /// The three-column *Select Vehicle* modal.
     Select,
+    /// The train formation editor (`formation_menu`), reached from the Select Vehicle modal.
+    Formation,
 }
 
 /// State of the menu.
@@ -94,6 +96,48 @@ impl VehicleMenu {
         self.page != Page::Closed
     }
 
+    /// Whether the formation editor is the open page.
+    #[must_use]
+    pub fn formation_open(&self) -> bool {
+        self.page == Page::Formation
+    }
+
+    /// Goes back from the formation editor to the Select Vehicle modal.
+    pub fn leave_formation(&mut self) {
+        if self.page == Page::Formation {
+            self.page = Page::Select;
+        }
+    }
+
+    /// Closes the menu.
+    pub fn close(&mut self) {
+        self.page = Page::Closed;
+        self.config_open = false;
+    }
+
+    /// The free entry points of the map (record number and label).
+    #[must_use]
+    pub fn free_entries(&self) -> &[(u32, String)] {
+        &self.shown_entries
+    }
+
+    /// The entry point chosen.
+    #[must_use]
+    pub fn entry(&self) -> Option<u32> {
+        self.entry
+    }
+
+    /// Chooses an entry point.
+    pub fn set_entry(&mut self, id: u32) {
+        self.entry = Some(id);
+    }
+
+    /// Entries resolved so far and whether the index has finished.
+    #[must_use]
+    pub fn entry_progress(&self) -> (usize, bool) {
+        self.index_progress
+    }
+
     /// The state as JSON (`menu.state`).
     #[must_use]
     pub fn describe(&self) -> serde_json::Value {
@@ -122,6 +166,8 @@ enum Action {
     /// Puts a session vehicle back at its spawn point.
     Respawn(VehicleId),
     OpenSelect,
+    /// Opens the train formation editor.
+    OpenFormation,
     Close,
     PickVehicle(usize),
     PickRepaint(String),
@@ -208,6 +254,8 @@ fn toggle_menu(
     if step_back && menu.page != Page::Closed {
         if menu.config_open {
             menu.config_open = false;
+        } else if menu.page == Page::Formation {
+            menu.page = Page::Select;
         } else if menu.page == Page::Select {
             menu.page = Page::Main;
         } else {
@@ -264,6 +312,7 @@ fn menu_actions(
     mut commands: Commands,
     mut registry: ResMut<SessionVehicles>,
     mut remote: ResMut<MenuCommands>,
+    mut formation_commands: ResMut<super::formation_menu::FormationCommands>,
 ) {
     let mut todo: Vec<Action> = clicks
         .read()
@@ -280,6 +329,13 @@ fn menu_actions(
             }
             "close" => Some(Action::Close),
             "spawn" => Some(Action::OpenSelect),
+            "formation" => {
+                // `formation` opens the editor; `formation <command>` is the editor's own.
+                if !rest.is_empty() {
+                    formation_commands.0.push(rest.clone());
+                }
+                (menu.page != Page::Formation).then_some(Action::OpenFormation)
+            }
             "back" => Some(Action::Back),
             "config" => Some(Action::OpenConfig),
             "done" => Some(Action::CloseConfig),
@@ -356,6 +412,10 @@ fn menu_actions(
             }
             Action::OpenSelect => {
                 menu.page = Page::Select;
+                menu.status.clear();
+            }
+            Action::OpenFormation => {
+                menu.page = Page::Formation;
                 menu.status.clear();
             }
             Action::Close => {
@@ -538,7 +598,7 @@ fn refresh_entries(
     index: Res<EntryIndex>,
     traffic: Query<&GlobalTransform, With<TrafficVehicle>>,
 ) {
-    if menu.page != Page::Select {
+    if !matches!(menu.page, Page::Select | Page::Formation) {
         return;
     }
     let Some(job) = job else { return };
@@ -618,7 +678,7 @@ fn rebuild_menu(
     menu.built = Some(want);
     let Some(theme) = theme else { return };
     match menu.page {
-        Page::Closed => {}
+        Page::Closed | Page::Formation => {}
         Page::Main => {
             let status = if menu.status.is_empty() {
                 if registry.live_count() == 0 {
@@ -806,7 +866,23 @@ fn build_select(
     commands.entity(root).insert(MenuRoot);
     let veh = menu.vehicle.and_then(|i| cat.vehicles.get(i));
     commands.entity(content).with_children(|p| {
-        label(p, "Select Vehicle", 24.0, ColorRole::Primary);
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            align_items: AlignItems::Center,
+            column_gap: Val::Px(16.0),
+            ..default()
+        })
+        .with_children(|tabs| {
+            label(tabs, "Select Vehicle", 24.0, ColorRole::Primary);
+            let vehicle_tab = button(tabs, "Vehicle", true, Action::OpenSelect);
+            tabs.commands()
+                .entity(vehicle_tab)
+                .insert(UiId::new("vehicle.tab.vehicle"));
+            let formation_tab = button(tabs, "Formation", false, Action::OpenFormation);
+            tabs.commands()
+                .entity(formation_tab)
+                .insert(UiId::new("vehicle.tab.formation"));
+        });
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
             column_gap: Val::Px(16.0),

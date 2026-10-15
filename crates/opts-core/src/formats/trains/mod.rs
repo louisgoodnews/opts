@@ -5,6 +5,7 @@
 //! formation against an installation and spawning it happen in `opts-game`.
 //! Design: `docs/src/architecture/train-formation-editor.md`, ADR-0013.
 
+mod edit;
 mod validate;
 mod zug;
 
