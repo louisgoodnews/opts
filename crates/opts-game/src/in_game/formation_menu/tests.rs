@@ -1,7 +1,12 @@
 //! Tests of the editor's state and actions (no installation needed; spawning is checked live).
 
+use super::state::{Act, Car, FormationCommands, FormationEditor, Summary};
 use super::*;
+use crate::in_game::vehicle_menu::VehicleMenu;
+use crate::session_vehicles::SessionVehicles;
 use opts_core::formats::trains::Orientation;
+use opts_core::formats::trains::{FormationIssue, FormationSource, TrainFormation};
+use opts_gui::interaction::events::ButtonClicked;
 
 fn app() -> App {
     let mut app = App::new();
@@ -10,7 +15,7 @@ fn app() -> App {
         .init_resource::<FormationCommands>()
         .init_resource::<VehicleMenu>()
         .init_resource::<SessionVehicles>()
-        .add_systems(Update, formation_actions);
+        .add_systems(Update, actions::formation_actions);
     {
         let mut ed = app.world_mut().resource_mut::<FormationEditor>();
         for (rel, label) in [

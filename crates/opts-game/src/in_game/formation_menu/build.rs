@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use opts_gui::prelude::*;
 
-use super::{Act, FormationEditor, FormationList, FormationRoot, ListKind};
+use super::state::{Act, FormationEditor, FormationList, FormationRoot, ListKind};
 
 fn label(p: &mut ChildSpawnerCommands, text: impl Into<String>, size: f32, role: ColorRole) {
     p.spawn((
