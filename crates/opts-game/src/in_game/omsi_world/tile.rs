@@ -45,6 +45,9 @@ pub fn load_next_tile(
     };
     job.tile_splines
         .insert(key, std::sync::Arc::new(tile.splines.clone()));
+    for w in &tile.warnings {
+        tracing::warn!(tile = ?key, "tile record left out: {w}");
+    }
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();

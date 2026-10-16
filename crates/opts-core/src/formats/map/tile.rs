@@ -218,6 +218,9 @@ pub struct MapTile {
     pub spline_attachments: Vec<MapSplineAttachment>,
     /// Objects placed on attachment points of other objects (`[attachObj]`).
     pub attached_objects: Vec<MapAttachedObject>,
+    /// Records that could not be used and were left out, with their line numbers (truncated or
+    /// damaged records, attachments without a carrier spline). The game logs them at WARN.
+    pub warnings: Vec<String>,
     /// `[varparent] <id>` links: `(index into objects, parent id code)`. A signal head names its
     /// junction this way; its single string variable is the junction's light program index
     /// (`docs/src/architecture/scenery-runtime.md`).
@@ -334,6 +337,13 @@ impl MapTile {
                             roll_deg: roll,
                             string_vars,
                         });
+                    } else {
+                        tile.warnings.push(format!(
+                            "line {}: [object] with {} fields skipped (damaged record): {}",
+                            block.line_number,
+                            block.parameters.len(),
+                            block.parameters.get(1).map_or("", |s| s.trim_matches('\0'))
+                        ));
                     }
                 }
                 "spline" | "spline_h" => {
@@ -402,7 +412,12 @@ impl MapTile {
                         let (mut px, mut py, mut pz, mut heading) = (px, py, pz, heading);
                         if chained_v10 {
                             let Some(prev) = tile.splines.last() else {
-                                continue; // nothing to continue: the pose is unknown
+                                // Nothing to continue: the pose is unknown.
+                                tile.warnings.push(format!(
+                                    "line {}: version 10 [spline] {} continues no spline: skipped",
+                                    block.line_number, sli
+                                ));
+                                continue;
                             };
                             let end = spline_end_pose(prev);
                             (px, py, pz, heading) = (end.0, end.1, end.2, end.3);
@@ -431,6 +446,13 @@ impl MapTile {
                                 .any(|p| p.trim().eq_ignore_ascii_case("mirror")),
                             raw_params: block.parameters[11..].to_vec(),
                         });
+                    } else {
+                        tile.warnings.push(format!(
+                            "line {}: [{}] with {} fields skipped (damaged record)",
+                            block.line_number,
+                            block.keyword,
+                            block.parameters.len()
+                        ));
                     }
                 }
                 "rule" => {
@@ -467,6 +489,12 @@ impl MapTile {
                     let v14 = tile.version != Some(10);
                     let strings_at = if v14 { 9 } else { 7 };
                     if p.len() < strings_at {
+                        tile.warnings.push(format!(
+                            "line {}: [attachObj] with {} fields skipped (damaged record): {}",
+                            block.line_number,
+                            p.len(),
+                            p.get(1).map_or("", String::as_str)
+                        ));
                         continue;
                     }
                     let n_strings = p
@@ -495,12 +523,23 @@ impl MapTile {
                     let repeater = block.keyword == "splineattachement_repeater";
                     let o = if repeater { 2 } else { 0 };
                     if block.parameters.len() < 8 + o {
+                        tile.warnings.push(format!(
+                            "line {}: [{}] with {} fields skipped (damaged record)",
+                            block.line_number,
+                            block.keyword,
+                            block.parameters.len()
+                        ));
                         continue;
                     }
                     let p = &block.parameters;
                     // `-1` as carrier: the attachment belongs to no spline (an editor leftover, e.g.
                     // Berlin-Spandau tile 2394/11275). It has no place to be put.
                     if p[3 + o].trim() == "-1" {
+                        tile.warnings.push(format!(
+                            "line {}: attachment {} names no spline (-1): not placed",
+                            block.line_number,
+                            p[1 + o]
+                        ));
                         continue;
                     }
                     let repeat = if repeater {
@@ -641,6 +680,19 @@ mod tests {
         );
         assert_eq!((a.pitch_deg, a.roll_deg), (None, None));
         assert_eq!(a.string_vars, vec!["Südermarkt"]);
+    }
+
+    /// Neuenbreid `tile_9_-19.map` (attachments without a carrier) and `tile_3_11.map` (a record cut
+    /// off by NUL bytes): left out, but named in `warnings`.
+    #[test]
+    fn records_that_cannot_be_placed_are_reported() {
+        let text = "[version]\n14\n\n[splineAttachement]\n0\nSceneryobjects\\Trees_MC\\shrubbery_04_05.sco\n855395\n-1\n2.0\n-0.5\n1.7\n90\n0\n0\n\n[object]\n0\nSceneryobjects\\Trees_MC\\fir\n";
+        let tile = MapTile::from_text(text).unwrap();
+        assert!(tile.spline_attachments.is_empty());
+        assert!(tile.objects.is_empty());
+        assert_eq!(tile.warnings.len(), 2, "{:?}", tile.warnings);
+        assert!(tile.warnings[0].contains("names no spline"));
+        assert!(tile.warnings[1].contains("[object]"));
     }
 
     #[test]
