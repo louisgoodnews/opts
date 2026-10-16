@@ -58,6 +58,7 @@ fn grid(n: usize) -> (O3d, Vec<Vec3>) {
             transform: None,
             encryption_key: Some(0x1234),
             descrambled: false,
+            exact_decoded: false,
             unknown_chunks: Vec::new(),
         },
         truth,

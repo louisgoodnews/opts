@@ -78,6 +78,7 @@ fn x_submeshes(bytes: &[u8]) -> Result<Vec<O3d>, String> {
             unknown_chunks: Vec::new(),
             encryption_key: None,
             descrambled: false,
+            exact_decoded: false,
         }
     }
     fn walk_frame(f: &XFrame, global: &[opts_core::formats::x::XMaterial], out: &mut Vec<O3d>) {

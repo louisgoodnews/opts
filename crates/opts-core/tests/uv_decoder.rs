@@ -50,6 +50,7 @@ fn grid(w: usize, h: usize) -> O3d {
         transform: None,
         encryption_key: None,
         descrambled: false,
+        exact_decoded: false,
         unknown_chunks: Vec::new(),
     }
 }

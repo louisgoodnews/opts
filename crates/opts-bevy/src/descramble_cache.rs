@@ -543,6 +543,7 @@ mod tests {
             transform: None,
             encryption_key: Some(1),
             descrambled: false,
+            exact_decoded: false,
             unknown_chunks: Vec::new(),
         };
         let k = key(b"pool-file", 0);
