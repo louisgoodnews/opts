@@ -240,6 +240,8 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         manifest,
         tile_files,
         queue: VecDeque::new(),
+        water_material: None,
+        water_enabled: true,
         resident: HashMap::new(),
         stream_radius: 1,
         total_tiles: 0,

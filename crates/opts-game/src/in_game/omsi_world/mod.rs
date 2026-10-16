@@ -167,6 +167,8 @@ pub struct WorldStats {
     pub load_problems: usize,
     /// Keyed meshes decoded exactly (`o3d::exact`).
     pub meshes_exact: usize,
+    /// Tiles with a water surface.
+    pub water_tiles: usize,
     pub overlay_visible: bool,
 }
 
@@ -215,6 +217,10 @@ pub struct WorldLoadJob {
     /// segment loader binds `[useTextTexture]` indices against them).
     vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
     ground_material: Option<Handle<StandardMaterial>>,
+    /// Shared material of the water surfaces.
+    water_material: Option<Handle<StandardMaterial>>,
+    /// Whether `.map.water` surfaces are drawn.
+    pub water_enabled: bool,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,
     /// Files each resident tile was built from (normalised paths); drives hot reload.

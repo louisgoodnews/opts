@@ -96,6 +96,18 @@ pub fn sync_developer_panel(
     }
 }
 
+/// Whether tiles built from now on draw their water (`graphics.water`).
+pub fn sync_water(
+    settings: Res<GameSettings>,
+    job: Option<ResMut<crate::in_game::omsi_world::WorldLoadJob>>,
+) {
+    let Some(mut job) = job else { return };
+    let want = settings.raw("graphics.water").as_deref() != Some("false");
+    if job.water_enabled != want {
+        job.water_enabled = want;
+    }
+}
+
 /// Start-up: the saved scene trace mode (unless `--trace-scene` chose one for this run) and overlay.
 pub fn apply_saved_trace(
     settings: Res<GameSettings>,
