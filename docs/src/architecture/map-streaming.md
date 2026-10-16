@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 Describes the code as it runs on `master` (2026-10-13); the planned `TileGridManager` / `AsyncComputeTaskPool` design of [M-0024](../roadmap/phase-4/M-0024.md) does **not** exist |
-| **Last Updated** | 2026-10-13 |
+| **Last Updated** | 2026-10-16 |
 | **Relevant Crates** | `opts-game` (`in_game/omsi_world/{job,tile,tile_ground,reload}.rs`, `loading_pipeline.rs`), `opts-bevy` (`terrain.rs`, `descramble_cache.rs`, `model.rs`), `opts-core` (`formats::map`) |
 | **Traces to** | critical review 2026-10-11 F-012 (code ran without a specification), M-0024 Phase A; used by [M-0080](../roadmap/phase-4/M-0080.md) (tile loading controls) |
 
@@ -70,7 +70,7 @@ Consequences (all by construction):
 | :--- | :--- | :--- |
 | 1 | `read_tile`: read and `MapTile::parse` the `.map` (UTF-16LE with BOM mostly); parse failure logs an error and counts `tiles_missing` | parsed tile is **not cached**: a revisit parses again |
 | 2 | dependency set starts (`loading_deps`: the files this tile is built from, for hot reload) | stored per tile in `tile_deps` |
-| 3 | `spawn_terrain`: `.map.terrain` height grid (60 × 60 cells), terrain mesh, layered ground material, ground-texture array (built once per map) | terrain entity, `Option<MapTerrain>` for later height sampling |
+| 3 | `spawn_terrain`: `.map.terrain` height grid (60 × 60 cells), carved under the road footprints of the tile's own splines **and of its eight neighbours' splines** (a spline is stored on the tile it starts in but runs on across the border; the neighbours' splines come from `WorldLoadJob::splines_of`, kept per tile for the session and read from the tile file when not seen yet; [tiles.md Q-M10](../formats/map/tiles.md#-open-questions)), terrain mesh, layered ground material, ground-texture array (built once per map) | terrain entity, `Option<MapTerrain>` for later height sampling |
 | 4 | `spawn_splines`: spline meshes from `.sli` profiles | spline entities |
 | 5 | drivable surfaces (`ground_height::register`): road/rail splines with lanes or flat width ≥ 3.5 m, plus the terrain | the player's ground following ([articulation](articulation.md), wheel contact) queries these |
 | 6 | spline attachments expanded against the map-wide `SplineIndex` (**built on first use by reading every tile of the map once**) | ordinary placements with heights |

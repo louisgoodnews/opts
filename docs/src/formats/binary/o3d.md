@@ -262,6 +262,7 @@ magic ver fl   stamp       tag   vertex_count                        tag   face_
 | Q-008 | The two `E7 1B 32 34…` files: are they a protected/encrypted `.o3d` variant? Per project policy, analysis stops until the maintainer decides. | 🟡 Medium |
 | Q-009 | String encoding of texture names (CP1252 vs UTF-8). Only 24 sampled names have bytes `> 0x7F`. | 🟢 Low |
 | Q-010 | Do bone names in `0x54` match bone/animation names in `model.cfg`? Is `weight` normalised per vertex? | 🟡 Medium |
+| Q-012 | Which frame does a decoded keyed mesh come out in? The decoder's objective cannot tell the model from a copy whose axes are permuted as a whole or per connected part ([Addendum 12](#-addendum-12--2026-10-16-frame-of-decoded-meshes-vertex-0-anchor)). Global swaps are now corrected by the vertex-0 anchor; mixed per-vertex and per-part frames (about 24 % of the decoded twins) remain. Registry: MI-0042, MI-0044. | 🟡 Medium |
 
 ---
 
@@ -503,3 +504,19 @@ So the 284 meshes accepted *only because* the limit was lowered from 0.98 to 0.9
 **Still open.** 714 of 22,395 keyed meshes (3.2 %) are rejected by the confident decoder and stay skipped; accepted decodes remain wrong in about 18 % of the meshes (see Addendum 7 for the causes); none of the generic detectors can find them without a twin.
 
 **Negative results of P-1014 on the 18 % wrong decodes (twin truth set, 1,826 accepted, 299-301 wrong).** (a) Requiring a pair agreement above 0.98 and otherwise trying all six runs for a better pair: 310 wrong, i.e. not better. (b) A per-vertex majority vote over the six runs for doubtful decodes: 310 wrong. The extra runs agree on the same wrong labelling (symmetric parts), so more runs do not help; only new evidence would. 31 of the wrong meshes are wrong by one global axis permutation or mirror; the rest have individual wrong vertices. Neither change is in the code.
+
+## 📎 Addendum 12 — 2026-10-16: frame of decoded meshes, vertex-0 anchor
+
+Sources: the plain/keyed twin set of the installed corpus (5,463 keyed `.o3d` with a plain copy of the same model, `layout_twin_eval` and `vertex0_anchor_eval` examples) and the Neuenbreid investigation ([report](../../meta/neuenbreid-scenery-2026-10-16.md)).
+
+**Symptom.** Decoded buildings, bollards and lamp parts lying on their side (map `Lemmental_Neuenbreid`: 189 decoded meshes, 4,300 placements stood on the stored `x` axis instead of `y`).
+
+**Cause: the decoder's frame is not determined.** Every term of the solver's objective — edge lengths, the coordinate pool, the sorted absolute face-normal components, the fold penalty — is unchanged when all vertices of a mesh (or of one connected part) are permuted by the same axis permutation. Whenever such an alternative is reachable with the four scrambler permutations, only the label prior separates the frames. Twin truth, 5,302 accepted decodes: 3,613 (68.1 %) identical to the plain copy, 405 (7.6 %) identical up to one **global** axis permutation (227 swap x/y, 72 swap x/z, …), 343 (6.5 %) right per connected part but with parts in different frames, 941 (17.7 %) with individual wrong vertices. The 104 twins that stand on `y` in the plain copy and on `x` after decoding are all global x/y swaps — the meshes are **not** in the axis-cycled layout of Addendum 2, and treating them as such would have mirrored them.
+
+**The vertex-0 rule holds on the larger set.** The rule of Addendum 4, Update 3 (`K = key + version − 4`, `+ 381` with header flags bit 1; `q = K·n mod 8000`, `u = (q + 1000) mod 8000`) gives the true permutation of vertex 0 for 5,332 of 5,463 twins: 962/962 alternative-seed files and 4,370/4,501 others; 126 of the 131 misses are files with key `0` (no single `K` fits them better: the best, `K = 1`, is the rule's own value).
+
+**Correction (`descramble::anchor_frame`, used by `decode_confident*` and `decode_joint*`).** When the decoded vertex 0 is not where the rule puts it, the axis permutation that maps it there is applied to the whole mesh — but only when every vertex of every scrambled copy stays reachable from its stored position with one of the four permutations (a wrong vertex-0 rule makes the corrected mesh unreachable and the correction is refused). Twin result: exact decodes 3,613 → **4,018** (75.8 %), **no** exact decode lost (the 20 meshes where the rule is wrong all fail the reachability test). Decode cache version 10.
+
+**Negative results (not kept).** Correcting only the connected part of vertex 0: 3,699 exact. Re-framing every other part by the reachable permutation whose positions coincide most with the rest of the mesh (seams): +28 on the twins, none on Neuenbreid, one Neuenbreid mesh made worse. Swapping x/y for meshes that still stand on `x` after the correction: of 39 such twins the swap is reachable for one and fixes none.
+
+**Still open (Q-012).** About 24 % of the accepted twin decodes stay wrong (mixed per-vertex labels, parts in different frames); on Neuenbreid 68 decoded meshes (1,382 placements) still stand on `x`, e.g. `Buildings_DDR_RUE/model/DDR_House_small_01.o3d`, and `DDR_House_medium_05.o3d` is a mixed-label decode. The generator's state chain (Addendum 6) remains the only route to exact decoding.

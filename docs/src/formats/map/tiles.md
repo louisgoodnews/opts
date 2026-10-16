@@ -266,6 +266,7 @@ Reading `.terrain` (descriptive): read `u32 n = 60`; read `(n+1)²` `f32` height
 | Q-M07 | `.water` header `1` and the four values; `.LM.bmp` orientation. | 🟡 Medium |
 | Q-M08 | Purpose of `.prt` (cache?) and `.surf`; are they safe to ignore? | 🟢 Low |
 | Q-M09 | Why only 11,471 of 16,639 tiles listed in `global.cfg` files exist, and whether OMSI tolerates missing tiles. | 🟡 Medium |
+| Q-M10 | A `[spline]` is stored on the tile it starts in but may run on across the tile border: whose terrain must give way under it? | 🟢 Low | ✅ **Resolved for OPTS (2026-10-16):** both. Carving each tile only under its own splines left road surface under the next tile's terrain (Neuenbreid: 286 m of 51 km of road on neighbour tiles covered, against 7 m of 482 km on the splines' own tiles; `spline_terrain_cover` example). Each tile is now also carved under the footprints of its eight neighbours' splines (`opts_bevy::footprint_from_neighbour`); afterwards 0 m. Registry: MI-0043. |
 
 ---
 
