@@ -47,6 +47,7 @@ fn test_o3d_coordinate_conversion_and_winding() {
         unknown_chunks: Vec::new(),
         encryption_key: None,
         descrambled: false,
+        exact_decoded: false,
     };
 
     let mesh = o3d_to_bevy_mesh(&o3d);
@@ -123,6 +124,7 @@ fn test_o3d_vertex_colors() {
         unknown_chunks: Vec::new(),
         encryption_key: None,
         descrambled: false,
+        exact_decoded: false,
     };
 
     let mesh = o3d_to_bevy_mesh(&o3d);

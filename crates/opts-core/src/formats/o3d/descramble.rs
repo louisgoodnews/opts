@@ -1619,6 +1619,7 @@ mod joint_tests {
             transform: None,
             encryption_key: Some(7),
             descrambled: false,
+            exact_decoded: false,
             unknown_chunks: Vec::new(),
         }
     }
@@ -1696,6 +1697,7 @@ mod anchor_tests {
             transform: None,
             encryption_key: Some(key),
             descrambled: false,
+            exact_decoded: false,
             unknown_chunks: Vec::new(),
         };
         let mut stored = truth.clone();
@@ -1825,6 +1827,7 @@ mod spike_tests {
             transform: None,
             encryption_key: Some(1),
             descrambled: false,
+            exact_decoded: false,
             unknown_chunks: Vec::new(),
         }
     }

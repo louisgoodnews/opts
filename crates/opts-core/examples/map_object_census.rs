@@ -133,6 +133,20 @@ fn classify(path: &Path) -> String {
         return "none:empty-mesh".into();
     }
     let keyed = o.encryption_key.is_some();
+    if keyed {
+        let mut exact = o.clone();
+        if opts_core::formats::o3d::exact::decode(&mut exact).is_some() {
+            ORIENT.with(|m| {
+                m.borrow_mut()
+                    .insert(path.to_path_buf(), orientation(&exact))
+            });
+            return if extent(&exact) > 400.0 {
+                "fail:exact-extent>400".into()
+            } else {
+                "ok:exact".into()
+            };
+        }
+    }
     if !keyed {
         ORIENT.with(|m| m.borrow_mut().insert(path.to_path_buf(), orientation(&o)));
         let ext = extent(&o);

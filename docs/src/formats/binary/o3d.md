@@ -262,7 +262,7 @@ magic ver fl   stamp       tag   vertex_count                        tag   face_
 | Q-008 | The two `E7 1B 32 34…` files: are they a protected/encrypted `.o3d` variant? Per project policy, analysis stops until the maintainer decides. | 🟡 Medium |
 | Q-009 | String encoding of texture names (CP1252 vs UTF-8). Only 24 sampled names have bytes `> 0x7F`. | 🟢 Low |
 | Q-010 | Do bone names in `0x54` match bone/animation names in `model.cfg`? Is `weight` normalised per vertex? | 🟡 Medium |
-| Q-012 | Which frame does a decoded keyed mesh come out in? (Addendum 13: the stored normals now pick between two decodings, 4,251 of 5,363 accepted twins exact.) The decoder's objective cannot tell the model from a copy whose axes are permuted as a whole or per connected part ([Addendum 12](#-addendum-12--2026-10-16-frame-of-decoded-meshes-vertex-0-anchor)). Global swaps are now corrected by the vertex-0 anchor; mixed per-vertex and per-part frames (about 24 % of the decoded twins) remain. Registry: MI-0042, MI-0044. | 🟡 Medium |
+| Q-012 | Which frame does a decoded keyed mesh come out in? ✅ **Resolved 2026-10-16 ([Addendum 14](#-addendum-14--2026-10-16-the-scramblers-generator-exact-decoding)):** the generator is known and keyed meshes are decoded exactly. The decoder's objective cannot tell the model from a copy whose axes are permuted as a whole or per connected part ([Addendum 12](#-addendum-12--2026-10-16-frame-of-decoded-meshes-vertex-0-anchor)). Global swaps are now corrected by the vertex-0 anchor; mixed per-vertex and per-part frames (about 24 % of the decoded twins) remain. Registry: MI-0042, MI-0044. | 🟡 Medium |
 
 ---
 
@@ -541,3 +541,30 @@ Measured against the **geometric** vertex normals of the plain copy instead of i
 **Two decodings, the normal table chooses.** `decode_confident` now decodes with the default parameters and again with `w_normal_label = w_normal_label_alt` (0.5) and keeps the result with the higher `normal_table_agreement` (share of vertices whose stored normal, permuted as their label allows, matches the geometric normal within 0.05). Twins: exact **4,018 -> 4,251** (79.3 % of the accepted), rejected 161 -> 100; 7 meshes that were exact are now wrong (the selector picks the wrong one of two different results), 242 that were wrong are now exact. Decoding takes about twice as long (background pool, cached; cache version 11).
 
 **Negative result.** Re-framing each connected part by the reachable axis permutation with the best normal-table agreement (margin 20 % of the part's vertices): 64 meshes fixed, 54 broken. Not kept.
+
+## 📎 Addendum 14 — 2026-10-16: the scrambler's generator, exact decoding
+
+Sources: the 6,417 plain/keyed twins of the installed corpus (`scramble_state_dump`, `exact_twin_eval` examples; the derivation is in [docs/src/meta/scramble-chain-2026-10-16.md](../../meta/scramble-chain-2026-10-16.md)). No OMSI binary was inspected; every rule below was found by black-box measurement on the files and holds on the whole twin set.
+
+**State.** A keyed file is written by a generator with an integer state `s` reduced modulo 8000. With `n` the vertex count:
+
+* `s₀ = key + version − 4`, plus 381 when header flags bit 1 (alternative seed) is set; files with **key `0`** start at `s₀ = 0`;
+* vertex `i` uses `q = n·sᵢ mod 8000`;
+* `sᵢ₊₁ = n·sᵢ + g(pᵢ) mod 8000` with the **data term** `g(p) = ⌊600·|frac(x)·frac(y)·frac(z)|⌋ mod 256` of the vertex's **original** position (`frac` keeps the sign, the product is taken absolute, so `g` is permutation-invariant); files with key `0` keep no memory: `sᵢ₊₁ = g(pᵢ)`.
+
+**Decisions of vertex `i` from `q`** (`true[k] = stored[P[k]]`):
+
+| Quantity | Rule |
+| :--- | :--- |
+| Position permutation | `q < 1000` swap x/y; `1000 ≤ q < 3000` swap x/z; `3000 ≤ q ≤ 7000` identity; `q > 7000` swap y/z |
+| Texture jitter | `u += ((q mod 100)/100)²` when `q mod 5 = 0`; `v += ((2q mod 100)/100)²` when `q mod 3 = 0` |
+| Normal: sign of the stored slots | x negated when `q mod 4 = 0`, y when `q mod 6 = 0`, z when `q mod 7 = 0` |
+| Normal: permutation | `q < 600` swap y/z; `600 ≤ q ≤ 4500` identity; `q > 4500` swap x/y |
+
+Faces, materials and vertex order are untouched (Addendum 4).
+
+**Verification.** Simulating every twin from its header alone reproduces the observed permutation class and jitter of 99.9 % of 1.6 M vertices; the exact decoder (`o3d::exact::decode`) returns the plain copy's positions for **6,415 of 6,417** twins (all 5,460 with a key, 955 of 957 with key `0`; the two others have a flagged header the rule does not cover), the normals for 6,410 and the texture coordinates for 6,017 (the rest are plain copies with other texture coordinates: their jitter codes are not of the form above). Recovered texture coordinates can differ from the original by one float32 ulp (the exporter's rounding).
+
+**How it was found.** Files of one model scrambled under different keys must agree on the data term once the key's contribution is removed: scanning the multiplier of an affine step over such pairs gave `a = n` in every group; the term's exact values (1,450 samples from vertices whose evidence pins the state) are bytes, zero whenever a coordinate's fractional part is tiny, and `⌊600·|Π frac|⌋ mod 256` fits all of them with the scale pinned to 600 (599.5 and 600.5 already lose dozens). Class boundaries were read off thousands of observations at the exact boundary values; the normal's sign flips decomposed per stored slot into residues of `q`.
+
+**Consequences.** The heuristic decoder (Addenda 5–13) and the plain-twin substitution are no longer needed for keyed meshes: the loader decodes them exactly and reads them as plain files (`O3d::exact_decoded`; `VertexLayout` classifies them like plain files, so their stored normals are used). `map_object_census` reports them as `ok:exact`. On `Lemmental_Neuenbreid` every keyed mesh has key `0`: 615 objects, 17,175 placements, previously 3,023 placements skipped as undecodable and 1,144 standing on the wrong axis, now all exact and none on a wrong axis. Q-012 and the open items MI-0017, MI-0044 are closed for every keyed mesh the rule covers.

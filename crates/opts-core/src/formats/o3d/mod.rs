@@ -7,6 +7,7 @@ pub mod audit;
 pub mod chunks;
 pub mod descramble;
 pub mod error;
+pub mod exact;
 pub mod header;
 pub mod index;
 pub mod material;
@@ -49,6 +50,9 @@ pub struct O3d {
     /// Set when [`descramble::decode_confident`] recovered the positions of a keyed mesh:
     /// positions are trusted, but stored normals (and part of the UVs) are not.
     pub descrambled: bool,
+    /// Set when [`exact::decode`] reproduced the generator of a keyed mesh: positions, texture
+    /// coordinates and normals are the originals, and the mesh is read like a plain file.
+    pub exact_decoded: bool,
     /// Unparsed raw chunks preserved for future analysis (e.g. bone weights `0x54`).
     pub unknown_chunks: Vec<UnknownChunk>,
 }
@@ -211,7 +215,7 @@ impl O3d {
         if self.descrambled {
             return VertexLayout::RecomputedNormals;
         }
-        if self.encryption_key.is_some() {
+        if self.encryption_key.is_some() && !self.exact_decoded {
             return VertexLayout::Unreadable;
         }
         let layout = self.classify_by_coherence();

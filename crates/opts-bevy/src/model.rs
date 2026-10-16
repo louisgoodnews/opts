@@ -138,6 +138,8 @@ pub struct ContentStats {
     pub textures: usize,
     /// Meshes skipped because their vertex data is scrambled (author-protected files).
     pub protected_meshes: usize,
+    /// Keyed meshes decoded exactly by following the exporter's generator (`o3d::exact`).
+    pub exact_meshes: usize,
     /// Scrambled meshes replaced by a verified plain twin from another add-on.
     pub twin_meshes: usize,
     /// Scrambled meshes recovered by the confident geometric decoder.
@@ -443,6 +445,15 @@ impl ContentLoader<'_> {
         let mut deferred_here = false;
         let mut model_quality: HashMap<usize, [usize; 3]> = HashMap::new();
         if is_o3d {
+            // Keyed meshes: the exporter's generator is known (`o3d.md`, Addendum 14), so the
+            // original positions, texture coordinates and normals come back exactly and the mesh
+            // is read like a plain file from here on.
+            for m in &mut models {
+                if m.encryption_key.is_some() && o3d::exact::decode(m).is_some() {
+                    self.cache.stats.exact_meshes += 1;
+                    sc.stage = "exact";
+                }
+            }
             let unreadable = models
                 .iter()
                 .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable));
