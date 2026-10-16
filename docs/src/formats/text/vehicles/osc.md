@@ -5,8 +5,8 @@
 | **Format Family** | Text (stack-based script language) |
 | **File Extensions** | `.osc` |
 | **Referenced By** | `.bus` via `[script]` |
-| **Parser Crate** | `opts-core` (parse), `opts-sim` (execute) |
-| **Parser Module** | `opts_core::formats::osc` |
+| **Parser Crate** | `opts-sim` (lexer, compiler and VM) |
+| **Parser Module** | `opts_sim::script` (corrected 2026-10-16: there is no `opts_core::formats::osc`) |
 | **Encoding** | Windows-1252 (CP1252), CRLF line endings |
 | **Status** | 🟢 Specified |
 | **Last Updated** | 2026-10-07 |
@@ -224,7 +224,7 @@ Conditionals nest freely. Samples reach **ten levels** of nesting. There are no 
 | Construct | Defined by | Invoked by |
 | :--- | :--- | :--- |
 | Macro | `{macro:name}` | `(M.L.name)` from any script of the vehicle. |
-| Trigger | `{trigger:name}` | Model hot-spot or key binding defined in `model_cfg` or the OMSI key system; also `(T.L.name)`. |
+| Trigger | `{trigger:name}` | Model hot-spot or key binding defined in `model_cfg` or the OMSI key system; also the engine itself (`collision`, `ai_scheduled_settarget`). Whether `(T.L.name)` runs a trigger of the same name is unverified ❓ (Q-OSC-007; the OPTS VM only queues the event). |
 | Event | no definition | `(T.L.ev_name)`. Consumed by `[trigger]` in `sound_cfg`. |
 
 Notable standard trigger names seen: `collision`, `malfunction_reset`, `malfunction_gettime`, `ai_scheduled_settarget`, `matrix_seitenschildklemme_drag`, `bus_matrix_change_steckschild`.
@@ -306,6 +306,10 @@ OMSI is lenient about leftover values on the stack (the original scripts leave e
 | Q-OSC-003 | Exact stack effects of the `$` family. | Open. |
 | Q-OSC-004 | Full set of `(X.Y.)` accessor pairs. | Only observed pairs are listed. |
 | Q-OSC-005 | ~~Meaning of the `@` and `%` tokens seen in a few files~~ — resolved: `%` = modulo (📚 confirmed); `@` unknown. | ✅ |
+| Q-OSC-006 | Does `$msg` pop its string or leave it? 78 of 325 corpus sites use the string afterwards (e.g. `MAN_NL_NG/Script/IBIS-2.osc:673-681`); the OPTS VM pops it. 🟡 Medium | Open; see the [guide](osc-guide.md#-anti-patterns-and-pitfalls) |
+| Q-OSC-007 | Does a script raise `(T.L.name)` run `{trigger:name}` of the same vehicle? 253 (bus, trigger) pairs are reachable only that way; none of five surveyed sets uses it. 🟡 Medium | Open; per-vehicle flag in the [runtime design](../../../architecture/osc-runtime.md) |
+| Q-OSC-008 | `(T.F.name)` carries the top string as payload (announcement file names); `(T.S.name)` (6 uses) is unexplained. ⚪ Low | Payload assumed; `T.S` open |
+| Q-OSC-009 | A trigger may leave a value on the stack for the engine (`malfunction_gettime`, `MAN_NL_NG/Script/MAN_GN92_main.osc:155-160`). What reads it? ⚪ Low | Open |
 
 ---
 
@@ -347,6 +351,7 @@ All 6,062 `.osc` files compile (83,861 blocks). Beyond the table above: `sgn` (6
 
 ## 🔗 Related Documents
 
+- [OMSI Scripting Guide](osc-guide.md) — the language, its execution model and idioms
 - [`.bus` — Vehicle Definition](bus.md)
 - [Variable Lists](varnamelist.md)
 - [Constant Files](const.md)

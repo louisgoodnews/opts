@@ -1490,3 +1490,9 @@ vehicle scripts,script\VMatrix_multi_KI.osc,WARN,file not found,1,corpus,corpus,
 vehicle scripts,script\Vmatrix_varlist_ki.txt,WARN,file not found,1,corpus,corpus,vehicle=MAN_NG313_main_KI.bus
 vehicles,maps/Ahlheim 5/global.cfg,ERROR,cannot load OMSI world: <file>: invalid number for entrypoint id_code 'N' at line N,1,2026-10-12T10:04:56.887Z,2026-10-12T10:04:56.887Z,
 vehicles,maps/HB_2017_Bremen-Nord_FIKTIV/global.cfg,ERROR,cannot load OMSI world: <file>: invalid number for entrypoint id_code 'N' at line N,1,2026-10-12T10:23:07.813Z,2026-10-12T10:23:07.813Z,
+vehicle scripts,Vehicles/Urbino_II/script/Urbino_II_D854.osc,WARN,{endif} without a matching {if} ignored,2,2026-10-16,2026-10-16,vehicle=SU_12.bus;lines 907-908
+vehicle scripts,Vehicles/Urbino_II/script/Urbino_II_Tuer.osc,WARN,{else} / {endif} without a matching {if} ignored,2,2026-10-16,2026-10-16,vehicle=SU_12.bus;lines 844 and 847
+vehicle scripts,Vehicles/Urbino_II/script/Urbino_II_misc.osc,WARN,{endif} without a matching {if} ignored,1,2026-10-16,2026-10-16,vehicle=SU_12.bus;line 633
+vehicle scripts,Vehicles/Urbino_II/script/Urbino_II_Matr.osc,WARN,{endif} without a matching {if} ignored,2,2026-10-16,2026-10-16,vehicle=SU_12.bus;lines 1649 and 1683
+vehicle scripts,Vehicles/Urbino_II/script/Urbino_II_IBIS_constfile.txt,WARN,curve `Revert`: points not ascending; sorted,1,2026-10-16,2026-10-16,vehicle=SU_12.bus
+vehicle scripts,(script engine),WARN,$msg pops the string although N corpus sites use it afterwards (Q-OSC-006),78,2026-10-16,2026-10-16,vehicle=MAN_GN92_main.bus;vehicle=HH109_Stadtbus_HHA;corpus scan of 325 sites

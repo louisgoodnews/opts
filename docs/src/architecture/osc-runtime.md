@@ -382,6 +382,15 @@ Budgets from the strategy (§7), restated as rules:
 | Q-OSC-R9 | Save-state size of canvases per vehicle; compress or redraw | measure on the GN92 (two 256×32 canvases ❓ size from `model.cfg`) |
 | Q-OSC-R10 | `M_WHEEL_UNIT`, `Axle_Steering` sign, `A_Trans_*` definition | E1, physics trace (owned by M-0097) |
 
+## 🔁 Reconciliation with the prior research
+
+Read again after the three documents were written (2026-10-16):
+
+* **Agrees:** every decision D1-D8, the phase order, the demand profile, the callback signatures of `callbacks.md`, the fifteen suspicious spots of the research report (five of them get a concrete rule here: pedal ownership, `GetTime` in `f64`, the stable seed, the script-brake zero clamp, the output snapshot instead of per-mesh locks).
+* **Extends:** the callback registry is signature-first instead of a handler closure; events carry a payload; triggers carry a part selector and a return value; the load order of pre-init values, the restore rule and the hot-reload relink are new; the cable propagation has an order; `GetFontIndex` and `TextLength` are cached.
+* **Corrects by date, not by contradiction:** the research report's "41 of 42 callbacks unimplemented" and the strategy's "only `NrSpecRandom`" describe `f531a3e`; M-0093 (same day, later) implemented 27, so P0's remaining stub work is the 12 canvas calls. The route document's "registers block-local" (also in `script-vm.md`) is contradicted by the corpus and the code (guide, Execution Model); this sheet follows the code.
+* **Contradicts, and says why:** `osc.md` stated that `(T.L.name)` runs `{trigger:name}`; the VM does not, no surveyed set depends on it, and the sheet keeps both readings behind a flag (Q-OSC-R3). The VM's popping `$msg` is treated as a defect on corpus evidence (Q-OSC-R1); the strategy did not know of it.
+
 ## 📝 Provenance
 
 * **Prior documents read in full:** strategy, research report, M-0093 and M-0096 to M-0103, the six format specs, `script-vm.md`, `vehicle-scripts-route.md`, `articulation-physics.md`, ADR-0002, `standards.md`.
