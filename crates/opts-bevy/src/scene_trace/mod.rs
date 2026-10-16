@@ -154,15 +154,12 @@ pub struct MeshNote {
     /// Time parsing (ms).
     #[serde(default)]
     pub parse_ms: f32,
-    /// Time in the decoder or its cache (ms).
+    /// Time decoding a keyed mesh (ms).
     #[serde(default)]
     pub decode_ms: f32,
     /// Time building meshes, materials and textures (ms).
     #[serde(default)]
     pub build_ms: f32,
-    /// Decoded vertices by texture-coordinate quality: exact, recovered, unreliable.
-    #[serde(default)]
-    pub uv: [usize; 3],
     /// Vertices of the file.
     #[serde(default)]
     pub vertices: usize,
@@ -202,7 +199,6 @@ impl MeshNote {
             self.stage.as_str(),
             "rejected" | "extent" | "read-failed" | "parse-failed"
         ) || !self.warnings.is_empty()
-            || self.uv[2] * 10 > self.uv.iter().sum::<usize>().max(1)
     }
 }
 
@@ -316,14 +312,12 @@ impl TraceRecord {
             || self.meshes.iter().any(MeshNote::is_issue)
     }
 
-    /// A short worst-quality label for colour coding: `failed`, `unreliable`, `decoded`, `ok`.
+    /// A short worst-quality label for colour coding: `failed`, `decoded`, `ok`.
     #[must_use]
     pub fn quality(&self) -> &'static str {
         if self.result == "failed" || self.meshes.iter().any(|m| m.is_issue_stage()) {
             "failed"
-        } else if self.meshes.iter().any(|m| m.uv[2] > 0) {
-            "unreliable"
-        } else if self.meshes.iter().any(|m| m.stage.starts_with("decode")) {
+        } else if self.meshes.iter().any(|m| m.stage == "exact") {
             "decoded"
         } else {
             "ok"

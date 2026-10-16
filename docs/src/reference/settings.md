@@ -75,7 +75,6 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `omsi_path` | OMSI 2 folder | path | - | after restart | available | The folder your OMSI 2 is installed in. Maps and vehicles are read from here, never changed. |
 | `discovery_interval_days` | Look for new content every | whole number 1 to 90 | `1` | at once | available | Days between automatic scans of the OMSI folder at start-up. |
 | `content.rescan` | Scan now | action (no stored value) | - | at once | available | Looks for new or changed maps and vehicles in the background. |
-| `content.clear_cache` | Clear texture cache | action (no stored value) | - | at once | available | Deletes the converted textures; they are made again when needed. |
 | `recent_map_path` | Last map | path | - | at once | internal | The map you drove last. |
 
 ## Advanced

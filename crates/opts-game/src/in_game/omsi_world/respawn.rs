@@ -11,7 +11,7 @@ use opts_bevy::{CameraMode, CameraState};
 use opts_core::formats::map::{MapEntryPoint, MapTile};
 
 use super::ground::tile_origin;
-use super::vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes};
+use super::vehicle::load_player_vehicle;
 use super::{LoadAssets, WorldLoadJob, WorldStats};
 use crate::session_vehicles::{ops, SessionVehicles, SpawnPoint, VehicleId};
 use opts_gui::l10n::Localization;
@@ -166,8 +166,8 @@ fn resolve_entries(
     }
 }
 
-/// The spawn request being worked on: its vehicle's meshes decode in the background, then it is
-/// built. One at a time; the others wait in the registry as [`Lifecycle::Spawning`] records.
+/// The spawn request being worked on: it is built on the next frame. One at a time; the others
+/// wait in the registry as [`Lifecycle::Spawning`] records.
 ///
 /// [`Lifecycle::Spawning`]: crate::session_vehicles::Lifecycle::Spawning
 #[derive(Resource)]
@@ -176,11 +176,10 @@ pub struct SpawnVehicleRequest {
     pub id: VehicleId,
     entry: (u32, String),
     point: SpawnPoint,
-    keys: Vec<opts_bevy::descramble_cache::Key>,
 }
 
-/// Works down the spawn requests of the registry: places the vehicle at its entry point, waits for
-/// its scrambled meshes, builds it and makes it the active vehicle.
+/// Works down the spawn requests of the registry: places the vehicle at its entry point, builds it
+/// and makes it the active vehicle.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_vehicle_requests(
     mut commands: Commands,
@@ -204,9 +203,6 @@ pub fn handle_vehicle_requests(
             .is_some_and(|r| r.lifecycle == crate::session_vehicles::Lifecycle::Spawning);
         if !wanted {
             commands.remove_resource::<SpawnVehicleRequest>();
-            return;
-        }
-        if decodes_pending(&job, &flight.keys) > 0 {
             return;
         }
         let id = flight.id;
@@ -323,13 +319,6 @@ pub fn handle_vehicle_requests(
     job.config.livery = rec.repaint.clone();
     job.config.setvars = rec.setvars.clone();
     job.repaint = None;
-    let keys = prewarm_vehicle_meshes(
-        &mut job,
-        &mut commands,
-        &mut assets.meshes,
-        &mut assets.materials,
-        &mut assets.images,
-    );
     commands.insert_resource(SpawnVehicleRequest {
         id,
         entry: (entry_id, entry_name),
@@ -339,6 +328,5 @@ pub fn handle_vehicle_requests(
             z: f64::from(world.z),
             heading_deg: f64::from(heading),
         },
-        keys,
     });
 }

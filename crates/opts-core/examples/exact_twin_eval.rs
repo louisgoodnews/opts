@@ -1,6 +1,6 @@
 //! Evaluates `o3d::exact::decode` on every keyed `.o3d` with a plain copy of the same model:
-//! how many meshes come out with exactly the plain copy's positions, texture coordinates and
-//! normals. Files with key `0` are reported separately.
+//! how many meshes come out with exactly the plain copy's positions, texture coordinates (to the
+//! bit, and within 1e-5) and normals. Files with key `0` are reported separately.
 //!
 //! Usage: `exact_twin_eval <omsi root> [--list]`
 use std::collections::{BTreeMap, HashMap};
@@ -106,6 +106,12 @@ fn main() {
                             .vertices
                             .iter()
                             .zip(&p.vertices)
+                            .filter(|(a, b)| a.uv == b.uv)
+                            .count();
+                        let uv_near = k
+                            .vertices
+                            .iter()
+                            .zip(&p.vertices)
                             .filter(|(a, b)| (a.uv - b.uv).abs().max_element() < 1e-5)
                             .count();
                         let nrm = k
@@ -126,9 +132,10 @@ fn main() {
                             }
                         };
                         format!(
-                            "positions {:5} | uv {:5} | normals {:5}",
+                            "positions {:5} | uv {:5} (within 1e-5 {:5}) | normals {:5}",
                             share(pos),
                             share(uv),
+                            share(uv_near),
                             share(nrm)
                         )
                     }

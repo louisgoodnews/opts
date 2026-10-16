@@ -15,12 +15,9 @@ fn main() {
                 continue;
             }
         };
-        if std::env::var_os("O3D_DESCRAMBLE").is_some() {
-            // handled below (mutable copy)
-        }
         let mut o = o;
         if std::env::var_os("O3D_DESCRAMBLE").is_some() && o.encryption_key.is_some() {
-            opts_core::formats::o3d::descramble::descramble(&mut o);
+            opts_core::formats::o3d::exact::decode(&mut o);
         }
         let (mut ulo, mut uhi) = ([f32::MAX; 2], [f32::MIN; 2]);
         for v in &o.vertices {

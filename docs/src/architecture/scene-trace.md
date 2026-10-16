@@ -43,20 +43,21 @@ One JSON object per thing (`TraceRecord`):
 | `world` | the transform used in the game (Bevy space: translation, quaternion, scale) |
 | `bounds` | local bounding box of the geometry (what `trace.pick` tests) |
 | `entity` | Bevy entity (bits) of the thing's root |
-| `meshes` | the mesh files used (`MeshNote`): `file`, `stage`, `uv` (exact/recovered/unreliable vertices), `vertices`, `parts`, `materials` (slot, texture, `opaque`/`mask`/`blend`, textured), timings `read_ms`/`parse_ms`/`decode_ms`/`build_ms`, `warnings`, `bbox` |
+| `meshes` | the mesh files used (`MeshNote`): `file`, `stage`, `vertices`, `parts`, `materials` (slot, texture, `opaque`/`mask`/`blend`, textured), timings `read_ms`/`parse_ms`/`decode_ms`/`build_ms`, `warnings`, `bbox` |
 | `parents` | what the thing belongs to: the carrying spline of an attachment, the `carpark` marker a parked car replaced |
-| `result` | `ok`, `no-geometry` (nothing to draw by design), `pending` (waits for a background decode; the tile is rebuilt), `failed` |
+| `result` | `ok`, `no-geometry` (nothing to draw by design), `failed` |
 | `warnings`, `load_ms`, `detail` | problems seen, time spent, kind-specific details (spline length/radius/ids, string variables, vehicle name) |
 
-Mesh `stage` says how the geometry was obtained: `plain` (readable file), `twin` (plain twin of a
-keyed mesh), `decode-cache`, `decode-background`, `decoded-now`, `decode-deferred`, `rejected`
-(keyed, decoder gave up: nothing drawn, MI-0017), `extent` (implausible size), `read-failed`,
+Mesh `stage` says how the geometry was obtained: `plain` (readable file), `exact` (keyed mesh
+decoded exactly, o3d.md Addendum 14), `rejected` (keyed mesh the generator does not cover: nothing
+drawn), `extent` (implausible size), `read-failed`,
 `parse-failed`, `hidden` (all slots hidden by `[alphascale]` overlays), `cached` (served from the
 cache of an earlier load, see above).
 
-A record is an *issue* when `result` is `failed`, it has warnings, one of its meshes was rejected
-or failed, or more than 10 % of a decoded mesh's vertices have unreliable texture coordinates.
-`quality()` condenses this to `failed`, `unreliable`, `decoded`, `ok` (overlay colours).
+A record is an *issue* when `result` is `failed`, it has warnings, or one of its meshes was
+rejected or failed. `quality()` condenses this to `failed`, `decoded`, `ok` (overlay colours).
+Runs recorded before 2026-10-16 carry the stages `twin`, `decode-cache`, `decode-background`,
+`decoded-now`, `decode-deferred` and a `uv` triple of the retired heuristic decoder.
 
 ## 3. The file
 
@@ -97,8 +98,8 @@ the answer's `ground.tile` names the tile and `trace.tile` lists its splines.
 ## 5. Overlay
 
 *Settings → Advanced → Scene trace overlay* (or `trace.set overlay=true`) draws a wire box around
-every traced object within 120 m of the camera: red = failed, orange = unreliable texture
-coordinates, yellow = decoded, blue = vehicles, violet = humans, green = scenery; the object of the
+every traced object within 120 m of the camera: red = failed, yellow = decoded (keyed), blue =
+vehicles, violet = humans, green = scenery; the object of the
 last `trace.pick` is white.
 
 ## 6. Recipe: screenshot defect to asset reference
@@ -106,11 +107,10 @@ last `trace.pick` is white.
 1. `opts --trace-scene=full ...` (or `trace.set mode=full` and load the map again).
 2. `screenshot` and note the pixel of the defect.
 3. `trace.pick x=<px> y=<py>`: `hit.file` is the `.sco`, `hit.meshes[*].file` the `.o3d`, `stage`
-   and `uv` say how it was decoded, `hit.tile_file` and `hit.index` locate the record in the map.
-4. Look the file up in the [mesh issue registry](../quality/mesh-issue-registry.md) (and, for
-   scrambled meshes, in the incident files of the run, `docs/src/architecture/uv-decoder.md`); a new
-   defect gets a new `MI-` id.
+   says how it was read, `hit.tile_file` and `hit.index` locate the record in the map.
+4. Look the file up in the [mesh issue registry](../quality/mesh-issue-registry.md); a new defect
+   gets a new `MI-` id.
 5. `trace.find file=<name>` shows every other place the same mesh is used.
 
-Related: [mesh issue registry](../quality/mesh-issue-registry.md), [UV decoder](uv-decoder.md),
+Related: [mesh issue registry](../quality/mesh-issue-registry.md),
 [control protocol](control-protocol.md), [M-0087](../roadmap/phase-5/M-0087.md).

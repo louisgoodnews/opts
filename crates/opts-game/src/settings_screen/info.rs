@@ -42,27 +42,6 @@ pub(super) fn local_time<T: TryInto<i64>>(t: T) -> String {
         .unwrap_or_default()
 }
 
-/// Bytes shown as megabytes with one decimal.
-fn megabytes(bytes: u64) -> String {
-    format!("{:.1}", bytes as f64 / 1_048_576.0)
-}
-
-/// Files and bytes below `dir`.
-fn dir_usage(dir: &std::path::Path) -> (usize, u64) {
-    let mut n = (0, 0);
-    if let Ok(rd) = std::fs::read_dir(dir) {
-        for e in rd.flatten() {
-            if let Ok(m) = e.metadata() {
-                if m.is_file() {
-                    n.0 += 1;
-                    n.1 += m.len();
-                }
-            }
-        }
-    }
-    n
-}
-
 /// The detected hardware (M-0081): what OPTS knows about this machine, and where it is stored.
 fn hardware_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
     label(
@@ -194,15 +173,6 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
                 &[("when", last.map(local_time).unwrap_or_default())],
                 TypeScale::BodyMedium,
             );
-            let (n, bytes) =
-                opts_bevy::descramble_cache::directory().map_or((0, 0), |d| dir_usage(&d));
-            line(
-                c,
-                pane,
-                "settings-info-cache",
-                &[("files", n.to_string()), ("size", megabytes(bytes))],
-                TypeScale::BodyMedium,
-            );
         }
         Category::Advanced => {
             hardware_info(c, pane, ctx);
@@ -242,13 +212,6 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
                 pane,
                 "settings-info-themes-folder",
                 &[("path", path_text(crate::theme_files::themes_dir()))],
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-cache-folder",
-                &[("path", path_text(opts_bevy::descramble_cache::directory()))],
                 TypeScale::BodyMedium,
             );
             line(

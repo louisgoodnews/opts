@@ -2,14 +2,14 @@
 //!
 //! Meshes are read with OPTS's own parsers and interpreted the way the loader documents it
 //! (axis-cycled layout, `.x` frame transforms, `[matl]` overrides, `[alphascale]` materials
-//! hidden, keyed meshes through a plain twin or the decoder's cache). The **placement** (heading
+//! hidden, keyed meshes decoded exactly). The **placement** (heading
 //! clockwise from north, object +Z forward, +X right, +Y up) is computed here independently of
 //! the game (`docs/src/architecture/coordinates.md`).
 
 use std::path::Path;
 
 use bevy::math::Vec3;
-use opts_bevy::model::{find_override, find_plain_twin};
+use opts_bevy::model::find_override;
 use opts_bevy::{OmsiInstall, TextureOverride};
 use opts_core::formats::o3d::{O3d, VertexLayout};
 use opts_core::formats::scenery::{SceneryObject, ScoMesh};
@@ -71,11 +71,9 @@ pub struct ExpectedTri {
 pub struct KeyedSummary {
     /// Keyed meshes referenced.
     pub total: usize,
-    /// Resolved through a plain twin.
-    pub twin: usize,
-    /// Resolved through the decoder's cache.
+    /// Decoded exactly (`o3d::exact`).
     pub decoded: usize,
-    /// Not resolvable: no expected geometry for them.
+    /// Not resolvable (the generator does not cover the file): no expected geometry for them.
     pub unresolved: usize,
 }
 
@@ -126,7 +124,7 @@ pub fn build(install: &OmsiInstall, sco_path: &Path, sco: &SceneryObject) -> Exp
             return out;
         };
         let base = mesh.visible.is_none() && mesh.lod_threshold.is_none_or(|l| Some(l) == top_lod);
-        let models = match read_models(install, &path, &mut out.keyed) {
+        let models = match read_models(&path, &mut out.keyed) {
             Ok(m) => m,
             Err(()) => {
                 push_unique(&mut out.categories, "F-MESH-PARSE");
@@ -148,11 +146,7 @@ fn push_unique(v: &mut Vec<String>, s: &str) {
 }
 
 /// Parses a mesh file and resolves keyed models; unresolved keyed models are dropped.
-fn read_models(
-    install: &OmsiInstall,
-    path: &Path,
-    keyed: &mut KeyedSummary,
-) -> Result<Vec<O3d>, ()> {
+fn read_models(path: &Path, keyed: &mut KeyedSummary) -> Result<Vec<O3d>, ()> {
     let bytes = std::fs::read(path).map_err(|_| ())?;
     let mut models = opts_bevy::mesh::parse_mesh_file(path, &bytes).map_err(|_| ())?;
     let unreadable = |ms: &[O3d]| {
@@ -163,20 +157,9 @@ fn read_models(
         return Ok(models);
     }
     keyed.total += 1;
-    if let Some((twin, _)) = find_plain_twin(install, path, &models) {
-        keyed.twin += 1;
-        return Ok(twin);
-    }
-    let fingerprint = opts_core::formats::o3d::descramble::DecodeParams::default()
-        .with_overrides(|k| std::env::var(k).ok())
-        .fingerprint();
-    for (i, m) in models.iter_mut().enumerate() {
-        if !matches!(m.vertex_layout(), VertexLayout::Unreadable) {
-            continue;
-        }
-        let key = opts_bevy::descramble_cache::key_bounded(&bytes, i, None);
-        if let Some(c) = opts_bevy::descramble_cache::load(key, fingerprint) {
-            opts_bevy::descramble_cache::apply(m, &c);
+    for m in models.iter_mut() {
+        if m.encryption_key.is_some() {
+            opts_core::formats::o3d::exact::decode(m);
         }
     }
     if unreadable(&models) {

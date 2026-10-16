@@ -11,11 +11,8 @@ fn main() {
                 m.indices.len(),
                 m.encryption_key.is_some(),
             );
-            let r = if m.encryption_key.is_some() {
-                Some(opts_core::formats::o3d::descramble::decode_confident(m))
-            } else {
-                None
-            };
+            let decoded =
+                m.encryption_key.is_some() && opts_core::formats::o3d::exact::decode(m).is_some();
             let out = opts_bevy::mesh::o3d_to_bevy_meshes_by_material(m);
             // front faces (counter-clockwise in Bevy) that point away from the centroid: a closed
             // body must show most of its faces outward, otherwise back-face culling hides it
@@ -50,11 +47,11 @@ fn main() {
                 );
             }
             println!(
-                "{a}: v={} t={} keyed={} decode={:?} layout={:?} -> {} submeshes {:?}",
+                "{a}: v={} t={} keyed={} decode={} layout={:?} -> {} submeshes {:?}",
                 before.0,
                 before.1,
                 before.2,
-                r.as_ref().map(|r| (r.accepted, r.dropped_faces)),
+                decoded,
                 m.vertex_layout(),
                 out.len(),
                 out.iter()

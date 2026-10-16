@@ -73,9 +73,7 @@ pub use traffic::{
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 pub use traffic_chain::move_traffic_chains;
-pub use vehicle::{
-    decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, FormationCar, SpawnedVehicle,
-};
+pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
 pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -167,10 +165,8 @@ pub struct WorldStats {
     pub asset_failures: usize,
     /// Problems recorded by the loading screen (blocking and minor).
     pub load_problems: usize,
-    /// Scrambled meshes recovered by the decoder / replaced by a plain twin / still decoding.
-    pub meshes_decoded: usize,
-    pub meshes_twin: usize,
-    pub meshes_decoding: usize,
+    /// Keyed meshes decoded exactly (`o3d::exact`).
+    pub meshes_exact: usize,
     pub overlay_visible: bool,
 }
 
@@ -192,8 +188,6 @@ pub struct WorldLoadJob {
     manifest: MapManifest,
     tile_files: HashMap<(i32, i32), String>,
     queue: VecDeque<(i32, i32)>,
-    /// Tiles waiting for background mesh decoding, with the meshes they wait for.
-    waiting_decode: HashMap<(i32, i32), HashSet<opts_bevy::descramble_cache::Key>>,
     /// Tiles currently spawned, by tile coordinates (root entity of each tile).
     resident: HashMap<(i32, i32), Entity>,
     /// Chebyshev radius of tiles kept loaded around the camera.

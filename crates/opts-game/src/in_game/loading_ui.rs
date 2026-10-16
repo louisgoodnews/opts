@@ -312,10 +312,6 @@ pub fn stage_message(state: &SimulationLoadState) -> (&'static str, L10nArgs) {
             ]),
         ),
         LoadStage::SetupAtmosphere => ("load-stage-light", L10nArgs::default()),
-        LoadStage::SpawnVehicle if state.meshes_left > 0 => (
-            "load-stage-vehicle-meshes",
-            L10nArgs::one("left", state.meshes_left), // l10n-ok: variable name
-        ),
         LoadStage::SpawnVehicle => ("load-stage-vehicle", L10nArgs::default()),
         LoadStage::CalibrateControls => ("load-stage-start", L10nArgs::default()),
         LoadStage::Ready => ("load-stage-ready", L10nArgs::default()),

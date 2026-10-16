@@ -9,8 +9,6 @@ fn main() {
     if let Some(ref dir) = args.log_file {
         config.files.directory = dir.clone();
     }
-    // Incident files of meshes the decoder could not prove go next to the logs.
-    opts_bevy::uv_incident::set_directory(config.files.directory.join("incidents"));
     // Scene trace files go next to the logs (`--trace-scene` switches the mode on for this run).
     opts_bevy::scene_trace::set_directory(config.files.directory.join("trace"));
     if let Some(text) = args.trace_scene.as_deref() {

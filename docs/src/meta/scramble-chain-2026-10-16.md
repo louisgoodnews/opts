@@ -39,7 +39,7 @@ Every keyed mesh of `Lemmental_Neuenbreid` has key `0` (615 objects, 17,175 plac
 | Where | Change |
 | :--- | :--- |
 | `opts-core::formats::o3d::exact` | `generator`, `decision`, `data_term`, `decode`, `scramble` (the inverse, for tests); `O3d::exact_decoded`; `VertexLayout` reads an exactly decoded mesh like a plain file |
-| `opts-bevy::model` | keyed meshes are decoded exactly before the plain-twin lookup and the heuristic decoder (both stay as fallbacks); `CacheStats::exact_meshes`; scene-trace stage `exact` |
+| `opts-bevy::model` | keyed meshes are decoded exactly; `CacheStats::exact_meshes`; scene-trace stage `exact` (the plain-twin lookup and the heuristic decoder stayed as fallbacks until the follow-up below) |
 | `map_object_census` | class `ok:exact` |
 | docs | o3d.md Addendum 14, Q-012 resolved; registry MI-0049, MI-0017 and MI-0044 closed; scenery-parsing.md |
 
@@ -57,5 +57,8 @@ Live on Neuenbreid: the house that lay on its side at the start stands, `DDR_Hou
 ## 9. Open
 
 - Two key-0 twins with a flagged header, and the normals of 5 twins (zero components whose sign is ambiguous) are not reproduced.
-- Recovered texture coordinates may differ from the original by one float32 ulp.
-- The heuristic decoder, its cache and the plain-twin substitution are now fallbacks only; they can be retired once no file in the wild is found that the rule does not cover.
+
+## 10. Follow-up (2026-10-16, branch `cleanup/retire-heuristic-decoder`)
+
+- The heuristic decoder, its on-disk cache, the background decode pool, the plain-twin substitution, the incident files and the vehicle prewarm stage were retired ([o3d.md Addendum 15](../formats/binary/o3d.md#-addendum-15--2026-10-16-the-heuristic-decoder-retired)). A keyed file the rule does not cover is skipped with a `WARN` naming the path.
+- The jitter's arithmetic was pinned down: `fl32(c²)/10000` in float32 (not `(c/100)²`), which makes 87 % of the jittered texture coordinates bit-exact (3,759 of 6,417 twins in every coordinate, 1,372 before; 6,019 within 1e-5); the rest differ by one float32 ulp because the exporter's float32 addition is not injective (Addendum 15).

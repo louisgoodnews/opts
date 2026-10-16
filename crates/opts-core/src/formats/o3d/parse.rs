@@ -159,7 +159,6 @@ fn parse_exact(bytes: &[u8]) -> Result<O3d> {
         transform,
         unknown_chunks,
         encryption_key: header.stamp.filter(|&k| k != 0xFFFF_FFFF),
-        descrambled: false,
         exact_decoded: false,
     })
 }

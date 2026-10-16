@@ -5,14 +5,12 @@
 
 pub mod audit;
 pub mod chunks;
-pub mod descramble;
 pub mod error;
 pub mod exact;
 pub mod header;
 pub mod index;
 pub mod material;
 pub mod parse;
-pub mod uvfix;
 pub mod vertex;
 
 pub use chunks::{
@@ -47,9 +45,6 @@ pub struct O3d {
     /// marker. Files with a key were written by an exporter that scrambles vertex data with a
     /// private, key-seeded scheme (see `docs/src/formats/binary/o3d.md`); plain files never are.
     pub encryption_key: Option<u32>,
-    /// Set when [`descramble::decode_confident`] recovered the positions of a keyed mesh:
-    /// positions are trusted, but stored normals (and part of the UVs) are not.
-    pub descrambled: bool,
     /// Set when [`exact::decode`] reproduced the generator of a keyed mesh: positions, texture
     /// coordinates and normals are the originals, and the mesh is read like a plain file.
     pub exact_decoded: bool,
@@ -212,9 +207,6 @@ impl O3d {
         // of those the coherence test calls `Standard` and 82 % of the `AxisCycled` ones differ
         // from the twin in more than 20 % of their vertices (normals are scrambled too, so the
         // normal-agreement test cannot see it). Only a twin can make them readable.
-        if self.descrambled {
-            return VertexLayout::RecomputedNormals;
-        }
         if self.encryption_key.is_some() && !self.exact_decoded {
             return VertexLayout::Unreadable;
         }

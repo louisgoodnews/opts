@@ -17,9 +17,8 @@ use crate::in_game::loading_ui::{
     ChooseAnotherBtn, ContinueBtn, DetailsBtn, LoadingBackBtn, RetryBtn,
 };
 use crate::in_game::omsi_world::{
-    begin_world_load, decodes_pending, load_next_tile, load_player_vehicle, prewarm_vehicle_meshes,
-    resolve_session_config, spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob,
-    WorldStats,
+    begin_world_load, load_next_tile, load_player_vehicle, resolve_session_config,
+    spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
 };
 use crate::in_game::types::{
     CancelLoadingBtn, InGameEntity, InGameSessionInfo, LoadStage, LoadingScreenRoot,
@@ -278,22 +277,6 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             ..
         } = env;
         if let Some(job) = job.as_deref_mut().filter(|j| !j.no_vehicle) {
-            // Scrambled vehicle meshes decode on background threads; the vehicle is built only
-            // once they are all done.
-            if !state.vehicle_prewarmed {
-                state.vehicle_wait = prewarm_vehicle_meshes(
-                    job,
-                    commands,
-                    &mut assets.meshes,
-                    &mut assets.materials,
-                    &mut assets.images,
-                );
-                state.vehicle_prewarmed = true;
-            }
-            state.meshes_left = decodes_pending(job, &state.vehicle_wait);
-            if state.meshes_left > 0 {
-                return;
-            }
             let params = SpawnParams {
                 catalogue_id: job
                     .vehicle_file()

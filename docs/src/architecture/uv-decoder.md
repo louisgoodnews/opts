@@ -1,4 +1,7 @@
-# UV decoder (P-1013)
+# UV decoder (P-1013) — retired
+
+> **Retired 2026-10-16.** The scrambler's generator was derived ([o3d.md Addendum 14](../formats/binary/o3d.md#-addendum-14--2026-10-16-the-scramblers-generator-exact-decoding)); keyed meshes are decoded exactly, including their texture coordinates, and the heuristic described here was deleted ([Addendum 15](../formats/binary/o3d.md#-addendum-15--2026-10-16-the-heuristic-decoder-retired)). This page is kept as the record of the design; the code it names (`uvfix.rs`, `descramble.rs`, `descramble_cache.rs`, `uv_incident.rs`) is in the git history before that date.
+
 
 Scope: the texture coordinates of keyed (scrambled) `.o3d` meshes. Positions are decoded by
 `descramble` (separate document: `formats/binary/o3d.md`, Addendum 5); this decoder works on the

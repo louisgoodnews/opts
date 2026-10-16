@@ -54,12 +54,6 @@ fn stats_delta(before: &WorldStats, after: &WorldStats) -> BTreeMap<String, i64>
             after.asset_failures,
         ),
         (
-            "meshes_decoded",
-            before.meshes_decoded,
-            after.meshes_decoded,
-        ),
-        ("meshes_twin", before.meshes_twin, after.meshes_twin),
-        (
             "scene_vertices",
             before.scene_vertices,
             after.scene_vertices,
@@ -282,7 +276,7 @@ fn base_record(entry: &ObjectEntry, pre: &Preflight, worker: usize) -> Record {
 
 fn no_expected_reason(pre: &Preflight, exp: &Expected) -> String {
     if exp.keyed.unresolved > 0 {
-        "keyed mesh without twin or cached decoding".into()
+        "keyed mesh the generator does not cover".into()
     } else if pre.classes.iter().any(|c| c == "vehicle-model") {
         "[model] objects are not predicted".into()
     } else {

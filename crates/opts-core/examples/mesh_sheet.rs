@@ -11,7 +11,6 @@
 use std::io::BufRead;
 
 use glam::{Vec2, Vec3};
-use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::{parse, O3d, VertexLayout};
 
 fn to_view(o: &O3d, v: Vec3) -> Vec3 {
@@ -155,8 +154,8 @@ fn main() {
             }
             Some(mut o) => {
                 if decode && o.encryption_key.is_some() {
-                    let r = decode_confident(&mut o);
-                    status = format!("decoded={} agree={:.2}", r.accepted, r.agreement);
+                    let decoded = opts_core::formats::o3d::exact::decode(&mut o).is_some();
+                    status = format!("decoded={decoded}");
                 }
                 if o.vertex_layout() == VertexLayout::Unreadable {
                     status = "skipped-scrambled".into();

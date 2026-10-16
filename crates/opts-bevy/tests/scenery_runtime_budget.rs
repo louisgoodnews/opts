@@ -88,7 +88,6 @@ fn thousands_of_signal_heads_fit_the_frame_budget() {
                             alpha_variable: None,
                             image: None,
                             pivot: None,
-                            uv_unreliable: 0,
                         }]
                     })
                     .collect();

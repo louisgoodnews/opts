@@ -123,7 +123,6 @@ fn app() -> App {
                         alpha_variable: None,
                         image: None,
                         pivot: None,
-                        uv_unreliable: 0,
                     }]
                 })
                 .collect();

@@ -31,16 +31,6 @@ pub(super) fn first_ai_list_vehicle(job: &WorldLoadJob) -> Option<PathBuf> {
         })
 }
 
-/// Expected mesh box of a vehicle from its `.bus` `[boundingbox]` (restricts the scrambled-mesh
-/// decoder; see `docs/src/formats/binary/o3d.md`, Addendum 9).
-fn manifest_bounds(
-    manifest: &BusManifest,
-) -> Option<opts_core::formats::o3d::descramble::ExpectedBounds> {
-    manifest.bounding_box.map(|(half, centre)| {
-        opts_core::formats::o3d::descramble::ExpectedBounds::from_omsi_box(half, centre)
-    })
-}
-
 /// Reads the repaints of the player's vehicle once per session (they come from the `.cti` files of
 /// its `Colorscheme` folders, `docs/src/formats/text/repaints.md`).
 fn ensure_repaints(job: &mut WorldLoadJob, bus_path: &Path, manifest: &BusManifest) {
@@ -256,8 +246,6 @@ pub(super) fn load_segment_meshes_for(
             loader.o3d_parts(&o3d_path, tex_dirs, &overrides)
         };
         for part in &parts {
-            job.cache.stats.uv_scope.0 += part.vertices;
-            job.cache.stats.uv_scope.1 += part.uv_unreliable;
             if let Some(mesh) = meshes.get(&part.mesh) {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
@@ -707,12 +695,10 @@ pub(super) fn spawn_trailer_chain(
                 .unwrap_or_else(|| dir.join("texture")),
             model_dir.join("texture"),
         ];
-        job.cache.expected_bounds = manifest_bounds(manifest);
         job.cache.texture_replacements = repaint_map(job, &model);
         let (count, verts, _, _) = load_segment_meshes_for(
             job, commands, meshes, materials, images, seg, root, lod0, &model_dir, &tex_dirs,
         );
-        job.cache.expected_bounds = None;
         job.cache.texture_replacements.clear();
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
         layout.push(super::rail::Part {
@@ -790,124 +776,6 @@ fn manifest_mass_kg(manifest: &BusManifest) -> Option<f32> {
 #[cfg(test)]
 fn unit_load(manifest: &BusManifest, reversed: bool, previous_kg: f32) -> opts_sim::UnitLoad {
     opts_sim::UnitLoad::from_manifest_or(manifest, reversed, previous_kg)
-}
-
-/// Queues the background decoding of the vehicle's scrambled meshes and returns their keys.
-///
-/// The vehicle must not be built before they are done (it would come up without a body), so the
-/// loading stage waits until none of the returned keys is pending, then calls
-/// [`load_player_vehicle`]. The scratch meshes built here are dropped.
-pub fn prewarm_vehicle_meshes(
-    job: &mut WorldLoadJob,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-) -> Vec<opts_bevy::descramble_cache::Key> {
-    let Some(bus_path) = job
-        .config
-        .vehicle_path
-        .clone()
-        .or_else(|| first_ai_list_vehicle(job))
-    else {
-        return Vec::new();
-    };
-    let mut keys = prewarm_file(job, commands, meshes, materials, images, &bus_path, true);
-    // The units behind the head (its `[couple_back]` chain and the cars of a formation, each with
-    // its own chain) are built by the same loader and need their decoded meshes too.
-    let mut files: Vec<PathBuf> = Vec::new();
-    let heads: Vec<PathBuf> = std::iter::once(bus_path.clone())
-        .chain(job.formation_cars.iter().map(|c| c.path.clone()))
-        .collect();
-    for (n, head) in heads.iter().enumerate() {
-        let mut path = head.clone();
-        for step in 0..max_parts(true) {
-            if !(n == 0 && step == 0) {
-                files.push(path.clone());
-            }
-            let Some(next) = std::fs::read(&path)
-                .ok()
-                .and_then(|b| BusManifest::parse_bytes(&b).ok())
-                .and_then(|m| m.couple_back)
-            else {
-                break;
-            };
-            let Some(dir) = path.parent() else { break };
-            let Some(found) = job.install.find_in(dir, &next) else {
-                break;
-            };
-            path = found;
-        }
-    }
-    for f in files {
-        keys.extend(prewarm_file(
-            job, commands, meshes, materials, images, &f, false,
-        ));
-    }
-    keys.sort_unstable();
-    keys.dedup();
-    keys
-}
-
-/// Queues the decoding of one vehicle file's meshes (`head`: the player's vehicle, whose repaints
-/// are read as well).
-fn prewarm_file(
-    job: &mut WorldLoadJob,
-    commands: &mut Commands,
-    meshes: &mut Assets<Mesh>,
-    materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    bus_path: &Path,
-    head: bool,
-) -> Vec<opts_bevy::descramble_cache::Key> {
-    let loaded = (|| -> Option<(PathBuf, PathBuf, ModelConfig, Option<_>, BusManifest)> {
-        let manifest = BusManifest::parse_bytes(&std::fs::read(bus_path).ok()?).ok()?;
-        let bus_dir = bus_path.parent()?.to_path_buf();
-        let cfg = job
-            .install
-            .find_in(&bus_dir, manifest.model_cfg.as_deref()?)?;
-        let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).ok()?).ok()?;
-        let bounds = manifest_bounds(&manifest);
-        Some((bus_dir, cfg, model, bounds, manifest))
-    })();
-    let Some((bus_dir, cfg, model, bounds, manifest)) = loaded else {
-        return Vec::new();
-    };
-    let Some(detail) = model.detail_lod() else {
-        return Vec::new();
-    };
-    let lod0 = &detail;
-    job.vehicle_text_defs = model.text_textures.clone();
-    let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
-    let tex_dirs = vec![
-        job.install
-            .find_in(&bus_dir, "texture")
-            .unwrap_or_else(|| bus_dir.join("texture")),
-        model_dir.join("texture"),
-    ];
-    job.cache.take_deferred();
-    let scratch = commands.spawn_empty().id();
-    if head {
-        ensure_repaints(job, bus_path, &manifest);
-    }
-    job.cache.expected_bounds = bounds;
-    job.cache.texture_replacements = repaint_map(job, &model);
-    load_segment_meshes(
-        job, commands, meshes, materials, images, scratch, lod0, &model_dir, &tex_dirs,
-    );
-    job.cache.expected_bounds = None;
-    job.cache.texture_replacements.clear();
-    commands.entity(scratch).despawn();
-    job.cache.take_deferred().into_iter().collect()
-}
-
-/// Number of the given decode keys still being worked on.
-#[must_use]
-pub fn decodes_pending(job: &WorldLoadJob, keys: &[opts_bevy::descramble_cache::Key]) -> usize {
-    job.cache
-        .decode_pool
-        .as_ref()
-        .map_or(0, |p| keys.iter().filter(|k| p.is_pending(**k)).count())
 }
 
 /// Mass of a rail consist for the dynamics (kg): the head unit's mass, at least 20 t (the other
@@ -995,16 +863,12 @@ pub fn load_player_vehicle(
     let root = spawn_vehicle_model(commands, &manifest, &model, root_tf, &[], &[]);
 
     ensure_repaints(job, &bus_path, &manifest);
-    job.cache.expected_bounds = manifest_bounds(&manifest);
     job.cache.texture_replacements = repaint_map(job, &model);
-    job.cache.stats.uv_scope = (0, 0);
-    job.cache.uv_context = format!("vehicle {}", bus_path.display());
     super::trace::begin_frame();
     let (mesh_count, vertex_count, min, max) = load_segment_meshes(
         job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
     );
     let trace_frame = super::trace::end_frame();
-    job.cache.expected_bounds = None;
     job.cache.texture_replacements.clear();
     if mesh_count == 0 {
         return Err("no vehicle meshes could be loaded".into());
@@ -1123,18 +987,6 @@ pub fn load_player_vehicle(
     if activate {
         stats.vehicle_name.clone_from(&vehicle_name);
     }
-    job.cache.uv_context.clear();
-    // Texture coordinates the decoder could not prove (scrambled meshes): named once per vehicle.
-    let (uv_all, uv_bad) = job.cache.stats.uv_scope;
-    if uv_all > 0 && uv_bad * 10 > uv_all {
-        tracing::warn!(
-            vehicle = %vehicle_name,
-            unreliable_percent = (100 * uv_bad / uv_all) as u64,
-            unreliable_vertices = uv_bad,
-            vertices = uv_all,
-            "vehicle: more than 10% of the texture coordinates are unreliable (see docs/src/architecture/uv-decoder.md)"
-        );
-    }
     stats.vehicle_meshes = mesh_count;
     stats.vehicle_vertices = vertex_count;
     stats.scene_vertices += vertex_count;
@@ -1144,8 +996,6 @@ pub fn load_player_vehicle(
         session_id,
         meshes = mesh_count,
         vertices = vertex_count,
-        uv_vertices = uv_all,
-        uv_unreliable = uv_bad,
         "vehicle meshes loaded"
     );
     if opts_bevy::scene_trace::enabled() {

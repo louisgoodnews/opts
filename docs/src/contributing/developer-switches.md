@@ -11,19 +11,12 @@ Environment variables and flags that change behaviour for development, tests and
 | `OPTS_DEV_HOUR` | Hour `0`–`23` the session starts at (with `--autostart`; checks of night lighting). |
 | `OPTS_DEV_CAM_HEIGHT` | Metres: start the free camera this high above the spawn, looking down (overview screenshots). |
 | `OPTS_HIDE_MESH` | Comma-separated substrings; vehicle meshes whose name matches are not spawned (bisecting rendering problems). |
-| `OPTS_NO_DESCRAMBLE` | Disables the scrambled-mesh decoder (meshes without a plain twin are skipped). |
-| `OPTS_DECODE_SCRAMBLED` | Experimental: runs the older heuristic descrambler instead of the confident one (`o3d.md`, Addendum 4). |
 | `OPTS_REDUCED_MOTION` | `1` or `true` forces *reduced motion* (as if the desktop asked for it; the OS hint is otherwise read once from `gsettings` on Linux/GNOME). |
 | `OPTS_REPORTS_DIR` | Where F1 reports and screenshots are saved (default `~/.local/share/opts/reports`). |
-| `XDG_CACHE_HOME` | Base of the descrambler cache (`<base>/opts/descramble`, capped at 256 MiB). |
 
 ## Game flags
 
 `--pedestrians <n>` caps simultaneously walking pedestrians (`0` = none, default 40). `--traffic <n>` caps simultaneously driving AI vehicles (`0` = none, default 30); the target count is also limited by the road length of the loaded tiles (one vehicle per 250 m) and the map's `unsched_trafficdens.txt` curve at the session's time of day. Debug lines of the traffic module: `OPTS_LOG_LEVEL=debug` (lane graph rebuilds, spawns).
-
-## Decoder tuning (read by the game and by `confident_eval`; see `o3d.md`, Addendum 6)
-
-`BP_W`, `BP_T`, `BP_I` (belief propagation weight, truncation, sweeps), `ANNEAL_T0`, `ANNEAL_R` (annealing start temperature, rounds), `OPTS_DESCRAMBLE_RESTARTS` (restarts of the plain solver), `OPTS_CONF_AGREE` (agreement two runs need, default `0.98`). They are applied through `DecodeParams::with_overrides`; every distinct set has its own cache entries.
 
 ## Logging (`opts-logging`)
 

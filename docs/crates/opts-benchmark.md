@@ -27,7 +27,7 @@ opts-benchmark scenery run --omsi-path "<OMSI 2>" --workers 3
 # CPU-only survey: tiers, context classes, unsupported tags (seconds for the whole corpus)
 opts-benchmark scenery preflight --omsi-path "<OMSI 2>" --out /tmp/preflight.jsonl
 
-# A spread sample, keeping every image, with a throw-away decoder cache
+# A spread sample, keeping every image, with an isolated cache directory
 opts-benchmark scenery run --omsi-path "<OMSI 2>" --sample 300 --keep-images all \
     --out /tmp/runs --cache-dir /tmp/cache
 
@@ -37,8 +37,8 @@ opts-benchmark scenery report --run-dir /tmp/runs/<run-id> --compare /tmp/runs/<
 ```
 
 The installation is only read. Workers get their own `XDG_CONFIG_HOME` and `XDG_DATA_HOME`
-below the run directory; the game's catalogue is opened read-only. The decoder cache
-(`$XDG_CACHE_HOME/opts/descramble`) is shared with the game unless `--cache-dir` is given.
+below the run directory; the game's catalogue is opened read-only. `--cache-dir` sets their
+`XDG_CACHE_HOME` (nothing of OPTS is cached there since the decoder cache was retired).
 To run the tool itself with isolated settings, prefix it with
 `XDG_CONFIG_HOME=$(mktemp -d)` and pass `--catalogue ~/.config/opts/catalogue.db`.
 
@@ -70,7 +70,7 @@ To run the tool itself with isolated settings, prefix it with
 | Dependency | Why |
 | :--- | :--- |
 | `opts-game` (feature `scenery`) | the real map loader (`begin_world_load`, `load_next_tile`, `plan_scene_reload`) |
-| `opts-bevy` (feature `scenery`) | mesh parsing, plain twins, decoder cache, the missing-texture sentinel |
+| `opts-bevy` (feature `scenery`) | mesh parsing, exact decoding of keyed meshes, the missing-texture sentinel |
 | `opts-catalogue` (feature `scenery`) | read-only path lookups, as in the game |
 | `bevy` (feature `scenery`) | off-screen rendering and readback |
 | `opts-core` | `.sco`/map parsers and the map writers |
