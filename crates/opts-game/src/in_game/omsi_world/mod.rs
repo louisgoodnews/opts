@@ -10,7 +10,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::MapManifest;
+use opts_core::formats::map::{MapManifest, MapSplineInstance};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use crate::in_game::attachments::SplineIndex;
@@ -202,6 +202,8 @@ pub struct WorldLoadJob {
     sli_cache: HashMap<PathBuf, Option<Arc<SplineProfile>>>,
     /// Map-wide spline lookup for attachments, built on first use.
     spline_index: Option<Arc<SplineIndex>>,
+    /// The splines of every tile read this session, for the terrain carve of its neighbours.
+    tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,

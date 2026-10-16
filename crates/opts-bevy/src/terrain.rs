@@ -156,6 +156,31 @@ pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Opti
     })
 }
 
+/// The footprint of a spline placed on a neighbouring tile, moved into this tile's frame, or
+/// `None` when it does not come within reach of this tile's grid.
+///
+/// `offset` is the neighbour's south-west corner relative to this tile's (`(dx·tile, dy·tile)`).
+/// Splines are stored on the tile they start in but run on across the border; a tile carved only
+/// under its own splines covered the part of a road that lies on the next tile (Neuenbreid: 286 m
+/// of road surface under the neighbour's terrain, 7 m within the splines' own tiles).
+#[must_use]
+pub fn footprint_from_neighbour(road: &RoadFootprint, offset: (f32, f32)) -> Option<RoadFootprint> {
+    let reach = road.half_width + terrain_cell();
+    let size = tile_size();
+    let centreline: Vec<[f32; 3]> = road
+        .centreline
+        .iter()
+        .map(|p| [p[0] + offset.0, p[1] + offset.1, p[2]])
+        .collect();
+    let near = centreline.iter().any(|p| {
+        (-reach..=size + reach).contains(&p[0]) && (-reach..=size + reach).contains(&p[1])
+    });
+    near.then(|| RoadFootprint {
+        centreline,
+        ..road.clone()
+    })
+}
+
 /// Lowers terrain vertices under road surfaces so the terrain never covers them.
 ///
 /// A vertex within `half_width + ½ cell` of a road centreline is capped at the road's lowest
@@ -232,5 +257,35 @@ mod tests {
         assert!((sample_terrain(&t, 7.5, 100.0) - 1.5).abs() < 1e-4);
         let mesh = build_terrain_mesh(&t, (300.0, 0.0), false);
         assert_eq!(mesh.count_vertices(), 61 * 61);
+    }
+
+    #[test]
+    fn a_road_from_the_neighbour_tile_is_carved_too() {
+        set_tile_size(300.0);
+        let dim = 61;
+        let flat = MapTerrain {
+            grid_cells: 60,
+            heights: vec![1.0; dim * dim],
+        };
+        // A road on the western neighbour, running east from x = 280 to x = 340 there: its last
+        // 40 m lie on this tile (x = -20 .. 40 here), 0.5 m below the terrain.
+        let road = RoadFootprint {
+            centreline: (0..=12)
+                .map(|k| [280.0 + 5.0 * k as f32, 150.0, 0.5])
+                .collect(),
+            half_width: 3.0,
+            min_surface_z: 0.0,
+            max_cover: f32::INFINITY,
+        };
+        let here = footprint_from_neighbour(&road, (-300.0, 0.0)).expect("reaches this tile");
+        let carved = carve_terrain_under_roads(&flat, &[here]);
+        assert!(sample_terrain(&carved, 20.0, 150.0) < 0.5);
+        assert!((sample_terrain(&carved, 100.0, 150.0) - 1.0).abs() < 1e-4);
+        // A road that stays on the neighbour does not reach this tile.
+        let far = RoadFootprint {
+            centreline: vec![[100.0, 150.0, 0.5], [200.0, 150.0, 0.5]],
+            ..road
+        };
+        assert!(footprint_from_neighbour(&far, (-300.0, 0.0)).is_none());
     }
 }

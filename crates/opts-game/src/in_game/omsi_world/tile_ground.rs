@@ -5,13 +5,25 @@ use std::path::Path;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{
-    build_terrain_mesh, carve_terrain_under_roads, extrude_spline_segment, road_footprint,
-    terrain_material, ContentLoader, RoadFootprint,
+    build_terrain_mesh, carve_terrain_under_roads, extrude_spline_segment,
+    footprint_from_neighbour, road_footprint, terrain_material, ContentLoader, RoadFootprint,
 };
 use opts_core::formats::map::{MapTerrain, MapTile};
 
 use super::ground::compose_tile_material;
 use super::{WorldLoadJob, WorldStats};
+
+/// The eight tiles around a tile, as key offsets.
+const NEIGHBOURS: [(i32, i32); 8] = [
+    (-1, -1),
+    (0, -1),
+    (1, -1),
+    (-1, 0),
+    (1, 0),
+    (-1, 1),
+    (0, 1),
+    (1, 1),
+];
 
 /// Terrain stage: reads the height grid, carves it under roads and spawns the ground mesh.
 #[allow(clippy::too_many_arguments)]
@@ -75,8 +87,9 @@ pub(super) fn spawn_terrain(
         // Ground painting: per-layer alpha masks of this tile (road markings, pavements, paths).
         let tile_material = ground_materials
             .and_then(|gm| compose_tile_material(job, key, images, materials, meshes, gm));
-        // Terrain under height-profile splines must not cover the road surface.
-        let roads: Vec<RoadFootprint> = tile
+        // Terrain under height-profile splines must not cover the road surface, including the
+        // splines of the neighbouring tiles that run on into this one.
+        let mut roads: Vec<RoadFootprint> = tile
             .splines
             .iter()
             .filter_map(|inst| {
@@ -84,6 +97,23 @@ pub(super) fn spawn_terrain(
                 road_footprint(&profile, inst)
             })
             .collect();
+        let size = opts_bevy::tile_size();
+        for (dx, dy) in NEIGHBOURS {
+            let Some(splines) = job.splines_of((key.0 + dx, key.1 + dy)) else {
+                continue;
+            };
+            let offset = (dx as f32 * size, dy as f32 * size);
+            for inst in splines.iter() {
+                let Some(profile) = job.sli(&inst.sli_file) else {
+                    continue;
+                };
+                if let Some(fp) = road_footprint(&profile, inst)
+                    .and_then(|fp| footprint_from_neighbour(&fp, offset))
+                {
+                    roads.push(fp);
+                }
+            }
+        }
         let carved = carve_terrain_under_roads(t, &roads);
         let mesh = build_terrain_mesh(&carved, origin, tile_material.is_some());
         stats.scene_vertices += mesh.count_vertices();

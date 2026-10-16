@@ -43,6 +43,8 @@ pub fn load_next_tile(
         stats.tiles_missing += 1;
         return;
     };
+    job.tile_splines
+        .insert(key, std::sync::Arc::new(tile.splines.clone()));
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::coords::omsi_to_bevy_pos;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapTile};
+use opts_core::formats::map::{MapManifest, MapSplineInstance, MapTile};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use super::vehicle::FormationCar;
@@ -249,6 +249,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         loading_deps: HashSet::new(),
         vehicle_dirs: Vec::new(),
         spline_index: None,
+        tile_splines: HashMap::new(),
         sco_cache: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
@@ -526,6 +527,18 @@ impl WorldLoadJob {
                 None
             }
         }
+    }
+
+    /// The splines of a tile: kept from its last read, otherwise read now (`None` when the tile
+    /// has no readable file).
+    pub(super) fn splines_of(&mut self, key: (i32, i32)) -> Option<Arc<Vec<MapSplineInstance>>> {
+        if let Some(s) = self.tile_splines.get(&key) {
+            return Some(s.clone());
+        }
+        self.tile_files.get(&key)?;
+        let splines = Arc::new(self.read_tile(key)?.splines);
+        self.tile_splines.insert(key, splines.clone());
+        Some(splines)
     }
 
     /// Where a referenced file really is: at its path, or, failing that, under another folder name.

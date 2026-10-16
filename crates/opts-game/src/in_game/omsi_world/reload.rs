@@ -127,6 +127,7 @@ impl WorldLoadJob {
         self.cache.clear_meshes();
         self.sco_cache.clear();
         self.sli_cache.clear();
+        self.tile_splines.clear();
         self.scenery.clear_templates();
         self.spline_materials.clear();
         self.fonts = opts_bevy::text_texture::FontRegistry::default();
