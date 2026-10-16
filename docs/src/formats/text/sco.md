@@ -143,7 +143,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[friendlyname]` | 1 | Display name in the editor. |
 | `[onlyeditor]` | — | Object is visible in the editor only (helpers, markers). |
 | `[joinable]` | — | Object may be merged with neighbours by the editor. |
-| `[helparrow]` | — | Route helper arrow (editor aid). |
+| `[helparrow]` | — | Route helper (arrows over junctions, `routearrows_busstop.sco` with the next stop's name): OMSI shows it only while its route-arrow help is on. OPTS has no route help yet and does not draw these objects (2026-10-16; before, every stop name and arrow of a map floated in the air). |
 | `[complexity]` | 1 | Draw-priority class, see below. |
 
 `[complexity]` classes (from the files' own comments):

@@ -459,6 +459,14 @@ fn spawn_object_inner(
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
+    // Route helpers (`[helparrow]`: arrows over junctions, the next stop's name over the stop) are
+    // shown by OMSI only while its route-arrow help is on, along the route being driven
+    // (`docs/src/architecture/scenery-benchmark.md`); OPTS has no such help yet, and drawing all of
+    // them put stop names and arrows in the air all over the maps.
+    if sco.is_help_arrow {
+        tracing::debug!(sco = %sco_path.display(), "route helper object not drawn");
+        return;
+    }
     let sco_dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let model_dir = job
         .install
