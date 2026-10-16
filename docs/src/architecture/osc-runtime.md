@@ -407,7 +407,7 @@ Budgets from the strategy (§7), restated as rules:
 - [Research report](../meta/bus-script-integration-2026-10-14.md) — demand numbers and defects
 - [OMSI scripting guide](../formats/text/vehicles/osc-guide.md) — language semantics the execution model follows
 - [Vehicle functions](../simulation/vehicle-functions.md) — the demand this sheet serves
-- [Script VM](script-vm.md), [Callbacks](../formats/text/vehicles/callbacks.md), [Predefined variables](../formats/text/vehicles/predefined-variables.md), [`.hof`](../formats/text/vehicles/hof.md), [Timetables](../formats/text/timetables.md), [Ticket packs](../formats/text/ticketpacks.md), [Money](../formats/text/money.md)
+- [Script VM](script-vm.md), [Callbacks](../formats/text/vehicles/callbacks.md), [Predefined variables](../formats/text/vehicles/predefined-variables.md), [`.hof`](../formats/text/vehicles/hof.md), [Timetables](../formats/map/timetables.md), [Ticket packs](../formats/text/ticketpacks.md), [Money](../formats/text/money.md)
 - [OMSI experiment protocol](omsi-experiment-protocol.md) — E1 to E8
 - Deferred designs: [M-0101](../roadmap/phase-4/M-0101.md) doors, passengers and tickets, [M-0102](../roadmap/phase-4/M-0102.md) sound and force feedback, [M-0103](../roadmap/phase-4/M-0103.md) AI scripts near the player, [Rail vehicles](../simulation/rail-vehicles.md) for train physics
 
