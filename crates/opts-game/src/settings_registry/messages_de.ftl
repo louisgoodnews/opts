@@ -35,6 +35,8 @@ set-opt-look-natural = Natürlich
 set-opt-look-bevy = Bevy-Standard
 set-view-distance = Sichtweite
 set-view-distance-desc = Wie weit Szenerie und Kacheln gezeichnet werden.
+set-water = Wasser
+set-water-desc = Zeichnet Flüsse, Seen und das Meer der Karte. Ausschalten, um den Grund darunter zu sehen.
 
 set-audio-master = Gesamtlautstärke
 set-audio-master-desc = Lautstärke des gesamten Simulators.

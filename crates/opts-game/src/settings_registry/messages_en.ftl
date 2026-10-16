@@ -35,6 +35,8 @@ set-opt-look-natural = Natural
 set-opt-look-bevy = Bevy default
 set-view-distance = View distance
 set-view-distance-desc = How far scenery and tiles are drawn.
+set-water = Water
+set-water-desc = Draws rivers, lakes and the sea of the map. Turn it off to see the ground below.
 
 set-audio-master = Master volume
 set-audio-master-desc = Overall volume of the simulator.

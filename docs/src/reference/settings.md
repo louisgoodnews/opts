@@ -14,6 +14,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `texture_filtering` | Texture filtering | `off`, `4`, `8`, `16` | `16` | at once | available | Sharper textures at an angle, small cost. |
 | `look` | Look | `vivid`, `natural`, `bevy` | `vivid` | at once | available | Colour and contrast of the 3D world. |
 | `graphics.view_distance` | View distance | whole number 1 to 8 | `4` | at once | not available yet (M-0029) | How far scenery and tiles are drawn. |
+| `graphics.water` | Water | on / off | `true` | after restart | available | Draws rivers, lakes and the sea of the map. Turn it off to see the ground below. |
 
 ## Audio
 

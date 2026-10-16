@@ -20,7 +20,7 @@ A map is a grid of **tiles**; [`global.cfg`](global-cfg.md) lists them (`[map] x
 | :--- | ---: | :--- | :--- |
 | `tile_<x>_<y>.map` | 13,938 | text | Placed objects, splines, traffic rules |
 | `tile_<x>_<y>.map.terrain` | 12,273 | binary, **always 14,888 bytes** | Height grid |
-| `tile_<x>_<y>.map.water` | 1,485 | binary, **always 20 bytes** | Water level |
+| `tile_<x>_<y>.map.water` | 1,906 (40 maps) | binary, **always 20 bytes** | Water level at the four tile corners |
 | `tile_<x>_<y>.map.LM.bmp` | 10,546 | BMP, **always 256×256, 24-bit** | Terrain light map |
 | `tile_<x>_<y>.map.prt` | 13,341 (3,793 empty) | text | Used-object list with file stamps |
 
@@ -194,8 +194,12 @@ All **12,273** files are exactly **14,888 bytes** [C]:
 
 | Offset | Type | Meaning |
 | ---: | :--- | :--- |
-| 0 | `u32` | `1` in all 1,485 files. ❓ version or count |
-| 4 | `f32[4]` | Four water-level values; usually all equal (`−5.0` ×511, `−10.0` ×124, `−2.0` ×29, `0.0` ×26, `30.0`). ❓ per corner or per quadrant |
+| 0 | `u32` | `1` in all 1,906 files. ❓ version |
+| 4 | `f32[4]` | Water level in metres at the tile's corners, index `x + 2·y` (x east, y north): south-west, south-east, north-west, north-east. [C] |
+
+**Corner order and continuity (measured 2026-10-16, 1,906 files in 40 maps).** 1,294 files hold four equal values (`−5.0` ×559, `−10.0` ×124, `−2.0` ×95, `−1.0` ×69, `−0.5` ×40, `0.0` ×31, `8.0` ×30, …: flat lakes and seas; negative levels are mostly "no water here", the terrain being above), 315 / 183 / 114 files hold two / three / four distinct values (river reaches that slope, e.g. `27.903, 31, 31, 31`). Between east neighbours of one map, corner 1 of the western tile equals corner 0 of the eastern in 355 of 399 pairs with varying levels, and corner 3 equals corner 2 in 360; between north neighbours corner 2 of the southern tile equals corner 0 of the northern in 390 of 421, and corner 3 equals corner 1 in 392. So the four values are the levels **at the corners**, shared with the neighbours, and the surface is continuous across tiles. Inside a tile the surface is taken as the bilinear blend of the corners (flat for the 68 % of files with equal corners; the interpolation of sloping ones is [H], not distinguishable from two planar triangles on the corpus).
+
+**Where water shows.** Of 1,899 tiles with water and terrain files, 1,575 are partly and 160 fully submerged, 164 dry (level below the whole terrain). The `.map` marker `[water]` accompanies 1,806 of the 1,906 files, 93 files have no marker (scattered over 17 maps, e.g. 23 of 109 on `Lemmental_Neuenbreid`), one marker has no file. Terrain, in contrast, has its marker for 14,205 of 14,208 files, so the marker is a switch, not a by-product: water files without it are read as water the editor switched off (the tile file is what the editor saves; ❓ Q-M07 needs an in-engine check). OPTS draws water only for tiles with the marker.
 
 ### `.map.LM.bmp` — light map
 
@@ -263,7 +267,7 @@ Reading `.terrain` (descriptive): read `u32 n = 60`; read `(n+1)²` `f32` height
 | Q-M04 | `[splineattachement]`, `[splineattachement_repeater]`, `[attachobj]`, `[varparent]` full layouts. | 🟡 Medium | `[attachobj]` layout resolved 2026-10-16 (see [Other blocks](#other-blocks)); the always-`0` fifth field remains ❓. |
 | Q-M05 | What differs in versions 11–13, and does `[version]` with two lines (655 files) carry extra data? | 🟡 Medium |
 | Q-M06 | `[rule]` index semantics and the `flag` field; `[relabel]`/`[typ]`/`[delete]` target semantics. | 🟡 Medium |
-| Q-M07 | `.water` header `1` and the four values; `.LM.bmp` orientation. | 🟡 Medium |
+| Q-M07 | `.water` header `1`; whether a `.water` file without the `[water]` marker is drawn, and the interpolation inside the tile (bilinear vs two triangles) need an in-engine check; `.LM.bmp` orientation. The four values are resolved: corner levels (see `.map.water`). | 🟡 Medium |
 | Q-M08 | Purpose of `.prt` (cache?) and `.surf`; are they safe to ignore? | 🟢 Low |
 | Q-M09 | Why only 11,471 of 16,639 tiles listed in `global.cfg` files exist, and whether OMSI tolerates missing tiles. | 🟡 Medium |
 | Q-M10 | A `[spline]` is stored on the tile it starts in but may run on across the tile border: whose terrain must give way under it? | 🟢 Low | ✅ **Resolved for OPTS (2026-10-16):** both. Carving each tile only under its own splines left road surface under the next tile's terrain (Neuenbreid: 286 m of 51 km of road on neighbour tiles covered, against 7 m of 482 km on the splines' own tiles; `spline_terrain_cover` example). Each tile is now also carved under the footprints of its eight neighbours' splines (`opts_bevy::footprint_from_neighbour`); afterwards 0 m. Registry: MI-0043. |

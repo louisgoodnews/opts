@@ -168,6 +168,18 @@ fn graphics() -> Vec<D> {
         .keywords(&["draw distance", "lod"])
         .not_yet(&SETTINGS_VIEW_DISTANCE),
         D::new(
+            "graphics.water",
+            K::Bool,
+            "true",
+            C::Graphics,
+            70,
+            "set-water",
+            "set-water-desc",
+        )
+        .keywords(&["river", "lake", "sea", "sea level"])
+        .apply(Apply::OnRestart)
+        .since("0.3"),
+        D::new(
             "audio.master",
             K::Int {
                 min: 0,

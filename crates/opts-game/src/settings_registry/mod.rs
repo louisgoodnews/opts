@@ -319,6 +319,7 @@ impl Plugin for SettingsRegistryPlugin {
                     display::apply_display_changes,
                     live::apply_live_changes,
                     live::sync_developer_panel,
+                    live::sync_water,
                 ),
             )
             .add_systems(

@@ -50,6 +50,7 @@ pub mod vehicle_remote;
 pub mod vehicle_script;
 pub mod vehicle_sim;
 pub mod vehicle_triggers;
+pub mod water;
 
 pub use ai_variables::{AiVariables, VariableSource};
 pub use articulation::{
@@ -135,6 +136,7 @@ pub use vehicle_triggers::{
     dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, MouseTrigger,
     ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
 };
+pub use water::{build_water_mesh, water_material};
 
 /// System set of the rail-bound player's track step: runs after the road physics and before the
 /// articulation of the following units.
