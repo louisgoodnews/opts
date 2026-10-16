@@ -169,7 +169,7 @@ pub struct MapSplineAttachment {
 /// Object placed on an attachment point of another object (`[attachObj]`): line modules and
 /// timetables on bus-stop signs, signal heads on their arms, plates on sign poles. 62,609 records
 /// in the installed corpus; every parent lies on the same tile (an `[object]`, another
-/// `[attachObj]` or a spline attachment). Layout ([C] over the corpus): `flag`, `.sco`, ID, parent
+/// `[attachObj]` or a spline attachment). Layout (counted over the corpus): `flag`, `.sco`, ID, parent
 /// ID, a field that is always `0`, the parent's attachment point index (0-based, file order of its
 /// `[new_attachment]` blocks), heading, then in version 14 pitch and roll, then the string
 /// variables as in `[object]` (count, strings).
