@@ -1,6 +1,6 @@
 //! Per-map census of scenery objects: how many placed instances end up with drawable geometry
 //! and why the rest does not (missing `.sco`, missing mesh, unparseable, unreadable layout,
-//! decoder rejection, low agreement, extent gates).
+//! extent gates). Keyed meshes are decoded exactly (`ok:exact`).
 //!
 //! Usage: `map_object_census <omsi root> <map folder name> [--list]`
 //!
@@ -12,7 +12,6 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use opts_core::formats::map::MapTile;
-use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::{parse, VertexLayout};
 use opts_core::formats::scenery::sco::SceneryObject;
 use opts_core::formats::x::parse_x;
@@ -132,8 +131,7 @@ fn classify(path: &Path) -> String {
     if o.vertices.is_empty() || o.indices.is_empty() {
         return "none:empty-mesh".into();
     }
-    let keyed = o.encryption_key.is_some();
-    if keyed {
+    if o.encryption_key.is_some() {
         let mut exact = o.clone();
         if opts_core::formats::o3d::exact::decode(&mut exact).is_some() {
             ORIENT.with(|m| {
@@ -147,33 +145,12 @@ fn classify(path: &Path) -> String {
             };
         }
     }
-    if !keyed {
-        ORIENT.with(|m| m.borrow_mut().insert(path.to_path_buf(), orientation(&o)));
-        let ext = extent(&o);
-        return if ext > 3000.0 {
-            "fail:plain-extent>3000".into()
-        } else {
-            "ok:plain".into()
-        };
-    }
-    let mut d = o.clone();
-    let r = decode_confident(&mut d);
-    if !r.accepted {
-        return format!("fail:keyed-rejected({})", o.vertex_layout() as u8 as char);
-    }
-    ORIENT.with(|m| m.borrow_mut().insert(path.to_path_buf(), orientation(&d)));
-    let ext = extent(&d);
-    if ext > 400.0 {
-        return "fail:decoded-extent>400".into();
-    }
-    let bad = r.quality.len().max(1);
-    let _ = bad;
-    if r.agreement < 0.98 {
-        format!("risky:decoded-agree<0.98(layout {:?})", o.vertex_layout())
-    } else if o.vertex_layout() == VertexLayout::Unreadable {
-        "ok:decoded(unreadable-layout)".into()
+    ORIENT.with(|m| m.borrow_mut().insert(path.to_path_buf(), orientation(&o)));
+    let ext = extent(&o);
+    if ext > 3000.0 {
+        "fail:plain-extent>3000".into()
     } else {
-        "ok:decoded".into()
+        "ok:plain".into()
     }
 }
 
@@ -258,7 +235,6 @@ fn main() {
             for v in &verdicts {
                 let rank = |s: &str| match s.split(':').next() {
                     Some("fail") => 3,
-                    Some("risky") => 2,
                     Some("none") => 1,
                     _ => 0,
                 };
@@ -280,7 +256,7 @@ fn main() {
     if let Ok(out) = std::env::var("FAIL_LIST") {
         let mut s = String::new();
         for (p, v) in &cache {
-            if v.starts_with("fail:keyed") || v.starts_with("risky") {
+            if v.starts_with("fail:") {
                 s.push_str(&format!("{}\t{v}\n", p.display()));
             }
         }

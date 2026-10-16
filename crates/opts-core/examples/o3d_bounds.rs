@@ -1,7 +1,7 @@
-//! Prints the bounding box of the `.o3d` files read from stdin, after the confident decoder.
+//! Prints the bounding box of the `.o3d` files read from stdin, after exact decoding.
 use std::io::BufRead;
 
-use opts_core::formats::o3d::{descramble::decode_confident, parse};
+use opts_core::formats::o3d::{exact, parse};
 
 fn main() {
     for p in std::io::stdin().lock().lines().map_while(Result::ok) {
@@ -12,8 +12,7 @@ fn main() {
         let Ok(mut o) = parse(&b) else { continue };
         let scrambled = o.encryption_key.is_some();
         let verdict = if scrambled {
-            let r = decode_confident(&mut o);
-            if r.accepted {
+            if exact::decode(&mut o).is_some() {
                 "decoded"
             } else {
                 "SKIPPED"

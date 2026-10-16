@@ -485,17 +485,6 @@ fn content() -> Vec<D> {
         .keywords(&["catalogue", "discovery", "refresh", "scan"])
         .since("0.2"),
         D::new(
-            "content.clear_cache",
-            K::Action,
-            "",
-            C::Content,
-            40,
-            "set-clear-cache",
-            "set-clear-cache-desc",
-        )
-        .keywords(&["textures", "decoder", "disk", "space"])
-        .since("0.2"),
-        D::new(
             "recent_map_path",
             K::Path,
             "",

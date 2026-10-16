@@ -1,5 +1,5 @@
-//! The actions of the Content and Advanced pages: choose the OMSI folder, scan now, clear the
-//! texture cache.
+//! The actions of the Content and Advanced pages: choose the OMSI folder, scan now, detect the
+//! hardware again.
 
 use bevy::prelude::*;
 use opts_gui::components::toast::ToastBuilder;
@@ -35,11 +35,6 @@ pub fn run_actions(
                 }
                 None => toast(&mut commands, &loc, "settings-toast-no-omsi"),
             },
-            "content.clear_cache" => {
-                let removed = opts_bevy::descramble_cache::prune(0);
-                tracing::info!(removed, "texture cache cleared from the settings page");
-                toast(&mut commands, &loc, "settings-toast-cache-cleared");
-            }
             // Detect again and keep the result in the local profile file the user can delete.
             "advanced.hardware_redetect" => {
                 if let Some(h) = hardware.as_mut() {

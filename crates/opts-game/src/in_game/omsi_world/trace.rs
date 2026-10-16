@@ -119,7 +119,6 @@ pub(super) struct Counters {
     failed: usize,
     no_geometry: usize,
     protected: usize,
-    deferred: usize,
     hidden: usize,
 }
 
@@ -131,7 +130,6 @@ impl Counters {
             failed: stats.objects_failed,
             no_geometry: stats.objects_no_geometry,
             protected: stats.objects_protected,
-            deferred: job.cache.stats.deferred_meshes,
             hidden: job.cache.stats.hidden_parts,
         }
     }
@@ -173,10 +171,8 @@ pub(super) fn object(
         "ok"
     } else if after.no_geometry > before.no_geometry || after.hidden > before.hidden {
         "no-geometry"
-    } else if after.deferred > before.deferred {
-        "pending"
     } else if after.protected > before.protected {
-        warnings.push("all meshes are scrambled and could not be decoded".into());
+        warnings.push("no mesh has usable geometry".into());
         "failed"
     } else if after.failed > before.failed {
         "failed"

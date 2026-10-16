@@ -47,8 +47,6 @@ pub mod load {
     pub const LOAD_STAGE_LIGHT: &str = "load-stage-light";
     /// `load-stage-vehicle`.
     pub const LOAD_STAGE_VEHICLE: &str = "load-stage-vehicle";
-    /// `load-stage-vehicle-meshes`.
-    pub const LOAD_STAGE_VEHICLE_MESHES: &str = "load-stage-vehicle-meshes";
     /// `load-stage-start`.
     pub const LOAD_STAGE_START: &str = "load-stage-start";
     /// `load-stage-ready`.
@@ -150,7 +148,6 @@ pub const ALL: &[&str] = &[
     load::LOAD_STAGE_MAP,
     load::LOAD_STAGE_LIGHT,
     load::LOAD_STAGE_VEHICLE,
-    load::LOAD_STAGE_VEHICLE_MESHES,
     load::LOAD_STAGE_START,
     load::LOAD_STAGE_READY,
     load::LOAD_STAGE_FAILED,

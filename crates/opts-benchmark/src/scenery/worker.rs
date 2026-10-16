@@ -2,8 +2,7 @@
 //!
 //! It loads the generated map once with `begin_world_load`, then for every object rewrites the
 //! tile, rebuilds it through the loader (`plan_scene_reload` + `load_next_tile`, no file watcher),
-//! waits until background mesh decoding has finished and the tile is stable, and captures the
-//! views. The per-object analysis is in [`super::object`].
+//! waits until the tile is stable, and captures the views. The per-object analysis is in [`super::object`].
 
 use std::io::{BufRead, Write as _};
 use std::path::PathBuf;
@@ -207,8 +206,8 @@ impl Harness {
         Ok(())
     }
 
-    /// Loads queued tiles and waits for background decoding until the tile is stable for two
-    /// consecutive checks. `Ok(false)` when `deadline` passes first.
+    /// Loads queued tiles until the tile is stable for two consecutive checks. `Ok(false)` when
+    /// `deadline` passes first.
     ///
     /// # Errors
     /// The loading system cannot run.
@@ -224,10 +223,7 @@ impl Harness {
             let done = world
                 .get_resource::<WorldLoadJob>()
                 .is_some_and(WorldLoadJob::tiles_done);
-            let decoding = world
-                .get_resource::<WorldStats>()
-                .map_or(0, |s| s.meshes_decoding);
-            if done && decoding == 0 {
+            if done {
                 stable += 1;
                 if stable >= 2 {
                     self.update();
@@ -235,9 +231,6 @@ impl Harness {
                 }
             } else {
                 stable = 0;
-                if decoding > 0 {
-                    std::thread::sleep(Duration::from_millis(5));
-                }
             }
             self.update();
         }
@@ -295,7 +288,7 @@ impl Harness {
     }
 }
 
-/// Rebuilds tiles whose meshes finished decoding and loads every queued tile.
+/// Loads every queued tile.
 fn drive_tiles(
     mut job: ResMut<WorldLoadJob>,
     mut stats: ResMut<WorldStats>,
@@ -304,7 +297,6 @@ fn drive_tiles(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    job.rebuild_decoded_tiles(&mut commands, &mut stats);
     while !job.tiles_done() {
         load_next_tile(
             &mut job,

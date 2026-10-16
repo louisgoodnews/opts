@@ -46,7 +46,6 @@ pub struct SimulationLoadState {
     /// Map tiles asked for.
     pub tiles_total: usize,
     /// Protected vehicle models still being decoded.
-    pub meshes_left: usize,
     /// The catalogue is still being built (first start); nothing can be resolved yet.
     pub waiting_for_catalogue: bool,
     /// Whether all simulation assets and entities have been successfully synthesized.
@@ -57,9 +56,6 @@ pub struct SimulationLoadState {
     pub world_spawned: bool,
     pub atmosphere_spawned: bool,
     pub vehicle_spawned: bool,
-    /// Scrambled vehicle meshes queued for background decoding; the vehicle waits for them.
-    pub vehicle_prewarmed: bool,
-    pub vehicle_wait: Vec<opts_bevy::descramble_cache::Key>,
     pub camera_spawned: bool,
     pub hud_spawned: bool,
 }
@@ -72,15 +68,12 @@ impl Default for SimulationLoadState {
             stage_elapsed: 0.0,
             tiles_done: 0,
             tiles_total: 0,
-            meshes_left: 0,
             waiting_for_catalogue: false,
             is_complete: false,
             auto_launch_delay: 0.6,
             world_spawned: false,
             atmosphere_spawned: false,
             vehicle_spawned: false,
-            vehicle_prewarmed: false,
-            vehicle_wait: Vec::new(),
             camera_spawned: false,
             hud_spawned: false,
         }

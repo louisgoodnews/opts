@@ -384,7 +384,6 @@ mod finite_tests {
             materials: Vec::new(),
             transform: None,
             encryption_key: None,
-            descrambled: false,
             exact_decoded: false,
             unknown_chunks: Vec::new(),
         };
@@ -601,7 +600,6 @@ pub fn parse_mesh_file(path: &std::path::Path, bytes: &[u8]) -> Result<Vec<O3d>,
                 transform,
                 unknown_chunks: Vec::new(),
                 encryption_key: None,
-                descrambled: false,
                 exact_decoded: false,
             }
         })

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Draft - proposal, nothing implemented |
+| **Status** | ⛔ Obsolete (2026-10-16): the scrambler's generator is known and texture coordinates are decoded exactly ([o3d.md Addendum 14](../formats/binary/o3d.md#-addendum-14--2026-10-16-the-scramblers-generator-exact-decoding)); nothing of this proposal is needed. Kept as a record. |
 | **Milestone** | [M-0104](../roadmap/phase-10/M-0104.md) |
 | **Extends** | [uv-decoder.md](uv-decoder.md) (pipeline, `UvQuality`) |
 | **Motivation** | [MAN NL/NG reinvestigation 2026-10-14](../meta/man-nlng-reinvestigation-2026-10-14.md) |

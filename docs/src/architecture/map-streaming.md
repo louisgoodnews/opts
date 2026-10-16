@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Status** | 🟡 Describes the code as it runs on `master` (2026-10-13); the planned `TileGridManager` / `AsyncComputeTaskPool` design of [M-0024](../roadmap/phase-4/M-0024.md) does **not** exist |
 | **Last Updated** | 2026-10-16 |
-| **Relevant Crates** | `opts-game` (`in_game/omsi_world/{job,tile,tile_ground,reload}.rs`, `loading_pipeline.rs`), `opts-bevy` (`terrain.rs`, `descramble_cache.rs`, `model.rs`), `opts-core` (`formats::map`) |
+| **Relevant Crates** | `opts-game` (`in_game/omsi_world/{job,tile,tile_ground,reload}.rs`, `loading_pipeline.rs`), `opts-bevy` (`terrain.rs`, `model.rs`), `opts-core` (`formats::map`) |
 | **Traces to** | critical review 2026-10-11 F-012 (code ran without a specification), M-0024 Phase A; used by [M-0080](../roadmap/phase-4/M-0080.md) (tile loading controls) |
 
 This page specifies what the streamer **does today**, derived from the code, so that further world-loading work (tile loading controls, async loading, extraction into `opts-bevy`) starts from facts. Facts carry the function that proves them; guesses are marked ❓ and collected in the [open questions](#-open-questions).
@@ -36,7 +36,6 @@ The M-0024 plan names five states (`Pending`, `Loading`, `Active`, `Culled`, `Ev
 | **Queued** | key in `WorldLoadJob::queue` | at most one key during streaming (see 4) |
 | **Loading** | inside `load_next_tile` | synchronous, one tile per call, one call per frame |
 | **Resident** | key in `resident` | root entity `TileRoot(key)` / `Name "Tile_x_y"` with all tile entities as children |
-| **Waiting for decode** | key in `waiting_decode` | resident but incomplete: scrambled meshes are still decoding in the background (see 7) |
 | **Evicted** | removed from `resident`, root despawned | caches stay (see 6) |
 
 There is no *culled* state: a resident tile is always rendered by Bevy's own frustum culling; the streamer never hides tiles.
@@ -53,11 +52,10 @@ There is no *culled* state: a resident tile is always rendered by Bevy's own fru
 
 Runs every frame once the simulation load is complete (`SimulationLoadState::is_complete`) and a `WorldLoadJob` exists.
 
-1. `rebuild_decoded_tiles` (see 7).
-2. Observer position gives the centre tile; `dist(k)` is the **Chebyshev** distance of tile `k` from it.
-3. **Eviction:** every resident tile with `dist > radius + 1` is removed: root entity despawned (children recursively), then the per-tile registries are told (see 5). The extra `+ 1` is the hysteresis against thrashing at tile borders.
-4. **Demand:** only when `queue` is empty, the tiles within `radius` that are neither resident nor missing are collected and **sorted by distance**; the **nearest one** is queued.
-5. **Load:** if the queue is not empty, `load_next_tile` runs for the front key, **synchronously on the main thread**.
+1. Observer position gives the centre tile; `dist(k)` is the **Chebyshev** distance of tile `k` from it.
+2. **Eviction:** every resident tile with `dist > radius + 1` is removed: root entity despawned (children recursively), then the per-tile registries are told (see 5). The extra `+ 1` is the hysteresis against thrashing at tile borders.
+3. **Demand:** only when `queue` is empty, the tiles within `radius` that are neither resident nor missing are collected and **sorted by distance**; the **nearest one** is queued.
+4. **Load:** if the queue is not empty, `load_next_tile` runs for the front key, **synchronously on the main thread**.
 
 Consequences (all by construction):
 - `stream_radius` is **1** (`begin_world_load`); the 3 × 3 area (up to 9 tiles, fewer at map edges and gaps) is the working set; nothing changes it at run time (no setting, no CLI flag yet: M-0080 R-20/R-21).
@@ -78,7 +76,6 @@ Consequences (all by construction):
 | 8 | scenery index (`job.scenery.index_tile`) | scripted scenery runtime ([scenery-runtime.md](scenery-runtime.md)) |
 | 9 | every object (`spawn_object`): `.sco` lookup (cached in `sco_cache`), trees as billboards, parking-bay markers replaced by a car from `parklist_p.txt` (hash of the bay id: stable), editor-only objects skipped, `[model]` vehicle-style objects through the vehicle loader, otherwise meshes via `ContentLoader::o3d_parts`; collision registered; scripts and text textures bound | scenery entities |
 | 10 | root entity `TileRoot(key)` adopts all children; `resident.insert`; dependency set stored | the tile is resident |
-| 11 | if scrambled meshes are still decoding, the tile is parked in `waiting_decode` | see 7 |
 
 Chrono overlays (`Chrono/<…>/` delta tiles) and `.map.water` are **not read** by the streamer (water: [M-0067](../roadmap/phase-10/M-0067.md); overlays: ❓ Q-MS-02).
 
@@ -89,22 +86,22 @@ Eviction despawns the tile root and calls `unregister_tile` / `unregister` of: p
 - `ContentCache::parts` (`(path, model key) -> Vec<ModelPart>`), which holds the mesh, material and image **handles** of every object loaded so far, and the texture cache.
 So Bevy never frees the GPU assets of an evicted tile: **memory only grows during a session** (❓ Q-MS-03: measure on a long drive). The upside is the stated one: revisiting a tile re-parses its `.map` and re-spawns entities but needs no mesh or texture work.
 
-## 7. Background decoding and tile rebuild
+## 7. Keyed meshes
 
-Scrambled (keyed) meshes are decoded by `opts_bevy::descramble_cache::DecodePool` on worker threads (up to 4, leaving cores for the renderer; results in the on-disk cache, [uv-decoder.md](uv-decoder.md)). A mesh whose result is not ready is skipped for now and its key is queued as *deferred*; at the end of `load_next_tile` the tile registers in `waiting_decode`. Every frame `rebuild_decoded_tiles` drains the finished keys; when a tile has nothing left to wait for, its root is **despawned, the key goes to the front of the queue and the tile is built again** (`tile rebuilt with decoded meshes`). Counters: `meshes_decoding`, `meshes_decoded`, `meshes_twin` in `WorldStats`.
+Keyed (scrambled) meshes are decoded exactly while the tile is built (`o3d::exact::decode` in `ContentLoader::o3d_parts`, [o3d.md Addendum 14](../formats/binary/o3d.md#-addendum-14--2026-10-16-the-scramblers-generator-exact-decoding)): a few microseconds per mesh, on the loading thread, with nothing cached on disk. There is no deferred state and no tile rebuild any more; the background decode pool, its on-disk cache and the plain-twin substitution of the heuristic decoder were retired on 2026-10-16 (Addendum 15). Counter: `meshes_exact` in `WorldStats`.
 
 ## 8. Hot reload
 
 `WorldLoadJob::plan_reload` (`reload.rs`) maps a changed file to the tiles that were built from it (`tile_deps`), despawns those roots and puts the keys at the front of `queue`; the streamer rebuilds them in the following frames. Textures are overwritten in place. See [hot-reload.md](hot-reload.md).
 
-## 9. Measured example (Aachen Linie 33, 2026-10-13, cold decode cache, release build)
+## 9. Measured example (Aachen Linie 33, 2026-10-13, release build, heuristic decoder with a cold cache at the time)
 
 | Fact | Value |
 | :--- | :--- |
 | Tile size | 386.66 m (80 sampled tiles) |
 | Start tile | (1093, 10763); 3 × 3 neighbourhood: **5 tiles** exist |
 | Objects / splines per tile | (1093,10762) 62/4; (1094,10762) 1,036/127; (1093,10763) 321/34; (1094,10763) 327/36; (1093,10764) 24/2 |
-| Parse times | the five tiles finished within 1.6 s of the first `tile parsed` line (about 0.1-0.75 s each, dominated by object and texture loading and decode deferral on a cold cache) |
+| Parse times | the five tiles finished within 1.6 s of the first `tile parsed` line (about 0.1-0.75 s each, dominated by object and texture loading and, at the time, decode deferral on a cold cache; keyed meshes decode exactly since 2026-10-16) |
 
 ## 10. Limits of the design (what M-0024 phase B/C and M-0080 build on)
 

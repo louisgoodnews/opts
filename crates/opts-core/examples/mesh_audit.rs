@@ -4,11 +4,11 @@
 //! on screen: parse errors, non-finite values, index / material-index range, degenerate and
 //! huge triangles, exploded (outlier) vertices, bounding-box extent, winding disagreement with the
 //! stored normals, texture-coordinate chaos, unresolved texture names and the scrambling state
-//! (keyed file, decoded or skipped). Output is one TSV line per mesh: `path<TAB>codes<TAB>metrics`.
+//! (keyed file, decoded). Output is one TSV line per mesh: `path<TAB>codes<TAB>metrics`.
 //!
 //! Usage: `mesh_audit <omsi root> [--decode] [--threads N] [--only SUBSTR]`
-//! `--decode` additionally runs the confident decoder on every keyed mesh and audits the decoded
-//! result (slow: ~135 ms per mesh, spread over the threads).
+//! `--decode` additionally decodes every keyed mesh exactly (`o3d::exact`) and audits the decoded
+//! result with the `dec_` prefix.
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -16,7 +16,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
 use opts_core::formats::o3d::audit::check;
-use opts_core::formats::o3d::descramble::decode_confident;
 use opts_core::formats::o3d::{parse, O3d, VertexLayout};
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>, names: &mut HashSet<String>) {
@@ -77,7 +76,6 @@ fn x_submeshes(bytes: &[u8]) -> Result<Vec<O3d>, String> {
             transform: None,
             unknown_chunks: Vec::new(),
             encryption_key: None,
-            descrambled: false,
             exact_decoded: false,
         }
     }
@@ -175,30 +173,9 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
     }
     if decode && keyed {
         let mut d = o.clone();
-        let t0 = std::time::Instant::now();
-        let r = decode_confident(&mut d);
-        let ms = t0.elapsed().as_millis();
-        metrics.push(format!(
-            "dec_acc={} agree={:.2} dropped={} uv={}/{}/{} dec_ms={}",
-            r.accepted,
-            r.agreement,
-            r.dropped_faces,
-            r.uv.clean,
-            r.uv.corrected,
-            r.uv.unresolved,
-            ms
-        ));
-        if r.accepted {
+        if opts_core::formats::o3d::exact::decode(&mut d).is_some() {
             codes.push("DECODED".into());
-            if r.dropped_faces > 0 {
-                codes.push("DECODED_DROPPED_FACES".into());
-            }
-            if r.uv.unresolved * 10 > d.vertices.len() {
-                codes.push("DECODED_UV_UNRESOLVED".into());
-            }
             check(&d, "dec_", &mut codes, &mut metrics);
-        } else {
-            codes.push("DECODE_REJECTED".into());
         }
     }
 

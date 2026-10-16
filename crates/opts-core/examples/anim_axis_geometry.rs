@@ -90,14 +90,11 @@ fn main() {
         );
         let Ok(b) = std::fs::read(f[0]) else { continue };
         let Ok(mut o) = parse(&b) else { continue };
-        if std::env::var_os("AXIS_SKIP_SCRAMBLED").is_some()
-            && o.encryption_key.is_some()
-            && !o.descrambled
-        {
+        if std::env::var_os("AXIS_SKIP_SCRAMBLED").is_some() && o.encryption_key.is_some() {
             continue;
         }
-        if o.encryption_key.is_some() && !o.descrambled {
-            opts_core::formats::o3d::descramble::descramble(&mut o);
+        if o.encryption_key.is_some() {
+            opts_core::formats::o3d::exact::decode(&mut o);
         }
         let Some(m) = o.transform else { continue };
         if o.vertices.len() < 12 {

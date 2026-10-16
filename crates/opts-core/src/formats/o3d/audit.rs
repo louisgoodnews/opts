@@ -19,7 +19,6 @@ fn percentile(v: &mut [f32], q: f32) -> f32 {
 /// and huge triangles, winding disagreement with the stored normals and texture-coordinate chaos.
 ///
 /// Each finding appends a code (prefixed with `tag`) to `codes` and the measurement to `metrics`.
-/// The winding check is skipped when `o.descrambled` (decoded meshes carry no trustworthy normals).
 pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<String>) {
     let nv = o.vertices.len();
     let nt = o.indices.len();
@@ -146,7 +145,7 @@ pub fn check(o: &O3d, tag: &str, codes: &mut Vec<String>, metrics: &mut Vec<Stri
             codes.push(format!("{tag}HUGE_TRIS"));
         }
     }
-    if agree_n >= 8 && !o.descrambled {
+    if agree_n >= 8 {
         let f = flip as f32 / agree_n as f32;
         metrics.push(format!("{tag}flip={f:.2}"));
         if (0.25..0.75).contains(&f) {

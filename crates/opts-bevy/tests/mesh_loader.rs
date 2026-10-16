@@ -46,7 +46,6 @@ fn test_o3d_coordinate_conversion_and_winding() {
         transform: None,
         unknown_chunks: Vec::new(),
         encryption_key: None,
-        descrambled: false,
         exact_decoded: false,
     };
 
@@ -123,7 +122,6 @@ fn test_o3d_vertex_colors() {
         transform: None,
         unknown_chunks: Vec::new(),
         encryption_key: None,
-        descrambled: false,
         exact_decoded: false,
     };
 

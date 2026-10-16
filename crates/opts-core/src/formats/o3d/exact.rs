@@ -13,6 +13,13 @@
 //!
 //! Files with key `0` start at `s₀ = 0` and keep no memory: `sᵢ₊₁` is the data term alone.
 //!
+//! The jitter is `fl32(c²) / 10000` computed in float32 (`c = q mod 100`, or `2q mod 100` for v)
+//! and was added in float32: `stored = fl32(u + j)`. Measured on the twins, that addition
+//! reproduces the stored bits of 99.3 % of the jittered coordinates (the rest are plain copies
+//! with other texture coordinates); `(c/100)²` reproduces only 79 %. The addition is not
+//! injective, so `stored − j` is the original for 87 % of the jittered coordinates and one ulp off
+//! for the rest; no rule picks the right neighbour better than the plain difference.
+//!
 //! Verified on the install's plain/keyed twins: positions exact for all 5,460 meshes with a key
 //! and 934 of 957 with key `0` (`exact_twin_eval`).
 
@@ -85,13 +92,9 @@ pub fn decision(q: i64) -> VertexDecision {
         [1, 0, 2]
     };
     let flips = [q % 4 == 0, q % 6 == 0, q % 7 == 0];
-    let ju = if q % 5 == 0 {
-        ((q % 100) as f32 / 100.0).powi(2)
-    } else {
-        0.0
-    };
+    let ju = if q % 5 == 0 { jitter(q % 100) } else { 0.0 };
     let jv = if q % 3 == 0 {
-        (((2 * q) % 100) as f32 / 100.0).powi(2)
+        jitter((2 * q) % 100)
     } else {
         0.0
     };
@@ -102,6 +105,11 @@ pub fn decision(q: i64) -> VertexDecision {
         flips,
         jitter: Vec2::new(ju, jv),
     }
+}
+
+/// The texture jitter of code `c` (`0..100`), as the exporter computes it in float32.
+fn jitter(c: i64) -> f32 {
+    (c * c) as f32 / 10000.0
 }
 
 /// The state's data term for a true position.
@@ -207,7 +215,6 @@ mod tests {
             materials: Vec::new(),
             transform: None,
             encryption_key: key,
-            descrambled: false,
             exact_decoded: false,
             unknown_chunks: Vec::new(),
         }
@@ -229,8 +236,9 @@ mod tests {
             assert_eq!(decisions.len(), 40);
             for (a, b) in plain.vertices.iter().zip(&original.vertices) {
                 assert_eq!(a.position, b.position);
+                // The exporter's float32 addition is not injective: one ulp may be lost.
                 assert!(
-                    (a.uv - b.uv).abs().max_element() < 1e-6,
+                    (a.uv - b.uv).abs().max_element() <= 2.0 * f32::EPSILON,
                     "{} {}",
                     a.uv,
                     b.uv

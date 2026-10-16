@@ -27,7 +27,7 @@ use crate::install::OmsiInstall;
 use crate::material::o3d_material_to_standard_material;
 use crate::texture::load_bevy_image;
 
-/// Scrambled (keyed) meshes larger than this along any axis are rejected as corrupt (metres).
+/// Keyed (decoded) meshes larger than this along any axis are rejected as corrupt (metres).
 pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 400.0;
 
 /// Plain meshes are trusted far more: road and crossing models are legitimately hundreds of
@@ -122,9 +122,6 @@ pub struct ModelPart {
     /// axes; `None` for files without one and for `.x` meshes (whose frames are applied).
     /// `[newanim] origin_from_mesh` rotates about it.
     pub pivot: Option<Vec3>,
-    /// Vertices of this part whose texture coordinates are `Unreliable` (scrambled meshes whose
-    /// jitter the decoder could not prove; the unreliable share of the model, scaled to the part).
-    pub uv_unreliable: usize,
 }
 
 /// Counters collected while loading, shown in the diagnostic overlay and logs.
@@ -136,20 +133,11 @@ pub struct ContentStats {
     pub o3d_vertices: usize,
     /// Distinct textures decoded.
     pub textures: usize,
-    /// Meshes skipped because their vertex data is scrambled (author-protected files).
+    /// Meshes skipped because their geometry is unusable (a keyed file the generator does not
+    /// cover, or an implausible extent).
     pub protected_meshes: usize,
     /// Keyed meshes decoded exactly by following the exporter's generator (`o3d::exact`).
     pub exact_meshes: usize,
-    /// Scrambled meshes replaced by a verified plain twin from another add-on.
-    pub twin_meshes: usize,
-    /// Scrambled meshes recovered by the confident geometric decoder.
-    pub decoded_meshes: usize,
-    /// Texture-coordinate quality of the decoded meshes' vertices: exact, recovered, unreliable.
-    pub uv_quality: [usize; 3],
-    /// Vertices and unreliable vertices of the parts used since the last reset (a vehicle load).
-    pub uv_scope: (usize, usize),
-    /// Meshes left out for now because their background decoding is still running.
-    pub deferred_meshes: usize,
     /// Meshes read with the axis-cycled layout (coherent positions, unusable stored normals).
     pub axis_cycled_meshes: usize,
     /// Material slots left out because a script variable scales their alpha (`[alphascale]`):
@@ -174,31 +162,11 @@ pub struct ContentCache {
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
-    /// Scrambled meshes already reported for unreliable texture coordinates.
-    pub(crate) uv_warned: std::collections::HashSet<PathBuf>,
-    /// What is being loaded (named in incident files); set by the caller, e.g. a vehicle's file.
-    pub uv_context: String,
-    /// Parameters of the scrambled-mesh decoder.
-    pub decode_params: opts_core::formats::o3d::descramble::DecodeParams,
-    /// Background decoder; without it meshes are decoded on the calling thread.
-    pub decode_pool: Option<std::sync::Arc<crate::descramble_cache::DecodePool>>,
-    /// Box the meshes loaded next are expected to lie in (the owning vehicle's bounding box);
-    /// restricts the scrambled-mesh decoder.
-    pub expected_bounds: Option<opts_core::formats::o3d::descramble::ExpectedBounds>,
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
     pub texture_replacements: HashMap<String, PathBuf>,
-    /// Meshes whose decoding was queued since the last [`Self::take_deferred`].
-    pub deferred: std::collections::HashSet<crate::descramble_cache::Key>,
     /// Loading statistics.
     pub stats: ContentStats,
-}
-
-impl ContentCache {
-    /// Takes the keys of meshes that were queued for background decoding since the last call.
-    pub fn take_deferred(&mut self) -> std::collections::HashSet<crate::descramble_cache::Key> {
-        std::mem::take(&mut self.deferred)
-    }
 }
 
 /// Borrowed view tying an installation, caches and Bevy asset stores together.
@@ -247,11 +215,6 @@ impl ContentLoader<'_> {
         };
         self.cache.opaque.insert(handle.id(), out.clone());
         out
-    }
-
-    /// Finds a verified plain twin of a scrambled mesh (see [`find_plain_twin`]).
-    fn plain_twin(&self, path: &Path, scrambled: &[O3d]) -> Option<(Vec<O3d>, PathBuf)> {
-        find_plain_twin(self.install, path, scrambled)
     }
 
     fn fail(&mut self, what: String) {
@@ -442,8 +405,6 @@ impl ContentLoader<'_> {
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
-        let mut deferred_here = false;
-        let mut model_quality: HashMap<usize, [usize; 3]> = HashMap::new();
         if is_o3d {
             // Keyed meshes: the exporter's generator is known (`o3d.md`, Addendum 14), so the
             // original positions, texture coordinates and normals come back exactly and the mesh
@@ -454,205 +415,25 @@ impl ContentLoader<'_> {
                     sc.stage = "exact";
                 }
             }
-            let unreadable = models
-                .iter()
-                .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable));
-            // Experimental: `OPTS_DECODE_SCRAMBLED=1` runs the geometric descrambler. It recovers
-            // all vertices of only ~42 % of scrambled meshes and cannot tell which (texture
-            // jitter stays), so it is off by default (`o3d.md`, Addendum 4).
-            let experimental = unreadable && std::env::var_os("OPTS_DECODE_SCRAMBLED").is_some();
-            if experimental {
-                for m in &mut models {
-                    let report = o3d::descramble::descramble(m);
-                    tracing::warn!(
-                        path = %o3d_path.display(),
-                        accepted = report.accepted,
-                        kept = report.kept_faces,
-                        total = report.total_faces,
-                        "scrambled mesh decoded heuristically (experimental)"
-                    );
-                }
-            }
-            // A scrambled mesh often exists unscrambled in another add-on (same name, same
-            // counts, same coordinates): use that exact geometry instead.
-            if unreadable && !experimental {
-                if let Some((twin, from)) = self.plain_twin(o3d_path, &models) {
-                    tracing::info!(
-                        path = %o3d_path.display(),
-                        twin = %from.display(),
-                        "scrambled mesh replaced by its plain twin"
-                    );
-                    self.cache.stats.twin_meshes += 1;
-                    sc.stage = "twin";
-                    models = twin;
-                }
-            }
-            // No twin: try the confident decoder (two independent annealing runs must agree),
-            // reusing earlier outcomes from the on-disk cache. `OPTS_NO_DESCRAMBLE=1` disables it.
-            if unreadable && !experimental && std::env::var_os("OPTS_NO_DESCRAMBLE").is_none() {
-                let fingerprint = self.cache.decode_params.fingerprint();
-                deferred_here = false;
-                for (mi, m) in models.iter_mut().enumerate() {
-                    let counts: Option<[usize; 3]>;
-                    if !matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable) {
-                        continue;
-                    }
-                    let bounds = self.cache.expected_bounds;
-                    let ckey = crate::descramble_cache::key_bounded(&bytes, mi, bounds);
-                    let pool_result = self.cache.decode_pool.as_ref().and_then(|p| p.result(ckey));
-                    let from_pool = pool_result.is_some();
-                    let cached =
-                        pool_result.or_else(|| crate::descramble_cache::load(ckey, fingerprint));
-                    // What the incident file needs, taken before the decoding replaces it.
-                    let stored_uv: Vec<[f32; 2]> =
-                        m.vertices.iter().map(|v| v.uv.to_array()).collect();
-                    let header = (m.version, m.header_flags, m.encryption_key);
-                    let triangles_before = m.indices.len();
-                    let mut source = if from_pool {
-                        "background decode"
-                    } else {
-                        "decode cache"
-                    };
-                    let mut fresh: Option<crate::descramble_cache::Cached> = None;
-                    let applied = match &cached {
-                        Some(c) => {
-                            counts = crate::descramble_cache::quality_counts(c);
-                            crate::descramble_cache::apply(m, c)
-                        }
-                        None => {
-                            if let Some(pool) = &self.cache.decode_pool {
-                                // Decode in the background; the tile is rebuilt when it is done.
-                                let siblings: Vec<PathBuf> = o3d_path
-                                    .file_name()
-                                    .map(|n| self.install.files_named(&n.to_string_lossy()))
-                                    .unwrap_or_default()
-                                    .into_iter()
-                                    .filter(|p| p != o3d_path)
-                                    .collect();
-                                pool.submit(ckey, m, siblings, bounds);
-                                self.cache.deferred.insert(ckey);
-                                deferred_here = true;
-                                continue;
-                            }
-                            let before = m.clone();
-                            let t = std::time::Instant::now();
-                            let report = match bounds {
-                                Some(b) => o3d::descramble::decode_confident_bounded(
-                                    m,
-                                    &self.cache.decode_params,
-                                    b,
-                                ),
-                                None => o3d::descramble::decode_confident_with(
-                                    m,
-                                    &self.cache.decode_params,
-                                ),
-                            };
-                            tracing::info!(
-                                path = %o3d_path.display(),
-                                accepted = report.accepted,
-                                agreement = report.agreement,
-                                coherence = report.coherence,
-                                dropped_faces = report.dropped_faces,
-                                uv_unresolved = report.uv.unresolved,
-                                ms = t.elapsed().as_millis() as u64,
-                                "scrambled mesh decoded"
-                            );
-                            let outcome = if report.accepted {
-                                crate::descramble_cache::capture(&before, m, &report)
-                            } else {
-                                crate::descramble_cache::Cached::Rejected
-                            };
-                            counts = crate::descramble_cache::quality_counts(&outcome);
-                            crate::descramble_cache::store(ckey, fingerprint, &outcome);
-                            source = "decoded now";
-                            fresh = Some(outcome);
-                            report.accepted
-                        }
-                    };
-                    if applied {
-                        sc.stage = match source {
-                            "decode cache" => "decode-cache",
-                            "background decode" => "decode-background",
-                            _ => "decoded-now",
-                        };
-                        self.cache.stats.decoded_meshes += 1;
-                        if let Some(c) = counts {
-                            for (total, n) in self.cache.stats.uv_quality.iter_mut().zip(c) {
-                                *total += n;
-                            }
-                            let all: usize = c.iter().sum();
-                            for (t, n) in sc.uv.iter_mut().zip(c) {
-                                *t += n;
-                            }
-                            model_quality.insert(mi, c);
-                            // Every mesh whose texture coordinates are largely guesses is named once.
-                            if all > 0
-                                && c[2] * 10 > all
-                                && self.cache.uv_warned.insert(o3d_path.to_path_buf())
-                            {
-                                let decoded = fresh.as_ref().or(cached.as_ref());
-                                let siblings = o3d_path
-                                    .file_name()
-                                    .map(|n| self.install.files_named(&n.to_string_lossy()))
-                                    .map_or(0, |f| {
-                                        f.iter().filter(|p| p.as_path() != o3d_path).count()
-                                    });
-                                let incident = decoded.and_then(|d| {
-                                    crate::uv_incident::write(&crate::uv_incident::UvIncident {
-                                        mesh: o3d_path,
-                                        context: &self.cache.uv_context,
-                                        model_index: mi,
-                                        file_bytes: bytes.len(),
-                                        header,
-                                        vertices: stored_uv.len(),
-                                        triangles: triangles_before,
-                                        decoded: d,
-                                        stored_uv: &stored_uv,
-                                        fingerprint,
-                                        siblings,
-                                        source,
-                                    })
-                                });
-                                tracing::warn!(
-                                    path = %o3d_path.display(),
-                                    unreliable_percent = (100 * c[2] / all) as u64,
-                                    exact = c[0],
-                                    recovered = c[1],
-                                    unreliable = c[2],
-                                    incident = incident.as_ref().map(|p| p.display().to_string()).unwrap_or_default(),
-                                    "scrambled mesh: texture coordinates partly unreliable (best guess used)"
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-            let unreadable = unreadable
-                && !experimental
-                && models
-                    .iter()
-                    .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable));
+            // A keyed file the generator does not cover would still read as `Unreadable`
+            // (none is known); it is skipped with a warning rather than drawn scrambled.
             sc.decode_ms = sc.lap.split();
-            if unreadable && !experimental && deferred_here {
-                // Decoding runs in the background; the caller rebuilds the object when it ends.
-                sc.stage = "decode-deferred";
-                self.cache.stats.deferred_meshes += 1;
-                return Vec::new();
-            }
-            if unreadable && !experimental {
-                // Vertex positions are permuted per vertex; the geometry cannot be reconstructed.
+            if models
+                .iter()
+                .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable))
+            {
                 sc.stage = "rejected";
                 self.cache.stats.protected_meshes += 1;
                 self.cache.protected.insert(o3d_path.to_path_buf());
                 tracing::warn!(
                     path = %o3d_path.display(),
-                    "mesh vertex positions are scrambled; skipped"
+                    "mesh vertex positions are scrambled and could not be decoded; skipped"
                 );
                 self.cache.parts.insert(key, Vec::new());
                 return Vec::new();
             }
             // A mesh that is hundreds of metres across is not an object: positions are corrupt
-            // in a way the coherence measures did not catch (stray far-away vertices).
+            // in a way no plausibility check caught (stray far-away vertices).
             let extent = models
                 .iter()
                 .map(|m| {
@@ -711,16 +492,7 @@ impl ContentLoader<'_> {
         }
 
         let mut parts = Vec::new();
-        for (model_index, model) in models.iter().enumerate() {
-            // Unreliable share of this model's texture coordinates (0 for plain meshes and twins).
-            let unreliable_share = model_quality.get(&model_index).map_or(0.0, |c| {
-                let all: usize = c.iter().sum();
-                if all == 0 {
-                    0.0
-                } else {
-                    c[2] as f32 / all as f32
-                }
-            });
+        for model in &models {
             for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
             {
                 // Static model parts carry no skeleton: joint attributes without a `SkinnedMesh`
@@ -872,7 +644,6 @@ impl ContentLoader<'_> {
                         .map(str::to_owned),
                     image: over.and_then(|o| o.image.clone()),
                     pivot,
-                    uv_unreliable: (vertices as f32 * unreliable_share).round() as usize,
                 });
             }
         }
@@ -891,7 +662,6 @@ struct TraceScratch {
     parse_ms: f32,
     decode_ms: f32,
     build_ms: f32,
-    uv: [usize; 3],
     hidden: usize,
     materials: Vec<crate::scene_trace::MaterialNote>,
     warnings: Vec<String>,
@@ -906,7 +676,6 @@ impl TraceScratch {
             parse_ms: 0.0,
             decode_ms: 0.0,
             build_ms: 0.0,
-            uv: [0; 3],
             hidden: 0,
             materials: Vec::new(),
             warnings: Vec::new(),
@@ -963,7 +732,6 @@ impl TraceScratch {
                 parse_ms: self.parse_ms,
                 decode_ms: self.decode_ms,
                 build_ms: self.build_ms,
-                uv: self.uv,
                 vertices: parts.iter().map(|p| p.vertices).sum(),
                 parts: parts.len(),
                 materials: self.materials,
@@ -973,54 +741,6 @@ impl TraceScratch {
             },
         );
     }
-}
-
-/// Finds a verified plain twin of a scrambled mesh: same file name, same vertex and face
-/// counts and the same multiset of (axis-order independent) position triples.
-///
-/// Public so the scenery benchmark (M-0054) predicts the geometry the loader will draw.
-#[must_use]
-pub fn find_plain_twin(
-    install: &OmsiInstall,
-    path: &Path,
-    scrambled: &[O3d],
-) -> Option<(Vec<O3d>, PathBuf)> {
-    let [target] = scrambled else { return None };
-    let name = path.file_name()?.to_string_lossy().into_owned();
-    let want = position_signature(target);
-    for cand in install.files_named(&name) {
-        if cand == path {
-            continue;
-        }
-        let Ok(bytes) = std::fs::read(&cand) else {
-            continue;
-        };
-        let Ok(o) = o3d::parse(&bytes) else { continue };
-        if o.encryption_key.is_none()
-            && o.vertices.len() == target.vertices.len()
-            && o.indices.len() == target.indices.len()
-            && position_signature(&o) == want
-        {
-            return Some((vec![o], cand));
-        }
-    }
-    None
-}
-
-/// Sorted multiset of per-vertex sorted coordinate triples (2/10 mm quantised): equal for a
-/// mesh and its scrambled copy because scrambling only permutes components within a vertex.
-fn position_signature(o: &O3d) -> Vec<[i32; 3]> {
-    let mut v: Vec<[i32; 3]> = o
-        .vertices
-        .iter()
-        .map(|v| {
-            let mut a = [v.position.x, v.position.y, v.position.z];
-            a.sort_by(f32::total_cmp);
-            a.map(|x| (x * 10_000.0).round() as i32)
-        })
-        .collect();
-    v.sort_unstable();
-    v
 }
 
 fn base_name(path: &str) -> String {
