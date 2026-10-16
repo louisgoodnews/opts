@@ -174,6 +174,100 @@ fn permuted(p: usize, v: Vec3) -> Vec3 {
     Vec3::new(a[q[0]], a[q[1]], a[q[2]])
 }
 
+/// All six axis permutations (`out[k] = in[P[k]]`): the frame corrections [`anchor_frame`] tries.
+const AXIS_PERMS: [[usize; 3]; 6] = [
+    [0, 1, 2],
+    [0, 2, 1],
+    [1, 0, 2],
+    [1, 2, 0],
+    [2, 0, 1],
+    [2, 1, 0],
+];
+
+/// Added to the seed of files written with the alternative seed (header flags bit 1).
+const ALT_SEED_OFFSET: i64 = 381;
+
+/// The scrambler's permutation of vertex 0 (an index into the four permutations), which is a
+/// function of the header alone (`o3d.md`, Addendum 4, Update 3): with `K = key + version − 4`
+/// (`+ 381` with the alternative-seed flag) and `q = K·n mod 8000`, `u = (q + 1000) mod 8000`
+/// selects identity (`u > 4000`), swap x/z (`> 2000`), swap x/y (`> 1000`) or swap y/z. Measured on
+/// 5,463 plain/keyed twins: right for 5,332 (all 962 alternative-seed files; the misses are mostly
+/// files with key `0`). `None` for plain files and empty meshes.
+#[must_use]
+pub fn vertex0_label(o: &O3d) -> Option<usize> {
+    let key = i64::from(o.encryption_key?);
+    if o.vertices.is_empty() {
+        return None;
+    }
+    let mut k = key + i64::from(o.version) - 4;
+    if o.header_flags & 2 != 0 {
+        k += ALT_SEED_OFFSET;
+    }
+    let n = o.vertices.len() as i64;
+    let q = (k.rem_euclid(8000) * n.rem_euclid(8000)).rem_euclid(8000);
+    let u = (q + 1000) % 8000;
+    Some(if u > 4000 {
+        0
+    } else if u > 2000 {
+        1
+    } else if u > 1000 {
+        2
+    } else {
+        3
+    })
+}
+
+/// Puts decoded positions into the model's frame.
+///
+/// The solver's objective (edge lengths, coordinate pool, face normals, folds) does not change when
+/// every vertex is permuted by the same axis permutation, so whenever such an alternative is
+/// reachable with the four scrambler permutations the decoder may return the model swapped (a
+/// building lying on its side: 7.6 % of the decoded plain/keyed twins). Vertex 0's permutation is
+/// known from the header ([`vertex0_label`]); when the decoded vertex 0 disagrees with it, the axis
+/// permutation that maps it onto the known position is applied to the whole mesh, but only when
+/// every vertex of every scrambled copy stays reachable from its stored position with one of the
+/// four permutations (a wrong vertex-0 rule fails this test). On the twins: exact decodes 3,613 →
+/// 4,018 of 5,302, none lost. Returns whether the positions were changed.
+fn anchor_frame(stored: &[&O3d], positions: &mut [Vec3]) -> bool {
+    const EPS: f32 = 1e-4;
+    let close = |a: Vec3, b: Vec3| (a - b).abs().max_element() <= EPS;
+    let Some(first) = stored.first() else {
+        return false;
+    };
+    let (Some(l0), Some(p0)) = (vertex0_label(first), positions.first().copied()) else {
+        return false;
+    };
+    let Some(v0) = first.vertices.first() else {
+        return false;
+    };
+    let anchor = permuted(l0, v0.position);
+    if close(p0, anchor) {
+        return false;
+    }
+    let apply = |g: usize, v: Vec3| {
+        let a = [v.x, v.y, v.z];
+        let q = AXIS_PERMS[g];
+        Vec3::new(a[q[0]], a[q[1]], a[q[2]])
+    };
+    let Some(g) = (1..6).find(|&g| close(apply(g, p0), anchor)) else {
+        return false;
+    };
+    let reachable = stored.iter().all(|o| {
+        o.vertices.len() == positions.len()
+            && o.vertices.iter().zip(positions.iter()).all(|(s, p)| {
+                let fixed = apply(g, *p);
+                (0..4).any(|l| close(permuted(l, s.position), fixed))
+            })
+    });
+    if !reachable {
+        return false;
+    }
+    for p in positions.iter_mut() {
+        *p = apply(g, *p);
+    }
+    true
+}
+
 fn sorted_abs(n: Vec3) -> [f32; 3] {
     let mut a = [n.x.abs(), n.y.abs(), n.z.abs()];
     a.sort_by(|x, y| x.total_cmp(y));
@@ -1004,9 +1098,10 @@ pub fn decode_joint_bounded(
         Ok(v) => v,
         Err(best) => return vec![rejected(best); copies.len()],
     };
-    let truth: Vec<Vec3> = (0..n)
+    let mut truth: Vec<Vec3> = (0..n)
         .map(|i| permuted(labels[i] as usize, copies[0].vertices[i].position))
         .collect();
+    anchor_frame(&copies.iter().collect::<Vec<&O3d>>(), &mut truth);
     let uv_hints = super::uvfix::joint_uv(&copies.iter().collect::<Vec<&O3d>>());
     let mut out = Vec::with_capacity(copies.len());
     for (ci, c) in copies.iter_mut().enumerate() {
@@ -1235,9 +1330,16 @@ fn decode_confident_masked(
         Ok(v) => v,
         Err(best_pair) => return rejected(best_pair, 0.0),
     };
+    let mut positions: Vec<Vec3> = o
+        .vertices
+        .iter()
+        .zip(&labels)
+        .map(|(v, &l)| permuted(l as usize, v.position))
+        .collect();
+    anchor_frame(&[&*o], &mut positions);
     let mut trial = o.clone();
-    for (v, &l) in trial.vertices.iter_mut().zip(&labels) {
-        v.position = permuted(l as usize, v.position);
+    for (v, p) in trial.vertices.iter_mut().zip(positions) {
+        v.position = p;
     }
     let (verdicts, coherence) = triangle_verdicts(&trial);
     if coherence < params.min_coherence {
@@ -1418,6 +1520,99 @@ mod joint_tests {
         let mut copies = vec![a, b];
         let reports = decode_joint(&mut copies, &DecodeParams::default());
         assert!(reports.iter().all(|r| !r.accepted));
+    }
+}
+
+#[cfg(test)]
+mod anchor_tests {
+    use super::*;
+    use crate::formats::o3d::Vertex;
+    use glam::Vec2;
+
+    /// A small keyed mesh whose vertices have three distinct coordinates (an asymmetric fan), and
+    /// its scrambling: vertex 0 by the header rule, the others by a fixed pattern.
+    fn keyed(key: u32, flags: u32) -> (O3d, O3d) {
+        let pts = [
+            Vec3::new(0.3, 1.1, 2.9),
+            Vec3::new(1.7, 0.2, 3.4),
+            Vec3::new(2.6, 1.9, 0.4),
+            Vec3::new(0.8, 2.7, 1.3),
+            Vec3::new(3.1, 0.6, 2.2),
+            Vec3::new(1.4, 3.3, 0.9),
+        ];
+        let truth = O3d {
+            version: 7,
+            header_flags: flags,
+            vertices: pts
+                .iter()
+                .map(|&position| Vertex {
+                    position,
+                    normal: Vec3::Y,
+                    uv: Vec2::ZERO,
+                    color: None,
+                })
+                .collect(),
+            indices: vec![[0, 1, 2], [0, 2, 3], [0, 3, 4], [0, 4, 5]],
+            face_materials: vec![0; 4],
+            materials: Vec::new(),
+            transform: None,
+            encryption_key: Some(key),
+            descrambled: false,
+            unknown_chunks: Vec::new(),
+        };
+        let mut stored = truth.clone();
+        let l0 = vertex0_label(&truth).unwrap();
+        for (i, v) in stored.vertices.iter_mut().enumerate() {
+            // The four permutations are their own inverses.
+            v.position = permuted(if i == 0 { l0 } else { (i * 3) % 4 }, v.position);
+        }
+        (truth, stored)
+    }
+
+    #[test]
+    fn vertex0_rule_follows_the_header() {
+        let (truth, _) = keyed(7, 0);
+        // K = 7 + 7 - 4 = 10, q = 10 * 6 = 60, u = 1060: swap x/y.
+        assert_eq!(vertex0_label(&truth), Some(2));
+        // The alternative seed adds 381: q = 391 * 6 = 2346, u = 3346: swap x/z.
+        let (alt, _) = keyed(7, 2);
+        assert_eq!(vertex0_label(&alt), Some(1));
+        let mut plain = truth;
+        plain.encryption_key = None;
+        assert_eq!(vertex0_label(&plain), None);
+    }
+
+    #[test]
+    fn a_globally_swapped_decode_is_put_back_into_the_model_frame() {
+        let (truth, stored) = keyed(7, 0);
+        // The solver's alternative: every vertex with x and y exchanged (a model on its side).
+        let mut positions: Vec<Vec3> = truth
+            .vertices
+            .iter()
+            .map(|v| Vec3::new(v.position.y, v.position.x, v.position.z))
+            .collect();
+        assert!(anchor_frame(&[&stored], &mut positions));
+        for (p, t) in positions.iter().zip(&truth.vertices) {
+            assert!((*p - t.position).length() < 1e-5, "{p} vs {}", t.position);
+        }
+    }
+
+    #[test]
+    fn a_right_decode_is_left_alone() {
+        let (truth, stored) = keyed(7, 0);
+        let mut positions: Vec<Vec3> = truth.vertices.iter().map(|v| v.position).collect();
+        assert!(!anchor_frame(&[&stored], &mut positions));
+    }
+
+    #[test]
+    fn a_correction_the_stored_data_cannot_explain_is_refused() {
+        let (truth, mut stored) = keyed(7, 0);
+        // A header the rule gets wrong: vertex 0 actually stored with the identity.
+        stored.vertices[0].position = truth.vertices[0].position;
+        let mut positions: Vec<Vec3> = truth.vertices.iter().map(|v| v.position).collect();
+        let before = positions.clone();
+        assert!(!anchor_frame(&[&stored], &mut positions));
+        assert_eq!(positions, before);
     }
 }
 

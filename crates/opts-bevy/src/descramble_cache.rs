@@ -19,7 +19,8 @@ use opts_core::formats::o3d::O3d;
 
 /// Bump when the decoder *algorithm* changes in a way that alters its output; parameter changes
 /// are covered by [`DecodeParams::fingerprint`], which is part of every entry's file name.
-const VERSION: u8 = 9;
+/// 10: decoded meshes are put into the model frame by the vertex-0 anchor (`anchor_frame`).
+const VERSION: u8 = 10;
 /// Default size cap of the cache directory.
 pub const DEFAULT_MAX_BYTES: u64 = 256 * 1024 * 1024;
 
