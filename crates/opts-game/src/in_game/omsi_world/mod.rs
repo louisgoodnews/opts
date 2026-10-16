@@ -41,6 +41,7 @@ pub(crate) use traffic::DEFAULT_MAX_TRAFFIC;
 mod trees;
 mod vehicle;
 mod vehicle_text;
+mod water;
 
 pub use collision::{
     attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
@@ -75,6 +76,7 @@ pub use traffic::{
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
 pub use vehicle_text::update_vehicle_text_textures;
+pub use water::warn_vehicle_in_water;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 #[derive(bevy::ecs::system::SystemParam)]
@@ -217,6 +219,8 @@ pub struct WorldLoadJob {
     /// segment loader binds `[useTextTexture]` indices against them).
     vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
     ground_material: Option<Handle<StandardMaterial>>,
+    /// Water of the tiles built so far, by tile key (for [`WorldLoadJob::water_level_at`]).
+    tile_water: HashMap<(i32, i32), opts_core::formats::map::MapWater>,
     /// Shared material of the water surfaces.
     water_material: Option<Handle<StandardMaterial>>,
     /// Whether `.map.water` surfaces are drawn.

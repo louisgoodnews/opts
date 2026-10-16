@@ -148,6 +148,7 @@ impl Plugin for InGamePlugin {
                 deactivate_menu_camera,
                 omsi_world::stream_world_tiles,
                 omsi_world::track_position,
+                omsi_world::warn_vehicle_in_water,
                 toggle_pause,
                 debug_frame_log
                     .after(omsi_world::follow_ground)
