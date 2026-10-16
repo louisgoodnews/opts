@@ -9,7 +9,7 @@ use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
 use opts_bevy::{sample_terrain, ContentLoader, TextureOverride};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
-use opts_core::formats::vehicles::model::ModelConfig;
+use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
@@ -494,8 +494,19 @@ fn spawn_object_inner(
     stats.objects_loaded += 1;
 }
 
-/// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config whose
-/// first LOD holds the visible meshes.
+/// The levels of detail of a parked/static vehicle model in the order they are tried: `[LOD] 0`
+/// first (parked models list a decal-laden close-up level first and the plain body as `[LOD] 0`),
+/// then the others in file order; levels without a `[mesh]` are left out. Some models keep the
+/// body only in the close-up level and leave `[LOD] 0` without a `[mesh]` (the `FW_*` parked cars
+/// of Aachen Linie 33: 152 cars were dropped at the start before this order).
+fn lod_preference(lods: &[ModelLod]) -> Vec<&ModelLod> {
+    let mut out: Vec<&ModelLod> = lods.iter().filter(|l| !l.meshes.is_empty()).collect();
+    out.sort_by_key(|l| l.threshold != 0.0);
+    out
+}
+
+/// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config; the first
+/// level of detail of [`lod_preference`] that loads anything is drawn.
 #[allow(clippy::too_many_arguments)]
 fn spawn_vehicle_model(
     job: &mut WorldLoadJob,
@@ -529,17 +540,12 @@ fn spawn_vehicle_model(
             return;
         }
     };
-    // Parked models list a decal-laden close-up level first and the plain body as `[LOD] 0`.
-    let Some(lod0) = model
-        .lods
-        .iter()
-        .find(|l| l.threshold == 0.0)
-        .or_else(|| model.lods.first())
-    else {
+    let lods = lod_preference(&model.lods);
+    if lods.is_empty() {
         tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config has no meshes");
         stats.objects_failed += 1;
         return;
-    };
+    }
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let tex_dirs = vec![
         job.install
@@ -551,10 +557,19 @@ fn spawn_vehicle_model(
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
     job.vehicle_text_defs = model.text_textures.clone();
-    let (count, verts, _, _) = super::vehicle::load_segment_meshes(
-        job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
-    );
+    let (mut count, mut verts) = (0, 0);
+    for lod in lods {
+        let (c, v, _, _) = super::vehicle::load_segment_meshes(
+            job, commands, meshes, materials, images, root, lod, &model_dir, &tex_dirs,
+        );
+        (count, verts) = (c, v);
+        if count > 0 {
+            break;
+        }
+    }
     if count == 0 {
+        tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
+        super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));
         commands.entity(root).despawn();
         stats.objects_failed += 1;
         return;
@@ -687,5 +702,32 @@ impl WorldLoadJob {
         stats.meshes_decoding = pool.pending_count();
         stats.meshes_decoded = self.cache.stats.decoded_meshes;
         stats.meshes_twin = self.cache.stats.twin_meshes;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shape of `Vehicles/FW_AstraG/model/Astra_Parked.cfg`: the body in the close-up level,
+    /// `[LOD] 0` holding a bare file name without `[mesh]`.
+    const PARKED: &str = "[LOD]\r\n0.025\r\n\r\n[mesh]\r\nbody.o3d\r\n\r\n[mesh]\r\nwheels.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n..\\..\\other\\model\\far.o3d\r\n";
+
+    #[test]
+    fn a_parked_model_without_meshes_at_lod_0_draws_its_close_up_level() {
+        let model = ModelConfig::parse_bytes(PARKED.as_bytes()).expect("parses");
+        let order = lod_preference(&model.lods);
+        assert_eq!(order.len(), 1);
+        assert!((order[0].threshold - 0.025).abs() < 1e-6);
+        assert_eq!(order[0].meshes.len(), 2);
+    }
+
+    #[test]
+    fn lod_0_comes_first_when_it_has_meshes() {
+        let cfg = "[LOD]\r\n0.025\r\n\r\n[mesh]\r\ndecals.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n[mesh]\r\nbody.o3d\r\n";
+        let model = ModelConfig::parse_bytes(cfg.as_bytes()).expect("parses");
+        let order = lod_preference(&model.lods);
+        assert_eq!(order.len(), 2);
+        assert_eq!(order[0].threshold, 0.0);
     }
 }
