@@ -76,7 +76,7 @@ pub fn build_water_mesh(
 #[must_use]
 pub fn water_material() -> StandardMaterial {
     StandardMaterial {
-        base_color: Color::srgba(0.07, 0.24, 0.30, 0.72),
+        base_color: Color::srgba(0.05, 0.22, 0.32, 0.86),
         alpha_mode: AlphaMode::Blend,
         perceptual_roughness: 0.12,
         metallic: 0.0,

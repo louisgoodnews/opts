@@ -193,6 +193,7 @@ pub(super) fn spawn_water(
         .clone();
     stats.scene_vertices += mesh.count_vertices();
     stats.water_tiles += 1;
+    job.tile_water.insert(key, water);
     children.push(
         commands
             .spawn((
