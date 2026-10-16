@@ -262,7 +262,7 @@ magic ver fl   stamp       tag   vertex_count                        tag   face_
 | Q-008 | The two `E7 1B 32 34…` files: are they a protected/encrypted `.o3d` variant? Per project policy, analysis stops until the maintainer decides. | 🟡 Medium |
 | Q-009 | String encoding of texture names (CP1252 vs UTF-8). Only 24 sampled names have bytes `> 0x7F`. | 🟢 Low |
 | Q-010 | Do bone names in `0x54` match bone/animation names in `model.cfg`? Is `weight` normalised per vertex? | 🟡 Medium |
-| Q-012 | Which frame does a decoded keyed mesh come out in? The decoder's objective cannot tell the model from a copy whose axes are permuted as a whole or per connected part ([Addendum 12](#-addendum-12--2026-10-16-frame-of-decoded-meshes-vertex-0-anchor)). Global swaps are now corrected by the vertex-0 anchor; mixed per-vertex and per-part frames (about 24 % of the decoded twins) remain. Registry: MI-0042, MI-0044. | 🟡 Medium |
+| Q-012 | Which frame does a decoded keyed mesh come out in? (Addendum 13: the stored normals now pick between two decodings, 4,251 of 5,363 accepted twins exact.) The decoder's objective cannot tell the model from a copy whose axes are permuted as a whole or per connected part ([Addendum 12](#-addendum-12--2026-10-16-frame-of-decoded-meshes-vertex-0-anchor)). Global swaps are now corrected by the vertex-0 anchor; mixed per-vertex and per-part frames (about 24 % of the decoded twins) remain. Registry: MI-0042, MI-0044. | 🟡 Medium |
 
 ---
 
@@ -520,3 +520,24 @@ Sources: the plain/keyed twin set of the installed corpus (5,463 keyed `.o3d` wi
 **Negative results (not kept).** Correcting only the connected part of vertex 0: 3,699 exact. Re-framing every other part by the reachable permutation whose positions coincide most with the rest of the mesh (seams): +28 on the twins, none on Neuenbreid, one Neuenbreid mesh made worse. Swapping x/y for meshes that still stand on `x` after the correction: of 39 such twins the swap is reachable for one and fixes none.
 
 **Still open (Q-012).** About 24 % of the accepted twin decodes stay wrong (mixed per-vertex labels, parts in different frames); on Neuenbreid 68 decoded meshes (1,382 placements) still stand on `x`, e.g. `Buildings_DDR_RUE/model/DDR_House_small_01.o3d`, and `DDR_House_medium_05.o3d` is a mixed-label decode. The generator's state chain (Addendum 6) remains the only route to exact decoding.
+
+## 📎 Addendum 13 — 2026-10-16: the stored normals tell the label, a second decoding
+
+Sources: the 5,463 plain/keyed twins (`normal_label_eval`, `layout_twin_eval`, `normal_frame_eval` examples).
+
+**The normal permutation follows the position permutation.** Addendum 4 noted that normals get "their own signed permutation, strongly correlated with the position permutation". Tabulated over 2.15 M vertices (signs ignored, where the permutation is unique), the permutation that turns a vertex's stored normal into its true normal takes only three values and depends on the position label:
+
+| Position label | Normal permutation (vertices) |
+| :--- | :--- |
+| identity | identity (240 k) or swap x/y (400 k) |
+| swap x/z | identity (325 k) |
+| swap x/y | identity (69 k) or swap y/z (131 k) |
+| swap y/z | swap x/y (156 k) |
+
+Measured against the **geometric** vertex normals of the plain copy instead of its stored normals the same pairs dominate (98 % of the uniquely matched vertices). The solver's existing normal term compares sorted absolute components and so cannot use this: it is the same for every label. `descramble::NORMAL_PERMS` holds the table.
+
+**As an objective term it trades.** `DecodeParams::w_normal_label` adds, per face, the distance between the face normal and the closest allowed permutation of each vertex's stored normal. Exact decodes on the twins: weight 0 (before) 4,018; 0.5: 4,221; 1: 4,113; 2: 4,116; 6: 3,621; 20: 2,374 (the two runs stop agreeing). At weight 1 the term gains 316 exact meshes and loses 221.
+
+**Two decodings, the normal table chooses.** `decode_confident` now decodes with the default parameters and again with `w_normal_label = w_normal_label_alt` (0.5) and keeps the result with the higher `normal_table_agreement` (share of vertices whose stored normal, permuted as their label allows, matches the geometric normal within 0.05). Twins: exact **4,018 -> 4,251** (79.3 % of the accepted), rejected 161 -> 100; 7 meshes that were exact are now wrong (the selector picks the wrong one of two different results), 242 that were wrong are now exact. Decoding takes about twice as long (background pool, cached; cache version 11).
+
+**Negative result.** Re-framing each connected part by the reachable axis permutation with the best normal-table agreement (margin 20 % of the part's vertices): 64 meshes fixed, 54 broken. Not kept.
