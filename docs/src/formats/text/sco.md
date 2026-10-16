@@ -310,7 +310,7 @@ The source strings come from the object's **string variables** (for example a bu
 | Keyword | Params | Description |
 | :--- | :--- | :--- |
 | `[newanim]` | variable | Animation block. Sub-keys (by frequency): `anim_rot`, `origin_from_mesh`, `origin_rot_y`, `origin_trans`, `origin_rot_z`, `origin_rot_x`, `anim_trans`, rarely `anim_height`, `anim_bar`; each followed by its values and, for animated ones, a **variable name**. Same family as in `model_cfg`. |
-| `[new_attachment]` | sub-keys | Attachment point: `attach_trans` (3), `attach_rot_x/y/z` (1). Used for signs on poles, lamp heads and so on. |
+| `[new_attachment]` | sub-keys | Attachment point: `attach_trans` (3: x right, y forward, z up), `attach_rot_x/y/z` (1, degrees; `attach_rot_z` turns about the up axis, applied as `Rx·Ry·Rz` like `[newanim]` frames ❓ sign not tested in OMSI). Used for signs on poles, lamp heads and so on. Points are numbered **0-based in file order**; tiles place children on them with [`[attachobj]`](../map/tiles.md#other-blocks). Corpus [C]: 7,979 `attach_trans`, 1,697 `attach_rot_z`, 1 each `attach_rot_x/y`. OPTS: `SceneryObject::attachments`. |
 | `[script]` | 1 + N | Count, then `.osc` paths. |
 | `[varnamelist]` | 1 + N | Count, then variable list files. |
 | `[stringvarnamelist]` | 1 + N | Count, then string variable list files. |
