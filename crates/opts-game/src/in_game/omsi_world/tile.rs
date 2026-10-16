@@ -636,14 +636,15 @@ fn spawn_object_inner(
     stats.objects_loaded += 1;
 }
 
-/// The levels of detail of a parked/static vehicle model in the order they are tried: `[LOD] 0`
-/// first (parked models list a decal-laden close-up level first and the plain body as `[LOD] 0`),
-/// then the others in file order; levels without a `[mesh]` are left out. Some models keep the
-/// body only in the close-up level and leave `[LOD] 0` without a `[mesh]` (the `FW_*` parked cars
-/// of Aachen Linie 33: 152 cars were dropped at the start before this order).
+/// The levels of detail of a parked/static vehicle model in the order they are tried: the most
+/// detailed level first. `[LOD] x` is the smallest share of the screen the level is drawn at, so
+/// the highest threshold holds the full model and `[LOD] 0` the coarse far one (corpus: the
+/// `0.07` + `0` configs keep the body, wheels and shadow decal at `0.07` and a single `*_LOD.o3d`
+/// at `0`; Aachen's `FW_*` cars leave `[LOD] 0` without a `[mesh]`). OPTS has no distance switch
+/// for these objects yet. Levels without a `[mesh]` are left out.
 fn lod_preference(lods: &[ModelLod]) -> Vec<&ModelLod> {
     let mut out: Vec<&ModelLod> = lods.iter().filter(|l| !l.meshes.is_empty()).collect();
-    out.sort_by_key(|l| l.threshold != 0.0);
+    out.sort_by(|a, b| b.threshold.total_cmp(&a.threshold));
     out
 }
 
@@ -902,12 +903,15 @@ mod tests {
         assert!((forward - Vec3::X).length() < 1e-5, "{forward}");
     }
 
+    /// The shape of `TH_A4_B6_Avant_parked.cfg`: full model at `0.07`, coarser ones below.
     #[test]
-    fn lod_0_comes_first_when_it_has_meshes() {
-        let cfg = "[LOD]\r\n0.025\r\n\r\n[mesh]\r\ndecals.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n[mesh]\r\nbody.o3d\r\n";
+    fn the_most_detailed_level_comes_first() {
+        let cfg = "[LOD]\r\n0.07\r\n\r\n[mesh]\r\nbody.o3d\r\n\r\n[mesh]\r\nwheels.o3d\r\n\r\n[LOD]\r\n0.04\r\n\r\n[mesh]\r\nbody_lod.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n[mesh]\r\nbody_lod_2.o3d\r\n";
         let model = ModelConfig::parse_bytes(cfg.as_bytes()).expect("parses");
-        let order = lod_preference(&model.lods);
-        assert_eq!(order.len(), 2);
-        assert_eq!(order[0].threshold, 0.0);
+        let order: Vec<f32> = lod_preference(&model.lods)
+            .iter()
+            .map(|l| l.threshold)
+            .collect();
+        assert_eq!(order, vec![0.07, 0.04, 0.0]);
     }
 }
