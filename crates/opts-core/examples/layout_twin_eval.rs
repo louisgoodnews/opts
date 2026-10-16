@@ -5,14 +5,15 @@
 //! plain one vertex by vertex, and the layout `O3d::vertex_layout` gives the decoded mesh is
 //! compared with the truth.
 //!
-//! Usage: `layout_twin_eval <omsi root>`
+//! Usage: `layout_twin_eval <omsi root>` (decoder overrides from the environment, e.g. `W_NLAB=1`;
+//! `LIST=<file>` writes one verdict per mesh).
 use std::collections::{BTreeMap, HashMap};
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 
-use opts_core::formats::o3d::descramble::decode_confident;
+use opts_core::formats::o3d::descramble::{decode_confident_with, DecodeParams};
 use opts_core::formats::o3d::{parse, O3d, VertexLayout};
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
@@ -144,6 +145,10 @@ fn relation(k: &O3d, p: &O3d) -> String {
 
 fn main() {
     let root = PathBuf::from(std::env::args().nth(1).expect("omsi root"));
+    let params = DecodeParams::default().with_overrides(|k| std::env::var(k).ok());
+    // `LIST=<file>`: one line per keyed mesh with its verdict (to compare two parameter sets).
+    let list = std::env::var("LIST").ok();
+    let rows: Mutex<Vec<String>> = Mutex::new(Vec::new());
     let mut files = Vec::new();
     walk(&root, &mut files);
     // Plain copies by model, then every keyed file whose model has one.
@@ -198,7 +203,7 @@ fn main() {
                     continue;
                 };
                 let truth = up_axis(p.vertex_layout());
-                let key = if decode_confident(&mut k).accepted {
+                let key = if decode_confident_with(&mut k, &params).accepted {
                     format!(
                         "truth {truth:5} plain-floor {:9} | decoded floor {:9} | {}",
                         format!("{:?}", p.floor_axes()),
@@ -208,6 +213,12 @@ fn main() {
                 } else {
                     format!("truth {truth:5} | rejected")
                 };
+                if list.is_some() {
+                    rows.lock().unwrap().push(format!(
+                        "{}\t{key}",
+                        kp.strip_prefix(&root).unwrap_or(kp).display()
+                    ));
+                }
                 let mut t = tally.lock().unwrap();
                 let e = t.entry(key).or_default();
                 e.0 += 1;
@@ -217,6 +228,11 @@ fn main() {
             });
         }
     });
+    if let Some(path) = &list {
+        let mut r = rows.into_inner().unwrap();
+        r.sort();
+        std::fs::write(path, r.join("\n")).expect("write LIST");
+    }
     let mut rows: Vec<_> = tally.into_inner().unwrap().into_iter().collect();
     rows.sort_by_key(|r| std::cmp::Reverse(r.1 .0));
     for (k, (n, ex)) in rows {

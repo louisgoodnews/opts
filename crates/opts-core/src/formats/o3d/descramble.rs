@@ -49,6 +49,23 @@ pub const CONFIDENT_MIN_COHERENCE: f32 = 0.0;
 /// Weight of the fold penalty (adjacent consistently wound triangles must not bend past 90°);
 /// on twins 12 raises the share of exact decodes from 85.0 % to 86.3 %.
 const FOLD_WEIGHT: f32 = 12.0;
+/// Weight of the label-aware normal term ([`DecodeParams::w_normal_label`]) in the first decoding.
+/// As the only objective term it trades exact decodes (twins, weight 1: 316 gained, 221 lost);
+/// see [`DecodeParams::w_normal_label_alt`].
+const W_NORMAL_LABEL: f32 = 0.0;
+/// Weight of the label-aware normal term in the second decoding (twins: 0.5 alone gives 4,221
+/// exact of 5,463, against 4,018 without the term; 1: 4,113; 2: 4,116; 6: 3,621; 20: 2,374).
+const W_NORMAL_LABEL_ALT: f32 = 0.5;
+/// The permutations (`out[k] = in[P[k]]`, signs ignored) that turn a vertex's stored normal into its
+/// true normal, per position label (index into `PERMS`). Measured on the 5,463 plain/keyed twins
+/// (2.15 M vertices): identity -> identity (240 k) or x/y (400 k); swap x/z -> identity (325 k);
+/// swap x/y -> identity (69 k) or y/z (131 k); swap y/z -> x/y (156 k); no other pair occurs.
+pub const NORMAL_PERMS: [&[[usize; 3]]; 4] = [
+    &[[0, 1, 2], [1, 0, 2]],
+    &[[0, 1, 2]],
+    &[[0, 1, 2], [0, 2, 1]],
+    &[[1, 0, 2]],
+];
 /// Independent runs tried before giving up.
 pub const CONFIDENT_MAX_RUNS: u32 = 6;
 const BP_ITERS: usize = 25;
@@ -76,6 +93,12 @@ pub struct DecodeParams {
     pub w_fold: f32,
     /// Share of triangles whose normal must fit the stored vertex normals ([`decode_confident`]).
     pub min_coherence: f32,
+    /// Weight of the label-aware normal term ([`NORMAL_PERMS`]): a vertex's true normal is one of
+    /// the permutations of its stored normal that go with its position label.
+    pub w_normal_label: f32,
+    /// When positive, [`decode_confident`] also decodes with `w_normal_label` at this weight and
+    /// keeps the result that agrees better with the normal table ([`normal_table_agreement`]).
+    pub w_normal_label_alt: f32,
 }
 
 impl Default for DecodeParams {
@@ -90,6 +113,8 @@ impl Default for DecodeParams {
             min_agreement: CONFIDENT_MIN_AGREEMENT,
             min_coherence: CONFIDENT_MIN_COHERENCE,
             w_fold: FOLD_WEIGHT,
+            w_normal_label: W_NORMAL_LABEL,
+            w_normal_label_alt: W_NORMAL_LABEL_ALT,
         }
     }
 }
@@ -128,6 +153,12 @@ impl DecodeParams {
         if let Some(v) = f("OPTS_CONF_COH") {
             self.min_coherence = v;
         }
+        if let Some(v) = f("W_NLAB") {
+            self.w_normal_label = v;
+        }
+        if let Some(v) = f("W_NLAB_ALT") {
+            self.w_normal_label_alt = v;
+        }
         self
     }
 
@@ -146,6 +177,8 @@ impl DecodeParams {
             self.min_agreement.to_bits(),
             self.min_coherence.to_bits(),
             self.w_fold.to_bits(),
+            self.w_normal_label.to_bits(),
+            self.w_normal_label_alt.to_bits(),
         ] {
             for b in v.to_le_bytes() {
                 h = (h ^ u32::from(b)).wrapping_mul(0x0100_0193);
@@ -172,6 +205,44 @@ fn permuted(p: usize, v: Vec3) -> Vec3 {
     let a = [v.x, v.y, v.z];
     let q = PERMS[p];
     Vec3::new(a[q[0]], a[q[1]], a[q[2]])
+}
+
+/// Share of the vertices of a decoded mesh whose stored normal, permuted as their position label
+/// allows ([`NORMAL_PERMS`]), matches the geometric vertex normal of `positions` (signs ignored,
+/// within 0.05). `stored` is the mesh as read (its positions give each vertex's label).
+#[must_use]
+pub fn normal_table_agreement(stored: &O3d, positions: &[Vec3]) -> f32 {
+    let n = positions.len().min(stored.vertices.len());
+    if n == 0 {
+        return 0.0;
+    }
+    let mut geo = vec![Vec3::ZERO; n];
+    for f in &stored.indices {
+        let [a, b, c] = f.map(|i| i as usize);
+        if a.max(b).max(c) >= n {
+            continue;
+        }
+        let g = (positions[b] - positions[a]).cross(positions[c] - positions[a]);
+        for v in [a, b, c] {
+            geo[v] += g;
+        }
+    }
+    let close = |a: Vec3, b: Vec3| (a - b).abs().max_element() <= 1e-4;
+    let agree = (0..n)
+        .filter(|&i| {
+            let v = &stored.vertices[i];
+            let Some(l) = (0..4).find(|&l| close(permuted(l, v.position), positions[i])) else {
+                return false;
+            };
+            let g = geo[i].normalize_or_zero().abs();
+            let s = v.normal.normalize_or_zero().abs();
+            let a = [s.x, s.y, s.z];
+            NORMAL_PERMS[l]
+                .iter()
+                .any(|q| (Vec3::new(a[q[0]], a[q[1]], a[q[2]]) - g).length() < 0.05)
+        })
+        .count();
+    agree as f32 / n as f32
 }
 
 /// All six axis permutations (`out[k] = in[P[k]]`): the frame corrections [`anchor_frame`] tries.
@@ -491,13 +562,16 @@ struct Scorer<'a> {
     mates: HashMap<(u32, u32), Vec<(u32, bool)>>,
     stored: Vec<Vec3>,
     normal_key: Vec<[f32; 3]>,
+    /// Per vertex and position label: the absolute true-normal candidates ([`NORMAL_PERMS`]).
+    normal_cands: Vec<[Vec<Vec3>; 4]>,
+    w_normal_label: f32,
     adj: Vec<Vec<u32>>,
     vfaces: Vec<Vec<u32>>,
     diag2: f32,
 }
 
 impl<'a> Scorer<'a> {
-    fn new(o: &'a O3d, w_fold: f32) -> Self {
+    fn new(o: &'a O3d, w_fold: f32, w_normal_label: f32) -> Self {
         let n = o.vertices.len();
         let mut mates: HashMap<(u32, u32), Vec<(u32, bool)>> = HashMap::new();
         for (fi, f) in o.indices.iter().enumerate() {
@@ -513,6 +587,23 @@ impl<'a> Scorer<'a> {
         }
         let stored: Vec<Vec3> = o.vertices.iter().map(|v| v.position).collect();
         let normal_key: Vec<[f32; 3]> = o.vertices.iter().map(|v| sorted_abs(v.normal)).collect();
+        let normal_cands: Vec<[Vec<Vec3>; 4]> = if w_normal_label > 0.0 {
+            o.vertices
+                .iter()
+                .map(|v| {
+                    let n = v.normal.normalize_or_zero();
+                    let a = [n.x.abs(), n.y.abs(), n.z.abs()];
+                    std::array::from_fn(|l| {
+                        NORMAL_PERMS[l]
+                            .iter()
+                            .map(|q| Vec3::new(a[q[0]], a[q[1]], a[q[2]]))
+                            .collect()
+                    })
+                })
+                .collect()
+        } else {
+            Vec::new()
+        };
         let mut adj: Vec<Vec<u32>> = vec![Vec::new(); n];
         let mut vfaces: Vec<Vec<u32>> = vec![Vec::new(); n];
         for (fi, f) in o.indices.iter().enumerate() {
@@ -539,6 +630,8 @@ impl<'a> Scorer<'a> {
             mates,
             stored,
             normal_key,
+            normal_cands,
+            w_normal_label,
             adj,
             vfaces,
             diag2,
@@ -563,6 +656,7 @@ impl<'a> Scorer<'a> {
         }
         if !self.vfaces[i].is_empty() {
             let mut c = 0.0;
+            let mut cl = 0.0;
             for &fi in &self.vfaces[i] {
                 let f = self.o.indices[fi as usize];
                 let ps: Vec<Vec3> = f
@@ -579,14 +673,28 @@ impl<'a> Scorer<'a> {
                 if nrm.length_squared() < 1e-12 {
                     continue;
                 }
-                let sf = sorted_abs(nrm.normalize());
+                let nn = nrm.normalize();
+                let sf = sorted_abs(nn);
                 for &v in &f {
                     if let Some(sn) = self.normal_key.get(v as usize) {
                         c += (0..3).map(|k| (sf[k] - sn[k]).powi(2)).sum::<f32>();
                     }
+                    if let Some(cands) = self.normal_cands.get(v as usize) {
+                        let label = if v as usize == i {
+                            p
+                        } else {
+                            lab[v as usize] as usize
+                        };
+                        let fa = nn.abs();
+                        cl += cands[label]
+                            .iter()
+                            .map(|t| (fa - *t).length_squared())
+                            .fold(f32::MAX, f32::min);
+                    }
                 }
             }
             score -= W_NORMAL * c / self.vfaces[i].len() as f32;
+            score -= self.w_normal_label * cl / self.vfaces[i].len() as f32;
         }
         if self.w_fold > 0.0 {
             score -= self.w_fold * self.fold_penalty(lab, i, cand);
@@ -651,7 +759,8 @@ impl<'a> Scorer<'a> {
 /// the data does not pin down.
 #[must_use]
 pub fn label_margins(o: &O3d, labels: &[u8]) -> Vec<f32> {
-    let sc = Scorer::new(o, DecodeParams::default().w_fold);
+    let d = DecodeParams::default();
+    let sc = Scorer::new(o, d.w_fold, d.w_normal_label);
     let mut pool = Pool::new();
     for (i, p) in sc.stored.iter().enumerate() {
         pool.add(permuted(labels[i] as usize, *p), 1);
@@ -681,7 +790,7 @@ fn run_local_search(
 ) -> (Vec<u8>, f32) {
     let n = o.vertices.len();
     let ok = |i: usize, l: usize| allowed.is_none_or(|a| a[i] & (1 << l) != 0);
-    let sc = Scorer::new(o, params.w_fold);
+    let sc = Scorer::new(o, params.w_fold, params.w_normal_label);
     let stored = &sc.stored;
 
     let mut lab = init.unwrap_or_else(|| vec![0u8; n]);
@@ -1323,20 +1432,41 @@ fn decode_confident_masked(
     if o.vertices.len() < 4 || o.indices.len() < 2 || o.vertices.len() > CONFIDENT_MAX_VERTICES {
         return rejected(0.0, 0.0);
     }
-    let (labels, agree) = match confident_labels(o, params, allowed.as_deref()).map(|(mut l, a)| {
-        refine_outliers(o, &mut l);
-        (l, a)
-    }) {
-        Ok(v) => v,
+    // One decoding with the parameters as given and, when `w_normal_label_alt` is set, one with
+    // the label-aware normal term at that weight; the one whose vertices agree more often with
+    // the normal table is kept (twins: exact 4,018 -> 4,253 of 5,463; 7 exact ones lost).
+    let decode = |p: &DecodeParams| {
+        confident_labels(o, p, allowed.as_deref()).map(|(mut l, a)| {
+            refine_outliers(o, &mut l);
+            let mut positions: Vec<Vec3> = o
+                .vertices
+                .iter()
+                .zip(&l)
+                .map(|(v, &lab)| permuted(lab as usize, v.position))
+                .collect();
+            anchor_frame(&[&*o], &mut positions);
+            let share = normal_table_agreement(o, &positions);
+            (positions, a, share)
+        })
+    };
+    let first = decode(params);
+    let second = (params.w_normal_label_alt > 0.0).then(|| {
+        decode(&DecodeParams {
+            w_normal_label: params.w_normal_label_alt,
+            ..params.clone()
+        })
+    });
+    let chosen = match (first, second) {
+        (Ok(a), Some(Ok(b))) => Ok(if b.2 > a.2 + 1e-6 { b } else { a }),
+        (Ok(a), _) => Ok(a),
+        (Err(_), Some(Ok(b))) => Ok(b),
+        (Err(x), Some(Err(y))) => Err(x.max(y)),
+        (Err(x), None) => Err(x),
+    };
+    let (positions, agree) = match chosen {
+        Ok((p, a, _)) => (p, a),
         Err(best_pair) => return rejected(best_pair, 0.0),
     };
-    let mut positions: Vec<Vec3> = o
-        .vertices
-        .iter()
-        .zip(&labels)
-        .map(|(v, &l)| permuted(l as usize, v.position))
-        .collect();
-    anchor_frame(&[&*o], &mut positions);
     let mut trial = o.clone();
     for (v, p) in trial.vertices.iter_mut().zip(positions) {
         v.position = p;
@@ -1420,6 +1550,14 @@ mod params_tests {
             },
             DecodeParams {
                 w_fold: 1.0,
+                ..base.clone()
+            },
+            DecodeParams {
+                w_normal_label: 3.0,
+                ..base.clone()
+            },
+            DecodeParams {
+                w_normal_label_alt: 2.0,
                 ..base.clone()
             },
         ];
