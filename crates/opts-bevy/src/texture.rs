@@ -430,7 +430,18 @@ pub fn decode_to_rgba8(image: &Image) -> Option<Image> {
     let format = image.texture_descriptor.format;
     let (block_bytes, kind) = match format {
         F::Rgba8Unorm | F::Rgba8UnormSrgb => {
-            return (data.len() == w * h * 4).then(|| image.clone());
+            // Loaded textures carry their mip chain after level 0 (`prepare_object_texture`);
+            // demanding exactly one level made every TGA/BMP base or transparency map fail, so
+            // `[matl_transmap]` was ignored for them (Aachen's parked cars drawn see-through).
+            if data.len() < w * h * 4 {
+                return None;
+            }
+            let mut level0 = image.clone();
+            if let Some(d) = level0.data.as_mut() {
+                d.truncate(w * h * 4);
+            }
+            level0.texture_descriptor.mip_level_count = 1;
+            return Some(level0);
         }
         F::Bc1RgbaUnorm | F::Bc1RgbaUnormSrgb => (8, 1),
         F::Bc2RgbaUnorm | F::Bc2RgbaUnormSrgb => (16, 2),

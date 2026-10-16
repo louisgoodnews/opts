@@ -339,8 +339,7 @@ Verified on `Ruhrau V2` (2,829 placements) and `Hamburg109`/`Neuendorf`:
   vehicle `.sco` from the map's `parklist_p.txt` stands in the bay (Latin-1 text, one `.sco` per line,
   duplicates weight the draw). OPTS draws deterministically from the marker's id code.
 - Parked-vehicle `.sco` files (`Vehicles/<name>/parked_*.sco`) have no `[mesh]`; their `[model]` points
-  to a vehicle-style `model_parked.cfg`. Such configs often list two `[LOD]` levels: a close-up one with
-  interior and shadow-decal meshes (`[LOD] 0.07`) and the plain body (`[LOD] 0`). OPTS uses the
-  `[LOD] 0` level (the close-up level renders as black decal blobs).
+  to a vehicle-style `model_parked.cfg`. Such configs often list two or three `[LOD]` levels: the full
+  model with body, wheels, interior and shadow decal (`[LOD] 0.07`) and coarser far models down to `[LOD] 0` (corpus [C]: 74 configs `0.07` + `0`, 26 `0.07` + `0.04` + `0`). OPTS draws the most detailed level that has a `[mesh]` (highest threshold; `[LOD] 0` is the coarse far model, e.g. a single `*_LOD.o3d`), falling back to the next level when one loads nothing (MI-0046; there is no distance switch for these objects yet). The "black decal blobs" once seen at the close-up level were bodies made invisible by MI-0047.
 - Cars may also be placed directly as `Vehicles\…\parked_*.sco` objects (e.g. 106× `parked_hh109kipkw5_ziv.sco`).
 - Open: how `parklist_p_<n>.txt` variants are selected per bay (the attachment's trailing `1 / 1` fields are a guess).

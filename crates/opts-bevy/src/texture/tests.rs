@@ -153,3 +153,33 @@ fn bc3_block_decodes_alpha_and_colour() {
     assert_eq!(&px[0..3], &[255, 255, 255]);
     assert!(px.chunks_exact(4).all(|p| p[3] < 255));
 }
+
+/// A TGA/BMP texture as the loader keeps it (level 0 plus its mip chain) still decodes to its
+/// first level: the transparency-map composition needs it (Aachen's parked cars were drawn
+/// see-through because the base texture was refused).
+#[test]
+fn an_rgba8_texture_with_its_mip_chain_decodes_to_level_0() {
+    let mut texels = Vec::new();
+    for i in 0..16u8 {
+        texels.extend_from_slice(&[i, 2 * i, 3 * i, 255 - i]);
+    }
+    let mut img = Image::new(
+        Extent3d {
+            width: 4,
+            height: 4,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        texels.clone(),
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    crate::texture_filter::prepare_object_texture(&mut img);
+    assert!(
+        img.texture_descriptor.mip_level_count > 1,
+        "mips were built"
+    );
+    let out = decode_to_rgba8(&img).expect("decodes");
+    assert_eq!(out.texture_descriptor.mip_level_count, 1);
+    assert_eq!(out.data.as_deref(), Some(&texels[..]));
+}

@@ -202,6 +202,9 @@ pub struct WorldLoadJob {
     sli_cache: HashMap<PathBuf, Option<Arc<SplineProfile>>>,
     /// Map-wide spline lookup for attachments, built on first use.
     spline_index: Option<Arc<SplineIndex>>,
+    /// Transform and object of everything placed on the tile being built, by ID code: the parents
+    /// of its `[attachObj]` children.
+    placed: HashMap<u64, (Transform, Arc<SceneryObject>)>,
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,

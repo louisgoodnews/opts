@@ -4,12 +4,12 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use bevy::prelude::*;
-use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
+use opts_bevy::coords::{bevy_to_omsi_pos, omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
 use opts_bevy::{sample_terrain, ContentLoader, TextureOverride};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
-use opts_core::formats::vehicles::model::ModelConfig;
+use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
@@ -45,6 +45,9 @@ pub fn load_next_tile(
     };
     job.tile_splines
         .insert(key, std::sync::Arc::new(tile.splines.clone()));
+    for w in &tile.warnings {
+        tracing::warn!(tile = ?key, "tile record left out: {w}");
+    }
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();
@@ -150,14 +153,15 @@ pub fn load_next_tile(
         .objects
         .iter()
         .enumerate()
-        .map(|(i, o)| (o, None, "objects", i))
+        .map(|(i, o)| (o, Placement::Tile, "objects", i))
         .chain(
             attached
                 .iter()
                 .enumerate()
-                .map(|(i, (o, z))| (o, Some(*z), "attachments", i)),
+                .map(|(i, (o, z))| (o, Placement::OnSpline(*z), "attachments", i)),
         );
-    for (obj, attached_z, list, index) in placements {
+    job.placed.clear();
+    for (obj, placement, list, index) in placements {
         spawn_object(
             job,
             stats,
@@ -166,7 +170,7 @@ pub fn load_next_tile(
             materials,
             images,
             obj,
-            attached_z,
+            placement,
             terrain.as_ref(),
             key,
             origin,
@@ -179,6 +183,19 @@ pub fn load_next_tile(
             },
         );
     }
+    place_attached_objects(
+        job,
+        stats,
+        commands,
+        meshes,
+        materials,
+        images,
+        &tile,
+        terrain.as_ref(),
+        key,
+        origin,
+        &mut children,
+    );
 
     let tile_root = commands
         .spawn((
@@ -213,6 +230,127 @@ pub fn load_next_tile(
     opts_bevy::set_loading_tile(None);
 }
 
+/// Where an object is put.
+#[derive(Debug, Clone, Copy)]
+enum Placement {
+    /// At its `[object]` record on the tile (height relative to the terrain unless `[absheight]`).
+    Tile,
+    /// Resolved from a spline attachment: absolute height for `[absheight]` objects.
+    OnSpline(f32),
+    /// On an attachment point of another object (`[attachObj]`): the full world transform.
+    OnParent(Transform),
+}
+
+/// World transform of an object on attachment point `point` of a parent placed at `parent`.
+///
+/// The point is given in the parent's OMSI axes (x right, y forward, z up; `attach_rot_*` turned
+/// as in `[newanim]` frames: `Rx·Ry·Rz`, right-handed); the child's own heading, pitch and roll
+/// follow the `[object]` convention (heading clockwise).
+fn attachment_transform(
+    parent: &Transform,
+    point: &opts_core::formats::scenery::sco::ScoAttachment,
+    heading_deg: f32,
+    pitch_deg: f32,
+    roll_deg: f32,
+) -> Transform {
+    let r = point.rotation_deg;
+    // OMSI x -> Bevy x, OMSI y (forward) -> Bevy -z, OMSI z (up) -> Bevy y.
+    let frame = Quat::from_rotation_x(r.x.to_radians())
+        * Quat::from_rotation_z(-r.y.to_radians())
+        * Quat::from_rotation_y(r.z.to_radians());
+    let local = Transform {
+        translation: omsi_to_bevy_pos(point.translation),
+        rotation: frame * omsi_euler_to_bevy_quat(-heading_deg, pitch_deg, roll_deg),
+        scale: Vec3::ONE,
+    };
+    parent.mul_transform(local)
+}
+
+/// Places the tile's `[attachObj]` children on their parents (objects, spline attachments or other
+/// children placed before them, all on this tile). Chains are resolved in rounds; a child whose
+/// parent never appears or whose parent has no such attachment point is logged at WARN.
+#[allow(clippy::too_many_arguments)]
+fn place_attached_objects(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    tile: &opts_core::formats::map::MapTile,
+    terrain: Option<&MapTerrain>,
+    key: (i32, i32),
+    origin: (f32, f32),
+    children: &mut Vec<Entity>,
+) {
+    let mut pending: Vec<usize> = (0..tile.attached_objects.len()).collect();
+    loop {
+        let before = pending.len();
+        let mut next = Vec::new();
+        for i in pending {
+            let a = &tile.attached_objects[i];
+            let Some((parent, parent_sco)) = job.placed.get(&a.parent_id).cloned() else {
+                next.push(i);
+                continue;
+            };
+            let Some(point) = parent_sco.attachments.get(a.attachment) else {
+                tracing::warn!(sco = %a.sco_file, parent = a.parent_id, point = a.attachment, points = parent_sco.attachments.len(), tile = ?key, "attached object skipped: the parent has no such attachment point");
+                stats.objects_failed += 1;
+                continue;
+            };
+            let transform = attachment_transform(
+                &parent,
+                point,
+                a.heading_deg,
+                a.pitch_deg.unwrap_or(0.0),
+                a.roll_deg.unwrap_or(0.0),
+            );
+            // The record as an ordinary object at the resolved spot (tile-local position for
+            // whatever samples it, e.g. trees and the scene trace).
+            let world = bevy_to_omsi_pos(transform.translation);
+            let obj = MapObjectInstance {
+                flag: a.flag,
+                sco_file: a.sco_file.clone(),
+                id_code: a.id_code,
+                position: Vec3::new(world.x - origin.0, world.y - origin.1, 0.0),
+                heading_deg: a.heading_deg,
+                pitch_deg: a.pitch_deg,
+                roll_deg: a.roll_deg,
+                string_vars: a.string_vars.clone(),
+            };
+            spawn_object(
+                job,
+                stats,
+                commands,
+                meshes,
+                materials,
+                images,
+                &obj,
+                Placement::OnParent(transform),
+                terrain,
+                key,
+                origin,
+                children,
+                tile,
+                super::trace::Site {
+                    list: "attached objects",
+                    index: i,
+                    marker: None,
+                },
+            );
+        }
+        pending = next;
+        if pending.is_empty() || pending.len() == before {
+            break;
+        }
+    }
+    for i in pending {
+        let a = &tile.attached_objects[i];
+        tracing::warn!(sco = %a.sco_file, id = a.id_code, parent = a.parent_id, tile = ?key, "attached object skipped: its parent is not placed on this tile");
+        stats.objects_failed += 1;
+    }
+}
+
 /// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
 #[allow(clippy::too_many_arguments)]
 fn spawn_object(
@@ -223,7 +361,7 @@ fn spawn_object(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
-    attached_z: Option<f32>,
+    placement: Placement,
     terrain: Option<&MapTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
@@ -233,7 +371,7 @@ fn spawn_object(
 ) {
     if !opts_bevy::scene_trace::enabled() {
         spawn_object_inner(
-            job, stats, commands, meshes, materials, images, obj, attached_z, terrain, key, origin,
+            job, stats, commands, meshes, materials, images, obj, placement, terrain, key, origin,
             children, tile, site,
         );
         return;
@@ -243,7 +381,7 @@ fn spawn_object(
     let first = children.len();
     super::trace::begin_frame();
     spawn_object_inner(
-        job, stats, commands, meshes, materials, images, obj, attached_z, terrain, key, origin,
+        job, stats, commands, meshes, materials, images, obj, placement, terrain, key, origin,
         children, tile, site,
     );
     let frame = super::trace::end_frame();
@@ -262,7 +400,7 @@ fn spawn_object_inner(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
-    attached_z: Option<f32>,
+    placement: Placement,
     terrain: Option<&MapTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
@@ -306,7 +444,7 @@ fn spawn_object_inner(
                 materials,
                 images,
                 &replaced,
-                attached_z,
+                placement,
                 terrain,
                 key,
                 origin,
@@ -324,6 +462,14 @@ fn spawn_object_inner(
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
+    // Route helpers (`[helparrow]`: arrows over junctions, the next stop's name over the stop) are
+    // shown by OMSI only while its route-arrow help is on, along the route being driven
+    // (`docs/src/architecture/scenery-benchmark.md`); OPTS has no such help yet, and drawing all of
+    // them put stop names and arrows in the air all over the maps.
+    if sco.is_help_arrow {
+        tracing::debug!(sco = %sco_path.display(), "route helper object not drawn");
+        return;
+    }
     let sco_dir = sco_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let model_dir = job
         .install
@@ -339,21 +485,28 @@ fn spawn_object_inner(
             .as_ref()
             .map_or(0.0, |t| sample_terrain(t, obj.position.x, obj.position.y))
     };
-    let z = match (attached_z, sco.has_absolute_height()) {
-        (Some(z), true) => z,
+    let z = match (placement, sco.has_absolute_height()) {
+        (Placement::OnSpline(z), true) => z,
         _ => terrain_h + obj.position.z,
     };
     let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
-    let transform = Transform {
-        translation: omsi_to_bevy_pos(world),
-        // OMSI headings are clockwise-positive (compass-style); the helper is CCW.
-        rotation: omsi_euler_to_bevy_quat(
-            -obj.heading_deg,
-            obj.pitch_deg.unwrap_or(0.0),
-            obj.roll_deg.unwrap_or(0.0),
-        ),
-        scale: Vec3::ONE,
+    let transform = match placement {
+        Placement::OnParent(t) => t,
+        _ => Transform {
+            translation: omsi_to_bevy_pos(world),
+            // OMSI headings are clockwise-positive (compass-style); the helper is CCW.
+            rotation: omsi_euler_to_bevy_quat(
+                -obj.heading_deg,
+                obj.pitch_deg.unwrap_or(0.0),
+                obj.roll_deg.unwrap_or(0.0),
+            ),
+            scale: Vec3::ONE,
+        },
     };
+    // `[attachObj]` children of this object are placed relative to it.
+    job.placed
+        .entry(obj.id_code)
+        .or_insert_with(|| (transform, sco.clone()));
 
     tracing::debug!(
         sco = %sco_path.display(),
@@ -494,8 +647,20 @@ fn spawn_object_inner(
     stats.objects_loaded += 1;
 }
 
-/// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config whose
-/// first LOD holds the visible meshes.
+/// The levels of detail of a parked/static vehicle model in the order they are tried: the most
+/// detailed level first. `[LOD] x` is the smallest share of the screen the level is drawn at, so
+/// the highest threshold holds the full model and `[LOD] 0` the coarse far one (corpus: the
+/// `0.07` + `0` configs keep the body, wheels and shadow decal at `0.07` and a single `*_LOD.o3d`
+/// at `0`; Aachen's `FW_*` cars leave `[LOD] 0` without a `[mesh]`). OPTS has no distance switch
+/// for these objects yet. Levels without a `[mesh]` are left out.
+fn lod_preference(lods: &[ModelLod]) -> Vec<&ModelLod> {
+    let mut out: Vec<&ModelLod> = lods.iter().filter(|l| !l.meshes.is_empty()).collect();
+    out.sort_by(|a, b| b.threshold.total_cmp(&a.threshold));
+    out
+}
+
+/// Places a parked/static vehicle object: its `[model]` is a vehicle-style model config; the first
+/// level of detail of [`lod_preference`] that loads anything is drawn.
 #[allow(clippy::too_many_arguments)]
 fn spawn_vehicle_model(
     job: &mut WorldLoadJob,
@@ -529,17 +694,12 @@ fn spawn_vehicle_model(
             return;
         }
     };
-    // Parked models list a decal-laden close-up level first and the plain body as `[LOD] 0`.
-    let Some(lod0) = model
-        .lods
-        .iter()
-        .find(|l| l.threshold == 0.0)
-        .or_else(|| model.lods.first())
-    else {
+    let lods = lod_preference(&model.lods);
+    if lods.is_empty() {
         tracing::error!(at = %opts_bevy::position_tag(), cfg = %cfg_path.display(), "vehicle model config has no meshes");
         stats.objects_failed += 1;
         return;
-    };
+    }
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let tex_dirs = vec![
         job.install
@@ -551,10 +711,19 @@ fn spawn_vehicle_model(
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
     job.vehicle_text_defs = model.text_textures.clone();
-    let (count, verts, _, _) = super::vehicle::load_segment_meshes(
-        job, commands, meshes, materials, images, root, lod0, &model_dir, &tex_dirs,
-    );
+    let (mut count, mut verts) = (0, 0);
+    for lod in lods {
+        let (c, v, _, _) = super::vehicle::load_segment_meshes(
+            job, commands, meshes, materials, images, root, lod, &model_dir, &tex_dirs,
+        );
+        (count, verts) = (c, v);
+        if count > 0 {
+            break;
+        }
+    }
     if count == 0 {
+        tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
+        super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));
         commands.entity(root).despawn();
         stats.objects_failed += 1;
         return;
@@ -687,5 +856,73 @@ impl WorldLoadJob {
         stats.meshes_decoding = pool.pending_count();
         stats.meshes_decoded = self.cache.stats.decoded_meshes;
         stats.meshes_twin = self.cache.stats.twin_meshes;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The shape of `Vehicles/FW_AstraG/model/Astra_Parked.cfg`: the body in the close-up level,
+    /// `[LOD] 0` holding a bare file name without `[mesh]`.
+    const PARKED: &str = "[LOD]\r\n0.025\r\n\r\n[mesh]\r\nbody.o3d\r\n\r\n[mesh]\r\nwheels.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n..\\..\\other\\model\\far.o3d\r\n";
+
+    #[test]
+    fn a_parked_model_without_meshes_at_lod_0_draws_its_close_up_level() {
+        let model = ModelConfig::parse_bytes(PARKED.as_bytes()).expect("parses");
+        let order = lod_preference(&model.lods);
+        assert_eq!(order.len(), 1);
+        assert!((order[0].threshold - 0.025).abs() < 1e-6);
+        assert_eq!(order[0].meshes.len(), 2);
+    }
+
+    #[test]
+    fn an_attached_object_sits_on_the_turned_parent_and_follows_the_point_rotation() {
+        use opts_core::formats::scenery::sco::ScoAttachment;
+        // Parent facing east (heading 90, clockwise), point 1 m forward and 2 m up.
+        let parent = Transform::from_rotation(omsi_euler_to_bevy_quat(-90.0, 0.0, 0.0));
+        let point = ScoAttachment {
+            translation: Vec3::new(0.0, 1.0, 2.0),
+            rotation_deg: Vec3::ZERO,
+        };
+        let t = attachment_transform(&parent, &point, 0.0, 0.0, 0.0);
+        assert!(
+            (t.translation - Vec3::new(1.0, 2.0, 0.0)).length() < 1e-5,
+            "{t:?}"
+        );
+        // The child faces where the parent faces: east (Bevy +x).
+        let forward = t.rotation * Vec3::NEG_Z;
+        assert!((forward - Vec3::X).length() < 1e-5, "{forward}");
+
+        // `attach_rot_z 90` turns the child counter-clockwise seen from above: north -> west.
+        let point = ScoAttachment {
+            translation: Vec3::ZERO,
+            rotation_deg: Vec3::new(0.0, 0.0, 90.0),
+        };
+        let t = attachment_transform(&Transform::IDENTITY, &point, 0.0, 0.0, 0.0);
+        let forward = t.rotation * Vec3::NEG_Z;
+        assert!((forward - Vec3::NEG_X).length() < 1e-5, "{forward}");
+        // The child's own heading is clockwise like an [object]: 90 -> east.
+        let t = attachment_transform(
+            &Transform::IDENTITY,
+            &ScoAttachment::default(),
+            90.0,
+            0.0,
+            0.0,
+        );
+        let forward = t.rotation * Vec3::NEG_Z;
+        assert!((forward - Vec3::X).length() < 1e-5, "{forward}");
+    }
+
+    /// The shape of `TH_A4_B6_Avant_parked.cfg`: full model at `0.07`, coarser ones below.
+    #[test]
+    fn the_most_detailed_level_comes_first() {
+        let cfg = "[LOD]\r\n0.07\r\n\r\n[mesh]\r\nbody.o3d\r\n\r\n[mesh]\r\nwheels.o3d\r\n\r\n[LOD]\r\n0.04\r\n\r\n[mesh]\r\nbody_lod.o3d\r\n\r\n[LOD]\r\n0\r\n\r\n[mesh]\r\nbody_lod_2.o3d\r\n";
+        let model = ModelConfig::parse_bytes(cfg.as_bytes()).expect("parses");
+        let order: Vec<f32> = lod_preference(&model.lods)
+            .iter()
+            .map(|l| l.threshold)
+            .collect();
+        assert_eq!(order, vec![0.07, 0.04, 0.0]);
     }
 }
