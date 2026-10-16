@@ -250,6 +250,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         vehicle_dirs: Vec::new(),
         spline_index: None,
         tile_splines: HashMap::new(),
+        placed: HashMap::new(),
         sco_cache: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),

@@ -166,6 +166,35 @@ pub struct MapSplineAttachment {
     pub raw_params: Vec<String>,
 }
 
+/// Object placed on an attachment point of another object (`[attachObj]`): line modules and
+/// timetables on bus-stop signs, signal heads on their arms, plates on sign poles. 62,609 records
+/// in the installed corpus; every parent lies on the same tile (an `[object]`, another
+/// `[attachObj]` or a spline attachment). Layout ([C] over the corpus): `flag`, `.sco`, ID, parent
+/// ID, a field that is always `0`, the parent's attachment point index (0-based, file order of its
+/// `[new_attachment]` blocks), heading, then in version 14 pitch and roll, then the string
+/// variables as in `[object]` (count, strings).
+#[derive(Debug, Clone, PartialEq)]
+pub struct MapAttachedObject {
+    /// Placement flag (`0`).
+    pub flag: i32,
+    /// Attached scenery object `.sco` path.
+    pub sco_file: String,
+    /// ID code of this object (other attached objects may name it as their parent).
+    pub id_code: u64,
+    /// ID code of the parent object.
+    pub parent_id: u64,
+    /// Index of the parent's attachment point.
+    pub attachment: usize,
+    /// Heading relative to the attachment point (degrees, clockwise like `[object]`).
+    pub heading_deg: f32,
+    /// Pitch (version 14 only).
+    pub pitch_deg: Option<f32>,
+    /// Roll (version 14 only).
+    pub roll_deg: Option<f32>,
+    /// Per-object string variables.
+    pub string_vars: Vec<String>,
+}
+
 /// Complete representation of an OMSI tile file (`tile_<x>_<y>.map`).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MapTile {
@@ -187,6 +216,8 @@ pub struct MapTile {
     pub rules: Vec<MapTrafficRule>,
     /// Attachments bound to splines.
     pub spline_attachments: Vec<MapSplineAttachment>,
+    /// Objects placed on attachment points of other objects (`[attachObj]`).
+    pub attached_objects: Vec<MapAttachedObject>,
     /// `[varparent] <id>` links: `(index into objects, parent id code)`. A signal head names its
     /// junction this way; its single string variable is the junction's light program index
     /// (`docs/src/architecture/scenery-runtime.md`).
@@ -431,6 +462,35 @@ impl MapTile {
                         });
                     }
                 }
+                "attachobj" => {
+                    let p = &block.parameters;
+                    let v14 = tile.version != Some(10);
+                    let strings_at = if v14 { 9 } else { 7 };
+                    if p.len() < strings_at {
+                        continue;
+                    }
+                    let n_strings = p
+                        .get(strings_at)
+                        .and_then(|s| s.trim().parse::<usize>().ok())
+                        .unwrap_or(0);
+                    tile.attached_objects.push(MapAttachedObject {
+                        flag: parse_i32(&p[0], "attachobj flag", block.line_number)?,
+                        sco_file: p[1].clone(),
+                        id_code: parse_u64(&p[2], "attachobj id", block.line_number)?,
+                        parent_id: parse_u64(&p[3], "attachobj parent", block.line_number)?,
+                        attachment: parse_u32(&p[5], "attachobj point", block.line_number)?
+                            as usize,
+                        heading_deg: parse_f32(&p[6], "attachobj heading", block.line_number)?,
+                        pitch_deg: v14.then(|| parse_float(&p[7]).ok()).flatten(),
+                        roll_deg: v14.then(|| parse_float(&p[8]).ok()).flatten(),
+                        string_vars: p
+                            .iter()
+                            .skip(strings_at + 1)
+                            .take(n_strings)
+                            .cloned()
+                            .collect(),
+                    });
+                }
                 "splineattachement" | "splineattachement_repeater" => {
                     let repeater = block.keyword == "splineattachement_repeater";
                     let o = if repeater { 2 } else { 0 };
@@ -560,6 +620,28 @@ fn parse_usize(s: &str, field: &'static str, line: usize) -> Result<usize, MapPa
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Two line modules on a bus-stop sign (`Aachen Linie 33`, tile 1094/10762), one in version 10.
+    #[test]
+    fn attached_objects_name_their_parent_and_attachment_point() {
+        let v14 = "[version]\n14\n\n[attachObj]\n0\nSceneryobjects\\ASEAG\\Haltestelle_Linienmodul.sco\n15988\n15986\n0\n1\n90\n0\n0\n2\n396\nVaals Busstation\n\nObject Nr. 29\n";
+        let tile = MapTile::from_text(v14).unwrap();
+        let a = &tile.attached_objects[0];
+        assert_eq!((a.id_code, a.parent_id, a.attachment), (15988, 15986, 1));
+        assert_eq!(a.heading_deg, 90.0);
+        assert_eq!((a.pitch_deg, a.roll_deg), (Some(0.0), Some(0.0)));
+        assert_eq!(a.string_vars, vec!["396", "Vaals Busstation"]);
+
+        let v10 = "[version]\n10\n\n[attachObj]\n0\nSceneryobjects\\X\\Std_H_Name.sco\n42468\n42465\n0\n3\n180\n1\nSüdermarkt\n\nObject Nr. 264\n";
+        let tile = MapTile::from_text(v10).unwrap();
+        let a = &tile.attached_objects[0];
+        assert_eq!(
+            (a.parent_id, a.attachment, a.heading_deg),
+            (42465, 3, 180.0)
+        );
+        assert_eq!((a.pitch_deg, a.roll_deg), (None, None));
+        assert_eq!(a.string_vars, vec!["Südermarkt"]);
+    }
 
     #[test]
     fn test_parse_minimal_tile() {

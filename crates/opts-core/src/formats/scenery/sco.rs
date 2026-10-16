@@ -306,6 +306,16 @@ pub struct ScoCtc {
     pub default_index: usize,
 }
 
+/// An attachment point (`[new_attachment]`): where objects placed with `[attachObj]` sit on this
+/// one, numbered in file order (`docs/src/formats/text/sco.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ScoAttachment {
+    /// `attach_trans`: position in the object's frame (OMSI axes: x right, y forward, z up).
+    pub translation: Vec3,
+    /// `attach_rot_x`, `attach_rot_y`, `attach_rot_z` in degrees (z: about the up axis).
+    pub rotation_deg: Vec3,
+}
+
 /// Complete representation of an OMSI scenery object (`.sco`).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct SceneryObject {
@@ -365,6 +375,8 @@ pub struct SceneryObject {
 
     /// Visual 3D mesh attachments.
     pub meshes: Vec<ScoMesh>,
+    /// Attachment points for `[attachObj]` children, in file order.
+    pub attachments: Vec<ScoAttachment>,
     /// Traffic path lane segments.
     pub paths: Vec<ScoPath>,
     /// Spline helper profiles.
@@ -440,6 +452,9 @@ impl SceneryObject {
                             .cloned()
                             .collect();
                     }
+                }
+                "new_attachment" => {
+                    obj.attachments.push(parse_attachment(&block.parameters));
                 }
                 "friendlyname" => {
                     if let Some(name) = block.parameters.first() {
@@ -1094,6 +1109,43 @@ fn add_light(obj: &mut SceneryObject, block: &OmsiBlock, lod: Option<f32>) {
     }
 }
 
+/// The sub-keys of a `[new_attachment]` block: `attach_trans x y z` and `attach_rot_x|y|z angle`
+/// (8,000 `attach_trans` and 1,700 `attach_rot_z` in the installed corpus). Unknown sub-keys and
+/// unreadable numbers leave the value at zero: the point still exists, so the numbering of the
+/// following points stays right.
+fn parse_attachment(params: &[String]) -> ScoAttachment {
+    let mut a = ScoAttachment::default();
+    let num = |i: usize| {
+        params
+            .get(i)
+            .and_then(|s| parse_float(s).ok())
+            .unwrap_or(0.0)
+    };
+    let mut i = 0;
+    while i < params.len() {
+        match params[i].trim().to_ascii_lowercase().as_str() {
+            "attach_trans" => {
+                a.translation = Vec3::new(num(i + 1), num(i + 2), num(i + 3));
+                i += 4;
+            }
+            "attach_rot_x" => {
+                a.rotation_deg.x = num(i + 1);
+                i += 2;
+            }
+            "attach_rot_y" => {
+                a.rotation_deg.y = num(i + 1);
+                i += 2;
+            }
+            "attach_rot_z" => {
+                a.rotation_deg.z = num(i + 1);
+                i += 2;
+            }
+            _ => i += 1,
+        }
+    }
+    a
+}
+
 fn parse_f32(s: &str, field: &'static str, line: usize) -> Result<f32, SceneryParseError> {
     parse_float(s).map_err(|_| SceneryParseError::InvalidNumber {
         field,
@@ -1182,6 +1234,18 @@ red
         let bbox = sco.bounding_box.unwrap();
         assert_eq!(bbox.half_extents, Vec3::new(0.3, 0.3, 1.2));
         assert_eq!(bbox.center, Vec3::new(0.0, 0.0, 0.6));
+    }
+
+    #[test]
+    fn attachment_points_are_numbered_in_file_order() {
+        let text = "[new_attachment]\nattach_trans\n0\n0.053\n2.376\n\n[mesh]\nmast.o3d\n\n[new_attachment]\nattach_rot_z\n180\n\nattach_trans\n-0.147\n0.000\n1.120\n";
+        let sco = SceneryObject::from_text(text).unwrap();
+        assert_eq!(sco.attachments.len(), 2);
+        assert_eq!(sco.attachments[0].translation, Vec3::new(0.0, 0.053, 2.376));
+        assert_eq!(sco.attachments[0].rotation_deg, Vec3::ZERO);
+        assert_eq!(sco.attachments[1].translation, Vec3::new(-0.147, 0.0, 1.12));
+        assert_eq!(sco.attachments[1].rotation_deg.z, 180.0);
+        assert_eq!(sco.meshes.len(), 1);
     }
 
     #[test]

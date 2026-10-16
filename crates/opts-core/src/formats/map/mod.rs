@@ -19,8 +19,8 @@ pub use lists::{
 pub use pitch::{estimate_tile_size, DEFAULT_TILE_SIZE_M};
 pub use terrain::MapTerrain;
 pub use tile::{
-    MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile, MapTrafficRule, RuleKind,
-    RuleOwner,
+    MapAttachedObject, MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile,
+    MapTrafficRule, RuleKind, RuleOwner,
 };
 pub use water::MapWater;
 pub use write::MapWriteError;

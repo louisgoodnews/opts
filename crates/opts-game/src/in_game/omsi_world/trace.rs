@@ -209,6 +209,36 @@ pub(super) fn object(
             id: None,
         });
     }
+    if site.list == "attached objects" {
+        if let Some(att) = tile.attached_objects.get(site.index) {
+            let parent = att.parent_id;
+            let file = tile
+                .objects
+                .iter()
+                .find(|o| o.id_code == parent)
+                .map(|o| o.sco_file.clone())
+                .or_else(|| {
+                    tile.attached_objects
+                        .iter()
+                        .find(|o| o.id_code == parent)
+                        .map(|o| o.sco_file.clone())
+                })
+                .or_else(|| {
+                    tile.spline_attachments
+                        .iter()
+                        .find(|o| o.id_code == parent)
+                        .map(|o| o.sco_file.clone())
+                })
+                .unwrap_or_default();
+            parents.push(ParentRef {
+                kind: "attach_parent".into(),
+                file,
+                tile: Some([key.0, key.1]),
+                index: None,
+                id: None,
+            });
+        }
+    }
     if site.list == "attachments" {
         if let Some(att) = tile
             .spline_attachments
