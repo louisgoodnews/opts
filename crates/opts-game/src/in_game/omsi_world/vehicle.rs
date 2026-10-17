@@ -118,6 +118,8 @@ pub(super) fn load_segment_meshes_for(
     // script string variable it shows changes (`vehicle_text.rs`).
     let text_defs = job.vehicle_text_defs.clone();
     let mut text_images: std::collections::HashMap<usize, Handle<Image>> = Default::default();
+    let script_defs = job.vehicle_script_defs.clone();
+    let mut script_images: std::collections::HashMap<usize, Handle<Image>> = Default::default();
     // Dummy meshes (`…Dum_Gelenk_A`) that carry a bone's animation, and the skinned meshes
     // (`[smoothskin]` + `[setbone]`: the articulation bellows) bound to them.
     let mut dummies: Vec<(String, Entity)> = Vec::new();
@@ -232,6 +234,33 @@ pub(super) fn load_segment_meshes_for(
                     ));
                     text_images.insert(i, handle.clone());
                     Some(handle)
+                }).or_else(|| {
+                    m.script_texture_index.and_then(|i| {
+                        if let Some(h) = script_images.get(&i) {
+                            return Some(h.clone());
+                        }
+                        let Some(def) = script_defs.get(i) else {
+                            tracing::error!(at = %opts_bevy::position_tag(), mesh = %mesh_def.path, index = i, "[useScriptTexture] names a script texture the model does not declare");
+                            return None;
+                        };
+                        let (w, h) = (def.width.max(1), def.height.max(1));
+                        let handle = images.add(opts_bevy::text_texture::text_image(
+                            w,
+                            h,
+                            vec![0; (w * h * 4) as usize],
+                        ));
+                        commands.spawn((
+                            super::vehicle_script_texture::VehicleScriptTexture::new(
+                                i,
+                                job.vehicle_script_textures.clone(),
+                                handle.clone(),
+                            ),
+                            Name::new(format!("script_texture_{i}")),
+                            ChildOf(root),
+                        ));
+                        script_images.insert(i, handle.clone());
+                        Some(handle)
+                    })
                 }),
                 light_map: m.light_map.clone(),
             })
@@ -552,6 +581,15 @@ pub(super) fn spawn_trailer_chain(
         };
         let lod0 = &detail;
         job.vehicle_text_defs = model.text_textures.clone();
+        job.vehicle_script_defs = model.script_textures.clone();
+        let canvases: Vec<opts_core::formats::script_texture::CpuScriptTexture> = model
+            .script_textures
+            .iter()
+            .map(|st| {
+                opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height)
+            })
+            .collect();
+        job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
         // Both coupling points are in their own vehicle frame; the segment follows its leader
         // with its front joint on the leader's rear joint (`opts_bevy::articulation`).
         let reversed = parent_manifest.couple_back_reversed;
@@ -756,6 +794,13 @@ pub fn prewarm_vehicle_meshes(
     };
     let lod0 = &detail;
     job.vehicle_text_defs = model.text_textures.clone();
+    job.vehicle_script_defs = model.script_textures.clone();
+    let canvases: Vec<opts_core::formats::script_texture::CpuScriptTexture> = model
+        .script_textures
+        .iter()
+        .map(|st| opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height))
+        .collect();
+    job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
     let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
     let tex_dirs = vec![
         job.install
@@ -844,6 +889,13 @@ pub fn load_player_vehicle(
     let detail = model.detail_lod().ok_or("model config has no meshes")?;
     let lod0 = &detail;
     job.vehicle_text_defs = model.text_textures.clone();
+    job.vehicle_script_defs = model.script_textures.clone();
+    let canvases: Vec<opts_core::formats::script_texture::CpuScriptTexture> = model
+        .script_textures
+        .iter()
+        .map(|st| opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height))
+        .collect();
+    job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
     tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
 
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
@@ -1385,6 +1437,11 @@ fn attach_scripts(
         current_stop_index: 0,
         delay_seconds: 0.0,
         line_string: active_line_string,
+        script_textures: job.vehicle_script_textures.clone(),
+        fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
+            &job.install,
+        ))),
+        texture_base_dir: Some(bus_dir.join("Texture")),
     };
     engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
         ctx,

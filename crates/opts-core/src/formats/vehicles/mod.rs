@@ -6,6 +6,7 @@ pub mod error;
 pub mod hof;
 pub mod model;
 pub mod paths;
+pub mod script_texture;
 
 pub use ai_profile::{AiKind, AiProfile, VehicleDomain};
 pub use bus::{
@@ -19,3 +20,4 @@ pub use model::{
     ModelParseError, ViewpointFlags,
 };
 pub use paths::{parse_paths, DoorBinding, PassengerPaths, PathLink, PathPoint, StepSoundPack};
+pub use script_texture::{CpuScriptTexture, ScriptTextureCanvas};

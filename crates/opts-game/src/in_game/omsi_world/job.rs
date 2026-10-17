@@ -255,6 +255,8 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
         vehicle_text_defs: Vec::new(),
+        vehicle_script_defs: Vec::new(),
+        vehicle_script_textures: Arc::default(),
         ground_material: None,
         ground_array: None,
         spawn: None,

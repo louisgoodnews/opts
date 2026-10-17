@@ -19,3 +19,6 @@ pub mod text;
 pub mod varlist;
 pub mod vehicles;
 pub mod x;
+pub use vehicles::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
+
+pub use vehicles::script_texture;

@@ -39,6 +39,7 @@ pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;
 pub(crate) use traffic::DEFAULT_MAX_TRAFFIC;
 mod trees;
 mod vehicle;
+pub mod vehicle_script_texture;
 mod vehicle_text;
 
 pub use collision::{
@@ -73,6 +74,7 @@ pub use traffic::{
 };
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{decodes_pending, load_player_vehicle, prewarm_vehicle_meshes, SpawnedVehicle};
+pub use vehicle_script_texture::update_vehicle_script_textures;
 pub use vehicle_text::update_vehicle_text_textures;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -212,6 +214,11 @@ pub struct WorldLoadJob {
     /// `[texttexture]` declarations of the vehicle model being loaded (set by its loader; the
     /// segment loader binds `[useTextTexture]` indices against them).
     vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
+    /// `[scripttexture]` declarations of the vehicle model being loaded.
+    vehicle_script_defs: Vec<opts_core::formats::vehicles::model::ScriptTexture>,
+    /// Script texture canvases for the active vehicle model.
+    vehicle_script_textures:
+        Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>,
     ground_material: Option<Handle<StandardMaterial>>,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,
