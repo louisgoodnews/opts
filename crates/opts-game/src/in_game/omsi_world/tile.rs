@@ -43,6 +43,8 @@ pub fn load_next_tile(
     };
     job.tile_splines
         .insert(key, std::sync::Arc::new(tile.splines.clone()));
+    // A tile rebuilt in place (Chrono switch) may still hold the collision of its previous build.
+    super::collision::unregister_tile(commands, key);
     for w in &tile.warnings {
         tracing::warn!(tile = ?key, "tile record left out: {w}");
     }
@@ -54,6 +56,10 @@ pub fn load_next_tile(
     job.loading_deps.clear();
     job.loading_deps
         .insert(opts_bevy::hot_reload::cache::normalize(&tile_path));
+    for overlay in job.chrono_overlays(key).to_vec() {
+        job.loading_deps
+            .insert(opts_bevy::hot_reload::cache::normalize(&overlay));
+    }
     tracing::info!(
         tile = ?key,
         path = %tile_path.display(),
@@ -810,16 +816,8 @@ pub fn stream_world_tiles(
         .filter(|k| dist(*k) > radius + 1)
         .collect();
     for key in far {
-        if let Some(root) = job.resident.remove(&key) {
-            commands.entity(root).despawn();
-            super::pedestrians::unregister_tile(&mut commands, key);
-            super::ground_height::unregister(&mut commands, key);
-            super::rail::unregister_tile(&mut commands, key);
-            super::rail::unregister_bike_tile(&mut commands, key);
-            super::collision::unregister_tile(&mut commands, key);
-            super::traffic::unregister_tile(&mut commands, key);
-            opts_bevy::scene_trace::forget_tile(key);
-            tracing::debug!(tile = ?key, "tile unloaded");
+        if let Some(unload) = job.unload_tile(key, false) {
+            unload.apply(&mut commands);
         }
     }
     stats.tiles_loaded = job.resident.len();

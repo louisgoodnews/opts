@@ -196,8 +196,18 @@ pub(super) fn find_bus_file(install: &OmsiInstall, id: &str) -> Option<PathBuf> 
         .find_map(|e| install.find_in(&e.path(), &file))
 }
 
-/// Parses `global.cfg`, picks the start tile and queues its 3×3 neighbourhood.
+/// Parses `global.cfg`, picks the start tile and queues its 3×3 neighbourhood (the base map,
+/// without Chrono).
 pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, String> {
+    begin_world_load_at(config, None)
+}
+
+/// [`begin_world_load`] for a map date: the Chrono entries active on it are applied to every
+/// tile read (`None`: the base map).
+pub fn begin_world_load_at(
+    config: OmsiSessionConfig,
+    map_date: Option<opts_core::formats::chrono::ChronoDate>,
+) -> Result<WorldLoadJob, String> {
     let mut install = OmsiInstall::new(&config.root);
     if let Some(l) = &config.lookup {
         install = install.with_lookup(l.clone());
@@ -259,6 +269,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
         parklist: None,
+        chrono: super::chrono::ChronoContext::default(),
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
         vehicle_text_defs: Vec::new(),
@@ -279,6 +290,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
     };
 
     opts_bevy::scene_trace::begin_session(&job.map_name(), job.install.root());
+    job.init_chrono(map_date);
 
     // Tile grid: 300 m, except for maps with world coordinates (Mercator rows when the splines'
     // border chains agree with them, else the measured pitch).
@@ -535,13 +547,11 @@ impl WorldLoadJob {
             return i.clone();
         }
         let mut index = SplineIndex::default();
-        for key in self.tile_files.keys() {
-            let parsed = self
-                .tile_path(*key)
-                .and_then(|p| std::fs::read(p).ok())
-                .and_then(|b| MapTile::parse(&b).ok());
-            if let Some(tile) = parsed {
-                index.add_tile(*key, &tile.splines);
+        // Through `read_tile`: the splines as Chrono leaves them on the map date.
+        let keys: Vec<(i32, i32)> = self.tile_files.keys().copied().collect();
+        for key in keys {
+            if let Some(tile) = self.read_tile(key) {
+                index.add_tile(key, &tile.splines);
             }
         }
         let index = Arc::new(index);
@@ -549,21 +559,35 @@ impl WorldLoadJob {
         index
     }
 
+    /// The tile's file: the base file, or for a tile that only Chrono adds, its first overlay.
     pub(super) fn tile_path(&self, key: (i32, i32)) -> Option<PathBuf> {
+        self.base_tile_path(key)
+            .or_else(|| self.chrono_new_tile(key))
+    }
+
+    fn base_tile_path(&self, key: (i32, i32)) -> Option<PathBuf> {
         let name = self.tile_files.get(&key)?;
         self.install.find_in(&self.config.map_dir, name)
     }
 
+    /// Parses a tile and applies the Chrono overlays active on the map date.
     pub(super) fn read_tile(&self, key: (i32, i32)) -> Option<MapTile> {
-        let path = self.tile_path(key)?;
-        let bytes = std::fs::read(&path).ok()?;
-        match MapTile::parse(&bytes) {
-            Ok(t) => Some(t),
-            Err(e) => {
-                tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "tile parse failed: {e}");
-                None
+        let mut tile = match self.base_tile_path(key) {
+            Some(path) => {
+                let bytes = std::fs::read(&path).ok()?;
+                match MapTile::parse(&bytes) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "tile parse failed: {e}");
+                        return None;
+                    }
+                }
             }
-        }
+            None if !self.chrono_overlays(key).is_empty() => MapTile::default(),
+            None => return None,
+        };
+        self.apply_chrono(key, &mut tile);
+        Some(tile)
     }
 
     /// The splines of a tile: kept from its last read, otherwise read now (`None` when the tile
@@ -623,7 +647,7 @@ impl WorldLoadJob {
     /// The draw is a hash of the marker's id code, so a bay shows the same car on every load.
     pub(super) fn parked_vehicle(&mut self, id_code: u64) -> Option<String> {
         if self.parklist.is_none() {
-            let path = self.install.find_in(&self.config.map_dir, "parklist_p.txt");
+            let path = self.data_file("parklist_p.txt");
             let list = match path.map(|p| std::fs::read(&p).map(|b| (p, b))) {
                 Some(Ok((p, bytes))) => {
                     self.loading_deps

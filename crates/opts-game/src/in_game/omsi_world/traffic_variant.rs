@@ -321,11 +321,8 @@ pub(super) fn participating<'a>(
 
 /// Reads the map's AI lists and builds the groups and vehicle slots of the traffic pool.
 pub(super) fn read_groups(job: &WorldLoadJob) -> (Vec<PoolGroup>, Vec<Slot>) {
-    let read = |name: &str| {
-        job.install
-            .find_in(&job.config.map_dir, name)
-            .and_then(|p| std::fs::read(p).ok())
-    };
+    // The files in force on the map date (Chrono replacements and group updates).
+    let read = |name: &str| job.data_bytes(name);
     let lists = read("ailists.cfg")
         .map(|b| AiLists::parse(&b))
         .unwrap_or_default();

@@ -1,6 +1,6 @@
 # Session Environment (date, time, weather)
 
-Status: implemented (C6 of the Berlin-Spandau systems work, 2026-10-17;
+Status: implemented (C6 of the Berlin-Spandau systems work, 2026-10-17; Chrono switch C4a;
 [findings §5 System 5](../meta/berlin-spandau-systems-2026-10-17.md#system-5-environment-controls)).
 
 Date, time of day and weather of a drive are one resource, `opts_bevy::SessionEnvironment`
@@ -73,17 +73,37 @@ weather; *apply* (stage `Settled`) sends the saved clock as an `EnvironmentChang
 date rolled over (`TimeData::clock`). The `weather` section stores the session's current weather.
 The drive history keeps recording the plan (start values).
 
-## 5. Chrono hook (extension point)
+## 5. Chrono live switch
 
 A change with `MapDatePolicy::Follow` whose date differs from `map_date` moves `map_date` and
 sends `MapDateChanged { old, new }`. Midnight rollover and restored clocks do not.
 
-`ChronoRebuild { pending_tiles, total_tiles }` (default 0) is the progress a Chrono handler
-reports: it reads `MapDateChanged`, sets both counts and counts `pending_tiles` down as it rebuilds
-the resident overlay tiles. **No handler exists yet** (Chrono is a later item), so nothing waits.
-The page shows `env-rebuilding` while `pending_tiles > 0`, and *Resume* (or Esc on the overlay)
-closes the overlay but keeps the simulation paused until the rebuild is done
-(`pause::resume_after_rebuild`).
+The map is loaded for the planned date (`begin_world_load_at`, `stage_init`): every tile is read
+through `WorldLoadJob::read_tile`, which applies the overlays of the Chrono entries active on the
+map date ([chrono](../formats/map/chrono.md)); the map-wide spline index goes through it too.
+Data files come from `WorldLoadJob::data_file` / `data_bytes` (the last active entry's
+replacement, `ailists.cfg` with its group updates). `ChronoState` (resource) exposes the active
+entries, deactivated lines, ticket pack and money system; nothing consumes it yet.
+
+`omsi_world::apply_map_date_changes` handles `MapDateChanged` (`in_game/omsi_world/chrono.rs`):
+
+1. the active sets of the old and new date are compared; **equal sets only move the map date**;
+2. the changed tiles are those whose overlay list differs, plus the 3 × 3 ring around every
+   `.chronoterrrelevant` tile of a toggled entry (terrain carve); a changed `parklist_p*.txt`
+   adds every resident tile (parked cars);
+3. the neighbour caches of those tiles (splines and objects for the carve) and the spline index
+   are dropped; tiles that only an entry adds join or leave the tile set;
+4. the **resident** ones among them are unloaded with `WorldLoadJob::unload_tile` (the same full
+   unregister the streamer and hot reload use) and queued at the front, **the player's tile first**;
+   the player's tile keeps its ground and collision until the rebuilt tile registers its own;
+5. the traffic pool is rebuilt when `ailists_#upd.cfg` or `unsched_trafficdens.txt` changed (cars
+   already driving stay).
+
+`ChronoRebuild { pending_tiles, total_tiles }` is set to the number of tiles queued;
+`track_chrono_rebuild` counts `pending_tiles` down as they become resident again (or drop out of
+the queue). The page shows `env-rebuilding` while `pending_tiles > 0`, and *Resume* (or Esc on the
+overlay) closes the overlay but keeps the simulation paused until the rebuild is done
+(`pause::resume_after_rebuild`). Tiles keep streaming while paused.
 
 ## 6. Wizard
 

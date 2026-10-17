@@ -13,8 +13,9 @@ use super::WorldLoadJob;
 /// What the application has to do after [`WorldLoadJob::plan_reload`].
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ReloadPlan {
-    /// Tile roots to despawn (the streamer re-queues and reloads the tiles).
-    pub despawn: Vec<Entity>,
+    /// Tiles taken down (the streamer re-queues and reloads them); [`ReloadPlan::apply`] despawns
+    /// their roots and unregisters them.
+    pub unloads: Vec<TileUnload>,
     /// Tiles being rebuilt.
     pub tiles: usize,
     /// Textures overwritten in place.
@@ -25,7 +26,49 @@ pub struct ReloadPlan {
     pub restart_vehicle: bool,
 }
 
+/// A tile taken out of the world: its root entity and what it registered (ground, collision,
+/// lanes, signals). Built by [`WorldLoadJob::unload_tile`], carried out by [`TileUnload::apply`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TileUnload {
+    /// Tile key.
+    pub key: (i32, i32),
+    /// Root entity of the tile.
+    pub root: Entity,
+    /// Keep the tile's ground and collision until the rebuilt tile registers its own (the tile
+    /// the player stands on).
+    pub keep_ground: bool,
+}
+
+impl TileUnload {
+    /// Despawns the tile and unregisters it from every index.
+    pub fn apply(&self, commands: &mut Commands) {
+        let key = self.key;
+        if let Ok(mut e) = commands.get_entity(self.root) {
+            e.despawn();
+        }
+        super::pedestrians::unregister_tile(commands, key);
+        super::rail::unregister_tile(commands, key);
+        super::rail::unregister_bike_tile(commands, key);
+        super::traffic::unregister_tile(commands, key);
+        if !self.keep_ground {
+            super::ground_height::unregister(commands, key);
+            super::collision::unregister_tile(commands, key);
+        }
+        opts_bevy::scene_trace::forget_tile(key);
+        tracing::debug!(tile = ?key, keep_ground = self.keep_ground, "tile unloaded");
+    }
+}
+
 impl ReloadPlan {
+    /// Carries out the unloads.
+    pub fn apply(&self, world: &mut World) {
+        let mut commands = world.commands();
+        for u in &self.unloads {
+            u.apply(&mut commands);
+        }
+        world.flush();
+    }
+
     /// A readable summary (`2 tiles, 1 texture in place`), or `nothing depends on the file`.
     #[must_use]
     pub fn summary(&self) -> String {
@@ -51,11 +94,22 @@ impl ReloadPlan {
 }
 
 impl WorldLoadJob {
+    /// Takes a resident tile out of the job's bookkeeping; the returned [`TileUnload`] removes it
+    /// from the world. `None` when the tile is not resident.
+    pub(super) fn unload_tile(&mut self, key: (i32, i32), keep_ground: bool) -> Option<TileUnload> {
+        let root = self.resident.remove(&key)?;
+        self.tile_deps.remove(&key);
+        Some(TileUnload {
+            key,
+            root,
+            keep_ground,
+        })
+    }
+
     fn respawn_tiles(&mut self, keys: &[(i32, i32)], plan: &mut ReloadPlan) {
         for key in keys {
-            if let Some(root) = self.resident.remove(key) {
-                plan.despawn.push(root);
-                self.tile_deps.remove(key);
+            if let Some(unload) = self.unload_tile(*key, false) {
+                plan.unloads.push(unload);
                 if !self.queue.contains(key) {
                     self.queue.push_front(*key);
                 }

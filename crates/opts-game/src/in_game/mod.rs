@@ -44,6 +44,7 @@ impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
+            .init_resource::<omsi_world::ChronoState>()
             .init_resource::<omsi_world::CollisionIndex>()
             .init_resource::<omsi_world::RailNetwork>()
             .init_resource::<omsi_world::BikeNetwork>()
@@ -146,6 +147,18 @@ impl Plugin for InGamePlugin {
             )
                 .chain()
                 .after(opts_bevy::EnvironmentSet)
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // Chrono: the live switch on a new map date, and its progress for the pause page.
+        app.add_systems(
+            Update,
+            (
+                omsi_world::apply_map_date_changes
+                    .after(opts_bevy::EnvironmentSet)
+                    .before(omsi_world::stream_world_tiles),
+                omsi_world::track_chrono_rebuild.after(omsi_world::stream_world_tiles),
+            )
                 .run_if(in_state(AppState::InGame)),
         );
 
