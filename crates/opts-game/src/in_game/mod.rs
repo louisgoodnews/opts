@@ -12,6 +12,7 @@ pub mod moon;
 pub mod omsi_world;
 pub mod screenshot;
 pub mod sky;
+pub mod sky_cube;
 pub mod stream_budget;
 pub mod types;
 pub mod vehicle_spawner;
@@ -80,7 +81,11 @@ impl Plugin for InGamePlugin {
             opts_bevy::EnvironmentSet.run_if(in_state(AppState::InGame)),
         );
         app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
-        app.add_plugins((moon::MoonPlugin, opts_bevy::sun_rays::SunRaysPlugin));
+        app.add_plugins((
+            moon::MoonPlugin,
+            opts_bevy::sun_rays::SunRaysPlugin,
+            opts_bevy::reflections::ReflectionsPlugin,
+        ));
         app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins((VehicleMenuPlugin, FormationMenuPlugin))
             .add_systems(
@@ -218,6 +223,15 @@ impl Plugin for InGamePlugin {
                     .before(opts_bevy::scenery_runtime::SceneryRuntimeSet),
                 screenshot::capture_screenshot_when_ready,
             )
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // The sky cube map for glass reflections reads the sky that `sky::update_sky` keeps current.
+        app.add_systems(
+            Update,
+            sky_cube::feed_sky_cube
+                .after(sky::update_sky)
+                .after(opts_bevy::EnvironmentSet)
                 .run_if(in_state(AppState::InGame)),
         );
 

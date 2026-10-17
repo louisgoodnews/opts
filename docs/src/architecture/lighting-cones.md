@@ -344,7 +344,7 @@ cones 4 steps, mirrors every 2nd frame; (2) cones off for lanterns, vehicle head
 | `opts-bevy/src/scenery_runtime/lights.rs` (`[light_enh_2]`), `vehicle_glow.rs` / `vehicle_lights.rs` (`[spotlight]`) | cone entities (shared unit-cone mesh, one `ConeMaterial`, scale (r, r, L), `MeshTag` colour) per shining lamp and headlight within the cap |
 | new `opts-bevy/src/light_cones.rs` + `shaders/light_cone.wesl` | material and plugin from the example (`lighting_bench.rs`, `lighting_bench.wesl`), selection with hysteresis, budget |
 | all `With<Camera3d>` sites above (about 32 of the 48 need it) | `With<MainCamera>` |
-| `opts-bevy/src/reflections.rs` | mirrors by `is_active`, `Hdr`, shared IBL |
+| `opts-bevy/src/{mirrors,sky_cube,glass}.rs` | mirrors by `is_active`, `Hdr`, shared IBL (implemented, [lighting system §9.3](lighting-system.md#93-implemented-sky-cube-map-for-glass-and-mirror-cameras-2026-10-17-agentlighting-reflections)) |
 | `opts-game/src/settings_registry` | `light_shafts` (Off/Low/Medium/High), `light_cones` (Off/Low/Full) and the HDR toggle |
 
 ## Risks

@@ -758,7 +758,9 @@ impl ContentLoader<'_> {
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
                 let material = self.cache.pool.material(self.materials, material);
                 if let Some(m) = self.materials.get(&material) {
-                    // Research prototype hook (M-0085); free unless `OPTS_REFLECT` is set.
+                    // Glass and mirror surfaces for the reflections (`glass`, `mirrors`), and the
+                    // research prototype hook (M-0085; free unless `OPTS_REFLECT` is set).
+                    crate::glass::note_surface(&material, tex_name.as_deref(), m, false);
                     crate::reflections::note_material(&material, tex_name.as_deref(), m);
                 }
                 let part = ModelPart {
@@ -778,6 +780,15 @@ impl ContentLoader<'_> {
                         material: self.cache.pool.material(self.materials, glass),
                         ..part.clone()
                     };
+                    if let Some(g) = self.materials.get(&glass_part.material) {
+                        // The glass pass of a transmap split is glass whatever its texture is called.
+                        crate::glass::note_surface(
+                            &glass_part.material,
+                            tex_name.as_deref(),
+                            g,
+                            true,
+                        );
+                    }
                     parts.push(part);
                     parts.push(glass_part);
                 } else {

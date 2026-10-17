@@ -97,6 +97,7 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
     if let Some(q) = world.get_resource::<crate::light_quality::LightQuality>() {
         out["light_quality"] = light_quality_json(q);
     }
+    out["reflections"] = reflections_json(world);
     if let Some(c) = world.get_resource::<crate::light_cones::ConeStats>() {
         out["light_cones"] = json!({
             "total": c.total,
@@ -107,6 +108,30 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
         });
     }
     Outcome::ok(out)
+}
+
+/// The reflection features as they run (what `sim.get` reports as `reflections`): the shared sky
+/// cube, the glass look and the mirror cameras.
+fn reflections_json(world: &World) -> Value {
+    let mut out = json!({});
+    if let Some(c) = world.get_resource::<crate::sky_cube::SkyCubeState>() {
+        out["sky_cube"] = json!({
+            "on": c.handle.is_some(),
+            "builds": c.builds,
+            "intensity": c.intensity,
+        });
+    }
+    if let Some(g) = world.get_resource::<crate::glass::GlassStats>() {
+        out["glass"] = json!({"registered": g.registered, "reflective": g.reflective});
+    }
+    if let Some(m) = world.get_resource::<crate::mirrors::MirrorStats>() {
+        out["mirrors"] = json!({
+            "cameras": m.cameras,
+            "selected": m.selected,
+            "rendering": m.rendering,
+        });
+    }
+    out
 }
 
 /// The lighting quality as the effects see it (what `sim.get` reports as `light_quality`).
