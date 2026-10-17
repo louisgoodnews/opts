@@ -103,10 +103,14 @@ classification of the conditions.
 | Wet ground | `GroundMaterial.extension.wet` (existing shader), road materials via a global factor | `graphics.weather_wet_ground` (on) | on change only |
 | Snow tint | `wet.z` in the ground shader, road base colour | with wet ground | on change only |
 
+**Colours are scene-linear** and come from one function, `opts_bevy::weather::weather_look` (fog colour, cloud and precipitation brightness); a later HDR camera needs a change there only.
+
 Effects use real time (not `Time<Virtual>`), so a weather preview on the paused Environment page
 animates. Disabling a setting takes effect live (`SettingChanged`).
 
 ## 6. Wet ground and snow
+
+The weather is the writer of the reflections prototype's `Wetness` resource (`opts_bevy::reflections::Wetness`, [reflections research](reflections-research.md)): `drive_wetness` sets it from `[groundwet]` (0 when `graphics.weather_wet_ground` is off) and the surfaces system reads it, so there is one wet-ground implementation. The prototype's env-switched standard-material path (`OPTS_REFLECT=wet`) stays a research option; its ground-shader write was removed (the weather writes the uniform, with puddles and snow). The wet path is now a normal setting, default on; its cost is one uniform write on change and a 0.5 s scan of the ground materials, the road materials are touched only on change (the research measured wet surfaces as free within noise).
 
 Wetness `w = groundwet[1]/255`; puddle coverage `0.45 · min(groundwet[2]/120, 1)` clamped (0.45 is the
 existing prototype value). Ground uses the existing shader path (darker, rougher→smoother,
@@ -114,6 +118,10 @@ puddles). Road materials (`StandardMaterial`s of the splines) get the same globa
 colour × `(1 − 0.3·w)` and roughness × `(1 − 0.55·w)`, from their original values captured at first
 sight. Snow cover tints the ground toward `(0.92, 0.94, 0.97)` by 0.85 and, with `[snowOnRoad]`,
 the roads by 0.7. Objects, roofs and vehicles are not snow-covered (deviation).
+
+## Headless check
+
+`cargo run -p opts-game --example weather_probe -- <dir> [preset…]` renders a small scene (layered ground, boxes) off-screen under each preset (with `OMSI_PATH`: the install's presets and cloud textures) and writes PNGs: fog, cloud disc, rain streaks, snow flakes, wet ground and puddles, snow cover. It does not include the sky dome (the fogged sky texture is in `sky.rs`).
 
 ## 7. Script variables
 

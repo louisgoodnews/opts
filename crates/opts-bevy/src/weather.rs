@@ -702,6 +702,38 @@ pub fn cloud_tint(c: &WeatherConditions, sun_alt_deg: f32) -> f32 {
     (0.04 + 0.96 * day) * dim
 }
 
+/// The colours and brightnesses of the weather effects, **scene-linear** (what the camera
+/// renders before tonemapping). The one place that turns the sky's sRGB horizon colour and the
+/// time of day into them, so a switch of the camera to HDR (an exposure factor) changes this
+/// function only.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeatherLook {
+    /// Fog colour, linear RGB.
+    pub fog: [f32; 3],
+    /// Brightness of the cloud layer, linear `0..=1`.
+    pub cloud: f32,
+    /// Brightness of rain and snow, linear `0.25..=1`.
+    pub precip: f32,
+}
+
+/// The [`WeatherLook`] for the conditions, the sky's horizon colour (sRGB `0..=1`, as the sky
+/// texture holds it) and the sun's elevation.
+#[must_use]
+pub fn weather_look(
+    c: &WeatherConditions,
+    horizon_srgb: [f32; 3],
+    sun_alt_deg: f32,
+) -> WeatherLook {
+    let fog_srgb = fog_color(horizon_srgb, c);
+    let lin = Color::srgb(fog_srgb[0], fog_srgb[1], fog_srgb[2]).to_linear();
+    let cloud = cloud_tint(c, sun_alt_deg);
+    WeatherLook {
+        fog: [lin.red, lin.green, lin.blue],
+        cloud,
+        precip: 0.25 + 0.75 * cloud,
+    }
+}
+
 /// Cloud drift in metres per second on the ground plane (Bevy axes): the wind carries the clouds
 /// three times faster than it blows at the ground.
 #[must_use]
@@ -1131,6 +1163,20 @@ mod tests {
         c.wind_speed = 40.0;
         let p = precip_plan(&c, 1000).unwrap();
         assert!(p.drift.length() <= p.fall_speed * 1.5 + 1e-4);
+    }
+
+    #[test]
+    fn the_look_is_scene_linear_and_follows_the_time_of_day() {
+        let fog = WeatherConditions {
+            fog_visibility_m: 100.0,
+            ..WeatherConditions::default()
+        };
+        let day = weather_look(&fog, [0.6, 0.65, 0.75], 45.0);
+        let night = weather_look(&fog, [0.02, 0.02, 0.04], -30.0);
+        // sRGB 0.6 is about 0.32 linear: darker than the sRGB number.
+        assert!(day.fog[0] < 0.5 && day.fog[0] > 0.2, "{:?}", day.fog);
+        assert!(night.fog[0] < 0.01 && night.cloud < 0.06 && night.precip < 0.4);
+        assert!((day.cloud - 1.0 + 0.15 * fogginess(&fog)).abs() < 1e-4);
     }
 
     #[test]

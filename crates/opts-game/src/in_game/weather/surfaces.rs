@@ -7,6 +7,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
+use opts_bevy::reflections::Wetness;
 use opts_bevy::weather::{road_surface, surface_state, SurfaceState};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
 
@@ -31,6 +32,19 @@ pub fn wanted_state(env: &SessionEnvironment, effects: &WeatherEffects) -> Surfa
     }
 }
 
+/// Writes the weather's wetness into the [`Wetness`] resource, the single driver of wet surfaces
+/// (the reflections prototype's parameter, `docs/src/architecture/reflections-research.md`).
+pub fn drive_wetness(
+    env: Res<SessionEnvironment>,
+    effects: Res<WeatherEffects>,
+    mut wetness: ResMut<Wetness>,
+) {
+    let wet = wanted_state(&env, &effects).wet;
+    if (wetness.0 - wet).abs() > 1e-4 {
+        wetness.0 = wet;
+    }
+}
+
 /// Applies the surface state to the ground and road materials: at once when it changes, and
 /// every half second for materials that are new.
 #[allow(clippy::too_many_arguments)]
@@ -38,6 +52,7 @@ pub fn update_surfaces(
     time: Res<Time<Real>>,
     env: Res<SessionEnvironment>,
     effects: Res<WeatherEffects>,
+    wetness: Res<Wetness>,
     job: Option<Res<WorldLoadJob>>,
     mut ground: ResMut<Assets<GroundMaterial>>,
     mut standard: ResMut<Assets<StandardMaterial>>,
@@ -45,7 +60,9 @@ pub fn update_surfaces(
     mut last: Local<Option<SurfaceState>>,
     mut next_scan: Local<f32>,
 ) {
-    let state = wanted_state(&env, &effects);
+    // Wetness comes from the `Wetness` resource; puddles and snow from the weather.
+    let mut state = wanted_state(&env, &effects);
+    state.wet = wetness.0.clamp(0.0, 1.0);
     let changed = *last != Some(state);
     if !changed && time.elapsed_secs() < *next_scan {
         return;

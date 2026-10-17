@@ -10,7 +10,7 @@ use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::math::Affine2;
 use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
-use opts_bevy::weather::{cloud_drift, cloud_tint};
+use opts_bevy::weather::{cloud_drift, weather_look};
 use opts_bevy::{SessionEnvironment, WeatherCatalogue, WeatherEffects};
 
 use crate::in_game::types::{InGameCamera, InGameEntity};
@@ -151,7 +151,7 @@ pub fn update_clouds(
     let reference = state.reference_y.get_or_insert(cam.y);
     *reference += (cam.y - *reference) * (1.0 - (-dt * HEIGHT_FOLLOW).exp());
     let y = *reference + cloud.base_m;
-    let tint = cloud_tint(conditions, env.sun_alt_deg());
+    let tint = weather_look(conditions, [0.0; 3], env.sun_alt_deg()).cloud;
     let colour = Color::linear_rgb(tint, tint, tint);
     let transform = uv_transform(
         Vec2::new(cam.x, cam.z),

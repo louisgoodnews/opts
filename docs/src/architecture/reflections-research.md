@@ -1,5 +1,7 @@
 # Reflections Research: Mirrors, Glass and Wet Surfaces
 
+> **Update 2026-10-17:** the weather now writes `Wetness` and drives the ground shader's wet uniform (puddles, snow cover) and the road materials; see [weather](weather.md) §6. The env-switched path below remains for standard materials only.
+
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | Research complete, prototypes on branch `research/reflections` (off by default); recommendation below |

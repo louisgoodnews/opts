@@ -467,7 +467,7 @@ fn apply_wet(
     wetness: Res<Wetness>,
     mut state: ResMut<WetState>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut ground: ResMut<Assets<GroundMaterial>>,
+    ground: Res<Assets<GroundMaterial>>,
 ) {
     if !sw.wet {
         return;
@@ -491,12 +491,8 @@ fn apply_wet(
             m.perceptual_roughness = r;
         }
     }
-    let gids: Vec<_> = ground.ids().collect();
-    for id in gids {
-        if let Some(mut m) = ground.get_mut(id) {
-            m.extension.wet = Vec4::new(w, 0.45, 0.0, 0.0);
-        }
-    }
+    // The layered ground follows `Wetness` too, but the weather writes its uniform (with puddles
+    // and snow, `in_game::weather::surfaces`), so there is one implementation of wet ground.
 }
 
 // ---------------------------------------------------------------------------------------------

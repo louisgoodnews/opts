@@ -13,7 +13,7 @@ use bevy::light::{NotShadowCaster, NotShadowReceiver};
 use bevy::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use opts_bevy::weather::{cloud_tint, precip_plan, PrecipPlan};
+use opts_bevy::weather::{precip_plan, weather_look, PrecipPlan};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
 use opts_core::formats::weather::PrecipKind;
 
@@ -179,11 +179,11 @@ fn material(image: Handle<Image>, colour: Color) -> StandardMaterial {
     }
 }
 
-fn base_colour(kind: PrecipKind, tint: f32) -> Color {
-    let k = 0.25 + 0.75 * tint;
+/// Colour of the particles for a scene-linear brightness `k` (`WeatherLook::precip`).
+fn base_colour(kind: PrecipKind, k: f32) -> Color {
     match kind {
-        PrecipKind::Snow => Color::srgba(k, k, k, 0.9),
-        _ => Color::srgba(0.85 * k, 0.9 * k, k, 0.45),
+        PrecipKind::Snow => Color::linear_rgba(k, k, k, 0.9),
+        _ => Color::linear_rgba(0.85 * k, 0.9 * k, k, 0.45),
     }
 }
 
@@ -293,7 +293,7 @@ pub fn update_precipitation(
         }
     }
     // Colour follows the daylight.
-    let tint = cloud_tint(env.conditions(), env.sun_alt_deg());
+    let tint = weather_look(env.conditions(), [0.0; 3], env.sun_alt_deg()).precip;
     if state.kind != Some(plan.kind) || (state.tint - tint).abs() > 0.01 {
         state.tint = tint;
         for (handle, kind) in [

@@ -61,6 +61,7 @@ pub struct NewGameMenuPlugin;
 impl Plugin for NewGameMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameCatalogue>()
+            .init_resource::<opts_bevy::WeatherCatalogue>()
             .init_resource::<NewGameSetup>()
             .init_resource::<PlannerState>()
             .init_resource::<livery::LiveryState>()

@@ -4,7 +4,7 @@
 
 use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
-use opts_bevy::weather::{fog_color, fog_density};
+use opts_bevy::weather::{fog_density, weather_look};
 use opts_bevy::{SessionEnvironment, WeatherConditions, WeatherEffects};
 
 use crate::in_game::sky::SkyHorizon;
@@ -16,14 +16,15 @@ pub fn desired_fog(
     conditions: &WeatherConditions,
     effects: &WeatherEffects,
     horizon: [f32; 3],
+    sun_alt_deg: f32,
 ) -> Option<DistanceFog> {
     if !effects.fog {
         return None;
     }
     let density = fog_density(conditions)?;
-    let c = fog_color(horizon, conditions);
+    let c = weather_look(conditions, horizon, sun_alt_deg).fog;
     Some(DistanceFog {
-        color: Color::srgb(c[0], c[1], c[2]),
+        color: Color::linear_rgb(c[0], c[1], c[2]),
         directional_light_color: Color::NONE,
         directional_light_exponent: 8.0,
         falloff: FogFalloff::ExponentialSquared { density },
@@ -43,14 +44,18 @@ pub fn update_fog(
 ) {
     let horizon_changed = horizon.as_ref().is_some_and(|h| h.is_changed());
     let colour = horizon.map_or(DEFAULT_HORIZON, |h| h.0);
-    let want = desired_fog(env.conditions(), &effects, colour);
+    let want = desired_fog(env.conditions(), &effects, colour, env.sun_alt_deg());
     let dirty = env.is_changed() || effects.is_changed() || horizon_changed;
     for (camera, current) in &cameras {
         match (&want, current) {
             (Some(fog), None) => {
                 commands.entity(camera).insert(fog.clone());
             }
-            (Some(fog), Some(_)) if dirty => {
+            (Some(fog), Some(cur))
+                if dirty
+                    && (cur.color != fog.color
+                        || format!("{:?}", cur.falloff) != format!("{:?}", fog.falloff)) =>
+            {
                 commands.entity(camera).insert(fog.clone());
             }
             (None, Some(_)) => {
@@ -70,18 +75,18 @@ mod tests {
     fn clear_air_and_a_disabled_effect_draw_no_fog() {
         let cat = WeatherCatalogue::default();
         let on = WeatherEffects::default();
-        assert!(desired_fog(&cat.resolve("Clear Summer Day"), &on, [0.5; 3]).is_none());
+        assert!(desired_fog(&cat.resolve("Clear Summer Day"), &on, [0.5; 3], 45.0).is_none());
         let foggy = cat.resolve("Autumn Morning Fog");
-        assert!(desired_fog(&foggy, &on, [0.5; 3]).is_some());
+        assert!(desired_fog(&foggy, &on, [0.5; 3], 45.0).is_some());
         let off = WeatherEffects { fog: false, ..on };
-        assert!(desired_fog(&foggy, &off, [0.5; 3]).is_none());
+        assert!(desired_fog(&foggy, &off, [0.5; 3], 45.0).is_none());
     }
 
     #[test]
     fn thicker_fog_has_a_larger_density_and_the_horizon_colour() {
         let cat = WeatherCatalogue::default();
         let on = WeatherEffects::default();
-        let density = |id: &str| match desired_fog(&cat.resolve(id), &on, [0.2, 0.2, 0.2])
+        let density = |id: &str| match desired_fog(&cat.resolve(id), &on, [0.2, 0.2, 0.2], 45.0)
             .unwrap()
             .falloff
         {
@@ -90,8 +95,14 @@ mod tests {
         };
         // 300 m (morning fog) against 6 km (rain).
         assert!(density("Autumn Morning Fog") > density("Rainy Afternoon") * 10.0);
-        let fog = desired_fog(&cat.resolve("Autumn Morning Fog"), &on, [0.2, 0.2, 0.2]).unwrap();
-        let srgb = fog.color.to_srgba();
+        let fog = desired_fog(
+            &cat.resolve("Autumn Morning Fog"),
+            &on,
+            [0.2, 0.2, 0.2],
+            45.0,
+        )
+        .unwrap();
+        let srgb = fog.color.to_linear();
         assert!((srgb.red - srgb.blue).abs() < 0.05 && srgb.red < 0.3);
     }
 }

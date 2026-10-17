@@ -49,6 +49,7 @@ impl Plugin for WeatherPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WeatherCatalogue>()
             .init_resource::<WeatherEffects>()
+            .init_resource::<opts_bevy::reflections::Wetness>()
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
@@ -58,7 +59,7 @@ impl Plugin for WeatherPlugin {
                     fog::update_fog,
                     clouds::update_clouds,
                     precip::update_precipitation,
-                    surfaces::update_surfaces,
+                    (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
                 )
                     .after(EnvironmentSet)
                     .after(super::sky::update_sky)
@@ -83,6 +84,7 @@ mod tests {
             .init_asset::<Mesh>()
             .init_asset::<StandardMaterial>()
             .init_asset::<opts_bevy::ground_material::GroundMaterial>()
+            .init_resource::<opts_bevy::reflections::Wetness>()
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
             .add_systems(
@@ -91,7 +93,7 @@ mod tests {
                     fog::update_fog,
                     clouds::update_clouds,
                     precip::update_precipitation,
-                    surfaces::update_surfaces,
+                    (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
                 )
                     .after(EnvironmentSet),
             );
@@ -187,6 +189,18 @@ mod tests {
         let low = app.world().resource::<precip::PrecipState>().drawn();
         assert!(low > 0 && low < medium, "{low} < {medium}");
         assert!(low <= PrecipitationQuality::Low.budget() as usize);
+    }
+
+    #[test]
+    fn the_weather_drives_the_wetness_resource_and_the_setting_dries_it() {
+        use opts_bevy::reflections::Wetness;
+        let mut app = app();
+        assert_eq!(app.world().resource::<Wetness>().0, 0.0);
+        set_weather(&mut app, "Rainy Afternoon");
+        assert!(app.world().resource::<Wetness>().0 > 0.9);
+        app.world_mut().resource_mut::<WeatherEffects>().wet_ground = false;
+        app.update();
+        assert_eq!(app.world().resource::<Wetness>().0, 0.0);
     }
 
     #[test]

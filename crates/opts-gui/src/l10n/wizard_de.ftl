@@ -117,8 +117,8 @@ wiz-weather-fx-clear = Klarer Himmel
 wiz-weather-fx-rain = Regen
 wiz-weather-fx-snow = Schnee
 wiz-weather-fx-fog = Nebel, { $m } m Sicht
-wiz-weather-fx-wind = Wind { $speed } m/s
-wiz-weather-fx-line = { $temp } °C · { $effects }
+wiz-weather-fx-wind = Wind: { $speed } m/s
+wiz-weather-fx-line = { $temp } °C – { $effects }
 wiz-weather-live = Live-Wetter
 
 wiz-review-title = Bereit zur Fahrt?
