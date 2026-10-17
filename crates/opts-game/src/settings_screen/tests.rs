@@ -879,6 +879,37 @@ mod lighting_quality_section {
         assert_eq!(text(&app, "graphics.light_cone_cap"), "8");
         assert_eq!(quality(&app).cone_cap, 8);
         assert_eq!(quality(&app).mode, LightMode::Custom);
+        // The governor's target frame rate is the other way round: greyed out in custom.
+        let fps_up = by_id(
+            &mut app,
+            "settings/graphics/graphics.light_governor_target_fps/up",
+        )
+        .expect("target fps stepper");
+        assert!(
+            app.world().get::<Disabled>(fps_up).is_some(),
+            "custom: the governor target is disabled"
+        );
+    }
+
+    #[test]
+    fn the_governor_target_is_enabled_in_automatic_mode() {
+        let (mut app, _, _) = page_app("lightgovfps", "graphics");
+        let up = by_id(
+            &mut app,
+            "settings/graphics/graphics.light_governor_target_fps/up",
+        )
+        .expect("target fps stepper");
+        assert!(app.world().get::<Disabled>(up).is_none());
+        click(&mut app, up);
+        app.update();
+        app.update();
+        assert_eq!(text(&app, "graphics.light_governor_target_fps"), "70");
+        assert_eq!(
+            app.world()
+                .resource::<opts_bevy::light_quality::GovernorTargetFps>()
+                .0,
+            70
+        );
     }
 
     #[test]

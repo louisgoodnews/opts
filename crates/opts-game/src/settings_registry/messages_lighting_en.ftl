@@ -45,6 +45,9 @@ set-glass-reflections = Sky in glass
 set-glass-reflections-desc = Windows and other glass reflect the sky.
 set-bloom = Bloom
 set-bloom-desc = A soft glow around very bright lights.
+set-light-governor-fps = Governor target frame rate
+set-light-governor-fps-desc = The frame rate the automatic lighting quality tries to keep. Without vsync it is the deadline; with vsync the deadline is your display's refresh interval, or this rate if that is lower. Frames that miss it by a wide margin make the quality step down; with no missed frames for a while it steps up again.
+set-light-governor-disabled = Automatic mode only. Switch the lighting quality mode to automatic to change it.
 
 env-light-quality = Lighting quality
 env-light-automatic = Automatic (level { $level }: { $name })

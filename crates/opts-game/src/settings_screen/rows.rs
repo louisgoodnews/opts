@@ -37,11 +37,13 @@ pub struct Ctx<'a> {
 }
 
 impl Ctx<'_> {
-    /// Whether `key` is a custom lighting control that the automatic mode owns right now.
+    /// Whether `key` is a lighting control that the current mode makes inert: a custom control in
+    /// automatic mode, or the governor's target frame rate in custom mode.
     #[must_use]
     pub fn light_locked(&self, key: &str) -> bool {
         use crate::settings_registry::lighting as l;
-        l::is_custom_key(key) && l::is_automatic(self.settings)
+        let automatic = l::is_automatic(self.settings);
+        (l::is_custom_key(key) && automatic) || (key == l::TARGET_FPS_KEY && !automatic)
     }
 }
 
@@ -92,7 +94,12 @@ enum Usable {
 
 fn usable(ctx: &Ctx, d: &SettingDescriptor) -> Usable {
     if ctx.light_locked(d.key) {
-        return Usable::Needs(ctx.loc.t("set-light-auto-disabled"));
+        let msg = if d.key == crate::settings_registry::lighting::TARGET_FPS_KEY {
+            "set-light-governor-disabled"
+        } else {
+            "set-light-auto-disabled"
+        };
+        return Usable::Needs(ctx.loc.t(msg));
     }
     match d.available {
         Available::Always => Usable::Yes,
