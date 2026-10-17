@@ -187,6 +187,12 @@ const GAP_ACCEPTANCE_S: f64 = 6.0;
 const DEADLOCK_AFTER_S: f64 = 12.0;
 /// … and ignores conflicts for this long (s).
 const DEADLOCK_IGNORE_S: f64 = 5.0;
+/// TEMPORARY: `OPTS_AI_DEBUG` switches the per-agent trace on.
+fn debug_trace() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("OPTS_AI_DEBUG").is_some())
+}
+
 /// How far along its planned lanes an agent looks for leaders, signals and zones (m).
 pub(crate) const LOOKAHEAD_M: f64 = 100.0;
 /// The plan covers at least this much road ahead (m).
@@ -216,6 +222,9 @@ pub struct TrafficWorld {
     /// Clock time (seconds of the day) at simulation time zero.
     clock_base: f64,
     signals: HashMap<SignalKey, SignalProgram>,
+    /// TEMPORARY diagnosis trace.
+    debug_rows: Vec<String>,
+    debug_steps: u64,
 }
 
 impl TrafficWorld {
@@ -231,6 +240,8 @@ impl TrafficWorld {
             time: 0.0,
             clock_base: 0.0,
             signals: HashMap::new(),
+            debug_rows: Vec::new(),
+            debug_steps: 0,
         }
     }
 
@@ -614,6 +625,32 @@ impl TrafficWorld {
             }
             let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
             accels.push(a.params.acceleration(a.speed, cap, ahead));
+            // TEMPORARY (ai-car-following diagnosis): per-agent trace, remove before the fix.
+            if debug_trace() {
+                self.debug_rows.push(format!(
+                    "t={:.1} id={} lane={:?} s={:.1} v={:.1} cap={:.1} leader={} signal={} wait={} sigkey={:?} accel={:.2}",
+                    self.time,
+                    a.id.0,
+                    a.lane,
+                    a.s,
+                    a.speed,
+                    cap.min(99.0),
+                    leader.map_or("none".to_string(), |(g, v)| format!("{g:.1}m@{v:.1}")),
+                    signal[i].map_or("none".to_string(), |g| format!("{g:.1}m")),
+                    wait.map_or("none".to_string(), |g| format!("{g:.1}m")),
+                    lane.signal,
+                    accels.last().copied().unwrap_or(0.0)
+                ));
+            }
+        }
+        if debug_trace() {
+            self.debug_steps += 1;
+            if self.debug_steps % 20 == 0 {
+                for r in self.debug_rows.iter().take(40) {
+                    tracing::info!(target: "ai_dbg", "{r}");
+                }
+            }
+            self.debug_rows.clear();
         }
         // Integrate (ballistic; a vehicle that would reverse stops within the step).
         for (a, &acc) in self.agents.iter_mut().zip(&accels) {
