@@ -72,6 +72,18 @@ pub enum TrafficEvent {
 /// Seconds a lane change takes sideways (smooth start and end).
 pub const LANE_CHANGE_DURATION_S: f64 = 3.0;
 
+/// A planned (mandatory) lane change: the plan continues from a successor of the neighbour
+/// lane `via`, so the vehicle must move over to it while on lane `from`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Strategic {
+    /// The lane on which the change has to happen.
+    pub from: LaneId,
+    /// The neighbour lane to change to.
+    pub via: LaneId,
+    /// Its side.
+    pub side: Side,
+}
+
 /// A vehicle on a lane.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Agent {
@@ -112,6 +124,12 @@ pub struct Agent {
     pub(crate) prev_lane: Option<LaneId>,
     /// The axles were placed (else the next update places them afresh).
     pub(crate) axles_ready: bool,
+    /// A lane change the route needs (see [`Strategic`]).
+    pub strategic: Option<Strategic>,
+    /// Seconds spent waiting at the end of a lane for a strategic change.
+    pub(crate) strategic_wait_s: f64,
+    /// No strategic route choice from this lane (a change there timed out).
+    pub(crate) no_strategic: Option<LaneId>,
     /// Side of the lane change being driven or announced.
     pub(crate) lc_side: Option<Side>,
     /// Announced lane change: the indicator is on until this world time, then it is executed if
@@ -224,6 +242,15 @@ const MAX_GLIDE_SPEED: f64 = 3.0;
 
 /// Distance (m) beyond the comfortable braking distance in which lower lane speeds are seen.
 const SPEED_LOOK_EXTRA_M: f64 = 15.0;
+/// A strategic change must be made this far (m) before the end of its lane …
+pub(crate) const STRATEGIC_LAST_M: f64 = 15.0;
+/// … where the vehicle otherwise stops this far (m) before the end and waits …
+const STRATEGIC_STOP_M: f64 = 1.0;
+/// … for at most this long (s) before it re-plans from its own lane.
+const STRATEGIC_TIMEOUT_S: f64 = 10.0;
+/// Lanes shorter than this (m) offer no strategic changes.
+const STRATEGIC_MIN_LANE_M: f64 = 30.0;
+
 /// Vehicles reach a lower lane speed this far (m) before the lane's start.
 const SPEED_MARGIN_M: f64 = 2.0;
 /// Time constant (s) of shedding excess speed on the current lane.
@@ -395,6 +422,10 @@ impl TrafficWorld {
                         }
                     }
                     a.plan = kept;
+                    if a.strategic.take().is_some() {
+                        // The plan beyond the change point may no longer fit the new graph.
+                        a.plan.clear();
+                    }
                     a.prev_lane = a.prev_lane.and_then(remap);
                     a.lc_due = None;
                     // Lanes may have moved: the axles are placed afresh.
@@ -422,17 +453,97 @@ impl TrafficWorld {
         self.events.push(e);
     }
 
+    /// The lanes a vehicle of `class` may continue into from `lane` through a lane change to a
+    /// neighbour: successors of a neighbour that runs beside the end of `lane`, which are
+    /// neither successors of `lane` nor parallel to one (so the change opens a new direction —
+    /// a turn pocket — or avoids a dead end). Each with the neighbour and its side.
+    fn strategic_options(
+        &self,
+        lane: LaneId,
+        class: crate::idm::VehicleClass,
+    ) -> Vec<(LaneId, LaneId, Side)> {
+        let Some(own) = self.graph.lane(lane) else {
+            return Vec::new();
+        };
+        let len = own.length();
+        if len < STRATEGIC_MIN_LANE_M || own.junction {
+            return Vec::new();
+        }
+        let succ = self.graph.successors(lane);
+        let parallel: Vec<LaneId> = succ
+            .iter()
+            .flat_map(|&s| self.graph.neighbours(s).iter().map(|n| n.lane))
+            .collect();
+        let mut out = Vec::new();
+        for n in self.graph.neighbours(lane) {
+            let Some(nl) = self.graph.lane(n.lane) else {
+                continue;
+            };
+            if nl.kind != own.kind
+                || nl.rules.density == Some(0.0)
+                || !nl.rules.allows(class)
+                || n.at(len - STRATEGIC_LAST_M - 5.0).is_none()
+            {
+                continue;
+            }
+            for &t in self.graph.successors(n.lane) {
+                let ok = !succ.contains(&t)
+                    && !parallel.contains(&t)
+                    && !out.iter().any(|(x, _, _)| *x == t)
+                    && self.graph.lane(t).is_some_and(|l| l.rules.allows(class));
+                if ok {
+                    out.push((t, n.lane, n.side));
+                }
+            }
+        }
+        out
+    }
+
     /// A successor of `lane` for a vehicle of `class`, chosen at random among the lanes it may
-    /// use (all of them when none qualifies, so a vehicle is never stranded by a rule).
-    fn pick_next(&mut self, lane: LaneId, class: crate::idm::VehicleClass) -> Option<LaneId> {
+    /// use (all of them when none qualifies, so a vehicle is never stranded by a rule) and, when
+    /// `strategic`, the lanes reachable through a change to a neighbour
+    /// ([`Self::strategic_options`]; always one of them when `lane` is a dead end).
+    fn pick_next(
+        &mut self,
+        lane: LaneId,
+        class: crate::idm::VehicleClass,
+        strategic: bool,
+    ) -> Option<(LaneId, Option<Strategic>)> {
         let succ = self.graph.successors(lane);
         let allowed: Vec<LaneId> = succ
             .iter()
             .copied()
             .filter(|s| self.graph.lane(*s).is_none_or(|l| l.rules.allows(class)))
             .collect();
-        let pool: &[LaneId] = if allowed.is_empty() { succ } else { &allowed };
-        (!pool.is_empty()).then(|| pool[self.rng.below(pool.len())])
+        let pool: Vec<LaneId> = if allowed.is_empty() {
+            succ.to_vec()
+        } else {
+            allowed
+        };
+        let options = if strategic {
+            self.strategic_options(lane, class)
+        } else {
+            Vec::new()
+        };
+        let total = pool.len() + options.len();
+        if total == 0 {
+            return None;
+        }
+        let k = self.rng.below(total);
+        Some(match pool.get(k) {
+            Some(&l) => (l, None),
+            None => {
+                let (t, via, side) = options[k - pool.len()];
+                (
+                    t,
+                    Some(Strategic {
+                        from: lane,
+                        via,
+                        side,
+                    }),
+                )
+            }
+        })
     }
 
     /// Extends agent `i`'s plan until it covers [`PLAN_HORIZON_M`] of road (or runs out).
@@ -450,8 +561,17 @@ impl TrafficWorld {
                 return;
             }
             let last = a.plan.back().copied().unwrap_or(a.lane);
-            match self.pick_next(last, self.agents[i].params.class) {
-                Some(n) => self.agents[i].plan.push_back(n),
+            let strategic = a.strategic.is_none() && a.no_strategic != Some(last);
+            let class = a.params.class;
+            match self.pick_next(last, class, strategic) {
+                Some((n, change)) => {
+                    let a = &mut self.agents[i];
+                    a.plan.push_back(n);
+                    if change.is_some() {
+                        a.strategic = change;
+                        a.strategic_wait_s = 0.0;
+                    }
+                }
                 None => return,
             }
         }
@@ -501,6 +621,9 @@ impl TrafficWorld {
             pursuit: DVec2::ZERO,
             prev_lane: None,
             axles_ready: false,
+            strategic: None,
+            strategic_wait_s: 0.0,
+            no_strategic: None,
             lc_side: None,
             lc_due: None,
             lc_cooldown_until: 0.0,
@@ -779,9 +902,16 @@ impl TrafficWorld {
             let leader = self.leader(i, &looks[i], &by_lane);
             let wait = self.conflict_gap(i, &looks[i], &by_lane, &held);
             blocked[i] = wait.is_some();
-            // The nearest of leader, light and conflict zone limits the vehicle.
+            // The end of the lane a strategic change has to happen on is a stop line until the
+            // change is made.
+            let stuck = a.strategic.and_then(|c| {
+                let (_, off) = looks[i].iter().find(|(l, _)| *l == c.from)?;
+                let len = self.graph.lane(c.from)?.length();
+                Some((off + len - STRATEGIC_STOP_M).max(0.0))
+            });
+            // The nearest of leader, light, conflict zone and such a stop limits the vehicle.
             let mut ahead = leader;
-            for gap in [signal[i], wait].into_iter().flatten() {
+            for gap in [signal[i], wait, stuck].into_iter().flatten() {
                 if ahead.is_none_or(|(g, _)| gap < g) {
                     ahead = Some((gap, 0.0));
                 }
@@ -814,6 +944,31 @@ impl TrafficWorld {
             a.glide(dt);
         }
         self.time += dt;
+        // A vehicle that cannot make its strategic change re-plans from its lane after a while.
+        for i in 0..self.agents.len() {
+            let a = &mut self.agents[i];
+            let Some(c) = a.strategic.filter(|c| c.from == a.lane) else {
+                continue;
+            };
+            let near_end = self
+                .graph
+                .lane(a.lane)
+                .is_some_and(|l| l.length() - a.s < STRATEGIC_STOP_M + 5.0);
+            if near_end && a.speed < 0.2 {
+                a.strategic_wait_s += dt;
+            }
+            if a.strategic_wait_s > STRATEGIC_TIMEOUT_S {
+                a.strategic = None;
+                a.strategic_wait_s = 0.0;
+                a.no_strategic = Some(c.from);
+                a.plan.clear();
+                if a.lc_side == Some(c.side) && !a.changing_lane() {
+                    a.lc_due = None;
+                    a.lc_side = None;
+                }
+                self.extend_plan(i);
+            }
+        }
         // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles).
         for (a, &b) in self.agents.iter_mut().zip(&blocked) {
             if b && a.speed < 0.2 {
@@ -848,6 +1003,13 @@ impl TrafficWorld {
                     break;
                 };
                 if a.s <= len {
+                    break;
+                }
+                // It may not leave a lane it still has to change away from.
+                if a.strategic.is_some_and(|c| c.from == a.lane) {
+                    let a = &mut self.agents[i];
+                    a.s = len;
+                    a.speed = 0.0;
                     break;
                 }
                 let (over, id, lane) = (a.s - len, a.id, a.lane);
@@ -1062,6 +1224,7 @@ mod tests {
             rules: Default::default(),
             elevation: Default::default(),
             signal: None,
+            junction: false,
             source: 0,
         };
         let mut w = world(&[straight(0.0, 100.0), turn]);
@@ -1663,6 +1826,92 @@ mod tests {
             "{} km/h on a 70 km/h lane",
             a.speed * 3.6
         );
+    }
+
+    #[test]
+    fn a_car_changes_into_a_trucks_lane() {
+        // Changed reading (C3): `trucks` marks a lane trucks may use; cars use it too.
+        let mut right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 800.0, LaneKind::Road);
+        right.rules.trucks = true;
+        let mut w = world(&[straight(0.0, 800.0), right]);
+        let car = w
+            .spawn(LaneId(0), 50.0, 12.0, IdmParams::default())
+            .unwrap();
+        let mut events = Vec::new();
+        for _ in 0..300 {
+            w.step(0.1);
+            events.extend(w.drain_events());
+        }
+        assert!(events.contains(&TrafficEvent::LaneChanged {
+            id: car,
+            side: Side::Right
+        }));
+        assert_eq!(w.agent(car).unwrap().lane, LaneId(1));
+    }
+
+    #[test]
+    fn a_lane_change_is_possible_after_a_passed_crossing() {
+        use std::f64::consts::FRAC_PI_2;
+        // Both lanes are crossed at y = 50; the car is 40 m past it behind a slow one.
+        let right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 800.0, LaneKind::Road);
+        let cross =
+            LaneSegment::straight(DVec2::new(-50.0, 50.0), FRAC_PI_2, 100.0, LaneKind::Road);
+        let mut w = world(&[straight(0.0, 800.0), right, cross]);
+        w.spawn(LaneId(1), 170.0, 3.0, slow()).unwrap();
+        let fast = w
+            .spawn(LaneId(1), 90.0 + 4.4, 12.0, IdmParams::default())
+            .unwrap();
+        assert!(!w.graph().conflicts(LaneId(1)).is_empty());
+        let mut changed = false;
+        for _ in 0..150 {
+            w.step(0.1);
+            changed |= w
+                .drain_events()
+                .iter()
+                .any(|e| matches!(e, TrafficEvent::LaneChanged { id, .. } if *id == fast));
+        }
+        assert!(changed, "the passed crossing still blocked the change");
+    }
+
+    #[test]
+    fn a_strategic_change_is_made_before_the_lane_ends() {
+        use std::f64::consts::FRAC_PI_2;
+        // The left lane ends (no successor); the right one continues into a right turn. The
+        // route goes through the neighbour, so the car must move over in time.
+        let right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 200.0, LaneKind::Road);
+        let turn = LaneSegment {
+            geometry: PathGeometry {
+                start: DVec2::new(3.5, 200.0),
+                heading: 0.0,
+                radius: 15.0,
+                length: 15.0 * FRAC_PI_2,
+            },
+            ..straight(0.0, 0.0)
+        };
+        let exit = LaneSegment::straight(DVec2::new(18.5, 215.0), FRAC_PI_2, 300.0, LaneKind::Road);
+        let mut w = world(&[straight(0.0, 200.0), right, turn, exit]);
+        let id = w
+            .spawn(LaneId(0), 60.0, 10.0, IdmParams::default())
+            .unwrap();
+        let s = w
+            .agent(id)
+            .unwrap()
+            .strategic
+            .expect("planned through the neighbour");
+        assert_eq!((s.from, s.via, s.side), (LaneId(0), LaneId(1), Side::Right));
+        let mut events = Vec::new();
+        for _ in 0..300 {
+            w.step(0.1);
+            events.extend(w.drain_events());
+        }
+        assert!(events.contains(&TrafficEvent::LaneChanged {
+            id,
+            side: Side::Right
+        }));
+        assert!(!events
+            .iter()
+            .any(|e| matches!(e, TrafficEvent::ReachedDeadEnd { .. })));
+        assert_eq!(w.agent(id).unwrap().lane, LaneId(3), "took the turn");
     }
 
     #[test]

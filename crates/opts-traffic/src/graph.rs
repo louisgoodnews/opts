@@ -80,9 +80,11 @@ impl Direction {
 
 /// Traffic rules of a path (`[rule]` records of the owning spline or object).
 ///
-/// The vehicle-type flags read as their names say (project decision, M-0049): `bus` makes the lane
-/// a lane **for buses**, `trucks` one **for trucks**, `no_cars` keeps **cars** off it. The corpus
-/// has them only with value `0`; the semantics are not confirmed in OMSI ❓.
+/// Vehicle-type flags (the corpus has them only with value `0`; not confirmed in OMSI ❓): `bus`
+/// makes the lane a lane **for buses**, `no_cars` keeps **cars** off it, and `trucks` marks a lane
+/// **trucks may use** — it does not exclude cars (C3, reversing the M-0049 reading: on
+/// Berlin-Spandau it sits on the right lane of 723 two-lane pairs beside an unmarked left lane;
+/// `docs/src/architecture/ai-traffic-kinematics.md`, §4). Trucks prefer such lanes.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LaneRules {
     /// `trafficdensity`: factor for AI traffic on the lane (`0` = none; corpus values `0`,
@@ -90,7 +92,7 @@ pub struct LaneRules {
     pub density: Option<f64>,
     /// `priority`: raw value (corpus: `64` and `192`; the order is not settled ❓).
     pub priority: Option<u32>,
-    /// A `trucks` rule exists.
+    /// A `trucks` rule exists (trucks may use the lane, and prefer it).
     pub trucks: bool,
     /// A `bus` rule exists.
     pub bus: bool,
@@ -101,16 +103,17 @@ pub struct LaneRules {
 }
 
 impl LaneRules {
-    /// Whether vehicles of `class` may use the lane: `bus` and `trucks` restrict the lane to the
-    /// classes they name (both together admit both), `no_cars` excludes cars.
+    /// Whether vehicles of `class` may use the lane: `bus` restricts it to buses (and to trucks
+    /// as well when it also has `trucks`), `no_cars` excludes cars; `trucks` alone excludes
+    /// nobody.
     #[must_use]
     pub fn allows(&self, class: crate::idm::VehicleClass) -> bool {
         use crate::idm::VehicleClass::{Bus, Car, Truck};
         if class == Car && self.no_cars {
             return false;
         }
-        if self.bus || self.trucks {
-            return (class == Bus && self.bus) || (class == Truck && self.trucks);
+        if self.bus {
+            return class == Bus || (class == Truck && self.trucks);
         }
         true
     }
@@ -181,6 +184,9 @@ pub struct LaneSegment {
     pub elevation: Elevation,
     /// The light that governs entering this lane (`[use_traffic_light]`), if any.
     pub signal: Option<crate::signals::SignalKey>,
+    /// The path belongs to a scenery object (junction, crossing): vehicles do not change lanes
+    /// on it.
+    pub junction: bool,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }
@@ -198,6 +204,7 @@ impl LaneSegment {
             rules: LaneRules::default(),
             elevation: Elevation::default(),
             signal: None,
+            junction: false,
             source: 0,
         }
     }
@@ -220,6 +227,8 @@ pub struct Lane {
     pub elevation: Elevation,
     /// The light that governs entering this lane.
     pub signal: Option<crate::signals::SignalKey>,
+    /// The path belongs to a scenery object (see [`LaneSegment::junction`]).
+    pub junction: bool,
     /// The host's tag from the segment.
     pub source: u64,
     /// Stable identity across rebuilds: the segment's `source` and the number of lanes of that
@@ -317,6 +326,7 @@ impl LaneGraph {
                     rules: s.rules,
                     elevation,
                     signal: s.signal,
+                    junction: s.junction,
                     source: s.source,
                     key,
                 }
@@ -581,7 +591,8 @@ mod tests {
     }
 
     #[test]
-    fn vehicle_type_rules_read_as_their_names_say() {
+    fn vehicle_type_rules_bus_restricts_trucks_permits() {
+        // Changed (C3): `trucks` no longer excludes cars and buses.
         use crate::idm::VehicleClass::{Bus, Car, Truck};
         let none = LaneRules::default();
         assert!([Car, Truck, Bus].iter().all(|c| none.allows(*c)));
@@ -604,7 +615,7 @@ mod tests {
                 truck_lane.allows(Truck),
                 truck_lane.allows(Bus)
             ],
-            [false, true, false]
+            [true, true, true]
         );
         let both = LaneRules {
             bus: true,

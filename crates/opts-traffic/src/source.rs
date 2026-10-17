@@ -174,6 +174,7 @@ pub fn segments_from_tile(
                     rise: s.explicit_rise().map(f64::from),
                 },
                 signal: None,
+                junction: false,
                 source: s.id_code,
             });
         }
@@ -226,6 +227,7 @@ pub fn segments_from_tile(
                     rise: None,
                 },
                 signal: p.traffic_light_index.map(|i| (o.id_code, i)),
+                junction: true,
                 source: o.id_code,
             });
         }
