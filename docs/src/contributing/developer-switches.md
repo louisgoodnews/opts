@@ -12,6 +12,7 @@ Environment variables and flags that change behaviour for development, tests and
 | `OPTS_DEV_CAM_HEIGHT` | Metres: start the free camera this high above the spawn, looking down (overview screenshots). |
 | `OPTS_HIDE_MESH` | Comma-separated substrings; vehicle meshes whose name matches are not spawned (bisecting rendering problems). |
 | `OPTS_REDUCED_MOTION` | `1` or `true` forces *reduced motion* (as if the desktop asked for it; the OS hint is otherwise read once from `gsettings` on Linux/GNOME). |
+| `OPTS_SHAFT_TUNE` | Look of the god rays, read once at startup and logged at INFO (`light shaft style`): comma-separated `key=value`, any subset of `haze` (baseline `density_factor` per metre, default 0.0005), `asym` (Henyey-Greenstein g, 0.55), `gain` (factor of `light_intensity`, 0.5), `ambient` (0), `absorption` (0.3), `scatter` (0.3), `moon_gain` (extra gain of moon shafts, 4). Example: `OPTS_SHAFT_TUNE="haze=0.001,asym=0.6,gain=1"`. Unknown keys and bad values are ignored. Derivation: [lighting system](../architecture/lighting-system.md) 6.7. |
 | `OPTS_REPORTS_DIR` | Where F1 reports and screenshots are saved (default `~/.local/share/opts/reports`). |
 
 ## Game flags

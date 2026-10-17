@@ -32,7 +32,7 @@ pub const SHAFT_VOLUME_SIDE_M: f32 = 200.0;
 /// Baseline haze `density_factor` per metre (`HAZE_BASE`): a clear sky has an extinction of about
 /// 1e-4 per metre, far too thin to show a shaft inside the shadow range, so this is an artistic
 /// haze ❓.
-pub const HAZE_BASE: f32 = 0.002;
+pub const HAZE_BASE: f32 = 0.0005;
 /// Factor from the weather's Koschmieder extinction `3.912 / visibility` (per metre) to the
 /// volume's `density_factor`. Bevy's extinction is `density_factor × (absorption + scattering)`
 /// = `0.6 ×` with the defaults, so 1.0 makes the haze a little thinner than the distance fog.
@@ -40,7 +40,17 @@ pub const FOG_TO_SHAFT: f32 = 1.0;
 /// Largest `density_factor`: thicker volumes wash the screen out and end every ray early.
 pub const HAZE_MAX: f32 = 0.05;
 /// `scattering_asymmetry`: strong forward scattering, shafts show when looking towards the light.
-pub const SHAFT_ASYMMETRY: f32 = 0.8;
+pub const SHAFT_ASYMMETRY: f32 = 0.55;
+/// Overall factor of the volume's `light_intensity` (`gain`).
+pub const SHAFT_GAIN: f32 = 0.5;
+/// `VolumetricFog::ambient_intensity` (`ambient`): 0, the default 0.1 veils the whole screen.
+pub const SHAFT_AMBIENT: f32 = 0.0;
+/// The volume's `absorption` coefficient (`absorption`).
+pub const SHAFT_ABSORPTION: f32 = 0.3;
+/// The volume's `scattering` coefficient (`scatter`).
+pub const SHAFT_SCATTERING: f32 = 0.3;
+/// Name of the developer override variable, see [`ShaftStyle::parse_tune`].
+pub const TUNE_ENV: &str = "OPTS_SHAFT_TUNE";
 /// Brighter shafts for the moon: its light is about 20 times weaker than the sun's in game units,
 /// so with the same intensity its beams would be invisible ❓ (tunable).
 pub const MOON_SHAFT_GAIN: f32 = 4.0;
@@ -49,6 +59,78 @@ pub const LDR_SHAFT_SCALE: f32 = 0.6;
 /// `VolumetricFog::jitter` in metres (no effect without temporal anti-aliasing, kept on as in the
 /// design).
 pub const SHAFT_JITTER: f32 = 0.5;
+
+/// The look of the shafts: the constants above as a resource, overridable for tuning with
+/// `OPTS_SHAFT_TUNE="haze=0.001,asym=0.6,gain=1,ambient=0,absorption=0.3,scatter=0.3,moon_gain=4"`
+/// (any subset, read once at startup; see `docs/src/reference/developer-switches.md`).
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct ShaftStyle {
+    /// Baseline haze `density_factor` per metre (`haze`).
+    pub haze: f32,
+    /// Henyey-Greenstein asymmetry `g` (`asym`).
+    pub asym: f32,
+    /// Factor of the volume's `light_intensity` (`gain`).
+    pub gain: f32,
+    /// `VolumetricFog::ambient_intensity` (`ambient`).
+    pub ambient: f32,
+    /// Absorption coefficient (`absorption`).
+    pub absorption: f32,
+    /// Scattering coefficient (`scatter`).
+    pub scatter: f32,
+    /// Extra gain of the moon's shafts (`moon_gain`).
+    pub moon_gain: f32,
+}
+
+impl Default for ShaftStyle {
+    fn default() -> Self {
+        Self {
+            haze: HAZE_BASE,
+            asym: SHAFT_ASYMMETRY,
+            gain: SHAFT_GAIN,
+            ambient: SHAFT_AMBIENT,
+            absorption: SHAFT_ABSORPTION,
+            scatter: SHAFT_SCATTERING,
+            moon_gain: MOON_SHAFT_GAIN,
+        }
+    }
+}
+
+impl ShaftStyle {
+    /// The defaults with the `key=value` pairs of `text` applied (comma separated, unknown keys
+    /// and unparsable or negative values ignored; `asym` is clamped below 1).
+    #[must_use]
+    pub fn parse_tune(text: &str) -> Self {
+        let mut st = Self::default();
+        for pair in text.split(',') {
+            let Some((k, v)) = pair.split_once('=') else {
+                continue;
+            };
+            let Ok(v) = v.trim().parse::<f32>() else {
+                continue;
+            };
+            if !v.is_finite() || v < 0.0 {
+                continue;
+            }
+            match k.trim() {
+                "haze" => st.haze = v,
+                "asym" => st.asym = v.min(0.99),
+                "gain" => st.gain = v,
+                "ambient" => st.ambient = v,
+                "absorption" => st.absorption = v,
+                "scatter" => st.scatter = v,
+                "moon_gain" => st.moon_gain = v,
+                _ => {}
+            }
+        }
+        st
+    }
+
+    /// The style from [`TUNE_ENV`] (the defaults when unset).
+    #[must_use]
+    pub fn from_env() -> Self {
+        std::env::var(TUNE_ENV).map_or_else(|_| Self::default(), |t| Self::parse_tune(&t))
+    }
+}
 
 /// Which of the two sky lights an entity is.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,18 +153,23 @@ pub struct SunRaysSet;
 /// [`HAZE_BASE`] and the weather's extinction (`β = 3.912 / V`, Koschmieder) times
 /// [`FOG_TO_SHAFT`], at most [`HAZE_MAX`]. Fog thickens the haze; clear air keeps the baseline.
 #[must_use]
-pub fn haze_density(visibility_m: f32) -> f32 {
+pub fn haze_density(visibility_m: f32, style: &ShaftStyle) -> f32 {
     let beta = 3.912 / visibility_m.max(1.0);
-    (beta * FOG_TO_SHAFT).clamp(HAZE_BASE, HAZE_MAX)
+    (beta * FOG_TO_SHAFT).clamp(style.haze, HAZE_MAX.max(style.haze))
 }
 
 /// The `light_intensity` of the volume: the weather's shaft attenuation, the moon's gain and the
 /// LDR scale.
 #[must_use]
-pub fn shaft_intensity(role: LightRole, shafts_attenuation: f32, hdr: bool) -> f32 {
+pub fn shaft_intensity(
+    role: LightRole,
+    shafts_attenuation: f32,
+    hdr: bool,
+    style: &ShaftStyle,
+) -> f32 {
     let gain = match role {
-        LightRole::Sun => 1.0,
-        LightRole::Moon => MOON_SHAFT_GAIN,
+        LightRole::Sun => style.gain,
+        LightRole::Moon => style.gain * style.moon_gain,
     };
     let ldr = if hdr { 1.0 } else { LDR_SHAFT_SCALE };
     shafts_attenuation.clamp(0.0, 1.0) * gain * ldr
@@ -108,6 +195,7 @@ pub fn pick_carrier(
 #[allow(clippy::type_complexity)]
 pub fn sync_light_shafts(
     quality: Res<LightQuality>,
+    style: Option<Res<ShaftStyle>>,
     env: Option<Res<SessionEnvironment>>,
     mut commands: Commands,
     mut cameras: Query<
@@ -123,6 +211,7 @@ pub fn sync_light_shafts(
     lights: Query<(Entity, &LightRole, &DirectionalLight, Has<VolumetricLight>)>,
     mut volumes: Query<(Entity, &mut Transform, &mut FogVolume), With<ShaftFogVolume>>,
 ) {
+    let style = style.as_deref().copied().unwrap_or_default();
     let list: Vec<_> = lights.iter().collect();
     let carrier = pick_carrier(
         quality.shafts,
@@ -151,7 +240,7 @@ pub fn sync_light_shafts(
         match (active, fog) {
             (true, None) => {
                 commands.entity(entity).insert(VolumetricFog {
-                    ambient_intensity: 0.0,
+                    ambient_intensity: style.ambient,
                     jitter: SHAFT_JITTER,
                     step_count: quality.shafts.steps(),
                     ..default()
@@ -160,6 +249,9 @@ pub fn sync_light_shafts(
             (true, Some(mut fog)) => {
                 if fog.step_count != quality.shafts.steps() {
                     fog.step_count = quality.shafts.steps();
+                }
+                if fog.ambient_intensity != style.ambient {
+                    fog.ambient_intensity = style.ambient;
                 }
             }
             (false, Some(_)) => {
@@ -177,15 +269,20 @@ pub fn sync_light_shafts(
     };
     let role = carrier.map_or(LightRole::Sun, |i| *list[i].1);
     let (density, shafts_att) = env.as_ref().map_or_else(
-        || (haze_density(crate::weather::FOG_MAX_VISIBILITY_M), 1.0),
+        || {
+            (
+                haze_density(crate::weather::FOG_MAX_VISIBILITY_M, &style),
+                1.0,
+            )
+        },
         |e| {
             (
-                haze_density(e.conditions().fog_visibility_m),
+                haze_density(e.conditions().fog_visibility_m, &style),
                 e.light_attenuation().shafts,
             )
         },
     );
-    let intensity = shaft_intensity(role, shafts_att, hdr);
+    let intensity = shaft_intensity(role, shafts_att, hdr, &style);
     let mut seen = false;
     for (entity, mut t, mut volume) in &mut volumes {
         if seen {
@@ -202,13 +299,24 @@ pub fn sync_light_shafts(
         if (volume.light_intensity - intensity).abs() > 1e-6 {
             volume.light_intensity = intensity;
         }
+        if volume.scattering_asymmetry != style.asym {
+            volume.scattering_asymmetry = style.asym;
+        }
+        if volume.absorption != style.absorption {
+            volume.absorption = style.absorption;
+        }
+        if volume.scattering != style.scatter {
+            volume.scattering = style.scatter;
+        }
     }
     if !seen {
         commands.spawn((
             ShaftFogVolume,
             FogVolume {
                 density_factor: density,
-                scattering_asymmetry: SHAFT_ASYMMETRY,
+                scattering_asymmetry: style.asym,
+                absorption: style.absorption,
+                scattering: style.scatter,
                 light_intensity: intensity,
                 ..default()
             },
@@ -224,6 +332,11 @@ pub struct SunRaysPlugin;
 
 impl Plugin for SunRaysPlugin {
     fn build(&self, app: &mut App) {
+        if !app.world().contains_resource::<ShaftStyle>() {
+            let style = ShaftStyle::from_env();
+            tracing::info!(?style, env = TUNE_ENV, "light shaft style");
+            app.insert_resource(style);
+        }
         app.init_resource::<LightQuality>().add_systems(
             Update,
             sync_light_shafts
