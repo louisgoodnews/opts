@@ -3,7 +3,8 @@
 //! [`crate::in_game::omsi_world`].
 //!
 //! The light follows the [`SessionEnvironment`] like the sky does: [`update_fallback_light`]
-//! sets it whenever the environment changes.
+//! sets it whenever the environment changes. At night it gives no direct light; the moon light
+//! (`in_game::moon`) is the one night light in both the data-driven and the fallback path.
 
 use bevy::prelude::*;
 use opts_bevy::{SessionEnvironment, WeatherKind};
@@ -29,48 +30,34 @@ pub struct FallbackLighting {
     pub ambient_brightness: f32,
 }
 
-/// Picks the fallback light: moonlight at night (before 6:00 and from 20:00), a low warm sun in
-/// the golden hours, a diffuse sky under clouds, a bright sun otherwise.
+/// Picks the fallback light for the sun's position: a low warm sun in the golden hours, a
+/// diffuse sky under clouds, a bright sun otherwise, and **no direct light at night**: the moon
+/// ([`crate::in_game::moon`]) is the one night light. The direction is the sun's.
 #[must_use]
-pub fn fallback_lighting(hour: f32, weather: WeatherKind) -> FallbackLighting {
-    let hour = hour.rem_euclid(24.0);
-    let is_night = !(6.0..20.0).contains(&hour);
-    let is_golden_hour = (6.0..8.0).contains(&hour) || (18.0..20.0).contains(&hour);
+pub fn fallback_lighting(
+    sun_alt_deg: f32,
+    sun_az_deg: f32,
+    weather: WeatherKind,
+) -> FallbackLighting {
+    let is_night = sun_alt_deg < 0.0;
+    let is_golden_hour = sun_alt_deg < 12.0;
     let covered = weather.overcast();
+    // The sun fades out through the twilight instead of switching off.
+    let fade = ((sun_alt_deg + 4.0) / 7.0).clamp(0.0, 1.0);
+    let fade = fade * fade * (3.0 - 2.0 * fade);
 
     // In Bevy: -Z is forward, +Y is up, +X is right.
-    let (rotation, color, illuminance) = if is_night {
-        // Cool moonlight from a high angle.
-        (
-            Quat::from_euler(EulerRot::XYZ, -0.9, 0.4, 0.0),
-            Color::srgb(0.45, 0.55, 0.85),
-            900.0,
-        )
-    } else if is_golden_hour {
+    let dir = crate::in_game::sky::direction(sun_alt_deg, sun_az_deg);
+    let rotation = Transform::IDENTITY.looking_to(-dir, Vec3::Y).rotation;
+    let (color, illuminance) = if is_golden_hour {
         // Sunrise / sunset: a low warm sun.
-        let yaw = if hour < 12.0 { 0.3 } else { 2.8 };
-        (
-            Quat::from_euler(EulerRot::XYZ, -0.3, yaw, 0.0),
-            Color::srgb(1.0, 0.75, 0.45),
-            12_000.0,
-        )
+        (Color::srgb(1.0, 0.75, 0.45), 12_000.0)
     } else if covered {
         // Overcast, rain, snow, fog: a diffuse silvery sky.
-        (
-            Quat::from_euler(EulerRot::XYZ, -1.1, 0.6, 0.0),
-            Color::srgb(0.8, 0.85, 0.9),
-            7_000.0,
-        )
+        (Color::srgb(0.8, 0.85, 0.9), 7_000.0)
     } else {
         // Clear day: bright golden-white sun.
-        let progress_through_day = ((hour - 6.0) / 14.0).clamp(0.0, 1.0);
-        let pitch = -0.4 - 0.7 * (1.0 - (progress_through_day - 0.5).abs() * 2.0);
-        let yaw = 0.2 + progress_through_day * 1.5;
-        (
-            Quat::from_euler(EulerRot::XYZ, pitch, yaw, 0.0),
-            Color::srgb(1.0, 0.98, 0.92),
-            18_000.0,
-        )
+        (Color::srgb(1.0, 0.98, 0.92), 18_000.0)
     };
     let (ambient_color, ambient_brightness) = if is_night {
         (Color::srgb(0.12, 0.15, 0.28), 120.0)
@@ -82,7 +69,7 @@ pub fn fallback_lighting(hour: f32, weather: WeatherKind) -> FallbackLighting {
     FallbackLighting {
         rotation,
         color,
-        illuminance,
+        illuminance: illuminance * fade,
         ambient_color,
         ambient_brightness,
     }
@@ -97,6 +84,7 @@ pub fn spawn_atmosphere_and_lighting(commands: &mut Commands) {
         },
         Transform::default(),
         FallbackLight,
+        opts_bevy::sun_rays::LightRole::Sun,
         InGameEntity,
         Name::new("Atmosphere_Sun_Light"),
     ));
@@ -115,21 +103,28 @@ pub fn update_fallback_light(
         return;
     }
     let added = lights.iter().any(|(_, _, f)| f.is_added());
-    let want = fallback_lighting(env.hour(), env.weather_kind());
+    let want = fallback_lighting(env.sun_alt_deg(), env.sun_az_deg(), env.weather_kind());
     if !added && *last == Some(want) {
         return;
     }
+    // The sun moves, so the light changes every tick; the ambient light only changes rarely.
+    let ambient_same = !added
+        && last.is_some_and(|l| {
+            l.ambient_color == want.ambient_color && l.ambient_brightness == want.ambient_brightness
+        });
     *last = Some(want);
     for (mut light, mut transform, _) in &mut lights {
         light.color = want.color;
         light.illuminance = want.illuminance;
         transform.rotation = want.rotation;
     }
-    commands.insert_resource(GlobalAmbientLight {
-        color: want.ambient_color,
-        brightness: want.ambient_brightness,
-        ..default()
-    });
+    if !ambient_same {
+        commands.insert_resource(GlobalAmbientLight {
+            color: want.ambient_color,
+            brightness: want.ambient_brightness,
+            ..default()
+        });
+    }
 }
 
 #[cfg(test)]
@@ -138,15 +133,19 @@ mod tests {
     use opts_bevy::{CalendarDate, EnvironmentChange, EnvironmentPlugin};
 
     #[test]
-    fn the_light_follows_hour_and_weather() {
-        let night = fallback_lighting(23.0, WeatherKind::Clear);
-        assert_eq!(night.illuminance, 900.0);
-        assert_eq!(fallback_lighting(25.0, WeatherKind::Clear), night);
-        let noon = fallback_lighting(12.0, WeatherKind::Clear);
+    fn the_light_follows_the_sun_and_weather() {
+        let night = fallback_lighting(-30.0, 0.0, WeatherKind::Clear);
+        assert_eq!(night.illuminance, 0.0, "the moon is the night light");
+        assert_eq!(night.ambient_brightness, 120.0);
+        let noon = fallback_lighting(60.0, 180.0, WeatherKind::Clear);
         assert_eq!(noon.illuminance, 18_000.0);
-        let grey = fallback_lighting(12.0, WeatherKind::Rain);
+        let grey = fallback_lighting(60.0, 180.0, WeatherKind::Rain);
         assert_eq!(grey.illuminance, 7_000.0);
         assert_eq!(grey.ambient_brightness, 380.0);
+        // Low sun: warm and dimmer through the twilight.
+        let low = fallback_lighting(5.0, 90.0, WeatherKind::Clear);
+        assert!(low.illuminance > 0.0 && low.illuminance <= 12_000.0);
+        assert!(fallback_lighting(1.0, 90.0, WeatherKind::Clear).illuminance < low.illuminance);
     }
 
     #[test]
@@ -178,7 +177,7 @@ mod tests {
             ..default()
         });
         app.update();
-        assert_eq!(illum(&mut app), 900.0);
+        assert_eq!(illum(&mut app), 0.0);
         assert_eq!(
             app.world().resource::<GlobalAmbientLight>().brightness,
             120.0

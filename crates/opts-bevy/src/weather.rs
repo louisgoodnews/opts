@@ -649,7 +649,14 @@ pub fn effective_cover(c: &WeatherConditions) -> f32 {
 /// (cover 1) gives the sun 0.55 and the ambient light 0.8, a clear one 1 and 1.
 #[must_use]
 pub fn light_scales(c: &WeatherConditions) -> LightScales {
-    let cover = effective_cover(c);
+    light_scales_for_cover(effective_cover(c))
+}
+
+/// [`light_scales`] for a given share of covered sky `0..=1` (the rule itself, so the sky
+/// description [`crate::environment::WeatherSky`] shares it).
+#[must_use]
+pub fn light_scales_for_cover(cover: f32) -> LightScales {
+    let cover = cover.clamp(0.0, 1.0);
     LightScales {
         sun: 1.0 - 0.45 * cover,
         ambient: 1.0 - 0.2 * cover,

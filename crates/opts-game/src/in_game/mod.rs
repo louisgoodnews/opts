@@ -8,6 +8,7 @@ pub mod instruments;
 pub mod load_report;
 pub mod loading_pipeline;
 pub mod loading_ui;
+pub mod moon;
 pub mod omsi_world;
 pub mod screenshot;
 pub mod sky;
@@ -79,6 +80,7 @@ impl Plugin for InGamePlugin {
             opts_bevy::EnvironmentSet.run_if(in_state(AppState::InGame)),
         );
         app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
+        app.add_plugins((moon::MoonPlugin, opts_bevy::sun_rays::SunRaysPlugin));
         app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins((VehicleMenuPlugin, FormationMenuPlugin))
             .add_systems(
