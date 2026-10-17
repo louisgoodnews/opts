@@ -33,6 +33,8 @@ pub struct Sky {
     last_refresh: f64,
     /// Environment revision of the last rebuild (`None` before the first).
     last_revision: Option<u64>,
+    /// Whether the last rebuild wrote the clear colour for an HDR camera.
+    last_hdr: Option<bool>,
 }
 
 /// The sky's colour at the horizon (linear RGB `0..=1`), refreshed with the sky texture; the fog
@@ -211,6 +213,7 @@ pub fn spawn_sky(
         image: image.clone(),
         last_refresh: f64::NEG_INFINITY,
         last_revision: None,
+        last_hdr: None,
     };
 
     let image = sky.image.clone();
@@ -287,6 +290,7 @@ pub fn update_sky(
     mut clear: Option<ResMut<ClearColor>>,
     mut ambient: Option<ResMut<GlobalAmbientLight>>,
     look: Option<Res<crate::look::ActiveLook>>,
+    settings: Option<Res<crate::settings::GameSettings>>,
     cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), (With<SunLight>, Without<SkyDome>)>,
     mut sun_disc: Query<
@@ -323,10 +327,21 @@ pub fn update_sky(
     let ambient_scale = look.as_ref().map_or(1.0, |l| {
         crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
     });
+    // Switching `graphics.hdr` changes how the clear colour must be written.
+    let hdr = settings
+        .as_ref()
+        .is_some_and(|s| crate::settings_registry::live::hdr_enabled(s));
+    let hdr_changed = sky.last_hdr != Some(hdr);
     let jumped = sky.last_revision != Some(env.revision());
     let effects_changed = effects.as_ref().is_some_and(|e| e.is_changed());
-    if look_changed || jumped || effects_changed || (now - sky.last_refresh).abs() >= REFRESH_S {
+    if look_changed
+        || hdr_changed
+        || jumped
+        || effects_changed
+        || (now - sky.last_refresh).abs() >= REFRESH_S
+    {
         sky.last_refresh = now;
+        sky.last_hdr = Some(hdr);
         sky.last_revision = Some(env.revision());
         let weights = sky.config.sky_weights(elevation);
         // Colour of the sky at the horizon fills anything the dome does not cover; the fog
@@ -374,7 +389,18 @@ pub fn update_sky(
         }
         let clear_color = if fog_on { veil_color } else { horizon };
         if let Some(clear) = clear.as_mut() {
-            clear.0 = Color::srgb(clear_color[0], clear_color[1], clear_color[2]);
+            let display = Color::srgb(clear_color[0], clear_color[1], clear_color[2]).to_linear();
+            clear.0 = if hdr {
+                // The HDR camera tonemaps its clear colour too; write what shows `display` after it.
+                let tm = look
+                    .as_ref()
+                    .map_or_else(Default::default, |l| l.0.params().tonemapping);
+                let x =
+                    crate::look::hdr_clear_color(tm, [display.red, display.green, display.blue]);
+                Color::linear_rgb(x[0], x[1], x[2])
+            } else {
+                display.into()
+            };
         }
         commands.insert_resource(SkyHorizon(horizon));
     }

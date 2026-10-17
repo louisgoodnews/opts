@@ -378,3 +378,34 @@ fn the_weather_settings_default_on_and_switch_each_effect() {
     app.update();
     assert!(app.world().resource::<opts_bevy::WeatherEffects>().fog);
 }
+
+#[test]
+fn hdr_is_on_by_default_and_follows_the_setting_on_the_main_camera_only() {
+    use bevy::camera::Hdr;
+    let r = SettingsRegistry::with_builtin();
+    assert_eq!(r.get("graphics.hdr").map(|d| d.default), Some("true"));
+    let mut app = App::new();
+    app.insert_resource(GameSettings::default())
+        .add_systems(Update, live::sync_hdr);
+    let main = app
+        .world_mut()
+        .spawn((Camera3d::default(), opts_bevy::MainCamera))
+        .id();
+    let mirror = app.world_mut().spawn(Camera3d::default()).id();
+    app.update();
+    assert!(app.world().get::<Hdr>(main).is_some(), "on by default");
+    assert!(
+        app.world().get::<Hdr>(mirror).is_none(),
+        "not on other cameras"
+    );
+    app.world_mut()
+        .resource_mut::<GameSettings>()
+        .set_raw("graphics.hdr", "false");
+    app.update();
+    assert!(app.world().get::<Hdr>(main).is_none(), "off, live");
+    app.world_mut()
+        .resource_mut::<GameSettings>()
+        .set_raw("graphics.hdr", "true");
+    app.update();
+    assert!(app.world().get::<Hdr>(main).is_some(), "on again, live");
+}
