@@ -5,7 +5,7 @@
 | **Map** | `OMSI 2/maps/Berlin-Spandau` |
 | **Brief** | expanded scope: 19 symptoms in five systems (terrain/coordinates/tags, parser and Chrono, AI kinematics and lights, asset gaps, environment UI) |
 | **Branch** | `fix/terrain-and-traffic-systems` (worktree `opts-wt-berlin-spandau-systems`, from `master` `85d2391`), carries the two report commits of `fix/map-fidelity-systemic`; not merged, merge only after user acceptance |
-| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done, waiting for Checkpoint 2 |
+| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done (Checkpoint 2: all four decisions accepted); Phase C done, waiting for Checkpoint 3 |
 | **Predecessor** | [Berlin-Spandau map fidelity investigation](berlin-spandau-2026-10-17.md): symptoms 1-13 reproduced and root-caused there (§2, §6), fix plan §7 |
 | **Clean room** | no OMSI binary inspected; screenshots and probes kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/` (`systems/` for this phase), not committed |
 
@@ -100,3 +100,58 @@ One commit (or short series) per item, tests with each; ordinary 300 m maps pinn
 2. **Environment page:** time and weather preview live while the page is open, the date (and any Chrono rebuild) applies on *Apply*; Resume waits for the rebuild to finish. Weather stays sky/light/temperature (no fog or rain rendering in this task).
 3. **Terrain guard** 1 m (recommended) rather than 2 m; deeper buried content is left for terrain holes (`[terrainhole]`, not in this task).
 4. **Order:** C1 → C2 → C3 → C4 → C5 → C6, each reported briefly as it lands, Checkpoint 3 at the end?
+
+**Checkpoint 2 decisions ("Go"):** `trucks` = "trucks permitted"; time and weather preview live on the Environment page, the date applies on *Apply*, *Resume* waits for the rebuild, weather stays sky/light/temperature; terrain guard 1 m; order C1 → C6.
+
+## 8. Phase C: implementation
+
+Six agents in separate worktrees, merged into `fix/terrain-and-traffic-systems` (37 commits besides merges, 157 files, +13,475 / −1,985 lines). Each agent ran fmt, clippy `-D warnings` and the tests of its crates before every commit; the lead re-ran the whole workspace after each merge.
+
+| Item | Commits | What it does | Design |
+| :--- | :--- | :--- | :--- |
+| **C1** tile grid | `3c40630` `1aead49` | `TileGrid` (f64, uniform or Mercator rows, chosen only when the seam fit agrees within 0.05 m); every tile origin, spawn, height lookup, water, neighbour offset, control coordinate goes through it; global tile size removed | [streaming coordinates](../architecture/streaming-coordinates.md) |
+| **C2** terrain, crossings | `89ed6f0` `537e714` `4ebe1c2` `94e8fd2` `b405e6a` `5c7f251` | ground surface of a profile; triangle-cap carve (ε 3 cm, guard 1 m) replaces the flat footprint; carved grid returned and one `terrain_height` for everything; `[crossing_heightdeformation]` bends meshes, collision, paths and arms; terrain capped under crossing ground faces | [terrain carving](../architecture/terrain-carving.md) |
+| **C3** AI | `37afa83` `72d8ffe` `c7ed22b` `2430633` `783b50d` `995480b` | arced and mirrored lanes with the `[spline_h]` ramp; axle pose; per-driver speed factor, curve limit, look-ahead; distance-gated and strategic lane changes, `trucks` = permitted; indicators from `[path]` parameter 12; `[light_enh_2]` for vehicles with a headlight pool | [AI traffic kinematics](../architecture/ai-traffic-kinematics.md) |
+| **C4a** Chrono | `8cc7001` `7b117b0` `3da3c60` `30b5853` | entries, activation, overlay grammar, data-file overrides; tiles read through Chrono; live switch on `MapDateChanged` rebuilding only changed tiles plus the carve ring | [chrono.md](../formats/map/chrono.md) |
+| **C4b** config | `1ca78df` `a0c564c` `7a42c62` | blank string values kept; attachment runs on a map-wide chain index; parking-list selector; per-group density from the rule flag with time factors and a proportional ceiling | [lists.md](../formats/map/lists.md), [ai-traffic.md](../architecture/ai-traffic.md) |
+| **C5** rendering | `1b38c45` `37d2341` `ad78244` `59fee97` `0c71c54` `29930eb` `5ff3112` | tree crown normals; `[onlyeditor]` per mesh; shared `.x` palettes; opaque body + blended glass; `[CTC]` for parked/AI cars; glow under the object root; `[maplight]` pool; night maps | [scenery runtime](../architecture/scenery-runtime.md) |
+| **C6** environment | `3f24497` … `9b47c3e` (6) | `SessionEnvironment` with one writer; pause Environment page; map-step date picker; `sim.set_time`; hook for the Chrono rebuild | [session environment](../architecture/session-environment.md) |
+
+Fixes found while integrating: `401380a` (the glass image kept a mip chain longer than its data: wgpu panic at tile load, test added that fails on the old code), `a4221e7` (lamp glow was a solid sphere and the map lights were invisible at 15 lx: now a soft camera-facing disc and 10,000 lx), `aed3eb9` (wizard test leaked the host install through the shared folder names of the fixture maps).
+
+### Numbers
+
+| | Before | After |
+| :--- | :--- | :--- |
+| Tests (workspace, no `OMSI_PATH`) | 1,514 | **1,707 passed, 0 failed** |
+| Terrain at the Güterschuppen (2402/11279) | 31-33 m → 15-17 m (1,468 vertices) | deepest lowering **0.79 m** (89 vertices) |
+| Bent crossings below terrain (11 placements, 72,469 m²) | 19.4 % | **0.000 %**; 38 of 39 arms within 1 cm, one at 1.3 cm |
+| Lateral acceleration in curves (p99, 30 / 150 cars) | 34.0 / 30.4 m/s² | **2.6 / 2.6** (max 7.7 / 10.6) |
+| Dead-end lanes | 373 | 178 |
+| Lane changes in 600 s (30 / 150 cars) | 20 / 93 | 31 / 123 |
+| Parking bays / lamps placed | 762 / 716 | 3,774 / 1,806 (authored 3,858 / 1,923; the difference is repeaters repeating another on the same spline) |
+| Chrono, 1986 → 1994 | not supported | 16 entries toggled, 108 tiles changed, 25 in the carve ring, 9 resident tiles rebuilt in place |
+
+### Live checks (release build, Berlin-Spandau)
+
+Confirmed in the game: the Rathaus junction and the Ruhlebener ramp no longer lie under grass; the Güterschuppen has no pit and the building stands on the ground; trees look the same from both sides; the "Brunsbütteler Damm" sign has its plate; parked cars are opaque, in varied colours and in an even 7 m row at the kerb; at night lamps glow softly and light the pavement and the bus shelter; AI cars follow the junction lanes without sliding; the Wall area differs between 1986 (border-strip paving) and 1994 (a road with traffic); `sim.set_time` with a date switches Chrono state live.
+
+Not confirmed live: the median break on Falkenseer Chaussee (photo 2; the joins measure exact and the median is continuous in the shots taken, the exact vantage is unknown), lane arrows on crossings (no vantage taken), AI headlights at night with traffic in view, traffic density against the map's config at several hours, the player's tile through a Chrono switch while driving.
+
+### Deviations from the designs
+
+* **Re-anchoring (design §2.3) is not implemented.** The fixed per-row grid ships: exact near the start tile, about 2.8 cm of error per tile column away from it (pinned by a test).
+* **Lane changes** rose less than the headless estimate (31 / 123 instead of 85 / 335) because changes on lanes that come from junction objects (`.sco` paths) are blocked; without that rule 64 / 236. Mirrored splines reverse their lane direction as well as their side (the side flip alone raised dead ends from 279 to 336).
+* **Terrain guard** is applied per surface contribution, not on the final minimum; a straight `[spline_h]` ramp is now drawn and carved as its cubic.
+* **Density:** `L0 = 80 m` (median over 56 entry points of 12 maps), default traffic ceiling raised from 30 to 100.
+* **Glow** is an additive disc, not a swapped night texture; `[nomaplighting]` is parsed only.
+* **Not done:** active Chrono entry shown on the wizard map step (optional); a Bevy-app test of the live-switch handler (verified live instead); the 136+ parked vans whose mesh cannot be decoded (`MB_T1_kasten_parked.o3d`, 247 skipped objects counting every resident tile).
+
+### Known problems outside this task
+
+* `golden_screens` (2 tests of `opts-game`) fail whenever `OMSI_PATH` is set, also on unmodified `master`.
+* The wizard fixture maps share folder names with real maps; the wizard test is now hermetic (`aed3eb9`), the golden screens are not.
+
+### Open questions
+
+Q-TC-01..04 ([terrain carving](../architecture/terrain-carving.md)), Q-AK-01..04 ([AI kinematics](../architecture/ai-traffic-kinematics.md)), whether OMSI re-evaluates Chrono when the clock passes midnight, the meaning of attachment fields 9 and 12, the value of the "Medium" density class (assumed 1.0), which repaint OMSI picks for a parked car (deterministic hash here).
