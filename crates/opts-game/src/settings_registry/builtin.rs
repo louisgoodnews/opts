@@ -694,6 +694,7 @@ fn minimap() -> Vec<D> {
 #[must_use]
 pub fn all() -> Vec<D> {
     let mut v = graphics();
+    v.extend(super::lighting::descriptors());
     v.extend(interface());
     v.extend(hud());
     v.extend(minimap());

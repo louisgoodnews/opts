@@ -396,6 +396,47 @@ mod environment_page {
         );
     }
 
+    fn light_row_text(app: &mut App) -> String {
+        let kids: Vec<Entity> = app
+            .world_mut()
+            .query_filtered::<&Children, With<environment::LightModeButton>>()
+            .iter(app.world())
+            .flat_map(|c| c.iter().collect::<Vec<_>>())
+            .collect();
+        kids.iter()
+            .filter_map(|k| app.world().get::<Text>(*k).map(|t| t.0.clone()))
+            .collect()
+    }
+
+    #[test]
+    fn the_lighting_quality_row_shows_the_mode_and_level_and_toggles_it() {
+        use opts_bevy::light_quality::{GovernorState, LightMode, LightQuality};
+        let mut app = drive_at_noon();
+        open_page(&mut app);
+        app.update();
+        assert_eq!(light_row_text(&mut app), "Automatic (level 0: full)");
+        app.world_mut().resource_mut::<GovernorState>().level = 2;
+        app.update();
+        app.update();
+        assert_eq!(
+            light_row_text(&mut app),
+            "Automatic (level 2: headlights only)"
+        );
+        click(&mut app, "pause.environment.light-quality");
+        for _ in 0..3 {
+            app.update();
+        }
+        assert_eq!(light_row_text(&mut app), "Custom");
+        let q = *app.world().resource::<LightQuality>();
+        assert_eq!((q.mode, q.level), (LightMode::Custom, 2));
+        click(&mut app, "pause.environment.light-quality");
+        for _ in 0..3 {
+            app.update();
+        }
+        assert_eq!(light_row_text(&mut app), "Automatic (level 0: full)");
+        assert!(paused(&app), "the page still pauses the drive");
+    }
+
     #[test]
     fn time_and_weather_preview_live_and_esc_restores_them() {
         let mut app = drive_at_noon();

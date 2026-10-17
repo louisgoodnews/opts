@@ -196,6 +196,7 @@ impl Plugin for SettingsPagePlugin {
 
 /// Marks the page dirty when something it cannot update in place changed: the language, or a
 /// path or free text value.
+#[allow(clippy::too_many_arguments)]
 pub fn mark_dirty(
     mut state: ResMut<SettingsPageState>,
     mut changes: MessageReader<SettingChanged>,
@@ -203,17 +204,23 @@ pub fn mark_dirty(
     loc: Res<Localization>,
     added: Query<(), Added<SettingsPage>>,
     facts: Res<crate::content_facts::ContentFactsStore>,
+    light: Option<Res<opts_bevy::light_quality::LightQuality>>,
     mut themes: Local<Vec<String>>,
 ) {
+    if light.is_some_and(|l| l.is_changed()) {
+        // The values the automatic mode shows (and which controls are locked) changed.
+        state.dirty = true;
+    }
     if themes.as_slice() != facts.theme_files() {
         *themes = facts.theme_files().to_vec();
         state.dirty = true;
     }
     let structural = changes.read().any(|c| {
-        registry.get(&c.key).is_some_and(|d| {
-            matches!(d.kind, SettingKind::Path)
-                || (matches!(d.kind, SettingKind::Text) && d.key != "theme_file")
-        })
+        c.key == crate::settings_registry::lighting::MODE_KEY
+            || registry.get(&c.key).is_some_and(|d| {
+                matches!(d.kind, SettingKind::Path)
+                    || (matches!(d.kind, SettingKind::Text) && d.key != "theme_file")
+            })
     });
     if structural || loc.is_changed() || !added.is_empty() {
         state.dirty = true;
@@ -339,6 +346,7 @@ pub fn rebuild_page(
     facts: Res<crate::content_facts::ContentFactsStore>,
     loc: Res<Localization>,
     hardware: Option<Res<crate::hardware::HardwareState>>,
+    light: Option<Res<opts_bevy::light_quality::LightQuality>>,
     focused: Query<&UiId, With<opts_gui::interaction::state::Focused>>,
     cats: Query<(Entity, Option<&Children>), With<PageCategories>>,
     panes: Query<(Entity, Option<&Children>), With<PagePane>>,
@@ -375,6 +383,7 @@ pub fn rebuild_page(
             .filter(|h| h.is_stored())
             .and_then(|h| h.dir.as_deref().map(opts_hardware::store::path)),
         theme_files: facts.theme_files(),
+        light: light.as_deref(),
     };
     let searching = !state.query.trim().is_empty();
     for cat in registry
@@ -418,6 +427,7 @@ pub fn rebuild_page(
                     ColorRole::Primary,
                 );
             }
+            light_section(&mut commands, pane, &ctx, d);
             spawn_row(&mut commands, pane, &ctx, d);
         }
     } else {
@@ -433,6 +443,7 @@ pub fn rebuild_page(
             .into_iter()
             .filter(|d| !d.hidden)
         {
+            light_section(&mut commands, pane, &ctx, d);
             spawn_row(&mut commands, pane, &ctx, d);
             if d.key == "content.rescan" {
                 super::scan_status::spawn_chip(&mut commands, pane);
@@ -440,6 +451,65 @@ pub fn rebuild_page(
         }
         let kind = theme_name_key(theme.kind());
         super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);
+    }
+}
+
+/// The "Lighting quality" section heading and its note, above the mode row.
+fn light_section(
+    commands: &mut Commands,
+    pane: Entity,
+    ctx: &Ctx,
+    d: &crate::settings_registry::SettingDescriptor,
+) {
+    use crate::settings_registry::lighting as l;
+    if d.key != l::MODE_KEY {
+        return;
+    }
+    let heading = label(
+        commands,
+        pane,
+        "set-light-section",
+        TypeScale::TitleMedium,
+        ColorRole::Primary,
+    );
+    commands.entity(heading).insert(Node {
+        margin: UiRect::top(Val::Px(20.0)),
+        ..default()
+    });
+    label(
+        commands,
+        pane,
+        "set-light-section-note",
+        TypeScale::BodyMedium,
+        ColorRole::OnSurfaceVariant,
+    );
+    if l::is_automatic(ctx.settings) {
+        let level = ctx.light.map_or(0, |q| q.level);
+        commands.spawn((
+            Text::new("set-light-auto-note"),
+            opts_gui::l10n::L10nKey("set-light-auto-note"),
+            L10nArgs(vec![
+                ("level".into(), usize::from(level).into()),
+                ("name".into(), ctx.loc.t(level_key(level)).into()),
+            ]),
+            TextColor::default(),
+            TypeStyleToken(TypeScale::BodyMedium),
+            ForegroundRole(ColorRole::Info),
+            ChildOf(pane),
+        ));
+    }
+}
+
+/// The message key of the name of a ladder level.
+#[must_use]
+pub fn level_key(level: u8) -> &'static str {
+    match level {
+        0 => "set-light-level-0",
+        1 => "set-light-level-1",
+        2 => "set-light-level-2",
+        3 => "set-light-level-3",
+        4 => "set-light-level-4",
+        _ => "set-light-level-5",
     }
 }
 

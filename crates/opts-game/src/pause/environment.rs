@@ -30,6 +30,8 @@ pub enum EnvAction {
     Step(Field, i32),
     /// Choose a weather preset (live); the id is the control's [`WeatherId`].
     Weather,
+    /// Switch the lighting quality between automatic and custom (`graphics.light_quality_mode`).
+    LightMode,
     /// Apply the date and close.
     Apply,
     /// Restore time and weather and close.
@@ -43,6 +45,10 @@ pub struct WeatherId(pub String);
 /// A value text of a stepper.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EnvValue(pub Field);
+
+/// The button of the lighting quality row; its text names the mode (and the level).
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct LightModeButton;
 
 /// The line that reports a running map rebuild.
 #[derive(Component, Debug, Clone, Copy, Default)]
@@ -227,6 +233,27 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
         ))
         .id();
     let weather = weather_chips(commands, weather_list, loc);
+    let light_title = commands
+        .spawn(text(
+            "env-light-quality",
+            TypeScale::TitleMedium,
+            ColorRole::OnSurface,
+        ))
+        .id();
+    let light_button = ButtonBuilder::outlined("Lighting quality").spawn(commands);
+    commands.entity(light_button).insert((
+        EnvAction::LightMode,
+        LightModeButton,
+        UiId::new("pause.environment.light-quality"),
+    ));
+    // The button keeps its own width instead of filling the card.
+    let light = commands
+        .spawn(Node {
+            flex_direction: FlexDirection::Row,
+            ..default()
+        })
+        .add_child(light_button)
+        .id();
     let rebuild = commands
         .spawn((
             text(keys::ENV_REBUILDING, TypeScale::Label, ColorRole::Info),
@@ -271,6 +298,8 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
         time,
         weather_title,
         weather,
+        light_title,
+        light,
         rebuild,
         buttons,
     ]);
@@ -342,6 +371,7 @@ pub fn environment_page_input(
                     });
                 }
             }
+            EnvAction::LightMode => {}
             EnvAction::Apply => {
                 changes.write(EnvironmentChange {
                     date: Some(page.draft_date),
@@ -353,6 +383,76 @@ pub fn environment_page_input(
             EnvAction::Cancel => {
                 restore(&page, &mut changes);
                 close(&mut commands, &mut page, &roots);
+            }
+        }
+    }
+}
+
+/// The lighting quality row: toggles `graphics.light_quality_mode` between automatic and custom.
+pub fn environment_light_toggle(
+    mut commands: Commands,
+    mut activated: MessageReader<Activated>,
+    actions: Query<&EnvAction>,
+) {
+    for Activated(entity) in activated.read() {
+        if actions.get(*entity) != Ok(&EnvAction::LightMode) {
+            continue;
+        }
+        commands.queue(|world: &mut World| {
+            use crate::settings_registry::lighting::MODE_KEY;
+            if !world.contains_resource::<crate::settings_registry::SettingsRegistry>() {
+                return;
+            }
+            let next = if crate::settings_registry::lighting::mode_of(
+                world.resource::<crate::settings::GameSettings>(),
+            ) == opts_bevy::light_quality::LightMode::Custom
+            {
+                "automatic"
+            } else {
+                "custom"
+            };
+            let _ = crate::settings_registry::apply_change(
+                world,
+                MODE_KEY,
+                Some(next),
+                crate::settings_registry::ChangeSource::Page,
+            );
+        });
+    }
+}
+
+/// Names the mode (and, in automatic mode, the level) on the lighting quality button.
+pub fn refresh_light_row(
+    page: Res<EnvironmentPage>,
+    loc: Res<Localization>,
+    quality: Option<Res<opts_bevy::light_quality::LightQuality>>,
+    buttons: Query<&Children, With<LightModeButton>>,
+    mut texts: Query<&mut Text>,
+) {
+    if !page.open {
+        return;
+    }
+    let q = quality.map_or_else(opts_bevy::light_quality::LightQuality::default, |q| *q);
+    let want = match q.mode {
+        opts_bevy::light_quality::LightMode::Custom => loc.t("env-light-custom"),
+        opts_bevy::light_quality::LightMode::Automatic => loc.t_args(
+            "env-light-automatic",
+            &[
+                ("level".into(), usize::from(q.level).into()),
+                (
+                    "name".into(),
+                    loc.t(crate::settings_screen::page::level_key(q.level))
+                        .into(),
+                ),
+            ],
+        ),
+    };
+    for kids in &buttons {
+        for k in kids {
+            if let Ok(mut t) = texts.get_mut(*k) {
+                if t.0 != want {
+                    t.0.clone_from(&want);
+                }
             }
         }
     }

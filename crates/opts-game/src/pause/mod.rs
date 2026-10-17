@@ -482,6 +482,8 @@ impl Plugin for PausePlugin {
                     return_after_overlay,
                     environment::resume_after_rebuild,
                     environment::environment_page_input,
+                    environment::environment_light_toggle,
+                    environment::refresh_light_row,
                     environment::refresh_environment_page,
                 )
                     .run_if(in_state(AppState::InGame)),
