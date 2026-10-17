@@ -5,7 +5,7 @@
 | **Map** | `OMSI 2/maps/Berlin-Spandau` |
 | **Brief** | expanded scope: 19 symptoms in five systems (terrain/coordinates/tags, parser and Chrono, AI kinematics and lights, asset gaps, environment UI) |
 | **Branch** | `fix/terrain-and-traffic-systems` (worktree `opts-wt-berlin-spandau-systems`, from `master` `85d2391`), carries the two report commits of `fix/map-fidelity-systemic`; not merged, merge only after user acceptance |
-| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done (Checkpoint 2: all four decisions accepted); Phase C done, waiting for Checkpoint 3 |
+| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done (Checkpoint 2: all four decisions accepted); Phase C done; lighting round (§9) implemented, waiting for Checkpoint 3 |
 | **Predecessor** | [Berlin-Spandau map fidelity investigation](berlin-spandau-2026-10-17.md): symptoms 1-13 reproduced and root-caused there (§2, §6), fix plan §7 |
 | **Clean room** | no OMSI binary inspected; screenshots and probes kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/` (`systems/` for this phase), not committed |
 
@@ -242,3 +242,30 @@ Designs: [lighting system](../architecture/lighting-system.md) (rooms, moon, sun
 1. **Quality mode automatic/custom** (`graphics.light_quality_mode`): Automatic = frame-time governor, Custom = every effect individually controllable; see [lighting system §9](../architecture/lighting-system.md#9-performance-budget-measured-2026-10-17).
 2. **Cones use the depth fade** (depth prepass on the main camera; measured in the real game during implementation).
 3. **Night (moon) shafts are on by default.**
+
+## 10. Round 3, Phase C: lighting, reflections and weather (implemented 2026-10-17/18)
+
+Branch `fix/map-and-lighting-systems` (from `master` 6cdbd05). Nine agents in separate worktrees, merged one by one; every merge was followed by fmt, workspace clippy and the tests of the touched crates, the whole workspace after each larger step.
+
+| Item | What it does | Design |
+| :--- | :--- | :--- |
+| Weather | the install's presets (`Weather/*.owt`), fog, clouds, rain/snow, wet ground via the shared `Wetness`, script variables, four live settings, `sim.set_time --weather` | [weather](../architecture/weather.md) |
+| `MainCamera` + HDR | marker for the player's view; 48 query sites converted; HDR on by default (`graphics.hdr`), clear colour converted | [camera system](../architecture/camera-system.md), [lighting system §6.2](../architecture/lighting-system.md) |
+| Quality mode | `graphics.light_quality_mode` automatic/custom, ten custom controls, six-level ladder, Environment row | [lighting system §9](../architecture/lighting-system.md) |
+| Moon, rays | moon model (Meeus series, 11 phases within 5 min), `MoonLight`, one shadow carrier, `MoonMaterial` phase disc, sun/moon god rays with `VolumetricFog`, `OPTS_SHAFT_TUNE` override | [lighting system §5, §6](../architecture/lighting-system.md) |
+| Cones, light rooms | ray-marched proxy cones for lanterns and headlights with depth fade, prepass-ready gate, ground clip, bounded accumulation; cabin layer, CPU rules, `NoMapLighting` | [lighting cones](../architecture/lighting-cones.md) |
+| Glass, mirrors | one shared sky cube map for glass reflections, live rear-view mirror cameras on the player's vehicle (`reflexion<N>.bmp` panes, at most 2, every 2nd frame, HDR) | [lighting system §9.3](../architecture/lighting-system.md), [reflections research](../architecture/reflections-research.md) |
+| Governor | judges missed deadlines (late = 1.25 × budget), works under vsync, new `graphics.light_governor_target_fps` | [lighting system §9.1](../architecture/lighting-system.md) |
+| Paused lighting | scenery tick re-evaluates lights at a zero time step; map-light and glow fades on real time | this page |
+
+**Tests:** whole workspace 1,956 passed, 0 failed; with the installation (opts-core, opts-bevy, opts-traffic, opts-sim, opts-game, the two known golden screens skipped) 1,567 passed, 0 failed; fmt, clippy `-D warnings` and the docs build clean. Known rare flake `home::tests::a_blocked_continue…` (about 1 in 20 runs).
+
+**Found live and fixed during integration** (each only visible on the real GPU): the cone white-out without or before the depth prepass; sun rays far too strong at a low sun (mean luminance 0.71 → +0.027 over rays-off); lamps dark while the simulation is paused after a time jump (the Environment page's lighting preview); the governor dropping to level 5 in 20 s under vsync (frame times can never be below the refresh interval).
+
+**Measured live on the RTX 3060, 1080p, Berlin-Spandau:** cones 23-64 active, selection 15-47 µs; sun rays +0.027 (low sun) / −0.003 (noon); moon at night +0.038 (halo); HDR on/off 0.08 % mean error; governor with vsync on (75 Hz display, budget 16.67 ms): level 0, no late frames, no level change in the log; with an unreachable target (240 fps) one step down per 5 s to level 5, one step back up after about a minute of clean frames.
+
+**Not verified:** mirror image orientation against the real driving view (dev override `OPTS_MIRROR_FLIP=u|v|uv`); glass reflections at the sun on a window; light rooms in a cockpit at night with the cabin lights on; cone intensity tuning for AI headlights with traffic in view; the real-game GPU cost of the depth prepass; moon shafts at night against `MOON_SHAFT_GAIN`; ground fog from above (the whole view whites out, fog is not height-limited).
+
+**Deviations:** the cone criterion is the `cone` flag of `[light_enh_2]` (not "angle < 180°"); the `RenderLayers` finding (layers do not filter lit meshes); no additive-mesh cone fallback (the cap is the fallback); mirror cameras use `Tonemapping::None` (the main camera tonemaps once); cube map 64², regenerated at most every 2 s.
+
+**Open questions:** Q-LS01..14 in the lighting page; which cone data wins on disagreement between `[light_enh_2]` and `[spotlight]` (the `[spotlight]` wins on the player vehicle); `HAZE_BASE` and weather fog combination; cone brightness (`ConeStyle`).
