@@ -35,6 +35,9 @@ pub struct Sky {
     last_revision: Option<u64>,
     /// Whether the last rebuild wrote the clear colour for an HDR camera.
     last_hdr: Option<bool>,
+    /// The ground-fog sky clearing of the last rebuild, in 1/32 steps (the sky is rebuilt when
+    /// the camera's height moves it by a step).
+    last_fog_clear: u8,
 }
 
 /// The sky's colour at the horizon (linear RGB `0..=1`), refreshed with the sky texture; the fog
@@ -217,6 +220,7 @@ pub fn spawn_sky(
         last_refresh: f64::NEG_INFINITY,
         last_revision: None,
         last_hdr: None,
+        last_fog_clear: 0,
     };
 
     let image = sky.image.clone();
@@ -292,6 +296,7 @@ pub fn place_sky_dome(
 pub fn update_sky(
     env: Res<SessionEnvironment>,
     effects: Option<Res<opts_bevy::WeatherEffects>>,
+    fog_view: Option<Res<opts_bevy::weather::GroundFogView>>,
     mut commands: Commands,
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
@@ -333,7 +338,14 @@ pub fn update_sky(
     let hdr_changed = sky.last_hdr != Some(hdr);
     let jumped = sky.last_revision != Some(env.revision());
     let effects_changed = effects.as_ref().is_some_and(|e| e.is_changed());
+    // Above a ground-fog layer the sky is not veiled (`ground_fog`); quantised so the sky is not
+    // rebuilt every frame while the camera climbs.
+    let fog_clear = fog_view
+        .as_ref()
+        .map_or(0, |v| (v.sky_clear * 32.0).round() as u8);
+    let fog_clear_changed = sky.last_fog_clear != fog_clear;
     if look_changed
+        || fog_clear_changed
         || hdr_changed
         || jumped
         || effects_changed
@@ -341,6 +353,7 @@ pub fn update_sky(
     {
         sky.last_refresh = now;
         sky.last_hdr = Some(hdr);
+        sky.last_fog_clear = fog_clear;
         sky.last_revision = Some(env.revision());
         let weights = sky.config.sky_weights(elevation);
         // Colour of the sky at the horizon fills anything the dome does not cover; the fog
@@ -360,7 +373,7 @@ pub fn update_sky(
             weights,
             |v| {
                 if fog_on {
-                    opts_bevy::weather::sky_veil(conditions, v)
+                    opts_bevy::weather::sky_veil_clear(conditions, v, f32::from(fog_clear) / 32.0)
                 } else {
                     0.0
                 }
@@ -387,7 +400,14 @@ pub fn update_sky(
             ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
             ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * ambient_att;
         }
-        let clear_color = if fog_on { veil_color } else { horizon };
+        // The clear colour fills what the dome does not cover: the fog colour, towards the
+        // horizon colour as the camera leaves the ground-fog layer.
+        let lift = f32::from(fog_clear) / 32.0;
+        let clear_color = if fog_on {
+            [0, 1, 2].map(|c| veil_color[c] + (horizon[c] - veil_color[c]) * lift)
+        } else {
+            horizon
+        };
         if let Some(clear) = clear.as_mut() {
             let display = Color::srgb(clear_color[0], clear_color[1], clear_color[2]).to_linear();
             clear.0 = if hdr {

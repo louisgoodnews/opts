@@ -79,8 +79,9 @@ the next frame. No effect keeps its own copy of the weather.
 * `[precip]` the last three values (`0 -2 0` in all but the `32`-baseline files): kept, unused. The
   second value is an intensity only for type ≠ 0 (`Ueberfrierende Naesse` has type 0 and 192:
   ice on the ground without precipitation ❓).
-* `[press]` has no known consumer. `[fog]` has no unit for the second value's "layer height";
-  it is used only for the sun attenuation and the contrast threshold.
+* `[press]` has no known consumer. `[fog]`'s second value is a unitless thickness factor
+  (`0.5 … 1`), not metres; it feeds the sun attenuation, the contrast threshold and the
+  ground-fog layer thickness estimate (§5a ❓).
 * Cloud cover of `sct` types: we read the digit of `Cumulus 1/2/3` as 0.25/0.4/0.55 ❓.
 
 ## 4. Light: one function
@@ -97,7 +98,7 @@ classification of the conditions.
 
 | Effect | Implementation | Setting (default) | Cost |
 | :--- | :--- | :--- | :--- |
-| Fog | `DistanceFog` on the in-game camera; none when visibility > 15 km | `graphics.weather_fog` (on) | free (GPU, per-fragment blend) |
+| Fog | `DistanceFog` on the in-game camera; none when visibility > 15 km; ground fog (≤ 150 m) is a low layer, §5a | `graphics.weather_fog` (on) | free (GPU, per-fragment blend) |
 | Clouds | one 48×6 vertex disc at the base height (radius 950 m, alpha fade at the rim), unlit, texture scrolls with `uv_transform` | `graphics.weather_clouds` (on) | 1 draw call, ~300 vertices |
 | Precipitation | one dynamic mesh of quads rebuilt each frame around the camera (rain: velocity-aligned streaks, snow: billboards); particles are a pure function of (seed, time) wrapped in a 44 m box, no state | `graphics.weather_precipitation` (`off`, `low` 1500, `medium` 3000, `high` 6000 quads; default `medium`) | O(active quads) CPU, ≤ 6000 × 4 vertices written per frame, 1 draw call |
 | Wet ground | `GroundMaterial.extension.wet` (existing shader), road materials via a global factor | `graphics.weather_wet_ground` (on) | on change only |
@@ -107,6 +108,43 @@ classification of the conditions.
 
 Effects use real time (not `Time<Virtual>`), so a weather preview on the paused Environment page
 animates. Disabling a setting takes effect live (`SettingChanged`).
+
+## 5a. Ground fog (a height-limited layer)
+
+`Bodennebel` (`[fog] 75 1`) is a low layer, not a wall of fog: standing in it you see 75 m, from
+above it you see the ground below the layer and the clear sky. The rule:
+
+* **Which presets.** Visibility ≤ `FOG_LAYER_MAX_VISIBILITY_M` (150 m) is ground fog. Dusk fog
+  (500 m), storm (700 m), rain/snow haze and the built-in 300 m fog stay fog everywhere, exactly as
+  before. The `.owt` has no layer flag ❓; the corpus has one ground-fog preset.
+* **Thickness T** (`fog_layer_thickness`): the second value is a factor, not metres, so
+  `T = clamp(0.4 · visibility · (0.5 + 0.5 · factor), 25, 200)` m (`Bodennebel`: 30 m) ❓.
+* **Model** (`ground_fog(visibility, T, height, pitch) -> FogParams`, pure, in `opts_bevy::weather`).
+  `DistanceFog` knows only the distance `d` to a fragment. A ground fragment seen from height
+  `h > T` is reached by a ray that spends `T·d/h` of its length in the layer, so the layer is
+  distance fog with the visibility multiplied by `h/T`, whatever the pitch (exact for the ground,
+  approximate for things standing on it). Between `0.5·T` and `2·T` the factor goes `1 … 2` by a
+  smoothstep (continuous, monotonic); `h ≤ 0.5·T` is today's fog. The pitch term: looking up from
+  above the layer the ray never enters it, so the visibility grows up to 4× at +15° (smoothstep).
+  The camera height is above the terrain under the camera (`GroundIndex::terrain_at`, the last
+  known ground if no tile is loaded, else 0), measured each frame by `fog::measure_fog_view`
+  into the resource `GroundFogView` (also shown by `sim.get`).
+* **Sky.** The dome is not distance fog; its texture veil follows the same function: the fog part
+  of `sky_veil_clear` is scaled by `1 − sky_clear·(1 − rim)`, `sky_clear` = the smoothstep above
+  (0 inside the layer, 1 from `2·T`), `rim = 0.5·(1 − elevation/8°)²` (a hazy rim, 0 above 8°).
+  The clear colour moves from the fog colour to the horizon colour with `sky_clear`. The sky is
+  rebuilt when `sky_clear` changes by 1/32. Clouds and precipitation are unaffected.
+* **Choice of falloff.** `Exponential` would be exact for the ground but its density is the same
+  everywhere, so the ground under the camera is veiled as much as the far one; keeping
+  `ExponentialSquared` (the existing shape) leaves the near ground clearer. `Atmospheric` needs
+  extinction and inscattering colours per channel and no height. No new shader, no cost beyond a
+  uniform write when the density moves by more than 0.1 %.
+* **Result** (offscreen probe, `Bodennebel`, 30 m layer): at 2 m the image is as before (white-out
+  beyond about 75 m); at 70 m looking at the horizon the frame shows ground beyond 360 m, all fogged
+  (a 15° slant through the layer is 116 m of fog), the sky unveiled; looking down at 35° the
+  ground under the camera is hazy but visible (about half veiled, the exponential would give 79 %).
+* `sim.get` → `weather_conditions` shows `fog_layer_m` (`null` outside ground fog),
+  `fog_effective_visibility_m`, `fog_camera_height_m`, `fog_sky_clear`.
 
 ## 6. Wet ground and snow
 
@@ -141,7 +179,7 @@ of it, plus the old built-in ids. `sim.get` in a drive adds `weather_presets` (t
 
 ## 9. Deviations from OMSI (as far as known) and not done
 
-* No height-limited fog layer, no volumetric fog, no light rays (System 6 *Lighting* owns those).
+* Ground fog is a camera-height approximation of a layer (§5a): no per-fragment height (a tall object in the layer is fogged by its distance only), no volumetric fog, no light rays (System 6 *Lighting* owns those). The layer thickness is an estimate ❓.
 * No cloud shadows, no lightning, no rain on windows (`Rain_Window_*` variables stay unset), no
   splash/ripple effects, no puddle reflections beyond the existing shader, no snow on objects.
 * *Live weather* (ICAO lookup) stays the registered not-yet place `wizard.live-weather`.
