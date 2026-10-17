@@ -146,6 +146,7 @@
 - [Vehicle Functions in OMSI (script catalogue)](simulation/vehicle-functions.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Map Streaming](architecture/map-streaming.md)
+- [Streaming Coordinates (Tile Grid)](architecture/streaming-coordinates.md)
 - [Scenery Parsing: Tile Record to Drawn Geometry](architecture/scenery-parsing.md)
 - [Error Handling](architecture/error-handling.md)
 - [Determinism & Replays](architecture/determinism-replays.md)
