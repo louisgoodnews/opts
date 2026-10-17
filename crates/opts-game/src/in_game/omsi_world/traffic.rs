@@ -514,7 +514,7 @@ pub fn spawn_traffic(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.max == 0 {
@@ -888,7 +888,8 @@ pub fn update_ai_variables(
     mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
 ) {
     let dt = time.delta_secs().min(0.2);
-    let brightness = clock.map(|c| c.envir_brightness());
+    let brightness = clock.as_ref().map(|c| c.envir_brightness());
+    let weather = clock.map(|c| (c.temperature_c, c.weather));
     let now = time.elapsed_secs();
     let dark = env.is_some_and(|e| e.night());
     for (mut v, mut vars) in &mut vehicles {
@@ -934,6 +935,12 @@ pub fn update_ai_variables(
         if let Some(b) = brightness {
             vars.set("envir_brightness", b);
         }
+        if let Some((temperature, w)) = weather {
+            vars.set("weather_temperature", temperature);
+            vars.set("weather_abshum", w.abs_hum);
+            vars.set("preciptype", w.precip_type);
+            vars.set("preciprate", w.precip_rate);
+        }
         vars.set("lights_ai", light);
         for i in 0..4 {
             vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));
@@ -947,7 +954,7 @@ pub fn move_traffic(
     mut commands: Commands,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut state: ResMut<TrafficState>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut vehicles: Query<(
         Entity,
         &mut TrafficVehicle,

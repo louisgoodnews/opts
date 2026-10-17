@@ -108,6 +108,56 @@ pub fn sync_water(
     }
 }
 
+/// `graphics.hdr`: the main camera carries [`bevy::camera::Hdr`] while the setting is on (the
+/// default). Off keeps the 8-bit main texture (saves about 50 MB at 1080p with 4x MSAA).
+pub fn sync_hdr(
+    settings: Res<GameSettings>,
+    cameras: Query<(Entity, Has<bevy::camera::Hdr>), With<opts_bevy::MainCamera>>,
+    mut commands: Commands,
+) {
+    let want = hdr_enabled(&settings);
+    for (entity, has) in &cameras {
+        if want && !has {
+            commands.entity(entity).insert(bevy::camera::Hdr);
+        } else if !want && has {
+            commands.entity(entity).remove::<bevy::camera::Hdr>();
+        }
+    }
+}
+
+/// Whether `graphics.hdr` is on (the default).
+#[must_use]
+pub fn hdr_enabled(settings: &GameSettings) -> bool {
+    settings.raw("graphics.hdr").as_deref() != Some("false")
+}
+
+/// The weather effects the settings ask for (`graphics.weather_*`).
+#[must_use]
+pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects {
+    let on = |key: &str| settings.raw(key).as_deref() != Some("false");
+    opts_bevy::WeatherEffects {
+        fog: on("graphics.weather_fog"),
+        clouds: on("graphics.weather_clouds"),
+        precipitation: settings
+            .raw("graphics.weather_precipitation")
+            .and_then(|q| opts_bevy::weather::PrecipitationQuality::parse(&q))
+            .unwrap_or_default(),
+        wet_ground: on("graphics.weather_wet_ground"),
+    }
+}
+
+/// Keeps [`opts_bevy::WeatherEffects`] equal to the settings, live.
+pub fn sync_weather_effects(
+    settings: Res<GameSettings>,
+    effects: Option<ResMut<opts_bevy::WeatherEffects>>,
+) {
+    let Some(mut effects) = effects else { return };
+    let want = weather_effects_of(&settings);
+    if *effects != want {
+        *effects = want;
+    }
+}
+
 /// Start-up: the saved scene trace mode (unless `--trace-scene` chose one for this run) and overlay.
 pub fn apply_saved_trace(
     settings: Res<GameSettings>,

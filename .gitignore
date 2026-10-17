@@ -4,3 +4,6 @@ __pycache__/
 /docs/book/
 # Golden-screen test failures: the actual and diff images of a mismatch (written by `opts_gui::testing::golden`)
 /crates/*/tests/golden/_failed/
+
+# Cargo output when cargo is run from docs/ (once committed by accident: 4.6 GB)
+/docs/target/

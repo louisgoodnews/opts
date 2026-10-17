@@ -59,6 +59,13 @@ const DENSITIES: &[super::EnumOption] = &[
     opt("dense", theme::DENSITY_DENSE),
 ];
 
+const PRECIPITATION: &[super::EnumOption] = &[
+    opt("off", "set-opt-precip-off"),
+    opt("low", "set-opt-precip-low"),
+    opt("medium", "set-opt-precip-medium"),
+    opt("high", "set-opt-precip-high"),
+];
+
 const UNITS: &[super::EnumOption] = &[
     opt("kmh", "set-opt-units-kmh"),
     opt("mph", "set-opt-units-mph"),
@@ -153,6 +160,17 @@ fn graphics() -> Vec<D> {
         )
         .keywords(&["colour", "color", "tonemapping", "saturation"]),
         D::new(
+            "graphics.hdr",
+            K::Bool,
+            "true",
+            C::Graphics,
+            52,
+            "set-hdr",
+            "set-hdr-desc",
+        )
+        .keywords(&["tonemapping", "bloom", "high dynamic range", "16 bit"])
+        .since("0.3"),
+        D::new(
             "graphics.default_fov",
             K::Int {
                 min: 0,
@@ -193,6 +211,50 @@ fn graphics() -> Vec<D> {
         )
         .keywords(&["river", "lake", "sea", "sea level"])
         .apply(Apply::OnRestart)
+        .since("0.3"),
+        D::new(
+            "graphics.weather_fog",
+            K::Bool,
+            "true",
+            C::Graphics,
+            72,
+            "set-weather-fog",
+            "set-weather-fog-desc",
+        )
+        .keywords(&["weather", "mist", "visibility", "haze"])
+        .since("0.3"),
+        D::new(
+            "graphics.weather_clouds",
+            K::Bool,
+            "true",
+            C::Graphics,
+            74,
+            "set-weather-clouds",
+            "set-weather-clouds-desc",
+        )
+        .keywords(&["weather", "sky", "overcast", "cloud layer"])
+        .since("0.3"),
+        D::new(
+            "graphics.weather_precipitation",
+            K::Enum(PRECIPITATION),
+            "medium",
+            C::Graphics,
+            76,
+            "set-weather-precipitation",
+            "set-weather-precipitation-desc",
+        )
+        .keywords(&["weather", "rain", "snow", "particles", "drops"])
+        .since("0.3"),
+        D::new(
+            "graphics.weather_wet_ground",
+            K::Bool,
+            "true",
+            C::Graphics,
+            78,
+            "set-weather-wet-ground",
+            "set-weather-wet-ground-desc",
+        )
+        .keywords(&["weather", "wet", "puddles", "snow cover", "road"])
         .since("0.3"),
         D::new(
             "audio.master",
@@ -643,6 +705,7 @@ fn minimap() -> Vec<D> {
 #[must_use]
 pub fn all() -> Vec<D> {
     let mut v = graphics();
+    v.extend(super::lighting::descriptors());
     v.extend(interface());
     v.extend(hud());
     v.extend(minimap());

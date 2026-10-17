@@ -108,7 +108,7 @@ pub const INPUT_TABLE: &[InputRow] = &[
     row("dirtrate", "0..1", Source::Environment, Kind::Float, false, true),
     row("wearlifespan", "0..1", Source::Environment, Kind::Float, false, true),
     row("preciprate", "0..1", Source::Weather, Kind::Float, false, true),
-    row("preciptype", "0 rain/1 snow", Source::Weather, Kind::Float, false, true),
+    row("preciptype", "0 none/1 rain/2 snow", Source::Weather, Kind::Float, false, true),
     row("relrange", "?", Source::Constant, Kind::Float, false, false),
     row("driver_seat_verttransl", "m", Source::Constant, Kind::Float, false, false),
     row("colorscheme", "index", Source::Constant, Kind::Float, true, false),
@@ -129,7 +129,7 @@ pub const INPUT_TABLE: &[InputRow] = &[
     row("weather_temperature", "°C", Source::Weather, Kind::System, false, true),
     row("weather_abshum", "g/m³", Source::Weather, Kind::System, false, true),
     row("preciprate", "0..1", Source::Weather, Kind::System, false, true),
-    row("preciptype", "0 rain/1 snow", Source::Weather, Kind::System, false, true),
+    row("preciptype", "0 none/1 rain/2 snow", Source::Weather, Kind::System, false, true),
     row("autoclutch", "0/1", Source::Planner, Kind::System, false, true),
     row("coll_energy", "J", Source::Collision, Kind::System, false, false),
     row("coll_pos_x", "m", Source::Collision, Kind::System, false, false),
@@ -236,7 +236,7 @@ pub struct HostInputs {
     pub wearlifespan: f32,
     /// Precipitation 0..1.
     pub precip_rate: f32,
-    /// 0 rain, 1 snow.
+    /// 0 none, 1 rain, 2 snow (the `.owt` coding ❓).
     pub precip_type: f32,
     /// Seconds since midnight.
     pub time_of_day_s: f32,

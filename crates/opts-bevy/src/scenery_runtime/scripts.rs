@@ -28,6 +28,12 @@ pub struct HostValues {
     pub sun_alt_deg: f32,
     /// `Weather_Temperature`.
     pub temperature_c: f32,
+    /// `Weather_AbsHum`.
+    pub abs_hum: f32,
+    /// `PrecipType`.
+    pub precip_type: f32,
+    /// `PrecipRate`.
+    pub precip_rate: f32,
     /// `NightlightA` (0 or 1).
     pub night: f32,
     /// Clock for light programs (seconds, not wrapped).
@@ -46,6 +52,9 @@ impl HostValues {
             day_of_year: clock.day_of_year() as f32,
             sun_alt_deg: clock.sun_alt_deg,
             temperature_c: clock.temperature_c,
+            abs_hum: clock.weather.abs_hum,
+            precip_type: clock.weather.precip_type,
+            precip_rate: clock.weather.precip_rate,
             night: f32::from(u8::from(clock.night)),
             program_clock_s: clock.seconds_of_day,
         }
@@ -67,6 +76,9 @@ struct HostIds {
     day_of_year: u32,
     sun_alt: u32,
     temperature: u32,
+    abs_hum: u32,
+    precip_type: u32,
+    precip_rate: u32,
     phase: u32,
     night: u32,
 }
@@ -81,6 +93,9 @@ impl HostIds {
             day_of_year: e.system_id("DayOfYear"),
             sun_alt: e.system_id("SunAlt"),
             temperature: e.system_id("Weather_Temperature"),
+            abs_hum: e.system_id("Weather_AbsHum"),
+            precip_type: e.system_id("PrecipType"),
+            precip_rate: e.system_id("PrecipRate"),
             phase: e.variable_id("TrafficLightPhase"),
             night: e.variable_id("NightlightA"),
         }
@@ -166,6 +181,9 @@ impl SceneryScripts {
         e.set_system_id(ids.day_of_year, host.day_of_year);
         e.set_system_id(ids.sun_alt, host.sun_alt_deg);
         e.set_system_id(ids.temperature, host.temperature_c);
+        e.set_system_id(ids.abs_hum, host.abs_hum);
+        e.set_system_id(ids.precip_type, host.precip_type);
+        e.set_system_id(ids.precip_rate, host.precip_rate);
         e.set_id(ids.night, host.night);
         if let Some(p) = phase {
             e.set_id(ids.phase, p);

@@ -17,6 +17,7 @@ pub mod api;
 pub mod builtin;
 pub mod descriptor;
 pub mod display;
+pub mod lighting;
 pub mod live;
 pub mod protocol;
 pub mod reference;
@@ -286,7 +287,9 @@ pub fn localization(locale: &str) -> Localization {
 /// Adds the settings messages (`en`, `de`) to `loc`.
 pub fn add_messages(loc: &mut Localization) {
     loc.extend("en", include_str!("messages_en.ftl"));
+    loc.extend("en", include_str!("messages_lighting_en.ftl"));
     loc.extend("de", include_str!("messages_de.ftl"));
+    loc.extend("de", include_str!("messages_lighting_de.ftl"));
 }
 
 /// Adds the registry, the message and the migration of renamed keys.
@@ -306,6 +309,9 @@ impl Plugin for SettingsRegistryPlugin {
             app.insert_resource(Localization::detect());
         }
         add_messages(&mut app.world_mut().resource_mut::<Localization>());
+        if !app.is_plugin_added::<lighting::LightQualityGamePlugin>() {
+            app.add_plugins(lighting::LightQualityGamePlugin);
+        }
         app.init_resource::<SettingsCapabilities>()
             .add_message::<SettingChanged>()
             .insert_resource(display::DisplayBackend(Box::new(display::WindowDisplay)))
@@ -320,6 +326,8 @@ impl Plugin for SettingsRegistryPlugin {
                     live::apply_live_changes,
                     live::sync_developer_panel,
                     live::sync_water,
+                    live::sync_hdr,
+                    live::sync_weather_effects,
                 ),
             )
             .add_systems(

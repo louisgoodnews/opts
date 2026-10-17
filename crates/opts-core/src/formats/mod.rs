@@ -20,6 +20,7 @@ pub mod text;
 pub mod trains;
 pub mod varlist;
 pub mod vehicles;
+pub mod weather;
 pub mod x;
 pub use vehicles::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 

@@ -4,6 +4,7 @@
 //! ([`ModelConfig`]) into native Bevy entity hierarchies with visual mesh attachments,
 //! material slots, interior/exterior light sources, and camera preset views.
 
+use bevy::camera::visibility::RenderLayers;
 use bevy::prelude::*;
 use opts_core::formats::vehicles::{
     bus::{BusCamera, BusManifest},
@@ -179,8 +180,17 @@ pub fn spawn_vehicle_model(
         spawn_spotlight_child(commands, parent, i, spot);
     }
 
-    // 4. Light effects (`[light_enh]`, `[light_enh_2]`) as glow sprites under the root.
-    crate::vehicle_glow::spawn_vehicle_glows(commands, parent, parent, model);
+    // 4. Light effects (`[light_enh]`, `[light_enh_2]`) as glow sprites under the root. When the
+    // model has `[spotlight]`s their cones are the headlight cones; otherwise the
+    // `[light_enh_2]` headlights get them (the same rule AI and parked vehicles follow).
+    let has_spots = !model.spotlights.is_empty()
+        || model
+            .lods
+            .first()
+            .is_some_and(|lod| lod.meshes.iter().any(|m| !m.spotlights.is_empty()));
+    crate::vehicle_glow::spawn_vehicle_glows_with_cones(
+        commands, parent, parent, model, !has_spots,
+    );
 
     parent
 }
@@ -206,8 +216,15 @@ fn spawn_interior_light_child(
         switch: LightSwitch::Variable(light.variable.clone()),
         base_intensity: point.intensity,
     };
+    // Cabin lights are on their own render layer: the main camera only includes it in an
+    // interior view or close to the vehicle (`light_rooms`). Lights only, no meshes.
     let child = commands
-        .spawn((point, switch, Transform::from_translation(pos_bevy)))
+        .spawn((
+            point,
+            switch,
+            Transform::from_translation(pos_bevy),
+            RenderLayers::layer(crate::light_rooms::CABIN_LAYER),
+        ))
         .insert(Name::new(format!(
             "InteriorLight_{index}_{}",
             light.variable
@@ -253,6 +270,17 @@ fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, 
         ))
         .insert(Name::new(format!("Spotlight_{index}")))
         .id();
+    // The visible beam: a child of the light, so it points where the light points. Its
+    // brightness is the light's own (`Spot_Select`).
+    crate::light_cones::spawn_light_cone(
+        commands,
+        child,
+        crate::light_cones::LightCone {
+            kind: crate::light_cones::ConeKind::Headlight,
+            shape: crate::light_cones::spotlight_cone_shape(spot),
+            level: crate::light_cones::ConeLevel::Spot(child),
+        },
+    );
 
     commands.entity(parent).add_children(&[child]);
 }

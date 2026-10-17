@@ -47,7 +47,11 @@ fn app(hour: f64, lamps: usize) -> App {
                 .id();
             spawn_map_lights(&mut commands, root, &sco);
         }
-        commands.spawn((Camera3d::default(), Transform::from_xyz(0.0, 2.0, 0.0)));
+        commands.spawn((
+            Camera3d::default(),
+            opts_bevy::MainCamera,
+            Transform::from_xyz(0.0, 2.0, 0.0),
+        ));
     });
     app
 }

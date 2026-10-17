@@ -53,7 +53,7 @@ pub(super) fn camera_capture(world: &mut World) -> Result<Option<Value>, String>
         return Ok(None);
     };
     let translation = world
-        .query_filtered::<&Transform, With<Camera3d>>()
+        .query_filtered::<&Transform, With<opts_bevy::MainCamera>>()
         .iter(world)
         .next()
         .map_or(Vec3::ZERO, |t| t.translation);
@@ -115,7 +115,7 @@ pub(super) fn camera_apply(world: &mut World, data: &Value) -> Result<(), String
     }
     if world.resource::<CameraState>().mode == CameraMode::FreeRoam {
         let rotation = Quat::from_euler(EulerRot::YXZ, d.free_roam_yaw, d.free_roam_pitch, 0.0);
-        let mut cameras = world.query_filtered::<&mut Transform, With<Camera3d>>();
+        let mut cameras = world.query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
         for mut t in cameras.iter_mut(world) {
             t.translation = position;
             t.rotation = rotation;

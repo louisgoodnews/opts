@@ -234,6 +234,10 @@ impl WorldLoadJob {
         template: Option<Arc<ScriptTemplate>>,
     ) {
         self.scenery.dev_look.offer(&obj.sco_file, root);
+        // `[nomaplighting]`: recorded on the root (version 1 has no behaviour yet).
+        if sco.no_map_lighting {
+            commands.entity(root).insert(opts_bevy::NoMapLighting);
+        }
         // `[maplight]` ground lights: markers the map light pool hands its point lights to.
         opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
         let scripts = template.filter(|t| t.has_scripts).and_then(|t| {
@@ -289,6 +293,7 @@ pub fn sync_scenery_clock(
     next.sun_alt_deg = env.sun_alt_deg();
     next.night = env.night();
     next.temperature_c = env.temperature_c();
+    next.weather = env.conditions().vars();
     if *clock != next {
         *clock = next;
     }

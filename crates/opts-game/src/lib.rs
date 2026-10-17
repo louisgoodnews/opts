@@ -102,6 +102,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)
             .add_plugins(look::LookPlugin)
+            .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
             .add_plugins(InGamePlugin);
 

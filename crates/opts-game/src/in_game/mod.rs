@@ -8,12 +8,15 @@ pub mod instruments;
 pub mod load_report;
 pub mod loading_pipeline;
 pub mod loading_ui;
+pub mod moon;
 pub mod omsi_world;
 pub mod screenshot;
 pub mod sky;
+pub mod sky_cube;
 pub mod stream_budget;
 pub mod types;
 pub mod vehicle_spawner;
+pub mod weather;
 pub mod world;
 
 use bevy::prelude::*;
@@ -78,6 +81,11 @@ impl Plugin for InGamePlugin {
             opts_bevy::EnvironmentSet.run_if(in_state(AppState::InGame)),
         );
         app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
+        app.add_plugins((
+            moon::MoonPlugin,
+            opts_bevy::sun_rays::SunRaysPlugin,
+            opts_bevy::reflections::ReflectionsPlugin,
+        ));
         app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins((VehicleMenuPlugin, FormationMenuPlugin))
             .add_systems(
@@ -206,7 +214,8 @@ impl Plugin for InGamePlugin {
                 sky::update_sky
                     .run_if(resource_exists::<sky::Sky>)
                     .after(opts_bevy::EnvironmentSet),
-                world::update_fallback_light.after(opts_bevy::EnvironmentSet),
+                (world::update_fallback_light, sky::place_sky_dome)
+                    .after(opts_bevy::EnvironmentSet),
                 omsi_world::place_dev_camera,
                 omsi_world::sync_scenery_clock
                     .run_if(resource_exists::<opts_bevy::SceneryClock>)
@@ -214,6 +223,15 @@ impl Plugin for InGamePlugin {
                     .before(opts_bevy::scenery_runtime::SceneryRuntimeSet),
                 screenshot::capture_screenshot_when_ready,
             )
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // The sky cube map for glass reflections reads the sky that `sky::update_sky` keeps current.
+        app.add_systems(
+            Update,
+            sky_cube::feed_sky_cube
+                .after(sky::update_sky)
+                .after(opts_bevy::EnvironmentSet)
                 .run_if(in_state(AppState::InGame)),
         );
 

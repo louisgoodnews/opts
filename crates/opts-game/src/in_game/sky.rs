@@ -15,7 +15,7 @@ use opts_core::formats::envir::EnvirConfig;
 
 use crate::in_game::types::InGameEntity;
 /// Radius of the sky dome; stays inside the default 1000 m far plane.
-const DOME_RADIUS: f32 = 900.0;
+pub(crate) const DOME_RADIUS: f32 = 900.0;
 /// Clock seconds between sky texture rebuilds (a jump of the environment rebuilds at once).
 const REFRESH_S: f64 = 0.5;
 /// Peak illuminance of full white direct sunlight.
@@ -33,7 +33,14 @@ pub struct Sky {
     last_refresh: f64,
     /// Environment revision of the last rebuild (`None` before the first).
     last_revision: Option<u64>,
+    /// Whether the last rebuild wrote the clear colour for an HDR camera.
+    last_hdr: Option<bool>,
 }
+
+/// The sky's colour at the horizon (linear RGB `0..=1`), refreshed with the sky texture; the fog
+/// takes its colour from it (`weather::fog`).
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct SkyHorizon(pub [f32; 3]);
 
 /// Marks the sky dome.
 #[derive(Component)]
@@ -44,9 +51,12 @@ pub struct SunLight;
 /// Marks the sun disc quad.
 #[derive(Component)]
 pub struct SunDisc;
-/// Marks the moon disc quad.
+/// Marks the moon disc quad; `in_game::moon` gives it its mesh and material.
 #[derive(Component)]
 pub struct MoonDisc;
+/// The moon photograph (`Texture/mond.bmp`) waiting for the disc's material.
+#[derive(Component)]
+pub struct MoonDiscTexture(pub Option<Handle<Image>>);
 
 fn load_texture(root: &Path, rel: &str) -> Result<Image, String> {
     let path = rel.replace('\\', "/");
@@ -65,7 +75,7 @@ pub fn sun_position(hour: f32, day_of_year: f32) -> (f32, f32) {
 }
 
 /// Direction towards a point at the given elevation/azimuth, in Bevy space (north = −Z).
-fn direction(elevation_deg: f32, azimuth_deg: f32) -> Vec3 {
+pub(crate) fn direction(elevation_deg: f32, azimuth_deg: f32) -> Vec3 {
     let (el, az) = (elevation_deg.to_radians(), azimuth_deg.to_radians());
     Vec3::new(el.cos() * az.sin(), el.sin(), -el.cos() * az.cos())
 }
@@ -100,10 +110,19 @@ fn dome_mesh() -> Mesh {
     mesh
 }
 
-fn blended_sky(sky: &Sky, weights: [f32; 3]) -> Vec<u8> {
+/// The sky texture for the blend weights of the sun's height. `veil` gives, per row (`0` zenith …
+/// `1` horizon), how far the row is pulled towards `veil_color` (the fog colour, sRGB `0..=1`);
+/// a veil of 0 leaves the texture as it is.
+fn blended_sky(
+    sky: &Sky,
+    weights: [f32; 3],
+    veil: impl Fn(f32) -> f32,
+    veil_color: [f32; 3],
+) -> Vec<u8> {
     let (w, h) = (sky.textures[0].width, sky.textures[0].height);
     let mut out = vec![255u8; w * h * 4];
     for y in 0..h {
+        let v = veil(y as f32 / (h - 1).max(1) as f32).clamp(0.0, 1.0);
         for x in 0..w {
             for c in 0..3 {
                 let mut acc = 0.0;
@@ -112,6 +131,9 @@ fn blended_sky(sky: &Sky, weights: [f32; 3]) -> Vec<u8> {
                         let (tx, ty) = (x * t.width / w, y * t.height / h);
                         acc += f32::from(t.rgba[(ty * t.width + tx) * 4 + c]) * wt;
                     }
+                }
+                if v > 0.0 {
+                    acc += (veil_color[c] * 255.0 - acc) * v;
                 }
                 out[(y * w + x) * 4 + c] = acc.round().clamp(0.0, 255.0) as u8;
             }
@@ -194,6 +216,7 @@ pub fn spawn_sky(
         image: image.clone(),
         last_refresh: f64::NEG_INFINITY,
         last_revision: None,
+        last_hdr: None,
     };
 
     let image = sky.image.clone();
@@ -220,48 +243,63 @@ pub fn spawn_sky(
             ..default()
         }),
         SunLight,
+        opts_bevy::sun_rays::LightRole::Sun,
         InGameEntity,
         Name::new("Sun_Light"),
     ));
     let sun_tex = load_texture(root, "Texture/sonne.bmp").ok();
     let moon_tex = load_texture(root, "Texture/mond.bmp").ok();
-    for (is_sun, tex, size) in [(true, sun_tex, 160.0), (false, moon_tex, 120.0)] {
-        let (mesh, material) = disc(meshes, materials, tex, images, size);
-        let mut e = commands.spawn((
-            (Mesh3d(mesh), MeshMaterial3d(material)),
-            bevy::light::NotShadowCaster,
-            bevy::light::NotShadowReceiver,
-            InGameEntity,
-        ));
-        if is_sun {
-            e.insert((SunDisc, Name::new("Sun_Disc")));
-        } else {
-            e.insert((MoonDisc, Name::new("Moon_Disc")));
-        }
-    }
+    let (mesh, material) = disc(meshes, materials, sun_tex, images, 160.0);
+    commands.spawn((
+        (Mesh3d(mesh), MeshMaterial3d(material)),
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+        InGameEntity,
+        SunDisc,
+        Name::new("Sun_Disc"),
+    ));
+    // The moon disc gets its phase material from `in_game::moon`.
+    commands.spawn((
+        MoonDisc,
+        MoonDiscTexture(moon_tex.map(|t| images.add(t))),
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+        InGameEntity,
+        Name::new("Moon_Disc"),
+    ));
     commands.insert_resource(sky);
     Ok(())
 }
 
-/// Moves the dome with the camera and updates sky colours, sun/moon placement and lighting.
+/// Moves the sky dome to the [`MainCamera`](opts_bevy::MainCamera) and turns it so that texture
+/// `u = 0` faces the sun (the dusk texture's glow is authored around it).
+pub fn place_sky_dome(
+    env: Res<SessionEnvironment>,
+    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
+    mut dome: Query<&mut Transform, With<SkyDome>>,
+) {
+    let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
+        return;
+    };
+    for mut t in &mut dome {
+        t.translation = cam;
+        t.rotation = Quat::from_rotation_y(-env.sun_az_deg().to_radians());
+    }
+}
+
+/// Updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
     env: Res<SessionEnvironment>,
+    effects: Option<Res<opts_bevy::WeatherEffects>>,
+    mut commands: Commands,
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
     mut ambient: Option<ResMut<GlobalAmbientLight>>,
     look: Option<Res<crate::look::ActiveLook>>,
-    cameras: Query<&GlobalTransform, (With<Camera3d>, Without<SkyDome>)>,
-    mut dome: Query<
-        &mut Transform,
-        (
-            With<SkyDome>,
-            Without<SunLight>,
-            Without<SunDisc>,
-            Without<MoonDisc>,
-        ),
-    >,
+    settings: Option<Res<crate::settings::GameSettings>>,
+    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), (With<SunLight>, Without<SkyDome>)>,
     mut sun_disc: Query<
         &mut Transform,
@@ -270,15 +308,6 @@ pub fn update_sky(
             Without<SkyDome>,
             Without<SunLight>,
             Without<MoonDisc>,
-        ),
-    >,
-    mut moon_disc: Query<
-        &mut Transform,
-        (
-            With<MoonDisc>,
-            Without<SkyDome>,
-            Without<SunLight>,
-            Without<SunDisc>,
         ),
     >,
 ) {
@@ -292,22 +321,52 @@ pub fn update_sky(
     let (elevation, azimuth) = (env.sun_alt_deg(), env.sun_az_deg());
     let sun_dir = direction(elevation, azimuth);
 
-    for mut t in &mut dome {
-        // Rotate so texture u = 0 faces the sun (the dusk texture's glow is authored around it).
-        t.translation = cam;
-        t.rotation = Quat::from_rotation_y(-azimuth.to_radians());
-    }
     // A new look changes the ambient scale: refresh at once instead of at the next interval.
     let look_changed = look.as_ref().is_some_and(|l| l.is_changed());
     let ambient_scale = look.as_ref().map_or(1.0, |l| {
         crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
     });
+    // Switching `graphics.hdr` changes how the clear colour must be written.
+    let hdr = settings
+        .as_ref()
+        .is_some_and(|s| crate::settings_registry::live::hdr_enabled(s));
+    let hdr_changed = sky.last_hdr != Some(hdr);
     let jumped = sky.last_revision != Some(env.revision());
-    if look_changed || jumped || (now - sky.last_refresh).abs() >= REFRESH_S {
+    let effects_changed = effects.as_ref().is_some_and(|e| e.is_changed());
+    if look_changed
+        || hdr_changed
+        || jumped
+        || effects_changed
+        || (now - sky.last_refresh).abs() >= REFRESH_S
+    {
         sky.last_refresh = now;
+        sky.last_hdr = Some(hdr);
         sky.last_revision = Some(env.revision());
         let weights = sky.config.sky_weights(elevation);
-        let data = blended_sky(&sky, weights);
+        // Colour of the sky at the horizon fills anything the dome does not cover; the fog
+        // takes it too, greyed in thick fog.
+        let h = sky.textures[0].height - 1;
+        let mut horizon = [0.0; 3];
+        for (ch, out) in horizon.iter_mut().enumerate() {
+            for (t, wt) in sky.textures.iter().zip(weights) {
+                *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
+            }
+        }
+        let conditions = env.conditions();
+        let fog_on = effects.as_ref().is_none_or(|e| e.fog);
+        let veil_color = opts_bevy::weather::fog_color(horizon, conditions);
+        let data = blended_sky(
+            &sky,
+            weights,
+            |v| {
+                if fog_on {
+                    opts_bevy::weather::sky_veil(conditions, v)
+                } else {
+                    0.0
+                }
+            },
+            veil_color,
+        );
         if let Some(mut img) = images.get_mut(&sky.image) {
             img.data = Some(data);
         }
@@ -315,7 +374,9 @@ pub fn update_sky(
         let a = sky.config.light_at(&sky.config.light_a, elevation);
         let b = sky.config.light_at(&sky.config.light_b, elevation);
         let c = sky.config.light_at(&sky.config.light_c, elevation);
-        let att = env.attenuation();
+        // The weather scales the light through `opts_bevy::weather::light_scales`.
+        let la = env.light_attenuation();
+        let (att, ambient_att) = (la.direct, la.ambient);
         for (_, mut light) in &mut sun {
             light.color = Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001));
             light.illuminance = SUN_ILLUMINANCE * l(a) * att;
@@ -324,20 +385,24 @@ pub fn update_sky(
         let peak = amb.iter().copied().fold(0.001_f32, f32::max);
         if let Some(ambient) = ambient.as_mut() {
             ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
-            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * att.max(0.8);
+            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * ambient_att;
         }
-        // Colour of the sky at the horizon fills anything the dome does not cover.
-        let h = sky.textures[0].height - 1;
-        let w = weights;
-        let mut horizon = [0.0; 3];
-        for (ch, out) in horizon.iter_mut().enumerate() {
-            for (t, wt) in sky.textures.iter().zip(w) {
-                *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
-            }
-        }
+        let clear_color = if fog_on { veil_color } else { horizon };
         if let Some(clear) = clear.as_mut() {
-            clear.0 = Color::srgb(horizon[0], horizon[1], horizon[2]);
+            let display = Color::srgb(clear_color[0], clear_color[1], clear_color[2]).to_linear();
+            clear.0 = if hdr {
+                // The HDR camera tonemaps its clear colour too; write what shows `display` after it.
+                let tm = look
+                    .as_ref()
+                    .map_or_else(Default::default, |l| l.0.params().tonemapping);
+                let x =
+                    crate::look::hdr_clear_color(tm, [display.red, display.green, display.blue]);
+                Color::linear_rgb(x[0], x[1], x[2])
+            } else {
+                display.into()
+            };
         }
+        commands.insert_resource(SkyHorizon(horizon));
     }
     for (mut t, _) in &mut sun {
         *t = Transform::from_translation(cam).looking_to(-sun_dir, Vec3::Y);
@@ -353,7 +418,34 @@ pub fn update_sky(
     for mut t in &mut sun_disc {
         *t = place(sun_dir);
     }
-    for mut t in &mut moon_disc {
-        *t = place(-sun_dir);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// With a second `Camera3d` (a reflection mirror) the dome still follows only the main camera.
+    #[test]
+    fn the_dome_follows_the_main_camera_not_a_mirror_camera() {
+        let mut app = App::new();
+        app.insert_resource(SessionEnvironment::default())
+            .add_systems(Update, place_sky_dome);
+        let main_pos = Vec3::new(10.0, 2.0, -30.0);
+        app.world_mut().spawn((
+            Camera3d::default(),
+            opts_bevy::MainCamera,
+            GlobalTransform::from_translation(main_pos),
+        ));
+        app.world_mut().spawn((
+            Camera3d::default(),
+            Name::new("MirrorCamera"),
+            GlobalTransform::from_translation(Vec3::new(-500.0, 1.0, 400.0)),
+        ));
+        let dome = app.world_mut().spawn((SkyDome, Transform::default())).id();
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(dome).unwrap().translation,
+            main_pos
+        );
     }
 }

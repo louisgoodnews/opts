@@ -238,7 +238,7 @@ pub fn redraw(
         Option<&SessionVehicle>,
         Has<PlayerVehicle>,
     )>,
-    cameras: Query<&GlobalTransform, With<Camera3d>>,
+    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     traffic: Option<Res<TrafficState>>,
     fixture: Option<Res<FixtureRoads>>,
     hud: Option<Res<super::HudValues>>,

@@ -4,7 +4,7 @@ use opts_gui::l10n::Localization;
 
 use super::planner::{clock_text, month_key};
 use super::types::{GameCatalogue, NewGameSetup};
-use super::weather::preset_of;
+use opts_bevy::WeatherCatalogue;
 
 /// `9 October 1989`.
 pub fn date_text(loc: &Localization, setup: &NewGameSetup) -> String {
@@ -19,8 +19,12 @@ pub fn date_text(loc: &Localization, setup: &NewGameSetup) -> String {
 }
 
 /// The name of the chosen weather.
-pub fn weather_name(loc: &Localization, setup: &NewGameSetup) -> String {
-    loc.t(preset_of(&setup.weather_preset).name_key)
+pub fn weather_name(
+    loc: &Localization,
+    weather: &WeatherCatalogue,
+    setup: &NewGameSetup,
+) -> String {
+    super::weather::name_of(weather, loc, &setup.weather_preset)
 }
 
 /// The vehicle as the user knows it.
@@ -75,12 +79,12 @@ pub fn what_text(loc: &Localization, catalogue: &GameCatalogue, setup: &NewGameS
 }
 
 /// Part ③: date, time and weather.
-pub fn when_text(loc: &Localization, setup: &NewGameSetup) -> String {
+pub fn when_text(loc: &Localization, weather: &WeatherCatalogue, setup: &NewGameSetup) -> String {
     format!(
         "{} {} · {}",
         date_text(loc, setup),
         clock_text(setup),
-        weather_name(loc, setup)
+        weather_name(loc, weather, setup)
     )
 }
 
@@ -108,7 +112,10 @@ mod tests {
         assert_eq!(where_text(&s), "Berlin · Rathaus");
         assert_eq!(what_text(&loc, &cat, &s), "MAN SD77 · Beige");
         assert_eq!(date_text(&loc, &s), "9 October 1989");
-        assert_eq!(when_text(&loc, &s), "9 October 1989 08:30 · Clear day");
+        assert_eq!(
+            when_text(&loc, &WeatherCatalogue::default(), &s),
+            "9 October 1989 08:30 · Clear day"
+        );
         let de = Localization::new("de");
         assert_eq!(date_text(&de, &s), "9. Oktober 1989");
     }

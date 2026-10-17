@@ -198,7 +198,7 @@ pub fn spawn_review(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
             .id(),
         commands
             .spawn(plain(
-                weather_name(ctx.loc, s),
+                weather_name(ctx.loc, ctx.weather, s),
                 TypeScale::BodyMedium,
                 ColorRole::OnSurfaceVariant,
             ))

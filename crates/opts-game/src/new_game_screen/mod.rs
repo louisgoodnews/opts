@@ -44,6 +44,8 @@ pub struct BuildCtx<'a> {
     pub loc: &'a Localization,
     /// Maps and vehicles.
     pub catalogue: &'a GameCatalogue,
+    /// Weather presets.
+    pub weather: &'a opts_bevy::WeatherCatalogue,
     /// The choices so far.
     pub setup: &'a NewGameSetup,
     /// Recents and favourites.
@@ -59,6 +61,7 @@ pub struct NewGameMenuPlugin;
 impl Plugin for NewGameMenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<GameCatalogue>()
+            .init_resource::<opts_bevy::WeatherCatalogue>()
             .init_resource::<NewGameSetup>()
             .init_resource::<PlannerState>()
             .init_resource::<livery::LiveryState>()
@@ -126,6 +129,7 @@ fn enter_wizard(
     shell: Res<ShellContent>,
     loc: Res<Localization>,
     catalogue: Res<GameCatalogue>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
     mut setup: ResMut<NewGameSetup>,
     mut history: ResMut<PlannerHistory>,
     mut state: ResMut<PlannerState>,
@@ -144,6 +148,7 @@ fn enter_wizard(
     let ctx = BuildCtx {
         loc: &loc,
         catalogue: &catalogue,
+        weather: &weather,
         setup: &setup,
         history: &history,
         notes: &state.notes,
@@ -182,17 +187,22 @@ fn rebuild_body(
     body: Query<Entity, With<PlannerBody>>,
     loc: Res<Localization>,
     catalogue: Res<GameCatalogue>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
     setup: Res<NewGameSetup>,
     history: Res<PlannerHistory>,
     mut commands: Commands,
-    mut built_with: Local<(usize, usize)>,
+    mut built_with: Local<(usize, usize, usize)>,
 ) {
     let Ok(body) = body.single() else {
         return;
     };
     // The catalogue may be (re)read while the wizard is open (the first scan of a fresh
     // installation takes seconds): a step built from an empty or older list is built again.
-    let content = (catalogue.maps.len(), catalogue.vehicles.len());
+    let content = (
+        catalogue.maps.len(),
+        catalogue.vehicles.len(),
+        weather.ids().len(),
+    );
     let content_changed = *built_with != content;
     *built_with = content;
     if state.built == Some(state.step) && !content_changed {
@@ -203,6 +213,7 @@ fn rebuild_body(
     let ctx = BuildCtx {
         loc: &loc,
         catalogue: &catalogue,
+        weather: &weather,
         setup: &setup,
         history: &history,
         notes: &state.notes,

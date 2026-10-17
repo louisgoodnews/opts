@@ -20,6 +20,12 @@ use crate::omsi_root::locate_omsi_root;
 use super::{OmsiSessionConfig, SessionRequest, WorldLoadJob};
 
 impl WorldLoadJob {
+    /// The materials of the road (spline) surfaces built so far; the weather darkens and
+    /// whitens them when wet or snowy (`in_game::weather::surfaces`).
+    pub fn spline_material_handles(&self) -> impl Iterator<Item = &Handle<StandardMaterial>> {
+        self.spline_materials.values()
+    }
+
     /// Root folder of the OMSI installation the session reads from.
     #[must_use]
     pub fn omsi_root(&self) -> &std::path::Path {

@@ -38,6 +38,7 @@ fn setup_scene(
     // 1. Setup Camera and Lighting
     commands.spawn((
         Camera3d::default(),
+        opts_bevy::MainCamera,
         Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::new(0.0, 1.5, 0.0), Vec3::Y),
     ));
 

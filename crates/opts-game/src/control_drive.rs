@@ -476,7 +476,7 @@ fn reset_camera(world: &mut World, _: &Value) -> Outcome {
             "a dialog or the vehicle menu is open: camera input is blocked",
         ));
     }
-    let mut camera = world.query_filtered::<&mut Transform, With<Camera3d>>();
+    let mut camera = world.query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
     let mut tf = camera.iter_mut(world).next().map(|t| *t);
     let mut state = world.resource::<CameraState>().clone();
     let mut viewpoint = world
@@ -537,7 +537,7 @@ fn look_inner(world: &mut World, params: &Value) -> Result<Outcome, RpcError> {
         }
         let rotation = Quat::from_euler(EulerRot::YXZ, cam.free_roam_yaw, cam.free_roam_pitch, 0.0);
         let (y, p) = (cam.free_roam_yaw, cam.free_roam_pitch);
-        let mut cameras = world.query_filtered::<&mut Transform, With<Camera3d>>();
+        let mut cameras = world.query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
         for mut t in cameras.iter_mut(world) {
             t.rotation = rotation;
         }

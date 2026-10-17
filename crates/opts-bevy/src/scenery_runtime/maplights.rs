@@ -52,6 +52,12 @@ pub struct MapLightSettings {
     pub full_lux: f32,
     /// Fade time in and out (s).
     pub fade_s: f32,
+    /// While the camera is in an interior view of the player vehicle, lamps over the vehicle
+    /// (inside its footprint prism, from the roof up) get no light (`lighting-system.md` 4.5).
+    pub exclude_over_vehicle: bool,
+    /// Factor on the pool's intensity while the camera is in an interior view, so a lamp outside
+    /// does not out-shine the cabin light ([`crate::light_rooms::INTERIOR_VIEW_SCALE`]).
+    pub interior_view_scale: f32,
 }
 
 impl Default for MapLightSettings {
@@ -64,6 +70,8 @@ impl Default for MapLightSettings {
             interval_s: 0.25,
             full_lux: FULL_LUX,
             fade_s: 0.5,
+            exclude_over_vehicle: true,
+            interior_view_scale: crate::light_rooms::INTERIOR_VIEW_SCALE,
         }
     }
 }
@@ -160,13 +168,19 @@ pub fn spawn_map_lights(commands: &mut Commands, root: Entity, sco: &SceneryObje
 #[allow(clippy::too_many_arguments)]
 pub fn map_light_pool_system(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     settings: Res<MapLightSettings>,
     clock: Res<SceneryClock>,
     mut pool: ResMut<MapLightPool>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     lamps: Query<(Entity, &MapLight, &GlobalTransform)>,
     mut lights: Query<(&mut PointLight, &mut Transform, &mut Visibility), Without<MapLight>>,
+    cabin: Option<Res<crate::light_rooms::CabinView>>,
+    vehicle: Query<
+        (&GlobalTransform, &crate::light_rooms::VehicleFootprint),
+        With<crate::PlayerVehicle>,
+    >,
+    mut view_scale: Local<Option<f32>>,
 ) {
     if !settings.enabled {
         return;
@@ -197,6 +211,21 @@ pub fn map_light_pool_system(
     }
     let dt = time.delta_secs();
     pool.since_assign_s += dt;
+    let interior = cabin.as_deref().is_some_and(|c| c.interior_view);
+    // The interior-view dimming fades with the lamps instead of jumping.
+    let scale_target = if interior {
+        settings.interior_view_scale
+    } else {
+        1.0
+    };
+    let scale = view_scale.get_or_insert(scale_target);
+    let scale_step = if settings.fade_s > 0.0 {
+        dt / settings.fade_s
+    } else {
+        1.0
+    };
+    *scale += (scale_target - *scale).clamp(-scale_step, scale_step);
+    let scale = *scale;
     let camera = cameras
         .iter()
         .find(|(c, _)| c.is_active)
@@ -205,8 +234,20 @@ pub fn map_light_pool_system(
         pool.since_assign_s = 0.0;
         let chosen = match camera.filter(|_| clock.night) {
             Some(cam) => {
+                let hide_over = interior && settings.exclude_over_vehicle;
                 let candidates: Vec<(Entity, f32)> = lamps
                     .iter()
+                    .filter(|(_, _, t)| {
+                        !hide_over
+                            || !vehicle.iter().any(|(g, fp)| {
+                                crate::light_rooms::over_vehicle(
+                                    t.translation(),
+                                    g,
+                                    fp,
+                                    crate::light_rooms::FOOTPRINT_MARGIN_M,
+                                )
+                            })
+                    })
                     .map(|(e, _, t)| (e, t.translation().distance(cam)))
                     .collect();
                 let current: Vec<Entity> = pool
@@ -253,7 +294,8 @@ pub fn map_light_pool_system(
         match lamp.filter(|_| slot.level > 0.0) {
             Some((_, m, t)) => {
                 point.color = Color::srgb(m.color.x, m.color.y, m.color.z);
-                point.intensity = map_light_lumens(m.radius_m, settings.full_lux) * slot.level;
+                point.intensity =
+                    map_light_lumens(m.radius_m, settings.full_lux) * slot.level * scale;
                 point.range = map_light_range(m.radius_m);
                 transform.translation = t.translation();
                 if *visibility != Visibility::Inherited {

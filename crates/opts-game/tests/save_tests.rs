@@ -524,6 +524,13 @@ fn the_session_environment_round_trips() {
     assert_eq!(env.map_date(), CalendarDate::new(1991, 7, 8));
     assert_eq!(env.hms(), (1, 2, 3));
     assert_eq!(env.weather(), "Winter Snowfall");
+    // An old preset id keeps loading: it resolves to snow and frost (a built-in preset here, the
+    // closest installed one with an install), and is stored as it was.
+    assert_eq!(
+        env.conditions().precip,
+        opts_core::formats::weather::PrecipKind::Snow
+    );
+    assert_eq!(env.temperature_c(), -3.0);
     assert_eq!(env.rate(), 5.0);
 }
 

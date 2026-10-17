@@ -145,6 +145,7 @@ fn app() -> App {
             commands.insert_resource(Root(root));
             commands.spawn((
                 Camera3d::default(),
+                opts_bevy::MainCamera,
                 Transform::from_xyz(0.0, 1.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             ));
         },
@@ -222,7 +223,9 @@ fn the_animated_mesh_moves_with_simulated_time() {
     assert!((angle(&after_2s) - 20.0).abs() < 0.5, "{after_2s:?}");
     let root = app.world().resource::<Root>().0;
     let scripts = app.world().get::<SceneryScripts>(root).unwrap();
-    assert_eq!(scripts.ticks, 120);
+    // 120 steps plus the initial evaluation of the first, zero-length frame (it advances no
+    // script time: the angles above are exact).
+    assert_eq!(scripts.ticks, 121);
     let deg = scripts.with_engine(|e| e.get("hand_deg")).unwrap();
     assert!((deg - 20.0).abs() < 1e-3, "{deg}");
     let clock = app.world().resource::<SceneryClock>().seconds_of_day;
@@ -266,7 +269,7 @@ fn lod_shows_the_band_of_the_current_screen_size() {
     // Far away the object is small: the stand-in shows instead.
     let mut q = app
         .world_mut()
-        .query_filtered::<&mut Transform, With<Camera3d>>();
+        .query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
     for mut t in q.iter_mut(app.world_mut()) {
         *t = Transform::from_xyz(0.0, 1.0, 400.0).looking_at(Vec3::ZERO, Vec3::Y);
     }
@@ -274,4 +277,24 @@ fn lod_shows_the_band_of_the_current_screen_size() {
     app.update();
     assert_eq!(visibility(&app, fine.0), Visibility::Hidden);
     assert_eq!(visibility(&app, coarse.0), Visibility::Inherited);
+}
+
+/// While the simulation clock is paused (the Environment page previews the time), a switch to
+/// night still reaches the lamps: the lights follow the host, no script time advances.
+#[test]
+fn lights_follow_the_night_switch_while_the_clock_is_paused() {
+    let mut app = app();
+    app.insert_resource(SceneryClock::at(2026, 6, 29, 12.0 * 3600.0));
+    for _ in 0..3 {
+        app.update();
+    }
+    let light = runtime(&app).lights[0];
+    let level = |app: &App| app.world().get::<SceneryLight>(light).unwrap().level;
+    assert_eq!(level(&app), 0.0, "day: the lamp is off");
+    app.world_mut().resource_mut::<Time<Virtual>>().pause();
+    app.insert_resource(SceneryClock::at(2026, 6, 29, 22.0 * 3600.0));
+    for _ in 0..3 {
+        app.update();
+    }
+    assert!(level(&app) > 0.5, "night while paused: {}", level(&app));
 }

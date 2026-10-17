@@ -51,6 +51,7 @@ fn main() {
         let h = world.resource_mut::<Assets<Image>>().add(img);
         world.spawn((
             Camera3d::default(),
+            opts_bevy::MainCamera,
             Camera {
                 clear_color: ClearColorConfig::Custom(clear),
                 ..default()

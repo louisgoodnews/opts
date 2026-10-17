@@ -1,5 +1,6 @@
 //! The session environment: date, time of day, weather and the values derived from them (sun,
-//! night, light attenuation, temperature, day of the week).
+//! night, light attenuation, temperature, day of the week). The weather is a preset id, resolved
+//! to [`WeatherConditions`] through the [`WeatherCatalogue`] (`weather.rs`).
 //!
 //! [`SessionEnvironment`] is the one source of these values for a running session. It is written
 //! only through [`EnvironmentChange`] messages (session start, the pause menu's *Environment*
@@ -17,6 +18,13 @@ use std::fmt;
 use bevy::prelude::*;
 use opts_core::formats::map::lists::day;
 use serde::{Deserialize, Serialize};
+
+use crate::moon::{moon_state, MoonState};
+pub use crate::weather::WeatherKind;
+use crate::weather::{
+    effective_cover, light_scales_for_cover, WeatherCatalogue, WeatherConditions,
+};
+use opts_core::formats::weather::PrecipKind;
 
 /// Latitude of the built-in sun formula. OMSI maps carry no geographic position, so the sun path
 /// assumes central Europe (where OMSI's maps lie) and treats clock time as local solar time.
@@ -186,66 +194,72 @@ pub fn sun_position(hour: f32, day_of_year: f32, latitude_deg: f32) -> (f32, f32
     )
 }
 
-/// What a weather preset does to the world: sky and light attenuation and the temperature (no
-/// fog or precipitation is rendered).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum WeatherKind {
-    /// Clear sky.
-    Clear,
-    /// Overcast.
-    Overcast,
-    /// Rain.
-    Rain,
-    /// Snow.
-    Snow,
-    /// Fog.
-    Fog,
+/// The sky as far as lighting is concerned: the one input of [`light_attenuation`].
+///
+/// The weather side fills it ([`WeatherSky::from_conditions`]); the lighting code only reads
+/// [`LightAttenuation`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeatherSky {
+    /// Share of the sky that blocks the direct light, `0..=1` (clouds, precipitation, fog).
+    pub cloud_cover: f32,
+    /// Meteorological visibility in metres.
+    pub visibility_m: f32,
+    /// What falls.
+    pub precip: PrecipKind,
+    /// Ground wetness `0..=1` (reserved: no rule reads it yet).
+    pub wet: f32,
 }
 
-impl WeatherKind {
-    /// The kind of a preset id, by the words it contains (`rain`, `snow`, `fog`, `overcast`);
-    /// anything else is clear.
-    #[must_use]
-    pub fn of_preset(id: &str) -> Self {
-        let id = id.to_lowercase();
-        if id.contains("snow") {
-            Self::Snow
-        } else if id.contains("rain") {
-            Self::Rain
-        } else if id.contains("fog") {
-            Self::Fog
-        } else if id.contains("overcast") {
-            Self::Overcast
-        } else {
-            Self::Clear
+impl Default for WeatherSky {
+    fn default() -> Self {
+        Self {
+            cloud_cover: 0.0,
+            visibility_m: crate::weather::FOG_MAX_VISIBILITY_M,
+            precip: PrecipKind::None,
+            wet: 0.0,
         }
     }
+}
 
-    /// Whether the sky is covered (sun and ambient light are attenuated).
+impl WeatherSky {
+    /// The sky of resolved weather conditions.
     #[must_use]
-    pub fn overcast(self) -> bool {
-        self != Self::Clear
-    }
-
-    /// Multiplier for sun and ambient light.
-    #[must_use]
-    pub fn attenuation(self) -> f32 {
-        if self.overcast() {
-            0.55
-        } else {
-            1.0
+    pub fn from_conditions(c: &WeatherConditions) -> Self {
+        Self {
+            cloud_cover: effective_cover(c),
+            visibility_m: c.fog_visibility_m,
+            precip: c.precip,
+            wet: c.ground_wet.into_iter().fold(0.0, f32::max).clamp(0.0, 1.0),
         }
     }
+}
 
-    /// Outside temperature in °C (`Weather_Temperature`). No weather model yet: snow is frost,
-    /// everything else 15 °C ❓.
-    #[must_use]
-    pub fn temperature_c(self) -> f32 {
-        if self == Self::Snow {
-            -3.0
-        } else {
-            15.0
-        }
+/// What the sky does to each light, `0..=1` (1 = clear).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LightAttenuation {
+    /// The direct sunlight.
+    pub direct: f32,
+    /// The ambient light.
+    pub ambient: f32,
+    /// The moonlight (cloud blocks the weaker light more).
+    pub moon: f32,
+    /// Light shafts: they need gaps in the cloud, so a solid overcast has none.
+    pub shafts: f32,
+}
+
+/// **The one attenuation function** (design `lighting-system.md` 5.6). `direct` and `ambient`
+/// come from [`light_scales_for_cover`] (the rule of [`light_scales`]: 0.55 and 0.8 at full cover,
+/// the values that were in use before); `moon = 1 − 0.65·cover`; `shafts = direct² × (1 −
+/// cover)`, which is 0 under a solid cover.
+#[must_use]
+pub fn light_attenuation(w: &WeatherSky) -> LightAttenuation {
+    let cover = w.cloud_cover.clamp(0.0, 1.0);
+    let scales = light_scales_for_cover(cover);
+    LightAttenuation {
+        direct: scales.sun,
+        ambient: scales.ambient,
+        moon: 1.0 - 0.65 * cover,
+        shafts: scales.sun * scales.sun * (1.0 - cover),
     }
 }
 
@@ -338,9 +352,11 @@ pub struct SessionEnvironment {
     revision: u64,
     map_date: CalendarDate,
     // Derived.
+    conditions: WeatherConditions,
     kind: WeatherKind,
     sun_alt_deg: f32,
     sun_az_deg: f32,
+    moon: MoonState,
 }
 
 impl Default for SessionEnvironment {
@@ -360,12 +376,15 @@ impl SessionEnvironment {
             rate: 1.0,
             revision: 0,
             map_date: date,
+            conditions: WeatherConditions::default(),
             kind: WeatherKind::Clear,
             sun_alt_deg: 0.0,
             sun_az_deg: 0.0,
+            moon: moon_state(date, 0.0, LATITUDE_DEG),
         };
         env.set_seconds(seconds_of_day);
-        env.derive();
+        env.derive_sun();
+        env.resolve_weather(WeatherCatalogue::builtin());
         env
     }
 
@@ -407,10 +426,16 @@ impl SessionEnvironment {
         &self.weather
     }
 
-    /// What the weather does.
+    /// What the weather does, classified (fallback light, icons).
     #[must_use]
     pub fn weather_kind(&self) -> WeatherKind {
         self.kind
+    }
+
+    /// The resolved weather: fog, wind, clouds, precipitation, wetness.
+    #[must_use]
+    pub fn conditions(&self) -> &WeatherConditions {
+        &self.conditions
     }
 
     /// Clock seconds per `Time<Virtual>` second.
@@ -461,16 +486,36 @@ impl SessionEnvironment {
         self.sun_alt_deg < NIGHT_SUN_ALT_DEG
     }
 
-    /// Multiplier for sun and ambient light under the weather.
+    /// The moon (position, phase, bright limb) for the session's date and time, refreshed with
+    /// the sun.
+    #[must_use]
+    pub fn moon(&self) -> &MoonState {
+        &self.moon
+    }
+
+    /// What the weather does to every light ([`light_attenuation`]).
+    #[must_use]
+    pub fn light_attenuation(&self) -> LightAttenuation {
+        light_attenuation(&WeatherSky::from_conditions(&self.conditions))
+    }
+
+    /// Multiplier for the sun's illuminance under the weather: the `direct` part of
+    /// [`Self::light_attenuation`].
     #[must_use]
     pub fn attenuation(&self) -> f32 {
-        self.kind.attenuation()
+        self.light_attenuation().direct
+    }
+
+    /// Multiplier for the ambient light under the weather ([`light_scales`]).
+    #[must_use]
+    pub fn ambient_attenuation(&self) -> f32 {
+        self.light_attenuation().ambient
     }
 
     /// Outside temperature in °C.
     #[must_use]
     pub fn temperature_c(&self) -> f32 {
-        self.kind.temperature_c()
+        self.conditions.temperature_c
     }
 
     /// Moves the clock on by `dt_s` clock seconds, rolling the date over at midnight. Not a jump:
@@ -485,11 +530,21 @@ impl SessionEnvironment {
             self.date = self.date.add_days(days as i64);
         }
         self.set_seconds(total);
-        self.derive();
+        self.derive_sun();
     }
 
-    /// Applies a change; returns the map date change it causes, if any.
+    /// Applies a change with the built-in presets only; see [`Self::apply_with`].
     pub fn apply(&mut self, change: &EnvironmentChange) -> Option<MapDateChanged> {
+        self.apply_with(change, WeatherCatalogue::builtin())
+    }
+
+    /// Applies a change, resolving a new weather id through `catalogue`; returns the map date
+    /// change it causes, if any.
+    pub fn apply_with(
+        &mut self,
+        change: &EnvironmentChange,
+        catalogue: &WeatherCatalogue,
+    ) -> Option<MapDateChanged> {
         let mut jumped = false;
         let mut announced = None;
         if let Some(date) = change.date {
@@ -525,8 +580,19 @@ impl SessionEnvironment {
         if jumped || change.map_date == MapDatePolicy::Reset {
             self.revision += 1;
         }
-        self.derive();
+        self.derive_sun();
+        self.resolve_weather(catalogue);
         announced
+    }
+
+    /// Resolves the weather again after the catalogue changed (the install became known). A
+    /// different outcome is a jump, so the sky and the effects refresh.
+    pub fn refresh_weather(&mut self, catalogue: &WeatherCatalogue) {
+        let before = self.conditions.clone();
+        self.resolve_weather(catalogue);
+        if self.conditions != before {
+            self.revision += 1;
+        }
     }
 
     fn set_seconds(&mut self, s: f64) {
@@ -537,11 +603,16 @@ impl SessionEnvironment {
         }
     }
 
-    fn derive(&mut self) {
-        self.kind = WeatherKind::of_preset(&self.weather);
+    fn resolve_weather(&mut self, catalogue: &WeatherCatalogue) {
+        self.conditions = catalogue.resolve(&self.weather);
+        self.kind = self.conditions.kind();
+    }
+
+    fn derive_sun(&mut self) {
         let (alt, az) = sun_position(self.hour(), self.date.day_of_year() as f32, LATITUDE_DEG);
         self.sun_alt_deg = alt;
         self.sun_az_deg = az;
+        self.moon = moon_state(self.date, self.seconds_of_day, LATITUDE_DEG);
     }
 }
 
@@ -562,13 +633,24 @@ pub fn tick_environment(time: Res<Time<Virtual>>, mut env: ResMut<SessionEnviron
 pub fn apply_environment_changes(
     mut changes: MessageReader<EnvironmentChange>,
     mut env: ResMut<SessionEnvironment>,
+    catalogue: Res<WeatherCatalogue>,
     mut map_dates: MessageWriter<MapDateChanged>,
 ) {
     for change in changes.read() {
-        if let Some(changed) = env.apply(change) {
+        if let Some(changed) = env.apply_with(change, &catalogue) {
             tracing::info!(old = %changed.old, new = %changed.new, "map date changed");
             map_dates.write(changed);
         }
+    }
+}
+
+/// Resolves the weather again when the preset catalogue changes (an install found after start).
+pub fn refresh_weather_on_catalogue_change(
+    catalogue: Res<WeatherCatalogue>,
+    mut env: ResMut<SessionEnvironment>,
+) {
+    if catalogue.is_changed() && !catalogue.is_added() {
+        env.refresh_weather(&catalogue);
     }
 }
 
@@ -579,12 +661,18 @@ pub struct EnvironmentPlugin;
 impl Plugin for EnvironmentPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<SessionEnvironment>()
+            .init_resource::<WeatherCatalogue>()
+            .init_resource::<crate::weather::WeatherEffects>()
             .init_resource::<ChronoRebuild>()
             .add_message::<EnvironmentChange>()
             .add_message::<MapDateChanged>()
             .add_systems(
                 Update,
-                (tick_environment, apply_environment_changes)
+                (
+                    tick_environment,
+                    refresh_weather_on_catalogue_change,
+                    apply_environment_changes,
+                )
                     .chain()
                     .in_set(EnvironmentSet),
             );
@@ -797,5 +885,130 @@ mod tests {
         let got: Vec<_> = cursor.read(msgs).copied().collect();
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].new, CalendarDate::new(1995, 1, 2));
+    }
+
+    #[test]
+    fn a_weather_change_resolves_through_the_catalogue_and_is_a_jump() {
+        use opts_core::formats::weather::{PresetFile, WeatherFile, WeatherFolder};
+        let storm = WeatherFile {
+            fog: opts_core::formats::weather::Fog {
+                visibility_m: 700.0,
+                density: 0.5,
+            },
+            temp: opts_core::formats::weather::Temperature {
+                celsius: 9.0,
+                dew_point_c: 9.0,
+            },
+            ..WeatherFile::default()
+        };
+        let catalogue = WeatherCatalogue::from_folder(
+            "/omsi".into(),
+            WeatherFolder {
+                presets: vec![PresetFile {
+                    id: "Sturm".into(),
+                    weather: storm,
+                    texts: Default::default(),
+                }],
+                ..default()
+            },
+        );
+        let mut env = SessionEnvironment::new(CalendarDate::new(2026, 6, 29), 43_200.0, "Sturm");
+        // Without the install the id is unknown: clear weather.
+        assert_eq!(env.conditions().fog_visibility_m, 50_000.0);
+        let r0 = env.revision();
+        env.refresh_weather(&catalogue);
+        assert_eq!(env.conditions().fog_visibility_m, 700.0);
+        assert_eq!(env.temperature_c(), 9.0);
+        assert_eq!(env.revision(), r0 + 1, "a different outcome is a jump");
+        env.refresh_weather(&catalogue);
+        assert_eq!(env.revision(), r0 + 1, "the same outcome is not");
+        env.apply_with(
+            &EnvironmentChange {
+                weather: Some("Rainy Afternoon".into()),
+                ..default()
+            },
+            &catalogue,
+        );
+        assert_eq!(env.conditions().kind(), WeatherKind::Rain);
+        assert_eq!(
+            env.weather(),
+            "Rainy Afternoon",
+            "the stored id is kept as given"
+        );
+    }
+
+    #[test]
+    fn the_plugin_resolves_weather_changes_and_catalogue_changes() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .add_plugins(EnvironmentPlugin);
+        app.world_mut().write_message(EnvironmentChange::reset(
+            CalendarDate::new(2026, 6, 29),
+            43_200.0,
+            "Rainy Afternoon",
+        ));
+        app.update();
+        let env = app.world().resource::<SessionEnvironment>();
+        assert_eq!(
+            env.conditions().precip,
+            opts_core::formats::weather::PrecipKind::Rain
+        );
+        assert!(env.attenuation() < 0.6);
+    }
+
+    fn sky(cover: f32) -> WeatherSky {
+        WeatherSky {
+            cloud_cover: cover,
+            ..WeatherSky::default()
+        }
+    }
+
+    #[test]
+    fn attenuation_is_clear_at_one_and_the_old_values_under_full_cover() {
+        let clear = light_attenuation(&sky(0.0));
+        assert_eq!(
+            (clear.direct, clear.ambient, clear.moon, clear.shafts),
+            (1.0, 1.0, 1.0, 1.0)
+        );
+        let over = light_attenuation(&sky(1.0));
+        assert!((over.direct - 0.55).abs() < 1e-6);
+        assert!((over.ambient - 0.8).abs() < 1e-6);
+        assert!((over.moon - 0.35).abs() < 1e-6);
+        assert_eq!(over.shafts, 0.0, "a solid overcast has no beam");
+    }
+
+    #[test]
+    fn attenuation_is_monotone_in_cloud_cover() {
+        let mut prev = light_attenuation(&sky(0.0));
+        for i in 1..=20 {
+            let a = light_attenuation(&sky(i as f32 / 20.0));
+            assert!(a.direct <= prev.direct && a.ambient <= prev.ambient);
+            assert!(a.moon <= prev.moon && a.shafts <= prev.shafts);
+            assert!(a.moon < a.direct, "cloud blocks the weaker light more");
+            prev = a;
+        }
+    }
+
+    #[test]
+    fn the_environment_wrappers_agree_with_the_function() {
+        let env =
+            SessionEnvironment::new(CalendarDate::new(2026, 6, 29), 43_200.0, "Rainy Afternoon");
+        let a = env.light_attenuation();
+        assert_eq!(env.attenuation(), a.direct);
+        assert_eq!(env.ambient_attenuation(), a.ambient);
+        assert_eq!(
+            a,
+            light_attenuation(&WeatherSky::from_conditions(env.conditions()))
+        );
+        assert!(a.shafts < 0.2 && a.moon < 0.6);
+    }
+
+    #[test]
+    fn the_moon_follows_the_clock() {
+        let mut env = SessionEnvironment::new(CalendarDate::new(2026, 10, 17), 18.0 * 3600.0, "");
+        let before = *env.moon();
+        env.advance(4.0 * 3600.0);
+        assert_ne!(before.elevation_deg, env.moon().elevation_deg);
+        assert!((before.illuminated - env.moon().illuminated).abs() < 0.02);
     }
 }

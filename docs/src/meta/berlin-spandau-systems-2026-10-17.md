@@ -5,7 +5,7 @@
 | **Map** | `OMSI 2/maps/Berlin-Spandau` |
 | **Brief** | expanded scope: 19 symptoms in five systems (terrain/coordinates/tags, parser and Chrono, AI kinematics and lights, asset gaps, environment UI) |
 | **Branch** | `fix/terrain-and-traffic-systems` (worktree `opts-wt-berlin-spandau-systems`, from `master` `85d2391`), carries the two report commits of `fix/map-fidelity-systemic`; not merged, merge only after user acceptance |
-| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done (Checkpoint 2: all four decisions accepted); Phase C done, waiting for Checkpoint 3 |
+| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done (Checkpoint 2: all four decisions accepted); Phase C done; lighting round (§9) implemented, waiting for Checkpoint 3 |
 | **Predecessor** | [Berlin-Spandau map fidelity investigation](berlin-spandau-2026-10-17.md): symptoms 1-13 reproduced and root-caused there (§2, §6), fix plan §7 |
 | **Clean room** | no OMSI binary inspected; screenshots and probes kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/` (`systems/` for this phase), not committed |
 
@@ -155,3 +155,117 @@ Not confirmed live: the median break on Falkenseer Chaussee (photo 2; the joins 
 ### Open questions
 
 Q-TC-01..04 ([terrain carving](../architecture/terrain-carving.md)), Q-AK-01..04 ([AI kinematics](../architecture/ai-traffic-kinematics.md)), whether OMSI re-evaluates Chrono when the clock passes midnight, the meaning of attachment fields 9 and 12, the value of the "Medium" density class (assumed 1.0), which repaint OMSI picks for a parked car (deterministic hash here).
+
+## 9. Round 3: lighting, cones and volumetrics (2026-10-17, branch `fix/map-and-lighting-systems`)
+
+The third brief adds symptoms 20-23 (System 6) and repeats 1-19. **Symptoms 1-19 are implemented and merged in `master`** (sections 6-8); they are not redone. One new, separate task was added: weather (below). Shots are kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/lighting/` (not committed).
+
+### Premise corrections
+
+1. **Bevy 0.20 does have volumetric lighting.** `bevy_pbr::volumetric_fog` (`VolumetricFog` on the camera, `VolumetricLight` on lights) renders light shafts and god rays by screen-space ray marching with a Henyey-Greenstein phase function. Its documented limit: **only directional lights with shadow maps interact**, and its cost scales with the number of volumetric lights. So the sun (a shadow-casting `DirectionalLight` already, `SunLight` in `sky.rs`) can get god rays without a custom shader. Lantern and headlight cones are **not** covered (spot and point lights are unsupported) and need custom work. *(Corrected in Phase B: the 0.20 shader also ray-marches point and spot lights that have `VolumetricLight` and shadow maps, `volumetric_fog.wesl:340-445`, `light.rs:1326`; the module docs still say directional only. A fog volume is also required. See [lighting system §6](../architecture/lighting-system.md#6-sun-god-rays-with-volumetricfog).)* Bevy 0.20 also ships a physical `atmosphere` module (not used by OPTS; the sky is the installation's textures).
+2. **Light rooms map to `RenderLayers`.** *(Corrected in Phase B, see [lighting system §4.1](../architecture/lighting-system.md#41-what-bevy-020-does-with-renderlayers-on-lights-verified): in Bevy 0.20 a light's layers select which views it is in and which meshes cast its shadows, not which meshes it lights; the content needs no room separation, and `[nomaplighting]` marks lamps that carry their own `[maplight]`.)* Bevy applies `RenderLayers` to lights as well as meshes (`bevy_pbr/src/render/light.rs`), so a light only affects entities on shared layers. No custom shader uniform is needed for interior/exterior separation, only a layer convention and a tool for assigning objects.
+3. **Cones are in the data.** `[light_enh_2]` carries inner and outer cone angles (`ScoLight::cone_inner_deg/outer_deg`, parsed), vehicle `[spotlight]` has inner/outer cones and `Spot_Select`, `[interiorlight]` has range and colour. What is missing is rendering them.
+
+### Reproduction (A1)
+
+Release build of `master` (`6cdbd05`), Berlin-Spandau at 22:00 (`OPTS_DEV_HOUR`), `sim.set_time` for dusk:
+
+| # | Symptom | Shot | Observed |
+| ---: | :--- | :--- | :--- |
+| 20 | Lantern cones | `l1`, `l2`, `l3` | Pools of light on the pavement (map-light pool of 48 point lights) and no visible beam: the lamp heads are dark shades with no light source or cone, the air is clear. Distant lamps are soft glow discs |
+| 21 | Light rooms | code, `l1` | None: point lights and the glow ignore walls and interiors (`[nomaplighting]` is parsed but not applied; every map light lights every object in range, also behind walls and inside buildings). The pool does not distinguish inside and outside |
+| 22 | Sun and moon | `s1_sun_low_*` | At dusk the sky glow and ambient change, no light shafts through trees or buildings. The moon is a textured disc at the anti-sun position: no phase, no own direction (moonlight is the sun's `DirectionalLight` with night values, `world.rs`) |
+| 23 | Vehicle light cones | `v1` | AI and parked cars show glows and (nearest six) real shadowless `SpotLight`s of fixed 12°/30°; no visible cone, no per-light cone angles from `[light_enh_2]`/`[spotlight]`, no interior lights. The player vehicle uses the model's own spotlights with shadow maps (`vehicle.rs`) |
+| 18 | AI headlights | done | glows and the headlight pool exist (C3); cone is the open part (23) |
+
+### Subsystem map (A2) for 20-23
+
+| # | Data origin | Code today | Gap |
+| ---: | :--- | :--- | :--- |
+| 20 | `.sco` `[light_enh_2]` (position, direction, cone angles, size, variable), `[maplight]` | `scenery_runtime/lights.rs` (glow disc), `maplights.rs` (48 point lights) | no beam geometry or scattering for spot-like lights; map lights are omni point lights, cone ignored |
+| 21 | vehicle `[interiorlight]`, scenery `[nomaplighting]`, building lightmaps | `vehicle_lights.rs`, `maplights.rs`; no `RenderLayers` anywhere | no layer convention, no assignment of buildings/vehicle interiors, `[nomaplighting]` unapplied |
+| 22 | `envir.cfg` sky/light colours and twilight angles, session date and time | `sky.rs` (`SunLight`, `SunDisc`, `MoonDisc`), `environment.rs` (sun position) | no `VolumetricFog`/`VolumetricLight`, no moon direction/phase from date, moonlight reuses the sun light |
+| 23 | model `[light_enh_2]`, `[spotlight]` with `Spot_Select`, AI variables | `vehicle_glow.rs` (pool of six spots, fixed cone), `vehicle.rs` | cone angles and brightness variables not mapped to the spot light, no beam |
+
+### Asked for in this round besides the brief: weather
+
+The docs specify weather ([`environment.md`](../formats/text/environment.md): `Weather/*.owt`, `clouds.cfg`, `.dsc`; scenario `.osn.owt`) but the game has five hard-coded presets that change only sky attenuation, fallback light and temperature; fog, clouds, precipitation, ground wetness and wind are not rendered. An agent (`agent/weather`, own worktree) implements it: `.owt` parser, the installation's presets in the wizard and the Environment page, distance fog, cloud layer, precipitation, wet ground, wind and precipitation script variables, settings toggles; design note `architecture/weather.md`. It is bounded away from System 6: plain distance fog only, no volumetric fog, god rays or light cones.
+
+### Open for Checkpoint 2 (Phase B scope)
+
+1. How OMSI separates interior from exterior light: measure from content (`[interiorlight]` range semantics, `[nomaplighting]` objects, buildings with `[LightMapMapping]`, bus interior lights) and decide the `RenderLayers` convention.
+2. Cone rendering technique for lanterns and headlights without volumetric support in Bevy: candidates are a screen-space additive cone mesh with depth fade (cheap, no shadows), per-light analytic ray-marched cone in a custom material, or Bevy's volumetric fog with a spot-light shadow proxy; each costed against the 60 fps budget.
+3. Sun god rays through `VolumetricFog`/`VolumetricLight`: cost on the target GPU, step count, fallback (off) in the Environment UI and settings.
+4. Moon: direction and phase from date and time (new moon to full moon from the date), moonlight as its own directional light.
+5. Performance budget: maximum volumetric lights on screen and the fallback ladder.
+
+### Decisions of the user in round 3 (Checkpoint 1 answers and follow-ups)
+
+* Phase B scope for lighting confirmed (light rooms, cone techniques, sun god rays, moon with phase, performance budget).
+* **Hardware for the 60 fps budget: this machine**, RTX 3060 12 GB, 1920×1080 (DP-1 59.96 Hz, DP-2 74.91 Hz), 16 cores.
+* **Weather:** design, then implement (agent `agent/weather`, design note `architecture/weather.md`).
+* **HDR:** the OPTS cameras should use HDR if the measured cost is acceptable; the minimap needs nothing (it is painted on the CPU, not a camera) and mirror cameras must be HDR as well.
+* **Reflections are system 7 of this task** (mirrors, glass, wet surfaces; research in [reflections research](../architecture/reflections-research.md), prototypes `opts_bevy::reflections`, off by default).
+* **Seven systems** now: 1 terrain and coordinates, 2 parser/config, 3 AI, 4 asset subsystems, 5 environment UI, 6 lighting (cones, rooms, sun/moon, god rays), 7 reflections.
+* **Order for Phase C (lighting and reflections part), confirmed:**
+  1. `MainCamera` marker and the 48 `With<Camera3d>` query sites (prerequisite for every second camera);
+  2. HDR on the main camera if the cost is acceptable, with screenshots and golden screens regenerated in the same step;
+  3. sun god rays and the moon (own directional light, phase);
+  4. cones for lanterns and vehicle headlights;
+  5. sky cubemap for glass reflections;
+  6. mirror cameras with HDR, as measured.
+* Weather lands as its own branch merge; light rooms (layer convention, CPU light selection) go with item 4.
+
+### Phase B result (lighting round, Checkpoint 2)
+
+Designs: [lighting system](../architecture/lighting-system.md) (rooms, moon, sun rays, measured budget), [lighting cones and benchmarks](../architecture/lighting-cones.md), [weather](../architecture/weather.md) (implemented, merged). Weather landed first (`agent/weather`, 7 commits): the install's presets, fog, clouds, precipitation, wet ground via the shared `Wetness`, script variables, four live settings.
+
+**Root causes**
+
+| # | Symptom | Cause |
+| ---: | :--- | :--- |
+| 20 | no lantern cones | the data has cone angles (`[light_enh_2]`, `[spotlight]`), nothing draws a cone; lamps are glow discs plus omni point lights |
+| 21 | no light rooms | map lights are Bevy point lights that light everything in range; `[nomaplighting]` is parsed but unused. **`RenderLayers` on a Bevy 0.20 light does not filter lit meshes** (it controls views, shadow casters and cascades only), so rooms are handled by CPU light selection plus one cabin layer for the interior lights |
+| 22 | no god rays, no moon logic | no `VolumetricFog`/`VolumetricLight`/`FogVolume`; the moon is the anti-sun disc with no phase and no light of its own (below −18° the installation's sun colour is black, so no light shines at night) |
+| 23 | no vehicle cones | glows and six fixed 12°/30° spots; cone angles and variables from the cars are not mapped |
+
+**Measured on the RTX 3060 at 1080p** (deltas; real game today 3.7-3.9 ms/frame, CPU-bound): sun rays at 16 steps +1.0 ms (night +2.5, Bevy's default of 64 would cost +3.9); cones: ray-marched proxy 64 cones about +0.75 ms (cap 96); HDR within noise (+50 MB colour target at 4× MSAA); bloom +0.3; mirror camera +0.6-0.7 ms each; IBL +1.2 per camera (share one cube map). Night budget about 6.6 ms GPU against 16.7 ms; ceiling for the lighting additions 4.5 ms. Bevy volumetric spot lights work in 0.20 but cost +4.5 ms for the first one: rejected.
+
+**Existing problem outside lighting:** the real game's 1 % lows are 34-47 fps from tile-streaming hitches of 25-140 ms (average 260 fps), which breaks "never below 60 fps" regardless of lighting.
+
+**Phase C order (confirmed):** (1) `MainCamera` marker, 48 `With<Camera3d>` sites (13 write the camera transform, 10 use `single()` and silently stop with two cameras, about 16 take the first/active camera); (2) HDR on the main camera, screenshots and golden screens regenerated in the same commit; (3) moon model, moonlight, disc phase, sun god rays; (4) cones for lanterns and headlights, light rooms, `[nomaplighting]`; (5) sky cube map for glass; (6) mirror cameras with HDR; settings `graphics.light_shafts`, `graphics.light_cones`, governor, Environment UI entries.
+
+**Limits of the evidence:** the benchmark scene is synthetic (the ALU ballast makes it GPU-bound; deltas, not absolute times, are valid); depth-prepass/overdraw cost and the CPU cost of many cone entities must be re-measured in the real game; cone look is untuned; weather was tested headlessly only (no window): the fogged sky and clouds on a real map are unchecked. The benchmark agent used about 50 runs against the allowed 40 (46 offscreen).
+
+### Checkpoint 2 decisions (lighting round)
+
+1. **Quality mode automatic/custom** (`graphics.light_quality_mode`): Automatic = frame-time governor, Custom = every effect individually controllable; see [lighting system §9](../architecture/lighting-system.md#9-performance-budget-measured-2026-10-17).
+2. **Cones use the depth fade** (depth prepass on the main camera; measured in the real game during implementation).
+3. **Night (moon) shafts are on by default.**
+
+## 10. Round 3, Phase C: lighting, reflections and weather (implemented 2026-10-17/18)
+
+Branch `fix/map-and-lighting-systems` (from `master` 6cdbd05). Nine agents in separate worktrees, merged one by one; every merge was followed by fmt, workspace clippy and the tests of the touched crates, the whole workspace after each larger step.
+
+| Item | What it does | Design |
+| :--- | :--- | :--- |
+| Weather | the install's presets (`Weather/*.owt`), fog, clouds, rain/snow, wet ground via the shared `Wetness`, script variables, four live settings, `sim.set_time --weather` | [weather](../architecture/weather.md) |
+| `MainCamera` + HDR | marker for the player's view; 48 query sites converted; HDR on by default (`graphics.hdr`), clear colour converted | [camera system](../architecture/camera-system.md), [lighting system §6.2](../architecture/lighting-system.md) |
+| Quality mode | `graphics.light_quality_mode` automatic/custom, ten custom controls, six-level ladder, Environment row | [lighting system §9](../architecture/lighting-system.md) |
+| Moon, rays | moon model (Meeus series, 11 phases within 5 min), `MoonLight`, one shadow carrier, `MoonMaterial` phase disc, sun/moon god rays with `VolumetricFog`, `OPTS_SHAFT_TUNE` override | [lighting system §5, §6](../architecture/lighting-system.md) |
+| Cones, light rooms | ray-marched proxy cones for lanterns and headlights with depth fade, prepass-ready gate, ground clip, bounded accumulation; cabin layer, CPU rules, `NoMapLighting` | [lighting cones](../architecture/lighting-cones.md) |
+| Glass, mirrors | one shared sky cube map for glass reflections, live rear-view mirror cameras on the player's vehicle (`reflexion<N>.bmp` panes, at most 2, every 2nd frame, HDR) | [lighting system §9.3](../architecture/lighting-system.md), [reflections research](../architecture/reflections-research.md) |
+| Governor | judges missed deadlines (late = 1.25 × budget), works under vsync, new `graphics.light_governor_target_fps` | [lighting system §9.1](../architecture/lighting-system.md) |
+| Paused lighting | scenery tick re-evaluates lights at a zero time step; map-light and glow fades on real time | this page |
+
+**Tests:** whole workspace 1,956 passed, 0 failed; with the installation (opts-core, opts-bevy, opts-traffic, opts-sim, opts-game, the two known golden screens skipped) 1,567 passed, 0 failed; fmt, clippy `-D warnings` and the docs build clean. Known rare flake `home::tests::a_blocked_continue…` (about 1 in 20 runs).
+
+**Found live and fixed during integration** (each only visible on the real GPU): the cone white-out without or before the depth prepass; sun rays far too strong at a low sun (mean luminance 0.71 → +0.027 over rays-off); lamps dark while the simulation is paused after a time jump (the Environment page's lighting preview); the governor dropping to level 5 in 20 s under vsync (frame times can never be below the refresh interval).
+
+**Measured live on the RTX 3060, 1080p, Berlin-Spandau:** cones 23-64 active, selection 15-47 µs; sun rays +0.027 (low sun) / −0.003 (noon); moon at night +0.038 (halo); HDR on/off 0.08 % mean error; governor with vsync on (75 Hz display, budget 16.67 ms): level 0, no late frames, no level change in the log; with an unreachable target (240 fps) one step down per 5 s to level 5, one step back up after about a minute of clean frames.
+
+**Not verified:** mirror image orientation against the real driving view (dev override `OPTS_MIRROR_FLIP=u|v|uv`); glass reflections at the sun on a window; light rooms in a cockpit at night with the cabin lights on; cone intensity tuning for AI headlights with traffic in view; the real-game GPU cost of the depth prepass; moon shafts at night against `MOON_SHAFT_GAIN`; ground fog from above (the whole view whites out, fog is not height-limited).
+
+**Deviations:** the cone criterion is the `cone` flag of `[light_enh_2]` (not "angle < 180°"); the `RenderLayers` finding (layers do not filter lit meshes); no additive-mesh cone fallback (the cap is the fallback); mirror cameras use `Tonemapping::None` (the main camera tonemaps once); cube map 64², regenerated at most every 2 s.
+
+**Open questions:** Q-LS01..14 in the lighting page; which cone data wins on disagreement between `[light_enh_2]` and `[spotlight]` (the `[spotlight]` wins on the player vehicle); `HAZE_BASE` and weather fog combination; cone brightness (`ConeStyle`).

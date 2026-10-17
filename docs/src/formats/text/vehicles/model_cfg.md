@@ -223,8 +223,10 @@ Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspensio
 - `[mouseevent] <name>`: the name is a script trigger (the SD77's 94 hot-spots use the same names as `keyboard.cfg`, e.g. `bus_doorfront0`, `horn`, `kw_fernlicht_toggle`). Click raises `<name>`, the first drag movement `<name>_drag`, release `<name>_off`.
 - `[light_enh]` / `[light_enh_2]` (2026-10-17, C3): parsed with the `.sco` layout (`ModelConfig::lights`, with the LOD threshold and mesh they follow; malformed blocks go to `ModelConfig::warnings`). The lights of the detail LOD become glow sprites under the vehicle root (not under a LOD group), for player and AI vehicles: brightness = variable × factor clamped to `0..=1`, approached with the block's time constant (parameter 23), sized and faded by the cone like scenery lights. Forward-facing white lights count as headlights: the nearest six vehicles whose headlights shine get one real, shadowless spot light each, with 25 % distance hysteresis. AI brake lights also show while the vehicle stands.
 - `[matl_nightmap]` is not rendered yet.
+- **Visible light cones** (2026-10-17, [lighting cones](../../../architecture/lighting-cones.md#implementation)): a headlight shows a ray-marched cone while it shines. The player vehicle's `[spotlight]`s each get a cone as a child of their `SpotLight` (so it follows `Spot_Select` through the light's own intensity); the angles are read as full angles (like `[light_enh_2]`: 30/70 gives a 25° half angle, the widest headlight cone) and the length is the range capped at 40 m. A vehicle without `[spotlight]` (AI, parked) gets a cone per forward-facing white `[light_enh_2]` ([`is_headlight`](../../../architecture/lighting-system.md#2-what-the-content-says-measurements)), brightness from the same `AI_Light`-style variable as its glow: half angle from the outer angle halved (kept in 6°..25°; the corpus writes 190° for headlights), length 30 m because the block has no range. When a model has both, the `[spotlight]` data wins for the player vehicle (the real light's data) and the `[light_enh_2]` headlights get no cone, so a beam is never drawn twice. Tail, brake and indicator lights get no cone. The `cone` flag (parameter 22) of a vehicle `[light_enh_2]` is not used: 3,755 of 4,643 headlights carry it, 14,587 of 18,599 other lights too (indicators, interior lamps), so it does not mark beams there.
+- **Cabin lights** (`[interiorlight]`) of the player vehicle are on render layer 1 and in the main camera's views only in an interior view or within 12 m of the vehicle ([light rooms](../../../architecture/lighting-system.md#4-light-rooms-and-the-layer-convention)). AI and parked vehicles create none.
 
-Implementation: `opts_bevy::vehicle_lights`, `opts_bevy::vehicle_glow`, `opts_bevy::vehicle_triggers`.
+Implementation: `opts_bevy::vehicle_lights`, `opts_bevy::vehicle_glow`, `opts_bevy::vehicle_triggers`, `opts_bevy::light_cones`, `opts_bevy::light_rooms`.
 
 > ⚠️ **Open Question:** When both `origin_trans` and `origin_from_mesh` are present, which takes precedence? Observation suggests `origin_from_mesh` overrides. **Needs verification.**
 
@@ -281,6 +283,8 @@ envmap_lenkrad2.bmp
 | `[useTextTexture]` | 1 (index) | Binds a previously-declared `[texttexture]` to this material. |
 | `[alphascale]` | 1 (varname) | Modulates alpha by a script variable. |
 | `[texcoordtransY]` | 1 (varname) | Translates texture coordinates vertically by a variable (used for wiper water effects). |
+
+> **Mirror panes.** There is no mirror keyword. OMSI's convention (from the file names, not from a spec) is that the pane of a rear-view mirror is a separate material of the mirror's `.o3d` with the texture **`reflexion<N>.bmp`** (N 0 to 5; about 800 mesh files in 92 vehicle folders of the reference installation, e.g. the MAN SD77 with panes 0 to 2); the housing of the same unit uses its own texture (`nlc_side_mirror.dds`, `sl_mirrors.dds`, ...). The renderer treats the `reflexion<N>` part as the surface for the live mirror picture ([lighting system §9.3](../../../architecture/lighting-system.md#93-implemented-sky-cube-map-for-glass-and-mirror-cameras-2026-10-17-agentlighting-reflections)); what OMSI itself puts on it is not derivable from the files (Q-RF01).
 
 > ⚠️ **Open Question:** The role of `[matl_item]` is unclear. It appears after `[matl_change]` but its effect is not documented. It may act as a group terminator. **Needs verification.**
 
@@ -351,11 +355,11 @@ The most capable light system. The comments in the sample file provide a complet
 | Lines | Field |
 | :--- | :--- |
 | 1 | `variable` — script variable that switches/dims the light (`door_light_3`, `lights_fahrerlicht`) |
-| 2 | **range** in metres: the distance at which the light has fallen to about 63 % (📚; corpus values `0.25`–`1`, e.g. `0.4`, `0.7`) ❓ earlier drafts called this a 0–1 *factor* |
+| 2 | **range** in metres: the distance at which the light has fallen to about 63 % (📚) ❓ earlier drafts called this a 0–1 *factor*. **Corpus (3,568 `model*.cfg`, 6,174 uses, 2026-10-17): min 0, median 1.14 m, max 8.1 m; `1.0` ×1,521, `2.0` ×1,305, `1.5` ×575, `0.85` ×464, `0.5` ×272; only 211 above 2.5 m.** The earlier "0.25–1" was too low |
 | 3–5 | `R, G, B` (0–255; typical `205 200 175`) |
 | 6–8 | `x, y, z` position |
 
-✅ Corpus: 6,173 uses; the common shapes are one name plus seven numbers (name, range, R, G, B, x, y, z → **8 lines**); trailing comment banners are not parameters. Limits (📚): at most **four** interior lights per object and only the four nearest active ones light moving passengers; lights shine through objects (no shadows); only the player vehicle's interior lights count.
+✅ Corpus: 6,173 uses; the common shapes are one name plus seven numbers (name, range, R, G, B, x, y, z → **8 lines**); trailing comment banners are not parameters. Limits (📚): at most **four** interior lights per object and only the four nearest active ones light moving passengers; lights shine through objects (no shadows); only the player vehicle's interior lights count. **Census (2026-10-17):** 829 cfgs, median 6 and at most 24 interior lights per cfg (639 cfgs list more than four, so the "four" is a per-passenger limit ❓); height z median 2.75 m, x median 0 (6,019 of 6,022 within ±1.4 m of the centre line), 124 distinct variables (`lights_beleuchtung_unterdeck` 1,634, `…_oberdeck` 1,182, `lights_fahrerlicht` 333, `door_light_1` 224), colour `205 200 175` in 43 %; only 296 (4.8 %) are long enough to reach the ground and 68 % reach through a side wall by up to about 1 m, so an interior light is local and needs no light-room separation ([lighting system §4](../../../architecture/lighting-system.md#4-light-rooms-and-the-layer-convention)). `[light_enh_2]` bound to interior-style variables: 1,192 of 32,218 uses; `[spotlight]`: 2,206 uses in 662 cfgs, range 500 m ×411, cones 30/70 ×1,228.
 
 --- | :--- |
 | 1 | `variable` |

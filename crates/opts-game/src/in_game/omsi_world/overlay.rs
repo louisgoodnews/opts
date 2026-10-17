@@ -137,7 +137,7 @@ pub fn track_position(
     mut since_trace: Local<f32>,
     mut last: Local<LastTiles>,
     mut stats: ResMut<WorldStats>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     vehicle: Query<&GlobalTransform, With<opts_bevy::PlayerVehicle>>,
     mut ended: Local<Option<PositionReadout>>,
 ) {

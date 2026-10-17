@@ -322,6 +322,7 @@ pub fn stage_message(state: &SimulationLoadState) -> (&'static str, L10nArgs) {
 /// The manifest texts of the session that is loading.
 pub fn manifest_lines(
     loc: &Localization,
+    weather: &opts_bevy::WeatherCatalogue,
     session: &InGameSessionInfo,
     setup: &NewGameSetup,
 ) -> [(Tile, [String; 2]); 3] {
@@ -351,7 +352,7 @@ pub fn manifest_lines(
                 format!(
                     "{} · {}",
                     crate::new_game_screen::planner::clock_text(&when),
-                    crate::new_game_screen::texts::weather_name(loc, &when)
+                    crate::new_game_screen::texts::weather_name(loc, weather, &when)
                 ),
             ],
         ),
@@ -373,6 +374,7 @@ pub fn update_loading_ui(
     report: Res<LoadReport>,
     session: Res<InGameSessionInfo>,
     setup: Res<NewGameSetup>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
     loc: Res<Localization>,
     mut fill: Query<&mut Node, With<ProgressBarFill>>,
     mut percent: Query<&mut Text, (With<PercentText>, Without<ManifestText>)>,
@@ -404,7 +406,7 @@ pub fn update_loading_ui(
             *a = args.clone();
         }
     }
-    let lines = manifest_lines(&loc, &session, &setup);
+    let lines = manifest_lines(&loc, &weather, &session, &setup);
     for (m, mut t) in &mut manifest {
         let new = &lines
             .iter()

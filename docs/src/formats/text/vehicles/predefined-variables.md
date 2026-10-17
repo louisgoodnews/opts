@@ -106,7 +106,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `Axle_Suspension_1_L` | 656 | L.L |  |
 | `Axle_Suspension_0_L` | 652 | L.L |  |
 | `Axle_Suspension_1_R` | 644 | L.L |  |
-| `PrecipRate` | 607 | L.L, L.S |  |
+| `PrecipRate` | 607 | L.L, L.S | precipitation rate; OPTS sets `0…1` = the `.owt` intensity / 255, 0 when dry (the scale is a guess ❓) |
 | `Axle_Springfactor_2_L` | 603 | L.L, S.L |  |
 | `PAX_Exit1_Req` | 595 | L.L, S.L |  |
 | `PAX_Exit0_Req` | 566 | L.L, S.L |  |
@@ -180,7 +180,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `PAX_Entry6_Open` | 64 | L.L, S.L |  |
 | `PAX_Entry7_Open` | 57 | S.L |  |
 | `train_backcoupling` | 55 | L.L |  |
-| `PrecipType` | 50 | L.L, L.S |  |
+| `PrecipType` | 50 | L.L, L.S | what falls; OPTS uses the `.owt` coding 0 none, 1 rain, 2 snow ❓ |
 | `PAX_Entry6_Req` | 48 | L.L, S.L |  |
 | `PAX_Entry7_Req` | 48 | L.L, S.L |  |
 | `AI_Brakelight` | 36 | L.L |  |
@@ -226,14 +226,14 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `wearlifespan` | 2,208 | L.L |  |
 | `Weather_Temperature` | 2,168 | L.L, L.S | outside air temperature (°C) 📚 |
 | `Year` | 1,749 | L.S |  |
-| `PrecipRate` | 607 | L.L, L.S |  |
-| `Weather_AbsHum` | 546 | L.S |  |
+| `PrecipRate` | 607 | L.L, L.S | precipitation rate; OPTS sets `0…1` = the `.owt` intensity / 255, 0 when dry (the scale is a guess ❓) |
+| `Weather_AbsHum` | 546 | L.S | absolute humidity of the outside air; OPTS computes g/m³ from the temperature and the dew point of the weather preset ❓ unit |
 | `DayOfYear` | 304 | L.S, S.L |  |
 | `coll_energy` | 292 | L.S |  |
 | `coll_pos_y` | 286 | L.S |  |
 | `coll_pos_z` | 137 | L.S |  |
 | `coll_pos_x` | 60 | L.S |  |
-| `PrecipType` | 50 | L.L, L.S |  |
+| `PrecipType` | 50 | L.L, L.S | what falls; OPTS uses the `.owt` coding 0 none, 1 rain, 2 snow ❓ |
 | `SunAlt` | 40 | L.S, S.L |  |
 | `AutoClutch` | 37 | L.S |  |
 | `Pause` | 16 | C.L, L.L, L.S, S.L |  |

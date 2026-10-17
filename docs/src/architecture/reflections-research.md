@@ -1,5 +1,9 @@
 # Reflections Research: Mirrors, Glass and Wet Surfaces
 
+> **Update 2026-10-17 (steps 5 and 6):** the sky cube map for glass, the glass look and the mirror cameras are implemented as normal features controlled by `LightQuality` (`glass_reflections`, `mirror_count`, `mirror_every`); see [lighting system §9.3](lighting-system.md#93-implemented-sky-cube-map-for-glass-and-mirror-cameras-2026-10-17-agentlighting-reflections). Findings that correct this page: OMSI marks mirror panes with the texture **`reflexion<N>.bmp`** (about 800 mesh files, 92 vehicle folders, **including the reference MAN SD77**, panes 0 to 2), the mirror-named textures are the housing; `GeneratedEnvironmentMapLight` refilters every frame (Q-RF04). The `env`, `glass` and `mirror` switches of `OPTS_REFLECT` and the `Camera3d` toggle hack are gone.
+>
+> **Update 2026-10-17:** the weather now writes `Wetness` and drives the ground shader's wet uniform (puddles, snow cover) and the road materials; see [weather](weather.md) §6. The env-switched path below remains for standard materials only.
+
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | Research complete, prototypes on branch `research/reflections` (off by default); recommendation below |
@@ -33,7 +37,7 @@ Source: the offline example `reflection_census` (`cargo run --release -p opts-be
 * **Alpha modes** of `[matl_alpha]`: `2` 207,443; `1` 17,666; `0` 2,360; `3` 896; `16` 2. Mode 2 (blend) is the glass mode.
 * **Glass:** 20,163 materials have a glass-like texture name (`fenster*`, `glass`, `scheibe`, `window`); 18,353 of them use alpha mode 2, 15,453 also have an env map. Top names: `fenster.tga` 3,946, `fenster_int.tga` 3,203, `glass.tga` 1,258. 56,943 env-mapped materials are neither glass nor mirror named (paint, chrome, steering wheel: `envmap_lenkrad2.bmp`).
 * **Mirrors:** 176 mirror-named materials (`sl_mirrors*.dds` 57 each, `nlc_side_mirror.dds`, `nlc_mirror_int.dds`, `o3d_spiegel.dds`, traffic mirrors `verkehrsspiegel`). 909 mirror-named files overall (meshes `Spiegel_links.o3d`, textures). Vehicles with the most mirror-named files: TH_Ueberlandbus 110, Citybus 530 (Kajosoft) 90 and 81, C2-Fam 80, MAN_NewLionsCity 49. The mirror surface is a normal mesh whose material also carries an env map.
-* **The reference vehicle MAN SD77 has no env map and no mirror texture** (no `matl_envmap` in `MAN_SD200`): the prototypes needed another bus (MAN New Lions City) for the mirror and glass scenes.
+* **Correction (2026-10-17):** the reference vehicle MAN SD77 does have mirror panes (`reflexion0.bmp` to `reflexion2.bmp`); only its env map and mirror-*named* textures are absent. Original statement: **the reference vehicle MAN SD77 has no env map and no mirror texture** (no `matl_envmap` in `MAN_SD200`): the prototypes needed another bus (MAN New Lions City) for the mirror and glass scenes.
 * **What the original does:** not derivable from the files. The evidence says static env-mapped surfaces; whether OMSI renders a real rear-view picture cannot be settled from data (the engine is not inspected, ADR-0002). Open question Q-RF01 below.
 
 ## 3. Bevy 0.20 technique survey
@@ -128,6 +132,8 @@ Per-pass observations (cockpit, single runs): baseline GPU is dominated by `main
 
 ## 7. Recommendation and phased plan
 
+> **Status 2026-10-17:** phase A (mirrors) and B (glass) are implemented, with `MainCamera` as the prerequisite; deviations: panes by `reflexion<N>` instead of mirror-named textures, mirror cameras without tonemapper (the main camera tonemaps once), the settings are the `LightQuality` controls (`mirror_count`, `mirror_every`, `glass_reflections`) instead of one `graphics.reflections` setting, transmission and SSR are not offered. Phase C (wet surfaces) was done by the weather work.
+
 1. **Phase A, mirrors first.** (a) Introduce a `MainCamera` marker and change the single-camera queries to use it (a prerequisite refactor, no feature). (b) Mirror cameras per mirror mesh (recognised by texture name `*spiegel*`/`*mirror*` initially, later by an explicit config keyword in the add-on), reduced resolution (start at 256x128, setting 128/256/512), reduced rate (every 2nd or 3rd frame), shadows and detail reduced for the mirror view, only for the player vehicle, only when the mirror is inside the main frustum, mirror view distance capped. (c) Re-measure with the toggle hack gone; this is the first thing the milestone must do because this research could not obtain the number.
 2. **Phase B, glass next.** A sky cube map captured from the sky dome (or a gradient derived from `envir.cfg`) as view `GeneratedEnvironmentMapLight`, refreshed at most every few seconds; glass-named alpha-blended materials get low roughness and premultiplied alpha; the OMSI `[matl_envmap]` strength can scale reflection (`reflectance`). Transmission only as the "High" quality tier. Windows of buildings use the same path.
 3. **Phase C, wet surfaces with the weather milestone.** `Wetness` resource written by the weather system; standard-material parameter set (as prototyped), puddle mask in the ground shader, an extension material for road splines (UV-space puddle noise) and clearcoat for wet vehicle paint; env reflections carry the look. SSR stays off unless the renderer moves to deferred for other reasons (DLSS strategy), then it becomes a "Reflections: Ultra" option.
@@ -146,10 +152,10 @@ Per-pass observations (cockpit, single runs): baseline GPU is dominated by `main
 | ID | Question |
 | :--- | :--- |
 | Q-RF01 | How does OMSI itself produce rear-view mirror pictures and how does it use the `[matl_envmap]` image (sphere map, mask, strength)? Needs a mutation test, no data in `docs/src/formats` answers it. |
-| Q-RF02 | True per-mirror cost without the `Camera3d` toggle (`mirror_keep` switch). |
+| Q-RF02 | True per-mirror cost without the `Camera3d` toggle: the lighting benchmark measured about 0.7 ms per view ([lighting cones, E](lighting-cones.md#e-mirror-cameras-and-the-single-camera-assumption)); the game itself is not measured. |
 | Q-RF03 | Visual quality of glass modes and wet surfaces on a full screenshot set (windscreen, building window, wet road). |
-| Q-RF04 | Does `GeneratedEnvironmentMapLight` refilter every frame or only when the source changes? |
-| Q-RF05 | Can mirror geometry be recognised only by texture name, or do add-ons mark mirrors elsewhere (mesh name, scripts)? 176 mirror-named materials found; the corpus shows no keyword. |
+| Q-RF04 | ~~Does `GeneratedEnvironmentMapLight` refilter every frame or only when the source changes?~~ **Answered (read from `bevy_pbr-0.20.0/src/light_probe/generate.rs`): every frame**, the compute passes and bind groups are recorded per frame for every entity with the component; the cost is constant while the light is on. |
+| Q-RF05 | ~~Can mirror geometry be recognised only by texture name?~~ **Answered:** by the pane texture `reflexion<N>.bmp` (OMSI's convention; a mirror mesh file holds housing and pane as separate materials). Add-ons with other pane names (C2 `t_c2_spiegel_*`) are not recognised and keep a static texture. |
 
 ## Provenance
 

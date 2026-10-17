@@ -304,7 +304,7 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
             return Some(Err(e));
         }
         let rotation = Quat::from_euler(EulerRot::YXZ, yaw_rad, pitch_rad, 0.0);
-        let mut cameras = world.query_filtered::<&mut Transform, With<Camera3d>>();
+        let mut cameras = world.query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
         for mut t in cameras.iter_mut(world) {
             t.translation = position;
             t.rotation = rotation;

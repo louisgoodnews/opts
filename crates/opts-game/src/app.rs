@@ -129,6 +129,8 @@ pub fn build_app(args: CliArgs) -> App {
     // F1 bug reports (screenshot + text); needs a window, so not in headless runs.
     if !args.headless {
         app.add_plugins(opts_bevy::ground_material::GroundMaterialPlugin)
+            .add_plugins(opts_bevy::LightConeRenderPlugin)
+            .add_plugins(opts_bevy::moon_material::MoonMaterialPlugin)
             .add_plugins(opts_bevy::reporting::ReportingPlugin)
             .add_systems(Update, crate::report_context::update_report_context);
     }

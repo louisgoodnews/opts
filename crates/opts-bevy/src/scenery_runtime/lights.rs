@@ -129,7 +129,7 @@ pub fn spawn_light_sprite(
 /// Sizes and shows each light sprite by its brightness as seen from the camera, and turns its
 /// glow disc towards the camera.
 pub fn scenery_light_system(
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     mut lights: Query<(
         &SceneryLight,
         &GlobalTransform,

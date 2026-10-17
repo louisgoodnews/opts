@@ -361,6 +361,7 @@ passengercabin\passengercabin_NL202.cfg
     commands.spawn((
         (
             Camera3d::default(),
+            opts_bevy::MainCamera,
             world_cam_transform,
             Projection::Perspective(PerspectiveProjection {
                 fov: initial_driver_cam.fov_deg.to_radians(),

@@ -2,7 +2,7 @@
 //!
 //! A [`Look`] is a user setting (settings screen, `--look`, control protocol `render.look`) that
 //! maps to [`LookParams`]. The [`ActiveLook`] resource holds the look in effect; [`LookPlugin`]
-//! applies its parameters live to every `Camera3d` ([`apply_look_to_cameras`]) and the sky system
+//! applies its parameters live to the [`MainCamera`](opts_bevy::MainCamera) ([`apply_look_to_cameras`]) and the sky system
 //! reads [`LookParams::ambient_scale`]. Provisional values, see M-0060 step 1 (physical calibration
 //! follows in step 2): *Vivid* is the default, *Bevy default* reproduces the behaviour before the
 //! looks existed.
@@ -65,7 +65,7 @@ impl Look {
 /// What a [`Look`] does to the camera and the sky.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct LookParams {
-    /// Tonemapper of every `Camera3d`.
+    /// Tonemapper of the main camera.
     pub tonemapping: Tonemapping,
     /// Saturation applied after tonemapping (`1.0` = unchanged).
     pub post_saturation: f32,
@@ -170,11 +170,58 @@ pub fn grading_for(params: LookParams) -> ColorGrading {
     g
 }
 
-/// Applies the active look to every `Camera3d`: all of them when the look changed, new ones when
+/// CPU replica of Bevy's `SomewhatBoringDisplayTransform` (`bevy_core_pipeline` tonemapping.wesl).
+fn somewhat_boring(c: [f32; 3]) -> [f32; 3] {
+    let curve = |v: f32| 1.0 - (-v).exp();
+    let lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    let cb = -0.1146 * c[0] - 0.3854 * c[1] + 0.5 * c[2];
+    let cr = 0.5 * c[0] - 0.4542 * c[1] - 0.0458 * c[2];
+    let bt = curve(cb.hypot(cr) * 2.4);
+    let desat = ((bt - 0.7) * 0.8).max(0.0).powi(2);
+    let k = (curve(lum) / lum.max(1e-5)).max(0.0);
+    let mut out = [0.0; 3];
+    for (i, o) in out.iter_mut().enumerate() {
+        let tm0 = c[i] * k;
+        let tm1 = curve(c[i] + (lum - c[i]) * desat);
+        *o = (tm0 + (tm1 - tm0) * bt * bt) * 0.97;
+    }
+    out
+}
+
+/// The scene-linear colour a camera with `Hdr` must clear to so that, after its tonemapper, the
+/// sky region shows `display` (linear RGB `0..=1`), exactly what the 8-bit camera showed when the
+/// clear colour bypassed the tonemapper (it was written straight to the target).
+///
+/// `SomewhatBoringDisplayTransform` is inverted numerically with its CPU replica, `None` is the
+/// identity, every other tonemapper is approximated by an inverse Reinhard curve `x / (1 + x)` (an
+/// approximation: the LUT based ones cannot be evaluated on the CPU). Colour grading (the
+/// `Vivid` post saturation of 1.1) is not inverted.
+#[must_use]
+pub fn hdr_clear_color(tonemapping: Tonemapping, display: [f32; 3]) -> [f32; 3] {
+    // The curves reach 1 only at infinity; stay below the white the target can show.
+    let target = display.map(|v| v.clamp(0.0, 0.97));
+    match tonemapping {
+        Tonemapping::None => display,
+        Tonemapping::SomewhatBoringDisplayTransform => {
+            let target = display.map(|v| v.clamp(0.0, 0.9));
+            let mut x = target.map(|v| v.max(1e-4));
+            for _ in 0..48 {
+                let y = somewhat_boring(x);
+                for i in 0..3 {
+                    x[i] = (x[i] * target[i] / y[i].max(1e-5)).clamp(1e-4, 64.0);
+                }
+            }
+            x
+        }
+        _ => target.map(|v| v / (1.0 - v)),
+    }
+}
+
+/// Applies the active look to the `MainCamera`: all of them when the look changed, new ones when
 /// they appear.
 pub fn apply_look_to_cameras(
     look: Res<ActiveLook>,
-    cameras: Query<(Entity, Has<LookApplied>), With<Camera3d>>,
+    cameras: Query<(Entity, Has<LookApplied>), With<opts_bevy::MainCamera>>,
     mut commands: Commands,
 ) {
     let params = look.0.params();
@@ -205,6 +252,10 @@ impl Plugin for LookPlugin {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn reinhard(x: f32) -> f32 {
+        x / (1.0 + x)
+    }
 
     #[test]
     fn vivid_is_the_default_and_keys_round_trip() {
@@ -249,6 +300,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn the_hdr_clear_colour_round_trips_through_the_tonemapper() {
+        for display in [
+            [0.5, 0.6, 0.8],
+            [0.30, 0.35, 0.45],
+            [0.8, 0.8, 0.8],
+            [0.0, 0.0, 0.0],
+        ] {
+            let x = hdr_clear_color(Tonemapping::SomewhatBoringDisplayTransform, display);
+            let back = somewhat_boring(x);
+            for i in 0..3 {
+                assert!(
+                    (back[i] - display[i]).abs() < 0.01,
+                    "{display:?} -> {x:?} -> {back:?}"
+                );
+            }
+            let r = hdr_clear_color(Tonemapping::Reinhard, display);
+            for i in 0..3 {
+                assert!((reinhard(r[i]) - display[i]).abs() < 0.01);
+            }
+        }
+        assert_eq!(
+            hdr_clear_color(Tonemapping::None, [0.2, 0.4, 0.6]),
+            [0.2, 0.4, 0.6]
+        );
+    }
+
     fn app_with_look(look: Look) -> App {
         let mut app = App::new();
         app.insert_resource(ActiveLook(look));
@@ -259,7 +337,10 @@ mod tests {
     #[test]
     fn cameras_follow_the_active_look_live() {
         let mut app = app_with_look(Look::Vivid);
-        let cam = app.world_mut().spawn((Camera3d::default(),)).id();
+        let cam = app
+            .world_mut()
+            .spawn((Camera3d::default(), opts_bevy::MainCamera))
+            .id();
         app.update();
         let tm = *app.world().get::<Tonemapping>(cam).expect("tonemapping");
         assert_eq!(tm, Tonemapping::SomewhatBoringDisplayTransform);
@@ -277,7 +358,10 @@ mod tests {
             ColorGrading::default()
         );
         // A camera spawned later gets the current look although the look did not change.
-        let late = app.world_mut().spawn(Camera3d::default()).id();
+        let late = app
+            .world_mut()
+            .spawn((Camera3d::default(), opts_bevy::MainCamera))
+            .id();
         app.update();
         assert_eq!(
             *app.world().get::<Tonemapping>(late).expect("tonemapping"),

@@ -166,7 +166,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_alpha]` | 1 | Alpha mode. Whole-corpus values (25,508 uses): `2` ×12,119, `1` ×10,290, `0` ×2,201, `3` ×896, `16` ×2 *(the earlier statement here, "`1` in 99 %", does not hold corpus-wide)*. The community wiki lists `0` opaque, `1` full transparency, `2` partial transparency 📚; `3` and `16` are undocumented. OPTS reads `0` as opaque (the texture's alpha channel is ignored); corpus evidence 2026-10-12: the `Ampelmast_*` and `P_*` objects, which stand on the maps, have fully transparent textures and `[matl_alpha] 0`, so reading `0` as a cutout made them invisible ([triage](../../meta/scenery-benchmark-triage-2026-10-12.md)). Other modes unverified ([Q-SCO-001](#-open-questions)). |
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
-| `[matl_lightmap]` | 1 | Lightmap bitmap. |
+| `[matl_lightmap]` | 1 | Lightmap bitmap (emissive lit windows and signs). 456 `.sco` (by name 137 signs and signals, 106 bus stops and shelters, 38 buildings); 73 placements in Berlin-Spandau. |
 | `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` (the variable-less `[matl_lightmap]` path) instead of swapping the texture ❓. |
 | `[matl_transmap]` | — | Material fades by `[alphascale]`. |
 | `[matl_noZwrite]` | — | Do not write depth (transparent decals). |
@@ -181,8 +181,8 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[visible]` | 2 | `<variable>`, `<flag>`. Mesh visible only while the variable is nonzero (`red`, `green`, `yellow`, `blink_visible`, `snow_visible`, `sommerhalbjahr`, …). |
 | `[rendertype]` | 1 | Render pass: `0`–`4`, or `surface`, `presurface`, `on_surface`. |
 | `[NightMapMode]` | 1 | Night lighting, see below. |
-| `[LightMapMapping]` | — | Mesh uses lightmap UVs. |
-| `[nomaplighting]` | — | Object is not lit by map lights. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet: map lights are Bevy point lights and light every object in range. |
+| `[LightMapMapping]` | — | Mesh uses lightmap UVs: the UVs address the **tile's baked terrain light map** (`tile_*.map.LM.bmp`, 256 × 256, [tiles.md](../map/tiles.md)), not a per-object map. Corpus (55,721 `.sco`, 2026-10-17): 9,413 files, 7,164 of them `[surface]` (road ribbons); 246 placements in Berlin-Spandau. |
+| `[nomaplighting]` | — | Object is not lit by map lights. **Corpus (55,721 `.sco`, 2026-10-17): 688 files, 654 of them (95 %) also carry a `[maplight]`**: it marks the objects that emit their own map light (street, neon, sodium and tunnel lamps, bus shelters with an inner lamp; 381 lamps, 170 road furniture, 24 buildings, 9 bus stops by name), so a lamp is not lit by its own light. It does **not** mark interiors, tunnels or shelters in general. Berlin-Spandau: 1,588 placements, 1,587 of the 1,607 placed `[maplight]` objects. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet. Bevy 0.20 has no per-mesh light mask (`RenderLayers` on a light select views and shadow casters only), so the planned handling is a night material swap, see [lighting system §4.6](../../architecture/lighting-system.md#46-nomaplighting-handling). |
 | `[detail_factor]` | 1 | Size multiplier for **distance culling**. 0.5 shows it at half size, 2 shows it only when twice as large. |
 | `[noDistanceCheck]` | — | Never culled by distance. |
 
@@ -242,7 +242,7 @@ Barer-Str-44.o3d
 | :--- | :--- | :--- |
 | `[light_enh]` | 12 | Basic light effect: x, y, z, r, g, b (0–255), size, then a **variable** name controlling brightness, followed by further tuning values. |
 | `[light_enh_2]` | 23–24 | Full light effect, see below. |
-| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). 1,771 street lamps on Berlin-Spandau. OPTS (2026-10-17): a marker per light; a pool of 48 shadowless point lights goes to the nearest lamps within 200 m of the camera every 0.25 s (hysteresis 15 m), only while `NightlightA` is on, fading in and out over 0.5 s; luminous power `4π·r²·E_full` with `E_full` = 15 lx (tunable, `MapLightSettings`), range `8·r` ([scenery runtime](../../architecture/scenery-runtime.md#map-lights-maplight)). |
+| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). 1,771 street lamps on Berlin-Spandau. OPTS (2026-10-17): a marker per light; a pool of 48 shadowless point lights goes to the nearest lamps within 200 m of the camera every 0.25 s (hysteresis 15 m), only while `NightlightA` is on, fading in and out over 0.5 s; luminous power `4π·r²·E_full` with `E_full` = 10,000 lx (`FULL_LUX`, tunable in `MapLightSettings`; the physical 15 lx of a street lamp is invisible under the game's fixed exposure), range `8·r` ([scenery runtime](../../architecture/scenery-runtime.md#map-lights-maplight)). |
 | `[smoke]` | 19 | Smoke emitter: position (3), direction (3), then tuning values. |
 | `[particle_emitter]` | many | Particle system with named sub-blocks. See below. |
 | `[tree]` | 5 | Billboard helper: texture, min height, max height, min width ratio, max width ratio. Followed by a `[mesh]` of the helper (`treehelper.x`, `Grashelfer.x`). |
@@ -266,7 +266,7 @@ The embedded documentation lists the layout (one value per line):
 | 19 | `factor` | Multiplier. |
 | 20 | `z-offset` | Pull towards viewer, to keep a light inside a solid visible. |
 | 21 | `parameters` | Bit mask: `+1` star, `+2` no fog effect, `+4` effect only. |
-| 22 | `cone` | `1` creates a volumetric cone (not for omni lights). |
+| 22 | `cone` | `1` creates a volumetric cone (not for omni lights). ✅ Census of `Sceneryobjects` (2026-10-17): of the directional lights 1,022 carry `1` (861 of them with an outer angle of 180° or more: the angles describe where the corona is visible, not the beam), 2,166 carry `0` (1,979 with an outer angle below 180°: traffic signals), 2 carry `2`; the renderer draws a [visible cone](../../architecture/lighting-cones.md#implementation) for `1` only (`ScoLight::volumetric_cone`). |
 | 23 | `timeconst` | Seconds to reach 63 % intensity (27 % on switch-off). |
 | 24 | `bitmap` | Effect texture; empty uses the default. |
 

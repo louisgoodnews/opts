@@ -32,6 +32,19 @@ pub struct Ctx<'a> {
     pub hardware_file: Option<std::path::PathBuf>,
     /// Theme files found by the background facts (never read from disk while building).
     pub theme_files: &'a [String],
+    /// The effective lighting quality (what the governor applies in automatic mode).
+    pub light: Option<&'a opts_bevy::light_quality::LightQuality>,
+}
+
+impl Ctx<'_> {
+    /// Whether `key` is a lighting control that the current mode makes inert: a custom control in
+    /// automatic mode, or the governor's target frame rate in custom mode.
+    #[must_use]
+    pub fn light_locked(&self, key: &str) -> bool {
+        use crate::settings_registry::lighting as l;
+        let automatic = l::is_automatic(self.settings);
+        (l::is_custom_key(key) && automatic) || (key == l::TARGET_FPS_KEY && !automatic)
+    }
 }
 
 /// A localized text element.
@@ -80,6 +93,14 @@ enum Usable {
 }
 
 fn usable(ctx: &Ctx, d: &SettingDescriptor) -> Usable {
+    if ctx.light_locked(d.key) {
+        let msg = if d.key == crate::settings_registry::lighting::TARGET_FPS_KEY {
+            "set-light-governor-disabled"
+        } else {
+            "set-light-auto-disabled"
+        };
+        return Usable::Needs(ctx.loc.t(msg));
+    }
     match d.available {
         Available::Always => Usable::Yes,
         Available::NotYet(p) => Usable::NotYet(p),
@@ -475,7 +496,16 @@ pub fn spawn_control(
 
 /// Spawns the row of `d` below `parent`.
 pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescriptor) {
-    let cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
+    let mut cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
+    if ctx.light_locked(d.key) {
+        // Automatic mode: show what the governor applies, not the stored custom value.
+        if let Some(shown) = ctx
+            .light
+            .and_then(|q| crate::settings_registry::lighting::text_for(q, d.key))
+        {
+            cur = shown;
+        }
+    }
     let row = c
         .spawn((
             Node {
@@ -550,7 +580,7 @@ pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescrip
         ))
         .id();
     spawn_control(c, right, ctx, d, &cur);
-    if d.is_stored() && !matches!(d.available, Available::NotYet(_)) {
+    if d.is_stored() && !matches!(d.available, Available::NotYet(_)) && !ctx.light_locked(d.key) {
         let at_default = cur == d.default;
         let b = ButtonBuilder::text("settings-reset")
             .with_key("settings-reset")
