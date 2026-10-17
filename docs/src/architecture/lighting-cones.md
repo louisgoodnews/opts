@@ -377,3 +377,71 @@ also help the 48 map lights)? ❓ 3. Is the 150 m shaft range enough (the cascad
 sun get a second long cascade only while rays are on? ❓ 4. Is a fallback ladder driven by measured GPU time acceptable (needs the timestamp queries, which are Vulkan/DX12 only), or by settings
 only? ❓ 5. Which cone data wins when `[light_enh_2]` and the vehicle `[spotlight]` disagree on
 angle and range? ❓ 6. 74.9 Hz display (DP-2): is the budget to be judged against 13.3 ms instead of 16.7?
+
+## Implementation
+
+Implemented 2026-10-17 on `agent/lighting-cones-rooms` (step 4 of the [lighting plan](lighting-system.md)): `opts_bevy::light_cones` (+ `shaders/light_cone.wesl`) and, for the rooms, `opts_bevy::light_rooms` ([lighting system 4.8](lighting-system.md#48-implemented-2026-10-17-agentlighting-cones-rooms)). Not run on a GPU by the implementer (no windows allowed): the shader is the prototype's, adapted, and unproven in the game until the live checks below are done.
+
+### What exists
+
+| Part | Where | Notes |
+| :--- | :--- | :--- |
+| Material and shader | `LightConeMaterial`, `shaders/light_cone.wesl` | The prototype's ray-marched proxy cone, march only: back faces (`cull_mode = Front`), `AlphaMode::Add` with shader alpha 0, no prepass of its own, no shadows. Steps: 8, or 4 when the camera is farther than 40 m from the apex (`ConeStyle::far_steps_distance_m`). One shared material and one shared 24-segment unit-cone mesh (`unit_cone_mesh`, CPU copy kept so Bevy computes the `Aabb` and frustum-culls it). All visible cones are one instanced draw. |
+| Per-cone data | model matrix and `MeshTag` | Apex = translation, axis = local -Z, length = Z scale, base radius = X scale. The tag packs colour (6 bits per channel), brightness (8 bits) and the inner soft-edge radius (6 bits) (`pack_tag`). Cone shape is static; brightness is written only when it changes. |
+| Look | `ConeStyle` (resource) | `density` 0.05 scatter per metre at the centre of a fully lit cone, `axial_power` 1.5, far-steps distance 40 m. Live-tunable (a changed resource is pushed into the shared material). Values are first guesses: the prototype never had a calibrated brightness. |
+| Sources | `lantern_cone_shape`, `headlight_cone_shape`, `spotlight_cone_shape` | Pure functions from `ScoLight` / `Spotlight` to a `ConeShape` (apex, direction, length, half angle, inner fraction, colour). |
+| Budget | `ConePool`, `light_cone_pool_system`, `select_cones` | See below. |
+| Depth fade | `cone_depth_prepass_system` | See below. |
+| Plugins | `LightConePlugin` (logic, headless-safe, part of `OptsAssetPlugin`), `LightConeRenderPlugin` (material, shader, mesh; added next to `GroundMaterialPlugin` in `opts-game/src/app.rs`, not in headless runs) | Cones in a headless run exist and are selected but have no mesh. |
+
+### Cone sources and the data decisions
+
+* **Scenery.** The discriminator is the `cone` flag (parameter 22 of `[light_enh_2]`, `ScoLight::volumetric_cone`), not "outer angle below 180°" as first planned. The census of `Sceneryobjects` (2026-10-17) shows why: the flagship lantern `neonlight_M_whip_S.sco` has inner/outer 120/200 and `cone` = 1, while 1,979 traffic-signal lights have an outer angle below 180° and `cone` = 0. 1,022 directional lights carry the flag. Omni lights never get a cone. The cone sits under the object root next to the glow sprite and reads that sprite's `SceneryLight::level` (variable x factor, `NightlightA`, no second evaluation), so it shows exactly when the glow does.
+* **Angles.** The corona angles of a lantern say where the glow is visible (up to 200°), not the beam. Half angle = outer / 2 kept in 10°..40° (lantern) or 6°..25° (headlight); the soft edge starts at the radius ratio of `tan(half x inner/outer) / tan(half)`. The cone values are read as full angles (the existing glow code's convention, Q-SR-08).
+* **Lengths.** A lantern pointing down reaches the ground (apex height / cos of the angle to the vertical, 2..14 m; the object origin is taken as ground level), else 6 m. A `[light_enh_2]` headlight has no range: 30 m. A `[spotlight]` uses its range capped at 40 m (the corpus ranges are 100..500 m; a 500 m cone would be a wall).
+* **Open question Q5 (which data wins when `[light_enh_2]` and `[spotlight]` disagree).** The player vehicle's cones come from its `[spotlight]`s (each cone is a child of its `SpotLight` entity and follows `Spot_Select` through the light's intensity over `ScriptLight::base_intensity`); its `[light_enh_2]` headlights then get no cone (`spawn_vehicle_glows_with_cones(..., false)`). A vehicle without `[spotlight]` (AI, parked) gets a cone per `[light_enh_2]` headlight (`is_headlight`) with brightness from the glow's level (`AI_Light`). The reason: `[spotlight]` is the real light's data (range, angles), `[light_enh_2]` is a corona description. Tail, brake and indicator lights get no cone.
+* **Known mismatch (not changed).** `spawn_vehicle_model` passes the `[spotlight]` cone angles to Bevy's `SpotLight` as half angles (`outer_angle: spot.outer_cone.to_radians()`), while the cone reads them as full angles. A 30/70 spotlight therefore lights a 70° half angle (Bevy clamps to 90°) but shows a 25° half-angle cone. If OMSI's values are full angles, the real light is too wide, not the cone too narrow. Left alone: it changes the look of the player's headlights and needs a live comparison.
+
+### Selection and budget
+
+`light_cone_pool_system` runs after `LightQualitySet` and `SceneryRuntimeSet`, so it sees this frame's levels and settings.
+
+* Every `SELECT_INTERVAL_S` = 0.15 s, and at once when `lantern_cones`, `headlight_cones` or `cone_cap` change: scan all cones; skip kinds the settings switch off, cones that are not lit (level <= 0.02), lanterns beyond 150 m and headlights beyond 250 m of the camera, and cones wholly behind the camera; score the rest by coverage `length x base radius / distance^2` (distance to the cone's centre); keep the best `cone_cap` (`select_cones`: partial selection, ties by entity). A cone that holds a slot counts 1.3x (`CONE_HYSTERESIS`), so a cone at the edge of the budget does not flicker. Everything that is not chosen is `Hidden`.
+* Every frame, only for the chosen cones (at most 96): read the level, show or hide, write the tag if it changed. A lamp that goes out hides its cone in the same frame; the slot is refilled at the next selection (at most 0.15 s).
+* Ladder: levels 0..5 give cap 64/48/16/0/0/0 with the lantern switch off from level 2 and the headlight switch off from level 3 (tests `the_ladder_levels_show_the_expected_cones`, `a_live_ladder_change_applies_in_the_next_frame`). The levels' "far cones 4 steps" is the shader's distance rule at every level (the shader has no per-level uniform).
+* `ConeStats` (resource) and `sim.get` (`light_cones`): cones in the world, eligible, active, hidden by the cap, microseconds of the last selection.
+
+**CPU cost** (headless test `the_cpu_cost_with_two_thousand_lamps_is_small`, the workspace's dev profile with optimised dependencies, 2,000 lit lamp cones spread over 400 x 300 m): a selection takes about 41 microseconds (it runs every 0.15 s, about 5 microseconds per frame at 60 fps); the per-frame part touches at most 96 cones (a few microseconds). The whole app update of that test, which also propagates the 2,000 transforms, averages 130 microseconds. The target of 0.2 ms with 2,000 lamps is met with a wide margin; at night in the game the scan also reads the glow levels (one random access per cone). A real map has more entities in the cache, so expect a factor of two to three more than the headless figure, not ten.
+
+### Depth fade
+
+`cone_depth_prepass_system` adds `DepthPrepass` (plus the marker `ConeDepthPrepass`, so only our own prepass is ever removed) to the `MainCamera` when `cone_depth_fade` is on, `cone_cap` > 0, a cone type is allowed, **and a cone shines** (`ConeStats::active > 0`); it stays on for `PREPASS_RELEASE_S` = 20 s after the last cone went out, and is removed at once when the setting turns off. Day-time scenes (lanterns off, headlights off) therefore never pay for the prepass (+1.6..2.2 ms in the synthetic scene). The prepass flag also changes the main-pass pipeline key of every mesh, so the first toggle compiles new pipelines (a short hitch is possible at dusk); the release delay keeps the toggling rare. With the prepass, the shader ends each cone's volume at the scene depth (the prototype's depth clip), without it the cone passes through geometry (the additive-mesh look).
+
+What the Bevy 0.20 source says about the prepass in this game (read, not run):
+
+* **MSAA:** supported. With `Msaa` on, the prepass texture is multisampled and `prepass_depth(frag_coord, sample_index)` reads the sample; the shader reads sample 0, which is exact in the interior of triangles and off by one sample at edges (a faint, 1-pixel edge difference, not a hole).
+* **Alpha-masked billboards (trees):** `StandardMaterial` with `AlphaMode::Mask` has a prepass pipeline with an alpha-test fragment (`MAY_DISCARD`, `prepass/mod.rs`), so tree quads write depth only where they are opaque. This is why the prepass works with the game's `Mask` materials; every material in the game is a `StandardMaterial` (the ground is an `ExtendedMaterial` that keeps the base prepass), so nothing in the game opts out of depth.
+* **Fails:** alpha-blended (`Blend`) geometry writes no depth, so a cone is not clipped by it: the game's window glass (vehicles, `model.rs`), water (`water.rs`) and `[matl_alpha]` blend materials. A cone behind a window therefore shows through the glass (physically right), and a cone *inside* a water surface is not clipped by it. Opaque and `Mask` meshes all write depth.
+
+### Deviations from the plan
+
+1. `cone` flag instead of "angle < 180°" (above).
+2. No additive-mesh fallback implemented: the ladder never needed it (the cost is in the cap and the prepass, not in the shading), so one shader remains. Without the prepass the ray-marched cone behaves like the mesh cone (no depth clip); the cheap fallback of the design is therefore the cap, not a second shader.
+3. The prepass is tied to "a cone shines" and has a 20 s release delay (the design only said "with the setting").
+4. Depth is sampled at sample 0 under MSAA.
+5. Cone brightness is quantised to 8 bits and colour to 6 bits per channel by the tag packing.
+6. Overlap normalisation (risk list) is not done; `density` is chosen low (0.05) and the cap bounds the number of overlapping cones.
+
+### Live checks
+
+Not run by the implementer (no GPU access). For the lead, on Berlin-Spandau at night (`sim.set_time` after sunset, `NightlightA` on), `sim.get` shows `light_cones` and `light_quality`:
+
+1. **Lantern cones.** Free-roam camera 5 m up, 25 m from a `Streetobjects_RUE` neon lamp (`neonlight_M_whip_S.sco`, `[light_enh_2]` 120/200, `cone` 1; the lamps along the main streets near the spawn). Look for a soft bluish-white cone under each lamp head, brightest at the apex, fading towards the ground, with a soft edge; `light_cones.active` equal to the number in view up to 64. In the daytime no cone (lamps off), and a traffic signal head never has one.
+2. **Depth fade at a wall.** Find a lamp 1 to 2 m from a facade (a lamp on a pavement in front of a building). With `graphics.light_quality_mode custom` and `graphics.light_cone_depth_fade true` the cone must end exactly at the wall surface (no bright triangle behind the wall); switch the setting off: the cone now continues through the wall and the ground (additive mesh look), and the camera loses its depth prepass again (frame time down). Look at the cone where it meets the ground: a clean ellipse, not a hard polygon.
+3. **Camera inside a cone.** Fly the free-roam camera up into the cone of a lamp (3 m below the head): the view must stay continuous: no pop at the apex, no full-screen white, no black disc; the cone becomes a faint haze around you. Leave through the side: smooth.
+4. **Trees and MSAA.** A cone behind a tree billboard (`Trees_MC`): the cone is cut along the leaf shapes, not along the quad; the cut may flicker by one pixel at leaf edges (depth sample 0 under MSAA).
+5. **Headlights.** At night, the player vehicle with the dipped beam (`Spot_Select` 1) and the high beam (`kw_fernlicht_toggle`): one cone per beam, 25 degree half angle at most, 40 m, switching with the key; no second cone from the corona lights. AI vehicles at night: a cone per headlight, only the nearest ones (the cap).
+6. **Budget and ladder.** `graphics.light_cone_cap` 0, 16, 96 (custom mode) and `light_lantern_cones` / `light_headlight_cones` off: cones disappear and appear at once; `hidden_by_budget` grows when the cap is below the number in view; no flicker at the border of the budget while turning slowly.
+7. **Prepass hitch at dusk.** Run the clock through sunset: the moment the first lamp comes on the camera gets the depth prepass (new pipeline variants); look for a single-frame flicker or missing meshes. If it shows, the release delay (20 s) or an always-on prepass while night is the fix.
+8. **Brightness.** `ConeStyle::density` (0.05) is a guess: if cones read too strong overlapping in a row of lamps, or too faint, change the resource (`light_cones::ConeStyle`).
+9. **Rooms.** Key 2 (cockpit): the saloon lights (`[interiorlight]`) light the cabin; key 3 (external) 20 m away: the cabin lights no longer light the road beside the bus, within 12 m they do again (no flicker between 12 and 15 m); a street lamp directly over the bus gives no hot spot on the roof/saloon in the cockpit view and the other lamps look about half as strong as outside.

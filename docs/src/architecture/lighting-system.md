@@ -83,7 +83,7 @@ The brief assumed that a light only affects meshes that share a layer with it. T
 | Question | Answer | Source |
 | :--- | :--- | :--- |
 | Does a light's layer filter which meshes it **shades**? | **No.** The forward shader loops over the clustered lights of the fragment's cluster and tests only the mesh's shadow-receiver bit and the light's shadow flags, never a layer. There is no per-mesh light mask in the PBR shader. | `bevy_pbr-0.20.0/src/render/pbr_functions.wesl:463-482` (loop), `render/mesh_types.wesl:74-80` (the only mesh flags) |
-| Does it filter which **views** the light is in? | Yes: a point or spot light enters a view's clusters only if the view's layers intersect the light's layers. | `bevy_light-0.20.0/src/cluster/assign.rs:491` |
+| Does it filter which **views** the light is in? | Yes, in both clustering modes. **CPU clustering:** a point or spot light enters a view's clusters only if the view's layers intersect the light's (`assign.rs:491`), and only lights with a `ViewVisibility` are collected. **GPU clustering** (on whenever the adapter has compute shaders; the RTX 3060 log says "GPU clustering is supported"): every extracted light goes into one global table with **no layer test**, but `extract_lights` extracts only lights with `ViewVisibility`, and `check_visibility` sets that only when some active view's layers intersect the light's. So a layer-1 light is out of every view's lighting unless a camera with layer 1 sees it (verified 2026-10-17, implementation notes in 4.8; regression test `light_rooms::tests::a_cabin_light_is_view_visible_only_to_a_camera_with_the_cabin_layer`). | `bevy_light-0.20.0/src/cluster/assign.rs:191,491`, `bevy_pbr-0.20.0/src/render/light.rs:482,614` (the `view_visibility` early-outs), `bevy_pbr-0.20.0/src/cluster/gpu.rs` (no layer test) |
 | Does it filter which meshes **cast shadows** for it? | Yes: for directional (`lib.rs:406,436-437`), point (`lib.rs:588,610-611`) and spot lights (`lib.rs:679,702-703`) a mesh is a caster only if its layers intersect the light's. | `bevy_light-0.20.0/src/lib.rs` |
 | Do layers change the **number of shadow cascades** allocated? | Yes: per view, only directional lights with `shadow_maps_enabled` whose layers intersect the camera's count. | `bevy_pbr-0.20.0/src/render/light.rs:1456-1463` |
 | Does `RenderLayers` propagate to children? | **No** (unlike `Visibility`). `bevy_app::Propagate<C>` can do it, but `HierarchyPropagatePlugin::<RenderLayers>` is not registered by any Bevy plugin; the game must add it. | `bevy_app-0.20.0/src/propagate.rs:44,77`; grep of `bevy_camera`, `bevy_render`, `bevy_internal` finds no registration |
@@ -140,6 +140,17 @@ Meaning (measured, 2.2): the object is not lit by map lights: a lamp does not li
 3. **v2 if blown out: night material swap (recommended).** While `SceneryClock::night`, parts with `NoMapLighting` get a shared cached `StandardMaterial` copy with `unlit: true` and `base_color` scaled by the night surface level (the ambient colour times a tunable factor ❓); day restores the original handle. One shared copy per original material keeps batching ([instancing research](instancing-research.md)). Files: `scenery_runtime/{spawn,effects,maplights}.rs`.
 4. **Alternatives**: hemisphere `SpotLight` instead of a `PointLight` for lamps with a downward `[light_enh_2]` (the housing is behind the cone; cost as a point light without shadows); a forked shader (rejected, 4.4 D).
 5. Docs: [sco.md](../formats/text/sco.md) row corrected with the census.
+
+### 4.8 Implemented (2026-10-17, `agent/lighting-cones-rooms`)
+
+`opts_bevy::light_rooms` (plugin `LightRoomsPlugin`, part of `OptsAssetPlugin`):
+
+* **Layers.** `spawn_vehicle_model` puts every `[interiorlight]` `PointLight` on `RenderLayers::layer(1)` (`CABIN_LAYER`). `camera_light_layers_system` keeps the `MainCamera`'s `RenderLayers` explicitly at `{0}` or `{0, 1}` (`camera_layers`); it never touches another camera, so the reflection prototype's mirror camera (no `MainCamera`, no component = layer 0) never includes layer 1. The camera is on `{0, 1}` in an interior view (`CameraState` cockpit or passenger, or a `VehicleCameraRig` in `InteriorCockpit`), or within 12 m of the player vehicle (15 m to leave; `cabin_layer_wanted`). The distance is to the vehicle's bounding box (`VehicleFootprint`, computed once from the mesh `Aabb`s of the player vehicle by `vehicle_footprint_system`), or to its origin before that exists. Giving the camera `RenderLayers` does not hide existing scenery: entities without the component are on layer 0 and a camera on `{0, 1}` intersects it (the same test file checks it).
+* **CPU rules.** `CabinView { interior_view, cabin_layer }` is published every frame. In an interior view `map_light_pool_system` skips lamps that hang over the player vehicle (`over_vehicle`: inside the footprint grown by 1 m, at or above the roof; `MapLightSettings::exclude_over_vehicle`, default on) and scales the pool's intensity by `MapLightSettings::interior_view_scale` (`INTERIOR_VIEW_SCALE` = 0.5), faded over `fade_s` so the switch of view does not jump.
+* **`[nomaplighting]`.** The marker `NoMapLighting` is on the root of every such object (`build_scenery_object` and the map loader's flat path); v1 has no behaviour (4.6).
+* **AI and parked vehicles** create no interior lights (verified: only `opts_bevy::spawn_vehicle_model` makes `PointLight`s from `[interiorlight]`; `omsi_world/tile.rs` and `traffic.rs` spawn glows only).
+
+Not done: the units behind the player vehicle's first (`spawn_trailer_chain`) get no `[interiorlight]`s at all today (they are built without that call), so a trailer's cabin lights are neither on layer 1 nor lit; the footprint is computed once, so a vehicle that changes its parts later keeps the first box and only the first unit counts.
 
 ### 4.7 Edge cases
 
@@ -398,7 +409,7 @@ Switching from Automatic to Custom keeps the level reached so far as the startin
 
 ### 9.1 Implemented: settings, ladder state and governor (2026-10-17, `agent/lighting-settings`)
 
-The effects (rays, cones, mirrors, bloom) are not built yet. What exists is everything they will **read** and the controls that drive it.
+The effects (rays, mirrors, bloom) are not built yet; **cones and light rooms are** (section 9.2). What exists is everything they **read** and the controls that drive it.
 
 **State.** `opts_bevy::light_quality::LightQuality` is the resource the effects read: `mode` (`Automatic` or `Custom`), `level` (0-5), `shafts` (`Off`, `Low` 8, `Medium` 16, `High` 32, `Ultra` 64 steps), `night_shafts`, `lantern_cones`, `headlight_cones`, `cone_cap` (0-96), `cone_depth_fade`, `mirror_count` (0-2), `mirror_every` (1, 2 or 4), `glass_reflections`, `bloom`. Order of systems: input (settings) → governor → resolve, all in `LightQualitySet`; effects schedule `.after(LightQualitySet)`. HDR is not part of it.
 
@@ -420,6 +431,12 @@ Decisions: the "cones 48, then 24" of level 1 is **not** a sub-step; level 1 is 
 **Governor** (`GovernorSettings`, a resource; defaults are the constants of one `Default` impl): window 120 frames of `Time<Real>` deltas; judged on the 95th percentile of a full window; one level down above 15 ms for 2 s, one level up below 11 ms for 15 s; at least 5 s between two steps; level stays in 0..=5; after a step the window starts again, so the new level is judged on its own frames. It counts frames only when `GovernorGate` is open: Automatic mode, app state `InGame`, the simulation not paused, the loading screen gone and loading complete, no map rebuild pending (`update_governor_gate`). A frame longer than 50 ms is a **hitch** (tile streaming, 25-140 ms in the measurements) and is not counted, neither in the window nor in the timers; but a run of more than 3 such frames in a row is a real slowdown and counts. Every change is logged once at INFO (`lighting quality level changed`, with `from`, `to`, `p95_ms`). `sim.get` reports `light_quality {mode, level, level_name, values}`.
 
 **Environment page:** one row *Lighting quality* with a button *Automatic (level n: name)* / *Custom* that toggles the mode.
+
+### 9.2 Implemented: cones and light rooms (2026-10-17, `agent/lighting-cones-rooms`)
+
+**Cones** (`opts_bevy::light_cones`, details and deviations in [lighting cones, implementation](lighting-cones.md#implementation)): a ray-marched proxy cone per lit scenery lantern (`[light_enh_2]` with the `cone` flag) and per vehicle headlight (`[spotlight]` of the player vehicle, `[light_enh_2]` headlights of the others), at most `LightQuality::cone_cap` visible at a time (nearest by screen coverage, hysteresis 1.3, reselected every 0.15 s or at once on a settings change), switched by `lantern_cones` / `headlight_cones`, depth-faded through a `DepthPrepass` on the main camera while `cone_depth_fade` is on and a cone shines. The ladder levels act exactly as the table above says (tested for levels 0-5 and for a live change). The measured cost of the budget logic is in the cones note; the GPU side is the prototype's (64 cones about 0.75 ms, 96 about 1.1 ms; 1.3-1.5 ms with the depth clip) and **has not been re-measured in the game**.
+
+**Rooms** (`opts_bevy::light_rooms`, section 4.8): cabin lights on layer 1, the main camera's layers `{0}` / `{0, 1}` by view and distance (12 / 15 m), the map light pool skips lamps over the vehicle and is dimmed by 0.5 in an interior view, `NoMapLighting` marker.
 
 ## 10. Files that change
 
