@@ -32,6 +32,17 @@ pub struct Ctx<'a> {
     pub hardware_file: Option<std::path::PathBuf>,
     /// Theme files found by the background facts (never read from disk while building).
     pub theme_files: &'a [String],
+    /// The effective lighting quality (what the governor applies in automatic mode).
+    pub light: Option<&'a opts_bevy::light_quality::LightQuality>,
+}
+
+impl Ctx<'_> {
+    /// Whether `key` is a custom lighting control that the automatic mode owns right now.
+    #[must_use]
+    pub fn light_locked(&self, key: &str) -> bool {
+        use crate::settings_registry::lighting as l;
+        l::is_custom_key(key) && l::is_automatic(self.settings)
+    }
 }
 
 /// A localized text element.
@@ -80,6 +91,9 @@ enum Usable {
 }
 
 fn usable(ctx: &Ctx, d: &SettingDescriptor) -> Usable {
+    if ctx.light_locked(d.key) {
+        return Usable::Needs(ctx.loc.t("set-light-auto-disabled"));
+    }
     match d.available {
         Available::Always => Usable::Yes,
         Available::NotYet(p) => Usable::NotYet(p),
@@ -475,7 +489,16 @@ pub fn spawn_control(
 
 /// Spawns the row of `d` below `parent`.
 pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescriptor) {
-    let cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
+    let mut cur = ctx.registry.text(ctx.settings, d.key).unwrap_or_default();
+    if ctx.light_locked(d.key) {
+        // Automatic mode: show what the governor applies, not the stored custom value.
+        if let Some(shown) = ctx
+            .light
+            .and_then(|q| crate::settings_registry::lighting::text_for(q, d.key))
+        {
+            cur = shown;
+        }
+    }
     let row = c
         .spawn((
             Node {
@@ -550,7 +573,7 @@ pub fn spawn_row(c: &mut Commands, parent: Entity, ctx: &Ctx, d: &SettingDescrip
         ))
         .id();
     spawn_control(c, right, ctx, d, &cur);
-    if d.is_stored() && !matches!(d.available, Available::NotYet(_)) {
+    if d.is_stored() && !matches!(d.available, Available::NotYet(_)) && !ctx.light_locked(d.key) {
         let at_default = cur == d.default;
         let b = ButtonBuilder::text("settings-reset")
             .with_key("settings-reset")

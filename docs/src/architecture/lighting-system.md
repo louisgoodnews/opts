@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Draft: design from measurements (Phase B, 2026-10-17); nothing here is implemented yet |
+| **Status** | 🟡 Draft: design from measurements (Phase B, 2026-10-17). **Implemented: the quality-mode settings, the ladder state and the governor (section 9)**; the lighting effects themselves are not |
 | **Branch** | `agent/lighting-content` (docs only; content probes were throwaway scripts) |
 | **Code today** | `opts_bevy::environment` (sun position, `SessionEnvironment`), `opts_game::in_game::{sky,world}` (`SunLight`, discs, fallback light), `opts_bevy::scenery_runtime::{lights,maplights,effects,spawn}`, `opts_bevy::{vehicle,vehicle_glow,vehicle_lights}`, `opts_game::look` |
 | **Related** | [Session environment](session-environment.md), [Scenery runtime](scenery-runtime.md), [Systems report §9](../meta/berlin-spandau-systems-2026-10-17.md#9-round-3-lighting-cones-and-volumetrics-2026-10-17-branch-fixmap-and-lighting-systems), [`envir.cfg`](../formats/text/environment.md), [`.sco`](../formats/text/sco.md), [`model.cfg`](../formats/text/vehicles/model_cfg.md), [Reflections research](reflections-research.md) |
@@ -394,6 +394,31 @@ scenery clock (NightlightA) -> map-light pool (exclude lamps over the vehicle; i
 * **Custom:** the governor never touches anything; every effect has its own control, on the settings page and the Environment UI: sun rays (off / low 8 / medium 16 / high 32 / ultra 64 steps), night (moon) shafts, cones for lanterns, cones for vehicle headlights, cone cap (0-96), cone depth fade, mirror count (0-2) and update rate, sky-cubemap reflections on glass, bloom. The ladder levels are presets of these controls ("Apply level n to custom").
 
 Switching from Automatic to Custom keeps the level reached so far as the starting values. Defaults at level 0: sun rays medium (16 steps), **night shafts on**, lantern and headlight cones on (64, cap 96), **cone depth fade on** (needs a depth prepass on the main camera; it is a custom-mode control and the first thing the ladder drops after "fewer cones"), mirrors 2 at 256×128 every 2nd frame, bloom off.
+
+### 9.1 Implemented: settings, ladder state and governor (2026-10-17, `agent/lighting-settings`)
+
+The effects (rays, cones, mirrors, bloom) are not built yet. What exists is everything they will **read** and the controls that drive it.
+
+**State.** `opts_bevy::light_quality::LightQuality` is the resource the effects read: `mode` (`Automatic` or `Custom`), `level` (0-5), `shafts` (`Off`, `Low` 8, `Medium` 16, `High` 32, `Ultra` 64 steps), `night_shafts`, `lantern_cones`, `headlight_cones`, `cone_cap` (0-96), `cone_depth_fade`, `mirror_count` (0-2), `mirror_every` (1, 2 or 4), `glass_reflections`, `bloom`. Order of systems: input (settings) → governor → resolve, all in `LightQualitySet`; effects schedule `.after(LightQualitySet)`. HDR is not part of it.
+
+**The ladder as implemented** (`ladder_preset(level)`; the table is a unit test):
+
+| Level | Name | Rays | Night rays | Lantern cones | Headlight cones | Cone cap | Depth fade | Mirrors | Glass | Bloom |
+| ---: | :--- | :--- | :--- | :--- | :--- | ---: | :--- | :--- | :--- | :--- |
+| 0 | Full | medium (16) | on | on | on | 64 | on | 2, every 2nd frame | on | off |
+| 1 | Fewer cones | medium | on | on | on | 48 | on | 2, every 2nd | on | off |
+| 2 | Headlights only | medium | on | off | on | 16 | off | 2, every 2nd | on | off |
+| 3 | Cones off | medium | on | off | off | 0 | off | 2, every 2nd | on | off |
+| 4 | Sun rays only | low (8) | off | off | off | 0 | off | 0 | on | off |
+| 5 | All volumetrics off | off | off | off | off | 0 | off | 0 | on | off |
+
+Decisions: the "cones 48, then 24" of level 1 is **not** a sub-step; level 1 is 48 and the next rung goes straight to the 16 headlight cones (24 against 16 differs by about 0.1 ms in the table above). Depth fade (the prepass, +1.6-2.2 ms) goes at level 2, right after "fewer cones". Night rays go at level 4 (a moon ray costs about 2.4 times the day cost). Bloom is off by default and so in every row, which also satisfies "no bloom" at level 4. Glass reflections stay on (they cost nothing measurable). The "far cones at 4 steps" detail of level 1 belongs to the cone effect, which reads the level.
+
+**Settings** (Graphics page, section *Lighting quality*, all live): `graphics.light_quality_mode` (`automatic` default, `custom`), `graphics.light_shafts`, `graphics.light_night_shafts`, `graphics.light_lantern_cones`, `graphics.light_headlight_cones`, `graphics.light_cone_cap`, `graphics.light_cone_depth_fade`, `graphics.mirror_count`, `graphics.mirror_rate` (1, 2, 4), `graphics.glass_reflections`, `graphics.bloom` ([reference](../reference/settings.md)). In Automatic the ten controls are shown disabled with a note and display the values the governor applies now; the stored custom values stay untouched. In Custom the controls are authoritative and the governor does nothing. Switching **Automatic → Custom** writes the values of the level reached into the controls (so they are the starting values); **Custom → Automatic** restarts the governor at level 0.
+
+**Governor** (`GovernorSettings`, a resource; defaults are the constants of one `Default` impl): window 120 frames of `Time<Real>` deltas; judged on the 95th percentile of a full window; one level down above 15 ms for 2 s, one level up below 11 ms for 15 s; at least 5 s between two steps; level stays in 0..=5; after a step the window starts again, so the new level is judged on its own frames. It counts frames only when `GovernorGate` is open: Automatic mode, app state `InGame`, the simulation not paused, the loading screen gone and loading complete, no map rebuild pending (`update_governor_gate`). A frame longer than 50 ms is a **hitch** (tile streaming, 25-140 ms in the measurements) and is not counted, neither in the window nor in the timers; but a run of more than 3 such frames in a row is a real slowdown and counts. Every change is logged once at INFO (`lighting quality level changed`, with `from`, `to`, `p95_ms`). `sim.get` reports `light_quality {mode, level, level_name, values}`.
+
+**Environment page:** one row *Lighting quality* with a button *Automatic (level n: name)* / *Custom* that toggles the mode.
 
 ## 10. Files that change
 

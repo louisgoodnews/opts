@@ -61,6 +61,7 @@ clock.
   change behind the overlay while the game stays paused.
 * **The date is a draft** that applies with *Apply* (`MapDatePolicy::Follow`).
 * *Cancel* and **Esc restore** the time and weather the page opened with.
+* **Lighting quality** (one row): a button *Automatic (level n: name)* / *Custom* that toggles `graphics.light_quality_mode` at once (not part of *Cancel*; it is a setting, saved like the others). See [lighting system](lighting-system.md) §9.1.
 * Closing the page returns to the pause overlay.
 * **The weather previews live with everything it drives**: sky, light, temperature, fog, clouds, rain and snow, wet ground. The chips list the install's presets ([weather](weather.md) §2); the chip of the current weather is marked (an old id marks its stand-in).
 
@@ -119,7 +120,7 @@ sets `planner::default_map_date` unless the date was chosen or remembered: today
 `Follow`) and answers two frames later with `{clock, seconds_of_day, date, map_date, weather,
 rate, revision}`; `weather` is any listed preset id, a slug, a name or a word (see [weather](weather.md) §8). `sim.get` adds `clock`, `seconds_of_day`, `date`, `map_date`, `weather`,
 `clock_rate`, `weather_canonical`, `weather_presets` (the ids available) and `weather_conditions`
-(what the resolved weather is). See [control protocol](control-protocol.md) §4.4.
+(what the resolved weather is) and `light_quality` (the [lighting quality](lighting-system.md) in effect). See [control protocol](control-protocol.md) §4.4.
 
 ## 8. Tests
 

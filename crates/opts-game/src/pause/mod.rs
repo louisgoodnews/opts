@@ -6,6 +6,7 @@
 //! Home* or *Quit OPTS*. Leaving a drive that moved shows the session summary on Home.
 
 pub mod environment;
+pub mod light_row;
 pub mod stats;
 
 use bevy::app::AppExit;
@@ -482,6 +483,8 @@ impl Plugin for PausePlugin {
                     return_after_overlay,
                     environment::resume_after_rebuild,
                     environment::environment_page_input,
+                    light_row::environment_light_toggle,
+                    light_row::refresh_light_row,
                     environment::refresh_environment_page,
                 )
                     .run_if(in_state(AppState::InGame)),

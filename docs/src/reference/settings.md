@@ -20,6 +20,17 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.weather_clouds` | Weather: clouds | on / off | `true` | at once | available | Draws the cloud layer of the weather. Off keeps the sky and the dimmer light but hides the clouds. |
 | `graphics.weather_precipitation` | Weather: rain and snow | `off`, `low`, `medium`, `high` | `medium` | at once | available | How many rain streaks or snowflakes are drawn around the camera at most (1500, 3000 or 6000). Light precipitation uses fewer. Off draws none. |
 | `graphics.weather_wet_ground` | Weather: wet and snowy ground | on / off | `true` | at once | available | Darkens and smooths the ground and roads when it is wet, adds puddles and a snow cover. Off keeps them dry. |
+| `graphics.light_quality_mode` | Lighting quality mode | `automatic`, `custom` | `automatic` | at once | available | Automatic: OPTS picks the lighting level from the measured frame time. Custom: you choose every effect yourself and nothing changes by itself. Switching to custom keeps the level reached as the starting values; switching back to automatic starts again at the fullest level. |
+| `graphics.light_shafts` | Sun rays | `off`, `low`, `medium`, `high`, `ultra` | `medium` | at once | available | Light shafts through the air (volumetric fog). The quality is the number of steps per ray: low 8, medium 16, high 32, ultra 64. Off draws none and costs nothing. |
+| `graphics.light_night_shafts` | Rays at night | on / off | `true` | at once | available | Also draws light shafts at night, lit by the moon. Costs more at night because of the many lamps. |
+| `graphics.light_lantern_cones` | Cones of street lamps | on / off | `true` | at once | available | Visible cones of light below street lamps and other lanterns. |
+| `graphics.light_headlight_cones` | Cones of headlights | on / off | `true` | at once | available | Visible cones of light in front of vehicle headlights. |
+| `graphics.light_cone_cap` | Most light cones | whole number 0 to 96 | `64` | at once | available | How many light cones are drawn at most at the same time, from 0 to 96. The nearest ones are kept. |
+| `graphics.light_cone_depth_fade` | Soft cone edges | on / off | `true` | at once | available | Cones fade out where they meet walls and the ground instead of cutting through them. Needs an extra depth pass and costs frame time. |
+| `graphics.mirror_count` | Mirrors | whole number 0 to 2 | `2` | at once | available | How many mirrors show a live rear view, 0 to 2. Each one renders the scene again. |
+| `graphics.mirror_rate` | Mirror update rate | `1`, `2`, `4` | `2` | at once | available | How often a mirror renders: every frame, every 2nd or every 4th frame. Less often is cheaper. |
+| `graphics.glass_reflections` | Sky in glass | on / off | `true` | at once | available | Windows and other glass reflect the sky. |
+| `graphics.bloom` | Bloom | on / off | `false` | at once | available | A soft glow around very bright lights. |
 
 ## Audio
 

@@ -151,7 +151,7 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "sim.get",
         "query",
-        "Pause state, simulation time, time scale, session clock and weather",
+        "Pause state, simulation time, time scale, session clock, weather and lighting quality",
         "",
     ),
     c("log.tail", "query", "Last N log lines", "n:i@0?"),

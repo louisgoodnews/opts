@@ -30,6 +30,8 @@ pub enum EnvAction {
     Step(Field, i32),
     /// Choose a weather preset (live); the id is the control's [`WeatherId`].
     Weather,
+    /// Switch the lighting quality between automatic and custom (`graphics.light_quality_mode`).
+    LightMode,
     /// Apply the date and close.
     Apply,
     /// Restore time and weather and close.
@@ -227,6 +229,14 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
         ))
         .id();
     let weather = weather_chips(commands, weather_list, loc);
+    let light_title = commands
+        .spawn(text(
+            "env-light-quality",
+            TypeScale::TitleMedium,
+            ColorRole::OnSurface,
+        ))
+        .id();
+    let light = super::light_row::spawn(commands);
     let rebuild = commands
         .spawn((
             text(keys::ENV_REBUILDING, TypeScale::Label, ColorRole::Info),
@@ -271,6 +281,8 @@ fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Lo
         time,
         weather_title,
         weather,
+        light_title,
+        light,
         rebuild,
         buttons,
     ]);
@@ -342,6 +354,7 @@ pub fn environment_page_input(
                     });
                 }
             }
+            EnvAction::LightMode => {}
             EnvAction::Apply => {
                 changes.write(EnvironmentChange {
                     date: Some(page.draft_date),

@@ -95,7 +95,32 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
             out["weather_presets"] = json!(cat.ids());
         }
     }
+    if let Some(q) = world.get_resource::<crate::light_quality::LightQuality>() {
+        out["light_quality"] = light_quality_json(q);
+    }
     Outcome::ok(out)
+}
+
+/// The lighting quality as the effects see it (what `sim.get` reports as `light_quality`).
+fn light_quality_json(q: &crate::light_quality::LightQuality) -> Value {
+    json!({
+        "mode": q.mode.name(),
+        "level": q.level,
+        "level_name": crate::light_quality::level_name(q.level),
+        "values": {
+            "shafts": q.shafts.name(),
+            "shaft_steps": q.shafts.steps(),
+            "night_shafts": q.night_shafts,
+            "lantern_cones": q.lantern_cones,
+            "headlight_cones": q.headlight_cones,
+            "cone_cap": q.cone_cap,
+            "cone_depth_fade": q.cone_depth_fade,
+            "mirror_count": q.mirror_count,
+            "mirror_every": q.mirror_every,
+            "glass_reflections": q.glass_reflections,
+            "bloom": q.bloom,
+        },
+    })
 }
 
 /// The resolved weather as the effects see it (what `sim.get` reports as `weather_conditions`).
@@ -189,5 +214,29 @@ mod tests {
         assert_eq!(c["snow"], true);
         assert_eq!(c["temperature_c"], -3.0);
         assert!(c["sun_scale"].as_f64().unwrap() < 0.6);
+    }
+
+    #[test]
+    fn sim_get_reports_the_lighting_quality_when_the_app_has_one() {
+        let mut world = World::new();
+        world.insert_resource(Time::<Virtual>::default());
+        world.insert_resource(Time::<Real>::default());
+        world.insert_resource(ControlState::default());
+        let Outcome::Done(Ok(v)) = sim_get(&mut world, &Value::Null) else {
+            panic!("sim.get did not answer at once");
+        };
+        assert!(v.get("light_quality").is_none());
+        world.insert_resource(crate::light_quality::ladder_preset(2));
+        let Outcome::Done(Ok(v)) = sim_get(&mut world, &Value::Null) else {
+            panic!("sim.get did not answer at once");
+        };
+        let l = &v["light_quality"];
+        assert_eq!(l["mode"], "automatic");
+        assert_eq!(l["level"], 2);
+        assert_eq!(l["level_name"], "headlights-only");
+        assert_eq!(l["values"]["shaft_steps"], 16);
+        assert_eq!(l["values"]["cone_cap"], 16);
+        assert_eq!(l["values"]["lantern_cones"], false);
+        assert_eq!(l["values"]["headlight_cones"], true);
     }
 }
