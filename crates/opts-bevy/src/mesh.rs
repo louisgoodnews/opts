@@ -564,44 +564,73 @@ pub fn parse_mesh_file(path: &std::path::Path, bytes: &[u8]) -> Result<Vec<O3d>,
     for frame in &x.frames {
         collect_frame_submeshes(frame, None, &mut subs);
     }
+    // One file-wide material palette: the sub-meshes' material lists are concatenated in file
+    // order (as a loader that collapses the frame hierarchy into one mesh does) and each
+    // sub-mesh's slots are offset into it, so `[matl]` entries (which name a native texture and
+    // its occurrence) see the materials of the whole file, as for an `.o3d`. With per-sub-mesh
+    // palettes an override for the text quad of a two-frame street sign also matched the plate's
+    // slot 0 through the slot-index fallback of `find_override` (Berlin-Spandau report, System
+    // 2 item 3). Equal materials of different sub-meshes stay separate slots:
+    // `Ruede/Tree_Street_01.sco` gives `[matl_alpha] 1` to occurrence 1 of `Tree_Street_01.tga`,
+    // which is the material of the file's third frame (`Plane`), not of the second (`Tube`).
+    let mut palette: Vec<&opts_core::formats::x::XMaterial> = Vec::new();
+    let mut remaps: Vec<Vec<u16>> = Vec::with_capacity(subs.len());
+    for (sub, _) in &subs {
+        let local = if sub.materials.is_empty() {
+            &x.global_materials
+        } else {
+            &sub.materials
+        };
+        let offset = palette.len();
+        palette.extend(local.iter());
+        remaps.push(
+            (0..local.len())
+                .map(|i| u16::try_from(offset + i).unwrap_or(u16::MAX))
+                .collect(),
+        );
+    }
+    let materials: Vec<opts_core::formats::o3d::Material> = palette
+        .iter()
+        .map(|m| opts_core::formats::o3d::Material {
+            diffuse: m.diffuse,
+            specular: m.specular,
+            emissive: m.emissive,
+            power: m.power,
+            textures: m.texture_filename.clone().into_iter().collect(),
+        })
+        .collect();
     Ok(subs
         .into_iter()
-        .map(|(sub, transform)| {
-            let palette = if sub.materials.is_empty() {
-                &x.global_materials
-            } else {
-                &sub.materials
-            };
-            O3d {
-                version: 0,
-                header_flags: 0,
-                vertices: sub
-                    .vertices
-                    .iter()
-                    .map(|v| opts_core::formats::o3d::Vertex {
-                        position: v.position,
-                        normal: v.normal,
-                        uv: v.uv,
-                        color: None,
+        .zip(remaps)
+        .map(|((sub, transform), remap)| O3d {
+            version: 0,
+            header_flags: 0,
+            vertices: sub
+                .vertices
+                .iter()
+                .map(|v| opts_core::formats::o3d::Vertex {
+                    position: v.position,
+                    normal: v.normal,
+                    uv: v.uv,
+                    color: None,
+                })
+                .collect(),
+            indices: sub.indices.clone(),
+            // A slot outside the sub-mesh's own list stays out of the palette (as before).
+            face_materials: sub
+                .face_materials
+                .iter()
+                .map(|&m| {
+                    remap.get(m as usize).copied().unwrap_or_else(|| {
+                        u16::try_from(materials.len() + m as usize).unwrap_or(u16::MAX)
                     })
-                    .collect(),
-                indices: sub.indices.clone(),
-                face_materials: sub.face_materials.iter().map(|&m| m as u16).collect(),
-                materials: palette
-                    .iter()
-                    .map(|m| opts_core::formats::o3d::Material {
-                        diffuse: m.diffuse,
-                        specular: m.specular,
-                        emissive: m.emissive,
-                        power: m.power,
-                        textures: m.texture_filename.clone().into_iter().collect(),
-                    })
-                    .collect(),
-                transform,
-                unknown_chunks: Vec::new(),
-                encryption_key: None,
-                exact_decoded: false,
-            }
+                })
+                .collect(),
+            materials: materials.clone(),
+            transform,
+            unknown_chunks: Vec::new(),
+            encryption_key: None,
+            exact_decoded: false,
         })
         .collect())
 }
@@ -702,6 +731,93 @@ pub fn tree_billboard_material(
         perceptual_roughness: 1.0,
         reflectance: 0.0,
         ..Default::default()
+    }
+}
+
+#[cfg(test)]
+mod x_palette_tests {
+    use super::*;
+
+    /// Two frames like `strschild_1.x`: a plate with `StrSchild_1.bmp` and a text quad with
+    /// `StrSchild_Text1.bmp`, each with its own one-entry material list.
+    pub(crate) const TWO_FRAME_SIGN: &[u8] = b"xof 0303txt 0032\n\
+Frame Plate {\n\
+  Mesh {\n\
+    3; 0.0;0.0;0.0;, 1.0;0.0;0.0;, 0.0;1.0;0.0;;\n\
+    1; 3; 0,1,2;;\n\
+    MeshMaterialList { 1; 1; 0;\n\
+      Material Mat1 { 1.0;1.0;1.0;1.0;; 0.0; 0.0;0.0;0.0;; 0.0;0.0;0.0;;\n\
+        TextureFilename { \"StrSchild_1.bmp\"; } }\n\
+    }\n\
+  }\n\
+}\n\
+Frame Text {\n\
+  Mesh {\n\
+    3; 0.0;0.0;0.1;, 1.0;0.0;0.1;, 0.0;1.0;0.1;;\n\
+    1; 3; 0,1,2;;\n\
+    MeshMaterialList { 1; 1; 0;\n\
+      Material Mat1 { 1.0;1.0;1.0;1.0;; 0.0; 0.0;0.0;0.0;; 0.0;0.0;0.0;;\n\
+        TextureFilename { \"StrSchild_Text1.bmp\"; } }\n\
+    }\n\
+  }\n\
+}\n";
+
+    #[test]
+    fn x_sub_meshes_share_the_file_wide_palette() {
+        let models =
+            parse_mesh_file(std::path::Path::new("strschild_1.x"), TWO_FRAME_SIGN).expect("parse");
+        assert_eq!(models.len(), 2);
+        for m in &models {
+            let names: Vec<_> = m.materials.iter().map(|m| m.primary_texture()).collect();
+            assert_eq!(
+                names,
+                vec![Some("StrSchild_1.bmp"), Some("StrSchild_Text1.bmp")]
+            );
+        }
+        assert_eq!(models[0].face_materials, vec![0]);
+        assert_eq!(models[1].face_materials, vec![1]);
+    }
+
+    #[test]
+    fn text_override_does_not_reach_the_plate() {
+        let models =
+            parse_mesh_file(std::path::Path::new("strschild_1.x"), TWO_FRAME_SIGN).expect("parse");
+        let over = [crate::model::TextureOverride {
+            slot: 0,
+            texture: "StrSchild_Text1.bmp".into(),
+            alpha: Some(2),
+            alpha_variable: None,
+            trans_map: None,
+            image: None,
+            light_map: None,
+        }];
+        let palette = &models[0].materials;
+        assert!(crate::model::find_override(palette, 0, &over).is_none());
+        assert!(crate::model::find_override(palette, 1, &over).is_some());
+    }
+
+    #[test]
+    fn equal_materials_of_two_sub_meshes_stay_two_slots() {
+        let doubled = std::str::from_utf8(TWO_FRAME_SIGN)
+            .expect("utf8")
+            .replace("StrSchild_Text1.bmp", "StrSchild_1.bmp");
+        let models =
+            parse_mesh_file(std::path::Path::new("a.x"), doubled.as_bytes()).expect("parse");
+        assert_eq!(models[0].materials.len(), 2);
+        assert_eq!(models[1].face_materials, vec![1]);
+        // `[matl] StrSchild_1.bmp 1` reaches the second sub-mesh only (occurrence 1).
+        let over = [crate::model::TextureOverride {
+            slot: 1,
+            texture: "StrSchild_1.bmp".into(),
+            alpha: Some(1),
+            alpha_variable: None,
+            trans_map: None,
+            image: None,
+            light_map: None,
+        }];
+        let palette = &models[0].materials;
+        assert!(crate::model::find_override(palette, 0, &over).is_none());
+        assert!(crate::model::find_override(palette, 1, &over).is_some());
     }
 }
 
