@@ -303,6 +303,7 @@
 - [Train Formation Implementation (2026-10-15)](meta/train-formation-implementation-2026-10-15.md)
 - [Neuenbreid Scenery Investigation (2026-10-16)](meta/neuenbreid-scenery-2026-10-16.md)
 - [Scrambler Generator Derivation (2026-10-16)](meta/scramble-chain-2026-10-16.md)
+- [Berlin-Spandau Map Fidelity Investigation (2026-10-17)](meta/berlin-spandau-2026-10-17.md)
 - [AI Vehicle Configuration Investigation (2026-10-14)](meta/ai-vehicle-config-2026-10-14.md)
 - [Bus Script Integration Research (2026-10-14)](meta/bus-script-integration-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
