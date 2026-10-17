@@ -143,6 +143,8 @@ pub struct ContentStats {
     /// Material slots left out because a script variable scales their alpha (`[alphascale]`):
     /// an object whose slots are all of that kind has nothing to draw, which is not a load failure.
     pub hidden_parts: usize,
+    /// Transmap materials split into an opaque body and a blended glass part.
+    pub transmap_splits: usize,
     /// Human-readable descriptions of assets that failed to load.
     pub failures: Vec<String>,
 }
@@ -550,6 +552,7 @@ impl ContentLoader<'_> {
                     && (self.cache.stats.failures.len() > failures_before
                         || model.materials.get(slot).is_none());
                 let mut blended_by_map = false;
+                let mut glass_tex = None;
                 if let (Some(base_h), Some(tm)) =
                     (tex.clone(), over.and_then(|o| o.trans_map.clone()))
                 {
@@ -559,6 +562,12 @@ impl ContentLoader<'_> {
                             _ => None,
                         };
                         if let Some(img) = composed {
+                            // A mostly opaque composition (a car body with its windows) is drawn
+                            // as an opaque cut-out body plus a blended glass pass; blending the
+                            // whole body lets its far side and interior show through.
+                            if over.and_then(|o| o.alpha).is_none_or(|a| a == 2) {
+                                glass_tex = transmap_glass(&img).map(|g| self.images.add(g));
+                            }
                             tex = Some(self.images.add(img));
                             blended_by_map = true;
                         }
@@ -590,6 +599,15 @@ impl ContentLoader<'_> {
                 if blended_by_map && over.and_then(|o| o.alpha).is_none() {
                     material.alpha_mode = AlphaMode::Blend;
                 }
+                let glass_material = glass_tex.map(|g| {
+                    let mut glass = material.clone();
+                    glass.base_color_texture = Some(g);
+                    glass.alpha_mode = AlphaMode::Blend;
+                    glass.cull_mode = Some(bevy::render::render_resource::Face::Back);
+                    glass.double_sided = false;
+                    material.alpha_mode = AlphaMode::Mask(TRANSMAP_OPAQUE);
+                    glass
+                });
                 // OMSI renders with back-face culling; keeping it also lets a camera that ends up
                 // inside a building see out through the (culled) inner faces.
                 material.cull_mode = Some(bevy::render::render_resource::Face::Back);
@@ -634,7 +652,7 @@ impl ContentLoader<'_> {
                     .transform
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
-                parts.push(ModelPart {
+                let part = ModelPart {
                     mesh: self.meshes.add(mesh),
                     material: self.materials.add(material),
                     vertices,
@@ -644,7 +662,18 @@ impl ContentLoader<'_> {
                         .map(str::to_owned),
                     image: over.and_then(|o| o.image.clone()),
                     pivot,
-                });
+                };
+                if let Some(glass) = glass_material {
+                    self.cache.stats.transmap_splits += 1;
+                    let glass_part = ModelPart {
+                        material: self.materials.add(glass),
+                        ..part.clone()
+                    };
+                    parts.push(part);
+                    parts.push(glass_part);
+                } else {
+                    parts.push(part);
+                }
             }
         }
         sc.build_ms = sc.lap.split();
@@ -805,6 +834,48 @@ pub fn attach_model_parts(
 /// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
 /// resampled). Bases and maps may be RGBA8 or block-compressed (BC1-3); an R8 map is read directly.
 /// Only level 0 of either input is read; the result gets a fresh mip chain like any loaded texture.
+/// Alpha from which a texel of a transmap-composed texture counts as opaque: the body pass is
+/// `AlphaMode::Mask(TRANSMAP_OPAQUE)`, the glass pass draws the rest blended.
+pub const TRANSMAP_OPAQUE: f32 = 0.95;
+
+/// Share of opaque texels from which a composed texture is split into body and glass passes.
+/// Below it (shadow quads, smoke, plain windows) the material stays one blended pass.
+pub const TRANSMAP_SPLIT_SHARE: f32 = 0.5;
+
+/// The glass texels of an RGBA8 buffer whose alpha came from a transmap: `None` when fewer than
+/// [`TRANSMAP_SPLIT_SHARE`] of the texels are opaque (≥ [`TRANSMAP_OPAQUE`]), else the buffer with
+/// the alpha of every opaque texel set to 0 (the body pass draws those).
+#[must_use]
+pub fn transmap_glass_rgba(rgba: &[u8]) -> Option<Vec<u8>> {
+    // `a / 255 >= 0.95` exactly as the mask test compares it.
+    let opaque = |a: u8| f32::from(a) / 255.0 >= TRANSMAP_OPAQUE;
+    let texels = rgba.len() / 4;
+    if texels == 0 {
+        return None;
+    }
+    let solid = rgba.chunks_exact(4).filter(|p| opaque(p[3])).count();
+    if (solid as f32) < TRANSMAP_SPLIT_SHARE * texels as f32 {
+        return None;
+    }
+    let mut glass = rgba.to_vec();
+    for p in glass.chunks_exact_mut(4) {
+        if opaque(p[3]) {
+            p[3] = 0;
+        }
+    }
+    Some(glass)
+}
+
+/// [`transmap_glass_rgba`] on a composed image (RGBA8, as [`compose_alpha`] returns it).
+fn transmap_glass(composed: &Image) -> Option<Image> {
+    let data = composed.data.as_deref()?;
+    let (w, h) = (composed.width() as usize, composed.height() as usize);
+    let glass = transmap_glass_rgba(data.get(..w * h * 4)?)?;
+    let mut out = composed.clone();
+    out.data = Some(glass);
+    Some(out)
+}
+
 fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     // DDS textures stay block-compressed on the GPU; the texel values are needed here.
     let base = crate::texture::decode_to_rgba8(base)?;
@@ -935,5 +1006,45 @@ mod alphascale_tests {
             !over(Some(2), None, false).is_variable_hidden(),
             "no variable: visible"
         );
+    }
+}
+
+#[cfg(test)]
+mod transmap_split_tests {
+    use super::{transmap_glass_rgba, TRANSMAP_OPAQUE};
+
+    fn image(alphas: &[u8]) -> Vec<u8> {
+        alphas.iter().flat_map(|&a| [200, 10, 10, a]).collect()
+    }
+
+    /// A car body: 6 opaque texels, 2 window texels (transmap 0.6-0.8).
+    #[test]
+    fn mostly_opaque_composition_splits_into_body_and_glass() {
+        let rgba = image(&[255, 255, 250, 243, 255, 255, 160, 200]);
+        let glass = transmap_glass_rgba(&rgba).expect("split");
+        let alpha: Vec<u8> = glass.chunks_exact(4).map(|p| p[3]).collect();
+        assert_eq!(alpha, vec![0, 0, 0, 0, 0, 0, 160, 200]);
+        // Colours are kept; the body pass (mask at 0.95) keeps exactly the zeroed texels.
+        assert!(glass.chunks_exact(4).all(|p| p[..3] == [200, 10, 10]));
+        let body: Vec<bool> = rgba
+            .chunks_exact(4)
+            .map(|p| f32::from(p[3]) / 255.0 >= TRANSMAP_OPAQUE)
+            .collect();
+        assert_eq!(body, alpha.iter().map(|&a| a == 0).collect::<Vec<_>>());
+    }
+
+    /// A shadow quad or smoke: mostly translucent, stays one blended pass.
+    #[test]
+    fn mostly_translucent_composition_is_not_split() {
+        assert!(transmap_glass_rgba(&image(&[0, 40, 80, 120, 255, 30])).is_none());
+        assert!(transmap_glass_rgba(&[]).is_none());
+    }
+
+    /// 242 / 255 = 0.949 is glass, 243 / 255 = 0.953 is body.
+    #[test]
+    fn threshold_matches_the_mask_cutoff() {
+        let glass = transmap_glass_rgba(&image(&[242, 243, 255])).expect("split");
+        assert_eq!(glass[3], 242);
+        assert_eq!(glass[7], 0);
     }
 }

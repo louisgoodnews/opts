@@ -37,5 +37,50 @@ fn main() {
             }
             None => println!("{label}: decode_to_rgba8 returned None"),
         }
+        if label == "trans" {
+            // The value `compose_alpha` takes: an R8 map's value, else the alpha channel if the
+            // map has one, else red.
+            let n = (img.width() * img.height()) as usize;
+            let values: Option<Vec<u8>> = if img.texture_descriptor.format
+                == bevy::render::render_resource::TextureFormat::R8Unorm
+            {
+                img.data
+                    .as_deref()
+                    .map(|d| d.iter().take(n).copied().collect())
+            } else {
+                decode_to_rgba8(&img).and_then(|d| {
+                    let data = d.data.as_deref()?;
+                    let px: Vec<&[u8]> = data.chunks_exact(4).take(n).collect();
+                    let has_alpha = px.iter().any(|p| p[3] != 255);
+                    Some(
+                        px.iter()
+                            .map(|p| if has_alpha { p[3] } else { p[0] })
+                            .collect(),
+                    )
+                })
+            };
+            if let Some(values) = values {
+                let mut hist = [0usize; 5];
+                for &v in &values {
+                    hist[match v {
+                        0..=50 => 0,
+                        51..=152 => 1,
+                        153..=203 => 2,
+                        204..=242 => 3,
+                        _ => 4,
+                    }] += 1;
+                }
+                let pct = |c: usize| 100.0 * c as f64 / n.max(1) as f64;
+                println!(
+                    "trans: composed alpha <0.2 {:.1} %, 0.2-0.6 {:.1} %, 0.6-0.8 {:.1} %, 0.8-0.95 {:.1} %, >=0.95 {:.1} % (body/glass split from {:.0} %)",
+                    pct(hist[0]),
+                    pct(hist[1]),
+                    pct(hist[2]),
+                    pct(hist[3]),
+                    pct(hist[4]),
+                    100.0 * opts_bevy::model::TRANSMAP_SPLIT_SHARE
+                );
+            }
+        }
     }
 }
