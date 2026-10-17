@@ -1,5 +1,6 @@
 //! Format parser implementations for OMSI file formats.
 
+pub mod chrono;
 pub mod constfile;
 pub mod cti;
 pub mod engine_config;
