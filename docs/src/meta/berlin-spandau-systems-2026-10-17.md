@@ -155,3 +155,46 @@ Not confirmed live: the median break on Falkenseer Chaussee (photo 2; the joins 
 ### Open questions
 
 Q-TC-01..04 ([terrain carving](../architecture/terrain-carving.md)), Q-AK-01..04 ([AI kinematics](../architecture/ai-traffic-kinematics.md)), whether OMSI re-evaluates Chrono when the clock passes midnight, the meaning of attachment fields 9 and 12, the value of the "Medium" density class (assumed 1.0), which repaint OMSI picks for a parked car (deterministic hash here).
+
+## 9. Round 3: lighting, cones and volumetrics (2026-10-17, branch `fix/map-and-lighting-systems`)
+
+The third brief adds symptoms 20-23 (System 6) and repeats 1-19. **Symptoms 1-19 are implemented and merged in `master`** (sections 6-8); they are not redone. One new, separate task was added: weather (below). Shots are kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/lighting/` (not committed).
+
+### Premise corrections
+
+1. **Bevy 0.20 does have volumetric lighting.** `bevy_pbr::volumetric_fog` (`VolumetricFog` on the camera, `VolumetricLight` on lights) renders light shafts and god rays by screen-space ray marching with a Henyey-Greenstein phase function. Its documented limit: **only directional lights with shadow maps interact**, and its cost scales with the number of volumetric lights. So the sun (a shadow-casting `DirectionalLight` already, `SunLight` in `sky.rs`) can get god rays without a custom shader. Lantern and headlight cones are **not** covered (spot and point lights are unsupported) and need custom work. Bevy 0.20 also ships a physical `atmosphere` module (not used by OPTS; the sky is the installation's textures).
+2. **Light rooms map to `RenderLayers`.** Bevy applies `RenderLayers` to lights as well as meshes (`bevy_pbr/src/render/light.rs`), so a light only affects entities on shared layers. No custom shader uniform is needed for interior/exterior separation, only a layer convention and a tool for assigning objects.
+3. **Cones are in the data.** `[light_enh_2]` carries inner and outer cone angles (`ScoLight::cone_inner_deg/outer_deg`, parsed), vehicle `[spotlight]` has inner/outer cones and `Spot_Select`, `[interiorlight]` has range and colour. What is missing is rendering them.
+
+### Reproduction (A1)
+
+Release build of `master` (`6cdbd05`), Berlin-Spandau at 22:00 (`OPTS_DEV_HOUR`), `sim.set_time` for dusk:
+
+| # | Symptom | Shot | Observed |
+| ---: | :--- | :--- | :--- |
+| 20 | Lantern cones | `l1`, `l2`, `l3` | Pools of light on the pavement (map-light pool of 48 point lights) and no visible beam: the lamp heads are dark shades with no light source or cone, the air is clear. Distant lamps are soft glow discs |
+| 21 | Light rooms | code, `l1` | None: point lights and the glow ignore walls and interiors (`[nomaplighting]` is parsed but not applied; every map light lights every object in range, also behind walls and inside buildings). The pool does not distinguish inside and outside |
+| 22 | Sun and moon | `s1_sun_low_*` | At dusk the sky glow and ambient change, no light shafts through trees or buildings. The moon is a textured disc at the anti-sun position: no phase, no own direction (moonlight is the sun's `DirectionalLight` with night values, `world.rs`) |
+| 23 | Vehicle light cones | `v1` | AI and parked cars show glows and (nearest six) real shadowless `SpotLight`s of fixed 12°/30°; no visible cone, no per-light cone angles from `[light_enh_2]`/`[spotlight]`, no interior lights. The player vehicle uses the model's own spotlights with shadow maps (`vehicle.rs`) |
+| 18 | AI headlights | done | glows and the headlight pool exist (C3); cone is the open part (23) |
+
+### Subsystem map (A2) for 20-23
+
+| # | Data origin | Code today | Gap |
+| ---: | :--- | :--- | :--- |
+| 20 | `.sco` `[light_enh_2]` (position, direction, cone angles, size, variable), `[maplight]` | `scenery_runtime/lights.rs` (glow disc), `maplights.rs` (48 point lights) | no beam geometry or scattering for spot-like lights; map lights are omni point lights, cone ignored |
+| 21 | vehicle `[interiorlight]`, scenery `[nomaplighting]`, building lightmaps | `vehicle_lights.rs`, `maplights.rs`; no `RenderLayers` anywhere | no layer convention, no assignment of buildings/vehicle interiors, `[nomaplighting]` unapplied |
+| 22 | `envir.cfg` sky/light colours and twilight angles, session date and time | `sky.rs` (`SunLight`, `SunDisc`, `MoonDisc`), `environment.rs` (sun position) | no `VolumetricFog`/`VolumetricLight`, no moon direction/phase from date, moonlight reuses the sun light |
+| 23 | model `[light_enh_2]`, `[spotlight]` with `Spot_Select`, AI variables | `vehicle_glow.rs` (pool of six spots, fixed cone), `vehicle.rs` | cone angles and brightness variables not mapped to the spot light, no beam |
+
+### Asked for in this round besides the brief: weather
+
+The docs specify weather ([`environment.md`](../formats/text/environment.md): `Weather/*.owt`, `clouds.cfg`, `.dsc`; scenario `.osn.owt`) but the game has five hard-coded presets that change only sky attenuation, fallback light and temperature; fog, clouds, precipitation, ground wetness and wind are not rendered. An agent (`agent/weather`, own worktree) implements it: `.owt` parser, the installation's presets in the wizard and the Environment page, distance fog, cloud layer, precipitation, wet ground, wind and precipitation script variables, settings toggles; design note `architecture/weather.md`. It is bounded away from System 6: plain distance fog only, no volumetric fog, god rays or light cones.
+
+### Open for Checkpoint 2 (Phase B scope)
+
+1. How OMSI separates interior from exterior light: measure from content (`[interiorlight]` range semantics, `[nomaplighting]` objects, buildings with `[LightMapMapping]`, bus interior lights) and decide the `RenderLayers` convention.
+2. Cone rendering technique for lanterns and headlights without volumetric support in Bevy: candidates are a screen-space additive cone mesh with depth fade (cheap, no shadows), per-light analytic ray-marched cone in a custom material, or Bevy's volumetric fog with a spot-light shadow proxy; each costed against the 60 fps budget.
+3. Sun god rays through `VolumetricFog`/`VolumetricLight`: cost on the target GPU, step count, fallback (off) in the Environment UI and settings.
+4. Moon: direction and phase from date and time (new moon to full moon from the date), moonlight as its own directional light.
+5. Performance budget: maximum volumetric lights on screen and the fallback ladder.
