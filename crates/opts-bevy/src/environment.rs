@@ -9,8 +9,8 @@
 //! refresh. Design: `docs/src/architecture/session-environment.md`.
 //!
 //! A change of the date that the map content is built for (`map_date`, Chrono) is announced with
-//! [`MapDateChanged`]; a Chrono handler (none is registered yet) reports its progress in
-//! [`ChronoRebuild`], which the pause menu observes.
+//! [`MapDateChanged`]; the game's Chrono handler (`omsi_world::apply_map_date_changes`) reports
+//! its progress in [`ChronoRebuild`], which the pause menu observes.
 
 use std::fmt;
 
@@ -306,9 +306,9 @@ pub struct MapDateChanged {
 /// Progress of rebuilding the map for a new map date (Chrono).
 ///
 /// The extension point of the live Chrono switch: a handler reads [`MapDateChanged`], sets
-/// `total_tiles` and `pending_tiles` and counts `pending_tiles` down as tiles are rebuilt. No
-/// handler is registered yet, so it stays at zero and nothing waits. The pause page shows the
-/// progress and *Resume* waits until `pending_tiles` is zero.
+/// `total_tiles` and `pending_tiles` and counts `pending_tiles` down as tiles are rebuilt (the
+/// game's `omsi_world::apply_map_date_changes`). The pause page shows the progress and *Resume*
+/// waits until `pending_tiles` is zero.
 #[derive(Resource, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ChronoRebuild {
     /// Tiles still to rebuild.

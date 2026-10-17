@@ -281,6 +281,12 @@ pub fn configure_traffic(
     *pool = TrafficPool::default();
 }
 
+/// Empties the pool so that the AI lists are read again (a Chrono switch changed them). Vehicles
+/// already driving stay.
+pub(super) fn reset_pool(pool: &mut TrafficPool) {
+    *pool = TrafficPool::default();
+}
+
 /// Rebuilds the lane graph after tiles were loaded or unloaded; agents on lanes that no longer
 /// exist are removed (their entities follow in [`move_traffic`]).
 pub fn update_traffic_graph(mut state: ResMut<TrafficState>) {

@@ -630,10 +630,8 @@ pub fn load_rail_variants(
     pool.rng = 0x7A41_C0DE;
     bikes.0.started = true;
     bikes.0.rng = 0xB1CE_0001;
-    let Some(path) = job.install.find_in(&job.config.map_dir, "ailists.cfg") else {
-        return;
-    };
-    let Ok(bytes) = std::fs::read(path) else {
+    // The lists in force on the map date (Chrono group updates merged in).
+    let Some(bytes) = job.data_bytes("ailists.cfg") else {
         return;
     };
     let lists = opts_core::formats::map::AiLists::parse(&bytes);

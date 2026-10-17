@@ -32,11 +32,7 @@ impl Plugin for GameHotReloadPlugin {
 }
 
 fn execute(world: &mut World, plan: &ReloadPlan) {
-    for e in &plan.despawn {
-        if let Ok(entity) = world.get_entity_mut(*e) {
-            entity.despawn();
-        }
-    }
+    plan.apply(world);
     if !plan.restart_vehicle {
         return;
     }

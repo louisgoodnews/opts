@@ -17,7 +17,7 @@ use crate::in_game::loading_ui::{
     ChooseAnotherBtn, ContinueBtn, DetailsBtn, LoadingBackBtn, RetryBtn,
 };
 use crate::in_game::omsi_world::{
-    begin_world_load, load_next_tile, load_player_vehicle, resolve_session_config,
+    begin_world_load_at, chrono_date, load_next_tile, load_player_vehicle, resolve_session_config,
     spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
 };
 use crate::in_game::types::{
@@ -142,7 +142,9 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         env.service.as_deref(),
     )
     .and_then(|cfg| {
-        begin_world_load(cfg).map(|mut job| {
+        // The map is built for the planned date (Chrono); the session environment starts there.
+        let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
+        begin_world_load_at(cfg, Some(date)).map(|mut job| {
             job.no_vehicle = no_vehicle;
             (job.map_name(), job)
         })
@@ -171,6 +173,7 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                     .because("load-cause-no-vehicle-file"),
                 );
             }
+            env.commands.insert_resource(job.chrono_state());
             env.commands.insert_resource(job);
             state.progress = P_TERRAIN;
             state.stage = LoadStage::BuildTerrain;

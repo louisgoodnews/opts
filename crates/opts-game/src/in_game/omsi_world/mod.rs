@@ -16,6 +16,7 @@ use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
+mod chrono;
 mod collision;
 mod consist_plan;
 mod crossing;
@@ -44,6 +45,7 @@ mod vehicle;
 mod vehicle_text;
 mod water;
 
+pub use chrono::{apply_map_date_changes, chrono_date, track_chrono_rebuild, ChronoState};
 pub use collision::{
     attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
     VehicleCollider,
@@ -51,7 +53,7 @@ pub use collision::{
 pub use dev_look::place_dev_camera;
 use ground::GroundArray;
 pub use ground_height::{follow_ground, sample_consist_ground, GroundIndex};
-pub use job::{begin_world_load, resolve_session_config};
+pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,
     update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText, DebugWheelVars,
@@ -66,7 +68,7 @@ pub use rail::{
     rail_player_step, spawn_ai_trains, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, Part,
     RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
 };
-pub use reload::ReloadPlan;
+pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
@@ -219,6 +221,8 @@ pub struct WorldLoadJob {
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
     scenery: scenery_objects::SceneryObjectCache,
+    /// Chrono entries and what is active on the map date (`chrono.rs`).
+    chrono: chrono::ChronoContext,
     /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
     parklist: Option<Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
