@@ -87,9 +87,9 @@ impl Direction {
 /// `docs/src/architecture/ai-traffic-kinematics.md`, §4). Trucks prefer such lanes.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LaneRules {
-    /// `trafficdensity`: factor for AI traffic on the lane (`0` = none; corpus values `0`,
-    /// `0.001`, `0.1`, `0.5`, `3`, …).
-    pub density: Option<f64>,
+    /// `trafficdensity` rules by vehicle group (the rule's flag; `0` = none for that group;
+    /// corpus values `0`, `0.001`, `0.1`, `0.5`, `1`, `3`, …).
+    pub density: crate::density::LaneDensity,
     /// `priority`: raw value (corpus: `64` and `192`; the order is not settled ❓).
     pub priority: Option<u32>,
     /// A `trucks` rule exists (trucks may use the lane, and prefer it).
@@ -457,14 +457,7 @@ impl LaneGraph {
             .enumerate()
             .filter(|(_, l)| {
                 // Distance to the chord, with slack for the bulge of an arc.
-                let (a, b) = (l.geometry.start, l.geometry.end());
-                let ab = b - a;
-                let t = if ab.length_squared() > 1e-9 {
-                    ((centre - a).dot(ab) / ab.length_squared()).clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                (a + ab * t).distance(centre) <= max + 0.25 * l.length() && accept(l)
+                chord_distance(l, centre) <= max + 0.25 * l.length() && accept(l)
             })
             .map(|(i, _)| i as u32)
             .collect();
@@ -473,6 +466,48 @@ impl LaneGraph {
         }
         for _ in 0..12 {
             let id = LaneId(near[rng.below(near.len())]);
+            let lane = &self.lanes[id.0 as usize];
+            let s = rng.next_f64() * lane.length();
+            let d = lane.geometry.point_at(s).distance(centre);
+            if (min..=max).contains(&d) {
+                return Some((id, s));
+            }
+        }
+        None
+    }
+
+    /// A random place on a lane at a distance of `min..=max` metres from `centre`, the lane drawn
+    /// with probability proportional to `weight` (lanes weighing `0` or less are never drawn; up
+    /// to 12 tries). Spawning uses `length × density` as the weight.
+    pub fn weighted_spot(
+        &self,
+        centre: DVec2,
+        min: f64,
+        max: f64,
+        rng: &mut Rng,
+        weight: impl Fn(&Lane) -> f64,
+    ) -> Option<(LaneId, f64)> {
+        let mut near: Vec<(u32, f64)> = Vec::new();
+        let mut total = 0.0;
+        for (i, l) in self.lanes.iter().enumerate() {
+            if chord_distance(l, centre) > max + 0.25 * l.length() {
+                continue;
+            }
+            let w = weight(l);
+            if w > 0.0 && w.is_finite() {
+                total += w;
+                near.push((i as u32, total));
+            }
+        }
+        if near.is_empty() {
+            return None;
+        }
+        for _ in 0..12 {
+            let pick = rng.next_f64() * total;
+            let at = near
+                .partition_point(|&(_, acc)| acc <= pick)
+                .min(near.len() - 1);
+            let id = LaneId(near[at].0);
             let lane = &self.lanes[id.0 as usize];
             let s = rng.next_f64() * lane.length();
             let d = lane.geometry.point_at(s).distance(centre);
@@ -539,6 +574,18 @@ impl LaneGraph {
         }
         None
     }
+}
+
+/// Distance from `centre` to the chord between a lane's ends.
+fn chord_distance(l: &Lane, centre: DVec2) -> f64 {
+    let (a, b) = (l.geometry.start, l.geometry.end());
+    let ab = b - a;
+    let t = if ab.length_squared() > 1e-9 {
+        ((centre - a).dot(ab) / ab.length_squared()).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    (a + ab * t).distance(centre)
 }
 
 #[cfg(test)]
@@ -695,6 +742,39 @@ mod tests {
         assert_eq!(g1.lane_by_key((5, 1)), Some(LaneId(1)));
         assert_eq!(g2.lane_by_key((5, 1)), Some(LaneId(2)));
         assert_eq!(g2.lane_by_key((9, 0)), None);
+    }
+
+    /// Lanes are drawn in proportion to their weight; a lane weighing 0 never.
+    #[test]
+    fn weighted_spots_follow_the_weights() {
+        let g = LaneGraph::build(
+            &[
+                road(0.0, 0.0, 0.0, 200.0),
+                road(10.0, 0.0, 0.0, 200.0),
+                road(20.0, 0.0, 0.0, 200.0),
+            ],
+            &ConnectParams::default(),
+        );
+        let centre = DVec2::new(10.0, 100.0);
+        let x_of = |id: LaneId| g.lane(id).unwrap().geometry.start.x;
+        let mut rng = Rng::new(3);
+        let mut counts = [0usize; 3];
+        for _ in 0..3000 {
+            let (id, _) = g
+                .weighted_spot(centre, 0.0, 150.0, &mut rng, |l| match l.geometry.start.x {
+                    x if x < 5.0 => 3.0,
+                    x if x < 15.0 => 1.0,
+                    _ => 0.0,
+                })
+                .unwrap();
+            counts[(x_of(id) / 10.0).round() as usize] += 1;
+        }
+        assert_eq!(counts[2], 0);
+        let share = counts[0] as f64 / (counts[0] + counts[1]) as f64;
+        assert!((share - 0.75).abs() < 0.04, "share {share}");
+        assert!(g
+            .weighted_spot(centre, 0.0, 150.0, &mut rng, |_| 0.0)
+            .is_none());
     }
 
     #[test]

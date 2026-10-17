@@ -134,7 +134,7 @@ Principles:
 2. **Parsing stays in `opts-core`**, simulation in `opts-traffic`, ECS glue in `opts-bevy` (an `AiTrafficPlugin` that owns the world as a resource, mirrors agents to entities and implements the two modes). The game decides *when* to run it (map loaded, player position, density settings).
 3. **Two fidelity levels, one state.** *Kinematic*: the crate moves the agent and the host places a mesh. *Dynamic*: the host spawns the vehicle simulation and scripts and feeds `DriverCommand`; the agent's `s`/`speed` are then read back from the vehicle (the lane position follows from projecting the vehicle onto its lane). Dynamic is used within a radius of the player (≈ 150 m ❓), kinematic beyond, with hysteresis. Most background vehicles never need scripts at all.
 4. **Streaming.** The lane graph is built per loaded tile set; because tiles stream in and out (M-0024, resident-tile streaming as implemented by `stream_world_tiles`), the graph is rebuilt (or extended) when the resident tile set changes. A whole map builds in milliseconds [M]; agents on a lane that disappears are despawned (`TrafficEvent`), agents must not outlive their tile's data. Spawn only on resident lanes, outside the camera frustum and beyond a minimum distance from the player; despawn beyond the despawn radius or at dead ends.
-5. **Density.** Target vehicle count near the player = `lane_km_resident × density(hour, day) × base_per_km` where `density` comes from `unsched_trafficdens.txt` (× `global.cfg`), and per-lane `[rule] trafficdensity` scales it. OMSI's own scale is unknown ❓ — `base_per_km` is a game setting (default chosen by visual calibration).
+5. **Density.** Per path and group from the `[rule] trafficdensity` flag, times each group's time curve, over the lanes around the player; see [Density model](#density-model-2026-10-17). OMSI's own scale is unknown ❓ — `L0` is calibrated against the former behaviour.
 6. **Time.** The simulation runs in `FixedUpdate` at the existing fixed step (≤ 0.1 s for the IDM) after the physics step; the day clock comes from the game's time of day.
 
 ### 5.1 `opts-traffic` today (this milestone's slice)
@@ -156,6 +156,59 @@ Principles:
 | `examples/lane_graph_audit` | the measurement of §3.1 | — |
 
 ---
+
+### Density model (2026-10-17)
+
+Measured on the 40+ installed maps (Phase B of the Berlin-Spandau analysis,
+`docs/src/meta/berlin-spandau-2026-10-17.md` §6 System 3): the `flag` of `[rule] trafficdensity` is
+the 0-based index into `unsched_vehgroups.txt` (297,493 of 297,493 rules in range). Before this,
+OPTS ignored the flag (the last rule of any group won), clamped values above 1, dropped the groups
+whose default density is 0 (Berlin-Spandau `Trucks`, `GDRCars`), assumed a weekday and set the
+target to `resident road length / 250 m × Σ factors`, capped at 30 — with 3 × 3 resident tiles the
+cap always bound.
+
+* **Per lane and group** `D(l, g)` ([lists](../formats/map/lists.md#unsched_vehgroupstxt-and-unsched_trafficdenstxt)):
+  the rule with flag `g` (last in file order), unclamped; otherwise the group's default (`0` none,
+  `k` = the density of group `k − 1` on the lane, first group `1` = *Medium* = 1.0 ❓).
+  `opts_traffic::LaneDensity` keeps the rules per group (`LaneRules::density`), `for_group`
+  resolves the defaults. Lane changes and strategic route options avoid a lane whose rule closes it
+  to the vehicle's own group (`IdmParams::density_group`).
+* **Time factor** `f_g(t)`: `unsched_trafficdens.txt` factor × curve (hour wrapping at 24, day bit
+  from the session date), else `global.cfg` `[trafficdensity_road]`.
+* **Target**: `n_g = Σ_lanes (length inside the 320 m disc around the camera) × D(l, g) × f_g(t) / L0`
+  with **`L0 = 80 m`** (`METRES_OF_LANE_PER_VEHICLE`), calibrated with the `density_census`
+  example (below). The total is `round(Σ n_g)`.
+* **Ceiling**: the setting *Road traffic* (`gameplay.traffic`, default **100**, was 30) is a
+  performance ceiling only. When `Σ n_g` exceeds it, every `n_g` is scaled by `ceiling / Σ n_g`
+  (`opts_traffic::group_targets`) and the game logs it once.
+* **Spawning** picks a group below its target (weighted by the shortfall), a vehicle of the group
+  by its `ailists.cfg` weight, then a lane in the 80–220 m ring with probability ∝ `length × D(l, g)`
+  (`LaneGraph::weighted_spot`), out of the camera's view.
+* **Pedestrians**: the walker target (path length / 80 m, up to the pedestrian ceiling) is scaled
+  by `global.cfg` `[trafficdensity_passenger]` at the session hour.
+
+**Calibration of `L0`** (`cargo run --release -p opts-traffic --example density_census -- <map dir>…`,
+12:00 on a weekday, up to five entry points per map, 3 × 3 tiles around each). `S` is
+`Σ lane metres in 320 m × D × f`; *old* is the former target `min(30, resident road / 250 m × Σ factors)`.
+The median of `S / old` over the 56 entry points with traffic is **84 m**, hence `L0 = 80 m`; the
+spread is wide (2–297 m), because the old target ignored the rules and the time curves. Selected rows
+(new target = `S / 80`):
+
+| Map, entry point | Resident road | Old target | `S` | New target |
+| :--- | ---: | ---: | ---: | ---: |
+| Berlin-Spandau, Westerwaldstr. | 31.6 km | 30 | 1,831 | 23 |
+| Berlin-Spandau, Stadtgrenze | 11.3 km | 17 | 2,039 | 25 |
+| Ruhrau V2, Betriebshof | 17.5 km | 30 | 6,699 | 84 |
+| Hamburg109, Rathausmarkt | 11.5 km | 25 | 1,661 | 21 |
+| Aachen Linie 33, Rothe Erde | 18.9 km | 30 | 3,198 | 40 |
+| Grundorf, Einsteindorf | 5.3 km | 21 | 872 | 11 |
+| BRT Berlin, Nikolassee | 8.7 km | 30 | 6,063 | 76 |
+| BRT Berlin, Teltow | 9.3 km | 30 | 12 | 0 |
+| Gladbeck (no `unsched_*`), Mentzelstr. | 8.1 km | 30 | 944 | 12 |
+
+Maps whose rules give a group many dense lanes (Ruhrau, BRT Nikolassee: `3` on main roads) get far
+more traffic than before; maps whose first-group rules are mostly `0`/`0.001` (BRT Teltow, Rheinhausen
+Waldhof) get almost none — as their rules say. Whether OMSI shows the same is the open Q-AI04.
 
 ## 6. Integration steps (what the game needs)
 

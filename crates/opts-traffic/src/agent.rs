@@ -461,6 +461,7 @@ impl TrafficWorld {
         &self,
         lane: LaneId,
         class: crate::idm::VehicleClass,
+        group: usize,
     ) -> Vec<(LaneId, LaneId, Side)> {
         let Some(own) = self.graph.lane(lane) else {
             return Vec::new();
@@ -480,7 +481,7 @@ impl TrafficWorld {
                 continue;
             };
             if nl.kind != own.kind
-                || nl.rules.density == Some(0.0)
+                || nl.rules.density.closed_for(group)
                 || !nl.rules.allows(class)
                 || n.at(len - STRATEGIC_LAST_M - 5.0).is_none()
             {
@@ -507,6 +508,7 @@ impl TrafficWorld {
         &mut self,
         lane: LaneId,
         class: crate::idm::VehicleClass,
+        group: usize,
         strategic: bool,
     ) -> Option<(LaneId, Option<Strategic>)> {
         let succ = self.graph.successors(lane);
@@ -521,7 +523,7 @@ impl TrafficWorld {
             allowed
         };
         let options = if strategic {
-            self.strategic_options(lane, class)
+            self.strategic_options(lane, class, group)
         } else {
             Vec::new()
         };
@@ -562,8 +564,8 @@ impl TrafficWorld {
             }
             let last = a.plan.back().copied().unwrap_or(a.lane);
             let strategic = a.strategic.is_none() && a.no_strategic != Some(last);
-            let class = a.params.class;
-            match self.pick_next(last, class, strategic) {
+            let (class, group) = (a.params.class, usize::from(a.params.density_group));
+            match self.pick_next(last, class, group, strategic) {
                 Some((n, change)) => {
                     let a = &mut self.agents[i];
                     a.plan.push_back(n);
