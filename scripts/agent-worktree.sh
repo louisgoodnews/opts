@@ -6,7 +6,7 @@
 set -euo pipefail
 topic=${1:?usage: scripts/agent-worktree.sh <topic> [base-branch]}
 root=$(git rev-parse --show-toplevel)
-main=$(git -C "$root" worktree list --porcelain | awk '/^worktree /{print $2; exit}')
+main=$(git -C "$root" worktree list --porcelain | awk '/^worktree / && !n++ {print $2}')
 base=${2:-$(git -C "$main" rev-parse --abbrev-ref HEAD)}
 dir="$(dirname "$main")/opts-wt-$topic"
 branch="agent/$topic"
