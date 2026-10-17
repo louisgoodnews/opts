@@ -49,6 +49,10 @@ pub struct VehicleTraits {
     pub brake_performance: f64,
     /// Range the per-vehicle "rowdy" draw lies in (`[rowdy_factor]`), within `0..=1`.
     pub rowdy: (f64, f64),
+    /// Distance (m) from the front bumper to the front axle, when the axles are known.
+    pub front_overhang: Option<f64>,
+    /// Distance (m) from the front axle to the rearmost axle, when the axles are known.
+    pub wheelbase: Option<f64>,
 }
 
 impl Default for VehicleTraits {
@@ -65,6 +69,8 @@ impl Default for VehicleTraits {
             brake_force: None,
             brake_performance: 1.0,
             rowdy: (0.0, 1.0),
+            front_overhang: None,
+            wheelbase: None,
         }
     }
 }
@@ -90,10 +96,15 @@ impl VehicleTraits {
 /// used for a typical car and lorry and are ❓ until measured against OMSI (Q-AI01).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Calibration {
-    /// Free-road speed (m/s) where a lane has no limit, before the per-vehicle draw.
+    /// Free-road speed (m/s) where a lane has no limit, before the driver's factor (hosts pass
+    /// it to [`crate::TrafficWorld::set_open_road_speed`]).
     pub open_road_speed: f64,
-    /// Half the width of the desired-speed spread around `open_road_speed` (`0.1` = ±10 %).
+    /// Half the width of the spread of the drivers' speed factor around 1 (`0.1` = ±10 %).
     pub speed_spread: f64,
+    /// Top speed (m/s) when the file gives none: cars, then heavy vehicles.
+    pub default_top_speed: (f64, f64),
+    /// Lateral acceleration (m/s²) accepted in curves: cars, then buses and trucks.
+    pub lat_accel: (f64, f64),
     /// Fraction of the available drive force a driver uses for normal acceleration.
     pub accel_fraction: f64,
     /// Fraction of the available brake force a driver uses for comfortable braking.
@@ -115,6 +126,8 @@ impl Default for Calibration {
         Self {
             open_road_speed: 50.0 / 3.6,
             speed_spread: 0.1,
+            default_top_speed: (130.0 / 3.6, 80.0 / 3.6),
+            lat_accel: (2.5, 2.0),
             accel_fraction: 0.55,
             comfort_brake_fraction: 0.15,
             default_wheel_radius: (0.31, 0.5),
@@ -134,17 +147,12 @@ impl IdmParams {
     /// The driving parameters of the vehicle described by `traits`.
     ///
     /// `roll` is a uniform draw in `[0, 1)` that picks this vehicle's place in its rowdy range
-    /// (the caller owns the random generator, so runs stay reproducible); `lane_limit` is the
-    /// speed limit (m/s) of the lane it is placed on. Fields the traits do not give keep the
-    /// defaults of the vehicle's class ([`IdmParams::default`] for cars, [`IdmParams::heavy`]
-    /// otherwise).
+    /// (the caller owns the random generator, so runs stay reproducible). Fields the traits do
+    /// not give keep the defaults of the vehicle's class ([`IdmParams::default`] for cars,
+    /// [`IdmParams::heavy`] otherwise). Speed limits are not part of the parameters: the driver
+    /// applies its [`IdmParams::speed_factor`] to the limit of each lane it drives on.
     #[must_use]
-    pub fn from_traits(
-        traits: &VehicleTraits,
-        cal: &Calibration,
-        roll: f64,
-        lane_limit: Option<f64>,
-    ) -> Self {
+    pub fn from_traits(traits: &VehicleTraits, cal: &Calibration, roll: f64) -> Self {
         let class = traits.class();
         let heavy = class != VehicleClass::Car;
         let mut p = if heavy {
@@ -154,20 +162,37 @@ impl IdmParams {
         };
         p.class = class;
         p.length = traits.length;
+        // Axles: from the file, else the front axle 0.85 m behind the bumper and a wheelbase of
+        // 0.6 × length (`docs/src/architecture/ai-traffic-kinematics.md`, §2).
+        p.front_overhang = traits
+            .front_overhang
+            .filter(|o| o.is_finite() && *o >= 0.0 && *o < traits.length)
+            .unwrap_or(0.85_f64.min(traits.length * 0.3));
+        p.wheelbase = traits
+            .wheelbase
+            .filter(|l| l.is_finite() && *l > 0.5 && *l < traits.length)
+            .unwrap_or(0.6 * traits.length)
+            .max(0.5);
         p.time_headway = if heavy { cal.headway.1 } else { cal.headway.0 };
 
-        // Desired speed: the open-road speed, spread by this driver's rowdiness, never above the
-        // vehicle's own top speed or the lane's limit.
+        // Speed: a factor on the limits, spread by this driver's rowdiness; the vehicle's own
+        // top speed is the ceiling. Rowdier drivers also accept a little more in curves.
         let (lo, hi) = traits.rowdy;
         let rowdy = (lo + (hi - lo) * roll).clamp(0.0, 1.0);
-        let mut v0 = cal.open_road_speed * (1.0 + cal.speed_spread * (2.0 * rowdy - 1.0));
-        if let Some(top) = traits.top_speed {
-            v0 = v0.min(top);
-        }
-        if let Some(limit) = lane_limit {
-            v0 = v0.min(limit);
-        }
-        p.desired_speed = v0.max(0.5);
+        let spread = cal.speed_spread * (2.0 * rowdy - 1.0);
+        p.speed_factor = 1.0 + spread;
+        let top = if heavy {
+            cal.default_top_speed.1
+        } else {
+            cal.default_top_speed.0
+        };
+        p.desired_speed = traits.top_speed.unwrap_or(top).max(0.5);
+        let lat = if heavy {
+            cal.lat_accel.1
+        } else {
+            cal.lat_accel.0
+        };
+        p.lat_accel = lat * (1.0 + 0.5 * spread);
 
         if let (Some(torque), Some(mass)) = (traits.drive_torque, traits.mass_kg) {
             let radius = traits.wheel_radius.unwrap_or(if heavy {
@@ -218,7 +243,7 @@ mod tests {
     }
 
     fn params(t: &VehicleTraits) -> IdmParams {
-        IdmParams::from_traits(t, &Calibration::default(), 0.5, None)
+        IdmParams::from_traits(t, &Calibration::default(), 0.5)
     }
 
     #[test]
@@ -230,8 +255,12 @@ mod tests {
             (d.max_accel, d.comfort_decel, d.max_decel)
         );
         assert!(
-            (p.desired_speed - d.desired_speed).abs() < 1e-9,
+            (p.speed_factor - 1.0).abs() < 1e-9 && (p.lat_accel - 2.5).abs() < 1e-9,
             "roll 0.5 is the middle"
+        );
+        assert!(
+            (p.desired_speed - 130.0 / 3.6).abs() < 1e-9,
+            "default top speed"
         );
         let heavy = VehicleTraits {
             length: 12.0,
@@ -305,19 +334,24 @@ mod tests {
     }
 
     #[test]
-    fn top_speed_and_lane_limit_cap_the_desired_speed() {
+    fn the_top_speed_caps_and_the_limit_is_applied_per_lane() {
+        // Semantics changed (C3): the lane limit is no longer folded in at spawn; the driver
+        // applies its factor to each lane's limit, under the vehicle's top speed.
         let scooter = VehicleTraits {
             top_speed: Some(15.0 / 3.6),
             ..car()
         };
-        assert!(params(&scooter).desired_speed <= 15.0 / 3.6 + 1e-9);
-        let limited = IdmParams::from_traits(&car(), &Calibration::default(), 1.0, Some(8.0));
-        assert!((limited.desired_speed - 8.0).abs() < 1e-9);
-        let free = IdmParams::from_traits(&car(), &Calibration::default(), 0.5, None);
+        let p = params(&scooter);
+        assert!(p.lane_speed(Some(50.0 / 3.6), 50.0 / 3.6) <= 15.0 / 3.6 + 1e-9);
+        let fast = IdmParams::from_traits(&car(), &Calibration::default(), 1.0);
+        assert!((fast.lane_speed(Some(8.0), 50.0 / 3.6) - 8.0 * 1.1).abs() < 1e-9);
+        let free = params(&car());
         assert!(
-            (free.desired_speed - 50.0 / 3.6).abs() < 1e-9,
+            (free.lane_speed(None, 50.0 / 3.6) - 50.0 / 3.6).abs() < 1e-9,
             "open road speed, not the 160 km/h top speed"
         );
+        assert!((free.desired_speed - 160.0 / 3.6).abs() < 1e-9);
+        assert_eq!(params(&lorry()).lat_accel, 2.0);
     }
 
     #[test]
@@ -327,24 +361,20 @@ mod tests {
             rowdy: (0.4, 0.6),
             ..car()
         };
-        let lowest = IdmParams::from_traits(&t, &cal, 0.0, None).desired_speed;
-        let highest = IdmParams::from_traits(&t, &cal, 0.999, None).desired_speed;
-        let base = cal.open_road_speed;
+        let lowest = IdmParams::from_traits(&t, &cal, 0.0).speed_factor;
+        let highest = IdmParams::from_traits(&t, &cal, 0.999).speed_factor;
         assert!(
-            lowest >= base * 0.98 - 1e-9 && highest <= base * 1.02 + 1e-9,
+            lowest >= 0.98 - 1e-9 && highest <= 1.02 + 1e-9,
             "{lowest} {highest}"
         );
         let fixed = VehicleTraits {
             rowdy: (0.0, 0.0),
             ..car()
         };
-        let a = IdmParams::from_traits(&fixed, &cal, 0.1, None).desired_speed;
-        let b = IdmParams::from_traits(&fixed, &cal, 0.9, None).desired_speed;
+        let a = IdmParams::from_traits(&fixed, &cal, 0.1).speed_factor;
+        let b = IdmParams::from_traits(&fixed, &cal, 0.9).speed_factor;
         assert_eq!(a, b);
-        assert!(
-            (a - base * 0.9).abs() < 1e-9,
-            "rowdy 0 is the calmest driver"
-        );
+        assert!((a - 0.9).abs() < 1e-9, "rowdy 0 is the calmest driver");
     }
 
     #[test]

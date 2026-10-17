@@ -81,6 +81,9 @@ pub fn signals_from_tile(
     out
 }
 
+/// `speedlimit` values (km/h) from this on mean "no limit".
+pub const NO_LIMIT_KMH: f64 = 200.0;
+
 /// Folds the rules that address path `path_index` of `owner` into a speed limit (m/s) and the
 /// other lane rules.
 fn rules_for(
@@ -96,8 +99,11 @@ fn rules_for(
     {
         let value = f64::from(r.value);
         match r.kind() {
-            // km/h in the file; `0` would stop all traffic, so it counts as "no limit" ❓.
-            Some(RuleKind::SpeedLimit) if value > 0.0 => speed = Some(value / 3.6),
+            // km/h in the file; `0` would stop all traffic, so it counts as "no limit" ❓, and so
+            // do 200 km/h and more (the editor's "no limit" is 250, Q-AK-02).
+            Some(RuleKind::SpeedLimit) if value > 0.0 && value < NO_LIMIT_KMH => {
+                speed = Some(value / 3.6);
+            }
             Some(RuleKind::TrafficDensity) => out.density = Some(value),
             Some(RuleKind::Priority) => out.priority = Some(r.value.max(0.0) as u32),
             Some(RuleKind::Trucks) => out.trucks = true,
@@ -365,6 +371,7 @@ mod tests {
                 rule(me, 0, "overtaking_prohib", 0.0),
                 rule(other, 0, "speedlimit", 5.0),
                 rule(me, 0, "speedlimit", 0.0),
+                rule(me, 0, "speedlimit", 250.0),
             ],
             ..MapTile::default()
         };
@@ -373,7 +380,8 @@ mod tests {
             sco: Vec::new(),
         };
         let segs = segments_from_tile(&tile, DVec2::ZERO, &mut src);
-        // Path 0: only the overtaking ban; a limit of 0 means none, the other owner's is ignored.
+        // Path 0: only the overtaking ban; limits of 0 and 250 mean none, the other owner's is
+        // ignored.
         assert_eq!(segs[0].speed_limit, None);
         assert!(segs[0].rules.no_overtaking && segs[0].rules.density.is_none());
         // Path 1: 36 km/h = 10 m/s, density 0.5, priority 192, trucks.

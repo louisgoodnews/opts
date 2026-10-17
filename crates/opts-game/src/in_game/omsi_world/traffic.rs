@@ -121,13 +121,12 @@ pub struct TrafficPool {
 #[derive(Component)]
 pub struct TrafficVehicle {
     id: AgentId,
-    /// Distance from the model origin to the front bumper (m).
-    front_offset: f32,
     delta_height: f32,
-    /// Wheel radius (m) and wheelbase (m) used for the wheel variables (from the vehicle's
-    /// axles when the file gives them).
+    /// Wheel radius (m) used for the wheel rotation (from the vehicle's file when it gives one).
     wheel_radius: f32,
-    wheelbase: f32,
+    /// Longitudinal position of the rear axle in the model frame (m): the model origin sits
+    /// `rear_axle_y` along the body from the agent's rear axle.
+    rear_axle_y: f32,
     /// Accumulated wheel rotation (rad).
     wheel_angle: f32,
     /// Seat occupation (`ai_pax1…4`): bit `i` shows passenger `i + 1`.
@@ -148,10 +147,9 @@ impl TrafficVehicle {
     pub(super) fn at(origin: DVec2, heading: f64, height: f32) -> Self {
         Self {
             id: AgentId(0),
-            front_offset: 0.0,
             delta_height: 0.0,
             wheel_radius: 0.31,
-            wheelbase: 2.6,
+            rear_axle_y: -1.3,
             wheel_angle: 0.0,
             pax: 0,
             blink_phase: 0.0,
@@ -520,9 +518,9 @@ pub fn spawn_traffic(
         if view.dot(to) > 0.5 && at.distance(centre) < 160.0 {
             return Err(4);
         }
-        Ok((lane_id, s, lane.speed_limit, slot, at))
+        Ok((lane_id, s, slot, at))
     })();
-    let (lane_id, s, limit, slot, at) = match result {
+    let (lane_id, s, slot, at) = match result {
         Ok(found) => found,
         Err(reason) => {
             rejected[reason] += 1;
@@ -613,7 +611,7 @@ pub fn spawn_traffic(
         });
     }
     let traits = variant.traits();
-    let params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64(), limit);
+    let params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());
     // The vehicle may not use the lane it was placed on (its length was unknown before).
     if state
         .world
@@ -627,16 +625,17 @@ pub fn spawn_traffic(
         pool.rng = Some(rng);
         return;
     }
-    let speed = params.desired_speed * 0.8;
+    let speed = state.world.lane_cap(&params, lane_id) * 0.8;
     let head = &variant.units[0];
     let size = head.size.unwrap_or((4.4, 2.2));
     let heavy = params.class != VehicleClass::Car;
-    let (wheel_radius, wheelbase) = (
-        head.profile
-            .wheel_radius_m
-            .unwrap_or(if heavy { 0.5 } else { 0.31 }),
-        head.profile.wheelbase_m.unwrap_or(size.0 * 0.6),
-    );
+    let wheel_radius = head
+        .profile
+        .wheel_radius_m
+        .unwrap_or(if heavy { 0.5 } else { 0.31 });
+    // Model frame: front bumper at `size.1`, front axle the overhang behind it, rear axle a
+    // wheelbase further back.
+    let rear_axle_y = size.1 - (params.front_overhang + params.wheelbase) as f32;
     let delta_height = head.profile.delta_height_m;
     let name = variant.name.clone();
     let fallbacks = head.profile.fallbacks.clone();
@@ -704,10 +703,9 @@ pub fn spawn_traffic(
             commands.entity(root).insert((
                 TrafficVehicle {
                     id,
-                    front_offset: size.1,
                     delta_height,
                     wheel_radius,
-                    wheelbase,
+                    rear_axle_y,
                     wheel_angle: 0.0,
                     pax,
                     blink_phase: rng_pax.next_f64() as f32 * 0.7,
@@ -761,15 +759,8 @@ pub fn update_ai_variables(
         };
         v.wheel_angle = (v.wheel_angle + agent.speed as f32 / v.wheel_radius * dt)
             % (std::f32::consts::TAU * 64.0);
-        // Steering from the lane's curvature under the bicycle model; positive radius = right.
-        let steer = state.world.graph().lane(agent.lane).map_or(0.0, |l| {
-            let r = l.geometry.radius;
-            if l.geometry.is_straight() {
-                0.0
-            } else {
-                (f64::from(v.wheelbase) / r).atan() as f32
-            }
-        });
+        // Steering: the lane's heading at the front axle against the body (positive = right).
+        let steer = agent.steer as f32;
         for axle in 0..4 {
             for side in ["l", "r"] {
                 vars.set(&format!("wheel_rotation_{axle}_{side}"), v.wheel_angle);
@@ -843,16 +834,16 @@ pub fn move_traffic(
     for (entity, mut v, mut transform, mut visibility, chain) in &mut vehicles {
         let graph = state.world.graph();
         let pose = state.world.agent(v.id).and_then(|a| {
-            let (p, h) = a.pose(graph)?;
-            Some((p, h, a.height(graph)?))
+            let (_, h) = a.pose(graph)?;
+            Some((a.rear_axle, h, a.height(graph)?))
         });
-        let Some((front, heading, z)) = pose else {
+        let Some((rear, heading, z)) = pose else {
             despawn_chain(&mut commands, entity, chain);
             continue;
         };
-        // The model origin sits `front_offset` behind the front bumper.
+        // The body lies along the axles; the model origin sits `rear_axle_y` from the rear axle.
         let dir = DVec2::new(heading.sin(), heading.cos());
-        let origin = front - dir * f64::from(v.front_offset);
+        let origin = rear - dir * f64::from(v.rear_axle_y);
         let height = z as f32 + v.delta_height;
         let bevy = omsi_to_bevy_pos(Vec3::new(origin.x as f32, origin.y as f32, height));
         if cam.is_some_and(|c| c.distance(bevy) > DESPAWN_M) {

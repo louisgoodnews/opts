@@ -119,6 +119,7 @@ impl TrafficWorld {
         let a = &mut self.agents[i];
         a.lane = c.target;
         a.s = c.s_target;
+        a.prev_lane = None;
         a.plan.clear();
         // The car now belongs to the new lane but is still beside it, on the side it came from.
         let offset = match c.side {
@@ -154,7 +155,7 @@ impl TrafficWorld {
             }
         }
         let own = &a.params;
-        let cap_now = lane.speed_limit.unwrap_or(f64::INFINITY);
+        let cap_now = self.lane_cap(own, a.lane);
         let leader_now = self.leader(i, &look, by_lane);
         let a_now = own.acceleration(a.speed, cap_now, leader_now);
         // The vehicle behind me on my lane: its comfort changes when I leave.
@@ -164,7 +165,7 @@ impl TrafficWorld {
         });
         let (a_o_before, a_o_after) = old_follower.map_or((0.0, 0.0), |j| {
             let o = &self.agents[j];
-            let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
+            let cap = self.lane_cap(&o.params, a.lane);
             let gap_me = a.s - own.length - o.s;
             let before = o.params.acceleration(o.speed, cap, Some((gap_me, a.speed)));
             let after_ahead = leader_now.map(|(g, v)| (g + own.length + gap_me, v));
@@ -201,7 +202,7 @@ impl TrafficWorld {
             {
                 continue;
             }
-            let cap_t = ml.speed_limit.unwrap_or(f64::INFINITY);
+            let cap_t = self.lane_cap(own, n.lane);
             let list: &[usize] = by_lane.get(&n.lane).map_or(&[], Vec::as_slice);
             // Someone beside me, or changing into the same spot: no.
             let beside = list.iter().any(|&j| {
@@ -253,12 +254,20 @@ impl TrafficWorld {
                     if gap < f.params.min_gap + 0.5 {
                         continue;
                     }
-                    let after = f.params.acceleration(f.speed, cap_t, Some((gap, a.speed)));
+                    let after = f.params.acceleration(
+                        f.speed,
+                        self.lane_cap(&f.params, n.lane),
+                        Some((gap, a.speed)),
+                    );
                     if after < -B_SAFE_FOLLOWER {
                         continue;
                     }
                     let lead_gap = leader_t.map(|(g, v)| (g + own.length + gap, v));
-                    (f.params.acceleration(f.speed, cap_t, lead_gap), after)
+                    (
+                        f.params
+                            .acceleration(f.speed, self.lane_cap(&f.params, n.lane), lead_gap),
+                        after,
+                    )
                 }
                 None => (0.0, 0.0),
             };

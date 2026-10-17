@@ -39,6 +39,9 @@ pub(super) struct Unit {
     pub joint: Vec2,
     /// Longitudinal position of the rearmost axle in this unit's frame.
     pub rear_axle_y: f32,
+    /// Longitudinal position of the frontmost axle in this unit's own frame, when the file
+    /// declares axles.
+    pub front_axle_y: Option<f32>,
     /// Joint limit on the angle against the predecessor (degrees).
     pub max_alpha_deg: f32,
     /// The unit is coupled the other way round (its model faces backwards).
@@ -103,6 +106,13 @@ impl Variant {
                 .or(head.brake_max_n.map(f64::from)),
             brake_performance: f64::from(head.brake_performance),
             rowdy: (f64::from(head.rowdy.0), f64::from(head.rowdy.1)),
+            // The front axle sits `front_offset − y` behind the bumper; the wheelbase is the
+            // head's own axle span (trailers follow through their joints).
+            front_overhang: self.units[0]
+                .size
+                .zip(self.units[0].front_axle_y)
+                .map(|((_, front), y)| f64::from(front - y)),
+            wheelbase: head.wheelbase_m.map(f64::from),
         }
     }
 
@@ -143,6 +153,11 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         .collect();
     let profile = AiProfile::from_manifest(&manifest, &consts);
     let response = measure_script(job, &manifest, &dir);
+    let front_axle_y = manifest
+        .axles
+        .iter()
+        .map(|a| a.longitudinal_m)
+        .reduce(f32::max);
     let tex_dirs = vec![
         job.install
             .find_in(&dir, "texture")
@@ -163,6 +178,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         hitch: Vec2::ZERO,
         joint: Vec2::ZERO,
         rear_axle_y: 0.0,
+        front_axle_y,
         max_alpha_deg: 52.5,
         reversed: false,
     };
@@ -400,6 +416,7 @@ mod tests {
             hitch: Vec2::ZERO,
             joint: Vec2::ZERO,
             rear_axle_y: 0.0,
+            front_axle_y: None,
             max_alpha_deg: 52.5,
             reversed: false,
         };

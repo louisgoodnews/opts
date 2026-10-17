@@ -99,8 +99,19 @@ pub struct Agent {
     /// Offset at the start of the running lane change and seconds since then.
     pub(crate) lc_from: f64,
     pub(crate) lc_t: f64,
-    /// Yaw (rad, clockwise) caused by the sideways motion.
-    pub(crate) yaw: f64,
+    /// Front axle in the world: on the lane (plus the lane-change offset).
+    pub front_axle: DVec2,
+    /// Rear axle in the world: dragged behind the front axle at the wheelbase (a tractrix).
+    pub rear_axle: DVec2,
+    /// Steering angle of the front wheels (rad, positive = right): the lane's heading at the
+    /// front axle minus the body's heading.
+    pub steer: f64,
+    /// The path point the front axle pursued at the last update.
+    pub(crate) pursuit: DVec2,
+    /// The lane before the current one (the front axle may still be on it).
+    pub(crate) prev_lane: Option<LaneId>,
+    /// The axles were placed (else the next update places them afresh).
+    pub(crate) axles_ready: bool,
     /// Side of the lane change being driven or announced.
     pub(crate) lc_side: Option<Side>,
     /// Announced lane change: the indicator is on until this world time, then it is executed if
@@ -124,14 +135,21 @@ impl Agent {
         self.lc_t < LANE_CHANGE_DURATION_S && self.lc_from != 0.0
     }
 
-    /// World position and compass heading (radians) of the front bumper, including the sideways
-    /// offset and yaw of a lane change in progress.
+    /// Compass heading (radians) of the body: from the rear axle to the front axle.
+    #[must_use]
+    pub fn heading(&self) -> f64 {
+        let d = self.front_axle - self.rear_axle;
+        d.x.atan2(d.y)
+    }
+
+    /// World position and compass heading (radians) of the front bumper of the body (ahead of
+    /// the front axle along the body's heading). `None` when the agent's lane is gone.
     #[must_use]
     pub fn pose(&self, graph: &LaneGraph) -> Option<(DVec2, f64)> {
-        let g = &graph.lane(self.lane)?.geometry;
-        let h = g.heading_at(self.s);
-        let right = DVec2::new(h.cos(), -h.sin());
-        Some((g.point_at(self.s) + right * self.lateral, h + self.yaw))
+        graph.lane(self.lane)?;
+        let h = self.heading();
+        let dir = DVec2::new(h.sin(), h.cos());
+        Some((self.front_axle + dir * self.params.front_overhang, h))
     }
 
     /// Height of the front bumper in metres (from the lane's elevation profile).
@@ -152,7 +170,6 @@ impl Agent {
     fn glide(&mut self, dt: f64) {
         if self.lc_from == 0.0 || self.lc_t >= LANE_CHANGE_DURATION_S {
             self.lateral = 0.0;
-            self.yaw = 0.0;
             if self.lc_due.is_none() {
                 self.lc_side = None;
             }
@@ -160,13 +177,11 @@ impl Agent {
         }
         self.lc_t = (self.lc_t + dt).min(LANE_CHANGE_DURATION_S);
         let u = self.lc_t / LANE_CHANGE_DURATION_S;
-        // Smoothstep: zero lateral speed at both ends.
+        // Smoothstep: zero lateral speed at both ends. The body yaws by itself: the rear axle
+        // follows the front axle's sideways motion.
         self.lateral = self.lc_from * (1.0 - u * u * (3.0 - 2.0 * u));
-        let rate = -self.lc_from * 6.0 * u * (1.0 - u) / LANE_CHANGE_DURATION_S;
-        self.yaw = rate.atan2(self.speed.max(1.0));
         if self.lc_t >= LANE_CHANGE_DURATION_S {
             self.lateral = 0.0;
-            self.yaw = 0.0;
             self.lc_from = 0.0;
             if self.lc_due.is_none() {
                 self.lc_side = None;
@@ -198,6 +213,22 @@ const YELLOW_COMFORT_DECEL: f64 = 3.0;
 /// Light-checking distance (m) when the program does not name one (`[approachdist]` `0`).
 const DEFAULT_APPROACH_M: f64 = 60.0;
 
+/// Slack (m) on the front axle's motion before the rear axle is placed afresh.
+const AXLE_RESET_M: f64 = 0.3;
+/// Distance (m) of the point on the path the front axle pursues.
+const FRONT_PURSUIT_M: f64 = 1.0;
+/// Largest travel (m) of one sub-step of the axle update.
+const AXLE_SUBSTEP_M: f64 = 0.2;
+/// Largest sideways speed (m/s) of a lane change's glide, for the axle jump check.
+const MAX_GLIDE_SPEED: f64 = 3.0;
+
+/// Distance (m) beyond the comfortable braking distance in which lower lane speeds are seen.
+const SPEED_LOOK_EXTRA_M: f64 = 15.0;
+/// Vehicles reach a lower lane speed this far (m) before the lane's start.
+const SPEED_MARGIN_M: f64 = 2.0;
+/// Time constant (s) of shedding excess speed on the current lane.
+const SPEED_TAU_S: f64 = 1.0;
+
 /// Indicators are requested when the next lane turns by more than this (radians) …
 const BLINK_TURN: f64 = 20.0 * std::f64::consts::PI / 180.0;
 /// … and the lane end is closer than this (metres).
@@ -216,6 +247,8 @@ pub struct TrafficWorld {
     /// Clock time (seconds of the day) at simulation time zero.
     clock_base: f64,
     signals: HashMap<SignalKey, SignalProgram>,
+    /// Speed limit (m/s) assumed on lanes without one.
+    open_road_speed: f64,
 }
 
 impl TrafficWorld {
@@ -231,7 +264,66 @@ impl TrafficWorld {
             time: 0.0,
             clock_base: 0.0,
             signals: HashMap::new(),
+            open_road_speed: crate::idm::OPEN_ROAD_SPEED,
         }
+    }
+
+    /// Sets the limit (m/s) assumed on lanes without a `speedlimit` rule (default 50 km/h).
+    pub fn set_open_road_speed(&mut self, speed: f64) {
+        self.open_road_speed = speed.max(0.1);
+    }
+
+    /// The speed (m/s) a vehicle with `params` wants on `lane` by itself: the lane speed of the
+    /// driver ([`IdmParams::lane_speed`]) and the curve limit of the lane's arc.
+    #[must_use]
+    pub fn lane_cap(&self, params: &IdmParams, lane: LaneId) -> f64 {
+        self.graph.lane(lane).map_or(f64::INFINITY, |l| {
+            params
+                .lane_speed(l.speed_limit, self.open_road_speed)
+                .min(params.curve_speed(l.geometry.radius))
+        })
+    }
+
+    /// The free-road speed cap of agent `i` (the IDM's desired speed) and the braking it needs
+    /// for lower lane speeds ahead (m/s², `≤ 0`, or `+∞` when none).
+    ///
+    /// The cap is that of its own lane, and of every planned lane within its comfortable braking
+    /// distance plus [`SPEED_LOOK_EXTRA_M`], reduced by what it can shed on the way
+    /// (`√(v_lim² + 2·b·d)`). Because the IDM's free term lags behind a falling cap, a vehicle
+    /// faster than a lane's speed brakes explicitly once it needs at least half its comfortable
+    /// deceleration to reach it at the lane's start: it slows before a bend or a lower limit
+    /// instead of in it.
+    pub(crate) fn speed_cap(&self, i: usize) -> (f64, f64) {
+        let a = &self.agents[i];
+        let b = a.params.comfort_decel.max(0.1);
+        let v = a.speed;
+        let reach = v * v / (2.0 * b) + SPEED_LOOK_EXTRA_M;
+        let own = self.lane_cap(&a.params, a.lane);
+        let mut cap = own;
+        let mut brake = if v > own {
+            -(v - own) / SPEED_TAU_S
+        } else {
+            f64::INFINITY
+        };
+        let Some(lane) = self.graph.lane(a.lane) else {
+            return (cap, brake);
+        };
+        let mut d = lane.length() - a.s;
+        for &p in &a.plan {
+            if d > reach {
+                break;
+            }
+            let v_lim = self.lane_cap(&a.params, p);
+            cap = cap.min((v_lim * v_lim + 2.0 * b * d).sqrt());
+            if v > v_lim {
+                let need = (v * v - v_lim * v_lim) / (2.0 * (d - SPEED_MARGIN_M).max(0.5));
+                if need > 0.5 * b {
+                    brake = brake.min(-need);
+                }
+            }
+            d += self.graph.lane(p).map_or(0.0, |l| l.length());
+        }
+        (cap, brake)
     }
 
     /// The lane graph.
@@ -303,7 +395,10 @@ impl TrafficWorld {
                         }
                     }
                     a.plan = kept;
+                    a.prev_lane = a.prev_lane.and_then(remap);
                     a.lc_due = None;
+                    // Lanes may have moved: the axles are placed afresh.
+                    a.axles_ready = false;
                     true
                 }
                 _ => {
@@ -312,6 +407,9 @@ impl TrafficWorld {
                 }
             }
         });
+        for i in 0..self.agents.len() {
+            self.update_axles(i, 0.0);
+        }
         removed
     }
 
@@ -397,7 +495,12 @@ impl TrafficWorld {
             lateral: 0.0,
             lc_from: 0.0,
             lc_t: LANE_CHANGE_DURATION_S,
-            yaw: 0.0,
+            front_axle: DVec2::ZERO,
+            rear_axle: DVec2::ZERO,
+            steer: 0.0,
+            pursuit: DVec2::ZERO,
+            prev_lane: None,
+            axles_ready: false,
             lc_side: None,
             lc_due: None,
             lc_cooldown_until: 0.0,
@@ -405,7 +508,78 @@ impl TrafficWorld {
         });
         let last = self.agents.len() - 1;
         self.extend_plan(last);
+        self.update_axles(last, 0.0);
         Ok(id)
+    }
+
+    /// The point `back` metres behind agent `i`'s front bumper along its path, with the path's
+    /// heading there and the sideways offset of a lane change: on the current lane, else on the
+    /// previous one, else on the extension of the lane's start tangent.
+    fn path_point(&self, i: usize, back: f64) -> Option<(DVec2, f64)> {
+        let a = &self.agents[i];
+        let g = &self.graph.lane(a.lane)?.geometry;
+        let s = a.s - back;
+        let (p, h) = if s >= 0.0 {
+            (g.point_at(s), g.heading_at(s))
+        } else if let Some(prev) = a
+            .prev_lane
+            .and_then(|l| self.graph.lane(l))
+            .filter(|l| l.length() + s >= 0.0)
+        {
+            let t = prev.length() + s;
+            (prev.geometry.point_at(t), prev.geometry.heading_at(t))
+        } else {
+            let h = g.heading;
+            (g.start + DVec2::new(h.sin(), h.cos()) * s, h)
+        };
+        Some((p + DVec2::new(h.cos(), -h.sin()) * a.lateral, h))
+    }
+
+    /// Moves agent `i`'s axles: the front axle onto its path, the rear axle after it at the
+    /// wheelbase. `travel` (m) is how far the front axle may have moved since the last update;
+    /// a larger jump (a rebuilt graph, a teleport) places the rear axle afresh on the path's
+    /// tangent, as on spawn.
+    pub(crate) fn update_axles(&mut self, i: usize, travel: f64) {
+        let p = self.agents[i].params;
+        let Some((on_path, h)) = self.path_point(i, p.front_overhang) else {
+            return;
+        };
+        let Some((target, _)) = self.path_point(i, p.front_overhang - FRONT_PURSUIT_M) else {
+            return;
+        };
+        let a = &mut self.agents[i];
+        let l = p.wheelbase.max(0.1);
+        let jumped = !a.axles_ready
+            || on_path.distance(a.front_axle) > travel + AXLE_RESET_M
+            || (a.front_axle.distance(a.rear_axle) - l).abs() > AXLE_RESET_M;
+        if jumped {
+            a.front_axle = on_path;
+            a.rear_axle = on_path - DVec2::new(h.sin(), h.cos()) * l;
+        } else {
+            // The front axle pursues a point just ahead on the path (on an arc it stays within
+            // d²/2R of the lane, a kink at a lane join is rounded off), the rear axle the front
+            // one; both in sub-steps of at most `AXLE_SUBSTEP_M` of travel.
+            let n = (a.pursuit.distance(target) / AXLE_SUBSTEP_M)
+                .ceil()
+                .clamp(1.0, 64.0);
+            let from = a.pursuit;
+            for k in 1..=n as usize {
+                let t = from.lerp(target, k as f64 / n);
+                let d = t - a.front_axle;
+                if d.length_squared() > 1e-12 {
+                    a.front_axle = t - d.normalize() * FRONT_PURSUIT_M;
+                }
+                let d = a.front_axle - a.rear_axle;
+                if d.length_squared() > 1e-12 {
+                    a.rear_axle = a.front_axle - d.normalize() * l;
+                }
+            }
+        }
+        a.pursuit = target;
+        a.axles_ready = true;
+        let steer = h - a.heading();
+        a.steer =
+            (steer + std::f64::consts::PI).rem_euclid(std::f64::consts::TAU) - std::f64::consts::PI;
     }
 
     /// The lanes ahead of agent `i` with the distance from its front bumper to each lane's start
@@ -598,10 +772,10 @@ impl TrafficWorld {
         let mut accels = Vec::with_capacity(self.agents.len());
         let mut blocked = vec![false; self.agents.len()];
         for (i, a) in self.agents.iter().enumerate() {
-            let Some(lane) = self.graph.lane(a.lane) else {
+            if self.graph.lane(a.lane).is_none() {
                 accels.push(0.0);
                 continue;
-            };
+            }
             let leader = self.leader(i, &looks[i], &by_lane);
             let wait = self.conflict_gap(i, &looks[i], &by_lane, &held);
             blocked[i] = wait.is_some();
@@ -612,10 +786,17 @@ impl TrafficWorld {
                     ahead = Some((gap, 0.0));
                 }
             }
-            let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
-            accels.push(a.params.acceleration(a.speed, cap, ahead));
+            let (cap, brake) = self.speed_cap(i);
+            let acc = a.params.acceleration(a.speed, cap, ahead).min(brake);
+            accels.push(acc.max(-a.params.max_decel));
         }
         // Integrate (ballistic; a vehicle that would reverse stops within the step).
+        let travel: Vec<f64> = self
+            .agents
+            .iter()
+            .zip(&accels)
+            .map(|(a, &acc)| (a.speed.max(a.speed + acc * dt) + MAX_GLIDE_SPEED) * dt)
+            .collect();
         for (a, &acc) in self.agents.iter_mut().zip(&accels) {
             let v1 = a.speed + acc * dt;
             if v1 < 0.0 {
@@ -645,7 +826,16 @@ impl TrafficWorld {
                 a.waiting_s = 0.0;
             }
         }
+        let ids: Vec<AgentId> = self.agents.iter().map(|a| a.id).collect();
         self.advance_lanes();
+        // Axles after the lane transitions (agents removed at dead ends drop out of `ids`).
+        let mut k = 0;
+        for (id, t) in ids.into_iter().zip(travel) {
+            if self.agents.get(k).is_some_and(|a| a.id == id) {
+                self.update_axles(k, t);
+                k += 1;
+            }
+        }
     }
 
     /// Moves agents that passed the end of their lane onto the next one.
@@ -664,6 +854,7 @@ impl TrafficWorld {
                 match self.agents[i].plan.pop_front() {
                     Some(n) => {
                         let a = &mut self.agents[i];
+                        a.prev_lane = Some(a.lane);
                         a.lane = n;
                         a.s = over;
                         self.extend_plan(i);
@@ -1052,6 +1243,8 @@ mod tests {
                 20.0,
                 IdmParams {
                     desired_speed: 20.0,
+                    // 20 m/s needs a factor on the 50 km/h open-road limit (C3).
+                    speed_factor: 1.5,
                     ..IdmParams::default()
                 },
             )
@@ -1348,6 +1541,128 @@ mod tests {
             }
         }
         assert!(slowest > 9.0, "the crossing car slowed to {slowest} m/s");
+    }
+
+    /// A straight 100 m, a right-hand quarter circle of radius `r` and another straight.
+    fn bend(r: f64) -> TrafficWorld {
+        use std::f64::consts::FRAC_PI_2;
+        let arc = LaneSegment {
+            geometry: PathGeometry {
+                start: DVec2::new(0.0, 100.0),
+                heading: 0.0,
+                radius: r,
+                length: r * FRAC_PI_2,
+            },
+            ..straight(100.0, 0.0)
+        };
+        let after =
+            LaneSegment::straight(DVec2::new(r, 100.0 + r), FRAC_PI_2, 200.0, LaneKind::Road);
+        world(&[straight(0.0, 100.0), arc, after])
+    }
+
+    #[test]
+    fn in_a_tight_bend_the_axles_track_the_lane_and_the_speed_suits_the_radius() {
+        let r = 12.0;
+        let mut w = bend(r);
+        let id = w.spawn(LaneId(0), 0.0, 12.0, IdmParams::default()).unwrap();
+        let centre = DVec2::new(r, 100.0);
+        let (l, v_c) = (IdmParams::default().wheelbase, (2.5 * r).sqrt());
+        let (mut braked_before, mut on_arc) = (false, 0);
+        for _ in 0..300 {
+            w.step(0.1);
+            let Some(a) = w.agent(id) else { break };
+            if a.lane == LaneId(0) && a.accel < -0.3 {
+                braked_before = true;
+            }
+            if a.lane == LaneId(1) && a.s > a.params.front_overhang + l {
+                on_arc += 1;
+                assert!(a.speed <= v_c + 0.3, "{} m/s on the arc", a.speed);
+                // Front axle on the lane; the rear axle off-tracks inwards by at most
+                // R − √(R² − L²) (≈ 0.29 m) and never outwards.
+                let front = a.front_axle.distance(centre);
+                let rear = a.rear_axle.distance(centre);
+                assert!(
+                    (front - r).abs() < 0.1,
+                    "front axle {front} from the centre"
+                );
+                assert!(
+                    rear <= r + 0.1 && rear >= (r * r - l * l).sqrt() - 0.1,
+                    "rear axle {rear} from the centre"
+                );
+                assert!(a.steer > 0.05, "steers right: {}", a.steer);
+            }
+        }
+        assert!(braked_before, "braking starts before the arc");
+        assert!(on_arc > 5);
+    }
+
+    #[test]
+    fn a_kinked_lane_join_turns_the_body_smoothly() {
+        // A 12° kink between two lanes (within the join tolerance): the body's heading must not
+        // jump at the join.
+        let kink = 12f64.to_radians();
+        let next = LaneSegment::straight(DVec2::new(0.0, 100.0), kink, 100.0, LaneKind::Road);
+        let mut w = world(&[straight(0.0, 100.0), next]);
+        // 25 km/h, a junction speed: the body turns over about a wheelbase of travel.
+        let slow = IdmParams {
+            desired_speed: 7.0,
+            ..IdmParams::default()
+        };
+        let id = w.spawn(LaneId(0), 70.0, 7.0, slow).unwrap();
+        let mut h = w.agent(id).unwrap().heading();
+        let mut worst = 0.0f64;
+        for _ in 0..80 {
+            w.step(0.1);
+            let Some(a) = w.agent(id) else { break };
+            worst = worst.max((a.heading() - h).abs());
+            h = a.heading();
+        }
+        assert!(
+            (h - kink).abs() < 0.01,
+            "ends on the new lane's heading: {h}"
+        );
+        assert!(
+            worst < 2f64.to_radians(),
+            "heading jumped {}°",
+            worst.to_degrees()
+        );
+    }
+
+    #[test]
+    fn a_vehicle_brakes_before_a_lower_limit_and_keeps_it() {
+        let mut slow = straight(100.0, 200.0);
+        slow.speed_limit = Some(30.0 / 3.6);
+        let mut w = world(&[straight(0.0, 100.0), slow]);
+        let id = w
+            .spawn(LaneId(0), 50.0, 50.0 / 3.6, IdmParams::default())
+            .unwrap();
+        for _ in 0..200 {
+            w.step(0.1);
+            let a = w.agent(id).unwrap();
+            if a.lane == LaneId(1) {
+                assert!(a.speed <= 30.0 / 3.6 + 0.3, "{} km/h", a.speed * 3.6);
+            }
+        }
+        assert_eq!(w.agent(id).unwrap().lane, LaneId(1));
+    }
+
+    #[test]
+    fn the_speed_cap_is_not_carried_over_from_the_spawn_lane() {
+        let mut slow = straight(0.0, 100.0);
+        slow.speed_limit = Some(30.0 / 3.6);
+        let mut fast = straight(100.0, 600.0);
+        fast.speed_limit = Some(70.0 / 3.6);
+        let mut w = world(&[slow, fast]);
+        let id = w.spawn(LaneId(0), 0.0, 5.0, IdmParams::default()).unwrap();
+        for _ in 0..400 {
+            w.step(0.1);
+        }
+        let a = w.agent(id).unwrap();
+        assert!(
+            a.speed > 60.0 / 3.6,
+            "{} km/h on a 70 km/h lane",
+            a.speed * 3.6
+        );
     }
 
     #[test]
