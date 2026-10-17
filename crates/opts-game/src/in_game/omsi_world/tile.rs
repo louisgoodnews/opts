@@ -534,7 +534,12 @@ fn spawn_object_inner(
         .map(|t| t.string_names.clone())
         .unwrap_or_default();
     let mut mesh_parts = Vec::with_capacity(sco.meshes.len());
-    for mesh_def in &sco.meshes {
+    for (mesh_index, mesh_def) in sco.meshes.iter().enumerate() {
+        // `[onlyeditor]` after a `[mesh]` hides that mesh only (helpers next to a visible one).
+        if !sco.mesh_in_game(mesh_index) {
+            mesh_parts.push(Vec::new());
+            continue;
+        }
         let found = job.install.find_in(&model_dir, &mesh_def.file);
         if let Some(p) = &found {
             job.loading_deps
@@ -606,7 +611,7 @@ fn spawn_object_inner(
         mesh_parts.push(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
     }
     if mesh_parts.iter().all(Vec::is_empty) {
-        if sco.meshes.is_empty() {
+        if sco.meshes.is_empty() || sco.is_editor_only() {
             tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
             stats.objects_no_geometry += 1;
         } else if job.cache.stats.hidden_parts > hidden_before {

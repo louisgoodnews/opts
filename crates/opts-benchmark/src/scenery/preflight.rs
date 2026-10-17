@@ -156,7 +156,7 @@ fn classes(pre: &Preflight, entry: &ObjectEntry) -> Vec<String> {
             c.push(name.to_string());
         }
     };
-    push(o.only_editor, "editor-only");
+    push(o.is_editor_only(), "editor-only");
     push(o.is_help_arrow, "help-arrow");
     push(o.carpark_p, "carpark-marker");
     push(o.tree.is_some(), "tree");

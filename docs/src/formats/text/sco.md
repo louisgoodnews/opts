@@ -141,7 +141,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | :--- | :--- | :--- |
 | `[groups]` | 1 + N | Count N, then N **editor category names** (`Aachen`, `Ampeln`). |
 | `[friendlyname]` | 1 | Display name in the editor. |
-| `[onlyeditor]` | — | Object is visible in the editor only (helpers, markers). |
+| `[onlyeditor]` | — | Editor-only geometry. **Per mesh** when it follows a `[mesh]` (that mesh is a helper and is not drawn in the game), **object-wide** when it comes before the first `[mesh]` (no mesh of the object is drawn). Corpus (installed `Sceneryobjects`, 3,371 files with the keyword, 2026-10-17): 2,356 put it before their first mesh (markers such as `bus_stop.sco`, `entrypoint_bus.sco`, `car_park.sco` with `[carpark_p]`), 1,015 after a mesh, 941 of those in `[tree]` objects (`Trees_MC`: `[mesh] treehelper.x`, `[onlyeditor]`, then the billboard, which is drawn); `Eisplatte.sco` hides the second of its two meshes. Only meshes are affected: `[maplight]`s, paths and the `[carpark_p]` replacement still apply (`sodiumlight_4L_break_L_Forum.sco` lights a square from hidden lamps). OPTS (2026-10-17): `ScoMesh::only_editor` / `SceneryObject::only_editor`, `SceneryObject::mesh_in_game(i)`. |
 | `[joinable]` | — | Object may be merged with neighbours by the editor. |
 | `[helparrow]` | — | Route helper (arrows over junctions, `routearrows_busstop.sco` with the next stop's name): OMSI shows it only while its route-arrow help is on. OPTS has no route help yet and does not draw these objects (2026-10-16; before, every stop name and arrow of a map floated in the air). |
 | `[complexity]` | 1 | Draw-priority class, see below. |
