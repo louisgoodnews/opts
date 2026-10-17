@@ -117,7 +117,7 @@ pub fn handle_vehicle_view_drag(
     mouse: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     mut state: ResMut<CameraState>,
-    camera: Query<&Transform, With<Camera3d>>,
+    camera: Query<&Transform, With<crate::MainCamera>>,
 ) {
     let delta: bevy::math::Vec2 = motion.read().map(|e| e.delta).sum();
     if delta == bevy::math::Vec2::ZERO {
@@ -151,7 +151,7 @@ pub fn update_cockpit_camera(
     head: Query<&GlobalTransform, With<crate::human::PlayerHead>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut viewpoint: ResMut<ViewpointState>,
-    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::Cockpit {
         return;
@@ -186,7 +186,7 @@ pub fn update_passenger_camera(
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
     segments: Query<&GlobalTransform, Without<PlayerVehicle>>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::Passenger {
         return;
@@ -209,8 +209,8 @@ pub fn update_passenger_camera(
 pub fn update_external_camera(
     state: Res<CameraState>,
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
-    segments: Query<&GlobalTransform, (With<ArticulatedSegment>, Without<Camera3d>)>,
-    mut camera: Query<(&mut Transform, &mut Projection), With<Camera3d>>,
+    segments: Query<&GlobalTransform, (With<ArticulatedSegment>, Without<crate::MainCamera>)>,
+    mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::External {
         return;

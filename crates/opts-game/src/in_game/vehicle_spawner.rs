@@ -2,7 +2,7 @@
 //! and model config by [`crate::in_game::omsi_world::load_player_vehicle`].
 
 use bevy::prelude::*;
-use opts_bevy::{VehicleCameraMode, VehicleCameraRig};
+use opts_bevy::{MainCamera, VehicleCameraMode, VehicleCameraRig};
 
 use crate::in_game::omsi_world::CameraSetup;
 use crate::in_game::types::{InGameCamera, InGameEntity};
@@ -12,6 +12,7 @@ pub fn spawn_camera_rig(commands: &mut Commands, setup: &CameraSetup) {
     commands.spawn((
         (
             Camera3d::default(),
+            MainCamera,
             bevy::ui::IsDefaultUiCamera,
             setup.start,
         ),
@@ -31,7 +32,12 @@ pub fn spawn_camera_rig(commands: &mut Commands, setup: &CameraSetup) {
 /// Spawns a plain 3D camera for free-roam inspection when there is no vehicle to track.
 pub fn spawn_free_camera(commands: &mut Commands, transform: Transform) {
     commands.spawn((
-        (Camera3d::default(), bevy::ui::IsDefaultUiCamera, transform),
+        (
+            Camera3d::default(),
+            MainCamera,
+            bevy::ui::IsDefaultUiCamera,
+            transform,
+        ),
         InGameEntity,
         InGameCamera,
         Name::new("Free_Roam_Camera"),

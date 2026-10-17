@@ -441,7 +441,7 @@ fn free_roam_start(
             Vec3::Y,
         );
         commands.queue(move |w: &mut World| {
-            let mut q = w.query_filtered::<&mut Transform, With<Camera3d>>();
+            let mut q = w.query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
             for mut t in q.iter_mut(w) {
                 *t = start;
             }

@@ -108,6 +108,29 @@ pub fn sync_water(
     }
 }
 
+/// `graphics.hdr`: the main camera carries [`bevy::camera::Hdr`] while the setting is on (the
+/// default). Off keeps the 8-bit main texture (saves about 50 MB at 1080p with 4x MSAA).
+pub fn sync_hdr(
+    settings: Res<GameSettings>,
+    cameras: Query<(Entity, Has<bevy::camera::Hdr>), With<opts_bevy::MainCamera>>,
+    mut commands: Commands,
+) {
+    let want = hdr_enabled(&settings);
+    for (entity, has) in &cameras {
+        if want && !has {
+            commands.entity(entity).insert(bevy::camera::Hdr);
+        } else if !want && has {
+            commands.entity(entity).remove::<bevy::camera::Hdr>();
+        }
+    }
+}
+
+/// Whether `graphics.hdr` is on (the default).
+#[must_use]
+pub fn hdr_enabled(settings: &GameSettings) -> bool {
+    settings.raw("graphics.hdr").as_deref() != Some("false")
+}
+
 /// The weather effects the settings ask for (`graphics.weather_*`).
 #[must_use]
 pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects {

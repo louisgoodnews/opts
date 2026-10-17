@@ -164,7 +164,7 @@ pub fn map_light_pool_system(
     settings: Res<MapLightSettings>,
     clock: Res<SceneryClock>,
     mut pool: ResMut<MapLightPool>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     lamps: Query<(Entity, &MapLight, &GlobalTransform)>,
     mut lights: Query<(&mut PointLight, &mut Transform, &mut Visibility), Without<MapLight>>,
 ) {

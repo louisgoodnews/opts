@@ -250,7 +250,7 @@ scene, main camera MSAA 4x, delta vs the same scene without mirrors (frame 6.8 m
 
 ### Which `With<Camera3d>` sites misbehave with a second camera
 
-The game has exactly one in-game `Camera3d` (`vehicle_spawner.rs:14,34`) and no `MainCamera` marker.
+**Status 2026-10-17: fixed.** `MainCamera` exists (`opts_bevy::MainCamera`, spawned with the in-game camera) and every site below queries it; the list is kept as the record of what was wrong. Before: the game had exactly one in-game `Camera3d` (`vehicle_spawner.rs:14,34`) and no marker.
 Sites in `crates/` (`grep Camera3d`, tests excluded), classified for a **render-to-texture mirror camera that
 is a `Camera3d`**:
 

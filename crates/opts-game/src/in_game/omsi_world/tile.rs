@@ -851,7 +851,7 @@ pub struct TileRoot(pub (i32, i32));
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
     state: Res<crate::in_game::types::SimulationLoadState>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut stats: ResMut<WorldStats>,
     mut commands: Commands,
     mut assets: LoadAssets,

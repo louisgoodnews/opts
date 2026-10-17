@@ -315,7 +315,7 @@ pub fn script_mouse_trigger_system(
     mut motion: MessageReader<MouseMotion>,
     state: Option<Res<CameraState>>,
     windows: Query<&Window, With<PrimaryWindow>>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     hot_spots: Query<&MouseTrigger>,
     vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
     mut ray_cast: MeshRayCast,

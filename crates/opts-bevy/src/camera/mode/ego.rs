@@ -33,7 +33,7 @@ pub fn update_ego_look(
 pub fn update_ego_camera(
     state: Res<CameraState>,
     head: Query<&GlobalTransform, With<PlayerHead>>,
-    mut camera: Query<&mut Transform, With<Camera3d>>,
+    mut camera: Query<&mut Transform, With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::Ego {
         return;

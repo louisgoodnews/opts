@@ -4,6 +4,7 @@
 
 pub mod hud;
 pub mod input;
+pub mod main_camera;
 pub mod mode;
 pub mod plugin;
 pub mod reset;
@@ -11,6 +12,7 @@ pub mod state;
 pub mod viewpoint;
 
 pub use hud::camera_hint_text;
+pub use main_camera::MainCamera;
 pub use plugin::{rig_drives_camera, vehicle_accepts_input, OptsCameraPlugin};
 pub use state::{
     scale_free_roam_speed, CameraAvailability, CameraMode, CameraState, FREE_ROAM_MIN_SPEED,

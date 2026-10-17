@@ -207,7 +207,8 @@ impl Plugin for InGamePlugin {
                 sky::update_sky
                     .run_if(resource_exists::<sky::Sky>)
                     .after(opts_bevy::EnvironmentSet),
-                world::update_fallback_light.after(opts_bevy::EnvironmentSet),
+                (world::update_fallback_light, sky::place_sky_dome)
+                    .after(opts_bevy::EnvironmentSet),
                 omsi_world::place_dev_camera,
                 omsi_world::sync_scenery_clock
                     .run_if(resource_exists::<opts_bevy::SceneryClock>)

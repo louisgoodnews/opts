@@ -145,6 +145,7 @@ fn app() -> App {
             commands.insert_resource(Root(root));
             commands.spawn((
                 Camera3d::default(),
+                opts_bevy::MainCamera,
                 Transform::from_xyz(0.0, 1.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
             ));
         },
@@ -266,7 +267,7 @@ fn lod_shows_the_band_of_the_current_screen_size() {
     // Far away the object is small: the stand-in shows instead.
     let mut q = app
         .world_mut()
-        .query_filtered::<&mut Transform, With<Camera3d>>();
+        .query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
     for mut t in q.iter_mut(app.world_mut()) {
         *t = Transform::from_xyz(0.0, 1.0, 400.0).looking_at(Vec3::ZERO, Vec3::Y);
     }

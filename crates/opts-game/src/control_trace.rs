@@ -65,7 +65,7 @@ fn colour(quality: &str, kind: &str) -> Color {
 
 fn draw_overlay(
     overlay: Res<TraceOverlay>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut gizmos: Gizmos,
 ) {
     if !overlay.enabled || !st::enabled() {
@@ -134,7 +134,7 @@ fn tile_param(params: &Value) -> Result<Option<(i32, i32)>, RpcError> {
 }
 
 fn camera_xz(world: &mut World) -> Option<[f32; 2]> {
-    let mut q = world.query_filtered::<&GlobalTransform, With<Camera3d>>();
+    let mut q = world.query_filtered::<&GlobalTransform, With<opts_bevy::MainCamera>>();
     q.iter(world)
         .next()
         .map(|t| [t.translation().x, t.translation().z])

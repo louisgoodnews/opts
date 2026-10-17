@@ -67,7 +67,7 @@ pub use articulation::{
 };
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
-    OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState,
+    MainCamera, OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState,
     FREE_ROAM_MIN_SPEED,
 };
 pub use coords::{

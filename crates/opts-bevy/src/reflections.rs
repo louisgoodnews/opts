@@ -274,8 +274,8 @@ impl Plugin for ReflectionsResearchPlugin {
                     PostUpdate,
                     (update_mirror_cameras, follow_debug_quad).before(bevy::transform::TransformSystems::Propagate),
                 )
-                // The camera systems of the game query `With<Camera3d>` and assume exactly one;
-                // the mirror cameras are `Camera3d` only while the frame is extracted.
+                // The camera systems of the game query `With<MainCamera>`; the mirror cameras never carry
+                // that marker (and are `Camera3d` only while the frame is extracted).
                 ;
             if !sw.mirror_keep {
                 app.add_systems(First, hide_mirror_cameras)
@@ -365,7 +365,7 @@ fn apply_camera_features(
     sw: Res<ReflectionSwitches>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-    cameras: Query<Entity, (With<Camera3d>, Without<ReflectionsApplied>)>,
+    cameras: Query<Entity, (With<crate::MainCamera>, Without<ReflectionsApplied>)>,
 ) {
     for e in &cameras {
         let mut c = commands.entity(e);
@@ -506,7 +506,7 @@ fn spawn_mirror_cameras(
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     existing: Query<(), With<MirrorCamera>>,
-    main_cams: Query<Entity, (With<Camera3d>, Without<MirrorCamera>)>,
+    main_cams: Query<Entity, (With<crate::MainCamera>, Without<MirrorCamera>)>,
     mut meshes_add: ResMut<Assets<Mesh>>,
     candidates: Query<
         (
@@ -627,7 +627,7 @@ fn spawn_mirror_cameras(
 fn update_mirror_cameras(
     sw: Res<ReflectionSwitches>,
     mut frame: Local<u32>,
-    main: Query<&Transform, (With<Camera3d>, Without<MirrorCamera>)>,
+    main: Query<&Transform, (With<crate::MainCamera>, Without<MirrorCamera>)>,
     mirrors: Query<&GlobalTransform, Without<MirrorCamera>>,
     mut cams: Query<(&MirrorCamera, &mut Transform, &mut Camera)>,
 ) {
@@ -659,7 +659,14 @@ fn update_mirror_cameras(
 
 #[allow(clippy::type_complexity)]
 fn follow_debug_quad(
-    main: Query<&Transform, (With<Camera3d>, Without<MirrorCamera>, Without<DebugQuad>)>,
+    main: Query<
+        &Transform,
+        (
+            With<crate::MainCamera>,
+            Without<MirrorCamera>,
+            Without<DebugQuad>,
+        ),
+    >,
     mut quad: Query<&mut Transform, With<DebugQuad>>,
 ) {
     let Some(cam) = main.iter().next() else {
@@ -714,7 +721,7 @@ fn collect_stats(
     mut stats: ResMut<FrameStats>,
     diagnostics: Option<Res<bevy::diagnostic::DiagnosticsStore>>,
     mut exit: MessageWriter<AppExit>,
-    cameras: Query<(), With<Camera3d>>,
+    cameras: Query<(), With<crate::MainCamera>>,
 ) {
     let Ok(path) = std::env::var("OPTS_REFLECT_STATS") else {
         return;

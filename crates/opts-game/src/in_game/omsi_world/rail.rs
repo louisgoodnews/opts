@@ -765,7 +765,7 @@ pub fn spawn_ai_trains(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     living: Query<&AiTrain>,
 ) {
     let (Some(mut job), Ok(cam)) = (job, camera.single()) else {
@@ -907,7 +907,7 @@ pub fn move_ai_trains(
     mut commands: Commands,
     rail_net: Res<RailNetwork>,
     bike_net: Res<BikeNetwork>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut trains: Query<(Entity, &mut AiTrain)>,
     mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
 ) {

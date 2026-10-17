@@ -200,7 +200,7 @@ pub fn scenery_script_system(
     clock: Res<SceneryClock>,
     overrides: Res<SceneryVariableOverrides>,
     mut stats: ResMut<SceneryRuntimeStats>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     mut objects: ObjectQuery,
     mut targets: EffectTargets,
 ) {

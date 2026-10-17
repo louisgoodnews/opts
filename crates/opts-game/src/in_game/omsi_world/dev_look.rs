@@ -59,8 +59,8 @@ pub fn place_dev_camera(
     job: Option<ResMut<super::WorldLoadJob>>,
     load: Res<crate::in_game::types::SimulationLoadState>,
     mut state: ResMut<CameraState>,
-    objects: Query<&GlobalTransform, Without<Camera3d>>,
-    mut cameras: Query<&mut Transform, With<Camera3d>>,
+    objects: Query<&GlobalTransform, Without<opts_bevy::MainCamera>>,
+    mut cameras: Query<&mut Transform, With<opts_bevy::MainCamera>>,
 ) {
     let Some(mut job) = job else { return };
     let target = &mut job.scenery.dev_look;

@@ -236,7 +236,7 @@ pub fn despawn(
 /// No vehicle is active any more: the camera is free where it is, the HUD loses its instruments.
 fn leave_vehicle_mode(world: &mut World) {
     let transform = world
-        .query_filtered::<&Transform, With<Camera3d>>()
+        .query_filtered::<&Transform, With<opts_bevy::MainCamera>>()
         .iter(world)
         .next()
         .copied();

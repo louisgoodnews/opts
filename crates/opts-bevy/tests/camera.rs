@@ -27,8 +27,11 @@ fn app() -> App {
             )
                 .chain(),
         );
-    app.world_mut()
-        .spawn((Camera3d::default(), Transform::from_xyz(1.0, 2.0, 3.0)));
+    app.world_mut().spawn((
+        Camera3d::default(),
+        opts_bevy::MainCamera,
+        Transform::from_xyz(1.0, 2.0, 3.0),
+    ));
     app
 }
 
@@ -129,7 +132,7 @@ fn entering_free_roam_records_spawn_and_reset_restores_it() {
     }
     let mut cams = app
         .world_mut()
-        .query_filtered::<&mut Transform, With<Camera3d>>();
+        .query_filtered::<&mut Transform, With<opts_bevy::MainCamera>>();
     cams.single_mut(app.world_mut()).unwrap().translation = Vec3::splat(99.0);
 
     {
@@ -287,4 +290,37 @@ fn shift_space_in_the_walking_view_looks_forward_again() {
     shift_space(&mut app);
     let s = app.world().resource::<CameraState>();
     assert_eq!((s.ego_yaw, s.ego_pitch), (0.0, 0.0));
+}
+
+/// A second `Camera3d` (the reflection prototype's mirror camera) must neither stop the camera
+/// systems (`single()` queries) nor be moved by them: only the `MainCamera` follows the modes.
+#[test]
+fn camera_modes_ignore_an_extra_mirror_camera() {
+    let mut app = app();
+    let mirror_pos = Vec3::new(-500.0, 7.0, 400.0);
+    let mirror = app
+        .world_mut()
+        .spawn((
+            Camera3d::default(),
+            Name::new("MirrorCamera"),
+            Transform::from_translation(mirror_pos),
+        ))
+        .id();
+    spawn_vehicle(&mut app);
+    app.update();
+    tap(&mut app, KeyCode::Digit2);
+    assert_eq!(mode(&app), CameraMode::Cockpit);
+    tap(&mut app, KeyCode::Digit5);
+    assert_eq!(mode(&app), CameraMode::FreeRoam);
+    // The free-roam spawn is the main camera's position, not the mirror's.
+    assert_eq!(
+        app.world().resource::<CameraState>().free_roam_spawn,
+        Vec3::new(1.0, 2.0, 3.0)
+    );
+    app.update();
+    assert_eq!(
+        app.world().get::<Transform>(mirror).unwrap().translation,
+        mirror_pos,
+        "the mirror camera is never moved by the camera modes"
+    );
 }

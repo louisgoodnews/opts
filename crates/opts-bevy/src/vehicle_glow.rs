@@ -230,7 +230,7 @@ pub struct PooledHeadlight {
 /// in front of those vehicles.
 pub fn headlight_pool_system(
     mut commands: Commands,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
     glows: Query<(&VehicleGlow, &SceneryLight, &GlobalTransform)>,
     owners: Query<&GlobalTransform, Without<PooledHeadlight>>,
     mut pool: Query<(

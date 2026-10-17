@@ -160,6 +160,17 @@ fn graphics() -> Vec<D> {
         )
         .keywords(&["colour", "color", "tonemapping", "saturation"]),
         D::new(
+            "graphics.hdr",
+            K::Bool,
+            "true",
+            C::Graphics,
+            52,
+            "set-hdr",
+            "set-hdr-desc",
+        )
+        .keywords(&["tonemapping", "bloom", "high dynamic range", "16 bit"])
+        .since("0.3"),
+        D::new(
             "graphics.default_fov",
             K::Int {
                 min: 0,
