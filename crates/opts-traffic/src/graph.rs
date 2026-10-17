@@ -187,6 +187,9 @@ pub struct LaneSegment {
     /// The path belongs to a scenery object (junction, crossing): vehicles do not change lanes
     /// on it.
     pub junction: bool,
+    /// The indicator a crossing path states (`.sco` `[path]` parameter 12: `0` none, `2` left,
+    /// `3` right); `None` when it states none (splines, value `1`) and the turn heuristic applies.
+    pub indicator: Option<crate::agent::Blinker>,
     /// Opaque tag for the host (object or spline id) so lanes can be traced back.
     pub source: u64,
 }
@@ -205,6 +208,7 @@ impl LaneSegment {
             elevation: Elevation::default(),
             signal: None,
             junction: false,
+            indicator: None,
             source: 0,
         }
     }
@@ -229,6 +233,8 @@ pub struct Lane {
     pub signal: Option<crate::signals::SignalKey>,
     /// The path belongs to a scenery object (see [`LaneSegment::junction`]).
     pub junction: bool,
+    /// Indicator stated by the path (see [`LaneSegment::indicator`]).
+    pub indicator: Option<crate::agent::Blinker>,
     /// The host's tag from the segment.
     pub source: u64,
     /// Stable identity across rebuilds: the segment's `source` and the number of lanes of that
@@ -314,7 +320,7 @@ impl LaneGraph {
         let mut lanes = Vec::new();
         let mut per_source: HashMap<u64, u32> = HashMap::new();
         for s in segments {
-            let mut mk = |geometry: PathGeometry, elevation: Elevation| {
+            let mut mk = |geometry: PathGeometry, elevation: Elevation, reversed: bool| {
                 let n = per_source.entry(s.source).or_default();
                 let key = (s.source, *n);
                 *n += 1;
@@ -327,17 +333,19 @@ impl LaneGraph {
                     elevation,
                     signal: s.signal,
                     junction: s.junction,
+                    // Driven backwards, a turn indicator would point the wrong way.
+                    indicator: if reversed { None } else { s.indicator },
                     source: s.source,
                     key,
                 }
             };
             let back = s.elevation.reversed(s.geometry.length);
             match s.direction {
-                Direction::Forward => lanes.push(mk(s.geometry, s.elevation)),
-                Direction::Reverse => lanes.push(mk(s.geometry.reversed(), back)),
+                Direction::Forward => lanes.push(mk(s.geometry, s.elevation, false)),
+                Direction::Reverse => lanes.push(mk(s.geometry.reversed(), back, true)),
                 Direction::Both => {
-                    lanes.push(mk(s.geometry, s.elevation));
-                    lanes.push(mk(s.geometry.reversed(), back));
+                    lanes.push(mk(s.geometry, s.elevation, false));
+                    lanes.push(mk(s.geometry.reversed(), back, true));
                 }
             }
         }

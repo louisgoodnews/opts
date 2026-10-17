@@ -1050,20 +1050,27 @@ impl TrafficWorld {
             Some(Side::Right) => Blinker::Right,
             None => Blinker::Off,
         };
+        // A crossing path that states its indicator (`[path]` parameter 12) keeps it on while
+        // it is driven and announces it over the last metres before it; paths without one fall
+        // back to the turn of the next lane.
         if blinker == Blinker::Off {
-            if let Some(next) = a.next().and_then(|n| self.graph.lane(n)) {
+            if let Some(b) = lane.indicator.filter(|b| *b != Blinker::Off) {
+                blinker = b;
+            } else if let Some(next) = a.next().and_then(|n| self.graph.lane(n)) {
                 if lane.length() - a.s < BLINK_DISTANCE {
-                    let turn = (next.geometry.end_heading() - lane.geometry.end_heading()
-                        + std::f64::consts::PI)
-                        .rem_euclid(std::f64::consts::TAU)
-                        - std::f64::consts::PI;
-                    blinker = if turn > BLINK_TURN {
-                        Blinker::Right
-                    } else if turn < -BLINK_TURN {
-                        Blinker::Left
-                    } else {
-                        Blinker::Off
-                    };
+                    blinker = next.indicator.unwrap_or_else(|| {
+                        let turn = (next.geometry.end_heading() - lane.geometry.end_heading()
+                            + std::f64::consts::PI)
+                            .rem_euclid(std::f64::consts::TAU)
+                            - std::f64::consts::PI;
+                        if turn > BLINK_TURN {
+                            Blinker::Right
+                        } else if turn < -BLINK_TURN {
+                            Blinker::Left
+                        } else {
+                            Blinker::Off
+                        }
+                    });
                 }
             }
         }
@@ -1225,6 +1232,7 @@ mod tests {
             elevation: Default::default(),
             signal: None,
             junction: false,
+            indicator: None,
             source: 0,
         };
         let mut w = world(&[straight(0.0, 100.0), turn]);
@@ -1912,6 +1920,43 @@ mod tests {
             .iter()
             .any(|e| matches!(e, TrafficEvent::ReachedDeadEnd { .. })));
         assert_eq!(w.agent(id).unwrap().lane, LaneId(3), "took the turn");
+    }
+
+    #[test]
+    fn the_indicator_of_a_crossing_path_wins_over_the_turn_heuristic() {
+        // A straight crossing path that says "left" (parameter 12 = 2), and a right-hand bend
+        // that says "none" (0): the path's word counts, before and on the path.
+        let mut left = straight(100.0, 30.0);
+        left.indicator = Some(Blinker::Left);
+        let mut w = world(&[straight(0.0, 100.0), left]);
+        let id = w.spawn(LaneId(0), 80.0, 5.0, IdmParams::default()).unwrap();
+        assert_eq!(w.command(id).unwrap().blinker, Blinker::Left);
+        w.agents[0].s = 40.0;
+        assert_eq!(
+            w.command(id).unwrap().blinker,
+            Blinker::Off,
+            "too far ahead"
+        );
+        w.agents[0].lane = LaneId(1);
+        w.agents[0].s = 10.0;
+        assert_eq!(
+            w.command(id).unwrap().blinker,
+            Blinker::Left,
+            "kept on the path"
+        );
+        let quiet = LaneSegment {
+            geometry: PathGeometry {
+                start: DVec2::new(0.0, 100.0),
+                heading: 0.0,
+                radius: 15.0,
+                length: 15.0 * std::f64::consts::FRAC_PI_2,
+            },
+            indicator: Some(Blinker::Off),
+            ..straight(0.0, 0.0)
+        };
+        let mut w = world(&[straight(0.0, 100.0), quiet]);
+        let id = w.spawn(LaneId(0), 80.0, 5.0, IdmParams::default()).unwrap();
+        assert_eq!(w.command(id).unwrap().blinker, Blinker::Off);
     }
 
     #[test]

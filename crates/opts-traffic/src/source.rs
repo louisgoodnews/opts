@@ -19,6 +19,7 @@ use glam::DVec2;
 use opts_core::formats::map::{MapObjectInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner};
 use opts_core::formats::scenery::{ScoPath, ScoTrafficLightGroup, SplinePath};
 
+use crate::agent::Blinker;
 use crate::geometry::{PathGeometry, SCO_STRAIGHT_RADIUS};
 use crate::graph::{Direction, Elevation, LaneKind, LaneRules, LaneSegment};
 use crate::signals::{SignalKey, SignalProgram};
@@ -175,6 +176,7 @@ pub fn segments_from_tile(
                 },
                 signal: None,
                 junction: false,
+                indicator: None,
                 source: s.id_code,
             });
         }
@@ -228,6 +230,12 @@ pub fn segments_from_tile(
                 },
                 signal: p.traffic_light_index.map(|i| (o.id_code, i)),
                 junction: true,
+                indicator: match p.extra {
+                    Some(0) => Some(Blinker::Off),
+                    Some(2) => Some(Blinker::Left),
+                    Some(3) => Some(Blinker::Right),
+                    _ => None,
+                },
                 source: o.id_code,
             });
         }
@@ -549,6 +557,47 @@ mod tests {
         assert!(
             segs[1].geometry.is_straight(),
             "|r| >= 999 of an object path"
+        );
+    }
+
+    #[test]
+    fn path_parameter_12_gives_the_indicator() {
+        let object = MapObjectInstance {
+            flag: 0,
+            sco_file: "junction.sco".into(),
+            id_code: 9,
+            position: Vec3::ZERO,
+            heading_deg: 0.0,
+            pitch_deg: None,
+            roll_deg: None,
+            string_vars: Vec::new(),
+        };
+        let tile = MapTile {
+            objects: vec![object],
+            ..MapTile::default()
+        };
+        let path = |extra| ScoPath {
+            extra,
+            ..sco_path(0.0, 0.0)
+        };
+        let mut src = Fixed {
+            sli: Vec::new(),
+            sco: [None, Some(0), Some(1), Some(2), Some(3)]
+                .into_iter()
+                .map(path)
+                .collect(),
+        };
+        let segs = segments_from_tile(&tile, DVec2::ZERO, &mut src);
+        let got: Vec<_> = segs.iter().map(|s| s.indicator).collect();
+        assert_eq!(
+            got,
+            [
+                None,
+                Some(Blinker::Off),
+                None,
+                Some(Blinker::Left),
+                Some(Blinker::Right)
+            ]
         );
     }
 
