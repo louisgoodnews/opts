@@ -20,7 +20,17 @@ fn history_path(tag: &str) -> std::path::PathBuf {
         .join("drive_history.json")
 }
 
+/// Pins the process's OMSI root to an empty installation, so the date lookup of the map step
+/// (`global.cfg` of the map folder) never sees the host's real install: the fixture maps share
+/// folder names with real maps. The first call wins for the whole test binary.
+fn pin_fixture_root() {
+    let root = std::env::temp_dir().join(format!("opts-wizard-root-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("maps")).expect("fixture root");
+    let _ = opts_game::omsi_root::locate_omsi_root(Some(&root));
+}
+
 fn wizard_with(history: PlannerHistory) -> App {
+    pin_fixture_root();
     let mut app = layout_app();
     // The shell's content area: a fixed-size frame, like a 1280x720 window without the rail.
     let frame = app
