@@ -45,15 +45,16 @@ fn set_quality(app: &mut App, f: impl FnOnce(&mut LightQuality)) {
 
 #[test]
 fn haze_is_the_baseline_in_clear_air_and_follows_fog() {
-    assert_eq!(haze_density(15_000.0), HAZE_BASE);
-    assert_eq!(haze_density(10_000.0), HAZE_BASE);
-    assert!(haze_density(200.0) > HAZE_BASE);
-    assert!((haze_density(200.0) - 3.912 / 200.0 * FOG_TO_SHAFT).abs() < 1e-6);
-    assert_eq!(haze_density(2.0), HAZE_MAX);
+    let st = ShaftStyle::default();
+    assert_eq!(haze_density(15_000.0, &st), HAZE_BASE);
+    assert_eq!(haze_density(10_000.0, &st), HAZE_BASE);
+    assert!(haze_density(200.0, &st) > HAZE_BASE);
+    assert!((haze_density(200.0, &st) - 3.912 / 200.0 * FOG_TO_SHAFT).abs() < 1e-6);
+    assert_eq!(haze_density(2.0, &st), HAZE_MAX);
     // Thicker fog never gives a thinner haze.
     let mut prev = 0.0;
     for v in [10_000.0, 2_000.0, 500.0, 100.0, 20.0] {
-        let d = haze_density(v);
+        let d = haze_density(v, &st);
         assert!(d >= prev);
         prev = d;
     }
@@ -61,10 +62,11 @@ fn haze_is_the_baseline_in_clear_air_and_follows_fog() {
 
 #[test]
 fn intensity_follows_role_weather_and_hdr() {
-    assert_eq!(shaft_intensity(LightRole::Sun, 1.0, true), 1.0);
-    assert_eq!(shaft_intensity(LightRole::Sun, 0.0, true), 0.0);
-    assert!(shaft_intensity(LightRole::Moon, 1.0, true) > 1.0);
-    assert!(shaft_intensity(LightRole::Sun, 1.0, false) < 1.0);
+    let st = ShaftStyle::default();
+    assert_eq!(shaft_intensity(LightRole::Sun, 1.0, true, &st), st.gain);
+    assert_eq!(shaft_intensity(LightRole::Sun, 0.0, true, &st), 0.0);
+    assert!(shaft_intensity(LightRole::Moon, 1.0, true, &st) > st.gain);
+    assert!(shaft_intensity(LightRole::Sun, 1.0, false, &st) < st.gain);
 }
 
 #[test]
@@ -226,7 +228,7 @@ fn the_volume_follows_the_camera_and_the_weather() {
     assert_eq!(t.translation, pos);
     assert_eq!(t.scale, Vec3::splat(SHAFT_VOLUME_SIDE_M));
     assert_eq!(v.density_factor, HAZE_BASE);
-    assert_eq!(v.light_intensity, 1.0);
+    assert_eq!(v.light_intensity, SHAFT_GAIN);
     // Rain under a solid overcast: no direct beam, thick haze.
     let mut env = SessionEnvironment::new(
         crate::CalendarDate::new(2026, 6, 29),
@@ -245,4 +247,64 @@ fn the_volume_follows_the_camera_and_the_weather() {
         .clone();
     assert!(v.light_intensity < 0.1 && (v.light_intensity - wet).abs() < 1e-6);
     assert!(v.density_factor >= HAZE_BASE);
+}
+
+#[test]
+fn the_tune_string_overrides_any_subset() {
+    let d = ShaftStyle::default();
+    assert_eq!(ShaftStyle::parse_tune(""), d);
+    let st = ShaftStyle::parse_tune(
+        "haze=0.001, asym=0.6,gain=2,ambient=0.05,absorption=0.1,scatter=0.2,moon_gain=7",
+    );
+    assert_eq!(
+        st,
+        ShaftStyle {
+            haze: 0.001,
+            asym: 0.6,
+            gain: 2.0,
+            ambient: 0.05,
+            absorption: 0.1,
+            scatter: 0.2,
+            moon_gain: 7.0,
+        }
+    );
+    let part = ShaftStyle::parse_tune("gain=0.25,bogus=3,haze=x,asym=-1,scatter");
+    assert_eq!(part, ShaftStyle { gain: 0.25, ..d });
+    assert_eq!(ShaftStyle::parse_tune("asym=5").asym, 0.99);
+}
+
+#[test]
+fn the_style_reaches_the_volume_and_the_camera() {
+    let mut app = app(Shafts::Medium, false);
+    let st = ShaftStyle::parse_tune(
+        "haze=0.004,asym=0.3,gain=1,ambient=0.02,absorption=0.1,scatter=0.2",
+    );
+    app.insert_resource(st);
+    let cam = camera(&mut app, true);
+    light(&mut app, LightRole::Sun, true, 20_000.0);
+    app.update();
+    app.update();
+    let v = app
+        .world_mut()
+        .query::<&FogVolume>()
+        .single(app.world())
+        .unwrap()
+        .clone();
+    assert_eq!(
+        (
+            v.density_factor,
+            v.scattering_asymmetry,
+            v.light_intensity,
+            v.absorption,
+            v.scattering
+        ),
+        (0.004, 0.3, 1.0, 0.1, 0.2)
+    );
+    assert_eq!(
+        app.world()
+            .get::<VolumetricFog>(cam)
+            .unwrap()
+            .ambient_intensity,
+        0.02
+    );
 }

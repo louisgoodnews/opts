@@ -336,6 +336,18 @@ Metric: the GPU time of the `volumetric_lighting` span (Bevy's render diagnostic
 * **Haze (Q-LS12):** `haze_density(visibility_m) = min(HAZE_MAX 0.05, max(HAZE_BASE 0.002, 3.912 / V × FOG_TO_SHAFT 1.0))` per metre as the volume's `density_factor` (Bevy's extinction is `density_factor × 0.6`, so the haze is a little thinner than the distance fog); `scattering_asymmetry` 0.8. `light_intensity = LightAttenuation::shafts × gain × ldr`, gain 1 for the sun and `MOON_SHAFT_GAIN` 4 for the moon ❓ (its light is about 20 times weaker).
 * **Not done:** the `shaft_range` decoupled from the cascade distance, a raised `maximum_distance` while shafts are on (Q-LS10), shafts through cabin glass (Q-LS08). The shadow map stays 2048 with the sun's default cascades (150 m).
 
+### 6.7 Retuning after the first live test (2026-10-17)
+
+First values (`HAZE_BASE` 0.002, `g` 0.8, intensity 1) gave a white glare into a low sun (mean luminance 0.71 against 0.55 without shafts). Reading `volumetric_fog.wesl` (`fragment`, ray march loop): every lit step adds
+
+`dL = light.color × phase(g) × scattering × density × step_size × light_intensity × exposure × exp(-density × R × (absorption + scattering))`
+
+where `light.color` already holds the light's illuminance in lx, `exposure` is about 0.001 (EV100 9.7), `R` the volume's bounding radius and `phase` the Henyey-Greenstein function, `(1/4π)(1−g²)/(1+g²−2g cosθ)^1.5`. The sum over the steps is `density × scattering × phase × (light × exposure) × light_intensity × ray length`: **linear in density, in scattering, in gain and in path length** (path ≤ 100 m in the 200 m cube, and nothing beyond the 150 m cascades). Unshadowed ground-level air in front of the sun therefore adds the full term everywhere; the shadow map only removes it where an occluder is in the way, so strong haze looks like a glare and only weak haze lets the occluded rays stand out as shafts.
+
+Numbers (a 100 m lit path, scattering 0.3, sun at about 20 lx-equivalents after exposure): looking straight into the sun `phase` is 3.6 for g 0.8 and 0.61 for g 0.55 (6 times less); at 90° from the sun it is 0.032 for g 0.6 and about 0.04 for g 0.55. The old values added about `100 × 0.002 × 0.3 × 3.6 × 20 ≈ 4.3` linear units into the sun (far above the clip point); the new ones add `100 × 0.0005 × 0.3 × 0.61 × 0.5 × 20 ≈ 0.09` (a low sun is dimmer than 20 after `lightcolor_A`, so less), and at noon looking at the horizon about `100 × 0.0005 × 0.3 × 0.04 × 0.5 × 20 ≈ 0.006`. The moon (900 lx, gain 0.5 × 4) adds about 0.02 at most. These are estimates from the shader maths, **not measurements**; the acceptance numbers (frame mean at most +0.08 into the low sun, +0.03 at noon, moon unchanged ±0.02) are measured live.
+
+Final defaults: `HAZE_BASE` 0.0005, `SHAFT_ASYMMETRY` 0.55, `SHAFT_GAIN` 0.5, `SHAFT_AMBIENT` 0, absorption and scattering 0.3, `MOON_SHAFT_GAIN` 4. All are fields of the resource `ShaftStyle` and can be changed without a rebuild with `OPTS_SHAFT_TUNE` ([developer switches](../contributing/developer-switches.md)); the effective values are logged once at INFO. Fog still thickens the haze through `haze_density` (`3.912 / visibility`), so a foggy morning shows stronger shafts, scaled down by the weather's `shafts` factor.
+
 ## 7. Weather and the Environment UI
 
 * The weather agent supplies `WeatherSky` (section 5.6); the lighting code never reads `Weather/*.owt` itself. The weather agent's distance fog is Bevy `DistanceFog` and is independent of the volumetric haze; both derive from the same visibility `V`.
