@@ -147,7 +147,7 @@ pub fn attach_glow_assets(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     for (e, glow) in &fresh {
-        let mesh = assets.0.sphere(&mut meshes);
+        let mesh = assets.0.glow_mesh(&mut meshes);
         let material = assets.0.material(&mut materials, glow.color);
         commands
             .entity(e)

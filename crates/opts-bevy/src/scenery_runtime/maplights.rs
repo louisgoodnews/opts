@@ -26,6 +26,14 @@ pub struct MapLight {
     pub radius_m: f32,
 }
 
+/// Illuminance of a `[maplight]` at its full-intensity radius (lx). OMSI's own description:
+/// full intensity within the radius, then falling off with the square of the distance. "Full"
+/// is the scene's full lighting level, so it is set to half the midday sun of the session sky
+/// (20,000 lx): a lamp 7 m above the road then lights it with about 1,300 lx, which reads as a
+/// lit patch under the game's fixed exposure. The physical value of a street lamp (≈ 15 lx)
+/// is invisible at that exposure.
+pub const FULL_LUX: f32 = 10_000.0;
+
 /// Tuning of the map light pool.
 #[derive(Resource, Debug, Clone, PartialEq)]
 pub struct MapLightSettings {
@@ -54,7 +62,7 @@ impl Default for MapLightSettings {
             radius_m: 200.0,
             hysteresis_m: 15.0,
             interval_s: 0.25,
-            full_lux: 15.0,
+            full_lux: FULL_LUX,
             fade_s: 0.5,
         }
     }

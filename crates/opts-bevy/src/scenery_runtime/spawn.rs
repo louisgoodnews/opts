@@ -215,7 +215,7 @@ fn build_light(
         cos_outer: half(light.cone_outer_deg),
         level: 0.0,
     };
-    let mesh = assets.lights.sphere(assets.meshes);
+    let mesh = assets.lights.glow_mesh(assets.meshes);
     let material = assets.lights.material(assets.materials, light.color);
     let e = spawn_light_sprite(commands, sprite, local(light.position), mesh, material);
     commands.entity(parent).add_child(e);

@@ -76,7 +76,10 @@ fn at_night_the_nearest_lamps_get_the_pool_and_fade_in() {
     let full = lit(&mut app);
     let xs: Vec<f32> = full.iter().map(|l| l.0).collect();
     assert_eq!(xs, vec![0.0, 30.0, 60.0, 90.0], "the four nearest lamps");
-    let lumens = opts_bevy::scenery_runtime::map_light_lumens(4.5, 15.0);
+    let lumens = opts_bevy::scenery_runtime::map_light_lumens(
+        4.5,
+        opts_bevy::scenery_runtime::MapLightSettings::default().full_lux,
+    );
     assert!(full.iter().all(|l| (l.1 - lumens).abs() < 1.0));
     assert!(early.iter().all(|l| l.1 < lumens), "fading in: {early:?}");
     // Stable: the same lamps keep the lights.
