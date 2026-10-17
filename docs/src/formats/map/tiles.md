@@ -166,18 +166,21 @@ Note the **axis order differs** from `[object]`: spline positions are stored as 
 
 ### Chrono overlay blocks
 
-Tiles under `Chrono/<variant>/` contain only edits to the base tile:
+Tiles under `Chrono/<entry>/` are **diffs** of the base tile, never copies, and never change terrain or water (measured 2026-10-17 over 22 maps, 494 entries, 2,626 overlay tiles; [chrono](chrono.md#tile-overlays)). Grammar:
 
 | Block | Lines | Meaning |
 | :--- | ---: | :--- |
-| `[selobject]` | 1 | ID code of a base object that the following edit refers to. |
-| `[selspline]` | 1 | ID code of a base spline. |
-| `[delete]` | 0 | Deletes the selected element in this variant. ❓ |
-| `[relabel]` | 2–7 | `<n>`, `<text…>`: changes label/variable text (e.g. `1 / 13N`, `1 / Alle Linien@Umleitung`). |
-| `[kill_rule]` | 4 | `<index>`, `<type>`, `<value>`, `<flag>`: removes a rule (`4 / priority / 128 / 0`). |
-| `[typ]` | 1–2 | `.sco` path: replaces the selected object's type (`Busstop_Lineplate_green_3.sco`). ❓ |
+| `[selobject]` | 1 | Selects the element with this ID among `[object]`, `[attachObj]`, `[splineAttachement]` and repeater records (one ID space). |
+| `[selspline]` | 1 | Selects the `[spline]`/`[spline_h]` with this ID. |
+| `[rule]` | 4 | After a selection: **upsert** keyed by (owner, path index, type, flag) — an existing rule gets the new value, otherwise the rule is added. Without a selection it belongs to the element added just before it, as in base tiles. |
+| `[kill_rule]` | 4 | Removes the selected owner's rules with this path index and type (value and flag are not part of the key). |
+| `[relabel]` | 1 + n | `n`, then **exactly n literal lines** (blank lines are values): replaces all string variables of the selected object or `[attachObj]`. |
+| `[typ]` | 1 | Replaces the `.sco` of the selected object/attachment or the `.sli` of the selected spline. |
+| `[delete]` | 0 | Removes the selected element. The editor writes explicit deletes for `[attachObj]` children (240 of 244 deleted parents with children), so nothing cascades. |
 
-New objects/splines in an overlay use the same `[object]` / `[spline]` / `[attachobj]` blocks as base tiles.
+The selection persists across the edits that follow and is cleared by the next selection or by any added element. Added blocks (`[object]`, `[spline]`, `[spline_h]`, `[attachObj]`, `[splineAttachement*]`, `[varparent]`, `[spline_terrain_align*]`) use the base layouts; a carrier index of an added `[splineAttachement]` counts the tile's splines **including the ones the overlay added** (60 of 395 attachments next to added splines point past the base list). After deletions, rule owners, `[varparent]` links and attachment carriers are re-numbered (OPTS removes deleted elements after the whole overlay: indices inside one overlay refer to the tile before it plus what it added).
+
+Selections resolve [C]: 98.6 % in the base tile, the rest in elements created by an earlier entry (62) or earlier in the same overlay (3); 54 refer to nothing (OPTS warns and skips their edits). Applied in order with `opts_core::formats::chrono`, 8,648 of 8,737 selections resolve (`crates/opts-core/tests/chrono_corpus.rs`).
 
 ### `.map.terrain` — height grid (binary)
 
@@ -266,7 +269,7 @@ Reading `.terrain` (descriptive): read `u32 n = 60`; read `(n+1)²` `f32` height
 | Q-M03 | `[object]` flag line, pitch/roll order and sign, and `z` reference. | 🟡 Medium | Lines 6–8 confirmed as Heading (Yaw), Pitch (transverse), Roll (longitudinal). |
 | Q-M04 | `[splineattachement]`, `[splineattachement_repeater]`, `[attachobj]`, `[varparent]` full layouts. | 🟡 Medium | `[attachobj]` layout resolved 2026-10-16 (see [Other blocks](#other-blocks)); the always-`0` fifth field remains ❓. |
 | Q-M05 | What differs in versions 11–13, and does `[version]` with two lines (655 files) carry extra data? | 🟡 Medium |
-| Q-M06 | `[rule]` index semantics and the `flag` field; `[relabel]`/`[typ]`/`[delete]` target semantics. | 🟡 Medium |
+| Q-M06 | `[rule]` index semantics and the `flag` field; `[relabel]`/`[typ]`/`[delete]` target semantics. | 🟡 Medium | ✅ **Overlay semantics resolved (2026-10-17, corpus):** see [Chrono overlay blocks](#chrono-overlay-blocks): `[rule]` upserts by (owner, path, type, flag), `[kill_rule]` removes by (path, type), `[relabel]` replaces all strings of the selected object/`[attachObj]`, `[typ]` swaps `.sco`/`.sli`, `[delete]` removes the selection. The meaning of the `trafficdensity` flag belongs to the density model. |
 | Q-M07 | `.water` header `1`; whether a `.water` file without the `[water]` marker is drawn, and the interpolation inside the tile (bilinear vs two triangles) need an in-engine check; `.LM.bmp` orientation. The four values are resolved: corner levels (see `.map.water`). | 🟡 Medium |
 | Q-M08 | Purpose of `.prt` (cache?) and `.surf`; are they safe to ignore? | 🟢 Low |
 | Q-M09 | Why only 11,471 of 16,639 tiles listed in `global.cfg` files exist, and whether OMSI tolerates missing tiles. | 🟡 Medium |
@@ -280,7 +283,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 
 - **`[rule]` types.** The editor's traffic-rule tab (📚) offers: speed limits (km/h), lane-change prohibition, AI traffic density in five levels, priority (higher/lower), vehicle-type restrictions (cars, trucks, buses, taxis), switching traffic off on a path. These plausibly correspond to the types found in the files — `speedlimit`, `overtaking_prohib`, `trafficdensity`, `priority`, `no_cars`/`trucks`/`bus` ❓ (mapping is an inference). Rules attach to a path or spline picked in the editor and use the AI groups defined in `unsched_vehgroups.txt`; with no priority rule AI vehicles follow right-before-left (📚).
 - **Cyclists** (📚): a cycle path is an ordinary car-type path (type "street", direction forward, width about 0.5 m); the group's default density in `unsched_vehgroups.txt` is `0` so that paths are blocked unless freed, and bicycle paths must be explicitly closed to the `NormalCars` group.
-- **Chrono overlays**: the wiki describes the overlay mechanism ([timetables](timetables.md)) but not the tile-level blocks `[selobject]`, `[selspline]`, `[delete]`, `[relabel]`, `[kill_rule]`, `[typ]`; their meaning stays as inferred above.
+- **Chrono overlays**: the wiki describes the overlay mechanism ([timetables](timetables.md)) but not the tile-level blocks `[selobject]`, `[selspline]`, `[delete]`, `[relabel]`, `[kill_rule]`, `[typ]`; their meaning above is measured on the corpus (2026-10-17), not taken from the wiki.
 
 ---
 
