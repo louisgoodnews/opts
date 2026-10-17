@@ -41,6 +41,8 @@ pub(super) struct Unit {
     pub rear_axle_y: f32,
     /// Joint limit on the angle against the predecessor (degrees).
     pub max_alpha_deg: f32,
+    /// The `[CTC]` colour schemes of the model (default and `.cti` items); each vehicle picks one.
+    pub repaints: crate::new_game_screen::repaints::VehicleRepaints,
     /// The unit is coupled the other way round (its model faces backwards).
     pub reversed: bool,
 }
@@ -149,6 +151,17 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
             .unwrap_or_else(|| dir.join("texture")),
         model_dir.join("texture"),
     ];
+    let default_livery = manifest
+        .friendly_name
+        .as_ref()
+        .map(|f| f.livery.clone())
+        .unwrap_or_default();
+    let repaints = crate::new_game_screen::repaints::discover_for_model(
+        &job.config.root,
+        &dir,
+        &model,
+        &default_livery,
+    );
     let unit = Unit {
         name: path
             .file_stem()
@@ -164,6 +177,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         joint: Vec2::ZERO,
         rear_axle_y: 0.0,
         max_alpha_deg: 52.5,
+        repaints,
         reversed: false,
     };
     Ok((unit, manifest, dir))
@@ -401,6 +415,7 @@ mod tests {
             joint: Vec2::ZERO,
             rear_axle_y: 0.0,
             max_alpha_deg: 52.5,
+            repaints: Default::default(),
             reversed: false,
         };
         let v = Variant {

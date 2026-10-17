@@ -115,6 +115,8 @@ pub struct TrafficPool {
     slots: Vec<Slot>,
     rng: Option<Rng>,
     frames: u32,
+    /// Vehicles built so far; with the slot it seeds each vehicle's repaint choice.
+    built: u64,
 }
 
 /// Component of a driving AI vehicle.
@@ -532,6 +534,8 @@ pub fn spawn_traffic(
     };
 
     let group_name = pool.groups[pool.slots[slot].group].name.clone();
+    pool.built += 1;
+    let repaint_seed = crate::new_game_screen::repaints::instance_seed(&[slot as u64, pool.built]);
     // Build the models of every unit (parts are cached, so repeated types are cheap).
     let SlotState::Ready(variant) = &pool.slots[slot].state else {
         pool.rng = Some(rng);
@@ -562,6 +566,12 @@ pub fn spawn_traffic(
             break;
         };
         job.vehicle_text_defs = unit.model.text_textures.clone();
+        // Each vehicle wears one of its `[CTC]` colour schemes (all units the same seed).
+        job.cache.texture_replacements = unit
+            .repaints
+            .replacements(unit.repaints.pick(repaint_seed), &unit.model.ctc_textures)
+            .into_iter()
+            .collect();
         let (count, _, min, max) = load_segment_meshes_for(
             &mut job,
             &mut commands,
@@ -574,6 +584,7 @@ pub fn spawn_traffic(
             &unit.model_dir.clone(),
             &unit.tex_dirs.clone(),
         );
+        job.cache.texture_replacements.clear();
         if count == 0 {
             failed = Some(false);
             break;

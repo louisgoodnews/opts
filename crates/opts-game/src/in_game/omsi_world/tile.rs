@@ -519,9 +519,15 @@ fn spawn_object_inner(
     super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
         super::trace::set_model_cfg(cfg_rel);
+        // The colour scheme of this placement (`[CTC]` repaints), fixed per object and tile.
+        let seed = crate::new_game_screen::repaints::instance_seed(&[
+            obj.id_code,
+            u64::from(key.0 as u32),
+            u64::from(key.1 as u32),
+        ]);
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
-            transform, children,
+            transform, seed, children,
         );
         return;
     }
@@ -672,6 +678,7 @@ fn spawn_vehicle_model(
     sco_dir: &Path,
     cfg_rel: &str,
     transform: Transform,
+    repaint_seed: u64,
     children: &mut Vec<Entity>,
 ) {
     let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
@@ -710,6 +717,19 @@ fn spawn_vehicle_model(
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
     job.vehicle_text_defs = model.text_textures.clone();
+    let repaints = job
+        .model_repaints
+        .entry(cfg_path.clone())
+        .or_insert_with(|| {
+            crate::new_game_screen::repaints::discover_for_model(
+                &job.config.root,
+                sco_dir,
+                &model,
+                "",
+            )
+        });
+    let replacements = repaints.replacements(repaints.pick(repaint_seed), &model.ctc_textures);
+    job.cache.texture_replacements = replacements.into_iter().collect();
     let (mut count, mut verts) = (0, 0);
     for lod in lods {
         let (c, v, _, _) = super::vehicle::load_segment_meshes(
@@ -720,6 +740,7 @@ fn spawn_vehicle_model(
             break;
         }
     }
+    job.cache.texture_replacements.clear();
     if count == 0 {
         tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
         super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));

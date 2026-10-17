@@ -264,6 +264,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         ground_array: None,
         spawn: None,
         repaint: None,
+        model_repaints: HashMap::new(),
         formation_cars: Vec::new(),
         start_tile: (0, 0),
         missing_listed: 0,
