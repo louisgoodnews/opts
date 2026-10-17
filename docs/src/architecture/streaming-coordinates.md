@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design draft for approval (Checkpoint 2 of the [Berlin-Spandau investigation](../meta/berlin-spandau-2026-10-17.md)); nothing implemented |
+| **Status** | 🟢 Implemented with deviations (Phase C, C1): fixed-anchor per-row grid; anchor re-centring (§2.3) deferred. See [§4](#4-implementation-notes-2026-10-17) |
 | **Last Updated** | 2026-10-17 |
 | **Relevant Crates** | `opts-core` (`formats::map::pitch` → `grid`), `opts-bevy` (`terrain.rs` `tile_size`/`terrain_cell`), `opts-game` (`in_game/omsi_world/{job,ground,tile,tile_ground,ground_height,water,respawn,traffic}.rs`, `in_game/attachments.rs`, `control*.rs`), `opts-traffic` (`source.rs`) |
 | **Replaces** | the single per-session tile size of [tiles.md, "Tile size is not always 300 m"](../formats/map/tiles.md) |
@@ -54,6 +54,13 @@ With a fixed anchor the error grows by about 0.028 m per tile column away from i
 3. agents re-pose from `(lane, s)`; the player chassis and the camera move by the delta of their tile.
 
 Deltas of neighbouring tiles differ by centimetres, far below the graph join tolerances (0.75 m / 15° for cars, 0.6 m for pedestrians), so the topology survives. Measured residual at the neighbours of the anchor: ≤ 0.034 m.
+
+## 4. Implementation notes (2026-10-17)
+
+* `opts_core::formats::map::TileGrid` (`grid.rs`, formerly `pitch.rs`): `Uniform { pitch }` / `Mercator`, chosen by `TileGrid::measure` from the spline chains of up to 80 tiles and `MapManifest::world_coordinates`. The Mercator row width is taken at the centre latitude of slippy row `32767 − ty` (the fit of the probe). Tests: `uniform_origins_are_bit_identical_to_the_f32_formula` (keys ±1000, five anchors), `a_synthetic_mercator_grid_is_selected_and_its_seams_close`, `tile_at_inverts_origin`.
+* Every site of §2.2 goes through the grid; `TILE_SIZE_BITS`, `opts_bevy::tile_size`/`set_tile_size`/`terrain_cell` and `opts_traffic::TILE_SIZE_M` are gone. The session keeps the grid in `WorldLoadJob` and `WorldStats` (anchor = start tile); height consumers take a `TileTerrain` (grid + cell of its row).
+* **Absolute coordinates** (control protocol, overlay, spawn points) are `TileGrid::absolute(key, local)` = origin relative to tile (0, 0) + local: `key · 300 + local` on ordinary maps as before; on Mercator maps the north-south steps are summed from row 0 (memoised). They are therefore not the median-pitch values Berlin-Spandau reported before.
+* **Deviation: no anchor re-centring yet** (§2.3). With the fixed anchor the error grows by ≈ 2.8 cm per tile column away from the start tile (the synthetic test pins exactly this). Re-centring moves tile roots, lane segments, nets and agents and is left for a follow-up.
 
 ## 3. Out of scope here
 
