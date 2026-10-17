@@ -280,17 +280,17 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
         Ok(v) => v,
         Err(e) => return Outcome::err(e),
     };
-    let Some(start) = world.get_resource::<WorldStats>().map(|s| s.start_tile) else {
+    let Some((start, grid)) = world
+        .get_resource::<WorldStats>()
+        .map(|s| (s.start_tile, s.grid))
+    else {
         return Outcome::err(RpcError::new(
             code::NOT_READY,
             "no session has been started",
         ));
     };
-    let local = Vec3::new(
-        x as f32 - start.0 as f32 * opts_bevy::tile_size(),
-        y as f32 - start.1 as f32 * opts_bevy::tile_size(),
-        z as f32,
-    );
+    let local = grid.absolute_to_local(bevy::math::DVec2::new(x, y), start);
+    let local = Vec3::new(local.x as f32, local.y as f32, z as f32);
     let position = omsi_to_bevy_pos(local);
     let (yaw_rad, pitch_rad) = ((-yaw).to_radians() as f32, pitch.to_radians() as f32);
     let switched = dispatch(world, "camera.set_mode", &json!({ "mode": "free" }));
@@ -402,12 +402,13 @@ fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
     let ch = &c.sim.chassis;
     // The chassis position is local to the start tile; the protocol speaks absolute coordinates
     // (the same as `camera.teleport`).
-    let (tx, ty) = world
+    let (start, grid) = world
         .get_resource::<WorldStats>()
-        .map_or((0, 0), |s| s.start_tile);
+        .map_or(((0, 0), Default::default()), |s| (s.start_tile, s.grid));
+    let abs = grid.local_to_absolute(ch.position.as_dvec2(), start);
     Outcome::ok(json!({
-        "x": f64::from(ch.position.x) + f64::from(tx) * f64::from(opts_bevy::tile_size()),
-        "y": f64::from(ch.position.y) + f64::from(ty) * f64::from(opts_bevy::tile_size()),
+        "x": abs.x,
+        "y": abs.y,
         "z": ch.elevation_z,
         "heading_deg": ch.heading_rad.to_degrees(),
         "speed_kmh": ch.forward_speed_km_h(),

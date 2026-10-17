@@ -561,7 +561,6 @@ fn free_entries(
     traffic: &Query<&GlobalTransform, With<TrafficVehicle>>,
 ) -> Vec<(u32, String)> {
     let blockers: Vec<Vec3> = traffic.iter().map(GlobalTransform::translation).collect();
-    let start = job.session_origin();
     let records = job.entry_records();
     let mut seen: HashMap<String, usize> = HashMap::new();
     let mut total: HashMap<&str, usize> = HashMap::new();
@@ -573,7 +572,7 @@ fn free_entries(
         let n = seen.entry(name.clone()).or_default();
         *n += 1;
         let free = index.find(*id).is_none_or(|e| {
-            let session = Vec3::new(e.world.x - start.0, e.world.y - start.1, e.world.z);
+            let session = job.session_pos(e.tile, e.local);
             let p = opts_bevy::coords::omsi_to_bevy_pos(session);
             !blockers
                 .iter()

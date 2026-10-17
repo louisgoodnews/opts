@@ -10,7 +10,9 @@
 use std::collections::{HashMap, HashSet};
 
 use opts_bevy::scenery::spline_pose;
-use opts_core::formats::map::{MapObjectInstance, MapSplineAttachment, MapSplineInstance};
+use opts_core::formats::map::{
+    MapObjectInstance, MapSplineAttachment, MapSplineInstance, TileGrid,
+};
 
 use bevy::math::Vec3;
 
@@ -85,6 +87,7 @@ pub fn expand_attachments(
     tile_splines: &[MapSplineInstance],
     index: &SplineIndex,
     tile: (i32, i32),
+    grid: &TileGrid,
     elevation_at: impl Fn(f32, f32) -> f32,
 ) -> Vec<(MapObjectInstance, f32)> {
     let mut out = Vec::new();
@@ -106,11 +109,12 @@ pub fn expand_attachments(
             let Some((entry, local)) = index.locate(carrier.id_code, s) else {
                 continue;
             };
-            let ((ex, ey), (tx, ty)) = (entry.0, tile);
+            // The carrier may lie on a neighbouring tile: its frame's corner in this tile's frame.
+            let offset = grid.neighbour_offset(tile, entry.0);
             let pose = spline_pose(&entry.1, local);
             let (rx, ry) = (pose.heading.cos(), -pose.heading.sin());
-            let x = pose.x + rx * att.lateral_m + (ex - tx) as f32 * opts_bevy::tile_size();
-            let y = pose.y + ry * att.lateral_m + (ey - ty) as f32 * opts_bevy::tile_size();
+            let x = pose.x + rx * att.lateral_m + offset.x;
+            let y = pose.y + ry * att.lateral_m + offset.y;
             let absolute_z = pose.z + att.height_m;
             out.push((
                 MapObjectInstance {
@@ -188,6 +192,7 @@ mod tests {
             &splines,
             &index,
             (0, 0),
+            &TileGrid::default(),
             |_, _| 0.0,
         );
         assert_eq!(out.len(), 1);
@@ -205,6 +210,7 @@ mod tests {
             &splines,
             &index,
             (0, 0),
+            &TileGrid::default(),
             |_, _| 0.0,
         );
         let xs: Vec<f32> = out.iter().map(|o| o.0.position.x).collect();
@@ -224,6 +230,7 @@ mod tests {
             &splines,
             &index,
             (0, 0),
+            &TileGrid::default(),
             |_, _| 0.0,
         );
         assert!(out.is_empty());

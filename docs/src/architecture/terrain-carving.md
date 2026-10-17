@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design for approval (Checkpoint 2 of the [Berlin-Spandau systems investigation](../meta/berlin-spandau-systems-2026-10-17.md)); replaces the flat-footprint carve |
+| **Status** | 🟢 Implemented with deviations (Phase C, C2), see [§8](#8-implementation-notes-2026-10-17); replaces the flat-footprint carve |
 | **Date** | 2026-10-17 |
 | **Crates** | `opts-core` (`formats/scenery/sli.rs`), `opts-bevy` (`terrain.rs`), `opts-game` (`in_game/omsi_world/{tile_ground,tile,trees,pedestrians,rail,traffic,ground_height}.rs`) |
 | **Related** | [map tiles](../formats/map/tiles.md) (terrain, `[spline_terrain_align*]`), [`.sli`](../formats/text/sli.md), [`.sco`](../formats/text/sco.md) (`[crossing_heightdeformation]`, `[surface]`), [streaming coordinates](streaming-coordinates.md), MI-0043 |
@@ -76,6 +76,17 @@ An overlay that adds or changes splines, or a tile marked `.chronoterrrelevant`,
 * A border vertex gets the same value on both tiles.
 * `terrain_height` equals the mesh interpolation in both triangles of a cell.
 * Content regression on Spandau, Ruhrau and Hügelsdorf: no lowering above 1 m; poking triangles ≤ the guard list.
+
+## 8. Implementation notes (2026-10-17)
+
+* Surface: `SplineProfile::ground_surface` / `surface_at` (`opts-core` `sli.rs`), the lower envelope of the qualifying segments.
+* Carve: `opts_bevy::spline_ground_triangles` (ribbons on `spline_stations`, the stations of the drawn mesh) and `opts_bevy::carve_terrain` (Sutherland-Hodgman clip of each ribbon triangle against each overlapped terrain triangle, ε = `CARVE_EPSILON_M` 0.03 m, guard `CARVE_COVER_M` 1.0 m). Terrain triangles one cell beyond the border take part, so a border vertex gets the same caps on both tiles. `spawn_terrain` returns the carved `TileTerrain`; `TileTerrain::height` / `terrain_height` interpolate on the mesh's split and are the only terrain height function.
+* Crossings: `[crossing_heightdeformation]` → `SceneryObject::crossing_deformation`; `BaseSurface` (`opts-core` `scenery/crossing.rs`) bends meshes (`ContentLoader::o3d_parts_bent`, parts cache keyed by the base file), collision boxes, `[path]` heights (start height and both gradients fitted through start, middle and end) and `[splinehelper]` heights (the bent `.sco` is what `WorldLoadJob::sco` caches). The carve adds the near-level faces (`|n_y| ≥ 0.7`, ≥ 0.05 m², −1.5…3 m around the base) of absolute-height crossings and `[surface]` objects of the 3 × 3 tiles.
+* **Deviation 1: the guard applies per surface**, not to the final minimum: a cap that would lower a vertex by more than 1 m is dropped, other surfaces over the same vertex still cap it. A per-vertex guard let a deep surface (a tunnel road) cancel the cap of the road above it (the Phase B probe also guarded per sample).
+* **Deviation 2:** a straight `[spline_h]` with equal end gradients was drawn as one linear quad; it is now drawn (and carved) as its cubic ramp, so the ribbon matches the Hermite height.
+* Terrain-relative `[surface]` objects do not carve (their height comes from the terrain itself).
+* Tests: `opts-bevy` `terrain.rs` (Damm1-like embankment, kerb, guard, mirrored profile, `[spline_h]` ramp, border vertices, `terrain_height` = mesh triangles), `tests/spline_winding.rs`, `opts-core` `sli.rs` and `crossing.rs` unit tests, the parts-cache key test in `model.rs`, and the install-gated `opts-bevy/tests/terrain_carve_content.rs` (Berlin-Spandau): 2402/11279 lowers 89 vertices, none by more than 0.79 m, Damm1 flanks untouched; the 11 bent placements have 0.000 % of 72,469 m² below the terrain; 38 of 39 arms meet their spline within 1 cm, one (`Einm_SpandauerD_WiesenD`) at 1.3 cm. The Ruhrau and Hügelsdorf regressions of §7 are not automated (no lowering above 1 m holds by construction).
+* Chrono invalidation (§6) waits for the Chrono implementation.
 
 ## ❓ Open questions
 

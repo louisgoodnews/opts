@@ -99,7 +99,9 @@ Four values, defining one cross-section **strip**, left to right:
 | 3 | z start | Height above the local origin at the start. |
 | 4 | z end | Height at the end. |
 
-> **Terrain vs. road surface.** The `.terrain` grid baked from these strips is only sampled every 5 m and curb strips sit above the carriageway (Waldhofen: terrain up to 0.15 m over the road surface). Renderers must keep the terrain from covering the road, e.g. by capping terrain vertices under the footprint at the lowest profile height; see the [spline winding bug report](../../meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md).
+> **Terrain vs. road surface.** The `.terrain` grid baked from these strips is only sampled every 5 m and curb strips sit above the carriageway (Waldhofen: terrain up to 0.15 m over the road surface). Renderers must keep the terrain from covering the road; see the [spline winding bug report](../../meta/bugs/f17228d9-3bc0-4830-8f25-3bc9465f63d2_2026-10-10_16-44-31-spline-winding.md).
+>
+> **Ground surface (2026-10-17).** OPTS carves to the **graphical** profile, not to `[heightprofile]`: a `[profile]` segment is ground surface when it runs left to right (faces up), slopes at most 0.25 and lies at most 1.0 m above the datum; where several cover an offset the lowest wins (`SplineProfile::ground_surface`). Embankment flanks (`Damm1.sli` slopes 0.67), walls, hedges, platforms and rail heads are therefore not ground, and `[onlyeditor]` profiles carve nothing. Capping the whole profile width at its lowest point dug 20 m pits beside embankments; see [terrain carving](../../architecture/terrain-carving.md).
 
 ```
 [heightprofile]

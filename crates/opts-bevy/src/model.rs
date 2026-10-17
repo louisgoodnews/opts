@@ -21,6 +21,7 @@ use bevy::pbr::StandardMaterial;
 use bevy::prelude::AlphaMode;
 
 use opts_core::formats::o3d::{self, O3d};
+use opts_core::formats::scenery::BaseSurface;
 use opts_core::formats::vehicles::model::LightMap;
 
 use crate::install::OmsiInstall;
@@ -156,6 +157,44 @@ pub fn repeat_sampler() -> ImageSampler {
     crate::texture_filter::current_object_sampler()
 }
 
+/// Key of the parts cache: the file and everything that changes what is built from it (the
+/// material overrides, skinning, the repaint, bone slots and the crossing base it is bent over).
+fn parts_key(
+    o3d_path: &Path,
+    overrides: &[TextureOverride],
+    keep_skin: bool,
+    repaint: &[(&String, &PathBuf)],
+    slots: Option<&[(String, u16)]>,
+    base: Option<&Path>,
+) -> (PathBuf, String) {
+    (
+        o3d_path.to_path_buf(),
+        format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}{base:?}"),
+    )
+}
+
+/// Reads a mesh file with positions as the exporter wrote them: keyed `.o3d` files are decoded
+/// exactly (`o3d::exact`); a file that stays scrambled is an error.
+///
+/// # Errors
+/// The file cannot be read, parsed or decoded.
+pub fn load_decoded_meshes(path: &Path) -> Result<Vec<O3d>, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let mut models = crate::mesh::parse_mesh_file(path, &bytes)?;
+    for m in &mut models {
+        if m.encryption_key.is_some() {
+            let _ = o3d::exact::decode(m);
+        }
+    }
+    if models
+        .iter()
+        .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable))
+    {
+        return Err("vertex positions are scrambled and could not be decoded".into());
+    }
+    Ok(models)
+}
+
 /// Caches shared across a loading session.
 #[derive(Default)]
 pub struct ContentCache {
@@ -163,6 +202,8 @@ pub struct ContentCache {
     /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
+    /// `[crossing_heightdeformation]` base surfaces by file.
+    pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
@@ -310,7 +351,37 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None, None)
+    }
+
+    /// [`Self::o3d_parts`] bent over a `[crossing_heightdeformation]` base surface: every vertex
+    /// is raised by the base height under it. `bend` is `(base file, surface)`; the parts are
+    /// cached per base file.
+    pub fn o3d_parts_bent(
+        &mut self,
+        o3d_path: &Path,
+        tex_dirs: &[PathBuf],
+        overrides: &[TextureOverride],
+        bend: Option<(&Path, &BaseSurface)>,
+    ) -> Vec<ModelPart> {
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None, bend)
+    }
+
+    /// The base surface of a `[crossing_heightdeformation]` mesh file (cached; `None` when the
+    /// file cannot be read or decoded).
+    pub fn base_surface(&mut self, path: &Path) -> Option<std::sync::Arc<BaseSurface>> {
+        if let Some(b) = self.cache.bases.get(path) {
+            return b.clone();
+        }
+        let base = match load_decoded_meshes(path) {
+            Ok(models) => Some(std::sync::Arc::new(BaseSurface::from_meshes(&models))),
+            Err(e) => {
+                self.fail(format!("crossing base mesh {}: {e}", path.display()));
+                None
+            }
+        };
+        self.cache.bases.insert(path.to_path_buf(), base.clone());
+        base
     }
 
     /// Like [`Self::o3d_parts`], but keeps the bone-weight vertex attributes (for meshes that
@@ -321,7 +392,7 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, None)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, None, None)
     }
 
     /// [`Self::o3d_skinned_parts`] for a vehicle mesh whose `[setbone]` entries give the joint
@@ -334,7 +405,7 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         slots: &[(String, u16)],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, Some(slots))
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, Some(slots), None)
     }
 
     fn o3d_parts_impl(
@@ -344,6 +415,7 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
         slots: Option<&[(String, u16)]>,
+        bend: Option<(&Path, &BaseSurface)>,
     ) -> Vec<ModelPart> {
         let mut scratch = TraceScratch::new();
         let parts = self.o3d_parts_core(
@@ -352,6 +424,7 @@ impl ContentLoader<'_> {
             overrides,
             keep_skin,
             slots,
+            bend,
             &mut scratch,
         );
         if scratch.lap.active() {
@@ -360,6 +433,7 @@ impl ContentLoader<'_> {
         parts
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn o3d_parts_core(
         &mut self,
         o3d_path: &Path,
@@ -367,13 +441,18 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
         slots: Option<&[(String, u16)]>,
+        bend: Option<(&Path, &BaseSurface)>,
         sc: &mut TraceScratch,
     ) -> Vec<ModelPart> {
         let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
         repaint.sort();
-        let key = (
-            o3d_path.to_path_buf(),
-            format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}"),
+        let key = parts_key(
+            o3d_path,
+            overrides,
+            keep_skin,
+            &repaint,
+            slots,
+            bend.map(|b| b.0),
         );
         if let Some(parts) = self.cache.parts.get(&key) {
             sc.stage = "parts-cache";
@@ -479,6 +558,11 @@ impl ContentLoader<'_> {
             }) {
                 self.cache.stats.axis_cycled_meshes += 1;
                 tracing::debug!(path = %o3d_path.display(), "axis-cycled vertex layout; normals recomputed");
+            }
+        }
+        if let Some((_, base)) = bend {
+            for m in &mut models {
+                base.bend_mesh(m);
             }
         }
         for model in &models {
@@ -1046,5 +1130,25 @@ mod transmap_split_tests {
         let glass = transmap_glass_rgba(&image(&[242, 243, 255])).expect("split");
         assert_eq!(glass[3], 242);
         assert_eq!(glass[7], 0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parts bent over a crossing base are cached apart from the flat parts and per base file.
+    #[test]
+    fn the_parts_cache_key_includes_the_crossing_base() {
+        let file = Path::new("Kreuz.o3d");
+        let flat = parts_key(file, &[], false, &[], None, None);
+        let a = parts_key(file, &[], false, &[], None, Some(Path::new("a_base.o3d")));
+        let b = parts_key(file, &[], false, &[], None, Some(Path::new("b_base.o3d")));
+        assert_ne!(flat, a);
+        assert_ne!(a, b);
+        assert_eq!(
+            a,
+            parts_key(file, &[], false, &[], None, Some(Path::new("a_base.o3d")))
+        );
     }
 }

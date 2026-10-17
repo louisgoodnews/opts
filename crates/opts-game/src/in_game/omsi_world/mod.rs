@@ -10,7 +10,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance};
+use opts_core::formats::map::{MapManifest, MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use crate::in_game::attachments::SplineIndex;
@@ -18,6 +18,7 @@ use crate::in_game::attachments::SplineIndex;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 mod collision;
 mod consist_plan;
+mod crossing;
 mod dev_look;
 mod ground;
 mod ground_height;
@@ -146,6 +147,8 @@ pub struct PositionReadout {
 pub struct WorldStats {
     pub map_name: String,
     pub start_tile: (i32, i32),
+    /// Tile grid of the map (where each tile lies relative to the start tile).
+    pub grid: TileGrid,
     /// Where the camera and the player's vehicle are (updated every frame).
     pub position: PositionReadout,
     pub tiles_loaded: usize,
@@ -206,6 +209,12 @@ pub struct WorldLoadJob {
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// `[crossing_heightdeformation]` base surfaces by file.
+    crossing_bases: HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
+    /// Ground faces of crossings and surface objects by `.sco` (mesh axes), for the carve.
+    ground_faces: HashMap<PathBuf, crossing::ObjectFaces>,
+    /// The `[object]`s of tiles read for the carve of their neighbours.
+    tile_objects: HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
@@ -241,6 +250,8 @@ pub struct WorldLoadJob {
     /// Repaints of parked/static vehicle models, by model config path (read on first use).
     model_repaints: HashMap<PathBuf, crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
+    /// Tile grid of the map; the session frame is anchored at `start_tile`.
+    grid: TileGrid,
     /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
     missing_listed: usize,
     /// Camera parameters, set once the vehicle is loaded.

@@ -388,6 +388,10 @@ pub struct SceneryObject {
 
     /// Collision meshes attached to the object.
     pub collision_meshes: Vec<String>,
+    /// Base mesh of `[crossing_heightdeformation]` (relative to the `model/` folder): its
+    /// surface bends the object's meshes, paths and spline helpers vertically
+    /// ([`super::crossing::BaseSurface`]).
+    pub crossing_deformation: Option<String>,
     /// Bounding box.
     pub bounding_box: Option<ScoBoundingBox>,
     /// Center of gravity.
@@ -759,6 +763,13 @@ impl SceneryObject {
                         block.line_number
                     )),
                 },
+                "crossing_heightdeformation" => {
+                    obj.crossing_deformation = block
+                        .parameters
+                        .first()
+                        .map(|f| f.trim().to_string())
+                        .filter(|f| !f.is_empty());
+                }
                 "collision_mesh" | "collisionsmesh" | "collisionmesh" | "collisioionsmesh" => {
                     if let Some(file) = block.parameters.first() {
                         obj.collision_meshes.push(file.clone());

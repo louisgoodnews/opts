@@ -55,5 +55,5 @@ pub use neighbours::{Neighbour, Side};
 pub use rightofway::{precedence, Precedence};
 pub use rng::Rng;
 pub use signals::{Aspect, SignalKey, SignalProgram};
-pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource, TILE_SIZE_M};
+pub use source::{segments_from_tile, signals_from_tile, tile_origin, PathSource};
 pub use traits::{Calibration, VehicleKind, VehicleTraits};

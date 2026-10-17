@@ -15,8 +15,9 @@ use std::sync::Arc;
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
+use opts_bevy::TileTerrain;
 use opts_core::formats::map::lists::day;
-use opts_core::formats::map::{MapObjectInstance, MapTerrain, MapTile};
+use opts_core::formats::map::{MapObjectInstance, MapTile};
 use opts_core::formats::scenery::sco::{ScoPath, ScoTrafficLightGroup};
 use opts_core::formats::scenery::{SceneryObject, SplinePath, SplineProfile};
 use opts_core::formats::vehicles::model::ModelLod;
@@ -165,7 +166,7 @@ impl TrafficVehicle {
 /// Path data for [`segments_from_tile`], read through the load job's caches.
 struct JobSource<'a> {
     job: &'a mut WorldLoadJob,
-    terrain: Option<&'a MapTerrain>,
+    terrain: Option<&'a TileTerrain>,
     sli: HashMap<String, Option<Arc<SplineProfile>>>,
     sco: HashMap<String, Option<Arc<SceneryObject>>>,
 }
@@ -207,9 +208,8 @@ impl PathSource for JobSource<'_> {
         let ground = if absolute {
             0.0
         } else {
-            self.terrain.map_or(0.0, |t| {
-                opts_bevy::sample_terrain(t, o.position.x, o.position.y)
-            })
+            self.terrain
+                .map_or(0.0, |t| t.height(o.position.x, o.position.y))
         };
         f64::from(ground + o.position.z)
     }
@@ -219,7 +219,7 @@ impl PathSource for JobSource<'_> {
 pub(super) fn tile_segments(
     job: &mut WorldLoadJob,
     tile: &MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     origin: (f32, f32),
 ) -> (Vec<LaneSegment>, Vec<(SignalKey, SignalProgram)>) {
     let mut source = JobSource {

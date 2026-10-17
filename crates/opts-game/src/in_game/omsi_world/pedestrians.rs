@@ -8,9 +8,10 @@
 use bevy::mesh::skinning::SkinnedMeshInverseBindposes;
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
+use opts_bevy::TileTerrain;
 use opts_bevy::{pose_rotations, rest_pivots, spawn_human, Human, HumanPose, ModelPart};
 use opts_core::formats::humans::HumanProfile;
-use opts_core::formats::map::{MapObjectInstance, MapTerrain, MapTile};
+use opts_core::formats::map::{MapObjectInstance, MapTile};
 use opts_sim::pedestrian::{
     gait, lanes_from_object, lanes_from_spline, Advance, FootLane, PedestrianNet, Walker,
 };
@@ -84,7 +85,7 @@ pub(super) fn tile_lanes(
     job: &mut WorldLoadJob,
     tile: &MapTile,
     attached: &[(MapObjectInstance, f32)],
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     origin: (f32, f32),
 ) -> Vec<FootLane> {
     let mut out = Vec::new();
@@ -112,9 +113,7 @@ pub(super) fn tile_lanes(
         let ground = if absolute {
             0.0
         } else {
-            terrain.map_or(0.0, |t| {
-                opts_bevy::sample_terrain(t, obj.position.x, obj.position.y)
-            })
+            terrain.map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
         };
         let z = match (attached_z, absolute) {
             (Some(z), true) => z,

@@ -8,8 +8,8 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use opts_bevy::scenery::spline_pose;
-use opts_bevy::{sample_terrain, tile_size, VehicleController};
-use opts_core::formats::map::{MapSplineInstance, MapTerrain};
+use opts_bevy::{TileTerrain, VehicleController};
+use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
 
 /// Session vehicles (active or parked) that follow the ground (rail-bound ones follow their track instead).
@@ -43,9 +43,10 @@ type TileSample = ((i32, i32), RoadSample);
 /// start tile's corner, OMSI axes).
 #[derive(Resource, Default)]
 pub struct GroundIndex {
-    terrain: HashMap<(i32, i32), MapTerrain>,
+    terrain: HashMap<(i32, i32), TileTerrain>,
     cells: HashMap<(i32, i32), Vec<TileSample>>,
     start_tile: (i32, i32),
+    grid: TileGrid,
 }
 
 fn cell_of(x: f32, y: f32) -> (i32, i32) {
@@ -58,7 +59,7 @@ impl GroundIndex {
         &mut self,
         key: (i32, i32),
         origin: (f32, f32),
-        terrain: Option<MapTerrain>,
+        terrain: Option<TileTerrain>,
         roads: &[(MapSplineInstance, SplineProfile)],
     ) {
         self.remove_tile(key);
@@ -102,17 +103,11 @@ impl GroundIndex {
     /// Terrain height at a session-frame position.
     #[must_use]
     pub fn terrain_at(&self, x: f32, y: f32) -> Option<f32> {
-        let p = tile_size();
-        let key = (
-            self.start_tile.0 + (x / p).floor() as i32,
-            self.start_tile.1 + (y / p).floor() as i32,
-        );
+        let (key, local) = self
+            .grid
+            .tile_at(Vec2::new(x, y).as_dvec2(), self.start_tile);
         let t = self.terrain.get(&key)?;
-        let (lx, ly) = (
-            x - (key.0 - self.start_tile.0) as f32 * p,
-            y - (key.1 - self.start_tile.1) as f32 * p,
-        );
-        Some(sample_terrain(t, lx, ly))
+        Some(t.height(local.x as f32, local.y as f32))
     }
 
     /// Height of the surface the vehicle stands on at `(x, y)`: the road when the point lies on
@@ -163,13 +158,15 @@ pub(super) fn register(
     commands: &mut Commands,
     key: (i32, i32),
     origin: (f32, f32),
-    terrain: Option<MapTerrain>,
+    terrain: Option<TileTerrain>,
     roads: Vec<(MapSplineInstance, SplineProfile)>,
     start_tile: (i32, i32),
+    grid: TileGrid,
 ) {
     commands.queue(move |world: &mut World| {
         if let Some(mut g) = world.get_resource_mut::<GroundIndex>() {
             g.start_tile = start_tile;
+            g.grid = grid;
             g.insert_tile(key, origin, terrain, &roads);
         }
     });

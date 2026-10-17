@@ -4,7 +4,7 @@
 #![allow(dead_code)]
 use std::collections::HashMap;
 
-use opts_core::formats::map::MapTile;
+use opts_core::formats::map::{MapManifest, MapTile, TileGrid};
 
 #[derive(Clone)]
 struct Seg {
@@ -63,7 +63,7 @@ fn pose(inst: &opts_core::formats::map::MapSplineInstance, ox: f64, oy: f64) -> 
 
 fn main() {
     let dir = std::env::args().nth(1).expect("map dir");
-    let mut segs: Vec<Seg> = Vec::new();
+    let mut tiles: Vec<((i32, i32), MapTile)> = Vec::new();
     for e in std::fs::read_dir(&dir).expect("dir").flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         let Some(rest) = name
@@ -85,8 +85,20 @@ fn main() {
         let Ok(tile) = MapTile::parse(&bytes) else {
             continue;
         };
+        tiles.push(((tx, ty), tile));
+    }
+    // The tiles' grid: 300 m, or the Mercator rows of a `[worldcoordinates]` map.
+    let world_coordinates = std::fs::read(std::path::Path::new(&dir).join("global.cfg"))
+        .ok()
+        .and_then(|b| MapManifest::parse(&b).ok())
+        .is_some_and(|m| m.world_coordinates);
+    let sample: Vec<_> = tiles.iter().map(|(k, t)| (*k, t.splines.clone())).collect();
+    let (grid, _) = TileGrid::measure(&sample, world_coordinates);
+    let mut segs: Vec<Seg> = Vec::new();
+    for (key, tile) in &tiles {
+        let o = grid.origin(*key, (0, 0));
         for s in &tile.splines {
-            segs.push(pose(s, f64::from(tx) * 300.0, f64::from(ty) * 300.0));
+            segs.push(pose(s, o.x, o.y));
         }
     }
     let by_id: HashMap<u64, usize> = segs.iter().enumerate().map(|(i, s)| (s.id, i)).collect();

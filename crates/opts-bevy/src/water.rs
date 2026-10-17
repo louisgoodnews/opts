@@ -13,18 +13,18 @@ use bevy::prelude::AlphaMode;
 use opts_core::formats::map::{MapTerrain, MapWater};
 
 use crate::mesh::smooth_normal_mesh;
-use crate::terrain::terrain_cell;
 
 /// Water surface of one tile in absolute Bevy world coordinates, or `None` when the water is
 /// nowhere above the terrain.
 ///
-/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`, as for
-/// [`crate::build_terrain_mesh`].
+/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)` and `cell` its
+/// terrain cell, as for [`crate::build_terrain_mesh`].
 #[must_use]
 pub fn build_water_mesh(
     terrain: &MapTerrain,
     water: &MapWater,
     origin: (f32, f32),
+    cell: f32,
 ) -> Option<Mesh> {
     let cells = terrain.grid_cells as usize;
     let dim = cells + 1;
@@ -47,9 +47,9 @@ pub fn build_water_mesh(
             if *slot == u32::MAX {
                 *slot = positions.len() as u32;
                 positions.push([
-                    origin.0 + i as f32 * terrain_cell(),
+                    origin.0 + i as f32 * cell,
                     level(i, j),
-                    -(origin.1 + j as f32 * terrain_cell()),
+                    -(origin.1 + j as f32 * cell),
                 ]);
                 uvs.push([i as f32, j as f32]);
             }
@@ -104,7 +104,7 @@ mod tests {
             version: 1,
             levels: [-5.0; 4],
         };
-        assert!(build_water_mesh(&flat_terrain(10.0), &w, (0.0, 0.0)).is_none());
+        assert!(build_water_mesh(&flat_terrain(10.0), &w, (0.0, 0.0), 5.0).is_none());
     }
 
     #[test]
@@ -113,7 +113,7 @@ mod tests {
             version: 1,
             levels: [3.0; 4],
         };
-        let mesh = build_water_mesh(&flat_terrain(0.0), &w, (0.0, 0.0)).expect("flooded");
+        let mesh = build_water_mesh(&flat_terrain(0.0), &w, (0.0, 0.0), 5.0).expect("flooded");
         assert_eq!(mesh.count_vertices(), 61 * 61);
         assert_eq!(mesh.indices().expect("indexed").len(), 60 * 60 * 6);
     }
@@ -132,7 +132,7 @@ mod tests {
             version: 1,
             levels: [6.0; 4],
         };
-        let mesh = build_water_mesh(&t, &w, (0.0, 0.0)).expect("partly wet");
+        let mesh = build_water_mesh(&t, &w, (0.0, 0.0), 5.0).expect("partly wet");
         let n = mesh.indices().expect("indexed").len() / 6;
         // Columns 0..30 are wet (the ground at column 30 is exactly 6 m, so column 29's cell
         // reaches it): 30 columns of 60 cells.
@@ -145,7 +145,7 @@ mod tests {
             version: 1,
             levels: [0.0, 6.0, 0.0, 6.0],
         };
-        let mesh = build_water_mesh(&flat_terrain(-1.0), &w, (0.0, 0.0)).expect("wet");
+        let mesh = build_water_mesh(&flat_terrain(-1.0), &w, (0.0, 0.0), 5.0).expect("wet");
         let pos = mesh
             .attribute(Mesh::ATTRIBUTE_POSITION)
             .and_then(|a| a.as_float3())

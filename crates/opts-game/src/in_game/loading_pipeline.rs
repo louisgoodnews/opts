@@ -157,6 +157,7 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             env.stats.map_name = name.clone();
             env.stats.tiles_missing = job.tiles_listed_missing();
             env.stats.start_tile = job.start_tile();
+            env.stats.grid = job.grid();
             // The card shows the map that is really loading, not the one the menu chose (F17).
             env.session.map_name = name;
             if !no_vehicle && !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
@@ -306,12 +307,14 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 true,
             ) {
                 Ok(spawned) => {
-                    let origin = job.session_origin();
-                    let point = job.spawn_point().map(|(p, heading)| SpawnPoint {
-                        x: f64::from(origin.0 + p.x),
-                        y: f64::from(origin.1 + p.y),
-                        z: f64::from(p.z),
-                        heading_deg: f64::from(heading),
+                    let point = job.spawn_point().map(|(p, heading)| {
+                        let abs = job.local_to_absolute(p.truncate());
+                        SpawnPoint {
+                            x: abs.x,
+                            y: abs.y,
+                            z: f64::from(p.z),
+                            heading_deg: f64::from(heading),
+                        }
                     });
                     let entry = job.start_entry().map(|(i, n)| (i, n.to_owned()));
                     if let Some(r) = registry.get_mut(id) {

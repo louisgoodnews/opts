@@ -5,8 +5,9 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use opts_bevy::coords::omsi_to_bevy_pos;
+use opts_bevy::TileTerrain;
 use opts_bevy::VehicleController;
-use opts_core::formats::map::{MapObjectInstance, MapTerrain, MapTile};
+use opts_core::formats::map::{MapObjectInstance, MapTile};
 use opts_core::formats::scenery::LaneKind;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 use opts_core::formats::vehicles::BusManifest;
@@ -85,7 +86,7 @@ pub(super) fn tile_rail_lanes(
     job: &mut WorldLoadJob,
     tile: &MapTile,
     attached: &[(MapObjectInstance, f32)],
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     origin: (f32, f32),
 ) -> Vec<FootLane> {
     let mut out = Vec::new();
@@ -114,9 +115,7 @@ pub(super) fn tile_rail_lanes(
         let ground = if absolute {
             0.0
         } else {
-            terrain.map_or(0.0, |t| {
-                opts_bevy::sample_terrain(t, obj.position.x, obj.position.y)
-            })
+            terrain.map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
         };
         let z = match (attached_z, absolute) {
             (Some(z), true) => z,

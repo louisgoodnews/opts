@@ -17,10 +17,12 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use bevy::camera::primitives::Aabb;
 use bevy::prelude::*;
 use opts_bevy::{ArticulatedChain, ArticulatedSegment, PlayerVehicle, VehicleController};
+use opts_core::formats::scenery::BaseSurface;
 use opts_sim::collision::{respond, ColliderGrid, Obb};
 
 use super::ground_height::GroundIndex;
@@ -105,14 +107,26 @@ pub struct VehicleCollider {
 impl WorldLoadJob {
     /// Bounding box of a collision mesh in Bevy's local axes, cached; `None` for unreadable
     /// (protected) or missing meshes.
-    pub(super) fn collision_bounds(&mut self, model_dir: &Path, rel: &str) -> Option<(Vec3, Vec3)> {
+    ///
+    /// `bend` is the crossing base the object is bent over (`[crossing_heightdeformation]`).
+    pub(super) fn collision_bounds(
+        &mut self,
+        model_dir: &Path,
+        rel: &str,
+        bend: Option<&(PathBuf, Arc<BaseSurface>)>,
+    ) -> Option<(Vec3, Vec3)> {
         let path = self.install.find_in(model_dir, rel)?;
-        if let Some(b) = self.collision_bounds.get(&path) {
+        let key = (path.clone(), bend.map(|b| b.0.clone()));
+        if let Some(b) = self.collision_bounds.get(&key) {
             return *b;
         }
         let bounds = (|| {
-            let bytes = std::fs::read(&path).ok()?;
-            let models = opts_bevy::parse_mesh_file(&path, &bytes).ok()?;
+            let mut models = opts_bevy::load_decoded_meshes(&path).ok()?;
+            if let Some((_, base)) = bend {
+                for m in &mut models {
+                    base.bend_mesh(m);
+                }
+            }
             let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
             for m in &models {
                 if matches!(
@@ -133,7 +147,7 @@ impl WorldLoadJob {
             }
             (lo.x <= hi.x).then_some((lo, hi))
         })();
-        self.collision_bounds.insert(path, bounds);
+        self.collision_bounds.insert(key, bounds);
         bounds
     }
 }
@@ -146,6 +160,7 @@ pub(super) fn register_object(
     model_dir: &Path,
     tf: &Transform,
     key: (i32, i32),
+    bend: Option<&(PathBuf, Arc<BaseSurface>)>,
 ) {
     if sco.no_collision || sco.collision_meshes.is_empty() {
         return;
@@ -154,7 +169,7 @@ pub(super) fn register_object(
     let heading = -yaw;
     let mut boxes = Vec::new();
     for rel in &sco.collision_meshes {
-        let Some((lo, hi)) = job.collision_bounds(model_dir, rel) else {
+        let Some((lo, hi)) = job.collision_bounds(model_dir, rel, bend) else {
             continue;
         };
         let local_centre = (lo + hi) * 0.5;
@@ -416,4 +431,4 @@ fn ground_step(ground: &GroundIndex, body: &Obb, z: f32) -> Option<Vec2> {
 }
 
 /// The index map for `PathBuf` cache keys (kept here so `mod.rs` stays small).
-pub(super) type BoundsCache = HashMap<PathBuf, Option<(Vec3, Vec3)>>;
+pub(super) type BoundsCache = HashMap<(PathBuf, Option<PathBuf>), Option<(Vec3, Vec3)>>;
