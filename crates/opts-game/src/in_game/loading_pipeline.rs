@@ -236,7 +236,6 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             commands,
             assets,
             job,
-            setup,
             ..
         } = env;
         let sky = job.as_deref().map(|j| {
@@ -246,7 +245,6 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 &mut assets.materials,
                 &mut assets.images,
                 j.omsi_root(),
-                setup,
             )
         });
         match sky {
@@ -255,7 +253,7 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 if let Some(Err(e)) = other {
                     tracing::error!(error = %e, "sky unavailable; using default sun light");
                 }
-                spawn_atmosphere_and_lighting(commands, setup);
+                spawn_atmosphere_and_lighting(commands);
             }
         }
         state.atmosphere_spawned = true;

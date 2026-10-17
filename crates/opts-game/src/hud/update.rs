@@ -17,7 +17,9 @@ use super::values::{HudValues, SpeedUnit, RPM_PROVIDED};
 use super::widget::{switch_on, widget, Binding, Row, Slot};
 use crate::in_game::instruments::InstrumentInk;
 use crate::in_game::types::InGameSessionInfo;
+use crate::new_game_screen::weather::preset_of;
 use crate::settings::GameSettings;
+use opts_bevy::SessionEnvironment;
 
 /// The last camera state that the label announced, and what it says.
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
@@ -40,18 +42,14 @@ pub const fn camera_key(mode: CameraMode) -> &'static str {
     }
 }
 
-/// The clock text of the session in seconds since midnight.
+/// The clock text of the session environment (`HH:MM:SS`).
 #[must_use]
-pub fn clock_text(session: &InGameSessionInfo) -> String {
-    let total = (session.start_hour * 3600 + session.start_minute * 60) as f32
-        + session.sim_elapsed_seconds;
-    let h = ((total / 3600.0) as u32) % 24;
-    let m = (((total % 3600.0) / 60.0) as u32) % 60;
-    let s = ((total % 60.0) as u32) % 60;
-    format!("{h:02}:{m:02}:{s:02}")
+pub fn clock_text(env: &SessionEnvironment) -> String {
+    env.clock_text()
 }
 
-/// Advances the session clock with the virtual time (paused with the game).
+/// Advances the session's play time with the virtual time (paused with the game). The time of
+/// day is the [`SessionEnvironment`]'s.
 pub fn tick_session_clock(time: Res<Time>, mut session: ResMut<InGameSessionInfo>) {
     session.sim_elapsed_seconds += time.delta_secs();
 }
@@ -68,6 +66,7 @@ pub fn update_texts(
     values: Res<HudValues>,
     settings: Res<GameSettings>,
     session: Res<InGameSessionInfo>,
+    env: Option<Res<SessionEnvironment>>,
     loc: Res<Localization>,
     label: Res<CameraLabel>,
     layout: Res<HudLayout>,
@@ -75,6 +74,8 @@ pub fn update_texts(
     mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
 ) {
     let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
+    let fallback = SessionEnvironment::default();
+    let env = env.as_deref().unwrap_or(&fallback);
     for (hud, mut text, ink) in &mut texts {
         let new = match (hud.binding, hud.part) {
             (Binding::Speed, Part::Value) => format!("{:.0}", unit.convert(values.speed_kmh)),
@@ -121,10 +122,10 @@ pub fn update_texts(
             (Binding::SessionClock, Part::Value) => loc.t_args(
                 keys::CLOCK,
                 &[
-                    ("time".to_owned(), Arg::from(clock_text(&session))),
+                    ("time".to_owned(), Arg::from(clock_text(env))),
                     (
                         "weather".to_owned(),
-                        Arg::from(session.weather_preset.as_str()),
+                        Arg::from(loc.t(preset_of(env.weather()).name_key)),
                     ),
                 ],
             ),

@@ -1,8 +1,8 @@
 //! Data-driven sky: dome texture, sun/moon discs and light colours from the installation's
-//! `envir.cfg`, driven by the sun's elevation at the session's time of day.
+//! `envir.cfg`, driven by the sun of the [`SessionEnvironment`] (date, time, weather).
 //!
 //! OMSI maps carry no geographic position, so the sun path assumes a fixed mid-latitude
-//! (`LATITUDE_DEG`) and treats the clock time as local solar time.
+//! (`opts_bevy::environment::LATITUDE_DEG`) and treats the clock time as local solar time.
 
 use std::path::Path;
 
@@ -10,30 +10,18 @@ use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use opts_bevy::ground::CpuImage;
+use opts_bevy::SessionEnvironment;
 use opts_core::formats::envir::EnvirConfig;
 
 use crate::in_game::types::InGameEntity;
-use crate::new_game_screen::types::NewGameSetup;
-
-/// Assumed latitude of the simulated region (central Europe, where OMSI's maps lie).
-const LATITUDE_DEG: f32 = 50.0;
 /// Radius of the sky dome; stays inside the default 1000 m far plane.
 const DOME_RADIUS: f32 = 900.0;
-/// Seconds of game time between sky texture rebuilds.
-const REFRESH_S: f32 = 0.5;
+/// Clock seconds between sky texture rebuilds (a jump of the environment rebuilds at once).
+const REFRESH_S: f64 = 0.5;
 /// Peak illuminance of full white direct sunlight.
 const SUN_ILLUMINANCE: f32 = 20_000.0;
 /// Ambient brightness for full white ambient light.
 const AMBIENT_BRIGHTNESS: f32 = 700.0;
-
-impl Sky {
-    /// Whether it is dark enough for vehicle headlights `elapsed_s` seconds into the session
-    /// (sun lower than 3° above the horizon).
-    #[must_use]
-    pub fn lights_needed(&self, elapsed_s: f32) -> bool {
-        sun_position(self.start_hour + elapsed_s / 3600.0, self.day_of_year).0 < 3.0
-    }
-}
 
 /// Sky state for the running session.
 #[derive(Resource)]
@@ -41,11 +29,10 @@ pub struct Sky {
     config: EnvirConfig,
     textures: [CpuImage; 3],
     image: Handle<Image>,
-    start_hour: f32,
-    day_of_year: f32,
-    /// Multiplier for sun and ambient light under overcast presets.
-    attenuation: f32,
-    last_refresh: f32,
+    /// Clock seconds of the last rebuild.
+    last_refresh: f64,
+    /// Environment revision of the last rebuild (`None` before the first).
+    last_revision: Option<u64>,
 }
 
 /// Marks the sky dome.
@@ -70,24 +57,11 @@ fn load_texture(root: &Path, rel: &str) -> Result<Image, String> {
     opts_bevy::texture::load_bevy_image(&bytes).map_err(|e| format!("{rel}: {e}"))
 }
 
-fn day_of_year(month: u32, day: u32) -> f32 {
-    const CUM: [u32; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    (CUM[(month.clamp(1, 12) - 1) as usize] + day) as f32
-}
-
-/// Sun elevation and azimuth (degrees; azimuth clockwise from north) for the local solar hour.
+/// Sun elevation and azimuth (degrees; azimuth clockwise from north) for the local solar hour:
+/// [`opts_bevy::environment::sun_position`] at the sky's latitude.
 #[must_use]
 pub fn sun_position(hour: f32, day_of_year: f32) -> (f32, f32) {
-    let lat = LATITUDE_DEG.to_radians();
-    let decl =
-        (-23.44f32).to_radians() * (std::f32::consts::TAU * (day_of_year + 10.0) / 365.0).cos();
-    let h = (15.0 * (hour - 12.0)).to_radians();
-    let sin_el = lat.sin() * decl.sin() + lat.cos() * decl.cos() * h.cos();
-    let az = h.sin().atan2(h.cos() * lat.sin() - decl.tan() * lat.cos()) + std::f32::consts::PI;
-    (
-        sin_el.clamp(-1.0, 1.0).asin().to_degrees(),
-        az.to_degrees().rem_euclid(360.0),
-    )
+    opts_bevy::environment::sun_position(hour, day_of_year, opts_bevy::environment::LATITUDE_DEG)
 }
 
 /// Direction towards a point at the given elevation/azimuth, in Bevy space (north = −Z).
@@ -178,7 +152,6 @@ pub fn spawn_sky(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     root: &Path,
-    setup: &NewGameSetup,
 ) -> Result<(), String> {
     let path = opts_bevy::install::OmsiInstall::new(root)
         .find_file("envir.cfg")
@@ -214,27 +187,15 @@ pub fn spawn_sky(
         });
     let image = images.add(sky_image);
 
-    let weather = setup.weather_preset.to_lowercase();
-    let overcast = ["rain", "fog", "snow", "overcast"]
-        .iter()
-        .any(|k| weather.contains(k));
+    // The texture is filled by `update_sky` on its first run.
     let sky = Sky {
         config,
         textures,
         image: image.clone(),
-        start_hour: setup.hour as f32 + setup.minute as f32 / 60.0,
-        day_of_year: day_of_year(setup.month, setup.day),
-        attenuation: if overcast { 0.55 } else { 1.0 },
-        last_refresh: f32::NEG_INFINITY,
+        last_refresh: f64::NEG_INFINITY,
+        last_revision: None,
     };
 
-    {
-        let (el, _) = sun_position(sky.start_hour, sky.day_of_year);
-        let data = blended_sky(&sky, sky.config.sky_weights(el));
-        if let Some(mut img) = images.get_mut(&sky.image) {
-            img.data = Some(data);
-        }
-    }
     let image = sky.image.clone();
     commands.spawn((
         (
@@ -285,7 +246,7 @@ pub fn spawn_sky(
 /// Moves the dome with the camera and updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
-    session: Res<crate::in_game::types::InGameSessionInfo>,
+    env: Res<SessionEnvironment>,
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
@@ -325,11 +286,10 @@ pub fn update_sky(
     let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
         return;
     };
-    // The session clock (not the app's virtual time, which keeps running between sessions), so a
-    // restored save shows the sky of its saved time.
-    let now = session.sim_elapsed_seconds;
-    let hour = sky.start_hour + now / 3600.0;
-    let (elevation, azimuth) = sun_position(hour, sky.day_of_year);
+    // The session environment (not the app's virtual time, which keeps running between
+    // sessions), so a restored save and a changed time show their sky at once.
+    let now = env.seconds_of_day();
+    let (elevation, azimuth) = (env.sun_alt_deg(), env.sun_az_deg());
     let sun_dir = direction(elevation, azimuth);
 
     for mut t in &mut dome {
@@ -342,8 +302,10 @@ pub fn update_sky(
     let ambient_scale = look.as_ref().map_or(1.0, |l| {
         crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
     });
-    if look_changed || now - sky.last_refresh >= REFRESH_S {
+    let jumped = sky.last_revision != Some(env.revision());
+    if look_changed || jumped || (now - sky.last_refresh).abs() >= REFRESH_S {
         sky.last_refresh = now;
+        sky.last_revision = Some(env.revision());
         let weights = sky.config.sky_weights(elevation);
         let data = blended_sky(&sky, weights);
         if let Some(mut img) = images.get_mut(&sky.image) {
@@ -353,7 +315,7 @@ pub fn update_sky(
         let a = sky.config.light_at(&sky.config.light_a, elevation);
         let b = sky.config.light_at(&sky.config.light_b, elevation);
         let c = sky.config.light_at(&sky.config.light_c, elevation);
-        let att = sky.attenuation;
+        let att = env.attenuation();
         for (_, mut light) in &mut sun {
             light.color = Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001));
             light.illuminance = SUN_ILLUMINANCE * l(a) * att;

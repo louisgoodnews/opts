@@ -17,6 +17,7 @@ pub mod registry;
 pub mod restore;
 pub mod sections;
 mod sections_runtime;
+mod sections_time;
 pub mod store;
 pub mod ui;
 

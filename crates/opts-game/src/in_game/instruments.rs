@@ -85,15 +85,14 @@ pub fn sync_instrument_tokens(
     }
 }
 
-/// Picks the instrument palette from the session's time of day: night when the sky model says
-/// vehicle lights are needed (sun lower than 3 degrees), day otherwise (also without a sky).
+/// Picks the instrument palette from the session environment: night when vehicle lights are
+/// needed (sun lower than 3 degrees), day otherwise (also without an environment).
 pub fn update_instrument_variant(
-    sky: Option<Res<crate::in_game::sky::Sky>>,
-    session: Res<crate::in_game::types::InGameSessionInfo>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut variant: ResMut<InstrumentVariant>,
 ) {
-    let wanted = match sky {
-        Some(sky) if sky.lights_needed(session.sim_elapsed_seconds) => InstrumentVariant::Night,
+    let wanted = match env {
+        Some(env) if env.night() => InstrumentVariant::Night,
         _ => InstrumentVariant::Day,
     };
     if *variant != wanted {
