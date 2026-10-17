@@ -49,14 +49,22 @@ impl Plugin for WeatherPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WeatherCatalogue>()
             .init_resource::<WeatherEffects>()
+            .init_resource::<opts_bevy::weather::GroundFogView>()
             .init_resource::<opts_bevy::reflections::Wetness>()
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
             .add_systems(
                 Update,
+                fog::measure_fog_view
+                    .after(EnvironmentSet)
+                    .before(super::sky::update_sky)
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                Update,
                 (
-                    fog::update_fog,
+                    fog::update_fog.after(fog::measure_fog_view),
                     clouds::update_clouds,
                     precip::update_precipitation,
                     (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
@@ -85,12 +93,14 @@ mod tests {
             .init_asset::<StandardMaterial>()
             .init_asset::<opts_bevy::ground_material::GroundMaterial>()
             .init_resource::<opts_bevy::reflections::Wetness>()
+            .init_resource::<opts_bevy::weather::GroundFogView>()
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
             .add_systems(
                 Update,
                 (
-                    fog::update_fog,
+                    fog::measure_fog_view,
+                    fog::update_fog.after(fog::measure_fog_view),
                     clouds::update_clouds,
                     precip::update_precipitation,
                     (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
@@ -249,5 +259,75 @@ mod tests {
         opts_bevy::vehicle_script::feed_weather(&mut engine, clock.temperature_c, &clock.weather);
         assert_eq!(engine.get("preciptype"), 1.0);
         assert!((engine.get("preciprate") - 173.0 / 255.0).abs() < 0.3);
+    }
+
+    fn fog_density_of(app: &mut App) -> f32 {
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&DistanceFog, With<InGameCamera>>();
+        match q.single(app.world()).unwrap().falloff {
+            bevy::pbr::FogFalloff::ExponentialSquared { density } => density,
+            ref other => panic!("{other:?}"),
+        }
+    }
+
+    fn place_camera(app: &mut App, y: f32, pitch_deg: f32) {
+        let mut q = app
+            .world_mut()
+            .query_filtered::<&mut GlobalTransform, With<InGameCamera>>();
+        let mut tf = q.single_mut(app.world_mut()).unwrap();
+        *tf = GlobalTransform::from(
+            Transform::from_xyz(0.0, y, 0.0)
+                .with_rotation(Quat::from_rotation_x(pitch_deg.to_radians())),
+        );
+        app.update();
+    }
+
+    #[test]
+    fn ground_fog_follows_the_camera_height_and_other_presets_do_not() {
+        use opts_bevy::weather::GroundFogView;
+        let mut app = app();
+        set_weather(&mut app, "Autumn Morning Fog");
+        // 300 m dusk-like fog: no layer, the same density at any height.
+        place_camera(&mut app, 2.0, 0.0);
+        let flat = fog_density_of(&mut app);
+        place_camera(&mut app, 70.0, 0.0);
+        assert_eq!(fog_density_of(&mut app), flat);
+        assert_eq!(app.world().resource::<GroundFogView>().layer_m, None);
+
+        // An installed ground fog (75 m, like `Bodennebel`) is a layer.
+        let mut w = opts_core::formats::weather::WeatherFile::default();
+        w.fog.visibility_m = 75.0;
+        w.fog.density = 1.0;
+        let folder = opts_core::formats::weather::WeatherFolder {
+            presets: vec![opts_core::formats::weather::PresetFile {
+                id: "Bodennebel".into(),
+                weather: w,
+                texts: Default::default(),
+            }],
+            clouds: Default::default(),
+        };
+        app.insert_resource(WeatherCatalogue::from_folder("/nonexistent".into(), folder));
+        set_weather(&mut app, "Bodennebel");
+        place_camera(&mut app, 2.0, 0.0);
+        let low = fog_density_of(&mut app);
+        place_camera(&mut app, 20.0, 0.0);
+        let mid = fog_density_of(&mut app);
+        place_camera(&mut app, 70.0, 0.0);
+        let high = fog_density_of(&mut app);
+        assert!(low > mid && mid > high, "{low} {mid} {high}");
+        let view = *app.world().resource::<GroundFogView>();
+        assert_eq!(view.layer_m, Some(30.0));
+        assert!(view.sky_clear > 0.99 && view.effective_visibility_m > 170.0);
+        // Looking up from above the layer clears the fog further; at the ground nothing changes.
+        place_camera(&mut app, 70.0, 20.0);
+        assert!(fog_density_of(&mut app) < high);
+        place_camera(&mut app, 2.0, 20.0);
+        assert_eq!(fog_density_of(&mut app), low);
+
+        // The clear preset has no fog at all, at any height.
+        set_weather(&mut app, "Clear Summer Day");
+        place_camera(&mut app, 70.0, 0.0);
+        assert!(!camera_has_fog(&mut app));
     }
 }

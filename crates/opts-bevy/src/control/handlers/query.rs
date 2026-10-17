@@ -89,6 +89,13 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
         out["weather"] = json!(env.weather());
         out["clock_rate"] = json!(env.rate());
         out["weather_conditions"] = weather_json(env);
+        if let Some(view) = world.get_resource::<crate::weather::GroundFogView>() {
+            let w = &mut out["weather_conditions"];
+            w["fog_layer_m"] = json!(view.layer_m);
+            w["fog_effective_visibility_m"] = json!(view.effective_visibility_m);
+            w["fog_camera_height_m"] = json!(view.height_m);
+            w["fog_sky_clear"] = json!(view.sky_clear);
+        }
         if let Some(cat) = world.get_resource::<crate::weather::WeatherCatalogue>() {
             out["weather_canonical"] = json!(cat.canonical_id(env.weather()));
             out["weather_presets"] = json!(cat.ids());
@@ -255,6 +262,19 @@ mod tests {
         assert_eq!(c["snow"], true);
         assert_eq!(c["temperature_c"], -3.0);
         assert!(c["sun_scale"].as_f64().unwrap() < 0.6);
+        // The ground-fog layer shows once the game publishes the camera's view of it.
+        assert!(c.get("fog_layer_m").is_none());
+        world.insert_resource(crate::weather::GroundFogView {
+            layer_m: Some(30.0),
+            effective_visibility_m: 175.0,
+            ..Default::default()
+        });
+        let Outcome::Done(Ok(v)) = sim_get(&mut world, &Value::Null) else {
+            panic!("sim.get did not answer at once");
+        };
+        let c = &v["weather_conditions"];
+        assert_eq!(c["fog_layer_m"], 30.0);
+        assert_eq!(c["fog_effective_visibility_m"], 175.0);
     }
 
     #[test]

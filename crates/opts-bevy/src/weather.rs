@@ -670,11 +670,152 @@ pub fn light_scales_for_cover(cover: f32) -> LightScales {
 /// lighter at the same visibility).
 #[must_use]
 pub fn fog_density(c: &WeatherConditions) -> Option<f32> {
-    if c.fog_visibility_m >= FOG_MAX_VISIBILITY_M {
+    fog_density_for(c, c.fog_visibility_m)
+}
+
+/// [`fog_density`] for another visibility than the preset's (the ground-fog layer raises it with
+/// the camera's height, see [`ground_fog`]).
+#[must_use]
+pub fn fog_density_for(c: &WeatherConditions, visibility_m: f32) -> Option<f32> {
+    if visibility_m >= FOG_MAX_VISIBILITY_M {
         return None;
     }
     let contrast = 0.02 + 0.08 * (1.0 - c.fog_density);
-    Some((-contrast.ln()).sqrt() / c.fog_visibility_m)
+    Some((-contrast.ln()).sqrt() / visibility_m.max(1.0))
+}
+
+// ---------------------------------------------------------------------------------------------
+// Ground-fog layer
+// ---------------------------------------------------------------------------------------------
+
+/// Presets with a visibility **at or below** this many metres are ground fog (a low layer);
+/// anything thinner (dusk fog 500 m, storm 700 m, haze) is fog everywhere, as before. ❓ The
+/// corpus has one ground-fog preset (`Bodennebel`, 75 m); `.owt` has no "layer" flag.
+pub const FOG_LAYER_MAX_VISIBILITY_M: f32 = 150.0;
+/// Layer thickness as a share of the visibility ❓ (`Bodennebel`: 0.4 × 75 m = 30 m).
+pub const FOG_LAYER_THICKNESS_PER_VISIBILITY: f32 = 0.4;
+/// Thinnest and thickest layer in metres.
+pub const FOG_LAYER_THICKNESS_RANGE_M: (f32, f32) = (25.0, 200.0);
+/// Below this share of the layer thickness the camera is inside the layer (full fog).
+pub const FOG_LAYER_INSIDE: f32 = 0.5;
+/// Above this multiple of the thickness the camera is clear of the layer.
+pub const FOG_LAYER_ABOVE: f32 = 2.0;
+/// Looking up by this many degrees (from above the layer) takes the fog off what is seen.
+pub const FOG_LAYER_LOOK_UP_DEG: f32 = 15.0;
+/// How much farther the visibility reaches when looking fully up from above the layer.
+pub const FOG_LAYER_LOOK_UP_GAIN: f32 = 3.0;
+
+/// The thickness in metres of the ground-fog layer of the conditions, `None` when the preset is
+/// not ground fog (visibility above [`FOG_LAYER_MAX_VISIBILITY_M`]).
+///
+/// The `.owt` second value is a unitless factor `0.5 … 1`, not metres (📖 environment.md), so the
+/// thickness is a documented estimate: the visibility times
+/// [`FOG_LAYER_THICKNESS_PER_VISIBILITY`], scaled by `0.5 + 0.5 ·` that factor, clamped to
+/// [`FOG_LAYER_THICKNESS_RANGE_M`].
+#[must_use]
+pub fn fog_layer_thickness(c: &WeatherConditions) -> Option<f32> {
+    if c.fog_visibility_m > FOG_LAYER_MAX_VISIBILITY_M {
+        return None;
+    }
+    let (lo, hi) = FOG_LAYER_THICKNESS_RANGE_M;
+    Some(
+        (c.fog_visibility_m * FOG_LAYER_THICKNESS_PER_VISIBILITY * (0.5 + 0.5 * c.fog_density))
+            .clamp(lo, hi),
+    )
+}
+
+/// What the ground-fog layer does to the fog and the sky for the camera's height and pitch.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FogParams {
+    /// Visibility in metres to feed the distance fog (the preset's, raised above the layer).
+    pub visibility_m: f32,
+    /// How far the camera is clear of the layer, `0` (inside) … `1` (above): the share by which
+    /// the sky's fog veil is taken away.
+    pub sky_clear: f32,
+}
+
+fn smoothstep(lo: f32, hi: f32, x: f32) -> f32 {
+    let t = ((x - lo) / (hi - lo)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
+/// The fog for a camera `height_m` above the ground, looking `pitch_deg` above the horizon
+/// (negative: down), in a fog layer of `thickness_m`.
+///
+/// Bevy's `DistanceFog` knows only the distance to a fragment. For a ground fragment at distance
+/// `d` seen from height `h > T` the ray runs `T·d/h` through the layer, so the layer equals
+/// distance fog with the visibility multiplied by `h/T`, whatever the pitch. This is exact for
+/// the ground (the exponential-squared shape keeps the near ground lighter than the exact
+/// exponential would) and approximate for objects above it. The pitch term: looking up from above
+/// the layer the ray never enters it, so the visibility grows by up to
+/// `FOG_LAYER_LOOK_UP_GAIN + 1` times. The sky is not distance fog at all; `sky_clear` tells
+/// `sky.rs` how much of its veil to take away.
+///
+/// Inside the layer (`h ≤ 0.5·T`) the result is the preset's own fog; between `0.5·T` and `2·T`
+/// the factor `1 … 2` follows a smoothstep, and from `2·T` up it is `h/T`; all continuous and
+/// monotonic in `h`.
+#[must_use]
+pub fn ground_fog(visibility_m: f32, thickness_m: f32, height_m: f32, pitch_deg: f32) -> FogParams {
+    let t = thickness_m.max(1.0);
+    let h = height_m.max(0.0);
+    let above = smoothstep(FOG_LAYER_INSIDE * t, FOG_LAYER_ABOVE * t, h);
+    let ratio = if h >= FOG_LAYER_ABOVE * t {
+        h / t
+    } else {
+        1.0 + above
+    };
+    let up = smoothstep(0.0, FOG_LAYER_LOOK_UP_DEG, pitch_deg);
+    let scale = ratio * (1.0 + FOG_LAYER_LOOK_UP_GAIN * above * up);
+    FogParams {
+        visibility_m: (visibility_m * scale).min(FOG_MAX_VISIBILITY_M - 1.0),
+        sky_clear: above,
+    }
+}
+
+/// Where the camera is relative to the ground-fog layer; written by the game each frame, read by
+/// the fog, the sky and `sim.get`.
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Default)]
+pub struct GroundFogView {
+    /// Camera height above the terrain under it, metres.
+    pub height_m: f32,
+    /// Camera pitch above the horizon, degrees.
+    pub pitch_deg: f32,
+    /// Layer thickness in metres (`None`: this weather is not ground fog or the effect is off).
+    pub layer_m: Option<f32>,
+    /// The visibility the distance fog gets now.
+    pub effective_visibility_m: f32,
+    /// How much of the sky's veil is taken away, `0..=1`.
+    pub sky_clear: f32,
+}
+
+/// The [`GroundFogView`] for the conditions and a camera pose (`fog_on`: the fog effect is on).
+#[must_use]
+pub fn ground_fog_view(
+    c: &WeatherConditions,
+    fog_on: bool,
+    height_m: f32,
+    pitch_deg: f32,
+) -> GroundFogView {
+    let layer = fog_on.then(|| fog_layer_thickness(c)).flatten();
+    match layer {
+        Some(t) => {
+            let p = ground_fog(c.fog_visibility_m, t, height_m, pitch_deg);
+            GroundFogView {
+                height_m,
+                pitch_deg,
+                layer_m: Some(t),
+                effective_visibility_m: p.visibility_m,
+                sky_clear: p.sky_clear,
+            }
+        }
+        None => GroundFogView {
+            height_m,
+            pitch_deg,
+            layer_m: None,
+            effective_visibility_m: c.fog_visibility_m,
+            sky_clear: 0.0,
+        },
+    }
 }
 
 /// Fog colour: the sky's horizon colour pulled towards grey in thick fog, in linear sRGB
@@ -692,12 +833,24 @@ pub fn fog_color(horizon: [f32; 3], c: &WeatherConditions) -> [f32; 3] {
 /// (the cloud layer reaches only so far).
 #[must_use]
 pub fn sky_veil(c: &WeatherConditions, v: f32) -> f32 {
+    sky_veil_clear(c, v, 0.0)
+}
+
+/// [`sky_veil`] with the fog lifted for a camera above the ground-fog layer
+/// ([`GroundFogView::sky_clear`]): the fog part of the veil falls to nothing at the zenith and to
+/// half at the horizon (a hazy rim: `0.5 · (1 − elevation/8°)²` below 8° of elevation, the
+/// texture row `v` being `1 − elevation/90°`); the overcast part is unchanged.
+#[must_use]
+pub fn sky_veil_clear(c: &WeatherConditions, v: f32, sky_clear: f32) -> f32 {
     let overcast = c
         .cloud
         .as_ref()
         .filter(|cl| cl.cover == CloudCover::Overcast)
         .map_or(0.0, |_| 0.45 * (0.3 + 0.7 * v.clamp(0.0, 1.0)));
-    (fogginess(c) * 0.9).max(overcast)
+    let elevation_deg = (1.0 - v.clamp(0.0, 1.0)) * 90.0;
+    let rim = 0.5 * (1.0 - elevation_deg / 8.0).clamp(0.0, 1.0).powi(2);
+    let lift = 1.0 - sky_clear.clamp(0.0, 1.0) * (1.0 - rim);
+    (fogginess(c) * 0.9 * lift).max(overcast)
 }
 
 /// Brightness of the unlit cloud layer: dark at night, full at day, a little darker under rain.
@@ -1271,5 +1424,123 @@ mod tests {
         assert_eq!(WeatherKind::of_preset("Rainy Afternoon"), WeatherKind::Rain);
         assert_eq!(WeatherKind::of_preset("Sommerlich"), WeatherKind::Clear);
         assert!(WeatherKind::Fog.overcast() && !WeatherKind::Clear.overcast());
+    }
+
+    fn ground_fog_conditions(visibility: f32) -> WeatherConditions {
+        WeatherConditions {
+            fog_visibility_m: visibility,
+            fog_density: 1.0,
+            ..WeatherConditions::default()
+        }
+    }
+
+    #[test]
+    fn only_low_visibility_presets_get_a_fog_layer() {
+        assert_eq!(
+            fog_layer_thickness(&ground_fog_conditions(75.0)),
+            Some(30.0)
+        );
+        assert_eq!(
+            fog_layer_thickness(&ground_fog_conditions(FOG_LAYER_MAX_VISIBILITY_M)),
+            Some(60.0)
+        );
+        for v in [500.0, 700.0, 6000.0, 50_000.0] {
+            assert_eq!(fog_layer_thickness(&ground_fog_conditions(v)), None, "{v}");
+        }
+        // Very thin fog still has a layer of at least 25 m; a thin factor makes it thinner.
+        assert_eq!(
+            fog_layer_thickness(&ground_fog_conditions(20.0)),
+            Some(25.0)
+        );
+        let mut c = ground_fog_conditions(150.0);
+        c.fog_density = 0.5;
+        assert_eq!(fog_layer_thickness(&c), Some(45.0));
+    }
+
+    #[test]
+    fn inside_the_layer_the_fog_is_the_presets_own() {
+        for h in [0.0, 2.0, 15.0] {
+            let p = ground_fog(75.0, 30.0, h, 0.0);
+            assert_eq!((p.visibility_m, p.sky_clear), (75.0, 0.0), "h={h}");
+            let looking_up = ground_fog(75.0, 30.0, h, 40.0);
+            assert_eq!(looking_up.visibility_m, 75.0, "h={h}");
+        }
+    }
+
+    #[test]
+    fn the_fog_lifts_smoothly_and_monotonically_with_height() {
+        let mut last = ground_fog(75.0, 30.0, 0.0, -10.0);
+        let mut h = 0.0;
+        while h <= 400.0 {
+            h += 0.5;
+            let p = ground_fog(75.0, 30.0, h, -10.0);
+            assert!(p.visibility_m >= last.visibility_m - 1e-3, "h={h}");
+            assert!(p.sky_clear >= last.sky_clear - 1e-6, "h={h}");
+            // No popping: a half metre step moves the visibility by a few metres at most.
+            assert!(p.visibility_m - last.visibility_m < 3.0, "h={h}");
+            last = p;
+        }
+        let at = |h: f32| ground_fog(75.0, 30.0, h, 0.0);
+        let (a, b, c, d) = (at(2.0), at(20.0), at(40.0), at(70.0));
+        assert!(a.visibility_m < b.visibility_m && b.visibility_m < c.visibility_m);
+        assert!(c.visibility_m < d.visibility_m);
+        assert!(d.sky_clear > 0.99 && a.sky_clear == 0.0);
+        // From 2·T up the visibility is the layer's share of the path: V · h / T.
+        assert!((d.visibility_m - 75.0 * 70.0 / 30.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn looking_up_from_above_the_layer_reaches_farther_but_not_from_inside() {
+        let down = ground_fog(75.0, 30.0, 70.0, -30.0).visibility_m;
+        let level = ground_fog(75.0, 30.0, 70.0, 0.0).visibility_m;
+        let up = ground_fog(75.0, 30.0, 70.0, 15.0).visibility_m;
+        assert_eq!(down, level);
+        assert!((up - level * 4.0).abs() < 0.01, "{up} {level}");
+        assert!(ground_fog(75.0, 30.0, 70.0, 7.0).visibility_m > level);
+        // Never beyond the distance where the fog is off.
+        assert!(ground_fog(75.0, 30.0, 5000.0, 20.0).visibility_m < FOG_MAX_VISIBILITY_M);
+    }
+
+    #[test]
+    fn the_view_follows_the_layer_rule_and_leaves_other_presets_alone() {
+        let c = ground_fog_conditions(75.0);
+        let low = ground_fog_view(&c, true, 2.0, 0.0);
+        let high = ground_fog_view(&c, true, 70.0, 0.0);
+        assert_eq!(low.layer_m, Some(30.0));
+        assert_eq!(low.effective_visibility_m, 75.0);
+        assert!(high.effective_visibility_m > 170.0 && high.sky_clear > 0.99);
+        for v in [500.0, 700.0] {
+            let c = ground_fog_conditions(v);
+            let view = ground_fog_view(&c, true, 70.0, 0.0);
+            assert_eq!(view.layer_m, None);
+            assert_eq!((view.effective_visibility_m, view.sky_clear), (v, 0.0));
+        }
+        assert_eq!(ground_fog_view(&c, false, 70.0, 0.0).layer_m, None);
+    }
+
+    #[test]
+    fn a_cleared_sky_keeps_only_a_hazy_rim_and_the_overcast() {
+        let c = ground_fog_conditions(75.0);
+        assert_eq!(sky_veil_clear(&c, 0.5, 0.0), sky_veil(&c, 0.5));
+        let zenith = sky_veil_clear(&c, 0.0, 1.0);
+        let mid = sky_veil_clear(&c, 0.6, 1.0);
+        let rim = sky_veil_clear(&c, 1.0, 1.0);
+        assert!(zenith == 0.0 && mid == 0.0 && rim > 0.3 && rim < sky_veil(&c, 1.0));
+        // The frame's top third of a horizon view (4° … 11° up) keeps only a faint veil.
+        let band: Vec<f32> = (0..=14)
+            .map(|i| sky_veil_clear(&c, 1.0 - (4.0 + i as f32 * 0.5) / 90.0, 1.0))
+            .collect();
+        let mean = band.iter().sum::<f32>() / band.len() as f32;
+        assert!(band[0] < 0.12 && mean < 0.05, "{band:?} {mean}");
+        let mut overcast = c.clone();
+        overcast.cloud = Some(CloudSpec {
+            name: "Overcast 1".into(),
+            texture: None,
+            size_m: 1000.0,
+            base_m: 100.0,
+            cover: CloudCover::Overcast,
+            coverage: 1.0,
+        });
+        assert!(sky_veil_clear(&overcast, 0.0, 1.0) > 0.1);
     }
 }

@@ -4,6 +4,10 @@
 //! used, else the built-in presets (no cloud textures).
 //!
 //! `cargo run -p opts-game --example weather_probe -- <out-dir> [preset ...]`
+//!
+//! `OPTS_PROBE_HEIGHTS=2,70` renders each preset once per camera height (metres above the flat
+//! ground), `OPTS_PROBE_PITCH=-8` sets the camera pitch in degrees (default: a slight upward
+//! look as before), to check the ground-fog layer (`Bodennebel`).
 
 use std::sync::{Arc, Mutex};
 
@@ -58,12 +62,14 @@ fn main() {
     )
     .add_plugins((GroundMaterialPlugin, EnvironmentPlugin))
     .init_resource::<opts_bevy::reflections::Wetness>()
+    .init_resource::<opts_bevy::weather::GroundFogView>()
     .init_resource::<clouds::CloudState>()
     .init_resource::<precip::PrecipState>()
     .add_systems(
         Update,
         (
-            fog::update_fog,
+            fog::measure_fog_view,
+            fog::update_fog.after(fog::measure_fog_view),
             clouds::update_clouds,
             precip::update_precipitation,
             (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
@@ -163,7 +169,36 @@ fn main() {
             timeout: None,
         });
     };
-    for (n, id) in presets.iter().enumerate() {
+    let heights: Vec<f32> = std::env::var("OPTS_PROBE_HEIGHTS")
+        .ok()
+        .map(|v| v.split(',').filter_map(|x| x.trim().parse().ok()).collect())
+        .unwrap_or_default();
+    let pitch: Option<f32> = std::env::var("OPTS_PROBE_PITCH")
+        .ok()
+        .and_then(|v| v.parse().ok());
+    let heights = if heights.is_empty() {
+        vec![2.0]
+    } else {
+        heights
+    };
+    let jobs: Vec<(usize, &String, f32)> = presets
+        .iter()
+        .enumerate()
+        .flat_map(|(n, id)| heights.iter().map(move |h| (n, id, *h)))
+        .collect();
+    for (n, id, height) in jobs {
+        {
+            let mut q = apps
+                .main
+                .world_mut()
+                .query_filtered::<&mut Transform, With<InGameCamera>>();
+            let mut t = q.single_mut(apps.main.world_mut()).unwrap();
+            let target = match pitch {
+                Some(p) => Vec3::new(0.0, height + 60.0 * p.to_radians().tan(), -60.0),
+                None => Vec3::new(0.0, height + 4.0, -60.0),
+            };
+            *t = Transform::from_xyz(0.0, height, 0.0).looking_at(target, Vec3::Y);
+        }
         let hour = if id.to_lowercase().contains("daemmer") {
             19.0
         } else {
@@ -200,7 +235,7 @@ fn main() {
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect();
         if let Some(img) = image::RgbaImage::from_raw(W, H, data) {
-            let path = format!("{out}/{n:02}_{name}.png");
+            let path = format!("{out}/{n:02}_{name}_h{height:.0}.png");
             let _ = img.save(&path);
             println!("{id}: {path}");
         } else {
