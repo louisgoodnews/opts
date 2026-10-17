@@ -22,7 +22,7 @@ set-opt-shafts-off = Aus
 set-opt-shafts-low = Niedrig (8)
 set-opt-shafts-medium = Mittel (16)
 set-opt-shafts-high = Hoch (32)
-set-opt-shafts-ultra = Ultra (64)
+set-opt-shafts-ultra = Ultra (64 Schritte)
 
 set-light-night-shafts = Strahlen bei Nacht
 set-light-night-shafts-desc = Zeichnet Lichtstrahlen auch nachts, beleuchtet vom Mond. Kostet nachts mehr wegen der vielen Lampen.

@@ -399,7 +399,7 @@ mod environment_page {
     fn light_row_text(app: &mut App) -> String {
         let kids: Vec<Entity> = app
             .world_mut()
-            .query_filtered::<&Children, With<environment::LightModeButton>>()
+            .query_filtered::<&Children, With<light_row::LightModeButton>>()
             .iter(app.world())
             .flat_map(|c| c.iter().collect::<Vec<_>>())
             .collect();
