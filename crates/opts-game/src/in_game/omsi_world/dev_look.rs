@@ -31,6 +31,12 @@ impl DevLookTarget {
         }
     }
 
+    /// Whether the aid is off (no object needs to be remembered).
+    #[must_use]
+    pub fn is_idle(&self) -> bool {
+        self.pattern.is_none()
+    }
+
     /// Remembers `root` when `sco_file` matches and nothing was chosen yet.
     pub fn offer(&mut self, sco_file: &str, root: Entity) {
         if self.entity.is_none()

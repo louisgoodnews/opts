@@ -284,6 +284,13 @@ pub const COMMANDS: &[CommandSpec] = &[
         "look:s@0?",
     ),
     c(
+        "render.stats",
+        "scene",
+        "Frame times, draw counts per render phase, memory",
+        "reset:b? parts:b?",
+    )
+    .doc("`frame_times` covers the frames since the last reset (average, median, 99th percentile, 1 % low rate); `phases` the latest frame's batch sets, bins and entities of Bevy's render phases summed over all views (one `multidraw_sets` entry is one multi-draw call, a batchable bin one instanced draw, every unbatchable entity one draw); `parts` (opt-in, scans the world) the visible mesh entities with their distinct meshes, materials and pairs; `gpu_diagnostics_ms` needs `OPTS_RENDER_DIAG=1`. `reset` clears the frame-time window after reading."),
+    c(
         "settings.list",
         "settings",
         "List the settings with their values (optionally one category)",

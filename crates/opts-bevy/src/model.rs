@@ -204,6 +204,10 @@ pub struct ContentCache {
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,
+    /// Shared handles by content (`OPTS_INSTANCING=dedupe`, see [`crate::instancing`]).
+    pub pool: crate::instancing::AssetPool,
+    /// Static parts of the tile being loaded (`OPTS_INSTANCING=merge`).
+    pub merger: crate::instancing::StaticMerger,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
@@ -737,8 +741,8 @@ impl ContentLoader<'_> {
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
                 let part = ModelPart {
-                    mesh: self.meshes.add(mesh),
-                    material: self.materials.add(material),
+                    mesh: self.cache.pool.mesh(self.meshes, mesh),
+                    material: self.cache.pool.material(self.materials, material),
                     vertices,
                     light_variable,
                     alpha_variable: over
@@ -750,7 +754,7 @@ impl ContentLoader<'_> {
                 if let Some(glass) = glass_material {
                     self.cache.stats.transmap_splits += 1;
                     let glass_part = ModelPart {
-                        material: self.materials.add(glass),
+                        material: self.cache.pool.material(self.materials, glass),
                         ..part.clone()
                     };
                     parts.push(part);

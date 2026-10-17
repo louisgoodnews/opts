@@ -115,6 +115,7 @@
 - [Hardware Probe: Privacy Charter](architecture/hardware-probe.md)
 - [Texture Quality and Colour (Proposal)](architecture/texture-quality.md)
 - [Visual A/B Procedure and Image Metrics](architecture/visual-ab.md)
+- [Mesh Instancing Research](architecture/instancing-research.md)
 - [Content Quality](quality/README.md)
   - [Content Issue Registry](quality/content-issue-registry.md)
   - [Mesh Issue Registry](quality/mesh-issue-registry.md)

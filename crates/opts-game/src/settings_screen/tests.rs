@@ -752,7 +752,7 @@ fn the_content_page_builds_within_a_frame_and_fills_in_when_the_facts_arrive() {
         "building the page waited for the facts"
     );
     let first = keys(&mut app);
-    assert_eq!(first.len(), 4, "the four lines exist at once: {first:?}");
+    assert_eq!(first.len(), 3, "the three lines exist at once: {first:?}");
     assert!(
         first.iter().all(|(_, k, _)| k.ends_with("-pending")),
         "placeholders first: {first:?}"
