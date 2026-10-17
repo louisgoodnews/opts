@@ -155,6 +155,8 @@ pub struct WorldStats {
     pub trees_loaded: usize,
     pub splines_loaded: usize,
     pub splines_failed: usize,
+    /// Tiles that got a water surface (`.map.water` above the terrain somewhere).
+    pub water_tiles: usize,
     pub scene_vertices: usize,
     pub vehicle_name: String,
     pub vehicle_meshes: usize,
@@ -211,6 +213,8 @@ pub struct WorldLoadJob {
     /// segment loader binds `[useTextTexture]` indices against them).
     vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
     ground_material: Option<Handle<StandardMaterial>>,
+    /// The shared water material (built on first use).
+    water_material: Option<Handle<StandardMaterial>>,
     /// Decoded `[groundtex]` layers as one GPU array, built on first use.
     ground_array: Option<GroundArray>,
     /// Files each resident tile was built from (normalised paths); drives hot reload.

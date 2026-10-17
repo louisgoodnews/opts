@@ -15,7 +15,7 @@ use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
 
 use super::ground::tile_origin;
-use super::tile_ground::{spawn_splines, spawn_terrain};
+use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
 use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{LoadAssets, WorldLoadJob, WorldStats};
@@ -70,6 +70,17 @@ pub fn load_next_tile(
         images,
         ground_materials,
         &tile,
+        key,
+        origin,
+        &mut children,
+    );
+    spawn_water(
+        job,
+        stats,
+        commands,
+        meshes,
+        materials,
+        terrain.as_ref(),
         key,
         origin,
         &mut children,

@@ -38,6 +38,8 @@ pub mod reporting;
 pub mod scenery;
 pub mod scenery_runtime;
 pub mod terrain;
+pub mod terrain_query;
+pub mod water;
 pub mod text_texture;
 pub mod texture;
 pub mod texture_filter;
@@ -99,6 +101,8 @@ pub use scenery_runtime::{
     SceneryObjectRuntime, SceneryRuntimePlugin, SceneryRuntimeSettings, SceneryRuntimeStats,
     SceneryScripts, SceneryVariableOverrides,
 };
+pub use terrain_query::GroundElevationQuery;
+pub use water::{build_water_mesh, water_level_at, water_material, water_visible, WATER_GRID};
 pub use terrain::{
     build_terrain_mesh, carve_terrain_under_roads, road_footprint, sample_terrain, set_tile_size,
     terrain_cell, terrain_material, tile_size, RoadFootprint, TERRAIN_CELL_M, TILE_SIZE_M,

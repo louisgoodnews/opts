@@ -189,8 +189,8 @@ All **12,273** files are exactly **14,888 bytes** [C]:
 
 | Offset | Type | Meaning |
 | ---: | :--- | :--- |
-| 0 | `u32` | `1` in all 1,485 files. ❓ version or count |
-| 4 | `f32[4]` | Four water-level values; usually all equal (`−5.0` ×511, `−10.0` ×124, `−2.0` ×29, `0.0` ×26, `30.0`). ❓ per corner or per quadrant |
+| 0 | `u32` | `1` in all 1,666 files (counted 2026-10-13 over all 38 maps; an earlier count said 1,485). ❓ version or count |
+| 4 | `f32[4]` | Water level in metres at the tile's corners **south-west, south-east, north-west, north-east** [H: the value 1 of a tile equals the value 0 of its east neighbour in 90 % of 374 pairs, value 3 equals value 2 in 91 %; north neighbours: values 2/3 equal the neighbour's 0/1 in 93 %/94 % of 378 pairs]. 523 files hold the default `−5.0` in all four, 586 another constant (`−10.0` ×124, `−1.0` ×54, `−0.5` ×34, …), 557 have four different values. A tile has water only if it has this file; the water bodies are made by digging the terrain below the level. See [terrain-rendering.md](../../architecture/terrain-rendering.md), reproduce with `opts-core` example `water_census`. ❓ bilinear versus triangle interpolation between the corners |
 
 ### `.map.LM.bmp` — light map
 
@@ -258,7 +258,7 @@ Reading `.terrain` (descriptive): read `u32 n = 60`; read `(n+1)²` `f32` height
 | Q-M04 | `[splineattachement]`, `[splineattachement_repeater]`, `[attachobj]`, `[varparent]` full layouts. | 🟡 Medium |
 | Q-M05 | What differs in versions 11–13, and does `[version]` with two lines (655 files) carry extra data? | 🟡 Medium |
 | Q-M06 | `[rule]` index semantics and the `flag` field; `[relabel]`/`[typ]`/`[delete]` target semantics. | 🟡 Medium |
-| Q-M07 | `.water` header `1` and the four values; `.LM.bmp` orientation. | 🟡 Medium |
+| Q-M07 | `.water` header `1`; interpolation between the four corner levels; `.LM.bmp` orientation. (The four values are corner levels SW, SE, NW, NE: resolved 2026-10-13.) | 🟡 Medium |
 | Q-M08 | Purpose of `.prt` (cache?) and `.surf`; are they safe to ignore? | 🟢 Low |
 | Q-M09 | Why only 11,471 of 16,639 tiles listed in `global.cfg` files exist, and whether OMSI tolerates missing tiles. | 🟡 Medium |
 

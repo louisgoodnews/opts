@@ -1,4 +1,4 @@
-//! Ground stages of a tile: terrain mesh (carved under roads) and spline ribbons.
+//! Ground stages of a tile: terrain mesh (carved under roads), water surface and spline ribbons.
 
 use std::path::Path;
 
@@ -8,7 +8,7 @@ use opts_bevy::{
     build_terrain_mesh, carve_terrain_under_roads, extrude_spline_segment, road_footprint,
     terrain_material, ContentLoader, RoadFootprint,
 };
-use opts_core::formats::map::{MapTerrain, MapTile};
+use opts_core::formats::map::{MapTerrain, MapTile, MapWater};
 
 use super::ground::compose_tile_material;
 use super::{WorldLoadJob, WorldStats};
@@ -107,6 +107,71 @@ pub(super) fn spawn_terrain(
     }
 
     terrain
+}
+
+/// Water stage: the tile's `.map.water` becomes one translucent surface patch whose heights
+/// follow the four corner levels (`docs/src/architecture/terrain-rendering.md`, section 7).
+///
+/// Only tiles that have the file get water, and only where the surface lies above the terrain
+/// somewhere ([`opts_bevy::water_visible`]); the terrain hides the rest through the depth test.
+/// `OPTS_NO_WATER=1` skips water entirely (diagnostics).
+#[allow(clippy::too_many_arguments)]
+pub(super) fn spawn_water(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    terrain: Option<&MapTerrain>,
+    key: (i32, i32),
+    origin: (f32, f32),
+    children: &mut Vec<Entity>,
+) {
+    if std::env::var_os("OPTS_NO_WATER").is_some() {
+        return;
+    }
+    let water_rel = format!("{}.water", job.tile_files[&key]);
+    let Some(path) = job.install.find_in(&job.config.map_dir, &water_rel) else {
+        return;
+    };
+    job.loading_deps
+        .insert(opts_bevy::hot_reload::cache::normalize(&path));
+    let water = match std::fs::read(&path).map(|b| MapWater::parse(&b)) {
+        Ok(Ok(w)) => w,
+        Ok(Err(e)) => {
+            tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "water parse failed: {e}");
+            return;
+        }
+        Err(e) => {
+            tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "water read failed: {e}");
+            return;
+        }
+    };
+    let Some(terrain) = terrain else {
+        tracing::debug!(tile = ?key, "water file without terrain: no surface");
+        return;
+    };
+    if !opts_bevy::water_visible(&water, terrain) {
+        tracing::debug!(tile = ?key, levels = ?water.levels, "water level nowhere above the terrain");
+        return;
+    }
+    let mesh = opts_bevy::build_water_mesh(water.levels, origin, opts_bevy::tile_size());
+    stats.scene_vertices += mesh.count_vertices();
+    let material = job
+        .water_material
+        .get_or_insert_with(|| materials.add(opts_bevy::water_material()))
+        .clone();
+    tracing::debug!(tile = ?key, levels = ?water.levels, "water surface");
+    stats.water_tiles += 1;
+    children.push(
+        commands
+            .spawn((
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(material),
+                Name::new(format!("Water_{}_{}", key.0, key.1)),
+            ))
+            .id(),
+    );
 }
 
 /// Spline stage: extrudes every spline's profile and spawns the ribbons.
