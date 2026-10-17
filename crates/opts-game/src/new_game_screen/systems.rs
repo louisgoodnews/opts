@@ -214,6 +214,7 @@ pub fn handle_list_events(
     lists: Query<(&StepList, &MasterDetailView)>,
     mut setup: ResMut<NewGameSetup>,
     catalogue: Res<GameCatalogue>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
     mut history: ResMut<PlannerHistory>,
     mut liveries: ResMut<LiveryState>,
     mut state: ResMut<PlannerState>,
@@ -253,6 +254,7 @@ pub fn handle_list_events(
                 let ctx = BuildCtx {
                     loc: &loc,
                     catalogue: &catalogue,
+                    weather: &weather,
                     setup: &setup,
                     history: &history,
                     notes: &state.notes,

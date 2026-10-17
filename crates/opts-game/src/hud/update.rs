@@ -17,9 +17,9 @@ use super::values::{HudValues, SpeedUnit, RPM_PROVIDED};
 use super::widget::{switch_on, widget, Binding, Row, Slot};
 use crate::in_game::instruments::InstrumentInk;
 use crate::in_game::types::InGameSessionInfo;
-use crate::new_game_screen::weather::preset_of;
+use crate::new_game_screen::weather::name_of;
 use crate::settings::GameSettings;
-use opts_bevy::SessionEnvironment;
+use opts_bevy::{SessionEnvironment, WeatherCatalogue};
 
 /// The last camera state that the label announced, and what it says.
 #[derive(Resource, Debug, Default, Clone, PartialEq)]
@@ -67,6 +67,7 @@ pub fn update_texts(
     settings: Res<GameSettings>,
     session: Res<InGameSessionInfo>,
     env: Option<Res<SessionEnvironment>>,
+    weather: Option<Res<WeatherCatalogue>>,
     loc: Res<Localization>,
     label: Res<CameraLabel>,
     layout: Res<HudLayout>,
@@ -76,6 +77,8 @@ pub fn update_texts(
     let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
     let fallback = SessionEnvironment::default();
     let env = env.as_deref().unwrap_or(&fallback);
+    let no_weather = WeatherCatalogue::default();
+    let weather = weather.as_deref().unwrap_or(&no_weather);
     for (hud, mut text, ink) in &mut texts {
         let new = match (hud.binding, hud.part) {
             (Binding::Speed, Part::Value) => format!("{:.0}", unit.convert(values.speed_kmh)),
@@ -125,7 +128,7 @@ pub fn update_texts(
                     ("time".to_owned(), Arg::from(clock_text(env))),
                     (
                         "weather".to_owned(),
-                        Arg::from(loc.t(preset_of(env.weather()).name_key)),
+                        Arg::from(name_of(weather, &loc, env.weather())),
                     ),
                 ],
             ),

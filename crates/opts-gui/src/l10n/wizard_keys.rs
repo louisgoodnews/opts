@@ -271,6 +271,14 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WEATHER_SNOW_EFFECT,
     wiz::WIZ_WEATHER_FOG,
     wiz::WIZ_WEATHER_FOG_EFFECT,
+    wiz::WIZ_WEATHER_FX_CLOUDS,
+    wiz::WIZ_WEATHER_FX_OVERCAST,
+    wiz::WIZ_WEATHER_FX_CLEAR,
+    wiz::WIZ_WEATHER_FX_RAIN,
+    wiz::WIZ_WEATHER_FX_SNOW,
+    wiz::WIZ_WEATHER_FX_FOG,
+    wiz::WIZ_WEATHER_FX_WIND,
+    wiz::WIZ_WEATHER_FX_LINE,
     wiz::WIZ_WEATHER_LIVE,
     wiz::WIZ_REVIEW_TITLE,
 ];
@@ -449,6 +457,22 @@ pub mod wiz {
     pub const WIZ_WEATHER_FOG: &str = "wiz-weather-fog";
     /// `wiz-weather-fog-effect`.
     pub const WIZ_WEATHER_FOG_EFFECT: &str = "wiz-weather-fog-effect";
+    /// `wiz-weather-fx-clouds`.
+    pub const WIZ_WEATHER_FX_CLOUDS: &str = "wiz-weather-fx-clouds";
+    /// `wiz-weather-fx-overcast`.
+    pub const WIZ_WEATHER_FX_OVERCAST: &str = "wiz-weather-fx-overcast";
+    /// `wiz-weather-fx-clear`.
+    pub const WIZ_WEATHER_FX_CLEAR: &str = "wiz-weather-fx-clear";
+    /// `wiz-weather-fx-rain`.
+    pub const WIZ_WEATHER_FX_RAIN: &str = "wiz-weather-fx-rain";
+    /// `wiz-weather-fx-snow`.
+    pub const WIZ_WEATHER_FX_SNOW: &str = "wiz-weather-fx-snow";
+    /// `wiz-weather-fx-fog`.
+    pub const WIZ_WEATHER_FX_FOG: &str = "wiz-weather-fx-fog";
+    /// `wiz-weather-fx-wind`.
+    pub const WIZ_WEATHER_FX_WIND: &str = "wiz-weather-fx-wind";
+    /// `wiz-weather-fx-line`.
+    pub const WIZ_WEATHER_FX_LINE: &str = "wiz-weather-fx-line";
     /// `wiz-weather-live`.
     pub const WIZ_WEATHER_LIVE: &str = "wiz-weather-live";
     /// `wiz-review-title`.
