@@ -92,6 +92,8 @@ fn by_id(app: &mut App, id: &str) -> Option<Entity> {
 }
 
 fn stored(db: &std::path::Path, key: &str) -> Option<String> {
+    // Saves go through the background writer: wait for it before reading the file.
+    crate::settings::GameSettings::flush_background_saves();
     let conn = rusqlite::Connection::open(db).ok()?;
     conn.query_row(
         "SELECT value FROM app_settings WHERE key = ?1",

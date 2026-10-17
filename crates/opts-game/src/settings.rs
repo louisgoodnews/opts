@@ -368,14 +368,22 @@ impl GameSettings {
     }
 
     /// Hands a copy of the settings to the single background writer: the caller never waits for
-    /// SQLite (M-0088). Writes made in quick succession are merged: only the newest copy is
-    /// written. [`GameSettings::flush_background_saves`] waits for the writer (shutdown).
+    /// SQLite (M-0088). Writes made in quick succession are merged: only the newest copy per
+    /// settings file is written. [`GameSettings::flush_background_saves`] waits for the writer (shutdown).
     pub fn save_in_background(&self) {
         let saver = saver();
         let Ok(mut st) = saver.state.lock() else {
             return;
         };
-        st.latest = Some(self.clone());
+        // Newer copies replace older ones for the same file only.
+        match st
+            .latest
+            .iter_mut()
+            .find(|s| s.db_path_override == self.db_path_override)
+        {
+            Some(slot) => *slot = self.clone(),
+            None => st.latest.push(self.clone()),
+        }
         if st.running {
             return;
         }
@@ -389,23 +397,27 @@ impl GameSettings {
                     let Ok(mut st) = worker.state.lock() else {
                         return;
                     };
-                    let next = st.latest.take();
-                    if next.is_none() {
+                    let next = std::mem::take(&mut st.latest);
+                    if next.is_empty() {
                         st.running = false;
                         worker.idle.notify_all();
                     }
                     next
                 };
-                let Some(settings) = next else { return };
-                if let Err(err) = settings.save() {
-                    tracing::warn!(err = ?err, "could not save settings");
+                if next.is_empty() {
+                    return;
+                }
+                for settings in next {
+                    if let Err(err) = settings.save() {
+                        tracing::warn!(err = ?err, "could not save settings");
+                    }
                 }
             });
         if let Err(err) = spawned {
             tracing::warn!(err = %err, "cannot start the settings writer; saving here");
             if let Ok(mut st) = saver.state.lock() {
                 st.running = false;
-                st.latest = None;
+                st.latest.clear();
             }
             let _ = self.save();
         }
@@ -478,7 +490,7 @@ struct Saver {
 
 #[derive(Default)]
 struct SaverState {
-    latest: Option<GameSettings>,
+    latest: Vec<GameSettings>,
     running: bool,
 }
 

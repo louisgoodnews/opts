@@ -138,7 +138,7 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
                     top: Val::Px(68.0),
                     width: Val::Px(super::layout::VIEWPOINT_PANEL_WIDTH),
                     flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(8.0),
+                    row_gap: Val::Px(4.0),
                     padding: UiRect::all(Val::Px(14.0)),
                     border: UiRect::all(Val::Px(1.0)),
                     ..default()
@@ -409,11 +409,7 @@ pub fn update_panel(
         }
     }
     for mut node in &mut scope_row {
-        let want = if state.model_key.is_some() {
-            Display::Flex
-        } else {
-            Display::None
-        };
+        let want = [Display::None, Display::Flex][usize::from(state.model_key.is_some())];
         if node.display != want {
             node.display = want;
         }
