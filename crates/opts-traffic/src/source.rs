@@ -105,7 +105,10 @@ fn rules_for(
             Some(RuleKind::SpeedLimit) if value > 0.0 && value < NO_LIMIT_KMH => {
                 speed = Some(value / 3.6);
             }
-            Some(RuleKind::TrafficDensity) => out.density = Some(value),
+            // The flag names the group; the last rule for a group wins (file order).
+            Some(RuleKind::TrafficDensity) => {
+                out.density.set(r.flag as usize, value);
+            }
             Some(RuleKind::Priority) => out.priority = Some(r.value.max(0.0) as u32),
             Some(RuleKind::Trucks) => out.trucks = true,
             Some(RuleKind::Bus) => out.bus = true,
@@ -361,7 +364,7 @@ mod tests {
             path_index,
             rule_type: rule_type.into(),
             value,
-            flag: 0,
+            flag: u32::from(rule_type == "trafficdensity" && value > 1.0) * 4,
         };
         let me = RuleOwner::Spline {
             index: 0,
@@ -376,6 +379,7 @@ mod tests {
             rules: vec![
                 rule(me, 1, "speedlimit", 36.0),
                 rule(me, 1, "trafficdensity", 0.5),
+                rule(me, 1, "trafficdensity", 3.0),
                 rule(me, 1, "priority", 192.0),
                 rule(me, 1, "trucks", 0.0),
                 rule(me, 0, "overtaking_prohib", 0.0),
@@ -393,13 +397,19 @@ mod tests {
         // Path 0: only the overtaking ban; limits of 0 and 250 mean none, the other owner's is
         // ignored.
         assert_eq!(segs[0].speed_limit, None);
-        assert!(segs[0].rules.no_overtaking && segs[0].rules.density.is_none());
-        // Path 1: 36 km/h = 10 m/s, density 0.5, priority 192, trucks.
+        assert!(segs[0].rules.no_overtaking && segs[0].rules.density.is_empty());
+        // Path 1: 36 km/h = 10 m/s, density 0.5 for group 0 and 3 (unclamped) for group 4 (the
+        // rule's flag), priority 192, trucks.
         assert!((segs[1].speed_limit.unwrap() - 10.0).abs() < 1e-9);
         assert_eq!(
-            (segs[1].rules.density, segs[1].rules.priority),
-            (Some(0.5), Some(192))
+            (
+                segs[1].rules.density.get(0),
+                segs[1].rules.density.get(4),
+                segs[1].rules.priority
+            ),
+            (Some(0.5), Some(3.0), Some(192))
         );
+        assert_eq!(segs[1].rules.density.get(1), None);
         assert!(segs[1].rules.trucks && !segs[1].rules.bus && !segs[1].rules.no_overtaking);
     }
 

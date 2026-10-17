@@ -223,8 +223,9 @@ pub struct WorldLoadJob {
     scenery: scenery_objects::SceneryObjectCache,
     /// Chrono entries and what is active on the map date (`chrono.rs`).
     chrono: chrono::ChronoContext,
-    /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
-    parklist: Option<Vec<String>>,
+    /// Entries of the map's parking lists by selector (`0` = `parklist_p.txt`, `N` =
+    /// `parklist_p_N.txt`), read on first use (empty when absent).
+    parklists: HashMap<u32, Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
     /// Bitmap fonts and rendered text textures (`[texttexture]`).
     fonts: opts_bevy::text_texture::FontRegistry,

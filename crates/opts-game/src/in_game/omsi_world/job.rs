@@ -7,7 +7,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::coords::omsi_to_bevy_pos;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance, MapTile};
+use opts_core::formats::map::{MapManifest, MapObjectInstance, MapSplineInstance, MapTile};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use super::vehicle::FormationCar;
@@ -268,7 +268,7 @@ pub fn begin_world_load_at(
         tile_objects: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
-        parklist: None,
+        parklists: HashMap::new(),
         chrono: super::chrono::ChronoContext::default(),
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
@@ -541,19 +541,28 @@ impl WorldLoadJob {
         self.start_tile
     }
 
-    /// Index of every spline on the map, built by reading all tiles once.
+    /// Index of every spline on the map with its chain offset, built by reading all tiles once
+    /// (through [`Self::read_tile`], so it sees what the tiles hold for the session).
     pub(super) fn spline_index(&mut self) -> Arc<SplineIndex> {
         if let Some(i) = &self.spline_index {
             return i.clone();
         }
+        let t = std::time::Instant::now();
         let mut index = SplineIndex::default();
         // Through `read_tile`: the splines as Chrono leaves them on the map date.
-        let keys: Vec<(i32, i32)> = self.tile_files.keys().copied().collect();
+        let mut keys: Vec<(i32, i32)> = self.tile_files.keys().copied().collect();
+        keys.sort_unstable();
         for key in keys {
             if let Some(tile) = self.read_tile(key) {
                 index.add_tile(key, &tile.splines);
             }
         }
+        index.finish();
+        tracing::info!(
+            splines = index.len(),
+            ms = t.elapsed().as_millis() as u64,
+            "map-wide spline chain index built"
+        );
         let index = Arc::new(index);
         self.spline_index = Some(index.clone());
         index
@@ -641,14 +650,14 @@ impl WorldLoadJob {
         out
     }
 
-    /// Picks the parked vehicle for a parking-bay marker from `parklist_p.txt`.
-    ///
-    /// One `.sco` per line; duplicates raise the pick probability (`docs/src/formats/map/lists.md`).
-    /// The draw is a hash of the marker's id code, so a bay shows the same car on every load.
-    pub(super) fn parked_vehicle(&mut self, id_code: u64) -> Option<String> {
-        if self.parklist.is_none() {
-            let path = self.data_file("parklist_p.txt");
-            let list = match path.map(|p| std::fs::read(&p).map(|b| (p, b))) {
+    /// Reads the parking list with this selector (`0` = `parklist_p.txt`), once.
+    fn parklist(&mut self, selector: u32) -> &[String] {
+        if !self.parklists.contains_key(&selector) {
+            let name = parklist_file_name(selector);
+            let list = match self
+                .data_file(&name)
+                .map(|p| std::fs::read(&p).map(|b| (p, b)))
+            {
                 Some(Ok((p, bytes))) => {
                     self.loading_deps
                         .insert(opts_bevy::hot_reload::cache::normalize(&p));
@@ -659,22 +668,42 @@ impl WorldLoadJob {
                         .collect()
                 }
                 Some(Err(e)) => {
-                    tracing::error!(at = %opts_bevy::position_tag(), "parklist_p.txt unreadable: {e}");
+                    tracing::error!(at = %opts_bevy::position_tag(), "{name} unreadable: {e}");
                     Vec::new()
                 }
-                None => {
+                None if selector == 0 => {
                     tracing::error!(at = %opts_bevy::position_tag(), map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
                     Vec::new()
                 }
+                None => {
+                    tracing::warn!(map = %self.config.map_dir.display(), "parking bays select {name}, which the map lacks: parklist_p.txt instead");
+                    self.parklist(0).to_vec()
+                }
             };
-            self.parklist = Some(list);
+            self.parklists.insert(selector, list);
         }
-        let list = self.parklist.as_deref().unwrap_or_default();
+        self.parklists.get(&selector).map_or(&[], Vec::as_slice)
+    }
+
+    /// Picks the parked vehicle for a parking-bay marker.
+    ///
+    /// The marker's first string value selects the list (blank or `0`: `parklist_p.txt`, `N`:
+    /// `parklist_p_N.txt`); one `.sco` per line, duplicates raise the pick probability
+    /// (`docs/src/formats/map/lists.md`). The draw is a hash of the marker's id code and position
+    /// (the instances of an attachment share the id), so a bay shows the same car on every load.
+    pub(super) fn parked_vehicle(&mut self, marker: &MapObjectInstance) -> Option<String> {
+        let selector = parklist_selector(marker.string_vars.first().map(String::as_str));
+        let list = self.parklist(selector);
         if list.is_empty() {
             return None;
         }
+        let cm = |v: f32| (f64::from(v) * 100.0).round() as i64 as u64;
+        let mut h = marker.id_code;
+        for v in [cm(marker.position.x), cm(marker.position.y)] {
+            h = h.rotate_left(21) ^ v;
+        }
         // splitmix64 finaliser: spreads consecutive ids evenly.
-        let mut h = id_code.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        h = h.wrapping_add(0x9E37_79B9_7F4A_7C15);
         h = (h ^ (h >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
         h = (h ^ (h >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         h ^= h >> 31;
@@ -826,5 +855,38 @@ impl WorldLoadJob {
             ));
         }
         None
+    }
+}
+
+/// The parking list a `car_park` marker's first string value selects: blank, `0` or no value is
+/// `0` (`parklist_p.txt`), a number `N` is `N` (`parklist_p_N.txt`). Anything else counts as `0`.
+pub(super) fn parklist_selector(value: Option<&str>) -> u32 {
+    value
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .unwrap_or(0)
+}
+
+/// File name of the parking list with this selector.
+pub(super) fn parklist_file_name(selector: u32) -> String {
+    if selector == 0 {
+        "parklist_p.txt".to_owned()
+    } else {
+        format!("parklist_p_{selector}.txt")
+    }
+}
+
+#[cfg(test)]
+mod parklist_tests {
+    use super::*;
+
+    #[test]
+    fn car_park_value_selects_the_parking_list() {
+        let file = |v| parklist_file_name(parklist_selector(v));
+        assert_eq!(file(None), "parklist_p.txt");
+        assert_eq!(file(Some("")), "parklist_p.txt");
+        assert_eq!(file(Some("0")), "parklist_p.txt");
+        assert_eq!(file(Some("1")), "parklist_p_1.txt");
+        assert_eq!(file(Some(" 2 ")), "parklist_p_2.txt");
+        assert_eq!(file(Some("Trabant")), "parklist_p.txt");
     }
 }

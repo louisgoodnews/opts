@@ -248,7 +248,7 @@ impl WorldLoadJob {
         let mut tiles = switch.rebuild_tiles();
         if switch.touches_prefix("parklist_p") {
             // Parked cars come from the list: every resident tile may change.
-            self.parklist = None;
+            self.parklists.clear();
             tiles.extend(self.resident.keys().copied());
         }
         for key in &tiles {

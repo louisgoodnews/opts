@@ -56,6 +56,10 @@ pub struct IdmParams {
     pub max_decel: f64,
     /// Vehicle class for lane restrictions.
     pub class: VehicleClass,
+    /// The vehicle's group: its 0-based index in `unsched_vehgroups.txt`, which the `flag` of a
+    /// `[rule] trafficdensity` names. A lane whose rule for this group is `0` is not entered by
+    /// lane changes.
+    pub density_group: u8,
 }
 
 impl Default for IdmParams {
@@ -76,6 +80,7 @@ impl Default for IdmParams {
             wheelbase: 0.6 * 4.4,
             max_decel: 9.0,
             class: VehicleClass::Car,
+            density_group: 0,
         }
     }
 }

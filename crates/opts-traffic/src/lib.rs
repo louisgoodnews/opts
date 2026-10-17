@@ -44,7 +44,9 @@ pub use agent::{
     Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld, LANE_CHANGE_DURATION_S,
 };
 pub use conflict::{Conflict, ConflictKind};
-pub use density::{weighted_pick, DensityCurve};
+pub use density::{
+    group_targets, weighted_pick, DensityCurve, LaneDensity, MAX_DENSITY_GROUPS, MEDIUM_DENSITY,
+};
 pub use geometry::PathGeometry;
 pub use graph::{
     ConnectParams, Direction, Elevation, Lane, LaneGraph, LaneId, LaneKind, LaneRules, LaneSegment,

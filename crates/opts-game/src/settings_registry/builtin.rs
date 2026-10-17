@@ -401,7 +401,7 @@ fn interface() -> Vec<D> {
                 max: 200,
                 step: 5,
             },
-            "30",
+            "100",
             C::Gameplay,
             10,
             "set-traffic",

@@ -237,7 +237,7 @@ fn main() {
     println!(
         "rules on lanes: speed limit {}, density {}, priority {}, trucks {}, bus {}, no_cars {}, no overtaking {}",
         lanes().filter(|l| l.speed_limit.is_some()).count(),
-        lanes().filter(|l| l.rules.density.is_some()).count(),
+        lanes().filter(|l| !l.rules.density.is_empty()).count(),
         lanes().filter(|l| l.rules.priority.is_some()).count(),
         lanes().filter(|l| l.rules.trucks).count(),
         lanes().filter(|l| l.rules.bus).count(),

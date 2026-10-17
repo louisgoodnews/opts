@@ -58,6 +58,21 @@ fn line(field: &'static str, value: &str) -> Result<String, MapWriteError> {
     Ok(value.to_string())
 }
 
+/// Checks that a string value reads back unchanged. The tile reader takes string values line by
+/// line, so blank and comment-like values survive; padding, line breaks and keyword lines do not.
+fn string_value(field: &'static str, value: &str) -> Result<String, MapWriteError> {
+    if value.is_empty() || value.starts_with("//") || value.starts_with('#') {
+        if value.contains(['\n', '\r']) {
+            return line(field, value);
+        }
+        if value.trim() != value {
+            return line(field, value);
+        }
+        return Ok(value.to_string());
+    }
+    line(field, value)
+}
+
 /// Appends a keyword followed by its parameter lines.
 fn block(out: &mut String, keyword: &str, params: &[String]) {
     let _ = writeln!(out, "[{keyword}]");
@@ -235,7 +250,7 @@ fn object_lines(obj: &MapObjectInstance, legacy: bool) -> Result<Vec<String>, Ma
     }
     p.push(obj.string_vars.len().to_string());
     for s in &obj.string_vars {
-        p.push(line("object string variable", s)?);
+        p.push(string_value("object string variable", s)?);
     }
     Ok(p)
 }
@@ -330,6 +345,18 @@ mod tests {
         assert_eq!(MapTile::from_text(&text).unwrap(), tile);
     }
 
+    /// Blank and comment-like string values are read line by line, so they round-trip.
+    #[test]
+    fn blank_and_comment_like_strings_round_trip() {
+        let tile = MapTile {
+            version: Some(14),
+            objects: vec![object(&["", "// not a comment", "#1"]), object(&["x"])],
+            ..MapTile::default()
+        };
+        let text = tile.to_text().unwrap();
+        assert_eq!(MapTile::from_text(&text).unwrap(), tile);
+    }
+
     #[test]
     fn legacy_tile_round_trips_without_pitch() {
         let mut obj = object(&["a"]);
@@ -345,7 +372,7 @@ mod tests {
 
     #[test]
     fn unwritable_strings_are_rejected() {
-        for bad in ["", " padded", "two\nlines", "// comment", "#x", "[keyword]"] {
+        for bad in [" padded", "two\nlines", "[keyword]", "# padded "] {
             let tile = MapTile {
                 version: Some(14),
                 objects: vec![object(&[bad])],

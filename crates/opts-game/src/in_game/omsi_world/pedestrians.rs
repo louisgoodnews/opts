@@ -258,6 +258,16 @@ pub fn load_variants(
     }
 }
 
+/// Factor of `global.cfg` `[trafficdensity_passenger]` (hour/value pairs, linear between them,
+/// the hour wrapping at midnight) at `hour`; `1` when the map gives no curve.
+pub(super) fn passenger_factor(curve: &[(f32, f32)], hour: f32) -> f32 {
+    let profile = opts_core::formats::map::DensityProfile {
+        days: 0,
+        points: curve.to_vec(),
+    };
+    profile.at(hour).max(0.0)
+}
+
 /// Spawns pedestrians on lanes around the camera up to the density-derived target.
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_pedestrians(
@@ -270,6 +280,8 @@ pub fn spawn_pedestrians(
     mut bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     living: Query<(), With<Pedestrian>>,
+    job: Option<Res<super::WorldLoadJob>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
 ) {
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.max == 0 {
@@ -277,8 +289,15 @@ pub fn spawn_pedestrians(
     }
     *elapsed = 0.0;
     let Ok(cam) = camera.single() else { return };
-    let target =
-        ((net.0.total_length() / METRES_OF_PATH_PER_PEDESTRIAN) as usize).min(settings.max);
+    // The map's `[trafficdensity_passenger]` curve scales the walkers by the time of day.
+    let factor = match (&job, &env) {
+        (Some(job), Some(env)) => {
+            passenger_factor(&job.manifest.traffic_density_passenger, env.hour())
+        }
+        _ => 1.0,
+    };
+    let target = ((net.0.total_length() / METRES_OF_PATH_PER_PEDESTRIAN * factor) as usize)
+        .min(settings.max);
     if living.iter().count() >= target {
         return;
     }
@@ -448,4 +467,17 @@ pub fn configure_pedestrians(
         .unwrap_or(DEFAULT_MAX_PEDESTRIANS);
     net.0 = PedestrianNet::default();
     *pool = PedestrianPool::default();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn passenger_curve_scales_walkers_and_wraps() {
+        let curve = [(0.0, 0.2), (4.0, 0.0), (6.0, 1.0), (7.0, 1.2), (24.0, 0.2)];
+        assert!((passenger_factor(&curve, 6.5) - 1.1).abs() < 1e-6);
+        assert!((passenger_factor(&curve, 26.5) - passenger_factor(&curve, 2.5)).abs() < 1e-6);
+        assert_eq!(passenger_factor(&[], 3.0), 1.0);
+    }
 }

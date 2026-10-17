@@ -64,7 +64,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 
 | Key | Name | Values | Default | Applies | Status | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `gameplay.traffic` | Road traffic | whole number 0 to 200 | `30` | at once | available | Most AI vehicles driving at the same time (0 for none). Applies to the next drive. |
+| `gameplay.traffic` | Road traffic | whole number 0 to 200 | `100` | at once | available | Most AI vehicles driving at the same time (0 for none). Applies to the next drive. |
 | `gameplay.pedestrians` | Pedestrians | whole number 0 to 200 | `40` | at once | available | Most people walking at the same time (0 for none). Applies to the next drive. |
 | `gameplay.time_scale` | Time scale | number 0 to 60 | `1` | at once | not available yet (M-0064) | Runs the session clock faster than real time. |
 | `gameplay.autosave_minutes` | Autosave | whole number 0 to 60 | `0` | at once | available | Saves the drive to the autosave slot every this many minutes of play. 0 turns it off. |

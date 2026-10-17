@@ -99,7 +99,7 @@ One placed scenery object. Verified layout for **version 14** (in all version-14
 | 7 | pitch | — | float | Degrees ([S]: values like `90`, `4`, `2.99` occur; `0` in 99 %). ❓ pitch vs. roll order |
 | 8 | roll | — | float | |
 | 9 / 7 | **N** | **N** | int | **Number of string variables that follow.** |
-| 10… / 8… | `N` strings | `N` strings | string | Per-object **string variables**: tree texture (`Tree_Medium_02.tga`) and sizes (`13.434`, `1.135`); bus-stop name and line data; sign texts; livery textures (`Repaint_C2\…dds`). Empty strings are blank lines. Their meaning is given by the object's `[stringvarnamelist]` ([`.sco`](../text/sco.md)). |
+| 10… / 8… | `N` strings | `N` strings | string | Per-object **string variables**: tree texture (`Tree_Medium_02.tga`) and sizes (`13.434`, `1.135`); bus-stop name and line data; sign texts; livery textures (`Repaint_C2\…dds`). Empty strings are blank lines (read literally, see [Blank string values](#blank-string-values)). Their meaning is given by the object's `[stringvarnamelist]` ([`.sco`](../text/sco.md)). |
 | … | *(blank line)* | | | Present in most records. |
 | … | `Object Nr. K` | | comment | Editor label; optional. |
 
@@ -338,34 +338,62 @@ Aachen's roads therefore rely on their own height profiles and on the terrain **
 
 Street lights, fences, shrubs, parking bays and similar objects that follow a road are stored as
 attachments instead of `[object]` blocks. They sit in the tile's object list (they take an
-`Object Nr.` like objects). Field order, determined experimentally against the BRT Berlin and
-Gladbeck tiles:
+`Object Nr.` like objects). Layout, counted over the installed corpus (40+ maps, 329,489 masters
+and 65,659 repeaters, 2026-10-17; `docs/src/meta/berlin-spandau-2026-10-17.md` §6):
 
-| Line | `[splineAttachement]` | `[splineAttachement_repeater]` |
-|------|------------------------|---------------------------------|
-| 0 | `0` (flag) | `0` (flag) |
-| 1–2 | — | span in metres, repeat count |
-| 1 / 3 | `.sco` path | `.sco` path |
-| 2 / 4 | object id code | object id code |
-| 3 / 5 | index of the carrying `[spline]` among this tile's splines (0-based) | same |
-| 4 / 6 | lateral offset in metres (positive = right of travel) | same |
-| 5 / 7 | height above the spline surface | same |
-| 6 / 8 | distance along the spline | same |
-| 7 / 9 | heading relative to the spline direction (degrees) | same |
-| 8.. / 10.. | two unidentified `0`s, then two numbers (typically 30/500) that look like visibility limits | same |
+| v14 line (master / repeater) | v10 line | Field | Meaning |
+| ---: | ---: | :--- | :--- |
+| 0 / 0 | 0 | flag | `0` |
+| — / 1 | — | `p1` | Repeater only: index of the **master's tile** in the `global.cfg` `[map]` list. Not needed for placement. |
+| — / 2 | — | `p2` | Repeater only: index of the **first instance** that falls on this repeater's spline (see below). |
+| 1 / 3 | 1 | `.sco` | Object path |
+| 2 / 4 | 2 | ID | Object id code (shared by every instance) |
+| 3 / 5 | 3 | spline | Index of the carrying `[spline]` among this tile's splines (0-based; `-1` = none, an editor leftover) |
+| 4 / 6 | 4 | lateral | Offset from the centre line in metres, positive = right of travel (762 of 762 Spandau bays within 0.5 m of the authored bay) |
+| 5 / 7 | 5 | height | Height above the spline surface |
+| 6 / 8 | 6 | distance `d` | **Chainage** of instance 0, from the start of the carrier's spline chain |
+| 7 / 9 | 7 | heading | Relative to the spline direction (degrees) |
+| 8 / 10 | — | `field8` | Always `0` ❓ |
+| 9 / 11 | — | `field9` | `0` or ±2–5 m; meaning unknown ❓ |
+| 10 / 12 | 8 | **spacing** | Distance between instances (m), e.g. 7 for parking bays |
+| 11 / 13 | 9 | **range** | Length of the run (m); `0` = one instance |
+| 12 / 14 | — | `field12` | `0` or `1`; meaning unknown ❓ |
+| 13 / 15 | 10 | `n` | Number of string values |
+| 14… / 16… | 11… | strings | `n` lines **taken literally, blank lines included** (as `[object]`); e.g. the `car_park` list selector |
 
-**Distance semantics.** For a single attachment the distance is a *chainage from the start of the
-connected spline chain* the carrier belongs to (walk `conn_id_1` backwards, summing lengths); the
-position on the carrier is `distance − Σ length(preceding splines)`. Evidence: in
-`tile_-12_-2.map` the attachments of splines 2 and 3 (lengths 96.5 and 174.3 m, preceded by 50 and
-87.3 m) have distances 150–223 m and 240–345 m, which map exactly into `[0, length]` after
-subtracting 137.3 m and 233.8 m. For a repeater the distance is measured from the carrier's own
-start. A repeater is read as `count` instances spaced `span / count` apart, continuing into the
-following splines (via `conn_id_2`) when it runs past the carrier's end; this reading is plausible
-(lamp spacing ≈ 43 m for 260 m / 6) but not yet proven.
+**Instances.** A record stands for the instances `k = 0 … ⌊range / spacing⌋` at the chainages
+`d + k · spacing` along the spline **chain** (walk `conn_id_1` backwards from the carrier and sum the
+lengths to get the carrier's chain offset; walk `conn_id_2` forwards). With spacing or range `0`
+it is a single instance at `d`. A **master** (`[splineAttachement]`) places the instances that fall
+on the splines of **its own tile**, starting at its carrier; where the chain enters another tile,
+the first spline there carries a **repeater** (169 of 176 chain entries on Berlin-Spandau) with
+the same `d`, spacing and range, which places the instances from `k = p2` on along that tile's part
+of the chain. `p2` is the first instance on the repeater's spline: `d + p2 · spacing − chain offset`
+lies on it and instance `p2 − 1` does not, for 200 of 213 repeaters on Berlin-Spandau and 57,499 of
+65,553 corpus-wide (57,563 with the OPTS reader, 87.8 %) (content test `repeater_first_instance_is_consistent_corpus_wide`). Repeaters
+that repeat each other (same id, spline and `p2`) are placed once.
 
-Open points: the two numbers after the heading are not confirmed to be visibility limits, and the
-meaning of the repeater `span` for instances that would end beyond the chain is unverified.
+The chain offsets need every spline of the map, not only the tiles in memory: OPTS builds a
+map-wide chain index once per session (`SplineIndex`, read through the same tile reader as the
+tiles themselves), so a placement does not move when tiles stream in or out.
+
+Before 2026-10-17 OPTS read `p1`/`p2` as "span" and "count" and ignored spacing and range: Berlin-Spandau
+showed **762 parked cars against 3,858 authored bays** (steps of 0.16–4.7 m instead of 7 m) and
+716 instead of 1,923 `*light*` attachments (counts of a Python model of the rule above). Since then
+it places **3,774 bays and 1,806 lights**: the model's 3,858 and 1,923 less 84 bays and 117 lights of
+3 and 15 repeaters that repeat another one on the same spline (content test
+`spandau_parking_bays_follow_spacing_and_range`; on tile 2404/11277 its 3 runs give 54 bays, each
+exactly 7.0 m from the previous one along the chain, none outside `[d, d + range]`).
+
+### Blank string values
+
+The string values of `[object]`, `[attachObj]` and both attachment records are **positional
+lines**: a blank value is a blank line. The generic keyword scanner drops blank lines, so a blank
+value used to pull the next line (the `Object Nr. N` comment) into its place; 2,808 `car_park`
+objects on Berlin-Spandau have a blank value. The tile reader therefore uses a line cursor: the
+fixed fields skip blank and comment lines as before, then exactly `n` lines are taken literally.
+Corpus count (2026-10-17): 2,136,299 v14 `[object]` records, 3,228 `[attachObj]` and 82,714
+attachments have at least one blank string value; no record has a blank fixed field.
 
 ## `mirror` flag and `[absheight]` objects (2026-10)
 
