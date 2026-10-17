@@ -32,6 +32,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.mirror_rate` | Mirror update rate | `1`, `2`, `4` | `2` | at once | available | How often a mirror renders: every frame, every 2nd or every 4th frame. Less often is cheaper. |
 | `graphics.glass_reflections` | Sky in glass | on / off | `true` | at once | available | Windows and other glass reflect the sky. |
 | `graphics.bloom` | Bloom | on / off | `false` | at once | available | A soft glow around very bright lights. |
+| `graphics.light_governor_target_fps` | Governor target frame rate | whole number 30 to 240 | `60` | at once | available | The frame rate the automatic lighting quality tries to keep. Without vsync it is the deadline; with vsync the deadline is your display's refresh interval, or this rate if that is lower. Frames that miss it by a wide margin make the quality step down; with no missed frames for a while it steps up again. |
 
 ## Audio
 

@@ -423,6 +423,7 @@ mod lighting_quality {
             ("graphics.mirror_rate", "2"),
             ("graphics.glass_reflections", "true"),
             ("graphics.bloom", "false"),
+            ("graphics.light_governor_target_fps", "60"),
         ];
         for (key, default) in want {
             let d = r.get(key).unwrap_or_else(|| panic!("{key} missing"));
@@ -464,6 +465,30 @@ mod lighting_quality {
         assert!(r
             .set(&mut settings, &caps, "graphics.light_quality_mode", "x")
             .is_err());
+        assert!(r
+            .set(
+                &mut settings,
+                &caps,
+                "graphics.light_governor_target_fps",
+                "29"
+            )
+            .is_err());
+        assert!(r
+            .set(
+                &mut settings,
+                &caps,
+                "graphics.light_governor_target_fps",
+                "241"
+            )
+            .is_err());
+        r.set(
+            &mut settings,
+            &caps,
+            "graphics.light_governor_target_fps",
+            "144",
+        )
+        .expect("144 is in range");
+        assert_eq!(lighting::target_fps_of(&settings), 144);
         r.set(&mut settings, &caps, "graphics.light_cone_cap", "96")
             .expect("96 is the maximum");
         assert_eq!(lighting::custom_of(&settings).cone_cap, 96);

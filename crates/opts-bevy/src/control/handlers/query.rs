@@ -96,6 +96,14 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
     }
     if let Some(q) = world.get_resource::<crate::light_quality::LightQuality>() {
         out["light_quality"] = light_quality_json(q);
+        if let Some(g) = world.get_resource::<crate::light_quality::GovernorState>() {
+            out["light_quality"]["target_ms"] = json!(g.target_ms);
+            out["light_quality"]["late_share"] = json!(g.late_share);
+            out["light_quality"]["up_wait_s"] = json!(g.up_wait_s);
+        }
+        if let Some(b) = world.get_resource::<crate::light_quality::GovernorBudget>() {
+            out["light_quality"]["vsync"] = json!(b.vsync);
+        }
     }
     out["reflections"] = reflections_json(world);
     if let Some(c) = world.get_resource::<crate::light_cones::ConeStats>() {
@@ -271,6 +279,16 @@ mod tests {
         assert_eq!(l["values"]["cone_cap"], 16);
         assert_eq!(l["values"]["lantern_cones"], false);
         assert_eq!(l["values"]["headlight_cones"], true);
+        assert!(l.get("target_ms").is_none());
+        world.insert_resource(crate::light_quality::GovernorState::default());
+        world.insert_resource(crate::light_quality::GovernorBudget::default());
+        let Outcome::Done(Ok(v)) = sim_get(&mut world, &Value::Null) else {
+            panic!("sim.get did not answer at once");
+        };
+        let l = &v["light_quality"];
+        assert!((l["target_ms"].as_f64().unwrap() - 16.667).abs() < 0.01);
+        assert_eq!(l["late_share"], 0.0);
+        assert_eq!(l["vsync"], false);
         assert!(v.get("light_cones").is_none());
         world.insert_resource(crate::light_cones::ConeStats {
             total: 120,

@@ -45,6 +45,9 @@ set-glass-reflections = Himmel im Glas
 set-glass-reflections-desc = Fenster und anderes Glas spiegeln den Himmel.
 set-bloom = Bloom
 set-bloom-desc = Ein weicher Schein um sehr helle Lichter.
+set-light-governor-fps = Zielbildrate der Automatik
+set-light-governor-fps-desc = Die Bildrate, die die automatische Lichtqualität zu halten versucht. Ohne vertikale Synchronisation ist sie die Vorgabe; mit ihr gilt das Bildintervall deines Bildschirms oder diese Rate, falls sie niedriger ist. Verpasst das Spiel sie deutlich, sinkt die Qualität schrittweise; nach einer Weile ohne verpasste Bilder steigt sie wieder.
+set-light-governor-disabled = Nur im Automatikmodus. Stelle den Modus der Lichtqualität auf Automatisch, um es zu ändern.
 
 env-light-quality = Lichtqualität
 env-light-automatic = Automatisch (Stufe { $level }: { $name })

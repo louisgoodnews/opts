@@ -7,8 +7,8 @@
 
 use bevy::prelude::*;
 use opts_bevy::light_quality::{
-    ladder_preset, GovernorGate, LightMode, LightQuality, LightQualityInput, LightQualitySet,
-    Shafts,
+    ladder_preset, GovernorGate, GovernorTargetFps, LightMode, LightQuality, LightQualityInput,
+    LightQualitySet, Shafts,
 };
 
 use super::descriptor::{opt, Category as C, SettingDescriptor as D, SettingKind as K};
@@ -17,6 +17,9 @@ use crate::settings::GameSettings;
 
 /// The mode setting.
 pub const MODE_KEY: &str = "graphics.light_quality_mode";
+
+/// The target frame rate of the automatic governor (30..=240, default 60).
+pub const TARGET_FPS_KEY: &str = "graphics.light_governor_target_fps";
 
 const MODES: &[super::EnumOption] = &[
     opt("automatic", "set-opt-lightmode-automatic"),
@@ -197,7 +200,32 @@ pub fn descriptors() -> Vec<D> {
             "set-bloom-desc",
             &["glow", "hdr", "lights"],
         ),
+        d(
+            TARGET_FPS_KEY,
+            int(30, 240, 10),
+            "60",
+            111,
+            "set-light-governor-fps",
+            "set-light-governor-fps-desc",
+            &[
+                "governor",
+                "target",
+                "frame rate",
+                "fps",
+                "automatic",
+                "vsync",
+            ],
+        ),
     ]
+}
+
+/// The target frame rate the settings hold (`30..=240`, 60 when missing or unreadable).
+#[must_use]
+pub fn target_fps_of(settings: &GameSettings) -> u32 {
+    settings
+        .raw(TARGET_FPS_KEY)
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .map_or(60, |v| v.clamp(30, 240))
 }
 
 /// The custom values the settings hold (`mode` and `level` of the result are placeholders).
@@ -267,6 +295,14 @@ pub fn sync_light_input(settings: Res<GameSettings>, mut input: ResMut<LightQual
     };
     if *input != want {
         *input = want;
+    }
+}
+
+/// Keeps the governor's target frame rate equal to the setting, live.
+pub fn sync_governor_target(settings: Res<GameSettings>, mut fps: ResMut<GovernorTargetFps>) {
+    let want = target_fps_of(&settings);
+    if fps.0 != want {
+        fps.0 = want;
     }
 }
 
@@ -342,6 +378,7 @@ impl Plugin for LightQualityGamePlugin {
                 notice_switch_to_custom,
                 copy_level_to_custom,
                 sync_light_input,
+                sync_governor_target,
                 update_governor_gate,
             )
                 .chain()
