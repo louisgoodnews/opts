@@ -16,6 +16,10 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.default_fov` | Driver's view: field of view | whole number 0 to 120 | `0` | at once | available | The horizontal field of view of the driver's views, in degrees (30 to 120). 0 keeps each vehicle's own. A viewpoint you saved with its own field of view still wins. |
 | `graphics.view_distance` | View distance | whole number 1 to 8 | `4` | at once | not available yet (M-0029) | How far scenery and tiles are drawn. |
 | `graphics.water` | Water | on / off | `true` | after restart | available | Draws rivers, lakes and the sea of the map. Turn it off to see the ground below. |
+| `graphics.weather_fog` | Weather: fog | on / off | `true` | at once | available | Draws the fog of the weather (distance haze and a fogged sky). Off shows the weather without fog. |
+| `graphics.weather_clouds` | Weather: clouds | on / off | `true` | at once | available | Draws the cloud layer of the weather. Off keeps the sky and the dimmer light but hides the clouds. |
+| `graphics.weather_precipitation` | Weather: rain and snow | `off`, `low`, `medium`, `high` | `medium` | at once | available | How many rain streaks or snowflakes are drawn around the camera at most (1500, 3000 or 6000). Light precipitation uses fewer. Off draws none. |
+| `graphics.weather_wet_ground` | Weather: wet and snowy ground | on / off | `true` | at once | available | Darkens and smooths the ground and roads when it is wet, adds puddles and a snow cover. Off keeps them dry. |
 
 ## Audio
 

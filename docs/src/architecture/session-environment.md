@@ -14,11 +14,11 @@ re-derived from the start values in six more (traffic used an unwrapped hour and
 | :--- | :--- |
 | `date` | the current calendar date; rolls over at midnight |
 | `seconds_of_day` | `0 ≤ s < 86400` |
-| `weather` | preset id (`Clear Summer Day`, `Rainy Afternoon`, …) |
+| `weather` | preset id: the file stem of an installed `Weather/*.owt` (`Sommerlich`, `#CAVOK`, …) or one of the old ids (`Clear Summer Day`, `Rainy Afternoon`, …), stored as given |
 | `rate` | clock seconds per `Time<Virtual>` second (default 1) |
 | `revision` | counts **jumps** (a change of date, time or weather, a session start); the clock running is not a jump |
 | `map_date` | the date the map content is built for (Chrono) |
-| derived | weekday and `[set_day_of_week]` bit, wrapped hour, sun elevation/azimuth, `night` (sun < 3°), light attenuation (0.55 under any covered sky), temperature (−3 °C with snow, else 15 °C ❓) |
+| derived | weekday and `[set_day_of_week]` bit, wrapped hour, sun elevation/azimuth, `night` (sun < 3°), and from the weather: `conditions()` (fog, wind, temperature, dew point, pressure, clouds, precipitation, wetness; [weather](weather.md)), the sun and ambient light scales (`attenuation()`, `ambient_attenuation()`: 0.55 / 0.8 under a fully covered sky) |
 
 The fields are private; the resource changes only through the `EnvironmentChange` message
 (`date?`, `seconds_of_day?`, `weather?`, `rate?`, `map_date` policy) and its own clock:
@@ -40,7 +40,8 @@ call it; a test pins the scenery clock and the environment to the same elevation
 | :--- | :--- |
 | sky (`in_game/sky.rs`) | sun elevation/azimuth, attenuation; rebuilds the texture every 0.5 clock seconds **or at once on a new revision** |
 | fallback light (`in_game/world.rs`) | a system (`update_fallback_light`) sets the light from hour and weather kind whenever they change |
-| scenery clock (`sync_scenery_clock`) | date, time, sun, night, temperature → `SceneryClock` (`NightlightA`, `Time`, `DayOfYear`, `Weather_Temperature`) |
+| weather effects (`in_game/weather/`) | distance fog on the camera, the cloud disc, rain and snow, wet and snowy ground: all read `conditions()` each frame ([weather](weather.md) §5) |
+| scenery clock (`sync_scenery_clock`) | date, time, sun, night, temperature and the weather values → `SceneryClock` (`NightlightA`, `Time`, `DayOfYear`, `Weather_Temperature`, `Weather_AbsHum`, `PrecipType`, `PrecipRate`); player vehicle scripts and the AI variable tables get the same weather values |
 | traffic density (`spawn_traffic`) | wrapped hour (0–24) and the day bit (weekday, Saturday, Sunday) |
 | traffic light programs (`move_traffic`) | `seconds_of_day` |
 | AI lights (`update_ai_variables`) | `night` |
@@ -61,7 +62,7 @@ clock.
 * **The date is a draft** that applies with *Apply* (`MapDatePolicy::Follow`).
 * *Cancel* and **Esc restore** the time and weather the page opened with.
 * Closing the page returns to the pause overlay.
-* Weather stays sky, light and temperature: no fog or precipitation is rendered.
+* **The weather previews live with everything it drives**: sky, light, temperature, fog, clouds, rain and snow, wet ground. The chips list the install's presets ([weather](weather.md) §2); the chip of the current weather is marked (an old id marks its stand-in).
 
 ## 4. Saves
 
@@ -116,14 +117,15 @@ sets `planner::default_map_date` unless the date was chosen or remembered: today
 
 `sim.set_time {seconds, date?, weather?, rate?}` sends an `EnvironmentChange` (date with
 `Follow`) and answers two frames later with `{clock, seconds_of_day, date, map_date, weather,
-rate, revision}`; `sim.get` adds `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and
-`clock_rate`. See [control protocol](control-protocol.md) §4.4.
+rate, revision}`; `weather` is any listed preset id, a slug, a name or a word (see [weather](weather.md) §8). `sim.get` adds `clock`, `seconds_of_day`, `date`, `map_date`, `weather`,
+`clock_rate`, `weather_canonical`, `weather_presets` (the ids available) and `weather_conditions`
+(what the resolved weather is). See [control protocol](control-protocol.md) §4.4.
 
 ## 8. Tests
 
-`opts-bevy`: calendar arithmetic, weekdays, rollover, revisions, map date policy, systems with
+`opts-bevy`: calendar arithmetic, weather resolving through the catalogue and the pure effect functions (`weather.rs`), weekdays, rollover, revisions, map date policy, systems with
 virtual time, sun parity with the scenery clock, traffic density on the wrapped hour and the
-weekend. `opts-game`: pause page (open, live preview, Esc restores, Apply and `MapDateChanged`,
+weekend. `opts-game`: weather effects (fog, clouds, precipitation, surfaces, settings), pause page (open, live preview, Esc restores, Apply and `MapDateChanged`,
 Resume waiting for a rebuild), save round trip and an old save, fallback light system, wizard
 default date (Spandau-like era, a map without `[years]`, 29 February), date steppers on the map
 step, `sim.set_time` parameters, and the generated control reference.

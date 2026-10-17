@@ -92,6 +92,12 @@ fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> Fragment
         let r = mix(pbr_input.material.perceptual_roughness, 0.35, wet.x);
         pbr_input.material.perceptual_roughness = mix(r, 0.04, puddle);
     }
+    if wet.z > 0.0 {
+        // Snow cover (weather `[snow]`): towards white-grey, rougher than wet ground.
+        let snow_colour = vec3<f32>(0.92, 0.94, 0.97);
+        pbr_input.material.base_color = vec4<f32>(mix(pbr_input.material.base_color.rgb, snow_colour, wet.z), pbr_input.material.base_color.a);
+        pbr_input.material.perceptual_roughness = mix(pbr_input.material.perceptual_roughness, 0.85, wet.z);
+    }
     pbr_input.material.base_color = alpha_discard(
         pbr_input.material.flags,
         pbr_input.material.alpha_cutoff,

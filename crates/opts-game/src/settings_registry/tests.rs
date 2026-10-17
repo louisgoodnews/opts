@@ -326,3 +326,55 @@ fn gameplay_defaults_equal_the_constants_of_the_session_systems() {
         Some(DEFAULT_MAX_PEDESTRIANS.to_string().as_str())
     );
 }
+
+#[test]
+fn the_weather_settings_default_on_and_switch_each_effect() {
+    use opts_bevy::weather::PrecipitationQuality;
+    let r = SettingsRegistry::with_builtin();
+    for key in [
+        "graphics.weather_fog",
+        "graphics.weather_clouds",
+        "graphics.weather_wet_ground",
+    ] {
+        assert_eq!(r.get(key).map(|d| d.default), Some("true"), "{key}");
+    }
+    assert_eq!(
+        r.get("graphics.weather_precipitation").map(|d| d.default),
+        Some("medium")
+    );
+    let mut settings = GameSettings::default();
+    assert_eq!(
+        live::weather_effects_of(&settings),
+        opts_bevy::WeatherEffects::default()
+    );
+    for (key, value) in [
+        ("graphics.weather_fog", "false"),
+        ("graphics.weather_clouds", "false"),
+        ("graphics.weather_wet_ground", "false"),
+        ("graphics.weather_precipitation", "high"),
+    ] {
+        settings.set_raw(key, value);
+    }
+    let fx = live::weather_effects_of(&settings);
+    assert!(!fx.fog && !fx.clouds && !fx.wet_ground);
+    assert_eq!(fx.precipitation, PrecipitationQuality::High);
+    // An unknown stored quality falls back to the default instead of switching rain off.
+    settings.set_raw("graphics.weather_precipitation", "ultra");
+    assert_eq!(
+        live::weather_effects_of(&settings).precipitation,
+        PrecipitationQuality::Medium
+    );
+
+    // The system keeps the resource equal to the settings.
+    let mut app = App::new();
+    app.insert_resource(settings)
+        .init_resource::<opts_bevy::WeatherEffects>()
+        .add_systems(Update, live::sync_weather_effects);
+    app.update();
+    assert!(!app.world().resource::<opts_bevy::WeatherEffects>().fog);
+    app.world_mut()
+        .resource_mut::<GameSettings>()
+        .set_raw("graphics.weather_fog", "true");
+    app.update();
+    assert!(app.world().resource::<opts_bevy::WeatherEffects>().fog);
+}

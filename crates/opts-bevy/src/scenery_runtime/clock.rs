@@ -28,6 +28,9 @@ pub struct SceneryClock {
     pub night: bool,
     /// Outside temperature in °C (`Weather_Temperature`).
     pub temperature_c: f32,
+    /// The other weather values (`Weather_AbsHum`, `PrecipType`, `PrecipRate`; wind, pressure
+    /// and fog visibility have no documented variable).
+    pub weather: crate::weather::WeatherVars,
     /// The game overwrites the clock from the session every frame.
     pub follow_session: bool,
 }
@@ -52,6 +55,7 @@ impl SceneryClock {
             sun_alt_deg: 0.0,
             night: false,
             temperature_c: 15.0,
+            weather: crate::weather::WeatherConditions::default().vars(),
             follow_session: false,
         };
         c.update_sun();

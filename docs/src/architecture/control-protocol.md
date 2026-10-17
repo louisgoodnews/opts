@@ -84,7 +84,7 @@ specified and answers `1007` until implemented.
 | `state` | — | `{app_state, camera_mode, fps, frame, map, vehicle}` | P1 |
 | `scene` | — | `{map, tiles:[{x,y,entities}], entity_count, asset_count, stats}` | P1 |
 | `camera.get` | — | `{mode, sub_index, transform:{translation,rotation}, fov}` | P1 |
-| `sim.get` | — | `{paused, sim_time, time_scale, tick}`, in a drive also the session clock `{clock, seconds_of_day, date, map_date, weather, clock_rate}` | P1 |
+| `sim.get` | — | `{paused, sim_time, time_scale, tick}`, in a drive also the session clock `{clock, seconds_of_day, date, map_date, weather, clock_rate}` and the weather `{weather_canonical, weather_presets, weather_conditions}` (the id the weather stands for, the ids `sim.set_time` accepts, what the resolved weather is: visibility, wind, temperature, clouds, precipitation, wetness) | P1 |
 | `log.tail` | `[n=100]` | `{lines:[{ts,level,target,message}]}` | P1 |
 | `log.filter` | `{target?, level?, contains?, n?}` | as `log.tail` | P1 |
 | `entity.list` | `[filter]` | `{entities:[{id,name,summary}]}`; filter keys: `name`, `category` | P2 |
@@ -121,7 +121,7 @@ Key names: `A`–`Z`, `0`–`9`, `F1`–`F12`, `Escape`, `Enter`, `Space`, `Tab`
 | `sim.resume` | — | resumes | P1 |
 | `sim.step` | `{frames}` | advances exactly N frames while paused; replies after the last one | P1 |
 | `sim.time_scale` | `{factor}` | relative speed, 0.0 < factor ≤ 20 | P1 |
-| `sim.set_time` | `{seconds, date?, weather?, rate?}` | sets the [session environment](session-environment.md) like the pause menu's *Environment* page: time of day (0 ≤ s < 86400), date `YYYY-MM-DD` (applied like *Apply*: may rebuild the map), weather preset (id, slug or word) and clock rate (0 < r ≤ 3600); answers `{clock, seconds_of_day, date, map_date, weather, rate, revision}`; `1001` outside a drive | P2 |
+| `sim.set_time` | `{seconds, date?, weather?, rate?}` | sets the [session environment](session-environment.md) like the pause menu's *Environment* page: time of day (0 ≤ s < 86400), date `YYYY-MM-DD` (applied like *Apply*: may rebuild the map), weather preset (an installed preset's id, its slug, localised name or a word of it; the old ids too; the available ids are `weather_presets` of `sim.get`) and clock rate (0 < r ≤ 3600); answers `{clock, seconds_of_day, date, map_date, weather, rate, revision}`; `1001` outside a drive | P2 |
 
 ### 4.5 Scene manipulation
 

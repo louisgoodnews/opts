@@ -50,8 +50,9 @@ pub struct GroundExtension {
     /// Detail repeats per tile edge of layers 4–7.
     #[uniform(110)]
     pub detail_repeats_b: Vec4,
-    /// Wet-surface parameters (M-0085 prototype): x = wetness 0..1, y = puddle coverage 0..1.
-    /// All zero (the default) leaves the shader output unchanged.
+    /// Wet-surface parameters: x = wetness 0..1, y = puddle coverage 0..1, z = snow cover 0..1
+    /// (written by the weather, `in_game::weather::surfaces`). All zero (the default) leaves the
+    /// shader output unchanged.
     #[uniform(111)]
     pub wet: Vec4,
 }

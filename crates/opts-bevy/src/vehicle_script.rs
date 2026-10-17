@@ -100,13 +100,30 @@ pub fn feed_predefined(engine: &mut ScriptEngine, controller: &VehicleController
     }
 }
 
+/// Gives a vehicle's scripts the weather: the system values `Weather_Temperature`,
+/// `Weather_AbsHum`, `PrecipType` and `PrecipRate`, and the two precipitation values as local
+/// variables as well (the scripts of the corpus read them both ways).
+pub fn feed_weather(
+    engine: &mut ScriptEngine,
+    temperature_c: f32,
+    vars: &crate::weather::WeatherVars,
+) {
+    engine.set_system("Weather_Temperature", temperature_c);
+    engine.set_system("Weather_AbsHum", vars.abs_hum);
+    engine.set_system("PrecipType", vars.precip_type);
+    engine.set_system("PrecipRate", vars.precip_rate);
+    engine.set("preciptype", vars.precip_type);
+    engine.set("preciprate", vars.precip_rate);
+}
+
 /// Fixed-step system: initialises and advances every vehicle's scripts.
 pub fn vehicle_script_system(
     time: Res<Time>,
     clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
     mut query: Query<(&VehicleController, &mut VehicleScripts)>,
 ) {
-    let brightness = clock.map(|c| c.envir_brightness());
+    let brightness = clock.as_ref().map(|c| c.envir_brightness());
+    let weather = clock.map(|c| (c.temperature_c, c.weather));
     let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
@@ -120,6 +137,9 @@ pub fn vehicle_script_system(
         feed_predefined(&mut engine, controller);
         if let Some(b) = brightness {
             engine.set("envir_brightness", b);
+        }
+        if let Some((temperature, vars)) = weather {
+            feed_weather(&mut engine, temperature, &vars);
         }
         if first {
             engine.run_init();

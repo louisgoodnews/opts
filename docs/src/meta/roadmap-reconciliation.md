@@ -25,7 +25,7 @@
 | **M-0007** | Documentation Drift Repair | 🟢 complete | 🟢 Complete | **🟢 Complete** | Broken links fixed; phase layout unified. |
 | **M-0008** | Script Reference | 🟢 complete | 🟢 Complete | **🟢 Complete** | Predefined variables and callbacks documented. |
 | **M-0009** | Repaint System | 🟢 complete | 🟢 Complete | **🟢 Complete** | `.cti` / `[CTC]` chain documented. |
-| **M-0010** | Engine & Environment Configs | 🟢 complete | 🟢 Complete | **🟢 Complete** | `envir.cfg`, weather, inputs documented. |
+| **M-0010** | Engine & Environment Configs | 🟢 complete | 🟢 Complete | **🟢 Complete** | `envir.cfg`, weather, inputs documented; weather presets are also implemented since 2026-10-17 ([weather](../architecture/weather.md)). |
 | **M-0011** | Passenger Content | 🟢 complete | 🟢 Complete | **🟢 Complete** | Ticket packs, money, fonts documented. |
 | **M-0012** | Chrono and Map Variants | 🟢 complete | 🟢 Complete | **🟢 Complete** | Chrono overlays and variants documented. |
 

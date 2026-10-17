@@ -24,7 +24,7 @@ pub enum PlannerAction {
     /// Set the time of day from quick chip `n`.
     Quick(usize),
     /// Choose a weather preset by id.
-    Weather(&'static str),
+    Weather(String),
     /// Change a date or time field by `delta` steps.
     Step(Field, i32),
     /// Choose the livery with this name.

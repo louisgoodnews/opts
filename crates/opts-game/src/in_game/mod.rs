@@ -14,6 +14,7 @@ pub mod sky;
 pub mod stream_budget;
 pub mod types;
 pub mod vehicle_spawner;
+pub mod weather;
 pub mod world;
 
 use bevy::prelude::*;

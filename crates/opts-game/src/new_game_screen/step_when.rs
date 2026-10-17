@@ -9,8 +9,8 @@ use opts_gui::prelude::*;
 use super::choice::{spawn_choice, ChoiceStep};
 use super::planner::{era_hint, month_key, Field, PlannerStep, QUICK_TIMES};
 use super::types::NewGameSetup;
-use super::ui::{column, glyph, keyed, keyed_args, row, Act, PlannerAction};
-use super::weather::PRESETS;
+use super::ui::{column, glyph, keyed, keyed_args, plain, row, Act, PlannerAction};
+use super::weather::{presets, Label, MAX_WIZARD_PRESETS};
 use super::BuildCtx;
 use crate::shell::calendar;
 
@@ -160,7 +160,15 @@ pub fn date_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     block
 }
 
-fn weather_cards(commands: &mut Commands) -> Entity {
+/// A text that is a message key or data text.
+fn label(commands: &mut Commands, label: Label, style: TypeScale, role: ColorRole) -> Entity {
+    match label {
+        Label::Key(key) => commands.spawn(keyed(key, style, role)).id(),
+        Label::Text(text) => commands.spawn(plain(text, style, role)).id(),
+    }
+}
+
+fn weather_cards(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let wrap = commands
         .spawn(Node {
             flex_wrap: FlexWrap::Wrap,
@@ -168,11 +176,14 @@ fn weather_cards(commands: &mut Commands) -> Entity {
             ..row(12.0)
         })
         .id();
-    for p in PRESETS {
+    for p in presets(ctx.weather, ctx.loc)
+        .into_iter()
+        .take(MAX_WIZARD_PRESETS)
+    {
         let card = spawn_choice(
             commands,
-            PlannerAction::Weather(p.id),
-            format!("wizard.when.weather.{}", opts_gui::ui_id::slug(p.id)),
+            PlannerAction::Weather(p.id.clone()),
+            format!("wizard.when.weather.{}", opts_gui::ui_id::slug(&p.id)),
             Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
@@ -192,20 +203,18 @@ fn weather_cards(commands: &mut Commands) -> Entity {
                 ..column(2.0)
             })
             .id();
-        let name = commands
-            .spawn(keyed(
-                p.name_key,
-                TypeScale::TitleMedium,
-                ColorRole::OnSurface,
-            ))
-            .id();
-        let effect = commands
-            .spawn(keyed(
-                p.effect_key,
-                TypeScale::Label,
-                ColorRole::OnSurfaceVariant,
-            ))
-            .id();
+        let name = label(
+            commands,
+            p.name,
+            TypeScale::TitleMedium,
+            ColorRole::OnSurface,
+        );
+        let effect = label(
+            commands,
+            p.effect,
+            TypeScale::Label,
+            ColorRole::OnSurfaceVariant,
+        );
         commands.entity(texts).add_children(&[name, effect]);
         commands
             .entity(card)
@@ -273,7 +282,7 @@ pub fn spawn_when(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let dt_title = section_title(commands, "wiz-when-exact");
     let dt = time_block(commands, ctx);
     let w_title = section_title(commands, "wiz-when-weather");
-    let weather = weather_cards(commands);
+    let weather = weather_cards(commands, ctx);
     commands
         .entity(body)
         .add_children(&[quick_title, quick, dt_title, dt, w_title, weather]);

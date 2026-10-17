@@ -69,7 +69,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `state` | - | 1.0 | App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame |
 | `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
 | `camera.get` | - | 1.0 | Camera mode and transform |
-| `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock |
+| `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock and weather |
 | `log.tail` | `n?` (integer) | 1.0 | Last N log lines |
 | `log.filter` | `target?` (string)<br>`level?` (string)<br>`contains?` (string)<br>`n?` (integer) | 1.0 | Filtered log lines |
 | `entity.list` | `filter?` (string) | 1.0 | List entities |
@@ -254,7 +254,7 @@ Set the session clock (and date, weather, clock rate).
 
 **Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision}` after the change
 
-Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (a preset id, its slug or a word such as `rain`, `snow`, `fog`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`.
+Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (an installed preset's id such as `Sturm` or `#CAVOK`, its slug, its localised name or a word of it; the old ids `Clear Summer Day`, `Rainy Afternoon`, … work too and stand for the closest installed preset; `sim.get` lists the available ids as `weather_presets`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`, and the weather as `weather_canonical`, `weather_presets` and `weather_conditions`.
 
 ## Group `scene`
 

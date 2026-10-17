@@ -5,10 +5,10 @@
 | **Format Family** | Text (keyword-based) |
 | **File Extensions / Names** | `envir.cfg`, `Weather/*.owt`, `*_<LANG>.dsc`, `Weather/clouds.cfg`, `Weather/ICAO.txt`, `Situations/*.osn`, `*.osn_<a>_<b>.dds` |
 | **Parser Crate** | `opts-core` |
-| **Parser Module** | `opts_core::formats::environment` |
+| **Parser Module** | `opts_core::formats::envir` (`envir.cfg`), `opts_core::formats::weather` (`.owt`, `clouds.cfg`, `.dsc`) |
 | **Encoding** | per file: CP1252, UTF-8, UTF-16LE (see below) |
-| **Status** | 🟡 Draft — structure corpus-verified; value meanings partly inferred |
-| **Last Updated** | 2026-10-04 |
+| **Status** | ✅ `.owt` / `clouds.cfg` / `.dsc` parsed and used ([weather](../../architecture/weather.md), corpus test over all 84 installed `.owt`); 🟡 `[groundwet]`, `[precip]` values 3–5 and `[press]` still unknown |
+| **Last Updated** | 2026-10-17 |
 
 ---
 
@@ -36,23 +36,27 @@ Each `[lightcolor_X]` holds **5 sun states × RGB = 15 integers (0–255)**, in 
 
 Content [C]: 9 presets `<Name>.owt`, 45 descriptions `<Name>_<LANG>.dsc` (DEU, ENG, FRA, HUN, POL), `clouds.cfg`, `ICAO.txt`. **Encodings are mixed even here**: of the `.owt`, 6 are CP1252 and 3 UTF-16LE; the `.dsc` files are UTF-16LE or CP1252 per file — detect per file ([global-cfg](../map/global-cfg.md#encoding--the-key-pitfall-c)).
 
-**`.owt` blocks** (all 9 presets parsed [H]); interpretations are inferred from the values ❓:
+**`.owt` blocks** (all 9 presets and all 84 `.owt` of the install parse; `opts_core::formats::weather::WeatherFile`). Evidence for the readings: [C] counted, [H] seen, 📖 the comment text of `#CAVOK.owt` (German, paraphrased). What each field drives in OPTS: [weather](../../architecture/weather.md) §3.
 
-| Keyword | Lines | Observed values | Reading |
-| :--- | ---: | :--- | :--- |
-| `[name]`, `[description]`…`[end]` | 1 / n | text | title (localised in the `.dsc`) and description |
-| `[fog]` | 2 | `50000 1` (clear), `75 1` (ground fog), `500 0.5` (dusk fog), `700 0.5` (storm) | visibility in metres, and a density-like factor 0.5–1 |
-| `[wind]` | 2 | `0 0` … `209 18.9` (storm) | direction in degrees and speed |
-| `[temp]` | 2 | `15 5`, `9 9`, `-16 -24.9`, `25 10.8` | temperature and **dew point** (never above the temperature; equal in fog) |
-| `[press]` | 1 | 997 – 1028 | pressure in hPa |
-| `[clouds]` | 2 | `-1 0` (none) or a **cloud type from `clouds.cfg`** plus a height (`Cumulus 3 300`, `Overcast 1 200`) | cloud type and base height |
-| `[precip]` | 5 | `0 32 0 -2 0` (none), `1 132 …` (rain), `2 187 …` (snow) | first value = **type: 0 none, 1 rain, 2 snow** (matches the system variable `PrecipType`); second = intensity-like (32 = baseline, up to 192); last three unknown |
-| `[groundwet]` | 3 | `0 0 0` (dry) … `78 255 115.9` (soaked) | ground wetness parameters ❓ |
-| `[snow]`, `[snowonroad]` | 0 | flags | snow cover, snow on roads |
+| Keyword | Lines | Observed values | Reading | Used |
+| :--- | ---: | :--- | :--- | :---: |
+| `[name]`, `[description]`…`[end]` | 1 / n | text (`<Bestes Wetter>` in `#CAVOK`) | title and description; the `.dsc` of the same stem localises them | ✅ |
+| `[fog]` | 2 | `50000 1` (clear), `75 1` (ground fog), `500 0.5` (dusk fog), `700 0.5` (storm) | 📖 **visibility range in metres** (the distance at which an object just stands out against the fog) and **thickness of the fog layer** above the ground (0.5 … 1); a thick and high layer also lowers the sunlight | ✅ visibility, 🟡 thickness (contrast threshold and sun scale only) |
+| `[wind]` | 2 | `0 0` … `209 18.9` (storm) | **direction** the wind comes **from** in degrees (`Sommerlich`: 70°, "light east wind" in its description) and **speed** (m/s by plausibility, storm 18.9) | ✅ |
+| `[temp]` | 2 | `15 5`, `9 9`, `-16 -24.9`, `25 10.8` | temperature and **dew point** (never above the temperature in all 84 files; equal in fog) — answers Q-ENV02 | ✅ |
+| `[press]` | 1 | 997 – 1028 | pressure in hPa | ❓ no consumer |
+| `[clouds]` | 2 | `-1 0` (none) or a **cloud type from `clouds.cfg`** plus a base height (`Cumulus 3 300`, `Overcast 1 200`) | cloud type and base height in metres; map add-ons name types `clouds.cfg` does not list (`Cumulus 5` in `TH_Wald`) | ✅ |
+| `[precip]` | 5 | `0 32 0 -2 0` (none), `1 132 …` (rain), `2 187 …` (snow) | first value **type: 0 none, 1 rain, 2 snow**; second an **intensity on a 0 … 255 scale** (32 = the drizzle of `Daemmerungsnebel`, 132 rain of `Sturm`, 173 `Schmuddelwetter`, 187 heavy snow; `Ueberfrierende Naesse` has 192 with type 0: a leftover or glaze); values 3–5 unknown (`0 -2 0` in every file) | ✅ type, intensity; ❓ 3–5 |
+| `[groundwet]` | 3 | `0 0 0` (dry), `30.6 255 0` (rain), `78 255 115.9` (soaked), `77.9 133.2 20.9` (icy wet), `1.7 255 0` (snow) | ground wetness parameters; OPTS uses *second / 255* as wetness and *third / 120* as puddle coverage, the first is unused | 🟡 ❓ |
+| `[snow]`, `[snowonroad]` | 0 | flags | snow cover on the ground, snow on the roads (case-insensitive keyword) | 🟡 |
 
-**`clouds.cfg`** [H]: four `[cloudtype]` blocks of four lines: *name* (`Cumulus 1/2/3`, `Overcast 1`), *texture file* (`Cumulus_1.tga` … `OVC_1.bmp`), *texture size in metres* (2000; 1000 for overcast), and the **cover class** `sct` (scattered) or `ovc` (overcast), which selects how the layer is drawn.
+A file may be short: `#CAVOK.owt` ends its `[precip]` after two values and has no `[groundwet]`. It also carries a long explanatory text between its blocks (with `[fog]`, `{range}`, `{height}` written indented), which is not data; the parser takes the parameter count of every keyword and drops the rest.
 
-**`ICAO.txt`** [H]: 105 lines `<ICAO code> - <place>` (e.g. `EDDH - Hamburg`, `EDDT - Berlin`), CP1252. The options file stores the selected code as `[currWeather_ICAO]` ([engine-config](engine-config.md)), so the list is the catalogue for real-weather lookup by airport ❓.
+**`clouds.cfg`** [H]: four `[cloudtype]` blocks of four lines: *name* (`Cumulus 1/2/3`, `Overcast 1`), *texture file* (`Cumulus_1.tga` … `OVC_1.bmp`), *texture size in metres* (2000; 1000 for overcast), and the **cover class** `sct` (scattered) or `ovc` (overcast), which selects how the layer is drawn: OPTS draws one textured disc at the base height, scrolling with the wind; a scattered type shows its texture's gaps (`Cumulus_1.tga` …), an overcast one (`OVC_1.bmp`) is closed. The digit of `Cumulus 1/2/3` is read as the cover amount (0.25 / 0.4 / 0.55 ❓).
+
+**`ICAO.txt`** [H]: 105 lines `<ICAO code> - <place>` (e.g. `EDDH - Hamburg`, `EDDT - Berlin`), CP1252. The options file stores the selected code as `[currWeather_ICAO]` ([engine-config](engine-config.md)), so the list is the catalogue for real-weather lookup by airport ❓ (OPTS does not use it: *Live weather* stays a registered not-yet place).
+
+**`.dsc`** [H]: `<Name>_<LANG>.dsc` (`DEU`, `ENG`, `FRA`, `HUN`, `POL`) holds `[name]` and `[description]…[end]` of the preset in that language (UTF-16LE or CP1252 per file). OPTS names a preset by the `.dsc` of the UI language (`de` → `DEU`, `en` → `ENG`), else English, else the `.owt`.
 
 ### Scenarios — `Situations/` and `Tutorials/`
 
@@ -86,8 +90,8 @@ See the tables above; there is no further layout. Related enumerations: surface/
 
 | ID | Question | Priority |
 | :--- | :--- | :--- |
-| Q-ENV01 | Meaning of `[fog]` second value, `[precip]` values 2–5 and `[groundwet]` values 1–3. Needs one-value-at-a-time tests. | 🟡 Medium |
-| Q-ENV02 | Is `[temp]`'s second value really the dew point? | 🟢 Low |
+| Q-ENV01 | ✅ partly answered: `[fog]` second value is the fog layer thickness (📖), `[precip]` second value an intensity on 0 … 255. Still open: `[precip]` values 3–5 and the three `[groundwet]` values. Needs one-value-at-a-time tests. | 🟡 Medium |
+| Q-ENV02 | ✅ Answered: `[temp]`'s second value is the dew point (never above the temperature in all 84 files, equal in fog). | — |
 | Q-ENV03 | Preview images: are they saved script textures (vehicle index × texture index)? | 🟡 Medium |
 | Q-ENV04 | How `ICAO.txt` is used (real-weather download vs plain label). | 🟢 Low |
 | Q-ENV05 | Interpolation between the five sun states of `[lightcolor_*]` (linear in elevation?). | 🟢 Low |
@@ -104,4 +108,5 @@ See the tables above; there is no further layout. Related enumerations: surface/
 
 ## 🔗 Related Documents
 
+- [Weather in OPTS](../../architecture/weather.md)
 - [`global.cfg` / `.osn`](../map/global-cfg.md), [misc types (`.owt`)](misc-types.md#owt), [engine-config](engine-config.md), [predefined variables](vehicles/predefined-variables.md), [texture-cfg](texture-cfg.md)

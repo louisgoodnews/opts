@@ -137,7 +137,7 @@ The string forms `(S.$.x)` and `(L.$.x)` are the only accessors that touch strin
 | `GetTime` | Simulation time in seconds. |
 | `Time`, `Year` | Calendar information. |
 | `mouse_x`, `mouse_y` | Mouse position (for drag interactions). |
-| `Weather_Temperature`, `Weather_AbsHum` | Environment. |
+| `Weather_Temperature`, `Weather_AbsHum`, `PrecipType`, `PrecipRate` | Environment (weather preset; see [weather](../../../architecture/weather.md) §7). |
 
 Names are matched case-insensitively (`GetTime`, `getTime`, `Timegap`, `timegap` all appear).
 

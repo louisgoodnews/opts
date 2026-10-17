@@ -8,13 +8,14 @@
 use bevy::prelude::*;
 use opts_bevy::{
     CalendarDate, ChronoRebuild, EnvironmentChange, MapDatePolicy, SessionEnvironment,
+    WeatherCatalogue,
 };
 use opts_gui::components::modal::{ModalBuilder, ModalEvent, ModalRoot};
 use opts_gui::interaction::activation::Activated;
 use opts_gui::l10n::{L10nArgs, L10nKey, Localization};
 use opts_gui::prelude::*;
 
-use crate::new_game_screen::weather::{preset_of, PRESETS};
+use crate::new_game_screen::weather::{presets, Label};
 use crate::shell::calendar::{self, ChoiceMark, Field};
 use crate::shell::keys;
 
@@ -27,13 +28,17 @@ pub struct EnvironmentOverlay;
 pub enum EnvAction {
     /// Change a date (draft) or time (live) field by `delta`.
     Step(Field, i32),
-    /// Choose a weather preset (live).
-    Weather(&'static str),
+    /// Choose a weather preset (live); the id is the control's [`WeatherId`].
+    Weather,
     /// Apply the date and close.
     Apply,
     /// Restore time and weather and close.
     Cancel,
 }
+
+/// The preset id of a weather chip.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct WeatherId(pub String);
 
 /// A value text of a stepper.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,8 +79,16 @@ pub fn open_environment_page(commands: &mut Commands) {
             snapshot: Some((env.seconds_of_day(), env.weather().to_owned())),
             draft_date: env.date(),
         };
+        let weather = world
+            .get_resource::<WeatherCatalogue>()
+            .cloned()
+            .unwrap_or_default();
+        let loc = world
+            .get_resource::<Localization>()
+            .cloned()
+            .unwrap_or_else(|| Localization::new("en"));
         let mut commands = world.commands();
-        spawn_page(&mut commands);
+        spawn_page(&mut commands, &weather, &loc);
         world.flush();
     });
 }
@@ -101,7 +114,11 @@ fn stepper(commands: &mut Commands, field: Field) -> Entity {
     )
 }
 
-fn weather_chips(commands: &mut Commands) -> Entity {
+fn weather_chips(
+    commands: &mut Commands,
+    weather: &WeatherCatalogue,
+    loc: &Localization,
+) -> Entity {
     let wrap = commands
         .spawn(Node {
             flex_direction: FlexDirection::Row,
@@ -111,10 +128,10 @@ fn weather_chips(commands: &mut Commands) -> Entity {
             ..default()
         })
         .id();
-    for p in PRESETS {
+    for p in presets(weather, loc) {
         let chip = calendar::spawn_choice_frame(
             commands,
-            format!("pause.environment.weather.{}", opts_gui::ui_id::slug(p.id)),
+            format!("pause.environment.weather.{}", opts_gui::ui_id::slug(&p.id)),
             Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
@@ -124,16 +141,22 @@ fn weather_chips(commands: &mut Commands) -> Entity {
                 ..default()
             },
         );
-        let name = commands
-            .spawn(text(
-                p.name_key,
-                TypeScale::BodyMedium,
-                ColorRole::OnSurface,
-            ))
-            .id();
+        let name = match p.name {
+            Label::Key(key) => commands
+                .spawn(text(key, TypeScale::BodyMedium, ColorRole::OnSurface))
+                .id(),
+            Label::Text(t) => commands
+                .spawn((
+                    Text::new(t),
+                    TextColor::default(),
+                    TypeStyleToken(TypeScale::BodyMedium),
+                    ForegroundRole(ColorRole::OnSurface),
+                ))
+                .id(),
+        };
         commands
             .entity(chip)
-            .insert(EnvAction::Weather(p.id))
+            .insert((EnvAction::Weather, WeatherId(p.id)))
             .add_child(name);
         commands.entity(wrap).add_child(chip);
     }
@@ -156,7 +179,7 @@ fn button(commands: &mut Commands, key: &'static str, filled: bool, action: EnvA
     b
 }
 
-fn spawn_page(commands: &mut Commands) {
+fn spawn_page(commands: &mut Commands, weather_list: &WeatherCatalogue, loc: &Localization) {
     let (root, card) = ModalBuilder::new()
         .with_size_percent(60.0, 80.0)
         .with_width_range(420.0, 720.0)
@@ -203,7 +226,7 @@ fn spawn_page(commands: &mut Commands) {
             ColorRole::OnSurface,
         ))
         .id();
-    let weather = weather_chips(commands);
+    let weather = weather_chips(commands, weather_list, loc);
     let rebuild = commands
         .spawn((
             text(keys::ENV_REBUILDING, TypeScale::Label, ColorRole::Info),
@@ -282,7 +305,7 @@ pub fn environment_page_input(
     mut commands: Commands,
     mut activated: MessageReader<Activated>,
     mut modal_events: MessageReader<ModalEvent>,
-    actions: Query<&EnvAction>,
+    actions: Query<(&EnvAction, Option<&WeatherId>)>,
     roots: Query<Entity, With<EnvironmentOverlay>>,
     modal_roots: Query<(), With<ModalRoot>>,
     env: Res<SessionEnvironment>,
@@ -296,7 +319,7 @@ pub fn environment_page_input(
         }
     }
     for Activated(entity) in activated.read() {
-        let Ok(action) = actions.get(*entity) else {
+        let Ok((action, weather_id)) = actions.get(*entity) else {
             continue;
         };
         match *action {
@@ -311,11 +334,13 @@ pub fn environment_page_input(
                     ..default()
                 });
             }
-            EnvAction::Weather(id) => {
-                changes.write(EnvironmentChange {
-                    weather: Some(id.to_owned()),
-                    ..default()
-                });
+            EnvAction::Weather => {
+                if let Some(WeatherId(id)) = weather_id {
+                    changes.write(EnvironmentChange {
+                        weather: Some(id.clone()),
+                        ..default()
+                    });
+                }
             }
             EnvAction::Apply => {
                 changes.write(EnvironmentChange {
@@ -341,9 +366,10 @@ pub fn refresh_environment_page(
     rebuild: Res<ChronoRebuild>,
     loc: Res<Localization>,
     mut values: Query<(&EnvValue, &mut Text)>,
+    weather: Res<WeatherCatalogue>,
     chips: Query<(
         Entity,
-        &EnvAction,
+        &WeatherId,
         &ChoiceMark,
         Has<opts_gui::interaction::state::Selected>,
     )>,
@@ -365,13 +391,11 @@ pub fn refresh_environment_page(
             t.0 = new;
         }
     }
-    let current = preset_of(env.weather()).id;
-    for (entity, action, mark, was) in &chips {
-        if let EnvAction::Weather(id) = action {
-            let on = *id == current;
-            if on != was {
-                calendar::show_chosen(&mut commands, &mut nodes, entity, mark, on);
-            }
+    let current = weather.canonical_id(env.weather());
+    for (entity, WeatherId(id), mark, was) in &chips {
+        let on = *id == current;
+        if on != was {
+            calendar::show_chosen(&mut commands, &mut nodes, entity, mark, on);
         }
     }
     for (mut node, mut args) in &mut lines {

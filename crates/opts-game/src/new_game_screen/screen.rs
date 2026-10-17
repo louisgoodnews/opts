@@ -315,6 +315,7 @@ pub fn refresh_chrome(
     state: Res<PlannerState>,
     setup: Res<NewGameSetup>,
     catalogue: Res<GameCatalogue>,
+    weather: Res<opts_bevy::WeatherCatalogue>,
     loc: Res<Localization>,
     mut summary: Query<(&SummaryPart, &mut Text)>,
     steppers: Query<(Entity, &StepperButton, Has<Selected>)>,
@@ -323,14 +324,19 @@ pub fn refresh_chrome(
     mut commands: Commands,
     added: Query<(), Added<StepperButton>>,
 ) {
-    if !state.is_changed() && !setup.is_changed() && !catalogue.is_changed() && added.is_empty() {
+    if !state.is_changed()
+        && !setup.is_changed()
+        && !catalogue.is_changed()
+        && !weather.is_changed()
+        && added.is_empty()
+    {
         return;
     }
     for (part, mut text) in &mut summary {
         let new = match part.0 {
             PlannerStep::Where => where_text(&setup),
             PlannerStep::What => what_text(&loc, &catalogue, &setup),
-            _ => when_text(&loc, &setup),
+            _ => when_text(&loc, &weather, &setup),
         };
         if text.0 != new {
             text.0 = new;

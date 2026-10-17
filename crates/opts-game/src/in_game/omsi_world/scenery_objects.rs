@@ -289,6 +289,7 @@ pub fn sync_scenery_clock(
     next.sun_alt_deg = env.sun_alt_deg();
     next.night = env.night();
     next.temperature_c = env.temperature_c();
+    next.weather = env.conditions().vars();
     if *clock != next {
         *clock = next;
     }

@@ -144,6 +144,7 @@
 - [Session Save](architecture/session-save.md)
 - [Session Environment (date, time, weather)](architecture/session-environment.md)
 - [Lighting System (sun, moon, light rooms, god rays)](architecture/lighting-system.md)
+- [Weather](architecture/weather.md)
 - [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)

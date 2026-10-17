@@ -89,8 +89,32 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
         out["map_date"] = json!(env.map_date().to_string());
         out["weather"] = json!(env.weather());
         out["clock_rate"] = json!(env.rate());
+        out["weather_conditions"] = weather_json(env);
+        if let Some(cat) = world.get_resource::<crate::weather::WeatherCatalogue>() {
+            out["weather_canonical"] = json!(cat.canonical_id(env.weather()));
+            out["weather_presets"] = json!(cat.ids());
+        }
     }
     Outcome::ok(out)
+}
+
+/// The resolved weather as the effects see it (what `sim.get` reports as `weather_conditions`).
+fn weather_json(env: &crate::environment::SessionEnvironment) -> Value {
+    let c = env.conditions();
+    json!({
+        "fog_visibility_m": c.fog_visibility_m,
+        "wind_from_deg": c.wind_from_deg,
+        "wind_speed": c.wind_speed,
+        "temperature_c": c.temperature_c,
+        "dew_point_c": c.dew_point_c,
+        "pressure_hpa": c.pressure_hpa,
+        "clouds": c.cloud.as_ref().map(|cl| json!({"type": cl.name, "base_m": cl.base_m})),
+        "precip_type": c.precip.code(),
+        "precip_rate": c.precip_rate,
+        "wetness": crate::weather::surface_state(c).wet,
+        "snow": c.snow,
+        "sun_scale": env.attenuation(),
+    })
 }
 
 fn records(list: Vec<LogRecord>) -> Value {
@@ -132,5 +156,38 @@ fn log_filter(_: &mut World, params: &Value) -> Outcome {
     match query {
         Ok((n, q)) => Outcome::ok(records(opts_logging::recent_logs(n, &q))),
         Err(e) => Outcome::err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::environment::{CalendarDate, EnvironmentChange, SessionEnvironment};
+
+    #[test]
+    fn sim_get_reports_the_resolved_weather_and_the_available_presets() {
+        let mut world = World::new();
+        world.insert_resource(Time::<Virtual>::default());
+        world.insert_resource(Time::<Real>::default());
+        world.insert_resource(ControlState::default());
+        world.insert_resource(crate::weather::WeatherCatalogue::default());
+        let mut env = SessionEnvironment::new(CalendarDate::new(2026, 6, 29), 43_200.0, "");
+        env.apply(&EnvironmentChange {
+            weather: Some("Winter Snowfall".into()),
+            ..Default::default()
+        });
+        world.insert_resource(env);
+        let out = sim_get(&mut world, &Value::Null);
+        let Outcome::Done(Ok(v)) = out else {
+            panic!("sim.get did not answer at once");
+        };
+        assert_eq!(v["weather"], "Winter Snowfall");
+        assert_eq!(v["weather_canonical"], "Winter Snowfall");
+        assert_eq!(v["weather_presets"].as_array().map(Vec::len), Some(5));
+        let c = &v["weather_conditions"];
+        assert_eq!(c["precip_type"], 2);
+        assert_eq!(c["snow"], true);
+        assert_eq!(c["temperature_c"], -3.0);
+        assert!(c["sun_scale"].as_f64().unwrap() < 0.6);
     }
 }
