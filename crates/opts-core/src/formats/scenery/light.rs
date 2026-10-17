@@ -37,6 +37,9 @@ pub struct ScoLight {
     pub cone_outer_deg: f32,
     /// Seconds to reach 63 % brightness (0 = immediate).
     pub time_const_s: f32,
+    /// The `cone` flag of `[light_enh_2]` (parameter 22 = `1`): the light also draws a volumetric
+    /// light cone (not for omnidirectional lights). `false` for `[light_enh]`.
+    pub volumetric_cone: bool,
     /// Effect texture; empty for the default.
     pub bitmap: String,
     /// Index of the `[mesh]` declared before the light (`None` when it precedes every mesh).
@@ -80,6 +83,7 @@ pub fn parse_light_enh(block: &OmsiBlock) -> Result<ScoLight, String> {
         cone_inner_deg: 180.0,
         cone_outer_deg: 180.0,
         time_const_s: 0.0,
+        volumetric_cone: false,
         bitmap: String::new(),
         after_mesh: None,
         lod_threshold: None,
@@ -104,6 +108,7 @@ pub fn parse_light_enh_2(block: &OmsiBlock) -> Result<ScoLight, String> {
     let variable = p.get(17).cloned().ok_or_else(bad)?;
     let factor = num(p, 18).unwrap_or(1.0);
     let time_const_s = num(p, 22).unwrap_or(0.0);
+    let volumetric_cone = num(p, 21).is_some_and(|v| (v - 1.0).abs() < 0.5);
     // The 24th value is an optional file name; free comment lines may follow, so only a value
     // that looks like an image file counts.
     let bitmap = p
@@ -127,6 +132,7 @@ pub fn parse_light_enh_2(block: &OmsiBlock) -> Result<ScoLight, String> {
         cone_inner_deg,
         cone_outer_deg,
         time_const_s,
+        volumetric_cone,
         bitmap,
         after_mesh: None,
         lod_threshold: None,
@@ -165,6 +171,49 @@ mod tests {
         assert_eq!(l.factor, 1.5);
         assert_eq!(l.time_const_s, 0.1);
         assert!(l.bitmap.is_empty());
+        assert!(!l.volumetric_cone);
+    }
+
+    /// Parameter 22 (`cone` = 1) marks a light that draws a volumetric cone; the rest do not.
+    #[test]
+    fn light_enh_2_reads_the_volumetric_cone_flag() {
+        let mut v: Vec<String> = [
+            "0",
+            "0",
+            "7",
+            "0",
+            "0",
+            "-1",
+            "0",
+            "1",
+            "0",
+            "0",
+            "1",
+            "230",
+            "230",
+            "255",
+            "2",
+            "120",
+            "200",
+            "NightlightA",
+            "0.8",
+            "0.5",
+            "1",
+            "1",
+            "0.2",
+        ]
+        .map(String::from)
+        .to_vec();
+        let mk = |v: &[String]| OmsiBlock {
+            keyword: "light_enh_2".into(),
+            line_number: 1,
+            parameters: v.to_vec(),
+        };
+        assert!(parse_light_enh_2(&mk(&v)).unwrap().volumetric_cone);
+        v[21] = "0".into();
+        assert!(!parse_light_enh_2(&mk(&v)).unwrap().volumetric_cone);
+        v[21] = "2".into();
+        assert!(!parse_light_enh_2(&mk(&v)).unwrap().volumetric_cone);
     }
 
     #[test]
