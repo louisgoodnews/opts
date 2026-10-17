@@ -31,6 +31,7 @@ wiz-date = { $day }. { $month } { $year }
 wiz-where-search = { $count } Karten durchsuchen…
 wiz-where-empty = Keine Karten gefunden. Prüfe den OMSI-Ordner oder suche neu.
 wiz-where-start = Startpunkt
+wiz-where-date = Datum
 wiz-where-no-starts = Diese Karte hat keine benannten Startpunkte.
 wiz-where-description = Beschreibung der Karte, in ihrer Originalsprache
 wiz-where-remembered-missing = Deine letzte Karte ist nicht mehr installiert.
@@ -73,7 +74,7 @@ wiz-options-reset = Zurücksetzen
 wiz-options-done = Fertig
 
 wiz-when-quick = Tageszeit
-wiz-when-exact = Datum und Uhrzeit
+wiz-when-exact = Uhrzeit
 wiz-when-weather = Wetter
 wiz-when-now = Jetzt
 wiz-when-morning = Morgen

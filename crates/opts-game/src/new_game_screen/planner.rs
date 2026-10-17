@@ -5,7 +5,10 @@
 
 use bevy::prelude::*;
 
+use opts_bevy::CalendarDate;
+
 use super::types::{GameCatalogue, NewGameSetup};
+use crate::shell::calendar;
 
 /// The four steps of the wizard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -60,6 +63,9 @@ pub struct PlannerState {
     pub built: Option<PlannerStep>,
     /// Notes about remembered choices that no longer exist (shown once in the step).
     pub notes: Vec<Note>,
+    /// The date was chosen by the user or remembered from the last drive: choosing a map keeps
+    /// it instead of setting the map's default date ([`default_map_date`]).
+    pub date_chosen: bool,
 }
 
 /// A one-line remark the wizard shows on a step.
@@ -194,88 +200,97 @@ pub fn matching_quick_time(setup: &NewGameSetup) -> Option<usize> {
         .position(|q| q.hour == Some(setup.hour) && q.minute == setup.minute)
 }
 
-/// Supported years.
-pub const YEARS: std::ops::RangeInclusive<i32> = 1900..=2100;
+pub use crate::shell::calendar::{month_key, Field, YEARS};
 
 /// Number of days of a month.
 pub fn days_in_month(year: i32, month: u32) -> u32 {
-    match month {
-        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
-        4 | 6 | 9 | 11 => 30,
-        _ if (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 => 29,
-        _ => 28,
-    }
+    opts_bevy::environment::days_in_month(year, month)
 }
 
-/// A part of the date or time the steppers change.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Field {
-    /// Day of the month.
-    Day,
-    /// Month.
-    Month,
-    /// Year.
-    Year,
-    /// Hour.
-    Hour,
-    /// Minute.
-    Minute,
+/// The date of the plan.
+pub fn setup_date(setup: &NewGameSetup) -> CalendarDate {
+    CalendarDate::new(setup.year, setup.month, setup.day)
+}
+
+/// Sets the date of the plan.
+pub fn set_setup_date(setup: &mut NewGameSetup, date: CalendarDate) {
+    (setup.year, setup.month, setup.day) = (date.year, date.month, date.day);
 }
 
 /// Changes one field by `delta` steps (minutes move by 5, `fine` by 1), wrapping hours, minutes,
-/// months and days, clamping years, and keeping the date valid.
+/// months and days, clamping years, and keeping the date valid (`shell::calendar`).
 pub fn step_field(setup: &mut NewGameSetup, field: Field, delta: i32, fine: bool) {
-    match field {
-        Field::Day => {
-            let n = days_in_month(setup.year, setup.month) as i32;
-            setup.day = ((setup.day as i32 - 1 + delta).rem_euclid(n) + 1) as u32;
-        }
-        Field::Month => {
-            setup.month = ((setup.month as i32 - 1 + delta).rem_euclid(12) + 1) as u32;
-        }
-        Field::Year => {
-            setup.year = (setup.year + delta).clamp(*YEARS.start(), *YEARS.end());
-        }
-        Field::Hour => setup.hour = (setup.hour as i32 + delta).rem_euclid(24) as u32,
-        Field::Minute => {
-            let step = if fine { 1 } else { 5 };
-            let m = setup.minute as i32 + delta * step;
-            setup.minute = if fine {
-                m.rem_euclid(60)
-            } else {
-                (m.div_euclid(5) * 5).rem_euclid(60)
-            } as u32;
-        }
-    }
+    let mut date = setup_date(setup);
+    calendar::step_date(&mut date, field, delta);
+    set_setup_date(setup, date);
+    calendar::step_time(&mut setup.hour, &mut setup.minute, field, delta, fine);
     clamp_date(setup);
 }
 
 /// Brings the day into the month (31 February becomes the last day of February).
 pub fn clamp_date(setup: &mut NewGameSetup) {
-    setup.year = setup.year.clamp(*YEARS.start(), *YEARS.end());
-    setup.month = setup.month.clamp(1, 12);
-    setup.day = setup.day.clamp(1, days_in_month(setup.year, setup.month));
+    let date = calendar::clamp_date(setup_date(setup));
+    set_setup_date(setup, date);
     setup.hour = setup.hour.min(23);
     setup.minute = setup.minute.min(59);
 }
 
-/// Message key of a month name.
-pub fn month_key(month: u32) -> &'static str {
-    const KEYS: [&str; 12] = [
-        "wiz-month-1",
-        "wiz-month-2",
-        "wiz-month-3",
-        "wiz-month-4",
-        "wiz-month-5",
-        "wiz-month-6",
-        "wiz-month-7",
-        "wiz-month-8",
-        "wiz-month-9",
-        "wiz-month-10",
-        "wiz-month-11",
-        "wiz-month-12",
-    ];
-    KEYS[(month.clamp(1, 12) - 1) as usize]
+/// What a map's `global.cfg` says about its time: `[years]` and `[realyearoffset]`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MapEra {
+    /// `[years]`: the first and last year the map is set in.
+    pub years: Option<(i32, i32)>,
+    /// `[realyearoffset]`: years added to today's date (0 when absent).
+    pub real_year_offset: i32,
+}
+
+impl MapEra {
+    /// The era of a parsed `global.cfg`.
+    pub fn of(manifest: &opts_core::formats::map::MapManifest) -> Self {
+        Self {
+            years: manifest.years.map(|(a, b)| (a.min(b), a.max(b))),
+            real_year_offset: manifest.real_year_offset.unwrap_or(0),
+        }
+    }
+
+    /// Reads `maps/<folder>/global.cfg` below the installation; `None` when it cannot be read.
+    pub fn read(root: &std::path::Path, folder: &str) -> Option<Self> {
+        let path = root.join("maps").join(folder).join("global.cfg");
+        let bytes = std::fs::read(path).ok()?;
+        opts_core::formats::map::MapManifest::parse(&bytes)
+            .ok()
+            .map(|m| Self::of(&m))
+    }
+}
+
+/// The date a map starts on when the user has not chosen one: today shifted by
+/// `[realyearoffset]` years (29 February becomes 28 February in a common year), clamped into
+/// `[years]` as `a-01-01 ..= b-12-31`. A map without `[years]` keeps the shifted date.
+pub fn default_map_date(today: CalendarDate, era: &MapEra) -> CalendarDate {
+    let shifted = CalendarDate::clamped(today.year + era.real_year_offset, today.month, today.day);
+    let date = match era.years {
+        Some((a, b)) => shifted.clamp(CalendarDate::new(a, 1, 1), CalendarDate::new(b, 12, 31)),
+        None => shifted,
+    };
+    calendar::clamp_date(date)
+}
+
+/// A fixed "today" for the map default date (screenshots and tests); `None` uses the wall clock.
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Today(pub Option<CalendarDate>);
+
+impl Today {
+    /// The date this resource stands for.
+    pub fn date(&self) -> CalendarDate {
+        self.0.unwrap_or_else(today)
+    }
+}
+
+/// Today's date on the wall clock.
+pub fn today() -> CalendarDate {
+    use chrono::Datelike;
+    let t = chrono::Local::now().date_naive();
+    CalendarDate::new(t.year(), t.month(), t.day())
 }
 
 /// `HH:MM`.
@@ -438,6 +453,57 @@ mod tests {
         s.year = 1900;
         step_field(&mut s, Field::Year, -5, false);
         assert_eq!(s.year, 1900);
+    }
+
+    #[test]
+    fn the_default_date_shifts_today_and_clamps_into_the_years() {
+        let spandau = MapEra {
+            years: Some((1986, 1994)),
+            real_year_offset: -25,
+        };
+        // 2026-10-17 − 25 years = 2001-10-17, after the map's last year.
+        assert_eq!(
+            default_map_date(CalendarDate::new(2026, 10, 17), &spandau),
+            CalendarDate::new(1994, 12, 31)
+        );
+        // 2012-03-04 − 25 = 1987-03-04, inside the years.
+        assert_eq!(
+            default_map_date(CalendarDate::new(2012, 3, 4), &spandau),
+            CalendarDate::new(1987, 3, 4)
+        );
+        // Before the first year: 1 January.
+        assert_eq!(
+            default_map_date(CalendarDate::new(2005, 6, 1), &spandau),
+            CalendarDate::new(1986, 1, 1)
+        );
+        // A map without [years] keeps the shifted date; 29 February becomes 28 February.
+        let open = MapEra {
+            years: None,
+            real_year_offset: -1,
+        };
+        assert_eq!(
+            default_map_date(CalendarDate::new(2024, 2, 29), &open),
+            CalendarDate::new(2023, 2, 28)
+        );
+        assert_eq!(
+            default_map_date(CalendarDate::new(2026, 10, 17), &MapEra::default()),
+            CalendarDate::new(2026, 10, 17)
+        );
+    }
+
+    #[test]
+    fn the_era_comes_from_global_cfg() {
+        let m = opts_core::formats::map::MapManifest::from_text(
+            "[years]\n1994\n1986\n\n[realyearoffset]\n-25\n",
+        )
+        .expect("parse");
+        assert_eq!(
+            MapEra::of(&m),
+            MapEra {
+                years: Some((1986, 1994)),
+                real_year_offset: -25
+            }
+        );
     }
 
     #[test]

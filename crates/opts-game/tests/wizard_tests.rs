@@ -318,16 +318,37 @@ fn live_weather_is_visible_marked_and_has_no_numbers() {
 }
 
 #[test]
+fn a_fresh_plan_starts_on_the_maps_default_date() {
+    use opts_game::new_game_screen::planner::{default_map_date, setup_date, today, MapEra};
+    let mut app = wizard("default-date");
+    assert!(!app.world().resource::<PlannerState>().date_chosen);
+    // The fixture maps have no `global.cfg`: no offset, no years, so today.
+    assert_eq!(
+        setup_date(app.world().resource::<NewGameSetup>()),
+        default_map_date(today(), &MapEra::default())
+    );
+    assert!(find_entity(app.world_mut(), "wizard.where.day.plus").is_some());
+    cleanup("default-date");
+}
+
+#[test]
 fn quick_chips_and_steppers_change_the_time_and_date() {
     let mut app = wizard("when");
+    // The date is chosen on the map step (one place), the time on step When.
+    let month = app.world().resource::<NewGameSetup>().month;
+    press(&mut app, "wizard.where.month.minus");
+    assert_eq!(
+        app.world().resource::<NewGameSetup>().month,
+        if month == 1 { 12 } else { month - 1 }
+    );
+    assert!(app.world().resource::<PlannerState>().date_chosen);
     press(&mut app, "wizard.stepper.when");
+    assert!(find_entity(app.world_mut(), "wizard.when.month.minus").is_none());
     press(&mut app, "wizard.when.quick.3");
     let s = app.world().resource::<NewGameSetup>().clone();
     assert_eq!((s.hour, s.minute), (18, 0));
     press(&mut app, "wizard.when.hour.plus");
     assert_eq!(app.world().resource::<NewGameSetup>().hour, 19);
-    press(&mut app, "wizard.when.month.minus");
-    assert_eq!(app.world().resource::<NewGameSetup>().month, 9);
     press(&mut app, "wizard.when.weather.rainy-afternoon");
     assert_eq!(
         app.world().resource::<NewGameSetup>().weather_preset,
@@ -417,30 +438,49 @@ fn the_date_and_time_block_fits_a_1024_window_at_100_and_150_percent() {
             }
             app.world_mut().insert_resource(UiScale(scale));
         }
-        press(&mut app, "wizard.stepper.when");
-        for _ in 0..4 {
-            app.update();
-        }
-        let width = 1024.0 / scale;
-        let mut q = app
-            .world_mut()
-            .query::<(&Name, &ComputedNode, &UiGlobalTransform)>();
-        let block = q
-            .iter(app.world())
-            .find(|(n, ..)| n.as_str() == "DateTimeBlock")
-            .map(|(_, c, t)| {
+        // The time block sits at the left of step When and must fit the window; the date block
+        // sits in the map step's detail pane and must fit that pane.
+        for (stepper, name, in_window) in [
+            ("wizard.stepper.where", "DateBlock", false),
+            ("wizard.stepper.when", "TimeBlock", true),
+        ] {
+            press(&mut app, stepper);
+            for _ in 0..4 {
+                app.update();
+            }
+            let mut q = app.world_mut().query::<(
+                Entity,
+                &Name,
+                &ComputedNode,
+                &UiGlobalTransform,
+                Option<&ChildOf>,
+            )>();
+            let rect = |c: &ComputedNode, t: &UiGlobalTransform| {
                 (
                     c.size() * c.inverse_scale_factor,
                     t.translation * c.inverse_scale_factor,
                 )
-            })
-            .expect("the picker block");
-        let right = block.1.x + block.0.x / 2.0;
-        assert!(
-            right <= width + 1.0,
-            "scale {scale}: right edge {right} beyond {width}"
-        );
-        assert!(block.0.x <= 560.0 + 1.0);
+            };
+            let (block, parent) = q
+                .iter(app.world())
+                .find(|(_, n, ..)| n.as_str() == name)
+                .map(|(_, _, c, t, p)| (rect(c, t), p.map(ChildOf::parent)))
+                .expect("the picker block");
+            let limit = if in_window {
+                1024.0 / scale
+            } else {
+                let parent = parent.expect("a parent");
+                let (_, _, c, t, _) = q.get(app.world(), parent).expect("parent node");
+                let (size, centre) = rect(c, t);
+                centre.x + size.x / 2.0
+            };
+            let right = block.1.x + block.0.x / 2.0;
+            assert!(
+                right <= limit + 1.0,
+                "{name} at scale {scale}: right edge {right} beyond {limit}"
+            );
+            assert!(block.0.x <= 560.0 + 1.0);
+        }
         cleanup("fit");
     }
 }
