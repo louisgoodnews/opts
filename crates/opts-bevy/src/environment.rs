@@ -19,8 +19,12 @@ use bevy::prelude::*;
 use opts_core::formats::map::lists::day;
 use serde::{Deserialize, Serialize};
 
+use crate::moon::{moon_state, MoonState};
 pub use crate::weather::WeatherKind;
-use crate::weather::{light_scales, WeatherCatalogue, WeatherConditions};
+use crate::weather::{
+    effective_cover, light_scales_for_cover, WeatherCatalogue, WeatherConditions,
+};
+use opts_core::formats::weather::PrecipKind;
 
 /// Latitude of the built-in sun formula. OMSI maps carry no geographic position, so the sun path
 /// assumes central Europe (where OMSI's maps lie) and treats clock time as local solar time.
@@ -190,6 +194,75 @@ pub fn sun_position(hour: f32, day_of_year: f32, latitude_deg: f32) -> (f32, f32
     )
 }
 
+/// The sky as far as lighting is concerned: the one input of [`light_attenuation`].
+///
+/// The weather side fills it ([`WeatherSky::from_conditions`]); the lighting code only reads
+/// [`LightAttenuation`].
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WeatherSky {
+    /// Share of the sky that blocks the direct light, `0..=1` (clouds, precipitation, fog).
+    pub cloud_cover: f32,
+    /// Meteorological visibility in metres.
+    pub visibility_m: f32,
+    /// What falls.
+    pub precip: PrecipKind,
+    /// Ground wetness `0..=1` (reserved: no rule reads it yet).
+    pub wet: f32,
+}
+
+impl Default for WeatherSky {
+    fn default() -> Self {
+        Self {
+            cloud_cover: 0.0,
+            visibility_m: crate::weather::FOG_MAX_VISIBILITY_M,
+            precip: PrecipKind::None,
+            wet: 0.0,
+        }
+    }
+}
+
+impl WeatherSky {
+    /// The sky of resolved weather conditions.
+    #[must_use]
+    pub fn from_conditions(c: &WeatherConditions) -> Self {
+        Self {
+            cloud_cover: effective_cover(c),
+            visibility_m: c.fog_visibility_m,
+            precip: c.precip,
+            wet: c.ground_wet.into_iter().fold(0.0, f32::max).clamp(0.0, 1.0),
+        }
+    }
+}
+
+/// What the sky does to each light, `0..=1` (1 = clear).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LightAttenuation {
+    /// The direct sunlight.
+    pub direct: f32,
+    /// The ambient light.
+    pub ambient: f32,
+    /// The moonlight (cloud blocks the weaker light more).
+    pub moon: f32,
+    /// Light shafts: they need gaps in the cloud, so a solid overcast has none.
+    pub shafts: f32,
+}
+
+/// **The one attenuation function** (design `lighting-system.md` 5.6). `direct` and `ambient`
+/// come from [`light_scales_for_cover`] (the rule of [`light_scales`]: 0.55 and 0.8 at full cover,
+/// the values that were in use before); `moon = 1 − 0.65·cover`; `shafts = direct² × (1 −
+/// cover)`, which is 0 under a solid cover.
+#[must_use]
+pub fn light_attenuation(w: &WeatherSky) -> LightAttenuation {
+    let cover = w.cloud_cover.clamp(0.0, 1.0);
+    let scales = light_scales_for_cover(cover);
+    LightAttenuation {
+        direct: scales.sun,
+        ambient: scales.ambient,
+        moon: 1.0 - 0.65 * cover,
+        shafts: scales.sun * scales.sun * (1.0 - cover),
+    }
+}
+
 /// What happens to the map date (the date the map content, Chrono, is built for) when a change
 /// sets the date.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -283,6 +356,7 @@ pub struct SessionEnvironment {
     kind: WeatherKind,
     sun_alt_deg: f32,
     sun_az_deg: f32,
+    moon: MoonState,
 }
 
 impl Default for SessionEnvironment {
@@ -306,6 +380,7 @@ impl SessionEnvironment {
             kind: WeatherKind::Clear,
             sun_alt_deg: 0.0,
             sun_az_deg: 0.0,
+            moon: moon_state(date, 0.0, LATITUDE_DEG),
         };
         env.set_seconds(seconds_of_day);
         env.derive_sun();
@@ -411,17 +486,30 @@ impl SessionEnvironment {
         self.sun_alt_deg < NIGHT_SUN_ALT_DEG
     }
 
-    /// Multiplier for the sun's illuminance under the weather
-    /// ([`light_scales`], the one place weather scales the light).
+    /// The moon (position, phase, bright limb) for the session's date and time, refreshed with
+    /// the sun.
+    #[must_use]
+    pub fn moon(&self) -> &MoonState {
+        &self.moon
+    }
+
+    /// What the weather does to every light ([`light_attenuation`]).
+    #[must_use]
+    pub fn light_attenuation(&self) -> LightAttenuation {
+        light_attenuation(&WeatherSky::from_conditions(&self.conditions))
+    }
+
+    /// Multiplier for the sun's illuminance under the weather: the `direct` part of
+    /// [`Self::light_attenuation`].
     #[must_use]
     pub fn attenuation(&self) -> f32 {
-        light_scales(&self.conditions).sun
+        self.light_attenuation().direct
     }
 
     /// Multiplier for the ambient light under the weather ([`light_scales`]).
     #[must_use]
     pub fn ambient_attenuation(&self) -> f32 {
-        light_scales(&self.conditions).ambient
+        self.light_attenuation().ambient
     }
 
     /// Outside temperature in °C.
@@ -524,6 +612,7 @@ impl SessionEnvironment {
         let (alt, az) = sun_position(self.hour(), self.date.day_of_year() as f32, LATITUDE_DEG);
         self.sun_alt_deg = alt;
         self.sun_az_deg = az;
+        self.moon = moon_state(self.date, self.seconds_of_day, LATITUDE_DEG);
     }
 }
 
@@ -865,5 +954,61 @@ mod tests {
             opts_core::formats::weather::PrecipKind::Rain
         );
         assert!(env.attenuation() < 0.6);
+    }
+
+    fn sky(cover: f32) -> WeatherSky {
+        WeatherSky {
+            cloud_cover: cover,
+            ..WeatherSky::default()
+        }
+    }
+
+    #[test]
+    fn attenuation_is_clear_at_one_and_the_old_values_under_full_cover() {
+        let clear = light_attenuation(&sky(0.0));
+        assert_eq!(
+            (clear.direct, clear.ambient, clear.moon, clear.shafts),
+            (1.0, 1.0, 1.0, 1.0)
+        );
+        let over = light_attenuation(&sky(1.0));
+        assert!((over.direct - 0.55).abs() < 1e-6);
+        assert!((over.ambient - 0.8).abs() < 1e-6);
+        assert!((over.moon - 0.35).abs() < 1e-6);
+        assert_eq!(over.shafts, 0.0, "a solid overcast has no beam");
+    }
+
+    #[test]
+    fn attenuation_is_monotone_in_cloud_cover() {
+        let mut prev = light_attenuation(&sky(0.0));
+        for i in 1..=20 {
+            let a = light_attenuation(&sky(i as f32 / 20.0));
+            assert!(a.direct <= prev.direct && a.ambient <= prev.ambient);
+            assert!(a.moon <= prev.moon && a.shafts <= prev.shafts);
+            assert!(a.moon < a.direct, "cloud blocks the weaker light more");
+            prev = a;
+        }
+    }
+
+    #[test]
+    fn the_environment_wrappers_agree_with_the_function() {
+        let env =
+            SessionEnvironment::new(CalendarDate::new(2026, 6, 29), 43_200.0, "Rainy Afternoon");
+        let a = env.light_attenuation();
+        assert_eq!(env.attenuation(), a.direct);
+        assert_eq!(env.ambient_attenuation(), a.ambient);
+        assert_eq!(
+            a,
+            light_attenuation(&WeatherSky::from_conditions(env.conditions()))
+        );
+        assert!(a.shafts < 0.2 && a.moon < 0.6);
+    }
+
+    #[test]
+    fn the_moon_follows_the_clock() {
+        let mut env = SessionEnvironment::new(CalendarDate::new(2026, 10, 17), 18.0 * 3600.0, "");
+        let before = *env.moon();
+        env.advance(4.0 * 3600.0);
+        assert_ne!(before.elevation_deg, env.moon().elevation_deg);
+        assert!((before.illuminated - env.moon().illuminated).abs() < 0.02);
     }
 }

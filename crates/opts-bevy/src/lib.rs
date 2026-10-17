@@ -35,6 +35,8 @@ pub mod loader;
 pub mod material;
 pub mod mesh;
 pub mod model;
+pub mod moon;
+pub mod moon_material;
 pub mod plugin;
 pub mod position_tag;
 pub mod reflections;
@@ -43,6 +45,7 @@ pub mod reporting;
 pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;
+pub mod sun_rays;
 pub mod terrain;
 pub mod terrain_query;
 pub mod text_texture;
@@ -77,8 +80,9 @@ pub use coords::{
     sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
 };
 pub use environment::{
-    CalendarDate, ChronoRebuild, EnvironmentChange, EnvironmentPlugin, EnvironmentSet,
-    MapDateChanged, MapDatePolicy, SessionEnvironment, WeatherKind,
+    light_attenuation, CalendarDate, ChronoRebuild, EnvironmentChange, EnvironmentPlugin,
+    EnvironmentSet, LightAttenuation, MapDateChanged, MapDatePolicy, SessionEnvironment,
+    WeatherKind, WeatherSky,
 };
 pub use human::{
     apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, sync_player_head, AlignEyes,
