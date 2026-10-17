@@ -1,7 +1,7 @@
 //! Named timers for the tile-streaming pipeline (M-0089, `docs/src/architecture/streaming-performance.md`).
 //!
 //! `let _t = stream_trace::span("tile.parse");` times the rest of the scope. Without the cargo
-//! feature `stream-trace` the guard is a zero-sized type without a destructor and `span` is an
+//! feature `stream-trace` the guard is a zero-sized type with an empty destructor and `span` is an
 //! empty `#[inline(always)]` function: no clock read, no lock, no code. With the feature every
 //! drop adds the elapsed time to a process-wide table keyed by the static name; the host drains
 //! the table once per frame ([`drain`]) and writes one line per frame
@@ -84,9 +84,14 @@ mod off {
         pub max_ns: u64,
     }
 
-    /// Zero-sized guard: no destructor, nothing to run.
-    #[derive(Debug, Clone, Copy)]
+    /// Zero-sized guard; its (empty) destructor is optimised away.
+    #[derive(Debug)]
     pub struct Span;
+
+    impl Drop for Span {
+        #[inline(always)]
+        fn drop(&mut self) {}
+    }
 
     /// Does nothing (the `stream-trace` feature is off).
     #[inline(always)]

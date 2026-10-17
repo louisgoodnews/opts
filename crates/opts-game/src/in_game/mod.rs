@@ -10,6 +10,7 @@ pub mod loading_pipeline;
 pub mod loading_ui;
 pub mod omsi_world;
 pub mod screenshot;
+pub mod stream_budget;
 pub mod sky;
 pub mod types;
 pub mod vehicle_spawner;

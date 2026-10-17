@@ -39,10 +39,13 @@ pub fn load_next_tile(
     if job.resident.contains_key(&key) {
         return;
     }
+    let t_total = opts_logging::stream_trace::span("tile.build");
+    let t_parse = opts_logging::stream_trace::span("tile.read_parse");
     let Some(tile) = job.read_tile(key) else {
         stats.tiles_missing += 1;
         return;
     };
+    drop(t_parse);
     opts_bevy::set_loading_tile(Some(key));
     let mut children: Vec<Entity> = Vec::new();
     let origin = {
@@ -61,6 +64,7 @@ pub fn load_next_tile(
         "tile parsed"
     );
 
+    let t = opts_logging::stream_trace::span("tile.terrain");
     let terrain = spawn_terrain(
         job,
         stats,
@@ -74,6 +78,8 @@ pub fn load_next_tile(
         origin,
         &mut children,
     );
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.splines");
     spawn_splines(
         job,
         stats,
@@ -86,6 +92,8 @@ pub fn load_next_tile(
         &mut children,
     );
 
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.surfaces");
     // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and terrain.
     {
         let mut roads = Vec::new();
@@ -114,6 +122,8 @@ pub fn load_next_tile(
         );
     }
 
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.attachments");
     // --- Scenery objects -------------------------------------------------------------------
     // Spline attachments become ordinary placements once resolved against their carrier spline.
     let attached = if tile.spline_attachments.is_empty() {
@@ -128,6 +138,8 @@ pub fn load_next_tile(
             |x, y| terrain.as_ref().map_or(0.0, |t| sample_terrain(t, x, y)),
         )
     };
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.registries");
     let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
     super::pedestrians::register_tile(commands, key, lanes);
     let rail = super::rail::tile_rail_lanes(job, &tile, &attached, terrain.as_ref(), origin);
@@ -137,6 +149,8 @@ pub fn load_next_tile(
     let road = super::traffic::tile_segments(job, &tile, terrain.as_ref(), origin);
     super::traffic::register_tile(commands, key, road);
     job.scenery.index_tile(&tile);
+    drop(t);
+    let t_objects = opts_logging::stream_trace::span("tile.objects");
     let placements = tile
         .objects
         .iter()
@@ -159,6 +173,8 @@ pub fn load_next_tile(
         );
     }
 
+    drop(t_objects);
+    let t = opts_logging::stream_trace::span("tile.root_adopt");
     let tile_root = commands
         .spawn((
             Transform::default(),
@@ -186,6 +202,8 @@ pub fn load_next_tile(
         tracing::info!(tile = ?key, meshes = waiting.len(), "tile rebuilds when its meshes are decoded");
         job.waiting_decode.insert(key, waiting);
     }
+    drop(t);
+    drop(t_total);
     stats.tiles_loaded = job.resident.len();
     stats.asset_failures = job.cache.stats.failures.len();
     opts_bevy::set_loading_tile(None);
@@ -207,11 +225,15 @@ fn spawn_object(
     origin: (f32, f32),
     children: &mut Vec<Entity>,
 ) {
-    let Some((sco_path, sco)) = job.sco(&obj.sco_file) else {
+    let t_sco = opts_logging::stream_trace::span("obj.sco");
+    let sco_found = job.sco(&obj.sco_file);
+    drop(t_sco);
+    let Some((sco_path, sco)) = sco_found else {
         stats.objects_failed += 1;
         return;
     };
     if let Some(tree) = &sco.tree {
+        let _t = opts_logging::stream_trace::span("obj.tree");
         children.extend(spawn_tree(
             job, stats, commands, meshes, materials, images, tree, obj, origin, terrain,
         ));
@@ -279,7 +301,10 @@ fn spawn_object(
         roll = ?obj.roll_deg,
         "placing scenery object"
     );
-    super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
+    {
+        let _t = opts_logging::stream_trace::span("obj.collision");
+        super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
+    }
     if let Some(cfg_rel) = &sco.model_cfg {
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
@@ -290,7 +315,9 @@ fn spawn_object(
     let protected_before = job.cache.stats.protected_meshes;
     let deferred_before = job.cache.stats.deferred_meshes;
     // Scripts and string-variable names (`[texttexture_enh]` sources given by name).
+    let t_tpl = opts_logging::stream_trace::span("obj.script_template");
     let template = job.script_template(&sco_path, &sco);
+    drop(t_tpl);
     let string_names = template
         .as_ref()
         .map(|t| t.string_names.clone())
@@ -385,6 +412,7 @@ fn spawn_object(
         .friendly_name
         .clone()
         .unwrap_or_else(|| obj.sco_file.clone());
+    let _t_fin = opts_logging::stream_trace::span("obj.entity_spawn");
     let parent = commands.spawn((transform, Name::new(name))).id();
     children.push(parent);
     stats.scene_vertices += mesh_parts
@@ -489,7 +517,10 @@ pub fn stream_world_tiles(
     if !state.is_complete {
         return;
     }
-    job.rebuild_decoded_tiles(&mut commands, &mut stats);
+    {
+        let _t = opts_logging::stream_trace::span("stream.rebuild_check");
+        job.rebuild_decoded_tiles(&mut commands, &mut stats);
+    }
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
     let centre = (
@@ -505,6 +536,7 @@ pub fn stream_world_tiles(
         .copied()
         .filter(|k| dist(*k) > radius + 1)
         .collect();
+    let _t_evict = opts_logging::stream_trace::span("stream.evict");
     for key in far {
         if let Some(root) = job.resident.remove(&key) {
             commands.entity(root).despawn();
@@ -517,6 +549,7 @@ pub fn stream_world_tiles(
             tracing::debug!(tile = ?key, "tile unloaded");
         }
     }
+    drop(_t_evict);
     stats.tiles_loaded = job.resident.len();
 
     if job.queue.is_empty() {
