@@ -236,3 +236,9 @@ Designs: [lighting system](../architecture/lighting-system.md) (rooms, moon, sun
 **Phase C order (confirmed):** (1) `MainCamera` marker, 48 `With<Camera3d>` sites (13 write the camera transform, 10 use `single()` and silently stop with two cameras, about 16 take the first/active camera); (2) HDR on the main camera, screenshots and golden screens regenerated in the same commit; (3) moon model, moonlight, disc phase, sun god rays; (4) cones for lanterns and headlights, light rooms, `[nomaplighting]`; (5) sky cube map for glass; (6) mirror cameras with HDR; settings `graphics.light_shafts`, `graphics.light_cones`, governor, Environment UI entries.
 
 **Limits of the evidence:** the benchmark scene is synthetic (the ALU ballast makes it GPU-bound; deltas, not absolute times, are valid); depth-prepass/overdraw cost and the CPU cost of many cone entities must be re-measured in the real game; cone look is untuned; weather was tested headlessly only (no window): the fogged sky and clouds on a real map are unchecked. The benchmark agent used about 50 runs against the allowed 40 (46 offscreen).
+
+### Checkpoint 2 decisions (lighting round)
+
+1. **Quality mode automatic/custom** (`graphics.light_quality_mode`): Automatic = frame-time governor, Custom = every effect individually controllable; see [lighting system §9](../architecture/lighting-system.md#9-performance-budget-measured-2026-10-17).
+2. **Cones use the depth fade** (depth prepass on the main camera; measured in the real game during implementation).
+3. **Night (moon) shafts are on by default.**

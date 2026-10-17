@@ -388,7 +388,12 @@ scenery clock (NightlightA) -> map-light pool (exclude lamps over the vehicle; i
 | 4 | **Sun rays only** | 8 steps, no bloom, no mirrors |
 | 5 | **All volumetrics off** | `VolumetricLight`, `VolumetricFog` and the `FogVolume` removed (zero GPU cost, `render.rs:247-262`); HDR stays |
 
-Governor (`light_shafts_auto`, default on; frame-time based, because GPU timestamp queries exist only on Vulkan/DX12): one level down when the 95th-percentile frame time over 120 frames exceeds 15 ms for 2 s (never more than one step per 5 s); one level up when it stays below 11 ms for 15 s ❓ (thresholds to be tuned in the real game). The Environment UI shows the level and has the manual toggle.
+**Quality mode (user decision, 2026-10-17: "give the user the choice and ability").** One setting `graphics.light_quality_mode` with two values:
+
+* **Automatic** (default): a governor picks the ladder level from the measured frame time. It is frame-time based, because GPU timestamp queries exist only on Vulkan/DX12: one level down when the 95th-percentile frame time over 120 frames exceeds 15 ms for 2 s (never more than one step per 5 s); one level up when it stays below 11 ms for 15 s ❓ (thresholds tuned in the real game). The current level is shown in the Environment UI and the settings page.
+* **Custom:** the governor never touches anything; every effect has its own control, on the settings page and the Environment UI: sun rays (off / low 8 / medium 16 / high 32 / ultra 64 steps), night (moon) shafts, cones for lanterns, cones for vehicle headlights, cone cap (0-96), cone depth fade, mirror count (0-2) and update rate, sky-cubemap reflections on glass, bloom. The ladder levels are presets of these controls ("Apply level n to custom").
+
+Switching from Automatic to Custom keeps the level reached so far as the starting values. Defaults at level 0: sun rays medium (16 steps), **night shafts on**, lantern and headlight cones on (64, cap 96), **cone depth fade on** (needs a depth prepass on the main camera; it is a custom-mode control and the first thing the ladder drops after "fewer cones"), mirrors 2 at 256×128 every 2nd frame, bloom off.
 
 ## 10. Files that change
 
