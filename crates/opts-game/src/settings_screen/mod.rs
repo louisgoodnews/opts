@@ -45,6 +45,10 @@ impl Plugin for SettingsScreenPlugin {
             .add_systems(OnEnter(AppState::Settings), spawn_settings_screen)
             .add_systems(OnExit(AppState::Settings), cleanup_settings_screen)
             .add_systems(
+                OnEnter(AppState::Settings),
+                |mut facts: ResMut<crate::content_facts::ContentFactsStore>| facts.invalidate(),
+            )
+            .add_systems(
                 Update,
                 (
                     handle_back_to_menu,
@@ -53,10 +57,6 @@ impl Plugin for SettingsScreenPlugin {
                 )
                     .run_if(any_with_component::<page::SettingsPage>)
                     .run_if(opts_bevy::reporting::not_modal_active),
-            )
-            .add_systems(
-                Update,
-                scan_status::refresh_scan_chip.run_if(any_with_component::<scan_status::ScanChip>),
             )
             .add_systems(
                 Update,

@@ -139,6 +139,8 @@ pub struct ControlState {
     pub frame: u64,
     /// Smoothed frames per second.
     pub fps: f32,
+    /// Frame durations of the last ten seconds as `(Time<Real>` seconds at the frame, milliseconds)`.
+    pub frame_log: std::collections::VecDeque<(f64, f32)>,
     /// Injected inputs waiting for their release time.
     pub releases: Vec<Release>,
 }
@@ -149,6 +151,7 @@ impl Default for ControlState {
             started: Instant::now(),
             frame: 0,
             fps: 0.0,
+            frame_log: std::collections::VecDeque::new(),
             releases: Vec::new(),
         }
     }

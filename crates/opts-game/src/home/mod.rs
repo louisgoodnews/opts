@@ -17,13 +17,13 @@ use opts_gui::l10n::{L10nArgs, L10nKey, Localization};
 use opts_gui::prelude::*;
 use opts_gui::theme::LayoutClass;
 
-pub use hero::{cover_rect, HeroImage};
+pub use hero::{cover_rect, HeroImage, HeroPending};
 pub use model::{stage_key, CatalogueStatus, DriveBlock, HomeBanner, HomeInputs};
 
 use crate::app_state::AppState;
 use crate::catalogue_service::{CatalogueService, DiscoveryStatus};
 use crate::drive_history::{DriveHistory, DriveRecord};
-use crate::menu::background::{load_map_picture, sync_menu_scrim, MenuBackgroundScrim};
+use crate::menu::background::sync_menu_scrim;
 use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
 use crate::shell::banner::{dismiss_banner, show_banner, BannerAction, BannerSeverity, BannerSpec};
 use crate::shell::{keys, nav::Navigate, spawn_screen_root, ShellContent};
@@ -92,10 +92,15 @@ pub struct HomePlugin;
 
 impl Plugin for HomePlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<crate::content_facts::ContentFactsPlugin>() {
+            app.add_plugins(crate::content_facts::ContentFactsPlugin);
+        }
         app.init_resource::<HomeDrives>()
             .init_resource::<NewGameSetup>()
             .init_resource::<GameCatalogue>()
+            .init_resource::<hero::HeroLoads>()
             .add_message::<StartDrive>()
+            .add_systems(Startup, load_drive_history)
             .add_systems(OnEnter(AppState::MainMenu), view::spawn_home)
             .add_systems(OnExit(AppState::MainMenu), despawn_home)
             .add_systems(
@@ -105,6 +110,8 @@ impl Plugin for HomePlugin {
                     sync_home_status,
                     banner_actions,
                     sync_menu_scrim,
+                    hero::start_hero_loads,
+                    hero::finish_hero_loads,
                     hero::sync_hero_crop,
                 )
                     .run_if(in_state(AppState::MainMenu)),
@@ -114,6 +121,14 @@ impl Plugin for HomePlugin {
             // freshly built page is torn down while other systems still hold its entities.
             .add_systems(Update, rebuild_when_content_arrives)
             .add_systems(Update, start_drive_system);
+    }
+}
+
+/// Reads the remembered drives once at startup (the only writer is Home itself, which keeps the
+/// copy in memory current), so building Home never touches the disk.
+fn load_drive_history(mut drives: ResMut<HomeDrives>) {
+    if drives.persist {
+        drives.history = DriveHistory::load();
     }
 }
 
@@ -141,8 +156,12 @@ fn despawn_home(mut commands: Commands, roots: Query<Entity, With<HomeRoot>>) {
 }
 
 /// What Home depends on, read from the world.
-fn current_inputs(service: Option<&CatalogueService>, lists: &GameCatalogue) -> HomeInputs {
-    let omsi_found = service.is_some() || crate::omsi_root::known_omsi_root().is_some();
+fn current_inputs(
+    service: Option<&CatalogueService>,
+    lists: &GameCatalogue,
+    root_found: bool,
+) -> HomeInputs {
+    let omsi_found = service.is_some() || root_found;
     let stage = service.and_then(|s| match s.status() {
         DiscoveryStatus::Running(stage) => Some(stage),
         _ => None,
@@ -181,6 +200,7 @@ pub fn sync_home_status(
     time: Res<Time>,
     service: Option<Res<CatalogueService>>,
     lists: Res<GameCatalogue>,
+    facts: Res<crate::content_facts::ContentFactsStore>,
     loc: Res<Localization>,
     mut since: Local<Option<f32>>,
     mut last: Local<Option<(HomeInputs, String)>>,
@@ -198,7 +218,14 @@ pub fn sync_home_status(
         return;
     }
     *since = Some(0.0);
-    let inputs = current_inputs(service.as_deref(), &lists);
+    // Without a catalogue service the installation is looked for in the background
+    // (`content_facts`); until that answer is there nothing is decided (no flicker).
+    let root_found = match (service.is_some(), facts.light()) {
+        (true, _) => false,
+        (false, Some(l)) => l.root == crate::content_facts::RootState::Present,
+        (false, None) => return,
+    };
+    let inputs = current_inputs(service.as_deref(), &lists, root_found);
     let locale = loc.locale().to_owned();
     if last
         .as_ref()
@@ -352,8 +379,17 @@ pub fn start_drive_system(
     stamped.last_driven = view::now_secs();
     drives.history.record(stamped);
     if drives.persist {
-        if let Err(e) = drives.history.save() {
-            tracing::warn!("could not save the drive history: {e}");
+        // Written on a worker thread: the drive starts at once, the file follows.
+        let history = drives.history.clone();
+        if let Err(e) = std::thread::Builder::new()
+            .name("drive-history".into())
+            .spawn(move || {
+                if let Err(e) = history.save() {
+                    tracing::warn!("could not save the drive history: {e}");
+                }
+            })
+        {
+            tracing::warn!("could not start the drive history writer: {e}");
         }
     }
     tracing::info!(map = %record.map, vehicle = %record.vehicle, "starting a drive from Home");

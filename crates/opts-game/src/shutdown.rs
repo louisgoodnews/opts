@@ -21,6 +21,7 @@ fn handle_application_shutdown(
     if exit_events.read().next().is_some() {
         tracing::info!("Received AppExit event; performing clean shutdown tasks");
         if let Some(settings) = settings {
+            GameSettings::flush_background_saves();
             if let Err(err) = settings.save() {
                 tracing::warn!(err = ?err, "Failed to persist GameSettings during shutdown");
             } else {

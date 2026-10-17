@@ -341,8 +341,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Dropdown menus scroll (R-28, `fix/dropdown-scroll`).
   - [x] Search field in long dropdowns (R-28); catalogue summary with a breakdown by kind (R-24) — `feat/combobox-search`.
   - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
-- [ ] **🧊 No Blocking Work on the Main Thread** — [M-0088](phase-9/M-0088.md)
-  - [ ] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
+- [x] **🧊 No Blocking Work on the Main Thread** — [M-0088](phase-9/M-0088.md)
+  - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
 
 ---
 

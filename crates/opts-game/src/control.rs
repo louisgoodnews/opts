@@ -438,9 +438,7 @@ fn render_look(world: &mut World, params: &Value) -> Outcome {
         world.resource_mut::<crate::look::ActiveLook>().0 = look;
         if let Some(mut settings) = world.get_resource_mut::<crate::settings::GameSettings>() {
             settings.look = look;
-            if let Err(err) = settings.save() {
-                tracing::warn!(err = ?err, "Failed to persist the look");
-            }
+            settings.save_in_background();
         }
     }
     let available: Vec<&str> = crate::look::Look::ALL.iter().map(|l| l.key()).collect();
