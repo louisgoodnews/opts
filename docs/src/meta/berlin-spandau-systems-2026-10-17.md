@@ -123,7 +123,7 @@ Fixes found while integrating: `401380a` (the glass image kept a mip chain longe
 
 | | Before | After |
 | :--- | :--- | :--- |
-| Tests (workspace, no `OMSI_PATH`) | 1,514 | **1,707 passed, 0 failed** |
+| Tests (whole workspace, no `OMSI_PATH`) | not counted before | **1,707 passed, 0 failed** (with the install: 1,088 in the five content crates, 0 failed apart from the two known golden screens) |
 | Terrain at the Güterschuppen (2402/11279) | 31-33 m → 15-17 m (1,468 vertices) | deepest lowering **0.79 m** (89 vertices) |
 | Bent crossings below terrain (11 placements, 72,469 m²) | 19.4 % | **0.000 %**; 38 of 39 arms within 1 cm, one at 1.3 cm |
 | Lateral acceleration in curves (p99, 30 / 150 cars) | 34.0 / 30.4 m/s² | **2.6 / 2.6** (max 7.7 / 10.6) |
