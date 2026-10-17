@@ -39,7 +39,17 @@ pub enum ViewpointButton {
     Cancel,
     /// Store and close.
     Save,
+    /// Switch between saving for this vehicle and for all of its model.
+    Scope,
 }
+
+/// The text of the scope button (this vehicle / all of this model).
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ViewpointScopeText;
+
+/// The scope button's row, hidden when the vehicle's model is unknown.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ViewpointScopeRow;
 
 /// The track of a row (click or drag sets the value).
 #[derive(Component, Debug, Clone, Copy)]
@@ -107,10 +117,13 @@ fn small_button(
             UiId::new(id),
         ))
         .with_children(|b| {
-            b.spawn((
+            let mut text = b.spawn((
                 texts(key, TypeScale::BodyMedium, InstrumentInk::Text, palette),
                 L10nKey(key),
             ));
+            if action == ViewpointButton::Scope {
+                text.insert(ViewpointScopeText);
+            }
         });
 }
 
@@ -233,6 +246,22 @@ pub fn spawn_panel(commands: &mut Commands, palette: &InstrumentPalette) {
                 });
             }
             p.spawn((
+                Node {
+                    justify_content: JustifyContent::FlexStart,
+                    ..default()
+                },
+                ViewpointScopeRow,
+            ))
+            .with_children(|r| {
+                small_button(
+                    r,
+                    ViewpointButton::Scope,
+                    keys::VIEWPOINT_SCOPE_VEHICLE,
+                    "hud.viewpoint.scope".to_owned(),
+                    palette,
+                );
+            });
+            p.spawn((
                 texts(
                     keys::VIEWPOINT_UNSAVED,
                     TypeScale::Label,
@@ -333,6 +362,8 @@ pub fn update_panel(
     mut names: Query<(&ViewpointName, &mut InstrumentInk)>,
     mut unsaved: Query<&mut Visibility, (With<ViewpointUnsaved>, Without<ViewpointMarker>)>,
     mut paints: Query<(&ViewpointPaint, &mut BackgroundColor)>,
+    mut scope_text: Query<&mut L10nKey, With<ViewpointScopeText>>,
+    mut scope_row: Query<&mut Node, (With<ViewpointScopeRow>, Without<ViewpointFill>)>,
 ) {
     let palette = theme.instrument(*variant);
     for (paint, mut bg) in &mut paints {
@@ -365,6 +396,26 @@ pub fn update_panel(
         );
         if text.0 != new {
             text.0 = new;
+        }
+    }
+    for mut key in &mut scope_text {
+        let want = L10nKey(if state.scope_model {
+            keys::VIEWPOINT_SCOPE_MODEL
+        } else {
+            keys::VIEWPOINT_SCOPE_VEHICLE
+        });
+        if *key != want {
+            *key = want;
+        }
+    }
+    for mut node in &mut scope_row {
+        let want = if state.model_key.is_some() {
+            Display::Flex
+        } else {
+            Display::None
+        };
+        if node.display != want {
+            node.display = want;
         }
     }
     for (f, mut node) in &mut fills {
@@ -426,6 +477,11 @@ pub fn panel_buttons(
             ViewpointButton::Reset => state.reset(),
             ViewpointButton::Cancel => state.cancel(),
             ViewpointButton::Save => state.save(),
+            ViewpointButton::Scope => {
+                if state.model_key.is_some() {
+                    state.scope_model = !state.scope_model;
+                }
+            }
         }
     }
 }

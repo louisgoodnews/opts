@@ -6,6 +6,7 @@ pub mod hud;
 pub mod input;
 pub mod mode;
 pub mod plugin;
+pub mod reset;
 pub mod state;
 pub mod viewpoint;
 
