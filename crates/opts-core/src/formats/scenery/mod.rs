@@ -13,5 +13,5 @@ pub use sco::{
 };
 pub use sli::{
     LaneKind, SplineGraphicalProfile, SplineHeightProfile, SplinePath, SplineProfile,
-    SplineProfilePoint, SplineRailEnh, SplineTexture,
+    SplineProfilePoint, SplineRailEnh, SplineTexture, SurfaceSegment,
 };
