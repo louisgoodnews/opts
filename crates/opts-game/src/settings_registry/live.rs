@@ -108,6 +108,33 @@ pub fn sync_water(
     }
 }
 
+/// The weather effects the settings ask for (`graphics.weather_*`).
+#[must_use]
+pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects {
+    let on = |key: &str| settings.raw(key).as_deref() != Some("false");
+    opts_bevy::WeatherEffects {
+        fog: on("graphics.weather_fog"),
+        clouds: on("graphics.weather_clouds"),
+        precipitation: settings
+            .raw("graphics.weather_precipitation")
+            .and_then(|q| opts_bevy::weather::PrecipitationQuality::parse(&q))
+            .unwrap_or_default(),
+        wet_ground: on("graphics.weather_wet_ground"),
+    }
+}
+
+/// Keeps [`opts_bevy::WeatherEffects`] equal to the settings, live.
+pub fn sync_weather_effects(
+    settings: Res<GameSettings>,
+    effects: Option<ResMut<opts_bevy::WeatherEffects>>,
+) {
+    let Some(mut effects) = effects else { return };
+    let want = weather_effects_of(&settings);
+    if *effects != want {
+        *effects = want;
+    }
+}
+
 /// Start-up: the saved scene trace mode (unless `--trace-scene` chose one for this run) and overlay.
 pub fn apply_saved_trace(
     settings: Res<GameSettings>,

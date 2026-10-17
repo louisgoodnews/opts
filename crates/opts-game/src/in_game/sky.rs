@@ -35,6 +35,11 @@ pub struct Sky {
     last_revision: Option<u64>,
 }
 
+/// The sky's colour at the horizon (linear RGB `0..=1`), refreshed with the sky texture; the fog
+/// takes its colour from it (`weather::fog`).
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct SkyHorizon(pub [f32; 3]);
+
 /// Marks the sky dome.
 #[derive(Component)]
 pub struct SkyDome;
@@ -100,10 +105,19 @@ fn dome_mesh() -> Mesh {
     mesh
 }
 
-fn blended_sky(sky: &Sky, weights: [f32; 3]) -> Vec<u8> {
+/// The sky texture for the blend weights of the sun's height. `veil` gives, per row (`0` zenith …
+/// `1` horizon), how far the row is pulled towards `veil_color` (the fog colour, sRGB `0..=1`);
+/// a veil of 0 leaves the texture as it is.
+fn blended_sky(
+    sky: &Sky,
+    weights: [f32; 3],
+    veil: impl Fn(f32) -> f32,
+    veil_color: [f32; 3],
+) -> Vec<u8> {
     let (w, h) = (sky.textures[0].width, sky.textures[0].height);
     let mut out = vec![255u8; w * h * 4];
     for y in 0..h {
+        let v = veil(y as f32 / (h - 1).max(1) as f32).clamp(0.0, 1.0);
         for x in 0..w {
             for c in 0..3 {
                 let mut acc = 0.0;
@@ -112,6 +126,9 @@ fn blended_sky(sky: &Sky, weights: [f32; 3]) -> Vec<u8> {
                         let (tx, ty) = (x * t.width / w, y * t.height / h);
                         acc += f32::from(t.rgba[(ty * t.width + tx) * 4 + c]) * wt;
                     }
+                }
+                if v > 0.0 {
+                    acc += (veil_color[c] * 255.0 - acc) * v;
                 }
                 out[(y * w + x) * 4 + c] = acc.round().clamp(0.0, 255.0) as u8;
             }
@@ -247,6 +264,8 @@ pub fn spawn_sky(
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
     env: Res<SessionEnvironment>,
+    effects: Option<Res<opts_bevy::WeatherEffects>>,
+    mut commands: Commands,
     sky: Option<ResMut<Sky>>,
     mut images: ResMut<Assets<Image>>,
     mut clear: Option<ResMut<ClearColor>>,
@@ -303,11 +322,35 @@ pub fn update_sky(
         crate::look::effective_ambient_scale(l.0.params().ambient_scale, elevation)
     });
     let jumped = sky.last_revision != Some(env.revision());
-    if look_changed || jumped || (now - sky.last_refresh).abs() >= REFRESH_S {
+    let effects_changed = effects.as_ref().is_some_and(|e| e.is_changed());
+    if look_changed || jumped || effects_changed || (now - sky.last_refresh).abs() >= REFRESH_S {
         sky.last_refresh = now;
         sky.last_revision = Some(env.revision());
         let weights = sky.config.sky_weights(elevation);
-        let data = blended_sky(&sky, weights);
+        // Colour of the sky at the horizon fills anything the dome does not cover; the fog
+        // takes it too, greyed in thick fog.
+        let h = sky.textures[0].height - 1;
+        let mut horizon = [0.0; 3];
+        for (ch, out) in horizon.iter_mut().enumerate() {
+            for (t, wt) in sky.textures.iter().zip(weights) {
+                *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
+            }
+        }
+        let conditions = env.conditions();
+        let fog_on = effects.as_ref().is_none_or(|e| e.fog);
+        let veil_color = opts_bevy::weather::fog_color(horizon, conditions);
+        let data = blended_sky(
+            &sky,
+            weights,
+            |v| {
+                if fog_on {
+                    opts_bevy::weather::sky_veil(conditions, v)
+                } else {
+                    0.0
+                }
+            },
+            veil_color,
+        );
         if let Some(mut img) = images.get_mut(&sky.image) {
             img.data = Some(data);
         }
@@ -315,7 +358,8 @@ pub fn update_sky(
         let a = sky.config.light_at(&sky.config.light_a, elevation);
         let b = sky.config.light_at(&sky.config.light_b, elevation);
         let c = sky.config.light_at(&sky.config.light_c, elevation);
-        let att = env.attenuation();
+        // The weather scales the light through `opts_bevy::weather::light_scales`.
+        let (att, ambient_att) = (env.attenuation(), env.ambient_attenuation());
         for (_, mut light) in &mut sun {
             light.color = Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001));
             light.illuminance = SUN_ILLUMINANCE * l(a) * att;
@@ -324,20 +368,13 @@ pub fn update_sky(
         let peak = amb.iter().copied().fold(0.001_f32, f32::max);
         if let Some(ambient) = ambient.as_mut() {
             ambient.color = Color::srgb(amb[0] / peak, amb[1] / peak, amb[2] / peak);
-            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * att.max(0.8);
+            ambient.brightness = AMBIENT_BRIGHTNESS * ambient_scale * peak.min(1.0) * ambient_att;
         }
-        // Colour of the sky at the horizon fills anything the dome does not cover.
-        let h = sky.textures[0].height - 1;
-        let w = weights;
-        let mut horizon = [0.0; 3];
-        for (ch, out) in horizon.iter_mut().enumerate() {
-            for (t, wt) in sky.textures.iter().zip(w) {
-                *out += f32::from(t.rgba[(h * t.width) * 4 + ch]) * wt / 255.0;
-            }
-        }
+        let clear_color = if fog_on { veil_color } else { horizon };
         if let Some(clear) = clear.as_mut() {
-            clear.0 = Color::srgb(horizon[0], horizon[1], horizon[2]);
+            clear.0 = Color::srgb(clear_color[0], clear_color[1], clear_color[2]);
         }
+        commands.insert_resource(SkyHorizon(horizon));
     }
     for (mut t, _) in &mut sun {
         *t = Transform::from_translation(cam).looking_to(-sun_dir, Vec3::Y);
