@@ -5,7 +5,7 @@
 | **Map** | `OMSI 2/maps/Berlin-Spandau` |
 | **Brief** | expanded scope: 19 symptoms in five systems (terrain/coordinates/tags, parser and Chrono, AI kinematics and lights, asset gaps, environment UI) |
 | **Branch** | `fix/terrain-and-traffic-systems` (worktree `opts-wt-berlin-spandau-systems`, from `master` `85d2391`), carries the two report commits of `fix/map-fidelity-systemic`; not merged, merge only after user acceptance |
-| **Status** | Phase A (triage) done, waiting for Checkpoint 1 |
+| **Status** | Phase A done (Checkpoint 1: premise corrections accepted, pause-menu environment page, Phase B scope); Phase B done, waiting for Checkpoint 2 |
 | **Predecessor** | [Berlin-Spandau map fidelity investigation](berlin-spandau-2026-10-17.md): symptoms 1-13 reproduced and root-caused there (§2, §6), fix plan §7 |
 | **Clean room** | no OMSI binary inspected; screenshots and probes kept locally in `~/.local/share/opts/captures/berlin-spandau-2026-10-17/` (`systems/` for this phase), not committed |
 
@@ -42,8 +42,61 @@ Symptoms 1-13 are mapped and root-caused in the predecessor (§3, §6); repeated
 4. **Trees are not a DDS alpha problem** (TGAs with clean alpha; the fault is billboard normals, confirmed live).
 5. **Lane changes and speed limits exist**; the work is to make them effective (junction rule, density, neighbour detection, curve limit, look-ahead) and visible (indicators).
 
-## 4. Questions for Checkpoint 1
+## 4. Questions for Checkpoint 1 (answered: all accepted)
 
 1. Accept the premise corrections of §3 as the basis for Phase B, in particular for #14 (no new tag; the deliverable becomes a precise spec of the existing tags in `sco.md`/`tiles.md`) and #15 (residue carve shaped by the profile, documented in `architecture/terrain-carving.md`).
 2. Environment UI (#19): a page in the pause menu (date, time, weather, apply live) is my proposal; alternatively a HUD panel. Should changing the date also switch the Chrono state live (reload of the affected tiles), or only on the next session start?
 3. Phase B for the five systems: the predecessor already holds root causes for 1-13; Phase B here would add the measurements still open (lane-change suppression, speed-rule path mapping, AI light sources in the vehicle configs, environment wiring) and the two design documents.
+
+**Checkpoint 1 decisions:** premise corrections accepted; environment page in the pause menu; a date change switches the Chrono state live (affected tiles only); Phase B covers the open measurements and the design documents.
+
+## 5. Phase B: findings
+
+Three read-only investigations with probes (kept locally in `systems/probes-t1..t3`); symptoms 1-13 keep the root causes of the [predecessor](berlin-spandau-2026-10-17.md#6-phase-b-root-causes).
+
+### System 1: terrain, coordinates, tags → [terrain carving](../architecture/terrain-carving.md), [streaming coordinates](../architecture/streaming-coordinates.md)
+
+* Height tags: rule complete and correct (§1 #14; specs updated in [`tiles.md`](../formats/map/tiles.md#mirror-flag-and-absheight-objects-2026-10), [`sco.md`](../formats/text/sco.md), [`global-cfg.md`](../formats/map/global-cfg.md)).
+* Carving, measured on three maps: today's flat-footprint carve changes 30,000-46,000 vertices per map, 3,800-7,300 by more than 5 m (max 40 m). A **triangle cap** limited to the flat drawn surface, guarded at 1 m, changes 10,800-34,600 vertices, **none by more than 1 m**, and leaves 151 / 1,259 / 1,610 poking triangles (raw data: 6,007 / 4,316 / 11,783; Hügelsdorf's remainder is buried content the guard keeps: tunnels, river bed). No terrain snapping (the gap below road edges is authored).
+* One height function on the carved grid with the mesh's triangle split for objects, trees, lanes, pedestrians, rail and the vehicle (today 7-12 % of objects are more than 5 cm off the drawn ground).
+* Crossings: bend by `[crossing_heightdeformation]`, then cap terrain under their ground faces (1,961 vertices on Spandau, p95 0.22 m).
+
+### System 2: parser, stitching, Chrono
+
+No change to the predecessor's findings (buried crossing ramp, `.x` material slots, blank values, Chrono semantics). Chrono becomes live-switchable (System 5).
+
+### System 3: AI kinematics and lights → [AI traffic kinematics](../architecture/ai-traffic-kinematics.md)
+
+* **Lane changes** are suppressed, not missing. Gates at 150 vehicles (44,921 evaluations): junction rule 58 % (any zone anywhere on the lane, even passed), `trucks` rule 2,776 of 4,552 candidates (read as "trucks only", which bars cars from every right lane: 857 lanes), density-0 lanes 567. Headless, 600 s: **16 → 85** changes (30 vehicles) and **65 → 335** (150) with `trucks` as "trucks permitted", a distance-based junction gate and arced lanes.
+* **Speed rules** map correctly (0 rules out of range or without owner). No Spandau road is posted above 30 km/h (60/80 are rail); AI drive 50 km/h ± 10 %, but the spawn lane's limit caps a driver for life, and **22 % of samples on arcs exceed 2.5 m/s² lateral (max 46 m/s²)**.
+* **Pose** from the front bumper (rear swings out, heading jumps at joins).
+* **AI lights:** all 11 AI vehicles light through `[light_enh_2]` (`AI_Light`, `AI_Brakelight`, `lights_blinker_l/r`); OPTS sets these variables, but the vehicle model parser drops `[light_enh_2]`, so nothing is drawn. `.sco` `[path]` parameter 12 is the turn indicator of a crossing path (0 none, 2 left, 3 right; 70-86 % agreement with turn direction).
+
+### System 4: asset ingestion
+
+Unchanged from the predecessor: tree billboard normals, transmap blending and CTC for parked/AI cars, glow parented to the LOD band, `[maplight]` unused, repeater fields, parking-list selector, density model.
+
+### System 5: environment controls
+
+* Date, time and weather are frozen at spawn in three places (`world.rs:10-84`, `sky.rs:217-229`, session info) and re-derived from start values in six more (sky update, scenery clock, traffic density, AI lights, instruments, HUD clock); traffic uses an unwrapped hour and always "weekday"; weather affects only sky attenuation, fallback light and temperature (no fog exists); `sim.set_time` has a CLI spec but no handler.
+* **Design:** one `SessionEnvironment` resource (date, seconds since midnight, weather, rate, revision, Chrono date) in `opts-bevy`, written only through an `EnvironmentChange` message by the pause page, `sim.set_time` and save restore; all nine consumers read it. Pause menu entry **Environment** (date, time, weather; steppers and chips shared with the wizard in a `shell::calendar` module). Live Chrono switch: if the active entry set changes, rebuild only the resident overlay tiles plus their carve neighbours (player tile first; AI on vanished lanes are removed; the player vehicle stays). Map-step date picker with the default `today + [realyearoffset]` clamped into `[years]` (Spandau 1994-12-31).
+
+## 6. Phase C plan (for approval)
+
+One commit (or short series) per item, tests with each; ordinary 300 m maps pinned by tests.
+
+| # | Item | Design |
+| ---: | :--- | :--- |
+| C1 | Tile grid (f64, Mercator rows, re-anchoring) | [streaming coordinates](../architecture/streaming-coordinates.md) |
+| C2 | Terrain triangle cap + one height function; crossing bend + carve under crossing faces | [terrain carving](../architecture/terrain-carving.md), [predecessor §7](berlin-spandau-2026-10-17.md#7-fix-plan-phase-c-for-approval) |
+| C3 | Lane geometry (arcs, mirror, Hermite), pose (axle tractrix), curve speed + look-ahead, lane-change gates, `trucks` reading, strategic changes, `[light_enh_2]` for vehicles + headlight pool, indicators from `[path]` parameter 12 | [AI traffic kinematics](../architecture/ai-traffic-kinematics.md) |
+| C4 | Tile reader keeps blank values; attachments (spacing/range/p2, chain index); parking-list selector; Chrono (parser, overlays, data files); density model | predecessor §6-7 |
+| C5 | Rendering gaps: tree normals, transmap split, CTC for parked/AI cars, scenery glow on the object root, `[maplight]` pool, `.x` shared palettes | predecessor §6-7 |
+| C6 | `SessionEnvironment`, pause Environment page, live Chrono switch, map-step date picker, `sim.set_time` | §5 System 5 |
+
+## 7. Questions for Checkpoint 2
+
+1. **`trucks` rule:** switch the reading to "trucks permitted" (the data supports it; it reverses an M-0049 project decision)?
+2. **Environment page:** time and weather preview live while the page is open, the date (and any Chrono rebuild) applies on *Apply*; Resume waits for the rebuild to finish. Weather stays sky/light/temperature (no fog or rain rendering in this task).
+3. **Terrain guard** 1 m (recommended) rather than 2 m; deeper buried content is left for terrain holes (`[terrainhole]`, not in this task).
+4. **Order:** C1 → C2 → C3 → C4 → C5 → C6, each reported briefly as it lands, Checkpoint 3 at the end?
