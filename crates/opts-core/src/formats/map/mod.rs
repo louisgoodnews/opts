@@ -3,8 +3,8 @@
 
 pub mod error;
 pub mod global;
+pub mod grid;
 pub mod lists;
-pub mod pitch;
 pub mod terrain;
 pub mod tile;
 pub mod water;
@@ -12,11 +12,11 @@ pub mod write;
 
 pub use error::MapParseError;
 pub use global::{MapEntryPoint, MapGroundTex, MapManifest, MapSeason, MapTileEntry};
+pub use grid::{estimate_tile_size, mercator_row_width, GridFit, TileGrid, DEFAULT_TILE_SIZE_M};
 pub use lists::{
     parse_unsched_trafficdens, parse_unsched_vehgroups, AiEntry, AiGroup, AiLists, DensityProfile,
     GroupDensity, UnschedGroup,
 };
-pub use pitch::{estimate_tile_size, DEFAULT_TILE_SIZE_M};
 pub use terrain::MapTerrain;
 pub use tile::{
     MapAttachedObject, MapObjectInstance, MapSplineAttachment, MapSplineInstance, MapTile,
