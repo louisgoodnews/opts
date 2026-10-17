@@ -150,6 +150,7 @@
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Map Streaming](architecture/map-streaming.md)
 - [Terrain Carving](architecture/terrain-carving.md)
+- [Terrain and Water Rendering](architecture/terrain-rendering.md)
 - [Streaming Coordinates (Tile Grid)](architecture/streaming-coordinates.md)
 - [Scenery Parsing: Tile Record to Drawn Geometry](architecture/scenery-parsing.md)
 - [Error Handling](architecture/error-handling.md)
