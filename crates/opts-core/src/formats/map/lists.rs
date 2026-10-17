@@ -131,11 +131,17 @@ pub struct DensityProfile {
 
 impl DensityProfile {
     /// Density at `hour` (linear between points, constant beyond the first and last point;
-    /// `1.0` for a profile without points).
+    /// `1.0` for a profile without points). The hour wraps at midnight (`25` is `1`, `-1` is
+    /// `23`), so a session clock running past 24 h keeps following the curve.
     #[must_use]
     pub fn at(&self, hour: f32) -> f32 {
         let (Some(first), Some(last)) = (self.points.first(), self.points.last()) else {
             return 1.0;
+        };
+        let hour = if hour.is_finite() {
+            hour.rem_euclid(24.0)
+        } else {
+            0.0
         };
         if hour <= first.0 {
             return first.1;
@@ -278,6 +284,20 @@ mod tests {
         // Weekday curve rises to 1.0 at 06:00.
         assert!((d[0].density(day::WEEKDAY, 3.0) - 0.6 * 0.55).abs() < 1e-5);
         assert!((d[0].density(day::WEEKDAY, 12.0) - 0.6).abs() < 1e-5);
+    }
+
+    /// Hours wrap at midnight; weekend curves are picked by the day bit.
+    #[test]
+    fn hours_wrap_and_weekends_have_their_own_curve() {
+        let text = b"[group]\nNormalCars\n1\n\n[set_day_of_week]\n1\n[trafficdensity]\n0\n0.2\n[trafficdensity]\n12\n1.4\n[trafficdensity]\n24\n0.2\n\n[set_day_of_week]\n6\n[trafficdensity]\n0\n0.1\n[trafficdensity]\n24\n0.5\n";
+        let d = &parse_unsched_trafficdens(text)[0];
+        let wd = |h| d.density(day::WEEKDAY, h);
+        assert!((wd(25.0) - wd(1.0)).abs() < 1e-6 && (wd(-1.0) - wd(23.0)).abs() < 1e-6);
+        assert!((wd(36.0) - 1.4).abs() < 1e-6);
+        assert!((d.density(day::SATURDAY, 12.0) - 0.3).abs() < 1e-6);
+        assert!((d.density(day::SUNDAY, 36.0) - 0.3).abs() < 1e-6);
+        // Values above 1 are kept.
+        assert!(wd(12.0) > 1.0);
     }
 
     #[test]

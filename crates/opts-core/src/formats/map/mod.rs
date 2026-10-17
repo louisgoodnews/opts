@@ -20,7 +20,7 @@ pub use lists::{
 pub use terrain::MapTerrain;
 pub use tile::{
     spline_height_offset, MapAttachedObject, MapObjectInstance, MapSplineAttachment,
-    MapSplineInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner,
+    MapSplineInstance, MapTile, MapTrafficRule, RepeaterLink, RuleKind, RuleOwner,
 };
 pub use water::MapWater;
 pub use write::MapWriteError;
