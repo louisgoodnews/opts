@@ -383,6 +383,17 @@ meaning of the repeater `span` for instances that would end beyond the chain is 
   42 on Bad Hügelsdorf, 45 of 47 on X10 Berlin and 48 of 49 on BRT Berlin have z ≈ terrain height;
   only 1–2 per map have z ≈ 0. Treated as terrain-relative they float one terrain height above
   the road (Bad Hügelsdorf at 23 m terrain: 46 m).
+- **Height reference, complete rule (2026-10-17, [C] over all 30,000 `[object]` placements of
+  Berlin-Spandau, probe in [the systems report](../../meta/berlin-spandau-systems-2026-10-17.md)):**
+  z is absolute when the `.sco` has `[absheight]` **or** `[splinehelper]`, otherwise relative to the
+  terrain. Placements without either tag: 27,206 have z ≈ 0 relative (a further 1,847 are sunk
+  below ground, z < 0, also relative), **0** have z ≈ terrain height. With `[splinehelper]`: 271
+  absolute, 0 relative, 16 on the 37 m railway embankment (absolute, terrain lower). With
+  `[absheight]`: 87 absolute, 22 bridges and quay walls above lower ground (absolute), 1 relative
+  (a crossing left at tile position 0/0/0, a content leftover). The `[object]` flag field (0/1/2)
+  and the `global.cfg` `[worldcoordinates]` flag play no part in this rule. The crossings that
+  looked "not absolute" in the earlier count (79 of 285) are absolute crossings bent by
+  `[crossing_heightdeformation]` (see [`sco.md`](../text/sco.md)) or standing on embankments.
 - **Helper line order is x, height, y** (not x, y, z): with the order x, y, z only 74 of 509 arms
   of Bad Hügelsdorf meet a spline end within 0.5 m, with x, height, y 259 (X10 Berlin: 668 → 1,398
   of 2,274). Tool: `conn_audit` in `opts-core`.

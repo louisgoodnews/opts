@@ -53,7 +53,7 @@ Counts are over 46 files; "lines" = parameter lines.
 | `[description]` … `[end]` | many | 46 | Free text, shown in the map picker. Localised variants live in `global_<LANG>.dsc`. |
 | `[version]` | 1 | 43 | Map file version; `14` in all 43 files that have it. |
 | `[NextIDCode]` | 1 | 44 | Next free object ID code for the editor (a number such as `322886`). |
-| `[worldcoordinates]` | — | 8 | Flag (real-world coordinates present). ❓ |
+| `[worldcoordinates]` | — | 8 | Flag: tiles are Web-Mercator zoom-16 tiles (OMSI x = slippy x − 32768, y = 32768 − slippy y); a tile's size is the Mercator width of its row, not 300 m ([streaming coordinates](../../architecture/streaming-coordinates.md)). It does **not** decide whether object heights are absolute ([`tiles.md`](tiles.md#mirror-flag-and-absheight-objects-2026-10)). |
 | `[dynhelperactive]` | — | 6 | Flag (dynamic helper lines on). ❓ |
 | `[realrail]` | — | 41 | Flag: **real rail rules** (Tram SDK 1.2): realistic point behaviour, AI trains set their own points (approaching at reduced speed), and trains run on **splines along the centre line regardless of the defined `[path]` offset**; on objects (crossings, points) they follow the object's rail path. Must be set for any map with rail vehicles. |
 | `[backgroundimage]` | 5 | 45 | `0` (no image) or image name, then four numbers (observed `299.99… 299.99… 0 0`). ❓ |

@@ -213,9 +213,9 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[crashmode_pole]` | 2 | Makes the object a **breakable pole**: stiffness-like coefficient (`0.02`/`0.05`) and a second factor (`0.5`–`0.7`). |
 | `[VFDmaxmin]` | 6 | Visibility-frustum box: min x/y/z, then max x/y/z. |
 | `[fixed]` | — | Object is **fixed to the terrain grid** (not freely rotatable). |
-| `[absheight]` | — | Height values are absolute, not relative to the terrain. |
+| `[absheight]` | — | Height values are absolute, not relative to the terrain. Objects with `[splinehelper]` are absolute too; all others are terrain-relative (complete rule and census: [`tiles.md`](../map/tiles.md#mirror-flag-and-absheight-objects-2026-10)). |
 | `[surface]` | — | Mesh is a drivable **surface** (ground mesh). |
-| `[crossing_heightdeformation]` | 1 | Mesh file deforming the terrain height under a junction. |
+| `[crossing_heightdeformation]` | 1 | Base mesh (`…_base.o3d`, no materials) that **bends the object's meshes vertically**: each vertex is raised by the base surface's height at its (x, z), 0 outside the base footprint. The terrain is not changed at runtime; the terrain files are already shaped to the bent surface (Berlin-Spandau, 11 placements: bent, 0.0 % of the crossing area lies below terrain, flat 19.4 %; every arm meets its spline within 1 cm). See the [systems report](../../meta/berlin-spandau-2026-10-17.md#system-2-crossings-signs-missing-geometry). |
 | `[crossingproblem]` | — | Flags a known junction-path conflict (editor warning). |
 
 `[surface]` and `[fixed]` frequently appear together with `[absheight]` and `[rendertype] surface` to describe road surfaces:
