@@ -41,7 +41,7 @@ Content [C]: 9 presets `<Name>.owt`, 45 descriptions `<Name>_<LANG>.dsc` (DEU, E
 | Keyword | Lines | Observed values | Reading | Used |
 | :--- | ---: | :--- | :--- | :---: |
 | `[name]`, `[description]`…`[end]` | 1 / n | text (`<Bestes Wetter>` in `#CAVOK`) | title and description; the `.dsc` of the same stem localises them | ✅ |
-| `[fog]` | 2 | `50000 1` (clear), `75 1` (ground fog), `500 0.5` (dusk fog), `700 0.5` (storm) | 📖 **visibility range in metres** (the distance at which an object just stands out against the fog) and **thickness of the fog layer** above the ground (0.5 … 1); a thick and high layer also lowers the sunlight | ✅ visibility, 🟡 thickness (contrast threshold and sun scale only) |
+| `[fog]` | 2 | `50000 1` (clear), `75 1` (ground fog), `500 0.5` (dusk fog), `700 0.5` (storm) | 📖 **visibility range in metres** (the distance at which an object just stands out against the fog) and **thickness of the fog layer** above the ground (0.5 … 1); a thick and high layer also lowers the sunlight | ✅ visibility, 🟡 thickness (contrast threshold, sun scale; ground fog: a visibility ≤ 150 m is drawn as a low layer whose metre thickness is estimated as `0.4 · visibility`, [weather](../../architecture/weather.md) §5a ❓) |
 | `[wind]` | 2 | `0 0` … `209 18.9` (storm) | **direction** the wind comes **from** in degrees (`Sommerlich`: 70°, "light east wind" in its description) and **speed** (m/s by plausibility, storm 18.9) | ✅ |
 | `[temp]` | 2 | `15 5`, `9 9`, `-16 -24.9`, `25 10.8` | temperature and **dew point** (never above the temperature in all 84 files; equal in fog) — answers Q-ENV02 | ✅ |
 | `[press]` | 1 | 997 – 1028 | pressure in hPa | ❓ no consumer |
@@ -90,7 +90,7 @@ See the tables above; there is no further layout. Related enumerations: surface/
 
 | ID | Question | Priority |
 | :--- | :--- | :--- |
-| Q-ENV01 | ✅ partly answered: `[fog]` second value is the fog layer thickness (📖), `[precip]` second value an intensity on 0 … 255. Still open: `[precip]` values 3–5 and the three `[groundwet]` values. Needs one-value-at-a-time tests. | 🟡 Medium |
+| Q-ENV01 | ✅ partly answered: `[fog]` second value is the fog layer thickness (📖) as a factor `0.5 … 1`; its unit in metres, and whether the low-visibility presets are meant as a layer, are open (we estimate 0.4 × visibility, ❓), `[precip]` second value an intensity on 0 … 255. Still open: `[precip]` values 3–5 and the three `[groundwet]` values. Needs one-value-at-a-time tests. | 🟡 Medium |
 | Q-ENV02 | ✅ Answered: `[temp]`'s second value is the dew point (never above the temperature in all 84 files, equal in fog). | — |
 | Q-ENV03 | Preview images: are they saved script textures (vehicle index × texture index)? | 🟡 Medium |
 | Q-ENV04 | How `ICAO.txt` is used (real-weather download vs plain label). | 🟢 Low |
