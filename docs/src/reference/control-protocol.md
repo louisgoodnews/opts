@@ -69,7 +69,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `state` | - | 1.0 | App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame |
 | `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
 | `camera.get` | - | 1.0 | Camera mode and transform |
-| `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock and weather |
+| `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock, weather and lighting quality |
 | `log.tail` | `n?` (integer) | 1.0 | Last N log lines |
 | `log.filter` | `target?` (string)<br>`level?` (string)<br>`contains?` (string)<br>`n?` (integer) | 1.0 | Filtered log lines |
 | `entity.list` | `filter?` (string) | 1.0 | List entities |
