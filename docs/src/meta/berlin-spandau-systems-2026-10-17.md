@@ -198,3 +198,20 @@ The docs specify weather ([`environment.md`](../formats/text/environment.md): `W
 3. Sun god rays through `VolumetricFog`/`VolumetricLight`: cost on the target GPU, step count, fallback (off) in the Environment UI and settings.
 4. Moon: direction and phase from date and time (new moon to full moon from the date), moonlight as its own directional light.
 5. Performance budget: maximum volumetric lights on screen and the fallback ladder.
+
+### Decisions of the user in round 3 (Checkpoint 1 answers and follow-ups)
+
+* Phase B scope for lighting confirmed (light rooms, cone techniques, sun god rays, moon with phase, performance budget).
+* **Hardware for the 60 fps budget: this machine**, RTX 3060 12 GB, 1920×1080 (DP-1 59.96 Hz, DP-2 74.91 Hz), 16 cores.
+* **Weather:** design, then implement (agent `agent/weather`, design note `architecture/weather.md`).
+* **HDR:** the OPTS cameras should use HDR if the measured cost is acceptable; the minimap needs nothing (it is painted on the CPU, not a camera) and mirror cameras must be HDR as well.
+* **Reflections are system 7 of this task** (mirrors, glass, wet surfaces; research in [reflections research](../architecture/reflections-research.md), prototypes `opts_bevy::reflections`, off by default).
+* **Seven systems** now: 1 terrain and coordinates, 2 parser/config, 3 AI, 4 asset subsystems, 5 environment UI, 6 lighting (cones, rooms, sun/moon, god rays), 7 reflections.
+* **Order for Phase C (lighting and reflections part), confirmed:**
+  1. `MainCamera` marker and the 48 `With<Camera3d>` query sites (prerequisite for every second camera);
+  2. HDR on the main camera if the cost is acceptable, with screenshots and golden screens regenerated in the same step;
+  3. sun god rays and the moon (own directional light, phase);
+  4. cones for lanterns and vehicle headlights;
+  5. sky cubemap for glass reflections;
+  6. mirror cameras with HDR, as measured.
+* Weather lands as its own branch merge; light rooms (layer convention, CPU light selection) go with item 4.
