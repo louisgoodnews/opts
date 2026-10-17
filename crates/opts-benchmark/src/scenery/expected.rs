@@ -100,7 +100,7 @@ pub fn build(install: &OmsiInstall, sco_path: &Path, sco: &SceneryObject) -> Exp
         out.tris = tree_billboard(h, w);
         return out;
     }
-    if sco.only_editor || sco.carpark_p || sco.model_cfg.is_some() {
+    if sco.is_editor_only() || sco.carpark_p || sco.model_cfg.is_some() {
         return out;
     }
     let sco_dir = sco_path.parent().unwrap_or(Path::new("."));
@@ -117,6 +117,9 @@ pub fn build(install: &OmsiInstall, sco_path: &Path, sco: &SceneryObject) -> Exp
     distinct.dedup();
     out.lod_groups = distinct.len();
     for (mesh_index, mesh) in sco.meshes.iter().enumerate() {
+        if !sco.mesh_in_game(mesh_index) {
+            continue;
+        }
         let Some(path) = install.find_in(&model_dir, &mesh.file) else {
             push_unique(&mut out.categories, "F-MESH-MISSING");
             // The loader gives up on the whole object at the first missing mesh.

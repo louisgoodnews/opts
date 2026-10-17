@@ -1,5 +1,6 @@
 //! Runtime of placed scenery objects: `[LOD]` selection, `[visible]` and `[newanim]` rules,
-//! scenery scripts (one engine per object), light effects and light maps.
+//! scenery scripts (one engine per object), light effects and light maps, and the pool of point
+//! lights behind the `[maplight]` ground lights.
 //!
 //! Design and the benchmark interface: `docs/src/architecture/scenery-runtime.md`. The map loader
 //! builds each object's hierarchy with [`build_scenery_object`]; [`SceneryRuntimePlugin`] ticks
@@ -12,6 +13,7 @@ mod clock;
 mod effects;
 mod lights;
 mod lod;
+mod maplights;
 mod scripts;
 mod spawn;
 mod tick;
@@ -25,6 +27,10 @@ pub use effects::{
 };
 pub use lights::{scenery_light_system, SceneryLightAssets, LIGHT_DRAW_DISTANCE_M};
 pub use lod::{scenery_lod_system, screen_size, select_band, SceneryLod, SceneryLodMode};
+pub use maplights::{
+    assign as assign_map_lights, choose_nearest, map_light_lumens, map_light_pool_system,
+    map_light_range, spawn_map_lights, MapLight, MapLightPool, MapLightSettings, PoolSlot,
+};
 pub use scripts::{HostValues, SceneryScripts, SceneryVariableOverrides};
 pub use spawn::{
     build_scenery_object, needs_runtime, SceneryBuildAssets, SceneryObjectInput, NIGHT_VARIABLE,
@@ -48,6 +54,8 @@ impl Plugin for SceneryRuntimePlugin {
             .init_resource::<SceneryRuntimeStats>()
             .init_resource::<SceneryVariableOverrides>()
             .init_resource::<SceneryLodMode>()
+            .init_resource::<MapLightSettings>()
+            .init_resource::<MapLightPool>()
             .add_systems(
                 Update,
                 (
@@ -55,6 +63,7 @@ impl Plugin for SceneryRuntimePlugin {
                     scenery_lod_system,
                     scenery_light_system,
                     scenery_alpha_scale_system,
+                    map_light_pool_system,
                 )
                     .chain()
                     .in_set(SceneryRuntimeSet)

@@ -97,17 +97,23 @@ impl SceneryObjectCache {
 }
 
 /// The light map of a `.sco` material for the model loader: its own variable, or the night
-/// switch when it names none.
+/// switch when it names none; a `[matl_nightmap]` without a light map is one switched by night.
 #[must_use]
 pub fn light_map_of(
     m: &opts_core::formats::scenery::ScoMaterial,
 ) -> Option<opts_core::formats::vehicles::model::LightMap> {
-    let texture = m.light_map.clone()?;
-    let variable = m
-        .light_map_variable
-        .clone()
-        .unwrap_or_else(|| opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned());
-    Some(opts_core::formats::vehicles::model::LightMap { texture, variable })
+    let night = || opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned();
+    if let Some(texture) = m.light_map.clone() {
+        let variable = m.light_map_variable.clone().unwrap_or_else(night);
+        return Some(opts_core::formats::vehicles::model::LightMap { texture, variable });
+    }
+    // `[matl_nightmap]`: the night texture (lit windows) is drawn as emissive light switched by
+    // the night switch, like a variable-less light map (OMSI swaps the texture at night ❓).
+    let texture = m.night_map.clone().filter(|t| !t.trim().is_empty())?;
+    Some(opts_core::formats::vehicles::model::LightMap {
+        texture,
+        variable: night(),
+    })
 }
 
 fn problems(diags: &[Diagnostic]) -> usize {
@@ -209,6 +215,8 @@ impl WorldLoadJob {
         template: Option<Arc<ScriptTemplate>>,
     ) {
         self.scenery.dev_look.offer(&obj.sco_file, root);
+        // `[maplight]` ground lights: markers the map light pool hands its point lights to.
+        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
         let scripts = template.filter(|t| t.has_scripts).and_then(|t| {
             let engine = t.engine.lock().ok()?.fork();
             Some(SceneryScripts::new(

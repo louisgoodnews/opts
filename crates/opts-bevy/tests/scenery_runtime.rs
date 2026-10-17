@@ -191,6 +191,19 @@ fn the_script_switches_the_lamp_by_time_of_day() {
     assert_eq!(visibility(&app, light), Visibility::Inherited);
 }
 
+/// The light is declared inside the `[LOD] 0.2` band but hangs under the object root, so a LOD
+/// switch never hides the glow.
+#[test]
+fn the_light_sprite_hangs_under_the_root_not_a_lod_group() {
+    let app = app();
+    let root = app.world().resource::<Root>().0;
+    let light = runtime(&app).lights[0];
+    let parent = app.world().get::<ChildOf>(light).expect("parent").parent();
+    assert_eq!(parent, root);
+    let lod = app.world().get::<SceneryLod>(root).expect("LOD groups");
+    assert!(!lod.groups.iter().any(|(g, _)| *g == parent));
+}
+
 #[test]
 fn the_animated_mesh_moves_with_simulated_time() {
     let mut app = app();

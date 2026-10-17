@@ -75,14 +75,12 @@ fn to_omsi(p: Vec3) -> Vec3 {
     Vec3::new(p.x, -p.z, p.y)
 }
 
-/// Spawns the LOD group entities (one per distinct threshold) under `root`.
+/// Spawns the LOD group entities (one per distinct mesh threshold) under `root`. Light sprites
+/// are not part of a LOD group: a lantern's `[light_enh_2]` written after `[LOD] 0` would
+/// otherwise vanish with its mesh band within ~70 m, while the glow is what is seen from afar.
 fn lod_groups(commands: &mut Commands, root: Entity, sco: &SceneryObject) -> Vec<(Entity, f32)> {
     let mut thresholds: Vec<f32> = Vec::new();
-    let all = sco
-        .meshes
-        .iter()
-        .map(|m| m.lod_threshold)
-        .chain(sco.lights.iter().map(|l| l.lod_threshold));
+    let all = sco.meshes.iter().map(|m| m.lod_threshold);
     for t in all.flatten() {
         if !thresholds.contains(&t) {
             thresholds.push(t);
@@ -262,8 +260,8 @@ pub fn build_scenery_object(
         count += parts.len();
     }
     for light in &sco.lights {
-        let parent = parent_of(light.lod_threshold);
-        let e = build_light(commands, parent, light, engine.as_deref_mut(), assets);
+        // Under the object root, whatever `[LOD]` band the light was declared in.
+        let e = build_light(commands, root, light, engine.as_deref_mut(), assets);
         rt.lights.push(e);
     }
     let mut root_cmd = commands.entity(root);

@@ -238,6 +238,8 @@ pub struct WorldLoadJob {
     formation_cars: Vec<vehicle::FormationCar>,
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
+    /// Repaints of parked/static vehicle models, by model config path (read on first use).
+    model_repaints: HashMap<PathBuf, crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
     /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
     missing_listed: usize,

@@ -88,6 +88,34 @@ pub fn discover_at(root: &Path, bus_path: &Path, default_name: &str) -> VehicleR
             return out;
         }
     };
+    add_model_repaints(&mut out, root, &bus_dir, &model);
+    out
+}
+
+/// Discovers the repaints of an already parsed vehicle model: `vehicle_dir` is the folder of the
+/// `.bus` or of the parked/static `.sco` that names it (the `[CTC]` folder is resolved against it,
+/// as for the player's vehicle). `default_name` may be empty (no named default repaint).
+#[must_use]
+pub fn discover_for_model(
+    root: &Path,
+    vehicle_dir: &Path,
+    model: &ModelConfig,
+    default_name: &str,
+) -> VehicleRepaints {
+    let mut out = VehicleRepaints {
+        default_name: default_name.to_string(),
+        ..Default::default()
+    };
+    if !default_name.is_empty() {
+        out.names.push(default_name.to_string());
+    }
+    add_model_repaints(&mut out, root, vehicle_dir, model);
+    out
+}
+
+/// Adds the `.cti` items of `model`'s `Colorscheme` folders to `out`.
+fn add_model_repaints(out: &mut VehicleRepaints, root: &Path, bus_dir: &Path, model: &ModelConfig) {
+    let install = OmsiInstall::new(root);
     let mut found: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
     let mut textures: BTreeMap<String, Vec<(String, PathBuf)>> = BTreeMap::new();
     for scheme in model
@@ -95,7 +123,7 @@ pub fn discover_at(root: &Path, bus_path: &Path, default_name: &str) -> VehicleR
         .iter()
         .filter(|s| s.name.eq_ignore_ascii_case("Colorscheme"))
     {
-        let Some(folder) = base_folders(&bus_dir, root)
+        let Some(folder) = base_folders(bus_dir, root)
             .iter()
             .find_map(|b| install.find_in(b, &scheme.texture_path))
             .filter(|p| p.is_dir())
@@ -148,7 +176,30 @@ pub fn discover_at(root: &Path, bus_path: &Path, default_name: &str) -> VehicleR
         }
         out.setvars.entry(name).or_default().extend(setvars);
     }
-    out
+}
+
+/// A well-mixed 64-bit hash of `parts` (SplitMix64 steps), stable across runs and platforms:
+/// the seed of a per-instance repaint choice.
+#[must_use]
+pub fn instance_seed(parts: &[u64]) -> u64 {
+    let mut h: u64 = 0x9E37_79B9_7F4A_7C15;
+    for &p in parts {
+        h ^= p;
+        h = h.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = h;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        h = z ^ (z >> 31);
+    }
+    h
+}
+
+/// Stable 64-bit hash of a string (FNV-1a), for seeds made from names.
+#[must_use]
+pub fn name_seed(name: &str) -> u64 {
+    name.bytes().fold(0xCBF2_9CE4_8422_2325, |h, b| {
+        (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01B3)
+    })
 }
 
 /// Repaints of a menu vehicle (empty list when the installation is unknown).
@@ -171,6 +222,24 @@ pub fn vehicle_repaints(vehicle: &VehicleItem) -> VehicleRepaints {
 }
 
 impl VehicleRepaints {
+    /// The repaint of one placed instance (a parked car, an AI vehicle), chosen deterministically
+    /// from `seed` among the default (unpainted when the vehicle names none) and the `.cti`
+    /// items. OMSI's own choice rule is unknown; a uniform choice per instance is assumed.
+    #[must_use]
+    pub fn pick(&self, seed: u64) -> &str {
+        let unnamed_default = usize::from(self.default_name.is_empty());
+        let count = self.names.len() + unnamed_default;
+        if count == 0 {
+            return "";
+        }
+        let i = usize::try_from(seed % count as u64).unwrap_or(0);
+        if i < unnamed_default {
+            ""
+        } else {
+            &self.names[i - unnamed_default]
+        }
+    }
+
     /// Texture replacements of repaint `name` for a model whose `[CTCTexture]` slots declare the
     /// default texture file of each slot: `(default file name, replacement path)`. Empty for the
     /// default repaint and for unknown names.
@@ -242,6 +311,56 @@ mod tests {
             r.setvars["Zebra"],
             [("lights".to_string(), "1".to_string())]
         );
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn instance_choice_is_deterministic_and_covers_all_repaints() {
+        let r = VehicleRepaints {
+            default_name: String::new(),
+            names: vec!["Rot".into(), "Gold".into(), "Taxi".into()],
+            ..Default::default()
+        };
+        let a: Vec<&str> = (0..64).map(|i| r.pick(instance_seed(&[7, i]))).collect();
+        let b: Vec<&str> = (0..64).map(|i| r.pick(instance_seed(&[7, i]))).collect();
+        assert_eq!(a, b);
+        for name in ["", "Rot", "Gold", "Taxi"] {
+            assert!(a.contains(&name), "{name} chosen at least once");
+        }
+        assert_ne!(instance_seed(&[1, 2]), instance_seed(&[2, 1]));
+        assert_eq!(name_seed("W123"), name_seed("W123"));
+        // A named default is one of the choices, not an extra unpainted one.
+        let named = VehicleRepaints {
+            default_name: "Beige".into(),
+            names: vec!["Beige".into()],
+            ..Default::default()
+        };
+        assert_eq!(named.pick(12345), "Beige");
+        assert_eq!(VehicleRepaints::default().pick(3), "");
+    }
+
+    #[test]
+    fn model_repaints_resolve_the_colorscheme_folder_from_the_sco_folder() {
+        let root = tmp_root("c");
+        let veh = root.join("Vehicles/Car");
+        std::fs::create_dir_all(veh.join("Model")).unwrap();
+        std::fs::create_dir_all(veh.join("Texture")).unwrap();
+        std::fs::write(veh.join("Texture/red.tga"), b"x").unwrap();
+        std::fs::write(
+            veh.join("Texture/l.cti"),
+            "[item]\nRot\nfarbschema\nred.tga\n",
+        )
+        .unwrap();
+        let model = ModelConfig::parse_bytes(
+            b"[CTC]\nColorscheme\nTexture\n0\n[CTCTexture]\nfarbschema\nCar_Main.tga\n",
+        )
+        .unwrap();
+        let r = discover_for_model(&root, &veh, &model, "");
+        assert_eq!(r.names, ["Rot"]);
+        let repl = r.replacements("Rot", &model.ctc_textures);
+        assert_eq!(repl.len(), 1);
+        assert_eq!(repl[0].0, "car_main.tga");
+        assert!(r.replacements("", &model.ctc_textures).is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
 

@@ -455,7 +455,8 @@ fn spawn_object_inner(
         }
         return;
     }
-    if sco.only_editor {
+    // An editor-only object draws no mesh; its `[maplight]`s are placed below.
+    if sco.only_editor && sco.map_lights.is_empty() {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
@@ -500,6 +501,15 @@ fn spawn_object_inner(
             scale: Vec3::ONE,
         },
     };
+    if sco.only_editor {
+        // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
+        // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
+        let root = commands.spawn((transform, Name::new("MapLights"))).id();
+        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
+        children.push(root);
+        tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
+        return;
+    }
     // `[attachObj]` children of this object are placed relative to it.
     job.placed
         .entry(obj.id_code)
@@ -519,9 +529,15 @@ fn spawn_object_inner(
     super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
         super::trace::set_model_cfg(cfg_rel);
+        // The colour scheme of this placement (`[CTC]` repaints), fixed per object and tile.
+        let seed = crate::new_game_screen::repaints::instance_seed(&[
+            obj.id_code,
+            u64::from(key.0 as u32),
+            u64::from(key.1 as u32),
+        ]);
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
-            transform, children,
+            transform, seed, children,
         );
         return;
     }
@@ -534,7 +550,12 @@ fn spawn_object_inner(
         .map(|t| t.string_names.clone())
         .unwrap_or_default();
     let mut mesh_parts = Vec::with_capacity(sco.meshes.len());
-    for mesh_def in &sco.meshes {
+    for (mesh_index, mesh_def) in sco.meshes.iter().enumerate() {
+        // `[onlyeditor]` after a `[mesh]` hides that mesh only (helpers next to a visible one).
+        if !sco.mesh_in_game(mesh_index) {
+            mesh_parts.push(Vec::new());
+            continue;
+        }
         let found = job.install.find_in(&model_dir, &mesh_def.file);
         if let Some(p) = &found {
             job.loading_deps
@@ -606,7 +627,7 @@ fn spawn_object_inner(
         mesh_parts.push(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
     }
     if mesh_parts.iter().all(Vec::is_empty) {
-        if sco.meshes.is_empty() {
+        if sco.meshes.is_empty() || sco.is_editor_only() {
             tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
             stats.objects_no_geometry += 1;
         } else if job.cache.stats.hidden_parts > hidden_before {
@@ -667,6 +688,7 @@ fn spawn_vehicle_model(
     sco_dir: &Path,
     cfg_rel: &str,
     transform: Transform,
+    repaint_seed: u64,
     children: &mut Vec<Entity>,
 ) {
     let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
@@ -705,6 +727,19 @@ fn spawn_vehicle_model(
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
     job.vehicle_text_defs = model.text_textures.clone();
+    let repaints = job
+        .model_repaints
+        .entry(cfg_path.clone())
+        .or_insert_with(|| {
+            crate::new_game_screen::repaints::discover_for_model(
+                &job.config.root,
+                sco_dir,
+                &model,
+                "",
+            )
+        });
+    let replacements = repaints.replacements(repaints.pick(repaint_seed), &model.ctc_textures);
+    job.cache.texture_replacements = replacements.into_iter().collect();
     let (mut count, mut verts) = (0, 0);
     for lod in lods {
         let (c, v, _, _) = super::vehicle::load_segment_meshes(
@@ -715,6 +750,7 @@ fn spawn_vehicle_model(
             break;
         }
     }
+    job.cache.texture_replacements.clear();
     if count == 0 {
         tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
         super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));
