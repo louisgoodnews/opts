@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use opts_core::formats::map::MapTile;
+use opts_core::formats::map::{MapManifest, MapTile, TileGrid};
 use opts_core::formats::scenery::SceneryObject;
 
 fn find_ci(base: &Path, rel: &str) -> Option<PathBuf> {
@@ -51,16 +51,25 @@ fn main() {
             tiles.push((tx, ty, t));
         }
     }
+    // The tiles' grid: 300 m, or the Mercator rows of a `[worldcoordinates]` map.
+    let world_coordinates = find_ci(&map_dir, "global.cfg")
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|b| MapManifest::parse(&b).ok())
+        .is_some_and(|m| m.world_coordinates);
+    let sample: Vec<_> = tiles
+        .iter()
+        .map(|(x, y, t)| ((*x, *y), t.splines.clone()))
+        .collect();
+    let (tile_grid, _) = TileGrid::measure(&sample, world_coordinates);
+    let origin = |tx: i32, ty: i32| tile_grid.origin((tx, ty), (0, 0));
     // spline ends: (spline index, point)
     let mut ends: Vec<(usize, Pt, bool)> = Vec::new(); // bool: is_road (has traffic path) approximated by sli name
     let mut idx = 0;
     for (tx, ty, t) in &tiles {
         for s in &t.splines {
             let phi = f64::from(s.heading_deg).to_radians();
-            let (x0, y0) = (
-                f64::from(*tx) * 300.0 + f64::from(s.position.x),
-                f64::from(*ty) * 300.0 + f64::from(s.position.y),
-            );
+            let o = origin(*tx, *ty);
+            let (x0, y0) = (o.x + f64::from(s.position.x), o.y + f64::from(s.position.y));
             let (len, r) = (f64::from(s.length_m), f64::from(s.radius_m));
             let (x1, y1) = if r.abs() > 1e-3 {
                 let h = phi + len / r;
@@ -116,9 +125,10 @@ fn main() {
                     .and_then(|b| SceneryObject::parse(&b).ok())
             });
             let Some(sco) = sco else { continue };
+            let t0 = origin(*tx, *ty);
             let (ox, oy) = (
-                f64::from(*tx) * 300.0 + f64::from(o.position.x),
-                f64::from(*ty) * 300.0 + f64::from(o.position.y),
+                t0.x + f64::from(o.position.x),
+                t0.y + f64::from(o.position.y),
             );
             let th = f64::from(o.heading_deg).to_radians();
             for p in sco.paths.iter().filter(|p| p.path_type == 0) {

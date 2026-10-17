@@ -10,7 +10,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance};
+use opts_core::formats::map::{MapManifest, MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use crate::in_game::attachments::SplineIndex;
@@ -146,6 +146,8 @@ pub struct PositionReadout {
 pub struct WorldStats {
     pub map_name: String,
     pub start_tile: (i32, i32),
+    /// Tile grid of the map (where each tile lies relative to the start tile).
+    pub grid: TileGrid,
     /// Where the camera and the player's vehicle are (updated every frame).
     pub position: PositionReadout,
     pub tiles_loaded: usize,
@@ -239,6 +241,8 @@ pub struct WorldLoadJob {
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
+    /// Tile grid of the map; the session frame is anchored at `start_tile`.
+    grid: TileGrid,
     /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
     missing_listed: usize,
     /// Camera parameters, set once the vehicle is loaded.

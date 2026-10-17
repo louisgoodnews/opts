@@ -1,6 +1,7 @@
 //! Toggleable diagnostic overlay.
 
 use bevy::prelude::*;
+use opts_core::formats::map::TileGrid;
 
 use crate::in_game::types::InGameEntity;
 
@@ -116,23 +117,13 @@ fn format_pos(label: &str, p: Option<WorldPos>) -> String {
 
 /// Converts a Bevy-space position (x east, y up, z = −north, relative to the start tile's corner)
 /// into an OMSI-frame position.
-fn world_pos(start_tile: (i32, i32), p: Vec3) -> WorldPos {
-    let (ox, oy) = (
-        start_tile.0 as f32 * opts_bevy::tile_size(),
-        start_tile.1 as f32 * opts_bevy::tile_size(),
-    );
-    let (x, y) = (ox + p.x, oy - p.z);
-    let tile = (
-        (x / opts_bevy::tile_size()).floor() as i32,
-        (y / opts_bevy::tile_size()).floor() as i32,
-    );
+fn world_pos(grid: &TileGrid, start_tile: (i32, i32), p: Vec3) -> WorldPos {
+    let (tile, local) = grid.tile_at(Vec2::new(p.x, -p.z).as_dvec2(), start_tile);
+    let abs = grid.absolute(tile, local);
     WorldPos {
         tile,
-        world: Vec3::new(x, y, p.y),
-        local: Vec2::new(
-            x - tile.0 as f32 * opts_bevy::tile_size(),
-            y - tile.1 as f32 * opts_bevy::tile_size(),
-        ),
+        world: Vec3::new(abs.x as f32, abs.y as f32, p.y),
+        local: local.as_vec2(),
     }
 }
 
@@ -150,16 +141,16 @@ pub fn track_position(
     vehicle: Query<&GlobalTransform, With<opts_bevy::PlayerVehicle>>,
     mut ended: Local<Option<PositionReadout>>,
 ) {
-    let start = stats.start_tile;
+    let (start, grid) = (stats.start_tile, stats.grid);
     let cam = camera
         .single()
         .ok()
-        .map(|c| world_pos(start, c.translation()));
+        .map(|c| world_pos(&grid, start, c.translation()));
     let veh = vehicle.single().ok().map(|v| {
         let (yaw, _, _) = v.rotation().to_euler(EulerRot::YXZ);
         // Bevy yaw is counter-clockwise about +Y; OMSI headings are clockwise from north.
         (
-            world_pos(start, v.translation()),
+            world_pos(&grid, start, v.translation()),
             (-yaw.to_degrees()).rem_euclid(360.0),
         )
     });

@@ -12,7 +12,7 @@ pub mod write;
 
 pub use error::MapParseError;
 pub use global::{MapEntryPoint, MapGroundTex, MapManifest, MapSeason, MapTileEntry};
-pub use grid::{estimate_tile_size, mercator_row_width, GridFit, TileGrid, DEFAULT_TILE_SIZE_M};
+pub use grid::{mercator_row_width, GridFit, TileGrid, DEFAULT_TILE_SIZE_M};
 pub use lists::{
     parse_unsched_trafficdens, parse_unsched_vehgroups, AiEntry, AiGroup, AiLists, DensityProfile,
     GroupDensity, UnschedGroup,

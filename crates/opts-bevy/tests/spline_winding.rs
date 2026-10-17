@@ -175,7 +175,7 @@ fn terrain_never_covers_a_road() {
     let inst = instance(0.0, 0.0, 0.0, false);
     let prof = profile(vec![pt(-4.0, 0.1), pt(4.0, 0.1)]);
     let footprint = road_footprint(&prof, &inst).expect("height profile deforms terrain");
-    let carved = carve_terrain_under_roads(&terrain, &[footprint]);
+    let carved = carve_terrain_under_roads(&terrain, &[footprint], TERRAIN_CELL_M);
     // Road runs north from (50, 50) for 40 m, 8 m wide, surface at 10.1.
     for j in 0..dim {
         for i in 0..dim {
@@ -210,13 +210,13 @@ fn flat_ground_surfaces_are_not_covered_but_cuttings_stay() {
         grid_cells: 60,
         heights: vec![10.08; dim * dim],
     };
-    let carved = carve_terrain_under_roads(&near, std::slice::from_ref(&footprint));
+    let carved = carve_terrain_under_roads(&near, std::slice::from_ref(&footprint), TERRAIN_CELL_M);
     assert!(carved.heights.iter().any(|h| *h < 10.05));
     // Terrain 2 m above it (a hill over a tunnel) stays as authored.
     let hill = MapTerrain {
         grid_cells: 60,
         heights: vec![12.0; dim * dim],
     };
-    let carved = carve_terrain_under_roads(&hill, &[footprint]);
+    let carved = carve_terrain_under_roads(&hill, &[footprint], TERRAIN_CELL_M);
     assert!(carved.heights.iter().all(|h| *h == 12.0));
 }

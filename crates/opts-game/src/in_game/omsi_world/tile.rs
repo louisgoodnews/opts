@@ -6,14 +6,13 @@ use bevy::prelude::*;
 use opts_bevy::coords::{bevy_to_omsi_pos, omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
-use opts_bevy::{sample_terrain, ContentLoader, TextureOverride};
-use opts_core::formats::map::{MapObjectInstance, MapTerrain};
+use opts_bevy::{ContentLoader, TextureOverride, TileTerrain};
+use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
 
-use super::ground::tile_origin;
 use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
 use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -50,10 +49,7 @@ pub fn load_next_tile(
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();
-    let origin = {
-        let (a, b) = (tile_origin(key), tile_origin(job.start_tile));
-        (a.0 - b.0, a.1 - b.1)
-    };
+    let origin = job.tile_offset(key);
     let tile_path = job.tile_path(key).unwrap_or_default();
     job.loading_deps.clear();
     job.loading_deps
@@ -134,6 +130,7 @@ pub fn load_next_tile(
             terrain.clone(),
             roads,
             job.start_tile,
+            job.grid,
         );
     }
 
@@ -148,7 +145,8 @@ pub fn load_next_tile(
             &tile.splines,
             &index,
             key,
-            |x, y| terrain.as_ref().map_or(0.0, |t| sample_terrain(t, x, y)),
+            &job.grid,
+            |x, y| terrain.as_ref().map_or(0.0, |t| t.height(x, y)),
         )
     };
     let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
@@ -275,7 +273,7 @@ fn place_attached_objects(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     tile: &opts_core::formats::map::MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -359,7 +357,7 @@ fn spawn_object(
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
     placement: Placement,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -398,7 +396,7 @@ fn spawn_object_inner(
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
     placement: Placement,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -480,7 +478,7 @@ fn spawn_object_inner(
     } else {
         terrain
             .as_ref()
-            .map_or(0.0, |t| sample_terrain(t, obj.position.x, obj.position.y))
+            .map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
     };
     let z = match (placement, sco.has_absolute_height()) {
         (Placement::OnSpline(z), true) => z,
@@ -751,10 +749,7 @@ pub fn stream_world_tiles(
     }
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
-    let centre = (
-        job.start_tile.0 + (p.x / opts_bevy::tile_size()).floor() as i32,
-        job.start_tile.1 + ((-p.z) / opts_bevy::tile_size()).floor() as i32,
-    );
+    let centre = job.grid.key_at(Vec2::new(p.x, -p.z), job.start_tile);
     let dist = |k: (i32, i32)| (k.0 - centre.0).abs().max((k.1 - centre.1).abs());
 
     let radius = job.stream_radius;

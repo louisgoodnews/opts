@@ -332,14 +332,11 @@ fn release(world: &mut World, params: &Value) -> Outcome {
 // ---- drive.state ------------------------------------------------------------------------------
 
 fn absolute_position(world: &World, local: Vec2) -> (f64, f64) {
-    let (tx, ty) = world
+    let (start, grid) = world
         .get_resource::<WorldStats>()
-        .map_or((0, 0), |s| s.start_tile);
-    let tile = f64::from(opts_bevy::tile_size());
-    (
-        f64::from(local.x) + f64::from(tx) * tile,
-        f64::from(local.y) + f64::from(ty) * tile,
-    )
+        .map_or(((0, 0), Default::default()), |s| (s.start_tile, s.grid));
+    let abs = grid.local_to_absolute(local.as_dvec2(), start);
+    (abs.x, abs.y)
 }
 
 /// The drive state as JSON; `None` without a player vehicle.
@@ -435,15 +432,13 @@ fn teleport(world: &mut World, params: &Value) -> Outcome {
         let x = opts_bevy::control::params::f64_param(params, "x")?;
         let y = opts_bevy::control::params::f64_param(params, "y")?;
         let heading = opt_f64(params, "heading_deg")?;
-        let (tx, ty) = world
+        let (start, grid) = world
             .get_resource::<WorldStats>()
-            .map(|s| s.start_tile)
+            .map(|s| (s.start_tile, s.grid))
             .ok_or_else(|| RpcError::new(code::NOT_READY, "no session has been started"))?;
-        let tile = f64::from(opts_bevy::tile_size());
-        let local = Vec2::new(
-            (x - f64::from(tx) * tile) as f32,
-            (y - f64::from(ty) * tile) as f32,
-        );
+        let local = grid
+            .absolute_to_local(bevy::math::DVec2::new(x, y), start)
+            .as_vec2();
         place(world, local, heading.map(|h| (h as f32).to_radians()), None)?;
         Ok(json!({ "ok": true, "x": x, "y": y, "heading_deg": heading }))
     })();

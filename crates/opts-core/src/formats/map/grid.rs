@@ -43,6 +43,27 @@ pub fn mercator_row_width(ty: i32) -> f64 {
     EARTH_CIRCUMFERENCE_M * lat.cos() / ZOOM16_TILES
 }
 
+/// Sum of the Mercator north-south steps from row 0 to row `ty` (m), memoised: absolute
+/// positions on a Mercator map lie some 11,000 rows from row 0.
+fn mercator_rows_from_zero(ty: i32) -> f64 {
+    static CACHE: std::sync::OnceLock<std::sync::Mutex<HashMap<i32, f64>>> =
+        std::sync::OnceLock::new();
+    let cache = CACHE.get_or_init(Default::default);
+    if let Some(v) = cache.lock().ok().and_then(|c| c.get(&ty).copied()) {
+        return v;
+    }
+    let step = |r: i32| 0.5 * (mercator_row_width(r) + mercator_row_width(r + 1));
+    let v = if ty >= 0 {
+        (0..ty).map(step).sum()
+    } else {
+        -(ty..0).map(step).sum::<f64>()
+    };
+    if let Ok(mut c) = cache.lock() {
+        c.insert(ty, v);
+    }
+    v
+}
+
 /// How the tiles of a map are laid out.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TileGrid {
@@ -129,15 +150,6 @@ fn median(mut v: Vec<f64>) -> Option<f64> {
     }
     v.sort_by(f64::total_cmp);
     Some(v[v.len() / 2])
-}
-
-/// The uniform tile size of a map (the median step, or 300 m); see [`TileGrid::measure`].
-#[must_use]
-pub fn estimate_tile_size(tiles: &[((i32, i32), Vec<MapSplineInstance>)]) -> f32 {
-    match TileGrid::measure(tiles, false).0 {
-        TileGrid::Uniform { pitch } => pitch as f32,
-        TileGrid::Mercator => DEFAULT_TILE_SIZE_M as f32,
-    }
 }
 
 impl TileGrid {
@@ -230,8 +242,14 @@ impl TileGrid {
     fn row_offset(&self, ty: i32, ay: i32) -> f64 {
         match self {
             Self::Uniform { pitch } => f64::from(ty - ay) * pitch,
-            Self::Mercator if ty >= ay => (ay..ty).map(|r| self.step_ns(r)).sum(),
-            Self::Mercator => -(ty..ay).map(|r| self.step_ns(r)).sum::<f64>(),
+            Self::Mercator if (ty - ay).abs() <= 64 => {
+                if ty >= ay {
+                    (ay..ty).map(|r| self.step_ns(r)).sum()
+                } else {
+                    -(ty..ay).map(|r| self.step_ns(r)).sum::<f64>()
+                }
+            }
+            Self::Mercator => mercator_rows_from_zero(ty) - mercator_rows_from_zero(ay),
         }
     }
 
@@ -266,18 +284,21 @@ impl TileGrid {
         let ty = match self {
             Self::Uniform { pitch } => anchor.1 + (local.y / pitch).floor() as i32,
             Self::Mercator => {
+                // Jump by the local row step until the row is found (a few rounds even from
+                // row 0), then settle on the row whose band holds the point.
                 let mut ty = anchor.1;
-                let mut y0 = 0.0;
-                while local.y < y0 {
-                    ty -= 1;
-                    y0 -= self.step_ns(ty);
-                }
-                loop {
-                    let next = y0 + self.step_ns(ty);
-                    if local.y < next {
+                for _ in 0..32 {
+                    let jump = ((local.y - self.row_offset(ty, anchor.1)) / self.step_ns(ty))
+                        .floor() as i32;
+                    if jump == 0 {
                         break;
                     }
-                    y0 = next;
+                    ty += jump;
+                }
+                while local.y < self.row_offset(ty, anchor.1) {
+                    ty -= 1;
+                }
+                while local.y >= self.row_offset(ty + 1, anchor.1) {
                     ty += 1;
                 }
                 ty

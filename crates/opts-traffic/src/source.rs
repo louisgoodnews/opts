@@ -16,20 +16,20 @@
 //! (`docs/src/architecture/ai-traffic.md`, "Gaps in `opts-core`").
 
 use glam::DVec2;
-use opts_core::formats::map::{MapObjectInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner};
+use opts_core::formats::map::{
+    MapObjectInstance, MapTile, MapTrafficRule, RuleKind, RuleOwner, TileGrid,
+};
 use opts_core::formats::scenery::{ScoPath, ScoTrafficLightGroup, SplinePath};
 
 use crate::geometry::PathGeometry;
 use crate::graph::{Direction, Elevation, LaneKind, LaneRules, LaneSegment};
 use crate::signals::{SignalKey, SignalProgram};
 
-/// Tile edge length in metres: tile `(x, y)` starts at `(x · 300, y · 300)`.
-pub const TILE_SIZE_M: f64 = 300.0;
-
-/// World origin of tile `(x, y)`.
+/// World origin of tile `(x, y)` on the map's tile grid, relative to tile `(0, 0)` (on a 300 m
+/// grid `(x · 300, y · 300)`; `docs/src/architecture/streaming-coordinates.md`).
 #[must_use]
-pub fn tile_origin(x: i32, y: i32) -> DVec2 {
-    DVec2::new(f64::from(x), f64::from(y)) * TILE_SIZE_M
+pub fn tile_origin(grid: &TileGrid, x: i32, y: i32) -> DVec2 {
+    grid.origin((x, y), (0, 0))
 }
 
 /// Lookup of parsed path data by the file name written in the tile.
@@ -302,7 +302,7 @@ mod tests {
             sli: vec![spline_path(1.75, 0), spline_path(-1.75, 1)],
             sco: vec![sco_path(1.75, 0.0)],
         };
-        let segs = segments_from_tile(&tile, tile_origin(1, 0), &mut src);
+        let segs = segments_from_tile(&tile, tile_origin(&TileGrid::default(), 1, 0), &mut src);
         assert_eq!(segs.len(), 3);
         // Tile (1, 0) starts 300 m east; the right lane sits 1.75 m east of the centre line.
         assert!(segs[0]

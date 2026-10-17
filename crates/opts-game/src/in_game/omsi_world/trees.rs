@@ -4,8 +4,8 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
-use opts_bevy::{sample_terrain, tree_billboard_mesh, ContentLoader};
-use opts_core::formats::map::{MapObjectInstance, MapTerrain};
+use opts_bevy::{tree_billboard_mesh, ContentLoader, TileTerrain};
+use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::scenery::ScoTree;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -24,7 +24,7 @@ pub(super) fn spawn_tree(
     tree: &ScoTree,
     obj: &MapObjectInstance,
     origin: (f32, f32),
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
 ) -> Option<Entity> {
     let var = |i: usize| {
         obj.string_vars
@@ -61,7 +61,7 @@ pub(super) fn spawn_tree(
         return None;
     };
 
-    let ground = terrain.map_or(0.0, |t| sample_terrain(t, obj.position.x, obj.position.y));
+    let ground = terrain.map_or(0.0, |t| t.height(obj.position.x, obj.position.y));
     let world = Vec3::new(
         origin.0 + obj.position.x,
         origin.1 + obj.position.y,

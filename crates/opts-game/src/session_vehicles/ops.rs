@@ -38,27 +38,21 @@ pub const PLACE_LABEL_HIDE_DISTANCE_M: f32 = 25.0;
 /// Absolute OMSI position of a point of the session frame (the chassis position).
 #[must_use]
 pub fn local_to_abs(world: &World, local: Vec2) -> (f64, f64) {
-    let (tx, ty) = world
+    let (start, grid) = world
         .get_resource::<WorldStats>()
-        .map_or((0, 0), |s| s.start_tile);
-    let tile = f64::from(opts_bevy::tile_size());
-    (
-        f64::from(local.x) + f64::from(tx) * tile,
-        f64::from(local.y) + f64::from(ty) * tile,
-    )
+        .map_or(((0, 0), Default::default()), |s| (s.start_tile, s.grid));
+    let abs = grid.local_to_absolute(local.as_dvec2(), start);
+    (abs.x, abs.y)
 }
 
 /// The session-frame position of an absolute OMSI position.
 #[must_use]
 pub fn abs_to_local(world: &World, x: f64, y: f64) -> Vec2 {
-    let (tx, ty) = world
+    let (start, grid) = world
         .get_resource::<WorldStats>()
-        .map_or((0, 0), |s| s.start_tile);
-    let tile = f64::from(opts_bevy::tile_size());
-    Vec2::new(
-        (x - f64::from(tx) * tile) as f32,
-        (y - f64::from(ty) * tile) as f32,
-    )
+        .map_or(((0, 0), Default::default()), |s| (s.start_tile, s.grid));
+    grid.absolute_to_local(bevy::math::DVec2::new(x, y), start)
+        .as_vec2()
 }
 
 fn alive_entity(world: &World, id: VehicleId) -> Result<Entity, OpError> {

@@ -13,43 +13,48 @@ use crate::mesh::smooth_normal_mesh;
 use crate::scenery::spline_pose;
 
 /// Default side length of a map tile in metres (`docs/src/formats/map/tiles.md` Q-M01). Maps with
-/// `[worldcoordinates]` use larger tiles (Berlin-Spandau 372 m, Wuppertal 639 382.8 m): see
-/// [`tile_size`].
+/// `[worldcoordinates]` lay their tiles out on Mercator rows instead
+/// (`opts_core::formats::map::TileGrid`); a tile's size and cell come from the session's grid.
 pub const TILE_SIZE_M: f32 = 300.0;
 
-/// Default terrain grid cell size (60 cells per default tile); see [`terrain_cell`].
+/// Default terrain grid cell size (60 cells per default tile).
 pub const TERRAIN_CELL_M: f32 = TILE_SIZE_M / 60.0;
 
-static TILE_SIZE_BITS: std::sync::atomic::AtomicU32 =
-    std::sync::atomic::AtomicU32::new(TILE_SIZE_M.to_bits());
-
-/// Side length of a tile of the map being played (set once per session by [`set_tile_size`]).
-#[must_use]
-pub fn tile_size() -> f32 {
-    f32::from_bits(TILE_SIZE_BITS.load(std::sync::atomic::Ordering::Relaxed))
+/// A tile's terrain grid with the size of its cells (`TileGrid::cell` of the tile's row): what
+/// every height consumer samples.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TileTerrain {
+    /// The height grid.
+    pub grid: MapTerrain,
+    /// Edge of one cell (m).
+    pub cell: f32,
 }
 
-/// Sets the tile size of the current map.
-pub fn set_tile_size(metres: f32) {
-    TILE_SIZE_BITS.store(metres.to_bits(), std::sync::atomic::Ordering::Relaxed);
+impl TileTerrain {
+    /// A grid with cells of `cell` metres.
+    #[must_use]
+    pub fn new(grid: MapTerrain, cell: f32) -> Self {
+        Self { grid, cell }
+    }
+
+    /// Ground height at tile-local `(x, y)` metres.
+    #[must_use]
+    pub fn height(&self, x: f32, y: f32) -> f32 {
+        sample_terrain(&self.grid, self.cell, x, y)
+    }
 }
 
-/// Terrain cell size of the current map (a tile has 60 × 60 cells).
+/// Bilinearly samples a tile's height grid at tile-local `(x, y)` metres; `cell` is the tile's
+/// terrain cell (`TileGrid::cell` of its row).
 #[must_use]
-pub fn terrain_cell() -> f32 {
-    tile_size() / 60.0
-}
-
-/// Bilinearly samples a tile's height grid at tile-local `(x, y)` metres.
-#[must_use]
-pub fn sample_terrain(terrain: &MapTerrain, x: f32, y: f32) -> f32 {
+pub fn sample_terrain(terrain: &MapTerrain, cell: f32, x: f32, y: f32) -> f32 {
     let dim = terrain.grid_cells as usize + 1;
     if dim < 2 || terrain.heights.len() < dim * dim {
         return 0.0;
     }
     let max = terrain.grid_cells as f32 - 0.0001;
-    let gx = (x / terrain_cell()).clamp(0.0, max);
-    let gy = (y / terrain_cell()).clamp(0.0, max);
+    let gx = (x / cell).clamp(0.0, max);
+    let gy = (y / cell).clamp(0.0, max);
     let (ix, iy) = (gx as usize, gy as usize);
     let (fx, fy) = (gx - ix as f32, gy - iy as f32);
     let h = |i: usize, j: usize| terrain.heights[j * dim + i];
@@ -60,22 +65,23 @@ pub fn sample_terrain(terrain: &MapTerrain, x: f32, y: f32) -> f32 {
 
 /// Builds the terrain mesh of one tile in absolute Bevy world coordinates.
 ///
-/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`. With
-/// `uv_per_tile` the UVs span 0..1 over the tile (painted ground texture), otherwise one unit per
-/// 5 m cell (a repeating base texture).
+/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`, `cell` its
+/// terrain cell. With `uv_per_tile` the UVs span 0..1 over the tile (painted ground texture),
+/// otherwise one unit per cell (a repeating base texture).
 #[must_use]
-pub fn build_terrain_mesh(terrain: &MapTerrain, origin: (f32, f32), uv_per_tile: bool) -> Mesh {
+pub fn build_terrain_mesh(
+    terrain: &MapTerrain,
+    origin: (f32, f32),
+    cell: f32,
+    uv_per_tile: bool,
+) -> Mesh {
     let dim = terrain.grid_cells as usize + 1;
     let mut positions = Vec::with_capacity(dim * dim);
     let mut uvs = Vec::with_capacity(dim * dim);
     for j in 0..dim {
         for i in 0..dim {
             let h = terrain.heights.get(j * dim + i).copied().unwrap_or(0.0);
-            positions.push([
-                origin.0 + i as f32 * terrain_cell(),
-                h,
-                -(origin.1 + j as f32 * terrain_cell()),
-            ]);
+            positions.push([origin.0 + i as f32 * cell, h, -(origin.1 + j as f32 * cell)]);
             if uv_per_tile {
                 // One texture over the whole tile, row 0 at the north edge.
                 let n = (dim - 1) as f32;
@@ -159,14 +165,19 @@ pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Opti
 /// The footprint of a spline placed on a neighbouring tile, moved into this tile's frame, or
 /// `None` when it does not come within reach of this tile's grid.
 ///
-/// `offset` is the neighbour's south-west corner relative to this tile's (`(dx·tile, dy·tile)`).
+/// `offset` is the neighbour's south-west corner relative to this tile's (`TileGrid` offset),
+/// `size` and `cell` this tile's edge and terrain cell.
 /// Splines are stored on the tile they start in but run on across the border; a tile carved only
 /// under its own splines covered the part of a road that lies on the next tile (Neuenbreid: 286 m
 /// of road surface under the neighbour's terrain, 7 m within the splines' own tiles).
 #[must_use]
-pub fn footprint_from_neighbour(road: &RoadFootprint, offset: (f32, f32)) -> Option<RoadFootprint> {
-    let reach = road.half_width + terrain_cell();
-    let size = tile_size();
+pub fn footprint_from_neighbour(
+    road: &RoadFootprint,
+    offset: (f32, f32),
+    size: f32,
+    cell: f32,
+) -> Option<RoadFootprint> {
+    let reach = road.half_width + cell;
     let centreline: Vec<[f32; 3]> = road
         .centreline
         .iter()
@@ -187,7 +198,11 @@ pub fn footprint_from_neighbour(road: &RoadFootprint, offset: (f32, f32)) -> Opt
 /// surface height minus a small clearance; vertices elsewhere and heights already below the road
 /// stay untouched.
 #[must_use]
-pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) -> MapTerrain {
+pub fn carve_terrain_under_roads(
+    terrain: &MapTerrain,
+    roads: &[RoadFootprint],
+    cell: f32,
+) -> MapTerrain {
     const CLEARANCE_M: f32 = 0.03;
     let dim = terrain.grid_cells as usize + 1;
     let mut out = terrain.clone();
@@ -195,20 +210,20 @@ pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) 
         return out;
     }
     for road in roads {
-        let reach = road.half_width + terrain_cell() * 0.5;
+        let reach = road.half_width + cell * 0.5;
         for seg in road.centreline.windows(2) {
             let (a, b) = (seg[0], seg[1]);
             let (min_x, max_x) = (a[0].min(b[0]) - reach, a[0].max(b[0]) + reach);
             let (min_y, max_y) = (a[1].min(b[1]) - reach, a[1].max(b[1]) + reach);
-            let i0 = ((min_x / terrain_cell()).floor().max(0.0)) as usize;
-            let j0 = ((min_y / terrain_cell()).floor().max(0.0)) as usize;
-            let i1 = (((max_x / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
-            let j1 = (((max_y / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
+            let i0 = ((min_x / cell).floor().max(0.0)) as usize;
+            let j0 = ((min_y / cell).floor().max(0.0)) as usize;
+            let i1 = (((max_x / cell).ceil()).max(0.0) as usize).min(dim - 1);
+            let j1 = (((max_y / cell).ceil()).max(0.0) as usize).min(dim - 1);
             let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
             let len2 = (dx * dx + dy * dy).max(1e-9);
             for j in j0..=j1 {
                 for i in i0..=i1 {
-                    let (vx, vy) = (i as f32 * terrain_cell(), j as f32 * terrain_cell());
+                    let (vx, vy) = (i as f32 * cell, j as f32 * cell);
                     let t = (((vx - a[0]) * dx + (vy - a[1]) * dy) / len2).clamp(0.0, 1.0);
                     let (px, py) = (a[0] + t * dx, a[1] + t * dy);
                     if (vx - px).hypot(vy - py) > reach {
@@ -254,14 +269,13 @@ mod tests {
             grid_cells: 60,
             heights,
         };
-        assert!((sample_terrain(&t, 7.5, 100.0) - 1.5).abs() < 1e-4);
-        let mesh = build_terrain_mesh(&t, (300.0, 0.0), false);
+        assert!((sample_terrain(&t, 5.0, 7.5, 100.0) - 1.5).abs() < 1e-4);
+        let mesh = build_terrain_mesh(&t, (300.0, 0.0), 5.0, false);
         assert_eq!(mesh.count_vertices(), 61 * 61);
     }
 
     #[test]
     fn a_road_from_the_neighbour_tile_is_carved_too() {
-        set_tile_size(300.0);
         let dim = 61;
         let flat = MapTerrain {
             grid_cells: 60,
@@ -277,15 +291,16 @@ mod tests {
             min_surface_z: 0.0,
             max_cover: f32::INFINITY,
         };
-        let here = footprint_from_neighbour(&road, (-300.0, 0.0)).expect("reaches this tile");
-        let carved = carve_terrain_under_roads(&flat, &[here]);
-        assert!(sample_terrain(&carved, 20.0, 150.0) < 0.5);
-        assert!((sample_terrain(&carved, 100.0, 150.0) - 1.0).abs() < 1e-4);
+        let here =
+            footprint_from_neighbour(&road, (-300.0, 0.0), 300.0, 5.0).expect("reaches this tile");
+        let carved = carve_terrain_under_roads(&flat, &[here], 5.0);
+        assert!(sample_terrain(&carved, 5.0, 20.0, 150.0) < 0.5);
+        assert!((sample_terrain(&carved, 5.0, 100.0, 150.0) - 1.0).abs() < 1e-4);
         // A road that stays on the neighbour does not reach this tile.
         let far = RoadFootprint {
             centreline: vec![[100.0, 150.0, 0.5], [200.0, 150.0, 0.5]],
             ..road
         };
-        assert!(footprint_from_neighbour(&far, (-300.0, 0.0)).is_none());
+        assert!(footprint_from_neighbour(&far, (-300.0, 0.0), 300.0, 5.0).is_none());
     }
 }

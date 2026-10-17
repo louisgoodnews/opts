@@ -7,7 +7,7 @@ use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{
     build_terrain_mesh, build_water_mesh, carve_terrain_under_roads, extrude_spline_segment,
     footprint_from_neighbour, road_footprint, terrain_material, water_material, ContentLoader,
-    RoadFootprint,
+    RoadFootprint, TileTerrain,
 };
 use opts_core::formats::map::{MapTerrain, MapTile, MapWater};
 
@@ -40,7 +40,7 @@ pub(super) fn spawn_terrain(
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
-) -> Option<MapTerrain> {
+) -> Option<TileTerrain> {
     // --- Terrain ---------------------------------------------------------------------------
     let terrain_rel = format!("{}.terrain", job.tile_files[&key]);
     let terrain: Option<MapTerrain> = job
@@ -98,25 +98,28 @@ pub(super) fn spawn_terrain(
                 road_footprint(&profile, inst)
             })
             .collect();
-        let size = opts_bevy::tile_size();
+        let size = job.grid.tile_size(key.1) as f32;
+        let cell = job.terrain_cell(key.1);
         for (dx, dy) in NEIGHBOURS {
-            let Some(splines) = job.splines_of((key.0 + dx, key.1 + dy)) else {
+            let other = (key.0 + dx, key.1 + dy);
+            let Some(splines) = job.splines_of(other) else {
                 continue;
             };
-            let offset = (dx as f32 * size, dy as f32 * size);
+            let offset = job.grid.neighbour_offset(key, other);
+            let offset = (offset.x, offset.y);
             for inst in splines.iter() {
                 let Some(profile) = job.sli(&inst.sli_file) else {
                     continue;
                 };
                 if let Some(fp) = road_footprint(&profile, inst)
-                    .and_then(|fp| footprint_from_neighbour(&fp, offset))
+                    .and_then(|fp| footprint_from_neighbour(&fp, offset, size, cell))
                 {
                     roads.push(fp);
                 }
             }
         }
-        let carved = carve_terrain_under_roads(t, &roads);
-        let mesh = build_terrain_mesh(&carved, origin, tile_material.is_some());
+        let carved = carve_terrain_under_roads(t, &roads, cell);
+        let mesh = build_terrain_mesh(&carved, origin, cell, tile_material.is_some());
         stats.scene_vertices += mesh.count_vertices();
         let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
         children.push(match tile_material {
@@ -137,7 +140,8 @@ pub(super) fn spawn_terrain(
         tracing::warn!(tile = ?key, "tile has no readable .terrain grid; objects use z as absolute height");
     }
 
-    terrain
+    let cell = job.terrain_cell(key.1);
+    terrain.map(|t| TileTerrain::new(t, cell))
 }
 
 /// Water stage: the tile's `.map.water` surface over the terrain it floods.
@@ -153,7 +157,7 @@ pub(super) fn spawn_water(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     tile: &MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -183,7 +187,7 @@ pub(super) fn spawn_water(
         tracing::warn!(tile = ?key, "water without a terrain grid is not drawn");
         return;
     };
-    let Some(mesh) = build_water_mesh(terrain, &water, origin) else {
+    let Some(mesh) = build_water_mesh(&terrain.grid, &water, origin, terrain.cell) else {
         tracing::debug!(tile = ?key, levels = ?water.levels, "water lies below the terrain everywhere");
         return;
     };

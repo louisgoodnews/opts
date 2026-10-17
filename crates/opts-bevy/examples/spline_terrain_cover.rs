@@ -15,7 +15,6 @@ use opts_bevy::install::OmsiInstall;
 use opts_bevy::scenery::{extrude_spline_segment, spline_pose};
 use opts_bevy::terrain::{
     carve_terrain_under_roads, footprint_from_neighbour, road_footprint, sample_terrain,
-    set_tile_size,
 };
 use opts_core::formats::map::{MapTerrain, MapTile};
 use opts_core::formats::scenery::sli::SplineProfile;
@@ -26,7 +25,7 @@ fn main() {
     let rest: Vec<String> = args.collect();
     let neighbours = rest.iter().any(|a| a == "--neighbours");
     let tile_size: f32 = rest.iter().find_map(|s| s.parse().ok()).unwrap_or(300.0);
-    set_tile_size(tile_size);
+    let cell = tile_size / 60.0;
     let root = OmsiInstall::root_from_map_dir(&dir).expect("OMSI root");
     let install = OmsiInstall::new(&root);
 
@@ -82,12 +81,14 @@ fn main() {
                         footprint_from_neighbour(
                             &road_footprint(&profile(&s.sli_file)?, s)?,
                             offset,
+                            tile_size,
+                            cell,
                         )
                     }));
                 }
             }
         }
-        carved.insert(*key, carve_terrain_under_roads(t, &roads));
+        carved.insert(*key, carve_terrain_under_roads(t, &roads, cell));
     }
 
     // (footprint?, own tile?) -> (metres sampled, metres covered); splines with >= 2 m covered.
@@ -143,7 +144,7 @@ fn main() {
                 };
                 let e = tally.entry((fp, own)).or_default();
                 e.0 += 1;
-                if sample_terrain(t, lx, ly) > pose.z + centre_z + 0.05 {
+                if sample_terrain(t, cell, lx, ly) > pose.z + centre_z + 0.05 {
                     e.1 += 1;
                     covered_here += 1;
                 }

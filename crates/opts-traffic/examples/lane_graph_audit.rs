@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use opts_core::formats::map::MapTile;
+use opts_core::formats::map::{MapManifest, MapTile, TileGrid};
 use opts_core::formats::scenery::{
     SceneryObject, ScoPath, ScoTrafficLightGroup, SplinePath, SplineProfile,
 };
@@ -76,8 +76,7 @@ fn main() {
         sli: HashMap::new(),
         sco: HashMap::new(),
     };
-    let mut segments = Vec::new();
-    let mut programs = HashMap::new();
+    let mut tiles: Vec<((i32, i32), MapTile)> = Vec::new();
     for e in std::fs::read_dir(&map_dir).expect("map dir").flatten() {
         let name = e.file_name().to_string_lossy().into_owned();
         let Some(rest) = name
@@ -99,9 +98,22 @@ fn main() {
         else {
             continue;
         };
-        let origin = tile_origin(x, y);
-        segments.extend(segments_from_tile(&tile, origin, &mut files));
-        programs.extend(signals_from_tile(&tile, &mut files));
+        tiles.push(((x, y), tile));
+    }
+    // The tiles' grid: 300 m, or the Mercator rows of a `[worldcoordinates]` map.
+    let world_coordinates = find_ci(&map_dir, "global.cfg")
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|b| MapManifest::parse(&b).ok())
+        .is_some_and(|m| m.world_coordinates);
+    let sample: Vec<_> = tiles.iter().map(|(k, t)| (*k, t.splines.clone())).collect();
+    let (grid, _) = TileGrid::measure(&sample, world_coordinates);
+    println!("tile grid {grid:?}");
+    let mut segments = Vec::new();
+    let mut programs = HashMap::new();
+    for ((x, y), tile) in &tiles {
+        let origin = tile_origin(&grid, *x, *y);
+        segments.extend(segments_from_tile(tile, origin, &mut files));
+        programs.extend(signals_from_tile(tile, &mut files));
     }
     segments.retain(|s| s.kind == LaneKind::Road);
     let params = ConnectParams::default();

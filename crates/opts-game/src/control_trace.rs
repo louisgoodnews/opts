@@ -283,12 +283,8 @@ fn summary_row(r: &st::TraceRecord) -> Value {
 
 /// The tile a Bevy ground position lies on.
 fn tile_at(world: &World, x: f32, z: f32) -> Option<(i32, i32)> {
-    let start = world.get_resource::<WorldStats>()?.start_tile;
-    let size = opts_bevy::tile_size();
-    Some((
-        start.0 + (x / size).floor() as i32,
-        start.1 + ((-z) / size).floor() as i32,
-    ))
+    let stats = world.get_resource::<WorldStats>()?;
+    Some(stats.grid.key_at(Vec2::new(x, -z), stats.start_tile))
 }
 
 /// `trace.pick {x?, y?, crosshair?, limit?}`: what is under a screen pixel (as in a screenshot)
