@@ -20,6 +20,7 @@ directories = { workspace = true }
 # Data structures & Math
 glam = { workspace = true }
 petgraph = { workspace = true }
+image = { workspace = true }
 
 # Error Handling
 thiserror = { workspace = true }

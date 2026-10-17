@@ -4,9 +4,12 @@
 //! operational depot data (`.hof`), timetable state, tickets, passengers, and ground elevation.
 //! Specification: `docs/src/formats/text/vehicles/callbacks.md` (M-0093).
 
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
 use opts_core::formats::hof::HofFile;
+use opts_core::formats::oft::OftFont;
+use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 use opts_sim::script::{ExternalHandler, Stacks};
 
 /// Context for vehicle script callbacks (`(M.V.name)`).
@@ -24,6 +27,12 @@ pub struct VehicleHostContext {
     pub delay_seconds: f32,
     /// Line string shown on line displays (e.g. "33", "109").
     pub line_string: String,
+    /// Script textures for this vehicle (`[scripttexture]`).
+    pub script_textures: Arc<RwLock<Vec<CpuScriptTexture>>>,
+    /// Loaded fonts for this vehicle / game session.
+    pub fonts: Arc<RwLock<Vec<OftFont>>>,
+    /// Base directory for resolving relative texture paths in `STLoadTex`.
+    pub texture_base_dir: Option<PathBuf>,
 }
 
 /// SplitMix64 finaliser: a well-mixed 64-bit value from `x`.
@@ -277,18 +286,261 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             }
 
             // Fonts & Metrics
-            //  -> font handle/index
+            // `fontName (M.V.GetFontIndex)` -> font handle/index
             "getfontindex" => {
-                let _name = st.strings.pop();
-                st.numbers.push(1.0);
+                let name = st.strings.pop().unwrap_or_default();
+                let name_trim = name.trim();
+                let fonts = ctx.fonts.read().unwrap();
+                let mut found = None;
+                for (i, f) in fonts.iter().enumerate() {
+                    if f.name.eq_ignore_ascii_case(name_trim) {
+                        found = Some(i as f32);
+                        break;
+                    }
+                }
+                let idx = found
+                    .or_else(|| {
+                        if name_trim.eq_ignore_ascii_case("default") && !fonts.is_empty() {
+                            Some(0.0)
+                        } else if !fonts.is_empty() {
+                            fonts
+                                .iter()
+                                .position(|f| {
+                                    f.name
+                                        .to_ascii_lowercase()
+                                        .starts_with(&name_trim.to_ascii_lowercase())
+                                })
+                                .map(|i| i as f32)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0.0);
+                st.numbers.push(idx);
                 true
             }
 
-            //  -> text width in pixels
+            // `font text (M.V.TextLength)` -> text width in pixels
             "textlength" => {
-                let _font = st.numbers.pop().unwrap_or(0.0);
+                let font_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
                 let t = st.strings.pop().unwrap_or_default();
-                st.numbers.push((t.chars().count() * 8) as f32);
+                let fonts = ctx.fonts.read().unwrap();
+                let width = if font_idx >= 0 && (font_idx as usize) < fonts.len() {
+                    let f = &fonts[font_idx as usize];
+                    crate::text_texture::text_width(f, &t) as f32
+                } else {
+                    (t.chars().count() * 8) as f32
+                };
+                st.numbers.push(width);
+                true
+            }
+
+            // Script Textures (ST*)
+            // `tex (M.V.STNewTex)` -> void
+            "stnewtex" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.new_tex();
+                    }
+                }
+                true
+            }
+
+            // `tex (M.V.STLock)` -> void
+            "stlock" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.lock();
+                    }
+                }
+                true
+            }
+
+            // `tex (M.V.STUnlock)` -> void
+            "stunlock" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.unlock();
+                    }
+                }
+                true
+            }
+
+            // `tex A R G B (M.V.STSetColor)` -> void
+            "stsetcolor" => {
+                let b = st.numbers.pop().unwrap_or(0.0) as u8;
+                let g = st.numbers.pop().unwrap_or(0.0) as u8;
+                let r = st.numbers.pop().unwrap_or(0.0) as u8;
+                let a = st.numbers.pop().unwrap_or(255.0) as u8;
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.set_color(a, r, g, b);
+                    }
+                }
+                true
+            }
+
+            // `tex x1 y1 x2 y2 (M.V.STDrawRect)` -> void
+            "stdrawrect" => {
+                let y2 = st.numbers.pop().unwrap_or(0.0) as i32;
+                let x2 = st.numbers.pop().unwrap_or(0.0) as i32;
+                let y1 = st.numbers.pop().unwrap_or(0.0) as i32;
+                let x1 = st.numbers.pop().unwrap_or(0.0) as i32;
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.draw_rect(x1, y1, x2, y2);
+                    }
+                }
+                true
+            }
+
+            // `tex x y (M.V.STDrawPixel)` -> void
+            "stdrawpixel" => {
+                let y = st.numbers.pop().unwrap_or(0.0) as i32;
+                let x = st.numbers.pop().unwrap_or(0.0) as i32;
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.draw_pixel(x, y);
+                    }
+                }
+                true
+            }
+
+            // `tex x y (M.V.STReadPixel)` -> void
+            "streadpixel" => {
+                let y = st.numbers.pop().unwrap_or(0.0) as i32;
+                let x = st.numbers.pop().unwrap_or(0.0) as i32;
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.read_pixel(x, y);
+                    }
+                }
+                true
+            }
+
+            // `tex (M.V.STGetR)` -> R
+            "stgetr" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let val = if tex_idx >= 0 {
+                    let texs = ctx.script_textures.read().unwrap();
+                    texs.get(tex_idx as usize).map(|t| t.get_r()).unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                st.numbers.push(val);
+                true
+            }
+
+            // `tex (M.V.STGetG)` -> G
+            "stgetg" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let val = if tex_idx >= 0 {
+                    let texs = ctx.script_textures.read().unwrap();
+                    texs.get(tex_idx as usize).map(|t| t.get_g()).unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                st.numbers.push(val);
+                true
+            }
+
+            // `tex (M.V.STGetB)` -> B
+            "stgetb" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let val = if tex_idx >= 0 {
+                    let texs = ctx.script_textures.read().unwrap();
+                    texs.get(tex_idx as usize).map(|t| t.get_b()).unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                st.numbers.push(val);
+                true
+            }
+
+            // `tex (M.V.STGetA)` -> A
+            "stgeta" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let val = if tex_idx >= 0 {
+                    let texs = ctx.script_textures.read().unwrap();
+                    texs.get(tex_idx as usize).map(|t| t.get_a()).unwrap_or(0.0)
+                } else {
+                    0.0
+                };
+                st.numbers.push(val);
+                true
+            }
+
+            // `tex (M.V.STFilter)` -> void
+            "stfilter" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                if tex_idx >= 0 {
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        tex.filter();
+                    }
+                }
+                true
+            }
+
+            // `file tex (M.V.STLoadTex)` -> msg
+            "stloadtex" => {
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let file = st.strings.pop().unwrap_or_default();
+                if tex_idx >= 0 && !file.is_empty() {
+                    let mut path = std::path::PathBuf::from(&file);
+                    if path.is_relative() {
+                        if let Some(base) = &ctx.texture_base_dir {
+                            path = base.join(&path);
+                        }
+                    }
+                    let mut texs = ctx.script_textures.write().unwrap();
+                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                        let _ = tex.load_tex(&path);
+                    }
+                }
+                st.strings.push(String::new());
+                true
+            }
+
+            // `tex x y font a b (text) (M.V.STTextOut)` -> void
+            "sttextout" => {
+                let text = st.strings.pop().unwrap_or_default();
+                let spacing = st.numbers.pop().unwrap_or(0.0) as i32;
+                let alignment = st.numbers.pop().unwrap_or(0.0) as u32;
+                let font_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+                let y = st.numbers.pop().unwrap_or(0.0) as i32;
+                let x = st.numbers.pop().unwrap_or(0.0) as i32;
+                let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
+
+                if tex_idx >= 0 && font_idx >= 0 {
+                    let fonts = ctx.fonts.read().unwrap();
+                    if let Some(font) = fonts.get(font_idx as usize) {
+                        let mut texs = ctx.script_textures.write().unwrap();
+                        if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                            tex.text_out(x, y, font, &text, alignment, spacing);
+                        }
+                    }
+                }
+                true
+            }
+
+            // `tex (M.V.STCopyColor)` -> void
+            "stcopycolor" => {
+                let _tex = st.numbers.pop();
                 true
             }
 
@@ -368,6 +620,7 @@ mod tests {
             current_stop_index: 0,
             delay_seconds: 0.0,
             line_string: "33".to_string(),
+            ..Default::default()
         };
         let mut h = vehicle_callbacks_with_context(ctx);
 
@@ -476,6 +729,7 @@ Ponttor
             current_stop_index: 1,
             delay_seconds: 45.0,
             line_string: "33".to_string(),
+            ..Default::default()
         };
         let mut h = vehicle_callbacks_with_context(ctx);
 
@@ -568,5 +822,66 @@ Ponttor
         st.numbers.push(3.0);
         assert!(h("getheightabovepoint", &mut st));
         assert_eq!(st.numbers.pop(), Some(0.0));
+    }
+    #[test]
+    fn host_callbacks_script_textures_lifecycle_and_drawing() {
+        let canvas = CpuScriptTexture::new(64, 32);
+        let textures = Arc::new(RwLock::new(vec![canvas]));
+        let ctx = VehicleHostContext {
+            script_textures: textures.clone(),
+            ..Default::default()
+        };
+        let mut h = vehicle_callbacks_with_context(ctx);
+        let mut st = Stacks::default();
+
+        // 1. Lock
+        st.numbers.push(0.0);
+        assert!(h("stlock", &mut st));
+        assert!(textures.read().unwrap()[0].is_locked());
+
+        // 2. Set color: A=255, R=255, G=128, B=64
+        st.numbers.push(0.0); // tex
+        st.numbers.push(255.0); // A
+        st.numbers.push(255.0); // R
+        st.numbers.push(128.0); // G
+        st.numbers.push(64.0); // B
+        assert!(h("stsetcolor", &mut st));
+
+        // 3. Draw rect
+        st.numbers.push(0.0); // tex
+        st.numbers.push(2.0); // x1
+        st.numbers.push(2.0); // y1
+        st.numbers.push(10.0); // x2
+        st.numbers.push(10.0); // y2
+        assert!(h("stdrawrect", &mut st));
+
+        // 4. Read pixel
+        st.numbers.push(0.0); // tex
+        st.numbers.push(5.0); // x
+        st.numbers.push(5.0); // y
+        assert!(h("streadpixel", &mut st));
+
+        // 5. Get R, G, B, A
+        st.numbers.push(0.0);
+        assert!(h("stgetr", &mut st));
+        assert_eq!(st.numbers.pop(), Some(255.0));
+
+        st.numbers.push(0.0);
+        assert!(h("stgetg", &mut st));
+        assert_eq!(st.numbers.pop(), Some(128.0));
+
+        st.numbers.push(0.0);
+        assert!(h("stgetb", &mut st));
+        assert_eq!(st.numbers.pop(), Some(64.0));
+
+        st.numbers.push(0.0);
+        assert!(h("stgeta", &mut st));
+        assert_eq!(st.numbers.pop(), Some(255.0));
+
+        // 6. Unlock
+        st.numbers.push(0.0);
+        assert!(h("stunlock", &mut st));
+        assert!(!textures.read().unwrap()[0].is_locked());
+        assert!(textures.read().unwrap()[0].is_dirty());
     }
 }

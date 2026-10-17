@@ -223,6 +223,8 @@ pub struct ModelMaterial {
     pub trans_map: Option<String>,
     /// Dynamic text texture index bound via `[useTextTexture]`.
     pub text_texture_index: Option<usize>,
+    /// Dynamic script texture index bound via `[useScriptTexture]` or `[matl_transmap] \S:n`.
+    pub script_texture_index: Option<usize>,
     /// Dynamic script texture binding via `[matl_freetex]`.
     pub free_tex: Option<FreeTex>,
     /// Alternate textures swapped conditionally.

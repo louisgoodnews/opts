@@ -340,6 +340,28 @@ Callbacks take their arguments from the stack and leave a result on it; the exac
 
 The **script-texture API** (17 callbacks: `STNewTex`, `STLock`, `STUnlock`, `STDrawRect`, `STTextOut`, `STLoadTex`, …) lets a script draw onto a texture that a `model.cfg` `[scripttexture]` entry declares (`GetFontIndex` and `TextLength` resolve fonts by name, see the font registry in the gap analysis); it explains why display scripts call `GetFontIndex` 6,160 times.
 
+##### Verified Argument & Calling Conventions (M-0094)
+
+| Callback | Arguments (bottom to top) | Result | Verified Semantics |
+| :--- | :--- | :--- | :--- |
+| `STNewTex` | `tex: f32` | – | Clears the canvas buffer to transparent black (0). |
+| `STLock` | `tex: f32` | – | Locks canvas for drawing operations. |
+| `STUnlock` | `tex: f32` | – | Unlocks canvas and flags GPU texture for re-upload. |
+| `STSetColor` | `tex, A, R, G, B` (0–255) | – | Sets active brush color. In matrix displays, `A` is passed from the Red channel of logical textures to mask lit LEDs. |
+| `STDrawRect` | `tex, x1, y1, x2, y2` | – | Fills axis-aligned rectangle from (x1, y1) to (x2, y2) with active color. |
+| `STDrawPixel` | `tex, x, y` | – | Draws a single pixel with active color. |
+| `STReadPixel` | `tex, x, y` | – | Samples pixel at (x, y) into internal read buffer. |
+| `STGetR` | `tex: f32` | `R: f32` | Returns red channel (0.0..255.0) of last sampled pixel. |
+| `STGetG` | `tex: f32` | `G: f32` | Returns green channel (0.0..255.0) of last sampled pixel. |
+| `STGetB` | `tex: f32` | `B: f32` | Returns blue channel (0.0..255.0) of last sampled pixel. |
+| `STGetA` | `tex: f32` | `A: f32` | Returns alpha channel (0.0..255.0) of last sampled pixel. |
+| `STFilter` | `tex: f32` | – | Applies 3×3 softening filter kernel for LED dot matrix matrices. |
+| `STLoadTex` | string: `path`, float: `tex` | `msg: str` | Loads texture file from disk (relative to vehicle or OMSI root). Returns empty string on success. |
+| `STTextOut` | string: `text`, floats: `tex, x, y, font, mode, spacing` | – | Renders text string using `.oft` glyph cells, advancing pen by glyph width + spacing + font gap. |
+| `STCopyColor`| `tex: f32` | – | Copies color state. |
+| `GetFontIndex` | string: `font_name` | `idx: f32` | Resolves `Fonts/*.oft` font name (case-insensitive) to font index handle. |
+| `TextLength` | string: `text`, float: `font_idx` | `width: f32` | Calculates total text width in pixels based on font glyph advances. |
+
 ### Controller axes (`gamectrl_axes.txt`)
 
 Five axes: 0 steering wheel (force feedback), 1 throttle, 2 brake, 3 clutch, 4 combined throttle/brake.
