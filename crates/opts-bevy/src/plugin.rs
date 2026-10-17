@@ -130,6 +130,8 @@ impl Plugin for OptsAssetPlugin {
             .add_plugins(crate::vehicle_glow::VehicleGlowPlugin)
             .add_plugins(crate::vehicle_triggers::VehicleTriggerPlugin)
             .add_plugins(crate::scenery_runtime::SceneryRuntimePlugin)
+            .add_plugins(crate::light_cones::LightConePlugin)
+            .add_plugins(crate::light_rooms::LightRoomsPlugin)
             .add_plugins(crate::camera::OptsCameraPlugin);
     }
 }

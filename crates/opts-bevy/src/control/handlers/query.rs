@@ -97,6 +97,15 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
     if let Some(q) = world.get_resource::<crate::light_quality::LightQuality>() {
         out["light_quality"] = light_quality_json(q);
     }
+    if let Some(c) = world.get_resource::<crate::light_cones::ConeStats>() {
+        out["light_cones"] = json!({
+            "total": c.total,
+            "eligible": c.eligible,
+            "active": c.active,
+            "hidden_by_budget": c.over_budget,
+            "select_us": c.select_us,
+        });
+    }
     Outcome::ok(out)
 }
 
@@ -237,5 +246,18 @@ mod tests {
         assert_eq!(l["values"]["cone_cap"], 16);
         assert_eq!(l["values"]["lantern_cones"], false);
         assert_eq!(l["values"]["headlight_cones"], true);
+        assert!(v.get("light_cones").is_none());
+        world.insert_resource(crate::light_cones::ConeStats {
+            total: 120,
+            eligible: 80,
+            active: 64,
+            over_budget: 16,
+            select_us: 30,
+        });
+        let Outcome::Done(Ok(v)) = sim_get(&mut world, &Value::Null) else {
+            panic!("sim.get did not answer at once");
+        };
+        assert_eq!(v["light_cones"]["active"], 64);
+        assert_eq!(v["light_cones"]["hidden_by_budget"], 16);
     }
 }

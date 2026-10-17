@@ -92,6 +92,19 @@ pub fn spawn_vehicle_glows(
     parent: Entity,
     model: &ModelConfig,
 ) -> Vec<Entity> {
+    spawn_vehicle_glows_with_cones(commands, owner, parent, model, true)
+}
+
+/// [`spawn_vehicle_glows`], with the choice whether the headlights also get a visible light
+/// cone. The player vehicle passes `false` when its model has `[spotlight]`s: their cones (see
+/// `spawn_vehicle_model`) are the more exact data, and the two must not show twice.
+pub fn spawn_vehicle_glows_with_cones(
+    commands: &mut Commands,
+    owner: Entity,
+    parent: Entity,
+    model: &ModelConfig,
+    headlight_cones: bool,
+) -> Vec<Entity> {
     let half = |deg: f32| (deg.clamp(0.0, 360.0) * 0.5).to_radians().cos();
     let mut out = Vec::new();
     for light in detail_lights(model) {
@@ -130,6 +143,19 @@ pub fn spawn_vehicle_glows(
             .id();
         commands.entity(parent).add_child(e);
         out.push(e);
+        if headlight_cones && is_headlight(light) {
+            if let Some(shape) = crate::light_cones::headlight_cone_shape(light) {
+                crate::light_cones::spawn_light_cone(
+                    commands,
+                    parent,
+                    crate::light_cones::LightCone {
+                        kind: crate::light_cones::ConeKind::Headlight,
+                        shape,
+                        level: crate::light_cones::ConeLevel::Glow(e),
+                    },
+                );
+            }
+        }
     }
     out
 }
