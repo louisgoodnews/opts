@@ -166,7 +166,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_alpha]` | 1 | Alpha mode. Whole-corpus values (25,508 uses): `2` ×12,119, `1` ×10,290, `0` ×2,201, `3` ×896, `16` ×2 *(the earlier statement here, "`1` in 99 %", does not hold corpus-wide)*. The community wiki lists `0` opaque, `1` full transparency, `2` partial transparency 📚; `3` and `16` are undocumented. OPTS reads `0` as opaque (the texture's alpha channel is ignored); corpus evidence 2026-10-12: the `Ampelmast_*` and `P_*` objects, which stand on the maps, have fully transparent textures and `[matl_alpha] 0`, so reading `0` as a cutout made them invisible ([triage](../../meta/scenery-benchmark-triage-2026-10-12.md)). Other modes unverified ([Q-SCO-001](#-open-questions)). |
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
-| `[matl_lightmap]` | 1 | Lightmap bitmap. |
+| `[matl_lightmap]` | 1 | Lightmap bitmap (emissive lit windows and signs). 456 `.sco` (by name 137 signs and signals, 106 bus stops and shelters, 38 buildings); 73 placements in Berlin-Spandau. |
 | `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` (the variable-less `[matl_lightmap]` path) instead of swapping the texture ❓. |
 | `[matl_transmap]` | — | Material fades by `[alphascale]`. |
 | `[matl_noZwrite]` | — | Do not write depth (transparent decals). |
@@ -181,8 +181,8 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[visible]` | 2 | `<variable>`, `<flag>`. Mesh visible only while the variable is nonzero (`red`, `green`, `yellow`, `blink_visible`, `snow_visible`, `sommerhalbjahr`, …). |
 | `[rendertype]` | 1 | Render pass: `0`–`4`, or `surface`, `presurface`, `on_surface`. |
 | `[NightMapMode]` | 1 | Night lighting, see below. |
-| `[LightMapMapping]` | — | Mesh uses lightmap UVs. |
-| `[nomaplighting]` | — | Object is not lit by map lights. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet: map lights are Bevy point lights and light every object in range. |
+| `[LightMapMapping]` | — | Mesh uses lightmap UVs: the UVs address the **tile's baked terrain light map** (`tile_*.map.LM.bmp`, 256 × 256, [tiles.md](../map/tiles.md)), not a per-object map. Corpus (55,721 `.sco`, 2026-10-17): 9,413 files, 7,164 of them `[surface]` (road ribbons); 246 placements in Berlin-Spandau. |
+| `[nomaplighting]` | — | Object is not lit by map lights. **Corpus (55,721 `.sco`, 2026-10-17): 688 files, 654 of them (95 %) also carry a `[maplight]`**: it marks the objects that emit their own map light (street, neon, sodium and tunnel lamps, bus shelters with an inner lamp; 381 lamps, 170 road furniture, 24 buildings, 9 bus stops by name), so a lamp is not lit by its own light. It does **not** mark interiors, tunnels or shelters in general. Berlin-Spandau: 1,588 placements, 1,587 of the 1,607 placed `[maplight]` objects. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet. Bevy 0.20 has no per-mesh light mask (`RenderLayers` on a light select views and shadow casters only), so the planned handling is a night material swap, see [lighting system §4.6](../../architecture/lighting-system.md#46-nomaplighting-handling). |
 | `[detail_factor]` | 1 | Size multiplier for **distance culling**. 0.5 shows it at half size, 2 shows it only when twice as large. |
 | `[noDistanceCheck]` | — | Never culled by distance. |
 
