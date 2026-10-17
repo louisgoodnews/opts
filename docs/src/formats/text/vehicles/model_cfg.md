@@ -284,6 +284,8 @@ envmap_lenkrad2.bmp
 | `[alphascale]` | 1 (varname) | Modulates alpha by a script variable. |
 | `[texcoordtransY]` | 1 (varname) | Translates texture coordinates vertically by a variable (used for wiper water effects). |
 
+> **Mirror panes.** There is no mirror keyword. OMSI's convention (from the file names, not from a spec) is that the pane of a rear-view mirror is a separate material of the mirror's `.o3d` with the texture **`reflexion<N>.bmp`** (N 0 to 5; about 800 mesh files in 92 vehicle folders of the reference installation, e.g. the MAN SD77 with panes 0 to 2); the housing of the same unit uses its own texture (`nlc_side_mirror.dds`, `sl_mirrors.dds`, ...). The renderer treats the `reflexion<N>` part as the surface for the live mirror picture ([lighting system §9.3](../../../architecture/lighting-system.md#93-implemented-sky-cube-map-for-glass-and-mirror-cameras-2026-10-17-agentlighting-reflections)); what OMSI itself puts on it is not derivable from the files (Q-RF01).
+
 > ⚠️ **Open Question:** The role of `[matl_item]` is unclear. It appears after `[matl_change]` but its effect is not documented. It may act as a group terminator. **Needs verification.**
 
 ---

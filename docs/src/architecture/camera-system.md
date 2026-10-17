@@ -108,5 +108,17 @@ Trailers named by `[couple_back]` are spawned as child segments (offset = tracto
 `Camera3d` in `vehicle_spawner.rs`). Camera input and modes, the sky dome, tile streaming, traffic, pedestrian
 and rail centres, the minimap, the scenery LOD/light culling, the look presets, `Hdr` (`graphics.hdr`) and the
 control protocol all query `With<MainCamera>`. Never use `With<Camera3d>` for "the player's view": auxiliary
-cameras (the reflection prototype's `MirrorCamera`, benchmark cameras) are `Camera3d` too, and a second match
+cameras (the `MirrorCamera`s of `opts_bevy::mirrors`, benchmark cameras) are `Camera3d` too, and a second match
 moves the wrong camera or makes a `single()` query fail. Code that really means any 3D camera says so in a comment.
+
+
+## Mirror cameras
+
+The rear-view mirrors of the player's vehicle are rendered by auxiliary `Camera3d` entities
+(`opts_bevy::mirrors`, [lighting system §9.3](lighting-system.md#93-implemented-sky-cube-map-for-glass-and-mirror-cameras-2026-10-17-agentlighting-reflections)).
+They carry `MirrorCamera`, render into a 256 x 128 image (`RenderTarget::Image`, order -10, `Msaa::Off`, `Hdr`
+while the main camera has it) and **never carry `MainCamera`**, so no camera mode, input, streaming, sky or look
+system sees them. Their `Camera::is_active` is toggled by `LightQuality::mirror_count` (0 to 2, nearest to the viewer
+first) and `mirror_every` (every n-th frame, staggered by rank); a mirror behind the main camera is not rendered.
+Only the `PlayerVehicle` gets mirror cameras; AI and parked vehicles keep the static pane texture. The camera sits
+5 cm in front of the pane and looks along the main camera's view ray reflected at the pane normal.
