@@ -78,6 +78,7 @@ impl CaptureRig {
             world
                 .spawn((
                     Camera3d::default(),
+                    opts_bevy::MainCamera,
                     Camera {
                         is_active: false,
                         order: i as isize,
