@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Design for approval (Checkpoint 2 of the [Berlin-Spandau systems investigation](../meta/berlin-spandau-systems-2026-10-17.md)); nothing implemented |
+| **Status** | 🟢 Implemented (C3, 2026-10-17); see "Implementation notes" below for deviations |
 | **Date** | 2026-10-17 |
 | **Crates** | [`opts-traffic`](../../crates/opts-traffic.md) (`agent.rs`, `idm.rs`, `traits.rs`, `lanechange.rs`, `graph.rs`, `geometry.rs`, `source.rs`), `opts-game` (`in_game/omsi_world/{traffic,traffic_chain,traffic_variant}.rs`), `opts-core` (vehicle model parser), `opts-bevy` (`vehicle.rs`, `vehicle_lights.rs`, `scenery_runtime/lights.rs`) |
 | **Builds on** | [AI road traffic](ai-traffic.md), [AI vehicle configuration](ai-vehicle-config.md), [map tiles `[rule]`](../formats/map/tiles.md), [`.sco` `[path]`](../formats/text/sco.md) |
@@ -61,6 +61,15 @@ Headless effect (all of 1-3 with arcs, 40 m gate): 16 → 85 changes at 30 vehic
 * `[path]` parameter 12 → blinker side.
 
 `opts-core`/`opts-bevy`: `[light_enh_2]` in a vehicle model parses; the sprites sit under the vehicle root; the spot-light pool picks the nearest pairs and is stable under small camera moves.
+
+## Implementation notes (C3)
+
+* **Mirror also reverses direction.** Negating the lane offsets alone left more dead ends (336) than ignoring `mirror` (279); flipping sides *and* directions gives 178 (Spandau, arced). Implemented that way and recorded in [`tiles.md`](../formats/map/tiles.md#mirror-flag-and-absheight-objects-2026-10).
+* **Pose:** the front axle pursues the path 1 m ahead (rounds join kinks), the rear axle follows in 0.2 m sub-steps. The rear axle off-tracks *inside* the lane by up to `R − √(R² − L²)` (0.29 m at R = 12 m for a 2.64 m wheelbase), which is physical; the R = 12 m test checks the front axle within 0.1 m and the rear axle between that and the centre line. A 12° join stays under 2° per 0.1 s step at junction speed (25 km/h); at 47 km/h a kink still turns the body by up to ~3.5° per step (exponential over about one wheelbase of travel).
+* **Speed:** the look-ahead cap alone lags (the IDM free term needs ~20 % overspeed to brake at 1.6 m/s²), so a vehicle faster than a lane speed ahead also brakes explicitly once it needs half its comfortable deceleration (it reaches the lane speed 2 m before the lane). `speedlimit` ≥ 200 km/h counts as none; default top speed 130 km/h cars, 80 km/h heavy.
+* **Lane changes:** "junction-object lane" = a lane from a `.sco` path; no change on one or onto one (except a strategic change). The strategic route choice only offers neighbour successors that are new directions (not successors of the own lane nor parallel to one); after 10 s waiting at the lane end the vehicle re-plans without them.
+* **Headless, Berlin-Spandau, 600 s (30 / 150 vehicles):** lane changes 20 / 93 → 31 / 123 (64 / 236 without the object-lane rule; the estimate 85 / 335 above did not exclude object lanes); lateral acceleration on arcs p99 34 / 30 → 2.6 / 2.6 m/s², max 46 / 44 → 7.7 / 10.6, share above 4 m/s² 18 / 15 % → 0 %; dead-end removals 148 / 509 → 67 / 226; dead-end lanes 373 → 178.
+* **Lights:** headlights for the pool are forward-facing (`dir.y > 0.7`), white (all channels ≥ 150) `[light_enh_2]`; one spot light per vehicle (at the middle of the pair), not two.
 
 ## ❓ Open questions
 

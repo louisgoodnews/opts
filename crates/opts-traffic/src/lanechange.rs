@@ -17,10 +17,17 @@
 //!   [`crate::LANE_CHANGE_DURATION_S`] seconds.
 //! * The incentive is the gain in own acceleration, plus a small politeness share of the others'
 //!   change, plus a bonus for moving right (*Rechtsfahrgebot*) and a penalty for moving left;
-//!   `overtaking_prohib` forbids moves to the left.
+//!   `overtaking_prohib` forbids moves to the left. Trucks and buses keep right more strongly,
+//!   and trucks prefer lanes with a `trucks` rule.
+//! * **Strategic changes:** when the route continues from a successor of a neighbour lane
+//!   ([`crate::agent::Strategic`]), the change to that neighbour is mandatory: it is the only one
+//!   considered on that lane, junctions ahead do not block it, and an urgency bonus grows as the
+//!   lane's end comes closer (the vehicle waits at the end otherwise).
 //!
-//! No lane changes near junctions (conflict zones or a light within 80 m), below 3 m/s, or within
-//! [`COOLDOWN_S`] seconds of the previous one.
+//! No lane changes inside a conflict zone or on a junction object's lane, nor within
+//! `max(25 m, 2.5 s · v)` of a conflict zone or a light's stop line ahead on the own or the
+//! target lane, and not onto a junction object's lane (zones already passed do not count); none below 3 m/s (1 m/s for a
+//! strategic change) or within [`COOLDOWN_S`] seconds of the previous one.
 
 use std::collections::HashMap;
 
@@ -32,11 +39,13 @@ use crate::TrafficWorld;
 /// Seconds between evaluations of one agent.
 const CHECK_INTERVAL_S: f64 = 1.0;
 /// Seconds the indicator is on before the vehicle moves over.
-pub const ANNOUNCE_S: f64 = 1.2;
+pub const ANNOUNCE_S: f64 = 3.0;
 /// Seconds without a new lane change after one.
 pub const COOLDOWN_S: f64 = 8.0;
 /// Slowest speed (m/s) at which vehicles change lanes.
 const MIN_SPEED: f64 = 3.0;
+/// Slowest speed (m/s) at which a strategic change is made.
+const MIN_SPEED_STRATEGIC: f64 = 1.0;
 /// Hardest braking (m/s²) the new follower may need.
 pub const B_SAFE_FOLLOWER: f64 = 1.5;
 /// Hardest braking (m/s²) the changer may need behind its new leader.
@@ -51,8 +60,19 @@ const KEEP_RIGHT_BONUS: f64 = 0.3;
 const LEFT_PENALTY: f64 = 0.1;
 /// Free length (m) required beside the target spot, front and back.
 const SIDE_PAD: f64 = 2.0;
-/// Junction proximity (m) that forbids changing lanes.
-const JUNCTION_LOOK_M: f64 = 80.0;
+/// Smallest distance (m) to a junction ahead that still allows changing lanes …
+const GATE_MIN_M: f64 = 25.0;
+/// … or this many seconds of travel, whichever is more.
+const GATE_TIME_S: f64 = 2.5;
+/// Extra keep-right bonus (m/s²) of trucks and buses.
+const HEAVY_KEEP_RIGHT_BONUS: f64 = 0.3;
+/// Bonus (m/s²) for a truck moving onto a `trucks` lane (and penalty for leaving one).
+const TRUCK_LANE_BONUS: f64 = 0.4;
+/// Base and growth (m/s²) of the incentive of a strategic change; it grows over the last
+/// [`URGENCY_RANGE_M`] metres before the change point.
+const STRATEGIC_BONUS: f64 = 0.5;
+const URGENCY_GROWTH: f64 = 1.5;
+const URGENCY_RANGE_M: f64 = 100.0;
 
 /// A lane change that passed the checks.
 #[derive(Debug, Clone, Copy)]
@@ -101,7 +121,15 @@ impl TrafficWorld {
                 }
                 continue;
             }
-            if speed < MIN_SPEED || self.time < next_check || self.time < cooldown {
+            let mandatory = self.agents[i]
+                .strategic
+                .is_some_and(|c| c.from == self.agents[i].lane);
+            let min_speed = if mandatory {
+                MIN_SPEED_STRATEGIC
+            } else {
+                MIN_SPEED
+            };
+            if speed < min_speed || self.time < next_check || self.time < cooldown {
                 continue;
             }
             self.agents[i].lc_next_check = self.time + CHECK_INTERVAL_S;
@@ -119,7 +147,15 @@ impl TrafficWorld {
         let a = &mut self.agents[i];
         a.lane = c.target;
         a.s = c.s_target;
-        a.plan.clear();
+        a.prev_lane = None;
+        // The planned change keeps the route (it continues from the target); any other change
+        // starts a new one.
+        if a.strategic.is_some_and(|s| s.via == c.target) {
+            a.strategic = None;
+        } else {
+            a.strategic = None;
+            a.plan.clear();
+        }
         // The car now belongs to the new lane but is still beside it, on the side it came from.
         let offset = match c.side {
             Side::Right => -c.separation,
@@ -143,18 +179,24 @@ impl TrafficWorld {
         let a = &self.agents[i];
         let lane = self.graph.lane(a.lane)?;
         let look = self.lookahead(i);
-        // Not near a junction.
-        for &(l, off) in &look {
-            if off > JUNCTION_LOOK_M {
-                break;
-            }
-            let ll = self.graph.lane(l)?;
-            if ll.signal.is_some() || !self.graph.conflicts(l).is_empty() {
-                return None;
-            }
-        }
         let own = &a.params;
-        let cap_now = lane.speed_limit.unwrap_or(f64::INFINITY);
+        let mandatory = a.strategic.filter(|c| c.from == a.lane);
+        let gate = GATE_MIN_M.max(GATE_TIME_S * a.speed);
+        // Never on a junction object's lane or inside a conflict zone.
+        let inside = |l: LaneId, s: f64| {
+            self.graph
+                .conflicts(l)
+                .iter()
+                .any(|c| c.enter - 1.0 < s && s - own.length < c.exit + 1.0)
+        };
+        if lane.junction || inside(a.lane, a.s) {
+            return None;
+        }
+        // Not within the gate of a junction ahead (a strategic change has to happen anyway).
+        if mandatory.is_none() && self.junction_within(&look, gate) {
+            return None;
+        }
+        let cap_now = self.lane_cap(own, a.lane);
         let leader_now = self.leader(i, &look, by_lane);
         let a_now = own.acceleration(a.speed, cap_now, leader_now);
         // The vehicle behind me on my lane: its comfort changes when I leave.
@@ -164,7 +206,7 @@ impl TrafficWorld {
         });
         let (a_o_before, a_o_after) = old_follower.map_or((0.0, 0.0), |j| {
             let o = &self.agents[j];
-            let cap = lane.speed_limit.unwrap_or(f64::INFINITY);
+            let cap = self.lane_cap(&o.params, a.lane);
             let gap_me = a.s - own.length - o.s;
             let before = o.params.acceleration(o.speed, cap, Some((gap_me, a.speed)));
             let after_ahead = leader_now.map(|(g, v)| (g + own.length + gap_me, v));
@@ -172,11 +214,12 @@ impl TrafficWorld {
         });
         let mut best: Option<Choice> = None;
         for n in self.graph.neighbours(a.lane) {
-            if only.is_some_and(|s| s != n.side) {
+            if only.is_some_and(|s| s != n.side) || mandatory.is_some_and(|c| c.via != n.lane) {
                 continue;
             }
             let ml = self.graph.lane(n.lane)?;
             let allowed = ml.kind == lane.kind
+                && (!ml.junction || mandatory.is_some())
                 && ml.rules.density != Some(0.0)
                 && ml.rules.allows(own.class)
                 && ml.signal.is_none()
@@ -192,16 +235,20 @@ impl TrafficWorld {
             {
                 continue;
             }
-            // No conflict zone of the target lane close by.
-            if self
-                .graph
-                .conflicts(n.lane)
-                .iter()
-                .any(|c| c.enter < s_t + 60.0 && c.exit > s_t - 5.0)
-            {
+            // No conflict zone of the target lane at the spot, nor (unless the change is
+            // mandatory) a junction within the gate ahead on it.
+            if inside(n.lane, s_t) {
                 continue;
             }
-            let cap_t = ml.speed_limit.unwrap_or(f64::INFINITY);
+            if mandatory.is_none() {
+                let mut ahead = vec![(n.lane, -s_t)];
+                let rest = ml.length() - s_t;
+                ahead.extend(self.graph.successors(n.lane).iter().map(|&l| (l, rest)));
+                if self.junction_within(&ahead, gate) {
+                    continue;
+                }
+            }
+            let cap_t = self.lane_cap(own, n.lane);
             let list: &[usize] = by_lane.get(&n.lane).map_or(&[], Vec::as_slice);
             // Someone beside me, or changing into the same spot: no.
             let beside = list.iter().any(|&j| {
@@ -253,12 +300,20 @@ impl TrafficWorld {
                     if gap < f.params.min_gap + 0.5 {
                         continue;
                     }
-                    let after = f.params.acceleration(f.speed, cap_t, Some((gap, a.speed)));
+                    let after = f.params.acceleration(
+                        f.speed,
+                        self.lane_cap(&f.params, n.lane),
+                        Some((gap, a.speed)),
+                    );
                     if after < -B_SAFE_FOLLOWER {
                         continue;
                     }
                     let lead_gap = leader_t.map(|(g, v)| (g + own.length + gap, v));
-                    (f.params.acceleration(f.speed, cap_t, lead_gap), after)
+                    (
+                        f.params
+                            .acceleration(f.speed, self.lane_cap(&f.params, n.lane), lead_gap),
+                        after,
+                    )
                 }
                 None => (0.0, 0.0),
             };
@@ -269,11 +324,27 @@ impl TrafficWorld {
             if a_after < -B_SAFE_SELF {
                 continue;
             }
-            let bias = match n.side {
-                Side::Right if a_after >= a_now - 0.1 => KEEP_RIGHT_BONUS,
+            let heavy = own.class != crate::idm::VehicleClass::Car;
+            let mut bias = match n.side {
+                Side::Right if a_after >= a_now - 0.1 => {
+                    KEEP_RIGHT_BONUS + if heavy { HEAVY_KEEP_RIGHT_BONUS } else { 0.0 }
+                }
                 Side::Right => 0.0,
                 Side::Left => -LEFT_PENALTY,
             };
+            if own.class == crate::idm::VehicleClass::Truck && ml.rules.trucks != lane.rules.trucks
+            {
+                bias += if ml.rules.trucks {
+                    TRUCK_LANE_BONUS
+                } else {
+                    -TRUCK_LANE_BONUS
+                };
+            }
+            if mandatory.is_some() {
+                let to_go = lane.length() - crate::agent::STRATEGIC_LAST_M - a.s;
+                let urgency = (1.0 - to_go / URGENCY_RANGE_M).clamp(0.0, 1.0);
+                bias += STRATEGIC_BONUS + URGENCY_GROWTH * urgency;
+            }
             let total = (a_after - a_now)
                 + POLITENESS * ((a_f_after - a_f_before) + (a_o_after - a_o_before))
                 + bias;
@@ -293,5 +364,28 @@ impl TrafficWorld {
             }
         }
         best
+    }
+}
+
+impl TrafficWorld {
+    /// Whether a junction starts within `gate` metres along `look` (lanes with the distance
+    /// from the vehicle to their start, negative for the lane it is on): the entry of a conflict
+    /// zone or the start of a lane governed by a light (its stop line). Zones already passed do
+    /// not count.
+    fn junction_within(&self, look: &[(LaneId, f64)], gate: f64) -> bool {
+        look.iter().any(|&(l, off)| {
+            if off >= gate {
+                return false;
+            }
+            let Some(lane) = self.graph.lane(l) else {
+                return false;
+            };
+            (off >= 0.0 && lane.signal.is_some())
+                || self
+                    .graph
+                    .conflicts(l)
+                    .iter()
+                    .any(|c| (0.0..gate).contains(&(c.enter + off)))
+        })
     }
 }

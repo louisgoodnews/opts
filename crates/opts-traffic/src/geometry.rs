@@ -8,8 +8,10 @@
 
 use glam::DVec2;
 
-/// Radii at or beyond this magnitude are straight (OMSI writes `-999.99…` for "straight").
-pub const STRAIGHT_RADIUS: f64 = 999.0;
+/// `.sco` `[path]` records write `-999.99…` for "straight": radii of object paths at or beyond
+/// this magnitude are read as straight ([`crate::source`]). Splines have no such marker: their
+/// mesh arcs for every radius, and so do their lanes.
+pub const SCO_STRAIGHT_RADIUS: f64 = 999.0;
 
 /// A straight line or circular arc.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -18,8 +20,7 @@ pub struct PathGeometry {
     pub start: DVec2,
     /// Heading at the start, radians, clockwise from +Y.
     pub heading: f64,
-    /// Signed radius in metres (positive = clockwise); `0` or a magnitude of
-    /// [`STRAIGHT_RADIUS`] and more means straight.
+    /// Signed radius in metres (positive = clockwise); `0` means straight.
     pub radius: f64,
     /// Length along the path in metres.
     pub length: f64,
@@ -40,7 +41,7 @@ impl PathGeometry {
     /// Whether the segment is treated as a straight line.
     #[must_use]
     pub fn is_straight(&self) -> bool {
-        self.radius.abs() < 1e-3 || self.radius.abs() >= STRAIGHT_RADIUS
+        self.radius.abs() < 1e-3 || !self.radius.is_finite()
     }
 
     /// Heading after `s` metres.
@@ -61,13 +62,11 @@ impl PathGeometry {
         if self.is_straight() {
             self.start + DVec2::new(self.heading.sin(), self.heading.cos()) * s
         } else {
-            let h = self.heading_at(s);
-            let r = self.radius;
-            self.start
-                + DVec2::new(
-                    -r * (h.cos() - self.heading.cos()),
-                    r * (h.sin() - self.heading.sin()),
-                )
+            // Chord form: exact for very large radii, where differences of cosines cancel.
+            let turn = s / self.radius;
+            let chord = 2.0 * self.radius * (turn / 2.0).sin();
+            let mid = self.heading + turn / 2.0;
+            self.start + DVec2::new(mid.sin(), mid.cos()) * chord
         }
     }
 
@@ -168,15 +167,31 @@ mod tests {
     }
 
     #[test]
-    fn omsi_straight_marker_is_straight() {
+    fn large_radii_arc_like_the_spline_mesh() {
+        // A spline of radius 1100 m and 183 m length (Spandau has such): the end lies
+        // L²/2R ≈ 15.2 m beside the straight line, exactly where the mesh formula puts it.
         let g = PathGeometry {
-            start: DVec2::ZERO,
-            heading: 0.0,
-            radius: -999.99,
-            length: 20.0,
+            start: DVec2::new(5.0, 7.0),
+            heading: 0.3,
+            radius: 1100.0,
+            length: 183.0,
         };
-        assert!(g.is_straight());
-        assert!(g.end().abs_diff_eq(DVec2::new(0.0, 20.0), 1e-9));
+        assert!(!g.is_straight());
+        let h = g.end_heading();
+        let mesh = g.start
+            + DVec2::new(
+                -1100.0 * (h.cos() - 0.3f64.cos()),
+                1100.0 * (h.sin() - 0.3f64.sin()),
+            );
+        assert!(g.end().distance(mesh) < 0.01, "{:?} vs {mesh:?}", g.end());
+        let straight = PathGeometry::straight(g.start, 0.3, 183.0).end();
+        assert!((g.end().distance(straight) - 183.0 * 183.0 / 2200.0).abs() < 0.1);
+        // Even a radius of 10⁷ m stays exact (no cancellation).
+        let huge = PathGeometry {
+            radius: 1.0e7,
+            ..PathGeometry::straight(DVec2::ZERO, 0.0, 100.0)
+        };
+        assert!(huge.end().abs_diff_eq(DVec2::new(0.0005, 100.0), 1e-6));
     }
 
     #[test]

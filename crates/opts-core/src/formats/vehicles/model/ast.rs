@@ -407,6 +407,12 @@ pub struct ModelConfig {
     pub interior_lights: Vec<InteriorLight>,
     /// Unscoped spotlights.
     pub spotlights: Vec<Spotlight>,
+    /// Light effects (`[light_enh]`, `[light_enh_2]`) in declaration order, whatever mesh or LOD
+    /// group they follow (recorded in `after_mesh`/`lod_threshold`, the mesh index counted within
+    /// its LOD group). Same layout as in a `.sco` ([`crate::formats::scenery::ScoLight`]).
+    pub lights: Vec<crate::formats::scenery::ScoLight>,
+    /// Blocks that were not understood (malformed light effects), with the reason.
+    pub warnings: Vec<String>,
     /// Global unrecognized keywords.
     pub unknown_fields: BTreeMap<String, Vec<Vec<String>>>,
 }

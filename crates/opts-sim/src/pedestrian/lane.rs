@@ -98,10 +98,15 @@ impl FootLane {
     }
 }
 
+/// Radii of `.sco` `[path]` records at or beyond this magnitude are the straight marker
+/// (`-999.99`); splines arc for every radius, like their mesh.
+pub const SCO_STRAIGHT_RADIUS: f32 = 999.0;
+
 /// Centreline of an arc segment: `(position, heading_rad)` every [`SAMPLE_STEP_M`] metres.
 ///
 /// Same arc as `opts_bevy::scenery::spline_pose` (heading clockwise from north; a positive
-/// radius turns right); `height(s)` is the elevation above the start.
+/// radius turns right; `0` is straight); `height(s)` is the elevation above the start. The chord
+/// form keeps very large radii exact in `f32`.
 fn arc(
     start: Vec3,
     heading_deg: f32,
@@ -109,20 +114,27 @@ fn arc(
     length: f32,
     height: impl Fn(f32) -> f32,
 ) -> Vec<(Vec3, f32)> {
-    let phi = heading_deg.to_radians();
+    let phi = f64::from(heading_deg.to_radians());
     let steps = ((length / SAMPLE_STEP_M).ceil() as usize).clamp(1, 2000);
     (0..=steps)
         .map(|k| {
             let s = length * k as f32 / steps as f32;
-            let (h, x, y) = if radius.abs() > 1e-3 && radius.abs() < 900.0 {
-                let h = phi + s / radius;
+            let (h, x, y) = if radius.abs() > 1e-3 {
+                let (r, sd) = (f64::from(radius), f64::from(s));
+                let turn = sd / r;
+                let chord = 2.0 * r * (turn / 2.0).sin();
+                let mid = phi + turn / 2.0;
                 (
-                    h,
-                    start.x - radius * (h.cos() - phi.cos()),
-                    start.y + radius * (h.sin() - phi.sin()),
+                    (phi + turn) as f32,
+                    start.x + (chord * mid.sin()) as f32,
+                    start.y + (chord * mid.cos()) as f32,
                 )
             } else {
-                (phi, start.x + s * phi.sin(), start.y + s * phi.cos())
+                (
+                    phi as f32,
+                    start.x + s * (phi.sin() as f32),
+                    start.y + s * (phi.cos() as f32),
+                )
             };
             (Vec3::new(x, y, start.z + height(s)), h)
         })
@@ -155,23 +167,7 @@ pub fn lanes_of_kind(
     kind: LaneKind,
 ) -> Vec<FootLane> {
     let length = inst.length_m.max(0.01);
-    let explicit = inst
-        .raw_params
-        .get(2)
-        .and_then(|v| v.trim().parse::<f32>().ok())
-        .filter(|h| inst.has_height_profile && h.abs() > 1e-6);
-    let height = |s: f32| match explicit {
-        Some(h) => {
-            let t = (s / length).clamp(0.0, 1.0);
-            let (m0, m1) = (inst.gradient_start * length, inst.gradient_end * length);
-            let (t2, t3) = (t * t, t * t * t);
-            (t3 - 2.0 * t2 + t) * m0 + (-2.0 * t3 + 3.0 * t2) * h + (t3 - t2) * m1
-        }
-        None => {
-            inst.gradient_start * s
-                + (inst.gradient_end - inst.gradient_start) * s * s / (2.0 * length)
-        }
-    };
+    let height = |s: f32| inst.height_offset(s);
     let centre = arc(
         inst.position,
         inst.heading_deg,
@@ -241,10 +237,15 @@ pub fn lanes_from_object_of_type(
         .filter_map(|p| {
             let length = p.length_m;
             let (s0, s1) = (p.slope_start, p.slope_end);
+            let radius = if p.radius_m.abs() >= SCO_STRAIGHT_RADIUS {
+                0.0
+            } else {
+                p.radius_m
+            };
             let local = arc(
                 Vec3::new(p.start.x, p.start.y, 0.0),
                 p.heading_deg,
-                p.radius_m,
+                radius,
                 length,
                 |s| s0 * s + (s1 - s0) * s * s / (2.0 * length),
             );
@@ -303,6 +304,40 @@ mod tests {
             ],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn large_radius_splines_arc_like_their_mesh() {
+        // r = 1100 m, 183 m long: the end lies L²/2R ≈ 15 m beside the straight line.
+        let lanes = lanes_from_spline(&spline(0.0, 1100.0, 183.0), &profile(0.0), (0.0, 0.0));
+        let end = lanes[0].end_point(true);
+        let h = 183.0f64 / 1100.0;
+        let exact = (10.0 + 1100.0 * (1.0 - h.cos()), 20.0 + 1100.0 * h.sin());
+        assert!(
+            (f64::from(end.x) - exact.0).abs() < 0.01 && (f64::from(end.y) - exact.1).abs() < 0.01,
+            "{end:?} vs {exact:?}"
+        );
+    }
+
+    #[test]
+    fn object_paths_keep_the_straight_marker() {
+        let path = |radius_m| ScoPath {
+            start: Vec3::ZERO,
+            heading_deg: 0.0,
+            radius_m,
+            length_m: 20.0,
+            slope_start: 0.0,
+            slope_end: 0.0,
+            path_type: PATH_TYPE_PEDESTRIAN,
+            width_m: 1.0,
+            direction: 2,
+            extra: None,
+            traffic_light_index: None,
+            approach_distance_m: None,
+        };
+        let lanes = lanes_from_object(&[path(-999.99), path(500.0)], Vec3::ZERO, 0.0);
+        assert!(lanes[0].end_point(true).x.abs() < 1e-4, "straight");
+        assert!(lanes[1].end_point(true).x > 0.3, "a 500 m arc bends right");
     }
 
     #[test]

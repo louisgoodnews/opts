@@ -68,6 +68,58 @@ pub struct MapSplineInstance {
     pub raw_params: Vec<String>,
 }
 
+/// Height above the start of a spline's height profile after `s` of `length` metres.
+///
+/// With an explicit total height change `rise` (`[spline_h]` parameter 13) the profile is a cubic
+/// Hermite ramp between the end gradients; otherwise the gradient changes linearly from start to
+/// end (`rise = length · (g0 + g1) / 2`). The road mesh, footpaths and AI lanes share this rule
+/// (`docs/src/formats/map/tiles.md`).
+#[must_use]
+pub fn spline_height_offset(
+    gradient_start: f64,
+    gradient_end: f64,
+    rise: Option<f64>,
+    s: f64,
+    length: f64,
+) -> f64 {
+    let length = length.max(1e-6);
+    let s = s.max(0.0).min(length);
+    match rise {
+        Some(h) => {
+            let t = s / length;
+            let (m0, m1) = (gradient_start * length, gradient_end * length);
+            let (t2, t3) = (t * t, t * t * t);
+            (t3 - 2.0 * t2 + t) * m0 + (-2.0 * t3 + 3.0 * t2) * h + (t3 - t2) * m1
+        }
+        None => gradient_start * s + (gradient_end - gradient_start) * s * s / (2.0 * length),
+    }
+}
+
+impl MapSplineInstance {
+    /// The explicit total height change of a `[spline_h]` record (parameter 13), when it has one
+    /// that is not zero.
+    #[must_use]
+    pub fn explicit_rise(&self) -> Option<f32> {
+        self.raw_params
+            .get(2)
+            .and_then(|v| v.trim().parse::<f32>().ok())
+            .filter(|h| self.has_height_profile && h.abs() > 1e-6)
+    }
+
+    /// Height of the centre line above the spline's start after `s` metres (see
+    /// [`spline_height_offset`]).
+    #[must_use]
+    pub fn height_offset(&self, s: f32) -> f32 {
+        spline_height_offset(
+            f64::from(self.gradient_start),
+            f64::from(self.gradient_end),
+            self.explicit_rise().map(f64::from),
+            f64::from(s),
+            f64::from(self.length_m.max(0.01)),
+        ) as f32
+    }
+}
+
 /// What a `[rule]` is attached to: the spline or object whose block precedes it in the tile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleOwner {

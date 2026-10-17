@@ -408,7 +408,7 @@ red
 | 9 | type | `0` AI road traffic, `1` AI pedestrians, `2` rail (AI or user). |
 | 10 | width | Lane width in metres (the corpus favours `2.5`). |
 | 11 | direction | `0` forward only, `1` reverse only, `2` both. |
-| 12 | – | Observed `0`–`3`; see [Q-SCO-006](#-open-questions). |
+| 12 | indicator | Turn indicator of the path for AI vehicles: `0` none, `2` left, `3` right; `1` unknown ❓ ([Q-SCO-006](#-open-questions)). |
 
 Types and the direction field are taken from the format's own documentation in `.sli` (see [`.sli` paths](sli.md#path)). The same convention applies here.
 
@@ -565,7 +565,7 @@ streetlight_large.o3d
 | Q-SCO-003 | `[LOD]` threshold direction. | Provisional. |
 | Q-SCO-004 | ~~Length of `[light_enh_2]` (23 or 24 lines in the wild)~~ — resolved: 23 lines without effect bitmap, 24 with optional bitmap name (`sco-sli-audit.md`). | ✅ |
 | Q-SCO-005 | Parameters of `[traffic_light_stop]` (3) and `[traffic_light_jump]` (4). | Partly answered (M-0049, 1,393 objects). **`[traffic_light_jump] <light> <t1> <flag> <t2>`** (6,041 uses): in 6,007 of them (99.4 %) both times are ≤ the group's cycle time, e.g. cycle 20 s with `(0, 20.0, 0, 19.0)`, `(0, 10.0, 1, 9.0)`, `(0, 4.0, 0, 14.0)` — a **jump of the controller's clock** from `t1` to `t2` within the cycle (traffic-actuated switching, e.g. when a bus is registered; flag `1` 3,768×, `0` 2,273×), *not* a vehicle behaviour such as speeding up at yellow. **`[traffic_light_stop] <light> <distance> <flag>`** (761 uses in 443 objects): object-level lines that come **before** the `[splinehelper]` arms (their number matches the arms' only in 58 of 443 files); `<distance>` (1.0, 16.0, 6.0, 18.0, 23.0 …) is a distance along an arm, so it is the **stop line of that light on the arms** — most common `0 1.0 1` (223×) and `0 16.0 0` (163×) in level-crossing objects — flag meaning unknown. Both matter for the spline arms of junctions (geometry unknown, Q-SCO-007), not for the object's own `[path]` lanes, whose stop line is the start of the governed path. OPTS implements neither; vehicles treat red as binding for all vehicle classes (no emergency exception yet). |
-| Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Open. |
+| Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Partly answered (2026-10-17, Berlin-Spandau crossing road paths): param 12 is the **turn indicator** — `0` on 2,186 of 2,554 straight paths, `2` on 530 of 727 left turns, `3` on 565 of 701 right turns (turn = more than 20° of heading change). OPTS reads `0` none, `2` left, `3` right and sets `AI_Blinker_L/R` from it; value `1` (meaning open) and missing values fall back to the 20°/30 m turn heuristic. `[path_2]` params 13–14 stay open. |
 | Q-SCO-007 | Last two `[splinehelper]` values. | Observed `0`, `0`. |
 | Q-SCO-008 | `[crashmode_pole]` parameter semantics. | Open. |
 | Q-SCO-009 | Does `[use_traffic_light]` apply only to the next `[path]` or to all following? | ✅ The next path only (M-0049): a Gladbeck junction repeats `[use_traffic_light]` before every controlled path, and the uncontrolled stubs of the arms sit between them. |

@@ -135,21 +135,8 @@ pub fn extrude_spline_profile(profile: &SplineProfile, length_m: f32) -> Vec<(us
 /// then a cubic Hermite curve between the end gradients (a smooth ramp). Plain `[spline]` records
 /// change the gradient linearly from start to end.
 fn height_offset(inst: &MapSplineInstance, s: f32, length: f32) -> f32 {
-    let explicit = inst
-        .raw_params
-        .get(2)
-        .and_then(|v| v.trim().parse::<f32>().ok())
-        .filter(|h| inst.has_height_profile && h.abs() > 1e-6);
-    if let Some(h) = explicit {
-        let t = (s / length).clamp(0.0, 1.0);
-        let (m0, m1) = (inst.gradient_start * length, inst.gradient_end * length);
-        let (t2, t3) = (t * t, t * t * t);
-        return (2.0 * t3 - 3.0 * t2 + 1.0) * 0.0
-            + (t3 - 2.0 * t2 + t) * m0
-            + (-2.0 * t3 + 3.0 * t2) * h
-            + (t3 - t2) * m1;
-    }
-    inst.gradient_start * s + (inst.gradient_end - inst.gradient_start) * s * s / (2.0 * length)
+    debug_assert!((length - inst.length_m.max(0.01)).abs() < 1e-3);
+    inst.height_offset(s)
 }
 
 /// Centreline pose of a placed spline at arc length `s`, in the spline's tile-local OMSI frame.

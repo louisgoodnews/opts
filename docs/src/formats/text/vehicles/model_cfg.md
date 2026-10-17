@@ -221,9 +221,10 @@ Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspensio
 - `[interiorlight]`: the variable is the brightness factor (clamped to `0..=3`, 📚 values above ~3 look the same); 0 hides the light.
 - `[matl_lightmap] <texture> <variable>`: the texture is emissive light scaled by the variable. A light map without a variable is left dark ❓ (it has no switch).
 - `[mouseevent] <name>`: the name is a script trigger (the SD77's 94 hot-spots use the same names as `keyboard.cfg`, e.g. `bus_doorfront0`, `horn`, `kw_fernlicht_toggle`). Click raises `<name>`, the first drag movement `<name>_drag`, release `<name>_off`.
-- `[matl_nightmap]` and `[light_enh_2]` light points are not rendered yet.
+- `[light_enh]` / `[light_enh_2]` (2026-10-17, C3): parsed with the `.sco` layout (`ModelConfig::lights`, with the LOD threshold and mesh they follow; malformed blocks go to `ModelConfig::warnings`). The lights of the detail LOD become glow sprites under the vehicle root (not under a LOD group), for player and AI vehicles: brightness = variable × factor clamped to `0..=1`, approached with the block's time constant (parameter 23), sized and faded by the cone like scenery lights. Forward-facing white lights count as headlights: the nearest six vehicles whose headlights shine get one real, shadowless spot light each, with 25 % distance hysteresis. AI brake lights also show while the vehicle stands.
+- `[matl_nightmap]` is not rendered yet.
 
-Implementation: `opts_bevy::vehicle_lights`, `opts_bevy::vehicle_triggers`.
+Implementation: `opts_bevy::vehicle_lights`, `opts_bevy::vehicle_glow`, `opts_bevy::vehicle_triggers`.
 
 > ⚠️ **Open Question:** When both `origin_trans` and `origin_from_mesh` are present, which takes precedence? Observation suggests `origin_from_mesh` overrides. **Needs verification.**
 

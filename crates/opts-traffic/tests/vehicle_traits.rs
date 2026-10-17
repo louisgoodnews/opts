@@ -49,7 +49,7 @@ fn world() -> (TrafficWorld, opts_traffic::LaneId, opts_traffic::LaneId) {
 }
 
 fn params(t: &VehicleTraits) -> IdmParams {
-    IdmParams::from_traits(t, &Calibration::default(), 0.5, None)
+    IdmParams::from_traits(t, &Calibration::default(), 0.5)
 }
 
 /// Seconds from rest to 40 km/h on an empty lane.

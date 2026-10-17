@@ -442,3 +442,72 @@ fn blank_transmap_value_does_not_swallow_the_next_text() {
         Some("mask.bmp")
     );
 }
+
+#[test]
+fn light_effects_of_a_vehicle_model_parse_with_their_lod_and_mesh() {
+    // An AI car as on Berlin-Spandau: a dipped-beam corona bound to `AI_Light` after the body
+    // mesh, a brake light, and one malformed block.
+    let text = r#"
+[LOD]
+0.1
+
+[mesh]
+body.o3d
+
+[light_enh_2]
+-0.6
+2.1
+0.55
+0
+1
+0
+0
+0
+1
+0
+0
+255
+250
+220
+0.4
+30
+60
+AI_Light
+1
+0
+0
+0
+0.1
+
+[light_enh]
+0.6
+-2.2
+0.6
+255
+0
+0
+0.25
+AI_Brakelight
+
+[light_enh_2]
+1
+2
+"#;
+    let config = parse_model(text).expect("parses");
+    assert_eq!(config.lights.len(), 2);
+    let head = &config.lights[0];
+    assert_eq!(head.variable, "AI_Light");
+    assert!((head.position.y - 2.1).abs() < 1e-6 && !head.omni);
+    assert!((head.direction.y - 1.0).abs() < 1e-6);
+    assert_eq!((head.cone_inner_deg, head.cone_outer_deg), (30.0, 60.0));
+    assert!((head.time_const_s - 0.1).abs() < 1e-6);
+    assert_eq!((head.lod_threshold, head.after_mesh), (Some(0.1), Some(0)));
+    let brake = &config.lights[1];
+    assert_eq!(brake.variable, "AI_Brakelight");
+    assert!(brake.omni && brake.color == [255.0, 0.0, 0.0]);
+    assert_eq!(config.warnings.len(), 1);
+    // The light blocks no longer land among the mesh's unknown keywords.
+    assert!(!config.lods[0].meshes[0]
+        .unknown_fields
+        .contains_key("light_enh_2"));
+}
