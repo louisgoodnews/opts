@@ -168,7 +168,7 @@ pub fn spawn_map_lights(commands: &mut Commands, root: Entity, sco: &SceneryObje
 #[allow(clippy::too_many_arguments)]
 pub fn map_light_pool_system(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     settings: Res<MapLightSettings>,
     clock: Res<SceneryClock>,
     mut pool: ResMut<MapLightPool>,

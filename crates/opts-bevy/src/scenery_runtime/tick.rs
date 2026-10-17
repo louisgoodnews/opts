@@ -79,9 +79,15 @@ fn due(
     host: &HostValues,
     interval: f32,
     force: bool,
+    paused: bool,
 ) -> bool {
     if force || !rt.updated {
         return true;
+    }
+    if paused {
+        // The simulation clock stands still: scripts and animations must not advance, but the
+        // lights still follow the host (night switch), so the Environment page previews them.
+        return rt.last_night != host.night;
     }
     if scripted {
         return rt.pending_s >= interval;
@@ -125,6 +131,7 @@ fn tick_one(
 fn tick_objects(
     dt: f32,
     force: bool,
+    paused: bool,
     camera: Option<Vec3>,
     settings: &SceneryRuntimeSettings,
     host: &HostValues,
@@ -161,7 +168,7 @@ fn tick_objects(
                     }
                 }
             };
-            if !due(&rt, scripts.is_some(), host, interval, force) {
+            if !due(&rt, scripts.is_some(), host, interval, force, paused) {
                 continue;
             }
             if !force && ticks >= settings.max_ticks_per_frame {
@@ -207,10 +214,10 @@ pub fn scenery_script_system(
     if !settings.automatic {
         return;
     }
+    // A paused clock (dt = 0) still evaluates objects whose host values changed (night switch):
+    // `tick_objects` then advances no script time.
     let dt = time.delta_secs();
-    if dt <= 0.0 {
-        return;
-    }
+    let paused = dt <= 0.0;
     let camera = cameras
         .iter()
         .find(|(c, _)| c.is_active)
@@ -219,6 +226,7 @@ pub fn scenery_script_system(
     tick_objects(
         dt,
         false,
+        paused,
         camera,
         &settings,
         &host,
@@ -260,6 +268,7 @@ pub fn advance_scenery(world: &mut World, dt_s: f32) {
     tick_objects(
         dt_s,
         true,
+        false,
         None,
         &settings,
         &host,

@@ -183,7 +183,7 @@ pub fn attach_glow_assets(
 
 /// Sets each glow's brightness from its owner's variable, smoothed by its time constant.
 pub fn vehicle_glow_system(
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
     mut glows: Query<(&VehicleGlow, &mut SceneryLight)>,
 ) {
