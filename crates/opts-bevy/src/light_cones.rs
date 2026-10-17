@@ -30,7 +30,8 @@ use bevy::pbr::{Material, MaterialPipeline, MaterialPipelineKey, MaterialPlugin}
 use bevy::prelude::*;
 use bevy::reflect::TypePath;
 use bevy::render::render_resource::{
-    AsBindGroup, Face, RenderPipelineDescriptor, SpecializedMeshPipelineError,
+    AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState, Face,
+    RenderPipelineDescriptor, SpecializedMeshPipelineError,
 };
 use bevy::shader::ShaderRef;
 use opts_core::formats::scenery::ScoLight;
@@ -70,6 +71,15 @@ pub const CONE_HYSTERESIS: f32 = 1.3;
 /// Seconds between two selections of the visible cones (a change of the quality settings
 /// selects at once).
 pub const SELECT_INTERVAL_S: f32 = 0.15;
+/// Seconds a camera must have had the depth prepass before cones are drawn with the depth fade
+/// on. The pipeline variants with the prepass compile in the background; until they exist the
+/// cones would draw without depth (a white-out). Measured live: a few seconds right after the
+/// switch, so the gate is conservative.
+pub const PREPASS_READY_S: f32 = 3.0;
+/// Frames the camera must have had the prepass (besides the time).
+pub const PREPASS_READY_FRAMES: u32 = 6;
+/// Seconds the cones take to fade in once the prepass counts as ready.
+pub const CONE_FADE_IN_S: f32 = 0.3;
 /// Seconds the depth prepass stays on after the last cone went out (so the prepass pipelines are
 /// not rebuilt every time a headlight is switched off).
 pub const PREPASS_RELEASE_S: f32 = 20.0;
@@ -122,6 +132,9 @@ pub struct ConeShape {
     pub inner_frac: f32,
     /// Colour, `0..=1` per channel.
     pub color: [f32; 3],
+    /// Height of the apex above the ground it stands on (m), if known: the cone ends at that
+    /// horizontal plane (a soft base) and never extends below it.
+    pub ground_h: Option<f32>,
 }
 
 impl ConeShape {
@@ -201,6 +214,7 @@ pub fn lantern_cone_shape(light: &ScoLight) -> Option<ConeShape> {
         half_angle,
         inner_frac,
         color: color01(light.color),
+        ground_h: ground_height(apex.y),
     })
 }
 
@@ -218,13 +232,15 @@ pub fn headlight_cone_shape(light: &ScoLight) -> Option<ConeShape> {
         light.cone_outer_deg,
         HEADLIGHT_HALF_DEG,
     );
+    let apex = omsi_to_bevy_pos(light.position);
     Some(ConeShape {
-        apex: omsi_to_bevy_pos(light.position),
+        apex,
         dir,
         length: HEADLIGHT_CONE_LENGTH_M,
         half_angle,
         inner_frac,
         color: color01(light.color),
+        ground_h: ground_height(apex.y),
     })
 }
 
@@ -248,23 +264,42 @@ pub fn spotlight_cone_shape(spot: &Spotlight) -> ConeShape {
         half_angle,
         inner_frac,
         color: color01(spot.color_rgb.map(f32::from)),
+        ground_h: ground_height(omsi_to_bevy_pos(spot.pos).y),
     }
 }
 
-/// Packs colour (6 bits per channel), brightness (8 bits) and inner edge (6 bits) into the mesh
-/// tag the shader reads.
-#[must_use]
-pub fn pack_tag(color: [f32; 3], level: f32, inner_frac: f32) -> u32 {
-    let c = |v: f32| (v.clamp(0.0, 1.0) * 63.0).round() as u32;
-    let i = (level.clamp(0.0, 1.0) * 255.0).round() as u32;
-    let e = (inner_frac.clamp(0.0, 1.0) * 63.0).round() as u32;
-    c(color[0]) | (c(color[1]) << 6) | (c(color[2]) << 12) | (i << 18) | (e << 26)
+/// The ground clip height for an apex `y` metres above the object's origin (which stands on the
+/// ground); none when the apex is not clearly above it.
+fn ground_height(y: f32) -> Option<f32> {
+    (y > 0.3).then_some(y.min(GROUND_H_MAX_M))
 }
 
-/// The brightness byte of a tag (`0..=255`).
+/// Highest ground height a tag can carry (m); the field has 0.25 m steps.
+pub const GROUND_H_MAX_M: f32 = 31.5;
+
+/// Packs the per-cone shader data into the mesh tag: colour (5 bits per channel, bits 0..14),
+/// brightness (6 bits, 15..20), inner edge (4 bits, 21..24) and the apex height above the
+/// ground in 0.25 m steps (7 bits, 25..31; 127 = no ground clip).
+#[must_use]
+pub fn pack_tag(color: [f32; 3], level: f32, inner_frac: f32, ground_h: Option<f32>) -> u32 {
+    let c = |v: f32| (v.clamp(0.0, 1.0) * 31.0).round() as u32;
+    let i = (level.clamp(0.0, 1.0) * 63.0).round() as u32;
+    let e = (inner_frac.clamp(0.0, 1.0) * 15.0).round() as u32;
+    let g = ground_h.map_or(127, |h| (h.clamp(0.0, GROUND_H_MAX_M) * 4.0).round() as u32);
+    c(color[0]) | (c(color[1]) << 5) | (c(color[2]) << 10) | (i << 15) | (e << 21) | (g << 25)
+}
+
+/// The brightness field of a tag (`0..=63`).
 #[must_use]
 pub const fn tag_level(tag: u32) -> u32 {
-    (tag >> 18) & 255
+    (tag >> 15) & 63
+}
+
+/// The ground height field of a tag in metres, if it has one.
+#[must_use]
+pub fn tag_ground_h(tag: u32) -> Option<f32> {
+    let g = tag >> 25;
+    (g != 127).then_some(g as f32 * 0.25)
 }
 
 /// Where a cone's brightness comes from. The cone only *reads* a level that the existing light
@@ -369,6 +404,11 @@ pub struct ConePool {
     key: Option<(bool, bool, usize)>,
     /// Seconds since a cone last shone (for the depth prepass).
     idle_s: f32,
+    /// Seconds and frames the main camera has had the depth prepass while the fade is on.
+    prepass_age_s: f32,
+    prepass_frames: u32,
+    /// The gate: cones fade in only once the prepass is ready (`0..=1`; 1 with the fade off).
+    pub gate: f32,
 }
 
 /// What the last selection saw (for `sim.get` and tests).
@@ -405,15 +445,29 @@ fn level_of(
     }
 }
 
+/// The prepass gate (`0..=1`): 1 without the depth fade; with it, 0 until the camera has had the
+/// prepass for [`PREPASS_READY_S`] and [`PREPASS_READY_FRAMES`], then rising over
+/// [`CONE_FADE_IN_S`].
+#[must_use]
+pub fn prepass_gate(depth_fade: bool, age_s: f32, frames: u32) -> f32 {
+    if !depth_fade {
+        return 1.0;
+    }
+    if frames < PREPASS_READY_FRAMES || age_s < PREPASS_READY_S {
+        return 0.0;
+    }
+    ((age_s - PREPASS_READY_S) / CONE_FADE_IN_S).clamp(0.0, 1.0)
+}
+
 /// Chooses the visible cones every [`SELECT_INTERVAL_S`] (at once when the quality settings
 /// change), and keeps their brightness and visibility current every frame.
 #[allow(clippy::too_many_arguments)]
 pub fn light_cone_pool_system(
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     quality: Res<LightQuality>,
     mut pool: ResMut<ConePool>,
     mut stats: ResMut<ConeStats>,
-    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    cameras: Query<(&Camera, &GlobalTransform, Has<DepthPrepass>), With<crate::MainCamera>>,
     scan: Query<(Entity, &LightCone, &GlobalTransform)>,
     mut apply: Query<(&LightCone, &mut Visibility, &mut MeshTag)>,
     glows: Query<&SceneryLight>,
@@ -424,15 +478,32 @@ pub fn light_cone_pool_system(
     pool.since_select_s += time.delta_secs();
     let camera = cameras
         .iter()
-        .find(|(c, _)| c.is_active)
-        .map(|(_, t)| (t.translation(), t.forward().as_vec3()));
+        .find(|(c, _, _)| c.is_active)
+        .map(|(_, t, p)| (t.translation(), t.forward().as_vec3(), p));
+    // The prepass gate: with the depth fade on, cones wait until the camera has had the prepass
+    // for a while, then fade in; with it off they are not gated.
+    if quality.cone_depth_fade && camera.is_some_and(|c| c.2) {
+        pool.prepass_age_s += time.delta_secs();
+        pool.prepass_frames += 1;
+    } else {
+        pool.prepass_age_s = 0.0;
+        pool.prepass_frames = 0;
+    }
+    let gate = prepass_gate(
+        quality.cone_depth_fade,
+        pool.prepass_age_s,
+        pool.prepass_frames,
+    );
+    if pool.gate != gate {
+        pool.gate = gate;
+    }
     if pool.since_select_s >= SELECT_INTERVAL_S || pool.key != Some(key) {
         pool.since_select_s = 0.0;
         pool.key = Some(key);
         let started = std::time::Instant::now();
         let mut candidates: Vec<(Entity, f32)> = Vec::new();
         let mut total = 0;
-        if let Some((cam, fwd)) = camera.filter(|_| cap > 0) {
+        if let Some((cam, fwd)) = camera.filter(|_| cap > 0).map(|c| (c.0, c.1)) {
             for (e, cone, global) in &scan {
                 total += 1;
                 if !cone.kind.allowed(&quality) {
@@ -483,11 +554,15 @@ pub fn light_cone_pool_system(
         let Ok((cone, mut vis, mut tag)) = apply.get_mut(e) else {
             return false;
         };
-        let level = if cone.kind.allowed(&quality) {
+        let raw = if cone.kind.allowed(&quality) {
             level_of(cone.level, &glows, &spots)
         } else {
             0.0
         };
+        if raw > CONE_ON_LEVEL {
+            lit += 1;
+        }
+        let level = raw * gate;
         let on = level > CONE_ON_LEVEL;
         let want = if on {
             Visibility::Inherited
@@ -498,8 +573,12 @@ pub fn light_cone_pool_system(
             *vis = want;
         }
         if on {
-            lit += 1;
-            let packed = pack_tag(cone.shape.color, level, cone.shape.inner_frac);
+            let packed = pack_tag(
+                cone.shape.color,
+                level,
+                cone.shape.inner_frac,
+                cone.shape.ground_h,
+            );
             if tag.value != packed {
                 tag.value = packed;
             }
@@ -539,7 +618,7 @@ pub fn wants_depth_prepass(
 /// Adds the depth prepass to the main camera while the cones need it and removes it again.
 pub fn cone_depth_prepass_system(
     mut commands: Commands,
-    time: Res<Time>,
+    time: Res<Time<Real>>,
     quality: Res<LightQuality>,
     stats: Res<ConeStats>,
     mut pool: ResMut<ConePool>,
@@ -595,8 +674,12 @@ const SHADER: Handle<Shader> = bevy::asset::uuid_handle!("6f707473-6c69-6768-746
 /// Look of the cones (live-tunable).
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub struct ConeStyle {
-    /// Scatter per metre at the centre of a fully lit cone.
+    /// Scatter per metre at the centre of a fully lit cone (with the depth fade; the shader halves
+    /// it without, where cones also cross walls).
     pub density: f32,
+    /// The most one cone adds to a pixel (`0..1`); the accumulation inside a cone is
+    /// `1 - exp(-scatter)` and the blend is a screen blend, so overlapping cones never exceed 1.
+    pub max_contribution: f32,
     /// Exponent of the falloff from the apex to the base.
     pub axial_power: f32,
     /// Cones whose apex is farther from the camera than this use 4 march steps instead of 8 (m).
@@ -606,7 +689,8 @@ pub struct ConeStyle {
 impl Default for ConeStyle {
     fn default() -> Self {
         Self {
-            density: 0.05,
+            density: 0.035,
+            max_contribution: 0.5,
             axial_power: 1.5,
             far_steps_distance_m: 40.0,
         }
@@ -619,7 +703,7 @@ impl ConeStyle {
             self.density,
             self.axial_power,
             self.far_steps_distance_m,
-            0.0,
+            self.max_contribution,
         )
     }
 }
@@ -658,6 +742,21 @@ impl Material for LightConeMaterial {
         // Back faces only: the fragment is where the view ray leaves the cone, which also works
         // with the camera inside.
         descriptor.primitive.cull_mode = Some(Face::Front);
+        // Screen blend, `src + dst * (1 - src)`, instead of plain addition: many overlapping
+        // cones approach white but cannot exceed it (the shader keeps `src` below 1).
+        if let Some(fragment) = descriptor.fragment.as_mut() {
+            for target in fragment.targets.iter_mut().flatten() {
+                let alpha = target.blend.map_or(BlendComponent::REPLACE, |b| b.alpha);
+                target.blend = Some(BlendState {
+                    color: BlendComponent {
+                        src_factor: BlendFactor::One,
+                        dst_factor: BlendFactor::OneMinusSrc,
+                        operation: BlendOperation::Add,
+                    },
+                    alpha,
+                });
+            }
+        }
         Ok(())
     }
 }

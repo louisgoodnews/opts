@@ -7,8 +7,15 @@
 //
 // Per-instance data comes from the model matrix and the mesh tag:
 //   apex   = translation, axis = local -Z, length = |Z axis|, tan(half angle) = |X axis| / length
-//   tag    = r(6 bits) | g(6) << 6 | b(6) << 12 | intensity(8) << 18 | inner edge(6) << 26
-// where the inner edge is the radius (0..1 of the outer radius) at which the soft falloff starts.
+//   tag    = r(5 bits) | g(5) << 5 | b(5) << 10 | intensity(6) << 15 | inner edge(4) << 21
+//            | ground height(7) << 25
+// where the inner edge is the radius (0..1 of the outer radius) at which the soft falloff starts
+// and the ground height is the apex height above the ground in 0.25 m steps (127 = unknown): the
+// volume ends at that horizontal plane with a soft base, with or without the depth prepass.
+//
+// The output is `1 - exp(-scatter)` per cone and the pipeline blends with a screen blend
+// (src + dst * (1 - src)), so overlapping cones cannot add up past white. Without the depth
+// prepass (depth fade off) the cones also cross walls, so the scatter is halved.
 import bevy_pbr::render::{
     forward_io::VertexOutput,
     mesh_functions::{get_world_from_local, get_local_from_world, get_tag},
@@ -18,7 +25,8 @@ import bevy_pbr::render::{
 @if(DEPTH_PREPASS) import bevy_pbr::prepass::utils::prepass_depth;
 
 // x = scatter per metre of a fully lit cone centre, y = axial falloff exponent,
-// z = distance (m) from the camera beyond which a cone uses the far step count, w unused.
+// z = distance (m) from the camera beyond which a cone uses the far step count,
+// w = the most one cone adds to a pixel (0..1).
 @group(constants::MATERIAL_BIND_GROUP) @binding(0) var<uniform> params: vec4<f32>;
 
 const NEAR_STEPS: u32 = 8u;
@@ -34,12 +42,13 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let m = get_world_from_local(in.instance_index);
     let tag = get_tag(in.instance_index);
     let color = vec3<f32>(
-        f32(tag & 63u),
-        f32((tag >> 6u) & 63u),
-        f32((tag >> 12u) & 63u),
-    ) / 63.0;
-    let intensity = f32((tag >> 18u) & 255u) / 255.0;
-    let inner = min(f32((tag >> 26u) & 63u) / 63.0, 0.95);
+        f32(tag & 31u),
+        f32((tag >> 5u) & 31u),
+        f32((tag >> 10u) & 31u),
+    ) / 31.0;
+    let intensity = f32((tag >> 15u) & 63u) / 63.0;
+    let inner = min(f32((tag >> 21u) & 15u) / 15.0, 0.95);
+    let ground_q = (tag >> 25u) & 127u;
     if intensity <= 0.0 { discard; }
 
     let P = in.world_position.xyz;
@@ -99,9 +108,27 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
     let t_scene = (-scene_z) / max(dot(d, fwd), 1e-4);
     t1 = min(t1, t_scene);
 }
+    let apex = m[3].xyz;
+    // The ground plane under the lamp: the volume never extends below it.
+    var ground_y = -1.0e30;
+    if ground_q != 127u {
+        ground_y = apex.y - f32(ground_q) * 0.25;
+        let oy = O.y - ground_y;
+        if abs(d.y) > 1e-6 {
+            let t_ground = -oy / d.y;
+            if oy >= 0.0 {
+                if d.y < 0.0 { t1 = min(t1, t_ground); }
+            } else if d.y > 0.0 {
+                t0 = max(t0, t_ground);
+            } else {
+                discard;
+            }
+        } else if oy < 0.0 {
+            discard;
+        }
+    }
     if t1 <= t0 { discard; }
 
-    let apex = m[3].xyz;
     let far = distance(O, apex) > params.z;
     let steps = select(NEAR_STEPS, FAR_STEPS, far);
     let dt = (t1 - t0) / f32(steps);
@@ -114,9 +141,16 @@ fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
         let rad = length(p.xy) / max(s, 1e-3);
         let radial = 1.0 - smoothstep(inner, 1.0, rad);
         let axial = pow(max(1.0 - s, 0.0), params.y);
-        acc += radial * axial * smoothstep(0.0, 0.05, s);
+        // A soft base: fade over the last 0.8 m above the ground plane.
+        let above = O.y + d.y * t - ground_y;
+        acc += radial * axial * smoothstep(0.0, 0.05, s) * smoothstep(0.0, 0.8, above);
     }
     // Fade out a cone the camera is almost inside the apex of (no hard pop at the lamp).
     let near = smoothstep(0.0, 1.5, t0 + 0.5 * (t1 - t0));
-    return vec4<f32>(color * (acc * dt * params.x * intensity * near), 0.0);
+    var density = params.x;
+@if(!DEPTH_PREPASS) {
+    density = density * 0.5;
+}
+    let scatter = acc * dt * density * intensity * near;
+    return vec4<f32>(color * (params.w * (1.0 - exp(-scatter))), 0.0);
 }
