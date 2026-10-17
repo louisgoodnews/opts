@@ -455,7 +455,8 @@ fn spawn_object_inner(
         }
         return;
     }
-    if sco.only_editor {
+    // An editor-only object draws no mesh; its `[maplight]`s are placed below.
+    if sco.only_editor && sco.map_lights.is_empty() {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
@@ -500,6 +501,15 @@ fn spawn_object_inner(
             scale: Vec3::ONE,
         },
     };
+    if sco.only_editor {
+        // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
+        // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
+        let root = commands.spawn((transform, Name::new("MapLights"))).id();
+        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
+        children.push(root);
+        tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
+        return;
+    }
     // `[attachObj]` children of this object are placed relative to it.
     job.placed
         .entry(obj.id_code)

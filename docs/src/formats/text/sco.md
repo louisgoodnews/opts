@@ -167,7 +167,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
 | `[matl_lightmap]` | 1 | Lightmap bitmap. |
-| `[matl_nightmap]` | 1 | Night texture, swapped in when `[matl_change]` fires. |
+| `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` (the variable-less `[matl_lightmap]` path) instead of swapping the texture ❓. |
 | `[matl_transmap]` | — | Material fades by `[alphascale]`. |
 | `[matl_noZwrite]` | — | Do not write depth (transparent decals). |
 | `[matl_noZcheck]` | — | Do not test depth. |
@@ -182,7 +182,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[rendertype]` | 1 | Render pass: `0`–`4`, or `surface`, `presurface`, `on_surface`. |
 | `[NightMapMode]` | 1 | Night lighting, see below. |
 | `[LightMapMapping]` | — | Mesh uses lightmap UVs. |
-| `[nomaplighting]` | — | Object is not lit by map lights. |
+| `[nomaplighting]` | — | Object is not lit by map lights. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet: map lights are Bevy point lights and light every object in range. |
 | `[detail_factor]` | 1 | Size multiplier for **distance culling**. 0.5 shows it at half size, 2 shows it only when twice as large. |
 | `[noDistanceCheck]` | — | Never culled by distance. |
 
@@ -242,7 +242,7 @@ Barer-Str-44.o3d
 | :--- | :--- | :--- |
 | `[light_enh]` | 12 | Basic light effect: x, y, z, r, g, b (0–255), size, then a **variable** name controlling brightness, followed by further tuning values. |
 | `[light_enh_2]` | 23–24 | Full light effect, see below. |
-| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). |
+| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). 1,771 street lamps on Berlin-Spandau. OPTS (2026-10-17): a marker per light; a pool of 48 shadowless point lights goes to the nearest lamps within 200 m of the camera every 0.25 s (hysteresis 15 m), only while `NightlightA` is on, fading in and out over 0.5 s; luminous power `4π·r²·E_full` with `E_full` = 15 lx (tunable, `MapLightSettings`), range `8·r` ([scenery runtime](../../architecture/scenery-runtime.md#map-lights-maplight)). |
 | `[smoke]` | 19 | Smoke emitter: position (3), direction (3), then tuning values. |
 | `[particle_emitter]` | many | Particle system with named sub-blocks. See below. |
 | `[tree]` | 5 | Billboard helper: texture, min height, max height, min width ratio, max width ratio. Followed by a `[mesh]` of the helper (`treehelper.x`, `Grashelfer.x`). |
