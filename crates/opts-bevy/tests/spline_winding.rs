@@ -8,7 +8,7 @@
 use bevy::math::Vec3;
 use bevy::mesh::{Indices, Mesh};
 use opts_bevy::{
-    carve_terrain_under_roads, extrude_spline_segment, road_footprint, TERRAIN_CELL_M,
+    carve_terrain, extrude_spline_segment, spline_ground_triangles, TileTerrain, TERRAIN_CELL_M,
 };
 use opts_core::formats::map::{MapSplineInstance, MapTerrain};
 use opts_core::formats::scenery::sli::{
@@ -164,18 +164,26 @@ fn vertex_normals_of_a_road_point_up() {
     assert!(normals.iter().all(|n| n[1] > 0.9));
 }
 
+fn carve(heights: f32, prof: &SplineProfile, inst: &MapSplineInstance) -> MapTerrain {
+    let terrain = TileTerrain::new(
+        MapTerrain {
+            grid_cells: 60,
+            heights: vec![heights; 61 * 61],
+        },
+        TERRAIN_CELL_M,
+    );
+    carve_terrain(&terrain, &spline_ground_triangles(prof, inst, (0.0, 0.0)))
+        .0
+        .grid
+}
+
 #[test]
 fn terrain_never_covers_a_road() {
     // Flat terrain 0.25 m above the road datum (the Waldhofen curb-strip situation).
     let dim = 61;
-    let terrain = MapTerrain {
-        grid_cells: 60,
-        heights: vec![10.25; dim * dim],
-    };
     let inst = instance(0.0, 0.0, 0.0, false);
     let prof = profile(vec![pt(-4.0, 0.1), pt(4.0, 0.1)]);
-    let footprint = road_footprint(&prof, &inst).expect("height profile deforms terrain");
-    let carved = carve_terrain_under_roads(&terrain, &[footprint], TERRAIN_CELL_M);
+    let carved = carve(10.25, &prof, &inst);
     // Road runs north from (50, 50) for 40 m, 8 m wide, surface at 10.1.
     for j in 0..dim {
         for i in 0..dim {
@@ -184,7 +192,7 @@ fn terrain_never_covers_a_road() {
             if (46.0..=54.0).contains(&x) && (50.0..=90.0).contains(&y) {
                 assert!(h < 10.1, "terrain {h} covers the road at ({x}, {y})");
             }
-            if !(30.0..=70.0).contains(&x) {
+            if !(40.0..=60.0).contains(&x) {
                 assert_eq!(h, 10.25, "terrain away from the road must stay as authored");
             }
         }
@@ -192,11 +200,16 @@ fn terrain_never_covers_a_road() {
 }
 
 #[test]
-fn splines_without_height_profile_leave_terrain_alone() {
-    // A narrow flat spline (a kerb line) does not deform the terrain.
-    let mut prof = profile(vec![pt(-0.5, 0.1), pt(0.5, 0.1)]);
-    prof.height_profiles.clear();
-    assert!(road_footprint(&prof, &instance(0.0, 0.0, 0.0, false)).is_none());
+fn splines_without_ground_surface_leave_terrain_alone() {
+    // A wall: vertical faces and a top 2 m up are no ground surface.
+    let prof = profile(vec![
+        pt(-0.2, 0.0),
+        pt(-0.2, 2.0),
+        pt(0.2, 2.0),
+        pt(0.2, 0.0),
+    ]);
+    let carved = carve(10.5, &prof, &instance(0.0, 0.0, 0.0, false));
+    assert!(carved.heights.iter().all(|h| *h == 10.5));
 }
 
 #[test]
@@ -204,19 +217,9 @@ fn flat_ground_surfaces_are_not_covered_but_cuttings_stay() {
     // An 8 m pavement without height profile, terrain 8 cm above it: lowered onto it.
     let mut prof = profile(vec![pt(-4.0, 0.0), pt(4.0, 0.0)]);
     prof.height_profiles.clear();
-    let footprint = road_footprint(&prof, &instance(0.0, 0.0, 0.0, false)).expect("flat surface");
-    let dim = 61;
-    let near = MapTerrain {
-        grid_cells: 60,
-        heights: vec![10.08; dim * dim],
-    };
-    let carved = carve_terrain_under_roads(&near, std::slice::from_ref(&footprint), TERRAIN_CELL_M);
-    assert!(carved.heights.iter().any(|h| *h < 10.05));
+    let carved = carve(10.08, &prof, &instance(0.0, 0.0, 0.0, false));
+    assert!(carved.heights.iter().any(|h| *h < 10.0));
     // Terrain 2 m above it (a hill over a tunnel) stays as authored.
-    let hill = MapTerrain {
-        grid_cells: 60,
-        heights: vec![12.0; dim * dim],
-    };
-    let carved = carve_terrain_under_roads(&hill, &[footprint], TERRAIN_CELL_M);
+    let carved = carve(12.0, &prof, &instance(0.0, 0.0, 0.0, false));
     assert!(carved.heights.iter().all(|h| *h == 12.0));
 }

@@ -93,8 +93,8 @@ pub use plugin::{
 };
 pub use position_tag::{position_tag, set_loading_tile, set_position_tag};
 pub use scenery::{
-    extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, SceneryLoaderError,
-    SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
+    extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, spline_stations,
+    SceneryLoaderError, SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
 pub use scenery_runtime::{
     advance_scenery, bind_alpha_scale, build_scenery_object, SceneryAlphaScale, SceneryClock,
@@ -102,8 +102,9 @@ pub use scenery_runtime::{
     SceneryRuntimeSettings, SceneryRuntimeStats, SceneryScripts, SceneryVariableOverrides,
 };
 pub use terrain::{
-    build_terrain_mesh, carve_terrain_under_roads, footprint_from_neighbour, road_footprint,
-    sample_terrain, terrain_material, RoadFootprint, TileTerrain, TERRAIN_CELL_M, TILE_SIZE_M,
+    build_terrain_mesh, carve_terrain, spline_ground_triangles, terrain_height, terrain_material,
+    CarveStats, GroundTriangle, TileTerrain, CARVE_COVER_M, CARVE_EPSILON_M, TERRAIN_CELL_M,
+    TILE_SIZE_M,
 };
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,

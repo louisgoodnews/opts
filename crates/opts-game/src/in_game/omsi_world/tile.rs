@@ -70,7 +70,6 @@ pub fn load_next_tile(
         materials,
         images,
         ground_materials,
-        &tile,
         key,
         origin,
         &mut children,

@@ -194,22 +194,16 @@ pub fn spline_pose(inst: &MapSplineInstance, s: f32) -> SplinePose {
     }
 }
 
-/// Extrudes a `.sli` graphical profile along a placed spline segment.
-///
-/// The segment starts at `inst.position` (tile-local), heads along `inst.heading_deg`
-/// (0° = north, **clockwise** positive like a compass), follows the arc given by
-/// `inst.radius_m` (positive radius = heading increases = turns right) and blends the
-/// longitudinal slope from `gradient_start` to `gradient_end`. Both sign conventions were
-/// derived from the corpus: the end of a placed segment coincides with the start of the
-/// segment it connects to only under these conventions.
-///
-/// Returns `(texture_index, mesh)` per graphical profile, in absolute Bevy world coordinates.
+/// The cross-sections a placed spline is drawn at: `(east, north, elevation, heading, s)` in the
+/// frame whose origin is `tile_origin` (the spline's tile corner in that frame). Straight
+/// segments with a constant slope need only their two ends; arcs and changing gradients
+/// (including `[spline_h]` ramps) are sampled every 4 m or 5°. The terrain carve builds its
+/// ribbons on the same stations so the carved ground matches the drawn surface.
 #[must_use]
-pub fn extrude_spline_segment(
-    profile: &SplineProfile,
+pub fn spline_stations(
     inst: &MapSplineInstance,
     tile_origin: (f32, f32),
-) -> Vec<(usize, Mesh)> {
+) -> Vec<(f32, f32, f32, f32, f32)> {
     let length = inst.length_m.max(0.01);
     let arc = inst.radius_m.abs() > 1e-3;
     let by_len = (length / 4.0).ceil();
@@ -218,8 +212,12 @@ pub fn extrude_spline_segment(
     } else {
         0.0
     };
-    // A straight segment with constant slope is exactly representable by one quad per ribbon.
-    let steps = if !arc && (inst.gradient_start - inst.gradient_end).abs() < 1e-6 {
+    // A straight segment with constant slope is exactly representable by one quad per ribbon;
+    // a `[spline_h]` ramp is a cubic even between equal end gradients.
+    let ramp = [0.25, 0.5, 0.75].iter().any(|f| {
+        (height_offset(inst, length * f, length) - inst.gradient_start * length * f).abs() > 1e-4
+    });
+    let steps = if !arc && !ramp && (inst.gradient_start - inst.gradient_end).abs() < 1e-6 {
         1
     } else {
         by_len.max(by_angle.ceil()).clamp(1.0, 400.0) as usize
@@ -250,6 +248,26 @@ pub fn extrude_spline_segment(
         samples.push((ex, ny, z, h, s));
     }
 
+    samples
+}
+
+/// Extrudes a `.sli` graphical profile along a placed spline segment.
+///
+/// The segment starts at `inst.position` (tile-local), heads along `inst.heading_deg`
+/// (0° = north, **clockwise** positive like a compass), follows the arc given by
+/// `inst.radius_m` (positive radius = heading increases = turns right) and blends the
+/// longitudinal slope from `gradient_start` to `gradient_end`. Both sign conventions were
+/// derived from the corpus: the end of a placed segment coincides with the start of the
+/// segment it connects to only under these conventions.
+///
+/// Returns `(texture_index, mesh)` per graphical profile, in absolute Bevy world coordinates.
+#[must_use]
+pub fn extrude_spline_segment(
+    profile: &SplineProfile,
+    inst: &MapSplineInstance,
+    tile_origin: (f32, f32),
+) -> Vec<(usize, Mesh)> {
+    let samples = spline_stations(inst, tile_origin);
     let mut out = Vec::new();
     for gp in &profile.graphical_profiles {
         if gp.points.len() < 2 {
