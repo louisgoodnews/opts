@@ -266,7 +266,7 @@ The embedded documentation lists the layout (one value per line):
 | 19 | `factor` | Multiplier. |
 | 20 | `z-offset` | Pull towards viewer, to keep a light inside a solid visible. |
 | 21 | `parameters` | Bit mask: `+1` star, `+2` no fog effect, `+4` effect only. |
-| 22 | `cone` | `1` creates a volumetric cone (not for omni lights). |
+| 22 | `cone` | `1` creates a volumetric cone (not for omni lights). ✅ Census of `Sceneryobjects` (2026-10-17): of the directional lights 1,022 carry `1` (861 of them with an outer angle of 180° or more: the angles describe where the corona is visible, not the beam), 2,166 carry `0` (1,979 with an outer angle below 180°: traffic signals), 2 carry `2`; the renderer draws a [visible cone](../../architecture/lighting-cones.md#implementation) for `1` only (`ScoLight::volumetric_cone`). |
 | 23 | `timeconst` | Seconds to reach 63 % intensity (27 % on switch-off). |
 | 24 | `bitmap` | Effect texture; empty uses the default. |
 

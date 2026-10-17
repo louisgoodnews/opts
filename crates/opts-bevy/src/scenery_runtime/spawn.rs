@@ -219,6 +219,19 @@ fn build_light(
     let material = assets.lights.material(assets.materials, light.color);
     let e = spawn_light_sprite(commands, sprite, local(light.position), mesh, material);
     commands.entity(parent).add_child(e);
+    // A directional light with the `cone` flag also draws a visible cone, next to the glow; its
+    // brightness is the glow's level (the same variable, switched by the same night rule).
+    if let Some(shape) = crate::light_cones::lantern_cone_shape(light) {
+        crate::light_cones::spawn_light_cone(
+            commands,
+            parent,
+            crate::light_cones::LightCone {
+                kind: crate::light_cones::ConeKind::Lantern,
+                shape,
+                level: crate::light_cones::ConeLevel::Glow(e),
+            },
+        );
+    }
     e
 }
 
@@ -265,6 +278,9 @@ pub fn build_scenery_object(
         rt.lights.push(e);
     }
     let mut root_cmd = commands.entity(root);
+    if sco.no_map_lighting {
+        root_cmd.insert(crate::light_rooms::NoMapLighting);
+    }
     if !groups.is_empty() {
         let (centre, radius) = bounds(&input.mesh_parts, assets.meshes);
         root_cmd.insert(SceneryLod::new(groups, centre, radius));

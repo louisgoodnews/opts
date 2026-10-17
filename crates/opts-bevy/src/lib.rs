@@ -30,7 +30,9 @@ pub mod hot_reload;
 pub mod human;
 pub mod install;
 pub mod instancing;
+pub mod light_cones;
 pub mod light_quality;
+pub mod light_rooms;
 pub mod loader;
 pub mod material;
 pub mod mesh;
@@ -85,6 +87,10 @@ pub use human::{
     DriverHead, Human, HumanHead, HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
 };
 pub use install::OmsiInstall;
+pub use light_cones::{
+    ConeKind, ConeLevel, ConePool, ConeStats, LightCone, LightConePlugin, LightConeRenderPlugin,
+};
+pub use light_rooms::{CabinView, LightRoomsPlugin, NoMapLighting, VehicleFootprint};
 pub use loader::{
     DdsAssetLoader, O3dAssetLoader, O3dLoaderError, OptsImageLoader, TextureLoaderError,
     XAssetLoader, XLoaderError,
@@ -135,7 +141,8 @@ pub use vehicle_anim::{
     MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
 };
 pub use vehicle_glow::{
-    choose_headlights, spawn_vehicle_glows, VehicleGlow, VehicleGlowPlugin, HEADLIGHT_POOL,
+    choose_headlights, spawn_vehicle_glows, spawn_vehicle_glows_with_cones, VehicleGlow,
+    VehicleGlowPlugin, HEADLIGHT_POOL,
 };
 pub use vehicle_lights::{
     vehicle_alpha_scale_system, vehicle_light_map_system, vehicle_light_system, AlphaScaleBinding,
