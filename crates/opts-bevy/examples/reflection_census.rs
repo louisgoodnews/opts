@@ -17,7 +17,15 @@ use std::path::{Path, PathBuf};
 
 const TEXT_EXT: [&str; 8] = ["cfg", "sco", "sli", "bus", "ovh", "osc", "xml", "txt"];
 const GLASS_WORDS: [&str; 9] = [
-    "glas", "glass", "scheibe", "fenster", "window", "verglas", "windscreen", "windshield", "pane",
+    "glas",
+    "glass",
+    "scheibe",
+    "fenster",
+    "window",
+    "verglas",
+    "windscreen",
+    "windshield",
+    "pane",
 ];
 const MIRROR_WORDS: [&str; 5] = ["spiegel", "mirror", "mirr", "rueckspiegel", "rückspiegel"];
 
@@ -119,7 +127,10 @@ fn main() {
         // File-name hits (any type).
         let fname = lower_rel.rsplit('/').next().unwrap_or("").to_string();
         if has_any(&fname, &MIRROR_WORDS) {
-            let key = if matches!(ext.as_str(), "o3d" | "x" | "bmp" | "dds" | "tga" | "jpg" | "png") {
+            let key = if matches!(
+                ext.as_str(),
+                "o3d" | "x" | "bmp" | "dds" | "tga" | "jpg" | "png"
+            ) {
                 "mirror-named file"
             } else {
                 "mirror-named other"
@@ -143,17 +154,17 @@ fn main() {
         let mut cur_alpha = String::from("-");
         let mut in_mat = false;
         let flush = |in_mat: bool,
-                         tex: &str,
-                         has_env: bool,
-                         alpha: &str,
-                         glass_alpha: &mut BTreeMap<String, u64>,
-                         glass_tex: &mut BTreeMap<String, u64>,
-                         mirror_tex: &mut BTreeMap<String, u64>,
-                         glass_mats: &mut u64,
-                         mirror_mats: &mut u64,
-                         glass_env: &mut u64,
-                         mirror_env: &mut u64,
-                         env_nonglass: &mut u64| {
+                     tex: &str,
+                     has_env: bool,
+                     alpha: &str,
+                     glass_alpha: &mut BTreeMap<String, u64>,
+                     glass_tex: &mut BTreeMap<String, u64>,
+                     mirror_tex: &mut BTreeMap<String, u64>,
+                     glass_mats: &mut u64,
+                     mirror_mats: &mut u64,
+                     glass_env: &mut u64,
+                     mirror_env: &mut u64,
+                     env_nonglass: &mut u64| {
             if !in_mat {
                 return;
             }
@@ -207,19 +218,20 @@ fn main() {
                     total_matl += 1;
                     total_matl_files.insert(rel.clone());
                 }
-                let interesting = matches!(
-                    name,
-                    "matl_envmap"
-                        | "matl_envmap_mask"
-                        | "matl_alpha"
-                        | "matl_transmap"
-                        | "matl_bumpmap"
-                        | "matl_nightmap"
-                        | "matl_lightmap"
-                        | "matl_noZwrite"
-                        | "matl_nozwrite"
-                        | "matl_nozcheck"
-                ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
+                let interesting =
+                    matches!(
+                        name,
+                        "matl_envmap"
+                            | "matl_envmap_mask"
+                            | "matl_alpha"
+                            | "matl_transmap"
+                            | "matl_bumpmap"
+                            | "matl_nightmap"
+                            | "matl_lightmap"
+                            | "matl_noZwrite"
+                            | "matl_nozwrite"
+                            | "matl_nozcheck"
+                    ) || has_any(name, &["mirror", "spiegel", "reflect", "cube", "env"]);
                 if interesting {
                     kw.entry(name.to_string()).or_default().add(&rel, &unit);
                 }
@@ -235,8 +247,14 @@ fn main() {
                 }
             } else if ext == "osc" || ext == "txt" || ext == "cfg" {
                 // Script or free text mentioning mirrors.
-                if (l.contains("mirror") || l.contains("spiegel")) && !l.starts_with("//") && !l.starts_with('#') {
-                    name_hits.entry("text line mentions mirror").or_default().push(format!("{rel}: {}", l.chars().take(80).collect::<String>()));
+                if (l.contains("mirror") || l.contains("spiegel"))
+                    && !l.starts_with("//")
+                    && !l.starts_with('#')
+                {
+                    name_hits
+                        .entry("text line mentions mirror")
+                        .or_default()
+                        .push(format!("{rel}: {}", l.chars().take(80).collect::<String>()));
                 }
             }
             i += 1;
@@ -257,7 +275,10 @@ fn main() {
         );
     }
 
-    println!("files walked: {}  text files read: {text_files}", files.len());
+    println!(
+        "files walked: {}  text files read: {text_files}",
+        files.len()
+    );
     println!(
         "vehicle folders: {}  object folders: {}  .sco files: {sco_files}",
         vehicles.len(),
@@ -291,11 +312,11 @@ fn main() {
     top(&glass_alpha, 10);
     println!("glass texture names (top 15):");
     top(&glass_tex, 15);
-    println!(
-        "\n== mirror-named materials: {mirror_mats} (with envmap {mirror_env})"
-    );
+    println!("\n== mirror-named materials: {mirror_mats} (with envmap {mirror_env})");
     top(&mirror_tex, 15);
-    println!("\n== env-mapped materials that are neither glass- nor mirror-named: {env_nonglass_mats}");
+    println!(
+        "\n== env-mapped materials that are neither glass- nor mirror-named: {env_nonglass_mats}"
+    );
     println!("\n== envmap/reflect-named files (top 10)");
     top(&env_files_bmp, 10);
     println!("\n== name hits");

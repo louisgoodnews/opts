@@ -68,6 +68,8 @@ pub struct ReflectionSwitches {
     pub wet: bool,
     /// Screen-space reflections (deferred).
     pub ssr: bool,
+    /// Measurement aid: keep `Camera3d` on the mirror cameras all the time (no per-frame toggle).
+    pub mirror_keep: bool,
     /// Show the first mirror texture on a quad in front of the main camera (debug aid).
     pub mirror_debug: bool,
     /// Environment intensity (cd/m2).
@@ -87,6 +89,7 @@ impl ReflectionSwitches {
             mirror_max: 2,
             wet: false,
             ssr: false,
+            mirror_keep: false,
             mirror_debug: false,
             env_intensity: 3000.0,
         };
@@ -114,6 +117,7 @@ impl ReflectionSwitches {
                 "wet" => s.wet = true,
                 "ssr" => s.ssr = true,
                 "mirror_debug" => s.mirror_debug = true,
+                "mirror_keep" => s.mirror_keep = true,
                 "env_intensity" => s.env_intensity = value.parse().unwrap_or(3000.0),
                 _ => {}
             }
@@ -130,11 +134,7 @@ impl ReflectionSwitches {
     /// Whether any switch is on.
     #[must_use]
     pub fn any(&self) -> bool {
-        self.env
-            || self.glass != GlassMode::Off
-            || self.mirror
-            || self.wet
-            || self.ssr
+        self.env || self.glass != GlassMode::Off || self.mirror || self.wet || self.ssr
     }
 }
 
@@ -165,7 +165,11 @@ pub fn switches() -> &'static ReflectionSwitches {
 }
 
 /// Called by the model loader for every material it creates; free when no switch is on.
-pub fn note_material(handle: &Handle<StandardMaterial>, texture: Option<&str>, m: &StandardMaterial) {
+pub fn note_material(
+    handle: &Handle<StandardMaterial>,
+    texture: Option<&str>,
+    m: &StandardMaterial,
+) {
     if !switches().any() {
         return;
     }
@@ -194,9 +198,18 @@ fn texture_stem(note: &MaterialNote) -> &str {
 /// Glass by texture name (the corpus has no other marker; see the research report).
 #[must_use]
 pub fn is_glass_name(name: &str) -> bool {
-    ["glas", "glass", "scheibe", "fenster", "window", "verglas", "windscreen", "windshield"]
-        .iter()
-        .any(|w| name.contains(w))
+    [
+        "glas",
+        "glass",
+        "scheibe",
+        "fenster",
+        "window",
+        "verglas",
+        "windscreen",
+        "windshield",
+    ]
+    .iter()
+    .any(|w| name.contains(w))
 }
 
 /// Mirror by texture name.
@@ -251,7 +264,10 @@ impl Plugin for ReflectionsResearchPlugin {
         if std::env::var_os("OPTS_REFLECT_GPU").is_some() {
             app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
         }
-        app.add_systems(Update, (apply_camera_features, apply_glass, apply_wet, collect_stats));
+        app.add_systems(
+            Update,
+            (apply_camera_features, apply_glass, apply_wet, collect_stats),
+        );
         if sw.mirror {
             app.add_systems(Update, spawn_mirror_cameras)
                 .add_systems(
@@ -260,8 +276,11 @@ impl Plugin for ReflectionsResearchPlugin {
                 )
                 // The camera systems of the game query `With<Camera3d>` and assume exactly one;
                 // the mirror cameras are `Camera3d` only while the frame is extracted.
-                .add_systems(First, hide_mirror_cameras)
-                .add_systems(Last, show_mirror_cameras);
+                ;
+            if !sw.mirror_keep {
+                app.add_systems(First, hide_mirror_cameras)
+                    .add_systems(Last, show_mirror_cameras);
+            }
         }
     }
 }
@@ -399,7 +418,9 @@ fn apply_glass(
         if !is_glass_name(texture_stem(&note)) || matches!(note.alpha, AlphaMode::Opaque) {
             continue;
         }
-        let Some(mut m) = materials.get_mut(id) else { continue };
+        let Some(mut m) = materials.get_mut(id) else {
+            continue;
+        };
         glass_count.0 += 1;
         if glass_count.0 % 50 == 1 {
             bevy::log::info!(count = glass_count.0, texture = %note.texture, "reflections: glass material treated");
@@ -491,7 +512,12 @@ fn spawn_mirror_cameras(
     main_cams: Query<Entity, (With<Camera3d>, Without<MirrorCamera>)>,
     mut meshes_add: ResMut<Assets<Mesh>>,
     candidates: Query<
-        (Entity, &MeshMaterial3d<StandardMaterial>, &Mesh3d, &GlobalTransform),
+        (
+            Entity,
+            &MeshMaterial3d<StandardMaterial>,
+            &Mesh3d,
+            &GlobalTransform,
+        ),
         Without<MirrorDone>,
     >,
 ) {
@@ -500,17 +526,23 @@ fn spawn_mirror_cameras(
         if count >= sw.mirror_max {
             return;
         }
-        let Some(note) = note_of(material.0.id()) else { continue };
+        let Some(note) = note_of(material.0.id()) else {
+            continue;
+        };
         if !is_mirror_name(texture_stem(&note)) {
             continue;
         }
         if gt.affine() == bevy::math::Affine3A::IDENTITY {
             continue;
         }
-        let Some(mesh) = meshes_add.get(&mesh.0) else { continue };
+        let Some(mesh) = meshes_add.get(&mesh.0) else {
+            continue;
+        };
         let (Some(pos), Some(nor)) = (
-            mesh.attribute(Mesh::ATTRIBUTE_POSITION).and_then(|a| a.as_float3()),
-            mesh.attribute(Mesh::ATTRIBUTE_NORMAL).and_then(|a| a.as_float3()),
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                .and_then(|a| a.as_float3()),
+            mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
+                .and_then(|a| a.as_float3()),
         ) else {
             continue;
         };
@@ -532,7 +564,8 @@ fn spawn_mirror_cameras(
             continue;
         }
         let size = sw.mirror_size;
-        let mut image = Image::new_target_texture(size.x, size.y, TextureFormat::Bgra8UnormSrgb, None);
+        let mut image =
+            Image::new_target_texture(size.x, size.y, TextureFormat::Bgra8UnormSrgb, None);
         image.sampler = bevy::image::ImageSampler::linear();
         let handle = images.add(image);
         // The mirror shows the render unlit, mirrored horizontally.
@@ -606,10 +639,16 @@ fn update_mirror_cameras(
         return;
     };
     for (info, mut t, mut cam) in &mut cams {
-        let Ok(gt) = mirrors.get(info.mirror) else { continue };
+        let Ok(gt) = mirrors.get(info.mirror) else {
+            continue;
+        };
         // Mirror pose of the current frame (the vehicle moves).
         let c = gt.transform_point(info.centre);
-        let mut n = gt.affine().matrix3.mul_vec3(info.normal).normalize_or_zero();
+        let mut n = gt
+            .affine()
+            .matrix3
+            .mul_vec3(info.normal)
+            .normalize_or_zero();
         let d = (c - viewer).normalize_or_zero();
         if d.dot(n) > 0.0 {
             n = -n;
@@ -625,19 +664,27 @@ fn follow_debug_quad(
     main: Query<&Transform, (With<Camera3d>, Without<MirrorCamera>, Without<DebugQuad>)>,
     mut quad: Query<&mut Transform, With<DebugQuad>>,
 ) {
-    let Some(cam) = main.iter().next() else { return };
+    let Some(cam) = main.iter().next() else {
+        return;
+    };
     for mut t in &mut quad {
         *t = *cam * Transform::from_xyz(0.0, -0.2, -0.9);
     }
 }
 
-fn hide_mirror_cameras(mut commands: Commands, cams: Query<Entity, (With<MirrorCamera>, With<Camera3d>)>) {
+fn hide_mirror_cameras(
+    mut commands: Commands,
+    cams: Query<Entity, (With<MirrorCamera>, With<Camera3d>)>,
+) {
     for e in &cams {
         commands.entity(e).remove::<Camera3d>();
     }
 }
 
-fn show_mirror_cameras(mut commands: Commands, cams: Query<Entity, (With<MirrorCamera>, Without<Camera3d>)>) {
+fn show_mirror_cameras(
+    mut commands: Commands,
+    cams: Query<Entity, (With<MirrorCamera>, Without<Camera3d>)>,
+) {
     for e in &cams {
         commands.entity(e).insert(Camera3d::default());
     }
@@ -671,15 +718,23 @@ fn collect_stats(
     mut exit: MessageWriter<AppExit>,
     cameras: Query<(), With<Camera3d>>,
 ) {
-    let Ok(path) = std::env::var("OPTS_REFLECT_STATS") else { return };
+    let Ok(path) = std::env::var("OPTS_REFLECT_STATS") else {
+        return;
+    };
     // Statistics start when the 3D scene is on screen (a camera exists and frames are short).
     if cameras.is_empty() {
         return;
     }
     let now = time.elapsed_secs_f64();
     let start = *stats.started.get_or_insert(now);
-    let warmup: f64 = std::env::var("OPTS_REFLECT_WARMUP").ok().and_then(|v| v.parse().ok()).unwrap_or(8.0);
-    let span: f64 = std::env::var("OPTS_REFLECT_STATS_AFTER").ok().and_then(|v| v.parse().ok()).unwrap_or(20.0);
+    let warmup: f64 = std::env::var("OPTS_REFLECT_WARMUP")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(8.0);
+    let span: f64 = std::env::var("OPTS_REFLECT_STATS_AFTER")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(20.0);
     if now - start > warmup {
         stats.samples.push(time.delta_secs() * 1000.0);
     }
@@ -688,7 +743,11 @@ fn collect_stats(
         v.sort_by(|a, b| a.total_cmp(b));
         let n = v.len().max(1);
         let mean = v.iter().sum::<f32>() / n as f32;
-        let pct = |p: f32| v.get(((n as f32 - 1.0) * p) as usize).copied().unwrap_or(0.0);
+        let pct = |p: f32| {
+            v.get(((n as f32 - 1.0) * p) as usize)
+                .copied()
+                .unwrap_or(0.0)
+        };
         let mut out = format!(
             "frames={} mean_ms={mean:.3} p50_ms={:.3} p95_ms={:.3} p99_ms={:.3} fps={:.1} rss_mib={:.0}\n",
             v.len(),
@@ -725,7 +784,9 @@ mod tests {
 
     #[test]
     fn switch_list_parses() {
-        let s = ReflectionSwitches::parse("env,glass=trans,mirror,mirror_size=128x64,mirror_every=3,wet");
+        let s = ReflectionSwitches::parse(
+            "env,glass=trans,mirror,mirror_size=128x64,mirror_every=3,wet",
+        );
         assert!(s.env && s.mirror && s.wet && !s.ssr);
         assert_eq!(s.glass, GlassMode::Transmission);
         assert_eq!(s.mirror_size, UVec2::new(128, 64));
