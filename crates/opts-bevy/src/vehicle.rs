@@ -179,6 +179,9 @@ pub fn spawn_vehicle_model(
         spawn_spotlight_child(commands, parent, i, spot);
     }
 
+    // 4. Light effects (`[light_enh]`, `[light_enh_2]`) as glow sprites under the root.
+    crate::vehicle_glow::spawn_vehicle_glows(commands, parent, parent, model);
+
     parent
 }
 

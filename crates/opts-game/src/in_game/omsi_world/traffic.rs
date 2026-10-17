@@ -656,6 +656,11 @@ pub fn spawn_traffic(
             )
         })
         .collect();
+    // Light effects (`[light_enh_2]`: headlights, tail and brake lights, indicators) of every
+    // unit, driven by the head's AI variables.
+    for (unit, &e) in variant.units.iter().zip(&entities) {
+        opts_bevy::spawn_vehicle_glows(&mut commands, root, e, &unit.model);
+    }
     let mut rng_pax = Rng::new(rng.next_u64());
     pool.rng = Some(rng);
     match state.world.spawn(lane_id, s, speed, params) {
@@ -784,7 +789,8 @@ pub fn update_ai_variables(
         );
         vars.set("lights_blinker_l", left);
         vars.set("lights_blinker_r", right);
-        let brake = f32::from(command.brake > 0.05);
+        // Brake lights also while standing (held on the brake).
+        let brake = f32::from(command.brake > 0.05 || agent.speed < 0.3);
         vars.set("ai_brakelight", brake);
         vars.set("lights_brems", brake);
         let light = if dark { 1.0 } else { 0.0 };

@@ -2,6 +2,7 @@
 
 use glam::Vec3;
 
+use crate::formats::scenery::light::{parse_light_enh, parse_light_enh_2};
 use crate::formats::text::{scan_blocks_with, OmsiBlock};
 use crate::formats::vehicles::model::anim::parse_newanim;
 use crate::formats::vehicles::model::ast::{
@@ -170,6 +171,23 @@ pub fn parse_model(text: &str) -> Result<ModelConfig, ModelParseError> {
                     mesh.spotlights.push(light);
                 } else {
                     config.spotlights.push(light);
+                }
+            }
+            "light_enh" | "light_enh_2" => {
+                let parsed = if block.keyword == "light_enh" {
+                    parse_light_enh(block)
+                } else {
+                    parse_light_enh_2(block)
+                };
+                match parsed {
+                    Ok(mut light) => {
+                        light.lod_threshold = current_lod_idx
+                            .and_then(|i| config.lods.get(i))
+                            .map(|l| l.threshold);
+                        light.after_mesh = current_mesh_idx;
+                        config.lights.push(light);
+                    }
+                    Err(e) => config.warnings.push(e),
                 }
             }
             "tex_detail_factor" | "ctc" | "ctctexture" | "texttexture" | "texttexture_enh"

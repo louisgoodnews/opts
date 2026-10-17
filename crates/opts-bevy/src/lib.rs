@@ -45,6 +45,7 @@ pub mod texture_filter;
 pub mod texture_sentinel;
 pub mod vehicle;
 pub mod vehicle_anim;
+pub mod vehicle_glow;
 pub mod vehicle_lights;
 pub mod vehicle_remote;
 pub mod vehicle_script;
@@ -118,6 +119,9 @@ pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{
     anim_steps, anim_steps_with, animation_matrix, vehicle_animation_system, AnimStep,
     MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
+};
+pub use vehicle_glow::{
+    choose_headlights, spawn_vehicle_glows, VehicleGlow, VehicleGlowPlugin, HEADLIGHT_POOL,
 };
 pub use vehicle_lights::{
     vehicle_alpha_scale_system, vehicle_light_map_system, vehicle_light_system, AlphaScaleBinding,
