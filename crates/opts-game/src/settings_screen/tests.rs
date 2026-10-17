@@ -587,6 +587,11 @@ fn every_control_of_every_category_can_be_used_with_the_keyboard() {
         for (_, id) in ids {
             // A language change rebuilds the page: look the control up again by its id.
             let e = by_id(&mut app, &id).expect("control exists");
+            if app.world().get::<Disabled>(e).is_some() {
+                // An earlier control locked it (the lighting mode switch greys out the
+                // governor's target frame rate).
+                continue;
+            }
             app.world_mut().write_message(FocusEvent::Set(e));
             app.update();
             app.update();
