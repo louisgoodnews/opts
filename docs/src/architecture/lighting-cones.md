@@ -380,15 +380,15 @@ angle and range? ❓ 6. 74.9 Hz display (DP-2): is the budget to be judged again
 
 ## Implementation
 
-Implemented 2026-10-17 on `agent/lighting-cones-rooms` (step 4 of the [lighting plan](lighting-system.md)): `opts_bevy::light_cones` (+ `shaders/light_cone.wesl`) and, for the rooms, `opts_bevy::light_rooms` ([lighting system 4.8](lighting-system.md#48-implemented-2026-10-17-agentlighting-cones-rooms)). Not run on a GPU by the implementer (no windows allowed): the shader is the prototype's, adapted, and unproven in the game until the live checks below are done.
+Implemented 2026-10-17 on `agent/lighting-cones-rooms` (step 4 of the [lighting plan](lighting-system.md)): `opts_bevy::light_cones` (+ `shaders/light_cone.wesl`) and, for the rooms, `opts_bevy::light_rooms` ([lighting system 4.8](lighting-system.md#48-implemented-2026-10-17-agentlighting-cones-rooms)). First run live on the RTX 3060 (see the findings below); the offscreen probe `light_cones_probe` renders the real path.
 
 ### What exists
 
 | Part | Where | Notes |
 | :--- | :--- | :--- |
-| Material and shader | `LightConeMaterial`, `shaders/light_cone.wesl` | The prototype's ray-marched proxy cone, march only: back faces (`cull_mode = Front`), `AlphaMode::Add` with shader alpha 0, no prepass of its own, no shadows. Steps: 8, or 4 when the camera is farther than 40 m from the apex (`ConeStyle::far_steps_distance_m`). One shared material and one shared 24-segment unit-cone mesh (`unit_cone_mesh`, CPU copy kept so Bevy computes the `Aabb` and frustum-culls it). All visible cones are one instanced draw. |
-| Per-cone data | model matrix and `MeshTag` | Apex = translation, axis = local -Z, length = Z scale, base radius = X scale. The tag packs colour (6 bits per channel), brightness (8 bits) and the inner soft-edge radius (6 bits) (`pack_tag`). Cone shape is static; brightness is written only when it changes. |
-| Look | `ConeStyle` (resource) | `density` 0.05 scatter per metre at the centre of a fully lit cone, `axial_power` 1.5, far-steps distance 40 m. Live-tunable (a changed resource is pushed into the shared material). Values are first guesses: the prototype never had a calibrated brightness. |
+| Material and shader | `LightConeMaterial`, `shaders/light_cone.wesl` | The prototype's ray-marched proxy cone, march only: back faces (`cull_mode = Front`), `AlphaMode::Add` with shader alpha 0 and a screen blend (below), no prepass of its own, no shadows. Steps: 8, or 4 when the camera is farther than 40 m from the apex (`ConeStyle::far_steps_distance_m`). One shared material and one shared 24-segment unit-cone mesh (`unit_cone_mesh`, CPU copy kept so Bevy computes the `Aabb` and frustum-culls it). All visible cones are one instanced draw. |
+| Per-cone data | model matrix and `MeshTag` | Apex = translation, axis = local -Z, length = Z scale, base radius = X scale. The tag packs colour (5 bits per channel), brightness (6 bits), the inner soft-edge radius (4 bits) and the apex height above the ground (7 bits, 0.25 m steps) (`pack_tag`). Cone shape is static; brightness is written only when it changes. |
+| Look | `ConeStyle` (resource) | `density` 0.035 scatter per metre at the centre of a fully lit cone, `max_contribution` 0.5, `axial_power` 1.5, far-steps distance 40 m. Live-tunable (a changed resource is pushed into the shared material). Values are first guesses: the prototype never had a calibrated brightness. |
 | Sources | `lantern_cone_shape`, `headlight_cone_shape`, `spotlight_cone_shape` | Pure functions from `ScoLight` / `Spotlight` to a `ConeShape` (apex, direction, length, half angle, inner fraction, colour). |
 | Budget | `ConePool`, `light_cone_pool_system`, `select_cones` | See below. |
 | Depth fade | `cone_depth_prepass_system` | See below. |
@@ -415,7 +415,7 @@ Implemented 2026-10-17 on `agent/lighting-cones-rooms` (step 4 of the [lighting 
 
 ### Depth fade
 
-`cone_depth_prepass_system` adds `DepthPrepass` (plus the marker `ConeDepthPrepass`, so only our own prepass is ever removed) to the `MainCamera` when `cone_depth_fade` is on, `cone_cap` > 0, a cone type is allowed, **and a cone shines** (`ConeStats::active > 0`); it stays on for `PREPASS_RELEASE_S` = 20 s after the last cone went out, and is removed at once when the setting turns off. Day-time scenes (lanterns off, headlights off) therefore never pay for the prepass (+1.6..2.2 ms in the synthetic scene). The prepass flag also changes the main-pass pipeline key of every mesh, so the first toggle compiles new pipelines (a short hitch is possible at dusk); the release delay keeps the toggling rare. With the prepass, the shader ends each cone's volume at the scene depth (the prototype's depth clip), without it the cone passes through geometry (the additive-mesh look).
+`cone_depth_prepass_system` adds `DepthPrepass` (plus the marker `ConeDepthPrepass`, so only our own prepass is ever removed) to the `MainCamera` when `cone_depth_fade` is on, `cone_cap` > 0, a cone type is allowed, **and a cone shines** (`ConeStats::active > 0`); it stays on for `PREPASS_RELEASE_S` = 20 s after the last cone went out, and is removed at once when the setting turns off. Day-time scenes (lanterns off, headlights off) therefore never pay for the prepass (+1.6..2.2 ms in the synthetic scene). The depth-fade gate (above) hides the cones until the prepass is ready. The prepass flag also changes the main-pass pipeline key of every mesh, so the first toggle compiles new pipelines (a short hitch is possible at dusk); the release delay keeps the toggling rare. With the prepass, the shader ends each cone's volume at the scene depth (the prototype's depth clip), without it the cone passes through geometry (the additive-mesh look).
 
 What the Bevy 0.20 source says about the prepass in this game (read, not run):
 
@@ -423,14 +423,41 @@ What the Bevy 0.20 source says about the prepass in this game (read, not run):
 * **Alpha-masked billboards (trees):** `StandardMaterial` with `AlphaMode::Mask` has a prepass pipeline with an alpha-test fragment (`MAY_DISCARD`, `prepass/mod.rs`), so tree quads write depth only where they are opaque. This is why the prepass works with the game's `Mask` materials; every material in the game is a `StandardMaterial` (the ground is an `ExtendedMaterial` that keeps the base prepass), so nothing in the game opts out of depth.
 * **Fails:** alpha-blended (`Blend`) geometry writes no depth, so a cone is not clipped by it: the game's window glass (vehicles, `model.rs`), water (`water.rs`) and `[matl_alpha]` blend materials. A cone behind a window therefore shows through the glass (physically right), and a cone *inside* a water surface is not clipped by it. Opaque and `Mask` meshes all write depth.
 
+### Live findings and the fixes (2026-10-17, after the first live run)
+
+The first run on the RTX 3060 (night, Berlin-Spandau) showed that the shader works, and two defects:
+
+* **White-out with the depth fade off, and for a few seconds after switching it on.** Cones ran through terrain and walls, and many stacked additively (mean frame luminance 0.20-0.28 against 0.18 with the fade). Fixes:
+  * **Prepass-ready gate.** With the depth fade on, a cone is not drawn until the main camera has had the `DepthPrepass` for `PREPASS_READY_S` = 3 s and `PREPASS_READY_FRAMES` = 6 frames (the pipeline variants with the prepass compile in the background; the main world cannot see the render-world prepass textures, so the gate is a conservative time). Then it fades in over `CONE_FADE_IN_S` = 0.3 s (`prepass_gate`). The cones still count as wanted meanwhile, so the prepass is added at once. With the fade off there is no gate.
+  * **Ground clip.** Each cone carries its apex height above the ground (lantern: the apex height in the object frame; `[light_enh_2]` headlight and `[spotlight]`: the lamp's height). The shader ends the volume at that horizontal plane, with or without the prepass, and fades the scatter over the last 0.8 m above it (a soft base). It assumes flat ground under the lamp.
+  * **Halved scatter without the prepass** (compile-time: no `DEPTH_PREPASS` shader def), since the cone then also crosses walls.
+  * **Bounded accumulation.** The per-cone result is `max_contribution x (1 - exp(-scatter))` and the pipeline's blend is a screen blend `src + dst x (1 - src)` (set in `Material::specialize`) instead of plain addition, so a stack of cones approaches white but cannot pass it. Plain additive blending cannot be bounded by the shader alone.
+* **Camera inside a cone.** Checked offscreen (below): no pop, no white-out; the only dark region is the ground outside the cone's footprint.
+
+* **Paused simulation.** The pool (selection interval), the prepass gate, the fade-in and the prepass idle timer run on `Time<Real>`, so cones respond while the virtual clock is paused (test `cones_follow_their_light_while_the_virtual_clock_is_paused`). The cone only *reads* `SceneryLight::level`; what it needs from the scenery side is that this level is updated while paused (`scenery_script_system` returns early at virtual dt <= 0, and `map_light_pool_system` and `vehicle_glow_system` use the virtual `Res<Time>`): until then a paused time jump to night leaves the levels at 0 and the cones dark. The cone follows any change of the level, from whatever system.
+
+**Measurements** (`cargo run -p opts-bevy --example light_cones_probe`, 480 x 270 window, `Tonemapping::None`, MSAA 4, night street with facades, 64 lanterns with the `neonlight_M_whip_S` values; luminance 0-1 of the displayed sRGB, wait 4.5 s per scenario; dev profile, the luminance does not depend on it):
+
+| Scenario | mean | peak luma |
+| :--- | ---: | ---: |
+| base (0 cones) | 0.0327 | 0.035 |
+| 64 cones, 20 m apart, fade on | 0.0442 (+0.012) | 0.417 |
+| 64 cones, 20 m apart, fade off | 0.0400 (+0.007) | 0.303 |
+| 64 cones, 2.5 m apart (dense overlap), fade on | 0.0546 (+0.022) | 0.855 |
+| 64 cones, 2.5 m apart, fade off | 0.0478 (+0.015) | 0.695 |
+| camera inside the cone, along the road, fade on / off | 0.0555 / 0.0447 | 0.406 / 0.296 |
+| camera inside the cone, looking down, fade on | 0.1047 | 0.212 |
+
+The acceptance bounds (mean up by at most 0.04, peak below 0.9) hold in every scenario. With the first parameter set (density 0.05, `max_contribution` 0.6) the dense case peaked at 0.934, which is why the defaults are 0.035 / 0.5. Only the nearest 150 m of lanterns are drawn, so the 20 m case shows about 8 cones; the dense case is the overlap stress.
+
 ### Deviations from the plan
 
 1. `cone` flag instead of "angle < 180°" (above).
 2. No additive-mesh fallback implemented: the ladder never needed it (the cost is in the cap and the prepass, not in the shading), so one shader remains. Without the prepass the ray-marched cone behaves like the mesh cone (no depth clip); the cheap fallback of the design is therefore the cap, not a second shader.
 3. The prepass is tied to "a cone shines" and has a 20 s release delay (the design only said "with the setting").
 4. Depth is sampled at sample 0 under MSAA.
-5. Cone brightness is quantised to 8 bits and colour to 6 bits per channel by the tag packing.
-6. Overlap normalisation (risk list) is not done; `density` is chosen low (0.05) and the cap bounds the number of overlapping cones.
+5. Cone brightness is quantised to 6 bits and colour to 5 bits per channel by the tag packing.
+6. Overlap is bounded (below), not normalised by count.
 
 ### Live checks
 

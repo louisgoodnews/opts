@@ -147,19 +147,91 @@ fn a_headlight_cone_follows_the_light_and_a_spotlight_cone_its_range() {
 }
 
 #[test]
-fn the_tag_packs_colour_level_and_inner_edge() {
-    let tag = pack_tag([1.0, 0.5, 0.0], 0.5, 0.25);
-    assert_eq!(tag & 63, 63);
-    assert_eq!((tag >> 6) & 63, 32);
-    assert_eq!((tag >> 12) & 63, 0);
-    assert_eq!(tag_level(tag), 128);
-    assert_eq!(tag >> 26, 16);
+fn the_tag_packs_colour_level_inner_edge_and_ground_height() {
+    let tag = pack_tag([1.0, 0.5, 0.0], 0.5, 0.2, Some(7.0));
+    assert_eq!(tag & 31, 31);
+    assert_eq!((tag >> 5) & 31, 16);
+    assert_eq!((tag >> 10) & 31, 0);
+    assert_eq!(tag_level(tag), 32);
+    assert_eq!((tag >> 21) & 15, 3);
+    assert_eq!(tag_ground_h(tag), Some(7.0));
+    assert_eq!(tag_ground_h(pack_tag([0.0; 3], 1.0, 0.0, None)), None);
     assert_eq!(
-        tag_level(pack_tag([0.0; 3], 2.0, 0.0)),
-        255,
+        tag_level(pack_tag([0.0; 3], 2.0, 0.0, None)),
+        63,
         "level is clamped"
     );
-    assert_eq!(tag_level(pack_tag([0.0; 3], -1.0, 0.0)), 0);
+    assert_eq!(tag_level(pack_tag([0.0; 3], -1.0, 0.0, None)), 0);
+    assert_eq!(
+        tag_ground_h(pack_tag([0.0; 3], 1.0, 0.0, Some(99.0))),
+        Some(31.5)
+    );
+}
+
+#[test]
+fn the_ground_clip_height_follows_the_apex() {
+    let down = Vec3::new(0.0, 0.0, -1.0);
+    let s = lantern_cone_shape(&light(down, false, true, 120.0, 200.0)).expect("cone");
+    assert_eq!(s.ground_h, Some(7.0));
+    let h = headlight_cone_shape(&light(Vec3::Y, false, false, 50.0, 190.0)).expect("head");
+    assert_eq!(h.ground_h, Some(7.0), "the fixture's z is 7 m");
+    let mut low = light(Vec3::Y, false, false, 50.0, 190.0);
+    low.position = Vec3::new(0.5, 1.9, 0.1);
+    assert_eq!(headlight_cone_shape(&low).unwrap().ground_h, None);
+    let spot = Spotlight {
+        pos: Vec3::new(0.5, 3.0, 0.7),
+        dir: Vec3::Y,
+        color_rgb: [255; 3],
+        range: 100.0,
+        inner_cone: 30.0,
+        outer_cone: 70.0,
+    };
+    assert_eq!(spotlight_cone_shape(&spot).ground_h, Some(0.7));
+}
+
+#[test]
+fn the_prepass_gate_waits_then_fades_in() {
+    assert_eq!(prepass_gate(false, 0.0, 0), 1.0, "no fade, no gate");
+    assert_eq!(prepass_gate(true, 0.0, 0), 0.0);
+    assert_eq!(prepass_gate(true, PREPASS_READY_S - 0.1, 100), 0.0);
+    assert_eq!(
+        prepass_gate(true, PREPASS_READY_S + 5.0, 2),
+        0.0,
+        "frames too"
+    );
+    let mid = prepass_gate(true, PREPASS_READY_S + CONE_FADE_IN_S * 0.5, 100);
+    assert!((mid - 0.5).abs() < 1e-5);
+    assert_eq!(prepass_gate(true, PREPASS_READY_S + 10.0, 1000), 1.0);
+}
+
+#[test]
+fn cones_wait_for_the_prepass_and_fade_in_when_the_depth_fade_turns_on() {
+    let mut q = ladder_preset(0);
+    q.cone_depth_fade = false;
+    let mut app = app(0);
+    app.insert_resource(custom(q));
+    let cone = spawn_cone(&mut app, ConeKind::Lantern, ConeLevel::Fixed(1.0), 10.0);
+    run(&mut app, 10);
+    assert_eq!(visible(&app, &[cone]), 1, "no fade, no gate");
+    app.insert_resource(custom(ladder_preset(0)));
+    run(&mut app, 5);
+    assert_eq!(visible(&app, &[cone]), 0, "hidden while the prepass is new");
+    assert_eq!(
+        app.world().resource::<ConeStats>().active,
+        1,
+        "still wanted"
+    );
+    run(&mut app, 50);
+    assert_eq!(visible(&app, &[cone]), 0, "2.5 s: not yet");
+    run(&mut app, 20);
+    assert_eq!(visible(&app, &[cone]), 1);
+    // And it fades in rather than popping.
+    let level = tag_level(app.world().get::<MeshTag>(cone).unwrap().value);
+    assert!(level > 0);
+    // Turning the fade off shows it at once and drops the prepass.
+    app.insert_resource(custom(q));
+    run(&mut app, 2);
+    assert_eq!(visible(&app, &[cone]), 1);
 }
 
 // ---- selection ----------------------------------------------------------------------------
@@ -236,6 +308,7 @@ fn shape() -> ConeShape {
         half_angle: 30f32.to_radians(),
         inner_frac: 0.3,
         color: [1.0; 3],
+        ground_h: Some(5.0),
     }
 }
 
@@ -307,7 +380,7 @@ fn the_ladder_levels_show_the_expected_cones() {
     for (level, lanterns, heads) in expected {
         let mut app = app(level);
         let (l, h) = spawn_mixed(&mut app);
-        run(&mut app, 6);
+        run(&mut app, 80);
         assert_eq!(visible(&app, &l), lanterns, "level {level} lanterns");
         assert_eq!(visible(&app, &h), heads, "level {level} headlights");
     }
@@ -318,7 +391,7 @@ fn the_ladder_levels_show_the_expected_cones() {
 fn a_live_ladder_change_applies_in_the_next_frame() {
     let mut app = app(0);
     let (l, h) = spawn_mixed(&mut app);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &l) + visible(&app, &h), 6);
     app.insert_resource(custom(ladder_preset(2)));
     run(&mut app, 1);
@@ -328,6 +401,12 @@ fn a_live_ladder_change_applies_in_the_next_frame() {
     assert_eq!(visible(&app, &h), 0);
     app.insert_resource(custom(ladder_preset(0)));
     run(&mut app, 1);
+    assert_eq!(
+        visible(&app, &l) + visible(&app, &h),
+        0,
+        "the depth fade is back on: the cones wait for the prepass"
+    );
+    run(&mut app, 80);
     assert_eq!(visible(&app, &l) + visible(&app, &h), 6);
 }
 
@@ -348,7 +427,7 @@ fn the_cap_hides_the_farthest_cones_and_the_stats_count_them() {
                 )
             })
             .collect();
-        run(&mut app, 6);
+        run(&mut app, 80);
         assert_eq!(visible(&app, &cones), shown, "cap {cap}");
         // The nearest ones are the visible ones.
         for c in &cones[..shown] {
@@ -382,14 +461,14 @@ fn a_cone_that_is_not_lit_is_hidden_and_follows_its_light() {
         })
         .id();
     let cone = spawn_cone(&mut app, ConeKind::Lantern, ConeLevel::Glow(glow), 10.0);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &[cone]), 0, "level 0 is hidden");
     // The lamp comes on: the next selection (within the interval) picks it up.
     app.world_mut().get_mut::<SceneryLight>(glow).unwrap().level = 0.5;
-    run(&mut app, 5);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &[cone]), 1);
     let tag = app.world().get::<MeshTag>(cone).unwrap().value;
-    assert_eq!(tag_level(tag), 128);
+    assert_eq!(tag_level(tag), 32);
     // And off again at once.
     app.world_mut().get_mut::<SceneryLight>(glow).unwrap().level = 0.0;
     run(&mut app, 1);
@@ -414,13 +493,13 @@ fn spot_cones_read_the_spotlights_intensity() {
         ))
         .id();
     let cone = spawn_cone(&mut app, ConeKind::Headlight, ConeLevel::Spot(spot), 10.0);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &[cone]), 0);
     app.world_mut()
         .get_mut::<SpotLight>(spot)
         .unwrap()
         .intensity = 100.0;
-    run(&mut app, 5);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &[cone]), 1);
 }
 
@@ -441,7 +520,7 @@ fn cones_behind_the_camera_or_too_far_are_not_considered() {
         ConeLevel::Fixed(1.0),
         LANTERN_MAX_DISTANCE_M + 100.0,
     );
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert_eq!(visible(&app, &[behind, far]), 0);
     assert_eq!(visible(&app, &[far_head]), 1);
 }
@@ -478,7 +557,7 @@ fn the_depth_fade_setting_adds_and_removes_the_prepass() {
     let mut app = app(0);
     let (l, _) = spawn_mixed(&mut app);
     let camera = main_camera(&mut app);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert!(visible(&app, &l) > 0);
     assert!(app.world().get::<DepthPrepass>(camera).is_some());
     assert!(app.world().get::<ConeDepthPrepass>(camera).is_some());
@@ -501,7 +580,7 @@ fn a_prepass_somebody_else_added_is_left_alone() {
     let camera = main_camera(&mut app);
     app.world_mut().entity_mut(camera).insert(DepthPrepass);
     spawn_mixed(&mut app);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert!(app.world().get::<DepthPrepass>(camera).is_some());
     assert!(app.world().get::<ConeDepthPrepass>(camera).is_none());
 }
@@ -511,14 +590,14 @@ fn the_prepass_goes_when_the_last_cone_has_been_out_for_a_while() {
     let mut app = app(0);
     let cone = spawn_cone(&mut app, ConeKind::Lantern, ConeLevel::Fixed(1.0), 10.0);
     let camera = main_camera(&mut app);
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert!(app.world().get::<DepthPrepass>(camera).is_some());
     app.world_mut().entity_mut(cone).insert(LightCone {
         kind: ConeKind::Lantern,
         shape: shape(),
         level: ConeLevel::Fixed(0.0),
     });
-    run(&mut app, 6);
+    run(&mut app, 80);
     assert!(
         app.world().get::<DepthPrepass>(camera).is_some(),
         "kept for a while"
@@ -550,7 +629,7 @@ fn the_cpu_cost_with_two_thousand_lamps_is_small() {
             },
         ));
     }
-    run(&mut app, 6);
+    run(&mut app, 80);
     let stats = *app.world().resource::<ConeStats>();
     assert_eq!(stats.total, 2000);
     assert_eq!(stats.active, 64);
@@ -563,4 +642,39 @@ fn the_cpu_cost_with_two_thousand_lamps_is_small() {
         app.world().resource::<ConeStats>().select_us
     );
     assert!(per_update < Duration::from_millis(20), "{per_update:?}");
+}
+
+/// While the simulation is paused (the Environment page previews times) the cone pool and the
+/// depth-fade gate still run on real time and follow the lamp's level when it changes.
+#[test]
+fn cones_follow_their_light_while_the_virtual_clock_is_paused() {
+    let mut app = app(0);
+    let glow = app
+        .world_mut()
+        .spawn(SceneryLight {
+            var: crate::scenery_runtime::VarRef::One,
+            factor: 1.0,
+            size_m: 1.0,
+            direction: Vec3::ZERO,
+            cos_inner: 1.0,
+            cos_outer: 1.0,
+            level: 0.0,
+        })
+        .id();
+    let cone = spawn_cone(&mut app, ConeKind::Lantern, ConeLevel::Glow(glow), 10.0);
+    run(&mut app, 4);
+    app.world_mut().resource_mut::<Time<Virtual>>().pause();
+    app.world_mut().get_mut::<SceneryLight>(glow).unwrap().level = 1.0;
+    run(&mut app, 100);
+    assert_eq!(app.world().resource::<ConeStats>().active, 1);
+    assert_eq!(
+        visible(&app, &[cone]),
+        1,
+        "selected, gated and faded in on real time"
+    );
+    let camera = main_camera(&mut app);
+    assert!(app.world().get::<DepthPrepass>(camera).is_some());
+    app.world_mut().get_mut::<SceneryLight>(glow).unwrap().level = 0.0;
+    run(&mut app, 1);
+    assert_eq!(visible(&app, &[cone]), 0);
 }
