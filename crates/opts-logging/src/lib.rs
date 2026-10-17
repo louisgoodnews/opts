@@ -40,6 +40,7 @@ pub mod layer;
 pub mod panic;
 pub mod prelude;
 pub mod rotation;
+pub mod stream_trace;
 
 pub use config::{
     AnsiMode, ConsoleConfig, ConsoleVerbosity, FilesConfig, LogConfig, LogFormat, RetentionPolicy,

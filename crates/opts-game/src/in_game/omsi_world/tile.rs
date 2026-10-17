@@ -37,6 +37,8 @@ pub fn load_next_tile(
     if job.resident.contains_key(&key) {
         return;
     }
+    let t_total = opts_logging::stream_trace::span("tile.build");
+    let t_parse = opts_logging::stream_trace::span("tile.read_parse");
     let Some(tile) = job.read_tile(key) else {
         stats.tiles_missing += 1;
         return;
@@ -48,6 +50,7 @@ pub fn load_next_tile(
     for w in &tile.warnings {
         tracing::warn!(tile = ?key, "tile record left out: {w}");
     }
+    drop(t_parse);
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();
@@ -68,6 +71,7 @@ pub fn load_next_tile(
         "tile parsed"
     );
 
+    let t = opts_logging::stream_trace::span("tile.terrain");
     let terrain = spawn_terrain(
         job,
         stats,
@@ -93,6 +97,8 @@ pub fn load_next_tile(
         &mut children,
     );
     let splines_failed_before = stats.splines_failed;
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.splines");
     spawn_splines(
         job,
         stats,
@@ -110,6 +116,8 @@ pub fn load_next_tile(
         super::trace::tile_content(job, &tile, key, origin, terrain.is_some(), failed);
     }
 
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.surfaces");
     // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and terrain.
     {
         let mut roads = Vec::new();
@@ -139,6 +147,8 @@ pub fn load_next_tile(
         );
     }
 
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.attachments");
     // --- Scenery objects -------------------------------------------------------------------
     // Spline attachments become ordinary placements once resolved against their carrier spline.
     let attached = if tile.spline_attachments.is_empty() {
@@ -154,6 +164,8 @@ pub fn load_next_tile(
             |x, y| terrain.as_ref().map_or(0.0, |t| t.height(x, y)),
         )
     };
+    drop(t);
+    let t = opts_logging::stream_trace::span("tile.registries");
     let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
     super::pedestrians::register_tile(commands, key, lanes);
     let rail = super::rail::tile_rail_lanes(job, &tile, &attached, terrain.as_ref(), origin);
@@ -163,6 +175,8 @@ pub fn load_next_tile(
     let road = super::traffic::tile_segments(job, &tile, terrain.as_ref(), origin);
     super::traffic::register_tile(commands, key, road);
     job.scenery.index_tile(&tile);
+    drop(t);
+    let t_objects = opts_logging::stream_trace::span("tile.objects");
     let placements = tile
         .objects
         .iter()
@@ -223,6 +237,8 @@ pub fn load_next_tile(
             "static scenery merged (running totals)"
         );
     }
+    drop(t_objects);
+    let t = opts_logging::stream_trace::span("tile.root_adopt");
     let tile_root = commands
         .spawn((
             Transform::default(),
@@ -235,6 +251,8 @@ pub fn load_next_tile(
     job.resident.insert(key, tile_root);
     let deps = std::mem::take(&mut job.loading_deps);
     job.tile_deps.insert(key, deps);
+    drop(t);
+    drop(t_total);
     stats.tiles_loaded = job.resident.len();
     stats.meshes_exact = job.cache.stats.exact_meshes;
     stats.asset_failures = job.cache.stats.failures.len();
@@ -420,7 +438,10 @@ fn spawn_object_inner(
     tile: &opts_core::formats::map::MapTile,
     site: super::trace::Site<'_>,
 ) {
-    let Some((sco_path, sco)) = job.sco(&obj.sco_file) else {
+    let t_sco = opts_logging::stream_trace::span("obj.sco");
+    let sco_found = job.sco(&obj.sco_file);
+    drop(t_sco);
+    let Some((sco_path, sco)) = sco_found else {
         stats.objects_failed += 1;
         super::trace::warn(|| {
             format!(
@@ -432,6 +453,7 @@ fn spawn_object_inner(
     };
     if let Some(tree) = &sco.tree {
         super::trace::set_kind(opts_bevy::scene_trace::kind::TREE);
+        let _t = opts_logging::stream_trace::span("obj.tree");
         children.extend(spawn_tree(
             job, stats, commands, meshes, materials, images, tree, obj, origin, terrain,
         ));
@@ -542,15 +564,18 @@ fn spawn_object_inner(
     );
     // `[crossing_heightdeformation]`: meshes and collision boxes bent over the base surface.
     let bend = job.crossing_base(&sco_path, &sco);
-    super::collision::register_object(
-        job,
-        commands,
-        &sco,
-        &model_dir,
-        &transform,
-        key,
-        bend.as_ref(),
-    );
+    {
+        let _t = opts_logging::stream_trace::span("obj.collision");
+        super::collision::register_object(
+            job,
+            commands,
+            &sco,
+            &model_dir,
+            &transform,
+            key,
+            bend.as_ref(),
+        );
+    }
     super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
         super::trace::set_model_cfg(cfg_rel);
@@ -569,7 +594,9 @@ fn spawn_object_inner(
     let protected_before = job.cache.stats.protected_meshes;
     let hidden_before = job.cache.stats.hidden_parts;
     // Scripts and string-variable names (`[texttexture_enh]` sources given by name).
+    let t_tpl = opts_logging::stream_trace::span("obj.script_template");
     let template = job.script_template(&sco_path, &sco);
+    drop(t_tpl);
     let string_names = template
         .as_ref()
         .map(|t| t.string_names.clone())
@@ -696,6 +723,7 @@ fn spawn_object_inner(
         .friendly_name
         .clone()
         .unwrap_or_else(|| obj.sco_file.clone());
+    let _t_fin = opts_logging::stream_trace::span("obj.entity_spawn");
     let parent = commands.spawn((transform, Name::new(name))).id();
     children.push(parent);
     stats.scene_vertices += mesh_parts
@@ -844,11 +872,13 @@ pub fn stream_world_tiles(
         .copied()
         .filter(|k| dist(*k) > radius + 1)
         .collect();
+    let _t_evict = opts_logging::stream_trace::span("stream.evict");
     for key in far {
         if let Some(unload) = job.unload_tile(key, false) {
             unload.apply(&mut commands);
         }
     }
+    drop(_t_evict);
     stats.tiles_loaded = job.resident.len();
 
     if job.queue.is_empty() {

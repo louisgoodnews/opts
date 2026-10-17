@@ -11,6 +11,7 @@ pub mod loading_ui;
 pub mod omsi_world;
 pub mod screenshot;
 pub mod sky;
+pub mod stream_budget;
 pub mod types;
 pub mod vehicle_spawner;
 pub mod world;
@@ -161,6 +162,9 @@ impl Plugin for InGamePlugin {
             )
                 .run_if(in_state(AppState::InGame)),
         );
+
+        #[cfg(feature = "stream-trace")]
+        app.add_systems(Last, stream_trace_frame);
 
         // Active simulation frame updates
         app.add_systems(
@@ -342,6 +346,36 @@ fn toggle_pause(
     } else {
         time.pause();
         tracing::info!("simulation paused [P]");
+    }
+}
+
+/// Streaming profile (M-0089): `OPTS_STREAM_TRACE=<file>` appends one JSON line per frame with the
+/// frame period and the `opts_logging::stream_trace` spans recorded since the previous frame.
+#[cfg(feature = "stream-trace")]
+fn stream_trace_frame(
+    mut file: Local<Option<std::fs::File>>,
+    mut last: Local<Option<std::time::Instant>>,
+    mut frame: Local<u64>,
+) {
+    use std::io::Write;
+    let Some(path) = std::env::var_os("OPTS_STREAM_TRACE") else {
+        return;
+    };
+    let now = std::time::Instant::now();
+    let dt = last
+        .replace(now)
+        .map_or(0.0, |p| (now - p).as_secs_f64() * 1e3);
+    if file.is_none() {
+        *file = std::fs::File::create(path).ok();
+    }
+    *frame += 1;
+    let spans = opts_logging::stream_trace::drain();
+    if let Some(f) = file.as_mut() {
+        let _ = writeln!(
+            f,
+            "{}",
+            opts_logging::stream_trace::frame_line(*frame, dt, &spans)
+        );
     }
 }
 

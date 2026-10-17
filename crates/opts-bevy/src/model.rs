@@ -230,6 +230,12 @@ pub struct ContentLoader<'a> {
     pub images: &'a mut Assets<Image>,
 }
 
+/// `load_bevy_image` under the `tex.decode` stream-trace span (M-0089).
+fn decode_traced(bytes: &[u8]) -> Result<Image, crate::texture::TextureError> {
+    let _t = opts_logging::stream_trace::span("tex.decode");
+    load_bevy_image(bytes)
+}
+
 impl ContentLoader<'_> {
     /// The texture without its alpha channel.
     ///
@@ -324,12 +330,19 @@ impl ContentLoader<'_> {
         if let Some(cached) = self.cache.textures.get(&path) {
             return cached.clone();
         }
-        let handle = match std::fs::read(&path) {
-            Ok(bytes) => match load_bevy_image(&bytes) {
+        let t_read = opts_logging::stream_trace::span("tex.read");
+        let read = std::fs::read(&path);
+        drop(t_read);
+        let handle = match read {
+            Ok(bytes) => match decode_traced(&bytes) {
                 Ok(mut image) => {
-                    crate::texture_filter::prepare_object_texture(&mut image);
+                    {
+                        let _t = opts_logging::stream_trace::span("tex.prepare_mips");
+                        crate::texture_filter::prepare_object_texture(&mut image);
+                    }
                     self.cache.stats.textures += 1;
                     tracing::debug!(path = %path.display(), "loaded texture");
+                    let _t = opts_logging::stream_trace::span("tex.assets_add");
                     Some(self.images.add(image))
                 }
                 Err(e) => {
@@ -466,6 +479,8 @@ impl ContentLoader<'_> {
             return parts.clone();
         }
 
+        let _t_miss = opts_logging::stream_trace::span("o3d.parts_miss");
+        let t_parse = opts_logging::stream_trace::span("o3d.read_parse");
         let bytes = match std::fs::read(o3d_path) {
             Ok(b) => b,
             Err(e) => {
@@ -487,6 +502,7 @@ impl ContentLoader<'_> {
         };
         sc.parse_ms = sc.lap.split();
         sc.stage = "plain";
+        drop(t_parse);
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
