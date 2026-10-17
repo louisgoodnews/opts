@@ -512,7 +512,17 @@ fn spawn_object_inner(
         roll = ?obj.roll_deg,
         "placing scenery object"
     );
-    super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
+    // `[crossing_heightdeformation]`: meshes and collision boxes bent over the base surface.
+    let bend = job.crossing_base(&sco_path, &sco);
+    super::collision::register_object(
+        job,
+        commands,
+        &sco,
+        &model_dir,
+        &transform,
+        key,
+        bend.as_ref(),
+    );
     super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
         super::trace::set_model_cfg(cfg_rel);
@@ -600,7 +610,12 @@ fn spawn_object_inner(
             materials,
             images,
         };
-        mesh_parts.push(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
+        mesh_parts.push(loader.o3d_parts_bent(
+            &o3d_path,
+            &tex_dirs,
+            &overrides,
+            bend.as_ref().map(|(p, b)| (p.as_path(), b.as_ref())),
+        ));
     }
     if mesh_parts.iter().all(Vec::is_empty) {
         if sco.meshes.is_empty() {

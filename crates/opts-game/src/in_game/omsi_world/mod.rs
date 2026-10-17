@@ -18,6 +18,7 @@ use crate::in_game::attachments::SplineIndex;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 mod collision;
 mod consist_plan;
+mod crossing;
 mod dev_look;
 mod ground;
 mod ground_height;
@@ -208,6 +209,12 @@ pub struct WorldLoadJob {
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// `[crossing_heightdeformation]` base surfaces by file.
+    crossing_bases: HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
+    /// Ground faces of crossings and surface objects by `.sco` (mesh axes), for the carve.
+    ground_faces: HashMap<PathBuf, crossing::ObjectFaces>,
+    /// The `[object]`s of tiles read for the carve of their neighbours.
+    tile_objects: HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).

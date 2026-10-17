@@ -253,6 +253,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         tile_splines: HashMap::new(),
         placed: HashMap::new(),
         sco_cache: HashMap::new(),
+        crossing_bases: HashMap::new(),
+        ground_faces: HashMap::new(),
+        tile_objects: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
         parklist: None,
@@ -673,7 +676,12 @@ impl WorldLoadJob {
         let out = match parsed {
             Ok(o) => {
                 tracing::debug!(path = %path.display(), meshes = o.meshes.len(), "loaded sco");
-                Some(Arc::new(o))
+                // A bent crossing's paths and arms follow its base surface.
+                let o = Arc::new(o);
+                match self.crossing_base(&path, &o) {
+                    Some((_, base)) => Some(Arc::new(o.bent(&base))),
+                    None => Some(o),
+                }
             }
             Err(e) => {
                 tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "sco parse failed: {e}");

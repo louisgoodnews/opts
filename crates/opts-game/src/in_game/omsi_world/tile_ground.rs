@@ -29,7 +29,7 @@ const NEIGHBOURHOOD: [(i32, i32); 9] = [
 
 /// The drawn ground surfaces that can lie over tile `key`'s terrain, in its frame: the surface
 /// ribbons of the splines of the tile and its eight neighbours (splines are stored on the tile
-/// they start in but run on across the border).
+/// they start in but run on across the border) and the ground faces of their crossings.
 fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle> {
     let mut out = Vec::new();
     for (dx, dy) in NEIGHBOURHOOD {
@@ -43,6 +43,8 @@ fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle
                 out.extend(spline_ground_triangles(&profile, inst, (o.x, o.y)));
             }
         }
+        // Crossings (bent by their base) and surface objects lay down ground too.
+        out.extend(job.crossing_ground_triangles(other, o));
     }
     out
 }
