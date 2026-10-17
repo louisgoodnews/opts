@@ -1,124 +1,57 @@
-//! Research prototypes for reflections (M-0085): planar rear-view mirrors, glass with
-//! environment reflection or transmission, and a wet-surface parameter set driven by [`Wetness`].
+//! Reflections: the shared entry point of the sky cube map, the glass look and the mirror cameras
+//! ([`ReflectionsPlugin`]), plus the remaining research prototypes (wet standard materials, SSR,
+//! frame statistics).
 //!
-//! Everything here is **off by default**. The switches come from the environment variable
-//! `OPTS_REFLECT` (comma separated), read once at start-up:
+//! The normal path does not depend on any environment variable:
+//!
+//! * [`crate::sky_cube`] - one shared sky cube map as image-based light on the
+//!   [`MainCamera`](crate::MainCamera), controlled by `LightQuality::glass_reflections`;
+//! * [`crate::glass`] - glass materials get a low roughness and premultiplied alpha while that
+//!   setting is on;
+//! * [`crate::mirrors`] - one render-to-texture camera per mirror of the player's vehicle,
+//!   controlled by `LightQuality::mirror_count` and `mirror_every`.
+//!
+//! The prototypes behind `OPTS_REFLECT` (comma separated, read once at start-up) that remain:
 //!
 //! | Switch | Effect |
 //! | :--- | :--- |
-//! | `env` | procedural sky cubemap as image-based light on the main camera (`GeneratedEnvironmentMapLight`) |
-//! | `glass=blend` | glass materials: low roughness, `AlphaMode::Blend` (needs `env` to reflect anything) |
-//! | `glass=premul` | the same with `AlphaMode::Premultiplied` (reflection survives high transparency) |
-//! | `glass=trans` | `specular_transmission` + `ScreenSpaceTransmission` on the camera |
-//! | `mirror` | one extra camera per mirror mesh renders into a texture shown on the mirror |
-//! | `mirror_size=256x128`, `mirror_every=2`, `mirror_max=2` | resolution, render every Nth frame, mirror count |
-//! | `wet` | [`Wetness`]-driven roughness drop, darkening and puddles on ground and standard materials |
+//! | `wet` | [`Wetness`]-driven roughness drop and darkening of standard materials |
 //! | `ssr` | screen-space reflections (switches the camera to deferred rendering, MSAA off) |
 //!
 //! `OPTS_WETNESS=0..1` sets the initial [`Wetness`]. `OPTS_REFLECT_STATS=<file>` makes the plugin
 //! write frame-time statistics (after `OPTS_REFLECT_STATS_AFTER` seconds, default 20) and exit.
 //!
-//! Prototype quality: see `docs/src/architecture/reflections-research.md` for what it proves
-//! and what it does not.
+//! See `docs/src/architecture/reflections-research.md` for what the research proves and what it
+//! does not.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
-use bevy::asset::RenderAssetUsages;
-use bevy::camera::RenderTarget;
-use bevy::light::GeneratedEnvironmentMapLight;
-use bevy::pbr::{ScreenSpaceReflections, ScreenSpaceTransmission, StandardMaterial};
+use bevy::pbr::{ScreenSpaceReflections, StandardMaterial};
 use bevy::prelude::*;
-use bevy::render::render_resource::{
-    Extent3d, TextureDimension, TextureFormat, TextureUsages, TextureViewDescriptor,
-    TextureViewDimension,
-};
 
 use crate::ground_material::GroundMaterial;
 
-/// How glass materials are treated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum GlassMode {
-    /// Untouched (default).
-    Off,
-    /// Low roughness, alpha blended.
-    Blend,
-    /// Low roughness, premultiplied alpha (keeps specular on transparent glass).
-    Premul,
-    /// Screen-space specular transmission.
-    Transmission,
-}
-
-/// The parsed `OPTS_REFLECT` switches.
-#[derive(Debug, Clone, Resource)]
+/// The parsed `OPTS_REFLECT` switches (research prototypes only).
+#[derive(Debug, Clone, Default, Resource)]
 pub struct ReflectionSwitches {
-    /// Environment cubemap on the main camera.
-    pub env: bool,
-    /// Glass treatment.
-    pub glass: GlassMode,
-    /// Planar mirrors.
-    pub mirror: bool,
-    /// Mirror texture size.
-    pub mirror_size: UVec2,
-    /// Render the mirror camera every N-th frame.
-    pub mirror_every: u32,
-    /// Most mirrors that get a camera.
-    pub mirror_max: usize,
     /// Wet-surface parameter set.
     pub wet: bool,
     /// Screen-space reflections (deferred).
     pub ssr: bool,
-    /// Measurement aid: keep `Camera3d` on the mirror cameras all the time (no per-frame toggle).
-    pub mirror_keep: bool,
-    /// Show the first mirror texture on a quad in front of the main camera (debug aid).
-    pub mirror_debug: bool,
-    /// Environment intensity (cd/m2).
-    pub env_intensity: f32,
 }
 
 impl ReflectionSwitches {
-    /// Parses a switch list such as `env,glass=trans,mirror,mirror_size=256x128`.
+    /// Parses a switch list such as `wet,ssr`; unknown items (the former `env`, `glass`, `mirror`
+    /// switches are normal features now) are ignored.
     #[must_use]
     pub fn parse(text: &str) -> Self {
-        let mut s = Self {
-            env: false,
-            glass: GlassMode::Off,
-            mirror: false,
-            mirror_size: UVec2::new(256, 128),
-            mirror_every: 1,
-            mirror_max: 2,
-            wet: false,
-            ssr: false,
-            mirror_keep: false,
-            mirror_debug: false,
-            env_intensity: 3000.0,
-        };
+        let mut s = Self::default();
         for item in text.split(',').map(str::trim).filter(|i| !i.is_empty()) {
-            let (key, value) = item.split_once('=').unwrap_or((item, ""));
+            let key = item.split_once('=').map_or(item, |(k, _)| k);
             match key {
-                "env" => s.env = true,
-                "glass" => {
-                    s.glass = match value {
-                        "premul" => GlassMode::Premul,
-                        "trans" => GlassMode::Transmission,
-                        _ => GlassMode::Blend,
-                    }
-                }
-                "mirror" => s.mirror = true,
-                "mirror_size" => {
-                    if let Some((w, h)) = value.split_once('x') {
-                        if let (Ok(w), Ok(h)) = (w.parse(), h.parse()) {
-                            s.mirror_size = UVec2::new(w, h);
-                        }
-                    }
-                }
-                "mirror_every" => s.mirror_every = value.parse().unwrap_or(1).max(1),
-                "mirror_max" => s.mirror_max = value.parse().unwrap_or(2),
                 "wet" => s.wet = true,
                 "ssr" => s.ssr = true,
-                "mirror_debug" => s.mirror_debug = true,
-                "mirror_keep" => s.mirror_keep = true,
-                "env_intensity" => s.env_intensity = value.parse().unwrap_or(3000.0),
                 _ => {}
             }
         }
@@ -134,7 +67,7 @@ impl ReflectionSwitches {
     /// Whether any switch is on.
     #[must_use]
     pub fn any(&self) -> bool {
-        self.env || self.glass != GlassMode::Off || self.mirror || self.wet || self.ssr
+        self.wet || self.ssr
     }
 }
 
@@ -188,58 +121,26 @@ fn note_of(id: AssetId<StandardMaterial>) -> Option<MaterialNote> {
     NOTES.lock().ok()?.as_ref()?.get(&id).cloned()
 }
 
-fn texture_stem(note: &MaterialNote) -> &str {
-    note.texture
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or(&note.texture)
-}
-
-/// Glass by texture name (the corpus has no other marker; see the research report).
-#[must_use]
-pub fn is_glass_name(name: &str) -> bool {
-    [
-        "glas",
-        "glass",
-        "scheibe",
-        "fenster",
-        "window",
-        "verglas",
-        "windscreen",
-        "windshield",
-    ]
-    .iter()
-    .any(|w| name.contains(w))
-}
-
-/// Mirror by texture name.
-#[must_use]
-pub fn is_mirror_name(name: &str) -> bool {
-    ["spiegel", "mirror"].iter().any(|w| name.contains(w))
-}
-
 /// Marks the main camera once it carries the prototype components.
 #[derive(Component)]
 struct ReflectionsApplied;
 
-/// Marks a mirror camera.
-#[derive(Component)]
-struct MirrorCamera {
-    mirror: Entity,
-    /// Mirror surface centre and mean normal in the mirror mesh's local space.
-    centre: Vec3,
-    normal: Vec3,
+/// The normal reflection features: the sky cube map, the glass look and the mirror cameras.
+/// (The game feeds [`crate::sky_cube::SkyCubeInput`].)
+#[derive(Default)]
+pub struct ReflectionsPlugin;
+
+impl Plugin for ReflectionsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((
+            crate::sky_cube::SkyCubePlugin,
+            crate::glass::GlassReflectionsPlugin,
+            crate::mirrors::MirrorPlugin,
+        ));
+    }
 }
 
-/// Marks the debug picture-in-picture quad.
-#[derive(Component)]
-struct DebugQuad;
-
-/// Marks a mirror mesh that has its camera.
-#[derive(Component)]
-struct MirrorDone;
-
-/// Registers the prototypes; does nothing unless a switch is on.
+/// Registers the remaining prototypes; does nothing unless a switch is on.
 pub struct ReflectionsResearchPlugin;
 
 impl Plugin for ReflectionsResearchPlugin {
@@ -254,7 +155,6 @@ impl Plugin for ReflectionsResearchPlugin {
             .unwrap_or(0.0);
         app.insert_resource(sw.clone())
             .insert_resource(Wetness(wet0.clamp(0.0, 1.0)))
-            .init_resource::<GlassDone>()
             .init_resource::<WetState>()
             .init_resource::<FrameStats>();
         if sw.ssr {
@@ -264,33 +164,13 @@ impl Plugin for ReflectionsResearchPlugin {
         if std::env::var_os("OPTS_REFLECT_GPU").is_some() {
             app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin);
         }
-        app.add_systems(
-            Update,
-            (apply_camera_features, apply_glass, apply_wet, collect_stats),
-        );
-        if sw.mirror {
-            app.add_systems(Update, spawn_mirror_cameras)
-                .add_systems(
-                    PostUpdate,
-                    (update_mirror_cameras, follow_debug_quad).before(bevy::transform::TransformSystems::Propagate),
-                )
-                // The camera systems of the game query `With<MainCamera>`; the mirror cameras never carry
-                // that marker (and are `Camera3d` only while the frame is extracted).
-                ;
-            if !sw.mirror_keep {
-                app.add_systems(First, hide_mirror_cameras)
-                    .add_systems(Last, show_mirror_cameras);
-            }
-        }
+        app.add_systems(Update, (apply_camera_features, apply_wet, collect_stats));
     }
 }
 
-// ---------------------------------------------------------------------------------------------
-// Environment cubemap, transmission, SSR
-// ---------------------------------------------------------------------------------------------
-
-fn f16_bits(v: f32) -> u16 {
-    // Positive finite values only (radiance), round to nearest, flush tiny to zero, clamp huge.
+/// Encodes a non-negative radiance as an IEEE half float (round to nearest, tiny values flush to
+/// zero, huge values clamp).
+pub(crate) fn f16_bits(v: f32) -> u16 {
     let v = v.clamp(0.0, 65_000.0);
     if v < 6.1e-5 {
         return 0;
@@ -302,85 +182,14 @@ fn f16_bits(v: f32) -> u16 {
     ((((exp as u32) << 10) | man) + round) as u16
 }
 
-fn sky_radiance(d: Vec3) -> Vec3 {
-    let up = d.y;
-    let zenith = Vec3::new(0.18, 0.36, 0.85);
-    let horizon = Vec3::new(0.80, 0.88, 1.00);
-    let ground = Vec3::new(0.16, 0.15, 0.14);
-    let mut c = if up >= 0.0 {
-        horizon.lerp(zenith, up.powf(0.5))
-    } else {
-        horizon.lerp(ground, (-up * 6.0).min(1.0))
-    };
-    let sun = Vec3::new(0.45, 0.6, 0.35).normalize();
-    c += Vec3::splat(40.0) * d.dot(sun).max(0.0).powf(400.0);
-    c
-}
-
-/// A small procedural sky cubemap (a stand-in for a cubemap captured from the sky dome).
-#[must_use]
-pub fn procedural_sky_cube(size: u32) -> Image {
-    let mut data = Vec::with_capacity((size * size * 6 * 8) as usize);
-    for face in 0..6 {
-        for y in 0..size {
-            for x in 0..size {
-                let u = (x as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let v = (y as f32 + 0.5) / size as f32 * 2.0 - 1.0;
-                let d = match face {
-                    0 => Vec3::new(1.0, -v, -u),
-                    1 => Vec3::new(-1.0, -v, u),
-                    2 => Vec3::new(u, 1.0, v),
-                    3 => Vec3::new(u, -1.0, -v),
-                    4 => Vec3::new(u, -v, 1.0),
-                    _ => Vec3::new(-u, -v, -1.0),
-                }
-                .normalize();
-                let c = sky_radiance(d);
-                for ch in [c.x, c.y, c.z, 1.0] {
-                    data.extend_from_slice(&f16_bits(ch).to_le_bytes());
-                }
-            }
-        }
-    }
-    let mut image = Image::new(
-        Extent3d {
-            width: size,
-            height: size,
-            depth_or_array_layers: 6,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba16Float,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-    image.texture_view_descriptor = Some(TextureViewDescriptor {
-        dimension: Some(TextureViewDimension::Cube),
-        ..default()
-    });
-    image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
-    image
-}
-
 fn apply_camera_features(
     sw: Res<ReflectionSwitches>,
     mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
     cameras: Query<Entity, (With<crate::MainCamera>, Without<ReflectionsApplied>)>,
 ) {
     for e in &cameras {
         let mut c = commands.entity(e);
         c.insert(ReflectionsApplied);
-        if sw.env {
-            let cube = images.add(procedural_sky_cube(64));
-            c.insert(GeneratedEnvironmentMapLight {
-                environment_map: cube,
-                intensity: sw.env_intensity,
-                ..default()
-            });
-        }
-        if sw.glass == GlassMode::Transmission {
-            c.insert(ScreenSpaceTransmission::default());
-        }
         if sw.ssr {
             c.insert((
                 Msaa::Off,
@@ -388,57 +197,6 @@ fn apply_camera_features(
                 bevy::core_pipeline::prepass::DepthPrepass,
                 bevy::core_pipeline::prepass::DeferredPrepass,
             ));
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Glass
-// ---------------------------------------------------------------------------------------------
-
-#[derive(Resource, Default)]
-struct GlassDone(HashSet<AssetId<StandardMaterial>>);
-
-fn apply_glass(
-    sw: Res<ReflectionSwitches>,
-    mut done: ResMut<GlassDone>,
-    mut glass_count: Local<(u32,)>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    if sw.glass == GlassMode::Off {
-        return;
-    }
-    let ids: Vec<_> = materials.ids().collect();
-    for id in ids {
-        if done.0.contains(&id) {
-            continue;
-        }
-        let Some(note) = note_of(id) else { continue };
-        done.0.insert(id);
-        if !is_glass_name(texture_stem(&note)) || matches!(note.alpha, AlphaMode::Opaque) {
-            continue;
-        }
-        let Some(mut m) = materials.get_mut(id) else {
-            continue;
-        };
-        glass_count.0 += 1;
-        if glass_count.0 % 50 == 1 {
-            bevy::log::info!(count = glass_count.0, texture = %note.texture, "reflections: glass material treated");
-        }
-        m.perceptual_roughness = 0.06;
-        m.reflectance = 0.6;
-        match sw.glass {
-            GlassMode::Blend => m.alpha_mode = AlphaMode::Blend,
-            GlassMode::Premul => m.alpha_mode = AlphaMode::Premultiplied,
-            GlassMode::Transmission => {
-                m.specular_transmission = 0.9;
-                m.thickness = 0.02;
-                m.ior = 1.5;
-                m.alpha_mode = AlphaMode::Opaque;
-                m.base_color = Color::srgb(0.85, 0.92, 0.9);
-                m.base_color_texture = None;
-            }
-            GlassMode::Off => {}
         }
     }
 }
@@ -494,207 +252,6 @@ fn apply_wet(
     // The layered ground follows `Wetness` too, but the weather writes its uniform (with puddles
     // and snow, `in_game::weather::surfaces`), so there is one implementation of wet ground.
 }
-
-// ---------------------------------------------------------------------------------------------
-// Planar mirrors
-// ---------------------------------------------------------------------------------------------
-
-#[allow(clippy::too_many_arguments)]
-fn spawn_mirror_cameras(
-    sw: Res<ReflectionSwitches>,
-    mut commands: Commands,
-    mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    existing: Query<(), With<MirrorCamera>>,
-    main_cams: Query<Entity, (With<crate::MainCamera>, Without<MirrorCamera>)>,
-    mut meshes_add: ResMut<Assets<Mesh>>,
-    candidates: Query<
-        (
-            Entity,
-            &MeshMaterial3d<StandardMaterial>,
-            &Mesh3d,
-            &GlobalTransform,
-        ),
-        Without<MirrorDone>,
-    >,
-) {
-    let mut count = existing.iter().count();
-    for (entity, material, mesh, gt) in &candidates {
-        if count >= sw.mirror_max {
-            return;
-        }
-        let Some(note) = note_of(material.0.id()) else {
-            continue;
-        };
-        if !is_mirror_name(texture_stem(&note)) {
-            continue;
-        }
-        if gt.affine() == bevy::math::Affine3A::IDENTITY {
-            continue;
-        }
-        let Some(mesh) = meshes_add.get(&mesh.0) else {
-            continue;
-        };
-        let (Some(pos), Some(nor)) = (
-            mesh.attribute(Mesh::ATTRIBUTE_POSITION)
-                .and_then(|a| a.as_float3()),
-            mesh.attribute(Mesh::ATTRIBUTE_NORMAL)
-                .and_then(|a| a.as_float3()),
-        ) else {
-            continue;
-        };
-        if pos.is_empty() {
-            continue;
-        }
-        let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
-        let mut nsum = Vec3::ZERO;
-        for p in pos {
-            lo = lo.min(Vec3::from(*p));
-            hi = hi.max(Vec3::from(*p));
-        }
-        for n in nor {
-            nsum += Vec3::from(*n);
-        }
-        let centre = (lo + hi) * 0.5;
-        let normal = nsum.normalize_or_zero();
-        if normal == Vec3::ZERO {
-            continue;
-        }
-        let size = sw.mirror_size;
-        let mut image =
-            Image::new_target_texture(size.x, size.y, TextureFormat::Bgra8UnormSrgb, None);
-        image.sampler = bevy::image::ImageSampler::linear();
-        let handle = images.add(image);
-        // The mirror shows the render unlit, mirrored horizontally.
-        if let Some(mut m) = materials.get_mut(material.0.id()) {
-            m.base_color_texture = Some(handle.clone());
-            m.base_color = Color::WHITE;
-            m.unlit = true;
-            m.alpha_mode = AlphaMode::Opaque;
-            m.double_sided = true;
-            m.cull_mode = None;
-            m.uv_transform = bevy::math::Affine2::from_cols(
-                Vec2::new(-1.0, 0.0),
-                Vec2::new(0.0, 1.0),
-                Vec2::new(1.0, 0.0),
-            );
-        }
-        bevy::log::info!(texture = %note.texture, ?size, ?normal, centre = ?gt.transform_point(centre), "reflections: mirror camera created");
-        if sw.mirror_debug && count == 0 {
-            // A picture-in-picture of the first mirror, to judge the render without finding the mirror.
-            let quad = meshes_add.add(Rectangle::new(0.6, 0.3));
-            let mat = materials.add(StandardMaterial {
-                base_color_texture: Some(handle.clone()),
-                unlit: true,
-                ..default()
-            });
-            let _ = &main_cams;
-            commands.spawn((
-                Mesh3d(quad.clone()),
-                MeshMaterial3d(mat.clone()),
-                Transform::default(),
-                DebugQuad,
-            ));
-        }
-        commands.entity(entity).insert(MirrorDone);
-        commands.spawn((
-            Camera3d::default(),
-            Camera {
-                order: -10,
-                clear_color: ClearColorConfig::Custom(Color::srgb(0.5, 0.6, 0.8)),
-                ..default()
-            },
-            RenderTarget::Image(handle.into()),
-            Msaa::Off,
-            Projection::Perspective(PerspectiveProjection {
-                fov: 40f32.to_radians(),
-                near: 0.2,
-                aspect_ratio: size.x as f32 / size.y as f32,
-                ..default()
-            }),
-            Transform::from_translation(gt.transform_point(centre)),
-            MirrorCamera {
-                mirror: entity,
-                centre,
-                normal,
-            },
-            Name::new("Mirror_Camera"),
-        ));
-        count += 1;
-    }
-}
-
-fn update_mirror_cameras(
-    sw: Res<ReflectionSwitches>,
-    mut frame: Local<u32>,
-    main: Query<&Transform, (With<crate::MainCamera>, Without<MirrorCamera>)>,
-    mirrors: Query<&GlobalTransform, Without<MirrorCamera>>,
-    mut cams: Query<(&MirrorCamera, &mut Transform, &mut Camera)>,
-) {
-    *frame = frame.wrapping_add(1);
-    let Some(viewer) = main.iter().next().map(|t| t.translation) else {
-        return;
-    };
-    for (info, mut t, mut cam) in &mut cams {
-        let Ok(gt) = mirrors.get(info.mirror) else {
-            continue;
-        };
-        // Mirror pose of the current frame (the vehicle moves).
-        let c = gt.transform_point(info.centre);
-        let mut n = gt
-            .affine()
-            .matrix3
-            .mul_vec3(info.normal)
-            .normalize_or_zero();
-        let d = (c - viewer).normalize_or_zero();
-        if d.dot(n) > 0.0 {
-            n = -n;
-        }
-        let r = d - 2.0 * d.dot(n) * n;
-        t.translation = c + n * 0.05;
-        t.look_to(r, Vec3::Y);
-        cam.is_active = (*frame).is_multiple_of(sw.mirror_every);
-    }
-}
-
-#[allow(clippy::type_complexity)]
-fn follow_debug_quad(
-    main: Query<
-        &Transform,
-        (
-            With<crate::MainCamera>,
-            Without<MirrorCamera>,
-            Without<DebugQuad>,
-        ),
-    >,
-    mut quad: Query<&mut Transform, With<DebugQuad>>,
-) {
-    let Some(cam) = main.iter().next() else {
-        return;
-    };
-    for mut t in &mut quad {
-        *t = *cam * Transform::from_xyz(0.0, -0.2, -0.9);
-    }
-}
-
-fn hide_mirror_cameras(
-    mut commands: Commands,
-    cams: Query<Entity, (With<MirrorCamera>, With<Camera3d>)>,
-) {
-    for e in &cams {
-        commands.entity(e).remove::<Camera3d>();
-    }
-}
-
-fn show_mirror_cameras(
-    mut commands: Commands,
-    cams: Query<Entity, (With<MirrorCamera>, Without<Camera3d>)>,
-) {
-    for e in &cams {
-        commands.entity(e).insert(Camera3d::default());
-    }
-}
-
 // ---------------------------------------------------------------------------------------------
 // Frame statistics
 // ---------------------------------------------------------------------------------------------
@@ -788,14 +345,10 @@ mod tests {
     }
 
     #[test]
-    fn switch_list_parses() {
-        let s = ReflectionSwitches::parse(
-            "env,glass=trans,mirror,mirror_size=128x64,mirror_every=3,wet",
-        );
-        assert!(s.env && s.mirror && s.wet && !s.ssr);
-        assert_eq!(s.glass, GlassMode::Transmission);
-        assert_eq!(s.mirror_size, UVec2::new(128, 64));
-        assert_eq!(s.mirror_every, 3);
+    fn switch_list_parses_and_ignores_the_promoted_ones() {
+        let s = ReflectionSwitches::parse("env,glass=trans,mirror,mirror_size=128x64,wet");
+        assert!(s.wet && !s.ssr);
+        assert!(ReflectionSwitches::parse("ssr").ssr);
     }
 
     #[test]
@@ -804,13 +357,6 @@ mod tests {
         assert!((c.to_linear().red - 0.5).abs() < 1e-6 && (r - 0.8).abs() < 1e-6);
         let (c, r) = wet_standard(Color::linear_rgb(0.5, 0.5, 0.5), 0.8, 1.0);
         assert!(c.to_linear().red < 0.5 && r < 0.8);
-    }
-
-    #[test]
-    fn names_are_classified() {
-        assert!(is_glass_name("scheibe_front.tga"));
-        assert!(is_mirror_name("spiegel.bmp"));
-        assert!(!is_glass_name("karosserie.bmp"));
     }
 
     #[test]
