@@ -30,6 +30,7 @@ pub mod hot_reload;
 pub mod human;
 pub mod install;
 pub mod instancing;
+pub mod light_quality;
 pub mod loader;
 pub mod material;
 pub mod mesh;
