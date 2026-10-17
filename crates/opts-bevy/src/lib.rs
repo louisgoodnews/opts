@@ -85,7 +85,8 @@ pub use mesh::{
     x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh, x_submesh_to_bevy_mesh,
 };
 pub use model::{
-    attach_model_parts, ContentCache, ContentLoader, ContentStats, ModelPart, TextureOverride,
+    attach_model_parts, load_decoded_meshes, ContentCache, ContentLoader, ContentStats, ModelPart,
+    TextureOverride,
 };
 pub use plugin::{
     OptsAssetPlugin, OptsCoordsPlugin, OptsMaterialPlugin, OptsMeshPlugin, OptsSceneryPlugin,
