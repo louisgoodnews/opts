@@ -344,36 +344,51 @@ camera_light_layers_system -> camera RenderLayers {0} or {0,1}  (interior view /
 scenery clock (NightlightA) -> map-light pool (exclude lamps over the vehicle; interior-view scale), NoMapLighting swap (v2)
 ```
 
-## 9. Performance budget
+## 9. Performance budget (measured 2026-10-17)
 
-**Rule:** 60 fps minimum (frame time ≤ 16.7 ms) on an RTX 3060 12 GB at 1920 × 1080 in the Berlin-Spandau night scene, all of System 6 enabled at the default quality. The lighting systems may use at most **⟨B-total⟩ ms of GPU time** (proposal: 3.0 ms, 18 % of the frame ❓) and **⟨B-cpu⟩ ms of CPU** (proposal: 0.5 ms). Volumetric lights on screen: at most **⟨B-vol⟩** (proposal: 1 directional carrier plus 2 spot headlights of the player vehicle; never the moon and the sun together). The numbers below are placeholders for the benchmark agent; nothing in this table is measured yet.
+**Rule:** at least 60 fps at all times (frame time ≤ 16.7 ms; 13.3 ms is the stricter target of the 74.9 Hz second display) on the user's machine: **RTX 3060 12 GB, 1920 × 1080, 16 cores**, in the Berlin-Spandau night scene with all of System 6 at its default quality. Full method, tables, screenshots and caveats: [lighting cones and benchmarks](lighting-cones.md). The numbers are GPU frame-time **deltas** in a synthetic street scene made GPU-bound with a 5.1 ms ALU ballast (noise ±0.15 ms); the absolute frame times of that scene are meaningless.
 
-| Item | Setting | GPU ms | CPU ms | Memory | Source |
-| :--- | :--- | ---: | ---: | ---: | :--- |
-| Baseline night scene without System 6 changes | – | ⟨B-0⟩ | ⟨B-0c⟩ | – | benchmark |
-| Sun shadow pass | 4 cascades × 2048² | ⟨B-1⟩ | ⟨B-1c⟩ | about 64 MB | benchmark |
-| Moon (carrier at night, replaces the sun's shadows) | 4 × 2048² | ⟨B-2⟩ | – | (same maps) | benchmark |
-| Volumetric pass, sun, High | 64 steps, 200 m, MSAA 4× | ⟨B-3⟩ | – | – | benchmark |
-| Volumetric pass, sun, Medium | 32 steps | ⟨B-4⟩ | – | – | benchmark |
-| Volumetric pass, sun, Low | 16 steps, 120 m | ⟨B-5⟩ | – | – | benchmark |
-| + 2 volumetric headlight spots | with shadow maps | ⟨B-6⟩ | – | – | benchmark |
-| HDR on | `Rgba16Float` | ⟨B-7⟩ | – | ⟨B-7m⟩ | benchmark |
-| Map-light pool | 48 point lights | ⟨B-8⟩ | ⟨B-8c⟩ | – | benchmark |
-| Headlight pool | 6 spots | ⟨B-9⟩ | ⟨B-9c⟩ | – | benchmark |
-| Cabin lights in view | 24 point lights | ⟨B-10⟩ | – | – | benchmark |
-| Cabin lights out of view (layer 1) | – | ⟨B-11⟩ | – | – | benchmark |
-| Moon model | per frame | – | ⟨B-12c⟩ (expected below 5 µs) | – | benchmark |
+**The real game today** (windowed, vsync as the game default, Rathaus 2402/11279, 22:00 and noon, two viewpoints each): 258-269 fps, 3.7-3.9 ms per frame, p99 5.6-5.7 ms; GPU 1.3-2.0 ms, so the game is **CPU-bound**. Night costs the same as noon in these views. **Existing problem outside lighting:** the 1 % lows are 34-47 fps because of tile-streaming hitches of 25-140 ms; no lighting setting can fix that, but it breaks the "never below 60 fps" rule independently of this work (follow-up).
 
-**Fallback ladder** (setting `light_shafts`, optionally chosen automatically from frame time):
+| Item | Setting | GPU ms (delta) | Notes |
+| :--- | :--- | ---: | :--- |
+| Sun god rays (Bevy volumetric fog) | 8 / 16 / 32 / 64 steps, day | +0.45 / **+0.95** / +1.95 / +3.9 | 0.06 ms per step; flat across volume size 100-1000 m, density, view direction, sun elevation 3-30°, jitter, HDR, MSAA |
+| Sun god rays at night with the game's 54 lights | 16 / 32 steps | +2.7 / +4.9 | Bevy's shader runs the clustered-light loop at every step (about 2.4× the day cost); halving the lamps changed nothing |
+| Sun shadow map | 4096² vs 2048² | +1.2 to +1.5 | keep 2048² |
+| Cascades | 1 vs 4 | ±0.6 on the fog cost | |
+| Cone: additive mesh | 16 / 48 / 100 / 200 | +0.1 / +0.5 / +1.0 / +1.4 | no depth fade without a prepass |
+| Cone: ray-marched proxy, 8 steps | 16 / 48 / 100 / 200 | +0.15 / +0.5 / +1.1 / +2.1 | 4 steps at N = 200: +1.45; 16 steps: +3.2; camera inside a cone +0.4 |
+| Depth prepass (for cone depth fade/clip) | N = 100 / 200 | +1.6 / +2.2 | unmeasured in the real game; the prepass also cut the synthetic night scene from 8.77 to 7.57 ms |
+| Bevy volumetric **spot** lights | 1 / 4 spots, 32 steps | +4.5 / +7.1 | supported in Bevy 0.20 (`light.rs:1321-1332`, `volumetric_fog.wesl:340-445`) but rejected on cost |
+| Real `SpotLight` shadow maps | 1 / 6 / 8 | +0.4 / +1.3 / +1.9 | 0.15-0.25 each; the game's headlight pool is shadowless |
+| HDR (`Rgba16Float`) | MSAA off / 4×, with and without fog | −0.1 to +0.1 (noise) | colour target 50 → 100 MB at 1080p with 4× MSAA (1440p 89 → 177, 4K 199 → 398) |
+| Bloom (`NATURAL`) | – | +0.3 | optional |
+| MSAA 4× | – | +0.27 | |
+| Mirror camera (render-to-texture) | 1 / 2 mirrors | +0.6 / +1.4-1.5 | about 0.7 ms per view, independent of target size (256×128 = 512×256); 2 mirrors at 512×256 every 2nd frame +0.9 |
+| IBL per camera (`GeneratedEnvironmentMapLight`) | main camera | +1.2 | about 1 ms each: share one cube map |
+
+**Decisions drawn from the numbers**
+
+* **HDR on the main camera, always** (cost within noise; geometry pixels identical to LDR, mean difference 0.02/255; only the tonemapped clear colour in the sky region differs: mean 4.7-6.1). A camera with `Hdr` renders its main texture as `Rgba16Float` and the output pass writes the 8-bit target (`bevy_render-0.20.0/src/camera.rs:619-626`), so **mirror cameras get HDR for free with an 8-bit image target**. Bloom is optional (+0.3 ms).
+* **Sun rays: default 16 steps** (+1.0 ms by day, about +2.5 ms at night), never Bevy's default of 64; camera-following 200 m `FogVolume`, `ambient_intensity` 0, shadow map 2048². Shafts end at the sun's cascade maximum distance (150 m).
+* **Cones: the ray-marched proxy cone** (per-cone angle, range and colour via the model matrix and a per-instance tag), **hard cap 96 simultaneous cones, default 64 (about +0.75 ms)**, nearest by screen coverage with hysteresis; the additive mesh cone is the cheaper fallback. **No Bevy volumetric spots.** Pitfall: `AlphaMode::Add` shares the premultiplied pipeline, so the cone shader must return alpha 0.
+* **Mirrors:** at most 2, every 2nd frame, 256×128, switched with `Camera::is_active` (not the `Camera3d` add/remove trick of the research prototype).
+* **Volumetric lights on screen:** one directional carrier (sun by day, moon at night, never both) plus no volumetric spots.
+
+**Night budget at 1080p on the 3060:** existing game GPU 2.0 + rays 2.5 + cones 0.75 + HDR 0.1 + bloom 0.3 + mirrors 0.9 = about **6.6 ms**, against 16.7 ms (13.3 ms on the DP-2 display). Ceiling for the lighting additions alone: **4.5 ms**. Limits: the scene is synthetic; the depth-prepass and overdraw costs and the CPU cost of many cone entities, mirrors and light assignment must be re-measured in the real game; cone quality is not tuned.
+
+**Unified fallback ladder** (setting `graphics.light_shafts` for the rays, `graphics.light_cones` for the cones; both can be driven by one governor):
 
 | Level | Name | What runs |
 | ---: | :--- | :--- |
-| 3 | **Full** (High) | carrier shafts (sun by day, moon at night if "Night shafts" is on), player headlight spot shafts, 64 steps, 200 m volume |
-| 2 | **Reduced steps** (Medium) | same lights, 32 steps, 160 m volume; headlight spots stay |
-| 1 | **Sun rays only** (Low) | the sun only (no moon shafts, no spot shafts), 16 steps, 120 m volume |
-| 0 | **Off** | `VolumetricLight` removed from every light, `VolumetricFog` removed from the cameras, `FogVolume` despawned (zero GPU cost, `render.rs:247-262`) |
+| 0 | **Full** | rays 16 steps (day: sun, night: moon if "night shafts" is on), cones 64 (cap 96), mirrors ≤ 2 every 2nd frame, bloom if on |
+| 1 | **Fewer cones** | cones 48, then 24; far cones at 4 steps; mirrors every 2nd frame at 256×128 |
+| 2 | **Headlights only** | lanterns' cones off, vehicle headlight cones only (cap 16) |
+| 3 | **Cones off** | glows and point/spot lights only |
+| 4 | **Sun rays only** | 8 steps, no bloom, no mirrors |
+| 5 | **All volumetrics off** | `VolumetricLight`, `VolumetricFog` and the `FogVolume` removed (zero GPU cost, `render.rs:247-262`); HDR stays |
 
-Auto mode (`light_shafts_auto`, default on): a governor keeps a 120-frame window of the frame time; if the 95th percentile exceeds 17.5 ms for 2 s it steps one level down (never below Off, never more than one step per 5 s); if it stays under 13 ms for 15 s it steps up, never above the level the player chose. The governor logs each change; the Environment page shows "auto-reduced". Fixed benchmark runs disable it (`--light-shafts 3` fixes the level).
+Governor (`light_shafts_auto`, default on; frame-time based, because GPU timestamp queries exist only on Vulkan/DX12): one level down when the 95th-percentile frame time over 120 frames exceeds 15 ms for 2 s (never more than one step per 5 s); one level up when it stays below 11 ms for 15 s ❓ (thresholds to be tuned in the real game). The Environment UI shows the level and has the manual toggle.
 
 ## 10. Files that change
 
