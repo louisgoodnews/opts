@@ -215,3 +215,24 @@ The docs specify weather ([`environment.md`](../formats/text/environment.md): `W
   5. sky cubemap for glass reflections;
   6. mirror cameras with HDR, as measured.
 * Weather lands as its own branch merge; light rooms (layer convention, CPU light selection) go with item 4.
+
+### Phase B result (lighting round, Checkpoint 2)
+
+Designs: [lighting system](../architecture/lighting-system.md) (rooms, moon, sun rays, measured budget), [lighting cones and benchmarks](../architecture/lighting-cones.md), [weather](../architecture/weather.md) (implemented, merged). Weather landed first (`agent/weather`, 7 commits): the install's presets, fog, clouds, precipitation, wet ground via the shared `Wetness`, script variables, four live settings.
+
+**Root causes**
+
+| # | Symptom | Cause |
+| ---: | :--- | :--- |
+| 20 | no lantern cones | the data has cone angles (`[light_enh_2]`, `[spotlight]`), nothing draws a cone; lamps are glow discs plus omni point lights |
+| 21 | no light rooms | map lights are Bevy point lights that light everything in range; `[nomaplighting]` is parsed but unused. **`RenderLayers` on a Bevy 0.20 light does not filter lit meshes** (it controls views, shadow casters and cascades only), so rooms are handled by CPU light selection plus one cabin layer for the interior lights |
+| 22 | no god rays, no moon logic | no `VolumetricFog`/`VolumetricLight`/`FogVolume`; the moon is the anti-sun disc with no phase and no light of its own (below −18° the installation's sun colour is black, so no light shines at night) |
+| 23 | no vehicle cones | glows and six fixed 12°/30° spots; cone angles and variables from the cars are not mapped |
+
+**Measured on the RTX 3060 at 1080p** (deltas; real game today 3.7-3.9 ms/frame, CPU-bound): sun rays at 16 steps +1.0 ms (night +2.5, Bevy's default of 64 would cost +3.9); cones: ray-marched proxy 64 cones about +0.75 ms (cap 96); HDR within noise (+50 MB colour target at 4× MSAA); bloom +0.3; mirror camera +0.6-0.7 ms each; IBL +1.2 per camera (share one cube map). Night budget about 6.6 ms GPU against 16.7 ms; ceiling for the lighting additions 4.5 ms. Bevy volumetric spot lights work in 0.20 but cost +4.5 ms for the first one: rejected.
+
+**Existing problem outside lighting:** the real game's 1 % lows are 34-47 fps from tile-streaming hitches of 25-140 ms (average 260 fps), which breaks "never below 60 fps" regardless of lighting.
+
+**Phase C order (confirmed):** (1) `MainCamera` marker, 48 `With<Camera3d>` sites (13 write the camera transform, 10 use `single()` and silently stop with two cameras, about 16 take the first/active camera); (2) HDR on the main camera, screenshots and golden screens regenerated in the same commit; (3) moon model, moonlight, disc phase, sun god rays; (4) cones for lanterns and headlights, light rooms, `[nomaplighting]`; (5) sky cube map for glass; (6) mirror cameras with HDR; settings `graphics.light_shafts`, `graphics.light_cones`, governor, Environment UI entries.
+
+**Limits of the evidence:** the benchmark scene is synthetic (the ALU ballast makes it GPU-bound; deltas, not absolute times, are valid); depth-prepass/overdraw cost and the CPU cost of many cone entities must be re-measured in the real game; cone look is untuned; weather was tested headlessly only (no window): the fogged sky and clouds on a real map are unchecked. The benchmark agent used about 50 runs against the allowed 40 (46 offscreen).
