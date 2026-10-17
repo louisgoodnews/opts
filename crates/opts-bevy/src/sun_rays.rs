@@ -32,7 +32,7 @@ pub const SHAFT_VOLUME_SIDE_M: f32 = 200.0;
 /// Baseline haze `density_factor` per metre (`HAZE_BASE`): a clear sky has an extinction of about
 /// 1e-4 per metre, far too thin to show a shaft inside the shadow range, so this is an artistic
 /// haze ❓.
-pub const HAZE_BASE: f32 = 0.0005;
+pub const HAZE_BASE: f32 = 0.0006;
 /// Factor from the weather's Koschmieder extinction `3.912 / visibility` (per metre) to the
 /// volume's `density_factor`. Bevy's extinction is `density_factor × (absorption + scattering)`
 /// = `0.6 ×` with the defaults, so 1.0 makes the haze a little thinner than the distance fog.
@@ -40,9 +40,9 @@ pub const FOG_TO_SHAFT: f32 = 1.0;
 /// Largest `density_factor`: thicker volumes wash the screen out and end every ray early.
 pub const HAZE_MAX: f32 = 0.05;
 /// `scattering_asymmetry`: strong forward scattering, shafts show when looking towards the light.
-pub const SHAFT_ASYMMETRY: f32 = 0.55;
+pub const SHAFT_ASYMMETRY: f32 = 0.65;
 /// Overall factor of the volume's `light_intensity` (`gain`).
-pub const SHAFT_GAIN: f32 = 0.5;
+pub const SHAFT_GAIN: f32 = 0.9;
 /// `VolumetricFog::ambient_intensity` (`ambient`): 0, the default 0.1 veils the whole screen.
 pub const SHAFT_AMBIENT: f32 = 0.0;
 /// The volume's `absorption` coefficient (`absorption`).
@@ -53,7 +53,7 @@ pub const SHAFT_SCATTERING: f32 = 0.3;
 pub const TUNE_ENV: &str = "OPTS_SHAFT_TUNE";
 /// Brighter shafts for the moon: its light is about 20 times weaker than the sun's in game units,
 /// so with the same intensity its beams would be invisible ❓ (tunable).
-pub const MOON_SHAFT_GAIN: f32 = 4.0;
+pub const MOON_SHAFT_GAIN: f32 = 2.0;
 /// Intensity scale without `Hdr` on the camera (the fog adds untonemapped light, colours clip).
 pub const LDR_SHAFT_SCALE: f32 = 0.6;
 /// `VolumetricFog::jitter` in metres (no effect without temporal anti-aliasing, kept on as in the
