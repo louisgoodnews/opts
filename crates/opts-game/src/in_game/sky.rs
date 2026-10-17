@@ -15,7 +15,7 @@ use opts_core::formats::envir::EnvirConfig;
 
 use crate::in_game::types::InGameEntity;
 /// Radius of the sky dome; stays inside the default 1000 m far plane.
-const DOME_RADIUS: f32 = 900.0;
+pub(crate) const DOME_RADIUS: f32 = 900.0;
 /// Clock seconds between sky texture rebuilds (a jump of the environment rebuilds at once).
 const REFRESH_S: f64 = 0.5;
 /// Peak illuminance of full white direct sunlight.
@@ -51,9 +51,12 @@ pub struct SunLight;
 /// Marks the sun disc quad.
 #[derive(Component)]
 pub struct SunDisc;
-/// Marks the moon disc quad.
+/// Marks the moon disc quad; `in_game::moon` gives it its mesh and material.
 #[derive(Component)]
 pub struct MoonDisc;
+/// The moon photograph (`Texture/mond.bmp`) waiting for the disc's material.
+#[derive(Component)]
+pub struct MoonDiscTexture(pub Option<Handle<Image>>);
 
 fn load_texture(root: &Path, rel: &str) -> Result<Image, String> {
     let path = rel.replace('\\', "/");
@@ -72,7 +75,7 @@ pub fn sun_position(hour: f32, day_of_year: f32) -> (f32, f32) {
 }
 
 /// Direction towards a point at the given elevation/azimuth, in Bevy space (north = −Z).
-fn direction(elevation_deg: f32, azimuth_deg: f32) -> Vec3 {
+pub(crate) fn direction(elevation_deg: f32, azimuth_deg: f32) -> Vec3 {
     let (el, az) = (elevation_deg.to_radians(), azimuth_deg.to_radians());
     Vec3::new(el.cos() * az.sin(), el.sin(), -el.cos() * az.cos())
 }
@@ -240,25 +243,30 @@ pub fn spawn_sky(
             ..default()
         }),
         SunLight,
+        opts_bevy::sun_rays::LightRole::Sun,
         InGameEntity,
         Name::new("Sun_Light"),
     ));
     let sun_tex = load_texture(root, "Texture/sonne.bmp").ok();
     let moon_tex = load_texture(root, "Texture/mond.bmp").ok();
-    for (is_sun, tex, size) in [(true, sun_tex, 160.0), (false, moon_tex, 120.0)] {
-        let (mesh, material) = disc(meshes, materials, tex, images, size);
-        let mut e = commands.spawn((
-            (Mesh3d(mesh), MeshMaterial3d(material)),
-            bevy::light::NotShadowCaster,
-            bevy::light::NotShadowReceiver,
-            InGameEntity,
-        ));
-        if is_sun {
-            e.insert((SunDisc, Name::new("Sun_Disc")));
-        } else {
-            e.insert((MoonDisc, Name::new("Moon_Disc")));
-        }
-    }
+    let (mesh, material) = disc(meshes, materials, sun_tex, images, 160.0);
+    commands.spawn((
+        (Mesh3d(mesh), MeshMaterial3d(material)),
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+        InGameEntity,
+        SunDisc,
+        Name::new("Sun_Disc"),
+    ));
+    // The moon disc gets its phase material from `in_game::moon`.
+    commands.spawn((
+        MoonDisc,
+        MoonDiscTexture(moon_tex.map(|t| images.add(t))),
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+        InGameEntity,
+        Name::new("Moon_Disc"),
+    ));
     commands.insert_resource(sky);
     Ok(())
 }
@@ -300,15 +308,6 @@ pub fn update_sky(
             Without<SkyDome>,
             Without<SunLight>,
             Without<MoonDisc>,
-        ),
-    >,
-    mut moon_disc: Query<
-        &mut Transform,
-        (
-            With<MoonDisc>,
-            Without<SkyDome>,
-            Without<SunLight>,
-            Without<SunDisc>,
         ),
     >,
 ) {
@@ -376,7 +375,8 @@ pub fn update_sky(
         let b = sky.config.light_at(&sky.config.light_b, elevation);
         let c = sky.config.light_at(&sky.config.light_c, elevation);
         // The weather scales the light through `opts_bevy::weather::light_scales`.
-        let (att, ambient_att) = (env.attenuation(), env.ambient_attenuation());
+        let la = env.light_attenuation();
+        let (att, ambient_att) = (la.direct, la.ambient);
         for (_, mut light) in &mut sun {
             light.color = Color::srgb(a[0].max(0.001), a[1].max(0.001), a[2].max(0.001));
             light.illuminance = SUN_ILLUMINANCE * l(a) * att;
@@ -417,9 +417,6 @@ pub fn update_sky(
     };
     for mut t in &mut sun_disc {
         *t = place(sun_dir);
-    }
-    for mut t in &mut moon_disc {
-        *t = place(-sun_dir);
     }
 }
 
