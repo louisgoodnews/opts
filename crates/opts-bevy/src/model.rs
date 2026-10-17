@@ -21,6 +21,7 @@ use bevy::pbr::StandardMaterial;
 use bevy::prelude::AlphaMode;
 
 use opts_core::formats::o3d::{self, O3d};
+use opts_core::formats::scenery::BaseSurface;
 use opts_core::formats::vehicles::model::LightMap;
 
 use crate::install::OmsiInstall;
@@ -143,6 +144,8 @@ pub struct ContentStats {
     /// Material slots left out because a script variable scales their alpha (`[alphascale]`):
     /// an object whose slots are all of that kind has nothing to draw, which is not a load failure.
     pub hidden_parts: usize,
+    /// Transmap materials split into an opaque body and a blended glass part.
+    pub transmap_splits: usize,
     /// Human-readable descriptions of assets that failed to load.
     pub failures: Vec<String>,
 }
@@ -154,6 +157,44 @@ pub fn repeat_sampler() -> ImageSampler {
     crate::texture_filter::current_object_sampler()
 }
 
+/// Key of the parts cache: the file and everything that changes what is built from it (the
+/// material overrides, skinning, the repaint, bone slots and the crossing base it is bent over).
+fn parts_key(
+    o3d_path: &Path,
+    overrides: &[TextureOverride],
+    keep_skin: bool,
+    repaint: &[(&String, &PathBuf)],
+    slots: Option<&[(String, u16)]>,
+    base: Option<&Path>,
+) -> (PathBuf, String) {
+    (
+        o3d_path.to_path_buf(),
+        format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}{base:?}"),
+    )
+}
+
+/// Reads a mesh file with positions as the exporter wrote them: keyed `.o3d` files are decoded
+/// exactly (`o3d::exact`); a file that stays scrambled is an error.
+///
+/// # Errors
+/// The file cannot be read, parsed or decoded.
+pub fn load_decoded_meshes(path: &Path) -> Result<Vec<O3d>, String> {
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let mut models = crate::mesh::parse_mesh_file(path, &bytes)?;
+    for m in &mut models {
+        if m.encryption_key.is_some() {
+            let _ = o3d::exact::decode(m);
+        }
+    }
+    if models
+        .iter()
+        .any(|m| matches!(m.vertex_layout(), o3d::VertexLayout::Unreadable))
+    {
+        return Err("vertex positions are scrambled and could not be decoded".into());
+    }
+    Ok(models)
+}
+
 /// Caches shared across a loading session.
 #[derive(Default)]
 pub struct ContentCache {
@@ -161,6 +202,8 @@ pub struct ContentCache {
     /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
+    /// `[crossing_heightdeformation]` base surfaces by file.
+    pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
@@ -308,7 +351,37 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None, None)
+    }
+
+    /// [`Self::o3d_parts`] bent over a `[crossing_heightdeformation]` base surface: every vertex
+    /// is raised by the base height under it. `bend` is `(base file, surface)`; the parts are
+    /// cached per base file.
+    pub fn o3d_parts_bent(
+        &mut self,
+        o3d_path: &Path,
+        tex_dirs: &[PathBuf],
+        overrides: &[TextureOverride],
+        bend: Option<(&Path, &BaseSurface)>,
+    ) -> Vec<ModelPart> {
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, false, None, bend)
+    }
+
+    /// The base surface of a `[crossing_heightdeformation]` mesh file (cached; `None` when the
+    /// file cannot be read or decoded).
+    pub fn base_surface(&mut self, path: &Path) -> Option<std::sync::Arc<BaseSurface>> {
+        if let Some(b) = self.cache.bases.get(path) {
+            return b.clone();
+        }
+        let base = match load_decoded_meshes(path) {
+            Ok(models) => Some(std::sync::Arc::new(BaseSurface::from_meshes(&models))),
+            Err(e) => {
+                self.fail(format!("crossing base mesh {}: {e}", path.display()));
+                None
+            }
+        };
+        self.cache.bases.insert(path.to_path_buf(), base.clone());
+        base
     }
 
     /// Like [`Self::o3d_parts`], but keeps the bone-weight vertex attributes (for meshes that
@@ -319,7 +392,7 @@ impl ContentLoader<'_> {
         tex_dirs: &[PathBuf],
         overrides: &[TextureOverride],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, None)
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, None, None)
     }
 
     /// [`Self::o3d_skinned_parts`] for a vehicle mesh whose `[setbone]` entries give the joint
@@ -332,7 +405,7 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         slots: &[(String, u16)],
     ) -> Vec<ModelPart> {
-        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, Some(slots))
+        self.o3d_parts_impl(o3d_path, tex_dirs, overrides, true, Some(slots), None)
     }
 
     fn o3d_parts_impl(
@@ -342,6 +415,7 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
         slots: Option<&[(String, u16)]>,
+        bend: Option<(&Path, &BaseSurface)>,
     ) -> Vec<ModelPart> {
         let mut scratch = TraceScratch::new();
         let parts = self.o3d_parts_core(
@@ -350,6 +424,7 @@ impl ContentLoader<'_> {
             overrides,
             keep_skin,
             slots,
+            bend,
             &mut scratch,
         );
         if scratch.lap.active() {
@@ -358,6 +433,7 @@ impl ContentLoader<'_> {
         parts
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn o3d_parts_core(
         &mut self,
         o3d_path: &Path,
@@ -365,13 +441,18 @@ impl ContentLoader<'_> {
         overrides: &[TextureOverride],
         keep_skin: bool,
         slots: Option<&[(String, u16)]>,
+        bend: Option<(&Path, &BaseSurface)>,
         sc: &mut TraceScratch,
     ) -> Vec<ModelPart> {
         let mut repaint: Vec<_> = self.cache.texture_replacements.iter().collect();
         repaint.sort();
-        let key = (
-            o3d_path.to_path_buf(),
-            format!("{overrides:?}{keep_skin}{repaint:?}{slots:?}"),
+        let key = parts_key(
+            o3d_path,
+            overrides,
+            keep_skin,
+            &repaint,
+            slots,
+            bend.map(|b| b.0),
         );
         if let Some(parts) = self.cache.parts.get(&key) {
             sc.stage = "parts-cache";
@@ -479,6 +560,11 @@ impl ContentLoader<'_> {
                 tracing::debug!(path = %o3d_path.display(), "axis-cycled vertex layout; normals recomputed");
             }
         }
+        if let Some((_, base)) = bend {
+            for m in &mut models {
+                base.bend_mesh(m);
+            }
+        }
         for model in &models {
             self.cache.stats.o3d_files += 1;
             self.cache.stats.o3d_vertices += model.vertices.len();
@@ -550,6 +636,7 @@ impl ContentLoader<'_> {
                     && (self.cache.stats.failures.len() > failures_before
                         || model.materials.get(slot).is_none());
                 let mut blended_by_map = false;
+                let mut glass_tex = None;
                 if let (Some(base_h), Some(tm)) =
                     (tex.clone(), over.and_then(|o| o.trans_map.clone()))
                 {
@@ -559,6 +646,12 @@ impl ContentLoader<'_> {
                             _ => None,
                         };
                         if let Some(img) = composed {
+                            // A mostly opaque composition (a car body with its windows) is drawn
+                            // as an opaque cut-out body plus a blended glass pass; blending the
+                            // whole body lets its far side and interior show through.
+                            if over.and_then(|o| o.alpha).is_none_or(|a| a == 2) {
+                                glass_tex = transmap_glass(&img).map(|g| self.images.add(g));
+                            }
                             tex = Some(self.images.add(img));
                             blended_by_map = true;
                         }
@@ -590,6 +683,15 @@ impl ContentLoader<'_> {
                 if blended_by_map && over.and_then(|o| o.alpha).is_none() {
                     material.alpha_mode = AlphaMode::Blend;
                 }
+                let glass_material = glass_tex.map(|g| {
+                    let mut glass = material.clone();
+                    glass.base_color_texture = Some(g);
+                    glass.alpha_mode = AlphaMode::Blend;
+                    glass.cull_mode = Some(bevy::render::render_resource::Face::Back);
+                    glass.double_sided = false;
+                    material.alpha_mode = AlphaMode::Mask(TRANSMAP_OPAQUE);
+                    glass
+                });
                 // OMSI renders with back-face culling; keeping it also lets a camera that ends up
                 // inside a building see out through the (culled) inner faces.
                 material.cull_mode = Some(bevy::render::render_resource::Face::Back);
@@ -634,7 +736,7 @@ impl ContentLoader<'_> {
                     .transform
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
-                parts.push(ModelPart {
+                let part = ModelPart {
                     mesh: self.meshes.add(mesh),
                     material: self.materials.add(material),
                     vertices,
@@ -644,7 +746,18 @@ impl ContentLoader<'_> {
                         .map(str::to_owned),
                     image: over.and_then(|o| o.image.clone()),
                     pivot,
-                });
+                };
+                if let Some(glass) = glass_material {
+                    self.cache.stats.transmap_splits += 1;
+                    let glass_part = ModelPart {
+                        material: self.materials.add(glass),
+                        ..part.clone()
+                    };
+                    parts.push(part);
+                    parts.push(glass_part);
+                } else {
+                    parts.push(part);
+                }
             }
         }
         sc.build_ms = sc.lap.split();
@@ -805,6 +918,53 @@ pub fn attach_model_parts(
 /// Returns `base` with its alpha channel replaced by the values of `trans` (nearest-neighbour
 /// resampled). Bases and maps may be RGBA8 or block-compressed (BC1-3); an R8 map is read directly.
 /// Only level 0 of either input is read; the result gets a fresh mip chain like any loaded texture.
+/// Alpha from which a texel of a transmap-composed texture counts as opaque: the body pass is
+/// `AlphaMode::Mask(TRANSMAP_OPAQUE)`, the glass pass draws the rest blended.
+pub const TRANSMAP_OPAQUE: f32 = 0.95;
+
+/// Share of opaque texels from which a composed texture is split into body and glass passes.
+/// Below it (shadow quads, smoke, plain windows) the material stays one blended pass.
+pub const TRANSMAP_SPLIT_SHARE: f32 = 0.5;
+
+/// The glass texels of an RGBA8 buffer whose alpha came from a transmap: `None` when fewer than
+/// [`TRANSMAP_SPLIT_SHARE`] of the texels are opaque (≥ [`TRANSMAP_OPAQUE`]), else the buffer with
+/// the alpha of every opaque texel set to 0 (the body pass draws those).
+#[must_use]
+pub fn transmap_glass_rgba(rgba: &[u8]) -> Option<Vec<u8>> {
+    // `a / 255 >= 0.95` exactly as the mask test compares it.
+    let opaque = |a: u8| f32::from(a) / 255.0 >= TRANSMAP_OPAQUE;
+    let texels = rgba.len() / 4;
+    if texels == 0 {
+        return None;
+    }
+    let solid = rgba.chunks_exact(4).filter(|p| opaque(p[3])).count();
+    if (solid as f32) < TRANSMAP_SPLIT_SHARE * texels as f32 {
+        return None;
+    }
+    let mut glass = rgba.to_vec();
+    for p in glass.chunks_exact_mut(4) {
+        if opaque(p[3]) {
+            p[3] = 0;
+        }
+    }
+    Some(glass)
+}
+
+/// [`transmap_glass_rgba`] on a composed image (RGBA8, as [`compose_alpha`] returns it).
+///
+/// The composed image already carries its mip chain; the glass is built from its base level
+/// and gets its own chain, so data and descriptor agree when the image is uploaded.
+fn transmap_glass(composed: &Image) -> Option<Image> {
+    let data = composed.data.as_deref()?;
+    let (w, h) = (composed.width() as usize, composed.height() as usize);
+    let glass = transmap_glass_rgba(data.get(..w * h * 4)?)?;
+    let mut out = composed.clone();
+    out.texture_descriptor.mip_level_count = 1;
+    out.data = Some(glass);
+    crate::texture_filter::prepare_object_texture(&mut out);
+    Some(out)
+}
+
 fn compose_alpha(base: &Image, trans: &Image) -> Option<Image> {
     // DDS textures stay block-compressed on the GPU; the texel values are needed here.
     let base = crate::texture::decode_to_rgba8(base)?;
@@ -934,6 +1094,99 @@ mod alphascale_tests {
         assert!(
             !over(Some(2), None, false).is_variable_hidden(),
             "no variable: visible"
+        );
+    }
+}
+
+#[cfg(test)]
+mod transmap_split_tests {
+    use super::{transmap_glass_rgba, TRANSMAP_OPAQUE};
+    use bevy::image::Image;
+
+    fn image(alphas: &[u8]) -> Vec<u8> {
+        alphas.iter().flat_map(|&a| [200, 10, 10, a]).collect()
+    }
+
+    /// A car body: 6 opaque texels, 2 window texels (transmap 0.6-0.8).
+    #[test]
+    fn mostly_opaque_composition_splits_into_body_and_glass() {
+        let rgba = image(&[255, 255, 250, 243, 255, 255, 160, 200]);
+        let glass = transmap_glass_rgba(&rgba).expect("split");
+        let alpha: Vec<u8> = glass.chunks_exact(4).map(|p| p[3]).collect();
+        assert_eq!(alpha, vec![0, 0, 0, 0, 0, 0, 160, 200]);
+        // Colours are kept; the body pass (mask at 0.95) keeps exactly the zeroed texels.
+        assert!(glass.chunks_exact(4).all(|p| p[..3] == [200, 10, 10]));
+        let body: Vec<bool> = rgba
+            .chunks_exact(4)
+            .map(|p| f32::from(p[3]) / 255.0 >= TRANSMAP_OPAQUE)
+            .collect();
+        assert_eq!(body, alpha.iter().map(|&a| a == 0).collect::<Vec<_>>());
+    }
+
+    /// A shadow quad or smoke: mostly translucent, stays one blended pass.
+    #[test]
+    fn mostly_translucent_composition_is_not_split() {
+        assert!(transmap_glass_rgba(&image(&[0, 40, 80, 120, 255, 30])).is_none());
+        assert!(transmap_glass_rgba(&[]).is_none());
+    }
+
+    /// The composed image comes with a mip chain; the glass must carry exactly the data its
+    /// descriptor announces (a base level under a full-chain descriptor crashed the upload).
+    #[test]
+    fn glass_data_matches_its_mip_levels() {
+        use bevy::asset::RenderAssetUsages;
+        use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+        let n = 64usize;
+        let mut alpha = vec![255u8; n * n];
+        alpha[..n * n / 8].fill(180);
+        let mut composed = Image::new(
+            Extent3d {
+                width: n as u32,
+                height: n as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            image(&alpha),
+            TextureFormat::Rgba8UnormSrgb,
+            RenderAssetUsages::default(),
+        );
+        crate::texture_filter::prepare_object_texture(&mut composed);
+        let glass = super::transmap_glass(&composed).expect("split");
+        let levels = glass.texture_descriptor.mip_level_count;
+        let expected: usize = (0..levels)
+            .map(|l| {
+                let (w, h) = crate::texture::level_size(n as u32, n as u32, l);
+                w as usize * h as usize * 4
+            })
+            .sum();
+        assert_eq!(glass.data.as_ref().map(Vec::len), Some(expected));
+    }
+
+    /// 242 / 255 = 0.949 is glass, 243 / 255 = 0.953 is body.
+    #[test]
+    fn threshold_matches_the_mask_cutoff() {
+        let glass = transmap_glass_rgba(&image(&[242, 243, 255])).expect("split");
+        assert_eq!(glass[3], 242);
+        assert_eq!(glass[7], 0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parts bent over a crossing base are cached apart from the flat parts and per base file.
+    #[test]
+    fn the_parts_cache_key_includes_the_crossing_base() {
+        let file = Path::new("Kreuz.o3d");
+        let flat = parts_key(file, &[], false, &[], None, None);
+        let a = parts_key(file, &[], false, &[], None, Some(Path::new("a_base.o3d")));
+        let b = parts_key(file, &[], false, &[], None, Some(Path::new("b_base.o3d")));
+        assert_ne!(flat, a);
+        assert_ne!(a, b);
+        assert_eq!(
+            a,
+            parts_key(file, &[], false, &[], None, Some(Path::new("a_base.o3d")))
         );
     }
 }

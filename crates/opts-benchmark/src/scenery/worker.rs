@@ -198,11 +198,7 @@ impl Harness {
             .get_resource_mut::<WorldLoadJob>()
             .map(|mut job| job.plan_scene_reload())
             .ok_or_else(|| anyhow!("no world load job"))?;
-        for e in plan.despawn {
-            if let Ok(entity) = world.get_entity_mut(e) {
-                entity.despawn();
-            }
-        }
+        plan.apply(world);
         Ok(())
     }
 

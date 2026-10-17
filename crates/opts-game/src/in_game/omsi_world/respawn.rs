@@ -10,7 +10,6 @@ use bevy::prelude::*;
 use opts_bevy::{CameraMode, CameraState};
 use opts_core::formats::map::{MapEntryPoint, MapTile};
 
-use super::ground::tile_origin;
 use super::vehicle::load_player_vehicle;
 use super::{LoadAssets, WorldLoadJob, WorldStats};
 use crate::session_vehicles::{ops, SessionVehicles, SpawnPoint, VehicleId};
@@ -24,8 +23,10 @@ pub struct ResolvedEntry {
     pub id: u32,
     /// Display name (`global.cfg`).
     pub name: String,
-    /// Absolute OMSI world position: tile position plus the record's elevation.
-    pub world: Vec3,
+    /// Tile the entry object lies on.
+    pub tile: (i32, i32),
+    /// Position in that tile's frame, with the record's elevation as `z`.
+    pub local: Vec3,
     /// Heading of the entry object (compass degrees).
     pub heading_deg: f32,
 }
@@ -127,7 +128,6 @@ fn resolve_entries(
         let Ok(tile) = MapTile::parse(&bytes) else {
             continue;
         };
-        let origin = tile_origin(*key);
         let mut fresh = Vec::new();
         for ep in entries {
             if let Some(obj) = tile
@@ -138,11 +138,8 @@ fn resolve_entries(
                 fresh.push(ResolvedEntry {
                     id: ep.id,
                     name: ep.name.clone(),
-                    world: Vec3::new(
-                        origin.0 + obj.position.x,
-                        origin.1 + obj.position.y,
-                        ep.position.y,
-                    ),
+                    tile: *key,
+                    local: Vec3::new(obj.position.x, obj.position.y, ep.position.y),
                     heading_deg: obj.heading_deg,
                 });
             }
@@ -298,22 +295,20 @@ pub fn handle_vehicle_requests(
     };
     let placed = entries
         .find(entry_id)
-        .map(|e| (e.world, e.heading_deg))
+        .map(|e| (e.tile, e.local, e.heading_deg))
         .or_else(|| {
             let keys: Vec<(i32, i32)> = job.tile_files.keys().copied().collect();
             job.find_entry_spawn_by_id(entry_id, &keys)
-                .map(|(_, (p, h))| (p, h))
+                .map(|(k, (p, h))| (k, p, h))
         });
-    let Some((world, heading)) = placed else {
+    let Some((tile, local, heading)) = placed else {
         registry.mark_failed(id, format!("entry point `{entry_name}` cannot be placed"));
         tracing::error!(at = %opts_bevy::position_tag(), entry = %entry_id, "entry point cannot be placed; no vehicle spawned");
         return;
     };
-    let abs = tile_origin(job.start_tile);
-    job.spawn = Some((
-        Vec3::new(world.x - abs.0, world.y - abs.1, world.z),
-        heading,
-    ));
+    let session = job.session_pos(tile, local);
+    let abs = job.grid.absolute(tile, local.truncate().as_dvec2());
+    job.spawn = Some((session, heading));
     job.config.vehicle_path = Some(bus_path);
     job.set_formation_cars(formation_cars);
     job.config.livery = rec.repaint.clone();
@@ -323,9 +318,9 @@ pub fn handle_vehicle_requests(
         id,
         entry: (entry_id, entry_name),
         point: SpawnPoint {
-            x: f64::from(world.x),
-            y: f64::from(world.y),
-            z: f64::from(world.z),
+            x: abs.x,
+            y: abs.y,
+            z: f64::from(local.z),
             heading_deg: f64::from(heading),
         },
     });

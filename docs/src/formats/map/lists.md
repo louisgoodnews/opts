@@ -8,7 +8,7 @@
 | **Parser Module** | `opts_core::formats::map::lists` (`AiLists`, `parse_unsched_vehgroups`, `parse_unsched_trafficdens`; depot groups and the legacy `[ailist]` syntax are skipped) |
 | **Encoding** | UTF-8/ASCII, CP1252, UTF-8+BOM, a few UTF-16LE (`Holidays*.txt`) — detect per file |
 | **Status** | 🟢 Specified |
-| **Last Updated** | 2026-10-07 |
+| **Last Updated** | 2026-10-17 |
 
 ---
 
@@ -151,6 +151,20 @@ NormalCars
 | `[trafficdensity]` | 2 | `<hour 0–24>`, `<density>` (may exceed 1). Points form a piecewise curve. |
 
 Counts: 26,122 `[trafficdensity]`, 3,181 `[set_day_of_week]`, 1,275 `[group]` over 193 files. [C]
+
+**How the files combine with the tiles (OPTS density model, 2026-10-17).** The `flag` of a tile's
+`[rule] trafficdensity` is the 0-based index of a group in `unsched_vehgroups.txt` (all 297,493
+rules of maps with that file are in range; e.g. Berlin-Spandau flag 4 = `GDRCars`). OPTS computes:
+
+- **Density of group `g` on path `p`**, `D(p, g)`: the rule with flag `g` on `p` (the last one in file
+  order wins), unclamped (`3` is three times normal); without one, the group's default from
+  `unsched_vehgroups.txt`: `0` = none, `k ≥ 1` = `D(p, k − 1)`, and for the first group `1` = class
+  *Medium* (OPTS: `1.0` ❓). So `Commercials` (default 1) follow `NormalCars`' rules, and
+  `GDRCars`/`Trucks` (default 0 on Berlin-Spandau) drive only where a rule with their flag says so.
+- **Time factor** `f_g(t)`: the group's `[group]` factor × its curve at the session hour (wrapping at
+  midnight) for the session's day (`[set_day_of_week]` weekday/Saturday/Sunday; holidays ❓). A group
+  without an entry, or a map without the file, uses `global.cfg` `[trafficdensity_road]` (factor 1).
+- Target and spawning: [AI road traffic](../../architecture/ai-traffic.md#density-model-2026-10-17).
 
 ### Plain line lists
 
@@ -299,7 +313,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 | :--- | :--- |
 | Q-L01 | Second line of `[aigroup_depot]` = depot `.hof` reference; typgroup row = fleet number, plate, repaint, start date, end date. |
 | Q-L03 | A missing weight means the default share (relative to 100 %); exact default ❓ stays low priority. |
-| Q-L06 | `_1`/`_2` parklists are alternative pools selected per parking zone in the editor; draw uniformity still ❓. |
+| Q-L06 | `_1`/`_2` parklists are alternative pools selected per bay by the `car_park` marker's string value (see [Parking bays](#parking-bays-and-parked-vehicles-2026-10)); draw uniformity still ❓. |
 
 ---
 
@@ -342,4 +356,11 @@ Verified on `Ruhrau V2` (2,829 placements) and `Hamburg109`/`Neuendorf`:
   to a vehicle-style `model_parked.cfg`. Such configs often list two or three `[LOD]` levels: the full
   model with body, wheels, interior and shadow decal (`[LOD] 0.07`) and coarser far models down to `[LOD] 0` (corpus [C]: 74 configs `0.07` + `0`, 26 `0.07` + `0.04` + `0`). OPTS draws the most detailed level that has a `[mesh]` (highest threshold; `[LOD] 0` is the coarse far model, e.g. a single `*_LOD.o3d`), falling back to the next level when one loads nothing (MI-0046; there is no distance switch for these objects yet). The "black decal blobs" once seen at the close-up level were bodies made invisible by MI-0047.
 - Cars may also be placed directly as `Vehicles\…\parked_*.sco` objects (e.g. 106× `parked_hh109kipkw5_ziv.sco`).
-- Open: how `parklist_p_<n>.txt` variants are selected per bay (the attachment's trailing `1 / 1` fields are a guess).
+- **List selector (measured 2026-10-17).** The marker's first string value selects the list: blank or
+  `0` → `parklist_p.txt`, `N` → `parklist_p_N.txt` (Berlin-Spandau: `1` = the Trabant list
+  `parklist_p_1.txt`; Ahlheim, Bad Hügelsdorf and Lemmental ship and use `_1`/`_2`). Records with six
+  values are editor leftovers whose first value is blank. The value is often a blank line, which
+  the tile reader keeps ([tiles](tiles.md#blank-string-values)). OPTS reads the selected list
+  through the map's data-file resolver (the seam where Chrono overrides plug in) and falls back to
+  `parklist_p.txt` with a warning when `parklist_p_N.txt` is missing. The car for a bay is drawn
+  deterministically from the marker's id code and position (all bays of one attachment share the id).

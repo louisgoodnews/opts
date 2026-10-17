@@ -1,7 +1,10 @@
-//! Terrain height grids (`.map.terrain`) → Bevy meshes and height sampling.
+//! Terrain height grids (`.map.terrain`) → Bevy meshes, the carve under drawn ground surfaces,
+//! and the one height function every consumer samples
+//! (`docs/src/architecture/terrain-carving.md`).
 
 use bevy::asset::Handle;
 use bevy::image::Image;
+use bevy::math::{Vec2, Vec3};
 use bevy::mesh::Mesh;
 use bevy::pbr::StandardMaterial;
 use bevy::render::render_resource::Face;
@@ -10,72 +13,90 @@ use opts_core::formats::map::{MapSplineInstance, MapTerrain};
 use opts_core::formats::scenery::SplineProfile;
 
 use crate::mesh::smooth_normal_mesh;
-use crate::scenery::spline_pose;
+use crate::scenery::spline_stations;
 
 /// Default side length of a map tile in metres (`docs/src/formats/map/tiles.md` Q-M01). Maps with
-/// `[worldcoordinates]` use larger tiles (Berlin-Spandau 372 m, Wuppertal 639 382.8 m): see
-/// [`tile_size`].
+/// `[worldcoordinates]` lay their tiles out on Mercator rows instead
+/// (`opts_core::formats::map::TileGrid`); a tile's size and cell come from the session's grid.
 pub const TILE_SIZE_M: f32 = 300.0;
 
-/// Default terrain grid cell size (60 cells per default tile); see [`terrain_cell`].
+/// Default terrain grid cell size (60 cells per default tile).
 pub const TERRAIN_CELL_M: f32 = TILE_SIZE_M / 60.0;
 
-static TILE_SIZE_BITS: std::sync::atomic::AtomicU32 =
-    std::sync::atomic::AtomicU32::new(TILE_SIZE_M.to_bits());
+/// Clearance the carve leaves between a drawn ground surface and the terrain under it (m).
+pub const CARVE_EPSILON_M: f32 = 0.03;
+/// Deepest a vertex is lowered for one surface (m): terrain further above a surface is buried
+/// content (a tunnel, a river bed, stale paving) and stays as authored.
+pub const CARVE_COVER_M: f32 = 1.0;
 
-/// Side length of a tile of the map being played (set once per session by [`set_tile_size`]).
-#[must_use]
-pub fn tile_size() -> f32 {
-    f32::from_bits(TILE_SIZE_BITS.load(std::sync::atomic::Ordering::Relaxed))
+/// A tile's terrain grid with the size of its cells (`TileGrid::cell` of the tile's row): what
+/// every height consumer samples.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TileTerrain {
+    /// The height grid.
+    pub grid: MapTerrain,
+    /// Edge of one cell (m).
+    pub cell: f32,
 }
 
-/// Sets the tile size of the current map.
-pub fn set_tile_size(metres: f32) {
-    TILE_SIZE_BITS.store(metres.to_bits(), std::sync::atomic::Ordering::Relaxed);
+impl TileTerrain {
+    /// A grid with cells of `cell` metres.
+    #[must_use]
+    pub fn new(grid: MapTerrain, cell: f32) -> Self {
+        Self { grid, cell }
+    }
+
+    /// Ground height at tile-local `(x, y)` metres, as drawn ([`terrain_height`]).
+    #[must_use]
+    pub fn height(&self, x: f32, y: f32) -> f32 {
+        terrain_height(&self.grid, self.cell, x, y)
+    }
 }
 
-/// Terrain cell size of the current map (a tile has 60 × 60 cells).
+/// Height of a tile's terrain at tile-local `(x, y)` metres, interpolated on the triangles the
+/// mesh is drawn with ([`build_terrain_mesh`]: cell `(i, j)` splits into `(i,j) (i+1,j) (i,j+1)`
+/// and `(i+1,j) (i+1,j+1) (i,j+1)`), so objects, lanes and vehicles stand on the drawn ground.
+/// Points outside the grid take the height at the nearest border.
 #[must_use]
-pub fn terrain_cell() -> f32 {
-    tile_size() / 60.0
-}
-
-/// Bilinearly samples a tile's height grid at tile-local `(x, y)` metres.
-#[must_use]
-pub fn sample_terrain(terrain: &MapTerrain, x: f32, y: f32) -> f32 {
-    let dim = terrain.grid_cells as usize + 1;
-    if dim < 2 || terrain.heights.len() < dim * dim {
+pub fn terrain_height(terrain: &MapTerrain, cell: f32, x: f32, y: f32) -> f32 {
+    let n = terrain.grid_cells as usize;
+    let dim = n + 1;
+    if n == 0 || terrain.heights.len() < dim * dim {
         return 0.0;
     }
-    let max = terrain.grid_cells as f32 - 0.0001;
-    let gx = (x / terrain_cell()).clamp(0.0, max);
-    let gy = (y / terrain_cell()).clamp(0.0, max);
-    let (ix, iy) = (gx as usize, gy as usize);
-    let (fx, fy) = (gx - ix as f32, gy - iy as f32);
+    let gx = (x / cell).clamp(0.0, n as f32);
+    let gy = (y / cell).clamp(0.0, n as f32);
+    let (i, j) = ((gx as usize).min(n - 1), (gy as usize).min(n - 1));
+    let (u, w) = (gx - i as f32, gy - j as f32);
     let h = |i: usize, j: usize| terrain.heights[j * dim + i];
-    let a = h(ix, iy) * (1.0 - fx) + h(ix + 1, iy) * fx;
-    let b = h(ix, iy + 1) * (1.0 - fx) + h(ix + 1, iy + 1) * fx;
-    a * (1.0 - fy) + b * fy
+    if u + w <= 1.0 {
+        let a = h(i, j);
+        a + (h(i + 1, j) - a) * u + (h(i, j + 1) - a) * w
+    } else {
+        let d = h(i + 1, j + 1);
+        d + (h(i, j + 1) - d) * (1.0 - u) + (h(i + 1, j) - d) * (1.0 - w)
+    }
 }
 
 /// Builds the terrain mesh of one tile in absolute Bevy world coordinates.
 ///
-/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`. With
-/// `uv_per_tile` the UVs span 0..1 over the tile (painted ground texture), otherwise one unit per
-/// 5 m cell (a repeating base texture).
+/// `origin` is the tile's south-west corner in OMSI world metres `(east, north)`, `cell` its
+/// terrain cell. With `uv_per_tile` the UVs span 0..1 over the tile (painted ground texture),
+/// otherwise one unit per cell (a repeating base texture).
 #[must_use]
-pub fn build_terrain_mesh(terrain: &MapTerrain, origin: (f32, f32), uv_per_tile: bool) -> Mesh {
+pub fn build_terrain_mesh(
+    terrain: &MapTerrain,
+    origin: (f32, f32),
+    cell: f32,
+    uv_per_tile: bool,
+) -> Mesh {
     let dim = terrain.grid_cells as usize + 1;
     let mut positions = Vec::with_capacity(dim * dim);
     let mut uvs = Vec::with_capacity(dim * dim);
     for j in 0..dim {
         for i in 0..dim {
             let h = terrain.heights.get(j * dim + i).copied().unwrap_or(0.0);
-            positions.push([
-                origin.0 + i as f32 * terrain_cell(),
-                h,
-                -(origin.1 + j as f32 * terrain_cell()),
-            ]);
+            positions.push([origin.0 + i as f32 * cell, h, -(origin.1 + j as f32 * cell)]);
             if uv_per_tile {
                 // One texture over the whole tile, row 0 at the north edge.
                 let n = (dim - 1) as f32;
@@ -98,132 +119,178 @@ pub fn build_terrain_mesh(terrain: &MapTerrain, origin: (f32, f32), uv_per_tile:
     smooth_normal_mesh(positions, uvs, indices)
 }
 
-/// Ground a road-like spline covers: its centreline and the lowest surface height of its profile.
-///
-/// OMSI bakes a spline's `[heightprofile]` into the terrain, but the terrain grid is only 5 m wide
-/// and its curb strips sit up to 0.15 m above the carriageway, so the raw grid pokes through the
-/// road surface from above (the road then only shows from below).
-#[derive(Debug, Clone, PartialEq)]
-pub struct RoadFootprint {
-    /// Centreline samples `(east, north, surface datum z)`, tile-local metres.
-    pub centreline: Vec<[f32; 3]>,
-    /// Half of the profile's total width (m).
-    pub half_width: f32,
-    /// Lowest profile point height relative to the centreline datum (m).
-    pub min_surface_z: f32,
-    /// Terrain further than this above the surface is left alone (a cutting or tunnel roof, not a
-    /// grid that merely covers the surface): infinite for roads with a height profile.
-    pub max_cover: f32,
-}
+/// A triangle of a drawn ground surface (a spline's surface ribbon, a crossing's ground face)
+/// in a tile's frame: `(east, north, height)` metres.
+pub type GroundTriangle = [Vec3; 3];
 
-/// Narrowest flat spline (m) that is treated as a ground surface the terrain must not cover.
-const FLAT_SURFACE_MIN_WIDTH_M: f32 = 2.0;
-/// How far above a flat surface the terrain may lie and still be lowered onto it (m).
-const FLAT_SURFACE_MAX_COVER_M: f32 = 0.4;
-
-/// Footprint of a placed spline, or `None` when it does not deform the terrain (no height profile).
+/// The surface ribbon of a placed spline: its profile's ground surface
+/// ([`SplineProfile::ground_surface`]) extruded over the same stations as the drawn spline
+/// ([`spline_stations`], `[spline_h]` ramps included). `offset` is the corner of the spline's tile
+/// in the frame the triangles are wanted in (zero for the spline's own tile). Mirrored splines
+/// negate the profile's `x`; profiles without a surface give nothing.
 #[must_use]
-pub fn road_footprint(profile: &SplineProfile, inst: &MapSplineInstance) -> Option<RoadFootprint> {
-    // Flat surfaces without a height profile (pavements, plazas, bus bays laid on the ground) are
-    // authored a few centimetres below the terrain grid and would be covered by it.
-    let flat_surface = !profile.only_editor && profile.flat_width() >= FLAT_SURFACE_MIN_WIDTH_M;
-    if profile.height_profiles.is_empty() && !flat_surface {
-        return None;
+pub fn spline_ground_triangles(
+    profile: &SplineProfile,
+    inst: &MapSplineInstance,
+    offset: (f32, f32),
+) -> Vec<GroundTriangle> {
+    let surface = profile.ground_surface();
+    if surface.is_empty() {
+        return Vec::new();
     }
-    let points = || profile.graphical_profiles.iter().flat_map(|g| &g.points);
-    let half_width = points().map(|p| p.x.abs()).fold(0.0_f32, f32::max);
-    let min_surface_z = points().map(|p| p.z).fold(f32::INFINITY, f32::min);
-    if half_width <= 0.0 || !min_surface_z.is_finite() {
-        return None;
+    let side = if inst.mirrored { -1.0 } else { 1.0 };
+    let stations = spline_stations(inst, offset);
+    let at = |k: usize, x: f32, z: f32| {
+        let (ex, ny, sz, h, _) = stations[k];
+        let x = x * side;
+        Vec3::new(ex + h.cos() * x, ny - h.sin() * x, sz + z)
+    };
+    let mut out = Vec::with_capacity(surface.len() * stations.len() * 2);
+    for k in 0..stations.len().saturating_sub(1) {
+        for seg in &surface {
+            let (a, b) = (at(k, seg.x0, seg.z0), at(k, seg.x1, seg.z1));
+            let (c, d) = (at(k + 1, seg.x0, seg.z0), at(k + 1, seg.x1, seg.z1));
+            out.push([a, b, c]);
+            out.push([b, d, c]);
+        }
     }
-    let length = inst.length_m.max(0.01);
-    let steps = ((length / 2.0).ceil() as usize).clamp(1, 400);
-    let centreline = (0..=steps)
-        .map(|k| {
-            let p = spline_pose(inst, length * k as f32 / steps as f32);
-            [p.x, p.y, p.z]
-        })
-        .collect();
-    Some(RoadFootprint {
-        centreline,
-        half_width,
-        min_surface_z,
-        max_cover: if profile.height_profiles.is_empty() {
-            FLAT_SURFACE_MAX_COVER_M
-        } else {
-            f32::INFINITY
-        },
-    })
+    out
 }
 
-/// The footprint of a spline placed on a neighbouring tile, moved into this tile's frame, or
-/// `None` when it does not come within reach of this tile's grid.
-///
-/// `offset` is the neighbour's south-west corner relative to this tile's (`(dx·tile, dy·tile)`).
-/// Splines are stored on the tile they start in but run on across the border; a tile carved only
-/// under its own splines covered the part of a road that lies on the next tile (Neuenbreid: 286 m
-/// of road surface under the neighbour's terrain, 7 m within the splines' own tiles).
-#[must_use]
-pub fn footprint_from_neighbour(road: &RoadFootprint, offset: (f32, f32)) -> Option<RoadFootprint> {
-    let reach = road.half_width + terrain_cell();
-    let size = tile_size();
-    let centreline: Vec<[f32; 3]> = road
-        .centreline
-        .iter()
-        .map(|p| [p[0] + offset.0, p[1] + offset.1, p[2]])
-        .collect();
-    let near = centreline.iter().any(|p| {
-        (-reach..=size + reach).contains(&p[0]) && (-reach..=size + reach).contains(&p[1])
-    });
-    near.then(|| RoadFootprint {
-        centreline,
-        ..road.clone()
-    })
+/// What [`carve_terrain`] did.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CarveStats {
+    /// Vertices lowered.
+    pub lowered: usize,
+    /// Vertices a surface would have lowered by more than [`CARVE_COVER_M`] (left as authored).
+    pub guarded: usize,
 }
 
-/// Lowers terrain vertices under road surfaces so the terrain never covers them.
+/// Twice the signed area of the 2D triangle `a b c`.
+fn cross2(a: Vec2, b: Vec2, c: Vec2) -> f32 {
+    (b - a).perp_dot(c - a)
+}
+
+/// The part of convex polygon `subject` inside the counter-clockwise triangle `clip`
+/// (Sutherland-Hodgman).
+fn clip_to_triangle(subject: &[Vec2], clip: [Vec2; 3]) -> Vec<Vec2> {
+    let mut poly = subject.to_vec();
+    for e in 0..3 {
+        if poly.is_empty() {
+            break;
+        }
+        let (p, q) = (clip[e], clip[(e + 1) % 3]);
+        let side = |x: Vec2| cross2(p, q, x);
+        let mut next = Vec::with_capacity(poly.len() + 2);
+        for k in 0..poly.len() {
+            let (a, b) = (poly[k], poly[(k + 1) % poly.len()]);
+            let (sa, sb) = (side(a), side(b));
+            if sa >= 0.0 {
+                next.push(a);
+            }
+            if (sa >= 0.0) != (sb >= 0.0) {
+                next.push(a + (b - a) * (sa / (sa - sb)));
+            }
+        }
+        poly = next;
+    }
+    poly
+}
+
+/// Lowers the terrain under drawn ground surfaces so it never covers them
+/// (`docs/src/architecture/terrain-carving.md` §4).
 ///
-/// A vertex within `half_width + ½ cell` of a road centreline is capped at the road's lowest
-/// surface height minus a small clearance; vertices elsewhere and heights already below the road
-/// stay untouched.
+/// For every surface triangle and every terrain triangle it overlaps (the mesh's own split), the
+/// lowest surface height on their overlap minus [`CARVE_EPSILON_M`] caps the terrain triangle's
+/// three vertices. A cap that would lower a vertex by more than [`CARVE_COVER_M`] is not applied
+/// (buried content). Terrain triangles one cell beyond the tile's border take part too, so a
+/// border vertex gets the same caps on both tiles that share it. Heights are only ever lowered;
+/// the mesh topology is unchanged.
 #[must_use]
-pub fn carve_terrain_under_roads(terrain: &MapTerrain, roads: &[RoadFootprint]) -> MapTerrain {
-    const CLEARANCE_M: f32 = 0.03;
-    let dim = terrain.grid_cells as usize + 1;
+pub fn carve_terrain(
+    terrain: &TileTerrain,
+    surfaces: &[GroundTriangle],
+) -> (TileTerrain, CarveStats) {
+    let n = terrain.grid.grid_cells as usize;
+    let dim = n + 1;
     let mut out = terrain.clone();
-    if out.heights.len() < dim * dim {
-        return out;
+    let mut stats = CarveStats::default();
+    if n == 0 || terrain.grid.heights.len() < dim * dim {
+        return (out, stats);
     }
-    for road in roads {
-        let reach = road.half_width + terrain_cell() * 0.5;
-        for seg in road.centreline.windows(2) {
-            let (a, b) = (seg[0], seg[1]);
-            let (min_x, max_x) = (a[0].min(b[0]) - reach, a[0].max(b[0]) + reach);
-            let (min_y, max_y) = (a[1].min(b[1]) - reach, a[1].max(b[1]) + reach);
-            let i0 = ((min_x / terrain_cell()).floor().max(0.0)) as usize;
-            let j0 = ((min_y / terrain_cell()).floor().max(0.0)) as usize;
-            let i1 = (((max_x / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
-            let j1 = (((max_y / terrain_cell()).ceil()).max(0.0) as usize).min(dim - 1);
-            let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-            let len2 = (dx * dx + dy * dy).max(1e-9);
-            for j in j0..=j1 {
-                for i in i0..=i1 {
-                    let (vx, vy) = (i as f32 * terrain_cell(), j as f32 * terrain_cell());
-                    let t = (((vx - a[0]) * dx + (vy - a[1]) * dy) / len2).clamp(0.0, 1.0);
-                    let (px, py) = (a[0] + t * dx, a[1] + t * dy);
-                    if (vx - px).hypot(vy - py) > reach {
+    let cell = terrain.cell;
+    let raw = &terrain.grid.heights;
+    let mut cap = vec![f32::INFINITY; dim * dim];
+    let mut guarded = vec![false; dim * dim];
+    let ring = -1_i64..=n as i64;
+    for tri in surfaces {
+        let p = tri.map(|v| v.truncate());
+        let area = cross2(p[0], p[1], p[2]);
+        if area.abs() < 1e-8 {
+            continue;
+        }
+        // Counter-clockwise for the clipper; the height plane follows the vertices.
+        let (p, h) = if area > 0.0 {
+            (p, [tri[0].z, tri[1].z, tri[2].z])
+        } else {
+            ([p[0], p[2], p[1]], [tri[0].z, tri[2].z, tri[1].z])
+        };
+        let height_at = |x: Vec2| {
+            let a = cross2(p[0], p[1], p[2]);
+            let l0 = cross2(x, p[1], p[2]) / a;
+            let l1 = cross2(p[0], x, p[2]) / a;
+            l0 * h[0] + l1 * h[1] + (1.0 - l0 - l1) * h[2]
+        };
+        let lo = p[0].min(p[1]).min(p[2]) / cell;
+        let hi = p[0].max(p[1]).max(p[2]) / cell;
+        let i0 = (lo.x.floor() as i64).max(*ring.start());
+        let i1 = (hi.x.floor() as i64).min(*ring.end());
+        let j0 = (lo.y.floor() as i64).max(*ring.start());
+        let j1 = (hi.y.floor() as i64).min(*ring.end());
+        for j in j0..=j1 {
+            for i in i0..=i1 {
+                let v = |di: i64, dj: i64| (i + di, j + dj);
+                for corners in [[v(0, 0), v(1, 0), v(0, 1)], [v(1, 0), v(1, 1), v(0, 1)]] {
+                    let pts = corners.map(|(a, b)| Vec2::new(a as f32 * cell, b as f32 * cell));
+                    let overlap = clip_to_triangle(&pts, p);
+                    if overlap.len() < 3 {
                         continue;
                     }
-                    let ceiling = a[2] + t * (b[2] - a[2]) + road.min_surface_z - CLEARANCE_M;
-                    let h = &mut out.heights[j * dim + i];
-                    if *h - ceiling <= road.max_cover {
-                        *h = h.min(ceiling);
+                    let overlap_area: f32 = (1..overlap.len() - 1)
+                        .map(|k| cross2(overlap[0], overlap[k], overlap[k + 1]))
+                        .sum();
+                    if overlap_area.abs() < 1e-6 {
+                        continue;
+                    }
+                    let m = overlap
+                        .iter()
+                        .map(|&x| height_at(x))
+                        .fold(f32::INFINITY, f32::min)
+                        - CARVE_EPSILON_M;
+                    for (a, b) in corners {
+                        if !(0..=n as i64).contains(&a) || !(0..=n as i64).contains(&b) {
+                            continue;
+                        }
+                        let k = b as usize * dim + a as usize;
+                        if raw[k] - m > CARVE_COVER_M {
+                            guarded[k] = true;
+                        } else if m < cap[k] {
+                            cap[k] = m;
+                        }
                     }
                 }
             }
         }
     }
-    out
+    for (k, h) in out.grid.heights.iter_mut().enumerate().take(dim * dim) {
+        if cap[k] < *h {
+            *h = cap[k];
+            stats.lowered += 1;
+        } else if guarded[k] {
+            stats.guarded += 1;
+        }
+    }
+    (out, stats)
 }
 
 #[must_use]
@@ -240,52 +307,238 @@ pub fn terrain_material(texture: Option<Handle<Image>>) -> StandardMaterial {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfilePoint};
 
-    #[test]
-    fn terrain_sampling_interpolates() {
-        let dim = 61;
-        let mut heights = vec![0.0; dim * dim];
-        for j in 0..dim {
-            for i in 0..dim {
-                heights[j * dim + i] = i as f32;
-            }
+    fn flat(h: f32) -> TileTerrain {
+        TileTerrain::new(
+            MapTerrain {
+                grid_cells: 60,
+                heights: vec![h; 61 * 61],
+            },
+            5.0,
+        )
+    }
+
+    fn profile(parts: &[&[(f32, f32)]]) -> SplineProfile {
+        let mut p = SplineProfile::default();
+        for pts in parts {
+            p.graphical_profiles.push(SplineGraphicalProfile {
+                texture_index: 0,
+                points: pts
+                    .iter()
+                    .map(|&(x, z)| SplineProfilePoint {
+                        x,
+                        z,
+                        u: 0.0,
+                        v_slope: 0.0,
+                    })
+                    .collect(),
+            });
         }
-        let t = MapTerrain {
-            grid_cells: 60,
-            heights,
-        };
-        assert!((sample_terrain(&t, 7.5, 100.0) - 1.5).abs() < 1e-4);
-        let mesh = build_terrain_mesh(&t, (300.0, 0.0), false);
-        assert_eq!(mesh.count_vertices(), 61 * 61);
+        p
+    }
+
+    /// A straight spline heading north from `(x, y)` at height `z`.
+    fn spline(x: f32, y: f32, z: f32, length: f32) -> MapSplineInstance {
+        MapSplineInstance {
+            flag: 0,
+            sli_file: String::new(),
+            id_code: 1,
+            conn_id_1: 0,
+            conn_id_2: 0,
+            position: Vec3::new(x, y, z),
+            heading_deg: 0.0,
+            length_m: length,
+            radius_m: 0.0,
+            gradient_start: 0.0,
+            gradient_end: 0.0,
+            has_height_profile: false,
+            mirrored: false,
+            raw_params: Vec::new(),
+        }
+    }
+
+    fn h(t: &TileTerrain, i: usize, j: usize) -> f32 {
+        t.grid.heights[j * 61 + i]
     }
 
     #[test]
-    fn a_road_from_the_neighbour_tile_is_carved_too() {
-        set_tile_size(300.0);
-        let dim = 61;
-        let flat = MapTerrain {
-            grid_cells: 60,
-            heights: vec![1.0; dim * dim],
+    fn terrain_height_follows_the_mesh_triangles() {
+        let mut heights = vec![0.0; 61 * 61];
+        for (k, v) in heights.iter_mut().enumerate() {
+            *v = ((k * 7919) % 13) as f32;
+        }
+        let t = TileTerrain::new(
+            MapTerrain {
+                grid_cells: 60,
+                heights,
+            },
+            5.0,
+        );
+        let mesh = build_terrain_mesh(&t.grid, (0.0, 0.0), 5.0, false);
+        let pos = mesh
+            .attribute(Mesh::ATTRIBUTE_POSITION)
+            .and_then(|a| a.as_float3())
+            .expect("positions")
+            .to_vec();
+        let Some(bevy::mesh::Indices::U32(idx)) = mesh.indices() else {
+            panic!("indices")
         };
-        // A road on the western neighbour, running east from x = 280 to x = 340 there: its last
-        // 40 m lie on this tile (x = -20 .. 40 here), 0.5 m below the terrain.
-        let road = RoadFootprint {
-            centreline: (0..=12)
-                .map(|k| [280.0 + 5.0 * k as f32, 150.0, 0.5])
-                .collect(),
-            half_width: 3.0,
-            min_surface_z: 0.0,
-            max_cover: f32::INFINITY,
-        };
-        let here = footprint_from_neighbour(&road, (-300.0, 0.0)).expect("reaches this tile");
-        let carved = carve_terrain_under_roads(&flat, &[here]);
-        assert!(sample_terrain(&carved, 20.0, 150.0) < 0.5);
-        assert!((sample_terrain(&carved, 100.0, 150.0) - 1.0).abs() < 1e-4);
-        // A road that stays on the neighbour does not reach this tile.
-        let far = RoadFootprint {
-            centreline: vec![[100.0, 150.0, 0.5], [200.0, 150.0, 0.5]],
-            ..road
-        };
-        assert!(footprint_from_neighbour(&far, (-300.0, 0.0)).is_none());
+        // Both triangles of cell (3, 4): sample their centroids and interpolate the mesh's own
+        // triangle there.
+        let cell = 4 * 60 + 3;
+        for tri in [
+            &idx[cell * 6..cell * 6 + 3],
+            &idx[cell * 6 + 3..cell * 6 + 6],
+        ] {
+            let v: Vec<Vec3> = tri.iter().map(|&i| Vec3::from(pos[i as usize])).collect();
+            for wts in [[1.0 / 3.0; 3], [0.6, 0.3, 0.1], [0.1, 0.1, 0.8]] {
+                let p = v[0] * wts[0] + v[1] * wts[1] + v[2] * wts[2];
+                let got = t.height(p.x, -p.z);
+                assert!((got - p.y).abs() < 1e-4, "{got} vs mesh {}", p.y);
+            }
+        }
+    }
+
+    /// `Damm1`-like embankment: crest ±5 m at the datum, flanks down to −20 m at ±35 m, crest 15 m
+    /// above flat ground. Nothing beyond crest ± 5 m changes and nothing is lowered by more than
+    /// the guard (today's carve dug a 20 m pit 38 m wide).
+    #[test]
+    fn an_embankment_carves_only_its_crest() {
+        let ground = flat(10.0);
+        let damm = profile(&[
+            &[(-5.0, 0.0), (5.0, 0.0)],
+            &[(-35.0, -20.0), (-5.0, 0.0)],
+            &[(5.0, 0.0), (35.0, -20.0)],
+        ]);
+        // The crest at 9.5 m: terrain 0.5 m above it is lowered under the crest only.
+        let tris = spline_ground_triangles(&damm, &spline(150.0, 50.0, 9.5, 200.0), (0.0, 0.0));
+        let (carved, stats) = carve_terrain(&ground, &tris);
+        assert!(stats.lowered > 0);
+        for j in 0..=60 {
+            for i in 0..=60 {
+                let (x, d) = (i as f32 * 5.0, h(&ground, i, j) - h(&carved, i, j));
+                assert!(d <= CARVE_COVER_M + 1e-5);
+                if (x - 150.0).abs() > 10.0 {
+                    assert_eq!(d, 0.0, "vertex {i},{j} at x {x} lowered by {d}");
+                }
+            }
+        }
+        // The crest 15 m above the ground: nothing to carve at all.
+        let tris = spline_ground_triangles(&damm, &spline(150.0, 50.0, 25.0, 200.0), (0.0, 0.0));
+        assert_eq!(carve_terrain(&ground, &tris).0, ground);
+    }
+
+    /// A carriageway (0.0) between kerbs and pavements (+0.15): the terrain baked to the datum
+    /// ends below the surface everywhere, a vertex 0.5 m above the outer edge is lowered just
+    /// enough, a vertex two cells out stays.
+    #[test]
+    fn a_kerbed_street_is_carved_just_enough() {
+        let street = profile(&[&[
+            (-6.0, 0.15),
+            (-4.0, 0.15),
+            (-4.0, 0.0),
+            (4.0, 0.0),
+            (4.0, 0.15),
+            (6.0, 0.15),
+        ]]);
+        let mut ground = flat(10.0);
+        // An outer vertex (x = 160) 0.5 m above the pavement's outer edge (x = 156, 10.15 m).
+        ground.grid.heights[20 * 61 + 32] = 10.65;
+        let inst = spline(150.0, 50.0, 10.0, 200.0);
+        let tris = spline_ground_triangles(&street, &inst, (0.0, 0.0));
+        let (carved, _) = carve_terrain(&ground, &tris);
+        for y in [60.0_f32, 100.0, 133.3] {
+            for x in [146.5_f32, 150.0, 153.9, 155.0] {
+                let surface = 10.0 + street.surface_at(x - 150.0).expect("on the street");
+                assert!(
+                    carved.height(x, y) <= surface - CARVE_EPSILON_M + 1e-4,
+                    "terrain {} over surface {surface} at ({x}, {y})",
+                    carved.height(x, y)
+                );
+            }
+        }
+        // Lowered just below the pavement it shares triangles with, no further.
+        assert!((h(&carved, 32, 20) - (10.15 - CARVE_EPSILON_M)).abs() < 1e-4);
+        // Two cells beyond the pavement edge (x = 165, 170): untouched.
+        assert_eq!(h(&carved, 33, 20), 10.0);
+        assert_eq!(h(&carved, 34, 20), 10.0);
+    }
+
+    /// Three metres of cover over a surface (a tunnel roof): the guard keeps it.
+    #[test]
+    fn deep_cover_is_left_alone() {
+        let ground = flat(13.0);
+        let road = profile(&[&[(-4.0, 0.0), (4.0, 0.0)]]);
+        let tris = spline_ground_triangles(&road, &spline(150.0, 50.0, 10.0, 100.0), (0.0, 0.0));
+        let (carved, stats) = carve_terrain(&ground, &tris);
+        assert_eq!(carved, ground);
+        assert!(stats.guarded > 0);
+        assert_eq!(stats.lowered, 0);
+    }
+
+    /// An asymmetric profile (surface on the right only) lands on the left when mirrored.
+    #[test]
+    fn a_mirrored_profile_carves_the_other_side() {
+        let ground = flat(10.2);
+        let half = profile(&[&[(2.0, 0.0), (12.0, 0.0)]]);
+        let mut inst = spline(150.0, 50.0, 10.0, 100.0);
+        let (right, _) = carve_terrain(&ground, &spline_ground_triangles(&half, &inst, (0.0, 0.0)));
+        inst.mirrored = true;
+        let (left, _) = carve_terrain(&ground, &spline_ground_triangles(&half, &inst, (0.0, 0.0)));
+        assert!(right.height(157.0, 100.0) < 10.0);
+        assert_eq!(right.height(143.0, 100.0), 10.2);
+        assert!(left.height(143.0, 100.0) < 10.0);
+        assert_eq!(left.height(157.0, 100.0), 10.2);
+    }
+
+    /// A `[spline_h]` ramp rises 2 m as a cubic; the carve follows the ramp, not a straight line.
+    #[test]
+    fn a_spline_h_ramp_is_followed() {
+        let ground = flat(11.2);
+        let road = profile(&[&[(-4.0, 0.0), (4.0, 0.0)]]);
+        let mut inst = spline(150.0, 50.0, 10.0, 100.0);
+        inst.has_height_profile = true;
+        inst.raw_params = vec![String::new(), String::new(), "2".into()];
+        let tris = spline_ground_triangles(&road, &inst, (0.0, 0.0));
+        let (carved, _) = carve_terrain(&ground, &tris);
+        // Hermite between flat ends: 25 % along, the road is at 10 + 2·(3·0.0625 − 2·0.015625)
+        // = 10.3125 (a straight ramp would be at 10.5).
+        let at = carved.height(150.0, 75.0);
+        assert!(at <= 10.3125 - CARVE_EPSILON_M + 0.05, "{at}");
+        assert!(at > 10.0, "{at}");
+        // Near the top the terrain (11.2) is within 0.03 + rounding of the road surface.
+        assert!(carved.height(150.0, 145.0) > 11.0);
+    }
+
+    /// A road on the western neighbour that runs on into this tile is carved here too, and the
+    /// vertices of the shared border get the same height on both tiles.
+    #[test]
+    fn border_vertices_agree_between_tiles() {
+        let ground = flat(10.5);
+        let road = profile(&[&[(-3.0, 0.0), (3.0, 0.0)]]);
+        // Diagonal road on the west tile crossing its east border at y ≈ 150.
+        let mut inst = spline(260.0, 110.0, 10.0, 120.0);
+        inst.heading_deg = 45.0;
+        let west = carve_terrain(&ground, &spline_ground_triangles(&road, &inst, (0.0, 0.0))).0;
+        let east = carve_terrain(
+            &ground,
+            &spline_ground_triangles(&road, &inst, (-300.0, 0.0)),
+        )
+        .0;
+        let mut lowered = 0;
+        for j in 0..=60 {
+            let (w, e) = (h(&west, 60, j), h(&east, 0, j));
+            assert!((w - e).abs() < 1e-4, "row {j}: west {w} east {e}");
+            lowered += usize::from(w < 10.5);
+        }
+        assert!(lowered >= 2, "the road crosses the border");
+        assert!(east.height(10.0, 160.0) < 10.0);
+    }
+
+    #[test]
+    fn terrain_mesh_has_one_vertex_per_grid_point() {
+        let mesh = build_terrain_mesh(&flat(1.0).grid, (300.0, 0.0), 5.0, false);
+        assert_eq!(mesh.count_vertices(), 61 * 61);
     }
 }

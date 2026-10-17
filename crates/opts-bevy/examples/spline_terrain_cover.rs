@@ -1,32 +1,21 @@
 //! How much of a map's drawn splines does the terrain cover? Rebuilds every tile's terrain as the
-//! game does (`carve_terrain_under_roads` with the footprints of the tile's own splines) and walks
-//! the centreline of every drawn spline in 1 m steps: a sample counts as covered when the carved
-//! terrain of the tile it lies in is more than 5 cm above the profile's centre surface. Samples
-//! are split by whether they lie in the spline's own tile or in a neighbour, and by whether the
-//! spline has a terrain footprint (`road_footprint`).
+//! game does (`carve_terrain` under the ground surfaces of the tile's and its neighbours'
+//! splines, on the map's `TileGrid`) and walks the centreline of every drawn spline in 1 m steps:
+//! a sample counts as covered when the carved terrain of the tile it lies in is more than 5 cm
+//! above the profile's centre surface. Samples are split by whether they lie in the spline's own
+//! tile or in a neighbour, and by whether the profile has a ground surface.
 //!
-//! With `--neighbours` each tile is also carved under the footprints of its eight neighbours'
-//! splines (`footprint_from_neighbour`), as the game does since the Neuenbreid fix.
-//!
-//! Usage: `cargo run --release -p opts-bevy --example spline_terrain_cover -- <map dir> [tile size] [--neighbours]`
+//! Usage: `cargo run --release -p opts-bevy --example spline_terrain_cover -- <map dir>`
 use std::collections::{BTreeMap, HashMap};
 
 use opts_bevy::install::OmsiInstall;
 use opts_bevy::scenery::{extrude_spline_segment, spline_pose};
-use opts_bevy::terrain::{
-    carve_terrain_under_roads, footprint_from_neighbour, road_footprint, sample_terrain,
-    set_tile_size,
-};
-use opts_core::formats::map::{MapTerrain, MapTile};
+use opts_bevy::terrain::{carve_terrain, spline_ground_triangles, TileTerrain};
+use opts_core::formats::map::{MapManifest, MapTerrain, MapTile, TileGrid};
 use opts_core::formats::scenery::sli::SplineProfile;
 
 fn main() {
-    let mut args = std::env::args().skip(1);
-    let dir = std::path::PathBuf::from(args.next().expect("map dir"));
-    let rest: Vec<String> = args.collect();
-    let neighbours = rest.iter().any(|a| a == "--neighbours");
-    let tile_size: f32 = rest.iter().find_map(|s| s.parse().ok()).unwrap_or(300.0);
-    set_tile_size(tile_size);
+    let dir = std::path::PathBuf::from(std::env::args().nth(1).expect("map dir"));
     let root = OmsiInstall::root_from_map_dir(&dir).expect("OMSI root");
     let install = OmsiInstall::new(&root);
 
@@ -59,38 +48,47 @@ fn main() {
             })
             .clone()
     };
-    // The terrain each tile is drawn with.
-    let mut carved: HashMap<(i32, i32), MapTerrain> = HashMap::new();
-    for (key, (tile, terrain)) in &tiles {
+    let world_coordinates = std::fs::read(dir.join("global.cfg"))
+        .ok()
+        .and_then(|b| MapManifest::parse(&b).ok())
+        .is_some_and(|m| m.world_coordinates);
+    let sample: Vec<_> = tiles
+        .iter()
+        .map(|(k, (t, _))| (*k, t.splines.clone()))
+        .collect();
+    let (grid, _) = TileGrid::measure(&sample, world_coordinates);
+    // The terrain each tile is drawn with: carved under the surfaces of its own and its eight
+    // neighbours' splines, as the game does.
+    let mut carved: HashMap<(i32, i32), TileTerrain> = HashMap::new();
+    let (mut lowered, mut guarded) = (0, 0);
+    for (key, (_, terrain)) in &tiles {
         let Some(t) = terrain else { continue };
-        let mut roads: Vec<_> = tile
-            .splines
-            .iter()
-            .filter_map(|s| road_footprint(&profile(&s.sli_file)?, s))
-            .collect();
-        if neighbours {
-            for dx in -1..=1 {
-                for dy in -1..=1 {
-                    let Some((n, _)) = tiles.get(&(key.0 + dx, key.1 + dy)) else {
-                        continue;
-                    };
-                    if (dx, dy) == (0, 0) {
-                        continue;
+        let mut surfaces = Vec::new();
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                let other = (key.0 + dx, key.1 + dy);
+                let Some((n, _)) = tiles.get(&other) else {
+                    continue;
+                };
+                let o = grid.neighbour_offset(*key, other);
+                for s in &n.splines {
+                    if let Some(p) = profile(&s.sli_file) {
+                        surfaces.extend(spline_ground_triangles(&p, s, (o.x, o.y)));
                     }
-                    let offset = (dx as f32 * tile_size, dy as f32 * tile_size);
-                    roads.extend(n.splines.iter().filter_map(|s| {
-                        footprint_from_neighbour(
-                            &road_footprint(&profile(&s.sli_file)?, s)?,
-                            offset,
-                        )
-                    }));
                 }
             }
         }
-        carved.insert(*key, carve_terrain_under_roads(t, &roads));
+        let (c, stats) = carve_terrain(
+            &TileTerrain::new(t.clone(), grid.cell(key.1) as f32),
+            &surfaces,
+        );
+        lowered += stats.lowered;
+        guarded += stats.guarded;
+        carved.insert(*key, c);
     }
+    println!("grid {grid:?}; vertices lowered {lowered}, left by the guard {guarded}");
 
-    // (footprint?, own tile?) -> (metres sampled, metres covered); splines with >= 2 m covered.
+    // (surface?, own tile?) -> (metres sampled, metres covered); splines with >= 2 m covered.
     let mut tally: BTreeMap<(&str, &str), (u64, u64)> = BTreeMap::new();
     let mut bad_splines: BTreeMap<&str, usize> = BTreeMap::new();
     let mut worst: Vec<(u64, String, (i32, i32), u64)> = Vec::new();
@@ -109,10 +107,10 @@ fn main() {
                 continue;
             }
             drawn += 1;
-            let fp = if road_footprint(&p, s).is_some() {
-                "footprint"
+            let fp = if p.ground_surface().is_empty() {
+                "no surface"
             } else {
-                "no footprint"
+                "surface"
             };
             // Centre surface: the profile point nearest the centreline.
             let centre_z = p
@@ -126,24 +124,20 @@ fn main() {
             let mut covered_here = 0u64;
             for k in 0..=steps {
                 let pose = spline_pose(s, len * k as f32 / steps.max(1) as f32);
-                let (dx, dy) = (
-                    (pose.x / tile_size).floor() as i32,
-                    (pose.y / tile_size).floor() as i32,
+                let (host, local) = grid.tile_at(
+                    bevy::math::DVec2::new(f64::from(pose.x), f64::from(pose.y)),
+                    *key,
                 );
-                let host = (key.0 + dx, key.1 + dy);
                 let Some(t) = carved.get(&host) else { continue };
-                let (lx, ly) = (
-                    pose.x - dx as f32 * tile_size,
-                    pose.y - dy as f32 * tile_size,
-                );
-                let own = if (dx, dy) == (0, 0) {
+                let (lx, ly) = (local.x as f32, local.y as f32);
+                let own = if host == *key {
                     "own tile"
                 } else {
                     "neighbour tile"
                 };
                 let e = tally.entry((fp, own)).or_default();
                 e.0 += 1;
-                if sample_terrain(t, lx, ly) > pose.z + centre_z + 0.05 {
+                if t.height(lx, ly) > pose.z + centre_z + 0.05 {
                     e.1 += 1;
                     covered_here += 1;
                 }

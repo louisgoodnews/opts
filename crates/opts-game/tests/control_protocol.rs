@@ -33,7 +33,6 @@ const NOT_IMPLEMENTED: &[&str] = &[
     "resource.get",
     "asset.list",
     "asset.get",
-    "sim.set_time",
     "entity.spawn",
     "entity.despawn",
     "entity.set_component",

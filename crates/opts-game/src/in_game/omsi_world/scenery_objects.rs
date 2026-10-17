@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use bevy::prelude::*;
 use opts_bevy::scenery_runtime::{
     build_scenery_object, needs_runtime, SceneryBuildAssets, SceneryClock, SceneryLightAssets,
-    SceneryObjectInput, SceneryScripts, NIGHT_SUN_ALT_DEG,
+    SceneryObjectInput, SceneryScripts,
 };
 use opts_bevy::{attach_model_parts, ModelPart};
 use opts_core::formats::map::{MapObjectInstance, MapTile};
@@ -18,8 +18,6 @@ use opts_sim::script::{load_scenery_scripts, Diagnostic, ScriptEngine, Severity}
 use opts_traffic::SignalProgram;
 
 use super::WorldLoadJob;
-use crate::in_game::types::InGameSessionInfo;
-use crate::new_game_screen::NewGameSetup;
 
 /// A `.sco`'s script set, compiled once and forked per placed object.
 pub struct ScriptTemplate {
@@ -99,17 +97,23 @@ impl SceneryObjectCache {
 }
 
 /// The light map of a `.sco` material for the model loader: its own variable, or the night
-/// switch when it names none.
+/// switch when it names none; a `[matl_nightmap]` without a light map is one switched by night.
 #[must_use]
 pub fn light_map_of(
     m: &opts_core::formats::scenery::ScoMaterial,
 ) -> Option<opts_core::formats::vehicles::model::LightMap> {
-    let texture = m.light_map.clone()?;
-    let variable = m
-        .light_map_variable
-        .clone()
-        .unwrap_or_else(|| opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned());
-    Some(opts_core::formats::vehicles::model::LightMap { texture, variable })
+    let night = || opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned();
+    if let Some(texture) = m.light_map.clone() {
+        let variable = m.light_map_variable.clone().unwrap_or_else(night);
+        return Some(opts_core::formats::vehicles::model::LightMap { texture, variable });
+    }
+    // `[matl_nightmap]`: the night texture (lit windows) is drawn as emissive light switched by
+    // the night switch, like a variable-less light map (OMSI swaps the texture at night ❓).
+    let texture = m.night_map.clone().filter(|t| !t.trim().is_empty())?;
+    Some(opts_core::formats::vehicles::model::LightMap {
+        texture,
+        variable: night(),
+    })
 }
 
 fn problems(diags: &[Diagnostic]) -> usize {
@@ -211,6 +215,8 @@ impl WorldLoadJob {
         template: Option<Arc<ScriptTemplate>>,
     ) {
         self.scenery.dev_look.offer(&obj.sco_file, root);
+        // `[maplight]` ground lights: markers the map light pool hands its point lights to.
+        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, sco);
         let scripts = template.filter(|t| t.has_scripts).and_then(|t| {
             let engine = t.engine.lock().ok()?.fork();
             Some(SceneryScripts::new(
@@ -245,34 +251,25 @@ impl WorldLoadJob {
     }
 }
 
-/// Copies the session clock and date into the scenery runtime's [`SceneryClock`] (unless a host
-/// drives it: `follow_session == false`). Light programs use the same clock as the AI traffic.
+/// Copies the session environment (date, time, sun, night, temperature) into the scenery
+/// runtime's [`SceneryClock`] (unless a host drives it: `follow_session == false`). Light
+/// programs use the same clock as the AI traffic.
 pub fn sync_scenery_clock(
-    session: Option<Res<InGameSessionInfo>>,
-    setup: Option<Res<NewGameSetup>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut clock: ResMut<SceneryClock>,
 ) {
     if !clock.follow_session {
         return;
     }
-    let (Some(session), Some(setup)) = (session, setup) else {
+    let Some(env) = env else {
         return;
     };
-    let seconds = f64::from(session.start_hour) * 3600.0
-        + f64::from(session.start_minute) * 60.0
-        + f64::from(session.sim_elapsed_seconds);
-    let mut next = SceneryClock::at(setup.year, setup.month, setup.day, seconds);
+    let date = env.date();
+    let mut next = SceneryClock::at(date.year, date.month, date.day, env.seconds_of_day());
     next.follow_session = true;
-    let (sun_alt, _) =
-        crate::in_game::sky::sun_position(next.time_of_day_s() / 3600.0, next.day_of_year() as f32);
-    next.sun_alt_deg = sun_alt;
-    next.night = sun_alt < NIGHT_SUN_ALT_DEG;
-    // No weather model yet: a snow preset is taken as frost ❓.
-    next.temperature_c = if session.weather_preset.to_lowercase().contains("snow") {
-        -3.0
-    } else {
-        15.0
-    };
+    next.sun_alt_deg = env.sun_alt_deg();
+    next.night = env.night();
+    next.temperature_c = env.temperature_c();
     if *clock != next {
         *clock = next;
     }

@@ -44,6 +44,7 @@ impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
+            .init_resource::<omsi_world::ChronoState>()
             .init_resource::<omsi_world::CollisionIndex>()
             .init_resource::<omsi_world::RailNetwork>()
             .init_resource::<omsi_world::BikeNetwork>()
@@ -67,6 +68,14 @@ impl Plugin for InGamePlugin {
                 ..default()
             });
 
+        if !app.is_plugin_added::<opts_bevy::EnvironmentPlugin>() {
+            app.add_plugins(opts_bevy::EnvironmentPlugin);
+        }
+        // The session clock runs (and changes apply) only in a drive.
+        app.configure_sets(
+            Update,
+            opts_bevy::EnvironmentSet.run_if(in_state(AppState::InGame)),
+        );
         app.add_plugins(crate::session_vehicles::SessionVehiclesPlugin);
         app.add_message::<crate::pause::PauseRequest>();
         app.add_plugins((VehicleMenuPlugin, FormationMenuPlugin))
@@ -137,6 +146,19 @@ impl Plugin for InGamePlugin {
                 instruments::sync_instrument_tokens,
             )
                 .chain()
+                .after(opts_bevy::EnvironmentSet)
+                .run_if(in_state(AppState::InGame)),
+        );
+
+        // Chrono: the live switch on a new map date, and its progress for the pause page.
+        app.add_systems(
+            Update,
+            (
+                omsi_world::apply_map_date_changes
+                    .after(opts_bevy::EnvironmentSet)
+                    .before(omsi_world::stream_world_tiles),
+                omsi_world::track_chrono_rebuild.after(omsi_world::stream_world_tiles),
+            )
                 .run_if(in_state(AppState::InGame)),
         );
 
@@ -174,10 +196,14 @@ impl Plugin for InGamePlugin {
                     omsi_world::update_ai_variables,
                 )
                     .chain(),
-                sky::update_sky.run_if(resource_exists::<sky::Sky>),
+                sky::update_sky
+                    .run_if(resource_exists::<sky::Sky>)
+                    .after(opts_bevy::EnvironmentSet),
+                world::update_fallback_light.after(opts_bevy::EnvironmentSet),
                 omsi_world::place_dev_camera,
                 omsi_world::sync_scenery_clock
                     .run_if(resource_exists::<opts_bevy::SceneryClock>)
+                    .after(opts_bevy::EnvironmentSet)
                     .before(opts_bevy::scenery_runtime::SceneryRuntimeSet),
                 screenshot::capture_screenshot_when_ready,
             )
@@ -215,6 +241,7 @@ fn setup_in_game_session(
     mut load_state: ResMut<SimulationLoadState>,
     mut session: ResMut<InGameSessionInfo>,
     mut report: ResMut<load_report::LoadReport>,
+    mut environment: MessageWriter<opts_bevy::EnvironmentChange>,
     setup: Res<NewGameSetup>,
     shell: Option<Res<crate::shell::ShellContent>>,
     catalogue: Option<Res<crate::new_game_screen::types::GameCatalogue>>,
@@ -263,6 +290,13 @@ fn setup_in_game_session(
     session.start_hour = setup.hour;
     session.start_minute = setup.minute;
     session.sim_elapsed_seconds = 0.0;
+    // The session environment starts at the planned date, time and weather; the map is loaded
+    // for that date (a restored save sets its clock when it is back, `save::sections`).
+    environment.write(opts_bevy::EnvironmentChange::reset(
+        crate::new_game_screen::planner::setup_date(&setup),
+        f64::from(setup.hour * 3600 + setup.minute * 60),
+        setup.weather_preset.clone(),
+    ));
 
     // Spawn Material Design 3 loading screen overlay
     spawn_loading_screen_ui(

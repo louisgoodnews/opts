@@ -150,6 +150,7 @@ pub struct NewGameSetup {
 
 impl Default for NewGameSetup {
     fn default() -> Self {
+        let today = super::planner::today();
         Self {
             selected_map: "Berlin-Spandau".to_string(),
             // No map-specific default: the wizard picks the first start point of the chosen map
@@ -159,9 +160,10 @@ impl Default for NewGameSetup {
             no_vehicle: false,
             selected_livery: String::new(),
             weather_preset: "Clear Summer Day".to_string(),
-            year: 1989,
-            month: 10,
-            day: 9,
+            // Today; choosing a map sets the map's default date (`planner::default_map_date`).
+            year: today.year,
+            month: today.month,
+            day: today.day,
             hour: 8,
             minute: 30,
             custom_setvars: HashMap::new(),

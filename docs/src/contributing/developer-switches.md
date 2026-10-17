@@ -16,7 +16,7 @@ Environment variables and flags that change behaviour for development, tests and
 
 ## Game flags
 
-`--pedestrians <n>` caps simultaneously walking pedestrians (`0` = none, default 40). `--traffic <n>` caps simultaneously driving AI vehicles (`0` = none, default 30); the target count is also limited by the road length of the loaded tiles (one vehicle per 250 m) and the map's `unsched_trafficdens.txt` curve at the session's time of day. Debug lines of the traffic module: `OPTS_LOG_LEVEL=debug` (lane graph rebuilds, spawns).
+`--pedestrians <n>` caps simultaneously walking pedestrians (`0` = none, default 40). `--traffic <n>` is the ceiling on simultaneously driving AI vehicles (`0` = none, default 100); the count itself comes from the map's density model (lane metres within 320 m × each group's `trafficdensity` rule × its `unsched_trafficdens.txt` curve at the session's hour and day, one vehicle per 80 m; [AI road traffic](../architecture/ai-traffic.md#density-model-2026-10-17)), and all groups are scaled down in proportion when it exceeds the ceiling. Debug lines of the traffic module: `OPTS_LOG_LEVEL=debug` (lane graph rebuilds, spawns).
 
 ## Logging (`opts-logging`)
 

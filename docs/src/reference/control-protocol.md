@@ -69,7 +69,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `state` | - | 1.0 | App state, camera mode, fps, frame |
 | `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
 | `camera.get` | - | 1.0 | Camera mode and transform |
-| `sim.get` | - | 1.0 | Pause state, simulation time, time scale |
+| `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock |
 | `log.tail` | `n?` (integer) | 1.0 | Last N log lines |
 | `log.filter` | `target?` (string)<br>`level?` (string)<br>`contains?` (string)<br>`n?` (integer) | 1.0 | Filtered log lines |
 | `entity.list` | `filter?` (string) | 1.0 | List entities |
@@ -240,13 +240,21 @@ Sends the same `Navigate` message as a rail click; the shell may refuse a destin
 | `sim.resume` | - | 1.0 | Resume the simulation |
 | `sim.step` | `frames` (integer) | 1.0 | Advance N frames while paused |
 | `sim.time_scale` | `factor` (number) | 1.0 | Set the simulation speed |
-| `sim.set_time` | `seconds` (number) | 1.0 | Set the session clock |
+| [`sim.set_time`](#simset_time) | `seconds` (number)<br>`date?` (string)<br>`weather?` (string)<br>`rate?` (number) | 1.0 | Set the session clock (and date, weather, clock rate) |
 
 ### `sim.pause`
 
 Pause the simulation.
 
 Pauses the simulation clock (`Time<Virtual>`) directly, not through the pause overlay; the overlay is reached with `ui.action menu` or `ui.key Escape`.
+
+### `sim.set_time`
+
+Set the session clock (and date, weather, clock rate).
+
+**Result:** `{clock, seconds_of_day, date, map_date, weather, rate, revision}` after the change
+
+Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (a preset id, its slug or a word such as `rain`, `snow`, `fog`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`.
 
 ## Group `scene`
 

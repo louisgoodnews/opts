@@ -1,21 +1,22 @@
-//! Ground stages of a tile: terrain mesh (carved under roads) and spline ribbons.
+//! Ground stages of a tile: terrain mesh (carved under the drawn ground) and spline ribbons.
 
 use std::path::Path;
 
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{
-    build_terrain_mesh, build_water_mesh, carve_terrain_under_roads, extrude_spline_segment,
-    footprint_from_neighbour, road_footprint, terrain_material, water_material, ContentLoader,
-    RoadFootprint,
+    build_terrain_mesh, build_water_mesh, carve_terrain, extrude_spline_segment,
+    spline_ground_triangles, terrain_material, water_material, ContentLoader, GroundTriangle,
+    TileTerrain,
 };
 use opts_core::formats::map::{MapTerrain, MapTile, MapWater};
 
 use super::ground::compose_tile_material;
 use super::{WorldLoadJob, WorldStats};
 
-/// The eight tiles around a tile, as key offsets.
-const NEIGHBOURS: [(i32, i32); 8] = [
+/// A tile and the eight around it, as key offsets.
+const NEIGHBOURHOOD: [(i32, i32); 9] = [
+    (0, 0),
     (-1, -1),
     (0, -1),
     (1, -1),
@@ -26,7 +27,30 @@ const NEIGHBOURS: [(i32, i32); 8] = [
     (1, 1),
 ];
 
-/// Terrain stage: reads the height grid, carves it under roads and spawns the ground mesh.
+/// The drawn ground surfaces that can lie over tile `key`'s terrain, in its frame: the surface
+/// ribbons of the splines of the tile and its eight neighbours (splines are stored on the tile
+/// they start in but run on across the border) and the ground faces of their crossings.
+fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle> {
+    let mut out = Vec::new();
+    for (dx, dy) in NEIGHBOURHOOD {
+        let other = (key.0 + dx, key.1 + dy);
+        let Some(splines) = job.splines_of(other) else {
+            continue;
+        };
+        let o = job.grid.neighbour_offset(key, other);
+        for inst in splines.iter() {
+            if let Some(profile) = job.sli(&inst.sli_file) {
+                out.extend(spline_ground_triangles(&profile, inst, (o.x, o.y)));
+            }
+        }
+        // Crossings (bent by their base) and surface objects lay down ground too.
+        out.extend(job.crossing_ground_triangles(other, o));
+    }
+    out
+}
+
+/// Terrain stage: reads the height grid, carves it under the drawn ground and spawns the ground
+/// mesh. Returns the carved grid: the ground every object, lane and vehicle stands on.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_terrain(
     job: &mut WorldLoadJob,
@@ -36,11 +60,10 @@ pub(super) fn spawn_terrain(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     ground_materials: Option<&mut Assets<GroundMaterial>>,
-    tile: &MapTile,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
-) -> Option<MapTerrain> {
+) -> Option<TileTerrain> {
     // --- Terrain ---------------------------------------------------------------------------
     let terrain_rel = format!("{}.terrain", job.tile_files[&key]);
     let terrain: Option<MapTerrain> = job
@@ -88,35 +111,18 @@ pub(super) fn spawn_terrain(
         // Ground painting: per-layer alpha masks of this tile (road markings, pavements, paths).
         let tile_material = ground_materials
             .and_then(|gm| compose_tile_material(job, key, images, materials, meshes, gm));
-        // Terrain under height-profile splines must not cover the road surface, including the
-        // splines of the neighbouring tiles that run on into this one.
-        let mut roads: Vec<RoadFootprint> = tile
-            .splines
-            .iter()
-            .filter_map(|inst| {
-                let profile = job.sli(&inst.sli_file)?;
-                road_footprint(&profile, inst)
-            })
-            .collect();
-        let size = opts_bevy::tile_size();
-        for (dx, dy) in NEIGHBOURS {
-            let Some(splines) = job.splines_of((key.0 + dx, key.1 + dy)) else {
-                continue;
-            };
-            let offset = (dx as f32 * size, dy as f32 * size);
-            for inst in splines.iter() {
-                let Some(profile) = job.sli(&inst.sli_file) else {
-                    continue;
-                };
-                if let Some(fp) = road_footprint(&profile, inst)
-                    .and_then(|fp| footprint_from_neighbour(&fp, offset))
-                {
-                    roads.push(fp);
-                }
-            }
-        }
-        let carved = carve_terrain_under_roads(t, &roads);
-        let mesh = build_terrain_mesh(&carved, origin, tile_material.is_some());
+        // Terrain must not cover the drawn ground (`docs/src/architecture/terrain-carving.md`).
+        let cell = job.terrain_cell(key.1);
+        let surfaces = carve_surfaces(job, key);
+        let (carved, carve) = carve_terrain(&TileTerrain::new(t.clone(), cell), &surfaces);
+        tracing::debug!(
+            tile = ?key,
+            triangles = surfaces.len(),
+            lowered = carve.lowered,
+            guarded = carve.guarded,
+            "terrain carved"
+        );
+        let mesh = build_terrain_mesh(&carved.grid, origin, cell, tile_material.is_some());
         stats.scene_vertices += mesh.count_vertices();
         let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
         children.push(match tile_material {
@@ -133,11 +139,10 @@ pub(super) fn spawn_terrain(
                 ))
                 .id(),
         });
-    } else {
-        tracing::warn!(tile = ?key, "tile has no readable .terrain grid; objects use z as absolute height");
+        return Some(carved);
     }
-
-    terrain
+    tracing::warn!(tile = ?key, "tile has no readable .terrain grid; objects use z as absolute height");
+    None
 }
 
 /// Water stage: the tile's `.map.water` surface over the terrain it floods.
@@ -153,7 +158,7 @@ pub(super) fn spawn_water(
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     tile: &MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -183,7 +188,7 @@ pub(super) fn spawn_water(
         tracing::warn!(tile = ?key, "water without a terrain grid is not drawn");
         return;
     };
-    let Some(mesh) = build_water_mesh(terrain, &water, origin) else {
+    let Some(mesh) = build_water_mesh(&terrain.grid, &water, origin, terrain.cell) else {
         tracing::debug!(tile = ?key, levels = ?water.levels, "water lies below the terrain everywhere");
         return;
     };

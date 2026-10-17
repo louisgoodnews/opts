@@ -22,6 +22,7 @@ pub mod camera;
 pub mod capture;
 pub mod control;
 pub mod coords;
+pub mod environment;
 pub mod ground;
 pub mod ground_material;
 pub mod host_callbacks;
@@ -45,6 +46,7 @@ pub mod texture_filter;
 pub mod texture_sentinel;
 pub mod vehicle;
 pub mod vehicle_anim;
+pub mod vehicle_glow;
 pub mod vehicle_lights;
 pub mod vehicle_remote;
 pub mod vehicle_script;
@@ -68,6 +70,10 @@ pub use coords::{
     omsi_to_bevy_transform, sync_bevy_to_omsi_transforms, sync_coordinate_transforms,
     sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
 };
+pub use environment::{
+    CalendarDate, ChronoRebuild, EnvironmentChange, EnvironmentPlugin, EnvironmentSet,
+    MapDateChanged, MapDatePolicy, SessionEnvironment, WeatherKind,
+};
 pub use human::{
     apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, sync_player_head, AlignEyes,
     DriverHead, Human, HumanHead, HumanPose, HumanRig, PlayerHead, HUMAN_BONES,
@@ -81,11 +87,13 @@ pub use material::{
     o3d_material_to_standard_material, specular_power_to_roughness, x_material_to_standard_material,
 };
 pub use mesh::{
-    o3d_to_bevy_mesh, o3d_to_bevy_meshes_by_material, parse_mesh_file, tree_billboard_mesh,
-    x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh, x_submesh_to_bevy_mesh,
+    o3d_to_bevy_mesh, o3d_to_bevy_meshes_by_material, parse_mesh_file, tree_billboard_material,
+    tree_billboard_mesh, x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh,
+    x_submesh_to_bevy_mesh,
 };
 pub use model::{
-    attach_model_parts, ContentCache, ContentLoader, ContentStats, ModelPart, TextureOverride,
+    attach_model_parts, load_decoded_meshes, ContentCache, ContentLoader, ContentStats, ModelPart,
+    TextureOverride,
 };
 pub use plugin::{
     OptsAssetPlugin, OptsCoordsPlugin, OptsMaterialPlugin, OptsMeshPlugin, OptsSceneryPlugin,
@@ -93,8 +101,8 @@ pub use plugin::{
 };
 pub use position_tag::{position_tag, set_loading_tile, set_position_tag};
 pub use scenery::{
-    extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, SceneryLoaderError,
-    SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
+    extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, spline_stations,
+    SceneryLoaderError, SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,
 };
 pub use scenery_runtime::{
     advance_scenery, bind_alpha_scale, build_scenery_object, SceneryAlphaScale, SceneryClock,
@@ -102,9 +110,9 @@ pub use scenery_runtime::{
     SceneryRuntimeSettings, SceneryRuntimeStats, SceneryScripts, SceneryVariableOverrides,
 };
 pub use terrain::{
-    build_terrain_mesh, carve_terrain_under_roads, footprint_from_neighbour, road_footprint,
-    sample_terrain, set_tile_size, terrain_cell, terrain_material, tile_size, RoadFootprint,
-    TERRAIN_CELL_M, TILE_SIZE_M,
+    build_terrain_mesh, carve_terrain, spline_ground_triangles, terrain_height, terrain_material,
+    CarveStats, GroundTriangle, TileTerrain, CARVE_COVER_M, CARVE_EPSILON_M, TERRAIN_CELL_M,
+    TILE_SIZE_M,
 };
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,
@@ -118,6 +126,9 @@ pub use vehicle::{spawn_vehicle_model, BusVehicle};
 pub use vehicle_anim::{
     anim_steps, anim_steps_with, animation_matrix, vehicle_animation_system, AnimStep,
     MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
+};
+pub use vehicle_glow::{
+    choose_headlights, spawn_vehicle_glows, VehicleGlow, VehicleGlowPlugin, HEADLIGHT_POOL,
 };
 pub use vehicle_lights::{
     vehicle_alpha_scale_system, vehicle_light_map_system, vehicle_light_system, AlphaScaleBinding,

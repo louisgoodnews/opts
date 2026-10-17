@@ -18,11 +18,12 @@ impl WorldLoadJob {
     /// no water file loaded.
     #[must_use]
     pub fn water_level_at(&self, x: f32, z: f32) -> Option<f32> {
-        let size = opts_bevy::tile_size();
-        let (tx, ty) = ((x / size).floor(), (-z / size).floor());
-        let key = (self.start_tile.0 + tx as i32, self.start_tile.1 + ty as i32);
+        let (key, local) = self
+            .grid
+            .tile_at(Vec2::new(x, -z).as_dvec2(), self.start_tile);
         let water = self.tile_water.get(&key)?;
-        Some(water.level_at(x / size - tx, -z / size - ty))
+        let size = self.grid.tile_size(key.1);
+        Some(water.level_at((local.x / size) as f32, (local.y / size) as f32))
     }
 }
 

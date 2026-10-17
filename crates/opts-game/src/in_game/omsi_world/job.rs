@@ -7,7 +7,7 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::coords::omsi_to_bevy_pos;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance, MapTile};
+use opts_core::formats::map::{MapManifest, MapObjectInstance, MapSplineInstance, MapTile};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use super::vehicle::FormationCar;
@@ -16,7 +16,6 @@ use crate::in_game::attachments::SplineIndex;
 use crate::new_game_screen::types::GameCatalogue;
 use crate::omsi_root::locate_omsi_root;
 
-use super::ground::tile_origin;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{OmsiSessionConfig, SessionRequest, WorldLoadJob};
 
@@ -197,8 +196,18 @@ pub(super) fn find_bus_file(install: &OmsiInstall, id: &str) -> Option<PathBuf> 
         .find_map(|e| install.find_in(&e.path(), &file))
 }
 
-/// Parses `global.cfg`, picks the start tile and queues its 3×3 neighbourhood.
+/// Parses `global.cfg`, picks the start tile and queues its 3×3 neighbourhood (the base map,
+/// without Chrono).
 pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, String> {
+    begin_world_load_at(config, None)
+}
+
+/// [`begin_world_load`] for a map date: the Chrono entries active on it are applied to every
+/// tile read (`None`: the base map).
+pub fn begin_world_load_at(
+    config: OmsiSessionConfig,
+    map_date: Option<opts_core::formats::chrono::ChronoDate>,
+) -> Result<WorldLoadJob, String> {
     let mut install = OmsiInstall::new(&config.root);
     if let Some(l) = &config.lookup {
         install = install.with_lookup(l.clone());
@@ -254,9 +263,13 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         tile_splines: HashMap::new(),
         placed: HashMap::new(),
         sco_cache: HashMap::new(),
+        crossing_bases: HashMap::new(),
+        ground_faces: HashMap::new(),
+        tile_objects: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
-        parklist: None,
+        parklists: HashMap::new(),
+        chrono: super::chrono::ChronoContext::default(),
         spline_materials: HashMap::new(),
         fonts: opts_bevy::text_texture::FontRegistry::default(),
         vehicle_text_defs: Vec::new(),
@@ -264,8 +277,10 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
         ground_array: None,
         spawn: None,
         repaint: None,
+        model_repaints: HashMap::new(),
         formation_cars: Vec::new(),
         start_tile: (0, 0),
+        grid: opts_core::formats::map::TileGrid::default(),
         missing_listed: 0,
         camera: None,
         camera_std_index: 0,
@@ -275,8 +290,10 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
     };
 
     opts_bevy::scene_trace::begin_session(&job.map_name(), job.install.root());
+    job.init_chrono(map_date);
 
-    // Tile size: 300 m, except for maps with world coordinates (measured from the splines).
+    // Tile grid: 300 m, except for maps with world coordinates (Mercator rows when the splines'
+    // border chains agree with them, else the measured pitch).
     {
         let mut sample = Vec::new();
         let keys: Vec<(i32, i32)> = job.manifest.tiles.iter().map(|t| (t.x, t.y)).collect();
@@ -288,12 +305,16 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
                 break;
             }
         }
-        let size = opts_core::formats::map::estimate_tile_size(&sample);
-        opts_bevy::set_tile_size(size);
+        let (grid, fit) =
+            opts_core::formats::map::TileGrid::measure(&sample, job.manifest.world_coordinates);
+        job.grid = grid;
         tracing::info!(
-            tile_size_m = size,
+            ?grid,
+            pairs = fit.pairs,
+            median_step_m = ?fit.median_step,
+            mercator_residual_m = ?fit.mercator_residual,
             sampled_tiles = sample.len(),
-            "tile size"
+            "tile grid"
         );
     }
 
@@ -312,7 +333,7 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
             let Some(tile) = job.read_tile(key) else {
                 continue;
             };
-            if let Some(spawn) = job.find_drivable_spawn(key, &tile) {
+            if let Some(spawn) = job.find_drivable_spawn(&tile) {
                 start = Some((key, spawn));
                 break;
             }
@@ -328,12 +349,9 @@ pub fn begin_world_load(config: OmsiSessionConfig) -> Result<WorldLoadJob, Strin
 
     // Floating origin: all scene coordinates are relative to the start tile's south-west
     // corner. Real maps use world coordinates in the millions of metres (Berlin-Spandau:
-    // 3.4e6 north), where f32 resolution is a quarter of a metre.
-    let abs = tile_origin(start_tile);
-    job.spawn = Some((
-        Vec3::new(spawn.0.x - abs.0, spawn.0.y - abs.1, spawn.0.z),
-        spawn.1,
-    ));
+    // 3.4e6 north), where f32 resolution is a quarter of a metre. The spawn point is already in
+    // the start tile's frame.
+    job.spawn = Some(spawn);
     job.start_tile = start_tile;
 
     for dy in -1..=1 {
@@ -379,10 +397,38 @@ impl WorldLoadJob {
         )
     }
 
-    /// Absolute OMSI position of the session frame's origin (the start tile's corner).
+    /// The map's tile grid.
     #[must_use]
-    pub fn session_origin(&self) -> (f32, f32) {
-        tile_origin(self.start_tile)
+    pub fn grid(&self) -> opts_core::formats::map::TileGrid {
+        self.grid
+    }
+
+    /// South-west corner of tile `key` in the session frame (OMSI axes, metres from the start
+    /// tile's corner).
+    #[must_use]
+    pub fn tile_offset(&self, key: (i32, i32)) -> (f32, f32) {
+        let o = self.grid.offset(key, self.start_tile);
+        (o.x, o.y)
+    }
+
+    /// Absolute OMSI position (see `TileGrid::absolute`) of a session-frame point.
+    #[must_use]
+    pub fn local_to_absolute(&self, local: Vec2) -> bevy::math::DVec2 {
+        self.grid
+            .local_to_absolute(local.as_dvec2(), self.start_tile)
+    }
+
+    /// Session-frame position of a point given in the frame of tile `key`.
+    #[must_use]
+    pub fn session_pos(&self, key: (i32, i32), local: Vec3) -> Vec3 {
+        let o = self.tile_offset(key);
+        Vec3::new(o.0 + local.x, o.1 + local.y, local.z)
+    }
+
+    /// Terrain cell of tile row `ty` (m).
+    #[must_use]
+    pub fn terrain_cell(&self, ty: i32) -> f32 {
+        self.grid.cell(ty) as f32
     }
 
     /// The map's entry points `(record number, name)`, in `global.cfg` order.
@@ -495,41 +541,62 @@ impl WorldLoadJob {
         self.start_tile
     }
 
-    /// Index of every spline on the map, built by reading all tiles once.
+    /// Index of every spline on the map with its chain offset, built by reading all tiles once
+    /// (through [`Self::read_tile`], so it sees what the tiles hold for the session).
     pub(super) fn spline_index(&mut self) -> Arc<SplineIndex> {
         if let Some(i) = &self.spline_index {
             return i.clone();
         }
+        let t = std::time::Instant::now();
         let mut index = SplineIndex::default();
-        for key in self.tile_files.keys() {
-            let parsed = self
-                .tile_path(*key)
-                .and_then(|p| std::fs::read(p).ok())
-                .and_then(|b| MapTile::parse(&b).ok());
-            if let Some(tile) = parsed {
-                index.add_tile(*key, &tile.splines);
+        // Through `read_tile`: the splines as Chrono leaves them on the map date.
+        let mut keys: Vec<(i32, i32)> = self.tile_files.keys().copied().collect();
+        keys.sort_unstable();
+        for key in keys {
+            if let Some(tile) = self.read_tile(key) {
+                index.add_tile(key, &tile.splines);
             }
         }
+        index.finish();
+        tracing::info!(
+            splines = index.len(),
+            ms = t.elapsed().as_millis() as u64,
+            "map-wide spline chain index built"
+        );
         let index = Arc::new(index);
         self.spline_index = Some(index.clone());
         index
     }
 
+    /// The tile's file: the base file, or for a tile that only Chrono adds, its first overlay.
     pub(super) fn tile_path(&self, key: (i32, i32)) -> Option<PathBuf> {
+        self.base_tile_path(key)
+            .or_else(|| self.chrono_new_tile(key))
+    }
+
+    fn base_tile_path(&self, key: (i32, i32)) -> Option<PathBuf> {
         let name = self.tile_files.get(&key)?;
         self.install.find_in(&self.config.map_dir, name)
     }
 
+    /// Parses a tile and applies the Chrono overlays active on the map date.
     pub(super) fn read_tile(&self, key: (i32, i32)) -> Option<MapTile> {
-        let path = self.tile_path(key)?;
-        let bytes = std::fs::read(&path).ok()?;
-        match MapTile::parse(&bytes) {
-            Ok(t) => Some(t),
-            Err(e) => {
-                tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "tile parse failed: {e}");
-                None
+        let mut tile = match self.base_tile_path(key) {
+            Some(path) => {
+                let bytes = std::fs::read(&path).ok()?;
+                match MapTile::parse(&bytes) {
+                    Ok(t) => t,
+                    Err(e) => {
+                        tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "tile parse failed: {e}");
+                        return None;
+                    }
+                }
             }
-        }
+            None if !self.chrono_overlays(key).is_empty() => MapTile::default(),
+            None => return None,
+        };
+        self.apply_chrono(key, &mut tile);
+        Some(tile)
     }
 
     /// The splines of a tile: kept from its last read, otherwise read now (`None` when the tile
@@ -583,14 +650,14 @@ impl WorldLoadJob {
         out
     }
 
-    /// Picks the parked vehicle for a parking-bay marker from `parklist_p.txt`.
-    ///
-    /// One `.sco` per line; duplicates raise the pick probability (`docs/src/formats/map/lists.md`).
-    /// The draw is a hash of the marker's id code, so a bay shows the same car on every load.
-    pub(super) fn parked_vehicle(&mut self, id_code: u64) -> Option<String> {
-        if self.parklist.is_none() {
-            let path = self.install.find_in(&self.config.map_dir, "parklist_p.txt");
-            let list = match path.map(|p| std::fs::read(&p).map(|b| (p, b))) {
+    /// Reads the parking list with this selector (`0` = `parklist_p.txt`), once.
+    fn parklist(&mut self, selector: u32) -> &[String] {
+        if !self.parklists.contains_key(&selector) {
+            let name = parklist_file_name(selector);
+            let list = match self
+                .data_file(&name)
+                .map(|p| std::fs::read(&p).map(|b| (p, b)))
+            {
                 Some(Ok((p, bytes))) => {
                     self.loading_deps
                         .insert(opts_bevy::hot_reload::cache::normalize(&p));
@@ -601,22 +668,42 @@ impl WorldLoadJob {
                         .collect()
                 }
                 Some(Err(e)) => {
-                    tracing::error!(at = %opts_bevy::position_tag(), "parklist_p.txt unreadable: {e}");
+                    tracing::error!(at = %opts_bevy::position_tag(), "{name} unreadable: {e}");
                     Vec::new()
                 }
-                None => {
+                None if selector == 0 => {
                     tracing::error!(at = %opts_bevy::position_tag(), map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
                     Vec::new()
                 }
+                None => {
+                    tracing::warn!(map = %self.config.map_dir.display(), "parking bays select {name}, which the map lacks: parklist_p.txt instead");
+                    self.parklist(0).to_vec()
+                }
             };
-            self.parklist = Some(list);
+            self.parklists.insert(selector, list);
         }
-        let list = self.parklist.as_deref().unwrap_or_default();
+        self.parklists.get(&selector).map_or(&[], Vec::as_slice)
+    }
+
+    /// Picks the parked vehicle for a parking-bay marker.
+    ///
+    /// The marker's first string value selects the list (blank or `0`: `parklist_p.txt`, `N`:
+    /// `parklist_p_N.txt`); one `.sco` per line, duplicates raise the pick probability
+    /// (`docs/src/formats/map/lists.md`). The draw is a hash of the marker's id code and position
+    /// (the instances of an attachment share the id), so a bay shows the same car on every load.
+    pub(super) fn parked_vehicle(&mut self, marker: &MapObjectInstance) -> Option<String> {
+        let selector = parklist_selector(marker.string_vars.first().map(String::as_str));
+        let list = self.parklist(selector);
         if list.is_empty() {
             return None;
         }
+        let cm = |v: f32| (f64::from(v) * 100.0).round() as i64 as u64;
+        let mut h = marker.id_code;
+        for v in [cm(marker.position.x), cm(marker.position.y)] {
+            h = h.rotate_left(21) ^ v;
+        }
         // splitmix64 finaliser: spreads consecutive ids evenly.
-        let mut h = id_code.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        h = h.wrapping_add(0x9E37_79B9_7F4A_7C15);
         h = (h ^ (h >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
         h = (h ^ (h >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         h ^= h >> 31;
@@ -643,7 +730,12 @@ impl WorldLoadJob {
         let out = match parsed {
             Ok(o) => {
                 tracing::debug!(path = %path.display(), meshes = o.meshes.len(), "loaded sco");
-                Some(Arc::new(o))
+                // A bent crossing's paths and arms follow its base surface.
+                let o = Arc::new(o);
+                match self.crossing_base(&path, &o) {
+                    Some((_, base)) => Some(Arc::new(o.bent(&base))),
+                    None => Some(o),
+                }
             }
             Err(e) => {
                 tracing::error!(at = %opts_bevy::position_tag(), path = %path.display(), "sco parse failed: {e}");
@@ -654,7 +746,7 @@ impl WorldLoadJob {
         out.map(|o| (path, o))
     }
 
-    /// Resolves the configured entry point to `(tile, world position, heading)`.
+    /// Resolves the configured entry point to `(tile, position in that tile, heading)`.
     ///
     /// A `global.cfg` `[entrypoints]` record references an `entrypoint_*.sco` object by its id
     /// code (verified: all 51 Berlin-Spandau records match a placed object). The record's
@@ -706,8 +798,7 @@ impl WorldLoadJob {
                 .iter()
                 .find(|o| o.id_code == u64::from(ep.id_code))
             {
-                let o = tile_origin(key);
-                let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
+                let pos = Vec3::new(obj.position.x, obj.position.y, ep.position.y);
                 tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved");
                 self.resolved_entry = Some((ep.id, ep.name.clone()));
                 return Some((key, (pos, obj.heading_deg)));
@@ -726,11 +817,11 @@ impl WorldLoadJob {
                     &tile.splines,
                     &index,
                     key,
+                    &self.grid,
                     |_, _| 0.0,
                 );
                 if let Some((obj, _)) = placed.first() {
-                    let o = tile_origin(key);
-                    let pos = Vec3::new(o.0 + obj.position.x, o.1 + obj.position.y, ep.position.y);
+                    let pos = Vec3::new(obj.position.x, obj.position.y, ep.position.y);
                     tracing::info!(entry = %ep.name, id_code = ep.id_code, sco = %obj.sco_file, tile = ?key, "entry point resolved (spline attachment)");
                     self.resolved_entry = Some((ep.id, ep.name.clone()));
                     return Some((key, (pos, obj.heading_deg)));
@@ -740,12 +831,9 @@ impl WorldLoadJob {
         None
     }
 
-    /// Finds the first road-vehicle path (type 0, forward or bidirectional) in a tile.
-    pub(super) fn find_drivable_spawn(
-        &mut self,
-        key: (i32, i32),
-        tile: &MapTile,
-    ) -> Option<(Vec3, f32)> {
+    /// Finds the first road-vehicle path (type 0, forward or bidirectional) in a tile; the
+    /// position is in that tile's frame.
+    pub(super) fn find_drivable_spawn(&mut self, tile: &MapTile) -> Option<(Vec3, f32)> {
         for inst in &tile.splines {
             let Some(profile) = self.sli(&inst.sli_file) else {
                 continue;
@@ -758,15 +846,47 @@ impl WorldLoadJob {
                 continue;
             };
             let h = inst.heading_deg.to_radians();
-            let origin = tile_origin(key);
             // Lateral offset along the spline's right vector.
-            let x = origin.0 + inst.position.x + h.cos() * path.offset_x;
-            let y = origin.1 + inst.position.y - h.sin() * path.offset_x;
+            let x = inst.position.x + h.cos() * path.offset_x;
+            let y = inst.position.y - h.sin() * path.offset_x;
             return Some((
                 Vec3::new(x, y, inst.position.z + path.offset_z),
                 inst.heading_deg,
             ));
         }
         None
+    }
+}
+
+/// The parking list a `car_park` marker's first string value selects: blank, `0` or no value is
+/// `0` (`parklist_p.txt`), a number `N` is `N` (`parklist_p_N.txt`). Anything else counts as `0`.
+pub(super) fn parklist_selector(value: Option<&str>) -> u32 {
+    value
+        .and_then(|v| v.trim().parse::<u32>().ok())
+        .unwrap_or(0)
+}
+
+/// File name of the parking list with this selector.
+pub(super) fn parklist_file_name(selector: u32) -> String {
+    if selector == 0 {
+        "parklist_p.txt".to_owned()
+    } else {
+        format!("parklist_p_{selector}.txt")
+    }
+}
+
+#[cfg(test)]
+mod parklist_tests {
+    use super::*;
+
+    #[test]
+    fn car_park_value_selects_the_parking_list() {
+        let file = |v| parklist_file_name(parklist_selector(v));
+        assert_eq!(file(None), "parklist_p.txt");
+        assert_eq!(file(Some("")), "parklist_p.txt");
+        assert_eq!(file(Some("0")), "parklist_p.txt");
+        assert_eq!(file(Some("1")), "parklist_p_1.txt");
+        assert_eq!(file(Some(" 2 ")), "parklist_p_2.txt");
+        assert_eq!(file(Some("Trabant")), "parklist_p.txt");
     }
 }

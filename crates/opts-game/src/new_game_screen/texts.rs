@@ -100,6 +100,9 @@ mod tests {
             selected_map: "Berlin".into(),
             selected_entry_point: "Rathaus".into(),
             selected_vehicle: "MAN SD77".into(),
+            year: 1989,
+            month: 10,
+            day: 9,
             ..NewGameSetup::default()
         };
         assert_eq!(where_text(&s), "Berlin · Rathaus");

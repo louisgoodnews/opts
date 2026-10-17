@@ -151,7 +151,7 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "sim.get",
         "query",
-        "Pause state, simulation time, time scale",
+        "Pause state, simulation time, time scale, session clock",
         "",
     ),
     c("log.tail", "query", "Last N log lines", "n:i@0?"),
@@ -248,9 +248,11 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "sim.set_time",
         "sim",
-        "Set the session clock",
-        "seconds:f@0",
-    ),
+        "Set the session clock (and date, weather, clock rate)",
+        "seconds:f@0 date:s? weather:s? rate:f?",
+    )
+    .result("`{clock, seconds_of_day, date, map_date, weather, rate, revision}` after the change")
+    .doc("Sets the session environment like the pause menu's *Environment* page: `seconds` since midnight (0 ≤ s < 86400), optionally `date` (`YYYY-MM-DD`; a new date is applied like *Apply* and may rebuild the map, Chrono), `weather` (a preset id, its slug or a word such as `rain`, `snow`, `fog`) and `rate` (clock seconds per simulated second, 0 < rate ≤ 3600). Answers two frames later with the environment; `1001` outside a drive. `sim.get` reports the clock as `clock`, `seconds_of_day`, `date`, `map_date`, `weather` and `clock_rate`."),
     c(
         "scene.load_map",
         "scene",

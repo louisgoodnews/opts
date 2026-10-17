@@ -727,9 +727,18 @@ fn spline_attachments_parse_single_and_repeater() {
         (single.spline_index, single.lateral_m, single.distance_m),
         (3, -4.5, 12.5)
     );
-    assert_eq!(single.repeat, None);
+    assert_eq!((single.spacing_m, single.range_m), (30.0, 500.0));
+    assert_eq!(single.repeater, None);
+    assert_eq!(single.instances(), 0..=16);
     let rep = &tile.spline_attachments[1];
-    assert_eq!(rep.repeat, Some((260.0, 6)));
+    assert_eq!(
+        rep.repeater,
+        Some(opts_core::formats::map::RepeaterLink {
+            master_tile: 260,
+            first_instance: 6
+        })
+    );
+    assert_eq!(rep.instances(), 6..=16);
     assert_eq!(
         (rep.spline_index, rep.sco_file.as_str()),
         (1, "Sceneryobjects\\b.sco")

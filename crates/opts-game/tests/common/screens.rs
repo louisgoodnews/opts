@@ -183,6 +183,10 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
         .init_resource::<opts_game::in_game::VehicleMenu>()
         .init_resource::<opts_game::in_game::types::SimulationLoadState>()
         .init_resource::<opts_game::new_game_screen::types::NewGameSetup>()
+        // A fixed "today": the map step's default date is shown in screenshots.
+        .insert_resource(opts_game::new_game_screen::planner::Today(Some(
+            opts_bevy::CalendarDate::new(1989, 10, 9),
+        )))
         .insert_resource(fixture_catalogue())
         .insert_resource(opts_game::new_game_screen::PlannerHistory::at(Some(
             db.join("drive_history.json"),

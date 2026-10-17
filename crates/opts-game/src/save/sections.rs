@@ -4,8 +4,8 @@
 //! | id | holds | restored |
 //! | :-- | :-- | :-- |
 //! | `session` | map folder and name, start point, mode, play time | before the session starts |
-//! | `time` | date, clock base, simulated seconds since the start | date and base before; the clock when everything is back |
-//! | `weather` | weather preset | before |
+//! | `time` | start date and clock, play time, the environment's date, time, map date, weather and rate | map date and start before; the clock when everything is back |
+//! | `weather` | the session's weather preset | before |
 //! | `session_vehicles` | the registry with every vehicle's live state | vehicles rebuilt by the spawner |
 //! | `active_vehicle` | which vehicle the driver is in | when all vehicles exist |
 //! | `camera` | mode, sub-camera, free camera pose, orbit and look offsets | when all vehicles exist |
@@ -25,6 +25,7 @@ use crate::in_game::omsi_world::WorldLoadJob;
 use crate::in_game::types::InGameSessionInfo;
 use crate::new_game_screen::types::NewGameSetup;
 use crate::session_vehicles::{ops, EntrySel, SessionVehicles, SAVE_SECTION, SAVE_SECTION_VERSION};
+use opts_bevy::SessionEnvironment;
 
 pub(super) fn parse<T: for<'de> Deserialize<'de>>(data: &Value, what: &str) -> Result<T, String> {
     serde_json::from_value(data.clone()).map_err(|e| format!("{what}: {e}"))
@@ -139,63 +140,20 @@ fn session_check(data: &Value, env: &CheckEnv) -> Vec<Issue> {
     }
 }
 
-// ---- time ------------------------------------------------------------------------------------
+// ---- time (`sections_time`) -----------------------------------------------------------------
 
-/// Data of the `time` section.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct TimeData {
-    /// Calendar year of the session's start.
-    pub year: i32,
-    /// Month 1-12.
-    pub month: u32,
-    /// Day 1-31.
-    pub day: u32,
-    /// Hour of the clock when the session started.
-    pub start_hour: u32,
-    /// Minute of the clock when the session started.
-    pub start_minute: u32,
-    /// Simulated seconds since then (the clock shows start + this).
-    pub sim_elapsed_s: f64,
-}
-
-fn time_capture(world: &mut World) -> Result<Option<Value>, String> {
-    let setup = world.resource::<NewGameSetup>();
-    let info = world.resource::<InGameSessionInfo>();
-    to_value(&TimeData {
-        year: setup.year,
-        month: setup.month,
-        day: setup.day,
-        start_hour: info.start_hour,
-        start_minute: info.start_minute,
-        sim_elapsed_s: f64::from(info.sim_elapsed_seconds),
-    })
-}
-
-fn time_prepare(world: &mut World, data: &Value) -> Result<(), String> {
-    let d: TimeData = parse(data, "time")?;
-    let mut setup = world.resource_mut::<NewGameSetup>();
-    setup.year = d.year;
-    setup.month = d.month;
-    setup.day = d.day;
-    setup.hour = d.start_hour;
-    setup.minute = d.start_minute;
-    Ok(())
-}
-
-fn time_apply(world: &mut World, data: &Value) -> Result<(), String> {
-    let d: TimeData = parse(data, "time")?;
-    world
-        .resource_mut::<InGameSessionInfo>()
-        .sim_elapsed_seconds = d.sim_elapsed_s as f32;
-    Ok(())
-}
+pub use super::sections_time::TimeData;
+use super::sections_time::{time_apply, time_capture, time_prepare};
 
 // ---- weather ---------------------------------------------------------------------------------
 
 fn weather_capture(world: &mut World) -> Result<Option<Value>, String> {
-    Ok(Some(
-        json!({ "preset": world.resource::<NewGameSetup>().weather_preset }),
-    ))
+    // The weather of the session now (the pause page may have changed it), else the plan's.
+    let preset = world.get_resource::<SessionEnvironment>().map_or_else(
+        || world.resource::<NewGameSetup>().weather_preset.clone(),
+        |e| e.weather().to_owned(),
+    );
+    Ok(Some(json!({ "preset": preset })))
 }
 
 fn weather_prepare(world: &mut World, data: &Value) -> Result<(), String> {
@@ -386,7 +344,8 @@ pub fn register(app: &mut App) {
         capture: time_capture,
         prepare: Some(time_prepare),
         apply: Some(time_apply),
-        about: "date, clock base and simulated seconds",
+        about:
+            "start date and clock, play time, the clock's date, time, map date, weather and rate",
         ..base
     })
     .register_save_section(SaveSection {

@@ -31,6 +31,7 @@ wiz-date = { $day } { $month } { $year }
 wiz-where-search = Search { $count } maps…
 wiz-where-empty = No maps found. Check the OMSI folder or rescan.
 wiz-where-start = Start point
+wiz-where-date = Date
 wiz-where-no-starts = This map has no named start points.
 wiz-where-description = Description from the map, in its original language
 wiz-where-remembered-missing = Your last map is no longer installed.
@@ -73,7 +74,7 @@ wiz-options-reset = Reset
 wiz-options-done = Done
 
 wiz-when-quick = Time of day
-wiz-when-exact = Date and time
+wiz-when-exact = Time of day
 wiz-when-weather = Weather
 wiz-when-now = Now
 wiz-when-morning = Morning

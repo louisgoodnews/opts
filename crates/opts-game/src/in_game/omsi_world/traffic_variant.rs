@@ -39,8 +39,13 @@ pub(super) struct Unit {
     pub joint: Vec2,
     /// Longitudinal position of the rearmost axle in this unit's frame.
     pub rear_axle_y: f32,
+    /// Longitudinal position of the frontmost axle in this unit's own frame, when the file
+    /// declares axles.
+    pub front_axle_y: Option<f32>,
     /// Joint limit on the angle against the predecessor (degrees).
     pub max_alpha_deg: f32,
+    /// The `[CTC]` colour schemes of the model (default and `.cti` items); each vehicle picks one.
+    pub repaints: crate::new_game_screen::repaints::VehicleRepaints,
     /// The unit is coupled the other way round (its model faces backwards).
     pub reversed: bool,
 }
@@ -103,6 +108,13 @@ impl Variant {
                 .or(head.brake_max_n.map(f64::from)),
             brake_performance: f64::from(head.brake_performance),
             rowdy: (f64::from(head.rowdy.0), f64::from(head.rowdy.1)),
+            // The front axle sits `front_offset − y` behind the bumper; the wheelbase is the
+            // head's own axle span (trailers follow through their joints).
+            front_overhang: self.units[0]
+                .size
+                .zip(self.units[0].front_axle_y)
+                .map(|((_, front), y)| f64::from(front - y)),
+            wheelbase: head.wheelbase_m.map(f64::from),
         }
     }
 
@@ -143,12 +155,28 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         .collect();
     let profile = AiProfile::from_manifest(&manifest, &consts);
     let response = measure_script(job, &manifest, &dir);
+    let front_axle_y = manifest
+        .axles
+        .iter()
+        .map(|a| a.longitudinal_m)
+        .reduce(f32::max);
     let tex_dirs = vec![
         job.install
             .find_in(&dir, "texture")
             .unwrap_or_else(|| dir.join("texture")),
         model_dir.join("texture"),
     ];
+    let default_livery = manifest
+        .friendly_name
+        .as_ref()
+        .map(|f| f.livery.clone())
+        .unwrap_or_default();
+    let repaints = crate::new_game_screen::repaints::discover_for_model(
+        &job.config.root,
+        &dir,
+        &model,
+        &default_livery,
+    );
     let unit = Unit {
         name: path
             .file_stem()
@@ -163,7 +191,9 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         hitch: Vec2::ZERO,
         joint: Vec2::ZERO,
         rear_axle_y: 0.0,
+        front_axle_y,
         max_alpha_deg: 52.5,
+        repaints,
         reversed: false,
     };
     Ok((unit, manifest, dir))
@@ -247,7 +277,12 @@ pub(super) fn load_variant(job: &WorldLoadJob, rel: &str) -> Result<Variant, Str
 /// A group of the map's AI lists that takes part in the traffic, with its density curve.
 pub(super) struct PoolGroup {
     pub name: String,
+    /// The group's `unsched_trafficdens.txt` entry (factor and curves); `None`: the map's
+    /// `global.cfg` `[trafficdensity_road]` curve applies.
     pub density: Option<GroupDensity>,
+    /// 0-based index in `unsched_vehgroups.txt`: the `flag` of the `[rule] trafficdensity`
+    /// records that address this group.
+    pub density_group: usize,
 }
 
 /// A vehicle entry of a group.
@@ -268,34 +303,45 @@ pub(super) enum SlotState {
     Failed,
 }
 
-/// The groups that take part in the traffic: every group `unsched_vehgroups.txt` gives a default
-/// density of 1 or more (`0` = no traffic by default), else `NormalCars`, else the first group.
+/// The groups that take part in the traffic, each with its index in `unsched_vehgroups.txt`:
+/// every group listed there that `ailists.cfg` defines, whatever its default density (a group
+/// with default `0` drives only where a rule gives it a density, e.g. Berlin-Spandau's `GDRCars`);
+/// without usable group data `NormalCars`, else the first group, as group `0`.
 pub(super) fn participating<'a>(
     lists: &'a AiLists,
     vehgroups: &[opts_core::formats::map::UnschedGroup],
-) -> Vec<&'a AiGroup> {
+) -> Vec<(usize, &'a AiGroup)> {
     let by_name = |n: &str| lists.groups.iter().find(|g| g.name.eq_ignore_ascii_case(n));
-    let mut out: Vec<&AiGroup> = Vec::new();
-    for g in vehgroups.iter().filter(|g| g.default_density >= 1) {
+    let mut out: Vec<(usize, &AiGroup)> = Vec::new();
+    for (i, g) in vehgroups.iter().enumerate() {
         if let Some(found) = by_name(&g.name) {
-            if !out.iter().any(|o| std::ptr::eq(*o, found)) {
-                out.push(found);
+            if !out.iter().any(|(_, o)| std::ptr::eq(*o, found)) {
+                out.push((i, found));
             }
         }
     }
     if out.is_empty() {
-        out.extend(by_name("NormalCars").or_else(|| lists.groups.first()));
+        out.extend(
+            by_name("NormalCars")
+                .or_else(|| lists.groups.first())
+                .map(|g| (0, g)),
+        );
     }
     out
 }
 
+/// What the traffic pool needs from the map's AI lists.
+pub(super) struct PoolSetup {
+    pub groups: Vec<PoolGroup>,
+    pub slots: Vec<Slot>,
+    /// Default density of each `unsched_vehgroups.txt` group (`[1]` without the file).
+    pub defaults: Vec<u32>,
+}
+
 /// Reads the map's AI lists and builds the groups and vehicle slots of the traffic pool.
-pub(super) fn read_groups(job: &WorldLoadJob) -> (Vec<PoolGroup>, Vec<Slot>) {
-    let read = |name: &str| {
-        job.install
-            .find_in(&job.config.map_dir, name)
-            .and_then(|p| std::fs::read(p).ok())
-    };
+pub(super) fn read_groups(job: &WorldLoadJob) -> PoolSetup {
+    // The files in force on the map date (Chrono replacements and group updates).
+    let read = |name: &str| job.data_bytes(name);
     let lists = read("ailists.cfg")
         .map(|b| AiLists::parse(&b))
         .unwrap_or_default();
@@ -305,16 +351,30 @@ pub(super) fn read_groups(job: &WorldLoadJob) -> (Vec<PoolGroup>, Vec<Slot>) {
     let densities = read("unsched_trafficdens.txt")
         .map(|b| parse_unsched_trafficdens(&b))
         .unwrap_or_default();
+    let defaults: Vec<u32> = if vehgroups.is_empty() {
+        vec![1]
+    } else {
+        vehgroups.iter().map(|g| g.default_density).collect()
+    };
     let (mut groups, mut slots) = (Vec::new(), Vec::new());
-    for g in participating(&lists, &vehgroups) {
-        tracing::info!(group = %g.name, vehicles = g.entries.len(), "AI traffic group chosen");
+    for (density_group, g) in participating(&lists, &vehgroups) {
+        let density = densities
+            .iter()
+            .find(|d| d.name.eq_ignore_ascii_case(&g.name))
+            .cloned();
+        tracing::info!(
+            group = %g.name,
+            density_group,
+            default = defaults.get(density_group).copied().unwrap_or(0),
+            factor = density.as_ref().map(|d| d.factor),
+            vehicles = g.entries.len(),
+            "AI traffic group chosen"
+        );
         let index = groups.len();
         groups.push(PoolGroup {
             name: g.name.clone(),
-            density: densities
-                .iter()
-                .find(|d| d.name.eq_ignore_ascii_case(&g.name))
-                .cloned(),
+            density,
+            density_group,
         });
         slots.extend(
             g.entries
@@ -335,7 +395,11 @@ pub(super) fn read_groups(job: &WorldLoadJob) -> (Vec<PoolGroup>, Vec<Slot>) {
     if groups.is_empty() {
         tracing::error!(at = %opts_bevy::position_tag(), map = %job.config.map_dir.display(), "no AI group in ailists.cfg; no traffic");
     }
-    (groups, slots)
+    PoolSetup {
+        groups,
+        slots,
+        defaults,
+    }
 }
 
 #[cfg(test)]
@@ -357,27 +421,34 @@ mod tests {
         }
     }
 
+    /// Every listed group takes part with its index in `unsched_vehgroups.txt` (the rule flag),
+    /// also those with default `0`; groups `ailists.cfg` lacks are skipped.
     #[test]
-    fn groups_with_a_default_density_take_part_the_others_do_not() {
+    fn listed_groups_take_part_with_their_rule_index() {
         let l = lists();
         let g = participating(
             &l,
-            &[vg("NormalCars", 1), vg("trucks", 1), vg("Emergency", 0)],
+            &[
+                vg("NormalCars", 1),
+                vg("Taxi", 1),
+                vg("trucks", 0),
+                vg("Emergency", 0),
+            ],
         );
-        let names: Vec<&str> = g.iter().map(|g| g.name.as_str()).collect();
-        assert_eq!(names, ["NormalCars", "Trucks"]);
+        let names: Vec<(usize, &str)> = g.iter().map(|(i, g)| (*i, g.name.as_str())).collect();
+        assert_eq!(names, [(0, "NormalCars"), (2, "Trucks"), (3, "Emergency")]);
     }
 
     #[test]
     fn without_usable_group_data_the_old_choice_stays() {
         let l = lists();
-        assert_eq!(participating(&l, &[])[0].name, "NormalCars");
+        assert_eq!(participating(&l, &[])[0].1.name, "NormalCars");
         assert_eq!(
-            participating(&l, &[vg("Emergency", 0)])[0].name,
-            "NormalCars"
+            participating(&l, &[vg("Bicycles", 0)])[0],
+            (0, &l.groups[0])
         );
         let only = AiLists::parse(b"[aigroup_2]\nTaxi\n\nvehicles\\t.bus\t1\n[end]\n");
-        assert_eq!(participating(&only, &[])[0].name, "Taxi");
+        assert_eq!(participating(&only, &[])[0].1.name, "Taxi");
         assert!(participating(&AiLists::default(), &[]).is_empty());
     }
 
@@ -400,7 +471,9 @@ mod tests {
             hitch: Vec2::ZERO,
             joint: Vec2::ZERO,
             rear_axle_y: 0.0,
+            front_axle_y: None,
             max_alpha_deg: 52.5,
+            repaints: Default::default(),
             reversed: false,
         };
         let v = Variant {

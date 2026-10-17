@@ -11,6 +11,7 @@
 //! * [`dialog`]: confirmation dialogs; [`footer`]: theme toggle and quit.
 
 pub mod banner;
+pub mod calendar;
 pub mod dialog;
 pub mod esc;
 pub mod footer;

@@ -84,7 +84,12 @@ fn run(frame: f64, rolling: bool) -> Vec<[f32; 3]> {
         )
         .add_systems(Update, follow_ground);
     let mut ground = GroundIndex::default();
-    ground.insert_tile((0, 0), (0.0, 0.0), Some(terrain(rolling)), &[]);
+    ground.insert_tile(
+        (0, 0),
+        (0.0, 0.0),
+        Some(opts_bevy::TileTerrain::new(terrain(rolling), 5.0)),
+        &[],
+    );
     app.insert_resource(ground);
 
     let mut controller = VehicleController::standard_bus(11_500.0, 5.85);

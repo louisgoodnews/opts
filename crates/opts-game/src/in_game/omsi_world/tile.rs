@@ -6,14 +6,13 @@ use bevy::prelude::*;
 use opts_bevy::coords::{bevy_to_omsi_pos, omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::text_texture::{resolve_text, TextSpec};
-use opts_bevy::{sample_terrain, ContentLoader, TextureOverride};
-use opts_core::formats::map::{MapObjectInstance, MapTerrain};
+use opts_bevy::{ContentLoader, TextureOverride, TileTerrain};
+use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::attachments::expand_attachments;
 use crate::in_game::types::InGameEntity;
 
-use super::ground::tile_origin;
 use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
 use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
@@ -44,20 +43,23 @@ pub fn load_next_tile(
     };
     job.tile_splines
         .insert(key, std::sync::Arc::new(tile.splines.clone()));
+    // A tile rebuilt in place (Chrono switch) may still hold the collision of its previous build.
+    super::collision::unregister_tile(commands, key);
     for w in &tile.warnings {
         tracing::warn!(tile = ?key, "tile record left out: {w}");
     }
     opts_bevy::set_loading_tile(Some(key));
     opts_bevy::scene_trace::begin_tile(key);
     let mut children: Vec<Entity> = Vec::new();
-    let origin = {
-        let (a, b) = (tile_origin(key), tile_origin(job.start_tile));
-        (a.0 - b.0, a.1 - b.1)
-    };
+    let origin = job.tile_offset(key);
     let tile_path = job.tile_path(key).unwrap_or_default();
     job.loading_deps.clear();
     job.loading_deps
         .insert(opts_bevy::hot_reload::cache::normalize(&tile_path));
+    for overlay in job.chrono_overlays(key).to_vec() {
+        job.loading_deps
+            .insert(opts_bevy::hot_reload::cache::normalize(&overlay));
+    }
     tracing::info!(
         tile = ?key,
         path = %tile_path.display(),
@@ -74,7 +76,6 @@ pub fn load_next_tile(
         materials,
         images,
         ground_materials,
-        &tile,
         key,
         origin,
         &mut children,
@@ -134,6 +135,7 @@ pub fn load_next_tile(
             terrain.clone(),
             roads,
             job.start_tile,
+            job.grid,
         );
     }
 
@@ -148,7 +150,8 @@ pub fn load_next_tile(
             &tile.splines,
             &index,
             key,
-            |x, y| terrain.as_ref().map_or(0.0, |t| sample_terrain(t, x, y)),
+            &job.grid,
+            |x, y| terrain.as_ref().map_or(0.0, |t| t.height(x, y)),
         )
     };
     let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
@@ -275,7 +278,7 @@ fn place_attached_objects(
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     tile: &opts_core::formats::map::MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -359,7 +362,7 @@ fn spawn_object(
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
     placement: Placement,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -398,7 +401,7 @@ fn spawn_object_inner(
     images: &mut Assets<Image>,
     obj: &MapObjectInstance,
     placement: Placement,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     key: (i32, i32),
     origin: (f32, f32),
     children: &mut Vec<Entity>,
@@ -423,7 +426,7 @@ fn spawn_object_inner(
         return;
     }
     if sco.carpark_p {
-        let Some(parked) = job.parked_vehicle(obj.id_code) else {
+        let Some(parked) = job.parked_vehicle(obj) else {
             return;
         };
         let mut replaced = obj.clone();
@@ -455,7 +458,8 @@ fn spawn_object_inner(
         }
         return;
     }
-    if sco.only_editor {
+    // An editor-only object draws no mesh; its `[maplight]`s are placed below.
+    if sco.only_editor && sco.map_lights.is_empty() {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
@@ -480,7 +484,7 @@ fn spawn_object_inner(
     } else {
         terrain
             .as_ref()
-            .map_or(0.0, |t| sample_terrain(t, obj.position.x, obj.position.y))
+            .map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
     };
     let z = match (placement, sco.has_absolute_height()) {
         (Placement::OnSpline(z), true) => z,
@@ -500,6 +504,15 @@ fn spawn_object_inner(
             scale: Vec3::ONE,
         },
     };
+    if sco.only_editor {
+        // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
+        // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
+        let root = commands.spawn((transform, Name::new("MapLights"))).id();
+        opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
+        children.push(root);
+        tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");
+        return;
+    }
     // `[attachObj]` children of this object are placed relative to it.
     job.placed
         .entry(obj.id_code)
@@ -515,13 +528,29 @@ fn spawn_object_inner(
         roll = ?obj.roll_deg,
         "placing scenery object"
     );
-    super::collision::register_object(job, commands, &sco, &model_dir, &transform, key);
+    // `[crossing_heightdeformation]`: meshes and collision boxes bent over the base surface.
+    let bend = job.crossing_base(&sco_path, &sco);
+    super::collision::register_object(
+        job,
+        commands,
+        &sco,
+        &model_dir,
+        &transform,
+        key,
+        bend.as_ref(),
+    );
     super::trace::set_transform(&transform);
     if let Some(cfg_rel) = &sco.model_cfg {
         super::trace::set_model_cfg(cfg_rel);
+        // The colour scheme of this placement (`[CTC]` repaints), fixed per object and tile.
+        let seed = crate::new_game_screen::repaints::instance_seed(&[
+            obj.id_code,
+            u64::from(key.0 as u32),
+            u64::from(key.1 as u32),
+        ]);
         spawn_vehicle_model(
             job, stats, commands, meshes, materials, images, &sco_path, &sco_dir, cfg_rel,
-            transform, children,
+            transform, seed, children,
         );
         return;
     }
@@ -534,7 +563,12 @@ fn spawn_object_inner(
         .map(|t| t.string_names.clone())
         .unwrap_or_default();
     let mut mesh_parts = Vec::with_capacity(sco.meshes.len());
-    for mesh_def in &sco.meshes {
+    for (mesh_index, mesh_def) in sco.meshes.iter().enumerate() {
+        // `[onlyeditor]` after a `[mesh]` hides that mesh only (helpers next to a visible one).
+        if !sco.mesh_in_game(mesh_index) {
+            mesh_parts.push(Vec::new());
+            continue;
+        }
         let found = job.install.find_in(&model_dir, &mesh_def.file);
         if let Some(p) = &found {
             job.loading_deps
@@ -603,10 +637,15 @@ fn spawn_object_inner(
             materials,
             images,
         };
-        mesh_parts.push(loader.o3d_parts(&o3d_path, &tex_dirs, &overrides));
+        mesh_parts.push(loader.o3d_parts_bent(
+            &o3d_path,
+            &tex_dirs,
+            &overrides,
+            bend.as_ref().map(|(p, b)| (p.as_path(), b.as_ref())),
+        ));
     }
     if mesh_parts.iter().all(Vec::is_empty) {
-        if sco.meshes.is_empty() {
+        if sco.meshes.is_empty() || sco.is_editor_only() {
             tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
             stats.objects_no_geometry += 1;
         } else if job.cache.stats.hidden_parts > hidden_before {
@@ -667,6 +706,7 @@ fn spawn_vehicle_model(
     sco_dir: &Path,
     cfg_rel: &str,
     transform: Transform,
+    repaint_seed: u64,
     children: &mut Vec<Entity>,
 ) {
     let Some(cfg_path) = job.install.find_in(sco_dir, cfg_rel) else {
@@ -705,6 +745,19 @@ fn spawn_vehicle_model(
         .spawn((transform, Name::new(cfg_rel.to_string())))
         .id();
     job.vehicle_text_defs = model.text_textures.clone();
+    let repaints = job
+        .model_repaints
+        .entry(cfg_path.clone())
+        .or_insert_with(|| {
+            crate::new_game_screen::repaints::discover_for_model(
+                &job.config.root,
+                sco_dir,
+                &model,
+                "",
+            )
+        });
+    let replacements = repaints.replacements(repaints.pick(repaint_seed), &model.ctc_textures);
+    job.cache.texture_replacements = replacements.into_iter().collect();
     let (mut count, mut verts) = (0, 0);
     for lod in lods {
         let (c, v, _, _) = super::vehicle::load_segment_meshes(
@@ -715,6 +768,7 @@ fn spawn_vehicle_model(
             break;
         }
     }
+    job.cache.texture_replacements.clear();
     if count == 0 {
         tracing::warn!(sco = %sco_path.display(), cfg = %cfg_path.display(), "vehicle model object skipped: no level of detail could be loaded");
         super::trace::warn(|| format!("no level of detail of {cfg_rel} could be loaded"));
@@ -751,10 +805,7 @@ pub fn stream_world_tiles(
     }
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
-    let centre = (
-        job.start_tile.0 + (p.x / opts_bevy::tile_size()).floor() as i32,
-        job.start_tile.1 + ((-p.z) / opts_bevy::tile_size()).floor() as i32,
-    );
+    let centre = job.grid.key_at(Vec2::new(p.x, -p.z), job.start_tile);
     let dist = |k: (i32, i32)| (k.0 - centre.0).abs().max((k.1 - centre.1).abs());
 
     let radius = job.stream_radius;
@@ -765,16 +816,8 @@ pub fn stream_world_tiles(
         .filter(|k| dist(*k) > radius + 1)
         .collect();
     for key in far {
-        if let Some(root) = job.resident.remove(&key) {
-            commands.entity(root).despawn();
-            super::pedestrians::unregister_tile(&mut commands, key);
-            super::ground_height::unregister(&mut commands, key);
-            super::rail::unregister_tile(&mut commands, key);
-            super::rail::unregister_bike_tile(&mut commands, key);
-            super::collision::unregister_tile(&mut commands, key);
-            super::traffic::unregister_tile(&mut commands, key);
-            opts_bevy::scene_trace::forget_tile(key);
-            tracing::debug!(tile = ?key, "tile unloaded");
+        if let Some(unload) = job.unload_tile(key, false) {
+            unload.apply(&mut commands);
         }
     }
     stats.tiles_loaded = job.resident.len();

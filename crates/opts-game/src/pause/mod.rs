@@ -5,6 +5,7 @@
 //! leaves the session. *Leave drive…* asks once, naming the consequence, and offers *Leave to
 //! Home* or *Quit OPTS*. Leaving a drive that moved shows the session summary on Home.
 
+pub mod environment;
 pub mod stats;
 
 use bevy::app::AppExit;
@@ -45,6 +46,9 @@ pub struct Pause {
     pub resume_time: bool,
     /// The report dialog was opened from here: come back when it closes.
     pub after_report: bool,
+    /// *Resume* was chosen while the map is rebuilt for a new date: the simulation resumes when
+    /// the rebuild is done ([`opts_bevy::ChronoRebuild`]).
+    pub resume_after_rebuild: bool,
     seen_report: bool,
 }
 
@@ -59,6 +63,8 @@ pub enum PauseItem {
     Resume,
     /// Open the vehicle menu.
     Vehicle,
+    /// Date, time and weather of the drive.
+    Environment,
     /// *Save game…*
     Save,
     /// *Load game…*
@@ -115,6 +121,12 @@ pub(crate) fn spawn_overlay(commands: &mut Commands) -> Entity {
         let resume = item(c, PauseItem::Resume, keys::PAUSE_RESUME, "resume");
         c.commands().entity(resume).insert(DefaultFocus);
         item(c, PauseItem::Vehicle, keys::PAUSE_VEHICLE, "vehicle");
+        item(
+            c,
+            PauseItem::Environment,
+            keys::PAUSE_ENVIRONMENT,
+            "environment",
+        );
         item(c, PauseItem::Save, keys::PAUSE_SAVE, "save");
         item(c, PauseItem::Load, keys::PAUSE_LOAD, "load");
         item(c, PauseItem::Settings, keys::PAUSE_SETTINGS, "settings");
@@ -146,7 +158,12 @@ fn open_pause(commands: &mut Commands, pause: &mut Pause, time: &mut Time<Virtua
     pause.root = Some(spawn_overlay(commands));
 }
 
-fn close_pause(commands: &mut Commands, pause: &mut Pause, time: &mut Time<Virtual>, resume: bool) {
+pub(crate) fn close_pause(
+    commands: &mut Commands,
+    pause: &mut Pause,
+    time: &mut Time<Virtual>,
+    resume: bool,
+) {
     if let Some(root) = pause.root.take() {
         commands.entity(root).try_despawn();
     }
@@ -199,12 +216,13 @@ pub fn pause_cancel(
     mut commands: Commands,
     mut events: MessageReader<ModalEvent>,
     roots: Query<(), With<ModalRoot>>,
+    rebuild: Option<Res<opts_bevy::ChronoRebuild>>,
     mut pause: ResMut<Pause>,
     mut time: ResMut<Time<Virtual>>,
 ) {
     for ModalEvent::CancelRequested(modal) in events.read() {
         if pause.root == Some(*modal) && roots.contains(*modal) {
-            close_pause(&mut commands, &mut pause, &mut time, true);
+            environment::resume_drive(&mut commands, &mut pause, &mut time, rebuild.as_deref());
         }
     }
 }
@@ -218,6 +236,7 @@ pub fn pause_items(
     disabled: Query<(), With<opts_gui::interaction::state::Disabled>>,
     mut pause: ResMut<Pause>,
     mut time: ResMut<Time<Virtual>>,
+    rebuild: Option<Res<opts_bevy::ChronoRebuild>>,
     mut menu: ResMut<VehicleMenu>,
     mut report: ResMut<ReportModalData>,
     report_state: Res<State<ReportModalState>>,
@@ -231,7 +250,16 @@ pub fn pause_items(
             continue;
         }
         match which {
-            PauseItem::Resume => close_pause(&mut commands, &mut pause, &mut time, true),
+            PauseItem::Resume => {
+                environment::resume_drive(&mut commands, &mut pause, &mut time, rebuild.as_deref());
+            }
+            PauseItem::Environment => {
+                // One dialog at a time: the overlay steps aside and returns when the page closes.
+                if let Some(root) = pause.root.take() {
+                    commands.entity(root).try_despawn();
+                }
+                environment::open_environment_page(&mut commands);
+            }
             PauseItem::Vehicle => {
                 close_pause(&mut commands, &mut pause, &mut time, true);
                 menu.open_main();
@@ -357,11 +385,17 @@ pub fn return_after_overlay(
     mut closed: RemovedComponents<crate::help::HelpOverlay>,
     mut settings_closed: RemovedComponents<SettingsOverlay>,
     mut saves_closed: RemovedComponents<crate::save::ui::SavesOverlay>,
+    mut environment_closed: RemovedComponents<environment::EnvironmentOverlay>,
     mut pause: ResMut<Pause>,
     reporting: Res<State<ReportModalState>>,
     mut commands: Commands,
 ) {
-    if closed.read().count() + settings_closed.read().count() + saves_closed.read().count() == 0 {
+    if closed.read().count()
+        + settings_closed.read().count()
+        + saves_closed.read().count()
+        + environment_closed.read().count()
+        == 0
+    {
         return;
     }
     // The report dialog (opened from the overlay) brings the pause overlay back itself.
@@ -401,11 +435,17 @@ fn open_pause_again(commands: &mut Commands, pause: &mut Pause, time: &mut Time<
 pub fn reset_on_exit(
     mut commands: Commands,
     mut pause: ResMut<Pause>,
+    mut page: ResMut<environment::EnvironmentPage>,
+    pages: Query<Entity, With<environment::EnvironmentOverlay>>,
     mut time: ResMut<Time<Virtual>>,
 ) {
     if let Some(root) = pause.root.take() {
         commands.entity(root).try_despawn();
     }
+    for root in &pages {
+        commands.entity(root).try_despawn();
+    }
+    *page = environment::EnvironmentPage::default();
     *pause = Pause::default();
     time.unpause();
 }
@@ -424,7 +464,11 @@ pub struct PausePlugin;
 impl Plugin for PausePlugin {
     fn build(&self, app: &mut App) {
         crate::pause::ensure_report_state(app);
+        if !app.is_plugin_added::<opts_bevy::EnvironmentPlugin>() {
+            app.add_plugins(opts_bevy::EnvironmentPlugin);
+        }
         stats::build(app);
+        environment::build(app);
         app.init_resource::<Pause>()
             .add_message::<PauseRequest>()
             .add_systems(
@@ -436,6 +480,9 @@ impl Plugin for PausePlugin {
                     leave_choices,
                     reopen_after_report,
                     return_after_overlay,
+                    environment::resume_after_rebuild,
+                    environment::environment_page_input,
+                    environment::refresh_environment_page,
                 )
                     .run_if(in_state(AppState::InGame)),
             )

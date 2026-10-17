@@ -17,7 +17,7 @@ use crate::in_game::loading_ui::{
     ChooseAnotherBtn, ContinueBtn, DetailsBtn, LoadingBackBtn, RetryBtn,
 };
 use crate::in_game::omsi_world::{
-    begin_world_load, load_next_tile, load_player_vehicle, resolve_session_config,
+    begin_world_load_at, chrono_date, load_next_tile, load_player_vehicle, resolve_session_config,
     spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
 };
 use crate::in_game::types::{
@@ -142,7 +142,9 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         env.service.as_deref(),
     )
     .and_then(|cfg| {
-        begin_world_load(cfg).map(|mut job| {
+        // The map is built for the planned date (Chrono); the session environment starts there.
+        let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
+        begin_world_load_at(cfg, Some(date)).map(|mut job| {
             job.no_vehicle = no_vehicle;
             (job.map_name(), job)
         })
@@ -157,6 +159,7 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             env.stats.map_name = name.clone();
             env.stats.tiles_missing = job.tiles_listed_missing();
             env.stats.start_tile = job.start_tile();
+            env.stats.grid = job.grid();
             // The card shows the map that is really loading, not the one the menu chose (F17).
             env.session.map_name = name;
             if !no_vehicle && !job.has_vehicle_file() && !setup.selected_vehicle.is_empty() {
@@ -170,6 +173,7 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                     .because("load-cause-no-vehicle-file"),
                 );
             }
+            env.commands.insert_resource(job.chrono_state());
             env.commands.insert_resource(job);
             state.progress = P_TERRAIN;
             state.stage = LoadStage::BuildTerrain;
@@ -236,7 +240,6 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             commands,
             assets,
             job,
-            setup,
             ..
         } = env;
         let sky = job.as_deref().map(|j| {
@@ -246,7 +249,6 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 &mut assets.materials,
                 &mut assets.images,
                 j.omsi_root(),
-                setup,
             )
         });
         match sky {
@@ -255,7 +257,7 @@ fn stage_atmosphere(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 if let Some(Err(e)) = other {
                     tracing::error!(error = %e, "sky unavailable; using default sun light");
                 }
-                spawn_atmosphere_and_lighting(commands, setup);
+                spawn_atmosphere_and_lighting(commands);
             }
         }
         state.atmosphere_spawned = true;
@@ -308,12 +310,14 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
                 true,
             ) {
                 Ok(spawned) => {
-                    let origin = job.session_origin();
-                    let point = job.spawn_point().map(|(p, heading)| SpawnPoint {
-                        x: f64::from(origin.0 + p.x),
-                        y: f64::from(origin.1 + p.y),
-                        z: f64::from(p.z),
-                        heading_deg: f64::from(heading),
+                    let point = job.spawn_point().map(|(p, heading)| {
+                        let abs = job.local_to_absolute(p.truncate());
+                        SpawnPoint {
+                            x: abs.x,
+                            y: abs.y,
+                            z: f64::from(p.z),
+                            heading_deg: f64::from(heading),
+                        }
                     });
                     let entry = job.start_entry().map(|(i, n)| (i, n.to_owned()));
                     if let Some(r) = registry.get_mut(id) {

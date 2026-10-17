@@ -10,14 +10,16 @@ use std::sync::Arc;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::{ContentCache, OmsiInstall};
-use opts_core::formats::map::{MapManifest, MapSplineInstance};
+use opts_core::formats::map::{MapManifest, MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::{SceneryObject, SplineProfile};
 
 use crate::in_game::attachments::SplineIndex;
 
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
+mod chrono;
 mod collision;
 mod consist_plan;
+mod crossing;
 mod dev_look;
 mod ground;
 mod ground_height;
@@ -43,6 +45,7 @@ mod vehicle;
 mod vehicle_text;
 mod water;
 
+pub use chrono::{apply_map_date_changes, chrono_date, track_chrono_rebuild, ChronoState};
 pub use collision::{
     attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
     VehicleCollider,
@@ -50,7 +53,7 @@ pub use collision::{
 pub use dev_look::place_dev_camera;
 use ground::GroundArray;
 pub use ground_height::{follow_ground, sample_consist_ground, GroundIndex};
-pub use job::{begin_world_load, resolve_session_config};
+pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use overlay::{
     log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,
     update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText, DebugWheelVars,
@@ -65,7 +68,7 @@ pub use rail::{
     rail_player_step, spawn_ai_trains, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, Part,
     RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
 };
-pub use reload::ReloadPlan;
+pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
@@ -146,6 +149,8 @@ pub struct PositionReadout {
 pub struct WorldStats {
     pub map_name: String,
     pub start_tile: (i32, i32),
+    /// Tile grid of the map (where each tile lies relative to the start tile).
+    pub grid: TileGrid,
     /// Where the camera and the player's vehicle are (updated every frame).
     pub position: PositionReadout,
     pub tiles_loaded: usize,
@@ -206,12 +211,21 @@ pub struct WorldLoadJob {
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// `[crossing_heightdeformation]` base surfaces by file.
+    crossing_bases: HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
+    /// Ground faces of crossings and surface objects by `.sco` (mesh axes), for the carve.
+    ground_faces: HashMap<PathBuf, crossing::ObjectFaces>,
+    /// The `[object]`s of tiles read for the carve of their neighbours.
+    tile_objects: HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
     scenery: scenery_objects::SceneryObjectCache,
-    /// Entries of the map's `parklist_p.txt`, read on first use (empty when absent).
-    parklist: Option<Vec<String>>,
+    /// Chrono entries and what is active on the map date (`chrono.rs`).
+    chrono: chrono::ChronoContext,
+    /// Entries of the map's parking lists by selector (`0` = `parklist_p.txt`, `N` =
+    /// `parklist_p_N.txt`), read on first use (empty when absent).
+    parklists: HashMap<u32, Vec<String>>,
     spline_materials: HashMap<(PathBuf, usize), Handle<StandardMaterial>>,
     /// Bitmap fonts and rendered text textures (`[texttexture]`).
     fonts: opts_bevy::text_texture::FontRegistry,
@@ -238,7 +252,11 @@ pub struct WorldLoadJob {
     formation_cars: Vec<vehicle::FormationCar>,
     /// Repaints of the player's vehicle, read when it is loaded.
     repaint: Option<crate::new_game_screen::repaints::VehicleRepaints>,
+    /// Repaints of parked/static vehicle models, by model config path (read on first use).
+    model_repaints: HashMap<PathBuf, crate::new_game_screen::repaints::VehicleRepaints>,
     start_tile: (i32, i32),
+    /// Tile grid of the map; the session frame is anchored at `start_tile`.
+    grid: TileGrid,
     /// Tiles of the 3x3 neighbourhood that `global.cfg` lists but whose file is missing.
     missing_listed: usize,
     /// Camera parameters, set once the vehicle is loaded.

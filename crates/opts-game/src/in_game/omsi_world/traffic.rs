@@ -15,28 +15,36 @@ use std::sync::Arc;
 use bevy::math::DVec2;
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
+use opts_bevy::TileTerrain;
 use opts_core::formats::map::lists::day;
-use opts_core::formats::map::{MapObjectInstance, MapTerrain, MapTile};
+use opts_core::formats::map::{DensityProfile, MapObjectInstance, MapTile};
 use opts_core::formats::scenery::sco::{ScoPath, ScoTrafficLightGroup};
 use opts_core::formats::scenery::{SceneryObject, SplinePath, SplineProfile};
 use opts_core::formats::vehicles::model::ModelLod;
 use opts_traffic::{
-    segments_from_tile, signals_from_tile, AgentId, Calibration, ConnectParams, IdmParams,
-    LaneGraph, LaneKind, LaneSegment, PathSource, Rng, SignalKey, SignalProgram, TrafficWorld,
-    VehicleClass,
+    group_targets, segments_from_tile, signals_from_tile, AgentId, Calibration, ConnectParams,
+    IdmParams, LaneGraph, LaneKind, LaneSegment, PathSource, Rng, SignalKey, SignalProgram,
+    TrafficWorld, VehicleClass,
 };
 
-use crate::in_game::types::{InGameEntity, InGameSessionInfo};
+use crate::in_game::types::InGameEntity;
 
 use super::traffic_chain::{despawn_chain, ChainUnit, TrafficChain};
-use super::traffic_variant::{load_variant, read_groups, PoolGroup, Slot, SlotState, Unit};
+use super::traffic_variant::{
+    load_variant, read_groups, PoolGroup, PoolSetup, Slot, SlotState, Unit,
+};
 use super::vehicle::load_segment_meshes_for;
 use super::WorldLoadJob;
 
-/// Default cap on simultaneously driving AI vehicles.
-pub const DEFAULT_MAX_TRAFFIC: usize = 30;
-/// One vehicle per this much road (m) in the loaded tiles at density factor 1, up to the cap.
-const METRES_OF_ROAD_PER_VEHICLE: f64 = 250.0;
+/// Default ceiling on simultaneously driving AI vehicles. It is a performance limit, not the
+/// density: the map's density model decides how many vehicles there are, and only when that
+/// exceeds the ceiling are all groups scaled down in proportion.
+pub const DEFAULT_MAX_TRAFFIC: usize = 100;
+/// `L0`: one vehicle per this much lane (m) at density `1` and time factor `1` (the density model,
+/// `docs/src/architecture/ai-traffic.md`). Calibrated with the `density_census` example: the
+/// median, over 56 entry points of 12 maps at 12:00 on a weekday, of the lane metres × density ×
+/// time factor within 320 m divided by the former target (84 m; Berlin-Spandau's main entry 60 m).
+pub const METRES_OF_LANE_PER_VEHICLE: f64 = 80.0;
 /// Vehicles appear at least this far from the camera (m)…
 const SPAWN_MIN_M: f64 = 80.0;
 /// …and at most this far.
@@ -113,21 +121,30 @@ pub struct TrafficPool {
     started: bool,
     groups: Vec<PoolGroup>,
     slots: Vec<Slot>,
+    /// Default density of each `unsched_vehgroups.txt` group.
+    defaults: Vec<u32>,
+    /// `global.cfg` `[trafficdensity_road]`: the time curve of groups without their own.
+    road_curve: DensityProfile,
+    /// The pool group of every vehicle this pool spawned.
+    agent_groups: HashMap<AgentId, usize>,
+    /// The ceiling bound at the last spawn attempt (logged when that changes).
+    capped: bool,
     rng: Option<Rng>,
     frames: u32,
+    /// Vehicles built so far; with the slot it seeds each vehicle's repaint choice.
+    built: u64,
 }
 
 /// Component of a driving AI vehicle.
 #[derive(Component)]
 pub struct TrafficVehicle {
     id: AgentId,
-    /// Distance from the model origin to the front bumper (m).
-    front_offset: f32,
     delta_height: f32,
-    /// Wheel radius (m) and wheelbase (m) used for the wheel variables (from the vehicle's
-    /// axles when the file gives them).
+    /// Wheel radius (m) used for the wheel rotation (from the vehicle's file when it gives one).
     wheel_radius: f32,
-    wheelbase: f32,
+    /// Longitudinal position of the rear axle in the model frame (m): the model origin sits
+    /// `rear_axle_y` along the body from the agent's rear axle.
+    rear_axle_y: f32,
     /// Accumulated wheel rotation (rad).
     wheel_angle: f32,
     /// Seat occupation (`ai_pax1…4`): bit `i` shows passenger `i + 1`.
@@ -148,10 +165,9 @@ impl TrafficVehicle {
     pub(super) fn at(origin: DVec2, heading: f64, height: f32) -> Self {
         Self {
             id: AgentId(0),
-            front_offset: 0.0,
             delta_height: 0.0,
             wheel_radius: 0.31,
-            wheelbase: 2.6,
+            rear_axle_y: -1.3,
             wheel_angle: 0.0,
             pax: 0,
             blink_phase: 0.0,
@@ -165,7 +181,7 @@ impl TrafficVehicle {
 /// Path data for [`segments_from_tile`], read through the load job's caches.
 struct JobSource<'a> {
     job: &'a mut WorldLoadJob,
-    terrain: Option<&'a MapTerrain>,
+    terrain: Option<&'a TileTerrain>,
     sli: HashMap<String, Option<Arc<SplineProfile>>>,
     sco: HashMap<String, Option<Arc<SceneryObject>>>,
 }
@@ -207,9 +223,8 @@ impl PathSource for JobSource<'_> {
         let ground = if absolute {
             0.0
         } else {
-            self.terrain.map_or(0.0, |t| {
-                opts_bevy::sample_terrain(t, o.position.x, o.position.y)
-            })
+            self.terrain
+                .map_or(0.0, |t| t.height(o.position.x, o.position.y))
         };
         f64::from(ground + o.position.z)
     }
@@ -219,7 +234,7 @@ impl PathSource for JobSource<'_> {
 pub(super) fn tile_segments(
     job: &mut WorldLoadJob,
     tile: &MapTile,
-    terrain: Option<&MapTerrain>,
+    terrain: Option<&TileTerrain>,
     origin: (f32, f32),
 ) -> (Vec<LaneSegment>, Vec<(SignalKey, SignalProgram)>) {
     let mut source = JobSource {
@@ -281,6 +296,12 @@ pub fn configure_traffic(
     *pool = TrafficPool::default();
 }
 
+/// Empties the pool so that the AI lists are read again (a Chrono switch changed them). Vehicles
+/// already driving stay.
+pub(super) fn reset_pool(pool: &mut TrafficPool) {
+    *pool = TrafficPool::default();
+}
+
 /// Rebuilds the lane graph after tiles were loaded or unloaded; agents on lanes that no longer
 /// exist are removed (their entities follow in [`move_traffic`]).
 pub fn update_traffic_graph(mut state: ResMut<TrafficState>) {
@@ -332,9 +353,18 @@ pub fn load_traffic_variants(
     if !pool.started {
         pool.started = true;
         pool.rng = Some(Rng::new(0xA11_CA45));
-        let (groups, slots) = read_groups(&job);
+        let PoolSetup {
+            groups,
+            slots,
+            defaults,
+        } = read_groups(&job);
         pool.groups = groups;
         pool.slots = slots;
+        pool.defaults = defaults;
+        pool.road_curve = DensityProfile {
+            days: 0,
+            points: job.manifest.traffic_density_road.clone(),
+        };
     }
     pool.frames += 1;
     if !pool.frames.is_multiple_of(10) {
@@ -384,21 +414,73 @@ fn unit_lod(unit: &Unit) -> Option<ModelLod> {
     }
 }
 
-/// Picks the group by its density at `hour`, then a vehicle of it by weight.
-fn pick_slot(pool: &TrafficPool, factors: &[f64], rng: &mut Rng) -> Option<usize> {
+/// Time factor of a group: its `unsched_trafficdens.txt` factor times its curve for the hour and
+/// day (`[set_day_of_week]`), or the map's `[trafficdensity_road]` curve when the group has no
+/// entry there. Unclamped: values above 1 mean denser traffic.
+pub(super) fn time_factor(
+    group: &PoolGroup,
+    road_curve: &DensityProfile,
+    day_bit: u8,
+    hour: f32,
+) -> f64 {
+    f64::from(match &group.density {
+        Some(d) => d.density(day_bit, hour),
+        None => road_curve.at(hour),
+    })
+    .max(0.0)
+}
+
+/// Lane metres inside the disc of `radius` around `centre`, weighted by each pool group's
+/// density on the lane: `Σ_lanes length_inside × D(lane, group)`.
+pub(super) fn group_lane_metres(
+    graph: &LaneGraph,
+    centre: DVec2,
+    radius: f64,
+    groups: &[PoolGroup],
+    defaults: &[u32],
+) -> Vec<f64> {
+    const SAMPLES: usize = 8;
+    let mut out = vec![0.0; groups.len()];
+    for lane in graph.lane_ids().filter_map(|l| graph.lane(l)) {
+        if lane.kind != LaneKind::Road {
+            continue;
+        }
+        let len = lane.length();
+        let inside = (0..=SAMPLES)
+            .filter(|&i| {
+                lane.geometry
+                    .point_at(len * i as f64 / SAMPLES as f64)
+                    .distance(centre)
+                    <= radius
+            })
+            .count();
+        if inside == 0 {
+            continue;
+        }
+        let metres = len * inside as f64 / (SAMPLES + 1) as f64;
+        for (g, group) in groups.iter().enumerate() {
+            out[g] += metres * lane.rules.density.for_group(group.density_group, defaults);
+        }
+    }
+    out
+}
+
+/// Picks a group that is below its target (weighted by how far below) and has a vehicle ready,
+/// then a vehicle of it by weight.
+fn pick_slot(pool: &TrafficPool, deficits: &[f64], rng: &mut Rng) -> Option<usize> {
     let ready = |s: &Slot| matches!(s.state, SlotState::Ready(_)) && s.weight > 0.0;
     let live: Vec<usize> = (0..pool.groups.len())
-        .filter(|&g| factors[g] > 0.0 && pool.slots.iter().any(|s| s.group == g && ready(s)))
+        .filter(|&g| deficits[g] > 0.0 && pool.slots.iter().any(|s| s.group == g && ready(s)))
         .collect();
-    let total: f64 = live.iter().map(|&g| factors[g]).sum();
+    let total: f64 = live.iter().map(|&g| deficits[g]).sum();
     let mut pick = rng.next_f64() * total;
     let mut group = *live.first()?;
     for &g in &live {
-        if pick < factors[g] {
+        if pick < deficits[g] {
             group = g;
             break;
         }
-        pick -= factors[g];
+        pick -= deficits[g];
     }
     let in_group: Vec<usize> = (0..pool.slots.len())
         .filter(|&i| pool.slots[i].group == group && ready(&pool.slots[i]))
@@ -428,7 +510,7 @@ pub fn spawn_traffic(
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
     settings: Res<TrafficSettings>,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -442,25 +524,68 @@ pub fn spawn_traffic(
     let (Some(mut job), Ok(cam)) = (job, camera.single()) else {
         return;
     };
-    // Target count: road length × the summed density of the groups at the session's time of day.
-    let hour = session.map_or(12.0, |s| {
-        s.start_hour as f32 + s.start_minute as f32 / 60.0 + s.sim_elapsed_seconds / 3600.0
-    });
+    let centre = DVec2::new(
+        f64::from(cam.translation().x),
+        -f64::from(cam.translation().z),
+    );
+    // Density model: per group, the lane metres within the despawn disc weighted by the group's
+    // density on each lane, times its time factor for the session's hour and day, per `L0`.
+    let (hour, day_bit) = env.map_or((12.0, day::WEEKDAY), |e| (e.hour(), e.day_bit()));
     let factors: Vec<f64> = pool
         .groups
         .iter()
-        .map(|g| {
-            f64::from(
-                g.density
-                    .as_ref()
-                    .map_or(1.0, |d| d.density(day::WEEKDAY, hour))
-                    .clamp(0.0, 2.0),
-            )
-        })
+        .map(|g| time_factor(g, &pool.road_curve, day_bit, hour))
         .collect();
-    let target = ((state.road_length_m / METRES_OF_ROAD_PER_VEHICLE * factors.iter().sum::<f64>())
-        as usize)
-        .min(settings.max);
+    let metres = group_lane_metres(
+        state.world.graph(),
+        centre,
+        f64::from(DESPAWN_M),
+        &pool.groups,
+        &pool.defaults,
+    );
+    let wanted: Vec<f64> = metres
+        .iter()
+        .zip(&factors)
+        .map(|(m, f)| m * f / METRES_OF_LANE_PER_VEHICLE)
+        .collect();
+    let (targets, capped) = group_targets(&wanted, settings.max);
+    if capped != pool.capped {
+        pool.capped = capped;
+        let wanted_total: f64 = wanted.iter().sum();
+        if capped {
+            tracing::info!(
+                wanted = wanted_total,
+                ceiling = settings.max,
+                scale = settings.max as f64 / wanted_total,
+                "traffic ceiling binds: every group scaled down in proportion"
+            );
+        } else {
+            tracing::info!(
+                wanted = wanted_total,
+                ceiling = settings.max,
+                "traffic below the ceiling again"
+            );
+        }
+    }
+    let target = (targets.iter().sum::<f64>().round() as usize).min(settings.max);
+    // Vehicles per group.
+    let TrafficPool {
+        agent_groups,
+        groups,
+        ..
+    } = &mut *pool;
+    agent_groups.retain(|id, _| state.world.agent(*id).is_some());
+    let mut alive = vec![0usize; groups.len()];
+    for &g in agent_groups.values() {
+        if let Some(a) = alive.get_mut(g) {
+            *a += 1;
+        }
+    }
+    let deficits: Vec<f64> = targets
+        .iter()
+        .zip(&alive)
+        .map(|(t, &a)| t - a as f64)
+        .collect();
     // A line every 15 s says why no vehicle appears (no road, no density, vehicles not loaded).
     *since_log += SPAWN_INTERVAL_S;
     if *since_log >= 15.0 {
@@ -470,7 +595,12 @@ pub fn spawn_traffic(
             target,
             agents = state.world.agents().len(),
             road_km = state.road_length_m / 1000.0,
-            density = ?factors,
+            hour,
+            day_bit,
+            time_factors = ?factors,
+            wanted = ?wanted,
+            alive = ?alive,
+            capped,
             ready = count(|s| matches!(s, SlotState::Ready(_))),
             pending = count(|s| matches!(s, SlotState::Pending)),
             failed = count(|s| matches!(s, SlotState::Failed)),
@@ -482,47 +612,42 @@ pub fn spawn_traffic(
         return;
     }
     let mut rng = pool.rng.take().unwrap_or_else(|| Rng::new(1));
-    // Why an attempt found no place, counted for the diagnostic line: no vehicle ready, no lane
-    // in the ring around the camera, lane gone, thinned by a density rule, in the camera's view.
+    // Why an attempt found no place, counted for the diagnostic line: no vehicle ready (or no
+    // group below its target), no lane in the ring around the camera, lane gone, -, in the
+    // camera's view.
     let result = (|| -> Result<_, usize> {
-        let centre = DVec2::new(
-            f64::from(cam.translation().x),
-            -f64::from(cam.translation().z),
-        );
         let fwd = cam.forward();
         let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
-        // The vehicle type comes first: bus and truck lanes admit only their own.
-        let slot = pick_slot(&pool, &factors, &mut rng).ok_or(0_usize)?;
+        // The group and vehicle type come first: bus and truck lanes admit only their own, and
+        // the lane is drawn by length × the group's density on it.
+        let slot = pick_slot(&pool, &deficits, &mut rng).ok_or(0_usize)?;
         let class = match &pool.slots[slot].state {
             SlotState::Ready(v) => v.class(),
             _ => VehicleClass::Car,
         };
+        let group = pool.groups[pool.slots[slot].group].density_group;
+        let defaults = &pool.defaults;
         let (lane_id, s) = state
             .world
             .graph()
-            .random_spot(centre, SPAWN_MIN_M, SPAWN_MAX_M, &mut rng, |l| {
-                l.kind == LaneKind::Road
-                    && l.length() > 6.0
-                    && l.rules.density != Some(0.0)
-                    && l.rules.allows(class)
+            .weighted_spot(centre, SPAWN_MIN_M, SPAWN_MAX_M, &mut rng, |l| {
+                if l.kind == LaneKind::Road && l.length() > 6.0 && l.rules.allows(class) {
+                    l.length() * l.rules.density.for_group(group, defaults)
+                } else {
+                    0.0
+                }
             })
             .ok_or(1_usize)?;
         let lane = state.world.graph().lane(lane_id).ok_or(2_usize)?;
-        // A density rule below 1 thins out the lane (`0` was excluded above).
-        if let Some(d) = lane.rules.density {
-            if rng.next_f64() > d.min(1.0) {
-                return Err(3);
-            }
-        }
         let at = lane.geometry.point_at(s);
         // Not in plain view of the camera.
         let to = (at - centre).normalize_or_zero();
         if view.dot(to) > 0.5 && at.distance(centre) < 160.0 {
             return Err(4);
         }
-        Ok((lane_id, s, lane.speed_limit, slot, at))
+        Ok((lane_id, s, slot, at))
     })();
-    let (lane_id, s, limit, slot, at) = match result {
+    let (lane_id, s, slot, at) = match result {
         Ok(found) => found,
         Err(reason) => {
             rejected[reason] += 1;
@@ -531,7 +656,11 @@ pub fn spawn_traffic(
         }
     };
 
-    let group_name = pool.groups[pool.slots[slot].group].name.clone();
+    let pool_group = pool.slots[slot].group;
+    let group_name = pool.groups[pool_group].name.clone();
+    let density_group = u8::try_from(pool.groups[pool_group].density_group).unwrap_or(u8::MAX);
+    pool.built += 1;
+    let repaint_seed = crate::new_game_screen::repaints::instance_seed(&[slot as u64, pool.built]);
     // Build the models of every unit (parts are cached, so repeated types are cheap).
     let SlotState::Ready(variant) = &pool.slots[slot].state else {
         pool.rng = Some(rng);
@@ -562,6 +691,12 @@ pub fn spawn_traffic(
             break;
         };
         job.vehicle_text_defs = unit.model.text_textures.clone();
+        // Each vehicle wears one of its `[CTC]` colour schemes (all units the same seed).
+        job.cache.texture_replacements = unit
+            .repaints
+            .replacements(unit.repaints.pick(repaint_seed), &unit.model.ctc_textures)
+            .into_iter()
+            .collect();
         let (count, _, min, max) = load_segment_meshes_for(
             &mut job,
             &mut commands,
@@ -574,6 +709,7 @@ pub fn spawn_traffic(
             &unit.model_dir.clone(),
             &unit.tex_dirs.clone(),
         );
+        job.cache.texture_replacements.clear();
         if count == 0 {
             failed = Some(false);
             break;
@@ -613,7 +749,8 @@ pub fn spawn_traffic(
         });
     }
     let traits = variant.traits();
-    let params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64(), limit);
+    let mut params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());
+    params.density_group = density_group;
     // The vehicle may not use the lane it was placed on (its length was unknown before).
     if state
         .world
@@ -627,16 +764,17 @@ pub fn spawn_traffic(
         pool.rng = Some(rng);
         return;
     }
-    let speed = params.desired_speed * 0.8;
+    let speed = state.world.lane_cap(&params, lane_id) * 0.8;
     let head = &variant.units[0];
     let size = head.size.unwrap_or((4.4, 2.2));
     let heavy = params.class != VehicleClass::Car;
-    let (wheel_radius, wheelbase) = (
-        head.profile
-            .wheel_radius_m
-            .unwrap_or(if heavy { 0.5 } else { 0.31 }),
-        head.profile.wheelbase_m.unwrap_or(size.0 * 0.6),
-    );
+    let wheel_radius = head
+        .profile
+        .wheel_radius_m
+        .unwrap_or(if heavy { 0.5 } else { 0.31 });
+    // Model frame: front bumper at `size.1`, front axle the overhang behind it, rear axle a
+    // wheelbase further back.
+    let rear_axle_y = size.1 - (params.front_overhang + params.wheelbase) as f32;
     let delta_height = head.profile.delta_height_m;
     let name = variant.name.clone();
     let fallbacks = head.profile.fallbacks.clone();
@@ -657,10 +795,16 @@ pub fn spawn_traffic(
             )
         })
         .collect();
+    // Light effects (`[light_enh_2]`: headlights, tail and brake lights, indicators) of every
+    // unit, driven by the head's AI variables.
+    for (unit, &e) in variant.units.iter().zip(&entities) {
+        opts_bevy::spawn_vehicle_glows(&mut commands, root, e, &unit.model);
+    }
     let mut rng_pax = Rng::new(rng.next_u64());
     pool.rng = Some(rng);
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
+            pool.agent_groups.insert(id, pool_group);
             tracing::debug!(
                 agent = id.0,
                 vehicle = %name,
@@ -704,10 +848,9 @@ pub fn spawn_traffic(
             commands.entity(root).insert((
                 TrafficVehicle {
                     id,
-                    front_offset: size.1,
                     delta_height,
                     wheel_radius,
-                    wheelbase,
+                    rear_axle_y,
                     wheel_angle: 0.0,
                     pax,
                     blink_phase: rng_pax.next_f64() as f32 * 0.7,
@@ -740,18 +883,14 @@ const BLINK_PERIOD_S: f32 = 0.7;
 pub fn update_ai_variables(
     time: Res<Time>,
     state: Res<TrafficState>,
-    sky: Option<Res<super::super::sky::Sky>>,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     clock: Option<Res<opts_bevy::SceneryClock>>,
     mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
 ) {
     let dt = time.delta_secs().min(0.2);
     let brightness = clock.map(|c| c.envir_brightness());
     let now = time.elapsed_secs();
-    let dark = match (&sky, &session) {
-        (Some(s), Some(i)) => s.lights_needed(i.sim_elapsed_seconds),
-        _ => false,
-    };
+    let dark = env.is_some_and(|e| e.night());
     for (mut v, mut vars) in &mut vehicles {
         let Some(agent) = state.world.agent(v.id) else {
             continue;
@@ -761,15 +900,8 @@ pub fn update_ai_variables(
         };
         v.wheel_angle = (v.wheel_angle + agent.speed as f32 / v.wheel_radius * dt)
             % (std::f32::consts::TAU * 64.0);
-        // Steering from the lane's curvature under the bicycle model; positive radius = right.
-        let steer = state.world.graph().lane(agent.lane).map_or(0.0, |l| {
-            let r = l.geometry.radius;
-            if l.geometry.is_straight() {
-                0.0
-            } else {
-                (f64::from(v.wheelbase) / r).atan() as f32
-            }
-        });
+        // Steering: the lane's heading at the front axle against the body (positive = right).
+        let steer = agent.steer as f32;
         for axle in 0..4 {
             for side in ["l", "r"] {
                 vars.set(&format!("wheel_rotation_{axle}_{side}"), v.wheel_angle);
@@ -793,7 +925,8 @@ pub fn update_ai_variables(
         );
         vars.set("lights_blinker_l", left);
         vars.set("lights_blinker_r", right);
-        let brake = f32::from(command.brake > 0.05);
+        // Brake lights also while standing (held on the brake).
+        let brake = f32::from(command.brake > 0.05 || agent.speed < 0.3);
         vars.set("ai_brakelight", brake);
         vars.set("lights_brems", brake);
         let light = if dark { 1.0 } else { 0.0 };
@@ -812,7 +945,7 @@ pub fn update_ai_variables(
 pub fn move_traffic(
     time: Res<Time>,
     mut commands: Commands,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut vehicles: Query<(
@@ -825,12 +958,8 @@ pub fn move_traffic(
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
     // The lights follow the session's time of day.
-    if let Some(s) = &session {
-        state.world.set_clock(
-            f64::from(s.start_hour) * 3600.0
-                + f64::from(s.start_minute) * 60.0
-                + f64::from(s.sim_elapsed_seconds),
-        );
+    if let Some(e) = &env {
+        state.world.set_clock(e.seconds_of_day());
     }
     // Sub-steps of at most 0.1 s keep the car-following law stable.
     let steps = (dt / 0.1).ceil().max(1.0);
@@ -843,16 +972,16 @@ pub fn move_traffic(
     for (entity, mut v, mut transform, mut visibility, chain) in &mut vehicles {
         let graph = state.world.graph();
         let pose = state.world.agent(v.id).and_then(|a| {
-            let (p, h) = a.pose(graph)?;
-            Some((p, h, a.height(graph)?))
+            let (_, h) = a.pose(graph)?;
+            Some((a.rear_axle, h, a.height(graph)?))
         });
-        let Some((front, heading, z)) = pose else {
+        let Some((rear, heading, z)) = pose else {
             despawn_chain(&mut commands, entity, chain);
             continue;
         };
-        // The model origin sits `front_offset` behind the front bumper.
+        // The body lies along the axles; the model origin sits `rear_axle_y` from the rear axle.
         let dir = DVec2::new(heading.sin(), heading.cos());
-        let origin = front - dir * f64::from(v.front_offset);
+        let origin = rear - dir * f64::from(v.rear_axle_y);
         let height = z as f32 + v.delta_height;
         let bevy = omsi_to_bevy_pos(Vec3::new(origin.x as f32, origin.y as f32, height));
         if cam.is_some_and(|c| c.distance(bevy) > DESPAWN_M) {
@@ -869,5 +998,111 @@ pub fn move_traffic(
     }
     for id in far {
         state.world.despawn(id);
+    }
+}
+
+#[cfg(test)]
+mod density_tests {
+    use super::*;
+    use opts_core::formats::map::GroupDensity;
+
+    fn group(name: &str, density_group: usize, density: Option<GroupDensity>) -> PoolGroup {
+        PoolGroup {
+            name: name.into(),
+            density,
+            density_group,
+        }
+    }
+
+    /// Berlin-Spandau's groups: NormalCars 1, Trucks 0, Commercials 1, Ambulance 1, GDRCars 0.
+    const SPANDAU: [u32; 5] = [1, 0, 1, 1, 0];
+
+    fn lane(x: f64, rules: &[(usize, f64)]) -> LaneSegment {
+        let mut seg = LaneSegment::straight(DVec2::new(x, 0.0), 0.0, 100.0, LaneKind::Road);
+        for &(g, v) in rules {
+            seg.rules.density.set(g, v);
+        }
+        seg
+    }
+
+    /// GDRCars (default 0) drive only on lanes whose rule has flag 4; values above 1 count fully.
+    #[test]
+    fn group_density_comes_from_the_rule_flag() {
+        let graph = LaneGraph::build(
+            &[
+                lane(0.0, &[(0, 1.0)]),
+                lane(10.0, &[(0, 0.0), (4, 3.0)]),
+                lane(20.0, &[]),
+                lane(30.0, &[(1, 1.0)]),
+            ],
+            &ConnectParams::default(),
+        );
+        let groups = [
+            group("NormalCars", 0, None),
+            group("Trucks", 1, None),
+            group("Commercials", 2, None),
+            group("GDRCars", 4, None),
+        ];
+        let m = group_lane_metres(&graph, DVec2::new(15.0, 50.0), 1000.0, &groups, &SPANDAU);
+        // NormalCars: rule 1 + none (Medium 1) + none on the trucks lane (Medium 1); closed by 0.
+        assert!((m[0] - 300.0).abs() < 1e-6, "{m:?}");
+        assert!(
+            (m[1] - 100.0).abs() < 1e-6,
+            "Trucks only where a flag-1 rule is: {m:?}"
+        );
+        assert!(
+            (m[2] - m[0]).abs() < 1e-6,
+            "Commercials follow NormalCars: {m:?}"
+        );
+        assert!(
+            (m[3] - 300.0).abs() < 1e-6,
+            "GDRCars: flag-4 lane at 3x, nowhere else: {m:?}"
+        );
+    }
+
+    /// Only the part of a lane inside the disc counts.
+    #[test]
+    fn lane_metres_count_inside_the_disc_only() {
+        let graph = LaneGraph::build(&[lane(0.0, &[])], &ConnectParams::default());
+        let m = group_lane_metres(
+            &graph,
+            DVec2::new(0.0, 0.0),
+            49.0,
+            &[group("N", 0, None)],
+            &[1],
+        );
+        assert!(m[0] > 30.0 && m[0] < 60.0, "{m:?}");
+    }
+
+    /// Time factors: the group's own curve (hour wrapping, weekend curve), else the map's road curve.
+    #[test]
+    fn time_factors_wrap_and_follow_the_day() {
+        let own = opts_core::formats::map::parse_unsched_trafficdens(
+            b"[group]\nNormalCars\n0.6\n[set_day_of_week]\n1\n[trafficdensity]\n0\n0.1\n[trafficdensity]\n12\n1.5\n[trafficdensity]\n24\n0.1\n[set_day_of_week]\n6\n[trafficdensity]\n0\n0.2\n[trafficdensity]\n24\n0.2\n",
+        );
+        let g = group("NormalCars", 0, own.into_iter().next());
+        let road = DensityProfile {
+            days: 0,
+            points: vec![(0.0, 0.5), (24.0, 0.5)],
+        };
+        let f = |day, h| time_factor(&g, &road, day, h);
+        assert!(
+            (f(day::WEEKDAY, 12.0) - 0.9).abs() < 1e-6,
+            "0.6 × 1.5, unclamped curve"
+        );
+        assert!((f(day::WEEKDAY, 36.0) - f(day::WEEKDAY, 12.0)).abs() < 1e-6);
+        assert!((f(day::SUNDAY, 12.0) - 0.12).abs() < 1e-6);
+        let none = group("GDRCars", 4, None);
+        assert!((time_factor(&none, &road, day::WEEKDAY, 3.0) - 0.5).abs() < 1e-6);
+    }
+
+    /// At the ceiling every group keeps its share.
+    #[test]
+    fn ceiling_scales_groups_in_proportion() {
+        let wanted = [90.0, 30.0, 0.3];
+        let (t, capped) = group_targets(&wanted, DEFAULT_MAX_TRAFFIC);
+        assert!(capped);
+        assert!((t.iter().sum::<f64>() - DEFAULT_MAX_TRAFFIC as f64).abs() < 1e-9);
+        assert!((t[0] / t[1] - 3.0).abs() < 1e-9);
     }
 }

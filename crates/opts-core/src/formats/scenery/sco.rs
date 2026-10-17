@@ -120,6 +120,10 @@ pub struct ScoMesh {
     pub text_texture_indices: Vec<usize>,
     /// Animation definitions attached to this mesh (`[newanim]`, same layout as in `model.cfg`).
     pub animations: Vec<ModelAnim>,
+    /// `[onlyeditor]` after this `[mesh]`: the mesh is an editor helper and is not drawn in the
+    /// game (e.g. `Trees_MC`'s `treehelper.x` next to the `[tree]` billboard, the second
+    /// `Eis.o3d` of `Eisplatte.sco`). The rest of the object is unaffected.
+    pub only_editor: bool,
 }
 
 impl SceneryObject {
@@ -129,6 +133,19 @@ impl SceneryObject {
     #[must_use]
     pub fn has_absolute_height(&self) -> bool {
         self.abs_height || !self.spline_helpers.is_empty()
+    }
+
+    /// Whether mesh `i` is drawn in the game: neither the object (`[onlyeditor]` before any
+    /// `[mesh]`) nor the mesh itself (`[onlyeditor]` after it) is editor-only.
+    #[must_use]
+    pub fn mesh_in_game(&self, i: usize) -> bool {
+        !self.only_editor && self.meshes.get(i).is_some_and(|m| !m.only_editor)
+    }
+
+    /// Whether the object has meshes and none of them is drawn in the game.
+    #[must_use]
+    pub fn is_editor_only(&self) -> bool {
+        self.only_editor || (!self.meshes.is_empty() && self.meshes.iter().all(|m| m.only_editor))
     }
 
     /// The light program `index` of `[use_traffic_light]`: programs are numbered in declaration
@@ -176,6 +193,7 @@ impl ScoMesh {
             mouse_event: None,
             text_texture_indices: Vec::new(),
             animations: Vec::new(),
+            only_editor: false,
         }
     }
 }
@@ -327,7 +345,11 @@ pub struct SceneryObject {
     pub complexity: Option<u32>,
     /// Billboard tree definition (`[tree]`), if any.
     pub tree: Option<ScoTree>,
-    /// Whether this object is only visible in the editor.
+    /// `[onlyeditor]` before any `[mesh]`: no mesh of the object is drawn in the game (markers
+    /// such as `bus_stop.sco`, `entrypoint_bus.sco`, `car_park.sco`). Non-mesh features
+    /// (`[maplight]`, paths, the `[carpark_p]` replacement) still apply. An `[onlyeditor]` after
+    /// a `[mesh]` hides only that mesh ([`ScoMesh::only_editor`]); see
+    /// `docs/src/formats/text/sco.md`.
     pub only_editor: bool,
     /// Parking-bay marker (`[carpark_p]`): the game places a random parked car from the map's
     /// `parklist_p.txt` here (the marker itself is editor-only).
@@ -366,6 +388,10 @@ pub struct SceneryObject {
 
     /// Collision meshes attached to the object.
     pub collision_meshes: Vec<String>,
+    /// Base mesh of `[crossing_heightdeformation]` (relative to the `model/` folder): its
+    /// surface bends the object's meshes, paths and spline helpers vertically
+    /// ([`super::crossing::BaseSurface`]).
+    pub crossing_deformation: Option<String>,
     /// Bounding box.
     pub bounding_box: Option<ScoBoundingBox>,
     /// Center of gravity.
@@ -493,9 +519,13 @@ impl SceneryObject {
                         });
                     }
                 }
-                "onlyeditor" => {
-                    obj.only_editor = true;
-                }
+                // Per mesh after a `[mesh]`, object-wide before the first one (installed corpus:
+                // 2,356 of 3,371 files put it before their first mesh, 1,015 after a mesh, 941
+                // of those `[tree]` helpers; `Eisplatte.sco` hides the second of two meshes).
+                "onlyeditor" => match obj.meshes.last_mut() {
+                    Some(mesh) => mesh.only_editor = true,
+                    None => obj.only_editor = true,
+                },
                 "carpark_p" => {
                     obj.carpark_p = true;
                 }
@@ -733,6 +763,13 @@ impl SceneryObject {
                         block.line_number
                     )),
                 },
+                "crossing_heightdeformation" => {
+                    obj.crossing_deformation = block
+                        .parameters
+                        .first()
+                        .map(|f| f.trim().to_string())
+                        .filter(|f| !f.is_empty());
+                }
                 "collision_mesh" | "collisionsmesh" | "collisionmesh" | "collisioionsmesh" => {
                     if let Some(file) = block.parameters.first() {
                         obj.collision_meshes.push(file.clone());
@@ -1339,5 +1376,39 @@ Main
         assert_eq!((tree.min_height, tree.max_height), (20.0, 30.0));
         assert_eq!((tree.min_width_ratio, tree.max_width_ratio), (0.7, 1.0));
         assert!(sco.only_editor);
+    }
+
+    #[test]
+    fn onlyeditor_after_a_mesh_hides_that_mesh_only() {
+        // `Trees_MC`: helper mesh, then `[onlyeditor]`, then the billboard.
+        let sco = SceneryObject::parse(
+            b"[mesh]\ntreehelper.x\n[onlyeditor]\n[tree]\nt.tga\n20\n30\n0.7\n1.0\n",
+        )
+        .expect("parse");
+        assert!(!sco.only_editor);
+        assert!(sco.meshes[0].only_editor);
+        assert!(!sco.mesh_in_game(0));
+        assert!(sco.is_editor_only());
+        // Two meshes, the second a helper.
+        let sco =
+            SceneryObject::parse(b"[mesh]\na.o3d\n[mesh]\nb.o3d\n[onlyeditor]\n").expect("parse");
+        assert!(!sco.only_editor);
+        assert!(sco.mesh_in_game(0));
+        assert!(!sco.mesh_in_game(1));
+        assert!(!sco.is_editor_only());
+    }
+
+    #[test]
+    fn onlyeditor_before_any_mesh_hides_the_object() {
+        // `Generic/car_park.sco`.
+        let sco = SceneryObject::parse(
+            b"[friendlyname]\nCar park\n[carpark_p]\n[onlyeditor]\n[mesh]\nparkplatz.x\n",
+        )
+        .expect("parse");
+        assert!(sco.carpark_p);
+        assert!(sco.only_editor);
+        assert!(!sco.meshes[0].only_editor);
+        assert!(!sco.mesh_in_game(0));
+        assert!(sco.is_editor_only());
     }
 }

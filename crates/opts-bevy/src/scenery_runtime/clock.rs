@@ -3,12 +3,8 @@
 
 use bevy::prelude::*;
 
-/// Sun elevation below which night lighting is on (the threshold the AI vehicles use for their
-/// lights).
-pub const NIGHT_SUN_ALT_DEG: f32 = 3.0;
-
-/// Latitude for the built-in sun formula (central Germany, like the sky).
-const LATITUDE_DEG: f32 = 50.0;
+pub use crate::environment::NIGHT_SUN_ALT_DEG;
+use crate::environment::{sun_position, LATITUDE_DEG};
 
 /// Clock and environment of the scenery runtime.
 ///
@@ -71,10 +67,7 @@ impl SceneryClock {
     /// Day of the year, 1–366 (`DayOfYear`).
     #[must_use]
     pub fn day_of_year(&self) -> u32 {
-        const START: [u32; 12] = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-        let leap = (self.year % 4 == 0 && self.year % 100 != 0) || self.year % 400 == 0;
-        let m = (self.month.clamp(1, 12) - 1) as usize;
-        START[m] + self.day + u32::from(leap && m >= 2)
+        crate::environment::CalendarDate::new(self.year, self.month, self.day).day_of_year()
     }
 
     /// `Envir_Brightness`: the ambient brightness `0..=1` that vehicle scripts and `[alphascale]`
@@ -105,16 +98,11 @@ impl SceneryClock {
     }
 }
 
-/// Sun elevation in degrees for a local solar hour, day of year and latitude (declination
-/// approximation, good to about a degree).
+/// Sun elevation in degrees for a local solar hour, day of year and latitude: the elevation of
+/// [`crate::environment::sun_position`], the one sun formula.
 #[must_use]
 pub fn solar_altitude_deg(hour: f32, day_of_year: f32, latitude_deg: f32) -> f32 {
-    let lat = latitude_deg.to_radians();
-    let decl =
-        (-23.44f32).to_radians() * (std::f32::consts::TAU * (day_of_year + 10.0) / 365.0).cos();
-    let h = (15.0 * (hour - 12.0)).to_radians();
-    let sin_el = lat.sin() * decl.sin() + lat.cos() * decl.cos() * h.cos();
-    sin_el.clamp(-1.0, 1.0).asin().to_degrees()
+    sun_position(hour, day_of_year, latitude_deg).0
 }
 
 /// A host value that objects without a script read by name.
@@ -188,6 +176,22 @@ mod tests {
         c.advance(11.0 * 3600.0);
         assert!(c.night);
         assert!((c.time_of_day_s() - 23.0 * 3600.0).abs() < 1.0);
+    }
+
+    #[test]
+    fn the_scenery_clock_and_the_session_environment_agree_on_the_sun() {
+        use crate::environment::{CalendarDate, SessionEnvironment};
+        for (date, h) in [
+            (CalendarDate::new(2026, 6, 29), 5.25),
+            (CalendarDate::new(1994, 12, 31), 15.75),
+            (CalendarDate::new(2024, 3, 1), 21.0),
+        ] {
+            let clock = SceneryClock::at(date.year, date.month, date.day, h * 3600.0);
+            let env = SessionEnvironment::new(date, h * 3600.0, "");
+            assert!((clock.sun_alt_deg - env.sun_alt_deg()).abs() < 1e-4);
+            assert_eq!(clock.night, env.night());
+            assert_eq!(clock.day_of_year(), date.day_of_year());
+        }
     }
 
     #[test]

@@ -141,7 +141,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | :--- | :--- | :--- |
 | `[groups]` | 1 + N | Count N, then N **editor category names** (`Aachen`, `Ampeln`). |
 | `[friendlyname]` | 1 | Display name in the editor. |
-| `[onlyeditor]` | — | Object is visible in the editor only (helpers, markers). |
+| `[onlyeditor]` | — | Editor-only geometry. **Per mesh** when it follows a `[mesh]` (that mesh is a helper and is not drawn in the game), **object-wide** when it comes before the first `[mesh]` (no mesh of the object is drawn). Corpus (installed `Sceneryobjects`, 3,371 files with the keyword, 2026-10-17): 2,356 put it before their first mesh (markers such as `bus_stop.sco`, `entrypoint_bus.sco`, `car_park.sco` with `[carpark_p]`), 1,015 after a mesh, 941 of those in `[tree]` objects (`Trees_MC`: `[mesh] treehelper.x`, `[onlyeditor]`, then the billboard, which is drawn); `Eisplatte.sco` hides the second of its two meshes. Only meshes are affected: `[maplight]`s, paths and the `[carpark_p]` replacement still apply (`sodiumlight_4L_break_L_Forum.sco` lights a square from hidden lamps). OPTS (2026-10-17): `ScoMesh::only_editor` / `SceneryObject::only_editor`, `SceneryObject::mesh_in_game(i)`. |
 | `[joinable]` | — | Object may be merged with neighbours by the editor. |
 | `[helparrow]` | — | Route helper (arrows over junctions, `routearrows_busstop.sco` with the next stop's name): OMSI shows it only while its route-arrow help is on. OPTS has no route help yet and does not draw these objects (2026-10-16; before, every stop name and arrow of a map floated in the air). |
 | `[complexity]` | 1 | Draw-priority class, see below. |
@@ -167,7 +167,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
 | `[matl_lightmap]` | 1 | Lightmap bitmap. |
-| `[matl_nightmap]` | 1 | Night texture, swapped in when `[matl_change]` fires. |
+| `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` (the variable-less `[matl_lightmap]` path) instead of swapping the texture ❓. |
 | `[matl_transmap]` | — | Material fades by `[alphascale]`. |
 | `[matl_noZwrite]` | — | Do not write depth (transparent decals). |
 | `[matl_noZcheck]` | — | Do not test depth. |
@@ -182,7 +182,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[rendertype]` | 1 | Render pass: `0`–`4`, or `surface`, `presurface`, `on_surface`. |
 | `[NightMapMode]` | 1 | Night lighting, see below. |
 | `[LightMapMapping]` | — | Mesh uses lightmap UVs. |
-| `[nomaplighting]` | — | Object is not lit by map lights. |
+| `[nomaplighting]` | — | Object is not lit by map lights. Parsed (`SceneryObject::no_map_lighting`); OPTS does not apply it yet: map lights are Bevy point lights and light every object in range. |
 | `[detail_factor]` | 1 | Size multiplier for **distance culling**. 0.5 shows it at half size, 2 shows it only when twice as large. |
 | `[noDistanceCheck]` | — | Never culled by distance. |
 
@@ -213,9 +213,9 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[crashmode_pole]` | 2 | Makes the object a **breakable pole**: stiffness-like coefficient (`0.02`/`0.05`) and a second factor (`0.5`–`0.7`). |
 | `[VFDmaxmin]` | 6 | Visibility-frustum box: min x/y/z, then max x/y/z. |
 | `[fixed]` | — | Object is **fixed to the terrain grid** (not freely rotatable). |
-| `[absheight]` | — | Height values are absolute, not relative to the terrain. |
+| `[absheight]` | — | Height values are absolute, not relative to the terrain. Objects with `[splinehelper]` are absolute too; all others are terrain-relative (complete rule and census: [`tiles.md`](../map/tiles.md#mirror-flag-and-absheight-objects-2026-10)). |
 | `[surface]` | — | Mesh is a drivable **surface** (ground mesh). |
-| `[crossing_heightdeformation]` | 1 | Mesh file deforming the terrain height under a junction. |
+| `[crossing_heightdeformation]` | 1 | Base mesh (`…_base.o3d`, no materials) that **bends the object's meshes vertically**: each vertex is raised by the base surface's height at its (x, z), 0 outside the base footprint. The terrain is not changed at runtime; the terrain files are already shaped to the bent surface (Berlin-Spandau, 11 placements: bent, 0.0 % of the crossing area lies below terrain, flat 19.4 %; every arm meets its spline within 1 cm). See the [systems report](../../meta/berlin-spandau-2026-10-17.md#system-2-crossings-signs-missing-geometry). |
 | `[crossingproblem]` | — | Flags a known junction-path conflict (editor warning). |
 
 `[surface]` and `[fixed]` frequently appear together with `[absheight]` and `[rendertype] surface` to describe road surfaces:
@@ -242,7 +242,7 @@ Barer-Str-44.o3d
 | :--- | :--- | :--- |
 | `[light_enh]` | 12 | Basic light effect: x, y, z, r, g, b (0–255), size, then a **variable** name controlling brightness, followed by further tuning values. |
 | `[light_enh_2]` | 23–24 | Full light effect, see below. |
-| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). |
+| `[maplight]` | 7 | A light that illuminates the **map**: x, y, z, r, g, b (0–1), radius at full intensity (inverse-square falloff after that). 1,771 street lamps on Berlin-Spandau. OPTS (2026-10-17): a marker per light; a pool of 48 shadowless point lights goes to the nearest lamps within 200 m of the camera every 0.25 s (hysteresis 15 m), only while `NightlightA` is on, fading in and out over 0.5 s; luminous power `4π·r²·E_full` with `E_full` = 15 lx (tunable, `MapLightSettings`), range `8·r` ([scenery runtime](../../architecture/scenery-runtime.md#map-lights-maplight)). |
 | `[smoke]` | 19 | Smoke emitter: position (3), direction (3), then tuning values. |
 | `[particle_emitter]` | many | Particle system with named sub-blocks. See below. |
 | `[tree]` | 5 | Billboard helper: texture, min height, max height, min width ratio, max width ratio. Followed by a `[mesh]` of the helper (`treehelper.x`, `Grashelfer.x`). |
@@ -408,7 +408,7 @@ red
 | 9 | type | `0` AI road traffic, `1` AI pedestrians, `2` rail (AI or user). |
 | 10 | width | Lane width in metres (the corpus favours `2.5`). |
 | 11 | direction | `0` forward only, `1` reverse only, `2` both. |
-| 12 | – | Observed `0`–`3`; see [Q-SCO-006](#-open-questions). |
+| 12 | indicator | Turn indicator of the path for AI vehicles: `0` none, `2` left, `3` right; `1` unknown ❓ ([Q-SCO-006](#-open-questions)). |
 
 Types and the direction field are taken from the format's own documentation in `.sli` (see [`.sli` paths](sli.md#path)). The same convention applies here.
 
@@ -565,7 +565,7 @@ streetlight_large.o3d
 | Q-SCO-003 | `[LOD]` threshold direction. | Provisional. |
 | Q-SCO-004 | ~~Length of `[light_enh_2]` (23 or 24 lines in the wild)~~ — resolved: 23 lines without effect bitmap, 24 with optional bitmap name (`sco-sli-audit.md`). | ✅ |
 | Q-SCO-005 | Parameters of `[traffic_light_stop]` (3) and `[traffic_light_jump]` (4). | Partly answered (M-0049, 1,393 objects). **`[traffic_light_jump] <light> <t1> <flag> <t2>`** (6,041 uses): in 6,007 of them (99.4 %) both times are ≤ the group's cycle time, e.g. cycle 20 s with `(0, 20.0, 0, 19.0)`, `(0, 10.0, 1, 9.0)`, `(0, 4.0, 0, 14.0)` — a **jump of the controller's clock** from `t1` to `t2` within the cycle (traffic-actuated switching, e.g. when a bus is registered; flag `1` 3,768×, `0` 2,273×), *not* a vehicle behaviour such as speeding up at yellow. **`[traffic_light_stop] <light> <distance> <flag>`** (761 uses in 443 objects): object-level lines that come **before** the `[splinehelper]` arms (their number matches the arms' only in 58 of 443 files); `<distance>` (1.0, 16.0, 6.0, 18.0, 23.0 …) is a distance along an arm, so it is the **stop line of that light on the arms** — most common `0 1.0 1` (223×) and `0 16.0 0` (163×) in level-crossing objects — flag meaning unknown. Both matter for the spline arms of junctions (geometry unknown, Q-SCO-007), not for the object's own `[path]` lanes, whose stop line is the start of the governed path. OPTS implements neither; vehicles treat red as binding for all vehicle classes (no emergency exception yet). |
-| Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Open. |
+| Q-SCO-006 | Path param 12 (values 0–3) and `[path_2]` params 13–14 (≈ ±0.05). | Partly answered (2026-10-17, Berlin-Spandau crossing road paths): param 12 is the **turn indicator** — `0` on 2,186 of 2,554 straight paths, `2` on 530 of 727 left turns, `3` on 565 of 701 right turns (turn = more than 20° of heading change). OPTS reads `0` none, `2` left, `3` right and sets `AI_Blinker_L/R` from it; value `1` (meaning open) and missing values fall back to the 20°/30 m turn heuristic. `[path_2]` params 13–14 stay open. |
 | Q-SCO-007 | Last two `[splinehelper]` values. | Observed `0`, `0`. |
 | Q-SCO-008 | `[crashmode_pole]` parameter semantics. | Open. |
 | Q-SCO-009 | Does `[use_traffic_light]` apply only to the next `[path]` or to all following? | ✅ The next path only (M-0049): a Gladbeck junction repeats `[use_traffic_light]` before every controlled path, and the uncontrolled stubs of the arms sit between them. |
