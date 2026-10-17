@@ -3,6 +3,7 @@
 pub mod app;
 pub mod app_state;
 pub mod catalogue_service;
+pub mod content_facts;
 pub mod control;
 pub mod control_drive;
 pub mod control_environment;
@@ -101,6 +102,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(SettingsScreenPlugin)
             .add_plugins(NewGameMenuPlugin)
             .add_plugins(look::LookPlugin)
+            .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
             .add_plugins(InGamePlugin);
 
         // Register global glass surface theme synchronization

@@ -50,6 +50,10 @@ pub struct GroundExtension {
     /// Detail repeats per tile edge of layers 4–7.
     #[uniform(110)]
     pub detail_repeats_b: Vec4,
+    /// Wet-surface parameters (M-0085 prototype): x = wetness 0..1, y = puddle coverage 0..1.
+    /// All zero (the default) leaves the shader output unchanged.
+    #[uniform(111)]
+    pub wet: Vec4,
 }
 
 impl MaterialExtension for GroundExtension {
@@ -213,6 +217,7 @@ pub fn ground_extension(
         details,
         detail_repeats_a: Vec4::new(d(0), d(1), d(2), d(3)),
         detail_repeats_b: Vec4::new(d(4), d(5), d(6), d(7)),
+        wet: Vec4::ZERO,
     }
 }
 

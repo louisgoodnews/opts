@@ -204,6 +204,10 @@ pub struct ContentCache {
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,
+    /// Shared handles by content (`OPTS_INSTANCING=dedupe`, see [`crate::instancing`]).
+    pub pool: crate::instancing::AssetPool,
+    /// Static parts of the tile being loaded (`OPTS_INSTANCING=merge`).
+    pub merger: crate::instancing::StaticMerger,
     pub(crate) protected: std::collections::HashSet<PathBuf>,
     /// Repaint: texture file name (lower case) → replacement file, applied to the meshes loaded
     /// next (see `docs/src/formats/text/repaints.md`).
@@ -224,6 +228,12 @@ pub struct ContentLoader<'a> {
     pub materials: &'a mut Assets<StandardMaterial>,
     /// Image store.
     pub images: &'a mut Assets<Image>,
+}
+
+/// `load_bevy_image` under the `tex.decode` stream-trace span (M-0089).
+fn decode_traced(bytes: &[u8]) -> Result<Image, crate::texture::TextureError> {
+    let _t = opts_logging::stream_trace::span("tex.decode");
+    load_bevy_image(bytes)
 }
 
 impl ContentLoader<'_> {
@@ -320,12 +330,19 @@ impl ContentLoader<'_> {
         if let Some(cached) = self.cache.textures.get(&path) {
             return cached.clone();
         }
-        let handle = match std::fs::read(&path) {
-            Ok(bytes) => match load_bevy_image(&bytes) {
+        let t_read = opts_logging::stream_trace::span("tex.read");
+        let read = std::fs::read(&path);
+        drop(t_read);
+        let handle = match read {
+            Ok(bytes) => match decode_traced(&bytes) {
                 Ok(mut image) => {
-                    crate::texture_filter::prepare_object_texture(&mut image);
+                    {
+                        let _t = opts_logging::stream_trace::span("tex.prepare_mips");
+                        crate::texture_filter::prepare_object_texture(&mut image);
+                    }
                     self.cache.stats.textures += 1;
                     tracing::debug!(path = %path.display(), "loaded texture");
+                    let _t = opts_logging::stream_trace::span("tex.assets_add");
                     Some(self.images.add(image))
                 }
                 Err(e) => {
@@ -462,6 +479,8 @@ impl ContentLoader<'_> {
             return parts.clone();
         }
 
+        let _t_miss = opts_logging::stream_trace::span("o3d.parts_miss");
+        let t_parse = opts_logging::stream_trace::span("o3d.read_parse");
         let bytes = match std::fs::read(o3d_path) {
             Ok(b) => b,
             Err(e) => {
@@ -483,6 +502,7 @@ impl ContentLoader<'_> {
         };
         sc.parse_ms = sc.lap.split();
         sc.stage = "plain";
+        drop(t_parse);
         let is_o3d = o3d_path
             .extension()
             .is_some_and(|e| e.to_string_lossy().eq_ignore_ascii_case("o3d"));
@@ -736,9 +756,14 @@ impl ContentLoader<'_> {
                     .transform
                     .filter(|_| model.version != 0)
                     .map(|m| Vec3::new(m[3][0], m[3][1], -m[3][2]));
+                let material = self.cache.pool.material(self.materials, material);
+                if let Some(m) = self.materials.get(&material) {
+                    // Research prototype hook (M-0085); free unless `OPTS_REFLECT` is set.
+                    crate::reflections::note_material(&material, tex_name.as_deref(), m);
+                }
                 let part = ModelPart {
-                    mesh: self.meshes.add(mesh),
-                    material: self.materials.add(material),
+                    mesh: self.cache.pool.mesh(self.meshes, mesh),
+                    material,
                     vertices,
                     light_variable,
                     alpha_variable: over
@@ -750,7 +775,7 @@ impl ContentLoader<'_> {
                 if let Some(glass) = glass_material {
                     self.cache.stats.transmap_splits += 1;
                     let glass_part = ModelPart {
-                        material: self.materials.add(glass),
+                        material: self.cache.pool.material(self.materials, glass),
                         ..part.clone()
                     };
                     parts.push(part);

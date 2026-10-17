@@ -13,6 +13,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `graphics.vsync` | Vertical sync | on / off | `false` | at once | available | Matches the frame rate to your display. Prevents tearing, can add a little delay. |
 | `texture_filtering` | Texture filtering | `off`, `4`, `8`, `16` | `16` | at once | available | Sharper textures at an angle, small cost. |
 | `look` | Look | `vivid`, `natural`, `bevy` | `vivid` | at once | available | Colour and contrast of the 3D world. |
+| `graphics.default_fov` | Driver's view: field of view | whole number 0 to 120 | `0` | at once | available | The horizontal field of view of the driver's views, in degrees (30 to 120). 0 keeps each vehicle's own. A viewpoint you saved with its own field of view still wins. |
 | `graphics.view_distance` | View distance | whole number 1 to 8 | `4` | at once | not available yet (M-0029) | How far scenery and tiles are drawn. |
 | `graphics.water` | Water | on / off | `true` | after restart | available | Draws rivers, lakes and the sea of the map. Turn it off to see the ground below. |
 

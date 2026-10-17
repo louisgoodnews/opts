@@ -200,6 +200,25 @@ impl WorldLoadJob {
         linked
     }
 
+    /// Whether an object is flat static scenery: no script, light, animation, visibility rule,
+    /// LOD group or driven light map, so it is only ever drawn at its placement (`needs_runtime`
+    /// would be false and nothing changes its parts).
+    pub(super) fn is_flat_static(
+        sco: &SceneryObject,
+        mesh_parts: &[Vec<ModelPart>],
+        template: Option<&Arc<ScriptTemplate>>,
+    ) -> bool {
+        template.is_none_or(|t| !t.has_scripts)
+            && sco.lights.is_empty()
+            && sco.meshes.iter().all(|m| {
+                m.lod_threshold.is_none() && m.visible.is_none() && m.animations.is_empty()
+            })
+            && mesh_parts
+                .iter()
+                .flatten()
+                .all(|p| p.light_variable.is_none())
+    }
+
     /// Hangs a placed object's parts under `root`: flat as before, or as a runtime hierarchy
     /// when the object has LOD groups, rules, lights, light maps or scripts.
     #[allow(clippy::too_many_arguments)]

@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use bevy::prelude::*;
 use opts_bevy::control::handlers::query::base_state;
-use opts_bevy::control::params::{f64_param, opt_f64, opt_str, str_param};
+use opts_bevy::control::params::{f64_param, opt_bool, opt_f64, opt_str, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome, Waiter};
 use opts_bevy::control::{channel::dispatch, PathPolicy};
 use opts_bevy::coords::omsi_to_bevy_pos;
@@ -37,6 +37,7 @@ impl Plugin for GameControlPlugin {
         registry.register("vehicle.get", vehicle_get);
         registry.register("camera.teleport", teleport);
         registry.register("render.look", render_look);
+        registry.register("render.stats", render_stats);
         registry.register("ui.navigate", ui_navigate);
         registry.register("menu.do", menu_do);
         registry.register("menu.state", menu_state);
@@ -415,6 +416,14 @@ fn vehicle_get(world: &mut World, _: &Value) -> Outcome {
     }))
 }
 
+/// `render.stats {reset?, parts?}`: frame times since the last reset, render-phase draw counts,
+/// memory, and (with `parts`) distinct meshes/materials of the visible mesh entities.
+fn render_stats(world: &mut World, params: &Value) -> Outcome {
+    let reset = opt_bool(params, "reset").ok().flatten().unwrap_or(false);
+    let parts = opt_bool(params, "parts").ok().flatten().unwrap_or(false);
+    Outcome::ok(opts_bevy::render_stats::render_stats(world, reset, parts))
+}
+
 /// `render.look {look?}`: reads the colour look, or sets it (`vivid`, `natural`, `bevy`). A set
 /// takes effect at once on every camera and the sky, and is saved in the settings.
 fn render_look(world: &mut World, params: &Value) -> Outcome {
@@ -438,9 +447,7 @@ fn render_look(world: &mut World, params: &Value) -> Outcome {
         world.resource_mut::<crate::look::ActiveLook>().0 = look;
         if let Some(mut settings) = world.get_resource_mut::<crate::settings::GameSettings>() {
             settings.look = look;
-            if let Err(err) = settings.save() {
-                tracing::warn!(err = ?err, "Failed to persist the look");
-            }
+            settings.save_in_background();
         }
     }
     let available: Vec<&str> = crate::look::Look::ALL.iter().map(|l| l.key()).collect();

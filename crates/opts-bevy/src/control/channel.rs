@@ -138,9 +138,20 @@ fn poll_deferred(world: &mut World) {
 /// The per-frame system: bookkeeping, input releases, new commands, deferred commands.
 pub fn drain_control_commands(world: &mut World) {
     {
-        let dt = world.resource::<Time<Real>>().delta_secs();
+        let (dt, now) = {
+            let t = world.resource::<Time<Real>>();
+            (t.delta_secs(), t.elapsed_secs_f64())
+        };
         let mut state = world.resource_mut::<ControlState>();
         state.frame += 1;
+        state.frame_log.push_back((now, dt * 1000.0));
+        while state
+            .frame_log
+            .front()
+            .is_some_and(|(at, _)| now - at > 10.0)
+        {
+            state.frame_log.pop_front();
+        }
         if dt > 0.0 {
             state.fps = if state.fps <= 0.0 {
                 1.0 / dt

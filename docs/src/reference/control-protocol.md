@@ -66,7 +66,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
-| `state` | - | 1.0 | App state, camera mode, fps, frame |
+| `state` | - | 1.0 | App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame |
 | `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
 | `camera.get` | - | 1.0 | Camera mode and transform |
 | `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock |
@@ -265,15 +265,17 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
 | `camera.teleport` *(debug)* | `x` (number)<br>`y` (number)<br>`z` (number)<br>`yaw?` (number)<br>`pitch?` (number) | 1.0 | Move the camera (OMSI coordinates) |
 | `render.look` | `look?` (string) | 1.0 | Get or set the colour look (vivid, natural, bevy) |
+| [`render.stats`](#renderstats) | `reset?` (boolean)<br>`parts?` (boolean) | 1.0 | Frame times, draw counts per render phase, memory |
 | [`vehicle.set`](#vehicleset) *(debug)* | `path` (string) | 1.0 | Replace the player vehicle |
 | `entity.spawn` | `asset` (string)<br>`transform?` (json) | 1.0 | Spawn an asset |
 | `entity.despawn` | `id` (integer) | 1.0 | Despawn an entity |
 | `entity.set_component` | `id` (integer)<br>`type` (string)<br>`value` (json) | 1.0 | Set a component value |
+| [`camera.reset`](#camerareset) | - | 1.2 | Reset the current camera view to its default, like Shift+Space |
 | [`camera.look`](#cameralook) | `yaw?` (number)<br>`pitch?` (number)<br>`dx?` (number)<br>`dy?` (number) | 1.1 | Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external) |
 | [`camera.move`](#cameramove) | `forward?` (number)<br>`right?` (number)<br>`up?` (number)<br>`duration_ms?` (integer) | 1.1 | Move the free camera forward/right/up for a duration, like the movement keys |
 | [`camera.viewpoint.get`](#cameraviewpointget) | - | 1.2 | The driver's-view viewpoint: offsets, field of view, stored value, editor state |
 | [`camera.viewpoint.set`](#cameraviewpointset) | `x?` (number)<br>`y?` (number)<br>`z?` (number)<br>`fov_deg?` (number) | 1.2 | Change the driver's-view viewpoint live (opens the editor; not stored until saved) |
-| [`camera.viewpoint.save`](#cameraviewpointsave) | - | 1.2 | Store the shown viewpoint for this vehicle and camera and close the editor |
+| [`camera.viewpoint.save`](#cameraviewpointsave) | `scope?` (string = vehicle \| model) | 1.2 | Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor |
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
 | [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
@@ -303,11 +305,25 @@ Return to the main menu.
 
 A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).
 
+### `render.stats`
+
+Frame times, draw counts per render phase, memory.
+
+`frame_times` covers the frames since the last reset (average, median, 99th percentile, 1 % low rate); `phases` the latest frame's batch sets, bins and entities of Bevy's render phases summed over all views (one `multidraw_sets` entry is one multi-draw call, a batchable bin one instanced draw, every unbatchable entity one draw); `parts` (opt-in, scans the world) the visible mesh entities with their distinct meshes, materials and pairs; `gpu_diagnostics_ms` needs `OPTS_RENDER_DIAG=1`. `reset` clears the frame-time window after reading.
+
 ### `vehicle.set`
 
 Replace the player vehicle.
 
 Restarts the session with the vehicle and answers like `scene.load_map` (including `1008` for a failed load and `waiting_for_continue` for a load with problems).
+
+### `camera.reset`
+
+Reset the current camera view to its default, like Shift+Space.
+
+**Result:** `{mode, sub_camera}`
+
+Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open.
 
 ### `camera.look`
 
@@ -343,11 +359,11 @@ Only the given values change. Out-of-range values answer `-32602` (offsets +-0.6
 
 ### `camera.viewpoint.save`
 
-Store the shown viewpoint for this vehicle and camera and close the editor.
+Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor.
 
 **Result:** the `camera.viewpoint.get` result
 
-Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active.
+Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active.
 
 ### `camera.viewpoint.reset`
 

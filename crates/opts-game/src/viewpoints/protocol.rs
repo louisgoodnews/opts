@@ -39,6 +39,9 @@ fn describe(world: &mut World) -> Value {
         "dirty": state.is_dirty(),
         "row": state.row.id(),
         "vehicle": state.vehicle_key,
+        "model": state.model_key,
+        "scope": if state.scope_model { "model" } else { "vehicle" },
+        "user_default_fov_deg": state.user_default_fov_deg,
         "camera": state.camera_index,
         "cameras": total,
         "viewpoint": json_of(&state.active),
@@ -152,11 +155,29 @@ fn set(world: &mut World, params: &Value) -> Outcome {
     }
 }
 
-fn save(world: &mut World, _: &Value) -> Outcome {
+fn save(world: &mut World, params: &Value) -> Outcome {
     if let Err(e) = require_view(world) {
         return Outcome::err(e);
     }
-    world.resource_mut::<ViewpointState>().save();
+    let scope = match opts_bevy::control::params::opt_str(params, "scope") {
+        Ok(s) => s.unwrap_or("vehicle"),
+        Err(e) => return Outcome::err(e),
+    };
+    if !matches!(scope, "vehicle" | "model") {
+        return Outcome::err(RpcError::new(
+            code::INVALID_PARAMS,
+            "`scope` is `vehicle` or `model`",
+        ));
+    }
+    let mut state = world.resource_mut::<ViewpointState>();
+    if scope == "model" && state.model_key.is_none() {
+        return Outcome::err(RpcError::new(
+            code::NOT_READY,
+            "the vehicle's model is not known: there is nothing to apply the viewpoint to",
+        ));
+    }
+    state.scope_model = scope == "model";
+    state.save();
     persist_viewpoint(world);
     Outcome::ok(describe(world))
 }

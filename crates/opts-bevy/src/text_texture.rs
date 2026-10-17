@@ -261,6 +261,25 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
     image
 }
 
+/// Loads all font definitions found in `Fonts/*.oft`.
+#[must_use]
+pub fn load_fonts(install: &OmsiInstall) -> Vec<OftFont> {
+    let mut files = Vec::new();
+    if let Some(dir) = install.find_file("Fonts") {
+        collect_oft(&dir, &mut files);
+    }
+    files.sort();
+    let mut fonts = Vec::new();
+    for path in files {
+        if let Ok(bytes) = std::fs::read(&path) {
+            if let Ok(file) = OftFile::parse(&bytes) {
+                fonts.extend(file.fonts);
+            }
+        }
+    }
+    fonts
+}
+
 fn collect_oft(dir: &Path, out: &mut Vec<PathBuf>) {
     for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
         let p = entry.path();

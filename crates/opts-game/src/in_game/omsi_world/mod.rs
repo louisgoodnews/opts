@@ -42,6 +42,7 @@ pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;
 pub(crate) use traffic::DEFAULT_MAX_TRAFFIC;
 mod trees;
 mod vehicle;
+pub mod vehicle_script_texture;
 mod vehicle_text;
 mod water;
 
@@ -78,6 +79,7 @@ pub use traffic::{
 };
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
+pub use vehicle_script_texture::update_vehicle_script_textures;
 pub use vehicle_text::update_vehicle_text_textures;
 pub use water::warn_vehicle_in_water;
 
@@ -232,6 +234,11 @@ pub struct WorldLoadJob {
     /// `[texttexture]` declarations of the vehicle model being loaded (set by its loader; the
     /// segment loader binds `[useTextTexture]` indices against them).
     vehicle_text_defs: Vec<opts_core::formats::vehicles::model::TextTexture>,
+    /// `[scripttexture]` declarations of the vehicle model being loaded.
+    vehicle_script_defs: Vec<opts_core::formats::vehicles::model::ScriptTexture>,
+    /// Script texture canvases for the active vehicle model.
+    vehicle_script_textures:
+        Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>,
     ground_material: Option<Handle<StandardMaterial>>,
     /// Water of the tiles built so far, by tile key (for [`WorldLoadJob::water_level_at`]).
     tile_water: HashMap<(i32, i32), opts_core::formats::map::MapWater>,

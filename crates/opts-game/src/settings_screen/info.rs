@@ -2,7 +2,7 @@
 //! the current theme, the catalogue, the cache, the file locations and the menu keys.
 
 use bevy::prelude::*;
-use opts_gui::l10n::L10nArgs;
+use opts_gui::l10n::{L10nArgs, L10nKey};
 use opts_gui::prelude::*;
 
 use super::rows::{label, Ctx};
@@ -16,13 +16,14 @@ fn line(
     key: &'static str,
     args: &[(&str, String)],
     style: TypeScale,
-) {
+) -> Entity {
     let e = label(c, parent, key, style, ColorRole::OnSurfaceVariant);
     let mut a = L10nArgs::default();
     for (k, v) in args {
         a.0.push(((*k).to_string(), v.clone().into()));
     }
     c.entity(e).insert(a);
+    e
 }
 
 fn path_text(p: Option<std::path::PathBuf>) -> String {
@@ -72,7 +73,7 @@ fn hardware_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
         let args: Vec<(&str, String)> = vars;
         line(c, pane, key, &args, TypeScale::BodyMedium);
     }
-    match &ctx.hardware_file {
+    let _ = match &ctx.hardware_file {
         Some(p) => line(
             c,
             pane,
@@ -80,16 +81,14 @@ fn hardware_info(c: &mut Commands, pane: Entity, ctx: &Ctx) {
             &[("path", p.display().to_string())],
             TypeScale::BodyMedium,
         ),
-        None => {
-            label(
-                c,
-                pane,
-                "settings-info-hw-not-stored",
-                TypeScale::BodyMedium,
-                ColorRole::OnSurfaceVariant,
-            );
-        }
-    }
+        None => label(
+            c,
+            pane,
+            "settings-info-hw-not-stored",
+            TypeScale::BodyMedium,
+            ColorRole::OnSurfaceVariant,
+        ),
+    };
 }
 
 /// Variables of the two catalogue lines: the breakdown by kind and the files-versus-entries line.
@@ -111,17 +110,82 @@ fn catalogue_args(c: &opts_catalogue::KindCounts) -> (Args, Args) {
     )
 }
 
+/// The lines of the Content page that show background facts.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ContentLine {
+    /// The breakdown by kind.
+    Catalogue,
+    /// Files versus entries.
+    Total,
+    /// The last scan (or "never").
+    LastScan,
+}
+
+/// Message key and variables of a content line once its facts are known.
+pub(super) fn content_line_text(
+    which: ContentLine,
+    f: &crate::content_facts::ContentFacts,
+) -> (&'static str, Args) {
+    let (kinds, total) = catalogue_args(&f.heavy.kinds);
+    match which {
+        ContentLine::Catalogue => ("settings-info-catalogue", kinds),
+        ContentLine::Total => ("settings-info-catalogue-total", total),
+        ContentLine::LastScan => match f.light.last_scan {
+            Some(t) => ("settings-info-last-scan", vec![("when", local_time(t))]),
+            None => ("settings-info-never-scanned", vec![("when", String::new())]),
+        },
+    }
+}
+
+/// Fills the content lines from the facts store as soon as an answer is there (the heavy
+/// lines wait for the heavy facts, the scan line for the light ones) and again after each new
+/// answer. Runs every frame but only touches entities when something arrived.
+pub fn fill_content_lines(
+    store: Res<crate::content_facts::ContentFactsStore>,
+    mut lines: Query<(Ref<ContentLine>, &mut L10nKey, &mut L10nArgs)>,
+) {
+    let (Some(light), heavy) = (store.light(), store.heavy()) else {
+        return;
+    };
+    for (which, mut key, mut args) in &mut lines {
+        if !store.is_changed() && !which.is_added() {
+            continue;
+        }
+        let which = *which;
+        let ready = match which {
+            ContentLine::LastScan => true,
+            _ => heavy.is_some(),
+        };
+        if !ready {
+            continue;
+        }
+        let facts = crate::content_facts::ContentFacts {
+            light,
+            heavy: heavy.unwrap_or_default(),
+        };
+        let (k, a) = content_line_text(which, &facts);
+        key.0 = k;
+        args.0 = a
+            .into_iter()
+            .map(|(n, v)| (n.to_string(), v.into()))
+            .collect();
+    }
+}
+
 /// Information that belongs to `cat`, below the rows.
 pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, theme_kind: &str) {
     match cat {
         Category::Interface => {
-            line(
+            let now = line(
                 c,
                 pane,
                 "settings-info-theme-now",
                 &[("theme", ctx.loc.t(theme_kind))],
                 TypeScale::BodyMedium,
             );
+            // The theme file list comes from the background facts.
+            c.entity(now)
+                .insert(crate::content_facts::WantsContentFacts);
             c.queue(|world: &mut World| {
                 // The last spawned text of the page is the line above: mark it so it follows
                 // the theme while the page is open.
@@ -137,42 +201,26 @@ pub fn spawn_info(c: &mut Commands, pane: Entity, ctx: &Ctx, cat: Category, them
             });
         }
         Category::Content => {
-            let (counts, last) = crate::catalogue_service::catalogue_db_path()
-                .filter(|p| p.exists())
-                .and_then(|p| opts_catalogue::Catalogue::open(&p).ok())
-                .map(|cat| {
-                    (
-                        cat.kind_counts().unwrap_or_default(),
-                        cat.last_scan().ok().flatten(),
-                    )
-                })
-                .unwrap_or_default();
-            let (kinds, total) = catalogue_args(&counts);
-            line(
-                c,
-                pane,
-                "settings-info-catalogue",
-                &kinds,
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                "settings-info-catalogue-total",
-                &total,
-                TypeScale::BodyMedium,
-            );
-            line(
-                c,
-                pane,
-                if last.is_some() {
-                    "settings-info-last-scan"
-                } else {
-                    "settings-info-never-scanned"
-                },
-                &[("when", last.map(local_time).unwrap_or_default())],
-                TypeScale::BodyMedium,
-            );
+            // The numbers come from the background facts (`content_facts`): the page never
+            // waits for them. Each line shows "Calculating..." until its answer arrives.
+            for (which, key) in [
+                (ContentLine::Catalogue, "settings-info-catalogue-pending"),
+                (ContentLine::Total, "settings-info-catalogue-total-pending"),
+                (ContentLine::LastScan, "settings-info-last-scan-pending"),
+            ] {
+                let e = label(
+                    c,
+                    pane,
+                    key,
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                );
+                c.entity(e).insert((
+                    which,
+                    L10nArgs::default(),
+                    crate::content_facts::WantsContentFacts,
+                ));
+            }
         }
         Category::Advanced => {
             hardware_info(c, pane, ctx);

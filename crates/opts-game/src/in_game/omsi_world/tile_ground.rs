@@ -262,25 +262,38 @@ pub(super) fn spawn_splines(
                     loader.texture(&t.file, &tex_dirs)
                 });
                 let alpha = tex.is_some_and(|t| t.alpha_mode.is_some());
-                let m = materials.add(StandardMaterial {
-                    base_color_texture: handle,
-                    perceptual_roughness: 0.9,
-                    double_sided: true,
-                    cull_mode: None,
-                    alpha_mode: if alpha {
-                        AlphaMode::Mask(0.5)
-                    } else {
-                        AlphaMode::Opaque
+                let m = job.cache.pool.material(
+                    materials,
+                    StandardMaterial {
+                        base_color_texture: handle,
+                        perceptual_roughness: 0.9,
+                        double_sided: true,
+                        cull_mode: None,
+                        alpha_mode: if alpha {
+                            AlphaMode::Mask(0.5)
+                        } else {
+                            AlphaMode::Opaque
+                        },
+                        // Road surfaces share their plane with the terrain deformed to them.
+                        depth_bias: 4.0,
+                        ..default()
                     },
-                    // Road surfaces share their plane with the terrain deformed to them.
-                    depth_bias: 4.0,
-                    ..default()
-                });
+                );
                 job.spline_materials
                     .insert((sli_key.clone(), tex_idx), m.clone());
                 m
             };
             stats.scene_vertices += mesh.count_vertices();
+            // `OPTS_INSTANCING=merge`: the ribbon (already in world space) joins the merged mesh.
+            if opts_bevy::instancing::merge()
+                && opts_bevy::instancing::StaticMerger::mesh_ok(&mesh)
+                && materials
+                    .get(&mat)
+                    .is_some_and(opts_bevy::instancing::StaticMerger::material_ok)
+                && job.cache.merger.bake(&mesh, &mat, &Transform::IDENTITY)
+            {
+                continue;
+            }
             children.push(
                 commands
                     .spawn((

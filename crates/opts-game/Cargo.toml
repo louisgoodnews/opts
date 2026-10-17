@@ -51,6 +51,8 @@ clap = { workspace = true }
 test-support = []
 # Bevy system spans plus `OPTS_SYSTEM_TIMING=<seconds>` per-system timing (profiling builds).
 profile = ["bevy/trace", "bevy/debug"]
+# Streaming pipeline timers and `OPTS_STREAM_TRACE=<file>` per-frame JSON lines (M-0089); zero cost when off.
+stream-trace = ["opts-bevy/stream-trace", "opts-logging/stream-trace"]
 
 [dev-dependencies]
 # Enables the fixtures for this crate's own integration tests.

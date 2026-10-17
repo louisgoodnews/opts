@@ -34,6 +34,7 @@ pub fn register(r: &mut ControlRegistry) {
     r.register("vehicle.teleport", teleport);
     r.register("vehicle.reset", reset);
     r.register("camera.look", look);
+    r.register("camera.reset", reset_camera);
     r.register("camera.move", move_camera);
     r.register("snapshot", snapshot);
 }
@@ -461,6 +462,41 @@ fn reset(world: &mut World, _: &Value) -> Outcome {
         Ok(json!({ "ok": true, "x": x, "y": y, "heading_deg": pose.1.to_degrees() }))
     })();
     res.into()
+}
+
+// ---- camera.reset ---------------------------------------------------------------------------
+
+fn reset_camera(world: &mut World, _: &Value) -> Outcome {
+    if world.get_resource::<CameraState>().is_none() {
+        return Outcome::err(RpcError::new(code::NOT_READY, "there is no camera"));
+    }
+    if modal_open(world) {
+        return Outcome::err(RpcError::new(
+            code::GATED,
+            "a dialog or the vehicle menu is open: camera input is blocked",
+        ));
+    }
+    let mut camera = world.query_filtered::<&mut Transform, With<Camera3d>>();
+    let mut tf = camera.iter_mut(world).next().map(|t| *t);
+    let mut state = world.resource::<CameraState>().clone();
+    let mut viewpoint = world
+        .get_resource::<opts_bevy::ViewpointState>()
+        .cloned()
+        .unwrap_or_default();
+    let done = opts_bevy::camera::reset::reset_view(&mut state, tf.as_mut(), &mut viewpoint);
+    *world.resource_mut::<CameraState>() = state;
+    if let Some(mut vp) = world.get_resource_mut::<opts_bevy::ViewpointState>() {
+        *vp = viewpoint;
+    }
+    if let Some(tf) = tf {
+        for mut t in camera.iter_mut(world) {
+            *t = tf;
+        }
+    }
+    Outcome::ok(json!({
+        "mode": format!("{:?}", done.mode).to_lowercase(),
+        "sub_camera": done.sub_camera,
+    }))
 }
 
 // ---- camera.look / camera.move -----------------------------------------------------------------------

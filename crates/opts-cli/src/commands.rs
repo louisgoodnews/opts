@@ -140,7 +140,7 @@ pub const COMMANDS: &[CommandSpec] = &[
         "token:s@0",
     ),
     c("shutdown", "meta", "Exit the application", "force:b?"),
-    c("state", "query", "App state, camera mode, fps, frame", ""),
+    c("state", "query", "App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame", ""),
     c(
         "scene",
         "query",
@@ -283,6 +283,13 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Get or set the colour look (vivid, natural, bevy)",
         "look:s@0?",
     ),
+    c(
+        "render.stats",
+        "scene",
+        "Frame times, draw counts per render phase, memory",
+        "reset:b? parts:b?",
+    )
+    .doc("`frame_times` covers the frames since the last reset (average, median, 99th percentile, 1 % low rate); `phases` the latest frame's batch sets, bins and entities of Bevy's render phases summed over all views (one `multidraw_sets` entry is one multi-draw call, a batchable bin one instanced draw, every unbatchable entity one draw); `parts` (opt-in, scans the world) the visible mesh entities with their distinct meshes, materials and pairs; `gpu_diagnostics_ms` needs `OPTS_RENDER_DIAG=1`. `reset` clears the frame-time window after reading."),
     c(
         "settings.list",
         "settings",
@@ -631,6 +638,15 @@ pub const COMMANDS: &[CommandSpec] = &[
     .doc("A debug command: restores the start position, zeroes speed and the controls and the distance counter.")
     .debug(),
     c(
+        "camera.reset",
+        "scene",
+        "Reset the current camera view to its default, like Shift+Space",
+        "",
+    )
+    .since("1.2")
+    .result("`{mode, sub_camera}`")
+    .doc("Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open."),
+    c(
         "camera.look",
         "scene",
         "Turn the camera: absolute yaw/pitch (free roam) or relative look (cockpit, external)",
@@ -669,12 +685,12 @@ pub const COMMANDS: &[CommandSpec] = &[
     c(
         "camera.viewpoint.save",
         "scene",
-        "Store the shown viewpoint for this vehicle and camera and close the editor",
-        "",
+        "Store the shown viewpoint for this vehicle (or all of its model) and camera and close the editor",
+        "scope:s[vehicle|model]@0?",
     )
     .since("1.2")
     .result("the `camera.viewpoint.get` result")
-    .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. A viewpoint equal to the vehicle's own removes the stored entry. Answers `1001` unless the driver's view is active."),
+    .doc("Writes `viewpoints.json` (next to `drive_history.json`) before it answers. `scope` `model` (default `vehicle`) applies the viewpoint to every vehicle of the same model (the folder of its `.bus` file) and drops this vehicle's own override; other vehicles' own entries keep winning. A viewpoint equal to the vehicle's own removes the stored entry (or keeps an explicit default when the model has one). Answers `1001` unless the driver's view is active."),
     c(
         "camera.viewpoint.reset",
         "scene",

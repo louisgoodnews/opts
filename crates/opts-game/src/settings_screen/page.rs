@@ -162,7 +162,19 @@ pub struct SettingsPagePlugin;
 
 impl Plugin for SettingsPagePlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<crate::content_facts::ContentFactsPlugin>() {
+            app.add_plugins(crate::content_facts::ContentFactsPlugin);
+        }
         app.add_message::<super::input::SettingActionRequested>()
+            .add_systems(
+                Update,
+                (
+                    super::scan_status::refresh_scan_chip
+                        .run_if(any_with_component::<super::scan_status::ScanChip>),
+                    super::info::fill_content_lines
+                        .run_if(any_with_component::<super::info::ContentLine>),
+                ),
+            )
             .add_systems(
                 Update,
                 (
@@ -190,7 +202,13 @@ pub fn mark_dirty(
     registry: Res<SettingsRegistry>,
     loc: Res<Localization>,
     added: Query<(), Added<SettingsPage>>,
+    facts: Res<crate::content_facts::ContentFactsStore>,
+    mut themes: Local<Vec<String>>,
 ) {
+    if themes.as_slice() != facts.theme_files() {
+        *themes = facts.theme_files().to_vec();
+        state.dirty = true;
+    }
     let structural = changes.read().any(|c| {
         registry.get(&c.key).is_some_and(|d| {
             matches!(d.kind, SettingKind::Path)
@@ -318,6 +336,7 @@ pub fn rebuild_page(
     registry: Res<SettingsRegistry>,
     settings: Res<GameSettings>,
     caps: Res<SettingsCapabilities>,
+    facts: Res<crate::content_facts::ContentFactsStore>,
     loc: Res<Localization>,
     hardware: Option<Res<crate::hardware::HardwareState>>,
     focused: Query<&UiId, With<opts_gui::interaction::state::Focused>>,
@@ -355,6 +374,7 @@ pub fn rebuild_page(
             .as_ref()
             .filter(|h| h.is_stored())
             .and_then(|h| h.dir.as_deref().map(opts_hardware::store::path)),
+        theme_files: facts.theme_files(),
     };
     let searching = !state.query.trim().is_empty();
     for cat in registry

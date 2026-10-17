@@ -131,6 +131,7 @@ pub fn parse_model(text: &str) -> Result<ModelConfig, ModelParseError> {
             | "matl_nozcheck"
             | "matl_texadress_clamp"
             | "usetexttexture"
+            | "usescripttexture"
             | "alphascale"
             | "texcoordtransy" => {
                 if let Some(mesh) =
@@ -357,11 +358,20 @@ fn apply_material_modifier(
             });
         }
         "matl_transmap" => {
-            mat.trans_map = block
+            let trans = block
                 .parameters
                 .first()
                 .filter(|p| !p.trim().is_empty())
                 .cloned();
+            if let Some(t) = &trans {
+                let trimmed = t.trim();
+                if trimmed.starts_with(r"\S:") || trimmed.starts_with(r"\s:") {
+                    if let Ok(idx) = trimmed[3..].trim().parse::<usize>() {
+                        mat.script_texture_index = Some(idx);
+                    }
+                }
+            }
+            mat.trans_map = trans;
         }
         "matl_freetex" => {
             let params = require_params(block, 2)?;
@@ -376,6 +386,10 @@ fn apply_material_modifier(
         "usetexttexture" => {
             let params = require_params(block, 1)?;
             mat.text_texture_index = Some(parse_number::<usize>(&params[0], block.line_number)?);
+        }
+        "usescripttexture" => {
+            let params = require_params(block, 1)?;
+            mat.script_texture_index = Some(parse_number::<usize>(&params[0], block.line_number)?);
         }
         "alphascale" => {
             let params = require_params(block, 1)?;

@@ -29,17 +29,21 @@ pub mod host_callbacks;
 pub mod hot_reload;
 pub mod human;
 pub mod install;
+pub mod instancing;
 pub mod loader;
 pub mod material;
 pub mod mesh;
 pub mod model;
 pub mod plugin;
 pub mod position_tag;
+pub mod reflections;
+pub mod render_stats;
 pub mod reporting;
 pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;
 pub mod terrain;
+pub mod terrain_query;
 pub mod text_texture;
 pub mod texture;
 pub mod texture_filter;
@@ -114,6 +118,7 @@ pub use terrain::{
     CarveStats, GroundTriangle, TileTerrain, CARVE_COVER_M, CARVE_EPSILON_M, TERRAIN_CELL_M,
     TILE_SIZE_M,
 };
+pub use terrain_query::GroundElevationQuery;
 pub use texture::{
     dds_to_bevy_image, image_to_bevy_image, load_bevy_image, sniff_image_format, ImageFormat,
     TextureError,
