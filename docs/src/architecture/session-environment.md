@@ -18,7 +18,7 @@ re-derived from the start values in six more (traffic used an unwrapped hour and
 | `rate` | clock seconds per `Time<Virtual>` second (default 1) |
 | `revision` | counts **jumps** (a change of date, time or weather, a session start); the clock running is not a jump |
 | `map_date` | the date the map content is built for (Chrono) |
-| derived | weekday and `[set_day_of_week]` bit, wrapped hour, sun elevation/azimuth, `night` (sun < 3°), and from the weather: `conditions()` (fog, wind, temperature, dew point, pressure, clouds, precipitation, wetness; [weather](weather.md)), the sun and ambient light scales (`attenuation()`, `ambient_attenuation()`: 0.55 / 0.8 under a fully covered sky) |
+| derived | weekday and `[set_day_of_week]` bit, wrapped hour, sun elevation/azimuth, `night` (sun < 3°), and from the weather: `conditions()` (fog, wind, temperature, dew point, pressure, clouds, precipitation, wetness; [weather](weather.md)), the moon (`moon()`: elevation, azimuth, phase; [lighting system](lighting-system.md) 5.2) and the light scales (`light_attenuation()` -> direct, ambient, moon, shafts; `attenuation()` and `ambient_attenuation()` are its `direct` and `ambient` parts: 0.55 / 0.8 under a fully covered sky) |
 
 The fields are private; the resource changes only through the `EnvironmentChange` message
 (`date?`, `seconds_of_day?`, `weather?`, `rate?`, `map_date` policy) and its own clock:

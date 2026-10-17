@@ -2,11 +2,11 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Draft: design from measurements (Phase B, 2026-10-17). **Implemented: the quality-mode settings, the ladder state and the governor (section 9)**; the lighting effects themselves are not |
+| **Status** | 🟡 Draft: design from measurements (Phase B, 2026-10-17). **Implemented: the quality-mode settings, the ladder state and the governor (section 9); the moon with phase and light, the shadow carrier, the weather attenuation function and the sun/moon god rays (sections 5.8 and 6.6)**; cones and light rooms are not |
 | **Branch** | `agent/lighting-content` (docs only; content probes were throwaway scripts) |
 | **Code today** | `opts_bevy::environment` (sun position, `SessionEnvironment`), `opts_game::in_game::{sky,world}` (`SunLight`, discs, fallback light), `opts_bevy::scenery_runtime::{lights,maplights,effects,spawn}`, `opts_bevy::{vehicle,vehicle_glow,vehicle_lights}`, `opts_game::look` |
 | **Related** | [Session environment](session-environment.md), [Scenery runtime](scenery-runtime.md), [Systems report §9](../meta/berlin-spandau-systems-2026-10-17.md#9-round-3-lighting-cones-and-volumetrics-2026-10-17-branch-fixmap-and-lighting-systems), [`envir.cfg`](../formats/text/environment.md), [`.sco`](../formats/text/sco.md), [`model.cfg`](../formats/text/vehicles/model_cfg.md), [Reflections research](reflections-research.md) |
-| **Last Updated** | 2026-10-17 |
+| **Last Updated** | 2026-10-17 (step 3: moon and god rays) |
 
 Evidence tags: ✅ measured on the installed content or read in the Bevy 0.20.0 source (file and line given), ❓ open, 📚 community wiki (see the format pages). Counts come from throwaway scans of the installed OMSI 2 files (text and config only, ADR-0002); the scripts are not kept.
 
@@ -255,6 +255,17 @@ Rules (initial, tunable): `direct = 1 − 0.45·cover^1.5` (0.55 at full cover, 
 | `update_sky` refreshes colours every 0.5 s | the moon uses the same cadence, the direction every frame |
 | Fallback light path (no `envir.cfg`) | uses the same moon and attenuation functions; the hard-coded table goes |
 
+### 5.8 Implemented (2026-10-17, `agent/lighting-moon-rays`)
+
+Code: `opts_bevy::moon` (pure model and illuminance), `opts_bevy::environment` (`WeatherSky`, `LightAttenuation`, `light_attenuation`, `SessionEnvironment::{moon, light_attenuation}`), `opts_bevy::moon_material` + `shaders/moon_disc.wesl` (`MoonMaterial`), `opts_game::in_game::moon` (`MoonLight`, `update_moon`, `shadow_carrier_system`, `ShadowCarrier`).
+
+* **Model and tests:** exactly as 5.2 (13 + 7 terms, moon relative to the sun). The 11-phase table passes with the 10 minute tolerance; fraction at new/full is within 0.003 of 0/1 (the moon's ecliptic latitude, up to 5°, keeps the fraction a hair off at non-eclipse syzygies) and 0.5 at the quarters. `MoonState` also has `waxing`, `age_days` (from the elongation, not the mean month) and `bright_limb_deg`. The bright limb is computed in the screen frame of an observer looking at the moon with the horizon level (sun and moon unit vectors in east/north/up, projected on the disc plane), so no parallactic angle is needed; `SessionEnvironment::moon()` is refreshed with the sun.
+* **Moonlight:** `MOON_PEAK_LX` 900, `MOON_PHASE_GAMMA` 0.5, `h(el) = smoothstep(−1°, 8°) × (0.4 + 0.6 sin el)`, `w(sun) = 1 − smoothstep(−4°, 6°, sun el)` (constants `MOON_FADE_BELOW_DEG`, `MOON_FADE_ABOVE_DEG`, `MOON_SUN_FULL_DEG`, `MOON_SUN_GONE_DEG`), colour `MOON_COLOR` (0.72, 0.80, 1.0), times `LightAttenuation::moon`. **Deviation:** a gate `smoothstep(0, MOON_NEW_FRACTION = 0.02, illuminated fraction)` makes the light exactly 0 at the new moon (Allen's function alone leaves about 15 lx there); the light is also 0 when the moon elevation is not above 0. The entity (`MoonLight`, `LightRole::Moon`) is spawned once a sun light exists (the data-driven `SunLight` or the `FallbackLight`) and updated every frame; ambient is unchanged.
+* **One night light:** the fallback light (`world.rs`) lost its hour table and its 900 lx night: it follows the sun's elevation and azimuth (warm below 12°, fading through −4°..+3°) and gives **no direct light at night**; the moon is the night light in both paths.
+* **Shadow carrier (5.4):** `choose_carrier(current, sun, moon)` with `CARRIER_HYSTERESIS` 0.15, `MIN_LIGHT_LX` 1; score = illuminance × (elevation above 0). The current carrier is kept until the other beats it by 15 % (or it falls below 0.5 lx); no carrier when neither reaches 1 lx; ties and the first frame prefer the sun. `shadow_carrier_system` sets `shadow_maps_enabled` on exactly the carrier and `Visibility::Hidden` on every light under 1 lx. **Deviation:** no 1 s illuminance cross-fade of the non-carrier (the hand-over happens where one of the two is nearly dark); the sun's shadow configuration is unchanged.
+* **Moon disc:** `MoonMaterial` (additive, premultiplied pipeline with alpha 0). The shader cuts a circle (`DISC_RADIUS` 0.94 of the quad half-width, soft rim) so the grey background of `mond.bmp` never shows, shades a sphere with the terminator for `phase_angle` and `bright_limb`, `EARTHSHINE` 0.03. Brightness: `MOON_DISC_DAY_BRIGHTNESS` 0.35 by day rising to 1 at night, times `LightAttenuation::moon`. The quad faces the viewer (its +Z towards the camera, so the back face is not seen and the phase is not mirrored), sits at the model direction on the dome and is scaled to zero below about −2.9°. `MoonMaterialPlugin` is registered with the ground material (windowed runs); headless runs keep the disc without a mesh.
+* **Weather hook (5.6):** `light_attenuation(&WeatherSky)`: `direct`/`ambient` from `weather::light_scales_for_cover` (the rule of `light_scales`: 0.55 / 0.8 at full cover, so existing behaviour is unchanged), `moon = 1 − 0.65·cover`, `shafts = direct² × (1 − cover)`. **Deviation:** the design's `clamp(1 − cover, 0.15, 1)` is a plain `1 − cover` so a solid overcast has no beam at all (the test plan asks for 0). `WeatherSky::from_conditions` takes `cloud_cover = effective_cover(c)` (clouds, precipitation and thick fog), `visibility_m`, `precip` and `wet` (reserved, no rule reads it). `SessionEnvironment::attenuation()` is a thin wrapper returning `direct`; `update_sky` reads `light_attenuation()`.
+
 ## 6. Sun god rays with `VolumetricFog`
 
 ### 6.1 How Bevy 0.20 does it (read from the source)
@@ -315,6 +326,15 @@ Metric: the GPU time of the `volumetric_lighting` span (Bevy's render diagnostic
 9. Interior lights: 0, 6, 24 cabin `PointLight`s in the view versus on layer 1 with the camera outside (cluster cost).
 10. Map-light pool 48 versus 24 with shafts on.
 11. Whether alpha-blended window panes cast shadows and show shafts in the cab ❓.
+
+### 6.6 Implemented (2026-10-17, `agent/lighting-moon-rays`)
+
+`opts_bevy::sun_rays` (`SunRaysPlugin`, `sync_light_shafts` in `SunRaysSet`, after `LightQualitySet` and `EnvironmentSet`); the game registers it with `MoonPlugin` in `InGamePlugin`. The sync is a pure function of `LightQuality`, the lights and the camera, evaluated every frame, and only touches components that differ:
+
+* **Carrier:** the first directional light with a `LightRole` that has `shadow_maps_enabled` and light; the moon only with `LightQuality::night_shafts`. The shadow carrier system (5.8) owns the 15 % hysteresis, so the rays never flicker on a hand-over (a swap moves `VolumetricLight` in two frames).
+* **Active** (shafts not `Off`, a carrier, a `MainCamera`): `VolumetricFog { step_count: shafts.steps(), jitter: SHAFT_JITTER 0.5, ambient_intensity: 0 }` on every `MainCamera` (step count changes live), `VolumetricLight` on the carrier only, one `ShaftFogVolume` cube of `SHAFT_VOLUME_SIDE_M` 200 m following the first active `MainCamera` every frame. **Inactive:** all of it removed and the volume despawned (Bevy then skips the pass). Mirror cameras are not `MainCamera` and never get the fog. Works with and without `Hdr`; without it the volume's `light_intensity` is scaled by `LDR_SHAFT_SCALE` 0.6.
+* **Haze (Q-LS12):** `haze_density(visibility_m) = min(HAZE_MAX 0.05, max(HAZE_BASE 0.002, 3.912 / V × FOG_TO_SHAFT 1.0))` per metre as the volume's `density_factor` (Bevy's extinction is `density_factor × 0.6`, so the haze is a little thinner than the distance fog); `scattering_asymmetry` 0.8. `light_intensity = LightAttenuation::shafts × gain × ldr`, gain 1 for the sun and `MOON_SHAFT_GAIN` 4 for the moon ❓ (its light is about 20 times weaker).
+* **Not done:** the `shaft_range` decoupled from the cascade distance, a raised `maximum_distance` while shafts are on (Q-LS10), shafts through cabin glass (Q-LS08). The shadow map stays 2048 with the sun's default cascades (150 m).
 
 ## 7. Weather and the Environment UI
 
