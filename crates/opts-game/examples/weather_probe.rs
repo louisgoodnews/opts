@@ -90,6 +90,7 @@ fn main() {
     world.insert_resource(ClearColor(Color::srgb(0.55, 0.7, 0.9)));
     world.spawn((
         Camera3d::default(),
+        opts_bevy::MainCamera,
         RenderTarget::from(target.clone()),
         Transform::from_xyz(0.0, 2.0, 0.0).looking_at(Vec3::new(0.0, 6.0, -60.0), Vec3::Y),
         InGameCamera,

@@ -275,7 +275,7 @@ Rules (initial, tunable): `direct = 1 − 0.45·cover^1.5` (0.55 at full cover, 
 
 ### 6.2 The existing camera and light
 
-* Cameras: `Camera3d::default()` at `in_game/vehicle_spawner.rs:14` (the tracking camera, with `VehicleCameraRig`, `IsDefaultUiCamera`) and `:34` (the free camera); the look system (`look.rs:173-190`, `apply_look_to_cameras`) later inserts `Tonemapping` and `ColorGrading`. **No `Hdr`, default `Msaa` (4 samples, `bevy_render-0.20.0/src/view/mod.rs:248-251`), no prepass, no SSAO.** Benchmark and test cameras use `Msaa::Off` (`opts-benchmark`).
+* Cameras (status 2026-10-17, step 1 of the lighting plan done): the tracking camera (`in_game/vehicle_spawner.rs`, with `VehicleCameraRig`, `IsDefaultUiCamera`) and the free camera carry the marker **`MainCamera`** (`opts_bevy::MainCamera`) next to `Camera3d`. **Rule: every system that means "the player's view" queries `With<MainCamera>`, never `With<Camera3d>`**; auxiliary cameras (the reflection prototype's `MirrorCamera`, benchmark and offscreen cameras) are plain `Camera3d` and are invisible to those queries. The look system (`look.rs`, `apply_look_to_cameras`) inserts `Tonemapping` and `ColorGrading` on the `MainCamera`. Default `Msaa` (4 samples, `bevy_render-0.20.0/src/view/mod.rs:248-251`) is unchanged, no prepass, no SSAO. Benchmark and test cameras use `Msaa::Off` (`opts-benchmark`).
 * Sun: `DirectionalLight { shadow_maps_enabled: true }` with default `CascadeShadowConfig` (4 cascades, 0.1 to 150 m, first far bound 10 m, overlap 0.2) and default `DirectionalLightShadowMap` 2048.
 * Mirror cameras (reflections prototype) toggle `Camera3d` per frame; they must never carry `VolumetricFog`.
 

@@ -10,7 +10,7 @@ pub struct MenuCamera;
 /// the only thing that draws the loading screen (and its *Failed* outcome, which never gets a
 /// scene camera); switching it off on entering the session left the window black while loading.
 pub fn deactivate_menu_camera(
-    scene: Query<&Camera, (With<Camera3d>, Without<MenuCamera>)>,
+    scene: Query<&Camera, (With<opts_bevy::MainCamera>, Without<MenuCamera>)>,
     mut query: Query<&mut Camera, With<MenuCamera>>,
 ) {
     if !scene.iter().any(|c| c.is_active) {

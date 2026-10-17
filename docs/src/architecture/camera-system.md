@@ -100,3 +100,13 @@ The key is the vehicle's catalogue identity (the `.bus` file stem, lower case, s
 Trailers named by `[couple_back]` are spawned as child segments (offset = tractor `[coupling_back]` − trailer `[coupling_front]`, chain depth ≤ 4). Their `[add_camera_pax]` presets are appended to the 4 list after the tractor's presets and are evaluated in the frame of their own segment (`BusVehicle::pax_camera`). Segments are rigid for now: no articulation angle is simulated.
 
 > **Key change (F1 reporting decision):** F1 now belongs to the report modal (`reporting-feature.md`). Camera modes moved from F2–F6 to the number keys 1–5 and "previous mode" from F1 to 0. The gear selector's digit aliases (1/2/3) were removed to avoid the clash; gears are D/N/R (D was E while A/D steered; steering is now on the arrow keys). The debug overlay stays on F10.
+
+
+## The `MainCamera` marker
+
+`opts_bevy::MainCamera` marks the one camera that shows the player's view (spawned with the in-game
+`Camera3d` in `vehicle_spawner.rs`). Camera input and modes, the sky dome, tile streaming, traffic, pedestrian
+and rail centres, the minimap, the scenery LOD/light culling, the look presets, `Hdr` (`graphics.hdr`) and the
+control protocol all query `With<MainCamera>`. Never use `With<Camera3d>` for "the player's view": auxiliary
+cameras (the reflection prototype's `MirrorCamera`, benchmark cameras) are `Camera3d` too, and a second match
+moves the wrong camera or makes a `single()` query fail. Code that really means any 3D camera says so in a comment.

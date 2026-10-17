@@ -63,7 +63,7 @@ pub fn screen_size(radius: f32, distance: f32, fov_y_rad: f32) -> f32 {
 /// Shows the LOD group of each object that matches its current screen size.
 pub fn scenery_lod_system(
     mode: Res<SceneryLodMode>,
-    cameras: Query<(&Camera, &GlobalTransform, &Projection), With<Camera3d>>,
+    cameras: Query<(&Camera, &GlobalTransform, &Projection), With<crate::MainCamera>>,
     mut objects: Query<(&mut SceneryLod, &GlobalTransform)>,
     mut groups: Query<&mut Visibility>,
 ) {

@@ -51,7 +51,7 @@ pub fn handle_camera_key_input(
     keys: Res<ButtonInput<KeyCode>>,
     avail: Res<CameraAvailability>,
     mut state: ResMut<CameraState>,
-    camera: Query<&Transform, With<Camera3d>>,
+    camera: Query<&Transform, With<crate::MainCamera>>,
     vehicle: Query<&BusVehicle, With<PlayerVehicle>>,
     mut warned: Local<[bool; 2]>,
 ) {
@@ -125,7 +125,7 @@ pub fn handle_camera_reset_input(
     keys: Res<ButtonInput<KeyCode>>,
     mut state: ResMut<CameraState>,
     mut viewpoint: ResMut<crate::camera::viewpoint::ViewpointState>,
-    mut camera: Query<&mut Transform, With<Camera3d>>,
+    mut camera: Query<&mut Transform, With<crate::MainCamera>>,
 ) {
     let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     if !(shift && keys.just_pressed(KeyCode::Space)) {

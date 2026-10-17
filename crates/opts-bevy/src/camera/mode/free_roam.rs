@@ -31,7 +31,7 @@ pub fn update_free_roam_camera(
     mut motion: MessageReader<MouseMotion>,
     mut wheel: MessageReader<MouseWheel>,
     mut state: ResMut<CameraState>,
-    mut camera: Query<&mut Transform, With<Camera3d>>,
+    mut camera: Query<&mut Transform, With<crate::MainCamera>>,
 ) {
     if state.mode != CameraMode::FreeRoam {
         motion.clear();
@@ -89,7 +89,7 @@ pub fn update_free_roam_camera(
 pub fn manage_free_roam_cursor(
     state: Res<CameraState>,
     keys: Res<ButtonInput<KeyCode>>,
-    cameras: Query<(), With<Camera3d>>,
+    cameras: Query<(), With<crate::MainCamera>>,
     modal: Option<Res<crate::reporting::ModalActive>>,
     menu: Option<Res<crate::reporting::MenuModalActive>>,
     mut windows: Query<&mut CursorOptions, With<PrimaryWindow>>,

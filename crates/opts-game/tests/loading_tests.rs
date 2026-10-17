@@ -407,8 +407,11 @@ fn the_menu_camera_keeps_drawing_the_loading_screen_until_a_scene_camera_exists(
         "the failed screen needs the menu camera"
     );
     // A scene camera appears: now the menu camera steps aside.
-    app.world_mut()
-        .spawn((Camera3d::default(), Camera::default()));
+    app.world_mut().spawn((
+        Camera3d::default(),
+        opts_bevy::MainCamera,
+        Camera::default(),
+    ));
     run(&mut app, 2);
     let active = app.world().get::<Camera>(cam).map(|c| c.is_active);
     assert_eq!(active, Some(false));
@@ -607,7 +610,7 @@ fn a_session_without_a_vehicle_loads_and_runs_with_a_free_camera() {
     );
     let cameras = app
         .world_mut()
-        .query_filtered::<Entity, With<Camera3d>>()
+        .query_filtered::<Entity, With<opts_bevy::MainCamera>>()
         .iter(app.world())
         .count();
     assert_eq!(cameras, 1, "the free camera exists");

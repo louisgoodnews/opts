@@ -578,6 +578,7 @@ fn setup(
     // Camera.
     let mut cam = commands.spawn((
         Camera3d::default(),
+        opts_bevy::MainCamera,
         Transform::from_xyz(0.0, 1.8, 6.0).looking_to(Vec3::NEG_Z, Vec3::Y),
         Tonemapping::default(),
         Msaa::Sample4,

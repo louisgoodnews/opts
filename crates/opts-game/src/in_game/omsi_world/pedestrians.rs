@@ -278,7 +278,7 @@ pub fn spawn_pedestrians(
     settings: Res<PedestrianSettings>,
     mut pool: ResMut<PedestrianPool>,
     mut bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     living: Query<(), With<Pedestrian>>,
     job: Option<Res<super::WorldLoadJob>>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
@@ -399,7 +399,7 @@ pub fn move_pedestrians(
     mut commands: Commands,
     net: Res<PedestrianNetwork>,
     mut pool: ResMut<PedestrianPool>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut peds: Query<(Entity, &mut Pedestrian, &Human)>,
     mut transforms: Query<&mut Transform>,
 ) {

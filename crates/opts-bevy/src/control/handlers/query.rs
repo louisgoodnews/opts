@@ -1,6 +1,5 @@
 //! `state`, `camera.get`, `sim.get`, `log.tail`, `log.filter`.
 
-use bevy::camera::Camera3d;
 use bevy::ecs::world::World;
 use bevy::prelude::*;
 use bevy::time::{Real, Time, Virtual};
@@ -57,7 +56,7 @@ fn camera_get(world: &mut World, _: &Value) -> Outcome {
         out.insert("sub_index".into(), json!(cam.sub_camera_index));
     }
     let mut query =
-        world.query_filtered::<(&GlobalTransform, Option<&Projection>), With<Camera3d>>();
+        world.query_filtered::<(&GlobalTransform, Option<&Projection>), With<crate::MainCamera>>();
     if let Some((tf, projection)) = query.iter(world).next() {
         let (t, r) = (tf.translation(), tf.to_scale_rotation_translation().1);
         out.insert(

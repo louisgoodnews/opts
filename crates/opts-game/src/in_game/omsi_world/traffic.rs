@@ -514,7 +514,7 @@ pub fn spawn_traffic(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
     *elapsed += time.delta_secs();
     if *elapsed < SPAWN_INTERVAL_S || settings.max == 0 {
@@ -954,7 +954,7 @@ pub fn move_traffic(
     mut commands: Commands,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut state: ResMut<TrafficState>,
-    camera: Query<&GlobalTransform, With<Camera3d>>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut vehicles: Query<(
         Entity,
         &mut TrafficVehicle,

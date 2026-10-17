@@ -260,7 +260,23 @@ pub fn spawn_sky(
     Ok(())
 }
 
-/// Moves the dome with the camera and updates sky colours, sun/moon placement and lighting.
+/// Moves the sky dome to the [`MainCamera`](opts_bevy::MainCamera) and turns it so that texture
+/// `u = 0` faces the sun (the dusk texture's glow is authored around it).
+pub fn place_sky_dome(
+    env: Res<SessionEnvironment>,
+    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
+    mut dome: Query<&mut Transform, With<SkyDome>>,
+) {
+    let Some(cam) = cameras.iter().next().map(GlobalTransform::translation) else {
+        return;
+    };
+    for mut t in &mut dome {
+        t.translation = cam;
+        t.rotation = Quat::from_rotation_y(-env.sun_az_deg().to_radians());
+    }
+}
+
+/// Updates sky colours, sun/moon placement and lighting.
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn update_sky(
     env: Res<SessionEnvironment>,
@@ -271,16 +287,7 @@ pub fn update_sky(
     mut clear: Option<ResMut<ClearColor>>,
     mut ambient: Option<ResMut<GlobalAmbientLight>>,
     look: Option<Res<crate::look::ActiveLook>>,
-    cameras: Query<&GlobalTransform, (With<Camera3d>, Without<SkyDome>)>,
-    mut dome: Query<
-        &mut Transform,
-        (
-            With<SkyDome>,
-            Without<SunLight>,
-            Without<SunDisc>,
-            Without<MoonDisc>,
-        ),
-    >,
+    cameras: Query<&GlobalTransform, (With<opts_bevy::MainCamera>, Without<SkyDome>)>,
     mut sun: Query<(&mut Transform, &mut DirectionalLight), (With<SunLight>, Without<SkyDome>)>,
     mut sun_disc: Query<
         &mut Transform,
@@ -311,11 +318,6 @@ pub fn update_sky(
     let (elevation, azimuth) = (env.sun_alt_deg(), env.sun_az_deg());
     let sun_dir = direction(elevation, azimuth);
 
-    for mut t in &mut dome {
-        // Rotate so texture u = 0 faces the sun (the dusk texture's glow is authored around it).
-        t.translation = cam;
-        t.rotation = Quat::from_rotation_y(-azimuth.to_radians());
-    }
     // A new look changes the ambient scale: refresh at once instead of at the next interval.
     let look_changed = look.as_ref().is_some_and(|l| l.is_changed());
     let ambient_scale = look.as_ref().map_or(1.0, |l| {
@@ -392,5 +394,35 @@ pub fn update_sky(
     }
     for mut t in &mut moon_disc {
         *t = place(-sun_dir);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// With a second `Camera3d` (a reflection mirror) the dome still follows only the main camera.
+    #[test]
+    fn the_dome_follows_the_main_camera_not_a_mirror_camera() {
+        let mut app = App::new();
+        app.insert_resource(SessionEnvironment::default())
+            .add_systems(Update, place_sky_dome);
+        let main_pos = Vec3::new(10.0, 2.0, -30.0);
+        app.world_mut().spawn((
+            Camera3d::default(),
+            opts_bevy::MainCamera,
+            GlobalTransform::from_translation(main_pos),
+        ));
+        app.world_mut().spawn((
+            Camera3d::default(),
+            Name::new("MirrorCamera"),
+            GlobalTransform::from_translation(Vec3::new(-500.0, 1.0, 400.0)),
+        ));
+        let dome = app.world_mut().spawn((SkyDome, Transform::default())).id();
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(dome).unwrap().translation,
+            main_pos
+        );
     }
 }

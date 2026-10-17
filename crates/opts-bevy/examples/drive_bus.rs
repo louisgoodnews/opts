@@ -233,6 +233,7 @@ fn setup_vehicle(
     commands.spawn((
         (
             Camera3d::default(),
+            opts_bevy::MainCamera,
             Transform::from_xyz(0.0, 4.5, 14.0).looking_at(Vec3::new(0.0, 1.5, 0.0), Vec3::Y),
         ),
         VehicleCameraRig {

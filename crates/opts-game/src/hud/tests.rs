@@ -836,7 +836,14 @@ fn without_a_vehicle_the_map_is_centred_on_the_free_camera() {
     app.world_mut().despawn(player);
     app.world_mut().spawn((
         Camera3d::default(),
+        opts_bevy::MainCamera,
         GlobalTransform::from(Transform::from_xyz(100.0, 5.0, -50.0)),
+    ));
+    // An auxiliary camera (a reflection mirror) is not the player's view.
+    app.world_mut().spawn((
+        Camera3d::default(),
+        Name::new("MirrorCamera"),
+        GlobalTransform::from(Transform::from_xyz(-900.0, 5.0, 700.0)),
     ));
     run(&mut app, 30);
     let s = minimap_state(&app);
