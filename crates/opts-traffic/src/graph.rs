@@ -66,6 +66,16 @@ impl Direction {
             _ => Self::Forward,
         }
     }
+
+    /// The direction seen from the other end of the path.
+    #[must_use]
+    pub fn reversed(self) -> Self {
+        match self {
+            Self::Forward => Self::Reverse,
+            Self::Reverse => Self::Forward,
+            Self::Both => Self::Both,
+        }
+    }
 }
 
 /// Traffic rules of a path (`[rule]` records of the owning spline or object).
@@ -106,9 +116,11 @@ impl LaneRules {
     }
 }
 
-/// Height profile along a lane: start height and the gradients (rise over run) at both ends,
-/// changing linearly in between (the rule of `[spline]` records:
-/// `rise = length · (g0 + g1) / 2`, `docs/src/formats/map/tiles.md`).
+/// Height profile along a lane: start height and the gradients (rise over run) at both ends.
+/// Between them the gradient changes linearly (`[spline]` records:
+/// `rise = length · (g0 + g1) / 2`) or, when `rise` is given (`[spline_h]`), the height follows
+/// the cubic Hermite ramp of the road mesh (`opts_core::formats::map::spline_height_offset`,
+/// `docs/src/formats/map/tiles.md`).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Elevation {
     /// Height at the start in metres.
@@ -117,15 +129,25 @@ pub struct Elevation {
     pub grad_start: f64,
     /// Gradient at the end (ratio).
     pub grad_end: f64,
+    /// Explicit total height change of a `[spline_h]` record (m), if any.
+    pub rise: Option<f64>,
 }
 
 impl Elevation {
     /// Height after `s` metres of a lane of `length` metres.
     #[must_use]
     pub fn at(&self, s: f64, length: f64) -> f64 {
-        let s = s.max(0.0).min(length.max(0.0));
-        let t = if length > 1e-9 { s / length } else { 0.0 };
-        self.z0 + s * (self.grad_start + (self.grad_end - self.grad_start) * t / 2.0)
+        if length <= 1e-9 {
+            return self.z0;
+        }
+        self.z0
+            + opts_core::formats::map::spline_height_offset(
+                self.grad_start,
+                self.grad_end,
+                self.rise,
+                s,
+                length,
+            )
     }
 
     /// The same profile walked backwards.
@@ -135,6 +157,7 @@ impl Elevation {
             z0: self.at(length, length),
             grad_start: -self.grad_end,
             grad_end: -self.grad_start,
+            rise: self.rise.map(|h| -h),
         }
     }
 }
@@ -612,6 +635,7 @@ mod tests {
             z0: 10.0,
             grad_start: 0.02,
             grad_end: 0.06,
+            rise: None,
         };
         // rise = length · (g0 + g1) / 2 = 100 · 0.04 = 4 m.
         assert!((e.at(100.0, 100.0) - 14.0).abs() < 1e-9);
@@ -620,6 +644,24 @@ mod tests {
         assert!((back.z0 - 14.0).abs() < 1e-9);
         assert!((back.at(100.0, 100.0) - 10.0).abs() < 1e-9);
         assert!((back.at(50.0, 100.0) - e.at(50.0, 100.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn spline_h_elevation_is_the_mesh_ramp_and_reverses() {
+        // Flat ends, 2 m up over 40 m: the S-shaped ramp of the mesh, not a linear gradient.
+        let e = Elevation {
+            z0: 5.0,
+            grad_start: 0.0,
+            grad_end: 0.0,
+            rise: Some(2.0),
+        };
+        assert!((e.at(40.0, 40.0) - 7.0).abs() < 1e-9);
+        assert!((e.at(20.0, 40.0) - 6.0).abs() < 1e-9);
+        assert!(e.at(4.0, 40.0) - 5.0 < 0.06, "starts flat");
+        let back = e.reversed(40.0);
+        for s in [0.0, 7.0, 20.0, 33.0, 40.0] {
+            assert!((back.at(40.0 - s, 40.0) - e.at(s, 40.0)).abs() < 1e-9);
+        }
     }
 
     #[test]

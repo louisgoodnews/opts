@@ -372,6 +372,16 @@ meaning of the repeater `span` for instances that would end beyond the chain is 
   profile in 24 of 28 mirrored cases but on the same side in 19 of 29 plain cases, i.e. attachment
   offsets stay in world orientation while the profile flips. Ignoring the flag puts half-road
   profiles (left lane, sidewalk) on the wrong side.
+- **The `[path]` lanes of a mirrored spline turn round with the profile:** they change sides
+  *and* travel direction (forward ↔ reverse), so a right-hand road stays right-hand. Evidence
+  (Berlin-Spandau, 7,339 directed road lanes, arced splines, 0.75 m join tolerance): lanes with no
+  successor drop to **178** with sides and directions flipped, against 279 with the flag ignored
+  and 336 with only the offsets negated (2026-10-17, C3 probe). OPTS AI lanes follow this; the
+  footpaths of `opts-sim` negate the offset only (they are mostly two-way) ❓.
+- **Lane geometry of splines** follows the mesh: a spline's lanes arc for every radius (no
+  "straight" cut-off; `-999.99` is the straight marker of `.sco` `[path]` records only), and
+  their height follows the `[spline_h]` Hermite ramp below (`opts_core::formats::map::spline_height_offset`,
+  shared by the mesh, footpaths and AI lanes).
 - An `[object]` whose `.sco` carries `[absheight]` stores an **absolute** elevation in its z
   field; all other objects store z relative to the terrain under them. Evidence: on X10 Berlin,
   crossings such as `TeltowerEichen.sco` have z = 2.00 where the terrain is 2.00, while 5,094 of
