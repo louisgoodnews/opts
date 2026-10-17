@@ -141,6 +141,7 @@
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
 - [Session Save](architecture/session-save.md)
+- [Session Environment (date, time, weather)](architecture/session-environment.md)
 - [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)

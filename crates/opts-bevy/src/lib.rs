@@ -22,6 +22,7 @@ pub mod camera;
 pub mod capture;
 pub mod control;
 pub mod coords;
+pub mod environment;
 pub mod ground;
 pub mod ground_material;
 pub mod host_callbacks;
@@ -67,6 +68,10 @@ pub use coords::{
     camera_preset_to_bevy_transform, omsi_euler_to_bevy_quat, omsi_to_bevy_pos,
     omsi_to_bevy_transform, sync_bevy_to_omsi_transforms, sync_coordinate_transforms,
     sync_omsi_to_bevy_transforms, OmsiCoords, OmsiTransform,
+};
+pub use environment::{
+    CalendarDate, ChronoRebuild, EnvironmentChange, EnvironmentPlugin, EnvironmentSet,
+    MapDateChanged, MapDatePolicy, SessionEnvironment, WeatherKind,
 };
 pub use human::{
     apply_pose, hip_offset, pose_rotations, rest_pivots, spawn_human, sync_player_head, AlignEyes,

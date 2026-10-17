@@ -5,6 +5,7 @@ pub mod app_state;
 pub mod catalogue_service;
 pub mod control;
 pub mod control_drive;
+pub mod control_environment;
 pub mod control_save;
 pub mod control_session;
 pub mod control_trace;

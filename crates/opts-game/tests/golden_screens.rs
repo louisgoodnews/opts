@@ -83,6 +83,11 @@ const SCENES: &[Scene] = &[
         screen: Screen::Pause,
         steps: &[],
     },
+    Scene {
+        name: "pause-environment",
+        screen: Screen::Pause,
+        steps: &["pause.environment"],
+    },
 ];
 
 fn render(scene: &Scene, w: u32, h: u32, kind: ThemeKind) -> image::RgbaImage {

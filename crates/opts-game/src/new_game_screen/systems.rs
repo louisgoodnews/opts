@@ -14,7 +14,10 @@ use opts_gui::prelude::*;
 use super::history::PlannerHistory;
 use super::livery::LiveryState;
 use super::options::{close_options, open_options, OptionsModal};
-use super::planner::{quick_time_of, step_field, validate, PlannerState, PlannerStep, QUICK_TIMES};
+use super::planner::{
+    default_map_date, quick_time_of, set_setup_date, step_field, today, validate, Field, MapEra,
+    PlannerState, PlannerStep, QUICK_TIMES,
+};
 use super::screen::step_invalid;
 use super::step_what::{fill_none_detail, fill_what_detail, NONE_ID};
 use super::step_where::{fill_empty_detail, fill_where_detail, StartPointBox, StepList};
@@ -87,6 +90,9 @@ pub fn handle_actions(
             PlannerAction::Weather(id) => id.clone_into(&mut env.setup.weather_preset),
             PlannerAction::Step(field, delta) => {
                 step_field(&mut env.setup, field, delta, false);
+                if Field::DATE.contains(&field) {
+                    env.state.date_chosen = true;
+                }
             }
             PlannerAction::Livery(name) => env.setup.selected_livery = name,
             PlannerAction::OpenOptions => open_options(
@@ -212,6 +218,8 @@ pub fn handle_list_events(
     mut liveries: ResMut<LiveryState>,
     mut state: ResMut<PlannerState>,
     loc: Res<Localization>,
+    mut eras: Local<std::collections::HashMap<String, Option<MapEra>>>,
+    fixed_today: Option<Res<super::planner::Today>>,
     mut commands: Commands,
 ) {
     for ev in selected.read() {
@@ -226,6 +234,22 @@ pub fn handle_list_events(
                     continue;
                 };
                 choose_map(&mut setup, map, &history);
+                if !state.date_chosen {
+                    // The map's default date: today shifted by its `[realyearoffset]`, inside
+                    // its `[years]` (read once per map from `global.cfg`).
+                    let era = eras
+                        .entry(map.id.clone())
+                        .or_insert_with(|| {
+                            crate::omsi_root::known_omsi_root()
+                                .and_then(|root| MapEra::read(&root, &map.id))
+                        })
+                        .unwrap_or_default();
+                    let today = fixed_today.as_deref().map_or_else(today, |t| t.date());
+                    let date = default_map_date(today, &era);
+                    if super::planner::setup_date(&setup) != date {
+                        set_setup_date(&mut setup, date);
+                    }
+                }
                 let ctx = BuildCtx {
                     loc: &loc,
                     catalogue: &catalogue,

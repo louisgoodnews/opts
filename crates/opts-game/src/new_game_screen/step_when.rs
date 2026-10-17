@@ -1,4 +1,5 @@
-//! Step ③ When: quick times, fixed-size date and time steppers, weather presets.
+//! Step ③ When: quick times, fixed-size time steppers, weather presets. The date steppers (built
+//! here with [`date_block`]) are on the map step, the one place where the date is chosen.
 
 use bevy::prelude::*;
 use opts_gui::l10n::{L10nArgs, Localization};
@@ -8,9 +9,10 @@ use opts_gui::prelude::*;
 use super::choice::{spawn_choice, ChoiceStep};
 use super::planner::{era_hint, month_key, Field, PlannerStep, QUICK_TIMES};
 use super::types::NewGameSetup;
-use super::ui::{column, glyph, keyed, keyed_args, plain, row, Act, PlannerAction};
+use super::ui::{column, glyph, keyed, keyed_args, row, Act, PlannerAction};
 use super::weather::PRESETS;
 use super::BuildCtx;
+use crate::shell::calendar;
 
 /// A value text of a stepper; [`refresh_when`] keeps it current.
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,100 +22,11 @@ pub struct WhenValue(pub Field);
 #[derive(Component, Debug, Clone, Copy)]
 pub struct EraHint;
 
-/// Width of the value box of a stepper, per field.
-fn value_width(field: Field) -> f32 {
-    match field {
-        Field::Day | Field::Hour | Field::Minute => 48.0,
-        Field::Month => 96.0,
-        Field::Year => 64.0,
-    }
-}
-
-fn label_key(field: Field) -> &'static str {
-    match field {
-        Field::Day => "wiz-when-day",
-        Field::Month => "wiz-when-month",
-        Field::Year => "wiz-when-year",
-        Field::Hour => "wiz-when-hour",
-        Field::Minute => "wiz-when-minute",
-    }
-}
-
-fn step_button(commands: &mut Commands, field: Field, delta: i32) -> Entity {
-    let sign = if delta < 0 { "minus" } else { "plus" };
-    let button = ButtonBuilder::text(String::new()).spawn(commands);
-    commands.entity(button).insert((
-        Act(PlannerAction::Step(field, delta)),
-        UiId::new(format!("wizard.when.{}.{sign}", label_id(field))),
-        Tooltip::new(""),
-        opts_gui::l10n::L10nTooltip(if delta < 0 {
-            "wiz-step-less"
-        } else {
-            "wiz-step-more"
-        }),
-        Node {
-            width: Val::Px(40.0),
-            height: Val::Px(40.0),
-            min_width: Val::Px(40.0),
-            min_height: Val::Px(40.0),
-            align_items: AlignItems::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        },
-    ));
-    let g = commands
-        .spawn(glyph(
-            if delta < 0 {
-                opts_gui::patterns::glyphs::REMOVE
-            } else {
-                opts_gui::patterns::glyphs::ADD
-            },
-            20.0,
-            ColorRole::OnSurfaceVariant,
-        ))
-        .id();
-    commands.entity(button).add_child(g);
-    button
-}
-
-fn label_id(field: Field) -> &'static str {
-    match field {
-        Field::Day => "day",
-        Field::Month => "month",
-        Field::Year => "year",
-        Field::Hour => "hour",
-        Field::Minute => "minute",
-    }
-}
-
-/// One stepper: label above, `[-] value [+]` below.
-fn stepper(commands: &mut Commands, field: Field, value: String) -> Entity {
-    let wrap = commands.spawn(column(4.0)).id();
-    let label = commands
-        .spawn(keyed(
-            label_key(field),
-            TypeScale::Label,
-            ColorRole::OnSurfaceVariant,
-        ))
-        .id();
-    let line = commands.spawn(row(8.0)).id();
-    let minus = step_button(commands, field, -1);
-    let val = commands
-        .spawn((
-            plain(value, TypeScale::TitleMedium, ColorRole::OnSurface),
-            WhenValue(field),
-            TextLayout::new(Justify::Center, LineBreak::NoWrap),
-            Node {
-                width: Val::Px(value_width(field)),
-                justify_content: JustifyContent::Center,
-                ..default()
-            },
-        ))
-        .id();
-    let plus = step_button(commands, field, 1);
-    commands.entity(line).add_children(&[minus, val, plus]);
-    commands.entity(wrap).add_children(&[label, line]);
-    wrap
+/// One stepper of the plan (`shell::calendar`): ids `wizard.<step>.<field>.minus|plus`.
+pub fn stepper(commands: &mut Commands, field: Field, value: String, id_prefix: &str) -> Entity {
+    calendar::spawn_stepper(commands, field, value, WhenValue(field), id_prefix, |d| {
+        Act(PlannerAction::Step(field, d))
+    })
 }
 
 fn section_title(commands: &mut Commands, key: &'static str) -> Entity {
@@ -156,38 +69,65 @@ fn quick_chips(commands: &mut Commands) -> Entity {
     line
 }
 
-fn date_time_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
+fn time_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let s = ctx.setup;
     let block = commands
         .spawn((
             Node {
+                width: Val::Percent(100.0),
                 max_width: Val::Px(560.0),
                 ..column(12.0)
             },
-            Name::new("DateTimeBlock"),
+            Name::new("TimeBlock"),
         ))
         .id();
-    let date = commands
-        .spawn(Node {
-            column_gap: Val::Px(16.0),
-            flex_wrap: FlexWrap::Wrap,
-            ..row(16.0)
-        })
+    let hour = stepper(
+        commands,
+        Field::Hour,
+        format!("{:02}", s.hour),
+        "wizard.when",
+    );
+    let minute = stepper(
+        commands,
+        Field::Minute,
+        format!("{:02}", s.minute),
+        "wizard.when",
+    );
+    let time = calendar::spawn_stepper_row(commands, &[hour, minute]);
+    commands.entity(block).add_child(time);
+    block
+}
+
+/// The date steppers and the era hint (shown only outside the map's years); the map step shows
+/// them, the one place where the date is chosen.
+pub fn date_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
+    let s = ctx.setup;
+    let block = commands
+        .spawn((
+            Node {
+                width: Val::Percent(100.0),
+                max_width: Val::Px(560.0),
+                ..column(8.0)
+            },
+            Name::new("DateBlock"),
+        ))
         .id();
-    let day = stepper(commands, Field::Day, s.day.to_string());
-    let month = stepper(commands, Field::Month, ctx.loc.t(month_key(s.month)));
-    let year = stepper(commands, Field::Year, s.year.to_string());
-    commands.entity(date).add_children(&[day, month, year]);
-    let time = commands
-        .spawn(Node {
-            flex_wrap: FlexWrap::Wrap,
-            ..row(16.0)
-        })
+    let label = commands
+        .spawn(keyed(
+            "wiz-where-date",
+            TypeScale::Label,
+            ColorRole::OnSurfaceVariant,
+        ))
         .id();
-    let hour = stepper(commands, Field::Hour, format!("{:02}", s.hour));
-    let minute = stepper(commands, Field::Minute, format!("{:02}", s.minute));
-    commands.entity(time).add_children(&[hour, minute]);
-    let mut kids = vec![date, time];
+    let day = stepper(commands, Field::Day, s.day.to_string(), "wizard.where");
+    let month = stepper(
+        commands,
+        Field::Month,
+        ctx.loc.t(month_key(s.month)),
+        "wizard.where",
+    );
+    let year = stepper(commands, Field::Year, s.year.to_string(), "wizard.where");
+    let date = calendar::spawn_stepper_row(commands, &[day, month, year]);
     let hint = ctx
         .catalogue
         .map_by_name(&s.selected_map)
@@ -214,8 +154,9 @@ fn date_time_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
             },
         ))
         .id();
-    kids.push(hint_node);
-    commands.entity(block).add_children(&kids);
+    commands
+        .entity(block)
+        .add_children(&[label, date, hint_node]);
     block
 }
 
@@ -330,7 +271,7 @@ pub fn spawn_when(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     let quick_title = section_title(commands, "wiz-when-quick");
     let quick = quick_chips(commands);
     let dt_title = section_title(commands, "wiz-when-exact");
-    let dt = date_time_block(commands, ctx);
+    let dt = time_block(commands, ctx);
     let w_title = section_title(commands, "wiz-when-weather");
     let weather = weather_cards(commands);
     commands

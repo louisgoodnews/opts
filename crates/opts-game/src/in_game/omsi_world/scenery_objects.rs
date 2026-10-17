@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use bevy::prelude::*;
 use opts_bevy::scenery_runtime::{
     build_scenery_object, needs_runtime, SceneryBuildAssets, SceneryClock, SceneryLightAssets,
-    SceneryObjectInput, SceneryScripts, NIGHT_SUN_ALT_DEG,
+    SceneryObjectInput, SceneryScripts,
 };
 use opts_bevy::{attach_model_parts, ModelPart};
 use opts_core::formats::map::{MapObjectInstance, MapTile};
@@ -18,8 +18,6 @@ use opts_sim::script::{load_scenery_scripts, Diagnostic, ScriptEngine, Severity}
 use opts_traffic::SignalProgram;
 
 use super::WorldLoadJob;
-use crate::in_game::types::InGameSessionInfo;
-use crate::new_game_screen::NewGameSetup;
 
 /// A `.sco`'s script set, compiled once and forked per placed object.
 pub struct ScriptTemplate {
@@ -245,34 +243,25 @@ impl WorldLoadJob {
     }
 }
 
-/// Copies the session clock and date into the scenery runtime's [`SceneryClock`] (unless a host
-/// drives it: `follow_session == false`). Light programs use the same clock as the AI traffic.
+/// Copies the session environment (date, time, sun, night, temperature) into the scenery
+/// runtime's [`SceneryClock`] (unless a host drives it: `follow_session == false`). Light
+/// programs use the same clock as the AI traffic.
 pub fn sync_scenery_clock(
-    session: Option<Res<InGameSessionInfo>>,
-    setup: Option<Res<NewGameSetup>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut clock: ResMut<SceneryClock>,
 ) {
     if !clock.follow_session {
         return;
     }
-    let (Some(session), Some(setup)) = (session, setup) else {
+    let Some(env) = env else {
         return;
     };
-    let seconds = f64::from(session.start_hour) * 3600.0
-        + f64::from(session.start_minute) * 60.0
-        + f64::from(session.sim_elapsed_seconds);
-    let mut next = SceneryClock::at(setup.year, setup.month, setup.day, seconds);
+    let date = env.date();
+    let mut next = SceneryClock::at(date.year, date.month, date.day, env.seconds_of_day());
     next.follow_session = true;
-    let (sun_alt, _) =
-        crate::in_game::sky::sun_position(next.time_of_day_s() / 3600.0, next.day_of_year() as f32);
-    next.sun_alt_deg = sun_alt;
-    next.night = sun_alt < NIGHT_SUN_ALT_DEG;
-    // No weather model yet: a snow preset is taken as frost ❓.
-    next.temperature_c = if session.weather_preset.to_lowercase().contains("snow") {
-        -3.0
-    } else {
-        15.0
-    };
+    next.sun_alt_deg = env.sun_alt_deg();
+    next.night = env.night();
+    next.temperature_c = env.temperature_c();
     if *clock != next {
         *clock = next;
     }

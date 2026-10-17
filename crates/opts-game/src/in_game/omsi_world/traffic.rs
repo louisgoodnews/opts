@@ -26,7 +26,7 @@ use opts_traffic::{
     VehicleClass,
 };
 
-use crate::in_game::types::{InGameEntity, InGameSessionInfo};
+use crate::in_game::types::InGameEntity;
 
 use super::traffic_chain::{despawn_chain, ChainUnit, TrafficChain};
 use super::traffic_variant::{load_variant, read_groups, PoolGroup, Slot, SlotState, Unit};
@@ -428,7 +428,7 @@ pub fn spawn_traffic(
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
     settings: Res<TrafficSettings>,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -443,9 +443,8 @@ pub fn spawn_traffic(
         return;
     };
     // Target count: road length × the summed density of the groups at the session's time of day.
-    let hour = session.map_or(12.0, |s| {
-        s.start_hour as f32 + s.start_minute as f32 / 60.0 + s.sim_elapsed_seconds / 3600.0
-    });
+    // The hour wraps at midnight (0..24) and the day of the week picks the curves.
+    let (hour, day_bit) = env.map_or((12.0, day::WEEKDAY), |e| (e.hour(), e.day_bit()));
     let factors: Vec<f64> = pool
         .groups
         .iter()
@@ -453,7 +452,7 @@ pub fn spawn_traffic(
             f64::from(
                 g.density
                     .as_ref()
-                    .map_or(1.0, |d| d.density(day::WEEKDAY, hour))
+                    .map_or(1.0, |d| d.density(day_bit, hour))
                     .clamp(0.0, 2.0),
             )
         })
@@ -740,18 +739,14 @@ const BLINK_PERIOD_S: f32 = 0.7;
 pub fn update_ai_variables(
     time: Res<Time>,
     state: Res<TrafficState>,
-    sky: Option<Res<super::super::sky::Sky>>,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     clock: Option<Res<opts_bevy::SceneryClock>>,
     mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
 ) {
     let dt = time.delta_secs().min(0.2);
     let brightness = clock.map(|c| c.envir_brightness());
     let now = time.elapsed_secs();
-    let dark = match (&sky, &session) {
-        (Some(s), Some(i)) => s.lights_needed(i.sim_elapsed_seconds),
-        _ => false,
-    };
+    let dark = env.is_some_and(|e| e.night());
     for (mut v, mut vars) in &mut vehicles {
         let Some(agent) = state.world.agent(v.id) else {
             continue;
@@ -812,7 +807,7 @@ pub fn update_ai_variables(
 pub fn move_traffic(
     time: Res<Time>,
     mut commands: Commands,
-    session: Option<Res<InGameSessionInfo>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut state: ResMut<TrafficState>,
     camera: Query<&GlobalTransform, With<Camera3d>>,
     mut vehicles: Query<(
@@ -825,12 +820,8 @@ pub fn move_traffic(
 ) {
     let dt = f64::from(time.delta_secs().min(0.2));
     // The lights follow the session's time of day.
-    if let Some(s) = &session {
-        state.world.set_clock(
-            f64::from(s.start_hour) * 3600.0
-                + f64::from(s.start_minute) * 60.0
-                + f64::from(s.sim_elapsed_seconds),
-        );
+    if let Some(e) = &env {
+        state.world.set_clock(e.seconds_of_day());
     }
     // Sub-steps of at most 0.1 s keep the car-following law stable.
     let steps = (dt / 0.1).ceil().max(1.0);

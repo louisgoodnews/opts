@@ -132,6 +132,22 @@ keys! {
     PAUSE_RESUME = "pause-resume",
     /// Message `pause-vehicle`.
     PAUSE_VEHICLE = "pause-vehicle",
+    /// Pause overlay: the Environment page (date, time, weather).
+    PAUSE_ENVIRONMENT = "pause-environment",
+    /// Environment page: title.
+    ENV_TITLE = "env-title",
+    /// Environment page: what applies when.
+    ENV_NOTE = "env-note",
+    /// Environment page: date section.
+    ENV_DATE = "env-date",
+    /// Environment page: time section.
+    ENV_TIME = "env-time",
+    /// Environment page: weather section.
+    ENV_WEATHER = "env-weather",
+    /// Environment page: apply button.
+    ENV_APPLY = "env-apply",
+    /// Environment page: the map is rebuilt for the new date (variables `pending`, `total`).
+    ENV_REBUILDING = "env-rebuilding",
     /// Message `pause-settings`.
     PAUSE_SETTINGS = "pause-settings",
     /// Message `pause-controls`.

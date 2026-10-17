@@ -66,12 +66,22 @@ fn sim_get(world: &mut World, _: &Value) -> Outcome {
     let virt = world.resource::<Time<Virtual>>();
     let tick = world.resource::<ControlState>().frame;
     let _ = world.resource::<Time<Real>>();
-    Outcome::ok(json!({
+    let mut out = json!({
         "paused": virt.is_paused(),
         "sim_time": virt.elapsed_secs_f64(),
         "time_scale": virt.relative_speed(),
         "tick": tick,
-    }))
+    });
+    // The session clock (sky, traffic, scenery), when the app has one.
+    if let Some(env) = world.get_resource::<crate::environment::SessionEnvironment>() {
+        out["clock"] = json!(env.clock_text());
+        out["seconds_of_day"] = json!(env.seconds_of_day());
+        out["date"] = json!(env.date().to_string());
+        out["map_date"] = json!(env.map_date().to_string());
+        out["weather"] = json!(env.weather());
+        out["clock_rate"] = json!(env.rate());
+    }
+    Outcome::ok(out)
 }
 
 fn records(list: Vec<LogRecord>) -> Value {

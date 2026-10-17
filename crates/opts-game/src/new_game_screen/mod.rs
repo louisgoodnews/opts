@@ -132,6 +132,10 @@ fn enter_wizard(
     mut events: MessageWriter<FocusEvent>,
 ) {
     let notes = history.apply_last(&mut setup, &catalogue);
+    // A remembered drive brings its date: choosing a map keeps it.
+    if history.history.last().is_some() && !catalogue.maps.is_empty() {
+        state.date_chosen = true;
+    }
     planner::ensure_valid(&mut setup, &catalogue);
     state.step = PlannerStep::Where;
     state.built = Some(PlannerStep::Where);

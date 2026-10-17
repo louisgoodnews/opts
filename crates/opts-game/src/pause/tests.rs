@@ -360,3 +360,115 @@ fn loading_a_save_whose_map_is_missing_shows_the_error_template() {
         "the list stays: {now:?}"
     );
 }
+
+mod environment_page {
+    use super::*;
+    use opts_bevy::{
+        CalendarDate, ChronoRebuild, EnvironmentChange, MapDateChanged, SessionEnvironment,
+    };
+
+    fn drive_at_noon() -> App {
+        let mut app = app();
+        app.world_mut().write_message(EnvironmentChange::reset(
+            CalendarDate::new(1994, 6, 1),
+            12.0 * 3600.0,
+            "Clear Summer Day",
+        ));
+        app.update();
+        app
+    }
+
+    fn env(app: &App) -> SessionEnvironment {
+        app.world().resource::<SessionEnvironment>().clone()
+    }
+
+    fn open_page(app: &mut App) {
+        esc(app);
+        click(app, "pause.environment");
+        let ids = ids(app);
+        assert!(
+            ids.contains(&"pause.environment.apply".to_string()),
+            "{ids:?}"
+        );
+        assert!(
+            !ids.contains(&"pause.resume".to_string()),
+            "one dialog at a time"
+        );
+    }
+
+    #[test]
+    fn time_and_weather_preview_live_and_esc_restores_them() {
+        let mut app = drive_at_noon();
+        open_page(&mut app);
+        click(&mut app, "pause.environment.hour.plus");
+        click(&mut app, "pause.environment.weather.rainy-afternoon");
+        click(&mut app, "pause.environment.day.plus");
+        let e = env(&app);
+        assert_eq!(e.hms().0, 13, "the time changes at once");
+        assert_eq!(
+            e.weather(),
+            "Rainy Afternoon",
+            "the weather changes at once"
+        );
+        assert_eq!(
+            e.date(),
+            CalendarDate::new(1994, 6, 1),
+            "the date waits for Apply"
+        );
+        assert!(paused(&app));
+        esc(&mut app);
+        let e = env(&app);
+        assert_eq!(e.hms(), (12, 0, 0));
+        assert_eq!(e.weather(), "Clear Summer Day");
+        assert_eq!(e.date(), CalendarDate::new(1994, 6, 1));
+        assert!(!app.world().resource::<environment::EnvironmentPage>().open);
+        let ids = ids(&mut app);
+        assert!(
+            ids.contains(&"pause.resume".to_string()),
+            "back in the overlay"
+        );
+        assert!(paused(&app));
+    }
+
+    #[test]
+    fn apply_sets_the_date_and_announces_the_map_date() {
+        let mut app = drive_at_noon();
+        open_page(&mut app);
+        click(&mut app, "pause.environment.day.plus");
+        click(&mut app, "pause.environment.year.minus");
+        click(&mut app, "pause.environment.minute.plus");
+        click(&mut app, "pause.environment.apply");
+        let e = env(&app);
+        assert_eq!(e.date(), CalendarDate::new(1993, 6, 2));
+        assert_eq!(e.map_date(), CalendarDate::new(1993, 6, 2));
+        assert_eq!(e.hms(), (12, 5, 0));
+        let msgs = app.world().resource::<Messages<MapDateChanged>>();
+        let mut cursor = msgs.get_cursor();
+        let got: Vec<_> = cursor.read(msgs).copied().collect();
+        assert_eq!(
+            got,
+            vec![MapDateChanged {
+                old: CalendarDate::new(1994, 6, 1),
+                new: CalendarDate::new(1993, 6, 2)
+            }]
+        );
+        assert!(ids(&mut app).contains(&"pause.resume".to_string()));
+    }
+
+    #[test]
+    fn resume_waits_for_a_map_rebuild() {
+        let mut app = drive_at_noon();
+        esc(&mut app);
+        app.world_mut()
+            .resource_mut::<ChronoRebuild>()
+            .pending_tiles = 3;
+        click(&mut app, "pause.resume");
+        assert!(!app.world().resource::<Pause>().open);
+        assert!(paused(&app), "still rebuilding");
+        app.world_mut()
+            .resource_mut::<ChronoRebuild>()
+            .pending_tiles = 0;
+        app.update();
+        assert!(!paused(&app));
+    }
+}

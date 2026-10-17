@@ -204,6 +204,7 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WHERE_SEARCH,
     wiz::WIZ_WHERE_EMPTY,
     wiz::WIZ_WHERE_START,
+    wiz::WIZ_WHERE_DATE,
     wiz::WIZ_WHERE_NO_STARTS,
     wiz::WIZ_WHERE_DESCRIPTION,
     wiz::WIZ_WHERE_REMEMBERED_MISSING,
@@ -314,6 +315,8 @@ pub mod wiz {
     pub const WIZ_WHERE_EMPTY: &str = "wiz-where-empty";
     /// `wiz-where-start`.
     pub const WIZ_WHERE_START: &str = "wiz-where-start";
+    /// `wiz-where-date`.
+    pub const WIZ_WHERE_DATE: &str = "wiz-where-date";
     /// `wiz-where-no-starts`.
     pub const WIZ_WHERE_NO_STARTS: &str = "wiz-where-no-starts";
     /// `wiz-where-description`.
