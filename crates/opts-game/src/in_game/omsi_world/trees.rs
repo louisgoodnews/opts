@@ -4,7 +4,7 @@ use std::path::Path;
 
 use bevy::prelude::*;
 use opts_bevy::coords::{omsi_euler_to_bevy_quat, omsi_to_bevy_pos};
-use opts_bevy::{sample_terrain, tree_billboard_mesh, ContentLoader};
+use opts_bevy::{sample_terrain, tree_billboard_material, tree_billboard_mesh, ContentLoader};
 use opts_core::formats::map::{MapObjectInstance, MapTerrain};
 use opts_core::formats::scenery::ScoTree;
 
@@ -69,14 +69,7 @@ pub(super) fn spawn_tree(
     );
     let mesh = tree_billboard_mesh(height, height * ratio);
     stats.scene_vertices += mesh.count_vertices();
-    let material = materials.add(StandardMaterial {
-        base_color_texture: Some(handle),
-        alpha_mode: AlphaMode::Mask(0.5),
-        double_sided: true,
-        cull_mode: None,
-        perceptual_roughness: 1.0,
-        ..default()
-    });
+    let material = materials.add(tree_billboard_material(handle));
     let id = commands
         .spawn((
             (

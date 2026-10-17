@@ -81,8 +81,9 @@ pub use material::{
     o3d_material_to_standard_material, specular_power_to_roughness, x_material_to_standard_material,
 };
 pub use mesh::{
-    o3d_to_bevy_mesh, o3d_to_bevy_meshes_by_material, parse_mesh_file, tree_billboard_mesh,
-    x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh, x_submesh_to_bevy_mesh,
+    o3d_to_bevy_mesh, o3d_to_bevy_meshes_by_material, parse_mesh_file, tree_billboard_material,
+    tree_billboard_mesh, x_mesh_to_bevy_meshes, x_mesh_to_combined_bevy_mesh,
+    x_submesh_to_bevy_mesh,
 };
 pub use model::{
     attach_model_parts, ContentCache, ContentLoader, ContentStats, ModelPart, TextureOverride,
