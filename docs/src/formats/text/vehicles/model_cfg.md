@@ -351,11 +351,11 @@ The most capable light system. The comments in the sample file provide a complet
 | Lines | Field |
 | :--- | :--- |
 | 1 | `variable` — script variable that switches/dims the light (`door_light_3`, `lights_fahrerlicht`) |
-| 2 | **range** in metres: the distance at which the light has fallen to about 63 % (📚; corpus values `0.25`–`1`, e.g. `0.4`, `0.7`) ❓ earlier drafts called this a 0–1 *factor* |
+| 2 | **range** in metres: the distance at which the light has fallen to about 63 % (📚) ❓ earlier drafts called this a 0–1 *factor*. **Corpus (3,568 `model*.cfg`, 6,174 uses, 2026-10-17): min 0, median 1.14 m, max 8.1 m; `1.0` ×1,521, `2.0` ×1,305, `1.5` ×575, `0.85` ×464, `0.5` ×272; only 211 above 2.5 m.** The earlier "0.25–1" was too low |
 | 3–5 | `R, G, B` (0–255; typical `205 200 175`) |
 | 6–8 | `x, y, z` position |
 
-✅ Corpus: 6,173 uses; the common shapes are one name plus seven numbers (name, range, R, G, B, x, y, z → **8 lines**); trailing comment banners are not parameters. Limits (📚): at most **four** interior lights per object and only the four nearest active ones light moving passengers; lights shine through objects (no shadows); only the player vehicle's interior lights count.
+✅ Corpus: 6,173 uses; the common shapes are one name plus seven numbers (name, range, R, G, B, x, y, z → **8 lines**); trailing comment banners are not parameters. Limits (📚): at most **four** interior lights per object and only the four nearest active ones light moving passengers; lights shine through objects (no shadows); only the player vehicle's interior lights count. **Census (2026-10-17):** 829 cfgs, median 6 and at most 24 interior lights per cfg (639 cfgs list more than four, so the "four" is a per-passenger limit ❓); height z median 2.75 m, x median 0 (6,019 of 6,022 within ±1.4 m of the centre line), 124 distinct variables (`lights_beleuchtung_unterdeck` 1,634, `…_oberdeck` 1,182, `lights_fahrerlicht` 333, `door_light_1` 224), colour `205 200 175` in 43 %; only 296 (4.8 %) are long enough to reach the ground and 68 % reach through a side wall by up to about 1 m, so an interior light is local and needs no light-room separation ([lighting system §4](../../../architecture/lighting-system.md#4-light-rooms-and-the-layer-convention)). `[light_enh_2]` bound to interior-style variables: 1,192 of 32,218 uses; `[spotlight]`: 2,206 uses in 662 cfgs, range 500 m ×411, cones 30/70 ×1,228.
 
 --- | :--- |
 | 1 | `variable` |
