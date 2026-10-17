@@ -420,7 +420,7 @@ fn spawn_object_inner(
         return;
     }
     if sco.carpark_p {
-        let Some(parked) = job.parked_vehicle(obj.id_code) else {
+        let Some(parked) = job.parked_vehicle(obj) else {
             return;
         };
         let mut replaced = obj.clone();
