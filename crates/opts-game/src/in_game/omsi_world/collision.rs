@@ -56,6 +56,12 @@ impl Default for CollisionIndex {
 }
 
 impl CollisionIndex {
+    /// Registers a static box under the key of its tile (tests and tools; tiles register their
+    /// objects themselves).
+    pub fn insert_box(&mut self, tile: (i32, i32), body: Obb) {
+        self.grid.insert(tile, body);
+    }
+
     /// Number of stored entries (for diagnostics).
     #[must_use]
     pub fn len(&self) -> usize {
@@ -309,43 +315,102 @@ fn player_boxes(
     out
 }
 
+/// The following parts' boxes: from their parts' `.bus` boxes.
+fn part_boxes(composition: Option<&VehicleComposition>) -> Vec<BodyBox> {
+    composition
+        .map(|c| c.followers.iter().filter_map(|p| p.body).collect())
+        .unwrap_or_default()
+}
+
+/// The following parts' boxes with their simulated poses.
+fn follower_poses(
+    chain: Option<&ArticulatedChain>,
+    part_boxes: &[BodyBox],
+    segments: &Query<&ArticulatedSegment>,
+) -> Vec<(BodyBox, Vec2, f32)> {
+    chain
+        .map(|c| {
+            c.segments
+                .iter()
+                .zip(part_boxes)
+                .filter_map(|(e, b)| {
+                    let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
+                    Some((*b, p, h))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// What the AI traffic reads of the player's vehicles.
+type PlayerBodies = (
+    &'static VehicleController,
+    &'static PlayerBox,
+    Option<&'static ArticulatedChain>,
+    Option<&'static VehicleComposition>,
+);
+
+/// Tells the AI traffic where the player's vehicles stand, every frame: the agents brake for them
+/// like for a leader. Without this the agents know nothing of the player, drive through a bus
+/// parked in their lane and [`player_collisions`] shoves the bus along in front of them (the
+/// "parked bus drifts away after a few seconds" bug).
+pub fn publish_player_obstacles(
+    mut traffic: ResMut<super::traffic::TrafficState>,
+    players: Query<PlayerBodies, GroundPlayer>,
+    segments: Query<&ArticulatedSegment>,
+) {
+    let mut obstacles = Vec::new();
+    for (controller, head, chain, composition) in &players {
+        let ch = &controller.sim.chassis;
+        let followers = follower_poses(chain, &part_boxes(composition), &segments);
+        for b in player_boxes(
+            ch.position,
+            ch.heading_rad,
+            ch.elevation_z,
+            head,
+            &followers,
+        ) {
+            obstacles.push(opts_traffic::Obstacle {
+                centre: b.centre.as_dvec2(),
+                heading: f64::from(b.heading),
+                half: b.half.as_dvec2(),
+                z: f64::from(b.z_min),
+            });
+        }
+    }
+    traffic.set_obstacles(obstacles);
+}
+
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
 #[allow(clippy::too_many_arguments)]
 pub fn player_collisions(
     index: Res<CollisionIndex>,
     ground: Res<GroundIndex>,
-    mut players: Query<PlayerCollide, GroundPlayer>,
+    mut players: Query<(Entity, PlayerCollide), GroundPlayer>,
     segments: Query<&ArticulatedSegment>,
     traffic: Query<(&GlobalTransform, &VehicleCollider), With<TrafficVehicle>>,
+    mut embedded: Local<HashMap<Entity, Vec<Obb>>>,
 ) {
     if std::env::var_os("OPTS_DBG_COLLISION").is_some() {
         tracing::info!(static_boxes = index.len(), "collision index");
     }
-    for (mut controller, head, chain, composition) in &mut players {
-        // The following parts' boxes: from their parts' `.bus` boxes, at their simulated poses.
-        let part_boxes: Vec<BodyBox> = composition
-            .map(|c| c.followers.iter().filter_map(|p| p.body).collect())
-            .unwrap_or_default();
+    embedded.retain(|e, _| players.contains(*e));
+    for (entity, (mut controller, head, chain, composition)) in &mut players {
+        let part_boxes = part_boxes(composition);
         let dynamic: Vec<Obb> = traffic
             .iter()
             .map(|(g, c)| obb_of(g, c.centre, c.half))
             .collect();
         let mut push_total = Vec2::ZERO;
         let mut normals = Vec::new();
+        // Static boxes the vehicle was placed inside (a spawn point in a bus stop's collision
+        // box): they do not push it, it is on its way out when it drives off. A box that no
+        // longer overlaps is forgotten, so it is solid again afterwards.
+        let first_seen = !embedded.contains_key(&entity);
+        let free = embedded.entry(entity).or_default();
         for _ in 0..4 {
             let ch = &controller.sim.chassis;
-            let followers: Vec<(BodyBox, Vec2, f32)> = chain
-                .map(|c| {
-                    c.segments
-                        .iter()
-                        .zip(&part_boxes)
-                        .filter_map(|(e, b)| {
-                            let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
-                            Some((*b, p, h))
-                        })
-                        .collect()
-                })
-                .unwrap_or_default();
+            let followers = follower_poses(chain, &part_boxes, &segments);
             let mine = player_boxes(
                 ch.position,
                 ch.heading_rad,
@@ -354,26 +419,41 @@ pub fn player_collisions(
                 &followers,
             );
             let mut worst: Option<(Vec2, f32)> = None;
+            let mut why = "";
+            let mut touching: Vec<Obb> = Vec::new();
             for me in &mine {
-                for other in index
+                for (is_dynamic, other) in index
                     .grid
                     .query(me.centre, me.radius())
-                    .chain(dynamic.iter())
+                    .map(|o| (false, o))
+                    .chain(dynamic.iter().map(|o| (true, o)))
                 {
                     if !me.overlaps_height(other, STEP_M) {
                         continue;
                     }
                     if let Some(c) = me.contact(other) {
+                        if !is_dynamic {
+                            if first_seen && !free.contains(other) {
+                                free.push(*other);
+                            }
+                            if free.contains(other) {
+                                touching.push(*other);
+                                continue;
+                            }
+                        }
                         if worst.is_none_or(|w| c.depth > w.1) {
                             worst = Some((c.normal, c.depth));
+                            why = if is_dynamic { "vehicle" } else { "object" };
                         }
                     }
                 }
             }
+            free.retain(|b| touching.contains(b));
             // Steps in the ground around the head's footprint.
             if let Some(n) = ground_step(&ground, &mine[0], ch.elevation_z) {
                 if worst.is_none_or(|w| 0.05 > w.1) {
                     worst = Some((n, 0.05));
+                    why = "ground step";
                 }
             }
             let Some((normal, depth)) = worst else { break };
@@ -383,6 +463,7 @@ pub fn player_collisions(
             if push <= 0.0 {
                 break;
             }
+            tracing::debug!(why, depth, push, ?normal, "player pushed out of an overlap");
             controller.sim.chassis.position += normal * push;
             push_total += normal * push;
             normals.push(normal);

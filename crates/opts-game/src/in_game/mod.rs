@@ -206,6 +206,7 @@ impl Plugin for InGamePlugin {
                     omsi_world::update_traffic_graph,
                     omsi_world::load_traffic_variants,
                     omsi_world::spawn_traffic,
+                    omsi_world::publish_player_obstacles,
                     omsi_world::move_traffic,
                     omsi_world::move_traffic_chains,
                     omsi_world::update_ai_variables,
