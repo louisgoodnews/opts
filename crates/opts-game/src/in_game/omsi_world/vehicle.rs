@@ -128,8 +128,6 @@ pub(super) fn load_segment_meshes_for(
         .flat_map(|m| m.bones.iter().map(|b| b.name.to_lowercase()))
         .collect();
     let sibling_run = articulation_runs(&lod0.meshes);
-    // `[mesh_ident]` / `[animparent]`: a mesh inherits the animation of its parent.
-    let pivots = anim_pivots(commands, root, &lod0.meshes);
     for (mesh_index, mesh_def) in lod0.meshes.iter().enumerate() {
         // Shadow-only and AI-only meshes are not part of the visible player model.
         let vp = mesh_def.viewpoint;
@@ -145,29 +143,6 @@ pub(super) fn load_segment_meshes_for(
         }) {
             continue;
         }
-        // The frame this mesh lives in: its parent's pivot (`[animparent]`), else the vehicle. A mesh
-        // that others hang on (`[mesh_ident]`) animates its pivot, and its parts sit below it.
-        let own_pivot = pivot_of(&pivots, mesh_def.mesh_ident.as_deref());
-        let frame = pivot_of(&pivots, mesh_def.animparent.as_deref())
-            .filter(|_| {
-                !forms_cycle(
-                    &lod0.meshes,
-                    mesh_def.mesh_ident.as_deref(),
-                    mesh_def.animparent.as_deref(),
-                )
-            })
-            .unwrap_or(root);
-        if let Some(pivot) = own_pivot {
-            commands.entity(frame).add_child(pivot);
-            if let Some(anim) = opts_bevy::MeshAnimation::from_mesh(
-                owner,
-                mesh_def,
-                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
-            ) {
-                commands.entity(pivot).insert(anim);
-            }
-        }
-        let parts_parent = own_pivot.unwrap_or(frame);
         // A dummy mesh only carries the animation of a bone. Its geometry is often protected
         // (scrambled) or empty, so the joint is an entity of its own.
         let stem = Path::new(&mesh_def.path.replace('\\', "/"))
@@ -321,20 +296,14 @@ pub(super) fn load_segment_meshes_for(
             vertex_count += part.vertices;
             mesh_count += 1;
         }
-        let spawned = attach_model_parts(commands, parts_parent, &parts, &mesh_def.path);
+        let spawned = attach_model_parts(commands, root, &parts, &mesh_def.path);
         // Script variables move and show the mesh (`[newanim]`, `[visible]`) and switch its light
-        // maps; a click on it raises its `[mouseevent]` trigger. A pivot already carries the
-        // animation of its parts.
-        let anim = if own_pivot.is_some() {
-            None
-        } else {
-            opts_bevy::MeshAnimation::from_mesh(
-                owner,
-                mesh_def,
-                mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
-            )
-        };
-        let view_scope = opts_bevy::ViewScope::of(mesh_def.viewpoint);
+        // maps; a click on it raises its `[mouseevent]` trigger.
+        let anim = opts_bevy::MeshAnimation::from_mesh(
+            owner,
+            mesh_def,
+            mesh_pivot(job, &mesh_def.path, model_dir, mesh_def),
+        );
         let hot_spot = mesh_def
             .mouseevent
             .as_deref()
@@ -373,9 +342,6 @@ pub(super) fn load_segment_meshes_for(
             if let Some(anim) = &anim {
                 entity.insert(anim.clone());
             }
-            if let Some(scope) = view_scope {
-                entity.insert(scope);
-            }
             if let Some(var) = &part.light_variable {
                 entity.insert(opts_bevy::LightMapBinding::new(owner, var.clone()));
             }
@@ -397,83 +363,6 @@ pub(super) fn load_segment_meshes_for(
     }
     bind_skins(commands, root, &dummies, skins);
     (mesh_count, vertex_count, min, max)
-}
-
-/// One entity per `[mesh_ident]` that some `[animparent]` of the segment names: the frame the
-/// parent mesh animates and its children live in (names compare case-insensitively). Spawned
-/// below `root` with an identity transform; the loop reparents and animates them in file order,
-/// so a child may come before its parent.
-fn anim_pivots(
-    commands: &mut Commands,
-    root: Entity,
-    meshes: &[opts_core::formats::vehicles::model::ModelMesh],
-) -> std::collections::HashMap<String, Entity> {
-    let wanted = referenced_idents(meshes);
-    let mut pivots = std::collections::HashMap::new();
-    for ident in &wanted {
-        let pivot = commands
-            .spawn((
-                Name::new(format!("anim_{ident}")),
-                Transform::IDENTITY,
-                Visibility::Inherited,
-            ))
-            .id();
-        commands.entity(root).add_child(pivot);
-        pivots.insert(ident.clone(), pivot);
-    }
-    pivots
-}
-
-/// The lower-case `[mesh_ident]`s that are declared by a mesh and named by another mesh's
-/// `[animparent]`.
-fn referenced_idents(
-    meshes: &[opts_core::formats::vehicles::model::ModelMesh],
-) -> std::collections::BTreeSet<String> {
-    let declared: std::collections::BTreeSet<String> = meshes
-        .iter()
-        .filter_map(|m| m.mesh_ident.as_deref())
-        .map(|i| i.trim().to_lowercase())
-        .collect();
-    meshes
-        .iter()
-        .filter_map(|m| m.animparent.as_deref())
-        .map(|i| i.trim().to_lowercase())
-        .filter(|i| declared.contains(i))
-        .collect()
-}
-
-/// Whether hanging a mesh named `ident` below `parent` closes a loop of `[animparent]`s (the
-/// mesh itself, or a chain of parents that leads back to it).
-fn forms_cycle(
-    meshes: &[opts_core::formats::vehicles::model::ModelMesh],
-    ident: Option<&str>,
-    parent: Option<&str>,
-) -> bool {
-    let (Some(ident), Some(mut at)) = (ident, parent) else {
-        return false;
-    };
-    let same = |a: &str, b: &str| a.trim().eq_ignore_ascii_case(b.trim());
-    for _ in 0..=meshes.len() {
-        if same(at, ident) {
-            return true;
-        }
-        let up = meshes
-            .iter()
-            .find(|m| m.mesh_ident.as_deref().is_some_and(|i| same(i, at)))
-            .and_then(|m| m.animparent.as_deref());
-        match up {
-            Some(next) => at = next,
-            None => return false,
-        }
-    }
-    true
-}
-
-fn pivot_of(
-    pivots: &std::collections::HashMap<String, Entity>,
-    ident: Option<&str>,
-) -> Option<Entity> {
-    pivots.get(&ident?.trim().to_lowercase()).copied()
 }
 
 /// A skinned mesh waiting for its bones: its entities, its `[setbone]` list and the run of
@@ -1733,40 +1622,5 @@ mod formation_tests {
     fn the_part_limit_is_forty_for_a_single_vehicle_and_the_formation_limit_otherwise() {
         assert_eq!(max_parts(false), 40);
         assert_eq!(max_parts(true), opts_core::formats::trains::MAX_PARTS);
-    }
-}
-
-#[cfg(test)]
-mod anim_parent_tests {
-    use super::*;
-    use opts_core::formats::vehicles::model::ModelConfig;
-
-    fn meshes(text: &str) -> Vec<opts_core::formats::vehicles::model::ModelMesh> {
-        let config = ModelConfig::parse(text).expect("model");
-        config.lods.into_iter().next().expect("lod").meshes
-    }
-
-    /// The cockpit shape of the Hamburg e-bus: a dashboard base that tilts, with switches hung on it.
-    const COCKPIT: &str = "[mesh]\nbase.o3d\n[mesh_ident]\nCP_Basis\n\n\
-[mesh]\nswitch_a.o3d\n[animparent]\ncp_basis\n\n\
-[mesh]\nswitch_b.o3d\n[animparent]\nunknown_parent\n\n\
-[mesh]\nflap.o3d\n[mesh_ident]\nflap\n[animparent]\nhandle\n\n\
-[mesh]\nhandle.o3d\n[mesh_ident]\nhandle\n[animparent]\nflap\n";
-
-    #[test]
-    fn only_declared_and_named_idents_get_a_pivot() {
-        let m = meshes(COCKPIT);
-        let ids: Vec<_> = referenced_idents(&m).into_iter().collect();
-        assert_eq!(ids, ["cp_basis", "flap", "handle"]);
-    }
-
-    #[test]
-    fn a_loop_of_parents_is_cut() {
-        let m = meshes(COCKPIT);
-        assert!(forms_cycle(&m, Some("flap"), Some("handle")));
-        assert!(forms_cycle(&m, Some("handle"), Some("flap")));
-        assert!(forms_cycle(&m, Some("x"), Some("x")), "own parent");
-        assert!(!forms_cycle(&m, None, Some("cp_basis")), "a leaf has no ident");
-        assert!(!forms_cycle(&m, Some("switch"), Some("CP_BASIS")));
     }
 }
