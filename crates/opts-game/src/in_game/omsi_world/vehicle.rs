@@ -1764,7 +1764,10 @@ mod anim_parent_tests {
         assert!(forms_cycle(&m, Some("flap"), Some("handle")));
         assert!(forms_cycle(&m, Some("handle"), Some("flap")));
         assert!(forms_cycle(&m, Some("x"), Some("x")), "own parent");
-        assert!(!forms_cycle(&m, None, Some("cp_basis")), "a leaf has no ident");
+        assert!(
+            !forms_cycle(&m, None, Some("cp_basis")),
+            "a leaf has no ident"
+        );
         assert!(!forms_cycle(&m, Some("switch"), Some("CP_BASIS")));
     }
 }

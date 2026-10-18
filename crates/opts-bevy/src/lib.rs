@@ -59,13 +59,13 @@ pub mod texture_filter;
 pub mod texture_sentinel;
 pub mod vehicle;
 pub mod vehicle_anim;
-pub mod view_scope;
 pub mod vehicle_glow;
 pub mod vehicle_lights;
 pub mod vehicle_remote;
 pub mod vehicle_script;
 pub mod vehicle_sim;
 pub mod vehicle_triggers;
+pub mod view_scope;
 pub mod water;
 pub mod weather;
 
@@ -144,7 +144,6 @@ pub use texture_filter::{
     TextureFiltering,
 };
 pub use vehicle::{spawn_vehicle_model, BusVehicle};
-pub use view_scope::{apply_view_scope, camera_is_inside, ViewScope, ViewScopePlugin};
 pub use vehicle_anim::{
     anim_steps, anim_steps_with, animation_matrix, vehicle_animation_system, AnimStep,
     MeshAnimation, MeshPivot, VehicleAnimationPlugin, SWAP_YZ_ROWS,
@@ -170,6 +169,7 @@ pub use vehicle_triggers::{
     dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, MouseTrigger,
     ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
 };
+pub use view_scope::{apply_view_scope, camera_is_inside, ViewScope, ViewScopePlugin};
 pub use water::{build_water_mesh, water_material};
 pub use weather::{WeatherCatalogue, WeatherConditions, WeatherEffects, WeatherVars};
 

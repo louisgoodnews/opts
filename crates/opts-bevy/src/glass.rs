@@ -592,7 +592,10 @@ mod tests {
         let images = app.world().resource::<Assets<Image>>();
         let copy = images.get(&shown).unwrap();
         let px = &copy.data.as_ref().unwrap()[..4];
-        assert!(px[0] < 120, "diffuse added over the view must be faint: {px:?}");
+        assert!(
+            px[0] < 120,
+            "diffuse added over the view must be faint: {px:?}"
+        );
         assert_eq!(px[3], 40);
         assert_eq!(images.get(&texture).unwrap().data.as_ref().unwrap()[0], 230);
 
@@ -605,7 +608,10 @@ mod tests {
             .resource::<Assets<StandardMaterial>>()
             .get(&h)
             .unwrap();
-        assert_eq!(back.base_color_texture.as_ref().map(|t| t.id()), Some(texture.id()));
+        assert_eq!(
+            back.base_color_texture.as_ref().map(|t| t.id()),
+            Some(texture.id())
+        );
         assert_eq!(back.alpha_mode, AlphaMode::Blend);
     }
 
@@ -631,7 +637,10 @@ mod tests {
             .get(&h)
             .unwrap();
         assert_eq!(m.alpha_mode, AlphaMode::Premultiplied);
-        assert_eq!(m.base_color_texture.as_ref().map(|t| t.id()), Some(missing.id()));
+        assert_eq!(
+            m.base_color_texture.as_ref().map(|t| t.id()),
+            Some(missing.id())
+        );
         assert!((m.base_color.to_linear().red - GLASS_FALLBACK_TINT).abs() < 1e-6);
     }
 }
