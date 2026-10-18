@@ -22,6 +22,9 @@
 ├─────────────────────────────────────────────────────────────┤
 │  P-006  Roadmap Update           (run after implementation) │
 │    └─→ Marks milestone complete; appends follow-up items    │
+├─────────────────────────────────────────────────────────────┤
+│  P-1010 Roadmap Review  (after each phase / every 10 merges)│
+│    └─→ Proposes new features and course corrections         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -50,6 +53,7 @@
 - **Plan and review only:** P-000 → P-002 → P-003.
 - **Implementation only (plan already approved):** P-000 → P-004 → P-005 → P-006.
 - **Roadmap housekeeping only:** P-000 → P-006.
+- **Roadmap review:** P-000 → [P-1010](process/P-1010-roadmap-review.md) after each phase closes, after every 10 merged milestones, or on request. It only proposes; approved suggestions then go through P-002 and P-006.
 
 ### When Something Goes Wrong
 
