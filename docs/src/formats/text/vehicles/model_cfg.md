@@ -113,7 +113,7 @@ The following keywords can appear inside a mesh block. Their effects are scoped 
 | `[illumination_interior]` | 4 | Interior lighting indices. `-1` means "not affected." |
 | `[visible]` | 2 | Conditional visibility. See below. |
 | `[mouseevent]` | 1 | A click event name that fires when the player clicks the mesh. |
-| `[animparent]` | 1 | The `[mesh_ident]` of a parent mesh. This mesh inherits the parent's animation transforms. |
+| `[animparent]` | 1 | The `[mesh_ident]` of a parent mesh. This mesh inherits the parent's animation transforms (implemented, see [Animation parents](#animation-parents)). |
 | `[mesh_ident]` | 1 | A name that other meshes can reference via `[animparent]`. |
 | `[smoothskin]` | 0 | Flag: enables smooth skinning (used for the articulation bellows). |
 | `[setbone]` | 2 | Bone name and index. Used with `[smoothskin]`. |
@@ -151,7 +151,9 @@ A `[viewpoint]` value is a bitmask. Interpretation:
 
 The most common values observed: `2`, `3`, `4`.
 
-> ⚠️ **Open Question:** Is the flag interpreted as "show if any bit matches the current view" or "show if all bits match"? The former is more likely given the "sum to combine" phrasing. **Needs verification.**
+**Implemented (2026-10-18, `opts_bevy::view_scope`):** the bits are read as "any bit matches". A mesh with exactly one of the bits 1 (outside) and 2 (inside) carries a `ViewScope` and is hidden while the camera is on the other side: the camera is **inside** in the cockpit and passenger modes and **outside** in external, free-roam and ego mode (the ego camera on foot is approximated as outside). A mesh with both bits (3, 7), none (0) or only bit 4 (AI only, dropped by the loader) is never scoped. Why it matters: the Hamburg buses list their exterior mirror twice, `17_aussensp_innen.o3d` (flag 2) and `17_aussenspiegel.o3d` (flag 5), and drawing both put two mirrors side by side. Hidden meshes also leave the shadow pass; in the Hamburg e-bus only small exterior-only parts (destination signs, lamps, the mirror) have flag 1 or 5, the body is 3.
+
+> ⚠️ **Open Question:** the ego camera inside a standing bus counts as outside; OMSI's rule for the walking character is not known.
 
 ---
 
@@ -215,6 +217,10 @@ Evidence from the model authors' own comments in `model_SD77.cfg` (wheels) and t
 - `maxspeed` limits how fast the animation follows its variable, in variable units per second (📚 `maxspeed` = 1 ÷ duration in seconds). OPTS snaps to the value on the first frame; `delay` (damping) is not applied yet ❓.
 
 Implementation: `opts_bevy::vehicle_anim`; unit tests cover the wheel, suspension, ordering and `maxspeed` cases.
+
+### Animation parents
+
+`[mesh_ident] <name>` names a mesh and `[animparent] <name>` hangs another mesh on it; names compare case-insensitively. A mesh that others name gets a **pivot** entity below the vehicle root (an identity transform, `anim_<name>`); the mesh's `[newanim]` steps and `[visible]` conditions run on the pivot and its parts are the pivot's children. A child's parts (and its own pivot, when others hang on it in turn) are children of the parent's pivot, so a child's transform composes as `parent animation x own animation`, in the vehicle axes both use. Parents may be declared after their children; a name nobody declares, or a loop of parents, leaves the mesh on the vehicle root. Evidence: the cockpit base `19_vdv_base.o3d` of the Hamburg e-bus (`[mesh_ident] cp_basis`) tilts and slides with `vdv_move_x` / `vdv_move_y` (a mouse-draggable dashboard, set to -0.22 / 0.4 by the vehicle's own script at start), and 123 further meshes (switches, gear buttons, warning triangles, display parts) hang on it; without the hierarchy the dashboard moved and its buttons stayed behind, floating above it. 145 meshes of the same model hang on `fahrertuer`, the driver's door.
 
 ### Runtime behaviour of lights and hot-spots (M-0045, 2026-10-11)
 
@@ -531,7 +537,7 @@ my_texture.tga
 
 | ID | Question | Priority |
 | :--- | :--- | :--- |
-| Q-001 | Are `[viewpoint]` flags interpreted as "any bit" or "all bits"? | 🟡 Medium |
+| Q-001 | ~~Are `[viewpoint]` flags interpreted as "any bit" or "all bits"?~~ — resolved: any bit; a mesh with exactly one of the outside/inside bits is drawn from that side only (2026-10-18). | ✅ |
 | Q-002 | ~~When both `origin_trans` and `origin_from_mesh` are present, which wins?~~ — resolved: `origin_from_mesh` is default pivot; `origin_trans` specifies explicit pivot for the animation (📚 M-0006). | ✅ |
 | Q-003 | ~~How do multiple `[newanim]` blocks on the same mesh compose?~~ — resolved: composed hierarchically in declaration order (M-0017). | ✅ |
 | Q-004 | What does `[matl_item]` do? | 🟡 Medium |
