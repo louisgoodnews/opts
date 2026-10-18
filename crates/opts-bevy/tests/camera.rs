@@ -56,6 +56,7 @@ fn spawn_vehicle(app: &mut App) {
             driver_cameras: vec![cam.clone(), cam.clone()],
             pax_cameras: vec![cam],
             trailer_pax_cameras: Vec::new(),
+            mirror_cameras: Vec::new(),
             outside_camera_center: None,
             std_camera_index: 1,
             active_camera_index: 0,

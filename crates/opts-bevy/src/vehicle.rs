@@ -25,6 +25,8 @@ pub struct BusVehicle {
     pub driver_cameras: Vec<BusCamera>,
     /// Passenger compartment camera presets of the main segment.
     pub pax_cameras: Vec<BusCamera>,
+    /// Mirror cameras of the `.bus` file: entry N renders the pane texture `reflexion<N>.bmp`.
+    pub mirror_cameras: Vec<opts_core::formats::vehicles::BusMirrorCamera>,
     /// Passenger camera presets of coupled trailer segments, with the segment entity whose
     /// frame each preset is defined in (articulated buses and trams).
     pub trailer_pax_cameras: Vec<(Entity, BusCamera)>,
@@ -120,6 +122,7 @@ pub fn spawn_vehicle_model(
         mass_tonnes: manifest.mass_tonnes,
         driver_cameras: manifest.driver_cameras.clone(),
         pax_cameras: manifest.pax_cameras.clone(),
+        mirror_cameras: manifest.mirror_cameras.clone(),
         trailer_pax_cameras: Vec::new(),
         outside_camera_center: manifest.outside_camera_center,
         std_camera_index: std_cam_idx,
