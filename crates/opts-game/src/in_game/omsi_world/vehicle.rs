@@ -1433,7 +1433,7 @@ fn attach_scripts(
     ));
 }
 
-/// Loads the installation's `Inputs/keyboard.cfg` into [`opts_bevy::ScriptKeyBindings`], so the
+/// Loads the installation's `Inputs/keyboard.cfg` into [`opts_bevy::ScriptKeyBase`], so the
 /// player's keys raise the vehicle's script triggers. Without the file no key triggers exist.
 fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
     let Some(path) = job.install.find_file("Inputs/keyboard.cfg") else {
@@ -1453,7 +1453,9 @@ fn load_key_bindings(job: &WorldLoadJob, commands: &mut Commands) {
         bound = bindings.0.len(),
         "vehicle script key bindings loaded"
     );
-    commands.insert_resource(bindings);
+    // The rebindable actions come from the settings (`crate::vehicle_keys`), which compose the
+    // final `ScriptKeyBindings` from this base.
+    commands.insert_resource(opts_bevy::ScriptKeyBase(bindings.0));
 }
 
 #[cfg(test)]

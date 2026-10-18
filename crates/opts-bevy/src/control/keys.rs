@@ -61,7 +61,7 @@ const FUNCTION: [(KeyCode, Key); 12] = [
 ];
 
 /// Names that are not single characters or function keys.
-const NAMED: [&str; 47] = [
+const NAMED: [&str; 51] = [
     "Escape",
     "Enter",
     "Space",
@@ -99,6 +99,10 @@ const NAMED: [&str; 47] = [
     "NumpadSubtract",
     "NumpadMultiply",
     "NumpadDivide",
+    "NumpadDecimal",
+    "ScrollLock",
+    "CapsLock",
+    "Pause",
     "Numpad0",
     "Numpad1",
     "Numpad2",
@@ -150,6 +154,10 @@ fn named(name: &str) -> Option<(KeyCode, Key)> {
         "NumpadSubtract" => (KeyCode::NumpadSubtract, Key::Character("-".into())),
         "NumpadMultiply" => (KeyCode::NumpadMultiply, Key::Character("*".into())),
         "NumpadDivide" => (KeyCode::NumpadDivide, Key::Character("/".into())),
+        "NumpadDecimal" => (KeyCode::NumpadDecimal, Key::Character(".".into())),
+        "ScrollLock" => (KeyCode::ScrollLock, Key::ScrollLock),
+        "CapsLock" => (KeyCode::CapsLock, Key::CapsLock),
+        "Pause" => (KeyCode::Pause, Key::Pause),
         "Numpad0" => (KeyCode::Numpad0, Key::Character("0".into())),
         "Numpad1" => (KeyCode::Numpad1, Key::Character("1".into())),
         "Numpad2" => (KeyCode::Numpad2, Key::Character("2".into())),
@@ -197,6 +205,24 @@ pub fn parse_key(name: &str) -> Option<(KeyCode, Key)> {
     })
 }
 
+/// The canonical protocol name of a physical key (the inverse of [`parse_key`]), if it has one.
+#[must_use]
+pub fn key_name(code: KeyCode) -> Option<String> {
+    if let Some(i) = LETTERS.iter().position(|k| *k == code) {
+        return Some(((b'A' + i as u8) as char).to_string());
+    }
+    if let Some(i) = DIGITS.iter().position(|k| *k == code) {
+        return Some(i.to_string());
+    }
+    if let Some(i) = FUNCTION.iter().position(|(k, _)| *k == code) {
+        return Some(format!("F{}", i + 1));
+    }
+    NAMED
+        .iter()
+        .find(|n| named(n).is_some_and(|(k, _)| k == code))
+        .map(|n| (*n).to_string())
+}
+
 /// Every accepted name pattern, for error messages.
 #[must_use]
 pub fn key_names() -> Vec<String> {
@@ -219,6 +245,24 @@ mod tests {
         assert_eq!(parse_key("Escape").map(|k| k.0), Some(KeyCode::Escape));
         assert_eq!(parse_key("escape").map(|k| k.0), Some(KeyCode::Escape));
         assert_eq!(parse_key("ArrowUp").map(|k| k.0), Some(KeyCode::ArrowUp));
+    }
+
+    #[test]
+    fn names_round_trip() {
+        for name in [
+            "L",
+            "7",
+            "F5",
+            "NumpadDecimal",
+            "PageUp",
+            "Space",
+            "ScrollLock",
+        ] {
+            let (code, _) = parse_key(name).unwrap();
+            assert_eq!(key_name(code).as_deref(), Some(name));
+        }
+        assert_eq!(key_name(KeyCode::KeyZ).as_deref(), Some("Z"));
+        assert_eq!(key_name(KeyCode::IntlBackslash), None);
     }
 
     #[test]

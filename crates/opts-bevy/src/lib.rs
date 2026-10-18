@@ -165,8 +165,8 @@ pub use vehicle_sim::{
     VehicleCameraRig, VehicleController, VehicleInputConfig, WheelSide, WheelVisual,
 };
 pub use vehicle_triggers::{
-    dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, MouseTrigger,
-    ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
+    dik_to_keycode, script_key_trigger_system, script_mouse_trigger_system, KeyChord, MouseTrigger,
+    ScriptKeyBase, ScriptKeyBinding, ScriptKeyBindings, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
 };
 pub use water::{build_water_mesh, water_material};
 pub use weather::{WeatherCatalogue, WeatherConditions, WeatherEffects, WeatherVars};
