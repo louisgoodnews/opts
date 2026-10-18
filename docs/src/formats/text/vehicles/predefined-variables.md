@@ -65,6 +65,8 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 
 ## 📚 Field Reference
 
+> **Machine-readable since 2026-10-18.** The inputs the engine feeds are the table `INPUT_TABLE` in `opts-sim/src/script/inputs.rs` (name, unit, producer, whether scripts may also write it, whether a real value reaches it), the expected outputs are `OUTPUT_TABLE` (consumer, whether OPTS reads it); the game's feed is generated from the table and `script_rig` reports the names scripts read that it does not feed ([Script Integration Report](../../../architecture/script-integration-report.md)). This page stays the reference for meanings and evidence.
+
 ### Predefined variables
 
 "Uses" counts all accessor uses of that name over all scripts; **14 of 180 names are never used** by any installed script (`relrange`, `Axle_Steering_1_L`, `Axle_Steering_1_R`, `Axle_Steering_2_L`, `Axle_Steering_2_R`, `Axle_Steering_3_L`, `Axle_Steering_3_R`, `NoSound`, `InUse`, `LastMovedDist`, `PAX_State`, `HeightOfSeat`, `act_route`, `file_schedule`). A name may appear in several lists (`Colorscheme`, `wearlifespan`, `Time`); it is then predefined in each class.

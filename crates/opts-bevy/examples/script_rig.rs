@@ -5,13 +5,21 @@
 //! (compile and run-time diagnostics, stack underflows, non-finite values, cost per frame).
 //!
 //! `script_rig <OMSI root> [--vehicle <text in the .bus path>] [--frames N] [--json FILE]
-//! [--csv DIR] [--limit N]`
+//! [--csv DIR] [--limit N] [--golden FILE | --check FILE]`
 //!
-//! The profile (60 frames per second): rest for one second, then 70 % throttle until the sixth,
-//! coasting, a 50 % service brake from the eighth to the tenth second; the speed follows from a
-//! crude longitudinal model (the real physics is not part of the rig). `--json` writes one line
-//! per vehicle, `--csv DIR` one CSV of every non-zero float variable per frame for each vehicle
-//! the filter selects (use it with `--vehicle`).
+//! The profile (60 frames per second): the driver switches the battery on at 0.5 s, starts the
+//! engine once the busbar has voltage and selects *Drive* (the triggers of the game's start-up,
+//! `vehicle_script::script_startup_system`); then the driver then releases the parking brake; rest until the first second, 70 % throttle until
+//! the sixth, coasting, a 50 % service brake from the eighth to the tenth second; the speed
+//! follows from a crude longitudinal model (the real physics is not part of the rig). `--json`
+//! writes one line per vehicle, `--csv DIR` one CSV of every non-zero float variable per frame for
+//! each vehicle the filter selects (use it with `--vehicle`).
+//!
+//! `--golden FILE` writes the values of [`GOLDEN_VARS`] at [`GOLDEN_TIMES`] for the vehicle the
+//! filter selects; `--check FILE` runs the same and exits with 1 when a value differs from the
+//! golden by more than 2 % (or 0.001 absolute). The golden run of the MAN NG272 (`MAN_GN92_main`)
+//! is `crates/opts-bevy/tests/golden/script-rig-gn92.json`; it needs the installation, so it is a
+//! local gate, not a CI test.
 //!
 //! The rig is the verification surface of the script programme
 //! (`docs/src/architecture/bus-script-integration.md`, principle 8): each later phase is accepted
@@ -28,6 +36,66 @@ use opts_sim::script::inputs::{feed, FeedPlan, HostInputs, OUTPUT_TABLE};
 use opts_sim::script::{load_vehicle_scripts, Severity};
 
 const DT: f32 = 1.0 / 60.0;
+
+/// Variables of a golden run, sampled at [`GOLDEN_TIMES`] (seconds).
+const GOLDEN_VARS: &[&str] = &[
+    "elec_busbar_main",
+    "engine_on",
+    "engine_n",
+    "m_wheel",
+    "antrieb_getr_aktugang",
+    "antrieb_getr_gangwahl",
+    "bremse_p_tank01",
+    "bremse_feststell",
+    "axle_brakeforce_0_l",
+    "axle_brakeforce_1_l",
+    "brakeforce",
+    "n_wheel",
+];
+const GOLDEN_TIMES: &[f32] = &[3.0, 6.0, 9.0, 11.0];
+
+/// The driver's start-up as the game performs it (battery switch, engine start key, *Drive*).
+#[derive(Default)]
+struct Startup {
+    stage: u8,
+    mark: f32,
+}
+
+impl Startup {
+    fn step(&mut self, t: f32, engine: &mut opts_sim::script::ScriptEngine) {
+        match self.stage {
+            0 if t > 0.5 => {
+                engine.trigger("cp_batterietrennschalter_toggle");
+                (self.stage, self.mark) = (1, t);
+            }
+            1 if t - self.mark > 0.3 => {
+                engine.trigger("cp_batterietrennschalter_toggle_off");
+                (self.stage, self.mark) = (2, t);
+            }
+            2 if engine.get("elec_busbar_main") > 0.3 && t - self.mark > 1.0 => {
+                engine.trigger("kw_m_enginestart");
+                (self.stage, self.mark) = (3, t);
+            }
+            3 if engine.get("engine_on") > 0.5 || t - self.mark > 8.0 => {
+                engine.trigger("kw_m_enginestart_off");
+                // The automatic leaves neutral only with the brake pressed.
+                let brake = engine.get("brake");
+                engine.set("brake", 1.0);
+                engine.trigger("automatic_d");
+                engine.set("brake", brake);
+                (self.stage, self.mark) = (4, t);
+            }
+            // The driver releases the parking brake the scripts start with applied.
+            4 if t - self.mark > 0.5 => {
+                if engine.get("bremse_feststell") > 0.5 {
+                    engine.trigger("parking_brake_toggle");
+                }
+                (self.stage, self.mark) = (5, t);
+            }
+            _ => {}
+        }
+    }
+}
 
 /// System values the engine itself sets in every `run_frame` (`GetTime`, `Timegap`): never unfed.
 const ENGINE_SET: &[&str] = &["gettime", "timegap"];
@@ -97,17 +165,20 @@ fn main() {
     let root = PathBuf::from(args.next().expect("OMSI root"));
     let (mut filter, mut frames, mut json, mut csv, mut limit) = (
         None::<String>,
-        600usize,
+        720usize,
         None::<PathBuf>,
         None::<PathBuf>,
         usize::MAX,
     );
+    let (mut golden, mut check) = (None::<PathBuf>, None::<PathBuf>);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--vehicle" => filter = args.next().map(|s| s.to_lowercase()),
-            "--frames" => frames = args.next().and_then(|v| v.parse().ok()).unwrap_or(600),
+            "--frames" => frames = args.next().and_then(|v| v.parse().ok()).unwrap_or(720),
             "--json" => json = args.next().map(PathBuf::from),
             "--csv" => csv = args.next().map(PathBuf::from),
+            "--golden" => golden = args.next().map(PathBuf::from),
+            "--check" => check = args.next().map(PathBuf::from),
             "--limit" => {
                 limit = args
                     .next()
@@ -181,6 +252,8 @@ fn main() {
             std::fs::File::create(d.join(format!("{name}.csv"))).ok()
         });
         let mut speed_ms = 0.0f32;
+        let mut startup = Startup::default();
+        let mut samples: Vec<serde_json::Value> = Vec::new();
         feed(&mut engine, &plan, &inputs);
         engine.run_init();
         let mut runtime: Vec<String> = Vec::new();
@@ -198,8 +271,16 @@ fn main() {
             inputs.n_wheel_rpm = speed_ms / (std::f32::consts::PI * 0.98) * 60.0;
             inputs.time_of_day_s = 8.0 * 3600.0 + t;
             feed(&mut engine, &plan, &inputs);
+            startup.step(t, &mut engine);
             let (ops0, t0) = (engine.ops_executed(), Instant::now());
             engine.run_frame(DT, false);
+            if GOLDEN_TIMES.iter().any(|g| (t - g).abs() < DT * 0.5) {
+                let values: serde_json::Map<String, serde_json::Value> = GOLDEN_VARS
+                    .iter()
+                    .map(|n| ((*n).to_owned(), serde_json::json!(engine.get(n))))
+                    .collect();
+                samples.push(serde_json::json!({ "time": GOLDEN_TIMES.iter().copied().find(|g| (t - g).abs() < DT * 0.5), "values": values }));
+            }
             micros_total += t0.elapsed().as_secs_f64() * 1e6;
             ops_total += engine.ops_executed() - ops0;
             let vars = engine.variables();
@@ -278,6 +359,51 @@ fn main() {
         });
         if let Some(o) = out.as_mut() {
             let _ = writeln!(o, "{line}");
+        }
+        let golden_doc =
+            serde_json::json!({ "vehicle": rel, "frames_per_second": 60, "samples": samples });
+        if let Some(path) = &golden {
+            std::fs::write(
+                path,
+                serde_json::to_string_pretty(&golden_doc).unwrap_or_default(),
+            )
+            .expect("write the golden file");
+            println!("golden run of {rel} written to {}", path.display());
+        }
+        if let Some(path) = &check {
+            let want: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(path).expect("read the golden file"))
+                    .expect("golden file is JSON");
+            let mut bad = Vec::new();
+            for (w, g) in want["samples"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .zip(golden_doc["samples"].as_array().into_iter().flatten())
+            {
+                for name in GOLDEN_VARS {
+                    let (a, b) = (
+                        w["values"][name].as_f64().unwrap_or(f64::NAN),
+                        g["values"][name].as_f64().unwrap_or(f64::NAN),
+                    );
+                    if (a - b).abs() > 0.001 + 0.02 * a.abs() {
+                        bad.push(format!("t={} {name}: golden {a}, run {b}", w["time"]));
+                    }
+                }
+            }
+            if want["samples"].as_array().map(Vec::len)
+                != golden_doc["samples"].as_array().map(Vec::len)
+            {
+                bad.push("a different number of samples".into());
+            }
+            if bad.is_empty() {
+                println!("golden run of {rel} matches");
+            } else {
+                for b in &bad {
+                    println!("{b}");
+                }
+                std::process::exit(1);
+            }
         }
         if filter.is_some() {
             println!(

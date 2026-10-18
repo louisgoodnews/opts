@@ -85,6 +85,15 @@ With the flag, `M_Wheel` (torque at the driven wheels) and `Brakeforce` from the
 * `x random` pushes a number from 0 up to `x` (`500000 random 400000 +` is the random initial tank pressure); it pushed 0…1 and left `x` below before.
 * Result for the NLC: engine starts in 1.6 s, gear D engages (interlock: brake pressed, emulated for the selection), the compressor fills the four brake circuits in about 2 minutes (the initial pressure is random 4–9 bar, as in OMSI), then the spring brakes release and the bus drives with `--script-drive`.
 
+## The contract with the game (M-0096, 2026-10-18)
+
+- **Callbacks.** A callback the host does not answer is answered by the stub of its signature (arguments off the stacks, neutral results on), counted in `ScriptEngine::callback_stats` and reported once per engine; before, its arguments stayed and misaligned the block. A name outside OMSI's lists is counted as unknown and ignored.
+- **Input feed.** The game feeds the engine from the input table (`opts_sim::script::inputs`, `FeedPlan` and `feed`); a variable the scripts store to themselves (the pedals of an AI-style script, the rotation of a trailer's wheel) is not overwritten by the host.
+- **Order.** The start-up system (battery, engine start, gear selector, parking brake) runs before the script system of the same step, so the frame that reads a start-up trigger's effect runs in the same step.
+- **Scheduling.** The scripts of the player's vehicle always run, those of other vehicles only within `ScriptRadius` (150 m) of it; a vehicle outside keeps its last state. Without a player's vehicle all run.
+- **Time and random.** `GetTime` is kept in f64 and handed over wrapped at 65,536 s (a running f32 total loses its milliseconds after a few hours; scripts compare two reads). A vehicle's random seed is built from its `.bus` path and its session slot, not from entity bits.
+- **Report.** Every compile problem is logged once with file and line; `script_rig` (`opts-bevy/examples`) runs a vehicle or the whole installation and writes the [integration report](script-integration-report.md).
+
 ## Not done yet (M-0026 follow-ups)
 
 - Remaining predefined variables (wheel speeds, axle suspension, AI, passengers) and the active bridge — script outputs driving `M_Wheel`, lights, doors and indicators through `model_cfg` animations; trigger input from keys and hot-spots; events to audio: engine per vehicle, variable ↔ component sync (lights, doors, indicators), triggers from keys and hot-spots, events to audio.

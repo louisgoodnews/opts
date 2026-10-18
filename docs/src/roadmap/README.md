@@ -207,7 +207,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 - [ ] **🌀 Tile Streaming Performance** — [M-0089](phase-4/M-0089.md)
   - [ ] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36).
-- [ ] **🚌 Script chain and course geometry (proposed 2026-10-14, awaiting approval)** — [M-0096](phase-4/M-0096.md) script rig and callback safety net, [M-0097](phase-4/M-0097.md) physics contract, [M-0098](phase-4/M-0098.md) consist script state, [M-0099](phase-4/M-0099.md) route, timetable and IBIS data, [M-0100](phase-4/M-0100.md) script textures, [M-0101](phase-4/M-0101.md) doors, passengers, tickets and cash, [M-0102](phase-4/M-0102.md) sound events and force feedback, [M-0103](phase-4/M-0103.md) AI scripts near the player, [M-0105](phase-4/M-0105.md) course geometry (research)
+- [x] **🚌 Script rig and callback safety net** — [M-0096](phase-4/M-0096.md)
+- [ ] **🚌 Script chain and course geometry (proposed 2026-10-14, awaiting approval)** — [M-0097](phase-4/M-0097.md) physics contract, [M-0098](phase-4/M-0098.md) consist script state, [M-0099](phase-4/M-0099.md) route, timetable and IBIS data, [M-0100](phase-4/M-0100.md) script textures, [M-0101](phase-4/M-0101.md) doors, passengers, tickets and cash, [M-0102](phase-4/M-0102.md) sound events and force feedback, [M-0103](phase-4/M-0103.md) AI scripts near the player, [M-0105](phase-4/M-0105.md) course geometry (research)
 
 ---
 

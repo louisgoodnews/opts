@@ -55,10 +55,10 @@ The wiki states only the `M_Wheel` hand-over and the Brakeforce/Axle_Brakeforce 
 | :--- | :--- |
 | Lexer, compiler, VM, strings, curves, constants, varlists | ✅ all 6,062 scripts compile; median frame 71 µs |
 | Script set loading per `.bus` | ✅ head part only; **coupled parts get no scripts** |
-| Inputs fed | ⚠️ `velocity`, `throttle`, `brake`, `ai`, `wheel_rotation_*`, `axle_steering_*`; `axle_suspension_*` fixed to 0; **missing:** `wheel_rotationspeed_*`, `n_wheel`, `velocity_ground`, `a_trans_*`, `clutch`, `kmcounter_*`, `streetcond`, `envir_brightness`, `humans_count`, `ai_engine`, weather and time system values |
+| Inputs fed | ✅ (2026-10-18) generated from the input table (`opts_sim::script::inputs`, [report](script-integration-report.md)): speeds, wheel speeds, `n_wheel`, accelerations, pedals, wheel and steering angles, date, time, sun, weather, brightness; names a script writes itself are left alone; `axle_suspension_*` is fed zero until the physics has a per-wheel suspension (M-0073); 20 names read by some scripts are unfed ([report](script-integration-report.md)) |
 | Outputs consumed | ✅ animations (`vehicle_anim`), lights (`vehicle_lights`, `Spot_Select`); ❌ `M_Wheel`, `Brakeforce`, `Axle_Brakeforce`, `Axle_Springfactor`, `PAX_*`, `Snd_*`, `FF_*`, events (dropped) |
 | Triggers | ✅ keys from `keyboard.cfg`, mouse hot-spots, `_off`, `_drag` |
-| Callbacks | ❌ all 42 are no-ops (reported once); only the host hook `set_external_handler` exists |
+| Callbacks | ✅ (2026-10-18) typed registry of the 45 callbacks of OMSI's lists with a stack-correct stub for each (`opts_sim::script::callbacks`); 34 are implemented by the host (`opts_bevy::host_callbacks`), the rest answer neutral values, counted and reported once |
 | Script textures | ❌ (`text_texture` exists for scenery text, not the ST API) |
 | AI vehicles | table of named values (`AiVariables`) driven by the kinematic traffic; no scripts |
 | Rail | `RailDynamics` (assumed tram constants) replaces the vehicle's own traction logic |

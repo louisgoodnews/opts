@@ -8,9 +8,23 @@
 use std::sync::Mutex;
 
 use bevy::prelude::*;
+use opts_sim::script::inputs::{feed, AxleInput, FeedPlan, HostInputs, WheelInput};
 use opts_sim::script::ScriptEngine;
 
 use crate::vehicle_sim::VehicleController;
+use crate::PlayerVehicle;
+
+/// How far from the player's vehicle the scripts of other vehicles run (m): the player's own
+/// consist always runs, the others only within this radius (they keep their last state outside
+/// it). `docs/src/architecture/bus-script-integration.md`, D8.
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct ScriptRadius(pub f32);
+
+impl Default for ScriptRadius {
+    fn default() -> Self {
+        Self(150.0)
+    }
+}
 
 /// Whether the vehicles' own scripts drive them: `M_Wheel` (drive torque) and the brake forces
 /// replace the built-in drivetrain's traction and braking. Off by default (`--script-drive`);
@@ -38,15 +52,20 @@ pub struct VehicleScripts {
     pub engine: Mutex<ScriptEngine>,
     /// `{init}` has been executed.
     pub initialised: bool,
+    /// The input table resolved against the engine: what the host feeds, and which names the
+    /// scripts own (the host leaves those alone, so a pedal the script writes stays).
+    pub plan: FeedPlan,
 }
 
 impl VehicleScripts {
     /// Wraps an engine; `{init}` runs on the first fixed step.
     #[must_use]
-    pub fn new(engine: ScriptEngine) -> Self {
+    pub fn new(mut engine: ScriptEngine) -> Self {
+        let plan = FeedPlan::new(&mut engine);
         Self {
             engine: Mutex::new(engine),
             initialised: false,
+            plan,
         }
     }
 }
@@ -56,24 +75,31 @@ fn rpm_of(speed: f32, radius: f32) -> f32 {
     speed / radius.max(0.1) * 60.0 / std::f32::consts::TAU
 }
 
-/// Copies the simulation state into the engine's predefined variables.
-///
-/// Units follow the OMSI wiki as far as known: `Velocity` in km/h ❓, pedals `0..1`.
-pub fn feed_predefined(engine: &mut ScriptEngine, controller: &VehicleController) {
+/// The host's state a vehicle's scripts may read, from the simulation and the session's clock
+/// (the table of `opts_sim::script::inputs`, units of the OMSI wiki as far as known: `Velocity`
+/// in km/h ❓, pedals `0..1`).
+#[must_use]
+pub fn host_inputs(
+    controller: &VehicleController,
+    clock: Option<&crate::scenery_runtime::SceneryClock>,
+) -> HostInputs {
     let sim = &controller.sim;
-    engine.set("velocity", sim.chassis.forward_speed_km_h());
-    engine.set("throttle", sim.inputs.throttle());
-    engine.set("brake", sim.inputs.service_brake());
-    engine.set("ai", 0.0);
-    // Speeds and accelerations (OMSI: wheel speed in rpm, ground speed in km/h, accelerations in
-    // m/s² along the vehicle axes).
     let speed = sim.chassis.forward_speed_m_s();
-    engine.set("velocity_ground", sim.chassis.forward_speed_km_h());
-    engine.set("a_trans_x", sim.chassis.local_acceleration.x);
-    engine.set("a_trans_y", sim.chassis.local_acceleration.y);
-    engine.set("a_trans_z", 0.0);
-    engine.set("ai_engine", 0.0);
-    let mean_rpm = if sim.axles.is_empty() {
+    let mut inputs = HostInputs {
+        velocity_km_h: sim.chassis.forward_speed_km_h(),
+        velocity_ground_km_h: sim.chassis.forward_speed_km_h(),
+        a_trans: [
+            sim.chassis.local_acceleration.x,
+            sim.chassis.local_acceleration.y,
+            0.0,
+        ],
+        throttle: sim.inputs.throttle(),
+        brake: sim.inputs.service_brake(),
+        ai: false,
+        ai_engine: 0.0,
+        ..HostInputs::default()
+    };
+    inputs.n_wheel_rpm = if sim.axles.is_empty() {
         0.0
     } else {
         sim.axles
@@ -82,22 +108,37 @@ pub fn feed_predefined(engine: &mut ScriptEngine, controller: &VehicleController
             .sum::<f32>()
             / sim.axles.len() as f32
     };
-    engine.set("n_wheel", mean_rpm);
-    for (i, axle) in sim.axles.iter().enumerate() {
-        let rpm = rpm_of(speed, axle.config.wheel_diameter_m * 0.5);
-        engine.set(&format!("wheel_rotationspeed_{i}_l"), rpm);
-        engine.set(&format!("wheel_rotationspeed_{i}_r"), rpm);
+    // Wheel spin (rad, growing while driving forward), steering (rad; positive steering is
+    // assumed to turn left ❓, the simulation's positive steering turns right) and suspension
+    // travel (zero until the suspension of the physics feeds it, M-0073).
+    inputs.axles = sim
+        .axles
+        .iter()
+        .map(|axle| {
+            let rpm = rpm_of(speed, axle.config.wheel_diameter_m * 0.5);
+            let wheel = |w: &opts_sim::WheelState| WheelInput {
+                speed_rpm: rpm,
+                rotation_rad: w.rotation_rad,
+                steering_rad: -w.steer_angle_rad,
+                suspension_m: 0.0,
+            };
+            AxleInput {
+                left: wheel(&axle.left_wheel),
+                right: wheel(&axle.right_wheel),
+            }
+        })
+        .collect();
+    if let Some(c) = clock {
+        inputs.envir_brightness = c.envir_brightness();
+        inputs.temperature_c = c.temperature_c;
+        inputs.abs_hum = c.weather.abs_hum;
+        inputs.precip_type = c.weather.precip_type;
+        inputs.precip_rate = c.weather.precip_rate;
+        inputs.sun_alt_deg = c.sun_alt_deg;
+        inputs.time_of_day_s = (c.seconds_of_day % 86_400.0) as f32;
+        (inputs.year, inputs.month, inputs.day) = (c.year, c.month, c.day);
     }
-    // Axle animation inputs: wheel spin (rad, growing while driving forward), steering (rad) and
-    // suspension travel (m). Positive steering is assumed to turn left ❓ (the simulation's
-    // positive steering turns right).
-    for (i, axle) in sim.axles.iter().enumerate() {
-        for (side, wheel) in [("L", &axle.left_wheel), ("R", &axle.right_wheel)] {
-            engine.set(&format!("wheel_rotation_{i}_{side}"), wheel.rotation_rad);
-            engine.set(&format!("axle_steering_{i}_{side}"), -wheel.steer_angle_rad);
-            engine.set(&format!("axle_suspension_{i}_{side}"), 0.0);
-        }
-    }
+    inputs
 }
 
 /// Gives a vehicle's scripts the weather: the system values `Weather_Temperature`,
@@ -116,31 +157,42 @@ pub fn feed_weather(
     engine.set("preciprate", vars.precip_rate);
 }
 
-/// Fixed-step system: initialises and advances every vehicle's scripts.
+/// Fixed-step system: initialises and advances the scripts of the player's vehicle and of the
+/// vehicles within [`ScriptRadius`] of it (all of them while there is no player's vehicle). A
+/// vehicle outside the radius keeps its last state.
 pub fn vehicle_script_system(
     time: Res<Time>,
+    radius: Option<Res<ScriptRadius>>,
     clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
-    mut query: Query<(&VehicleController, &mut VehicleScripts)>,
+    mut query: Query<(&VehicleController, &mut VehicleScripts, Has<PlayerVehicle>)>,
 ) {
-    let brightness = clock.as_ref().map(|c| c.envir_brightness());
-    let weather = clock.map(|c| (c.temperature_c, c.weather));
     let dt = time.delta_secs();
     if dt <= 0.0 {
         return;
     }
-    for (controller, mut scripts) in &mut query {
+    let radius = radius.map_or(ScriptRadius::default().0, |r| r.0);
+    let players: Vec<Vec2> = query
+        .iter()
+        .filter(|(_, _, player)| *player)
+        .map(|(c, _, _)| c.sim.chassis.position)
+        .collect();
+    for (controller, mut scripts, player) in &mut query {
+        if !player
+            && !players.is_empty()
+            && !players
+                .iter()
+                .any(|p| p.distance(controller.sim.chassis.position) <= radius)
+        {
+            continue;
+        }
         let first = !scripts.initialised;
         scripts.initialised = true;
-        let Ok(mut engine) = scripts.engine.lock() else {
+        let VehicleScripts { engine, plan, .. } = &mut *scripts;
+        let Ok(engine) = engine.get_mut() else {
             continue;
         };
-        feed_predefined(&mut engine, controller);
-        if let Some(b) = brightness {
-            engine.set("envir_brightness", b);
-        }
-        if let Some((temperature, vars)) = weather {
-            feed_weather(&mut engine, temperature, &vars);
-        }
+        let inputs = host_inputs(controller, clock.as_deref());
+        feed(engine, plan, &inputs);
         if first {
             engine.run_init();
         }
@@ -163,6 +215,20 @@ pub fn script_drive_system(
     mut query: Query<(&mut VehicleController, &VehicleScripts)>,
 ) {
     for (mut controller, scripts) in &mut query {
+        // A pedal the scripts write themselves (cruise control, AI-style scripts) is theirs: its
+        // value reaches the physics' inputs, whatever drives the vehicle.
+        if let Ok(engine) = scripts.engine.lock() {
+            if engine.writes("throttle") {
+                controller
+                    .inputs_mut()
+                    .set_throttle(engine.get("throttle").clamp(0.0, 1.0));
+            }
+            if engine.writes("brake") {
+                controller
+                    .inputs_mut()
+                    .set_service_brake(engine.get("brake").clamp(0.0, 1.0));
+            }
+        }
         if !enabled.0 {
             controller.sim.script_drive = None;
             continue;
@@ -304,14 +370,19 @@ pub struct VehicleScriptPlugin;
 
 impl Plugin for VehicleScriptPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ScriptDriveEnabled>().add_systems(
-            FixedUpdate,
-            (
-                // The scripts' output of the last step drives the next one.
-                script_drive_system.before(crate::vehicle_sim::vehicle_physics_step_system),
-                script_startup_system.after(crate::vehicle_sim::vehicle_physics_step_system),
-                vehicle_script_system.after(crate::vehicle_sim::vehicle_physics_step_system),
-            ),
-        );
+        app.init_resource::<ScriptDriveEnabled>()
+            .init_resource::<ScriptRadius>()
+            .add_systems(
+                FixedUpdate,
+                (
+                    // The scripts' output of the last step drives the next one.
+                    script_drive_system.before(crate::vehicle_sim::vehicle_physics_step_system),
+                    // The start-up's triggers run before the frame that should see them.
+                    script_startup_system
+                        .after(crate::vehicle_sim::vehicle_physics_step_system)
+                        .before(vehicle_script_system),
+                    vehicle_script_system.after(crate::vehicle_sim::vehicle_physics_step_system),
+                ),
+            );
     }
 }

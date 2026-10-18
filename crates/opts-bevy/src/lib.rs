@@ -158,7 +158,7 @@ pub use vehicle_lights::{
 };
 pub use vehicle_script::{
     script_drive_system, script_startup_system, vehicle_script_system, ScriptDriveEnabled,
-    ScriptStartup, VehicleScriptPlugin, VehicleScripts,
+    ScriptRadius, ScriptStartup, VehicleScriptPlugin, VehicleScripts,
 };
 pub use vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,

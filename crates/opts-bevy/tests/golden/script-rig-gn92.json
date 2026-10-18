@@ -1,0 +1,74 @@
+{
+  "frames_per_second": 60,
+  "samples": [
+    {
+      "time": 3.0,
+      "values": {
+        "antrieb_getr_aktugang": 1.0,
+        "antrieb_getr_gangwahl": 4.0,
+        "axle_brakeforce_0_l": -504.580322265625,
+        "axle_brakeforce_1_l": 23518.7109375,
+        "brakeforce": 0.0,
+        "bremse_feststell": 0.0,
+        "bremse_p_tank01": 763914.0,
+        "elec_busbar_main": 1.0,
+        "engine_n": 625.5973510742188,
+        "engine_on": 1.0,
+        "m_wheel": 53.78216552734375,
+        "n_wheel": 51.092010498046875
+      }
+    },
+    {
+      "time": 6.0,
+      "values": {
+        "antrieb_getr_aktugang": 1.0,
+        "antrieb_getr_gangwahl": 4.0,
+        "axle_brakeforce_0_l": -477.71044921875,
+        "axle_brakeforce_1_l": -284.3147277832031,
+        "brakeforce": 0.0,
+        "bremse_feststell": 0.0,
+        "bremse_p_tank01": 737505.625,
+        "elec_busbar_main": 1.0,
+        "engine_n": 1616.23095703125,
+        "engine_on": 1.0,
+        "m_wheel": 1411.05029296875,
+        "n_wheel": 126.64169311523438
+      }
+    },
+    {
+      "time": 9.0,
+      "values": {
+        "antrieb_getr_aktugang": 1.0,
+        "antrieb_getr_gangwahl": 4.0,
+        "axle_brakeforce_0_l": -496.6199035644531,
+        "axle_brakeforce_1_l": -496.6206970214844,
+        "brakeforce": 0.0,
+        "bremse_feststell": 0.0,
+        "bremse_p_tank01": 717632.0625,
+        "elec_busbar_main": 1.0,
+        "engine_n": 625.2291259765625,
+        "engine_on": 1.0,
+        "m_wheel": -374.0699462890625,
+        "n_wheel": 81.16931915283203
+      }
+    },
+    {
+      "time": 11.0,
+      "values": {
+        "antrieb_getr_aktugang": 1.0,
+        "antrieb_getr_gangwahl": 4.0,
+        "axle_brakeforce_0_l": -506.7689514160156,
+        "axle_brakeforce_1_l": -506.7697448730469,
+        "brakeforce": 0.0,
+        "bremse_feststell": 0.0,
+        "bremse_p_tank01": 718604.875,
+        "elec_busbar_main": 1.0,
+        "engine_n": 494.3108825683594,
+        "engine_on": 1.0,
+        "m_wheel": 72.9262924194336,
+        "n_wheel": 38.94432067871094
+      }
+    }
+  ],
+  "vehicle": "Vehicles/MAN_NL_NG/MAN_GN92_main.bus"
+}
