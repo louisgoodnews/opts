@@ -10,6 +10,7 @@ pub mod consist;
 pub mod drivetrain;
 pub mod ground;
 pub mod inputs;
+pub mod spec;
 pub mod suspension;
 pub mod trailer;
 
@@ -20,6 +21,7 @@ use self::consist::{driven_and_braked_load_n, UnitAxle, GRAVITY};
 use self::drivetrain::DrivetrainModel;
 use self::ground::{joint_beta_deg, GroundProbe, GroundSample, UnitBody};
 use self::inputs::VehicleInputs;
+use self::spec::VehicleDynamicsSpec;
 use self::suspension::SuspensionModel;
 use self::trailer::TrailerKinematics;
 
@@ -85,6 +87,10 @@ pub struct VehicleSimulation {
     /// built-in drivetrain decides).
     #[serde(default)]
     pub script_drive: Option<ScriptDrive>,
+    /// What the vehicle file states about mass, centre of gravity, inertia and rolling
+    /// resistance, and where each value comes from (M-0073).
+    #[serde(default)]
+    pub spec: VehicleDynamicsSpec,
 }
 
 impl Default for VehicleSimulation {
@@ -146,16 +152,15 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
+            spec: VehicleDynamicsSpec::default(),
         }
     }
 
     /// Constructs a full vehicle simulation from a parsed OMSI [`BusManifest`].
     #[must_use]
     pub fn from_manifest(manifest: &BusManifest) -> Self {
-        let mass_kg = manifest
-            .mass_tonnes
-            .filter(|&m| m > 0.5)
-            .map_or(11_500.0, |m| m * 1_000.0);
+        let spec = VehicleDynamicsSpec::from_manifest(manifest);
+        let mass_kg = spec.mass_kg.value;
 
         let mut axles = Vec::new();
 
@@ -167,14 +172,16 @@ impl VehicleSimulation {
 
         // If manifest had no axles, supply default front and rear axles
         if axles.is_empty() {
-            return Self::new_standard_bus(mass_kg, 5.85);
+            let mut sim = Self::new_standard_bus(mass_kg, 5.85);
+            sim.apply_spec(spec);
+            return sim;
         }
 
         let y_front = axles.first().map_or(3.0, |a| a.config.longitudinal_m);
         let y_rear = axles.last().map_or(-3.0, |a| a.config.longitudinal_m);
         let wheelbase = (y_front - y_rear).abs().max(1.0);
 
-        Self {
+        let mut sim = Self {
             chassis: ChassisState::new(mass_kg, Vec2::ZERO, 0.0),
             axles,
             drivetrain: DrivetrainModel::new(),
@@ -187,7 +194,21 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
-        }
+            spec: VehicleDynamicsSpec::default(),
+        };
+        sim.apply_spec(spec);
+        sim
+    }
+
+    /// Makes the vehicle behave as its spec says: the centre of gravity height of the
+    /// suspension model, the yaw inertia of the chassis and the rolling resistance of the
+    /// drivetrain.
+    pub fn apply_spec(&mut self, spec: VehicleDynamicsSpec) {
+        self.suspension =
+            SuspensionModel::new(spec.cg_height_m.value, self.suspension.cg_longitudinal_m);
+        self.chassis.yaw_inertia_kg_m2 = spec.yaw_inertia_kg_m2.value;
+        self.drivetrain.rolling_coefficient = spec.rolling_coefficient.value;
+        self.spec = spec;
     }
 
     /// Steps the vehicle simulation by a fixed time delta `dt`.

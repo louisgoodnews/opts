@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.9.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.10.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -790,6 +790,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`drive.state`](#drivestate) | - | 1.1 | Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state |
 | [`vehicle.teleport`](#vehicleteleport) *(debug)* | `x` (number)<br>`y` (number)<br>`heading_deg?` (number) | 1.1 | Place the player vehicle at an absolute OMSI position and heading, standing still |
 | [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
+| [`vehicle.dynamics`](#vehicledynamics) | - | 1.10 | What the player's vehicle states about its dynamics (mass, centre of gravity, inertia, rolling resistance, axles) with the source of each value, and the live axle loads |
 
 ### `drive.controls`
 
@@ -850,6 +851,14 @@ A debug command: it moves the vehicle directly (speed zero, controls neutral) wi
 Put the player vehicle back where the session placed it, standing still.
 
 A debug command: restores the start position, zeroes speed and the controls and the distance counter.
+
+### `vehicle.dynamics`
+
+What the player's vehicle states about its dynamics (mass, centre of gravity, inertia, rolling resistance, axles) with the source of each value, and the live axle loads.
+
+**Result:** `{spec: {mass_kg, cg_height_m, yaw_inertia_kg_m2, rolling_coefficient}, axles: [{index, longitudinal_m, track_width_m, wheel_diameter_m, spring_n_per_m, damping_n_s_per_m, max_force_n, driven, steered, static_load_n, load_n: [left, right], deflection_m, deflection_speed_m_s}], state: {speed_m_s, head_mass_kg, consist_mass_kg, units, wheelbase_m}}`; every `spec` entry is `{value, source}` with `source` one of `file`, `estimate`, `default`
+
+`1001` without a player vehicle. `file` values are read from the vehicle's `.bus` (`[mass]`, `[schwerpunkt]`, `[momentofintertia]` or lines 2 to 4 of `[mass]`, `[rollwiderstand]`); `estimate` is the yaw inertia of a box with the bounding box's width and length; `default` is the generic transit bus, used because the file states nothing usable. The rolling coefficient is the file's rolling resistance (a force) over the stated weight. Axle values are those the physics uses (the `.bus` axle block, with bus defaults for what is missing); `static_load_n` follows from the axle positions, the mass and the centre of gravity.
 
 ## Group `trace`
 

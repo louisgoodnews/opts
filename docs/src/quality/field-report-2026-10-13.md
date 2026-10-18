@@ -20,7 +20,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-08 | **HUD rework**: control information (hints, speed, gear, parking brake) in the **bottom-left**, a **mini map bottom-right**, in line with the UI standards | UI / HUD | [M-0071](../roadmap/phase-9/M-0071.md) | ✅ done 2026-10-13 |
 | R-09 | The **BRT Citaro** has UV/mesh issues | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
 | R-10 | The **control protocol** must allow AI agents to **set settings via the CLI** | tooling | [M-0072](../roadmap/phase-5/M-0072.md) (protocol 1.1.0 has `settings.*`; the exact gap is to be reproduced) | 🟢 implemented 2026-10-18 (protocol 1.7.0: confirm/revert, batch and profile methods, coverage test) |
-| R-11 | **Suspension, brakes and more**: every vehicle defines its own mass, axles etc., which must be respected; OPTS provides a world physics system, the vehicles their individual behaviour | simulation | [M-0073](../roadmap/phase-10/M-0073.md) | 📝 open |
+| R-11 | **Suspension, brakes and more**: every vehicle defines its own mass, axles etc., which must be respected; OPTS provides a world physics system, the vehicles their individual behaviour | simulation | [M-0073](../roadmap/phase-10/M-0073.md) | 🟡 in progress 2026-10-18 |
 
 ## Follow-up findings (2026-10-13, second message)
 

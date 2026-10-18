@@ -16,7 +16,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
 - [M-0069 — Session Save and Restore](M-0069.md) — ✅ Done 2026-10-13, 🔴 high (R-05)
-- [M-0073 — Vehicle Dynamics: Individual Mass, Axles, Suspension and Brakes](M-0073.md) — 📝 Planned, 🔴 high (R-11)
+- [M-0073 — Vehicle Dynamics: Individual Mass, Axles, Suspension and Brakes](M-0073.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-11)
 - [M-0077 — Bus Configurations (Quick-Load Presets)](M-0077.md) — 🟡 In progress since 2026-10-18 (R-15)
 - [M-0078 — Setvars: Supported Variable Lists per Bus](M-0078.md) — 🟢 Complete 2026-10-18, 🔴 high (R-16)
 
