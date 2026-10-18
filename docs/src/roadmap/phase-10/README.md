@@ -12,7 +12,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
 - [M-0104 — UV Decoder Texture Evidence](M-0104.md) — ✅ Approved 2026-10-14 (feasibility first; from the MAN NL/NG reinvestigation)
 - [M-0106 — Train Formation Editor v1](M-0106.md) — ✅ Implemented 2026-10-15 on `feat/train-formation-editor`; merge awaiting approval
-- [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 📝 Planned, 🔴 high (R-34 … R-42)
+- [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-34 … R-42)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
 - [M-0069 — Session Save and Restore](M-0069.md) — ✅ Done 2026-10-13, 🔴 high (R-05)
