@@ -20,6 +20,8 @@ pub mod display;
 pub mod lighting;
 pub mod live;
 pub mod protocol;
+pub mod protocol_batch;
+pub mod protocol_confirm;
 pub mod reference;
 pub mod search;
 pub mod value;
@@ -269,13 +271,25 @@ pub fn apply_change(
     text: Option<&str>,
     source: ChangeSource,
 ) -> Result<SettingChanged, SettingError> {
+    apply_change_with(world, key, text, source, true)
+}
+
+/// [`apply_change`] that can leave the settings file alone (`save` false): a risky change that
+/// waits for confirmation, or a batch that saves once at its end.
+pub fn apply_change_with(
+    world: &mut World,
+    key: &str,
+    text: Option<&str>,
+    source: ChangeSource,
+    save: bool,
+) -> Result<SettingChanged, SettingError> {
     let registry = world.resource::<SettingsRegistry>().clone();
     let caps = world
         .get_resource::<SettingsCapabilities>()
         .cloned()
         .unwrap_or_default();
     let mut settings = world.resource_mut::<GameSettings>();
-    let changed = api::change_in(&registry, &caps, &mut settings, key, text, source, true)?;
+    let changed = api::change_in(&registry, &caps, &mut settings, key, text, source, save)?;
     if changed.old != changed.new {
         world.write_message(changed.clone());
     }
@@ -336,6 +350,8 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_developer_panel,
                     live::sync_water,
                     live::sync_tile_loading,
+                    protocol_confirm::tick_protocol_revert
+                        .run_if(resource_exists::<protocol_confirm::ProtocolRevert>),
                     live::sync_hdr,
                     live::sync_weather_effects,
                 ),

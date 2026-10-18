@@ -1,16 +1,17 @@
 //! Control-protocol methods `settings.list`, `settings.get`, `settings.set`, `settings.reset`
-//! (`docs/src/architecture/control-protocol.md`). They use the same validation and the same
-//! effects as the settings page.
+//! (`docs/src/architecture/control-protocol.md`), and the registration of the confirm and revert
+//! ([`super::protocol_confirm`]) and batch ([`super::protocol_batch`]) methods. They use the same
+//! validation and the same effects as the settings page.
 
 use bevy::prelude::*;
-use opts_bevy::control::params::{opt_str, str_param};
+use opts_bevy::control::params::{opt_bool, opt_str, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
 use super::{
-    apply_change, Apply, Available, ChangeSource, SettingDescriptor, SettingError, SettingKind,
-    SettingsRegistry,
+    apply_change_with, protocol_batch, protocol_confirm, Apply, Available, ChangeSource,
+    SettingDescriptor, SettingError, SettingKind, SettingsRegistry,
 };
 use crate::settings::GameSettings;
 
@@ -23,14 +24,25 @@ pub fn register(app: &mut App) {
     registry.register("settings.get", get);
     registry.register("settings.set", set);
     registry.register("settings.reset", reset);
+    registry.register("settings.confirm", protocol_confirm::confirm);
+    registry.register("settings.revert", protocol_confirm::revert);
+    registry.register("settings.set_many", protocol_batch::set_many);
+    registry.register("settings.import", protocol_batch::import);
+    registry.register("settings.export", protocol_batch::export);
+    registry.register("settings.diff", protocol_batch::diff);
 }
 
-fn error(e: SettingError) -> Outcome {
-    let (c, m) = match &e {
+/// The protocol code and text of a refused change.
+pub(super) fn code_of(e: &SettingError) -> (i64, String) {
+    match e {
         SettingError::Unknown(_) => (code::NOT_FOUND, e.to_string()),
         SettingError::Invalid(_) => (code::INVALID_PARAMS, e.to_string()),
         SettingError::Unavailable(_) => (code::NOT_READY, e.to_string()),
-    };
+    }
+}
+
+fn error(e: SettingError) -> Outcome {
+    let (c, m) = code_of(&e);
     Outcome::err(RpcError::new(c, m))
 }
 
@@ -117,28 +129,69 @@ pub(crate) fn get(world: &mut World, params: &Value) -> Outcome {
     }
 }
 
-/// A parameter value as the text a setting stores (numbers and booleans are accepted too).
+/// A JSON value as the text a setting stores (numbers and booleans are accepted too).
+pub(super) fn text_of(v: &Value) -> Option<String> {
+    match v {
+        Value::String(s) => Some(s.clone()),
+        Value::Bool(b) => Some(b.to_string()),
+        Value::Number(n) => Some(n.to_string()),
+        _ => None,
+    }
+}
+
+/// The parameter `value` as stored text.
 fn value_text(params: &Value) -> Result<String, RpcError> {
     match params.get("value") {
-        Some(Value::String(s)) => Ok(s.clone()),
-        Some(Value::Bool(b)) => Ok(b.to_string()),
-        Some(Value::Number(n)) => Ok(n.to_string()),
-        Some(_) => Err(RpcError::invalid_params(
-            "parameter `value` must be a string, number or boolean",
-        )),
+        Some(v) => text_of(v).ok_or_else(|| {
+            RpcError::invalid_params("parameter `value` must be a string, number or boolean")
+        }),
         None => Err(RpcError::invalid_params("missing parameter `value`")),
     }
 }
 
-fn changed(world: &mut World, key: &str, value: Option<&str>) -> Outcome {
-    match apply_change(world, key, value, ChangeSource::Protocol) {
-        Ok(c) => match one(world, key) {
-            Ok(mut v) => {
-                v["previous"] = json!(c.old);
-                Outcome::ok(v)
+/// The optional parameter `confirm` (default true: apply and save at once).
+fn confirm_param(params: &Value) -> Result<bool, RpcError> {
+    opt_bool(params, "confirm").map(|c| c.unwrap_or(true))
+}
+
+/// Applies a change and answers with the setting, its previous value, whether it changed
+/// anything (`applied`) and whether it takes effect after a restart (`needs_restart`). With
+/// `confirm` false a setting that has a revert prompt on the page is applied but not saved and
+/// waits for `settings.confirm`, `settings.revert` or the timeout (`pending_confirm`).
+fn changed(world: &mut World, key: &str, value: Option<&str>, confirm: bool) -> Outcome {
+    let apply = world
+        .resource::<SettingsRegistry>()
+        .get(key)
+        .map(|d| d.apply);
+    let hold = match apply {
+        Some(Apply::WithRevert(s)) if !confirm => Some(s),
+        _ => None,
+    };
+    if hold.is_some() && protocol_confirm::is_pending(world) {
+        return Outcome::err(RpcError::new(
+            code::BUSY,
+            "another risky setting change waits for confirmation: settings.confirm or settings.revert it first",
+        ));
+    }
+    let c = match apply_change_with(world, key, value, ChangeSource::Protocol, hold.is_none()) {
+        Ok(c) => c,
+        Err(e) => return error(e),
+    };
+    let did = c.old != c.new;
+    if let Some(seconds) = hold.filter(|_| did) {
+        protocol_confirm::begin(world, key, &c.old, &c.new, seconds);
+    }
+    match one(world, key) {
+        Ok(mut v) => {
+            v["previous"] = json!(c.old);
+            v["applied"] = json!(did);
+            v["needs_restart"] = json!(did && matches!(apply, Some(Apply::OnRestart)));
+            if let Some(seconds) = hold.filter(|_| did) {
+                v["pending_confirm"] = json!(true);
+                v["confirm_within_s"] = json!(seconds);
             }
-            Err(e) => error(e),
-        },
+            Outcome::ok(v)
+        }
         Err(e) => error(e),
     }
 }
@@ -148,9 +201,9 @@ pub(crate) fn set(world: &mut World, params: &Value) -> Outcome {
         Ok(k) => k.to_string(),
         Err(e) => return Outcome::err(e),
     };
-    match value_text(params) {
-        Ok(v) => changed(world, &key, Some(&v)),
-        Err(e) => Outcome::err(e),
+    match (value_text(params), confirm_param(params)) {
+        (Ok(v), Ok(confirm)) => changed(world, &key, Some(&v), confirm),
+        (Err(e), _) | (_, Err(e)) => Outcome::err(e),
     }
 }
 
@@ -158,7 +211,10 @@ pub(crate) fn reset(world: &mut World, params: &Value) -> Outcome {
     match str_param(params, "key") {
         Ok(k) => {
             let key = k.to_string();
-            changed(world, &key, None)
+            match confirm_param(params) {
+                Ok(confirm) => changed(world, &key, None, confirm),
+                Err(e) => Outcome::err(e),
+            }
         }
         Err(e) => Outcome::err(e),
     }
@@ -259,3 +315,9 @@ mod tests {
         );
     }
 }
+
+// The registry-driven coverage and the confirm, batch and profile tests (M-0072); a file named
+// `tests.rs` is what the no-blocking-calls lint of the UI modules treats as test code.
+#[cfg(test)]
+#[path = "protocol/tests.rs"]
+mod coverage;

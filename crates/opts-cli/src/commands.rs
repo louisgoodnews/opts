@@ -314,14 +314,71 @@ pub const COMMANDS: &[CommandSpec] = &[
         "settings.set",
         "settings",
         "Change a setting (validated like the settings page, saved)",
-        "key:s@0 value:s@1",
-    ),
+        "key:s@0 value:s@1 confirm:b?",
+    )
+    .result("the setting as `settings.get` shows it, plus `previous`, `applied` (it changed), `needs_restart` and, while it waits, `pending_confirm` and `confirm_within_s`")
+    .doc("Applies and saves at once. A setting that the page protects with a 15 s prompt (`apply.revert_after_s` in `settings.list`: window mode, resolution) can instead be tried with `confirm: false`: it is applied but not saved and waits for `settings.confirm` (keep and save) or `settings.revert` (restore); after its time it is reverted by itself, like the page's prompt. Only one such change waits at a time (`1006 BUSY` otherwise); `confirm: false` on any other setting changes nothing about how it is applied. `needs_restart` is true when the change only takes effect after a restart."),
     c(
         "settings.reset",
         "settings",
         "Restore the default of a setting",
-        "key:s@0",
-    ),
+        "key:s@0 confirm:b?",
+    )
+    .doc("Like `settings.set` with the default value, including `confirm`."),
+    c(
+        "settings.confirm",
+        "settings",
+        "Keep the risky setting change that waits and save it",
+        "",
+    )
+    .since("1.7")
+    .result("`{key, value, confirmed: true}`")
+    .doc("Finishes a `settings.set` or `settings.reset` with `confirm: false`. `1001 NOT_READY` when nothing waits."),
+    c(
+        "settings.revert",
+        "settings",
+        "Undo the risky setting change that waits",
+        "",
+    )
+    .since("1.7")
+    .result("`{key, value, reverted: true}`")
+    .doc("Restores the value from before a `settings.set` or `settings.reset` with `confirm: false`. `1001 NOT_READY` when nothing waits."),
+    c(
+        "settings.set_many",
+        "settings",
+        "Change several settings at once, all or none",
+        "values:j@0",
+    )
+    .since("1.7")
+    .result("`{count, changed: [{key, previous, value, needs_restart}], unchanged, needs_restart: [keys]}`")
+    .doc("`values` is an object of setting key to value. The whole batch is validated first (unknown or unavailable keys, bad values, key bindings that clash inside the batch); if anything is refused nothing is applied and the answer is `-32602` with `data.errors: [{key, code, message}]` listing every refusal. Settings with a revert prompt are applied at once, without the `confirm` wait. Saved once at the end; at most 1000 entries."),
+    c(
+        "settings.diff",
+        "settings",
+        "The settings that differ from their defaults",
+        "",
+    )
+    .since("1.7")
+    .result("`{count, differences: [{key, value, default}]}`")
+    .doc("Visible settings only (internal state such as the last map is left out)."),
+    c(
+        "settings.export",
+        "settings",
+        "A profile of the changed settings, to import later",
+        "all:b?",
+    )
+    .since("1.7")
+    .result("`{format: \"opts-settings\", version: 1, count, settings: {key: value}}`")
+    .doc("Without `all` only the settings that differ from the defaults; with `all: true` every visible setting. Hand the result (its `settings` object) to `settings.import`."),
+    c(
+        "settings.import",
+        "settings",
+        "Apply a settings profile, all or none",
+        "settings:j@0 reset_missing:b?",
+    )
+    .since("1.7")
+    .result("as `settings.set_many`")
+    .doc("`settings` is the object `settings.export` returned (`values` is accepted as a synonym). Validated and applied like `settings.set_many`. With `reset_missing: true` the settings that differ from the defaults and are not in the profile go back to their defaults, so the result is exactly the profile."),
     c(
         "hardware.profile",
         "settings",
