@@ -87,7 +87,8 @@ impl Plugin for ViewScopePlugin {
         // before the visibility is propagated to the hierarchy.
         app.add_systems(
             PostUpdate,
-            apply_view_scope.before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate),
+            apply_view_scope
+                .before(bevy::camera::visibility::VisibilitySystems::VisibilityPropagate),
         );
     }
 }
@@ -104,12 +105,27 @@ mod tests {
     fn only_single_sided_meshes_are_scoped() {
         assert!(ViewScope::of(flags(0)).is_none(), "always");
         assert!(ViewScope::of(flags(3)).is_none(), "both sides");
-        assert!(ViewScope::of(flags(4)).is_none(), "AI only is dropped by the loader");
-        assert_eq!(ViewScope::of(flags(1)).map(|s| (s.outside, s.inside)), Some((true, false)));
-        assert_eq!(ViewScope::of(flags(2)).map(|s| (s.outside, s.inside)), Some((false, true)));
+        assert!(
+            ViewScope::of(flags(4)).is_none(),
+            "AI only is dropped by the loader"
+        );
+        assert_eq!(
+            ViewScope::of(flags(1)).map(|s| (s.outside, s.inside)),
+            Some((true, false))
+        );
+        assert_eq!(
+            ViewScope::of(flags(2)).map(|s| (s.outside, s.inside)),
+            Some((false, true))
+        );
         // The exterior mirror of the Hamburg buses: outside plus AI.
-        assert_eq!(ViewScope::of(flags(5)).map(|s| (s.outside, s.inside)), Some((true, false)));
-        assert_eq!(ViewScope::of(flags(6)).map(|s| (s.outside, s.inside)), Some((false, true)));
+        assert_eq!(
+            ViewScope::of(flags(5)).map(|s| (s.outside, s.inside)),
+            Some((true, false))
+        );
+        assert_eq!(
+            ViewScope::of(flags(6)).map(|s| (s.outside, s.inside)),
+            Some((false, true))
+        );
         assert!(ViewScope::of(flags(7)).is_none());
     }
 
