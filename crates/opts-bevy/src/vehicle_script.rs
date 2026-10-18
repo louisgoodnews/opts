@@ -27,10 +27,20 @@ impl Default for ScriptRadius {
 }
 
 /// Whether the vehicles' own scripts drive them: `M_Wheel` (drive torque) and the brake forces
-/// replace the built-in drivetrain's traction and braking. Off by default (`--script-drive`);
+/// replace the built-in drivetrain's traction and braking. On by default;
 /// the scripts then need the start-up of their vehicle, which [`ScriptStartup`] performs.
-#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScriptDriveEnabled(pub bool);
+
+impl Default for ScriptDriveEnabled {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Seconds of throttle with an all-zero `M_Wheel` after which a vehicle falls back to the
+/// built-in drivetrain (its const file's torque curve).
+const NO_TORQUE_FALLBACK_S: f32 = 4.0;
 
 /// Raises the triggers a driver would use to bring a vehicle to life (battery switch, engine
 /// start) after the scripts' `{init}`, and follows the gear selector with the automatic's
@@ -71,8 +81,8 @@ impl VehicleScripts {
 }
 
 /// Wheel speed in rpm for a road speed (m/s) and a wheel radius (m).
-fn rpm_of(speed: f32, radius: f32) -> f32 {
-    speed / radius.max(0.1) * 60.0 / std::f32::consts::TAU
+fn rpm_of_omega(omega_rad_s: f32) -> f32 {
+    omega_rad_s * 60.0 / std::f32::consts::TAU
 }
 
 /// The host's state a vehicle's scripts may read, from the simulation and the session's clock
@@ -84,7 +94,6 @@ pub fn host_inputs(
     clock: Option<&crate::scenery_runtime::SceneryClock>,
 ) -> HostInputs {
     let sim = &controller.sim;
-    let speed = sim.chassis.forward_speed_m_s();
     let mut inputs = HostInputs {
         velocity_km_h: sim.chassis.forward_speed_km_h(),
         velocity_ground_km_h: sim.chassis.forward_speed_km_h(),
@@ -104,7 +113,12 @@ pub fn host_inputs(
     } else {
         sim.axles
             .iter()
-            .map(|a| rpm_of(speed, a.config.wheel_diameter_m * 0.5))
+            .map(|a| {
+                rpm_of_omega(
+                    0.5 * (a.left_wheel.angular_velocity_rad_s
+                        + a.right_wheel.angular_velocity_rad_s),
+                )
+            })
             .sum::<f32>()
             / sim.axles.len() as f32
     };
@@ -117,7 +131,6 @@ pub fn host_inputs(
         .iter()
         .enumerate()
         .map(|(i, axle)| {
-            let rpm = rpm_of(speed, axle.config.wheel_diameter_m * 0.5);
             let travel = |side: usize| {
                 sim.body
                     .as_ref()
@@ -125,7 +138,7 @@ pub fn host_inputs(
                     .map_or(0.0, |w| w.compression_m)
             };
             let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
-                speed_rpm: rpm,
+                speed_rpm: rpm_of_omega(w.angular_velocity_rad_s),
                 rotation_rad: w.rotation_rad,
                 steering_rad: -w.steer_angle_rad,
                 suspension_m: travel(side),
@@ -215,14 +228,52 @@ pub fn vehicle_script_system(
     }
 }
 
+/// What the scripts hand to the physics: the torque at the driven wheels (`M_Wheel`, N·m) and the
+/// total brake force (N). `None` when no script writes `M_Wheel` (the vehicle is not
+/// script-driven). Player vehicles write the force of every wheel (`Axle_Brakeforce_<n>_<l|r>`);
+/// the total `Brakeforce` belongs to the AI scripts (`{frame_ai}`), so the wheel forces win.
+#[must_use]
+pub fn script_outputs(engine: &ScriptEngine) -> Option<opts_sim::vehicle::ScriptDrive> {
+    if !engine.writes("m_wheel") {
+        return None;
+    }
+    let wheel_names: Vec<String> = (0..8)
+        .flat_map(|i| {
+            [
+                format!("axle_brakeforce_{i}_l"),
+                format!("axle_brakeforce_{i}_r"),
+            ]
+        })
+        .collect();
+    let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
+        wheel_names.iter().map(|n| engine.get(n)).sum()
+    } else {
+        engine.get("brakeforce")
+    };
+    Some(opts_sim::vehicle::ScriptDrive {
+        wheel_torque_nm: engine.get("m_wheel") * opts_sim::vehicle::M_WHEEL_UNIT,
+        brake_force_n: brake.max(0.0) * opts_sim::vehicle::BRAKE_FORCE_UNIT,
+    })
+}
+
+/// What [`script_drive_system`] remembers of one vehicle's scripts.
+#[derive(Debug, Default)]
+pub struct DriveWatch {
+    idle_s: f32,
+    fallback: bool,
+    warned: bool,
+}
+
 /// Hands the scripts' torque and brake force to the physics for the next step (only when
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
+    time: Res<Time>,
     enabled: Res<ScriptDriveEnabled>,
     mut ticks: Local<u32>,
-    mut query: Query<(&mut VehicleController, &VehicleScripts)>,
+    mut watch: Local<std::collections::HashMap<Entity, DriveWatch>>,
+    mut query: Query<(Entity, &mut VehicleController, &VehicleScripts)>,
 ) {
-    for (mut controller, scripts) in &mut query {
+    for (entity, mut controller, scripts) in &mut query {
         // A pedal the scripts write themselves (cruise control, AI-style scripts) is theirs: its
         // value reaches the physics' inputs, whatever drives the vehicle.
         if let Ok(engine) = scripts.engine.lock() {
@@ -244,30 +295,52 @@ pub fn script_drive_system(
         let Ok(engine) = scripts.engine.lock() else {
             continue;
         };
-        if !engine.writes("m_wheel") {
+        // The scripts' spring factors, wheel by wheel.
+        for i in 0..controller.sim.axles.len().min(8) {
+            for (side, tag) in ["l", "r"].into_iter().enumerate() {
+                let name = format!("axle_springfactor_{i}_{tag}");
+                if engine.writes(&name) {
+                    controller
+                        .sim
+                        .set_spring_factor(i * 2 + side, engine.get(&name));
+                }
+            }
+        }
+        let w = watch.entry(entity).or_default();
+        let Some(drive) = script_outputs(&engine) else {
+            if !w.warned {
+                w.warned = true;
+                tracing::warn!(
+                    "the scripts of a vehicle write no `M_Wheel`: the built-in drivetrain with its constants drives it"
+                );
+            }
+            controller.sim.script_drive = None;
+            continue;
+        };
+        // Three ways to drive: a script that hands torque to the wheels; one that never does
+        // while the driver holds the pedal (const file's torque curve, one INFO); none at all
+        // (built-in constants, one WARN, above).
+        if drive.wheel_torque_nm.abs() > 1.0 {
+            w.idle_s = 0.0;
+            w.fallback = false;
+        } else if controller.inputs().throttle() > 0.2 && engine.get("engine_on") > 0.5 {
+            w.idle_s += time.delta_secs();
+            if w.idle_s > NO_TORQUE_FALLBACK_S && !w.fallback {
+                w.fallback = true;
+                tracing::info!(
+                    "the scripts of a vehicle hand no torque to the wheels under throttle: the const file's torque curve drives it"
+                );
+            }
+        }
+        if w.fallback {
             controller.sim.script_drive = None;
             continue;
         }
-        // Player vehicles write the force of every wheel (`Axle_Brakeforce_<n>_<l|r>`); the
-        // total `Brakeforce` belongs to the AI scripts (`{frame_ai}`), so the wheel forces win.
-        let wheel_names: Vec<String> = (0..8)
-            .flat_map(|i| {
-                [
-                    format!("axle_brakeforce_{i}_l"),
-                    format!("axle_brakeforce_{i}_r"),
-                ]
-            })
-            .collect();
-        let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
-            wheel_names.iter().map(|n| engine.get(n)).sum()
-        } else {
-            engine.get("brakeforce")
-        };
         *ticks = ticks.wrapping_add(1);
         if (*ticks).is_multiple_of(64) {
             tracing::debug!(
-                m_wheel = engine.get("m_wheel"),
-                brake,
+                m_wheel = drive.wheel_torque_nm,
+                brake = drive.brake_force_n,
                 engine_n = engine.get("engine_n"),
                 throttle = engine.get("throttle"),
                 gear_pre = engine.get("antrieb_getr_gangvorwahl"),
@@ -275,15 +348,10 @@ pub fn script_drive_system(
                 gear_act = engine.get("antrieb_getr_aktugang"),
                 parking = engine.get("bremse_feststell"),
                 tank = engine.get("bremse_p_tank01"),
-                f0r = engine.get("axle_brakeforce_0_r"),
-                f3l = engine.get("axle_brakeforce_3_l"),
                 "script drive"
             );
         }
-        controller.sim.script_drive = Some(opts_sim::vehicle::ScriptDrive {
-            wheel_torque_nm: engine.get("m_wheel"),
-            brake_force_n: brake.max(0.0),
-        });
+        controller.sim.script_drive = Some(drive);
     }
 }
 

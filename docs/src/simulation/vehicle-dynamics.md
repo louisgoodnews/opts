@@ -67,6 +67,10 @@ The consequence is the one the milestone asks for: a vehicle at or under its rat
 
 Gravity along the road (`m·g·sin(pitch)` from the chassis pitch of the last ground sample, nose up positive) acts on the vehicle. A **standing** vehicle stays put while the driving force (traction plus grade) does not exceed what the brakes and the rolling resistance withstand, and moves under the excess: the parking brake holds the 12 t test bus on a 10 % and a 30 % grade, it rolls backwards on 70 %, and without the brake a 10 % grade sets it rolling. The old stand-still clamp no longer swallows a vehicle that the net force pushes on.
 
+### Wheels under script drive (M-0097)
+
+With the vehicle's scripts driving, the wheels spin as bodies: torque and brake torque against the tyre force (linear in slip to 12 %, then `μ · load`), the wheel speeds going back to the scripts; the full account, the numbers and the open calibration (E1) are in [the integration report](../architecture/script-integration-report.md#the-physics-contract-m-0097-2026-10-18). `Axle_Springfactor_*` scales the wheel's spring (0.2..5).
+
 ## 6. Limits and open (❓)
 
 - ❓ **`[rot_pnt_long]`** (all vehicles): "longitudinal coordinate of the rotation point". Whether it is the centre of gravity's longitudinal position, the pivot of the yaw or something else is not known; the suspension model's longitudinal centre of gravity stays 0.

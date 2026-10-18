@@ -1,0 +1,20 @@
+{
+  "engine_on": 1.0,
+  "hz": 60.0,
+  "mass_kg": 10900.0,
+  "parking_brake_10_percent_drift_m": 0.004831520840525627,
+  "parking_brake_10_percent_final_speed": 0.0,
+  "seconds_to_50_kmh": 16.91640853881836,
+  "speed_after_40_s_kmh": 75.27043914794922,
+  "stop_from_50_kmh_m": 26.91026496887207,
+  "stop_from_50_kmh_s": 3.816608428955078,
+  "stopped": true,
+  "throttle_sweep_kmh_after_8_s": [
+    2.8402299880981445,
+    4.927708625793457,
+    11.824217796325684,
+    21.341310501098633,
+    29.83405303955078
+  ],
+  "throttle_sweep_monotone": true
+}

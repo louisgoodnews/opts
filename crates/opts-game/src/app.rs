@@ -87,7 +87,7 @@ pub fn build_app(args: CliArgs) -> App {
     }
     crate::look::apply_startup_render_options(&mut app, &settings, &args);
     app.insert_resource(settings);
-    app.insert_resource(opts_bevy::ScriptDriveEnabled(args.script_drive));
+    app.insert_resource(opts_bevy::ScriptDriveEnabled::default());
     app.insert_resource(crate::in_game::omsi_world::DebugWheelVars(
         args.debug_wheel_vars,
     ));
