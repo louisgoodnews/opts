@@ -69,7 +69,7 @@ Gravity along the road (`m·g·sin(pitch)` from the chassis pitch of the last gr
 
 ### Wheels under script drive (M-0097)
 
-With the vehicle's scripts driving, the wheels spin as bodies: torque and brake torque against the tyre force (linear in slip to 12 %, then `μ · load`), the wheel speeds going back to the scripts; the full account, the numbers and the open calibration (E1) are in [the integration report](../architecture/script-integration-report.md#the-physics-contract-m-0097-2026-10-18). `Axle_Springfactor_*` scales the wheel's spring (0.2..5).
+With the vehicle's scripts driving, the wheels spin as bodies: torque and brake torque against the tyre force (linear in slip to 12 %, then `μ · load`), the wheel speeds going back to the scripts; the full account, the numbers and the units (read from the scripts) are in [the integration report](../architecture/script-integration-report.md#the-physics-contract-m-0097-2026-10-18). `Axle_Springfactor_*` scales the wheel's spring (0.2..5).
 
 ## 6. Limits and open (❓)
 

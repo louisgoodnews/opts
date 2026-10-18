@@ -44,11 +44,13 @@ pub struct ScriptDrive {
     pub brake_force_n: f32,
 }
 
-/// Newton metres at the wheels per unit of the scripts' `M_Wheel`. 1.0 until the calibration
-/// experiment E1 (`docs/src/architecture/script-integration-report.md`) says otherwise ❓.
+/// Newton metres at the wheels per unit of the scripts' `M_Wheel`: 1.0, the drive script forms it
+/// as engine torque times the total ratio and checks its power with `M_Wheel · n_Wheel · π / 30000`
+/// kW (`docs/src/architecture/script-integration-report.md`, the units read from the scripts).
 pub const M_WHEEL_UNIT: f32 = 1.0;
 /// Newtons at the wheels per unit of the scripts' brake forces (`Brakeforce`,
-/// `Axle_Brakeforce_*`). 1.0 until experiment E1 ❓.
+/// `Axle_Brakeforce_*`): 1.0, the brake script's maximum (`max_bremskraft`, 90,000) is about the
+/// friction limit of the bus in newtons.
 pub const BRAKE_FORCE_UNIT: f32 = 1.0;
 
 /// Friction coefficient between tyres and road that limits traction and braking of a road
@@ -417,12 +419,19 @@ impl VehicleSimulation {
     /// wheels (all of them when no axle is marked driven) in equal parts, the brake force to the
     /// head's axles in proportion to their rated force.
     fn step_wheels(&mut self, d: ScriptDrive, speed: f32, dt: f32) -> f32 {
-        let any_driven = self.axles.iter().any(|a| a.config.is_driven);
-        let driven_wheels = self
+        let unit_driven = self
+            .trailer_loads
+            .iter()
+            .flat_map(|u| u.axles.iter())
+            .filter(|a| a.is_driven)
+            .count();
+        let any_driven = self.axles.iter().any(|a| a.config.is_driven) || unit_driven > 0;
+        let driven_wheels = (self
             .axles
             .iter()
             .filter(|a| a.config.is_driven || !any_driven)
             .count()
+            + unit_driven)
             * 2;
         let torque_each = d.wheel_torque_nm / driven_wheels.max(1) as f32;
         let rated_head: f32 = self.axles.iter().map(|a| a.config.max_force_n).sum();
@@ -457,6 +466,21 @@ impl VehicleSimulation {
                 let load = w.vertical_load_n;
                 let st = wheels::step_wheel(w, drive, brake_nm, load, speed, ROAD_FRICTION, dt);
                 total += st.force_n;
+            }
+        }
+        // The driven axles of the following units (the driven axle of an articulated bus hangs
+        // in its second unit): the tyre carries the torque as far as its load allows.
+        let r_unit = self
+            .axles
+            .first()
+            .map_or(0.49, |a| a.left_wheel.rolling_radius_m)
+            .max(0.1);
+        for unit in &self.trailer_loads {
+            for (axle, load) in unit.axles.iter().zip(unit.axle_loads_n()) {
+                if axle.is_driven {
+                    let limit = ROAD_FRICTION * load;
+                    total += (2.0 * torque_each / r_unit).clamp(-limit, limit);
+                }
             }
         }
         // The following units: their brake share, as far as their tyres carry it.
