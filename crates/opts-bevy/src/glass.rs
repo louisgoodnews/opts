@@ -12,6 +12,14 @@
 //!   [`AlphaMode::Premultiplied`] (the lit specular is added at full strength instead of being
 //!   faded with the texture alpha, so a transparent window still mirrors the sky); with it off the
 //!   original values come back exactly. At most [`MAX_PER_FRAME`] materials change per frame.
+//! * **Premultiplied glass:** `AlphaMode::Premultiplied` adds the lit colour at full weight and
+//!   fades only what is behind it by `1 - alpha`. Left alone, the diffuse colour of a window
+//!   texture (a pale tint, white print, frames) is added over the view through the glass at any
+//!   transparency: the milk-glass look of the Hamburg buses. The look therefore swaps the
+//!   texture for a copy whose colour is multiplied by its alpha ([`premultiply_rgba8`], in
+//!   linear light), so the diffuse part is faded exactly as `Blend` fades it while the specular
+//!   reflection stays at full strength. The copy is shared between the materials of a texture
+//!   and dropped with them; the original comes back when the look is switched off.
 //!
 //! [`mirrors`](crate::mirrors) reads the registry to find the mirror meshes of the player vehicle.
 
@@ -27,10 +35,15 @@ use crate::light_quality::{LightQuality, LightQualitySet};
 pub const GLASS_ROUGHNESS: f32 = 0.06;
 /// Reflectance (Fresnel `F0` scale) of glass with reflections on.
 pub const GLASS_REFLECTANCE: f32 = 0.6;
-/// Factor on the glass base colour with reflections on: under premultiplied alpha the lit diffuse
-/// colour is added at full weight, so a bright window texture would turn milky; halving it keeps
-/// the tint and lets the reflection and the view through dominate.
-pub const GLASS_TINT: f32 = 0.5;
+/// Factor on the glass base colour with reflections on, after the colour was multiplied by its
+/// alpha (see the module documentation): 1 keeps the tint of the texture exactly as `Blend`
+/// draws it. A glass without a texture (or one whose texture cannot be read) still gets
+/// [`GLASS_FALLBACK_TINT`] instead.
+pub const GLASS_TINT: f32 = 1.0;
+/// Factor on the base colour of glass whose texture cannot be premultiplied (block-compressed
+/// formats the CPU decoder does not know): the diffuse part is added at full weight, so it is kept
+/// small.
+pub const GLASS_FALLBACK_TINT: f32 = 0.15;
 /// Most materials switched per frame (a district of buildings registers thousands).
 pub const MAX_PER_FRAME: usize = 256;
 
@@ -44,12 +57,14 @@ pub enum SurfaceKind {
 }
 
 /// The values glass had before reflections touched it.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct GlassOriginal {
     alpha: AlphaMode,
     roughness: f32,
     reflectance: f32,
     base_color: Color,
+    /// The colour texture before it was premultiplied (held strongly while the copy is shown).
+    texture: Option<Handle<Image>>,
 }
 
 #[derive(Debug, Clone)]
@@ -153,6 +168,7 @@ fn insert(id: AssetId<StandardMaterial>, kind: SurfaceKind, m: &StandardMaterial
                     roughness: m.perceptual_roughness,
                     reflectance: m.reflectance,
                     base_color: m.base_color,
+                    texture: m.base_color_texture.clone(),
                 },
                 applied: false,
             });
@@ -189,18 +205,89 @@ pub fn registered_counts() -> (usize, usize) {
     (glass, map.len() - glass)
 }
 
-/// The glass look applied to `m`, from the values it had before.
-fn apply_look(m: &mut StandardMaterial, original: &GlassOriginal) {
+/// Multiplies the colour of RGBA8 texels by their alpha, in linear light (`srgb`: the bytes are
+/// sRGB encoded). Texels with alpha 255 are left alone, with alpha 0 they become black.
+pub fn premultiply_rgba8(data: &mut [u8], srgb: bool) {
+    let to_linear = |v: u8| -> f32 {
+        let c = f32::from(v) / 255.0;
+        if !srgb {
+            c
+        } else if c <= 0.04045 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let from_linear = |l: f32| -> u8 {
+        let c = if !srgb {
+            l
+        } else if l <= 0.003_130_8 {
+            l * 12.92
+        } else {
+            1.055 * l.powf(1.0 / 2.4) - 0.055
+        };
+        (c.clamp(0.0, 1.0) * 255.0 + 0.5) as u8
+    };
+    // Cache of the last texel: window textures are flat in large areas.
+    let mut last: Option<([u8; 4], [u8; 3])> = None;
+    for px in data.chunks_exact_mut(4) {
+        let a = px[3];
+        if a == 255 {
+            continue;
+        }
+        let key = [px[0], px[1], px[2], a];
+        if let Some((k, out)) = last {
+            if k == key {
+                px[..3].copy_from_slice(&out);
+                continue;
+            }
+        }
+        let f = f32::from(a) / 255.0;
+        let out = [
+            from_linear(to_linear(px[0]) * f),
+            from_linear(to_linear(px[1]) * f),
+            from_linear(to_linear(px[2]) * f),
+        ];
+        px[..3].copy_from_slice(&out);
+        last = Some((key, out));
+    }
+}
+
+/// A copy of `source` whose colour is multiplied by its alpha, with a fresh mip chain; `None`
+/// when the texels cannot be read on the CPU.
+fn premultiplied_copy(source: &Image) -> Option<Image> {
+    use bevy::render::render_resource::TextureFormat as F;
+    let mut out = crate::texture::decode_to_rgba8(source)?;
+    let srgb = match out.texture_descriptor.format {
+        F::Rgba8UnormSrgb => true,
+        F::Rgba8Unorm => false,
+        _ => return None,
+    };
+    let texels = out.width() as usize * out.height() as usize * 4;
+    let data = out.data.as_mut()?;
+    data.truncate(texels);
+    premultiply_rgba8(data, srgb);
+    crate::texture_filter::prepare_object_texture(&mut out);
+    Some(out)
+}
+
+/// The glass look applied to `m`, from the values it had before. `texture` is the premultiplied
+/// copy of the colour texture, when there is one.
+fn apply_look(m: &mut StandardMaterial, original: &GlassOriginal, texture: Option<Handle<Image>>) {
     m.perceptual_roughness = original.roughness.min(GLASS_ROUGHNESS);
     m.reflectance = original.reflectance.max(GLASS_REFLECTANCE);
     m.alpha_mode = AlphaMode::Premultiplied;
     let c = original.base_color.to_linear();
-    m.base_color = Color::linear_rgba(
-        c.red * GLASS_TINT,
-        c.green * GLASS_TINT,
-        c.blue * GLASS_TINT,
-        c.alpha,
-    );
+    // The material's own alpha multiplies the texture alpha: it belongs in the colour as well.
+    let (tint, fade) = match (&original.texture, &texture) {
+        (Some(_), None) => (GLASS_FALLBACK_TINT, 1.0),
+        _ => (GLASS_TINT, c.alpha),
+    };
+    let k = tint * fade;
+    m.base_color = Color::linear_rgba(c.red * k, c.green * k, c.blue * k, c.alpha);
+    if let Some(t) = texture {
+        m.base_color_texture = Some(t);
+    }
 }
 
 fn restore(m: &mut StandardMaterial, original: &GlassOriginal) {
@@ -208,6 +295,7 @@ fn restore(m: &mut StandardMaterial, original: &GlassOriginal) {
     m.reflectance = original.reflectance;
     m.alpha_mode = original.alpha;
     m.base_color = original.base_color;
+    m.base_color_texture = original.texture.clone();
 }
 
 /// What [`sync_glass`] reports (`sim.get` shows it).
@@ -223,8 +311,10 @@ pub struct GlassStats {
 pub fn sync_glass(
     quality: Res<LightQuality>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: Option<ResMut<Assets<Image>>>,
     mut stats: ResMut<GlassStats>,
     mut seen: Local<(u64, Option<bool>)>,
+    mut copies: Local<HashMap<AssetId<Image>, AssetId<Image>>>,
 ) {
     let want = quality.glass_reflections;
     let revision = REVISION.load(Ordering::Relaxed);
@@ -246,12 +336,20 @@ pub fn sync_glass(
             left = true;
             break;
         }
-        let Some(mut m) = materials.get_mut(*id) else {
+        if materials.get(*id).is_none() {
             // Not in this store (another session's material, or already freed): nothing to do.
+            continue;
+        }
+        let texture = if want {
+            premultiplied_texture(&entry.original, images.as_deref_mut(), &mut copies)
+        } else {
+            None
+        };
+        let Some(mut m) = materials.get_mut(*id) else {
             continue;
         };
         if want {
-            apply_look(&mut m, &entry.original);
+            apply_look(&mut m, &entry.original, texture);
         } else {
             restore(&mut m, &entry.original);
         }
@@ -272,6 +370,26 @@ pub fn sync_glass(
     } else {
         (revision, Some(want))
     };
+}
+
+/// The premultiplied copy of the glass's colour texture, built once per source image (the copies
+/// are held weakly here: the materials that show them keep them alive).
+fn premultiplied_texture(
+    original: &GlassOriginal,
+    images: Option<&mut Assets<Image>>,
+    copies: &mut HashMap<AssetId<Image>, AssetId<Image>>,
+) -> Option<Handle<Image>> {
+    let source = original.texture.as_ref()?;
+    let images = images?;
+    if let Some(copy) = copies.get(&source.id()) {
+        if let Some(strong) = images.get_strong_handle(*copy) {
+            return Some(strong);
+        }
+    }
+    let copy = premultiplied_copy(images.get(source)?)?;
+    let handle = images.add(copy);
+    copies.insert(source.id(), handle.id());
+    Some(handle)
 }
 
 /// Registers [`sync_glass`].
@@ -409,5 +527,111 @@ mod tests {
             None,
             "an opaque window is not touched"
         );
+    }
+
+    #[test]
+    fn premultiplying_fades_the_colour_by_alpha_in_linear_light() {
+        // A white texel at alpha 128 (about 0.5) is sRGB 188 once multiplied in linear light, not 128.
+        let mut px = [255, 255, 255, 128, 10, 20, 30, 255, 200, 100, 50, 0];
+        premultiply_rgba8(&mut px, true);
+        assert!((i32::from(px[0]) - 188).abs() <= 1, "{}", px[0]);
+        assert_eq!(px[3], 128, "alpha is not touched");
+        assert_eq!(&px[4..8], &[10, 20, 30, 255], "opaque texels stay");
+        assert_eq!(&px[8..11], &[0, 0, 0], "transparent texels turn black");
+        let mut linear = [200, 100, 50, 128];
+        premultiply_rgba8(&mut linear, false);
+        assert_eq!(&linear[..3], &[100, 50, 25]);
+    }
+
+    fn window_image(rgba: [u8; 4]) -> Image {
+        use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+        let data: Vec<u8> = (0..16).flat_map(|_| rgba).collect();
+        Image::new(
+            Extent3d {
+                width: 4,
+                height: 4,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            data,
+            TextureFormat::Rgba8UnormSrgb,
+            default(),
+        )
+    }
+
+    /// The milk-glass bug of the Hamburg buses: a pale, mostly transparent window texture added
+    /// at full weight by `Premultiplied` turned the view through the glass white.
+    #[test]
+    fn a_pale_window_texture_is_faded_by_its_alpha_while_the_look_is_on() {
+        let mut app = test_app();
+        app.init_resource::<Assets<Image>>();
+        let texture = app
+            .world_mut()
+            .resource_mut::<Assets<Image>>()
+            .add(window_image([230, 235, 240, 40]));
+        let material = StandardMaterial {
+            alpha_mode: AlphaMode::Blend,
+            base_color_texture: Some(texture.clone()),
+            ..default()
+        };
+        let h = unique_material(
+            &mut app.world_mut().resource_mut::<Assets<StandardMaterial>>(),
+            material.clone(),
+        );
+        note_surface(&h, Some("fenster.tga"), &material, false);
+        app.update();
+        let shown = app
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&h)
+            .unwrap()
+            .base_color_texture
+            .clone()
+            .expect("texture");
+        assert_ne!(shown.id(), texture.id(), "the premultiplied copy is shown");
+        let images = app.world().resource::<Assets<Image>>();
+        let copy = images.get(&shown).unwrap();
+        let px = &copy.data.as_ref().unwrap()[..4];
+        assert!(px[0] < 120, "diffuse added over the view must be faint: {px:?}");
+        assert_eq!(px[3], 40);
+        assert_eq!(images.get(&texture).unwrap().data.as_ref().unwrap()[0], 230);
+
+        app.world_mut()
+            .resource_mut::<LightQuality>()
+            .glass_reflections = false;
+        app.update();
+        let back = app
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&h)
+            .unwrap();
+        assert_eq!(back.base_color_texture.as_ref().map(|t| t.id()), Some(texture.id()));
+        assert_eq!(back.alpha_mode, AlphaMode::Blend);
+    }
+
+    #[test]
+    fn glass_whose_texture_cannot_be_read_gets_a_small_diffuse_instead() {
+        let mut app = test_app();
+        app.init_resource::<Assets<Image>>();
+        let missing = Handle::<Image>::Uuid(bevy::asset::uuid::Uuid::from_u128(99), default());
+        let material = StandardMaterial {
+            alpha_mode: AlphaMode::Blend,
+            base_color_texture: Some(missing.clone()),
+            ..default()
+        };
+        let h = unique_material(
+            &mut app.world_mut().resource_mut::<Assets<StandardMaterial>>(),
+            material.clone(),
+        );
+        note_surface(&h, Some("glas.tga"), &material, false);
+        app.update();
+        let m = app
+            .world()
+            .resource::<Assets<StandardMaterial>>()
+            .get(&h)
+            .unwrap();
+        assert_eq!(m.alpha_mode, AlphaMode::Premultiplied);
+        assert_eq!(m.base_color_texture.as_ref().map(|t| t.id()), Some(missing.id()));
+        assert!((m.base_color.to_linear().red - GLASS_FALLBACK_TINT).abs() < 1e-6);
     }
 }
