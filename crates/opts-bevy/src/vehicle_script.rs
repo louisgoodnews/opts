@@ -81,8 +81,8 @@ impl VehicleScripts {
 }
 
 /// Wheel speed in rpm for a road speed (m/s) and a wheel radius (m).
-fn rpm_of(speed: f32, radius: f32) -> f32 {
-    speed / radius.max(0.1) * 60.0 / std::f32::consts::TAU
+fn rpm_of_omega(omega_rad_s: f32) -> f32 {
+    omega_rad_s * 60.0 / std::f32::consts::TAU
 }
 
 /// The host's state a vehicle's scripts may read, from the simulation and the session's clock
@@ -94,7 +94,6 @@ pub fn host_inputs(
     clock: Option<&crate::scenery_runtime::SceneryClock>,
 ) -> HostInputs {
     let sim = &controller.sim;
-    let speed = sim.chassis.forward_speed_m_s();
     let mut inputs = HostInputs {
         velocity_km_h: sim.chassis.forward_speed_km_h(),
         velocity_ground_km_h: sim.chassis.forward_speed_km_h(),
@@ -114,7 +113,12 @@ pub fn host_inputs(
     } else {
         sim.axles
             .iter()
-            .map(|a| rpm_of(speed, a.config.wheel_diameter_m * 0.5))
+            .map(|a| {
+                rpm_of_omega(
+                    0.5 * (a.left_wheel.angular_velocity_rad_s
+                        + a.right_wheel.angular_velocity_rad_s),
+                )
+            })
             .sum::<f32>()
             / sim.axles.len() as f32
     };
@@ -127,7 +131,6 @@ pub fn host_inputs(
         .iter()
         .enumerate()
         .map(|(i, axle)| {
-            let rpm = rpm_of(speed, axle.config.wheel_diameter_m * 0.5);
             let travel = |side: usize| {
                 sim.body
                     .as_ref()
@@ -135,7 +138,7 @@ pub fn host_inputs(
                     .map_or(0.0, |w| w.compression_m)
             };
             let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
-                speed_rpm: rpm,
+                speed_rpm: rpm_of_omega(w.angular_velocity_rad_s),
                 rotation_rad: w.rotation_rad,
                 steering_rad: -w.steer_angle_rad,
                 suspension_m: travel(side),
@@ -292,6 +295,17 @@ pub fn script_drive_system(
         let Ok(engine) = scripts.engine.lock() else {
             continue;
         };
+        // The scripts' spring factors, wheel by wheel.
+        for i in 0..controller.sim.axles.len().min(8) {
+            for (side, tag) in ["l", "r"].into_iter().enumerate() {
+                let name = format!("axle_springfactor_{i}_{tag}");
+                if engine.writes(&name) {
+                    controller
+                        .sim
+                        .set_spring_factor(i * 2 + side, engine.get(&name));
+                }
+            }
+        }
         let w = watch.entry(entity).or_default();
         let Some(drive) = script_outputs(&engine) else {
             if !w.warned {

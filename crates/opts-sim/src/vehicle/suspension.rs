@@ -162,6 +162,14 @@ const BUMP_STOP_STIFFNESS_N_M: f32 = 2.0e6;
 /// Integration substep of the body model (s).
 const BODY_SUBSTEP_S: f32 = 0.004;
 
+fn one() -> f32 {
+    1.0
+}
+
+/// Lowest and highest factor on a spring the physics accepts (a script bug must not turn the
+/// body into a rock or a jelly).
+pub const SPRING_FACTOR_RANGE: (f32, f32) = (0.2, 5.0);
+
 /// One wheel's spring and damper under the body.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WheelSuspension {
@@ -173,6 +181,10 @@ pub struct WheelSuspension {
     pub spring_n_m: f32,
     /// Damping of this wheel (N·s/m).
     pub damping_n_s_m: f32,
+    /// Factor on the spring rate the scripts write (`Axle_Springfactor_<n>_<l|r>`, air
+    /// suspension and kneeling); 1.0 is the file's spring.
+    #[serde(default = "one")]
+    pub spring_factor: f32,
     /// Load at rest (N).
     pub static_load_n: f32,
     /// Spring compression beyond the rest position (m, compression positive).
@@ -234,6 +246,7 @@ impl BodySuspension {
                     y_m: side * axle.track_width_m * 0.5,
                     spring_n_m: axle.spring_rate_n_m.max(10_000.0),
                     damping_n_s_m: axle.damping_n_s_m.max(1_000.0),
+                    spring_factor: 1.0,
                     static_load_n: load * 0.5,
                     compression_m: 0.0,
                     compression_rate_m_s: 0.0,
@@ -285,7 +298,8 @@ impl BodySuspension {
                     - w.y_m * self.roll_rate_rad_s;
                 let compression = -body + g;
                 let rate = -body_rate;
-                let mut force = w.spring_n_m * compression + w.damping_n_s_m * rate;
+                let mut force =
+                    w.spring_n_m * w.spring_factor * compression + w.damping_n_s_m * rate;
                 if compression > BUMP_STOP_TRAVEL_M {
                     force += BUMP_STOP_STIFFNESS_N_M * (compression - BUMP_STOP_TRAVEL_M);
                 }

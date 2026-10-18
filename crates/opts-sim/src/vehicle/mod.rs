@@ -373,7 +373,8 @@ impl VehicleSimulation {
         self.chassis.integrate_with_mass(
             net_longitudinal_force,
             yaw_torque,
-            self.inputs.is_braking(),
+            // Under script drive the scripts' brakes count, not the pedal alone.
+            self.inputs.is_braking() || self.script_drive.is_some_and(|d| d.brake_force_n > 0.0),
             dt,
             moving_mass_kg,
         );
@@ -469,6 +470,19 @@ impl VehicleSimulation {
             total -= speed.signum() * trailer_brake_n.min(ROAD_FRICTION * loads);
         }
         total
+    }
+
+    /// Sets the factor on the spring of wheel `wheel` (axle `n`: left `2n`, right `2n + 1`) from
+    /// the scripts' `Axle_Springfactor`; non-finite values and wheels that do not exist are
+    /// ignored, the factor is held to [`suspension::SPRING_FACTOR_RANGE`].
+    pub fn set_spring_factor(&mut self, wheel: usize, factor: f32) {
+        if !factor.is_finite() {
+            return;
+        }
+        let (lo, hi) = suspension::SPRING_FACTOR_RANGE;
+        if let Some(w) = self.body.as_mut().and_then(|b| b.wheels.get_mut(wheel)) {
+            w.spring_factor = factor.clamp(lo, hi);
+        }
     }
 
     /// Builds the body-on-wheels model from the axles, the mass and the spec (at rest, on the
@@ -1136,5 +1150,52 @@ mod wheel_model_tests {
             (w.angular_velocity_rad_s * w.rolling_radius_m - v).abs() < 0.2,
             "{v}"
         );
+    }
+
+    /// The scripts' spring factor stiffens the body: under the same braking the pitch is smaller
+    /// with a factor of 2, and a non-finite factor changes nothing.
+    #[test]
+    fn the_spring_factor_stiffens_the_suspension() {
+        let pitch = |factor: f32| {
+            let mut sim = VehicleSimulation::new_standard_bus(10_900.0, 5.85);
+            sim.inputs.set_parking_brake(false);
+            sim.chassis.local_velocity.y = 12.0;
+            sim.script_drive = Some(ScriptDrive {
+                wheel_torque_nm: 0.0,
+                brake_force_n: 30_000.0,
+            });
+            sim.step(1.0 / 60.0); // builds the body
+            for w in 0..sim.axles.len() * 2 {
+                sim.set_spring_factor(w, factor);
+                sim.set_spring_factor(w, f32::NAN);
+            }
+            for _ in 0..60 {
+                sim.step(1.0 / 60.0);
+            }
+            sim.body.as_ref().expect("body").pitch_rad.abs()
+        };
+        let (soft, stiff) = (pitch(1.0), pitch(2.0));
+        assert!(soft > 0.0 && stiff < 0.8 * soft, "{soft} vs {stiff}");
+    }
+
+    /// A vehicle the scripts' brakes hold on a slope does not roll backwards when the pedal
+    /// is untouched (M-0097): the guard counts the script brake.
+    #[test]
+    fn a_script_brake_stops_the_roll_through_zero() {
+        let mut sim = VehicleSimulation::new_standard_bus(10_900.0, 5.85);
+        sim.inputs.set_parking_brake(false);
+        sim.chassis.local_velocity.y = 1.0;
+        sim.script_drive = Some(ScriptDrive {
+            wheel_torque_nm: 0.0,
+            brake_force_n: 60_000.0,
+        });
+        for _ in 0..600 {
+            sim.step(1.0 / 60.0);
+            assert!(
+                sim.chassis.forward_speed_m_s() >= -0.001,
+                "rolled backwards"
+            );
+        }
+        assert!(sim.chassis.forward_speed_m_s().abs() < 0.01);
     }
 }

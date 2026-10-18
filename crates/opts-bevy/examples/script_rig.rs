@@ -358,6 +358,45 @@ fn unconsumed(writes: &BTreeSet<String>) -> BTreeSet<String> {
     out
 }
 
+/// Compares two physics reports; numbers may differ by 5 % (or 0.2 absolute: stopping and
+/// hold distances are small), `hz` is not compared (the golden is for the step size it names).
+fn physics_diff(
+    at: &str,
+    want: &serde_json::Value,
+    got: &serde_json::Value,
+    out: &mut Vec<String>,
+) {
+    use serde_json::Value::{Array, Number, Object};
+    match (want, got) {
+        (Object(a), Object(b)) => {
+            for (k, v) in a {
+                if k == "hz" {
+                    continue;
+                }
+                physics_diff(
+                    &format!("{at}.{k}"),
+                    v,
+                    b.get(k).unwrap_or(&serde_json::Value::Null),
+                    out,
+                );
+            }
+        }
+        (Array(a), Array(b)) if a.len() == b.len() => {
+            for (i, (x, y)) in a.iter().zip(b).enumerate() {
+                physics_diff(&format!("{at}[{i}]"), x, y, out);
+            }
+        }
+        (Number(a), Number(b)) => {
+            let (a, b) = (a.as_f64().unwrap_or(0.0), b.as_f64().unwrap_or(0.0));
+            if (a - b).abs() > 0.2 && (a - b).abs() > 0.05 * a.abs().max(b.abs()) {
+                out.push(format!("{at}: golden {a}, now {b}"));
+            }
+        }
+        (a, b) if a == b => {}
+        (a, b) => out.push(format!("{at}: golden {a}, now {b}")),
+    }
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let root = PathBuf::from(args.next().expect("OMSI root"));
@@ -450,6 +489,26 @@ fn main() {
                 "{rel}\n{}",
                 serde_json::to_string_pretty(&report).unwrap_or_default()
             );
+            let value = serde_json::to_value(&report).unwrap_or_default();
+            if let Some(path) = &golden {
+                let text = serde_json::to_string_pretty(&value).unwrap_or_default();
+                std::fs::write(path, format!("{text}\n")).expect("write the golden");
+                println!("golden written to {}", path.display());
+            }
+            if let Some(path) = &check {
+                let text = std::fs::read_to_string(path).expect("read the golden");
+                let want: serde_json::Value =
+                    serde_json::from_str(&text).expect("parse the golden");
+                let mut diffs = Vec::new();
+                physics_diff("", &want, &value, &mut diffs);
+                for d in &diffs {
+                    eprintln!("DIFFERS {d}");
+                }
+                if !diffs.is_empty() {
+                    std::process::exit(1);
+                }
+                println!("physics golden holds ({})", path.display());
+            }
             continue;
         }
         let seed = seed_of(&rel);
