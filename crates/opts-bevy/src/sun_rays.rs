@@ -37,12 +37,8 @@ pub const HAZE_BASE: f32 = 0.0006;
 /// volume's `density_factor`. Bevy's extinction is `density_factor × (absorption + scattering)`
 /// = `0.6 ×` with the defaults, so 1.0 makes the haze a little thinner than the distance fog.
 pub const FOG_TO_SHAFT: f32 = 1.0;
-/// Largest `density_factor`: thicker volumes wash the screen out and end every ray early. The
-/// distance fog already is the fog; the haze volume only adds the light shafts and its
-/// in-scattering takes the *sun's* colour, so a thick one (0.05) tinted the whole frame yellow at
-/// a low sun. At 0.008 (extinction 0.005 per metre, 40 % in 100 m) the shafts of a foggy morning
-/// stay and the tint is a hint.
-pub const HAZE_MAX: f32 = 0.008;
+/// Largest `density_factor`: thicker volumes wash the screen out and end every ray early.
+pub const HAZE_MAX: f32 = 0.05;
 /// `scattering_asymmetry`: strong forward scattering, shafts show when looking towards the light.
 pub const SHAFT_ASYMMETRY: f32 = 0.65;
 /// Overall factor of the volume's `light_intensity` (`gain`).
