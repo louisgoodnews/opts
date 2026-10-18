@@ -68,15 +68,15 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-31 | **Freeze when opening the content section of the settings**; any synchronous blocking task must run in another thread | UI / performance | [M-0088](../roadmap/phase-9/M-0088.md) | ✅ fixed (background facts, "Calculating…" placeholders; worst frame 213-350 ms -> 17 ms) |
 | R-32 | **Tile streaming** performs poorly, with noticeable freezes; investigate routes for improvement | performance | [M-0089](../roadmap/phase-4/M-0089.md) | 🟡 in progress 2026-10-18 |
 | R-33 | **Default position per view**, reset with **Shift + Space** | camera | [M-0084](../roadmap/phase-4/M-0084.md) (addendum) | 📝 open |
-| R-34 | A few **pedestrians have scrambled meshes** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-35 | **Hamburg maps:** loading objects fails partially, leaving absent or scrambled objects | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-36 | **Objects take quite a bit of time to load** | performance | [M-0090](../roadmap/phase-10/M-0090.md), [M-0089](../roadmap/phase-4/M-0089.md) | 📝 open |
-| R-37 | Many **parked-car scenery objects are partially transparent** and show the interior | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-38 | **Driving cars have no wheel animations** | content / traffic | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-39 | **Driving cars on Wuppertal maps are transparent** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-34 | A few **pedestrians have scrambled meshes** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
+| R-35 | **Hamburg maps:** loading objects fails partially, leaving absent or scrambled objects | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 fixed 2026-10-18 (M-0066); awaiting your check |
+| R-36 | **Objects take quite a bit of time to load** | performance | [M-0090](../roadmap/phase-10/M-0090.md), [M-0089](../roadmap/phase-4/M-0089.md) | 🟡 loading screen fixed (M-0089); cold model load open |
+| R-37 | Many **parked-car scenery objects are partially transparent** and show the interior | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 fixed (MI-0046/0047/0053/0056); awaiting your check |
+| R-38 | **Driving cars have no wheel animations** | content / traffic | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 implemented 2026-10-11, verified 2026-10-18; awaiting your check |
+| R-39 | **Driving cars on Wuppertal maps are transparent** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
 | R-40 | **Shadows** (probably overall graphics) need to look more realistic | rendering | [M-0091](../roadmap/phase-8/M-0091.md) | 📝 open |
-| R-41 | **Schwebebahn stations** on the Wuppertal map do not load entirely | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
-| R-42 | On Wuppertal some **T-crossings are flipped by 90°** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
+| R-41 | **Schwebebahn stations** on the Wuppertal map do not load entirely | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
+| R-42 | On Wuppertal some **T-crossings are flipped by 90°** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 🟡 not reproduced; I need a position (map, junction) |
 | R-43 | M-0071 and directly related items: implemented on a branch by an agent that merges it and removes its worktree itself | UI / process | [M-0071](../roadmap/phase-9/M-0071.md) | ✅ done 2026-10-13 |
 
 ## Notes
