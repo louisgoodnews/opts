@@ -173,6 +173,7 @@
 - [Vehicle Functions in OMSI (script catalogue)](simulation/vehicle-functions.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Map Streaming](architecture/map-streaming.md)
+- [Streaming Performance](architecture/streaming-performance.md)
 - [Terrain Carving](architecture/terrain-carving.md)
 - [Terrain and Water Rendering](architecture/terrain-rendering.md)
 - [Streaming Coordinates (Tile Grid)](architecture/streaming-coordinates.md)

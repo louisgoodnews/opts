@@ -66,7 +66,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | R-31 | **Freeze when opening the content section of the settings**; any synchronous blocking task must run in another thread | UI / performance | [M-0088](../roadmap/phase-9/M-0088.md) | ✅ fixed (background facts, "Calculating…" placeholders; worst frame 213-350 ms -> 17 ms) |
-| R-32 | **Tile streaming** performs poorly, with noticeable freezes; investigate routes for improvement | performance | [M-0089](../roadmap/phase-4/M-0089.md) | 📝 open |
+| R-32 | **Tile streaming** performs poorly, with noticeable freezes; investigate routes for improvement | performance | [M-0089](../roadmap/phase-4/M-0089.md) | 🟡 in progress 2026-10-18 |
 | R-33 | **Default position per view**, reset with **Shift + Space** | camera | [M-0084](../roadmap/phase-4/M-0084.md) (addendum) | 📝 open |
 | R-34 | A few **pedestrians have scrambled meshes** | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
 | R-35 | **Hamburg maps:** loading objects fails partially, leaving absent or scrambled objects | content | [M-0090](../roadmap/phase-10/M-0090.md) | 📝 open |
