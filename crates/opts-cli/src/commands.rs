@@ -1053,6 +1053,58 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("without `values`: `{context, repaint, family, count, options: [{name, label, description, kind, min, max, values, value, default, group, declared_in, evidence, range_unverified}], not_offered}`; with `values`: `{context, count, changed: [{name, previous, value}], live}`")
     .doc("The options of the vehicle in a drive (its player vehicle) or, outside a drive, of the vehicle chosen in *Plan a drive* once its repaints are discovered; `1001` when there is none. Each option has a `kind`: `switch` (0 or 1), `choice` (one of `values`), `number` (a whole number from `min` to `max`) or `fraction` (decimal, listed but not settable). `default` is the value of the chosen repaint; `evidence` tells whether repaints set it, the vehicle declares it and the vendor documents it; `range_unverified` marks a documented range that is narrower than what repaints set. Only variables the vehicle declares are offered (`not_offered` names the others). `values` is an object of option name to value: the whole batch is validated and applied all or none (`-32602` with `data.errors: [{key, code, message}]`). In the wizard a change is a choice of the plan, like the equipment dialog; in a drive it is set on the vehicle's scripts at once (`live: true`: a script that reads the variable only at start shows no change) and kept for a respawn. A name the vehicle does not offer is refused unless `allow_unlisted` is true."),
     c(
+        "config.list",
+        "scene",
+        "List the saved bus configurations (vehicle, repaint, equipment options) with their check against the installation",
+        "",
+    )
+    .since("1.9")
+    .result("`{count, configurations: [{id, name, vehicle, vehicle_name, repaint, setvars, notes, favourite, created, last_used, usable, problems: [{code, message}]}]}`")
+    .doc("The configurations are kept in `bus_configurations.json` beside the drive history. Every one is checked when listed: `usable` is false when its vehicle is not installed (any more); `problems` also names a repaint the vehicle no longer offers (`repaint_missing`, the default is used) and equipment values the vehicle's catalogue no longer accepts (`setvar_unknown`, `setvar_rejected`: not applied). `1008` when the file cannot be read (damaged, or from a newer version)."),
+    c(
+        "config.save",
+        "scene",
+        "Save the vehicle, repaint and equipment options of the plan (or of the driven vehicle) under a name",
+        "name:s@0 notes:s? replace:b?",
+    )
+    .since("1.9")
+    .result("`{id, replaced, configuration}`")
+    .doc("Takes the vehicle chosen in *Plan a drive* or, in a drive, the player's vehicle (it must be in the vehicle catalogue). An existing name (ignoring case) is refused with `-32602` unless `replace` is true; a replaced configuration keeps its id, creation time and favourite mark. `1001` when there is no vehicle to save."),
+    c(
+        "config.load",
+        "scene",
+        "Write a saved configuration into the plan (vehicle, repaint, equipment options)",
+        "id:s@0",
+    )
+    .since("1.9")
+    .result("`{id, name, context, vehicle, repaint, setvars, problems}`")
+    .doc("`id` is the id or the name. The configuration is checked first: a missing vehicle refuses it (`1008`, `data.problems`), a missing repaint falls back to the default and values the catalogue no longer accepts are left out; both are listed in `problems`. In a running drive nothing is changed (`1007`): configurations are loaded in *Plan a drive*. `1004` for an unknown configuration."),
+    c(
+        "config.delete",
+        "scene",
+        "Delete a saved configuration",
+        "id:s@0",
+    )
+    .since("1.9")
+    .result("`{ok, id}`"),
+    c(
+        "config.update",
+        "scene",
+        "Rename a saved configuration, change its notes or its favourite mark",
+        "id:s@0 name:s? notes:s? favourite:b?",
+    )
+    .since("1.9")
+    .result("`{configuration}`")
+    .doc("At least one of `name`, `notes`, `favourite`. A name that is empty or taken by another configuration is refused with `-32602`."),
+    c(
+        "config.duplicate",
+        "scene",
+        "Copy a saved configuration under a new name",
+        "id:s@0 name:s",
+    )
+    .since("1.9")
+    .result("`{id, configuration}`"),
+    c(
         "menu.state",
         "query",
         "Page, choices and free entry points of the in-game vehicle menu",

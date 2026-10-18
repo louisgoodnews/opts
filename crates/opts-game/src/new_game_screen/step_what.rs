@@ -7,6 +7,7 @@ use opts_gui::patterns::{
 };
 use opts_gui::prelude::*;
 
+use super::configs::{spawn_configs_section, ConfigLibrary};
 use super::livery::{spawn_livery_section, LiveryState};
 use super::planner::{Note, PlannerStep};
 use super::step_where::{HeroImage, StepList};
@@ -143,8 +144,9 @@ pub fn fill_what_detail(
     setup: &NewGameSetup,
     liveries: &mut LiveryState,
     vehicle: &VehicleItem,
+    library: &ConfigLibrary,
+    catalogue: &super::types::GameCatalogue,
 ) {
-    let _ = loc;
     let header = commands
         .spawn(Node {
             align_items: AlignItems::Center,
@@ -231,6 +233,19 @@ pub fn fill_what_detail(
         ));
     }
     kids.push(spawn_livery_section(commands, liveries, setup, vehicle));
+    let repaints = liveries
+        .repaints
+        .clone()
+        .filter(|_| liveries.vehicle == vehicle.id);
+    kids.push(spawn_configs_section(
+        commands,
+        loc,
+        library,
+        catalogue,
+        setup,
+        vehicle,
+        repaints.as_ref(),
+    ));
     kids.push(super::ui::action_button(
         commands,
         "wiz-what-none",

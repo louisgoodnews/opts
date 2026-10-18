@@ -188,6 +188,7 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
             opts_bevy::CalendarDate::new(1989, 10, 9),
         )))
         .insert_resource(fixture_catalogue())
+        .insert_resource(opts_game::new_game_screen::configs::ConfigLibrary::at(None))
         .insert_resource(opts_game::new_game_screen::PlannerHistory::at(Some(
             db.join("drive_history.json"),
         )))

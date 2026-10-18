@@ -187,3 +187,26 @@ load-minor-toast =
     }
 load-minor-title = Kleine Ladeprobleme
 load-close = Schließen
+wiz-configs-title = Konfigurationen
+wiz-configs-name = Name
+wiz-configs-save = Als Konfiguration speichern
+wiz-configs-empty = Noch keine Konfigurationen. Speichere Fahrzeug, Lackierung und Optionen, um sie später in einem Schritt zu laden.
+wiz-configs-favourite = Merken
+wiz-configs-unfavourite = Nicht mehr merken
+wiz-configs-duplicate = Duplizieren
+wiz-configs-delete = Löschen
+wiz-configs-delete-confirm = Löschen? Nochmal drücken
+wiz-configs-copy-suffix = (Kopie)
+wiz-configs-saved = Konfiguration „{ $name }“ gespeichert.
+wiz-configs-loaded = Konfiguration „{ $name }“ geladen.
+wiz-configs-loaded-partly =
+    { $count ->
+        [one] Konfiguration „{ $name }“ geladen; 1 Teil ist nicht mehr verfügbar und wurde ausgelassen.
+       *[other] Konfiguration „{ $name }“ geladen; { $count } Teile sind nicht mehr verfügbar und wurden ausgelassen.
+    }
+wiz-configs-load-failed = Konfiguration „{ $name }“ kann nicht geladen werden: Das Fahrzeug ist nicht installiert.
+wiz-configs-save-failed = Die Konfigurationen konnten nicht gespeichert werden: { $reason }
+wiz-configs-file-problem = Die Konfigurationsdatei ist nicht nutzbar: { $reason }
+wiz-configs-vehicle-missing = Das Fahrzeug ist nicht installiert.
+wiz-configs-repaint-missing = Die Lackierung „{ $name }“ wird nicht mehr angeboten; die Standardlackierung wird verwendet.
+wiz-configs-option-left-out = Die Option „{ $name }“ wird nicht mehr akzeptiert und ausgelassen.

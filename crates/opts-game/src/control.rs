@@ -53,6 +53,7 @@ impl Plugin for GameControlPlugin {
         crate::control_trace::register(&mut registry);
         crate::control_tiles::register(&mut registry);
         crate::control_setvars::register(&mut registry);
+        crate::control_configs::register(&mut registry);
         crate::control_trace::add_overlay(app);
         app.add_systems(Update, allow_session_reads);
         if let Some(mut hooks) = app
