@@ -66,3 +66,4 @@
 
 pub mod formats;
 pub mod l10n;
+pub mod setvars;

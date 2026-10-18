@@ -174,7 +174,7 @@ pub fn fill_options(
     setup: &NewGameSetup,
 ) {
     commands.entity(container).despawn_related::<Children>();
-    let items = setvars_from(reps, &setup.custom_setvars);
+    let items = setvars_from(reps, &setup.custom_setvars, &setup.selected_livery);
     if items.is_empty() {
         let line = commands
             .spawn(keyed(

@@ -30,6 +30,7 @@ pub(crate) mod rail;
 mod reload;
 mod respawn;
 mod scenery_objects;
+mod setvar_state;
 mod tile;
 mod tile_ground;
 mod tile_mode;

@@ -30,6 +30,7 @@ use crate::new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem};
 use crate::session_vehicles::{
     ops, DespawnReason, EntrySel, SessionVehicles, SpawnParams, VehicleId,
 };
+use opts_core::setvars::SetvarKind;
 
 /// AI vehicles closer than this to an entry point block it (m).
 const ENTRY_BLOCK_RADIUS_M: f32 = 12.0;
@@ -176,6 +177,8 @@ enum Action {
     CloseConfig,
     ResetConfig,
     Toggle(String),
+    /// Moves an option on by `delta` (a choice to its next value, a number by one).
+    Step(String, i32),
     Confirm,
     Back,
 }
@@ -348,6 +351,18 @@ fn menu_actions(
                 .map(|r| Action::Switch(r.id)),
             "respawn" => registry.active_id().map(Action::Respawn),
             "toggle" => Some(Action::Toggle(rest.clone())),
+            // `step <option> [-1|1]`: the option is the first word, the direction the last.
+            "step" => {
+                let mut words = rest.split_whitespace();
+                let delta = words
+                    .clone()
+                    .nth(1)
+                    .and_then(|d| d.parse().ok())
+                    .unwrap_or(1);
+                words
+                    .next()
+                    .map(|name| Action::Step(name.to_string(), delta))
+            }
             "vehicle" => catalogue
                 .as_deref()
                 .and_then(|c| {
@@ -445,6 +460,19 @@ fn menu_actions(
                 let current = menu_setvar_value(&menu, catalogue.as_deref(), &var);
                 menu.setvars.insert(var, i32::from(current == 0));
             }
+            Action::Step(var, delta) => {
+                let Some(veh) = menu
+                    .vehicle
+                    .and_then(|i| catalogue.as_deref().and_then(|c| c.vehicles.get(i)))
+                else {
+                    continue;
+                };
+                let items = get_vehicle_setvars(veh, &menu.setvars, &menu.repaint);
+                if let Some(item) = items.iter().find(|s| s.name == var) {
+                    let next = item.step(item.value, delta);
+                    menu.setvars.insert(var, next);
+                }
+            }
             Action::Confirm => {
                 let (Some(cat), Some(job)) = (catalogue.as_deref(), job.as_deref()) else {
                     continue;
@@ -493,7 +521,7 @@ fn menu_setvar_value(menu: &VehicleMenu, catalogue: Option<&GameCatalogue>, var:
     else {
         return 0;
     };
-    get_vehicle_setvars(veh, &menu.setvars)
+    get_vehicle_setvars(veh, &menu.setvars, &menu.repaint)
         .into_iter()
         .find(|s| s.name == var)
         .map_or(0, |s| s.value)
@@ -1069,7 +1097,7 @@ fn build_config(
         .spawn(commands);
     commands.entity(root).insert(MenuRoot);
     commands.entity(root).insert(GlobalZIndex(1100));
-    let items = get_vehicle_setvars(v, &menu.setvars);
+    let items = get_vehicle_setvars(v, &menu.setvars, &menu.repaint);
     commands.entity(content).with_children(|p| {
         label(p, "Vehicle configuration", 20.0, ColorRole::Primary);
         label(p, v.full_name.clone(), 12.0, ColorRole::OnSurfaceVariant);
@@ -1097,13 +1125,29 @@ fn build_config(
                         12.0,
                         ColorRole::OnSurface,
                     );
-                    let text = if item.value == 0 { "off (0)" } else { "on (1)" };
-                    button(
-                        row,
-                        text,
-                        item.value != 0,
-                        Action::Toggle(item.name.clone()),
-                    );
+                    match item.kind {
+                        SetvarKind::Choice | SetvarKind::Number => {
+                            row.spawn(Node {
+                                align_items: AlignItems::Center,
+                                column_gap: Val::Px(6.0),
+                                ..default()
+                            })
+                            .with_children(|stepper| {
+                                button(stepper, "‹", false, Action::Step(item.name.clone(), -1));
+                                label(stepper, item.value.to_string(), 12.0, ColorRole::OnSurface);
+                                button(stepper, "›", false, Action::Step(item.name.clone(), 1));
+                            });
+                        }
+                        _ => {
+                            let text = if item.value == 0 { "off (0)" } else { "on (1)" };
+                            button(
+                                row,
+                                text,
+                                item.value != 0,
+                                Action::Toggle(item.name.clone()),
+                            );
+                        }
+                    }
                 });
             }
         });

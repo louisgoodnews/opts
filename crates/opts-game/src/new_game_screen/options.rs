@@ -1,13 +1,16 @@
 //! The equipment dialog (*Configure…*): one switch per option the vehicle's repaints offer.
 
 use bevy::prelude::*;
+use opts_core::setvars::SetvarKind;
+use opts_gui::components::combobox::ComboboxBuilder;
 use opts_gui::components::modal::ModalEvent;
-use opts_gui::interaction::events::SwitchToggled;
+use opts_gui::components::text_field::TextFieldBuilder;
+use opts_gui::interaction::events::{ComboboxSelected, SwitchToggled, TextChanged};
 use opts_gui::l10n::Localization;
 use opts_gui::prelude::*;
 
 use super::livery::LiveryState;
-use super::setvars_discovery::setvars_from;
+use super::setvars_discovery::{setvars_from, SetvarItem};
 use super::types::{GameCatalogue, NewGameSetup};
 use super::ui::{action_button, column, keyed, plain, row, Emphasis, PlannerAction};
 
@@ -24,6 +27,86 @@ pub struct OptionSwitch {
     pub default: i32,
 }
 
+/// The choice box of an option with several values.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct OptionChoice {
+    /// Option name (the script variable).
+    pub name: String,
+    /// The value the livery gives it.
+    pub default: i32,
+    /// The values, in the order of the box.
+    pub values: Vec<i32>,
+}
+
+/// The number field of an option that takes a free number.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct OptionNumber {
+    /// Option name (the script variable).
+    pub name: String,
+    /// The value the livery gives it.
+    pub default: i32,
+    /// Smallest accepted value.
+    pub min: i32,
+    /// Largest accepted value.
+    pub max: i32,
+}
+
+/// The control that fits `item`: a switch, a choice box or a number field.
+fn option_control(commands: &mut Commands, item: &SetvarItem) -> Entity {
+    let id = format!("wizard.what.option.{}", opts_gui::ui_id::slug(&item.name));
+    match item.kind {
+        SetvarKind::Choice if !item.values.is_empty() => {
+            let at = item
+                .values
+                .iter()
+                .position(|v| *v == item.value)
+                .unwrap_or(0);
+            let combo = ComboboxBuilder::new(item.label.clone())
+                .with_options(item.values.iter().map(i32::to_string).collect())
+                .with_selected(at)
+                .spawn(commands);
+            commands.entity(combo).insert((
+                OptionChoice {
+                    name: item.name.clone(),
+                    default: item.default_value,
+                    values: item.values.clone(),
+                },
+                UiId::new(id),
+            ));
+            combo
+        }
+        SetvarKind::Number | SetvarKind::Choice => {
+            let field = TextFieldBuilder::outlined(item.label.clone())
+                .with_text(item.value.to_string())
+                .with_max_characters(8)
+                .spawn(commands);
+            commands.entity(field).insert((
+                OptionNumber {
+                    name: item.name.clone(),
+                    default: item.default_value,
+                    min: item.min_val,
+                    max: item.max_val,
+                },
+                UiId::new(id),
+            ));
+            field
+        }
+        SetvarKind::Switch | SetvarKind::Fraction => {
+            let switch = SwitchBuilder::new(item.label.clone())
+                .with_value(item.value != 0)
+                .spawn(commands);
+            commands.entity(switch).insert((
+                OptionSwitch {
+                    name: item.name.clone(),
+                    default: item.default_value,
+                },
+                UiId::new(id),
+            ));
+            switch
+        }
+    }
+}
+
 /// Opens the dialog for the chosen vehicle (nothing without discovered options).
 pub fn open_options(
     commands: &mut Commands,
@@ -35,7 +118,7 @@ pub fn open_options(
     let Some(reps) = &liveries.repaints else {
         return;
     };
-    let items = setvars_from(reps, &setup.custom_setvars);
+    let items = setvars_from(reps, &setup.custom_setvars, &setup.selected_livery);
     if items.is_empty() {
         return;
     }
@@ -80,20 +163,8 @@ pub fn open_options(
                 ..row(12.0)
             })
             .id();
-        let switch = SwitchBuilder::new(item.label.clone())
-            .with_value(item.value != 0)
-            .spawn(commands);
-        commands.entity(switch).insert((
-            OptionSwitch {
-                name: item.name.clone(),
-                default: item.default_value,
-            },
-            UiId::new(format!(
-                "wizard.what.option.{}",
-                opts_gui::ui_id::slug(&item.name)
-            )),
-        ));
-        commands.entity(line).add_child(switch);
+        let control = option_control(commands, item);
+        commands.entity(line).add_child(control);
         commands.entity(list).add_child(line);
     }
     let footer = commands
@@ -134,12 +205,52 @@ pub fn apply_switches(
         let Ok(s) = switches.get(t.entity) else {
             continue;
         };
-        let value = i32::from(t.is_on);
-        if value == s.default {
-            setup.custom_setvars.remove(&s.name);
-        } else {
-            setup.custom_setvars.insert(s.name.clone(), value);
+        set_override(&mut setup, &s.name, s.default, i32::from(t.is_on));
+    }
+}
+
+/// Writes a chosen value of a choice box into the choices.
+pub fn apply_choices(
+    mut chosen: MessageReader<ComboboxSelected>,
+    boxes: Query<&OptionChoice>,
+    mut setup: ResMut<NewGameSetup>,
+) {
+    for c in chosen.read() {
+        let Ok(b) = boxes.get(c.entity) else {
+            continue;
+        };
+        let Some(value) = b.values.get(c.selected_index).copied() else {
+            continue;
+        };
+        set_override(&mut setup, &b.name, b.default, value);
+    }
+}
+
+/// Writes an edited number into the choices (text that is not a number in range is ignored).
+pub fn apply_numbers(
+    mut edited: MessageReader<TextChanged>,
+    fields: Query<&OptionNumber>,
+    mut setup: ResMut<NewGameSetup>,
+) {
+    for t in edited.read() {
+        let Ok(f) = fields.get(t.entity) else {
+            continue;
+        };
+        let Ok(value) = t.text.trim().parse::<i32>() else {
+            continue;
+        };
+        if (f.min..=f.max).contains(&value) {
+            set_override(&mut setup, &f.name, f.default, value);
         }
+    }
+}
+
+/// A value equal to the livery's own is no override.
+fn set_override(setup: &mut NewGameSetup, name: &str, default: i32, value: i32) {
+    if value == default {
+        setup.custom_setvars.remove(name);
+    } else {
+        setup.custom_setvars.insert(name.to_string(), value);
     }
 }
 

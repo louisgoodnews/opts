@@ -365,7 +365,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Versioned, section-based save format with a registry so weather, timetables and more can be added; Load game becomes real (R-05).
 - [ ] **🧰 Bus Configurations** — [M-0077](docs/src/roadmap/phase-10/M-0077.md)
   - [ ] Named, quick-loadable configurations of bus, repaint and setvars (R-15).
-- [ ] **🎛️ Setvars** — [M-0078](docs/src/roadmap/phase-10/M-0078.md)
+- [x] **🎛️ Setvars** — [M-0078](docs/src/roadmap/phase-10/M-0078.md)
   - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [ ] **⚙️ Vehicle Dynamics** — [M-0073](docs/src/roadmap/phase-10/M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).

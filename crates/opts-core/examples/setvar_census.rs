@@ -48,6 +48,8 @@ struct Vehicle {
     declared: BTreeMap<String, BTreeSet<String>>,
     /// Names of the declaring lists.
     lists: BTreeSet<String>,
+    /// Every `[setvar]` line of every repaint, as parsed.
+    observed: Vec<opts_core::formats::cti::CtiSetvar>,
 }
 
 fn read_vehicle(root: &Path, bus: &Path) -> Option<Vehicle> {
@@ -96,6 +98,7 @@ fn read_vehicle(root: &Path, bus: &Path) -> Option<Vehicle> {
             let cti = CtiFile::parse(&bytes);
             entry.0 += 1;
             entry.1 += cti.setvars.len();
+            v.observed.extend(cti.setvars.iter().cloned());
             for sv in cti.setvars {
                 let name = sv.variable.to_lowercase();
                 v.setvars.entry(name.clone()).or_default().insert(sv.value);
@@ -391,4 +394,45 @@ fn main() {
     for (n, c) in und.iter().take(15) {
         println!("  {n:32} {c}");
     }
+
+    // 4. The catalogue the game builds from this evidence.
+    use opts_core::setvars::{family_of_folder, SetvarCatalogue, SetvarKind};
+    let vehicles_root = root.join("Vehicles");
+    let (mut built, mut matched, mut offered, mut hidden) = (0usize, 0usize, Vec::new(), 0usize);
+    let mut kinds: BTreeMap<&str, usize> = BTreeMap::new();
+    let (mut unverified, mut doc_only) = (0usize, 0usize);
+    for (path, v) in vehicles.iter().filter(|(_, v)| !v.setvars.is_empty()) {
+        let folder = Path::new(path)
+            .strip_prefix(&vehicles_root)
+            .ok()
+            .and_then(|p| p.components().next())
+            .map(|c| c.as_os_str().to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let family = family_of_folder(&folder);
+        matched += usize::from(family.is_some());
+        let c = SetvarCatalogue::build(&v.observed, &v.declared, family);
+        built += 1;
+        offered.push(c.entries.len());
+        hidden += c.undeclared.len();
+        for e in &c.entries {
+            let k = match e.kind {
+                SetvarKind::Switch => "switch",
+                SetvarKind::Choice => "choice",
+                SetvarKind::Number => "number",
+                SetvarKind::Fraction => "fraction",
+            };
+            *kinds.entry(k).or_default() += 1;
+            unverified += usize::from(e.range_unverified);
+            doc_only += usize::from(!e.evidence.observed);
+        }
+    }
+    println!(
+        "\n## Catalogue built for {built} vehicles ({matched} matched to a documented family)"
+    );
+    println!(
+        "entries per vehicle: median {}, max {}; names left out as undeclared {hidden}",
+        median(offered.clone()),
+        offered.iter().max().copied().unwrap_or(0)
+    );
+    println!("entries by kind: {kinds:?}; range wider than documented {unverified}; documented but never set by a repaint {doc_only}");
 }

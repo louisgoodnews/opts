@@ -26,6 +26,54 @@ pub struct VehicleRepaints {
     pub setvars: BTreeMap<String, Vec<(String, String)>>,
     /// Texture files per repaint name and `[CTCTexture]` slot (resolved paths).
     pub textures: BTreeMap<String, Vec<(String, PathBuf)>>,
+    /// The variables the vehicle declares in its `[varnamelist]` files (lower-case name to the
+    /// list files); empty when they are not known (a discovery from a model alone).
+    pub declared: BTreeMap<String, std::collections::BTreeSet<String>>,
+    /// The folder below `Vehicles` the vehicle lives in (the key of the documented setvar
+    /// families); empty when unknown.
+    pub folder: String,
+}
+
+/// The first folder below `Vehicles` of a vehicle file or folder (the vendor's family folder).
+#[must_use]
+pub fn family_folder(path: &Path) -> String {
+    let mut parts = path.components().map(|c| c.as_os_str().to_string_lossy());
+    parts
+        .by_ref()
+        .find(|c| c.eq_ignore_ascii_case("Vehicles"))
+        .and_then(|_| parts.next())
+        .map(|c| c.into_owned())
+        .unwrap_or_default()
+}
+
+/// The names the `[varnamelist]` files of a vehicle declare, each with the file that declares it.
+fn declared_names(
+    install: &OmsiInstall,
+    bus_dir: &Path,
+    lists: &[String],
+) -> BTreeMap<String, std::collections::BTreeSet<String>> {
+    let mut out: BTreeMap<String, std::collections::BTreeSet<String>> = BTreeMap::new();
+    for rel in lists {
+        let Some(path) = install
+            .find_in(bus_dir, rel)
+            .or_else(|| install.find_file(rel))
+        else {
+            continue;
+        };
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let file = path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_lowercase())
+            .unwrap_or_default();
+        for name in opts_core::formats::varlist::VarList::parse(&bytes).names {
+            out.entry(name.to_lowercase())
+                .or_default()
+                .insert(file.clone());
+        }
+    }
+    out
 }
 
 /// Folders a `[CTC]` texture path is resolved against: the vehicle folder, its parent and
@@ -70,19 +118,25 @@ pub fn discover_at(root: &Path, bus_path: &Path, default_name: &str) -> VehicleR
     }
     let install = OmsiInstall::new(root);
     let bus_dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let model = (|| -> Result<ModelConfig, String> {
+    out.folder = family_folder(bus_path);
+    let model = (|| -> Result<(ModelConfig, BTreeMap<String, std::collections::BTreeSet<String>>), String> {
         let manifest =
             BusManifest::parse_bytes(&std::fs::read(bus_path).map_err(|e| e.to_string())?)
                 .map_err(|e| e.to_string())?;
+        let declared = declared_names(&install, &bus_dir, &manifest.varnamelists);
         let rel = manifest.model_cfg.ok_or("no [model] entry")?;
         let cfg = install
             .find_in(&bus_dir, &rel)
             .ok_or_else(|| format!("model config not found: {rel}"))?;
-        ModelConfig::parse_bytes(&std::fs::read(cfg).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())
+        let model = ModelConfig::parse_bytes(&std::fs::read(cfg).map_err(|e| e.to_string())?)
+            .map_err(|e| e.to_string())?;
+        Ok((model, declared))
     })();
     let model = match model {
-        Ok(m) => m,
+        Ok((m, declared)) => {
+            out.declared = declared;
+            m
+        }
         Err(e) => {
             tracing::error!(bus = %bus_path.display(), "cannot read model config for repaints: {e}");
             return out;
@@ -104,6 +158,7 @@ pub fn discover_for_model(
 ) -> VehicleRepaints {
     let mut out = VehicleRepaints {
         default_name: default_name.to_string(),
+        folder: family_folder(vehicle_dir),
         ..Default::default()
     };
     if !default_name.is_empty() {

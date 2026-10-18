@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.7.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.8.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -301,6 +301,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`session.delete_save`](#sessiondelete_save) | `name` (string) | 1.3 | Delete a save and its backup (no confirmation) |
 | [`session.rename_save`](#sessionrename_save) | `name` (string)<br>`new_name` (string) | 1.3 | Change the name of a save (the file keeps its id) |
 | [`menu.do`](#menudo) | `command` (string) | 1.0 | Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...) |
+| [`vehicle.setvars`](#vehiclesetvars) | `values?` (json)<br>`allow_unlisted?` (boolean) | 1.8 | List or change the equipment options (setvars) of the vehicle being planned or driven |
 
 ### `scene.load_map`
 
@@ -495,6 +496,14 @@ Change the name of a save (the file keeps its id).
 Drive the in-game vehicle menu (open, spawn, vehicle &lt;text&gt;, repaint &lt;text&gt;, done, ...).
 
 Queues one command of the vehicle menu (see the in-game vehicle menu page); read the result with `menu.state`.
+
+### `vehicle.setvars`
+
+List or change the equipment options (setvars) of the vehicle being planned or driven.
+
+**Result:** without `values`: `{context, repaint, family, count, options: [{name, label, description, kind, min, max, values, value, default, group, declared_in, evidence, range_unverified}], not_offered}`; with `values`: `{context, count, changed: [{name, previous, value}], live}`
+
+The options of the vehicle in a drive (its player vehicle) or, outside a drive, of the vehicle chosen in *Plan a drive* once its repaints are discovered; `1001` when there is none. Each option has a `kind`: `switch` (0 or 1), `choice` (one of `values`), `number` (a whole number from `min` to `max`) or `fraction` (decimal, listed but not settable). `default` is the value of the chosen repaint; `evidence` tells whether repaints set it, the vehicle declares it and the vendor documents it; `range_unverified` marks a documented range that is narrower than what repaints set. Only variables the vehicle declares are offered (`not_offered` names the others). `values` is an object of option name to value: the whole batch is validated and applied all or none (`-32602` with `data.errors: [{key, code, message}]`). In the wizard a change is a choice of the plan, like the equipment dialog; in a drive it is set on the vehicle's scripts at once (`live: true`: a script that reads the variable only at start shows no change) and kept for a respawn. A name the vehicle does not offer is refused unless `allow_unlisted` is true.
 
 ## Group `settings`
 
