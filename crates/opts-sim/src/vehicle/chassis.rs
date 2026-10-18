@@ -147,8 +147,11 @@ impl ChassisState {
         self.yaw_rate_rad_s += yaw_accel * dt;
 
         // 3. Defensive zero-speed clamping to eliminate stationary numerical vibration
+        // (A vehicle that the net force pushes on, a slope against a weak parking brake, is not
+        // held: only a vehicle that is slowing down or standing is.)
+        let pushed_on = accel_y * self.local_velocity.y > 0.0;
         if is_braking
-            && (self.local_velocity.y.abs() < 0.1
+            && ((self.local_velocity.y.abs() < 0.1 && !pushed_on)
                 || (prev_v_y > 0.0 && self.local_velocity.y < 0.0)
                 || (prev_v_y < 0.0 && self.local_velocity.y > 0.0))
         {

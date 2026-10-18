@@ -292,10 +292,33 @@ pub fn follow_ground(
         let blend = 1.0 - (-TILT_RATE * dt).exp();
         motion.pitch += (pitch_goal - motion.pitch) * blend;
         motion.roll += (roll_goal - motion.roll) * blend;
-        tf.translation.y = ch.elevation_z;
+        // The body on its springs (M-0073): heave, pitch and roll of the suspension model, on top
+        // of the plane through the wheels (its roll is right side down positive, this one's right
+        // side up).
+        let (heave, spring_pitch, spring_roll) = controller
+            .sim
+            .body
+            .as_ref()
+            .map_or((0.0, 0.0, 0.0), |b| (b.heave_m, b.pitch_rad, -b.roll_rad));
+        // What the ground under each wheel adds to the plane through the four (the twist), for
+        // the springs: front pair and rear pair of the outer axles.
+        let twist = (fl - fr - rl + rr) * 0.25;
+        let sim = &mut controller.sim;
+        let wheels = sim.axles.len() * 2;
+        sim.wheel_ground_m.clear();
+        sim.wheel_ground_m.resize(wheels, 0.0);
+        if wheels >= 4 {
+            // Axle 0 is the front one by the files' convention; the last is the rear.
+            let last = wheels - 2;
+            sim.wheel_ground_m[0] = twist;
+            sim.wheel_ground_m[1] = -twist;
+            sim.wheel_ground_m[last] = -twist;
+            sim.wheel_ground_m[last + 1] = twist;
+        }
+        tf.translation.y = sim.chassis.elevation_z + heave;
         tf.rotation = Quat::from_rotation_y(-h)
-            * Quat::from_rotation_x(motion.pitch)
-            * Quat::from_rotation_z(motion.roll);
+            * Quat::from_rotation_x(motion.pitch + spring_pitch)
+            * Quat::from_rotation_z(motion.roll + spring_roll);
     }
 }
 

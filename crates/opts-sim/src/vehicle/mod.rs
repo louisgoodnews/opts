@@ -5,6 +5,7 @@
 //! compliance, and optional multi-unit trailer articulation.
 
 pub mod axle;
+pub mod brakes;
 pub mod chassis;
 pub mod consist;
 pub mod drivetrain;
@@ -15,6 +16,7 @@ pub mod suspension;
 pub mod trailer;
 
 use self::axle::AxleState;
+use self::brakes::{BrakeSystem, BRAKE_FACTOR};
 use self::chassis::ChassisState;
 pub use self::consist::UnitLoad;
 use self::consist::{driven_and_braked_load_n, UnitAxle, GRAVITY};
@@ -22,7 +24,7 @@ use self::drivetrain::DrivetrainModel;
 use self::ground::{joint_beta_deg, GroundProbe, GroundSample, UnitBody};
 use self::inputs::VehicleInputs;
 use self::spec::VehicleDynamicsSpec;
-use self::suspension::SuspensionModel;
+use self::suspension::{BodySuspension, SuspensionModel};
 use self::trailer::TrailerKinematics;
 
 use glam::{DVec2, Vec2};
@@ -44,6 +46,34 @@ pub struct ScriptDrive {
 /// Friction coefficient between tyres and road that limits traction and braking of a road
 /// vehicle (dry asphalt).
 pub const ROAD_FRICTION: f32 = 0.85;
+
+/// Speed below which a vehicle counts as standing (m/s).
+const STANDSTILL_M_S: f32 = 0.01;
+
+/// The net force along the vehicle (N, forward positive). Moving, the brakes and the resistances
+/// oppose the motion; standing, they hold: the vehicle stays put while the driving force
+/// (`tractive` plus gravity along the road, `grade`) does not exceed what the brakes and the
+/// rolling resistance withstand, and otherwise moves under the excess.
+fn longitudinal_force(
+    speed: f32,
+    tractive: f32,
+    grade: f32,
+    brake: f32,
+    drag: f32,
+    rolling: f32,
+) -> f32 {
+    if speed.abs() > STANDSTILL_M_S {
+        let against = if speed > 0.0 { -1.0 } else { 1.0 };
+        return tractive + grade + against * (brake + drag + rolling);
+    }
+    let driving = tractive + grade;
+    let hold = brake + rolling;
+    if driving.abs() <= hold {
+        0.0
+    } else {
+        driving - driving.signum() * hold
+    }
+}
 
 /// High-level vehicle physics simulation orchestrator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -91,6 +121,17 @@ pub struct VehicleSimulation {
     /// resistance, and where each value comes from (M-0073).
     #[serde(default)]
     pub spec: VehicleDynamicsSpec,
+    /// The body on its wheels: per-wheel spring and damper, heave, pitch and roll (M-0073).
+    /// `None` until the first step builds it from the axles.
+    #[serde(default)]
+    pub body: Option<BodySuspension>,
+    /// The service brake's pressure and per-axle forces (M-0073).
+    #[serde(default)]
+    pub brakes: BrakeSystem,
+    /// Height of the ground under each wheel against the plane the chassis follows (m; axle by
+    /// axle, left then right): the host fills it from the terrain, missing entries are 0.
+    #[serde(default)]
+    pub wheel_ground_m: Vec<f32>,
 }
 
 impl Default for VehicleSimulation {
@@ -153,6 +194,9 @@ impl VehicleSimulation {
             wheelbase_m: wheelbase,
             script_drive: None,
             spec: VehicleDynamicsSpec::default(),
+            body: None,
+            brakes: BrakeSystem::default(),
+            wheel_ground_m: Vec::new(),
         }
     }
 
@@ -195,6 +239,9 @@ impl VehicleSimulation {
             wheelbase_m: wheelbase,
             script_drive: None,
             spec: VehicleDynamicsSpec::default(),
+            body: None,
+            brakes: BrakeSystem::default(),
+            wheel_ground_m: Vec::new(),
         };
         sim.apply_spec(spec);
         sim
@@ -209,6 +256,8 @@ impl VehicleSimulation {
         self.chassis.yaw_inertia_kg_m2 = spec.yaw_inertia_kg_m2.value;
         self.drivetrain.rolling_coefficient = spec.rolling_coefficient.value;
         self.spec = spec;
+        // Rebuilt from the new inertia and centre of gravity on the next step.
+        self.body = None;
     }
 
     /// Steps the vehicle simulation by a fixed time delta `dt`.
@@ -249,27 +298,28 @@ impl VehicleSimulation {
             forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
         }
 
-        let net_longitudinal_force =
-            if speed.abs() < 0.01 && !self.inputs.is_braking() && forces.tractive_force_n == 0.0 {
-                0.0
-            } else {
-                // Braking always opposes velocity direction
-                let brake_dir = if speed > 0.001 {
-                    -1.0
-                } else if speed < -0.001 {
-                    1.0
-                } else if forces.tractive_force_n > 0.0 {
-                    -1.0
-                } else {
-                    1.0
-                };
-                let drag_dir = if speed > 0.0 { -1.0 } else { 1.0 };
+        // The service brake: built-in drivetrain only (a script drive brings its own force).
+        if self.script_drive.is_none() {
+            let (caps, limits) = self.brake_axles();
+            self.brakes
+                .size_for(caps.iter().sum::<f32>() / BRAKE_FACTOR);
+            forces.braking_force_n +=
+                self.brakes
+                    .step(self.inputs.service_brake(), &caps, &limits, dt);
+        } else {
+            self.brakes.pressure = 0.0;
+        }
 
-                forces.tractive_force_n
-                    + (forces.braking_force_n * brake_dir)
-                    + (forces.drag_force_n * drag_dir)
-                    + (forces.rolling_resistance_n * drag_dir)
-            };
+        // Gravity along the road: the chassis pitch of the last ground sample, nose up positive.
+        let grade_n = -self.head_body.map_or(0.0, |b| b.pitch.sin()) * moving_mass_kg * GRAVITY;
+        let net_longitudinal_force = longitudinal_force(
+            speed,
+            forces.tractive_force_n,
+            grade_n,
+            forces.braking_force_n,
+            forces.drag_force_n,
+            forces.rolling_resistance_n,
+        );
 
         // 3. Kinematic turning yaw rate: omega = (v / L) * tan(delta)
         let yaw_rate = (speed / self.wheelbase_m) * central_steer_rad.tan();
@@ -285,24 +335,27 @@ impl VehicleSimulation {
             moving_mass_kg,
         );
 
-        // 5. Axle rotation and suspension load compliance
-        let axle_positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
-        let static_loads = self
-            .suspension
-            .compute_static_loads(&axle_positions, self.chassis.total_mass_kg);
-        let dynamic_loads = self.suspension.compute_dynamic_loads(
-            &static_loads,
-            &axle_positions,
-            self.chassis.total_mass_kg,
-            self.chassis.local_acceleration.y,
-        );
-
-        for (idx, axle) in self.axles.iter_mut().enumerate() {
+        // 5. Axle rotation and the body on its wheels: heave, pitch, roll and the load on every
+        // wheel from the accelerations and the ground under the wheels.
+        if self.body.is_none() {
+            self.rebuild_body();
+        }
+        let a_lat = speed * self.chassis.yaw_rate_rad_s;
+        let a_long = self.chassis.local_acceleration.y;
+        if let Some(body) = self.body.as_mut() {
+            body.step(dt, a_long, a_lat, &self.wheel_ground_m);
+            for (i, axle) in self.axles.iter_mut().enumerate() {
+                if let Some(w) = body.wheels.get(i * 2..i * 2 + 2) {
+                    axle.left_wheel.vertical_load_n = w[0].load_n;
+                    axle.right_wheel.vertical_load_n = w[1].load_n;
+                    axle.suspension_deflection_m = 0.5 * (w[0].compression_m + w[1].compression_m);
+                    axle.suspension_velocity_m_s =
+                        0.5 * (w[0].compression_rate_m_s + w[1].compression_rate_m_s);
+                }
+            }
+        }
+        for axle in &mut self.axles {
             axle.update_rotation(self.chassis.forward_speed_m_s(), dt);
-            let static_n = static_loads.get(idx).copied().unwrap_or(0.0);
-            let dynamic_n = dynamic_loads.get(idx).copied().unwrap_or(0.0);
-            self.suspension
-                .update_axle_suspension(axle, static_n, dynamic_n, dt);
         }
 
         // 6. Consist kinematics: every unit follows the one ahead, starting with the chassis.
@@ -311,6 +364,49 @@ impl VehicleSimulation {
             let st = unit.step(leader.0, leader.1, f64::from(dt));
             leader = (st.origin, st.heading);
         }
+    }
+
+    /// Builds the body-on-wheels model from the axles, the mass and the spec (at rest, on the
+    /// static axle loads).
+    pub fn rebuild_body(&mut self) {
+        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
+        let loads = self
+            .suspension
+            .compute_static_loads(&positions, self.chassis.total_mass_kg);
+        let configs: Vec<_> = self.axles.iter().map(|a| a.config.clone()).collect();
+        self.body = Some(BodySuspension::new(
+            &configs,
+            &loads,
+            self.chassis.total_mass_kg,
+            self.spec.pitch_inertia_kg_m2.value,
+            self.spec.roll_inertia_kg_m2.value,
+            self.suspension.cg_height_m,
+        ));
+        for (axle, load) in self.axles.iter_mut().zip(&loads) {
+            axle.left_wheel.vertical_load_n = load * 0.5;
+            axle.right_wheel.vertical_load_n = load * 0.5;
+        }
+    }
+
+    /// Brake force at full pressure and what the tyres carry now, per axle over all units (the
+    /// head's axles first, then each following unit's): the inputs of the [`BrakeSystem`].
+    fn brake_axles(&self) -> (Vec<f32>, Vec<f32>) {
+        let (mut caps, mut limits) = (Vec::new(), Vec::new());
+        for (i, a) in self.axles.iter().enumerate() {
+            caps.push(BRAKE_FACTOR * a.config.max_force_n);
+            let load = self.body.as_ref().map_or(
+                a.left_wheel.vertical_load_n + a.right_wheel.vertical_load_n,
+                |b| b.axle_load_n(i),
+            );
+            limits.push(ROAD_FRICTION * load);
+        }
+        for unit in &self.trailer_loads {
+            for (axle, load) in unit.axles.iter().zip(unit.axle_loads_n()) {
+                caps.push(BRAKE_FACTOR * axle.rated_n);
+                limits.push(ROAD_FRICTION * load);
+            }
+        }
+        (caps, limits)
     }
 
     /// Position and heading (compass radians) of the chassis in the precision of the consist.
@@ -497,6 +593,7 @@ impl VehicleSimulation {
                     UnitAxle {
                         longitudinal_m: a.config.longitudinal_m,
                         is_driven: a.config.is_driven || !head_has_driven,
+                        rated_n: a.config.max_force_n,
                     },
                     n,
                 )
@@ -693,6 +790,7 @@ mod tests {
                 .map(|&(y, is_driven)| UnitAxle {
                     longitudinal_m: y,
                     is_driven,
+                    rated_n: consist::DEFAULT_RATED_AXLE_N,
                 })
                 .collect(),
         }

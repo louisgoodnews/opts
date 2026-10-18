@@ -53,9 +53,16 @@ fn a_consist_accelerates_like_a_solo_vehicle_of_the_same_total_mass() {
     );
 }
 
+/// With brakes that are not the limit (every head axle rated for 400 kN) the tyres decide, and a
+/// consist stops like a solo vehicle of the same total mass. With the brakes sized for the rated
+/// loads the number of braked axles and their ratings matter instead (`the_brakes_are_sized_...`
+/// in `vehicle_dynamics_validation.rs`).
 #[test]
 fn a_consist_stops_like_a_solo_vehicle_of_the_same_total_mass() {
     let stop = |mut sim: VehicleSimulation| {
+        for a in &mut sim.axles {
+            a.config.max_force_n = 400_000.0;
+        }
         full_throttle(&mut sim, 5.0);
         let start = sim.chassis.position.y;
         sim.inputs.set_throttle(0.0);
