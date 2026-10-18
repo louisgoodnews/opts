@@ -17,14 +17,15 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — 🟢 Complete (audit 5037f89a F-013, F-018, F-020–F-023)
 - [M-0042 — CI & Toolchain Hardening](M-0042.md) — 🟡 Written, never run — blocked on [M-0052](M-0052.md) (audit 5037f89a F-024–F-026)
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Merged to `master` 2026-10-11; `Interaction` follow-up open
+- [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems](M-0029.md) — ⏳ Planned
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
 - [M-0072 — Settings and Configuration through the Control Protocol](M-0072.md) — 🟢 Complete 2026-10-18 (R-10)
-- [M-0081 — `opts-hardware`: Privacy-Respecting Hardware Capability Probe](M-0081.md) — 📝 Planned (R-22)
-- [M-0082 — Mesh Instancing Research](M-0082.md) — 🔬 Research branch started (R-23)
+- [M-0081 — `opts-hardware`: Privacy-Respecting Hardware Capability Probe](M-0081.md) — 🟡 Implemented and merged into master (R-22); untested on macOS and Windows hardware
+- [M-0082 — Mesh Instancing Research](M-0082.md) — 🔬 Research done 2026-10-13, merged into master (R-23)
 - [M-0085 — Reflections Research](M-0085.md) — 🔬 Research branch planned (R-27)
-- [M-0087 — Scene Trace: Which Mesh Is Where (Debug Mode)](M-0087.md) — 📝 Planned (R-30)
-- [M-0074 — Roadmap Adherence and Expansion](M-0074.md) — 📝 Planned, 🔴 high (R-06)
+- [M-0087 — Scene Trace: Which Mesh Is Where (Debug Mode)](M-0087.md) — ✅ Implemented 2026-10-14 (R-30)
+- [M-0074 — Roadmap Adherence and Expansion](M-0074.md) — 🟡 In progress (audit and checks done), 🔴 high (R-06)
 - [M-0054 — Scenery Object Load Verification (`opts-benchmark`)](M-0054.md) — 🟡 Spec done (Phase A), harness planned, 🔴 high
 
 ## Checklist
@@ -45,7 +46,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [x] **🎛️ Remote Control & Live Editing** — [M-0043](M-0043.md)
   - [x] Design documents and ADRs: [Control Protocol](../../architecture/control-protocol.md), [Hot Reload](../../architecture/hot-reload.md), ADR-0006, ADR-0007.
   - [x] `opts-cli` client, `opts-bevy::control` server and `opts-bevy::hot_reload` ([final report](../../meta/control-protocol-2026-10-10.md)).
-- [ ] **⬆️ Engine Upgrade** — [M-0044](M-0044.md)
+- [x] **⬆️ Engine Upgrade** — [M-0044](M-0044.md)
   - [x] Migrate Bevy 0.14 → 0.19.1 (done in one step; see [M-0044](M-0044.md)).
 - [ ] **⬆️ Bevy 0.20** — [M-0047](M-0047.md) (plan: [strategy](../../architecture/bevy-0-20-dlss.md))
 - [ ] **🎞️ DLSS upscaling (optional feature)** — [M-0048](M-0048.md)

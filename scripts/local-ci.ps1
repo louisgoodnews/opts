@@ -77,6 +77,26 @@ if (Get-Command mdbook -ErrorAction SilentlyContinue) {
     $statusMdbook = "skipped (not installed)"
 }
 
+# 6. Roadmap and architecture documents (M-0074)
+Write-Host ""
+Write-Host "--- Checking roadmap copies, roadmap drift and the crate graph ---" -ForegroundColor Yellow
+if (Get-Command python3 -ErrorAction SilentlyContinue) {
+    $roadmapOk = $true
+    foreach ($check in @("gen_roadmap_copy.py", "roadmap_audit.py", "crate_graph.py")) {
+        python3 "scripts/$check" --check
+        if ($LASTEXITCODE -ne 0) { $roadmapOk = $false }
+    }
+    if ($roadmapOk) {
+        $statusRoadmap = "✓"
+    } else {
+        $statusRoadmap = "✗"
+        $failed = $true
+    }
+} else {
+    Write-Warning "python3 is not installed; skipping the roadmap checks"
+    $statusRoadmap = "skipped (no python3)"
+}
+
 Write-Host ""
 Write-Host "=== Local CI Summary ===" -ForegroundColor Cyan
 Write-Host "  fmt:      $statusFmt"
@@ -84,6 +104,7 @@ Write-Host "  clippy:   $statusClippy"
 Write-Host "  test:     $statusTest"
 Write-Host "  doc:      $statusDoc"
 Write-Host "  mdbook:   $statusMdbook"
+Write-Host "  roadmap:  $statusRoadmap"
 
 if ($failed) {
     Write-Host ""

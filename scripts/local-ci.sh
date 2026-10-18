@@ -89,6 +89,29 @@ else
     STATUS_MDBOOK="skipped (not installed)"
 fi
 
+# 6. Roadmap and architecture documents (M-0074)
+echo
+echo "--- Checking roadmap copies, roadmap drift and the crate graph ---"
+if command -v python3 >/dev/null 2>&1; then
+    ROADMAP_OK=1
+    for check in "gen_roadmap_copy.py --check" "roadmap_audit.py --check" "crate_graph.py --check"; do
+        # shellcheck disable=SC2086
+        if ! python3 scripts/$check; then
+            echo >&2 "scripts/$check failed"
+            ROADMAP_OK=0
+        fi
+    done
+    if [ "$ROADMAP_OK" -eq 1 ]; then
+        STATUS_ROADMAP="✓"
+    else
+        STATUS_ROADMAP="✗"
+        FAILED=1
+    fi
+else
+    echo "WARN: python3 is not installed; skipping the roadmap checks"
+    STATUS_ROADMAP="skipped (no python3)"
+fi
+
 echo
 echo "=== Local CI Summary ==="
 printf "  fmt:      %s\n" "$STATUS_FMT"
@@ -96,6 +119,7 @@ printf "  clippy:   %s\n" "$STATUS_CLIPPY"
 printf "  test:     %s\n" "$STATUS_TEST"
 printf "  doc:      %s\n" "$STATUS_DOC"
 printf "  mdbook:   %s\n" "$STATUS_MDBOOK"
+printf "  roadmap:  %s\n" "$STATUS_ROADMAP"
 
 if [ "$FAILED" -ne 0 ]; then
     echo

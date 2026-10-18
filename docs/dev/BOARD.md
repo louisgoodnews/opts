@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-13 by Agent (M-0083 language packs)_
+_Last updated: 2026-10-18 by Agent (M-0074 roadmap audit)_
 
 ---
 
@@ -146,6 +146,23 @@ _Work that cannot proceed until a dependency is resolved._
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
+#### Open milestones without work items yet (added by the roadmap audit 2026-10-18, M-0074)
+- [ ] 🟠 **Dynamic LOD, Frustum Culling & Occlusion Systems** (M-0029) — ⏳ Planned; see [M-0029](../src/roadmap/phase-5/M-0029.md).
+- [ ] 🟡 **DLSS Upscaling (optional)** (M-0048) — 📝 Planned; see [M-0048](../src/roadmap/phase-5/M-0048.md).
+- [ ] 🟠 **Editor Mode** (M-0051) — 📝 Specified; implementation not started; see [M-0051](../src/roadmap/phase-6/M-0051.md).
+- [ ] 🟠 **`opts-script_editor` — specification model and script generator** (M-0055) — 📝 Specified; implementation not started; see [M-0055](../src/roadmap/phase-6/M-0055.md).
+- [ ] 🟠 **`opts-visual_script_editor` — visual editor for vehicle script sets** (M-0056) — 📝 Specified; implementation not started; see [M-0056](../src/roadmap/phase-6/M-0056.md).
+- [ ] 🟠 **`opts-script_engine` — the script runtime as a crate** (M-0092) — 📝 Specified; implementation not started; see [M-0092](../src/roadmap/phase-6/M-0092.md).
+- [ ] 🔴 **Script Rig, Input Table and Callback Safety Net** (M-0096) — 🔴 Not started (proposed 2026-10-14); see [M-0096](../src/roadmap/phase-4/M-0096.md).
+- [ ] 🔴 **Script Physics Contract: Torque, Brakes and Wheels** (M-0097) — 🔴 Not started (proposed 2026-10-14); see [M-0097](../src/roadmap/phase-4/M-0097.md).
+- [ ] 🟠 **Consist Script State: Per-Part Engines, Script Share and Control Cables** (M-0098) — 🔴 Not started (proposed 2026-10-14); see [M-0098](../src/roadmap/phase-4/M-0098.md).
+- [ ] 🔴 **Route, Timetable and IBIS Data Layer** (M-0099) — 🔴 Not started (proposed 2026-10-14); see [M-0099](../src/roadmap/phase-4/M-0099.md).
+- [ ] 🟠 **Script Textures: Canvas, Fonts and the `ST*` API** (M-0100) — 🔴 Not started (proposed 2026-10-14); see [M-0100](../src/roadmap/phase-4/M-0100.md).
+- [ ] 🟠 **Doors, Passengers, Tickets and Cash** (M-0101) — 🔴 Not started (proposed 2026-10-14); see [M-0101](../src/roadmap/phase-4/M-0101.md).
+- [ ] 🟡 **Sound Events and Force Feedback** (M-0102) — 🔴 Not started (proposed 2026-10-14); see [M-0102](../src/roadmap/phase-4/M-0102.md).
+- [ ] 🟡 **AI Scripts Near the Player** (M-0103) — 🔴 Not started (proposed 2026-10-14); see [M-0103](../src/roadmap/phase-4/M-0103.md).
+- [ ] 🟡 **Course Geometry and Path Recognition** (M-0105) — 📝 Proposed (2026-10-14) - research only, needs approval; see [M-0105](../src/roadmap/phase-4/M-0105.md).
+
 #### M-0052 — Repository Hosting, CI Activation & Commit Gate
 - [ ] 🟠 **CI triggers on all branches and pull requests** (M-0052, chore) — today `[main, master]` only (F-019).
 - [ ] 🟢 **`target/` hygiene note; shared `CARGO_TARGET_DIR` for worktrees** (M-0052, docs) — F-020.
@@ -170,7 +187,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### Field report 2026-10-13 — Phase 10 and related (planned, from the project lead; [report](../src/quality/field-report-2026-10-13.md))
 - [ ] 🔴 **Mesh fidelity: parked cars, BRT Citaro, buildings (flipped/misaligned), lantern posts** (M-0066, code) — R-01, R-09, R-17, R-18; discovery by the P-1014 mesh audit (running).
 - [ ] 🔴 **Water: format semantics, parser, rendering** (M-0067, spec + code) — R-02; the `.water` spec has open questions ❓.
-- [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (not merged), verified live; [architecture](../src/architecture/session-vehicles.md).
+- [x] 🔴 **Start without a vehicle; session vehicle registry; switch the active vehicle, despawn any session vehicle** (M-0068, code) — R-03, R-04. **Done 2026-10-13** on `agent/session-vehicles` (merged into master), verified live; [architecture](../src/architecture/session-vehicles.md).
 - [x] 🔴 **Session save and restore, section-based and expandable; Load game** (M-0069, spec + code) — R-05. **Done 2026-10-13** on `feat/session-save` (ADR-0011, [Session save](../src/architecture/session-save.md), protocol 1.3.0).
 - [x] 🟠 **Start-time defaults from the map, else the current date and time** (M-0070, code) — R-07. **Done 2026-10-18** on `agent/start-time-defaults`: time of day from the map's `laststn.osn` `[time]`, else the device clock, with a *Map default* / *Now* label; the date keeps the C6 map default date (decision by the project lead).
 - [x] 🟠 **HUD rework: bottom-left cluster, bottom-right mini map** (M-0071, code) — R-08. **Done 2026-10-13** on `feat/hud-minimap`, verified live; [HUD registry](../src/architecture/hud-registry.md#4a-the-mini-map-m-0071).
@@ -181,19 +198,19 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [x] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16. **Done 2026-10-18** on `agent/setvars` (protocol 1.8.0): [setvars](../src/formats/text/vehicles/setvars.md) (census of 782 names on 1,095 vehicles, cross-check with twelve vendor documents), `opts_core::setvars` catalogue, wizard dialog with switch, choice and number controls, in-game menu stepping, `vehicle.setvars`, live check on the real game; saving setvars with a bus configuration is M-0077.
 - [~] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21. Core done 2026-10-18 on `agent/tile-loading-controls` (settings, live streaming, load-all during loading, `scene.tiles`); open: wizard summary switch with estimate, memory guard, "Automatic (currently N)" label.
-- [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Branch `feat/opts-hardware` (not merged): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
+- [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Merged into master (branch `feat/opts-hardware`): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
-- [~] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25. *Implemented on `feat/language-packs` (not merged): [architecture](../src/architecture/localisation-packs.md), tooling, language list, `l10n.*`; trial in the running app and right-to-left/fonts open.*
-- [~] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26. Core done on `feat/viewpoint-editor` (not merged): editor, storage, protocol, tests; open: model-wide viewpoints, export/import, FOV setting.
+- [~] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25. *Implemented on `feat/language-packs` (merged into master): [architecture](../src/architecture/localisation-packs.md), tooling, language list, `l10n.*`; trial in the running app and right-to-left/fonts open.*
+- [~] 🟠 **Viewpoint editor (Tab) with per-vehicle saved camera position and FOV** (M-0084, code) — R-26. Core done on `feat/viewpoint-editor` (merged into master): editor, storage, protocol, tests; open: model-wide viewpoints, export/import, FOV setting.
 - [~] 🟠 **Reflections research on `research/reflections`** (M-0085, research) — R-27.
 - [x] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28; done on `feat/combobox-search`, awaiting merge.
-- [ ] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30.
+- [x] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30. **Done 2026-10-14** (merged `feat/scene-trace`, protocol 1.4.0; [scene trace](../src/architecture/scene-trace.md)).
 - [x] 🔴 **Settings Content page freeze: no blocking work on the main thread; UI-wide audit** (M-0088, code) — R-31. Done on `fix/settings-content-freeze`: background content facts, async Home picture, source lint, standards 3.13; worst frame opening Content 213-350 ms -> 17 ms.
 - [~] 🔴 **Tile streaming performance: measure, rank, implement** (M-0089, research + code) — R-32, R-36. In progress 2026-10-18 on `agent/streaming-perf`: baseline on Aachen Linie 33, Grundorf and Berlin-Spandau, stalls classified (loading screen: up to 3.5 s per synchronous tile; in-game on dense maps: up to 153 ms per tile, terrain 59 %), worker-thread research and ranked proposal written in [streaming performance](../src/architecture/streaming-performance.md); **step 1 done** (resumable, time-budgeted tile build behind `advanced.streaming_budget_ms`: worst frame on the dense map 166 to 62–81 ms, loading-screen frames 3.5 s to under 0.3 s); next: terrain on a worker (every remaining frame above 50 ms).
 - [ ] 🔴 **Content fidelity pass: pedestrians, parked/driving cars, Hamburg, Wuppertal stations and T-crossings** (M-0090, code) — R-34 … R-42.
 - [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40.
 - [ ] 🟠 **Shift+Space resets each view to its default position** (M-0084 addendum, code) — R-33.
-- [ ] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06.
+- [~] 🔴 **Roadmap drift audit, intake rule, consistency checks, gap analysis** (M-0074, process) — R-06. Audit and automated checks **done 2026-10-18** (`docs/dev/roadmap-audit-2026-10-18.md`); intake rule, expansion pass and regular review open.
 
 #### M-0079 — UV Decoder Fleet Validation (deferred by the project lead 2026-10-13; revisit later)
 - [ ] 🟡 **Fleet decode of every keyed `.o3d`; coverage report with the per-mesh table (vehicle, mesh, vertices, exact %, unreliable %) and the top-50 known-broken list** (M-0079, code + docs) — P-1013 phase D; the decoder, `UvQuality` and the warnings are done and merged, only the fleet-wide run and report wait.
@@ -252,7 +269,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Load Game screen (needs a save system) — labelled "not available" until then** (M-0040, code) — F-011.
 
 #### M-0041 — Documentation Repair
-- [ ] 🟢 **Crate-graph Mermaid diagram: add `opts-traffic`, `opts-catalogue`, `opts-cli` and the `opts-bevy` → `opts-gui`/`opts-cli` edges** (M-0041, docs) — critical review F-011 (table done).
+- [x] 🟢 **Crate-graph Mermaid diagram: add `opts-traffic`, `opts-catalogue`, `opts-cli` and the `opts-bevy` → `opts-gui`/`opts-cli` edges** (M-0041, docs) — critical review F-011. **Done 2026-10-18** by M-0074: the diagram and the table are now compared with `cargo metadata` by `scripts/crate_graph.py --check` (it found 29 differences, among them `opts-benchmark` and five more crates missing from the diagram and four `opts-logging` edges that do not exist).
 
 #### M-0042 — CI & Toolchain Hardening
 - [~] 🟡 **Add `rust-toolchain.toml`, `.editorconfig`, `deny.toml`; upgrade `binrw`** (M-0042, chore) — files exist; `binrw 0.13.4` future-incompat warning remains.

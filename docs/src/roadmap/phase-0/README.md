@@ -35,3 +35,4 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [x] **📖 Core Documentation**
   - [x] Write `docs/src/introduction.md` and `docs/src/vision.md`.
   - [X] Write `docs/src/glossary.md` (OMSI terms, Bevy terms, transit terminology).
+- [ ] **📋 Milestone file** — [M-0000](M-0000.md) (🟡 in progress: the hosted GitHub Pages deployment cannot be verified from the working tree)

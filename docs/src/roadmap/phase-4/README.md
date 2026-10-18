@@ -25,6 +25,18 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0080 — Tile Loading Controls: Load All Tiles and Tile Radius](M-0080.md) — 🟡 core delivered 2026-10-18 (settings, live streaming, `scene.tiles`); wizard switch, memory guard and page label open (R-20, R-21)
 - [M-0084 — Viewpoint Editor (Per-Vehicle Camera Positions)](M-0084.md) — 🟡 Core done (R-26)
 - [M-0089 — Tile Streaming Performance: Investigation and Improvements](M-0089.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-32)
+- [M-0093 — Host Callbacks — Timetable, Termini, Bus Stops, Tickets (IBIS)](M-0093.md) — 🟢 Complete (2026-10-14)
+- [M-0094 — Script Textures](M-0094.md) — 🟢 Complete (2026-10-14)
+- [M-0095 — AI Vehicle Profiles](M-0095.md) — ✅ Implemented 2026-10-14 (phase 1: profile layer and formulas; measured characterisation through the script VM and the dynamic mod
+- [M-0096 — Script Rig, Input Table and Callback Safety Net](M-0096.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0097 — Script Physics Contract: Torque, Brakes and Wheels](M-0097.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0103 — AI Scripts Near the Player](M-0103.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0105 — Course Geometry and Path Recognition](M-0105.md) — 📝 Proposed (2026-10-14) - research only, needs approval
 - [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003; scope revised 2026-10-14 from the [design](../../architecture/articulation-physics.md))
 
 ## Checklist
@@ -80,3 +92,4 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 - [ ] **🌀 Tile Streaming Performance** — [M-0089](M-0089.md)
   - [ ] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36).
+- [ ] **🚌 Script chain and course geometry (proposed 2026-10-14, awaiting approval)** — [M-0096](M-0096.md) script rig and callback safety net, [M-0097](M-0097.md) physics contract, [M-0098](M-0098.md) consist script state, [M-0099](M-0099.md) route, timetable and IBIS data, [M-0100](M-0100.md) script textures, [M-0101](M-0101.md) doors, passengers, tickets and cash, [M-0102](M-0102.md) sound events and force feedback, [M-0103](M-0103.md) AI scripts near the player, [M-0105](M-0105.md) course geometry (research)
