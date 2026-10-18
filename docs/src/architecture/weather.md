@@ -146,6 +146,33 @@ above it you see the ground below the layer and the clear sky. The rule:
 * `sim.get` → `weather_conditions` shows `fog_layer_m` (`null` outside ground fog),
   `fog_effective_visibility_m`, `fog_camera_height_m`, `fog_sky_clear`.
 
+## 5b. Fog colour (UAT 2026-10-18: "kinda like hell is upon us")
+
+The first ground-fog UAT found the scene tinted yellow, orange and olive with a low sun. Causes
+and the rules that replaced them:
+
+* **Hue of the horizon.** The fog colour was the sky's horizon colour with only 40 % of its chroma
+  taken out, so a sunset horizon coloured the whole fog. Now `fog_color` removes
+  `thick·(0.6 + 0.35·thick)` of the chroma (about 94 % in thick fog), caps the saturation at
+  `1 − 0.8·thick` (`FOG_MAX_SATURATION` 0.2 in thick fog) and scales the luminance by 0.95: fog is
+  grey-white with at most a hint of the sky. Its luminance still follows the horizon texture (and
+  so the sun's elevation) and is never higher than the horizon's: dark at night, darker at dusk.
+  In clear air nothing changes.
+* **Tonemapper.** The clear colour is written already compensated for the camera's tonemapper
+  (`look::hdr_clear_color`), the `DistanceFog` colour was not, so far geometry faded into a
+  different colour than the sky behind it. The fog colour now goes through the same compensation
+  using the camera's own `Tonemapping` (HDR or LDR: Bevy blends the fog before the tonemapper in
+  both).
+* **Haze volume.** The sun-ray `FogVolume` (lighting system, section 6) took its density from the
+  visibility up to 0.05 per metre: a second, thick fog whose in-scattering has the *sun's* colour
+  (orange at a low sun) over the whole 200 m around the camera. `HAZE_MAX` is now 0.008: the shafts
+  of a foggy morning remain, the tint does not. The distance fog alone is the fog.
+* **Not changed / open.** No separate fog tint or strength setting (the colour is derived; a
+  setting would be a new `graphics.*` key: not added). The fog is not lit by the ambient light, only
+  by the horizon texture's brightness ❓. Tests: `fog_is_never_strongly_tinted_whatever_the_horizon`,
+  `fog_luminance_rises_with_the_sun_and_never_exceeds_the_horizon` (weather), the tonemapper
+  compensation in `weather::fog` tests, the haze cap in the sun-ray tests.
+
 ## 6. Wet ground and snow
 
 The weather is the writer of the reflections prototype's `Wetness` resource (`opts_bevy::reflections::Wetness`, [reflections research](reflections-research.md)): `drive_wetness` sets it from `[groundwet]` (0 when `graphics.weather_wet_ground` is off) and the surfaces system reads it, so there is one wet-ground implementation. The prototype's env-switched standard-material path (`OPTS_REFLECT=wet`) stays a research option; its ground-shader write was removed (the weather writes the uniform, with puddles and snow). The wet path is now a normal setting, default on; its cost is one uniform write on change and a 0.5 s scan of the ground materials, the road materials are touched only on change (the research measured wet surfaces as free within noise).
