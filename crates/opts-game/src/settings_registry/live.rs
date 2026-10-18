@@ -131,6 +131,10 @@ pub fn sync_tile_loading(
     if job.tile_mode() != mode {
         job.set_tile_mode(mode);
     }
+    let budget = tile_loading::stream_budget_of(&settings);
+    if job.stream_budget != budget {
+        job.stream_budget = budget;
+    }
 }
 
 /// `graphics.hdr`: the main camera carries [`bevy::camera::Hdr`] while the setting is on (the

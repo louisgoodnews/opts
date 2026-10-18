@@ -668,6 +668,29 @@ fn content() -> Vec<D> {
         )
         .keywords(&["developer", "debug", "boxes", "overlay", "trace"])
         .since("0.3"),
+        D::new(
+            "advanced.streaming_budget_ms",
+            K::Int {
+                min: 0,
+                max: 50,
+                step: 1,
+            },
+            "8",
+            C::Advanced,
+            80,
+            "set-streaming-budget",
+            "set-streaming-budget-desc",
+        )
+        .keywords(&[
+            "map",
+            "tiles",
+            "streaming",
+            "stutter",
+            "freeze",
+            "frame",
+            "performance",
+        ])
+        .since("0.3"),
     ]
 }
 

@@ -17,9 +17,11 @@ use crate::in_game::loading_ui::{
     ChooseAnotherBtn, ContinueBtn, DetailsBtn, LoadingBackBtn, RetryBtn,
 };
 use crate::in_game::omsi_world::{
-    begin_world_load_at, chrono_date, load_next_tile, load_player_vehicle, resolve_session_config,
-    spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
+    advance_tile_loading, begin_world_load_at, chrono_date, load_player_vehicle,
+    resolve_session_config, spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob,
+    WorldStats,
 };
+use crate::in_game::stream_budget::FrameBudget;
 use crate::in_game::tile_loading;
 use crate::in_game::types::{
     CancelLoadingBtn, InGameEntity, InGameSessionInfo, LoadStage, LoadingScreenRoot,
@@ -212,8 +214,11 @@ fn stage_terrain(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         state.stage = LoadStage::SetupAtmosphere;
         return;
     };
-    if job.next_tile().is_some() {
-        load_next_tile(
+    if job.has_tile_work() {
+        // A budget per frame, not a whole tile: the window keeps answering while a dense tile
+        // builds (M-0089).
+        let mut budget = FrameBudget::new(tile_loading::LOADING_BUDGET);
+        advance_tile_loading(
             job,
             stats,
             commands,
@@ -221,6 +226,8 @@ fn stage_terrain(env: &mut LoadEnv, state: &mut SimulationLoadState) {
             &mut assets.materials,
             &mut assets.images,
             assets.ground_materials.as_deref_mut(),
+            &mut budget,
+            usize::MAX,
         );
     }
     (state.tiles_done, state.tiles_total) = job.tile_counts();

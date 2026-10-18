@@ -11,7 +11,7 @@ Worktree `/home/louisgoodnews/Dokumente/opts-wt-streaming-perf`, branch `agent/s
 - [x] spans module, frame logger, driver (`scripts/streaming-perf.py`; 2026-10-18: reads the measured tile pitch from the `tile grid` line and splits the trace by the game's frame counter)
 - [x] release build with `--features stream-trace`, baseline on three maps (2026-10-18)
 - [x] classify, rank, write [streaming performance](../../src/architecture/streaming-performance.md)
-- [ ] step 1: resumable, time-budgeted tile build (`FrameBudget`), behind `advanced.streaming_budget_ms`; measure again
+- [x] step 1: resumable, time-budgeted tile build (`FrameBudget`), behind `advanced.streaming_budget_ms`; measured 2026-10-18 (streaming-performance.md §8)
 - [ ] step 2: terrain on a worker task; measure again
 - [ ] steps 3 and 4 (model and texture preparation, whole-tile tasks) only after the measurements of 1 and 2
 - [ ] open questions Q-SP01 to Q-SP04, gates, merge

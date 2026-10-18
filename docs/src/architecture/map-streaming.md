@@ -45,7 +45,7 @@ There is no *culled* state: a resident tile is always rendered by Bevy's own fru
 1. Parse `global.cfg` into the `MapManifest`; `tile_files` maps key to file name (the tile file is found case-insensitively next to `global.cfg`).
 2. Estimate and set the tile size (above); choose the start tile and spawn; log `tile size`, `start tile and spawn point selected`.
 3. `begin_world_load_at` first queues the **3 × 3 neighbourhood** of the start tile that exists as files (`tiles discovered for the 3x3 neighbourhood`, 5 tiles on Aachen Linie 33). The loading pipeline then applies the **tile loading mode** ([§4a](#4a-tile-loading-modes-m-0080)) with `WorldLoadJob::queue_for_mode`: the queue becomes every tile the mode wants around the start tile, nearest first (*load all*: every listed tile that has a file), and `total_tiles = queue.len()`. Callers that do not apply a mode (the scenery benchmark) keep the 3 × 3 queue.
-4. The loading pipeline's `stage_terrain` calls `load_next_tile` once per frame until the queue is empty; the bar shows `1 - queue.len() / total_tiles`. Zero loaded tiles fails the load (`load-problem-map`).
+4. The loading pipeline's `stage_terrain` advances the tile build for up to 100 ms per frame (`advance_tile_loading`, [streaming performance](streaming-performance.md), M-0089) until the queue is empty and no build is in progress; the bar counts the tile in progress by how far it is. Zero loaded tiles fails the load (`load-problem-map`).
 5. After the world is spawned and the loading screen is done, `stream_world_tiles` takes over.
 
 ## 4. Streaming (`stream_world_tiles`, `Update` schedule, in game only)
@@ -55,7 +55,7 @@ Runs every frame once the simulation load is complete (`SimulationLoadState::is_
 1. Observer position gives the centre tile; `dist(k)` is the **Chebyshev** distance of tile `k` from it.
 2. **Eviction** (radius mode only; *load all* never unloads): every resident tile with `dist > radius + 1` is removed: root entity despawned (children recursively), then the per-tile registries are told (see 5). The extra `+ 1` is the hysteresis against thrashing at tile borders.
 3. **Demand:** only when `queue` is empty, the wanted tiles that are neither resident nor missing (the square of the radius, or every listed tile in *load all* mode) are collected and **sorted by distance**; the **nearest one that has a file** is queued.
-4. **Load:** if the queue is not empty, `load_next_tile` runs for the front key, **synchronously on the main thread**.
+4. **Load:** `advance_tile_loading` continues the build in progress or starts the front key, for up to `advanced.streaming_budget_ms` (default 8 ms) per frame **on the main thread**; the build is a sequence of steps (terrain, splines, surfaces, attachments, registries, the objects one by one, finish) that can pause between frames, and the tile root is resident from its first step. With the setting at 0 one whole tile is built per frame as before.
 
 Consequences (all by construction):
 - The radius is no longer fixed: `WorldLoadJob::tile_mode` holds `Radius(n)` or `All` and follows the settings at run time ([§4a](#4a-tile-loading-modes-m-0080)); with no hardware profile and no setting it is `Radius(1)`, the 3 × 3 area (up to 9 tiles, fewer at map edges and gaps) of earlier versions.
@@ -123,8 +123,8 @@ Keyed (scrambled) meshes are decoded exactly while the tile is built (`o3d::exac
 
 | # | Limit | Where it bites |
 | :--- | :--- | :--- |
-| L1 | Synchronous: parsing, mesh/texture building and entity spawning of a tile happen inside one `Update` call | frame spikes at tile borders and on first visits (no frame budget) |
-| L2 | One queued tile at a time, nearest first | after a fast move the working set fills one tile per frame at best |
+| L1 | The build runs on the main thread: parsing, mesh/texture building and entity spawning (since M-0089 step 1 in steps bounded by a frame budget, the terrain step as one piece of 16 ms on average and up to 65 ms) | frame spikes at tile borders on dense maps; the terrain step is what remains |
+| L2 | The nearest four wanted tiles are queued at a time, built one after the other | after a fast move the working set fills at the speed of the budget |
 | L3 | Chebyshev radius, hysteresis 1 | the radius is a setting with a hardware-derived default since M-0080; the per-tile memory estimate behind it is still a constant (Q-MS-03), and the radius and *load all* have no wizard switch yet |
 | L4 | Observer is the camera | free camera / vehicle separation, see Q-MS-01 |
 | L5 | Caches never evict | memory grows with distance travelled |
