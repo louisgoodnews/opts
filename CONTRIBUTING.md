@@ -27,7 +27,7 @@ If you want to add a new feature, parse a new OMSI format, or change the archite
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/opts.git
+   git clone https://github.com/louisgoodnews/opts.git
    cd opts
    ```
 3. **Build the workspace** to ensure everything compiles:

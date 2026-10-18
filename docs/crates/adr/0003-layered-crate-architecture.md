@@ -13,7 +13,7 @@
 
 ## 📌 Context
 
-The workspace has grown from the five crates described in [Coding Standards §2.11](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md) to thirteen, without a shared model of what goes where:
+The workspace has grown from the five crates described in [Coding Standards §2.11](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md) to thirteen, without a shared model of what goes where:
 
 - Parsers have two homes (`opts-core`, `opts-parsers`), and one of them depends on Bevy.
 - Three crates besides `opts-bevy` depend on Bevy, contradicting the existing rule.

@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 Proposed — pending [ADR-0003](adr/0003-layered-crate-architecture.md) |
-| **Supersedes (once accepted)** | The dependency tree in [Coding Standards §2.11](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md) |
+| **Supersedes (once accepted)** | The dependency tree in [Coding Standards §2.11](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md) |
 | **Last Updated** | 2026-10-04 |
 
 ---
@@ -127,7 +127,7 @@ Pure, I/O-free parsers: `&[u8]` in, `(Ast, Diagnostics)` out. One crate per **fo
 
 Each family maps 1:1 onto a section of the [format specifications](../src/formats/overview.md), so a spec and its parser are always easy to find.
 
-Inside each family crate, the existing [three-layer parser pattern](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md) (lexer → parser → validate) still applies. The *validated* output is still a **format-level** type (e.g. `O3d`); lowering it into the domain model is a fourth, separate step owned by `opts-import-omsi`.
+Inside each family crate, the existing [three-layer parser pattern](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md) (lexer → parser → validate) still applies. The *validated* output is still a **format-level** type (e.g. `O3d`); lowering it into the domain model is a fourth, separate step owned by `opts-import-omsi`.
 
 ### L2 · Model
 
@@ -246,7 +246,7 @@ Rows may depend on columns marked ✅.
 | R5 | **I/O lives at the edges.** Formats parse byte slices; Model and Simulation never touch the file system. Only `opts-vfs`, the Pipeline and Applications perform I/O. |
 | R6 | **Simulation is deterministic.** No wall-clock time, no unseeded RNG, no iteration-order-dependent `HashMap` traversal, `rayon` only with order-independent reductions. |
 | R7 | **Applications are composition only.** If two binaries need the same code, it belongs in a library. |
-| R8 | **Errors**: libraries use `thiserror` and never expose `anyhow`; binaries may use `anyhow` ([Coding Standards §2.1](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md)). |
+| R8 | **Errors**: libraries use `thiserror` and never expose `anyhow`; binaries may use `anyhow` ([Coding Standards §2.1](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md)). |
 | R9 | **Features are additive** and never change public types in a breaking way. |
 
 ### Enforcement

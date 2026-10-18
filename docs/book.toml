@@ -29,10 +29,10 @@ edition = "2021"
 default-theme = "light"
 preferred-dark-theme = "navy"
 smart-punctuation = true
-# TODO: replace `your-username` once the repository has its final home
+# TODO: replace `louisgoodnews` once the repository has its final home
 # (same placeholder as `repository` in the root Cargo.toml).
-git-repository-url = "https://github.com/your-username/opts"
-edit-url-template = "https://github.com/your-username/opts/edit/main/docs/src/{path}"
+git-repository-url = "https://github.com/louisgoodnews/opts"
+edit-url-template = "https://github.com/louisgoodnews/opts/edit/main/docs/src/{path}"
 site-url = "/opts/"
 
 # Format specs contain Rust sketches that are not complete programs.

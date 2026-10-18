@@ -54,7 +54,7 @@ Split by bounded context as code arrives: `opts-model-scenery`, `opts-model-vehi
 
 ## 🔗 Cross-References
 
-- [Coding Standards §2.11, §3.4–3.6](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md)
+- [Coding Standards §2.11, §3.4–3.6](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md)
 - [Phase 2 roadmap](../../src/roadmap/phase-2/README.md)
 - [Proposed Architecture § L2](../architecture.md#l2--model)
 - [Proposed Architecture](../architecture.md) · [Workspace Audit](../audit.md)

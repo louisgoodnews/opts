@@ -38,10 +38,10 @@ edition = "2021"
 default-theme = "light"
 preferred-dark-theme = "navy"
 smart-punctuation = true
-# TODO: replace `your-username` once the repository has its final home
+# TODO: replace `louisgoodnews` once the repository has its final home
 # (same placeholder as `repository` in the root Cargo.toml).
-git-repository-url = "https://github.com/your-username/opts"
-edit-url-template = "https://github.com/your-username/opts/edit/main/docs/crates/{path}"
+git-repository-url = "https://github.com/louisgoodnews/opts"
+edit-url-template = "https://github.com/louisgoodnews/opts/edit/main/docs/crates/{path}"
 site-url = "/opts/crates/"
 
 # Code samples in this book are illustrative API sketches, not

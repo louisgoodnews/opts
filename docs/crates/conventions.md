@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Proposed — complements [Coding Standards](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md) |
+| **Status** | 🟡 Proposed — complements [Coding Standards](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md) |
 | **Last Updated** | 2026-10-04 |
 
 Conventions that make ~50 crates feel like one codebase.
@@ -88,7 +88,7 @@ workspace = true
 ## 📤 Public API
 
 - Re-export the crate's main types at the root; keep modules for organisation.
-- Do not re-export dependencies (see [Coding Standards](https://github.com/your-username/opts/blob/main/docs/src/contributing/standards.md)); API crates are the exception for types that appear in their trait signatures.
+- Do not re-export dependencies (see [Coding Standards](https://github.com/louisgoodnews/opts/blob/main/docs/src/contributing/standards.md)); API crates are the exception for types that appear in their trait signatures.
 - Mark extensible enums `#[non_exhaustive]`.
 - Every public item has rustdoc; every crate has a `//!` header pointing at its page in this book.
 
@@ -106,7 +106,7 @@ workspace = true
 
 ## 📝 Crate Page Template
 
-Each crate has `docs/crates/<crate>/README.md` following this outline (required content from [PROMPTS.md § Documentation in docs/crates/](https://github.com/your-username/opts/blob/main/docs/dev/PROMPTS.md)):
+Each crate has `docs/crates/<crate>/README.md` following this outline (required content from [PROMPTS.md § Documentation in docs/crates/](https://github.com/louisgoodnews/opts/blob/main/docs/dev/PROMPTS.md)):
 
 ```markdown
 # `opts-<name>`

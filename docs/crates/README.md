@@ -67,4 +67,4 @@ Links from this book into the main book point at the **published** site, because
 
 ## ✍️ Updating This Book
 
-Per [PROMPTS.md](https://github.com/your-username/opts/blob/main/docs/dev/PROMPTS.md), every change that touches a crate updates that crate's page. Use the template in [Crate Conventions § Crate Page Template](conventions.md#-crate-page-template). New crates get a new folder `docs/crates/<crate>/README.md` and a `SUMMARY.md` entry in their layer.
+Per [PROMPTS.md](https://github.com/louisgoodnews/opts/blob/main/docs/dev/PROMPTS.md), every change that touches a crate updates that crate's page. Use the template in [Crate Conventions § Crate Page Template](conventions.md#-crate-page-template). New crates get a new folder `docs/crates/<crate>/README.md` and a `SUMMARY.md` entry in their layer.
