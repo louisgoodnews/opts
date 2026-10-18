@@ -74,6 +74,18 @@ pub fn measure_fog_view(
     view.set_if_neq(next);
 }
 
+/// The drive cameras [`update_fog`] works on: the fog and the tone mapping they carry, if any.
+type FogCameras<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        Option<&'static mut DistanceFog>,
+        Option<&'static Tonemapping>,
+    ),
+    With<InGameCamera>,
+>;
+
 /// Puts the fog on the drive camera, takes it off, and keeps it current: the colour and density
 /// follow the weather, the horizon and (ground fog) the camera's height.
 pub fn update_fog(
@@ -81,10 +93,7 @@ pub fn update_fog(
     effects: Res<WeatherEffects>,
     horizon: Option<Res<SkyHorizon>>,
     view: Res<GroundFogView>,
-    mut cameras: Query<
-        (Entity, Option<&mut DistanceFog>, Option<&Tonemapping>),
-        With<InGameCamera>,
-    >,
+    mut cameras: FogCameras,
     mut commands: Commands,
 ) {
     let colour = horizon.map_or(DEFAULT_HORIZON, |h| h.0);
