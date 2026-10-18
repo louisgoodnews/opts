@@ -153,7 +153,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟠 **`opts-script_editor` — specification model and script generator** (M-0055) — 📝 Specified; implementation not started; see [M-0055](../src/roadmap/phase-6/M-0055.md).
 - [ ] 🟠 **`opts-visual_script_editor` — visual editor for vehicle script sets** (M-0056) — 📝 Specified; implementation not started; see [M-0056](../src/roadmap/phase-6/M-0056.md).
 - [ ] 🟠 **`opts-script_engine` — the script runtime as a crate** (M-0092) — 📝 Specified; implementation not started; see [M-0092](../src/roadmap/phase-6/M-0092.md).
-- [ ] 🔴 **Script Rig, Input Table and Callback Safety Net** (M-0096) — 🔴 Not started (proposed 2026-10-14); see [M-0096](../src/roadmap/phase-4/M-0096.md).
+- [~] 🔴 **Script Rig, Input Table and Callback Safety Net** (M-0096) — In progress 2026-10-18 on `agent/script-rig`: `script_rig` + integration report, stack-correct stubs for all 45 callbacks, input and output tables compiled and tested; first run over 1,223 vehicles: 0 load errors, 0 stack underflows, 0 non-finite ([report](../src/architecture/script-integration-report.md)); open: contract fixes, repaint setvars, the game's feed from the table, golden runs; see [M-0096](../src/roadmap/phase-4/M-0096.md).
 - [ ] 🔴 **Script Physics Contract: Torque, Brakes and Wheels** (M-0097) — 🔴 Not started (proposed 2026-10-14); see [M-0097](../src/roadmap/phase-4/M-0097.md).
 - [ ] 🟠 **Consist Script State: Per-Part Engines, Script Share and Control Cables** (M-0098) — 🔴 Not started (proposed 2026-10-14); see [M-0098](../src/roadmap/phase-4/M-0098.md).
 - [ ] 🔴 **Route, Timetable and IBIS Data Layer** (M-0099) — 🔴 Not started (proposed 2026-10-14); see [M-0099](../src/roadmap/phase-4/M-0099.md).

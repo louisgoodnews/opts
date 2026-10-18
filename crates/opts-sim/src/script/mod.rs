@@ -6,7 +6,9 @@
 //! `docs/src/architecture/script-vm.md`; language: `docs/src/formats/text/vehicles/osc.md`.
 
 mod ai_response;
+pub mod callbacks;
 mod compiler;
+pub mod inputs;
 mod lexer;
 mod load;
 mod strings;
@@ -31,6 +33,23 @@ pub use vehicle::load_vehicle_scripts;
 /// Handler of the `(M.V.name)` callbacks of the host (name in lower case, arguments on the stacks).
 /// Returns `false` for a callback it does not implement; that is reported once.
 pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) -> bool + Send>;
+
+/// The names a script set reads and writes (`ScriptEngine::usage`), in lower case.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ScriptUsage {
+    /// Float variables read (`(L.L.x)`).
+    pub reads: std::collections::BTreeSet<String>,
+    /// Float variables written (`(S.L.x)`).
+    pub writes: std::collections::BTreeSet<String>,
+    /// String variables read.
+    pub string_reads: std::collections::BTreeSet<String>,
+    /// String variables written.
+    pub string_writes: std::collections::BTreeSet<String>,
+    /// System values read (`(L.S.x)`).
+    pub system_reads: std::collections::BTreeSet<String>,
+    /// Callbacks called (`(M.V.x)`).
+    pub external: std::collections::BTreeSet<String>,
+}
 
 /// An event raised by a script with `(T.x.name)`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +81,7 @@ pub struct ScriptEngine {
     consts_dirty: bool,
     declared: Option<HashSet<String>>,
     pub(crate) ops_executed: u64,
+    pub(crate) callback_stats: callbacks::CallbackStats,
     time: f32,
 }
 
@@ -86,6 +106,7 @@ impl ScriptEngine {
             consts_dirty: true,
             declared: None,
             ops_executed: 0,
+            callback_stats: callbacks::CallbackStats::default(),
             time: 0.0,
         }
     }
@@ -384,6 +405,47 @@ impl ScriptEngine {
     #[must_use]
     pub fn ops_executed(&self) -> u64 {
         self.ops_executed
+    }
+
+    /// How often each callback was answered by the host, by the stub or not at all (unknown
+    /// name) since the engine was built.
+    #[must_use]
+    pub fn callback_stats(&self) -> &callbacks::CallbackStats {
+        &self.callback_stats
+    }
+
+    /// The variables the compiled scripts read and write, by name: what the integration report
+    /// compares with the input table. `external` lists the callbacks they call.
+    #[must_use]
+    pub fn usage(&self) -> ScriptUsage {
+        let names = &self.program.names;
+        let mut u = ScriptUsage::default();
+        for block in &self.program.blocks {
+            for op in &block.ops {
+                match *op {
+                    Op::Load(i) => {
+                        u.reads.insert(names.vars.name(i).to_owned());
+                    }
+                    Op::Store(i) => {
+                        u.writes.insert(names.vars.name(i).to_owned());
+                    }
+                    Op::LoadStr(i) => {
+                        u.string_reads.insert(names.strvars.name(i).to_owned());
+                    }
+                    Op::StoreStr(i) => {
+                        u.string_writes.insert(names.strvars.name(i).to_owned());
+                    }
+                    Op::Sys(i) => {
+                        u.system_reads.insert(names.sys.name(i).to_owned());
+                    }
+                    Op::External(i) => {
+                        u.external.insert(names.externals.name(i).to_owned());
+                    }
+                    _ => {}
+                }
+            }
+        }
+        u
     }
 
     /// Takes the events raised since the last call.
