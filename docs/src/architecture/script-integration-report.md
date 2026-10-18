@@ -67,6 +67,24 @@ Step size: SD77 16.24 / 16.25 / 16.26 s and 16.8 / 16.7 / 16.7 m at 30 / 60 / 12
 
 **Against the acceptance criteria.** The stopping range for SD200 (12 to 20 m) is met (16.7 m). The acceleration range (8 to 14 s) is not: 16.2 s, and the cause is the vehicle's own scripts, not the physics. At full throttle the SD77 script hands 8.8 kN·m to the wheels in first gear (17 kN of thrust on 10.9 t) and about 3.9 kN·m at 50 km/h, about 107 kW at the wheels: a real bus of this class needs 15 to 18 s for 50 km/h, so the range of 8 to 14 s was an estimate without a source. Proposal for the project lead: replace it with 14 to 18 s, or keep the range and let the 16.2 s stand as the golden. The AI-car golden is a closed loop without the traffic system's driver (engine off, nothing braking: it rolls away on the grade). The `HH109` bus named in the criterion was not found among the vehicles sampled (the sampling cap forbids a sweep); the third golden is the HH109 AI car.
 
+## The route layer (M-0099, 2026-10-19)
+
+`opts_bevy::route` is the route service (strategy decision D7): a `RouteHandle` (depot `.hof`, the selected route, the stop, the delay) shared between the callbacks the scripts call, the control protocol and the game; the callbacks (`GetRouteIndex`, `GetTerminus*`, `GetBusstop*`, `GetTT*`, `GetDepotStringGlobal`) read it live, so a selection is seen by the next call. The game picks the depot with `route::find_depot` (a `.hof` of the vehicle's folder named like the map, else the first in name order; before, the choice depended on directory order and a route of line 33 was selected at spawn for every vehicle). Nothing is selected until the driver or `bus.set_route` selects; `Yard`, `SetLineTo`, `Ident` and `schedule_active` follow the selection, and `AI_Target_Index` and `schedule_active` are fed every frame from it. `bus.set_route` presses the keys of the vehicle's own IBIS one per physics step and hands the target to the displays; vehicles with another IBIS get the second part only (`keypad: false` in the answer).
+
+`script_rig <root> --vehicle <path> --hof <part of a depot name> --route <code>` does the same headless and reports the strings the scripts hold. Results (the depot's strings for the route against the scripts' own variables):
+
+| Vehicle | Depot, route | Keypad | `target_index_int` | The scripts' strings |
+|---|---|---|---|---|
+| MAN SD77 (SD200 family) | Aachen, 3301 (line 33, course 01) | yes | 233 = terminus row of code 983 | `IBIS_Terminus_Name` is the terminus' first string, `act_busstop`, `IBIS_Busstop_Name`, `IBIS_CabinDisplay` and `Haltestelle` carry the first stop; the roller blind has wound to row 233 |
+| MAN NG272 (GN92) | Aachen, 3301 | yes | 233 | the same strings; the matrix shows the terminus |
+| HH109 city bus (VHH) | Hamburg (VHH PVG), 10901 | no (its own controls) | 10 = terminus row of code 582 | `stringoutput_zielG_B` carries the destination text |
+
+Two findings on the way. The destination displays ignored the first offer of the target while they switched on, so the host now repeats the offer (up to 30 s) until `target_index_int` shows it. The parser took the empty trailing columns of the stop lines of a route (tabs) as part of the ident, so 84,614 of the 272,142 route stops of the installation resolved to no stop; the ident is now the first column and 1.2 % remain, partly a `*` suffix of unknown meaning (`hof.md`, Q-HOF-007).
+
+**Corpus.** All 27,779 `.hof` files below `Vehicles/` parse (296 distinct; `opts-core/tests/hof_corpus.rs`). The count of stubbed route callbacks over the fleet was already 0 after M-0096 (the host answers every callback a script reaches, with the neutral value when nothing is selected); what changed is that the answers now carry the depot's data, shown by the three vehicles above. A repeat of the 1,223-vehicle run was not made: the vehicle sampling cap rules out a further sweep.
+
+**Timetables.** The timetable files (`.ttl`, `.ttp`, `.ttr`, `Busstops.cfg`) are not parsed yet: `GetTTBusstopDep` and `GetTTBusstopArr` answer 0 and `GetTTDelay` follows the delay the host sets (0 in free driving). `GetTT*` otherwise answer from the selected route (line text, terminus, stops).
+
 ## Not done (M-0096 follow-ups)
 
 The items below belong to later phases (M-0097 to M-0103): the wheel-level physics contract, per-part script engines and `[scriptshare]` stores for consists, the data layers for routes and tickets, script textures, passengers, sound, AI scripts.
