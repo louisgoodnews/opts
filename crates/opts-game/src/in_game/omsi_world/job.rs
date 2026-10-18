@@ -284,6 +284,7 @@ pub fn begin_world_load_at(
         crossing_bases: HashMap::new(),
         ground_faces: HashMap::new(),
         tile_objects: HashMap::new(),
+        tile_surfaces: HashMap::new(),
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
         parklists: HashMap::new(),

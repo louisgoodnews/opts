@@ -465,6 +465,30 @@ mod tests {
         assert_eq!(h(&carved, 34, 20), 10.0);
     }
 
+    /// The streamer keeps each tile's triangles in the tile's own frame and moves them by the
+    /// neighbour's offset (M-0089 step 2): that equals asking for the offset directly.
+    #[test]
+    fn shifting_the_own_frame_triangles_equals_asking_for_the_offset() {
+        let road = profile(&[&[(-4.0, 0.0), (4.0, 0.0), (4.0, 0.15), (6.0, 0.15)]]);
+        let mut inst = spline(150.0, 50.0, 10.0, 200.0);
+        inst.radius_m = 120.0;
+        inst.gradient_end = 0.02;
+        let (ox, oy) = (-371.9_f32, 371.9_f32);
+        let direct = spline_ground_triangles(&road, &inst, (ox, oy));
+        let shift = Vec3::new(ox, oy, 0.0);
+        let shifted: Vec<GroundTriangle> = spline_ground_triangles(&road, &inst, (0.0, 0.0))
+            .iter()
+            .map(|t| t.map(|p| p + shift))
+            .collect();
+        assert!(!direct.is_empty());
+        assert_eq!(direct.len(), shifted.len());
+        for (d, s) in direct.iter().zip(&shifted) {
+            for (p, q) in d.iter().zip(s) {
+                assert!((*p - *q).length() < 1e-3, "{p} against {q}");
+            }
+        }
+    }
+
     /// Three metres of cover over a surface (a tunnel roof): the guard keeps it.
     #[test]
     fn deep_cover_is_left_alone() {

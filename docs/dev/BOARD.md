@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-18 by Agent (M-0074 roadmap audit)_
+_Last updated: 2026-10-18 by Agent (M-0089 step 2)_
 
 ---
 
@@ -206,7 +206,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟠 **Searchable dropdowns (scroll fixed); catalogue summary by kind** (M-0086, code) — R-24, R-28; done on `feat/combobox-search`, awaiting merge.
 - [x] 🟠 **Scene trace debug mode: which mesh is where; `trace.*` protocol commands; JSONL run log** (M-0087, spec + code) — R-30. **Done 2026-10-14** (merged `feat/scene-trace`, protocol 1.4.0; [scene trace](../src/architecture/scene-trace.md)).
 - [x] 🔴 **Settings Content page freeze: no blocking work on the main thread; UI-wide audit** (M-0088, code) — R-31. Done on `fix/settings-content-freeze`: background content facts, async Home picture, source lint, standards 3.13; worst frame opening Content 213-350 ms -> 17 ms.
-- [~] 🔴 **Tile streaming performance: measure, rank, implement** (M-0089, research + code) — R-32, R-36. In progress 2026-10-18 on `agent/streaming-perf`: baseline on Aachen Linie 33, Grundorf and Berlin-Spandau, stalls classified (loading screen: up to 3.5 s per synchronous tile; in-game on dense maps: up to 153 ms per tile, terrain 59 %), worker-thread research and ranked proposal written in [streaming performance](../src/architecture/streaming-performance.md); **step 1 done** (resumable, time-budgeted tile build behind `advanced.streaming_budget_ms`: worst frame on the dense map 166 to 62–81 ms, loading-screen frames 3.5 s to under 0.3 s); next: terrain on a worker (every remaining frame above 50 ms).
+- [~] 🔴 **Tile streaming performance: measure, rank, implement** (M-0089, research + code) — R-32, R-36. In progress 2026-10-18 on `agent/streaming-perf`: baseline on Aachen Linie 33, Grundorf and Berlin-Spandau, stalls classified (loading screen: up to 3.5 s per synchronous tile; in-game on dense maps: up to 153 ms per tile, terrain 59 %), worker-thread research and ranked proposal written in [streaming performance](../src/architecture/streaming-performance.md); **step 1 done** (resumable, time-budgeted tile build behind `advanced.streaming_budget_ms`: worst frame on the dense map 166 to 62–81 ms, loading-screen frames 3.5 s to under 0.3 s); **step 2 done 2026-10-18** (timers showed the terrain's own work is 6 % of its stage; the cost was each tile's neighbour surfaces being rebuilt up to nine times: cached once per tile, and the stage split into pausable steps): Spandau flight has **no frame above 50 ms** (13 at baseline), worst 36.9 ms (166); open: a synthetic multi-tile regression test, steps 3-4 (loading-screen objects, Q-SP01) as a separate decision.
 - [ ] 🔴 **Content fidelity pass: pedestrians, parked/driving cars, Hamburg, Wuppertal stations and T-crossings** (M-0090, code) — R-34 … R-42.
 - [ ] 🟠 **Shadow quality and realism** (M-0091, research + code) — R-40.
 - [ ] 🟠 **Shift+Space resets each view to its default position** (M-0084 addendum, code) — R-33.

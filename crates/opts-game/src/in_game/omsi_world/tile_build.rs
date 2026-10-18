@@ -19,13 +19,20 @@ use crate::in_game::stream_budget::FrameBudget;
 use crate::in_game::types::InGameEntity;
 
 use super::tile::{place_attached_objects, spawn_object, Placement, TileRoot, SURFACE_MIN_WIDTH_M};
-use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
+use super::tile_ground::{
+    ensure_surfaces, load_terrain, prune_tile_surfaces, spawn_splines, spawn_terrain, spawn_water,
+    TerrainInput, NEIGHBOURHOOD_LEN,
+};
 use super::{WorldLoadJob, WorldStats};
 
 /// The step a build is at.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Phase {
-    /// Terrain and water.
+    /// The terrain grid and the tile's ground painting.
+    TerrainRead,
+    /// The ground surfaces of the tile and its neighbours, one tile per step.
+    TerrainSurfaces,
+    /// Carve and mesh the terrain, water.
     Terrain,
     /// Spline meshes.
     Splines,
@@ -53,6 +60,10 @@ pub(super) struct TileBuild {
     /// Children spawned since the last call, not yet added to the root.
     children: Vec<Entity>,
     terrain: Option<TileTerrain>,
+    /// What the terrain read produced, until the terrain is built.
+    terrain_input: Option<TerrainInput>,
+    /// Neighbours whose surfaces are ready (index into the nine-tile neighbourhood).
+    next_neighbour: usize,
     attached: Vec<(MapObjectInstance, f32)>,
     splines_failed_before: usize,
     phase: Phase,
@@ -64,7 +75,7 @@ impl TileBuild {
     pub(super) fn fraction(&self) -> f32 {
         let objects = (self.tile.objects.len() + self.attached.len()).max(1) as f32;
         match self.phase {
-            Phase::Terrain => 0.0,
+            Phase::TerrainRead | Phase::TerrainSurfaces | Phase::Terrain => 0.0,
             Phase::Splines => 0.08,
             Phase::Surfaces => 0.12,
             Phase::Attachments => 0.14,
@@ -137,9 +148,11 @@ pub(super) fn begin(
             root,
             children: Vec::new(),
             terrain: None,
+            terrain_input: None,
+            next_neighbour: 0,
             attached: Vec::new(),
             splines_failed_before: 0,
-            phase: Phase::Terrain,
+            phase: Phase::TerrainRead,
             next_object: 0,
         });
     }
@@ -169,16 +182,29 @@ pub(super) fn advance(
             break false;
         }
         match b.phase {
-            Phase::Terrain => terrain_step(
-                &mut b,
-                job,
-                stats,
-                commands,
-                meshes,
-                materials,
-                images,
-                ground_materials.as_deref_mut(),
-            ),
+            Phase::TerrainRead => {
+                let _t = opts_logging::stream_trace::span("tile.terrain");
+                b.terrain_input = load_terrain(
+                    job,
+                    meshes,
+                    materials,
+                    images,
+                    ground_materials.as_deref_mut(),
+                    b.key,
+                );
+                b.phase = Phase::TerrainSurfaces;
+            }
+            Phase::TerrainSurfaces => {
+                let _t = opts_logging::stream_trace::span("tile.terrain");
+                // A tile without a grid needs no surfaces.
+                if b.terrain_input.is_none() || b.next_neighbour >= NEIGHBOURHOOD_LEN {
+                    b.phase = Phase::Terrain;
+                } else {
+                    ensure_surfaces(job, b.key, b.next_neighbour);
+                    b.next_neighbour += 1;
+                }
+            }
+            Phase::Terrain => terrain_step(&mut b, job, stats, commands, meshes, materials),
             Phase::Splines => splines_step(&mut b, job, stats, commands, meshes, materials, images),
             Phase::Surfaces => surfaces_step(&mut b, job, commands),
             Phase::Attachments => attachments_step(&mut b, job),
@@ -225,7 +251,6 @@ pub(super) fn advance(
     finished
 }
 
-#[allow(clippy::too_many_arguments)]
 fn terrain_step(
     b: &mut TileBuild,
     job: &mut WorldLoadJob,
@@ -233,8 +258,6 @@ fn terrain_step(
     commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
-    images: &mut Assets<Image>,
-    ground_materials: Option<&mut Assets<GroundMaterial>>,
 ) {
     let _t = opts_logging::stream_trace::span("tile.terrain");
     b.terrain = spawn_terrain(
@@ -242,9 +265,7 @@ fn terrain_step(
         stats,
         commands,
         meshes,
-        materials,
-        images,
-        ground_materials,
+        b.terrain_input.take(),
         b.key,
         b.origin,
         &mut b.children,
@@ -439,6 +460,7 @@ fn finish(
     let _t = opts_logging::stream_trace::span("tile.root_adopt");
     let deps = std::mem::take(&mut job.loading_deps);
     job.tile_deps.insert(b.key, deps);
+    prune_tile_surfaces(job);
     stats.tiles_loaded = job.resident.len();
     stats.meshes_exact = job.cache.stats.exact_meshes;
     stats.asset_failures = job.cache.stats.failures.len();

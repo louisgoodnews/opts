@@ -1,6 +1,7 @@
 //! Ground stages of a tile: terrain mesh (carved under the drawn ground) and spline ribbons.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
@@ -34,38 +35,69 @@ fn carve_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Vec<GroundTriangle
     let mut out = Vec::new();
     for (dx, dy) in NEIGHBOURHOOD {
         let other = (key.0 + dx, key.1 + dy);
-        let Some(splines) = job.splines_of(other) else {
+        let Some(own) = tile_surfaces(job, other) else {
             continue;
         };
+        // The triangles are kept in their own tile's frame; moving them is an addition.
         let o = job.grid.neighbour_offset(key, other);
-        for inst in splines.iter() {
-            if let Some(profile) = job.sli(&inst.sli_file) {
-                out.extend(spline_ground_triangles(&profile, inst, (o.x, o.y)));
-            }
-        }
-        // Crossings (bent by their base) and surface objects lay down ground too.
-        out.extend(job.crossing_ground_triangles(other, o));
+        let shift = Vec3::new(o.x, o.y, 0.0);
+        out.extend(own.iter().map(|t| t.map(|p| p + shift)));
     }
     out
 }
 
-/// Terrain stage: reads the height grid, carves it under the drawn ground and spawns the ground
-/// mesh. Returns the carved grid: the ground every object, lane and vehicle stands on.
-#[allow(clippy::too_many_arguments)]
-pub(super) fn spawn_terrain(
+/// The drawn ground surfaces of tile `key` in its own frame: the ribbons of its splines and the
+/// ground faces of its crossings and surface objects. Computed once per tile and kept
+/// (`WorldLoadJob::tile_surfaces`); `None` when the tile has no readable file.
+fn tile_surfaces(job: &mut WorldLoadJob, key: (i32, i32)) -> Option<Arc<Vec<GroundTriangle>>> {
+    if let Some(s) = job.tile_surfaces.get(&key) {
+        return Some(s.clone());
+    }
+    let splines = job.splines_of(key)?;
+    let _t = opts_logging::stream_trace::span("terrain.surfaces_build");
+    let mut out = Vec::new();
+    for inst in splines.iter() {
+        if let Some(profile) = job.sli(&inst.sli_file) {
+            out.extend(spline_ground_triangles(&profile, inst, (0.0, 0.0)));
+        }
+    }
+    // Crossings (bent by their base) and surface objects lay down ground too.
+    out.extend(job.crossing_ground_triangles(key, Vec2::ZERO));
+    let out = Arc::new(out);
+    job.tile_surfaces.insert(key, out.clone());
+    Some(out)
+}
+
+/// Forgets the kept surfaces of tiles that no resident tile's carve can need any more.
+pub(super) fn prune_tile_surfaces(job: &mut WorldLoadJob) {
+    let resident = &job.resident;
+    job.tile_surfaces.retain(|k, _| {
+        NEIGHBOURHOOD
+            .iter()
+            .any(|(dx, dy)| resident.contains_key(&(k.0 + dx, k.1 + dy)))
+    });
+}
+
+/// What the first part of the terrain stage reads: the height grid and the tile's ground
+/// painting.
+pub(super) struct TerrainInput {
+    terrain: MapTerrain,
+    tile_material: Option<Handle<GroundMaterial>>,
+}
+
+/// Terrain stage, part 1: reads the height grid and composes the tile's ground material (the
+/// per-layer alpha masks: road markings, pavements, paths). `None` when the tile has no readable
+/// grid.
+pub(super) fn load_terrain(
     job: &mut WorldLoadJob,
-    stats: &mut WorldStats,
-    commands: &mut Commands,
     meshes: &mut Assets<Mesh>,
     materials: &mut Assets<StandardMaterial>,
     images: &mut Assets<Image>,
     ground_materials: Option<&mut Assets<GroundMaterial>>,
     key: (i32, i32),
-    origin: (f32, f32),
-    children: &mut Vec<Entity>,
-) -> Option<TileTerrain> {
-    // --- Terrain ---------------------------------------------------------------------------
+) -> Option<TerrainInput> {
     let terrain_rel = format!("{}.terrain", job.tile_files[&key]);
+    let t_read = opts_logging::stream_trace::span("terrain.read");
     let terrain: Option<MapTerrain> = job
         .install
         .find_in(&job.config.map_dir, &terrain_rel)
@@ -84,65 +116,106 @@ pub(super) fn spawn_terrain(
                 None
             }
         });
-
-    if let Some(t) = &terrain {
-        if job.ground_material.is_none() {
-            let tex = job
-                .manifest
-                .ground_textures
-                .first()
-                .map(|g| g.ground_texture.clone());
-            let dirs = vec![
-                job.config.map_dir.clone(),
-                job.config.map_dir.join("texture"),
-            ];
-            let handle = tex.and_then(|name| {
-                let mut loader = ContentLoader {
-                    install: &job.install,
-                    cache: &mut job.cache,
-                    meshes,
-                    materials,
-                    images,
-                };
-                loader.texture(&name, &dirs)
-            });
-            job.ground_material = Some(materials.add(terrain_material(handle)));
-        }
-        // Ground painting: per-layer alpha masks of this tile (road markings, pavements, paths).
-        let tile_material = ground_materials
-            .and_then(|gm| compose_tile_material(job, key, images, materials, meshes, gm));
-        // Terrain must not cover the drawn ground (`docs/src/architecture/terrain-carving.md`).
-        let cell = job.terrain_cell(key.1);
-        let surfaces = carve_surfaces(job, key);
-        let (carved, carve) = carve_terrain(&TileTerrain::new(t.clone(), cell), &surfaces);
-        tracing::debug!(
-            tile = ?key,
-            triangles = surfaces.len(),
-            lowered = carve.lowered,
-            guarded = carve.guarded,
-            "terrain carved"
-        );
-        let mesh = build_terrain_mesh(&carved.grid, origin, cell, tile_material.is_some());
-        stats.scene_vertices += mesh.count_vertices();
-        let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
-        children.push(match tile_material {
-            Some(material) => commands
-                .spawn(((Mesh3d(meshes.add(mesh)), MeshMaterial3d(material)), name))
-                .id(),
-            None => commands
-                .spawn((
-                    (
-                        Mesh3d(meshes.add(mesh)),
-                        MeshMaterial3d(job.ground_material.clone().unwrap_or_default()),
-                    ),
-                    name,
-                ))
-                .id(),
+    drop(t_read);
+    let terrain = terrain?;
+    let _t_mat = opts_logging::stream_trace::span("terrain.material");
+    if job.ground_material.is_none() {
+        let tex = job
+            .manifest
+            .ground_textures
+            .first()
+            .map(|g| g.ground_texture.clone());
+        let dirs = vec![
+            job.config.map_dir.clone(),
+            job.config.map_dir.join("texture"),
+        ];
+        let handle = tex.and_then(|name| {
+            let mut loader = ContentLoader {
+                install: &job.install,
+                cache: &mut job.cache,
+                meshes,
+                materials,
+                images,
+            };
+            loader.texture(&name, &dirs)
         });
-        return Some(carved);
+        job.ground_material = Some(materials.add(terrain_material(handle)));
     }
-    tracing::warn!(tile = ?key, "tile has no readable .terrain grid; objects use z as absolute height");
-    None
+    let tile_material = ground_materials
+        .and_then(|gm| compose_tile_material(job, key, images, materials, meshes, gm));
+    Some(TerrainInput {
+        terrain,
+        tile_material,
+    })
+}
+
+/// Terrain stage, part 2: makes sure the surfaces of one of the nine tiles that can lie over
+/// tile `key`'s terrain are computed (`index` into [`NEIGHBOURHOOD`]), so that a tile with several
+/// new neighbours spreads that work over frames.
+pub(super) fn ensure_surfaces(job: &mut WorldLoadJob, key: (i32, i32), index: usize) {
+    let (dx, dy) = NEIGHBOURHOOD[index];
+    tile_surfaces(job, (key.0 + dx, key.1 + dy));
+}
+
+/// Number of tiles whose surfaces the carve of one tile needs.
+pub(super) const NEIGHBOURHOOD_LEN: usize = NEIGHBOURHOOD.len();
+
+/// Terrain stage, part 3: carves the grid under the drawn ground and spawns the ground mesh
+/// (`docs/src/architecture/terrain-carving.md`). Returns the carved grid: the ground every object,
+/// lane and vehicle stands on.
+#[allow(clippy::too_many_arguments)]
+pub(super) fn spawn_terrain(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    input: Option<TerrainInput>,
+    key: (i32, i32),
+    origin: (f32, f32),
+    children: &mut Vec<Entity>,
+) -> Option<TileTerrain> {
+    let Some(TerrainInput {
+        terrain: t,
+        tile_material,
+    }) = input
+    else {
+        tracing::warn!(tile = ?key, "tile has no readable .terrain grid; objects use z as absolute height");
+        return None;
+    };
+    let cell = job.terrain_cell(key.1);
+    let t_surf = opts_logging::stream_trace::span("terrain.surfaces");
+    let surfaces = carve_surfaces(job, key);
+    drop(t_surf);
+    let t_carve = opts_logging::stream_trace::span("terrain.carve");
+    let (carved, carve) = carve_terrain(&TileTerrain::new(t, cell), &surfaces);
+    drop(t_carve);
+    tracing::debug!(
+        tile = ?key,
+        triangles = surfaces.len(),
+        lowered = carve.lowered,
+        guarded = carve.guarded,
+        "terrain carved"
+    );
+    let t_mesh = opts_logging::stream_trace::span("terrain.mesh");
+    let mesh = build_terrain_mesh(&carved.grid, origin, cell, tile_material.is_some());
+    drop(t_mesh);
+    stats.scene_vertices += mesh.count_vertices();
+    let name = Name::new(format!("Terrain_{}_{}", key.0, key.1));
+    children.push(match tile_material {
+        Some(material) => commands
+            .spawn(((Mesh3d(meshes.add(mesh)), MeshMaterial3d(material)), name))
+            .id(),
+        None => commands
+            .spawn((
+                (
+                    Mesh3d(meshes.add(mesh)),
+                    MeshMaterial3d(job.ground_material.clone().unwrap_or_default()),
+                ),
+                name,
+            ))
+            .id(),
+    });
+    Some(carved)
 }
 
 /// Water stage: the tile's `.map.water` surface over the terrain it floods.
