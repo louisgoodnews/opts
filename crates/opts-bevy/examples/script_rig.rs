@@ -15,6 +15,13 @@
 //! writes one line per vehicle, `--csv DIR` one CSV of every non-zero float variable per frame for
 //! each vehicle the filter selects (use it with `--vehicle`).
 //!
+//! `--physics` closes the loop instead: the scripts' torque and brake force drive a
+//! `VehicleSimulation` (script drive) at `--hz` steps per second, and the rig measures what a
+//! vehicle does under its own scripts: the time from standstill to 50 km/h at full throttle, the
+//! distance to stop from 50 km/h at full brake, whether the parking brake holds on a 10 % grade
+//! and whether more throttle gives more speed (`docs/src/architecture/script-integration-report.md`,
+//! M-0097).
+//!
 //! `--golden FILE` writes the values of [`GOLDEN_VARS`] at [`GOLDEN_TIMES`] for the vehicle the
 //! filter selects; `--check FILE` runs the same and exits with 1 when a value differs from the
 //! golden by more than 2 % (or 0.001 absolute). The golden run of the MAN NG272 (`MAN_GN92_main`)
@@ -97,6 +104,195 @@ impl Startup {
     }
 }
 
+/// A vehicle's scripts and physics, closed in a loop (`--physics`).
+struct Loop {
+    engine: opts_sim::script::ScriptEngine,
+    plan: FeedPlan,
+    controller: opts_bevy::VehicleController,
+    startup: Startup,
+    t: f32,
+    dt: f32,
+}
+
+impl Loop {
+    fn new(bus: &BusManifest, engine: opts_sim::script::ScriptEngine, dt: f32) -> Self {
+        let mut engine = engine;
+        let plan = FeedPlan::new(&mut engine);
+        let mut controller =
+            opts_bevy::VehicleController::new(opts_sim::VehicleSimulation::from_manifest(bus));
+        controller
+            .inputs_mut()
+            .set_gear(opts_sim::GearPosition::Drive);
+        controller.inputs_mut().set_parking_brake(true);
+        let first = opts_bevy::vehicle_script::host_inputs(&controller, None);
+        feed(&mut engine, &plan, &first);
+        engine.run_init();
+        Self {
+            engine,
+            plan,
+            controller,
+            startup: Startup::default(),
+            t: 0.0,
+            dt,
+        }
+    }
+
+    /// One step: feed, start-up triggers, scripts, their torque and brakes into the physics.
+    fn tick(&mut self) {
+        let inputs = opts_bevy::vehicle_script::host_inputs(&self.controller, None);
+        feed(&mut self.engine, &self.plan, &inputs);
+        self.startup.step(self.t, &mut self.engine);
+        self.engine.run_frame(self.dt, false);
+        self.controller.sim.script_drive = opts_bevy::vehicle_script::script_outputs(&self.engine);
+        self.controller.sim.step(self.dt);
+        self.t += self.dt;
+    }
+
+    fn run(&mut self, seconds: f32) {
+        let trace = std::env::var_os("RIG_TRACE").is_some();
+        for i in 0..(seconds / self.dt) as usize {
+            self.tick();
+            if trace && i % (1.0 / self.dt) as usize == 0 {
+                eprintln!(
+                    "t={:.1} v={:.2} engine_on={} n={:.0} m_wheel={:.0} brake={:.0} park={} gear={}",
+                    self.t,
+                    self.speed(),
+                    self.engine.get("engine_on"),
+                    self.engine.get("engine_n"),
+                    self.engine.get("m_wheel"),
+                    self.controller
+                        .sim
+                        .script_drive
+                        .map_or(0.0, |d| d.brake_force_n),
+                    self.engine.get("bremse_feststell"),
+                    self.engine.get("antrieb_getr_aktugang"),
+                );
+            }
+        }
+    }
+
+    fn speed(&self) -> f32 {
+        self.controller.sim.chassis.forward_speed_m_s()
+    }
+
+    /// Start-up, then the parking brake off and the brake circuits filled until the scripts'
+    /// brakes are released (the compressor needs up to two minutes), at most 180 s: the vehicle
+    /// stands ready to drive.
+    fn ready(&mut self) {
+        self.run(12.0);
+        self.controller.inputs_mut().set_parking_brake(false);
+        if self.engine.get("bremse_feststell") > 0.5 {
+            self.engine.trigger("parking_brake_toggle");
+        }
+        self.run(1.0);
+        let t_limit = self.t + 170.0;
+        while self.t < t_limit {
+            let drag = self
+                .controller
+                .sim
+                .script_drive
+                .map_or(0.0, |d| d.brake_force_n);
+            if drag < 500.0 {
+                break;
+            }
+            self.run(1.0);
+        }
+    }
+}
+
+/// The closed-loop scenarios of one vehicle (`--physics`).
+fn physics_report(
+    bus: &BusManifest,
+    load: &dyn Fn() -> opts_sim::script::ScriptEngine,
+    hz: f32,
+) -> serde_json::Value {
+    let dt = 1.0 / hz;
+    let fresh = || Loop::new(bus, load(), dt);
+    // 1. Standstill to 50 km/h at full throttle.
+    let mut a = fresh();
+    a.ready();
+    a.controller.inputs_mut().set_throttle(1.0);
+    let t0 = a.t;
+    let mut to_50 = None;
+    while a.t - t0 < 40.0 {
+        a.tick();
+        if to_50.is_none() && a.speed() * 3.6 >= 50.0 {
+            to_50 = Some(a.t - t0);
+        }
+    }
+    let speed_after_40 = a.speed() * 3.6;
+    // 2. Stop from 50 km/h at full brake.
+    let mut b = fresh();
+    b.ready();
+    b.controller.sim.chassis.local_velocity = bevy::math::Vec2::new(0.0, 50.0 / 3.6);
+    b.controller.inputs_mut().set_service_brake(1.0);
+    let start = b.controller.sim.chassis.position.y;
+    let t1 = b.t;
+    while b.t - t1 < 20.0 && b.speed() > 0.05 {
+        b.tick();
+        if std::env::var_os("RIG_TRACE_BRAKE").is_some() && ((b.t - t1) / dt) as usize % 12 == 0 {
+            eprintln!(
+                "brake t={:.2} v={:.2} force={:.0} pressure={:.0}",
+                b.t - t1,
+                b.speed(),
+                b.controller
+                    .sim
+                    .script_drive
+                    .map_or(0.0, |d| d.brake_force_n),
+                b.engine.get("bremse_p_tank01"),
+            );
+        }
+    }
+    let stop_m = b.controller.sim.chassis.position.y - start;
+    let stop_s = b.t - t1;
+    // 3. Parking brake on a 10 % grade, facing uphill.
+    let mut c = fresh();
+    c.ready();
+    c.controller.inputs_mut().set_parking_brake(true);
+    // The driver pulls the lever: the scripts' spring brake follows (as in the game's start-up
+    // system, which asks for the toggle when the two differ).
+    if c.engine.get("bremse_feststell") < 0.5 {
+        c.engine.trigger("parking_brake_toggle");
+    }
+    c.controller.sim.head_body = Some(opts_sim::vehicle::ground::UnitBody {
+        elevation: 0.0,
+        pitch: 0.10f32.atan(),
+        roll: 0.0,
+    });
+    let y0 = c.controller.sim.chassis.position.y;
+    let mut drift = 0.0f32;
+    for _ in 0..(25.0 / dt) as usize {
+        c.tick();
+        drift = drift.max((c.controller.sim.chassis.position.y - y0).abs());
+    }
+    // 4. A throttle sweep.
+    let sweep: Vec<f32> = [0.2f32, 0.4, 0.6, 0.8, 1.0]
+        .iter()
+        .map(|&th| {
+            let mut s = fresh();
+            s.ready();
+            s.controller.inputs_mut().set_throttle(th);
+            s.run(8.0);
+            s.speed() * 3.6
+        })
+        .collect();
+    let monotone = sweep.windows(2).all(|w| w[1] >= w[0] - 0.05);
+    serde_json::json!({
+        "hz": hz,
+        "mass_kg": bus.mass_tonnes.map(|t| t * 1000.0),
+        "seconds_to_50_kmh": to_50,
+        "speed_after_40_s_kmh": speed_after_40,
+        "stop_from_50_kmh_m": stop_m,
+        "stop_from_50_kmh_s": stop_s,
+        "stopped": b.speed() <= 0.05,
+        "parking_brake_10_percent_drift_m": drift,
+        "parking_brake_10_percent_final_speed": c.speed(),
+        "throttle_sweep_kmh_after_8_s": sweep,
+        "throttle_sweep_monotone": monotone,
+        "engine_on": a.engine.get("engine_on"),
+    })
+}
+
 /// System values the engine itself sets in every `run_frame` (`GetTime`, `Timegap`): never unfed.
 const ENGINE_SET: &[&str] = &["gettime", "timegap"];
 
@@ -171,12 +367,15 @@ fn main() {
         usize::MAX,
     );
     let (mut golden, mut check) = (None::<PathBuf>, None::<PathBuf>);
+    let (mut physics, mut hz) = (false, 60.0f32);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--vehicle" => filter = args.next().map(|s| s.to_lowercase()),
             "--frames" => frames = args.next().and_then(|v| v.parse().ok()).unwrap_or(720),
             "--json" => json = args.next().map(PathBuf::from),
             "--csv" => csv = args.next().map(PathBuf::from),
+            "--physics" => physics = true,
+            "--hz" => hz = args.next().and_then(|v| v.parse().ok()).unwrap_or(60.0),
             "--golden" => golden = args.next().map(PathBuf::from),
             "--check" => check = args.next().map(PathBuf::from),
             "--limit" => {
@@ -235,6 +434,22 @@ fn main() {
             .filter(|d| d.severity == Severity::Error)
             .count();
         load_errors += usize::from(load_errors_here > 0);
+        if physics {
+            let seed0 = seed_of(&rel);
+            let loader = || {
+                let (mut e, _) =
+                    load_vehicle_scripts(&bus, |r| find_ci(&dir, r).or_else(|| find_ci(&root, r)));
+                e.seed_random(seed0 as u32);
+                e.set_external_handler(vehicle_callbacks(seed0));
+                e
+            };
+            let report = physics_report(&bus, &loader, hz);
+            println!(
+                "{rel}\n{}",
+                serde_json::to_string_pretty(&report).unwrap_or_default()
+            );
+            continue;
+        }
         let seed = seed_of(&rel);
         engine.seed_random(seed as u32);
         engine.set_external_handler(vehicle_callbacks(seed));

@@ -14,6 +14,7 @@ pub mod inputs;
 pub mod spec;
 pub mod suspension;
 pub mod trailer;
+pub mod wheels;
 
 use self::axle::AxleState;
 use self::brakes::{BrakeSystem, BRAKE_FACTOR};
@@ -117,6 +118,10 @@ pub struct VehicleSimulation {
     /// built-in drivetrain decides).
     #[serde(default)]
     pub script_drive: Option<ScriptDrive>,
+    /// The wheels carry their own speed from the last step (the wheel model ran); otherwise the
+    /// next wheel step starts them at the rolling speed of the vehicle.
+    #[serde(default)]
+    pub wheels_spinning: bool,
     /// What the vehicle file states about mass, centre of gravity, inertia and rolling
     /// resistance, and where each value comes from (M-0073).
     #[serde(default)]
@@ -193,6 +198,7 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
+            wheels_spinning: false,
             spec: VehicleDynamicsSpec::default(),
             body: None,
             brakes: BrakeSystem::default(),
@@ -238,6 +244,7 @@ impl VehicleSimulation {
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
+            wheels_spinning: false,
             spec: VehicleDynamicsSpec::default(),
             body: None,
             brakes: BrakeSystem::default(),
@@ -278,24 +285,53 @@ impl VehicleSimulation {
             axle.apply_steering(central_steer_rad, self.wheelbase_m);
         }
 
+        // The wheel loads the tyres need exist from the first step on.
+        if self.body.is_none() {
+            self.rebuild_body();
+        }
+
         // 2. Drivetrain & braking forces
         let moving_mass_kg = self.consist_mass_kg();
         let mut forces =
             self.drivetrain
                 .step(&self.inputs, speed, first_wheel_radius, moving_mass_kg);
+        let mut wheel_forces = false;
+        let was_spinning = std::mem::replace(&mut self.wheels_spinning, false);
         if let Some(d) = self.script_drive {
-            // The scripts' torque and brakes, limited by what the tyres can carry.
-            let (driven_n, braked_n) = self.friction_loads_n();
-            let (drive_limit, brake_limit) = (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
-            let driven_radius = self
-                .axles
-                .iter()
-                .find(|a| a.config.is_driven)
-                .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
-                .max(0.1);
-            forces.tractive_force_n =
-                (d.wheel_torque_nm / driven_radius).clamp(-drive_limit, drive_limit);
-            forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
+            if speed.abs() > STANDSTILL_M_S {
+                // Moving: the scripts' torque and brakes act on the spinning wheels; the tyres
+                // turn them into the longitudinal force (never above the friction limit).
+                if !was_spinning {
+                    for axle in &mut self.axles {
+                        for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
+                            w.angular_velocity_rad_s = speed / w.rolling_radius_m.max(0.1);
+                        }
+                    }
+                }
+                forces.tractive_force_n = self.step_wheels(d, speed, dt);
+                forces.braking_force_n = 0.0;
+                wheel_forces = true;
+                self.wheels_spinning = true;
+            } else {
+                // Standing: static hold against the scripts' torque, limited by the tyres.
+                let (driven_n, braked_n) = self.friction_loads_n();
+                let (drive_limit, brake_limit) =
+                    (ROAD_FRICTION * driven_n, ROAD_FRICTION * braked_n);
+                let driven_radius = self
+                    .axles
+                    .iter()
+                    .find(|a| a.config.is_driven)
+                    .map_or(first_wheel_radius, |a| a.config.wheel_diameter_m * 0.5)
+                    .max(0.1);
+                forces.tractive_force_n =
+                    (d.wheel_torque_nm / driven_radius).clamp(-drive_limit, drive_limit);
+                forces.braking_force_n = d.brake_force_n.clamp(0.0, brake_limit);
+                for axle in &mut self.axles {
+                    for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
+                        w.angular_velocity_rad_s = speed / w.rolling_radius_m.max(0.1);
+                    }
+                }
+            }
         }
 
         // The service brake: built-in drivetrain only (a script drive brings its own force).
@@ -354,8 +390,10 @@ impl VehicleSimulation {
                 }
             }
         }
-        for axle in &mut self.axles {
-            axle.update_rotation(self.chassis.forward_speed_m_s(), dt);
+        if !wheel_forces {
+            for axle in &mut self.axles {
+                axle.update_rotation(self.chassis.forward_speed_m_s(), dt);
+            }
         }
 
         // 6. Consist kinematics: every unit follows the one ahead, starting with the chassis.
@@ -364,6 +402,66 @@ impl VehicleSimulation {
             let st = unit.step(leader.0, leader.1, f64::from(dt));
             leader = (st.origin, st.heading);
         }
+    }
+
+    /// Advances the wheels of the head's axles under the scripts' torque and brake force and
+    /// returns the sum of their longitudinal tyre forces (N). The torque goes to the driven
+    /// wheels (all of them when no axle is marked driven) in equal parts, the brake force to the
+    /// head's axles in proportion to their rated force.
+    fn step_wheels(&mut self, d: ScriptDrive, speed: f32, dt: f32) -> f32 {
+        let any_driven = self.axles.iter().any(|a| a.config.is_driven);
+        let driven_wheels = self
+            .axles
+            .iter()
+            .filter(|a| a.config.is_driven || !any_driven)
+            .count()
+            * 2;
+        let torque_each = d.wheel_torque_nm / driven_wheels.max(1) as f32;
+        let rated_head: f32 = self.axles.iter().map(|a| a.config.max_force_n).sum();
+        let rated_all: f32 = rated_head
+            + self
+                .trailer_loads
+                .iter()
+                .flat_map(|u| u.axles.iter())
+                .map(|a| a.rated_n)
+                .sum::<f32>();
+        let head_brake_n = if rated_all > 0.0 {
+            d.brake_force_n * rated_head / rated_all
+        } else {
+            0.0
+        };
+        let mut total = 0.0;
+        let axle_count = self.axles.len().max(1) as f32;
+        for axle in &mut self.axles {
+            let drive = if axle.config.is_driven || !any_driven {
+                torque_each
+            } else {
+                0.0
+            };
+            let share = if rated_head > 0.0 {
+                axle.config.max_force_n / rated_head
+            } else {
+                1.0 / axle_count
+            };
+            for w in [&mut axle.left_wheel, &mut axle.right_wheel] {
+                let r = w.rolling_radius_m.max(0.1);
+                let brake_nm = head_brake_n * share * 0.5 * r;
+                let load = w.vertical_load_n;
+                let st = wheels::step_wheel(w, drive, brake_nm, load, speed, ROAD_FRICTION, dt);
+                total += st.force_n;
+            }
+        }
+        // The following units: their brake share, as far as their tyres carry it.
+        let trailer_brake_n = d.brake_force_n - head_brake_n;
+        if trailer_brake_n > 0.0 {
+            let loads: f32 = self
+                .trailer_loads
+                .iter()
+                .flat_map(|u| u.axle_loads_n())
+                .sum();
+            total -= speed.signum() * trailer_brake_n.min(ROAD_FRICTION * loads);
+        }
+        total
     }
 
     /// Builds the body-on-wheels model from the axles, the mass and the spec (at rest, on the
@@ -980,5 +1078,56 @@ mod tests {
         assert!((driven - braked).abs() < 1.0);
         sim.set_trailers(vec![UnitLoad::with_axles(5_000.0, 2, 2)]);
         assert!((sim.driven_mass_kg() - 15_000.0).abs() < 1.0);
+    }
+}
+
+#[cfg(test)]
+mod wheel_model_tests {
+    use super::*;
+
+    /// M-0097: under script drive the speed after 10 s at constant torque is the same, within
+    /// 5 %, at 30, 60 and 120 steps per second.
+    #[test]
+    fn script_drive_does_not_depend_on_the_step_size() {
+        let speed_after_10_s = |hz: f32| {
+            let mut sim = VehicleSimulation::new_standard_bus(10_900.0, 5.85);
+            sim.inputs.set_parking_brake(false);
+            sim.script_drive = Some(ScriptDrive {
+                wheel_torque_nm: 6000.0,
+                brake_force_n: 0.0,
+            });
+            for _ in 0..(10.0 * hz) as usize {
+                sim.step(1.0 / hz);
+            }
+            sim.chassis.forward_speed_m_s()
+        };
+        let (a, b, c) = (
+            speed_after_10_s(30.0),
+            speed_after_10_s(60.0),
+            speed_after_10_s(120.0),
+        );
+        assert!(
+            (a - b).abs() < 0.05 * b && (c - b).abs() < 0.05 * b,
+            "{a} {b} {c}"
+        );
+        assert!(b > 8.0, "it drives: {b}");
+    }
+
+    /// The wheels of a vehicle under script drive turn with the road when nothing brakes.
+    #[test]
+    fn the_wheels_follow_the_road_speed_without_brakes() {
+        let mut sim = VehicleSimulation::new_standard_bus(10_900.0, 5.85);
+        sim.inputs.set_parking_brake(false);
+        sim.chassis.local_velocity.y = 10.0;
+        sim.script_drive = Some(ScriptDrive::default());
+        for _ in 0..120 {
+            sim.step(1.0 / 60.0);
+        }
+        let v = sim.chassis.forward_speed_m_s();
+        let w = &sim.axles[0].left_wheel;
+        assert!(
+            (w.angular_velocity_rad_s * w.rolling_radius_m - v).abs() < 0.2,
+            "{v}"
+        );
     }
 }

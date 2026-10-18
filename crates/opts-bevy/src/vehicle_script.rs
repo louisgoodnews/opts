@@ -215,6 +215,34 @@ pub fn vehicle_script_system(
     }
 }
 
+/// What the scripts hand to the physics: the torque at the driven wheels (`M_Wheel`, N·m) and the
+/// total brake force (N). `None` when no script writes `M_Wheel` (the vehicle is not
+/// script-driven). Player vehicles write the force of every wheel (`Axle_Brakeforce_<n>_<l|r>`);
+/// the total `Brakeforce` belongs to the AI scripts (`{frame_ai}`), so the wheel forces win.
+#[must_use]
+pub fn script_outputs(engine: &ScriptEngine) -> Option<opts_sim::vehicle::ScriptDrive> {
+    if !engine.writes("m_wheel") {
+        return None;
+    }
+    let wheel_names: Vec<String> = (0..8)
+        .flat_map(|i| {
+            [
+                format!("axle_brakeforce_{i}_l"),
+                format!("axle_brakeforce_{i}_r"),
+            ]
+        })
+        .collect();
+    let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
+        wheel_names.iter().map(|n| engine.get(n)).sum()
+    } else {
+        engine.get("brakeforce")
+    };
+    Some(opts_sim::vehicle::ScriptDrive {
+        wheel_torque_nm: engine.get("m_wheel"),
+        brake_force_n: brake.max(0.0),
+    })
+}
+
 /// Hands the scripts' torque and brake force to the physics for the next step (only when
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
@@ -244,30 +272,15 @@ pub fn script_drive_system(
         let Ok(engine) = scripts.engine.lock() else {
             continue;
         };
-        if !engine.writes("m_wheel") {
+        let Some(drive) = script_outputs(&engine) else {
             controller.sim.script_drive = None;
             continue;
-        }
-        // Player vehicles write the force of every wheel (`Axle_Brakeforce_<n>_<l|r>`); the
-        // total `Brakeforce` belongs to the AI scripts (`{frame_ai}`), so the wheel forces win.
-        let wheel_names: Vec<String> = (0..8)
-            .flat_map(|i| {
-                [
-                    format!("axle_brakeforce_{i}_l"),
-                    format!("axle_brakeforce_{i}_r"),
-                ]
-            })
-            .collect();
-        let brake = if wheel_names.iter().any(|n| engine.writes(n)) {
-            wheel_names.iter().map(|n| engine.get(n)).sum()
-        } else {
-            engine.get("brakeforce")
         };
         *ticks = ticks.wrapping_add(1);
         if (*ticks).is_multiple_of(64) {
             tracing::debug!(
-                m_wheel = engine.get("m_wheel"),
-                brake,
+                m_wheel = drive.wheel_torque_nm,
+                brake = drive.brake_force_n,
                 engine_n = engine.get("engine_n"),
                 throttle = engine.get("throttle"),
                 gear_pre = engine.get("antrieb_getr_gangvorwahl"),
@@ -275,15 +288,10 @@ pub fn script_drive_system(
                 gear_act = engine.get("antrieb_getr_aktugang"),
                 parking = engine.get("bremse_feststell"),
                 tank = engine.get("bremse_p_tank01"),
-                f0r = engine.get("axle_brakeforce_0_r"),
-                f3l = engine.get("axle_brakeforce_3_l"),
                 "script drive"
             );
         }
-        controller.sim.script_drive = Some(opts_sim::vehicle::ScriptDrive {
-            wheel_torque_nm: engine.get("m_wheel"),
-            brake_force_n: brake.max(0.0),
-        });
+        controller.sim.script_drive = Some(drive);
     }
 }
 
