@@ -17,12 +17,21 @@ use crate::settings::GameSettings;
 pub const LOAD_ALL_KEY: &str = "gameplay.load_all_tiles";
 /// Key of the *Tile radius* setting (`0`: automatic).
 pub const RADIUS_KEY: &str = "gameplay.tile_radius";
+/// Key of the *Tile streaming budget* setting (milliseconds per frame; `0`: one whole tile).
+pub const STREAM_BUDGET_KEY: &str = "advanced.streaming_budget_ms";
 /// Tiles beyond `radius + HYSTERESIS` are unloaded, so the radius does not thrash at borders.
 pub const HYSTERESIS: i32 = 1;
 /// Largest value the *Tile radius* setting accepts.
 pub const RADIUS_SETTING_MAX: i64 = 16;
 /// The radius used while no hardware profile is known: the 3 x 3 area of earlier versions.
 pub const FALLBACK_RADIUS: u32 = 1;
+/// How long streaming may work on tiles in one frame while driving (`advanced.streaming_budget_ms`
+/// sets it; zero builds one whole tile per frame as before).
+pub const DEFAULT_STREAM_BUDGET: std::time::Duration = std::time::Duration::from_millis(8);
+/// The budget of a frame of the loading screen: the window answers at least ten times a second
+/// (a tile took up to 3.5 s in one frame before) without making the loading itself noticeably
+/// longer.
+pub const LOADING_BUDGET: std::time::Duration = std::time::Duration::from_millis(100);
 
 /// What stays resident.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,6 +111,18 @@ impl TileChoice {
         };
         TileMode::Radius(radius.clamp(1, max_radius.max(1)) as i32)
     }
+}
+
+/// How long streaming may work on tiles in one frame, from the setting (the default when it is
+/// absent or unreadable; zero builds one whole tile per frame, as before M-0089).
+#[must_use]
+pub fn stream_budget_of(settings: &GameSettings) -> std::time::Duration {
+    settings
+        .raw(STREAM_BUDGET_KEY)
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .map_or(DEFAULT_STREAM_BUDGET, |ms| {
+            std::time::Duration::from_millis(ms.min(50))
+        })
 }
 
 /// The radius `opts-hardware` recommends; [`FALLBACK_RADIUS`] while no profile is known.

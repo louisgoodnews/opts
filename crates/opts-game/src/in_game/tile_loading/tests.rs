@@ -106,6 +106,26 @@ fn resolve_applies_the_choice_to_this_machine_and_map() {
 }
 
 #[test]
+fn the_streaming_budget_follows_the_setting() {
+    let ms = |v: Option<&str>| {
+        let mut s = GameSettings::default();
+        if let Some(v) = v {
+            s.set_raw(STREAM_BUDGET_KEY, v);
+        }
+        stream_budget_of(&s).as_millis()
+    };
+    assert_eq!(ms(None), DEFAULT_STREAM_BUDGET.as_millis());
+    assert_eq!(ms(Some("16")), 16);
+    assert_eq!(
+        ms(Some("0")),
+        0,
+        "zero is the old one-tile-per-frame behaviour"
+    );
+    assert_eq!(ms(Some("500")), 50, "capped");
+    assert_eq!(ms(Some("fast")), DEFAULT_STREAM_BUDGET.as_millis());
+}
+
+#[test]
 fn without_a_profile_the_radius_is_the_old_3x3() {
     assert_eq!(recommended(None, &MapStats::default()), FALLBACK_RADIUS);
     assert_eq!(TileMode::default(), TileMode::Radius(1));

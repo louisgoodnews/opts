@@ -286,9 +286,11 @@ impl WorldLoadJob {
     /// no longer queued, e.g. a tile that exists no more).
     pub(super) fn chrono_pending(&mut self) -> usize {
         let (resident, queue) = (&self.resident, &self.queue);
-        self.chrono
-            .rebuilding
-            .retain(|k| !resident.contains_key(k) && queue.contains(k));
+        let building = self.building.as_ref().map(|b| b.key);
+        self.chrono.rebuilding.retain(|k| {
+            let in_progress = building == Some(*k);
+            in_progress || (!resident.contains_key(k) && queue.contains(k))
+        });
         self.chrono.rebuilding.len()
     }
 }

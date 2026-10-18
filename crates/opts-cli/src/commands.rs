@@ -153,8 +153,8 @@ pub const COMMANDS: &[CommandSpec] = &[
         "Resident tiles, tile loading mode and radius",
         "",
     )
-    .result("`{mode, radius, automatic, setting_radius, recommended_radius, load_all, map_radius, start_tile, listed, listed_missing, resident_count, resident, queued}`")
-    .doc("What the streamer keeps resident (M-0080). `mode` is `all` (every tile, never unloaded; `radius` is `null`) or `radius` (the tiles within `radius` of the tile the camera stands on: 1 is 3 x 3). `setting_radius` is the stored `gameplay.tile_radius` (`0`: automatic, then `radius` is `recommended_radius`, derived from the hardware profile and limited to `map_radius`, the radius that covers the map from the start tile); `load_all` is `gameplay.load_all_tiles`. `resident` lists the tile keys `[x, y]`, `queued` counts tiles waiting to be built, `listed` the tiles `global.cfg` names and `listed_missing` those among them without a file. Set the mode with `settings.set`. `1001` outside a drive."),
+    .result("`{mode, radius, automatic, setting_radius, recommended_radius, load_all, map_radius, start_tile, listed, listed_missing, resident_count, resident, queued, building, stream_budget_ms}`")
+    .doc("What the streamer keeps resident (M-0080). `mode` is `all` (every tile, never unloaded; `radius` is `null`) or `radius` (the tiles within `radius` of the tile the camera stands on: 1 is 3 x 3). `setting_radius` is the stored `gameplay.tile_radius` (`0`: automatic, then `radius` is `recommended_radius`, derived from the hardware profile and limited to `map_radius`, the radius that covers the map from the start tile); `load_all` is `gameplay.load_all_tiles`. `resident` lists the tile keys `[x, y]` (a tile whose build is still in progress is in it and named in `building`; it fills in over a few frames within `stream_budget_ms` per frame, M-0089), `queued` counts tiles waiting to be built, `listed` the tiles `global.cfg` names and `listed_missing` those among them without a file. Set the mode with `settings.set`. `1001` outside a drive."),
     c("camera.get", "query", "Camera mode and transform", ""),
     c(
         "sim.get",

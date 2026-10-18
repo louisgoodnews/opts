@@ -167,6 +167,8 @@ set-opt-trace-summary = Zusammenfassung
 set-opt-trace-full = Alles
 set-trace-overlay = Szenen-Trace-Überlagerung
 set-trace-overlay-desc = Entwicklerwerkzeug: zeichnet um jedes verfolgte Objekt in Kameranähe einen Kasten, eingefärbt nach Dekodierqualität (rot = fehlgeschlagen, orange = unsicher, gelb = dekodiert). Braucht den Szenen-Trace.
+set-streaming-budget = Kachel-Lade-Budget
+set-streaming-budget-desc = Millisekunden pro Bild, die das Laden neuer Kartenkacheln während der Fahrt verbrauchen darf. Ein kleiner Wert hält die Bildrate gleichmäßig und baut eine Kachel über einige Bilder auf; ein großer lädt schneller, kann aber ruckeln; 0 baut wie früher eine ganze Kachel pro Bild.
 
 settings-title = Einstellungen
 settings-search-placeholder = Einstellungen durchsuchen

@@ -54,5 +54,7 @@ fn tiles(world: &mut World, _: &Value) -> Outcome {
         "resident_count": resident.len(),
         "resident": resident.iter().map(|k| json!([k.0, k.1])).collect::<Vec<_>>(),
         "queued": job.queued_tiles().len(),
+        "building": job.building_tile().map(|k| json!([k.0, k.1])),
+        "stream_budget_ms": job.stream_budget.as_millis(),
     }))
 }

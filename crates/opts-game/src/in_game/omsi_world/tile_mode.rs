@@ -40,6 +40,13 @@ impl WorldLoadJob {
         keys
     }
 
+    /// The tile whose build is in progress (it is resident already, with its root entity, and is
+    /// filled in over a few frames), if any.
+    #[must_use]
+    pub fn building_tile(&self) -> Option<(i32, i32)> {
+        self.building.as_ref().map(|b| b.key)
+    }
+
     /// Tiles waiting to be built.
     #[must_use]
     pub fn queued_tiles(&self) -> Vec<(i32, i32)> {

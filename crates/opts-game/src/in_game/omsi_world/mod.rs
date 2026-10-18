@@ -32,6 +32,7 @@ mod respawn;
 mod scenery_objects;
 mod setvar_state;
 mod tile;
+mod tile_build;
 mod tile_ground;
 mod tile_mode;
 pub(crate) mod trace;
@@ -74,7 +75,7 @@ pub use rail::{
 pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
-pub use tile::{load_next_tile, stream_world_tiles, TileRoot};
+pub use tile::{advance_tile_loading, load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
     configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
     update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
@@ -207,6 +208,10 @@ pub struct WorldLoadJob {
     tile_mode: super::tile_loading::TileMode,
     /// Listed tiles whose file is not there (found while loading everything; not asked again).
     missing_tiles: HashSet<(i32, i32)>,
+    /// The tile whose build is in progress (it is already in `resident`, with its root entity).
+    building: Option<tile_build::TileBuild>,
+    /// How long streaming may work on tiles in one frame (zero: one whole tile per frame).
+    pub stream_budget: std::time::Duration,
     total_tiles: usize,
     sli_cache: HashMap<PathBuf, Option<Arc<SplineProfile>>>,
     /// Map-wide spline lookup for attachments, built on first use.

@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Baseline measured and ranked proposal written 2026-10-18; no improvement implemented yet |
+| **Status** | 🟡 Baseline measured, ranked proposal written, step 1 (resumable, time-budgeted build) implemented and measured 2026-10-18; step 2 (terrain on a worker) next |
 | **Last Updated** | 2026-10-18 |
 | **Relevant Crates** | `opts-game` (`in_game/omsi_world/{tile,tile_ground,job,tile_mode}.rs`, `in_game/stream_budget.rs`), `opts-bevy` (`model.rs`, `texture.rs`), `opts-logging` (`stream_trace`) |
 | **Traces to** | field report R-32 (streaming freezes), R-36 (load time); [map streaming](map-streaming.md) limits L1 and L2; [M-0089](../roadmap/phase-4/M-0089.md) |
@@ -67,7 +67,7 @@ Ordered by effect on the measured problems against risk. Each step is measured w
 
 | # | Change | Targets | Expected effect (from §3) | Risk |
 | :-: | :--- | :--- | :--- | :--- |
-| 1 | **Resumable, time-budgeted tile build on the main thread** (`FrameBudget`): split `load_next_tile` into phases that can stop between them (terrain, splines, surfaces, attachments, registries, objects in chunks of objects), tile root first so the tile fills in over a few frames; the loading screen uses the same steps | A and B | Caps a frame at the budget (for example 8 ms) plus a normal frame: the Spandau clusters of 40 to 100 ms become several 20 to 25 ms frames; loading-screen frames of seconds become tens of milliseconds (the window answers) | Low to medium: the build's local state (`placed`, `loading_deps`) must live in a per-tile cursor; a partly built tile is visible (pop-in), so registries and the root's `resident` entry come last. Behind a setting (`advanced.streaming_budget_ms`, 0 = old behaviour) because it changes behaviour |
+| 1 ✅ | **Resumable, time-budgeted tile build on the main thread** (`FrameBudget`; done and measured, [§8](#8-step-1-measured)): split `load_next_tile` into phases that can stop between them (terrain, splines, surfaces, attachments, registries, objects in chunks of objects), tile root first so the tile fills in over a few frames; the loading screen uses the same steps | A and B | Caps a frame at the budget (for example 8 ms) plus a normal frame: the Spandau clusters of 40 to 100 ms become several 20 to 25 ms frames; loading-screen frames of seconds become tens of milliseconds (the window answers) | Low to medium: the build's local state (`placed`, `loading_deps`) must live in a per-tile cursor; a partly built tile is visible (pop-in), so registries and the root's `resident` entry come last. Behind a setting (`advanced.streaming_budget_ms`, 0 = old behaviour) because it changes behaviour |
 | 2 | **Terrain on a worker task**: read and parse `.terrain`, carve and build the mesh off-thread, apply the mesh and spawn on the main thread | B (59 % of in-game build time) | Removes about 16 ms of 28 ms per tile from the main thread | Medium: needs the neighbours' splines and crossing objects from thread-safe caches and a generation token against eviction |
 | 3 | **Texture and model preparation on workers** (`o3d` parse, decode, bend, mesh build, texture decode and mips into a CPU texture cache, handles reserved up front) | A (cold objects) | Most of the 2.4 s frames of the loading phase | High: the read-back sites (`opaque_variant`, transmap composition, `ground.rs`) must use a CPU copy, the handle-keyed caches and the glass and reflection registries move to the apply step |
 | 4 | **Whole-tile prepare tasks** (several tiles in flight) | A and B | Parallel use of the 16 cores | Highest: only after 2 and 3; needs epochs for hot reload and Chrono and a bound on concurrent tasks so the pool is not starved |
@@ -84,6 +84,38 @@ On "each tile as a task": it is the end state (step 4), not the first step. The 
 | Q-SP02 | Does the loading-phase cost shrink with a warm OS file cache and with `OPTS_INSTANCING`? | Repeat `pre` with a second run per map and with the instancing switch |
 | Q-SP03 | Do the numbers hold with traffic, pedestrians and a driving vehicle (the real complaint, R-32)? | Run the driver with `--traffic`/`--pedestrians` on and the simulation running; the vehicle-driven observer instead of the camera |
 | Q-SP04 | Does a larger radius (the automatic default of M-0080 on a strong machine) scale the clusters linearly? | Repeat the Spandau flight with `gameplay.tile_radius` 2 and 3 |
+
+## 8. Step 1 measured
+
+Implemented in `opts-game/src/in_game/omsi_world/tile_build.rs`: the build of a tile is a `TileBuild` on the job, advanced by `advance_tile_loading` until a `FrameBudget` is used up. Steps: terrain and water, splines, surfaces, attachments, registries, then each scenery object, then the objects attached to objects, then the finish. The tile root exists from the first step and the children are added to it after every call, so unloading a half-built tile (`unload_tile`) despawns all it spawned and drops the build. Streaming uses `advanced.streaming_budget_ms` (default 8; `0` is the old one-whole-tile-per-frame behaviour) and queues the nearest four wanted tiles; the loading screen uses a budget of 100 ms per frame (`tile_loading::LOADING_BUDGET`). Same machine, same flights, release build with `stream-trace`, run on a quiet machine (load average below 1.5 at the start).
+
+**Driving** (legs 1 and 2 together):
+
+| | Baseline | Step 1, 8 ms |
+| :--- | ---: | ---: |
+| Berlin-Spandau: worst frame | 166 ms | 61 to 81 ms |
+| Berlin-Spandau: frames above 50 ms | 13 | 7 |
+| Berlin-Spandau: frames above 33 ms | 22 | 23 to 24 |
+| Berlin-Spandau: per-frame tile work, mean / p95 / max | 27.8 / 86.7 / 153 ms | 14.2 / 40.0 / 65.9 ms |
+| Berlin-Spandau: total tile work | 1,529 ms | 1,591 ms |
+| Aachen Linie 33, Grundorf | clean | clean |
+
+**Loading screen**, the tile stage (`pre`): the longest frame falls from 3,480 to 287 ms on Aachen, from 552 to 255 ms on Grundorf and from 1,695 to 326 ms on Spandau, with the same total time (9.0 and 9.3 s, 2.08 and 2.03 s, 5.3 and 5.4 s). Frames above 100 ms rise in number (the work is spread over more frames of about 100 to 250 ms) but none is longer than the budget plus one step.
+
+**Budget sweep** on Spandau (legs 1 and 2 together; the sweep ran the same build with `settings.set` after the drive started):
+
+| Budget | Frames above 33 ms | Above 50 ms | Worst frame | Time in frames above 33 ms |
+| :--- | ---: | ---: | ---: | ---: |
+| 0 (old behaviour) | 25 | 14 | 170 ms | 1,676 ms |
+| 4 ms | 22 | 7 | 71 ms | 1,021 ms |
+| 8 ms | 23 | 7 | 62 ms | 1,012 ms |
+| 16 ms | 21 | 7 | 71 ms | 992 ms |
+
+The old behaviour is reproduced at 0 (the baseline had 22, 13, 166 ms and 1,547 ms), and 4, 8 and 16 ms are the same within noise: the budget is not what limits the result.
+
+**What is left.** Every frame above 50 ms that remains is the **terrain step**: one indivisible 36 to 65 ms step (mean 16 ms, 902 ms over 55 tiles) that runs before the objects. The objects are tamed (at most 23 ms in any frame), so the milestone's target of no frame above 50 ms from streaming is **not yet met** on the dense map (7 frames, worst 62 to 81 ms = a normal frame of 16 ms plus the terrain step). That is what step 2 targets. On the loading screen the frames of 0.8 to 0.95 s that remain contain no tile build: they are the vehicle's model loading (`o3d.parts_miss`, Q-SP01) and one frame of 0.3 to 0.5 s right after the last tile (probably the first draw of everything that was built).
+
+The span `tile.build` now counts the frames that did tile work, not tiles (206 against 55 on the flight); `tile.terrain` still counts tiles.
 
 ## 7. Reproduce
 

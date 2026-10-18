@@ -7,6 +7,7 @@ run is reproducible, and analyses the per-frame trace the `stream-trace` build w
 
   scripts/streaming-perf.py run  <label> <map-dir-name> [--entry NAME] [--vehicle REL]
                                  [--speed 25] [--legs 2] [--leg-s 40] [--dir auto|E|N|W|S]
+                                 [--setting KEY=VALUE ...]
   scripts/streaming-perf.py analyse <trace.jsonl> [--phases 5,45,85]
 
 Environment: OMSI (install), OPTS_BIN (target/release/opts-game), OUT (default
@@ -188,6 +189,11 @@ def run(a):
         else:
             sys.exit("session did not start")
         load_s = time.time() - t0
+        for kv in a.setting:
+            key, _, value = kv.partition("=")
+            r = cl.call("settings.set", key=key, value=value)
+            if "error" in r:
+                sys.exit(f"setting {kv}: {r['error']['message']}")
         cl.call("sim.pause")
         # let the initial streaming settle
         time.sleep(float(os.environ.get("WARM", "15")))
@@ -291,6 +297,8 @@ if __name__ == "__main__":
     r.add_argument("--legs", type=int, default=2)
     r.add_argument("--leg-s", type=float, default=40.0)
     r.add_argument("--dir", default="auto")
+    r.add_argument("--setting", action="append", default=[], metavar="KEY=VALUE",
+                   help="a setting to change through the protocol once the drive is up (repeatable)")
     an = sub.add_parser("analyse")
     an.add_argument("trace")
     an.add_argument("--phases", default="")

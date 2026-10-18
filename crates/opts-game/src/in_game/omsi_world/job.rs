@@ -32,27 +32,36 @@ impl WorldLoadJob {
         self.install.root()
     }
 
-    /// Fraction of tiles already processed.
+    /// Fraction of tiles already processed (the tile in progress counts by how far it is).
     #[must_use]
     pub fn progress(&self) -> f32 {
         if self.total_tiles == 0 {
             1.0
         } else {
-            1.0 - self.queue.len() as f32 / self.total_tiles as f32
+            let in_progress = self.building.as_ref().map_or(0.0, |b| 1.0 - b.fraction());
+            let left = self.queue.len() as f32 + in_progress;
+            (1.0 - left / self.total_tiles as f32).clamp(0.0, 1.0)
         }
     }
 
-    /// Whether all queued tiles have been loaded.
+    /// Whether all queued tiles have been loaded (and none is in progress).
     #[must_use]
     pub fn tiles_done(&self) -> bool {
-        self.queue.is_empty()
+        self.queue.is_empty() && self.building.is_none()
+    }
+
+    /// Whether there is a tile to work on: one queued or one in progress.
+    #[must_use]
+    pub fn has_tile_work(&self) -> bool {
+        !self.queue.is_empty() || self.building.is_some()
     }
 
     /// Tiles loaded so far and tiles asked for (the 3x3 neighbourhood), for the loading screen.
     #[must_use]
     pub fn tile_counts(&self) -> (usize, usize) {
         (
-            self.total_tiles.saturating_sub(self.queue.len()),
+            self.total_tiles
+                .saturating_sub(self.queue.len() + usize::from(self.building.is_some())),
             self.total_tiles,
         )
     }
@@ -261,6 +270,8 @@ pub fn begin_world_load_at(
         resident: HashMap::new(),
         tile_mode: crate::in_game::tile_loading::TileMode::default(),
         missing_tiles: HashSet::new(),
+        building: None,
+        stream_budget: crate::in_game::tile_loading::DEFAULT_STREAM_BUDGET,
         total_tiles: 0,
         sli_cache: HashMap::new(),
         tile_deps: HashMap::new(),

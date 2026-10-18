@@ -167,6 +167,8 @@ set-opt-trace-summary = Summary
 set-opt-trace-full = Everything
 set-trace-overlay = Scene trace overlay
 set-trace-overlay-desc = Developer tool: draws a box around every traced object near the camera, coloured by decode quality (red = failed, orange = unreliable, yellow = decoded). Needs the scene trace.
+set-streaming-budget = Tile streaming budget
+set-streaming-budget-desc = Milliseconds per frame that loading new map tiles may use while driving. A small value keeps the frame rate steady and fills in a tile over a few frames; a large one loads faster but can stutter; 0 builds one whole tile per frame as before.
 
 
 settings-title = Settings

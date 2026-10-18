@@ -10,19 +10,23 @@ use opts_bevy::{ContentLoader, TextureOverride, TileTerrain};
 use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
-use crate::in_game::attachments::expand_attachments;
+use crate::in_game::stream_budget::FrameBudget;
 use crate::in_game::tile_loading;
-use crate::in_game::types::InGameEntity;
 
-use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
+use super::tile_build;
 use super::trees::spawn_tree;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{LoadAssets, WorldLoadJob, WorldStats};
 
 /// Flat width from which a spline without lanes (paved area, apron) carries vehicles (m).
-const SURFACE_MIN_WIDTH_M: f32 = 3.5;
+pub(super) const SURFACE_MIN_WIDTH_M: f32 = 3.5;
 
-/// Loads the next queued tile: terrain, splines and scenery objects.
+/// Tiles queued at once by the streamer (the nearest wanted ones).
+const REFILL: usize = 4;
+
+/// Loads the next queued tile completely: terrain, splines and scenery objects. The loading
+/// screen's and the benchmark's way; streaming in the game uses [`advance_tile_loading`] with a
+/// frame budget instead.
 pub fn load_next_tile(
     job: &mut WorldLoadJob,
     stats: &mut WorldStats,
@@ -32,48 +36,8 @@ pub fn load_next_tile(
     images: &mut Assets<Image>,
     ground_materials: Option<&mut Assets<GroundMaterial>>,
 ) {
-    let Some(key) = job.queue.pop_front() else {
-        return;
-    };
-    if job.resident.contains_key(&key) {
-        return;
-    }
-    let t_total = opts_logging::stream_trace::span("tile.build");
-    let t_parse = opts_logging::stream_trace::span("tile.read_parse");
-    let Some(tile) = job.read_tile(key) else {
-        stats.tiles_missing += 1;
-        return;
-    };
-    job.tile_splines
-        .insert(key, std::sync::Arc::new(tile.splines.clone()));
-    // A tile rebuilt in place (Chrono switch) may still hold the collision of its previous build.
-    super::collision::unregister_tile(commands, key);
-    for w in &tile.warnings {
-        tracing::warn!(tile = ?key, "tile record left out: {w}");
-    }
-    drop(t_parse);
-    opts_bevy::set_loading_tile(Some(key));
-    opts_bevy::scene_trace::begin_tile(key);
-    let mut children: Vec<Entity> = Vec::new();
-    let origin = job.tile_offset(key);
-    let tile_path = job.tile_path(key).unwrap_or_default();
-    job.loading_deps.clear();
-    job.loading_deps
-        .insert(opts_bevy::hot_reload::cache::normalize(&tile_path));
-    for overlay in job.chrono_overlays(key).to_vec() {
-        job.loading_deps
-            .insert(opts_bevy::hot_reload::cache::normalize(&overlay));
-    }
-    tracing::info!(
-        tile = ?key,
-        path = %tile_path.display(),
-        objects = tile.objects.len(),
-        splines = tile.splines.len(),
-        "tile parsed"
-    );
-
-    let t = opts_logging::stream_trace::span("tile.terrain");
-    let terrain = spawn_terrain(
+    let mut budget = FrameBudget::new(std::time::Duration::MAX);
+    advance_tile_loading(
         job,
         stats,
         commands,
@@ -81,189 +45,58 @@ pub fn load_next_tile(
         materials,
         images,
         ground_materials,
-        key,
-        origin,
-        &mut children,
+        &mut budget,
+        1,
     );
-    spawn_water(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        &tile,
-        terrain.as_ref(),
-        key,
-        origin,
-        &mut children,
-    );
-    let splines_failed_before = stats.splines_failed;
-    drop(t);
-    let t = opts_logging::stream_trace::span("tile.splines");
-    spawn_splines(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        images,
-        &tile,
-        origin,
-        &mut children,
-    );
+}
 
-    if opts_bevy::scene_trace::enabled() {
-        let failed = stats.splines_failed.saturating_sub(splines_failed_before);
-        super::trace::tile_content(job, &tile, key, origin, terrain.is_some(), failed);
-    }
-
-    drop(t);
-    let t = opts_logging::stream_trace::span("tile.surfaces");
-    // Surfaces the player's vehicle can stand on: drivable splines (road or rail lanes) and terrain.
-    {
-        let mut roads = Vec::new();
-        for inst in &tile.splines {
-            let Some(profile) = job.sli(&inst.sli_file) else {
-                continue;
-            };
-            if !profile.only_editor
-                && (profile
-                    .paths
-                    .iter()
-                    .any(|p| p.path_type == 0 || p.path_type == 2)
-                    || profile.flat_width() >= SURFACE_MIN_WIDTH_M)
-                && !profile.graphical_profiles.is_empty()
-            {
-                roads.push((inst.clone(), (*profile).clone()));
+/// Works on tile builds until `budget` is used up or `max_tiles` tiles are finished: continues the
+/// build that is in progress, else starts the next queued tile. Returns the number of tiles
+/// finished. With an unlimited budget this is [`load_next_tile`].
+#[allow(clippy::too_many_arguments)]
+pub fn advance_tile_loading(
+    job: &mut WorldLoadJob,
+    stats: &mut WorldStats,
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    mut ground_materials: Option<&mut Assets<GroundMaterial>>,
+    budget: &mut FrameBudget,
+    max_tiles: usize,
+) -> usize {
+    let mut finished = 0;
+    while finished < max_tiles {
+        if job.building.is_none() {
+            if job.queue.is_empty() || !budget.allow() {
+                break;
+            }
+            job.building = tile_build::begin(job, stats, commands);
+            if job.building.is_none() {
+                break;
             }
         }
-        super::ground_height::register(
-            commands,
-            key,
-            origin,
-            terrain.clone(),
-            roads,
-            job.start_tile,
-            job.grid,
-        );
-    }
-
-    drop(t);
-    let t = opts_logging::stream_trace::span("tile.attachments");
-    // --- Scenery objects -------------------------------------------------------------------
-    // Spline attachments become ordinary placements once resolved against their carrier spline.
-    let attached = if tile.spline_attachments.is_empty() {
-        Vec::new()
-    } else {
-        let index = job.spline_index();
-        expand_attachments(
-            &tile.spline_attachments,
-            &tile.splines,
-            &index,
-            key,
-            &job.grid,
-            |x, y| terrain.as_ref().map_or(0.0, |t| t.height(x, y)),
-        )
-    };
-    drop(t);
-    let t = opts_logging::stream_trace::span("tile.registries");
-    let lanes = super::pedestrians::tile_lanes(job, &tile, &attached, terrain.as_ref(), origin);
-    super::pedestrians::register_tile(commands, key, lanes);
-    let rail = super::rail::tile_rail_lanes(job, &tile, &attached, terrain.as_ref(), origin);
-    super::rail::register_tile(commands, key, rail);
-    let bikes = super::rail::tile_bike_lanes(job, &tile, origin);
-    super::rail::register_bike_tile(commands, key, bikes);
-    let road = super::traffic::tile_segments(job, &tile, terrain.as_ref(), origin);
-    super::traffic::register_tile(commands, key, road);
-    job.scenery.index_tile(&tile);
-    drop(t);
-    let t_objects = opts_logging::stream_trace::span("tile.objects");
-    let placements = tile
-        .objects
-        .iter()
-        .enumerate()
-        .map(|(i, o)| (o, Placement::Tile, "objects", i))
-        .chain(
-            attached
-                .iter()
-                .enumerate()
-                .map(|(i, (o, z))| (o, Placement::OnSpline(*z), "attachments", i)),
-        );
-    job.placed.clear();
-    for (obj, placement, list, index) in placements {
-        spawn_object(
+        let done = tile_build::advance(
             job,
             stats,
             commands,
             meshes,
             materials,
             images,
-            obj,
-            placement,
-            terrain.as_ref(),
-            key,
-            origin,
-            &mut children,
-            &tile,
-            super::trace::Site {
-                list,
-                index,
-                marker: None,
-            },
+            ground_materials.as_deref_mut(),
+            budget,
         );
+        if !done {
+            break;
+        }
+        finished += 1;
     }
-    place_attached_objects(
-        job,
-        stats,
-        commands,
-        meshes,
-        materials,
-        images,
-        &tile,
-        terrain.as_ref(),
-        key,
-        origin,
-        &mut children,
-    );
-
-    if opts_bevy::instancing::merge() {
-        let merged = job.cache.merger.flush(commands, meshes);
-        children.extend(merged);
-        let st = job.cache.merger.stats;
-        tracing::info!(
-            tile = ?key,
-            parts_merged = st.parts_merged,
-            entities = st.entities,
-            refused = st.refused,
-            "static scenery merged (running totals)"
-        );
-    }
-    drop(t_objects);
-    let t = opts_logging::stream_trace::span("tile.root_adopt");
-    let tile_root = commands
-        .spawn((
-            Transform::default(),
-            InGameEntity,
-            TileRoot(key),
-            Name::new(format!("Tile_{}_{}", key.0, key.1)),
-        ))
-        .id();
-    commands.entity(tile_root).add_children(&children);
-    job.resident.insert(key, tile_root);
-    let deps = std::mem::take(&mut job.loading_deps);
-    job.tile_deps.insert(key, deps);
-    drop(t);
-    drop(t_total);
-    stats.tiles_loaded = job.resident.len();
-    stats.meshes_exact = job.cache.stats.exact_meshes;
-    stats.asset_failures = job.cache.stats.failures.len();
-    opts_bevy::scene_trace::end_tile(key);
-    opts_bevy::set_loading_tile(None);
+    finished
 }
 
 /// Where an object is put.
 #[derive(Debug, Clone, Copy)]
-enum Placement {
+pub(super) enum Placement {
     /// At its `[object]` record on the tile (height relative to the terrain unless `[absheight]`).
     Tile,
     /// Resolved from a spline attachment: absolute height for `[absheight]` objects.
@@ -301,7 +134,7 @@ fn attachment_transform(
 /// children placed before them, all on this tile). Chains are resolved in rounds; a child whose
 /// parent never appears or whose parent has no such attachment point is logged at WARN.
 #[allow(clippy::too_many_arguments)]
-fn place_attached_objects(
+pub(super) fn place_attached_objects(
     job: &mut WorldLoadJob,
     stats: &mut WorldStats,
     commands: &mut Commands,
@@ -384,7 +217,7 @@ fn place_attached_objects(
 
 /// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
 #[allow(clippy::too_many_arguments)]
-fn spawn_object(
+pub(super) fn spawn_object(
     job: &mut WorldLoadJob,
     stats: &mut WorldStats,
     commands: &mut Commands,
@@ -877,24 +710,35 @@ pub fn stream_world_tiles(
     drop(_t_evict);
     stats.tiles_loaded = job.resident.len();
 
-    if job.queue.is_empty() {
+    if job.queue.is_empty() && job.building.is_none() {
         let wanted = tile_loading::wanted(mode, centre, job.listed_tiles(), |k| {
             job.resident.contains_key(&k) || job.missing_tiles.contains(&k)
         });
+        // The nearest few, so that a frame with budget left can go on with the next one.
+        let mut queued = 0;
         for key in wanted {
+            if queued == REFILL {
+                break;
+            }
             if job.tile_available(key) {
                 job.queue.push_back(key);
-                break;
+                queued += 1;
             }
         }
     }
-    if !job.queue.is_empty() {
+    if job.has_tile_work() {
         let (meshes, materials, images) = (
             &mut assets.meshes,
             &mut assets.materials,
             &mut assets.images,
         );
-        load_next_tile(
+        // A budget of zero is the old behaviour: one whole tile per frame.
+        let (mut budget, max_tiles) = if job.stream_budget.is_zero() {
+            (FrameBudget::new(std::time::Duration::MAX), 1)
+        } else {
+            (FrameBudget::new(job.stream_budget), usize::MAX)
+        };
+        advance_tile_loading(
             &mut job,
             &mut stats,
             &mut commands,
@@ -902,6 +746,8 @@ pub fn stream_world_tiles(
             materials,
             images,
             assets.ground_materials.as_deref_mut(),
+            &mut budget,
+            max_tiles,
         );
     }
 }

@@ -99,6 +99,12 @@ impl WorldLoadJob {
     pub(super) fn unload_tile(&mut self, key: (i32, i32), keep_ground: bool) -> Option<TileUnload> {
         let root = self.resident.remove(&key)?;
         self.tile_deps.remove(&key);
+        // A tile that is still being built stops here; its root and the children added so far
+        // are despawned with the unload.
+        if self.building.as_ref().is_some_and(|b| b.key == key) {
+            self.building = None;
+            opts_bevy::set_loading_tile(None);
+        }
         Some(TileUnload {
             key,
             root,
