@@ -18,7 +18,7 @@
 
 ## Automation
 
-The control protocol has no absolute mouse position, so the menu can be driven by `menu.do {command}` (queued, executed next frame): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <variable>`, `done`, `confirm`, `despawn` (the active vehicle, no question), `switch <text>`, `respawn`, `back` (texts match names case-insensitively by substring). `menu.state` returns the page, choices and the free entry points; the session vehicles have their own commands `session.*`. The rows have the ids `vehicle.session.<id>.switch|respawn|despawn`. See [control protocol](control-protocol.md).
+The control protocol has no absolute mouse position, so the menu can be driven by `menu.do {command}` (queued, executed next frame): `open`, `close`, `spawn`, `vehicle <text>`, `repaint <text>`, `entry <text>`, `config`, `toggle <variable>`, `step <variable> [-1|1]` (a choice to its previous or next value, a number by one), `done`, `confirm`, `despawn` (the active vehicle, no question), `switch <text>`, `respawn`, `back` (texts match names case-insensitively by substring). `menu.state` returns the page, choices and the free entry points; the session vehicles have their own commands `session.*`. The rows have the ids `vehicle.session.<id>.switch|respawn|despawn`. See [control protocol](control-protocol.md).
 
 ## Search and the entry index (2026-10-12)
 

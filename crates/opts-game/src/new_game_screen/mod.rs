@@ -87,6 +87,8 @@ impl Plugin for NewGameMenuPlugin {
                     systems::handle_start_point,
                     systems::handle_list_events,
                     options::apply_switches,
+                    options::apply_choices,
+                    options::apply_numbers,
                     options::close_on_cancel,
                 )
                     .run_if(active.clone())
@@ -117,7 +119,12 @@ impl Plugin for NewGameMenuPlugin {
                 )
                     .chain()
                     .run_if(active)
-                    .after(systems::handle_actions),
+                    // After every handler that clears or fills a panel: `poll_liveries` fills the
+                    // boxes it finds in the detail panel, so the commands that empty the panel
+                    // must be applied first (an unordered pair raced, M-0078).
+                    .after(systems::handle_actions)
+                    .after(systems::handle_tab_actions)
+                    .after(systems::handle_list_events),
             );
     }
 }
