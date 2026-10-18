@@ -228,6 +228,11 @@ pub struct WorldLoadJob {
     ground_faces: HashMap<PathBuf, crossing::ObjectFaces>,
     /// The `[object]`s of tiles read for the carve of their neighbours.
     tile_objects: HashMap<(i32, i32), Arc<Vec<opts_core::formats::map::MapObjectInstance>>>,
+    /// The drawn ground surfaces of each tile (its splines' ribbons and its crossings' faces) in
+    /// the tile's own frame, kept for the carve of the tile and its eight neighbours: one
+    /// computation per tile instead of nine (M-0089 step 2). Pruned to the resident tiles'
+    /// neighbourhood after every build; cleared with the splines and objects it derives from.
+    tile_surfaces: HashMap<(i32, i32), Arc<Vec<opts_bevy::GroundTriangle>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).

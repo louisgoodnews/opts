@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟡 Baseline measured, ranked proposal written, step 1 (resumable, time-budgeted build) implemented and measured 2026-10-18; step 2 (terrain on a worker) next |
+| **Status** | 🟡 Baseline measured, ranked proposal written, step 1 (resumable, time-budgeted build) implemented and measured 2026-10-18; step 2 implemented and measured 2026-10-18 (terrain stage cached and split; no worker needed): no frame above 50 ms on the dense map |
 | **Last Updated** | 2026-10-18 |
 | **Relevant Crates** | `opts-game` (`in_game/omsi_world/{tile,tile_ground,job,tile_mode}.rs`, `in_game/stream_budget.rs`), `opts-bevy` (`model.rs`, `texture.rs`), `opts-logging` (`stream_trace`) |
 | **Traces to** | field report R-32 (streaming freezes), R-36 (load time); [map streaming](map-streaming.md) limits L1 and L2; [M-0089](../roadmap/phase-4/M-0089.md) |
@@ -68,7 +68,7 @@ Ordered by effect on the measured problems against risk. Each step is measured w
 | # | Change | Targets | Expected effect (from §3) | Risk |
 | :-: | :--- | :--- | :--- | :--- |
 | 1 ✅ | **Resumable, time-budgeted tile build on the main thread** (`FrameBudget`; done and measured, [§8](#8-step-1-measured)): split `load_next_tile` into phases that can stop between them (terrain, splines, surfaces, attachments, registries, objects in chunks of objects), tile root first so the tile fills in over a few frames; the loading screen uses the same steps | A and B | Caps a frame at the budget (for example 8 ms) plus a normal frame: the Spandau clusters of 40 to 100 ms become several 20 to 25 ms frames; loading-screen frames of seconds become tens of milliseconds (the window answers) | Low to medium: the build's local state (`placed`, `loading_deps`) must live in a per-tile cursor; a partly built tile is visible (pop-in), so registries and the root's `resident` entry come last. Behind a setting (`advanced.streaming_budget_ms`, 0 = old behaviour) because it changes behaviour |
-| 2 | **Terrain on a worker task**: read and parse `.terrain`, carve and build the mesh off-thread, apply the mesh and spawn on the main thread | B (59 % of in-game build time) | Removes about 16 ms of 28 ms per tile from the main thread | Medium: needs the neighbours' splines and crossing objects from thread-safe caches and a generation token against eviction |
+| 2 ✅ | **Terrain on a worker task** (done differently, [§9](#9-step-2-measured): the terrain's own work turned out to be 6 % of the stage, so the stage was cached and split instead): read and parse `.terrain`, carve and build the mesh off-thread, apply the mesh and spawn on the main thread | B (59 % of in-game build time) | Removes about 16 ms of 28 ms per tile from the main thread | Medium: needs the neighbours' splines and crossing objects from thread-safe caches and a generation token against eviction |
 | 3 | **Texture and model preparation on workers** (`o3d` parse, decode, bend, mesh build, texture decode and mips into a CPU texture cache, handles reserved up front) | A (cold objects) | Most of the 2.4 s frames of the loading phase | High: the read-back sites (`opaque_variant`, transmap composition, `ground.rs`) must use a CPU copy, the handle-keyed caches and the glass and reflection registries move to the apply step |
 | 4 | **Whole-tile prepare tasks** (several tiles in flight) | A and B | Parallel use of the 16 cores | Highest: only after 2 and 3; needs epochs for hot reload and Chrono and a bound on concurrent tasks so the pool is not starved |
 | – | Prefetch of the file read and parse alone | – | `tile.read_parse` is 1.3 % of a build (20 ms over 55 tiles): not worth a step of its own, it falls out of step 2 | – |
@@ -116,6 +116,40 @@ The old behaviour is reproduced at 0 (the baseline had 22, 13, 166 ms and 1,547 
 **What is left.** Every frame above 50 ms that remains is the **terrain step**: one indivisible 36 to 65 ms step (mean 16 ms, 902 ms over 55 tiles) that runs before the objects. The objects are tamed (at most 23 ms in any frame), so the milestone's target of no frame above 50 ms from streaming is **not yet met** on the dense map (7 frames, worst 62 to 81 ms = a normal frame of 16 ms plus the terrain step). That is what step 2 targets. On the loading screen the frames of 0.8 to 0.95 s that remain contain no tile build: they are the vehicle's model loading (`o3d.parts_miss`, Q-SP01) and one frame of 0.3 to 0.5 s right after the last tile (probably the first draw of everything that was built).
 
 The span `tile.build` now counts the frames that did tile work, not tiles (206 against 55 on the flight); `tile.terrain` still counts tiles.
+
+## 9. Step 2 measured
+
+**The premise did not hold.** Step 2 was planned as "read, carve and mesh the terrain on a worker". Timers inside the terrain stage (`terrain.read`, `terrain.material`, `terrain.surfaces`, `terrain.carve`, `terrain.mesh`) show where its time goes over the 55 tiles of the Spandau flight (919 ms in all):
+
+| Part | Total | Longest | Share |
+| :--- | ---: | ---: | ---: |
+| `terrain.surfaces`: ground triangles of the tile and its eight neighbours (spline ribbons, crossing faces) | 647 ms | 42.5 ms | 70 % |
+| `terrain.material`: ground texture once, then the tile's paint layers | 212 ms | 15.0 ms | 23 % |
+| `terrain.carve` | 27 ms | 6.1 ms | 3 % |
+| `terrain.read` (read and parse) | 30 ms | 2.3 ms | 3 % |
+| `terrain.mesh` | 2.5 ms | 0.1 ms | 0.3 % |
+
+A worker for read, carve and mesh would have moved 6 % of the stage. The cost was that every tile recomputed the surface triangles of itself and all eight neighbours, so each tile's ribbons were built up to nine times.
+
+**What was done instead** (`tile_ground.rs`, `tile_build.rs`):
+
+1. The surfaces of each tile are computed once, in the tile's own frame, and kept (`WorldLoadJob::tile_surfaces`); a neighbour's copy is that list moved by the offset between the tiles, which is an addition (`spline_ground_triangles` and `crossing_ground_triangles` take the offset as an addition to the position; a test pins the equality). The cache is cleared with the splines on a scene reload, dropped per tile on a Chrono switch and pruned to the neighbourhood of the resident tiles after every build, so it stays bounded.
+2. The terrain stage is three steps that can pause between frames: read the grid and compose the ground material; compute the surfaces, one tile per step; carve, mesh and spawn (with the water).
+
+**Driving** (legs 1 and 2 together, same machine and flight as §8, quiet machine):
+
+| Berlin-Spandau | Baseline | Step 1 | Step 2 |
+| :--- | ---: | ---: | ---: |
+| Worst frame | 166 ms | 61 to 81 ms | **36.9 ms** |
+| Frames above 50 ms | 13 | 7 | **0** |
+| Frames above 33 ms | 22 | 23 to 24 | 4 |
+| Terrain stage, total over 55 tiles | | 919 ms | 471 ms |
+| Terrain stage, longest | | 58.5 ms | 21.9 ms |
+| `terrain.surfaces`, total | | 647 ms | 162 ms |
+
+The milestone's target (no frame above 50 ms from streaming) is met on the dense map. Grundorf (worst flight frame 32 ms) and Aachen Linie 33 (38 ms) stay clean. What is left in the terrain stage is the ground paint (`terrain.material`, 214 ms, at most 16 ms, main thread because it creates images and materials), the first computation of each tile's surfaces (160 ms, at most 19 ms) and the carve. None of them makes a frame above 37 ms. The loading screen is unchanged: its remaining long frames are the vehicle's model loading (Q-SP01).
+
+**Consequence for the proposal.** Steps 3 and 4 (workers for texture and model preparation, whole-tile tasks) target the loading screen's cold objects, not the driving stalls. They are not needed for the target and stay open as a separate decision with Q-SP01.
 
 ## 7. Reproduce
 
