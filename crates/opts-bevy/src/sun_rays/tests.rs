@@ -53,7 +53,7 @@ fn haze_is_the_baseline_in_clear_air_and_follows_fog() {
     // Thick fog is capped: the haze must not become a second, sun-coloured fog.
     assert_eq!(haze_density(2.0, &st), HAZE_MAX);
     assert_eq!(haze_density(75.0, &st), HAZE_MAX);
-    assert!(HAZE_MAX <= 0.01);
+    const { assert!(HAZE_MAX <= 0.01) };
     // Thicker fog never gives a thinner haze.
     let mut prev = 0.0;
     for v in [10_000.0, 2_000.0, 500.0, 100.0, 20.0] {

@@ -1320,8 +1320,10 @@ mod tests {
             }
         }
         // Thick fog (75 m) is grey-white even from an orange sunset horizon.
-        let mut thick = WeatherConditions::default();
-        thick.fog_visibility_m = 75.0;
+        let thick = WeatherConditions {
+            fog_visibility_m: 75.0,
+            ..Default::default()
+        };
         let f = fog_color([0.75, 0.40, 0.15], &thick);
         assert!(saturation(f) <= FOG_MAX_SATURATION + 0.01, "{f:?}");
         assert!(f[0] - f[2] < 0.12, "{f:?}");
@@ -1329,8 +1331,10 @@ mod tests {
 
     #[test]
     fn fog_luminance_rises_with_the_sun_and_never_exceeds_the_horizon() {
-        let mut thick = WeatherConditions::default();
-        thick.fog_visibility_m = 75.0;
+        let thick = WeatherConditions {
+            fog_visibility_m: 75.0,
+            ..Default::default()
+        };
         let mut prev = -1.0;
         for horizon in HORIZONS_BY_ELEVATION {
             let l = luma(fog_color(horizon, &thick));
