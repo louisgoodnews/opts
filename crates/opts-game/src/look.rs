@@ -171,7 +171,7 @@ pub fn grading_for(params: LookParams) -> ColorGrading {
 }
 
 /// CPU replica of Bevy's `SomewhatBoringDisplayTransform` (`bevy_core_pipeline` tonemapping.wesl).
-fn somewhat_boring(c: [f32; 3]) -> [f32; 3] {
+pub(crate) fn somewhat_boring(c: [f32; 3]) -> [f32; 3] {
     let curve = |v: f32| 1.0 - (-v).exp();
     let lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     let cb = -0.1146 * c[0] - 0.3854 * c[1] + 0.5 * c[2];
