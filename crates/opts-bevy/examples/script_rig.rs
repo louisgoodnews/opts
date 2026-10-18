@@ -230,7 +230,9 @@ fn physics_report(
     let t1 = b.t;
     while b.t - t1 < 20.0 && b.speed() > 0.05 {
         b.tick();
-        if std::env::var_os("RIG_TRACE_BRAKE").is_some() && ((b.t - t1) / dt) as usize % 12 == 0 {
+        if std::env::var_os("RIG_TRACE_BRAKE").is_some()
+            && (((b.t - t1) / dt) as usize).is_multiple_of(12)
+        {
             eprintln!(
                 "brake t={:.2} v={:.2} force={:.0} pressure={:.0}",
                 b.t - t1,
