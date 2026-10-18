@@ -28,7 +28,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0093 — Host Callbacks — Timetable, Termini, Bus Stops, Tickets (IBIS)](M-0093.md) — 🟢 Complete (2026-10-14)
 - [M-0094 — Script Textures](M-0094.md) — 🟢 Complete (2026-10-14)
 - [M-0095 — AI Vehicle Profiles](M-0095.md) — ✅ Implemented 2026-10-14 (phase 1: profile layer and formulas; measured characterisation through the script VM and the dynamic mod
-- [M-0096 — Script Rig, Input Table and Callback Safety Net](M-0096.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0096 — Script Rig, Input Table and Callback Safety Net](M-0096.md) — 🟡 In progress since 2026-10-18, 🔴 critical
 - [M-0097 — Script Physics Contract: Torque, Brakes and Wheels](M-0097.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🔴 Not started (proposed 2026-10-14)

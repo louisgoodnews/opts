@@ -189,6 +189,20 @@ impl CallbackResult {
 }
 
 impl CallbackSignature {
+    /// Answers a call with the stub: the arguments leave the stacks (as far as they are there)
+    /// and the neutral results arrive.
+    pub fn apply_stub(&self, st: &mut super::strings::Stacks) {
+        for _ in 0..self.float_args {
+            st.numbers.pop();
+        }
+        for _ in 0..self.string_args {
+            st.strings.pop();
+        }
+        let neutral = self.neutral_result();
+        st.numbers.extend(neutral.floats);
+        st.strings.extend(neutral.strings);
+    }
+
     /// The stub's answer: neutral floats and empty strings.
     #[must_use]
     pub fn neutral_result(&self) -> CallbackResult {
@@ -240,8 +254,42 @@ mod tests {
         names.dedup();
         assert_eq!(names.len(), 45);
         assert!(CALLBACKS.iter().all(|s| s.name == s.name.to_lowercase()));
-        assert_eq!(signature("GetTerminusString").map(|s| s.float_args), Some(2));
+        assert_eq!(
+            signature("GetTerminusString").map(|s| s.float_args),
+            Some(2)
+        );
         assert!(signature("nothing").is_none());
+    }
+
+    #[test]
+    fn every_stub_removes_its_arguments_and_adds_its_results_and_nothing_else() {
+        use super::super::strings::Stacks;
+        for sig in CALLBACKS {
+            let mut st = Stacks::default();
+            // A marker below the arguments must survive.
+            st.numbers.push(99.0);
+            st.strings.push("below".into());
+            for _ in 0..sig.float_args {
+                st.numbers.push(5.0);
+            }
+            for _ in 0..sig.string_args {
+                st.strings.push("x".into());
+            }
+            sig.apply_stub(&mut st);
+            assert_eq!(
+                st.numbers.len(),
+                1 + usize::from(sig.float_results),
+                "{} floats",
+                sig.name
+            );
+            assert_eq!(
+                st.strings.len(),
+                1 + usize::from(sig.string_results),
+                "{} strings",
+                sig.name
+            );
+            assert_eq!((st.numbers[0], st.strings[0].as_str()), (99.0, "below"));
+        }
     }
 
     #[test]
