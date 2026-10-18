@@ -4,7 +4,7 @@
 
 **Status:** ⏳ Planned 2026-10-18; every milestone is 📝 Proposed and awaits approval by the project lead. Nothing is started. The execution order below is a recommendation; the project lead may reorder it.
 
-The checklist for this phase will live in the [roadmap](../README.md) once the phase is approved; until then this page is the only index (the roadmap, the book summary and the board are not updated yet).
+The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page holds the details.
 
 ## Milestones (recommended execution order)
 
@@ -50,37 +50,37 @@ The checklist for this phase will live in the [roadmap](../README.md) once the p
 
 ## Feature-to-milestone map (27 items)
 
-The 27 items below are derived from the approved milestone list of 2026-10-18; the original inventory text was not part of the brief and should be checked against this table by the project lead.
+The numbering is the project lead's inventory of 2026-10-18. Items 22 to 26 are the Group G repeats of items 4, 3, 8, 5 and 6 and are merged into those milestones; no item is dropped or deferred.
 
-| # | Feature | Milestone |
+| # | Feature (project lead's inventory) | Captured in |
 | :--- | :--- | :--- |
-| 1 | Full-size in-game map (M key, pan, zoom, position and heading) | [M-0108](M-0108.md) |
+| 1 | Full-size in-game map (M, drag pan, wheel zoom, Esc, position and heading) | [M-0108](M-0108.md) |
 | 2 | In-game map switching via the Alt menu | [M-0108](M-0108.md) |
-| 3 | Door camera overlay | [M-0109](M-0109.md) |
-| 4 | Smooth driver-view camera | [M-0109](M-0109.md) |
-| 5 | UI scale presets 100/125/150/200 % | [M-0109](M-0109.md) |
-| 6 | UI font setting | [M-0109](M-0109.md) |
-| 7 | Base font size setting | [M-0109](M-0109.md) |
-| 8 | Setvar runtime editor (Alt menu) | [M-0110](M-0110.md) |
-| 9 | CTI value types (ints, ranges, enums) | [M-0110](M-0110.md) |
+| 3 | Door camera | [M-0109](M-0109.md) |
+| 4 | Smooth camera in driver view | [M-0109](M-0109.md) (after the `agent/spawn-drift-jitter` fix) |
+| 5 | UI scaling setting (100/125/150/200 %) | [M-0109](M-0109.md) |
+| 6 | UI font and base font size | [M-0109](M-0109.md) |
+| 7 | In-simulation setvar editor | [M-0110](M-0110.md) |
+| 8 | CTI interpreter: non-binary value types | [M-0110](M-0110.md) |
+| 9 | Force feedback | [M-0102](../phase-4/M-0102.md), existing; gaps listed below |
 | 10 | AI obstacle recognition and braking | [M-0111](M-0111.md) |
-| 11 | AI conservative lane change | [M-0111](M-0111.md) |
-| 12 | AI traffic-light compliance with `[rowdy_factor]` | [M-0111](M-0111.md) |
-| 13 | Scheduled AI buses | [M-0112](M-0112.md) |
-| 14 | Scheduled AI trams | [M-0112](M-0112.md) |
-| 15 | Scheduled AI trains | [M-0112](M-0112.md) |
-| 16 | Track switch reading from tiles | [M-0113](M-0113.md) |
-| 17 | Vehicle route announcement and switch response (AI and player) | [M-0113](M-0113.md) |
-| 18 | Hybrid tile and object streaming by speed | [M-0114](M-0114.md) |
-| 19 | Tunnel detection | [M-0115](M-0115.md) |
-| 20 | Spatial zones (reverb, light-room ambience precursor) | [M-0115](M-0115.md) |
-| 21 | Real weather research | [M-0116](M-0116.md) |
-| 22 | Weather effects on driving physics | [M-0117](M-0117.md) |
-| 23 | Exhaust visibility | [M-0117](M-0117.md) |
-| 24 | OMSI event system research | [M-0118](M-0118.md) |
-| 25 | Event consolidation strategy | [M-0118](M-0118.md) |
-| 26 | Dev agent roadmap review process | [M-0119](M-0119.md) |
-| 27 | Force feedback | already covered by [M-0102](../phase-4/M-0102.md) (see below) |
+| 11 | AI lane change | [M-0111](M-0111.md) |
+| 12 | AI traffic-light compliance with rowdyness | [M-0111](M-0111.md) |
+| 13 | Scheduled AI traffic (buses, trams, trains) | [M-0112](M-0112.md) |
+| 14 | Track switch interaction | [M-0113](M-0113.md) |
+| 15 | Hybrid tile and object streaming | [M-0114](M-0114.md) |
+| 16 | Tunnel detection rule | [M-0115](M-0115.md) |
+| 17 | Real weather (research) | [M-0116](M-0116.md) |
+| 18 | Weather effects on driving physics | [M-0117](M-0117.md) |
+| 19 | Exhaust gas visibility | [M-0117](M-0117.md) |
+| 20 | OMSI event system documentation | [M-0118](M-0118.md) |
+| 21 | Event consolidation strategy | [M-0118](M-0118.md) |
+| 22 | Smooth camera (duplicate of 4) | [M-0109](M-0109.md) (as item 4) |
+| 23 | Door camera (duplicate of 3) | [M-0109](M-0109.md) (as item 3) |
+| 24 | CTI improvements (duplicate of 8) | [M-0110](M-0110.md) (as item 8) |
+| 25 | UI scaling (duplicate of 5) | [M-0109](M-0109.md) (as item 5) |
+| 26 | UI font and size (duplicate of 6) | [M-0109](M-0109.md) (as item 6) |
+| 27 | Dev agent participation (process) | [M-0119](M-0119.md) |
 
 ## Already covered elsewhere
 
@@ -99,4 +99,4 @@ The 27 items below are derived from the approved milestone list of 2026-10-18; t
 
 ---
 
-*Proposed phase page. Not yet mirrored in the [roadmap](../README.md), the book summary or the board; those follow after the project lead's approval.*
+*Proposed phase page. It is mirrored in `ROADMAP.md`, the book summary and the board (Backlog); execution waits for the project lead's approval.*
