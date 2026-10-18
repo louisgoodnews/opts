@@ -100,6 +100,19 @@
   - [M-0063: Settings System](roadmap/phase-9/M-0063.md)
   - [M-0064: HUD & In-Game UI](roadmap/phase-9/M-0064.md)
   - [M-0065: Accessibility, Localisation & Validation](roadmap/phase-9/M-0065.md)
+- [Phase 11: Advanced Systems & Realism](roadmap/phase-11/README.md)
+  - [M-0118: OMSI Event System Research and Consolidation](roadmap/phase-11/M-0118.md)
+  - [M-0119: Dev Agent Roadmap Review Process](roadmap/phase-11/M-0119.md)
+  - [M-0109: QoL Suite](roadmap/phase-11/M-0109.md)
+  - [M-0108: Full-Size In-Game Map and Map Switching](roadmap/phase-11/M-0108.md)
+  - [M-0115: Tunnel Detection and Spatial Zones](roadmap/phase-11/M-0115.md)
+  - [M-0110: Setvar Runtime Editor and CTI Value Types](roadmap/phase-11/M-0110.md)
+  - [M-0111: AI Traffic Depth](roadmap/phase-11/M-0111.md)
+  - [M-0114: Hybrid Tile and Object Streaming](roadmap/phase-11/M-0114.md)
+  - [M-0116: Real Weather Research](roadmap/phase-11/M-0116.md)
+  - [M-0117: Weather Effects on Driving and Exhaust](roadmap/phase-11/M-0117.md)
+  - [M-0112: Scheduled AI Traffic](roadmap/phase-11/M-0112.md)
+  - [M-0113: Track Switch Interaction](roadmap/phase-11/M-0113.md)
 
 ---
 

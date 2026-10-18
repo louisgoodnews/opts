@@ -286,6 +286,20 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 
 - `[ ]` 🟢 **Add Mermaid diagram support** — Enable `mdbook-mermaid` for architecture diagrams (chore)
 
+#### M-0108–M-0119 — Phase 11: Advanced Systems, Realism & Continuous Improvement (proposed 2026-10-18, awaiting approval)
+- [ ] 🟡 **Inventory OMSI events from the installed content and write the taxonomy and dispatch notes (facts only)** (M-0118) — [OMSI Event System Research and Consolidation](../src/roadmap/phase-11/M-0118.md)
+- [ ] 🟡 **Check P-1010 for ID clashes with `BRANCH-STATUS.md`, then write the roadmap review prompt** (M-0119) — [Dev Agent Roadmap Review Process](../src/roadmap/phase-11/M-0119.md)
+- [ ] 🟡 **Locate the door attachment data and verify the UI scale presets 100/125/150/200 %** (M-0109) — [QoL Suite](../src/roadmap/phase-11/M-0109.md)
+- [ ] 🟡 **Full-size map overlay on M reusing the mini-map source** (M-0108) — [Full-Size In-Game Map and Map Switching](../src/roadmap/phase-11/M-0108.md)
+- [ ] 🟡 **Label a tunnel test set and compare geometric and tile-data detection** (M-0115) — [Tunnel Detection and Spatial Zones](../src/roadmap/phase-11/M-0115.md)
+- [ ] 🟡 **Specify how `.cti` expresses ints, ranges and enums (facts, with the installed files)** (M-0110) — [Setvar Runtime Editor and CTI Value Types](../src/roadmap/phase-11/M-0110.md)
+- [ ] 🟡 **Audit M-0049/M-0095 against the three behaviours and list the real gaps** (M-0111) — [AI Traffic Depth](../src/roadmap/phase-11/M-0111.md)
+- [ ] 🟡 **Measure streaming baselines at walking, driving and fast speeds** (M-0114) — [Hybrid Tile and Object Streaming](../src/roadmap/phase-11/M-0114.md)
+- [ ] 🟡 **Survey weather providers, licences and offline policy** (M-0116) — [Real Weather Research](../src/roadmap/phase-11/M-0116.md)
+- [ ] 🟡 **Define the `SurfaceGrip` model and its inputs from the weather state** (M-0117) — [Weather Effects on Driving and Exhaust](../src/roadmap/phase-11/M-0117.md)
+- [ ] 🟡 **Add the timetable reader API for non-player vehicles (after M-0099)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
+- [ ] 🟡 **Census of switch definitions in the installed maps' tiles** (M-0113) — [Track Switch Interaction](../src/roadmap/phase-11/M-0113.md)
+
 ---
 
 ### 🧹 Deferred Cleanup
@@ -593,3 +607,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — Startup routine for the OMSI path: saved in `settings.db`, folder dialog (`rfd`) when nothing is found; verified with a clean config on the real system.
 - `2026-10-11` — Critical review 2026-10-11 ([report](../src/meta/critical-review-2026-10-11.md)): board reconciled (In Progress shows the four active milestones, stale Ready/Backlog items archived, Blocked shows the hosting dependency), M-0052 and M-0053 added, M-0032 file created, Deferred Cleanup items from the 2026-10-08 review closed or pointed at M-0040/M-0042. WIP = 4 (red flag, recorded rather than hidden).
 - `2026-10-12` — M-0061 part B (`agent/ui-widgets`): one state mechanism (state layer, focus ring, scrim), activation on release, `UiAction` layer, layout-order focus with regions, keyboard-operable widgets, `TextField` on Bevy `TextInput`, stable UI ids + `ui.*` control commands, `NotAvailableYet` with generated list, localisation scaffold (en, de, en-XA), CI rules and the component gallery. Open: builders still have two spawn forms; legacy screens still have small targets/text (recorded in `docs/dev/progress/ui-widgets.md`).
+- `2026-10-18` — Phase 11 (M-0108–M-0119) proposed: phase page and milestone files created, first task of each milestone added to Backlog (nothing Ready until the phase is approved).

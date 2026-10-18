@@ -372,6 +372,34 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🏙️ Content Fidelity Pass** — [M-0090](docs/src/roadmap/phase-10/M-0090.md)
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
 
+## 🔭 Phase 11: Advanced Systems, Realism & Continuous Improvement
+*Goal: Build on the session-based simulator with the systems that make it feel finished: in-game map, comfort and accessibility settings, setvar and config depth, deeper and scheduled AI traffic, track switches, adaptive streaming, tunnels, real weather and its effect on driving, the OMSI event system, and a standing roadmap-review practice. Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](docs/src/roadmap/phase-11/README.md). Force feedback stays in [M-0102](docs/src/roadmap/phase-4/M-0102.md).*
+
+- [ ] **🧬 OMSI Event System Research and Consolidation** — [M-0118](docs/src/roadmap/phase-11/M-0118.md) — 📝 proposed 2026-10-18
+  - [ ] Event taxonomy, dispatch, base event set, parameter formats, ordering, then a consolidation design (documents).
+- [ ] **🔁 Dev Agent Roadmap Review Process** — [M-0119](docs/src/roadmap/phase-11/M-0119.md) — 📝 proposed 2026-10-18
+  - [ ] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).
+- [ ] **🧰 QoL Suite** — [M-0109](docs/src/roadmap/phase-11/M-0109.md) — 📝 proposed 2026-10-18
+  - [ ] Door camera, smooth driver view, UI scale presets 100/125/150/200 %, UI font and base font size.
+- [ ] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](docs/src/roadmap/phase-11/M-0108.md) — 📝 proposed 2026-10-18
+  - [ ] Full-size map on M (pan, zoom, position and heading) and map switching from the Alt menu; builds on the mini map (M-0071) and sessions (M-0068/M-0069).
+- [ ] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](docs/src/roadmap/phase-11/M-0115.md) — 📝 proposed 2026-10-18
+  - [ ] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
+- [ ] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](docs/src/roadmap/phase-11/M-0110.md) — 📝 proposed 2026-10-18
+  - [ ] Alt-menu setvar editor; ints, ranges and enums beyond binary in the config manager; extends M-0078/M-0077.
+- [ ] **🚦 AI Traffic Depth** — [M-0111](docs/src/roadmap/phase-11/M-0111.md) — 📝 proposed 2026-10-18
+  - [ ] Audit, then obstacle braking, conservative lane change and traffic lights with `[rowdy_factor]` on top of M-0095/M-0049.
+- [ ] **🧭 Hybrid Tile and Object Streaming** — [M-0114](docs/src/roadmap/phase-11/M-0114.md) — 📝 proposed 2026-10-18
+  - [ ] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
+- [ ] **🌦️ Real Weather Research** — [M-0116](docs/src/roadmap/phase-11/M-0116.md) — 📝 proposed 2026-10-18
+  - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
+- [ ] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](docs/src/roadmap/phase-11/M-0117.md) — 📝 proposed 2026-10-18
+  - [ ] Wet and snow grip, fog visibility hint, exhaust particles.
+- [ ] **🚏 Scheduled AI Traffic** — [M-0112](docs/src/roadmap/phase-11/M-0112.md) — 📝 proposed 2026-10-18
+  - [ ] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).
+- [ ] **🛤️ Track Switch Interaction** — [M-0113](docs/src/roadmap/phase-11/M-0113.md) — 📝 proposed 2026-10-18
+  - [ ] Switch census from tiles, switch state, route announcement and lock rule for AI and player.
+
 ---
 
 ## 🧹 Deferred Cleanup
