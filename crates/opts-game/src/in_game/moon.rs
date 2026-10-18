@@ -4,8 +4,8 @@
 //! * [`MoonLight`] is a `DirectionalLight` driven by [`opts_bevy::moon`]: direction from the
 //!   moon model, illuminance from the phase, height, sun and weather
 //!   ([`opts_bevy::moon::moon_illuminance`]).
-//! * The [`MoonDisc`](crate::in_game::sky::MoonDisc) quad gets a
-//!   [`MoonMaterial`](opts_bevy::moon_material::MoonMaterial) with the phase terminator and sits
+//! * The [`MoonDisc`] quad gets a
+//!   [`MoonMaterial`] with the phase terminator and sits
 //!   where the model puts the moon.
 //! * [`shadow_carrier_system`] keeps exactly one directional light (sun or moon) with shadow maps,
 //!   switching with a 15 % hysteresis, and hides lights that give no light.

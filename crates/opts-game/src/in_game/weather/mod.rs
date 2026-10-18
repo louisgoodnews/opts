@@ -1,5 +1,5 @@
 //! Weather in the running drive: the preset catalogue read from the install, and the effects
-//! that follow the [`SessionEnvironment`]: distance fog, the cloud layer, rain and snow, wet and
+//! that follow the [`SessionEnvironment`](opts_bevy::SessionEnvironment): distance fog, the cloud layer, rain and snow, wet and
 //! snowy ground. Everything reads `SessionEnvironment::conditions()`, so a weather change (an
 //! `EnvironmentChange`) takes effect in the next frame; the pure parameter functions are in
 //! `opts_bevy::weather`. Design and budget: `docs/src/architecture/weather.md`.
