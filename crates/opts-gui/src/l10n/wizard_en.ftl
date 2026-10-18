@@ -187,3 +187,26 @@ load-minor-toast =
     }
 load-minor-title = Minor loading problems
 load-close = Close
+wiz-configs-title = Configurations
+wiz-configs-name = Name
+wiz-configs-save = Save as configuration
+wiz-configs-empty = No configurations yet. Save the vehicle, livery and options you chose to load them in one step later.
+wiz-configs-favourite = Star
+wiz-configs-unfavourite = Unstar
+wiz-configs-duplicate = Duplicate
+wiz-configs-delete = Delete
+wiz-configs-delete-confirm = Delete? Press again
+wiz-configs-copy-suffix = (copy)
+wiz-configs-saved = Configuration “{ $name }” saved.
+wiz-configs-loaded = Configuration “{ $name }” loaded.
+wiz-configs-loaded-partly =
+    { $count ->
+        [one] Configuration “{ $name }” loaded; 1 part is no longer available and was left out.
+       *[other] Configuration “{ $name }” loaded; { $count } parts are no longer available and were left out.
+    }
+wiz-configs-load-failed = Configuration “{ $name }” cannot be loaded: its vehicle is not installed.
+wiz-configs-save-failed = The configurations could not be saved: { $reason }
+wiz-configs-file-problem = The configurations file cannot be used: { $reason }
+wiz-configs-vehicle-missing = The vehicle is not installed.
+wiz-configs-repaint-missing = The livery “{ $name }” is no longer offered; the default is used.
+wiz-configs-option-left-out = The option “{ $name }” is no longer accepted and is left out.

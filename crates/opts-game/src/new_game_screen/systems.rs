@@ -25,6 +25,7 @@ use super::types::{GameCatalogue, NewGameSetup};
 use super::ui::{Act, PlannerAction};
 use super::BuildCtx;
 use crate::app_state::AppState;
+use crate::bus_config::BusConfiguration;
 use crate::shell::esc::{ScreenBack, ScreenBackSteps};
 use crate::shell::nav::{Navigate, NavigateBack};
 
@@ -47,7 +48,8 @@ pub struct Env<'w, 's> {
     setup: ResMut<'w, NewGameSetup>,
     catalogue: Res<'w, GameCatalogue>,
     history: ResMut<'w, PlannerHistory>,
-    liveries: Res<'w, LiveryState>,
+    liveries: ResMut<'w, LiveryState>,
+    library: ResMut<'w, super::configs::ConfigLibrary>,
     loc: Res<'w, Localization>,
     next_state: ResMut<'w, NextState<AppState>>,
     leave: MessageWriter<'w, NavigateBack>,
@@ -114,12 +116,131 @@ pub fn handle_actions(
                 env.setup.custom_setvars.clear();
                 next(&mut env);
             }
+            PlannerAction::SaveConfig => configs_save(&mut env, &mut commands),
+            PlannerAction::LoadConfig(id) => configs_load(&mut env, &id, &mut commands),
+            PlannerAction::FavouriteConfig(id) => {
+                let on = env.library.store.find(&id).is_some_and(|c| !c.favourite);
+                env.library.store.set_favourite(&id, on);
+                configs_changed(&mut env, &mut commands);
+            }
+            PlannerAction::DuplicateConfig(id) => {
+                let copy = env
+                    .library
+                    .store
+                    .find(&id)
+                    .map(|c| format!("{} {}", c.name, env.loc.t("wiz-configs-copy-suffix")));
+                if let Some(base) = copy {
+                    let mut name = base.clone();
+                    let mut n = 2;
+                    while env
+                        .library
+                        .store
+                        .duplicate(&id, &name, now_unix())
+                        .is_none()
+                        && n < 100
+                    {
+                        name = format!("{base} {n}");
+                        n += 1;
+                    }
+                    configs_changed(&mut env, &mut commands);
+                }
+            }
+            PlannerAction::DeleteConfig(id) => {
+                if env.library.pending_delete.as_deref() == Some(id.as_str()) {
+                    env.library.pending_delete = None;
+                    env.library.store.delete(&id);
+                    configs_changed(&mut env, &mut commands);
+                } else {
+                    env.library.pending_delete = Some(id);
+                    env.state.built = None;
+                }
+            }
             PlannerAction::OpenSettings => {
                 // A step into a sub-page: Back returns here.
                 env.navigate.write(Navigate::push("settings"));
             }
         }
     }
+}
+
+/// The list changed: write it, show a failure, and build the step again.
+fn configs_changed(env: &mut Env, commands: &mut Commands) {
+    if let Err(e) = env.library.save() {
+        tracing::warn!("cannot save the bus configurations: {e}");
+        ToastBuilder::new(env.loc.t_args(
+            "wiz-configs-save-failed",
+            &[("reason".to_string(), e.to_string().into())],
+        ))
+        .with_duration(6.0)
+        .spawn(commands);
+    }
+    env.library.pending_delete = None;
+    env.state.built = None;
+}
+
+/// *Save*: the plan's vehicle, repaint and options under the name in the field.
+fn configs_save(env: &mut Env, commands: &mut Commands) {
+    let Some(vehicle) = env.catalogue.find_vehicle(&env.setup.selected_vehicle) else {
+        return;
+    };
+    let typed = env.library.draft_name.trim().to_string();
+    let name = if typed.is_empty() {
+        super::configs::default_name(vehicle, &env.setup.selected_livery)
+    } else {
+        typed
+    };
+    let config = BusConfiguration::new(
+        &name,
+        &vehicle.id,
+        &env.setup.selected_livery,
+        env.setup
+            .custom_setvars
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect(),
+        now_unix(),
+    );
+    env.library.store.save(config);
+    env.library.draft_name.clear();
+    ToastBuilder::new(
+        env.loc
+            .t_args("wiz-configs-saved", &[("name".to_string(), name.into())]),
+    )
+    .with_duration(4.0)
+    .spawn(commands);
+    configs_changed(env, commands);
+}
+
+/// *Load*: the configuration's vehicle, repaint and options go into the plan; the check against
+/// the vehicle's repaints follows when they are read ([`super::configs::finish_load`]).
+fn configs_load(env: &mut Env, id: &str, commands: &mut Commands) {
+    let Some(config) = env.library.store.find(id).cloned() else {
+        return;
+    };
+    let Some(vehicle) = env
+        .catalogue
+        .vehicles
+        .iter()
+        .find(|v| v.id == config.vehicle)
+    else {
+        ToastBuilder::new(env.loc.t_args(
+            "wiz-configs-load-failed",
+            &[("name".to_string(), config.name.clone().into())],
+        ))
+        .with_duration(6.0)
+        .spawn(commands);
+        return;
+    };
+    env.setup.no_vehicle = false;
+    env.setup.selected_vehicle = env.catalogue.vehicle_key(vehicle);
+    env.setup.selected_livery.clone_from(&config.repaint);
+    env.setup.custom_setvars = config.setvars.iter().cloned().collect();
+    env.library.store.touch(&config.id, now_unix());
+    env.library.pending_check = Some(config.id.clone());
+    // The step is built again from the plan and the repaints are read for the vehicle.
+    env.liveries.vehicle.clear();
+    env.liveries.repaints = None;
+    configs_changed(env, commands);
 }
 
 fn back(env: &mut Env) {
@@ -222,6 +343,7 @@ pub fn handle_list_events(
     weather: Res<opts_bevy::WeatherCatalogue>,
     mut history: ResMut<PlannerHistory>,
     mut liveries: ResMut<LiveryState>,
+    library: Res<super::configs::ConfigLibrary>,
     mut state: ResMut<PlannerState>,
     loc: Res<Localization>,
     mut eras: Local<std::collections::HashMap<String, Option<MapEra>>>,
@@ -308,6 +430,8 @@ pub fn handle_list_events(
                     &setup,
                     &mut liveries,
                     vehicle,
+                    &library,
+                    &catalogue,
                 );
             }
             (PlannerStep::Where, None) => {

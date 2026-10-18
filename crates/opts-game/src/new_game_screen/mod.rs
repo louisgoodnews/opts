@@ -7,6 +7,7 @@
 //! remembered through [`crate::drive_history`].
 
 pub mod choice;
+pub mod configs;
 pub mod history;
 pub mod livery;
 pub mod options;
@@ -76,6 +77,9 @@ impl Plugin for NewGameMenuPlugin {
         if !app.world().contains_resource::<PlannerHistory>() {
             app.init_resource::<PlannerHistory>();
         }
+        if !app.world().contains_resource::<configs::ConfigLibrary>() {
+            app.init_resource::<configs::ConfigLibrary>();
+        }
         let active = in_state(AppState::VehicleSelection);
         app.add_systems(OnEnter(AppState::VehicleSelection), enter_wizard)
             .add_systems(OnExit(AppState::VehicleSelection), cleanup_wizard)
@@ -89,6 +93,8 @@ impl Plugin for NewGameMenuPlugin {
                     options::apply_switches,
                     options::apply_choices,
                     options::apply_numbers,
+                    configs::track_name,
+                    configs::finish_load,
                     options::close_on_cancel,
                 )
                     .run_if(active.clone())

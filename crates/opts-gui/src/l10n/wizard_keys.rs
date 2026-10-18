@@ -226,6 +226,25 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WHAT_LIVERY_DEFAULT,
     wiz::WIZ_WHAT_LIVERY_LOADING,
     wiz::WIZ_WHAT_LIVERY_NONE,
+    wiz::WIZ_CONFIGS_TITLE,
+    wiz::WIZ_CONFIGS_NAME,
+    wiz::WIZ_CONFIGS_SAVE,
+    wiz::WIZ_CONFIGS_EMPTY,
+    wiz::WIZ_CONFIGS_FAVOURITE,
+    wiz::WIZ_CONFIGS_UNFAVOURITE,
+    wiz::WIZ_CONFIGS_DUPLICATE,
+    wiz::WIZ_CONFIGS_DELETE,
+    wiz::WIZ_CONFIGS_DELETE_CONFIRM,
+    wiz::WIZ_CONFIGS_COPY_SUFFIX,
+    wiz::WIZ_CONFIGS_SAVED,
+    wiz::WIZ_CONFIGS_LOADED,
+    wiz::WIZ_CONFIGS_LOADED_PARTLY,
+    wiz::WIZ_CONFIGS_LOAD_FAILED,
+    wiz::WIZ_CONFIGS_SAVE_FAILED,
+    wiz::WIZ_CONFIGS_FILE_PROBLEM,
+    wiz::WIZ_CONFIGS_VEHICLE_MISSING,
+    wiz::WIZ_CONFIGS_REPAINT_MISSING,
+    wiz::WIZ_CONFIGS_OPTION_LEFT_OUT,
     wiz::WIZ_WHAT_CONFIGURE,
     wiz::WIZ_WHAT_NO_OPTIONS,
     wiz::WIZ_WHAT_OPTIONS_CHANGED,
@@ -491,4 +510,42 @@ pub mod wiz {
     pub const WIZ_OPTION_VIS_GRILL_INVISIBLE: &str = "wiz-option-vis_grill_invisible";
     /// `wiz-option-ident_visible`.
     pub const WIZ_OPTION_IDENT_VISIBLE: &str = "wiz-option-ident_visible";
+    /// `wiz-configs-title`.
+    pub const WIZ_CONFIGS_TITLE: &str = "wiz-configs-title";
+    /// `wiz-configs-name`.
+    pub const WIZ_CONFIGS_NAME: &str = "wiz-configs-name";
+    /// `wiz-configs-save`.
+    pub const WIZ_CONFIGS_SAVE: &str = "wiz-configs-save";
+    /// `wiz-configs-empty`.
+    pub const WIZ_CONFIGS_EMPTY: &str = "wiz-configs-empty";
+    /// `wiz-configs-favourite`.
+    pub const WIZ_CONFIGS_FAVOURITE: &str = "wiz-configs-favourite";
+    /// `wiz-configs-unfavourite`.
+    pub const WIZ_CONFIGS_UNFAVOURITE: &str = "wiz-configs-unfavourite";
+    /// `wiz-configs-duplicate`.
+    pub const WIZ_CONFIGS_DUPLICATE: &str = "wiz-configs-duplicate";
+    /// `wiz-configs-delete`.
+    pub const WIZ_CONFIGS_DELETE: &str = "wiz-configs-delete";
+    /// `wiz-configs-delete-confirm`.
+    pub const WIZ_CONFIGS_DELETE_CONFIRM: &str = "wiz-configs-delete-confirm";
+    /// `wiz-configs-copy-suffix`.
+    pub const WIZ_CONFIGS_COPY_SUFFIX: &str = "wiz-configs-copy-suffix";
+    /// `wiz-configs-saved`.
+    pub const WIZ_CONFIGS_SAVED: &str = "wiz-configs-saved";
+    /// `wiz-configs-loaded`.
+    pub const WIZ_CONFIGS_LOADED: &str = "wiz-configs-loaded";
+    /// `wiz-configs-loaded-partly`.
+    pub const WIZ_CONFIGS_LOADED_PARTLY: &str = "wiz-configs-loaded-partly";
+    /// `wiz-configs-load-failed`.
+    pub const WIZ_CONFIGS_LOAD_FAILED: &str = "wiz-configs-load-failed";
+    /// `wiz-configs-save-failed`.
+    pub const WIZ_CONFIGS_SAVE_FAILED: &str = "wiz-configs-save-failed";
+    /// `wiz-configs-file-problem`.
+    pub const WIZ_CONFIGS_FILE_PROBLEM: &str = "wiz-configs-file-problem";
+    /// `wiz-configs-vehicle-missing`.
+    pub const WIZ_CONFIGS_VEHICLE_MISSING: &str = "wiz-configs-vehicle-missing";
+    /// `wiz-configs-repaint-missing`.
+    pub const WIZ_CONFIGS_REPAINT_MISSING: &str = "wiz-configs-repaint-missing";
+    /// `wiz-configs-option-left-out`.
+    pub const WIZ_CONFIGS_OPTION_LEFT_OUT: &str = "wiz-configs-option-left-out";
 }
