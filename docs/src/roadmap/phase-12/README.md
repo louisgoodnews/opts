@@ -4,7 +4,7 @@
 
 **Status:** ⏳ Planned 2026-10-18; every milestone is 📝 Proposed and awaits approval by the project lead. Nothing is started. The execution order below is a recommendation; the project lead may reorder it.
 
-The phase is not yet listed in [`ROADMAP.md`](../../../../ROADMAP.md), the book summary or the board; those entries follow after the project lead's checkpoint on these pages.
+The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 12); this page holds the details.
 
 ## Milestones (recommended execution order)
 
