@@ -302,7 +302,14 @@ impl HofFile {
                                                     if let Some((stop_ident, next_stop_i)) =
                                                         next_param_raw(&lines, stop_i)
                                                     {
-                                                        busstops.push(stop_ident.to_string());
+                                                        // Sheets export empty trailing columns as tabs: the ident is the first column.
+                                                        busstops.push(
+                                                            stop_ident
+                                                                .split('\t')
+                                                                .next()
+                                                                .unwrap_or_default()
+                                                                .to_string(),
+                                                        );
                                                         stop_i = next_stop_i;
                                                     }
                                                 }

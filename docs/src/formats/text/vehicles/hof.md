@@ -356,6 +356,10 @@ Hbf
 
 ---
 
+## 🧪 Corpus (M-0099)
+
+`opts-core/tests/hof_corpus.rs` (local gate, `OMSI_PATH`): the installation holds 27,779 `.hof` files below `Vehicles/`; they are 296 distinct files (the same depot is shipped into dozens of vehicle folders), all of which parse; 15,891 routes, 85 of them name a terminus code the depot's table does not have, and 3,387 of 272,142 route stops name no row of the stop table (Q-HOF-007).
+
 ## 🧪 Test Cases
 
 | ID | Input | Expected |
@@ -379,6 +383,8 @@ Hbf
 | Q-HOF-003 | ~~Is `Ident` matching case-sensitive?~~ — resolved: stop names match editor cube names; passengers react to names and IBIS codes (📚 M-0006). | ✅ |
 | Q-HOF-004 | Do `[addterminus]` / `[addbusstop]` (single entry) share one terminator rule? | Open; `.....` assumed. |
 | Q-HOF-005 | How `[SP]` / `[DLC]` tags affect loading. | Open. |
+| Q-HOF-006 | The stop lines of `[infosystem_busstop_list]` may carry empty trailing columns as tabs (a spreadsheet export; 14,000 stops in `Lemmental_Neuenbreid.hof`): the ident is the first column. | ✅ resolved 2026-10-19 in the parser (before: 84,614 of 272,142 route stops did not resolve against the stop table, afterwards 3,387, 1.2 %). |
+| Q-HOF-007 | The remaining 3,387 route stops that name no row of the stop table: some carry a suffix after `*` (`Teltow Bahnhof*N37`, `Teltow Bahnhof*S` in `BRT Berlin.hof`, whose table has `Teltow Bahnhof`), some name stops that only the vehicle's own lists define (`Bahnhof Terminus`). The meaning of the `*` suffix (platform or direction marker?) is not known; the corpus test (`opts-core/tests/hof_corpus.rs`) holds the share under 2 %. | Open. |
 
 ---
 

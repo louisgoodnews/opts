@@ -7,7 +7,6 @@
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
-use opts_core::formats::hof::HofFile;
 use opts_core::formats::oft::OftFont;
 use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 use opts_sim::script::{ExternalHandler, Stacks};
@@ -17,16 +16,8 @@ use opts_sim::script::{ExternalHandler, Stacks};
 pub struct VehicleHostContext {
     /// Deterministic seed identifying this vehicle instance.
     pub seed: u64,
-    /// Active depot (`.hof`) operational data, if loaded.
-    pub hof: Option<Arc<HofFile>>,
-    /// Active route index in the `.hof` file, if scheduled.
-    pub active_route_index: Option<usize>,
-    /// Current bus stop index along the active route.
-    pub current_stop_index: usize,
-    /// Timetable delay in seconds (positive = late, negative = early).
-    pub delay_seconds: f32,
-    /// Line string shown on line displays (e.g. "33", "109").
-    pub line_string: String,
+    /// The vehicle's depot and the driver's selection (`.hof`), shared with the protocol.
+    pub route: crate::route::RouteHandle,
     /// Script textures for this vehicle (`[scripttexture]`).
     pub script_textures: Arc<RwLock<Vec<CpuScriptTexture>>>,
     /// Loaded fonts for this vehicle / game session.
@@ -71,12 +62,9 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             "getterminusindex" => {
                 let code = st.numbers.pop().unwrap_or(0.0).round() as i32;
                 let idx = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.find_terminus_by_code(code))
-                    .map(|(i, _)| i as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(idx);
+                    .route
+                    .with(|r| r.hof.as_ref()?.find_terminus_by_code(code).map(|(i, _)| i));
+                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
@@ -84,12 +72,14 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             "getterminusstring" => {
                 let col = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
                 let term_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.terminus_string(term_idx, col))
-                    .unwrap_or("");
-                st.strings.push(text.to_string());
+                let text = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()
+                        .and_then(|h| h.terminus_string(term_idx, col))
+                        .unwrap_or("")
+                        .to_string()
+                });
+                st.strings.push(text);
                 true
             }
 
@@ -97,12 +87,9 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             "getterminuscode" => {
                 let term_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
                 let code = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.terminus(term_idx))
-                    .map(|t| t.code as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(code);
+                    .route
+                    .with(|r| r.hof.as_ref()?.terminus(term_idx).map(|t| t.code));
+                st.numbers.push(code.map_or(-1.0, |c| c as f32));
                 true
             }
 
@@ -110,13 +97,13 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // `routeCode (M.V.GetRouteIndex)` -> routeIdx (or -1)
             "getrouteindex" => {
                 let route_code = st.numbers.pop().unwrap_or(0.0).round() as i32;
-                let idx = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.find_route_by_code(route_code))
-                    .map(|(i, _)| i as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(idx);
+                let idx = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()?
+                        .find_route_by_code(route_code)
+                        .map(|(i, _)| i)
+                });
+                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
@@ -124,45 +111,40 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             "getroutebusstopident" => {
                 let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
                 let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let ident = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.route(route_idx))
-                    .and_then(|r| r.busstops.get(stop_no))
-                    .map(String::as_str)
-                    .unwrap_or("");
-                st.strings.push(ident.to_string());
+                let ident = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()
+                        .and_then(|h| h.route(route_idx))
+                        .and_then(|rt| rt.busstops.get(stop_no))
+                        .cloned()
+                        .unwrap_or_default()
+                });
+                st.strings.push(ident);
                 true
             }
 
             // `routeIdx (M.V.GetRouteTerminusIndex)` -> terminus row index of the route
             "getrouteterminusindex" => {
                 let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let term_idx = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.route(route_idx))
-                    .and_then(|r| {
-                        ctx.hof
-                            .as_ref()
-                            .and_then(|h| h.find_terminus_by_code(r.terminus_code))
-                    })
-                    .map(|(i, _)| i as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(term_idx);
+                let term_idx = ctx.route.with(|r| {
+                    let h = r.hof.as_ref()?;
+                    let route = h.route(route_idx)?;
+                    h.find_terminus_by_code(route.terminus_code).map(|(i, _)| i)
+                });
+                st.numbers.push(term_idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
             // `routeIdx (M.V.GetBusstopCount)` -> stop count of route
             "getbusstopcount" => {
                 let route_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let count = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.route(route_idx))
-                    .map(|r| r.busstops.len() as f32)
-                    .unwrap_or(0.0);
-                st.numbers.push(count);
+                let count = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()
+                        .and_then(|h| h.route(route_idx))
+                        .map_or(0, |rt| rt.busstops.len())
+                });
+                st.numbers.push(count as f32);
                 true
             }
 
@@ -170,13 +152,13 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // `ident:str (M.V.GetBusstopIndex)` -> busstopIdx (or -1)
             "getbusstopindex" => {
                 let ident = st.strings.pop().unwrap_or_default();
-                let idx = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.find_busstop_by_ident(&ident))
-                    .map(|(i, _)| i as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(idx);
+                let idx = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()?
+                        .find_busstop_by_ident(&ident)
+                        .map(|(i, _)| i)
+                });
+                st.numbers.push(idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
@@ -184,12 +166,14 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             "getbusstopstring" => {
                 let col = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
                 let stop_idx = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.busstop_string(stop_idx, col))
-                    .unwrap_or("");
-                st.strings.push(text.to_string());
+                let text = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()
+                        .and_then(|h| h.busstop_string(stop_idx, col))
+                        .unwrap_or("")
+                        .to_string()
+                });
+                st.strings.push(text);
                 true
             }
 
@@ -197,77 +181,69 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // `slot (M.V.GetDepotStringGlobal)` -> string
             "getdepotstringglobal" => {
                 let slot = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let text = ctx
-                    .hof
-                    .as_ref()
-                    .and_then(|h| h.global_string(slot))
-                    .unwrap_or("");
-                st.strings.push(text.to_string());
+                let text = ctx.route.with(|r| {
+                    r.hof
+                        .as_ref()
+                        .and_then(|h| h.global_string(slot))
+                        .unwrap_or("")
+                        .to_string()
+                });
+                st.strings.push(text);
                 true
             }
 
-            // 6. Timetable Callbacks
+            // 6. Timetable Callbacks: the active timetable is the selected route; free driving
+            // (nothing selected) answers with neutral values, never garbage.
             // `(M.V.GetTTLineString)` -> string
             "getttlinestring" => {
-                let line_str = if !ctx.line_string.is_empty() {
-                    ctx.line_string.clone()
-                } else if let Some(r) = ctx
-                    .active_route_index
-                    .and_then(|idx| ctx.hof.as_ref()?.route(idx))
-                {
-                    r.line_string.clone()
-                } else {
-                    String::new()
-                };
-                st.strings.push(line_str);
+                st.strings.push(ctx.route.with(|r| r.line_text()));
                 true
             }
 
             // `(M.V.GetTTTerminusIndex)` -> terminus index
             "getttterminusindex" => {
-                let term_idx = ctx
-                    .active_route_index
-                    .and_then(|idx| ctx.hof.as_ref()?.route(idx))
-                    .and_then(|r| ctx.hof.as_ref()?.find_terminus_by_code(r.terminus_code))
-                    .map(|(i, _)| i as f32)
-                    .unwrap_or(-1.0);
-                st.numbers.push(term_idx);
+                let term_idx = ctx.route.with(|r| {
+                    let rt = r.route()?;
+                    r.hof
+                        .as_ref()?
+                        .find_terminus_by_code(rt.terminus_code)
+                        .map(|(i, _)| i)
+                });
+                st.numbers.push(term_idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
             // `(M.V.GetTTBusstopCount)` -> count of stops on active schedule
             "getttbusstopcount" => {
                 let count = ctx
-                    .active_route_index
-                    .and_then(|idx| ctx.hof.as_ref()?.route(idx))
-                    .map(|r| r.busstops.len() as f32)
-                    .unwrap_or(0.0);
-                st.numbers.push(count);
+                    .route
+                    .with(|r| r.route().map_or(0, |rt| rt.busstops.len()));
+                st.numbers.push(count as f32);
                 true
             }
 
             // `(M.V.GetTTBusstopIndex)` -> current stop index (0-based)
             "getttbusstopindex" => {
-                st.numbers.push(ctx.current_stop_index as f32);
+                st.numbers.push(ctx.route.with(|r| r.stop_index) as f32);
                 true
             }
 
             // `stopNo (M.V.GetTTBusstopName)` -> stop name/ident string
             "getttbusstopname" => {
                 let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let name = ctx
-                    .active_route_index
-                    .and_then(|idx| ctx.hof.as_ref()?.route(idx))
-                    .and_then(|r| r.busstops.get(stop_no))
-                    .map(String::as_str)
-                    .unwrap_or("");
-                st.strings.push(name.to_string());
+                let name = ctx.route.with(|r| {
+                    r.route()
+                        .and_then(|rt| rt.busstops.get(stop_no))
+                        .cloned()
+                        .unwrap_or_default()
+                });
+                st.strings.push(name);
                 true
             }
 
             // `(M.V.GetTTDelay)` -> delay in seconds
             "getttdelay" => {
-                st.numbers.push(ctx.delay_seconds);
+                st.numbers.push(ctx.route.with(|r| r.delay_s));
                 true
             }
 
@@ -596,6 +572,8 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
 
 #[cfg(test)]
 mod tests {
+    use opts_core::formats::hof::HofFile;
+
     #[test]
     fn aachen_line_33_destination_and_cabin_monitor_resolution() {
         let aachen_path = std::path::Path::new(
@@ -613,13 +591,11 @@ mod tests {
         assert_eq!(route.terminus_code, 11);
         assert!(!route.busstops.is_empty());
 
+        let route = crate::route::RouteHandle::new(Some(hof.clone()));
+        route.select(3301).expect("select 3301");
         let ctx = VehicleHostContext {
             seed: 1234,
-            hof: Some(hof.clone()),
-            active_route_index: Some(route_idx),
-            current_stop_index: 0,
-            delay_seconds: 0.0,
-            line_string: "33".to_string(),
+            route,
             ..Default::default()
         };
         let mut h = vehicle_callbacks_with_context(ctx);
@@ -722,13 +698,13 @@ Ponttor
     #[test]
     fn host_callbacks_resolve_hof_data() {
         let hof = Arc::new(HofFile::parse_str(DEMO_HOF).expect("parse demo hof"));
+        let route = crate::route::RouteHandle::new(Some(hof));
+        route.select(3301).expect("select 3301");
+        route.set_stop(1);
+        route.set_delay(45.0);
         let ctx = VehicleHostContext {
             seed: 42,
-            hof: Some(hof),
-            active_route_index: Some(0),
-            current_stop_index: 1,
-            delay_seconds: 45.0,
-            line_string: "33".to_string(),
+            route,
             ..Default::default()
         };
         let mut h = vehicle_callbacks_with_context(ctx);

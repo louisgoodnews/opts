@@ -115,6 +115,9 @@ struct Loop {
     startup: Startup,
     t: f32,
     dt: f32,
+    keys: opts_bevy::route::KeyQueue,
+    route: Option<opts_bevy::route::RouteHandle>,
+    pending_target_s: f32,
 }
 
 impl Loop {
@@ -154,14 +157,34 @@ impl Loop {
             startup: Startup::default(),
             t: 0.0,
             dt,
+            keys: opts_bevy::route::KeyQueue::default(),
+            route: None,
+            pending_target_s: 0.0,
         }
+    }
+
+    /// Runs the vehicle's start-up (battery, engine, drive) without waiting for air.
+    fn ready_basic(&mut self) {
+        self.run(12.0);
     }
 
     /// One step: feed, start-up triggers, scripts, their torque and brakes into the physics.
     fn tick(&mut self) {
-        let inputs = opts_bevy::vehicle_script::host_inputs(&self.controller, None);
+        let mut inputs = opts_bevy::vehicle_script::host_inputs(&self.controller, None);
+        if let Some(r) = &self.route {
+            opts_bevy::route::feed_route(&mut inputs, r);
+        }
         feed(&mut self.engine, &self.plan, &inputs);
         self.startup.step(self.t, &mut self.engine);
+        self.keys.press_next(&mut self.engine);
+        if let Some(r) = self.route.clone() {
+            opts_bevy::route::keep_target(
+                &mut self.engine,
+                &r,
+                &mut self.pending_target_s,
+                self.dt,
+            );
+        }
         self.engine.run_frame(self.dt, false);
         self.controller.sim.script_drive = opts_bevy::vehicle_script::script_outputs(&self.engine);
         self.controller.sim.step(self.dt);
@@ -415,6 +438,148 @@ fn unconsumed(writes: &BTreeSet<String>) -> BTreeSet<String> {
     out
 }
 
+/// The depot of a vehicle: a `.hof` of its folder whose name contains `filter`, else the game's
+/// rule ([`opts_bevy::route::find_depot`]).
+fn depot_for(
+    dir: &Path,
+    root: &Path,
+    filter: Option<&str>,
+) -> Option<std::sync::Arc<opts_core::formats::hof::HofFile>> {
+    let pick = filter.and_then(|f| {
+        let mut files: Vec<_> = std::fs::read_dir(dir)
+            .ok()?
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| {
+                p.extension().is_some_and(|e| e.eq_ignore_ascii_case("hof"))
+                    && p.file_name()
+                        .is_some_and(|n| n.to_string_lossy().to_lowercase().contains(f))
+            })
+            .collect();
+        files.sort();
+        files.iter().find_map(|p| {
+            opts_core::formats::hof::HofFile::parse_bytes(&std::fs::read(p).ok()?).ok()
+        })
+    });
+    pick.or_else(|| opts_bevy::route::find_depot(dir, root, ""))
+        .map(std::sync::Arc::new)
+}
+
+/// Selects route `code` on a started vehicle the way a driver does (the IBIS keys) and reports
+/// what the scripts then hold: the selection, the keys, the strings the depot defines for it and
+/// whether the scripts' own string variables carry them (M-0099).
+fn route_report(
+    bus: &BusManifest,
+    dir: &Path,
+    root: &Path,
+    depot: Option<std::sync::Arc<opts_core::formats::hof::HofFile>>,
+    code: i32,
+    seed: u64,
+) -> serde_json::Value {
+    let route = opts_bevy::route::RouteHandle::new(depot.clone());
+    let (mut engine, _) =
+        load_vehicle_scripts(bus, |r| find_ci(dir, r).or_else(|| find_ci(root, r)));
+    engine.seed_random(seed as u32);
+    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
+        opts_bevy::host_callbacks::VehicleHostContext {
+            seed,
+            route: route.clone(),
+            ..Default::default()
+        },
+    ));
+    opts_bevy::route::apply_to_scripts(&mut engine, &route);
+    let mut lp = Loop::new(bus, None, engine, 1.0 / 60.0);
+    lp.route = Some(route.clone());
+    lp.ready_basic();
+    let before = lp.engine.get("target_index_int");
+    let selection = match route.select(code) {
+        Ok(s) => s,
+        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    };
+    let keypad = lp.keys.type_selection(&lp.engine, &selection).is_ok();
+    let ziel_before = lp.engine.get("ziel_neu");
+    let displays_answered = opts_bevy::route::schedule_target(&mut lp.engine, &route);
+    lp.pending_target_s = opts_bevy::route::TARGET_OFFER_S;
+    let ziel_after = lp.engine.get("ziel_neu");
+    eprintln!(
+        "ziel_neu before {ziel_before} after {ziel_after} timer {} ai {} line_anim {}",
+        lp.engine.get("matrix_ziel_animationtimer"),
+        lp.engine.get("ai"),
+        lp.engine.get("matrix_linie_animationtimer")
+    );
+    lp.run(150.0);
+    let hof = depot.expect("selected a route, so there is a depot");
+    let terminus = hof
+        .find_terminus_by_code(selection.terminus_code)
+        .map(|(i, t)| (i, t.strings.clone()));
+    let first_stop = route.with(|s| s.route().and_then(|r| r.busstops.first().cloned()));
+    let stop_strings: Vec<String> = first_stop
+        .as_deref()
+        .and_then(|id| hof.find_busstop_by_ident(id))
+        .map(|(_, b)| b.strings.clone())
+        .unwrap_or_default();
+    let held: Vec<(String, String)> = lp
+        .engine
+        .string_variables()
+        .into_iter()
+        .filter(|(_, v)| !v.is_empty())
+        .collect();
+    let carries = |wanted: &[String]| {
+        held.iter()
+            .filter(|(_, v)| {
+                // Displays pad and spread their text: compare without spaces, by containment.
+                let flat = |t: &str| t.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+                let have = flat(v);
+                wanted.iter().any(|w| {
+                    let w = flat(w);
+                    w.chars().count() >= 3 && have.contains(&w)
+                })
+            })
+            .map(|(n, _)| n.clone())
+            .collect::<Vec<_>>()
+    };
+    let terminus_strings = terminus.as_ref().map(|t| t.1.clone()).unwrap_or_default();
+    let extra: serde_json::Map<String, serde_json::Value> = std::env::var("RIG_VARS")
+        .map(|l| {
+            l.split(',')
+                .map(|n| {
+                    (
+                        n.to_string(),
+                        serde_json::json!(lp.engine.get(&n.to_lowercase())),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    serde_json::json!({
+        "extra": extra,
+        "yard": lp.engine.get_string("yard"),
+        "setlineto": lp.engine.get_string("setlineto"),
+        "keypad": keypad,
+        "displays_answered": displays_answered,
+        "route_code": selection.route_code,
+        "line": selection.line,
+        "course": selection.course,
+        "terminus_code": selection.terminus_code,
+        "terminus_index": terminus.as_ref().map(|t| t.0),
+        "target_index_int": lp.engine.get("target_index_int"),
+        "target_index_int_before": before,
+        "ibis_route": lp.engine.get("ibis_route"),
+        "ibis_terminusindex": lp.engine.get("ibis_terminusindex"),
+        "matrix_terminusact": lp.engine.get("matrix_terminusact"),
+        "matrix_steckschild_termindex": lp.engine.get("matrix_steckschild_termindex"),
+        "ibis_mode": lp.engine.get("ibis_mode"),
+        "rlbnd_ziel": lp.engine.get("rlbnd_ziel"),
+        "rlbnd_ziel_target": lp.engine.get("rlbnd_ziel_target"),
+        "ibis_terminuscode": lp.engine.get("ibis_terminuscode"),
+        "act_busstop": lp.engine.get_string("act_busstop"),
+        "expected_first_stop": first_stop,
+        "terminus_strings": terminus_strings,
+        "variables_carrying_terminus_strings": carries(&terminus_strings),
+        "variables_carrying_stop_strings": carries(&stop_strings),
+    })
+}
+
 /// Compares two physics reports; numbers may differ by 5 % (or 0.2 absolute: stopping and
 /// hold distances are small), `hz` is not compared (the golden is for the step size it names).
 fn physics_diff(
@@ -466,6 +631,7 @@ fn main() {
     );
     let (mut golden, mut check) = (None::<PathBuf>, None::<PathBuf>);
     let (mut physics, mut hz) = (false, 60.0f32);
+    let (mut route_code, mut hof_filter) = (None::<i32>, None::<String>);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--vehicle" => filter = args.next().map(|s| s.to_lowercase()),
@@ -473,6 +639,8 @@ fn main() {
             "--json" => json = args.next().map(PathBuf::from),
             "--csv" => csv = args.next().map(PathBuf::from),
             "--physics" => physics = true,
+            "--route" => route_code = args.next().and_then(|v| v.parse().ok()),
+            "--hof" => hof_filter = args.next().map(|s| s.to_lowercase()),
             "--hz" => hz = args.next().and_then(|v| v.parse().ok()).unwrap_or(60.0),
             "--golden" => golden = args.next().map(PathBuf::from),
             "--check" => check = args.next().map(PathBuf::from),
@@ -532,6 +700,16 @@ fn main() {
             .filter(|d| d.severity == Severity::Error)
             .count();
         load_errors += usize::from(load_errors_here > 0);
+        if let Some(code) = route_code {
+            let seed0 = seed_of(&rel);
+            let depot = depot_for(&dir, &root, hof_filter.as_deref());
+            let report = route_report(&bus, &dir, &root, depot, code, seed0);
+            println!(
+                "{rel}\n{}",
+                serde_json::to_string_pretty(&report).unwrap_or_default()
+            );
+            continue;
+        }
         if physics {
             let seed0 = seed_of(&rel);
             let loader = || {

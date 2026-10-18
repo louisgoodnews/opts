@@ -1062,6 +1062,33 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("`{spec: {mass_kg, cg_height_m, yaw_inertia_kg_m2, pitch_inertia_kg_m2, roll_inertia_kg_m2, rolling_coefficient}, axles: [{index, longitudinal_m, track_width_m, wheel_diameter_m, spring_n_per_m, damping_n_s_per_m, max_force_n, driven, steered, static_load_n, load_n: [left, right], deflection_m, deflection_speed_m_s, compression_m: [left, right], brake_force_n, brake_limited}], state: {speed_m_s, head_mass_kg, consist_mass_kg, units, wheelbase_m}, body: {heave_m, pitch_rad, roll_rad}, brakes: {pressure, apply_tau_s, force_n}}`; every `spec` entry is `{value, source}` with `source` one of `file`, `estimate`, `default`; since 1.11 the answer also has `pitch_inertia_kg_m2`, `roll_inertia_kg_m2`, `compression_m`, `brake_force_n`, `brake_limited`, `body` and `brakes`")
     .doc("`1001` without a player vehicle. `file` values are read from the vehicle's `.bus` (`[mass]`, `[schwerpunkt]`, `[momentofintertia]` or lines 2 to 4 of `[mass]`, `[rollwiderstand]`); `estimate` is the yaw inertia of a box with the bounding box's width and length; `default` is the generic transit bus, used because the file states nothing usable. The rolling coefficient is the file's rolling resistance (a force) over the stated weight. Axle values are those the physics uses (the `.bus` axle block, with bus defaults for what is missing); `static_load_n` follows from the axle positions, the mass and the centre of gravity."),
     c(
+        "bus.routes",
+        "drive",
+        "List the lines and courses of the depot (.hof) of the player's vehicle",
+        "limit:i?",
+    )
+    .since("1.12")
+    .result("`{depot, count, routes: [{route_code, line, course, line_string, route_string, terminus_code, terminus}], selected}`; `selected` is the route code or `null`")
+    .doc("`1001` without a player vehicle. `route_code` is `line * 100 + course` as keyed on the IBIS (`13001`: line 130, course 01); `terminus` is the first string of the destination's row in the depot. The depot is the `.hof` the game chose for the vehicle and the map (the vehicle's folder first); a vehicle without a depot lists nothing."),
+    c(
+        "bus.get_route",
+        "drive",
+        "The route the player's vehicle has selected, and whether its IBIS is still being keyed",
+        "",
+    )
+    .since("1.12")
+    .result("`{depot, selected: {route_code, line, course, line_string, route_string, terminus_code, terminus} or null, stop_index, typing}`")
+    .doc("`1001` without a player vehicle. `typing` is true while the keys of a selection are still being pressed (one key per physics step)."),
+    c(
+        "bus.set_route",
+        "drive",
+        "Select a route for the player's vehicle the way a driver does: the IBIS keys, then the destination to the displays",
+        "route_code:i? line:i? course:i? clear:b?",
+    )
+    .since("1.12")
+    .result("`{selected: {...} or null, keypad, typing}`; without a keypad also `note`")
+    .doc("Give `route_code`, or `line` and `course`, or `clear` (the driver cancels the route). The selection changes the timetable callbacks at once and the vehicle's own scripts take it: the keys of the MAN-type IBIS (`ibis_setmode_linie_kurs`, the digits, `ibis_eingabe`, ...) are pressed one per physics step, and the target (`AI_Target_Index`, `SetLineTo`, the trigger `ai_scheduled_settarget`) is offered to the destination displays until `target_index_int` shows it (30 s at most). Vehicles with another IBIS get the second part only (`keypad: false`). `-32602` for a route the depot does not have, `1001` without a player vehicle."),
+    c(
         "config.list",
         "scene",
         "List the saved bus configurations (vehicle, repaint, equipment options) with their check against the installation",
