@@ -2,7 +2,7 @@
 //! (`docs/src/architecture/lighting-system.md` section 6 and 9).
 //!
 //! One system, [`sync_light_shafts`], makes the volumetric components follow
-//! [`LightQuality`](crate::light_quality::LightQuality) and the shadow-carrying light:
+//! [`LightQuality`] and the shadow-carrying light:
 //!
 //! * the **carrier** is the directional light with a [`LightRole`] that has
 //!   `shadow_maps_enabled` and light (the game's carrier system keeps exactly one such light and

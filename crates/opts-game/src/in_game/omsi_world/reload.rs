@@ -27,7 +27,7 @@ pub struct ReloadPlan {
 }
 
 /// A tile taken out of the world: its root entity and what it registered (ground, collision,
-/// lanes, signals). Built by [`WorldLoadJob::unload_tile`], carried out by [`TileUnload::apply`].
+/// lanes, signals). Built by `WorldLoadJob::unload_tile`, carried out by [`TileUnload::apply`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TileUnload {
     /// Tile key.

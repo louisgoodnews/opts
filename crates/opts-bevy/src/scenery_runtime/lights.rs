@@ -21,7 +21,7 @@ pub struct SceneryLightAssets {
 }
 
 impl SceneryLightAssets {
-    /// The unit-diameter glow disc all light sprites share (see [`glow_mesh`]).
+    /// The unit-diameter glow disc all light sprites share (see `glow_mesh`).
     pub fn glow_mesh(&mut self, meshes: &mut Assets<Mesh>) -> Handle<Mesh> {
         self.glow
             .get_or_insert_with(|| meshes.add(glow_mesh()))

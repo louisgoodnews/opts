@@ -248,7 +248,7 @@ pub struct LightAttenuation {
 }
 
 /// **The one attenuation function** (design `lighting-system.md` 5.6). `direct` and `ambient`
-/// come from [`light_scales_for_cover`] (the rule of [`light_scales`]: 0.55 and 0.8 at full cover,
+/// come from [`light_scales_for_cover`] (the rule of [`crate::weather::light_scales`]: 0.55 and 0.8 at full cover,
 /// the values that were in use before); `moon = 1 − 0.65·cover`; `shafts = direct² × (1 −
 /// cover)`, which is 0 under a solid cover.
 #[must_use]
@@ -506,7 +506,7 @@ impl SessionEnvironment {
         self.light_attenuation().direct
     }
 
-    /// Multiplier for the ambient light under the weather ([`light_scales`]).
+    /// Multiplier for the ambient light under the weather ([`crate::weather::light_scales`]).
     #[must_use]
     pub fn ambient_attenuation(&self) -> f32 {
         self.light_attenuation().ambient
