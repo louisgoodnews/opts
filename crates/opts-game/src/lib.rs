@@ -10,6 +10,7 @@ pub mod control_configs;
 pub mod control_drive;
 pub mod control_dynamics;
 pub mod control_environment;
+pub mod control_route;
 pub mod control_save;
 pub mod control_session;
 pub mod control_setvars;
