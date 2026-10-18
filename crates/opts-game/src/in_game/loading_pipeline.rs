@@ -20,6 +20,7 @@ use crate::in_game::omsi_world::{
     begin_world_load_at, chrono_date, load_next_tile, load_player_vehicle, resolve_session_config,
     spawn_debug_overlay, LoadAssets, SessionRequest, WorldLoadJob, WorldStats,
 };
+use crate::in_game::tile_loading;
 use crate::in_game::types::{
     CancelLoadingBtn, InGameEntity, InGameSessionInfo, LoadStage, LoadingScreenRoot,
     SimulationLoadState,
@@ -46,6 +47,8 @@ pub struct LoadEnv<'w, 's> {
     session: ResMut<'w, InGameSessionInfo>,
     report: ResMut<'w, LoadReport>,
     registry: ResMut<'w, SessionVehicles>,
+    settings: Option<Res<'w, crate::settings::GameSettings>>,
+    hardware: Option<Res<'w, crate::hardware::HardwareState>>,
 }
 
 /// Progress of the stages, as fractions of the bar.
@@ -146,6 +149,14 @@ fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
         begin_world_load_at(cfg, Some(date)).map(|mut job| {
             job.no_vehicle = no_vehicle;
+            // *Load all tiles* and the tile radius decide what the loading screen builds (M-0080).
+            let choice = env
+                .settings
+                .as_deref()
+                .map(tile_loading::TileChoice::from_settings)
+                .unwrap_or_default();
+            let profile = env.hardware.as_deref().and_then(|h| h.profile.as_ref());
+            job.queue_for_mode(tile_loading::resolve(choice, profile, job.map_radius()));
             (job.map_name(), job)
         })
     });

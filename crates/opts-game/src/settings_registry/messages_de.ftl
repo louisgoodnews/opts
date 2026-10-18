@@ -217,6 +217,10 @@ settings-toast-omsi-invalid = Dieser Ordner sieht nicht nach einer OMSI-2-Instal
 settings-back = Zurück
 set-autosave = Automatisch speichern
 set-autosave-desc = Speichert die Fahrt alle so viele Spielminuten im Slot für die automatische Speicherung. 0 schaltet es aus.
+set-load-all-tiles = Alle Kacheln beim Start laden
+set-load-all-tiles-desc = Lädt beim Laden der Fahrt jede Kachel der Karte und behält alle im Speicher. Das Laden dauert länger und braucht mehr Speicher, große Karten verlangen daher einen starken Rechner. Gilt für die nächste Fahrt; während einer Fahrt eingeschaltet, wird der Rest im Hintergrund nachgeladen.
+set-tile-radius = Kachelradius
+set-tile-radius-desc = Kacheln, die rund um die aktuelle geladen bleiben: 1 sind 3 x 3, 2 sind 5 x 5. 0 wählt automatisch passend für diesen Computer. Ohne Wirkung, solange alle Kacheln geladen werden.
 
 
 # Hardware (M-0081)

@@ -218,6 +218,10 @@ settings-toast-omsi-invalid = That folder does not look like an OMSI 2 installat
 settings-back = Back
 set-autosave = Autosave
 set-autosave-desc = Saves the drive to the autosave slot every this many minutes of play. 0 turns it off.
+set-load-all-tiles = Load all tiles on start
+set-load-all-tiles-desc = Loads every tile of the map while the drive loads and keeps them all in memory. Loading takes longer and uses more memory, so large maps may need a strong machine. Applies to the next drive; switching it during a drive loads the rest in the background.
+set-tile-radius = Tile radius
+set-tile-radius-desc = Tiles kept loaded around the one you are on: 1 is 3 x 3, 2 is 5 x 5. 0 chooses automatically for this computer. Unused while all tiles are loaded.
 
 
 # Hardware (M-0081)

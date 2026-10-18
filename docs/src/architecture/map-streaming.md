@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 Describes the code as it runs on `master` (2026-10-13); the planned `TileGridManager` / `AsyncComputeTaskPool` design of [M-0024](../roadmap/phase-4/M-0024.md) does **not** exist |
-| **Last Updated** | 2026-10-16 |
+| **Last Updated** | 2026-10-18 (tile loading controls, M-0080) |
 | **Relevant Crates** | `opts-game` (`in_game/omsi_world/{job,tile,tile_ground,reload}.rs`, `loading_pipeline.rs`), `opts-bevy` (`terrain.rs`, `model.rs`), `opts-core` (`formats::map`) |
 | **Traces to** | critical review 2026-10-11 F-012 (code ran without a specification), M-0024 Phase A; used by [M-0080](../roadmap/phase-4/M-0080.md) (tile loading controls) |
 
@@ -44,7 +44,7 @@ There is no *culled* state: a resident tile is always rendered by Bevy's own fru
 
 1. Parse `global.cfg` into the `MapManifest`; `tile_files` maps key to file name (the tile file is found case-insensitively next to `global.cfg`).
 2. Estimate and set the tile size (above); choose the start tile and spawn; log `tile size`, `start tile and spawn point selected`.
-3. Queue the **3 × 3 neighbourhood** of the start tile that exists as files (`tiles discovered for the 3x3 neighbourhood`, 5 tiles on Aachen Linie 33); `total_tiles = queue.len()`.
+3. `begin_world_load_at` first queues the **3 × 3 neighbourhood** of the start tile that exists as files (`tiles discovered for the 3x3 neighbourhood`, 5 tiles on Aachen Linie 33). The loading pipeline then applies the **tile loading mode** ([§4a](#4a-tile-loading-modes-m-0080)) with `WorldLoadJob::queue_for_mode`: the queue becomes every tile the mode wants around the start tile, nearest first (*load all*: every listed tile that has a file), and `total_tiles = queue.len()`. Callers that do not apply a mode (the scenery benchmark) keep the 3 × 3 queue.
 4. The loading pipeline's `stage_terrain` calls `load_next_tile` once per frame until the queue is empty; the bar shows `1 - queue.len() / total_tiles`. Zero loaded tiles fails the load (`load-problem-map`).
 5. After the world is spawned and the loading screen is done, `stream_world_tiles` takes over.
 
@@ -53,14 +53,29 @@ There is no *culled* state: a resident tile is always rendered by Bevy's own fru
 Runs every frame once the simulation load is complete (`SimulationLoadState::is_complete`) and a `WorldLoadJob` exists.
 
 1. Observer position gives the centre tile; `dist(k)` is the **Chebyshev** distance of tile `k` from it.
-2. **Eviction:** every resident tile with `dist > radius + 1` is removed: root entity despawned (children recursively), then the per-tile registries are told (see 5). The extra `+ 1` is the hysteresis against thrashing at tile borders.
-3. **Demand:** only when `queue` is empty, the tiles within `radius` that are neither resident nor missing are collected and **sorted by distance**; the **nearest one** is queued.
+2. **Eviction** (radius mode only; *load all* never unloads): every resident tile with `dist > radius + 1` is removed: root entity despawned (children recursively), then the per-tile registries are told (see 5). The extra `+ 1` is the hysteresis against thrashing at tile borders.
+3. **Demand:** only when `queue` is empty, the wanted tiles that are neither resident nor missing (the square of the radius, or every listed tile in *load all* mode) are collected and **sorted by distance**; the **nearest one that has a file** is queued.
 4. **Load:** if the queue is not empty, `load_next_tile` runs for the front key, **synchronously on the main thread**.
 
 Consequences (all by construction):
-- `stream_radius` is **1** (`begin_world_load`); the 3 × 3 area (up to 9 tiles, fewer at map edges and gaps) is the working set; nothing changes it at run time (no setting, no CLI flag yet: M-0080 R-20/R-21).
+- The radius is no longer fixed: `WorldLoadJob::tile_mode` holds `Radius(n)` or `All` and follows the settings at run time ([§4a](#4a-tile-loading-modes-m-0080)); with no hardware profile and no setting it is `Radius(1)`, the 3 × 3 area (up to 9 tiles, fewer at map edges and gaps) of earlier versions.
 - At most **one tile per frame** is built and only one is queued at a time; a border crossing therefore stalls for the duration of each tile build (measured below).
 - The observer is the camera. With the free-roam camera far from the vehicle, tiles around the vehicle are evicted and their ground, road, rail and collision registrations are removed (`follow_ground` in `ground_height.rs` then finds no height under a wheel and **skips the update**: the vehicle keeps its last elevation, pitch and roll and drives on at that height until a tile is resident under it again; ❓ Q-MS-01 keeps the part nobody has watched).
+
+### 4a. Tile loading modes (M-0080)
+
+Two settings decide what stays resident; the pure decisions live in `opts-game/src/in_game/tile_loading.rs` (unit-tested without a map), the streamer and the loading pipeline apply them.
+
+| Setting | Meaning |
+| :--- | :--- |
+| `gameplay.load_all_tiles` (bool, default off) | *Load all tiles on start*: every tile of the map is built while the drive loads and none is ever unloaded. Wins over the radius. |
+| `gameplay.tile_radius` (0 to 16, default `0`) | Tiles kept around the centre tile (1 is 3 × 3, 2 is 5 × 5). `0` is **automatic**: `opts_hardware::recommend::recommended_tile_radius` for this machine ([hardware probe](hardware-probe.md)), `1` while no profile is known. Always limited to the map radius (the farthest listed tile from the start tile) and at least 1. |
+
+- **Loading:** the loading screen builds exactly the tiles the mode wants (`queue_for_mode`), so with *load all* every tile is resident when the drive starts and the bar counts them all. Listed tiles without a file count into `tiles_missing` as before.
+- **Live:** `live::sync_tile_loading` re-reads both settings and the hardware profile when they change and calls `set_tile_mode`. Switching *load all* on during a drive makes the streamer queue the missing tiles one per frame; switching it off (or lowering the radius) lets the radius eviction unload the tiles that are too far, with the usual hysteresis of 1.
+- **Misses are remembered** while *all* tiles are wanted (`missing_tiles`), so absent files are not looked up every frame.
+- **Control protocol:** `scene.tiles` reports `mode`, `radius`, `automatic`, `recommended_radius`, `map_radius`, the resident tile keys and the queue length; the settings are changed with `settings.set` ([control protocol](../reference/control-protocol.md)).
+- **Open:** the *Plan a drive* summary switch with a loading-time and memory estimate, the memory guard warning, the "Automatic (currently N)" label on the settings page and a per-tile memory estimate (`MapStats::tile_mib` is still the default of 120 MiB, Q-MS-03).
 
 ## 5. What building a tile does (`load_next_tile`, in order)
 
@@ -110,7 +125,7 @@ Keyed (scrambled) meshes are decoded exactly while the tile is built (`o3d::exac
 | :--- | :--- | :--- |
 | L1 | Synchronous: parsing, mesh/texture building and entity spawning of a tile happen inside one `Update` call | frame spikes at tile borders and on first visits (no frame budget) |
 | L2 | One queued tile at a time, nearest first | after a fast move the working set fills one tile per frame at best |
-| L3 | Fixed radius 1, Chebyshev, hysteresis 1 | no setting, no hardware-derived default; large maps show the world edge 1 tile away |
+| L3 | Chebyshev radius, hysteresis 1 | the radius is a setting with a hardware-derived default since M-0080; the per-tile memory estimate behind it is still a constant (Q-MS-03), and the radius and *load all* have no wizard switch yet |
 | L4 | Observer is the camera | free camera / vehicle separation, see Q-MS-01 |
 | L5 | Caches never evict | memory grows with distance travelled |
 | L6 | Tile `.map` re-parsed on every revisit; map-wide spline index reads all tiles once | stall on the first tile that has spline attachments |
@@ -125,4 +140,4 @@ Keyed (scrambled) meshes are decoded exactly while the tile is built (`o3d::exac
 | Q-MS-02 | Does a chrono overlay tile have to be merged over its base tile at load (timetable variants)? | Spec check in `formats/map/tiles.md` (chrono overlay blocks) and one map with overlays |
 | Q-MS-03 | How fast does GPU/CPU memory grow on a long drive across many tiles? | Drive a route on a large map with the profile build; record `Assets<Mesh>`/`Image` counts per minute |
 | Q-MS-04 | Frame time per tile build on warm and cold caches, per object count | `OPTS_SYSTEM_TIMING` profile build; the scenery benchmark ([scenery-benchmark.md](scenery-benchmark.md)) measures per-object cost offline |
-| Q-MS-05 | Which hardware-dependent radius is right (M-0080 R-21)? | after Q-MS-03/04 and the `opts-hardware` research (M-0081) |
+| Q-MS-05 | Which hardware-dependent radius is right (M-0080 R-21; the function and the setting exist, the table is unverified on real maps)? | after Q-MS-03/04 and the `opts-hardware` research (M-0081) |

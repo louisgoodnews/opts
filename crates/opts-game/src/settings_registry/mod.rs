@@ -335,6 +335,7 @@ impl Plugin for SettingsRegistryPlugin {
                     live::apply_live_changes,
                     live::sync_developer_panel,
                     live::sync_water,
+                    live::sync_tile_loading,
                     live::sync_hdr,
                     live::sync_weather_effects,
                 ),

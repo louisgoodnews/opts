@@ -180,7 +180,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [x] 🟠 **Loading screen shows the selected vehicle from the start** (M-0076, code) — R-13. **Done 2026-10-13** with M-0068.
 - [ ] 🟠 **Bus configurations: save and quick-load bus, repaint, setvars** (M-0077, code) — R-15.
 - [ ] 🔴 **Setvars from `.cti`, varnamelists and Add-on PDFs; editor and apply** (M-0078, spec + code) — R-16.
-- [ ] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21.
+- [~] 🟠 **Tile loading controls: load-all-tiles flag (also in the wizard summary) and tile radius with hardware-derived default** (M-0080, code) — R-20, R-21. Core done 2026-10-18 on `agent/tile-loading-controls` (settings, live streaming, load-all during loading, `scene.tiles`); open: wizard summary switch with estimate, memory guard, "Automatic (currently N)" label.
 - [~] 🟠 **`opts-hardware` crate: privacy charter, profile, probes, recommendations** (M-0081, spec + code) — R-22. Branch `feat/opts-hardware` (not merged): Linux verified; macOS/Windows CI-compiled only; open: report-dialog preview checkbox, GPU benchmark.
 - [~] 🟠 **Mesh instancing research on `research/mesh-instancing`** (M-0082, research) — R-23.
 - [~] 🟠 **Language packs as files: format decision, discovery, validation, `opts-tools l10n`** (M-0083, spec + code) — R-25. *Implemented on `feat/language-packs` (not merged): [architecture](../src/architecture/localisation-packs.md), tooling, language list, `l10n.*`; trial in the running app and right-to-left/fonts open.*
