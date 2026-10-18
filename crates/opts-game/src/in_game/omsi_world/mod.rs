@@ -32,6 +32,7 @@ mod respawn;
 mod scenery_objects;
 mod tile;
 mod tile_ground;
+mod tile_mode;
 pub(crate) mod trace;
 mod traffic;
 mod traffic_chain;
@@ -201,8 +202,10 @@ pub struct WorldLoadJob {
     queue: VecDeque<(i32, i32)>,
     /// Tiles currently spawned, by tile coordinates (root entity of each tile).
     resident: HashMap<(i32, i32), Entity>,
-    /// Chebyshev radius of tiles kept loaded around the camera.
-    stream_radius: i32,
+    /// What stays resident around the camera: a Chebyshev radius or the whole map (M-0080).
+    tile_mode: super::tile_loading::TileMode,
+    /// Listed tiles whose file is not there (found while loading everything; not asked again).
+    missing_tiles: HashSet<(i32, i32)>,
     total_tiles: usize,
     sli_cache: HashMap<PathBuf, Option<Arc<SplineProfile>>>,
     /// Map-wide spline lookup for attachments, built on first use.

@@ -531,6 +531,39 @@ fn interface() -> Vec<D> {
         )
         .keywords(&["save", "backup", "interval"])
         .since("0.3"),
+        D::new(
+            "gameplay.load_all_tiles",
+            K::Bool,
+            "false",
+            C::Gameplay,
+            50,
+            "set-load-all-tiles",
+            "set-load-all-tiles-desc",
+        )
+        .keywords(&[
+            "map",
+            "tiles",
+            "streaming",
+            "memory",
+            "preload",
+            "everything",
+        ])
+        .since("0.3"),
+        D::new(
+            "gameplay.tile_radius",
+            K::Int {
+                min: 0,
+                max: 16,
+                step: 1,
+            },
+            "0",
+            C::Gameplay,
+            60,
+            "set-tile-radius",
+            "set-tile-radius-desc",
+        )
+        .keywords(&["map", "tiles", "streaming", "distance", "view", "automatic"])
+        .since("0.3"),
     ]
 }
 

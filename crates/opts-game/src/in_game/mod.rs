@@ -14,6 +14,7 @@ pub mod screenshot;
 pub mod sky;
 pub mod sky_cube;
 pub mod stream_budget;
+pub mod tile_loading;
 pub mod types;
 pub mod vehicle_spawner;
 pub mod weather;

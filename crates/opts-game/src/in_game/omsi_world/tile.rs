@@ -11,6 +11,7 @@ use opts_core::formats::map::MapObjectInstance;
 use opts_core::formats::vehicles::model::{ModelConfig, ModelLod};
 
 use crate::in_game::attachments::expand_attachments;
+use crate::in_game::tile_loading;
 use crate::in_game::types::InGameEntity;
 
 use super::tile_ground::{spawn_splines, spawn_terrain, spawn_water};
@@ -844,9 +845,11 @@ pub struct TileRoot(pub (i32, i32));
 
 /// Keeps the tiles around the camera loaded and unloads distant ones (one tile load per frame).
 ///
-/// The observer is the 3D camera; tiles within `stream_radius` (Chebyshev distance) are
-/// resident, tiles beyond `stream_radius + 1` are despawned (hysteresis avoids thrashing at
-/// borders). Parsed objects and textures stay cached, so revisiting a tile is cheap.
+/// The observer is the 3D camera. In radius mode the tiles within the radius (Chebyshev
+/// distance) are resident and tiles beyond the radius + 1 are despawned (hysteresis avoids
+/// thrashing at borders); in *load all* mode every tile is wanted and none is despawned
+/// ([`tile_loading`], M-0080). Parsed objects and textures stay cached, so revisiting a tile is
+/// cheap.
 #[allow(clippy::too_many_arguments)]
 pub fn stream_world_tiles(
     job: Option<ResMut<WorldLoadJob>>,
@@ -863,15 +866,8 @@ pub fn stream_world_tiles(
     let Ok(cam) = camera.single() else { return };
     let p = cam.translation();
     let centre = job.grid.key_at(Vec2::new(p.x, -p.z), job.start_tile);
-    let dist = |k: (i32, i32)| (k.0 - centre.0).abs().max((k.1 - centre.1).abs());
-
-    let radius = job.stream_radius;
-    let far: Vec<(i32, i32)> = job
-        .resident
-        .keys()
-        .copied()
-        .filter(|k| dist(*k) > radius + 1)
-        .collect();
+    let mode = job.tile_mode();
+    let far = tile_loading::evict(mode, centre, job.resident.keys().copied());
     let _t_evict = opts_logging::stream_trace::span("stream.evict");
     for key in far {
         if let Some(unload) = job.unload_tile(key, false) {
@@ -882,18 +878,14 @@ pub fn stream_world_tiles(
     stats.tiles_loaded = job.resident.len();
 
     if job.queue.is_empty() {
-        let mut wanted: Vec<(i32, i32)> = Vec::new();
-        for dy in -radius..=radius {
-            for dx in -radius..=radius {
-                let k = (centre.0 + dx, centre.1 + dy);
-                if !job.resident.contains_key(&k) && job.tile_path(k).is_some() {
-                    wanted.push(k);
-                }
+        let wanted = tile_loading::wanted(mode, centre, job.listed_tiles(), |k| {
+            job.resident.contains_key(&k) || job.missing_tiles.contains(&k)
+        });
+        for key in wanted {
+            if job.tile_available(key) {
+                job.queue.push_back(key);
+                break;
             }
-        }
-        wanted.sort_by_key(|k| dist(*k));
-        if let Some(k) = wanted.first() {
-            job.queue.push_back(*k);
         }
     }
     if !job.queue.is_empty() {
