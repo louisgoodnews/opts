@@ -48,9 +48,12 @@ fn haze_is_the_baseline_in_clear_air_and_follows_fog() {
     let st = ShaftStyle::default();
     assert_eq!(haze_density(15_000.0, &st), HAZE_BASE);
     assert_eq!(haze_density(10_000.0, &st), HAZE_BASE);
-    assert!(haze_density(200.0, &st) > HAZE_BASE);
-    assert!((haze_density(200.0, &st) - 3.912 / 200.0 * FOG_TO_SHAFT).abs() < 1e-6);
+    assert!(haze_density(2_000.0, &st) > HAZE_BASE);
+    assert!((haze_density(800.0, &st) - 3.912 / 800.0 * FOG_TO_SHAFT).abs() < 1e-6);
+    // Thick fog is capped: the haze must not become a second, sun-coloured fog.
     assert_eq!(haze_density(2.0, &st), HAZE_MAX);
+    assert_eq!(haze_density(75.0, &st), HAZE_MAX);
+    assert!(HAZE_MAX <= 0.01);
     // Thicker fog never gives a thinner haze.
     let mut prev = 0.0;
     for v in [10_000.0, 2_000.0, 500.0, 100.0, 20.0] {

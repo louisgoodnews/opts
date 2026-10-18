@@ -8,6 +8,7 @@
 
 use bevy::pbr::{DistanceFog, FogFalloff};
 use bevy::prelude::*;
+use bevy::render::view::Tonemapping;
 use opts_bevy::weather::{fog_density_for, ground_fog_view, weather_look, GroundFogView};
 use opts_bevy::{SessionEnvironment, WeatherConditions, WeatherEffects};
 
@@ -15,6 +16,12 @@ use crate::in_game::sky::SkyHorizon;
 use crate::in_game::types::InGameCamera;
 
 /// The fog to draw: `None` when the effect is off or the air is clear.
+///
+/// `tonemapping` is the camera's: the fog colour is blended into the scene before the tonemapper
+/// (in the shader or in the HDR pipeline), whereas the clear colour is written already
+/// compensated, so the fog is written pre-compensated the same way
+/// ([`crate::look::hdr_clear_color`]) and the far geometry fades into the sky that is shown, not
+/// into a lighter or darker one.
 #[must_use]
 pub fn desired_fog(
     conditions: &WeatherConditions,
@@ -22,12 +29,16 @@ pub fn desired_fog(
     horizon: [f32; 3],
     sun_alt_deg: f32,
     visibility_m: f32,
+    tonemapping: Option<Tonemapping>,
 ) -> Option<DistanceFog> {
     if !effects.fog {
         return None;
     }
     let density = fog_density_for(conditions, visibility_m)?;
-    let c = weather_look(conditions, horizon, sun_alt_deg).fog;
+    let mut c = weather_look(conditions, horizon, sun_alt_deg).fog;
+    if let Some(tm) = tonemapping {
+        c = crate::look::hdr_clear_color(tm, c);
+    }
     Some(DistanceFog {
         color: Color::linear_rgb(c[0], c[1], c[2]),
         directional_light_color: Color::NONE,
@@ -70,18 +81,22 @@ pub fn update_fog(
     effects: Res<WeatherEffects>,
     horizon: Option<Res<SkyHorizon>>,
     view: Res<GroundFogView>,
-    mut cameras: Query<(Entity, Option<&mut DistanceFog>), With<InGameCamera>>,
+    mut cameras: Query<
+        (Entity, Option<&mut DistanceFog>, Option<&Tonemapping>),
+        With<InGameCamera>,
+    >,
     mut commands: Commands,
 ) {
     let colour = horizon.map_or(DEFAULT_HORIZON, |h| h.0);
-    let want = desired_fog(
-        env.conditions(),
-        &effects,
-        colour,
-        env.sun_alt_deg(),
-        view.effective_visibility_m,
-    );
-    for (camera, current) in &mut cameras {
+    for (camera, current, tonemapping) in &mut cameras {
+        let want = desired_fog(
+            env.conditions(),
+            &effects,
+            colour,
+            env.sun_alt_deg(),
+            view.effective_visibility_m,
+            tonemapping.copied(),
+        );
         match (&want, current) {
             (Some(fog), None) => {
                 commands.entity(camera).insert(fog.clone());
@@ -118,7 +133,7 @@ mod tests {
 
     fn fog_of(cat: &WeatherCatalogue, id: &str, effects: &WeatherEffects) -> Option<DistanceFog> {
         let c = cat.resolve(id);
-        desired_fog(&c, effects, [0.5; 3], 45.0, c.fog_visibility_m)
+        desired_fog(&c, effects, [0.5; 3], 45.0, c.fog_visibility_m, None)
     }
 
     #[test]
@@ -142,8 +157,27 @@ mod tests {
         // 300 m (morning fog) against 6 km (rain).
         assert!(density("Autumn Morning Fog") > density("Rainy Afternoon") * 10.0);
         let c = cat.resolve("Autumn Morning Fog");
-        let fog = desired_fog(&c, &on, [0.2, 0.2, 0.2], 45.0, c.fog_visibility_m).unwrap();
+        let fog = desired_fog(&c, &on, [0.2, 0.2, 0.2], 45.0, c.fog_visibility_m, None).unwrap();
         let srgb = fog.color.to_linear();
         assert!((srgb.red - srgb.blue).abs() < 0.05 && srgb.red < 0.3);
+    }
+
+    #[test]
+    fn the_fog_is_written_so_that_it_shows_the_colour_the_sky_clear_colour_shows() {
+        let cat = WeatherCatalogue::default();
+        let on = WeatherEffects::default();
+        let c = cat.resolve("Autumn Morning Fog");
+        let horizon = [0.55, 0.6, 0.7];
+        let shown = |tm| {
+            let fog = desired_fog(&c, &on, horizon, 45.0, c.fog_visibility_m, tm).unwrap();
+            fog.color.to_linear()
+        };
+        let plain = shown(None);
+        let comp = shown(Some(Tonemapping::SomewhatBoringDisplayTransform));
+        // The compensated colour goes through the tonemapper and comes out as the plain one.
+        let back = crate::look::somewhat_boring([comp.red, comp.green, comp.blue]);
+        for (b, p) in back.iter().zip([plain.red, plain.green, plain.blue]) {
+            assert!((b - p).abs() < 0.01, "{back:?} vs {plain:?}");
+        }
     }
 }

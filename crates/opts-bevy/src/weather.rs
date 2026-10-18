@@ -818,14 +818,36 @@ pub fn ground_fog_view(
     }
 }
 
-/// Fog colour: the sky's horizon colour pulled towards grey in thick fog, in linear sRGB
-/// components `0..=1`. The horizon colour already follows the time of day, so the fog is dark at
-/// night.
+/// Largest saturation `(max - min) / max` of the colour of a full-thickness fog; thinner fog
+/// allows more up to the horizon's own colour in clear air.
+pub const FOG_MAX_SATURATION: f32 = 0.2;
+
+/// Fog colour: the sky's horizon colour with most of its chroma taken out, in sRGB components
+/// `0..=1`, as the horizon texture holds them.
+///
+/// Real fog is grey-white: droplets scatter all wavelengths alike, so the hue of a sunset horizon
+/// (orange, olive) must not tint it. The share of the chroma that goes is
+/// `thick * (0.6 + 0.35 * thick)` with `thick` the fogginess (or half the cover), about 94 % in
+/// fog of 100 m, and the saturation is capped at `1 - 0.8 * thick` (0.2 in thick fog). The
+/// luminance follows the horizon (so the fog is dark at night and as dark under cloud as the
+/// horizon texture is), scaled by 0.95. In clear air the colour is the horizon's.
 #[must_use]
 pub fn fog_color(horizon: [f32; 3], c: &WeatherConditions) -> [f32; 3] {
-    let grey = (horizon[0] * 0.3 + horizon[1] * 0.59 + horizon[2] * 0.11) * 0.95;
-    let t = 0.6 * fogginess(c).max(effective_cover(c) * 0.5);
-    horizon.map(|v| v + (grey - v) * t)
+    let luma = |v: [f32; 3]| (v[0] * 0.3 + v[1] * 0.59 + v[2] * 0.11).max(0.0);
+    let grey = luma(horizon) * 0.95;
+    let thick = fogginess(c).max(effective_cover(c) * 0.5).clamp(0.0, 1.0);
+    let t = thick * (0.6 + 0.35 * thick);
+    let mixed = horizon.map(|v| v + (grey - v) * t);
+    let hi = mixed.iter().copied().fold(0.0_f32, f32::max);
+    let lo = mixed.iter().copied().fold(f32::MAX, f32::min);
+    let cap = 1.0 - (1.0 - FOG_MAX_SATURATION) * thick;
+    if hi > 1e-6 && (hi - lo) / hi > cap {
+        // Pull towards the colour's own luminance until the saturation is at the cap.
+        let mean = luma(mixed);
+        let k = (cap * mean / ((hi - lo) - cap * (hi - mean))).clamp(0.0, 1.0);
+        return mixed.map(|v| mean + (v - mean) * k);
+    }
+    mixed
 }
 
 /// How far the sky texture is veiled towards the fog colour at height `v` (`0` zenith … `1`
@@ -1254,6 +1276,76 @@ mod tests {
         // The colour darkens with the horizon at night.
         let night = fog_color([0.02, 0.02, 0.05], &fog);
         assert!(night.iter().all(|v| *v < 0.06));
+    }
+
+    /// Horizon colours (sRGB) for rising sun elevation: night blue, dawn red, sunset orange, olive
+    /// dusk, golden hour, pale day blue. Their luminance rises step by step.
+    const HORIZONS_BY_ELEVATION: [[f32; 3]; 6] = [
+        [0.02, 0.03, 0.08],
+        [0.30, 0.12, 0.10],
+        [0.75, 0.40, 0.15],
+        [0.62, 0.62, 0.25],
+        [0.95, 0.80, 0.50],
+        [0.80, 0.88, 1.00],
+    ];
+
+    fn saturation(c: [f32; 3]) -> f32 {
+        let hi = c.iter().copied().fold(0.0_f32, f32::max);
+        let lo = c.iter().copied().fold(f32::MAX, f32::min);
+        if hi <= 1e-6 {
+            0.0
+        } else {
+            (hi - lo) / hi
+        }
+    }
+
+    fn luma(c: [f32; 3]) -> f32 {
+        c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11
+    }
+
+    #[test]
+    fn fog_is_never_strongly_tinted_whatever_the_horizon() {
+        let cat = installed();
+        for id in ["Bodennebel", "Daemmerungsnebel", "Schmuddelwetter", "Sturm"] {
+            let c = cat.resolve(id);
+            for horizon in HORIZONS_BY_ELEVATION {
+                let f = fog_color(horizon, &c);
+                let cap =
+                    1.0 - (1.0 - FOG_MAX_SATURATION) * fogginess(&c).max(effective_cover(&c) * 0.5);
+                assert!(
+                    saturation(f) <= cap + 1e-3,
+                    "{id} {horizon:?} -> {f:?} saturation {} > {cap}",
+                    saturation(f)
+                );
+            }
+        }
+        // Thick fog (75 m) is grey-white even from an orange sunset horizon.
+        let mut thick = WeatherConditions::default();
+        thick.fog_visibility_m = 75.0;
+        let f = fog_color([0.75, 0.40, 0.15], &thick);
+        assert!(saturation(f) <= FOG_MAX_SATURATION + 0.01, "{f:?}");
+        assert!(f[0] - f[2] < 0.12, "{f:?}");
+    }
+
+    #[test]
+    fn fog_luminance_rises_with_the_sun_and_never_exceeds_the_horizon() {
+        let mut thick = WeatherConditions::default();
+        thick.fog_visibility_m = 75.0;
+        let mut prev = -1.0;
+        for horizon in HORIZONS_BY_ELEVATION {
+            let l = luma(fog_color(horizon, &thick));
+            assert!(l > prev, "{horizon:?}: {l} <= {prev}");
+            assert!(
+                l <= luma(horizon) + 1e-4,
+                "fog brighter than the sky it comes from"
+            );
+            prev = l;
+        }
+        // Clear air: the horizon unchanged.
+        let clear = WeatherConditions::default();
+        for horizon in HORIZONS_BY_ELEVATION {
+            assert_eq!(fog_color(horizon, &clear), horizon);
+        }
     }
 
     #[test]
