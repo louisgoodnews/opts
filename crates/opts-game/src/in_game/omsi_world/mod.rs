@@ -48,8 +48,8 @@ mod water;
 
 pub use chrono::{apply_map_date_changes, chrono_date, track_chrono_rebuild, ChronoState};
 pub use collision::{
-    attach_traffic_colliders, player_collisions, publish_player_obstacles, BodyBox, CollisionIndex,
-    PlayerBox, VehicleCollider,
+    attach_traffic_colliders, player_collisions, BodyBox, CollisionIndex, PlayerBox,
+    VehicleCollider,
 };
 pub use dev_look::place_dev_camera;
 use ground::GroundArray;

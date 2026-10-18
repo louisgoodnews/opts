@@ -2,7 +2,6 @@
 
 use bevy::input::mouse::{MouseMotion, MouseWheel};
 use bevy::prelude::*;
-use bevy::transform::helper::TransformHelper;
 
 use crate::camera::input::{
     handle_camera_key_input, handle_camera_reset_input, sync_vehicle_rig_mode,
@@ -33,34 +32,6 @@ pub fn vehicle_accepts_input(
     viewpoint: Option<Res<ViewpointState>>,
 ) -> bool {
     state.is_none_or(|s| s.mode != CameraMode::FreeRoam) && !viewpoint.is_some_and(|v| v.editing)
-}
-
-/// Brings the [`GlobalTransform`] of the main camera (and whatever hangs on it) up to the pose the
-/// camera systems have just written to its [`Transform`].
-///
-/// The camera systems run after `TransformSystems::Propagate` because they read the freshly
-/// propagated vehicle and head poses. Without this step the camera would be rendered with the
-/// global transform of the previous frame while the vehicle it looks out of is drawn at the
-/// current one: the view lags `speed x frame time` behind the cab and the lag changes with every
-/// frame time, which shows as jitter in the driver view.
-pub fn sync_camera_global_transform(
-    helper: TransformHelper,
-    cameras: Query<Entity, With<crate::MainCamera>>,
-    children: Query<&Children>,
-    mut globals: Query<&mut GlobalTransform>,
-) {
-    for camera in &cameras {
-        for entity in std::iter::once(camera).chain(children.iter_descendants(camera)) {
-            let Ok(pose) = helper.compute_global_transform(entity) else {
-                continue;
-            };
-            if let Ok(mut global) = globals.get_mut(entity) {
-                if *global != pose {
-                    *global = pose;
-                }
-            }
-        }
-    }
 }
 
 /// Registers [`CameraState`], mode switching, free roam and cursor handling.
@@ -101,14 +72,6 @@ impl Plugin for OptsCameraPlugin {
                     update_external_camera,
                 )
                     .after(bevy::transform::TransformSystems::Propagate),
-            )
-            .add_systems(
-                PostUpdate,
-                sync_camera_global_transform
-                    .after(update_ego_camera)
-                    .after(update_cockpit_camera)
-                    .after(update_passenger_camera)
-                    .after(update_external_camera),
             );
     }
 }

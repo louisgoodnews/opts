@@ -41,8 +41,7 @@ pub mod source;
 pub mod traits;
 
 pub use agent::{
-    Agent, AgentId, Blinker, DriverCommand, Obstacle, TrafficEvent, TrafficWorld,
-    LANE_CHANGE_DURATION_S,
+    Agent, AgentId, Blinker, DriverCommand, TrafficEvent, TrafficWorld, LANE_CHANGE_DURATION_S,
 };
 pub use conflict::{Conflict, ConflictKind};
 pub use density::{

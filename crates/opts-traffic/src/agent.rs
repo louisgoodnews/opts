@@ -261,48 +261,6 @@ const BLINK_TURN: f64 = 20.0 * std::f64::consts::PI / 180.0;
 /// … and the lane end is closer than this (metres).
 const BLINK_DISTANCE: f64 = 30.0;
 
-/// Sideways clearance (m) a passing vehicle needs on each side of an [`Obstacle`]: half the width
-/// of a car. A vehicle on a neighbouring lane (at least 2.2 m from the lane centre, see
-/// [`crate::neighbours::MIN_SEPARATION`]) passes a vehicle standing in the middle of the next one.
-const OBSTACLE_CLEARANCE_M: f64 = 0.9;
-/// Height difference (m) above which an obstacle is on another level (a bridge) and not in the way.
-const OBSTACLE_LEVEL_M: f64 = 3.0;
-/// Step (m) of the search for an obstacle along the lanes ahead.
-const OBSTACLE_STEP_M: f64 = 1.0;
-
-/// A body the host controls that stands or drives on the roads outside the traffic simulation
-/// (the player's vehicles): AI vehicles brake for it like for a leader instead of driving through
-/// it. See [`TrafficWorld::set_obstacles`].
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Obstacle {
-    /// Centre of the footprint in the world.
-    pub centre: DVec2,
-    /// Compass heading (radians) of the long axis.
-    pub heading: f64,
-    /// Half extents `(right, forward)` in metres.
-    pub half: DVec2,
-    /// Height of the ground under it in metres.
-    pub z: f64,
-}
-
-impl Obstacle {
-    /// Whether `p` lies within the footprint grown by `margin` on the sides (not lengthwise: the
-    /// gap to the front bumper is the IDM's business).
-    #[must_use]
-    fn blocks(&self, p: DVec2, margin: f64) -> bool {
-        let d = p - self.centre;
-        let (sin, cos) = self.heading.sin_cos();
-        let right = d.x * cos - d.y * sin;
-        let forward = d.x * sin + d.y * cos;
-        right.abs() <= self.half.x + margin && forward.abs() <= self.half.y
-    }
-
-    /// Radius of the circle around the centre that holds the footprint.
-    fn radius(&self) -> f64 {
-        self.half.length()
-    }
-}
-
 /// Lane graph plus the agents driving on it.
 #[derive(Debug, Clone)]
 pub struct TrafficWorld {
@@ -318,8 +276,6 @@ pub struct TrafficWorld {
     signals: HashMap<SignalKey, SignalProgram>,
     /// Speed limit (m/s) assumed on lanes without one.
     open_road_speed: f64,
-    /// Bodies of the host that the agents must not drive through (see [`Obstacle`]).
-    obstacles: Vec<Obstacle>,
 }
 
 impl TrafficWorld {
@@ -336,14 +292,7 @@ impl TrafficWorld {
             clock_base: 0.0,
             signals: HashMap::new(),
             open_road_speed: crate::idm::OPEN_ROAD_SPEED,
-            obstacles: Vec::new(),
         }
-    }
-
-    /// Replaces the bodies the agents have to stop for (the host's own vehicles): set it before
-    /// every [`TrafficWorld::step`], the agents do not remember anything of it.
-    pub fn set_obstacles(&mut self, obstacles: Vec<Obstacle>) {
-        self.obstacles = obstacles;
     }
 
     /// Sets the limit (m/s) assumed on lanes without a `speedlimit` rule (default 50 km/h).
@@ -803,37 +752,6 @@ impl TrafficWorld {
         None
     }
 
-    /// The gap (m) from the front bumper of agent `i` to the first [`Obstacle`] on the lanes
-    /// ahead (the centre line, with [`OBSTACLE_CLEARANCE_M`] to each side of the obstacle).
-    fn obstacle_gap(&self, i: usize, look: &[(LaneId, f64)]) -> Option<f64> {
-        let a = &self.agents[i];
-        let near: Vec<&Obstacle> = self
-            .obstacles
-            .iter()
-            .filter(|o| o.centre.distance(a.front_axle) < LOOKAHEAD_M + o.radius())
-            .collect();
-        if near.is_empty() {
-            return None;
-        }
-        for &(lane_id, offset) in look {
-            let Some(lane) = self.graph.lane(lane_id) else {
-                continue;
-            };
-            let mut s = if lane_id == a.lane { a.s } else { 0.0 };
-            while s <= lane.length() && offset + s <= LOOKAHEAD_M {
-                let p = lane.geometry.point_at(s);
-                let z = lane.z_at(s);
-                if near.iter().any(|o| {
-                    (o.z - z).abs() < OBSTACLE_LEVEL_M && o.blocks(p, OBSTACLE_CLEARANCE_M)
-                }) {
-                    return Some((offset + s).max(0.0));
-                }
-                s += OBSTACLE_STEP_M;
-            }
-        }
-        None
-    }
-
     /// The gap (m) to the start of the lane whose light agent `i` has to stop for, if any:
     /// red and red + yellow stop it, yellow only when it can stop at a comfortable deceleration.
     fn signal_gap(&self, i: usize, look: &[(LaneId, f64)]) -> Option<f64> {
@@ -995,8 +913,7 @@ impl TrafficWorld {
             });
             // The nearest of leader, light, conflict zone and such a stop limits the vehicle.
             let mut ahead = leader;
-            let obstacle = self.obstacle_gap(i, &looks[i]);
-            for gap in [signal[i], wait, stuck, obstacle].into_iter().flatten() {
+            for gap in [signal[i], wait, stuck].into_iter().flatten() {
                 if ahead.is_none_or(|(g, _)| gap < g) {
                     ahead = Some((gap, 0.0));
                 }
@@ -1219,38 +1136,6 @@ mod tests {
         assert!(f.speed < 0.05, "follower still at {}", f.speed);
         assert!(gap > 0.5, "collision: gap {gap}");
         assert!(gap < 4.0, "stopped too early: gap {gap}");
-    }
-
-    /// A standing body of the host (the player's bus) on the lane stops the agents in front of it
-    /// instead of letting them drive through it; one beside the lane is passed.
-    #[test]
-    fn an_agent_stops_for_an_obstacle_in_its_lane_and_passes_one_beside_it() {
-        let bus = |x: f64| Obstacle {
-            centre: DVec2::new(x, 150.0),
-            heading: 0.0,
-            half: DVec2::new(1.3, 6.0),
-            z: 0.0,
-        };
-        let mut w = world(&[straight(0.0, 400.0)]);
-        let id = w.spawn(LaneId(0), 5.0, 13.0, IdmParams::default()).unwrap();
-        for _ in 0..1200 {
-            w.set_obstacles(vec![bus(0.0)]);
-            w.step(0.1);
-        }
-        let a = w.agent(id).unwrap();
-        let gap = (150.0 - 6.0) - a.s;
-        assert!(a.speed < 0.05, "still at {} m/s", a.speed);
-        assert!(gap > 0.5, "inside the bus: gap {gap}");
-        assert!(gap < 6.0, "stopped far too early: gap {gap}");
-
-        // The bus stands in the next lane (3.5 m beside the centre line): no reason to stop.
-        let mut w = world(&[straight(0.0, 400.0)]);
-        let id = w.spawn(LaneId(0), 5.0, 13.0, IdmParams::default()).unwrap();
-        for _ in 0..600 {
-            w.set_obstacles(vec![bus(3.5)]);
-            w.step(0.1);
-        }
-        assert!(w.agent(id).is_none() || w.agent(id).unwrap().s > 200.0);
     }
 
     #[test]

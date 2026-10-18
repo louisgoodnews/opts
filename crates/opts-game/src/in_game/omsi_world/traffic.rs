@@ -84,14 +84,6 @@ pub struct TrafficState {
     road_length_m: f64,
 }
 
-impl TrafficState {
-    /// Sets the bodies of the player's vehicles the agents stop for (see
-    /// [`super::publish_player_obstacles`]).
-    pub fn set_obstacles(&mut self, obstacles: Vec<opts_traffic::Obstacle>) {
-        self.world.set_obstacles(obstacles);
-    }
-}
-
 impl Default for TrafficState {
     fn default() -> Self {
         Self {
