@@ -10,6 +10,7 @@ as a deprecated pointer; the prompt texts here are unchanged apart from a metada
 | [`guardrails.md`](guardrails.md) | Universal guardrails shared by all prompts |
 | [`core/`](core) | Recurring milestone workflow |
 | [`composite/`](composite) | Multi-phase tasks that chain core prompts |
+| [`process/`](process) | Standing practices that change how sessions operate (not features) |
 
 ## Core
 
@@ -28,6 +29,12 @@ as a deprecated pointer; the prompt texts here are unchanged apart from a metada
 | ID | Prompt |
 | :--- | :--- |
 | P-900 | [Audit, Roadmap Expansion, and Implementation](composite/P-900-audit-roadmap-implement.md) |
+
+## Process
+
+| ID | Prompt |
+| :--- | :--- |
+| P-1010 | [Roadmap Review](process/P-1010-roadmap-review.md) |
 
 ## Planned (not yet written)
 

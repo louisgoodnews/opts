@@ -114,6 +114,10 @@ scripts/agent-worktree.sh <topic> [base-branch]   # creates ../opts-wt-<topic> o
 
 Background: on 2026-10-11 two sessions shared one working tree, and one of them committed the other's unfinished hunks, which did not compile (`7f24124`). See the [critical review 2026-10-11](docs/src/meta/critical-review-2026-10-11.md) (F-001) and [M-0052](docs/src/roadmap/phase-5/M-0052.md).
 
+### 🔭 Roadmap Review
+
+The dev agent periodically runs a roadmap review (see [`docs/dev/prompts/process/P-1010-roadmap-review.md`](docs/dev/prompts/process/P-1010-roadmap-review.md)) that reconciles the roadmap with the project's current state and suggests new features or improvements. It runs after each phase closes, after every 10 merged milestones, or on request. Suggestions are proposed via checkpoint for maintainer approval before being added to the roadmap, so the roadmap stays a living document.
+
 ---
 
 ## ⚖️ Legal & Ethical Guidelines (Crucial)
