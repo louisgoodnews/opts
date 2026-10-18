@@ -38,6 +38,7 @@ pub mod settings_theme;
 pub mod shell;
 pub mod shutdown;
 pub mod theme_files;
+pub mod vehicle_keys;
 pub mod viewpoints;
 
 use bevy::prelude::*;
@@ -91,6 +92,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
             .add_plugins(hardware::HardwarePlugin)
+            .add_plugins(vehicle_keys::VehicleKeysPlugin)
             .add_plugins(shell::ShellPlugin)
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)

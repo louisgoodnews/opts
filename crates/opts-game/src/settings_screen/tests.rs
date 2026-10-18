@@ -571,11 +571,7 @@ fn every_control_of_every_category_can_be_used_with_the_keyboard() {
             })
             .map(|(e, u, _)| (e, u.0.to_string()))
             .collect();
-        if matches!(
-            cat,
-            crate::settings_registry::Category::Audio
-                | crate::settings_registry::Category::Controls
-        ) {
+        if matches!(cat, crate::settings_registry::Category::Audio) {
             assert!(
                 ids.is_empty(),
                 "{}: planned, every control is disabled",

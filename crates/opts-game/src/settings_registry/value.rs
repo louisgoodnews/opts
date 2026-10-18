@@ -104,7 +104,14 @@ pub fn normalize(d: &SettingDescriptor, text: &str) -> Result<String, SettingErr
                 Ok(text.trim().to_string())
             }
         }
-        SettingKind::Path | SettingKind::Binding => Ok(text.trim().to_string()),
+        SettingKind::Path => Ok(text.trim().to_string()),
+        SettingKind::Binding => match opts_bevy::KeyChord::parse(text) {
+            Ok(None) => Ok("none".into()),
+            Ok(Some(chord)) => chord
+                .to_text()
+                .ok_or_else(|| bad("this key has no name".into())),
+            Err(e) => Err(bad(e)),
+        },
         SettingKind::Action => Err(bad("this setting is an action and holds no value".into())),
     }
 }

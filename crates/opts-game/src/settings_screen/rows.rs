@@ -34,6 +34,8 @@ pub struct Ctx<'a> {
     pub theme_files: &'a [String],
     /// The effective lighting quality (what the governor applies in automatic mode).
     pub light: Option<&'a opts_bevy::light_quality::LightQuality>,
+    /// The key setting that waits for the next key press.
+    pub rebinding: Option<&'a str>,
 }
 
 impl Ctx<'_> {
@@ -406,7 +408,26 @@ pub fn spawn_control(
                 &u,
             );
         }
-        SettingKind::Path | SettingKind::Binding => {
+        SettingKind::Binding => {
+            value_text(c, group, d.key, cur.to_string());
+            let waiting = ctx.rebinding == Some(d.key);
+            button(
+                c,
+                group,
+                d,
+                "change".into(),
+                Some(if waiting {
+                    "settings-rebind-wait"
+                } else {
+                    "settings-rebind-change"
+                }),
+                "",
+                waiting,
+                SettingOp::Run { key: d.key },
+                &u,
+            );
+        }
+        SettingKind::Path => {
             if cur.is_empty() {
                 label(
                     c,

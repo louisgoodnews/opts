@@ -711,5 +711,6 @@ pub fn all() -> Vec<D> {
     v.extend(minimap());
     v.extend(content());
     v.extend(crate::hardware::descriptors());
+    v.extend(crate::vehicle_keys::descriptors());
     v
 }

@@ -34,6 +34,10 @@ pub struct SettingsPageState {
     pub dirty: bool,
     /// Id of the control that had keyboard focus when the pane was rebuilt; focus returns to it.
     pub restore_focus: Option<String>,
+    /// The key setting waiting for the next key press (Controls page, *Change key*).
+    pub rebinding: Option<&'static str>,
+    /// A line above the rows: why a rebinding was refused, or what to press.
+    pub notice: Option<String>,
 }
 
 /// Root of the page.
@@ -66,6 +70,8 @@ pub fn spawn_settings_page(
         clear_search_field: false,
         dirty: true,
         restore_focus: None,
+        rebinding: None,
+        notice: None,
     });
     let page = commands
         .spawn((
@@ -186,6 +192,7 @@ impl Plugin for SettingsPagePlugin {
                     search_field_system,
                     scroll_pane.run_if(opts_bevy::reporting::not_modal_active),
                     super::input::handle_page_input,
+                    super::input::capture_rebind,
                     super::input::revert_prompt_system,
                 )
                     .chain()
@@ -384,7 +391,9 @@ pub fn rebuild_page(
             .and_then(|h| h.dir.as_deref().map(opts_hardware::store::path)),
         theme_files: facts.theme_files(),
         light: light.as_deref(),
+        rebinding: state.rebinding,
     };
+    let notice = state.notice.clone();
     let searching = !state.query.trim().is_empty();
     for cat in registry
         .categories()
@@ -405,6 +414,7 @@ pub fn rebuild_page(
         ));
     }
     if searching {
+        spawn_notice(&mut commands, pane, notice.as_deref());
         let found = search::search(&registry, &loc, &state.query);
         if found.is_empty() {
             label(
@@ -438,6 +448,7 @@ pub fn rebuild_page(
             TypeScale::TitleLarge,
             ColorRole::Primary,
         );
+        spawn_notice(&mut commands, pane, notice.as_deref());
         for d in registry
             .in_category(state.category)
             .into_iter()
@@ -452,6 +463,19 @@ pub fn rebuild_page(
         let kind = theme_name_key(theme.kind());
         super::info::spawn_info(&mut commands, pane, &ctx, state.category, kind);
     }
+}
+
+/// The line above the rows (see [`SettingsPageState::notice`]).
+fn spawn_notice(commands: &mut Commands, pane: Entity, notice: Option<&str>) {
+    let Some(text) = notice else { return };
+    commands.spawn((
+        Text::new(text),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::BodyLarge),
+        ForegroundRole(ColorRole::Error),
+        UiId::new("settings/notice"),
+        ChildOf(pane),
+    ));
 }
 
 /// The "Lighting quality" section heading and its note, above the mode row.
