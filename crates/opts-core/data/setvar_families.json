@@ -1,0 +1,3171 @@
+{
+ "comment": "Setvar families documented by their vendors (M-0078). Facts restated in our own words from the vendor-supplied Add-on documentation; names, value ranges and short meanings only; nothing of the documents is reproduced. Ranges taken from pictures are not verified. See docs/src/formats/text/vehicles/setvars.md.",
+ "families": [
+  {
+   "id": "citybus-628-kajosoft",
+   "title": "Citybus 628c / 628g LF (Kajosoft)",
+   "folders": [
+    "Citybus 628c 628g LF by Kajosoft"
+   ],
+   "setvars": [
+    {
+     "name": "language_ibis",
+     "values": "0-2",
+     "meaning": "language of the IBIS unit (new option)",
+     "group": "display"
+    },
+    {
+     "name": "language_vdv",
+     "values": "0-2",
+     "meaning": "language of the VDV unit (new option)",
+     "group": "display"
+    },
+    {
+     "name": "air_conditioning",
+     "values": "0-2",
+     "meaning": "roof air-conditioning variant (new option)",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_driver",
+     "values": "0-2",
+     "meaning": "driver-area air conditioning variant (new)",
+     "group": "climate"
+    },
+    {
+     "name": "display_ext",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "exterior destination displays (new option)",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_rear",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "rear exterior display (new)",
+     "group": "display"
+    },
+    {
+     "name": "front_light",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "front light variant",
+     "group": "exterior"
+    },
+    {
+     "name": "mirror_left",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "left mirror variant",
+     "group": "exterior"
+    },
+    {
+     "name": "mirror_right",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "right mirror variant",
+     "group": "exterior"
+    },
+    {
+     "name": "wheels",
+     "values": "0|1",
+     "meaning": "rims versus hubcaps",
+     "group": "exterior"
+    },
+    {
+     "name": "wheels_brush",
+     "values": "0|1",
+     "meaning": "wheel-arch brush off/on (new)",
+     "group": "exterior"
+    },
+    {
+     "name": "cockpit_glass",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "driver cabin variant (configurator label: Driver cabin)",
+     "group": "driver"
+    },
+    {
+     "name": "additional_cockpit_handrail",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "extra handrail in cockpit",
+     "group": "driver"
+    },
+    {
+     "name": "cieply_guzik",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "passenger door request button (Polish 'warm button'); marked as new option",
+     "group": "doors"
+    },
+    {
+     "name": "cg_type",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "style of that door button (new)",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_open_front",
+     "values": "0|1",
+     "meaning": "double beep before front door opens",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close_front",
+     "values": "0|1",
+     "meaning": "double beep before front door closes",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close_front",
+     "values": "0-2",
+     "meaning": "front door closing: 1 long beep during closing, 2 double beep during closing",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_open",
+     "values": "0|1",
+     "meaning": "double beep before rear doors open",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close",
+     "values": "0|1",
+     "meaning": "double beep before rear doors close",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close",
+     "values": "0-2",
+     "meaning": "rear doors closing: 1 long beep during closing, 2 double beep during closing",
+     "group": "doors"
+    },
+    {
+     "name": "door_release_sound",
+     "values": "0|1",
+     "meaning": "0 silent, 1 pressure sound when door release is activated while stopping",
+     "group": "doors"
+    },
+    {
+     "name": "door_double_handrail",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "double handrail at doors",
+     "group": "interior"
+    },
+    {
+     "name": "interior_seats",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "seat layout/type",
+     "group": "interior"
+    },
+    {
+     "name": "stop_button",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "stop-request button style",
+     "group": "interior"
+    },
+    {
+     "name": "interior_display",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "interior display variant",
+     "group": "display"
+    },
+    {
+     "name": "double_announcement",
+     "values": "0|1",
+     "meaning": "stop announcement jingle once (0) or both after departure and before arrival (1)",
+     "group": "sound"
+    },
+    {
+     "name": "validators",
+     "values": "0-3",
+     "meaning": "ticket validator variants (new option)",
+     "group": "interior"
+    },
+    {
+     "name": "window_optional",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "optional passenger window variant",
+     "group": "interior"
+    },
+    {
+     "name": "ibis_type",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "IBIS unit type (new)",
+     "group": "display"
+    },
+    {
+     "name": "ibis_display_option",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "IBIS display option (new)",
+     "group": "display"
+    },
+    {
+     "name": "front_door_lock_button",
+     "values": "0-2",
+     "meaning": "front door lock button variant",
+     "group": "driver"
+    },
+    {
+     "name": "door_all_button",
+     "values": "0|1",
+     "meaning": "central door button off/on",
+     "group": "driver"
+    },
+    {
+     "name": "holdgear_sw",
+     "values": "0-2",
+     "meaning": "gear-hold switch; variants depend on gearbox family (D854.3/D864.3/6HP, D854.5/D864.5, 6AP1200/6AP1700); new",
+     "group": "driver"
+    },
+    {
+     "name": "retarder_direkt_sw",
+     "values": "0|1",
+     "meaning": "direct retarder switch (new)",
+     "group": "driver"
+    },
+    {
+     "name": "suspension_lift",
+     "values": "0|1",
+     "meaning": "suspension lift switch (new)",
+     "group": "driver"
+    },
+    {
+     "name": "no_blinker_sound",
+     "values": "0|1",
+     "meaning": "0 normal blinker click, 1 silent",
+     "group": "sound"
+    },
+    {
+     "name": "vehicle_id",
+     "values": "number (any, suggested 0-9999)",
+     "meaning": "fleet number shown on IBIS, not the registration",
+     "group": "identity"
+    }
+   ]
+  },
+  {
+   "id": "citybus-o530-kajosoft",
+   "title": "Citybus o530 (Kajosoft)",
+   "folders": [
+    "Citybus 530 by Kajosoft"
+   ],
+   "setvars": [
+    {
+     "name": "language_ibis",
+     "values": "0-2",
+     "meaning": "IBIS language",
+     "group": "display"
+    },
+    {
+     "name": "language_vdv",
+     "values": "0-2",
+     "meaning": "VDV language",
+     "group": "display"
+    },
+    {
+     "name": "air_conditioning",
+     "values": "0-3",
+     "meaning": "roof A/C variant",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_2",
+     "values": "0-3",
+     "meaning": "second A/C unit; only on articulated versions (unit on trailer)",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_position",
+     "values": "0|1",
+     "meaning": "position of A/C unit; usable with every A/C option",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_driver",
+     "values": "0-2",
+     "meaning": "driver A/C variant",
+     "group": "climate"
+    },
+    {
+     "name": "cng_big_tank",
+     "values": "0|1",
+     "meaning": "large CNG tank; only 12 m CNG versions",
+     "group": "exterior"
+    },
+    {
+     "name": "display_ext",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "exterior displays (master selection)",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_left",
+     "values": "0|1",
+     "meaning": "left exterior display off/on",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_right",
+     "values": "0|1",
+     "meaning": "right exterior display off/on",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_rear",
+     "values": "0|1",
+     "meaning": "rear display; the picture meaning of 1 depends on display_ext_right being 0 or 1",
+     "group": "display"
+    },
+    {
+     "name": "front_light",
+     "values": "0|1",
+     "meaning": "front light variant",
+     "group": "exterior"
+    },
+    {
+     "name": "front_u",
+     "values": "0|1",
+     "meaning": "suburban ('U') front variant",
+     "group": "exterior"
+    },
+    {
+     "name": "grill_flat",
+     "values": "0|1",
+     "meaning": "flat grill",
+     "group": "exterior"
+    },
+    {
+     "name": "logo_front",
+     "values": "0|1",
+     "meaning": "front logo off/on",
+     "group": "exterior"
+    },
+    {
+     "name": "mirror_right",
+     "values": "0|1",
+     "meaning": "right mirror variant",
+     "group": "exterior"
+    },
+    {
+     "name": "rear_bumper",
+     "values": "0|1",
+     "meaning": "rear bumper variant",
+     "group": "exterior"
+    },
+    {
+     "name": "rear_bumper_lights",
+     "values": "0|1",
+     "meaning": "rear light variant",
+     "group": "exterior"
+    },
+    {
+     "name": "reg_number_on_repaint",
+     "values": "0-2",
+     "meaning": "0 default OMSI plate, 2 plate from repaint texture (1 also exists, meaning unstated)",
+     "group": "identity"
+    },
+    {
+     "name": "reg_number_window_sticker",
+     "values": "0|1",
+     "meaning": "registration sticker in window",
+     "group": "identity"
+    },
+    {
+     "name": "wheels",
+     "values": "0|1",
+     "meaning": "rims or hubcaps",
+     "group": "exterior"
+    },
+    {
+     "name": "wheels_brush",
+     "values": "0|1",
+     "meaning": "wheel-arch brush",
+     "group": "exterior"
+    },
+    {
+     "name": "exterior_emergency_door",
+     "values": "0-2",
+     "meaning": "external emergency valve variant",
+     "group": "exterior"
+    },
+    {
+     "name": "driver_cabin",
+     "values": "0-4",
+     "meaning": "driver cabin variant",
+     "group": "driver"
+    },
+    {
+     "name": "money_type",
+     "values": "0|1",
+     "meaning": "0 DEM cash tray, 1 EUR",
+     "group": "driver"
+    },
+    {
+     "name": "no_front_handrail",
+     "values": "0|1",
+     "meaning": "remove front handrail; 0 for city versions, 1 for 'U' (suburban) versions",
+     "group": "interior"
+    },
+    {
+     "name": "additional_cockpit_handrail",
+     "values": "0|1",
+     "meaning": "extra cockpit handrail",
+     "group": "driver"
+    },
+    {
+     "name": "fahrgastpendel_type",
+     "values": "0-2",
+     "meaning": "passenger barrier (Fahrgastpendel) type; city solo and city long only",
+     "group": "interior"
+    },
+    {
+     "name": "fuel_tank_seats",
+     "values": "0|1",
+     "meaning": "fuel-tank seat housing, Euro 2 vs Euro 3 look",
+     "group": "interior"
+    },
+    {
+     "name": "threshold",
+     "values": "0|1",
+     "meaning": "door thresholds",
+     "group": "interior"
+    },
+    {
+     "name": "ramp",
+     "values": "0|1",
+     "meaning": "ramp",
+     "group": "interior"
+    },
+    {
+     "name": "cieply_guzyk",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "passenger door request button (index spells it 'guzyk', body 'guzik')",
+     "group": "doors"
+    },
+    {
+     "name": "cg_kinderwagen",
+     "values": "0-2",
+     "meaning": "stroller button variant",
+     "group": "doors"
+    },
+    {
+     "name": "cg_type",
+     "values": "0-2",
+     "meaning": "door button style",
+     "group": "doors"
+    },
+    {
+     "name": "no_exterior_cg",
+     "values": "0|1",
+     "meaning": "remove exterior door button; only when cieply_guzik is not 0",
+     "group": "doors"
+    },
+    {
+     "name": "no_manual_door_buttons",
+     "values": "0-2",
+     "meaning": "remove manual door buttons variants",
+     "group": "doors"
+    },
+    {
+     "name": "cg_inw",
+     "values": "0-2",
+     "meaning": "wheelchair button variant",
+     "group": "doors"
+    },
+    {
+     "name": "handrails",
+     "values": "0|1",
+     "meaning": "handrail type",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_1",
+     "values": "0|1",
+     "meaning": "small interior window at door 1",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_2",
+     "values": "0|1",
+     "meaning": "small interior window at door 2",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_3",
+     "values": "0|1",
+     "meaning": "small interior window at door 3",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_4",
+     "values": "0|1",
+     "meaning": "small interior window at door 4",
+     "group": "interior"
+    },
+    {
+     "name": "door_1_type",
+     "values": "0-3",
+     "meaning": "door type of door 1",
+     "group": "doors"
+    },
+    {
+     "name": "door_2_type",
+     "values": "0-3",
+     "meaning": "door type of door 2",
+     "group": "doors"
+    },
+    {
+     "name": "door_3_type",
+     "values": "0-3",
+     "meaning": "door type of door 3",
+     "group": "doors"
+    },
+    {
+     "name": "door_4_type",
+     "values": "0-3",
+     "meaning": "door type of door 4",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_open_front",
+     "values": "0|1",
+     "meaning": "double beep before front door opens",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close_front",
+     "values": "0|1",
+     "meaning": "double beep before front door closes",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close_front",
+     "values": "0-2",
+     "meaning": "1 long beep, 2 double beep during front door closing",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_open",
+     "values": "0|1",
+     "meaning": "double beep before rear doors open",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close",
+     "values": "0|1",
+     "meaning": "double beep before rear doors close",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close",
+     "values": "0-2",
+     "meaning": "1 long beep, 2 double beep during rear doors closing",
+     "group": "doors"
+    },
+    {
+     "name": "door_sound_type",
+     "values": "0|1",
+     "meaning": "0 old 1998 door sounds, 1 newer sounds (as facelift/628c LF); for door types 0,2,3",
+     "group": "sound"
+    },
+    {
+     "name": "door_elec",
+     "values": "0|1",
+     "meaning": "electric doors; for door types 0 and 3",
+     "group": "doors"
+    },
+    {
+     "name": "no_door_lock",
+     "values": "0|1",
+     "meaning": "remove door lock",
+     "group": "doors"
+    },
+    {
+     "name": "no_emergency_door_flap",
+     "values": "0|1",
+     "meaning": "remove emergency door flap",
+     "group": "doors"
+    },
+    {
+     "name": "door_double_handrail",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "double handrail at door; only door types 0 and 3",
+     "group": "interior"
+    },
+    {
+     "name": "interior_seats",
+     "values": "0-4",
+     "meaning": "seat layout",
+     "group": "interior"
+    },
+    {
+     "name": "club_seats_left",
+     "values": "0|1",
+     "meaning": "club seat group left",
+     "group": "interior"
+    },
+    {
+     "name": "club_seats_right",
+     "values": "0|1",
+     "meaning": "club seat group right",
+     "group": "interior"
+    },
+    {
+     "name": "rear_seats",
+     "values": "0|1",
+     "meaning": "rear seat variant",
+     "group": "interior"
+    },
+    {
+     "name": "stop_button",
+     "values": "0-2",
+     "meaning": "stop button style",
+     "group": "interior"
+    },
+    {
+     "name": "interior_display",
+     "values": "0-2",
+     "meaning": "interior display variant",
+     "group": "display"
+    },
+    {
+     "name": "double_announcement",
+     "values": "0|1",
+     "meaning": "announcement once or twice",
+     "group": "sound"
+    },
+    {
+     "name": "validator_front",
+     "values": "0-5",
+     "meaning": "front validator variant",
+     "group": "interior"
+    },
+    {
+     "name": "validator_rear",
+     "values": "0-5",
+     "meaning": "rear validator variant",
+     "group": "interior"
+    },
+    {
+     "name": "window_optional",
+     "values": "0|1",
+     "meaning": "optional window variant",
+     "group": "interior"
+    },
+    {
+     "name": "vdv_rpm",
+     "values": "0-4",
+     "meaning": "VDV rev-counter mapping to engine type (OM906 versus OM457/OM447 pictured)",
+     "group": "driver"
+    },
+    {
+     "name": "ibis_type",
+     "values": "0|1",
+     "meaning": "IBIS type",
+     "group": "display"
+    },
+    {
+     "name": "ibis_display_option",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "IBIS display option",
+     "group": "display"
+    },
+    {
+     "name": "front_door_lock_button",
+     "values": "0|1",
+     "meaning": "front door lock button",
+     "group": "driver"
+    },
+    {
+     "name": "door_all_button",
+     "values": "0|1",
+     "meaning": "central door button",
+     "group": "driver"
+    },
+    {
+     "name": "kneeling_switch_2",
+     "values": "0|1",
+     "meaning": "second kneeling switch",
+     "group": "driver"
+    },
+    {
+     "name": "holdgear_sw",
+     "values": "0-2",
+     "meaning": "gear hold switch",
+     "group": "driver"
+    },
+    {
+     "name": "kinder_blinker",
+     "values": "0|1",
+     "meaning": "school-bus blinker",
+     "group": "exterior"
+    },
+    {
+     "name": "no_system_buttons",
+     "values": "0|1",
+     "meaning": "remove system buttons",
+     "group": "driver"
+    },
+    {
+     "name": "retarder_direkt_sw",
+     "values": "0|1",
+     "meaning": "direct retarder switch",
+     "group": "driver"
+    },
+    {
+     "name": "retarder_sw",
+     "values": "0|1",
+     "meaning": "retarder switch",
+     "group": "driver"
+    },
+    {
+     "name": "suspension_lift",
+     "values": "0|1",
+     "meaning": "suspension lift switch",
+     "group": "driver"
+    },
+    {
+     "name": "manual_driver_window",
+     "values": "0|1",
+     "meaning": "manual driver window",
+     "group": "driver"
+    },
+    {
+     "name": "vdv_piep_type",
+     "values": "0|1",
+     "meaning": "stop-request alert sound: 0 old (1998), 1 new (facelift/628c LF)",
+     "group": "sound"
+    },
+    {
+     "name": "blinker_sound",
+     "values": "0|1",
+     "meaning": "0 standard blinker sound, 1 beeping blinker",
+     "group": "sound"
+    },
+    {
+     "name": "vehicle_id",
+     "values": "number (any, suggested 0-9999)",
+     "meaning": "fleet number on IBIS",
+     "group": "identity"
+    }
+   ]
+  },
+  {
+   "id": "citybus-o530-facelift-kajosoft",
+   "title": "Citybus o530 Facelift (Kajosoft)",
+   "folders": [
+    "Citybus 530 Facelift by Kajosoft"
+   ],
+   "setvars": [
+    {
+     "name": "language_ibis",
+     "values": "0-2",
+     "meaning": "IBIS language",
+     "group": "display"
+    },
+    {
+     "name": "language_vdv",
+     "values": "0-2",
+     "meaning": "VDV language",
+     "group": "display"
+    },
+    {
+     "name": "cng_big_tank",
+     "values": "0|1",
+     "meaning": "large CNG tank; only 12 m CNG versions",
+     "group": "exterior"
+    },
+    {
+     "name": "display_ext",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "exterior displays (master selection)",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_left",
+     "values": "0|1",
+     "meaning": "left exterior display off/on",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_right",
+     "values": "0|1",
+     "meaning": "right exterior display off/on",
+     "group": "display"
+    },
+    {
+     "name": "display_ext_rear",
+     "values": "0|1",
+     "meaning": "rear display; the picture meaning of 1 depends on display_ext_right being 0 or 1",
+     "group": "display"
+    },
+    {
+     "name": "front_u",
+     "values": "0|1",
+     "meaning": "suburban ('U') front variant",
+     "group": "exterior"
+    },
+    {
+     "name": "mirror_right",
+     "values": "0|1",
+     "meaning": "right mirror variant",
+     "group": "exterior"
+    },
+    {
+     "name": "reg_number_on_repaint",
+     "values": "0-2",
+     "meaning": "0 default OMSI plate, 2 plate from repaint texture (1 also exists, meaning unstated)",
+     "group": "identity"
+    },
+    {
+     "name": "reg_number_window_sticker",
+     "values": "0|1",
+     "meaning": "registration sticker in window",
+     "group": "identity"
+    },
+    {
+     "name": "wheels",
+     "values": "0|1",
+     "meaning": "rims or hubcaps",
+     "group": "exterior"
+    },
+    {
+     "name": "wheels_brush",
+     "values": "0|1",
+     "meaning": "wheel-arch brush",
+     "group": "exterior"
+    },
+    {
+     "name": "money_type",
+     "values": "0|1",
+     "meaning": "0 DEM cash tray, 1 EUR",
+     "group": "driver"
+    },
+    {
+     "name": "no_front_handrail",
+     "values": "0|1",
+     "meaning": "remove front handrail; 0 for city versions, 1 for 'U' (suburban) versions",
+     "group": "interior"
+    },
+    {
+     "name": "additional_cockpit_handrail",
+     "values": "0|1",
+     "meaning": "extra cockpit handrail",
+     "group": "driver"
+    },
+    {
+     "name": "fahrgastpendel_type",
+     "values": "0-2",
+     "meaning": "passenger barrier (Fahrgastpendel) type; city solo and city long only",
+     "group": "interior"
+    },
+    {
+     "name": "fuel_tank_seats",
+     "values": "0|1",
+     "meaning": "fuel-tank seat housing, Euro 2 vs Euro 3 look",
+     "group": "interior"
+    },
+    {
+     "name": "ramp",
+     "values": "0|1",
+     "meaning": "ramp",
+     "group": "interior"
+    },
+    {
+     "name": "cg_kinderwagen",
+     "values": "0-2",
+     "meaning": "stroller button variant",
+     "group": "doors"
+    },
+    {
+     "name": "cg_inw",
+     "values": "0-2",
+     "meaning": "wheelchair button variant",
+     "group": "doors"
+    },
+    {
+     "name": "small_windows_interior_1",
+     "values": "0|1",
+     "meaning": "small interior window at door 1",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_2",
+     "values": "0|1",
+     "meaning": "small interior window at door 2",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_3",
+     "values": "0|1",
+     "meaning": "small interior window at door 3",
+     "group": "interior"
+    },
+    {
+     "name": "small_windows_interior_4",
+     "values": "0|1",
+     "meaning": "small interior window at door 4",
+     "group": "interior"
+    },
+    {
+     "name": "piep_piep_open_front",
+     "values": "0|1",
+     "meaning": "double beep before front door opens",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close_front",
+     "values": "0|1",
+     "meaning": "double beep before front door closes",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close_front",
+     "values": "0-2",
+     "meaning": "1 long beep, 2 double beep during front door closing",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_open",
+     "values": "0|1",
+     "meaning": "double beep before rear doors open",
+     "group": "doors"
+    },
+    {
+     "name": "piep_piep_close",
+     "values": "0|1",
+     "meaning": "double beep before rear doors close",
+     "group": "doors"
+    },
+    {
+     "name": "pieeeep_close",
+     "values": "0-2",
+     "meaning": "1 long beep, 2 double beep during rear doors closing",
+     "group": "doors"
+    },
+    {
+     "name": "door_double_handrail",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "double handrail at door; only door types 0 and 3",
+     "group": "interior"
+    },
+    {
+     "name": "club_seats_left",
+     "values": "0|1",
+     "meaning": "club seat group left",
+     "group": "interior"
+    },
+    {
+     "name": "club_seats_right",
+     "values": "0|1",
+     "meaning": "club seat group right",
+     "group": "interior"
+    },
+    {
+     "name": "interior_display",
+     "values": "0-2",
+     "meaning": "interior display variant",
+     "group": "display"
+    },
+    {
+     "name": "double_announcement",
+     "values": "0|1",
+     "meaning": "announcement once or twice",
+     "group": "sound"
+    },
+    {
+     "name": "validator_front",
+     "values": "0-5",
+     "meaning": "front validator variant",
+     "group": "interior"
+    },
+    {
+     "name": "validator_rear",
+     "values": "0-5",
+     "meaning": "rear validator variant",
+     "group": "interior"
+    },
+    {
+     "name": "window_optional",
+     "values": "0|1",
+     "meaning": "optional window variant",
+     "group": "interior"
+    },
+    {
+     "name": "ibis_type",
+     "values": "0|1",
+     "meaning": "IBIS type",
+     "group": "display"
+    },
+    {
+     "name": "ibis_display_option",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "IBIS display option",
+     "group": "display"
+    },
+    {
+     "name": "front_door_lock_button",
+     "values": "0|1",
+     "meaning": "front door lock button",
+     "group": "driver"
+    },
+    {
+     "name": "door_all_button",
+     "values": "0|1",
+     "meaning": "central door button",
+     "group": "driver"
+    },
+    {
+     "name": "kneeling_switch_2",
+     "values": "0|1",
+     "meaning": "second kneeling switch",
+     "group": "driver"
+    },
+    {
+     "name": "holdgear_sw",
+     "values": "0-2",
+     "meaning": "gear hold switch",
+     "group": "driver"
+    },
+    {
+     "name": "kinder_blinker",
+     "values": "0|1",
+     "meaning": "school-bus blinker",
+     "group": "exterior"
+    },
+    {
+     "name": "no_system_buttons",
+     "values": "0|1",
+     "meaning": "remove system buttons",
+     "group": "driver"
+    },
+    {
+     "name": "retarder_direkt_sw",
+     "values": "0|1",
+     "meaning": "direct retarder switch",
+     "group": "driver"
+    },
+    {
+     "name": "retarder_sw",
+     "values": "0|1",
+     "meaning": "retarder switch",
+     "group": "driver"
+    },
+    {
+     "name": "suspension_lift",
+     "values": "0|1",
+     "meaning": "suspension lift switch",
+     "group": "driver"
+    },
+    {
+     "name": "manual_driver_window",
+     "values": "0|1",
+     "meaning": "manual driver window",
+     "group": "driver"
+    },
+    {
+     "name": "blinker_sound",
+     "values": "0|1",
+     "meaning": "0 standard blinker sound, 1 beeping blinker",
+     "group": "sound"
+    },
+    {
+     "name": "vehicle_id",
+     "values": "number (any, suggested 0-9999)",
+     "meaning": "fleet number on IBIS",
+     "group": "identity"
+    },
+    {
+     "name": "air_conditioning",
+     "values": "0-4",
+     "meaning": "roof A/C variant",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_2",
+     "values": "0-4",
+     "meaning": "second A/C unit; articulated only",
+     "group": "climate"
+    },
+    {
+     "name": "air_conditioning_driver",
+     "values": "0-3",
+     "meaning": "driver A/C variant",
+     "group": "climate"
+    },
+    {
+     "name": "front_light",
+     "values": "0-2",
+     "meaning": "front light variant",
+     "group": "exterior"
+    },
+    {
+     "name": "front_grill",
+     "values": "0-2",
+     "meaning": "front grill variant",
+     "group": "exterior"
+    },
+    {
+     "name": "roof_type",
+     "values": "0|1",
+     "meaning": "roof shape variant",
+     "group": "exterior"
+    },
+    {
+     "name": "air_intake_grille",
+     "values": "0|1",
+     "meaning": "air intake grille (list index writes it with spaces: 'air intake grille')",
+     "group": "exterior"
+    },
+    {
+     "name": "rear_lights",
+     "values": "0-3",
+     "meaning": "rear light variant",
+     "group": "exterior"
+    },
+    {
+     "name": "wheels_arch",
+     "values": "0|1",
+     "meaning": "wheel arch cover; articulated only",
+     "group": "exterior"
+    },
+    {
+     "name": "exterior_emergency_door",
+     "values": "0|1",
+     "meaning": "external emergency valve",
+     "group": "exterior"
+    },
+    {
+     "name": "driver_cabin",
+     "values": "0-4",
+     "meaning": "driver cabin variant; value 4 only in some versions",
+     "group": "driver"
+    },
+    {
+     "name": "cg_type",
+     "values": "0-6",
+     "meaning": "door button style",
+     "group": "doors"
+    },
+    {
+     "name": "cieply_guzik",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "passenger door request button",
+     "group": "doors"
+    },
+    {
+     "name": "exterior_cg_type",
+     "values": "0-2",
+     "meaning": "exterior door button type",
+     "group": "doors"
+    },
+    {
+     "name": "no_manual_door_buttons",
+     "values": "0-2",
+     "meaning": "remove manual door buttons",
+     "group": "doors"
+    },
+    {
+     "name": "handrail_stroller",
+     "values": "0|1",
+     "meaning": "stroller area handrail type (index: handrail_stroller; one heading reads handrails)",
+     "group": "interior"
+    },
+    {
+     "name": "handrails_club_seat",
+     "values": "0|1",
+     "meaning": "handrails at club seats",
+     "group": "interior"
+    },
+    {
+     "name": "door_1_type",
+     "values": "0-2",
+     "meaning": "door type door 1",
+     "group": "doors"
+    },
+    {
+     "name": "door_2_type",
+     "values": "0-2",
+     "meaning": "door type door 2",
+     "group": "doors"
+    },
+    {
+     "name": "door_3_type",
+     "values": "0-2",
+     "meaning": "door type door 3",
+     "group": "doors"
+    },
+    {
+     "name": "door_4_type",
+     "values": "0-2",
+     "meaning": "door type door 4",
+     "group": "doors"
+    },
+    {
+     "name": "door_release_sound",
+     "values": "0|1",
+     "meaning": "0 none, 1 pressure release sound",
+     "group": "doors"
+    },
+    {
+     "name": "door_elec",
+     "values": "0|1",
+     "meaning": "electric doors",
+     "group": "doors"
+    },
+    {
+     "name": "no_door_lock",
+     "values": "0|1",
+     "meaning": "remove door lock",
+     "group": "doors"
+    },
+    {
+     "name": "interior_seats",
+     "values": "list: not stated in extractable text (illustrated only)",
+     "meaning": "seat layout",
+     "group": "interior"
+    },
+    {
+     "name": "stop_button",
+     "values": "0-4",
+     "meaning": "stop button style",
+     "group": "interior"
+    },
+    {
+     "name": "vdv_display",
+     "values": "0|1",
+     "meaning": "VDV display variant",
+     "group": "display"
+    },
+    {
+     "name": "vdv_rpm",
+     "values": "0|1",
+     "meaning": "rev counter: 0 OM906/OM926, 1 OM457/OM447",
+     "group": "driver"
+    },
+    {
+     "name": "roller_blind",
+     "values": "0|1",
+     "meaning": "roller blind type",
+     "group": "interior"
+    },
+    {
+     "name": "metal_housing",
+     "values": "0|1",
+     "meaning": "metal housing variant",
+     "group": "interior"
+    }
+   ]
+  },
+  {
+   "id": "heuliez-gxx17",
+   "title": "Heuliez GX x17",
+   "folders": [
+    "HeuliezBus_GXx17"
+   ],
+   "setvars": [
+    {
+     "name": "vis_TS",
+     "values": "0|1",
+     "meaning": "hubcaps versus bare wheels; value for hubcaps is 1 on GX217, GX317 C8 2D and C8 3D, but 0 on GX117L, C8G 3D, GPL, MG2/MG3, MI and GX417 (bare wheel is the opposite value)",
+     "group": "wheels"
+    },
+    {
+     "name": "cache_lum",
+     "values": "0|1",
+     "meaning": "covers on roof lights: 0 trim, 1 bare light; GX317 C8 3D only",
+     "group": "exterior"
+    },
+    {
+     "name": "ver_clim",
+     "values": "0|1",
+     "meaning": "1 Eberspacher roof A/C (removes rear roof hatch), 0 none; GX317 C8 3D",
+     "group": "climate"
+    },
+    {
+     "name": "ver_sieges",
+     "values": "0,1,10 (GX317 C8); 0,1,10,100 (MIDR 2D); 0-4 (MIDR 3D); 0,1,2,10 (GX417)",
+     "meaning": "seat make and layout, also moves grab poles and stop buttons; values per model: C8 2D/3D Pino=0, Pino alt layout=10, B3000=1; MIDR 2D B3000=0, alt=10, circular alt=100; MIDR 3D Chardon=0, RVI 18B=1, RVI=2, B3000=3, Ciclo=4; GX417 B3000=0, RVI=1, RVI alt=10, RVI 18B=2",
+     "group": "interior"
+    },
+    {
+     "name": "ver_sieges_av",
+     "values": "0|1",
+     "meaning": "front seat shape: 0 wide, 1 narrow; GX317 MIDR 3D",
+     "group": "interior"
+    },
+    {
+     "name": "ver_montants",
+     "values": "0|1",
+     "meaning": "window frames old (before 2003) or newer",
+     "group": "exterior"
+    },
+    {
+     "name": "ver_body",
+     "values": "0-2 (MIDR 3D); 0|1 (GX417)",
+     "meaning": "restyling phase: MIDR 3D 0 Euro1 body, 1 Euro2 body, 2 Euro2 coach style with extra tank; GX417 0 Mark 1, 1 Mark 2",
+     "group": "body"
+    },
+    {
+     "name": "ver_cloison",
+     "values": "0|1",
+     "meaning": "metal trim on engine bulkhead plus plinth in floor material",
+     "group": "interior"
+    },
+    {
+     "name": "ver_logos",
+     "values": "0-3",
+     "meaning": "GX417 front signs: 0 Heuliez only, 1 Volvo only, 2 Heuliez+Volvo+GX417, 3 GX417 only (rear signs follow ver_body)",
+     "group": "exterior"
+    }
+   ]
+  },
+  {
+   "id": "iveco-interurbain",
+   "title": "IVECO BUS Interurbain (Crossway) generation",
+   "folders": [
+    "CW_IVECOBUS_INTER_FAMILY"
+   ],
+   "setvars": [
+    {
+     "name": "sv_display_front",
+     "values": "0-5",
+     "meaning": "front destination display model; 2 and 3 disable front ext cover setvar; 5 gives a terminal note; PRO replaces 2 and 3 with 0",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_extCover",
+     "values": "0|1",
+     "meaning": "0 black mask around front display on, 1 off",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_intCover",
+     "values": "0|1",
+     "meaning": "0 metal cover on, 1 off; not available on PRO (always on); off disables front interior display",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_L",
+     "values": "0|1",
+     "meaning": "left side display off/on; not on 10 m vehicles",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_R",
+     "values": "0|1",
+     "meaning": "right side display off/on",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_back",
+     "values": "0|1",
+     "meaning": "rear display off/on",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_color",
+     "values": "0|1",
+     "meaning": "0 orange, 1 white (restart vehicle after changing)",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_front_req",
+     "values": "0|1",
+     "meaning": "cab interior display; requires sv_display_front_intCover=0",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_middle_req",
+     "values": "0|1",
+     "meaning": "display at middle door interior",
+     "group": "display"
+    },
+    {
+     "name": "sv_passenger_seatcovers_req",
+     "values": "0|1",
+     "meaning": "POP/LINE/HIGH VALUE: seat damage protection; PRO: footrests",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ac_service",
+     "values": "0|1",
+     "meaning": "A/C lock; always on for PRO",
+     "group": "climate"
+    },
+    {
+     "name": "sv_passenger_panel_req",
+     "values": "list (values per phase and floor type in picture tables)",
+     "meaning": "passenger-area panels; options depend on phase and floor design (two groups: POP13/POP12/LINE13 double rear door/HV13 versus LINE13 single rear door, LINE12, HV12, PRO, 10 m)",
+     "group": "interior"
+    },
+    {
+     "name": "sv_curtains_req",
+     "values": "0|1",
+     "meaning": "POP: 1 curtains on; LINE/HV/PRO: 0 curtains on, 1 off",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ads_frontDoor_req",
+     "values": "0|1",
+     "meaning": "advert frame front door (A2 poster)",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_ads_driver_req",
+     "values": "0|1",
+     "meaning": "advert frame driver window (A4 poster)",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stickers_ext_front_req",
+     "values": "0|1",
+     "meaning": "accessibility stickers on front grille",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stickers_ext_rear_req",
+     "values": "0|1",
+     "meaning": "speed-limit stickers rear",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stopreq_frontdoor_req",
+     "values": "list (phase-dependent), >2 none",
+     "meaning": "stop button style front door",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_middledoor_req",
+     "values": "list (phase-dependent), >2 none",
+     "meaning": "stop button style rear/middle door",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_driver_req",
+     "values": "list (phase-dependent), >2 none",
+     "meaning": "driver-side stop button; not possible in phase 2",
+     "group": "interior"
+    },
+    {
+     "name": "sv_wheels_req",
+     "values": "list (picture table)",
+     "meaning": "wheel design; styles 1,3,4 recolourable in texture; sub-option 0b via nut covers",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_wheels_nutCover",
+     "values": "0|1",
+     "meaning": "wheel-lock indicators; only wheel type 0",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_middle_door_req",
+     "values": "0|1",
+     "meaning": "0 asymmetric, 1 symmetric double middle door; double-door versions only",
+     "group": "doors"
+    },
+    {
+     "name": "sv_windows",
+     "values": "0-2",
+     "meaning": "0 all windows open, 1 five openable, 2 none; PRO fixed 2",
+     "group": "interior"
+    },
+    {
+     "name": "sv_doors_cover",
+     "values": "0|1",
+     "meaning": "door sill 0 reflective, 1 matt",
+     "group": "interior"
+    },
+    {
+     "name": "sv_carpets",
+     "values": "0-5",
+     "meaning": "floor mats layout, increasing coverage",
+     "group": "interior"
+    },
+    {
+     "name": "sv_mirrors_cover",
+     "values": "0-3",
+     "meaning": "mirror type 1/2 combined with reflective or matt; LINE/HV/PRO only",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cockpit_clock",
+     "values": "0-2",
+     "meaning": "clock variant: 0 off, 1 clock with stop indicator, 2 stop lamp",
+     "group": "driver"
+    },
+    {
+     "name": "sv_cockpit_sellerie_req",
+     "values": "0|1",
+     "meaning": "dashboard upholstery",
+     "group": "driver"
+    },
+    {
+     "name": "sv_doors_toplights_c",
+     "values": "0|1",
+     "meaning": "door top lights, decoration only; PRO/CNG",
+     "group": "interior"
+    },
+    {
+     "name": "sv_usb_req",
+     "values": "0|1",
+     "meaning": "USB ports",
+     "group": "interior"
+    },
+    {
+     "name": "sv_school_sign",
+     "values": "0|1",
+     "meaning": "school boards; POP/LINE 0 = on, HV/PRO 1 = on",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_side_lights_req",
+     "values": "0|1",
+     "meaning": "rear side lights",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cng_right_cover",
+     "values": "0|1",
+     "meaning": "0 roof panel right on, 1 off; CNG",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_dash_doors_sw_pos",
+     "values": "0|1",
+     "meaning": "door buttons right/left of dashboard; phase 1 only",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_brakevalve_sw",
+     "values": "0|1",
+     "meaning": "brake valve: POP/LINE 1 = on; HV/PRO 0 = on",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_pos",
+     "values": "0|1",
+     "meaning": "automatic gearbox buttons right/left; fixed left on POP 13M and all 10 m",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_123",
+     "values": "0|1",
+     "meaning": "0 123-keys present, 1 absent",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_bluelight",
+     "values": "0|1",
+     "meaning": "0 blue lights fitted, 1 not",
+     "group": "driver"
+    },
+    {
+     "name": "engine_sv_req",
+     "values": "0-2, series dependent",
+     "meaning": "engine: Tector 7 320, Cursor 9 360, Cursor 9 400 (POP T7=0,C9=1; LINE T7=1,C9=0; HV T7=1,C9=0,C9-400=2; PRO C9=0,C9-400=1); diesel only; restart",
+     "group": "drivetrain"
+    },
+    {
+     "name": "gearbox_sv_req",
+     "values": "0-2, series dependent",
+     "meaning": "gearbox: POP/LINE EcoShift=0, DIWA=1, Ecolife=2; HV/PRO/CNG DIWA=0, Ecolife=1, EcoShift=2; restart",
+     "group": "drivetrain"
+    }
+   ]
+  },
+  {
+   "id": "iveco-low-entry",
+   "title": "IVECO BUS Low Entry (Crossway LE)",
+   "folders": [
+    "CW_IVECOBUS_LOWENTRY_FAMILY"
+   ],
+   "setvars": [
+    {
+     "name": "sv_display_front",
+     "values": "0-3",
+     "meaning": "front display model; 3 gives a terminal note",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_extCover",
+     "values": "0|1",
+     "meaning": "black mask around front display",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_intCover",
+     "values": "0|1",
+     "meaning": "metal cover; IVECO dash only",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_R",
+     "values": "0-2",
+     "meaning": "0 off, 1 large, 2 small",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_L",
+     "values": "0-2",
+     "meaning": "0 off, 1 large, 2 small",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_back",
+     "values": "0-2",
+     "meaning": "rear display variant",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_color",
+     "values": "0|1",
+     "meaning": "0 orange, 1 white",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_front",
+     "values": "0|1",
+     "meaning": "cab interior display; needs intCover=0",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_middle",
+     "values": "0|1",
+     "meaning": "middle door display",
+     "group": "display"
+    },
+    {
+     "name": "sv_passenger_seatcovers",
+     "values": "0|1",
+     "meaning": "seat covers; Sub CITY only",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ac_service",
+     "values": "0|1",
+     "meaning": "air conditioning",
+     "group": "climate"
+    },
+    {
+     "name": "sv_curtains_req",
+     "values": "0|1",
+     "meaning": "curtains",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ads_frontDoor",
+     "values": "0|1",
+     "meaning": "advert frame front door",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_ads_driver",
+     "values": "0|1",
+     "meaning": "advert frame driver window",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stopreq_frontdoor",
+     "values": "list, >2 none",
+     "meaning": "stop button style front door",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_middledoor",
+     "values": "list, >2 none",
+     "meaning": "stop button style rear door",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_driver",
+     "values": "list, >2 none",
+     "meaning": "stop button driver side",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_int1",
+     "values": "list, >2 none",
+     "meaning": "stop button front passenger area (CITY)",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_int2",
+     "values": "list, >2 none",
+     "meaning": "stop button rear passenger area (CITY)",
+     "group": "interior"
+    },
+    {
+     "name": "sv_wheels",
+     "values": "list",
+     "meaning": "wheel design (picture table)",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_wheels_nutCover",
+     "values": "0|1",
+     "meaning": "wheel lock indicators",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_windows",
+     "values": "0-2",
+     "meaning": "all/five/no openable windows",
+     "group": "interior"
+    },
+    {
+     "name": "sv_doors_cover",
+     "values": "0|1",
+     "meaning": "door sill reflective/matt",
+     "group": "interior"
+    },
+    {
+     "name": "sv_carpets",
+     "values": "LINE 0-1, CITY 0-3",
+     "meaning": "floor mats; LINE: none/driver space; CITY: none/front/+driver space/+complete (table order unclear)",
+     "group": "interior"
+    },
+    {
+     "name": "sv_mirrors_cover",
+     "values": "0-4",
+     "meaning": "type 1 reflective/matt, classic, type 2 reflective/matt",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_front_lights_req",
+     "values": "0|1",
+     "meaning": "front light type 1/2",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_cway_req",
+     "values": "0|1 (P1/P2 normal windows); 0-2 (P2 low windows)",
+     "meaning": "CROSSWAY side label",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_ivecorear_req",
+     "values": "0|1",
+     "meaning": "IVECO logo rear panel",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_side_speaker",
+     "values": "0|1",
+     "meaning": "side speaker",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_driver_hood_req",
+     "values": "0-2",
+     "meaning": "driver box: 0 classic, 1 CITY, 2 none (CITY only); 1 moves display controller; fixed on ACTIA dash",
+     "group": "driver"
+    },
+    {
+     "name": "sv_seats_acd_req",
+     "values": "0|1",
+     "meaning": "0 seat arm set on, 1 off; CITY only",
+     "group": "interior"
+    },
+    {
+     "name": "sv_body_fl1_reflections",
+     "values": "0|1",
+     "meaning": "black masks matt/reflective; FL1 only",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_door_plastic_req",
+     "values": "0|1",
+     "meaning": "plastic on top of doors; LINE",
+     "group": "interior"
+    },
+    {
+     "name": "sv_doors_toplights_c",
+     "values": "0|1",
+     "meaning": "door top lights; LINE; needs sv_door_plastic_req",
+     "group": "interior"
+    },
+    {
+     "name": "sv_usb_req",
+     "values": "0|1",
+     "meaning": "USB ports",
+     "group": "interior"
+    },
+    {
+     "name": "sv_side_lights_req",
+     "values": "0|1",
+     "meaning": "rear side lights",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cng_left_cover",
+     "values": "0|1",
+     "meaning": "0 left roof panel on, 1 off; CNG",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cng_right_cover",
+     "values": "0|1",
+     "meaning": "0 right roof panel on, 1 off; CNG",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_bus_phase",
+     "values": "0|1",
+     "meaning": "switch stickers/sounds/colours/dash units to phase style; diesel only, not on some phase 2",
+     "group": "body"
+    },
+    {
+     "name": "sv_school_sign",
+     "values": "0|1",
+     "meaning": "child transport panels",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cockpit_clock",
+     "values": "0-2",
+     "meaning": "clock variants",
+     "group": "driver"
+    },
+    {
+     "name": "sv_cockpit_sellerie_req",
+     "values": "0|1",
+     "meaning": "extra upholstery",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_additional_rollo",
+     "values": "0|1",
+     "meaning": "extra driver panel",
+     "group": "driver"
+    },
+    {
+     "name": "sv_driver_cockpit_req",
+     "values": "LINE (picture table), CITY 0-2",
+     "meaning": "driver cab type; IVECO dash only",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_doors_sw_pos",
+     "values": "0|1",
+     "meaning": "door buttons right/left",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_brakevalve_sw",
+     "values": "0|1",
+     "meaning": "brake valve feature",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_pos",
+     "values": "0|1",
+     "meaning": "auto-box buttons right/left; IVECO dash",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_123",
+     "values": "0|1",
+     "meaning": "0 with 123 buttons, 1 without",
+     "group": "driver"
+    },
+    {
+     "name": "button_dooropen_visible",
+     "values": "0|1",
+     "meaning": "door-open warning function; 0 activated, 1 deactivated (doc)",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_bluelight",
+     "values": "0|1",
+     "meaning": "0 activated, 1 deactivated",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_seatheater",
+     "values": "0|1",
+     "meaning": "driver seat heater",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_extdoorslight",
+     "values": "0|1",
+     "meaning": "external doors light",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_alarm",
+     "values": "0|1",
+     "meaning": "alarm function",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_contact_type",
+     "values": "0|1",
+     "meaning": "0 key, 1 start button",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_gong",
+     "values": "0|1",
+     "meaning": "gong; IVECO dash 1 = on, ACTIA dash inverted (0 = on)",
+     "group": "driver"
+    },
+    {
+     "name": "sv_gong_type",
+     "values": "list not stated",
+     "meaning": "gong sound",
+     "group": "sound"
+    },
+    {
+     "name": "sv_dash_cruiselimiter",
+     "values": "0|1",
+     "meaning": "0 cruise/limiter active, 1 off; IVECO BUS versions",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_middlecamera",
+     "values": "0|1",
+     "meaning": "middle door camera; needs sv_door_plastic_req",
+     "group": "driver"
+    },
+    {
+     "name": "engine_sv_req",
+     "values": "0-2",
+     "meaning": "LINE: Cursor 9 360=0, Tector 7 320=1; CITY: Cursor 9=0, Tector 320=1, Tector 285=2; diesel only, not 15 m",
+     "group": "drivetrain"
+    },
+    {
+     "name": "gearbox_sv_req",
+     "values": "0-2",
+     "meaning": "IVECO dash: DIWA 0, manual 6 =1, Ecolife 2; ACTIA dash: DIWA 0, Ecolife 1, no manual",
+     "group": "drivetrain"
+    },
+    {
+     "name": "gearbox_achse_req",
+     "values": "LINE 0|1 ; CITY 0-2",
+     "meaning": "axle ratio, manual 6-speed only: Cursor 3.07/3.36/4.63 and Tector 4.63/5.29/5.63; LINE value 0 = lowest ratio listed, 1 next; CITY 2/0/1 for the three ratios (from the table order). Speed limits 85 km/h CITY, 100 km/h LINE",
+     "group": "drivetrain"
+    },
+    {
+     "name": "sv_gearbox_lock_std",
+     "values": "0|1",
+     "meaning": "start only in first gear on manual; needs gearbox_sv_req manual; IVECO dash",
+     "group": "drivetrain"
+    },
+    {
+     "name": "sv_disable_plate",
+     "values": "0|1",
+     "meaning": "0 automatic French plate, 1 off (plate then from repaint)",
+     "group": "identity"
+    },
+    {
+     "name": "system_language_req",
+     "values": "0-3",
+     "meaning": "start language: 0 French, 1 Czech, 2 German, 3 English",
+     "group": "display"
+    },
+    {
+     "name": "doors_beep_disable_req",
+     "values": "0|1",
+     "meaning": "door-open alarm; this doc labels 0 as deactivated, 1 activated, which contradicts the name (compare Irisbus doc: 1 = deactivated)",
+     "group": "sound"
+    }
+   ]
+  },
+  {
+   "id": "irisbus-low-entry",
+   "title": "Irisbus Crossway Low Entry",
+   "folders": [
+    "CW_IRISBUS_LOWENTRY_FAMILY"
+   ],
+   "setvars": [
+    {
+     "name": "sv_display_front",
+     "values": "0-3",
+     "meaning": "front display model; 3 terminal note",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_extCover",
+     "values": "0|1",
+     "meaning": "black mask",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_front_intCover",
+     "values": "0|1",
+     "meaning": "metal cover",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_R",
+     "values": "0|1",
+     "meaning": "side display",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_side_L",
+     "values": "0|1",
+     "meaning": "side display",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_back",
+     "values": "0-2",
+     "meaning": "rear display variant",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_front",
+     "values": "0|1",
+     "meaning": "cab display; needs intCover=0",
+     "group": "display"
+    },
+    {
+     "name": "sv_display_i_middle",
+     "values": "0|1",
+     "meaning": "middle door display",
+     "group": "display"
+    },
+    {
+     "name": "sv_passenger_seatcovers",
+     "values": "0|1",
+     "meaning": "seat covers; Sub Urban only",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ac_service",
+     "values": "0|1",
+     "meaning": "air conditioning",
+     "group": "climate"
+    },
+    {
+     "name": "sv_curtains_req",
+     "values": "0|1",
+     "meaning": "curtains",
+     "group": "interior"
+    },
+    {
+     "name": "sv_ads_frontDoor",
+     "values": "0|1",
+     "meaning": "advert frame front door",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_ads_driver",
+     "values": "0|1",
+     "meaning": "advert frame driver window",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stickers_ext_rear",
+     "values": "0|1",
+     "meaning": "speed-limit stickers rear",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_stopreq_frontdoor",
+     "values": "list, >2 none",
+     "meaning": "stop button style",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_middledoor",
+     "values": "list, >2 none",
+     "meaning": "stop button style",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_driver",
+     "values": "list, >2 none",
+     "meaning": "stop button driver side",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_int1",
+     "values": "list, >2 none",
+     "meaning": "Urban front passenger area",
+     "group": "interior"
+    },
+    {
+     "name": "sv_stopreq_int2",
+     "values": "list, >2 none",
+     "meaning": "Urban rear passenger area",
+     "group": "interior"
+    },
+    {
+     "name": "sv_wheels",
+     "values": "list",
+     "meaning": "wheels (styles 1,3 recolourable); 0b via nut cover",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_wheels_nutCover",
+     "values": "0|1",
+     "meaning": "wheel lock indicators, wheel 0 only",
+     "group": "wheels"
+    },
+    {
+     "name": "sv_windows",
+     "values": "0-2",
+     "meaning": "all/five/no openable windows",
+     "group": "interior"
+    },
+    {
+     "name": "sv_doors_cover",
+     "values": "0|1",
+     "meaning": "door sills reflective/matt",
+     "group": "interior"
+    },
+    {
+     "name": "sv_carpets",
+     "values": "SubUrban 0-1 ; Urban 0-4",
+     "meaning": "floor mats (Urban: none, front, +rear stamper, +driver space, +complete; SubUrban: none, driver space; assignment of tables to values is as in doc layout)",
+     "group": "interior"
+    },
+    {
+     "name": "sv_mirrors_cover",
+     "values": "0-2",
+     "meaning": "type 1 reflective, type 1 matt, classic",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_front_lights_req",
+     "values": "0|1",
+     "meaning": "0 Euro5/EEV type, 1 Euro4 type",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_front_foglights_req",
+     "values": "0|1",
+     "meaning": "0 fog lights on, 1 off",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_cway_req",
+     "values": "0|1",
+     "meaning": "CROSSWAY LE label",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_irisfront_req",
+     "values": "0|1",
+     "meaning": "Irisbus logo front",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_irisrear_req",
+     "values": "0|1",
+     "meaning": "Irisbus logo rear",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_norm_req",
+     "values": "0-3",
+     "meaning": "emission label: 0 Euro 5, 1 Euro 4, 2 EEV, 3 none",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_logos_ivec_req",
+     "values": "0|1",
+     "meaning": "Iveco logo on engine cover",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_side_speaker",
+     "values": "0|1",
+     "meaning": "side speaker",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_engine_hood",
+     "values": "0|1",
+     "meaning": "engine cover style 0 centered plate, 1 left plate; needs matching repaint texture",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_driver_hood_req",
+     "values": "0-2",
+     "meaning": "driver box: 0 classic, 1 Urban, 2 none (Urban only)",
+     "group": "driver"
+    },
+    {
+     "name": "sv_school_sign",
+     "values": "0|1",
+     "meaning": "child transport panels",
+     "group": "exterior"
+    },
+    {
+     "name": "sv_cockpit_clock",
+     "values": "0-2",
+     "meaning": "clock variants",
+     "group": "driver"
+    },
+    {
+     "name": "sv_driver_cockpit_req",
+     "values": "SubUrban 0-2 ; Urban 0-4",
+     "meaning": "driver cab type; Urban options 3 and 4 replaced by 0 if sv_driver_hood_req=1",
+     "group": "driver"
+    },
+    {
+     "name": "sv_driver_handle_req",
+     "values": "0|1",
+     "meaning": "driver cab handle; SubUrban only with cockpit 0 or 2, Urban with 3 or 4; needs sv_stopreq_driver>2",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_doors_sw_pos",
+     "values": "0|1",
+     "meaning": "door buttons right/left",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_brakevalve_sw",
+     "values": "0|1",
+     "meaning": "brake valve",
+     "group": "driver"
+    },
+    {
+     "name": "sv_tacho_type",
+     "values": "0|1",
+     "meaning": "speedometer 0 black, 1 silver",
+     "group": "driver"
+    },
+    {
+     "name": "sv_steeringwheel_style",
+     "values": "0|1",
+     "meaning": "steering wheel style",
+     "group": "driver"
+    },
+    {
+     "name": "sv_shifter_style",
+     "values": "0|1",
+     "meaning": "0 pneumatic assisted, 1 long; Tector with manual only",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_pos",
+     "values": "0|1",
+     "meaning": "auto-box buttons right/left",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_automatic_sw_123",
+     "values": "0|1",
+     "meaning": "0 123 buttons, 1 none",
+     "group": "driver"
+    },
+    {
+     "name": "button_dooropen_visible",
+     "values": "0|1",
+     "meaning": "door-open warning: 0 activated, 1 deactivated",
+     "group": "driver"
+    },
+    {
+     "name": "sv_dash_km_needle",
+     "values": "0|1",
+     "meaning": "0 km/h, 1 mph",
+     "group": "driver"
+    },
+    {
+     "name": "engine_sv_req",
+     "values": "0|1",
+     "meaning": "0 Cursor 8 330 hp, 1 Tector 6 250 hp",
+     "group": "drivetrain"
+    },
+    {
+     "name": "gearbox_sv_req",
+     "values": "0|1",
+     "meaning": "0 DIWA auto 4, 1 manual 6",
+     "group": "drivetrain"
+    },
+    {
+     "name": "gearbox_achse_req",
+     "values": "0|1",
+     "meaning": "manual only: 0 = 3.07, 1 = 5.13 (5.13 limits to 70 km/h)",
+     "group": "drivetrain"
+    },
+    {
+     "name": "sv_disable_plate",
+     "values": "0|1",
+     "meaning": "0 French plate automatic, 1 off",
+     "group": "identity"
+    },
+    {
+     "name": "system_language_req",
+     "values": "0-3",
+     "meaning": "0 French, 1 Czech, 2 German, 3 English",
+     "group": "display"
+    },
+    {
+     "name": "doors_beep_disable_req",
+     "values": "0|1",
+     "meaning": "0 alarm active, 1 alarm deactivated",
+     "group": "sound"
+    }
+   ]
+  },
+  {
+   "id": "valiant-citybus",
+   "title": "Valiant Citybus Family (Renault Citybus 7000/7700)",
+   "folders": [
+    "Valiant_Citybus_Family"
+   ],
+   "setvars": [
+    {
+     "name": "var_seats",
+     "values": "0-2 (variant dependent)",
+     "meaning": "seat model/layout, also moves grab poles and stop buttons: rounded Citybus=0, squared=1, B3000=2 (B3000 only on a few models, e.g. 0A3DG, 72D); 2 options on most, 3 on 7700 2D",
+     "group": "interior"
+    },
+    {
+     "name": "var_plate",
+     "values": "0|1",
+     "meaning": "registration plate shape; 7700 and some articulated only",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_enjo",
+     "values": "0|1",
+     "meaning": "hide/show hubcaps; picture tables give hubcaps = 0 on most models (1 on 7A3D) and standard wheels = 1 on most (0 on 73D), so the value is model dependent",
+     "group": "wheels"
+    },
+    {
+     "name": "var_ac_front",
+     "values": "0|1",
+     "meaning": "front roof A/C unit present (1) or not (0)",
+     "group": "climate"
+    },
+    {
+     "name": "var_ac_mid",
+     "values": "0|1",
+     "meaning": "middle roof A/C unit, standard (non-articulated) only",
+     "group": "climate"
+    },
+    {
+     "name": "var_ac_rear",
+     "values": "0|1|10",
+     "meaning": "rear A/C unit shown by default; 10 = no rear A/C (other values only hide the model, cooling stays)",
+     "group": "climate"
+    },
+    {
+     "name": "var_ac",
+     "values": "0|1",
+     "meaning": "A/C roof type for articulated (the 'var_ac_xx' family); same default/10 caveat as var_ac_rear",
+     "group": "climate"
+    },
+    {
+     "name": "var_dash",
+     "values": "0-2",
+     "meaning": "dashboard: 7000: 0 old, 2 VDO (new unavailable); 7700: 0 new, 1 old, 2 VDO",
+     "group": "driver"
+    },
+    {
+     "name": "ver_body",
+     "values": "0|1",
+     "meaning": "side mouldings (table calls it var_body); 7700 only",
+     "group": "exterior"
+    },
+    {
+     "name": "ver_par",
+     "values": "0|1",
+     "meaning": "door 2 type",
+     "group": "doors"
+    },
+    {
+     "name": "ver_parar",
+     "values": "0|1",
+     "meaning": "door 3 type",
+     "group": "doors"
+    },
+    {
+     "name": "ver_pararar",
+     "values": "0|1",
+     "meaning": "door 4 type",
+     "group": "doors"
+    },
+    {
+     "name": "ver_px",
+     "values": "0|1",
+     "meaning": "door mechanism: 7000 ISAF=0, Webasto-Kiekert=1; 7700 ISAF=0, Ventura=1",
+     "group": "doors"
+    },
+    {
+     "name": "var_windows",
+     "values": "0|1",
+     "meaning": "0 hinged, 1 sliding windows",
+     "group": "interior"
+    },
+    {
+     "name": "var_rvm",
+     "values": "0-3",
+     "meaning": "mirror type: 0/1 streamlined variants swap per model, 2 basic, 3 streamlined single arm short",
+     "group": "exterior"
+    },
+    {
+     "name": "var_cockpit",
+     "values": "0-3",
+     "meaning": "cab look: 0 low driver door, 1 high driver door (swapped on 7000A CNG), 2 full cabin, 3 low door with anti-aggression glass (not on 7700 after 2004)",
+     "group": "driver"
+    },
+    {
+     "name": "var_colav",
+     "values": "0|1",
+     "meaning": "hide dash grab handle; 1 forced when var_cockpit=2",
+     "group": "driver"
+    },
+    {
+     "name": "var_CNG",
+     "values": "0|1",
+     "meaning": "reverses front part of CNG tank (SEMITAN)",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_brouav",
+     "values": "0|1",
+     "meaning": "front foglights (work in progress)",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_LCI",
+     "values": "0|1",
+     "meaning": "replace facelifted 7700 cockpit by pre-facelift 7000 cockpit; exclusive to 7700",
+     "group": "driver"
+    },
+    {
+     "name": "door_setvar_beep",
+     "values": "not stated",
+     "meaning": "time delay and warning sound for rear door closing",
+     "group": "doors"
+    },
+    {
+     "name": "Var_langue",
+     "values": "not stated",
+     "meaning": "language of dash panel and some signage",
+     "group": "display"
+    },
+    {
+     "name": "Var_dev",
+     "values": "0-3",
+     "meaning": "automatic door mode (separate 3.0 guide): 0 manual, 1 auto/manual with button, 2 French auto (DEV), 3 full auto; behaviour differs for modern and Actia dash",
+     "group": "doors"
+    }
+   ]
+  },
+  {
+   "id": "man-new-lions-city",
+   "title": "MAN New Lions City",
+   "folders": [
+    "MAN_NewLionsCity"
+   ],
+   "setvars": [
+    {
+     "name": "vis_CTI_Sonnenrollo",
+     "values": "0|1",
+     "meaning": "sun blind small/wide",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_123DNR",
+     "values": "0|1",
+     "meaning": "gear selector DNR or 123-DNR",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_AdBluelampe",
+     "values": "0|1",
+     "meaning": "AdBlue lamp off/on",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Haltewunschlampe",
+     "values": "0|1",
+     "meaning": "stop request lamp position",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Tuertaster_neu",
+     "values": "0|1",
+     "meaning": "old/new door buttons",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Tuertaster_Auto",
+     "values": "0|1",
+     "meaning": "0 show all door buttons, 1 only manually operable",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Tuersteuerung",
+     "values": "0-4 (solo 2 doors), 0-7 (solo 3 doors / articulated)",
+     "meaning": "which doors are manual/automatic/both; many combos",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_Stadionschalter",
+     "values": "0-2",
+     "meaning": "0 none, 1 style 1, 2 style 2 central door opener",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Fahrerschutzscheibe",
+     "values": "0|1",
+     "meaning": "small/large driver safety glass",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Tempomat",
+     "values": "0|1",
+     "meaning": "cruise control",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Totwinkelassistent",
+     "values": "0|1",
+     "meaning": "blind spot assistant",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_Mobileye",
+     "values": "0|1",
+     "meaning": "Mobileye unit",
+     "group": "driver"
+    },
+    {
+     "name": "vis_CTI_OptiView",
+     "values": "0|1",
+     "meaning": "1 OptiView mirror replacement system",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Fahrgastpendel",
+     "values": "0-3",
+     "meaning": "passenger barrier: 0 none, 1 single rear cab wall, 2 two, 3 on door separator bar (needs active bar)",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Tueranker",
+     "values": "0|1",
+     "meaning": "door anchor",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Tuerfluegelheizung",
+     "values": "0-2",
+     "meaning": "door leaf heating: 0 both, 1 front, 2 none",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_Tueraussenbeleuchtung",
+     "values": "0|1",
+     "meaning": "exterior door lights",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Tuerwarnlampen",
+     "values": "0|1",
+     "meaning": "door warning lamps",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_trennscheiben",
+     "values": "0|1",
+     "meaning": "small/big door separators; external swing and swing/sliding doors only",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Trennscheibe_LM",
+     "values": "0|1",
+     "meaning": "illuminated separator (doc labels small/big)",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Trennstange",
+     "values": "0|1",
+     "meaning": "door separator bar",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_TuerV_piepen",
+     "values": "0-3",
+     "meaning": "door closing warning, front door: 0 none, 1 before, 2 during, 3 both",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_TuerM_piepen",
+     "values": "0-3",
+     "meaning": "same, middle door",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_TuerH_piepen",
+     "values": "0-3",
+     "meaning": "same, rear door",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_TuerH2_piepen",
+     "values": "0-3",
+     "meaning": "same, second rear door",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_Sitztyp",
+     "values": "0|1",
+     "meaning": "city or intercity seats",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Innenanzeige",
+     "values": "0|1",
+     "meaning": "simple display or infotainment monitor",
+     "group": "display"
+    },
+    {
+     "name": "vis_CTI_Kennzeichen_Repaint",
+     "values": "0|1",
+     "meaning": "0 plate from OMSI plate input, 1 from CTC texture",
+     "group": "identity"
+    },
+    {
+     "name": "vis_CTI_spiegeltyp_l",
+     "values": "0|1",
+     "meaning": "driver mirror top/low hinged",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_spiegeltyp_r",
+     "values": "0|1",
+     "meaning": "door mirror long/short",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Windschutzscheibe",
+     "values": "0-2",
+     "meaning": "rain sensor pre-series, series, with Mobileye",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Front",
+     "values": "0|1",
+     "meaning": "black/painted front panel",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Scheinwerfer",
+     "values": "0|1",
+     "meaning": "LED/halogen headlights",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Nebelscheinwerfer",
+     "values": "0|1",
+     "meaning": "fog lights",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Seitenblinker",
+     "values": "0|1",
+     "meaning": "LED/old side indicator",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Zusatzblinker",
+     "values": "0|1",
+     "meaning": "additional indicators; articulated only",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Aussentuertaster",
+     "values": "0|1",
+     "meaning": "external door button beside door or on door leaf (swing doors only)",
+     "group": "doors"
+    },
+    {
+     "name": "vis_cti_aussenkiwataster",
+     "values": "0|1",
+     "meaning": "external stroller button beside door or on leaf (lowercase prefix in doc)",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_doortype_v",
+     "values": "0-3",
+     "meaning": "front door type: 0 pneumatic interior swing, 1 external swing, 2 external swing-sliding, 3 electric interior swing",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_doortype_m",
+     "values": "0-3",
+     "meaning": "middle door type, same coding",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_doortype_h",
+     "values": "0-3",
+     "meaning": "rear door type, same coding",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_doortype_h2",
+     "values": "0-3",
+     "meaning": "second rear door type, same coding",
+     "group": "doors"
+    },
+    {
+     "name": "vis_CTI_Klappfenster",
+     "values": "0-2",
+     "meaning": "none / swing windows (solo 2, arti 4) / (solo 4, arti 6)",
+     "group": "interior"
+    },
+    {
+     "name": "vis_CTI_Matrix_LED_Polycolor",
+     "values": "0|1",
+     "meaning": "single/multi colour destination display; needs adapted hof file else white",
+     "group": "display"
+    },
+    {
+     "name": "vis_CTI_Matrix_LED_Color",
+     "values": "0|1",
+     "meaning": "orange/white destination display",
+     "group": "display"
+    },
+    {
+     "name": "vis_CTI_Matrix",
+     "values": "0|1",
+     "meaning": "wide rear destination or small rear line display",
+     "group": "display"
+    },
+    {
+     "name": "vis_CTI_Matrix_Fahrerseite",
+     "values": "0-2",
+     "meaning": "driver side matrix off/small line/wide destination",
+     "group": "display"
+    },
+    {
+     "name": "vis_CTI_disable_Hybrid",
+     "values": "0|1",
+     "meaning": "0 hybrid module on, 1 off",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Rad_V",
+     "values": "0-4",
+     "meaning": "wheel front axle: 0 rim, 1-3 hubcap type, 4 rim type 2 (front axle only)",
+     "group": "wheels"
+    },
+    {
+     "name": "vis_CTI_Rad_M",
+     "values": "0-3",
+     "meaning": "wheel middle axle",
+     "group": "wheels"
+    },
+    {
+     "name": "vis_CTI_Rad_H",
+     "values": "0-3",
+     "meaning": "wheel rear axle",
+     "group": "wheels"
+    },
+    {
+     "name": "vis_CTI_Rad_H2",
+     "values": "0-3",
+     "meaning": "wheel second rear axle",
+     "group": "wheels"
+    },
+    {
+     "name": "vis_CTI_Radbesen",
+     "values": "0|1",
+     "meaning": "wheel broom",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Anhaengerkupplung",
+     "values": "0|1",
+     "meaning": "trailer coupling; not 19C",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Koffertraeger",
+     "values": "0|1",
+     "meaning": "carrier eyelets; not 19C",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Fahrradtraeger",
+     "values": "0|1",
+     "meaning": "bicycle carrier; not 19C",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_CTI_Motor_Typ",
+     "values": "0-2",
+     "meaning": "280 hp, 320 hp, 360 hp",
+     "group": "drivetrain"
+    },
+    {
+     "name": "vis_CTI_achse",
+     "values": "0|1",
+     "meaning": "axle ratio 5.67 city or 4.56 intercity",
+     "group": "drivetrain"
+    }
+   ]
+  },
+  {
+   "id": "iveco-crealis",
+   "title": "IVECO BUS Crealis Family (Natural Power)",
+   "folders": [
+    "ADCrealis-Fam"
+   ],
+   "setvars": [
+    {
+     "name": "svr_light_setcolor",
+     "values": "0-4",
+     "meaning": "interior light colour: 0 off, 1 green, 2 red, 3 blue, 4 orange",
+     "group": "interior"
+    },
+    {
+     "name": "svr_wheel_rims",
+     "values": "0|1",
+     "meaning": "wheel rims",
+     "group": "wheels"
+    },
+    {
+     "name": "svr_lower_window",
+     "values": "0|1",
+     "meaning": "side low windows (bays)",
+     "group": "interior"
+    },
+    {
+     "name": "svr_seat",
+     "values": "0-2",
+     "meaning": "seat model: 0 Compin SB09, 1 Compin Perseus, 2 Ster 8MS",
+     "group": "interior"
+    },
+    {
+     "name": "svr_airconditionning",
+     "values": "0-4",
+     "meaning": "0 none, 1 A/C, 2 driver A/C, 3 powered ventilation, 4 driver A/C + ventilation",
+     "group": "climate"
+    },
+    {
+     "name": "svr_door2_type",
+     "values": "0|1",
+     "meaning": "door 2 0 internal travel, 1 external sliding",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door3_type",
+     "values": "0|1",
+     "meaning": "door 3 type (same coding); 12M 3P and up",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door4_type",
+     "values": "0|1",
+     "meaning": "door 4 type (same coding); 18M 4-door",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door_2_self_enabled",
+     "values": "0-3",
+     "meaning": "self-service door: 0 off, 1 interior and exterior, 2 interior only, 3 interior active with exterior shutters (as tabulated)",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door_2_wreq_enabled",
+     "values": "0|1",
+     "meaning": "door 2 ramp request button: 0 off, 1 outside active / shutter inside (as tabulated)",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door_3_self_enabled",
+     "values": "0-3",
+     "meaning": "same as door 2 self (value coding stated for doors 3 and 4)",
+     "group": "doors"
+    },
+    {
+     "name": "svr_door_4_self_enabled",
+     "values": "0-3",
+     "meaning": "same as door 2 self",
+     "group": "doors"
+    },
+    {
+     "name": "svr_self_mode",
+     "values": "0|1",
+     "meaning": "normal or alternative automatic door management",
+     "group": "doors"
+    },
+    {
+     "name": "svr_blinker_buzzer_enabled",
+     "values": "0|1",
+     "meaning": "turn signal buzzer in dashboard",
+     "group": "driver"
+    },
+    {
+     "name": "svr_stoprequest_tone",
+     "values": "0-2",
+     "meaning": "0 manufacturer tone, 1 custom 1, 2 custom 2",
+     "group": "sound"
+    },
+    {
+     "name": "svr_retarder",
+     "values": "0|1",
+     "meaning": "manual retarder control",
+     "group": "driver"
+    },
+    {
+     "name": "svr_ceiling",
+     "values": "0|1",
+     "meaning": "0 default, 1 flat ceiling (no bevel)",
+     "group": "interior"
+    },
+    {
+     "name": "svr_advert_back",
+     "values": "0-2",
+     "meaning": "0 off, 1 frame only, 2 frame and ad",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_advert_left_1",
+     "values": "0-2",
+     "meaning": "front left flank advert, same coding; 18M",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_advert_left_2",
+     "values": "0-2",
+     "meaning": "rear left flank advert; 18M",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_advert_left",
+     "values": "0-2",
+     "meaning": "left flank advert; 12M",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_advert_right",
+     "values": "0-2",
+     "meaning": "right flank advert",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_force_closing_doors",
+     "values": "0|1",
+     "meaning": "forced door closing button",
+     "group": "driver"
+    },
+    {
+     "name": "svr_auto_mode",
+     "values": "0|1",
+     "meaning": "setvar management by park number (automatic assignment)",
+     "group": "identity"
+    },
+    {
+     "name": "svr_tank_extension",
+     "values": "not in table",
+     "meaning": "larger gas tank (no value row given)",
+     "group": "drivetrain"
+    },
+    {
+     "name": "svr_mirrors",
+     "values": "0|2",
+     "meaning": "0 default, 2 camera rear view (value 1 not shown)",
+     "group": "exterior"
+    },
+    {
+     "name": "svr_mild_hybrid",
+     "values": "0|1",
+     "meaning": "mild hybrid mode",
+     "group": "drivetrain"
+    },
+    {
+     "name": "svr_wheels",
+     "values": "0|1",
+     "meaning": "0 default, 1 wheel covers",
+     "group": "wheels"
+    },
+    {
+     "name": "svr_autonum_disable",
+     "values": "0|1",
+     "meaning": "0 automatic numbering/registration, 1 off",
+     "group": "identity"
+    }
+   ]
+  },
+  {
+   "id": "citybus-s31x",
+   "title": "Citybus S31X (Setra S315NF/S319NF)",
+   "folders": [
+    "Citybus_S31x"
+   ],
+   "setvars": [
+    {
+     "name": "ver_sol",
+     "values": "0-3 (3 on S315NF 2+2 Euro2, 2 on 2+2 Euro3)",
+     "meaning": "floor plan; each is compatible only with some ver_sieges: floor 0 with seats 0 and 2, floor 1 with seats 01, floor 2 with seats 011",
+     "group": "interior"
+    },
+    {
+     "name": "ver_sieges",
+     "values": "2-4 options",
+     "meaning": "seat layout/fabric; codes 0, 01, 011, 2 (2+2 Euro2), 0 and 01 (2+2 Euro3), 2 options on 1+2 Euro3 (solid or fabric backs)",
+     "group": "interior"
+    },
+    {
+     "name": "vis_enjo",
+     "values": "0|1 (ON/OFF)",
+     "meaning": "wheel cover option; default OFF except S315NF 1+2+1 Euro3 (ON); the description page calls it vis_enjol",
+     "group": "wheels"
+    },
+    {
+     "name": "ver_plaques",
+     "values": "0|1",
+     "meaning": "small front plate (Switzerland, Italy) versus normal size plate",
+     "group": "exterior"
+    },
+    {
+     "name": "ver_logos",
+     "values": "?",
+     "meaning": "old logo design on Euro3; needs the official logos mod from OMSI webdisk",
+     "group": "exterior"
+    },
+    {
+     "name": "ver_clim",
+     "values": "0|1",
+     "meaning": "1 big A/C unit; default ON on 1+2 variants, OFF on 2+2",
+     "group": "climate"
+    },
+    {
+     "name": "ver_dash",
+     "values": "0|1",
+     "meaning": "0 standard dash, 1 VDO dash",
+     "group": "driver"
+    },
+    {
+     "name": "ver_body",
+     "values": "0|1",
+     "meaning": "cooling style: 0 extended cooling (default 2+2), 1 standard (default 1+2); change with ver_body=1",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_pub",
+     "values": "0|1",
+     "meaning": "advertising panels; rear plate becomes small square",
+     "group": "exterior"
+    }
+   ]
+  },
+  {
+   "id": "iveco-urbanway",
+   "title": "IVECO BUS Urbanway (Nerosy)",
+   "folders": [],
+   "setvars": [
+    {
+     "name": "vis_clim",
+     "values": "0-2",
+     "meaning": "0 hidden, 1 driver A/C, 2 full A/C",
+     "group": "climate"
+    },
+    {
+     "name": "vis_clim_hide",
+     "values": "0|1",
+     "meaning": "must be 1 when vis_clim=2",
+     "group": "climate"
+    },
+    {
+     "name": "advert_left",
+     "values": "0-2",
+     "meaning": "0 hidden, 1 empty frames, 2 ads",
+     "group": "exterior"
+    },
+    {
+     "name": "advert_right",
+     "values": "0-2",
+     "meaning": "same",
+     "group": "exterior"
+    },
+    {
+     "name": "advert_front",
+     "values": "0-2",
+     "meaning": "same",
+     "group": "exterior"
+    },
+    {
+     "name": "advert_back",
+     "values": "0-2",
+     "meaning": "same",
+     "group": "exterior"
+    },
+    {
+     "name": "tp_pdl",
+     "values": "0|1",
+     "meaning": "roof hatches/skylights hidden or displayed",
+     "group": "exterior"
+    },
+    {
+     "name": "bode2_f",
+     "values": "0|1",
+     "meaning": "door 2 0 Ventura, 1 Bode",
+     "group": "doors"
+    },
+    {
+     "name": "bode3_f",
+     "values": "0|1",
+     "meaning": "door 3 type",
+     "group": "doors"
+    },
+    {
+     "name": "bode4_f",
+     "values": "0|1",
+     "meaning": "door 4 type",
+     "group": "doors"
+    },
+    {
+     "name": "blinker_buzzer_on",
+     "values": "0|1",
+     "meaning": "turn signal buzzer",
+     "group": "driver"
+    },
+    {
+     "name": "self_mode",
+     "values": "0|1",
+     "meaning": "alternative automatic door operating mode",
+     "group": "doors"
+    },
+    {
+     "name": "remove_bevel_top",
+     "values": "0|1",
+     "meaning": "remove ceiling relief",
+     "group": "interior"
+    },
+    {
+     "name": "tp_logo",
+     "values": "0|1",
+     "meaning": "alternative badges",
+     "group": "exterior"
+    },
+    {
+     "name": "vis_cl1_sp",
+     "values": "0|1",
+     "meaning": "horizontal holding bars (Ventura doors only)",
+     "group": "interior"
+    },
+    {
+     "name": "ver_retro",
+     "values": "0|1",
+     "meaning": "0 light mirrors, 1 reinforced mirrors (+ right mirror)",
+     "group": "exterior"
+    },
+    {
+     "name": "ASS_tone",
+     "values": "0-5",
+     "meaning": "stop request tone 1-5 (0-4) or custom (5)",
+     "group": "sound"
+    },
+    {
+     "name": "ver_phase",
+     "values": "0|1",
+     "meaning": "0 phase 1 (2014-2017), 1 phase 2 (since 2018)",
+     "group": "body"
+    }
+   ]
+  }
+ ]
+}
