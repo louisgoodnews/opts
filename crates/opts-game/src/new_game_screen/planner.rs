@@ -66,6 +66,20 @@ pub struct PlannerState {
     /// The date was chosen by the user or remembered from the last drive: choosing a map keeps
     /// it instead of setting the map's default date ([`default_map_date`]).
     pub date_chosen: bool,
+    /// The time of day was chosen by the user or remembered from the last drive: choosing a
+    /// map keeps it instead of setting the map's default time ([`default_start_clock`]).
+    pub time_chosen: bool,
+    /// Where the time of day shown comes from while it is still a default.
+    pub time_source: Option<TimeSource>,
+}
+
+/// Where a default time of day comes from (shown next to the time in step When).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimeSource {
+    /// The map's saved clock (`laststn.osn` `[time]`).
+    Map,
+    /// The device's current local time.
+    Now,
 }
 
 /// A one-line remark the wizard shows on a step.
@@ -242,6 +256,8 @@ pub struct MapEra {
     pub years: Option<(i32, i32)>,
     /// `[realyearoffset]`: years added to today's date (0 when absent).
     pub real_year_offset: i32,
+    /// The time of day (hour, minute) of the map's `laststn.osn` `[time]` block, if it has one.
+    pub start_clock: Option<(u32, u32)>,
 }
 
 impl MapEra {
@@ -250,16 +266,48 @@ impl MapEra {
         Self {
             years: manifest.years.map(|(a, b)| (a.min(b), a.max(b))),
             real_year_offset: manifest.real_year_offset.unwrap_or(0),
+            start_clock: None,
         }
     }
 
-    /// Reads `maps/<folder>/global.cfg` below the installation; `None` when it cannot be read.
+    /// Reads `maps/<folder>/global.cfg` and the start of `laststn.osn` below the installation;
+    /// `None` when neither tells anything.
     pub fn read(root: &std::path::Path, folder: &str) -> Option<Self> {
-        let path = root.join("maps").join(folder).join("global.cfg");
-        let bytes = std::fs::read(path).ok()?;
-        opts_core::formats::map::MapManifest::parse(&bytes)
+        let dir = root.join("maps").join(folder);
+        let era = std::fs::read(dir.join("global.cfg"))
             .ok()
-            .map(|m| Self::of(&m))
+            .and_then(|bytes| opts_core::formats::map::MapManifest::parse(&bytes).ok())
+            .map(|m| Self::of(&m));
+        let start_clock = read_start_clock(&dir);
+        if era.is_none() && start_clock.is_none() {
+            return None;
+        }
+        Some(Self {
+            start_clock,
+            ..era.unwrap_or_default()
+        })
+    }
+}
+
+/// The time of day of `<map dir>/laststn.osn` (`[time]`): only the first few KB are read.
+fn read_start_clock(map_dir: &std::path::Path) -> Option<(u32, u32)> {
+    use opts_core::formats::map::{OsnTime, OSN_TIME_PREFIX_BYTES};
+    use std::io::Read;
+    let mut prefix = Vec::new();
+    std::fs::File::open(map_dir.join("laststn.osn"))
+        .ok()?
+        .take(OSN_TIME_PREFIX_BYTES as u64)
+        .read_to_end(&mut prefix)
+        .ok()?;
+    OsnTime::parse(&prefix).map(|t| t.clock())
+}
+
+/// The time of day a plan starts at when the user has not chosen one: the map's saved clock,
+/// else `now`; with the source for the label.
+pub fn default_start_clock(era: &MapEra, now: (u32, u32)) -> ((u32, u32), TimeSource) {
+    match era.start_clock {
+        Some(clock) => (clock, TimeSource::Map),
+        None => (now, TimeSource::Now),
     }
 }
 
@@ -460,6 +508,7 @@ mod tests {
         let spandau = MapEra {
             years: Some((1986, 1994)),
             real_year_offset: -25,
+            ..MapEra::default()
         };
         // 2026-10-17 − 25 years = 2001-10-17, after the map's last year.
         assert_eq!(
@@ -480,6 +529,7 @@ mod tests {
         let open = MapEra {
             years: None,
             real_year_offset: -1,
+            ..MapEra::default()
         };
         assert_eq!(
             default_map_date(CalendarDate::new(2024, 2, 29), &open),
@@ -501,8 +551,25 @@ mod tests {
             MapEra::of(&m),
             MapEra {
                 years: Some((1986, 1994)),
-                real_year_offset: -25
+                real_year_offset: -25,
+                start_clock: None
             }
+        );
+    }
+
+    #[test]
+    fn the_start_clock_is_the_maps_saved_time_else_now() {
+        let with = MapEra {
+            start_clock: Some((21, 33)),
+            ..MapEra::default()
+        };
+        assert_eq!(
+            default_start_clock(&with, (9, 5)),
+            ((21, 33), TimeSource::Map)
+        );
+        assert_eq!(
+            default_start_clock(&MapEra::default(), (9, 5)),
+            ((9, 5), TimeSource::Now)
         );
     }
 

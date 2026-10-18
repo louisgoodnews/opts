@@ -15,8 +15,8 @@ use super::history::PlannerHistory;
 use super::livery::LiveryState;
 use super::options::{close_options, open_options, OptionsModal};
 use super::planner::{
-    default_map_date, quick_time_of, set_setup_date, step_field, today, validate, Field, MapEra,
-    PlannerState, PlannerStep, QUICK_TIMES,
+    default_map_date, default_start_clock, quick_time_of, set_setup_date, step_field, today,
+    validate, Field, MapEra, PlannerState, PlannerStep, QUICK_TIMES,
 };
 use super::screen::step_invalid;
 use super::step_what::{fill_none_detail, fill_what_detail, NONE_ID};
@@ -86,12 +86,17 @@ pub fn handle_actions(
                 let (h, m) = quick_time_of(&QUICK_TIMES[i.min(4)], wall_clock());
                 env.setup.hour = h;
                 env.setup.minute = m;
+                env.state.time_chosen = true;
+                env.state.time_source = None;
             }
             PlannerAction::Weather(id) => id.clone_into(&mut env.setup.weather_preset),
             PlannerAction::Step(field, delta) => {
                 step_field(&mut env.setup, field, delta, false);
                 if Field::DATE.contains(&field) {
                     env.state.date_chosen = true;
+                } else {
+                    env.state.time_chosen = true;
+                    env.state.time_source = None;
                 }
             }
             PlannerAction::Livery(name) => env.setup.selected_livery = name,
@@ -235,9 +240,9 @@ pub fn handle_list_events(
                     continue;
                 };
                 choose_map(&mut setup, map, &history);
-                if !state.date_chosen {
-                    // The map's default date: today shifted by its `[realyearoffset]`, inside
-                    // its `[years]` (read once per map from `global.cfg`).
+                if !state.date_chosen || !state.time_chosen {
+                    // What the map says about its time, read once per map: `[years]` and
+                    // `[realyearoffset]` of `global.cfg`, the clock of `laststn.osn`.
                     let era = eras
                         .entry(map.id.clone())
                         .or_insert_with(|| {
@@ -245,10 +250,24 @@ pub fn handle_list_events(
                                 .and_then(|root| MapEra::read(&root, &map.id))
                         })
                         .unwrap_or_default();
-                    let today = fixed_today.as_deref().map_or_else(today, |t| t.date());
-                    let date = default_map_date(today, &era);
-                    if super::planner::setup_date(&setup) != date {
-                        set_setup_date(&mut setup, date);
+                    if !state.date_chosen {
+                        // The map's default date: today shifted by its `[realyearoffset]`,
+                        // inside its `[years]`.
+                        let today = fixed_today.as_deref().map_or_else(today, |t| t.date());
+                        let date = default_map_date(today, &era);
+                        if super::planner::setup_date(&setup) != date {
+                            set_setup_date(&mut setup, date);
+                        }
+                    }
+                    if !state.time_chosen {
+                        // The map's saved time of day, else the time now (M-0070).
+                        let ((hour, minute), source) = default_start_clock(&era, wall_clock());
+                        if (setup.hour, setup.minute) != (hour, minute) {
+                            (setup.hour, setup.minute) = (hour, minute);
+                        }
+                        if state.time_source != Some(source) {
+                            state.time_source = Some(source);
+                        }
                     }
                 }
                 let ctx = BuildCtx {

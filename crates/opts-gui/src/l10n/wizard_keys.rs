@@ -249,6 +249,8 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_STEP_LESS,
     wiz::WIZ_STEP_MORE,
     wiz::WIZ_WHEN_ERA_HINT,
+    wiz::WIZ_WHEN_SOURCE_MAP,
+    wiz::WIZ_WHEN_SOURCE_NOW,
     wiz::WIZ_MONTH_1,
     wiz::WIZ_MONTH_2,
     wiz::WIZ_MONTH_3,
@@ -413,6 +415,10 @@ pub mod wiz {
     pub const WIZ_STEP_MORE: &str = "wiz-step-more";
     /// `wiz-when-era-hint`.
     pub const WIZ_WHEN_ERA_HINT: &str = "wiz-when-era-hint";
+    /// `wiz-when-source-map`.
+    pub const WIZ_WHEN_SOURCE_MAP: &str = "wiz-when-source-map";
+    /// `wiz-when-source-now`.
+    pub const WIZ_WHEN_SOURCE_NOW: &str = "wiz-when-source-now";
     /// `wiz-month-1`.
     pub const WIZ_MONTH_1: &str = "wiz-month-1";
     /// `wiz-month-2`.

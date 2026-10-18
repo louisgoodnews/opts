@@ -326,7 +326,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](docs/src/roadmap/phase-9/M-0065.md)
   - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
   - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
-- [ ] **🕗 Start Time Defaults from the Map** — [M-0070](docs/src/roadmap/phase-9/M-0070.md)
+- [x] **🕗 Start Time Defaults from the Map** — [M-0070](docs/src/roadmap/phase-9/M-0070.md)
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [x] **🗺️ HUD Layout Rework** — [M-0071](docs/src/roadmap/phase-9/M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).

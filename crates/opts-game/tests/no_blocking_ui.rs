@@ -81,6 +81,7 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     ("new_game_screen/history.rs", ".save_to(", "the planner history: one small file, written on a click (star, start)"),
     ("new_game_screen/history.rs", ".save()", "same: the planner's own `save`"),
     ("new_game_screen/planner.rs", "std::fs", "`MapEra::read`: one 1 kB `global.cfg` per map, read once on the user's click in the map list (candidate for a worker)"),
+    ("new_game_screen/planner.rs", "File::open", "`read_start_clock`: the first 4 kB of one `laststn.osn` per map, read once on the click in the map list together with the `global.cfg` above (candidate for the same worker)"),
     ("new_game_screen/systems.rs", "known_omsi_root(", "same click: path lookup for `MapEra::read`"),
     ("new_game_screen/repaints.rs", "std::fs", "repaint discovery: runs inside the IoTaskPool task of `livery::request`"),
     ("new_game_screen/repaints.rs", ".is_dir()", "same task"),

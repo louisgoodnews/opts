@@ -101,7 +101,7 @@ Tile coordinates are integers; the file name follows `tile_<x>_<y>.map` in 16,60
 
 ### `laststn.osn` keywords [C]
 
-40 files, all UTF-16LE. A `.osn` is a **scenario / saved situation**.
+45 files, all UTF-16LE (40 when this page was first written). A `.osn` is a **scenario / saved situation**.
 
 | Keyword | Lines | Meaning |
 | :--- | :--- | :--- |
@@ -116,6 +116,20 @@ Tile coordinates are integers; the file name follows `tile_<x>_<y>.map` in 16,60
 | `[tt_active]`, `[settimetable]`, `[actuweather]` | 2 / 7–9 / — | Active timetable, tour assignment, weather. |
 
 Semantics beyond the table are ❓; the file is a state dump that OPTS can ignore initially except `[map]`, `[time]`, `[egopos]`.
+
+#### The `[time]` block as the map's start time (M-0070, corpus 2026-10-18) [C]
+
+`global.cfg` has **no** start time or date key (47 maps, every tag counted). The only clock a map carries is the `[time]` block of its `laststn.osn`, the state OMSI saved when the map author last left the map:
+
+| Fact | Value |
+| :--- | :--- |
+| Files | 45 of the 47 installed maps have a `laststn.osn` (Grand Paris-Moulon and Lemmental_Neuenbreid have none); all 45 are UTF-16LE with BOM and all 45 have the block |
+| Position | `[time]` starts within the first **364 bytes** of files of 848 bytes to 285 KB, so a reader needs only the first few KB (`OSN_TIME_PREFIX_BYTES` = 4096) |
+| Layout | the five lines after `[time]`: year, day of the year (1 to 366), hour, minute, seconds with decimals |
+| Hours | 0 to 23, spread over the day: 6 to 9 h (11 maps), 10 to 14 h (22), 15 to 16 h (3), 19 to 23 h (8), one at 0 h |
+| Years | 1988 to 2028; for the 36 maps that have `[years]`, the saved year is **outside** it in 13 |
+
+Because the saved year disagrees with `[years]` for more than a third of the maps, OPTS takes only the **time of day** (hour and minute) from the block as the *When* step's default; the date keeps the [map default date](../../roadmap/phase-9/wizard-and-loading.md) (today shifted by `[realyearoffset]`, clamped into `[years]`). Without the file or the block the default is the device's current local time. Reader: `opts_core::formats::map::OsnTime::parse`; corpus test `crates/opts-core/tests/osn_corpus.rs`. Whether OMSI itself starts a new game at this time is not known (❓ Q-G08).
 
 ### `.dsc`
 
@@ -188,7 +202,8 @@ tile_0_0.map
 | Q-G04 | Which listed tiles OMSI requires to exist (11,471 of 16,639 listed tiles are present). | 🟡 Medium |
 | Q-G05 | Exact meaning of `[addseason]` day range wrap-around and the `[worldcoordinates]`, `[realrail]`, `[dynhelperactive]` flags. | 🟡 Medium |
 | Q-G06 | Does OMSI accept a UTF-8 `global.cfg` (3 exist) interchangeably with UTF-16? | 🟢 Low |
-| Q-G07 | `.osn` field meanings (`[time]`, `[egopos]`, vehicle `[vars]` ordering). | 🟢 Low |
+| Q-G07 | `.osn` field meanings (`[egopos]`, vehicle `[vars]` ordering; `[time]` layout is settled above). | 🟢 Low |
+| Q-G08 | Does OMSI start a new game on a map at the `laststn.osn` `[time]`, or at the current clock? Test: start a new game in OMSI on a map whose saved hour differs from the wall clock and read the time. | 🟡 Medium |
 
 ---
 
