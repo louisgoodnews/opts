@@ -11,7 +11,8 @@
 //!   when `q mod 4 = 0`, y when `q mod 6 = 0`, z when `q mod 7 = 0`) and the normal's permutation;
 //! * `sᵢ₊₁ = n·sᵢ + ⌊600·|frac(x)·frac(y)·frac(z)|⌋ mod 256` from the vertex's true position.
 //!
-//! Files with key `0` start at `s₀ = 0` and keep no memory: `sᵢ₊₁` is the data term alone.
+//! Files with key `0` start at `s₀ = 0` and keep no memory: `sᵢ₊₁` is the data term alone; with
+//! the alternative-seed flag the constant `KEY0_ALT_CONSTANT` (304) is added to it at every step.
 //!
 //! The jitter is `fl32(c²) / 10000` computed in float32 (`c = q mod 100`, or `2q mod 100` for v)
 //! and was added in float32: `stored = fl32(u + j)`. Measured on the twins, that addition
@@ -29,6 +30,11 @@ use super::O3d;
 
 /// Offset added to the seed of files written with the alternative seed (header flags bit 1).
 const ALT_SEED_OFFSET: i64 = 381;
+/// Constant added at every step by files with key `0` and the alternative-seed flag. Found by
+/// scanning the constant of the memoryless recurrence over the 20 flagged key-`0` files of the
+/// installation (Trabant, MB T1, Peugeot 106, the EN92/GN92 wagons): exactly one value decodes
+/// every one of them to a coherent mesh (`o3d.md` Addendum 16).
+const KEY0_ALT_CONSTANT: i64 = 304;
 /// Range of the per-vertex state.
 const MODULUS: i64 = 8000;
 /// Below this `q` the normal of a swap-x/y vertex is stored with y and z swapped.
@@ -64,6 +70,17 @@ pub fn generator(o: &O3d) -> Option<(i64, bool)> {
         k += ALT_SEED_OFFSET;
     }
     Some((k.rem_euclid(MODULUS), true))
+}
+
+/// The constant added to the state at every step: `KEY0_ALT_CONSTANT` for files with key `0`
+/// and the alternative-seed flag, otherwise zero.
+#[must_use]
+pub fn constant(o: &O3d) -> i64 {
+    if o.encryption_key == Some(0) && o.header_flags & 2 != 0 {
+        KEY0_ALT_CONSTANT
+    } else {
+        0
+    }
 }
 
 /// The seed of a keyed mesh, or `None` for plain files.
@@ -128,7 +145,15 @@ fn permute(p: [usize; 3], v: Vec3) -> Vec3 {
 /// Decodes the mesh in place: positions, texture coordinates and normals become the originals.
 /// Returns the per-vertex decisions, or `None` when the file has no usable seed (plain, key `0`).
 pub fn decode(o: &mut O3d) -> Option<Vec<VertexDecision>> {
-    let (mut s, accumulate) = generator(o)?;
+    let (s, accumulate) = generator(o)?;
+    let constant = constant(o);
+    Some(decode_with(o, s, accumulate, constant))
+}
+
+/// Decodes the mesh in place with a given seed and state rule (the generator of a file is
+/// [`generator`] and [`constant`]; tools try others on files whose generator is not known).
+pub fn decode_with(o: &mut O3d, seed: i64, accumulate: bool, constant: i64) -> Vec<VertexDecision> {
+    let mut s = seed;
     let n = o.vertices.len() as i64;
     let mut out = Vec::with_capacity(o.vertices.len());
     for v in &mut o.vertices {
@@ -148,17 +173,18 @@ pub fn decode(o: &mut O3d) -> Option<Vec<VertexDecision>> {
         }
         v.normal = permute(d.normal, nrm);
         let carry = if accumulate { n * s } else { 0 };
-        s = (carry + data_term(v.position)).rem_euclid(MODULUS);
+        s = (carry + constant + data_term(v.position)).rem_euclid(MODULUS);
         out.push(d);
     }
     o.exact_decoded = true;
-    Some(out)
+    out
 }
 
 /// The exporter's scrambling of a plain mesh (the inverse of [`decode`]), for tests and tools.
 pub fn scramble(o: &mut O3d, key: u32) {
     o.encryption_key = Some(key);
     let (mut s, accumulate) = generator(o).expect("keyed");
+    let constant = constant(o);
     let n = o.vertices.len() as i64;
     for v in &mut o.vertices {
         let q = (n * s).rem_euclid(MODULUS);
@@ -184,7 +210,7 @@ pub fn scramble(o: &mut O3d, key: u32) {
         }
         v.normal = Vec3::from(nrm);
         let carry = if accumulate { n * s } else { 0 };
-        s = (carry + term).rem_euclid(MODULUS);
+        s = (carry + constant + term).rem_euclid(MODULUS);
     }
     o.exact_decoded = false;
 }
@@ -220,9 +246,47 @@ mod tests {
         }
     }
 
+    /// A mesh whose stored normals disagree with its faces and whose positions have no floor: the
+    /// coherence heuristics of `vertex_layout` call it unreadable.
+    fn incoherent(key: Option<u32>) -> O3d {
+        let mut m = mesh(60, key);
+        for (i, v) in m.vertices.iter_mut().enumerate() {
+            let a = i as f32 * 2.399;
+            v.position = Vec3::new(a.sin() * 2.0, a.cos() * 2.0, (a * 0.37).sin() * 2.0);
+            v.normal = if i % 2 == 0 { Vec3::X } else { -Vec3::X };
+        }
+        m.indices = (0..58).map(|i| [i, i + 1, i + 2]).collect();
+        m.face_materials = vec![0; m.indices.len()];
+        m
+    }
+
+    /// M-0066: an exactly decoded mesh is trusted whatever its normals look like, like a plain
+    /// file; the loader used to refuse such meshes (`Unreadable`), so objects were missing.
+    #[test]
+    fn an_exactly_decoded_mesh_is_never_unreadable() {
+        let plain = incoherent(None);
+        assert_eq!(
+            plain.vertex_layout(),
+            super::super::VertexLayout::RecomputedNormals,
+            "the same mesh as a plain file"
+        );
+        let mut keyed = incoherent(None);
+        scramble(&mut keyed, 0x31B6);
+        assert_eq!(
+            keyed.vertex_layout(),
+            super::super::VertexLayout::Unreadable,
+            "scrambled: unreadable until decoded"
+        );
+        decode(&mut keyed).expect("keyed");
+        assert_eq!(
+            keyed.vertex_layout(),
+            super::super::VertexLayout::RecomputedNormals
+        );
+    }
+
     #[test]
     fn scrambling_and_decoding_round_trip() {
-        for (key, flags) in [(0x31B6, 0), (13730, 2), (0, 0), (5, 0)] {
+        for (key, flags) in [(0x31B6, 0), (13730, 2), (0, 0), (5, 0), (0, 2)] {
             let mut plain = mesh(40, None);
             plain.header_flags = flags;
             let original = plain.clone();

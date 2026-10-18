@@ -28,12 +28,12 @@ use crate::install::OmsiInstall;
 use crate::material::o3d_material_to_standard_material;
 use crate::texture::load_bevy_image;
 
-/// Keyed (decoded) meshes larger than this along any axis are rejected as corrupt (metres).
-pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 400.0;
-
-/// Plain meshes are trusted far more: road and crossing models are legitimately hundreds of
-/// metres long (up to ~700 m observed), so only absurd sizes count as corrupt.
-pub const MAX_PLAUSIBLE_PLAIN_EXTENT_M: f32 = 3000.0;
+/// Meshes larger than this along any axis are rejected as corrupt (metres). Road and crossing
+/// models are legitimately hundreds of metres long and skyline backdrops kilometres (up to
+/// 3,200 m observed); keyed meshes are decoded exactly, so they get no stricter limit than plain
+/// ones (the 400 m limit of the heuristic decoder skipped 5 city blocks of `DBC_Map` and the
+/// Hamburg backdrops, M-0066).
+pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 3000.0;
 
 /// Texture override for one `.o3d` material slot (from `[matl]` in `.sco` or `model.cfg`).
 #[derive(Debug, Clone, PartialEq)]
@@ -556,11 +556,7 @@ impl ContentLoader<'_> {
             if extent > 60.0 {
                 tracing::info!(path = %o3d_path.display(), extent, layout = ?models.first().map(O3d::vertex_layout), "large mesh");
             }
-            let limit = if models.iter().any(|m| m.encryption_key.is_some()) {
-                MAX_PLAUSIBLE_EXTENT_M
-            } else {
-                MAX_PLAUSIBLE_PLAIN_EXTENT_M
-            };
+            let limit = MAX_PLAUSIBLE_EXTENT_M;
             if extent > limit {
                 sc.stage = "extent";
                 sc.warn(|| format!("extent {extent:.0} m exceeds {limit:.0} m"));

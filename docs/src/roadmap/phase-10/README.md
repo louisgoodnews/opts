@@ -8,7 +8,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 📝 Planned, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
+- [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
 - [M-0104 — UV Decoder Texture Evidence](M-0104.md) — ✅ Approved 2026-10-14 (feasibility first; from the MAN NL/NG reinvestigation)
 - [M-0106 — Train Formation Editor v1](M-0106.md) — ✅ Implemented 2026-10-15 on `feat/train-formation-editor`; merge awaiting approval

@@ -176,6 +176,14 @@ fn audit(path: &Path, textures: &HashSet<String>, decode: bool) -> (String, Stri
         if opts_core::formats::o3d::exact::decode(&mut d).is_some() {
             codes.push("DECODED".into());
             check(&d, "dec_", &mut codes, &mut metrics);
+            // The loader refuses a mesh whose layout still reads as unreadable after decoding
+            // (M-0066): positions are exact then, so this must never happen.
+            if matches!(
+                d.vertex_layout(),
+                opts_core::formats::o3d::VertexLayout::Unreadable
+            ) {
+                codes.push("DEC_UNREADABLE".into());
+            }
         }
     }
 

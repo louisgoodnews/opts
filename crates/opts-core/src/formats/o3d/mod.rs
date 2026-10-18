@@ -212,8 +212,14 @@ impl O3d {
         }
         let layout = self.classify_by_coherence();
         // Plain files are never scrambled: whatever looks incoherent there is merely a mesh with
-        // unusable normals (poles, signs, hedges), so positions can be trusted.
-        if layout == VertexLayout::Unreadable && self.encryption_key.is_none() {
+        // unusable normals (poles, signs, hedges), so positions can be trusted. So can those of
+        // a keyed file decoded exactly (`exact`): the coherence test cannot tell a thin pole or a
+        // sign from a scramble, and refused 166 correctly decoded meshes of the installation
+        // (door poles of the VA_GS buses, bus stop signs, HH109 parts) that were then missing on
+        // screen (M-0066).
+        if layout == VertexLayout::Unreadable
+            && (self.encryption_key.is_none() || self.exact_decoded)
+        {
             return VertexLayout::RecomputedNormals;
         }
         layout
