@@ -5,6 +5,7 @@ pub mod error;
 pub mod global;
 pub mod grid;
 pub mod lists;
+pub mod osn;
 pub mod terrain;
 pub mod tile;
 pub mod water;
@@ -17,6 +18,7 @@ pub use lists::{
     parse_unsched_trafficdens, parse_unsched_vehgroups, AiEntry, AiGroup, AiLists, DensityProfile,
     GroupDensity, UnschedGroup,
 };
+pub use osn::{OsnTime, OSN_TIME_PREFIX_BYTES};
 pub use terrain::MapTerrain;
 pub use tile::{
     spline_height_offset, MapAttachedObject, MapObjectInstance, MapSplineAttachment,

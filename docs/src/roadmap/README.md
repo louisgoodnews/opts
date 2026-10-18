@@ -326,7 +326,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](phase-9/M-0065.md)
   - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
   - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
-- [ ] **🕗 Start Time Defaults from the Map** — [M-0070](phase-9/M-0070.md)
+- [x] **🕗 Start Time Defaults from the Map** — [M-0070](phase-9/M-0070.md)
   - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
 - [x] **🗺️ HUD Layout Rework** — [M-0071](phase-9/M-0071.md)
   - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
@@ -371,6 +371,48 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
 - [ ] **🏙️ Content Fidelity Pass** — [M-0090](phase-10/M-0090.md)
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
+
+## 🔭 Phase 11: Advanced Systems, Realism & Continuous Improvement
+*Goal: Build on the session-based simulator with the systems that make it feel finished: in-game map, comfort and accessibility settings, setvar and config depth, deeper and scheduled AI traffic, track switches, adaptive streaming, tunnels, real weather and its effect on driving, the OMSI event system, and a standing roadmap-review practice. Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](phase-11/README.md). Force feedback stays in [M-0102](phase-4/M-0102.md).*
+
+- [ ] **🧬 OMSI Event System Research and Consolidation** — [M-0118](phase-11/M-0118.md) — 📝 proposed 2026-10-18
+  - [ ] Event taxonomy, dispatch, base event set, parameter formats, ordering, then a consolidation design (documents).
+- [ ] **🔁 Dev Agent Roadmap Review Process** — [M-0119](phase-11/M-0119.md) — 📝 proposed 2026-10-18
+  - [ ] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).
+- [ ] **🧰 QoL Suite** — [M-0109](phase-11/M-0109.md) — 📝 proposed 2026-10-18
+  - [ ] Door camera, smooth driver view, UI scale presets 100/125/150/200 %, UI font and base font size.
+- [ ] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — 📝 proposed 2026-10-18
+  - [ ] Full-size map on M (pan, zoom, position and heading) and map switching from the Alt menu; builds on the mini map (M-0071) and sessions (M-0068/M-0069).
+- [ ] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](phase-11/M-0115.md) — 📝 proposed 2026-10-18
+  - [ ] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
+- [ ] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](phase-11/M-0110.md) — 📝 proposed 2026-10-18
+  - [ ] Alt-menu setvar editor; ints, ranges and enums beyond binary in the config manager; extends M-0078/M-0077.
+- [ ] **🚦 AI Traffic Depth** — [M-0111](phase-11/M-0111.md) — 📝 proposed 2026-10-18
+  - [ ] Audit, then obstacle braking, conservative lane change and traffic lights with `[rowdy_factor]` on top of M-0095/M-0049.
+- [ ] **🧭 Hybrid Tile and Object Streaming** — [M-0114](phase-11/M-0114.md) — 📝 proposed 2026-10-18
+  - [ ] Streaming strategy that adapts to the player's speed: tiles at speed, objects when slow.
+- [ ] **🌦️ Real Weather Research** — [M-0116](phase-11/M-0116.md) — 📝 proposed 2026-10-18
+  - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
+- [ ] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](phase-11/M-0117.md) — 📝 proposed 2026-10-18
+  - [ ] Wet and snow grip, fog visibility hint, exhaust particles.
+- [ ] **🚏 Scheduled AI Traffic** — [M-0112](phase-11/M-0112.md) — 📝 proposed 2026-10-18
+  - [ ] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).
+- [ ] **🛤️ Track Switch Interaction** — [M-0113](phase-11/M-0113.md) — 📝 proposed 2026-10-18
+  - [ ] Switch census from tiles, switch state, route announcement and lock rule for AI and player.
+
+## 🎨 Phase 12: Visual Fidelity & Advanced Physics
+*Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern lighting and anti-aliasing pipeline) and make vehicles behave under load (fuel or battery, passengers). Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](phase-12/README.md), [graphics design brief](../architecture/graphics-overhaul.md). Phase 8 keeps its own open items; M-0122 references them.*
+
+- [ ] **🧼 Material Overlays and Light Maps** — [M-0120](phase-12/M-0120.md) — 📝 proposed 2026-10-18
+  - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.
+- [ ] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](phase-12/M-0121.md) — 📝 proposed 2026-10-18
+  - [ ] Per-texture `[moisture]`/`[puddles]`, wet vehicles and scenery from the `Wetness` driver, `snow_visible` and winter variants.
+- [ ] **🧍 Passenger Load Physics** — [M-0124](phase-12/M-0124.md) — 📝 proposed 2026-10-18
+  - [ ] Dynamic mass from the passenger count into acceleration, braking, steering effort and ride height; Off/Realistic setting.
+- [ ] **⛽ Fuel and Battery State** — [M-0123](phase-12/M-0123.md) — 📝 proposed 2026-10-18
+  - [ ] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.
+- [ ] **✨ Graphics Overhaul** — [M-0122](phase-12/M-0122.md) — 📝 proposed 2026-10-18
+  - [ ] PBR audit, ambient occlusion, anti-aliasing decision, restrained bloom; benchmarked on an RTX 3060 at 1080p against the reference ([design brief](../architecture/graphics-overhaul.md)).
 
 ---
 

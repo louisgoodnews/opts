@@ -7,7 +7,9 @@ use opts_gui::not_yet::NotAvailableYet;
 use opts_gui::prelude::*;
 
 use super::choice::{spawn_choice, ChoiceStep};
-use super::planner::{era_hint, month_key, Field, PlannerStep, QUICK_TIMES};
+use super::planner::{
+    era_hint, month_key, Field, PlannerState, PlannerStep, TimeSource, QUICK_TIMES,
+};
 use super::types::NewGameSetup;
 use super::ui::{column, glyph, keyed, keyed_args, plain, row, Act, PlannerAction};
 use super::weather::{presets, Label, MAX_WIZARD_PRESETS};
@@ -21,6 +23,11 @@ pub struct WhenValue(pub Field);
 /// The era hint line (shown only outside the map's years).
 #[derive(Component, Debug, Clone, Copy)]
 pub struct EraHint;
+
+/// A line under the time that says where a default time comes from; [`refresh_when`] shows the
+/// one that matches [`PlannerState::time_source`] and none once the user has set the time.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TimeSourceLabel(pub TimeSource);
 
 /// One stepper of the plan (`shell::calendar`): ids `wizard.<step>.<field>.minus|plus`.
 pub fn stepper(commands: &mut Commands, field: Field, value: String, id_prefix: &str) -> Entity {
@@ -95,6 +102,22 @@ fn time_block(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     );
     let time = calendar::spawn_stepper_row(commands, &[hour, minute]);
     commands.entity(block).add_child(time);
+    for (source, key) in [
+        (TimeSource::Map, "wiz-when-source-map"),
+        (TimeSource::Now, "wiz-when-source-now"),
+    ] {
+        let label = commands
+            .spawn((
+                keyed(key, TypeScale::Label, ColorRole::Info),
+                TimeSourceLabel(source),
+                Node {
+                    display: Display::None,
+                    ..default()
+                },
+            ))
+            .id();
+        commands.entity(block).add_child(label);
+    }
     block
 }
 
@@ -293,17 +316,33 @@ pub fn spawn_when(commands: &mut Commands, ctx: &BuildCtx) -> Entity {
     body
 }
 
+/// Parts of the step that were just spawned and need their first refresh.
+type NewWhenParts = Or<(Added<WhenValue>, Added<TimeSourceLabel>)>;
+
 /// Keeps the stepper values and the era hint current.
+#[allow(clippy::too_many_arguments)]
 pub fn refresh_when(
     setup: Res<NewGameSetup>,
+    state: Res<PlannerState>,
     loc: Res<Localization>,
     catalogue: Res<super::types::GameCatalogue>,
     mut values: Query<(&WhenValue, &mut Text)>,
     mut hints: Query<(&mut Node, &mut L10nArgs), With<EraHint>>,
-    added: Query<(), Added<WhenValue>>,
+    mut sources: Query<(&TimeSourceLabel, &mut Node), Without<EraHint>>,
+    added: Query<(), NewWhenParts>,
 ) {
-    if !setup.is_changed() && added.is_empty() {
+    if !setup.is_changed() && !state.is_changed() && added.is_empty() {
         return;
+    }
+    for (label, mut node) in &mut sources {
+        let shown = if state.time_source == Some(label.0) && !state.time_chosen {
+            Display::Flex
+        } else {
+            Display::None
+        };
+        if node.display != shown {
+            node.display = shown;
+        }
     }
     for (v, mut text) in &mut values {
         let new = match v.0 {
