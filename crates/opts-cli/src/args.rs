@@ -60,11 +60,6 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub fullscreen: bool,
 
-    /// Let the vehicles' own scripts drive them: `M_Wheel` and the brake forces replace the
-    /// built-in drivetrain (the scripts' engine is started automatically). Experimental.
-    #[arg(long)]
-    pub script_drive: bool,
-
     /// Show an overlay with the wheel animation variables (`wheel_rotation_<n>_L/R`,
     /// `wheel_rotationspeed_<n>_l/r`) of every axle of the player's vehicle and its trailers.
     #[arg(long)]
@@ -179,7 +174,6 @@ impl Default for CliArgs {
             windowed: false,
             vsync: false,
             physics_hz: 64.0,
-            script_drive: false,
             debug_wheel_vars: false,
             window_size: "1920x1080".to_string(),
             headless: false,

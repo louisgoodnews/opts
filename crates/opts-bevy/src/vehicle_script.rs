@@ -27,10 +27,20 @@ impl Default for ScriptRadius {
 }
 
 /// Whether the vehicles' own scripts drive them: `M_Wheel` (drive torque) and the brake forces
-/// replace the built-in drivetrain's traction and braking. Off by default (`--script-drive`);
+/// replace the built-in drivetrain's traction and braking. On by default;
 /// the scripts then need the start-up of their vehicle, which [`ScriptStartup`] performs.
-#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ScriptDriveEnabled(pub bool);
+
+impl Default for ScriptDriveEnabled {
+    fn default() -> Self {
+        Self(true)
+    }
+}
+
+/// Seconds of throttle with an all-zero `M_Wheel` after which a vehicle falls back to the
+/// built-in drivetrain (its const file's torque curve).
+const NO_TORQUE_FALLBACK_S: f32 = 4.0;
 
 /// Raises the triggers a driver would use to bring a vehicle to life (battery switch, engine
 /// start) after the scripts' `{init}`, and follows the gear selector with the automatic's
@@ -238,19 +248,29 @@ pub fn script_outputs(engine: &ScriptEngine) -> Option<opts_sim::vehicle::Script
         engine.get("brakeforce")
     };
     Some(opts_sim::vehicle::ScriptDrive {
-        wheel_torque_nm: engine.get("m_wheel"),
-        brake_force_n: brake.max(0.0),
+        wheel_torque_nm: engine.get("m_wheel") * opts_sim::vehicle::M_WHEEL_UNIT,
+        brake_force_n: brake.max(0.0) * opts_sim::vehicle::BRAKE_FORCE_UNIT,
     })
+}
+
+/// What [`script_drive_system`] remembers of one vehicle's scripts.
+#[derive(Debug, Default)]
+pub struct DriveWatch {
+    idle_s: f32,
+    fallback: bool,
+    warned: bool,
 }
 
 /// Hands the scripts' torque and brake force to the physics for the next step (only when
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
+    time: Res<Time>,
     enabled: Res<ScriptDriveEnabled>,
     mut ticks: Local<u32>,
-    mut query: Query<(&mut VehicleController, &VehicleScripts)>,
+    mut watch: Local<std::collections::HashMap<Entity, DriveWatch>>,
+    mut query: Query<(Entity, &mut VehicleController, &VehicleScripts)>,
 ) {
-    for (mut controller, scripts) in &mut query {
+    for (entity, mut controller, scripts) in &mut query {
         // A pedal the scripts write themselves (cruise control, AI-style scripts) is theirs: its
         // value reaches the physics' inputs, whatever drives the vehicle.
         if let Ok(engine) = scripts.engine.lock() {
@@ -272,10 +292,36 @@ pub fn script_drive_system(
         let Ok(engine) = scripts.engine.lock() else {
             continue;
         };
+        let w = watch.entry(entity).or_default();
         let Some(drive) = script_outputs(&engine) else {
+            if !w.warned {
+                w.warned = true;
+                tracing::warn!(
+                    "the scripts of a vehicle write no `M_Wheel`: the built-in drivetrain with its constants drives it"
+                );
+            }
             controller.sim.script_drive = None;
             continue;
         };
+        // Three ways to drive: a script that hands torque to the wheels; one that never does
+        // while the driver holds the pedal (const file's torque curve, one INFO); none at all
+        // (built-in constants, one WARN, above).
+        if drive.wheel_torque_nm.abs() > 1.0 {
+            w.idle_s = 0.0;
+            w.fallback = false;
+        } else if controller.inputs().throttle() > 0.2 && engine.get("engine_on") > 0.5 {
+            w.idle_s += time.delta_secs();
+            if w.idle_s > NO_TORQUE_FALLBACK_S && !w.fallback {
+                w.fallback = true;
+                tracing::info!(
+                    "the scripts of a vehicle hand no torque to the wheels under throttle: the const file's torque curve drives it"
+                );
+            }
+        }
+        if w.fallback {
+            controller.sim.script_drive = None;
+            continue;
+        }
         *ticks = ticks.wrapping_add(1);
         if (*ticks).is_multiple_of(64) {
             tracing::debug!(

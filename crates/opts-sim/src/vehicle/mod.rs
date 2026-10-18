@@ -44,6 +44,13 @@ pub struct ScriptDrive {
     pub brake_force_n: f32,
 }
 
+/// Newton metres at the wheels per unit of the scripts' `M_Wheel`. 1.0 until the calibration
+/// experiment E1 (`docs/src/architecture/script-integration-report.md`) says otherwise ❓.
+pub const M_WHEEL_UNIT: f32 = 1.0;
+/// Newtons at the wheels per unit of the scripts' brake forces (`Brakeforce`,
+/// `Axle_Brakeforce_*`). 1.0 until experiment E1 ❓.
+pub const BRAKE_FORCE_UNIT: f32 = 1.0;
+
 /// Friction coefficient between tyres and road that limits traction and braking of a road
 /// vehicle (dry asphalt).
 pub const ROAD_FRICTION: f32 = 0.85;
