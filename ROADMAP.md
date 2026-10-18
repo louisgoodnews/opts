@@ -240,7 +240,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Implement the harness with static checks and calibrate thresholds (Phase B).
   - [ ] Script-effect checks; audio recorded only (Phase C, needs a scenery-script runtime).
   - [ ] Full corpus run and triage report (Phase D); fixes by failure category (Phase E).
-- [ ] **🛠️ Settings and Configuration through the Control Protocol** — [M-0072](docs/src/roadmap/phase-5/M-0072.md)
+- [x] **🛠️ Settings and Configuration through the Control Protocol** — [M-0072](docs/src/roadmap/phase-5/M-0072.md)
   - [ ] Reproduce the reported gap; confirm/revert and restart-required handling, batch set, export/import, registry-wide coverage test (R-10).
 - [ ] **🧭 Roadmap Adherence and Expansion** — [M-0074](docs/src/roadmap/phase-5/M-0074.md)
   - [ ] Drift audit, intake rule and automated consistency checks; gap analysis proposing the next milestones (R-06).

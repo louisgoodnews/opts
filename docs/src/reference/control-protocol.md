@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.6.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.7.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -502,9 +502,77 @@ Queues one command of the vehicle menu (see the in-game vehicle menu page); read
 | :--- | :--- | :--- | :--- |
 | `settings.list` | `category?` (string) | 1.0 | List the settings with their values (optionally one category) |
 | `settings.get` | `key` (string) | 1.0 | Value, default and options of one setting |
-| `settings.set` | `key` (string)<br>`value` (string) | 1.0 | Change a setting (validated like the settings page, saved) |
-| `settings.reset` | `key` (string) | 1.0 | Restore the default of a setting |
+| [`settings.set`](#settingsset) | `key` (string)<br>`value` (string)<br>`confirm?` (boolean) | 1.0 | Change a setting (validated like the settings page, saved) |
+| [`settings.reset`](#settingsreset) | `key` (string)<br>`confirm?` (boolean) | 1.0 | Restore the default of a setting |
+| [`settings.confirm`](#settingsconfirm) | - | 1.7 | Keep the risky setting change that waits and save it |
+| [`settings.revert`](#settingsrevert) | - | 1.7 | Undo the risky setting change that waits |
+| [`settings.set_many`](#settingsset_many) | `values` (json) | 1.7 | Change several settings at once, all or none |
+| [`settings.diff`](#settingsdiff) | - | 1.7 | The settings that differ from their defaults |
+| [`settings.export`](#settingsexport) | `all?` (boolean) | 1.7 | A profile of the changed settings, to import later |
+| [`settings.import`](#settingsimport) | `settings` (json)<br>`reset_missing?` (boolean) | 1.7 | Apply a settings profile, all or none |
 | [`hardware.profile`](#hardwareprofile) | `redetect?` (boolean) | 1.2 | The detected hardware profile and the recommended defaults (local, no identifiers) |
+
+### `settings.set`
+
+Change a setting (validated like the settings page, saved).
+
+**Result:** the setting as `settings.get` shows it, plus `previous`, `applied` (it changed), `needs_restart` and, while it waits, `pending_confirm` and `confirm_within_s`
+
+Applies and saves at once. A setting that the page protects with a 15 s prompt (`apply.revert_after_s` in `settings.list`: window mode, resolution) can instead be tried with `confirm: false`: it is applied but not saved and waits for `settings.confirm` (keep and save) or `settings.revert` (restore); after its time it is reverted by itself, like the page's prompt. Only one such change waits at a time (`1006 BUSY` otherwise); `confirm: false` on any other setting changes nothing about how it is applied. `needs_restart` is true when the change only takes effect after a restart.
+
+### `settings.reset`
+
+Restore the default of a setting.
+
+Like `settings.set` with the default value, including `confirm`.
+
+### `settings.confirm`
+
+Keep the risky setting change that waits and save it.
+
+**Result:** `{key, value, confirmed: true}`
+
+Finishes a `settings.set` or `settings.reset` with `confirm: false`. `1001 NOT_READY` when nothing waits.
+
+### `settings.revert`
+
+Undo the risky setting change that waits.
+
+**Result:** `{key, value, reverted: true}`
+
+Restores the value from before a `settings.set` or `settings.reset` with `confirm: false`. `1001 NOT_READY` when nothing waits.
+
+### `settings.set_many`
+
+Change several settings at once, all or none.
+
+**Result:** `{count, changed: [{key, previous, value, needs_restart}], unchanged, needs_restart: [keys]}`
+
+`values` is an object of setting key to value. The whole batch is validated first (unknown or unavailable keys, bad values, key bindings that clash inside the batch); if anything is refused nothing is applied and the answer is `-32602` with `data.errors: [{key, code, message}]` listing every refusal. Settings with a revert prompt are applied at once, without the `confirm` wait. Saved once at the end; at most 1000 entries.
+
+### `settings.diff`
+
+The settings that differ from their defaults.
+
+**Result:** `{count, differences: [{key, value, default}]}`
+
+Visible settings only (internal state such as the last map is left out).
+
+### `settings.export`
+
+A profile of the changed settings, to import later.
+
+**Result:** `{format: "opts-settings", version: 1, count, settings: {key: value}}`
+
+Without `all` only the settings that differ from the defaults; with `all: true` every visible setting. Hand the result (its `settings` object) to `settings.import`.
+
+### `settings.import`
+
+Apply a settings profile, all or none.
+
+**Result:** as `settings.set_many`
+
+`settings` is the object `settings.export` returned (`values` is accepted as a synonym). Validated and applied like `settings.set_many`. With `reset_missing: true` the settings that differ from the defaults and are not in the profile go back to their defaults, so the result is exactly the profile.
 
 ### `hardware.profile`
 
