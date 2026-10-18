@@ -113,6 +113,12 @@
   - [M-0117: Weather Effects on Driving and Exhaust](roadmap/phase-11/M-0117.md)
   - [M-0112: Scheduled AI Traffic](roadmap/phase-11/M-0112.md)
   - [M-0113: Track Switch Interaction](roadmap/phase-11/M-0113.md)
+- [Phase 12: Visual Fidelity & Advanced Physics](roadmap/phase-12/README.md)
+  - [M-0120: Material Overlays and Light Maps](roadmap/phase-12/M-0120.md)
+  - [M-0121: Wetness and Snow on Vehicles and Scenery](roadmap/phase-12/M-0121.md)
+  - [M-0124: Passenger Load Physics](roadmap/phase-12/M-0124.md)
+  - [M-0123: Fuel and Battery State](roadmap/phase-12/M-0123.md)
+  - [M-0122: Graphics Overhaul](roadmap/phase-12/M-0122.md)
 
 ---
 
@@ -124,6 +130,7 @@
 - [Coordinate Systems](architecture/coordinates.md)
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
+- [Graphics Overhaul (Design Brief)](architecture/graphics-overhaul.md)
 - [Performance Profiling and Frame Pacing](architecture/performance-profiling.md)
 - [Hardware Probe: Privacy Charter](architecture/hardware-probe.md)
 - [Texture Quality and Colour (Proposal)](architecture/texture-quality.md)

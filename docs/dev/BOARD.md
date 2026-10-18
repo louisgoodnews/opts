@@ -300,6 +300,13 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Add the timetable reader API for non-player vehicles (after M-0099)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
 - [ ] 🟡 **Census of switch definitions in the installed maps' tiles** (M-0113) — [Track Switch Interaction](../src/roadmap/phase-11/M-0113.md)
 
+#### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, awaiting approval)
+- [ ] 🟡 **Audit what renders today for overlays and light maps on MAN NG272 (screenshots at day and night)** (M-0120) — [Material Overlays and Light Maps](../src/roadmap/phase-12/M-0120.md)
+- [ ] 🟡 **Count `[moisture]` and `[puddles]` over the installed textures and parse them per texture** (M-0121) — [Wetness and Snow on Vehicles and Scenery](../src/roadmap/phase-12/M-0121.md)
+- [ ] 🟡 **Specify the passenger-count source and the dynamic-mass input of the M-0073 mass model** (M-0124) — [Passenger Load Physics](../src/roadmap/phase-12/M-0124.md)
+- [ ] 🟡 **Resolve the ❓ in M-0123: tank content unit, state-of-charge variable, who raises `veh_tank`** (M-0123) — [Fuel and Battery State](../src/roadmap/phase-12/M-0123.md)
+- [ ] 🟡 **Decide the anti-aliasing path (MSAA vs SMAA vs TAA) against M-0059 foliage coverage** (M-0122) — [Graphics Overhaul](../src/roadmap/phase-12/M-0122.md)
+
 ---
 
 ### 🧹 Deferred Cleanup
@@ -608,3 +615,4 @@ The agent should check these during P-001 audits:
 - `2026-10-11` — Critical review 2026-10-11 ([report](../src/meta/critical-review-2026-10-11.md)): board reconciled (In Progress shows the four active milestones, stale Ready/Backlog items archived, Blocked shows the hosting dependency), M-0052 and M-0053 added, M-0032 file created, Deferred Cleanup items from the 2026-10-08 review closed or pointed at M-0040/M-0042. WIP = 4 (red flag, recorded rather than hidden).
 - `2026-10-12` — M-0061 part B (`agent/ui-widgets`): one state mechanism (state layer, focus ring, scrim), activation on release, `UiAction` layer, layout-order focus with regions, keyboard-operable widgets, `TextField` on Bevy `TextInput`, stable UI ids + `ui.*` control commands, `NotAvailableYet` with generated list, localisation scaffold (en, de, en-XA), CI rules and the component gallery. Open: builders still have two spawn forms; legacy screens still have small targets/text (recorded in `docs/dev/progress/ui-widgets.md`).
 - `2026-10-18` — Phase 11 (M-0108–M-0119) proposed: phase page and milestone files created, first task of each milestone added to Backlog (nothing Ready until the phase is approved).
+- `2026-10-18` — Phase 12 (M-0120–M-0124) proposed: phase page, milestones and graphics design brief created; first task of each milestone in Backlog (nothing Ready until approved).

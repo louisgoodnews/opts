@@ -400,6 +400,20 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🛤️ Track Switch Interaction** — [M-0113](docs/src/roadmap/phase-11/M-0113.md) — 📝 proposed 2026-10-18
   - [ ] Switch census from tiles, switch state, route announcement and lock rule for AI and player.
 
+## 🎨 Phase 12: Visual Fidelity & Advanced Physics
+*Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern lighting and anti-aliasing pipeline) and make vehicles behave under load (fuel or battery, passengers). Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](docs/src/roadmap/phase-12/README.md), [graphics design brief](docs/src/architecture/graphics-overhaul.md). Phase 8 keeps its own open items; M-0122 references them.*
+
+- [ ] **🧼 Material Overlays and Light Maps** — [M-0120](docs/src/roadmap/phase-12/M-0120.md) — 📝 proposed 2026-10-18
+  - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.
+- [ ] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](docs/src/roadmap/phase-12/M-0121.md) — 📝 proposed 2026-10-18
+  - [ ] Per-texture `[moisture]`/`[puddles]`, wet vehicles and scenery from the `Wetness` driver, `snow_visible` and winter variants.
+- [ ] **🧍 Passenger Load Physics** — [M-0124](docs/src/roadmap/phase-12/M-0124.md) — 📝 proposed 2026-10-18
+  - [ ] Dynamic mass from the passenger count into acceleration, braking, steering effort and ride height; Off/Realistic setting.
+- [ ] **⛽ Fuel and Battery State** — [M-0123](docs/src/roadmap/phase-12/M-0123.md) — 📝 proposed 2026-10-18
+  - [ ] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.
+- [ ] **✨ Graphics Overhaul** — [M-0122](docs/src/roadmap/phase-12/M-0122.md) — 📝 proposed 2026-10-18
+  - [ ] PBR audit, ambient occlusion, anti-aliasing decision, restrained bloom; benchmarked on an RTX 3060 at 1080p against the reference ([design brief](docs/src/architecture/graphics-overhaul.md)).
+
 ---
 
 ## 🧹 Deferred Cleanup
