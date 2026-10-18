@@ -222,6 +222,7 @@
   - [`.osc` — Scripts](formats/text/vehicles/osc.md)
   - [OMSI Scripting Guide (language)](formats/text/vehicles/osc-guide.md)
   - [Variable Lists](formats/text/vehicles/varnamelist.md)
+  - [Setvars](formats/text/vehicles/setvars.md)
   - [Constant Files](formats/text/vehicles/const.md)
   - [Predefined Variables & Callbacks](formats/text/vehicles/predefined-variables.md)
   - [Engine Callbacks: Inferred Signatures](formats/text/vehicles/callbacks.md)
