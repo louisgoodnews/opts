@@ -528,6 +528,77 @@ fn triggers_raise_script_events_with_aliases_holds_and_gates() {
         .any(|t| t["name"] == "horn" && t["held"] == true));
 }
 
+const KEY_SCRIPT: &str = "\
+{trigger:kw_scheinwerfer_toggle}
+    1 (S.L.lightsv)
+{end}
+
+{trigger:kw_m_enginestart}
+    1 (S.L.startv)
+{end}
+
+{trigger:kw_m_enginestart_off}
+    0 (S.L.startv)
+{end}
+";
+
+#[test]
+fn vehicle_keys_press_actions_by_name_or_key_and_list_the_bindings() {
+    let mut app = drive_app();
+    app.insert_resource(opts_game::settings_registry::SettingsRegistry::with_builtin());
+    app.insert_resource(opts_game::settings::GameSettings::default());
+    app.add_plugins(opts_game::vehicle_keys::VehicleKeysPlugin);
+    app.update();
+    let (mut engine, _) = opts_sim::script::ScriptEngine::from_sources(&[("k.osc", KEY_SCRIPT)]);
+    engine.run_init();
+    let vehicle = {
+        let mut q = app
+            .world_mut()
+            .query_filtered::<Entity, With<PlayerVehicle>>();
+        q.iter(app.world()).next().expect("vehicle")
+    };
+    app.world_mut()
+        .entity_mut(vehicle)
+        .insert(opts_bevy::VehicleScripts::new(engine));
+    // By action: whatever key it has.
+    let r = call(&mut app, "vehicle.key", json!({"action": "lights"})).expect("lights");
+    assert_eq!(r["raised"][0]["raised"], "kw_scheinwerfer_toggle");
+    assert_eq!(r["raised"][0]["handled"], true);
+    assert_eq!(variable(&mut app, "lightsv"), Some(1.0));
+    // By key: the default L raises the same trigger; an unbound key is an error.
+    let r = call(&mut app, "vehicle.key", json!({"key": "L"})).expect("key L");
+    assert_eq!(r["raised"][0]["action"], "lights");
+    let e = call(&mut app, "vehicle.key", json!({"key": "F9"})).expect_err("unbound");
+    assert_eq!(e.code, code::INVALID_PARAMS);
+    let e = call(&mut app, "vehicle.key", json!({"action": "warp_drive"})).expect_err("unknown");
+    assert_eq!(e.code, code::INVALID_PARAMS);
+    let e = call(&mut app, "vehicle.key", json!({})).expect_err("nothing");
+    assert_eq!(e.code, code::INVALID_PARAMS);
+    // Engine start is held: `_off` follows after the hold.
+    let r = call(
+        &mut app,
+        "vehicle.key",
+        json!({"action": "engine_start", "hold_ms": 100}),
+    )
+    .expect("start");
+    assert_eq!(r["raised"][0]["held_ms"], 100);
+    assert_eq!(variable(&mut app, "startv"), Some(1.0));
+    for _ in 0..10 {
+        app.update();
+    }
+    assert_eq!(variable(&mut app, "startv"), Some(0.0));
+    // The listing names the actions with their keys and defaults.
+    let l = call(&mut app, "vehicle.keys", json!({})).expect("keys");
+    let a = l["actions"].as_array().expect("actions");
+    assert!(a
+        .iter()
+        .any(|x| x["action"] == "engine_start" && x["key"] == "M" && x["default"] == "M"));
+    // The modal gate blocks it like a key press.
+    app.insert_resource(ModalActive(true));
+    let e = call(&mut app, "vehicle.key", json!({"action": "lights"})).expect_err("gated");
+    assert_eq!(e.code, code::GATED);
+}
+
 #[test]
 fn camera_look_and_move_follow_the_mode_and_the_gates() {
     let mut app = drive_app();

@@ -45,5 +45,5 @@ Bevy's `KeyCode` is the physical key. On the user's QWERTZ layout the key labell
 | C2 | Rail lever and direction model + physics hookup, no parking brake for rail | M |
 | C3 | Road: `.` parking brake, gear keys per the decision, conflict resolved in settings | S |
 | C4 | Hint panel and HUD per scheme | S |
-| C5 | Script mapping (triggers) once script drive runs | M |
-| C6 | Rebinding page, `vehicle.control` CLI command | M |
+| C5 | Script mapping (triggers) once script drive runs | M (key events to triggers done 2026-10-18, see [Vehicle Key Events and Bindings](vehicle-keys.md)) |
+| C6 | Rebinding page, `vehicle.control` CLI command | M (rebinding of the vehicle system keys and `vehicle.key` done, see [Vehicle Key Events and Bindings](vehicle-keys.md); the driving keys are not rebindable yet) |

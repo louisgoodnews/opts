@@ -649,6 +649,8 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`drive.set`](#driveset) | `control` (string)<br>`value` (json)<br>`hold_ms?` (integer) | 1.1 | Set a vehicle control by name, optionally held for a duration |
 | `drive.release` | `control?` (string) | 1.1 | Release held controls (one by name, or all) |
 | [`drive.trigger`](#drivetrigger) | `name` (string)<br>`hold_ms?` (integer) | 1.1 | Raise a vehicle script trigger (doors, lights, indicators, horn, ...) |
+| [`vehicle.key`](#vehiclekey) | `action?` (string)<br>`key?` (string)<br>`hold_ms?` (integer) | 1.1 | Press a vehicle key (engine start, lights, indicators, doors, ...) by action or by key |
+| [`vehicle.keys`](#vehiclekeys) | - | 1.1 | List the vehicle key actions with their keys, defaults and triggers |
 | [`drive.state`](#drivestate) | - | 1.1 | Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state |
 | [`vehicle.teleport`](#vehicleteleport) *(debug)* | `x` (number)<br>`y` (number)<br>`heading_deg?` (number) | 1.1 | Place the player vehicle at an absolute OMSI position and heading, standing still |
 | [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
@@ -676,6 +678,22 @@ Raise a vehicle script trigger (doors, lights, indicators, horn, ...).
 **Result:** `{ok, name, handled, held_ms?}`
 
 Raises `<name>`; for a binding that is held (like the horn) `<name>_off` follows after `hold_ms` of simulation time (default 200). `handled` says whether a script of the vehicle reacted. An unbound name is raised as is. Gated like a key press.
+
+### `vehicle.key`
+
+Press a vehicle key (engine start, lights, indicators, doors, ...) by action or by key.
+
+**Result:** `{ok, raised:[{ok, name, action, raised, handled, held_ms?}]}`
+
+Raises the script trigger that the key press raises, whatever the player has bound. `action` is the short name of a rebindable action (`battery`, `engine_start`, `lights`, `high_beam`, `indicator_left`, `hazard`, `door_1`, `interior_upper`, ... all listed by `vehicle.keys`) or a bound trigger name; `key` is a key chord (`L`, `Ctrl+Numpad1`) and raises every trigger bound to it, so a test can also check the binding itself. Held actions (battery, engine start, indicators, horn) get their `_off` after `hold_ms` of simulation time (default 200); give a longer `hold_ms` to hold the engine start until the engine runs. `handled` says whether a script of the vehicle reacted. Gated like a key press (`1001` without a player vehicle, `1009` while a dialog is open).
+
+### `vehicle.keys`
+
+List the vehicle key actions with their keys, defaults and triggers.
+
+**Result:** `{actions:[{action, setting, trigger, key, default, held}], other:[{trigger, key, held}]}`
+
+`actions` are the rebindable ones (setting `controls.vehicle.<action>`, change with `settings.set`; a key that another action or OPTS itself uses is refused); `other` are the remaining `keyboard.cfg` vehicle bindings (IBIS, destination blinds, cash desk).
 
 ### `drive.state`
 
