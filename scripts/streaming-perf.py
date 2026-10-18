@@ -76,7 +76,7 @@ def pct(xs, p):
     return xs[min(len(xs) - 1, int(round(p / 100 * (len(xs) - 1))))]
 
 
-def analyse(path, phases=None, top=12):
+def analyse(path, phases=None, top=12, frame_bounds=None):
     frames = [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
     frames = [f for f in frames if f["dt"] > 0]
     dts = [f["dt"] for f in frames]
@@ -96,10 +96,19 @@ def analyse(path, phases=None, top=12):
             "over_50ms": sum(1 for x in d if x > 50),
             "over_100ms": sum(1 for x in d if x > 100),
             "hitch_ms_over_33": round(sum(x for x in d if x > 33.4), 1),
+            # stalls that no tile build explains (the span `tile.build` is absent from the frame)
+            "hitch_ms_without_tile_build": round(
+                sum(f["dt"] for f in sel if f["dt"] > 33.4 and "tile.build" not in f["s"]), 1),
         }
 
     out = {"all": stats(frames)}
-    if phases:
+    if frame_bounds:
+        # phases by the trace's own frame number: before the flight, one per leg, after it
+        bounds = [-1] + list(frame_bounds) + [1 << 60]
+        names = ["pre"] + [f"leg{i + 1}" for i in range(len(frame_bounds) - 1)] + ["post"]
+        for i, name in enumerate(names):
+            out[name] = stats([f for f in frames if bounds[i] < f["f"] <= bounds[i + 1]])
+    elif phases:
         # phases: elapsed-time boundaries in seconds (relative to the first frame)
         t = 0.0
         for f in frames:
@@ -183,7 +192,10 @@ def run(a):
         # let the initial streaming settle
         time.sleep(float(os.environ.get("WARM", "15")))
         text = re.sub(r"\x1b\[[0-9;]*m", "", (out / "game.log").read_text(errors="replace"))
-        size = float(re.search(r"tile_size_m[= ]+([0-9.]+)", text).group(1))
+        # The tile size: the pitch the grid measured from the splines (`tile grid` line), or the
+        # older `tile_size_m` field, or the default of 300 m.
+        sm = re.search(r"median_step_m=Some\(([0-9.]+)\)", text) or re.search(r"tile_size_m[= ]+([0-9.]+)", text)
+        size = float(sm.group(1)) if sm else 300.0
         m = re.search(r"start tile and spawn point selected.*?tile=\((-?\d+), (-?\d+)\)", text, re.S) or \
             re.search(r"tile=\((-?\d+), (-?\d+)\).*?start tile and spawn", text, re.S)
         start = (int(m.group(1)), int(m.group(2))) if m else None
@@ -210,6 +222,7 @@ def run(a):
         # jump ahead, as a vehicle that keeps driving would).
         scene_samples = []
         bounds = []
+        frame_marks = [cl.call("state")["result"]["frame"]]
         tstart = time.time()
         for leg in range(a.legs):
             sign = 1 if leg % 2 == 0 else -1
@@ -222,6 +235,7 @@ def run(a):
                 s = (el * a.speed) if sign > 0 else (dist - el * a.speed)
                 cl.call("camera.teleport", x=x0 + dx * s, y=y0 + dy * s, z=z0, yaw=0, pitch=-5)
                 time.sleep(0.02)
+            frame_marks.append(cl.call("state")["result"]["frame"])
         bounds.append(round(time.time() - tstart, 2))
         time.sleep(3)
         scene = cl.call("scene").get("result", {})
@@ -232,6 +246,7 @@ def run(a):
                 "loadavg_end": Path("/proc/loadavg").read_text().split()[:3],
                 "scene_tiles_end": len(scene.get("tiles", [])), "entity_count_end": scene.get("entity_count"),
                 "leg_bounds_s": bounds}
+        frame_end = cl.call("state")["result"]["frame"]
         cl.call("shutdown")
     finally:
         try:
@@ -248,10 +263,16 @@ def run(a):
     flight = bounds[-1]
     flight_start = max(0.0, total - 3 - flight)
     phases = [flight_start] + [flight_start + b for b in bounds[1:-1]]
-    res = analyse(out / "trace.jsonl", phases=phases)
+    # The control protocol's frame counter and the trace's differ by a constant: calibrate it on
+    # the last state call before shutdown (the few frames after it are the shutdown itself).
+    shift = frames[-1]["f"] - frame_end
+    fb = [m + shift for m in frame_marks]
+    meta["frame_marks"] = frame_marks
+    meta["trace_frame_shift"] = shift
+    res = analyse(out / "trace.jsonl", phases=phases, frame_bounds=fb)
     res["meta"] = meta
     (out / "summary.json").write_text(json.dumps(res, indent=1))
-    for k in ("all",) + tuple(f"phase{i}" for i in range(len(phases) + 1)):
+    for k in ["all", "pre"] + [f"leg{i + 1}" for i in range(len(frame_marks) - 1)] + ["post"]:
         if k in res:
             print(k, res[k], flush=True)
     for w in res["worst"][:5]:
