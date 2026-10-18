@@ -50,6 +50,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **📖 Core Documentation**
   - [x] Write `docs/src/introduction.md` and `docs/src/vision.md`.
   - [X] Write `docs/src/glossary.md` (OMSI terms, Bevy terms, transit terminology).
+- [ ] **📋 Milestone file** — [M-0000](phase-0/M-0000.md) (🟡 in progress: the hosted GitHub Pages deployment cannot be verified from the working tree)
 
 ---
 
@@ -95,6 +96,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Add the missing index pages referenced by `SUMMARY.md` (`formats/overview.md`, `formats/text/README.md`, `formats/binary/README.md`) — done in M-0007.
   - [ ] Confirm the drafts' provenance sections against [ADR-0002](../adr/0002-clean-room-policy.md) (clean-room policy).
 - [ ] **📚 Only shallowly covered:** `.osn` field meanings, the purpose of `.rra`/`.surf`/`.prt` caches, and vehicle `.dsc` fragments. Tool files (`.pdn`, `.sfk`, `.blend`, …) and `.dll` plug-ins are intentionally not specified.
+- [x] **📚 Format specification milestones** — [M-0001](phase-1/M-0001.md), [M-0002](phase-1/M-0002.md), [M-0003](phase-1/M-0003.md) and [M-0005](phase-1/M-0005.md) are complete
+- [ ] **🚏 Transit data specifications** — [M-0004](phase-1/M-0004.md) (in progress, GTFS notes open)
 
 ---
 
@@ -204,6 +207,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Tab opens an editor in the driver's view (height, X/Y/Z, FOV), saved and loaded per vehicle (R-26).
 - [ ] **🌀 Tile Streaming Performance** — [M-0089](phase-4/M-0089.md)
   - [ ] Measure where the frame time goes at tile borders, rank and implement the improvements (R-32, R-36).
+- [ ] **🚌 Script chain and course geometry (proposed 2026-10-14, awaiting approval)** — [M-0096](phase-4/M-0096.md) script rig and callback safety net, [M-0097](phase-4/M-0097.md) physics contract, [M-0098](phase-4/M-0098.md) consist script state, [M-0099](phase-4/M-0099.md) route, timetable and IBIS data, [M-0100](phase-4/M-0100.md) script textures, [M-0101](phase-4/M-0101.md) doors, passengers, tickets and cash, [M-0102](phase-4/M-0102.md) sound events and force feedback, [M-0103](phase-4/M-0103.md) AI scripts near the player, [M-0105](phase-4/M-0105.md) course geometry (research)
 
 ---
 
@@ -222,7 +226,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] **🎛️ Remote Control & Live Editing** — [M-0043](phase-5/M-0043.md)
   - [x] Design documents and ADRs: [Control Protocol](../architecture/control-protocol.md), [Hot Reload](../architecture/hot-reload.md), ADR-0006, ADR-0007.
   - [x] `opts-cli` client, `opts-bevy::control` server and `opts-bevy::hot_reload` ([final report](../meta/control-protocol-2026-10-10.md)).
-- [ ] **⬆️ Engine Upgrade** — [M-0044](phase-5/M-0044.md)
+- [x] **⬆️ Engine Upgrade** — [M-0044](phase-5/M-0044.md)
   - [x] Migrate Bevy 0.14 → 0.19.1 (done in one step; see [M-0044](phase-5/M-0044.md)).
 - [ ] **⬆️ Bevy 0.20** — [M-0047](phase-5/M-0047.md) (plan: [strategy](../architecture/bevy-0-20-dlss.md))
 - [ ] **🎞️ DLSS upscaling (optional feature)** — [M-0048](phase-5/M-0048.md)

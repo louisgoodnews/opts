@@ -71,6 +71,12 @@ jobs:
       - name: Roadmap copies match ROADMAP.md
         run: python3 scripts/gen_roadmap_copy.py --check
 
+      - name: Roadmap, board and phase pages agree
+        run: python3 scripts/roadmap_audit.py --check
+
+      - name: Crate graph matches the workspace
+        run: python3 scripts/crate_graph.py --check
+
   windows:
     name: Windows build and tests
     runs-on: windows-latest

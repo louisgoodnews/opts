@@ -11,11 +11,11 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0066 — Mesh Fidelity: Vehicles, Parked Cars, Buildings, Lanterns](M-0066.md) — 📝 Planned, 🔴 high (R-01, R-09; discovery by the P-1014 mesh audit)
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
 - [M-0104 — UV Decoder Texture Evidence](M-0104.md) — ✅ Approved 2026-10-14 (feasibility first; from the MAN NL/NG reinvestigation)
-- [M-0106 — Train Formation Editor v1](M-0106.md) — 📝 Proposed 2026-10-15 (design awaiting approval)
+- [M-0106 — Train Formation Editor v1](M-0106.md) — ✅ Implemented 2026-10-15 on `feat/train-formation-editor`; merge awaiting approval
 - [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 📝 Planned, 🔴 high (R-34 … R-42)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
-- [M-0069 — Session Save and Restore](M-0069.md) — 📝 Planned, 🔴 high (R-05)
+- [M-0069 — Session Save and Restore](M-0069.md) — ✅ Done 2026-10-13, 🔴 high (R-05)
 - [M-0073 — Vehicle Dynamics: Individual Mass, Axles, Suspension and Brakes](M-0073.md) — 📝 Planned, 🔴 high (R-11)
 - [M-0077 — Bus Configurations (Quick-Load Presets)](M-0077.md) — 📝 Planned (R-15)
 - [M-0078 — Setvars: Supported Variable Lists per Bus](M-0078.md) — 🟢 Complete 2026-10-18, 🔴 high (R-16)

@@ -8,11 +8,11 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 ## Milestones
 
-- [M-0001 — Vehicle Text Format Specifications](M-0001.md) — 🟡 Drafted (review pending)
+- [M-0001 — Vehicle Text Format Specifications](M-0001.md) — 🟢 Complete (maintainer review done 2026-10-07)
 - [M-0002 — Binary Mesh Format Specifications](M-0002.md) — 🟢 Complete
-- [M-0003 — World Format Specifications](M-0003.md) — 🟡 In Progress (tutorial blocked on parser)
+- [M-0003 — World Format Specifications](M-0003.md) — 🟢 Complete (the first-object tutorial moved to the Phase 3 track)
 - [M-0004 — Transit Data Specifications](M-0004.md) — 🟡 In Progress (GTFS notes open)
-- [M-0005 — Script Format Specifications](M-0005.md) — 🟡 Drafted (review pending)
+- [M-0005 — Script Format Specifications](M-0005.md) — 🟢 Complete (maintainer review done 2026-10-07)
 - [M-0006 — Community Wiki Cross-Check & Spec Overhaul](M-0006.md) — 🟢 Complete
 - [M-0007 — Documentation Drift Repair](M-0007.md) — 🟢 Complete
 - [M-0008 — Script Reference](M-0008.md) — 🟢 Complete
@@ -68,3 +68,5 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Add the missing index pages referenced by `SUMMARY.md` (`formats/overview.md`, `formats/text/README.md`, `formats/binary/README.md`) — done in M-0007.
   - [ ] Confirm the drafts' provenance sections against [ADR-0002](../../adr/0002-clean-room-policy.md) (clean-room policy).
 - [ ] **📚 Only shallowly covered:** `.osn` field meanings, the purpose of `.rra`/`.surf`/`.prt` caches, and vehicle `.dsc` fragments. Tool files (`.pdn`, `.sfk`, `.blend`, …) and `.dll` plug-ins are intentionally not specified.
+- [x] **📚 Format specification milestones** — [M-0001](M-0001.md), [M-0002](M-0002.md), [M-0003](M-0003.md) and [M-0005](M-0005.md) are complete
+- [ ] **🚏 Transit data specifications** — [M-0004](M-0004.md) (in progress, GTFS notes open)

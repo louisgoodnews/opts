@@ -18,6 +18,8 @@ graph TD
     %% Layer 0: Foundations
     subgraph L0 ["Layer 0 — Foundations & Diagnostics"]
         opts_logging["opts-logging<br/>• Non-blocking tracing writers<br/>• Subsystem file routing<br/>• Panic hook & crash telemetry"]:::foundation
+        opts_cli["opts-cli<br/>• Control-protocol types<br/>• Command-line client<br/>• Zero Bevy"]:::foundation
+        opts_hardware["opts-hardware<br/>• Privacy-respecting hardware probe<br/>• Default recommendations<br/>• No network, no identifiers"]:::foundation
     end
 
     %% Layer 1: Domain Core & Parsers
@@ -28,6 +30,8 @@ graph TD
     %% Layer 2: Domain Simulation & Engine Bridges
     subgraph L2 ["Layer 2 — Simulation & Engine Presentation Bridges"]
         opts_sim["opts-sim<br/>• Vehicle physics & kinematics<br/>• Drivetrain, suspension, steering<br/>• Script VM bytecode interpreter<br/>• Zero Bevy · Zero File I/O"]:::bridge
+        opts_traffic["opts-traffic<br/>• Lane graph & car following<br/>• Conflict zones, right of way<br/>• Zero Bevy"]:::bridge
+        opts_catalogue["opts-catalogue<br/>• Installation scan into a catalogue<br/>• Map & vehicle lists"]:::bridge
         opts_gui["opts-gui<br/>• Material Design 3 tokens<br/>• Reusable UI widgets<br/>• Glassmorphism layout<br/>• Bevy UI integration"]:::bridge
         opts_bevy["opts-bevy<br/>• 3D mesh loaders & materials<br/>• Coordinate system mapping<br/>• ECS VehicleController bridge<br/>• Scenery object spawning"]:::bridge
     end
@@ -35,28 +39,37 @@ graph TD
     %% Layer 3: Application Executables & Tools
     subgraph L3 ["Layer 3 — Application Executables & Tooling"]
         opts_game["opts-game (Binary)<br/>• Main simulation executable<br/>• AppState orchestrator<br/>• Main menu & UI flow"]:::app
+        opts_benchmark["opts-benchmark (Binary)<br/>• Scenery load verification<br/>• Off-screen worker & supervisor"]:::app
         opts_tools["opts-tools (Binary: opts)<br/>• CLI asset inspector<br/>• Mesh & texture converter<br/>• Dependency & format validator"]:::app
     end
 
     %% Dependencies
-    opts_core -.->|diagnostics| opts_logging
-    opts_sim --> opts_core
-    opts_sim -.->|diagnostics| opts_logging
-
-    opts_gui -.->|diagnostics| opts_logging
-
+    opts_benchmark --> opts_bevy
+    opts_benchmark --> opts_catalogue
+    opts_benchmark --> opts_core
+    opts_benchmark --> opts_game
+    opts_benchmark --> opts_sim
+    opts_bevy --> opts_cli
     opts_bevy --> opts_core
-    opts_bevy --> opts_sim
+    opts_bevy --> opts_gui
     opts_bevy -.->|diagnostics| opts_logging
-
-    opts_game --> opts_core
-    opts_game --> opts_sim
+    opts_bevy --> opts_sim
+    opts_bevy --> opts_traffic
+    opts_catalogue --> opts_core
     opts_game --> opts_bevy
+    opts_game --> opts_catalogue
+    opts_game --> opts_cli
+    opts_game --> opts_core
     opts_game --> opts_gui
-    opts_game --> opts_logging
-
+    opts_game --> opts_hardware
+    opts_game -.->|diagnostics| opts_logging
+    opts_game --> opts_sim
+    opts_game --> opts_traffic
+    opts_gui --> opts_core
+    opts_sim --> opts_core
     opts_tools --> opts_core
-    opts_tools --> opts_logging
+    opts_tools --> opts_hardware
+    opts_traffic --> opts_core
 ```
 
 ---
@@ -67,16 +80,17 @@ graph TD
 | :--- | :---: | :--- | :--- | :--- | :---: |
 | **`opts-logging`** | L0 | Structured diagnostics, subsystem log files, rotation, panic hook | *None* | `opts`, `opts-bevy`, `opts-game` | Pure Rust |
 | **`opts-cli`** | L0 | Control-protocol types and the command-line client that remote-controls a running game | *None* | `opts`, `opts-bevy`, `opts-game` | Pure Rust |
-| **`opts-core`** | L1 | OMSI format parsers and data models | *None* | `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
-| **`opts-traffic`** | L2 | AI road traffic: lane graph, car following, conflict zones, right of way | `opts-core` | `opts-game` | Pure Rust |
-| **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-game` | Pure Rust |
+| **`opts-core`** | L1 | OMSI format parsers and data models | *None* | `opts-benchmark`, `opts-bevy`, `opts-catalogue`, `opts-game`, `opts-gui`, `opts-sim`, `opts-tools`, `opts-traffic` | Pure Rust |
+| **`opts-sim`** | L2 | Vehicle dynamics, articulated-segment kinematics, pedestrians, OMSI script VM | `opts-core` | `opts-benchmark`, `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-traffic`** | L2 | AI road traffic: lane graph, car following, conflict zones, right of way | `opts-core` | `opts-bevy`, `opts-game` | Pure Rust |
+| **`opts-catalogue`** | L2 | Scans an installation into a map/vehicle catalogue | `opts-core` | `opts-benchmark`, `opts-game` | Pure Rust |
 | **`opts-gui`** | L2 | Material Design 3 UI widget library and theme tokens | `opts-core` | `opts-bevy`, `opts-game` | Bevy UI |
 | **`opts-hardware`** | L0 | Privacy-respecting hardware capability probe and default recommendations ([charter](hardware-probe.md)): no network, no identifiers, Linux/macOS/Windows | *None* (external: `sysinfo`) | `opts-game`, `opts-tools` | Pure Rust |
-| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-core`, `opts-sim`, `opts-gui`, `opts-cli`, `opts-logging` | `opts-game` | Bevy Engine |
-| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-cli`, `opts-logging`, `opts-hardware` | `opts` | Bevy Engine |
+| **`opts-bevy`** | L2 | Bevy loaders, materials, coordinates, vehicle/script/articulation bridges, control server, hot reload | `opts-cli`, `opts-core`, `opts-gui`, `opts-logging`, `opts-sim`, `opts-traffic` | `opts-benchmark`, `opts-game` | Bevy Engine |
+| **`opts-game`** | L3 | Game application: menus, world loading (tiles, traffic, pedestrians), state machine | `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, `opts-gui`, `opts-bevy`, `opts-cli`, `opts-logging`, `opts-hardware` | `opts`, `opts-benchmark` | Bevy Engine |
 | **`opts`** | L3 | Workspace root binary | `opts-game`, `opts-cli`, `opts-logging` | *None (executable root)* | — |
-| **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core` | *None (executable root)* | CLI Tooling |
+| **`opts-tools`** | L3 | File inspection tool (`inspect`) | `opts-core`, `opts-hardware` | *None (executable root)* | CLI Tooling |
+| **`opts-benchmark`** | L3 | Scenery object load verification harness ([spec](scenery-benchmark.md)): an off-screen worker that rebuilds objects through the loader and a supervisor | `opts-bevy`, `opts-catalogue`, `opts-core`, `opts-game`, `opts-sim` | *None (executable root)* | Bevy |
 
 *Table regenerated from `cargo metadata` (normal dependencies) on 2026-10-11 by the [critical review](../meta/critical-review-2026-10-11.md) (F-011). Two edges break the intended layering: `opts-bevy` → `opts-gui` (reporting modal) and `opts-bevy` → `opts-cli` (audit 5037f89a A-F-015, M-0046). The Mermaid diagram above has not been updated yet (M-0041).*
 ---
