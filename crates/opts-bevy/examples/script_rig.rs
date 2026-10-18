@@ -104,6 +104,9 @@ impl Startup {
     }
 }
 
+/// Tank pressure at which the rig starts measuring (Pa).
+const AIR_READY_PA: f32 = 800_000.0;
+
 /// A vehicle's scripts and physics, closed in a loop (`--physics`).
 struct Loop {
     engine: opts_sim::script::ScriptEngine,
@@ -115,11 +118,28 @@ struct Loop {
 }
 
 impl Loop {
-    fn new(bus: &BusManifest, engine: opts_sim::script::ScriptEngine, dt: f32) -> Self {
+    fn new(
+        bus: &BusManifest,
+        trail: Option<&BusManifest>,
+        engine: opts_sim::script::ScriptEngine,
+        dt: f32,
+    ) -> Self {
         let mut engine = engine;
         let plan = FeedPlan::new(&mut engine);
-        let mut controller =
-            opts_bevy::VehicleController::new(opts_sim::VehicleSimulation::from_manifest(bus));
+        let mut sim = opts_sim::VehicleSimulation::from_manifest(bus);
+        if let Some(t) = trail {
+            // The second unit of an articulated bus: mass and axles (the hitch geometry is a
+            // plausible stand-in, the rig drives straight).
+            let load = opts_sim::vehicle::consist::UnitLoad::from_manifest(t, false);
+            sim.attach_trailer(
+                bevy::math::DVec2::new(0.0, -3.5),
+                bevy::math::DVec2::new(0.0, 1.5),
+                6.0,
+                52.5,
+                Some(load),
+            );
+        }
+        let mut controller = opts_bevy::VehicleController::new(sim);
         controller
             .inputs_mut()
             .set_gear(opts_sim::GearPosition::Drive);
@@ -185,6 +205,16 @@ impl Loop {
             self.engine.trigger("parking_brake_toggle");
         }
         self.run(1.0);
+        // A vehicle in service has its air tanks at the compressor governor's cut-in (8 bar in
+        // the MAN scripts, the governor works between 8 and 9.5): wait for it, as a driver does.
+        let air_limit = self.t + 900.0;
+        while self.t < air_limit
+            && ["bremse_p_tank01", "bremse_p_tank02"]
+                .iter()
+                .any(|n| self.engine.writes(n) && self.engine.get(n) < AIR_READY_PA)
+        {
+            self.run(1.0);
+        }
         let t_limit = self.t + 170.0;
         while self.t < t_limit {
             let drag = self
@@ -203,11 +233,12 @@ impl Loop {
 /// The closed-loop scenarios of one vehicle (`--physics`).
 fn physics_report(
     bus: &BusManifest,
+    trail: Option<&BusManifest>,
     load: &dyn Fn() -> opts_sim::script::ScriptEngine,
     hz: f32,
 ) -> serde_json::Value {
     let dt = 1.0 / hz;
-    let fresh = || Loop::new(bus, load(), dt);
+    let fresh = || Loop::new(bus, trail, load(), dt);
     // 1. Standstill to 50 km/h at full throttle.
     let mut a = fresh();
     a.ready();
@@ -216,6 +247,28 @@ fn physics_report(
     let mut to_50 = None;
     while a.t - t0 < 40.0 {
         a.tick();
+        if std::env::var_os("RIG_TRACE_ACCEL").is_some()
+            && (((a.t - t0) / dt) as usize).is_multiple_of(hz as usize)
+        {
+            let d = a.controller.sim.script_drive.unwrap_or_default();
+            eprintln!(
+                "accel t={:.0} v={:.1} km/h torque={:.0} brake={:.0} n={:.0} gear={} halte={:.0}",
+                a.t - t0,
+                a.speed() * 3.6,
+                d.wheel_torque_nm,
+                d.brake_force_n,
+                a.engine.get("engine_n"),
+                a.engine.get("antrieb_getr_aktugang"),
+                a.engine.get("bremse_halte"),
+            );
+            if let Ok(list) = std::env::var("RIG_VARS") {
+                let extra: Vec<String> = list
+                    .split(',')
+                    .map(|n| format!("{n}={:.3}", a.engine.get(&n.to_lowercase())))
+                    .collect();
+                eprintln!("  vars {}", extra.join(" "));
+            }
+        }
         if to_50.is_none() && a.speed() * 3.6 >= 50.0 {
             to_50 = Some(a.t - t0);
         }
@@ -234,7 +287,7 @@ fn physics_report(
             && (((b.t - t1) / dt) as usize).is_multiple_of(12)
         {
             eprintln!(
-                "brake t={:.2} v={:.2} force={:.0} pressure={:.0}",
+                "brake t={:.2} v={:.2} force={:.0} tank={:.0} luft={:.3} zielBBA={:.0} cyl_HA_R={:.0} pedal_in={:.2}",
                 b.t - t1,
                 b.speed(),
                 b.controller
@@ -242,6 +295,10 @@ fn physics_report(
                     .script_drive
                     .map_or(0.0, |d| d.brake_force_n),
                 b.engine.get("bremse_p_tank01"),
+                b.engine.get("bremse_luft"),
+                b.engine.get("bremse_zieldruck_bba"),
+                b.engine.get("bremse_p_brzyl_ha_r"),
+                b.engine.get("brake"),
             );
         }
     }
@@ -484,7 +541,13 @@ fn main() {
                 e.set_external_handler(vehicle_callbacks(seed0));
                 e
             };
-            let report = physics_report(&bus, &loader, hz);
+            let trail = f
+                .to_string_lossy()
+                .strip_suffix("_main.bus")
+                .map(|stem| PathBuf::from(format!("{stem}_trail.bus")))
+                .and_then(|p| std::fs::read(p).ok())
+                .and_then(|b| BusManifest::parse_bytes(&b).ok());
+            let report = physics_report(&bus, trail.as_ref(), &loader, hz);
             println!(
                 "{rel}\n{}",
                 serde_json::to_string_pretty(&report).unwrap_or_default()

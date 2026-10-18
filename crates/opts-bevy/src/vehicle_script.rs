@@ -149,6 +149,28 @@ pub fn host_inputs(
             }
         })
         .collect();
+    // The axles of the following units continue the numbering (the driven axle of an articulated
+    // bus is the third, hanging in its second unit; the scripts read its wheel speed): they roll
+    // with the road.
+    let r0 = sim
+        .axles
+        .first()
+        .map_or(0.49, |a| a.left_wheel.rolling_radius_m)
+        .max(0.1);
+    let rolling = WheelInput {
+        speed_rpm: rpm_of_omega(sim.chassis.forward_speed_m_s() / r0),
+        rotation_rad: sim.axles.first().map_or(0.0, |a| a.left_wheel.rotation_rad),
+        steering_rad: 0.0,
+        suspension_m: 0.0,
+    };
+    for unit in &sim.trailer_loads {
+        for _ in &unit.axles {
+            inputs.axles.push(AxleInput {
+                left: rolling,
+                right: rolling,
+            });
+        }
+    }
     if let Some(c) = clock {
         inputs.envir_brightness = c.envir_brightness();
         inputs.temperature_c = c.temperature_c;
