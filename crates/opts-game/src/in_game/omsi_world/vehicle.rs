@@ -1071,7 +1071,8 @@ pub fn load_player_vehicle(
         }
         commands.entity(root).insert(player);
     }
-    attach_scripts(job, commands, root, &manifest, &bus_dir);
+    let script_seed = script_seed(job.install.root(), &bus_path, session_id);
+    attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed);
     load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
@@ -1426,6 +1427,29 @@ fn load_depot_file(
     None
 }
 
+/// The seed of a vehicle's random numbers (`random`, `NrSpecRandom`): FNV-1a of its `.bus` path
+/// below the installation and its session vehicle id, so the same vehicle in the same slot
+/// draws the same numbers in every run and two vehicles differ (the entity bits it used to be
+/// built from change with the order the world is spawned in).
+fn script_seed(
+    root: &Path,
+    bus_path: &Path,
+    session_id: crate::session_vehicles::VehicleId,
+) -> u64 {
+    let rel = bus_path
+        .strip_prefix(root)
+        .unwrap_or(bus_path)
+        .to_string_lossy()
+        .replace('\\', "/")
+        .to_lowercase();
+    rel.bytes()
+        .chain(std::iter::once(b'#'))
+        .chain(session_id.to_le_bytes())
+        .fold(0xCBF2_9CE4_8422_2325, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01B3)
+        })
+}
+
 /// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
 /// A vehicle with `[scriptshare]` has none of its own and gets no engine.
 fn attach_scripts(
@@ -1434,6 +1458,7 @@ fn attach_scripts(
     root: Entity,
     manifest: &BusManifest,
     bus_dir: &Path,
+    seed: u64,
 ) {
     if manifest.scripts.is_empty() {
         return;
@@ -1450,8 +1475,16 @@ fn attach_scripts(
         .iter()
         .filter(|d| d.severity == opts_sim::script::Severity::Error)
         .count();
-    for d in diags.iter().filter(|d| d.message == "file not found") {
-        tracing::error!(at = %opts_bevy::position_tag(), file = %d.file, "vehicle script file not found");
+    // Every compile problem once, with its file and line (the diagnostics of one compile are
+    // distinct); a missing file is an error with the position tag, like other missing content.
+    for d in &diags {
+        if d.message == "file not found" {
+            tracing::error!(at = %opts_bevy::position_tag(), file = %d.file, "vehicle script file not found");
+        } else if d.severity == opts_sim::script::Severity::Error {
+            tracing::error!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
+        } else {
+            tracing::warn!(file = %d.file, line = d.line, "vehicle script: {}", d.message);
+        }
     }
     tracing::info!(
         scripts = manifest.scripts.len(),
@@ -1505,8 +1538,9 @@ fn attach_scripts(
         }
     }
 
+    engine.seed_random(seed as u32);
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
-        seed: root.to_bits(),
+        seed,
         hof: hof.map(std::sync::Arc::new),
         active_route_index,
         current_stop_index: 0,
@@ -1771,5 +1805,34 @@ mod anim_parent_tests {
             "a leaf has no ident"
         );
         assert!(!forms_cycle(&m, Some("switch"), Some("CP_BASIS")));
+    }
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use super::script_seed;
+    use std::path::Path;
+
+    #[test]
+    fn the_seed_follows_the_vehicle_and_its_slot_not_the_spawn_order() {
+        let root = Path::new("/omsi");
+        let a = Path::new("/omsi/Vehicles/MAN_NG272/GN92.bus");
+        let again = script_seed(root, a, 1);
+        assert_eq!(script_seed(root, a, 1), again, "stable");
+        assert_ne!(script_seed(root, a, 2), again, "another slot");
+        assert_ne!(
+            script_seed(root, Path::new("/omsi/Vehicles/MAN_NG272/GN93.bus"), 1),
+            again,
+            "another vehicle"
+        );
+        // The same vehicle in another installation folder, with the path written the other way.
+        assert_eq!(
+            script_seed(
+                Path::new("/other"),
+                Path::new("/other/vehicles\\man_ng272\\gn92.bus"),
+                1
+            ),
+            again
+        );
     }
 }

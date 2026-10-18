@@ -34,6 +34,9 @@ pub use vehicle::load_vehicle_scripts;
 /// Returns `false` for a callback it does not implement; that is reported once.
 pub type ExternalHandler = Box<dyn FnMut(&str, &mut Stacks) -> bool + Send>;
 
+/// `GetTime` wraps after this many seconds (see [`ScriptEngine::run_frame`]).
+pub const GET_TIME_WRAP_S: f64 = 65_536.0;
+
 /// The names a script set reads and writes (`ScriptEngine::usage`), in lower case.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ScriptUsage {
@@ -82,7 +85,7 @@ pub struct ScriptEngine {
     declared: Option<HashSet<String>>,
     pub(crate) ops_executed: u64,
     pub(crate) callback_stats: callbacks::CallbackStats,
-    time: f32,
+    time: f64,
 }
 
 impl ScriptEngine {
@@ -317,9 +320,12 @@ impl ScriptEngine {
     /// Advances `dt` seconds: updates `Timegap`/`GetTime` and runs the `{frame}` blocks
     /// (`{frame_ai}` instead when `ai` is set).
     pub fn run_frame(&mut self, dt: f32, ai: bool) {
-        self.time += dt;
+        self.time += f64::from(dt);
         self.set_system("timegap", dt);
-        self.set_system("gettime", self.time);
+        // The time is kept in f64 and handed over wrapped at 65,536 s (about 18 h): an f32 of
+        // the running total loses its milliseconds after a few hours, and scripts only compare
+        // two readings.
+        self.set_system("gettime", (self.time % GET_TIME_WRAP_S) as f32);
         let count = if ai {
             self.program.frame_ai.len()
         } else {
