@@ -219,6 +219,8 @@ The vehicle is operated by *named controls*; the names are discovered with `driv
 | `drive.set control value [hold_ms]` | `throttle`, `brake` 0..1, `steer` -1..1, `gear` `drive`/`neutral`/`reverse`, `parking_brake` true/false/`toggle`; any other name is a script trigger |
 | `drive.release [control]` | drops held values (the keyboard decays the pedals as usual) |
 | `drive.trigger name [hold_ms]` | raises a script trigger: doors, lights, indicators, horn; held bindings (the horn) get their `_off` after `hold_ms` |
+| `vehicle.key action\|key [hold_ms]` | presses a vehicle key without the keyboard: `action` is a rebindable action (`engine_start`, `lights`, `indicator_left`, `door_1`, ...) or a bound trigger, `key` a chord (`L`, `Ctrl+Numpad1`) that raises every trigger bound to it |
+| `vehicle.keys` | the rebindable vehicle key actions with their current key, default and trigger, plus the other `keyboard.cfg` vehicle bindings |
 | `drive.state` | speed (signed and absolute), absolute position, heading, gear, pedals, parking brake, **distance driven**, camera, pause and time scale, HUD alert; `route` and `stops` are `null` because the timetable does not exist yet |
 | `vehicle.teleport`, `vehicle.reset` | *debug* placement: absolute OMSI position and heading, or back to the session's start pose, standing still |
 | `vehicle.get`, `vehicle.script_vars` | position/speed and the scripts' variables (route, stop and ticket variables live there) |

@@ -611,6 +611,24 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("`{ok, name, handled, held_ms?}`")
     .doc("Raises `<name>`; for a binding that is held (like the horn) `<name>_off` follows after `hold_ms` of simulation time (default 200). `handled` says whether a script of the vehicle reacted. An unbound name is raised as is. Gated like a key press."),
     c(
+        "vehicle.key",
+        "drive",
+        "Press a vehicle key (engine start, lights, indicators, doors, ...) by action or by key",
+        "action:s@0? key:s? hold_ms:i?",
+    )
+    .since("1.1")
+    .result("`{ok, raised:[{ok, name, action, raised, handled, held_ms?}]}`")
+    .doc("Raises the script trigger that the key press raises, whatever the player has bound. `action` is the short name of a rebindable action (`battery`, `engine_start`, `lights`, `high_beam`, `indicator_left`, `hazard`, `door_1`, `interior_upper`, ... all listed by `vehicle.keys`) or a bound trigger name; `key` is a key chord (`L`, `Ctrl+Numpad1`) and raises every trigger bound to it, so a test can also check the binding itself. Held actions (battery, engine start, indicators, horn) get their `_off` after `hold_ms` of simulation time (default 200); give a longer `hold_ms` to hold the engine start until the engine runs. `handled` says whether a script of the vehicle reacted. Gated like a key press (`1001` without a player vehicle, `1009` while a dialog is open)."),
+    c(
+        "vehicle.keys",
+        "drive",
+        "List the vehicle key actions with their keys, defaults and triggers",
+        "",
+    )
+    .since("1.1")
+    .result("`{actions:[{action, setting, trigger, key, default, held}], other:[{trigger, key, held}]}`")
+    .doc("`actions` are the rebindable ones (setting `controls.vehicle.<action>`, change with `settings.set`; a key that another action or OPTS itself uses is refused); `other` are the remaining `keyboard.cfg` vehicle bindings (IBIS, destination blinds, cash desk)."),
+    c(
         "drive.state",
         "drive",
         "Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state",

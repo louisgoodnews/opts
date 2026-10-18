@@ -162,6 +162,7 @@
 - [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
+- [Vehicle Key Events and Bindings](simulation/vehicle-keys.md)
 - [Vehicle Functions in OMSI (script catalogue)](simulation/vehicle-functions.md)
 - [Asset Pipeline](architecture/asset-pipeline.md)
 - [Map Streaming](architecture/map-streaming.md)

@@ -13,4 +13,4 @@ Decision D-UI-09 ([phase 9](../roadmap/phase-9/README.md#decisions)): a feature 
 | Settings, Audio, volumes | `settings.audio` | M-0027 | There is no audio engine; the volume settings appear with it. |
 | Settings, Graphics, View distance | `settings.view-distance` | M-0029 | Tiles and objects are loaded at a fixed distance; a user setting needs the LOD and culling system. |
 | Settings, Gameplay, Time scale | `settings.time-scale` | M-0064 | The session clock cannot be sped up or slowed down from the interface yet. |
-| Settings, Controls, Change a binding | `settings.rebind` | M-0035 | Vehicle and camera keys are fixed in code; the list shows them, rebinding needs the vehicle control layer. |
+| Settings, Controls, Change a binding | `settings.rebind` | M-0035 | The keys of the vehicle systems (engine, lights, doors, ...) can be changed above; driving and camera keys, gamepad buttons and wheel controls are fixed in code. |

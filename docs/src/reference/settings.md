@@ -48,6 +48,30 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | Key | Name | Values | Default | Applies | Status | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `controls.rebind` | Change a key or button | action (no stored value) | - | at once | not available yet (M-0035) | Choose your own keys, gamepad buttons and wheel controls. |
+| `controls.vehicle.battery` | Battery switch | input binding | `E` | at once | available | Batterietrennschalter |
+| `controls.vehicle.engine_start` | Start engine | input binding | `M` | at once | available | Motor starten |
+| `controls.vehicle.lights` | Headlights | input binding | `L` | at once | available | Scheinwerfer |
+| `controls.vehicle.parking_light` | Parking lights | input binding | `Shift+L` | at once | available | Standlicht |
+| `controls.vehicle.high_beam` | High beam | input binding | `F` | at once | available | Fernlicht |
+| `controls.vehicle.fog_rear` | Rear fog light | input binding | `Ctrl+F` | at once | available | Nebelschlussleuchte |
+| `controls.vehicle.indicator_left` | Indicator left | input binding | `Numpad7` | at once | available | Blinker links |
+| `controls.vehicle.indicator_right` | Indicator right | input binding | `Numpad9` | at once | available | Blinker rechts |
+| `controls.vehicle.indicator_off` | Indicators off | input binding | `NumpadDecimal` | at once | available | Blinker aus |
+| `controls.vehicle.hazard` | Hazard lights | input binding | `B` | at once | available | Warnblinker |
+| `controls.vehicle.horn` | Horn | input binding | `H` | at once | available | Hupe |
+| `controls.vehicle.wiper` | Wipers | input binding | `none` | at once | available | Scheibenwischer |
+| `controls.vehicle.door_1` | Door 1 | input binding | `NumpadDivide` | at once | available | Tür 1 |
+| `controls.vehicle.door_2` | Door 2 | input binding | `NumpadMultiply` | at once | available | Tür 2 |
+| `controls.vehicle.door_3` | Door 3 | input binding | `Numpad0` | at once | available | Tür 3 |
+| `controls.vehicle.door_4` | Door 4 | input binding | `Shift+NumpadDivide` | at once | available | Tür 4 |
+| `controls.vehicle.interior_driver` | Driver's light | input binding | `6` | at once | available | Fahrerlicht |
+| `controls.vehicle.interior_lower_right` | Interior light, lower right | input binding | `7` | at once | available | Innenlicht unten rechts |
+| `controls.vehicle.interior_upper` | Interior light, upper deck | input binding | `8` | at once | available | Innenlicht Oberdeck |
+| `controls.vehicle.interior_lower` | Interior light, lower deck | input binding | `9` | at once | available | Innenlicht Unterdeck |
+| `controls.vehicle.microphone` | Microphone | input binding | `Q` | at once | available | Mikrofon |
+| `controls.vehicle.ticket` | Hand over ticket | input binding | `T` | at once | available | Fahrschein ausgeben |
+| `controls.vehicle.ticket_change` | Ticket with change | input binding | `Ctrl+T` | at once | available | Fahrschein mit Rückgeld |
+| `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
 
 ## Interface
 

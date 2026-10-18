@@ -194,6 +194,10 @@ keys! {
     HELP_TAB_ABOUT = "help-tab-about",
     /// Message `help-group-driving`.
     HELP_GROUP_DRIVING = "help-group-driving",
+    /// Message `help-group-vehicle-keys`.
+    HELP_GROUP_VEHICLE_KEYS = "help-group-vehicle-keys",
+    /// Message `help-vehicle-keys-note`.
+    HELP_VEHICLE_KEYS_NOTE = "help-vehicle-keys-note",
     /// Message `help-group-camera`.
     HELP_GROUP_CAMERA = "help-group-camera",
     /// Message `help-group-menus`.

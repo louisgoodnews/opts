@@ -149,6 +149,22 @@ pub const GROUPS: &[Group] = &[
 
 /// Spawns the table into `parent`.
 pub fn spawn_controls(parent: &mut ChildSpawnerCommands) {
+    // The vehicle system keys are rebindable (Settings, Controls), so the table does not list a
+    // fixed key for them; this note points to the defaults and the page.
+    parent.spawn((
+        Text::new(keys::HELP_GROUP_VEHICLE_KEYS),
+        L10nKey(keys::HELP_GROUP_VEHICLE_KEYS),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::TitleMedium),
+        ForegroundRole(ColorRole::OnSurface),
+    ));
+    parent.spawn((
+        Text::new(keys::HELP_VEHICLE_KEYS_NOTE),
+        L10nKey(keys::HELP_VEHICLE_KEYS_NOTE),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::BodyMedium),
+        ForegroundRole(ColorRole::OnSurfaceVariant),
+    ));
     for (group, rows) in GROUPS {
         parent.spawn((
             Text::new(*group),

@@ -205,6 +205,7 @@ pub fn handle_page_input(
     mut api: SettingsApi,
     mut pending: Option<ResMut<PendingRevert>>,
     mut actions: MessageWriter<SettingActionRequested>,
+    loc: Res<opts_gui::l10n::Localization>,
 ) {
     for t in texts.read() {
         if search.contains(t.entity) && state.query != t.text {
@@ -237,7 +238,22 @@ pub fn handle_page_input(
                 change_from_page(&mut api, &mut commands, &mut pending, key, None);
             }
             SettingOp::Run { key } => {
-                actions.write(SettingActionRequested { key });
+                if api
+                    .registry
+                    .get(key)
+                    .is_some_and(|d| matches!(d.kind, SettingKind::Binding))
+                {
+                    // A key binding: the next key press is the new key (`capture_rebind`).
+                    state.rebinding = if state.rebinding == Some(*key) {
+                        None
+                    } else {
+                        Some(*key)
+                    };
+                    state.notice = state.rebinding.map(|_| loc.t("settings-rebind-prompt"));
+                    state.dirty = true;
+                } else {
+                    actions.write(SettingActionRequested { key });
+                }
             }
             SettingOp::Category(cat) => {
                 if state.category != *cat || !state.query.is_empty() {
@@ -248,6 +264,55 @@ pub fn handle_page_input(
                 }
             }
         }
+    }
+}
+
+/// While a key binding waits for its key: the next key press (with the modifiers held) is
+/// stored through the registry, so a conflict is refused with its reason on the page.
+pub fn capture_rebind(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut state: ResMut<SettingsPageState>,
+    mut api: SettingsApi,
+    loc: Res<opts_gui::l10n::Localization>,
+) {
+    let Some(setting) = state.rebinding else {
+        return;
+    };
+    const MODIFIERS: [KeyCode; 8] = [
+        KeyCode::ShiftLeft,
+        KeyCode::ShiftRight,
+        KeyCode::ControlLeft,
+        KeyCode::ControlRight,
+        KeyCode::AltLeft,
+        KeyCode::AltRight,
+        KeyCode::SuperLeft,
+        KeyCode::SuperRight,
+    ];
+    let Some(key) = keys
+        .get_just_pressed()
+        .find(|k| !MODIFIERS.contains(k))
+        .copied()
+    else {
+        return;
+    };
+    state.rebinding = None;
+    state.dirty = true;
+    if key == KeyCode::Escape {
+        state.notice = None;
+        return;
+    }
+    let chord = opts_bevy::KeyChord {
+        key,
+        shift: keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]),
+        ctrl: keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]),
+    };
+    let Some(text) = chord.to_text() else {
+        state.notice = Some(loc.t("settings-rebind-unnamed"));
+        return;
+    };
+    match api.change(setting, Some(&text), ChangeSource::Page, true) {
+        Ok(_) => state.notice = None,
+        Err(e) => state.notice = Some(e.to_string()),
     }
 }
 

@@ -22,14 +22,12 @@ use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::PlayerVehicle;
 
 /// Keys OPTS binds in-game (driving, gears, cameras, overlay, reporting). OMSI bindings on these
-/// keys are dropped unless they require Ctrl.
+/// keys are dropped unless they require Ctrl; a rebinding to one of them is refused (A, E, Q
+/// and 6-9 are free: the steering is on the arrows, the free camera is gated off the vehicle).
 pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::KeyW,
-    KeyCode::KeyA,
     KeyCode::KeyS,
     KeyCode::KeyD,
-    KeyCode::KeyE,
-    KeyCode::KeyQ,
     KeyCode::KeyN,
     KeyCode::KeyR,
     KeyCode::Space,
@@ -45,10 +43,6 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Digit3,
     KeyCode::Digit4,
     KeyCode::Digit5,
-    KeyCode::Digit6,
-    KeyCode::Digit7,
-    KeyCode::Digit8,
-    KeyCode::Digit9,
     KeyCode::F1,
     KeyCode::F2,
     KeyCode::F8,
@@ -209,9 +203,108 @@ pub struct ScriptKeyBinding {
     pub held: bool,
 }
 
-/// Key bindings of vehicle script triggers (empty until the game loads `keyboard.cfg`).
+/// A key with the modifiers that must be held with it (the value of a key binding setting).
+///
+/// Stored as text: `none`, or an optional `Ctrl+` and `Shift+` followed by a protocol key name
+/// (`L`, `7`, `F5`, `NumpadDivide`; see [`crate::control::keys::parse_key`]). Keys are physical,
+/// so a binding keeps its position on other keyboard layouts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct KeyChord {
+    /// The physical key.
+    pub key: KeyCode,
+    /// Shift must be held.
+    pub shift: bool,
+    /// Ctrl must be held.
+    pub ctrl: bool,
+}
+
+impl KeyChord {
+    /// Parses `text`; `Ok(None)` is `none` (or empty: unbound).
+    ///
+    /// # Errors
+    /// The message says what is wrong with `text`.
+    pub fn parse(text: &str) -> Result<Option<Self>, String> {
+        let text = text.trim();
+        if text.is_empty() || text.eq_ignore_ascii_case("none") {
+            return Ok(None);
+        }
+        let (mut shift, mut ctrl) = (false, false);
+        let mut rest = text;
+        while let Some((head, tail)) = rest.split_once('+') {
+            if tail.is_empty() {
+                break;
+            }
+            match head.trim().to_ascii_lowercase().as_str() {
+                "shift" => shift = true,
+                "ctrl" | "control" | "strg" => ctrl = true,
+                other => return Err(format!("unknown modifier \"{other}\" (Ctrl, Shift)")),
+            }
+            rest = tail;
+        }
+        let rest = rest.trim();
+        let Some((key, _)) = crate::control::keys::parse_key(rest) else {
+            return Err(format!(
+                "unknown key \"{rest}\" (A-Z, 0-9, F1-F12, Numpad0-9, NumpadDivide, ... or none)"
+            ));
+        };
+        Ok(Some(Self { key, shift, ctrl }))
+    }
+
+    /// The canonical text (`Ctrl+Shift+L`), `None` if the key has no protocol name.
+    #[must_use]
+    pub fn to_text(self) -> Option<String> {
+        let name = crate::control::keys::key_name(self.key)?;
+        let mut out = String::new();
+        if self.ctrl {
+            out.push_str("Ctrl+");
+        }
+        if self.shift {
+            out.push_str("Shift+");
+        }
+        out.push_str(&name);
+        Some(out)
+    }
+
+    /// Whether OPTS itself uses this key combination (see [`OPTS_RESERVED_KEYS`]).
+    #[must_use]
+    pub fn is_reserved(self) -> bool {
+        !self.ctrl && OPTS_RESERVED_KEYS.contains(&self.key)
+    }
+}
+
+/// Key bindings of vehicle script triggers: the `keyboard.cfg` ones ([`ScriptKeyBase`]) plus the
+/// rebindable actions of the settings (filled by the game; empty until it has run).
 #[derive(Resource, Debug, Clone, Default)]
 pub struct ScriptKeyBindings(pub Vec<ScriptKeyBinding>);
+
+/// The bindings read from `keyboard.cfg` without the rebindable actions (their keys come from the
+/// settings and win over an identical chord here).
+#[derive(Resource, Debug, Clone, Default)]
+pub struct ScriptKeyBase(pub Vec<ScriptKeyBinding>);
+
+impl ScriptKeyBindings {
+    /// `base` without the `replaced` triggers and without bindings on a chord that `own` uses,
+    /// followed by `own`.
+    #[must_use]
+    pub fn compose(
+        base: &[ScriptKeyBinding],
+        replaced: &[&str],
+        own: Vec<ScriptKeyBinding>,
+    ) -> Self {
+        let mut out: Vec<ScriptKeyBinding> = base
+            .iter()
+            .filter(|b| {
+                !replaced.contains(&b.trigger.as_str())
+                    && !own
+                        .iter()
+                        .any(|o| o.key == b.key && o.shift == b.shift && o.ctrl == b.ctrl)
+            })
+            .cloned()
+            .collect();
+        out.extend(own);
+        Self(out)
+    }
+}
 
 impl ScriptKeyBindings {
     /// The `[vehicles]` bindings of `config` whose key is known and not reserved by OPTS.
@@ -280,9 +373,14 @@ fn raise(vehicles: &Query<&VehicleScripts, With<PlayerVehicle>>, owner: Entity, 
 pub fn script_key_trigger_system(
     keys: Res<ButtonInput<KeyCode>>,
     bindings: Res<ScriptKeyBindings>,
+    state: Option<Res<CameraState>>,
     vehicles: Query<(Entity, &VehicleScripts), With<PlayerVehicle>>,
 ) {
     if bindings.0.is_empty() {
+        return;
+    }
+    // The free camera uses the keys for flying; the vehicle takes no input then.
+    if state.is_some_and(|s| s.mode == CameraMode::FreeRoam) {
         return;
     }
     let fired = bindings.fired(&keys);
@@ -384,17 +482,19 @@ pub struct VehicleTriggerPlugin;
 impl Plugin for VehicleTriggerPlugin {
     fn build(&self, app: &mut App) {
         // The F1 report modal takes all input: typing must not raise vehicle triggers.
-        app.init_resource::<ScriptKeyBindings>().add_systems(
-            Update,
-            (
-                script_key_trigger_system
-                    .run_if(crate::reporting::not_modal_active)
-                    .run_if(crate::camera::not_editing_viewpoint),
-                script_mouse_trigger_system
-                    .run_if(crate::reporting::not_modal_active)
-                    .run_if(crate::camera::not_editing_viewpoint),
-            ),
-        );
+        app.init_resource::<ScriptKeyBindings>()
+            .init_resource::<ScriptKeyBase>()
+            .add_systems(
+                Update,
+                (
+                    script_key_trigger_system
+                        .run_if(crate::reporting::not_modal_active)
+                        .run_if(crate::camera::not_editing_viewpoint),
+                    script_mouse_trigger_system
+                        .run_if(crate::reporting::not_modal_active)
+                        .run_if(crate::camera::not_editing_viewpoint),
+                ),
+            );
     }
 }
 
@@ -440,6 +540,42 @@ mod tests {
         keys.release(KeyCode::NumpadDivide);
         // Only the held binding reports its release.
         assert_eq!(b.fired(&keys), ["horn_off"]);
+    }
+
+    #[test]
+    fn chords_parse_and_print_canonically() {
+        let c = KeyChord::parse("shift+ctrl+l").unwrap().unwrap();
+        assert_eq!((c.key, c.shift, c.ctrl), (KeyCode::KeyL, true, true));
+        assert_eq!(c.to_text().as_deref(), Some("Ctrl+Shift+L"));
+        assert_eq!(KeyChord::parse("none").unwrap(), None);
+        assert_eq!(KeyChord::parse("").unwrap(), None);
+        let n = KeyChord::parse("NumpadDivide").unwrap().unwrap();
+        assert_eq!(n.key, KeyCode::NumpadDivide);
+        assert!(KeyChord::parse("Alt+L").is_err());
+        assert!(KeyChord::parse("Banana").is_err());
+        assert!(KeyChord::parse("W").unwrap().unwrap().is_reserved());
+        assert!(!KeyChord::parse("Ctrl+W").unwrap().unwrap().is_reserved());
+        assert!(!KeyChord::parse("E").unwrap().unwrap().is_reserved());
+    }
+
+    #[test]
+    fn compose_replaces_triggers_and_shadowed_chords() {
+        let b = |t: &str, key, ctrl| ScriptKeyBinding {
+            trigger: t.into(),
+            key,
+            shift: false,
+            ctrl,
+            held: false,
+        };
+        let base = [
+            b("old_lights", KeyCode::KeyK, false),
+            b("shadowed", KeyCode::KeyG, false),
+            b("kept", KeyCode::KeyG, true),
+        ];
+        let own = vec![b("lights", KeyCode::KeyG, false)];
+        let out = ScriptKeyBindings::compose(&base, &["old_lights"], own);
+        let names: Vec<_> = out.0.iter().map(|b| b.trigger.as_str()).collect();
+        assert_eq!(names, ["kept", "lights"]);
     }
 
     #[test]

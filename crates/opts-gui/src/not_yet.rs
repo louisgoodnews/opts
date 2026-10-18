@@ -94,7 +94,7 @@ pub const SETTINGS_REBIND: NotYetPlace = NotYetPlace {
     id: "settings.rebind",
     place: "Settings, Controls, Change a binding",
     milestone: "M-0035",
-    missing: "Vehicle and camera keys are fixed in code; the list shows them, rebinding needs the vehicle control layer.",
+    missing: "The keys of the vehicle systems (engine, lights, doors, ...) can be changed above; driving and camera keys, gamepad buttons and wheel controls are fixed in code.",
 };
 
 /// Every registered place. Add new ones here; the generated list and the tests follow.
