@@ -77,3 +77,42 @@ fn the_spec_axles_and_loads_of_the_player_vehicle_are_listed_with_their_sources(
     assert_eq!(d["state"]["consist_mass_kg"], 1200.0);
     assert_eq!(d["state"]["units"], 1);
 }
+
+#[test]
+fn the_wheels_the_body_and_the_brakes_are_shown_and_the_panel_text_names_them() {
+    let manifest = BusManifest::parse(
+        "[mass]\n10\n0\n0\n0\n\n[schwerpunkt]\n1.0\n\n\
+         [newachse]\nachse_long\n3\nachse_raddurchmesser\n0.9\nachse_feder\n250\n\
+         achse_maxforce\n100\nachse_daempfer\n20\n\n\
+         [newachse]\nachse_long\n-3\nachse_raddurchmesser\n0.9\nachse_feder\n250\n\
+         achse_maxforce\n100\nachse_daempfer\n20\nachse_antrieb\n1\n",
+    )
+    .expect("parses");
+    let mut sim = VehicleSimulation::from_manifest(&manifest);
+    sim.inputs.set_parking_brake(false);
+    sim.chassis.local_velocity = bevy::math::Vec2::new(0.0, 14.0);
+    sim.inputs.set_service_brake(1.0);
+    for _ in 0..80 {
+        sim.step(0.01);
+    }
+    let mut app = app();
+    app.world_mut()
+        .spawn((PlayerVehicle, VehicleController::new(sim.clone())));
+    let d = call(&mut app).expect("answers");
+    let axles = d["axles"].as_array().expect("axles");
+    assert!(axles[0]["compression_m"][0].as_f64().expect("front left") > 0.0);
+    assert!(axles[0]["brake_force_n"].as_f64().expect("force") > 0.0);
+    assert!(
+        d["body"]["pitch_rad"].as_f64().expect("pitch") < 0.0,
+        "nose down in braking"
+    );
+    assert!(d["brakes"]["pressure"].as_f64().expect("pressure") > 0.5);
+    assert_eq!(d["spec"]["pitch_inertia_kg_m2"]["source"], "default");
+
+    let text = opts_game::control_dynamics::dynamics_text(&sim);
+    assert!(text.starts_with("dynamics: "), "{text}");
+    assert!(
+        text.contains("body heave") && text.contains("axle 0") && text.contains("axle 1"),
+        "{text}"
+    );
+}

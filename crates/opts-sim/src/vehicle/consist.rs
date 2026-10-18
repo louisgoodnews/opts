@@ -17,6 +17,9 @@ pub const DEFAULT_UNIT_MASS_KG: f32 = 11_500.0;
 /// Gravity (m/s²), as used by the rest of the vehicle model.
 pub const GRAVITY: f32 = 9.81;
 
+/// Rated load of an axle (N) when the file states none: the generic transit-bus axle.
+pub const DEFAULT_RATED_AXLE_N: f32 = 115_000.0;
+
 /// One axle of a unit.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct UnitAxle {
@@ -24,6 +27,8 @@ pub struct UnitAxle {
     pub longitudinal_m: f32,
     /// The axle receives drive torque.
     pub is_driven: bool,
+    /// Rated load of the axle (N, `achse_maxforce`): the brakes are sized for it.
+    pub rated_n: f32,
 }
 
 /// Mass and axles of one unit of a consist.
@@ -61,6 +66,10 @@ impl UnitLoad {
                 .map(|a| UnitAxle {
                     longitudinal_m: a.longitudinal_m * sign,
                     is_driven: a.is_driven,
+                    rated_n: a
+                        .max_force
+                        .filter(|&f| f > 0.0)
+                        .map_or(DEFAULT_RATED_AXLE_N, |f| f * 1_000.0),
                 })
                 .collect(),
         }
@@ -77,6 +86,7 @@ impl UnitLoad {
                 .map(|i| UnitAxle {
                     longitudinal_m: -1.5 * i as f32,
                     is_driven: i < driven,
+                    rated_n: DEFAULT_RATED_AXLE_N,
                 })
                 .collect(),
         }
@@ -126,6 +136,7 @@ mod tests {
                 .map(|&(y, d)| UnitAxle {
                     longitudinal_m: y,
                     is_driven: d,
+                    rated_n: DEFAULT_RATED_AXLE_N,
                 })
                 .collect(),
         }
@@ -148,6 +159,7 @@ mod tests {
         let a = |d| UnitAxle {
             longitudinal_m: 0.0,
             is_driven: d,
+            rated_n: DEFAULT_RATED_AXLE_N,
         };
         let (driven, braked) = driven_and_braked_load_n(&[(a(true), 100.0), (a(false), 50.0)]);
         assert_eq!((driven, braked), (100.0, 150.0));

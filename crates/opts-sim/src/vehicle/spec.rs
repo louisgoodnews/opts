@@ -72,6 +72,11 @@ pub const DEFAULT_MASS_KG: f32 = 11_500.0;
 pub const DEFAULT_CG_HEIGHT_M: f32 = 1.15;
 /// Yaw inertia assumed when neither the file nor a bounding box gives one (kg·m²).
 pub const DEFAULT_YAW_INERTIA_KG_M2: f32 = 120_000.0;
+/// Pitch and roll inertia assumed when neither the file nor a bounding box gives one (kg·m²):
+/// a 12 m transit bus.
+pub const DEFAULT_PITCH_INERTIA_KG_M2: f32 = 150_000.0;
+/// See [`DEFAULT_PITCH_INERTIA_KG_M2`].
+pub const DEFAULT_ROLL_INERTIA_KG_M2: f32 = 30_000.0;
 /// Smallest and largest rolling resistance coefficient taken from a file (force over weight; the
 /// installed files state 0.001 to 0.02 at the 10th to 90th percentile, at most 0.1).
 pub const ROLLING_COEFF_RANGE: (f32, f32) = (0.0005, 0.05);
@@ -85,6 +90,11 @@ pub struct VehicleDynamicsSpec {
     pub cg_height_m: Sourced,
     /// Yaw moment of inertia (`[momentofintertia]`, else lines 2 to 4 of `[mass]`; z), kg·m².
     pub yaw_inertia_kg_m2: Sourced,
+    /// Pitch moment of inertia, about the lateral axis (`[momentofintertia]` x, else lines 2 of
+    /// `[mass]`), kg·m².
+    pub pitch_inertia_kg_m2: Sourced,
+    /// Roll moment of inertia, about the longitudinal axis (`[momentofintertia]` y), kg·m².
+    pub roll_inertia_kg_m2: Sourced,
     /// Rolling resistance as force over weight (`[rollwiderstand]`, a force in newtons, divided
     /// by the stated mass and `g`).
     pub rolling_coefficient: Sourced,
@@ -96,6 +106,8 @@ impl Default for VehicleDynamicsSpec {
             mass_kg: Sourced::default(DEFAULT_MASS_KG),
             cg_height_m: Sourced::default(DEFAULT_CG_HEIGHT_M),
             yaw_inertia_kg_m2: Sourced::default(DEFAULT_YAW_INERTIA_KG_M2),
+            pitch_inertia_kg_m2: Sourced::default(DEFAULT_PITCH_INERTIA_KG_M2),
+            roll_inertia_kg_m2: Sourced::default(DEFAULT_ROLL_INERTIA_KG_M2),
             rolling_coefficient: Sourced::default(ROLLING_RESISTANCE_COEFF),
         }
     }
@@ -134,6 +146,33 @@ impl VehicleDynamicsSpec {
             Sourced::default(DEFAULT_YAW_INERTIA_KG_M2)
         };
 
+        // Pitch (about x) and roll (about y): the stated moments, else a box of the bounding box
+        // (length and height for pitch, width and height for roll), else the bus figures.
+        let moment = |stated: Option<f32>, a: f32, b: f32, fallback: f32| {
+            if let Some(v) = stated.map(|t| t * 1_000.0).filter(|&v| v > 500.0) {
+                Sourced::file(v)
+            } else if let Some((size, _)) =
+                manifest.bounding_box.filter(|(s, _)| s.min_element() > 0.2)
+            {
+                let (a, b) = (size[a as usize], size[b as usize]);
+                Sourced::estimate(mass_kg.value * (a * a + b * b) / 12.0)
+            } else {
+                Sourced::default(fallback)
+            }
+        };
+        let pitch_inertia_kg_m2 = moment(
+            extras.inertia_t_m2.map(|i| i[0]),
+            1.0,
+            2.0,
+            DEFAULT_PITCH_INERTIA_KG_M2,
+        );
+        let roll_inertia_kg_m2 = moment(
+            extras.inertia_t_m2.map(|i| i[1]),
+            0.0,
+            2.0,
+            DEFAULT_ROLL_INERTIA_KG_M2,
+        );
+
         let rolling_coefficient = match (extras.roll_resistance_n.filter(|&r| r > 0.0), mass) {
             (Some(newtons), Some(kg)) => Sourced::file(
                 (newtons / (kg * GRAVITY)).clamp(ROLLING_COEFF_RANGE.0, ROLLING_COEFF_RANGE.1),
@@ -145,6 +184,8 @@ impl VehicleDynamicsSpec {
             mass_kg,
             cg_height_m,
             yaw_inertia_kg_m2,
+            pitch_inertia_kg_m2,
+            roll_inertia_kg_m2,
             rolling_coefficient,
         }
     }

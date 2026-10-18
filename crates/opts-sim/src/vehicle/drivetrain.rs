@@ -258,10 +258,9 @@ impl DrivetrainModel {
             0.0
         };
 
-        // 4. Braking forces (Service + Retarder + Parking)
+        // 4. Braking forces (Retarder + Parking; the service brake is the vehicle's own
+        // `BrakeSystem`, added by the simulation)
         let g = 9.81;
-        let max_service_n = 0.7 * vehicle_mass_kg * g; // ~6.8 m/s^2 deceleration capability
-        let service_brake_n = inputs.service_brake() * max_service_n;
 
         let retarder_torque_nm = (inputs.retarder_stage() as f32) * 500.0;
         let retarder_brake_n = (retarder_torque_nm * self.transmission.final_drive_ratio
@@ -274,7 +273,7 @@ impl DrivetrainModel {
             0.0
         };
 
-        let total_brake_n = service_brake_n + retarder_brake_n + parking_brake_n;
+        let total_brake_n = retarder_brake_n + parking_brake_n;
 
         // 5. Resistances
         let drag_force_n = self.aero.compute_drag_force(abs_speed);

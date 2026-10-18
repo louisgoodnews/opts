@@ -4,7 +4,7 @@
 //! dynamic longitudinal weight transfer during acceleration and braking, and
 //! suspension ride-height deflection.
 
-use crate::vehicle::axle::AxleState;
+use crate::vehicle::axle::{AxleConfig, AxleState};
 use serde::{Deserialize, Serialize};
 
 /// High-level suspension and mass distribution calculator.
@@ -152,6 +152,177 @@ impl SuspensionModel {
         let per_wheel_load = dynamic_load_n * 0.5;
         axle.left_wheel.vertical_load_n = per_wheel_load;
         axle.right_wheel.vertical_load_n = per_wheel_load;
+    }
+}
+
+/// Travel of a spring (m) beyond which the bump stop acts (assumed, the files state no travel ❓).
+pub const BUMP_STOP_TRAVEL_M: f32 = 0.12;
+/// Stiffness of the bump stop (N/m).
+const BUMP_STOP_STIFFNESS_N_M: f32 = 2.0e6;
+/// Integration substep of the body model (s).
+const BODY_SUBSTEP_S: f32 = 0.004;
+
+/// One wheel's spring and damper under the body.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct WheelSuspension {
+    /// Position under the body: longitudinal (m, forward positive) and lateral (m, right positive).
+    pub x_m: f32,
+    /// Lateral position (m).
+    pub y_m: f32,
+    /// Spring rate of this wheel (N/m).
+    pub spring_n_m: f32,
+    /// Damping of this wheel (N·s/m).
+    pub damping_n_s_m: f32,
+    /// Load at rest (N).
+    pub static_load_n: f32,
+    /// Spring compression beyond the rest position (m, compression positive).
+    pub compression_m: f32,
+    /// Rate of the compression (m/s).
+    pub compression_rate_m_s: f32,
+    /// Vertical load on the ground now (N, zero when the wheel has lifted).
+    pub load_n: f32,
+}
+
+/// The body on its wheels: heave, pitch and roll under a spring and a damper per wheel, driven by
+/// the longitudinal and lateral acceleration (their moments about the centre of gravity) and the
+/// ground under each wheel (M-0073). Small angles; the rest position is the static equilibrium of
+/// the loads the [`SuspensionModel`] distributes.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BodySuspension {
+    /// Height of the body above its rest position (m, up positive).
+    pub heave_m: f32,
+    /// Heave rate (m/s).
+    pub heave_rate_m_s: f32,
+    /// Pitch (rad, nose up positive).
+    pub pitch_rad: f32,
+    /// Pitch rate (rad/s).
+    pub pitch_rate_rad_s: f32,
+    /// Roll (rad, right side down positive).
+    pub roll_rad: f32,
+    /// Roll rate (rad/s).
+    pub roll_rate_rad_s: f32,
+    /// The wheels, axle by axle, left then right.
+    pub wheels: Vec<WheelSuspension>,
+    /// Sprung mass (kg).
+    pub mass_kg: f32,
+    /// Pitch moment of inertia about the lateral axis (kg·m²).
+    pub pitch_inertia_kg_m2: f32,
+    /// Roll moment of inertia about the longitudinal axis (kg·m²).
+    pub roll_inertia_kg_m2: f32,
+    /// Height of the centre of gravity (m).
+    pub cg_height_m: f32,
+}
+
+impl BodySuspension {
+    /// A body at rest on the wheels of `axles` (longitudinal position, track width, spring rate
+    /// and damping per side), carrying the static axle loads `static_loads_n` (summing to the
+    /// weight).
+    #[must_use]
+    pub fn new(
+        axles: &[AxleConfig],
+        static_loads_n: &[f32],
+        mass_kg: f32,
+        pitch_inertia_kg_m2: f32,
+        roll_inertia_kg_m2: f32,
+        cg_height_m: f32,
+    ) -> Self {
+        let mut wheels = Vec::with_capacity(axles.len() * 2);
+        for (axle, load) in axles.iter().zip(static_loads_n) {
+            for side in [-1.0f32, 1.0] {
+                wheels.push(WheelSuspension {
+                    x_m: axle.longitudinal_m,
+                    y_m: side * axle.track_width_m * 0.5,
+                    spring_n_m: axle.spring_rate_n_m.max(10_000.0),
+                    damping_n_s_m: axle.damping_n_s_m.max(1_000.0),
+                    static_load_n: load * 0.5,
+                    compression_m: 0.0,
+                    compression_rate_m_s: 0.0,
+                    load_n: load * 0.5,
+                });
+            }
+        }
+        Self {
+            heave_m: 0.0,
+            heave_rate_m_s: 0.0,
+            pitch_rad: 0.0,
+            pitch_rate_rad_s: 0.0,
+            roll_rad: 0.0,
+            roll_rate_rad_s: 0.0,
+            wheels,
+            mass_kg: mass_kg.max(100.0),
+            pitch_inertia_kg_m2: pitch_inertia_kg_m2.max(100.0),
+            roll_inertia_kg_m2: roll_inertia_kg_m2.max(100.0),
+            cg_height_m: cg_height_m.max(0.1),
+        }
+    }
+
+    /// Advances `dt` seconds. `a_long` is the longitudinal acceleration (m/s², forward positive),
+    /// `a_lat` the lateral one (m/s², towards the right positive); `ground_m` the height of the
+    /// ground under each wheel against the plane the body follows (m, same order as
+    /// [`BodySuspension::wheels`]; missing entries are 0).
+    pub fn step(&mut self, dt: f32, a_long: f32, a_lat: f32, ground_m: &[f32]) {
+        if dt <= 0.0 {
+            return;
+        }
+        let n = (dt / BODY_SUBSTEP_S).ceil().max(1.0) as usize;
+        let h = dt / n as f32;
+        let (m, ip, ir) = (
+            self.mass_kg,
+            self.pitch_inertia_kg_m2,
+            self.roll_inertia_kg_m2,
+        );
+        // The d'Alembert forces of the acceleration act at the centre of gravity: speeding up
+        // lifts the nose, turning right rolls the body to the left (right side up).
+        let m_pitch_ext = m * a_long * self.cg_height_m;
+        let m_roll_ext = -m * a_lat * self.cg_height_m;
+        for _ in 0..n {
+            let (mut fz, mut mp, mut mr) = (0.0f32, 0.0f32, 0.0f32);
+            for (i, w) in self.wheels.iter_mut().enumerate() {
+                let g = ground_m.get(i).copied().unwrap_or(0.0);
+                // Height of the body above this wheel's rest position, then the compression.
+                let body = self.heave_m + w.x_m * self.pitch_rad - w.y_m * self.roll_rad;
+                let body_rate = self.heave_rate_m_s + w.x_m * self.pitch_rate_rad_s
+                    - w.y_m * self.roll_rate_rad_s;
+                let compression = -body + g;
+                let rate = -body_rate;
+                let mut force = w.spring_n_m * compression + w.damping_n_s_m * rate;
+                if compression > BUMP_STOP_TRAVEL_M {
+                    force += BUMP_STOP_STIFFNESS_N_M * (compression - BUMP_STOP_TRAVEL_M);
+                }
+                // A wheel cannot pull: at most it loses all its load.
+                let load = (w.static_load_n + force).max(0.0);
+                let delta = load - w.static_load_n;
+                w.compression_m = compression;
+                w.compression_rate_m_s = rate;
+                w.load_n = load;
+                fz += delta;
+                mp += w.x_m * delta;
+                mr -= w.y_m * delta;
+            }
+            let heave_acc = fz / m;
+            let pitch_acc = (mp + m_pitch_ext) / ip;
+            let roll_acc = (mr + m_roll_ext) / ir;
+            self.heave_rate_m_s += heave_acc * h;
+            self.pitch_rate_rad_s += pitch_acc * h;
+            self.roll_rate_rad_s += roll_acc * h;
+            self.heave_m += self.heave_rate_m_s * h;
+            self.pitch_rad += self.pitch_rate_rad_s * h;
+            self.roll_rad += self.roll_rate_rad_s * h;
+        }
+    }
+
+    /// Sum of the loads on the wheels of axle `index` (N).
+    #[must_use]
+    pub fn axle_load_n(&self, index: usize) -> f32 {
+        self.wheels
+            .get(index * 2..index * 2 + 2)
+            .map_or(0.0, |w| w.iter().map(|w| w.load_n).sum())
+    }
+
+    /// Sum of all wheel loads (N).
+    #[must_use]
+    pub fn total_load_n(&self) -> f32 {
+        self.wheels.iter().map(|w| w.load_n).sum()
     }
 }
 

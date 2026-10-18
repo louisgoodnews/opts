@@ -110,21 +110,29 @@ pub fn host_inputs(
     };
     // Wheel spin (rad, growing while driving forward), steering (rad; positive steering is
     // assumed to turn left ❓, the simulation's positive steering turns right) and suspension
-    // travel (zero until the suspension of the physics feeds it, M-0073).
+    // travel (m, the spring's compression of the wheel under the body model, M-0073; its sign
+    // and zero point are ❓ against OMSI).
     inputs.axles = sim
         .axles
         .iter()
-        .map(|axle| {
+        .enumerate()
+        .map(|(i, axle)| {
             let rpm = rpm_of(speed, axle.config.wheel_diameter_m * 0.5);
-            let wheel = |w: &opts_sim::WheelState| WheelInput {
+            let travel = |side: usize| {
+                sim.body
+                    .as_ref()
+                    .and_then(|b| b.wheels.get(i * 2 + side))
+                    .map_or(0.0, |w| w.compression_m)
+            };
+            let wheel = |w: &opts_sim::WheelState, side: usize| WheelInput {
                 speed_rpm: rpm,
                 rotation_rad: w.rotation_rad,
                 steering_rad: -w.steer_angle_rad,
-                suspension_m: 0.0,
+                suspension_m: travel(side),
             };
             AxleInput {
-                left: wheel(&axle.left_wheel),
-                right: wheel(&axle.right_wheel),
+                left: wheel(&axle.left_wheel, 0),
+                right: wheel(&axle.right_wheel, 1),
             }
         })
         .collect();

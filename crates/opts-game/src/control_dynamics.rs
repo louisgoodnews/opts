@@ -47,6 +47,9 @@ pub fn describe(sim: &VehicleSimulation) -> Value {
                 "load_n": [a.left_wheel.vertical_load_n, a.right_wheel.vertical_load_n],
                 "deflection_m": a.suspension_deflection_m,
                 "deflection_speed_m_s": a.suspension_velocity_m_s,
+                "compression_m": sim.body.as_ref().and_then(|b| b.wheels.get(i * 2..i * 2 + 2)).map(|w| [w[0].compression_m, w[1].compression_m]),
+                "brake_force_n": sim.brakes.axle_forces_n.get(i),
+                "brake_limited": sim.brakes.axle_limited.get(i),
             })
         })
         .collect();
@@ -55,6 +58,8 @@ pub fn describe(sim: &VehicleSimulation) -> Value {
             "mass_kg": sourced(sim.spec.mass_kg),
             "cg_height_m": sourced(sim.spec.cg_height_m),
             "yaw_inertia_kg_m2": sourced(sim.spec.yaw_inertia_kg_m2),
+            "pitch_inertia_kg_m2": sourced(sim.spec.pitch_inertia_kg_m2),
+            "roll_inertia_kg_m2": sourced(sim.spec.roll_inertia_kg_m2),
             "rolling_coefficient": sourced(sim.spec.rolling_coefficient),
         },
         "axles": axles,
@@ -65,7 +70,59 @@ pub fn describe(sim: &VehicleSimulation) -> Value {
             "units": 1 + sim.consist.len(),
             "wheelbase_m": sim.wheelbase_m,
         },
+        "body": sim.body.as_ref().map(|b| json!({
+            "heave_m": b.heave_m,
+            "pitch_rad": b.pitch_rad,
+            "roll_rad": b.roll_rad,
+        })),
+        "brakes": {
+            "pressure": sim.brakes.pressure,
+            "apply_tau_s": sim.brakes.apply_tau_s,
+            "force_n": sim.brakes.axle_forces_n.iter().sum::<f32>(),
+        },
     })
+}
+
+/// The lines of the developer panel (F10) about the player's vehicle: speed, brake pressure and
+/// force, the body's heave, pitch and roll, and per axle the wheel loads, the spring compression
+/// and the brake force (`!` marks an axle held at the limit of its tyres).
+#[must_use]
+pub fn dynamics_text(sim: &VehicleSimulation) -> String {
+    let mut out = format!(
+        "dynamics: {:.1} m/s | brake {:.0} % {:.1} kN",
+        sim.chassis.forward_speed_m_s(),
+        sim.brakes.pressure * 100.0,
+        sim.brakes.axle_forces_n.iter().sum::<f32>() / 1_000.0,
+    );
+    if let Some(b) = &sim.body {
+        out.push_str(&format!(
+            " | body heave {:.0} mm pitch {:.2}° roll {:.2}°",
+            b.heave_m * 1_000.0,
+            b.pitch_rad.to_degrees(),
+            b.roll_rad.to_degrees(),
+        ));
+    }
+    for (i, a) in sim.axles.iter().enumerate() {
+        let comp = sim
+            .body
+            .as_ref()
+            .and_then(|b| b.wheels.get(i * 2..i * 2 + 2))
+            .map_or([0.0, 0.0], |w| [w[0].compression_m, w[1].compression_m]);
+        out.push_str(&format!(
+            "\n  axle {i}: load {:.1}/{:.1} kN, spring {:.0}/{:.0} mm, brake {:.1} kN{}",
+            a.left_wheel.vertical_load_n / 1_000.0,
+            a.right_wheel.vertical_load_n / 1_000.0,
+            comp[0] * 1_000.0,
+            comp[1] * 1_000.0,
+            sim.brakes.axle_forces_n.get(i).copied().unwrap_or(0.0) / 1_000.0,
+            if sim.brakes.axle_limited.get(i).copied().unwrap_or(false) {
+                " !"
+            } else {
+                ""
+            },
+        ));
+    }
+    out
 }
 
 fn dynamics(world: &mut World, _: &Value) -> Outcome {

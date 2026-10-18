@@ -65,6 +65,7 @@ pub fn toggle_developer_panel(
 /// Refreshes the developer panel text while it is visible.
 pub fn update_debug_overlay(
     stats: Res<WorldStats>,
+    vehicle: Query<&opts_bevy::VehicleController, With<opts_bevy::PlayerVehicle>>,
     mut query: Query<(&mut Text, &mut Visibility), With<DebugOverlayText>>,
 ) {
     for (mut text, mut vis) in &mut query {
@@ -102,6 +103,11 @@ pub fn update_debug_overlay(
             stats.load_problems,
             stats.meshes_exact,
         );
+        if let Ok(c) = vehicle.single() {
+            text.0.push('\n');
+            text.0
+                .push_str(&crate::control_dynamics::dynamics_text(&c.sim));
+        }
     }
 }
 
