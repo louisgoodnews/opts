@@ -28,6 +28,10 @@ pub const ENGLISH: &[(&str, &str)] = &[
         include_str!("../../../opts-game/src/settings_registry/messages_lighting_en.ftl"),
     ),
     (
+        "settings-keys.ftl",
+        include_str!("../../../opts-game/src/settings_registry/messages_keys_en.ftl"),
+    ),
+    (
         "hud.ftl",
         include_str!("../../../opts-game/src/hud/l10n/hud-en.ftl"),
     ),
@@ -51,6 +55,10 @@ pub const GERMAN: &[(&str, &str)] = &[
     (
         "settings-lighting.ftl",
         include_str!("../../../opts-game/src/settings_registry/messages_lighting_de.ftl"),
+    ),
+    (
+        "settings-keys.ftl",
+        include_str!("../../../opts-game/src/settings_registry/messages_keys_de.ftl"),
     ),
     (
         "hud.ftl",
