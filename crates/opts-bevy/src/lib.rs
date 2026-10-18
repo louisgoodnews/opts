@@ -46,6 +46,7 @@ pub mod position_tag;
 pub mod reflections;
 pub mod render_stats;
 pub mod reporting;
+pub mod route;
 pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;

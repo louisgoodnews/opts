@@ -1338,95 +1338,6 @@ pub(super) fn load_driver_human(
     Ok(name)
 }
 
-/// Discovers and loads the best matching depot file for the vehicle and current map.
-fn load_depot_file(
-    bus_dir: &Path,
-    omsi_root: &Path,
-    map_name: &str,
-) -> Option<opts_core::formats::hof::HofFile> {
-    let map_clean = map_name.trim().to_ascii_lowercase();
-
-    // 1. Look in the vehicle directory
-    if let Ok(entries) = std::fs::read_dir(bus_dir) {
-        let mut candidates = Vec::new();
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path
-                .extension()
-                .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
-            {
-                let stem = path
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_ascii_lowercase();
-                if !map_clean.is_empty() && stem == map_clean {
-                    if let Ok(bytes) = std::fs::read(&path) {
-                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
-                            return Some(hof);
-                        }
-                    }
-                }
-                candidates.push((stem, path));
-            }
-        }
-        if !map_clean.is_empty() {
-            for (stem, path) in &candidates {
-                if stem.contains(&map_clean) || map_clean.contains(stem.as_str()) {
-                    if let Ok(bytes) = std::fs::read(path) {
-                        if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
-                            return Some(hof);
-                        }
-                    }
-                }
-            }
-        }
-        if let Some((_, path)) = candidates.first() {
-            if let Ok(bytes) = std::fs::read(path) {
-                if let Ok(hof) = opts_core::formats::hof::HofFile::parse_bytes(&bytes) {
-                    return Some(hof);
-                }
-            }
-        }
-    }
-
-    // 2. Look in shared Vehicles folders in OMSI root
-    if !map_clean.is_empty() {
-        let shared_dirs = [
-            omsi_root.join("Vehicles"),
-            omsi_root.join("Vehicles/.hof Dateien"),
-        ];
-        for dir in shared_dirs {
-            if let Ok(entries) = std::fs::read_dir(dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path
-                        .extension()
-                        .is_some_and(|ext| ext.eq_ignore_ascii_case("hof"))
-                    {
-                        let stem = path
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_ascii_lowercase();
-                        if stem == map_clean || stem.contains(&map_clean) {
-                            if let Ok(bytes) = std::fs::read(&path) {
-                                if let Ok(hof) =
-                                    opts_core::formats::hof::HofFile::parse_bytes(&bytes)
-                                {
-                                    return Some(hof);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    None
-}
-
 /// The seed of a vehicle's random numbers (`random`, `NrSpecRandom`): FNV-1a of its `.bus` path
 /// below the installation and its session vehicle id, so the same vehicle in the same slot
 /// draws the same numbers in every run and two vehicles differ (the entity bits it used to be
@@ -1505,11 +1416,7 @@ fn attach_scripts(
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
         });
-    let hof = load_depot_file(bus_dir, job.install.root(), map_name);
-
-    let mut active_route_index = None;
-    let mut active_line_string = String::new();
-
+    let hof = opts_bevy::route::find_depot(bus_dir, job.install.root(), map_name);
     if let Some(h) = &hof {
         tracing::info!(
             depot_name = %h.name,
@@ -1517,35 +1424,16 @@ fn attach_scripts(
             routes = h.routes.len(),
             "depot (.hof) file loaded for vehicle"
         );
-        engine.set_string("Yard", &h.name);
-
-        if let Some((idx, r)) = h
-            .routes
-            .iter()
-            .enumerate()
-            .find(|(_, r)| r.line_string == "33" || r.route_code / 100 == 33)
-            .or_else(|| h.routes.iter().enumerate().next())
-        {
-            active_route_index = Some(idx);
-            active_line_string = if r.line_string.chars().all(|c| c == 'X') {
-                (r.route_code / 100).to_string()
-            } else {
-                r.line_string.clone()
-            };
-            engine.set_string("SetLineTo", &active_line_string);
-            engine.set_string("Ident", &r.route_code.to_string());
-            engine.set("schedule_active", 1.0);
-        }
     }
+    // Nothing is selected until the driver (or the control protocol) selects a route; the
+    // scripts' IBIS then asks the depot for it.
+    let route = opts_bevy::route::RouteHandle::new(hof.map(std::sync::Arc::new));
+    opts_bevy::route::apply_to_scripts(&mut engine, &route);
 
     engine.seed_random(seed as u32);
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
         seed,
-        hof: hof.map(std::sync::Arc::new),
-        active_route_index,
-        current_stop_index: 0,
-        delay_seconds: 0.0,
-        line_string: active_line_string,
+        route: route.clone(),
         script_textures: job.vehicle_script_textures.clone(),
         fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
             &job.install,
@@ -1575,6 +1463,7 @@ fn attach_scripts(
     commands.entity(root).insert((
         opts_bevy::VehicleScripts::new(engine),
         opts_bevy::ScriptStartup::default(),
+        opts_bevy::route::VehicleRoute::new(route),
     ));
 }
 

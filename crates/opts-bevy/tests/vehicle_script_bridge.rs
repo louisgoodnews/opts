@@ -342,11 +342,11 @@ fn vehicle_scripts_corpus_families_report_no_unimplemented_callbacks() {
 
         let ctx = opts_bevy::host_callbacks::VehicleHostContext {
             seed: 42,
-            hof,
-            active_route_index: Some(0),
-            current_stop_index: 0,
-            delay_seconds: 0.0,
-            line_string: "33".to_string(),
+            route: {
+                let route = opts_bevy::route::RouteHandle::new(hof);
+                route.with_first_route();
+                route
+            },
             script_textures: std::sync::Arc::new(std::sync::RwLock::new(script_textures)),
             fonts,
             texture_base_dir: Some(bus_dir.join("Texture")),
@@ -416,11 +416,11 @@ fn nlc_dash_and_matrix_script_textures_receive_drawing() {
 
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
         seed: 101,
-        hof,
-        active_route_index: Some(0),
-        current_stop_index: 0,
-        delay_seconds: 0.0,
-        line_string: "33".to_string(),
+        route: {
+            let route = opts_bevy::route::RouteHandle::new(hof);
+            route.with_first_route();
+            route
+        },
         script_textures: canvases.clone(),
         fonts,
         texture_base_dir: Some(bus_dir.join("Texture")),

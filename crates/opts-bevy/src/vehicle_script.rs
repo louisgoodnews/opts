@@ -207,7 +207,12 @@ pub fn vehicle_script_system(
     time: Res<Time>,
     radius: Option<Res<ScriptRadius>>,
     clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
-    mut query: Query<(&VehicleController, &mut VehicleScripts, Has<PlayerVehicle>)>,
+    mut query: Query<(
+        &VehicleController,
+        &mut VehicleScripts,
+        Has<PlayerVehicle>,
+        Option<&crate::route::VehicleRoute>,
+    )>,
 ) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
@@ -216,10 +221,10 @@ pub fn vehicle_script_system(
     let radius = radius.map_or(ScriptRadius::default().0, |r| r.0);
     let players: Vec<Vec2> = query
         .iter()
-        .filter(|(_, _, player)| *player)
-        .map(|(c, _, _)| c.sim.chassis.position)
+        .filter(|(_, _, player, _)| *player)
+        .map(|(c, _, _, _)| c.sim.chassis.position)
         .collect();
-    for (controller, mut scripts, player) in &mut query {
+    for (controller, mut scripts, player, route) in &mut query {
         if !player
             && !players.is_empty()
             && !players
@@ -234,7 +239,10 @@ pub fn vehicle_script_system(
         let Ok(engine) = engine.get_mut() else {
             continue;
         };
-        let inputs = host_inputs(controller, clock.as_deref());
+        let mut inputs = host_inputs(controller, clock.as_deref());
+        if let Some(r) = route {
+            crate::route::feed_route(&mut inputs, &r.handle);
+        }
         feed(engine, plan, &inputs);
         if first {
             engine.run_init();
@@ -477,6 +485,10 @@ impl Plugin for VehicleScriptPlugin {
                     script_drive_system.before(crate::vehicle_sim::vehicle_physics_step_system),
                     // The start-up's triggers run before the frame that should see them.
                     script_startup_system
+                        .after(crate::vehicle_sim::vehicle_physics_step_system)
+                        .before(vehicle_script_system),
+                    // A queued IBIS key is pressed before the frame that should see it.
+                    crate::route::route_typing_system
                         .after(crate::vehicle_sim::vehicle_physics_step_system)
                         .before(vehicle_script_system),
                     vehicle_script_system.after(crate::vehicle_sim::vehicle_physics_step_system),

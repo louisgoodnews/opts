@@ -353,6 +353,17 @@ impl ScriptEngine {
         !blocks.is_empty()
     }
 
+    /// Whether any script block answers trigger `name`.
+    #[must_use]
+    pub fn has_trigger(&self, name: &str) -> bool {
+        self.program.names.events.get(name).is_some_and(|id| {
+            self.program
+                .triggers
+                .get(&id)
+                .is_some_and(|b| !b.is_empty())
+        })
+    }
+
     /// All float variables the scripts know, with their current values (diagnostics).
     #[must_use]
     pub fn variables(&self) -> Vec<(String, f32)> {
