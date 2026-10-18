@@ -587,7 +587,7 @@ mod tests {
         assert_eq!(hof.name, "Aachen");
 
         // Route 3301: Line 33 Route 01 (FUCHSERDE >> VAALS)
-        let (route_idx, route) = hof.find_route_by_code(3301).expect("find route 3301");
+        let (_, route) = hof.find_route_by_code(3301).expect("find route 3301");
         assert_eq!(route.terminus_code, 11);
         assert!(!route.busstops.is_empty());
 
