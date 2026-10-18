@@ -526,7 +526,15 @@ fn route_report(
         .collect();
     let carries = |wanted: &[String]| {
         held.iter()
-            .filter(|(_, v)| wanted.iter().any(|w| !w.is_empty() && w == v))
+            .filter(|(_, v)| {
+                // Displays pad and spread their text: compare without spaces, by containment.
+                let flat = |t: &str| t.chars().filter(|c| !c.is_whitespace()).collect::<String>();
+                let have = flat(v);
+                wanted.iter().any(|w| {
+                    let w = flat(w);
+                    w.chars().count() >= 3 && have.contains(&w)
+                })
+            })
             .map(|(n, _)| n.clone())
             .collect::<Vec<_>>()
     };
