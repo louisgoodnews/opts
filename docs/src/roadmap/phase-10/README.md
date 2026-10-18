@@ -18,7 +18,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0069 — Session Save and Restore](M-0069.md) — 📝 Planned, 🔴 high (R-05)
 - [M-0073 — Vehicle Dynamics: Individual Mass, Axles, Suspension and Brakes](M-0073.md) — 📝 Planned, 🔴 high (R-11)
 - [M-0077 — Bus Configurations (Quick-Load Presets)](M-0077.md) — 📝 Planned (R-15)
-- [M-0078 — Setvars: Supported Variable Lists per Bus](M-0078.md) — 📝 Planned, 🔴 high (R-16)
+- [M-0078 — Setvars: Supported Variable Lists per Bus](M-0078.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-16)
 
 Related milestones elsewhere: [M-0070 start-time defaults](../phase-9/M-0070.md), [M-0071 HUD layout rework](../phase-9/M-0071.md), [M-0075 HUD place label](../phase-9/M-0075.md), [M-0076 loading screen vehicle](../phase-9/M-0076.md), [M-0072 settings through the control protocol](../phase-5/M-0072.md), [M-0074 roadmap adherence](../phase-5/M-0074.md).
 
