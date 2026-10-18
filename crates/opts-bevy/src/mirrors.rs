@@ -39,8 +39,11 @@ use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::Tonemapping;
 
-use crate::glass::{surface_kind, SurfaceKind};
+use opts_core::formats::vehicles::BusMirrorCamera;
+
+use crate::glass::{mirror_index, surface_kind, SurfaceKind};
 use crate::light_quality::{LightQuality, LightQualitySet};
+use crate::vehicle::BusVehicle;
 use crate::vehicle_sim::PlayerVehicle;
 use crate::MainCamera;
 
@@ -60,6 +63,18 @@ pub const MIRROR_VIEW_COS: f32 = 0.2;
 /// Draw order of the mirror cameras: before the main camera.
 pub const MIRROR_ORDER: isize = -10;
 
+/// A user adjustment on top of the `.bus` mirror cameras (degrees), for a mirror whose tags do not
+/// suit the user's seat or taste. `OPTS_MIRROR_ADJUST=yaw,pitch,fov` (any number of the three).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct MirrorAdjust {
+    /// Added to the tag's yaw (positive = further counter-clockwise seen from above).
+    pub yaw_deg: f32,
+    /// Added to the tag's pitch (positive = up).
+    pub pitch_deg: f32,
+    /// Added to the tag's field of view.
+    pub fov_deg: f32,
+}
+
 /// Where the mirror pictures go and how they are laid on the pane.
 #[derive(Resource, Debug, Clone, Copy, PartialEq)]
 pub struct MirrorSettings {
@@ -73,6 +88,12 @@ pub struct MirrorSettings {
     pub flip_v: bool,
     /// Real seconds between two scans for new panes ([`SCAN_INTERVAL_S`]).
     pub scan_interval_s: f64,
+    /// Drive the cameras from the vehicle's `[add_camera_reflexion]` tags (position, direction,
+    /// field of view, square picture) when it has one for the pane; `false` keeps the geometric
+    /// viewer-ray reflection for every pane. `OPTS_MIRROR_TAGS=0` switches it off.
+    pub use_tags: bool,
+    /// Adjustment of the tag cameras.
+    pub adjust: MirrorAdjust,
 }
 
 impl Default for MirrorSettings {
@@ -82,6 +103,8 @@ impl Default for MirrorSettings {
             flip_u: false,
             flip_v: false,
             scan_interval_s: SCAN_INTERVAL_S,
+            use_tags: true,
+            adjust: MirrorAdjust::default(),
         }
     }
 }
@@ -95,6 +118,17 @@ impl MirrorSettings {
         if let Ok(f) = std::env::var("OPTS_MIRROR_FLIP") {
             s.flip_u = f.contains('u');
             s.flip_v = f.contains('v');
+        }
+        if let Ok(v) = std::env::var("OPTS_MIRROR_TAGS") {
+            s.use_tags = !matches!(v.trim(), "0" | "off" | "false" | "no");
+        }
+        if let Ok(v) = std::env::var("OPTS_MIRROR_ADJUST") {
+            let mut it = v.split(',').map(|n| n.trim().parse::<f32>().unwrap_or(0.0));
+            s.adjust = MirrorAdjust {
+                yaw_deg: it.next().unwrap_or(0.0),
+                pitch_deg: it.next().unwrap_or(0.0),
+                fov_deg: it.next().unwrap_or(0.0),
+            };
         }
         if let Ok(v) = std::env::var("OPTS_MIRROR_SIZE") {
             if let Some((w, h)) = v.split_once('x') {
@@ -154,6 +188,9 @@ pub struct MirrorCamera {
     pub uv_min: Vec2,
     /// Union of the members' UV rectangles.
     pub uv_max: Vec2,
+    /// The `.bus` camera of this pane (`reflexion<N>.bmp` is tag N), when the vehicle has one and
+    /// [`MirrorSettings::use_tags`] is on: the camera then follows it instead of the reflection.
+    pub tag: Option<BusMirrorCamera>,
 }
 
 /// On a pane mesh that belongs to a group.
@@ -193,6 +230,27 @@ pub fn mirror_camera_pose(viewer: Vec3, centre: Vec3, normal: Vec3) -> Option<(V
     let n = normal.try_normalize()?;
     let n = facing_normal(n, view);
     Some((centre + n * MIRROR_OFFSET_M, reflect(view, n)))
+}
+
+/// Pose of a `.bus` mirror camera in the vehicle's frame (Bevy axes) and its field of view in
+/// radians. The pictures are square (the `reflexion<N>.bmp` of the install are), so the
+/// horizontal field of view of the tag is the vertical one too. `adjust` is the user's offset.
+#[must_use]
+pub fn tag_pose(tag: &BusMirrorCamera, adjust: &MirrorAdjust) -> (Vec3, Quat, f32) {
+    let position = Vec3::new(tag.x, tag.z, -tag.y);
+    // The mirror tags' yaw grows counter-clockwise seen from above, like Bevy's (the opposite of
+    // the driver cameras'): only then do the side mirrors of the stock vehicles look outwards,
+    // as the reflection of the driver's view at the pane does (see `bus.md`).
+    let rotation = Quat::from_euler(
+        EulerRot::YXZ,
+        (tag.yaw_deg + adjust.yaw_deg).to_radians(),
+        (tag.pitch_deg + adjust.pitch_deg).to_radians(),
+        0.0,
+    );
+    let fov = (tag.fov_deg + adjust.fov_deg)
+        .clamp(10.0, 160.0)
+        .to_radians();
+    (position, rotation, fov)
 }
 
 /// The vertical field of view (radians) under which a pane of `height` metres is seen from
@@ -341,6 +399,7 @@ pub fn spawn_mirror_cameras(
     mut materials: ResMut<Assets<StandardMaterial>>,
     meshes: Res<Assets<Mesh>>,
     vehicles: Query<Entity, With<PlayerVehicle>>,
+    buses: Query<&BusVehicle>,
     children: Query<&Children>,
     mut cameras: Query<(Entity, &mut MirrorCamera)>,
     candidates: Query<(&MeshMaterial3d<StandardMaterial>, &Mesh3d), Without<MirrorSurface>>,
@@ -420,8 +479,16 @@ pub fn spawn_mirror_cameras(
                     }
                     let (dynamic, lo, hi) = (info.dynamic.clone(), info.uv_min, info.uv_max);
                     if let Some(mut m) = materials.get_mut(&dynamic) {
-                        m.uv_transform =
-                            pane_uv_transform(lo, hi, settings.flip_u, settings.flip_v);
+                        m.uv_transform = if info.tag.is_some() {
+                            pane_uv_transform(
+                                Vec2::ZERO,
+                                Vec2::ONE,
+                                settings.flip_u,
+                                settings.flip_v,
+                            )
+                        } else {
+                            pane_uv_transform(lo, hi, settings.flip_u, settings.flip_v)
+                        };
                     }
                 }
                 continue;
@@ -432,7 +499,24 @@ pub fn spawn_mirror_cameras(
             let Some(base) = materials.get(&original).cloned() else {
                 continue;
             };
-            let size = settings.size;
+            let tag = if settings.use_tags {
+                mirror_index(id).and_then(|n| {
+                    buses
+                        .get(vehicle)
+                        .ok()
+                        .and_then(|b| b.mirror_cameras.get(n as usize).cloned())
+                })
+            } else {
+                None
+            };
+            // A tag camera fills the whole (square) texture, as in OMSI; the pane shows the part
+            // its UVs select. Same pixel count as the pane picture.
+            let size = if tag.is_some() {
+                let side = ((settings.size.x * settings.size.y) as f32).sqrt().round() as u32;
+                UVec2::splat(side.clamp(32, 1024))
+            } else {
+                settings.size
+            };
             let mut image =
                 Image::new_target_texture(size.x, size.y, TextureFormat::Bgra8UnormSrgb, None);
             image.sampler = bevy::image::ImageSampler::linear();
@@ -441,11 +525,16 @@ pub fn spawn_mirror_cameras(
                 (Vec2::splat(f32::MAX), Vec2::splat(f32::MIN)),
                 |(lo, hi), f| (lo.min(f.uv_min), hi.max(f.uv_max)),
             );
+            let (pic_min, pic_max) = if tag.is_some() {
+                (Vec2::ZERO, Vec2::ONE)
+            } else {
+                (uv_min, uv_max)
+            };
             let dynamic = materials.add(mirror_material(
                 &base,
                 picture.clone(),
-                uv_min,
-                uv_max,
+                pic_min,
+                pic_max,
                 &settings,
             ));
             let aspect = found.iter().map(|f| f.member.aspect).sum::<f32>() / found.len() as f32;
@@ -465,7 +554,11 @@ pub fn spawn_mirror_cameras(
                     Projection::Perspective(PerspectiveProjection {
                         fov: 40f32.to_radians(),
                         near: 0.2,
-                        aspect_ratio: aspect.clamp(MIRROR_ASPECT_RANGE.0, MIRROR_ASPECT_RANGE.1),
+                        aspect_ratio: if tag.is_some() {
+                            1.0
+                        } else {
+                            aspect.clamp(MIRROR_ASPECT_RANGE.0, MIRROR_ASPECT_RANGE.1)
+                        },
                         ..default()
                     }),
                     Transform::default(),
@@ -483,6 +576,7 @@ pub fn spawn_mirror_cameras(
                 members,
                 uv_min,
                 uv_max,
+                tag,
             });
             existing.insert(id, camera);
         }
@@ -506,7 +600,8 @@ pub fn update_mirror_cameras(
     mut frame: ResMut<MirrorFrame>,
     mut stats: ResMut<MirrorStats>,
     mut commands: Commands,
-    vehicles: Query<(), With<PlayerVehicle>>,
+    settings: Res<MirrorSettings>,
+    vehicles: Query<&GlobalTransform, With<PlayerVehicle>>,
     main: Query<&GlobalTransform, (With<MainCamera>, Without<MirrorCamera>)>,
     mut cameras: Query<(
         Entity,
@@ -625,6 +720,22 @@ pub fn update_mirror_cameras(
             cam.is_active = render;
         }
         if rank.is_none() {
+            continue;
+        }
+        if let (Some(tag), Ok(vehicle)) = (&info.tag, vehicles.get(info.vehicle)) {
+            let (local, rotation, fov) = tag_pose(tag, &settings.adjust);
+            let (_, vrot, vpos) = vehicle.to_scale_rotation_translation();
+            t.translation = vpos + vrot * local;
+            t.rotation = vrot * rotation;
+            if let Projection::Perspective(persp) = &mut *projection {
+                if (persp.fov - fov).abs() > 1e-4 {
+                    persp.fov = fov;
+                }
+                persp.aspect_ratio = 1.0;
+            }
+            if render {
+                stats.rendering += 1;
+            }
             continue;
         }
         if let Some((position, direction)) = mirror_camera_pose(viewer, p.centre, p.normal) {

@@ -92,6 +92,32 @@ pub struct BusCamera {
     pub is_ticket_view: bool,
 }
 
+/// Mirror / monitor camera (`[add_camera_reflexion]`, `[add_camera_reflexion_2]`).
+///
+/// The Nth tag of the file (both keywords share one counter) renders into the texture
+/// `reflexion<N>.bmp` of the vehicle, which the model's mirror pane shows. The frame is the
+/// vehicle's, like the driver cameras (see `docs/src/formats/text/vehicles/bus.md`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct BusMirrorCamera {
+    /// Lateral offset in meters (the files label negative values as the left side).
+    pub x: f32,
+    /// Longitudinal offset in meters (positive = forward).
+    pub y: f32,
+    /// Vertical offset in meters (positive = up).
+    pub z: f32,
+    /// Fourth number: `0` in all but a few files, meaning unknown.
+    pub param4: f32,
+    /// Field of view in degrees (the textures are square, so horizontal = vertical).
+    pub fov_deg: f32,
+    /// Viewing direction around the vertical axis in degrees (about 180 = backwards).
+    pub yaw_deg: f32,
+    /// Pitch in degrees (negative = down).
+    pub pitch_deg: f32,
+    /// Eighth number, only present on `[add_camera_reflexion_2]`; meaning unknown (0.0 to 6,
+    /// larger on door and blind-spot cameras).
+    pub param8: Option<f32>,
+}
+
 /// Keywords that shape how a vehicle drives or is driven by AI, beyond mass and axles.
 ///
 /// Counts are files of the installation that declare the keyword (2,752 `.bus`/`.ovh` files).
@@ -181,6 +207,8 @@ pub struct BusManifest {
     pub driver_cameras: Vec<BusCamera>,
     /// Passenger view camera presets.
     pub pax_cameras: Vec<BusCamera>,
+    /// Mirror cameras in file order: entry N renders `reflexion<N>.bmp`.
+    pub mirror_cameras: Vec<BusMirrorCamera>,
     /// Index of the default driver camera.
     pub std_camera_index: Option<usize>,
     /// Orbit pivot center for external exterior camera.
@@ -225,6 +253,7 @@ impl BusManifest {
         let mut coupling_front_limits = None;
         let mut driver_cameras = Vec::new();
         let mut pax_cameras = Vec::new();
+        let mut mirror_cameras = Vec::new();
         let mut std_camera_index = None;
         let mut outside_camera_center = None;
         let mut extras = VehicleExtras::default();
@@ -418,6 +447,11 @@ impl BusManifest {
                         pax_cameras.push(cam);
                     }
                 }
+                "add_camera_reflexion" | "add_camera_reflexion_2" => {
+                    if let Some(cam) = parse_mirror_block(&block.parameters) {
+                        mirror_cameras.push(cam);
+                    }
+                }
                 "set_camera_std" => {
                     if let Some(first) = block.parameters.first() {
                         std_camera_index = first.trim().parse::<usize>().ok();
@@ -505,6 +539,7 @@ impl BusManifest {
             coupling_front_limits,
             driver_cameras,
             pax_cameras,
+            mirror_cameras,
             std_camera_index,
             outside_camera_center,
             extras,
@@ -583,6 +618,23 @@ fn parse_axle_block(params: &[String], axle: &mut BusAxle) {
             _ => {}
         }
     }
+}
+
+fn parse_mirror_block(params: &[String]) -> Option<BusMirrorCamera> {
+    if params.len() < 7 {
+        return None;
+    }
+    let p = |i: usize| parse_float(&params[i]).ok();
+    Some(BusMirrorCamera {
+        x: p(0)?,
+        y: p(1)?,
+        z: p(2)?,
+        param4: p(3)?,
+        fov_deg: p(4)?,
+        yaw_deg: p(5)?,
+        pitch_deg: p(6)?,
+        param8: params.get(7).and_then(|_| p(7)),
+    })
 }
 
 fn parse_camera_block(params: &[String], is_driver: bool) -> Option<BusCamera> {
@@ -780,5 +832,48 @@ achse_antrieb
             bus.outside_camera_center,
             Some(glam::Vec3::new(0.0, 0.5, 1.5))
         );
+    }
+
+    #[test]
+    fn mirror_cameras_keep_file_order_across_both_keywords() {
+        let bus = parse_bus(
+            "[add_camera_reflexion_2]\n-1.3\n5.4\n2.1\n0\n52\n169\n-10\n0.15\n\n\
+             [add_camera_reflexion]\n1.32\n5.78\n2.2\n0\n52\n201\n-5\n\n\
+             [add_camera_reflexion]\n1\n2\n3\n0\nx\n195\n-13\n",
+        )
+        .unwrap();
+        // The third has an unreadable field: dropped, not an error.
+        assert_eq!(bus.mirror_cameras.len(), 2);
+        let (a, b) = (&bus.mirror_cameras[0], &bus.mirror_cameras[1]);
+        assert_eq!((a.x, a.y, a.z), (-1.3, 5.4, 2.1));
+        assert_eq!((a.fov_deg, a.yaw_deg, a.pitch_deg), (52.0, 169.0, -10.0));
+        assert_eq!(a.param8, Some(0.15));
+        assert_eq!(b.param8, None);
+        assert_eq!(b.yaw_deg, 201.0);
+    }
+
+    #[test]
+    fn mirror_cameras_of_installed_vehicles() {
+        let Some(root) = std::env::var_os("OMSI_PATH") else {
+            return;
+        };
+        let dir = std::path::Path::new(&root).join("Vehicles");
+        let read = |rel: &str| std::fs::read(dir.join(rel)).ok();
+        if let Some(bytes) = read("MAN_SD202/MAN_D86.bus") {
+            let bus = BusManifest::parse_bytes(&bytes).unwrap();
+            assert_eq!(bus.mirror_cameras.len(), 3);
+            let m = &bus.mirror_cameras[0];
+            assert_eq!((m.x, m.y, m.z), (-1.342, 5.345, 1.799));
+            assert_eq!((m.fov_deg, m.yaw_deg, m.pitch_deg), (52.0, 169.0, 0.0));
+            assert_eq!(m.param8, Some(0.15));
+            assert_eq!(bus.mirror_cameras[1].param8, None);
+            assert_eq!(bus.mirror_cameras[1].yaw_deg, 201.0);
+        }
+        if let Some(bytes) = read("Gladbeck_Stadtbus/GladbeckStadtbus2015.bus") {
+            let bus = BusManifest::parse_bytes(&bytes).unwrap();
+            assert_eq!(bus.mirror_cameras.len(), 6, "two door cameras included");
+            assert_eq!(bus.mirror_cameras[0].x, -1.8, "left outside mirror");
+            assert_eq!(bus.mirror_cameras[4].param8, Some(6.0));
+        }
     }
 }

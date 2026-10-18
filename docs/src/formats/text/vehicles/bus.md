@@ -135,7 +135,7 @@ This applies to:
 - Unknown keywords at any level.
 - Unknown sub-parameters within blocks.
 - The secondary bounding box (see U-001).
-- Extra fields in `[add_camera_reflexion_2]` (see U-003).
+- The eighth field of `[add_camera_reflexion_2]` and the fourth of both mirror tags (see U-003).
 
 The internal representation should therefore include a `unknown_fields: BTreeMap<String, Vec<String>>` (or similar) on each parsed struct, so that no information is lost when the file is read. This is valuable for two reasons:
 
@@ -232,7 +232,7 @@ The `[type]` keyword selects the primary simulation physics domain:
 | `[add_camera_driver]` | 7 | Adds a driver-view camera preset. |
 | `[add_camera_pax]` | 7 | Adds a passenger-view camera preset. |
 | `[add_camera_reflexion]` | 7 | Adds a reflection camera (renders to `reflexionN.bmp`). |
-| `[add_camera_reflexion_2]` | 8 | As above, with an additional distance parameter. |
+| `[add_camera_reflexion_2]` | 8 | As above, with an eighth number of unknown meaning (see below). |
 | `[set_camera_std]` | 1 | Zero-based index into the driver camera array, defining the default view. |
 | `[set_camera_outside_center]` | 3 | `x, y, z` offset for the orbit center of the outside camera. |
 | `[view_schedule]` | 0 | Marks the preceding `[add_camera_driver]` as the timetable view. |
@@ -250,18 +250,31 @@ The `[type]` keyword selects the primary simulation physics domain:
 | 6 | `yaw` | ° | Horizontal viewing direction. `-120` = full left, `0` = forward, `+120` = full right. |
 | 7 | `pitch` | ° | Vertical viewing direction. Negative = down. |
 
-#### `[add_camera_reflexion_2]` — Parameter Layout
+#### `[add_camera_reflexion]` / `[add_camera_reflexion_2]` — Mirror and Monitor Cameras
+
+*Source: the section "Reflexionskameras \*NEU01\*" in the comments of the stock `.bus` files, and 5,884 tags in the installation (4,135 `[add_camera_reflexion]`, 1,749 `[add_camera_reflexion_2]`).*
+
+When the vehicle is the player's, OMSI renders the scene from **every** such camera and stores the picture in the texture `reflexion0.bmp`, `reflexion1.bmp`, ... of the vehicle: the tag number N (counting both keywords together, in file order) feeds `reflexion<N>.bmp`. The model's mirror pane carries that texture. Authors label the entries in comments, e.g. `0 Aussenspiegel links`, `3 Innenspiegel`, `4 Totwinkelassi`, `5 Tuerkamera`.
 
 | Line | Field | Notes |
 | :--- | :--- | :--- |
-| 1–3 | `x, y, z` | Position of the mirror camera. |
-| 4 | `_unknown_` | ⚠️ Purpose unknown. Store as `None` in the parser. |
-| 5 | `fov` | Horizontal field of view. |
-| 6 | `yaw` | Horizontal viewing direction. |
-| 7 | `pitch` | Vertical viewing direction. |
-| 8 | `_unknown_` | ⚠️ Purpose unknown. Store as `None` in the parser. |
+| 1 | `x` | m, in the vehicle frame. **Negative = left** (labelled "links" in the files, the driver of a left-hand-drive bus sits at about `x = -0.7`). ✅ Same frame as the model meshes: the pane of `reflexion0` of `MAN_SD77` sits at the tag's position to within 5 mm (`-1.332, 5.327, 1.831`), +X is right. |
+| 2 | `y` | m, positive = forward. |
+| 3 | `z` | m, positive = up. |
+| 4 | `param4` | ❓ `0` in nearly every file (a few `0.05`, `-0.2`). Unknown. |
+| 5 | `fov` | degrees, 30 to 150 (typically 52 for mirrors, 80 to 90 for corner mirrors and door cameras). |
+| 6 | `yaw` | degrees, `180` = straight back; side mirrors are 160 to 170 (left) and 195 to 235 (right). ❓ **Direction inferred:** positive = **counter-clockwise** seen from above (opposite to the driver cameras). Evidence: with this reading the camera looks 5 to 20 degrees outwards on every side mirror of the stock `MAN_SD200` bus, and its direction agrees within 2 to 7 degrees with the reflection of the driver's view at the pane (`d - 2(d.n)n`, eye from the `[add_camera_driver]` of the mirror glance); the clockwise reading ends 15 to 24 degrees inwards. Not confirmed in OMSI itself. |
+| 7 | `pitch` | degrees, negative = down (-5 to -30 typically). |
+| 8 | `param8` | **Only on `[add_camera_reflexion_2]`.** ❓ Unknown. `0.0` to `0.6` on mirrors (the most common value is `0.15`), `2.84` to `6` on blind-spot and door cameras, a few files have `15`, `30`, `100`, `180`. |
 
-> ✅ **Resolved (partial):** The purposes of parameters 4 and 8 remain unknown. They are not required for rendering a functional mirror. The parser should accept them but expose them as `Option<f32>` fields (or omit them from the public struct entirely) so that future investigation can add meaning without breaking the API.
+* The textures are **square** (`reflexion*.bmp` are 64, 128 or 256 pixels square in the installation), so the field of view is the same horizontally and vertically; the pane's UV rectangle selects the part that is shown. The panes' UVs run right to left, which is what turns the plain backward camera picture into the mirror image.
+* `[add_camera_reflexion]` (7 numbers) is the older form, `[add_camera_reflexion_2]` (8 numbers) the `*NEU01*` form. Files mix them. The number of tags can exceed the number of panes of a model (alternative mirror variants share an index; the 5th to 8th tags of one stock file are identical door-camera placeholders).
+* ❓ The meaning of `param8` and `param4` is not documented in the files. Candidates for `param8`: a blur / curvature / sharpness amount, or a distance parameter (the values for door and blind-spot cameras are an order of magnitude above those of flat mirrors). OPTS parses both and does not use them.
+* ❓ OMSI's own render resolution and update rate of these cameras are not documented; OPTS renders about 180 x 180 pixels at half the frame rate (`OPTS_MIRROR_SIZE`).
+
+> ✅ **Resolved:** the older note in this table that `[add_camera_reflexion_2]` has an "additional distance parameter" was a guess; the eighth number is unexplained, see above.
+
+Parsed into `BusManifest::mirror_cameras: Vec<BusMirrorCamera>` (`opts-core`), consumed by `opts_bevy::mirrors` ([camera system](../../../architecture/camera-system.md#mirror-cameras)).
 
 ### 🎫 Attachments
 
@@ -582,7 +595,7 @@ All questions from the initial draft have been resolved.
 | Q-001 | Does `[mass]` consume 1 line or 4? | **4 lines:** mass plus three legacy moments of inertia. |
 | Q-002 | Does `[boundingbox]` consume 6, 12, or unbounded lines? | **12 lines:** two bounding boxes of 6 lines each. |
 | Q-003 | What does the second parameter of `[couple_back]` mean? | ❓ Reopened 2026-10-14: the corpus contradicts "has a further trailer" (see the note at `[couple_back]`); OPTS treats it as "reversed". |
-| Q-004 | What are the unknown params in `[add_camera_reflexion_2]`? | **Unknown.** Store as `None`; revisit later. |
+| Q-004 | What are the unknown params in `[add_camera_reflexion_2]`? | **Unknown.** Parsed as `param4` / `param8`, unused. |
 | Q-005 | File encoding? | **Windows-1252 (CP1252).** |
 | Q-006 | Count-line mismatch? | **OMSI crashes; OPTS logs and proceeds.** |
 | Q-007 | May block sub-parameters appear in any order? | **Yes, and blocks may nest.** |
@@ -612,7 +625,7 @@ The purpose of the second box is **unknown**. It may represent:
 
 ### U-003 — Unknown Reflection Camera Parameters
 
-Parameters 4 and 8 of `[add_camera_reflexion_2]` are stored as `Option<f32>` fields. Current values in the sample file are `0` and `0.15`, but their meaning is not yet known.
+Parameter 4 of both mirror tags (`param4: f32`) and parameter 8 of `[add_camera_reflexion_2]` (`param8: Option<f32>`) are parsed but unused. Their meaning is not yet known.
 
 **Parser directive:** Preserve the raw values. Do not attempt to interpret them. When a future contributor discovers their meaning, the fields can be given proper names without a breaking API change (rename via deprecation).
 
@@ -669,3 +682,5 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - [Variable Lists](varnamelist.md)
 - [Constant Files](const.md)
 - [Vehicle Script Sets](script-sets.md)
+
+> ❓ **Open (found while checking the mirror tags):** the table of `[add_camera_driver]` above says positive `x` is left, and `camera_preset_to_bevy_transform` negates it. The mirror tags of the same files and the model meshes both say negative `x` is left (labels "Aussenspiegel links" at `x = -1.8`; driver at `-0.72` in left-hand-drive buses). The driver view is not touched here; it deserves a separate check.

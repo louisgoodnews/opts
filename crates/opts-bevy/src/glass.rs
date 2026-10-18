@@ -55,6 +55,8 @@ struct GlassOriginal {
 #[derive(Debug, Clone)]
 struct Entry {
     kind: SurfaceKind,
+    /// `N` of a `reflexion<N>.bmp` mirror pane.
+    mirror_index: Option<u32>,
     original: GlassOriginal,
     /// Whether the glass look is applied now.
     applied: bool,
@@ -81,6 +83,21 @@ pub fn is_glass_name(name: &str) -> bool {
     ]
     .iter()
     .any(|w| name.contains(w))
+}
+
+/// `N` of a mirror pane texture `reflexion<N>.bmp` (any case, with or without folders).
+#[must_use]
+pub fn mirror_index_of(texture: &str) -> Option<u32> {
+    let lower = texture.to_lowercase();
+    let stem = lower.rsplit(['/', '\\']).next().unwrap_or(&lower);
+    if !is_mirror_name(stem) {
+        return None;
+    }
+    stem.strip_prefix("reflexion")?
+        .split('.')
+        .next()?
+        .parse()
+        .ok()
 }
 
 /// A mirror pane by texture name: OMSI's `reflexion<N>.bmp` convention (N = 0..5, the pane of
@@ -139,15 +156,24 @@ pub fn note_surface(
         texture.and_then(|t| classify(t, blended))
     };
     let Some(kind) = kind else { return };
-    insert(handle.id(), kind, material);
+    let index = texture
+        .filter(|_| kind == SurfaceKind::Mirror)
+        .and_then(mirror_index_of);
+    insert(handle.id(), kind, index, material);
 }
 
-fn insert(id: AssetId<StandardMaterial>, kind: SurfaceKind, m: &StandardMaterial) {
+fn insert(
+    id: AssetId<StandardMaterial>,
+    kind: SurfaceKind,
+    mirror_index: Option<u32>,
+    m: &StandardMaterial,
+) {
     if let Ok(mut g) = REGISTRY.lock() {
         g.get_or_insert_with(HashMap::new)
             .entry(id)
             .or_insert(Entry {
                 kind,
+                mirror_index,
                 original: GlassOriginal {
                     alpha: m.alpha_mode,
                     roughness: m.perceptual_roughness,
@@ -167,7 +193,23 @@ pub fn register_surface(
     kind: SurfaceKind,
     material: &StandardMaterial,
 ) {
-    insert(handle.id(), kind, material);
+    insert(handle.id(), kind, None, material);
+}
+
+/// Gives a registered mirror material the pane number `index` (tests).
+#[cfg(test)]
+pub(crate) fn set_mirror_index(id: AssetId<StandardMaterial>, index: u32) {
+    if let Ok(mut g) = REGISTRY.lock() {
+        if let Some(e) = g.as_mut().and_then(|m| m.get_mut(&id)) {
+            e.mirror_index = Some(index);
+        }
+    }
+}
+
+/// `N` of the `reflexion<N>.bmp` pane texture of a registered mirror material.
+#[must_use]
+pub fn mirror_index(id: AssetId<StandardMaterial>) -> Option<u32> {
+    REGISTRY.lock().ok()?.as_ref()?.get(&id)?.mirror_index
 }
 
 /// What the registry knows about a material.

@@ -122,3 +122,19 @@ system sees them. Their `Camera::is_active` is toggled by `LightQuality::mirror_
 first) and `mirror_every` (every n-th frame, staggered by rank); a mirror behind the main camera is not rendered.
 Only the `PlayerVehicle` gets mirror cameras; AI and parked vehicles keep the static pane texture. The camera sits
 5 cm in front of the pane and looks along the main camera's view ray reflected at the pane normal.
+
+**Tag-driven mode (default).** When the vehicle's `.bus` has an `[add_camera_reflexion]` / `[add_camera_reflexion_2]` tag for the
+pane (`reflexion<N>.bmp` is tag N, [bus.md](../formats/text/vehicles/bus.md)), the camera does **not** use the reflection. It
+sits at the tag's position in the vehicle frame, looks along the tag's yaw and pitch and has the tag's field of view
+(`opts_bevy::mirrors::tag_pose`, vehicle-relative, so it follows the vehicle). The picture is **square**
+(`sqrt(width x height)` of `OPTS_MIRROR_SIZE`, about 181 px at the default) because OMSI's `reflexion<N>.bmp` are square, and
+it is laid on the texture with the pane's own UVs unchanged (the UVs of the stock panes already run right to left, which is
+what makes the plain backward picture a mirror image; no stretching). Panes without a tag, vehicles without
+the tags, and `OPTS_MIRROR_TAGS=0` keep the reflection described above (pane aspect, stretched UV rectangle).
+User control: `OPTS_MIRROR_TAGS=0` (reflection for every pane), `OPTS_MIRROR_ADJUST=yaw,pitch,fov` (degrees added to every tag
+camera; yaw counter-clockwise), `OPTS_MIRROR_FLIP=u|v|uv` (picture orientation on the pane), `OPTS_MIRROR_SIZE=WxH`.
+A persistent per-vehicle adjustment is not stored yet (open).
+
+Checked live on `Gladbeck_Stadtbus` (six tags, exterior and interior mirrors) and `MAN_SD200/SD77`: the interior mirror shows
+the same road in both modes; the exterior mirrors differ because the tag cameras sit up to 0.6 m outside the pane
+(`x = -1.8` against a pane at `-1.41`), which is what the author chose.
