@@ -149,6 +149,14 @@ pub struct DrivetrainModel {
     pub current_rpm: f32,
     /// Current engaged forward gear index (1-indexed).
     pub current_gear: usize,
+    /// Rolling resistance as force over weight: the vehicle file's `[rollwiderstand]` over its
+    /// weight when it states one (`VehicleDynamicsSpec`), else [`ROLLING_RESISTANCE_COEFF`].
+    #[serde(default = "default_rolling_coefficient")]
+    pub rolling_coefficient: f32,
+}
+
+fn default_rolling_coefficient() -> f32 {
+    ROLLING_RESISTANCE_COEFF
 }
 
 impl Default for DrivetrainModel {
@@ -159,6 +167,7 @@ impl Default for DrivetrainModel {
             aero: AerodynamicSpec::default(),
             current_rpm: 600.0,
             current_gear: 1,
+            rolling_coefficient: ROLLING_RESISTANCE_COEFF,
         }
     }
 }
@@ -269,7 +278,7 @@ impl DrivetrainModel {
 
         // 5. Resistances
         let drag_force_n = self.aero.compute_drag_force(abs_speed);
-        let rolling_resistance_n = ROLLING_RESISTANCE_COEFF * vehicle_mass_kg * g;
+        let rolling_resistance_n = self.rolling_coefficient * vehicle_mass_kg * g;
 
         DrivetrainForces {
             tractive_force_n: tractive_force,

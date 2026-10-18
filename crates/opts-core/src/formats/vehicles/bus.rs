@@ -142,6 +142,9 @@ pub struct VehicleExtras {
     pub centre_of_gravity_height: Option<f32>,
     /// `[rot_pnt_long]`: longitudinal coordinate of the rotation point, metres (2,731 files).
     pub rotation_point_long: Option<f32>,
+    /// Moments of inertia about x (lateral), y (longitudinal) and z (vertical), t·m²: from
+    /// `[momentofintertia]`, else from lines 2 to 4 of `[mass]` when those are not all zero.
+    pub inertia_t_m2: Option<[f32; 3]>,
 }
 
 /// Parsed vehicle manifest configuration.
@@ -257,6 +260,7 @@ impl BusManifest {
         let mut std_camera_index = None;
         let mut outside_camera_center = None;
         let mut extras = VehicleExtras::default();
+        let mut legacy_inertia: Option<[f32; 3]> = None;
 
         for block in blocks {
             match block.keyword.as_str() {
@@ -367,6 +371,31 @@ impl BusManifest {
                         if let Ok(m) = parse_float(first) {
                             mass_tonnes = Some(m);
                         }
+                    }
+                    // Lines 2 to 4: the legacy moments of inertia (kept unless the modern block
+                    // gives its own).
+                    let legacy: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .skip(1)
+                        .take(3)
+                        .map_while(|p| parse_float(p).ok())
+                        .collect();
+                    if let [x, y, z] = legacy[..] {
+                        if (x, y, z) != (0.0, 0.0, 0.0) {
+                            legacy_inertia = Some([x, y, z]);
+                        }
+                    }
+                }
+                "momentofintertia" => {
+                    let v: Vec<f32> = block
+                        .parameters
+                        .iter()
+                        .take(3)
+                        .map_while(|p| parse_float(p).ok())
+                        .collect();
+                    if let [x, y, z] = v[..] {
+                        extras.inertia_t_m2 = Some([x, y, z]);
                     }
                 }
                 "newachse" => {
@@ -508,6 +537,10 @@ impl BusManifest {
                 }
                 _ => {}
             }
+        }
+
+        if extras.inertia_t_m2.is_none() {
+            extras.inertia_t_m2 = legacy_inertia;
         }
 
         Ok(Self {
