@@ -10,7 +10,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 
 | ID | Report | Area | Milestone | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| R-01 | Some **parked car** meshes are not loaded correctly: scrambled, missing or transparent meshes | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) (discovery: P-1014 mesh audit) | 📝 open |
+| R-01 | Some **parked car** meshes are not loaded correctly: scrambled, missing or transparent meshes | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) (discovery: P-1014 mesh audit) | 🟢 fixed 2026-10-18 on `agent/mesh-fidelity` (MI-0056–0058) |
 | R-02 | OPTS **cannot load water**, although `.water` files lie next to the tiles; they need to be handled | world | [M-0067](../roadmap/phase-10/M-0067.md) | 📝 open |
 | R-03 | The simulation must be **startable without a bus**: the vehicle selection needs a way to load only the map | session / UI | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
 | R-04 | OPTS must **track the user vehicles spawned in a session**, let the user **change the active bus** and **despawn any** previously spawned, still existing bus (follow-up 2026-10-13: *despawn*, not *respawn*, was meant; the active bus keeps its respawn) | session | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
@@ -18,7 +18,7 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-06 | **Adhere to the roadmap** again and **expand it** | process | [M-0074](../roadmap/phase-5/M-0074.md) | 🟡 in progress: audit and checks done 2026-10-18 |
 | R-07 | The date/time step of a new game must **default to the map's defined time**, otherwise the **current date and time** | UI / wizard | [M-0070](../roadmap/phase-9/M-0070.md) | 🟢 implemented 2026-10-18 (time of day from `laststn.osn`, else the clock; date keeps the map default) |
 | R-08 | **HUD rework**: control information (hints, speed, gear, parking brake) in the **bottom-left**, a **mini map bottom-right**, in line with the UI standards | UI / HUD | [M-0071](../roadmap/phase-9/M-0071.md) | ✅ done 2026-10-13 |
-| R-09 | The **BRT Citaro** has UV/mesh issues | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
+| R-09 | The **BRT Citaro** has UV/mesh issues | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
 | R-10 | The **control protocol** must allow AI agents to **set settings via the CLI** | tooling | [M-0072](../roadmap/phase-5/M-0072.md) (protocol 1.1.0 has `settings.*`; the exact gap is to be reproduced) | 🟢 implemented 2026-10-18 (protocol 1.7.0: confirm/revert, batch and profile methods, coverage test) |
 | R-11 | **Suspension, brakes and more**: every vehicle defines its own mass, axles etc., which must be respected; OPTS provides a world physics system, the vehicles their individual behaviour | simulation | [M-0073](../roadmap/phase-10/M-0073.md) | 📝 open |
 
@@ -31,8 +31,8 @@ Each reported item gets an ID (R-nn), is traced to a milestone, and is closed on
 | R-14 | Correction of R-04: the wish was to **despawn** any session vehicle, not respawn | session | [M-0068](../roadmap/phase-10/M-0068.md) | ✅ implemented 2026-10-13 (`agent/session-vehicles`, verified live) |
 | R-15 | **Bus configurations** (bus, repaint, setvars) that can be saved and quick-loaded | session / UI | [M-0077](../roadmap/phase-10/M-0077.md) | 🟡 in progress 2026-10-18 |
 | R-16 | **Setvar implementation**: derive each bus's setvar list from its `.cti` files, the Add-on **PDFs** and the **varnamelists** (lists named *visible* can hold setvars) | vehicles | [M-0078](../roadmap/phase-10/M-0078.md) | 🟢 implemented 2026-10-18 (catalogue, editors and `vehicle.setvars`; configurations in M-0077) |
-| R-17 | Several **building meshes are flipped** along an axis and/or have **misaligned textures** | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
-| R-18 | Several **lantern posts have scrambled meshes** in the simulation | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 📝 open |
+| R-17 | Several **building meshes are flipped** along an axis and/or have **misaligned textures** | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
+| R-18 | Several **lantern posts have scrambled meshes** in the simulation | content / meshes | [M-0066](../roadmap/phase-10/M-0066.md) | 🟡 re-checked 2026-10-18, no defect found; awaiting your check |
 | R-19 | The files of `master` must be present in the project folder on the project lead's machine | process | — (done 2026-10-13: `master` checked out in `/home/louisgoodnews/Dokumente/opts`) | ✅ done |
 
 ## Follow-up findings (2026-10-13, third message)
