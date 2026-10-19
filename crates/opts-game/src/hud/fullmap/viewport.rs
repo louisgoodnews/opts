@@ -107,6 +107,21 @@ impl Viewport {
     }
 }
 
+impl Viewport {
+    /// The viewport that shows the box (`low` south-west, `high` north-east) with a margin of a
+    /// tenth on every side, centred on it; the span stays within the documented range.
+    #[must_use]
+    pub fn fit(low: DVec2, high: DVec2, screen: Vec2) -> Self {
+        let size = (high - low).max(DVec2::splat(1.0)) * 1.1;
+        let ppm =
+            (f64::from(screen.x.max(1.0)) / size.x).min(f64::from(screen.y.max(1.0)) / size.y);
+        Self::new(
+            (low + high) / 2.0,
+            f64::from(screen.min_element().max(1.0)) / ppm,
+        )
+    }
+}
+
 /// `span_m` limited to the documented range.
 #[must_use]
 pub fn clamp_span(span_m: f64) -> f64 {

@@ -119,3 +119,100 @@ fn the_scale_bar_is_a_round_length_below_the_maximum() {
     }
     assert_eq!(scale_bar_m(0.0), 1.0);
 }
+
+mod overview_tests {
+    use super::super::overview::OverviewRoads;
+    use crate::hud::minimap::MapRoad;
+    use bevy::math::DVec2;
+    use opts_traffic::PathGeometry;
+
+    fn road(x: f64, y: f64) -> MapRoad {
+        MapRoad {
+            geometry: PathGeometry::straight(DVec2::new(x, y), 0.0, 100.0),
+            width: 5.0,
+        }
+    }
+
+    #[test]
+    fn roads_come_from_the_tiles_near_the_view_and_not_from_skipped_ones() {
+        let mut o = OverviewRoads::default();
+        o.insert((0, 0), vec![road(0.0, 0.0)]);
+        o.insert((5, 0), vec![road(5_000.0, 0.0)]);
+        o.insert((9, 9), vec![road(9_000.0, 9_000.0)]);
+        let mut out = Vec::new();
+        o.roads_near(DVec2::new(50.0, 50.0), 300.0, |_| false, &mut out);
+        assert_eq!(out.len(), 1, "only the tile at the origin is near");
+        out.clear();
+        o.roads_near(DVec2::new(50.0, 50.0), 300.0, |k| k == (0, 0), &mut out);
+        assert!(
+            out.is_empty(),
+            "a resident tile is drawn from the graph, not twice"
+        );
+        out.clear();
+        o.roads_near(DVec2::ZERO, 20_000.0, |_| false, &mut out);
+        assert_eq!(out.len(), 3, "the whole map in view");
+    }
+
+    #[test]
+    fn progress_counts_tiles_with_and_without_roads() {
+        let mut o = OverviewRoads::default();
+        assert!(!o.started() && !o.complete());
+        o.total = 4;
+        assert_eq!(o.percent(), 0);
+        o.insert((0, 0), vec![road(0.0, 0.0)]);
+        o.insert((1, 0), Vec::new());
+        assert_eq!(o.percent(), 50);
+        assert_eq!(o.generation, 2, "every finished tile is a change to draw");
+    }
+}
+
+#[test]
+fn fit_shows_the_whole_box_with_a_margin_and_centres_it() {
+    let screen = Vec2::new(1920.0, 1000.0);
+    let (lo, hi) = (DVec2::new(-3000.0, -1000.0), DVec2::new(3000.0, 1000.0));
+    let v = Viewport::fit(lo, hi, screen);
+    assert!((v.centre - DVec2::ZERO).length() < 1e-9);
+    let a = v.world_to_screen(lo, screen);
+    let b = v.world_to_screen(hi, screen);
+    for p in [a, b] {
+        assert!(
+            p.x >= 0.0 && p.x <= screen.x && p.y >= 0.0 && p.y <= screen.y,
+            "{p:?} is on screen"
+        );
+    }
+    // The wide side is the limit: 6 km plus a tenth across 1920 px (5 % margin on each side).
+    assert!(
+        (a.x - 87.3).abs() < 1.0 && (b.x - 1832.7).abs() < 1.0,
+        "{a:?} {b:?}"
+    );
+    // A tiny box is limited by the closest zoom.
+    let tiny = Viewport::fit(DVec2::ZERO, DVec2::new(5.0, 5.0), screen);
+    assert_eq!(tiny.span_m, MIN_SPAN_M);
+}
+
+mod thinning_tests {
+    use crate::hud::minimap::MapLine;
+    use bevy::math::Vec2;
+
+    fn line(a: (f32, f32), b: (f32, f32)) -> MapLine {
+        MapLine {
+            a: Vec2::new(a.0, a.1),
+            b: Vec2::new(b.0, b.1),
+            width_m: 5.0,
+        }
+    }
+
+    #[test]
+    fn sub_pixel_chords_and_covered_chords_are_left_out() {
+        // 0.5 px per metre: a 1 m chord is half a pixel, two lanes 0.4 m apart are one line.
+        let mut lines = vec![
+            line((0.0, 0.0), (100.0, 0.0)),
+            line((0.0, 0.2), (100.0, 0.2)),
+            line((100.0, 0.0), (0.0, 0.0)),
+            line((0.0, 50.0), (1.0, 50.0)),
+            line((0.0, 80.0), (100.0, 80.0)),
+        ];
+        super::super::thin_lines(&mut lines, 0.5);
+        assert_eq!(lines.len(), 2, "{lines:?}");
+    }
+}

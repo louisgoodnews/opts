@@ -215,6 +215,24 @@ impl WorldLoadJob {
         index
     }
 
+    /// What a background reader needs to list the roads of every tile of the map (the overview of
+    /// the full-size map): the installation root, the map folder and, for each listed tile, its
+    /// key, its file name and its south-west corner in the session frame (OMSI axes, metres).
+    #[must_use]
+    pub(crate) fn tile_listing(&self) -> (PathBuf, PathBuf, Vec<((i32, i32), String, (f32, f32))>) {
+        let mut tiles: Vec<_> = self
+            .tile_files
+            .iter()
+            .map(|(k, f)| (*k, f.clone(), self.tile_offset(*k)))
+            .collect();
+        tiles.sort_by_key(|t| t.0);
+        (
+            self.install.root().to_path_buf(),
+            self.config.map_dir.clone(),
+            tiles,
+        )
+    }
+
     /// The tile's file: the base file, or for a tile that only Chrono adds, its first overlay.
     pub(in super::super::super) fn tile_path(&self, key: (i32, i32)) -> Option<PathBuf> {
         self.base_tile_path(key)

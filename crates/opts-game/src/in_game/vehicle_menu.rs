@@ -317,9 +317,8 @@ fn toggle_menu(
     } else if *grace > 0 {
         *grace -= 1;
     }
-    let open = *grace > 0
-        || pause.is_some_and(|p| p.open)
-        || fullmap.is_some_and(|m| m.holds_input());
+    let open =
+        *grace > 0 || pause.is_some_and(|p| p.open) || fullmap.is_some_and(|m| m.holds_input());
     if active.0 != open {
         active.0 = open;
     }

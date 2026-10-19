@@ -185,7 +185,19 @@ fn fullmap_json(world: &World) -> Value {
         .cloned()
         .unwrap_or_default();
     let ppm = state.viewport.px_per_m(state.screen);
+    let overview = world
+        .get_resource::<super::fullmap::overview::OverviewRoads>()
+        .map_or(json!(null), |o| {
+            json!({
+                "started": o.started(),
+                "complete": o.complete(),
+                "percent": o.percent(),
+                "tiles_done": o.done,
+                "tiles_total": o.total,
+            })
+        });
     json!({
+        "overview": overview,
         "open": state.open,
         "follow": state.follow,
         "span_m": state.viewport.span_m,
@@ -211,6 +223,10 @@ pub(super) fn fullmap(world: &mut World, params: &Value) -> Outcome {
         return Outcome::err(RpcError::new(code::NOT_READY, "the HUD is not built yet"));
     }
     let open = match opt_bool(params, "open") {
+        Ok(v) => v,
+        Err(e) => return Outcome::err(e),
+    };
+    let fit = match opt_bool(params, "fit") {
         Ok(v) => v,
         Err(e) => return Outcome::err(e),
     };
@@ -247,6 +263,9 @@ pub(super) fn fullmap(world: &mut World, params: &Value) -> Outcome {
         }
         if let Some(f) = follow {
             state.follow = f;
+        }
+        if fit == Some(true) {
+            state.fit_request = true;
         }
         state.request = match open {
             Some(true) => Some(FullMapRequest::Open),

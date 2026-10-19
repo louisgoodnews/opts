@@ -1,7 +1,7 @@
 //! The full-size map (M-0108): opening, following, closing, the redraw policy and the input hold.
 
-use super::*;
 use super::map_widget::{map_app, run};
+use super::*;
 use crate::hud::fullmap::{FullMapRequest, FullMapRoot, FullMapState};
 
 fn full(app: &App) -> FullMapState {
@@ -54,7 +54,10 @@ fn the_map_opens_centred_on_the_vehicle_and_draws_roads_and_markers() {
     assert_eq!(roots(&mut app), 1, "one overlay");
     assert!(s.frames >= 1 && s.lines > 0, "roads of the fixture: {s:?}");
     assert_eq!(s.markers, 2, "the player and the other session vehicle");
-    assert_eq!(s.texture_px, 1024, "the fallback screen is 1280 x 720, the texture is capped");
+    assert_eq!(
+        s.texture_px, 1024,
+        "the fallback screen is 1280 x 720, the texture is capped"
+    );
 }
 
 #[test]

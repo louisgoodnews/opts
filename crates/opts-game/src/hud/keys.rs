@@ -44,6 +44,9 @@ keys! {
     MINIMAP_HEADING_UP = "hud-minimap-heading-up",
     /// Full-size map: the title when the session has no map name.
     FULLMAP_TITLE = "hud-fullmap-title",
+    /// Full-size map: the title while the roads of the whole map are still being read (`map`,
+    /// `percent`).
+    FULLMAP_READING = "hud-fullmap-reading",
     /// Full-size map: the keys.
     FULLMAP_HINT = "hud-fullmap-hint",
     /// Full-size map: the scale bar in metres (`metres`).

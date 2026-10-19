@@ -12,6 +12,7 @@
 //! [`FullMapState::holds_input`], which the vehicle menu includes in its flag), so driving, camera
 //! and script keys stand still and Esc closes the map instead of opening the pause overlay.
 
+pub mod overview;
 pub mod viewport;
 
 #[cfg(test)]
@@ -30,7 +31,8 @@ use opts_gui::l10n::{L10nKey, Localization};
 use opts_gui::prelude::*;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
-use self::viewport::{canvas_px, scale_bar_m, wheel_factor, Viewport};
+use self::overview::OverviewRoads;
+use self::viewport::{canvas_px, wheel_factor, Viewport};
 use super::keys;
 use super::minimap::{
     colors_of, pose_of, push_chords, raster, Canvas, FixtureRoads, MapLine, MapMarker, MapSource,
@@ -92,8 +94,12 @@ pub struct FullMapState {
     pub screen: Vec2,
     /// A request from the protocol, handled by the next frame.
     pub request: Option<FullMapRequest>,
+    /// Fit the whole map into the screen in the next frame (the protocol or a key).
+    pub fit_request: bool,
     /// The protocol set the view: opening keeps it instead of centring on the vehicle.
     pub preset_view: bool,
+    /// The overview generation the last redraw drew.
+    drawn_generation: u64,
     /// What the last redraw showed.
     drawn: Option<(Viewport, Vec<(DVec2, f32, bool)>)>,
     /// A change the user made (drag, wheel, Home): redraw this frame, not at the next tick.
@@ -122,7 +128,9 @@ impl Default for FullMapState {
             texture_px: 0,
             screen: FALLBACK_SCREEN,
             request: None,
+            fit_request: false,
             preset_view: false,
+            drawn_generation: 0,
             drawn: None,
             immediate: false,
             since: 0.0,
@@ -162,25 +170,10 @@ pub struct FullMapCanvas(Option<Canvas>);
 #[derive(Resource, Default)]
 pub struct FullMapImage(Option<Handle<Image>>);
 
-/// The root of the overlay.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FullMapRoot;
-
-/// The node that shows the texture (a square that covers the screen).
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FullMapSurface;
-
-/// The map name and the zoom.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FullMapCaption;
-
-/// The bar of the scale.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FullMapScaleBar;
-
-/// The length of the scale bar as text.
-#[derive(Component, Debug, Clone, Copy)]
-pub struct FullMapScaleText;
+mod overlay;
+pub use overlay::{
+    overlay, FullMapCaption, FullMapRoot, FullMapScaleBar, FullMapScaleText, FullMapSurface,
+};
 
 /// The logical size of the primary window, or the fallback.
 fn screen_of(windows: &Query<&Window, With<PrimaryWindow>>) -> Vec2 {
@@ -219,6 +212,8 @@ pub fn toggle(
         Has<PlayerVehicle>,
     )>,
     cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+    job: Option<Res<crate::in_game::omsi_world::WorldLoadJob>>,
+    mut overview: ResMut<OverviewRoads>,
     mut state: ResMut<FullMapState>,
 ) {
     let request = state.request.take();
@@ -254,11 +249,17 @@ pub fn toggle(
     state.open = true;
     state.immediate = true;
     state.drawn = None;
+    // The first time the map is opened, a reader starts on the roads of the whole map.
+    if let Some(job) = job.filter(|_| !overview.started()) {
+        let (root, map_dir, tiles) = job.tile_listing();
+        overview.start(root, map_dir, tiles);
+    }
 }
 
 /// Drag pans, the wheel zooms toward the cursor, Home follows the vehicle again.
 pub fn input(
     keyboard: Res<ButtonInput<KeyCode>>,
+    overview: Res<OverviewRoads>,
     mouse: Res<ButtonInput<MouseButton>>,
     mut wheel: MessageReader<MouseWheel>,
     windows: Query<&Window, With<PrimaryWindow>>,
@@ -296,6 +297,14 @@ pub fn input(
             changed = true;
         }
     }
+    if keyboard.just_pressed(KeyCode::End) || state.fit_request {
+        state.fit_request = false;
+        if let Some((low, high)) = overview.extent() {
+            state.viewport = Viewport::fit(low, high, screen);
+            state.follow = false;
+            changed = true;
+        }
+    }
     if keyboard.just_pressed(KeyCode::Home) {
         state.follow = true;
         changed = true;
@@ -325,209 +334,6 @@ pub fn follow(
     }
 }
 
-fn texts_bundle(key: &'static str, palette: &InstrumentPalette, ink: InstrumentInk) -> impl Bundle {
-    (texts(key, TypeScale::Label, ink, palette), L10nKey(key))
-}
-
-/// Spawns the overlay.
-fn spawn_overlay(commands: &mut Commands, palette: &InstrumentPalette, ground: Color) {
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                top: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                overflow: Overflow::clip(),
-                ..default()
-            },
-            BackgroundColor(ground),
-            GlobalZIndex(1000),
-            InGameEntity,
-            FullMapRoot,
-            UiId::new("hud.fullmap"),
-        ))
-        .with_children(|root| {
-            root.spawn((
-                Node {
-                    position_type: PositionType::Absolute,
-                    ..default()
-                },
-                ImageNode::default(),
-                FullMapSurface,
-                UiId::new("hud.fullmap.surface"),
-            ));
-            // The map name and the zoom, top left.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(16.0),
-                    top: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    texts("", TypeScale::BodyLarge, InstrumentInk::Text, palette),
-                    FullMapCaption,
-                    UiId::new("hud.fullmap.caption"),
-                ));
-            });
-            // The scale bar, bottom left.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    left: Val::Px(16.0),
-                    bottom: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    flex_direction: FlexDirection::Column,
-                    row_gap: Val::Px(4.0),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    Node {
-                        width: Val::Px(100.0),
-                        height: Val::Px(3.0),
-                        ..default()
-                    },
-                    BackgroundColor(palette.text),
-                    FullMapScaleBar,
-                ));
-                p.spawn((
-                    texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
-                    FullMapScaleText,
-                    UiId::new("hud.fullmap.scale"),
-                ));
-            });
-            // The keys, bottom right.
-            root.spawn(panel(
-                Node {
-                    position_type: PositionType::Absolute,
-                    right: Val::Px(16.0),
-                    bottom: Val::Px(12.0),
-                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
-                    border: UiRect::all(Val::Px(1.0)),
-                    ..default()
-                },
-                RadiusLevel::Medium,
-                palette,
-            ))
-            .with_children(|p| {
-                p.spawn((
-                    texts_bundle(keys::FULLMAP_HINT, palette, InstrumentInk::TextDim),
-                    UiId::new("hud.fullmap.hint"),
-                ));
-            });
-        });
-}
-
-/// Builds the overlay when the map opens and removes it when it closes; keeps the texture node,
-/// the caption and the scale bar in step with the window and the zoom.
-#[allow(clippy::too_many_arguments)]
-pub fn overlay(
-    mut commands: Commands,
-    state: Res<FullMapState>,
-    image: Res<FullMapImage>,
-    roots: Query<Entity, With<FullMapRoot>>,
-    mut surface: Query<(&mut Node, &mut ImageNode), With<FullMapSurface>>,
-    mut caption: Query<&mut Text, (With<FullMapCaption>, Without<FullMapScaleText>)>,
-    mut scale_text: Query<&mut Text, (With<FullMapScaleText>, Without<FullMapCaption>)>,
-    mut scale_bar: Query<&mut Node, (With<FullMapScaleBar>, Without<FullMapSurface>)>,
-    session: Option<Res<InGameSessionInfo>>,
-    loc: Res<Localization>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
-) {
-    let existing = roots.iter().next();
-    if !state.open {
-        if let Some(root) = existing {
-            commands.entity(root).try_despawn();
-        }
-        return;
-    }
-    let palette = *theme
-        .as_ref()
-        .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-            t.instrument(*variant)
-        });
-    if existing.is_none() {
-        let ground = Color::srgba_u8(
-            colors_of(&palette).ground[0],
-            colors_of(&palette).ground[1],
-            colors_of(&palette).ground[2],
-            255,
-        );
-        spawn_overlay(&mut commands, &palette, ground);
-        return;
-    }
-    let screen = state.screen;
-    // The texture covers the square around the screen; the root clips it.
-    let side = screen.max_element();
-    for (mut node, mut img) in &mut surface {
-        let (w, h) = (Val::Px(side), Val::Px(side));
-        let (left, top) = (
-            Val::Px((screen.x - side) / 2.0),
-            Val::Px((screen.y - side) / 2.0),
-        );
-        if node.width != w || node.height != h || node.left != left || node.top != top {
-            node.width = w;
-            node.height = h;
-            node.left = left;
-            node.top = top;
-        }
-        if let Some(h) = &image.0 {
-            if img.image != *h {
-                img.image = h.clone();
-            }
-        }
-    }
-    let map = session.as_ref().map_or("", |s| s.map_name.as_str());
-    let ppm = state.viewport.px_per_m(screen);
-    let bar_m = scale_bar_m(SCALE_BAR_MAX_PX / ppm);
-    let bar_text = if bar_m >= 1000.0 {
-        loc.t_args(
-            keys::FULLMAP_SCALE_KM,
-            &[("km".to_owned(), Arg::from((bar_m / 1000.0).round() as i32))],
-        )
-    } else {
-        loc.t_args(
-            keys::FULLMAP_SCALE_M,
-            &[("metres".to_owned(), Arg::from(bar_m.round() as i32))],
-        )
-    };
-    let title = if map.is_empty() {
-        loc.t(keys::FULLMAP_TITLE)
-    } else {
-        map.to_owned()
-    };
-    for mut t in &mut caption {
-        if t.0 != title {
-            t.0.clone_from(&title);
-        }
-    }
-    for mut t in &mut scale_text {
-        if t.0 != bar_text {
-            t.0.clone_from(&bar_text);
-        }
-    }
-    for mut node in &mut scale_bar {
-        let w = Val::Px((bar_m * ppm) as f32);
-        if node.width != w {
-            node.width = w;
-        }
-    }
-}
-
 /// Redraws the map: at once after a change of the view, while a vehicle moves at most ten times
 /// a second, otherwise twice a second.
 #[allow(clippy::too_many_arguments)]
@@ -547,7 +353,9 @@ pub fn redraw(
     cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     traffic: Option<Res<TrafficState>>,
     fixture: Option<Res<FixtureRoads>>,
+    mut overview: ResMut<OverviewRoads>,
 ) {
+    overview.poll();
     state.since += time.delta_secs();
     let mut markers: Vec<(DVec2, f32, bool)> = Vec::new();
     for (t, session, is_player) in &vehicles {
@@ -565,10 +373,11 @@ pub fn redraw(
     let screen = state.screen;
     let side = canvas_px(screen);
     let resized = canvas.0.as_ref().is_none_or(|c| c.size != side) || handle.0.is_none();
-    let view_changed = state
-        .drawn
-        .as_ref()
-        .is_none_or(|(v, _)| *v != state.viewport);
+    let view_changed = state.drawn_generation != overview.generation
+        || state
+            .drawn
+            .as_ref()
+            .is_none_or(|(v, _)| *v != state.viewport);
     let markers_moved = state.drawn.as_ref().is_none_or(|(_, old)| {
         old.len() != markers.len()
             || old
@@ -626,6 +435,13 @@ pub fn redraw(
     if let Some(t) = &traffic {
         t.roads_near(viewport.centre, reach, &mut roads);
     }
+    // Tiles that are not resident come from the overview of the whole map.
+    overview.roads_near(
+        viewport.centre,
+        reach,
+        |key| traffic.as_ref().is_some_and(|t| t.has_tile(key)),
+        &mut roads,
+    );
     if let Some(f) = &fixture {
         f.roads_near(viewport.centre, reach, &mut roads);
     }
@@ -637,6 +453,7 @@ pub fn redraw(
     for road in &roads {
         push_chords(road, viewport.centre, min_chord, &mut lines);
     }
+    thin_lines(&mut lines, px_per_m as f32);
     let drawn_markers: Vec<MapMarker> = markers
         .iter()
         .map(|(p, h, active)| MapMarker {
@@ -670,6 +487,29 @@ pub fn redraw(
     state.lines = lines.len();
     state.markers = drawn_markers.len();
     state.drawn = Some((viewport, markers));
+    state.drawn_generation = overview.generation;
+}
+
+/// Leaves out what cannot be seen: chords shorter than a pixel, and a chord that another one
+/// already covers at the pixel level (the two lanes of a street, or two paths over each other, once
+/// the map is zoomed out). The whole map has thousands of chords; this keeps a redraw cheap.
+pub(super) fn thin_lines(lines: &mut Vec<MapLine>, px_per_m: f32) {
+    let mut seen = std::collections::HashSet::with_capacity(lines.len());
+    lines.retain(|l| {
+        let len_px = (l.b - l.a).length() * px_per_m;
+        if len_px < 1.0 {
+            return false;
+        }
+        // Half-pixel cells; the two ends in a fixed order, so both directions of a lane match.
+        let q = |p: Vec2| {
+            (
+                (p.x * px_per_m * 2.0).round() as i32,
+                (p.y * px_per_m * 2.0).round() as i32,
+            )
+        };
+        let (a, b) = (q(l.a), q(l.b));
+        seen.insert(if a <= b { (a, b) } else { (b, a) })
+    });
 }
 
 /// Registers the resources and systems of the full-size map.
@@ -682,9 +522,13 @@ impl Plugin for FullMapPlugin {
         app.init_resource::<FullMapState>()
             .init_resource::<FullMapCanvas>()
             .init_resource::<FullMapImage>()
+            .init_resource::<OverviewRoads>()
             .add_systems(
                 OnEnter(AppState::InGame),
-                |mut state: ResMut<FullMapState>, mut image: ResMut<FullMapImage>| {
+                |mut state: ResMut<FullMapState>,
+                 mut image: ResMut<FullMapImage>,
+                 mut overview: ResMut<OverviewRoads>| {
+                    *overview = OverviewRoads::default();
                     let span = state.remembered_span_m;
                     *state = FullMapState {
                         remembered_span_m: span,

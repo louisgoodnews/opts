@@ -114,14 +114,15 @@ Not covered: the free-camera speed path (no vehicle) is unit-tested (`camera_spe
 | :--- | :--- |
 | **Key** | **F6** opens and closes it (Esc closes too, Home follows the vehicle again). `M` is OMSI's engine start and stays so; F6 is reserved against script bindings |
 | **Code** | `crates/opts-game/src/hud/fullmap/` (`viewport.rs`: centre, span, pan, zoom to the cursor; `mod.rs`: state, keys, mouse, the overlay, the redraw); the drawing is the mini map's ([`raster`](#1-current-state-m-0071-merged) with `render_with_unit`, [`source`]) |
-| **View** | North-up, `span_m` metres across the shorter side of the screen, 50 m to 20 km (default 1 km, remembered between openings). Drag pans (and stops following), the wheel zooms by 1.2 per notch **toward the cursor** (the point under it stays within 2 px), Home follows the active vehicle (or the camera) again |
+| **Whole map** | The lane graph holds only the resident tiles. The first opening starts a reader thread (`overview.rs`) that reads the splines and scenery paths of every tile of the map (base tiles, no Chrono overlays, no bent crossings; 369 tiles of Berlin-Spandau in about 2 s) and sends the road lanes per tile; the map draws them for every tile that is not resident, and fills in while the thread works (the title shows the percentage). **End** fits the whole map into the window |
+| **View** | North-up, `span_m` metres across the shorter side of the screen, 50 m to 20 km (default 1 km, remembered between openings). Drag pans (and stops following), End shows the whole map, the wheel zooms by 1.2 per notch **toward the cursor** (the point under it stays within 2 px), Home follows the active vehicle (or the camera) again |
 | **Texture** | One square texture, the longer screen side capped to 1024 px, shown larger than the screen and clipped by the overlay root, so a wide window needs no second code path in the raster. Chords of at least six texture pixels |
-| **Redraw** | At once after a change of the view (drag, wheel, Home), at most ten times a second while a vehicle moves, twice a second otherwise; measured 1.8 to 2.6 ms in a release build on Berlin-Spandau at 1 km span (`hud.fullmap` reports `last_us`, `worst_us`) |
+| **Redraw** | At once after a change of the view (drag, wheel, Home, End), at most ten times a second while a vehicle moves, twice a second otherwise; chords under a pixel and chords covered by another are left out; measured in a release build on Berlin-Spandau: 1.9 to 2.6 ms at 1 km span, 3 to 4.4 ms for the whole map (`hud.fullmap` reports `last_us`, `worst_us`) |
 | **Input** | While open the map holds `MenuModalActive` (via `FullMapState::holds_input`, included by the vehicle menu's flag, kept two frames after closing): driving, camera, script keys and the pause overlay stand still, the simulation runs. The control protocol is gated the same way (`drive.set` answers `1009`) |
 | **Protocol** | `hud.fullmap {open?, span?, x?, y?, follow?}` (protocol 1.15.0) reads and drives it; `x` and `y` set the view and stop following |
-| **Not yet** | the coarse tile outline of unloaded areas; a rebinding setting for F6 |
+| **Not yet** | a coarse tile outline for tiles without roads; a rebinding setting for F6; the redraw off the main thread |
 
-![The full-size map at a span of 1 km and of 8 km on Berlin-Spandau](img/fullmap-1km-8km.png)
+![The full-size map at a span of 1 km and fitted to the whole map (End) on Berlin-Spandau](img/fullmap-1km-whole.png)
 
 The picture is OPTS's own drawing of the map's lane graph (no textures).
 
