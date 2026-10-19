@@ -1,5 +1,7 @@
 //! Reveal tests of the combobox.
 
+use super::build::ComboboxBuilder;
+use super::search::ComboboxList;
 use super::*;
 use crate::testing::layout_app;
 

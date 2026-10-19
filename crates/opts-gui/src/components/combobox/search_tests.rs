@@ -1,5 +1,7 @@
 //! Search tests of the combobox.
 
+use super::build::ComboboxBuilder;
+use super::search::{ComboboxList, ComboboxNoMatch, ComboboxSearch};
 use super::*;
 use crate::actions::{Direction, UiAction};
 use crate::components::text_field::TextFieldClear;
