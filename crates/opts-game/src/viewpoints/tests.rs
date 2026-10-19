@@ -1,3 +1,5 @@
+//! Unit tests of `viewpoints`.
+
 use super::*;
 
 fn vp(x: f32, fov: Option<f32>) -> Viewpoint {

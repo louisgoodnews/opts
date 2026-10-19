@@ -2,7 +2,7 @@
 
 *Goal: keep the codebase readable and navigable by running a structural cleanup at the **end of every development cycle**, before a versioned release of OPTS is cut for the public. The phase never closes: each cycle is a new milestone from the same protocol, and the last one before a release is the release gate.*
 
-**Status:** ♾️ Continuous. Proposed 2026-10-19 (from the task `docs/dev/tasks/Clean Code Taskforce — Structural Refactoring.md`, expanded here); the first cycle waits for the project lead's approval. The phase number 999 puts it after every feature phase on purpose: a feature phase ends, this phase runs, then the release follows.
+**Status:** ♾️ Continuous. Proposed 2026-10-19 (from the task `docs/dev/tasks/Clean Code Taskforce — Structural Refactoring.md`, expanded here); the first cycle ran 2026-10-19 (M-0125 to M-0129 done; report [structure-refactoring-2026-10-19](../../meta/structure-refactoring-2026-10-19.md)). The phase number 999 puts it after every feature phase on purpose: a feature phase ends, this phase runs, then the release follows.
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 999); this page holds the details.
 

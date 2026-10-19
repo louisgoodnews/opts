@@ -1,6 +1,15 @@
-//! The loading screen's vehicle line.
+//! The vehicle line of the loading screen (M-0076) and the map-only start (M-0068).
 
-use super::*;
+mod common;
+
+use bevy::prelude::*;
+use opts_game::{
+    in_game::SimulationLoadState,
+    new_game_screen::types::{GameCatalogue, NewGameSetup, VehicleItem},
+};
+
+use common::loading::{args_for, catalogue, loading_app_with, run, screen_count, texts};
+use common::{fresh_root, write_map, MiniMap};
 
 fn three_vehicles() -> GameCatalogue {
     let mut c = catalogue("Mini", "MiniBus");

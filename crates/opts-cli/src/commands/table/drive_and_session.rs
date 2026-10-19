@@ -1,4 +1,4 @@
-//! Part 4 of 4 of the command table: 26 entries, in protocol order (the order is the listing order of `help` and the reference).
+//! Drive, session and menu commands of the table (`session.load` to `menu.state`), in protocol order.
 
 use crate::commands::{c, CommandSpec};
 

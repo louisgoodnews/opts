@@ -116,7 +116,7 @@ All 11 hot files are under the limit; the ratchet file `docs/dev/structure-known
 | :--- | ---: | ---: | :--- |
 | `opts-traffic/src/agent.rs` | 1957 | 367 | `routing` 178, `gaps` 150, `step` 248; its tests (1019) into `following`, `conflicts`, `lane_change`, `geometry`, `standing` (largest 318) |
 | `opts-game/src/in_game/vehicle_menu.rs` | 1733 | 351 | `actions` 287, `build` 390, `entries` 149, `route_page` 408 + `route_page/jump` 101, `route_page_tests` 75 |
-| `opts-cli/src/commands.rs` | 1498 | 294 | the 156-entry table in `commands/table/part_1..4.rs` (228 to 295), joined at compile time by `table.rs` (`CommandSpec` is `Copy`; `COMMANDS` keeps its path and type; the generated reference page is byte-identical) |
+| `opts-cli/src/commands.rs` | 1498 | 294 | the 156-entry table in `commands/table/{basics,ui_and_capture,scene_and_trace,drive_and_session}.rs` (228 to 295), joined at compile time by `table.rs` (`CommandSpec` is `Copy`; `COMMANDS` keeps its path and type; the generated reference page is byte-identical) |
 | `opts-game/src/in_game/omsi_world/vehicle.rs` | 1497 | 261 | `segments` 343, `skins` 196, `trailers` 265, `humans` 138, `scripts` 137, five test modules |
 | `opts-bevy/src/weather.rs` | 1285 | 328 | `catalogue` 234, `fog` 167; tests into `fog_tests` 222 and `look_tests` 131 |
 | `opts-omsi/src/formats/scenery/sco.rs` | 1098 | 392 | the 629-line `from_text` is a loop over four block-family functions: `object` 199, `meshes` 170, `traffic` 142, `texts` 101, with a `ParseState` for the values carried between blocks |
@@ -154,7 +154,7 @@ Lessons: a child module that has the name of an imported module shadows it (`o3d
 
 ### 6.1 Result of batch 4 (2026-10-19, branch `refactor/cycle-1-batch-4`)
 
-All 13 files are under the limit (the ratchet went from 24 to 11 files). The largest part is 389 lines of code (`script_rig/main.rs`); the before and after counts are in each commit message. Test and example files are split into a directory with the same name: integration tests as `tests/foo/main.rs` + `tests/foo/<concern>.rs` (`control_protocol`, `wizard_tests`, `loading_tests`, `save_tests`), examples as `examples/foo/main.rs` + modules (`lighting_bench` with its `.wesl` shader beside it, `script_rig`), unit tests as `tests.rs` + `tests/<concern>.rs` (shared helpers stay in `tests.rs`; inline `mod` blocks of `pause`, `settings_registry` became files).
+All 13 files are under the limit (the ratchet went from 24 to 11 files). The largest part is 389 lines of code (`script_rig/main.rs`); the before and after counts are in each commit message. Test and example files are split into a directory with the same name: integration tests as `tests/foo/main.rs` + `tests/foo/<concern>.rs` (`control_protocol`, `wizard_tests`, `save_tests`; `loading_tests` stays a flat file because it needs `mod common;`, so its helpers moved to `tests/common/loading.rs` and the vehicle-line tests to `tests/loading_vehicle_line.rs`), examples as `examples/foo/main.rs` + modules (`lighting_bench` with its `.wesl` shader beside it, `script_rig`), unit tests as `tests.rs` + `tests/<concern>.rs` (shared helpers stay in `tests.rs`; inline `mod` blocks of `pause`, `settings_registry` became files).
 
 Checks: the multiset of test function names is equal before and after (2161 = 2161, compared from the sources at `f5a2d85` and at the head); the touched test targets pass; all targets compile (`cargo check --all-targets`). No golden file was touched.
 

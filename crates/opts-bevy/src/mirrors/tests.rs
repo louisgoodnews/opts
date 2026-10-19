@@ -1,3 +1,5 @@
+//! Unit tests of `mirrors`.
+
 use super::spawn::spawn_mirror_cameras;
 use super::update::{sync_mirror_camera_look, update_mirror_cameras};
 use super::*;

@@ -1,3 +1,5 @@
+//! Unit tests of `setvars`.
+
 use super::*;
 
 fn sv(repaint: &str, var: &str, value: &str) -> CtiSetvar {

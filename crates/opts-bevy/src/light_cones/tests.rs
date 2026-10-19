@@ -1,3 +1,5 @@
+//! Unit tests of `light_cones`.
+
 use std::time::Duration;
 
 use bevy::time::TimeUpdateStrategy;

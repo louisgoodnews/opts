@@ -1,4 +1,4 @@
-//! Part 2 of 4 of the command table: 40 entries, in protocol order (the order is the listing order of `help` and the reference).
+//! UI, reload, debug, output and capture commands of the table (`l10n.report` to `vehicle.teleport`), in protocol order.
 
 use crate::commands::{c, CommandSpec};
 

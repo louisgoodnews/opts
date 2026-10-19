@@ -1,3 +1,5 @@
+//! Unit tests of `scene_trace`.
+
 use std::path::Path;
 use std::sync::Mutex;
 

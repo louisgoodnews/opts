@@ -165,7 +165,7 @@ _Work that cannot proceed until a dependency is resolved._
 - [x] 🟠 **Refactoring cycle protocol and release gate** (M-0126, **done 2026-10-19 on `agent/cycle-protocol`**, dry run on `weather.rs`: Phase 999, process) — template, prompt P-1015, release-gate checklist; [M-0126](../src/roadmap/phase-999/M-0126.md).
 - [x] 🟡 **Refactoring cycle 1, batches 1 and 2: low- and medium-risk splits** (M-0127, Phase 999) — **plan approved 2026-10-19, batches 1 and 2 done (63 → 24 files over the limit)** ([refactoring-plan](../src/architecture/refactoring-plan.md): 13 files, tests moved out, 63 → 50 files over the limit); batches 3 and 4 are M-0128 — [M-0127](../src/roadmap/phase-999/M-0127.md); needs a quiet tree.
 - [x] 🟡 **Refactoring cycle 1, batches 3 and 4: high-risk splits and structural cleanup** (M-0128, Phase 999) — **done 2026-10-19: 0 files over the limit (63 → 0 over the cycle)** — [M-0128](../src/roadmap/phase-999/M-0128.md).
-- [ ] 🟢 **Refactoring cycle 1, batch 5: crate-level decisions (ADRs)** (M-0129, Phase 999) — [M-0129](../src/roadmap/phase-999/M-0129.md).
+- [x] 🟢 **Refactoring cycle 1, batch 5: crate-level decisions (ADRs)** (M-0129, Phase 999) — **done 2026-10-19: all crates kept ([ADR-0015](../src/adr/0015-crate-size-review-cycle-1.md)); cycle report [structure-refactoring-2026-10-19](../src/meta/structure-refactoring-2026-10-19.md)** — [M-0129](../src/roadmap/phase-999/M-0129.md).
 
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 

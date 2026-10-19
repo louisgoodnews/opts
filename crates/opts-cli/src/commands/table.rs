@@ -1,14 +1,19 @@
 //! The command table, assembled at compile time from its parts (kept in separate files so that
-//! none grows past the file-size limit).
+//! none grows past the file-size limit); the order of the parts is the order of the table.
 
 use super::CommandSpec;
 
-mod part_1;
-mod part_2;
-mod part_3;
-mod part_4;
+mod basics;
+mod drive_and_session;
+mod scene_and_trace;
+mod ui_and_capture;
 
-const PARTS: &[&[CommandSpec]] = &[part_1::PART, part_2::PART, part_3::PART, part_4::PART];
+const PARTS: &[&[CommandSpec]] = &[
+    basics::PART,
+    ui_and_capture::PART,
+    scene_and_trace::PART,
+    drive_and_session::PART,
+];
 
 /// The number of entries of all parts.
 pub(super) const LEN: usize = {

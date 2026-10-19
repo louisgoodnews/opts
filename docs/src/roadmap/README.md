@@ -466,7 +466,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Plan, then split the clean and the somewhat tangled oversized files along concerns, API paths kept.
 - [x] **🧱 Cycle 1, Batches 3 and 4: High-Risk Splits and Structural Cleanup** — [M-0128](phase-999/M-0128.md) — ✅ done 2026-10-19
   - [x] The hot and widely used files, misplaced files, oversized test files.
-- [ ] **🧩 Cycle 1, Batch 5: Crate-Level Decisions** — [M-0129](phase-999/M-0129.md) — 📝 proposed 2026-10-19
+- [x] **🧩 Cycle 1, Batch 5: Crate-Level Decisions** — [M-0129](phase-999/M-0129.md) — ✅ done 2026-10-19
   - [ ] An ADR per crate merge, split or rename; default keep; execute only what is approved.
 
 ---
