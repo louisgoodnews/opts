@@ -54,6 +54,10 @@ pub enum Page {
     /// *Jump to entry point*: every entry point of the map; the camera goes there and the active
     /// vehicle, if there is one, is put there.
     Jump,
+    /// *Change map*: the installed maps (M-0108).
+    ChangeMap,
+    /// *Change to <map>*: what the change does and the one question.
+    ChangeMapConfirm,
 }
 
 /// State of the menu.
@@ -92,6 +96,8 @@ pub struct VehicleMenu {
     /// line files and that file's tours).
     tt_line: Option<usize>,
     tt_tour: Option<usize>,
+    /// The choices of the *Change map* pages.
+    change_map: ChangeMapDraft,
 }
 
 /// What a row of the main page shows; a change rebuilds the page.
@@ -214,6 +220,16 @@ enum Action {
     OpenJump,
     /// Jumps to the entry point with this record number.
     JumpEntry(u32),
+    /// Opens the *Change map* page.
+    OpenChangeMap,
+    /// Chooses the target map (folder name) and shows what the change does.
+    PickMap(String),
+    /// Chooses the start point on the target map.
+    PickMapEntry(String),
+    /// Goes on without a vehicle on the other map.
+    DriveWithoutVehicle,
+    /// Changes the map.
+    ConfirmChangeMap,
 }
 
 /// Every entity of the menu's modals.
@@ -291,9 +307,14 @@ fn toggle_menu(
     if step_back && menu.page != Page::Closed {
         if menu.config_open {
             menu.config_open = false;
+        } else if menu.page == Page::ChangeMapConfirm {
+            menu.page = Page::ChangeMap;
         } else if menu.page == Page::Formation {
             menu.page = Page::Select;
-        } else if matches!(menu.page, Page::Select | Page::Route | Page::Jump) {
+        } else if matches!(
+            menu.page,
+            Page::Select | Page::Route | Page::Jump | Page::ChangeMap
+        ) {
             menu.page = Page::Main;
         } else {
             menu.page = Page::Closed;
@@ -361,6 +382,8 @@ fn rebuild_menu(
     index: Res<EntryIndex>,
     job: Option<Res<WorldLoadJob>>,
     routes: Query<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>,
+    env: Option<Res<opts_bevy::environment::SessionEnvironment>>,
+    session: Option<Res<super::types::InGameSessionInfo>>,
 ) {
     let want = (menu.page, menu.config_open);
     if !menu.is_changed() && menu.built == Some(want) {
@@ -380,6 +403,28 @@ fn rebuild_menu(
         Page::Jump => {
             let entries = job.as_ref().map(|j| j.entry_records()).unwrap_or_default();
             build_jump(&mut commands, &menu, &entries, index.is_done());
+        }
+        Page::ChangeMap => {
+            let Some(cat) = catalogue else { return };
+            let current = session.as_ref().map_or("", |s| s.map_name.as_str());
+            build_change_map(&mut commands, &menu, &cat, current);
+        }
+        Page::ChangeMapConfirm => {
+            let (Some(cat), Some(setup)) = (catalogue, setup) else {
+                return;
+            };
+            let Some(outcome) = draft_plan(&menu, &cat, &registry, env.as_deref(), Some(&setup))
+            else {
+                return;
+            };
+            let target = menu
+                .change_map
+                .map
+                .as_deref()
+                .and_then(|m| super::change_map::find_maps(&cat, m).into_iter().next());
+            let entries = target.map(|m| m.entry_points.clone()).unwrap_or_default();
+            let name = target.map_or_else(String::new, |m| m.friendly_name.clone());
+            build_change_map_confirm(&mut commands, &menu, &outcome, &entries, &name);
         }
         Page::Route => {
             let view = routes.iter().next().map(|r| route_view(&menu, &r.handle));
@@ -460,6 +505,14 @@ fn rebuild_menu(
 
 mod build;
 use build::{build_config, build_main, build_select};
+
+// --- change map (M-0108) ----------------------------------------------------------------------
+
+mod change_map_page;
+use change_map_page::{
+    build_change_map, build_change_map_confirm, confirm as confirm_change_map, draft_plan,
+    ChangeMapDraft,
+};
 
 // --- the route page (M-0099) ------------------------------------------------------------------
 

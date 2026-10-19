@@ -111,6 +111,10 @@ pub(super) fn build_main(
         button(p, "Spawn vehicle…", true, Action::OpenSelect);
         let jump = button(p, "Jump to entry point…", false, Action::OpenJump);
         p.commands().entity(jump).insert(UiId::new("vehicle.jump"));
+        let change = button(p, "Change map…", false, Action::OpenChangeMap);
+        p.commands()
+            .entity(change)
+            .insert(UiId::new("vehicle.change_map"));
         let route = button(p, "Line and destination…", false, Action::OpenRoute);
         p.commands()
             .entity(route)

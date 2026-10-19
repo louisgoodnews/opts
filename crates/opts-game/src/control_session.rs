@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use bevy::prelude::*;
-use opts_bevy::control::params::{opt_str, opt_u64};
+use opts_bevy::control::params::{opt_bool, opt_str, opt_u64};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use opts_bevy::control::PathPolicy;
 use opts_cli::protocol::{code, RpcError};
@@ -25,6 +25,7 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("session.switch", switch);
     registry.register("session.despawn", despawn);
     registry.register("session.respawn", respawn);
+    registry.register("session.change_map", change_map);
 }
 
 fn op_error(e: OpError) -> RpcError {
@@ -117,6 +118,37 @@ fn resolve_vehicle(world: &World, text: &str) -> Result<(String, String, PathBuf
             )
         })?;
     Ok((item.id, item.full_name, file))
+}
+
+/// `session.change_map {map, entry?, vehicle?, dry_run?}`: the Alt menu's *Change map*.
+fn change_map(world: &mut World, params: &Value) -> Outcome {
+    use crate::in_game::change_map::{plan_in_world, start, ChangeMapError, VehicleChoice};
+    let result = (|| -> Result<Value, RpcError> {
+        let map = opts_bevy::control::params::str_param(params, "map")?;
+        let entry = opt_str(params, "entry")?;
+        let choice = match opt_str(params, "vehicle")? {
+            None | Some("carry") => VehicleChoice::Carry,
+            Some("none") => VehicleChoice::None,
+            Some(_) => {
+                return Err(RpcError::invalid_params("`vehicle` is `carry` or `none`"));
+            }
+        };
+        let dry_run = opt_bool(params, "dry_run")?.unwrap_or(false);
+        let plan = plan_in_world(world, map, entry, choice).map_err(|e| match e {
+            ChangeMapError::NotInDrive | ChangeMapError::NoCatalogue => {
+                RpcError::new(code::NOT_READY, e.to_string())
+            }
+            ChangeMapError::VehicleUnavailable(_) => RpcError::new(code::NOT_FOUND, e.to_string()),
+            _ => RpcError::invalid_params(e.to_string()),
+        })?;
+        let mut answer = plan.describe();
+        answer["started"] = json!(!dry_run);
+        if !dry_run {
+            start(world, &plan);
+        }
+        Ok(answer)
+    })();
+    Outcome::Done(result)
 }
 
 fn spawn(world: &mut World, params: &Value) -> Outcome {

@@ -40,6 +40,24 @@ pub(super) fn menu_actions(
                 (menu.page != Page::Formation).then_some(Action::OpenFormation)
             }
             "back" => Some(Action::Back),
+            "changemap" => Some(Action::OpenChangeMap),
+            // `map <text>` picks the first map that matches, `map <text> / <entry>` also the entry.
+            "map" => {
+                let (m, entry) = rest
+                    .split_once('/')
+                    .map_or((rest.as_str(), None), |(m, e)| (m, Some(e.trim())));
+                if let Some(entry) = entry {
+                    menu.change_map.entry = Some(entry.to_owned());
+                }
+                catalogue
+                    .as_deref()
+                    .and_then(|c| {
+                        super::super::change_map::find_maps(c, m.trim())
+                            .first()
+                            .map(|x| x.id.clone())
+                    })
+                    .map(Action::PickMap)
+            }
             "route" if rest.is_empty() => Some(Action::OpenRoute),
             "route" => Some(Action::PickRouteText(rest.clone())),
             "route-clear" => Some(Action::ClearRoute),
@@ -67,6 +85,7 @@ pub(super) fn menu_actions(
             }
             "config" => Some(Action::OpenConfig),
             "done" => Some(Action::CloseConfig),
+            "confirm" if menu.page == Page::ChangeMapConfirm => Some(Action::ConfirmChangeMap),
             "confirm" => Some(Action::Confirm),
             "despawn" => Some(Action::Despawn),
             "switch" => registry
@@ -163,7 +182,11 @@ pub(super) fn menu_actions(
                 menu.config_open = false;
             }
             Action::Back => {
-                menu.page = Page::Main;
+                menu.page = if menu.page == Page::ChangeMapConfirm {
+                    Page::ChangeMap
+                } else {
+                    Page::Main
+                };
                 menu.config_open = false;
             }
             Action::OpenRoute => {
@@ -200,6 +223,28 @@ pub(super) fn menu_actions(
             }
             Action::ClearRoute => {
                 commands.queue(|w: &mut World| clear_route(w));
+            }
+            Action::OpenChangeMap => {
+                menu.page = Page::ChangeMap;
+                menu.status.clear();
+                menu.change_map = ChangeMapDraft::default();
+            }
+            Action::PickMap(id) => {
+                if menu.change_map.map.as_deref() != Some(id.as_str()) {
+                    menu.change_map.entry = menu
+                        .change_map
+                        .entry
+                        .take()
+                        .filter(|_| menu.page == Page::ChangeMap);
+                }
+                menu.change_map.map = Some(id);
+                menu.page = Page::ChangeMapConfirm;
+                menu.status.clear();
+            }
+            Action::PickMapEntry(name) => menu.change_map.entry = Some(name),
+            Action::DriveWithoutVehicle => menu.change_map.without_vehicle = true,
+            Action::ConfirmChangeMap => {
+                commands.queue(|w: &mut World| confirm_change_map(w));
             }
             Action::OpenJump => {
                 menu.page = Page::Jump;

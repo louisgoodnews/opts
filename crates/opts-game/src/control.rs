@@ -128,12 +128,17 @@ fn scene(world: &mut World, _: &Value) -> Outcome {
     let meshes = world.resource::<Assets<Mesh>>().len();
     let materials = world.resource::<Assets<StandardMaterial>>().len();
     let images = world.resource::<Assets<Image>>().len();
+    let live_entities = world.query::<Entity>().iter(world).count();
     Outcome::ok(json!({
         "map": stats.map_name,
         "start_tile": [stats.start_tile.0, stats.start_tile.1],
         "tiles_loaded": stats.tiles_loaded,
         "tiles_missing": stats.tiles_missing,
         "entity_count": world.entities().len(),
+        "entities_live": live_entities,
+        "meshes": meshes,
+        "materials": materials,
+        "images": images,
         "asset_count": meshes + materials + images,
         "stats": {
             "objects_loaded": stats.objects_loaded,
