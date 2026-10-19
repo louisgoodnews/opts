@@ -148,7 +148,6 @@ pub fn handle_vehicle_view_drag(
 pub fn update_cockpit_camera(
     state: Res<CameraState>,
     vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
-    head: Query<&GlobalTransform, With<crate::human::PlayerHead>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut viewpoint: ResMut<ViewpointState>,
     mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
@@ -163,10 +162,8 @@ pub fn update_cockpit_camera(
         return;
     };
     *tf = preset_world_transform(gt, cam, state.view_yaw, state.view_pitch);
-    // The preset gives the viewing direction; the eyes are the player character's.
-    if let Ok(eyes) = head.single() {
-        tf.translation = eyes.translation();
-    }
+    // Eye position and direction are the vehicle's own `[add_camera_driver]` preset (the player
+    // character is hidden in this view, see `crate::human::hide_driver_in_seat_views`).
     // The viewpoint editor's offset (right, up, forward in the driver's frame) and FOV.
     if (viewpoint.default_fov_deg - cam.fov_deg).abs() > 1e-4 {
         viewpoint.default_fov_deg = cam.fov_deg;

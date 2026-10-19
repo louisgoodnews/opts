@@ -1,6 +1,6 @@
 # Camera Perspective System
 
-> Status: **keys 1–5 select ego, cockpit, external, passenger and free roam; 0 returns to the previous mode; Shift+Space and the HUD hint are implemented; Tab edits the driver's viewpoint (M-0084)** (`opts_bevy::camera`). Articulated passenger cameras span tractor and trailer segments.
+> Status: **keys 1–5 select ego, cockpit, external, passenger and free roam; 0 returns to the previous mode; 6 returns to the driver's seat; Shift+Space and the HUD hint are implemented; Tab edits the driver's viewpoint (M-0084)** (`opts_bevy::camera`). Articulated passenger cameras span tractor and trailer segments.
 
 Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_game/`.
 
@@ -14,6 +14,7 @@ Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_g
 | 3 | External | user vehicle | left-drag orbit, middle-drag pan (`zoom × 0.005` m/px, moves the orbit centre), wheel zoom 0.5–50 m; centre = `[set_camera_outside_center]` | ✅ (vehicle target only; human target with 1) |
 | 4 | Passenger | user vehicle | `[add_camera_pax]`; wheel cycles, wraps; right-drag looks | ✅ for single vehicles; articulated segment flattening waits for trailer spawning |
 | 5 | Free roam | none | one | ✅ |
+| 6 | Back to the bus | the driver's seat: the last of Ego/Cockpit, then the other one | — | ✅ from any other view; in a seat view it toggles Ego ↔ Cockpit (`home_mode`) |
 
 `ModelConfig`/`BusManifest` already expose the camera data (`BusManifest::driver_cameras`, `pax_cameras`, `std_camera_index`, `outside_camera_center` — see `BusVehicle`); conversion to Bevy space uses the existing `camera_preset_to_bevy_transform`. No camera transform is hard-coded. The one exception today is the interim chase distance/height, which `opts-game` derives from the vehicle's measured body size.
 
@@ -47,7 +48,7 @@ Fires on the key edge in every mode, never changes the mode or `previous_mode`, 
 
 ## HUD
 
-`[0] Prev  [1] Ego  [2] Cockpit  [3] External  [4] Pax  [5] Free   [Shift+Space] Reset`. The active mode is wrapped in `*…*`, unavailable modes in `(…)`; the free-roam entry appends the speed. `[MMB] Pan` joins the line when the external view gets orbit/pan.
+`[0] Prev  [1] Ego  [2] Cockpit  [3] External  [4] Pax  [5] Free  [6] Bus   [Shift+Space] Reset`. The active mode is wrapped in `*…*`, unavailable modes in `(…)`; the free-roam entry appends the speed. `[MMB] Pan` joins the line when the external view gets orbit/pan.
 
 ## Cursor handling
 
@@ -65,7 +66,7 @@ Cockpit and passenger cameras are **per-vehicle data**: `BusManifest::driver_cam
 
 Code: `opts_bevy::camera::viewpoint` (model, state, keys), `opts-game` `hud/viewpoint.rs` (panel) and `viewpoints.rs` (store, protocol).
 
-**How the view is defined today.** The driver's view is **key 2 (Cockpit)**; key 4 is the passenger view. Its cameras are the vehicle's `[add_camera_driver]` presets (position `x y z`, `dist`, yaw, pitch, **horizontal FOV**); `[set_camera_std]` picks the one shown first. The label reads `Driver's view x/n` (`x` = sub-camera index + 1, `n` = number of `[add_camera_driver]` presets) for 1.5 s after a change. The preset's position is not what is drawn from when the player character exists: the eye position is the character's head (seated at `[drivpos]`, shifted so its eyes lie at the preset). The horizontal FOV becomes the vertical one for the window aspect.
+**How the view is defined today.** The driver's view is **key 2 (Cockpit)**; key 4 is the passenger view. Its cameras are the vehicle's `[add_camera_driver]` presets (position `x y z`, `dist`, yaw, pitch, **horizontal FOV**); `[set_camera_std]` picks the one shown first. The label reads `Driver's view x/n` (`x` = sub-camera index + 1, `n` = number of `[add_camera_driver]` presets) for 1.5 s after a change. The eye position **is the preset's** (2026-10-19; before, every sub-camera collapsed onto the seated character's head), and the player character is **hidden** in the cockpit and ego views (`hide_driver_in_seat_views`) so the eye never looks through it. The horizontal FOV becomes the vertical one for the window aspect.
 
 **What the editor changes.** A `Viewpoint` is an **offset from that eye** plus an optional FOV, so the default (all zero, no FOV) *is* the vehicle-defined view and nothing about the vehicle is copied:
 

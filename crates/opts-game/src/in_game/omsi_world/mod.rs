@@ -219,6 +219,9 @@ pub struct WorldLoadJob {
     /// Transform and object of everything placed on the tile being built, by ID code: the parents
     /// of its `[attachObj]` children.
     placed: HashMap<u64, (Transform, Arc<SceneryObject>)>,
+    /// The road surfaces of the tile being built: `[rendertype] on_surface` objects (road
+    /// markings, text on the road) are laid on them.
+    tile_ground: Option<GroundIndex>,
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,

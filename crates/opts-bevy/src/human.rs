@@ -137,6 +137,33 @@ pub fn sync_player_head(
     }
 }
 
+/// Hides the player's own character while the camera sits at the driver's seat (cockpit and ego
+/// views), so the eye never looks through the head or the torso; shows it in every other view.
+pub fn hide_driver_in_seat_views(
+    state: bevy::prelude::Res<crate::camera::CameraState>,
+    humans: bevy::prelude::Query<(&Human, &mut bevy::prelude::Visibility)>,
+    players: bevy::prelude::Query<(), bevy::prelude::With<PlayerHead>>,
+) {
+    let seat = matches!(
+        state.mode,
+        crate::camera::CameraMode::Cockpit | crate::camera::CameraMode::Ego
+    );
+    let mut humans = humans;
+    for (human, mut vis) in &mut humans {
+        if !players.contains(human.rig.head_anchor) {
+            continue;
+        }
+        let want = if seat {
+            bevy::prelude::Visibility::Hidden
+        } else {
+            bevy::prelude::Visibility::Inherited
+        };
+        if *vis != want {
+            *vis = want;
+        }
+    }
+}
+
 /// How far the eyes (the nose bridge) lie in front of the head's centre line (m).
 pub const EYES_FORWARD_M: f32 = 0.09;
 
