@@ -21,7 +21,6 @@ crates/opts-cli/src/commands.rs 1498  # planned: refactoring cycle 1 (M-0127, M-
 crates/opts-game/src/control_drive.rs 831  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/control_trace.rs 526  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/hud/tests.rs 978  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/in_game/attachments.rs 541  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/loading_pipeline.rs 529  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/loading_ui.rs 727  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/omsi_world/job.rs 777  # planned: refactoring cycle 1 (M-0127, M-0128)
