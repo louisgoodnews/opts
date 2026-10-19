@@ -2,6 +2,10 @@ use std::time::Duration;
 
 use bevy::time::TimeUpdateStrategy;
 
+use super::shape::{
+    cone_angles, headlight_cone_shape, lantern_cone_length, lantern_cone_shape,
+    spotlight_cone_shape, ConeKind, ConeShape,
+};
 use super::*;
 use crate::light_quality::{ladder_preset, LightMode, LightQualityInput};
 
