@@ -13,7 +13,6 @@ crates/opts-bevy/src/mirrors.rs 657  # planned: refactoring cycle 1 (M-0127, M-0
 crates/opts-bevy/src/mirrors/tests.rs 737  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/model.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/route.rs 561  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/src/vehicle_triggers.rs 506  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/weather.rs 1285  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-catalogue/src/extract.rs 655  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-catalogue/src/lib.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
