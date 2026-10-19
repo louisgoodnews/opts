@@ -1263,8 +1263,6 @@ fn build_config(
     });
 }
 
-/// Mouse wheel over a list scrolls it.
-
 // --- the route page (M-0099) ------------------------------------------------------------------
 
 /// Most depot routes the list builds buttons for; the search narrows the rest.
@@ -1668,6 +1666,7 @@ fn build_route(
     });
 }
 
+/// Mouse wheel over a list scrolls it.
 fn scroll_lists(
     mut wheel: MessageReader<MouseWheel>,
     window: Query<&Window, With<PrimaryWindow>>,
