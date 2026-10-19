@@ -11,7 +11,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 1. [M-0118 — OMSI Event System Research and Consolidation Strategy](M-0118.md) — 📝 Proposed; documents only (taxonomy, dispatch, consolidation design); feeds M-0102, M-0098 and M-0115.
 2. [M-0119 — Dev Agent Roadmap Review Process](M-0119.md) — 📝 Proposed; delivers prompt P-1010, a CONTRIBUTING note and the workflow reference.
 3. [M-0109 — Quality-of-Life Suite](M-0109.md) — 📝 Proposed; one checklist: door camera, smooth driver view (after the jitter fix), UI scale presets, UI font settings.
-4. [M-0108 — Full-Size In-Game Map and In-Game Map Switching](M-0108.md) — 📝 Proposed; M key map, Alt menu *Change map*.
+4. [M-0108 — Full-Size In-Game Map and In-Game Map Switching](M-0108.md) — ✅ Done 2026-10-19; F6 map (the whole map), Alt menu *Change map*.
 5. [M-0115 — Tunnel Detection and Spatial Zones](M-0115.md) — 📝 Proposed; zone abstraction for reverb and light-room ambience.
 6. [M-0110 — Setvar Runtime Editor and CTI Value Types](M-0110.md) — 📝 Proposed; extends M-0078 and M-0077.
 7. [M-0111 — AI Traffic Depth](M-0111.md) — 📝 Proposed; audit first, then obstacles, conservative lane changes, traffic-light compliance with `[rowdy_factor]`.
@@ -54,7 +54,7 @@ The numbering is the project lead's inventory of 2026-10-18. Items 22 to 26 are 
 
 | # | Feature (project lead's inventory) | Captured in |
 | :--- | :--- | :--- |
-| 1 | Full-size in-game map (M, drag pan, wheel zoom, Esc, position and heading) | [M-0108](M-0108.md) |
+| 1 | Full-size in-game map (F6, drag pan, wheel zoom, Esc, position and heading) | [M-0108](M-0108.md) |
 | 2 | In-game map switching via the Alt menu | [M-0108](M-0108.md) |
 | 3 | Door camera | [M-0109](M-0109.md) |
 | 4 | Smooth camera in driver view | [M-0109](M-0109.md) (after the `agent/spawn-drift-jitter` fix) |

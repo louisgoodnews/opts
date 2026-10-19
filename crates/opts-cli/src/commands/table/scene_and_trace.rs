@@ -223,6 +223,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)")
     .doc("`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on)."),
     c(
+        "session.change_map",
+        "scene",
+        "Change the map of the running drive (the Alt menu's Change map): the vehicle and the time are carried over",
+        "map:s@0 entry:s? vehicle:s[carry|none]? dry_run:b?",
+    )
+    .since("1.16")
+    .result("`{map, map_id, entry_point, entry_defaulted, vehicle, repaint, date, time, weather, dropped, started}`")
+    .doc("Leaves the drive and enters it again on another installed map through the loading path of *Load game*; poll `state` until `loading.ready` is true. `map` is a folder name, a friendly name or a part of one that names one map (else `-32602` with the candidates). `entry` is an entry point of the target map (exact, else a part that names one; default: the map's first). The active vehicle is built again at it with its repaint and equipment (`vehicle: carry`, the default; `none` goes on without a vehicle); the session date, time of day and weather are kept; the other session vehicles are dropped and listed in `dropped`. A vehicle that is not in the catalogue answers `1004` (ask for `vehicle: none` or choose another vehicle first). `dry_run` only answers what would happen (`started: false`). `1001` outside a loaded drive."),
+    c(
         "session.switch",
         "scene",
         "Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow)",

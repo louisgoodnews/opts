@@ -332,7 +332,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Check P-1010 for ID clashes with `BRANCH-STATUS.md`, then write the roadmap review prompt** (M-0119) — [Dev Agent Roadmap Review Process](../src/roadmap/phase-11/M-0119.md)
 - [ ] 🟡 **Locate the door attachment data and verify the UI scale presets 100/125/150/200 %** (M-0109) — [QoL Suite](../src/roadmap/phase-11/M-0109.md)
 - [x] 🟡 **Full-size map overlay (key F6, not M: M is the engine start) reusing the mini-map source** (M-0108) — **done 2026-10-19** on `agent/full-size-map`: pan, wheel zoom to the cursor, follow, scale bar, `hud.fullmap` (protocol 1.15.0), input held while open; open: tile outline of unloaded areas, redraw 1.8-2.4 ms against 2 ms ([M-0108](../src/roadmap/phase-11/M-0108.md))
-- [ ] 🟡 **Map switching from the Alt menu: *Change map* page and `session.change_map`** (M-0108, code) — carry-over rules (vehicle, time), spawn-point prompt, leak test; next step of M-0108
+- [x] 🟡 **Map switching from the Alt menu: *Change map* page and `session.change_map`** (M-0108, code) — **done 2026-10-19** on `agent/change-map` (protocol 1.16.0): carry-over rules (vehicle with repaint and equipment, session time and weather, start point prompt, dropped vehicles listed), loads through the *Load game* path; live check: six switches, no entity left behind
 - [ ] 🟡 **Label a tunnel test set and compare geometric and tile-data detection** (M-0115) — [Tunnel Detection and Spatial Zones](../src/roadmap/phase-11/M-0115.md)
 - [ ] 🟡 **Specify how `.cti` expresses ints, ranges and enums (facts, with the installed files)** (M-0110) — [Setvar Runtime Editor and CTI Value Types](../src/roadmap/phase-11/M-0110.md)
 - [ ] 🟡 **Audit M-0049/M-0095 against the three behaviours and list the real gaps** (M-0111) — [AI Traffic Depth](../src/roadmap/phase-11/M-0111.md)
@@ -352,6 +352,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 ---
 
 ### 🧹 Deferred Cleanup
+
+- [ ] 🟡 **Vehicle assets are not released on despawn** (found 2026-10-19 by the M-0108 leak check) — every `session.spawn` of the same vehicle adds about 24 images and 29 meshes that `session.despawn` leaves in `Assets` (images 358, 379, 400, 421 and meshes 1640, 1669, 1698, 1727 over three despawn/spawn cycles on Grundorf; `entities_live` is back to 5,115 each time); a map change adds 91 images per switch for the same reason. Likely a content cache that keeps the handles; find the owner (`ContentCache`, script textures) and free what no vehicle uses
 
 _Small items discovered during implementation that don't warrant a milestone._
 

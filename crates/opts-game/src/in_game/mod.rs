@@ -2,6 +2,7 @@
 
 pub mod attachments;
 pub mod camera;
+pub mod change_map;
 pub mod hot_reload;
 pub mod hud;
 pub mod instruments;

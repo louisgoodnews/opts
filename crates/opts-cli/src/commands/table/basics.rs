@@ -26,7 +26,9 @@ pub(super) const PART: &[CommandSpec] = &[
         "query",
         "Loaded map, tiles, entity and asset counts",
         "",
-    ),
+    )
+    .result("`{map, start_tile, tiles_loaded, tiles_missing, entity_count, entities_live, meshes, materials, images, asset_count, stats}`")
+    .doc("`entity_count` is the number of entity slots the world has allocated (it only grows); `entities_live` counts the entities that exist now (since 1.16), which is the number to compare before and after leaving and entering a session; `meshes`, `materials` and `images` are the asset counts that add up to `asset_count`."),
     c(
         "scene.tiles",
         "query",

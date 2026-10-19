@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.15.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.16.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -67,7 +67,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
 | `state` | - | 1.0 | App state, camera mode, fps, worst frame time of the last 10 s (frame_ms_max), frame |
-| `scene` | - | 1.0 | Loaded map, tiles, entity and asset counts |
+| [`scene`](#scene) | - | 1.0 | Loaded map, tiles, entity and asset counts |
 | [`scene.tiles`](#scenetiles) | - | 1.0 | Resident tiles, tile loading mode and radius |
 | `camera.get` | - | 1.0 | Camera mode and transform |
 | `sim.get` | - | 1.0 | Pause state, simulation time, time scale, session clock, weather and lighting quality |
@@ -85,6 +85,14 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
 | [`session.saves`](#sessionsaves) | - | 1.3 | The list of saves, the registered save sections and the state of a restore |
 | `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
+
+### `scene`
+
+Loaded map, tiles, entity and asset counts.
+
+**Result:** `{map, start_tile, tiles_loaded, tiles_missing, entity_count, entities_live, meshes, materials, images, asset_count, stats}`
+
+`entity_count` is the number of entity slots the world has allocated (it only grows); `entities_live` counts the entities that exist now (since 1.16), which is the number to compare before and after leaving and entering a session; `meshes`, `materials` and `images` are the asset counts that add up to `asset_count`.
 
 ### `scene.tiles`
 
@@ -289,6 +297,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`hud.fullmap`](#hudfullmap) | `open?` (boolean)<br>`span?` (number)<br>`x?` (number)<br>`y?` (number)<br>`follow?` (boolean)<br>`fit?` (boolean) | 1.15 | Read or drive the full-size map: open or close, zoom span, centre, follow |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
+| [`session.change_map`](#sessionchange_map) | `map` (string)<br>`entry?` (string)<br>`vehicle?` (string = carry \| none)<br>`dry_run?` (boolean) | 1.16 | Change the map of the running drive (the Alt menu's Change map): the vehicle and the time are carried over |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
 | [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
@@ -413,6 +422,14 @@ Spawn a vehicle at an entry point of the map; it becomes the active vehicle when
 **Result:** `{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)
 
 `vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on).
+
+### `session.change_map`
+
+Change the map of the running drive (the Alt menu's Change map): the vehicle and the time are carried over.
+
+**Result:** `{map, map_id, entry_point, entry_defaulted, vehicle, repaint, date, time, weather, dropped, started}`
+
+Leaves the drive and enters it again on another installed map through the loading path of *Load game*; poll `state` until `loading.ready` is true. `map` is a folder name, a friendly name or a part of one that names one map (else `-32602` with the candidates). `entry` is an entry point of the target map (exact, else a part that names one; default: the map's first). The active vehicle is built again at it with its repaint and equipment (`vehicle: carry`, the default; `none` goes on without a vehicle); the session date, time of day and weather are kept; the other session vehicles are dropped and listed in `dropped`. A vehicle that is not in the catalogue answers `1004` (ask for `vehicle: none` or choose another vehicle first). `dry_run` only answers what would happen (`started: false`). `1001` outside a loaded drive.
 
 ### `session.switch`
 
