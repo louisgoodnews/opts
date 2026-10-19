@@ -1,0 +1,11 @@
+[package]
+name = "opts-types"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Shared geometry and coordinate types of the legacy OMSI readers and the native model (no file formats)."
+repository.workspace = true
+
+[dependencies]
+glam = { workspace = true }

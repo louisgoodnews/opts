@@ -1,0 +1,12 @@
+[package]
+name = "opts-l10n"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Localisation without the engine: Fluent-subset parser, language packs, checks, JSON interchange."
+repository.workspace = true
+
+[dependencies]
+serde_json = { workspace = true }
+directories = { workspace = true }
