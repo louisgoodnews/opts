@@ -35,6 +35,9 @@ pub struct TileRoads {
     pub bounds: (DVec2, DVec2),
 }
 
+/// One tile of the listing: its key, its file name and its south-west corner (session frame).
+pub type ListedTile = ((i32, i32), String, (f32, f32));
+
 /// One answer of the reader thread.
 type Batch = ((i32, i32), Vec<MapRoad>);
 
@@ -121,12 +124,7 @@ impl OverviewRoads {
     }
 
     /// Starts the reader (once per session) for the tiles listed by the load job.
-    pub fn start(
-        &mut self,
-        root: PathBuf,
-        map_dir: PathBuf,
-        tiles: Vec<((i32, i32), String, (f32, f32))>,
-    ) {
+    pub fn start(&mut self, root: PathBuf, map_dir: PathBuf, tiles: Vec<ListedTile>) {
         if self.started {
             return;
         }
@@ -241,7 +239,7 @@ impl PathSource for FileSource<'_> {
 fn read_tiles(
     root: &std::path::Path,
     map_dir: &std::path::Path,
-    tiles: &[((i32, i32), String, (f32, f32))],
+    tiles: &[ListedTile],
     tx: &std::sync::mpsc::Sender<Batch>,
 ) {
     let install = OmsiInstall::new(root);

@@ -58,6 +58,9 @@ const IDLE_INTERVAL_S: f32 = 0.5;
 /// The screen size assumed when there is no window (tests, headless runs).
 const FALLBACK_SCREEN: Vec2 = Vec2::new(1280.0, 720.0);
 
+/// What the last redraw showed: the view and the markers (position, heading, active).
+type DrawnState = (Viewport, Vec<(DVec2, f32, bool)>);
+
 /// A request from outside the keyboard (the control protocol).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FullMapRequest {
@@ -101,7 +104,7 @@ pub struct FullMapState {
     /// The overview generation the last redraw drew.
     drawn_generation: u64,
     /// What the last redraw showed.
-    drawn: Option<(Viewport, Vec<(DVec2, f32, bool)>)>,
+    drawn: Option<DrawnState>,
     /// A change the user made (drag, wheel, Home): redraw this frame, not at the next tick.
     immediate: bool,
     /// Seconds (real time) since the last redraw.

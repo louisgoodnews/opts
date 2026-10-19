@@ -219,7 +219,13 @@ impl WorldLoadJob {
     /// the full-size map): the installation root, the map folder and, for each listed tile, its
     /// key, its file name and its south-west corner in the session frame (OMSI axes, metres).
     #[must_use]
-    pub(crate) fn tile_listing(&self) -> (PathBuf, PathBuf, Vec<((i32, i32), String, (f32, f32))>) {
+    pub(crate) fn tile_listing(
+        &self,
+    ) -> (
+        PathBuf,
+        PathBuf,
+        Vec<crate::hud::fullmap::overview::ListedTile>,
+    ) {
         let mut tiles: Vec<_> = self
             .tile_files
             .iter()
