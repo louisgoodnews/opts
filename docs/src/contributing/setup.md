@@ -18,3 +18,15 @@
 
 The structure step is a **ratchet**: the files already over the limit are listed with their size and a reason, and may only shrink. When it fails it names the file and the measure (`FAIL crates/x/src/y.rs: grew from 612 to 618 lines of code`). Split the file by concern; do not edit the known file to make a failure go away. `python3 scripts/structure_audit.py report` writes the full measurement (files, functions, modules, crates, standards violations) to `docs/src/meta/structure-audit-<date>.md`, and `seed` rewrites the known file after files shrank.
 
+## System libraries (Linux)
+
+Building and running OPTS on Linux needs **fontconfig**: Bevy's `system_font_discovery` feature (workspace `Cargo.toml`) lists the fonts installed on the computer for the *Interface font* setting ([M-0109](../roadmap/phase-11/M-0109.md)), and its Linux backend links `libfontconfig`.
+
+| Distribution | Build (headers and `pkg-config`) | Run |
+| :--- | :--- | :--- |
+| Debian, Ubuntu | `libfontconfig-dev pkg-config` | `libfontconfig1` |
+| Fedora | `fontconfig-devel pkgconf-pkg-config` | `fontconfig` |
+| Arch | `fontconfig pkgconf` | `fontconfig` |
+
+macOS and Windows use their own font services (no extra package). A computer without fontconfig cannot start the Linux build: the binary needs the shared library at start-up.
+

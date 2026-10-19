@@ -14,7 +14,8 @@ use crate::settings_registry::{
     Available, SettingDescriptor, SettingKind, SettingsCapabilities, SettingsRegistry,
 };
 
-use super::input::{SettingOp, SettingSwitch};
+use super::input::{SettingCombo, SettingOp, SettingSwitch};
+use opts_gui::components::combobox::ComboboxBuilder;
 
 /// Everything a row needs to build itself.
 pub struct Ctx<'a> {

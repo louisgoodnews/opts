@@ -151,36 +151,33 @@ pub fn spawn_control(
             }
         }
         SettingKind::Text if d.key == crate::ui_typography::SETTING_FONT => {
-            button(
-                c,
-                group,
-                d,
-                "option-default".into(),
-                Some("settings-font-default"),
-                "",
-                cur.is_empty(),
-                SettingOp::Set {
-                    key: d.key,
-                    value: String::new(),
-                },
-                &u,
-            );
-            for family in ctx.fonts {
-                button(
-                    c,
-                    group,
-                    d,
-                    format!("option-{}", opts_gui::ui_id::slug(family)),
-                    None,
-                    family,
-                    family == cur,
-                    SettingOp::Set {
-                        key: d.key,
-                        value: family.clone(),
-                    },
-                    &u,
-                );
+            // Every installed family is a choice: a combo box with its search field.
+            let mut values = vec![String::new()];
+            values.extend(ctx.fonts.iter().cloned());
+            if !cur.is_empty() && !values.iter().any(|v| v == cur) {
+                values.push(cur.to_owned());
             }
+            let labels: Vec<String> = values
+                .iter()
+                .map(|v| {
+                    if v.is_empty() {
+                        ctx.loc.t("settings-font-default")
+                    } else {
+                        v.clone()
+                    }
+                })
+                .collect();
+            let selected = values.iter().position(|v| v == cur).unwrap_or(0);
+            let combo = ComboboxBuilder::new(ctx.loc.t(d.label_key))
+                .with_options(labels)
+                .with_selected(selected)
+                .spawn(c);
+            c.entity(combo).insert((
+                SettingCombo { key: d.key, values },
+                UiId::new(format!("settings/{}/{}/combo", d.category.id(), d.key)),
+                ChildOf(group),
+            ));
+            mark(c, combo, &u);
         }
         SettingKind::Text if d.key == crate::language_packs::LANGUAGE_KEY => {
             language_list(c, group, ctx, d, cur, &u);

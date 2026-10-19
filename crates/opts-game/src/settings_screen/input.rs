@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use opts_gui::components::button::ButtonBuilder;
 use opts_gui::components::modal::{ModalBuilder, ModalEvent};
-use opts_gui::interaction::events::{ButtonClicked, SwitchToggled, TextChanged};
+use opts_gui::interaction::events::{ButtonClicked, ComboboxSelected, SwitchToggled, TextChanged};
 use opts_gui::interaction::focus::DefaultFocus;
 use opts_gui::l10n::L10nArgs;
 use opts_gui::prelude::*;
@@ -12,6 +12,15 @@ use crate::settings_registry::{Apply, Category, ChangeSource, SettingKind, Setti
 
 use super::page::{SettingsPageState, SettingsSearch};
 use super::rows::label;
+
+/// A combo box that sets a text setting: the stored text of each option, in order.
+#[derive(Component, Debug, Clone, PartialEq, Eq)]
+pub struct SettingCombo {
+    /// Setting key.
+    pub key: &'static str,
+    /// The stored text of every option (the first, empty, is the default).
+    pub values: Vec<String>,
+}
 
 /// What a control of the page does when activated.
 #[derive(Component, Debug, Clone, PartialEq, Eq)]
@@ -198,6 +207,8 @@ pub fn handle_page_input(
     mut clicks: MessageReader<ButtonClicked>,
     mut toggles: MessageReader<SwitchToggled>,
     mut texts: MessageReader<TextChanged>,
+    mut chosen: MessageReader<ComboboxSelected>,
+    combos: Query<&SettingCombo>,
     ops: Query<&SettingOp>,
     switches: Query<&SettingSwitch>,
     search: Query<(), With<SettingsSearch>>,
@@ -211,6 +222,22 @@ pub fn handle_page_input(
         if search.contains(t.entity) && state.query != t.text {
             state.query.clone_from(&t.text);
             state.dirty = true;
+        }
+    }
+    for ev in chosen.read() {
+        let Ok(combo) = combos.get(ev.entity) else {
+            continue;
+        };
+        if let Some(value) = combo.values.get(ev.selected_index) {
+            if *value != api.text(combo.key) {
+                change_from_page(
+                    &mut api,
+                    &mut commands,
+                    &mut pending,
+                    combo.key,
+                    Some(value),
+                );
+            }
         }
     }
     for t in toggles.read() {

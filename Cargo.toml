@@ -74,7 +74,7 @@ opts-traffic = { path = "crates/opts-traffic" }
 # --- Bevy Ecosystem ---
 # Bevy moves fast. Check the latest version before starting. 
 # As of mid-2024, 0.14 is stable, but 0.15 might be out.
-bevy = { version = "0.20", features = ["file_watcher"] }
+bevy = { version = "0.20", features = ["file_watcher", "system_font_discovery"] }
 
 # --- Parsing & Serialization ---
 nom = "7.1"                 # For parsing OMSI text config files (.sco, .sli, .cfg)

@@ -1,12 +1,12 @@
 //! The user's text preferences (M-0109): the UI font family and the base text size.
 //!
 //! * `ui_font`: a font family put in front of the bundled UI stack (empty: Noto Sans). The choices
-//!   are the families the font database holds beyond the UI family: the other bundled faces and
-//!   every font file in the `fonts/` folder of the configuration directory (`*.ttf`, `*.otf`),
-//!   which is read once at start-up and registered like the bundled ones. System fonts are not
-//!   listed (that needs the `system_font_discovery` feature of Bevy, which links `libfontconfig`).
-//!   A family that is not in the database is refused on the spot: the previous one stays and an
-//!   error toast says so.
+//!   are the families the font database holds beyond the UI family: the other bundled faces,
+//!   every font installed on the computer (Bevy's `system_font_discovery` feature, which links
+//!   `libfontconfig` on Linux) and every font file in the `fonts/` folder of the configuration
+//!   directory (`*.ttf`, `*.otf`), which is read once at start-up and registered like the bundled
+//!   ones. A family that is not in the database is refused on the spot: the previous one stays and
+//!   an error toast says so.
 //! * `ui_font_size`: the body text size, 12 to 24 px (default 14); every style of the type scale
 //!   follows it and none goes below 12 px (`opts_gui::fonts::UiTypography`).
 
