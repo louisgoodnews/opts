@@ -471,3 +471,8 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 - Simulation: Passenger Model *(planned)* *(not yet written)*
 - Architecture: Chain Assembly *(planned)* *(not yet written)*
 - [ADR-0002: Clean-Room Policy](../../../adr/0002-clean-room-policy.md)
+
+### Door positions (finding of M-0109)
+
+`[entry]` and `[exit]` give no coordinates, but the pathpoint they name is at the door: for the BRT C2 the entries 3 and 0 are at (1.257, 4.873, 0.433) and (1.257, 4.198, 0.433) and the exits 23 and 21 at (1.153, -1.088, 0.433) and (1.189, -1.652, 0.433) in vehicle space (right of the middle, front and rear, on the floor). OPTS uses these points as the door positions (the door camera, [camera system](../../../architecture/camera-system.md)). A door's open state is **not** named by any convention: the C2's scripts use `c2_tuer_<n>_<h|v>_pos`, `_open`, `_open_req`, model files use `door_01` and the like.
+

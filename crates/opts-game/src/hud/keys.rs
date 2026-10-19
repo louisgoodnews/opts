@@ -42,6 +42,22 @@ keys! {
     MINIMAP_NORTH_UP = "hud-minimap-north-up",
     /// Mini map: the heading points up.
     MINIMAP_HEADING_UP = "hud-minimap-heading-up",
+    /// Door camera: the door's name (`number`, `kind`, `zone`, `side`).
+    DOOR_TITLE = "hud-door-title",
+    /// Door camera: an entry door.
+    DOOR_ENTRY = "hud-door-entry",
+    /// Door camera: an exit door.
+    DOOR_EXIT = "hud-door-exit",
+    /// Door camera: at the front.
+    DOOR_FRONT = "hud-door-front",
+    /// Door camera: in the middle.
+    DOOR_MIDDLE = "hud-door-middle",
+    /// Door camera: at the rear.
+    DOOR_REAR = "hud-door-rear",
+    /// Door camera: on the left.
+    DOOR_LEFT = "hud-door-left",
+    /// Door camera: on the right.
+    DOOR_RIGHT = "hud-door-right",
     /// Full-size map: the title when the session has no map name.
     FULLMAP_TITLE = "hud-fullmap-title",
     /// Full-size map: the title while the roads of the whole map are still being read (`map`,

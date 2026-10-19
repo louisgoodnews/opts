@@ -22,6 +22,7 @@ pub mod camera;
 pub mod capture;
 pub mod control;
 pub mod coords;
+pub mod door_camera;
 pub mod environment;
 pub mod glass;
 pub mod ground;

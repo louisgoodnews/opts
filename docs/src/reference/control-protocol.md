@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.16.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.17.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -296,6 +296,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`camera.viewpoint.reset`](#cameraviewpointreset) | - | 1.2 | Back to the vehicle's own viewpoint and remove the stored one |
 | [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`hud.fullmap`](#hudfullmap) | `open?` (boolean)<br>`span?` (number)<br>`x?` (number)<br>`y?` (number)<br>`follow?` (boolean)<br>`fit?` (boolean) | 1.15 | Read or drive the full-size map: open or close, zoom span, centre, follow |
+| [`camera.door`](#cameradoor) | `door?` (integer) | 1.17 | Read the door camera or choose the door it shows |
 | [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.change_map`](#sessionchange_map) | `map` (string)<br>`entry?` (string)<br>`vehicle?` (string = carry \| none)<br>`dry_run?` (boolean) | 1.16 | Change the map of the running drive (the Alt menu's Change map): the vehicle and the time are carried over |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
@@ -414,6 +415,14 @@ Read or drive the full-size map: open or close, zoom span, centre, follow.
 **Result:** `{open, follow, span_m, centre, px_per_m, screen, texture_px, redraws, last_us, worst_us, road_chords, markers, min_span_m, max_span_m, overview}`
 
 The full-size map of the session (key F6). Without parameters it reads. `open` opens or closes it (the change happens in the next frame; opening is refused silently while a dialog, the pause overlay or the vehicle menu holds the input, or before the session has loaded). `span` is the number of metres across the shorter side of the screen, limited to `min_span_m`..`max_span_m` (50 m to 20 km); `x` and `y` (east and north in OMSI metres) centre the map and stop following the vehicle; `follow` follows the active vehicle (or the camera) again; `fit` shows the whole map (every lane read so far, with a margin; the End key does the same). `centre` is the world point in the middle of the screen, `px_per_m` the scale in logical screen pixels, `screen` the logical window size. `last_us` and `worst_us` are the time of the last and the slowest redraw (a redraw follows a change of the view at once, a moving vehicle at most ten times a second, a still map twice a second). Mouse drag, wheel and Home work through `input.mouse_*` and `input.key` like for a person. `overview` is the reader of the roads of the whole map (`{started, complete, percent, tiles_done, tiles_total}`): the first opening starts a background thread that reads every tile of the map, and the map draws these roads for all tiles that are not resident while it fills in. `1001` outside a drive.
+
+### `camera.door`
+
+Read the door camera or choose the door it shows.
+
+**Result:** `{enabled, doors:[{number, kind, zone, side, pathpoint, position}], manual, auto, shown, renders, picture}`
+
+The door camera of M-0109: a picture-in-picture view from a door of the player's vehicle at the top right of the HUD. It exists only while the setting `camera.door_overlay` is on. `doors` are the pathpoints that the vehicle's passenger cabin names with `[entry]` and `[exit]` (`position` in the vehicle's Bevy frame); `manual` is the door chosen with F4 or with `door` (a number from the list, `0` for none), `auto` the door whose leaf animates, `shown` the door in the picture (`manual` wins), `renders` the pictures rendered so far (30 per second while shown). `-32602` for a door number outside the list.
 
 ### `session.spawn`
 

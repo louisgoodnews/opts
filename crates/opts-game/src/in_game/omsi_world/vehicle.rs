@@ -18,6 +18,7 @@ use crate::in_game::types::InGameEntity;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{CameraSetup, WorldLoadJob, WorldStats};
 
+mod doors;
 mod segments;
 use segments::{ensure_repaints, repaint_map};
 pub(super) use segments::{first_ai_list_vehicle, load_segment_meshes, load_segment_meshes_for};
@@ -169,6 +170,7 @@ pub fn load_player_vehicle(
     }
     let script_seed = script_seed(job.install.root(), &bus_path, session_id);
     attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed);
+    doors::attach_door_points(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,

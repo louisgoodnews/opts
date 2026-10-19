@@ -11,6 +11,7 @@
 pub mod alerts;
 pub mod build;
 pub mod details;
+pub mod door_camera;
 pub mod fade;
 pub mod fullmap;
 pub mod keys;
@@ -81,6 +82,13 @@ impl Plugin for HudPlugin {
             .add_message::<ClearAlert>()
             .add_message::<ShowDetailsToast>()
             .add_systems(OnEnter(AppState::InGame), reset_session_state)
+            .add_systems(
+                Update,
+                (door_camera::sync_setting, door_camera::update_overlay)
+                    .chain()
+                    .run_if(in_state(AppState::InGame))
+                    .run_if(resource_exists::<opts_bevy::door_camera::DoorCamera>),
+            )
             .add_systems(
                 Update,
                 (

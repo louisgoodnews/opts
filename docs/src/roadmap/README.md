@@ -392,8 +392,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Event taxonomy, dispatch, base event set, parameter formats, ordering, then a consolidation design (documents).
 - [ ] **🔁 Dev Agent Roadmap Review Process** — [M-0119](phase-11/M-0119.md) — 📝 proposed 2026-10-18
   - [ ] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).
-- [ ] **🧰 QoL Suite** — [M-0109](phase-11/M-0109.md) — 🔄 UI scale presets and font settings done 2026-10-19; door camera and smooth driver view open
-  - [ ] Door camera and smooth driver view (open).
+- [ ] **🧰 QoL Suite** — [M-0109](phase-11/M-0109.md) — 🔄 UI scale presets, font settings and door camera done; smooth driver view open
+  - [x] Door camera (done 2026-10-20).
+  - [ ] Smooth driver view (open, waits for the jitter branch).
   - [x] UI scale presets 100/125/150/200 %, UI font and base font size.
 - [x] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — ✅ done 2026-10-19
   - [x] Full-size map on F6 (pan, zoom, the whole map, position and heading); builds on the mini map (M-0071).

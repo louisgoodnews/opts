@@ -236,6 +236,23 @@ pub(super) fn interface() -> Vec<D> {
         .keywords(&["save", "backup", "interval"])
         .since("0.3"),
         D::new(
+            "camera.door_overlay",
+            K::Bool,
+            "false",
+            C::Gameplay,
+            95,
+            "set-door-overlay",
+            "set-door-overlay-desc",
+        )
+        .keywords(&[
+            "door",
+            "camera",
+            "overlay",
+            "picture in picture",
+            "boarding",
+        ])
+        .since("0.3"),
+        D::new(
             "gameplay.load_all_tiles",
             K::Bool,
             "false",
