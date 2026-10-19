@@ -80,7 +80,7 @@ fn mtime_of(md: &fs::Metadata) -> i64 {
         .map_or(0, |d| i64::try_from(d.as_secs()).unwrap_or(0))
 }
 
-fn join(parent: &str, name: &str) -> String {
+pub(super) fn join(parent: &str, name: &str) -> String {
     if parent.is_empty() {
         name.to_string()
     } else {

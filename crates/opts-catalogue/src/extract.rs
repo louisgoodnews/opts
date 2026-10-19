@@ -104,7 +104,7 @@ fn first_param(blocks: &[opts_core::formats::text::OmsiBlock], key: &str) -> Opt
         .filter(|s| !s.is_empty())
 }
 
-fn stem(name: &str) -> String {
+pub(super) fn stem(name: &str) -> String {
     name.rsplit_once('.').map_or(name, |(s, _)| s).to_string()
 }
 
@@ -218,7 +218,7 @@ fn spline_refs(dir: &str, sli: &SplineProfile) -> Vec<(&'static str, String, Vec
         .collect()
 }
 
-fn friendly_name(bytes: &[u8]) -> Option<String> {
+pub(super) fn friendly_name(bytes: &[u8]) -> Option<String> {
     let blocks = scan_blocks(&decode_bytes(bytes));
     first_param(&blocks, "friendlyname")
 }

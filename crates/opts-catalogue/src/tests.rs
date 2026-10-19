@@ -1,5 +1,6 @@
 //! Unit tests of `lib.rs` (moved out of the file to keep it under the 500-line limit, refactoring cycle 1).
 
+use super::discover::discover;
 use super::*;
 use std::fs;
 
