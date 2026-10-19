@@ -25,6 +25,7 @@
 | 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 📝 planned 2026-10-13 from the project lead's field report | [`phase-10/`](docs/src/roadmap/phase-10/README.md) |
 | 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 📝 planned 2026-10-18, all milestones proposed | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 📝 planned 2026-10-18, all milestones proposed | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
+| 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | 📝 proposed 2026-10-19, audit and ADR first | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 proposed 2026-10-19 | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -424,6 +425,20 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.
 - [ ] **✨ Graphics Overhaul** — [M-0122](docs/src/roadmap/phase-12/M-0122.md) — 📝 proposed 2026-10-18
   - [ ] PBR audit, ambient occlusion, anti-aliasing decision, restrained bloom; benchmarked on an RTX 3060 at 1080p against the reference ([design brief](docs/src/architecture/graphics-overhaul.md)).
+
+---
+
+## 🏗️ Phase 13: Crate Architecture: Legacy vs. Native Separation
+*Goal: a strict boundary between legacy OMSI data (`opts-omsi`, a leaf adapter) and native OPTS data (`opts-model`, TOML), with shared types in a base crate so there is no circular dependency; `opts-bevy`, `opts-sim` and `opts-game` never depend on `opts-omsi`. Status: proposed 2026-10-19 by the project lead; audit and ADR-0014 first, checkpoints after each phase. Documents: [phase page](docs/src/roadmap/phase-13/README.md).*
+
+- [ ] **🔎 Data-Model Separation: Audit, Options and ADR-0014** — [M-0131](docs/src/roadmap/phase-13/M-0131.md) — 📝 proposed 2026-10-19
+  - [ ] Audit of `opts-core` (math, parsers, OMSI data, domain model), three crate-graph options with a recommendation, dependency lists, importer location; checkpoint 1.
+- [ ] **🏗️ New Crates and Shared Types** — [M-0132](docs/src/roadmap/phase-13/M-0132.md) — 📝 proposed 2026-10-19
+  - [ ] Scaffolding, workspace members, shared domain types moved with `git mv`, `opts-core` re-exports.
+- [ ] **📦 Move the OMSI Parsers into `opts-omsi`** — [M-0133](docs/src/roadmap/phase-13/M-0133.md) — 📝 proposed 2026-10-19
+  - [ ] Format modules moved, corpus tests identical, no engine crate depends on `opts-omsi`.
+- [ ] **📚 Native Model, Importer, Workspace Wiring and Documentation** — [M-0134](docs/src/roadmap/phase-13/M-0134.md) — 📝 proposed 2026-10-19
+  - [ ] `opts-model` stubs, importer, workspace updated, ADR-0014 accepted, crate graph and CONTRIBUTING updated, merge `--no-ff`.
 
 ---
 

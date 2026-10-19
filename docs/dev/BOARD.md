@@ -125,6 +125,8 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
+- [ ] 🔴 **Crate architecture: legacy vs. native separation (Phase 13)** (M-0131 audit and ADR, M-0132 new crates and shared types, M-0133 move the OMSI parsers, M-0134 native model, importer, wiring and docs; design + refactoring) — project lead 2026-10-19. `opts-omsi` (leaf adapter), `opts-model` (native TOML), shared base crate, importer; no engine crate depends on `opts-omsi`. **Phase A first: audit and ADR-0014 (M-0131), approval before any code moves.** Open points recorded: the `opts-game`/`opts-omsi` contradiction in the task, the run-time OMSI loading path, overlap with M-0129; [Phase 13](../src/roadmap/phase-13/README.md).
+
 - [ ] 🔴 **Per-map configuration profiles and load profiler** (M-0130, Phase 9, design + code) — **Top priority, project lead 2026-10-19.** Profiles keyed by map and Chrono (fallback map default → global), only performance and simulation settings, non-destructive per session; static profiler (<100 ms, off the main thread) plus last-session frame time, heuristic advice, *Map Configuration* modal. Phase A design first; checkpoints after A and B; [M-0130](../src/roadmap/phase-9/M-0130.md). Branch `feat/map-profiles` (`./scripts/agent-worktree.sh map-profiles`).
 
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
