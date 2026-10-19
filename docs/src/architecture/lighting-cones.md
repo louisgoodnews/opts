@@ -3,7 +3,7 @@
 Phase B GPU investigation for System 6 (lighting) of the Berlin-Spandau round
 ([systems report §9](../meta/berlin-spandau-systems-2026-10-17.md)). Everything here is measured on
 the target machine (RTX 3060 12 GB, driver 615.78, Vulkan, 1920 x 1080, Bevy 0.20.0) with the example
-`crates/opts-bevy/examples/lighting_bench.rs` (+ `lighting_bench.wesl`). No engine code changed.
+`crates/opts-bevy/examples/lighting_bench/` (`main.rs`, modules, `lighting_bench.wesl`). No engine code changed.
 
 Contents: [method](#method), [A: sun rays](#a-sun-god-rays-with-bevys-volumetric-fog),
 [B: cones](#b-cones-for-lanterns-and-headlights), [C: real game baseline](#c-baseline-of-the-real-game),
