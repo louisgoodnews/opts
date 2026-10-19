@@ -4,27 +4,9 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "Core data structures and parsers for OMSI 2 assets."
+description = "Temporary facade over opts-omsi and opts-l10n (the former opts-core); see ADR-0014."
 repository.workspace = true
 
 [dependencies]
-# Parsing
-nom = { workspace = true }
-binrw = { workspace = true }
-
-# Serialization
-serde = { workspace = true }
-serde_json = { workspace = true }
-directories = { workspace = true }
-
-# Data structures & Math
-glam = { workspace = true }
-petgraph = { workspace = true }
-image = { workspace = true }
-
-# Error Handling
-thiserror = { workspace = true }
-tracing = { workspace = true }
-
-[dev-dependencies]
-# Add test-specific dependencies here
+opts-l10n = { workspace = true }
+opts-omsi = { workspace = true }

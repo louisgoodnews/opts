@@ -2,7 +2,7 @@
 //! `l10n.languages`, `l10n.set`, `l10n.reload`, `l10n.report`, and the *Reload languages* action
 //! of the settings page.
 //!
-//! The format, the checks and the folder layout are in `opts_core::l10n` and documented in
+//! The format, the checks and the folder layout are in `opts_l10n` and documented in
 //! `docs/src/architecture/localisation-packs.md`; the merge with the built-in tables is
 //! `opts_gui::l10n::Localization::load_packs`. A broken pack never stops the game: its problems
 //! are logged and listed by `l10n.report`, and the English text shows where a message is
@@ -14,10 +14,10 @@ use bevy::prelude::*;
 use opts_bevy::control::params::{opt_str, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
 use opts_cli::protocol::{code, RpcError};
-use opts_core::l10n::check::Severity;
 use opts_gui::components::toast::ToastBuilder;
 use opts_gui::l10n::LanguageInfo;
 use opts_gui::l10n::Localization;
+use opts_l10n::check::Severity;
 use serde_json::{json, Value};
 
 use crate::settings_registry::{apply_change, ChangeSource, SettingError};
@@ -31,7 +31,7 @@ pub const RELOAD_KEY: &str = "interface.language_reload";
 /// The folder language packs are read from (`<user data dir>/lang`).
 #[must_use]
 pub fn packs_dir() -> Option<PathBuf> {
-    opts_core::l10n::pack::default_root()
+    opts_l10n::pack::default_root()
 }
 
 /// What a scan found.
@@ -164,7 +164,7 @@ fn problems_json(loc: &Localization) -> Value {
             .map(|(folder, issues)| {
                 json!({
                     "folder": folder,
-                    "issues": issues.iter().map(opts_core::l10n::Issue::to_json).collect::<Vec<_>>(),
+                    "issues": issues.iter().map(opts_l10n::Issue::to_json).collect::<Vec<_>>(),
                 })
             })
             .collect(),
@@ -264,7 +264,7 @@ fn report(world: &mut World, params: &Value) -> Outcome {
         "language": info_json(&r.info, &current),
         "missing_keys": r.missing_keys,
         "copied_keys": r.copied_keys,
-        "issues": r.issues.iter().map(opts_core::l10n::Issue::to_json).collect::<Vec<_>>(),
+        "issues": r.issues.iter().map(opts_l10n::Issue::to_json).collect::<Vec<_>>(),
         "issue_lines": r.issues.iter().map(ToString::to_string).collect::<Vec<_>>(),
     }))
 }

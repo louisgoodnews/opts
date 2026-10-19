@@ -76,7 +76,7 @@ The referenced vehicles are almost all self-contained rail cars: 338 of the 347 
 ## 📝 Provenance
 
 - Corpus scan `/…/OMSI 2/Trains` and the two other folders, 2026-10-15; community cross-check [`122-zugverkehr-in-omsi-2`](../community-crosscheck.md) for the meaning of the orientation value.
-- Tests: `crates/opts-core/src/formats/trains/tests.rs` (self-authored fixtures), `crates/opts-core/tests/zug_corpus.rs` (needs `OMSI_PATH`).
+- Tests: `crates/opts-omsi/src/formats/trains/tests.rs` (self-authored fixtures), `crates/opts-omsi/tests/zug_corpus.rs` (needs `OMSI_PATH`).
 
 **Clean-room attestation (ADR-0002):** no OMSI binary was inspected; no OMSI asset is committed; the page quotes no `.zug` content beyond file-name shapes.
 

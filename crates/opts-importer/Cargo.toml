@@ -1,0 +1,12 @@
+[package]
+name = "opts-importer"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Turns legacy OMSI content (opts-omsi) into the native model (opts-model); the only crate that knows both."
+repository.workspace = true
+
+[dependencies]
+opts-omsi = { workspace = true }
+opts-model = { workspace = true }

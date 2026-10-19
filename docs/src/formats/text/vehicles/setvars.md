@@ -141,5 +141,5 @@ So the model reacts live to at least the roof air-conditioning option; whether t
 ---
 
 ## 📝 Provenance
-- Census: `crates/opts-core/examples/setvar_census.rs` over the installed `Vehicles` folder, 2026-10-18; the figures above are its output. Live check: `scripts/setvars-check.py`, 2026-10-18.
+- Census: `crates/opts-omsi/examples/setvar_census.rs` over the installed `Vehicles` folder, 2026-10-18; the figures above are its output. Live check: `scripts/setvars-check.py`, 2026-10-18.
 - Vendor documents: one language per family of the setvar lists and guides in the `Addons` and `Vehicles/*/Templates` folders, read in full by an analysis pass; names, ranges and meanings are restated in our own words; the cross-check numbers come from comparing that digest with the census per vehicle folder. No text or image of a PDF is committed.

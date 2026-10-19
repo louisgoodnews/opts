@@ -11,11 +11,11 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use bevy::prelude::*;
-use opts_core::l10n::check::Issue;
-use opts_core::l10n::pack::{Direction, Pack};
+use opts_l10n::check::Issue;
+use opts_l10n::pack::{Direction, Pack};
 
 pub mod fold;
-pub use opts_core::l10n::fluent;
+pub use opts_l10n::fluent;
 pub mod keys;
 pub mod packs;
 pub mod pseudo;

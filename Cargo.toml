@@ -28,6 +28,11 @@ members = [
     "crates/opts-core",
     "crates/opts-game",
     "crates/opts-hardware",
+    "crates/opts-importer",
+    "crates/opts-l10n",
+    "crates/opts-model",
+    "crates/opts-omsi",
+    "crates/opts-types",
     "crates/opts-gui",
     "crates/opts-logging",
     "crates/opts-sim",
@@ -55,6 +60,11 @@ opts-cli = { path = "crates/opts-cli", default-features = false }
 opts-core = { path = "crates/opts-core" }
 opts-game = { path = "crates/opts-game" }
 opts-hardware = { path = "crates/opts-hardware" }
+opts-importer = { path = "crates/opts-importer" }
+opts-l10n = { path = "crates/opts-l10n" }
+opts-model = { path = "crates/opts-model" }
+opts-omsi = { path = "crates/opts-omsi" }
+opts-types = { path = "crates/opts-types" }
 opts-gui = { path = "crates/opts-gui" }
 opts-logging = { path = "crates/opts-logging" }
 opts-sim = { path = "crates/opts-sim" }

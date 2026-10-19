@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **ADR ID** | 0014 |
-| **Status** | 🟡 Proposed |
+| **Status** | ✅ Accepted 2026-10-19 (the project lead accepted the recommended answers of the five decisions "for now" and will adjust after testing; implemented in [M-0132](../roadmap/phase-13/M-0132.md) to [M-0134](../roadmap/phase-13/M-0134.md)) |
 | **Date** | 2026-10-19 |
 | **Deciders** | Project lead |
 | **Supersedes** | None |
@@ -117,3 +117,27 @@ opts-core       temporary facade: re-exports opts-omsi / opts-types / opts-l10n 
 3. **`opts-l10n` as its own crate** in this phase (recommended) or leave `l10n` in a slimmed `opts-core`?
 4. **The ratchet** as the enforcement of "engine crates do not depend on `opts-omsi`" until the migration is done (recommended) — or a hard dependency rule from day one (impossible without the model)?
 5. **Scope of the follow-up migration:** plan it as milestones after M-0134 (recommended), or fold the first module (`weather`, 9 + 10 uses) into this phase as proof?
+
+---
+
+## 🛠️ Implemented (2026-10-19, branch `refactor/crate-separation`)
+
+The workspace now has 18 crates; the crate graph is in [crate-graph](../architecture/crate-graph.md) and the rules in `CONTRIBUTING.md`.
+
+| Crate | What it holds now | Depends on (internal) |
+| :--- | :--- | :--- |
+| `opts-types` | `TileGrid`, `GridFit`, `mercator_row_width` and the `BorderSpline` trait (the grid is measured from any spline record that implements it) | none |
+| `opts-l10n` | the former `opts-core::l10n` (2,764 lines, 23 tests), moved with `git mv` | none |
+| `opts-omsi` | the former `opts-core::formats` and `setvars` with their data, 17 corpus tests and the examples, moved with `git mv` (`git log --follow` follows them); 236 unit tests | `opts-types` |
+| `opts-model` | `VehicleDefinition`, `AxleDefinition` with a TOML round trip, the `ContentSource` trait (stubs) | `opts-types` |
+| `opts-importer` | `import_vehicle` / `vehicle_from_manifest`: a `.bus` becomes a native vehicle that round-trips through TOML | `opts-omsi`, `opts-model` |
+| `opts-core` | the facade: `pub use opts_omsi::{formats, setvars}; pub use opts_l10n as l10n;`, no code of its own | `opts-omsi`, `opts-l10n` |
+
+**Deviations from the proposal, and what was learned:**
+
+* **`TileGrid` could not simply move.** Its `measure` function read the OMSI spline record. It is generic now over `opts_types::BorderSpline`, implemented by `opts-omsi` for its `MapSplineInstance`; the eight call sites (`TileGrid::measure(&sample, ...)`) did not change.
+* **The planned dependency lists were longer than needed:** `nom`, `binrw`, `petgraph` and `directories` (outside `l10n`) were declared by the old `opts-core` but used nowhere in its source; the new manifests list what is used (`opts-omsi`: `opts-types`, `serde`, `serde_json`, `glam`, `image`, `thiserror`, `tracing`).
+* **`opts-gui` no longer depends on the OMSI side at all** (it used `opts-core` for `l10n` only); `opts-game` and `opts-tools` name `opts-l10n` directly.
+* **Behaviour is unchanged:** the corpus tests of the whole installation (`OMSI_PATH`) give the same results in `opts-omsi` as they did in `opts-core`; no parser file changed except the import paths and the one trait implementation.
+* **The ratchet** (`scripts/omsi_uses.py`, step of `local-ci.sh` and `local-ci.ps1`) starts at the numbers of the audit: `opts-bevy` 55, `opts-sim` 20, `opts-traffic` 7, `opts-catalogue` 1, `opts-gui` 0. Only `opts-game` (the composition root), `opts-benchmark` and `opts-tools` are not counted.
+* **Not done, by design:** no engine crate uses `opts-model` yet, and `opts-game` does not use `opts-importer`; migrating the consumers (suggested order: `weather`, `humans`, `map`, `scenery`, `vehicles`, `o3d`/`x`, then the script seam) is the follow-up of this phase.

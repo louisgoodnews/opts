@@ -37,7 +37,7 @@ OMSI maps are alive with background traffic: cars, lorries, cyclists, scheduled 
 
 ### 2.1 What the lists look like in the installed corpus [M]
 
-`crates/opts-core/tests/ai_lists_corpus.rs` (needs `OMSI_PATH`):
+`crates/opts-omsi/tests/ai_lists_corpus.rs` (needs `OMSI_PATH`):
 
 * 101 `ailists*.cfg` files under `maps/`, 953 `[aigroup_2]` groups, 2,187 vehicle entries — **760 (35 %) have no weight**, so the default weight matters; OPTS counts a missing weight as `1` ❓. 5 lists have no `NormalCars` group.
 * 32 `unsched_vehgroups.txt` (147 groups), 250 `unsched_trafficdens.txt` (1,561 groups); 28 density groups name an AI group that is absent from the sibling `ailists.cfg` (chrono folders use their own lists, so this is expected for some).

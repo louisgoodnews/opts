@@ -129,7 +129,7 @@ Semantics beyond the table are ❓; the file is a state dump that OPTS can ignor
 | Hours | 0 to 23, spread over the day: 6 to 9 h (11 maps), 10 to 14 h (22), 15 to 16 h (3), 19 to 23 h (8), one at 0 h |
 | Years | 1988 to 2028; for the 36 maps that have `[years]`, the saved year is **outside** it in 13 |
 
-Because the saved year disagrees with `[years]` for more than a third of the maps, OPTS takes only the **time of day** (hour and minute) from the block as the *When* step's default; the date keeps the [map default date](../../roadmap/phase-9/wizard-and-loading.md) (today shifted by `[realyearoffset]`, clamped into `[years]`). Without the file or the block the default is the device's current local time. Reader: `opts_core::formats::map::OsnTime::parse`; corpus test `crates/opts-core/tests/osn_corpus.rs`. Whether OMSI itself starts a new game at this time is not known (❓ Q-G08).
+Because the saved year disagrees with `[years]` for more than a third of the maps, OPTS takes only the **time of day** (hour and minute) from the block as the *When* step's default; the date keeps the [map default date](../../roadmap/phase-9/wizard-and-loading.md) (today shifted by `[realyearoffset]`, clamped into `[years]`). Without the file or the block the default is the device's current local time. Reader: `opts_core::formats::map::OsnTime::parse`; corpus test `crates/opts-omsi/tests/osn_corpus.rs`. Whether OMSI itself starts a new game at this time is not known (❓ Q-G08).
 
 ### `.dsc`
 

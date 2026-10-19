@@ -13,7 +13,7 @@
 
 In this tutorial, you will:
 1. Understand the structure of an OMSI 2 scenery object (`.sco`).
-2. Parse `.sco` asset data using [`opts_core::formats::scenery::SceneryObject`](../../../crates/opts-core/src/formats/scenery/sco.rs).
+2. Parse `.sco` asset data using [`opts_core::formats::scenery::SceneryObject`](../../../crates/opts-omsi/src/formats/scenery/sco.rs).
 3. Handle coordinate transformations between OMSI (right-handed $Z$-up) and Bevy (right-handed $Y$-up).
 4. Spawn a complete scenery object entity hierarchy in Bevy with mesh attachments and materials using [`spawn_scenery_object`](../../../crates/opts-bevy/src/scenery.rs).
 

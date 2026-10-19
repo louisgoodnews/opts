@@ -1,13 +1,13 @@
 # O3D UV decoder correctness (P-1013)
 
 Branch `fix/uv-decoder-correctness` (from `fix/man-nlng-materials`, which carries the P-1012 diagnostic).
-Tools: `crates/opts-core/examples/uv_truth.rs` (twin enumeration and per-vertex truth), `scripts/uv_truth_analysis.py`.
+Tools: `crates/opts-omsi/examples/uv_truth.rs` (twin enumeration and per-vertex truth), `scripts/uv_truth_analysis.py`.
 Run: `uv_truth "<OMSI 2>" <out>` then `python3 scripts/uv_truth_analysis.py <out>`.
 Status: **Phase A (diagnostic) complete.**
 
 ## Preconditions
 1. Branch `fix/uv-decoder-correctness`: yes. 2. `man-nlng-materials-2026-10-12.md`: yes (7d13e12).
-3. `uvfix` exists at `crates/opts-core/src/formats/o3d/uvfix.rs` (not `binary/o3d/` as the task says).
+3. `uvfix` exists at `crates/opts-omsi/src/formats/o3d/uvfix.rs` (not `binary/o3d/` as the task says).
 4. **The premise "17 twin pairs in the GN92 folder" does not hold.** The `plain twins 17` in the game log counts meshes of
    the loaded vehicle whose plain file name exists elsewhere. Only 13 GN92 file names occur as plain files in
    other vehicles (`GN_Dum_Gelenk_A-D`, `Rad_HL/HR/VL/VR`, `schildFrnt*`, `seitenschild`, `seitenschklemme`) and only

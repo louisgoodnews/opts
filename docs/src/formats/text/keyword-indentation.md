@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Status** | 🟡 Investigated 2026-10-14: the scanner is **unchanged**; indented keywords are most likely comments or disabled blocks, not data |
-| **Code** | `opts_core::formats::text::scan_blocks_with` (keyword only at the start of a line); census `crates/opts-core/examples/keyword_indent_census.rs` |
+| **Code** | `opts_core::formats::text::scan_blocks_with` (keyword only at the start of a line); census `crates/opts-omsi/examples/keyword_indent_census.rs` |
 | **Related** | [`bus.md`](vehicles/bus.md) Q-003, design `articulation-physics.md` (branch `design/articulation-physics`) Q-ART-14 |
 
 ## Question

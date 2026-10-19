@@ -1,0 +1,17 @@
+[package]
+name = "opts-omsi"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Legacy OMSI 2 file readers (.bus, .sco, .sli, .map, .o3d, .x, ...): a leaf adapter, never used by the engine crates directly."
+repository.workspace = true
+
+[dependencies]
+opts-types = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+glam = { workspace = true }
+image = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

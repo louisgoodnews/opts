@@ -334,7 +334,7 @@ Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, C
 
 ## Parser findings (M-0049, 2026-10-11)
 
-`crates/opts-core/tests/ai_lists_corpus.rs` over the installed `maps/` tree: 101 `ailists*.cfg` files with 953 `[aigroup_2]` groups and 2,187 vehicle entries, of which **760 have no weight**; 5 lists have no `NormalCars` group. 32 `unsched_vehgroups.txt` (147 groups), 250 `unsched_trafficdens.txt` (1,561 groups). **A `[trafficdensity]` hour can exceed 24** (`TH_Wald`: `25.000 / 0.25`), so hours must not be clamped to `0..=24`. How the AI uses these lists is described in [AI Road Traffic](../../architecture/ai-traffic.md).
+`crates/opts-omsi/tests/ai_lists_corpus.rs` over the installed `maps/` tree: 101 `ailists*.cfg` files with 953 `[aigroup_2]` groups and 2,187 vehicle entries, of which **760 have no weight**; 5 lists have no `NormalCars` group. 32 `unsched_vehgroups.txt` (147 groups), 250 `unsched_trafficdens.txt` (1,561 groups). **A `[trafficdensity]` hour can exceed 24** (`TH_Wald`: `25.000 / 0.25`), so hours must not be clamped to `0..=24`. How the AI uses these lists is described in [AI Road Traffic](../../architecture/ai-traffic.md).
 
 ## 🔗 Related Documents
 

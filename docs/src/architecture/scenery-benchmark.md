@@ -24,8 +24,8 @@ The benchmark checks **self-consistency**: OPTS's renderer against OPTS's own re
 - A tile without `tile_X_Y.map.terrain` loads with a warning, and object `z` is absolute (`tile_ground.rs:105-107`). No ground mesh is built, so the background is empty.
 - `.sco`, `.sli` and mesh paths resolve against the OMSI root with case-insensitive lookup (`crates/opts-bevy/src/install.rs:153-179`); map files resolve against the map folder. **A map folder outside the OMSI root works** when the root is given explicitly. Verified 2026-10-11: a generated folder in a temp directory with `global.cfg`, `tile_0_0.map`, an entry anchor `Sceneryobjects\Generic\entrypoint_bus.sco` (it is `[onlyeditor]`, so it is not rendered) and one object loaded with `opts-game --autostart --map-path <tmp> --omsi-path <root>`. **No overlay root is needed**, and the installation is never written to.
 - `opts-core` has **no writers** for `global.cfg` or tile `.map` files: `formats/map/{global,tile,terrain}.rs` only parse. The benchmark writes the text itself (see [Map generation](#map-generation)).
-- Tile size falls back to 300 m when fewer than 5 cross-tile spline pairs exist (`crates/opts-core/src/formats/map/pitch.rs:13,37`), which is always the case here.
-- The text scanner drops blank lines (`crates/opts-core/src/formats/text.rs:125-151`), so an empty string variable shifts the ones after it. Generated tiles never write empty strings.
+- Tile size falls back to 300 m when fewer than 5 cross-tile spline pairs exist (`crates/opts-omsi/src/formats/map/pitch.rs:13,37`), which is always the case here.
+- The text scanner drops blank lines (`crates/opts-omsi/src/formats/text.rs:125-151`), so an empty string variable shifts the ones after it. Generated tiles never write empty strings.
 
 ### Object spawning (question B)
 
@@ -40,7 +40,7 @@ The benchmark checks **self-consistency**: OPTS's renderer against OPTS's own re
 
 **Scenery scripts do not run in OPTS today.** The VM (`opts_sim::script::ScriptEngine`, `crates/opts-sim/src/script/mod.rs:39`) is wired only to vehicles (`crates/opts-bevy/src/vehicle_script.rs`, `vehicle_anim.rs`, `vehicle_lights.rs`). Nothing reads `SceneryObject::scripts` at spawn time. M-0026 is "complete for vehicles" only, and M-0049 says "signal heads are not animated yet (scenery scripts do not run)" (`docs/src/roadmap/phase-4/M-0049.md:54`). Also:
 - The host sets only `Timegap` and `GetTime` (`script/mod.rs:203-204`). `Time`, `Day`, `DayOfYear` and the weather read 0, so clock scripts and the season switch (`visibleflag_sommerhalbjahr.osc`) cannot work yet, even for vehicles.
-- `ScoAnimation` is untyped (`crates/opts-core/src/formats/scenery/sco.rs:100`); the vehicle animation system needs a typed `ModelAnim`.
+- `ScoAnimation` is untyped (`crates/opts-omsi/src/formats/scenery/sco.rs:100`); the vehicle animation system needs a typed `ModelAnim`.
 - The scenery predefined variables (`TrafficLightPhase`, `Switch`, `NightlightA`, `Refresh_Strings`, …) are listed in `docs/src/formats/text/vehicles/predefined-variables.md:242-252`.
 
 *(Historical, before 2026-10-12.)* The script-effect check ([Phase C](#script-effect-check)) was specified first and reported `S-NOT-RUN` for every scripted object until the scenery-script runtime ([scenery-runtime.md](scenery-runtime.md)) existed ([Q-SB-11](#open-questions)).
@@ -355,7 +355,7 @@ opts-benchmark scenery report --run-dir <dir> [--compare <other-run-dir>]
 
 **Preflight survey (OPTS parsers, 2026-10-12, `opts-benchmark scenery preflight`, takes seconds):** 55,664 objects; tiers `referenced` 31,181, `attachment` 1,448, `unreferenced` 23,035; classes `standalone` 42,354, `surface` 8,415, `editor-only` 3,351, `spline-attachment` 1,448, `tree` 941, `no-geometry` 638, `help-arrow` 268, `vehicle-model` 19, `carpark-marker` 5; 4 `.sco` files fail OPTS's parser (`F-SCO-PARSE`: e.g. a maplight radius `3.5--`, a `------` where a number is expected). 61 map tiles of 15,839 do not parse with `MapTile::parse` (old tile version 10, e.g. `maps/Neuendorf`), so the objects only they place count as `unreferenced` here and differ from the scanner counts below (33,596 referenced). Both are known and documented; Phase D can use the scanner definition if needed.
 
-Measured 2026-10-11 on the installation at `…/steamapps/common/OMSI 2` (43 maps, 15,839 tile files) with a text scanner (Python, files decoded as UTF-16 with BOM or cp1252; keywords matched only as whole lines; mesh paths resolved case-insensitively below `<sco dir>/model/`; a mesh counts as keyed when its version is ≥ 4 and its stamp is not `0xFFFFFFFF`, the rule of `crates/opts-core/src/formats/o3d/parse.rs:115`). Phase B's preflight replaces these counts with the OPTS parsers' own.
+Measured 2026-10-11 on the installation at `…/steamapps/common/OMSI 2` (43 maps, 15,839 tile files) with a text scanner (Python, files decoded as UTF-16 with BOM or cp1252; keywords matched only as whole lines; mesh paths resolved case-insensitively below `<sco dir>/model/`; a mesh counts as keyed when its version is ≥ 4 and its stamp is not `0xFFFFFFFF`, the rule of `crates/opts-omsi/src/formats/o3d/parse.rs:115`). Phase B's preflight replaces these counts with the OPTS parsers' own.
 
 | Quantity | Count |
 | :--- | ---: |

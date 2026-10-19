@@ -62,7 +62,7 @@ I converted the two atlases to PNG for reading only (nothing was copied into the
 
 ### 3.1 Has `uvfix` changed since the deferral?
 
-No. `git log` of `crates/opts-core/src/formats/o3d/uvfix.rs`: last substantive change `59cbefb` (2026-10-12, lattice and smooth stages, 77.1 % -> 85.1 %). The 2026-10-13 commits only added the quality classification (`8c362f9`), the incident files and cache v8 (`33506a8`), formatting and merges. M-0079 was deferred on 2026-10-13 (`9818939`).
+No. `git log` of `crates/opts-omsi/src/formats/o3d/uvfix.rs`: last substantive change `59cbefb` (2026-10-12, lattice and smooth stages, 77.1 % -> 85.1 %). The 2026-10-13 commits only added the quality classification (`8c362f9`), the incident files and cache v8 (`33506a8`), formatting and merges. M-0079 was deferred on 2026-10-13 (`9818939`).
 
 ### 3.2 Exact-match rate (re-measured today)
 

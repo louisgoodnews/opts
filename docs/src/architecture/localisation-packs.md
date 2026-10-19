@@ -9,7 +9,7 @@ scaffold ([M-0061](../roadmap/phase-9/M-0061.md)) and the translation tests
 dropping them in a folder. No Rust, no recompiling. The game finds them, checks them, lists them in
 *Settings → Interface → Language*, and a broken pack never stops it from starting.
 
-Code: `crates/opts-core/src/l10n/` (format, checks, packs, interchange; no engine),
+Code: `crates/opts-l10n/src/` (format, checks, packs, interchange; no engine),
 `crates/opts-gui/src/l10n/` (`Localization`, the pack overlay), `crates/opts-game/src/language_packs.rs`
 (start-up scan, control methods), `crates/opts-tools/src/l10n.rs` (`opts-tools l10n ...`).
 
