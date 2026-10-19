@@ -475,8 +475,12 @@ fn route_report(
     depot: Option<std::sync::Arc<opts_core::formats::hof::HofFile>>,
     code: i32,
     seed: u64,
+    timetable: Option<(&(String, usize, usize), PathBuf)>,
 ) -> serde_json::Value {
     let route = opts_bevy::route::RouteHandle::new(depot.clone());
+    if let Some((_, map_dir)) = &timetable {
+        route.set_timetables(opts_bevy::route::find_timetables(map_dir).map(std::sync::Arc::new));
+    }
     let (mut engine, _) =
         load_vehicle_scripts(bus, |r| find_ci(dir, r).or_else(|| find_ci(root, r)));
     engine.seed_random(seed as u32);
@@ -492,9 +496,27 @@ fn route_report(
     lp.route = Some(route.clone());
     lp.ready_basic();
     let before = lp.engine.get("target_index_int");
-    let selection = match route.select(code) {
-        Ok(s) => s,
-        Err(e) => return serde_json::json!({ "error": e.to_string() }),
+    let mut schedule_json = serde_json::Value::Null;
+    let selection = if let Some(((line, tour, run), _)) = &timetable {
+        match route.select_run(line, *tour, *run) {
+            Ok((sc, Some(_))) => {
+                schedule_json = serde_json::json!({
+                    "tour": sc.tour, "trip": sc.trip, "title": sc.title, "line": sc.line,
+                    "start_s": sc.start_s, "stops": sc.stops.len(),
+                    "first": sc.stops.iter().take(3).map(|x| (x.name.clone(), x.arrival_s, x.departure_s)).collect::<Vec<_>>(),
+                });
+                route.selection().expect("the route was selected")
+            }
+            Ok((sc, None)) => {
+                return serde_json::json!({ "error": "the depot has no route for this run", "title": sc.title, "line": sc.line });
+            }
+            Err(e) => return serde_json::json!({ "error": e.to_string() }),
+        }
+    } else {
+        match route.select(code) {
+            Ok(s) => s,
+            Err(e) => return serde_json::json!({ "error": e.to_string() }),
+        }
     };
     let keypad = lp.keys.type_selection(&lp.engine, &selection).is_ok();
     let ziel_before = lp.engine.get("ziel_neu");
@@ -556,6 +578,7 @@ fn route_report(
         "yard": lp.engine.get_string("yard"),
         "setlineto": lp.engine.get_string("setlineto"),
         "keypad": keypad,
+        "schedule": schedule_json,
         "displays_answered": displays_answered,
         "route_code": selection.route_code,
         "line": selection.line,
@@ -632,6 +655,7 @@ fn main() {
     let (mut golden, mut check) = (None::<PathBuf>, None::<PathBuf>);
     let (mut physics, mut hz) = (false, 60.0f32);
     let (mut route_code, mut hof_filter) = (None::<i32>, None::<String>);
+    let (mut map_name, mut timetable) = (None::<String>, None::<(String, usize, usize)>);
     while let Some(a) = args.next() {
         match a.as_str() {
             "--vehicle" => filter = args.next().map(|s| s.to_lowercase()),
@@ -641,6 +665,15 @@ fn main() {
             "--physics" => physics = true,
             "--route" => route_code = args.next().and_then(|v| v.parse().ok()),
             "--hof" => hof_filter = args.next().map(|s| s.to_lowercase()),
+            "--map" => map_name = args.next(),
+            "--timetable" => {
+                timetable = args.next().and_then(|v| {
+                    let mut p = v.rsplitn(3, '/');
+                    let run = p.next()?.parse().ok()?;
+                    let tour = p.next()?.parse().ok()?;
+                    Some((p.next()?.to_string(), tour, run))
+                });
+            }
             "--hz" => hz = args.next().and_then(|v| v.parse().ok()).unwrap_or(60.0),
             "--golden" => golden = args.next().map(PathBuf::from),
             "--check" => check = args.next().map(PathBuf::from),
@@ -700,10 +733,21 @@ fn main() {
             .filter(|d| d.severity == Severity::Error)
             .count();
         load_errors += usize::from(load_errors_here > 0);
-        if let Some(code) = route_code {
+        if route_code.is_some() || timetable.is_some() {
+            let code = route_code.unwrap_or(0);
             let seed0 = seed_of(&rel);
             let depot = depot_for(&dir, &root, hof_filter.as_deref());
-            let report = route_report(&bus, &dir, &root, depot, code, seed0);
+            let report = route_report(
+                &bus,
+                &dir,
+                &root,
+                depot,
+                code,
+                seed0,
+                timetable
+                    .as_ref()
+                    .map(|t| (t, root.join("maps").join(map_name.as_deref().unwrap_or("")))),
+            );
             println!(
                 "{rel}\n{}",
                 serde_json::to_string_pretty(&report).unwrap_or_default()

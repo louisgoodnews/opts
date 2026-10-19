@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.12.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.13.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -794,6 +794,9 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.routes`](#busroutes) | `limit?` (integer) | 1.12 | List the lines and courses of the depot (.hof) of the player's vehicle |
 | [`bus.get_route`](#busget_route) | - | 1.12 | The route the player's vehicle has selected, and whether its IBIS is still being keyed |
 | [`bus.set_route`](#busset_route) | `route_code?` (integer)<br>`line?` (integer)<br>`course?` (integer)<br>`clear?` (boolean) | 1.12 | Select a route for the player's vehicle the way a driver does: the IBIS keys, then the destination to the displays |
+| [`bus.timetables`](#bustimetables) | `line?` (string)<br>`tour?` (integer)<br>`limit?` (integer)<br>`all?` (boolean) | 1.13 | List the map's timetables: line files, their tours and the runs of a tour |
+| [`bus.set_timetable`](#busset_timetable) | `line?` (string)<br>`tour?` (integer)<br>`run?` (integer)<br>`stops?` (integer)<br>`clear?` (boolean) | 1.13 | Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS |
+| [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
 
 ### `drive.controls`
 
@@ -886,6 +889,30 @@ Select a route for the player's vehicle the way a driver does: the IBIS keys, th
 **Result:** `{selected: {...} or null, keypad, typing}`; without a keypad also `note`
 
 Give `route_code`, or `line` and `course`, or `clear` (the driver cancels the route). The selection changes the timetable callbacks at once and the vehicle's own scripts take it: the keys of the MAN-type IBIS (`ibis_setmode_linie_kurs`, the digits, `ibis_eingabe`, ...) are pressed one per physics step, and the target (`AI_Target_Index`, `SetLineTo`, the trigger `ai_scheduled_settarget`) is offered to the destination displays until `target_index_int` shows it (30 s at most). Vehicles with another IBIS get the second part only (`keypad: false`). `-32602` for a route the depot does not have, `1001` without a player vehicle.
+
+### `bus.timetables`
+
+List the map's timetables: line files, their tours and the runs of a tour.
+
+**Result:** without `line`: `{available, lines: [{file, priority, user_allowed, tours, runs}]}`; with `line`: `{available, line, tours: [{tour, name, vehicle_group, runs}]}`; with `line` and `tour`: `{available, line, tour, name, runs: [{run, trip, title, line, start, stops}]}`
+
+The map's `TTData` folder: `.ttl` line files with their tours (`[newtour]`) and the runs of each tour (`[addtrip]`: a trip file, a timing profile and the start time). Without `line` only the line files the player may drive (`[userallowed]`) are listed, all of them with `all: true`. `available: false` when the map has no timetable files. `1001` without a player vehicle, `-32602` for an unknown line or tour.
+
+### `bus.set_timetable`
+
+Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS.
+
+**Result:** `{schedule: {line_file, tour, trip, title, line, start, stop_count, stops: [{station, name, arrival, departure}]}, route_code, typing}`; `route_code` is the depot route selected for the run (`null` when the depot has none for its line and destination)
+
+`line` is the file name of a line file without extension, `tour` and `run` count from 0 (default 0). The run's trip gives the stops (`Busstops.cfg` names) and, with its timing profile, the scheduled arrival and departure of each; times without a manual entry in the profile are interpolated by station index. `GetTTDelay` is the simulation clock minus the arrival at the current stop (`bus.set_stop`). `stops` limits how many stops the answer lists (default 5). `clear` stops following. `-32602` for a run the map does not have or a map without timetable files.
+
+### `bus.set_stop`
+
+Set the stop of the route or timetable the vehicle is at (0-based).
+
+**Result:** `{stop_index, stop_count}`
+
+What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable.
 
 ## Group `trace`
 

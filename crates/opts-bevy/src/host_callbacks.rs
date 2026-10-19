@@ -196,29 +196,21 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // (nothing selected) answers with neutral values, never garbage.
             // `(M.V.GetTTLineString)` -> string
             "getttlinestring" => {
-                st.strings.push(ctx.route.with(|r| r.line_text()));
+                st.strings.push(ctx.route.with(|r| r.tt_line_text()));
                 true
             }
 
             // `(M.V.GetTTTerminusIndex)` -> terminus index
             "getttterminusindex" => {
-                let term_idx = ctx.route.with(|r| {
-                    let rt = r.route()?;
-                    r.hof
-                        .as_ref()?
-                        .find_terminus_by_code(rt.terminus_code)
-                        .map(|(i, _)| i)
-                });
+                let term_idx = ctx.route.with(|r| r.tt_terminus_index());
                 st.numbers.push(term_idx.map_or(-1.0, |i| i as f32));
                 true
             }
 
             // `(M.V.GetTTBusstopCount)` -> count of stops on active schedule
             "getttbusstopcount" => {
-                let count = ctx
-                    .route
-                    .with(|r| r.route().map_or(0, |rt| rt.busstops.len()));
-                st.numbers.push(count as f32);
+                st.numbers
+                    .push(ctx.route.with(|r| r.tt_stop_count()) as f32);
                 true
             }
 
@@ -231,13 +223,7 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // `stopNo (M.V.GetTTBusstopName)` -> stop name/ident string
             "getttbusstopname" => {
                 let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
-                let name = ctx.route.with(|r| {
-                    r.route()
-                        .and_then(|rt| rt.busstops.get(stop_no))
-                        .cloned()
-                        .unwrap_or_default()
-                });
-                st.strings.push(name);
+                st.strings.push(ctx.route.with(|r| r.tt_stop_name(stop_no)));
                 true
             }
 
@@ -249,15 +235,16 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
 
             // `stopNo (M.V.GetTTBusstopDep)` -> departure time in seconds of day
             "getttbusstopdep" => {
-                let _stop_no = st.numbers.pop();
-                st.numbers.push(0.0);
+                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
+                st.numbers
+                    .push(ctx.route.with(|r| r.tt_departure_s(stop_no)));
                 true
             }
 
             // `stopNo (M.V.GetTTBusstopArr)` -> arrival time in seconds of day
             "getttbusstoparr" => {
-                let _stop_no = st.numbers.pop();
-                st.numbers.push(0.0);
+                let stop_no = st.numbers.pop().unwrap_or(0.0).max(0.0) as usize;
+                st.numbers.push(ctx.route.with(|r| r.tt_arrival_s(stop_no)));
                 true
             }
 

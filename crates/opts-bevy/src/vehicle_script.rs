@@ -491,6 +491,7 @@ impl Plugin for VehicleScriptPlugin {
                     crate::route::route_typing_system
                         .after(crate::vehicle_sim::vehicle_physics_step_system)
                         .before(vehicle_script_system),
+                    crate::route::route_clock_system.before(vehicle_script_system),
                     vehicle_script_system.after(crate::vehicle_sim::vehicle_physics_step_system),
                 ),
             );

@@ -1428,6 +1428,7 @@ fn attach_scripts(
     // Nothing is selected until the driver (or the control protocol) selects a route; the
     // scripts' IBIS then asks the depot for it.
     let route = opts_bevy::route::RouteHandle::new(hof.map(std::sync::Arc::new));
+    route.set_timetables(job.timetables());
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
 
     engine.seed_random(seed as u32);

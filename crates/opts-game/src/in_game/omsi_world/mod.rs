@@ -233,6 +233,9 @@ pub struct WorldLoadJob {
     /// computation per tile instead of nine (M-0089 step 2). Pruned to the resident tiles'
     /// neighbourhood after every build; cleared with the splines and objects it derives from.
     tile_surfaces: HashMap<(i32, i32), Arc<Vec<opts_bevy::GroundTriangle>>>,
+    /// The map's timetable files, read when the first vehicle needs them (`None` inside: the map
+    /// has none).
+    timetables: Option<Option<Arc<opts_core::formats::timetable::Timetables>>>,
     /// Bounding boxes of collision meshes in Bevy's local axes, by file.
     collision_bounds: collision::BoundsCache,
     /// Compiled scenery scripts, light assets and `[varparent]` links (scenery runtime).
