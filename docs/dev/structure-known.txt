@@ -42,7 +42,6 @@ crates/opts-game/tests/wizard_tests.rs 945  # planned: refactoring cycle 1 (M-01
 crates/opts-gui/src/components/combobox.rs 1082  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-gui/src/testing/rules.rs 665  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-l10n/src/fluent.rs 680  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-l10n/src/interchange.rs 516  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-l10n/src/pack.rs 508  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/chrono/entry.rs 690  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/map/tile.rs 814  # planned: refactoring cycle 1 (M-0127, M-0128)
