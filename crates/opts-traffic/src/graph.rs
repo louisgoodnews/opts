@@ -82,9 +82,9 @@ impl Direction {
 ///
 /// Vehicle-type flags (the corpus has them only with value `0`; not confirmed in OMSI ❓): `bus`
 /// makes the lane a lane **for buses**, `no_cars` keeps **cars** off it, and `trucks` marks a lane
-/// **trucks may use** — it does not exclude cars (C3, reversing the M-0049 reading: on
-/// Berlin-Spandau it sits on the right lane of 723 two-lane pairs beside an unmarked left lane;
-/// `docs/src/architecture/ai-traffic-kinematics.md`, §4). Trucks prefer such lanes.
+/// **trucks may use**. Read as a whitelist (project lead, 2026-10-19): a lane with a type rule is
+/// for the named types only (`bus` → buses only, `trucks` → trucks only). Trucks prefer `trucks`
+/// lanes; the rules never apply to the player.
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LaneRules {
     /// `trafficdensity` rules by vehicle group (the rule's flag; `0` = none for that group;
@@ -103,17 +103,18 @@ pub struct LaneRules {
 }
 
 impl LaneRules {
-    /// Whether vehicles of `class` may use the lane: `bus` restricts it to buses (and to trucks
-    /// as well when it also has `trucks`), `no_cars` excludes cars; `trucks` alone excludes
-    /// nobody.
+    /// Whether vehicles of `class` may use the lane. The vehicle-type rules are a whitelist
+    /// ("only the named types are allowed here"): with a `bus` and/or `trucks` rule only those
+    /// types may use the lane; `no_cars` additionally keeps cars off. Applies to AI vehicles
+    /// only — the player's vehicle is never stopped by a rule.
     #[must_use]
     pub fn allows(&self, class: crate::idm::VehicleClass) -> bool {
         use crate::idm::VehicleClass::{Bus, Car, Truck};
         if class == Car && self.no_cars {
             return false;
         }
-        if self.bus {
-            return class == Bus || (class == Truck && self.trucks);
+        if self.bus || self.trucks {
+            return (class == Bus && self.bus) || (class == Truck && self.trucks);
         }
         true
     }
@@ -646,8 +647,8 @@ mod tests {
     }
 
     #[test]
-    fn vehicle_type_rules_bus_restricts_trucks_permits() {
-        // Changed (C3): `trucks` no longer excludes cars and buses.
+    fn vehicle_type_rules_are_a_whitelist() {
+        // Project lead 2026-10-19: a type rule means only those types are allowed.
         use crate::idm::VehicleClass::{Bus, Car, Truck};
         let none = LaneRules::default();
         assert!([Car, Truck, Bus].iter().all(|c| none.allows(*c)));
@@ -670,7 +671,7 @@ mod tests {
                 truck_lane.allows(Truck),
                 truck_lane.allows(Bus)
             ],
-            [true, true, true]
+            [false, true, false]
         );
         let both = LaneRules {
             bus: true,

@@ -160,6 +160,7 @@ impl Agent {
             params,
             plan: std::collections::VecDeque::new(),
             waiting_s: 0.0,
+            stuck_s: 0.0,
             ignore_conflicts_until: 0.0,
             lateral: 0.0,
             lc_from: 0.0,

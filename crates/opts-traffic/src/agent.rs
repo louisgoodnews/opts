@@ -67,6 +67,14 @@ pub enum TrafficEvent {
         /// Side it moved to.
         side: Side,
     },
+    /// The agent stood still for [`STUCK_AFTER_S`] seconds without a red light or a lane change
+    /// to wait for, and was removed (forced despawn) — the first agent to get stuck goes.
+    Stuck {
+        /// The removed agent.
+        id: AgentId,
+        /// The lane it stood on.
+        lane: LaneId,
+    },
 }
 
 /// Seconds a lane change takes sideways (smooth start and end).
@@ -103,6 +111,8 @@ pub struct Agent {
     pub plan: VecDeque<LaneId>,
     /// Seconds spent standing still because of a conflict zone.
     pub waiting_s: f64,
+    /// Seconds standing still without a red light ahead (the "vehicle stuck" timer).
+    pub stuck_s: f64,
     /// World time until which conflicts are ignored (breaks deadlocks).
     pub ignore_conflicts_until: f64,
     /// Sideways offset from the lane's centre line in metres (positive = right); non-zero while a
@@ -221,6 +231,8 @@ const MIN_ARRIVAL_SPEED: f64 = 2.0;
 const GAP_ACCEPTANCE_S: f64 = 6.0;
 /// A vehicle that has stood this long (s) at a conflict zone goes anyway …
 const DEADLOCK_AFTER_S: f64 = 12.0;
+/// A vehicle standing this long (s) with no red light ahead is stuck and is despawned.
+pub const STUCK_AFTER_S: f64 = 60.0;
 /// … and ignores conflicts for this long (s).
 const DEADLOCK_IGNORE_S: f64 = 5.0;
 /// How far along its planned lanes an agent looks for leaders, signals and zones (m).
@@ -283,6 +295,8 @@ pub struct TrafficWorld {
     pub(crate) obstacles: Vec<crate::obstacles::Obstacle>,
     /// Phantom agents of the last step (diagnostics).
     pub(crate) last_phantoms: usize,
+    /// Seconds standing without a light ahead after which an agent counts as stuck.
+    stuck_after_s: f64,
 }
 
 impl TrafficWorld {
@@ -295,6 +309,7 @@ impl TrafficWorld {
             next_id: 1,
             rng: Rng::new(seed),
             events: Vec::new(),
+            stuck_after_s: STUCK_AFTER_S,
             time: 0.0,
             clock_base: 0.0,
             signals: HashMap::new(),
@@ -378,6 +393,12 @@ impl TrafficWorld {
     #[must_use]
     pub fn agent(&self, id: AgentId) -> Option<&Agent> {
         self.agents.iter().find(|a| a.id == id)
+    }
+
+    /// Sets how long (s) an agent may stand without a light ahead before it is despawned as
+    /// stuck (default [`STUCK_AFTER_S`]; `f64::INFINITY` switches the check off).
+    pub fn set_stuck_after(&mut self, seconds: f64) {
+        self.stuck_after_s = seconds;
     }
 
     /// Removes an agent (despawn outside the player's range, say).
@@ -625,6 +646,7 @@ impl TrafficWorld {
             params,
             plan: VecDeque::new(),
             waiting_s: 0.0,
+            stuck_s: 0.0,
             ignore_conflicts_until: 0.0,
             lateral: 0.0,
             lc_from: 0.0,
@@ -1004,6 +1026,26 @@ impl TrafficWorld {
                 a.waiting_s = 0.0;
             }
         }
+        // The "vehicle stuck" flag: standing with no light to wait for. The first agent to reach
+        // the limit is removed (one per step), which usually frees the others.
+        let limit = self.stuck_after_s;
+        let mut stuck = None;
+        for (a, g) in self.agents.iter_mut().zip(&signal) {
+            if !a.foreign && a.speed < 0.2 && g.is_none() {
+                a.stuck_s += dt;
+                if stuck.is_none() && a.stuck_s > limit {
+                    stuck = Some((a.id, a.lane));
+                }
+            } else {
+                a.stuck_s = 0.0;
+            }
+        }
+        if let Some((id, lane)) = stuck {
+            self.despawn(id);
+            self.events.push(TrafficEvent::Stuck { id, lane });
+            self.remove_phantoms();
+            return;
+        }
         let ids: Vec<AgentId> = self.agents.iter().map(|a| a.id).collect();
         self.advance_lanes();
         // Axles after the lane transitions (agents removed at dead ends drop out of `ids`).
@@ -1125,7 +1167,9 @@ mod tests {
     }
 
     fn world(segments: &[LaneSegment]) -> TrafficWorld {
-        TrafficWorld::new(LaneGraph::build(segments, &ConnectParams::default()), 3)
+        let mut w = TrafficWorld::new(LaneGraph::build(segments, &ConnectParams::default()), 3);
+        w.set_stuck_after(f64::INFINITY);
+        w
     }
 
     #[test]
@@ -1866,8 +1910,8 @@ mod tests {
     }
 
     #[test]
-    fn a_car_changes_into_a_trucks_lane() {
-        // Changed reading (C3): `trucks` marks a lane trucks may use; cars use it too.
+    fn a_car_stays_out_of_a_trucks_lane() {
+        // Whitelist reading (2026-10-19): a `trucks` lane is for trucks only.
         let mut right = LaneSegment::straight(DVec2::new(3.5, 0.0), 0.0, 800.0, LaneKind::Road);
         right.rules.trucks = true;
         let mut w = world(&[straight(0.0, 800.0), right]);
@@ -1879,11 +1923,11 @@ mod tests {
             w.step(0.1);
             events.extend(w.drain_events());
         }
-        assert!(events.contains(&TrafficEvent::LaneChanged {
+        assert!(!events.contains(&TrafficEvent::LaneChanged {
             id: car,
             side: Side::Right
         }));
-        assert_eq!(w.agent(car).unwrap().lane, LaneId(1));
+        assert_eq!(w.agent(car).unwrap().lane, LaneId(0));
     }
 
     #[test]
@@ -2018,6 +2062,33 @@ mod tests {
             width: 2.55,
             velocity: DVec2::ZERO,
         }
+    }
+
+    #[test]
+    fn the_first_vehicle_stuck_is_despawned_with_an_event() {
+        let mut w = world(&[straight(0.0, 800.0)]);
+        w.set_stuck_after(STUCK_AFTER_S);
+        w.set_obstacles(vec![bus_at(0.0, 200.0)]);
+        let first = w
+            .spawn(LaneId(0), 150.0, 0.0, IdmParams::default())
+            .unwrap();
+        let second = w
+            .spawn(LaneId(0), 100.0, 0.0, IdmParams::default())
+            .unwrap();
+        let mut stuck = Vec::new();
+        for _ in 0..((STUCK_AFTER_S + 60.0) * 10.0) as usize {
+            w.step(0.1);
+            for e in w.drain_events() {
+                if let TrafficEvent::Stuck { id, .. } = e {
+                    stuck.push(id);
+                }
+            }
+        }
+        // Both drive up to the bus and stand; the one that reaches the limit first
+        // goes, and the event names it.
+        assert!(!stuck.is_empty());
+        assert!(stuck.contains(&first) || stuck.contains(&second));
+        assert!(stuck.iter().all(|id| w.agent(*id).is_none()));
     }
 
     #[test]
