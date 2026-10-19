@@ -1,6 +1,6 @@
 # Camera Perspective System
 
-> Status: **keys 1–5 select ego, cockpit, external, passenger and free roam; 0 returns to the previous mode; 6 returns to the driver's seat; Shift+Space and the HUD hint are implemented; Tab edits the driver's viewpoint (M-0084)** (`opts_bevy::camera`). Articulated passenger cameras span tractor and trailer segments.
+> Status: **keys 1–5 select ego, cockpit, external, passenger and free roam; 0 returns to the previous mode; Shift+Space and the HUD hint are implemented; Tab edits the driver's viewpoint (M-0084)** (`opts_bevy::camera`). Articulated passenger cameras span tractor and trailer segments.
 
 Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_game/`.
 
@@ -14,7 +14,6 @@ Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_g
 | 3 | External | user vehicle | left-drag orbit, middle-drag pan (`zoom × 0.005` m/px, moves the orbit centre), wheel zoom 0.5–50 m; centre = `[set_camera_outside_center]` | ✅ (vehicle target only; human target with 1) |
 | 4 | Passenger | user vehicle | `[add_camera_pax]`; wheel cycles, wraps; right-drag looks | ✅ for single vehicles; articulated segment flattening waits for trailer spawning |
 | 5 | Free roam | none | one | ✅ |
-| 6 | Back to the bus | the driver's seat: the last of Ego/Cockpit, then the other one | — | ✅ from any other view; in a seat view it toggles Ego ↔ Cockpit (`home_mode`) |
 
 `ModelConfig`/`BusManifest` already expose the camera data (`BusManifest::driver_cameras`, `pax_cameras`, `std_camera_index`, `outside_camera_center` — see `BusVehicle`); conversion to Bevy space uses the existing `camera_preset_to_bevy_transform`. No camera transform is hard-coded. The one exception today is the interim chase distance/height, which `opts-game` derives from the vehicle's measured body size.
 
@@ -48,7 +47,7 @@ Fires on the key edge in every mode, never changes the mode or `previous_mode`, 
 
 ## HUD
 
-`[0] Prev  [1] Ego  [2] Cockpit  [3] External  [4] Pax  [5] Free  [6] Bus   [Shift+Space] Reset`. The active mode is wrapped in `*…*`, unavailable modes in `(…)`; the free-roam entry appends the speed. `[MMB] Pan` joins the line when the external view gets orbit/pan.
+`[0] Prev  [1] Ego  [2] Cockpit  [3] External  [4] Pax  [5] Free   [Shift+Space] Reset`. The active mode is wrapped in `*…*`, unavailable modes in `(…)`; the free-roam entry appends the speed. `[MMB] Pan` joins the line when the external view gets orbit/pan.
 
 ## Cursor handling
 

@@ -46,7 +46,7 @@ fn enter_free_roam(state: &mut CameraState, camera: &Transform) {
     tracing::debug!(position = ?camera.translation, "entered free roam");
 }
 
-/// Handles 0 (previous mode), 1–5 (select mode) and 6 (back to the driver's seat), honouring availability.
+/// Handles 0 (previous mode) and 1–5 (select mode), honouring availability.
 pub fn handle_camera_key_input(
     keys: Res<ButtonInput<KeyCode>>,
     avail: Res<CameraAvailability>,
@@ -64,14 +64,6 @@ pub fn handle_camera_key_input(
         if keys.just_pressed(key) {
             requested = Some(mode);
             trigger = key;
-        }
-    }
-    if keys.just_pressed(KeyCode::Digit6) {
-        // Back to the bus: the driver's seat (Ego or Cockpit), wherever the camera is.
-        requested = crate::camera::state::home_mode(state.mode, state.seat_mode, &avail);
-        trigger = KeyCode::Digit6;
-        if requested.is_none() {
-            tracing::debug!("key 6: no driver's-seat view available");
         }
     }
     let Some(mode) = requested else { return };

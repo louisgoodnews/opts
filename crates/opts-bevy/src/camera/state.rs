@@ -125,8 +125,6 @@ pub struct CameraState {
     pub ego_pitch: f32,
     /// Mouse-look sensitivity in radians per pixel.
     pub mouse_sensitivity: f32,
-    /// The last view from the driver's seat (Ego or Cockpit): where key 6 returns to.
-    pub seat_mode: CameraMode,
 }
 
 impl Default for CameraState {
@@ -150,7 +148,6 @@ impl Default for CameraState {
             ego_yaw: 0.0,
             ego_pitch: 0.0,
             mouse_sensitivity: 0.002,
-            seat_mode: CameraMode::Cockpit,
         }
     }
 }
@@ -165,9 +162,6 @@ impl CameraState {
         }
         self.previous_mode = self.mode;
         self.mode = mode;
-        if matches!(mode, CameraMode::Ego | CameraMode::Cockpit) {
-            self.seat_mode = mode;
-        }
         self.sub_camera_index = 0;
         self.pan_offset = Vec3::ZERO;
         self.ego_yaw = 0.0;
@@ -175,32 +169,6 @@ impl CameraState {
         self.view_yaw = 0.0;
         self.view_pitch = 0.0;
     }
-}
-
-/// Key 6, "back to the bus": from any view outside the driver's seat to the last seat view
-/// (`seat`, falling back to the other one); from a seat view to the other seat view. `None` when
-/// neither seat view is available.
-#[must_use]
-pub fn home_mode(
-    current: CameraMode,
-    seat: CameraMode,
-    avail: &CameraAvailability,
-) -> Option<CameraMode> {
-    let other = |m| {
-        if m == CameraMode::Ego {
-            CameraMode::Cockpit
-        } else {
-            CameraMode::Ego
-        }
-    };
-    let want = if matches!(current, CameraMode::Ego | CameraMode::Cockpit) {
-        other(current)
-    } else {
-        seat
-    };
-    [want, other(want)]
-        .into_iter()
-        .find(|m| avail.allows(*m) && *m != current)
 }
 
 /// Next sub-camera index after `notches` wheel notches (positive = forward), wrapping around a
@@ -243,25 +211,6 @@ mod tests {
     fn up_then_down_is_reciprocal() {
         let s = scale_free_roam_speed(scale_free_roam_speed(22.0, 4.0), -4.0);
         assert!((s - 22.0).abs() < 1e-3);
-    }
-
-    #[test]
-    fn key_six_returns_to_the_seat_and_toggles_between_seat_views() {
-        let all = CameraAvailability {
-            ego: true,
-            cockpit: true,
-            external: true,
-            passenger: true,
-        };
-        let no_ego = CameraAvailability { ego: false, ..all };
-        let (ego, cock, free) = (CameraMode::Ego, CameraMode::Cockpit, CameraMode::FreeRoam);
-        assert_eq!(home_mode(free, ego, &all), Some(ego));
-        assert_eq!(home_mode(CameraMode::External, cock, &all), Some(cock));
-        assert_eq!(home_mode(cock, cock, &all), Some(ego));
-        assert_eq!(home_mode(ego, ego, &all), Some(cock));
-        assert_eq!(home_mode(free, ego, &no_ego), Some(cock));
-        assert_eq!(home_mode(cock, cock, &no_ego), None);
-        assert_eq!(home_mode(free, cock, &CameraAvailability::default()), None);
     }
 
     #[test]
