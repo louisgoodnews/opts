@@ -981,7 +981,11 @@ pub fn move_traffic(
     for _ in 0..steps as usize {
         state.world.step(dt / steps);
     }
-    state.world.drain_events();
+    for e in state.world.drain_events() {
+        if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
+            tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
+        }
+    }
     if std::env::var_os("OPTS_DBG_OBSTACLES").is_some() {
         tracing::info!(
             obstacles = state.world.obstacles().len(),
