@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batches 1 and 2 done 2026-10-19** (§3.1, §4.1); batches 3 and 4 open |
+| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batches 1 and 2 done 2026-10-19** (§3.1, §4.1); **batch 4 done 2026-10-19** (§6.1); batch 3 open |
 | **Milestones** | [M-0127](../roadmap/phase-999/M-0127.md) (batches 1 and 2), [M-0128](../roadmap/phase-999/M-0128.md) (batches 3 and 4), [M-0129](../roadmap/phase-999/M-0129.md) (batch 5) |
 | **Audit** | [structure-audit-2026-10-19](../meta/structure-audit-2026-10-19.md) |
 | **Generated from** | `python3 scripts/structure_audit.py` measurements plus a scan of each file's top-level items; the cut points are proposals to be checked when the batch runs |
@@ -125,6 +125,14 @@ Two things the audit does not show: 26 small `pub(super)` widenings on moved ite
 | `crates/opts-bevy/src/light_quality/tests.rs` | 544 | 0 | 105 | low | split by concern: feed ×2, vsync ×2, shafts ×1, clamping ×1, cfg ×1 | each part ≤ 500 (now 544) |
 | `crates/opts-game/tests/save_tests.rs` | 521 | 0 | 100 | low | split by concern: dir ×1, session ×1, capture ×1, restore ×1, every ×1 | each part ≤ 500 (now 521) |
 | `crates/opts-game/src/pause/tests.rs` | 516 | 0 | 49 | low | split by concern: esc ×5, leaving ×2, app ×1, key ×1, state ×1 | each part ≤ 500 (now 516) |
+
+### 6.1 Result of batch 4 (2026-10-19, branch `refactor/cycle-1-batch-4`)
+
+All 13 files are under the limit (the ratchet went from 24 to 11 files). The largest part is 389 lines of code (`script_rig/main.rs`); the before and after counts are in each commit message. Test and example files are split into a directory with the same name: integration tests as `tests/foo/main.rs` + `tests/foo/<concern>.rs` (`control_protocol`, `wizard_tests`, `loading_tests`, `save_tests`), examples as `examples/foo/main.rs` + modules (`lighting_bench` with its `.wesl` shader beside it, `script_rig`), unit tests as `tests.rs` + `tests/<concern>.rs` (shared helpers stay in `tests.rs`; inline `mod` blocks of `pause`, `settings_registry` became files).
+
+Checks: the multiset of test function names is equal before and after (2161 = 2161, compared from the sources at `f5a2d85` and at the head); the touched test targets pass; all targets compile (`cargo check --all-targets`). No golden file was touched.
+
+Lessons for batch 3: a child module must not have the name of a module or item that its parent imports (`minimap`, `rules`, `sections` shadowed imports and had to be renamed); `include_str!("fixtures/…")` and `mod common;` in a test that moved into a directory need `../` and `#[path]`; the item mover must skip the crate root (`main.rs`) when it adds sibling imports; tuple-struct fields and `impl` methods need `pub(super)` when the item moves.
 
 ## 7. How the public path is kept
 

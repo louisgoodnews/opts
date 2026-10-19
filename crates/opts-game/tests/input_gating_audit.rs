@@ -50,6 +50,8 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/in_game/omsi_world/overlay.rs",
     "opts-game/src/help/mod.rs",
     "opts-game/src/hud/tests.rs",
+    // Test module (split out of `hud/tests.rs`): presses the keys to test the systems above.
+    "opts-game/src/hud/tests/alerts.rs",
     // F7, Shift+F7, + and - drive the mini map settings; gated with `not_modal_active`.
     "opts-game/src/hud/minimap/mod.rs",
     "opts-game/src/pause/mod.rs",

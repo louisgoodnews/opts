@@ -2,26 +2,13 @@
 # Format: <path> <lines of code>  # <reason or the planned cycle>. A known file may only shrink;
 # a file that is not listed and passes 500 lines fails `scripts/structure_audit.py check`.
 # Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.
-crates/opts-bevy/examples/lighting_bench.rs 1070  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/examples/script_rig.rs 928  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/src/light_cones/tests.rs 601  # planned: M-0128 batch 4 (split by concern); +4 lines of imports from the batch 2 split of light_cones.rs
-crates/opts-bevy/src/light_quality/tests.rs 544  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/src/mirrors/tests.rs 739  # planned: M-0128 batch 4 (split by concern); +2 lines of imports from the batch 2 split of mirrors.rs
 crates/opts-bevy/src/model.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/weather.rs 1285  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-catalogue/src/lib.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-cli/src/commands.rs 1498  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/hud/tests.rs 978  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/omsi_world/traffic.rs 1011  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/omsi_world/vehicle.rs 1497  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/vehicle_menu.rs 1733  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/pause/tests.rs 516  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/settings_registry/tests.rs 601  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/settings_screen/tests.rs 911  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/tests/control_protocol.rs 1061  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/tests/loading_tests.rs 571  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/tests/save_tests.rs 521  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/tests/wizard_tests.rs 945  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-gui/src/components/combobox.rs 1082  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/scenery/sco.rs 1098  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-sim/src/vehicle/mod.rs 974  # planned: refactoring cycle 1 (M-0127, M-0128)
