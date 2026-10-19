@@ -5,7 +5,6 @@
 crates/opts-bevy/examples/lighting_bench.rs 1070  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/examples/script_rig.rs 928  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/control/handlers/ui_ext.rs 912  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/src/glass.rs 562  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/light_cones.rs 662  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/light_cones/tests.rs 597  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-bevy/src/light_quality/tests.rs 544  # planned: refactoring cycle 1 (M-0127, M-0128)
