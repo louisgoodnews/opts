@@ -52,17 +52,68 @@ pub const MONO_FONT: Handle<Font> = font_handle(4);
 /// Fixed handle under which the fallback face is registered.
 pub const FALLBACK_FONT: Handle<Font> = font_handle(5);
 
+/// The body size of the type scale in logical pixels: [`UiTypography::base_px`] scales every
+/// style by its ratio to this size.
+pub const BASE_TEXT_PX: f32 = 14.0;
+/// The smallest and largest base text size the user may choose.
+pub const BASE_TEXT_RANGE: std::ops::RangeInclusive<u32> = 12..=24;
+
+/// The user's text preferences (accessibility): the family put in front of the UI stack and the
+/// base text size. Written from the settings `ui_font` and `ui_font_size`; read by
+/// `sync_typestyle_tokens`, so a change reaches all text with a type token in the next frame.
+#[derive(Resource, Debug, Clone, PartialEq)]
+pub struct UiTypography {
+    /// A font family put in front of the UI stack; empty for the bundled UI family.
+    pub family: String,
+    /// The size of body text in logical pixels (12 to 24); every style scales with it.
+    pub base_px: f32,
+}
+
+impl Default for UiTypography {
+    fn default() -> Self {
+        Self {
+            family: String::new(),
+            base_px: BASE_TEXT_PX,
+        }
+    }
+}
+
+impl UiTypography {
+    /// A text size of the type scale after the base size: scaled by `base_px / 14` and never
+    /// below [`MIN_TEXT_PX`](crate::theme::typography::MIN_TEXT_PX).
+    #[must_use]
+    pub fn size(&self, style_px: f32) -> f32 {
+        (style_px * self.base_px / BASE_TEXT_PX).max(crate::theme::typography::MIN_TEXT_PX)
+    }
+
+    /// The font source of ordinary UI text: the chosen family (if any) before the UI stack.
+    #[must_use]
+    pub fn font_source(&self) -> FontSource {
+        ui_font_source_for(&self.family)
+    }
+}
+
 /// The font source of all ordinary UI text: the UI family with its fallback.
 pub fn ui_font_source() -> FontSource {
     FontSource::Families(UI_FONT_STACK.into())
 }
 
-/// `true` when `source` is Bevy's default font or already the UI stack (the sources the theme may
-/// restyle); `false` for the icon font and any other explicit choice.
+/// The UI stack with `family` in front (a family name containing a comma or a quote is ignored).
+pub fn ui_font_source_for(family: &str) -> FontSource {
+    let family = family.trim();
+    if family.is_empty() || family.contains([',', '"', '\'']) || family == UI_FAMILY {
+        return ui_font_source();
+    }
+    FontSource::Families(format!("\"{family}\", {UI_FONT_STACK}").into())
+}
+
+/// `true` when `source` is Bevy's default font or already a UI stack, with or without a chosen
+/// family in front (the sources the theme may restyle); `false` for the icon font and any other
+/// explicit choice.
 pub fn is_ui_font(source: &FontSource) -> bool {
     match source {
         FontSource::Handle(handle) => *handle == Handle::<Font>::default(),
-        FontSource::Families(s) => s.as_str() == UI_FONT_STACK,
+        FontSource::Families(s) => s.as_str().ends_with(UI_FONT_STACK),
         _ => false,
     }
 }
@@ -106,6 +157,42 @@ mod tests {
     fn covers(font: &[u8], ch: char) -> bool {
         use ab_glyph::Font as _;
         ab_glyph::FontRef::try_from_slice(font).is_ok_and(|f| f.glyph_id(ch).0 != 0)
+    }
+
+    #[test]
+    fn a_chosen_family_goes_in_front_of_the_stack_and_odd_names_are_ignored() {
+        assert_eq!(ui_font_source_for(""), ui_font_source());
+        assert_eq!(ui_font_source_for("Noto Sans"), ui_font_source());
+        assert_eq!(ui_font_source_for("a, b"), ui_font_source());
+        let f = ui_font_source_for("Atkinson Hyperlegible");
+        assert_eq!(
+            f,
+            FontSource::Families("\"Atkinson Hyperlegible\", Noto Sans, DejaVu Sans".into())
+        );
+        assert!(is_ui_font(&f) && is_ui_font(&ui_font_source()));
+        assert!(!is_ui_font(&FontSource::Family(
+            "Atkinson Hyperlegible".into()
+        )));
+    }
+
+    #[test]
+    fn the_base_size_scales_the_scale_and_keeps_the_floor() {
+        let t = UiTypography {
+            family: String::new(),
+            base_px: 20.0,
+        };
+        assert!((t.size(14.0) - 20.0).abs() < 1e-4);
+        assert!((t.size(40.0) - 40.0 * 20.0 / 14.0).abs() < 1e-3);
+        let small = UiTypography {
+            family: String::new(),
+            base_px: 12.0,
+        };
+        assert_eq!(small.size(12.0), 12.0, "the floor holds");
+        assert_eq!(
+            UiTypography::default().size(16.0),
+            16.0,
+            "14 px is the identity"
+        );
     }
 
     #[test]

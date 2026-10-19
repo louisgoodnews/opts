@@ -16,7 +16,7 @@ use super::fade::{
     STATUS_FADE, STATUS_HOLD,
 };
 use super::keys;
-use super::layout::HudLayout;
+use super::layout::{HudLayout, CAMERA_LABEL_MIN_TOP};
 use super::minimap::{MiniMapCaption, MiniMapSurface};
 use super::profile::{HudProfile, HudProfiles};
 use super::values::kind_of;
@@ -24,7 +24,7 @@ use super::widget::{Row, Slot, VehicleKind};
 use crate::in_game::instruments::{InstrumentInk, InstrumentPanel};
 use crate::in_game::types::{InGameEntity, InGameHudRoot, PauseMenuBtn};
 
-use super::parts::{build_instrument, panel, panel_node, text_widget, texts};
+use super::parts::{build_instrument, panel, panel_node, text_widget, texts, CameraLabelRow};
 pub use super::parts::{
     ActiveProfile, AlertPill, ClusterBox, HudRoot, HudRow, HudSlot, HudText, HudWidgetNode, MapBox,
     Part, ReadoutBox,
@@ -126,14 +126,17 @@ pub fn spawn_hud(commands: &mut Commands, profile: &HudProfile, palette: &Instru
     let camera = in_slot(Slot::CameraLabel);
     let camera_label = (!camera.is_empty()).then(|| {
         commands
-            .spawn(Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(84.0),
-                left: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                ..default()
-            })
+            .spawn((
+                Node {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(CAMERA_LABEL_MIN_TOP),
+                    left: Val::Px(0.0),
+                    width: Val::Percent(100.0),
+                    justify_content: JustifyContent::Center,
+                    ..default()
+                },
+                CameraLabelRow,
+            ))
             .with_children(|row| {
                 row.spawn((
                     panel(

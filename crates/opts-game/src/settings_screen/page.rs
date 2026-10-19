@@ -212,8 +212,12 @@ pub fn mark_dirty(
     added: Query<(), Added<SettingsPage>>,
     facts: Res<crate::content_facts::ContentFactsStore>,
     light: Option<Res<opts_bevy::light_quality::LightQuality>>,
+    fonts: Option<Res<crate::ui_typography::FontChoices>>,
     mut themes: Local<Vec<String>>,
 ) {
+    if fonts.is_some_and(|f| f.is_changed()) {
+        state.dirty = true;
+    }
     if light.is_some_and(|l| l.is_changed()) {
         // The values the automatic mode shows (and which controls are locked) changed.
         state.dirty = true;

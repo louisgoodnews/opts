@@ -15,6 +15,7 @@ pub fn rebuild_page(
     loc: Res<Localization>,
     hardware: Option<Res<crate::hardware::HardwareState>>,
     light: Option<Res<opts_bevy::light_quality::LightQuality>>,
+    fonts: Option<Res<crate::ui_typography::FontChoices>>,
     focused: Query<&UiId, With<opts_gui::interaction::state::Focused>>,
     cats: Query<(Entity, Option<&Children>), With<PageCategories>>,
     panes: Query<(Entity, Option<&Children>), With<PagePane>>,
@@ -51,6 +52,7 @@ pub fn rebuild_page(
             .filter(|h| h.is_stored())
             .and_then(|h| h.dir.as_deref().map(opts_hardware::store::path)),
         theme_files: facts.theme_files(),
+        fonts: fonts.as_ref().map_or(&[][..], |f| f.0.as_slice()),
         light: light.as_deref(),
         rebinding: state.rebinding,
     };

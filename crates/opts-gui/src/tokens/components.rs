@@ -260,18 +260,21 @@ pub struct TypeWeight(pub u16);
 /// keeps its font and only receives size, line height and tracking.
 pub fn sync_typestyle_tokens(
     theme: Res<MaterialTheme>,
+    typography: Option<Res<crate::fonts::UiTypography>>,
     mut commands: Commands,
     mut query: Query<TypeStyleSyncItem>,
 ) {
-    let theme_changed = theme.is_changed();
+    // The user's text preferences (family and base size) restyle all text when they change.
+    let theme_changed = theme.is_changed() || typography.as_ref().is_some_and(|t| t.is_changed());
+    let typo = typography.as_deref().cloned().unwrap_or_default();
     for (entity, token, mut font, line_height, spacing, weight) in &mut query {
         if !(theme_changed || token.is_changed()) {
             continue;
         }
         let style = theme.typography.resolve(token.0);
-        font.font_size = FontSize::Px(style.font_size);
+        font.font_size = FontSize::Px(typo.size(style.font_size));
         if crate::fonts::is_ui_font(&font.font) {
-            font.font = crate::fonts::ui_font_source();
+            font.font = typo.font_source();
             font.weight = FontWeight(weight.map_or(style.weight, |w| w.0));
             font.font_features = if style.tabular {
                 FontFeatures::builder()
@@ -402,6 +405,47 @@ mod tests {
             Some(&LineHeight::RelativeToFont(28.0 / 20.0))
         );
         assert_eq!(w.get::<LetterSpacing>(e), Some(&LetterSpacing::Px(0.0)));
+    }
+
+    #[test]
+    fn the_users_base_size_and_family_reach_the_text_in_the_next_frame_and_never_go_below_12_px() {
+        let mut app = app();
+        let title = app
+            .world_mut()
+            .spawn((Text::new("T"), TypeStyleToken(TypeScale::TitleLarge)))
+            .id();
+        let label = app
+            .world_mut()
+            .spawn((Text::new("l"), TypeStyleToken(TypeScale::Label)))
+            .id();
+        app.update();
+        // 20 px base: every style grows by 20 / 14.
+        app.insert_resource(crate::fonts::UiTypography {
+            family: "OpenDyslexic".into(),
+            base_px: 20.0,
+        });
+        app.update();
+        let font = |app: &App, e| app.world().get::<TextFont>(e).expect("font").clone();
+        let t = font(&app, title);
+        assert_eq!(t.font_size, FontSize::Px(20.0 * 20.0 / 14.0));
+        assert_eq!(
+            t.font,
+            FontSource::Families(
+                format!("\"OpenDyslexic\", {}", crate::fonts::UI_FONT_STACK).into()
+            )
+        );
+        assert_eq!(
+            font(&app, label).font_size,
+            FontSize::Px(12.0 * 20.0 / 14.0)
+        );
+        // The smallest base size is 12 px: the label would shrink to 10.3 px and is held at 12.
+        app.insert_resource(crate::fonts::UiTypography {
+            family: String::new(),
+            base_px: 12.0,
+        });
+        app.update();
+        assert_eq!(font(&app, label).font_size, FontSize::Px(12.0));
+        assert_eq!(font(&app, title).font, crate::fonts::ui_font_source());
     }
 
     #[test]

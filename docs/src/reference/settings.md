@@ -84,6 +84,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `active_theme` | Accent colour | `Default`, `Amber`, `Violet`, `Emerald`, `Teal` | `Default` | at once | available | The colour of selections and primary buttons. |
 | `theme_file` | Theme file | text | - | at once | available | Name of a theme file in the themes folder of your configuration folder; empty uses the built-in theme. |
 | `ui_scale` | Interface size | whole number 75 to 200 | `100` | at once | available | Scales text and controls, in percent. |
+| `ui_font` | Interface font | text | - | at once | available | A font family for all text; empty uses Noto Sans. Fonts you put in the fonts folder of your configuration folder (.ttf, .otf) are listed here after a restart. |
+| `ui_font_size` | Text size | whole number 12 to 24 | `14` | at once | available | The size of body text, 12 to 24 px; every other text size follows it, none goes below 12 px. |
 | `density` | Density | `comfortable`, `compact`, `dense` | `comfortable` | at once | available | How much space the interface leaves between elements. |
 | `reduced_motion` | Reduce motion | on / off | `false` | at once | available | Transitions and animations become instant. |
 | `interface.language` | Language | language tag (`en`, `de`, or an installed pack such as `fr`; see `l10n.languages`) | `en` | at once | available | The language of menus and messages. Content from OMSI keeps its own language. |
