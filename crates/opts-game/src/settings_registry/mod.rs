@@ -27,7 +27,9 @@ pub mod search;
 pub mod value;
 
 pub use api::SettingsApi;
-pub use descriptor::{opt, Apply, Available, Category, EnumOption, SettingDescriptor, SettingKind};
+pub use descriptor::{
+    opt, Apply, Available, Category, EnumOption, ProfileScope, SettingDescriptor, SettingKind,
+};
 pub use value::{normalize, SettingError, SettingValue};
 
 use crate::settings::GameSettings;
@@ -100,6 +102,16 @@ impl SettingsRegistry {
             return;
         }
         self.by_key.insert(d.key, d);
+    }
+
+    /// The keys a map profile may set, in key order.
+    #[must_use]
+    pub fn profile_keys(&self) -> Vec<&'static str> {
+        self.by_key
+            .values()
+            .filter(|d| d.profile == ProfileScope::Map)
+            .map(|d| d.key)
+            .collect()
     }
 
     /// The descriptor of `key`.

@@ -10,6 +10,7 @@ pub mod control_configs;
 pub mod control_drive;
 pub mod control_dynamics;
 pub mod control_environment;
+pub mod control_profiles;
 pub mod control_route;
 pub mod control_save;
 pub mod control_session;
@@ -28,6 +29,7 @@ pub mod in_game;
 pub mod isolation;
 pub mod language_packs;
 pub mod look;
+pub mod map_profiles;
 pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
@@ -97,6 +99,7 @@ impl Plugin for OptsGamePlugin {
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
+            .add_plugins(map_profiles::MapProfilesPlugin)
             .add_plugins(hardware::HardwarePlugin)
             .add_plugins(vehicle_keys::VehicleKeysPlugin)
             .add_plugins(shell::ShellPlugin)

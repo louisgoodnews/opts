@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.13.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.14.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -791,6 +791,12 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`vehicle.teleport`](#vehicleteleport) *(debug)* | `x` (number)<br>`y` (number)<br>`heading_deg?` (number) | 1.1 | Place the player vehicle at an absolute OMSI position and heading, standing still |
 | [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
 | [`vehicle.dynamics`](#vehicledynamics) | - | 1.10 | What the player's vehicle states about its dynamics (mass, centre of gravity, inertia, rolling resistance, axles) with the source of each value, and the live axle loads |
+| [`profiles.list`](#profileslist) | - | 1.14 | The map profiles of the planned drive's map: the profile that applies, the saved ones, the presets, the load profile and the advice |
+| [`profiles.advice`](#profilesadvice) | - | 1.14 | The load profile of the planned drive's map and the recommendations that follow from it |
+| [`profiles.apply`](#profilesapply) | `profile` (string)<br>`make_default?` (boolean) | 1.14 | Use a profile for the next drive of the planned map (Apply Selected) |
+| [`profiles.save`](#profilessave) | `name` (string)<br>`chrono?` (boolean) | 1.14 | Create a profile from the current values of the map-eligible settings (Create New from Current) |
+| [`profiles.delete`](#profilesdelete) | `chrono?` (boolean) | 1.14 | Delete the map's profile (the Chrono entry's with `chrono: true`) |
+| [`profiles.status`](#profilesstatus) | - | 1.14 | Which profile the running drive uses |
 | [`bus.routes`](#busroutes) | `limit?` (integer) | 1.12 | List the lines and courses of the depot (.hof) of the player's vehicle |
 | [`bus.get_route`](#busget_route) | - | 1.12 | The route the player's vehicle has selected, and whether its IBIS is still being keyed |
 | [`bus.set_route`](#busset_route) | `route_code?` (integer)<br>`line?` (integer)<br>`course?` (integer)<br>`clear?` (boolean) | 1.12 | Select a route for the player's vehicle the way a driver does: the IBIS keys, then the destination to the displays |
@@ -865,6 +871,54 @@ What the player's vehicle states about its dynamics (mass, centre of gravity, in
 **Result:** `{spec: {mass_kg, cg_height_m, yaw_inertia_kg_m2, pitch_inertia_kg_m2, roll_inertia_kg_m2, rolling_coefficient}, axles: [{index, longitudinal_m, track_width_m, wheel_diameter_m, spring_n_per_m, damping_n_s_per_m, max_force_n, driven, steered, static_load_n, load_n: [left, right], deflection_m, deflection_speed_m_s, compression_m: [left, right], brake_force_n, brake_limited}], state: {speed_m_s, head_mass_kg, consist_mass_kg, units, wheelbase_m}, body: {heave_m, pitch_rad, roll_rad}, brakes: {pressure, apply_tau_s, force_n}}`; every `spec` entry is `{value, source}` with `source` one of `file`, `estimate`, `default`; since 1.11 the answer also has `pitch_inertia_kg_m2`, `roll_inertia_kg_m2`, `compression_m`, `brake_force_n`, `brake_limited`, `body` and `brakes`
 
 `1001` without a player vehicle. `file` values are read from the vehicle's `.bus` (`[mass]`, `[schwerpunkt]`, `[momentofintertia]` or lines 2 to 4 of `[mass]`, `[rollwiderstand]`); `estimate` is the yaw inertia of a box with the bounding box's width and length; `default` is the generic transit bus, used because the file states nothing usable. The rolling coefficient is the file's rolling resistance (a force) over the stated weight. Axle values are those the physics uses (the `.bus` axle block, with bus defaults for what is missing); `static_load_n` follows from the axle positions, the mass and the centre of gravity.
+
+### `profiles.list`
+
+The map profiles of the planned drive's map: the profile that applies, the saved ones, the presets, the load profile and the advice.
+
+**Result:** `{map, chrono, chrono_entries, resolved: {source, profile, dropped}, picked, saved: [{chrono, name, created, based_on, settings}], presets: [...], load: {tiles, objects, splines, ai_pool_vehicles, area_km2, estimated, counting, avg_frame_time_ms, p95_frame_time_ms}, advice: [{id, severity, preset, suggested}]}`
+
+`1001` without a map in the plan. `chrono` is the newest Chrono entry active on the plan's date (`default` when none is); `resolved.source` is `chrono`, `map` or `global` (the fallback chain: this Chrono entry, the map's default, your global settings). The load profile is counted in the background the first time the map is asked for: `counting` is true until the full count is in, `estimated` while only a sample is. `avg_frame_time_ms` comes from the last session of this key on this computer.
+
+### `profiles.advice`
+
+The load profile of the planned drive's map and the recommendations that follow from it.
+
+**Result:** `{load, advice}` as in `profiles.list`
+
+`advice[].id` is one of `geometry-above-typical`, `geometry-high`, `light-map`, `many-splines`, `high-ai-load`, `ran-slowly`, `ran-smoothly`, `not-played-yet`; `suggested` lists settings to change as `{key, value}` and `preset` names the preset that carries the suggestion.
+
+### `profiles.apply`
+
+Use a profile for the next drive of the planned map (Apply Selected).
+
+**Result:** the answer of `profiles.list`
+
+`profile` is `none` (your global settings), `preset:<id>` (`performance`, `balanced`, `quality`) or the name of a saved profile of the map. The profile is applied when the drive starts and the global settings return when it ends; the settings file never holds profile values. With `make_default` the profile is also written as the profile of this key. `-32602` for a profile that does not exist, `1001` without a map.
+
+### `profiles.save`
+
+Create a profile from the current values of the map-eligible settings (Create New from Current).
+
+**Result:** the answer of `profiles.list`
+
+Saved as the map's default profile, or with `chrono: true` as the profile of the newest active Chrono entry. Settings nothing is stored for are saved with their default. An existing profile of the same key is replaced.
+
+### `profiles.delete`
+
+Delete the map's profile (the Chrono entry's with `chrono: true`).
+
+**Result:** the answer of `profiles.list` plus `removed` (false when there was none)
+
+Presets cannot be deleted.
+
+### `profiles.status`
+
+Which profile the running drive uses.
+
+**Result:** `{active, map, chrono, profile, source, keys, overlaid}`
+
+`keys` are the settings the profile overrides, `overlaid` the keys the settings currently hold as session values (the global values return when the drive ends).
 
 ### `bus.routes`
 

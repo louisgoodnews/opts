@@ -1,6 +1,7 @@
 //! Map scenario manifest (`global.cfg`), tile (`tile_*.map`), terrain, and water parsers, plus
 //! writers for `global.cfg` and tile `[object]` records.
 
+pub mod count;
 pub mod error;
 pub mod global;
 pub mod grid;

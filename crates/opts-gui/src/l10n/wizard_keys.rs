@@ -204,6 +204,7 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WHERE_SEARCH,
     wiz::WIZ_WHERE_EMPTY,
     wiz::WIZ_WHERE_START,
+    wiz::MAP_CONFIG_OPEN,
     wiz::WIZ_WHERE_DATE,
     wiz::WIZ_WHERE_NO_STARTS,
     wiz::WIZ_WHERE_DESCRIPTION,
@@ -344,6 +345,8 @@ pub mod wiz {
     pub const WIZ_WHERE_EMPTY: &str = "wiz-where-empty";
     /// `wiz-where-start`.
     pub const WIZ_WHERE_START: &str = "wiz-where-start";
+    /// `map-config-open`: the button that opens the map configuration (M-0130).
+    pub const MAP_CONFIG_OPEN: &str = "map-config-open";
     /// `wiz-where-date`.
     pub const WIZ_WHERE_DATE: &str = "wiz-where-date";
     /// `wiz-where-no-starts`.

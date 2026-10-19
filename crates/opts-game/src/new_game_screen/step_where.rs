@@ -139,6 +139,13 @@ pub fn fill_where_detail(commands: &mut Commands, detail: Entity, ctx: &BuildCtx
     }
     kids.push(facts_row(commands, map));
     kids.push(start_point(commands, ctx, map));
+    kids.push(action_button(
+        commands,
+        "map-config-open",
+        Emphasis::Tonal,
+        PlannerAction::OpenMapConfig,
+        "wizard.where.map-config".to_owned(),
+    ));
     kids.push(super::step_when::date_block(commands, ctx));
     if !map.description.trim().is_empty() {
         kids.push(description(commands, map));

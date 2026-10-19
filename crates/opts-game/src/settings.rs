@@ -87,6 +87,11 @@ pub struct GameSettings {
     /// changed the file) cannot undo another instance's choices, e.g. the theme.
     #[serde(skip)]
     baseline: Baseline,
+    /// Keys a map profile overrides for this session, with the value they have globally
+    /// (`None`: nothing is stored). Saving writes the global value of these keys, never the
+    /// profile's, so a profile cannot reach the file ([`GameSettings::overlay_session`]).
+    #[serde(skip)]
+    session_overlay: BTreeMap<String, Option<String>>,
 }
 
 /// Snapshot of the persisted key/value pairs (the baseline of `GameSettings`, used to save only changed keys).
@@ -151,6 +156,7 @@ impl Default for GameSettings {
             loaded_keys: std::collections::BTreeSet::new(),
             db_path_override: None,
             baseline: Baseline::default(),
+            session_overlay: BTreeMap::new(),
         }
     }
 }
@@ -294,6 +300,33 @@ impl GameSettings {
         self.apply_key(key, value);
     }
 
+    /// Overrides keys for the running session (a map profile): the values are set in memory, the
+    /// global values are remembered, and [`save`](Self::save) keeps writing the global ones.
+    /// Applying again first restores what an earlier call overrode.
+    pub fn overlay_session(&mut self, values: &BTreeMap<String, String>) {
+        self.restore_session();
+        for (key, value) in values {
+            self.session_overlay.insert(key.clone(), self.raw(key));
+            self.set_raw(key, value);
+        }
+    }
+
+    /// Puts the global values back after [`overlay_session`](Self::overlay_session).
+    pub fn restore_session(&mut self) {
+        for (key, global) in std::mem::take(&mut self.session_overlay) {
+            match global {
+                Some(v) => self.set_raw(&key, &v),
+                None => self.remove_extra(&key),
+            }
+        }
+    }
+
+    /// The keys overridden for this session.
+    #[must_use]
+    pub fn overlaid_keys(&self) -> Vec<String> {
+        self.session_overlay.keys().cloned().collect()
+    }
+
     /// Removes an extra key (a typed field is reset by the registry writing its default).
     pub fn remove_extra(&mut self, key: &str) {
         self.extra.remove(key);
@@ -357,6 +390,17 @@ impl GameSettings {
         m.extend(self.theme_entries());
         for (k, v) in &self.extra {
             m.entry(k.clone()).or_insert_with(|| v.clone());
+        }
+        // A profile's values are the session's, not the person's: the file keeps the global ones.
+        for (k, global) in &self.session_overlay {
+            match global {
+                Some(v) => {
+                    m.insert(k.clone(), v.clone());
+                }
+                None => {
+                    m.remove(k);
+                }
+            }
         }
         m
     }

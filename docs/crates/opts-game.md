@@ -168,3 +168,18 @@ cargo run -- --map-path /path/to/omsi/maps/Berlin-Spandau
 ## Plan a drive and loading (M-0062)
 
 `new_game_screen` is the four-step wizard (*Where, What, When, Review*) built on `opts_gui::patterns::master_detail`; the choices live in `NewGameSetup` and are remembered through `drive_history` (`PlannerHistory`). `thumbnails.rs` decodes map pictures off the main thread into a capped cache. `in_game::loading_ui`/`loading_pipeline` show real stages and the outcomes *Ready*, *Ready with N problems*, *Failed*; everything that went wrong is kept in `in_game::load_report::LoadReport`. Specification: [wizard and loading](../src/roadmap/phase-9/wizard-and-loading.md).
+
+## Map profiles and the load profiler (M-0130)
+
+`map_profiles` keeps per-map configuration profiles and the load profiler ([design](../src/architecture/map-profiles.md)).
+
+| Module | Role |
+| :--- | :--- |
+| `profile` | `MapProfile` (a named map of stored setting texts, validated against the registry on load), `MapKey` (map folder and the Chrono entries active on the date), `presets()` (*Performance*, *Balanced*, *Quality*), `settings_hash` |
+| `store` | `ProfileStore` over `<data dir>/profiles/<map_id>/{default,<chrono_id>}.toml`: atomic writes, `.bad` for unreadable files, the fallback chain `resolve` (Chrono entry, map default, global), `metrics.toml` (five sessions per Chrono key, sessions under 60 s dropped) |
+| `advice` | `MapLoadProfile` and `advise`: the tiered heuristics (thresholds are named constants calibrated on the installed maps) |
+| `static_profile` | `StaticProfiles`: counts a map on a worker thread (a sample first, then the full count) and caches it in `profiles/<map_id>/static.toml` while the tile files are unchanged |
+| `session` | `apply_on_enter` (before the drive loads: the picked profile or the fallback chain is overlaid on `GameSettings`), `track_frame_time` (after a 10 s warm-up), `finish_on_exit` and `finish_on_quit` (metrics written off the main thread, global values restored) |
+| `service`, `modal` | the view and the actions shared by the *Map configuration* modal (button on the wizard's *Where* step) and the control protocol (`profiles.list`, `advice`, `apply`, `save`, `delete`, `status`) |
+
+A map profile may only hold keys whose descriptor says `ProfileScope::Map` (`SettingDescriptor::profile`; the keys are listed in `settings_registry/builtin.rs`). `GameSettings::overlay_session` sets the profile's values in memory while `save` keeps writing the global ones, so a profile never reaches `settings.db`. `OPTS_PROFILES_DIR` moves the profile folder (tests, automation). The static counter is `opts_core::formats::map::count`.

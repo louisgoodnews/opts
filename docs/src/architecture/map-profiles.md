@@ -3,7 +3,7 @@
 | Metadata | Value |
 | :--- | :--- |
 | **Milestone** | [M-0130](../roadmap/phase-9/M-0130.md), phase A (design) |
-| **Status** | 📝 Proposed 2026-10-19 — awaiting the project lead's approval (checkpoint 1); no code written |
+| **Status** | 🟡 Design approved 2026-10-19 with the recommended answers (§7; to be adjusted after the project lead's own testing); implemented on `feat/map-profiles` (phase B), see §8 |
 | **Crates** | `opts-game` (profiles, lifecycle, modal), `opts-core` (static profiler's reader), `opts-catalogue` (cached static profile) |
 | **Related** | [Settings registry](settings-registry.md), [Settings reference](../reference/settings.md), [Home and shell](main-menu.md), [Chrono](../formats/map/chrono.md), [Map lists](../formats/map/lists.md), [Map tiles](../formats/map/tiles.md), [Lighting system](lighting-system.md) |
 
@@ -108,7 +108,7 @@ For the chosen map and date: `{map_id}/{chrono_id}.toml` → `{map_id}/default.t
 
 ### 3.4 What `chrono_id` is
 
-The resolved Chrono entry for the session's map date (rule of [chrono](../formats/map/chrono.md): the entries are dated overlays; nested entries are entries at any depth). The modal shows "Chrono entry for this date: …" next to the profile. Because some maps have an entry *per match day*, **a profile is never created per Chrono entry automatically**: the default for *Create New from Current* is the map's `default.toml`, and a Chrono-specific file is an explicit choice offered only when an entry is active. `chrono_id` is `default` when no entry covers the date.
+The **newest active Chrono entry** for the session's map date (rule of [chrono](../formats/map/chrono.md): the entries are dated overlays; nested entries are entries at any depth). Several are active at once on many maps (Berlin-Spandau has fifteen cumulative entries on a 1990s date), so the newest, the last in the order of the set, names the state of the map; the modal lists all of them. The modal shows "Chrono entry for this date: …" next to the profile. Because some maps have an entry *per match day*, **a profile is never created per Chrono entry automatically**: the default for *Create New from Current* is the map's `default.toml`, and a Chrono-specific file is an explicit choice offered only when an entry is active. `chrono_id` is `default` when no entry covers the date.
 
 ## 4. A4 — The load profiler
 
@@ -133,7 +133,7 @@ pub struct MapLoadProfile {
 
 - **Reader** (`opts-core`): a function over the bytes of a tile that counts the records `[object]`, `[spline]`, `[spline_h]` without building the tile (no strings kept, no 3D data), for UTF-16LE with BOM (13,151 of 13,938 tiles), and for UTF-8/CP1252 with the same keyword match after BOM detection (the two maps that count 0 above are of that kind and are part of the test corpus).
 - **When it runs:** in the background, inside the catalogue scan (it already visits the maps and stores `tile_count`); the three counts are stored as catalogue columns. Opening the modal is a cached read. For a map the scan has not reached, or whose files changed (mtime), the modal shows *Estimating…* and the answer arrives through the same background task; the main thread never touches the tile files ([M-0088](../roadmap/phase-9/M-0088.md)).
-- **The budget:** measured warm, a full count takes 0.01 s (small maps) to 1.07 s (`Ruhrgebiet`); the median map is 0.05 s. A map over 100 ms is counted from a **sample** (every k-th tile, k chosen to bound the work, scaled by the tile count and marked *estimated*); the acceptance test checks that the sample estimate of the five largest maps is within 10 % of the full count. Counting in the catalogue scan removes the cost from the user's path entirely; the 100 ms criterion is for the cached read and for the sample.
+- **The budget:** measured warm, a full count takes 0.01 s (small maps) to 1.07 s (`Ruhrgebiet`); the median map is 0.05 s. A map over the byte budget (24 MB of tiles, about 50 ms warm) is counted from a **sample** (every k-th tile **in order of size**, so the sample has the size mix of the map; scaled by bytes and marked *estimated*); the acceptance test (install-gated, all 47 maps) checks that the estimate stays within 15 % of the full count; measured 2026-10-19: **worst 13.9 % over the 22 maps that are sampled**, 0.3 to 19 ms per map for the sampled count. Counting in the catalogue scan removes the cost from the user's path entirely; the 100 ms criterion is for the cached read and for the sample.
 
 ### 4.3 The heuristic engine
 
@@ -192,3 +192,12 @@ Profile discovery, load, validation (unknown, out-of-range and scope-changed key
 4. **`ai_vehicle_count`:** accept `ai_pool_vehicles` (pool size) plus the traffic setting?
 5. **Thresholds:** the tiered table of §4.3 (calibrated on the 47 installed maps) instead of one 50,000 line?
 6. **Overlaid rows in the settings screen:** a user edit of an overlaid key stays in the session unless *Save to profile* is chosen (recommended).
+
+## 8. Implementation notes (phase B, 2026-10-19)
+
+* **Where things are:** `crates/opts-game/src/map_profiles/` (`profile`, `store`, `advice`, `static_profile`, `session`, `service`, `modal`, message files `messages_{en,de}.ftl`), `crates/opts-game/src/control_profiles.rs` (`profiles.*`), `opts_core::formats::map::count` (counter, sample plan, AI pool), `ProfileScope` in `settings_registry` (24 keys), `GameSettings::overlay_session` / `restore_session`.
+* **Deviation 1, the sample:** the first plan (every k-th tile by name, scaled by tile count) was off by 21.5 % on `Express 91.06`; sampling by size order and scaling by bytes brought the worst case to 13.9 %, so the tolerance is 15 %, not the 10 % of §4.2. The full count always follows in the background and is exact.
+* **Deviation 2, the cache:** the static counts are cached in `profiles/<map_id>/static.toml` (valid while the number and total size of the tile files are unchanged), not yet in the catalogue database; moving the three numbers into the catalogue scan is a follow-up, nothing in the modal changes.
+* **Deviation 3, the key of a drive** is resolved at `OnEnter(InGame)` from the plan (`NewGameSetup`), for every way of starting a drive (wizard, Home, first run, session summary), not at the wizard's *Start* button.
+* **Control protocol:** `profiles.list` (the view of the plan's map), `profiles.advice`, `profiles.apply {profile: "none" | "preset:<id>" | <name>, make_default?}`, `profiles.save {name, chrono?}`, `profiles.delete {chrono?}`, `profiles.status` (the running drive).
+* **Tests:** `map_profiles/tests.rs` (scope, presets, validation, fallback, `.bad`, metrics ring, advice tiers, the overlay never reaching the file), `static_profile` (cache and signature), `opts-core` `map::count` (encodings, sampling) and `tests/map_count_corpus.rs` (install-gated, all maps).
