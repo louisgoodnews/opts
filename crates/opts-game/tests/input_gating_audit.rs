@@ -54,6 +54,9 @@ const REVIEWED: &[&str] = &[
     "opts-game/src/hud/tests/alerts.rs",
     // F7, Shift+F7, + and - drive the mini map settings; gated with `not_modal_active`.
     "opts-game/src/hud/minimap/mod.rs",
+    // F6, Home, the mouse drag and the wheel drive the full-size map; while it is open it holds
+    // `MenuModalActive` (through `FullMapState::holds_input`), so all gated input stands still.
+    "opts-game/src/hud/fullmap/mod.rs",
     "opts-game/src/pause/mod.rs",
     "opts-game/src/shell/footer.rs",
     "opts-game/src/new_game_screen/picker_systems.rs",

@@ -85,6 +85,12 @@ pub struct TrafficState {
 }
 
 impl TrafficState {
+    /// Whether the lanes of tile `key` are in the graph (the tile is resident).
+    #[must_use]
+    pub(crate) fn has_tile(&self, key: (i32, i32)) -> bool {
+        self.segments.contains_key(&key)
+    }
+
     /// Sets the vehicles outside the traffic that the agents must stop for or drive round (the
     /// player's bus), as footprints in the session frame.
     pub(super) fn set_obstacles(&mut self, obstacles: Vec<opts_traffic::Obstacle>) {

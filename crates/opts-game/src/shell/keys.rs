@@ -208,6 +208,8 @@ keys! {
     HELP_KEY_MINIMAP = "help-key-minimap",
     /// Message `help-key-minimap-zoom`.
     HELP_KEY_MINIMAP_ZOOM = "help-key-minimap-zoom",
+    /// Message `help-key-fullmap`.
+    HELP_KEY_FULLMAP = "help-key-fullmap",
     /// Message `help-key-throttle`.
     HELP_KEY_THROTTLE = "help-key-throttle",
     /// Message `help-key-steer`.

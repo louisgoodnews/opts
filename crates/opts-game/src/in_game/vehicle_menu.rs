@@ -282,6 +282,7 @@ fn toggle_menu(
     mut cancels: MessageReader<ModalEvent>,
     mut grace: Local<u8>,
     pause: Option<Res<crate::pause::Pause>>,
+    fullmap: Option<Res<crate::hud::fullmap::FullMapState>>,
 ) {
     let mut step_back = false;
     for ModalEvent::CancelRequested(_) in cancels.read() {
@@ -316,7 +317,8 @@ fn toggle_menu(
     } else if *grace > 0 {
         *grace -= 1;
     }
-    let open = *grace > 0 || pause.is_some_and(|p| p.open);
+    let open =
+        *grace > 0 || pause.is_some_and(|p| p.open) || fullmap.is_some_and(|m| m.holds_input());
     if active.0 != open {
         active.0 = open;
     }

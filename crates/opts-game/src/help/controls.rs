@@ -51,6 +51,7 @@ const HELP: &str = "crates/opts-game/src/help/mod.rs";
 const THEME: &str = "crates/opts-game/src/shell/footer.rs";
 const DEV: &str = "crates/opts-game/src/in_game/omsi_world/overlay.rs";
 const MINIMAP: &str = "crates/opts-game/src/hud/minimap/mod.rs";
+const FULLMAP: &str = "crates/opts-game/src/hud/fullmap/mod.rs";
 const SESSION: &str = "crates/opts-game/src/session_vehicles/mod.rs";
 const QUICK_SAVE: &str = "crates/opts-game/src/save/quick.rs";
 
@@ -129,6 +130,7 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_MINIMAP_ZOOM,
                 MINIMAP,
             ),
+            bind("F6", &[KeyCode::F6], keys::HELP_KEY_FULLMAP, FULLMAP),
         ],
     ),
     (

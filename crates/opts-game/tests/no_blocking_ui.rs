@@ -73,6 +73,7 @@ const ALLOWED: &[(&str, &str, &str)] = &[
     ("home/hero.rs", "known_omsi_root(", "inside the IoTaskPool task that decodes the picture"),
     ("home/mod.rs", "DriveHistory::load", "Startup system `load_drive_history`"),
     ("home/mod.rs", ".save()", "inside the `drive-history` writer thread"),
+    ("hud/fullmap/overview.rs", "std::fs", "the `fullmap-overview` reader thread: it reads the tiles and the files they name, the game only receives the finished roads by channel"),
     ("hud/profile.rs", "std::fs", "user HUD profiles: read when the plugin is built (startup)"),
     ("hud/viewpoint.rs", ".save()", "stores the in-memory viewpoint; the file is a few hundred bytes, written on the user's click"),
     ("menu/background.rs", ".exists()", "`decode_map_picture`: called from a worker only"),

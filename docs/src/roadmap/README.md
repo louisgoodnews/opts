@@ -394,8 +394,9 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).
 - [ ] **🧰 QoL Suite** — [M-0109](phase-11/M-0109.md) — 📝 proposed 2026-10-18
   - [ ] Door camera, smooth driver view, UI scale presets 100/125/150/200 %, UI font and base font size.
-- [ ] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — 📝 proposed 2026-10-18
-  - [ ] Full-size map on M (pan, zoom, position and heading) and map switching from the Alt menu; builds on the mini map (M-0071) and sessions (M-0068/M-0069).
+- [ ] **🗺️ Full-Size In-Game Map and Map Switching** — [M-0108](phase-11/M-0108.md) — 🔄 full-size map done 2026-10-19 (key F6), map switching open
+  - [x] Full-size map on F6 (pan, zoom, position and heading); builds on the mini map (M-0071).
+  - [ ] Map switching from the Alt menu (builds on sessions M-0068/M-0069).
 - [ ] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](phase-11/M-0115.md) — 📝 proposed 2026-10-18
   - [ ] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
 - [ ] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](phase-11/M-0110.md) — 📝 proposed 2026-10-18
