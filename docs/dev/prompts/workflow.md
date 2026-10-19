@@ -25,6 +25,10 @@
 ├─────────────────────────────────────────────────────────────┤
 │  P-1010 Roadmap Review  (after each phase / every 10 merges)│
 │    └─→ Proposes new features and course corrections         │
+├─────────────────────────────────────────────────────────────┤
+│  P-1015 Refactoring Cycle (end of every dev cycle, before   │
+│    a versioned release: Phase 999)                          │
+│    └─→ Structural cleanup without behaviour change          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -53,6 +57,7 @@
 - **Plan and review only:** P-000 → P-002 → P-003.
 - **Implementation only (plan already approved):** P-000 → P-004 → P-005 → P-006.
 - **Roadmap housekeeping only:** P-000 → P-006.
+- **Refactoring cycle:** P-000 → [P-1015](process/P-1015-refactoring-cycle.md) at the end of every development cycle and before every versioned release ([Phase 999](../../src/roadmap/phase-999/README.md)); it changes structure, never behaviour.
 - **Roadmap review:** P-000 → [P-1010](process/P-1010-roadmap-review.md) after each phase closes, after every 10 merged milestones, or on request. It only proposes; approved suggestions then go through P-002 and P-006.
 
 ### When Something Goes Wrong

@@ -153,6 +153,12 @@ _Work that cannot proceed until a dependency is resolved._
 
 ### 📚 Backlog
 
+- [ ] 🟠 **Structure audit tool and baseline** (M-0125, Phase 999, tooling) — `scripts/structure_audit.py`, the baseline report and the ratchet in `local-ci.sh`; [M-0125](../src/roadmap/phase-999/M-0125.md). Phase 999 runs at the end of every development cycle before a versioned release; proposed 2026-10-19.
+- [ ] 🟠 **Refactoring cycle protocol and release gate** (M-0126, Phase 999, process) — template, prompt P-1015, release-gate checklist; [M-0126](../src/roadmap/phase-999/M-0126.md).
+- [ ] 🟡 **Refactoring cycle 1, batches 1 and 2: low- and medium-risk splits** (M-0127, Phase 999) — [M-0127](../src/roadmap/phase-999/M-0127.md); needs a quiet tree.
+- [ ] 🟡 **Refactoring cycle 1, batches 3 and 4: high-risk splits and structural cleanup** (M-0128, Phase 999) — [M-0128](../src/roadmap/phase-999/M-0128.md).
+- [ ] 🟢 **Refactoring cycle 1, batch 5: crate-level decisions (ADRs)** (M-0129, Phase 999) — [M-0129](../src/roadmap/phase-999/M-0129.md).
+
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Open milestones without work items yet (added by the roadmap audit 2026-10-18, M-0074)

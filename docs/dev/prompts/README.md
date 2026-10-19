@@ -35,6 +35,7 @@ as a deprecated pointer; the prompt texts here are unchanged apart from a metada
 | ID | Prompt |
 | :--- | :--- |
 | P-1010 | [Roadmap Review](process/P-1010-roadmap-review.md) |
+| P-1015 | [Refactoring Cycle](process/P-1015-refactoring-cycle.md) |
 
 ## Planned (not yet written)
 

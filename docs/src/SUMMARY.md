@@ -119,6 +119,13 @@
   - [M-0124: Passenger Load Physics](roadmap/phase-12/M-0124.md)
   - [M-0123: Fuel and Battery State](roadmap/phase-12/M-0123.md)
   - [M-0122: Graphics Overhaul](roadmap/phase-12/M-0122.md)
+- [Phase 999: Refactoring Taskforce (continuous)](roadmap/phase-999/README.md)
+  - [M-0125: Structure Audit Tool and Baseline](roadmap/phase-999/M-0125.md)
+  - [M-0126: Refactoring Cycle Protocol and Release Gate](roadmap/phase-999/M-0126.md)
+  - [M-0127: Cycle 1, Batches 1 and 2](roadmap/phase-999/M-0127.md)
+  - [M-0128: Cycle 1, Batches 3 and 4](roadmap/phase-999/M-0128.md)
+  - [M-0129: Cycle 1, Batch 5: Crate-Level Decisions](roadmap/phase-999/M-0129.md)
+  - [Cycle template](roadmap/phase-999/CYCLE-TEMPLATE.md)
 
 ---
 
