@@ -57,4 +57,3 @@ crates/opts-sim/src/script/inputs.rs 751  # planned: refactoring cycle 1 (M-0127
 crates/opts-sim/src/vehicle/mod.rs 974  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-tools/src/l10n.rs 697  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-traffic/src/agent.rs 1957  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-traffic/src/source.rs 547  # planned: refactoring cycle 1 (M-0127, M-0128)
