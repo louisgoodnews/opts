@@ -372,16 +372,18 @@ impl RouteHandle {
     }
 
     /// Sets the clock the delay is measured against (s after midnight) and recomputes the delay
-    /// of a followed timetable: now minus the scheduled arrival at the current stop (0 in free
-    /// driving).
+    /// of a followed timetable: now minus the scheduled arrival at the current stop, wrapped to
+    /// within 12 hours (0 in free driving).
     pub fn set_clock(&self, seconds_of_day: f32) {
         self.with_mut(|s| {
             let stop = s.stop_index;
             s.delay_s = match &s.schedule {
-                Some(sc) => sc
-                    .stops
-                    .get(stop)
-                    .map_or(0.0, |x| seconds_of_day - x.arrival_s),
+                Some(sc) => sc.stops.get(stop).map_or(0.0, |x| {
+                    // Times wrap at 24 h: a run that starts at 23:50 and a clock at 00:10 are
+                    // 20 minutes apart, not 23 h 40 min.
+                    let d = seconds_of_day - x.arrival_s;
+                    (d + 43_200.0).rem_euclid(86_400.0) - 43_200.0
+                }),
                 None => 0.0,
             };
         });

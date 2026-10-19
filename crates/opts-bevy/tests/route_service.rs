@@ -265,6 +265,21 @@ Ponttor
     }
 
     #[test]
+    fn the_delay_wraps_at_midnight() {
+        let route = handle();
+        route.select_run("33", 0, 0).expect("run");
+        // The run's first stop is at 08:00; a clock at 08:00 the next day is on time, 23:50 the
+        // evening before is 8 h 10 min early (not 15 h 50 min late).
+        route.set_clock(8.0 * 3600.0);
+        assert_eq!(route.with(|s| s.delay_s), 0.0);
+        route.set_clock(23.0 * 3600.0 + 50.0 * 60.0);
+        assert_eq!(
+            route.with(|s| s.delay_s),
+            15.0 * 3600.0 + 50.0 * 60.0 - 86_400.0
+        );
+    }
+
+    #[test]
     fn unknown_runs_and_maps_without_timetables_are_refused() {
         let route = handle();
         assert!(matches!(

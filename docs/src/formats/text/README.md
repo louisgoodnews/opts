@@ -6,7 +6,7 @@ OMSI's configuration formats are plain text. Most use the same keyword grammar: 
 | :--- | :--- |
 | Objects and splines | [`.sco`](sco.md), [`.sli`](sli.md), [audit](sco-sli-audit.md), [texture property files](texture-cfg.md) |
 | Vehicles | [`.bus`](vehicles/bus.md), [`.cfg`](cfg.md), [`model.cfg`](vehicles/model_cfg.md), [paths](vehicles/paths_cfg.md), [passenger cabin](vehicles/passengercabin_cfg.md), [sound](vehicles/sound_cfg.md) |
-| Transit data | [`.hof`](vehicles/hof.md), [`.org`](org.md) |
+| Transit data | [`.hof`](vehicles/hof.md), [timetables](timetable.md), [`.org`](org.md) |
 | Scripts | [`.osc`](vehicles/osc.md), [variable lists](vehicles/varnamelist.md), [constant files](vehicles/const.md), [audit](vehicles/vehicle-corpus-audit.md) |
 | Everything else | [misc. types](misc-types.md) |
 | Map files | [map & scenario files](../map/global-cfg.md) |

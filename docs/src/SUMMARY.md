@@ -238,6 +238,7 @@
   - [Money Systems](formats/text/money.md)
   - [Fonts](formats/text/fonts.md)
   - [`.hof` — Bus Stops & Routes](formats/text/vehicles/hof.md)
+  - [Timetables — `TTData`](formats/text/timetable.md)
   - [`.org` — Number Lists](formats/text/org.md)
   - [`.hum` — Human Characters](formats/text/humans.md)
   - [Misc. Extension Types](formats/text/misc-types.md)

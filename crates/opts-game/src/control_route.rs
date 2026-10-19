@@ -119,6 +119,11 @@ fn timetables(world: &mut World, params: &Value) -> Outcome {
 }
 
 fn set_timetable(world: &mut World, params: &Value) -> Outcome {
+    set_timetable_impl(world, params).map_or_else(Outcome::err, Outcome::ok)
+}
+
+/// `bus.set_timetable` as a function: the vehicle menu calls it too.
+pub(crate) fn set_timetable_impl(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     (|| {
         let clear = opt_bool(params, "clear")?.unwrap_or(false);
         let line = opt_str(params, "line")?.map(str::to_string);
@@ -158,7 +163,6 @@ fn set_timetable(world: &mut World, params: &Value) -> Outcome {
             Err(e) => Err(RpcError::invalid_params(e.to_string())),
         }
     })()
-    .map_or_else(Outcome::err, Outcome::ok)
 }
 
 fn set_stop(world: &mut World, params: &Value) -> Outcome {
@@ -248,6 +252,11 @@ fn get_route(world: &mut World, _: &Value) -> Outcome {
 }
 
 fn set_route(world: &mut World, params: &Value) -> Outcome {
+    set_route_impl(world, params).map_or_else(Outcome::err, Outcome::ok)
+}
+
+/// `bus.set_route` as a function: the vehicle menu calls it too.
+pub(crate) fn set_route_impl(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     (|| {
         let clear = opt_bool(params, "clear")?.unwrap_or(false);
         let code_param = opt_u64(params, "route_code")?;
@@ -263,8 +272,8 @@ fn set_route(world: &mut World, params: &Value) -> Outcome {
                 ))
             }
         };
-        let mut q = world
-            .query_filtered::<(&mut VehicleRoute, &VehicleScripts), With<PlayerVehicle>>();
+        let mut q =
+            world.query_filtered::<(&mut VehicleRoute, &VehicleScripts), With<PlayerVehicle>>();
         let Some((mut route, scripts)) = q.iter_mut(world).next() else {
             return Err(RpcError::new(
                 code::NOT_READY,
@@ -297,5 +306,4 @@ fn set_route(world: &mut World, params: &Value) -> Outcome {
             Err(e) => Err(RpcError::invalid_params(e.to_string())),
         }
     })()
-    .map_or_else(Outcome::err, Outcome::ok)
 }

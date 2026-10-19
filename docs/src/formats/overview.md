@@ -38,6 +38,7 @@ Specs are derived from black-box observation of the files and from public docume
 | [`.bus`](text/vehicles/bus.md), [`.cfg`](text/cfg.md) | vehicle definitions |
 | [`model.cfg`](text/vehicles/model_cfg.md), [paths](text/vehicles/paths_cfg.md), [passenger cabin](text/vehicles/passengercabin_cfg.md), [sound](text/vehicles/sound_cfg.md) | vehicle sub-configurations |
 | [`.hof`](text/vehicles/hof.md) | destinations, stops, routes |
+| [`Busstops.cfg`, `.ttl`, `.ttp`, `.ttr`](text/timetable.md) | timetables: stop list, lines and tours, trips with timing profiles, tracks |
 | [`.osc`](text/vehicles/osc.md), [variable lists](text/vehicles/varnamelist.md), [constant files](text/vehicles/const.md) | scripts |
 | [Predefined variables & callbacks](text/vehicles/predefined-variables.md), [script sets](text/vehicles/script-sets.md), [scenery scripts](text/scenery-scripts.md) | the engine-side script vocabulary and how real vehicles/scenery organise their scripts |
 | [Repaints](text/repaints.md) | `[CTC]`, `[CTCTexture]`, `.cti` item lists, `.rpc` templates |
