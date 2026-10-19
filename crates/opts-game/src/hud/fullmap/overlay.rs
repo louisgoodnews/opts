@@ -1,5 +1,6 @@
 //! The overlay of the full-size map: root, texture node, caption, scale bar and keys.
 
+use super::draw::FullMapImage;
 use super::viewport::scale_bar_m;
 use super::*;
 
@@ -160,12 +161,7 @@ pub fn overlay(
             t.instrument(*variant)
         });
     if existing.is_none() {
-        let ground = Color::srgba_u8(
-            colors_of(&palette).ground[0],
-            colors_of(&palette).ground[1],
-            colors_of(&palette).ground[2],
-            255,
-        );
+        let ground = palette.panel;
         spawn_overlay(&mut commands, &palette, ground);
         return;
     }

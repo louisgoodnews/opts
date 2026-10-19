@@ -212,7 +212,7 @@ mod thinning_tests {
             line((0.0, 50.0), (1.0, 50.0)),
             line((0.0, 80.0), (100.0, 80.0)),
         ];
-        super::super::thin_lines(&mut lines, 0.5);
+        super::super::draw::thin_lines(&mut lines, 0.5);
         assert_eq!(lines.len(), 2, "{lines:?}");
     }
 }

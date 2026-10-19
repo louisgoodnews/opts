@@ -32,7 +32,7 @@ use opts_gui::prelude::*;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
 use self::overview::OverviewRoads;
-use self::viewport::{canvas_px, wheel_factor, Viewport};
+use self::viewport::{wheel_factor, Viewport};
 use super::keys;
 use super::minimap::{
     colors_of, pose_of, push_chords, raster, Canvas, FixtureRoads, MapLine, MapMarker, MapSource,
@@ -165,13 +165,8 @@ impl FullMapState {
     }
 }
 
-/// The texture's drawing buffer (kept between redraws).
-#[derive(Resource, Default)]
-pub struct FullMapCanvas(Option<Canvas>);
-
-/// The image the surface shows.
-#[derive(Resource, Default)]
-pub struct FullMapImage(Option<Handle<Image>>);
+mod draw;
+pub use draw::{redraw, FullMapCanvas, FullMapImage};
 
 mod overlay;
 pub use overlay::{
@@ -335,184 +330,6 @@ pub fn follow(
             state.viewport.centre = pos;
         }
     }
-}
-
-/// Redraws the map: at once after a change of the view, while a vehicle moves at most ten times
-/// a second, otherwise twice a second.
-#[allow(clippy::too_many_arguments)]
-pub fn redraw(
-    time: Res<Time<Real>>,
-    mut state: ResMut<FullMapState>,
-    mut canvas: ResMut<FullMapCanvas>,
-    mut handle: ResMut<FullMapImage>,
-    mut images: ResMut<Assets<Image>>,
-    variant: Res<InstrumentVariant>,
-    theme: Option<Res<MaterialTheme>>,
-    vehicles: Query<(
-        &GlobalTransform,
-        Option<&SessionVehicle>,
-        Has<PlayerVehicle>,
-    )>,
-    cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
-    traffic: Option<Res<TrafficState>>,
-    fixture: Option<Res<FixtureRoads>>,
-    mut overview: ResMut<OverviewRoads>,
-) {
-    overview.poll();
-    state.since += time.delta_secs();
-    let mut markers: Vec<(DVec2, f32, bool)> = Vec::new();
-    for (t, session, is_player) in &vehicles {
-        if session.is_some() || is_player {
-            let (pos, heading) = pose_of(t);
-            markers.push((pos, heading, is_player));
-        }
-    }
-    if !markers.iter().any(|m| m.2) {
-        if let Some(t) = cameras.iter().next() {
-            let (pos, heading) = pose_of(t);
-            markers.push((pos, heading, true));
-        }
-    }
-    let screen = state.screen;
-    let side = canvas_px(screen);
-    let resized = canvas.0.as_ref().is_none_or(|c| c.size != side) || handle.0.is_none();
-    let view_changed = state.drawn_generation != overview.generation
-        || state
-            .drawn
-            .as_ref()
-            .is_none_or(|(v, _)| *v != state.viewport);
-    let markers_moved = state.drawn.as_ref().is_none_or(|(_, old)| {
-        old.len() != markers.len()
-            || old
-                .iter()
-                .zip(&markers)
-                .any(|(a, b)| a.0.distance(b.0) > 0.05 || (a.1 - b.1).abs() > 0.01 || a.2 != b.2)
-    });
-    let due = resized
-        || state.immediate
-        || (view_changed && state.since >= MOVING_INTERVAL_S)
-        || (markers_moved && state.since >= MOVING_INTERVAL_S)
-        || state.since >= IDLE_INTERVAL_S;
-    if !due {
-        return;
-    }
-    let started = std::time::Instant::now();
-    let colors = colors_of(
-        theme
-            .as_ref()
-            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-                t.instrument(*variant)
-            }),
-    );
-    if resized {
-        let c = Canvas::new(side, colors.ground);
-        let image = Image::new(
-            Extent3d {
-                width: side,
-                height: side,
-                depth_or_array_layers: 1,
-            },
-            TextureDimension::D2,
-            c.data.clone(),
-            TextureFormat::Rgba8UnormSrgb,
-            RenderAssetUsages::default(),
-        );
-        handle.0 = Some(images.add(image));
-        canvas.0 = Some(c);
-        state.texture_px = side;
-    }
-    let (Some(canvas), Some(handle)) = (canvas.0.as_mut(), handle.0.as_ref()) else {
-        return;
-    };
-    state.since = 0.0;
-    state.immediate = false;
-
-    let viewport = state.viewport;
-    let radius_m = viewport.canvas_radius_m(screen);
-    let view = MapView {
-        radius_m: radius_m as f32,
-        up_heading: 0.0,
-    };
-    let mut roads = Vec::new();
-    let reach = radius_m * std::f64::consts::SQRT_2;
-    if let Some(t) = &traffic {
-        t.roads_near(viewport.centre, reach, &mut roads);
-    }
-    // Tiles that are not resident come from the overview of the whole map.
-    overview.roads_near(
-        viewport.centre,
-        reach,
-        |key| traffic.as_ref().is_some_and(|t| t.has_tile(key)),
-        &mut roads,
-    );
-    if let Some(f) = &fixture {
-        f.roads_near(viewport.centre, reach, &mut roads);
-    }
-    let px_per_m = f64::from(canvas.size) / 2.0 / radius_m;
-    // Chords of at least six pixels: the large canvas has many arcs, and a six-pixel chord is
-    // still within a fifth of a pixel of the arc (this keeps a redraw near the 2 ms budget).
-    let min_chord = MIN_CHORD_PX / px_per_m;
-    let mut lines: Vec<MapLine> = Vec::with_capacity(roads.len() * 2);
-    for road in &roads {
-        push_chords(road, viewport.centre, min_chord, &mut lines);
-    }
-    thin_lines(&mut lines, px_per_m as f32);
-    let drawn_markers: Vec<MapMarker> = markers
-        .iter()
-        .map(|(p, h, active)| MapMarker {
-            pos: Vec2::new(
-                (p.x - viewport.centre.x) as f32,
-                (p.y - viewport.centre.y) as f32,
-            ),
-            heading: *h,
-            active: *active,
-        })
-        .collect();
-    raster::render_with_unit(
-        canvas,
-        view,
-        &lines,
-        &drawn_markers,
-        &colors,
-        MARKER_UNIT,
-        false,
-    );
-    if let Some(mut image) = images.get_mut(handle) {
-        match image.data.as_mut() {
-            Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),
-            _ => image.data = Some(canvas.data.clone()),
-        }
-    }
-    let us = started.elapsed().as_micros() as u64;
-    state.frames += 1;
-    state.last_us = us;
-    state.worst_us = state.worst_us.max(us);
-    state.lines = lines.len();
-    state.markers = drawn_markers.len();
-    state.drawn = Some((viewport, markers));
-    state.drawn_generation = overview.generation;
-}
-
-/// Leaves out what cannot be seen: chords shorter than a pixel, and a chord that another one
-/// already covers at the pixel level (the two lanes of a street, or two paths over each other, once
-/// the map is zoomed out). The whole map has thousands of chords; this keeps a redraw cheap.
-pub(super) fn thin_lines(lines: &mut Vec<MapLine>, px_per_m: f32) {
-    let mut seen = std::collections::HashSet::with_capacity(lines.len());
-    lines.retain(|l| {
-        let len_px = (l.b - l.a).length() * px_per_m;
-        if len_px < 1.0 {
-            return false;
-        }
-        // Half-pixel cells; the two ends in a fixed order, so both directions of a lane match.
-        let q = |p: Vec2| {
-            (
-                (p.x * px_per_m * 2.0).round() as i32,
-                (p.y * px_per_m * 2.0).round() as i32,
-            )
-        };
-        let (a, b) = (q(l.a), q(l.b));
-        seen.insert(if a <= b { (a, b) } else { (b, a) })
-    });
 }
 
 /// Registers the resources and systems of the full-size map.
