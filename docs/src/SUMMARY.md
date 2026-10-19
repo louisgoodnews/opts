@@ -143,6 +143,7 @@
 - [Overview](architecture/overview.md)
 - [Crate Structure](architecture/crate-structure.md)
 - [Crate Dependency Graph](architecture/crate-graph.md)
+- [Refactoring Plan, Cycle 1](architecture/refactoring-plan.md)
 - [Coordinate Systems](architecture/coordinates.md)
 - [Text Textures](architecture/text-textures.md)
 - [Bevy 0.20 and DLSS Strategy](architecture/bevy-0-20-dlss.md)
