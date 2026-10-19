@@ -130,13 +130,22 @@ fn fixture() -> Fixture {
         app.update();
     }
     // The drop-down is operated through its header, the part that carries the id in the tree.
-    let header = app
-        .world_mut()
-        .query::<(Entity, &opts_gui::components::combobox::ComboboxHeader)>()
-        .iter(app.world())
-        .next()
-        .map(|(e, _)| e)
-        .expect("combobox header");
+    // The header of the Weather combo box (not just the first header: the order of a query is
+    // not part of its contract).
+    let weather_header = {
+        let world = app.world_mut();
+        let headers: Vec<(Entity, Entity)> = world
+            .query::<(Entity, &opts_gui::components::combobox::ComboboxHeader)>()
+            .iter(world)
+            .map(|(e, h)| (e, h.0))
+            .collect();
+        headers.into_iter().find(|(_, root)| {
+            world
+                .get::<opts_gui::components::combobox::M3Combobox>(*root)
+                .is_some_and(|c| c.options.iter().any(|o| o == "Sunny"))
+        })
+    };
+    let header = weather_header.map(|(e, _)| e).expect("combobox header");
     app.world_mut()
         .entity_mut(header)
         .insert(UiId::new("opt.weather"));
