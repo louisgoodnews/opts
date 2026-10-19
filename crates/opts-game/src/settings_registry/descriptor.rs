@@ -133,6 +133,18 @@ pub enum Apply {
     WithRevert(u32),
 }
 
+/// Whether a setting may differ per map (`docs/src/architecture/map-profiles.md` §1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum ProfileScope {
+    /// The person's or the machine's: never in a map profile.
+    #[default]
+    Global,
+    /// Changes performance or the simulated content of a map: a map profile may set it.
+    Map,
+    /// Defines the simulation itself: never in a map profile.
+    Locked,
+}
+
 /// Whether a setting can be used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Available {
@@ -176,6 +188,8 @@ pub struct SettingDescriptor {
     /// Kept out of the page and the search (internal state such as the last map); still
     /// available to the control protocol and the generated reference.
     pub hidden: bool,
+    /// Whether a map profile may set it (default [`ProfileScope::Global`]).
+    pub profile: ProfileScope,
 }
 
 impl SettingDescriptor {
@@ -204,6 +218,7 @@ impl SettingDescriptor {
             since: "0.1",
             migrate_from: &[],
             hidden: false,
+            profile: ProfileScope::Global,
         }
     }
 
@@ -239,6 +254,13 @@ impl SettingDescriptor {
     #[must_use]
     pub const fn migrate_from(mut self, keys: &'static [&'static str]) -> Self {
         self.migrate_from = keys;
+        self
+    }
+
+    /// Lets a map profile set the key.
+    #[must_use]
+    pub const fn profile(mut self, scope: ProfileScope) -> Self {
+        self.profile = scope;
         self
     }
 

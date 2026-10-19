@@ -757,9 +757,48 @@ fn minimap() -> Vec<D> {
     ]
 }
 
+/// The keys a map profile may set: they change performance or the simulated content of a map
+/// (map-profiles design §1). Everything else is the person's or the machine's.
+const MAP_PROFILE_KEYS: &[&str] = &[
+    "graphics.view_distance",
+    "graphics.water",
+    "graphics.weather_fog",
+    "graphics.weather_clouds",
+    "graphics.weather_precipitation",
+    "graphics.weather_wet_ground",
+    "graphics.light_quality_mode",
+    "graphics.light_shafts",
+    "graphics.light_night_shafts",
+    "graphics.light_lantern_cones",
+    "graphics.light_headlight_cones",
+    "graphics.light_cone_cap",
+    "graphics.light_cone_depth_fade",
+    "graphics.light_governor_target_fps",
+    "graphics.mirror_count",
+    "graphics.mirror_rate",
+    "graphics.glass_reflections",
+    "graphics.bloom",
+    "texture_filtering",
+    "gameplay.traffic",
+    "gameplay.pedestrians",
+    "gameplay.load_all_tiles",
+    "gameplay.tile_radius",
+    "advanced.streaming_budget_ms",
+];
+
 /// Every built-in descriptor.
 #[must_use]
 pub fn all() -> Vec<D> {
+    let mut v = all_unscoped();
+    for d in &mut v {
+        if MAP_PROFILE_KEYS.contains(&d.key) {
+            d.profile = super::descriptor::ProfileScope::Map;
+        }
+    }
+    v
+}
+
+fn all_unscoped() -> Vec<D> {
     let mut v = graphics();
     v.extend(super::lighting::descriptors());
     v.extend(interface());

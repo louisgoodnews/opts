@@ -28,6 +28,7 @@ pub mod in_game;
 pub mod isolation;
 pub mod language_packs;
 pub mod look;
+pub mod map_profiles;
 pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
