@@ -265,7 +265,7 @@ impl Plugin for InGamePlugin {
 
 /// Initializes simulation resources and spawns the loading screen on entering [`AppState::InGame`].
 #[allow(clippy::too_many_arguments)]
-fn setup_in_game_session(
+pub(crate) fn setup_in_game_session(
     mut commands: Commands,
     mut load_state: ResMut<SimulationLoadState>,
     mut session: ResMut<InGameSessionInfo>,

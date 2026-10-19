@@ -98,6 +98,7 @@ impl Plugin for OptsGamePlugin {
         app.init_state::<AppState>()
             .add_plugins(OptsGuiPlugin)
             .add_plugins(settings_registry::SettingsRegistryPlugin)
+            .add_plugins(map_profiles::MapProfilesPlugin)
             .add_plugins(hardware::HardwarePlugin)
             .add_plugins(vehicle_keys::VehicleKeysPlugin)
             .add_plugins(shell::ShellPlugin)
