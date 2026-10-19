@@ -29,10 +29,11 @@ const ELEMENTS: [&str; 5] = [
     "hud.slot.camera-label",
 ];
 
-/// The viewpoint editor's panel needs this much layout height (68 px from the top, about 350 px
-/// tall) and its width: smaller layout areas are too small for the editor itself.
+/// The viewpoint editor's panel needs this much layout height (68 px from the top, about 360 px
+/// tall with its subtitle filled in, a toast of 48 px below it with its gaps) and its width:
+/// smaller layout areas are too small for the editor itself.
 fn editor_fits(logical: Vec2) -> bool {
-    logical.x >= 640.0 && logical.y >= 470.0
+    logical.x >= 640.0 && logical.y >= 500.0
 }
 
 fn check(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> Vec<String> {
