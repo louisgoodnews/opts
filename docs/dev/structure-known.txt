@@ -34,7 +34,6 @@ crates/opts-game/src/settings_registry/builtin.rs 774  # planned: refactoring cy
 crates/opts-game/src/settings_registry/tests.rs 601  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_screen/page.rs 577  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_screen/rows.rs 574  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/settings_screen/scan_status.rs 517  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_screen/tests.rs 911  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/tests/control_protocol.rs 1061  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/tests/loading_tests.rs 571  # planned: refactoring cycle 1 (M-0127, M-0128)
