@@ -84,6 +84,14 @@ pub struct TrafficState {
     road_length_m: f64,
 }
 
+impl TrafficState {
+    /// Sets the vehicles outside the traffic that the agents must stop for or drive round (the
+    /// player's bus), as footprints in the session frame.
+    pub(super) fn set_obstacles(&mut self, obstacles: Vec<opts_traffic::Obstacle>) {
+        self.world.set_obstacles(obstacles);
+    }
+}
+
 impl Default for TrafficState {
     fn default() -> Self {
         Self {
@@ -974,6 +982,40 @@ pub fn move_traffic(
         state.world.step(dt / steps);
     }
     state.world.drain_events();
+    if std::env::var_os("OPTS_DBG_OBSTACLES").is_some() {
+        tracing::info!(
+            obstacles = state.world.obstacles().len(),
+            lanes_blocked = state.world.phantom_count(),
+            agents = state.world.agents().len(),
+            lanes = state.world.graph().len(),
+            "traffic obstacles"
+        );
+        for a in state.world.agents() {
+            let Some((pos, h)) = a.pose(state.world.graph()) else {
+                continue;
+            };
+            for o in state.world.obstacles() {
+                let d = pos.distance(o.centre);
+                if d < 25.0 {
+                    tracing::info!(
+                        id = a.id.0,
+                        lane = a.lane.0,
+                        s = a.s,
+                        speed = a.speed,
+                        accel = a.accel,
+                        waiting = a.waiting_s,
+                        ignore_until = a.ignore_conflicts_until,
+                        dist = d,
+                        heading = h,
+                        agent_at = ?pos,
+                        bus_at = ?o.centre,
+                        bus_len = o.length,
+                        "agent near obstacle"
+                    );
+                }
+            }
+        }
+    }
     let cam = camera.single().ok().map(GlobalTransform::translation);
     let mut far = Vec::new();
     for (entity, mut v, mut transform, mut visibility, chain) in &mut vehicles {

@@ -138,6 +138,9 @@ pub struct Agent {
     /// No new lane change before this world time; next evaluation time.
     pub(crate) lc_cooldown_until: f64,
     pub(crate) lc_next_check: f64,
+    /// A phantom standing for a vehicle outside the traffic ([`crate::obstacles`]): only exists
+    /// during a step.
+    pub(crate) foreign: bool,
 }
 
 impl Agent {
@@ -276,6 +279,10 @@ pub struct TrafficWorld {
     signals: HashMap<SignalKey, SignalProgram>,
     /// Speed limit (m/s) assumed on lanes without one.
     open_road_speed: f64,
+    /// Vehicles outside the traffic ([`crate::obstacles`]).
+    pub(crate) obstacles: Vec<crate::obstacles::Obstacle>,
+    /// Phantom agents of the last step (diagnostics).
+    pub(crate) last_phantoms: usize,
 }
 
 impl TrafficWorld {
@@ -292,6 +299,8 @@ impl TrafficWorld {
             clock_base: 0.0,
             signals: HashMap::new(),
             open_road_speed: crate::idm::OPEN_ROAD_SPEED,
+            obstacles: Vec::new(),
+            last_phantoms: 0,
         }
     }
 
@@ -550,6 +559,9 @@ impl TrafficWorld {
 
     /// Extends agent `i`'s plan until it covers [`PLAN_HORIZON_M`] of road (or runs out).
     pub(crate) fn extend_plan(&mut self, i: usize) {
+        if self.agents[i].foreign {
+            return;
+        }
         loop {
             let a = &self.agents[i];
             let Some(lane) = self.graph.lane(a.lane) else {
@@ -599,7 +611,7 @@ impl TrafficWorld {
                 && o.s - o.params.length - params.min_gap < s
                 && s - params.length - params.min_gap < o.s
         });
-        if clash {
+        if clash || self.blocked_by_obstacle(lane, s, params.length + params.min_gap) {
             return Err(SpawnError::Occupied);
         }
         let id = AgentId(self.next_id);
@@ -630,6 +642,7 @@ impl TrafficWorld {
             lc_due: None,
             lc_cooldown_until: 0.0,
             lc_next_check: self.time + (id.0 % 10) as f64 * 0.1,
+            foreign: false,
         });
         let last = self.agents.len() - 1;
         self.extend_plan(last);
@@ -799,9 +812,10 @@ impl TrafficWorld {
         held: &[bool],
     ) -> Option<f64> {
         let a = &self.agents[i];
-        if a.ignore_conflicts_until > self.time {
-            return None;
-        }
+        // The deadlock breaker lets a vehicle drive on through *other traffic* it waits for
+        // (cyclic waits, ghosts); a vehicle outside the traffic (the player's bus) is a body
+        // that is really there and is never driven through.
+        let ignoring = a.ignore_conflicts_until > self.time;
         let mut best: Option<f64> = None;
         for &(lane_id, offset) in look {
             if offset > CONFLICT_LOOKAHEAD_M {
@@ -821,6 +835,9 @@ impl TrafficWorld {
                             return false;
                         }
                         let b = &self.agents[j];
+                        if ignoring && !b.foreign {
+                            return false;
+                        }
                         let inside = b.s > c.other_enter && b.s - b.params.length < c.other_exit;
                         let gap_b = c.other_enter - b.s;
                         if !inside && (held[j] || !(0.0..=CONFLICT_LOOKAHEAD_M).contains(&gap_b)) {
@@ -873,6 +890,7 @@ impl TrafficWorld {
         for i in 0..self.agents.len() {
             self.extend_plan(i);
         }
+        self.add_phantoms();
         let mut by_lane = self.agents_by_lane();
         // One lane change per step at most; the lists are rebuilt when it happened.
         if self.lane_change_pass(&by_lane) {
@@ -897,7 +915,7 @@ impl TrafficWorld {
         let mut accels = Vec::with_capacity(self.agents.len());
         let mut blocked = vec![false; self.agents.len()];
         for (i, a) in self.agents.iter().enumerate() {
-            if self.graph.lane(a.lane).is_none() {
+            if a.foreign || self.graph.lane(a.lane).is_none() {
                 accels.push(0.0);
                 continue;
             }
@@ -930,6 +948,9 @@ impl TrafficWorld {
             .map(|(a, &acc)| (a.speed.max(a.speed + acc * dt) + MAX_GLIDE_SPEED) * dt)
             .collect();
         for (a, &acc) in self.agents.iter_mut().zip(&accels) {
+            if a.foreign {
+                continue;
+            }
             let v1 = a.speed + acc * dt;
             if v1 < 0.0 {
                 a.s += if acc < 0.0 {
@@ -989,10 +1010,13 @@ impl TrafficWorld {
         let mut k = 0;
         for (id, t) in ids.into_iter().zip(travel) {
             if self.agents.get(k).is_some_and(|a| a.id == id) {
-                self.update_axles(k, t);
+                if !self.agents[k].foreign {
+                    self.update_axles(k, t);
+                }
                 k += 1;
             }
         }
+        self.remove_phantoms();
     }
 
     /// Moves agents that passed the end of their lane onto the next one.
@@ -1001,6 +1025,9 @@ impl TrafficWorld {
         while i < self.agents.len() {
             loop {
                 let a = &self.agents[i];
+                if a.foreign {
+                    break;
+                }
                 let Some(len) = self.graph.lane(a.lane).map(|l| l.length()) else {
                     break;
                 };
@@ -1976,5 +2003,162 @@ mod tests {
             w.agent(id).map(|a| (a.lane, a.s.to_bits()))
         };
         assert_eq!(run(), run());
+    }
+
+    // --- vehicles outside the traffic (the player's bus) -----------------------------------------
+
+    use crate::obstacles::Obstacle;
+
+    /// A bus standing across lane 0 at `y`, heading north.
+    fn bus_at(x: f64, y: f64) -> Obstacle {
+        Obstacle {
+            centre: DVec2::new(x, y),
+            heading: 0.0,
+            length: 12.0,
+            width: 2.55,
+            velocity: DVec2::ZERO,
+        }
+    }
+
+    #[test]
+    fn a_car_stops_behind_a_standing_vehicle_on_its_lane_and_phantoms_do_not_show() {
+        let mut w = world(&[straight(0.0, 800.0)]);
+        w.set_obstacles(vec![bus_at(0.0, 200.0)]); // rear end at y = 194
+        let id = w
+            .spawn(LaneId(0), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        for _ in 0..600 {
+            w.step(0.1);
+            assert!(w.agents().iter().all(|a| !a.foreign), "a phantom leaked");
+        }
+        let a = w.agent(id).unwrap();
+        assert!(a.speed < 0.1, "it still drives at {} m/s", a.speed);
+        // Its front bumper stays short of the bus' rear end by about the minimum gap.
+        assert!(
+            a.s < 194.0 - 0.5,
+            "front bumper at {} m touches the bus",
+            a.s
+        );
+        assert!(a.s > 194.0 - 6.0, "it stopped far too early at {} m", a.s);
+    }
+
+    #[test]
+    fn a_car_changes_to_a_free_lane_round_a_standing_vehicle() {
+        let mut w = two_lanes();
+        w.set_obstacles(vec![bus_at(0.0, 300.0)]);
+        let id = w
+            .spawn(LaneId(0), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        let mut changed = false;
+        let mut worst = 0.0f64;
+        for _ in 0..500 {
+            w.step(0.1);
+            worst = worst.min(w.agent(id).map_or(0.0, |a| a.accel));
+            changed |= w
+                .drain_events()
+                .iter()
+                .any(|e| matches!(e, TrafficEvent::LaneChanged { id: i, .. } if *i == id));
+        }
+        assert!(changed, "the car never changed lanes");
+        let a = w.agent(id).unwrap();
+        assert!(a.s > 330.0, "it did not get past the bus: s = {}", a.s);
+        assert!(worst > -4.5, "it braked at {worst} m/s²");
+    }
+
+    #[test]
+    fn a_vehicle_next_to_the_lane_does_not_block_it() {
+        let mut w = world(&[straight(0.0, 800.0)]);
+        // 3.4 m beside the lane: the bus' side is 2.1 m from the lane's centre line, the car's
+        // half width 0.95 m: it passes with room to spare.
+        w.set_obstacles(vec![bus_at(3.4, 200.0)]);
+        let id = w
+            .spawn(LaneId(0), 30.0, 14.0, IdmParams::default())
+            .unwrap();
+        for _ in 0..400 {
+            w.step(0.1);
+        }
+        assert!(w.agent(id).is_some_and(|a| a.s > 250.0 && a.speed > 5.0));
+    }
+
+    #[test]
+    fn a_vehicle_driving_ahead_is_followed_not_overtaken_through() {
+        let mut w = world(&[straight(0.0, 2000.0)]);
+        let id = w
+            .spawn(LaneId(0), 20.0, 14.0, IdmParams::default())
+            .unwrap();
+        let mut y = 60.0;
+        for _ in 0..300 {
+            // The player drives at 5 m/s ahead.
+            y += 5.0 * 0.1;
+            w.set_obstacles(vec![Obstacle {
+                velocity: DVec2::new(0.0, 5.0),
+                ..bus_at(0.0, y)
+            }]);
+            w.step(0.1);
+        }
+        let a = w.agent(id).unwrap();
+        assert!(
+            a.s < y - 6.0,
+            "the car ran into the bus: s = {}, bus at {y}",
+            a.s
+        );
+        assert!(
+            (a.speed - 5.0).abs() < 1.5,
+            "it should follow at the bus' speed, not {}",
+            a.speed
+        );
+    }
+
+    #[test]
+    fn nothing_is_spawned_inside_a_standing_vehicle() {
+        let mut w = world(&[straight(0.0, 800.0)]);
+        w.set_obstacles(vec![bus_at(0.0, 200.0)]);
+        assert_eq!(
+            w.spawn(LaneId(0), 200.0, 0.0, IdmParams::default())
+                .unwrap_err(),
+            SpawnError::Occupied,
+            "inside the bus"
+        );
+        assert_eq!(
+            w.spawn(LaneId(0), 197.0, 0.0, IdmParams::default())
+                .unwrap_err(),
+            SpawnError::Occupied,
+            "with its nose in the bus' rear"
+        );
+        assert!(
+            w.spawn(LaneId(0), 120.0, 0.0, IdmParams::default()).is_ok(),
+            "far behind it"
+        );
+        assert!(
+            w.spawn(LaneId(0), 260.0, 0.0, IdmParams::default()).is_ok(),
+            "far in front"
+        );
+    }
+
+    #[test]
+    fn the_deadlock_breaker_does_not_drive_through_a_standing_vehicle_in_a_junction() {
+        let mut w = crossing(LaneRules::default(), LaneRules::default());
+        // The bus stands across the north-bound lane at the crossing.
+        w.set_obstacles(vec![Obstacle {
+            centre: DVec2::new(0.0, 100.0),
+            heading: std::f64::consts::FRAC_PI_2, // lying across the road
+            length: 12.0,
+            width: 2.55,
+            velocity: DVec2::ZERO,
+        }]);
+        let id = w
+            .spawn(LaneId(0), 40.0, 10.0, IdmParams::default())
+            .unwrap();
+        // Far longer than the deadlock timeout.
+        for _ in 0..1200 {
+            w.step(0.1);
+        }
+        let a = w.agent(id).unwrap();
+        assert!(a.speed < 0.3, "still moving at {} m/s", a.speed);
+        assert!(
+            a.s < 100.0 - 1.0,
+            "it drove into the bus: front at {} m",
+            a.s
+        );
     }
 }

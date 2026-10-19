@@ -205,6 +205,9 @@ impl Plugin for InGamePlugin {
                     .chain(),
                 (
                     omsi_world::update_traffic_graph,
+                    // The player's footprints first: spawning must not put a vehicle inside the
+                    // bus, and the step must see where it stands.
+                    omsi_world::publish_traffic_obstacles,
                     omsi_world::load_traffic_variants,
                     omsi_world::spawn_traffic,
                     omsi_world::move_traffic,

@@ -64,7 +64,7 @@ with `uv` the per-tile `0..1` coordinates of section 2 and the layers sampled wi
 | :--- | :--- | :--- |
 | `TileTerrain::height(x, y)` / `terrain_height` | `opts-bevy::terrain` | interpolated on the two triangles the mesh is drawn with, coordinates clamped to the grid; 0 for a malformed grid |
 | `GroundIndex::terrain_at(x, y)` | `opts-game::ground_height` | session-frame point to tile key and local point (`TileGrid::tile_at`), then `TileTerrain::height`; `None` if the tile is not resident |
-| `GroundIndex::height_at(x, y, near_z)` | `opts-game::ground_height` | the road surface sample (2 m spacing, within half width + 1 m) closest in height to `near_z` where the point lies on a drivable spline, else the terrain |
+| `GroundIndex::height_at(x, y, near_z)` | `opts-game::ground_height` | the road surface sample (2 m spacing, within half width + 1 m) closest in height to `near_z` where the point lies on a drivable spline, else the terrain. **Since 2026-10-19 a sample's height is the spline's datum plus the profile's ground surface at the point's lateral offset** (`RoadSample::surface_z`): a cobbled road lies 12 cm above its datum and the wheels of an articulated Urbino on Ahlheim V5 stood in it |
 | `GroundElevationQuery` | `opts-bevy::terrain_query` | the same heights for several tiles at once, in absolute grid metres, plus surface normals (central differences, also across tile borders); the M-0025 query API |
 | `follow_ground` | `opts-game::ground_height` | the vehicle and its trailers sample four wheel points through `height_at` (see [articulation.md](articulation.md)) |
 
