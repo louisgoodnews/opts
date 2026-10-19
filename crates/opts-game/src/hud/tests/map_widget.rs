@@ -4,7 +4,7 @@ use super::*;
 
 /// A drive with the HUD, a vehicle with a position, fixture roads, a registry for the settings
 /// (saved under a throwaway folder) and a clock that advances 16 ms per frame.
-fn map_app() -> App {
+pub(super) fn map_app() -> App {
     use crate::settings_registry::{SettingChanged, SettingsCapabilities, SettingsRegistry};
     let dir = std::env::temp_dir().join(format!("opts-hud-map-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("dir");
@@ -54,7 +54,7 @@ fn minimap_state(app: &App) -> MiniMapState {
     app.world().resource::<MiniMapState>().clone()
 }
 
-fn run(app: &mut App, frames: usize) {
+pub(super) fn run(app: &mut App, frames: usize) {
     for _ in 0..frames {
         app.update();
     }

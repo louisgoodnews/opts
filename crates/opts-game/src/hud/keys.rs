@@ -42,6 +42,14 @@ keys! {
     MINIMAP_NORTH_UP = "hud-minimap-north-up",
     /// Mini map: the heading points up.
     MINIMAP_HEADING_UP = "hud-minimap-heading-up",
+    /// Full-size map: the title when the session has no map name.
+    FULLMAP_TITLE = "hud-fullmap-title",
+    /// Full-size map: the keys.
+    FULLMAP_HINT = "hud-fullmap-hint",
+    /// Full-size map: the scale bar in metres (`metres`).
+    FULLMAP_SCALE_M = "hud-fullmap-scale-m",
+    /// Full-size map: the scale bar in kilometres (`km`).
+    FULLMAP_SCALE_KM = "hud-fullmap-scale-km",
     /// Widget name.
     WIDGET_MINIMAP = "hud-widget-minimap",
     /// The pause button of the HUD.

@@ -273,7 +273,8 @@ fn arrow(centre: Vec2, screen_heading: f32, length: f32) -> [Vec2; 3] {
     ]
 }
 
-/// Draws the whole map into `canvas` (which is cleared first).
+/// Draws the whole map into `canvas` (which is cleared first). Marker and line sizes scale with
+/// the canvas (176 px is one unit, the size of the mini map).
 pub fn render(
     canvas: &mut Canvas,
     view: MapView,
@@ -281,9 +282,24 @@ pub fn render(
     markers: &[MapMarker],
     colors: &MapColors,
 ) {
+    let unit = canvas.size as f32 / 176.0;
+    render_with_unit(canvas, view, lines, markers, colors, unit, true);
+}
+
+/// [`render`] with an explicit size unit for markers, the north mark and the thinnest line: the
+/// full-size map draws a large canvas with markers as big as on the mini map (`unit` about 1.4)
+/// and leaves out the north mark (its canvas is larger than the screen, the map is always north-up).
+pub fn render_with_unit(
+    canvas: &mut Canvas,
+    view: MapView,
+    lines: &[MapLine],
+    markers: &[MapMarker],
+    colors: &MapColors,
+    unit: f32,
+    north_mark: bool,
+) {
     canvas.clear(colors.ground);
     let proj = Projection::new(canvas.size, view);
-    let unit = canvas.size as f32 / 176.0;
     for l in lines {
         let width = (l.width_m * proj.px_per_m).max(1.6 * unit.max(0.75));
         draw_line(canvas, proj.point(l.a), proj.point(l.b), width, colors.road);
@@ -309,6 +325,9 @@ pub fn render(
             let inner = arrow(c, heading, 7.0 * unit);
             fill_triangle(canvas, inner, colors.ground, -1.4 * unit);
         }
+    }
+    if !north_mark {
+        return;
     }
     // The north mark: a small triangle on the edge at the direction of north.
     let north = -view.up_heading;

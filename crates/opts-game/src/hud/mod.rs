@@ -14,6 +14,7 @@ pub mod details;
 pub mod fade;
 pub mod keys;
 pub mod layout;
+pub mod fullmap;
 pub mod minimap;
 pub mod parts;
 pub mod profile;
@@ -70,6 +71,7 @@ impl Plugin for HudPlugin {
                 layout::toast_inset.before(opts_gui::components::toast_stack::stack_toasts),
             )
             .add_plugins(minimap::MiniMapPlugin)
+            .add_plugins(fullmap::FullMapPlugin)
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<crate::session_vehicles::PlaceLabel>()

@@ -97,4 +97,5 @@ use super::minimap::{
 };
 use serde_json::{json, Value};
 
+mod full_map;
 mod map_widget;

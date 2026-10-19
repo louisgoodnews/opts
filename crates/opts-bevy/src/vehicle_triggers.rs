@@ -53,6 +53,8 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Equal,
     KeyCode::NumpadAdd,
     KeyCode::NumpadSubtract,
+    // The full-size map (M-0108; M stays the engine start of OMSI).
+    KeyCode::F6,
     KeyCode::F10,
     KeyCode::F12,
     KeyCode::Escape,

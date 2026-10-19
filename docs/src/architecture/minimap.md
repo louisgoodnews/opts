@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Status** | 🟢 Implemented on `feat/minimap-speed-zoom` (design approved by the project lead 2026-10-14: default `speed`, `V_FAST` 60 km/h, Ctrl+F7); sections 1-2 describe the merged M-0071 code |
 | **Phase** | Phase 9 (M-0071), extension on `feat/minimap-speed-zoom` |
-| **Code** | `crates/opts-game/src/hud/minimap/` (`config.rs`, `mod.rs`, `raster.rs`, `source.rs`, `tests.rs`) |
+| **Code** | `crates/opts-game/src/hud/minimap/` (`config.rs`, `mod.rs`, `raster.rs`, `source.rs`, `tests.rs`); the full-size map: section 8 |
 | **Related** | [HUD registry §4a](hud-registry.md#4a-the-mini-map-m-0071), minimap path recognition (separate research branch) |
 
 ## 1. Current state (M-0071, merged)
@@ -107,3 +107,21 @@ The vehicle could not exceed about 32-39 km/h live because of obstacles on the s
 The strip is a crop of OPTS's own drawing (roads from the map's lane graph, no textures).
 
 Not covered: the free-camera speed path (no vehicle) is unit-tested (`camera_speed_kmh`) but was not driven live.
+
+## 8. The full-size map (M-0108)
+
+| | |
+| :--- | :--- |
+| **Key** | **F6** opens and closes it (Esc closes too, Home follows the vehicle again). `M` is OMSI's engine start and stays so; F6 is reserved against script bindings |
+| **Code** | `crates/opts-game/src/hud/fullmap/` (`viewport.rs`: centre, span, pan, zoom to the cursor; `mod.rs`: state, keys, mouse, the overlay, the redraw); the drawing is the mini map's ([`raster`](#1-current-state-m-0071-merged) with `render_with_unit`, [`source`]) |
+| **View** | North-up, `span_m` metres across the shorter side of the screen, 50 m to 20 km (default 1 km, remembered between openings). Drag pans (and stops following), the wheel zooms by 1.2 per notch **toward the cursor** (the point under it stays within 2 px), Home follows the active vehicle (or the camera) again |
+| **Texture** | One square texture, the longer screen side capped to 1024 px, shown larger than the screen and clipped by the overlay root, so a wide window needs no second code path in the raster. Chords of at least six texture pixels |
+| **Redraw** | At once after a change of the view (drag, wheel, Home), at most ten times a second while a vehicle moves, twice a second otherwise; measured 1.8 to 2.6 ms in a release build on Berlin-Spandau at 1 km span (`hud.fullmap` reports `last_us`, `worst_us`) |
+| **Input** | While open the map holds `MenuModalActive` (via `FullMapState::holds_input`, included by the vehicle menu's flag, kept two frames after closing): driving, camera, script keys and the pause overlay stand still, the simulation runs. The control protocol is gated the same way (`drive.set` answers `1009`) |
+| **Protocol** | `hud.fullmap {open?, span?, x?, y?, follow?}` (protocol 1.15.0) reads and drives it; `x` and `y` set the view and stop following |
+| **Not yet** | the coarse tile outline of unloaded areas; a rebinding setting for F6 |
+
+![The full-size map at a span of 1 km and of 8 km on Berlin-Spandau](img/fullmap-1km-8km.png)
+
+The picture is OPTS's own drawing of the map's lane graph (no textures).
+

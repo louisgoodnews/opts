@@ -107,6 +107,7 @@ help-group-camera = Kamera
 help-group-map = Minikarte
 help-key-minimap = Minikarte ein- oder ausblenden (mit Umschalt: Norden oder Fahrtrichtung oben)
 help-key-minimap-zoom = Minikarte: hinein- oder herauszoomen (100 m bis 1 km)
+help-key-fullmap = Große Karte öffnen oder schließen (Ziehen verschiebt, Mausrad zoomt)
 help-group-menus = Menüs und Werkzeuge
 help-key-throttle = Gas und Bremse
 help-key-steer = Lenken
