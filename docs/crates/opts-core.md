@@ -19,4 +19,4 @@ Re-exports `opts-omsi` (`formats`, `setvars`) and `opts-l10n` (`l10n`) at the pa
 
 ## Notes
 
-The facade is removed when the last consumer is migrated to the native model; `scripts/omsi_uses.py` counts the engine-crate files that still reach OMSI types through it (ratchet `docs/dev/omsi-uses-known.txt`). New code names the real crate.
+The facade is removed when the last consumer is migrated to the native model; `scripts/omsi_uses.py` counts the uses of OMSI types in the engine crates that still go through it (ratchet `docs/dev/omsi-uses-known.txt`). New code names the real crate.

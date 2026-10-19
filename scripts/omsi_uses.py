@@ -4,8 +4,10 @@
 `opts-omsi` (the legacy readers, also reachable through the temporary facade `opts-core`) is a leaf
 adapter. The crates below are the engine side; they still import the OMSI structures in some
 files while their consumers are migrated to the native model (`opts-model`). This script counts,
-per crate, the `.rs` files that name `opts_omsi` or the facade's `opts_core::formats` /
-`opts_core::setvars`, and compares with `docs/dev/omsi-uses-known.txt`:
+per crate, the **uses** (occurrences) of `opts_omsi` and of the facade's `opts_core::formats` /
+`opts_core::setvars`, and compares with `docs/dev/omsi-uses-known.txt`. Occurrences, not files: a
+refactoring that moves code (a test module into its own file, a split by concern) must not change
+the number, only a real new reach into OMSI or a migration does:
 
   * a count above the known one fails (a new reach into OMSI);
   * a count below passes and says so, so the file can be lowered (`--write`);
@@ -30,8 +32,7 @@ def counts() -> dict[str, int]:
         for p in (ROOT / "crates" / crate).rglob("*.rs"):
             if "target" in p.parts:
                 continue
-            if PATTERN.search(p.read_text(encoding="utf-8", errors="ignore")):
-                n += 1
+            n += len(PATTERN.findall(p.read_text(encoding="utf-8", errors="ignore")))
         out[crate] = n
     return out
 
@@ -52,7 +53,7 @@ def main() -> int:
     if "--write" in sys.argv:
         body = "".join(f"{k} {v}\n" for k, v in sorted(now.items()))
         KNOWN.write_text(
-            "# Files of each engine crate that still name opts_omsi or opts_core::formats/setvars\n"
+            "# Uses (occurrences) in each engine crate of opts_omsi or opts_core::formats/setvars\n"
             "# (ADR-0014). The numbers may only fall; regenerate with scripts/omsi_uses.py --write.\n" + body,
             encoding="utf-8",
         )
@@ -63,7 +64,7 @@ def main() -> int:
     for crate in ENGINE:
         have, allowed = now[crate], base.get(crate, 0)
         if have > allowed:
-            print(f"FAIL {crate}: {have} files reach OMSI types, known {allowed} (ADR-0014: engine crates use opts-model)")
+            print(f"FAIL {crate}: {have} uses of OMSI types, known {allowed} (ADR-0014: engine crates use opts-model)")
             bad += 1
         elif have < allowed:
             print(f"ok   {crate}: {have} (known {allowed}: lower the ratchet with --write)")
