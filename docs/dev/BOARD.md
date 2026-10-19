@@ -118,7 +118,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
 - [x] 🔴 **Author map streaming architecture specification from the existing code** (M-0024, spec) — `docs/src/architecture/map-streaming.md`. **Done 2026-10-13** on `agent/map-streaming`: states, initial load, streaming loop, tile build order, unloading, decode rebuild, hot reload, measured Aachen example, limits L1-L8, open questions Q-MS-01..05; the vehicle/camera question (Q-MS-01) and memory growth (Q-MS-03) are the first things to test.
-- [ ] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — `docs/src/architecture/terrain-rendering.md` (F-012).
+- [x] 🔴 **Author terrain & water rendering architecture specification from the existing code** (M-0025, spec) — **Done 2026-10-19** on `agent/terrain-spec`: [terrain-rendering.md](../src/architecture/terrain-rendering.md) re-read against the code (build stages, ground shader with the weather uniform, water and depth tint, the duplicate height query, the milestone-versus-code table); border normals measured on Aachen (median 0.2°, 22 % over 1°, up to 25°) (F-012).
 - [ ] 🟠 **Pre-commit hook building the staged tree** (M-0052, chore) — F-001. (The worktree-per-session rule is done: CONTRIBUTING, guardrail 7, `scripts/agent-worktree.sh`.)
 - [ ] 🟡 **Author spatial audio evaluation and curve mapping architecture specification** (M-0027, spec) — `docs/src/architecture/audio-system.md` (traces to F-009, F-020).
 - [ ] 🟡 **Extend articulation.md with the coupled physics model and pitch rule** (M-0053, spec) — F-002, F-003.
@@ -239,7 +239,8 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 #### M-0025 — Terrain Heightmap & Water Mesh Generation (`opts-core`, `opts-bevy`)
 - [x] 🟡 **Implement terrain elevation mesh tessellation** (M-0025, code) — `build_terrain_mesh` in `opts-bevy/src/terrain.rs` (verified by M-0037).
 - [x] 🟡 **Implement multi-layer ground texture splatting** (M-0025, code) — layered ground shader (`ground_material.rs`, WESL on 0.20).
-- [ ] 🟡 **Implement GroundElevationQuery raycasting interface** (M-0025, code) — needed by vehicles and M-0053.
+- [~] 🟡 **Implement GroundElevationQuery raycasting interface** (M-0025, code) — needed by vehicles and M-0053. `GroundElevationQuery` exists and is tested but the game uses `GroundIndex` (a second copy of the carved terrain); open: make it the one height service ([terrain-rendering.md §5](../src/architecture/terrain-rendering.md)).
+- [ ] 🟢 **Stitch the terrain normals across tile borders** (M-0025, code) — measured 2026-10-19: 22 % of the matching border vertices differ by more than 1° (up to 25°); first a screenshot of a steep border to see whether it shows (Q-TR-01).
 - [ ] 🟡 **Implement water surface planar meshes** (M-0025, code) — Construct translucent water planes from `.map.water` level data.
 
 #### M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)
