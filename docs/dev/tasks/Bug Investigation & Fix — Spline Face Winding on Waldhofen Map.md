@@ -45,8 +45,8 @@ unable to determine exact tile coordinates, but the diagnostic
 overlay in the screenshot shows `tile: (18, -6)`.
 
 ### Target crates
-- `crates/opts-core/src/formats/scenery/sli.rs` — the `.sli` parser
-- `crates/opts-core/src/formats/map/tile.rs` — the `.map` tile parser
+- `crates/opts-omsi/src/formats/scenery/sli.rs` — the `.sli` parser
+- `crates/opts-omsi/src/formats/map/tile.rs` — the `.map` tile parser
 - `crates/opts-bevy/src/scene/` (or wherever spline extrusion lives)
 - `crates/opts-bevy/src/mesh/` (or wherever meshes are generated)
 

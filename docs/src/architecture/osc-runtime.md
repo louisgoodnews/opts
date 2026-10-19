@@ -394,7 +394,7 @@ Read again after the three documents were written (2026-10-16):
 ## 📝 Provenance
 
 * **Prior documents read in full:** strategy, research report, M-0093 and M-0096 to M-0103, the six format specs, `script-vm.md`, `vehicle-scripts-route.md`, `articulation-physics.md`, ADR-0002, `standards.md`.
-* **Code read (not modified):** `crates/opts-sim/src/script/*` (compiler, VM, strings, variables, loader), `crates/opts-bevy/src/{host_callbacks,vehicle_script,text_texture}.rs`, `crates/opts-core/src/formats/vehicles/hof.rs`, `crates/opts-game/src/in_game/omsi_world/vehicle.rs` (script attachment), `session_vehicles/state.rs`.
+* **Code read (not modified):** `crates/opts-sim/src/script/*` (compiler, VM, strings, variables, loader), `crates/opts-bevy/src/{host_callbacks,vehicle_script,text_texture}.rs`, `crates/opts-omsi/src/formats/vehicles/hof.rs`, `crates/opts-game/src/in_game/omsi_world/vehicle.rs` (script attachment), `session_vehicles/state.rs`.
 * **Corpus read (not committed):** the complete script sets of `MAN_NL_NG/MAN_GN92_main.bus` (+ trailer), `MAN_SD200/MAN_SD83.bus`, `EMT_Citaro/EMT_Solo.bus`, `Tram_NF6D/NF6D_A.bus` (+ B, C), `Urbino_II/SU_12.bus`; a corpus-wide scan of `$msg` sites; `program/varlist_*.txt`.
 * **Runs:** `script_diag` on the five sets (read-only).
 

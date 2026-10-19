@@ -13,7 +13,7 @@
 
 In this tutorial, you will:
 1. Understand the multi-tiered structure of OMSI 2 vehicle assets (`.bus` manifest and `model.cfg` rendering definition).
-2. Parse vehicle metadata and geometry manifests using [`opts_core::formats::vehicles::bus`](../../../crates/opts-core/src/formats/vehicles/bus.rs) and [`opts_core::formats::vehicles::model`](../../../crates/opts-core/src/formats/vehicles/model/mod.rs).
+2. Parse vehicle metadata and geometry manifests using [`opts_core::formats::vehicles::bus`](../../../crates/opts-omsi/src/formats/vehicles/bus.rs) and [`opts_core::formats::vehicles::model`](../../../crates/opts-omsi/src/formats/vehicles/model/mod.rs).
 3. Bridge OMSI vehicle coordinate spaces ($X$ right, $Y$ forward, $Z$ up) and camera conventions into Bevy's right-handed engine frame.
 4. Spawn an interactive bus entity hierarchy in Bevy ECS with mesh attachments, PBR materials, spotlights (headlights), and interior lights using [`spawn_vehicle_model`](../../../crates/opts-bevy/src/vehicle.rs).
 5. Switch smoothly between vehicle camera presets (`[add_camera_driver]`, `[view_schedule]`, `[view_ticketselling]`, `[add_camera_pax]`, exterior orbit) using [`camera_preset_to_bevy_transform`](../../../crates/opts-bevy/src/coords.rs).

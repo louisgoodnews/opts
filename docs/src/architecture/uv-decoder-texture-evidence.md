@@ -49,7 +49,7 @@ Question: on the truth set, does the texture term separate the true offset from 
 - Add `E_tex` to the smooth stage's energy with a weight set by Phase 1.
 - `TextureProbe` interface; implementation in `opts-bevy`.
 - Recalibrate `UvQuality` thresholds on the truth set (the thresholds 99 % / 90 % are defined by measured precision and must be re-measured, since the evidence changes).
-- Cache v9, tests in `crates/opts-core/tests/uv_decoder.rs` using a synthetic atlas fixture (self-authored).
+- Cache v9, tests in `crates/opts-omsi/tests/uv_decoder.rs` using a synthetic atlas fixture (self-authored).
 
 ### Phase 3 - acceptance
 

@@ -78,7 +78,7 @@ The extremes are real vehicles in `NormalCars` lists: a 15 t `AI_MAN_F90_Wechsel
 
 ### B1/B2: what files declare, what the AI sim uses
 
-Counts over **2,752** `.bus`/`.ovh` files of the installation [C]. "Parsed" = a field of `BusManifest` (`crates/opts-core/src/formats/vehicles/bus.rs`). "Reaches AI" = the value arrives anywhere in `opts-game/src/in_game/omsi_world/traffic.rs` or `opts-traffic`. "Used" = it changes the motion or class of an AI vehicle.
+Counts over **2,752** `.bus`/`.ovh` files of the installation [C]. "Parsed" = a field of `BusManifest` (`crates/opts-omsi/src/formats/vehicles/bus.rs`). "Reaches AI" = the value arrives anywhere in `opts-game/src/in_game/omsi_world/traffic.rs` or `opts-traffic`. "Used" = it changes the motion or class of an AI vehicle.
 
 | Parameter | Files | Parsed | Reaches AI | Used by AI sim | Notes |
 | :--- | ---: | :---: | :---: | :---: | :--- |
@@ -165,7 +165,7 @@ No IDM "feel" rebalancing, no change to the lane graph, signals or right of way,
 
 ## Provenance
 
-* **Read:** `docs/src/architecture/ai-traffic.md`, `vehicle-scripts-route.md`, `formats/text/vehicles/bus.md`, `formats/text/misc-types.md`, `design/articulation-physics` (the consist-mass finding, read from that branch because it is not on master: trailer mass is a median 0.90 of the head's over 480 links, relevant to a later dynamic mode), `crates/opts-traffic/src/*.rs` (idm, agent, lanechange, conflict, rightofway, graph, source, density), `crates/opts-game/src/in_game/omsi_world/traffic.rs` (all), `crates/opts-core/src/formats/vehicles/bus.rs`, `crates/opts-sim/src/vehicle/mod.rs`.
+* **Read:** `docs/src/architecture/ai-traffic.md`, `vehicle-scripts-route.md`, `formats/text/vehicles/bus.md`, `formats/text/misc-types.md`, `design/articulation-physics` (the consist-mass finding, read from that branch because it is not on master: trailer mass is a median 0.90 of the head's over 480 links, relevant to a later dynamic mode), `crates/opts-traffic/src/*.rs` (idm, agent, lanechange, conflict, rightofway, graph, source, density), `crates/opts-game/src/in_game/omsi_world/traffic.rs` (all), `crates/opts-omsi/src/formats/vehicles/bus.rs`, `crates/opts-sim/src/vehicle/mod.rs`.
 * **Corpus scans (read-only, in the session scratchpad, not committed):** a Python reader that lists every `ailists.cfg` group of the 45 maps in `<OMSI>/maps`, resolves each vehicle file and its `[constfile]`, and counts keywords over all 2,752 `.bus`/`.ovh` files of the installation. Executables and DLLs were not opened. No OMSI file was changed or copied into the repository.
 * **Run:** the headless game run described under B5 (binary from `agent/screen-capture` `da1ca76`, traffic code identical to master); log lines filtered with `grep 'AI vehicle spawned'`.
 * **Not done:** the ten-minute live observation of Phase A (skipped by instruction), screenshots and recordings.

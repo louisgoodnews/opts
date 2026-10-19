@@ -94,7 +94,7 @@ echo
 echo "--- Checking roadmap copies, roadmap drift and the crate graph ---"
 if command -v python3 >/dev/null 2>&1; then
     ROADMAP_OK=1
-    for check in "gen_roadmap_copy.py --check" "roadmap_audit.py --check" "crate_graph.py --check"; do
+    for check in "gen_roadmap_copy.py --check" "roadmap_audit.py --check" "crate_graph.py --check" "omsi_uses.py --check"; do
         # shellcheck disable=SC2086
         if ! python3 scripts/$check; then
             echo >&2 "scripts/$check failed"

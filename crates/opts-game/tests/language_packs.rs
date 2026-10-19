@@ -8,11 +8,11 @@ use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
 use opts_bevy::control::state::{ControlRegistry, Outcome};
-use opts_core::l10n::pack::EXPECTED_LICENSE;
 use opts_game::language_packs;
 use opts_game::settings::GameSettings;
 use opts_game::settings_registry::{SettingChanged, SettingsCapabilities, SettingsRegistry};
 use opts_gui::l10n::Localization;
+use opts_l10n::pack::EXPECTED_LICENSE;
 use serde_json::{json, Value};
 
 fn scratch(name: &str) -> PathBuf {

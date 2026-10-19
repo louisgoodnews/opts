@@ -26,10 +26,12 @@ impl std::error::Error for ImportError {}
 /// The native definition of a parsed `.bus` file.
 #[must_use]
 pub fn vehicle_from_manifest(bus: &BusManifest) -> VehicleDefinition {
-    let (manufacturer, model, livery) = bus.friendly_name.as_ref().map_or_else(
-        Default::default,
-        |f| (f.manufacturer.clone(), f.model.clone(), f.livery.clone()),
-    );
+    let (manufacturer, model, livery) = bus
+        .friendly_name
+        .as_ref()
+        .map_or_else(Default::default, |f| {
+            (f.manufacturer.clone(), f.model.clone(), f.livery.clone())
+        });
     VehicleDefinition {
         manufacturer,
         model,
@@ -65,7 +67,10 @@ mod tests {
     #[test]
     fn a_bus_file_becomes_a_native_vehicle_that_round_trips_through_toml() {
         let v = import_vehicle(BUS.as_bytes()).unwrap();
-        assert_eq!((v.manufacturer.as_str(), v.model.as_str()), ("MAN", "SD202"));
+        assert_eq!(
+            (v.manufacturer.as_str(), v.model.as_str()),
+            ("MAN", "SD202")
+        );
         let back = VehicleDefinition::from_toml(&v.to_toml()).unwrap();
         assert_eq!(back, v);
     }

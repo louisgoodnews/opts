@@ -22,7 +22,7 @@ with `[workspace]` and a `docs/src/SUMMARY.md`.
 `crates/opts-core`
 
 ### Target module
-`crates/opts-core/src/formats/o3d/`
+`crates/opts-omsi/src/formats/o3d/`
 
 ### Spec
 `docs/src/formats/binary/o3d.md` (🟢 Specified)
@@ -63,7 +63,7 @@ may be committed only if the user approves.
 - Read the spec, the coding standards, and the mutation fixtures.
 - Write Rust code in `opts-core`.
 - Write unit tests in `#[cfg(test)] mod tests`.
-- Write integration tests in `crates/opts-core/tests/`.
+- Write integration tests in `crates/opts-omsi/tests/`.
 - Write rustdoc and module docs.
 - Write `docs/crates/opts-core.md` if it does not exist.
 - Update the spec's Open Questions table if you discover an
@@ -135,7 +135,7 @@ Follow these stages in order. Report after each one.
 
 2. Create the module tree:
    ```
-   crates/opts-core/src/formats/
+   crates/opts-omsi/src/formats/
    ├── mod.rs
    └── o3d/
        ├── mod.rs
@@ -272,7 +272,7 @@ fit in under 40 lines.
 
 ### Stage 10 — Integration Tests
 
-1. Create `crates/opts-core/tests/o3d_parse.rs`.
+1. Create `crates/opts-omsi/tests/o3d_parse.rs`.
 2. For each fixture from the mutation kit:
    - Load the file via `std::fs::read`.
    - Parse it.
@@ -344,7 +344,7 @@ why and use a targeted allow.
 
 At the end of the task, the following should exist:
 
-- ✅ `crates/opts-core/src/formats/o3d/` module tree with all files.
+- ✅ `crates/opts-omsi/src/formats/o3d/` module tree with all files.
 - ✅ `O3d` struct with public fields.
 - ✅ `parse(bytes: &[u8]) -> Result<O3d>` public function.
 - ✅ Unit tests for each submodule.

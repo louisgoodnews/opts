@@ -1,13 +1,13 @@
 //! Language packs in the localisation: scanning the user folder, the language list and the
-//! per-language report. The pure parts (format, checks) live in `opts_core::l10n`.
+//! per-language report. The pure parts (format, checks) live in `opts_l10n`.
 
 use std::collections::HashMap;
 use std::path::Path;
 
-use opts_core::l10n::builtin;
-use opts_core::l10n::check::{self, Issue, Reference};
-use opts_core::l10n::fluent::Table;
-use opts_core::l10n::pack::{self, Direction};
+use opts_l10n::builtin;
+use opts_l10n::check::{self, Issue, Reference};
+use opts_l10n::fluent::Table;
+use opts_l10n::pack::{self, Direction};
 
 use super::pseudo::PSEUDO_TAG;
 use super::{LanguageInfo, LanguageReport, LoadedPack, Localization};

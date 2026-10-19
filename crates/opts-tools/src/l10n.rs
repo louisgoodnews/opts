@@ -16,11 +16,11 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use opts_core::l10n::builtin;
-use opts_core::l10n::check::{self, Issue, Reference, Severity};
-use opts_core::l10n::fluent::{self, Table};
-use opts_core::l10n::interchange::{self, ExportOptions};
-use opts_core::l10n::pack::{self, Direction, PackMeta};
+use opts_l10n::builtin;
+use opts_l10n::check::{self, Issue, Reference, Severity};
+use opts_l10n::fluent::{self, Table};
+use opts_l10n::interchange::{self, ExportOptions};
+use opts_l10n::pack::{self, Direction, PackMeta};
 
 /// What a command produced.
 #[derive(Debug, Default)]

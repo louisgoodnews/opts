@@ -2,7 +2,7 @@
 
 *Goal: a strict boundary between **legacy OMSI data** and **native OPTS data**. Today `opts-core` holds both the OMSI parsers and the data structures the simulation and rendering crates use, so a native OPTS TOML format cannot be added without entangling it with OMSI's quirks. The phase splits parsing and data model into dedicated crates: `opts-omsi` (legacy `.bus`, `.sco`, `.cfg` readers, a leaf adapter), `opts-model` (native TOML read and write) and a shared base crate that both use, so there is no circular dependency.*
 
-**Status:** 📝 Proposed 2026-10-19 by the project lead (task "Crate Architecture — Legacy vs. Native Separation"). Phase A (audit and ADR-0014) has not started. Three reporting points: after the audit (before any code moves), after the execution (before the documentation), and the final report with the merge.
+**Status:** ✅ Delivered 2026-10-19 on `refactor/crate-separation` (the project lead accepted the recommended answers of ADR-0014 "for now"): the crates `opts-types`, `opts-l10n`, `opts-omsi`, `opts-model`, `opts-importer` and the facade `opts-core` exist, the ratchet runs in CI. The migration of the consumers to the native model is the follow-up. Three reporting points: after the audit (before any code moves), after the execution (before the documentation), and the final report with the merge.
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 13); this page holds the details.
 

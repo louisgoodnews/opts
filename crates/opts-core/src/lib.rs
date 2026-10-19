@@ -7,7 +7,7 @@
 //! | Old path | Now lives in |
 //! | :--- | :--- |
 //! | `opts_core::formats::*`, `opts_core::setvars` | `opts-omsi` (the legacy OMSI readers) |
-//! | `opts_core::l10n::*` | `opts-l10n` (localisation, no OMSI content) |
+//! | `opts_l10n::*` | `opts-l10n` (localisation, no OMSI content) |
 //!
 //! New code should name the real crate. The facade goes when the last consumer is migrated; the
 //! ratchet `docs/dev/omsi-uses-known.txt` (checked by `scripts/omsi_uses.py`) counts the files of

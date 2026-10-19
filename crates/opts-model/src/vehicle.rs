@@ -109,7 +109,10 @@ mod tests {
     #[test]
     fn missing_fields_take_defaults_and_garbage_is_an_error() {
         let v = VehicleDefinition::from_toml("model = \"X\"").unwrap();
-        assert_eq!((v.schema, v.model.as_str(), v.axles.len()), (SCHEMA, "X", 0));
+        assert_eq!(
+            (v.schema, v.model.as_str(), v.axles.len()),
+            (SCHEMA, "X", 0)
+        );
         assert!(VehicleDefinition::from_toml("= =").is_err());
     }
 }

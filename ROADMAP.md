@@ -25,7 +25,7 @@
 | 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 📝 planned 2026-10-13 from the project lead's field report | [`phase-10/`](docs/src/roadmap/phase-10/README.md) |
 | 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 📝 planned 2026-10-18, all milestones proposed | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 📝 planned 2026-10-18, all milestones proposed | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
-| 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | 📝 proposed 2026-10-19, audit and ADR first | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
+| 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | ✅ delivered 2026-10-19; consumer migration is the follow-up | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
 | 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](docs/src/roadmap/phase-14/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 proposed 2026-10-19 | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
@@ -430,16 +430,16 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ---
 
 ## 🏗️ Phase 13: Crate Architecture: Legacy vs. Native Separation
-*Goal: a strict boundary between legacy OMSI data (`opts-omsi`, a leaf adapter) and native OPTS data (`opts-model`, TOML), with shared types in a base crate so there is no circular dependency; `opts-bevy`, `opts-sim` and `opts-game` never depend on `opts-omsi`. Status: proposed 2026-10-19 by the project lead; audit and ADR-0014 first, checkpoints after each phase. Documents: [phase page](docs/src/roadmap/phase-13/README.md).*
+*Goal: a strict boundary between legacy OMSI data (`opts-omsi`, a leaf adapter) and native OPTS data (`opts-model`, TOML), with shared types in a base crate so there is no circular dependency; `opts-bevy`, `opts-sim` and `opts-game` never depend on `opts-omsi`. Status: delivered 2026-10-19 (the migration of the consumers to the native model is the follow-up). Documents: [phase page](docs/src/roadmap/phase-13/README.md).*
 
-- [ ] **🔎 Data-Model Separation: Audit, Options and ADR-0014** — [M-0131](docs/src/roadmap/phase-13/M-0131.md) — 📝 proposed 2026-10-19
-  - [ ] Audit of `opts-core` (math, parsers, OMSI data, domain model), three crate-graph options with a recommendation, dependency lists, importer location; checkpoint 1.
-- [ ] **🏗️ New Crates and Shared Types** — [M-0132](docs/src/roadmap/phase-13/M-0132.md) — 📝 proposed 2026-10-19
-  - [ ] Scaffolding, workspace members, shared domain types moved with `git mv`, `opts-core` re-exports.
-- [ ] **📦 Move the OMSI Parsers into `opts-omsi`** — [M-0133](docs/src/roadmap/phase-13/M-0133.md) — 📝 proposed 2026-10-19
-  - [ ] Format modules moved, corpus tests identical, no engine crate depends on `opts-omsi`.
-- [ ] **📚 Native Model, Importer, Workspace Wiring and Documentation** — [M-0134](docs/src/roadmap/phase-13/M-0134.md) — 📝 proposed 2026-10-19
-  - [ ] `opts-model` stubs, importer, workspace updated, ADR-0014 accepted, crate graph and CONTRIBUTING updated, merge `--no-ff`.
+- [x] **🔎 Data-Model Separation: Audit, Options and ADR-0014** — [M-0131](docs/src/roadmap/phase-13/M-0131.md) — ✅ done 2026-10-19
+  - [x] Audit of `opts-core` (math, parsers, OMSI data, domain model), three crate-graph options with a recommendation, dependency lists, importer location; checkpoint 1.
+- [x] **🏗️ New Crates and Shared Types** — [M-0132](docs/src/roadmap/phase-13/M-0132.md) — ✅ done 2026-10-19
+  - [x] Scaffolding, workspace members, shared domain types moved with `git mv`, `opts-core` re-exports.
+- [x] **📦 Move the OMSI Parsers into `opts-omsi`** — [M-0133](docs/src/roadmap/phase-13/M-0133.md) — ✅ done 2026-10-19
+  - [x] Format modules moved, corpus tests identical, no engine crate depends on `opts-omsi`.
+- [x] **📚 Native Model, Importer, Workspace Wiring and Documentation** — [M-0134](docs/src/roadmap/phase-13/M-0134.md) — ✅ done 2026-10-19
+  - [x] `opts-model` stubs, importer, workspace updated, ADR-0014 accepted, crate graph and CONTRIBUTING updated, merge `--no-ff`.
 
 ---
 
@@ -488,10 +488,10 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [x] Align the CI/Pages branch (`main`) with the repository's actual default branch (`master` locally) (F-014 — resolved 2026-10-08)
 - [x] Remove or replace the 0-byte `docs/crates/book.toml` (populated in M-0007)
 - [ ] Install `mdbook` and run `mdbook build docs` once to confirm the book builds with `create-missing = false` (M-0007)
-- [ ] Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-core/src/formats/x/parse.rs:388`) (F-001)
+- [ ] Replace bare `.unwrap()` with `?` in `parse_mesh` (`crates/opts-omsi/src/formats/x/parse.rs:388`) (F-001)
 - [ ] Audit and prune premature stub crates from workspace `members` in root `Cargo.toml` (F-002)
 - [ ] Provide `opts_bevy::testing::TestAppBuilder` helper for headless `FixedUpdate` time stepping (F-003)
-- [ ] Decompose monolithic parser (1,061 lines) and 546-line `from_text` function in `crates/opts-core/src/formats/scenery/sco.rs` (F-004)
+- [ ] Decompose monolithic parser (1,061 lines) and 546-line `from_text` function in `crates/opts-omsi/src/formats/scenery/sco.rs` (F-004)
 - [ ] Refactor monolithic parsing functions (>80 lines) in `bus.rs`, `sli.rs`, `global.rs`, `tile.rs`, `model/parse.rs`, `paths.rs` (F-005)
 - [ ] Split `bus.rs` (583 lines) and `world_parse.rs` (689 lines) to comply with 500-line file limit (F-006)
 - [ ] Consolidate entity spawning boilerplate between `spawn` and `spawn_child` in `opts-gui` widgets (F-007)

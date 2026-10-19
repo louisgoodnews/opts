@@ -5324,6 +5324,7 @@ dependencies = [
  "opts-game",
  "opts-gui",
  "opts-hardware",
+ "opts-l10n",
  "opts-logging",
  "opts-sim",
  "opts-traffic",
@@ -5348,7 +5349,7 @@ dependencies = [
  "bevy",
  "chrono",
  "image",
- "opts-core",
+ "opts-l10n",
  "ron 0.8.1",
  "serde",
  "thiserror 1.0.69",
@@ -5440,6 +5441,7 @@ dependencies = [
  "image",
  "opts-core",
  "opts-hardware",
+ "opts-l10n",
  "serde_json",
 ]
 

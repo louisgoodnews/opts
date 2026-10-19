@@ -113,7 +113,7 @@ maps/<Map>/Chrono/0200_Grenzoeffnung/        ← entry folder
 ## 📝 Provenance
 
 - **Corpus (2026-10-04):** all 455 chrono folders (composition census); byte comparison of 163 `unsched_trafficdens.txt` against their map-level files; keyword census of 1,526 overlay tiles; `timeline.prt.cfg` of 40 maps matched against disk; variant folders `Fahrgastaufkommen`, `Alternative AI-Listen` etc. by listing, file diff and `.cmd` content.
-- **Corpus (2026-10-17):** all 22 installed maps with Chrono, 494 entries: activation against the `timeline.prt.cfg` masks, selection resolution, edit kinds per selected element, delete cascades, carrier indices of added attachments (probe scripts under the Berlin-Spandau capture, `phase-b/probes-s3`; `crates/opts-core/tests/chrono_corpus.rs`).
+- **Corpus (2026-10-17):** all 22 installed maps with Chrono, 494 entries: activation against the `timeline.prt.cfg` masks, selection resolution, edit kinds per selected element, delete cascades, carrier indices of added attachments (probe scripts under the Berlin-Spandau capture, `phase-b/probes-s3`; `crates/opts-omsi/tests/chrono_corpus.rs`).
 - **Community wiki (📚):** chronology function (temporary construction sites). Paraphrased.
 
 **Clean-room attestation (ADR-0002):**

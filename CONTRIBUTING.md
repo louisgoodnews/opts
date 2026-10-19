@@ -49,8 +49,13 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 | Crate | Layer | Purpose | Dependencies Allowed |
 | :--- | :---: | :--- | :--- |
 | `opts-logging` | L0 | Structured logging, non-blocking writers, subsystem routing, panic hook. | Zero internal OPTS dependencies |
-| `opts-core` | L1 | Pure data structures and parsers for OMSI formats. Zero Bevy, zero file I/O. | `nom`, `binrw`, `serde`, `glam`, `thiserror`, `opts-logging` |
-| `opts-sim` | L2 | Engine-agnostic vehicle simulation logic, kinematics, drivetrain, script VM. Zero Bevy. | `opts-core`, `petgraph`, `rayon`, `opts-logging` |
+| `opts-types` | L1 | Shared geometry and tile-grid types used by both the legacy readers and the native model. No file formats. | `glam` |
+| `opts-l10n` | L1 | Localisation without the engine: Fluent-subset parser, language packs, checks. | `serde_json`, `directories` |
+| `opts-omsi` | L1 | **Leaf adapter**: the legacy OMSI readers and the OMSI-shaped data they fill. Zero Bevy, zero file I/O. | `opts-types`, `serde`, `glam`, `thiserror`, `image`, `tracing` |
+| `opts-model` | L1 | The native content model and its TOML form. Knows nothing of OMSI. | `opts-types`, `serde`, `toml`, `thiserror` |
+| `opts-importer` | L1 | Turns `opts-omsi` output into `opts-model` values; the only crate that knows both. | `opts-omsi`, `opts-model` |
+| `opts-core` | L1 | **Temporary facade** re-exporting `opts-omsi` and `opts-l10n` at the old paths. No code of its own; do not add any. | `opts-omsi`, `opts-l10n` |
+| `opts-sim` | L2 | Engine-agnostic vehicle simulation logic, kinematics, drivetrain, script VM. Zero Bevy. | `opts-core` (facade, ratcheted), `petgraph`, `rayon`, `opts-logging` |
 | `opts-traffic` | L2 | AI road traffic, lane graph from OMSI paths, car following, conflict zones. Zero Bevy. | `opts-core`, `opts-logging`, `glam`, `petgraph` |
 | `opts-catalogue` | L2 | Scans local OMSI directories into a searchable asset catalogue. Zero Bevy. | `opts-core`, `opts-logging`, `rusqlite` |
 | `opts-hardware` | L2 | Privacy-respecting hardware capability detection and preset defaults. Zero Bevy. | `opts-logging` |
@@ -62,7 +67,8 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
 | `opts-benchmark` | L3 | Performance profiling harness and off-screen scenery object verification. | `opts-core`, `opts-bevy`, `opts-sim`, `opts-logging` |
 
 **⚠️ Important Boundary Invariants:**
-- `opts-core`, `opts-sim`, `opts-traffic`, `opts-catalogue`, and `opts-hardware` must **never** depend on Bevy, and must not perform synchronous file I/O.
+- `opts-types`, `opts-omsi`, `opts-model`, `opts-sim`, `opts-traffic`, `opts-catalogue`, and `opts-hardware` must **never** depend on Bevy, and must not perform synchronous file I/O.
+- **Legacy vs. native ([ADR-0014](docs/src/adr/0014-data-model-separation.md)):** `opts-omsi` is a leaf adapter and `opts-model` knows nothing of OMSI; they never depend on each other, only on `opts-types`. `opts-bevy`, `opts-sim`, `opts-traffic`, `opts-gui` and `opts-catalogue` must **never** depend on `opts-omsi` (directly or through the `opts-core` facade) in new code: a new import of `opts_omsi` or `opts_core::formats` in those crates fails `scripts/omsi_uses.py`, which counts the files that still reach OMSI types against `docs/dev/omsi-uses-known.txt` (the numbers may only fall). `opts-game` is the composition root and may wire the OMSI source through `opts-importer`.
 - `opts-logging` must **never** depend on any OPTS internal crate.
 - Only `opts-bevy`, `opts-gui`, `opts-game`, and `opts-benchmark` are permitted to depend on Bevy.
 

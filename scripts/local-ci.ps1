@@ -82,7 +82,7 @@ Write-Host ""
 Write-Host "--- Checking roadmap copies, roadmap drift and the crate graph ---" -ForegroundColor Yellow
 if (Get-Command python3 -ErrorAction SilentlyContinue) {
     $roadmapOk = $true
-    foreach ($check in @("gen_roadmap_copy.py", "roadmap_audit.py", "crate_graph.py")) {
+    foreach ($check in @("gen_roadmap_copy.py", "roadmap_audit.py", "crate_graph.py", "omsi_uses.py")) {
         python3 "scripts/$check" --check
         if ($LASTEXITCODE -ne 0) { $roadmapOk = $false }
     }

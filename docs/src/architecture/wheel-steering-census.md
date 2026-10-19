@@ -1,7 +1,7 @@
 # Wheel and steering animation census (P-1011, Phase A)
 
-Tools: `scripts/wheel_census.py` (`[newanim]` census, `--csv`), `crates/opts-core/examples/o3d_matrix_census.rs`
-(rotation part of the o3d 0x79 matrix), `crates/opts-core/examples/anim_axis_probe.rs` (axis hypotheses).
+Tools: `scripts/wheel_census.py` (`[newanim]` census, `--csv`), `crates/opts-omsi/examples/o3d_matrix_census.rs`
+(rotation part of the o3d 0x79 matrix), `crates/opts-omsi/examples/anim_axis_probe.rs` (axis hypotheses).
 
 ## Wheel spin (`Wheel_Rotation_*`)
 Frame rotation (0,0,0) dominates: 3,983 uses with explicit `origin_trans`, 1,317 with `origin_from_mesh`.

@@ -14,6 +14,7 @@ path = "src/main.rs"
 [dependencies]
 # Internal Crates
 opts-core = { workspace = true }
+opts-l10n = { workspace = true }
 opts-bevy = { workspace = true }
 opts-hardware = { workspace = true }
 rfd = { workspace = true }

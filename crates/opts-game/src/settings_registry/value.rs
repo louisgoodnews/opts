@@ -88,7 +88,7 @@ pub fn normalize(d: &SettingDescriptor, text: &str) -> Result<String, SettingErr
         SettingKind::Time => parse_hhmm(text).ok_or_else(|| bad("expected HH:MM".into())),
         SettingKind::Text if d.key == "interface.language" => {
             let tag = text.trim();
-            if opts_core::l10n::pack::valid_code(tag) || tag == "en-XA" {
+            if opts_l10n::pack::valid_code(tag) || tag == "en-XA" {
                 Ok(tag.to_string())
             } else {
                 Err(bad(

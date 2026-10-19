@@ -180,7 +180,7 @@ Tiles under `Chrono/<entry>/` are **diffs** of the base tile, never copies, and 
 
 The selection persists across the edits that follow and is cleared by the next selection or by any added element. Added blocks (`[object]`, `[spline]`, `[spline_h]`, `[attachObj]`, `[splineAttachement*]`, `[varparent]`, `[spline_terrain_align*]`) use the base layouts; a carrier index of an added `[splineAttachement]` counts the tile's splines **including the ones the overlay added** (60 of 395 attachments next to added splines point past the base list). After deletions, rule owners, `[varparent]` links and attachment carriers are re-numbered (OPTS removes deleted elements after the whole overlay: indices inside one overlay refer to the tile before it plus what it added).
 
-Selections resolve [C]: 98.6 % in the base tile, the rest in elements created by an earlier entry (62) or earlier in the same overlay (3); 54 refer to nothing (OPTS warns and skips their edits). Applied in order with `opts_core::formats::chrono`, 8,648 of 8,737 selections resolve (`crates/opts-core/tests/chrono_corpus.rs`).
+Selections resolve [C]: 98.6 % in the base tile, the rest in elements created by an earlier entry (62) or earlier in the same overlay (3); 54 refer to nothing (OPTS warns and skips their edits). Applied in order with `opts_core::formats::chrono`, 8,648 of 8,737 selections resolve (`crates/opts-omsi/tests/chrono_corpus.rs`).
 
 ### `.map.terrain` — height grid (binary)
 

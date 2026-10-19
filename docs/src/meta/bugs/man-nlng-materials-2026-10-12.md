@@ -2,7 +2,7 @@
 
 Status: Phase A (diagnostic) complete, root cause candidate identified, waiting for approval.
 Vehicles: `MAN_NL_NG` (EN92 solo, GN92 main + trail; the player vehicle "MAN NG272 - GN92").
-Tools (this branch): `o3d_materials`, `vehicle_material_audit`, `scrambled_uv_report` (`crates/opts-core/examples/`).
+Tools (this branch): `o3d_materials`, `vehicle_material_audit`, `scrambled_uv_report` (`crates/opts-omsi/examples/`).
 
 ## Preconditions
 1. **Reproduced** with GN92 main + trail on Aachen Linie 33 (cockpit, passenger and external cameras, release build of

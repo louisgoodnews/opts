@@ -5,7 +5,7 @@
 
 Scope: the texture coordinates of keyed (scrambled) `.o3d` meshes. Positions are decoded by
 `descramble` (separate document: `formats/binary/o3d.md`, Addendum 5); this decoder works on the
-stored `(u, v)` and the positions. Code: `crates/opts-core/src/formats/o3d/uvfix.rs` (the task text names
+stored `(u, v)` and the positions. Code: `crates/opts-omsi/src/formats/o3d/uvfix.rs` (the task text names
 `formats/binary/o3d/`; the real path is `formats/o3d/`).
 
 ## 1. What the scrambler does (measured on 2,476 plain/keyed pairs, 881,573 vertices)
@@ -83,5 +83,5 @@ The value stays the decoder's best guess (smooth stage maximum). A hinge-interpo
 evaluated 2026-10-13 on the twin truth set: worse than the best guess (51 % against 81 % within 0.01 on the 21 % of unreliable vertices where a prediction exists), so it is not used. One `WARN` and one incident file per mesh with the unreliable share; no per-vertex special handling.
 
 ## 8. Verification
-- `crates/opts-core/tests/uv_decoder.rs` (Phase C): for every twin pair available at run time, decode the keyed mesh with true positions and assert the quality contract: no `Exact` vertex is wrong beyond the calibrated rate (at most 1 % wrong among `Exact`, 10 % among `Recovered`), every vertex has a quality, no `Unreliable` on plain twins; and a regression case from the pre-fix code (the GN92 steering wheel is a keyed mesh without twin: its share of `Unreliable` is asserted > 0, i.e. the flag exists where the old code reported 0 %).
+- `crates/opts-omsi/tests/uv_decoder.rs` (Phase C): for every twin pair available at run time, decode the keyed mesh with true positions and assert the quality contract: no `Exact` vertex is wrong beyond the calibrated rate (at most 1 % wrong among `Exact`, 10 % among `Recovered`), every vertex has a quality, no `Unreliable` on plain twins; and a regression case from the pre-fix code (the GN92 steering wheel is a keyed mesh without twin: its share of `Unreliable` is asserted > 0, i.e. the flag exists where the old code reported 0 %).
 - `opts-cli validate-uvs` (Phase E): the fleet table (vehicle, mesh, vertices, exact %, unreliable %), sorted by unreliable share.
