@@ -29,7 +29,6 @@ pub fn camera_hint_text(
         }
         parts.push(label);
     }
-    parts.push("[6] Bus".to_string());
     let cursor = if matches!(state.mode, CameraMode::FreeRoam | CameraMode::Ego) {
         "   [L-Alt] Vehicle menu"
     } else {
