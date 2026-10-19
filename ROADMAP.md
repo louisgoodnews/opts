@@ -163,7 +163,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🗺️ World & Map Loading** — [M-0024](docs/src/roadmap/phase-4/M-0024.md) & [M-0025](docs/src/roadmap/phase-4/M-0025.md)
   - [x] Document the architecture of the map streaming system (`docs/src/architecture/map-streaming.md`). *Done 2026-10-13: written from the code as it runs; limits L1-L8 and open questions Q-MS-01..05 listed.* 🔴 The code already exists without it (critical review 2026-10-11 F-012); write it before further world-loading work.
   - [~] Implement tile grid paging and async chunk streaming coordinator in `opts-game` and `opts-bevy` (M-0024 — traces to F-018). *Paging runs in `opts-game` (`stream_world_tiles`); async jobs and the `opts-bevy` module are open.*
-  - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh and elevation sampling done; water and a ground-height query for vehicles open.*
+  - [~] Implement terrain elevation mesh generation and water plane systems from `.map.terrain` and `.map.water` (M-0025 — traces to F-018). *Terrain mesh, carve, layered ground, water with depth tint and the specification ([terrain-rendering.md](docs/src/architecture/terrain-rendering.md), 2026-10-19) done; open: one height service for the game, normal stitching, wave displacement.*
 - [ ] **🛞 Vehicle Physics & Control** — [M-0022](docs/src/roadmap/phase-4/M-0022.md) & [M-0023](docs/src/roadmap/phase-4/M-0023.md)
   - [x] Document the vehicle physics model in `docs/src/simulation/vehicle_physics.md`.
   - [x] Implement kinematic/dynamic vehicle movement in `opts-sim`.
