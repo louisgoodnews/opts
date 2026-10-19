@@ -138,7 +138,8 @@ fn map_dir(setup: &NewGameSetup, catalogue: Option<&GameCatalogue>, args: Option
     Some(crate::omsi_root::known_omsi_root()?.join("maps").join(id))
 }
 
-/// The Chrono entries active on the date of the plan, as their paths below `Chrono/`.
+/// The Chrono entries active on the date of the plan, as their paths below `Chrono/`, in the
+/// order of the set (the newest last).
 #[must_use]
 pub fn active_chrono(map_dir: &std::path::Path, setup: &NewGameSetup) -> Vec<String> {
     let set = ChronoSet::scan(map_dir);
@@ -160,9 +161,11 @@ pub fn key_of(
 ) -> Option<MapKey> {
     let dir = map_dir(setup, catalogue, args)?;
     let name = dir.file_name()?.to_string_lossy().into_owned();
+    // Several entries can be active at once (Berlin-Spandau: fifteen cumulative ones on a 1990s
+    // date); the newest, the last in the order of the set, names the state of the map.
     let active = active_chrono(&dir, setup);
-    let refs: Vec<&str> = active.iter().map(String::as_str).collect();
-    Some(MapKey::new(&name, &refs))
+    let newest: Vec<&str> = active.last().map(String::as_str).into_iter().collect();
+    Some(MapKey::new(&name, &newest))
 }
 
 /// `OnEnter(InGame)`, before the session is set up: resolves the profile (the picked one, else

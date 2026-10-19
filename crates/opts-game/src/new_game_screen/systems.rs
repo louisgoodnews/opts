@@ -109,6 +109,12 @@ pub fn handle_actions(
                 &env.setup,
                 &env.liveries,
             ),
+            PlannerAction::OpenMapConfig => commands.queue(|w: &mut World| {
+                let mut menu = w.resource_mut::<crate::map_profiles::modal::MapConfigMenu>();
+                menu.open = true;
+                menu.selected = None;
+                menu.status.clear();
+            }),
             PlannerAction::ResetOptions => env.setup.custom_setvars.clear(),
             PlannerAction::CloseOptions => close_options(&env.modals, &mut commands),
             PlannerAction::NoVehicle => {

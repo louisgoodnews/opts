@@ -31,6 +31,8 @@ pub enum PlannerAction {
     Livery(String),
     /// Open the equipment dialog.
     OpenOptions,
+    /// Open the map configuration (profiles and the load profile of the chosen map).
+    OpenMapConfig,
     /// Reset the equipment options to the livery's defaults.
     ResetOptions,
     /// Close the equipment dialog.
