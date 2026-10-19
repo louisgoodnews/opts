@@ -458,8 +458,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## ♾️ Phase 999: Refactoring Taskforce (continuous)
 *Goal: keep the code navigable by running a structural cleanup (no behaviour change) at the end of every development cycle, before each versioned public release; the phase never closes. Baseline 2026-10-19: 846 `.rs` files, 87 over 500 total lines, 19 over 1,000 ([Phase 999 README](docs/src/roadmap/phase-999/README.md)).*
 
-- [ ] **📏 Structure Audit Tool and Baseline** — [M-0125](docs/src/roadmap/phase-999/M-0125.md) — 📝 proposed 2026-10-19
-  - [ ] `scripts/structure_audit.py` (files, functions, modules, crates, standards, tests), the baseline report and a ratchet checked by `local-ci.sh`.
+- [x] **📏 Structure Audit Tool and Baseline** — [M-0125](docs/src/roadmap/phase-999/M-0125.md) — ✅ done 2026-10-19
+  - [x] `scripts/structure_audit.py` (files, functions, modules, crates, standards, tests), the baseline report and a ratchet checked by `local-ci.sh`.
 - [ ] **🔁 Refactoring Cycle Protocol and Release Gate** — [M-0126](docs/src/roadmap/phase-999/M-0126.md) — 📝 proposed 2026-10-19
   - [ ] Cycle template, process prompt P-1015, release-gate checklist in the release process, a dry run.
 - [ ] **✂️ Cycle 1, Batches 1 and 2: Low- and Medium-Risk Splits** — [M-0127](docs/src/roadmap/phase-999/M-0127.md) — 📝 proposed 2026-10-19
