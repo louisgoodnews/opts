@@ -2,14 +2,3 @@
 # Format: <path> <lines of code>  # <reason or the planned cycle>. A known file may only shrink;
 # a file that is not listed and passes 500 lines fails `scripts/structure_audit.py check`.
 # Regenerate (keeping the reasons) with `python3 scripts/structure_audit.py seed`.
-crates/opts-bevy/src/model.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-bevy/src/weather.rs 1285  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-catalogue/src/lib.rs 988  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-cli/src/commands.rs 1498  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/in_game/omsi_world/traffic.rs 1011  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/in_game/omsi_world/vehicle.rs 1497  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/in_game/vehicle_menu.rs 1733  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-gui/src/components/combobox.rs 1082  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-omsi/src/formats/scenery/sco.rs 1098  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-sim/src/vehicle/mod.rs 974  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-traffic/src/agent.rs 1957  # planned: refactoring cycle 1 (M-0127, M-0128)

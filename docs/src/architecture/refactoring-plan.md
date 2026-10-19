@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batches 1 and 2 done 2026-10-19** (§3.1, §4.1); **batch 4 done 2026-10-19** (§6.1); batch 3 open |
+| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batches 1 and 2 done 2026-10-19** (§3.1, §4.1); **batches 3 and 4 done 2026-10-19** (§5.1, §6.1); batch 5 (ADR only) open |
 | **Milestones** | [M-0127](../roadmap/phase-999/M-0127.md) (batches 1 and 2), [M-0128](../roadmap/phase-999/M-0128.md) (batches 3 and 4), [M-0129](../roadmap/phase-999/M-0129.md) (batch 5) |
 | **Audit** | [structure-audit-2026-10-19](../meta/structure-audit-2026-10-19.md) |
 | **Generated from** | `python3 scripts/structure_audit.py` measurements plus a scan of each file's top-level items; the cut points are proposals to be checked when the batch runs |
@@ -107,6 +107,32 @@ Two things the audit does not show: 26 small `pub(super)` widenings on moved ite
 | `crates/opts-bevy/src/model.rs` | 988 | 16 | 318 | high | `impl ContentLoader` (500 lines, 239-799); `impl TraceScratch` (72 lines, 815-889); `mod alphascale_tests` (68 lines, 1053-1131); split the 318-line function; concern words: o3d ×6, base ×2, transmap ×2, runtime ×1, repeat ×1 | 988 → parts of ≤ 500 |
 | `crates/opts-catalogue/src/lib.rs` | 988 | 220 | 237 | high | tests (220) → `tests.rs`; `impl Catalogue` (330 lines, 166-623); `fn discover` (237 lines, 729-975); split the 237-line function; concern words: find ×5, open ×2, now ×1, needs ×1, db ×1 | 988 → parts of ≤ 500 |
 | `crates/opts-sim/src/vehicle/mod.rs` | 974 | 278 | 112 | high | tests (278) → `tests.rs`; `impl VehicleSimulation` (519 lines, 157-797); `mod wheel_model_tests` (85 lines, 1130-1225); split the 112-line function; concern words: consist ×3, apply ×2, step ×2, set ×2, longitudinal ×1 | 974 → parts of ≤ 500 |
+
+### 5.1 Result of batch 3 (2026-10-19, branch `refactor/cycle-1-batch-3`)
+
+All 11 hot files are under the limit; the ratchet file `docs/dev/structure-known.txt` is empty (0 files over 500 lines of code). One commit per file, before and after counts in each message:
+
+| File | Before | After (parent) | Parts |
+| :--- | ---: | ---: | :--- |
+| `opts-traffic/src/agent.rs` | 1957 | 367 | `routing` 178, `gaps` 150, `step` 248; its tests (1019) into `following`, `conflicts`, `lane_change`, `geometry`, `standing` (largest 318) |
+| `opts-game/src/in_game/vehicle_menu.rs` | 1733 | 351 | `actions` 287, `build` 390, `entries` 149, `route_page` 408 + `route_page/jump` 101, `route_page_tests` 75 |
+| `opts-cli/src/commands.rs` | 1498 | 294 | the 156-entry table in `commands/table/part_1..4.rs` (228 to 295), joined at compile time by `table.rs` (`CommandSpec` is `Copy`; `COMMANDS` keeps its path and type; the generated reference page is byte-identical) |
+| `opts-game/src/in_game/omsi_world/vehicle.rs` | 1497 | 261 | `segments` 343, `skins` 196, `trailers` 265, `humans` 138, `scripts` 137, five test modules |
+| `opts-bevy/src/weather.rs` | 1285 | 328 | `catalogue` 234, `fog` 167; tests into `fog_tests` 222 and `look_tests` 131 |
+| `opts-omsi/src/formats/scenery/sco.rs` | 1098 | 392 | the 629-line `from_text` is a loop over four block-family functions: `object` 199, `meshes` 170, `traffic` 142, `texts` 101, with a `ParseState` for the values carried between blocks |
+| `opts-gui/src/components/combobox.rs` | 1082 | 228 | `search` 203, `build` 287, tests |
+| `opts-game/src/in_game/omsi_world/traffic.rs` | 1011 | 136 | `graph` 142, `variants` 143, `spawn` 354, `motion` 160 |
+| `opts-bevy/src/model.rs` | 988 | 242 | `overrides` 141, `trace` 84, `o3d_loading` 394, tests |
+| `opts-catalogue/src/lib.rs` | 988 | 174 | `lookup` 107, `queries` 164, `relocation` 65, `discover` 239, tests |
+| `opts-sim/src/vehicle/mod.rs` | 974 | 443 | `consist_ops` 123, `ground_ops` 55, tests |
+
+Two kinds of moves: files and impl blocks were moved by a small tool (not committed) that cuts top-level items and, new in this batch, single methods of one `impl` into a child module with its own `impl` block (private methods stay private unless a sibling needs them, the compiler decides). The two non-mechanical edits are `sco.rs` (the arms of the match moved into four functions; the four locals that lived across loop iterations became fields of `ParseState`; checked by the parser tests with the OMSI install, whose corpus tests parse every installed `.sco`) and the compile-time join of the command table.
+
+Long functions that the splits exposed and that stay as they are, with the reason that moving them is not mechanical (each is a candidate for a function-level cycle): `menu_actions` (268 lines), `build_route` (160), `build_select` (152), `load_segment_meshes_for` (281), `load_player_vehicle` (220), `spawn_trailer_chain` (205), `spawn_traffic` (352), `o3d_parts_core` (319), `discover` (237), `TrafficWorld::step` (164).
+
+Checks: the multiset of `#[test]` function names equals master (2161 = 2161); no golden file was regenerated; the replay determinism tests and the rig goldens pass in `./scripts/local-ci.sh`.
+
+Lessons: a child module that has the name of an imported module shadows it (`o3d`); an existing sibling module with the same name as the new one gets the code appended (`consist`, `ground` in `opts-sim`; use another name); `names.py`-style pickers must skip items without a kind.
 
 ## 6. Batch 4: structural: oversized test files and examples
 

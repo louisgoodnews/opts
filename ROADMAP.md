@@ -464,8 +464,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Cycle template, process prompt P-1015, release-gate checklist in the release process, a dry run.
 - [x] **✂️ Cycle 1, Batches 1 and 2: Low- and Medium-Risk Splits** — [M-0127](docs/src/roadmap/phase-999/M-0127.md) — ✅ done 2026-10-19
   - [x] Plan, then split the clean and the somewhat tangled oversized files along concerns, API paths kept.
-- [ ] **🧱 Cycle 1, Batches 3 and 4: High-Risk Splits and Structural Cleanup** — [M-0128](docs/src/roadmap/phase-999/M-0128.md) — 🔄 batch 4 done 2026-10-19, batch 3 open
-  - [ ] The hot and widely used files, misplaced files, oversized test files.
+- [x] **🧱 Cycle 1, Batches 3 and 4: High-Risk Splits and Structural Cleanup** — [M-0128](docs/src/roadmap/phase-999/M-0128.md) — ✅ done 2026-10-19
+  - [x] The hot and widely used files, misplaced files, oversized test files.
 - [ ] **🧩 Cycle 1, Batch 5: Crate-Level Decisions** — [M-0129](docs/src/roadmap/phase-999/M-0129.md) — 📝 proposed 2026-10-19
   - [ ] An ADR per crate merge, split or rename; default keep; execute only what is approved.
 
