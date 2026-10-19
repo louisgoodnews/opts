@@ -114,6 +114,15 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 ### ⏭️ Ready
 
+- [ ] 🔴 **Bus spawn height: wheels clip through the ground at spawn** (M-0073/M-0090, code) — project lead 2026-10-19: the Urbino (articulated) sits partly below the ground on spawn, reproducible on most maps; place the vehicle on the ground under its wheels (per-axle ground samples, not the entry object's height).
+- [ ] 🔴 **Standing bus jumps around after 1-2 minutes** (M-0073, code) — project lead 2026-10-19: a stationary bus starts to jump; likely the standstill hold/jitter family (`agent/spawn-drift-jitter`, deferred); reproduce with a 3-minute stand, find the energy source.
+- [ ] 🔴 **AI traffic drives into a standing bus; lane change; deadlock at crossings** (M-0049/M-0103, code) — project lead 2026-10-19: AI collides with a bus in its way; it has to brake, then look for a parallel path of the same direction that allows a lane change; AI vehicles block each other at crossings (needs a crossing arbiter).
+- [ ] 🟠 **Blocking paths for specific vehicle types** (M-0049, code + spec) — project lead 2026-10-19: path/lane closures by vehicle class (check the map tile: the `[...]` path or object records that carry a vehicle-type restriction; `paths` of `.sco` files).
+- [ ] 🟠 **Ahlheim V5, Eichenhöhe Bf: curbs below the ground; one spline/object slab over the road** (M-0090, content) — project lead 2026-10-19, screenshots: a dark slab covers the road below the viaduct; the stop's curbs sink under the terrain.
+- [ ] 🟠 **Bus-stop sign fonts are too small (any stop of Ahlheim V5)** (M-0100, code) — script-texture text on the stop signs renders tiny.
+- [ ] 🟠 **Bus road decals ("BUS", "B") float above the ground; the ground text is mirrored on one side** (M-0090, content) — Ahlheim V5, spline or object decals not draped on the terrain/road surface.
+- [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
+
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
 - [ ] 🔴 **Fix the CI gate failures at HEAD: `fmt` of `priority_probe.rs`, `sort_by_key` in `ai_model_vars.rs`, 10 stale rustdoc links** (M-0052/M-0040, chore) — HEAD fails three `ci.yml` steps (F-018, F-007).
