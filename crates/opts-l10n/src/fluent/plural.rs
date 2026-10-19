@@ -1,6 +1,5 @@
 //! CLDR plural categories of the supported languages.
 
-
 /// The CLDR cardinal plural categories `lang` uses, in the order a template lists them. Every
 /// language has `other`. Languages without a rule here use `one` and `other`.
 #[must_use]
