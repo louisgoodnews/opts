@@ -1,5 +1,6 @@
 //! Density tests of the traffic spawner.
 
+use super::variants::{group_lane_metres, time_factor};
 use super::*;
 use opts_core::formats::map::GroupDensity;
 
