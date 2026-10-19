@@ -190,8 +190,10 @@ fn a_vehicle_that_is_not_in_the_catalogue_is_asked_about_and_none_goes_on_withou
     );
     let p = plan(&i, "Grundorf", None, VehicleChoice::None).expect("without a vehicle");
     assert!(p.no_vehicle && p.vehicle_key.is_empty() && p.vehicle_name.is_empty());
-    let mut setup = NewGameSetup::default();
-    setup.selected_vehicle = "keep".into();
+    let mut setup = NewGameSetup {
+        selected_vehicle: "keep".into(),
+        ..NewGameSetup::default()
+    };
     p.apply_to(&mut setup);
     assert!(setup.no_vehicle);
     assert_eq!(
