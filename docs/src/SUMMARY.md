@@ -316,6 +316,7 @@
 - [ADR-0012: Screen Capture Encoding](adr/0012-screen-capture-encoding.md)
 - [ADR-0013: Train Formation Model](adr/0013-train-formation-model.md)
 - [ADR-0014: Separate Legacy OMSI Data from the Native Model](adr/0014-data-model-separation.md)
+- [ADR-0015: Keep the Crate Layout After the Cycle 1 Size Review](adr/0015-crate-size-review-cycle-1.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
@@ -365,6 +366,7 @@
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
 - [Bug: MAN NL/NG Material Artifacts (P-1012)](meta/bugs/man-nlng-materials-2026-10-12.md)
 - [Structure Audit (2026-10-19)](meta/structure-audit-2026-10-19.md)
+- [Structure Refactoring, Cycle 1 (2026-10-19)](meta/structure-refactoring-2026-10-19.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Screen Capture Report (2026-10-14)](meta/screen-capture-2026-10-14.md)
