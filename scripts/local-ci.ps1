@@ -98,6 +98,19 @@ if (Get-Command python3 -ErrorAction SilentlyContinue) {
 }
 
 Write-Host ""
+# 7. Structure: files over 500 lines of code may only shrink (M-0125)
+Write-Host "--- Checking the structure of the code (file-size ratchet) ---" -ForegroundColor Yellow
+if (Get-Command python3 -ErrorAction SilentlyContinue) {
+    $structOk = $true
+    python3 scripts/test_structure_audit.py *> $null
+    if ($LASTEXITCODE -ne 0) { $structOk = $false }
+    python3 scripts/structure_audit.py check
+    if ($LASTEXITCODE -ne 0) { $structOk = $false }
+    if ($structOk) { $statusStructure = "✓" } else { $statusStructure = "✗"; $failed = $true }
+} else {
+    $statusStructure = "skipped (no python3)"
+}
+
 Write-Host "=== Local CI Summary ===" -ForegroundColor Cyan
 Write-Host "  fmt:      $statusFmt"
 Write-Host "  clippy:   $statusClippy"
@@ -105,6 +118,7 @@ Write-Host "  test:     $statusTest"
 Write-Host "  doc:      $statusDoc"
 Write-Host "  mdbook:   $statusMdbook"
 Write-Host "  roadmap:  $statusRoadmap"
+Write-Host "  structure: $statusStructure"
 
 if ($failed) {
     Write-Host ""

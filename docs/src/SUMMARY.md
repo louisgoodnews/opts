@@ -363,6 +363,7 @@
 - [Bus Script Integration Research (2026-10-14)](meta/bus-script-integration-2026-10-14.md)
 - [Bug: UV Decoder Correctness (P-1013)](meta/bugs/uv-decoder-2026-10-12.md)
 - [Bug: MAN NL/NG Material Artifacts (P-1012)](meta/bugs/man-nlng-materials-2026-10-12.md)
+- [Structure Audit (2026-10-19)](meta/structure-audit-2026-10-19.md)
 - [Critical Review (2026-10-11)](meta/critical-review-2026-10-11.md)
 - [Control Protocol & Hot Reload Report (2026-10-10)](meta/control-protocol-2026-10-10.md)
 - [Screen Capture Report (2026-10-14)](meta/screen-capture-2026-10-14.md)

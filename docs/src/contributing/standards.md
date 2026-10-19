@@ -648,8 +648,15 @@ and paging.
 3. Update `mod.rs` to re-export public items.
 
 **Exception:** generated code, test fixtures, and long lookup tables.
-These must be clearly marked as such and excluded from the count via
-`grep -v` in the lint tool.
+These must be clearly marked as such and excluded from the count: a
+file whose first 5 lines contain `structure-audit: generated` is not
+measured, one with `structure-audit: table` is measured but not held
+against the limit (`scripts/structure_audit.py`, M-0125).
+
+**Enforcement:** `scripts/local-ci.sh` runs `structure_audit.py check`
+against the ratchet `docs/dev/structure-known.txt` (the files already
+over the limit may only shrink; a new file over 500 lines of code
+fails).
 
 ### 3.8 Module Documentation
 

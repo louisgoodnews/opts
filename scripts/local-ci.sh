@@ -112,6 +112,28 @@ else
     STATUS_ROADMAP="skipped (no python3)"
 fi
 
+# 7. Structure: files over 500 lines of code may only shrink (M-0125, docs/dev/structure-known.txt)
+echo
+echo "--- Checking the structure of the code (file-size ratchet) ---"
+if command -v python3 >/dev/null 2>&1; then
+    STRUCT_OK=1
+    python3 scripts/test_structure_audit.py >/dev/null 2>&1 || { echo >&2 "scripts/test_structure_audit.py failed"; STRUCT_OK=0; }
+    if ! python3 scripts/structure_audit.py check; then
+        echo >&2 "A file is over the 500-line limit or grew beyond docs/dev/structure-known.txt."
+        echo >&2 "Split it by concern (standards.md 3.7); see the FAIL lines above for the file."
+        STRUCT_OK=0
+    fi
+    if [ "$STRUCT_OK" -eq 1 ]; then
+        STATUS_STRUCTURE="✓"
+    else
+        STATUS_STRUCTURE="✗"
+        FAILED=1
+    fi
+else
+    echo "WARN: python3 is not installed; skipping the structure check"
+    STATUS_STRUCTURE="skipped (no python3)"
+fi
+
 echo
 echo "=== Local CI Summary ==="
 printf "  fmt:      %s\n" "$STATUS_FMT"
@@ -120,6 +142,7 @@ printf "  test:     %s\n" "$STATUS_TEST"
 printf "  doc:      %s\n" "$STATUS_DOC"
 printf "  mdbook:   %s\n" "$STATUS_MDBOOK"
 printf "  roadmap:  %s\n" "$STATUS_ROADMAP"
+printf "  structure: %s\n" "$STATUS_STRUCTURE"
 
 if [ "$FAILED" -ne 0 ]; then
     echo
