@@ -26,6 +26,7 @@
 | 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 📝 planned 2026-10-18, all milestones proposed | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
 | 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 📝 planned 2026-10-18, all milestones proposed | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
 | 🏗️ **Phase 13** — Crate Architecture: Legacy vs. Native Separation | `opts-omsi` (legacy parsers, leaf adapter), `opts-model` (native TOML), shared base crate; no engine crate depends on `opts-omsi` | 📝 proposed 2026-10-19, audit and ADR first | [`phase-13/`](docs/src/roadmap/phase-13/README.md) |
+| 🛠️ **Phase 14** — Vehicle Overrides & Visual Editor | `VehicleProfile` TOML patch layer (sound, script, constant, mesh swaps with validation) and an in-game visual mesh editor | 📝 proposed 2026-10-19, design first | [`phase-14/`](docs/src/roadmap/phase-14/README.md) |
 | ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 proposed 2026-10-19 | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
@@ -439,6 +440,18 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Format modules moved, corpus tests identical, no engine crate depends on `opts-omsi`.
 - [ ] **📚 Native Model, Importer, Workspace Wiring and Documentation** — [M-0134](docs/src/roadmap/phase-13/M-0134.md) — 📝 proposed 2026-10-19
   - [ ] `opts-model` stubs, importer, workspace updated, ADR-0014 accepted, crate graph and CONTRIBUTING updated, merge `--no-ff`.
+
+---
+
+## 🛠️ Phase 14: Vehicle Overrides & Visual Editor
+*Goal: customise vehicles without touching the OMSI installation: swap sound, script and constant sets between vehicles and edit meshes in the game, through a `VehicleProfile` TOML patch layer with compatibility validation. Status: proposed 2026-10-19 by the project lead; design first, a checkpoint before implementation. Documents: [phase page](docs/src/roadmap/phase-14/README.md).*
+
+- [ ] **📐 Vehicle Profile Design: Override Schema, Validation and Editor Architecture** — [M-0135](docs/src/roadmap/phase-14/M-0135.md) — 📝 proposed 2026-10-19
+  - [ ] `vehicle-profiles.md` and `vehicle_override.md`: schema, load sequence, validation of scripts, sounds and meshes, editor architecture; checkpoint.
+- [ ] **🧩 Vehicle Profile Schema, Loader and Validation** — [M-0136](docs/src/roadmap/phase-14/M-0136.md) — 📝 proposed 2026-10-19
+  - [ ] TOML profiles in `~/.local/share/opts/vehicles/`, sound/script/constant/mesh overrides, validation warnings, derived vehicles in the selection.
+- [ ] **🛠️ In-Game Visual Mesh Editor** — [M-0137](docs/src/roadmap/phase-14/M-0137.md) — 📝 proposed 2026-10-19
+  - [ ] Picking, gizmos, catalogue browser, live swap, undo, saving profiles.
 
 ---
 
