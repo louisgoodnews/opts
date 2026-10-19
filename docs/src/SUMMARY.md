@@ -314,6 +314,7 @@
 - [ADR-0011: Session Save Format](adr/0011-session-save-format.md)
 - [ADR-0012: Screen Capture Encoding](adr/0012-screen-capture-encoding.md)
 - [ADR-0013: Train Formation Model](adr/0013-train-formation-model.md)
+- [ADR-0014: Separate Legacy OMSI Data from the Native Model](adr/0014-data-model-separation.md)
 - [ADR-0010: Hardware Probe Privacy](adr/0010-hardware-probe-privacy.md)
 
 # ✏️ Editor Mode
