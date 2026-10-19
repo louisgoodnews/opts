@@ -52,7 +52,6 @@ crates/opts-l10n/src/pack.rs 508  # planned: refactoring cycle 1 (M-0127, M-0128
 crates/opts-omsi/src/formats/chrono/entry.rs 690  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/map/tile.rs 814  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/scenery/sco.rs 1098  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-omsi/src/formats/scenery/sli.rs 586  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/vehicles/bus.rs 670  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/vehicles/hof.rs 530  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/vehicles/model/parse.rs 503  # planned: refactoring cycle 1 (M-0127, M-0128)
