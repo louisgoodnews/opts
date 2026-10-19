@@ -47,6 +47,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0083 — Language Packs: Community and AI Translations as Files](M-0083.md) — 🟡 Implemented (R-25); trial in the running app with a real second language open
 - [M-0086 — Searchable Dropdowns and Honest Catalogue Counts](M-0086.md) — ✅ Implemented on `feat/combobox-search` (R-24, R-28, R-29)
 - [M-0088 — No Blocking Work on the Main Thread (Settings Content Page Freeze)](M-0088.md) — ✅ Implemented 2026-10-13 on `fix/settings-content-freeze` (R-31)
+- [M-0130 — Per-Map Configuration Profiles and Load Profiler](M-0130.md) — 📝 Proposed 2026-10-19 (project lead; top priority; design first, checkpoints after each phase)
 - [M-0065 — Accessibility, Localisation and Validation](M-0065.md) — 🟡 In progress (automatic part done: WCAG audit, gamepad, de/en; usability test not run)
 
 Order: M-0061 first; M-0062 and M-0063 follow in parallel; M-0064 needs the pause overlay of M-0062; M-0065 closes the phase. Every milestone leaves a working game.
@@ -115,3 +116,5 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
   - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
 - [x] **🧊 No Blocking Work on the Main Thread** — [M-0088](M-0088.md)
   - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
+- [ ] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](M-0130.md)
+  - [ ] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification.
