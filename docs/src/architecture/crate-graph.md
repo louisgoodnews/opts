@@ -118,7 +118,7 @@ graph TD
 1. **`opts-omsi` Zero-Engine & Zero-IO Invariant, and the legacy/native boundary ([ADR-0014](../adr/0014-data-model-separation.md)):**
    - Must never depend on `bevy`, `wgpu`, or windowing crates, and never on `opts-model`.
    - Must never perform synchronous file I/O (`std::fs::File`, `std::io::Read`). All parsers operate strictly on in-memory slices (`&str`, `&[u8]`).
-   - It is a **leaf adapter**: `opts-bevy`, `opts-sim`, `opts-traffic`, `opts-gui` and `opts-catalogue` must not depend on it (directly or through the `opts-core` facade) in new code. The files that still do are counted by `scripts/omsi_uses.py` against `docs/dev/omsi-uses-known.txt`; the count may only fall. `opts-game` is the composition root and may wire the OMSI source through `opts-importer`.
+   - It is a **leaf adapter**: `opts-bevy`, `opts-sim`, `opts-traffic`, `opts-gui` and `opts-catalogue` must not depend on it (directly or through the `opts-core` facade) in new code. The uses that remain are counted by `scripts/omsi_uses.py` against `docs/dev/omsi-uses-known.txt`; the count may only fall. `opts-game` is the composition root and may wire the OMSI source through `opts-importer`.
    - `opts-model` and `opts-omsi` share only `opts-types` and never import each other; `opts-importer` is the only crate that depends on both.
 2. **`opts-sim` Zero-Engine & Zero-IO Invariant:**
    - Must never depend on `bevy` or rendering crates.

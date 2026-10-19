@@ -1,7 +1,7 @@
-# Files of each engine crate that still name opts_omsi or opts_core::formats/setvars
+# Uses (occurrences) in each engine crate of opts_omsi or opts_core::formats/setvars
 # (ADR-0014). The numbers may only fall; regenerate with scripts/omsi_uses.py --write.
-opts-bevy 55
-opts-catalogue 1
+opts-bevy 130
+opts-catalogue 5
 opts-gui 0
-opts-sim 20
-opts-traffic 7
+opts-sim 31
+opts-traffic 14

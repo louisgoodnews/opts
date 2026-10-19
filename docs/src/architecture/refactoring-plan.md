@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 📝 Proposed 2026-10-19: checkpoint 2 of [P-1015](../../dev/prompts/process/P-1015-refactoring-cycle.md); waiting for the project lead's approval (nothing is refactored yet) |
+| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batch 1 done 2026-10-19** (§3.1); batches 2 to 4 open |
 | **Milestones** | [M-0127](../roadmap/phase-999/M-0127.md) (batches 1 and 2), [M-0128](../roadmap/phase-999/M-0128.md) (batches 3 and 4), [M-0129](../roadmap/phase-999/M-0129.md) (batch 5) |
 | **Audit** | [structure-audit-2026-10-19](../meta/structure-audit-2026-10-19.md) |
 | **Generated from** | `python3 scripts/structure_audit.py` measurements plus a scan of each file's top-level items; the cut points are proposals to be checked when the batch runs |
@@ -48,6 +48,10 @@ Each batch runs in its own session in its own worktree (`refactor/cycle-1-batch-
 | `crates/opts-game/src/settings_screen/scan_status.rs` | 517 | 168 | 80 | low | move the in-file tests (168) to `tests.rs` (file → directory with `mod.rs`) | 517 → 349 + 168 |
 | `crates/opts-l10n/src/interchange.rs` | 516 | 102 | 105 | low | move the in-file tests (102) to `tests.rs` (file → directory with `mod.rs`) | 516 → 414 + 102 |
 | `crates/opts-bevy/src/vehicle_triggers.rs` | 506 | 84 | 127 | low | move the in-file tests (84) to `tests.rs` (file → directory with `mod.rs`) | 506 → 422 + 84 |
+
+### 3.1 Result of batch 1 (2026-10-19, branch `refactor/cycle-1-batch-1`)
+
+All 13 files were done, one commit each (before and after counts are in each commit message), with `cargo check --tests` of the crate before each commit and the full `./scripts/local-ci.sh` at the end. The mechanical rule differed from the dry run in one respect: the file **stays where it is** and the tests go to `foo/tests.rs` (Rust 2018 module layout, the way `light_cones.rs` + `light_cones/tests.rs` already is), so no file is moved, the module path and the history of the production file are untouched and a relative `include_str!` in the production code keeps its base. One path in a test (`scan_status`) needed one more `../`. The ratchet went from 63 to 50 files over the limit. The first CI run caught a flaw of the OMSI-boundary ratchet that counted *files*: the new test files raised the count without any new reach into OMSI; it now counts *uses* (occurrences), which moving code does not change.
 
 ## 4. Batch 2: medium risk: production files split by concern
 
