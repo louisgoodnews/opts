@@ -128,7 +128,11 @@ impl FrameStats {
 }
 
 /// The folder of the chosen map, from the command line or the OMSI installation.
-fn map_dir(setup: &NewGameSetup, catalogue: Option<&GameCatalogue>, args: Option<&AppArgs>) -> Option<PathBuf> {
+fn map_dir(
+    setup: &NewGameSetup,
+    catalogue: Option<&GameCatalogue>,
+    args: Option<&AppArgs>,
+) -> Option<PathBuf> {
     if let Some(p) = args.and_then(|a| a.0.map_path.clone()) {
         return Some(p);
     }
@@ -203,7 +207,11 @@ pub fn apply_on_enter(
             None => (None, ProfileSource::Global),
         },
     };
-    active.vehicle = if setup.no_vehicle { String::new() } else { setup.selected_vehicle.clone() };
+    active.vehicle = if setup.no_vehicle {
+        String::new()
+    } else {
+        setup.selected_vehicle.clone()
+    };
     active.key = Some(key.clone());
     let Some(profile) = profile else {
         tracing::info!(map = %key.map_id, chrono = %key.chrono_id, "no map profile: global settings");

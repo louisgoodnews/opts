@@ -5,9 +5,7 @@ use bevy::prelude::*;
 
 use super::advice::{advise, Advice, MapLoadProfile};
 use super::profile::{presets, MapKey, MapProfile, DEFAULT_CHRONO};
-use super::session::{
-    active_chrono, key_of, MapProfilePick, PickedProfile, ProfileStoreRes,
-};
+use super::session::{active_chrono, key_of, MapProfilePick, PickedProfile, ProfileStoreRes};
 use super::static_profile::{request_for, StaticProfiles};
 use super::store::{ProfileSource, Resolved};
 use crate::app::AppArgs;
@@ -69,14 +67,12 @@ fn map_context(world: &World) -> Option<(MapKey, String, std::path::PathBuf, Vec
     let catalogue = world.get_resource::<GameCatalogue>();
     let args = world.get_resource::<AppArgs>();
     let key = key_of(setup, catalogue, args)?;
-    let dir = args
-        .and_then(|a| a.0.map_path.clone())
-        .or_else(|| {
-            let id = catalogue
-                .and_then(|c| c.map_by_name(&setup.selected_map))
-                .map_or_else(|| setup.selected_map.clone(), |m| m.id.clone());
-            Some(crate::omsi_root::known_omsi_root()?.join("maps").join(id))
-        })?;
+    let dir = args.and_then(|a| a.0.map_path.clone()).or_else(|| {
+        let id = catalogue
+            .and_then(|c| c.map_by_name(&setup.selected_map))
+            .map_or_else(|| setup.selected_map.clone(), |m| m.id.clone());
+        Some(crate::omsi_root::known_omsi_root()?.join("maps").join(id))
+    })?;
     let name = dir.file_name()?.to_string_lossy().into_owned();
     let chrono = active_chrono(&dir, setup);
     Some((key, name, dir, chrono))
@@ -107,14 +103,21 @@ pub fn view(world: &mut World) -> Option<ProfileView> {
         };
         let stat = statics.get(&key.map_id);
         let load = stat.map_or_else(MapLoadProfile::default, |s| {
-            s.to_load_profile(last.as_ref().map(|m| m.avg_ms), last.as_ref().map(|m| m.p95_ms))
+            s.to_load_profile(
+                last.as_ref().map(|m| m.avg_ms),
+                last.as_ref().map(|m| m.p95_ms),
+            )
         });
         let traffic = world
             .resource::<GameSettings>()
             .raw("gameplay.traffic")
             .and_then(|v| v.parse().ok())
             .unwrap_or(100);
-        let advice = if stat.is_some() { advise(&load, traffic) } else { Vec::new() };
+        let advice = if stat.is_some() {
+            advise(&load, traffic)
+        } else {
+            Vec::new()
+        };
         let picked = world
             .resource::<MapProfilePick>()
             .0
@@ -154,7 +157,9 @@ fn find(view: &ProfileView, choice: &Choice) -> Result<Option<MapProfile>, Servi
             .presets
             .iter()
             .find(|p| {
-                p.based_on.as_deref().is_some_and(|b| b.eq_ignore_ascii_case(n))
+                p.based_on
+                    .as_deref()
+                    .is_some_and(|b| b.eq_ignore_ascii_case(n))
                     || p.name.eq_ignore_ascii_case(n)
             })
             .cloned()
@@ -179,8 +184,14 @@ pub fn apply(world: &mut World, choice: &Choice, make_default: bool) -> Result<(
     let profile = find(&v, choice)?;
     if make_default {
         if let Some(p) = &profile {
-            let store = world.resource::<ProfileStoreRes>().0.clone().ok_or(ServiceError::NoStore)?;
-            store.save(&v.key, p).map_err(|e| ServiceError::Io(e.to_string()))?;
+            let store = world
+                .resource::<ProfileStoreRes>()
+                .0
+                .clone()
+                .ok_or(ServiceError::NoStore)?;
+            store
+                .save(&v.key, p)
+                .map_err(|e| ServiceError::Io(e.to_string()))?;
         }
     }
     world.resource_mut::<MapProfilePick>().0 = Some(PickedProfile {
@@ -201,7 +212,11 @@ pub fn create_from_current(
     for_chrono: bool,
 ) -> Result<String, ServiceError> {
     let v = view(world).ok_or(ServiceError::NoMap)?;
-    let store = world.resource::<ProfileStoreRes>().0.clone().ok_or(ServiceError::NoStore)?;
+    let store = world
+        .resource::<ProfileStoreRes>()
+        .0
+        .clone()
+        .ok_or(ServiceError::NoStore)?;
     let profile = {
         let registry = world.resource::<SettingsRegistry>();
         let settings = world.resource::<GameSettings>();
@@ -218,7 +233,9 @@ pub fn create_from_current(
     } else {
         v.key.map_default()
     };
-    store.save(&key, &profile).map_err(|e| ServiceError::Io(e.to_string()))?;
+    store
+        .save(&key, &profile)
+        .map_err(|e| ServiceError::Io(e.to_string()))?;
     Ok(profile.name)
 }
 
@@ -229,11 +246,17 @@ pub fn create_from_current(
 /// No map, no folder, or the file cannot be removed.
 pub fn delete(world: &mut World, for_chrono: bool) -> Result<bool, ServiceError> {
     let v = view(world).ok_or(ServiceError::NoMap)?;
-    let store = world.resource::<ProfileStoreRes>().0.clone().ok_or(ServiceError::NoStore)?;
+    let store = world
+        .resource::<ProfileStoreRes>()
+        .0
+        .clone()
+        .ok_or(ServiceError::NoStore)?;
     let key = if for_chrono && v.key.chrono_id != DEFAULT_CHRONO {
         v.key.clone()
     } else {
         v.key.map_default()
     };
-    store.delete(&key).map_err(|e| ServiceError::Io(e.to_string()))
+    store
+        .delete(&key)
+        .map_err(|e| ServiceError::Io(e.to_string()))
 }

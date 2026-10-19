@@ -64,5 +64,8 @@ fn counts_of_real_maps_are_complete_and_the_sample_estimate_is_close() {
         );
     }
     assert!(checked > 0);
-    eprintln!("{checked} maps, {sampled_maps} sampled, worst estimate error {:.1} %", worst * 100.0);
+    eprintln!(
+        "{checked} maps, {sampled_maps} sampled, worst estimate error {:.1} %",
+        worst * 100.0
+    );
 }

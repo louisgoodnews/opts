@@ -1,9 +1,9 @@
 # Der Dialog „Kartenkonfiguration“ (M-0130).
-map-config-open = Kartenkonfiguration
 map-config-title = Kartenkonfiguration
 map-config-map = { $map }
 map-config-chrono-none = An diesem Datum ist kein Chrono-Eintrag aktiv.
-map-config-chrono = Chrono-Eintrag an diesem Datum: { $entries }
+map-config-chrono = Chrono-Eintrag an diesem Datum: { $newest } ({ $others } weitere aktiv)
+map-config-chrono-one = Chrono-Eintrag an diesem Datum: { $newest }
 map-config-load = Lastprofil
 map-config-counting = Die Karte wird im Hintergrund gezählt …
 map-config-load-counts = { $objects } Objekte · { $splines } Splines · { $tiles } Kacheln · { $area } km² · KI-Pool { $pool } Fahrzeuge

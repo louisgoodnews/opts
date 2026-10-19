@@ -33,11 +33,7 @@ pub struct StaticProfile {
 impl StaticProfile {
     /// The load profile, with the frame times of the last session when there is one.
     #[must_use]
-    pub fn to_load_profile(
-        &self,
-        avg_ms: Option<f32>,
-        p95_ms: Option<f32>,
-    ) -> MapLoadProfile {
+    pub fn to_load_profile(&self, avg_ms: Option<f32>, p95_ms: Option<f32>) -> MapLoadProfile {
         MapLoadProfile {
             tile_count: self.tiles,
             object_count: self.objects,
@@ -72,7 +68,8 @@ fn cache_path(store: &ProfileStore, map_id: &str) -> PathBuf {
 
 /// The cached counts when the tile files are as they were when they were counted.
 fn read_cache(store: &ProfileStore, map_id: &str, sig: (usize, u64)) -> Option<StaticProfile> {
-    let c: CacheFile = toml::from_str(&std::fs::read_to_string(cache_path(store, map_id)).ok()?).ok()?;
+    let c: CacheFile =
+        toml::from_str(&std::fs::read_to_string(cache_path(store, map_id)).ok()?).ok()?;
     ((c.tiles, c.bytes) == sig).then_some(StaticProfile {
         tiles: c.tiles,
         objects: c.objects,

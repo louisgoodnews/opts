@@ -167,7 +167,16 @@ pub fn rebuild(
         let chrono = if view.chrono_entries.is_empty() {
             loc.t("map-config-chrono-none")
         } else {
-            loc.t_args("map-config-chrono", &[arg("entries", view.chrono_entries.join(", "))])
+            let newest = view.chrono_entries.last().cloned().unwrap_or_default();
+            let others = view.chrono_entries.len() - 1;
+            if others == 0 {
+                loc.t_args("map-config-chrono-one", &[arg("newest", newest)])
+            } else {
+                loc.t_args(
+                    "map-config-chrono",
+                    &[arg("newest", newest), arg("others", others)],
+                )
+            }
         };
         text(p, chrono, 13.0, ColorRole::OnSurfaceVariant);
         if !status.is_empty() {
@@ -177,7 +186,12 @@ pub fn rebuild(
         // Load profile and advice.
         text(p, loc.t("map-config-load"), 16.0, ColorRole::Primary);
         if view.load.tile_count == 0 {
-            text(p, loc.t("map-config-counting"), 13.0, ColorRole::OnSurfaceVariant);
+            text(
+                p,
+                loc.t("map-config-counting"),
+                13.0,
+                ColorRole::OnSurfaceVariant,
+            );
         } else {
             let l = &view.load;
             let mut line = loc.t_args(
@@ -206,7 +220,12 @@ pub fn rebuild(
         }
         text(p, loc.t("map-config-advice"), 16.0, ColorRole::Primary);
         if view.advice.is_empty() {
-            text(p, loc.t("map-config-advice-none"), 13.0, ColorRole::OnSurfaceVariant);
+            text(
+                p,
+                loc.t("map-config-advice-none"),
+                13.0,
+                ColorRole::OnSurfaceVariant,
+            );
         }
         for a in &view.advice {
             let role = if a.severity == super::advice::Severity::Warning {
@@ -247,12 +266,25 @@ pub fn rebuild(
                 13.0,
                 ColorRole::Primary,
             ),
-            Some(None) => text(p, loc.t("map-config-picked-global"), 13.0, ColorRole::Primary),
+            Some(None) => text(
+                p,
+                loc.t("map-config-picked-global"),
+                13.0,
+                ColorRole::Primary,
+            ),
             None => {}
         }
         let mut choices = vec![Choice::Global];
-        choices.extend(view.presets.iter().filter_map(|x| x.based_on.clone().map(Choice::Preset)));
-        choices.extend(view.saved.iter().map(|(_, x)| Choice::Saved(x.name.clone())));
+        choices.extend(
+            view.presets
+                .iter()
+                .filter_map(|x| x.based_on.clone().map(Choice::Preset)),
+        );
+        choices.extend(
+            view.saved
+                .iter()
+                .map(|(_, x)| Choice::Saved(x.name.clone())),
+        );
         p.spawn(Node {
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(4.0),
@@ -276,6 +308,12 @@ pub fn rebuild(
         });
 
         // Create.
+        text(
+            p,
+            loc.t("map-config-name"),
+            13.0,
+            ColorRole::OnSurfaceVariant,
+        );
         let field = TextFieldBuilder::outlined(loc.t("map-config-name"))
             .with_text(name)
             .with_max_characters(60)
@@ -290,9 +328,21 @@ pub fn rebuild(
             ..default()
         })
         .with_children(|row| {
-            button(row, &loc.t("map-config-create"), false, Action::Create { chrono: false }, "map-config.create".to_string());
+            button(
+                row,
+                &loc.t("map-config-create"),
+                false,
+                Action::Create { chrono: false },
+                "map-config.create".to_string(),
+            );
             if view.key.chrono_id != DEFAULT_CHRONO {
-                button(row, &loc.t("map-config-create-chrono"), false, Action::Create { chrono: true }, "map-config.create-chrono".to_string());
+                button(
+                    row,
+                    &loc.t("map-config-create-chrono"),
+                    false,
+                    Action::Create { chrono: true },
+                    "map-config.create-chrono".to_string(),
+                );
             }
         });
         p.spawn(Node {
@@ -302,10 +352,34 @@ pub fn rebuild(
             ..default()
         })
         .with_children(|row| {
-            button(row, &loc.t("map-config-apply"), true, Action::Apply { keep: false }, "map-config.apply".to_string());
-            button(row, &loc.t("map-config-apply-keep"), false, Action::Apply { keep: true }, "map-config.apply-keep".to_string());
-            button(row, &loc.t("map-config-delete"), false, Action::Delete, "map-config.delete".to_string());
-            button(row, &loc.t("map-config-cancel"), false, Action::Close, "map-config.cancel".to_string());
+            button(
+                row,
+                &loc.t("map-config-apply"),
+                true,
+                Action::Apply { keep: false },
+                "map-config.apply".to_string(),
+            );
+            button(
+                row,
+                &loc.t("map-config-apply-keep"),
+                false,
+                Action::Apply { keep: true },
+                "map-config.apply-keep".to_string(),
+            );
+            button(
+                row,
+                &loc.t("map-config-delete"),
+                false,
+                Action::Delete,
+                "map-config.delete".to_string(),
+            );
+            button(
+                row,
+                &loc.t("map-config-cancel"),
+                false,
+                Action::Close,
+                "map-config.cancel".to_string(),
+            );
         });
     });
 }
@@ -341,7 +415,11 @@ pub fn actions(
             }
             Action::Create { chrono } => {
                 let name = menu.name.trim().to_string();
-                let name = if name.is_empty() { "Profile".to_string() } else { name };
+                let name = if name.is_empty() {
+                    "Profile".to_string()
+                } else {
+                    name
+                };
                 commands.queue(move |w: &mut World| {
                     let loc = w.resource::<Localization>().clone();
                     let status = match service::create_from_current(w, &name, chrono) {
@@ -356,9 +434,8 @@ pub fn actions(
             Action::Delete => {
                 commands.queue(move |w: &mut World| {
                     let loc = w.resource::<Localization>().clone();
-                    let chrono = service::view(w).is_some_and(|v| {
-                        v.resolved.source == ProfileSource::Chrono
-                    });
+                    let chrono = service::view(w)
+                        .is_some_and(|v| v.resolved.source == ProfileSource::Chrono);
                     let status = match service::delete(w, chrono) {
                         Ok(true) => loc.t("map-config-status-deleted"),
                         Ok(false) => loc.t("map-config-status-nothing"),

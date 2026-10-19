@@ -31,6 +31,7 @@ wiz-date = { $day }. { $month } { $year }
 wiz-where-search = { $count } Karten durchsuchen…
 wiz-where-empty = Keine Karten gefunden. Prüfe den OMSI-Ordner oder suche neu.
 wiz-where-start = Startpunkt
+map-config-open = Kartenkonfiguration
 wiz-where-date = Datum
 wiz-where-no-starts = Diese Karte hat keine benannten Startpunkte.
 wiz-where-description = Beschreibung der Karte, in ihrer Originalsprache

@@ -151,7 +151,10 @@ fn save(world: &mut World, params: &Value) -> Outcome {
 fn save_impl(world: &mut World, params: &Value) -> Result<Value, RpcError> {
     let name = str_param(params, "name")?.trim().to_string();
     if name.is_empty() {
-        return Err(RpcError::new(code::INVALID_PARAMS, "the profile needs a name"));
+        return Err(RpcError::new(
+            code::INVALID_PARAMS,
+            "the profile needs a name",
+        ));
     }
     let chrono = opt_bool(params, "chrono")?.unwrap_or(false);
     service::create_from_current(world, &name, chrono).map_err(rpc)?;

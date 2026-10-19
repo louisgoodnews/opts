@@ -176,11 +176,7 @@ impl ProfileStore {
 
     /// Every profile saved for the map: `(chrono_id, profile)` ordered by chrono id.
     #[must_use]
-    pub fn list_map(
-        &self,
-        registry: &SettingsRegistry,
-        map_id: &str,
-    ) -> Vec<(String, MapProfile)> {
+    pub fn list_map(&self, registry: &SettingsRegistry, map_id: &str) -> Vec<(String, MapProfile)> {
         let mut out = Vec::new();
         let Ok(rd) = fs::read_dir(self.map_dir(map_id)) else {
             return out;
@@ -193,7 +189,8 @@ impl ProfileStore {
             ) else {
                 continue;
             };
-            if stem == "metrics" {
+            // The two other files of a map folder are not profiles.
+            if stem == "metrics" || stem == "static" {
                 continue;
             }
             let key = MapKey {

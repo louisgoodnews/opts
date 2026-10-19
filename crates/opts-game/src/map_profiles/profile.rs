@@ -218,7 +218,7 @@ fn fnv32(bytes: &[u8]) -> u32 {
 pub fn settings_hash(values: &BTreeMap<String, String>) -> String {
     let mut h: u64 = 0xcbf2_9ce4_8422_2325;
     for (k, v) in values {
-        for b in k.bytes().chain([b'=']).chain(v.bytes()).chain([b';']) {
+        for b in k.bytes().chain(*b"=").chain(v.bytes()).chain(*b";") {
             h ^= u64::from(b);
             h = h.wrapping_mul(0x0100_0000_01b3);
         }

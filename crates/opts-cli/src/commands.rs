@@ -1062,6 +1062,60 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("`{spec: {mass_kg, cg_height_m, yaw_inertia_kg_m2, pitch_inertia_kg_m2, roll_inertia_kg_m2, rolling_coefficient}, axles: [{index, longitudinal_m, track_width_m, wheel_diameter_m, spring_n_per_m, damping_n_s_per_m, max_force_n, driven, steered, static_load_n, load_n: [left, right], deflection_m, deflection_speed_m_s, compression_m: [left, right], brake_force_n, brake_limited}], state: {speed_m_s, head_mass_kg, consist_mass_kg, units, wheelbase_m}, body: {heave_m, pitch_rad, roll_rad}, brakes: {pressure, apply_tau_s, force_n}}`; every `spec` entry is `{value, source}` with `source` one of `file`, `estimate`, `default`; since 1.11 the answer also has `pitch_inertia_kg_m2`, `roll_inertia_kg_m2`, `compression_m`, `brake_force_n`, `brake_limited`, `body` and `brakes`")
     .doc("`1001` without a player vehicle. `file` values are read from the vehicle's `.bus` (`[mass]`, `[schwerpunkt]`, `[momentofintertia]` or lines 2 to 4 of `[mass]`, `[rollwiderstand]`); `estimate` is the yaw inertia of a box with the bounding box's width and length; `default` is the generic transit bus, used because the file states nothing usable. The rolling coefficient is the file's rolling resistance (a force) over the stated weight. Axle values are those the physics uses (the `.bus` axle block, with bus defaults for what is missing); `static_load_n` follows from the axle positions, the mass and the centre of gravity."),
     c(
+        "profiles.list",
+        "drive",
+        "The map profiles of the planned drive's map: the profile that applies, the saved ones, the presets, the load profile and the advice",
+        "",
+    )
+    .since("1.14")
+    .result("`{map, chrono, chrono_entries, resolved: {source, profile, dropped}, picked, saved: [{chrono, name, created, based_on, settings}], presets: [...], load: {tiles, objects, splines, ai_pool_vehicles, area_km2, estimated, counting, avg_frame_time_ms, p95_frame_time_ms}, advice: [{id, severity, preset, suggested}]}`")
+    .doc("`1001` without a map in the plan. `chrono` is the newest Chrono entry active on the plan's date (`default` when none is); `resolved.source` is `chrono`, `map` or `global` (the fallback chain: this Chrono entry, the map's default, your global settings). The load profile is counted in the background the first time the map is asked for: `counting` is true until the full count is in, `estimated` while only a sample is. `avg_frame_time_ms` comes from the last session of this key on this computer."),
+    c(
+        "profiles.advice",
+        "drive",
+        "The load profile of the planned drive's map and the recommendations that follow from it",
+        "",
+    )
+    .since("1.14")
+    .result("`{load, advice}` as in `profiles.list`")
+    .doc("`advice[].id` is one of `geometry-above-typical`, `geometry-high`, `light-map`, `many-splines`, `high-ai-load`, `ran-slowly`, `ran-smoothly`, `not-played-yet`; `suggested` lists settings to change as `{key, value}` and `preset` names the preset that carries the suggestion."),
+    c(
+        "profiles.apply",
+        "drive",
+        "Use a profile for the next drive of the planned map (Apply Selected)",
+        "profile:s make_default:b?",
+    )
+    .since("1.14")
+    .result("the answer of `profiles.list`")
+    .doc("`profile` is `none` (your global settings), `preset:<id>` (`performance`, `balanced`, `quality`) or the name of a saved profile of the map. The profile is applied when the drive starts and the global settings return when it ends; the settings file never holds profile values. With `make_default` the profile is also written as the profile of this key. `-32602` for a profile that does not exist, `1001` without a map."),
+    c(
+        "profiles.save",
+        "drive",
+        "Create a profile from the current values of the map-eligible settings (Create New from Current)",
+        "name:s chrono:b?",
+    )
+    .since("1.14")
+    .result("the answer of `profiles.list`")
+    .doc("Saved as the map's default profile, or with `chrono: true` as the profile of the newest active Chrono entry. Settings nothing is stored for are saved with their default. An existing profile of the same key is replaced."),
+    c(
+        "profiles.delete",
+        "drive",
+        "Delete the map's profile (the Chrono entry's with `chrono: true`)",
+        "chrono:b?",
+    )
+    .since("1.14")
+    .result("the answer of `profiles.list` plus `removed` (false when there was none)")
+    .doc("Presets cannot be deleted."),
+    c(
+        "profiles.status",
+        "drive",
+        "Which profile the running drive uses",
+        "",
+    )
+    .since("1.14")
+    .result("`{active, map, chrono, profile, source, keys, overlaid}`")
+    .doc("`keys` are the settings the profile overrides, `overlaid` the keys the settings currently hold as session values (the global values return when the drive ends)."),
+    c(
         "bus.routes",
         "drive",
         "List the lines and courses of the depot (.hof) of the player's vehicle",

@@ -1,9 +1,9 @@
 # The Map Configuration modal (M-0130).
-map-config-open = Map configuration
 map-config-title = Map configuration
 map-config-map = { $map }
 map-config-chrono-none = No Chrono entry on this date.
-map-config-chrono = Chrono entry for this date: { $entries }
+map-config-chrono = Chrono entry for this date: { $newest } ({ $others } more active)
+map-config-chrono-one = Chrono entry for this date: { $newest }
 map-config-load = Load profile
 map-config-counting = Counting the map in the background…
 map-config-load-counts = { $objects } objects · { $splines } splines · { $tiles } tiles · { $area } km² · AI pool { $pool } vehicles
