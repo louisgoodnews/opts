@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batch 1 done 2026-10-19** (§3.1); batches 2 to 4 open |
+| **Status** | ✅ Approved 2026-10-19 (the project lead left the four decisions of §9 to the executing session and signs off on the result): batch assignment as proposed; batch 1 starts now; the 80-line rule stays a warning list; `foo.rs` + `foo/tests.rs` is the convention. **Batches 1 and 2 done 2026-10-19** (§3.1, §4.1); batches 3 and 4 open |
 | **Milestones** | [M-0127](../roadmap/phase-999/M-0127.md) (batches 1 and 2), [M-0128](../roadmap/phase-999/M-0128.md) (batches 3 and 4), [M-0129](../roadmap/phase-999/M-0129.md) (batch 5) |
 | **Audit** | [structure-audit-2026-10-19](../meta/structure-audit-2026-10-19.md) |
 | **Generated from** | `python3 scripts/structure_audit.py` measurements plus a scan of each file's top-level items; the cut points are proposals to be checked when the batch runs |
@@ -83,6 +83,14 @@ All 13 files were done, one commit each (before and after counts are in each com
 | `crates/opts-game/src/control_trace.rs` | 526 | 0 | 116 | medium | `fn pick` (116 lines, 292-409); `fn parse_filters` (70 lines, 143-212); split the 116-line function; concern words: tile ×3, register ×1, add ×1, colour ×1, draw ×1 | 526 → parts of ≤ 500 |
 | `crates/opts-l10n/src/pack.rs` | 508 | 49 | 163 | medium | `fn load_pack_dir` (163 lines, 335-497); `fn parse_meta` (138 lines, 106-243); split the 163-line function; concern words: name ×1, to ×1, valid ×1, parse ×1, errors ×1 | 508 → parts of ≤ 500 |
 | `crates/opts-omsi/src/formats/vehicles/model/parse.rs` | 503 | 0 | 157 | medium | `fn parse_model` (157 lines, 60-218); `fn apply_material_modifier` (100 lines, 307-408); `fn handle_global_directive` (78 lines, 453-531); split the 157-line function; concern words: parse ×4, handle ×3, require ×1, model ×1, get ×1 | 503 → parts of ≤ 500 |
+
+### 4.1 Result of batch 2 (2026-10-19, branch `refactor/cycle-1-batch-2`)
+
+All 26 files are under the limit (the ratchet went from 50 to 24 files). 10 files lost only their tests (`hof`, `pack`, and the tests of `tile`, `chrono/entry`, `fluent`, `bus`, `omsi_world/tile`, `extract`, tools `l10n`, which were also cut by concern), the rest were split by concern into 1 to 3 child modules each (`foo.rs` + `foo/<concern>.rs`; before and after counts are in each commit message). Moved code is byte-identical apart from `super::` paths one level deeper, relative `include_str!`/shader paths with one more `../`, and `pub(super)` items becoming `pub(in super::super)`; doc comments move with their items; the old public paths are kept by `pub use` in the parent.
+
+How it was done, for the next batches: a small tool (not committed; its rules are in this paragraph) moves top-level items by name into a child module, re-exports what was public, widens what the parent still uses to `pub(super)`, adds sibling imports, and `cargo check` repeats until the privacy errors are gone. Three flaws of the first version were found by the compiler, by `cargo clippy` or by reading the diff, and fixed before anything was merged: doc comments were left behind in the parent (the inventory treated comment lines as blank), `super::` and relative paths were not rewritten, and a private type leaked through a moved method. Lesson for the prompt: after a mechanical move, read the diff of the parent for orphaned doc comments.
+
+Two things the audit does not show: 26 small `pub(super)` widenings on moved items that only the child uses were reverted by the tool, and the `tests.rs` files of `light_cones` and `mirrors` grew by 4 and 2 lines of imports (recorded in the ratchet file; they are batch 4 files).
 
 ## 5. Batch 3: high risk: the hot, widely used files
 
