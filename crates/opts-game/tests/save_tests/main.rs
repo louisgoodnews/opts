@@ -292,7 +292,7 @@ fn a_vehicle_state_round_trips_with_its_script_variables() {
 
 #[test]
 fn an_old_version_fixture_migrates_and_unknown_sections_are_kept() {
-    let text = include_str!("fixtures/saves/v1-vehicles.save.json");
+    let text = include_str!("../fixtures/saves/v1-vehicles.save.json");
     let file = SaveFile::decode(text).expect("old fixture decodes");
     let app = session_world();
     let sections = app.world().resource::<SaveRegistry>().all().to_vec();
@@ -331,85 +331,14 @@ fn an_old_version_fixture_migrates_and_unknown_sections_are_kept() {
     );
 }
 
-fn noop_capture(_: &mut World) -> Result<Option<Value>, String> {
-    Ok(Some(json!({ "lamps": 3 })))
-}
-
-fn counting_apply(world: &mut World, data: &Value) -> Result<(), String> {
-    world.insert_resource(Lamps(data["lamps"].as_u64().unwrap_or(0) as u32));
-    Ok(())
-}
-
-#[derive(Resource)]
-struct Lamps(u32);
-
-#[test]
-fn a_section_registered_in_a_test_needs_no_change_to_the_save_system() {
-    let mut app = session_world();
-    app.register_save_section(SaveSection {
-        id: "test_lamps",
-        version: 1,
-        stage: Stage::World,
-        order: 500,
-        required: false,
-        capture: noop_capture,
-        prepare: None,
-        apply: Some(counting_apply),
-        migrate: None,
-        check: None,
-        about: "a section from a test",
-    });
-    let file = capture(&mut app);
-    assert_eq!(file.sections["test_lamps"].data, json!({"lamps": 3}));
-    let store = SaveStore::new(dir("independence"));
-    store.write("s", &file).expect("write");
-    let loaded = store.read("s").expect("read").file;
-    let mut other = session_world();
-    // Another build without the section keeps it as unknown.
-    let plan = plan_restore(other.world().resource::<SaveRegistry>().all(), &loaded);
-    assert_eq!(plan.unknown, ["test_lamps"]);
-    other.register_save_section(
-        *app.world()
-            .resource::<SaveRegistry>()
-            .get("test_lamps")
-            .expect("registered"),
-    );
-    restore(&mut other, &loaded);
-    assert_eq!(other.world().resource::<Lamps>().0, 3);
-}
-
-#[test]
-fn damaged_and_newer_files_are_reported_not_loaded() {
-    let store = SaveStore::new(dir("damaged"));
-    std::fs::create_dir_all(store.dir()).expect("dir");
-    std::fs::write(
-        store.dir().join("bad.save.json"),
-        "{\"magic\": \"OPTS-SAVE\", \"for",
-    )
-    .expect("write");
-    std::fs::write(
-        store.dir().join("new.save.json"),
-        json!({"magic": "OPTS-SAVE", "format_version": 42}).to_string(),
-    )
-    .expect("write");
-    let list = store.list();
-    assert_eq!(list.len(), 2);
-    let kinds: Vec<_> = list
-        .iter()
-        .map(|e| e.state.as_ref().err().map(opts_game::save::SaveError::kind))
-        .collect();
-    assert!(
-        kinds.contains(&Some("corrupt")) && kinds.contains(&Some("newer_format")),
-        "{kinds:?}"
-    );
-}
+mod section_registry;
 
 #[test]
 fn missing_content_is_found_before_anything_is_applied() {
     let app = session_world();
     let sections = app.world().resource::<SaveRegistry>().all().to_vec();
     let file =
-        SaveFile::decode(include_str!("fixtures/saves/v1-vehicles.save.json")).expect("fixture");
+        SaveFile::decode(include_str!("../fixtures/saves/v1-vehicles.save.json")).expect("fixture");
     let root = dir("no-omsi");
     std::fs::create_dir_all(root.join("maps")).expect("maps");
     let issues = preflight(
@@ -462,98 +391,4 @@ fn missing_content_is_found_before_anything_is_applied() {
         .any(|i| i.kind == IssueKind::MissingVehicle && i.subject == "Bus B"));
 }
 
-fn environment_world() -> App {
-    let mut app = session_world();
-    app.add_plugins(opts_bevy::EnvironmentPlugin);
-    app
-}
-
-#[test]
-fn the_session_environment_round_trips() {
-    use opts_bevy::{CalendarDate, EnvironmentChange, MapDatePolicy, SessionEnvironment};
-    let mut app = environment_world();
-    {
-        let mut setup = app.world_mut().resource_mut::<NewGameSetup>();
-        (setup.year, setup.month, setup.day, setup.hour, setup.minute) = (1990, 3, 4, 17, 45);
-        setup.weather_preset = "Clear Summer Day".into();
-        let mut info = app.world_mut().resource_mut::<InGameSessionInfo>();
-        (info.start_hour, info.start_minute) = (17, 45);
-    }
-    app.world_mut().write_message(EnvironmentChange::reset(
-        CalendarDate::new(1990, 3, 4),
-        17.75 * 3600.0,
-        "Clear Summer Day",
-    ));
-    app.update();
-    // The pause page changed the date (Apply), then time, weather and rate.
-    app.world_mut().write_message(EnvironmentChange {
-        date: Some(CalendarDate::new(1991, 7, 8)),
-        map_date: MapDatePolicy::Follow,
-        ..Default::default()
-    });
-    app.world_mut().write_message(EnvironmentChange {
-        date: Some(CalendarDate::new(1991, 7, 9)),
-        seconds_of_day: Some(3_723.0),
-        weather: Some("Winter Snowfall".into()),
-        rate: Some(5.0),
-        ..Default::default()
-    });
-    app.update();
-    let file = capture(&mut app);
-    let file = SaveFile::decode(&file.encode().expect("encode")).expect("decode");
-
-    let mut other = environment_world();
-    restore(&mut other, &file);
-    {
-        let setup = other.world().resource::<NewGameSetup>();
-        // The map loads for its map date, with the saved weather.
-        assert_eq!((setup.year, setup.month, setup.day), (1991, 7, 8));
-        assert_eq!((setup.hour, setup.minute), (17, 45));
-        assert_eq!(setup.weather_preset, "Winter Snowfall");
-    }
-    // The session starts from the plan (as `setup_in_game_session` does), then the clock comes back.
-    other.world_mut().write_message(EnvironmentChange::reset(
-        CalendarDate::new(1991, 7, 8),
-        17.75 * 3600.0,
-        "Winter Snowfall",
-    ));
-    restore(&mut other, &file);
-    other.update();
-    let env = other.world().resource::<SessionEnvironment>();
-    assert_eq!(env.date(), CalendarDate::new(1991, 7, 9));
-    assert_eq!(env.map_date(), CalendarDate::new(1991, 7, 8));
-    assert_eq!(env.hms(), (1, 2, 3));
-    assert_eq!(env.weather(), "Winter Snowfall");
-    // An old preset id keeps loading: it resolves to snow and frost (a built-in preset here, the
-    // closest installed one with an install), and is stored as it was.
-    assert_eq!(
-        env.conditions().precip,
-        opts_core::formats::weather::PrecipKind::Snow
-    );
-    assert_eq!(env.temperature_c(), -3.0);
-    assert_eq!(env.rate(), 5.0);
-}
-
-#[test]
-fn an_old_time_section_restores_start_plus_play_time() {
-    use opts_bevy::{CalendarDate, SessionEnvironment};
-    // A save written before the session environment: no date, clock, weather or rate.
-    let old: sections::TimeData = serde_json::from_value(json!({
-        "year": 1994, "month": 12, "day": 31,
-        "start_hour": 23, "start_minute": 30, "sim_elapsed_s": 3600.0
-    }))
-    .expect("old time section");
-    assert_eq!(old.date, None);
-    assert_eq!(old.clock(), (CalendarDate::new(1995, 1, 1), 1800.0));
-    let mut app = environment_world();
-    let mut file = SaveFile::new(SaveMeta::default());
-    file.sections = capture(&mut app).sections;
-    file.sections.get_mut("time").expect("time").data = serde_json::to_value(&old).expect("json");
-    restore(&mut app, &file);
-    app.update();
-    let env = app.world().resource::<SessionEnvironment>();
-    assert_eq!(env.date(), CalendarDate::new(1995, 1, 1));
-    assert_eq!(env.hms(), (0, 30, 0));
-    let setup = app.world().resource::<NewGameSetup>();
-    assert_eq!((setup.year, setup.month, setup.day), (1994, 12, 31));
-}
+mod environment;
