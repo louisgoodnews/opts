@@ -44,6 +44,7 @@ fn describe_schedule(
             "name": x.name,
             "arrival": clock_text(x.arrival_s),
             "departure": clock_text(x.departure_s),
+            "distance_m": x.distance_m,
         })).collect::<Vec<_>>(),
     })
 }

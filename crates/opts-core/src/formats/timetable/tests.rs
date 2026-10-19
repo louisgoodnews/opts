@@ -118,3 +118,79 @@ fn manual_times_win_and_unlisted_stations_are_interpolated() {
     assert!(timetables().schedule("11", 0, 9).is_none());
     assert!(timetables().schedule("nope", 0, 0).is_none());
 }
+
+const LINKS: &str = "---------------------------\r\nTime Table StnLinkList File\r\n---------------------------\r\n\r\nCreated with Omsi Version 2.2.032\r\nDate: 05.10.2015\r\n\r\nPonttor ==> Bushof\r\n\r\n[StnLink]\r\n600.0000000000\r\n100\r\n101\r\n1.1300000000\r\n4.0600000000\r\n87.0000000000\r\n64.8000000000\r\n0\r\n1\r\n\r\n   0:\r\n[StnLink_entry]\r\n17754\r\n0\r\n7\r\n400.0000000000\r\n-1\r\n0\r\n0\r\n\r\n   1:\r\n[StnLink_entry]\r\n17753\r\n0\r\n7\r\n200.0000000000\r\n-1\r\n0\r\n0\r\n\r\nBushof ==> Vaals\r\n\r\n[StnLink]\r\n1400.0\r\n101\r\n102\r\n4.06\r\n4.19\r\n64.8\r\n15.1\r\n0\r\n0\r\n\r\n   0:\r\n[StnLink_entry]\r\n161539\r\n7\r\n3\r\n1400.0\r\n-1\r\n0\r\n1\r\n";
+
+#[test]
+fn station_links_name_the_stations_give_the_length_and_list_the_pieces_of_path() {
+    let l = parse_stn_links(LINKS.as_bytes());
+    assert_eq!(l.len(), 2);
+    assert_eq!(
+        (l[0].from_name.as_str(), l[0].to_name.as_str()),
+        ("Ponttor", "Bushof")
+    );
+    assert_eq!((l[0].from_id, l[0].to_id, l[0].length_m), (100, 101, 600.0));
+    assert_eq!(
+        (l[0].from_a, l[0].to_a, l[0].from_b, l[0].to_b),
+        (1.13, 4.06, 87.0, 64.8)
+    );
+    assert_eq!(l[0].last_entry, 1);
+    assert_eq!(l[0].entries.len(), 2);
+    assert_eq!(l[0].entries.iter().map(|e| e.length_m).sum::<f32>(), 600.0);
+    assert_eq!(l[0].entries[0].id, 17754);
+    assert_eq!(l[1].entries[0].f, 1);
+    // The second link starts where the first ends.
+    assert_eq!(l[1].from_id, l[0].to_id);
+}
+
+fn with_links() -> Timetables {
+    timetables().with_links(parse_stn_links(LINKS.as_bytes()))
+}
+
+#[test]
+fn a_link_is_found_in_either_direction_and_gives_the_distance_along_a_run() {
+    let t = with_links();
+    assert_eq!(t.link(100, 101).map(|l| l.length_m), Some(600.0));
+    assert_eq!(
+        t.link(101, 100).map(|l| l.length_m),
+        Some(600.0),
+        "the road is the same road"
+    );
+    assert!(t.link(100, 102).is_none());
+    // The trip of the fixtures has five stations 100..104 in `TTP`, only the first pair linked:
+    // no distance for the run.
+    let s = t.schedule("11", 0, 1).expect("schedule");
+    assert!(s.stops.iter().all(|x| x.distance_m.is_none()));
+}
+
+#[test]
+fn the_interpolation_can_follow_the_link_lengths() {
+    // Three stations 100, 101, 102 with arrivals listed for the first and the last only; the
+    // links are 600 m and 1,400 m, so by distance the middle one is at 30 % of the time, by
+    // order at 50 %.
+    let ttp = "[trip]\n\nVaals\n33\n[station_typ2]\n100\n[station_typ2]\n101\n[station_typ2]\n102\n[profile]\nstandard\n10.0\n[profile_man_arr_time]\n0\n0.0\n[profile_man_arr_time]\n2\n10.0\n";
+    let ttl = "[newtour]\nT\nBus\n1\n[addtrip]\nthree\n0\n480.000\n";
+    let t = Timetables::from_parts(
+        parse_busstops(STOPS.as_bytes()),
+        vec![("3".into(), parse_line(ttl.as_bytes()))],
+        vec![("three".into(), parse_trip(ttp.as_bytes()))],
+    )
+    .with_links(parse_stn_links(LINKS.as_bytes()));
+    let mid = |mode| {
+        let s = t.schedule_with("3", 0, 0, mode).expect("schedule");
+        (s.stops[1].arrival_s - s.start_s) / 60.0
+    };
+    assert_eq!(mid(Interpolation::ByIndex), 5.0);
+    assert!((mid(Interpolation::ByDistance) - 3.0).abs() < 1e-4);
+    assert_eq!(
+        mid(Interpolation::default()),
+        5.0,
+        "the order is the default"
+    );
+    let s = t.schedule("3", 0, 0).expect("schedule");
+    assert_eq!(
+        s.stops.iter().map(|x| x.distance_m).collect::<Vec<_>>(),
+        [Some(0.0), Some(600.0), Some(2000.0)],
+        "the distance along the run comes from the links"
+    );
+}

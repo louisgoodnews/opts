@@ -902,7 +902,7 @@ The map's `TTData` folder: `.ttl` line files with their tours (`[newtour]`) and 
 
 Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS.
 
-**Result:** `{schedule: {line_file, tour, trip, title, line, start, stop_count, stops: [{station, name, arrival, departure}]}, route_code, typing}`; `route_code` is the depot route selected for the run (`null` when the depot has none for its line and destination)
+**Result:** `{schedule: {line_file, tour, trip, title, line, start, stop_count, stops: [{station, name, arrival, departure, distance_m}]}, route_code, typing}`; `distance_m` is the distance along the run from its first stop (`null` unless `StnLinks.cfg` links every pair of stations); `route_code` is the depot route selected for the run (`null` when the depot has none for its line and destination)
 
 `line` is the file name of a line file without extension, `tour` and `run` count from 0 (default 0). The run's trip gives the stops (`Busstops.cfg` names) and, with its timing profile, the scheduled arrival and departure of each; times without a manual entry in the profile are interpolated by station index. `GetTTDelay` is the simulation clock minus the arrival at the current stop (`bus.set_stop`). `stops` limits how many stops the answer lists (default 5). `clear` stops following. `-32602` for a run the map does not have or a map without timetable files.
 
