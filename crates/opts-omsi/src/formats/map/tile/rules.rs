@@ -3,16 +3,16 @@
 /// What a `[rule]` is attached to: the spline or object whose block precedes it in the tile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuleOwner {
-    /// A spline: `index` into [`MapTile::splines`].
+    /// A spline: `index` into [`super::MapTile::splines`].
     Spline {
-        /// Position in [`MapTile::splines`].
+        /// Position in [`super::MapTile::splines`].
         index: usize,
         /// The spline's `id_code`.
         id_code: u64,
     },
-    /// A scenery object (a junction, say): `index` into [`MapTile::objects`].
+    /// A scenery object (a junction, say): `index` into [`super::MapTile::objects`].
     Object {
-        /// Position in [`MapTile::objects`].
+        /// Position in [`super::MapTile::objects`].
         index: usize,
         /// The object's `id_code`.
         id_code: u64,
