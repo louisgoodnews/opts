@@ -1,3 +1,5 @@
+//! Unit tests of `setvars_discovery`.
+
 use std::collections::BTreeSet;
 
 use super::*;

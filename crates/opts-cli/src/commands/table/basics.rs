@@ -1,4 +1,4 @@
-//! Part 1 of 4 of the command table: 56 entries, in protocol order (the order is the listing order of `help` and the reference).
+//! The basic commands of the table: meta, queries, input, simulation and settings (`ping` to `l10n.reload`), in protocol order.
 
 use crate::commands::{c, CommandSpec};
 

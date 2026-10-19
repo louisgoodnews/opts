@@ -1,3 +1,5 @@
+//! Unit tests of `bus_config`.
+
 use std::collections::BTreeMap;
 
 use super::*;

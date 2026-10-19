@@ -1,3 +1,5 @@
+//! Unit tests of `wheels`.
+
 use super::*;
 
 fn wheel() -> WheelState {

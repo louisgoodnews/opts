@@ -1,3 +1,5 @@
+//! Unit tests of `light_rooms`.
+
 use std::time::Duration;
 
 use bevy::camera::visibility::{ViewVisibility, VisibilityPlugin};

@@ -1,3 +1,5 @@
+//! Unit tests of `tile_loading`.
+
 use std::collections::HashSet;
 
 use opts_hardware::fact::Fact;

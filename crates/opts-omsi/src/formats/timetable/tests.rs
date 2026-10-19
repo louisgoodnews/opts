@@ -1,3 +1,5 @@
+//! Unit tests of `timetable`.
+
 use super::*;
 
 const TTP: &str = "-----------------------\r\nTime Table Trip File\r\n-----------------------\r\n\r\n[trip]\r\n\r\nHoengen I G A\r\n11\r\n\r\n.........................\r\n        Stations\r\n.........................\r\n\r\n[station_typ2]\r\n100\r\n\r\n[station_typ2]\r\n101\r\n\r\n[station_typ2]\r\n102\r\n\r\n[station_typ2]\r\n103\r\n\r\n[station_typ2]\r\n104\r\n\r\n[profile]\r\nstandard\r\n8.000\r\n\r\n[profile_man_arr_time]\r\n0\r\n0.000\r\n[profile_man_arr_time]\r\n2\r\n2.000\r\n[profile_otherstopping]\r\n2\r\n30\r\n[profile_man_dep_time]\r\n2\r\n3.000\r\n[profile_man_arr_time]\r\n4\r\n8.000\r\n[profile]\r\nBlockverkehr\r\n10.000\r\n";

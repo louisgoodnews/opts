@@ -2,6 +2,8 @@
 
 #![allow(dead_code)]
 
+pub mod loading;
+
 use std::path::{Path, PathBuf};
 
 use bevy::math::Vec3;

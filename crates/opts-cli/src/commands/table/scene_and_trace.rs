@@ -1,4 +1,4 @@
-//! Part 3 of 4 of the command table: 34 entries, in protocol order (the order is the listing order of `help` and the reference).
+//! Scene, trace and query commands of the table (`vehicle.reset` to `session.save`), in protocol order.
 
 use crate::commands::{c, CommandSpec};
 

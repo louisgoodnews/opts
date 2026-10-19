@@ -1,3 +1,5 @@
+//! Unit tests of `sun_rays`.
+
 use super::*;
 use crate::light_quality::LightQuality;
 

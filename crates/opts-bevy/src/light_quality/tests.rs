@@ -1,3 +1,5 @@
+//! Unit tests of `light_quality`.
+
 use super::*;
 
 mod ladder;

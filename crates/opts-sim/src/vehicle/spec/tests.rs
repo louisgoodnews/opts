@@ -1,3 +1,5 @@
+//! Unit tests of `spec`.
+
 use super::*;
 use glam::Vec3;
 use opts_core::formats::vehicles::bus::{BusManifest, VehicleExtras};
