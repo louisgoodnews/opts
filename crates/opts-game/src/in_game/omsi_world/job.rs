@@ -285,6 +285,7 @@ pub fn begin_world_load_at(
         ground_faces: HashMap::new(),
         tile_objects: HashMap::new(),
         tile_surfaces: HashMap::new(),
+        timetables: None,
         collision_bounds: HashMap::new(),
         scenery: super::scenery_objects::SceneryObjectCache::new(),
         parklists: HashMap::new(),
@@ -397,6 +398,26 @@ pub fn begin_world_load_at(
 }
 
 impl WorldLoadJob {
+    /// The map's timetable files (`TTData`), read on the first call and shared by every vehicle
+    /// of the session; `None` when the map has none.
+    pub fn timetables(
+        &mut self,
+    ) -> Option<std::sync::Arc<opts_core::formats::timetable::Timetables>> {
+        self.timetables
+            .get_or_insert_with(|| {
+                let t = opts_bevy::route::find_timetables(&self.config.map_dir);
+                if let Some(t) = &t {
+                    tracing::info!(
+                        stops = t.stops.len(),
+                        lines = t.lines.len(),
+                        "timetable files (TTData) loaded"
+                    );
+                }
+                t.map(std::sync::Arc::new)
+            })
+            .clone()
+    }
+
     /// Display name of the loaded map.
     #[must_use]
     pub fn map_name(&self) -> String {

@@ -47,6 +47,8 @@ pub enum Page {
     Select,
     /// The train formation editor (`formation_menu`), reached from the Select Vehicle modal.
     Formation,
+    /// *Line and destination*: the depot's routes and the map's timetables (M-0099).
+    Route,
 }
 
 /// State of the menu.
@@ -68,7 +70,7 @@ pub struct VehicleMenu {
     status: String,
     /// Scroll offsets carried over a rebuild: vehicles, repaints, entries, description,
     /// configuration.
-    scroll: [f32; 5],
+    scroll: [f32; 7],
     /// Name of the vehicle spawned through the menu.
     current: String,
     built: Option<(Page, bool)>,
@@ -79,6 +81,12 @@ pub struct VehicleMenu {
     search: String,
     /// The session vehicle rows shown in the last build of the main page (rebuild on change).
     shown_rows: Vec<RowSig>,
+    /// Text typed into the route search field.
+    route_search: String,
+    /// The timetable line file and tour the right column has opened (indices into the map's
+    /// line files and that file's tours).
+    tt_line: Option<usize>,
+    tt_tour: Option<usize>,
 }
 
 /// What a row of the main page shows; a change rebuilds the page.
@@ -181,6 +189,22 @@ enum Action {
     Step(String, i32),
     Confirm,
     Back,
+    /// Opens the *Line and destination* page.
+    OpenRoute,
+    /// Selects the depot route with this code (`line * 100 + course`).
+    PickRoute(i32),
+    /// Selects the first depot route whose label contains the text (`menu.do route <text>`).
+    PickRouteText(String),
+    /// Opens line file `i` of the timetable list.
+    TtLine(usize),
+    /// Opens tour `i` of the open line file.
+    TtTour(usize),
+    /// Follows run `i` of the open tour.
+    TtRun(usize),
+    /// One level up in the timetable list.
+    TtUp,
+    /// Cancels the route and the timetable.
+    ClearRoute,
 }
 
 /// Every entity of the menu's modals.
@@ -259,7 +283,7 @@ fn toggle_menu(
             menu.config_open = false;
         } else if menu.page == Page::Formation {
             menu.page = Page::Select;
-        } else if menu.page == Page::Select {
+        } else if menu.page == Page::Select || menu.page == Page::Route {
             menu.page = Page::Main;
         } else {
             menu.page = Page::Closed;
@@ -340,6 +364,26 @@ fn menu_actions(
                 (menu.page != Page::Formation).then_some(Action::OpenFormation)
             }
             "back" => Some(Action::Back),
+            "route" if rest.is_empty() => Some(Action::OpenRoute),
+            "route" => Some(Action::PickRouteText(rest.clone())),
+            "route-clear" => Some(Action::ClearRoute),
+            // `run <line file> <tour> <run>`: the line file may contain spaces, tour and run are
+            // the last two words.
+            "run" => {
+                let mut w: Vec<&str> = rest.split_whitespace().collect();
+                let run = w.pop().and_then(|x| x.parse().ok());
+                let tour = w.pop().and_then(|x| x.parse().ok());
+                match (tour, run, w.is_empty()) {
+                    (Some(tour), Some(run), false) => {
+                        let line = w.join(" ");
+                        commands.queue(move |world: &mut World| {
+                            run_timetable(world, &line, tour, run);
+                        });
+                        None
+                    }
+                    _ => None,
+                }
+            }
             "config" => Some(Action::OpenConfig),
             "done" => Some(Action::CloseConfig),
             "confirm" => Some(Action::Confirm),
@@ -440,6 +484,41 @@ fn menu_actions(
             Action::Back => {
                 menu.page = Page::Main;
                 menu.config_open = false;
+            }
+            Action::OpenRoute => {
+                menu.page = Page::Route;
+                menu.status.clear();
+            }
+            Action::PickRoute(code) => {
+                commands.queue(move |w: &mut World| pick_route(w, code));
+            }
+            Action::PickRouteText(text) => {
+                menu.page = Page::Route;
+                commands.queue(move |w: &mut World| pick_route_text(w, &text));
+            }
+            Action::TtLine(i) => {
+                menu.tt_line = Some(i);
+                menu.tt_tour = None;
+                menu.scroll[6] = 0.0;
+            }
+            Action::TtTour(i) => {
+                menu.tt_tour = Some(i);
+                menu.scroll[6] = 0.0;
+            }
+            Action::TtRun(i) => {
+                let (Some(l), Some(t)) = (menu.tt_line, menu.tt_tour) else {
+                    continue;
+                };
+                commands.queue(move |w: &mut World| pick_run(w, l, t, i));
+            }
+            Action::TtUp => {
+                if menu.tt_tour.take().is_none() {
+                    menu.tt_line = None;
+                }
+                menu.scroll[6] = 0.0;
+            }
+            Action::ClearRoute => {
+                commands.queue(|w: &mut World| clear_route(w));
             }
             Action::PickVehicle(i) => {
                 if menu.vehicle != Some(i) {
@@ -546,9 +625,14 @@ fn search_input(
     mut menu: ResMut<VehicleMenu>,
     mut commands_in: ResMut<MenuCommands>,
 ) {
-    let typing = menu.page == Page::Select && !menu.config_open;
+    let on_route = menu.page == Page::Route;
+    let typing = (menu.page == Page::Select && !menu.config_open) || on_route;
     let mut changed = false;
-    let mut search = menu.search.clone();
+    let mut search = if on_route {
+        menu.route_search.clone()
+    } else {
+        menu.search.clone()
+    };
     for e in keys.read() {
         if !typing || e.state != ButtonState::Pressed {
             continue;
@@ -576,7 +660,12 @@ fn search_input(
         search = text;
         changed = true;
     }
-    if changed && search != menu.search {
+    if on_route {
+        if changed && search != menu.route_search {
+            menu.route_search = search;
+            menu.scroll[5] = 0.0;
+        }
+    } else if changed && search != menu.search {
         menu.search = search;
         menu.scroll[0] = 0.0;
     }
@@ -690,6 +779,7 @@ fn rebuild_menu(
     registry: Res<SessionVehicles>,
     index: Res<EntryIndex>,
     job: Option<Res<WorldLoadJob>>,
+    routes: Query<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>,
 ) {
     let want = (menu.page, menu.config_open);
     if !menu.is_changed() && menu.built == Some(want) {
@@ -706,6 +796,10 @@ fn rebuild_menu(
     let Some(theme) = theme else { return };
     match menu.page {
         Page::Closed | Page::Formation => {}
+        Page::Route => {
+            let view = routes.iter().next().map(|r| route_view(&menu, &r.handle));
+            build_route(&mut commands, &theme, &menu, view.as_ref());
+        }
         Page::Main => {
             let status = if menu.status.is_empty() {
                 if registry.live_count() == 0 {
@@ -875,6 +969,10 @@ fn build_main(
             });
         }
         button(p, "Spawn vehicle…", true, Action::OpenSelect);
+        let route = button(p, "Line and destination…", false, Action::OpenRoute);
+        p.commands()
+            .entity(route)
+            .insert(UiId::new("vehicle.route"));
         button(p, "Close", false, Action::Close);
     });
 }
@@ -1165,6 +1263,409 @@ fn build_config(
     });
 }
 
+// --- the route page (M-0099) ------------------------------------------------------------------
+
+/// Most depot routes the list builds buttons for; the search narrows the rest.
+const MAX_ROUTE_ROWS: usize = 300;
+
+/// What the route page shows: the depot's routes, the map's timetable lists and the selection.
+struct RouteView {
+    depot: Option<String>,
+    /// `(route code, label)` of the routes matching the search.
+    routes: Vec<(i32, String)>,
+    total_routes: usize,
+    selected: Option<i32>,
+    /// Text of the selection line.
+    summary: String,
+    timetable: Option<TimetableView>,
+}
+
+/// The right column: line files, or the tours of one, or the runs of a tour.
+enum TimetableView {
+    Lines(Vec<(usize, String)>),
+    Tours(String, Vec<(usize, String)>),
+    Runs(String, Vec<(usize, String)>),
+}
+
+fn route_label(r: &opts_bevy::route::RouteSelection, terminus: &str) -> String {
+    let line = if r.line_string.is_empty() {
+        r.line.to_string()
+    } else {
+        r.line_string.clone()
+    };
+    format!("{line}/{:02}  {terminus}", r.course)
+}
+
+/// The labels of every route of the depot.
+fn route_labels(handle: &opts_bevy::route::RouteHandle) -> Vec<(i32, String)> {
+    handle
+        .routes()
+        .into_iter()
+        .map(|r| {
+            let terminus = handle.with(|s| {
+                let hof = s.hof.as_ref()?;
+                let (i, _) = hof.find_terminus_by_code(r.terminus_code)?;
+                hof.terminus_string(i, 0).map(str::to_string)
+            });
+            let label = route_label(&r, terminus.as_deref().unwrap_or(""));
+            (r.route_code, label)
+        })
+        .collect()
+}
+
+fn clock_text(s: f32) -> String {
+    let t = (s.max(0.0).round() as u32) % 86_400;
+    format!("{:02}:{:02}", t / 3600, t / 60 % 60)
+}
+
+fn route_view(menu: &VehicleMenu, handle: &opts_bevy::route::RouteHandle) -> RouteView {
+    let needle = menu.route_search.to_lowercase();
+    let all = route_labels(handle);
+    let total_routes = all.len();
+    let routes: Vec<(i32, String)> = all
+        .into_iter()
+        .filter(|(_, l)| needle.is_empty() || l.to_lowercase().contains(&needle))
+        .collect();
+    let selected = handle.selection().map(|s| s.route_code);
+    let schedule = handle.schedule();
+    let summary = match (&schedule, handle.selection()) {
+        (Some(sc), _) => format!(
+            "Timetable: {} · {} {} → {}, start {}",
+            sc.line_file,
+            sc.tour,
+            sc.line,
+            sc.title,
+            clock_text(sc.start_s)
+        ),
+        (None, Some(sel)) => {
+            let terminus = route_labels(handle)
+                .into_iter()
+                .find(|(c, _)| *c == sel.route_code)
+                .map(|(_, l)| l)
+                .unwrap_or_default();
+            format!("Route: {terminus}")
+        }
+        (None, None) => "No route selected (free driving).".to_string(),
+    };
+    let timetable = handle.timetables().map(|tt| {
+        let line = menu
+            .tt_line
+            .and_then(|i| tt.lines.iter().filter(|(_, l)| l.user_allowed).nth(i));
+        match (line, menu.tt_tour) {
+            (None, _) => TimetableView::Lines(
+                tt.lines
+                    .iter()
+                    .filter(|(_, l)| l.user_allowed)
+                    .enumerate()
+                    .map(|(i, (n, l))| (i, format!("{n}  ({} tours)", l.tours.len())))
+                    .collect(),
+            ),
+            (Some((name, l)), None) => TimetableView::Tours(
+                name.clone(),
+                l.tours
+                    .iter()
+                    .enumerate()
+                    .map(|(i, t)| {
+                        (
+                            i,
+                            format!(
+                                "{}  ·  {}  ({} runs)",
+                                t.name,
+                                t.vehicle_group,
+                                t.trips.len()
+                            ),
+                        )
+                    })
+                    .collect(),
+            ),
+            (Some((name, l)), Some(ti)) => TimetableView::Runs(
+                format!(
+                    "{name} / {}",
+                    l.tours.get(ti).map_or("", |t| t.name.as_str())
+                ),
+                l.tours
+                    .get(ti)
+                    .map(|t| {
+                        t.trips
+                            .iter()
+                            .enumerate()
+                            .map(|(i, r)| {
+                                let trip = tt.trip(&r.trip);
+                                (
+                                    i,
+                                    format!(
+                                        "{}  {}  {}",
+                                        clock_text(r.start_min * 60.0),
+                                        trip.map_or("", |x| x.line.as_str()),
+                                        trip.map_or(r.trip.as_str(), |x| x.title.as_str())
+                                    ),
+                                )
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            ),
+        }
+    });
+    RouteView {
+        depot: handle.with(|s| s.hof.as_ref().map(|h| h.name.clone())),
+        routes,
+        total_routes,
+        selected,
+        summary,
+        timetable,
+    }
+}
+
+fn set_status(world: &mut World, text: String) {
+    if let Some(mut m) = world.get_resource_mut::<VehicleMenu>() {
+        m.status = text;
+    }
+}
+
+fn pick_route(world: &mut World, code: i32) {
+    let result =
+        crate::control_route::set_route_impl(world, &serde_json::json!({ "route_code": code }));
+    set_status(
+        world,
+        match result {
+            Ok(v) if v["keypad"] == false => {
+                "Route selected (this vehicle's IBIS is not supported: only its displays follow)."
+                    .to_string()
+            }
+            Ok(_) => "Route selected; the IBIS is being keyed.".to_string(),
+            Err(e) => format!("ERROR: {}", e.message),
+        },
+    );
+}
+
+fn pick_route_text(world: &mut World, text: &str) {
+    let needle = text.to_lowercase();
+    let mut q =
+        world.query_filtered::<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>();
+    let code = q.iter(world).next().and_then(|r| {
+        route_labels(&r.handle)
+            .into_iter()
+            .find(|(_, l)| l.to_lowercase().contains(&needle))
+            .map(|(c, _)| c)
+    });
+    match code {
+        Some(c) => pick_route(world, c),
+        None => set_status(world, format!("No route matches `{text}`.")),
+    }
+}
+
+fn pick_run(world: &mut World, line_index: usize, tour: usize, run: usize) {
+    let mut q =
+        world.query_filtered::<&opts_bevy::route::VehicleRoute, With<opts_bevy::PlayerVehicle>>();
+    let line = q.iter(world).next().and_then(|r| {
+        r.handle.timetables().and_then(|tt| {
+            tt.lines
+                .iter()
+                .filter(|(_, l)| l.user_allowed)
+                .nth(line_index)
+                .map(|(n, _)| n.clone())
+        })
+    });
+    match line {
+        Some(l) => run_timetable(world, &l, tour, run),
+        None => set_status(world, "That timetable line is gone.".to_string()),
+    }
+}
+
+fn run_timetable(world: &mut World, line: &str, tour: usize, run: usize) {
+    let result = crate::control_route::set_timetable_impl(
+        world,
+        &serde_json::json!({ "line": line, "tour": tour, "run": run }),
+    );
+    set_status(
+        world,
+        match result {
+            Ok(v) if v["route_code"].is_null() => {
+                "Timetable followed; the depot has no route for its line and destination."
+                    .to_string()
+            }
+            Ok(_) => "Timetable followed; the route is being keyed on the IBIS.".to_string(),
+            Err(e) => format!("ERROR: {}", e.message),
+        },
+    );
+}
+
+fn clear_route(world: &mut World) {
+    let a = crate::control_route::set_route_impl(world, &serde_json::json!({ "clear": true }));
+    let b = crate::control_route::set_timetable_impl(world, &serde_json::json!({ "clear": true }));
+    set_status(
+        world,
+        match a.and(b) {
+            Ok(_) => "Route and timetable cancelled.".to_string(),
+            Err(e) => format!("ERROR: {}", e.message),
+        },
+    );
+}
+
+fn build_route(
+    commands: &mut Commands,
+    _theme: &MaterialTheme,
+    menu: &VehicleMenu,
+    view: Option<&RouteView>,
+) {
+    let (root, content) = ModalBuilder::new()
+        .with_size_percent(80.0, 88.0)
+        .with_width_range(760.0, 1400.0)
+        .spawn(commands);
+    commands.entity(root).insert(MenuRoot);
+    commands.entity(content).with_children(|p| {
+        label(p, "Line and destination", 24.0, ColorRole::Primary);
+        let Some(view) = view else {
+            label(
+                p,
+                "There is no player vehicle with a route.",
+                14.0,
+                ColorRole::OnSurfaceVariant,
+            );
+            let back = button(p, "Back", false, Action::Back);
+            p.commands()
+                .entity(back)
+                .insert(UiId::new("vehicle.route.back"));
+            return;
+        };
+        label(p, view.summary.clone(), 14.0, ColorRole::OnSurface);
+        if !menu.status.is_empty() {
+            label(p, menu.status.clone(), 13.0, ColorRole::OnSurfaceVariant);
+        }
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(16.0),
+            width: Val::Percent(100.0),
+            flex_grow: 1.0,
+            min_height: Val::Px(0.0),
+            ..default()
+        })
+        .with_children(|row| {
+            // Left: the depot's routes.
+            let left = column(row, 50.0);
+            row.commands().entity(left).with_children(|c| {
+                label(
+                    c,
+                    format!(
+                        "Depot routes{} ({} of {})",
+                        view.depot
+                            .as_deref()
+                            .map_or(String::new(), |d| format!(" · {d}")),
+                        view.routes.len(),
+                        view.total_routes
+                    ),
+                    15.0,
+                    ColorRole::Primary,
+                );
+                c.spawn((
+                    Node {
+                        width: Val::Percent(100.0),
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        border: UiRect::all(Val::Px(1.0)),
+                        ..default()
+                    },
+                    BorderRole(ColorRole::Outline),
+                    BackgroundRole(ColorRole::SurfaceContainerLowest),
+                    RadiusToken(RadiusLevel::Small),
+                ))
+                .with_children(|f| {
+                    let text = if menu.route_search.is_empty() {
+                        "Search: type a line or destination…".to_string()
+                    } else {
+                        format!("Search: {}|", menu.route_search)
+                    };
+                    label(f, text, 13.0, ColorRole::OnSurface);
+                });
+                scroll_list(c, 5, menu.scroll[5], Val::Percent(100.0), |list| {
+                    for (code, text) in view.routes.iter().take(MAX_ROUTE_ROWS) {
+                        let b = button(
+                            list,
+                            text,
+                            view.selected == Some(*code),
+                            Action::PickRoute(*code),
+                        );
+                        list.commands()
+                            .entity(b)
+                            .insert(UiId::new(format!("vehicle.route.pick.{code}")));
+                    }
+                    if view.routes.len() > MAX_ROUTE_ROWS {
+                        label(
+                            list,
+                            format!(
+                                "… {} more: type to narrow the list",
+                                view.routes.len() - MAX_ROUTE_ROWS
+                            ),
+                            13.0,
+                            ColorRole::OnSurfaceVariant,
+                        );
+                    }
+                });
+            });
+            // Right: the map's timetables.
+            let right = column(row, 50.0);
+            row.commands()
+                .entity(right)
+                .with_children(|c| match &view.timetable {
+                    None => label(
+                        c,
+                        "This map has no timetable files.",
+                        14.0,
+                        ColorRole::OnSurfaceVariant,
+                    ),
+                    Some(t) => {
+                        let (title, rows, nested): (String, Vec<(usize, String)>, u8) = match t {
+                            TimetableView::Lines(v) => {
+                                ("Timetables · line files".into(), v.clone(), 0)
+                            }
+                            TimetableView::Tours(n, v) => {
+                                (format!("Timetables · {n} · tours"), v.clone(), 1)
+                            }
+                            TimetableView::Runs(n, v) => {
+                                (format!("Timetables · {n} · runs"), v.clone(), 2)
+                            }
+                        };
+                        label(c, title, 15.0, ColorRole::Primary);
+                        if nested > 0 {
+                            let up = button(c, "◀ Up", false, Action::TtUp);
+                            c.commands()
+                                .entity(up)
+                                .insert(UiId::new("vehicle.route.tt.up"));
+                        }
+                        scroll_list(c, 6, menu.scroll[6], Val::Percent(100.0), |list| {
+                            for (i, text) in rows {
+                                let action = match nested {
+                                    0 => Action::TtLine(i),
+                                    1 => Action::TtTour(i),
+                                    _ => Action::TtRun(i),
+                                };
+                                let b = button(list, &text, false, action);
+                                list.commands()
+                                    .entity(b)
+                                    .insert(UiId::new(format!("vehicle.route.tt.{nested}.{i}")));
+                            }
+                        });
+                    }
+                });
+        });
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(8.0),
+            ..default()
+        })
+        .with_children(|b| {
+            let clear = button(b, "Cancel route", false, Action::ClearRoute);
+            b.commands()
+                .entity(clear)
+                .insert(UiId::new("vehicle.route.clear"));
+            let back = button(b, "Back", true, Action::Back);
+            b.commands()
+                .entity(back)
+                .insert(UiId::new("vehicle.route.back"));
+        });
+    });
+}
+
 /// Mouse wheel over a list scrolls it.
 fn scroll_lists(
     mut wheel: MessageReader<MouseWheel>,
@@ -1189,5 +1690,134 @@ fn scroll_lists(
             pos.y = (pos.y + delta).clamp(0.0, max);
             break;
         }
+    }
+}
+
+#[cfg(test)]
+mod route_page_tests {
+    use super::*;
+    use opts_core::formats::hof::HofFile;
+    use opts_core::formats::timetable::{parse_busstops, parse_line, parse_trip, Timetables};
+    use std::sync::Arc;
+
+    const HOF: &str = "
+[name]
+Demo
+
+[servicetrip]
+x
+
+[global_strings]
+1
+a
+
+stringcount_terminus
+1
+
+[addterminus_list]
+	11	Vaals	VAALS
+	22	Bushof	BUSHOF
+[end]
+
+stringcount_busstop
+1
+
+[addbusstop_list]
+Ponttor
+[end]
+
+[infosystem_trip]
+3301
+A - B
+11
+33
+
+[infosystem_busstop_list]
+1
+Ponttor
+
+[infosystem_trip]
+5002
+C - D
+22
+50
+
+[infosystem_busstop_list]
+1
+Ponttor
+";
+
+    fn handle() -> opts_bevy::route::RouteHandle {
+        let h = opts_bevy::route::RouteHandle::new(Some(Arc::new(
+            HofFile::parse_str(HOF).expect("hof"),
+        )));
+        h.set_timetables(Some(Arc::new(Timetables::from_parts(
+            parse_busstops(b"[busstop]\nPonttor\n1\n100\n0\n0\n\n"),
+            vec![(
+                "33".into(),
+                parse_line(b"[userallowed]\n[priority]\n1\n[newtour]\nT1\nBus\n1\n[addtrip]\n33_V\n0\n480.000\n"),
+            )],
+            vec![(
+                "33_V".into(),
+                parse_trip(b"[trip]\n\nVAALS\n33\n[station_typ2]\n100\n[profile]\nstandard\n1.0\n"),
+            )],
+        ))));
+        h
+    }
+
+    #[test]
+    fn the_depot_routes_are_listed_with_line_course_and_destination_and_the_search_narrows_them() {
+        let mut menu = VehicleMenu::default();
+        let h = handle();
+        let v = route_view(&menu, &h);
+        assert_eq!(v.total_routes, 2);
+        assert_eq!(v.routes[0], (3301, "33/01  VAALS".to_string()));
+        assert_eq!(v.routes[1].1, "50/02  BUSHOF");
+        assert_eq!(v.summary, "No route selected (free driving).");
+        menu.route_search = "bush".into();
+        let v = route_view(&menu, &h);
+        assert_eq!(v.routes.len(), 1);
+        assert_eq!(v.total_routes, 2, "the count is of the whole depot");
+        h.select(3301).expect("select");
+        let v = route_view(&menu, &h);
+        assert_eq!(v.selected, Some(3301));
+        assert!(v.summary.starts_with("Route: 33/01"), "{}", v.summary);
+    }
+
+    #[test]
+    fn the_timetable_column_goes_from_lines_to_tours_to_runs() {
+        let mut menu = VehicleMenu::default();
+        let h = handle();
+        let Some(TimetableView::Lines(l)) = route_view(&menu, &h).timetable else {
+            panic!("lines first");
+        };
+        assert_eq!(l, vec![(0, "33  (1 tours)".to_string())]);
+        menu.tt_line = Some(0);
+        let Some(TimetableView::Tours(name, t)) = route_view(&menu, &h).timetable else {
+            panic!("then the tours");
+        };
+        assert_eq!(name, "33");
+        assert_eq!(t[0].1, "T1  ·  Bus  (1 runs)");
+        menu.tt_tour = Some(0);
+        let Some(TimetableView::Runs(_, r)) = route_view(&menu, &h).timetable else {
+            panic!("then the runs");
+        };
+        assert_eq!(r[0].1, "08:00  33  VAALS");
+        h.select_run("33", 0, 0).expect("run");
+        assert!(
+            route_view(&menu, &h)
+                .summary
+                .starts_with("Timetable: 33 · T1 33 → VAALS, start 08:00"),
+            "{}",
+            route_view(&menu, &h).summary
+        );
+    }
+
+    #[test]
+    fn a_map_without_timetables_has_no_right_column() {
+        let h = opts_bevy::route::RouteHandle::new(Some(Arc::new(
+            HofFile::parse_str(HOF).expect("hof"),
+        )));
+        assert!(route_view(&VehicleMenu::default(), &h).timetable.is_none());
     }
 }

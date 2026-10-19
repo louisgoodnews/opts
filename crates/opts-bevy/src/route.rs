@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use opts_core::formats::hof::HofFile;
+use opts_core::formats::timetable::{ActiveSchedule, Timetables};
 use opts_sim::script::ScriptEngine;
 
 /// What the driver has selected, as the scripts and the protocol name it.
@@ -39,6 +40,10 @@ pub enum RouteError {
     UnknownRoute(i32),
     /// The vehicle's scripts have no IBIS keypad this layer knows (`ibis_eingabe`, `ibis_0`...).
     NoKeypad,
+    /// The map has no timetable files.
+    NoTimetables,
+    /// The map's timetables have no such run (`line file/tour/run`).
+    UnknownRun(String),
 }
 
 impl std::fmt::Display for RouteError {
@@ -47,6 +52,8 @@ impl std::fmt::Display for RouteError {
             Self::NoDepot => write!(f, "the vehicle has no depot (.hof) file"),
             Self::UnknownRoute(c) => write!(f, "the depot has no route {c}"),
             Self::NoKeypad => write!(f, "the vehicle's scripts have no IBIS keypad"),
+            Self::NoTimetables => write!(f, "the map has no timetable files (TTData)"),
+            Self::UnknownRun(r) => write!(f, "the timetables have no run {r}"),
         }
     }
 }
@@ -64,6 +71,19 @@ pub struct RouteState {
     pub stop_index: usize,
     /// Delay against the timetable (s, late positive); free driving has none.
     pub delay_s: f32,
+    /// The map's timetable files, if it has any.
+    pub timetables: Option<Arc<Timetables>>,
+    /// The run the driver follows, if a timetable is selected.
+    pub schedule: Option<ActiveSchedule>,
+}
+
+/// Lower case without spaces and `*` (platform and padding marks): destination texts of the
+/// timetable files and of the depot differ in both.
+fn flat(text: &str) -> String {
+    text.chars()
+        .filter(|c| !c.is_whitespace() && *c != '*')
+        .collect::<String>()
+        .to_lowercase()
 }
 
 impl RouteState {
@@ -71,6 +91,74 @@ impl RouteState {
     #[must_use]
     pub fn route(&self) -> Option<&opts_core::formats::hof::HofRoute> {
         self.hof.as_ref()?.route(self.active_route?)
+    }
+
+    /// The terminus row of the depot that the active timetable's destination text names (the
+    /// trip's title against every string of the terminus rows, ignoring case, spaces and `*`),
+    /// or the selected route's terminus without a timetable.
+    #[must_use]
+    pub fn tt_terminus_index(&self) -> Option<usize> {
+        let hof = self.hof.as_ref()?;
+        if let Some(sc) = &self.schedule {
+            let want = flat(&sc.title);
+            if !want.is_empty() {
+                if let Some(i) = hof.termini.iter().position(|t| {
+                    flat(&t.ident) == want || t.strings.iter().any(|x| flat(x) == want)
+                }) {
+                    return Some(i);
+                }
+            }
+        }
+        let rt = self.route()?;
+        hof.find_terminus_by_code(rt.terminus_code).map(|(i, _)| i)
+    }
+
+    /// The line text of the active timetable (the trip's), else the route's.
+    #[must_use]
+    pub fn tt_line_text(&self) -> String {
+        match &self.schedule {
+            Some(s) if !s.line.is_empty() => s.line.clone(),
+            _ => self.line_text(),
+        }
+    }
+
+    /// Stops of the active timetable, else of the selected route.
+    #[must_use]
+    pub fn tt_stop_count(&self) -> usize {
+        match &self.schedule {
+            Some(s) => s.stops.len(),
+            None => self.route().map_or(0, |r| r.busstops.len()),
+        }
+    }
+
+    /// Name of stop `i` of the active timetable (its `Busstops.cfg` name), else of the route.
+    #[must_use]
+    pub fn tt_stop_name(&self, i: usize) -> String {
+        match &self.schedule {
+            Some(s) => s.stops.get(i).map(|x| x.name.clone()).unwrap_or_default(),
+            None => self
+                .route()
+                .and_then(|r| r.busstops.get(i).cloned())
+                .unwrap_or_default(),
+        }
+    }
+
+    /// Scheduled arrival at stop `i` (s after midnight); 0 without a timetable.
+    #[must_use]
+    pub fn tt_arrival_s(&self, i: usize) -> f32 {
+        self.schedule
+            .as_ref()
+            .and_then(|s| s.stops.get(i))
+            .map_or(0.0, |x| x.arrival_s)
+    }
+
+    /// Scheduled departure from stop `i` (s after midnight); 0 without a timetable.
+    #[must_use]
+    pub fn tt_departure_s(&self, i: usize) -> f32 {
+        self.schedule
+            .as_ref()
+            .and_then(|s| s.stops.get(i))
+            .map_or(0.0, |x| x.departure_s)
     }
 
     /// The line text shown for the selected route: the depot's, or the line number when the
@@ -202,6 +290,105 @@ impl RouteHandle {
         })
     }
 
+    /// The map's timetable files.
+    pub fn set_timetables(&self, t: Option<Arc<Timetables>>) {
+        self.with_mut(|s| s.timetables = t);
+    }
+
+    /// The map's timetable files.
+    #[must_use]
+    pub fn timetables(&self) -> Option<Arc<Timetables>> {
+        self.with(|s| s.timetables.clone())
+    }
+
+    /// Follows run `run` of tour `tour` in line file `line_file`: the schedule becomes active,
+    /// the stop is the first, and the depot's route of that line and destination is selected when
+    /// it has one (so the IBIS can be keyed). Returns the schedule and the route code selected.
+    ///
+    /// # Errors
+    /// [`RouteError::UnknownRun`] when the map has no such run or no timetable files.
+    pub fn select_run(
+        &self,
+        line_file: &str,
+        tour: usize,
+        run: usize,
+    ) -> Result<(ActiveSchedule, Option<i32>), RouteError> {
+        let tt = self.timetables().ok_or(RouteError::NoTimetables)?;
+        let schedule = tt
+            .schedule(line_file, tour, run)
+            .ok_or_else(|| RouteError::UnknownRun(format!("{line_file}/{tour}/{run}")))?;
+        self.with_mut(|s| {
+            s.schedule = Some(schedule.clone());
+            s.stop_index = 0;
+        });
+        let code = self.route_code_for(&schedule);
+        if let Some(c) = code {
+            let _ = self.select(c);
+            // `select` resets the stop; the schedule stays.
+        }
+        Ok((schedule, code))
+    }
+
+    /// Stops following a timetable.
+    pub fn clear_schedule(&self) {
+        self.with_mut(|s| {
+            s.schedule = None;
+            s.delay_s = 0.0;
+        });
+    }
+
+    /// The run followed, if any.
+    #[must_use]
+    pub fn schedule(&self) -> Option<ActiveSchedule> {
+        self.with(|s| s.schedule.clone())
+    }
+
+    /// The depot route (route code) that has the schedule's line and destination: the terminus
+    /// the trip's title names, on a route whose line text is the trip's line (or whose line
+    /// number is it).
+    #[must_use]
+    pub fn route_code_for(&self, schedule: &ActiveSchedule) -> Option<i32> {
+        self.with(|s| {
+            let hof = s.hof.as_ref()?;
+            let want = flat(&schedule.title);
+            let terminus = hof
+                .termini
+                .iter()
+                .find(|t| {
+                    !want.is_empty()
+                        && (flat(&t.ident) == want || t.strings.iter().any(|x| flat(x) == want))
+                })
+                .map(|t| t.code)?;
+            let line = flat(&schedule.line);
+            hof.routes
+                .iter()
+                .find(|r| {
+                    r.terminus_code == terminus
+                        && (flat(&r.line_string) == line
+                            || (r.route_code / 100).to_string() == line)
+                })
+                .map(|r| r.route_code)
+        })
+    }
+
+    /// Sets the clock the delay is measured against (s after midnight) and recomputes the delay
+    /// of a followed timetable: now minus the scheduled arrival at the current stop, wrapped to
+    /// within 12 hours (0 in free driving).
+    pub fn set_clock(&self, seconds_of_day: f32) {
+        self.with_mut(|s| {
+            let stop = s.stop_index;
+            s.delay_s = match &s.schedule {
+                Some(sc) => sc.stops.get(stop).map_or(0.0, |x| {
+                    // Times wrap at 24 h: a run that starts at 23:50 and a clock at 00:10 are
+                    // 20 minutes apart, not 23 h 40 min.
+                    let d = seconds_of_day - x.arrival_s;
+                    (d + 43_200.0).rem_euclid(86_400.0) - 43_200.0
+                }),
+                None => 0.0,
+            };
+        });
+    }
+
     /// Moves to stop `index` of the route.
     pub fn set_stop(&self, index: usize) {
         self.with_mut(|s| s.stop_index = index);
@@ -290,8 +477,13 @@ pub fn apply_to_scripts(engine: &mut ScriptEngine, route: &RouteHandle) {
         }
         match s.route() {
             Some(r) => {
-                engine.set_string("SetLineTo", &s.line_text());
+                engine.set_string("SetLineTo", &s.tt_line_text());
                 engine.set_string("Ident", &r.route_code.to_string());
+                engine.set("schedule_active", 1.0);
+            }
+            None if s.schedule.is_some() => {
+                // A timetable without a depot route (the depot lacks the line or destination).
+                engine.set_string("SetLineTo", &s.tt_line_text());
                 engine.set("schedule_active", 1.0);
             }
             None => engine.set("schedule_active", 0.0),
@@ -302,15 +494,9 @@ pub fn apply_to_scripts(engine: &mut ScriptEngine, route: &RouteHandle) {
 /// What the host feeds every frame from the route: `AI_Target_Index` (the terminus row of the
 /// selected route, -1 without one) and `schedule_active`.
 pub fn feed_route(inputs: &mut opts_sim::script::inputs::HostInputs, route: &RouteHandle) {
-    let target = route.with(|s| {
-        let rt = s.route()?;
-        s.hof
-            .as_ref()?
-            .find_terminus_by_code(rt.terminus_code)
-            .map(|(i, _)| i)
-    });
+    let target = route.with(RouteState::tt_terminus_index);
     inputs.ai_target_index = target.map_or(-1.0, |i| i as f32);
-    inputs.schedule_active = route.with(|s| s.active_route.is_some());
+    inputs.schedule_active = route.with(|s| s.active_route.is_some() || s.schedule.is_some());
 }
 
 /// Hands the selected route to the vehicle's displays the way OMSI hands a scheduled target to
@@ -320,13 +506,7 @@ pub fn feed_route(inputs: &mut opts_sim::script::inputs::HostInputs, route: &Rou
 /// trigger.
 pub fn schedule_target(engine: &mut ScriptEngine, route: &RouteHandle) -> bool {
     apply_to_scripts(engine, route);
-    let target = route.with(|s| {
-        let rt = s.route()?;
-        s.hof
-            .as_ref()?
-            .find_terminus_by_code(rt.terminus_code)
-            .map(|(i, _)| i)
-    });
+    let target = route.with(RouteState::tt_terminus_index);
     match target {
         Some(i) => {
             engine.set("ai_target_index", i as f32);
@@ -348,13 +528,7 @@ pub fn keep_target(engine: &mut ScriptEngine, route: &RouteHandle, pending: &mut
         return;
     }
     *pending -= dt;
-    let want = route.with(|s| {
-        let rt = s.route()?;
-        s.hof
-            .as_ref()?
-            .find_terminus_by_code(rt.terminus_code)
-            .map(|(i, _)| i)
-    });
+    let want = route.with(RouteState::tt_terminus_index);
     let Some(want) = want else {
         *pending = 0.0;
         return;
@@ -518,5 +692,58 @@ pub fn route_typing_system(
                 time.delta_secs(),
             );
         }
+    }
+}
+
+/// The timetable files of a map: its `TTData` folder (any letter case), `None` when it has none.
+#[must_use]
+pub fn find_timetables(map_dir: &Path) -> Option<Timetables> {
+    let dir = std::fs::read_dir(map_dir)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| {
+            p.is_dir()
+                && p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case("TTData"))
+        })?;
+    let t = Timetables::load_dir(&dir);
+    (!t.is_empty()).then_some(t)
+}
+
+/// [`select_route`] for a run of the map's timetable: the run becomes the active timetable
+/// (`GetTT*`), the depot's matching route is selected and keyed on the IBIS when the vehicle has
+/// one, and the target is offered to the displays.
+///
+/// # Errors
+/// [`RouteError::NoTimetables`] or [`RouteError::UnknownRun`].
+pub fn select_run_on(
+    route: &mut VehicleRoute,
+    engine: &mut ScriptEngine,
+    line_file: &str,
+    tour: usize,
+    run: usize,
+) -> Result<(ActiveSchedule, Option<i32>), RouteError> {
+    let (schedule, code) = route.handle.select_run(line_file, tour, run)?;
+    if code.is_some() {
+        if let Some(sel) = route.handle.selection() {
+            // A vehicle without the known keypad still follows the timetable.
+            let _ = route.keys.type_selection(engine, &sel);
+        }
+    }
+    schedule_target(engine, &route.handle);
+    route.pending_target_s = TARGET_OFFER_S;
+    Ok((schedule, code))
+}
+
+/// Keeps the delay of every followed timetable current from the simulation clock.
+pub fn route_clock_system(
+    clock: Option<bevy::prelude::Res<crate::scenery_runtime::SceneryClock>>,
+    query: bevy::prelude::Query<&VehicleRoute>,
+) {
+    let Some(clock) = clock else { return };
+    let now = (clock.seconds_of_day % 86_400.0) as f32;
+    for r in &query {
+        r.handle.set_clock(now);
     }
 }

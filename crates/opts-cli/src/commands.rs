@@ -1089,6 +1089,33 @@ pub const COMMANDS: &[CommandSpec] = &[
     .result("`{selected: {...} or null, keypad, typing}`; without a keypad also `note`")
     .doc("Give `route_code`, or `line` and `course`, or `clear` (the driver cancels the route). The selection changes the timetable callbacks at once and the vehicle's own scripts take it: the keys of the MAN-type IBIS (`ibis_setmode_linie_kurs`, the digits, `ibis_eingabe`, ...) are pressed one per physics step, and the target (`AI_Target_Index`, `SetLineTo`, the trigger `ai_scheduled_settarget`) is offered to the destination displays until `target_index_int` shows it (30 s at most). Vehicles with another IBIS get the second part only (`keypad: false`). `-32602` for a route the depot does not have, `1001` without a player vehicle."),
     c(
+        "bus.timetables",
+        "drive",
+        "List the map's timetables: line files, their tours and the runs of a tour",
+        "line:s? tour:i? limit:i? all:b?",
+    )
+    .since("1.13")
+    .result("without `line`: `{available, lines: [{file, priority, user_allowed, tours, runs}]}`; with `line`: `{available, line, tours: [{tour, name, vehicle_group, runs}]}`; with `line` and `tour`: `{available, line, tour, name, runs: [{run, trip, title, line, start, stops}]}`")
+    .doc("The map's `TTData` folder: `.ttl` line files with their tours (`[newtour]`) and the runs of each tour (`[addtrip]`: a trip file, a timing profile and the start time). Without `line` only the line files the player may drive (`[userallowed]`) are listed, all of them with `all: true`. `available: false` when the map has no timetable files. `1001` without a player vehicle, `-32602` for an unknown line or tour."),
+    c(
+        "bus.set_timetable",
+        "drive",
+        "Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS",
+        "line:s? tour:i? run:i? stops:i? clear:b?",
+    )
+    .since("1.13")
+    .result("`{schedule: {line_file, tour, trip, title, line, start, stop_count, stops: [{station, name, arrival, departure, distance_m}]}, route_code, typing}`; `distance_m` is the distance along the run from its first stop (`null` unless `StnLinks.cfg` links every pair of stations); `route_code` is the depot route selected for the run (`null` when the depot has none for its line and destination)")
+    .doc("`line` is the file name of a line file without extension, `tour` and `run` count from 0 (default 0). The run's trip gives the stops (`Busstops.cfg` names) and, with its timing profile, the scheduled arrival and departure of each; times without a manual entry in the profile are interpolated by station index. `GetTTDelay` is the simulation clock minus the arrival at the current stop (`bus.set_stop`). `stops` limits how many stops the answer lists (default 5). `clear` stops following. `-32602` for a run the map does not have or a map without timetable files."),
+    c(
+        "bus.set_stop",
+        "drive",
+        "Set the stop of the route or timetable the vehicle is at (0-based)",
+        "index:i@0",
+    )
+    .since("1.13")
+    .result("`{stop_index, stop_count}`")
+    .doc("What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable."),
+    c(
         "config.list",
         "scene",
         "List the saved bus configurations (vehicle, repaint, equipment options) with their check against the installation",

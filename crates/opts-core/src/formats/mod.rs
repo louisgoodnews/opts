@@ -17,6 +17,7 @@ pub mod oft;
 pub mod org;
 pub mod scenery;
 pub mod text;
+pub mod timetable;
 pub mod trains;
 pub mod varlist;
 pub mod vehicles;

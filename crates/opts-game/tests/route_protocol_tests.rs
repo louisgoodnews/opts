@@ -10,6 +10,7 @@ use opts_bevy::route::{route_typing_system, RouteHandle, VehicleRoute};
 use opts_bevy::{PlayerVehicle, VehicleController, VehicleScripts};
 use opts_cli::protocol::{code, RpcError};
 use opts_core::formats::hof::HofFile;
+use opts_core::formats::timetable::{parse_busstops, parse_line, parse_trip, Timetables};
 use opts_sim::script::ScriptEngine;
 use serde_json::{json, Value};
 
@@ -82,6 +83,23 @@ const IBIS: &str = "
 {trigger:ibis_9}\n(L.L.input) 10 * 9 + (S.L.input)\n{end}
 ";
 
+fn timetables() -> Timetables {
+    Timetables::from_parts(
+        parse_busstops(b"[busstop]\nPonttor\n1\n100\n0\n0\n\n[busstop]\nBushof\n1\n101\n0\n0\n\n"),
+        vec![
+            (
+                "33".into(),
+                parse_line(b"[userallowed]\n[priority]\n1\n[newtour]\nT1\nBus\n1\n[addtrip]\n33_V\n0\n480.000\n"),
+            ),
+            ("depot".into(), parse_line(b"[priority]\n1\n[newtour]\nD\nBus\n1\n")),
+        ],
+        vec![(
+            "33_V".into(),
+            parse_trip(b"[trip]\n\nVaals\n33\n[station_typ2]\n100\n[station_typ2]\n101\n[profile]\nstandard\n6.0\n[profile_man_arr_time]\n0\n0.0\n[profile_man_arr_time]\n1\n6.0\n"),
+        )],
+    )
+}
+
 fn app(script: &str) -> (App, Entity) {
     let mut app = App::new();
     app.add_plugins(MinimalPlugins);
@@ -93,13 +111,15 @@ fn app(script: &str) -> (App, Entity) {
     assert!(d.is_empty(), "{d:?}");
     engine.run_init();
     let hof = Arc::new(HofFile::parse_str(HOF).expect("hof"));
+    let handle = RouteHandle::new(Some(hof));
+    handle.set_timetables(Some(Arc::new(timetables())));
     let e = app
         .world_mut()
         .spawn((
             PlayerVehicle,
             VehicleController::standard_bus(11_500.0, 5.85),
             VehicleScripts::new(engine),
-            VehicleRoute::new(RouteHandle::new(Some(hof))),
+            VehicleRoute::new(handle),
         ))
         .id();
     (app, e)
@@ -192,4 +212,72 @@ fn a_vehicle_without_a_keypad_still_takes_the_route() {
     assert_eq!(r["keypad"], false);
     assert_eq!(r["typing"], false);
     assert_eq!(r["selected"]["route_code"], 3301);
+}
+
+#[test]
+fn the_timetables_are_listed_by_line_tour_and_run() {
+    let (mut app, _) = app(IBIS);
+    let l = call(&mut app, "bus.timetables", json!({})).expect("lines");
+    assert_eq!(l["available"], true);
+    assert_eq!(
+        l["lines"].as_array().expect("array").len(),
+        1,
+        "only the lines the player may drive"
+    );
+    assert_eq!(l["lines"][0]["file"], "33");
+    assert_eq!(l["lines"][0]["runs"], 1);
+    let all = call(&mut app, "bus.timetables", json!({ "all": true })).expect("all");
+    assert_eq!(all["lines"].as_array().expect("array").len(), 2);
+    let t = call(&mut app, "bus.timetables", json!({ "line": "33" })).expect("tours");
+    assert_eq!(t["tours"][0]["name"], "T1");
+    let r = call(
+        &mut app,
+        "bus.timetables",
+        json!({ "line": "33", "tour": 0 }),
+    )
+    .expect("runs");
+    assert_eq!(r["runs"][0]["start"], "08:00:00");
+    assert_eq!(r["runs"][0]["title"], "Vaals");
+    assert_eq!(r["runs"][0]["stops"], 2);
+    let bad = call(&mut app, "bus.timetables", json!({ "line": "nope" })).expect_err("unknown");
+    assert_eq!(bad.code, -32602);
+}
+
+#[test]
+fn following_a_run_selects_the_route_and_the_stop_moves_the_delay() {
+    let (mut app, e) = app(IBIS);
+    let r = call(
+        &mut app,
+        "bus.set_timetable",
+        json!({ "line": "33", "tour": 0, "run": 0 }),
+    )
+    .expect("follow");
+    assert_eq!(r["schedule"]["title"], "Vaals");
+    assert_eq!(r["schedule"]["stops"][1]["name"], "Bushof");
+    assert_eq!(r["schedule"]["stops"][1]["arrival"], "08:06:00");
+    assert_eq!(
+        r["route_code"], 3301,
+        "the depot's route of line 33 to Vaals"
+    );
+    assert_eq!(r["typing"], true, "its IBIS is keyed");
+    for _ in 0..40 {
+        app.update();
+    }
+    assert_eq!(var(&app, e, "course"), 1.0);
+    let g = call(&mut app, "bus.get_route", json!({})).expect("get");
+    assert_eq!(g["timetable"]["trip"], "33_V");
+    let s = call(&mut app, "bus.set_stop", json!({ "index": 1 })).expect("stop");
+    assert_eq!(s["stop_count"], 2);
+    let past = call(&mut app, "bus.set_stop", json!({ "index": 5 })).expect_err("beyond");
+    assert_eq!(past.code, -32602);
+    let missing = call(
+        &mut app,
+        "bus.set_timetable",
+        json!({ "line": "33", "run": 9 }),
+    )
+    .expect_err("no such run");
+    assert_eq!(missing.code, -32602);
+    call(&mut app, "bus.set_timetable", json!({ "clear": true })).expect("clear");
+    let g = call(&mut app, "bus.get_route", json!({})).expect("get");
+    assert_eq!(g["timetable"], Value::Null);
 }
