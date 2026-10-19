@@ -233,6 +233,8 @@ const GAP_ACCEPTANCE_S: f64 = 6.0;
 const DEADLOCK_AFTER_S: f64 = 12.0;
 /// A vehicle standing this long (s) with no red light ahead is stuck and is despawned.
 pub const STUCK_AFTER_S: f64 = 60.0;
+/// A released vehicle still gives way to one inside the zone that moves faster than this (m/s).
+const RELEASE_RESPECT_SPEED: f64 = 0.5;
 /// … and ignores conflicts for this long (s).
 const DEADLOCK_IGNORE_S: f64 = 5.0;
 /// How far along its planned lanes an agent looks for leaders, signals and zones (m).
@@ -857,10 +859,14 @@ impl TrafficWorld {
                             return false;
                         }
                         let b = &self.agents[j];
-                        if ignoring && !b.foreign {
+                        let inside = b.s > c.other_enter && b.s - b.params.length < c.other_exit;
+                        // A released vehicle drives on through traffic it was waiting for, but
+                        // not through one that is moving through the zone right now: that one
+                        // clears it in a moment, and driving through it is a collision, not a
+                        // way out of a cyclic wait.
+                        if ignoring && !b.foreign && !(inside && b.speed > RELEASE_RESPECT_SPEED) {
                             return false;
                         }
-                        let inside = b.s > c.other_enter && b.s - b.params.length < c.other_exit;
                         let gap_b = c.other_enter - b.s;
                         if !inside && (held[j] || !(0.0..=CONFLICT_LOOKAHEAD_M).contains(&gap_b)) {
                             return false;
@@ -887,6 +893,16 @@ impl TrafficWorld {
             }
         }
         best
+    }
+
+    /// Whether agent `i`'s lane (or one of the next ones on its plan) has a conflict zone with the
+    /// lane agent `j` is on: the two meet in a junction.
+    fn shares_conflict(&self, i: usize, j: usize) -> bool {
+        let other = self.agents[j].lane;
+        let a = &self.agents[i];
+        std::iter::once(a.lane)
+            .chain(a.plan.iter().copied().take(3))
+            .any(|l| self.graph.conflicts(l).iter().any(|c| c.other == other))
     }
 
     /// Agents per lane, rearmost first; ties broken by id so the order is deterministic.
@@ -1014,17 +1030,43 @@ impl TrafficWorld {
                 self.extend_plan(i);
             }
         }
-        // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles).
-        for (a, &b) in self.agents.iter_mut().zip(&blocked) {
+        // A vehicle that waited too long at a zone goes anyway (cyclic waits, ghost vehicles), but
+        // **one at a time** per junction: in a cycle (right before left at a four-way) every
+        // vehicle times out together, and releasing them all sends them through the middle at
+        // once. The one that waited longest (ties: the lower id) is released; the others that
+        // share a conflict with it keep waiting, see it inside the zone and yield, and get their
+        // turn when its zone is clear.
+        let mut due: Vec<usize> = Vec::new();
+        for (i, (a, &b)) in self.agents.iter_mut().zip(&blocked).enumerate() {
             if b && a.speed < 0.2 {
                 a.waiting_s += dt;
                 if a.waiting_s > DEADLOCK_AFTER_S {
-                    a.waiting_s = 0.0;
-                    a.ignore_conflicts_until = self.time + DEADLOCK_IGNORE_S;
+                    due.push(i);
                 }
             } else {
                 a.waiting_s = 0.0;
             }
+        }
+        due.sort_by(|&x, &y| {
+            let (a, b) = (&self.agents[x], &self.agents[y]);
+            b.waiting_s.total_cmp(&a.waiting_s).then(a.id.cmp(&b.id))
+        });
+        let mut released: Vec<usize> = (0..self.agents.len())
+            .filter(|&k| {
+                self.agents[k].ignore_conflicts_until > self.time && !self.agents[k].foreign
+            })
+            .collect();
+        for i in due {
+            if released
+                .iter()
+                .any(|&j| j != i && self.shares_conflict(i, j))
+            {
+                continue; // its turn comes when the one released ahead of it has gone through
+            }
+            let a = &mut self.agents[i];
+            a.waiting_s = 0.0;
+            a.ignore_conflicts_until = self.time + DEADLOCK_IGNORE_S;
+            released.push(i);
         }
         // The "vehicle stuck" flag: standing with no light to wait for. The first agent to reach
         // the limit is removed (one per step), which usually frees the others.
@@ -2230,6 +2272,67 @@ mod tests {
             a.s < 100.0 - 1.0,
             "it drove into the bus: front at {} m",
             a.s
+        );
+    }
+
+    /// Four lanes into one junction, one vehicle on each, all arriving together: right before left
+    /// is a cycle (everyone yields to someone). The breaker has to let them through one at a time.
+    fn four_way() -> TrafficWorld {
+        use std::f64::consts::{FRAC_PI_2, PI};
+        let lane = |x: f64, y: f64, h: f64| {
+            LaneSegment::straight(DVec2::new(x, y), h, 200.0, LaneKind::Road)
+        };
+        let mut w = world(&[
+            // Right-hand traffic: each direction keeps 1.75 m to the right of the axis.
+            lane(1.75, -100.0, 0.0),            // north-bound
+            lane(-100.0, -1.75, FRAC_PI_2),     // east-bound
+            lane(-1.75, 100.0, PI),             // south-bound
+            lane(100.0, 1.75, 3.0 * FRAC_PI_2), // west-bound
+        ]);
+        // The deadlock breaker is what is under test: the vehicles must not be removed as stuck.
+        w.set_stuck_after(f64::INFINITY);
+        w
+    }
+
+    #[test]
+    fn a_four_way_cycle_resolves_one_vehicle_at_a_time_without_touching() {
+        let mut w = four_way();
+        let ids: Vec<AgentId> = (0..4)
+            .map(|l| {
+                w.spawn(LaneId(l), 70.0, 12.0, IdmParams::default())
+                    .unwrap()
+            })
+            .collect();
+        let min = min_body_distance(&mut w, 1500);
+        assert!(min > 1.4, "bodies came within {min} m in the junction");
+        assert!(
+            ids.iter().all(|id| w.agent(*id).is_none()),
+            "somebody is still stuck in the junction"
+        );
+    }
+
+    #[test]
+    fn a_released_vehicle_still_waits_for_one_that_is_driving_through_the_zone() {
+        // Cross traffic that is *moving* through the zone is respected even by a vehicle the
+        // breaker has released: the breaker is for cyclic waits, not for ramming.
+        let mut w = four_way();
+        // `a` is in the middle of the junction, moving; `b`, released by the breaker, comes up
+        // from the side. With the old rule `b` ignored `a` and drove into it.
+        let _a = w
+            .spawn(LaneId(0), 100.5, 1.0, IdmParams::default())
+            .unwrap();
+        let b = w
+            .spawn(LaneId(1), 86.0, 10.0, IdmParams::default())
+            .unwrap();
+        w.agents
+            .iter_mut()
+            .find(|x| x.id == b)
+            .unwrap()
+            .ignore_conflicts_until = f64::INFINITY;
+        let min = min_body_distance(&mut w, 400);
+        assert!(
+            min > 1.4,
+            "the released vehicle touched the one in the zone: {min} m"
         );
     }
 }
