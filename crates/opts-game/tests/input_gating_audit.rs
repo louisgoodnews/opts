@@ -71,6 +71,10 @@ const REVIEWED: &[&str] = &[
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",
     "opts-game/src/in_game/vehicle_menu.rs",
+    // Split out of `vehicle_menu.rs`: the search keys and the route page read input under the
+    // same rule (the open menu holds `MenuModalActive`, which gates driving and camera input).
+    "opts-game/src/in_game/vehicle_menu/entries.rs",
+    "opts-game/src/in_game/vehicle_menu/route_page.rs",
     // The formation page of the vehicle menu: typing and the wheel act only while that page is
     // open, and the open menu holds `MenuModalActive`, which gates driving and camera input.
     "opts-game/src/in_game/formation_menu/mod.rs",
