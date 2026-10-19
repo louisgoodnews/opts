@@ -28,7 +28,9 @@ You are running a structural refactoring cycle on the OPTS codebase. You do not 
 0. Work in your own worktree on a branch refactor/cycle-<n>. Create the cycle milestone from the template and announce it on the BOARD.
 1. Audit: run the tool, commit docs/src/meta/structure-audit-<date>.md. Checkpoint 1: the counts (files over 500 lines, five largest, functions over 80, crate anomalies). Wait for approval.
 2. Plan: docs/src/architecture/refactoring-plan.md, per file over the limit: its concerns with line ranges, the proposed concern-named files with sizes, the risk, the tests affected, how the public path is kept. Group into batches (1 low risk, 2 medium, 3 high risk, 4 structural, 5 crate level with ADRs). Checkpoint 2. Wait for approval.
-3. Execute one batch per session, one refactoring per commit: git mv for moves; new files with a //! document; pub use at the old path; tests move with their code; cargo check and test of the affected crates; ./scripts/local-ci.sh; measure before and after; commit with both counts and one sentence of justification. Never commit before all gates pass. Checkpoint 3 per batch: wait for approval before merging.
+3. Execute one batch per session, one refactoring per commit: git mv for moves; new files with a //! document; pub use at the old path; tests move with their code; cargo fmt, cargo check and test of the affected crates; measure before and after with `python3 scripts/structure_audit.py show <paths>` (take the "before" line first); run `python3 scripts/structure_audit.py seed` so the ratchet follows the new paths and sizes; ./scripts/local-ci.sh; commit with both counts and one sentence of justification. Never commit before all gates pass. Checkpoint 3 per batch: wait for approval before merging.
+   - **Cheapest split first:** a file whose in-file `#[cfg(test)] mod tests { .. }` is a quarter of its code becomes a directory: `git mv foo.rs foo/mod.rs`, the tests to `foo/tests.rs` (`#[cfg(test)] mod tests;` in `mod.rs`, `//!` document and `use super::*;` in `tests.rs`, one indent level less). The module path does not change, so no re-export is needed. Do this before cutting the production code.
+   - A file that becomes a directory changes its path in `docs/dev/structure-known.txt`: `check` then says the old path is no longer over the limit; `seed` fixes the list (and keeps the reasons of the entries that still exist).
 4. If a refactoring breaks tests: do not touch the tests. Find out why (a cycle, an incomplete re-export, a wrong concern boundary). If the split cannot be made clean, revert it and record it: a coherent file over the limit beats two tangled ones.
 5. Verify: re-run the audit and fill the before/after table; the public-API diff (cargo public-api, else by hand) must show no removed item; cargo doc builds; golden tests unchanged.
 6. Report docs/src/meta/structure-refactoring-<date>.md and update the ratchet. Merge with --no-ff after approval and ./scripts/local-ci.sh on the merge target.
@@ -42,6 +44,10 @@ You are running a structural refactoring cycle on the OPTS codebase. You do not 
 ## Output
 At each checkpoint: Phase, branch, target, before/after line counts, findings, blockers. At the end: the summary of the report and the line "REFACTORING CYCLE COMPLETE: ready for user review".
 ```
+
+### Findings of the dry run (2026-10-19)
+
+The protocol was followed literally on the smallest file over the limit, `crates/opts-omsi/src/formats/weather.rs` (502 lines of code, 632 total, 118 of the code in its test module): the tests moved to `weather/tests.rs` and the parser stayed in `weather/mod.rs`. Result: `mod.rs` 386 + `tests.rs` 114 lines of code (the two lines of the wrapper `mod tests { }` are gone), 9 tests unchanged and green, the module path `formats::weather` unchanged, the ratchet 64 → 63 files. What the first reading left to judgment, now written into the procedure above: how to take the before and after counts (`show`), that a file turned into a directory changes its path in the ratchet (`seed`), and that moving a test module out is the cheapest split and comes first.
 
 ### Related Prompts
 - [P-000 Context Loader](../core/P-000-context-loader.md)

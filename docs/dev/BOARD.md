@@ -162,7 +162,7 @@ _Work that cannot proceed until a dependency is resolved._
 ### 📚 Backlog
 
 - [x] 🟠 **Structure audit tool and baseline** (M-0125, Phase 999, tooling) — **Done 2026-10-19 on `agent/structure-audit`**: 64 files over 500 lines of code are the baseline and the ratchet, `check` runs in `local-ci.sh`; — `scripts/structure_audit.py`, the baseline report and the ratchet in `local-ci.sh`; [M-0125](../src/roadmap/phase-999/M-0125.md). Phase 999 runs at the end of every development cycle before a versioned release; proposed 2026-10-19.
-- [ ] 🟠 **Refactoring cycle protocol and release gate** (M-0126, Phase 999, process) — template, prompt P-1015, release-gate checklist; [M-0126](../src/roadmap/phase-999/M-0126.md).
+- [x] 🟠 **Refactoring cycle protocol and release gate** (M-0126, **done 2026-10-19 on `agent/cycle-protocol`**, dry run on `weather.rs`: Phase 999, process) — template, prompt P-1015, release-gate checklist; [M-0126](../src/roadmap/phase-999/M-0126.md).
 - [ ] 🟡 **Refactoring cycle 1, batches 1 and 2: low- and medium-risk splits** (M-0127, Phase 999) — [M-0127](../src/roadmap/phase-999/M-0127.md); needs a quiet tree.
 - [ ] 🟡 **Refactoring cycle 1, batches 3 and 4: high-risk splits and structural cleanup** (M-0128, Phase 999) — [M-0128](../src/roadmap/phase-999/M-0128.md).
 - [ ] 🟢 **Refactoring cycle 1, batch 5: crate-level decisions (ADRs)** (M-0129, Phase 999) — [M-0129](../src/roadmap/phase-999/M-0129.md).
@@ -560,6 +560,10 @@ _Completed items from the last two cycles. Older items live in git history and m
 - `[x]` 🟡 **Core documentation** — introduction, vision, glossary, roadmap
 
 ---
+
+## 🧹 Refactoring cycles on the board
+
+A refactoring cycle ([Phase 999](../src/roadmap/phase-999/README.md)) is **announced** here before it starts: one line in *In Progress* ("Refactoring cycle <n>, batch <k>: <crates or directories>") naming the files of the batch. While that line is open the named files are **frozen**: feature work that needs one of them waits or goes first and the batch moves to the next session. A cycle runs one batch per session and removes its line when the batch is merged. A bug found during a cycle becomes an ordinary BOARD item, never part of the batch. The conditions for a release are the gate in [`release-process.md`](../src/contributing/release-process.md).
 
 ## 🧭 How the Board Gets Maintained
 

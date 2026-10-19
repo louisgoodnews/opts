@@ -59,7 +59,6 @@ crates/opts-omsi/src/formats/scenery/sli.rs 586  # planned: refactoring cycle 1 
 crates/opts-omsi/src/formats/vehicles/bus.rs 670  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/vehicles/hof.rs 530  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-omsi/src/formats/vehicles/model/parse.rs 503  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-omsi/src/formats/weather.rs 502  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-sim/src/script/inputs.rs 751  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-sim/src/vehicle/mod.rs 974  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-tools/src/l10n.rs 697  # planned: refactoring cycle 1 (M-0127, M-0128)
