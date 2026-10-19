@@ -34,6 +34,7 @@ pub mod graph;
 pub mod idm;
 pub mod lanechange;
 pub mod neighbours;
+pub mod obstacles;
 pub mod rightofway;
 pub mod rng;
 pub mod signals;
@@ -54,6 +55,7 @@ pub use graph::{
 };
 pub use idm::{IdmParams, VehicleClass};
 pub use neighbours::{Neighbour, Side};
+pub use obstacles::Obstacle;
 pub use rightofway::{precedence, Precedence};
 pub use rng::Rng;
 pub use signals::{Aspect, SignalKey, SignalProgram};

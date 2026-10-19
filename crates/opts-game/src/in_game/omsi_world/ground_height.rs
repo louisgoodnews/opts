@@ -28,12 +28,36 @@ const CELL_M: f32 = 8.0;
 /// Distance between the two points the pitch is measured from (m).
 const PITCH_BASE_M: f32 = 6.0;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct RoadSample {
     x: f32,
     y: f32,
+    /// Height of the spline's datum at this sample.
     z: f32,
     half_width: f32,
+    /// Heading of the spline here (rad, clockwise from north).
+    heading: f32,
+    /// The profile's ground surface (heights relative to the datum), shared by the samples of
+    /// one spline: the drawn road surface is the datum plus this, not the datum itself.
+    surface: std::sync::Arc<Vec<opts_core::formats::scenery::SurfaceSegment>>,
+    /// The spline is mirrored (its profile's `x` is negated).
+    mirrored: bool,
+}
+
+impl RoadSample {
+    /// Height of the drawn road surface at `(x, y)`: the datum plus the profile's ground
+    /// surface at the point's lateral offset; the datum where the profile lays none there.
+    fn surface_z(&self, x: f32, y: f32) -> f32 {
+        let (sin, cos) = self.heading.sin_cos();
+        // Right of the direction of travel: (cos h, -sin h), as the ribbons are extruded.
+        let lateral = (x - self.x) * cos - (y - self.y) * sin;
+        let side = if self.mirrored { -1.0 } else { 1.0 };
+        let px = lateral * side;
+        self.surface
+            .iter()
+            .find(|seg| seg.x0 - 0.05 <= px && px <= seg.x1 + 0.05)
+            .map_or(self.z, |seg| self.z + seg.z_at(px))
+    }
 }
 
 /// A road sample with the tile it came from.
@@ -67,6 +91,7 @@ impl GroundIndex {
             self.terrain.insert(key, t);
         }
         for (inst, profile) in roads {
+            let surface = std::sync::Arc::new(profile.ground_surface());
             let half_width = profile
                 .graphical_profiles
                 .iter()
@@ -82,6 +107,9 @@ impl GroundIndex {
                     y: origin.1 + p.y,
                     z: p.z,
                     half_width,
+                    heading: p.heading,
+                    surface: surface.clone(),
+                    mirrored: inst.mirrored,
                 };
                 self.cells
                     .entry(cell_of(s.x, s.y))
@@ -125,7 +153,7 @@ impl GroundIndex {
                     // Samples are 2 m apart: a point is on the road within its half width plus
                     // half a sample step.
                     if d <= s.half_width + SAMPLE_STEP_M * 0.5 {
-                        on_road.push((d, s.z));
+                        on_road.push((d, s.surface_z(x, y)));
                     }
                 }
             }
@@ -358,5 +386,84 @@ pub fn sample_consist_ground(
             })
             .collect();
         sim.apply_ground(&samples, dt);
+    }
+}
+
+#[cfg(test)]
+mod surface_tests {
+    use super::*;
+    use opts_core::formats::scenery::SurfaceSegment;
+    use std::sync::Arc;
+
+    fn sample(mirrored: bool) -> RoadSample {
+        RoadSample {
+            x: 100.0,
+            y: 200.0,
+            z: 10.0,
+            half_width: 4.0,
+            heading: 0.0, // north: right is east
+            surface: Arc::new(vec![
+                SurfaceSegment {
+                    x0: -3.0,
+                    z0: 0.12,
+                    x1: 0.0,
+                    z1: 0.12,
+                },
+                SurfaceSegment {
+                    x0: 0.0,
+                    z0: 0.12,
+                    x1: 3.0,
+                    z1: 0.0,
+                },
+            ]),
+            mirrored,
+        }
+    }
+
+    /// M-0097/M-0090: a vehicle stands on the drawn road surface (the datum plus the profile's
+    /// surface at its lateral offset), not on the datum: a cobbled road 12 cm thick used to
+    /// sink the wheels by that much.
+    #[test]
+    fn the_height_is_the_datum_plus_the_profiles_surface_at_the_lateral_offset() {
+        let s = sample(false);
+        assert!(
+            (s.surface_z(98.0, 200.0) - 10.12).abs() < 1e-5,
+            "left of the centre line"
+        );
+        assert!(
+            (s.surface_z(101.5, 200.0) - 10.06).abs() < 1e-5,
+            "on the sloping right half"
+        );
+        assert!(
+            (s.surface_z(100.0, 230.0) - 10.12).abs() < 1e-5,
+            "along the road: same lateral"
+        );
+        assert_eq!(
+            s.surface_z(110.0, 200.0),
+            10.0,
+            "off the profile: the datum"
+        );
+    }
+
+    #[test]
+    fn a_mirrored_spline_reads_its_profile_the_other_way_round() {
+        let s = sample(true);
+        // Mirrored: the profile's right half (sloping down to the datum) lies on the left.
+        assert!((s.surface_z(98.5, 200.0) - 10.06).abs() < 1e-5);
+        assert!((s.surface_z(102.0, 200.0) - 10.12).abs() < 1e-5);
+    }
+
+    #[test]
+    fn the_heading_turns_the_lateral_axis() {
+        let mut s = sample(false);
+        s.heading = std::f32::consts::FRAC_PI_2; // east: right is south
+        assert!(
+            (s.surface_z(100.0, 202.0) - 10.12).abs() < 1e-5,
+            "north of the line is left"
+        );
+        assert!(
+            (s.surface_z(100.0, 198.5) - 10.06).abs() < 1e-5,
+            "south is the sloping right half"
+        );
     }
 }

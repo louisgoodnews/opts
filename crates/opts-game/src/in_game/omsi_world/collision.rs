@@ -34,10 +34,16 @@ use super::{RailPlayer, WorldLoadJob};
 const STEP_M: f32 = 0.3;
 /// Largest push out of an overlap in one fixed step (m).
 const MAX_PUSH_M: f32 = 0.5;
+/// Largest push out of an overlap with an AI vehicle per fixed step (m): the AI is kinematic, so a
+/// ram must not throw the player's bus across the road (it used to move it up to 2 m per step).
+const MAX_TRAFFIC_PUSH_M: f32 = 0.05;
 /// Share of the speed along an obstacle that is lost scraping it.
 const FRICTION: f32 = 0.08;
 /// Bounce off an obstacle.
 const RESTITUTION: f32 = 0.05;
+/// Largest half extents `(right, up, back)` the box of an AI vehicle may have: 3.6 m wide, 5 m
+/// high, 20 m long.
+const MAX_VEHICLE_HALF: Vec3 = Vec3::new(1.8, 2.5, 10.0);
 /// Cell size of the static index (m).
 const CELL_M: f32 = 16.0;
 
@@ -229,16 +235,24 @@ pub fn attach_traffic_colliders(
     mut commands: Commands,
     vehicles: Query<(Entity, &GlobalTransform), Unmeasured>,
     children: Query<&Children>,
-    bounds: Query<(&Aabb, &GlobalTransform)>,
+    bounds: Query<(
+        &Aabb,
+        &GlobalTransform,
+        Has<opts_bevy::light_cones::LightCone>,
+    )>,
 ) {
     for (e, root) in &vehicles {
         let inverse = root.affine().inverse();
         let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
         let mut count = 0;
         for d in children.iter_descendants(e) {
-            let Ok((aabb, g)) = bounds.get(d) else {
+            let Ok((aabb, g, is_cone)) = bounds.get(d) else {
                 continue;
             };
+            // The headlight cones reach 8 m out of a car; they are light, not body.
+            if is_cone {
+                continue;
+            }
             let (c, h) = (Vec3::from(aabb.center), Vec3::from(aabb.half_extents));
             // Shadow volumes and helper geometry are far larger than a vehicle.
             if h.max_element() > 9.0 {
@@ -257,9 +271,12 @@ pub fn attach_traffic_colliders(
             count += 1;
         }
         if count >= 3 && hi.x > lo.x {
+            // A road vehicle is at most so wide, high and long; more is helper geometry that got
+            // through (a car measured 29 by 34 m once and pushed the player about).
+            let half = ((hi - lo) * 0.5).min(MAX_VEHICLE_HALF);
             commands.entity(e).insert(VehicleCollider {
                 centre: (lo + hi) * 0.5,
-                half: (hi - lo) * 0.5,
+                half,
             });
         }
     }
@@ -312,6 +329,7 @@ fn player_boxes(
 /// Pushes the player's vehicle out of everything it overlaps (fixed step, after the physics).
 #[allow(clippy::too_many_arguments)]
 pub fn player_collisions(
+    mut logged: Local<u32>,
     index: Res<CollisionIndex>,
     ground: Res<GroundIndex>,
     mut players: Query<PlayerCollide, GroundPlayer>,
@@ -354,18 +372,19 @@ pub fn player_collisions(
                 &followers,
             );
             let mut worst: Option<(Vec2, f32)> = None;
+            let mut worst_is_traffic = false;
+            let mut worst_other: Option<Obb> = None;
             for me in &mine {
-                for other in index
-                    .grid
-                    .query(me.centre, me.radius())
-                    .chain(dynamic.iter())
-                {
+                let statics = index.grid.query(me.centre, me.radius()).map(|o| (o, false));
+                for (other, is_traffic) in statics.chain(dynamic.iter().map(|o| (o, true))) {
                     if !me.overlaps_height(other, STEP_M) {
                         continue;
                     }
                     if let Some(c) = me.contact(other) {
                         if worst.is_none_or(|w| c.depth > w.1) {
                             worst = Some((c.normal, c.depth));
+                            worst_is_traffic = is_traffic;
+                            worst_other = Some(*other);
                         }
                     }
                 }
@@ -377,9 +396,22 @@ pub fn player_collisions(
                 }
             }
             let Some((normal, depth)) = worst else { break };
-            let push = (depth + 0.01)
-                .min(MAX_PUSH_M - push_total.length())
-                .max(0.0);
+            if worst_is_traffic && *logged < 40 {
+                *logged += 1;
+                tracing::info!(
+                    at = ?controller.sim.chassis.position,
+                    speed = controller.sim.chassis.forward_speed_m_s(),
+                    other = ?worst_other,
+                    depth,
+                    "the player's vehicle overlaps an AI vehicle and is pushed"
+                );
+            }
+            let cap = if worst_is_traffic {
+                MAX_TRAFFIC_PUSH_M
+            } else {
+                MAX_PUSH_M
+            };
+            let push = (depth + 0.01).min(cap - push_total.length()).max(0.0);
             if push <= 0.0 {
                 break;
             }
@@ -432,3 +464,98 @@ fn ground_step(ground: &GroundIndex, body: &Obb, z: f32) -> Option<Vec2> {
 
 /// The index map for `PathBuf` cache keys (kept here so `mod.rs` stays small).
 pub(super) type BoundsCache = HashMap<(PathBuf, Option<PathBuf>), Option<(Vec3, Vec3)>>;
+
+/// Hands the AI traffic the footprints of the player's road vehicles (head and following parts),
+/// so the agents stop behind them or change lanes round them (`opts_traffic::obstacles`) instead
+/// of driving into them.
+pub fn publish_traffic_obstacles(
+    mut state: ResMut<super::traffic::TrafficState>,
+    players: Query<PlayerCollide, GroundPlayer>,
+    segments: Query<&ArticulatedSegment>,
+) {
+    let mut obstacles = Vec::new();
+    for (controller, head, chain, composition) in &players {
+        let part_boxes: Vec<BodyBox> = composition
+            .map(|c| c.followers.iter().filter_map(|p| p.body).collect())
+            .unwrap_or_default();
+        let followers: Vec<(BodyBox, Vec2, f32)> = chain
+            .map(|c| {
+                c.segments
+                    .iter()
+                    .zip(&part_boxes)
+                    .filter_map(|(e, b)| {
+                        let (p, h) = segments.get(*e).ok()?.simulated_pose()?;
+                        Some((*b, p, h))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        let ch = &controller.sim.chassis;
+        let v = ch.world_velocity();
+        for b in player_boxes(
+            ch.position,
+            ch.heading_rad,
+            ch.elevation_z,
+            head,
+            &followers,
+        ) {
+            obstacles.push(opts_traffic::Obstacle {
+                centre: bevy::math::DVec2::new(f64::from(b.centre.x), f64::from(b.centre.y)),
+                heading: f64::from(b.heading),
+                length: f64::from(b.half.y) * 2.0,
+                width: f64::from(b.half.x) * 2.0,
+                velocity: bevy::math::DVec2::new(f64::from(v.x), f64::from(v.y)),
+            });
+        }
+    }
+    state.set_obstacles(obstacles);
+}
+
+#[cfg(test)]
+mod collider_tests {
+    use super::*;
+    use bevy::camera::primitives::Aabb;
+
+    /// A car whose meshes include helper geometry far out of the body (8 m headlight cones used
+    /// to) still gets a box of vehicle size: the AI car that measured 29 by 34 m pushed the
+    /// player's standing bus 40 m across the map.
+    #[test]
+    fn a_vehicle_box_is_never_larger_than_a_vehicle() {
+        let mut app = App::new();
+        app.add_systems(Update, attach_traffic_colliders);
+        let root = app
+            .world_mut()
+            .spawn((
+                super::super::traffic::TrafficVehicle::at(bevy::math::DVec2::ZERO, 0.0, 0.0),
+                GlobalTransform::default(),
+            ))
+            .id();
+        for (centre, half) in [
+            (Vec3::ZERO, Vec3::new(0.9, 0.7, 2.2)),
+            (Vec3::new(0.0, 0.5, 0.5), Vec3::new(0.8, 0.5, 1.5)),
+            (Vec3::new(0.0, 0.3, -0.5), Vec3::new(0.7, 0.3, 1.0)),
+            // Something that reaches 8 m out sideways and 12 m forwards.
+            (Vec3::new(8.0, 0.0, 12.0), Vec3::new(8.5, 8.5, 8.5)),
+        ] {
+            let child = app
+                .world_mut()
+                .spawn((
+                    Aabb {
+                        center: centre.into(),
+                        half_extents: half.into(),
+                    },
+                    GlobalTransform::default(),
+                ))
+                .id();
+            app.world_mut().entity_mut(root).add_child(child);
+        }
+        app.update();
+        let c = app
+            .world()
+            .get::<VehicleCollider>(root)
+            .expect("the box was measured");
+        assert!(c.half.x <= MAX_VEHICLE_HALF.x, "{:?}", c.half);
+        assert!(c.half.y <= MAX_VEHICLE_HALF.y, "{:?}", c.half);
+        assert!(c.half.z <= MAX_VEHICLE_HALF.z, "{:?}", c.half);
+    }
+}

@@ -89,6 +89,9 @@ impl TrafficWorld {
     /// agent moves per step. Returns whether an agent moved.
     pub(crate) fn lane_change_pass(&mut self, by_lane: &HashMap<LaneId, Vec<usize>>) -> bool {
         for i in 0..self.agents.len() {
+            if self.agents[i].foreign {
+                continue;
+            }
             let (speed, busy, due, next_check, cooldown, side) = {
                 let a = &self.agents[i];
                 (
