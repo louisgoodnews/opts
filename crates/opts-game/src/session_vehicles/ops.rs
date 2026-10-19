@@ -269,12 +269,21 @@ fn leave_vehicle_mode(world: &mut World) {
 /// # Errors
 /// The vehicle does not exist, is not in the world or has no recorded spawn point.
 pub fn respawn(world: &mut World, id: VehicleId) -> Result<(), OpError> {
-    let entity = alive_entity(world, id)?;
     let point: SpawnPoint = world
         .resource::<SessionVehicles>()
         .get(id)
         .and_then(|r| r.spawn_point)
         .ok_or_else(|| OpError::NotReady(format!("session vehicle {id} has no spawn point")))?;
+    respawn_at(world, id, point)
+}
+
+/// Puts a vehicle at `point` (absolute OMSI coordinates), at rest — [`respawn`] for any place
+/// (the menu's *jump to entry point*). The recorded spawn point stays as it was.
+///
+/// # Errors
+/// The vehicle does not exist or is not in the world.
+pub fn respawn_at(world: &mut World, id: VehicleId, point: SpawnPoint) -> Result<(), OpError> {
+    let entity = alive_entity(world, id)?;
     let local = abs_to_local(world, point.x, point.y);
     let active = world.resource::<SessionVehicles>().active_id() == Some(id);
     let Some(mut c) = world.get_mut::<VehicleController>(entity) else {

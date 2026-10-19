@@ -78,6 +78,25 @@ fn cell_of(x: f32, y: f32) -> (i32, i32) {
 }
 
 impl GroundIndex {
+    /// An index of one tile alone (what an object placed on that tile needs).
+    #[must_use]
+    pub(super) fn for_tile(
+        key: (i32, i32),
+        origin: (f32, f32),
+        terrain: Option<TileTerrain>,
+        roads: &[(MapSplineInstance, SplineProfile)],
+        start_tile: (i32, i32),
+        grid: TileGrid,
+    ) -> Self {
+        let mut g = Self {
+            start_tile,
+            grid,
+            ..Self::default()
+        };
+        g.insert_tile(key, origin, terrain, roads);
+        g
+    }
+
     /// Registers a tile: its terrain and the surfaces of its road-like splines.
     pub fn insert_tile(
         &mut self,
@@ -136,6 +155,15 @@ impl GroundIndex {
             .tile_at(Vec2::new(x, y).as_dvec2(), self.start_tile);
         let t = self.terrain.get(&key)?;
         Some(t.height(local.x as f32, local.y as f32))
+    }
+
+    /// Height of the road at `(x, y)` when the point lies on one (`near_z` picks among overlapping
+    /// surfaces), `None` on bare terrain.
+    #[must_use]
+    pub fn road_height_at(&self, x: f32, y: f32, near_z: f32) -> Option<f32> {
+        let h = self.height_at(x, y, near_z)?;
+        let t = self.terrain_at(x, y);
+        t.is_none_or(|t| (h - t).abs() > 1e-4).then_some(h)
     }
 
     /// Height of the surface the vehicle stands on at `(x, y)`: the road when the point lies on

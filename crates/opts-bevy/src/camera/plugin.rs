@@ -50,6 +50,7 @@ impl Plugin for OptsCameraPlugin {
                 (
                     crate::human::align_driver_eyes,
                     crate::human::sync_player_head,
+                    crate::human::hide_driver_in_seat_views,
                     update_camera_availability,
                     handle_camera_key_input.run_if(not_modal_active),
                     handle_camera_reset_input.run_if(not_modal_active),

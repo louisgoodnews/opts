@@ -215,6 +215,9 @@ pub(super) fn place_attached_objects(
     }
 }
 
+/// Height above a road at which an `on_surface` object is drawn (m): enough to avoid z-fighting.
+const ON_SURFACE_LIFT_M: f32 = 0.01;
+
 /// Places one scenery object (or tree) of a tile; the scene trace sees what came of it.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn spawn_object(
@@ -354,10 +357,26 @@ fn spawn_object_inner(
             .as_ref()
             .map_or(0.0, |t| t.height(obj.position.x, obj.position.y))
     };
-    let z = match (placement, sco.has_absolute_height()) {
+    let mut z = match (placement, sco.has_absolute_height()) {
         (Placement::OnSpline(z), true) => z,
         _ => terrain_h + obj.position.z,
     };
+    // `[rendertype] on_surface` objects (road markings, text on the road) lie on the road they
+    // were placed on, not on the terrain below it: the map stores their height above the terrain
+    // (0.12 m for the bus text of Ahlheim V5), where the road may be higher or lower.
+    if sco.render_type.as_deref() == Some("on_surface")
+        && !sco.has_absolute_height()
+        && matches!(placement, Placement::Tile)
+    {
+        let (x, y) = (origin.0 + obj.position.x, origin.1 + obj.position.y);
+        if let Some(road) = job
+            .tile_ground
+            .as_ref()
+            .and_then(|g| g.road_height_at(x, y, z))
+        {
+            z = road + ON_SURFACE_LIFT_M;
+        }
+    }
     let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
     let transform = match placement {
         Placement::OnParent(t) => t,

@@ -334,6 +334,14 @@ fn surfaces_step(b: &mut TileBuild, job: &mut WorldLoadJob, commands: &mut Comma
             roads.push((inst.clone(), (*profile).clone()));
         }
     }
+    job.tile_ground = Some(super::GroundIndex::for_tile(
+        b.key,
+        b.origin,
+        b.terrain.clone(),
+        &roads,
+        job.start_tile,
+        job.grid,
+    ));
     super::ground_height::register(
         commands,
         b.key,
