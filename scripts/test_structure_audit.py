@@ -105,6 +105,13 @@ class Fixture(unittest.TestCase):
         (self.root / "crates/demo/src/edge.rs").write_text("//! Edge.\n" + "".join(f"pub const E{i}: u32 = {i};\n" for i in range(501)))
         self.assertEqual(run(self.root, "check")[0], 1)
 
+    def test_show_prints_the_counts_of_the_named_files(self):
+        code, out = run(self.root, "show", "crates/demo/src/small.rs")
+        self.assertEqual(code, 0)
+        self.assertIn("crates/demo/src/small.rs:", out)
+        self.assertIn("in test modules", out)
+        self.assertEqual(run(self.root, "show", "crates/demo/src/nothing.rs")[0], 1)
+
     def test_generated_and_table_markers(self):
         gen = "//! structure-audit: generated\n" + "".join(f"pub const G{i}: u32 = {i};\n" for i in range(900))
         (self.root / "crates/demo/src/gen.rs").write_text(gen)

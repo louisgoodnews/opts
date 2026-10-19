@@ -460,8 +460,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 
 - [x] **📏 Structure Audit Tool and Baseline** — [M-0125](docs/src/roadmap/phase-999/M-0125.md) — ✅ done 2026-10-19
   - [x] `scripts/structure_audit.py` (files, functions, modules, crates, standards, tests), the baseline report and a ratchet checked by `local-ci.sh`.
-- [ ] **🔁 Refactoring Cycle Protocol and Release Gate** — [M-0126](docs/src/roadmap/phase-999/M-0126.md) — 📝 proposed 2026-10-19
-  - [ ] Cycle template, process prompt P-1015, release-gate checklist in the release process, a dry run.
+- [x] **🔁 Refactoring Cycle Protocol and Release Gate** — [M-0126](docs/src/roadmap/phase-999/M-0126.md) — ✅ done 2026-10-19
+  - [x] Cycle template, process prompt P-1015, release-gate checklist in the release process, a dry run.
 - [ ] **✂️ Cycle 1, Batches 1 and 2: Low- and Medium-Risk Splits** — [M-0127](docs/src/roadmap/phase-999/M-0127.md) — 📝 proposed 2026-10-19
   - [ ] Plan, then split the clean and the somewhat tangled oversized files along concerns, API paths kept.
 - [ ] **🧱 Cycle 1, Batches 3 and 4: High-Risk Splits and Structural Cleanup** — [M-0128](docs/src/roadmap/phase-999/M-0128.md) — 📝 proposed 2026-10-19

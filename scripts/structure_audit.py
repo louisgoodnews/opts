@@ -15,6 +15,8 @@ Sub-commands (Python 3, no dependencies):
   json                                     the measurements as JSON (for a cycle comparison)
   seed                                     (re)write docs/dev/structure-known.txt from the tree,
                                            keeping the reasons of entries that already exist
+  show PATH...                             total, code, comment, blank and test lines of files
+                                           (the before and after counts of a commit message)
 
 MEASUREMENT RULES (quoted from standards.md section 3.7: "No .rs file exceeds 500 lines of code,
 excluding doc comments and blank lines"):
@@ -582,6 +584,19 @@ def cmd_report(files: list[FileInfo], date: str, out: Path | None) -> int:
     return 0
 
 
+def cmd_show(files: list[FileInfo], paths: list[str]) -> int:
+    by = {f.path: f for f in files}
+    missing = 0
+    for p in paths:
+        f = by.get(p.strip("./") if p.startswith("./") else p)
+        if not f:
+            print(f"{p}: not measured (missing, generated or outside crates/)")
+            missing += 1
+            continue
+        print(f"{f.path}: {f.code} code, {f.total} total, {f.comment} comment, {f.blank} blank, {f.test_code} in test modules")
+    return 1 if missing else 0
+
+
 def cmd_json(files: list[FileInfo]) -> int:
     print(json.dumps({
         "files": [dict(path=f.path, crate=f.crate, total=f.total, code=f.code, comment=f.comment, blank=f.blank,
@@ -596,7 +611,8 @@ def cmd_json(files: list[FileInfo]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("command", choices=["report", "check", "json", "seed"])
+    ap.add_argument("command", choices=["report", "check", "json", "seed", "show"])
+    ap.add_argument("paths", nargs="*", help="files for `show` (repository-relative)")
     ap.add_argument("--date", default=datetime.date.today().isoformat())
     ap.add_argument("--out", type=Path)
     ap.add_argument("--root", type=Path, help="measure another tree (tests)")
@@ -610,6 +626,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_check(files)
     if a.command == "seed":
         return cmd_seed(files)
+    if a.command == "show":
+        return cmd_show(files, a.paths)
     if a.command == "json":
         return cmd_json(files)
     return cmd_report(files, a.date, a.out)
