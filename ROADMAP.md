@@ -23,6 +23,9 @@
 | 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 decided 2026-10-12, not started | [`phase-8/`](docs/src/roadmap/phase-8/README.md) |
 | 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 🟡 design approved 2026-10-12, implementation in progress | [`phase-9/`](docs/src/roadmap/phase-9/README.md) |
 | 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 📝 planned 2026-10-13 from the project lead's field report | [`phase-10/`](docs/src/roadmap/phase-10/README.md) |
+| 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 📝 planned 2026-10-18, all milestones proposed | [`phase-11/`](docs/src/roadmap/phase-11/README.md) |
+| 🎨 **Phase 12** — Visual Fidelity & Advanced Physics | dirt and light maps, wetness and snow, graphics overhaul, fuel and battery, passenger load | 📝 planned 2026-10-18, all milestones proposed | [`phase-12/`](docs/src/roadmap/phase-12/README.md) |
+| ♾️ **Phase 999** — Refactoring Taskforce (continuous) | a structural cleanup without behaviour change at the end of every development cycle and before every versioned release | ♾️ continuous; set-up and cycle 1 proposed 2026-10-19 | [`phase-999/`](docs/src/roadmap/phase-999/README.md) |
 
 Each phase folder holds a README with that phase's checklist (mirrored from the sections below, which are canonical) and its milestone files.
 
@@ -419,6 +422,22 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.
 - [ ] **✨ Graphics Overhaul** — [M-0122](docs/src/roadmap/phase-12/M-0122.md) — 📝 proposed 2026-10-18
   - [ ] PBR audit, ambient occlusion, anti-aliasing decision, restrained bloom; benchmarked on an RTX 3060 at 1080p against the reference ([design brief](docs/src/architecture/graphics-overhaul.md)).
+
+---
+
+## ♾️ Phase 999: Refactoring Taskforce (continuous)
+*Goal: keep the code navigable by running a structural cleanup (no behaviour change) at the end of every development cycle, before each versioned public release; the phase never closes. Baseline 2026-10-19: 846 `.rs` files, 87 over 500 total lines, 19 over 1,000 ([Phase 999 README](docs/src/roadmap/phase-999/README.md)).*
+
+- [ ] **📏 Structure Audit Tool and Baseline** — [M-0125](docs/src/roadmap/phase-999/M-0125.md) — 📝 proposed 2026-10-19
+  - [ ] `scripts/structure_audit.py` (files, functions, modules, crates, standards, tests), the baseline report and a ratchet checked by `local-ci.sh`.
+- [ ] **🔁 Refactoring Cycle Protocol and Release Gate** — [M-0126](docs/src/roadmap/phase-999/M-0126.md) — 📝 proposed 2026-10-19
+  - [ ] Cycle template, process prompt P-1015, release-gate checklist in the release process, a dry run.
+- [ ] **✂️ Cycle 1, Batches 1 and 2: Low- and Medium-Risk Splits** — [M-0127](docs/src/roadmap/phase-999/M-0127.md) — 📝 proposed 2026-10-19
+  - [ ] Plan, then split the clean and the somewhat tangled oversized files along concerns, API paths kept.
+- [ ] **🧱 Cycle 1, Batches 3 and 4: High-Risk Splits and Structural Cleanup** — [M-0128](docs/src/roadmap/phase-999/M-0128.md) — 📝 proposed 2026-10-19
+  - [ ] The hot and widely used files, misplaced files, oversized test files.
+- [ ] **🧩 Cycle 1, Batch 5: Crate-Level Decisions** — [M-0129](docs/src/roadmap/phase-999/M-0129.md) — 📝 proposed 2026-10-19
+  - [ ] An ADR per crate merge, split or rename; default keep; execute only what is approved.
 
 ---
 
