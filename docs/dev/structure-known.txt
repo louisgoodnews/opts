@@ -30,7 +30,6 @@ crates/opts-game/src/in_game/omsi_world/traffic.rs 1011  # planned: refactoring 
 crates/opts-game/src/in_game/omsi_world/vehicle.rs 1497  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/in_game/vehicle_menu.rs 1733  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/pause/tests.rs 516  # planned: refactoring cycle 1 (M-0127, M-0128)
-crates/opts-game/src/settings.rs 526  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_registry/builtin.rs 774  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_registry/tests.rs 601  # planned: refactoring cycle 1 (M-0127, M-0128)
 crates/opts-game/src/settings_screen/page.rs 577  # planned: refactoring cycle 1 (M-0127, M-0128)
