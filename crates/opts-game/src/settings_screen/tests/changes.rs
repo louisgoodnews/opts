@@ -162,3 +162,37 @@ fn going_back_returns_the_old_value() {
     app.update();
     assert_eq!(text(&app, "graphics.resolution"), "1920x1080");
 }
+
+#[test]
+fn a_preset_chip_sets_the_ui_scale_and_the_matching_chip_is_marked() {
+    let (mut app, _, db) = page_app("scale-presets", "interface");
+    for p in ["100", "125", "150", "200"] {
+        assert!(
+            by_id(&mut app, &format!("settings/interface/ui_scale/preset-{p}")).is_some(),
+            "chip {p}"
+        );
+    }
+    // A marked chip has another background role than the plain one (200 stays unmarked here).
+    let marked = |app: &mut App, p: &str| {
+        let role = |app: &mut App, p: &str| {
+            by_id(app, &format!("settings/interface/ui_scale/preset-{p}"))
+                .and_then(|e| app.world().get::<BackgroundRole>(e).map(|r| r.0))
+        };
+        role(app, p) != role(app, "200")
+    };
+    assert!(
+        marked(&mut app, "100"),
+        "100 % is the default and is marked"
+    );
+    assert!(!marked(&mut app, "150"));
+    let b = by_id(&mut app, "settings/interface/ui_scale/preset-150").expect("chip");
+    click(&mut app, b);
+    app.update();
+    app.update();
+    assert_eq!(app.world().resource::<GameSettings>().ui_scale, 150);
+    assert_eq!(stored(&db, "ui_scale").as_deref(), Some("150"));
+    assert!(
+        marked(&mut app, "150") && !marked(&mut app, "100"),
+        "the marked chip follows"
+    );
+}

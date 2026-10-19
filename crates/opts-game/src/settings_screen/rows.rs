@@ -32,6 +32,8 @@ pub struct Ctx<'a> {
     pub hardware_file: Option<std::path::PathBuf>,
     /// Theme files found by the background facts (never read from disk while building).
     pub theme_files: &'a [String],
+    /// Font families the font setting offers besides the default.
+    pub fonts: &'a [String],
     /// The effective lighting quality (what the governor applies in automatic mode).
     pub light: Option<&'a opts_bevy::light_quality::LightQuality>,
     /// The key setting that waits for the next key press.
@@ -287,6 +289,23 @@ pub fn spawn_control(
                 SettingOp::Step { key: d.key, dir: 1 },
                 &u,
             );
+            // Preset chips: one click to a usual value; the one that matches is marked.
+            for preset in d.presets {
+                button(
+                    c,
+                    group,
+                    d,
+                    format!("preset-{preset}"),
+                    None,
+                    &format!("{preset}{}", d.preset_suffix),
+                    *preset == cur,
+                    SettingOp::Set {
+                        key: d.key,
+                        value: (*preset).to_string(),
+                    },
+                    &u,
+                );
+            }
         }
         SettingKind::Binding => {
             value_text(c, group, d.key, cur.to_string());
@@ -329,6 +348,38 @@ pub fn spawn_control(
                     "",
                     false,
                     SettingOp::Run { key: d.key },
+                    &u,
+                );
+            }
+        }
+        SettingKind::Text if d.key == crate::ui_typography::SETTING_FONT => {
+            button(
+                c,
+                group,
+                d,
+                "option-default".into(),
+                Some("settings-font-default"),
+                "",
+                cur.is_empty(),
+                SettingOp::Set {
+                    key: d.key,
+                    value: String::new(),
+                },
+                &u,
+            );
+            for family in ctx.fonts {
+                button(
+                    c,
+                    group,
+                    d,
+                    format!("option-{}", opts_gui::ui_id::slug(family)),
+                    None,
+                    family,
+                    family == cur,
+                    SettingOp::Set {
+                        key: d.key,
+                        value: family.clone(),
+                    },
                     &u,
                 );
             }

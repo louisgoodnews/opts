@@ -190,6 +190,11 @@ pub struct SettingDescriptor {
     pub hidden: bool,
     /// Whether a map profile may set it (default [`ProfileScope::Global`]).
     pub profile: ProfileScope,
+    /// Stored values of a whole-number setting that the page offers as chips next to the
+    /// stepper (the stepper stays for every other value); empty for none.
+    pub presets: &'static [&'static str],
+    /// Text after a preset chip's number (`" %"`).
+    pub preset_suffix: &'static str,
 }
 
 impl SettingDescriptor {
@@ -219,7 +224,17 @@ impl SettingDescriptor {
             migrate_from: &[],
             hidden: false,
             profile: ProfileScope::Global,
+            presets: &[],
+            preset_suffix: "",
         }
+    }
+
+    /// Offers `values` as chips (the value followed by `suffix`) next to the stepper.
+    #[must_use]
+    pub const fn presets(mut self, values: &'static [&'static str], suffix: &'static str) -> Self {
+        self.presets = values;
+        self.preset_suffix = suffix;
+        self
     }
 
     /// Sets the search keywords.

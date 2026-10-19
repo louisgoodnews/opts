@@ -85,7 +85,7 @@ impl Plugin for HudPlugin {
                 Update,
                 (
                     values::sample_values,
-                    (layout::measure, layout::apply).chain(),
+                    (layout::measure, layout::apply, layout::place_camera_label).chain(),
                     (
                         update::tick_session_clock,
                         update::camera_label_changes,

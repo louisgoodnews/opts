@@ -31,6 +31,11 @@ pub struct ClusterBox;
 #[derive(Component, Debug, Clone, Copy, Default)]
 pub struct MapBox;
 
+/// Marks the row that holds the camera label: the layout puts it below the status bar, however
+/// tall that is (larger text makes it taller).
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct CameraLabelRow;
+
 /// A readout column whose minimum width depends on the layout (fixed width, so values do not
 /// jitter; narrower in a compact layout).
 #[derive(Component, Debug, Clone, Copy)]

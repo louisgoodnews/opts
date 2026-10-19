@@ -9,7 +9,7 @@
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
-use super::parts::{ClusterBox, HudRoot, HudSlot, MapBox, ReadoutBox};
+use super::parts::{CameraLabelRow, ClusterBox, HudRoot, HudSlot, MapBox, ReadoutBox};
 use super::widget::Slot;
 
 /// The layout area is narrower than this (logical px): compact.
@@ -105,6 +105,30 @@ pub fn measure(
     next.editor = viewpoint.is_some_and(|v| v.editing);
     next.hints = next.hints && !next.editor;
     layout.set_if_neq(next);
+}
+
+/// The camera label never sits higher than this (layout px from the top).
+pub const CAMERA_LABEL_MIN_TOP: f32 = 84.0;
+/// Gap between the status bar and the camera label below it (layout px).
+const CAMERA_LABEL_GAP: f32 = 8.0;
+
+/// Puts the camera label below the status bar: the bar grows with the text size, so a fixed
+/// offset would let the two overlap at larger sizes.
+pub fn place_camera_label(
+    layout: Res<HudLayout>,
+    status: Query<(&HudSlot, &ComputedNode)>,
+    mut rows: Query<&mut Node, With<CameraLabelRow>>,
+) {
+    let bar = status
+        .iter()
+        .find(|(s, _)| s.0 == Slot::StatusBar)
+        .map_or(0.0, |(_, c)| c.size().y * c.inverse_scale_factor());
+    let want = Val::Px((layout.margin + bar + CAMERA_LABEL_GAP).max(CAMERA_LABEL_MIN_TOP));
+    for mut node in &mut rows {
+        if node.top != want {
+            node.top = want;
+        }
+    }
 }
 
 /// Applies the layout to the HUD's nodes (cheap: only differing values are written).

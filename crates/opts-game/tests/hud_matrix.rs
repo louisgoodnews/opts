@@ -36,7 +36,28 @@ fn editor_fits(logical: Vec2) -> bool {
 }
 
 fn check(w: u32, h: u32, scale: f32, kind: VehicleKind, extras: Extras) -> Vec<String> {
+    check_at(w, h, scale, kind, extras, 14.0)
+}
+
+/// [`check`] with the user's base text size (`ui_font_size`).
+fn check_at(
+    w: u32,
+    h: u32,
+    scale: f32,
+    kind: VehicleKind,
+    extras: Extras,
+    base: f32,
+) -> Vec<String> {
     let mut app = build_hud(w, h, scale, kind, extras);
+    if base != 14.0 {
+        app.insert_resource(opts_gui::fonts::UiTypography {
+            family: String::new(),
+            base_px: base,
+        });
+        for _ in 0..6 {
+            app.update();
+        }
+    }
     let logical = Vec2::new(w as f32 / scale, h as f32 / scale);
     let what = format!(
         "{kind:?} {w}x{h} at {}% (layout {:.0}x{:.0}) {extras:?}",
@@ -185,6 +206,25 @@ fn every_vehicle_kind_lays_out_at_the_smallest_window() {
     for kind in VehicleKind::ALL {
         for scale in [1.0, 2.0] {
             findings.extend(check(1024, 640, scale, kind, extras));
+        }
+    }
+    report(&findings);
+}
+
+#[test]
+fn the_hud_has_no_overlap_at_the_largest_base_text_sizes() {
+    let extras = Extras {
+        alert: true,
+        toast: true,
+        camera_label: true,
+        editor: false,
+    };
+    let mut findings = Vec::new();
+    for kind in VehicleKind::ALL {
+        for (w, h) in [(1024, 640), (1920, 1080)] {
+            for base in [20.0, 24.0] {
+                findings.extend(check_at(w, h, 1.0, kind, extras, base));
+            }
         }
     }
     report(&findings);

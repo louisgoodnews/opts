@@ -50,6 +50,7 @@ impl Plugin for ThemePlugin {
             .init_resource::<ThemeRuntime>()
             .init_resource::<UiScalePercent>()
             .init_resource::<MinTextSize>()
+            .init_resource::<crate::fonts::UiTypography>()
             .init_resource::<Density>()
             .init_resource::<LayoutClass>()
             .init_resource::<MotionPreference>()
