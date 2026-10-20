@@ -87,6 +87,8 @@ mod alerts;
 
 mod details;
 
+mod control_label;
+
 // ---- the cluster and the mini map (M-0071) ----
 
 use std::time::Duration;
