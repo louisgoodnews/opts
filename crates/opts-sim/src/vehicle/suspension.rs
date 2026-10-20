@@ -298,8 +298,13 @@ impl BodySuspension {
                     - w.y_m * self.roll_rate_rad_s;
                 let compression = -body + g;
                 let rate = -body_rate;
-                let mut force =
-                    w.spring_n_m * w.spring_factor * compression + w.damping_n_s_m * rate;
+                // The factor scales the whole spring, the rest load included: the body rests
+                // lower on a softer spring (kneeling, `Axle_Springfactor` 0.55) and higher on a
+                // stiffer one (raising to 2), where scaling only the compression would change
+                // the stiffness and never the height.
+                let mut force = w.spring_n_m * w.spring_factor * compression
+                    + (w.spring_factor - 1.0) * w.static_load_n
+                    + w.damping_n_s_m * rate;
                 if compression > BUMP_STOP_TRAVEL_M {
                     force += BUMP_STOP_STIFFNESS_N_M * (compression - BUMP_STOP_TRAVEL_M);
                 }

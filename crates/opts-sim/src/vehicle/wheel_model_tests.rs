@@ -74,6 +74,33 @@ fn the_spring_factor_stiffens_the_suspension() {
     assert!(soft > 0.0 && stiff < 0.8 * soft, "{soft} vs {stiff}");
 }
 
+/// Kneeling: the scripts write a spring factor of 0.55 for the wheels on the kerb side and the body
+/// settles lower on that side (a few centimetres), a factor of 2 raises it, and 1 changes nothing.
+#[test]
+fn a_softer_spring_lowers_the_body_and_a_stiffer_one_raises_it() {
+    let settle = |right: f32, left: f32| {
+        let mut sim = VehicleSimulation::new_standard_bus(10_900.0, 5.85);
+        sim.inputs.set_parking_brake(true);
+        sim.step(1.0 / 60.0);
+        for a in 0..sim.axles.len() {
+            sim.set_spring_factor(a * 2, left);
+            sim.set_spring_factor(a * 2 + 1, right);
+        }
+        for _ in 0..600 {
+            sim.step(1.0 / 60.0);
+        }
+        let b = sim.body.as_ref().expect("body");
+        (b.heave_m, b.roll_rad)
+    };
+    let (h0, r0) = settle(1.0, 1.0);
+    assert!(h0.abs() < 0.005 && r0.abs() < 0.005, "{h0} {r0}");
+    let (hk, rk) = settle(0.55, 1.0);
+    assert!(hk < -0.015, "the body sinks on one side: heave {hk}");
+    assert!(rk.abs() > 0.01, "and leans: roll {rk}");
+    let (hr, _) = settle(2.0, 2.0);
+    assert!(hr > 0.02, "a stiffer spring raises it: {hr}");
+}
+
 /// A vehicle the scripts' brakes hold on a slope does not roll backwards when the pedal
 /// is untouched (M-0097): the guard counts the script brake.
 #[test]
