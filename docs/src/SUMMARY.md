@@ -350,6 +350,7 @@
 - [Vehicle Physics & Kinematics](simulation/vehicle_physics.md)
 - [Vehicle Dynamics (world physics and the vehicle's definition)](simulation/vehicle-dynamics.md)
 - [Pedestrians](simulation/pedestrians.md)
+- [Passengers](simulation/passengers.md)
 - [Lane Kinds and Composite Splines](simulation/lane-kinds.md)
 - [Rail Vehicles](simulation/rail-vehicles.md)
 

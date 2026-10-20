@@ -68,6 +68,8 @@ pub struct PedestrianPool {
     /// Distinct entries and their loaded model, load attempts so far.
     slots: Vec<(String, Option<Variant>, u32)>,
     started: bool,
+    /// The passenger system needs the characters even when the walkers are off.
+    wanted: bool,
     rng: u32,
     frames: u32,
 }
@@ -153,7 +155,7 @@ pub fn load_variants(
     mut images: ResMut<Assets<Image>>,
 ) {
     let Some(mut job) = job else { return };
-    if settings.max == 0 {
+    if settings.max == 0 && !pool.wanted {
         return;
     }
     if !pool.started {
@@ -423,29 +425,8 @@ pub fn move_pedestrians(
             t.rotation = omsi_euler_to_bevy_quat(-heading.to_degrees(), 0.0, 0.0);
         }
         // Gait.
-        let walk = human.profile.walk;
-        let stride = walk.stride_m.max(0.3);
-        ped.walker.phase = (ped.walker.phase
-            + std::f32::consts::TAU * ped.walker.speed / stride * dt)
-            % std::f32::consts::TAU;
-        let g = gait(&walk, ped.leg_m, ped.walker.phase);
-        let mut q = pose_rotations(&human.profile, HumanPose::Standing);
-        q[3] = Quat::from_rotation_x(g.thigh[0]);
-        q[4] = Quat::from_rotation_x(g.thigh[1]);
-        q[5] = Quat::from_rotation_x(-g.knee[0]);
-        q[6] = Quat::from_rotation_x(-g.knee[1]);
-        q[7] = Quat::from_rotation_x(g.arm[0]) * q[7];
-        q[8] = Quat::from_rotation_x(g.arm[1]) * q[8];
-        q[1] = Quat::from_rotation_y(g.waist_twist);
-        for (i, joint) in human.rig.joints.iter().enumerate() {
-            if let Ok(mut t) = transforms.get_mut(*joint) {
-                t.rotation = q[i];
-                if i == 0 {
-                    let rest = rest_pivots(&human.profile)[0];
-                    t.translation = rest + Vec3::new(g.hip_shift, -g.bob, 0.0);
-                }
-            }
-        }
+        ped.walker.phase = advance_phase(human, ped.walker.phase, ped.walker.speed, dt);
+        apply_gait(human, ped.leg_m, ped.walker.phase, &mut transforms);
     }
     pool.rng = rng;
 }
@@ -468,6 +449,9 @@ pub fn configure_pedestrians(
     net.0 = PedestrianNet::default();
     *pool = PedestrianPool::default();
 }
+
+mod actor;
+pub(crate) use actor::{advance_phase, apply_gait, apply_rest_pose};
 
 #[cfg(test)]
 mod tests {

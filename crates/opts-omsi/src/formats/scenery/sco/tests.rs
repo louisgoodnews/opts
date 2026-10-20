@@ -186,3 +186,17 @@ fn onlyeditor_before_any_mesh_hides_the_object() {
     assert!(!sco.mesh_in_game(0));
     assert!(sco.is_editor_only());
 }
+
+#[test]
+fn busstop_marks_the_object_as_a_bus_stop() {
+    let sco = SceneryObject::parse(
+        b"[friendlyname]\nBus Stop\n[onlyeditor]\n[mesh]\nbusstop.x\n[busstop]\n",
+    )
+    .expect("parse");
+    assert!(sco.bus_stop);
+    assert!(
+        !SceneryObject::parse(b"[mesh]\na.o3d\n")
+            .expect("parse")
+            .bus_stop
+    );
+}

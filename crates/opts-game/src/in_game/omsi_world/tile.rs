@@ -156,7 +156,7 @@ fn spawn_object_inner(
         return;
     }
     // An editor-only object draws no mesh; its `[maplight]`s are placed below.
-    if sco.only_editor && sco.map_lights.is_empty() {
+    if sco.only_editor && sco.map_lights.is_empty() && !sco.bus_stop {
         tracing::debug!(sco = %sco_path.display(), "editor-only object skipped");
         return;
     }
@@ -221,6 +221,15 @@ fn spawn_object_inner(
         // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
         // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
         let root = commands.spawn((transform, Name::new("MapLights"))).id();
+        if sco.bus_stop {
+            // The marker of a bus stop (`[busstop]`): where the bus stops and the passengers wait.
+            commands.entity(root).insert((
+                opts_bevy::bus_stops::BusStopMarker {
+                    id_code: obj.id_code,
+                },
+                Name::new("BusStop"),
+            ));
+        }
         opts_bevy::scenery_runtime::spawn_map_lights(commands, root, &sco);
         children.push(root);
         tracing::debug!(sco = %sco_path.display(), "editor-only object: map lights only");

@@ -187,6 +187,16 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{enabled, doors:[{number, kind, zone, side, pathpoint, position}], manual, auto, shown, renders, picture}`")
     .doc("The door camera of M-0109: a picture-in-picture view from a door of the player's vehicle at the top right of the HUD. It exists only while the setting `camera.door_overlay` is on. `doors` are the pathpoints that the vehicle's passenger cabin names with `[entry]` and `[exit]` (`position` in the vehicle's Bevy frame); `manual` is the door chosen with F4 or with `door` (a number from the list, `0` for none), `auto` the door whose leaf animates, `shown` the door in the picture (`manual` wins), `renders` the pictures rendered so far (30 per second while shown). `-32602` for a door number outside the list."),
     c(
+        "vehicle.passengers",
+        "drive",
+        "Read the passengers of the player's vehicle, or send some to its doors",
+        "spawn:i? arrive:b?",
+    )
+    .since("1.25")
+    .result("`{inside, approaching, leaving, at_stop, stops_served, seats, standing_places, on_places, entry_requests, exit_requests, revenue, tickets_in_pack, passengers:[{id, age, phase, ticket, stamped, stops_left}]}`")
+    .doc("The passengers of M-0101. They walk up to the doors when the bus stands at a bus stop (an object whose `.sco` says `[busstop]`), board when the scripts report the door open (`PAX_Entry<n>_Open`), buy a ticket of the map's ticket pack with its probability, stamp, take a seat or stand, and get off through an open exit (`PAX_Exit<n>_Open`) when their ride is over. `arrive: true` counts a stop reached (those whose ride is over head for the nearest exit and get off when it opens). `spawn n` sends up to 30 people to the first entry now, stop or no stop (a test aid; they count as a stop visit: those who ride one stop get off). `inside` counts the people in the cabin, `on_places` the people on each `[passpos]`, `revenue` the money of the tickets sold (main currency unit), `passengers` the people inside with their `phase`. `-32000` (not ready) without a drive or for a vehicle without a passenger cabin.")
+    .debug(),
+    c(
         "hud.alert",
         "debug",
         "Raise or clear a test alert on the HUD",

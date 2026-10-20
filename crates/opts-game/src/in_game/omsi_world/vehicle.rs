@@ -19,6 +19,7 @@ use crate::in_game::types::InGameEntity;
 use super::{CameraSetup, WorldLoadJob, WorldStats};
 
 mod doors;
+mod passengers;
 mod segments;
 use segments::{ensure_repaints, repaint_map};
 pub(super) use segments::{first_ai_list_vehicle, load_segment_meshes, load_segment_meshes_for};
@@ -172,6 +173,9 @@ pub fn load_player_vehicle(
     attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed);
     crate::player_sound::attach(job, commands, root, &manifest, &bus_dir);
     doors::attach_door_points(job, commands, root, &manifest, &bus_dir);
+    if activate {
+        passengers::attach_passengers(job, commands, root, &manifest, &bus_dir, script_seed);
+    }
     load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,

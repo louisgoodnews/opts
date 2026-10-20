@@ -359,6 +359,9 @@ pub struct SceneryObject {
     /// Parking-bay marker (`[carpark_p]`): the game places a random parked car from the map's
     /// `parklist_p.txt` here (the marker itself is editor-only).
     pub carpark_p: bool,
+    /// Bus stop marker (`[busstop]`): the object is a bus stop; its position and heading are
+    /// where the bus stops (the generic `bus_stop.sco` is such a marker, hidden in the game).
+    pub bus_stop: bool,
     /// Vehicle-style model config (`[model]`, e.g. `model\model_parked.cfg`) of a parked/static
     /// vehicle object.
     pub model_cfg: Option<String>,

@@ -104,6 +104,15 @@ pub(super) fn attach_scripts(
             &job.install,
         ))),
         texture_base_dir: Some(bus_dir.join("Texture")),
+        tickets: std::sync::Arc::new(crate::passengers::ticket_book(
+            &super::passengers::ticket_pack(job),
+        )),
+        coins: std::sync::Arc::new(
+            super::passengers::money_system(job)
+                .map(|m| m.coins.iter().map(|c| c.value as f32).collect())
+                .unwrap_or_default(),
+        ),
+        ..Default::default()
     };
     engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
         ctx,

@@ -24,6 +24,12 @@ pub struct VehicleHostContext {
     pub fonts: Arc<RwLock<Vec<OftFont>>>,
     /// Base directory for resolving relative texture paths in `STLoadTex`.
     pub texture_base_dir: Option<PathBuf>,
+    /// The map's ticket system (`GetTicketName`, `GetTicketValue`); empty: the stub answers.
+    pub tickets: Arc<opts_sim::passengers::TicketBook>,
+    /// The values of the coins of the map's currency (`GiveChangeCoin` names one by index).
+    pub coins: Arc<Vec<f32>>,
+    /// The coins the scripts gave as change, by value, since the last read.
+    pub change_given: Arc<RwLock<Vec<f32>>>,
 }
 
 /// SplitMix64 finaliser: a well-mixed 64-bit value from `x`.
@@ -510,21 +516,41 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // 7. Tickets & Money
             // `ticketIdx (M.V.GetTicketName)` -> string
             "getticketname" => {
-                let _idx = st.numbers.pop();
-                st.strings.push("Normalfahrschein".to_string());
+                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
+                let name = usize::try_from(idx)
+                    .ok()
+                    .and_then(|i| ctx.tickets.tickets.get(i))
+                    .map_or_else(
+                        || "Normalfahrschein".to_string(),
+                        |t| t.display.replace('@', " "),
+                    );
+                st.strings.push(name);
                 true
             }
 
             // `ticketIdx (M.V.GetTicketValue)` -> price
             "getticketvalue" => {
-                let _idx = st.numbers.pop();
-                st.numbers.push(2.50);
+                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
+                let price = usize::try_from(idx)
+                    .ok()
+                    .and_then(|i| ctx.tickets.price(i))
+                    .unwrap_or(2.50);
+                st.numbers.push(price);
                 true
             }
 
             // `coinIdx (M.V.GiveChangeCoin)` -> void
             "givechangecoin" => {
-                let _coin_idx = st.numbers.pop();
+                let idx = st.numbers.pop().unwrap_or(0.0).round() as i64;
+                let value = usize::try_from(idx)
+                    .ok()
+                    .and_then(|i| ctx.coins.get(i))
+                    .copied();
+                if let (Some(v), Ok(mut log)) = (value, ctx.change_given.write()) {
+                    if log.len() < 64 {
+                        log.push(v);
+                    }
+                }
                 true
             }
 

@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.24.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.25.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -904,6 +904,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`drive.state`](#drivestate) | - | 1.1 | Speed, position, heading, gear, pedals, parking brake, distance, camera and HUD state |
 | [`vehicle.teleport`](#vehicleteleport) *(debug)* | `x` (number)<br>`y` (number)<br>`heading_deg?` (number) | 1.1 | Place the player vehicle at an absolute OMSI position and heading, standing still |
 | [`vehicle.reset`](#vehiclereset) *(debug)* | - | 1.1 | Put the player vehicle back where the session placed it, standing still |
+| [`vehicle.passengers`](#vehiclepassengers) *(debug)* | `spawn?` (integer)<br>`arrive?` (boolean) | 1.25 | Read the passengers of the player's vehicle, or send some to its doors |
 | [`vehicle.dynamics`](#vehicledynamics) | - | 1.10 | What the player's vehicle states about its dynamics (mass, centre of gravity, inertia, rolling resistance, axles) with the source of each value, and the live axle loads |
 | [`profiles.list`](#profileslist) | - | 1.14 | The map profiles of the planned drive's map: the profile that applies, the saved ones, the presets, the load profile and the advice |
 | [`profiles.advice`](#profilesadvice) | - | 1.14 | The load profile of the planned drive's map and the recommendations that follow from it |
@@ -978,6 +979,14 @@ A debug command: it moves the vehicle directly (speed zero, controls neutral) wi
 Put the player vehicle back where the session placed it, standing still.
 
 A debug command: restores the start position, zeroes speed and the controls and the distance counter.
+
+### `vehicle.passengers`
+
+Read the passengers of the player's vehicle, or send some to its doors.
+
+**Result:** `{inside, approaching, leaving, at_stop, stops_served, seats, standing_places, on_places, entry_requests, exit_requests, revenue, tickets_in_pack, passengers:[{id, age, phase, ticket, stamped, stops_left}]}`
+
+The passengers of M-0101. They walk up to the doors when the bus stands at a bus stop (an object whose `.sco` says `[busstop]`), board when the scripts report the door open (`PAX_Entry<n>_Open`), buy a ticket of the map's ticket pack with its probability, stamp, take a seat or stand, and get off through an open exit (`PAX_Exit<n>_Open`) when their ride is over. `arrive: true` counts a stop reached (those whose ride is over head for the nearest exit and get off when it opens). `spawn n` sends up to 30 people to the first entry now, stop or no stop (a test aid; they count as a stop visit: those who ride one stop get off). `inside` counts the people in the cabin, `on_places` the people on each `[passpos]`, `revenue` the money of the tickets sold (main currency unit), `passengers` the people inside with their `phase`. `-32000` (not ready) without a drive or for a vehicle without a passenger cabin.
 
 ### `vehicle.dynamics`
 

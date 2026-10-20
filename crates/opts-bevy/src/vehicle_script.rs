@@ -211,6 +211,28 @@ pub fn feed_weather(
     engine.set("preciprate", vars.precip_rate);
 }
 
+/// What the passengers tell the scripts of their vehicle (`humans_count`, `PAX_Entry<n>_Req`,
+/// `PAX_Exit<n>_Req`), kept by the passenger system (`opts_game::passengers`).
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PassengerFeed {
+    /// Passengers inside.
+    pub humans: u32,
+    /// Somebody waits at entry door `n` for it to open.
+    pub entry_req: [bool; opts_sim::script::inputs::DOORS],
+    /// Somebody waits at exit door `n` to get off.
+    pub exit_req: [bool; opts_sim::script::inputs::DOORS],
+}
+
+/// What the script system reads of a vehicle: its simulation, its scripts, whether it is the
+/// player's, its route and its passengers.
+type ScriptedVehicle<'a> = (
+    &'a VehicleController,
+    &'a mut VehicleScripts,
+    Has<PlayerVehicle>,
+    Option<&'a crate::route::VehicleRoute>,
+    Option<&'a PassengerFeed>,
+);
+
 /// Fixed-step system: initialises and advances the scripts of the player's vehicle and of the
 /// vehicles within [`ScriptRadius`] of it (all of them while there is no player's vehicle). A
 /// vehicle outside the radius keeps its last state.
@@ -218,12 +240,7 @@ pub fn vehicle_script_system(
     time: Res<Time>,
     radius: Option<Res<ScriptRadius>>,
     clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
-    mut query: Query<(
-        &VehicleController,
-        &mut VehicleScripts,
-        Has<PlayerVehicle>,
-        Option<&crate::route::VehicleRoute>,
-    )>,
+    mut query: Query<ScriptedVehicle>,
 ) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
@@ -232,10 +249,10 @@ pub fn vehicle_script_system(
     let radius = radius.map_or(ScriptRadius::default().0, |r| r.0);
     let players: Vec<Vec2> = query
         .iter()
-        .filter(|(_, _, player, _)| *player)
-        .map(|(c, _, _, _)| c.sim.chassis.position)
+        .filter(|(_, _, player, _, _)| *player)
+        .map(|(c, _, _, _, _)| c.sim.chassis.position)
         .collect();
-    for (controller, mut scripts, player, route) in &mut query {
+    for (controller, mut scripts, player, route, pax) in &mut query {
         if !player
             && !players.is_empty()
             && !players
@@ -258,6 +275,11 @@ pub fn vehicle_script_system(
         let mut inputs = host_inputs(controller, clock.as_deref());
         if let Some(r) = route {
             crate::route::feed_route(&mut inputs, &r.handle);
+        }
+        if let Some(p) = pax {
+            inputs.humans_count = p.humans;
+            inputs.pax_entry_req = p.entry_req;
+            inputs.pax_exit_req = p.exit_req;
         }
         feed(engine, plan, &inputs);
         if first {
