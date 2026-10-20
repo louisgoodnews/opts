@@ -120,9 +120,37 @@ pub fn uses_texture_alpha(mode: Option<u32>) -> bool {
     matches!(mode, Some(m) if m != 0)
 }
 
+/// The alpha a textured material starts from. A material that asks for the texture's alpha
+/// (`[matl_alpha]` 1 or higher) takes its transparency from the texture alone: the `.o3d`
+/// diffuse alpha is the exporter's opacity field, which many add-ons leave at 0 on glass,
+/// button and decal materials whose textures carry the intended alpha (the BRT C2 family has
+/// 849 such slots, MAN New Lion's City 382; corpus census in
+/// `docs/src/quality/brt-c2-census.md`). A material without that key keeps the diffuse alpha
+/// (a value below 1 blends it, as the mutation test T03 observed, so 0 stays invisible).
+#[must_use]
+pub fn textured_base_alpha(textured: bool, alpha_mode: Option<u32>, diffuse_alpha: f32) -> f32 {
+    if textured && uses_texture_alpha(alpha_mode) {
+        1.0
+    } else {
+        diffuse_alpha
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_texture_alpha_material_ignores_the_diffuse_alpha_field() {
+        // Glass of the C2: `[matl_alpha] 2`, diffuse alpha 0, the texture carries 0.61.
+        assert_eq!(textured_base_alpha(true, Some(2), 0.0), 1.0);
+        assert_eq!(textured_base_alpha(true, Some(1), 0.6), 1.0);
+        // No key: the diffuse alpha still blends (T03), so 0 stays hidden.
+        assert_eq!(textured_base_alpha(true, None, 0.0), 0.0);
+        assert_eq!(textured_base_alpha(true, Some(0), 0.3), 0.3);
+        // Untextured materials keep their colour alpha whatever the mode says.
+        assert_eq!(textured_base_alpha(false, Some(2), 0.4), 0.4);
+    }
 
     #[test]
     fn test_roughness_conversion() {

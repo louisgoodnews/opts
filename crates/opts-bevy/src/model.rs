@@ -224,35 +224,7 @@ impl ContentLoader<'_> {
         if name.is_empty() || name.chars().all(|c| c == '-') {
             return None;
         }
-        let global = self.install.root().join("Texture");
-        let mut search: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-        search.push(&global);
-        search.push(self.install.root());
-        // Materials often name a texture by an extension that does not exist on disk
-        // (`textures.md`): fall back to the same stem with the other image extensions.
-        let stem = name.rsplit_once('.').map_or(name, |(s, _)| s);
-        let candidates = std::iter::once(name.to_owned()).chain(
-            ["dds", "bmp", "tga", "png", "jpg"]
-                .iter()
-                .map(|e| format!("{stem}.{e}")),
-        );
-        let mut found = None;
-        'outer: for cand in candidates {
-            for dir in &search {
-                if let Some(p) = self.install.find_in(dir, &cand) {
-                    found = Some(p);
-                    break 'outer;
-                }
-            }
-        }
-        let found = found.or_else(|| {
-            let near = dirs.first().map_or_else(|| self.install.root().to_path_buf(), Clone::clone);
-            let hit = self.install.find_by_name(name, &near, true);
-            if let Some(p) = &hit {
-                tracing::debug!(texture = name, found = %p.display(), "texture rerouted to a same-named file");
-            }
-            hit
-        });
+        let found = find_texture(self.install, name, dirs);
         let Some(path) = found else {
             // Not real files: `\S:n` style names are script/slot references and `Textfeld_*`
             // textures are text fields OMSI renders at run time.
@@ -265,7 +237,7 @@ impl ContentLoader<'_> {
             }
             self.fail(format!(
                 "texture not found: {name} (searched {} folders)",
-                search.len()
+                dirs.len() + 2
             ));
             return None;
         };
@@ -335,3 +307,41 @@ mod transmap_split_tests;
 
 #[cfg(test)]
 mod tests;
+
+/// Where a texture name resolves: `dirs` in order, then the global `Texture` folder and the root;
+/// the same stem with the other image extensions (materials often name an extension that does
+/// not exist on disk, `textures.md`); at last any same-named file near the first folder. `None`
+/// for the names that are not files (`------`, empty). The one search the model loader, the
+/// vehicle census and its regression test share.
+#[must_use]
+pub fn find_texture(install: &OmsiInstall, name: &str, dirs: &[PathBuf]) -> Option<PathBuf> {
+    let name = name.trim();
+    if name.is_empty() || name.chars().all(|c| c == '-') {
+        return None;
+    }
+    let global = install.root().join("Texture");
+    let mut search: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+    search.push(&global);
+    search.push(install.root());
+    let stem = name.rsplit_once('.').map_or(name, |(s, _)| s);
+    let candidates = std::iter::once(name.to_owned()).chain(
+        ["dds", "bmp", "tga", "png", "jpg"]
+            .iter()
+            .map(|e| format!("{stem}.{e}")),
+    );
+    for cand in candidates {
+        for dir in &search {
+            if let Some(p) = install.find_in(dir, &cand) {
+                return Some(p);
+            }
+        }
+    }
+    let near = dirs
+        .first()
+        .map_or_else(|| install.root().to_path_buf(), Clone::clone);
+    let hit = install.find_by_name(name, &near, true);
+    if let Some(p) = &hit {
+        tracing::debug!(texture = name, found = %p.display(), "texture rerouted to a same-named file");
+    }
+    hit
+}
