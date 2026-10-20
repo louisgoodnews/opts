@@ -115,6 +115,10 @@ pub(super) fn build_main(
         p.commands()
             .entity(change)
             .insert(UiId::new("vehicle.change_map"));
+        let setvars = button(p, "Setvars…", false, Action::OpenSetvars);
+        p.commands()
+            .entity(setvars)
+            .insert(UiId::new("vehicle.setvars"));
         let configs = button(p, "Configurations…", false, Action::OpenConfigs);
         p.commands()
             .entity(configs)
@@ -358,46 +362,7 @@ pub(super) fn build_config(
             );
         }
         scroll_list(p, 4, menu.scroll[4], Val::Auto, |list| {
-            for item in &items {
-                list.spawn(Node {
-                    flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::SpaceBetween,
-                    align_items: AlignItems::Center,
-                    width: Val::Percent(100.0),
-                    ..default()
-                })
-                .with_children(|row| {
-                    label(
-                        row,
-                        format!("{} ({})", item.label, item.name),
-                        12.0,
-                        ColorRole::OnSurface,
-                    );
-                    match item.kind {
-                        SetvarKind::Choice | SetvarKind::Number => {
-                            row.spawn(Node {
-                                align_items: AlignItems::Center,
-                                column_gap: Val::Px(6.0),
-                                ..default()
-                            })
-                            .with_children(|stepper| {
-                                button(stepper, "‹", false, Action::Step(item.name.clone(), -1));
-                                label(stepper, item.value.to_string(), 12.0, ColorRole::OnSurface);
-                                button(stepper, "›", false, Action::Step(item.name.clone(), 1));
-                            });
-                        }
-                        _ => {
-                            let text = if item.value == 0 { "off (0)" } else { "on (1)" };
-                            button(
-                                row,
-                                text,
-                                item.value != 0,
-                                Action::Toggle(item.name.clone()),
-                            );
-                        }
-                    }
-                });
-            }
+            setvar_rows(list, &items, false);
         });
         p.spawn(Node {
             flex_direction: FlexDirection::Row,
@@ -411,4 +376,61 @@ pub(super) fn build_config(
             button(footer, "Done", true, Action::CloseConfig);
         });
     });
+}
+
+/// One row per option: the label with a stepper (choices and numbers) or a toggle (switches).
+/// `live` makes the controls change the driven vehicle at once (the Setvars page) instead of the
+/// choices of the vehicle that is about to be spawned.
+pub(super) fn setvar_rows(
+    list: &mut ChildSpawnerCommands,
+    items: &[crate::new_game_screen::setvars_discovery::SetvarItem],
+    live: bool,
+) {
+    for item in items {
+        let step = |delta: i32| {
+            if live {
+                Action::LiveStep(item.name.clone(), delta)
+            } else {
+                Action::Step(item.name.clone(), delta)
+            }
+        };
+        let toggle = if live {
+            Action::LiveToggle(item.name.clone())
+        } else {
+            Action::Toggle(item.name.clone())
+        };
+        list.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            justify_content: JustifyContent::SpaceBetween,
+            align_items: AlignItems::Center,
+            width: Val::Percent(100.0),
+            ..default()
+        })
+        .with_children(|row| {
+            label(
+                row,
+                format!("{} ({})", item.label, item.name),
+                12.0,
+                ColorRole::OnSurface,
+            );
+            match item.kind {
+                SetvarKind::Choice | SetvarKind::Number => {
+                    row.spawn(Node {
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|stepper| {
+                        button(stepper, "‹", false, step(-1));
+                        label(stepper, item.value.to_string(), 12.0, ColorRole::OnSurface);
+                        button(stepper, "›", false, step(1));
+                    });
+                }
+                _ => {
+                    let text = if item.value == 0 { "off (0)" } else { "on (1)" };
+                    button(row, text, item.value != 0, toggle);
+                }
+            }
+        });
+    }
 }

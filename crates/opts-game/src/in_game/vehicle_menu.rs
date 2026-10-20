@@ -60,6 +60,8 @@ pub enum Page {
     ChangeMapConfirm,
     /// *Configurations*: the saved bus configurations (M-0077).
     Configs,
+    /// *Setvars*: the equipment options of the active vehicle, changed while it runs (M-0110).
+    Setvars,
 }
 
 /// State of the menu.
@@ -102,6 +104,8 @@ pub struct VehicleMenu {
     change_map: ChangeMapDraft,
     /// The rows of the *Configurations* page.
     configs: ConfigsView,
+    /// The repaints the *Setvars* page offers its options from (read once per vehicle).
+    live_setvars: LiveSetvars,
 }
 
 /// What a row of the main page shows; a change rebuilds the page.
@@ -246,6 +250,14 @@ enum Action {
     RenameConfig(String),
     /// Applies the typed name.
     CommitRename,
+    /// Opens the *Setvars* page.
+    OpenSetvars,
+    /// Switches an option of the active vehicle on or off, live.
+    LiveToggle(String),
+    /// Moves an option of the active vehicle on by `delta`, live.
+    LiveStep(String, i32),
+    /// Puts every option of the active vehicle back to its repaint's value.
+    LiveReset,
     /// Leaves the name field without renaming.
     CancelRename,
 }
@@ -333,7 +345,12 @@ fn toggle_menu(
             menu.page = Page::Select;
         } else if matches!(
             menu.page,
-            Page::Select | Page::Route | Page::Jump | Page::ChangeMap | Page::Configs
+            Page::Select
+                | Page::Route
+                | Page::Jump
+                | Page::ChangeMap
+                | Page::Configs
+                | Page::Setvars
         ) {
             menu.page = Page::Main;
         } else {
@@ -406,7 +423,10 @@ fn rebuild_menu(
     session: Option<Res<super::types::InGameSessionInfo>>,
 ) {
     let want = (menu.page, menu.config_open);
-    if !menu.is_changed() && menu.built == Some(want) {
+    // The Setvars page also follows changes made outside it (the control protocol).
+    let shown_now = registry.active().map(|r| r.setvars.clone());
+    let stale = menu.page == Page::Setvars && shown_now != menu.live_setvars.shown;
+    if !menu.is_changed() && menu.built == Some(want) && !stale {
         return;
     }
     // Keep the scroll offsets of the lists across the rebuild.
@@ -417,6 +437,8 @@ fn rebuild_menu(
         commands.entity(r).despawn();
     }
     menu.built = Some(want);
+    // Remember what the page shows without calling it a change (that would rebuild once more).
+    menu.bypass_change_detection().live_setvars.shown = shown_now;
     let Some(theme) = theme else { return };
     match menu.page {
         Page::Closed | Page::Formation => {}
@@ -428,6 +450,9 @@ fn rebuild_menu(
             let Some(cat) = catalogue else { return };
             let current = session.as_ref().map_or("", |s| s.map_name.as_str());
             build_change_map(&mut commands, &menu, &cat, current);
+        }
+        Page::Setvars => {
+            build_setvars(&mut commands, &menu, &registry);
         }
         Page::Configs => {
             let can_save = registry.active().is_some_and(|r| r.is_alive());
@@ -542,6 +567,11 @@ use change_map_page::{
 
 mod configs_page;
 use configs_page::{build_configs, load_view, ConfigsView};
+
+// --- the Setvars page (M-0110) ---------------------------------------------------------------
+
+mod setvars_page;
+use setvars_page::{build_setvars, LiveSetvars};
 
 // --- the route page (M-0099) ------------------------------------------------------------------
 

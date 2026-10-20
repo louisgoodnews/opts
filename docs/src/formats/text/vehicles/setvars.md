@@ -114,6 +114,7 @@ Rules:
 - **In-game vehicle menu:** ‹ and › step a choice through its values or a number by one (`menu.do step <option> [-1|1]`).
 - **Protocol:** `vehicle.setvars` ([control protocol](../../../architecture/control-protocol.md)) lists the options with kind, range, value, default, group and evidence and changes several at once, all or none; in a drive the change is set on the player's scripts at once and kept for a respawn.
 - **Apply order** is unchanged: the repaint's setvars, then the user's overrides at spawn.
+- **Alt menu *Setvars* (M-0110):** the options of the **active session vehicle** with a toggle or stepper each; a change is set on its scripts at once and kept on its session record (`SessionVehicles::set_setvar`), so the session save and *Save current vehicle* carry it. `vehicle.setvars` in a drive now reads and writes the active session vehicle (before: the vehicle the drive started with). Whether a script reads an option again after start stays open per option (Q-SV02): the page says so and offers no promise; *Spawn* on a saved configuration applies every option from the start.
 
 ### Live check on the real game
 

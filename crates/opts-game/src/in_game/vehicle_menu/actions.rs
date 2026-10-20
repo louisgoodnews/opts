@@ -47,6 +47,7 @@ pub(super) fn menu_actions(
             "changemap" => Some(Action::OpenChangeMap),
             "configs" => Some(Action::OpenConfigs),
             "saveconfig" => Some(Action::SaveConfig),
+            "setvars" => Some(Action::OpenSetvars),
             // `renameconfig <text>` starts renaming the first configuration whose name matches.
             "renameconfig" => menu
                 .configs
@@ -286,6 +287,19 @@ pub(super) fn menu_actions(
                     let lib = lib_of(&mut library, &mut fallback);
                     super::configs_page::spawn(&mut menu, lib, &mut registry, cat, job, &id);
                 }
+            }
+            Action::OpenSetvars => {
+                commands.queue(|w: &mut World| super::setvars_page::open(w));
+            }
+            Action::LiveToggle(name) => {
+                commands.queue(move |w: &mut World| super::setvars_page::change(w, &name, None));
+            }
+            Action::LiveStep(name, delta) => {
+                commands
+                    .queue(move |w: &mut World| super::setvars_page::change(w, &name, Some(delta)));
+            }
+            Action::LiveReset => {
+                commands.queue(|w: &mut World| super::setvars_page::reset(w));
             }
             Action::RenameConfig(id) => super::configs_page::start_rename(&mut menu, &id),
             Action::CancelRename => menu.configs.renaming = None,

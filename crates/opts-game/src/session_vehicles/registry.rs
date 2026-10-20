@@ -232,6 +232,21 @@ impl SessionVehicles {
         self.active.and_then(|id| self.get(id))
     }
 
+    /// Records a live change of an equipment option of a vehicle: kept for the save, a saved
+    /// configuration and the status of the editor. A value equal to the repaint's own `default`
+    /// removes the override; the list stays sorted by name. `false` when there is no such vehicle.
+    pub fn set_setvar(&mut self, id: VehicleId, name: &str, value: i32, default: i32) -> bool {
+        let Some(r) = self.get_mut(id) else {
+            return false;
+        };
+        r.setvars.retain(|(n, _)| !n.eq_ignore_ascii_case(name));
+        if value != default {
+            r.setvars.push((name.to_owned(), value));
+            r.setvars.sort();
+        }
+        true
+    }
+
     /// Makes `id` the active vehicle (or none).
     pub fn set_active(&mut self, id: Option<VehicleId>) {
         self.active = id;
@@ -491,6 +506,28 @@ mod tests {
             }),
             None,
         )
+    }
+
+    #[test]
+    fn a_live_option_change_is_recorded_sorted_and_dropped_at_the_default() {
+        let mut reg = SessionVehicles::default();
+        let a = alive(&mut reg, "A", 1);
+        assert!(reg.set_setvar(a, "Heater", 1, 0));
+        assert!(reg.set_setvar(a, "display_ext", 4, 2));
+        assert_eq!(
+            reg.get(a).map(|r| r.setvars.clone()),
+            Some(vec![
+                ("Heater".to_owned(), 1),
+                ("display_ext".to_owned(), 4)
+            ])
+        );
+        // Back to the repaint's own value (any spelling of the name): the override goes.
+        assert!(reg.set_setvar(a, "heater", 0, 0));
+        assert_eq!(
+            reg.get(a).map(|r| r.setvars.clone()),
+            Some(vec![("display_ext".to_owned(), 4)])
+        );
+        assert!(!reg.set_setvar(99, "x", 1, 0));
     }
 
     #[test]
