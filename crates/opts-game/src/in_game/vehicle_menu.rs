@@ -242,6 +242,12 @@ enum Action {
     SaveConfig,
     /// Deletes the saved configuration with this id (on the second press).
     DeleteConfig(String),
+    /// Starts renaming the saved configuration with this id.
+    RenameConfig(String),
+    /// Applies the typed name.
+    CommitRename,
+    /// Leaves the name field without renaming.
+    CancelRename,
 }
 
 /// Every entity of the menu's modals.
@@ -319,6 +325,8 @@ fn toggle_menu(
     if step_back && menu.page != Page::Closed {
         if menu.config_open {
             menu.config_open = false;
+        } else if menu.configs.renaming.take().is_some() {
+            // Escape leaves the name field first.
         } else if menu.page == Page::ChangeMapConfirm {
             menu.page = Page::ChangeMap;
         } else if menu.page == Page::Formation {

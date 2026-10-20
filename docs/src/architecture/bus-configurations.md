@@ -54,7 +54,7 @@ The *What* step has a *Configurations* section under the livery (`new_game_scree
 
 ## Alt menu
 
-*Configurations…* on the main page of the vehicle menu (`in_game/vehicle_menu/configs_page.rs`) lists the saved configurations, favourites first and then the most recently used, each with its vehicle, repaint and number of options. *Spawn* builds it as a new vehicle at the session's start point and closes the menu; a configuration whose vehicle or `.bus` file is gone shows why instead of the button, one that lost a repaint or an option spawns without it and says so. *Delete* asks with a second press. *Save current vehicle* stores the active session vehicle under its name (numbered when taken). A repaint the catalogue does not list (the vehicle's own default as its `.bus` names it) is stored as the default, so the new entry does not read as having a missing repaint. `menu.do configs`, `spawnconfig <text>` and `saveconfig` drive it; Esc goes back to the main page.
+*Configurations…* on the main page of the vehicle menu (`in_game/vehicle_menu/configs_page.rs`) lists the saved configurations, favourites first and then the most recently used, each with its vehicle, repaint and number of options. *Spawn* builds it as a new vehicle at the session's start point and closes the menu; a configuration whose vehicle or `.bus` file is gone shows why instead of the button, one that lost a repaint or an option spawns without it and says so. *Rename* turns the name into a field (type, Backspace, Enter or *Save name*; Esc or *Cancel* leaves it; an empty or taken name is refused in the status line). *Delete* asks with a second press. *Save current vehicle* stores the active session vehicle under its name (numbered when taken). A repaint the catalogue does not list (the vehicle's own default as its `.bus` names it) is stored as the default, so the new entry does not read as having a missing repaint. `menu.do configs`, `spawnconfig <text>`, `saveconfig`, `renameconfig <text>` with `typename <text>` and `commitrename` drive it; Esc goes back to the main page.
 
 ## Session save
 
@@ -62,4 +62,4 @@ The session save (M-0069) already stores each session vehicle with its catalogue
 
 ## Open
 
-Renaming in the UI (`config.update` does it in the protocol) and a thumbnail are not done.
+A thumbnail is not done.
