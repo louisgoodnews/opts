@@ -167,6 +167,33 @@ pub fn sync_view_distance(
     }
 }
 
+/// The volume settings (`audio.*`, percent) into the sound engine's [`opts_bevy::AudioSettings`]; master 0
+/// switches the sound off, which also frees every voice.
+pub fn sync_audio(settings: Res<GameSettings>, audio: Option<ResMut<opts_bevy::AudioSettings>>) {
+    let Some(mut audio) = audio else { return };
+    if !(settings.is_changed() || audio.is_added()) {
+        return;
+    }
+    let percent = |key: &str, default: f32| -> f32 {
+        settings
+            .raw(key)
+            .and_then(|v| v.parse::<f32>().ok())
+            .map_or(default, |v| v.clamp(0.0, 100.0))
+    };
+    let want = opts_bevy::AudioSettings {
+        enabled: percent("audio.master", 80.0) > 0.0,
+        master: percent("audio.master", 80.0),
+        effects: percent("audio.effects", 80.0),
+        ambient: percent("audio.ambience", 60.0),
+        vehicles: percent("audio.engine", 80.0),
+        ui: percent("audio.interface", 60.0),
+        max_voices: audio.max_voices,
+    };
+    if *audio != want {
+        *audio = want;
+    }
+}
+
 /// `graphics.hdr`: the main camera carries [`bevy::camera::Hdr`] while the setting is on (the
 /// default). Off keeps the 8-bit main texture (saves about 50 MB at 1080p with 4x MSAA).
 pub fn sync_hdr(
@@ -282,5 +309,35 @@ mod view_distance_tests {
                 .metres,
             None
         );
+    }
+}
+
+#[cfg(test)]
+mod audio_tests {
+    use super::*;
+
+    #[test]
+    fn the_volume_settings_reach_the_engine() {
+        let mut app = App::new();
+        let mut settings = GameSettings::default();
+        settings.set_raw("audio.master", "50");
+        settings.set_raw("audio.engine", "25");
+        settings.set_raw("audio.ambience", "not a number");
+        app.insert_resource(settings)
+            .init_resource::<opts_bevy::AudioSettings>()
+            .add_systems(Update, sync_audio);
+        app.update();
+        let a = app.world().resource::<opts_bevy::AudioSettings>().clone();
+        assert_eq!(
+            (a.master, a.vehicles, a.ui, a.effects),
+            (50.0, 25.0, 60.0, 80.0)
+        );
+        assert_eq!(a.ambient, 60.0, "an unreadable value is the default");
+        assert!(a.enabled);
+        app.world_mut()
+            .resource_mut::<GameSettings>()
+            .set_raw("audio.master", "0");
+        app.update();
+        assert!(!app.world().resource::<opts_bevy::AudioSettings>().enabled);
     }
 }

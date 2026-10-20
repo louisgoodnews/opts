@@ -177,6 +177,7 @@
 - [UV Decoder (retired 2026-10-16)](architecture/uv-decoder.md)
 - [UV Decoder: Texture Evidence (obsolete design)](architecture/uv-decoder-texture-evidence.md)
 - [Scene Trace (which mesh is where)](architecture/scene-trace.md)
+- [Audio System](architecture/audio-system.md)
 - [In-Game Vehicle Menu](architecture/in-game-vehicle-menu.md)
 - [Session Vehicles](architecture/session-vehicles.md)
 - [Session Save](architecture/session-save.md)

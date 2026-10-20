@@ -18,6 +18,7 @@
 
 pub mod ai_variables;
 pub mod articulation;
+pub mod audio;
 pub mod camera;
 pub mod capture;
 pub mod control;
@@ -75,6 +76,10 @@ pub use ai_variables::{AiVariables, VariableSource};
 pub use articulation::{
     articulation_system, joint_beta_deg, ArticulatedChain, ArticulatedSegment, ArticulationPlugin,
     SegmentGround,
+};
+pub use audio::{
+    AudioSettings, AudioStats, Distance as SoundDistance, OptsAudioPlugin, PcmClip, SoundBus,
+    SoundEmitter,
 };
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,

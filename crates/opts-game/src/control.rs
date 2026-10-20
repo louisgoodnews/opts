@@ -52,6 +52,7 @@ impl Plugin for GameControlPlugin {
         crate::control_save::register(&mut registry);
         crate::control_trace::register(&mut registry);
         crate::control_tiles::register(&mut registry);
+        crate::control_audio::register(&mut registry);
         crate::control_setvars::register(&mut registry);
         crate::control_configs::register(&mut registry);
         crate::control_dynamics::register(&mut registry);

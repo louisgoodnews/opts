@@ -13,7 +13,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0024 — OMSI Map Tile Grid & Chunk Streaming Engine (`opts-game`, `opts-bevy`)](M-0024.md) — 🟡 Partly delivered in `opts-game`; spec, async jobs, extraction open
 - [M-0025 — Terrain Heightmap & Water Surface Mesh Generation (`opts-core`, `opts-bevy`)](M-0025.md) — 🟡 Terrain mesh and sampling delivered; spec, water, ground-height query open
 - [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — 🟢 Complete for vehicles (compiler, VM, variables, passive bridge); audio events wait for M-0027
-- [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — ⏳ Planned (sound.cfg evaluation, dynamic curve modulation, Bevy spatial audio)
+- [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — 🟡 Engine implemented 2026-10-20 (voices, buses, settings, `audio.*`); sounds follow in M-0139, M-0140, M-0102
+- [M-0139 — Sounds of Scenery Objects and Splines](M-0139.md) — 📝 Requested 2026-10-20 (step 2 of the sound plan)
+- [M-0140 — Sounds of AI Traffic](M-0140.md) — 📝 Requested 2026-10-20 (step 3 of the sound plan)
 - [M-0037 — Shipped-Work Reconciliation (Roadmap, Phase Pages, Board)](M-0037.md) — 🟢 Complete (audit 5037f89a F-019, F-023)
 - [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)
@@ -56,7 +58,8 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Script VM (compiles all 6,062 corpus scripts; 1,216 scripted vehicles load and run) wired to the vehicle through a passive and an active Bevy bridge — OMSI Script Stack VM (`.osc`) and dynamic variable table system in `opts-sim` ([M-0026](M-0026.md) — traces to F-008, F-019).
   - [~] Map OMSI script variables (`.osc`) to Bevy systems for lights, doors, and indicators — animation, `[visible]`, interior lights, `Spot_Select` headlights, light maps, `keyboard.cfg` key triggers and `[mouseevent]` hot-spots done; in-game screenshot check, night maps and `delay` open ([M-0045](M-0045.md)).
   - [~] AI road traffic — [M-0049](M-0049.md): research and plan ([`ai-traffic.md`](../../architecture/ai-traffic.md)), AI list parsers and the `opts-traffic` crate (lane graph, car following, spawning helpers) done; kinematic traffic runs in the game (cars follow lanes with the IDM, speed limits and density rules, spawn around the camera); signals, priority, script-driven vehicles and calibration open.
-  - [ ] Implement vehicle and environmental spatial audio simulation bridge in `opts-bevy` mapping engine RPM and pneumatic pressure to spatial audio ([M-0027](M-0027.md) — traces to F-009, F-020).
+  - [x] Sound engine in `opts-bevy` (2026-10-20): clips, emitters, voice budget, distance fading, listener, buses with the Audio settings, `audio.*` protocol ([M-0027](M-0027.md), [audio-system](../../architecture/audio-system.md)).
+  - [ ] Sounds of scenery objects and splines ([M-0139](M-0139.md)), of AI traffic ([M-0140](M-0140.md)), then the player's vehicle: engine RPM and pneumatic pressure to spatial audio ([M-0102](M-0102.md)).
   - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](../../architecture/articulation.md), M-0022 addendum 2026-10-11); physics coupling, pitch, `[couple_front]` and AI/parked trailers open — [M-0053](M-0053.md) (critical review 2026-10-11 F-002, F-003).
 - [~] **🚶 Pedestrians** — [M-0050](M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**

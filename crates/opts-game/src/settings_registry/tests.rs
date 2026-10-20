@@ -150,7 +150,7 @@ fn planned_settings_refuse_changes_with_the_standard_wording() {
     let r = registry();
     let mut s = GameSettings::default();
     let e = r
-        .set(&mut s, &caps(), "audio.master", "50")
+        .set(&mut s, &caps(), "gameplay.time_scale", "5")
         .expect_err("not yet");
     assert!(e.to_string().contains("Feature not available yet!"), "{e}");
 }

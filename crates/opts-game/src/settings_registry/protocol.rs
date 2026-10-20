@@ -297,7 +297,11 @@ mod tests {
             code::INVALID_PARAMS
         );
         assert_eq!(
-            err(set(&mut w, &json!({ "key": "audio.master", "value": "5" }))).code,
+            err(set(
+                &mut w,
+                &json!({ "key": "gameplay.time_scale", "value": "5" })
+            ))
+            .code,
             code::NOT_READY
         );
         assert_eq!(

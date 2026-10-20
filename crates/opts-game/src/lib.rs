@@ -2,11 +2,13 @@
 
 pub mod app;
 pub mod app_state;
+pub mod audio_content;
 pub mod bus_config;
 pub mod bus_config_spawn;
 pub mod catalogue_service;
 pub mod content_facts;
 pub mod control;
+pub mod control_audio;
 pub mod control_configs;
 pub mod control_drive;
 pub mod control_dynamics;

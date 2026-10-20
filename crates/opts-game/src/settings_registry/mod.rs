@@ -347,7 +347,8 @@ impl Plugin for SettingsRegistryPlugin {
         if !app.is_plugin_added::<lighting::LightQualityGamePlugin>() {
             app.add_plugins(lighting::LightQualityGamePlugin);
         }
-        app.init_resource::<SettingsCapabilities>()
+        app.init_resource::<crate::audio_content::ClipCache>()
+            .init_resource::<SettingsCapabilities>()
             .add_message::<SettingChanged>()
             .insert_resource(display::DisplayBackend(Box::new(display::WindowDisplay)))
             .add_systems(
@@ -366,6 +367,7 @@ impl Plugin for SettingsRegistryPlugin {
                         .run_if(resource_exists::<protocol_confirm::ProtocolRevert>),
                     live::sync_hdr,
                     live::sync_view_distance,
+                    live::sync_audio,
                     live::sync_weather_effects,
                 ),
             )

@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.18.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.19.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -84,6 +84,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `vehicle.script_vars` | `contains?` (string) | 1.0 | Script variables of the player vehicle (substring filter) |
 | [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
 | [`session.saves`](#sessionsaves) | - | 1.3 | The list of saves, the registered save sections and the state of a restore |
+| [`audio.state`](#audiostate) | - | 1.19 | The sound engine: volumes, voice budget, listener and the loudest emitters |
 | `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
 
 ### `scene`
@@ -123,6 +124,14 @@ The list of saves, the registered save sections and the state of a restore.
 **Result:** `{dir, running, saves:[{id, name, map, vehicles, play_time_s, saved_unix, sections, unknown_sections, from_backup, issues}|{id, error}], sections:[{id, version, about}], restore:{state, id?, warnings?}}`
 
 Most recent first. A file that cannot be read is listed with its `error` (`kind`: `corrupt`, `newer_format`, ...). `issues` name missing or changed content (`MissingMap`, `MissingVehicle`, `Changed`).
+
+### `audio.state`
+
+The sound engine: volumes, voice budget, listener and the loudest emitters.
+
+**Result:** `{enabled, volumes:{master, effects, ambience, engine, interface}, voices:{budget, emitters, audible, with_voice, virtualized, playing}, listener, clips_cached, top:[{entity, bus, gain, distance, voice}]}`
+
+`gain` is the level an emitter computes: its own gain × the distance fade × its bus' volume × the master volume (volumes are percent, squared into a gain). `voices.playing` counts voices whose sink exists, that is the sound card accepted them: on a machine without an output it stays 0 while `with_voice` rises. `listener` is the main camera's position (Bevy metres) or `null`.
 
 ## Group `ui`
 
@@ -320,6 +329,9 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`config.delete`](#configdelete) | `id` (string) | 1.9 | Delete a saved configuration |
 | [`config.update`](#configupdate) | `id` (string)<br>`name?` (string)<br>`notes?` (string)<br>`favourite?` (boolean) | 1.9 | Rename a saved configuration, change its notes or its favourite mark |
 | [`config.duplicate`](#configduplicate) | `id` (string)<br>`name` (string) | 1.9 | Copy a saved configuration under a new name |
+| [`audio.tone`](#audiotone) | `bus?` (string = effects \| ambient \| vehicles \| ui)<br>`loop?` (boolean)<br>`at?` (json) | 1.19 | Play a sine tone (a test signal for the sound output) |
+| [`audio.play`](#audioplay) | `file` (string)<br>`bus?` (string = effects \| ambient \| vehicles \| ui)<br>`loop?` (boolean)<br>`at?` (json) | 1.19 | Play a sound file of the installation through the engine |
+| [`audio.stop`](#audiostop) | - | 1.19 | Stop and remove the sounds `audio.tone` and `audio.play` made |
 
 ### `scene.load_map`
 
@@ -598,6 +610,28 @@ At least one of `name`, `notes`, `favourite`. A name that is empty or taken by a
 Copy a saved configuration under a new name.
 
 **Result:** `{id, configuration}`
+
+### `audio.tone`
+
+Play a sine tone (a test signal for the sound output).
+
+**Result:** `{entity, bus, loop}`
+
+`frequency` 20 to 20000 Hz (440), `seconds` 0.05 to 30 (1). Without `at` the tone plays everywhere; with `at: [x, y, z]` (Bevy metres) it is a source that fades from `reference` (5 m) to `max` (120 m) and is panned. The sound is kept after it ended, so `audio.state` can show it; `audio.stop` removes it. `1001` before the engine runs.
+
+### `audio.play`
+
+Play a sound file of the installation through the engine.
+
+**Result:** `{entity, bus, loop}`
+
+`file` is a `.wav` below an allowed read root (`1002` outside, `1004` missing). It is decoded once and shared (`audio.state.clips_cached`). A file that is not RIFF/WAVE or has an unusual sample format answers `1008` with the reason (five MPEG files in the corpus are named `.wav`). `at`, `reference`, `max` as for `audio.tone`.
+
+### `audio.stop`
+
+Stop and remove the sounds `audio.tone` and `audio.play` made.
+
+**Result:** `{stopped}`
 
 ## Group `settings`
 

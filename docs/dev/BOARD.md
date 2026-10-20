@@ -114,6 +114,10 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 ### ⏭️ Ready
 
+- [x] 🟠 **Sound engine on Bevy** (M-0027, code + spec) — **Done 2026-10-20** on `agent/sound-engine` (project lead request): `opts_bevy::audio` (clips, emitters, voice budget, distance curve, listener, buses), WAV decoder, `audio.*` protocol 1.19.0, Audio settings live; checked live (tone in the system mixer, 10 m source heard, 500 m source silent). [audio-system](../src/architecture/audio-system.md).
+- [ ] 🟠 **Sounds of scenery objects and splines** (M-0139) — next step of the sound plan.
+- [ ] 🟠 **Sounds of AI traffic** (M-0140) — then; and the player's vehicle (M-0102).
+
 - [ ] 🔴 ⏸ **BRT C2 full fix: the mesh loads and displays completely and accurately** (M-0138, code + content) — requested by the project lead 2026-10-20, **deferred the same day** (a first slice sits unmerged on `agent/c2-full-fix`: census and MI-0064; it did not fix what the project lead sees). Census of every part of `BRT_C2-Solo/C2_2T.bus`, materials/textures/animations checked part by part, regression gate; [M-0138](../src/roadmap/phase-10/M-0138.md).
 
 - [x] 🔴 **Bus spawn height: wheels clip through the ground at spawn** (M-0073/M-0090, code) — **Done 2026-10-19** on `agent/mesh-looks`: reproduced with the Urbino II articulated bus on Ahlheim V5 (front axle in the cobbles); the road height was the spline's datum, not the drawn surface (a cobbled profile lies above it): `GroundIndex` now samples the profile's ground surface at the wheel's lateral offset (`RoadSample::surface_z`, tests); checked in the game window. Open: other surfaces without a road spline (plazas made of objects) still use the terrain.
