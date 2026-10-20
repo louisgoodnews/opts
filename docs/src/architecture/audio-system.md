@@ -86,7 +86,7 @@ Not yet: door sounds, horns (`ev_AI_Horn`), trailers' own sounds (only the head 
 
 Checked live (Citybus 530, Ahlheim 5): 330 voices, 44 loops with an emitter, 52 of its sound files decoded on demand (60 MB); pressing the battery switch and a door key plays their one-shots 1.7 m from the listener with a sink in the system mixer. Not checked live: the engine loops of a running engine (the engine of this bus does not start through the protocol keys yet, `engine_n` stays 0 and the loops are silent), tested instead over a script engine in the unit tests.
 
-Not yet: trailers and the articulated bus' second unit, announcements (the `(T.F)` payload files), the `Snd_*` mixer inputs, force feedback, the horn and the other definitions with an unknown condition mode, a cabin filter for outside sounds heard from inside (the viewpoint rule only switches them).
+Trailers and the articulated bus' second unit have their own voices since 2026-10-20 (`player_sound::attach_unit`, children of the unit, driven by the head's variables and events; the Bremen MAN NG313's engine loops are in `sound_NG313_T.cfg`, its head has none). Not yet: announcements (the `(T.F)` payload files), the `Snd_*` mixer inputs, force feedback, the horn and the other definitions with an unknown condition mode, a cabin filter for outside sounds heard from inside (the viewpoint rule only switches them).
 
 ## 11. Open
 
@@ -98,3 +98,14 @@ Not yet: trailers and the articulated bus' second unit, announcements (the `(T.F
 | Q-AU06 | The comparison modes 0, 4 and 5 of `[conditionSingle]` (the horn, the retarder stages, gear selector): 749 definitions of the installed vehicles are left out until they are known. |
 | Q-AU05 | The engine speed OMSI's AI writes to `AI_Motor`/`engine_n` of an AI vehicle (the gear model of M-0140 is a stand-in); it fixes the pitch of every AI engine loop. |
 | Q-AU03 | Output device choice and a latency setting (Bevy uses the system default device). |
+
+
+### 10a. What was wrong with the engine sound (2026-10-20, found by the project lead's ears)
+
+Three readings of `sound.cfg` were wrong and made the stationary Citybus 530 sound like top speed and the Bremen MAN beep:
+
+1. **Loop pitch.** `variable / reference × scale` played a loop recorded at its reference value at `scale` times its speed: the Citybus' idle loop (reference 600, scale 2) an octave up. The pitch is `1 + (variable / reference - 1) × scale` (natural speed at the reference value, the scale a sensitivity; `sound_logic::speed`, Q-SND-001).
+2. **A pitch of zero is silence.** The loops without condition and curve, like `brake_warning` and `notheben_initialized`, are switched by their pitch variable: 0 stops them. They played at the lower limit of the speed (0.3, "deep beeping") all the time. A loop whose speed is below 0.1 is silent (`sound_logic::loop_voice`), which also silences the engine loops of a stopped engine.
+3. **Rooms.** `[viewpoint]` 2 and 6 are interior sounds, 5 and 1 exterior sounds (Q-SND-004; the first reading had 2 and 5 swapped). Inside is decided by the camera: the driver's and the passengers' views are inside, the external view is outside (its camera hangs a few metres behind the body, which the old box test called inside), the walking and the free camera by their position. So the cabin plays `OM_906hLA_E2_*_v` and the outside `OM_906hLA_E2_ext_*`.
+
+Also: the volume curve variable `-1` is the time the voice has been sounding (fade-in of the starter and retarder loops, Q-SND-005). `audio.state.player.loudest` lists the loudest loops with their file, gain and speed (idle Citybus, cockpit: `OM_906hLA_E2_0_v.wav` at speed 0.99; outside: `OM_906hLA_E2_ext_0_v.wav`; the Bremen MAN NG313 idle, cockpit: `Innen_idle.wav` at 0.96, outside `Motor_ext_leerlauf.wav`).

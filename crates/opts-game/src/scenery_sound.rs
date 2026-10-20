@@ -24,7 +24,7 @@ use opts_core::formats::sound::SoundDef;
 
 use crate::audio_content::{poll_clip_loader, ClipLoader, ClipState};
 use crate::in_game::omsi_world::WorldLoadJob;
-use crate::sound_logic::{conditions_hold, level, playback_of, speed, Playback};
+use crate::sound_logic::{conditions_hold, level, playback_of, Playback};
 
 /// One sound definition of a placed object, a child at its `[3d]` position.
 #[derive(Component, Debug, Clone)]
@@ -195,14 +195,17 @@ pub fn stream_scenery_voices(
                     }
                 }
                 None if d <= curve.max && active => {
-                    if let ClipState::Ready(clip) = loader.state(&path) {
-                        commands.entity(entity).insert(
-                            SoundEmitter::new(clip, SoundBus::Ambient)
-                                .looping()
-                                .spatial(curve)
-                                .with_speed(speed(&voice.def, read))
-                                .with_gain(level(&voice.def, read)),
-                        );
+                    let (gain, spd) = crate::sound_logic::loop_voice(&voice.def, read);
+                    if gain > 0.0 {
+                        if let ClipState::Ready(clip) = loader.state(&path) {
+                            commands.entity(entity).insert(
+                                SoundEmitter::new(clip, SoundBus::Ambient)
+                                    .looping()
+                                    .spatial(curve)
+                                    .with_speed(spd)
+                                    .with_gain(gain),
+                            );
+                        }
                     }
                 }
                 None => {}

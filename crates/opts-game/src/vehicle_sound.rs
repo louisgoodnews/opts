@@ -229,13 +229,13 @@ pub fn level_of(def: &SoundDef, vars: &AiVariables) -> f32 {
 /// sound its pitch factor.
 #[must_use]
 pub fn speed_of(def: &SoundDef, vars: &AiVariables) -> f32 {
-    match (def.kind, def.pitch_variable.as_deref()) {
-        (SoundKind::Loop, Some(v)) if def.pitch_reference.abs() > f32::EPSILON => {
-            (vars.get(v) / def.pitch_reference * def.pitch_scale).clamp(0.3, 3.5)
-        }
-        (SoundKind::Loop, _) => 1.0,
-        (SoundKind::Sound, _) => def.pitch.clamp(0.3, 3.5),
-    }
+    crate::sound_logic::speed(def, |n| vars.get(n)).max(crate::sound_logic::MIN_SPEED)
+}
+
+/// Level and speed of an AI loop: the shared rules (`1 + (variable / reference - 1) × scale`,
+/// silent while the pitch is zero).
+fn ai_loop(def: &SoundDef, vars: &AiVariables) -> (f32, f32) {
+    crate::sound_logic::loop_voice(def, |n| vars.get(n))
 }
 
 /// Starts, updates and stops the emitters of AI voices five times a second.
@@ -284,7 +284,7 @@ pub fn stream_ai_voices(
                     commands.entity(entity).remove::<SoundEmitter>();
                 } else {
                     playing += 1;
-                    let (gain, speed) = (level_of(&voice.def, vars), speed_of(&voice.def, vars));
+                    let (gain, speed) = ai_loop(&voice.def, vars);
                     if (e.gain - gain).abs() > 1e-3 {
                         e.gain = gain;
                     }
@@ -294,14 +294,17 @@ pub fn stream_ai_voices(
                 }
             }
             None if d <= curve.max => {
-                if let ClipState::Ready(clip) = loader.state(&voice.file) {
-                    commands.entity(entity).insert(
-                        SoundEmitter::new(clip, SoundBus::Vehicles)
-                            .looping()
-                            .spatial(curve)
-                            .with_speed(speed_of(&voice.def, vars))
-                            .with_gain(level_of(&voice.def, vars)),
-                    );
+                let (gain, speed) = ai_loop(&voice.def, vars);
+                if gain > 0.0 {
+                    if let ClipState::Ready(clip) = loader.state(&voice.file) {
+                        commands.entity(entity).insert(
+                            SoundEmitter::new(clip, SoundBus::Vehicles)
+                                .looping()
+                                .spatial(curve)
+                                .with_speed(speed)
+                                .with_gain(gain),
+                        );
+                    }
                 }
             }
             None => {}

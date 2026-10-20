@@ -25,7 +25,9 @@ use opts_core::formats::vehicles::BusManifest;
 
 use crate::audio_content::{ClipLoader, ClipState};
 use crate::in_game::omsi_world::WorldLoadJob;
-use crate::sound_logic::{conditions_hold, level, playback_of, speed, viewpoint_allows, Playback};
+use crate::sound_logic::{
+    conditions_hold, level, loop_voice, playback_of, viewpoint_allows, Playback,
+};
 
 /// One sound definition of the player's vehicle, a child at its `[3d]` position.
 #[derive(Component, Debug, Clone)]
@@ -38,6 +40,12 @@ pub struct PlayerVoice {
     pub playback: Playback,
     /// The conditions held at the last look (edge detection of `[noloop]` voices).
     pub was_active: bool,
+    /// The vehicle whose script variables and events drive this voice when it hangs on another
+    /// unit of it (a trailer shares the head's scripts, `[scriptshare]`); `None`: its parent.
+    pub owner: Option<Entity>,
+    /// Where the emitter's gain and speed are heading (set twenty times a second, followed every
+    /// frame by [`smooth_player_voices`]): a change of the engine speed is a glide, not steps.
+    pub goal: Option<(f32, f32)>,
     /// Seconds the voice has been active without a break: the volume curves with the variable
     /// `-1` ([`crate::sound_logic::AGE_VARIABLE`]) fade the voice in over it.
     pub active_s: f32,
@@ -81,6 +89,9 @@ pub struct PlayerAudioStats {
     pub unresolved: usize,
     /// The listener is inside the vehicle.
     pub inside: bool,
+    /// The last script events the sound layer saw and how many one-shot voices each started (a
+    /// name with 0 has no voice in the vehicle's configuration, or none whose conditions held).
+    pub events: std::collections::VecDeque<(String, usize)>,
 }
 
 /// Adds the voices of the vehicle's `[sound]` configuration under `root`.
@@ -91,6 +102,22 @@ pub fn attach(
     manifest: &BusManifest,
     bus_dir: &std::path::Path,
 ) {
+    attach_unit(job, commands, root, None, manifest, bus_dir);
+}
+
+/// Adds the voices of the `[sound]` configuration of one unit of a vehicle under `unit`. A trailer
+/// (`owner` is the head) has its own configuration at its own places but the head's variables and
+/// events: the engine of an articulated bus can sit in its second unit (the Bremen MAN NG313's
+/// engine loops are in `sound_NG313_T.cfg`).
+pub fn attach_unit(
+    job: &WorldLoadJob,
+    commands: &mut Commands,
+    unit: Entity,
+    owner: Option<Entity>,
+    manifest: &BusManifest,
+    bus_dir: &std::path::Path,
+) {
+    let root = unit;
     let Some(rel) = manifest.sound_cfg.as_deref() else {
         return;
     };
@@ -120,6 +147,8 @@ pub fn attach(
                 file,
                 playback,
                 was_active: false,
+                owner,
+                goal: None,
                 active_s: 0.0,
             },
             omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2])),
@@ -216,7 +245,9 @@ pub fn stream_player_voices(
     let (mut total, mut loops, mut inside_any) = (0, 0, false);
     for (entity, mut voice, tf, parent, emitter) in &mut voices {
         total += 1;
-        let Ok((scripts, vehicle_tf)) = vehicles.get(parent.parent()) else {
+        let Ok((scripts, vehicle_tf)) =
+            vehicles.get(voice.owner.unwrap_or_else(|| parent.parent()))
+        else {
             continue;
         };
         let inside = listener_in_cabin(camera.as_ref().map(|c| c.mode), vehicle_tf, listener);
@@ -246,33 +277,33 @@ pub fn stream_player_voices(
                 let curve = voice.distance();
                 let d = listener.distance(tf.translation());
                 match emitter {
-                    Some(mut e) => {
+                    Some(e) => {
                         if d > curve.max * 1.25 {
                             commands.entity(entity).remove::<SoundEmitter>();
                             continue;
                         }
                         loops += 1;
                         let (gain, spd) = if active && audible_here {
-                            (level(&voice.def, read), speed(&voice.def, read))
+                            loop_voice(&voice.def, read)
                         } else {
                             (0.0, e.speed)
                         };
-                        if (e.gain - gain).abs() > 1e-3 {
-                            e.gain = gain;
-                        }
-                        if (e.speed - spd).abs() > 1e-3 {
-                            e.speed = spd;
-                        }
+                        // The emitter follows these every frame (`smooth_player_voices`).
+                        voice.goal = Some((gain, spd));
                     }
                     None if d <= curve.max && active && audible_here => {
-                        if let ClipState::Ready(clip) = loader.state(&voice.file) {
-                            commands.entity(entity).insert(
-                                SoundEmitter::new(clip, SoundBus::Vehicles)
-                                    .looping()
-                                    .spatial(curve)
-                                    .with_speed(speed(&voice.def, read))
-                                    .with_gain(level(&voice.def, read)),
-                            );
+                        let (gain, spd) = loop_voice(&voice.def, read);
+                        // A loop that is silent now gets its emitter when it sounds.
+                        if gain > 0.0 {
+                            if let ClipState::Ready(clip) = loader.state(&voice.file) {
+                                commands.entity(entity).insert(
+                                    SoundEmitter::new(clip, SoundBus::Vehicles)
+                                        .looping()
+                                        .spatial(curve)
+                                        .with_speed(spd)
+                                        .with_gain(gain),
+                                );
+                            }
                         }
                     }
                     None => {}
@@ -301,6 +332,51 @@ pub fn stream_player_voices(
     stats.voices = total;
     stats.loops = loops;
     stats.inside = inside_any;
+}
+
+/// Starts decoding the files of the one-shots (doors, switches, brakes, the horn's start and end)
+/// as soon as the voices exist: the first ask of a clip that is still undecoded is silent
+/// (`ClipLoader`), and a door that opens for the first time must be heard.
+pub fn preload_one_shots(
+    voices: Query<&PlayerVoice, Added<PlayerVoice>>,
+    mut loader: ResMut<ClipLoader>,
+) {
+    for voice in &voices {
+        if matches!(voice.playback, Playback::OnTrigger | Playback::OnEdge) {
+            let _ = loader.state(&voice.file);
+        }
+    }
+}
+
+/// How fast a loop's gain and speed follow their goals (seconds to cover about two thirds of the
+/// way): short enough to follow the engine, long enough to hide the 20 Hz updates.
+const GLIDE_S: f32 = 0.08;
+
+/// Moves the gain and speed of the voices' emitters towards their goals every frame.
+pub fn smooth_player_voices(
+    time: Res<Time>,
+    mut voices: Query<(&mut PlayerVoice, &mut SoundEmitter)>,
+) {
+    let k = 1.0 - (-time.delta_secs() / GLIDE_S).exp();
+    for (voice, mut emitter) in &mut voices {
+        let Some((gain, speed)) = voice.goal else {
+            continue;
+        };
+        let step = |now: f32, goal: f32| {
+            if (goal - now).abs() < 1e-3 {
+                goal
+            } else {
+                now + (goal - now) * k
+            }
+        };
+        let (g, s) = (step(emitter.gain, gain), step(emitter.speed, speed));
+        if (emitter.gain - g).abs() > f32::EPSILON {
+            emitter.gain = g;
+        }
+        if (emitter.speed - s).abs() > f32::EPSILON {
+            emitter.speed = s;
+        }
+    }
 }
 
 /// Starts a one-shot of `voice`: a child emitter at its place, gone when it has played.
@@ -333,14 +409,14 @@ fn fire(
 pub fn fire_player_triggers(
     camera: Option<Res<opts_bevy::CameraState>>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
-    mut vehicles: Query<(&mut VehicleScripts, &Children, &GlobalTransform)>,
-    voices: Query<&PlayerVoice>,
+    mut vehicles: Query<(Entity, &mut VehicleScripts, &GlobalTransform)>,
+    voices: Query<(Entity, &PlayerVoice, &ChildOf)>,
     mut loader: ResMut<ClipLoader>,
     mut stats: ResMut<PlayerAudioStats>,
     mut commands: Commands,
 ) {
     let listener = listener.iter().next().map(GlobalTransform::translation);
-    for (mut scripts, children, vehicle_tf) in &mut vehicles {
+    for (vehicle, mut scripts, vehicle_tf) in &mut vehicles {
         let raised = {
             let s = scripts.bypass_change_detection();
             if s.raised.is_empty() {
@@ -351,10 +427,13 @@ pub fn fire_player_triggers(
         let inside = listener
             .is_some_and(|l| listener_in_cabin(camera.as_ref().map(|c| c.mode), vehicle_tf, l));
         for name in raised {
-            for child in children.iter() {
-                let Ok(voice) = voices.get(child) else {
+            let mut started = 0;
+            // The voices of the vehicle: on its root, and on the units behind it that share its
+            // scripts.
+            for (child, voice, parent) in &voices {
+                if voice.owner.unwrap_or_else(|| parent.parent()) != vehicle {
                     continue;
-                };
+                }
                 if voice.playback != Playback::OnTrigger
                     || !voice
                         .def
@@ -371,7 +450,12 @@ pub fn fire_player_triggers(
                 }
                 let lvl = level(&voice.def, read);
                 fire(&mut commands, &mut loader, &mut stats, child, voice, lvl);
+                started += 1;
             }
+            if stats.events.len() >= 64 {
+                stats.events.pop_front();
+            }
+            stats.events.push_back((name, started));
         }
     }
 }
@@ -386,7 +470,12 @@ impl Plugin for PlayerAudioPlugin {
             .init_resource::<PlayerAudioStats>()
             .add_systems(
                 Update,
-                (stream_player_voices, fire_player_triggers)
+                (
+                    stream_player_voices,
+                    fire_player_triggers,
+                    smooth_player_voices.after(stream_player_voices),
+                    preload_one_shots,
+                )
                     .after(crate::audio_content::poll_clip_loader),
             );
     }

@@ -11,12 +11,13 @@
 //! | `[trigger]` | once per raised event (while active, when it has conditions) |
 //!
 //! The comparison of a `[conditionSingle] variable value mode` is read from usage (13,270
-//! conditions in the installed vehicles; ❓ Q-SND-003): mode 1 is "equals" (`engine_on 0`,
+//! conditions in the installed vehicles; ❓ Q-SND-003): mode 0 is "differs" (the horn's `cockpit_hupe_volume 3 0`, a volume that is never 3, so the loop is always on and its volume curve decides; `antrieb_getr_aktugang 0 0`: a gear is engaged), mode 1 is "equals" (`engine_on 0`,
 //! `antrieb_wendesatz 1`, `wiperrunning 1`: 9,659), mode 2 is "below" (`velocity 1`,
 //! `throttle 0.1`, `brake 0.02`: stopped, off the pedal), mode 3 is "above" (`engine_n 300`,
-//! `engine_n 200`, `velocity 3`: engine running, driving). Modes 0, 4, 5 and -1 (630 uses, among
-//! them the horn `cockpit_hupe_volume 3 0` and the retarder stages) are not understood and make a
-//! definition [`Playback::Unsupported`].
+//! `engine_n 200`, `velocity 3`: engine running, driving). Modes 4 ("at least": `antrieb_getr_aktugang 2`) and 5
+//! ("at most": `antrieb_retarderstufe 2, 3, 4`) complete the set 0 to 5 (differs, equals, below,
+//! above, at least, at most); -1 (2 uses) is not understood and makes a definition
+//! [`Playback::Unsupported`].
 
 use opts_core::formats::sound::{Condition, SoundDef, SoundKind};
 
@@ -60,9 +61,12 @@ pub fn playback_of(d: &SoundDef) -> Playback {
 #[must_use]
 pub fn compare(mode: f32, variable: f32, value: f32) -> Option<bool> {
     match mode.round() as i32 {
+        0 => Some((variable - value).abs() >= 0.05),
         1 => Some((variable - value).abs() < 0.05),
         2 => Some(variable < value),
         3 => Some(variable > value),
+        4 => Some(variable >= value - 0.05),
+        5 => Some(variable <= value + 0.05),
         _ => None,
     }
 }
@@ -91,9 +95,26 @@ pub fn level(d: &SoundDef, read: impl Fn(&str) -> f32) -> f32 {
         .clamp(0.0, 1.0)
 }
 
+/// The slowest a loop plays: below it the loop is silent. A loop whose pitch variable is 0 stops
+/// (the warning loops `brake_warning` and `notheben_initialized` of the MAN buses play at
+/// `1 + (0 / 1 - 1) × 1 = 0` while nothing is wrong; the engine loops of a stopped engine, `engine_n`
+/// 0, likewise): they have no `[conditionSingle]` and no volume curve, the pitch is their switch.
+pub const MIN_SPEED: f32 = 0.1;
+
+/// Level and speed of a loop over `read`: silent (level 0) while the speed is below
+/// [`MIN_SPEED`], else its volume curves' level and the speed.
+pub fn loop_voice(d: &SoundDef, read: impl Fn(&str) -> f32 + Copy) -> (f32, f32) {
+    let s = speed(d, read);
+    if s < MIN_SPEED {
+        (0.0, MIN_SPEED)
+    } else {
+        (level(d, read), s)
+    }
+}
+
 /// The playback speed: a loop plays at its natural speed when the variable equals the reference
 /// value and follows it with a sensitivity, `1 + (variable / reference - 1) × scale` (limited to
-/// 0.3 to 3.5; with the scale 1 that is `variable / reference`, the engine samples named by their
+/// 3.5 above, and not limited below: a speed at or below zero is no sound, see [`loop_voice`]; with the scale 1 that is `variable / reference`, the engine samples named by their
 /// rpm); a plain sound its pitch factor. The scale is *not* a factor on the whole ratio: the
 /// documented reference value is the natural pitch whatever the scale is (the Citybus 530's
 /// engine loops have the scale 2, the MAN's exterior loops 0.8, its turbo loops 0.05; a factor
@@ -101,7 +122,7 @@ pub fn level(d: &SoundDef, read: impl Fn(&str) -> f32) -> f32 {
 pub fn speed(d: &SoundDef, read: impl Fn(&str) -> f32) -> f32 {
     match (d.kind, d.pitch_variable.as_deref()) {
         (SoundKind::Loop, Some(v)) if d.pitch_reference.abs() > f32::EPSILON => {
-            (1.0 + (read(v) / d.pitch_reference - 1.0) * d.pitch_scale).clamp(0.3, 3.5)
+            (1.0 + (read(v) / d.pitch_reference - 1.0) * d.pitch_scale).min(3.5)
         }
         (SoundKind::Loop, _) => 1.0,
         (SoundKind::Sound, _) => d.pitch.clamp(0.3, 3.5),
@@ -163,7 +184,7 @@ mod tests {
         );
         assert_eq!(
             playback_of(&def(&format!(
-                "[sound]\nhorn.wav\n1\n{d3}[conditionSingle]\nhupe\n3\n0\n"
+                "[sound]\nhorn.wav\n1\n{d3}[conditionSingle]\nhupe\n3\n-1\n"
             ))),
             Playback::Unsupported
         );
@@ -181,9 +202,18 @@ mod tests {
         assert_eq!(compare(2.0, 2.0, 1.0), Some(false));
         assert_eq!(compare(3.0, 700.0, 300.0), Some(true));
         assert_eq!(compare(3.0, 100.0, 300.0), Some(false));
-        for m in [0.0, 4.0, 5.0, -1.0] {
-            assert_eq!(compare(m, 1.0, 1.0), None);
-        }
+        // 0 differs, 4 at least, 5 at most (❓ Q-SND-006: read from the variables they test).
+        assert_eq!(
+            compare(0.0, 0.5, 3.0),
+            Some(true),
+            "the horn volume is not 3"
+        );
+        assert_eq!(compare(0.0, 3.0, 3.0), Some(false));
+        assert_eq!(compare(4.0, 2.0, 2.0), Some(true));
+        assert_eq!(compare(4.0, 1.0, 2.0), Some(false));
+        assert_eq!(compare(5.0, 2.0, 3.0), Some(true));
+        assert_eq!(compare(5.0, 4.0, 3.0), Some(false));
+        assert_eq!(compare(-1.0, 1.0, 1.0), None);
     }
 
     #[test]
@@ -230,9 +260,23 @@ mod tests {
         // A turbo whine with the scale 0.05 hardly changes its pitch.
         let t = def("[loopsound]\nt.wav\n44100\nengine_turbo_RPM\n28\n0.05\n[3d]\n0\n0\n0\n5\n");
         assert!((speed(&t, |_| 56.0) - 1.05).abs() < 1e-4);
-        // Far from the reference the speed is limited.
-        assert_eq!(speed(&d, |_| 0.0), 0.3);
+        // Far above the reference the speed is limited; at an engine speed of 0 the loop stops.
         assert_eq!(speed(&d, |_| 5000.0), 3.5);
+        assert!(speed(&d, |_| 0.0) < MIN_SPEED);
+        assert_eq!(loop_voice(&d, |_| 0.0).0, 0.0, "a stopped engine is silent");
+        assert!(loop_voice(&d, |_| 600.0).0 >= 0.0 && loop_voice(&d, |_| 600.0).1 > 0.9);
+        // A warning loop: pitch variable `brake_warning`, reference 1, no curve and no condition.
+        let w = def("[loopsound]\nw.wav\n44100\nbrake_warning\n1\n1\n[3d]\n0\n0\n0\n5\n");
+        assert_eq!(
+            loop_voice(&w, |_| 0.0).0,
+            0.0,
+            "silent while nothing is wrong"
+        );
+        assert_eq!(
+            loop_voice(&w, |_| 1.0),
+            (1.0, 1.0),
+            "sounding at its natural pitch when it is on"
+        );
     }
 
     #[test]

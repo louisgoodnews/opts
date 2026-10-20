@@ -64,6 +64,10 @@ questions: the 12 `rot (0,90,0)` + swap main steering samples, the 116 factor-4 
 steering animations, wheel spins with yaw matrices (9 samples where H3 fits, H4 not), `anim_trans` frames on swapped
 meshes (NLC suspension). Separate investigation, not started.
 
+## Vertical translations of mesh-origin animations (2026-10-20)
+
+A translation (`anim_trans`) on an `origin_from_mesh` frame (no `origin_trans`) with a pure `origin_rot_y` of ±90 is negated: the push buttons (`cockpit_gang4` factor 0.002 with -90, `cockpit_tuertaster1` -0.005 with +90: 934 and 3,103 entries in the installed vehicles) press down into the console, and the Bremen MAN's sun blind (`cp_rollo_pos` -1 at load, factor 0.5, drawn by `mouse_y / 500`) is retracted up, where the unflipped convention drew it as a dark panel over the lower windscreen (the project lead's "object obstructing the driver's view"). Rotations (doors, steering, wheels) and explicit `origin_trans` frames are unchanged (checked: the front doors of the Bremen MAN open outward). Reading from usage; not checked against OMSI ❓.
+
 ## Classes left unchanged
 - explicit `origin_trans` frames (the fleet majority, vehicle axes);
 - identity-matrix `origin_from_mesh` (382 of 382 already vertical);

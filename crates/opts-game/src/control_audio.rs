@@ -144,6 +144,7 @@ fn state(world: &mut World, _: &Value) -> Outcome {
             "files_not_found": player.unresolved,
             "listener_inside": player.inside,
             "loudest": loudest,
+            "events": player.events.iter().map(|(n, k)| json!({ "event": n, "voices": k })).collect::<Vec<_>>(),
         },
         "traffic": { "voices": traffic.voices, "playing": traffic.playing },
         "scenery": {

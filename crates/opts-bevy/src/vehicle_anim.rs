@@ -178,10 +178,25 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
     } else {
         frame
     };
+    // A translation along the X axis that a mesh-origin `origin_rot_y ±90` turns vertical (push
+    // buttons, the sun blind) moves the other way than the right-handed rotation says: the
+    // buttons' factors (`cockpit_gang4` 0.002 with -90, `cockpit_tuertaster1` -0.005 with +90)
+    // press them *down* into the console, and the Bremen MAN's blind (`cp_rollo_pos` -1 with
+    // factor 0.5, retracted at load) goes *up*. Rotations and explicit `origin_trans` frames keep
+    // the convention (doors swing outward, wheels turn: checked).
+    let flips_translation = anim.origin_from_mesh
+        && anim.origin_trans.is_none()
+        && anim.origin_rot.x == 0.0
+        && anim.origin_rot.z == 0.0
+        && (anim.origin_rot.y.abs() - 90.0).abs() < 1e-3;
     let mk = |a: &AnimAction, translate: bool| AnimStep {
         frame: if translate { frame } else { rot_frame },
         variable: a.variable.clone(),
-        factor: a.factor,
+        factor: if translate && flips_translation {
+            -a.factor
+        } else {
+            a.factor
+        },
         translate,
         maxspeed: anim.maxspeed.filter(|v| *v > 0.0),
     };
@@ -499,6 +514,32 @@ mod tests {
         let p = bevy(Vec3::Y);
         let moved = m.transform_point3(p);
         assert!((moved.x - p.x).abs() > 0.1 && (moved.y - p.y).abs() < 1e-4);
+    }
+
+    /// The Bremen MAN's sun blind (`model_NG313_main.cfg`): the blind is retracted at load
+    /// (`cp_rollo_pos` -1), pulled down by `mouse_y / 500` per call towards 0.
+    const BLIND: &str = "[mesh]\nGeneric\\Bremen_LC_rollo_vorn.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n-90\nanim_trans\ncp_rollo_pos\n0.5\n\n++++++\n";
+    /// A push button of the same class: pressed (`1`) it moves 2 mm into the console.
+    const BUTTON: &str = "[mesh]\nb.o3d\n\n[newanim]\norigin_from_mesh\norigin_rot_y\n-90\nanim_trans\ncockpit_gang4\n0.002\n\n++++++\n";
+
+    #[test]
+    fn a_retracted_blind_goes_up_and_a_pressed_button_goes_down() {
+        let up = |cfg: &str, value: f32| {
+            let anim = steering_mesh(cfg, Some(MeshPivot::plain(Vec3::ZERO)));
+            let m = animation_matrix(&anim.steps, |_| value);
+            // Bevy's y is up.
+            m.transform_point3(Vec3::ZERO).y
+        };
+        assert!(
+            up(BLIND, -1.0) > 0.4,
+            "retracted: 0.5 m up, got {}",
+            up(BLIND, -1.0)
+        );
+        assert!(
+            up(BLIND, 0.0).abs() < 1e-6,
+            "pulled down: where the mesh is"
+        );
+        assert!(up(BUTTON, 1.0) < -0.001, "pressed: into the console");
     }
 
     /// MAN_NL_NG `model_GN92_main.cfg` steering wheel: `origin_from_mesh`, no origin rotation.

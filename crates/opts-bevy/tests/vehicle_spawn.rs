@@ -140,6 +140,6 @@ BVG Traditional
     let cam_tx = vehicle
         .current_camera_bevy_transform()
         .expect("Camera transform exists");
-    // OMSI driver camera: X=0.68 (left in cam frame -> -0.68 in OMSI -> -0.68 in Bevy X)
-    assert!((cam_tx.translation.x - (-0.68)).abs() < 1e-3);
+    // The preset is in the vehicle's own frame: X=0.68 stays 0.68 (to the right) in Bevy.
+    assert!((cam_tx.translation.x - 0.68).abs() < 1e-3);
 }

@@ -244,16 +244,60 @@ fn load_map(world: &mut World, params: &Value) -> Outcome {
         }
         Err(e) => return Outcome::err(e),
     };
-    let entry = match opt_str(params, "entry") {
-        Ok(e) => e.map(str::to_string),
-        Err(e) => return Outcome::err(e),
+    // The choices of the drive: start point, weather, date, time, equipment options (like the
+    // command line's `--entry`, `--weather`, `--date`, `--time`, `--setvar`), and the vehicle with
+    // its repaint.
+    let options = match crate::start_options::StartOptions::from_json(params) {
+        Ok(o) => o,
+        Err(e) => return Outcome::err(RpcError::invalid_params(e)),
     };
+    let (vehicle, repaint) = match (opt_str(params, "vehicle"), opt_str(params, "repaint")) {
+        (Ok(v), Ok(r)) => (v.map(str::to_string), r.map(str::to_string)),
+        (Err(e), _) | (_, Err(e)) => return Outcome::err(e),
+    };
+    let vehicle_path = match vehicle {
+        None => None,
+        Some(v) => {
+            let given = PathBuf::from(&v);
+            let full = if given.is_absolute() {
+                given
+            } else {
+                // Relative to the installation's `Vehicles` folder.
+                match world.resource::<AppArgs>().0.omsi_path.clone() {
+                    Some(root) => root.join("Vehicles").join(given),
+                    None => given,
+                }
+            };
+            let checked = world.resource::<PathPolicy>().check_read(&full);
+            match checked {
+                Ok(p) if p.extension().is_some_and(|e| e.eq_ignore_ascii_case("bus")) => Some(p),
+                Ok(p) => {
+                    return Outcome::err(RpcError::invalid_params(format!(
+                        "{} is not a .bus file",
+                        p.display()
+                    )))
+                }
+                Err(e) => return Outcome::err(e),
+            }
+        }
+    };
+    let weather = world.get_resource::<opts_bevy::WeatherCatalogue>().cloned();
+    if let Some(mut setup) = world.get_resource_mut::<NewGameSetup>() {
+        if let Err(e) = options.apply(&mut setup, weather.as_ref()) {
+            return Outcome::err(RpcError::invalid_params(e));
+        }
+    }
     if let Err(e) = crate::control_loading::accept_problems_param(world, params) {
         return Outcome::err(e);
     }
-    world.resource_mut::<AppArgs>().0.map_path = Some(dir);
-    if let (Some(entry), Some(mut setup)) = (entry, world.get_resource_mut::<NewGameSetup>()) {
-        setup.selected_entry_point = entry;
+    let mut args = world.resource_mut::<AppArgs>();
+    args.0.map_path = Some(dir);
+    args.0.entry.clone_from(&options.entry);
+    if let Some(p) = vehicle_path {
+        args.0.vehicle_path = Some(p);
+    }
+    if let Some(r) = repaint {
+        args.0.livery = Some(r);
     }
     restart_session(world)
 }

@@ -355,6 +355,10 @@ fn census_engine_sounds() {
             "Vehicles/Citybus 530 by Kajosoft/01a_o530_e2_2.bus",
         ),
         ("MAN NL", "Vehicles/MAN_NL_NG/MAN_EN92_main.bus"),
+        (
+            "Bremen NG313",
+            "Vehicles/HB76_MAN_LionsCity/MAN_NG313_main.bus",
+        ),
     ] {
         let Some(bus_path) = install.find_file(rel) else {
             continue;
@@ -411,7 +415,8 @@ fn census_engine_sounds() {
                     Playback::Unsupported => "unsupported",
                 })
                 .or_default() += 1;
-            if engine_related {
+            let warn = d.file.to_lowercase().contains("warn");
+            if engine_related || warn {
                 println!(
                     "SND   {} | {:?} | pitch {:?} ref {} x{} | cond {:?} | vol {:?} | {:?} | vars not written by scripts: {:?}",
                     d.file, d.kind, d.pitch_variable, d.pitch_reference, d.pitch_scale,

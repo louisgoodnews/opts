@@ -57,6 +57,7 @@ fn rig(name: &str, cfg: &str, script: &str) -> Rig {
             crate::audio_content::poll_clip_loader,
             stream_player_voices,
             fire_player_triggers,
+            smooth_player_voices,
         )
             .chain(),
     );
@@ -76,6 +77,8 @@ fn rig(name: &str, cfg: &str, script: &str) -> Rig {
                 file: file.clone(),
                 playback,
                 was_active: false,
+                owner: None,
+                goal: None,
                 active_s: 0.0,
             },
             Transform::from_translation(omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2]))),
@@ -106,6 +109,11 @@ fn emitters(app: &mut App) -> Vec<SoundEmitter> {
         .iter(app.world())
         .cloned()
         .collect()
+}
+
+fn emitters_of(app: &App) -> Vec<SoundEmitter> {
+    let mut q = app.world().try_query::<&SoundEmitter>().expect("query");
+    q.iter(app.world()).cloned().collect()
 }
 
 fn set(rig: &mut Rig, name: &str, v: f32) {
@@ -145,7 +153,11 @@ fn an_engine_loop_follows_its_variables_and_its_condition() {
         e[0].speed
     );
     set(&mut r, "engine_n", 1200.0);
-    run(&mut r.app, |_| false);
+    run(&mut r.app, |a| {
+        emitters_of(a)
+            .first()
+            .is_some_and(|e| (e.speed - 2.0).abs() < 0.05 && (e.gain - 1.0).abs() < 0.02)
+    });
     let e = emitters(&mut r.app);
     assert!(
         (e[0].gain - 1.0).abs() < 0.02 && (e[0].speed - 2.0).abs() < 0.05,
@@ -155,7 +167,9 @@ fn an_engine_loop_follows_its_variables_and_its_condition() {
     );
     // The condition fails (engine off): silent but kept.
     set(&mut r, "engine_on", 0.0);
-    run(&mut r.app, |_| false);
+    run(&mut r.app, |a| {
+        emitters_of(a).first().is_some_and(|e| e.gain == 0.0)
+    });
     assert_eq!(emitters(&mut r.app)[0].gain, 0.0);
     assert!(
         r.app
