@@ -321,7 +321,7 @@ A `.sco` names a configuration with `[sound]` (relative to the object's folder, 
 
 - A `[sound]` with no modifier is a **continuous ambience**: the transformer hum `trafohaus_sound.cfg` is exactly that, 156 definitions of this shape. (For vehicles the page says a `[sound]` does not loop; for scenery a definition that nothing triggers has to.) OPTS plays it as a loop while the listener is within range.
 - A `[trigger] name` fires when the object's script raises `(T.L.name)`: `Generic/sound_cock.sco` (an editor-only helper with a script and `cock.cfg`) crows at sunrise; church clocks use `clock_bell_hour` and `clock_bell_quarter`. OPTS plays a one-shot at the voice's `[3d]` place.
-- `[conditionSingle] var value mode` gates a definition by a variable (87 definitions, e.g. `churchbell_main.wav`); its semantics are open (Q-SND-003) and OPTS does not play these yet.
+- `[conditionSingle] var value mode` gates a definition by a variable (87 definitions, e.g. `churchbell_main.wav`); the comparison is read from usage below ("What the keywords do"), and OPTS plays these with it since M-0102.
 - `[volcurve]` over `DayOfYear`/`SunAlt` makes ambience seasonal and daily (`field.cfg`: larks "vom 31.1. bis 31.7. und vom 10.9. bis 30.11.", only in daylight).
 - `[3d]` range: used as the distance where the sound starts to fall off. OMSI's maximum distance is unknown; OPTS fades to silence at six times the range (at least 40 m more) ([audio-system](../../../architecture/audio-system.md), Q-AU01).
 - Editor-only helper objects (`[onlyeditor]` mesh, no geometry in the game) are the usual carriers of ambience (`Generic/sound_*.sco`, `backgroundsounds`): they must still be built for their script and sound; they were skipped before M-0139.
@@ -344,4 +344,35 @@ AI traffic uses the vehicle's **`[sound_ai]`** configuration (1,241 `.bus` and 3
 **Variables the definitions read** (volume curves and loop pitch): `engine_n` (5,986 curves, 5,901 loop pitches), the door variables `in_door_sound_*`, `door_*`, `doorSpeed_*` (about 14,000 curves, all tied to door scripts), `throttle` (4,647), `engine_throttle_injection` (2,972), `velocity` (1,564), `antrieb_n_kardanwelle` (driveshaft speed, 1,099 curves, 2,575 pitches), `Wheel_RotationSpeed_<axle>_<side>`, and for the shared car files `Velocity`, `Throttle`, `StreetCond`, `AI_Engine`, `AI_Motor` (21 loop pitches: the engine speed the car samples were recorded at, `Eng_O305_200PS_@631_x.wav` is 631 rpm). Triggers are the door families (`ev_doortrigger*`, `ev_doorhit*`) and `ev_AI_Horn` (9); conditions gate by `antrieb_wendesatz`, `antrieb_getr_aktugang`, `engine_n`, `engine_on`, `engine_starter`, `elec_busbar_main_sw`, `velocity`, `wiperrunning`.
 
 **Reading (❓):** a `[sound]` of an AI configuration without trigger or condition, with a `[volcurve]` over `Velocity` and `StreetCond`, is a continuous loop: `rollen.wav` (rolling noise, volume rising with speed) and `WetLane_1.wav` (wet-road noise: speed × wet). AI vehicles in OPTS run without their scripts, so the script-side variables (doors, driveshaft, retarder, turbo) are not available; what the traffic model states is listed in [audio-system](../../../architecture/audio-system.md) §9.
+
+---
+
+## 🎛️ What the keywords do: activation and the comparison modes (census 2026-10-20, M-0102)
+
+**Census of the player configurations** (`[sound]` of every `.bus`/`.ovh`; 841 distinct files): 100,945 definitions, 1,876 distinct `[trigger]` names, 13,270 `[conditionSingle]`.
+
+| By what a definition does (inferred below) | Definitions |
+| :--- | ---: |
+| plays once per raised script event (`[trigger]`) | 66,762 |
+| a loop while active (`[loopsound]`, or `[sound]` without trigger and `[noloop]`) | 30,358 |
+| plays once when its conditions turn true (`[noloop]` and conditions) | 3,076 |
+| uses a condition mode that is not understood | 749 (0.7 %) |
+
+**Activation.** A definition is active when all its `[conditionSingle]`s hold (always, without any). A `[loopsound]` is a loop. A `[sound]` with neither trigger nor `[noloop]` also plays as a loop while it is active (`piep_alert_long_e2.wav` beeps while `piep_alert_long == 1`; `kneel_up_loop.wav`; the siren `Auto_6.wav` while `vis_heulen == 1`). `[noloop]` makes it play once when it becomes active (`kneel_up_start.wav [noloop]` on `bremse_suspension_fillvalve_0_R == 1`). `[trigger] name` plays once per raised event `(T.L.name)` (and `(T.F)`, `(T.S)`), when its conditions hold (`wiper_start` with `[noloop]` is the wiper sweep).
+
+**The third parameter of `[conditionSingle]` is a comparison code** (❓ read from which variables use which value; Q-SND-003):
+
+| Mode | Uses | Variables and values | Reading |
+| ---: | ---: | :--- | :--- |
+| 1 | 9,659 | `antrieb_wendesatz 1` (2,280), `engine_starter 1`, `engine_on 0`, `wiperrunning 1`, `preciptype 1` | equals |
+| 3 | 2,689 | `engine_n 300` (666) and `200` (441), `velocity 3`, `kneel_timer 0` | above (the engine runs, the bus drives) |
+| 0 | 423 | `cockpit_hupe_volume 3` (317), `antrieb_getr_aktugang 0`, `gefahrenbremsung 1` | not understood (the horn's) |
+| 2 | 290 | `engine_n 300` (98), `velocity 1` and `2`, `throttle 0.1`, `brake 0.02`, `m_wheel -2000` | below (standing, off the pedal) |
+| 5 | 105 | `antrieb_retarderstufe 2, 3, 4` (30 each) | not understood |
+| 4 | 102 | `antrieb_getr_aktugang 2` (89) | not understood |
+| -1 | 2 | `cp_rollo_*_sw -1` | not understood |
+
+OPTS plays modes 1 to 3 (95 % of the conditions) and leaves definitions with another mode out (the horn is among them). `[viewpoint]` 2 plays only outside the vehicle, 5 only inside (rain and wipers outside, the compressor and cabin hiss inside); the other values are unknown and play everywhere.
+
+Reproduction: `crates/opts-game/tests/sound_cfg_corpus.rs` (`the_player_sound_configurations_split_by_playback`, with `OMSI_PATH`).
 

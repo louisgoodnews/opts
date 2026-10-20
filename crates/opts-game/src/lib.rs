@@ -38,6 +38,7 @@ pub mod new_game_screen;
 pub mod omsi_root;
 pub mod omsi_setup;
 pub mod pause;
+pub mod player_sound;
 pub mod report_context;
 pub mod save;
 pub mod scenery_sound;
@@ -49,6 +50,7 @@ pub mod settings_screen;
 pub mod settings_theme;
 pub mod shell;
 pub mod shutdown;
+pub mod sound_logic;
 pub mod theme_files;
 pub mod ui_typography;
 pub mod vehicle_keys;
@@ -124,6 +126,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(scenery_sound::SceneryAudioPlugin)
             .add_plugins(vehicle_sound::AiAudioPlugin)
+            .add_plugins(player_sound::PlayerAudioPlugin)
             .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
             .add_plugins(InGamePlugin);
 

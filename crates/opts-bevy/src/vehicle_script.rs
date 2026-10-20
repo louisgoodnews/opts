@@ -65,9 +65,18 @@ pub struct VehicleScripts {
     /// The input table resolved against the engine: what the host feeds, and which names the
     /// scripts own (the host leaves those alone, so a pedal the script writes stays).
     pub plan: FeedPlan,
+    /// Events the scripts raised since the last [`Self::take_raised`] (lower case names, oldest
+    /// first; `(T.L.name)`, `(T.F.name)`, `(T.S.name)` alike): the sound layer plays the
+    /// `[trigger]`s of the vehicle's sound configuration for them.
+    pub raised: Vec<String>,
 }
 
 impl VehicleScripts {
+    /// Takes the events raised since the last call.
+    pub fn take_raised(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.raised)
+    }
+
     /// Wraps an engine; `{init}` runs on the first fixed step.
     #[must_use]
     pub fn new(mut engine: ScriptEngine) -> Self {
@@ -76,6 +85,7 @@ impl VehicleScripts {
             engine: Mutex::new(engine),
             initialised: false,
             plan,
+            raised: Vec::new(),
         }
     }
 }
@@ -235,7 +245,12 @@ pub fn vehicle_script_system(
         }
         let first = !scripts.initialised;
         scripts.initialised = true;
-        let VehicleScripts { engine, plan, .. } = &mut *scripts;
+        let VehicleScripts {
+            engine,
+            plan,
+            raised,
+            ..
+        } = &mut *scripts;
         let Ok(engine) = engine.get_mut() else {
             continue;
         };
@@ -251,9 +266,12 @@ pub fn vehicle_script_system(
         for d in engine.drain_diagnostics() {
             tracing::warn!(file = %d.file, line = d.line, "{}", d.message);
         }
-        // Events (sounds, announcements) have no consumer until the audio layer exists (M-0027).
+        // The events (sounds, announcements) wait for the sound layer (`opts_game::player_sound`).
         for e in engine.drain_events() {
             tracing::debug!(kind = ?e.kind, name = %e.name, "vehicle script event");
+            if raised.len() < 256 {
+                raised.push(e.name);
+            }
         }
     }
 }

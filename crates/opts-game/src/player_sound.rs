@@ -1,0 +1,354 @@
+//! Sounds of the player's vehicle (M-0102): the `[sound]` configuration of the `.bus` becomes
+//! [`PlayerVoice`] children of the vehicle, driven by the vehicle's script variables and events.
+//!
+//! * a voice that is a loop while active (`engine_n` pitch, `velocity` rolling noise, the
+//!   compressor, wipers, sirens …) has a looping emitter near the listener, its level from the
+//!   `[volcurve]`s, its pitch from the loop's variable, silenced while its `[conditionSingle]`s
+//!   do not hold;
+//! * a voice that fires once (`[trigger]` on a raised script event, or `[noloop]` with a condition
+//!   that turns true) plays a one-shot at its `[3d]` place (doors, switches, kneeling, starter);
+//! * `[viewpoint]` 2 plays outside the vehicle only, 5 inside only.
+//!
+//! The rules of when a definition plays are in [`crate::sound_logic`]. Not yet: trailers and the
+//! articulated bus' second unit, announcements (`(T.F)` payloads), the `Snd_*` mixer inputs,
+//! force feedback, the horn and other definitions with a condition mode that is not understood
+//! (counted in [`PlayerAudioStats::unsupported`]).
+
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use bevy::prelude::*;
+use opts_bevy::audio::{Distance, SoundBus, SoundEmitter};
+use opts_bevy::{omsi_to_bevy_pos, MainCamera, VehicleScripts};
+use opts_core::formats::sound::SoundDef;
+use opts_core::formats::vehicles::BusManifest;
+
+use crate::audio_content::{ClipLoader, ClipState};
+use crate::in_game::omsi_world::WorldLoadJob;
+use crate::sound_logic::{conditions_hold, level, playback_of, speed, viewpoint_allows, Playback};
+
+/// One sound definition of the player's vehicle, a child at its `[3d]` position.
+#[derive(Component, Debug, Clone)]
+pub struct PlayerVoice {
+    /// The definition.
+    pub def: Arc<SoundDef>,
+    /// The sound file.
+    pub file: PathBuf,
+    /// What it does when active.
+    pub playback: Playback,
+    /// The conditions held at the last look (edge detection of `[noloop]` voices).
+    pub was_active: bool,
+}
+
+impl PlayerVoice {
+    /// The fade with distance: full inside the `[3d]` range, silent beyond six times it (at least
+    /// 40 m more). Cabin sounds have ranges of a metre or two and are heard around the vehicle.
+    #[must_use]
+    pub fn distance(&self) -> Distance {
+        let r = self.def.range.max(0.5);
+        Distance::new(r, (r * 6.0).max(r + 40.0))
+    }
+}
+
+/// What the definitions of a vehicle's configuration came to (on the vehicle root).
+#[derive(Component, Debug, Clone, Copy, Default)]
+pub struct PlayerSoundInfo {
+    /// Definitions in the configuration.
+    pub total: usize,
+    /// Left out: a condition mode that is not understood, or `[noloop]` alone.
+    pub unsupported: usize,
+    /// Left out: the sound file was not found.
+    pub unresolved: usize,
+}
+
+/// What the player's sounds did, for `audio.state`.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct PlayerAudioStats {
+    /// Voice entities.
+    pub voices: usize,
+    /// Loops with an emitter now (the listener is within their range).
+    pub loops: usize,
+    /// One-shots started.
+    pub one_shots: u64,
+    /// Triggers that found their file still decoding.
+    pub cold_misses: u64,
+    /// Definitions left out for an unsupported condition mode.
+    pub unsupported: usize,
+    /// Definitions whose file was not found.
+    pub unresolved: usize,
+    /// The listener is inside the vehicle.
+    pub inside: bool,
+}
+
+/// Adds the voices of the vehicle's `[sound]` configuration under `root`.
+pub fn attach(
+    job: &WorldLoadJob,
+    commands: &mut Commands,
+    root: Entity,
+    manifest: &BusManifest,
+    bus_dir: &std::path::Path,
+) {
+    let Some(rel) = manifest.sound_cfg.as_deref() else {
+        return;
+    };
+    let Some((cfg, cfg_dir)) = job.read_sound_config(bus_dir, rel) else {
+        tracing::warn!(cfg = rel, "the vehicle's sound configuration was not found");
+        return;
+    };
+    let mut info = PlayerSoundInfo {
+        total: cfg.sounds.len(),
+        ..Default::default()
+    };
+    let mut voices = Vec::new();
+    for def in &cfg.sounds {
+        let playback = playback_of(def);
+        if playback == Playback::Unsupported {
+            info.unsupported += 1;
+            continue;
+        }
+        let Some(file) = job.find_sound_file(&cfg_dir, &def.file) else {
+            info.unresolved += 1;
+            continue;
+        };
+        let at = def.position.unwrap_or([0.0; 3]);
+        voices.push((
+            PlayerVoice {
+                def: Arc::new(def.clone()),
+                file,
+                playback,
+                was_active: false,
+            },
+            omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2])),
+        ));
+    }
+    tracing::info!(
+        total = info.total,
+        voices = voices.len(),
+        unsupported = info.unsupported,
+        unresolved = info.unresolved,
+        "player vehicle sounds"
+    );
+    commands.entity(root).insert(info).with_children(|p| {
+        for (voice, pos) in voices {
+            p.spawn((
+                voice,
+                Transform::from_translation(pos),
+                Name::new("PlayerVoice"),
+            ));
+        }
+    });
+}
+
+/// Whether `listener` (world position) is inside the vehicle at `vehicle`: a box about the body
+/// of a solo bus (1.7 m either side, up to 3.6 m high, 8 m either way; ❓ the model's own bounds
+/// would be better).
+#[must_use]
+pub fn listener_inside(vehicle: &GlobalTransform, listener: Vec3) -> bool {
+    let p = vehicle.affine().inverse().transform_point3(listener);
+    p.x.abs() < 1.7 && p.y > -0.3 && p.y < 3.6 && p.z.abs() < 8.0
+}
+
+type VoiceQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        Entity,
+        &'static mut PlayerVoice,
+        &'static GlobalTransform,
+        &'static ChildOf,
+        Option<&'static mut SoundEmitter>,
+    ),
+>;
+
+/// Reads a vehicle variable by name (case-insensitive).
+fn variable(scripts: &VehicleScripts, name: &str) -> f32 {
+    scripts
+        .engine
+        .lock()
+        .map_or(0.0, |e| e.get(&name.to_lowercase()))
+}
+
+/// Updates the loops and the `[noloop]` edges twenty times a second.
+#[allow(clippy::too_many_arguments)]
+pub fn stream_player_voices(
+    time: Res<Time>,
+    listener: Query<&GlobalTransform, With<MainCamera>>,
+    mut voices: VoiceQuery,
+    vehicles: Query<(&VehicleScripts, &GlobalTransform)>,
+    mut loader: ResMut<ClipLoader>,
+    mut stats: ResMut<PlayerAudioStats>,
+    mut since: Local<f32>,
+    mut commands: Commands,
+) {
+    *since += time.delta_secs();
+    if *since < 0.05 {
+        return;
+    }
+    *since = 0.0;
+    let Some(listener) = listener.iter().next().map(GlobalTransform::translation) else {
+        return;
+    };
+    let (mut total, mut loops, mut inside_any) = (0, 0, false);
+    for (entity, mut voice, tf, parent, emitter) in &mut voices {
+        total += 1;
+        let Ok((scripts, vehicle_tf)) = vehicles.get(parent.parent()) else {
+            continue;
+        };
+        let inside = listener_inside(vehicle_tf, listener);
+        inside_any |= inside;
+        let read = |n: &str| variable(scripts, n);
+        let Some(active) = conditions_hold(&voice.def.conditions, read) else {
+            continue;
+        };
+        let audible_here = viewpoint_allows(voice.def.viewpoint, inside);
+        match voice.playback {
+            Playback::Loop => {
+                let curve = voice.distance();
+                let d = listener.distance(tf.translation());
+                match emitter {
+                    Some(mut e) => {
+                        if d > curve.max * 1.25 {
+                            commands.entity(entity).remove::<SoundEmitter>();
+                            continue;
+                        }
+                        loops += 1;
+                        let (gain, spd) = if active && audible_here {
+                            (level(&voice.def, read), speed(&voice.def, read))
+                        } else {
+                            (0.0, e.speed)
+                        };
+                        if (e.gain - gain).abs() > 1e-3 {
+                            e.gain = gain;
+                        }
+                        if (e.speed - spd).abs() > 1e-3 {
+                            e.speed = spd;
+                        }
+                    }
+                    None if d <= curve.max && active && audible_here => {
+                        if let ClipState::Ready(clip) = loader.state(&voice.file) {
+                            commands.entity(entity).insert(
+                                SoundEmitter::new(clip, SoundBus::Vehicles)
+                                    .looping()
+                                    .spatial(curve)
+                                    .with_speed(speed(&voice.def, read))
+                                    .with_gain(level(&voice.def, read)),
+                            );
+                        }
+                    }
+                    None => {}
+                }
+            }
+            Playback::OnEdge => {
+                let edge = active && !voice.was_active;
+                if voice.was_active != active {
+                    voice.was_active = active;
+                }
+                if edge && audible_here {
+                    let level = level(&voice.def, read);
+                    fire(
+                        &mut commands,
+                        &mut loader,
+                        &mut stats,
+                        entity,
+                        &voice,
+                        level,
+                    );
+                }
+            }
+            Playback::OnTrigger | Playback::Unsupported => {}
+        }
+    }
+    stats.voices = total;
+    stats.loops = loops;
+    stats.inside = inside_any;
+}
+
+/// Starts a one-shot of `voice`: a child emitter at its place, gone when it has played.
+fn fire(
+    commands: &mut Commands,
+    loader: &mut ClipLoader,
+    stats: &mut PlayerAudioStats,
+    entity: Entity,
+    voice: &PlayerVoice,
+    level: f32,
+) {
+    match loader.state(&voice.file) {
+        ClipState::Ready(clip) => {
+            stats.one_shots += 1;
+            let emitter = SoundEmitter::new(clip, SoundBus::Effects)
+                .spatial(voice.distance())
+                .with_speed(voice.def.pitch.clamp(0.3, 3.5))
+                .with_gain(level);
+            commands.entity(entity).with_children(|p| {
+                p.spawn((emitter, Transform::IDENTITY, Name::new("player one-shot")));
+            });
+        }
+        // The first ask only starts the decode; the next one is heard.
+        ClipState::Loading => stats.cold_misses += 1,
+        ClipState::Failed => {}
+    }
+}
+
+/// Plays the one-shots whose `[trigger]` the vehicle's scripts raised this frame.
+pub fn fire_player_triggers(
+    listener: Query<&GlobalTransform, With<MainCamera>>,
+    mut vehicles: Query<(&mut VehicleScripts, &Children, &GlobalTransform)>,
+    voices: Query<&PlayerVoice>,
+    mut loader: ResMut<ClipLoader>,
+    mut stats: ResMut<PlayerAudioStats>,
+    mut commands: Commands,
+) {
+    let listener = listener.iter().next().map(GlobalTransform::translation);
+    for (mut scripts, children, vehicle_tf) in &mut vehicles {
+        let raised = {
+            let s = scripts.bypass_change_detection();
+            if s.raised.is_empty() {
+                continue;
+            }
+            s.take_raised()
+        };
+        let inside = listener.is_some_and(|l| listener_inside(vehicle_tf, l));
+        for name in raised {
+            for child in children.iter() {
+                let Ok(voice) = voices.get(child) else {
+                    continue;
+                };
+                if voice.playback != Playback::OnTrigger
+                    || !voice
+                        .def
+                        .triggers
+                        .iter()
+                        .any(|t| t.trim().eq_ignore_ascii_case(&name))
+                    || !viewpoint_allows(voice.def.viewpoint, inside)
+                {
+                    continue;
+                }
+                let read = |n: &str| variable(&scripts, n);
+                if conditions_hold(&voice.def.conditions, read) != Some(true) {
+                    continue;
+                }
+                let lvl = level(&voice.def, read);
+                fire(&mut commands, &mut loader, &mut stats, child, voice, lvl);
+            }
+        }
+    }
+}
+
+/// Registers the player vehicle sound systems.
+#[derive(Default)]
+pub struct PlayerAudioPlugin;
+
+impl Plugin for PlayerAudioPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<ClipLoader>()
+            .init_resource::<PlayerAudioStats>()
+            .add_systems(
+                Update,
+                (stream_player_voices, fire_player_triggers)
+                    .after(crate::audio_content::poll_clip_loader),
+            );
+    }
+}
+
+#[cfg(test)]
+mod tests;
