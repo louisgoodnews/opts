@@ -271,6 +271,7 @@ pub fn spawn_traffic(
     }
     let speed = state.world.lane_cap(&params, lane_id) * 0.8;
     let head = &variant.units[0];
+    let sound = head.sound.clone();
     let size = head.size.unwrap_or((4.4, 2.2));
     let heavy = params.class != VehicleClass::Car;
     let wheel_radius = head
@@ -365,6 +366,7 @@ pub fn spawn_traffic(
                 },
                 opts_bevy::AiVariables::default(),
             ));
+            crate::vehicle_sound::attach_ai(&mut commands, root, sound.as_ref());
             if !chain.is_empty() {
                 commands.entity(root).insert(TrafficChain { units: chain });
             }

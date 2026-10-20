@@ -72,11 +72,18 @@ Decoding happens where `ClipCache::clip` is called, on the calling thread. A map
 
 Not yet: `[conditionSingle]`, `[viewpoint]`, `[onlyone]`, `[checkloading]`, script variables in `[volcurve]`, eviction of decoded clips, splines (no spline names a sound; road and rail rolling noise belongs to the vehicles, whose tyre sounds read the surface texture configurations, M-0102).
 
-## 9. Open
+## 9. AI traffic (M-0140)
+
+`vehicle_sound.rs`. When an AI vehicle type loads (`traffic_variant::load_unit`), `ai_sound_set` picks its `[sound_ai]` configuration (else a shared `Sounds/AI_Cars` file named by `[sound]`) and keeps the **playable** definitions: continuous, no condition, and only variables the traffic model states (`velocity`, `throttle`, `brake`, `engine_n`/`ai_motor`/`antrieb_n_kardanwelle` from the gear model, `wheel_rotationspeed_<axle>_<l|r>`, `n_wheel`, `streetcond`, `ai_engine`, `engine_throttle_injection`), at most 16 per vehicle; the rest is counted as skipped. At spawn the head unit gets `AiVoice` children at the `[3d]` places. `update_ai_variables` publishes the variables every frame into the vehicle's `AiVariables` (speed and acceleration from the agent, wheel speeds from the rolling radius, wet road from the precipitation rate); `stream_ai_voices` (five times a second) gives each voice near the listener a looping emitter on the **Vehicles** bus, with the level from its `[volcurve]`s and, for a loop, the speed `variable / reference × scale`. The engine speed is a stand-in gear model (idle 650 rpm, shifts at 2,100 rpm at 12, 25, 40, 60 and 90 km/h) with the right shape: ❓ OMSI's AI computes `AI_Motor` itself (Q-AU05).
+
+Not yet: door sounds, horns (`ev_AI_Horn`), trailers' own sounds (only the head unit sounds), conditions, brakes squeal and the other script variables; trams and trains (the traffic has road vehicles only).
+
+## 10. Open
 
 | Id | Question |
 | :--- | :--- |
 | Q-AU01 | OMSI's own fall-off: its `[3d]` blocks give a minimum and maximum distance and a volume curve ([sound_cfg](../formats/text/vehicles/sound_cfg.md)); the engine's inverse-distance curve is a stand-in until the scenery milestone maps them. |
 | Q-AU02 | Whether virtual loops should keep their play position so that a returning source continues instead of restarting. |
 | Q-AU04 | Which surface a road or rail gives its tyre noise: the texture configurations next to the scenery (`x.bmp.cfg` with `[surface]`, `[moisture]`, `[puddles]`) look like the source; M-0102. |
+| Q-AU05 | The engine speed OMSI's AI writes to `AI_Motor`/`engine_n` of an AI vehicle (the gear model of M-0140 is a stand-in); it fixes the pitch of every AI engine loop. |
 | Q-AU03 | Output device choice and a latency setting (Bevy uses the system default device). |

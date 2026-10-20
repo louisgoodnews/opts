@@ -72,6 +72,17 @@ pub fn update_ai_variables(
             vars.set("preciprate", w.precip_rate);
         }
         vars.set("lights_ai", light);
+        // Sound variables (M-0140): speed and pedals, the engine speed of a gear model, the wheel
+        // speeds and the road state.
+        let wet = weather.as_ref().is_some_and(|(_, w)| w.precip_rate > 0.05);
+        crate::vehicle_sound::publish_sound_variables(
+            &mut vars,
+            agent.speed as f32,
+            agent.accel as f32,
+            command.brake,
+            v.wheel_radius,
+            wet,
+        );
         for i in 0..4 {
             vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));
         }

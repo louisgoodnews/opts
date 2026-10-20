@@ -48,6 +48,8 @@ pub(super) struct Unit {
     pub repaints: crate::new_game_screen::repaints::VehicleRepaints,
     /// The unit is coupled the other way round (its model faces backwards).
     pub reversed: bool,
+    /// The sounds the vehicle can play as AI traffic (M-0140); `None`: silent.
+    pub sound: Option<std::sync::Arc<crate::vehicle_sound::AiSoundSet>>,
 }
 
 /// A vehicle type of the map's AI list: the head unit and its trailers.
@@ -195,6 +197,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         max_alpha_deg: 52.5,
         repaints,
         reversed: false,
+        sound: crate::vehicle_sound::ai_sound_set(job, &manifest, &dir),
     };
     Ok((unit, manifest, dir))
 }
@@ -475,6 +478,7 @@ mod tests {
             max_alpha_deg: 52.5,
             repaints: Default::default(),
             reversed: false,
+            sound: None,
         };
         let v = Variant {
             name: "bus".into(),
