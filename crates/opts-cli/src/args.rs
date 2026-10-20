@@ -32,6 +32,12 @@ pub struct CliArgs {
     #[arg(long, default_value_t = false)]
     pub autostart: bool,
 
+    /// Start the drive when the load ends with problems that would wait for *Continue* (broken
+    /// tiles, a missing vehicle model part ...): they are logged and the drive begins. A load that
+    /// failed outright still stops.
+    #[arg(long, default_value_t = false)]
+    pub accept_load_problems: bool,
+
     /// Save a screenshot of the running game to this PNG path once loading finishes, then exit.
     #[arg(long, value_name = "FILE")]
     pub screenshot: Option<PathBuf>,
@@ -164,6 +170,7 @@ impl Default for CliArgs {
             omsi_path: None,
             vehicle_path: None,
             autostart: false,
+            accept_load_problems: false,
             camera: None,
             screenshot: None,
             screenshot_delay: 4.0,

@@ -4,6 +4,12 @@
 
 use bevy::prelude::*;
 
+/// Start the drive without waiting for *Continue* when the load ends with problems. Set by the
+/// control protocol (`loading.continue`, `scene.load_map`) for one load; the command line flag
+/// `--accept-load-problems` does the same for every load.
+#[derive(Resource, Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct AcceptLoadProblems(pub bool);
+
 /// How much a problem matters for the drive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
