@@ -20,7 +20,17 @@ use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::PlayerVehicle;
 
 mod hover;
+mod pseudo;
 pub use hover::{hover_system, HotSpotPicker, HoveredControl};
+use pseudo::{toggle_cabin_light, toggle_door_side};
+
+/// The pseudo trigger of the tram's door side selection: one key switches between the right and
+/// the left side, where the scripts only have a toggle for each (`kw_s_1`, `kw_s_2`).
+pub const DOOR_SIDE_TOGGLE: &str = "@door_side_toggle";
+
+/// The pseudo trigger of the cabin light key: the cab light on or off, whatever the vehicle's
+/// switch has (a bus's three-position switch off, auto, on; a tram's plain toggle).
+pub const CABIN_LIGHT_TOGGLE: &str = "@cabin_light_toggle";
 
 /// Keys OPTS binds in-game (driving, gears, cameras, overlay, reporting). OMSI bindings on these
 /// keys are dropped unless they require Ctrl; a rebinding to one of them is refused (A, E, Q
@@ -52,8 +62,6 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::F9,
     KeyCode::Minus,
     KeyCode::Equal,
-    KeyCode::NumpadAdd,
-    KeyCode::NumpadSubtract,
     // The door camera cycles its door with F4 (M-0109); the full-size map is F6 (M-0108; M stays
     // the engine start of OMSI).
     KeyCode::F4,
@@ -397,7 +405,13 @@ pub fn script_key_trigger_system(
             continue;
         };
         for name in &fired {
-            let handled = engine.trigger(name);
+            let handled = if name == DOOR_SIDE_TOGGLE {
+                toggle_door_side(&mut engine)
+            } else if name == CABIN_LIGHT_TOGGLE {
+                toggle_cabin_light(&mut engine)
+            } else {
+                engine.trigger(name)
+            };
             tracing::debug!(trigger = %name, handled, "vehicle script trigger (key)");
         }
     }

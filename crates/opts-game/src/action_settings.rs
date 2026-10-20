@@ -129,6 +129,11 @@ pub fn binding_settings() -> Vec<(String, &'static str, &'static str)> {
     v
 }
 
+/// The vehicles a binding setting is for (built-in actions: all).
+fn scope_of(setting: &str) -> vehicle_keys::Scope {
+    vehicle_keys::action(setting).map_or(vehicle_keys::Scope::Both, |a| a.scope)
+}
+
 /// Whether `key` is the default key of a built-in action: those keys are no longer fixed, the
 /// action that holds the chord is named instead.
 fn moved_by_an_action(key: KeyCode) -> bool {
@@ -155,7 +160,11 @@ pub fn conflict(
             chord.to_text().unwrap_or_default()
         ));
     }
-    for (other, _, _) in binding_settings().iter().filter(|(s, _, _)| s != setting) {
+    let scope = scope_of(setting);
+    for (other, _, _) in binding_settings()
+        .iter()
+        .filter(|(s, _, _)| s != setting && scope_of(s).overlaps(scope))
+    {
         let text = registry.text(settings, other).unwrap_or_default();
         if KeyChord::parse(&text).ok().flatten() == Some(chord) {
             return Some(format!(

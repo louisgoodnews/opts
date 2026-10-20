@@ -63,8 +63,12 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.wiper` | Wipers | input binding | `none` | at once | available | Scheibenwischer |
 | `controls.vehicle.door_1` | Door 1 | input binding | `NumpadDivide` | at once | available | Tür 1 |
 | `controls.vehicle.door_2` | Door 2 | input binding | `NumpadMultiply` | at once | available | Tür 2 |
-| `controls.vehicle.door_3` | Door 3 | input binding | `Numpad0` | at once | available | Tür 3 |
-| `controls.vehicle.door_4` | Door 4 | input binding | `Shift+NumpadDivide` | at once | available | Tür 4 |
+| `controls.vehicle.door_3` | Door 3 | input binding | `Ctrl+NumpadDivide` | at once | available | Tür 3 |
+| `controls.vehicle.door_4` | Door 4 | input binding | `Ctrl+NumpadMultiply` | at once | available | Tür 4 |
+| `controls.vehicle.door_clearance` | Door clearance | input binding | `NumpadSubtract` | at once | available | Türfreigabe |
+| `controls.vehicle.door_central` | Open or close all doors | input binding | `NumpadAdd` | at once | available | Alle Türen zentral öffnen oder schließen |
+| `controls.vehicle.door_side` | Door side (tram) | input binding | `NumpadMultiply` | at once | available | Türseite wählen (Straßenbahn) |
+| `controls.vehicle.cabin_light` | Cabin light | input binding | `Ctrl+L` | at once | available | Kabinenlicht |
 | `controls.vehicle.interior_driver` | Driver's light | input binding | `6` | at once | available | Fahrerlicht |
 | `controls.vehicle.interior_lower_right` | Interior light, lower right | input binding | `7` | at once | available | Innenlicht unten rechts |
 | `controls.vehicle.interior_upper` | Interior light, upper deck | input binding | `8` | at once | available | Innenlicht Oberdeck |

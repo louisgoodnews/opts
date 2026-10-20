@@ -182,7 +182,8 @@ pub use vehicle_sim::{
 pub use vehicle_triggers::{
     dik_to_keycode, hover_system, script_key_trigger_system, script_mouse_trigger_system,
     HotSpotPicker, HoveredControl, KeyChord, MouseTrigger, ScriptKeyBase, ScriptKeyBinding,
-    ScriptKeyBindings, ScriptedClick, ScriptedClicks, VehicleTriggerPlugin, OPTS_RESERVED_KEYS,
+    ScriptKeyBindings, ScriptedClick, ScriptedClicks, VehicleTriggerPlugin, CABIN_LIGHT_TOGGLE,
+    DOOR_SIDE_TOGGLE, OPTS_RESERVED_KEYS,
 };
 pub use view_scope::{apply_view_scope, camera_is_inside, ViewScope, ViewScopePlugin};
 pub use water::{build_water_mesh, water_material};
