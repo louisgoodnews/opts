@@ -12,6 +12,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0079 — UV Decoder Fleet Validation and `validate-uvs`](M-0079.md) — ⏸ Deferred by the project lead 2026-10-13 (decoder done, P-1013 phases A–C); fleet validation and tool to be revisited
 - [M-0104 — UV Decoder Texture Evidence](M-0104.md) — ✅ Approved 2026-10-14 (feasibility first; from the MAN NL/NG reinvestigation)
 - [M-0106 — Train Formation Editor v1](M-0106.md) — ✅ Implemented 2026-10-15 on `feat/train-formation-editor`; merge awaiting approval
+- [M-0138 — BRT C2 Full Fix (mesh completeness and accuracy)](M-0138.md) — 📝 Requested by the project lead 2026-10-20, 🔴 high
 - [M-0090 — Content Fidelity Pass: Pedestrians, Traffic Cars, Parked Cars, Hamburg, Wuppertal](M-0090.md) — 🟡 In progress since 2026-10-18, 🔴 high (R-34 … R-42)
 - [M-0067 — Water Rendering (`.water` Tiles)](M-0067.md) — 📝 Planned, 🔴 high (R-02)
 - [M-0068 — Session Vehicles: Map-Only Start, Switching and Despawn](M-0068.md) — ✅ Implemented 2026-10-13, 🔴 high (R-03, R-04)
@@ -50,5 +51,7 @@ Suggested order: M-0068 (sessions) before M-0069 (save needs the registry); M-00
   - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [x] **⚙️ Vehicle Dynamics** — [M-0073](M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
+- [ ] **🚌 BRT C2 Full Fix** — [M-0138](M-0138.md) — requested 2026-10-20
+  - [ ] Complete part census of `C2_2T.bus`, every part built, bound and drawn as authored or registered as a content defect; regression gate; the project lead's look.
 - [ ] **🏙️ Content Fidelity Pass** — [M-0090](M-0090.md)
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
