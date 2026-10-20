@@ -12,14 +12,15 @@
 //!   camera).
 
 use bevy::input::mouse::MouseMotion;
-use bevy::picking::mesh_picking::ray_cast::{MeshRayCast, MeshRayCastSettings};
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use opts_core::formats::engine_config::KeyboardConfig;
 
 use crate::camera::{CameraMode, CameraState};
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::PlayerVehicle;
+
+mod hover;
+pub use hover::{hover_system, HotSpotPicker, HoveredControl};
 
 /// Keys OPTS binds in-game (driving, gears, cameras, overlay, reporting). OMSI bindings on these
 /// keys are dropped unless they require Ctrl; a rebinding to one of them is refused (A, E, Q
@@ -501,12 +502,8 @@ pub struct HeldHotSpot {
 pub fn script_mouse_trigger_system(
     mouse: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
-    state: Option<Res<CameraState>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    cameras: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
-    hot_spots: Query<&MouseTrigger>,
     vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
-    mut ray_cast: MeshRayCast,
+    mut picker: HotSpotPicker,
     mut held: Local<Option<HeldHotSpot>>,
 ) {
     let delta: Vec2 = motion.read().map(|m| m.delta).sum();
@@ -539,25 +536,7 @@ pub fn script_mouse_trigger_system(
     if !mouse.just_pressed(MouseButton::Left) {
         return;
     }
-    if !state.is_some_and(|s| matches!(s.mode, CameraMode::Cockpit | CameraMode::Passenger)) {
-        return;
-    }
-    let Some(cursor) = windows.single().ok().and_then(Window::cursor_position) else {
-        return;
-    };
-    let Some(ray) = cameras
-        .iter()
-        .find(|(c, _)| c.is_active)
-        .and_then(|(c, t)| c.viewport_to_world(t, cursor).ok())
-    else {
-        return;
-    };
-    let filter = |e: Entity| hot_spots.get(e).is_ok_and(|h| vehicles.contains(h.owner));
-    let settings = MeshRayCastSettings::default().with_filter(&filter);
-    let Some((entity, _)) = ray_cast.cast_ray(ray, &settings).first() else {
-        return;
-    };
-    let Ok(spot) = hot_spots.get(*entity) else {
+    let Some(spot) = picker.under_cursor() else {
         return;
     };
     raise(&vehicles, spot.owner, &spot.trigger);
@@ -578,10 +557,14 @@ impl Plugin for VehicleTriggerPlugin {
         app.init_resource::<ScriptKeyBindings>()
             .init_resource::<ScriptKeyBase>()
             .init_resource::<ScriptedClicks>()
+            .init_resource::<HoveredControl>()
             .add_systems(
                 Update,
                 (
                     scripted_click_system,
+                    hover_system
+                        .run_if(crate::reporting::not_modal_active)
+                        .run_if(crate::camera::not_editing_viewpoint),
                     script_key_trigger_system
                         .run_if(crate::reporting::not_modal_active)
                         .run_if(crate::camera::not_editing_viewpoint),

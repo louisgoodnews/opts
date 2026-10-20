@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.20.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.21.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -130,9 +130,9 @@ Most recent first. A file that cannot be read is listed with its `error` (`kind`
 
 The cockpit controls of the player's vehicle that react to the mouse (hot-spots).
 
-**Result:** `{count, hotspots:[{name, meshes, position}]}`
+**Result:** `{count, hotspots:[{name, meshes, position}], hovered}`
 
-`name` is the `[mouseevent]` trigger name a click raises (`<name>`, then `<name>_drag` while the mouse moves and `<name>_off` on release); `meshes` counts the meshes that carry it, `position` is the first one's place (Bevy metres). `contains` filters by a substring of the name (case-insensitive). `1001` without a player vehicle.
+`name` is the `[mouseevent]` trigger name a click raises (`<name>`, then `<name>_drag` while the mouse moves and `<name>_off` on release); `meshes` counts the meshes that carry it, `position` is the first one's place (Bevy metres). `contains` filters by a substring of the name (case-insensitive). `hovered` (1.21) is the name of the control under the mouse cursor in the cockpit and passenger views, `null` when none (the HUD shows the same label). `1001` without a player vehicle.
 
 ### `audio.state`
 
@@ -266,6 +266,15 @@ Sends the same `Navigate` message as a rail click; the shell may refuse a destin
 | `input.mouse.move` | `dx` (number)<br>`dy` (number) | 1.0 | Move the mouse relatively |
 | `input.mouse.click` | `button` (string)<br>`x?` (number)<br>`y?` (number) | 1.0 | Click a mouse button |
 | `input.mouse.scroll` | `delta` (number) | 1.0 | Scroll the wheel |
+| [`input.mouse.position`](#inputmouseposition) | `x` (number)<br>`y` (number) | 1.21 | Put the cursor at a window position without clicking |
+
+### `input.mouse.position`
+
+Put the cursor at a window position without clicking.
+
+**Result:** `{position:[x, y]}`
+
+Physical window pixels, like `x`/`y` of `input.mouse.click`. In the cockpit and passenger views the control under the cursor shows in the HUD and as `hovered` of `vehicle.hotspots`; a real mouse movement moves the cursor on. `1001` without a window.
 
 ## Group `sim`
 
@@ -1062,7 +1071,7 @@ Operate a cockpit hot-spot like a player: press, drag, hold, release.
 
 **Result:** `{queued, name, drag, drag_frames, hold_ms}`
 
-Raises `<name>` (press), then `<name>_drag` on each of `frames` frames (default 10) while `mouse_x`/`mouse_y` carry the share of `drag_x`/`drag_y` pixels of that frame, holds the button for `hold_ms`, then raises `<name>_off` with the mouse values at 0. The same triggers and system values a real click makes, so it works in any camera. A control that reads the mouse position in steps (the ignition key of the Citybus 530 turns by `mouse_y / -75` per drag call) needs a drag: `drag_y: -80` turns it to the starter. The command returns at once; poll `vehicle.script_vars`. `1004` for a name that is not a hot-spot of the vehicle.
+Raises `<name>` (press), then `<name>_drag` on each of `frames` frames (default 10) while `mouse_x`/`mouse_y` carry the share of `drag_x`/`drag_y` pixels of that frame, holds the button for `hold_ms`, then raises `<name>_off` with the mouse values at 0. The same triggers and system values a real click makes, so it works in any camera. A control that reads the mouse position in steps (the ignition key of the Citybus 530 turns by `mouse_y / -75` per drag call) needs a drag, and the ignition key two (to the drive position, release, then to the starter and hold; see the start-procedures page). The command returns at once; poll `vehicle.script_vars`. `1004` for a name that is not a hot-spot of the vehicle.
 
 ## Group `trace`
 

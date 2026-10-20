@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use bevy::prelude::*;
 use opts_bevy::control::params::{opt_f64, str_param};
 use opts_bevy::control::state::{ControlRegistry, Outcome};
-use opts_bevy::{MouseTrigger, PlayerVehicle, ScriptedClick, ScriptedClicks};
+use opts_bevy::{HoveredControl, MouseTrigger, PlayerVehicle, ScriptedClick, ScriptedClicks};
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
@@ -16,6 +16,7 @@ use serde_json::{json, Value};
 pub fn register(registry: &mut ControlRegistry) {
     registry.register("vehicle.hotspots", hotspots);
     registry.register("vehicle.click", click);
+    registry.register("input.mouse.position", mouse_position);
 }
 
 /// The hot-spots of the player's vehicle by trigger name: how many meshes carry it and where the
@@ -58,7 +59,24 @@ fn hotspots(world: &mut World, params: &Value) -> Outcome {
             json!({ "name": name, "meshes": meshes, "position": [at.x, at.y, at.z] })
         })
         .collect();
-    Outcome::ok(json!({ "count": list.len(), "hotspots": list }))
+    let hovered = world
+        .get_resource::<HoveredControl>()
+        .and_then(|h| h.0.clone());
+    let cursor = world
+        .query_filtered::<&Window, With<bevy::window::PrimaryWindow>>()
+        .iter(world)
+        .next()
+        .and_then(Window::cursor_position)
+        .map(|c| [c.x, c.y]);
+    let visible = world
+        .query_filtered::<&ViewVisibility, With<MouseTrigger>>()
+        .iter(world)
+        .filter(|v| v.get())
+        .count();
+    Outcome::ok(json!({
+        "count": list.len(), "hotspots": list, "hovered": hovered,
+        "cursor": cursor, "visible_meshes": visible,
+    }))
 }
 
 /// `vehicle.click {name, drag_x?, drag_y?, frames?, hold_ms?}`.
@@ -95,4 +113,23 @@ fn click(world: &mut World, params: &Value) -> Outcome {
         }))
     };
     run(world).into()
+}
+
+/// `input.mouse.position {x, y}`: puts the cursor at this window position (physical pixels, like
+/// `input.mouse.click`) without clicking, so the control under it can be read as `hovered`.
+fn mouse_position(world: &mut World, params: &Value) -> Outcome {
+    let (x, y) = match (opt_f64(params, "x"), opt_f64(params, "y")) {
+        (Ok(Some(x)), Ok(Some(y))) => (x, y),
+        (Err(e), _) | (_, Err(e)) => return Outcome::err(e),
+        _ => return Outcome::err(RpcError::invalid_params("`x` and `y` are required")),
+    };
+    let Some(mut window) = world
+        .query_filtered::<&mut Window, With<bevy::window::PrimaryWindow>>()
+        .iter_mut(world)
+        .next()
+    else {
+        return Outcome::err(RpcError::new(code::NOT_READY, "no window"));
+    };
+    window.set_physical_cursor_position(Some(bevy::math::DVec2::new(x, y)));
+    Outcome::ok(json!({ "position": [x, y] }))
 }

@@ -10,6 +10,7 @@
 
 pub mod alerts;
 pub mod build;
+pub mod control_label;
 pub mod details;
 pub mod door_camera;
 pub mod fade;
@@ -73,6 +74,7 @@ impl Plugin for HudPlugin {
             )
             .add_plugins(minimap::MiniMapPlugin)
             .add_plugins(fullmap::FullMapPlugin)
+            .init_resource::<opts_bevy::HoveredControl>()
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<crate::session_vehicles::PlaceLabel>()
@@ -132,6 +134,13 @@ impl Plugin for HudPlugin {
             )
             // The panel is spawned after the frame's input, in `PostUpdate`: a spawn system in
             // `Update` would add a sync point that reorders the toast systems below.
+            .add_systems(
+                PostUpdate,
+                control_label::sync_label
+                    .run_if(in_state(AppState::InGame))
+                    .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+                    .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+            )
             .add_systems(
                 PostUpdate,
                 viewpoint::sync_panel

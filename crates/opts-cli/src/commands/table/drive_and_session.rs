@@ -238,8 +238,17 @@ pub(super) const PART: &[CommandSpec] = &[
         "contains:s@0?",
     )
     .since("1.20")
-    .result("`{count, hotspots:[{name, meshes, position}]}`")
-    .doc("`name` is the `[mouseevent]` trigger name a click raises (`<name>`, then `<name>_drag` while the mouse moves and `<name>_off` on release); `meshes` counts the meshes that carry it, `position` is the first one's place (Bevy metres). `contains` filters by a substring of the name (case-insensitive). `1001` without a player vehicle."),
+    .result("`{count, hotspots:[{name, meshes, position}], hovered}`")
+    .doc("`name` is the `[mouseevent]` trigger name a click raises (`<name>`, then `<name>_drag` while the mouse moves and `<name>_off` on release); `meshes` counts the meshes that carry it, `position` is the first one's place (Bevy metres). `contains` filters by a substring of the name (case-insensitive). `hovered` (1.21) is the name of the control under the mouse cursor in the cockpit and passenger views, `null` when none (the HUD shows the same label). `1001` without a player vehicle."),
+    c(
+        "input.mouse.position",
+        "input",
+        "Put the cursor at a window position without clicking",
+        "x:f@0 y:f@1",
+    )
+    .since("1.21")
+    .result("`{position:[x, y]}`")
+    .doc("Physical window pixels, like `x`/`y` of `input.mouse.click`. In the cockpit and passenger views the control under the cursor shows in the HUD and as `hovered` of `vehicle.hotspots`; a real mouse movement moves the cursor on. `1001` without a window."),
     c(
         "vehicle.click",
         "drive",
@@ -248,7 +257,7 @@ pub(super) const PART: &[CommandSpec] = &[
     )
     .since("1.20")
     .result("`{queued, name, drag, drag_frames, hold_ms}`")
-    .doc("Raises `<name>` (press), then `<name>_drag` on each of `frames` frames (default 10) while `mouse_x`/`mouse_y` carry the share of `drag_x`/`drag_y` pixels of that frame, holds the button for `hold_ms`, then raises `<name>_off` with the mouse values at 0. The same triggers and system values a real click makes, so it works in any camera. A control that reads the mouse position in steps (the ignition key of the Citybus 530 turns by `mouse_y / -75` per drag call) needs a drag: `drag_y: -80` turns it to the starter. The command returns at once; poll `vehicle.script_vars`. `1004` for a name that is not a hot-spot of the vehicle."),
+    .doc("Raises `<name>` (press), then `<name>_drag` on each of `frames` frames (default 10) while `mouse_x`/`mouse_y` carry the share of `drag_x`/`drag_y` pixels of that frame, holds the button for `hold_ms`, then raises `<name>_off` with the mouse values at 0. The same triggers and system values a real click makes, so it works in any camera. A control that reads the mouse position in steps (the ignition key of the Citybus 530 turns by `mouse_y / -75` per drag call) needs a drag, and the ignition key two (to the drive position, release, then to the starter and hold; see the start-procedures page). The command returns at once; poll `vehicle.script_vars`. `1004` for a name that is not a hot-spot of the vehicle."),
     c(
         "audio.state",
         "query",
