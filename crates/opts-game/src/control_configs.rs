@@ -1,10 +1,10 @@
 //! Control protocol of the bus configurations (M-0077): `config.list`, `config.save`,
-//! `config.load`, `config.delete`, `config.update` and `config.duplicate`.
+//! `config.load`, `config.spawn`, `config.delete`, `config.update` and `config.duplicate`.
 //!
 //! A configuration is a vehicle, a repaint and equipment options saved under a name
 //! ([`crate::bus_config`]). Saving takes the vehicle chosen in *Plan a drive* or, in a drive, the
-//! player's vehicle; loading writes the choices into the plan (a drive is not changed: spawning a
-//! configuration into a running session is a later part of the milestone). Every configuration is
+//! player's vehicle; loading writes the choices into the plan (a drive is not changed; `config.spawn` builds
+//! a configuration as a new session vehicle of the running drive). Every configuration is
 //! checked against the installation when it is listed or loaded: what is gone is reported with a
 //! code, never applied and never a crash.
 
@@ -39,6 +39,7 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("config.delete", delete);
     registry.register("config.update", update);
     registry.register("config.duplicate", duplicate);
+    registry.register("config.spawn", spawn);
 }
 
 fn now() -> i64 {
@@ -196,6 +197,26 @@ struct Driven {
 }
 
 fn drive_vehicle(world: &mut World, cat: &GameCatalogue) -> Option<Result<Driven, RpcError>> {
+    // The active session vehicle is the player's vehicle (the load job still names the first one
+    // after a switch).
+    if let Some(rec) = world
+        .get_resource::<crate::session_vehicles::SessionVehicles>()
+        .and_then(|r| r.active())
+        .filter(|r| r.is_alive())
+    {
+        return Some(if rec.catalogue_id.is_empty() {
+            Err(RpcError::new(
+                code::NOT_FOUND,
+                "the driven vehicle is not in the vehicle catalogue, so it cannot be saved",
+            ))
+        } else {
+            Ok(Driven {
+                vehicle: rec.catalogue_id.clone(),
+                repaint: rec.repaint.clone(),
+                setvars: rec.setvars.clone(),
+            })
+        });
+    }
     let in_drive = {
         let mut q =
             world.query_filtered::<&opts_bevy::VehicleScripts, With<opts_bevy::PlayerVehicle>>();
@@ -324,6 +345,53 @@ fn load(world: &mut World, params: &Value) -> Outcome {
             "setvars": checked.setvars.iter().cloned().collect::<HashMap<_, _>>(),
             "problems": problems,
         }))
+    };
+    run().into()
+}
+
+/// `config.spawn {id, entry?, entry_id?}`: builds a saved configuration as a new session vehicle
+/// of the running drive (the same request as `session.spawn`, from the checked configuration).
+fn spawn(world: &mut World, params: &Value) -> Outcome {
+    let mut run = || -> Result<Value, RpcError> {
+        crate::control_session::session_ready(world)?;
+        let key = str_param(params, "id")?.to_string();
+        let entry = crate::control_session::entry_param(params)?;
+        let (path, mut store) = open(world)?;
+        let config = store.find(&key).cloned().ok_or_else(|| not_found(&key))?;
+        let cat = catalogue(world);
+        let reps = Repaints::new(world);
+        let checked = config.check(&cat, |v| reps.of(v));
+        let problems: Vec<Value> = checked
+            .problems
+            .iter()
+            .map(|p| json!({ "code": p.code(), "message": p.to_string() }))
+            .collect();
+        let job = world
+            .get_resource::<WorldLoadJob>()
+            .ok_or_else(|| RpcError::new(code::NOT_READY, "the world is not loaded"))?;
+        let request = crate::bus_config_spawn::spawn_params(
+            &config,
+            &checked,
+            &cat,
+            |f| job.bus_file(f),
+            entry,
+        )
+        .map_err(|e| {
+            RpcError::new(
+                code::FAILED,
+                format!("configuration `{}` cannot be spawned: {e}", config.name),
+            )
+            .with_data(json!({ "problems": problems }))
+        })?;
+        let name = request.name.clone();
+        let id = world
+            .resource_mut::<crate::session_vehicles::SessionVehicles>()
+            .request_spawn(request);
+        store.touch(&config.id, now());
+        commit(world, &path, &store)?;
+        Ok(
+            json!({ "id": id, "queued": true, "configuration": config.id, "name": name, "problems": problems }),
+        )
     };
     run().into()
 }

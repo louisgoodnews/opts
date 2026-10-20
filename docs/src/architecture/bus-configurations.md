@@ -42,15 +42,24 @@ Nothing in the check panics; every problem is reported with a code and a sentenc
 
 ## Control protocol
 
-Since protocol 1.9.0 (see the [reference](../reference/control-protocol.md)): `config.list`, `config.save`, `config.load`, `config.delete`, `config.update` (rename, notes, favourite) and `config.duplicate`.
+Since protocol 1.9.0 (see the [reference](../reference/control-protocol.md)): `config.list`, `config.save`, `config.load`, `config.delete`, `config.update` (rename, notes, favourite) and `config.duplicate`; since 1.18.0 also `config.spawn`.
 
-- `config.save` takes the vehicle chosen in *Plan a drive* or the player's vehicle in a drive. A taken name is refused unless `replace` is true.
-- `config.load` writes the vehicle, the repaint and the accepted options into the plan and has the wizard rebuild its lists from it. In a running drive it answers `1007`: spawning a configuration into a session is a later part of the milestone.
+- `config.save` takes the vehicle chosen in *Plan a drive* or, in a drive, the active session vehicle (its catalogue id, repaint and equipment options from the session registry). A taken name is refused unless `replace` is true.
+- `config.load` writes the vehicle, the repaint and the accepted options into the plan and has the wizard rebuild its lists from it. In a running drive it answers `1007`; use `config.spawn` there.
+- `config.spawn {id, entry?, entry_id?}` builds a configuration as a new session vehicle of the running drive: the same check as `config.load`, then the request of `session.spawn` (`bus_config_spawn::spawn_params`); the new vehicle becomes the active one. A missing vehicle or `.bus` file refuses it (`1008`, `data.problems`).
 
 ## Wizard
 
 The *What* step has a *Configurations* section under the livery (`new_game_screen/configs.rs`): a name field (the vehicle and livery name when left alone) with *Save as configuration*, then the list, favourites first and then the most recently used. Each row loads on a click and has *Star*, *Duplicate* and *Delete* (the first press asks, the second deletes). *Save* with a name that exists replaces that configuration. A configuration whose vehicle is gone says so in its row and does not load; one whose livery or options are gone loads without them and a toast says how many parts were left out (the check against the vehicle's livery data runs once that has been read, `finish_load`). The list is kept in the `ConfigLibrary` resource, read at startup and written at once on every change (a few hundred bytes); the control protocol works on the same resource, so a script and the screen see one list. A file that cannot be used (damaged, newer version) is shown above the list.
 
+## Alt menu
+
+*Configurations…* on the main page of the vehicle menu (`in_game/vehicle_menu/configs_page.rs`) lists the saved configurations, favourites first and then the most recently used, each with its vehicle, repaint and number of options. *Spawn* builds it as a new vehicle at the session's start point and closes the menu; a configuration whose vehicle or `.bus` file is gone shows why instead of the button, one that lost a repaint or an option spawns without it and says so. *Delete* asks with a second press. *Save current vehicle* stores the active session vehicle under its name (numbered when taken). A repaint the catalogue does not list (the vehicle's own default as its `.bus` names it) is stored as the default, so the new entry does not read as having a missing repaint. `menu.do configs`, `spawnconfig <text>` and `saveconfig` drive it; Esc goes back to the main page.
+
+## Session save
+
+The session save (M-0069) already stores each session vehicle with its catalogue id, repaint and equipment options, so a spawned configuration is restored with the session; the saved configurations themselves are a user file next to the settings and are not part of a save.
+
 ## Open
 
-*Pause → Vehicle* list, renaming in the UI (`config.update` does it in the protocol), a thumbnail, spawning a configuration into a running session and the session save (M-0069) are not done.
+Renaming in the UI (`config.update` does it in the protocol) and a thumbnail are not done.

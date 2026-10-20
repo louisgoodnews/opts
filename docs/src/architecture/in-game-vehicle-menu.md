@@ -25,6 +25,10 @@ The control protocol has no absolute mouse position, so the menu can be driven b
 * The vehicle list has a **search field**: type to filter (every word must occur in name, id, make, model or repaint), Backspace deletes; `menu.do search <text>` sets it. The counter shows `n of 947`. While the menu is open, `P` no longer pauses.
 * The entry index starts when the session is up (not when the menu opens), reads the nearest tiles first and **publishes entries as it finds them**; the *blocked* filter applies to every entry resolved so far, and the list says how many are still being located. Entries on spline attachments cannot be checked for blocking (they are resolved when chosen).
 
+## Configurations (M-0077)
+
+*Configurations…* on the main page opens the list of saved bus configurations with *Spawn*, *Delete* and *Save current vehicle*; see [Bus Configurations](bus-configurations.md#alt-menu). `menu.do configs`, `spawnconfig <text>`, `saveconfig`.
+
 ## Change map (M-0108)
 
 *Change map…* on the main page lists the installed maps (the current one marked). A click on a map opens *Change to <map>*, the one page that asks: the **start point** (the map's first, or the one picked), the **vehicle** (the active one is built again with its repaint and equipment options), the **time** (date, time of day and weather of the session are kept, to the minute) and the **session vehicles that are not carried over** (listed by name). *Change map* then writes the choices into the session setup and sets the state to the drive once more: the old session is torn down and the new one loads through the normal loading screen, exactly like *Load game* (`save::restore::begin_restore`); no second loading path exists. A drive started with `--map-path`, `--vehicle-path` or `--livery` drops those arguments at that moment, otherwise it would load the same map again.

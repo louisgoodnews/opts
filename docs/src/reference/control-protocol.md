@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.17.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.18.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -316,6 +316,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`config.list`](#configlist) | - | 1.9 | List the saved bus configurations (vehicle, repaint, equipment options) with their check against the installation |
 | [`config.save`](#configsave) | `name` (string)<br>`notes?` (string)<br>`replace?` (boolean) | 1.9 | Save the vehicle, repaint and equipment options of the plan (or of the driven vehicle) under a name |
 | [`config.load`](#configload) | `id` (string) | 1.9 | Write a saved configuration into the plan (vehicle, repaint, equipment options) |
+| [`config.spawn`](#configspawn) | `id` (string)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.18 | Build a saved configuration as a new vehicle of the running drive |
 | [`config.delete`](#configdelete) | `id` (string) | 1.9 | Delete a saved configuration |
 | [`config.update`](#configupdate) | `id` (string)<br>`name?` (string)<br>`notes?` (string)<br>`favourite?` (boolean) | 1.9 | Rename a saved configuration, change its notes or its favourite mark |
 | [`config.duplicate`](#configduplicate) | `id` (string)<br>`name` (string) | 1.9 | Copy a saved configuration under a new name |
@@ -569,6 +570,14 @@ Write a saved configuration into the plan (vehicle, repaint, equipment options).
 **Result:** `{id, name, context, vehicle, repaint, setvars, problems}`
 
 `id` is the id or the name. The configuration is checked first: a missing vehicle refuses it (`1008`, `data.problems`), a missing repaint falls back to the default and values the catalogue no longer accepts are left out; both are listed in `problems`. In a running drive nothing is changed (`1007`): configurations are loaded in *Plan a drive*. `1004` for an unknown configuration.
+
+### `config.spawn`
+
+Build a saved configuration as a new vehicle of the running drive.
+
+**Result:** `{id, queued:true, configuration, name, problems}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`)
+
+As `session.spawn` with the vehicle, repaint and options of the configuration (`id` is its id or name), after the same check as `config.load`: a missing vehicle or `.bus` file refuses it (`1008`, `data.problems`), a missing repaint falls back to the default, values the catalogue no longer accepts are left out and listed in `problems`. The new vehicle becomes the active one and the previous one is parked; `entry`/`entry_id` as in `session.spawn`. `1001` outside a loaded drive, `1004` for an unknown configuration.
 
 ### `config.delete`
 

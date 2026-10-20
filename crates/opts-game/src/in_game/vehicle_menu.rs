@@ -58,6 +58,8 @@ pub enum Page {
     ChangeMap,
     /// *Change to <map>*: what the change does and the one question.
     ChangeMapConfirm,
+    /// *Configurations*: the saved bus configurations (M-0077).
+    Configs,
 }
 
 /// State of the menu.
@@ -98,6 +100,8 @@ pub struct VehicleMenu {
     tt_tour: Option<usize>,
     /// The choices of the *Change map* pages.
     change_map: ChangeMapDraft,
+    /// The rows of the *Configurations* page.
+    configs: ConfigsView,
 }
 
 /// What a row of the main page shows; a change rebuilds the page.
@@ -230,6 +234,14 @@ enum Action {
     DriveWithoutVehicle,
     /// Changes the map.
     ConfirmChangeMap,
+    /// Opens the *Configurations* page.
+    OpenConfigs,
+    /// Builds the saved configuration with this id as a new session vehicle.
+    SpawnConfig(String),
+    /// Saves the active vehicle as a configuration.
+    SaveConfig,
+    /// Deletes the saved configuration with this id (on the second press).
+    DeleteConfig(String),
 }
 
 /// Every entity of the menu's modals.
@@ -313,7 +325,7 @@ fn toggle_menu(
             menu.page = Page::Select;
         } else if matches!(
             menu.page,
-            Page::Select | Page::Route | Page::Jump | Page::ChangeMap
+            Page::Select | Page::Route | Page::Jump | Page::ChangeMap | Page::Configs
         ) {
             menu.page = Page::Main;
         } else {
@@ -408,6 +420,10 @@ fn rebuild_menu(
             let Some(cat) = catalogue else { return };
             let current = session.as_ref().map_or("", |s| s.map_name.as_str());
             build_change_map(&mut commands, &menu, &cat, current);
+        }
+        Page::Configs => {
+            let can_save = registry.active().is_some_and(|r| r.is_alive());
+            build_configs(&mut commands, &menu, can_save);
         }
         Page::ChangeMapConfirm => {
             let (Some(cat), Some(setup)) = (catalogue, setup) else {
@@ -513,6 +529,11 @@ use change_map_page::{
     build_change_map, build_change_map_confirm, confirm as confirm_change_map, draft_plan,
     ChangeMapDraft,
 };
+
+// --- configurations (M-0077) -----------------------------------------------------------------
+
+mod configs_page;
+use configs_page::{build_configs, load_view, ConfigsView};
 
 // --- the route page (M-0099) ------------------------------------------------------------------
 
