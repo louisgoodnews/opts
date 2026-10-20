@@ -66,6 +66,7 @@ pub mod vehicle_glow;
 pub mod vehicle_lights;
 pub mod vehicle_remote;
 pub mod vehicle_script;
+pub mod vehicle_setup;
 pub mod vehicle_sim;
 pub mod vehicle_triggers;
 pub mod view_scope;
@@ -168,6 +169,7 @@ pub use vehicle_script::{
     script_drive_system, script_startup_system, vehicle_script_system, ScriptDriveEnabled,
     ScriptRadius, ScriptStartup, VehicleScriptPlugin, VehicleScripts,
 };
+pub use vehicle_setup::{StartLights, VehicleSetup};
 pub use vehicle_sim::{
     vehicle_camera_system, vehicle_input_system, vehicle_physics_step_system,
     vehicle_transform_sync_system, wheel_transform_sync_system, PlayerVehicle, VehicleCameraMode,

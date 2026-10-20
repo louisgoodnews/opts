@@ -117,6 +117,14 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `gameplay.tile_radius` | Tile radius | whole number 0 to 16 | `0` | at once | available | Tiles kept loaded around the one you are on: 1 is 3 x 3, 2 is 5 x 5. 0 chooses automatically for this computer. Unused while all tiles are loaded. |
 | `camera.door_overlay` | Door camera | on / off | `false` | at once | available | Shows the view from a door in the corner of the screen while the door opens or when you press F4 (F4 again: next door, then off). |
 
+## Vehicle
+
+| Key | Name | Values | Default | Applies | Status | Description |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `vehicle.setup` | Vehicle set-up | number 0 to 1 | `0.75` | at once | available | How far the vehicle is prepared when a drive begins: 0 nothing is started, 0.25 electrics on, 0.5 ignition in the drive position, 0.75 engine running, 1 ready to drive (parking brake released). Applies to the next vehicle; raising it also continues a vehicle that has not got that far. |
+| `vehicle.fuel` | Fuel | number 0 to 1 | `0.6` | at once | available | Fuel in the tank at the start, as a share of the tank (0 empty, 1 full). Applies to the next vehicle. |
+| `vehicle.start_lights` | Lights at the start | `off`, `parking`, `dipped` | `off` | at once | available | The lights that are switched on once the electrics are on. Applies to the next vehicle. |
+
 ## Content
 
 | Key | Name | Values | Default | Applies | Status | Description |

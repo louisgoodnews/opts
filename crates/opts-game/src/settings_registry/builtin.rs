@@ -345,5 +345,6 @@ fn all_unscoped() -> Vec<D> {
     v.extend(content());
     v.extend(crate::hardware::descriptors());
     v.extend(crate::vehicle_keys::descriptors());
+    v.extend(crate::vehicle_setup_settings::descriptors());
     v
 }

@@ -48,8 +48,9 @@ const NO_TORQUE_FALLBACK_S: f32 = 4.0;
 #[derive(Component, Debug, Clone, Default)]
 pub struct ScriptStartup {
     elapsed: f32,
-    mark: f32,
-    stage: u8,
+    run: crate::vehicle_setup::SetupRun,
+    settled: bool,
+    released: bool,
     gear: Option<opts_sim::GearPosition>,
     /// The parking brake state last handed to the scripts (they start with it applied).
     parking: Option<bool>,
@@ -403,62 +404,49 @@ pub fn script_drive_system(
     }
 }
 
-/// Start-up of the scripts' vehicle and gear selector (see [`ScriptStartup`]).
+/// Start-up of the scripts' vehicle and gear selector (see [`ScriptStartup`]): the player's
+/// [`VehicleSetup`](crate::vehicle_setup::VehicleSetup) says how far the vehicle is brought.
 pub fn script_startup_system(
     time: Res<Time>,
     enabled: Res<ScriptDriveEnabled>,
-    mut query: Query<(&VehicleController, &VehicleScripts, &mut ScriptStartup)>,
+    setup: Option<Res<crate::vehicle_setup::VehicleSetup>>,
+    mut query: Query<(&mut VehicleController, &VehicleScripts, &mut ScriptStartup)>,
 ) {
     if !enabled.0 {
         return;
     }
-    for (controller, scripts, mut st) in &mut query {
+    let setup = setup.map_or_else(Default::default, |s| *s);
+    for (mut controller, scripts, mut st) in &mut query {
         st.elapsed += time.delta_secs();
         let Ok(mut engine) = scripts.engine.lock() else {
             continue;
         };
-        // Battery switch (pressed and released), then the engine start key once the busbar has
-        // voltage, held until the engine runs (OMSI's standard `keyboard.cfg` vehicle triggers).
-        let busbar_ok = engine.get("elec_busbar_main") > 0.3;
-        let before = st.stage;
-        match st.stage {
-            0 if st.elapsed > 0.5 => {
-                engine.trigger("cp_batterietrennschalter_toggle");
-                st.stage = 1;
-                st.mark = st.elapsed;
-            }
-            1 if st.elapsed - st.mark > 0.3 => {
-                engine.trigger("cp_batterietrennschalter_toggle_off");
-                st.stage = 2;
-                st.mark = st.elapsed;
-            }
-            2 if busbar_ok && st.elapsed - st.mark > 1.0 => {
-                engine.trigger("kw_m_enginestart");
-                st.stage = 3;
-                st.mark = st.elapsed;
-            }
-            3 if engine.get("engine_on") > 0.5 || st.elapsed - st.mark > 8.0 => {
-                engine.trigger("kw_m_enginestart_off");
-                st.stage = 4;
-                st.mark = st.elapsed;
-                // Drive (or whatever the player selected meanwhile) once the engine runs.
-                st.gear = None;
-            }
-            _ => {}
-        }
-        if st.stage != before {
+        let now = st.elapsed;
+        let settled = st.run.advance(&mut engine, &setup, now);
+        if settled != st.settled {
+            st.settled = settled;
             tracing::debug!(
-                stage = st.stage,
                 busbar = engine.get("elec_busbar_main"),
                 gear_select = engine.get("antrieb_getr_gangwahl"),
                 engine_n = engine.get("engine_n"),
                 engine_on = engine.get("engine_on"),
-                "script start-up"
+                degree = setup.degree,
+                "script start-up settled"
             );
+        }
+        // Ready to drive: the parking brake comes off once, when the start-up has settled.
+        if settled
+            && setup.degree >= crate::vehicle_setup::READY
+            && controller.sim.inputs.is_parking_brake_engaged()
+            && !st.released
+            && engine.get("engine_on") > 0.5
+        {
+            st.released = true;
+            controller.sim.inputs.set_parking_brake(false);
         }
         let gear = controller.sim.inputs.gear();
         // The gear selector follows the player once the engine is up (before: neutral/park).
-        let gear = if st.stage >= 4 {
+        let gear = if st.settled {
             gear
         } else {
             opts_sim::GearPosition::Neutral
@@ -495,6 +483,7 @@ pub struct VehicleScriptPlugin;
 impl Plugin for VehicleScriptPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScriptDriveEnabled>()
+            .init_resource::<crate::vehicle_setup::VehicleSetup>()
             .init_resource::<ScriptRadius>()
             .add_systems(
                 FixedUpdate,
