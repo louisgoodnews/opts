@@ -2,45 +2,21 @@
 
 use super::*;
 
-const CABIN: &str = "[entry]\n3\n\n[entry]\n0\n\n[exit]\n23\n\n[exit]\n21\n\n[exit]\n99\n";
-
-/// A paths file with `n` points: point `i` at x = `xs[i]`, y = `ys[i]`, z 0.4.
-fn paths(points: &[(f32, f32)]) -> PassengerPaths {
-    let mut text = String::new();
-    for (x, y) in points {
-        text.push_str(&format!("[pathpnt]\n{x}\n{y}\n0.4\n\n"));
-    }
-    PassengerPaths::parse(&text).expect("paths")
-}
-
+/// Right front (entry), right front behind it (entry), right rear (exit), left rear (exit), in
+/// Bevy axes (forward is -z).
 fn doors() -> Vec<DoorPoint> {
-    // 24 points, only 0, 3, 21 and 23 matter: right-front, right-front-behind, left-rear, right-rear.
-    let mut pts = vec![(0.0, 0.0); 24];
-    pts[0] = (1.25, 4.2);
-    pts[3] = (1.25, 4.9);
-    pts[21] = (-1.2, -2.5);
-    pts[23] = (1.25, -2.4);
-    door_points(CABIN, &paths(&pts))
-}
-
-#[test]
-fn the_doors_are_the_entries_then_the_exits_that_have_a_pathpoint() {
-    let d = doors();
-    let order: Vec<(bool, usize)> = d.iter().map(|p| (p.entry, p.index)).collect();
-    assert_eq!(
-        order,
-        [(true, 3), (true, 0), (false, 23), (false, 21)],
-        "99 has no point"
-    );
-    // Vehicle space (x right, y forward, z up) became Bevy axes (x right, y up, -z forward).
-    assert_eq!(d[0].position, Vec3::new(1.25, 0.4, -4.9));
-    assert_eq!((d[0].side, d[3].side), (1, -1));
-}
-
-#[test]
-fn a_bad_file_gives_no_doors() {
-    assert!(door_points_from_bytes(b"[entry]\n0\n", b"[pathpnt]\nx\ny\nz\n").is_empty());
-    assert!(door_points_from_bytes(b"", b"").is_empty());
+    let door = |entry, index, x: f32, z: f32| DoorPoint {
+        entry,
+        index,
+        position: Vec3::new(x, 0.4, z),
+        side: if x < 0.0 { -1 } else { 1 },
+    };
+    vec![
+        door(true, 3, 1.25, -4.9),
+        door(true, 0, 1.25, -4.2),
+        door(false, 23, 1.25, 2.4),
+        door(false, 21, -1.2, 2.5),
+    ]
 }
 
 #[test]
@@ -50,6 +26,7 @@ fn zones_follow_the_position_along_the_vehicle() {
     assert_eq!(points.zone(0), Zone::Front);
     assert_eq!(points.zone(1), Zone::Front);
     assert_eq!(points.zone(2), Zone::Rear);
+    assert_eq!(points.zone(3), Zone::Rear);
     // Doors within a metre of each other have no front or rear.
     let near = DoorPoints(vec![doors()[0].clone(), doors()[1].clone()]);
     assert_eq!(near.zone(0), Zone::Middle);

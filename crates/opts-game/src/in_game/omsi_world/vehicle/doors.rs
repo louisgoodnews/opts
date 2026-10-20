@@ -1,9 +1,60 @@
 //! The doors of the player's vehicle for the door camera (M-0109).
 
+use opts_bevy::door_camera::{DoorPoint, DoorPoints};
+use opts_core::formats::text::{decode_bytes, scan_blocks};
+use opts_core::formats::vehicles::PassengerPaths;
+
 use super::*;
 
+/// The door points of a cabin: `cabin_text` names entries and exits, `paths` has their positions.
+/// Entries come first, then exits, each in declaration order; an index without a pathpoint is
+/// left out.
+#[must_use]
+pub(in super::super::super) fn door_points(
+    cabin_text: &str,
+    paths: &PassengerPaths,
+) -> Vec<DoorPoint> {
+    let blocks = scan_blocks(cabin_text);
+    let mut out = Vec::new();
+    for (keyword, entry) in [("entry", true), ("exit", false)] {
+        for b in blocks.iter().filter(|b| b.keyword == keyword) {
+            let Some(index) = b
+                .parameters
+                .first()
+                .and_then(|p| p.trim().parse::<usize>().ok())
+            else {
+                continue;
+            };
+            let Some(p) = paths.points.get(index) else {
+                continue;
+            };
+            // Vehicle space (x right, y forward, z up) to Bevy axes.
+            let position = opts_bevy::coords::omsi_to_bevy_pos(p.position);
+            out.push(DoorPoint {
+                entry,
+                index,
+                position,
+                side: if position.x < -0.05 { -1 } else { 1 },
+            });
+        }
+    }
+    out
+}
+
+/// [`door_points`] from the bytes of the two files (none when the paths file is unreadable).
+#[must_use]
+pub(in super::super::super) fn door_points_from_bytes(
+    cabin: &[u8],
+    paths: &[u8],
+) -> Vec<DoorPoint> {
+    let Ok(paths) = PassengerPaths::parse(&decode_bytes(paths)) else {
+        return Vec::new();
+    };
+    door_points(&decode_bytes(cabin), &paths)
+}
+
 /// Reads the passenger cabin and the paths file of the vehicle and puts the door points on its
-/// root (`opts_bevy::door_camera::DoorPoints`); a vehicle without cabin or paths gets none.
+/// root; a vehicle without cabin or paths gets none.
 pub(super) fn attach_door_points(
     job: &WorldLoadJob,
     commands: &mut Commands,
@@ -21,11 +72,12 @@ pub(super) fn attach_door_points(
     ) else {
         return;
     };
-    let doors = opts_bevy::door_camera::door_points_from_bytes(&cabin, &paths);
+    let doors = door_points_from_bytes(&cabin, &paths);
     if !doors.is_empty() {
         tracing::info!(doors = doors.len(), "door camera points");
-        commands
-            .entity(root)
-            .insert(opts_bevy::door_camera::DoorPoints(doors));
+        commands.entity(root).insert(DoorPoints(doors));
     }
 }
+
+#[cfg(test)]
+mod tests;

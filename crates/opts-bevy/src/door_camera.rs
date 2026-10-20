@@ -2,8 +2,8 @@
 //!
 //! * **Doors.** The door points are the pathpoints that the vehicle's passenger cabin names with
 //!   `[entry]` and `[exit]` (indices into its `paths.cfg`, vehicle space: x right, y forward, z up),
-//!   read once when the vehicle is built ([`door_points`]) and kept on the vehicle root as
-//!   [`DoorPoints`]. The point lies on the floor at the door, so the camera sits above it, a little
+//!   read once when the vehicle is built (`opts-game`, `vehicle/doors.rs`, which converts them to
+//!   Bevy axes) and kept on the vehicle root as [`DoorPoints`]. The point lies on the floor at the door, so the camera sits above it, a little
 //!   outside, and looks out and towards the rear ([`door_pose`]).
 //! * **Which door.** Two sources, the manual one wins: the key **F4** cycles through the doors and
 //!   back to none ([`DoorCamera::cycle`]); the automatic one shows the door whose leaf animates.
@@ -15,7 +15,7 @@
 //! * **Picture.** One `Camera3d` child of the vehicle renders into a 480 x 270 image at 30 Hz
 //!   ([`RENDER_HZ`]) and only while a door is shown (`Camera::is_active` is the switch); the HUD
 //!   shows the image. Like the mirror cameras it renders scene-linear (no tonemapping) and copies
-//!   `Hdr` and fog from the [`MainCamera`](crate::MainCamera).
+//!   `Hdr` and fog from the [`MainCamera`].
 //! * **Setting.** `camera.door_overlay` (off by default) sets [`DoorCamera::enabled`]; while it is
 //!   off nothing exists: no camera, no image, no scan.
 
@@ -24,9 +24,6 @@ use bevy::pbr::DistanceFog;
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::Tonemapping;
-
-use opts_core::formats::text::{decode_bytes, scan_blocks};
-use opts_core::formats::vehicles::PassengerPaths;
 
 use crate::mirrors::MIRROR_ORDER;
 use crate::vehicle_anim::MeshAnimation;
@@ -102,47 +99,6 @@ impl DoorPoints {
             Zone::Middle
         }
     }
-}
-
-/// The door points of a cabin: `cabin_text` names entries and exits, `paths` has their positions.
-/// Entries come first, then exits, each in declaration order; an index without a pathpoint is
-/// left out.
-#[must_use]
-pub fn door_points(cabin_text: &str, paths: &PassengerPaths) -> Vec<DoorPoint> {
-    let blocks = scan_blocks(cabin_text);
-    let mut out = Vec::new();
-    for (keyword, entry) in [("entry", true), ("exit", false)] {
-        for b in blocks.iter().filter(|b| b.keyword == keyword) {
-            let Some(index) = b
-                .parameters
-                .first()
-                .and_then(|p| p.trim().parse::<usize>().ok())
-            else {
-                continue;
-            };
-            let Some(p) = paths.points.get(index) else {
-                continue;
-            };
-            // Vehicle space (x right, y forward, z up) to Bevy axes.
-            let position = crate::coords::omsi_to_bevy_pos(p.position);
-            out.push(DoorPoint {
-                entry,
-                index,
-                position,
-                side: if position.x < -0.05 { -1 } else { 1 },
-            });
-        }
-    }
-    out
-}
-
-/// [`door_points`] from the bytes of the two files.
-#[must_use]
-pub fn door_points_from_bytes(cabin: &[u8], paths: &[u8]) -> Vec<DoorPoint> {
-    let Ok(paths) = PassengerPaths::parse(&decode_bytes(paths)) else {
-        return Vec::new();
-    };
-    door_points(&decode_bytes(cabin), &paths)
 }
 
 /// The pose of the door camera in the vehicle's frame: above the door point, a little outside,
@@ -402,10 +358,17 @@ pub fn drive_camera(
     }
 }
 
+/// What the picture copies from the main camera: `Hdr` and fog.
+type MainLook<'a> = (Has<Hdr>, Option<&'a DistanceFog>);
+/// The main camera, not a door camera.
+type MainFilter = (With<MainCamera>, Without<DoorCameraMarker>);
+/// The same look on a door camera, with its entity.
+type DoorLook<'a> = (Entity, Has<Hdr>, Option<&'a DistanceFog>);
+
 /// The picture is scene-linear like the mirrors': `Hdr` and fog follow the main camera.
 pub fn sync_look(
-    main: Query<(Has<Hdr>, Option<&DistanceFog>), (With<MainCamera>, Without<DoorCameraMarker>)>,
-    doors: Query<(Entity, Has<Hdr>, Option<&DistanceFog>), With<DoorCameraMarker>>,
+    main: Query<MainLook, MainFilter>,
+    doors: Query<DoorLook, With<DoorCameraMarker>>,
     mut commands: Commands,
 ) {
     let Some((hdr, fog)) = main.iter().next() else {
