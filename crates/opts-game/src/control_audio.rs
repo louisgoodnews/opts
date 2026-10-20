@@ -81,6 +81,29 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         .get_resource::<ClipLoader>()
         .map_or((0, 0, 0), ClipLoader::counts);
     let loaded_bytes = world.get_resource::<ClipLoader>().map_or(0, |l| l.bytes);
+    // What the player's vehicle is sounding: the loudest loops with the speed they play at, so the
+    // engine layers (idle, throttle, load, interior and exterior) can be told apart.
+    let mut loud: Vec<(f32, f32, String)> = world
+        .query::<(
+            &crate::player_sound::PlayerVoice,
+            &opts_bevy::audio::SoundEmitter,
+        )>()
+        .iter(world)
+        .filter(|(_, e)| e.gain > 0.001 && !e.muted)
+        .map(|(v, e)| {
+            let file = v
+                .file
+                .file_name()
+                .map_or_else(String::new, |f| f.to_string_lossy().into_owned());
+            (e.gain, e.speed, file)
+        })
+        .collect();
+    loud.sort_by(|a, b| b.0.total_cmp(&a.0));
+    let loudest: Vec<Value> = loud
+        .iter()
+        .take(10)
+        .map(|(gain, speed, file)| json!({ "file": file, "gain": gain, "speed": speed }))
+        .collect();
     let top: Vec<Value> = stats
         .top
         .iter()
@@ -120,6 +143,7 @@ fn state(world: &mut World, _: &Value) -> Outcome {
             "unsupported": player.unsupported,
             "files_not_found": player.unresolved,
             "listener_inside": player.inside,
+            "loudest": loudest,
         },
         "traffic": { "voices": traffic.voices, "playing": traffic.playing },
         "scenery": {

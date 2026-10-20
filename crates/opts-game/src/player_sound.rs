@@ -38,6 +38,9 @@ pub struct PlayerVoice {
     pub playback: Playback,
     /// The conditions held at the last look (edge detection of `[noloop]` voices).
     pub was_active: bool,
+    /// Seconds the voice has been active without a break: the volume curves with the variable
+    /// `-1` ([`crate::sound_logic::AGE_VARIABLE`]) fade the voice in over it.
+    pub active_s: f32,
 }
 
 impl PlayerVoice {
@@ -117,6 +120,7 @@ pub fn attach(
                 file,
                 playback,
                 was_active: false,
+                active_s: 0.0,
             },
             omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2])),
         ));
@@ -144,6 +148,26 @@ pub fn attach(
 /// would be better).
 #[must_use]
 pub fn listener_inside(vehicle: &GlobalTransform, listener: Vec3) -> bool {
+    inside_box(vehicle, listener)
+}
+
+/// Whether the listener is in the cabin: the driver's and the passengers' views are, the external
+/// view is not (its camera hangs a few metres behind the vehicle, still within a body-sized box);
+/// the walking and the free camera are where their position says.
+#[must_use]
+pub fn listener_in_cabin(
+    mode: Option<opts_bevy::CameraMode>,
+    vehicle: &GlobalTransform,
+    listener: Vec3,
+) -> bool {
+    match mode {
+        Some(opts_bevy::CameraMode::Cockpit | opts_bevy::CameraMode::Passenger) => true,
+        Some(opts_bevy::CameraMode::External) => false,
+        _ => inside_box(vehicle, listener),
+    }
+}
+
+fn inside_box(vehicle: &GlobalTransform, listener: Vec3) -> bool {
     let p = vehicle.affine().inverse().transform_point3(listener);
     p.x.abs() < 1.7 && p.y > -0.3 && p.y < 3.6 && p.z.abs() < 8.0
 }
@@ -172,6 +196,7 @@ fn variable(scripts: &VehicleScripts, name: &str) -> f32 {
 #[allow(clippy::too_many_arguments)]
 pub fn stream_player_voices(
     time: Res<Time>,
+    camera: Option<Res<opts_bevy::CameraState>>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
     mut voices: VoiceQuery,
     vehicles: Query<(&VehicleScripts, &GlobalTransform)>,
@@ -184,7 +209,7 @@ pub fn stream_player_voices(
     if *since < 0.05 {
         return;
     }
-    *since = 0.0;
+    let dt = std::mem::take(&mut *since);
     let Some(listener) = listener.iter().next().map(GlobalTransform::translation) else {
         return;
     };
@@ -194,13 +219,28 @@ pub fn stream_player_voices(
         let Ok((scripts, vehicle_tf)) = vehicles.get(parent.parent()) else {
             continue;
         };
-        let inside = listener_inside(vehicle_tf, listener);
+        let inside = listener_in_cabin(camera.as_ref().map(|c| c.mode), vehicle_tf, listener);
         inside_any |= inside;
-        let read = |n: &str| variable(scripts, n);
-        let Some(active) = conditions_hold(&voice.def.conditions, read) else {
+        let Some(active) = conditions_hold(&voice.def.conditions, |n: &str| variable(scripts, n))
+        else {
             continue;
         };
         let audible_here = viewpoint_allows(voice.def.viewpoint, inside);
+        // How long it has been sounding: the volume curves of the starter and retarder loops fade in
+        // over it (`[volcurve] -1`).
+        if active && audible_here {
+            voice.active_s += dt;
+        } else {
+            voice.active_s = 0.0;
+        }
+        let age = voice.active_s;
+        let read = |n: &str| {
+            if n == crate::sound_logic::AGE_VARIABLE {
+                age
+            } else {
+                variable(scripts, n)
+            }
+        };
         match voice.playback {
             Playback::Loop => {
                 let curve = voice.distance();
@@ -291,6 +331,7 @@ fn fire(
 
 /// Plays the one-shots whose `[trigger]` the vehicle's scripts raised this frame.
 pub fn fire_player_triggers(
+    camera: Option<Res<opts_bevy::CameraState>>,
     listener: Query<&GlobalTransform, With<MainCamera>>,
     mut vehicles: Query<(&mut VehicleScripts, &Children, &GlobalTransform)>,
     voices: Query<&PlayerVoice>,
@@ -307,7 +348,8 @@ pub fn fire_player_triggers(
             }
             s.take_raised()
         };
-        let inside = listener.is_some_and(|l| listener_inside(vehicle_tf, l));
+        let inside = listener
+            .is_some_and(|l| listener_in_cabin(camera.as_ref().map(|c| c.mode), vehicle_tf, l));
         for name in raised {
             for child in children.iter() {
                 let Ok(voice) = voices.get(child) else {
