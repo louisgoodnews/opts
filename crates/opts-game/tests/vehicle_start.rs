@@ -24,6 +24,7 @@ fn load(rel: &str) -> Option<ScriptEngine> {
             &install,
         ))),
         texture_base_dir: Some(bus_dir.join("Texture")),
+        ..Default::default()
     };
     engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
         ctx,

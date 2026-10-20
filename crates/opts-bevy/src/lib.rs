@@ -20,6 +20,7 @@ pub mod action_keys;
 pub mod ai_variables;
 pub mod articulation;
 pub mod audio;
+pub mod bus_stops;
 pub mod camera;
 pub mod capture;
 pub mod control;
@@ -170,8 +171,8 @@ pub use vehicle_lights::{
     LightMapBinding, LightSwitch, ScriptLight, VehicleLightPlugin,
 };
 pub use vehicle_script::{
-    script_drive_system, script_startup_system, vehicle_script_system, ScriptDriveEnabled,
-    ScriptRadius, ScriptStartup, VehicleScriptPlugin, VehicleScripts,
+    script_drive_system, script_startup_system, vehicle_script_system, PassengerFeed,
+    ScriptDriveEnabled, ScriptRadius, ScriptStartup, VehicleScriptPlugin, VehicleScripts,
 };
 pub use vehicle_setup::{StartLights, VehicleSetup};
 pub use vehicle_sim::{

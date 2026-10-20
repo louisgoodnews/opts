@@ -40,6 +40,7 @@ pub mod menu;
 pub mod new_game_screen;
 pub mod omsi_root;
 pub mod omsi_setup;
+pub mod passengers;
 pub mod pause;
 pub mod player_sound;
 pub mod report_context;
@@ -129,6 +130,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(look::LookPlugin)
             .add_plugins(ui_typography::UiTypographyPlugin)
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
+            .add_plugins(passengers::PassengersPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(scenery_sound::SceneryAudioPlugin)
             .add_plugins(vehicle_sound::AiAudioPlugin)

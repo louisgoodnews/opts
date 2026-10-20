@@ -2,6 +2,7 @@
 
 pub mod ai_profile;
 pub mod bus;
+pub mod cabin;
 pub mod error;
 pub mod hof;
 pub mod model;

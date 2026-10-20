@@ -71,6 +71,9 @@ pub(super) fn apply(
         "carpark_p" => {
             obj.carpark_p = true;
         }
+        "busstop" => {
+            obj.bus_stop = true;
+        }
         "model" => {
             if let Some(path) = block.parameters.first() {
                 obj.model_cfg = Some(path.clone());

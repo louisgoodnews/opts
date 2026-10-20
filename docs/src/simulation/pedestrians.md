@@ -37,7 +37,7 @@ Unit tests: lane geometry (right of travel, arc length, object rotation), networ
 | Topic | Note |
 | :--- | :--- |
 | Crossings and traffic lights | Pedestrian paths of a junction are walkable, but no signal phases are consulted (`[use_traffic_light]`) and AI traffic does not yield. Needs the AI-traffic session's signal model. |
-| Bus stops and boarding | Waiting at stops, boarding/alighting at doors, ticket purchase (`.otp`, `[age]`, `[voice]`) — the passenger system (roadmap "Passenger & Routing"). |
+| Bus stops and boarding | First slice done: see [Passengers](passengers.md) (stops, boarding at the scripts' doors, tickets, places, alighting). Open there: the callbacks for seat and link counts, the cash desk, trams and articulated buses, voices. |
 | Collision avoidance | Walkers pass through each other; `width` of the lane is read but unused. |
 | Density schedule | Apply `[trafficdensity_passenger]`; time-of-day, holidays. |
 | Idle behaviour | Standing groups, benches, phone — OMSI's scenery uses static `people_standing*.x` objects. |

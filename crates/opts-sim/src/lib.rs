@@ -11,6 +11,7 @@
 #![warn(missing_docs)]
 
 pub mod collision;
+pub mod passengers;
 pub mod pedestrian;
 pub mod rail;
 pub mod script;

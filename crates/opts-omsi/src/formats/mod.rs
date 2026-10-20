@@ -18,6 +18,7 @@ pub mod org;
 pub mod scenery;
 pub mod sound;
 pub mod text;
+pub mod ticketpack;
 pub mod timetable;
 pub mod trains;
 pub mod varlist;
