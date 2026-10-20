@@ -382,6 +382,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Per-bus setvar lists derived from `.cti`, varnamelists and the Add-on PDFs (facts only, ADR-0002), editor and apply (R-16).
 - [x] **⚙️ Vehicle Dynamics** — [M-0073](phase-10/M-0073.md)
   - [ ] World physics plus per-vehicle dynamics specs from vehicle data: mass, axle loads, per-wheel suspension, brake system; validated by measurable differences between vehicles (R-11).
+- [ ] **🚌 BRT C2 Full Fix** — [M-0138](phase-10/M-0138.md) — requested 2026-10-20
+  - [ ] Complete part census of `C2_2T.bus`, every part built, bound and drawn as authored or registered as a content defect; regression gate; the project lead's look.
 - [ ] **🏙️ Content Fidelity Pass** — [M-0090](phase-10/M-0090.md)
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
 
