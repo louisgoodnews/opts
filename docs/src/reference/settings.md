@@ -73,6 +73,27 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.ticket` | Hand over ticket | input binding | `T` | at once | available | Fahrschein ausgeben |
 | `controls.vehicle.ticket_change` | Ticket with change | input binding | `Ctrl+T` | at once | available | Fahrschein mit Rückgeld |
 | `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
+| `controls.drive.parking_brake` | Parking brake | input binding | `Period` | at once | available | Applies or releases the parking brake. |
+| `controls.map.minimap_toggle` | Mini map on or off | input binding | `F7` | at once | available | Shows or hides the mini map. |
+| `controls.map.minimap_rotate` | Mini map: north up or heading up | input binding | `Shift+F7` | at once | available | Switches the mini map between north up and heading up. |
+| `controls.map.minimap_speed_zoom` | Mini map: speed zoom | input binding | `Ctrl+F7` | at once | available | Switches the zoom that follows the speed on or off. |
+| `controls.map.minimap_zoom_in` | Mini map: zoom in | input binding | `Equal` | at once | available | One zoom step closer (the numpad + always zooms in). |
+| `controls.map.minimap_zoom_out` | Mini map: zoom out | input binding | `Minus` | at once | available | One zoom step further away (the numpad - always zooms out). |
+| `controls.map.full_map` | Full-size map | input binding | `F6` | at once | available | Opens and closes the full-size map. |
+| `controls.camera.door_camera` | Door camera: next door | input binding | `F4` | at once | available | Cycles the door camera through the doors. |
+| `controls.ui.help` | Help | input binding | `F1` | at once | available | Opens the help. |
+| `controls.ui.theme` | Switch light and dark theme | input binding | `F2` | at once | available | Switches between the dark and the light theme. |
+| `controls.ui.quick_save` | Quick save | input binding | `F5` | at once | available | Saves the quick slot. |
+| `controls.ui.quick_load` | Quick load | input binding | `F9` | at once | available | Loads the quick slot. |
+| `controls.ui.switch_vehicle` | Next vehicle | input binding | `F8` | at once | available | Switches to the next vehicle of the session. |
+| `controls.ui.switch_vehicle_prev` | Previous vehicle | input binding | `Shift+F8` | at once | available | Switches to the previous vehicle of the session. |
+| `controls.ui.developer_panel` | Developer panel | input binding | `F10` | at once | available | Shows or hides the developer panel. |
+| `controls.reset.all` | Reset: all key bindings | action (no stored value) | - | at once | available | Puts all key bindings back to their defaults. |
+| `controls.reset.vehicle` | Reset: vehicle keys | action (no stored value) | - | at once | available | Puts vehicle keys back to their defaults. |
+| `controls.reset.drive` | Reset: driving keys | action (no stored value) | - | at once | available | Puts driving keys back to their defaults. |
+| `controls.reset.camera` | Reset: camera keys | action (no stored value) | - | at once | available | Puts camera keys back to their defaults. |
+| `controls.reset.map` | Reset: map keys | action (no stored value) | - | at once | available | Puts map keys back to their defaults. |
+| `controls.reset.ui` | Reset: interface keys | action (no stored value) | - | at once | available | Puts interface keys back to their defaults. |
 
 ## Interface
 

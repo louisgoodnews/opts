@@ -135,6 +135,48 @@ fn f1_opens_the_help_page_from_the_shell() {
 }
 
 #[test]
+fn a_rebound_help_key_opens_the_help_and_the_old_key_does_not() {
+    let mut app = app();
+    app.world_mut()
+        .resource_mut::<NextState<AppState>>()
+        .set(AppState::MainMenu);
+    for _ in 0..3 {
+        app.update();
+    }
+    let mut keys = opts_bevy::ActionKeys::default();
+    keys.set("help", opts_bevy::KeyChord::parse("H").unwrap());
+    app.insert_resource(keys);
+    press(&mut app, KeyCode::F1, Key::F1);
+    assert_eq!(state(&app), AppState::MainMenu, "F1 is free now");
+    press(&mut app, KeyCode::KeyH, Key::Character("h".into()));
+    assert_eq!(state(&app), AppState::Help);
+}
+
+#[test]
+fn the_controls_table_shows_the_current_keys() {
+    let mut app = app();
+    let mut keys = opts_bevy::ActionKeys::default();
+    keys.set("help", opts_bevy::KeyChord::parse("Ctrl+H").unwrap());
+    app.insert_resource(keys);
+    enter_help(&mut app);
+    for _ in 0..3 {
+        app.update();
+    }
+    let shown: Vec<String> = app
+        .world_mut()
+        .query_filtered::<&Text, With<super::controls::ActionChip>>()
+        .iter(app.world())
+        .map(|t| t.0.clone())
+        .collect();
+    assert!(shown.iter().any(|t| t == "Ctrl+H"), "{shown:?}");
+    assert!(!shown.iter().any(|t| t == "F1"), "{shown:?}");
+    assert!(
+        shown.iter().any(|t| t == "F6"),
+        "the others keep theirs: {shown:?}"
+    );
+}
+
+#[test]
 fn f1_in_a_drive_opens_the_overlay_over_a_paused_scene_and_closing_returns_to_the_pause_menu() {
     let mut app = app();
     app.world_mut()

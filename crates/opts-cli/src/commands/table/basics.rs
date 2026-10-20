@@ -218,6 +218,15 @@ pub(super) const PART: &[CommandSpec] = &[
     )
     .doc("Like `settings.set` with the default value, including `confirm`."),
     c(
+        "settings.reset_keys",
+        "settings",
+        "Restore the default of every key binding, or of one group",
+        "group:s@0?",
+    )
+    .since("1.23")
+    .result("`{changed, bindings:[{key, previous, value}]}`")
+    .doc("`group` is `all` (default), `vehicle`, `drive`, `camera`, `map` or `ui`. Only bindings that differ from their default are written; the defaults of all actions are unique, so the order does not matter. The `controls.reset.*` rows of the Controls page do the same."),
+    c(
         "settings.confirm",
         "settings",
         "Keep the risky setting change that waits and save it",

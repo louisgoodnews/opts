@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.22.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.23.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -668,6 +668,7 @@ Stop and remove the sounds `audio.tone` and `audio.play` made.
 | `settings.get` | `key` (string) | 1.0 | Value, default and options of one setting |
 | [`settings.set`](#settingsset) | `key` (string)<br>`value` (string)<br>`confirm?` (boolean) | 1.0 | Change a setting (validated like the settings page, saved) |
 | [`settings.reset`](#settingsreset) | `key` (string)<br>`confirm?` (boolean) | 1.0 | Restore the default of a setting |
+| [`settings.reset_keys`](#settingsreset_keys) | `group?` (string) | 1.23 | Restore the default of every key binding, or of one group |
 | [`settings.confirm`](#settingsconfirm) | - | 1.7 | Keep the risky setting change that waits and save it |
 | [`settings.revert`](#settingsrevert) | - | 1.7 | Undo the risky setting change that waits |
 | [`settings.set_many`](#settingsset_many) | `values` (json) | 1.7 | Change several settings at once, all or none |
@@ -689,6 +690,14 @@ Applies and saves at once. A setting that the page protects with a 15 s prompt (
 Restore the default of a setting.
 
 Like `settings.set` with the default value, including `confirm`.
+
+### `settings.reset_keys`
+
+Restore the default of every key binding, or of one group.
+
+**Result:** `{changed, bindings:[{key, previous, value}]}`
+
+`group` is `all` (default), `vehicle`, `drive`, `camera`, `map` or `ui`. Only bindings that differ from their default are written; the defaults of all actions are unique, so the order does not matter. The `controls.reset.*` rows of the Controls page do the same.
 
 ### `settings.confirm`
 

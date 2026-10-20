@@ -45,9 +45,10 @@ pub fn spawn_debug_overlay(commands: &mut Commands) {
 /// the choice is remembered).
 pub fn toggle_developer_panel(
     keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
     mut api: crate::settings_registry::SettingsApi,
 ) {
-    if !keyboard.just_pressed(KeyCode::F10) {
+    if !opts_bevy::action_keys_of(&action_keys).just_pressed(&keyboard, "developer_panel") {
         return;
     }
     let on = api.text("advanced.developer_panel") == "true";

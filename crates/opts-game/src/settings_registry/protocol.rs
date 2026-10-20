@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 
 use super::{
     apply_change_with, protocol_batch, protocol_confirm, Apply, Available, ChangeSource,
-    SettingDescriptor, SettingError, SettingKind, SettingsRegistry,
+    SettingChanged, SettingDescriptor, SettingError, SettingKind, SettingsRegistry,
 };
 use crate::settings::GameSettings;
 
@@ -24,6 +24,7 @@ pub fn register(app: &mut App) {
     registry.register("settings.get", get);
     registry.register("settings.set", set);
     registry.register("settings.reset", reset);
+    registry.register("settings.reset_keys", reset_keys);
     registry.register("settings.confirm", protocol_confirm::confirm);
     registry.register("settings.revert", protocol_confirm::revert);
     registry.register("settings.set_many", protocol_batch::set_many);
@@ -218,6 +219,47 @@ pub(crate) fn reset(world: &mut World, params: &Value) -> Outcome {
         }
         Err(e) => Outcome::err(e),
     }
+}
+
+/// `settings.reset_keys {group?}`: every key binding (or those of `group`: `vehicle`, `drive`,
+/// `camera`, `map`, `ui`) back to its default, saved once.
+pub(crate) fn reset_keys(world: &mut World, params: &Value) -> Outcome {
+    let group = match opt_str(params, "group") {
+        Ok(g) => g
+            .filter(|g| !g.eq_ignore_ascii_case("all"))
+            .map(str::to_lowercase),
+        Err(e) => return Outcome::err(e),
+    };
+    if let Some(g) = &group {
+        if !crate::action_settings::GROUPS.contains(&g.as_str()) {
+            return Outcome::err(RpcError::invalid_params(format!(
+                "unknown group `{g}` (all, {})",
+                crate::action_settings::GROUPS.join(", ")
+            )));
+        }
+    }
+    let registry = world.resource::<SettingsRegistry>().clone();
+    let changed = crate::action_settings::reset_bindings(
+        &registry,
+        &mut world.resource_mut::<GameSettings>(),
+        group.as_deref(),
+    );
+    for (key, old, new) in &changed {
+        world.write_message(SettingChanged {
+            key: key.clone(),
+            old: old.clone(),
+            new: new.clone(),
+            source: ChangeSource::Protocol,
+        });
+    }
+    if !changed.is_empty() {
+        world.resource_mut::<GameSettings>().save_in_background();
+    }
+    let list: Vec<Value> = changed
+        .iter()
+        .map(|(k, old, new)| json!({ "key": k, "previous": old, "value": new }))
+        .collect();
+    Outcome::ok(json!({ "changed": list.len(), "bindings": list }))
 }
 
 #[cfg(test)]

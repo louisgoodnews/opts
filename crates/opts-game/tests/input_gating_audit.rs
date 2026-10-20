@@ -35,6 +35,9 @@ fn reads_input(src: &str) -> bool {
 
 /// Files whose systems read input and were reviewed. Gated ones are in `must_reference_gate`.
 const REVIEWED: &[&str] = &[
+    // The registry of key actions only answers `just_pressed(action)`; the systems that ask are
+    // gated where they are registered.
+    "opts-bevy/src/action_keys.rs",
     "opts-bevy/src/camera/input.rs",
     "opts-bevy/src/camera/mode/ego.rs",
     "opts-bevy/src/camera/mode/free_roam.rs",

@@ -296,7 +296,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **📖 User Documentation & Settings UI** — [M-0035](phase-7/README.md)
   - [ ] Author end-user installation, controls, and troubleshooting manuals (`docs/src/user/`).
   - [x] In-game settings dialog for graphics preferences: delivered by the settings page of M-0063 (2026-10-12); audio volume appears with M-0027.
-  - [ ] Input rebinding (M-0035): the *Controls* page shows it as "Feature not available yet!".
+  - [ ] Input rebinding (M-0035): the *Controls* page shows it as "Feature not available yet!"; the keyboard part moved to [M-0142](phase-7/M-0142.md).
+- [~] **⌨️ Rebind Every Key** — [M-0142](phase-7/M-0142.md) — first slice 2026-10-20 (one registry of built-in actions, hints follow the binding, reset)
 - [ ] **🏁 Milestone Release** — [M-0036](phase-7/README.md)
   - [ ] Publish `v0.1.0-alpha` public release milestone on GitHub Releases (M-0036).
 

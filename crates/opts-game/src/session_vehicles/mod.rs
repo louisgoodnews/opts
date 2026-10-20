@@ -112,12 +112,19 @@ pub fn despawn_choices(
 /// F8 switches to the next session vehicle, Shift+F8 to the previous one.
 ///
 /// Registered with the other gated input systems; the row of the Help table names this file.
-pub fn quick_switch(keyboard: Res<ButtonInput<KeyCode>>, mut commands: Commands) {
-    if !keyboard.just_pressed(QUICK_SWITCH_KEY) {
+pub fn quick_switch(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
+    mut commands: Commands,
+) {
+    let keys = opts_bevy::action_keys_of(&action_keys);
+    let step = if keys.just_pressed(&keyboard, "switch_vehicle") {
+        1
+    } else if keys.just_pressed(&keyboard, "switch_vehicle_prev") {
+        -1
+    } else {
         return;
-    }
-    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    let step = if shift { -1 } else { 1 };
+    };
     commands.queue(move |world: &mut World| {
         if let Err(e) = ops::switch_step(world, step) {
             tracing::debug!("quick switch: {e}");

@@ -201,6 +201,7 @@ fn active_pose(
 #[allow(clippy::too_many_arguments)]
 pub fn toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
     load: Option<Res<SimulationLoadState>>,
     report: Option<Res<ModalActive>>,
     menu: Option<Res<MenuModalActive>>,
@@ -215,7 +216,7 @@ pub fn toggle(
     mut state: ResMut<FullMapState>,
 ) {
     let request = state.request.take();
-    let toggle_key = keyboard.just_pressed(KeyCode::F6);
+    let toggle_key = opts_bevy::action_keys_of(&action_keys).just_pressed(&keyboard, "full_map");
     if state.open {
         if toggle_key
             || keyboard.just_pressed(KeyCode::Escape)
