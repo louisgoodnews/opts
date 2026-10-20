@@ -100,7 +100,7 @@ pub(super) fn graphics() -> Vec<D> {
             "set-view-distance-desc",
         )
         .keywords(&["draw distance", "lod"])
-        .not_yet(&SETTINGS_VIEW_DISTANCE),
+        .since("0.4"),
         D::new(
             "graphics.water",
             K::Bool,

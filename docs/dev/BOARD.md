@@ -170,7 +170,7 @@ _Work that cannot proceed until a dependency is resolved._
 _Work that is planned but not yet ready — dependencies unmet, scope unclear, or lower priority than Ready items._
 
 #### Open milestones without work items yet (added by the roadmap audit 2026-10-18, M-0074)
-- [ ] 🟠 **Dynamic LOD, Frustum Culling & Occlusion Systems** (M-0029) — ⏳ Planned; see [M-0029](../src/roadmap/phase-5/M-0029.md).
+- [ ] 🟠 **Dynamic LOD, Frustum Culling & Occlusion Systems** (M-0029) — 🟡 **View distance live 2026-10-20** on `agent/view-distance`: `graphics.view_distance` hides scenery objects beyond 150 m × step (top step: all); shadow culling and instancing open; see [M-0029](../src/roadmap/phase-5/M-0029.md).
 - [ ] 🟡 **DLSS Upscaling (optional)** (M-0048) — 📝 Planned; see [M-0048](../src/roadmap/phase-5/M-0048.md).
 - [ ] 🟠 **Editor Mode** (M-0051) — 📝 Specified; implementation not started; see [M-0051](../src/roadmap/phase-6/M-0051.md).
 - [ ] 🟠 **`opts-script_editor` — specification model and script generator** (M-0055) — 📝 Specified; implementation not started; see [M-0055](../src/roadmap/phase-6/M-0055.md).

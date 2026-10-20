@@ -365,6 +365,7 @@ impl Plugin for SettingsRegistryPlugin {
                     protocol_confirm::tick_protocol_revert
                         .run_if(resource_exists::<protocol_confirm::ProtocolRevert>),
                     live::sync_hdr,
+                    live::sync_view_distance,
                     live::sync_weather_effects,
                 ),
             )

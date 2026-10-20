@@ -137,6 +137,36 @@ pub fn sync_tile_loading(
     }
 }
 
+/// Metres of draw distance per step of `graphics.view_distance`.
+pub const VIEW_DISTANCE_STEP_M: f32 = 150.0;
+/// The step that means *unlimited* (the largest one).
+pub const VIEW_DISTANCE_UNLIMITED: i64 = 8;
+
+/// The scenery draw distance for a `graphics.view_distance` value: 150 m per step (the default 4 is
+/// 600 m, beyond the default 3 x 3 tiles); the largest step draws everything that is loaded. A
+/// value that is not a number counts as the default, one outside 1 to 8 is clamped.
+#[must_use]
+pub fn draw_distance_of(settings: &GameSettings) -> Option<f32> {
+    let step = settings
+        .raw("graphics.view_distance")
+        .and_then(|v| v.parse::<i64>().ok())
+        .unwrap_or(4);
+    let step = step.clamp(1, VIEW_DISTANCE_UNLIMITED);
+    (step < VIEW_DISTANCE_UNLIMITED).then_some(step as f32 * VIEW_DISTANCE_STEP_M)
+}
+
+/// `graphics.view_distance`: how far scenery objects are drawn (M-0029).
+pub fn sync_view_distance(
+    settings: Res<GameSettings>,
+    distance: Option<ResMut<opts_bevy::SceneryDrawDistance>>,
+) {
+    let Some(mut distance) = distance else { return };
+    let want = draw_distance_of(&settings);
+    if distance.metres != want {
+        distance.metres = want;
+    }
+}
+
 /// `graphics.hdr`: the main camera carries [`bevy::camera::Hdr`] while the setting is on (the
 /// default). Off keeps the 8-bit main texture (saves about 50 MB at 1080p with 4x MSAA).
 pub fn sync_hdr(
@@ -203,5 +233,54 @@ pub fn apply_saved_trace(
     }
     if let Some(mut o) = overlay {
         o.enabled = settings.raw("advanced.trace_overlay").as_deref() == Some("true");
+    }
+}
+
+#[cfg(test)]
+mod view_distance_tests {
+    use super::*;
+
+    fn settings(value: Option<&str>) -> GameSettings {
+        let mut s = GameSettings::default();
+        if let Some(v) = value {
+            s.set_raw("graphics.view_distance", v);
+        }
+        s
+    }
+
+    #[test]
+    fn steps_are_150_metres_and_the_largest_is_unlimited() {
+        assert_eq!(draw_distance_of(&settings(None)), Some(600.0));
+        assert_eq!(draw_distance_of(&settings(Some("1"))), Some(150.0));
+        assert_eq!(draw_distance_of(&settings(Some("7"))), Some(1050.0));
+        assert_eq!(draw_distance_of(&settings(Some("8"))), None);
+        assert_eq!(draw_distance_of(&settings(Some("0"))), Some(150.0));
+        assert_eq!(draw_distance_of(&settings(Some("99"))), None);
+        assert_eq!(draw_distance_of(&settings(Some("far"))), Some(600.0));
+    }
+
+    #[test]
+    fn the_setting_drives_the_scenery_draw_distance() {
+        let mut app = App::new();
+        app.insert_resource(settings(Some("2")))
+            .init_resource::<opts_bevy::SceneryDrawDistance>()
+            .add_systems(Update, sync_view_distance);
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<opts_bevy::SceneryDrawDistance>()
+                .metres,
+            Some(300.0)
+        );
+        app.world_mut()
+            .resource_mut::<GameSettings>()
+            .set_raw("graphics.view_distance", "8");
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<opts_bevy::SceneryDrawDistance>()
+                .metres,
+            None
+        );
     }
 }

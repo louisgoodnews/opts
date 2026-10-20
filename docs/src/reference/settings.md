@@ -15,7 +15,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `look` | Look | `vivid`, `natural`, `bevy` | `vivid` | at once | available | Colour and contrast of the 3D world. |
 | `graphics.hdr` | HDR rendering | on / off | `true` | at once | available | Renders the 3D view in high dynamic range and tones it down at the end, which keeps bright lights from clipping. Turn it off to save about 50 MB of video memory. |
 | `graphics.default_fov` | Driver's view: field of view | whole number 0 to 120 | `0` | at once | available | The horizontal field of view of the driver's views, in degrees (30 to 120). 0 keeps each vehicle's own. A viewpoint you saved with its own field of view still wins. |
-| `graphics.view_distance` | View distance | whole number 1 to 8 | `4` | at once | not available yet (M-0029) | How far scenery and tiles are drawn. |
+| `graphics.view_distance` | View distance | whole number 1 to 8 | `4` | at once | available | How far scenery objects are drawn, in steps of 150 m; the top step draws everything that is loaded. Tiles follow the tile radius. |
 | `graphics.water` | Water | on / off | `true` | after restart | available | Draws rivers, lakes and the sea of the map. Turn it off to see the ground below. |
 | `graphics.weather_fog` | Weather: fog | on / off | `true` | at once | available | Draws the fog of the weather (distance haze and a fogged sky). Off shows the weather without fog. |
 | `graphics.weather_clouds` | Weather: clouds | on / off | `true` | at once | available | Draws the cloud layer of the weather. Off keeps the sky and the dimmer light but hides the clouds. |

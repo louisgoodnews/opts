@@ -73,14 +73,6 @@ pub const SETTINGS_AUDIO: NotYetPlace = NotYetPlace {
     missing: "There is no audio engine; the volume settings appear with it.",
 };
 
-/// Settings, Graphics: view distance.
-pub const SETTINGS_VIEW_DISTANCE: NotYetPlace = NotYetPlace {
-    id: "settings.view-distance",
-    place: "Settings, Graphics, View distance",
-    milestone: "M-0029",
-    missing: "Tiles and objects are loaded at a fixed distance; a user setting needs the LOD and culling system.",
-};
-
 /// Settings, Gameplay: time scale of the session clock.
 pub const SETTINGS_TIME_SCALE: NotYetPlace = NotYetPlace {
     id: "settings.time-scale",
@@ -104,7 +96,6 @@ pub const PLACES: &[&NotYetPlace] = &[
     &HELP_GUIDES,
     &LIVE_WEATHER,
     &SETTINGS_AUDIO,
-    &SETTINGS_VIEW_DISTANCE,
     &SETTINGS_TIME_SCALE,
     &SETTINGS_REBIND,
 ];

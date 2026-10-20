@@ -128,8 +128,9 @@ pub use scenery::{
 };
 pub use scenery_runtime::{
     advance_scenery, bind_alpha_scale, build_scenery_object, SceneryAlphaScale, SceneryClock,
-    SceneryLodMode, SceneryMeshRule, SceneryObjectRuntime, SceneryRuntimePlugin,
-    SceneryRuntimeSettings, SceneryRuntimeStats, SceneryScripts, SceneryVariableOverrides,
+    SceneryDrawDistance, SceneryDrawRoot, SceneryLodMode, SceneryMeshRule, SceneryObjectRuntime,
+    SceneryRuntimePlugin, SceneryRuntimeSettings, SceneryRuntimeStats, SceneryScripts,
+    SceneryVariableOverrides,
 };
 pub use terrain::{
     build_terrain_mesh, carve_terrain, spline_ground_triangles, terrain_height, terrain_material,

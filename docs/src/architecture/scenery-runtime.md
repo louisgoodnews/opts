@@ -31,6 +31,10 @@ Meshes without rules hang their parts directly under their LOD group (or the roo
 
 `SceneryObjectRuntime` on the root lists the mesh-rule, light and light-map entities, so the per-object update touches only that object's own entities (no global scan over all animated meshes).
 
+## Draw distance (M-0029)
+
+`SceneryDrawDistance` (resource, set from `graphics.view_distance` by `sync_view_distance`: 150 m per step, step 8 or `None` = unlimited) is applied by `scenery_draw_distance_system` every 0.25 s and at once when it changes: an object root (every placed object carries `SceneryDrawRoot`, set in `finish_object`) whose bounding sphere (`SceneryLod` radius, else 50 m) lies wholly beyond the limit gets `Visibility::Hidden` and the `DistanceCulled` marker; it is shown again 20 m inside the limit. Only roots carrying the marker are ever restored, so an object hidden by another rule stays hidden. Terrain tiles are not affected (tile radius), nor are splines or the sky.
+
 ## Level of detail (`[LOD]`)
 
 **Parsing** (unchanged): `[LOD] <t>` starts a group; meshes after it carry `lod_threshold = Some(t)` until the next `[LOD]`. Meshes before the first `[LOD]` have `None`.

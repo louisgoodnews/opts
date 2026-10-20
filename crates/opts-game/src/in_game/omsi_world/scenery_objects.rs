@@ -234,6 +234,9 @@ impl WorldLoadJob {
         template: Option<Arc<ScriptTemplate>>,
     ) {
         self.scenery.dev_look.offer(&obj.sco_file, root);
+        commands
+            .entity(root)
+            .insert((opts_bevy::SceneryDrawRoot, Visibility::Inherited));
         // `[nomaplighting]`: recorded on the root (version 1 has no behaviour yet).
         if sco.no_map_lighting {
             commands.entity(root).insert(opts_bevy::NoMapLighting);
