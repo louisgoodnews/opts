@@ -158,6 +158,7 @@
   - [Content Issue Registry](quality/content-issue-registry.md)
   - [Mesh Issue Registry](quality/mesh-issue-registry.md)
   - [Field Report 2026-10-13](quality/field-report-2026-10-13.md)
+  - [Vehicle Start Procedures](quality/vehicle-start-procedures.md)
 - [Script VM](architecture/script-vm.md)
 - [Vehicle Scripts: How OMSI Does It and the Route](architecture/vehicle-scripts-route.md)
 - [Script Generator and Visual Script Editor](architecture/script-generator.md)

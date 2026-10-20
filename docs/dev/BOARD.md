@@ -114,6 +114,8 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 ### ⏭️ Ready
 
+- [ ] 🔴 **Vehicle controls and systems: the driver's workplace works** (M-0141, code + spec) — requested by the project lead 2026-10-20 (no milestone covered it): electrics, engine start procedure, lights, doors, heating, dashboard controls; **first slice 2026-10-20**: drag trigger fired once per press (fixed), `vehicle.hotspots`/`vehicle.click`, Citybus 530 starts from cold through its ignition key (procedure page); open: other reference vehicles, lights, doors, heating, dashboard, hover feedback, start tests. [M-0141](../src/roadmap/phase-4/M-0141.md).
+
 - [x] 🟠 **Sound engine on Bevy** (M-0027, code + spec) — **Done 2026-10-20** on `agent/sound-engine` (project lead request): `opts_bevy::audio` (clips, emitters, voice budget, distance curve, listener, buses), WAV decoder, `audio.*` protocol 1.19.0, Audio settings live; checked live (tone in the system mixer, 10 m source heard, 500 m source silent). [audio-system](../src/architecture/audio-system.md).
 - [~] 🟠 **Sounds of scenery objects and splines** (M-0139) — **first slice 2026-10-20**: `[sound]` parser, census (353 objects, no spline sounds), continuous and triggered sounds with worker-thread decoding, live-checked on Lemmental_Neuenbreid; open: `[conditionSingle]`, eviction, `[viewpoint]`.
 - [~] 🟠 **Sounds of AI traffic** (M-0140) — **first slice 2026-10-20**: continuous engine, rolling and wheel sounds from `[sound_ai]`/`AI_Cars` configurations with variables from the traffic model; open: doors, horns, brakes, trailers, the real engine-speed model. Then the player's vehicle (M-0102).
