@@ -139,10 +139,19 @@ pub fn sync_player_head(
 
 /// Hides the player's own character while the camera sits at the driver's seat (cockpit and ego
 /// views), so the eye never looks through the head or the torso; shows it in every other view.
+///
+/// The character is the player's when it belongs to the player's vehicle (it is a child of its
+/// root): that holds from the frame it exists, whereas [`PlayerHead`] is only set a few frames
+/// later (eye alignment, [`sync_player_head`]), which showed the back of the head in the first
+/// seconds of a drive in the driver's view.
 pub fn hide_driver_in_seat_views(
     state: bevy::prelude::Res<crate::camera::CameraState>,
-    humans: bevy::prelude::Query<(&Human, &mut bevy::prelude::Visibility)>,
-    players: bevy::prelude::Query<(), bevy::prelude::With<PlayerHead>>,
+    humans: bevy::prelude::Query<
+        (Entity, &mut bevy::prelude::Visibility),
+        bevy::prelude::With<Human>,
+    >,
+    parents: bevy::prelude::Query<&bevy::prelude::ChildOf>,
+    players: bevy::prelude::Query<(), bevy::prelude::With<crate::vehicle_sim::PlayerVehicle>>,
 ) {
     let seat = matches!(
         state.mode,
@@ -150,7 +159,7 @@ pub fn hide_driver_in_seat_views(
     );
     let mut humans = humans;
     for (human, mut vis) in &mut humans {
-        if !players.contains(human.rig.head_anchor) {
+        if !players.contains(parents.root_ancestor(human)) {
             continue;
         }
         let want = if seat {
@@ -246,7 +255,11 @@ pub fn spawn_human(
     let pivots = rest_pivots(profile);
     let rotations = pose_rotations(profile, pose);
     let root = commands
-        .spawn((Transform::default(), Name::new(name.to_string())))
+        .spawn((
+            Transform::default(),
+            bevy::prelude::Visibility::default(),
+            Name::new(name.to_string()),
+        ))
         .id();
 
     let mut joints: Vec<Entity> = Vec::with_capacity(13);

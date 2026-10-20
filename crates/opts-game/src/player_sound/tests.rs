@@ -57,6 +57,7 @@ fn rig(name: &str, cfg: &str, script: &str) -> Rig {
             crate::audio_content::poll_clip_loader,
             stream_player_voices,
             fire_player_triggers,
+            smooth_player_voices,
         )
             .chain(),
     );
@@ -76,6 +77,9 @@ fn rig(name: &str, cfg: &str, script: &str) -> Rig {
                 file: file.clone(),
                 playback,
                 was_active: false,
+                owner: None,
+                goal: None,
+                active_s: 0.0,
             },
             Transform::from_translation(omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2]))),
             ChildOf(root),
@@ -105,6 +109,11 @@ fn emitters(app: &mut App) -> Vec<SoundEmitter> {
         .iter(app.world())
         .cloned()
         .collect()
+}
+
+fn emitters_of(app: &App) -> Vec<SoundEmitter> {
+    let mut q = app.world().try_query::<&SoundEmitter>().expect("query");
+    q.iter(app.world()).cloned().collect()
 }
 
 fn set(rig: &mut Rig, name: &str, v: f32) {
@@ -144,7 +153,11 @@ fn an_engine_loop_follows_its_variables_and_its_condition() {
         e[0].speed
     );
     set(&mut r, "engine_n", 1200.0);
-    run(&mut r.app, |_| false);
+    run(&mut r.app, |a| {
+        emitters_of(a)
+            .first()
+            .is_some_and(|e| (e.speed - 2.0).abs() < 0.05 && (e.gain - 1.0).abs() < 0.02)
+    });
     let e = emitters(&mut r.app);
     assert!(
         (e[0].gain - 1.0).abs() < 0.02 && (e[0].speed - 2.0).abs() < 0.05,
@@ -154,7 +167,9 @@ fn an_engine_loop_follows_its_variables_and_its_condition() {
     );
     // The condition fails (engine off): silent but kept.
     set(&mut r, "engine_on", 0.0);
-    run(&mut r.app, |_| false);
+    run(&mut r.app, |a| {
+        emitters_of(a).first().is_some_and(|e| e.gain == 0.0)
+    });
     assert_eq!(emitters(&mut r.app)[0].gain, 0.0);
     assert!(
         r.app
@@ -248,9 +263,9 @@ fn a_noloop_voice_plays_once_when_its_condition_turns_true() {
 
 #[test]
 fn the_viewpoint_keeps_exterior_sounds_out_of_the_cabin() {
-    // Two loops: rain for the outside only, a hum for everywhere. The camera at (0, 1.5, 0) is
-    // inside the box of the vehicle at the origin, so only the hum may start.
-    let cfg = "[sound]\nrain.wav\n1\n[3d]\n0\n0\n1\n10\n[viewpoint]\n2\n\
+    // Two loops: rain for the outside only (`[viewpoint]` 5), a hum for everywhere. The camera at
+    // (0, 1.5, 0) is inside the box of the vehicle at the origin, so only the hum may start.
+    let cfg = "[sound]\nrain.wav\n1\n[3d]\n0\n0\n1\n10\n[viewpoint]\n5\n\
 [sound]\nhum.wav\n1\n[3d]\n0\n0\n1\n10\n";
     let mut r = rig("view", cfg, "{frame}\n{end}");
     assert!(run(&mut r.app, |a| a
@@ -274,4 +289,34 @@ fn the_cabin_box_is_the_body_of_a_bus() {
     assert!(!listener_inside(&tf, Vec3::new(14.0, 1.5, 0.0)));
     assert!(!listener_inside(&tf, Vec3::new(10.0, 6.0, 0.0)));
     assert!(!listener_inside(&tf, Vec3::new(10.0, 1.5, 12.0)));
+}
+
+#[test]
+fn the_camera_mode_decides_the_room_of_a_bus() {
+    use opts_bevy::CameraMode::{Cockpit, External, FreeRoam, Passenger};
+    let tf = GlobalTransform::from(Transform::from_xyz(0.0, 0.0, 0.0));
+    // The external camera hangs a few metres behind the body: inside the body-sized box, but
+    // outside the cabin.
+    let behind = Vec3::new(0.0, 3.0, 7.0);
+    assert!(listener_inside(&tf, behind));
+    assert!(!listener_in_cabin(Some(External), &tf, behind));
+    // The driver's and the passengers' views are in the cabin wherever the preset puts them.
+    assert!(listener_in_cabin(Some(Cockpit), &tf, behind));
+    assert!(listener_in_cabin(
+        Some(Passenger),
+        &tf,
+        Vec3::new(40.0, 0.0, 0.0)
+    ));
+    // The free camera is where it is.
+    assert!(listener_in_cabin(
+        Some(FreeRoam),
+        &tf,
+        Vec3::new(0.0, 1.5, 0.0)
+    ));
+    assert!(!listener_in_cabin(
+        Some(FreeRoam),
+        &tf,
+        Vec3::new(30.0, 1.5, 0.0)
+    ));
+    assert!(listener_in_cabin(None, &tf, Vec3::new(0.0, 1.5, 0.0)));
 }

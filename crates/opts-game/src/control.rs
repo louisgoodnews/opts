@@ -244,16 +244,60 @@ fn load_map(world: &mut World, params: &Value) -> Outcome {
         }
         Err(e) => return Outcome::err(e),
     };
-    let entry = match opt_str(params, "entry") {
-        Ok(e) => e.map(str::to_string),
-        Err(e) => return Outcome::err(e),
+    // The choices of the drive: start point, weather, date, time, equipment options (like the
+    // command line's `--entry`, `--weather`, `--date`, `--time`, `--setvar`), and the vehicle with
+    // its repaint.
+    let options = match crate::start_options::StartOptions::from_json(params) {
+        Ok(o) => o,
+        Err(e) => return Outcome::err(RpcError::invalid_params(e)),
     };
+    let (vehicle, repaint) = match (opt_str(params, "vehicle"), opt_str(params, "repaint")) {
+        (Ok(v), Ok(r)) => (v.map(str::to_string), r.map(str::to_string)),
+        (Err(e), _) | (_, Err(e)) => return Outcome::err(e),
+    };
+    let vehicle_path = match vehicle {
+        None => None,
+        Some(v) => {
+            let given = PathBuf::from(&v);
+            let full = if given.is_absolute() {
+                given
+            } else {
+                // Relative to the installation's `Vehicles` folder.
+                match world.resource::<AppArgs>().0.omsi_path.clone() {
+                    Some(root) => root.join("Vehicles").join(given),
+                    None => given,
+                }
+            };
+            let checked = world.resource::<PathPolicy>().check_read(&full);
+            match checked {
+                Ok(p) if p.extension().is_some_and(|e| e.eq_ignore_ascii_case("bus")) => Some(p),
+                Ok(p) => {
+                    return Outcome::err(RpcError::invalid_params(format!(
+                        "{} is not a .bus file",
+                        p.display()
+                    )))
+                }
+                Err(e) => return Outcome::err(e),
+            }
+        }
+    };
+    let weather = world.get_resource::<opts_bevy::WeatherCatalogue>().cloned();
+    if let Some(mut setup) = world.get_resource_mut::<NewGameSetup>() {
+        if let Err(e) = options.apply(&mut setup, weather.as_ref()) {
+            return Outcome::err(RpcError::invalid_params(e));
+        }
+    }
     if let Err(e) = crate::control_loading::accept_problems_param(world, params) {
         return Outcome::err(e);
     }
-    world.resource_mut::<AppArgs>().0.map_path = Some(dir);
-    if let (Some(entry), Some(mut setup)) = (entry, world.get_resource_mut::<NewGameSetup>()) {
-        setup.selected_entry_point = entry;
+    let mut args = world.resource_mut::<AppArgs>();
+    args.0.map_path = Some(dir);
+    args.0.entry.clone_from(&options.entry);
+    if let Some(p) = vehicle_path {
+        args.0.vehicle_path = Some(p);
+    }
+    if let Some(r) = repaint {
+        args.0.livery = Some(r);
     }
     restart_session(world)
 }
@@ -472,87 +516,6 @@ fn render_look(world: &mut World, params: &Value) -> Outcome {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::look::{ActiveLook, Look};
-
-    fn answer(outcome: Outcome) -> Result<Value, RpcError> {
-        match outcome {
-            Outcome::Done(r) => r,
-            Outcome::Wait(_) => panic!("render.look answers immediately"),
-        }
-    }
-
-    #[test]
-    fn render_look_gets_sets_and_rejects() {
-        let mut world = World::new();
-        world.insert_resource(ActiveLook::default());
-        // get: Vivid is the default.
-        let got = answer(render_look(&mut world, &json!({}))).expect("get");
-        assert_eq!(got["look"], "vivid");
-        assert_eq!(got["available"], json!(["vivid", "natural", "bevy"]));
-        // set: takes effect on the resource.
-        let set = answer(render_look(&mut world, &json!({ "look": "bevy" }))).expect("set");
-        assert_eq!(
-            (set["look"].as_str(), set["previous"].as_str()),
-            (Some("bevy"), Some("vivid"))
-        );
-        assert_eq!(world.resource::<ActiveLook>().0, Look::BevyDefault);
-        // unknown names are invalid parameters and change nothing.
-        let err = answer(render_look(&mut world, &json!({ "look": "sepia" }))).expect_err("bad");
-        assert_eq!(err.code, opts_cli::protocol::code::INVALID_PARAMS);
-        assert_eq!(world.resource::<ActiveLook>().0, Look::BevyDefault);
-    }
-}
-
+mod restart_waiter_tests;
 #[cfg(test)]
-mod restart_waiter_tests {
-    use super::*;
-    use crate::in_game::load_report::{LoadOutcome, LoadReport};
-
-    fn world_in(state: AppState) -> World {
-        let mut w = World::new();
-        w.insert_resource(State::new(state));
-        w.insert_resource(NextState::<AppState>::default());
-        w.init_resource::<LoadReport>();
-        w.init_resource::<SimulationLoadState>();
-        w.init_resource::<WorldStats>();
-        w
-    }
-
-    /// Runs the waiter through the menu and into a new session, with `outcome` as the load result.
-    fn answer(outcome: LoadOutcome) -> Option<Result<Value, RpcError>> {
-        let mut w = world_in(AppState::InGame);
-        let mut waiter = restart_waiter(&mut w);
-        assert!(waiter(&mut w).is_none(), "still in the old session");
-        w.insert_resource(State::new(AppState::MainMenu));
-        assert!(
-            waiter(&mut w).is_none(),
-            "left the session, new one requested"
-        );
-        w.insert_resource(State::new(AppState::InGame));
-        w.resource_mut::<LoadReport>().outcome = outcome;
-        waiter(&mut w)
-    }
-
-    /// MI-0036: a failed load answers `FAILED` at once.
-    #[test]
-    fn a_failed_load_answers_with_an_error() {
-        let r = answer(LoadOutcome::Failed).expect("answers");
-        assert_eq!(r.expect_err("error").code, code::FAILED);
-    }
-
-    /// MI-0036: a load with problems answers while the loading screen waits for Continue.
-    #[test]
-    fn a_load_with_problems_does_not_wait_for_continue() {
-        let r = answer(LoadOutcome::ReadyWithProblems)
-            .expect("answers")
-            .expect("ok");
-        assert_eq!(r["waiting_for_continue"], json!(true));
-    }
-
-    #[test]
-    fn a_load_in_progress_keeps_waiting() {
-        assert!(answer(LoadOutcome::Loading).is_none());
-    }
-}
+mod tests;

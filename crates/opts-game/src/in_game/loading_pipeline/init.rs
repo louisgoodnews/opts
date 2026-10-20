@@ -7,7 +7,12 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
     if state.waiting_for_catalogue {
         return;
     }
-    let setup = env.setup.clone();
+    let mut setup = env.setup.clone();
+    // `--entry` and the protocol's `entry` name the start point of the map that is loaded; the
+    // wizard's list belongs to the catalogue's choice of map, which may be another one.
+    if let Some(entry) = env.args.as_ref().and_then(|a| a.0.entry.clone()) {
+        setup.selected_entry_point = entry;
+    }
     let session = &mut env.session;
     session.map_name = setup.selected_map.clone();
     session.entry_point = setup.selected_entry_point.clone();

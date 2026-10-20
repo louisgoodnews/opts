@@ -114,6 +114,28 @@ pub struct CliArgs {
     #[arg(long, value_name = "NAME")]
     pub livery: Option<String>,
 
+    /// Start point of the map to begin at: its name or a part of it that only one start point
+    /// has (`Ahlheim Hbf`). Default: the map's first start point.
+    #[arg(long, value_name = "NAME")]
+    pub entry: Option<String>,
+
+    /// Weather preset of the session (an installed preset's id or name).
+    #[arg(long, value_name = "PRESET")]
+    pub weather: Option<String>,
+
+    /// Date of the session, `YYYY-MM-DD`.
+    #[arg(long, value_name = "DATE")]
+    pub date: Option<String>,
+
+    /// Time of day the session starts at, `HH:MM`.
+    #[arg(long, value_name = "TIME")]
+    pub time: Option<String>,
+
+    /// An equipment option of the player's vehicle, `NAME=VALUE` (a `[setvar]` of the `.bus`;
+    /// repeat for several).
+    #[arg(long = "setvar", value_name = "NAME=VALUE")]
+    pub setvars: Vec<String>,
+
     /// Number of cyclists on cycle paths (default 6; `0` = none).
     #[arg(long, value_name = "N")]
     pub cyclists: Option<usize>,
@@ -191,6 +213,11 @@ impl Default for CliArgs {
             trains: None,
             cyclists: None,
             livery: None,
+            entry: None,
+            weather: None,
+            date: None,
+            time: None,
+            setvars: Vec::new(),
             traffic: None,
             cli_allow_dir: Vec::new(),
             texture_filter: None,

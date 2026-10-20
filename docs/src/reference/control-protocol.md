@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.23.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.24.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -304,7 +304,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 
 | Command | Arguments | Since | Summary |
 | :--- | :--- | :--- | :--- |
-| [`scene.load_map`](#sceneload_map) *(debug)* | `path` (string)<br>`entry?` (string)<br>`accept_problems?` (boolean) | 1.0 | Start a session on a map |
+| [`scene.load_map`](#sceneload_map) *(debug)* | `path` (string)<br>`entry?` (string)<br>`accept_problems?` (boolean)<br>`vehicle?` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`weather?` (string)<br>`date?` (string)<br>`time?` (string) | 1.0 | Start a session on a map |
 | [`loading.continue`](#loadingcontinue) *(debug)* | `accept_all?` (boolean) | 1.22 | Continue past the problems of a load (broken tiles ...) |
 | [`scene.unload`](#sceneunload) *(debug)* | - | 1.0 | Return to the main menu |
 | `camera.set_mode` | `mode` (string)<br>`sub?` (integer) | 1.0 | Switch camera mode |
@@ -356,7 +356,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 
 Start a session on a map.
 
-`accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.
+Since 1.24 the drive's choices can be given here like on the command line: `entry` (start point, a name or a word of it such as `Ahlheim Hbf`), `vehicle` (a `.bus` path, relative to `Vehicles`) with its `repaint`, `setvars` (`{name: n}` equipment options of the vehicle), `weather` (preset id or name), `date` (`YYYY-MM-DD`) and `time` (`HH:MM`). `accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.
 
 ### `loading.continue`
 

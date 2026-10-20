@@ -54,6 +54,7 @@ pub mod settings_theme;
 pub mod shell;
 pub mod shutdown;
 pub mod sound_logic;
+pub mod start_options;
 pub mod theme_files;
 pub mod ui_typography;
 pub mod vehicle_keys;
@@ -164,12 +165,28 @@ fn transition_to_main_menu(
     mut next_state: ResMut<NextState<AppState>>,
     args: Option<Res<AppArgs>>,
     setup: Option<ResMut<new_game_screen::NewGameSetup>>,
+    weather: Option<Res<opts_bevy::WeatherCatalogue>>,
 ) {
-    if args.is_some_and(|a| a.0.autostart) {
+    let (autostart, options) = args.as_deref().map_or((false, None), |a| {
+        (
+            a.0.autostart,
+            Some(start_options::StartOptions::from_args(&a.0)),
+        )
+    });
+    let mut setup = setup;
+    if let (true, Some(options), Some(setup)) = (autostart, options, setup.as_mut()) {
+        // The command line's choices of the drive (`--entry`, `--weather`, `--date`, `--time`,
+        // `--setvar`); a wrong one is said and the default stands.
+        match options.and_then(|o| o.apply(setup, weather.as_deref())) {
+            Ok(()) => {}
+            Err(e) => tracing::error!("start options: {e}"),
+        }
+    }
+    if autostart {
         tracing::info!("--autostart: skipping menus and entering the in-game session");
         // Developer aid: `OPTS_DEV_HOUR=<0-23>` starts the session at that hour (night checks).
-        if let (Some(mut setup), Some(h)) = (
-            setup,
+        if let (Some(setup), Some(h)) = (
+            setup.as_mut(),
             std::env::var("OPTS_DEV_HOUR")
                 .ok()
                 .and_then(|h| h.parse::<u32>().ok()),

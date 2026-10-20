@@ -147,9 +147,9 @@ pub(super) const PART: &[CommandSpec] = &[
         "scene.load_map",
         "scene",
         "Start a session on a map",
-        "path:s@0 entry:s? accept_problems:b?",
+        "path:s@0 entry:s? accept_problems:b? vehicle:s? repaint:s? setvars:j? weather:s? date:s? time:s?",
     )
-    .doc("`accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.")
+    .doc("Since 1.24 the drive's choices can be given here like on the command line: `entry` (start point, a name or a word of it such as `Ahlheim Hbf`), `vehicle` (a `.bus` path, relative to `Vehicles`) with its `repaint`, `setvars` (`{name: n}` equipment options of the vehicle), `weather` (preset id or name), `date` (`YYYY-MM-DD`) and `time` (`HH:MM`). `accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.")
     .debug(),
     c(
         "loading.continue",

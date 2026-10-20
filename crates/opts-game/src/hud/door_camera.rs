@@ -1,8 +1,10 @@
-//! The door camera's picture on the HUD (M-0109): a panel at the top right, below the pause
-//! button, with the picture of `opts_bevy::door_camera` and the door's name.
+//! The door cameras' pictures on the HUD (M-0109): one panel per open door at the top right,
+//! below the pause button, each with the picture of `opts_bevy::door_camera` and the door's name.
 //!
-//! It exists only while a door is shown (the setting `camera.door_overlay` is on and F4 chose a
-//! door or a door leaf moves); it steps aside for the viewpoint editor, which owns that edge.
+//! The first door that opened is at the top, the next ones follow beneath; a closed door's panel
+//! fades out (the fade itself is the slot's, `opts_bevy::door_camera`) and the panels below glide
+//! up. The panels exist only while the setting `camera.door_overlay` is on; they step aside for
+//! the viewpoint editor, which owns that edge.
 
 use bevy::prelude::*;
 use opts_bevy::door_camera::{DoorCamera, DoorPoints, Zone};
@@ -15,24 +17,36 @@ use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 use super::keys;
 use super::layout::HudLayout;
 use super::parts::{panel, texts};
-use crate::in_game::instruments::InstrumentInk;
+use crate::in_game::instruments::{InstrumentFade, InstrumentInk};
 use crate::in_game::types::InGameEntity;
 use crate::settings::GameSettings;
 
 /// Key of the setting that turns the door camera on.
 pub const SETTING: &str = "camera.door_overlay";
 
-/// The panel.
+/// The panel of a door; `y` is where it is now (layout pixels from the top), gliding to its place.
 #[derive(Component, Debug, Clone, Copy)]
-pub struct DoorOverlay;
+pub struct DoorOverlay {
+    /// The door (index into the vehicle's doors).
+    pub door: usize,
+    /// Current distance from the top.
+    pub y: f32,
+}
 
-/// The node that shows the picture.
+/// The node that shows the picture of a door.
 #[derive(Component, Debug, Clone, Copy)]
-pub struct DoorOverlayImage;
+pub struct DoorOverlayImage(pub usize);
 
 /// The door's name below the picture.
 #[derive(Component, Debug, Clone, Copy)]
-pub struct DoorOverlayCaption;
+pub struct DoorOverlayCaption(pub usize);
+
+/// Gap between two panels.
+const GAP: f32 = 8.0;
+/// Panel height besides the picture: padding, border, caption line and the row gap.
+const CHROME: f32 = 44.0;
+/// How fast a panel glides to its place (1/s).
+const GLIDE: f32 = 8.0;
 
 /// Width of the picture in layout pixels, in the normal and the compact layout.
 const WIDTH: (f32, f32) = (320.0, 224.0);
@@ -52,18 +66,26 @@ pub fn sync_setting(settings: Res<GameSettings>, mut cam: ResMut<DoorCamera>) {
         if !on {
             cam.manual = None;
             cam.auto = None;
+            cam.open.clear();
         }
     }
 }
 
-fn spawn(commands: &mut Commands, palette: &InstrumentPalette, image: Handle<Image>, width: f32) {
+fn spawn(
+    commands: &mut Commands,
+    palette: &InstrumentPalette,
+    image: Handle<Image>,
+    width: f32,
+    door: usize,
+    y: f32,
+) {
     commands
         .spawn((
             panel(
                 Node {
                     position_type: PositionType::Absolute,
                     right: Val::Px(20.0),
-                    top: Val::Px(TOP),
+                    top: Val::Px(y),
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(4.0),
                     padding: UiRect::all(Val::Px(6.0)),
@@ -73,10 +95,10 @@ fn spawn(commands: &mut Commands, palette: &InstrumentPalette, image: Handle<Ima
                 RadiusLevel::Large,
                 palette,
             ),
-            DoorOverlay,
+            DoorOverlay { door, y },
             GlobalZIndex(55),
             InGameEntity,
-            UiId::new("hud.door_camera"),
+            UiId::new(format!("hud.door_camera.{}", door + 1)),
         ))
         .with_children(|p| {
             p.spawn((
@@ -86,13 +108,13 @@ fn spawn(commands: &mut Commands, palette: &InstrumentPalette, image: Handle<Ima
                     ..default()
                 },
                 ImageNode::new(image),
-                DoorOverlayImage,
-                UiId::new("hud.door_camera.image"),
+                DoorOverlayImage(door),
+                UiId::new(format!("hud.door_camera.{}.image", door + 1)),
             ));
             p.spawn((
                 texts("", TypeScale::Label, InstrumentInk::TextDim, palette),
-                DoorOverlayCaption,
-                UiId::new("hud.door_camera.caption"),
+                DoorOverlayCaption(door),
+                UiId::new(format!("hud.door_camera.{}.caption", door + 1)),
             ));
         });
 }
@@ -132,10 +154,12 @@ fn caption(loc: &Localization, doors: &DoorPoints, door: usize) -> String {
     )
 }
 
-/// Builds the panel when a door is shown and removes it when none is; keeps the door's name.
-#[allow(clippy::too_many_arguments)]
+/// Keeps one panel per slot: made when a door's picture appears, stacked in slot order, gliding
+/// up when one above it goes, faded with the slot, removed with it.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_overlay(
     mut commands: Commands,
+    time: Res<Time<Real>>,
     cam: Res<DoorCamera>,
     layout: Res<HudLayout>,
     loc: Res<Localization>,
@@ -143,43 +167,82 @@ pub fn update_overlay(
     variant: Res<InstrumentVariant>,
     editor: Option<Res<opts_bevy::ViewpointState>>,
     vehicles: Query<&DoorPoints, With<PlayerVehicle>>,
-    roots: Query<(Entity, &Children), With<DoorOverlay>>,
-    mut images: Query<&mut Node, With<DoorOverlayImage>>,
-    mut captions: Query<&mut Text, With<DoorOverlayCaption>>,
+    mut roots: Query<(Entity, &mut DoorOverlay, &mut Node, &mut InstrumentFade)>,
+    mut images: Query<(&DoorOverlayImage, &mut Node, &mut ImageNode), Without<DoorOverlay>>,
+    mut captions: Query<
+        (&DoorOverlayCaption, &mut Text, &mut InstrumentFade),
+        Without<DoorOverlay>,
+    >,
 ) {
-    let want = cam
-        .shown()
-        .filter(|_| !editor.is_some_and(|e| e.editing) && cam.image.is_some());
-    let existing = roots.iter().next().map(|(e, _)| e);
-    let (Some(door), Some(image)) = (want, cam.image.clone()) else {
-        if let Some(root) = existing {
-            commands.entity(root).try_despawn();
+    let hidden = editor.is_some_and(|e| e.editing);
+    let slots: &[_] = if hidden { &[] } else { &cam.slots };
+    // Panels of doors that have no slot any more.
+    for (entity, overlay, _, _) in &roots {
+        if !slots.iter().any(|s| s.door == overlay.door) {
+            commands.entity(entity).try_despawn();
         }
-        return;
-    };
-    let width = if layout.compact { WIDTH.1 } else { WIDTH.0 };
-    if existing.is_none() {
-        let palette = *theme
-            .as_ref()
-            .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
-                t.instrument(*variant)
-            });
-        spawn(&mut commands, &palette, image, width);
-        return;
     }
-    for mut node in &mut images {
+    // Three or four pictures are smaller so that they stay above the minimap.
+    let crowd = if slots.len() > 2 { 0.68 } else { 1.0 };
+    let width = if layout.compact { WIDTH.1 } else { WIDTH.0 } * crowd;
+    let step = width * 9.0 / 16.0 + CHROME + GAP;
+    let k = 1.0 - (-GLIDE * time.delta_secs()).exp();
+    for (i, slot) in slots.iter().enumerate() {
+        let target = TOP + i as f32 * step;
+        let Some((_, mut overlay, mut node, mut fade)) =
+            roots.iter_mut().find(|(_, o, _, _)| o.door == slot.door)
+        else {
+            let palette = *theme
+                .as_ref()
+                .map_or(&opts_gui::theme::InstrumentTokens::default().day, |t| {
+                    t.instrument(*variant)
+                });
+            spawn(
+                &mut commands,
+                &palette,
+                slot.image.clone(),
+                width,
+                slot.door,
+                target,
+            );
+            continue;
+        };
+        overlay.y = if (overlay.y - target).abs() < 0.5 {
+            target
+        } else {
+            overlay.y + (target - overlay.y) * k
+        };
+        let top = Val::Px(overlay.y);
+        if node.top != top {
+            node.top = top;
+        }
+        if fade.0 != slot.fade {
+            fade.0 = slot.fade;
+        }
+    }
+    for (marker, mut node, mut image) in &mut images {
         let w = Val::Px(width);
         if node.width != w {
             node.width = w;
         }
+        if let Some(slot) = slots.iter().find(|s| s.door == marker.0) {
+            let color = image.color.with_alpha(slot.fade);
+            if image.color != color {
+                image.color = color;
+            }
+        }
     }
-    let text = vehicles
-        .iter()
-        .next()
-        .map_or_else(String::new, |d| caption(&loc, d, door));
-    for mut t in &mut captions {
-        if t.0 != text {
-            t.0.clone_from(&text);
+    let doors = vehicles.iter().next();
+    for (marker, mut text, mut fade) in &mut captions {
+        let Some(slot) = slots.iter().find(|s| s.door == marker.0) else {
+            continue;
+        };
+        let words = doors.map_or_else(String::new, |d| caption(&loc, d, marker.0));
+        if text.0 != words {
+            text.0 = words;
+        }
+        if fade.0 != slot.fade {
+            fade.0 = slot.fade;
         }
     }
 }

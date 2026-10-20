@@ -324,7 +324,10 @@ pub fn sync_coordinate_transforms(mut query: Query<SyncTransformData, SyncTransf
 /// Converts an OMSI vehicle camera preset into a native Bevy [`Transform`].
 ///
 /// In OMSI camera definitions (`[add_camera_driver]`, `[add_camera_pax]`):
-/// - Lateral offset $x$ has positive pointing left ($x_{\text{omsi}} = -x$).
+/// - Lateral offset $x$ is the vehicle's own lateral coordinate: positive to the right, negative
+///   to the left (the Citybus 530's driver presets have $x = -0.74$ and its `[drivpos]` seat
+///   $x = -0.733$; the front passenger preset `[add_camera_pax]` $x = +0.8$). An earlier version of
+///   this function mirrored $x$ and put the driver's eye on the passenger side.
 /// - Longitudinal offset $y$ has positive pointing forward ($y_{\text{omsi}} = y$).
 /// - Vertical offset $z$ has positive pointing up ($z_{\text{omsi}} = z$).
 /// - `yaw_deg`: 0° forward, -120° left, +120° right.
@@ -337,9 +340,8 @@ pub fn camera_preset_to_bevy_transform(
     yaw_deg: f32,
     pitch_deg: f32,
 ) -> Transform {
-    // In OMSI vehicle camera definitions, positive X is left, so invert X for standard OMSI coordinates
-    let omsi_pos = Vec3::new(-camera_pos.x, camera_pos.y, camera_pos.z);
-    let mut bevy_pos = omsi_to_bevy_pos(omsi_pos);
+    // The preset is in the vehicle's frame like every other position of its files.
+    let mut bevy_pos = omsi_to_bevy_pos(camera_pos);
 
     // Bevy rotation: Yaw around +Y (-yaw because right is negative in Bevy angles), pitch around +X
     let rot = Quat::from_euler(

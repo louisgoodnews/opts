@@ -217,7 +217,7 @@ The sound plays when the variable condition becomes true (single shot). Used for
 
 ### `[viewpoint]` — Camera Restriction
 
-One integer: a camera class restricting where the sound is audible. Observed values `2` (exterior) and `5` (interior); the meaning is inferred from placement (rain at `2`, compressor hiss at `5`).
+One integer: a camera class restricting where the sound is audible: `2` and `6` interior, `5` and `1` exterior, read from the file names (the Citybus 530's `OM_906hLA_E2_ext_*` engine loops have `5`, its `OM_906hLA_E2_*_v` loops `2`). Q-SND-004.
 
 ### `[noloop]` — One-Shot Loop Variant
 
@@ -273,10 +273,11 @@ ev_haltebremse_sw_an
 
 | ID | Question | Status |
 | :--- | :--- | :--- |
-| Q-SND-001 | Exact meaning of `[loopsound]` lines 2 and 5. | Sample rate and pitch scale assumed. |
+| Q-SND-001 | Exact meaning of `[loopsound]` lines 2 and 5. | Line 2 is the sample rate. Line 5 is a **sensitivity**, not a factor on the whole ratio: the pitch is `1 + (variable / reference − 1) × line 5` (2026-10-20: the first reading, `variable / reference × line 5`, played the Citybus 530's idle loop, reference 600, scale 2, at about twice its speed, an octave up, and the stationary bus sounded like top speed; the documented reference value is the natural pitch whatever line 5 says). Values in the installed vehicles: 2 (Citybus 530 engine), 1, 0.8 (MAN exterior loops), 0.6 (starter), 0.05 to 0.2 (turbo whine). The exact curve (this linear form or `ratio^scale`) is still a reading ❓. |
 | Q-SND-002 | Meaning of the optional fifth `[3d]` value. | Open. |
 | Q-SND-003 | Semantics of `[conditionSingle]` params 2–3. | Open. |
-| Q-SND-004 | Numeric meaning of `[viewpoint]` values beyond `2` and `5`. | Open. |
+| Q-SND-004 | Numeric meaning of `[viewpoint]` values. | Read from the file names (2026-10-20, 1,190 + 96 + 13,033 + 404 + 2 + 11,163 + 38 definitions with values 0 to 6): **2 and 6 are interior sounds, 5 and 1 exterior sounds**; 0, 3, 4 and none play everywhere. The first reading had 2 and 5 swapped (from the rain and compressor guess) and played the exterior engine loops inside the cab. 3 and 4 are unknown ❓. |
+| Q-SND-005 | The volume curve variable `-1` (630 curves: the starter loops `OM_906hLA_E2_on_*` with points 0.1→0, 0.3→1; the retarder loops with 0→0, 1→1). | Read as the time the sound has been playing (seconds), a fade-in; OPTS does this for the player's vehicle ❓. |
 
 ---
 
@@ -372,7 +373,7 @@ AI traffic uses the vehicle's **`[sound_ai]`** configuration (1,241 `.bus` and 3
 | 4 | 102 | `antrieb_getr_aktugang 2` (89) | not understood |
 | -1 | 2 | `cp_rollo_*_sw -1` | not understood |
 
-OPTS plays modes 1 to 3 (95 % of the conditions) and leaves definitions with another mode out (the horn is among them). `[viewpoint]` 2 plays only outside the vehicle, 5 only inside (rain and wipers outside, the compressor and cabin hiss inside); the other values are unknown and play everywhere.
+OPTS plays modes 1 to 3 (95 % of the conditions) and leaves definitions with another mode out (the horn is among them). `[viewpoint]` 2 and 6 play only inside the vehicle (interior sounds), 5 and 1 only outside (exterior sounds); the other values play everywhere (Q-SND-004).
 
 Reproduction: `crates/opts-game/tests/sound_cfg_corpus.rs` (`the_player_sound_configurations_split_by_playback`, with `OMSI_PATH`).
 

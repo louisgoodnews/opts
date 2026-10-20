@@ -494,12 +494,21 @@ impl WorldLoadJob {
         let eps = &self.manifest.entry_points;
         // Developer aid: `OPTS_DEV_ENTRY=<substring>` picks the first entry point containing it.
         let dev = std::env::var("OPTS_DEV_ENTRY").ok();
+        let wanted = self.config.entry_point.trim().to_lowercase();
+        // The configured start point: its exact name, else the same without regard to case, else
+        // the first one whose name contains the text (`--entry "Ahlheim Hbf"`), else the first.
+        let named = |e: &&opts_core::formats::map::MapEntryPoint| e.name == self.config.entry_point;
+        let folded = |e: &&opts_core::formats::map::MapEntryPoint| e.name.to_lowercase() == wanted;
+        let part = || {
+            eps.iter()
+                .find(|e| !wanted.is_empty() && e.name.to_lowercase().contains(&wanted))
+        };
         let ep = eps
             .iter()
-            .find(|e| {
-                dev.as_deref()
-                    .map_or(e.name == self.config.entry_point, |d| e.name.contains(d))
-            })
+            .find(|e| dev.as_deref().is_some_and(|d| e.name.contains(d)))
+            .or_else(|| eps.iter().find(named))
+            .or_else(|| eps.iter().find(folded))
+            .or_else(part)
             .or_else(|| eps.first())?
             .clone();
         self.find_entry_spawn_of(&ep, keys)

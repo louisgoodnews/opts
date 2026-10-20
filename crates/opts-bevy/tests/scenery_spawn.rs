@@ -41,13 +41,13 @@ fn test_opts_scenery_plugin_registration() {
 
 #[test]
 fn test_camera_preset_to_bevy_transform() {
-    // Driver camera: x = -0.70 (positive is left, so +0.70 in OMSI lateral),
+    // Driver camera: x = -0.70 (the driver sits on the left, like the `[drivpos]` of the vehicle),
     // y = 4.40 forward, z = 1.80 up, dist = -0.06, yaw = 0, pitch = -5.0 deg
     let cam_pos = Vec3::new(-0.70, 4.40, 1.80);
     let transform = camera_preset_to_bevy_transform(cam_pos, -0.06, 0.0, -5.0);
 
-    // Bevy coordinates: x = 0.70, y ≈ 1.80, z ≈ -4.40
-    assert!((transform.translation.x - 0.70).abs() < 1e-3);
+    // Bevy coordinates: x = -0.70 (left), y ≈ 1.80, z ≈ -4.40
+    assert!((transform.translation.x + 0.70).abs() < 1e-3);
     assert!((transform.translation.y - 1.80).abs() < 0.1);
     assert!((transform.translation.z - (-4.40)).abs() < 0.1);
 }

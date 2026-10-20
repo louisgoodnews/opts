@@ -15,7 +15,7 @@ Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_g
 | 4 | Passenger | user vehicle | `[add_camera_pax]`; wheel cycles, wraps; right-drag looks | ✅ for single vehicles; articulated segment flattening waits for trailer spawning |
 | 5 | Free roam | none | one | ✅ |
 
-`ModelConfig`/`BusManifest` already expose the camera data (`BusManifest::driver_cameras`, `pax_cameras`, `std_camera_index`, `outside_camera_center` — see `BusVehicle`); conversion to Bevy space uses the existing `camera_preset_to_bevy_transform`. No camera transform is hard-coded. The one exception today is the interim chase distance/height, which `opts-game` derives from the vehicle's measured body size.
+`ModelConfig`/`BusManifest` already expose the camera data (`BusManifest::driver_cameras`, `pax_cameras`, `std_camera_index`, `outside_camera_center` — see `BusVehicle`); conversion to Bevy space uses the existing `camera_preset_to_bevy_transform` (the lateral offset is the vehicle's own: negative is left; an earlier version mirrored it and put the driver's eye on the passenger side, 2026-10-20). No camera transform is hard-coded. The one exception today is the interim chase distance/height, which `opts-game` derives from the vehicle's measured body size.
 
 ## Types
 
