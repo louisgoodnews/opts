@@ -6,7 +6,7 @@
 | **Category** | process |
 | **Prerequisites** | P-000 |
 | **Follow-up** | P-002 (for approved suggestions), P-006 (to record them) |
-| **Last Updated** | 2026-10-18 |
+| **Last Updated** | 2026-10-20 |
 
 **When to use:** After each phase closes, after every 10 merged milestones, or whenever the maintainer asks. The first run is the dry run of [M-0119](../../../src/roadmap/phase-11/M-0119.md).
 
@@ -26,6 +26,12 @@ You are reviewing the OPTS project against its roadmap and proposing what should
 - Recent reports under docs/src/meta/ and docs/src/quality/
 - Open questions (❓) in docs/src/architecture/ and docs/src/formats/ that recent work touched
 - The previous review report, if one exists (docs/src/meta/roadmap-review-*.md)
+- The BOARD's In Progress column read against the merge log (items untouched for a long time are stale)
+
+## Evidence recipes
+- Merges: `git log --merges --since=<date> --format='%h %ad %s' --date=short`
+- Milestone status census: `grep -m1 '\*\*Status\*\*' docs/src/roadmap/phase-*/M-*.md`
+- Is a branch merged: `git log --oneline --all --grep=<topic>` and `git branch --merged master`
 
 ## Task
 
