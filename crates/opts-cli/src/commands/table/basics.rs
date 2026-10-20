@@ -147,9 +147,19 @@ pub(super) const PART: &[CommandSpec] = &[
         "scene.load_map",
         "scene",
         "Start a session on a map",
-        "path:s@0 entry:s?",
+        "path:s@0 entry:s? accept_problems:b?",
     )
-    .doc("A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): click `loading.continue` (`ui.click`) to start the drive.")
+    .doc("`accept_problems: true` starts the drive without waiting for *Continue* when the load ends with problems (broken tiles ...; since 1.22, one load; the `--accept-load-problems` flag does it for every load). A debug shortcut around the plan-a-drive wizard: it starts a session directly. The player-facing route is the wizard (`ui.*`). Answers when the HUD is up. A load that failed answers at once with `1008 FAILED` (the problems in the message). A load with problems answers while the loading screen waits for *Continue* (`waiting_for_continue: true`, the problems listed): call `loading.continue` (or click `loading.continue` with `ui.click`) to start the drive.")
+    .debug(),
+    c(
+        "loading.continue",
+        "scene",
+        "Continue past the problems of a load (broken tiles ...)",
+        "accept_all:b?",
+    )
+    .since("1.22")
+    .result("`{continued, outcome, problems:[{key, args, fatal, detail}]}`")
+    .doc("Presses *Continue* on a loading screen that waits because the load ended with problems (a map tile or part of the vehicle did not load; minor problems never wait). `continued` is false when nothing waited (still loading, or already continued); `outcome` is `Loading`, `Ready`, `ReadyWithProblems` or `Failed`; a failed load answers `1008` (nothing to continue). `accept_all: true` also lets the next load start by itself, `false` switches that off. The problems are listed either way so a script can decide whether the drive is worth it.")
     .debug(),
     c("scene.unload", "scene", "Return to the main menu", "")
     .doc("A debug shortcut: leaves the drive without the confirmation dialog (`pause.leave` in the pause overlay is the player route).")

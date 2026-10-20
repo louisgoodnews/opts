@@ -55,26 +55,16 @@ All three share one procedure: the `battery` key switches the electrics on (`ele
 
 Stepped key like the Citybus, with one more step: the `battery` key inserts the key (1st press, nothing else happens), turns it to the electrics (2nd, busbar 1), to the drive position (3rd); the `engine_start` key held then starts the engine from the drive position. The ignition key hot-spot is `C2_CP_Zuendschluessel` (drag).
 
+## Tram NF6D (`NF6D_B_User.bus`, the driver's car; map *Tram*, checked 2026-10-20)
+
+There is **no start procedure**: the driver's car has no battery or engine trigger (`NF6D_A.bus` answers the battery key with `sla_elec_bat`, the cab car does not), its scripts own no `engine_on`, and the tram's traction is the game's own rail dynamics (parking brake, gear `drive`, throttle). The start-up helper therefore skips the engine steps; at degree 1 the parking brake is released and the tram drives (throttle 0.6: 7 km/h after 3 s, 18 km/h after 9 s, live).
+
+What the scripts do answer (keys, checked live through `vehicle.key`): `interior_driver` (`lichtinnenfahrer_b_cp` 1), `hazard` (`slb_blinkerl_b`/`slb_blinkerr_b`), `wiper` (`wischer1_cp_anim`), `door_3` (`tuerfreigabe_b`, `tuervorwahl_links_b`: the left doors are released and preselected); `door_1`/`door_2` are handled but change nothing visible in the scripts' variables ❓ (the doors of the other side); `high_beam` and `indicator_left` are handled and change no variable I looked at ❓; the `lights` key is not handled (the tram has no `kw_scheinwerfer_toggle`). The hot-spots (56) include the traction/brake stages `kw_s_1` to `kw_s_5`, `kw_s_N`, `kw_s_R`, `Notbremse` and its reset, `TurboTram`, the IBIS keys and the cab windows. How the driver's stages (`kw_s_*`) relate to the game's throttle is open ❓ (M-0098: rail on its scripts' torque).
+
+## Loads with problems (broken tiles)
+
+The map *Tram* lists 20 tiles and 6 files are missing: the loading screen waits for *Continue*. For scripts and the command line: `loading.continue` presses it (and lists the problems), `scene.load_map {accept_problems: true}` starts the drive by itself for that load, `--accept-load-problems` does so for every load. A load that failed outright still stops. The problems stay in the report and are written to the log as a warning.
+
 ## Not yet looked at ❓
 
-Trams (Tram_NF6D, Stadtbahn TW6000): electric, no engine start; their procedure (master switch, direction lever, power) is for the next slice.
-
-### Citybus 530: the other controls (checked 2026-10-20, engine running, through `vehicle.click` / `vehicle.key`)
-
-| Control | Operation | Result in the script variables |
-| :--- | :--- | :--- |
-| Parking brake `parking_brake_mouse` | drag the lever: `bremse_feststell_sw` moves by `mouse_y / 200` per frame; above 0.6 the brake is set, below 0.4 released (a drag of -160 px total releases it) | `bremse_feststell` 1 → 0, the dashboard lamp `cockpit_light_feststellbremse` follows |
-| Doors: front `bus_doorfront0` (key `door_1`: opens `door_0` and `door_1`), rear (keys `door_2`/`door_3`: `door_2` and `door_3`; `door_4` closes them) | the keys;  click; the door opens only when the door air circuit `bremse_p_tank04` is above 600 000 Pa, about 30 s after the engine started (the circuit starts at 390 000 Pa and fills behind the main circuits) and the busbar is live | `door_0` 0 → 1 |
-| Driver's light `cp_fahrerlicht_toggle`, interior lights `cp_licht_unterdeck_toggle` / `cp_licht_untenrechts_toggle` | click | `lights_fahrerlicht`, `lights_beleuchtung_unterdeck` switch, battery current rises with the load |
-| Hazard lights `blinker_warn_toggle`, indicators (`indicator_left`, `indicator_off`) | click / key | `lights_blinker_l/r` pulse with `lights_blinkgeber`, bulbs and `cockpit_light_blinker*` follow |
-| High beam (key `high_beam`) | key | `lights_fern`, `cockpit_light_fern` 1 |
-| Key `lights` (`kw_scheinwerfer_toggle`) | key | switches the light key between off and dipped beam: `lights_abbl` 1 with `lights_stand`, `lights_rueck` (tail lights), `lights_terminus` and the dashboard lamp; at night the tail lights and the destination sign glow (screenshot checked) |
-| Wipers `cp_wiper_turnswitch` | drag the rotary: `mouse_y / -50` per frame, positions at 0.17 / 0.5 / 0.83 (interval, off, slow, fast) | drag -40 px: mode 3 (fast), `wiperrunning` 1, `wiperpos` moves |
-| Heating `cp_heizregler_temp` | drag: `mouse_y / -150` per frame | `cockpit_heizregler_temp` 0.4 after -60 px |
-| Horn `horn` | click | event only (the sound is M-0102's) |
-
-A plain click without a drag on a rotary or slider does nothing visible (the value moves in the drag trigger): not an error of OPTS. A control that reads `elec_busbar_main` (stalk `cp_lus_ster`) does nothing while the electrics are off.
-
-### The mouse path
-
-Hot-spots are picked by a ray from the cursor through the camera onto the vehicle's own meshes (`MouseTrigger`, nearest first); in the cockpit view the camera looks at the street, the dashboard comes into view by looking down (right mouse button). The control under the cursor shows its trigger name in a label at the bottom centre and as `hovered` in `vehicle.hotspots`; `input.mouse.position {x, y}` places the cursor for tests (checked: with the view turned down, the label showed `door0` under the cursor).
+Other trams and trains (Stadtbahn TW6000, ULF, the `.zug` consists with several driven cars), buses of other makers.

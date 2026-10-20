@@ -224,6 +224,19 @@ impl SetupRun {
             }
             return false;
         }
+        // A vehicle whose scripts have no engine (a tram) has nothing to start: its start step
+        // is skipped, and what waits for a busbar its scripts never raise does not wait.
+        if let Some(step) = recipe.steps.get(self.step) {
+            if step.until_engine && !engine.writes("engine_on") {
+                self.step += 1;
+                return false;
+            }
+        }
+        let busbar = if engine.writes("elec_busbar_main") {
+            busbar
+        } else {
+            1.0
+        };
         if let Some(step) = recipe.steps.get(self.step) {
             if step.from <= setup.degree + 1e-4 {
                 let ready =
@@ -251,6 +264,12 @@ impl SetupRun {
         }
         true
     }
+}
+
+/// Whether the vehicle's scripts own an engine (`engine_on`): a tram's do not.
+#[must_use]
+pub fn has_engine(engine: &ScriptEngine) -> bool {
+    engine.writes("engine_on")
 }
 
 /// Raises a key's trigger and its `_off` (the lights are not held keys).

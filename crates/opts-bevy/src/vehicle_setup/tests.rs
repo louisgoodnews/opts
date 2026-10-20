@@ -190,3 +190,22 @@ fn stored_lights_text_is_parsed() {
     assert_eq!(StartLights::parse("parking"), StartLights::Parking);
     assert_eq!(StartLights::parse("nonsense"), StartLights::Off);
 }
+
+/// A tram-like vehicle: scripts without an engine or a busbar.
+const TRAM_LIKE: &str = "\
+{trigger:kw_s_1}
+    1 (S.L.traction)
+{end}
+";
+
+#[test]
+fn a_vehicle_without_an_engine_settles_at_once_and_counts_as_started() {
+    let mut e = engine(TRAM_LIKE);
+    let mut run = SetupRun::default();
+    assert!(
+        drive(&mut e, &mut run, &at(1.0), 6.0),
+        "nothing to start, nothing to wait for"
+    );
+    assert!(!has_engine(&e));
+    assert!(has_engine(&engine(MAN_LIKE)));
+}

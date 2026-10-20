@@ -54,6 +54,7 @@ impl Plugin for GameControlPlugin {
         crate::control_tiles::register(&mut registry);
         crate::control_audio::register(&mut registry);
         crate::control_hotspots::register(&mut registry);
+        crate::control_loading::register(&mut registry);
         crate::control_setvars::register(&mut registry);
         crate::control_configs::register(&mut registry);
         crate::control_dynamics::register(&mut registry);
@@ -247,6 +248,9 @@ fn load_map(world: &mut World, params: &Value) -> Outcome {
         Ok(e) => e.map(str::to_string),
         Err(e) => return Outcome::err(e),
     };
+    if let Err(e) = crate::control_loading::accept_problems_param(world, params) {
+        return Outcome::err(e);
+    }
     world.resource_mut::<AppArgs>().0.map_path = Some(dir);
     if let (Some(entry), Some(mut setup)) = (entry, world.get_resource_mut::<NewGameSetup>()) {
         setup.selected_entry_point = entry;

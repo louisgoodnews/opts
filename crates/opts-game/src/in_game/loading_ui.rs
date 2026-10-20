@@ -12,7 +12,9 @@ use opts_gui::patterns::glyphs;
 use opts_gui::prelude::*;
 
 use crate::app_state::AppState;
-use crate::in_game::load_report::{LoadOutcome, LoadProblem, LoadReport, Severity};
+use crate::in_game::load_report::{
+    AcceptLoadProblems, LoadOutcome, LoadProblem, LoadReport, Severity,
+};
 use crate::in_game::types::{
     CancelLoadingBtn, InGameEntity, InGameSessionInfo, LoadStage, LoadingScreenRoot,
     ProgressBarFill, SimulationLoadState,
@@ -449,15 +451,19 @@ pub fn hide_overlay_while_loading(
 
 /// Registers the systems of the loading screen.
 pub fn build(app: &mut App) {
-    app.init_resource::<LoadReport>().add_systems(
-        Update,
-        (
-            announce_minor_problems,
-            handle_minor_dialog,
-            update_loading_ui,
-            handle_cancel,
-            hide_overlay_while_loading.after(crate::in_game::omsi_world::update_debug_overlay),
-        )
-            .run_if(in_state(AppState::InGame)),
-    );
+    app.init_resource::<LoadReport>()
+        .init_resource::<AcceptLoadProblems>()
+        .add_systems(
+            Update,
+            (
+                announce_minor_problems,
+                handle_minor_dialog,
+                // Before the pipeline: when it ends the screen in the same frame (accepted
+                // problems), the outcome box is rebuilt first and not on a despawned entity.
+                update_loading_ui.before(crate::in_game::loading_pipeline::update_loading_progress),
+                handle_cancel,
+                hide_overlay_while_loading.after(crate::in_game::omsi_world::update_debug_overlay),
+            )
+                .run_if(in_state(AppState::InGame)),
+        );
 }

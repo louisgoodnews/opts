@@ -11,7 +11,7 @@ use crate::app_state::AppState;
 use crate::catalogue_service::{CatalogueService, DiscoveryStatus};
 use crate::in_game::hud::spawn_in_game_hud;
 use crate::in_game::load_report::{
-    problems_from_counts, LoadOutcome, LoadProblem, LoadReport, WorldCounts,
+    problems_from_counts, AcceptLoadProblems, LoadOutcome, LoadProblem, LoadReport, WorldCounts,
 };
 use crate::in_game::loading_ui::{
     ChooseAnotherBtn, ContinueBtn, DetailsBtn, LoadingBackBtn, RetryBtn,
@@ -48,6 +48,7 @@ pub struct LoadEnv<'w, 's> {
     camera_state: ResMut<'w, CameraState>,
     session: ResMut<'w, InGameSessionInfo>,
     report: ResMut<'w, LoadReport>,
+    accept: ResMut<'w, AcceptLoadProblems>,
     registry: ResMut<'w, SessionVehicles>,
     settings: Option<Res<'w, crate::settings::GameSettings>>,
     hardware: Option<Res<'w, crate::hardware::HardwareState>>,
@@ -397,7 +398,22 @@ fn stage_ready(
             state.auto_launch_delay -= dt;
             state.auto_launch_delay <= 0.0
         }
-        LoadOutcome::ReadyWithProblems => env.report.continue_requested,
+        LoadOutcome::ReadyWithProblems => {
+            let by_flag = env.args.as_ref().is_some_and(|a| a.0.accept_load_problems);
+            let accepted = by_flag || env.accept.0;
+            if accepted && !env.report.continue_requested {
+                tracing::warn!(
+                    problems = env.report.blocking_count(),
+                    "starting the drive although the load had problems (accepted):\n{}",
+                    env.report.as_text()
+                );
+            }
+            if accepted {
+                // The protocol's acceptance covers one load.
+                env.accept.0 = false;
+            }
+            env.report.continue_requested || accepted
+        }
         LoadOutcome::Loading | LoadOutcome::Failed => false,
     };
     if go {
