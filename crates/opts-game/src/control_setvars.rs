@@ -17,9 +17,10 @@ use serde_json::{json, Map, Value};
 
 use crate::in_game::omsi_world::WorldLoadJob;
 use crate::new_game_screen::livery::LiveryState;
-use crate::new_game_screen::repaints::VehicleRepaints;
+use crate::new_game_screen::repaints::{vehicle_repaints, VehicleRepaints};
 use crate::new_game_screen::setvars_discovery::catalogue_of;
-use crate::new_game_screen::types::NewGameSetup;
+use crate::new_game_screen::types::{GameCatalogue, NewGameSetup};
+use crate::session_vehicles::SessionVehicles;
 
 /// Registers `vehicle.setvars`.
 pub fn register(registry: &mut ControlRegistry) {
@@ -59,6 +60,9 @@ fn source(world: &mut World) -> Option<Source> {
         q.iter(world).next().is_some()
     };
     if in_drive {
+        if let Some(src) = active_vehicle_source(world) {
+            return Some(src);
+        }
         let job = world.get_resource::<WorldLoadJob>()?;
         return Some(Source {
             context: Context::Drive,
@@ -79,6 +83,50 @@ fn source(world: &mut World) -> Option<Source> {
         repaint: setup.selected_livery.clone(),
         custom: setup
             .custom_setvars
+            .iter()
+            .map(|(n, v)| (n.to_lowercase(), *v))
+            .collect(),
+    })
+}
+
+/// The repaints and declared options of a session vehicle: the load job's own for the vehicle
+/// the drive started with, else read from the vehicle's files through the catalogue.
+pub(crate) fn repaints_of_record(
+    world: &World,
+    record: &crate::session_vehicles::SessionVehicleRecord,
+) -> Option<VehicleRepaints> {
+    let job = world.get_resource::<WorldLoadJob>();
+    let first = job.as_ref().is_some_and(|j| {
+        j.vehicle_file()
+            .is_some_and(|f| f == std::path::Path::new(&record.bus_file))
+    });
+    if let Some(r) = job.filter(|_| first).and_then(|j| j.vehicle_repaints()) {
+        return Some(r.clone());
+    }
+    let item = world
+        .get_resource::<GameCatalogue>()?
+        .vehicles
+        .iter()
+        .find(|v| v.id == record.catalogue_id)?;
+    Some(vehicle_repaints(item))
+}
+
+/// The active session vehicle as the source of the options: its own repaint and changes (the
+/// load job still describes the vehicle the drive started with, whatever was switched to since).
+/// `None` when there is no session registry or no living active vehicle.
+fn active_vehicle_source(world: &World) -> Option<Source> {
+    let record = world
+        .get_resource::<SessionVehicles>()?
+        .active()
+        .filter(|r| r.is_alive())?
+        .clone();
+    let repaints = repaints_of_record(world, &record)?;
+    Some(Source {
+        context: Context::Drive,
+        repaints,
+        repaint: record.repaint.clone(),
+        custom: record
+            .setvars
             .iter()
             .map(|(n, v)| (n.to_lowercase(), *v))
             .collect(),
@@ -209,6 +257,40 @@ fn validate(
     }
 }
 
+/// A change of the driven vehicle: set on its scripts at once, kept on its session record (the
+/// save, a saved configuration and the editor read it there) and, while the driven vehicle is
+/// the one the drive started with, on the load job too.
+pub fn apply_live(world: &mut World, name: &str, value: i32, default: i32) {
+    let active = world.get_resource::<SessionVehicles>().and_then(|r| {
+        r.active()
+            .filter(|r| r.is_alive())
+            .map(|r| (r.id, r.bus_file.clone()))
+    });
+    if let Some((id, _)) = &active {
+        world
+            .resource_mut::<SessionVehicles>()
+            .set_setvar(*id, name, value, default);
+    }
+    if let Some(mut job) = world.get_resource_mut::<WorldLoadJob>() {
+        let first = match &active {
+            Some((_, bus)) => job
+                .vehicle_file()
+                .is_some_and(|f| f == std::path::Path::new(bus)),
+            None => true,
+        };
+        if first {
+            job.set_vehicle_setvar(name, value);
+        }
+    }
+    let mut q =
+        world.query_filtered::<&opts_bevy::VehicleScripts, With<opts_bevy::PlayerVehicle>>();
+    if let Some(scripts) = q.iter(world).next() {
+        if let Ok(mut engine) = scripts.engine.lock() {
+            engine.set(name, value as f32);
+        }
+    }
+}
+
 fn set(
     world: &mut World,
     src: &Source,
@@ -250,18 +332,7 @@ fn set(
                     setup.custom_setvars.insert(name.clone(), *value);
                 }
             }
-            Context::Drive => {
-                if let Some(mut job) = world.get_resource_mut::<WorldLoadJob>() {
-                    job.set_vehicle_setvar(name, *value);
-                }
-                let mut q = world
-                    .query_filtered::<&opts_bevy::VehicleScripts, With<opts_bevy::PlayerVehicle>>();
-                if let Some(scripts) = q.iter(world).next() {
-                    if let Ok(mut engine) = scripts.engine.lock() {
-                        engine.set(name, *value as f32);
-                    }
-                }
-            }
+            Context::Drive => apply_live(world, name, *value, default),
         }
         changed.push(json!({ "name": name, "previous": previous, "value": value }));
     }

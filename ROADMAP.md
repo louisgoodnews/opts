@@ -401,8 +401,8 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Map switching from the Alt menu (builds on sessions M-0068/M-0069).
 - [ ] **🚇 Tunnel Detection and Spatial Zones** — [M-0115](docs/src/roadmap/phase-11/M-0115.md) — 📝 proposed 2026-10-18
   - [ ] Tunnel detection and a `SpatialZone` abstraction as the precursor for reverb and light-room ambience.
-- [ ] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](docs/src/roadmap/phase-11/M-0110.md) — 📝 proposed 2026-10-18
-  - [ ] Alt-menu setvar editor; ints, ranges and enums beyond binary in the config manager; extends M-0078/M-0077.
+- [ ] **🎛️ Setvar Runtime Editor and CTI Value Types** — [M-0110](docs/src/roadmap/phase-11/M-0110.md) — 🟡 in progress since 2026-10-20
+  - [x] Alt-menu setvar editor (2026-10-20); ints, choices and numbers beyond binary exist since M-0078 and are carried by configurations; a per-option "needs respawn" marker is open (Q-SV02).
 - [ ] **🚦 AI Traffic Depth** — [M-0111](docs/src/roadmap/phase-11/M-0111.md) — 📝 proposed 2026-10-18
   - [ ] Audit, then obstacle braking, conservative lane change and traffic lights with `[rowdy_factor]` on top of M-0095/M-0049.
 - [ ] **🧭 Hybrid Tile and Object Streaming** — [M-0114](docs/src/roadmap/phase-11/M-0114.md) — 📝 proposed 2026-10-18
