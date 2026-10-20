@@ -41,3 +41,37 @@ fn the_label_follows_the_control_under_the_cursor() {
     app.update();
     assert_eq!(shown(&mut app), None);
 }
+
+#[test]
+fn the_key_hint_line_shows_the_players_keys() {
+    let mut app = app();
+    build(&mut app, super::super::widget::VehicleKind::Bus);
+    let hint = |app: &mut App| -> String {
+        app.world_mut()
+            .query::<(&super::super::build::HudText, &Text)>()
+            .iter(app.world())
+            .find(|(h, _)| h.binding == super::super::widget::Binding::ControlsHint)
+            .map(|(_, t)| t.0.clone())
+            .unwrap_or_default()
+    };
+    for _ in 0..3 {
+        app.update();
+    }
+    let before = hint(&mut app);
+    assert!(
+        before.contains(". Parking brake") && before.contains("F1 Help"),
+        "{before}"
+    );
+    let mut keys = opts_bevy::ActionKeys::default();
+    keys.set("parking_brake", opts_bevy::KeyChord::parse("B").unwrap());
+    keys.set("help", opts_bevy::KeyChord::parse("Ctrl+H").unwrap());
+    app.insert_resource(keys);
+    for _ in 0..3 {
+        app.update();
+    }
+    let after = hint(&mut app);
+    assert!(
+        after.contains("B Parking brake") && after.contains("Ctrl+H Help"),
+        "{after}"
+    );
+}

@@ -76,6 +76,25 @@ impl SettingsApi<'_> {
         Ok(c)
     }
 
+    /// Puts the key bindings of `group` (`None`: all of them) back to their defaults, announces
+    /// every change and saves once. Returns how many bindings changed.
+    pub fn reset_keys(&mut self, group: Option<&str>, source: ChangeSource) -> usize {
+        let changed =
+            crate::action_settings::reset_bindings(&self.registry, &mut self.settings, group);
+        for (key, old, new) in &changed {
+            self.out.write(SettingChanged {
+                key: key.clone(),
+                old: old.clone(),
+                new: new.clone(),
+                source,
+            });
+        }
+        if !changed.is_empty() {
+            self.settings.save_in_background();
+        }
+        changed.len()
+    }
+
     /// Writes the settings file (after a confirmed risky change).
     pub fn save(&mut self) {
         self.settings.save_in_background();

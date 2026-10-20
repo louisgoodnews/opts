@@ -26,12 +26,13 @@ pub const QUIT: &str = "quit";
 /// leaves the high-contrast switch off.
 pub fn theme_toggle_system(
     keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
     mut activated: MessageReader<Activated>,
     actions: Query<&RailAction>,
     theme: Res<MaterialTheme>,
     mut settings: ResMut<GameSettings>,
 ) {
-    let mut toggle = keyboard.just_pressed(KeyCode::F2);
+    let mut toggle = opts_bevy::action_keys_of(&action_keys).just_pressed(&keyboard, "theme");
     for Activated(entity) in activated.read() {
         toggle |= actions.get(*entity) == Ok(&RailAction::ThemeToggle);
     }

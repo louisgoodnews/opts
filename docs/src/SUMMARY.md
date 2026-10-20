@@ -209,6 +209,7 @@
 - [UI Foundations Spikes](architecture/ui-spikes.md)
 - [GUI Interaction Layer and Components](architecture/gui-interaction-layer.md)
 - [Settings Registry](architecture/settings-registry.md)
+- [Key Bindings](architecture/key-bindings.md)
 - [Map Profiles and Load Profiler](architecture/map-profiles.md)
 - [Localisation Packs](architecture/localisation-packs.md)
 - [HUD Registry](architecture/hud-registry.md)

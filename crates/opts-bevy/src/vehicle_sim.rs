@@ -191,6 +191,7 @@ impl Default for VehicleCameraRig {
 /// Systems that poll desktop keyboard inputs and translate them to [`VehicleInputs`].
 pub fn vehicle_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<crate::action_keys::ActionKeys>>,
     time: Res<Time>,
     mut remote: ResMut<crate::vehicle_remote::RemoteControls>,
     mut query: Query<(&mut VehicleController, Option<&VehicleInputConfig>), With<PlayerVehicle>>,
@@ -240,8 +241,8 @@ pub fn vehicle_input_system(
             inputs.set_steering((current_steer + config.steering_return_rate * dt).min(0.0));
         }
 
-        // 4. Parking brake toggle (`.`)
-        if keyboard.just_pressed(KeyCode::Period) {
+        // 4. Parking brake toggle (the `parking_brake` action, `.` by default)
+        if crate::action_keys::resolve(&action_keys).just_pressed(&keyboard, "parking_brake") {
             let current_park = inputs.is_parking_brake_engaged();
             inputs.set_parking_brake(!current_park);
         }

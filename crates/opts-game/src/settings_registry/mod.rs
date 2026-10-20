@@ -195,7 +195,7 @@ impl SettingsRegistry {
         let new = normalize(d, text)?;
         if matches!(d.kind, SettingKind::Binding) {
             if let Ok(Some(chord)) = opts_bevy::KeyChord::parse(&new) {
-                if let Some(why) = crate::vehicle_keys::conflict(self, settings, key, chord) {
+                if let Some(why) = crate::action_settings::conflict(self, settings, key, chord) {
                     return Err(SettingError::Invalid(format!("{key}: {why}")));
                 }
             }
@@ -323,10 +323,12 @@ pub fn add_messages(loc: &mut Localization) {
     loc.extend("en", include_str!("messages_lighting_en.ftl"));
     loc.extend("en", include_str!("messages_keys_en.ftl"));
     loc.extend("en", include_str!("messages_vehicle_en.ftl"));
+    loc.extend("en", include_str!("messages_actions_en.ftl"));
     loc.extend("de", include_str!("messages_de.ftl"));
     loc.extend("de", include_str!("messages_lighting_de.ftl"));
     loc.extend("de", include_str!("messages_keys_de.ftl"));
     loc.extend("de", include_str!("messages_vehicle_de.ftl"));
+    loc.extend("de", include_str!("messages_actions_de.ftl"));
 }
 
 /// Adds the registry, the message and the migration of renamed keys.

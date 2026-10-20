@@ -1,5 +1,6 @@
 //! OPTS Game - Core application orchestration, state management, and consumer UI screens.
 
+pub mod action_settings;
 pub mod app;
 pub mod app_state;
 pub mod audio_content;
@@ -113,6 +114,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(map_profiles::MapProfilesPlugin)
             .add_plugins(hardware::HardwarePlugin)
             .add_plugins(vehicle_keys::VehicleKeysPlugin)
+            .add_plugins(action_settings::ActionKeysPlugin)
             .add_plugins(shell::ShellPlugin)
             .add_plugins(home::HomePlugin)
             .add_plugins(help::HelpPlugin)

@@ -90,6 +90,7 @@ impl Plugin for HelpPlugin {
         crate::pause::ensure_report_state(app);
         app.init_resource::<HelpState>()
             .init_resource::<Pause>()
+            .add_systems(Update, controls::sync_action_chips)
             .add_systems(OnEnter(AppState::Help), spawn_help)
             .add_systems(OnExit(AppState::Help), despawn_help)
             .add_systems(
@@ -297,6 +298,7 @@ fn report_click(
 /// F1 opens Help: the page in the shell, the overlay (over a paused scene) in a drive.
 pub fn f1_opens_help(
     keys_in: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
     state: Res<State<AppState>>,
     gate: Res<EscGate>,
     overlays: Query<(), With<HelpOverlay>>,
@@ -305,7 +307,10 @@ pub fn f1_opens_help(
     mut navigate: MessageWriter<Navigate>,
     mut commands: Commands,
 ) {
-    if !keys_in.just_pressed(KeyCode::F1) || gate.closed() || !overlays.is_empty() {
+    if !opts_bevy::action_keys_of(&action_keys).just_pressed(&keys_in, "help")
+        || gate.closed()
+        || !overlays.is_empty()
+    {
         return;
     }
     match state.get() {

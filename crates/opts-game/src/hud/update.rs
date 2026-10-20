@@ -72,6 +72,7 @@ pub fn update_texts(
     label: Res<CameraLabel>,
     layout: Res<HudLayout>,
     place: Res<crate::session_vehicles::PlaceLabel>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
     mut texts: Query<(&HudText, &mut Text, Option<&mut InstrumentInk>)>,
 ) {
     let unit = SpeedUnit::parse(settings.raw("interface.units").as_deref());
@@ -132,11 +133,24 @@ pub fn update_texts(
                     ),
                 ],
             ),
-            (Binding::ControlsHint, Part::Value) => loc.t(if layout.compact {
-                keys::HINT_CONTROLS_COMPACT
-            } else {
-                keys::HINT_CONTROLS
-            }),
+            // The keys of the rebindable actions are the player's current ones.
+            (Binding::ControlsHint, Part::Value) => {
+                let bound = opts_bevy::action_keys_of(&action_keys);
+                loc.t_args(
+                    if layout.compact {
+                        keys::HINT_CONTROLS_COMPACT
+                    } else {
+                        keys::HINT_CONTROLS
+                    },
+                    &[
+                        (
+                            "parking".to_owned(),
+                            Arg::from(bound.label("parking_brake")),
+                        ),
+                        ("help".to_owned(), Arg::from(bound.label("help"))),
+                    ],
+                )
+            }
             (Binding::CameraLabel, Part::Value) => label.shown.map_or_else(String::new, |s| {
                 let (mode, index, total) = s;
                 let name = loc.t(camera_key(mode));

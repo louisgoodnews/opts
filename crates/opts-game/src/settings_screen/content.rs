@@ -23,6 +23,7 @@ pub fn run_actions(
     loc: Res<Localization>,
     service: Option<Res<CatalogueService>>,
     mut hardware: Option<ResMut<crate::hardware::HardwareState>>,
+    mut api: SettingsApi,
 ) {
     for r in requests.read() {
         match r.key {
@@ -53,6 +54,21 @@ pub fn run_actions(
                         "settings-toast-hw-nothing-stored"
                     },
                 );
+            }
+            key if key.starts_with(crate::action_settings::RESET_PREFIX) => {
+                let group = key.trim_start_matches(crate::action_settings::RESET_PREFIX);
+                let group = (group != "all").then_some(group);
+                let n = api.reset_keys(group, ChangeSource::Page);
+                if n == 0 {
+                    toast(&mut commands, &loc, "settings-toast-keys-reset-none");
+                } else {
+                    ToastBuilder::new(loc.t_args(
+                        "settings-toast-keys-reset",
+                        &[("count".to_owned(), n.to_string().into())],
+                    ))
+                    .with_duration(4.0)
+                    .spawn(&mut commands);
+                }
             }
             _ => {}
         }

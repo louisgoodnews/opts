@@ -20,6 +20,33 @@ pub struct Binding {
     pub action: &'static str,
     /// The source file (repository path) whose input system reads the keys.
     pub source: &'static str,
+    /// The rebindable actions behind the keys (`opts_bevy::action_keys`): the chip shows their
+    /// current chords, `shown` is the default; empty for keys that cannot move.
+    pub ids: &'static [&'static str],
+}
+
+/// The chip of a rebindable row: its text follows the player's bindings.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ActionChip(pub &'static [&'static str]);
+
+/// Writes the current chords of the rebindable rows into their chips.
+pub fn sync_action_chips(
+    keys: Option<Res<opts_bevy::ActionKeys>>,
+    mut chips: Query<(&ActionChip, &mut Text)>,
+    added: Query<(), Added<ActionChip>>,
+) {
+    let changed = keys.as_ref().is_some_and(|k| k.is_changed()) || !added.is_empty();
+    if !changed {
+        return;
+    }
+    let keys = opts_bevy::action_keys_of(&keys);
+    for (chip, mut text) in &mut chips {
+        let shown: Vec<String> = chip.0.iter().map(|id| keys.label(id)).collect();
+        let shown = shown.join(" / ");
+        if text.0 != shown {
+            text.0 = shown;
+        }
+    }
 }
 
 /// A group: its message key and bindings.
@@ -37,6 +64,24 @@ const fn bind(
         keys,
         action,
         source,
+        ids: &[],
+    }
+}
+
+/// A [`Binding`] whose keys the player can change.
+const fn rebindable(
+    ids: &'static [&'static str],
+    shown: &'static str,
+    keys: &'static [KeyCode],
+    action: &'static str,
+    source: &'static str,
+) -> Binding {
+    Binding {
+        shown,
+        keys,
+        action,
+        source,
+        ids,
     }
 }
 
@@ -76,7 +121,13 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_STEER,
                 SIM,
             ),
-            bind(".", &[KeyCode::Period], keys::HELP_KEY_PARKING, SIM),
+            rebindable(
+                &["parking_brake"],
+                ".",
+                &[KeyCode::Period],
+                keys::HELP_KEY_PARKING,
+                SIM,
+            ),
             bind(
                 "D / N / R",
                 &[KeyCode::KeyD, KeyCode::KeyN, KeyCode::KeyR],
@@ -119,8 +170,15 @@ pub const GROUPS: &[Group] = &[
     (
         keys::HELP_GROUP_MAP,
         &[
-            bind("F7", &[KeyCode::F7], keys::HELP_KEY_MINIMAP, MINIMAP),
-            bind(
+            rebindable(
+                &["minimap_toggle"],
+                "F7",
+                &[KeyCode::F7],
+                keys::HELP_KEY_MINIMAP,
+                MINIMAP,
+            ),
+            rebindable(
+                &["minimap_zoom_in", "minimap_zoom_out"],
                 "+ / -",
                 &[
                     KeyCode::Equal,
@@ -131,8 +189,15 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_MINIMAP_ZOOM,
                 MINIMAP,
             ),
-            bind("F6", &[KeyCode::F6], keys::HELP_KEY_FULLMAP, FULLMAP),
-            bind(
+            rebindable(
+                &["full_map"],
+                "F6",
+                &[KeyCode::F6],
+                keys::HELP_KEY_FULLMAP,
+                FULLMAP,
+            ),
+            rebindable(
+                &["door_camera"],
                 "F4",
                 &[KeyCode::F4],
                 keys::HELP_KEY_DOOR_CAMERA,
@@ -146,12 +211,42 @@ pub const GROUPS: &[Group] = &[
             bind("Esc", &[KeyCode::Escape], keys::HELP_KEY_PAUSE_MENU, PAUSE),
             bind("P", &[KeyCode::KeyP], keys::HELP_KEY_SIM_PAUSE, SIM_PAUSE),
             bind("Alt", &[KeyCode::AltLeft], keys::HELP_KEY_VEHICLE_MENU, EGO),
-            bind("F8", &[KeyCode::F8], keys::HELP_KEY_SWITCH_VEHICLE, SESSION),
-            bind("F5", &[KeyCode::F5], keys::HELP_KEY_QUICK_SAVE, QUICK_SAVE),
-            bind("F9", &[KeyCode::F9], keys::HELP_KEY_QUICK_LOAD, QUICK_SAVE),
-            bind("F1", &[KeyCode::F1], keys::HELP_KEY_HELP, HELP),
-            bind("F2", &[KeyCode::F2], keys::HELP_KEY_THEME, THEME),
-            bind("F10", &[KeyCode::F10], keys::HELP_KEY_DEV, DEV),
+            rebindable(
+                &["switch_vehicle"],
+                "F8",
+                &[KeyCode::F8],
+                keys::HELP_KEY_SWITCH_VEHICLE,
+                SESSION,
+            ),
+            rebindable(
+                &["quick_save"],
+                "F5",
+                &[KeyCode::F5],
+                keys::HELP_KEY_QUICK_SAVE,
+                QUICK_SAVE,
+            ),
+            rebindable(
+                &["quick_load"],
+                "F9",
+                &[KeyCode::F9],
+                keys::HELP_KEY_QUICK_LOAD,
+                QUICK_SAVE,
+            ),
+            rebindable(&["help"], "F1", &[KeyCode::F1], keys::HELP_KEY_HELP, HELP),
+            rebindable(
+                &["theme"],
+                "F2",
+                &[KeyCode::F2],
+                keys::HELP_KEY_THEME,
+                THEME,
+            ),
+            rebindable(
+                &["developer_panel"],
+                "F10",
+                &[KeyCode::F10],
+                keys::HELP_KEY_DEV,
+                DEV,
+            ),
         ],
     ),
 ];
@@ -185,6 +280,7 @@ pub fn spawn_controls(parent: &mut ChildSpawnerCommands) {
         for Binding {
             shown: keys_text,
             action,
+            ids,
             ..
         } in *rows
         {
@@ -205,12 +301,15 @@ pub fn spawn_controls(parent: &mut ChildSpawnerCommands) {
                         RadiusToken(RadiusLevel::Small),
                     ))
                     .with_children(|chip| {
-                        chip.spawn((
+                        let mut text = chip.spawn((
                             Text::new(*keys_text),
                             TextColor::default(),
                             TypeStyleToken(TypeScale::Label),
                             ForegroundRole(ColorRole::OnSurface),
                         ));
+                        if !ids.is_empty() {
+                            text.insert(ActionChip(ids));
+                        }
                     });
                     row.spawn((
                         Text::new(*action),
@@ -238,7 +337,23 @@ mod tests {
             for b in *rows {
                 let text = std::fs::read_to_string(root().join(b.source))
                     .unwrap_or_else(|e| panic!("{}: {e}", b.source));
-                for key in b.keys {
+                // A rebindable row is read through the registry: the source names its actions.
+                for id in b.ids {
+                    assert!(
+                        text.contains(&format!("\"{id}\"")),
+                        "{} lists the action {id} but {} never asks for it",
+                        b.shown,
+                        b.source
+                    );
+                }
+                let defaults: Vec<KeyCode> = b
+                    .ids
+                    .iter()
+                    .filter_map(|id| opts_bevy::action_keys::action(id))
+                    .filter_map(|a| opts_bevy::KeyChord::parse(a.default).ok().flatten())
+                    .map(|c| c.key)
+                    .collect();
+                for key in b.keys.iter().filter(|k| !defaults.contains(k)) {
                     assert!(
                         text.contains(&format!("KeyCode::{key:?}")),
                         "{} lists {key:?} but {} never reads it",

@@ -16,6 +16,7 @@
 
 #![deny(unsafe_code)]
 
+pub mod action_keys;
 pub mod ai_variables;
 pub mod articulation;
 pub mod audio;
@@ -73,6 +74,7 @@ pub mod view_scope;
 pub mod water;
 pub mod weather;
 
+pub use action_keys::{resolve as action_keys_of, ActionKeys};
 pub use ai_variables::{AiVariables, VariableSource};
 pub use articulation::{
     articulation_system, joint_beta_deg, ArticulatedChain, ArticulatedSegment, ArticulationPlugin,

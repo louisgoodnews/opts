@@ -201,10 +201,13 @@ pub struct DoorCameraMarker;
 /// F4 cycles through the doors.
 pub fn door_keys(
     keys: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<crate::action_keys::ActionKeys>>,
     vehicles: Query<&DoorPoints, With<PlayerVehicle>>,
     mut state: ResMut<DoorCamera>,
 ) {
-    if !state.enabled || !keys.just_pressed(KeyCode::F4) {
+    if !state.enabled
+        || !crate::action_keys::resolve(&action_keys).just_pressed(&keys, "door_camera")
+    {
         return;
     }
     let doors = vehicles.iter().next().map_or(0, |d| d.0.len());

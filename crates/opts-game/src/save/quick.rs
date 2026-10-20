@@ -76,15 +76,20 @@ pub fn quick_load(world: &mut World) {
 }
 
 /// F5 and F9 in a drive; ignored while a dialog is open (registered with the modal gate).
-pub fn quick_keys(keyboard: Res<ButtonInput<KeyCode>>, mut commands: Commands) {
-    if keyboard.just_pressed(QUICK_SAVE_KEY) {
+pub fn quick_keys(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
+    mut commands: Commands,
+) {
+    let keys = opts_bevy::action_keys_of(&action_keys);
+    if keys.just_pressed(&keyboard, "quick_save") {
         commands.queue(|world: &mut World| {
             if session_running(world) {
                 quick_save(world);
             }
         });
     }
-    if keyboard.just_pressed(QUICK_LOAD_KEY) {
+    if keys.just_pressed(&keyboard, "quick_load") {
         commands.queue(|world: &mut World| {
             if session_running(world) && !world.contains_resource::<PendingRestore>() {
                 quick_load(world);
