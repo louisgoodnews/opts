@@ -34,23 +34,6 @@ fn zones_follow_the_position_along_the_vehicle() {
 }
 
 #[test]
-fn the_camera_sits_above_and_outside_the_door_and_looks_out_and_back() {
-    let d = doors();
-    let right = door_pose(&d[0]);
-    assert!(
-        (right.translation - (d[0].position + Vec3::new(EYE_OUT_M, EYE_HEIGHT_M, 0.0))).length()
-            < 1e-5
-    );
-    let f = right.forward();
-    assert!(f.x > 0.7, "looks out to the right: {f:?}");
-    assert!(f.z > 0.2, "and back (towards +z, the rear): {f:?}");
-    assert!(f.y < 0.0, "and a little down: {f:?}");
-    let left = door_pose(&d[3]);
-    assert!(left.forward().x < -0.7, "a left door looks out to the left");
-    assert!(left.translation.x < d[3].position.x, "and sits outside it");
-}
-
-#[test]
 fn only_door_leaf_variables_count() {
     for yes in ["door_01", "c2_tuer_1_v_pos", "Door_2", "tür_pos"] {
         assert!(is_door_variable(yes), "{yes}");
@@ -160,7 +143,11 @@ mod detection {
             .spawn((
                 MeshAnimation {
                     owner: vehicle,
-                    steps: vec![step(variable)],
+                    steps: vec![AnimStep {
+                        // The pivot in vehicle axes (x right, y forward, z up).
+                        frame: Mat4::from_translation(Vec3::new(local.x, -local.z, local.y)),
+                        ..step(variable)
+                    }],
                     visible: Vec::new(),
                     shown: vec![value],
                 },
@@ -259,7 +246,7 @@ mod detection {
 }
 
 #[test]
-fn the_camera_is_removed_after_five_quiet_seconds_and_made_again_when_a_door_is_shown() {
+fn every_open_door_has_a_picture_that_fades_after_it_closes_and_the_rest_move_up() {
     use std::time::Duration;
     let mut app = App::new();
     app.add_plugins(MinimalPlugins)
@@ -270,46 +257,101 @@ fn the_camera_is_removed_after_five_quiet_seconds_and_made_again_when_a_door_is_
         ))
         .insert_resource(DoorCamera {
             enabled: true,
-            manual: Some(0),
+            open: vec![0],
             ..default()
         })
         .add_systems(Update, drive_camera);
-    let _vehicle = app
-        .world_mut()
-        .spawn((
-            PlayerVehicle,
-            DoorPoints(doors()),
-            Transform::default(),
-            GlobalTransform::default(),
-        ))
-        .id();
+    app.world_mut().spawn((
+        PlayerVehicle,
+        DoorPoints(doors()),
+        Transform::default(),
+        GlobalTransform::default(),
+    ));
     let cameras = |app: &mut App| {
         app.world_mut()
             .query::<&DoorCameraMarker>()
             .iter(app.world())
             .count()
     };
+    let doors_of = |app: &App| -> Vec<usize> {
+        app.world()
+            .resource::<DoorCamera>()
+            .slots
+            .iter()
+            .map(|s| s.door)
+            .collect()
+    };
     for _ in 0..3 {
         app.update();
     }
-    assert_eq!(cameras(&mut app), 1, "made for the shown door");
-    app.world_mut().resource_mut::<DoorCamera>().manual = None;
-    for _ in 0..4 {
+    assert_eq!(doors_of(&app), vec![0]);
+    app.world_mut().resource_mut::<DoorCamera>().open = vec![0, 1, 2, 3];
+    for _ in 0..2 {
         app.update();
     }
-    assert_eq!(
-        cameras(&mut app),
-        1,
-        "still there after a few quiet seconds"
-    );
-    for _ in 0..4 {
+    assert_eq!(doors_of(&app), vec![0, 1, 2, 3], "in the order they opened");
+    app.world_mut().resource_mut::<DoorCamera>().open = vec![0, 1, 2, 3, 3];
+    app.update();
+    assert_eq!(cameras(&mut app), 4, "one camera per door, at most four");
+    // Door 0 closes: two seconds untouched, then three of fading, then gone.
+    app.world_mut().resource_mut::<DoorCamera>().open = vec![1, 2, 3];
+    app.update();
+    for _ in 0..2 {
         app.update();
     }
-    assert_eq!(cameras(&mut app), 0, "gone after five");
-    assert!(app.world().resource::<DoorCamera>().camera.is_none());
-    app.world_mut().resource_mut::<DoorCamera>().manual = Some(1);
+    let fade = app.world().resource::<DoorCamera>().slots[0].fade;
+    assert!(fade > 0.99, "held for two seconds: {fade}");
+    app.update();
+    app.update();
+    let fade = app.world().resource::<DoorCamera>().slots[0].fade;
+    assert!(fade > 0.2 && fade < 0.9, "fading: {fade}");
     for _ in 0..3 {
         app.update();
     }
-    assert_eq!(cameras(&mut app), 1, "and made again");
+    assert_eq!(doors_of(&app), vec![1, 2, 3], "gone, the others move up");
+    assert_eq!(cameras(&mut app), 3);
+    // It opens again: a new picture at the end.
+    app.world_mut().resource_mut::<DoorCamera>().open = vec![1, 2, 3, 0];
+    app.update();
+    assert_eq!(doors_of(&app), vec![1, 2, 3, 0]);
+}
+
+#[test]
+fn the_camera_hangs_at_the_upper_rear_of_a_right_door_and_the_upper_front_of_a_left_one() {
+    let right = DoorPoint {
+        entry: true,
+        index: 0,
+        position: Vec3::new(1.2, 0.0, -3.0),
+        side: 1,
+    };
+    let left = DoorPoint {
+        side: -1,
+        position: Vec3::new(-1.2, 0.0, -3.0),
+        ..right.clone()
+    };
+    let r = door_pose(&right);
+    let l = door_pose(&left);
+    // Bevy: z backward. The right door's camera is behind it, the left one's in front of it.
+    assert!(r.translation.z > right.position.z && l.translation.z < left.position.z);
+    assert!(r.translation.x > right.position.x && l.translation.x < left.position.x);
+    assert!(r.translation.y > 1.5, "above the door");
+    // Both look at the doorway: the door point lies in front of the lens.
+    for (pose, door) in [(r, &right), (l, &left)] {
+        let to_door = (door.position + Vec3::Y * 0.7 - pose.translation).normalize();
+        assert!(pose.forward().dot(to_door) > 0.99);
+    }
+}
+
+#[test]
+fn the_points_of_one_entrance_are_one_door() {
+    let p = |z: f32, side: i8| DoorPoint {
+        entry: true,
+        index: 0,
+        position: Vec3::new(f32::from(side), 0.0, z),
+        side,
+    };
+    // Two lanes of the front door, two of the rear door, one on the left.
+    let d = vec![p(-5.3, 1), p(-4.6, 1), p(-0.7, 1), p(-0.2, 1), p(-5.0, -1)];
+    let groups: Vec<usize> = (0..d.len()).map(|i| door_group(&d, i)).collect();
+    assert_eq!(groups, vec![0, 0, 2, 2, 4]);
 }

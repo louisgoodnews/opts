@@ -313,6 +313,8 @@ fn door_camera_json(world: &mut World) -> Value {
         "doors": doors,
         "manual": cam.manual.map(|d| d + 1),
         "auto": cam.auto.map(|d| d + 1),
+        "open": cam.open.iter().map(|d| d + 1).collect::<Vec<_>>(),
+        "pictures": cam.slots.iter().map(|s| json!({"door": s.door + 1, "fade": s.fade})).collect::<Vec<_>>(),
         "shown": cam.shown().map(|d| d + 1),
         "renders": cam.renders,
         "picture": { "width": opts_bevy::door_camera::IMAGE_SIZE.x, "height": opts_bevy::door_camera::IMAGE_SIZE.y, "hz": opts_bevy::door_camera::RENDER_HZ },

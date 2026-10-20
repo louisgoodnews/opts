@@ -79,3 +79,19 @@ Unifying these conventions is a separate investigation.
 
 ## Open
 The rotation sense with the swap (a reflection) is unverified against OMSI; check with the OMSI NLC reference.
+
+## Doors turn the other way (NLC and Bremen MAN)
+Top views of the three door types of the NLC (`vis_doortype_* 0/1/2`: interior swing, outward swing, outward-swinging
+sliding) and of the Bremen MAN NG313's default interior-swing doors (`vis_doortype_*_int 0`) showed every leaf swinging
+the wrong way: the interior-swing leaves went *out* of the bus, the outward-swinging ones *into* it, and the sliding
+leaves of the SST hung below the floor. The wheels of the same vehicles steer correctly (a negative
+`Axle_Steering_0_L` turns the front wheels right, test `a_negative_steering_variable_turns_the_wheels_right`), so the
+rule is limited to variables that start with `door`:
+
+* `anim_rot` factors of `door*` variables are negated (`door0 -177` of the NLC's IST leaf now opens into the bus,
+  `door0 -130` of the AST leaf out of it; the Bremen's `door_0 75` into it, `door_0 -130` out);
+* the translation of a `door*` variable on a y/z-swapped mesh with `origin_rot_y ±90` (the SST's `door_0_schiebe 0.47`)
+  runs in the swapped frame, along the bus, and is negated: the leaves swing out and part to the front and the back.
+
+Checked on screen from the side and from above (closed, half open, open) for all three types. Not checked against OMSI
+itself: the arm angles of the SST in between (`door_N_stange`, `door_N_trapez`).

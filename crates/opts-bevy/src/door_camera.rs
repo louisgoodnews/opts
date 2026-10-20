@@ -12,10 +12,13 @@
 //!   animation reads a variable that names a door ([`is_door_variable`]) with a shown value away
 //!   from zero is an open door leaf, and the door point nearest to it ([`nearest_door`]) is the
 //!   door ([`detect_open_doors`], five times a second, held for two seconds after the leaf rests).
-//! * **Picture.** One `Camera3d` child of the vehicle renders into a 480 x 270 image at 30 Hz
-//!   ([`RENDER_HZ`]) and only while a door is shown (`Camera::is_active` is the switch); the HUD
-//!   shows the image. Like the mirror cameras it renders scene-linear (no tonemapping) and copies
-//!   `Hdr` and fog from the [`MainCamera`].
+//! * **Pictures.** Every open door (at most [`MAX_SLOTS`], in the order they opened) has its own
+//!   [`DoorSlot`]: a `Camera3d` child of the vehicle, sitting at the door's upper left (as seen
+//!   from outside) and looking into the doorway ([`door_pose`]), rendering into a 480 x 270 image
+//!   at 30 Hz ([`RENDER_HZ`]); the HUD stacks the images from the top right downwards. A door that
+//!   closes keeps its picture [`FADE_DELAY_S`], fades it out over [`FADE_S`] and then drops the
+//!   slot, so the pictures below move up. Like the mirror cameras they render scene-linear (no
+//!   tonemapping) and copy `Hdr` and fog from the [`MainCamera`].
 //! * **Setting.** `camera.door_overlay` (off by default) sets [`DoorCamera::enabled`]; while it is
 //!   off nothing exists: no camera, no image, no scan.
 
@@ -35,15 +38,23 @@ pub const IMAGE_SIZE: UVec2 = UVec2::new(480, 270);
 /// How often the picture is rendered.
 pub const RENDER_HZ: f64 = 30.0;
 /// Height of the camera above the floor point of the door (m).
-pub const EYE_HEIGHT_M: f32 = 1.5;
+pub const EYE_HEIGHT_M: f32 = 2.1;
 /// How far outside the door point the camera sits (m).
-pub const EYE_OUT_M: f32 = 0.3;
+pub const EYE_OUT_M: f32 = 0.6;
+/// How far to the upper left of the door (along the vehicle) the camera sits (m).
+pub const EYE_ALONG_M: f32 = 0.9;
 /// Seconds between two looks at the animated meshes.
 pub const DETECT_INTERVAL_S: f64 = 0.2;
 /// Seconds a door stays shown after its leaf stopped moving.
 pub const HOLD_S: f64 = 2.0;
-/// Seconds without a shown door after which the camera entity is removed.
-pub const REMOVE_AFTER_S: f64 = 5.0;
+/// Pictures shown at once.
+pub const MAX_SLOTS: usize = 4;
+/// Seconds a closed door's picture stays before it fades.
+pub const FADE_DELAY_S: f64 = 2.0;
+/// Seconds the fade takes.
+pub const FADE_S: f64 = 3.0;
+/// A leaf is at most this far from its door point in the floor plane (m).
+pub const LEAF_NEAR_M: f32 = 2.5;
 /// A door animation value above this counts as open.
 pub const OPEN_ABOVE: f32 = 0.05;
 
@@ -101,14 +112,16 @@ impl DoorPoints {
     }
 }
 
-/// The pose of the door camera in the vehicle's frame: above the door point, a little outside,
-/// looking out and towards the rear and slightly down, so the kerb and the passengers show.
+/// The pose of a door camera in the vehicle's frame: stuck to the door, above its upper left
+/// corner as seen from outside (towards the rear for a door on the right, towards the front on
+/// the left), a little outside, looking down into the doorway.
 #[must_use]
 pub fn door_pose(door: &DoorPoint) -> Transform {
-    let out = Vec3::X * f32::from(door.side);
-    let eye = door.position + Vec3::Y * EYE_HEIGHT_M + out * EYE_OUT_M;
-    let look = out + Vec3::Z * 0.5 - Vec3::Y * 0.25;
-    Transform::from_translation(eye).looking_to(look, Vec3::Y)
+    let side = f32::from(door.side);
+    // Bevy: x right, y up, z backward.
+    let eye = door.position + Vec3::new(side * EYE_OUT_M, EYE_HEIGHT_M, side * EYE_ALONG_M);
+    let target = door.position + Vec3::new(-side * 0.2, 0.7, 0.0);
+    Transform::from_translation(eye).looking_at(target, Vec3::Y)
 }
 
 /// Whether a variable name is the position of a door leaf: it names a door and none of the
@@ -117,7 +130,8 @@ pub fn door_pose(door: &DoorPoint) -> Transform {
 pub fn is_door_variable(name: &str) -> bool {
     let n = name.to_lowercase();
     let door = n.contains("door") || n.contains("tuer") || n.contains("tür");
-    const AUX: [&str; 14] = [
+    const AUX: [&str; 15] = [
+        "taster",
         "alpha",
         "warn",
         "speed",
@@ -150,6 +164,40 @@ pub fn nearest_door(doors: &[DoorPoint], leaf: Vec3) -> Option<usize> {
         .map(|(i, _)| i)
 }
 
+/// One picture: a door with its camera and image.
+#[derive(Debug, Clone)]
+pub struct DoorSlot {
+    /// Index into the vehicle's [`DoorPoints`].
+    pub door: usize,
+    /// The vehicle and the camera that renders for it.
+    pub vehicle: Entity,
+    /// The camera entity.
+    pub camera: Entity,
+    /// The picture.
+    pub image: Handle<Image>,
+    /// Real time the door was seen closed (the fade starts [`FADE_DELAY_S`] later).
+    pub closed_since: Option<f64>,
+    /// Opacity of the picture, `1` to `0`.
+    pub fade: f32,
+}
+
+/// Door points closer than this along the vehicle (m), on the same side, are one door (the
+/// two lanes of an entrance, or the two leaves).
+pub const SAME_DOOR_M: f32 = 1.6;
+
+/// The first point of the door that `door` belongs to: the points of one entrance or exit lie
+/// within [`SAME_DOOR_M`] of each other on the same side, and one opening shows one picture.
+#[must_use]
+pub fn door_group(doors: &[DoorPoint], door: usize) -> usize {
+    let Some(d) = doors.get(door) else {
+        return door;
+    };
+    doors
+        .iter()
+        .position(|o| o.side == d.side && (o.position.z - d.position.z).abs() < SAME_DOOR_M)
+        .unwrap_or(door)
+}
+
 /// What the door camera shows and did.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct DoorCamera {
@@ -161,20 +209,18 @@ pub struct DoorCamera {
     pub auto: Option<usize>,
     /// Real time until which `auto` is held.
     pub auto_until: f64,
-    /// The picture.
-    pub image: Option<Handle<Image>>,
-    /// The vehicle and the camera that renders for it.
-    pub camera: Option<(Entity, Entity)>,
+    /// Every door whose leaf is open now (not held).
+    pub open: Vec<usize>,
+    /// The pictures, in the order the doors opened.
+    pub slots: Vec<DoorSlot>,
     /// Real time of the last render request.
     pub last_render: f64,
-    /// Since when no door has been shown (the camera is removed after [`REMOVE_AFTER_S`]).
-    pub hidden_since: Option<f64>,
     /// Pictures rendered since the session started.
     pub renders: u64,
 }
 
 impl DoorCamera {
-    /// The door being shown (`None`: nothing, and the camera is off).
+    /// The door being shown first (`None`: nothing, and the cameras are off).
     #[must_use]
     pub fn shown(&self) -> Option<usize> {
         if self.enabled {
@@ -182,6 +228,21 @@ impl DoorCamera {
         } else {
             None
         }
+    }
+
+    /// The doors that should have a picture now: the manual one and the open ones.
+    #[must_use]
+    pub fn wanted(&self) -> Vec<usize> {
+        if !self.enabled {
+            return Vec::new();
+        }
+        let mut w: Vec<usize> = self.manual.into_iter().collect();
+        for d in &self.open {
+            if !w.contains(d) {
+                w.push(*d);
+            }
+        }
+        w
     }
 
     /// F4: the next door, after the last none again.
@@ -224,6 +285,7 @@ pub fn detect_open_doors(
 ) {
     if !state.enabled {
         state.auto = None;
+        state.open.clear();
         return;
     }
     let now = time.elapsed_secs_f64();
@@ -231,26 +293,53 @@ pub fn detect_open_doors(
         return;
     }
     *last = now;
-    let Some((vehicle, doors, vehicle_tf)) = vehicles.iter().next() else {
+    let Some((vehicle, doors, _)) = vehicles.iter().next() else {
         state.auto = None;
+        state.open.clear();
         return;
     };
-    let to_local = vehicle_tf.affine().inverse();
     let mut found = None;
-    for (anim, tf) in &animated {
+    let mut now_open = Vec::new();
+    for (anim, _tf) in &animated {
         if anim.owner != vehicle {
             continue;
         }
-        let open = anim
+        // The pivot of the first step that moves a door variable is where the leaf hangs (the
+        // mesh entity's own origin is the vehicle's); vehicle axes (x right, y forward, z up)
+        // to Bevy's (x right, y up, z backward).
+        let Some(step) = anim
             .steps
             .iter()
             .zip(&anim.shown)
-            .any(|(step, value)| is_door_variable(&step.variable) && value.abs() > OPEN_ABOVE);
-        if open {
-            let local = to_local.transform_point3(tf.translation());
-            found = nearest_door(&doors.0, local);
-            break;
+            .find(|(step, value)| is_door_variable(&step.variable) && value.abs() > OPEN_ABOVE)
+            .map(|(step, _)| step)
+        else {
+            continue;
+        };
+        let pivot = step.frame.w_axis.truncate();
+        if pivot.length() < 0.01 {
+            continue;
         }
+        let local = Vec3::new(pivot.x, pivot.z, -pivot.y);
+        // Only a leaf near a door point counts.
+        if !doors
+            .0
+            .iter()
+            .any(|d| (d.position.x - local.x).hypot(d.position.z - local.z) < LEAF_NEAR_M)
+        {
+            continue;
+        }
+        if let Some(d) = nearest_door(&doors.0, local).map(|d| door_group(&doors.0, d)) {
+            if !now_open.contains(&d) {
+                now_open.push(d);
+            }
+            found = found.or(Some(d));
+        }
+    }
+    // Doors keep the order they opened in.
+    now_open.sort_by_key(|d| state.open.iter().position(|o| o == d).unwrap_or(usize::MAX));
+    if state.open != now_open {
+        state.open = now_open;
     }
     match found {
         Some(door) => {
@@ -262,8 +351,9 @@ pub fn detect_open_doors(
     }
 }
 
-/// Keeps the camera: made when a door is first shown for a vehicle, posed at the shown door and
-/// rendering at [`RENDER_HZ`] only while one is shown; gone with its vehicle.
+/// Keeps the pictures: a slot (camera and image) is made when a door opens, its camera sits at
+/// the door and renders at [`RENDER_HZ`]; when the door closes the picture holds for
+/// [`FADE_DELAY_S`], fades for [`FADE_S`] and the slot is dropped. Slots of another vehicle go.
 #[allow(clippy::too_many_arguments)]
 pub fn drive_camera(
     time: Res<Time<Real>>,
@@ -273,37 +363,44 @@ pub fn drive_camera(
     vehicles: Query<(Entity, &DoorPoints), With<PlayerVehicle>>,
     mut cameras: Query<(&mut Camera, &mut Transform), With<DoorCameraMarker>>,
 ) {
+    let now = time.elapsed_secs_f64();
     let vehicle = vehicles.iter().next();
-    // A camera of another vehicle (the player switched) is removed.
-    if let Some((owner, cam)) = state.camera {
-        if vehicle.is_none_or(|(v, _)| v != owner) || cameras.get(cam).is_err() {
-            commands.entity(cam).try_despawn();
-            state.camera = None;
+    let wanted = state.wanted();
+    // Slots of another vehicle, or whose camera is gone, are dropped.
+    let mut slots = std::mem::take(&mut state.slots);
+    slots.retain(|slot| {
+        let keep =
+            vehicle.is_some_and(|(v, _)| v == slot.vehicle) && cameras.get(slot.camera).is_ok();
+        if !keep {
+            commands.entity(slot.camera).try_despawn();
+        }
+        keep
+    });
+    for slot in &mut slots {
+        if wanted.contains(&slot.door) {
+            slot.closed_since = None;
+            slot.fade = 1.0;
+        } else {
+            let since = *slot.closed_since.get_or_insert(now);
+            let t = now - since - FADE_DELAY_S;
+            slot.fade = (1.0 - t / FADE_S).clamp(0.0, 1.0) as f32;
         }
     }
-    let (Some((vehicle, doors)), Some(door)) = (vehicle, state.shown()) else {
-        if let Some((_, cam)) = state.camera {
-            if let Ok((mut c, _)) = cameras.get_mut(cam) {
-                c.is_active = false;
-            }
-            // Nothing is shown: the camera stays a moment (the next F4 press is quick), then goes
-            // and costs nothing.
-            let now = time.elapsed_secs_f64();
-            let since = *state.hidden_since.get_or_insert(now);
-            if now - since > REMOVE_AFTER_S {
-                commands.entity(cam).try_despawn();
-                state.camera = None;
-                state.hidden_since = None;
-            }
+    slots.retain(|slot| {
+        let keep = slot.closed_since.is_none() || slot.fade > 0.0;
+        if !keep {
+            commands.entity(slot.camera).try_despawn();
         }
-        return;
-    };
-    state.hidden_since = None;
-    let Some(point) = doors.0.get(door) else {
-        return;
-    };
-    if state.camera.is_none() {
-        let handle = state.image.clone().unwrap_or_else(|| {
+        keep
+    });
+    if let Some((vehicle, doors)) = vehicle {
+        for door in wanted {
+            if slots.len() >= MAX_SLOTS || slots.iter().any(|s| s.door == door) {
+                continue;
+            }
+            let Some(point) = doors.0.get(door) else {
+                continue;
+            };
             let mut image = Image::new_target_texture(
                 IMAGE_SIZE.x,
                 IMAGE_SIZE.y,
@@ -311,54 +408,61 @@ pub fn drive_camera(
                 None,
             );
             image.sampler = bevy::image::ImageSampler::linear();
-            images.add(image)
-        });
-        state.image = Some(handle.clone());
-        let cam = commands
-            .spawn((
-                Camera3d::default(),
-                Camera {
-                    order: MIRROR_ORDER - 1,
-                    is_active: false,
-                    ..default()
-                },
-                RenderTarget::Image(handle.into()),
-                Msaa::Off,
-                Hdr,
-                Tonemapping::None,
-                Projection::Perspective(PerspectiveProjection {
-                    fov: 70f32.to_radians(),
-                    near: 0.1,
-                    aspect_ratio: IMAGE_SIZE.x as f32 / IMAGE_SIZE.y as f32,
-                    ..default()
-                }),
-                door_pose(point),
-                DoorCameraMarker,
-                Name::new("Door_Camera"),
-            ))
-            .id();
-        commands.entity(vehicle).add_child(cam);
-        state.camera = Some((vehicle, cam));
-        return;
+            let handle = images.add(image);
+            let camera = commands
+                .spawn((
+                    Camera3d::default(),
+                    Camera {
+                        order: MIRROR_ORDER - 1 - slots.len() as isize,
+                        is_active: false,
+                        ..default()
+                    },
+                    RenderTarget::Image(handle.clone().into()),
+                    Msaa::Off,
+                    Hdr,
+                    Tonemapping::None,
+                    Projection::Perspective(PerspectiveProjection {
+                        fov: 70f32.to_radians(),
+                        near: 0.1,
+                        aspect_ratio: IMAGE_SIZE.x as f32 / IMAGE_SIZE.y as f32,
+                        ..default()
+                    }),
+                    door_pose(point),
+                    DoorCameraMarker,
+                    Name::new("Door_Camera"),
+                ))
+                .id();
+            commands.entity(vehicle).add_child(camera);
+            slots.push(DoorSlot {
+                door,
+                vehicle,
+                camera,
+                image: handle,
+                closed_since: None,
+                fade: 1.0,
+            });
+        }
     }
-    let Some((_, cam)) = state.camera else {
-        return;
-    };
-    let now = time.elapsed_secs_f64();
     let due = now - state.last_render >= 1.0 / RENDER_HZ;
-    if let Ok((mut camera, mut tf)) = cameras.get_mut(cam) {
-        let pose = door_pose(point);
-        if *tf != pose {
-            *tf = pose;
+    for slot in &slots {
+        let Ok((mut camera, mut tf)) = cameras.get_mut(slot.camera) else {
+            continue;
+        };
+        if let Some(point) = vehicle.and_then(|(_, d)| d.0.get(slot.door)) {
+            let pose = door_pose(point);
+            if *tf != pose {
+                *tf = pose;
+            }
         }
         if camera.is_active != due {
             camera.is_active = due;
         }
     }
-    if due {
+    if due && !slots.is_empty() {
         state.last_render = now;
         state.renders += 1;
     }
+    state.slots = slots;
 }
 
 /// What the picture copies from the main camera: `Hdr` and fog.
