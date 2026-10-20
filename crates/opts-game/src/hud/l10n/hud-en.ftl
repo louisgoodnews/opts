@@ -77,3 +77,5 @@ hud-fullmap-scale-km = { $km } km
 hud-widget-minimap = Mini map
 hud-viewpoint-scope-vehicle = Saves for: this vehicle
 hud-viewpoint-scope-model = Saves for: all of this model
+hud-mouse-driving-on = Mouse driving: up is throttle, down is brake, left and right steer  -  right click frees the mouse  -  wheel press ends it
+hud-mouse-driving-free = Mouse free  -  right click drives with it again  -  wheel press ends mouse driving

@@ -34,6 +34,9 @@ pub fn drive_state_json(world: &mut World) -> Option<Value> {
                 .map(|a| json!({ "id": a.id, "severity": a.severity.id() }))
         });
     let camera = world.get_resource::<CameraState>().map(|c| c.mode.label());
+    let mouse = world
+        .get_resource::<opts_bevy::MouseDriving>()
+        .map(|m| json!({ "enabled": m.enabled, "on": m.on, "freed": m.freed, "steering": m.steering }));
     Some(json!({
         "speed_kmh": signed.abs(),
         "signed_speed_kmh": signed,
@@ -44,6 +47,7 @@ pub fn drive_state_json(world: &mut World) -> Option<Value> {
         "brake": i.service_brake(),
         "steer": i.steering(),
         "parking_brake": i.is_parking_brake_engaged(),
+        "mouse_driving": mouse,
         "rpm": crate::hud::values::RPM_PROVIDED.then(|| c.engine_rpm()),
         "distance_m": distance,
         "camera": camera,

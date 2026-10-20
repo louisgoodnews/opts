@@ -44,3 +44,5 @@ set-reset-keys-ui = Reset: interface keys
 set-reset-keys-ui-desc = Puts interface keys back to their defaults.
 settings-toast-keys-reset = Key bindings reset: { $count } changed
 settings-toast-keys-reset-none = The key bindings already have their defaults.
+set-mouse-driving = Drive with the mouse
+set-mouse-driving-desc = The mouse wheel press switches mouse driving: the cursor's height is throttle (upper half) and brake (lower half), its width is the steering. A right click frees the mouse until the next right click. Applies at once.

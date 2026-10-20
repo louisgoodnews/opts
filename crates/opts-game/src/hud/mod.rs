@@ -11,6 +11,7 @@
 pub mod alerts;
 pub mod build;
 pub mod control_label;
+pub mod mouse_driving;
 pub mod details;
 pub mod door_camera;
 pub mod fade;
@@ -136,7 +137,7 @@ impl Plugin for HudPlugin {
             // `Update` would add a sync point that reorders the toast systems below.
             .add_systems(
                 PostUpdate,
-                control_label::sync_label
+                (control_label::sync_label, mouse_driving::sync_cue)
                     .run_if(in_state(AppState::InGame))
                     .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
                     .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),

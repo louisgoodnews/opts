@@ -34,6 +34,10 @@ keys! {
     HINT_CONTROLS = "hud-hint-controls",
     /// Hints in a compact layout: the same keys, shorter.
     HINT_CONTROLS_COMPACT = "hud-hint-controls-compact",
+    /// Mouse driving: how to leave it or free the mouse.
+    MOUSE_DRIVING_ON = "hud-mouse-driving-on",
+    /// Mouse driving: the mouse is free; how to drive with it again.
+    MOUSE_DRIVING_FREE = "hud-mouse-driving-free",
     /// Mini map: scale and orientation line (`metres`, `mode`).
     MINIMAP_CAPTION = "hud-minimap-caption",
     /// Mini map: scale line while the radius follows the speed (`metres`, `mode`).

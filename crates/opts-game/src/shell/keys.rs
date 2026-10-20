@@ -198,6 +198,10 @@ keys! {
     HELP_GROUP_VEHICLE_KEYS = "help-group-vehicle-keys",
     /// Message `help-vehicle-keys-note`.
     HELP_VEHICLE_KEYS_NOTE = "help-vehicle-keys-note",
+    /// Message `help-group-mouse-driving`.
+    HELP_GROUP_MOUSE_DRIVING = "help-group-mouse-driving",
+    /// Message `help-mouse-driving-note`.
+    HELP_MOUSE_DRIVING_NOTE = "help-mouse-driving-note",
     /// Message `help-group-camera`.
     HELP_GROUP_CAMERA = "help-group-camera",
     /// Message `help-group-menus`.

@@ -197,3 +197,5 @@ load-choose-another = Choose another
 load-back = Back
 help-key-quick-save = Quick save
 help-key-quick-load = Quick load
+help-group-mouse-driving = Driving with the mouse
+help-mouse-driving-note = Press the mouse wheel to drive with the mouse: the height of the cursor is throttle above the middle of the window and brake below it, its width steers (full lock at the edges). A right click frees the mouse for the cockpit and the menus until the next right click; the wheel press ends the mode. Settings, Controls can switch it off.

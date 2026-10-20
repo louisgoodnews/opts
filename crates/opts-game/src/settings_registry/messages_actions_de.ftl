@@ -44,3 +44,5 @@ set-reset-keys-ui = Zurücksetzen: Bedientasten
 set-reset-keys-ui-desc = Setzt Bedientasten auf die Standardwerte zurück.
 settings-toast-keys-reset = Tastenbelegung zurückgesetzt: { $count } geändert
 settings-toast-keys-reset-none = Die Tastenbelegung hat schon die Standardwerte.
+set-mouse-driving = Mit der Maus fahren
+set-mouse-driving-desc = Ein Druck auf das Mausrad schaltet das Fahren mit der Maus ein und aus: Die Höhe des Zeigers ist Gas (obere Hälfte) und Bremse (untere Hälfte), seine Breite die Lenkung. Ein Rechtsklick gibt die Maus bis zum nächsten Rechtsklick frei. Gilt sofort.
