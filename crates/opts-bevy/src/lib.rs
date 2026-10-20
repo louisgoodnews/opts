@@ -44,6 +44,7 @@ pub mod mirrors;
 pub mod model;
 pub mod moon;
 pub mod moon_material;
+pub mod mouse_driving;
 pub mod plugin;
 pub mod position_tag;
 pub mod reflections;
@@ -125,6 +126,7 @@ pub use model::{
     attach_model_parts, load_decoded_meshes, ContentCache, ContentLoader, ContentStats, ModelPart,
     TextureOverride,
 };
+pub use mouse_driving::MouseDriving;
 pub use plugin::{
     OptsAssetPlugin, OptsCoordsPlugin, OptsMaterialPlugin, OptsMeshPlugin, OptsSceneryPlugin,
     OptsVehiclePlugin,

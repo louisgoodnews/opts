@@ -77,3 +77,5 @@ hud-fullmap-scale-km = { $km } km
 hud-widget-minimap = Minikarte
 hud-viewpoint-scope-vehicle = Speichert für: dieses Fahrzeug
 hud-viewpoint-scope-model = Speichert für: alle dieses Modells
+hud-mouse-driving-on = Mausfahrt: oben ist Gas, unten Bremse, links und rechts lenken  -  Rechtsklick gibt die Maus frei  -  Mausrad drücken beendet sie
+hud-mouse-driving-free = Maus frei  -  Rechtsklick fährt wieder mit ihr  -  Mausrad drücken beendet die Mausfahrt

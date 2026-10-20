@@ -18,6 +18,7 @@ pub mod fullmap;
 pub mod keys;
 pub mod layout;
 pub mod minimap;
+pub mod mouse_driving;
 pub mod parts;
 pub mod profile;
 pub mod protocol;
@@ -75,6 +76,7 @@ impl Plugin for HudPlugin {
             .add_plugins(minimap::MiniMapPlugin)
             .add_plugins(fullmap::FullMapPlugin)
             .init_resource::<opts_bevy::HoveredControl>()
+            .init_resource::<opts_bevy::MouseDriving>()
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<crate::session_vehicles::PlaceLabel>()
@@ -136,7 +138,7 @@ impl Plugin for HudPlugin {
             // `Update` would add a sync point that reorders the toast systems below.
             .add_systems(
                 PostUpdate,
-                control_label::sync_label
+                (control_label::sync_label, mouse_driving::sync_cue)
                     .run_if(in_state(AppState::InGame))
                     .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
                     .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),

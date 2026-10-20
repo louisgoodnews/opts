@@ -38,6 +38,11 @@ const REVIEWED: &[&str] = &[
     // The registry of key actions only answers `just_pressed(action)`; the systems that ask are
     // gated where they are registered.
     "opts-bevy/src/action_keys.rs",
+    // The mouse driving mode reads the wheel and right button; its systems are registered with the
+    // vehicle input system and share its run conditions (`vehicle_accepts_input`, `not_modal_active`).
+    "opts-bevy/src/mouse_driving.rs",
+    // Its tests press the mouse buttons on purpose.
+    "opts-bevy/src/mouse_driving/tests.rs",
     "opts-bevy/src/camera/input.rs",
     "opts-bevy/src/camera/mode/ego.rs",
     "opts-bevy/src/camera/mode/free_roam.rs",
