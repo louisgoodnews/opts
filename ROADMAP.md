@@ -386,7 +386,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Pedestrians, parked and driving cars (transparency, wheel animation), Hamburg partial loads, Wuppertal Schwebebahn stations and T-crossings (R-34 … R-42).
 
 ## 🔭 Phase 11: Advanced Systems, Realism & Continuous Improvement
-*Goal: Build on the session-based simulator with the systems that make it feel finished: in-game map, comfort and accessibility settings, setvar and config depth, deeper and scheduled AI traffic, track switches, adaptive streaming, tunnels, real weather and its effect on driving, the OMSI event system, and a standing roadmap-review practice. Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](docs/src/roadmap/phase-11/README.md). Force feedback stays in [M-0102](docs/src/roadmap/phase-4/M-0102.md).*
+*Goal: Build on the session-based simulator with the systems that make it feel finished: in-game map, comfort and accessibility settings, setvar and config depth, deeper and scheduled AI traffic, track switches, adaptive streaming, tunnels, real weather and its effect on driving, the OMSI event system, and a standing roadmap-review practice. Status: planned 2026-10-18; approved by the project lead 2026-10-20, open for implementation. Documents: [phase page](docs/src/roadmap/phase-11/README.md). Force feedback stays in [M-0102](docs/src/roadmap/phase-4/M-0102.md).*
 
 - [ ] **🧬 OMSI Event System Research and Consolidation** — [M-0118](docs/src/roadmap/phase-11/M-0118.md) — 📝 proposed 2026-10-18
   - [ ] Event taxonomy, dispatch, base event set, parameter formats, ordering, then a consolidation design (documents).
@@ -417,7 +417,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Switch census from tiles, switch state, route announcement and lock rule for AI and player.
 
 ## 🎨 Phase 12: Visual Fidelity & Advanced Physics
-*Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern lighting and anti-aliasing pipeline) and make vehicles behave under load (fuel or battery, passengers). Status: planned 2026-10-18; every milestone is proposed and awaits approval; not started. Documents: [phase page](docs/src/roadmap/phase-12/README.md), [graphics design brief](docs/src/architecture/graphics-overhaul.md). Phase 8 keeps its own open items; M-0122 references them.*
+*Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern lighting and anti-aliasing pipeline) and make vehicles behave under load (fuel or battery, passengers). Status: planned 2026-10-18; approved by the project lead 2026-10-20, open for implementation. Documents: [phase page](docs/src/roadmap/phase-12/README.md), [graphics design brief](docs/src/architecture/graphics-overhaul.md). Phase 8 keeps its own open items; M-0122 references them.*
 
 - [ ] **🧼 Material Overlays and Light Maps** — [M-0120](docs/src/roadmap/phase-12/M-0120.md) — 📝 proposed 2026-10-18
   - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.

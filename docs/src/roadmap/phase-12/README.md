@@ -2,7 +2,7 @@
 
 *Goal: Close the visible gap between OPTS and a good OMSI 2 screenshot (dirt, light maps, wet and snowy surfaces, a modern post-processing chain) and add two physical effects the player feels while driving: fuel or battery state and passenger load.*
 
-**Status:** ⏳ Planned 2026-10-18; every milestone is 📝 Proposed and awaits approval by the project lead. Nothing is started. The execution order below is a recommendation; the project lead may reorder it.
+**Status:** ⏳ Planned 2026-10-18; approved by the project lead on 2026-10-20: the milestones are open for implementation (the page lists each one's own status). The execution order below is a recommendation; the project lead may reorder it.
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 12); this page holds the details.
 

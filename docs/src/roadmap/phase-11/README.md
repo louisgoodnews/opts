@@ -2,7 +2,7 @@
 
 *Goal: Build on the session-based simulator of Phases 9 and 10 with the systems that make it feel finished: a usable in-game map, comfort and accessibility settings, deeper AI traffic and scheduled public transport, rail switches, adaptive streaming, spatial zones such as tunnels, weather that affects driving, a consolidated event system, and a recurring review of the roadmap itself.*
 
-**Status:** ⏳ Planned 2026-10-18; every milestone is 📝 Proposed and awaits approval by the project lead. Nothing is started. The execution order below is a recommendation; the project lead may reorder it.
+**Status:** ⏳ Planned 2026-10-18; approved by the project lead on 2026-10-20: the milestones are open for implementation (the page lists each one's own status). The execution order below is a recommendation; the project lead may reorder it.
 
 The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page holds the details.
 
