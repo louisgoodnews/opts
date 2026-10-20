@@ -40,6 +40,7 @@ pub mod omsi_setup;
 pub mod pause;
 pub mod report_context;
 pub mod save;
+pub mod scenery_sound;
 pub mod session_summary;
 pub mod session_vehicles;
 pub mod settings;
@@ -120,6 +121,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(ui_typography::UiTypographyPlugin)
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)
+            .add_plugins(scenery_sound::SceneryAudioPlugin)
             .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
             .add_plugins(InGamePlugin);
 

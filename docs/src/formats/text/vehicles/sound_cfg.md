@@ -298,3 +298,32 @@ ev_haltebremse_sw_an
 - [`model_cfg`](model_cfg.md)
 - [.wav — Audio Files](../../wav.md)
 - [.sco — Scenery Objects](../sco.md)
+
+---
+
+## 🏛️ Sound configurations of scenery objects (census 2026-10-20, M-0139)
+
+A `.sco` names a configuration with `[sound]` (relative to the object's folder, e.g. `sound\cock.cfg`). 353 of 61,094 scenery objects do; they reference 282 distinct files, and 308 `.cfg` files live in `sound` folders of `Sceneryobjects` (8 of them are *texture* configurations with `[moisture]`, `[puddles]`, `[surface]`, named `x.bmp.cfg`, not sound files). **No `.sli` spline names a sound** (0 of 16,878; one file mentions the word).
+
+| Fact | Count |
+| :--- | ---: |
+| definitions in the 300 sound configurations | 408 |
+| `[loopsound]` | 0 (scenery uses `[sound]` only) |
+| definitions without `[trigger]`, `[conditionSingle]` or `[noloop]` | 198 |
+| with `[trigger]` | 119 |
+| with `[conditionSingle]` | 97 |
+| with `[volcurve]` | 35+ (variables `DayOfYear`, `SunAlt`, `Time`: the session clock) |
+| `[3d]` present | 407 of 408 (the exception names a `Sounds\AI_Cars` file) |
+| distinct WAV files | about 150 |
+| keywords beyond the vehicle set | `[onlyone]` (5), `[checkloading]` (14), `[script]`/`[varnamelist]` inside a sound configuration (1 file, `Eenden_sound.cfg`) |
+
+**Reading (❓ inferred, no OMSI run):**
+
+- A `[sound]` with no modifier is a **continuous ambience**: the transformer hum `trafohaus_sound.cfg` is exactly that, 156 definitions of this shape. (For vehicles the page says a `[sound]` does not loop; for scenery a definition that nothing triggers has to.) OPTS plays it as a loop while the listener is within range.
+- A `[trigger] name` fires when the object's script raises `(T.L.name)`: `Generic/sound_cock.sco` (an editor-only helper with a script and `cock.cfg`) crows at sunrise; church clocks use `clock_bell_hour` and `clock_bell_quarter`. OPTS plays a one-shot at the voice's `[3d]` place.
+- `[conditionSingle] var value mode` gates a definition by a variable (87 definitions, e.g. `churchbell_main.wav`); its semantics are open (Q-SND-003) and OPTS does not play these yet.
+- `[volcurve]` over `DayOfYear`/`SunAlt` makes ambience seasonal and daily (`field.cfg`: larks "vom 31.1. bis 31.7. und vom 10.9. bis 30.11.", only in daylight).
+- `[3d]` range: used as the distance where the sound starts to fall off. OMSI's maximum distance is unknown; OPTS fades to silence at six times the range (at least 40 m more) ([audio-system](../../../architecture/audio-system.md), Q-AU01).
+- Editor-only helper objects (`[onlyeditor]` mesh, no geometry in the game) are the usual carriers of ambience (`Generic/sound_*.sco`, `backgroundsounds`): they must still be built for their script and sound; they were skipped before M-0139.
+
+Reproduction: `crates/opts-game/tests/sound_cfg_corpus.rs` (with `OMSI_PATH`) parses all of them with `opts_core::formats::sound::SoundConfig` (2 warnings: the `[script]` and `[varnamelist]` keywords of one file).

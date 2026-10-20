@@ -217,7 +217,7 @@ fn spawn_object_inner(
             scale: Vec3::ONE,
         },
     };
-    if sco.only_editor {
+    if sco.only_editor && sco.sound.is_none() {
         // No mesh is drawn, but the `[maplight]`s still light the map (e.g. the
         // `sodiumlight_4L_break_L_Forum.sco` helpers that light a square from hidden lamps).
         let root = commands.spawn((transform, Name::new("MapLights"))).id();
@@ -363,6 +363,23 @@ fn spawn_object_inner(
         ));
     }
     if mesh_parts.iter().all(Vec::is_empty) {
+        if sco.sound.is_some() && (sco.meshes.is_empty() || sco.is_editor_only()) {
+            // A sound source without geometry (the `Generic` ambient objects: `[onlyeditor]`
+            // mesh, a script that raises the triggers): the root carries the script and the
+            // voices.
+            let name = sco
+                .friendly_name
+                .clone()
+                .unwrap_or_else(|| obj.sco_file.clone());
+            let parent = commands.spawn((transform, Name::new(name))).id();
+            children.push(parent);
+            job.finish_object(
+                commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
+            );
+            crate::scenery_sound::attach(job, commands, parent, &sco, &sco_dir);
+            stats.objects_loaded += 1;
+            return;
+        }
         if sco.meshes.is_empty() || sco.is_editor_only() {
             tracing::debug!(sco = %sco_path.display(), "object has no mesh (helper/path object)");
             stats.objects_no_geometry += 1;
@@ -413,6 +430,7 @@ fn spawn_object_inner(
     job.finish_object(
         commands, meshes, materials, parent, &sco, obj, mesh_parts, template,
     );
+    crate::scenery_sound::attach(job, commands, parent, &sco, &sco_dir);
     stats.objects_loaded += 1;
 }
 
