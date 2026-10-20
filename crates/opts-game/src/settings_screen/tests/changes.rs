@@ -57,15 +57,16 @@ fn search_lists_matches_across_categories() {
 
 #[test]
 fn planned_rows_are_visible_disabled_and_marked() {
-    let (mut app, _, _) = page_app("notyet", "audio");
-    let b = by_id(&mut app, "settings/audio/audio.master/down").expect("stepper stays visible");
+    let (mut app, _, _) = page_app("notyet", "gameplay");
+    let b = by_id(&mut app, "settings/gameplay/gameplay.time_scale/down")
+        .expect("stepper stays visible");
     assert!(app.world().get::<Disabled>(b).is_some());
     let labels = app
         .world_mut()
         .query_filtered::<(), With<opts_gui::not_yet::NotYetLabel>>()
         .iter(app.world())
         .count();
-    assert_eq!(labels, 4, "one red label per planned audio row");
+    assert_eq!(labels, 1, "one red label per planned gameplay row");
 }
 
 fn advance(app: &mut App, secs: u32) {

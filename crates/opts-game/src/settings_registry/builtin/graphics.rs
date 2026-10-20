@@ -171,7 +171,7 @@ pub(super) fn graphics() -> Vec<D> {
             "set-audio-master-desc",
         )
         .keywords(&["volume", "sound"])
-        .not_yet(&SETTINGS_AUDIO),
+        .since("0.4"),
         D::new(
             "audio.engine",
             K::Int {
@@ -186,7 +186,22 @@ pub(super) fn graphics() -> Vec<D> {
             "set-audio-engine-desc",
         )
         .keywords(&["volume", "sound"])
-        .not_yet(&SETTINGS_AUDIO),
+        .since("0.4"),
+        D::new(
+            "audio.effects",
+            K::Int {
+                min: 0,
+                max: 100,
+                step: 5,
+            },
+            "80",
+            C::Audio,
+            25,
+            "set-audio-effects",
+            "set-audio-effects-desc",
+        )
+        .keywords(&["volume", "sound", "doors", "horn", "switches"])
+        .since("0.4"),
         D::new(
             "audio.ambience",
             K::Int {
@@ -201,7 +216,7 @@ pub(super) fn graphics() -> Vec<D> {
             "set-audio-ambience-desc",
         )
         .keywords(&["volume", "sound"])
-        .not_yet(&SETTINGS_AUDIO),
+        .since("0.4"),
         D::new(
             "audio.interface",
             K::Int {
@@ -216,7 +231,7 @@ pub(super) fn graphics() -> Vec<D> {
             "set-audio-interface-desc",
         )
         .keywords(&["volume", "sound", "clicks"])
-        .not_yet(&SETTINGS_AUDIO),
+        .since("0.4"),
         D::new(
             "controls.rebind",
             K::Action,

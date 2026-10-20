@@ -65,14 +65,6 @@ pub const LIVE_WEATHER: NotYetPlace = NotYetPlace {
         "The weather query is never called; live conditions need an explicit, explained opt-in.",
 };
 
-/// Settings, Audio: the volume settings.
-pub const SETTINGS_AUDIO: NotYetPlace = NotYetPlace {
-    id: "settings.audio",
-    place: "Settings, Audio, volumes",
-    milestone: "M-0027",
-    missing: "There is no audio engine; the volume settings appear with it.",
-};
-
 /// Settings, Gameplay: time scale of the session clock.
 pub const SETTINGS_TIME_SCALE: NotYetPlace = NotYetPlace {
     id: "settings.time-scale",
@@ -95,7 +87,6 @@ pub const PLACES: &[&NotYetPlace] = &[
     &NAV_WORKSHOP,
     &HELP_GUIDES,
     &LIVE_WEATHER,
-    &SETTINGS_AUDIO,
     &SETTINGS_TIME_SCALE,
     &SETTINGS_REBIND,
 ];

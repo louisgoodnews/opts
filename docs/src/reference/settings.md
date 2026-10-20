@@ -38,10 +38,11 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 
 | Key | Name | Values | Default | Applies | Status | Description |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `audio.master` | Master volume | whole number 0 to 100 | `80` | at once | not available yet (M-0027) | Overall volume of the simulator. |
-| `audio.engine` | Engine volume | whole number 0 to 100 | `80` | at once | not available yet (M-0027) | Volume of your vehicle's engine and drivetrain. |
-| `audio.ambience` | Ambience volume | whole number 0 to 100 | `60` | at once | not available yet (M-0027) | Traffic, weather and city sounds. |
-| `audio.interface` | Interface volume | whole number 0 to 100 | `60` | at once | not available yet (M-0027) | Clicks and notification sounds. |
+| `audio.master` | Master volume | whole number 0 to 100 | `80` | at once | available | Overall volume of the simulator. |
+| `audio.engine` | Engine volume | whole number 0 to 100 | `80` | at once | available | Volume of your vehicle's engine and drivetrain. |
+| `audio.effects` | Effects volume | whole number 0 to 100 | `80` | at once | available | Doors, switches, horns and other one-off sounds. |
+| `audio.ambience` | Ambience volume | whole number 0 to 100 | `60` | at once | available | Traffic, weather and city sounds. |
+| `audio.interface` | Interface volume | whole number 0 to 100 | `60` | at once | available | Clicks and notification sounds. |
 
 ## Controls
 

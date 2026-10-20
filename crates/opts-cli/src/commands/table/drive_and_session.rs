@@ -232,6 +232,41 @@ pub(super) const PART: &[CommandSpec] = &[
     .since("1.9")
     .result("`{id, configuration}`"),
     c(
+        "audio.state",
+        "query",
+        "The sound engine: volumes, voice budget, listener and the loudest emitters",
+        "",
+    )
+    .since("1.19")
+    .result("`{enabled, volumes:{master, effects, ambience, engine, interface}, voices:{budget, emitters, audible, with_voice, virtualized, playing}, listener, clips_cached, top:[{entity, bus, gain, distance, voice}]}`")
+    .doc("`gain` is the level an emitter computes: its own gain × the distance fade × its bus' volume × the master volume (volumes are percent, squared into a gain). `voices.playing` counts voices whose sink exists, that is the sound card accepted them: on a machine without an output it stays 0 while `with_voice` rises. `listener` is the main camera's position (Bevy metres) or `null`."),
+    c(
+        "audio.tone",
+        "scene",
+        "Play a sine tone (a test signal for the sound output)",
+        "frequency:n? seconds:n? gain:n? speed:n? bus:s[effects|ambient|vehicles|ui]? loop:b? at:j? reference:n? max:n?",
+    )
+    .since("1.19")
+    .result("`{entity, bus, loop}`")
+    .doc("`frequency` 20 to 20000 Hz (440), `seconds` 0.05 to 30 (1). Without `at` the tone plays everywhere; with `at: [x, y, z]` (Bevy metres) it is a source that fades from `reference` (5 m) to `max` (120 m) and is panned. The sound is kept after it ended, so `audio.state` can show it; `audio.stop` removes it. `1001` before the engine runs."),
+    c(
+        "audio.play",
+        "scene",
+        "Play a sound file of the installation through the engine",
+        "file:s@0 gain:n? speed:n? bus:s[effects|ambient|vehicles|ui]? loop:b? at:j? reference:n? max:n?",
+    )
+    .since("1.19")
+    .result("`{entity, bus, loop}`")
+    .doc("`file` is a `.wav` below an allowed read root (`1002` outside, `1004` missing). It is decoded once and shared (`audio.state.clips_cached`). A file that is not RIFF/WAVE or has an unusual sample format answers `1008` with the reason (five MPEG files in the corpus are named `.wav`). `at`, `reference`, `max` as for `audio.tone`."),
+    c(
+        "audio.stop",
+        "scene",
+        "Stop and remove the sounds `audio.tone` and `audio.play` made",
+        "",
+    )
+    .since("1.19")
+    .result("`{stopped}`"),
+    c(
         "menu.state",
         "query",
         "Page, choices and free entry points of the in-game vehicle menu",
