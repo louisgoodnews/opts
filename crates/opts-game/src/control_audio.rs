@@ -13,6 +13,7 @@ use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
 use crate::audio_content::{ClipCache, ClipLoader};
+use crate::player_sound::PlayerAudioStats;
 use crate::scenery_sound::SceneryAudioStats;
 use crate::vehicle_sound::AiAudioStats;
 
@@ -68,6 +69,10 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         .get_resource::<SceneryAudioStats>()
         .cloned()
         .unwrap_or_default();
+    let player = world
+        .get_resource::<PlayerAudioStats>()
+        .cloned()
+        .unwrap_or_default();
     let traffic = world
         .get_resource::<AiAudioStats>()
         .cloned()
@@ -107,6 +112,15 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         "listener": stats.listener.map(|l| json!([l.x, l.y, l.z])),
         "clips_cached": cached,
         "clips": { "ready": ready, "loading": loading, "failed": failed, "bytes": loaded_bytes },
+        "player": {
+            "voices": player.voices,
+            "loops": player.loops,
+            "one_shots": player.one_shots,
+            "cold_misses": player.cold_misses,
+            "unsupported": player.unsupported,
+            "files_not_found": player.unresolved,
+            "listener_inside": player.inside,
+        },
         "traffic": { "voices": traffic.voices, "playing": traffic.playing },
         "scenery": {
             "voices": scenery.voices,

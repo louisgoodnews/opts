@@ -273,6 +273,8 @@ pub fn stream_ai_voices(
         let curve = SceneryVoice {
             def: voice.def.clone(),
             file: None,
+            playback: crate::sound_logic::Playback::Loop,
+            was_active: false,
         }
         .distance();
         let d = listener.distance(tf.translation());

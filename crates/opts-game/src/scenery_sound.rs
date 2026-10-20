@@ -24,6 +24,7 @@ use opts_core::formats::sound::SoundDef;
 
 use crate::audio_content::{poll_clip_loader, ClipLoader, ClipState};
 use crate::in_game::omsi_world::WorldLoadJob;
+use crate::sound_logic::{conditions_hold, level, playback_of, speed, Playback};
 
 /// One sound definition of a placed object, a child at its `[3d]` position.
 #[derive(Component, Debug, Clone)]
@@ -32,6 +33,10 @@ pub struct SceneryVoice {
     pub def: Arc<SoundDef>,
     /// The sound file, when it was found.
     pub file: Option<PathBuf>,
+    /// What it does when active ([`crate::sound_logic::playback_of`]).
+    pub playback: Playback,
+    /// The conditions held at the last look (edge detection of `[noloop]` voices).
+    pub was_active: bool,
 }
 
 impl SceneryVoice {
@@ -84,6 +89,8 @@ pub fn attach(
             (
                 SceneryVoice {
                     file: job.find_sound_file(&cfg_dir, &def.file),
+                    playback: playback_of(def),
+                    was_active: false,
                     def: Arc::new(def.clone()),
                 },
                 omsi_to_bevy_pos(Vec3::new(p[0], p[1], p[2])),
@@ -122,11 +129,7 @@ pub fn host_variable(name: &str, host: &HostValues) -> Option<f32> {
 /// The level of a definition: the product of its volume curves over the clock.
 #[must_use]
 pub fn level_of(def: &SoundDef, host: &HostValues) -> f32 {
-    def.volcurves
-        .iter()
-        .map(|c| c.at(host_variable(&c.variable, host).unwrap_or(0.0)))
-        .product::<f32>()
-        .clamp(0.0, 1.0)
+    level(def, |n| host_variable(n, host).unwrap_or(0.0))
 }
 
 type VoiceQuery<'w, 's> = Query<
@@ -134,13 +137,15 @@ type VoiceQuery<'w, 's> = Query<
     's,
     (
         Entity,
-        &'static SceneryVoice,
+        &'static mut SceneryVoice,
         &'static GlobalTransform,
         Option<&'static mut SoundEmitter>,
     ),
 >;
 
-/// Starts and stops the looping emitters of continuous voices by distance, four times a second.
+/// Starts and stops the looping emitters of continuous voices by distance, four times a second,
+/// gates them by their conditions and plays the `[noloop]` voices whose conditions just turned
+/// true.
 #[allow(clippy::too_many_arguments)]
 pub fn stream_scenery_voices(
     time: Res<Time>,
@@ -161,50 +166,73 @@ pub fn stream_scenery_voices(
         return;
     };
     let host = HostValues::of(&clock);
+    let read = |n: &str| host_variable(n, &host).unwrap_or(0.0);
     let (mut total, mut playing, mut unsupported, mut unresolved) = (0, 0, 0, 0);
-    for (entity, voice, tf, emitter) in &mut voices {
+    for (entity, mut voice, tf, emitter) in &mut voices {
         total += 1;
-        let def = &voice.def;
-        if !def.conditions.is_empty() {
+        if voice.playback == Playback::Unsupported {
             unsupported += 1;
             continue;
         }
-        if voice.file.is_none() {
+        let Some(path) = voice.file.clone() else {
             unresolved += 1;
             continue;
-        }
-        if !def.is_continuous() {
-            continue;
-        }
+        };
+        let active = conditions_hold(&voice.def.conditions, read).unwrap_or(false);
         let curve = voice.distance();
         let d = listener.distance(tf.translation());
-        match emitter {
-            Some(mut e) => {
-                if d > curve.max * 1.25 {
-                    commands.entity(entity).remove::<SoundEmitter>();
-                } else {
-                    playing += 1;
-                    let level = level_of(def, &host);
-                    if (e.gain - level).abs() > 1e-3 {
-                        e.gain = level;
+        match voice.playback {
+            Playback::Loop => match emitter {
+                Some(mut e) => {
+                    if d > curve.max * 1.25 {
+                        commands.entity(entity).remove::<SoundEmitter>();
+                    } else {
+                        playing += 1;
+                        let gain = if active { level(&voice.def, read) } else { 0.0 };
+                        if (e.gain - gain).abs() > 1e-3 {
+                            e.gain = gain;
+                        }
+                    }
+                }
+                None if d <= curve.max && active => {
+                    if let ClipState::Ready(clip) = loader.state(&path) {
+                        commands.entity(entity).insert(
+                            SoundEmitter::new(clip, SoundBus::Ambient)
+                                .looping()
+                                .spatial(curve)
+                                .with_speed(speed(&voice.def, read))
+                                .with_gain(level(&voice.def, read)),
+                        );
+                    }
+                }
+                None => {}
+            },
+            Playback::OnEdge => {
+                let edge = active && !voice.was_active;
+                if voice.was_active != active {
+                    voice.was_active = active;
+                }
+                if edge && d <= curve.max {
+                    match loader.state(&path) {
+                        ClipState::Ready(clip) => {
+                            stats.one_shots += 1;
+                            commands.entity(entity).with_children(|p| {
+                                p.spawn((
+                                    SoundEmitter::new(clip, SoundBus::Ambient)
+                                        .spatial(curve)
+                                        .with_speed(voice.def.pitch.clamp(0.3, 3.5))
+                                        .with_gain(level(&voice.def, read)),
+                                    Transform::IDENTITY,
+                                    Name::new("scenery one-shot"),
+                                ));
+                            });
+                        }
+                        ClipState::Loading => stats.cold_misses += 1,
+                        ClipState::Failed => {}
                     }
                 }
             }
-            None if d <= curve.max => {
-                let Some(path) = voice.file.as_deref() else {
-                    continue;
-                };
-                if let ClipState::Ready(clip) = loader.state(path) {
-                    commands.entity(entity).insert(
-                        SoundEmitter::new(clip, SoundBus::Ambient)
-                            .looping()
-                            .spatial(curve)
-                            .with_speed(def.pitch)
-                            .with_gain(level_of(def, &host)),
-                    );
-                }
-            }
-            None => {}
+            Playback::OnTrigger | Playback::Unsupported => {}
         }
     }
     stats.voices = total;
@@ -215,12 +243,14 @@ pub fn stream_scenery_voices(
 
 /// Plays the one-shots whose `[trigger]` the objects' scripts raised this frame.
 pub fn fire_scenery_triggers(
+    clock: Res<SceneryClock>,
     mut objects: Query<(&mut SceneryScripts, &Children)>,
     voices: Query<(&SceneryVoice, &GlobalTransform)>,
     mut loader: ResMut<ClipLoader>,
     mut stats: ResMut<SceneryAudioStats>,
     mut commands: Commands,
 ) {
+    let host = HostValues::of(&clock);
     for (mut scripts, children) in &mut objects {
         // No change flag for the thousands of objects that raised nothing.
         let raised = {
@@ -235,11 +265,15 @@ pub fn fire_scenery_triggers(
                 let Ok((voice, tf)) = voices.get(child) else {
                     continue;
                 };
-                if !voice
-                    .def
-                    .triggers
-                    .iter()
-                    .any(|t| t.trim().eq_ignore_ascii_case(&name))
+                if voice.playback != Playback::OnTrigger
+                    || !voice
+                        .def
+                        .triggers
+                        .iter()
+                        .any(|t| t.trim().eq_ignore_ascii_case(&name))
+                    || conditions_hold(&voice.def.conditions, |n| {
+                        host_variable(n, &host).unwrap_or(0.0)
+                    }) != Some(true)
                 {
                     continue;
                 }
@@ -323,6 +357,8 @@ mod tests {
         let v = SceneryVoice {
             def: Arc::new(lark()),
             file: None,
+            playback: Playback::Loop,
+            was_active: false,
         };
         let c = v.distance();
         assert_eq!((c.reference, c.max), (20.0, 120.0));
@@ -334,6 +370,8 @@ mod tests {
         let v = SceneryVoice {
             def: Arc::new(d),
             file: None,
+            playback: Playback::Loop,
+            was_active: false,
         };
         assert_eq!(v.distance().max, 42.0);
     }

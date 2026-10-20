@@ -70,7 +70,7 @@ Decoding happens where `ClipCache::clip` is called, on the calling thread. A map
 
 `scenery_sound.rs` turns the `[sound]` configuration of a placed object into `SceneryVoice` children at the `[3d]` positions (the configuration is parsed once per file, cached in the load job). Three systems: `poll_clip_loader` (finished decodes into the assets), `stream_scenery_voices` (four times a second: a continuous voice gets a looping `SoundEmitter` when the listener is within its range and its clip is decoded, loses it beyond 1.25 × the maximum distance; the level is the product of its `[volcurve]`s over the session clock), `fire_scenery_triggers` (the events an object's script raised become one-shot emitters at the voice's place). Clips are decoded on two worker threads the first time a voice comes near, so no frame waits for a file and the 3.6 GB of scenery sound is never read as a whole. Objects without geometry (`[onlyeditor]` helpers) are built when they carry a sound, so their script and voices exist. Counters: `audio.state.scenery` and `audio.state.clips`.
 
-Not yet: `[conditionSingle]`, `[viewpoint]`, `[onlyone]`, `[checkloading]`, script variables in `[volcurve]`, eviction of decoded clips, splines (no spline names a sound; road and rail rolling noise belongs to the vehicles, whose tyre sounds read the surface texture configurations, M-0102).
+Since M-0102 the scenery voices use the shared rules of `sound_logic.rs` (§10): a `[conditionSingle]` over the session clock gates a loop or fires a `[noloop]` voice on its edge. Not yet: `[viewpoint]`, `[onlyone]`, `[checkloading]`, script variables in `[volcurve]`, eviction of decoded clips, splines (no spline names a sound; road and rail rolling noise belongs to the vehicles, whose tyre sounds read the surface texture configurations, M-0102).
 
 ## 9. AI traffic (M-0140)
 
@@ -78,12 +78,23 @@ Not yet: `[conditionSingle]`, `[viewpoint]`, `[onlyone]`, `[checkloading]`, scri
 
 Not yet: door sounds, horns (`ev_AI_Horn`), trailers' own sounds (only the head unit sounds), conditions, brakes squeal and the other script variables; trams and trains (the traffic has road vehicles only).
 
-## 10. Open
+## 10. The player's vehicle (M-0102)
+
+`player_sound.rs` and `sound_logic.rs`. `load_player_vehicle` calls `player_sound::attach`, which turns every definition of the `.bus` `[sound]` configuration into a `PlayerVoice` child at its `[3d]` place (the Citybus 530 has 330; definitions with an unsupported condition mode or a missing file are counted). `sound_logic` holds the rules all three layers share: what a definition does (`playback_of`: loop, once on the edge of its conditions, once per trigger), the condition comparison (modes 1 to 3), level (product of the `[volcurve]`s), pitch (`variable / reference × scale`) and the `[viewpoint]` split. The variables are the vehicle script's own (`engine.get(name)`), so every predefined and script variable a volume curve names is there: `engine_n`, `velocity`, `throttle`, the door and brake variables, … The vehicle's scripts' events (`(T.L.name)`, `(T.F.name)`, `(T.S.name)`) are kept in `VehicleScripts::raised` and played by `fire_player_triggers`.
+
+`stream_player_voices` (twenty times a second): a loop within range of the listener gets a looping emitter on the **Vehicles** bus (silenced while its conditions fail or its viewpoint does not match), a `[noloop]` voice fires a one-shot on the edge of its conditions; one-shots are children of the voice and use the **Effects** bus. Whether the listener is inside the vehicle (a box about a solo bus' body) decides the `[viewpoint]`. Counters: `audio.state.player`.
+
+Checked live (Citybus 530, Ahlheim 5): 330 voices, 44 loops with an emitter, 52 of its sound files decoded on demand (60 MB); pressing the battery switch and a door key plays their one-shots 1.7 m from the listener with a sink in the system mixer. Not checked live: the engine loops of a running engine (the engine of this bus does not start through the protocol keys yet, `engine_n` stays 0 and the loops are silent), tested instead over a script engine in the unit tests.
+
+Not yet: trailers and the articulated bus' second unit, announcements (the `(T.F)` payload files), the `Snd_*` mixer inputs, force feedback, the horn and the other definitions with an unknown condition mode, a cabin filter for outside sounds heard from inside (the viewpoint rule only switches them).
+
+## 11. Open
 
 | Id | Question |
 | :--- | :--- |
 | Q-AU01 | OMSI's own fall-off: its `[3d]` blocks give a minimum and maximum distance and a volume curve ([sound_cfg](../formats/text/vehicles/sound_cfg.md)); the engine's inverse-distance curve is a stand-in until the scenery milestone maps them. |
 | Q-AU02 | Whether virtual loops should keep their play position so that a returning source continues instead of restarting. |
 | Q-AU04 | Which surface a road or rail gives its tyre noise: the texture configurations next to the scenery (`x.bmp.cfg` with `[surface]`, `[moisture]`, `[puddles]`) look like the source; M-0102. |
+| Q-AU06 | The comparison modes 0, 4 and 5 of `[conditionSingle]` (the horn, the retarder stages, gear selector): 749 definitions of the installed vehicles are left out until they are known. |
 | Q-AU05 | The engine speed OMSI's AI writes to `AI_Motor`/`engine_n` of an AI vehicle (the gear model of M-0140 is a stand-in); it fixes the pitch of every AI engine loop. |
 | Q-AU03 | Output device choice and a latency setting (Bevy uses the system default device). |

@@ -170,6 +170,7 @@ pub fn load_player_vehicle(
     }
     let script_seed = script_seed(job.install.root(), &bus_path, session_id);
     attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed);
+    crate::player_sound::attach(job, commands, root, &manifest, &bus_dir);
     doors::attach_door_points(job, commands, root, &manifest, &bus_dir);
     load_key_bindings(job, commands);
     let trailer_cams = spawn_trailer_chain(

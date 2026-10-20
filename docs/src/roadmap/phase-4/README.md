@@ -36,7 +36,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🟢 done 2026-10-19
 - [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🔴 Not started (proposed 2026-10-14)
-- [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🟡 First slice 2026-10-20 (the player vehicle's loops and one-shots from its sound configuration; announcements, mixer inputs, force feedback open)
 - [M-0103 — AI Scripts Near the Player](M-0103.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0105 — Course Geometry and Path Recognition](M-0105.md) — 📝 Proposed (2026-10-14) - research only, needs approval
 - [M-0053 — Articulated Vehicle Completion](M-0053.md) — ⏳ Planned (critical review 2026-10-11 F-002, F-003; scope revised 2026-10-14 from the [design](../../architecture/articulation-physics.md))
