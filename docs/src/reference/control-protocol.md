@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.19.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.20.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -84,6 +84,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `vehicle.script_vars` | `contains?` (string) | 1.0 | Script variables of the player vehicle (substring filter) |
 | [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
 | [`session.saves`](#sessionsaves) | - | 1.3 | The list of saves, the registered save sections and the state of a restore |
+| [`vehicle.hotspots`](#vehiclehotspots) | `contains?` (string) | 1.20 | The cockpit controls of the player's vehicle that react to the mouse (hot-spots) |
 | [`audio.state`](#audiostate) | - | 1.19 | The sound engine: volumes, voice budget, listener and the loudest emitters |
 | `menu.state` | - | 1.0 | Page, choices and free entry points of the in-game vehicle menu |
 
@@ -124,6 +125,14 @@ The list of saves, the registered save sections and the state of a restore.
 **Result:** `{dir, running, saves:[{id, name, map, vehicles, play_time_s, saved_unix, sections, unknown_sections, from_backup, issues}|{id, error}], sections:[{id, version, about}], restore:{state, id?, warnings?}}`
 
 Most recent first. A file that cannot be read is listed with its `error` (`kind`: `corrupt`, `newer_format`, ...). `issues` name missing or changed content (`MissingMap`, `MissingVehicle`, `Changed`).
+
+### `vehicle.hotspots`
+
+The cockpit controls of the player's vehicle that react to the mouse (hot-spots).
+
+**Result:** `{count, hotspots:[{name, meshes, position}]}`
+
+`name` is the `[mouseevent]` trigger name a click raises (`<name>`, then `<name>_drag` while the mouse moves and `<name>_off` on release); `meshes` counts the meshes that carry it, `position` is the first one's place (Bevy metres). `contains` filters by a substring of the name (case-insensitive). `1001` without a player vehicle.
 
 ### `audio.state`
 
@@ -881,6 +890,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.timetables`](#bustimetables) | `line?` (string)<br>`tour?` (integer)<br>`limit?` (integer)<br>`all?` (boolean) | 1.13 | List the map's timetables: line files, their tours and the runs of a tour |
 | [`bus.set_timetable`](#busset_timetable) | `line?` (string)<br>`tour?` (integer)<br>`run?` (integer)<br>`stops?` (integer)<br>`clear?` (boolean) | 1.13 | Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS |
 | [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
+| [`vehicle.click`](#vehicleclick) | `name` (string)<br>`frames?` (integer)<br>`hold_ms?` (integer) | 1.20 | Operate a cockpit hot-spot like a player: press, drag, hold, release |
 
 ### `drive.controls`
 
@@ -1045,6 +1055,14 @@ Set the stop of the route or timetable the vehicle is at (0-based).
 **Result:** `{stop_index, stop_count}`
 
 What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable.
+
+### `vehicle.click`
+
+Operate a cockpit hot-spot like a player: press, drag, hold, release.
+
+**Result:** `{queued, name, drag, drag_frames, hold_ms}`
+
+Raises `<name>` (press), then `<name>_drag` on each of `frames` frames (default 10) while `mouse_x`/`mouse_y` carry the share of `drag_x`/`drag_y` pixels of that frame, holds the button for `hold_ms`, then raises `<name>_off` with the mouse values at 0. The same triggers and system values a real click makes, so it works in any camera. A control that reads the mouse position in steps (the ignition key of the Citybus 530 turns by `mouse_y / -75` per drag call) needs a drag: `drag_y: -80` turns it to the starter. The command returns at once; poll `vehicle.script_vars`. `1004` for a name that is not a hot-spot of the vehicle.
 
 ## Group `trace`
 
