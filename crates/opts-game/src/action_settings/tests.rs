@@ -11,14 +11,19 @@ fn parts() -> (SettingsRegistry, SettingsCapabilities, GameSettings) {
 
 #[test]
 fn defaults_are_unique_across_vehicle_and_built_in_actions() {
-    let mut seen = std::collections::BTreeMap::new();
+    // Bus-only and tram-only keys may share a key (Num * is door 2 and the tram's side).
+    let mut seen: Vec<(&str, String)> = Vec::new();
     for (setting, default, _) in binding_settings() {
         if default == "none" {
             continue;
         }
-        if let Some(other) = seen.insert(default, setting.clone()) {
+        if let Some((_, other)) = seen
+            .iter()
+            .find(|(d, o)| *d == default && scope_of(o).overlaps(scope_of(&setting)))
+        {
             panic!("{setting} and {other} both default to {default}");
         }
+        seen.push((default, setting));
     }
 }
 

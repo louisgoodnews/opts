@@ -288,7 +288,7 @@ fn the_keys_change_the_settings() {
     press(&mut app, &[KeyCode::Equal]);
     assert_eq!(config(&app).zoom_m, 100.0, "stops at 100 m");
     press(&mut app, &[KeyCode::Minus]);
-    press(&mut app, &[KeyCode::NumpadSubtract]);
+    press(&mut app, &[KeyCode::Minus]);
     assert_eq!(config(&app).zoom_m, 500.0, "- zooms out");
     press(&mut app, &[KeyCode::ShiftLeft, KeyCode::F7]);
     assert_eq!(config(&app).orientation, Orientation::North);

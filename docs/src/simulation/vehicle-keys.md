@@ -43,10 +43,14 @@
 | Hazard lights | `hazard` | B | `blinker_warn_toggle` | no |
 | Horn | `horn` | H | `horn` | yes |
 | Wipers up | `wiper` | none (OMSI: W, the throttle here) | `kw_wipermode_up` | no |
-| Door 1 | `door_1` | Num / | `bus_doorfront0` | no |
-| Door 2 | `door_2` | Num * | `bus_doorfront1` | no |
-| Door 3 | `door_3` | Num 0 (OMSI: Num -, kept by the map zoom) | `bus_dooraft` | no |
-| Door 4 | `door_4` | Shift+Num / | `bus_doorfront5` | no |
+| Door 1 (buses) | `door_1` | Num / | `bus_doorfront0` | no |
+| Door 2 (buses) | `door_2` | Num * | `bus_doorfront1` | no |
+| Door 3 (buses) | `door_3` | Ctrl+Num / | `bus_doorfront2` | no |
+| Door 4 (buses) | `door_4` | Ctrl+Num * | `bus_doorfront3` | no |
+| Door clearance (buses, trams) | `door_clearance` | Num - | `bus_dooraft` | no |
+| All doors at once (buses) | `door_central` | Num + | `bus_doorfront4` and `bus_doorfront5` | no |
+| Door side (trams) | `door_side` | Num * | `kw_s_1` / `kw_s_2` (see below) | no |
+| Cabin light (buses, trams) | `cabin_light` | Ctrl+L | pseudo trigger, see below | no |
 | Driver's light | `interior_driver` | 6 | `cp_fahrerlicht_toggle` | no |
 | Interior, lower right | `interior_lower_right` | 7 | `cp_licht_untenrechts_toggle` | no |
 | Interior, upper deck | `interior_upper` | 8 | `cp_licht_oberdeck_toggle` | no |
@@ -55,6 +59,10 @@
 | Hand over ticket | `ticket` | T | `ticket_give` | no |
 | Ticket with change | `ticket_change` | Ctrl+T | `change_give` | no |
 | Collect money | `ticket_take` | Shift+T | `change_take` | no |
+
+The door keys are scoped to the vehicle: a tram only has door clearance and the side selection (its open and close buttons stay on the mouse), so Num * is door 2 on a bus and the side selection on a tram (a tram's `bus_doorfront0/1` are its open and close buttons). The side selection is one key for two script toggles: `kw_s_1` flips the right side and `kw_s_2` the left one (`Tuervorwahl_rechts_*`, `Tuervorwahl_links_*`); the key reads which is on and raises the pair so that the other side is selected (none selected: the right). Num + and Num - no longer zoom the mini map (`+` and `-` still do); the numpad keys belong to the doors, as in OMSI. On the NLC `bus_doorfront2` and `bus_doorfront3` open the third and fourth door and `bus_doorfront4` is the "all doors" switch; `bus_dooraft` is the clearance (`Tuerfreigabe`) toggle.
+
+The cabin light key is one key for the cab light's on and off, whatever the vehicle has: a bus's switch (`cp_fahrerlicht_sw`) has three positions (off, auto, on) and its toggle trigger only steps through them, so the key steps until the switch is on (or, when it is on, off); a tram's `cp_fahrerlicht_toggle` is a plain toggle and is raised once. The four interior keys (6 to 9) still step the individual switches.
 
 Not rebindable here and driven by OPTS itself: throttle, brake, steering, gears (W, S, arrows, D/N/R), parking brake (`.`, which also raises `parking_brake_toggle`), cameras (digits, Tab), menus. A vehicle that does not define a trigger simply ignores the key (`handled: false` in the protocol answer).
 

@@ -32,10 +32,47 @@ pub struct VehicleKeyAction {
     pub default: &'static str,
     /// Releasing the key raises `<trigger>_off`.
     pub held: bool,
+    /// Which vehicles the key is for: a bus's door keys do nothing on a tram and the tram's
+    /// side selection shares its key with the bus's second door.
+    pub scope: Scope,
+    /// A second trigger the same key raises (vehicles name the same function differently).
+    pub also: Option<&'static str>,
+}
+
+/// The vehicles a key action is for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scope {
+    /// Buses, trolleybuses and trams.
+    Both,
+    /// Buses and trolleybuses.
+    Bus,
+    /// Trams.
+    Tram,
+}
+
+impl Scope {
+    /// Whether an action of this scope applies to a vehicle (`tram`: it runs on rails).
+    #[must_use]
+    pub fn applies(self, tram: bool) -> bool {
+        match self {
+            Self::Both => true,
+            Self::Bus => !tram,
+            Self::Tram => tram,
+        }
+    }
+
+    /// Whether two scopes can be in use on the same vehicle, so their keys must differ.
+    #[must_use]
+    pub fn overlaps(self, other: Self) -> bool {
+        self == Self::Both || other == Self::Both || self == other
+    }
 }
 
 macro_rules! action {
-    ($id:literal, $trigger:literal, $default:literal, $held:literal) => {
+    ($id:literal, $trigger:expr, $default:literal, $held:literal) => {
+        action!($id, $trigger, $default, $held, Scope::Both, None)
+    };
+    ($id:literal, $trigger:expr, $default:literal, $held:literal, $scope:expr, $also:expr) => {
         VehicleKeyAction {
             id: $id,
             setting: concat!("controls.vehicle.", $id),
@@ -44,6 +81,8 @@ macro_rules! action {
             trigger: $trigger,
             default: $default,
             held: $held,
+            scope: $scope,
+            also: $also,
         }
     };
 }
@@ -62,10 +101,72 @@ pub const ACTIONS: &[VehicleKeyAction] = &[
     action!("hazard", "blinker_warn_toggle", "B", false),
     action!("horn", "horn", "H", true),
     action!("wiper", "kw_wipermode_up", "none", false),
-    action!("door_1", "bus_doorfront0", "NumpadDivide", false),
-    action!("door_2", "bus_doorfront1", "NumpadMultiply", false),
-    action!("door_3", "bus_dooraft", "Numpad0", false),
-    action!("door_4", "bus_doorfront5", "Shift+NumpadDivide", false),
+    // Buses: the doors one by one and all at once; the trams only clear the doors and choose the
+    // side (`bus_doorfront0/1` of a tram are its open and close buttons, which stay on the mouse).
+    action!(
+        "door_1",
+        "bus_doorfront0",
+        "NumpadDivide",
+        false,
+        Scope::Bus,
+        None
+    ),
+    action!(
+        "door_2",
+        "bus_doorfront1",
+        "NumpadMultiply",
+        false,
+        Scope::Bus,
+        None
+    ),
+    action!(
+        "door_3",
+        "bus_doorfront2",
+        "Ctrl+NumpadDivide",
+        false,
+        Scope::Bus,
+        None
+    ),
+    action!(
+        "door_4",
+        "bus_doorfront3",
+        "Ctrl+NumpadMultiply",
+        false,
+        Scope::Bus,
+        None
+    ),
+    action!(
+        "door_clearance",
+        "bus_dooraft",
+        "NumpadSubtract",
+        false,
+        Scope::Both,
+        None
+    ),
+    action!(
+        "door_central",
+        "bus_doorfront4",
+        "NumpadAdd",
+        false,
+        Scope::Bus,
+        Some("bus_doorfront5")
+    ),
+    action!(
+        "door_side",
+        opts_bevy::DOOR_SIDE_TOGGLE,
+        "NumpadMultiply",
+        false,
+        Scope::Tram,
+        None
+    ),
+    action!(
+        "cabin_light",
+        opts_bevy::CABIN_LIGHT_TOGGLE,
+        "Ctrl+L",
+        false,
+        Scope::Both,
+        None
+    ),
     action!("interior_driver", "cp_fahrerlicht_toggle", "6", false),
     action!(
         "interior_lower_right",
@@ -130,7 +231,11 @@ pub fn conflict(
             chord.to_text().unwrap_or_default()
         ));
     }
-    for a in ACTIONS.iter().filter(|a| a.setting != setting) {
+    let scope = action(setting).map_or(Scope::Both, |a| a.scope);
+    for a in ACTIONS
+        .iter()
+        .filter(|a| a.setting != setting && a.scope.overlaps(scope))
+    {
         let other = registry.text(settings, a.setting).unwrap_or_default();
         if KeyChord::parse(&other).ok().flatten() == Some(chord) {
             return Some(format!(
@@ -162,26 +267,45 @@ pub fn sync_bindings(
     settings: Res<GameSettings>,
     base: Res<ScriptKeyBase>,
     mut bindings: ResMut<ScriptKeyBindings>,
-    mut first: Local<bool>,
+    rail: Query<
+        (),
+        (
+            With<opts_bevy::PlayerVehicle>,
+            With<crate::in_game::omsi_world::RailPlayer>,
+        ),
+    >,
+    mut first: Local<Option<bool>>,
 ) {
-    if *first && !settings.is_changed() && !base.is_changed() {
+    let tram = !rail.is_empty();
+    if *first == Some(tram) && !settings.is_changed() && !base.is_changed() {
         return;
     }
-    *first = true;
+    *first = Some(tram);
     let own: Vec<ScriptKeyBinding> = ACTIONS
         .iter()
+        .filter(|a| a.scope.applies(tram))
         .filter_map(|a| {
             let c = chord_of(&registry, &settings, a)?;
-            Some(ScriptKeyBinding {
-                trigger: a.trigger.to_string(),
-                key: c.key,
-                shift: c.shift,
-                ctrl: c.ctrl,
-                held: a.held,
-            })
+            Some(
+                std::iter::once(a.trigger)
+                    .chain(a.also)
+                    .map(move |t| ScriptKeyBinding {
+                        trigger: t.to_string(),
+                        key: c.key,
+                        shift: c.shift,
+                        ctrl: c.ctrl,
+                        held: a.held,
+                    }),
+            )
         })
+        .flatten()
         .collect();
-    let replaced: Vec<&str> = ACTIONS.iter().map(|a| a.trigger).collect();
+    // The triggers of every action are the settings', never the installation's key file's (also
+    // those of the actions that do not apply to this vehicle).
+    let replaced: Vec<&str> = ACTIONS
+        .iter()
+        .flat_map(|a| std::iter::once(a.trigger).chain(a.also))
+        .collect();
     let composed = ScriptKeyBindings::compose(&base.0, &replaced, own);
     if composed.0 != bindings.0 {
         *bindings = composed;
@@ -215,17 +339,21 @@ mod tests {
     #[test]
     fn defaults_are_valid_unique_and_free() {
         let mut seen = std::collections::BTreeSet::new();
-        for a in ACTIONS {
-            let chord = KeyChord::parse(a.default).unwrap_or_else(|e| panic!("{}: {e}", a.id));
-            if let Some(c) = chord {
-                assert!(
-                    !c.is_reserved(),
-                    "{} default {} is reserved",
-                    a.id,
-                    a.default
-                );
-                assert!(seen.insert(a.default), "{} duplicates {}", a.id, a.default);
-                assert_eq!(c.to_text().as_deref(), Some(a.default));
+        // Bus and tram keys may share a key; the scopes are checked one at a time.
+        for tram in [false, true] {
+            seen.clear();
+            for a in ACTIONS.iter().filter(|a| a.scope.applies(tram)) {
+                let chord = KeyChord::parse(a.default).unwrap_or_else(|e| panic!("{}: {e}", a.id));
+                if let Some(c) = chord {
+                    assert!(
+                        !c.is_reserved(),
+                        "{} default {} is reserved",
+                        a.id,
+                        a.default
+                    );
+                    assert!(seen.insert(a.default), "{} duplicates {}", a.id, a.default);
+                    assert_eq!(c.to_text().as_deref(), Some(a.default));
+                }
             }
         }
     }

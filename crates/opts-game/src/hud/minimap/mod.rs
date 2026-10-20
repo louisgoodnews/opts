@@ -153,13 +153,9 @@ pub fn minimap_keys(
         ))
     } else if keys.just_pressed(&keyboard, "minimap_toggle") {
         Some((SETTING_ENABLED, (!config.enabled).to_string()))
-    } else if keys.just_pressed(&keyboard, "minimap_zoom_in")
-        || keyboard.just_pressed(KeyCode::NumpadAdd)
-    {
+    } else if keys.just_pressed(&keyboard, "minimap_zoom_in") {
         Some((SETTING_ZOOM, format!("{}", step_zoom(config.zoom_m, 1))))
-    } else if keys.just_pressed(&keyboard, "minimap_zoom_out")
-        || keyboard.just_pressed(KeyCode::NumpadSubtract)
-    {
+    } else if keys.just_pressed(&keyboard, "minimap_zoom_out") {
         Some((SETTING_ZOOM, format!("{}", step_zoom(config.zoom_m, -1))))
     } else {
         None

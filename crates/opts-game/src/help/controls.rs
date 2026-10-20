@@ -180,12 +180,7 @@ pub const GROUPS: &[Group] = &[
             rebindable(
                 &["minimap_zoom_in", "minimap_zoom_out"],
                 "+ / -",
-                &[
-                    KeyCode::Equal,
-                    KeyCode::Minus,
-                    KeyCode::NumpadAdd,
-                    KeyCode::NumpadSubtract,
-                ],
+                &[KeyCode::Equal, KeyCode::Minus],
                 keys::HELP_KEY_MINIMAP_ZOOM,
                 MINIMAP,
             ),
