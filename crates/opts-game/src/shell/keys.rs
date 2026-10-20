@@ -198,6 +198,12 @@ keys! {
     HELP_GROUP_VEHICLE_KEYS = "help-group-vehicle-keys",
     /// Message `help-vehicle-keys-note`.
     HELP_VEHICLE_KEYS_NOTE = "help-vehicle-keys-note",
+    /// Message `help-group-cockpit`.
+    HELP_GROUP_COCKPIT = "help-group-cockpit",
+    /// Message `help-cockpit-note`.
+    HELP_COCKPIT_NOTE = "help-cockpit-note",
+    /// Message `help-cockpit-none`.
+    HELP_COCKPIT_NONE = "help-cockpit-none",
     /// Message `help-group-camera`.
     HELP_GROUP_CAMERA = "help-group-camera",
     /// Message `help-group-menus`.

@@ -269,6 +269,7 @@ pub fn spawn_controls(parent: &mut ChildSpawnerCommands) {
         TypeStyleToken(TypeScale::BodyMedium),
         ForegroundRole(ColorRole::OnSurfaceVariant),
     ));
+    super::vehicle_controls::spawn_list(parent);
     for (group, rows) in GROUPS {
         parent.spawn((
             Text::new(*group),
