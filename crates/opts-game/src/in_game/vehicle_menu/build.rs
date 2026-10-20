@@ -115,6 +115,10 @@ pub(super) fn build_main(
         p.commands()
             .entity(change)
             .insert(UiId::new("vehicle.change_map"));
+        let configs = button(p, "Configurations…", false, Action::OpenConfigs);
+        p.commands()
+            .entity(configs)
+            .insert(UiId::new("vehicle.configs"));
         let route = button(p, "Line and destination…", false, Action::OpenRoute);
         p.commands()
             .entity(route)

@@ -16,7 +16,11 @@ pub(super) fn menu_actions(
     mut registry: ResMut<SessionVehicles>,
     mut remote: ResMut<MenuCommands>,
     mut formation_commands: ResMut<super::super::formation_menu::FormationCommands>,
+    mut library: Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
 ) {
+    // The wizard's list when the game has one (one list for the screens and the protocol), else
+    // one read from the file when first needed.
+    let mut fallback: Option<crate::new_game_screen::configs::ConfigLibrary> = None;
     let mut todo: Vec<Action> = clicks
         .read()
         .filter_map(|ButtonClicked(e)| actions.get(*e).ok().cloned())
@@ -41,6 +45,15 @@ pub(super) fn menu_actions(
             }
             "back" => Some(Action::Back),
             "changemap" => Some(Action::OpenChangeMap),
+            "configs" => Some(Action::OpenConfigs),
+            "saveconfig" => Some(Action::SaveConfig),
+            // `spawnconfig <text>` spawns the first listed configuration whose name matches.
+            "spawnconfig" => menu
+                .configs
+                .rows
+                .iter()
+                .find(|r| has(&r.name))
+                .map(|r| Action::SpawnConfig(r.id.clone())),
             // `map <text>` picks the first map that matches, `map <text> / <entry>` also the entry.
             "map" => {
                 let (m, entry) = rest
@@ -246,6 +259,32 @@ pub(super) fn menu_actions(
             Action::ConfirmChangeMap => {
                 commands.queue(|w: &mut World| confirm_change_map(w));
             }
+            Action::OpenConfigs => {
+                menu.page = Page::Configs;
+                menu.status.clear();
+                if let Some(cat) = catalogue.as_deref() {
+                    let lib = lib_of(&mut library, &mut fallback);
+                    menu.configs = super::load_view(lib, cat);
+                }
+            }
+            Action::SaveConfig => {
+                if let Some(cat) = catalogue.as_deref() {
+                    let lib = lib_of(&mut library, &mut fallback);
+                    super::configs_page::save_active(&mut menu, lib, &registry, cat);
+                }
+            }
+            Action::SpawnConfig(id) => {
+                if let (Some(cat), Some(job)) = (catalogue.as_deref(), job.as_deref()) {
+                    let lib = lib_of(&mut library, &mut fallback);
+                    super::configs_page::spawn(&mut menu, lib, &mut registry, cat, job, &id);
+                }
+            }
+            Action::DeleteConfig(id) => {
+                if let Some(cat) = catalogue.as_deref() {
+                    let lib = lib_of(&mut library, &mut fallback);
+                    super::configs_page::delete(&mut menu, lib, cat, &id);
+                }
+            }
             Action::OpenJump => {
                 menu.page = Page::Jump;
                 menu.status.clear();
@@ -320,6 +359,17 @@ pub(super) fn menu_actions(
                 menu.config_open = false;
             }
         }
+    }
+}
+
+/// The configuration list the menu works on: the game's own, else one read from the file.
+fn lib_of<'a>(
+    library: &'a mut Option<ResMut<crate::new_game_screen::configs::ConfigLibrary>>,
+    fallback: &'a mut Option<crate::new_game_screen::configs::ConfigLibrary>,
+) -> &'a mut crate::new_game_screen::configs::ConfigLibrary {
+    match library {
+        Some(l) => l,
+        None => fallback.get_or_insert_with(Default::default),
     }
 }
 

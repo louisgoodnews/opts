@@ -198,6 +198,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{id, name, context, vehicle, repaint, setvars, problems}`")
     .doc("`id` is the id or the name. The configuration is checked first: a missing vehicle refuses it (`1008`, `data.problems`), a missing repaint falls back to the default and values the catalogue no longer accepts are left out; both are listed in `problems`. In a running drive nothing is changed (`1007`): configurations are loaded in *Plan a drive*. `1004` for an unknown configuration."),
     c(
+        "config.spawn",
+        "scene",
+        "Build a saved configuration as a new vehicle of the running drive",
+        "id:s@0 entry:s? entry_id:i?",
+    )
+    .since("1.18")
+    .result("`{id, queued:true, configuration, name, problems}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`)")
+    .doc("As `session.spawn` with the vehicle, repaint and options of the configuration (`id` is its id or name), after the same check as `config.load`: a missing vehicle or `.bus` file refuses it (`1008`, `data.problems`), a missing repaint falls back to the default, values the catalogue no longer accepts are left out and listed in `problems`. The new vehicle becomes the active one and the previous one is parked; `entry`/`entry_id` as in `session.spawn`. `1001` outside a loaded drive, `1004` for an unknown configuration."),
+    c(
         "config.delete",
         "scene",
         "Delete a saved configuration",

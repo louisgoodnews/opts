@@ -151,6 +151,23 @@ fn change_map(world: &mut World, params: &Value) -> Outcome {
     Outcome::Done(result)
 }
 
+/// The entry point a spawn asks for: `entry_id`, else `entry` (a name), else the session's own.
+pub(crate) fn entry_param(params: &Value) -> Result<EntrySel, RpcError> {
+    Ok(
+        match (opt_u64(params, "entry_id")?, opt_str(params, "entry")?) {
+            (Some(i), _) => EntrySel::Id(
+                u32::try_from(i).map_err(|_| RpcError::invalid_params("`entry_id` too large"))?,
+            ),
+            (None, Some(n)) => EntrySel::Name(n.to_owned()),
+            (None, None) => EntrySel::Default,
+        },
+    )
+}
+
+pub(crate) fn session_ready(world: &World) -> Result<(), RpcError> {
+    session_up(world)
+}
+
 fn spawn(world: &mut World, params: &Value) -> Outcome {
     let result = (|| -> Result<Value, RpcError> {
         session_up(world)?;
@@ -178,13 +195,7 @@ fn spawn(world: &mut World, params: &Value) -> Outcome {
                 ))
             }
         };
-        let entry = match (opt_u64(params, "entry_id")?, opt_str(params, "entry")?) {
-            (Some(i), _) => EntrySel::Id(
-                u32::try_from(i).map_err(|_| RpcError::invalid_params("`entry_id` too large"))?,
-            ),
-            (None, Some(n)) => EntrySel::Name(n.to_owned()),
-            (None, None) => EntrySel::Default,
-        };
+        let entry = entry_param(params)?;
         let id = world
             .resource_mut::<SessionVehicles>()
             .request_spawn(SpawnParams {
