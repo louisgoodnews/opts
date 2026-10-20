@@ -27,6 +27,8 @@ pub(super) struct ConfigsView {
     pub rows: Vec<ConfigRow>,
     pub problem: Option<String>,
     pub confirm_delete: Option<String>,
+    /// The row being renamed and the name typed so far.
+    pub renaming: Option<(String, String)>,
 }
 
 fn now() -> i64 {
@@ -50,6 +52,7 @@ pub(super) fn load_view(lib: &ConfigLibrary, cat: &GameCatalogue) -> ConfigsView
         rows,
         problem: lib.problem.as_ref().map(ToString::to_string),
         confirm_delete: None,
+        renaming: None,
     }
 }
 
@@ -142,7 +145,13 @@ pub(super) fn build_configs(commands: &mut Commands, menu: &VehicleMenu, can_sav
                     ..default()
                 })
                 .with_children(|r| {
-                    label(r, row.name.clone(), 15.0, ColorRole::Primary);
+                    let renaming = view.renaming.as_ref().filter(|(id, _)| *id == row.id);
+                    match renaming {
+                        Some((_, text)) => {
+                            label(r, format!("Name: {text}|"), 15.0, ColorRole::Primary);
+                        }
+                        None => label(r, row.name.clone(), 15.0, ColorRole::Primary),
+                    }
                     label(r, row.detail.clone(), 12.0, ColorRole::OnSurfaceVariant);
                     if !row.blocked.is_empty() {
                         label(r, row.blocked.clone(), 12.0, ColorRole::Error);
@@ -155,6 +164,15 @@ pub(super) fn build_configs(commands: &mut Commands, menu: &VehicleMenu, can_sav
                         ..default()
                     })
                     .with_children(|buttons| {
+                        if renaming.is_some() {
+                            let ok = button(buttons, "Save name", true, Action::CommitRename);
+                            buttons
+                                .commands()
+                                .entity(ok)
+                                .insert(UiId::new("vehicle.config.rename.save"));
+                            button(buttons, "Cancel", false, Action::CancelRename);
+                            return;
+                        }
                         if row.blocked.is_empty() {
                             let b = button(buttons, "Spawn", true, Action::SpawnConfig(row.id.clone()));
                             buttons
@@ -162,6 +180,11 @@ pub(super) fn build_configs(commands: &mut Commands, menu: &VehicleMenu, can_sav
                                 .entity(b)
                                 .insert(UiId::new(format!("vehicle.config.{}.spawn", row.id)));
                         }
+                        let rename = button(buttons, "Rename", false, Action::RenameConfig(row.id.clone()));
+                        buttons
+                            .commands()
+                            .entity(rename)
+                            .insert(UiId::new(format!("vehicle.config.{}.rename", row.id)));
                         let asked = view.confirm_delete.as_deref() == Some(row.id.as_str());
                         let text = if asked { "Delete? Press again" } else { "Delete" };
                         let b = button(buttons, text, asked, Action::DeleteConfig(row.id.clone()));
@@ -255,6 +278,35 @@ pub(super) fn spawn(
     }
 }
 
+/// Starts renaming a configuration: the field holds its current name.
+pub(super) fn start_rename(menu: &mut VehicleMenu, id: &str) {
+    let name = menu
+        .configs
+        .rows
+        .iter()
+        .find(|r| r.id == id)
+        .map(|r| r.name.clone());
+    menu.configs.renaming = name.map(|n| (id.to_owned(), n));
+    menu.configs.confirm_delete = None;
+}
+
+/// Gives the configuration the typed name; a name that is empty or taken is refused in the
+/// status line and the field stays open.
+pub(super) fn commit_rename(menu: &mut VehicleMenu, lib: &mut ConfigLibrary, cat: &GameCatalogue) {
+    let Some((id, text)) = menu.configs.renaming.clone() else {
+        return;
+    };
+    if !lib.store.rename(&id, &text) {
+        menu.status = "That name is empty or already used.".into();
+        return;
+    }
+    menu.status = match lib.save() {
+        Ok(()) => format!("Renamed to {}.", text.trim()),
+        Err(e) => format!("Could not save: {e}"),
+    };
+    menu.configs = load_view(lib, cat);
+}
+
 /// Deletes a configuration on the second press of its button.
 pub(super) fn delete(
     menu: &mut VehicleMenu,
@@ -324,5 +376,48 @@ mod tests {
         assert_eq!(free_name(&store, "Solo C2"), "Solo C2 (2)");
         store.save(BusConfiguration::new("Solo C2 (2)", "c2", "", vec![], 1));
         assert_eq!(free_name(&store, "solo c2"), "solo c2 (3)");
+    }
+
+    fn library() -> ConfigLibrary {
+        let mut lib = ConfigLibrary::at(None);
+        lib.store
+            .save(BusConfiguration::new("Morning", "c2", "", vec![], 1));
+        lib.store
+            .save(BusConfiguration::new("Evening", "c2", "", vec![], 1));
+        lib
+    }
+
+    #[test]
+    fn a_rename_takes_the_typed_name_and_refuses_empty_or_taken_ones() {
+        let mut lib = library();
+        let mut menu = VehicleMenu {
+            configs: load_view(&lib, &cat()),
+            ..Default::default()
+        };
+        start_rename(&mut menu, "morning");
+        assert_eq!(
+            menu.configs.renaming,
+            Some(("morning".into(), "Morning".into()))
+        );
+
+        // Taken (ignoring case): refused, the field stays open.
+        menu.configs.renaming = Some(("morning".into(), "evening".into()));
+        commit_rename(&mut menu, &mut lib, &cat());
+        assert!(menu.status.contains("already used"));
+        assert!(menu.configs.renaming.is_some());
+        // Empty: refused as well.
+        menu.configs.renaming = Some(("morning".into(), "  ".into()));
+        commit_rename(&mut menu, &mut lib, &cat());
+        assert!(menu.status.contains("already used"));
+
+        menu.configs.renaming = Some(("morning".into(), " Early shift ".into()));
+        commit_rename(&mut menu, &mut lib, &cat());
+        assert_eq!(menu.status, "Renamed to Early shift.");
+        assert!(menu.configs.renaming.is_none());
+        assert!(menu.configs.rows.iter().any(|r| r.name == "Early shift"));
+        assert_eq!(
+            lib.store.find("morning").map(|c| c.name.as_str()),
+            Some("Early shift")
+        );
     }
 }

@@ -21,6 +21,39 @@ pub(super) fn search_input(
     mut menu: ResMut<VehicleMenu>,
     mut commands_in: ResMut<MenuCommands>,
 ) {
+    // A configuration being renamed takes the keys (the name field of the Configurations page).
+    if menu.page == Page::Configs && menu.configs.renaming.is_some() {
+        for e in keys.read() {
+            if e.state != ButtonState::Pressed {
+                continue;
+            }
+            let Some((_, text)) = menu.configs.renaming.as_mut() else {
+                break;
+            };
+            if e.logical_key == Key::Backspace {
+                text.pop();
+            } else if e.logical_key == Key::Enter {
+                commands_in.0.push("commitrename".into());
+            } else if let Some(t) = &e.text {
+                text.extend(t.chars().filter(|c| !c.is_control()));
+            }
+        }
+        // `menu.do typename <text>` sets the field (for scripts).
+        let mut typed = None;
+        commands_in
+            .0
+            .retain(|line| match line.strip_prefix("typename") {
+                Some(rest) => {
+                    typed = Some(rest.trim().to_string());
+                    false
+                }
+                None => true,
+            });
+        if let (Some(t), Some((_, text))) = (typed, menu.configs.renaming.as_mut()) {
+            *text = t;
+        }
+        return;
+    }
     let on_route = menu.page == Page::Route;
     let typing = (menu.page == Page::Select && !menu.config_open) || on_route;
     let mut changed = false;

@@ -47,6 +47,14 @@ pub(super) fn menu_actions(
             "changemap" => Some(Action::OpenChangeMap),
             "configs" => Some(Action::OpenConfigs),
             "saveconfig" => Some(Action::SaveConfig),
+            // `renameconfig <text>` starts renaming the first configuration whose name matches.
+            "renameconfig" => menu
+                .configs
+                .rows
+                .iter()
+                .find(|r| has(&r.name))
+                .map(|r| Action::RenameConfig(r.id.clone())),
+            "commitrename" => Some(Action::CommitRename),
             // `spawnconfig <text>` spawns the first listed configuration whose name matches.
             "spawnconfig" => menu
                 .configs
@@ -277,6 +285,14 @@ pub(super) fn menu_actions(
                 if let (Some(cat), Some(job)) = (catalogue.as_deref(), job.as_deref()) {
                     let lib = lib_of(&mut library, &mut fallback);
                     super::configs_page::spawn(&mut menu, lib, &mut registry, cat, job, &id);
+                }
+            }
+            Action::RenameConfig(id) => super::configs_page::start_rename(&mut menu, &id),
+            Action::CancelRename => menu.configs.renaming = None,
+            Action::CommitRename => {
+                if let Some(cat) = catalogue.as_deref() {
+                    let lib = lib_of(&mut library, &mut fallback);
+                    super::configs_page::commit_rename(&mut menu, lib, cat);
                 }
             }
             Action::DeleteConfig(id) => {
