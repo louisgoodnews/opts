@@ -383,6 +383,7 @@
 - [Format Status Audit](meta/status-audit.md)
 - [Provenance Audit](meta/provenance-audit.md)
 - [Roadmap Reconciliation](meta/roadmap-reconciliation.md)
+- [Roadmap Review 2026-10-20](meta/roadmap-review-2026-10-20.md)
 - [Cross-Reference Graph](meta/cross-references.md)
 
 ---
