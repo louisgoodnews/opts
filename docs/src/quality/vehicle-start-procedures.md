@@ -2,6 +2,20 @@
 
 *Facts read from the vehicles' own scripts (OSC read as prose, no text copied) and confirmed in the running game through `vehicle.click`, `vehicle.hotspots` and `vehicle.script_vars`. Each procedure lists what the player does, which variables change and what is still unverified ❓. A vehicle is added when its procedure has been run.*
 
+## The set-up degree (settings, category *Vehicle*)
+
+`vehicle.setup` (0 to 1, default 0.75), `vehicle.fuel` (share of the tank, default 0.6) and `vehicle.start_lights` (off, parking, dipped) say how a vehicle begins a drive. The host brings the vehicle there by pressing the keys of its procedure (the *recipe* of its family, `crates/opts-bevy/src/vehicle_setup.rs`); it writes nothing into the scripts' variables except the tank content, once.
+
+| Degree | State |
+| ---: | :--- |
+| below 0.25 | cold: nothing started, parking brake set |
+| from 0.25 | electrics on |
+| from 0.5 | ignition in the drive position |
+| from 0.75 | engine running (parking brake still set) |
+| 1 | ready to drive: parking brake released, the gear selector follows the driver |
+
+Recipes (recognised by a variable the vehicle's scripts own): *stepped ignition key* (Citybus 530: battery key three times, the last one held), *inserted ignition key* (BRT C2: battery key three times, then the start key held), *battery switch and start key* (MAN NL, SD200, NG272 and every vehicle not recognised). The fuel is set as a share of `engine_tank_capacity` (250 l when the vehicle's constants name none). Changes apply to the next vehicle; raising the degree also continues a vehicle that has not got that far. Verified live on the Citybus 530 for 0, 0.25, 0.5 and 1 (cold; electrics, lights and fuel; key in drive position; running with the brake released); the other families in the rig only (`crates/opts-bevy/src/vehicle_setup/tests.rs`, `crates/opts-game/tests/vehicle_start.rs`). Rail vehicles have no recipe yet ❓.
+
 ## How controls are operated
 
 | Control | In the game | By command |

@@ -322,9 +322,11 @@ pub fn add_messages(loc: &mut Localization) {
     loc.extend("en", include_str!("messages_en.ftl"));
     loc.extend("en", include_str!("messages_lighting_en.ftl"));
     loc.extend("en", include_str!("messages_keys_en.ftl"));
+    loc.extend("en", include_str!("messages_vehicle_en.ftl"));
     loc.extend("de", include_str!("messages_de.ftl"));
     loc.extend("de", include_str!("messages_lighting_de.ftl"));
     loc.extend("de", include_str!("messages_keys_de.ftl"));
+    loc.extend("de", include_str!("messages_vehicle_de.ftl"));
 }
 
 /// Adds the registry, the message and the migration of renamed keys.
@@ -368,6 +370,7 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_hdr,
                     live::sync_view_distance,
                     live::sync_audio,
+                    crate::vehicle_setup_settings::sync_vehicle_setup,
                     live::sync_weather_effects,
                 ),
             )

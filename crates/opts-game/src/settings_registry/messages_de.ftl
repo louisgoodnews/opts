@@ -4,6 +4,7 @@ settings-cat-audio = Audio
 settings-cat-controls = Steuerung
 settings-cat-interface = Oberfläche
 settings-cat-gameplay = Spielablauf
+settings-cat-vehicle = Fahrzeug
 settings-cat-content = Inhalte
 settings-cat-advanced = Erweitert
 

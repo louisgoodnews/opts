@@ -15,6 +15,8 @@ pub enum Category {
     Interface,
     /// Clock, traffic, assists.
     Gameplay,
+    /// How a vehicle is set up at the start of a drive.
+    Vehicle,
     /// OMSI folder, catalogue, cache.
     Content,
     /// Developer panel, logging, file locations.
@@ -23,12 +25,13 @@ pub enum Category {
 
 impl Category {
     /// All categories in display order.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Graphics,
         Self::Audio,
         Self::Controls,
         Self::Interface,
         Self::Gameplay,
+        Self::Vehicle,
         Self::Content,
         Self::Advanced,
     ];
@@ -42,6 +45,7 @@ impl Category {
             Self::Controls => "controls",
             Self::Interface => "interface",
             Self::Gameplay => "gameplay",
+            Self::Vehicle => "vehicle",
             Self::Content => "content",
             Self::Advanced => "advanced",
         }
@@ -56,6 +60,7 @@ impl Category {
             Self::Controls => "settings-cat-controls",
             Self::Interface => "settings-cat-interface",
             Self::Gameplay => "settings-cat-gameplay",
+            Self::Vehicle => "settings-cat-vehicle",
             Self::Content => "settings-cat-content",
             Self::Advanced => "settings-cat-advanced",
         }

@@ -55,6 +55,7 @@ pub mod sound_logic;
 pub mod theme_files;
 pub mod ui_typography;
 pub mod vehicle_keys;
+pub mod vehicle_setup_settings;
 pub mod vehicle_sound;
 pub mod viewpoints;
 
