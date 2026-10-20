@@ -327,3 +327,21 @@ A `.sco` names a configuration with `[sound]` (relative to the object's folder, 
 - Editor-only helper objects (`[onlyeditor]` mesh, no geometry in the game) are the usual carriers of ambience (`Generic/sound_*.sco`, `backgroundsounds`): they must still be built for their script and sound; they were skipped before M-0139.
 
 Reproduction: `crates/opts-game/tests/sound_cfg_corpus.rs` (with `OMSI_PATH`) parses all of them with `opts_core::formats::sound::SoundConfig` (2 warnings: the `[script]` and `[varnamelist]` keywords of one file).
+
+---
+
+## 🚗 Sound configurations of AI vehicles (census 2026-10-20, M-0140)
+
+AI traffic uses the vehicle's **`[sound_ai]`** configuration (1,241 `.bus` and 35 `.ovh` files name one, almost all their own lighter `*_ai.cfg`); cars and the many AI `.ovh` files without it name a shared file of `Sounds/AI_Cars` through `[sound]` (254 `.ovh`, 107 `.bus`). A bus with only the heavy player `[sound]` and no `[sound_ai]` has no AI sound.
+
+| Fact | Count |
+| :--- | ---: |
+| distinct AI sound configurations | 499 |
+| definitions in them | 45,043 (about 90 per file; the shared car files have 116 in 18 files) |
+| of those, continuous (no `[trigger]`, no `[conditionSingle]`, no `[noloop]`) with only the variables the traffic model can state | 6,319 (median 8 per configuration, most 68); 4,899 with the 16-per-vehicle cap |
+| configurations with no such definition | 33 |
+
+**Variables the definitions read** (volume curves and loop pitch): `engine_n` (5,986 curves, 5,901 loop pitches), the door variables `in_door_sound_*`, `door_*`, `doorSpeed_*` (about 14,000 curves, all tied to door scripts), `throttle` (4,647), `engine_throttle_injection` (2,972), `velocity` (1,564), `antrieb_n_kardanwelle` (driveshaft speed, 1,099 curves, 2,575 pitches), `Wheel_RotationSpeed_<axle>_<side>`, and for the shared car files `Velocity`, `Throttle`, `StreetCond`, `AI_Engine`, `AI_Motor` (21 loop pitches: the engine speed the car samples were recorded at, `Eng_O305_200PS_@631_x.wav` is 631 rpm). Triggers are the door families (`ev_doortrigger*`, `ev_doorhit*`) and `ev_AI_Horn` (9); conditions gate by `antrieb_wendesatz`, `antrieb_getr_aktugang`, `engine_n`, `engine_on`, `engine_starter`, `elec_busbar_main_sw`, `velocity`, `wiperrunning`.
+
+**Reading (❓):** a `[sound]` of an AI configuration without trigger or condition, with a `[volcurve]` over `Velocity` and `StreetCond`, is a continuous loop: `rollen.wav` (rolling noise, volume rising with speed) and `WetLane_1.wav` (wet-road noise: speed × wet). AI vehicles in OPTS run without their scripts, so the script-side variables (doors, driveshaft, retarder, turbo) are not available; what the traffic model states is listed in [audio-system](../../../architecture/audio-system.md) §9.
+

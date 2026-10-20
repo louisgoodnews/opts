@@ -116,7 +116,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 - [x] 🟠 **Sound engine on Bevy** (M-0027, code + spec) — **Done 2026-10-20** on `agent/sound-engine` (project lead request): `opts_bevy::audio` (clips, emitters, voice budget, distance curve, listener, buses), WAV decoder, `audio.*` protocol 1.19.0, Audio settings live; checked live (tone in the system mixer, 10 m source heard, 500 m source silent). [audio-system](../src/architecture/audio-system.md).
 - [~] 🟠 **Sounds of scenery objects and splines** (M-0139) — **first slice 2026-10-20**: `[sound]` parser, census (353 objects, no spline sounds), continuous and triggered sounds with worker-thread decoding, live-checked on Lemmental_Neuenbreid; open: `[conditionSingle]`, eviction, `[viewpoint]`.
-- [ ] 🟠 **Sounds of AI traffic** (M-0140) — then; and the player's vehicle (M-0102).
+- [~] 🟠 **Sounds of AI traffic** (M-0140) — **first slice 2026-10-20**: continuous engine, rolling and wheel sounds from `[sound_ai]`/`AI_Cars` configurations with variables from the traffic model; open: doors, horns, brakes, trailers, the real engine-speed model. Then the player's vehicle (M-0102).
 
 - [ ] 🔴 ⏸ **BRT C2 full fix: the mesh loads and displays completely and accurately** (M-0138, code + content) — requested by the project lead 2026-10-20, **deferred the same day** (a first slice sits unmerged on `agent/c2-full-fix`: census and MI-0064; it did not fix what the project lead sees). Census of every part of `BRT_C2-Solo/C2_2T.bus`, materials/textures/animations checked part by part, regression gate; [M-0138](../src/roadmap/phase-10/M-0138.md).
 

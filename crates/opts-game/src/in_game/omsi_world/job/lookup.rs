@@ -196,6 +196,24 @@ impl WorldLoadJob {
         parsed.map(|c| (c, dir))
     }
 
+    /// Like [`Self::sound_config`] without the cache, for callers that only hold `&self` (the
+    /// AI vehicle types parse theirs once when they load).
+    #[must_use]
+    pub fn read_sound_config(
+        &self,
+        base: &Path,
+        rel: &str,
+    ) -> Option<(Arc<opts_core::formats::sound::SoundConfig>, PathBuf)> {
+        let path = self.install.find_in(base, rel)?;
+        let dir = path.parent()?.to_path_buf();
+        let bytes = std::fs::read(&path).ok()?;
+        let text: String = bytes.iter().map(|b| char::from(*b)).collect();
+        Some((
+            Arc::new(opts_core::formats::sound::SoundConfig::parse(&text)),
+            dir,
+        ))
+    }
+
     /// The sound file a configuration names: relative to the configuration's folder (names are
     /// matched case-insensitively), else a file of that name in the shared `Sounds` folder.
     #[must_use]

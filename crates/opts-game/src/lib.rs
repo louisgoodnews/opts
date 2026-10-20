@@ -52,6 +52,7 @@ pub mod shutdown;
 pub mod theme_files;
 pub mod ui_typography;
 pub mod vehicle_keys;
+pub mod vehicle_sound;
 pub mod viewpoints;
 
 use bevy::prelude::*;
@@ -122,6 +123,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(scenery_sound::SceneryAudioPlugin)
+            .add_plugins(vehicle_sound::AiAudioPlugin)
             .add_plugins(opts_bevy::reflections::ReflectionsResearchPlugin)
             .add_plugins(InGamePlugin);
 

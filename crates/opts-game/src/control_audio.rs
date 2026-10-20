@@ -14,6 +14,7 @@ use serde_json::{json, Value};
 
 use crate::audio_content::{ClipCache, ClipLoader};
 use crate::scenery_sound::SceneryAudioStats;
+use crate::vehicle_sound::AiAudioStats;
 
 /// Marks the emitters `audio.tone` and `audio.play` create, so `audio.stop` removes only them.
 #[derive(Component)]
@@ -67,6 +68,10 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         .get_resource::<SceneryAudioStats>()
         .cloned()
         .unwrap_or_default();
+    let traffic = world
+        .get_resource::<AiAudioStats>()
+        .cloned()
+        .unwrap_or_default();
     let (ready, loading, failed) = world
         .get_resource::<ClipLoader>()
         .map_or((0, 0, 0), ClipLoader::counts);
@@ -81,6 +86,7 @@ fn state(world: &mut World, _: &Value) -> Outcome {
                 "gain": e.gain,
                 "distance": e.distance,
                 "voice": e.voice,
+                "position": e.position.map(|p| json!([p.x, p.y, p.z])),
             })
         })
         .collect();
@@ -101,6 +107,7 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         "listener": stats.listener.map(|l| json!([l.x, l.y, l.z])),
         "clips_cached": cached,
         "clips": { "ready": ready, "loading": loading, "failed": failed, "bytes": loaded_bytes },
+        "traffic": { "voices": traffic.voices, "playing": traffic.playing },
         "scenery": {
             "voices": scenery.voices,
             "playing": scenery.playing,

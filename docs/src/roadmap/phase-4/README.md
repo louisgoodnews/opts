@@ -15,7 +15,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0026 — OMSI Script Stack VM & Dynamic Variable System (`opts-sim`)](M-0026.md) — 🟢 Complete for vehicles (compiler, VM, variables, passive bridge); audio events wait for M-0027
 - [M-0027 — Vehicle & Environmental Spatial Audio Simulation (`opts-bevy`)](M-0027.md) — 🟡 Engine implemented 2026-10-20 (voices, buses, settings, `audio.*`); sounds follow in M-0139, M-0140, M-0102
 - [M-0139 — Sounds of Scenery Objects and Splines](M-0139.md) — 🟡 First slice 2026-10-20 (continuous and triggered scenery sounds live; conditions, eviction open)
-- [M-0140 — Sounds of AI Traffic](M-0140.md) — 📝 Requested 2026-10-20 (step 3 of the sound plan)
+- [M-0140 — Sounds of AI Traffic](M-0140.md) — 🟡 First slice 2026-10-20 (AI engine, rolling and wheel sounds live; doors, horns, brakes open)
 - [M-0037 — Shipped-Work Reconciliation (Roadmap, Phase Pages, Board)](M-0037.md) — 🟢 Complete (audit 5037f89a F-019, F-023)
 - [M-0038 — Scrambled-Mesh Completion (`opts-core`, `opts-bevy`)](M-0038.md) — 🟡 Engineering complete (async decoding, parameters, cache policy); generator research open
 - [M-0039 — Text Textures for Signs, Stops and Displays](M-0039.md) — 🟢 Complete (`[texttexture]` rendering for static strings)

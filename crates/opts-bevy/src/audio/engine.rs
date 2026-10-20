@@ -78,6 +78,8 @@ pub struct EmitterReport {
     pub voice: bool,
     /// The bus.
     pub bus: SoundBus,
+    /// Where it is (Bevy world metres), when it has a position.
+    pub position: Option<Vec3>,
 }
 
 /// What the engine did last frame.
@@ -147,7 +149,7 @@ pub fn select_voices(
 ) {
     let listener_pos = listener.iter().next().map(GlobalTransform::translation);
     stats.listener = listener_pos;
-    let all: Vec<(Entity, f32, Option<f32>)> = emitters
+    let all: Vec<(Entity, f32, Option<f32>, Option<Vec3>)> = emitters
         .iter()
         .map(|(entity, e, tf, _, _)| {
             let (distance, spatial_gain) = match (&e.spatial, listener_pos, tf) {
@@ -164,13 +166,13 @@ pub fn select_voices(
             } else {
                 e.gain * spatial_gain * settings.bus_gain(e.bus)
             };
-            (entity, gain, distance)
+            (entity, gain, distance, tf.map(GlobalTransform::translation))
         })
         .collect();
     let levels: Vec<(usize, f32)> = all
         .iter()
         .enumerate()
-        .map(|(i, (_, g, _))| (i, *g))
+        .map(|(i, (_, g, _, _))| (i, *g))
         .collect();
     let chosen: std::collections::HashSet<usize> = choose_voices(&levels, settings.max_voices)
         .into_iter()
@@ -178,7 +180,7 @@ pub fn select_voices(
 
     let (mut audible, mut voices) = (0, 0);
     let mut report: Vec<EmitterReport> = Vec::new();
-    for (i, (entity, gain, distance)) in all.iter().enumerate() {
+    for (i, (entity, gain, distance, position)) in all.iter().enumerate() {
         let Ok((_, e, _, voice, has_player)) = emitters.get_mut(*entity) else {
             continue;
         };
@@ -250,6 +252,7 @@ pub fn select_voices(
             distance: *distance,
             voice: want,
             bus: e.bus,
+            position: *position,
         });
     }
     report.sort_by(|a, b| b.gain.total_cmp(&a.gain));
