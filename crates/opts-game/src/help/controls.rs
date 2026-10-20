@@ -269,6 +269,21 @@ pub fn spawn_controls(parent: &mut ChildSpawnerCommands) {
         TypeStyleToken(TypeScale::BodyMedium),
         ForegroundRole(ColorRole::OnSurfaceVariant),
     ));
+    super::vehicle_controls::spawn_list(parent);
+    parent.spawn((
+        Text::new(keys::HELP_GROUP_MOUSE_DRIVING),
+        L10nKey(keys::HELP_GROUP_MOUSE_DRIVING),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::TitleMedium),
+        ForegroundRole(ColorRole::OnSurface),
+    ));
+    parent.spawn((
+        Text::new(keys::HELP_MOUSE_DRIVING_NOTE),
+        L10nKey(keys::HELP_MOUSE_DRIVING_NOTE),
+        TextColor::default(),
+        TypeStyleToken(TypeScale::BodyMedium),
+        ForegroundRole(ColorRole::OnSurfaceVariant),
+    ));
     for (group, rows) in GROUPS {
         parent.spawn((
             Text::new(*group),

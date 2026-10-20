@@ -7,6 +7,7 @@
 mod about;
 mod controls;
 mod overlay;
+pub mod vehicle_controls;
 
 use bevy::prelude::*;
 use opts_bevy::reporting::{request_report, ReportModalData, ReportModalState};
@@ -90,7 +91,13 @@ impl Plugin for HelpPlugin {
         crate::pause::ensure_report_state(app);
         app.init_resource::<HelpState>()
             .init_resource::<Pause>()
-            .add_systems(Update, controls::sync_action_chips)
+            .add_systems(
+                Update,
+                (
+                    controls::sync_action_chips,
+                    vehicle_controls::fill_vehicle_controls,
+                ),
+            )
             .add_systems(OnEnter(AppState::Help), spawn_help)
             .add_systems(OnExit(AppState::Help), despawn_help)
             .add_systems(

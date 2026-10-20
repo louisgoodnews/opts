@@ -202,6 +202,12 @@ keys! {
     HELP_GROUP_MOUSE_DRIVING = "help-group-mouse-driving",
     /// Message `help-mouse-driving-note`.
     HELP_MOUSE_DRIVING_NOTE = "help-mouse-driving-note",
+    /// Message `help-group-cockpit`.
+    HELP_GROUP_COCKPIT = "help-group-cockpit",
+    /// Message `help-cockpit-note`.
+    HELP_COCKPIT_NOTE = "help-cockpit-note",
+    /// Message `help-cockpit-none`.
+    HELP_COCKPIT_NONE = "help-cockpit-none",
     /// Message `help-group-camera`.
     HELP_GROUP_CAMERA = "help-group-camera",
     /// Message `help-group-menus`.
