@@ -132,7 +132,10 @@ pub fn mouse_driving_axes(
     mut state: ResMut<MouseDriving>,
     mut query: Query<&mut VehicleController, With<PlayerVehicle>>,
 ) {
-    let cursor = windows.single().ok().and_then(|w| w.cursor_position().map(|c| (c, w.size())));
+    let cursor = windows
+        .single()
+        .ok()
+        .and_then(|w| w.cursor_position().map(|c| (c, w.size())));
     let drives = state.drives() && cursor.is_some();
     if state.steering != drives && !drives {
         release(&mut query);

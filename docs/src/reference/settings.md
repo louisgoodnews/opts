@@ -73,6 +73,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.ticket` | Hand over ticket | input binding | `T` | at once | available | Fahrschein ausgeben |
 | `controls.vehicle.ticket_change` | Ticket with change | input binding | `Ctrl+T` | at once | available | Fahrschein mit Rückgeld |
 | `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
+| `controls.mouse_driving` | Drive with the mouse | on / off | `true` | at once | available | The mouse wheel press switches mouse driving: the cursor's height is throttle (upper half) and brake (lower half), its width is the steering. A right click frees the mouse until the next right click. Applies at once. |
 | `controls.drive.parking_brake` | Parking brake | input binding | `Period` | at once | available | Applies or releases the parking brake. |
 | `controls.map.minimap_toggle` | Mini map on or off | input binding | `F7` | at once | available | Shows or hides the mini map. |
 | `controls.map.minimap_rotate` | Mini map: north up or heading up | input binding | `Shift+F7` | at once | available | Switches the mini map between north up and heading up. |

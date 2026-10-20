@@ -11,7 +11,6 @@
 pub mod alerts;
 pub mod build;
 pub mod control_label;
-pub mod mouse_driving;
 pub mod details;
 pub mod door_camera;
 pub mod fade;
@@ -19,6 +18,7 @@ pub mod fullmap;
 pub mod keys;
 pub mod layout;
 pub mod minimap;
+pub mod mouse_driving;
 pub mod parts;
 pub mod profile;
 pub mod protocol;
@@ -76,6 +76,7 @@ impl Plugin for HudPlugin {
             .add_plugins(minimap::MiniMapPlugin)
             .add_plugins(fullmap::FullMapPlugin)
             .init_resource::<opts_bevy::HoveredControl>()
+            .init_resource::<opts_bevy::MouseDriving>()
             .init_resource::<AlertQueue>()
             .init_resource::<update::CameraLabel>()
             .init_resource::<crate::session_vehicles::PlaceLabel>()
