@@ -41,6 +41,8 @@ const REVIEWED: &[&str] = &[
     "opts-bevy/src/camera/mode/vehicle_views.rs",
     // Tab opens the viewpoint editor of the driver's view; gated in the camera plugin.
     "opts-bevy/src/camera/viewpoint.rs",
+    // F4 cycles the door camera; gated with `not_modal_active` where it is registered.
+    "opts-bevy/src/door_camera.rs",
     "opts-bevy/src/reporting/trigger.rs",
     "opts-bevy/src/vehicle_sim.rs",
     "opts-bevy/src/vehicle_triggers.rs",

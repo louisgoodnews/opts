@@ -114,6 +114,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `gameplay.autosave_minutes` | Autosave | whole number 0 to 60 | `0` | at once | available | Saves the drive to the autosave slot every this many minutes of play. 0 turns it off. |
 | `gameplay.load_all_tiles` | Load all tiles on start | on / off | `false` | at once | available | Loads every tile of the map while the drive loads and keeps them all in memory. Loading takes longer and uses more memory, so large maps may need a strong machine. Applies to the next drive; switching it during a drive loads the rest in the background. |
 | `gameplay.tile_radius` | Tile radius | whole number 0 to 16 | `0` | at once | available | Tiles kept loaded around the one you are on: 1 is 3 x 3, 2 is 5 x 5. 0 chooses automatically for this computer. Unused while all tiles are loaded. |
+| `camera.door_overlay` | Door camera | on / off | `false` | at once | available | Shows the view from a door in the corner of the screen while the door opens or when you press F4 (F4 again: next door, then off). |
 
 ## Content
 

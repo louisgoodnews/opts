@@ -53,7 +53,9 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Equal,
     KeyCode::NumpadAdd,
     KeyCode::NumpadSubtract,
-    // The full-size map (M-0108; M stays the engine start of OMSI).
+    // The door camera cycles its door with F4 (M-0109); the full-size map is F6 (M-0108; M stays
+    // the engine start of OMSI).
+    KeyCode::F4,
     KeyCode::F6,
     KeyCode::F10,
     KeyCode::F12,

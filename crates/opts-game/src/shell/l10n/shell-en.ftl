@@ -107,6 +107,7 @@ help-group-camera = Camera
 help-group-map = Mini map
 help-key-minimap = Show or hide the mini map (with Shift: north up or heading up)
 help-key-minimap-zoom = Mini map: zoom in or out (100 m to 1 km)
+help-key-door-camera = Door camera: show the view from a door (needs the setting Door camera; again: next door, then off)
 help-key-fullmap = Open or close the full-size map (drag to move it, wheel to zoom)
 help-group-menus = Menus and tools
 help-key-throttle = Throttle and brake

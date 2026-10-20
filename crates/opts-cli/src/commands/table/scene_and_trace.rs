@@ -178,6 +178,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{open, follow, span_m, centre, px_per_m, screen, texture_px, redraws, last_us, worst_us, road_chords, markers, min_span_m, max_span_m, overview}`")
     .doc("The full-size map of the session (key F6). Without parameters it reads. `open` opens or closes it (the change happens in the next frame; opening is refused silently while a dialog, the pause overlay or the vehicle menu holds the input, or before the session has loaded). `span` is the number of metres across the shorter side of the screen, limited to `min_span_m`..`max_span_m` (50 m to 20 km); `x` and `y` (east and north in OMSI metres) centre the map and stop following the vehicle; `follow` follows the active vehicle (or the camera) again; `fit` shows the whole map (every lane read so far, with a margin; the End key does the same). `centre` is the world point in the middle of the screen, `px_per_m` the scale in logical screen pixels, `screen` the logical window size. `last_us` and `worst_us` are the time of the last and the slowest redraw (a redraw follows a change of the view at once, a moving vehicle at most ten times a second, a still map twice a second). Mouse drag, wheel and Home work through `input.mouse_*` and `input.key` like for a person. `overview` is the reader of the roads of the whole map (`{started, complete, percent, tiles_done, tiles_total}`): the first opening starts a background thread that reads every tile of the map, and the map draws these roads for all tiles that are not resident while it fills in. `1001` outside a drive."),
     c(
+        "camera.door",
+        "scene",
+        "Read the door camera or choose the door it shows",
+        "door:i?",
+    )
+    .since("1.17")
+    .result("`{enabled, doors:[{number, kind, zone, side, pathpoint, position}], manual, auto, shown, renders, picture}`")
+    .doc("The door camera of M-0109: a picture-in-picture view from a door of the player's vehicle at the top right of the HUD. It exists only while the setting `camera.door_overlay` is on. `doors` are the pathpoints that the vehicle's passenger cabin names with `[entry]` and `[exit]` (`position` in the vehicle's Bevy frame); `manual` is the door chosen with F4 or with `door` (a number from the list, `0` for none), `auto` the door whose leaf animates, `shown` the door in the picture (`manual` wins), `renders` the pictures rendered so far (30 per second while shown). `-32602` for a door number outside the list."),
+    c(
         "hud.alert",
         "debug",
         "Raise or clear a test alert on the HUD",
