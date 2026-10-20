@@ -16,6 +16,7 @@ pub mod o3d;
 pub mod oft;
 pub mod org;
 pub mod scenery;
+pub mod sound;
 pub mod text;
 pub mod timetable;
 pub mod trains;

@@ -76,6 +76,117 @@ impl ClipCache {
     }
 }
 
+/// Where a clip stands.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClipState {
+    /// Decoded; the handle plays.
+    Ready(Handle<PcmClip>),
+    /// Requested, a worker is decoding it (or it waits for one).
+    Loading,
+    /// Could not be read or decoded (the reason is in the log).
+    Failed,
+}
+
+/// Decodes sound files on worker threads so a frame never waits for a file. A file is asked for
+/// with [`ClipLoader::state`]; the first ask starts the decode, later asks answer
+/// [`ClipState::Loading`] until [`poll_clip_loader`] has moved the finished clip into the
+/// assets. At most [`ClipLoader::MAX_WORKERS`] decodes run at once.
+#[derive(Resource)]
+pub struct ClipLoader {
+    states: HashMap<PathBuf, ClipState>,
+    queue: std::collections::VecDeque<PathBuf>,
+    running: usize,
+    tx: std::sync::mpsc::Sender<(PathBuf, Result<PcmClip, String>)>,
+    rx: std::sync::Mutex<std::sync::mpsc::Receiver<(PathBuf, Result<PcmClip, String>)>>,
+    /// Bytes of decoded samples held (for the report; a limit comes with the eviction).
+    pub bytes: usize,
+}
+
+impl Default for ClipLoader {
+    fn default() -> Self {
+        let (tx, rx) = std::sync::mpsc::channel();
+        Self {
+            states: HashMap::new(),
+            queue: std::collections::VecDeque::new(),
+            running: 0,
+            tx,
+            rx: std::sync::Mutex::new(rx),
+            bytes: 0,
+        }
+    }
+}
+
+impl ClipLoader {
+    /// Decodes running at the same time.
+    pub const MAX_WORKERS: usize = 2;
+
+    /// The state of `path`; asking for an unknown file starts its decode.
+    pub fn state(&mut self, path: &Path) -> ClipState {
+        if let Some(s) = self.states.get(path) {
+            return s.clone();
+        }
+        self.states.insert(path.to_path_buf(), ClipState::Loading);
+        self.queue.push_back(path.to_path_buf());
+        self.start_queued();
+        ClipState::Loading
+    }
+
+    fn start_queued(&mut self) {
+        while self.running < Self::MAX_WORKERS {
+            let Some(path) = self.queue.pop_front() else {
+                return;
+            };
+            self.running += 1;
+            let tx = self.tx.clone();
+            std::thread::spawn(move || {
+                let r = decode_file(&path);
+                let _ = tx.send((path, r));
+            });
+        }
+    }
+
+    /// Counts by state: (ready, loading, failed).
+    #[must_use]
+    pub fn counts(&self) -> (usize, usize, usize) {
+        self.states
+            .values()
+            .fold((0, 0, 0), |(r, l, f), s| match s {
+                ClipState::Ready(_) => (r + 1, l, f),
+                ClipState::Loading => (r, l + 1, f),
+                ClipState::Failed => (r, l, f + 1),
+            })
+    }
+
+    /// Moves finished decodes into `assets` and starts queued ones.
+    pub fn poll(&mut self, assets: &mut Assets<PcmClip>) {
+        let finished: Vec<(PathBuf, Result<PcmClip, String>)> = self
+            .rx
+            .lock()
+            .map(|rx| rx.try_iter().collect())
+            .unwrap_or_default();
+        for (path, result) in finished {
+            self.running = self.running.saturating_sub(1);
+            let state = match result {
+                Ok(clip) => {
+                    self.bytes += clip.samples.len() * std::mem::size_of::<f32>();
+                    ClipState::Ready(assets.add(clip))
+                }
+                Err(e) => {
+                    tracing::warn!("sound not loaded: {e}");
+                    ClipState::Failed
+                }
+            };
+            self.states.insert(path, state);
+        }
+        self.start_queued();
+    }
+}
+
+/// `Update` system: finishes the decodes the [`ClipLoader`] has done.
+pub fn poll_clip_loader(mut loader: ResMut<ClipLoader>, mut assets: ResMut<Assets<PcmClip>>) {
+    loader.poll(&mut assets);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -127,6 +238,34 @@ mod tests {
         let e2 = cache.clip(&bad, &mut assets).expect_err("refused again");
         assert!(e2.contains("failed before"), "{e2}");
         assert!(cache.clip(&dir.join("none.wav"), &mut assets).is_err());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_loader_decodes_on_a_worker_and_reports_states() {
+        let dir = std::env::temp_dir().join(format!("opts-clip-loader-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("dir");
+        let good = dir.join("beep.wav");
+        std::fs::write(&good, wav_bytes()).expect("write");
+        let bad = dir.join("none.wav");
+        let mut assets = Assets::<PcmClip>::default();
+        let mut loader = ClipLoader::default();
+        assert_eq!(loader.state(&good), ClipState::Loading);
+        assert_eq!(loader.state(&bad), ClipState::Loading);
+        for _ in 0..200 {
+            loader.poll(&mut assets);
+            if loader.counts().1 == 0 {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert_eq!(loader.counts(), (1, 0, 1));
+        let ClipState::Ready(h) = loader.state(&good) else {
+            panic!("the good file is ready");
+        };
+        assert_eq!(assets.get(&h).map(PcmClip::frames), Some(4));
+        assert_eq!(loader.state(&bad), ClipState::Failed);
+        assert_eq!(loader.bytes, 16);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

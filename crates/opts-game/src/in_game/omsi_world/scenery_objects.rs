@@ -209,6 +209,7 @@ impl WorldLoadJob {
         template: Option<&Arc<ScriptTemplate>>,
     ) -> bool {
         template.is_none_or(|t| !t.has_scripts)
+            && sco.sound.is_none()
             && sco.lights.is_empty()
             && sco.meshes.iter().all(|m| {
                 m.lod_threshold.is_none() && m.visible.is_none() && m.animations.is_empty()

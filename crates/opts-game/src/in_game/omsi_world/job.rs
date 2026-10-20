@@ -282,6 +282,7 @@ pub fn begin_world_load_at(
         placed: HashMap::new(),
         tile_ground: None,
         sco_cache: HashMap::new(),
+        sound_cfgs: HashMap::new(),
         crossing_bases: HashMap::new(),
         ground_faces: HashMap::new(),
         tile_objects: HashMap::new(),

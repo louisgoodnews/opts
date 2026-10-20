@@ -10,6 +10,8 @@ use super::clock::SceneryClock;
 
 /// Most diagnostics kept per object (the harness reads them; the log gets a summary).
 const MAX_KEPT_DIAGNOSTICS: usize = 32;
+/// Events kept between two reads of [`SceneryScripts::take_raised`].
+const MAX_RAISED: usize = 64;
 
 /// Values every scripted object receives before `{frame}`, from the [`SceneryClock`].
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -114,6 +116,8 @@ pub struct SceneryScripts {
     diagnostics: Vec<Diagnostic>,
     /// Ticks run so far.
     pub ticks: u64,
+    /// Events the script raised since the last [`Self::take_raised`] (lower case).
+    raised: Vec<String>,
 }
 
 impl SceneryScripts {
@@ -138,6 +142,7 @@ impl SceneryScripts {
             initialised: false,
             diagnostics,
             ticks: 0,
+            raised: Vec::new(),
         }
     }
 
@@ -149,6 +154,17 @@ impl SceneryScripts {
     /// The engine for exclusive access inside a system.
     pub fn engine_mut(&mut self) -> Option<&mut ScriptEngine> {
         self.engine.get_mut().ok()
+    }
+
+    /// Whether the script raised events that nobody has taken yet.
+    #[must_use]
+    pub fn has_raised(&self) -> bool {
+        !self.raised.is_empty()
+    }
+
+    /// Takes the events the script raised since the last call (lower case names, oldest first).
+    pub fn take_raised(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.raised)
     }
 
     /// Load-time and run-time diagnostics kept for this object.
@@ -195,8 +211,13 @@ impl SceneryScripts {
             e.run_init();
         }
         e.run_frame(dt_s, false);
-        // Sounds and announcements have no consumer yet (audio is checked later).
-        e.drain_events();
+        // The events the script raised (`(T.L.name)`, lower case) wait for the sound layer
+        // (`opts_game::scenery_sound`), which plays the `[trigger]`s of the object's sounds.
+        for ev in e.drain_events() {
+            if self.raised.len() < MAX_RAISED {
+                self.raised.push(ev.name);
+            }
+        }
         e.drain_messages();
         let new = e.drain_diagnostics();
         let count = new.len();

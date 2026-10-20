@@ -66,10 +66,17 @@ Decoding happens where `ClipCache::clip` is called, on the calling thread. A map
 
 `audio.state` (volumes, voice counts, listener, the loudest emitters with their computed level and distance), `audio.tone` (a sine test signal, optionally positioned), `audio.play` (a sound file of the installation), `audio.stop`. The unit tests run without a sound card (`opts-bevy/src/audio/tests.rs`: range, budget, loops, one-shots, settings, listener; `curves`, `clip`, the WAV decoder, the clip cache, the settings sync). The output path is checked live: `audio.tone` shows up as a playback stream of the game in the system mixer (`pactl list sink-inputs`) with the volume the engine computed.
 
-## 8. Open
+## 8. Scenery objects (M-0139)
+
+`scenery_sound.rs` turns the `[sound]` configuration of a placed object into `SceneryVoice` children at the `[3d]` positions (the configuration is parsed once per file, cached in the load job). Three systems: `poll_clip_loader` (finished decodes into the assets), `stream_scenery_voices` (four times a second: a continuous voice gets a looping `SoundEmitter` when the listener is within its range and its clip is decoded, loses it beyond 1.25 × the maximum distance; the level is the product of its `[volcurve]`s over the session clock), `fire_scenery_triggers` (the events an object's script raised become one-shot emitters at the voice's place). Clips are decoded on two worker threads the first time a voice comes near, so no frame waits for a file and the 3.6 GB of scenery sound is never read as a whole. Objects without geometry (`[onlyeditor]` helpers) are built when they carry a sound, so their script and voices exist. Counters: `audio.state.scenery` and `audio.state.clips`.
+
+Not yet: `[conditionSingle]`, `[viewpoint]`, `[onlyone]`, `[checkloading]`, script variables in `[volcurve]`, eviction of decoded clips, splines (no spline names a sound; road and rail rolling noise belongs to the vehicles, whose tyre sounds read the surface texture configurations, M-0102).
+
+## 9. Open
 
 | Id | Question |
 | :--- | :--- |
 | Q-AU01 | OMSI's own fall-off: its `[3d]` blocks give a minimum and maximum distance and a volume curve ([sound_cfg](../formats/text/vehicles/sound_cfg.md)); the engine's inverse-distance curve is a stand-in until the scenery milestone maps them. |
 | Q-AU02 | Whether virtual loops should keep their play position so that a returning source continues instead of restarting. |
+| Q-AU04 | Which surface a road or rail gives its tyre noise: the texture configurations next to the scenery (`x.bmp.cfg` with `[surface]`, `[moisture]`, `[puddles]`) look like the source; M-0102. |
 | Q-AU03 | Output device choice and a latency setting (Bevy uses the system default device). |

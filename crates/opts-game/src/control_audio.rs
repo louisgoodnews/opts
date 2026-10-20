@@ -12,7 +12,8 @@ use opts_bevy::PcmClip;
 use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
-use crate::audio_content::ClipCache;
+use crate::audio_content::{ClipCache, ClipLoader};
+use crate::scenery_sound::SceneryAudioStats;
 
 /// Marks the emitters `audio.tone` and `audio.play` create, so `audio.stop` removes only them.
 #[derive(Component)]
@@ -62,6 +63,14 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         .cloned()
         .unwrap_or_default();
     let cached = world.get_resource::<ClipCache>().map_or(0, ClipCache::len);
+    let scenery = world
+        .get_resource::<SceneryAudioStats>()
+        .cloned()
+        .unwrap_or_default();
+    let (ready, loading, failed) = world
+        .get_resource::<ClipLoader>()
+        .map_or((0, 0, 0), ClipLoader::counts);
+    let loaded_bytes = world.get_resource::<ClipLoader>().map_or(0, |l| l.bytes);
     let top: Vec<Value> = stats
         .top
         .iter()
@@ -91,6 +100,15 @@ fn state(world: &mut World, _: &Value) -> Outcome {
         },
         "listener": stats.listener.map(|l| json!([l.x, l.y, l.z])),
         "clips_cached": cached,
+        "clips": { "ready": ready, "loading": loading, "failed": failed, "bytes": loaded_bytes },
+        "scenery": {
+            "voices": scenery.voices,
+            "playing": scenery.playing,
+            "one_shots": scenery.one_shots,
+            "cold_misses": scenery.cold_misses,
+            "unsupported_conditions": scenery.unsupported,
+            "files_not_found": scenery.unresolved,
+        },
         "top": top,
     }))
 }

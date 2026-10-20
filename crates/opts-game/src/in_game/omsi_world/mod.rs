@@ -225,6 +225,8 @@ pub struct WorldLoadJob {
     /// The splines of every tile read this session, for the terrain carve of its neighbours.
     tile_splines: HashMap<(i32, i32), Arc<Vec<MapSplineInstance>>>,
     sco_cache: HashMap<PathBuf, Option<Arc<SceneryObject>>>,
+    /// Parsed sound configurations by file (`None`: unreadable).
+    sound_cfgs: HashMap<PathBuf, Option<Arc<opts_core::formats::sound::SoundConfig>>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     crossing_bases: HashMap<PathBuf, Option<Arc<opts_core::formats::scenery::BaseSurface>>>,
     /// Ground faces of crossings and surface objects by `.sco` (mesh axes), for the carve.

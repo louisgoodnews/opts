@@ -238,8 +238,8 @@ pub(super) const PART: &[CommandSpec] = &[
         "",
     )
     .since("1.19")
-    .result("`{enabled, volumes:{master, effects, ambience, engine, interface}, voices:{budget, emitters, audible, with_voice, virtualized, playing}, listener, clips_cached, top:[{entity, bus, gain, distance, voice}]}`")
-    .doc("`gain` is the level an emitter computes: its own gain × the distance fade × its bus' volume × the master volume (volumes are percent, squared into a gain). `voices.playing` counts voices whose sink exists, that is the sound card accepted them: on a machine without an output it stays 0 while `with_voice` rises. `listener` is the main camera's position (Bevy metres) or `null`."),
+    .result("`{enabled, volumes:{master, effects, ambience, engine, interface}, voices:{budget, emitters, audible, with_voice, virtualized, playing}, listener, clips_cached, clips:{ready, loading, failed, bytes}, scenery:{voices, playing, one_shots, cold_misses, unsupported_conditions, files_not_found}, top:[{entity, bus, gain, distance, voice}]}`")
+    .doc("`gain` is the level an emitter computes: its own gain × the distance fade × its bus' volume × the master volume (volumes are percent, squared into a gain). `voices.playing` counts voices whose sink exists, that is the sound card accepted them: on a machine without an output it stays 0 while `with_voice` rises. `listener` is the main camera's position (Bevy metres) or `null`. `clips` counts the sound files the worker threads decoded, are decoding or could not decode, with the bytes held; `scenery` reports the sound definitions of placed objects (M-0139): all of them, the continuous ones playing now, the one-shots started by script triggers, triggers that found their file still decoding, definitions waiting for a `[conditionSingle]` (not supported yet) and files not found."),
     c(
         "audio.tone",
         "scene",
