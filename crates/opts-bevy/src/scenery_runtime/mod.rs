@@ -10,6 +10,7 @@
 
 mod alpha;
 mod clock;
+mod draw_distance;
 mod effects;
 mod lights;
 mod lod;
@@ -22,6 +23,9 @@ use bevy::prelude::*;
 
 pub use alpha::{bind_alpha_scale, scenery_alpha_scale_system, SceneryAlphaScale};
 pub use clock::{solar_altitude_deg, HostVar, SceneryClock, VarRef, NIGHT_SUN_ALT_DEG};
+pub use draw_distance::{
+    is_culled, scenery_draw_distance_system, DistanceCulled, SceneryDrawDistance, SceneryDrawRoot,
+};
 pub use effects::{
     read_var, EffectTargets, SceneryLight, SceneryLightMap, SceneryMeshRule, SceneryObjectRuntime,
 };
@@ -54,6 +58,7 @@ impl Plugin for SceneryRuntimePlugin {
             .init_resource::<SceneryRuntimeStats>()
             .init_resource::<SceneryVariableOverrides>()
             .init_resource::<SceneryLodMode>()
+            .init_resource::<SceneryDrawDistance>()
             .init_resource::<MapLightSettings>()
             .init_resource::<MapLightPool>()
             .add_systems(
@@ -61,6 +66,7 @@ impl Plugin for SceneryRuntimePlugin {
                 (
                     scenery_script_system,
                     scenery_lod_system,
+                    scenery_draw_distance_system,
                     scenery_light_system,
                     scenery_alpha_scale_system,
                     map_light_pool_system,

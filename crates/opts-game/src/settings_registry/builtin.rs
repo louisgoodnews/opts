@@ -2,9 +2,7 @@
 //! values are unchanged) and the new ones of M-0063.
 
 use opts_gui::l10n::keys::theme;
-use opts_gui::not_yet::{
-    SETTINGS_AUDIO, SETTINGS_REBIND, SETTINGS_TIME_SCALE, SETTINGS_VIEW_DISTANCE,
-};
+use opts_gui::not_yet::{SETTINGS_AUDIO, SETTINGS_REBIND, SETTINGS_TIME_SCALE};
 
 use super::descriptor::{opt, Apply, Category as C, SettingDescriptor as D, SettingKind as K};
 

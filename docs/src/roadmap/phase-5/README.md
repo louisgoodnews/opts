@@ -17,7 +17,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — 🟢 Complete (audit 5037f89a F-013, F-018, F-020–F-023)
 - [M-0042 — CI & Toolchain Hardening](M-0042.md) — 🟡 Written, never run — blocked on [M-0052](M-0052.md) (audit 5037f89a F-024–F-026)
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟡 Merged to `master` 2026-10-11; `Interaction` follow-up open
-- [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems](M-0029.md) — ⏳ Planned
+- [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems](M-0029.md) — 🟡 View distance setting live (scenery draw distance); shadow culling, instancing open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
 - [M-0052 — Repository Hosting, CI Activation & Commit Gate](M-0052.md) — ⏳ Planned, 🔴 high (critical review 2026-10-11 F-001, F-018–F-020)
 - [M-0072 — Settings and Configuration through the Control Protocol](M-0072.md) — 🟢 Complete 2026-10-18 (R-10)
