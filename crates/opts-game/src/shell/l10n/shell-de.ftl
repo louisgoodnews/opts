@@ -200,3 +200,5 @@ load-choose-another = Anderen wählen
 load-back = Zurück
 help-key-quick-save = Schnellspeichern
 help-key-quick-load = Schnellladen
+help-group-mouse-driving = Fahren mit der Maus
+help-mouse-driving-note = Drücken Sie das Mausrad, um mit der Maus zu fahren: Die Höhe des Zeigers ist über der Fenstermitte Gas, darunter Bremse, seine Breite lenkt (voller Einschlag an den Rändern). Ein Rechtsklick gibt die Maus für das Cockpit und die Menüs bis zum nächsten Rechtsklick frei; ein Druck auf das Mausrad beendet den Modus. Unter Einstellungen, Steuerung lässt er sich abschalten.

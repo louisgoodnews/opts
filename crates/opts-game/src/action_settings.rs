@@ -17,6 +17,9 @@ use crate::vehicle_keys;
 /// The groups of key bindings, in the order of the reset rows.
 pub const GROUPS: [&str; 5] = ["vehicle", "drive", "camera", "map", "ui"];
 
+/// `controls.mouse_driving`: whether the wheel press switches the mouse driving mode.
+pub const MOUSE_DRIVING_KEY: &str = "controls.mouse_driving";
+
 /// The prefix of the reset rows (`controls.reset.map`, `controls.reset.all`).
 pub const RESET_PREFIX: &str = "controls.reset.";
 
@@ -87,6 +90,18 @@ pub fn descriptors() -> Vec<D> {
             ))
         })
         .collect();
+    v.push(
+        D::new(
+            MOUSE_DRIVING_KEY,
+            K::Bool,
+            "true",
+            C::Controls,
+            190,
+            "set-mouse-driving",
+            "set-mouse-driving-desc",
+        )
+        .keywords(&["mouse", "wheel", "cursor", "steer", "pedals"]),
+    );
     v.extend(
         RESET_ROWS
             .iter()
@@ -204,13 +219,25 @@ pub fn sync_action_keys(
     }
 }
 
+/// Keeps [`opts_bevy::MouseDriving::enabled`] equal to the setting.
+pub fn sync_mouse_driving(settings: Res<GameSettings>, mut mouse: ResMut<opts_bevy::MouseDriving>) {
+    if !(settings.is_changed() || mouse.is_added()) {
+        return;
+    }
+    let enabled = settings.raw(MOUSE_DRIVING_KEY).as_deref() != Some("false");
+    if mouse.enabled != enabled {
+        mouse.enabled = enabled;
+    }
+}
+
 /// Registers the resource and its sync.
 pub struct ActionKeysPlugin;
 
 impl Plugin for ActionKeysPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ActionKeys>()
-            .add_systems(PreUpdate, sync_action_keys);
+            .init_resource::<opts_bevy::MouseDriving>()
+            .add_systems(PreUpdate, (sync_action_keys, sync_mouse_driving));
     }
 }
 

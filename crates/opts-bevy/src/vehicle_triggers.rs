@@ -504,6 +504,7 @@ pub fn script_mouse_trigger_system(
     mut motion: MessageReader<MouseMotion>,
     vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
     mut picker: HotSpotPicker,
+    driving: Option<Res<crate::mouse_driving::MouseDriving>>,
     mut held: Local<Option<HeldHotSpot>>,
 ) {
     let delta: Vec2 = motion.read().map(|m| m.delta).sum();
@@ -534,6 +535,10 @@ pub fn script_mouse_trigger_system(
         return;
     }
     if !mouse.just_pressed(MouseButton::Left) {
+        return;
+    }
+    // The cursor is the steering wheel while the mouse drives: it clicks nothing in the cockpit.
+    if driving.is_some_and(|d| d.drives()) {
         return;
     }
     let Some(spot) = picker.under_cursor() else {
