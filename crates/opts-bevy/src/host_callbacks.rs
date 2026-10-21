@@ -491,14 +491,14 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
                 let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
                 let file = st.strings.pop().unwrap_or_default();
                 if tex_idx >= 0 && !file.is_empty() {
-                    let mut path = std::path::PathBuf::from(&file);
-                    if path.is_relative() {
-                        if let Some(base) = &ctx.texture_base_dir {
-                            path = base.join(&path);
-                        }
-                    }
+                    // OMSI paths: backslashes, any letter case, relative to the vehicle's
+                    // texture folder (`..\..\Anzeigen\...` reaches `Vehicles/Anzeigen`).
+                    let path = match &ctx.texture_base_dir {
+                        Some(base) => crate::script_text::resolve_path(base, &file),
+                        None => Some(std::path::PathBuf::from(file.replace('\\', "/"))),
+                    };
                     let mut texs = ctx.script_textures.write().unwrap();
-                    if let Some(tex) = texs.get_mut(tex_idx as usize) {
+                    if let (Some(tex), Some(path)) = (texs.get_mut(tex_idx as usize), path) {
                         let _ = tex.load_tex(&path);
                     }
                 }

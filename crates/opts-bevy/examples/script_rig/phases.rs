@@ -117,7 +117,7 @@ impl Loop {
         }
         feed(&mut self.engine, &self.plan, &inputs);
         self.startup.step(self.t, &mut self.engine);
-        self.keys.press_next(&mut self.engine);
+        self.keys.press_next(&mut self.engine, 1.0 / 60.0);
         if let Some(r) = self.route.clone() {
             opts_bevy::route::keep_target(
                 &mut self.engine,

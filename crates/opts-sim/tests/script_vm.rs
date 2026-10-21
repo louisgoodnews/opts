@@ -41,6 +41,18 @@ fn t_osc_010_stores_keep_the_value_on_the_stack() {
 }
 
 #[test]
+fn t_osc_011_if_leaves_its_condition_on_the_stack() {
+    // The ticket printer's power idiom: the busbar value stays after `{if}` and is compared with
+    // the negated state (a popping `{if}` would never switch the printer on).
+    let mut e = run("1 (S.L.busbar) {if} (L.L.an) ! = {if} 1 (S.L.an) {endif} {endif}");
+    assert_eq!(e.get("an"), 1.0);
+    // Once on, `!an` is 0, the comparison fails and the state stays.
+    let e2 = run("1 (S.L.an) 1 {if} (L.L.an) ! = {if} 5 (S.L.hit) {endif} {endif}");
+    assert_eq!(e2.get("hit"), 0.0);
+    assert!(e.drain_diagnostics().is_empty(), "no stack underflow");
+}
+
+#[test]
 fn t_osc_002_if_taken() {
     assert_eq!(run("1 {if} 7 (S.L.x) {endif}").get("x"), 7.0);
 }

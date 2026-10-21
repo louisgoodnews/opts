@@ -211,7 +211,7 @@ Control flow is **inline**:
 
 | Token | Behavior |
 | :--- | :--- |
-| `{if}` | Pops a value; executes the following branch if it is non-zero. |
+| `{if}` | Looks at the top value and executes the following branch if it is non-zero; **the value stays on the stack** (OMSI scripts rely on it, see the VM sheet). |
 | `{else}` | Optional alternate branch. |
 | `{endif}` | Ends the conditional. |
 

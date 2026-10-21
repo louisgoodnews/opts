@@ -177,8 +177,13 @@ impl ScriptEngine {
                     );
                 }
             }
+            // `{if}` looks at the condition and leaves it on the stack, like a store leaves its
+            // value: the scripts' own idioms need it (`(L.L.elec_busbar_main) {if}
+            // (L.L.Drucker_an) ! = {if}` compares the busbar still on the stack with the negated
+            // state; the NLC's ticket printer never starts without it). Evidence in
+            // `docs/src/architecture/script-vm.md`.
             Op::JumpIfZero(t) => {
-                if self.pop(st, block, pc) == 0.0 {
+                if st.numbers.last().copied().unwrap_or(0.0) == 0.0 {
                     return Some(t as usize);
                 }
             }

@@ -18,7 +18,7 @@ The principle: the `.osc` scripts run unchanged; the host feeds their inputs (`o
 | Wipers, mirrors, sun blind | yes | the wiper animates; the NG313's blind was fixed 2026-10-20 (translation sign of mesh-origin animations); the blinds of other vehicles are not all checked | NG313 |
 | Sound | yes | engine loops by rpm and load, rooms inside and outside, door and switch one-shots, trailer units' loops ([audio](../architecture/audio-system.md)) | five vehicles |
 | Passengers, tickets | yes | people at stops board through the doors the scripts open, stamp or buy, take places, get off; `humans_count`, `GetHumanCountOn*` and the ticket callbacks read the simulation and the map's ticket pack | NLC, NG313 |
-| Ticket printer (`Drucker`) | yes | a script-drawn dialog on a display texture (login, menu, ticket choice): the ticket names now come from the map's ticket pack (they were one fixed text) | script only; the display texture was not looked at |
+| Ticket printer (`Drucker`, the NLC's IBIS) | yes (2026-10-21) | boots, logs in with the driver number and PIN of its constants, takes line and course and sets the destination (`bus.set_route` presses these keys); it did not start before because `{if}` popped its condition ([VM sheet](../architecture/script-vm.md)); ticket names come from the map's pack | script only; the printer's own screen was not looked at |
 | Cash desk (change dispenser buttons) | yes | `GiveChangeCoin` logs the coin of the map's currency; no coin is drawn at the change point yet | log only |
 
 ## Not working or not checked

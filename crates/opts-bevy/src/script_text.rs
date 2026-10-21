@@ -1,7 +1,8 @@
-//! Text on script textures (`STTextOut`): the glyphs of the OMSI bitmap fonts drawn onto a
-//! canvas in the colours of the font's colour bitmap (the matrix fonts carry their LED colour
-//! there; the script's `STSetColor` is not used for text, open question E3), with the font's
-//! alpha bitmap as coverage.
+//! Text on script textures (`STTextOut`): the glyph cells of the OMSI bitmap fonts drawn onto a
+//! canvas in the colour the script set with `STSetColor` (alpha included), with the font's alpha
+//! bitmap as coverage of each pixel. The matrix script of the MAN New Lion's City draws its
+//! text in red with alpha 0 and reads the red channel back pixel by pixel to light its LEDs, so
+//! the colour channels must carry the colour whatever the alpha is.
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -58,9 +59,39 @@ impl FontBitmapSource {
     }
 }
 
-/// Draws `text` with its top left corner at (`x`, `y`): every glyph cell of the font's bitmaps is
-/// blended onto the canvas in its own colour, scaled by the glyph's coverage; each glyph moves
-/// the pen on by its width (cell including its gap) plus `spacing`.
+/// The file `rel` below `base` the way OMSI's Windows paths name it: backslashes separate, `..`
+/// goes up and every name matches whatever its letter case on this file system.
+#[must_use]
+pub fn resolve_path(base: &std::path::Path, rel: &str) -> Option<PathBuf> {
+    let mut at = base.to_path_buf();
+    for part in rel
+        .split(['\\', '/'])
+        .filter(|p| !p.is_empty() && *p != ".")
+    {
+        if part == ".." {
+            at = at.parent()?.to_path_buf();
+            continue;
+        }
+        let exact = at.join(part);
+        at = if exact.exists() {
+            exact
+        } else {
+            std::fs::read_dir(&at)
+                .ok()?
+                .flatten()
+                .map(|e| e.path())
+                .find(|p| {
+                    p.file_name()
+                        .is_some_and(|n| n.to_string_lossy().eq_ignore_ascii_case(part))
+                })?
+        };
+    }
+    Some(at)
+}
+
+/// Draws `text` with its top left corner at (`x`, `y`): every pixel of a glyph cell moves each
+/// channel of the canvas towards the canvas's current colour by the glyph's coverage; each glyph
+/// moves the pen on by its width (cell including its gap) plus `spacing`.
 pub fn draw_text(
     canvas: &mut dyn ScriptTextureCanvas,
     x: i32,
@@ -70,6 +101,8 @@ pub fn draw_text(
     text: &str,
     spacing: i32,
 ) {
+    let [ca, cr, cg, cb] = canvas.current_color();
+    let colour = [cr, cg, cb, ca];
     let (cw, ch) = (canvas.width() as i32, canvas.height() as i32);
     let line = font.line_height.max(1) as i32;
     let mut pen = x;
@@ -101,13 +134,11 @@ pub fn draw_text(
                 }
                 let o = ((py * cw + px) * 4) as usize;
                 let dst = &mut buffer[o..o + 4];
-                // Source over: the canvas keeps what it had where the glyph is not opaque.
+                // Each channel, alpha included, moves towards the colour by the coverage.
                 let inv = 255 - cover;
-                let rgb = bitmaps.colour[(sy * bitmaps.width + sx) as usize];
-                for (d, s) in dst.iter_mut().zip(rgb) {
-                    *d = ((u32::from(s) * cover + u32::from(*d) * inv) / 255) as u8;
+                for (d, c) in dst.iter_mut().zip(colour) {
+                    *d = ((u32::from(c) * cover + u32::from(*d) * inv) / 255) as u8;
                 }
-                dst[3] = (cover + u32::from(dst[3]) * inv / 255).min(255) as u8;
             }
         }
         pen += width + spacing;

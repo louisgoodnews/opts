@@ -34,7 +34,7 @@ fn font() -> (OftFont, FontBitmaps) {
     let bmp = FontBitmaps {
         width: 4,
         height: 3,
-        colour: vec![[200, 100, 50]; 12],
+        colour: vec![[1, 2, 3]; 12],
         alpha_size: (4, 3),
         alpha,
     };
@@ -48,12 +48,12 @@ fn px(canvas: &CpuScriptTexture, x: usize, y: usize) -> [u8; 4] {
 }
 
 #[test]
-fn glyphs_are_drawn_in_the_fonts_colours_through_its_coverage() {
+fn glyphs_are_drawn_in_the_set_colour_through_the_fonts_coverage() {
     let (font, bmp) = font();
     let mut canvas = CpuScriptTexture::new(16, 8);
-    canvas.set_color(255, 1, 2, 3);
+    canvas.set_color(255, 200, 100, 50);
     draw_text(&mut canvas, 2, 1, &font, &bmp, "A", 0);
-    // Covered pixel: the font's colour, whatever colour the script set. Uncovered column and everything around: untouched.
+    // Covered pixel: the colour the script set (the font's own colours are not used). Uncovered column and everything around: untouched.
     assert_eq!(px(&canvas, 2, 1), [200, 100, 50, 255]);
     assert_eq!(px(&canvas, 5, 1), [0, 0, 0, 0], "the uncovered column");
     assert_eq!(px(&canvas, 1, 1), [0, 0, 0, 0], "left of the glyph");
@@ -62,6 +62,16 @@ fn glyphs_are_drawn_in_the_fonts_colours_through_its_coverage() {
     let half = px(&canvas, 2, 2);
     assert!((127..=129).contains(&half[3]), "{half:?}");
     assert!(canvas.is_dirty());
+}
+
+#[test]
+fn a_colour_with_alpha_zero_still_carries_its_channels_for_the_scripts_that_read_them_back() {
+    let (font, bmp) = font();
+    let mut canvas = CpuScriptTexture::new(16, 8);
+    // The matrix script's text colour: alpha 0, red 255.
+    canvas.set_color(0, 255, 0, 0);
+    draw_text(&mut canvas, 0, 0, &font, &bmp, "A", 0);
+    assert_eq!(px(&canvas, 1, 0), [255, 0, 0, 0]);
 }
 
 #[test]
