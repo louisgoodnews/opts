@@ -329,6 +329,14 @@ impl ContentLoader<'_> {
                     // fixed-function multiplier that is white in practice.
                     material.base_color = bevy::color::Color::srgba(1.0, 1.0, 1.0, base.diffuse[3]);
                 }
+                // A script canvas that is the transparency map (`\S:n`, the LED matrices) is a
+                // light source: it shows its colour whatever the daylight.
+                if over
+                    .and_then(|o| o.trans_map.as_deref())
+                    .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"))
+                {
+                    material.unlit = true;
+                }
                 if let Some(mode) = over
                     .and_then(|o| o.alpha)
                     .filter(|m| crate::material::uses_texture_alpha(Some(*m)))

@@ -21,6 +21,22 @@ pub struct VehicleScriptTexture {
     /// (`[matl_transmap] \S:n`, the LED matrices): the material's own texture gives the colour,
     /// the canvas only its alpha. `None`: the canvas is the texture.
     pub tint: Option<[u8; 3]>,
+    /// The string variable that names the colour texture (`[matl_freetex]`) and where to look
+    /// for the file; the tint follows it.
+    pub colour_source: Option<ColourSource>,
+}
+
+/// Where a tinted canvas takes its colour texture's name from.
+#[derive(Debug, Clone)]
+pub struct ColourSource {
+    /// The entity whose engine owns the variable.
+    pub owner: Entity,
+    /// The string variable.
+    pub variable: String,
+    /// The folders to look for the texture in.
+    pub dirs: Vec<std::path::PathBuf>,
+    /// The name last looked at.
+    pub last: String,
 }
 
 impl VehicleScriptTexture {
@@ -36,7 +52,25 @@ impl VehicleScriptTexture {
             canvases,
             image,
             tint: None,
+            colour_source: None,
         }
+    }
+
+    /// The tint follows the colour texture the string variable `variable` of `owner` names.
+    #[must_use]
+    pub fn following(
+        mut self,
+        owner: Entity,
+        variable: &str,
+        dirs: Vec<std::path::PathBuf>,
+    ) -> Self {
+        self.colour_source = Some(ColourSource {
+            owner,
+            variable: variable.to_owned(),
+            dirs,
+            last: String::new(),
+        });
+        self
     }
 
     /// The canvas as a transparency map over the colour `rgb`.
@@ -50,11 +84,44 @@ impl VehicleScriptTexture {
 /// Uploads unlocked/dirty script texture canvases into Bevy GPU images.
 pub fn update_vehicle_script_textures(
     mut images: ResMut<Assets<Image>>,
-    targets: Query<&VehicleScriptTexture>,
+    mut targets: Query<&mut VehicleScriptTexture>,
+    scripts: Query<&opts_bevy::VehicleScripts>,
 ) {
-    for target in &targets {
+    for mut target in &mut targets {
+        // A colour texture named by a string variable: when the name changes, the tint changes
+        // and the image is made again.
+        let mut retint = false;
+        if let Some(source) = target.colour_source.as_mut() {
+            let name = scripts
+                .get(source.owner)
+                .ok()
+                .and_then(|s| {
+                    s.engine
+                        .lock()
+                        .ok()
+                        .map(|e| e.get_string(&source.variable).to_owned())
+                })
+                .unwrap_or_default();
+            if !name.is_empty() && name != source.last {
+                source.last.clone_from(&name);
+                let rgb = source
+                    .dirs
+                    .iter()
+                    .find_map(|d| opts_bevy::script_text::resolve_path(d, &name))
+                    .and_then(|p| std::fs::read(p).ok())
+                    .and_then(|b| opts_bevy::texture::load_bevy_image(&b).ok())
+                    .and_then(|img| bright_colour(&img));
+                if let Some(rgb) = rgb {
+                    target.tint = Some(rgb);
+                    retint = true;
+                }
+            }
+        }
         if let Ok(mut canvases) = target.canvases.write() {
             if let Some(canvas) = canvases.get_mut(target.index) {
+                if retint {
+                    canvas.mark_dirty();
+                }
                 if canvas.is_dirty() && !canvas.is_locked() {
                     if let Some(mut img) = images.get_mut(&target.image) {
                         let mut data = canvas.raw_rgba().to_vec();
