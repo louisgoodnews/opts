@@ -34,7 +34,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0097 — Script Physics Contract: Torque, Brakes and Wheels](M-0097.md) — 🟡 Implemented 2026-10-18, units from the scripts 2026-10-19, SD200 acceleration range open, 🔴 critical
 - [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — ✅ Done 2026-10-21
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🟢 done 2026-10-19
-- [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🔴 Not started (proposed 2026-10-14)
+- [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🟡 Partly built; glyph text 2026-10-21
 - [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0141 — Vehicle Controls and Systems: the Driver's Workplace Works](M-0141.md) — 📝 Requested 2026-10-20 (electrics, engine start, lights, doors, heating, dashboard controls; no earlier milestone owned it)
 - [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🟡 First slice 2026-10-20 (the player vehicle's loops and one-shots from its sound configuration; announcements, mixer inputs, force feedback open)

@@ -83,7 +83,7 @@ pub use traffic::{
 };
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
-pub use vehicle_script_texture::update_vehicle_script_textures;
+pub use vehicle_script_texture::{update_vehicle_script_textures, VehicleScriptTexture};
 pub use vehicle_text::update_vehicle_text_textures;
 pub use water::warn_vehicle_in_water;
 

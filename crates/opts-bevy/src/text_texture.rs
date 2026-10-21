@@ -12,7 +12,8 @@ use bevy::asset::RenderAssetUsages;
 use bevy::asset::{Assets, Handle};
 use bevy::image::Image;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use opts_core::formats::oft::{OftFile, OftFont};
+#[allow(unused_imports)] // `OftChar` is for the tests of `script_text`
+pub(crate) use opts_core::formats::oft::{OftChar, OftFile, OftFont};
 
 use crate::install::OmsiInstall;
 
@@ -51,7 +52,7 @@ pub struct FontBitmaps {
 }
 
 impl FontBitmaps {
-    fn coverage(&self, x: u32, y: u32) -> u8 {
+    pub(crate) fn coverage(&self, x: u32, y: u32) -> u8 {
         let (aw, ah) = self.alpha_size;
         let ax = (x * aw / self.width.max(1)).min(aw.saturating_sub(1));
         let ay = (y * ah / self.height.max(1)).min(ah.saturating_sub(1));
@@ -137,15 +138,22 @@ pub fn render_rgba(font: &OftFont, bmp: &FontBitmaps, spec: &TextSpec) -> Vec<u8
 }
 
 fn load_bitmaps(install: &OmsiInstall, dir: &Path, font: &OftFont) -> Result<FontBitmaps, String> {
-    let read = |name: &str| -> Result<image::DynamicImage, String> {
-        let p = install
+    let find = |name: &str| {
+        install
             .find_in(dir, name)
-            .ok_or_else(|| format!("bitmap `{name}` not found"))?;
-        let bytes = std::fs::read(&p).map_err(|e| format!("{}: {e}", p.display()))?;
+            .ok_or_else(|| format!("bitmap `{name}` not found"))
+    };
+    decode_bitmaps(&find(&font.bitmap)?, &find(&font.alpha)?)
+}
+
+/// Decodes a font's colour and alpha bitmap files.
+pub(crate) fn decode_bitmaps(colour: &Path, alpha: &Path) -> Result<FontBitmaps, String> {
+    let read = |p: &Path| -> Result<image::DynamicImage, String> {
+        let bytes = std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?;
         image::load_from_memory(&bytes).map_err(|e| format!("{}: {e}", p.display()))
     };
-    let colour = read(&font.bitmap)?.to_rgb8();
-    let alpha = read(&font.alpha)?.to_rgb8();
+    let colour = read(colour)?.to_rgb8();
+    let alpha = read(alpha)?.to_rgb8();
     Ok(FontBitmaps {
         width: colour.width(),
         height: colour.height(),
@@ -264,6 +272,16 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
 /// Loads all font definitions found in `Fonts/*.oft`.
 #[must_use]
 pub fn load_fonts(install: &OmsiInstall) -> Vec<OftFont> {
+    load_font_files(install)
+        .into_iter()
+        .map(|(_, font)| font)
+        .collect()
+}
+
+/// The fonts of `Fonts/*.oft` in the order [`load_fonts`] lists them, each with the directory of
+/// its `.oft` (its bitmaps lie there).
+#[must_use]
+pub fn load_font_files(install: &OmsiInstall) -> Vec<(PathBuf, OftFont)> {
     let mut files = Vec::new();
     if let Some(dir) = install.find_file("Fonts") {
         collect_oft(&dir, &mut files);
@@ -273,7 +291,8 @@ pub fn load_fonts(install: &OmsiInstall) -> Vec<OftFont> {
     for path in files {
         if let Ok(bytes) = std::fs::read(&path) {
             if let Ok(file) = OftFile::parse(&bytes) {
-                fonts.extend(file.fonts);
+                let dir = path.parent().map(Path::to_path_buf).unwrap_or_default();
+                fonts.extend(file.fonts.into_iter().map(|f| (dir.clone(), f)));
             }
         }
     }

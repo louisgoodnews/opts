@@ -56,6 +56,7 @@ pub mod route;
 pub mod scene_trace;
 pub mod scenery;
 pub mod scenery_runtime;
+pub mod script_text;
 pub mod sky_cube;
 pub mod sun_rays;
 pub mod terrain;

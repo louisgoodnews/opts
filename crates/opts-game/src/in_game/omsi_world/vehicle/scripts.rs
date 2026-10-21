@@ -112,6 +112,7 @@ pub(super) fn attach_scripts(
         fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
             &job.install,
         ))),
+        font_bitmaps: opts_bevy::script_text::FontBitmapSource::new(&job.install),
         texture_base_dir: Some(bus_dir.join("Texture")),
         tickets: std::sync::Arc::new(crate::passengers::ticket_book(
             &super::passengers::ticket_pack(job),
