@@ -75,6 +75,7 @@ pub(super) fn attach_unit(
     commands: &mut Commands,
     head: Entity,
     seg: Entity,
+    store: Option<Entity>,
     manifest: &BusManifest,
     dir: &Path,
 ) {
@@ -95,18 +96,27 @@ pub(super) fn attach_unit(
         &opts_core::formats::vehicles::cabin::PassengerCabin::parse_bytes(&cabin),
         &paths,
     );
-    // A unit that shares the head's scripts (`[scriptshare]`: the articulated bus's second unit)
-    // has its doors in the head's `PAX_*` variables. One with scripts of its own (the NF6D's
-    // cars B and C) would report them in an engine that does not run yet: its doors are left
-    // out, the people use the head's doors and walk through (places and paths stay).
-    if !manifest.script_share {
+    // The doors report in the engine of the unit's scripts: its own (the NF6D's cars B and C),
+    // or the one it shares (`[scriptshare]`: the articulated bus's second unit). A unit with
+    // neither has nobody to open its doors: they are left out (places and paths stay).
+    let store = store.unwrap_or_else(|| {
         unit.cabin.entries.clear();
         unit.cabin.exits.clear();
         unit.cabin.entry_no_sale.clear();
-    }
+        head
+    });
+    tracing::info!(
+        unit = %dir.display(),
+        places = unit.cabin.places.len(),
+        entries = unit.cabin.entries.len(),
+        points = unit.paths.points.len(),
+        link_to_prev = ?unit.link_to_prev,
+        link_to_next = ?unit.link_to_next,
+        "passengers: unit joins the chain"
+    );
     commands.queue(move |world: &mut World| {
         if let Some(mut rig) = world.get_mut::<crate::passengers::PassengerRig>(head) {
-            rig.add_unit(seg, unit);
+            rig.add_unit(seg, unit, store);
         }
     });
 }

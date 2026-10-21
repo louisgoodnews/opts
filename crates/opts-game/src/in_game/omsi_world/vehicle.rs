@@ -170,7 +170,7 @@ pub fn load_player_vehicle(
         commands.entity(root).insert(player);
     }
     let script_seed = script_seed(job.install.root(), &bus_path, session_id);
-    attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed);
+    attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed, None);
     crate::player_sound::attach(job, commands, root, &manifest, &bus_dir);
     doors::attach_door_points(job, commands, root, &manifest, &bus_dir);
     if activate {

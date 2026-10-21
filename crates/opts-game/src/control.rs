@@ -426,19 +426,37 @@ fn menu_state(world: &mut World, _: &Value) -> Outcome {
     }
 }
 
-/// `vehicle.script_vars {contains?}`: the player vehicle's script variables (name → value),
-/// optionally filtered by a case-insensitive substring.
+/// `vehicle.script_vars {contains?, unit?}`: the player vehicle's script variables (name →
+/// value), optionally filtered by a case-insensitive substring; `unit` n reads the engine of the
+/// n-th unit of the consist (0, the default, is the head).
 fn script_vars(world: &mut World, params: &Value) -> Outcome {
     let needle = params
         .get("contains")
         .and_then(Value::as_str)
         .map(str::to_lowercase);
-    let mut query =
-        world.query_filtered::<&opts_bevy::VehicleScripts, With<opts_bevy::PlayerVehicle>>();
-    let Some(scripts) = query.iter(world).next() else {
+    let unit = params.get("unit").and_then(Value::as_u64).unwrap_or(0) as usize;
+    let mut query = world.query_filtered::<Entity, (
+        With<opts_bevy::VehicleScripts>,
+        With<opts_bevy::PlayerVehicle>,
+    )>();
+    let Some(head) = query.iter(world).next() else {
         return Outcome::err(RpcError::new(
             code::NOT_READY,
             "the player vehicle has no scripts",
+        ));
+    };
+    let owner = if unit == 0 {
+        Some(head)
+    } else {
+        world
+            .get::<opts_bevy::ScriptConsist>(head)
+            .and_then(|c| c.units.get(unit))
+            .and_then(|u| u.part)
+    };
+    let Some(scripts) = owner.and_then(|e| world.get::<opts_bevy::VehicleScripts>(e)) else {
+        return Outcome::err(RpcError::new(
+            code::INVALID_PARAMS,
+            "that unit of the consist runs no scripts of its own",
         ));
     };
     let Ok(engine) = scripts.engine.lock() else {

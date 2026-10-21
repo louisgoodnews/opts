@@ -13,6 +13,7 @@ fn paths() -> Paths {
             p(1.2, 0.0),  // 5 exit door
         ],
         links: vec![(0, 1), (1, 2), (1, 3), (1, 4), (1, 5)],
+        one_way: Vec::new(),
         unit_of: Vec::new(),
     }
 }
@@ -250,6 +251,7 @@ fn trailer_unit() -> Unit {
         paths: Paths {
             points: vec![p(0.0, 4.0), p(0.0, 0.0), p(0.4, -3.0), p(1.2, -2.0)],
             links: vec![(0, 1), (1, 2), (1, 3)],
+            one_way: Vec::new(),
             unit_of: Vec::new(),
         },
         link_to_prev: None,
@@ -290,4 +292,15 @@ fn passengers_walk_through_the_joint_into_the_unit_behind_and_get_off_there() {
     assert_eq!(s.exit_requests().iter().filter(|r| **r).count(), 1);
     run(&mut s, 3.0, &doors);
     assert_eq!(s.humans_inside(), 0, "got off");
+}
+
+#[test]
+fn a_oneway_link_can_be_walked_in_its_direction_only() {
+    let mut p = paths();
+    // The door leads in, the aisle does not lead back out through it.
+    p.one_way = vec![true, false, false, false, false];
+    let g = graph::CabinGraph::new(&p);
+    assert!(g.route(0, 3).is_some());
+    assert!(g.route(3, 0).is_none());
+    assert!(g.route(3, 5).is_some());
 }

@@ -126,10 +126,20 @@ impl RemoteControls {
 /// Raises script trigger `name` on the player's vehicle; returns whether a script handled it, or
 /// `None` when there is no vehicle with scripts.
 pub fn raise_trigger(world: &mut World, name: &str) -> Option<bool> {
-    let mut q = world.query_filtered::<&VehicleScripts, With<PlayerVehicle>>();
-    let scripts = q.iter(world).next()?;
-    let mut engine = scripts.engine.lock().ok()?;
-    let handled = engine.trigger(name);
+    let mut q = world.query_filtered::<(Entity, &VehicleScripts), With<PlayerVehicle>>();
+    let (head, scripts) = q.iter(world).next()?;
+    let mut handled = scripts.engine.lock().ok()?.trigger(name);
+    // The units of the consist with scripts of their own hear it too.
+    for e in world
+        .get::<crate::consist_scripts::ScriptConsist>(head)
+        .iter()
+        .flat_map(|c| &c.units)
+        .filter_map(|u| u.part)
+    {
+        if let Some(Ok(mut engine)) = world.get::<VehicleScripts>(e).map(|s| s.engine.lock()) {
+            handled |= engine.trigger(name);
+        }
+    }
     tracing::debug!(trigger = name, handled, "vehicle script trigger (remote)");
     Some(handled)
 }
@@ -138,7 +148,14 @@ pub fn raise_trigger(world: &mut World, name: &str) -> Option<bool> {
 pub fn release_trigger_system(
     time: Res<Time>,
     mut remote: ResMut<RemoteControls>,
-    vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
+    vehicles: Query<
+        (
+            &VehicleScripts,
+            Option<&crate::consist_scripts::ScriptConsist>,
+        ),
+        With<PlayerVehicle>,
+    >,
+    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     if remote.release_triggers.is_empty() {
         return;
@@ -155,10 +172,16 @@ pub fn release_trigger_system(
         }
     });
     for name in due {
-        for scripts in &vehicles {
-            if let Ok(mut engine) = scripts.engine.lock() {
-                let handled = engine.trigger(&name);
-                tracing::debug!(trigger = %name, handled, "vehicle script trigger (remote release)");
+        for (scripts, consist) in &vehicles {
+            let units = consist
+                .into_iter()
+                .flat_map(|c| &c.units)
+                .filter_map(|u| u.part.and_then(|e| parts.get(e).ok()));
+            for scripts in std::iter::once(scripts).chain(units) {
+                if let Ok(mut engine) = scripts.engine.lock() {
+                    let handled = engine.trigger(&name);
+                    tracing::debug!(trigger = %name, handled, "vehicle script trigger (remote release)");
+                }
             }
         }
     }

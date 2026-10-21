@@ -25,6 +25,10 @@ pub fn command(
         };
         if let Some(n) = spawn {
             rig.force_group = n.min(30) as u32;
+            rig.force_entry = params
+                .get("entry")
+                .and_then(serde_json::Value::as_u64)
+                .unwrap_or(0) as usize;
         }
         if params
             .get("arrive")

@@ -26,7 +26,9 @@ pub(super) fn script_seed(
 }
 
 /// Loads the vehicle's `.osc` scripts, variable lists and constants into a script engine.
-/// A vehicle with `[scriptshare]` has none of its own and gets no engine.
+/// A vehicle with `[scriptshare]` has none of its own and gets no engine. `part` is the unit's
+/// number in the consist for a unit behind the head: its engine stands alone (no route, no
+/// passenger counts) and is stepped by the head's system.
 pub(super) fn attach_scripts(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
@@ -34,10 +36,12 @@ pub(super) fn attach_scripts(
     manifest: &BusManifest,
     bus_dir: &Path,
     seed: u64,
-) {
+    part: Option<usize>,
+) -> bool {
     if manifest.scripts.is_empty() {
-        return;
+        return false;
     }
+    let seed = seed ^ (part.unwrap_or(0) as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
     let (engine, diags) = opts_sim::script::load_vehicle_scripts(manifest, |rel| {
         let found = job.install.find_in(bus_dir, rel);
         if let Some(p) = &found {
@@ -97,7 +101,9 @@ pub(super) fn attach_scripts(
 
     engine.seed_random(seed as u32);
     let counts = opts_bevy::host_callbacks::PassengerCountsHandle::default();
-    commands.entity(root).insert(counts.clone());
+    if part.is_none() {
+        commands.entity(root).insert(counts.clone());
+    }
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
         passengers: counts.0.clone(),
         seed,
@@ -137,11 +143,36 @@ pub(super) fn attach_scripts(
     for (var, value) in &job.config.setvars {
         engine.set(var, *value as f32);
     }
+    if part.is_some() {
+        commands.entity(root).insert((
+            opts_bevy::VehicleScripts::new(engine),
+            opts_bevy::ScriptPart,
+        ));
+        return true;
+    }
     commands.entity(root).insert((
         opts_bevy::VehicleScripts::new(engine),
         opts_bevy::ScriptStartup::default(),
         opts_bevy::route::VehicleRoute::new(route),
     ));
+    true
+}
+
+/// The cables a vehicle file declares, as the bridge reads them.
+pub(super) fn cables_of(manifest: &BusManifest) -> Vec<opts_sim::script::consist::Cable> {
+    manifest
+        .extras
+        .control_cables
+        .iter()
+        .map(|c| opts_sim::script::consist::Cable {
+            front: c.front,
+            kind: c.kind,
+            index: c.index,
+            receive: c.receive.clone(),
+            send: c.send.clone(),
+            coupling: c.coupling.clone(),
+        })
+        .collect()
 }
 
 /// Loads the installation's `Inputs/keyboard.cfg` into [`opts_bevy::ScriptKeyBase`], so the

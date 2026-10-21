@@ -190,11 +190,11 @@ pub(super) const PART: &[CommandSpec] = &[
         "vehicle.passengers",
         "drive",
         "Read the passengers of the player's vehicle, or send some to its doors",
-        "spawn:i? arrive:b?",
+        "spawn:i? arrive:b? entry:i?",
     )
     .since("1.25")
     .result("`{inside, approaching, leaving, at_stop, stops_served, seats, standing_places, on_places, entry_requests, exit_requests, revenue, tickets_in_pack, passengers:[{id, age, phase, ticket, stamped, stops_left}]}`")
-    .doc("The passengers of M-0101. They walk up to the doors when the bus stands at a bus stop (an object whose `.sco` says `[busstop]`), board when the scripts report the door open (`PAX_Entry<n>_Open`), buy a ticket of the map's ticket pack with its probability, stamp, take a seat or stand, and get off through an open exit (`PAX_Exit<n>_Open`) when their ride is over. `arrive: true` counts a stop reached (those whose ride is over head for the nearest exit and get off when it opens). `spawn n` sends up to 30 people to the first entry now, stop or no stop (a test aid; they count as a stop visit: those who ride one stop get off). `inside` counts the people in the cabin, `on_places` the people on each `[passpos]`, `revenue` the money of the tickets sold (main currency unit), `passengers` the people inside with their `phase`. `-32000` (not ready) without a drive or for a vehicle without a passenger cabin.")
+    .doc("The passengers of M-0101. They walk up to the doors when the bus stands at a bus stop (an object whose `.sco` says `[busstop]`), board when the scripts report the door open (`PAX_Entry<n>_Open`), buy a ticket of the map's ticket pack with its probability, stamp, take a seat or stand, and get off through an open exit (`PAX_Exit<n>_Open`) when their ride is over. `arrive: true` counts a stop reached (those whose ride is over head for the nearest exit and get off when it opens). `spawn n` sends up to 30 people to the first entry (or to entry number `entry` of the chain, counting the units' entries one after the other) now, stop or no stop (a test aid; they count as a stop visit: those who ride one stop get off). `inside` counts the people in the cabin, `on_places` the people on each `[passpos]`, `revenue` the money of the tickets sold (main currency unit), `passengers` the people inside with their `phase`. `-32000` (not ready) without a drive or for a vehicle without a passenger cabin.")
     .debug(),
     c(
         "hud.alert",
@@ -220,8 +220,8 @@ pub(super) const PART: &[CommandSpec] = &[
     c(
         "vehicle.script_vars",
         "query",
-        "Script variables of the player vehicle (substring filter)",
-        "contains:s@0?",
+        "Script variables of the player vehicle (substring filter; `unit` picks a car of a consist)",
+        "contains:s@0? unit:i?",
     ),
     c(
         "session.vehicles",
