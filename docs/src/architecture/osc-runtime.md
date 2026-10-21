@@ -205,7 +205,7 @@ Rules carried from the guide (each is corpus- or code-backed there):
 
 | Source | Routed to |
 | :--- | :--- |
-| Key binding (`keyboard.cfg`, `gamectrler.cfg`) | every part that defines `{trigger:name}` (`PartSel::Owning`); default assumption until E8 says otherwise ❓ |
+| Key binding (`keyboard.cfg`, `gamectrler.cfg`) | the head part only (measured on the NF6D 2026-10-21: the car behind has a cab of its own that answers `automatic_D` and marks the head inactive; the cars hear the head through the control cables) |
 | Mouse hot-spot | the part whose mesh was hit |
 | Engine (`collision`, `malfunction_*`, `ai_scheduled_settarget`, `veh_tank`) | the head part, plus every other part that defines it |
 | Script `(T.L.name)` where `{trigger:name}` exists in the same part | **configurable**: `ScriptRaiseRunsTrigger` on or off per vehicle (default off, as the VM behaves today; Q-OSC-G2 decides the default). Either way the event is still delivered. |
