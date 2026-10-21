@@ -391,10 +391,15 @@ pub fn script_drive_system(
         // Three ways to drive: a script that hands torque to the wheels; one that never does
         // while the driver holds the pedal (const file's torque curve, one INFO); none at all
         // (built-in constants, one WARN, above).
-        if drive.wheel_torque_nm.abs() > 1.0 {
+        if drive.wheel_torque_nm.abs() > 1.0 || engine.get("bremse_feststell") >= 0.5 {
             w.idle_s = 0.0;
             w.fallback = false;
-        } else if controller.inputs().throttle() > 0.2 && engine.get("engine_on") > 0.5 {
+        } else if controller.inputs().throttle() > 0.2
+            && engine.get("engine_on") > 0.5
+            // A parking brake the script holds (the Urbino's spring brake until its air is up)
+            // is why it hands no torque: the built-in drivetrain must not drive through it.
+            && engine.get("bremse_feststell") < 0.5
+        {
             w.idle_s += time.delta_secs();
             if w.idle_s > NO_TORQUE_FALLBACK_S && !w.fallback {
                 w.fallback = true;
@@ -487,12 +492,23 @@ pub fn script_startup_system(
             engine.trigger(name);
             engine.set("brake", brake);
         }
-        // The parking brake of the scripts follows the player's (`parking_brake_toggle` is the
-        // standard trigger of the `.` key); a toggle takes a step to show, so ask once per change.
+        // The parking brake of the scripts follows the player's, once per change. A vehicle whose
+        // lever is `cockpit_parking_brake` (the Urbino's: 1 is *released*, and `bremse_feststell`
+        // also shows applied while its spring brake lacks air, which is no lever position) gets
+        // its idempotent `parking_brake_set` / `parking_brake_release`; the others are toggled by
+        // what `bremse_feststell` shows (their `set` and `release` lean on the condition staying
+        // on the stack after `{if}`, which the VM pops).
         let parking = controller.sim.inputs.is_parking_brake_engaged();
-        let applied = engine.get("bremse_feststell") > 0.5;
-        if parking != applied && st.parking != Some(parking) {
-            engine.trigger("parking_brake_toggle");
+        if st.parking != Some(parking) {
+            if engine.writes("cockpit_parking_brake") {
+                engine.trigger(if parking {
+                    "parking_brake_set"
+                } else {
+                    "parking_brake_release"
+                });
+            } else if parking != (engine.get("bremse_feststell") > 0.5) {
+                engine.trigger("parking_brake_toggle");
+            }
         }
         st.parking = Some(parking);
     }
