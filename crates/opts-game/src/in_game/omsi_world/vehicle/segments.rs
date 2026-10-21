@@ -280,6 +280,15 @@ pub(in super::super::super) fn load_segment_meshes_for(
                             );
                         if let Some(rgb) = tint {
                             component = component.with_tint(rgb);
+                            // The colour texture may be named by a string variable
+                            // (`[matl_freetex]`, the LED matrix's `Matrix_Farbe`).
+                            if let Some(free) = &m.free_tex {
+                                component = component.following(
+                                    owner,
+                                    free.variable.trim(),
+                                    tex_dirs.to_vec(),
+                                );
+                            }
                         }
                         commands.spawn((
                             component,
