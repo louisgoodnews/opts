@@ -40,7 +40,7 @@ A bus that stands at a bus stop gets passengers: people appear beside the stop, 
 | :--- | :--- |
 | Index space | The seat and link indices are the file orders of `[passpos]` and `[pathlink]`, inferred (E6 of the [script integration strategy](../architecture/bus-script-integration.md)); not compared with OMSI. |
 | Cash desk | The driver's side of the ticket sale: choosing the ticket, taking money, giving change (`GiveChangeCoin`, `ticket_give`, `change_give`). Passengers pay by themselves for now. |
-| Trams | Not tried: the NF6D's cabin and its units (a tram has no `[entry]` at the stops the buses use) are not set up. |
+| Trams | The rig exists on the NF6D (cars A, B and C with four entries and exits each, 131 places, the articulation units as walkways), and units whose scripts do not run (no `[scriptshare]`: the NF6D's cars B and C have door scripts of their own) contribute places and paths but no doors. **Blocked on [M-0098](../roadmap/phase-4/M-0098.md)**: the tram's power `SLAR_Elec_Bat` and its door commands travel through the `[control_cable_front]` links between the cars and the head's engine alone does not run them, so the doors never open (`vehicle.click cp_batterietrennschalter_toggle` leaves `SLAR_Elec_Bat` at 0); people queue at the first door and wait. |
 | Alighting at *real* next stops | The ride counts stops reached; the stop sequence of the timetable (`bus.set_stop`) and the destination of each passenger are not coupled. |
 | Seated pose | The place and rotation come from `[passpos]`; the height of the seated body against the seat was not tuned against the models. |
 | Crowds | No collision between people; the number waiting is uniform, not weighted by the time of day (`[trafficdensity_passenger]`). |
