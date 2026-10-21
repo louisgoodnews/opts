@@ -100,7 +100,11 @@ fn script_textures(world: &mut World, params: &Value) -> Outcome {
                 .get(image)
                 .and_then(|i| i.data.as_ref())
                 .map(|d| d.chunks(4).filter(|p| p[3] != 0).count());
-            json!({ "slot": index, "tint": tint, "pixels_with_alpha": lit })
+            let sample = images
+                .get(image)
+                .and_then(|i| i.data.as_ref())
+                .and_then(|d| d.chunks(4).find(|p| p[3] > 100).map(|p| [p[0], p[1], p[2], p[3]]));
+            json!({ "slot": index, "tint": tint, "pixels_with_alpha": lit, "a_pixel": sample, "image": format!("{:?}", image.id()) })
         })
         .collect();
     Outcome::ok(json!({ "count": files.len(), "files": files, "on_meshes": on_meshes }))

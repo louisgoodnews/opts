@@ -336,6 +336,12 @@ impl ContentLoader<'_> {
                     .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"))
                 {
                     material.unlit = true;
+                    // Drawn after the cover glass in front of it, which does not write depth:
+                    // a light is seen through the glass at its full brightness.
+                    material.depth_bias = 10.0;
+                    // The `.o3d` diffuse alpha (a fraction here) would dim the lit pixels of the
+                    // mask a second time: the canvas alone says how bright an LED is.
+                    material.base_color = bevy::color::Color::WHITE;
                 }
                 if let Some(mode) = over
                     .and_then(|o| o.alpha)
