@@ -91,10 +91,19 @@ pub(super) fn attach_unit(
     let Ok(paths) = opts_core::formats::vehicles::PassengerPaths::parse_bytes(&paths) else {
         return;
     };
-    let unit = crate::passengers::unit_spec(
+    let mut unit = crate::passengers::unit_spec(
         &opts_core::formats::vehicles::cabin::PassengerCabin::parse_bytes(&cabin),
         &paths,
     );
+    // A unit that shares the head's scripts (`[scriptshare]`: the articulated bus's second unit)
+    // has its doors in the head's `PAX_*` variables. One with scripts of its own (the NF6D's
+    // cars B and C) would report them in an engine that does not run yet: its doors are left
+    // out, the people use the head's doors and walk through (places and paths stay).
+    if !manifest.script_share {
+        unit.cabin.entries.clear();
+        unit.cabin.exits.clear();
+        unit.cabin.entry_no_sale.clear();
+    }
     commands.queue(move |world: &mut World| {
         if let Some(mut rig) = world.get_mut::<crate::passengers::PassengerRig>(head) {
             rig.add_unit(seg, unit);
