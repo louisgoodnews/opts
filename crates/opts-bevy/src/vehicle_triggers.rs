@@ -397,8 +397,6 @@ pub fn script_key_trigger_system(
     bindings: Res<ScriptKeyBindings>,
     state: Option<Res<CameraState>>,
     vehicles: Query<(Entity, &VehicleScripts), With<PlayerVehicle>>,
-    consists: Query<&crate::consist_scripts::ScriptConsist>,
-    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     if bindings.0.is_empty() {
         return;
@@ -411,7 +409,10 @@ pub fn script_key_trigger_system(
     if fired.is_empty() {
         return;
     }
-    for (head, scripts) in &vehicles {
+    // Keys reach the head's scripts only: the cars behind it have cabs of their own that answer
+    // the same triggers (the NF6D's `automatic_D` in car B marks its cab active and the head's
+    // inactive); they hear the head through the control cables.
+    for (_, scripts) in &vehicles {
         let Ok(mut engine) = scripts.engine.lock() else {
             continue;
         };
@@ -424,22 +425,6 @@ pub fn script_key_trigger_system(
                 engine.trigger(name)
             };
             tracing::debug!(trigger = %name, handled, "vehicle script trigger (key)");
-        }
-        drop(engine);
-        // A key reaches every unit of the consist that defines the trigger (research Q-OSC-G2:
-        // the default until the original's behaviour is measured).
-        for part in consists.get(head).iter().flat_map(|c| &c.units) {
-            let Some(part) = part.part.and_then(|e| parts.get(e).ok()) else {
-                continue;
-            };
-            if let Ok(mut engine) = part.engine.lock() {
-                for name in fired
-                    .iter()
-                    .filter(|n| *n != DOOR_SIDE_TOGGLE && *n != CABIN_LIGHT_TOGGLE)
-                {
-                    engine.trigger(name);
-                }
-            }
         }
     }
 }
