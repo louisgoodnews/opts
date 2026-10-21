@@ -333,3 +333,35 @@ fn the_ticket_callbacks_answer_from_the_maps_pack_and_the_change_is_logged() {
     }
     assert_eq!(*log.read().expect("log"), vec![0.5, 0.1]);
 }
+
+#[test]
+fn the_human_count_callbacks_read_the_passenger_counts() {
+    let counts = std::sync::Arc::new(std::sync::RwLock::new(PassengerCounts {
+        on_place: vec![0, 2, 1],
+        on_link: vec![3],
+    }));
+    let ctx = VehicleHostContext {
+        passengers: counts.clone(),
+        ..Default::default()
+    };
+    let mut h = vehicle_callbacks_with_context(ctx);
+    let mut st = Stacks::default();
+    let ask = |h: &mut opts_sim::script::ExternalHandler, st: &mut Stacks, name: &str, i: f32| {
+        st.numbers.push(i);
+        assert!(h(name, st));
+        st.numbers.pop().expect("answer")
+    };
+    assert_eq!(ask(&mut h, &mut st, "gethumancountonseat", 1.0), 2.0);
+    assert_eq!(
+        ask(&mut h, &mut st, "gethumancountonseat", 9.0),
+        0.0,
+        "no such place"
+    );
+    assert_eq!(ask(&mut h, &mut st, "gethumancountonpathlink", 0.0), 3.0);
+    counts.write().expect("w").on_place[0] = 5;
+    assert_eq!(
+        ask(&mut h, &mut st, "gethumancountonseat", 0.0),
+        5.0,
+        "live"
+    );
+}

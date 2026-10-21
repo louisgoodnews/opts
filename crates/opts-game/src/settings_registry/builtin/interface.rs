@@ -206,6 +206,17 @@ pub(super) fn interface() -> Vec<D> {
         .keywords(&["people", "walkers", "density"])
         .since("0.2"),
         D::new(
+            "gameplay.passengers",
+            K::Bool,
+            "true",
+            C::Gameplay,
+            25,
+            "set-passengers",
+            "set-passengers-desc",
+        )
+        .keywords(&["people", "boarding", "bus stop", "tickets", "passengers"])
+        .since("0.4"),
+        D::new(
             "gameplay.time_scale",
             K::Float {
                 min: 0.0,

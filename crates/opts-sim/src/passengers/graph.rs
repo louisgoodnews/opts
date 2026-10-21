@@ -10,6 +10,7 @@ pub struct CabinGraph {
     pub points: Vec<Vec3>,
     /// `(from, to)` of every link in file order (the index of `GetHumanCountOnPathLink`).
     pub links: Vec<(usize, usize)>,
+    unit_of: Vec<usize>,
     adjacent: Vec<Vec<(usize, f32)>>,
 }
 
@@ -22,15 +23,23 @@ impl CabinGraph {
         let mut links = Vec::new();
         for &(from, to) in &paths.links {
             if from < points.len() && to < points.len() && from != to {
-                let len = points[from].distance(points[to]);
+                // Joined units are in different spaces: the joint costs a short step.
+                let len = if paths.unit_of.get(from) == paths.unit_of.get(to) {
+                    points[from].distance(points[to])
+                } else {
+                    0.6
+                };
                 adjacent[from].push((to, len));
                 adjacent[to].push((from, len));
                 links.push((from, to));
             }
         }
+        let mut unit_of = paths.unit_of.clone();
+        unit_of.resize(points.len(), 0);
         Self {
             points,
             links,
+            unit_of,
             adjacent,
         }
     }
@@ -43,6 +52,24 @@ impl CabinGraph {
             .enumerate()
             .min_by(|(_, a), (_, b)| a.distance_squared(p).total_cmp(&b.distance_squared(p)))
             .map(|(i, _)| i)
+    }
+
+    /// The unit a pathpoint is in.
+    #[must_use]
+    pub fn unit(&self, node: usize) -> usize {
+        self.unit_of.get(node).copied().unwrap_or(0)
+    }
+
+    /// The pathpoint of `unit` nearest to `p` (in that unit's space).
+    #[must_use]
+    pub fn nearest_in_unit(&self, p: Vec3, unit: usize) -> Option<usize> {
+        (0..self.points.len())
+            .filter(|&i| self.unit(i) == unit)
+            .min_by(|&a, &b| {
+                self.points[a]
+                    .distance_squared(p)
+                    .total_cmp(&self.points[b].distance_squared(p))
+            })
     }
 
     /// The index of the link between two neighbours.

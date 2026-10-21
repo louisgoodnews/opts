@@ -55,7 +55,7 @@ pub(super) fn attach_passengers(
         return;
     };
     let Some(rig) =
-        crate::passengers::PassengerRig::from_files(&cabin, &paths, ticket_pack(job), seed)
+        crate::passengers::PassengerRig::from_files(&cabin, &paths, ticket_pack(job), seed, root)
     else {
         return;
     };
@@ -66,4 +66,38 @@ pub(super) fn attach_passengers(
         "passengers: cabin loaded"
     );
     commands.entity(root).insert(rig);
+}
+
+/// A following unit of the chain joins the head's passengers: its cabin and paths are added to
+/// the rig once both exist (the unit's own frame is `seg`).
+pub(super) fn attach_unit(
+    job: &WorldLoadJob,
+    commands: &mut Commands,
+    head: Entity,
+    seg: Entity,
+    manifest: &BusManifest,
+    dir: &Path,
+) {
+    let read = |rel: Option<&str>| {
+        rel.and_then(|r| job.install.find_in(dir, r))
+            .and_then(|p| std::fs::read(p).ok())
+    };
+    let (Some(cabin), Some(paths)) = (
+        read(manifest.passengercabin_cfg.as_deref()),
+        read(manifest.paths_cfg.as_deref()),
+    ) else {
+        return;
+    };
+    let Ok(paths) = opts_core::formats::vehicles::PassengerPaths::parse_bytes(&paths) else {
+        return;
+    };
+    let unit = crate::passengers::unit_spec(
+        &opts_core::formats::vehicles::cabin::PassengerCabin::parse_bytes(&cabin),
+        &paths,
+    );
+    commands.queue(move |world: &mut World| {
+        if let Some(mut rig) = world.get_mut::<crate::passengers::PassengerRig>(head) {
+            rig.add_unit(seg, unit);
+        }
+    });
 }

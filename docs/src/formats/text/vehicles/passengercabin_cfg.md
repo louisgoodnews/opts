@@ -74,7 +74,7 @@ This is the **first observed use of `{...}` syntax** in OMSI's text formats. Unl
 
 #### `{noticketsale}`
 
-> ✅ **Resolved:** `{noticketsale}` means that **passengers cannot trigger ticket sales at entries** in this vehicle. It is a global flag, not scoped to a specific entrance or pathpoint.
+> ✅ **Resolved, corrected 2026-10-21:** `{noticketsale}` means that **passengers cannot trigger ticket sales at entries**. Placed **before the first `[entry]`** (the NLC) it is a global flag; placed **after an `[entry]`** it counts for that entry only: the Bremen MAN's `passengercabin_NG313_main.cfg` has `[entry] 3` (the front door, which sells) and then `[entry] 39`, `40` and `41` each followed by `{noticketsale}` (the rear doors, which do not). The parser keeps `no_ticket_sale` for the first case and `entry_no_sale` per entry for the second.
 
 | State | Behavioral Implication |
 | :--- | :--- |

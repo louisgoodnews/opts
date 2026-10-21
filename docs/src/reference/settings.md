@@ -137,6 +137,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `gameplay.traffic` | Road traffic | whole number 0 to 200 | `100` | at once | available | Most AI vehicles driving at the same time (0 for none). Applies to the next drive. |
 | `gameplay.pedestrians` | Pedestrians | whole number 0 to 200 | `40` | at once | available | Most people walking at the same time (0 for none). Applies to the next drive. |
+| `gameplay.passengers` | Passengers | on / off | `true` | at once | available | People wait at bus stops, board your vehicle through its open doors, buy or stamp tickets, take a seat or stand, and get off. Off: nobody boards. |
 | `gameplay.time_scale` | Time scale | number 0 to 60 | `1` | at once | not available yet (M-0064) | Runs the session clock faster than real time. |
 | `gameplay.autosave_minutes` | Autosave | whole number 0 to 60 | `0` | at once | available | Saves the drive to the autosave slot every this many minutes of play. 0 turns it off. |
 | `gameplay.load_all_tiles` | Load all tiles on start | on / off | `false` | at once | available | Loads every tile of the map while the drive loads and keeps them all in memory. Loading takes longer and uses more memory, so large maps may need a strong machine. Applies to the next drive; switching it during a drive loads the rest in the background. |

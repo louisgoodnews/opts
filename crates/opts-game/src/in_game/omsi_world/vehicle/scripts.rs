@@ -96,7 +96,10 @@ pub(super) fn attach_scripts(
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
 
     engine.seed_random(seed as u32);
+    let counts = opts_bevy::host_callbacks::PassengerCountsHandle::default();
+    commands.entity(root).insert(counts.clone());
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
+        passengers: counts.0.clone(),
         seed,
         route: route.clone(),
         script_textures: job.vehicle_script_textures.clone(),

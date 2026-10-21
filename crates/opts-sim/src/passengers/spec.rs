@@ -13,6 +13,8 @@ pub struct Place {
     pub seat_height: f32,
     /// Rotation about the vertical in degrees (`0` faces forward).
     pub rotation_deg: f32,
+    /// The unit of the chain the place is in (`0` for a single vehicle).
+    pub unit: usize,
 }
 
 impl Place {
@@ -38,6 +40,8 @@ pub struct Cabin {
     pub ticket_sales: Vec<usize>,
     /// The unit sells no tickets.
     pub no_ticket_sale: bool,
+    /// Per entry: nobody buys who boards through it (missing: may buy).
+    pub entry_no_sale: Vec<bool>,
 }
 
 impl Cabin {
@@ -57,10 +61,12 @@ impl Cabin {
 /// The walkable graph of a unit as given: pathpoints and links.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Paths {
-    /// Pathpoint positions (segment space).
+    /// Pathpoint positions, each in the space of its own unit.
     pub points: Vec<Vec3>,
     /// Links between pathpoints (walkable both ways).
     pub links: Vec<(usize, usize)>,
+    /// The unit of every pathpoint (empty: all in unit 0).
+    pub unit_of: Vec<usize>,
 }
 
 /// How the passengers of a map behave.
@@ -128,4 +134,66 @@ impl TicketBook {
     pub fn price(&self, index: usize) -> Option<f32> {
         self.tickets.get(index).map(|t| t.value)
     }
+}
+
+/// One unit of a chain with the pathpoints where it joins its neighbours.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Unit {
+    /// Its cabin.
+    pub cabin: Cabin,
+    /// Its paths.
+    pub paths: Paths,
+    /// The pathpoint that joins the unit behind it (`[linkToPrevVeh]` of the file).
+    pub link_to_prev: Option<usize>,
+    /// The pathpoint that joins the unit in front of it (`[linkToNextVeh]`).
+    pub link_to_next: Option<usize>,
+}
+
+/// Merges the units of a chain (head first) into one cabin and one graph: indices of pathpoints,
+/// links, places, entries and exits run on through the units in order; unit `k`'s
+/// `link_to_prev` is joined to unit `k + 1`'s `link_to_next` by a link.
+#[must_use]
+pub fn chain(units: &[Unit]) -> (Cabin, Paths) {
+    let mut cabin = Cabin::default();
+    let mut paths = Paths::default();
+    let mut offsets = Vec::new();
+    for (u, unit) in units.iter().enumerate() {
+        let off = paths.points.len();
+        offsets.push(off);
+        paths.points.extend(unit.paths.points.iter().copied());
+        paths
+            .unit_of
+            .extend(std::iter::repeat_n(u, unit.paths.points.len()));
+        paths
+            .links
+            .extend(unit.paths.links.iter().map(|&(a, b)| (a + off, b + off)));
+        cabin
+            .places
+            .extend(unit.cabin.places.iter().map(|p| Place { unit: u, ..*p }));
+        cabin
+            .entries
+            .extend(unit.cabin.entries.iter().map(|n| n + off));
+        cabin.exits.extend(unit.cabin.exits.iter().map(|n| n + off));
+        cabin
+            .stampers
+            .extend(unit.cabin.stampers.iter().map(|n| n + off));
+        cabin
+            .ticket_sales
+            .extend(unit.cabin.ticket_sales.iter().map(|n| n + off));
+        let mut no_sale = unit.cabin.entry_no_sale.clone();
+        no_sale.resize(unit.cabin.entries.len(), unit.cabin.no_ticket_sale);
+        cabin.entry_no_sale.extend(no_sale);
+        if u == 0 {
+            cabin.no_ticket_sale = unit.cabin.no_ticket_sale;
+        }
+    }
+    for k in 0..units.len().saturating_sub(1) {
+        if let (Some(a), Some(b)) = (units[k].link_to_prev, units[k + 1].link_to_next) {
+            let (a, b) = (a + offsets[k], b + offsets[k + 1]);
+            if a < paths.points.len() && b < paths.points.len() {
+                paths.links.push((a, b));
+            }
+        }
+    }
+    (cabin, paths)
 }

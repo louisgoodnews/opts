@@ -213,6 +213,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
         // The unit's own sounds (an articulated bus can have its engine in the second unit); they
         // read the head's variables, the trailer shares its scripts.
         crate::player_sound::attach_unit(job, commands, seg, Some(root), manifest, dir);
+        super::passengers::attach_unit(job, commands, root, seg, manifest, dir);
         axle_base += manifest.axles.len();
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
