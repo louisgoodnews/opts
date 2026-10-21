@@ -55,6 +55,7 @@ impl Plugin for GameControlPlugin {
         crate::control_tiles::register(&mut registry);
         crate::control_audio::register(&mut registry);
         crate::control_hotspots::register(&mut registry);
+        crate::control_textures::register(&mut registry);
         crate::control_loading::register(&mut registry);
         crate::control_setvars::register(&mut registry);
         crate::control_configs::register(&mut registry);
@@ -468,9 +469,15 @@ fn script_vars(world: &mut World, params: &Value) -> Outcome {
         .filter(|(n, _)| needle.as_deref().is_none_or(|s| n.contains(s)))
         .map(|(n, v)| (n, json!(v)))
         .collect();
-    Outcome::ok(
-        json!({ "count": vars.len(), "variables": vars, "ops_executed": engine.ops_executed() }),
-    )
+    Outcome::ok(json!({
+        "count": vars.len(),
+        "variables": vars,
+        "ops_executed": engine.ops_executed(),
+        "callbacks": {
+            "real": engine.callback_stats().real,
+            "stub": engine.callback_stats().stub,
+        },
+    }))
 }
 
 /// `vehicle.get`: the player vehicle's absolute OMSI position, heading and speed.

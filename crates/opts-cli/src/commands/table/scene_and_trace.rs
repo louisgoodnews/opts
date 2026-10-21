@@ -224,6 +224,15 @@ pub(super) const PART: &[CommandSpec] = &[
         "contains:s@0? unit:i?",
     ),
     c(
+        "vehicle.script_textures",
+        "query",
+        "Write what the vehicles' scripts drew on their canvases (boards, IBIS, displays) as PNG files",
+        "prefix:s@0?",
+    )
+    .since("1.26")
+    .result("`{count, files:[{index, path, width, height, drawn}]}`")
+    .doc("One PNG per script-texture canvas of the loaded vehicles, `<prefix>-<n>.png` (default prefix `canvas`) in the captures directory; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100."),
+    c(
         "session.vehicles",
         "query",
         "The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker",

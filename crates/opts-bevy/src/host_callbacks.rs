@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 
 use opts_core::formats::oft::OftFont;
-use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
+pub(crate) use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 use opts_sim::script::{ExternalHandler, Stacks};
 
 /// How many people stand on each place and walk on each path link of a vehicle (what the scripts'
@@ -39,6 +39,8 @@ pub struct VehicleHostContext {
     pub script_textures: Arc<RwLock<Vec<CpuScriptTexture>>>,
     /// Loaded fonts for this vehicle / game session.
     pub fonts: Arc<RwLock<Vec<OftFont>>>,
+    /// The bitmaps of those fonts, by the same index (`STTextOut` draws their glyphs).
+    pub font_bitmaps: crate::script_text::FontBitmapSource,
     /// Base directory for resolving relative texture paths in `STLoadTex`.
     pub texture_base_dir: Option<PathBuf>,
     /// The map's ticket system (`GetTicketName`, `GetTicketValue`); empty: the stub answers.
@@ -517,9 +519,15 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
                 if tex_idx >= 0 && font_idx >= 0 {
                     let fonts = ctx.fonts.read().unwrap();
                     if let Some(font) = fonts.get(font_idx as usize) {
+                        let bitmaps = ctx.font_bitmaps.get(font_idx as usize);
                         let mut texs = ctx.script_textures.write().unwrap();
                         if let Some(tex) = texs.get_mut(tex_idx as usize) {
-                            tex.text_out(x, y, font, &text, alignment, spacing);
+                            match bitmaps {
+                                Some(b) => crate::script_text::draw_text(
+                                    tex, x, y, font, &b, &text, spacing,
+                                ),
+                                None => tex.text_out(x, y, font, &text, alignment, spacing),
+                            }
                         }
                     }
                 }

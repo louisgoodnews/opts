@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.25.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.26.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -82,6 +82,7 @@ At most 100 commands, no nesting. A command that waits (`ui.wait_for`, `scene.lo
 | `hud.state` | - | 1.0 | What the HUD shows: widgets, texts, alert, speed, gear |
 | [`vehicle.get`](#vehicleget) | - | 1.0 | Position, heading and speed of the player vehicle (absolute OMSI coordinates) |
 | `vehicle.script_vars` | `contains?` (string)<br>`unit?` (integer) | 1.0 | Script variables of the player vehicle (substring filter; `unit` picks a car of a consist) |
+| [`vehicle.script_textures`](#vehiclescript_textures) | `prefix?` (string) | 1.26 | Write what the vehicles' scripts drew on their canvases (boards, IBIS, displays) as PNG files |
 | [`session.vehicles`](#sessionvehicles) | - | 1.2 | The session's user vehicles: id, name, repaint, spawn entry point, lifecycle, active marker |
 | [`session.saves`](#sessionsaves) | - | 1.3 | The list of saves, the registered save sections and the state of a restore |
 | [`vehicle.hotspots`](#vehiclehotspots) | `contains?` (string) | 1.20 | The cockpit controls of the player's vehicle that react to the mouse (hot-spots) |
@@ -109,6 +110,14 @@ What the streamer keeps resident (M-0080). `mode` is `all` (every tile, never un
 Position, heading and speed of the player vehicle (absolute OMSI coordinates).
 
 **Result:** `{x, y, z, heading_deg, speed_kmh}`
+
+### `vehicle.script_textures`
+
+Write what the vehicles' scripts drew on their canvases (boards, IBIS, displays) as PNG files.
+
+**Result:** `{count, files:[{index, path, width, height, drawn}]}`
+
+One PNG per script-texture canvas of the loaded vehicles, `<prefix>-<n>.png` (default prefix `canvas`) in the captures directory; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100.
 
 ### `session.vehicles`
 

@@ -32,6 +32,9 @@ pub trait ScriptTextureCanvas: Send + Sync {
     /// Clears the dirty flag once uploaded to GPU.
     fn clear_dirty(&mut self);
 
+    /// Marks the content as changed (drawing done on the raw buffer by the host).
+    fn mark_dirty(&mut self);
+
     /// Sets the active drawing color in ARGB (0-255 per channel).
     fn set_color(&mut self, a: u8, r: u8, g: u8, b: u8);
 
@@ -148,6 +151,10 @@ impl ScriptTextureCanvas for CpuScriptTexture {
 
     fn clear_dirty(&mut self) {
         self.dirty = false;
+    }
+
+    fn mark_dirty(&mut self) {
+        self.dirty = true;
     }
 
     fn set_color(&mut self, a: u8, r: u8, g: u8, b: u8) {

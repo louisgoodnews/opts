@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 /// Version reported by the `version` method; additive changes bump the minor part.
-pub const PROTOCOL_VERSION: &str = "1.25.0";
+pub const PROTOCOL_VERSION: &str = "1.26.0";
 /// Port the control server uses when it is started without an explicit one.
 pub const DEFAULT_PORT: u16 = 44201;
 /// Longest accepted line in bytes.

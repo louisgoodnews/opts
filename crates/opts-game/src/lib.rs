@@ -21,6 +21,7 @@ pub mod control_route;
 pub mod control_save;
 pub mod control_session;
 pub mod control_setvars;
+pub mod control_textures;
 pub mod control_tiles;
 pub mod control_trace;
 pub mod control_ui;
