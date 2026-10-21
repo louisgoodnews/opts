@@ -115,9 +115,9 @@ Position, heading and speed of the player vehicle (absolute OMSI coordinates).
 
 Write what the vehicles' scripts drew on their canvases (boards, IBIS, displays) as PNG files.
 
-**Result:** `{count, files:[{index, path, width, height, drawn}]}`
+**Result:** `{count, files:[{unit, slot, path, width, height, drawn}]}`
 
-One PNG per script-texture canvas of the loaded vehicles, `<prefix>-<n>.png` (default prefix `canvas`) in the captures directory; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100.
+One PNG per script-texture slot of every loaded unit, `<prefix>-<unit>-<slot>.png` (default prefix `canvas`) in the captures directory: what the scripts drew, on slots no mesh shows too; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100.
 
 ### `session.vehicles`
 

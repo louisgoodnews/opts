@@ -245,6 +245,12 @@ impl ScriptEngine {
         e
     }
 
+    /// The value of scalar constant `name` (a const file's `[const]`), `None` when there is none.
+    #[must_use]
+    pub fn const_scalar(&self, name: &str) -> Option<f32> {
+        self.consts.scalar(name)
+    }
+
     /// Reads float variable `name` (`0` if the scripts never touched it).
     #[must_use]
     pub fn get(&self, name: &str) -> f32 {

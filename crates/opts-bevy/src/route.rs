@@ -180,6 +180,8 @@ impl RouteState {
 pub struct RouteHandle(Arc<RwLock<RouteState>>);
 
 mod handle;
+mod keys;
+pub use keys::{has_drucker_keypad, has_ibis_keypad, ibis_keys, KeyQueue};
 
 /// Finds the depot (`.hof`) for a vehicle: a file of the vehicle's folder named like the map,
 /// one whose name contains the map's (or the other way round), the shared folders by the same
@@ -321,81 +323,6 @@ pub fn keep_target(engine: &mut ScriptEngine, route: &RouteHandle, pending: &mut
     }
 }
 
-/// The keys a driver presses on the MAN-style IBIS (`ibis_setmode_linie_kurs`, `ibis_eingabe`,
-/// `ibis_<digit>`) to select a route: line and suffix as `line * 100 + suffix`, then the route
-/// (course), then the destination (terminus code). Names are the triggers of the scripts.
-#[must_use]
-pub fn ibis_keys(selection: &RouteSelection) -> Vec<String> {
-    let digits = |n: i32| -> Vec<String> {
-        n.max(0)
-            .to_string()
-            .chars()
-            .map(|c| format!("ibis_{c}"))
-            .collect()
-    };
-    let mut keys = vec!["ibis_setmode_linie_kurs".to_string()];
-    keys.extend(digits(selection.line * 100));
-    keys.push("ibis_eingabe".into());
-    keys.push("ibis_setmode_route".into());
-    keys.extend(digits(selection.course));
-    keys.push("ibis_eingabe".into());
-    keys.push("ibis_setmode_ziel".into());
-    keys.extend(digits(selection.terminus_code));
-    keys.push("ibis_eingabe".into());
-    keys
-}
-
-/// Whether the scripts have the keypad [`ibis_keys`] presses.
-#[must_use]
-pub fn has_ibis_keypad(engine: &ScriptEngine) -> bool {
-    ["ibis_eingabe", "ibis_setmode_linie_kurs", "ibis_0"]
-        .iter()
-        .all(|t| engine.has_trigger(t))
-}
-
-/// Keys still to be pressed, one per frame (the scripts see every key in a frame of its own, as
-/// with a person's finger).
-#[derive(Debug, Clone, Default)]
-pub struct KeyQueue {
-    keys: std::collections::VecDeque<String>,
-}
-
-impl KeyQueue {
-    /// Queues the keys of a selection for this vehicle.
-    ///
-    /// # Errors
-    /// [`RouteError::NoKeypad`] when the scripts have no IBIS keypad of the known kind.
-    pub fn type_selection(
-        &mut self,
-        engine: &ScriptEngine,
-        selection: &RouteSelection,
-    ) -> Result<(), RouteError> {
-        if !has_ibis_keypad(engine) {
-            return Err(RouteError::NoKeypad);
-        }
-        self.keys.clear();
-        self.keys.extend(ibis_keys(selection));
-        Ok(())
-    }
-
-    /// Presses the next key, if any; returns whether one was pressed.
-    pub fn press_next(&mut self, engine: &mut ScriptEngine) -> bool {
-        match self.keys.pop_front() {
-            Some(k) => {
-                engine.trigger(&k);
-                true
-            }
-            None => false,
-        }
-    }
-
-    /// Whether keys are still waiting.
-    #[must_use]
-    pub fn is_typing(&self) -> bool {
-        !self.keys.is_empty()
-    }
-}
-
 /// The route of a vehicle in the world: the shared state and the keys still to be pressed.
 #[derive(bevy::prelude::Component, Debug, Clone, Default)]
 pub struct VehicleRoute {
@@ -464,7 +391,7 @@ pub fn route_typing_system(
             continue;
         }
         if let Ok(mut engine) = scripts.engine.lock() {
-            route.keys.press_next(&mut engine);
+            route.keys.press_next(&mut engine, time.delta_secs());
             let handle = route.handle.clone();
             keep_target(
                 &mut engine,

@@ -230,8 +230,8 @@ pub(super) const PART: &[CommandSpec] = &[
         "prefix:s@0?",
     )
     .since("1.26")
-    .result("`{count, files:[{index, path, width, height, drawn}]}`")
-    .doc("One PNG per script-texture canvas of the loaded vehicles, `<prefix>-<n>.png` (default prefix `canvas`) in the captures directory; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100."),
+    .result("`{count, files:[{unit, slot, path, width, height, drawn}]}`")
+    .doc("One PNG per script-texture slot of every loaded unit, `<prefix>-<unit>-<slot>.png` (default prefix `canvas`) in the captures directory: what the scripts drew, on slots no mesh shows too; `drawn` is false while nothing has been drawn on the canvas. A test aid for the displays of M-0100."),
     c(
         "session.vehicles",
         "query",

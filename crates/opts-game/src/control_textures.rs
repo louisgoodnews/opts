@@ -11,6 +11,7 @@ use opts_cli::protocol::{code, RpcError};
 use serde_json::{json, Value};
 
 use crate::in_game::omsi_world::VehicleScriptTexture;
+use opts_core::formats::script_texture::ScriptTextureCanvas;
 
 /// Most canvases written by one call.
 const MAX_FILES: usize = 64;
@@ -20,8 +21,9 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("vehicle.script_textures", script_textures);
 }
 
-/// `vehicle.script_textures {prefix?}`: one PNG per canvas, named `<prefix>-<n>.png` (default
-/// prefix `canvas`); answers with each file's path, size and whether anything was drawn.
+/// `vehicle.script_textures {prefix?}`: one PNG per canvas, named `<prefix>-<unit>-<slot>.png`
+/// (default prefix `canvas`): the canvases of each loaded unit, what the scripts drew on every slot
+/// of the model's `[scripttexture]` list, shown on a mesh or not.
 fn script_textures(world: &mut World, params: &Value) -> Outcome {
     let prefix = match str_param(params, "prefix") {
         Ok(p) => p.to_owned(),
@@ -39,42 +41,50 @@ fn script_textures(world: &mut World, params: &Value) -> Outcome {
             ))
         }
     };
-    let handles: Vec<Handle<Image>> = {
+    // The canvases of every loaded unit (the CPU side: what the scripts drew, also on slots no
+    // mesh shows), once per set.
+    let sets: Vec<
+        std::sync::Arc<
+            std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>,
+        >,
+    > = {
         let mut q = world.query::<&VehicleScriptTexture>();
-        let mut seen = Vec::new();
+        let mut seen: Vec<std::sync::Arc<std::sync::RwLock<Vec<_>>>> = Vec::new();
         for t in q.iter(world) {
-            if !seen.iter().any(|h: &Handle<Image>| h.id() == t.image.id()) {
-                seen.push(t.image.clone());
+            if !seen.iter().any(|c| std::sync::Arc::ptr_eq(c, &t.canvases)) {
+                seen.push(t.canvases.clone());
             }
         }
         seen
     };
-    let images = world.resource::<Assets<Image>>();
     let mut files = Vec::new();
-    for (n, handle) in handles.iter().take(MAX_FILES).enumerate() {
-        let Some(image) = images.get(handle) else {
+    'sets: for (unit, set) in sets.iter().enumerate() {
+        let Ok(canvases) = set.read() else {
             continue;
         };
-        let Some(data) = image.data.as_ref() else {
-            continue;
-        };
-        let (w, h) = (image.width(), image.height());
-        let drawn = data.chunks(4).any(|p| p[3] != 0);
-        let Some(buffer) = image::RgbaImage::from_raw(w, h, data.clone()) else {
-            continue;
-        };
-        let mut png = std::io::Cursor::new(Vec::new());
-        if buffer.write_to(&mut png, image::ImageFormat::Png).is_err() {
-            continue;
+        for (slot, canvas) in canvases.iter().enumerate() {
+            if files.len() >= MAX_FILES {
+                break 'sets;
+            }
+            let (w, h) = (canvas.width(), canvas.height());
+            let data = canvas.raw_rgba();
+            let drawn = data.chunks(4).any(|p| p != [0, 0, 0, 0]);
+            let Some(buffer) = image::RgbaImage::from_raw(w, h, data.to_vec()) else {
+                continue;
+            };
+            let mut png = std::io::Cursor::new(Vec::new());
+            if buffer.write_to(&mut png, image::ImageFormat::Png).is_err() {
+                continue;
+            }
+            let path = match storage::resolve_name(&root, &format!("{prefix}-{unit}-{slot}.png")) {
+                Ok(p) => p,
+                Err(e) => return Outcome::err(RpcError::invalid_params(e.to_string())),
+            };
+            if storage::write_atomic(&path, png.get_ref()).is_err() {
+                continue;
+            }
+            files.push(json!({ "unit": unit, "slot": slot, "path": path, "width": w, "height": h, "drawn": drawn }));
         }
-        let path = match storage::resolve_name(&root, &format!("{prefix}-{n}.png")) {
-            Ok(p) => p,
-            Err(e) => return Outcome::err(RpcError::invalid_params(e.to_string())),
-        };
-        if storage::write_atomic(&path, png.get_ref()).is_err() {
-            continue;
-        }
-        files.push(json!({ "index": n, "path": path, "width": w, "height": h, "drawn": drawn }));
     }
     Outcome::ok(json!({ "count": files.len(), "files": files }))
 }

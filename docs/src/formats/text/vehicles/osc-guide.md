@@ -96,7 +96,7 @@ Exact tokens and accessor syntax: [`osc.md` Execution Model](osc.md#-execution-m
 | `(F.L.x)` | pop x, push curve(x) (piecewise linear; 0 if undefined) |
 | `(L.S.x)` | push read-only system value (`Timegap`, `GetTime`, `Time`, `Day`, `Month`, `Year`, `mouse_x/y`, weather, …) |
 
-**Control flow**: `{if}` pops and runs the branch when non-zero; `{else}`, `{endif}` [S: `osc.md` Control Flow; K: `compiler.rs` `control`]. A second `{else}` in one `{if}` makes its branch dead [K: `compiler.rs` `control`]. Nesting reaches ten levels in shipped scripts [S].
+**Control flow**: `{if}` looks at the top value, leaves it on the stack and runs the branch when it is non-zero (2026-10-21: a popping `{if}` never starts the MAN ticket printer, whose power idiom `(L.L.elec_busbar_main) {if} (L.L.Drucker_an) ! = {if}` compares the value `{if}` left behind); `{else}`, `{endif}` [S: `osc.md` Control Flow; K: `compiler.rs` `control`]. A second `{else}` in one `{if}` makes its branch dead [K: `compiler.rs` `control`]. Nesting reaches ten levels in shipped scripts [S].
 
 **Calls and events**: `(M.L.x)` calls a macro (nesting limit 64 in the VM [K: `vm.rs` `MAX_DEPTH`]); `(M.V.x)` calls a host callback (see Host Interaction); `(T.L.x)`, `(T.F.x)`, `(T.S.x)` raise events [S; K: `compiler.rs` `EventKind`].
 

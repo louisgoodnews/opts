@@ -289,13 +289,12 @@ impl ScriptTextureCanvas for CpuScriptTexture {
         let rgba = img.to_rgba8();
         let (src_w, src_h) = (rgba.width(), rgba.height());
 
-        // Blit or scale into canvas
-        for y in 0..self.height {
-            let sy = (y * src_h / self.height).min(src_h.saturating_sub(1));
+        // The bitmap goes to the canvas's top left corner at its own size, clipped: the scripts
+        // read single pixels at fixed places back (`STReadPixel 251 3`), so it must not scale.
+        for y in 0..self.height.min(src_h) {
             let dst_row = (y * self.width) as usize * 4;
-            for x in 0..self.width {
-                let sx = (x * src_w / self.width).min(src_w.saturating_sub(1));
-                let pixel = rgba.get_pixel(sx, sy);
+            for x in 0..self.width.min(src_w) {
+                let pixel = rgba.get_pixel(x, y);
                 let dst_idx = dst_row + (x as usize * 4);
                 self.buffer[dst_idx..dst_idx + 4].copy_from_slice(&pixel.0);
             }
