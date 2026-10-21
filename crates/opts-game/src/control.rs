@@ -469,9 +469,16 @@ fn script_vars(world: &mut World, params: &Value) -> Outcome {
         .filter(|(n, _)| needle.as_deref().is_none_or(|s| n.contains(s)))
         .map(|(n, v)| (n, json!(v)))
         .collect();
+    let strings: serde_json::Map<String, Value> = engine
+        .string_variables()
+        .into_iter()
+        .filter(|(n, v)| !v.is_empty() && needle.as_deref().is_none_or(|s| n.contains(s)))
+        .map(|(n, v)| (n, json!(v)))
+        .collect();
     Outcome::ok(json!({
         "count": vars.len(),
         "variables": vars,
+        "strings": strings,
         "ops_executed": engine.ops_executed(),
         "callbacks": {
             "real": engine.callback_stats().real,

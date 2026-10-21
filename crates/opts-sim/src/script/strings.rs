@@ -100,7 +100,9 @@ pub fn exec(op: StrOp, st: &mut Stacks, messages: &mut Vec<String>, underflow: &
             st.strings.push(s.repeat(n));
         }
         StrOp::Length => {
-            let s = st.strings.pop().unwrap_or_default();
+            // The string stays: the matrix script measures a string and keeps working with it
+            // (`(S.$.x) $length (S.L.n) 0 $* $+` stores it, notes its length and drops it).
+            let s = st.strings.last().cloned().unwrap_or_default();
             st.numbers.push(s.chars().count() as f32);
         }
         StrOp::SetLengthL | StrOp::SetLengthC | StrOp::SetLengthR => {
@@ -137,7 +139,9 @@ pub fn exec(op: StrOp, st: &mut Stacks, messages: &mut Vec<String>, underflow: &
         }
         StrOp::StrToFloat => {
             let s = st.strings.pop().unwrap_or_default();
-            st.numbers.push(s.trim().parse().unwrap_or(0.0));
+            // Text that is not a number gives -1: `$d 6 $cutBegin 1 $cutEnd $StrToFloat 0 >=` asks
+            // whether a string is a `*GOTO[n]` command.
+            st.numbers.push(s.trim().parse().unwrap_or(-1.0));
         }
         StrOp::Msg => messages.push(st.strings.pop().unwrap_or_default()),
     }

@@ -206,6 +206,13 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
     // three door types shows it). The wheels of the same vehicles steer the right way, so this
     // is limited to the `door*` variables.
     let door = |a: &AnimAction| a.variable.to_ascii_lowercase().starts_with("door");
+    // The scissor arms of the NLC's front sun blind (`Rollo_v`, `origin_rot_y -90` on y/z-swapped
+    // meshes, arm angles 57 and 114 degrees) swung the fabric out of the bus, above the destination
+    // board, with the right-handed sense: they turn like the door chains. The side blind, whose
+    // meshes take their matrix rotation into the frame, keeps the convention.
+    let swapped_arm = pivot.is_some_and(|p| p.is_swap_yz()) && !needs_matrix(anim, pivot);
+    let blind_arm =
+        |a: &AnimAction| swapped_arm && a.variable.to_ascii_lowercase().contains("rollo");
     // The sliding leaves of the NLC's outward-swinging sliding doors: `origin_rot_y 90` (the X axis
     // down) and `anim_trans door_0_schiebe 0.47` run along the bus on the swapped mesh.
     let swapped = swaps_translation(anim, pivot);
@@ -225,7 +232,9 @@ fn steps_of(anim: &ModelAnim, pivot: Option<MeshPivot>) -> Vec<AnimStep> {
                 rot_frame
             },
             variable: a.variable.clone(),
-            factor: if (translate && (flips_translation || slides)) || (!translate && door(a)) {
+            factor: if (translate && (flips_translation || slides))
+                || (!translate && (door(a) || blind_arm(a)))
+            {
                 -a.factor
             } else {
                 a.factor

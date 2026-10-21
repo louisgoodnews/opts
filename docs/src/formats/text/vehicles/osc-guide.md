@@ -110,6 +110,8 @@ Exact tokens and accessor syntax: [`osc.md` Execution Model](osc.md#-execution-m
 | `$length` | string | float (character count) |
 | `$SetLengthL` / `$SetLengthR` / `$SetLengthC` | float n, string | first n / last n / centred, padded with spaces |
 | `$cutBegin` / `$cutEnd` | float n, string | string without its first / last n characters |
+| `$length` | string | pushes the length **and keeps the string** (2026-10-21; the matrix script `(S.$.x) $length (S.L.n) 0 $* $+` relies on it) |
+| `$StrToFloat` | string | the number, **-1 for text that is not one** (`$d 6 $cutBegin 1 $cutEnd $StrToFloat 0 >=` asks whether a string is a `*GOTO[n]` command; with 0 it swallowed the string) |
 | `$RemoveSpaces` | string | string |
 | `$IntToStr` | float | integer text |
 | `$IntToStrEnh` | string format, float | integer padded per format (`"02"` → `07`, `" 3"` → `  7`) |
