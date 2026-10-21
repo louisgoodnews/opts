@@ -26,6 +26,8 @@ use super::WorldLoadJob;
 const PATH_TYPE_RAIL: u32 = 2;
 /// A player vehicle spawned farther than this from any track is not put on rails (m).
 const SNAP_MAX_M: f32 = 12.0;
+/// Wheel radius assumed for the scripts' torque when the vehicle file states none (m).
+const DEFAULT_WHEEL_RADIUS_M: f32 = 0.33;
 /// A train formation is put on the nearest track within this distance of its entry point (m): the
 /// entry points of a map are road-oriented, a station track can lie some way off.
 pub const FORMATION_SNAP_M: f32 = 150.0;
@@ -221,6 +223,8 @@ pub struct RailPlayer {
     gave_up: bool,
     /// How far from its spawn point a track is looked for (m).
     snap_m: f32,
+    /// Radius of the driven wheels (m): the scripts' torque pulls the train with `M_Wheel / r`.
+    wheel_radius_m: f32,
 }
 
 impl RailPlayer {
@@ -234,6 +238,7 @@ impl RailPlayer {
             span,
             gave_up: false,
             snap_m: SNAP_MAX_M,
+            wheel_radius_m: DEFAULT_WHEEL_RADIUS_M,
         }
     }
 
@@ -296,6 +301,15 @@ pub fn rail_player_step(
                 i.is_parking_brake_engaged(),
             )
         };
+        // The vehicle's own scripts drive it when they write `M_Wheel`: torque at the wheel
+        // radius is the pull, their brake force the brake (the constants are the fallback).
+        let script = controller
+            .sim
+            .script_drive
+            .map(|d| opts_sim::rail::ScriptForces {
+                traction_n: d.wheel_torque_nm / rail.wheel_radius_m,
+                brake_n: d.brake_force_n,
+            });
         let ch = &mut controller.sim.chassis;
         if rail.train.is_none() {
             if net.0.lane_count() == 0 {
@@ -334,6 +348,7 @@ pub fn rail_player_step(
             emergency: false,
             hold,
             direction: 1,
+            script,
         };
         let Some(train) = rail.train.as_mut() else {
             continue;

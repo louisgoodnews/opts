@@ -23,6 +23,18 @@ pub struct RailInput {
     pub hold: bool,
     /// Travel direction `+1`/`-1` selected by the driver (only matters at standstill).
     pub direction: i8,
+    /// Forces the vehicle's own scripts hand over (`M_Wheel` at the wheel radius, `Brakeforce`):
+    /// they replace the traction curve and the brake constants; adhesion still limits both.
+    pub script: Option<ScriptForces>,
+}
+
+/// The traction and brake force of a consist as its scripts compute them.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct ScriptForces {
+    /// Tractive force at the rails (N, not negative).
+    pub traction_n: f32,
+    /// Brake force at the rails (N, not negative).
+    pub brake_n: f32,
 }
 
 /// What a consist weighs and what acts on it: resistance and gradient act on the total mass,
@@ -120,6 +132,8 @@ impl RailDynamics {
         let brake_limit = self.adhesion * self.braked_mass_kg * G;
         let traction = if v >= self.max_speed {
             0.0
+        } else if let Some(f) = input.script {
+            f.traction_n.max(0.0).min(traction_limit)
         } else {
             (input.traction.clamp(0.0, 1.0)
                 * self
@@ -127,7 +141,9 @@ impl RailDynamics {
                     .min(self.power_w / v.max(self.power_w / self.max_traction_n)))
             .min(traction_limit)
         };
-        let brake = if input.emergency {
+        let brake = if let Some(f) = input.script {
+            f.brake_n.max(0.0)
+        } else if input.emergency {
             self.emergency_n
         } else {
             input.brake.clamp(0.0, 1.0) * self.brake_n
@@ -142,7 +158,7 @@ impl RailDynamics {
     #[must_use]
     pub fn step(&self, speed: f32, grade: f32, input: &RailInput, dt: f32) -> f32 {
         let v = speed.max(0.0);
-        if input.hold && input.traction <= 0.0 {
+        if input.hold && input.traction <= 0.0 && input.script.is_none() {
             return (v - self.brake_n / self.mass_kg * dt).max(0.0); // holding brake: the braked mass's force on the whole train
         }
         let a = self.acceleration(v, grade, input);
@@ -205,6 +221,37 @@ mod tests {
             ..d
         };
         assert!(wet.acceleration(0.1, 0.0, &go()) < 0.8);
+    }
+
+    #[test]
+    fn script_forces_replace_the_constants_and_a_script_brake_holds_the_train() {
+        let d = RailDynamics::tram(30_000.0);
+        let pull = RailInput {
+            script: Some(ScriptForces {
+                traction_n: 15_000.0,
+                brake_n: 0.0,
+            }),
+            ..Default::default()
+        };
+        let a = d.acceleration(0.1, 0.0, &pull);
+        assert!((a - (15_000.0 - d.davis_a) / 30_000.0).abs() < 0.01, "{a}");
+        let held = RailInput {
+            script: Some(ScriptForces {
+                traction_n: 5_000.0,
+                brake_n: 20_000.0,
+            }),
+            ..Default::default()
+        };
+        assert_eq!(d.step(0.0, 0.0, &held, 0.1), 0.0);
+        // Adhesion still caps what a script asks for.
+        let huge = RailInput {
+            script: Some(ScriptForces {
+                traction_n: 1.0e7,
+                brake_n: 0.0,
+            }),
+            ..Default::default()
+        };
+        assert!(d.acceleration(0.1, 0.0, &huge) < 3.0);
     }
 
     fn freight() -> (RailDynamics, RailDynamics) {
