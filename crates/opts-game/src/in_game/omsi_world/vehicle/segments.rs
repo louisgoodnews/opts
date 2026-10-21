@@ -247,17 +247,42 @@ pub(in super::super::super) fn load_segment_meshes_for(
                             return None;
                         };
                         let (w, h) = (def.width.max(1), def.height.max(1));
-                        let handle = images.add(opts_bevy::text_texture::text_image(
-                            w,
-                            h,
-                            vec![0; (w * h * 4) as usize],
-                        ));
-                        commands.spawn((
+                        // A canvas used as `[matl_transmap] \S:n` is only the alpha: the colour
+                        // is the material's own texture (an LED matrix's `.dds`).
+                        let tint = m
+                            .trans_map
+                            .as_deref()
+                            .is_some_and(|t| t.trim().to_ascii_lowercase().starts_with("\\s:"))
+                            .then(|| {
+                                tex_dirs
+                                    .iter()
+                                    .find_map(|d| job.install.find_in(d, &m.texture))
+                                    .and_then(|p| std::fs::read(p).ok())
+                                    .and_then(|b| opts_bevy::texture::load_bevy_image(&b).ok())
+                                    .and_then(|img| {
+                                        super::super::vehicle_script_texture::bright_colour(&img)
+                                    })
+                            })
+                            .flatten();
+                        let mut blank = vec![0; (w * h * 4) as usize];
+                        if let Some(rgb) = tint {
+                            for p in blank.chunks_exact_mut(4) {
+                                p[..3].copy_from_slice(&rgb);
+                            }
+                        }
+                        let handle =
+                            images.add(opts_bevy::text_texture::text_image(w, h, blank));
+                        let mut component =
                             super::super::vehicle_script_texture::VehicleScriptTexture::new(
                                 i,
                                 job.vehicle_script_textures.clone(),
                                 handle.clone(),
-                            ),
+                            );
+                        if let Some(rgb) = tint {
+                            component = component.with_tint(rgb);
+                        }
+                        commands.spawn((
+                            component,
                             Name::new(format!("script_texture_{i}")),
                             ChildOf(root),
                         ));

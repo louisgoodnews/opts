@@ -53,6 +53,17 @@ fn t_osc_011_if_leaves_its_condition_on_the_stack() {
 }
 
 #[test]
+fn t_osc_012_length_leaves_the_string_and_a_non_number_is_minus_one() {
+    // `(S.$.x) $length (S.L.n) 0 $* $+`: store, measure, drop (the matrix script's idiom).
+    let e = run("\"abc\" (S.$.t) $length (S.L.n) 0 $* $+ (S.$.after)");
+    assert_eq!(e.get("n"), 3.0);
+    assert_eq!(e.get_string("t"), "abc");
+    let e =
+        run("\"abc\" $StrToFloat (S.L.a) \"\" $StrToFloat (S.L.b) \"12.5\" $StrToFloat (S.L.c)");
+    assert_eq!((e.get("a"), e.get("b"), e.get("c")), (-1.0, -1.0, 12.5));
+}
+
+#[test]
 fn t_osc_002_if_taken() {
     assert_eq!(run("1 {if} 7 (S.L.x) {endif}").get("x"), 7.0);
 }

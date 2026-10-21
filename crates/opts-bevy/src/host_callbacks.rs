@@ -515,7 +515,6 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
                 let y = st.numbers.pop().unwrap_or(0.0) as i32;
                 let x = st.numbers.pop().unwrap_or(0.0) as i32;
                 let tex_idx = st.numbers.pop().unwrap_or(0.0).round() as isize;
-
                 if tex_idx >= 0 && font_idx >= 0 {
                     let fonts = ctx.fonts.read().unwrap();
                     if let Some(font) = fonts.get(font_idx as usize) {
