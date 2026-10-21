@@ -118,6 +118,24 @@ pub struct BusMirrorCamera {
     pub param8: Option<f32>,
 }
 
+/// One `[control_cable_front]` / `[control_cable_back]` entry: a pair of script variables that
+/// travel between coupled units (the tram's battery switch, indicators, doors, traction demand).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ControlCable {
+    /// The cable sits at the unit's front coupling (else the rear one).
+    pub front: bool,
+    /// Plug kind: `C` (central, links to the other unit's `C` of the same number), `L` or `R`.
+    pub kind: char,
+    /// Number of the cable within its kind.
+    pub index: u32,
+    /// The variable that receives the value the cable carries (the scripts read it).
+    pub receive: String,
+    /// The variable the unit's scripts write to put a value on the cable.
+    pub send: String,
+    /// The link works only while this variable of the unit is above 0.5.
+    pub coupling: String,
+}
+
 /// Keywords that shape how a vehicle drives or is driven by AI, beyond mass and axles.
 ///
 /// Counts are files of the installation that declare the keyword (2,752 `.bus`/`.ovh` files).
@@ -145,6 +163,8 @@ pub struct VehicleExtras {
     /// Moments of inertia about x (lateral), y (longitudinal) and z (vertical), t·m²: from
     /// `[momentofintertia]`, else from lines 2 to 4 of `[mass]` when those are not all zero.
     pub inertia_t_m2: Option<[f32; 3]>,
+    /// `[control_cable_front]` and `[control_cable_back]` entries in file order.
+    pub control_cables: Vec<ControlCable>,
 }
 
 /// Parsed vehicle manifest configuration.
@@ -523,6 +543,22 @@ impl BusManifest {
                 }
                 "schwerpunkt" => {
                     extras.centre_of_gravity_height = first_float(&block.parameters);
+                }
+                tag @ ("control_cable_front" | "control_cable_back") => {
+                    if let [kind, index, receive, send, coupling, ..] = &block.parameters[..] {
+                        if let (Some(kind), Ok(index)) =
+                            (kind.trim().chars().next(), index.trim().parse::<u32>())
+                        {
+                            extras.control_cables.push(ControlCable {
+                                front: tag == "control_cable_front",
+                                kind: kind.to_ascii_uppercase(),
+                                index,
+                                receive: receive.trim().to_owned(),
+                                send: send.trim().to_owned(),
+                                coupling: coupling.trim().to_owned(),
+                            });
+                        }
+                    }
                 }
                 "rot_pnt_long" => extras.rotation_point_long = first_float(&block.parameters),
                 "view_schedule" => {

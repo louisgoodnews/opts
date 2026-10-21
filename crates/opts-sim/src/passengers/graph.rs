@@ -3,7 +3,7 @@
 use super::spec::Paths;
 use glam::Vec3;
 
-/// Walkable graph of one vehicle unit (links are walkable both ways).
+/// Walkable graph of a vehicle (links are walkable both ways unless they are one-way).
 #[derive(Debug, Clone, Default)]
 pub struct CabinGraph {
     /// Position of every pathpoint (segment space: x right, y forward, z up).
@@ -21,7 +21,7 @@ impl CabinGraph {
         let points: Vec<Vec3> = paths.points.clone();
         let mut adjacent = vec![Vec::new(); points.len()];
         let mut links = Vec::new();
-        for &(from, to) in &paths.links {
+        for (i, &(from, to)) in paths.links.iter().enumerate() {
             if from < points.len() && to < points.len() && from != to {
                 // Joined units are in different spaces: the joint costs a short step.
                 let len = if paths.unit_of.get(from) == paths.unit_of.get(to) {
@@ -30,7 +30,9 @@ impl CabinGraph {
                     0.6
                 };
                 adjacent[from].push((to, len));
-                adjacent[to].push((from, len));
+                if !paths.one_way.get(i).copied().unwrap_or(false) {
+                    adjacent[to].push((from, len));
+                }
                 links.push((from, to));
             }
         }

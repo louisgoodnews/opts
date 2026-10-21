@@ -481,7 +481,7 @@ Step_01.wav
 
 Facts marked 📚 come from the OMSI community wiki (`reboot.omsi-webdisk.de`, CC BY-SA 4.0; facts restated, nothing copied) (passenger-paths page); ✅ = confirmed in the corpus.
 
-- **`[pathlink_oneway]` — missing from this spec.** ✅ 887 uses in 107 of 455 paths files. 📚 It connects two pathpoints **in one direction only** (from the first-named point to the second), used to stop passengers using an exit as an entrance. `[pathlink]` is bidirectional; a missing link makes passengers "teleport".
+- **`[pathlink_oneway]` — missing from this spec.** ✅ 887 uses in 107 of 455 paths files. 📚 It connects two pathpoints **in one direction only** (from the first-named point to the second), used to stop passengers using an exit as an entrance. `[pathlink]` is bidirectional; a missing link makes passengers "teleport". OPTS reads it as a directed link (2026-10-21): the NF6D's entrances reach the cabin only through such links, and with them ignored nobody could walk in.
 - **Group commands** (📚): `[next_roomheight]` sets the ceiling height (m) for the following links (avoids head clipping); `[next_stepsound]` assigns a zero-based footstep sound index to following links; `[stepsoundpack]` (count + files) must precede the first link ✅ (446 uses).
 - **Construction rules** (📚): pathpoints lie on the floor (1–2 cm above, never below); keep ≥ 25–30 cm between points; entry/exit points at the vehicle edge, ≥ 30–40 cm from the door threshold; avoid four-way junctions; ≤ 45° between consecutive points; keep seats close to the path to limit visible "popping".
 - Limits (📚): standing→sitting is instantaneous (no transition animation); occupancy is limited to defined positions.

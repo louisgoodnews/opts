@@ -23,6 +23,7 @@ pub mod audio;
 pub mod bus_stops;
 pub mod camera;
 pub mod capture;
+pub mod consist_scripts;
 pub mod control;
 pub mod coords;
 pub mod door_camera;
@@ -91,6 +92,7 @@ pub use camera::{
     MainCamera, OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState,
     FREE_ROAM_MIN_SPEED,
 };
+pub use consist_scripts::{ConsistUnit, ScriptConsist, ScriptPart};
 pub use coords::{
     bevy_quat_to_omsi_euler, bevy_to_omsi_pos, bevy_to_omsi_transform,
     camera_preset_to_bevy_transform, omsi_euler_to_bevy_quat, omsi_to_bevy_pos,

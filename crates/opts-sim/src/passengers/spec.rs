@@ -63,8 +63,11 @@ impl Cabin {
 pub struct Paths {
     /// Pathpoint positions, each in the space of its own unit.
     pub points: Vec<Vec3>,
-    /// Links between pathpoints (walkable both ways).
+    /// Links between pathpoints.
     pub links: Vec<(usize, usize)>,
+    /// Per link whether it may be walked from the first point to the second only (missing
+    /// entries: both ways).
+    pub one_way: Vec<bool>,
     /// The unit of every pathpoint (empty: all in unit 0).
     pub unit_of: Vec<usize>,
 }
@@ -164,9 +167,14 @@ pub fn chain(units: &[Unit]) -> (Cabin, Paths) {
         paths
             .unit_of
             .extend(std::iter::repeat_n(u, unit.paths.points.len()));
+        paths.one_way.resize(paths.links.len(), false);
         paths
             .links
             .extend(unit.paths.links.iter().map(|&(a, b)| (a + off, b + off)));
+        paths.one_way.extend(
+            (0..unit.paths.links.len())
+                .map(|i| unit.paths.one_way.get(i).copied().unwrap_or(false)),
+        );
         cabin
             .places
             .extend(unit.cabin.places.iter().map(|p| Place { unit: u, ..*p }));

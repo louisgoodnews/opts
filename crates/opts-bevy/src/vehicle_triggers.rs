@@ -19,8 +19,10 @@ use crate::camera::{CameraMode, CameraState};
 use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::PlayerVehicle;
 
+mod click;
 mod hover;
 mod pseudo;
+pub use click::{scripted_click_system, ScriptedClick, ScriptedClicks};
 pub use hover::{hover_system, HotSpotPicker, HoveredControl};
 use pseudo::{toggle_cabin_light, toggle_door_side};
 
@@ -371,8 +373,15 @@ pub struct MouseTrigger {
     pub trigger: String,
 }
 
+/// The engines triggers reach: the player's vehicle and the units of its consist that run scripts
+/// of their own.
+type Scripted = Or<(
+    With<PlayerVehicle>,
+    With<crate::consist_scripts::ScriptPart>,
+)>;
+
 /// Raises `name` on `owner`'s engine; logs at `debug` whether a script handled it.
-fn raise(vehicles: &Query<&VehicleScripts, With<PlayerVehicle>>, owner: Entity, name: &str) {
+fn raise(vehicles: &Query<&VehicleScripts, Scripted>, owner: Entity, name: &str) {
     let Ok(scripts) = vehicles.get(owner) else {
         return;
     };
@@ -388,6 +397,8 @@ pub fn script_key_trigger_system(
     bindings: Res<ScriptKeyBindings>,
     state: Option<Res<CameraState>>,
     vehicles: Query<(Entity, &VehicleScripts), With<PlayerVehicle>>,
+    consists: Query<&crate::consist_scripts::ScriptConsist>,
+    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     if bindings.0.is_empty() {
         return;
@@ -400,7 +411,7 @@ pub fn script_key_trigger_system(
     if fired.is_empty() {
         return;
     }
-    for (_, scripts) in &vehicles {
+    for (head, scripts) in &vehicles {
         let Ok(mut engine) = scripts.engine.lock() else {
             continue;
         };
@@ -414,92 +425,22 @@ pub fn script_key_trigger_system(
             };
             tracing::debug!(trigger = %name, handled, "vehicle script trigger (key)");
         }
-    }
-}
-
-/// A click on a hot-spot made by a command instead of the mouse (the control protocol's
-/// `vehicle.click`): press, drag by an offset over some frames, hold, release. Everything goes
-/// through the same triggers and system values as a real click, so it tests the controls the way
-/// a player uses them.
-#[derive(Debug, Clone)]
-pub struct ScriptedClick {
-    /// The hot-spot's trigger name (`[mouseevent]`), without the `_drag`/`_off` suffix.
-    pub trigger: String,
-    /// Total mouse movement to apply while dragging, in pixels (`mouse_x`, `mouse_y`).
-    pub drag: Vec2,
-    /// Frames the drag is spread over (at least 1 when `drag` is not zero).
-    pub drag_frames: u32,
-    /// Seconds to keep the button held after the drag, before the release.
-    pub hold_s: f32,
-    /// Frames since the press (0: not pressed yet).
-    frame: u32,
-    /// Seconds held after the drag.
-    held_s: f32,
-}
-
-impl ScriptedClick {
-    /// A click that presses `trigger`, drags by `drag` pixels over `drag_frames` frames, holds for
-    /// `hold_s` seconds and releases.
-    #[must_use]
-    pub fn new(trigger: &str, drag: Vec2, drag_frames: u32, hold_s: f32) -> Self {
-        Self {
-            trigger: trigger.to_owned(),
-            drag,
-            drag_frames: if drag == Vec2::ZERO {
-                0
-            } else {
-                drag_frames.max(1)
-            },
-            hold_s: hold_s.max(0.0),
-            frame: 0,
-            held_s: 0.0,
-        }
-    }
-}
-
-/// The clicks waiting to run or running; one frame of each per update.
-#[derive(Resource, Default, Debug)]
-pub struct ScriptedClicks(pub Vec<ScriptedClick>);
-
-/// Runs the [`ScriptedClicks`] against the player's vehicle.
-pub fn scripted_click_system(
-    time: Res<Time>,
-    mut clicks: ResMut<ScriptedClicks>,
-    vehicles: Query<(Entity, &VehicleScripts), With<PlayerVehicle>>,
-) {
-    if clicks.0.is_empty() {
-        return;
-    }
-    let Some((_, scripts)) = vehicles.iter().next() else {
-        clicks.0.clear();
-        return;
-    };
-    let Ok(mut engine) = scripts.engine.lock() else {
-        return;
-    };
-    let mut done = Vec::new();
-    for (i, c) in clicks.0.iter_mut().enumerate() {
-        if c.frame == 0 {
-            let handled = engine.trigger(&c.trigger);
-            tracing::debug!(trigger = %c.trigger, handled, "vehicle script trigger (scripted click)");
-        } else if c.frame <= c.drag_frames {
-            let step = c.drag / c.drag_frames as f32;
-            engine.set_system("mouse_x", step.x);
-            engine.set_system("mouse_y", step.y);
-            engine.trigger(&format!("{}_drag", c.trigger));
-        } else {
-            engine.set_system("mouse_x", 0.0);
-            engine.set_system("mouse_y", 0.0);
-            c.held_s += time.delta_secs();
-            if c.held_s >= c.hold_s {
-                engine.trigger(&format!("{}_off", c.trigger));
-                done.push(i);
+        drop(engine);
+        // A key reaches every unit of the consist that defines the trigger (research Q-OSC-G2:
+        // the default until the original's behaviour is measured).
+        for part in consists.get(head).iter().flat_map(|c| &c.units) {
+            let Some(part) = part.part.and_then(|e| parts.get(e).ok()) else {
+                continue;
+            };
+            if let Ok(mut engine) = part.engine.lock() {
+                for name in fired
+                    .iter()
+                    .filter(|n| *n != DOOR_SIDE_TOGGLE && *n != CABIN_LIGHT_TOGGLE)
+                {
+                    engine.trigger(name);
+                }
             }
         }
-        c.frame += 1;
-    }
-    for i in done.into_iter().rev() {
-        clicks.0.remove(i);
     }
 }
 
@@ -516,7 +457,7 @@ pub struct HeldHotSpot {
 pub fn script_mouse_trigger_system(
     mouse: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
-    vehicles: Query<&VehicleScripts, With<PlayerVehicle>>,
+    vehicles: Query<&VehicleScripts, Scripted>,
     mut picker: HotSpotPicker,
     driving: Option<Res<crate::mouse_driving::MouseDriving>>,
     mut held: Local<Option<HeldHotSpot>>,

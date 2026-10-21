@@ -34,6 +34,7 @@ pub fn paths_spec(p: &PassengerPaths) -> Paths {
     Paths {
         points: p.points.iter().map(|p| p.position).collect(),
         links: p.links.iter().map(|l| (l.from, l.to)).collect(),
+        one_way: p.links.iter().map(|l| l.one_way).collect(),
         unit_of: Vec::new(),
     }
 }

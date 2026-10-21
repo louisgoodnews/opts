@@ -26,6 +26,9 @@ pub struct PathLink {
     pub from: usize,
     /// Destination pathpoint index.
     pub to: usize,
+    /// `[pathlink_oneway]`: passengers may walk only from `from` to `to` (entrances lead in,
+    /// exits lead out).
+    pub one_way: bool,
 }
 
 /// A set of footstep audio sample files.
@@ -132,10 +135,10 @@ impl PassengerPaths {
                         position: Vec3::new(x, y, z),
                     });
                 }
-                "pathlink" => {
+                "pathlink" | "pathlink_oneway" => {
                     if block.parameters.len() < 2 {
                         return Err(PathsParseError::MissingParameters {
-                            keyword: "pathlink".to_string(),
+                            keyword: block.keyword.clone(),
                             line: block.line_number,
                             expected: 2,
                             found: block.parameters.len(),
@@ -153,7 +156,11 @@ impl PassengerPaths {
                             value: block.parameters[1].clone(),
                         }
                     })?;
-                    links.push(PathLink { from, to });
+                    links.push(PathLink {
+                        from,
+                        to,
+                        one_way: block.keyword == "pathlink_oneway",
+                    });
                 }
                 "entry" => {
                     if block.parameters.len() >= 2 {
@@ -274,9 +281,30 @@ step2.wav
         assert_eq!(paths.points[0].position, Vec3::new(0.85, 4.12, 0.35));
         assert_eq!(paths.points[1].index, 1);
         assert_eq!(paths.links.len(), 1);
-        assert_eq!(paths.links[0], PathLink { from: 0, to: 1 });
+        assert_eq!(
+            paths.links[0],
+            PathLink {
+                from: 0,
+                to: 1,
+                one_way: false
+            }
+        );
         assert_eq!(paths.next_stepsound, Some(0));
         assert_eq!(paths.next_roomheight, Some(2.15));
+    }
+
+    #[test]
+    fn a_oneway_link_is_marked_and_keeps_its_place_in_the_list() {
+        let paths = parse_paths(
+            "[pathpnt]\n0\n0\n0\n[pathpnt]\n0\n1\n0\n[pathpnt]\n0\n2\n0\n[pathlink_oneway]\n1\n0\n[pathlink]\n1\n2\n",
+        )
+        .unwrap();
+        let one_way: Vec<_> = paths
+            .links
+            .iter()
+            .map(|l| (l.from, l.to, l.one_way))
+            .collect();
+        assert_eq!(one_way, vec![(1, 0, true), (1, 2, false)]);
     }
 
     #[test]

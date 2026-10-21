@@ -11,6 +11,8 @@
 
 use bevy::math::Affine3A;
 use bevy::mesh::skinning::SkinnedMeshInverseBindposes;
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use opts_bevy::bus_stops::{nearest_stop, BusStopMarker};
 use opts_bevy::coords::omsi_to_bevy_pos;
@@ -38,15 +40,30 @@ const LEAVE_DISTANCE_M: f32 = 9.0;
 /// Most people waiting at a stop.
 const MAX_WAITING: u32 = 7;
 
-/// The doors the vehicle's scripts report.
-fn read_doors(scripts: &VehicleScripts, entries: usize, exits: usize) -> Doors {
-    let Ok(engine) = scripts.engine.lock() else {
-        return Doors::default();
-    };
-    let open = |kind: &str, n: usize| engine.get(&format!("pax_{kind}{n}_open")) > 0.5;
+/// Whether door `n` of kind `kind` (`entry`/`exit`) is open in the engine of `store`.
+fn door_open(engines: &Query<&VehicleScripts>, (store, n): (Entity, usize), kind: &str) -> bool {
+    engines
+        .get(store)
+        .ok()
+        .and_then(|s| s.engine.lock().ok())
+        .is_some_and(|e| e.get(&format!("pax_{kind}{n}_open")) > 0.5)
+}
+
+/// The doors the vehicle's scripts report: each unit's in the engine of its own scripts.
+fn read_doors(
+    engines: &Query<&VehicleScripts>,
+    entries: &[(Entity, usize)],
+    exits: &[(Entity, usize)],
+) -> Doors {
     Doors {
-        entries: (0..entries).map(|n| open("entry", n)).collect(),
-        exits: (0..exits).map(|n| open("exit", n)).collect(),
+        entries: entries
+            .iter()
+            .map(|&d| door_open(engines, d, "entry"))
+            .collect(),
+        exits: exits
+            .iter()
+            .map(|&d| door_open(engines, d, "exit"))
+            .collect(),
     }
 }
 
@@ -83,11 +100,11 @@ pub fn update_passengers(
             &mut PassengerRig,
             &GlobalTransform,
             &VehicleController,
-            &VehicleScripts,
             Option<&opts_bevy::host_callbacks::PassengerCountsHandle>,
         ),
         With<PlayerVehicle>,
     >,
+    engines: Query<&VehicleScripts>,
     stops: Query<(Entity, &GlobalTransform), With<BusStopMarker>>,
     humans: Query<&Human>,
     globals: Query<&GlobalTransform>,
@@ -102,7 +119,7 @@ pub fn update_passengers(
         .as_ref()
         .and_then(|s| s.raw(SETTING))
         .is_none_or(|v| v.trim() != "false");
-    for (vehicle, mut rig, vgt, controller, scripts, handle) in &mut rigs {
+    for (vehicle, mut rig, vgt, controller, handle) in &mut rigs {
         let rig = &mut *rig;
         if !on {
             // Switched off: everybody goes at once.
@@ -138,7 +155,7 @@ pub fn update_passengers(
         if rig.force_group > 0 {
             let n = std::mem::take(&mut rig.force_group);
             rig.sim.arrive_at_stop();
-            let (door_unit, door) = rig.door_outside(0);
+            let (door_unit, door) = rig.door_outside(rig.force_entry);
             let frame = frames.get(door_unit).copied().unwrap_or(to_world);
             let side = if door.x >= 0.0 { 1.0 } else { -1.0 };
             for slot in 0..n {
@@ -221,11 +238,8 @@ pub fn update_passengers(
             _ => {}
         }
         // People walking up to the doors; they board when the door is open.
-        let doors = read_doors(
-            scripts,
-            rig.sim.cabin.entries.len(),
-            rig.sim.cabin.exits.len(),
-        );
+        let (entry_slots, exit_slots) = rig.door_slots();
+        let doors = read_doors(&engines, &entry_slots, &exit_slots);
         let mut still = Vec::new();
         for mut w in std::mem::take(&mut rig.approaching) {
             w.target = rig.door_world(w.entry, &frames);
@@ -409,33 +423,33 @@ pub fn update_passengers(
                     .collect();
             }
         }
-        let mut feed = PassengerFeed {
-            humans: rig.sim.humans_inside() as u32,
-            ..default()
-        };
-        for (i, r) in rig
-            .sim
-            .entry_requests()
-            .into_iter()
-            .enumerate()
-            .take(feed.entry_req.len())
-        {
-            feed.entry_req[i] = r
+        // Each engine is told about its own doors; the head's also about the people inside.
+        let mut feeds: HashMap<Entity, PassengerFeed> = HashMap::new();
+        feeds.entry(vehicle).or_default().humans = rig.sim.humans_inside() as u32;
+        for (i, r) in rig.sim.entry_requests().into_iter().enumerate() {
+            let Some(&(store, n)) = entry_slots.get(i) else {
+                continue;
+            };
+            let waiting = r
                 || rig
                     .approaching
                     .iter()
                     .any(|w| w.entry == i && w.position.distance(w.target) <= 0.4);
+            if let Some(slot) = feeds.entry(store).or_default().entry_req.get_mut(n) {
+                *slot = waiting;
+            }
         }
-        for (i, r) in rig
-            .sim
-            .exit_requests()
-            .into_iter()
-            .enumerate()
-            .take(feed.exit_req.len())
-        {
-            feed.exit_req[i] = r;
+        for (i, r) in rig.sim.exit_requests().into_iter().enumerate() {
+            let Some(&(store, n)) = exit_slots.get(i) else {
+                continue;
+            };
+            if let Some(slot) = feeds.entry(store).or_default().exit_req.get_mut(n) {
+                *slot = r;
+            }
         }
-        commands.entity(vehicle).insert(feed);
+        for (store, feed) in feeds {
+            commands.entity(store).insert(feed);
+        }
     }
 }
 

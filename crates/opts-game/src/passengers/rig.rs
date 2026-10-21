@@ -33,12 +33,20 @@ pub struct PassengerRig {
     pub stops_served: u32,
     /// People to send to the doors now, stop or no stop (`vehicle.passengers spawn`).
     pub force_group: u32,
+    /// The entry that group is sent to (its number in the chain).
+    pub force_entry: usize,
 }
+
+/// A door as the scripts know it: the engine's entity and the door's number in it.
+pub(super) type DoorSlot = (Entity, usize);
 
 /// One unit of the chain: the entity of its frame and its cabin.
 pub(super) struct UnitSource {
     pub(super) root: Entity,
     pub(super) unit: Unit,
+    /// The entity whose script engine reports the unit's doors (`PAX_Entry<n>_Open`): the head,
+    /// a unit with scripts of its own, or the unit whose scripts the unit shares.
+    pub(super) store: Entity,
 }
 
 /// A passenger inside, as drawn.
@@ -83,7 +91,11 @@ impl PassengerRig {
             return None;
         }
         let book = ticket_book(&tickets);
-        let units = vec![UnitSource { root, unit }];
+        let units = vec![UnitSource {
+            root,
+            unit,
+            store: root,
+        }];
         let sim = Self::sim_of(&units, &book, seed);
         Some(Self {
             sim,
@@ -97,6 +109,7 @@ impl PassengerRig {
             rng: Rng::new(seed ^ 0xA5A5),
             stops_served: 0,
             force_group: 0,
+            force_entry: 0,
         })
     }
 
@@ -107,9 +120,29 @@ impl PassengerRig {
     }
 
     /// Adds the unit behind the chain (its cabin joins the others'); nobody may be aboard yet.
-    pub fn add_unit(&mut self, root: Entity, unit: Unit) {
-        self.units.push(UnitSource { root, unit });
+    pub fn add_unit(&mut self, root: Entity, unit: Unit, store: Entity) {
+        self.units.push(UnitSource { root, unit, store });
         self.sim = Self::sim_of(&self.units, &self.book, self.seed);
+    }
+
+    /// For every entry and every exit of the chain, in chain order: the entity whose engine
+    /// reports the door and the door's number in that engine (`PAX_Entry<n>`; a store counts
+    /// the doors of all the units that use it, in chain order).
+    pub(super) fn door_slots(&self) -> (Vec<DoorSlot>, Vec<DoorSlot>) {
+        let mut counted: HashMap<Entity, (usize, usize)> = HashMap::new();
+        let (mut entries, mut exits) = (Vec::new(), Vec::new());
+        for u in &self.units {
+            let c = counted.entry(u.store).or_default();
+            for _ in &u.unit.cabin.entries {
+                entries.push((u.store, c.0));
+                c.0 += 1;
+            }
+            for _ in &u.unit.cabin.exits {
+                exits.push((u.store, c.1));
+                c.1 += 1;
+            }
+        }
+        (entries, exits)
     }
 
     /// The point in front of entry `entry` where people wait: the unit it is in and the point in

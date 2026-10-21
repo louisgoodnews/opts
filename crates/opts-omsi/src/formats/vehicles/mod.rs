@@ -11,8 +11,8 @@ pub mod script_texture;
 
 pub use ai_profile::{AiKind, AiProfile, VehicleDomain};
 pub use bus::{
-    parse_bus, BusAxle, BusCamera, BusManifest, BusMirrorCamera, CouplingLimits, FriendlyName,
-    RegistrationMode, VehicleExtras,
+    parse_bus, BusAxle, BusCamera, BusManifest, BusMirrorCamera, ControlCable, CouplingLimits,
+    FriendlyName, RegistrationMode, VehicleExtras,
 };
 pub use error::{BusParseError, PathsParseError};
 pub use hof::{HofBusStop, HofFile, HofParseError, HofRoute, HofTerminus};

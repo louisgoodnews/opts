@@ -227,6 +227,7 @@ pub struct PassengerFeed {
 /// player's, its route and its passengers.
 type ScriptedVehicle<'a> = (
     &'a VehicleController,
+    Option<&'a crate::consist_scripts::ScriptConsist>,
     &'a mut VehicleScripts,
     Has<PlayerVehicle>,
     Option<&'a crate::route::VehicleRoute>,
@@ -240,7 +241,11 @@ pub fn vehicle_script_system(
     time: Res<Time>,
     radius: Option<Res<ScriptRadius>>,
     clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
-    mut query: Query<ScriptedVehicle>,
+    mut query: Query<ScriptedVehicle, Without<crate::consist_scripts::ScriptPart>>,
+    mut parts: Query<
+        (&mut VehicleScripts, Option<&PassengerFeed>),
+        With<crate::consist_scripts::ScriptPart>,
+    >,
 ) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
@@ -249,10 +254,10 @@ pub fn vehicle_script_system(
     let radius = radius.map_or(ScriptRadius::default().0, |r| r.0);
     let players: Vec<Vec2> = query
         .iter()
-        .filter(|(_, _, player, _, _)| *player)
-        .map(|(c, _, _, _, _)| c.sim.chassis.position)
+        .filter(|(_, _, _, player, _, _)| *player)
+        .map(|(c, _, _, _, _, _)| c.sim.chassis.position)
         .collect();
-    for (controller, mut scripts, player, route, pax) in &mut query {
+    for (controller, consist, mut scripts, player, route, pax) in &mut query {
         if !player
             && !players.is_empty()
             && !players
@@ -286,6 +291,9 @@ pub fn vehicle_script_system(
             engine.run_init();
         }
         engine.run_frame(dt, false);
+        if let Some(consist) = consist {
+            crate::consist_scripts::run_parts(consist, &mut parts, engine, &inputs, dt);
+        }
         for d in engine.drain_diagnostics() {
             tracing::warn!(file = %d.file, line = d.line, "{}", d.message);
         }

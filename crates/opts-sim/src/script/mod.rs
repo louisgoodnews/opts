@@ -8,6 +8,7 @@
 mod ai_response;
 pub mod callbacks;
 mod compiler;
+pub mod consist;
 pub mod inputs;
 mod lexer;
 mod load;

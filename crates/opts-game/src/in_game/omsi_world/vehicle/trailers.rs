@@ -90,6 +90,15 @@ pub(in super::super::super) fn spawn_trailer_chain(
     let mut previous_kg = manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG);
     let mut chain = Vec::new();
     let mut layout = Vec::new();
+    // Script state: the head's engine, then the units with scripts of their own. A unit without
+    // `[scriptshare]` and with scripts runs an engine on its own entity; the others read the
+    // engine of the unit before them that owns a store (`owner`).
+    let mut owner = root;
+    let mut consist = vec![opts_bevy::ConsistUnit {
+        part: None,
+        head: true,
+        cables: super::scripts::cables_of(tractor),
+    }];
     // Axles counted so far: trailer models number theirs after the head's (`Wheel_Rotation_2_L`).
     let mut axle_base = tractor.axles.len();
     // Rail: the head's mass (at least 20 t), then the stated mass of every following unit and
@@ -212,8 +221,36 @@ pub(in super::super::super) fn spawn_trailer_chain(
         chain.push(seg);
         // The unit's own sounds (an articulated bus can have its engine in the second unit); they
         // read the head's variables, the trailer shares its scripts.
-        crate::player_sound::attach_unit(job, commands, seg, Some(root), manifest, dir);
-        super::passengers::attach_unit(job, commands, root, seg, manifest, dir);
+        let mut engine_unit = None;
+        if !manifest.script_share
+            && super::scripts::attach_scripts(
+                job,
+                commands,
+                seg,
+                manifest,
+                dir,
+                super::scripts::script_seed(job.install.root(), path, 0),
+                Some(chain.len()),
+            )
+        {
+            owner = seg;
+            engine_unit = Some(seg);
+        }
+        consist.push(opts_bevy::ConsistUnit {
+            part: engine_unit,
+            head: false,
+            cables: super::scripts::cables_of(manifest),
+        });
+        crate::player_sound::attach_unit(job, commands, seg, Some(owner), manifest, dir);
+        super::passengers::attach_unit(
+            job,
+            commands,
+            root,
+            seg,
+            (engine_unit.is_some() || manifest.script_share).then_some(owner),
+            manifest,
+            dir,
+        );
         axle_base += manifest.axles.len();
         let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
         let tex_dirs = vec![
@@ -224,7 +261,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
         ];
         job.cache.texture_replacements = repaint_map(job, &model);
         let (count, verts, _, _) = load_segment_meshes_for(
-            job, commands, meshes, materials, images, seg, root, lod0, &model_dir, &tex_dirs,
+            job, commands, meshes, materials, images, seg, owner, lod0, &model_dir, &tex_dirs,
         );
         job.cache.texture_replacements.clear();
         tracing::info!(trailer = %name, meshes = count, vertices = verts, "trailer segment attached");
@@ -241,6 +278,11 @@ pub(in super::super::super) fn spawn_trailer_chain(
                 .map(|(size, centre)| super::super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
+    }
+    if consist.iter().any(|u| u.part.is_some()) || consist.iter().any(|u| !u.cables.is_empty()) {
+        commands
+            .entity(root)
+            .insert(opts_bevy::ScriptConsist { units: consist });
     }
     if rail {
         // The whole consist's masses for the dynamics (set once the head has its `RailPlayer`).
