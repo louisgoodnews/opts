@@ -32,7 +32,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0095 — AI Vehicle Profiles](M-0095.md) — ✅ Implemented 2026-10-14 (phase 1: profile layer and formulas; measured characterisation through the script VM and the dynamic mod
 - [M-0096 — Script Rig, Input Table and Callback Safety Net](M-0096.md) — 🟢 Complete 2026-10-18, 🔴 critical
 - [M-0097 — Script Physics Contract: Torque, Brakes and Wheels](M-0097.md) — 🟡 Implemented 2026-10-18, units from the scripts 2026-10-19, SD200 acceleration range open, 🔴 critical
-- [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — 🟡 First slice 2026-10-21 (part engines, control cables, trigger routing, rail on the scripts' torque; the articulation writer remains)
+- [M-0098 — Consist Script State: Per-Part Engines, Script Share and Control Cables](M-0098.md) — ✅ Done 2026-10-21
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🟢 done 2026-10-19
 - [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🔴 Not started (proposed 2026-10-14)
