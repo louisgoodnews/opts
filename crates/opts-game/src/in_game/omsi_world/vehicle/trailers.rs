@@ -241,6 +241,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
             head: false,
             cables: super::scripts::cables_of(manifest),
         });
+        super::doors::attach_unit_door_points(job, commands, root, seg, manifest, dir);
         crate::player_sound::attach_unit(job, commands, seg, Some(owner), manifest, dir);
         super::passengers::attach_unit(
             job,

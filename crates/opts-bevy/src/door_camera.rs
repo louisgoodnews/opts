@@ -10,7 +10,7 @@
 //!   Door state variables are named by each vehicle's scripts (`c2_tuer_1_v_pos`, ...), so the
 //!   host cannot read them by name; it looks at the **mesh animations** instead: a mesh whose
 //!   animation reads a variable that names a door ([`is_door_variable`]) with a shown value away
-//!   from zero is an open door leaf, and the door point nearest to it ([`nearest_door`]) is the
+//!   from zero is an open door leaf, and the door point nearest to it ([`nearest_point`]) is the
 //!   door ([`detect_open_doors`], five times a second, held for two seconds after the leaf rests).
 //! * **Pictures.** Every open door (at most [`MAX_SLOTS`], in the order they opened) has its own
 //!   [`DoorSlot`]: a `Camera3d` child of the vehicle, sitting at the door's upper left (as seen
@@ -22,6 +22,7 @@
 //! * **Setting.** `camera.door_overlay` (off by default) sets [`DoorCamera::enabled`]; while it is
 //!   off nothing exists: no camera, no image, no scan.
 
+use bevy::camera::primitives::Aabb;
 use bevy::camera::{Hdr, RenderTarget};
 use bevy::pbr::DistanceFog;
 use bevy::prelude::*;
@@ -80,6 +81,8 @@ pub struct DoorPoint {
     pub position: Vec3,
     /// `1` for a door on the right side, `-1` on the left.
     pub side: i8,
+    /// The unit the door is in (the entity its position is relative to); `None`: the head.
+    pub unit: Option<Entity>,
 }
 
 /// The doors of a vehicle (on its root).
@@ -94,9 +97,13 @@ impl DoorPoints {
             return Zone::Middle;
         };
         // Bevy: forward is -Z, so the smaller z is further front.
-        let (front, rear) = self.0.iter().fold((f32::MAX, f32::MIN), |(lo, hi), p| {
-            (lo.min(p.position.z), hi.max(p.position.z))
-        });
+        let (front, rear) = self
+            .0
+            .iter()
+            .filter(|p| p.unit == d.unit)
+            .fold((f32::MAX, f32::MIN), |(lo, hi), p| {
+                (lo.min(p.position.z), hi.max(p.position.z))
+            });
         let span = rear - front;
         if span < 1.0 {
             return Zone::Middle;
@@ -130,7 +137,7 @@ pub fn door_pose(door: &DoorPoint) -> Transform {
 pub fn is_door_variable(name: &str) -> bool {
     let n = name.to_lowercase();
     let door = n.contains("door") || n.contains("tuer") || n.contains("tür");
-    const AUX: [&str; 15] = [
+    const AUX: [&str; 19] = [
         "taster",
         "alpha",
         "warn",
@@ -146,19 +153,23 @@ pub fn is_door_variable(name: &str) -> bool {
         "hit",
         "stop",
         "free",
+        "freigabe",
+        "vorwahl",
+        "tuer_auf",
+        "tuer_zu",
     ];
     door && !AUX.iter().any(|a| n.contains(a))
 }
 
-/// The door nearest to `leaf` (a point in the vehicle's frame), by distance in the floor plane.
+/// The point nearest to `leaf`, by distance in the floor plane (Bevy axes).
 #[must_use]
-pub fn nearest_door(doors: &[DoorPoint], leaf: Vec3) -> Option<usize> {
-    doors
+pub fn nearest_point(points: &[Vec3], leaf: Vec3) -> Option<usize> {
+    points
         .iter()
         .enumerate()
         .min_by(|(_, a), (_, b)| {
-            let da = (a.position.x - leaf.x).hypot(a.position.z - leaf.z);
-            let db = (b.position.x - leaf.x).hypot(b.position.z - leaf.z);
+            let da = (a.x - leaf.x).hypot(a.z - leaf.z);
+            let db = (b.x - leaf.x).hypot(b.z - leaf.z);
             da.total_cmp(&db)
         })
         .map(|(i, _)| i)
@@ -194,7 +205,11 @@ pub fn door_group(doors: &[DoorPoint], door: usize) -> usize {
     };
     doors
         .iter()
-        .position(|o| o.side == d.side && (o.position.z - d.position.z).abs() < SAME_DOOR_M)
+        .position(|o| {
+            o.unit == d.unit
+                && o.side == d.side
+                && (o.position.z - d.position.z).abs() < SAME_DOOR_M
+        })
         .unwrap_or(door)
 }
 
@@ -280,8 +295,9 @@ pub fn detect_open_doors(
     time: Res<Time<Real>>,
     mut last: Local<f64>,
     mut state: ResMut<DoorCamera>,
-    vehicles: Query<(Entity, &DoorPoints, &GlobalTransform), With<PlayerVehicle>>,
-    animated: Query<(&MeshAnimation, &GlobalTransform)>,
+    vehicles: Query<(Entity, &DoorPoints, Option<&crate::ScriptConsist>), With<PlayerVehicle>>,
+    animated: Query<(&MeshAnimation, &GlobalTransform, Option<&Aabb>)>,
+    globals: Query<&GlobalTransform>,
 ) {
     if !state.enabled {
         state.auto = None;
@@ -293,20 +309,34 @@ pub fn detect_open_doors(
         return;
     }
     *last = now;
-    let Some((vehicle, doors, _)) = vehicles.iter().next() else {
+    let Some((vehicle, doors, consist)) = vehicles.iter().next() else {
         state.auto = None;
         state.open.clear();
         return;
     };
     let mut found = None;
     let mut now_open = Vec::new();
-    for (anim, _tf) in &animated {
-        if anim.owner != vehicle {
+    // Every door in the world's frame: units have frames of their own.
+    let door_world: Vec<Vec3> = doors
+        .0
+        .iter()
+        .map(|d| {
+            globals
+                .get(d.unit.unwrap_or(vehicle))
+                .map_or(d.position, |g| g.transform_point(d.position))
+        })
+        .collect();
+    for (anim, tf, aabb) in &animated {
+        // The animations of the vehicle's own engine and of the units with engines of their own
+        // (a car's door meshes may belong to another unit than its passenger cabin).
+        let ours = anim.owner == vehicle
+            || consist.is_some_and(|c| c.units.iter().any(|u| u.part == Some(anim.owner)));
+        if !ours {
             continue;
         }
         // The pivot of the first step that moves a door variable is where the leaf hangs (the
-        // mesh entity's own origin is the vehicle's); vehicle axes (x right, y forward, z up)
-        // to Bevy's (x right, y up, z backward).
+        // mesh entity's own origin is its unit's); vehicle axes (x right, y forward, z up) to
+        // Bevy's (x right, y up, z backward).
         let Some(step) = anim
             .steps
             .iter()
@@ -317,24 +347,29 @@ pub fn detect_open_doors(
             continue;
         };
         let pivot = step.frame.w_axis.truncate();
-        if pivot.length() < 0.01 {
-            continue;
-        }
-        let local = Vec3::new(pivot.x, pivot.z, -pivot.y);
+        let local = if pivot.length() >= 0.01 {
+            Vec3::new(pivot.x, pivot.z, -pivot.y)
+        } else {
+            // A sliding leaf (the tram's plug doors) has no pivot: the centre of its mesh says
+            // where it is.
+            let Some(aabb) = aabb else {
+                continue;
+            };
+            Vec3::from(aabb.center)
+        };
+        let leaf = tf.transform_point(local);
         // Only a leaf near a door point counts.
-        if !doors
-            .0
-            .iter()
-            .any(|d| (d.position.x - local.x).hypot(d.position.z - local.z) < LEAF_NEAR_M)
-        {
+        let near = nearest_point(&door_world, leaf);
+        let Some(i) = near
+            .filter(|&i| (door_world[i].x - leaf.x).hypot(door_world[i].z - leaf.z) < LEAF_NEAR_M)
+        else {
             continue;
+        };
+        let d = door_group(&doors.0, i);
+        if !now_open.contains(&d) {
+            now_open.push(d);
         }
-        if let Some(d) = nearest_door(&doors.0, local).map(|d| door_group(&doors.0, d)) {
-            if !now_open.contains(&d) {
-                now_open.push(d);
-            }
-            found = found.or(Some(d));
-        }
+        found = found.or(Some(d));
     }
     // Doors keep the order they opened in.
     now_open.sort_by_key(|d| state.open.iter().position(|o| o == d).unwrap_or(usize::MAX));
@@ -432,7 +467,9 @@ pub fn drive_camera(
                     Name::new("Door_Camera"),
                 ))
                 .id();
-            commands.entity(vehicle).add_child(camera);
+            commands
+                .entity(point.unit.unwrap_or(vehicle))
+                .add_child(camera);
             slots.push(DoorSlot {
                 door,
                 vehicle,
