@@ -63,7 +63,13 @@ pub fn update_vehicle_script_textures(
                                 p[..3].copy_from_slice(&rgb);
                             }
                         }
-                        img.data = Some(data);
+                        // A new image with its mip chain: setting the data alone leaves the
+                        // image's other mip levels (made for the blank one) empty.
+                        *img = opts_bevy::text_texture::text_image(
+                            canvas.width(),
+                            canvas.height(),
+                            data,
+                        );
                     }
                     canvas.clear_dirty();
                 }

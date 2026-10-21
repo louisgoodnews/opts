@@ -86,5 +86,22 @@ fn script_textures(world: &mut World, params: &Value) -> Outcome {
             files.push(json!({ "unit": unit, "slot": slot, "path": path, "width": w, "height": h, "drawn": drawn }));
         }
     }
-    Outcome::ok(json!({ "count": files.len(), "files": files }))
+    // What reached the images of the meshes (the GPU side): per slot, whether any pixel has alpha.
+    let mut q = world.query::<&VehicleScriptTexture>();
+    let targets: Vec<(usize, Option<[u8; 3]>, Handle<Image>)> = q
+        .iter(world)
+        .map(|t| (t.index, t.tint, t.image.clone()))
+        .collect();
+    let images = world.resource::<Assets<Image>>();
+    let on_meshes: Vec<Value> = targets
+        .iter()
+        .map(|(index, tint, image)| {
+            let lit = images
+                .get(image)
+                .and_then(|i| i.data.as_ref())
+                .map(|d| d.chunks(4).filter(|p| p[3] != 0).count());
+            json!({ "slot": index, "tint": tint, "pixels_with_alpha": lit })
+        })
+        .collect();
+    Outcome::ok(json!({ "count": files.len(), "files": files, "on_meshes": on_meshes }))
 }
