@@ -35,6 +35,7 @@ pub(in super::super::super) fn door_points(
                 index,
                 position,
                 side: if position.x < -0.05 { -1 } else { 1 },
+                unit: None,
             });
         }
     }
@@ -77,6 +78,42 @@ pub(super) fn attach_door_points(
         tracing::info!(doors = doors.len(), "door camera points");
         commands.entity(root).insert(DoorPoints(doors));
     }
+}
+
+/// The door points of a unit behind the head, added to the head's: `unit` is the unit's entity,
+/// the frame its points are relative to.
+pub(super) fn attach_unit_door_points(
+    job: &WorldLoadJob,
+    commands: &mut Commands,
+    head: Entity,
+    unit: Entity,
+    manifest: &BusManifest,
+    dir: &Path,
+) {
+    let read = |rel: Option<&str>| {
+        rel.and_then(|r| job.install.find_in(dir, r))
+            .and_then(|p| std::fs::read(p).ok())
+    };
+    let (Some(cabin), Some(paths)) = (
+        read(manifest.passengercabin_cfg.as_deref()),
+        read(manifest.paths_cfg.as_deref()),
+    ) else {
+        return;
+    };
+    let mut doors = door_points_from_bytes(&cabin, &paths);
+    if doors.is_empty() {
+        return;
+    }
+    for d in &mut doors {
+        d.unit = Some(unit);
+    }
+    commands.queue(move |world: &mut World| {
+        if let Some(mut points) = world.get_mut::<DoorPoints>(head) {
+            points.0.extend(doors);
+        } else {
+            world.entity_mut(head).insert(DoorPoints(doors));
+        }
+    });
 }
 
 #[cfg(test)]
