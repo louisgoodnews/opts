@@ -149,6 +149,8 @@ set-traffic = Road traffic
 set-traffic-desc = Most AI vehicles driving at the same time (0 for none). Applies to the next drive.
 set-pedestrians = Pedestrians
 set-pedestrians-desc = Most people walking at the same time (0 for none). Applies to the next drive.
+set-passengers = Passengers
+set-passengers-desc = People wait at bus stops, board your vehicle through its open doors, buy or stamp tickets, take a seat or stand, and get off. Off: nobody boards.
 set-time-scale = Time scale
 set-time-scale-desc = Runs the session clock faster than real time.
 

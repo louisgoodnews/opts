@@ -12,7 +12,7 @@ mod spec;
 
 pub use graph::CabinGraph;
 pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, Rng, WALK_SPEED_M_S};
-pub use spec::{Behaviour, Cabin, Paths, Place, Ticket, TicketBook};
+pub use spec::{chain, Behaviour, Cabin, Paths, Place, Ticket, TicketBook, Unit};
 
 #[cfg(test)]
 mod tests;

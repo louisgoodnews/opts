@@ -73,8 +73,11 @@ pub struct PassengerCabin {
     pub money_points: Vec<CashPoint>,
     /// Where the change appears.
     pub change_points: Vec<CashPoint>,
-    /// `{noticketsale}`: this unit sells no tickets.
+    /// `{noticketsale}` before the first `[entry]`: this unit sells no tickets at all.
     pub no_ticket_sale: bool,
+    /// `{noticketsale}` after an `[entry]`: nobody buys a ticket who boards through that entry
+    /// (aligned with [`Self::entries`]; the rear doors of the Bremen MAN carry it).
+    pub entry_no_sale: Vec<bool>,
 }
 
 impl PassengerCabin {
@@ -112,12 +115,22 @@ impl PassengerCabin {
                 .map(|s| s.trim().to_owned())
                 .filter(|s| !s.is_empty()),
         };
-        let mut c = Self {
-            no_ticket_sale: text
-                .lines()
-                .any(|l| l.trim().eq_ignore_ascii_case("{noticketsale}")),
-            ..Self::default()
-        };
+        let mut c = Self::default();
+        // The flag counts for the `[entry]` before it, or for the whole unit before the first.
+        let mut entries_seen = 0usize;
+        for l in text.lines() {
+            let t = l.trim();
+            if t.eq_ignore_ascii_case("[entry]") {
+                entries_seen += 1;
+            } else if t.eq_ignore_ascii_case("{noticketsale}") {
+                if entries_seen == 0 {
+                    c.no_ticket_sale = true;
+                } else {
+                    c.entry_no_sale.resize(entries_seen, false);
+                    c.entry_no_sale[entries_seen - 1] = true;
+                }
+            }
+        }
         for b in &blocks {
             let p = &b.parameters;
             match b.keyword.as_str() {
@@ -138,6 +151,7 @@ impl PassengerCabin {
                 _ => {}
             }
         }
+        c.entry_no_sale.resize(c.entries.len(), false);
         c
     }
 
@@ -185,6 +199,13 @@ mod tests {
             c.change_points[0].animparent, None,
             "the legacy variant has none"
         );
+    }
+
+    #[test]
+    fn the_flag_after_an_entry_belongs_to_that_entry() {
+        let c = PassengerCabin::parse("[entry]\n3\n\n[entry]\n39\n\n{noticketsale}\n\n[entry]\n40\n{noticketsale}\n[exit]\n40\n");
+        assert!(!c.no_ticket_sale);
+        assert_eq!(c.entry_no_sale, vec![false, true, true]);
     }
 
     /// Every installed cabin parses with the doors of its paths (`OMSI_PATH`, `--ignored`).

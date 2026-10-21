@@ -149,6 +149,8 @@ set-traffic = Straßenverkehr
 set-traffic-desc = Höchstzahl gleichzeitig fahrender KI-Fahrzeuge (0 für keine). Gilt für die nächste Fahrt.
 set-pedestrians = Fußgänger
 set-pedestrians-desc = Höchstzahl gleichzeitig laufender Personen (0 für keine). Gilt für die nächste Fahrt.
+set-passengers = Fahrgäste
+set-passengers-desc = Personen warten an Haltestellen, steigen durch die geöffneten Türen ein, kaufen oder entwerten Fahrscheine, setzen sich oder stehen und steigen wieder aus. Aus: niemand steigt ein.
 set-time-scale = Zeitraffer
 set-time-scale-desc = Lässt die Uhr der Fahrt schneller als in Echtzeit laufen.
 

@@ -13,6 +13,7 @@ fn paths() -> Paths {
             p(1.2, 0.0),  // 5 exit door
         ],
         links: vec![(0, 1), (1, 2), (1, 3), (1, 4), (1, 5)],
+        unit_of: Vec::new(),
     }
 }
 
@@ -23,11 +24,13 @@ fn cabin() -> Cabin {
                 position: Vec3::new(0.5, 2.0, 0.4),
                 seat_height: 0.45,
                 rotation_deg: 0.0,
+                unit: 0,
             },
             Place {
                 position: Vec3::new(-0.5, 1.5, 0.4),
                 seat_height: 0.0,
                 rotation_deg: 0.0,
+                unit: 0,
             },
         ],
         entries: vec![0],
@@ -35,6 +38,7 @@ fn cabin() -> Cabin {
         stampers: Vec::new(),
         ticket_sales: vec![2],
         no_ticket_sale: false,
+        entry_no_sale: Vec::new(),
     }
 }
 
@@ -211,4 +215,79 @@ fn the_same_seed_gives_the_same_day() {
         s.take_events()
     };
     assert_eq!(events(42), events(42));
+}
+
+#[test]
+fn nobody_buys_who_boards_through_an_entry_that_does_not_sell() {
+    let mut s = sim(1.0, 0.0, 9);
+    s.cabin.entry_no_sale = vec![true];
+    for _ in 0..4 {
+        s.board(30, 3, 0);
+    }
+    run(&mut s, 60.0, &open());
+    assert_eq!(s.revenue, 0.0);
+    assert_eq!(s.humans_inside(), 4);
+}
+
+/// A rear unit: a joint point 0, an aisle point 1, a seat point 2 and an exit door point 3.
+fn trailer_unit() -> Unit {
+    let p = |x: f32, y: f32| Vec3::new(x, y, 0.4);
+    Unit {
+        cabin: Cabin {
+            places: vec![Place {
+                position: p(0.4, -3.0),
+                seat_height: 0.45,
+                rotation_deg: 0.0,
+                unit: 0,
+            }],
+            entries: Vec::new(),
+            exits: vec![3],
+            stampers: Vec::new(),
+            ticket_sales: Vec::new(),
+            no_ticket_sale: false,
+            entry_no_sale: Vec::new(),
+        },
+        paths: Paths {
+            points: vec![p(0.0, 4.0), p(0.0, 0.0), p(0.4, -3.0), p(1.2, -2.0)],
+            links: vec![(0, 1), (1, 2), (1, 3)],
+            unit_of: Vec::new(),
+        },
+        link_to_prev: None,
+        link_to_next: Some(0),
+    }
+}
+
+#[test]
+fn passengers_walk_through_the_joint_into_the_unit_behind_and_get_off_there() {
+    let head = Unit {
+        cabin: {
+            let mut c = cabin();
+            // Only the rear unit has a free seat: the head's places are taken.
+            c.places.clear();
+            c
+        },
+        paths: paths(),
+        link_to_prev: Some(5),
+        link_to_next: None,
+    };
+    let (cab, graph) = chain(&[head, trailer_unit()]);
+    assert_eq!(cab.places.len(), 1);
+    assert_eq!(cab.places[0].unit, 1);
+    assert_eq!(cab.exits, vec![5, 6 + 3], "exits run on through the units");
+    let mut s = PassengerSim::new(cab, &graph, pack(0.0, 0.0), 4);
+    s.board(30, 2, 0);
+    let doors = Doors {
+        entries: vec![true],
+        exits: vec![true, true],
+    };
+    run(&mut s, 40.0, &doors);
+    let p = &s.passengers()[0];
+    assert_eq!(p.unit, 1, "the seat is in the unit behind");
+    assert_eq!(s.on_place(0), 1);
+    s.arrive_at_stop();
+    s.arrive_at_stop();
+    run(&mut s, 40.0, &shut());
+    assert_eq!(s.exit_requests().iter().filter(|r| **r).count(), 1);
+    run(&mut s, 3.0, &doors);
+    assert_eq!(s.humans_inside(), 0, "got off");
 }

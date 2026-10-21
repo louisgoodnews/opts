@@ -9,8 +9,7 @@
 //! Doors are the scripts' `PAX_Entry<n>_Open` and `PAX_Exit<n>_Open` (the n-th `[entry]` and
 //! `[exit]` of the cabin). Specification: `docs/src/simulation/passengers.md`.
 
-use std::collections::HashMap;
-
+use bevy::math::Affine3A;
 use bevy::mesh::skinning::SkinnedMeshInverseBindposes;
 use bevy::prelude::*;
 use opts_bevy::bus_stops::{nearest_stop, BusStopMarker};
@@ -18,13 +17,12 @@ use opts_bevy::coords::omsi_to_bevy_pos;
 use opts_bevy::{
     Human, HumanPose, PassengerFeed, PlayerVehicle, VehicleController, VehicleScripts,
 };
-use opts_core::formats::ticketpack::TicketPack;
-use opts_core::formats::vehicles::cabin::PassengerCabin;
-use opts_core::formats::vehicles::PassengerPaths;
-use opts_sim::passengers::{Doors, Event, PassengerSim, Phase, Rng, WALK_SPEED_M_S};
+use opts_sim::passengers::{Doors, Event, Phase, WALK_SPEED_M_S};
 
 use crate::in_game::omsi_world::{advance_phase, apply_gait, apply_rest_pose, PedestrianPool};
 
+/// Key of the setting that turns the passengers on and off.
+pub const SETTING: &str = "gameplay.passengers";
 /// The bus counts as being at a stop within this distance of the marker (m).
 const AT_STOP_M: f32 = 22.0;
 /// …and slower than this (km/h).
@@ -33,104 +31,12 @@ const STOPPED_KMH: f32 = 3.0;
 const MOVING_KMH: f32 = 6.0;
 /// Distance at which a stop is left (m).
 const LEFT_M: f32 = 45.0;
-/// How far from the door the people come to wait for it to open (m).
-const DOOR_APPROACH_M: f32 = 0.9;
 /// Walking speed outside (m/s).
 const OUTSIDE_SPEED_M_S: f32 = 1.3;
 /// How far a passenger who got off walks away before they vanish (m).
 const LEAVE_DISTANCE_M: f32 = 9.0;
 /// Most people waiting at a stop.
 const MAX_WAITING: u32 = 7;
-
-/// The passengers of a vehicle.
-#[derive(Component)]
-pub struct PassengerRig {
-    /// The simulation of the main unit.
-    pub sim: PassengerSim,
-    stop: Option<Entity>,
-    actors: HashMap<u32, Shown>,
-    approaching: Vec<Walker>,
-    leaving: Vec<Walker>,
-    rng: Rng,
-    /// Visits of stops so far (for the sounds and the report).
-    pub stops_served: u32,
-    /// People to send to the doors now, stop or no stop (`vehicle.passengers spawn`).
-    pub force_group: u32,
-}
-
-/// A passenger inside, as drawn.
-struct Shown {
-    entity: Entity,
-    leg_m: f32,
-    phase: f32,
-    local: Vec3,
-    seated: Option<f32>,
-}
-
-/// A person outside: walking up to the bus or away from it.
-struct Walker {
-    entity: Entity,
-    leg_m: f32,
-    phase: f32,
-    position: Vec3,
-    target: Vec3,
-    entry: usize,
-    age: u32,
-    stops: u32,
-    walked_m: f32,
-}
-
-impl PassengerRig {
-    /// A rig from the files of a unit, `None` when the cabin has no entry or no pathpoints.
-    #[must_use]
-    pub fn from_files(cabin: &[u8], paths: &[u8], tickets: TicketPack, seed: u64) -> Option<Self> {
-        let cabin = PassengerCabin::parse_bytes(cabin);
-        let paths = PassengerPaths::parse_bytes(paths).ok()?;
-        if cabin.entries.is_empty() || paths.points.is_empty() {
-            return None;
-        }
-        Some(Self {
-            sim: PassengerSim::new(
-                cabin_spec(&cabin),
-                &paths_spec(&paths),
-                ticket_book(&tickets),
-                seed,
-            ),
-            stop: None,
-            actors: HashMap::new(),
-            approaching: Vec::new(),
-            leaving: Vec::new(),
-            rng: Rng::new(seed ^ 0xA5A5),
-            stops_served: 0,
-            force_group: 0,
-        })
-    }
-
-    /// The point in front of entry `entry` where people wait (vehicle-local Bevy axes).
-    fn door_outside(&self, entry: usize) -> Vec3 {
-        let node = self.sim.cabin.entries.get(entry).copied().unwrap_or(0);
-        let p = self
-            .sim
-            .graph()
-            .points
-            .get(node)
-            .copied()
-            .unwrap_or(Vec3::ZERO);
-        let out = if p.x >= 0.0 { 1.0 } else { -1.0 };
-        omsi_to_bevy_pos(p + Vec3::new(out * DOOR_APPROACH_M, 0.0, 0.0))
-    }
-
-    /// The entry nearest to the point `local` (vehicle-local Bevy axes).
-    fn nearest_entry(&self, local: Vec3) -> usize {
-        (0..self.sim.cabin.entries.len())
-            .min_by(|&a, &b| {
-                self.door_outside(a)
-                    .distance(local)
-                    .total_cmp(&self.door_outside(b).distance(local))
-            })
-            .unwrap_or(0)
-    }
-}
 
 /// The doors the vehicle's scripts report.
 fn read_doors(scripts: &VehicleScripts, entries: usize, exits: usize) -> Doors {
@@ -156,8 +62,12 @@ fn facing(direction: Vec3) -> Quat {
 
 mod convert;
 mod protocol;
+mod rig;
 
-pub use convert::{cabin_spec, paths_spec, ticket_book};
+pub use rig::PassengerRig;
+use rig::{Shown, Walker};
+
+pub use convert::{cabin_spec, paths_spec, ticket_book, unit_spec};
 pub use protocol::{command, register};
 
 /// Runs the passengers of the player's vehicle.
@@ -174,22 +84,49 @@ pub fn update_passengers(
             &GlobalTransform,
             &VehicleController,
             &VehicleScripts,
+            Option<&opts_bevy::host_callbacks::PassengerCountsHandle>,
         ),
         With<PlayerVehicle>,
     >,
     stops: Query<(Entity, &GlobalTransform), With<BusStopMarker>>,
     humans: Query<&Human>,
+    globals: Query<&GlobalTransform>,
     mut transforms: Query<&mut Transform>,
+    settings: Option<Res<crate::settings::GameSettings>>,
 ) {
     let dt = time.delta_secs().min(0.1);
     if dt <= 0.0 {
         return;
     }
-    for (vehicle, mut rig, vgt, controller, scripts) in &mut rigs {
-        pool.want();
+    let on = settings
+        .as_ref()
+        .and_then(|s| s.raw(SETTING))
+        .is_none_or(|v| v.trim() != "false");
+    for (vehicle, mut rig, vgt, controller, scripts, handle) in &mut rigs {
         let rig = &mut *rig;
+        if !on {
+            // Switched off: everybody goes at once.
+            for (_, s) in rig.actors.drain() {
+                commands.entity(s.entity).despawn();
+            }
+            for w in rig.approaching.drain(..).chain(rig.leaving.drain(..)) {
+                commands.entity(w.entity).despawn();
+            }
+            rig.sim.clear();
+            rig.stop = None;
+            continue;
+        }
+        pool.want();
         let to_world = vgt.affine();
-        let to_local = to_world.inverse();
+        let frames: Vec<Affine3A> = rig
+            .units
+            .iter()
+            .map(|u| {
+                globals
+                    .get(u.root)
+                    .map_or(to_world, GlobalTransform::affine)
+            })
+            .collect();
         let speed = controller.forward_speed_km_h().abs();
         let here = vgt.translation();
         let markers: Vec<(Entity, Transform)> = stops
@@ -201,7 +138,8 @@ pub fn update_passengers(
         if rig.force_group > 0 {
             let n = std::mem::take(&mut rig.force_group);
             rig.sim.arrive_at_stop();
-            let door = rig.door_outside(0);
+            let (door_unit, door) = rig.door_outside(0);
+            let frame = frames.get(door_unit).copied().unwrap_or(to_world);
             let side = if door.x >= 0.0 { 1.0 } else { -1.0 };
             for slot in 0..n {
                 let Some(actor) =
@@ -211,12 +149,12 @@ pub fn update_passengers(
                 };
                 let local = door
                     + Vec3::new(
-                        side * (1.4 + (slot % 3) as f32 * 0.5),
+                        side * (1.6 + (slot % 3) as f32 * 0.8),
                         0.0,
-                        (slot as f32 - n as f32 / 2.0) * 0.7,
+                        ((slot / 3) as f32 - (n / 3) as f32 / 2.0) + (slot % 3) as f32 * 0.35,
                     );
-                let spot = to_world.transform_point3(local);
-                let entry = rig.nearest_entry(local);
+                let spot = frame.transform_point3(local);
+                let entry = rig.nearest_entry(spot, &frames);
                 let age = actor.age.unwrap_or(18 + (rig.rng.next_f32() * 50.0) as u32);
                 let stops_to_ride = 1 + (rig.rng.next_f32() * 3.0) as u32;
                 commands
@@ -251,8 +189,7 @@ pub fn update_passengers(
                         else {
                             break;
                         };
-                        let local = to_local.transform_point3(spot);
-                        let entry = rig.nearest_entry(local);
+                        let entry = rig.nearest_entry(spot, &frames);
                         let age = actor.age.unwrap_or(18 + (rig.rng.next_f32() * 50.0) as u32);
                         let stops_to_ride = 1 + (rig.rng.next_f32() * 6.0) as u32;
                         commands
@@ -291,7 +228,7 @@ pub fn update_passengers(
         );
         let mut still = Vec::new();
         for mut w in std::mem::take(&mut rig.approaching) {
-            w.target = to_world.transform_point3(rig.door_outside(w.entry));
+            w.target = rig.door_world(w.entry, &frames);
             let d = w.position.distance(w.target);
             let step = OUTSIDE_SPEED_M_S * dt;
             if d > 0.25 {
@@ -308,14 +245,23 @@ pub fn update_passengers(
                 still.push(w);
             } else if doors.entries.get(w.entry).copied().unwrap_or(false) {
                 if let Some(id) = rig.sim.board(w.age, w.stops, w.entry) {
-                    let local = to_local.transform_point3(w.position);
-                    commands.entity(w.entity).insert(ChildOf(vehicle));
+                    let unit = rig
+                        .sim
+                        .passengers()
+                        .iter()
+                        .find(|p| p.id == id)
+                        .map_or(0, |p| p.unit);
+                    let frame = frames.get(unit).copied().unwrap_or(to_world);
+                    let local = frame.inverse().transform_point3(w.position);
+                    let parent = rig.units.get(unit).map_or(vehicle, |u| u.root);
+                    commands.entity(w.entity).insert(ChildOf(parent));
                     if let Ok(mut t) = transforms.get_mut(w.entity) {
                         t.translation = local;
                     }
                     rig.actors.insert(
                         id,
                         Shown {
+                            unit,
                             entity: w.entity,
                             leg_m: w.leg_m,
                             phase: w.phase,
@@ -354,8 +300,9 @@ pub fn update_passengers(
                             .get(exit)
                             .and_then(|n| rig.sim.graph().points.get(*n))
                             .map_or(1.0, |p| if p.x >= 0.0 { 1.0 } else { -1.0 });
-                        let world = to_world.transform_point3(s.local);
-                        let away = to_world
+                        let frame = frames.get(s.unit).copied().unwrap_or(to_world);
+                        let world = frame.transform_point3(s.local);
+                        let away = frame
                             .transform_vector3(Vec3::new(out, 0.0, 0.0))
                             .normalize_or_zero();
                         commands.entity(s.entity).remove::<ChildOf>();
@@ -384,6 +331,14 @@ pub fn update_passengers(
                 continue;
             };
             let target = omsi_to_bevy_pos(p.position);
+            if p.unit != s.unit {
+                // Through the joint: the person now belongs to the other unit's frame.
+                if let Some(u) = rig.units.get(p.unit) {
+                    commands.entity(s.entity).insert(ChildOf(u.root));
+                    s.local = target;
+                    s.unit = p.unit;
+                }
+            }
             let moving = matches!(
                 p.phase,
                 Phase::Walking { .. } | Phase::WaitingOutside { .. }
@@ -443,7 +398,17 @@ pub fn update_passengers(
             walking.push(w);
         }
         rig.leaving = walking;
-        // What the scripts see.
+        // What the scripts see: the counts of the callbacks and the inputs.
+        if let Some(h) = handle {
+            if let Ok(mut c) = h.0.write() {
+                c.on_place = (0..rig.sim.cabin.places.len())
+                    .map(|i| rig.sim.on_place(i) as u32)
+                    .collect();
+                c.on_link = (0..rig.sim.graph().links.len())
+                    .map(|i| rig.sim.on_link(i) as u32)
+                    .collect();
+            }
+        }
         let mut feed = PassengerFeed {
             humans: rig.sim.humans_inside() as u32,
             ..default()

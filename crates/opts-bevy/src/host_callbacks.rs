@@ -11,6 +11,23 @@ use opts_core::formats::oft::OftFont;
 use opts_core::formats::script_texture::{CpuScriptTexture, ScriptTextureCanvas};
 use opts_sim::script::{ExternalHandler, Stacks};
 
+/// How many people stand on each place and walk on each path link of a vehicle (what the scripts'
+/// `GetHumanCountOnSeat` and `GetHumanCountOnPathLink` ask), kept by the passenger system.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct PassengerCounts {
+    /// People on place `i` (the n-th `[passpos]` of the cabin).
+    pub on_place: Vec<u32>,
+    /// People walking along link `i` of the paths file.
+    pub on_link: Vec<u32>,
+}
+
+/// The counts shared between the passenger system and the vehicle's callbacks.
+pub type SharedPassengerCounts = Arc<RwLock<PassengerCounts>>;
+
+/// The shared counts on the vehicle's root (the passenger system writes them).
+#[derive(bevy::prelude::Component, Debug, Clone, Default)]
+pub struct PassengerCountsHandle(pub SharedPassengerCounts);
+
 /// Context for vehicle script callbacks (`(M.V.name)`).
 #[derive(Clone, Default)]
 pub struct VehicleHostContext {
@@ -28,6 +45,8 @@ pub struct VehicleHostContext {
     pub tickets: Arc<opts_sim::passengers::TicketBook>,
     /// The values of the coins of the map's currency (`GiveChangeCoin` names one by index).
     pub coins: Arc<Vec<f32>>,
+    /// People per place and link (`GetHumanCountOn*`).
+    pub passengers: SharedPassengerCounts,
     /// The coins the scripts gave as change, by value, since the last read.
     pub change_given: Arc<RwLock<Vec<f32>>>,
 }
@@ -557,15 +576,27 @@ pub fn vehicle_callbacks_with_context(ctx: VehicleHostContext) -> ExternalHandle
             // 8. Passengers & Geometry
             // `seatIdx (M.V.GetHumanCountOnSeat)` -> count
             "gethumancountonseat" => {
-                let _seat = st.numbers.pop();
-                st.numbers.push(0.0);
+                let seat = st.numbers.pop().unwrap_or(0.0).round() as i64;
+                let n = usize::try_from(seat).ok().and_then(|i| {
+                    ctx.passengers
+                        .read()
+                        .ok()
+                        .and_then(|c| c.on_place.get(i).copied())
+                });
+                st.numbers.push(n.unwrap_or(0) as f32);
                 true
             }
 
             // `linkIdx (M.V.GetHumanCountOnPathLink)` -> count
             "gethumancountonpathlink" => {
-                let _link = st.numbers.pop();
-                st.numbers.push(0.0);
+                let link = st.numbers.pop().unwrap_or(0.0).round() as i64;
+                let n = usize::try_from(link).ok().and_then(|i| {
+                    ctx.passengers
+                        .read()
+                        .ok()
+                        .and_then(|c| c.on_link.get(i).copied())
+                });
+                st.numbers.push(n.unwrap_or(0) as f32);
                 true
             }
 

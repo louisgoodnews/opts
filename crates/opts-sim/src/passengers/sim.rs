@@ -94,8 +94,10 @@ pub struct Passenger {
     pub stamped: bool,
     /// Stops to ride before getting off.
     pub stops_left: u32,
-    /// Position in segment space.
+    /// Position in the space of the unit the passenger is in.
     pub position: Vec3,
+    /// The unit of the chain the passenger is in.
+    pub unit: usize,
     /// The pathpoint last reached.
     pub at: usize,
     route: Vec<usize>,
@@ -181,7 +183,7 @@ impl PassengerSim {
         let place_node = cabin
             .places
             .iter()
-            .map(|p| graph.nearest(p.position).unwrap_or(0))
+            .map(|p| graph.nearest_in_unit(p.position, p.unit).unwrap_or(0))
             .collect();
         let entry_nodes = cabin.entries.clone();
         let exit_nodes = cabin.exits.clone();
@@ -212,6 +214,12 @@ impl PassengerSim {
         &self.passengers
     }
 
+    /// Removes everybody (passengers switched off).
+    pub fn clear(&mut self) {
+        self.passengers.clear();
+        self.events.clear();
+    }
+
     /// Takes the events since the last call.
     pub fn take_events(&mut self) -> Vec<Event> {
         std::mem::take(&mut self.events)
@@ -235,6 +243,7 @@ impl PassengerSim {
             stamped: false,
             stops_left: stops.max(1),
             position: self.graph.points.get(node).copied().unwrap_or(Vec3::ZERO),
+            unit: self.graph.unit(node),
             at: node,
             route: Vec::new(),
             next: Next::Place,
@@ -439,7 +448,14 @@ impl PassengerSim {
         };
         self.events.push(Event::Boarded { id, entry });
         let b = self.tickets.behaviour;
+        let entry_sells = !self
+            .cabin
+            .entry_no_sale
+            .get(entry)
+            .copied()
+            .unwrap_or(false);
         let buys = !self.cabin.no_ticket_sale
+            && entry_sells
             && !self.cabin.ticket_sales.is_empty()
             && self.rng.next_f32() < b.ticketbuy_prop;
         let ticket = if buys {
@@ -522,6 +538,15 @@ impl PassengerSim {
                 break;
             };
             let target = self.graph.points[next];
+            // The joint between two units is a hop: the two points are in different spaces and in
+            // the same place of the vehicle.
+            if self.graph.unit(next) != p.unit {
+                p.position = target;
+                p.unit = self.graph.unit(next);
+                p.at = next;
+                p.route.remove(0);
+                continue;
+            }
             let d = p.position.distance(target);
             if d <= budget {
                 budget -= d;
@@ -551,6 +576,7 @@ impl PassengerSim {
                 let place = self.passengers[i].place.unwrap_or(usize::MAX);
                 if let Some(pl) = self.cabin.places.get(place) {
                     self.passengers[i].position = pl.position;
+                    self.passengers[i].unit = pl.unit;
                     self.events.push(Event::Settled {
                         id,
                         place,

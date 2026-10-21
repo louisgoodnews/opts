@@ -3,7 +3,7 @@
 use opts_core::formats::ticketpack::TicketPack;
 use opts_core::formats::vehicles::cabin::PassengerCabin;
 use opts_core::formats::vehicles::PassengerPaths;
-use opts_sim::passengers::{Behaviour, Cabin, Paths, Place, Ticket, TicketBook};
+use opts_sim::passengers::{Behaviour, Cabin, Paths, Place, Ticket, TicketBook, Unit};
 
 /// The cabin of the simulation from the parsed `passengercabin.cfg`.
 #[must_use]
@@ -16,6 +16,7 @@ pub fn cabin_spec(c: &PassengerCabin) -> Cabin {
                 position: p.position,
                 seat_height: p.seat_height,
                 rotation_deg: p.rotation_deg,
+                unit: 0,
             })
             .collect(),
         entries: c.entries.clone(),
@@ -23,6 +24,7 @@ pub fn cabin_spec(c: &PassengerCabin) -> Cabin {
         stampers: c.stampers.iter().map(|m| m.pathpoint).collect(),
         ticket_sales: c.ticket_sales.iter().map(|m| m.pathpoint).collect(),
         no_ticket_sale: c.no_ticket_sale,
+        entry_no_sale: c.entry_no_sale.clone(),
     }
 }
 
@@ -32,6 +34,18 @@ pub fn paths_spec(p: &PassengerPaths) -> Paths {
     Paths {
         points: p.points.iter().map(|p| p.position).collect(),
         links: p.links.iter().map(|l| (l.from, l.to)).collect(),
+        unit_of: Vec::new(),
+    }
+}
+
+/// A unit of the chain from its parsed cabin and paths.
+#[must_use]
+pub fn unit_spec(c: &PassengerCabin, p: &PassengerPaths) -> Unit {
+    Unit {
+        cabin: cabin_spec(c),
+        paths: paths_spec(p),
+        link_to_prev: c.link_to_prev,
+        link_to_next: c.link_to_next,
     }
 }
 
