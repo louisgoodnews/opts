@@ -40,6 +40,18 @@ pub fn specular_to_reflectance(specular: [f32; 3]) -> f32 {
     (lum.clamp(0.0, 1.0) * 0.5).clamp(0.0, 0.5)
 }
 
+/// The opacity an `.o3d` material's diffuse alpha stands for. A material exported with alpha 0
+/// (the lens of the MAN Lion's City rear lamps, 740 faces) is not invisible in OMSI: it only
+/// becomes translucent through `[matl_alpha]`, so a zero is read as opaque.
+#[must_use]
+pub fn effective_diffuse_alpha(alpha: f32) -> f32 {
+    if alpha < 0.01 {
+        1.0
+    } else {
+        alpha.clamp(0.0, 1.0)
+    }
+}
+
 /// Converts an OMSI `.o3d` [`Material`](O3dMaterial) into a Bevy [`StandardMaterial`].
 ///
 /// # Arguments
@@ -51,6 +63,7 @@ pub fn o3d_material_to_standard_material(
     texture_handle: Option<Handle<Image>>,
 ) -> StandardMaterial {
     let [r, g, b, a] = mat.diffuse;
+    let a = effective_diffuse_alpha(a);
     let base_color = Color::srgba(
         r.clamp(0.0, 1.0),
         g.clamp(0.0, 1.0),
@@ -135,6 +148,13 @@ pub fn uses_texture_alpha(mode: Option<u32>) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn zero_diffuse_alpha_is_opaque_and_fractions_stay() {
+        assert_eq!(effective_diffuse_alpha(0.0), 1.0);
+        assert_eq!(effective_diffuse_alpha(0.4), 0.4);
+        assert_eq!(effective_diffuse_alpha(1.0), 1.0);
+    }
 
     #[test]
     fn test_roughness_conversion() {
