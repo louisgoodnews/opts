@@ -38,6 +38,17 @@ pub struct Unit<'a> {
     pub engine: Option<&'a mut ScriptEngine>,
     /// The cables the unit's vehicle file declares.
     pub cables: &'a [Cable],
+    /// The vehicle of the formation the unit belongs to (0 for the head's own chain, then one per
+    /// coupled car): the lines of the head flags stay within one vehicle, see `is_local`.
+    pub vehicle: usize,
+}
+
+/// Whether the line `receive` is private to a vehicle of a formation. A cab's *inactive* flags
+/// (`SLR_A_Kopf_Inaktiv`) say whether the ends of **this** tram are occupied; with the passive
+/// trams of a traction on the same line every head would read the inactive flag of another
+/// tram's cab, the driven tram would take itself for a trailing car and cut its own traction.
+fn is_local(receive: &str) -> bool {
+    receive.to_ascii_lowercase().contains("inaktiv")
 }
 
 fn find(cables: &[Cable], front: bool, kind: char, index: u32) -> Option<&Cable> {
@@ -77,11 +88,15 @@ pub fn bridge(units: &mut [Unit<'_>]) -> usize {
                 continue;
             }
             // The run of units the line connects: each declares it and the plugs between touch.
+            let local = units[start]
+                .declares(key)
+                .is_some_and(|c| is_local(&c.receive));
             let mut end = start + 1;
             while end < units.len()
                 && units[end].declares(key).is_some()
                 && units[end - 1].plugged(false, key)
                 && units[end].plugged(true, key)
+                && !(local && units[end].vehicle != units[end - 1].vehicle)
             {
                 end += 1;
             }

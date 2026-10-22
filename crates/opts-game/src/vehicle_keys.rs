@@ -20,8 +20,12 @@ use crate::settings_registry::{Category, SettingDescriptor, SettingKind, Setting
 pub struct VehicleKeyAction {
     /// Short name (`lights`), the argument of `vehicle.key`.
     pub id: &'static str,
-    /// The setting that holds the key.
+    /// The setting that holds the key (of buses and trolleybuses when the action is shared).
     pub setting: &'static str,
+    /// The setting that holds the key of rail vehicles for an action shared by both kinds
+    /// (`controls.rail.<id>`): trams are operated with their own layout, which starts out as the
+    /// bus's. `None` for an action of one kind only.
+    pub rail_setting: Option<&'static str>,
     /// Message key of the label .
     pub label_key: &'static str,
     /// Message key of the description.
@@ -76,6 +80,10 @@ macro_rules! action {
         VehicleKeyAction {
             id: $id,
             setting: concat!("controls.vehicle.", $id),
+            rail_setting: match $scope {
+                Scope::Both => Some(concat!("controls.rail.", $id)),
+                _ => None,
+            },
             label_key: concat!("set-vk-", $id),
             desc_key: concat!("set-vk-", $id, "-desc"),
             trigger: $trigger,
@@ -182,12 +190,30 @@ pub const ACTIONS: &[VehicleKeyAction] = &[
     action!("ticket_take", "change_take", "Shift+T", false),
 ];
 
+impl VehicleKeyAction {
+    /// The setting that holds this action's key for a bus (`rail`: false) or a rail vehicle.
+    #[must_use]
+    pub fn setting_for(&self, rail: bool) -> &'static str {
+        if rail {
+            self.rail_setting.unwrap_or(self.setting)
+        } else {
+            self.setting
+        }
+    }
+
+    /// Whether `setting` is one of this action's keys.
+    #[must_use]
+    pub fn owns(&self, setting: &str) -> bool {
+        self.setting == setting || self.rail_setting == Some(setting)
+    }
+}
+
 /// The action with this id or this setting key.
 #[must_use]
 pub fn action(id_or_setting: &str) -> Option<&'static VehicleKeyAction> {
     ACTIONS
         .iter()
-        .find(|a| a.id == id_or_setting || a.setting == id_or_setting)
+        .find(|a| a.id == id_or_setting || a.owns(id_or_setting))
 }
 
 /// The action that raises `trigger`.
@@ -199,7 +225,7 @@ pub fn action_of_trigger(trigger: &str) -> Option<&'static VehicleKeyAction> {
 /// The settings, one `Binding` row each, in the Controls category.
 #[must_use]
 pub fn descriptors() -> Vec<SettingDescriptor> {
-    ACTIONS
+    let mut rows: Vec<SettingDescriptor> = ACTIONS
         .iter()
         .enumerate()
         .map(|(i, a)| {
@@ -212,9 +238,37 @@ pub fn descriptors() -> Vec<SettingDescriptor> {
                 a.label_key,
                 a.desc_key,
             )
-            .keywords(&["key", "keyboard", "binding", "vehicle", "bus", "tram"])
+            .keywords(&["key", "keyboard", "binding", "vehicle", "bus"])
         })
-        .collect()
+        .collect();
+    // The same actions with the keys of rail vehicles.
+    rows.extend(ACTIONS.iter().enumerate().filter_map(|(i, a)| {
+        Some(
+            SettingDescriptor::new(
+                a.rail_setting?,
+                SettingKind::Binding,
+                a.default,
+                Category::Controls,
+                300 + i as u16,
+                rail_label_key(a.id),
+                rail_desc_key(a.id),
+            )
+            .keywords(&[
+                "key", "keyboard", "binding", "vehicle", "tram", "train", "rail",
+            ]),
+        )
+    }));
+    rows
+}
+
+/// Message key of the label of an action's rail-vehicle row.
+fn rail_label_key(id: &str) -> &'static str {
+    Box::leak(format!("set-vkr-{id}").into_boxed_str())
+}
+
+/// Message key of the description of an action's rail-vehicle row.
+fn rail_desc_key(id: &str) -> &'static str {
+    Box::leak(format!("set-vkr-{id}-desc").into_boxed_str())
 }
 
 /// Why `chord` cannot be the key of `setting`: a key OPTS uses itself, or another action's key.
@@ -231,32 +285,37 @@ pub fn conflict(
             chord.to_text().unwrap_or_default()
         ));
     }
-    let scope = action(setting).map_or(Scope::Both, |a| a.scope);
+    // Only the keys of the same kind of vehicle can clash: a bus's and a tram's layouts are apart.
+    let rail = ACTIONS.iter().any(|a| a.rail_setting == Some(setting))
+        || action(setting).is_some_and(|a| a.scope == Scope::Tram);
     for a in ACTIONS
         .iter()
-        .filter(|a| a.setting != setting && a.scope.overlaps(scope))
+        .filter(|a| a.scope.applies(rail) && a.setting_for(rail) != setting)
     {
-        let other = registry.text(settings, a.setting).unwrap_or_default();
+        let other = registry
+            .text(settings, a.setting_for(rail))
+            .unwrap_or_default();
         if KeyChord::parse(&other).ok().flatten() == Some(chord) {
             return Some(format!(
                 "{} is already the key of {} ({})",
                 chord.to_text().unwrap_or_default(),
                 a.id,
-                a.setting
+                a.setting_for(rail)
             ));
         }
     }
     None
 }
 
-/// The chord that a setting holds for `a` now.
+/// The chord that a setting holds for `a` now on a bus (`rail`: false) or a rail vehicle.
 #[must_use]
 pub fn chord_of(
     registry: &SettingsRegistry,
     settings: &GameSettings,
     a: &VehicleKeyAction,
+    rail: bool,
 ) -> Option<KeyChord> {
-    let text = registry.text(settings, a.setting)?;
+    let text = registry.text(settings, a.setting_for(rail))?;
     KeyChord::parse(&text).ok().flatten()
 }
 
@@ -285,7 +344,7 @@ pub fn sync_bindings(
         .iter()
         .filter(|a| a.scope.applies(tram))
         .filter_map(|a| {
-            let c = chord_of(&registry, &settings, a)?;
+            let c = chord_of(&registry, &settings, a, tram)?;
             Some(
                 std::iter::once(a.trigger)
                     .chain(a.also)
@@ -370,6 +429,45 @@ mod tests {
                 assert_ne!(l.t(a.label_key), a.label_key, "{}", a.label_key);
                 assert_ne!(l.t(a.desc_key), a.desc_key, "{}", a.desc_key);
             }
+            if let Some(rail) = a.rail_setting {
+                let d = reg.get(rail).expect(rail);
+                assert!(matches!(d.kind, SettingKind::Binding));
+                for l in [&loc, &de] {
+                    assert_ne!(l.t(d.label_key), d.label_key, "{}", d.label_key);
+                    assert_ne!(l.t(d.description_key), d.description_key);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn a_bus_and_a_tram_have_their_own_layouts() {
+        let (reg, caps, mut s) = parts();
+        // The tram's lights go on another key; the bus keeps L.
+        reg.set(&mut s, &caps, "controls.rail.lights", "J").unwrap();
+        let lights = action("lights").expect("lights");
+        assert_eq!(
+            chord_of(&reg, &s, lights, false).and_then(|c| c.to_text()),
+            Some("L".to_owned())
+        );
+        assert_eq!(
+            chord_of(&reg, &s, lights, true).and_then(|c| c.to_text()),
+            Some("J".to_owned())
+        );
+        // A key taken in one layout is free in the other: the bus may use J for the hazard
+        // lights, the tram may not.
+        assert!(reg
+            .set(&mut s, &caps, "controls.vehicle.hazard", "J")
+            .is_ok());
+        let e = reg
+            .set(&mut s, &caps, "controls.rail.hazard", "J")
+            .unwrap_err();
+        assert!(e.to_string().contains("lights"), "{e}");
+        // The shared default is the same key in both layouts.
+        for a in ACTIONS.iter().filter(|a| a.rail_setting.is_some()) {
+            assert_eq!(a.default, a.default);
+            assert_eq!(a.setting_for(true), a.rail_setting.unwrap());
+            assert_eq!(a.setting_for(false), a.setting);
         }
     }
 

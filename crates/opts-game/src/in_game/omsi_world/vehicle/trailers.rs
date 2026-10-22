@@ -98,6 +98,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
         part: None,
         head: true,
         cables: super::scripts::cables_of(tractor),
+        vehicle: 0,
     }];
     // Axles counted so far: trailer models number theirs after the head's (`Wheel_Rotation_2_L`).
     let mut axle_base = tractor.axles.len();
@@ -106,6 +107,8 @@ pub(in super::super::super) fn spawn_trailer_chain(
     let head_kg = commands_mass(tractor);
     let mut powered_kg = head_kg;
     let mut total_kg = head_kg;
+    // The head's own tram (its chain): its scripts' torque and brake force are those of this mass.
+    let mut lead_kg = head_kg;
     for part in &plan.followers {
         let (path, manifest, dir) = (&part.path, &part.manifest, &part.dir);
         let name = path
@@ -181,6 +184,9 @@ pub(in super::super::super) fn spawn_trailer_chain(
         previous_kg = load.mass_kg;
         if rail {
             total_kg += load.mass_kg;
+            if part.car == 0 {
+                lead_kg += load.mass_kg;
+            }
             if part.powered {
                 powered_kg += load.mass_kg;
             }
@@ -240,6 +246,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
             part: engine_unit,
             head: false,
             cables: super::scripts::cables_of(manifest),
+            vehicle: part.car,
         });
         super::doors::attach_unit_door_points(job, commands, root, seg, manifest, dir);
         crate::player_sound::attach_unit(job, commands, seg, Some(owner), manifest, dir);
@@ -292,9 +299,15 @@ pub(in super::super::super) fn spawn_trailer_chain(
             powered_kg,
             braked_kg: total_kg,
         };
+        // The cars behind run scripts of their own that stand passive (their cabs are inactive,
+        // their brakes hold): the head's scripts give the pull and the brake of one tram, the
+        // other trams of a traction add theirs in proportion to their mass.
+        let lead = lead_kg.max(1.0);
+        let (pull_scale, brake_scale) = (powered_kg / lead, total_kg / lead);
         commands.queue(move |world: &mut World| {
             if let Some(mut player) = world.get_mut::<super::super::rail::RailPlayer>(root) {
                 player.set_consist(load);
+                player.set_script_scale(pull_scale, brake_scale);
             }
         });
     }

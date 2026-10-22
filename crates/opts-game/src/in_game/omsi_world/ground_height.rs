@@ -47,7 +47,14 @@ struct RoadSample {
 impl RoadSample {
     /// Height of the drawn road surface at `(x, y)`: the datum plus the profile's ground
     /// surface at the point's lateral offset; the datum where the profile lays none there.
+    #[cfg(test)]
     fn surface_z(&self, x: f32, y: f32) -> f32 {
+        self.surface_at(x, y).0
+    }
+
+    /// [`surface_z`](Self::surface_z) and whether the profile really lays a surface at the
+    /// point (`false`: the height is only the spline's datum).
+    fn surface_at(&self, x: f32, y: f32) -> (f32, bool) {
         let (sin, cos) = self.heading.sin_cos();
         // Right of the direction of travel: (cos h, -sin h), as the ribbons are extruded.
         let lateral = (x - self.x) * cos - (y - self.y) * sin;
@@ -56,7 +63,7 @@ impl RoadSample {
         self.surface
             .iter()
             .find(|seg| seg.x0 - 0.05 <= px && px <= seg.x1 + 0.05)
-            .map_or(self.z, |seg| self.z + seg.z_at(px))
+            .map_or((self.z, false), |seg| (self.z + seg.z_at(px), true))
     }
 }
 
@@ -172,8 +179,8 @@ impl GroundIndex {
     #[must_use]
     pub fn height_at(&self, x: f32, y: f32, near_z: f32) -> Option<f32> {
         let (cx, cy) = cell_of(x, y);
-        // Road samples the point lies on: (distance, height).
-        let mut on_road: Vec<(f32, f32)> = Vec::new();
+        // Road samples the point lies on: (distance, height, a surface really lies there).
+        let mut on_road: Vec<(f32, f32, bool)> = Vec::new();
         for dx in -1..=1 {
             for dy in -1..=1 {
                 for (_, s) in self.cells.get(&(cx + dx, cy + dy)).into_iter().flatten() {
@@ -181,11 +188,19 @@ impl GroundIndex {
                     // Samples are 2 m apart: a point is on the road within its half width plus
                     // half a sample step.
                     if d <= s.half_width + SAMPLE_STEP_M * 0.5 {
-                        on_road.push((d, s.surface_z(x, y)));
+                        let (z, laid) = s.surface_at(x, y);
+                        on_road.push((d, z, laid));
                     }
                 }
             }
         }
+        // A spline whose profile lays no surface at the point (the datum of a bridge deck beside
+        // the road, a verge) is no floor where another spline does lay one: otherwise a
+        // vehicle that once stood on the higher layer kept to it along the whole road.
+        if on_road.iter().any(|(_, _, laid)| *laid) {
+            on_road.retain(|(_, _, laid)| *laid);
+        }
+        let on_road: Vec<(f32, f32)> = on_road.into_iter().map(|(d, z, _)| (d, z)).collect();
         // Of overlapping surfaces (bridges) the one closest to `near_z`; its height is blended
         // from the samples around the point, so the height is continuous along the road instead
         // of stepping from sample to sample (which made the vehicle pitch and bob).
@@ -493,5 +508,30 @@ mod surface_tests {
             (s.surface_z(100.0, 198.5) - 10.06).abs() < 1e-5,
             "south is the sloping right half"
         );
+    }
+
+    /// A spline whose profile lays no surface where the vehicle is (its datum only) does not
+    /// make a second floor above the road that has one.
+    #[test]
+    fn a_datum_without_a_laid_surface_is_not_a_floor_next_to_a_real_road() {
+        let mut index = GroundIndex::default();
+        let road = sample(false); // laid surface across -3..3
+        let mut deck = sample(false);
+        deck.z = 10.6;
+        deck.surface = Arc::new(vec![SurfaceSegment {
+            x0: 5.0,
+            z0: 0.0,
+            x1: 8.0,
+            z1: 0.0,
+        }]);
+        deck.half_width = 9.0;
+        index
+            .cells
+            .entry(cell_of(100.0, 200.0))
+            .or_default()
+            .extend([((0, 0), road), ((0, 0), deck)]);
+        // The vehicle stood on the higher layer before: it is put back on the road.
+        let h = index.height_at(100.0, 200.0, 10.6).expect("road");
+        assert!((h - 10.12).abs() < 0.01, "{h}");
     }
 }

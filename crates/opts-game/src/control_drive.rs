@@ -399,7 +399,11 @@ fn vehicle_keys(world: &mut World, _: &Value) -> Outcome {
         .iter()
         .map(|a| {
             let key = registry.text(settings, a.setting).unwrap_or_default();
+            let rail_key = a
+                .rail_setting
+                .map(|s| registry.text(settings, s).unwrap_or_default());
             json!({ "action": a.id, "setting": a.setting, "trigger": a.trigger, "key": key,
+                    "rail_setting": a.rail_setting, "rail_key": rail_key,
                     "default": a.default, "held": a.held })
         })
         .collect();

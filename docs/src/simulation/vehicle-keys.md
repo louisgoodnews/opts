@@ -66,6 +66,19 @@ The cabin light key is one key for the cab light's on and off, whatever the vehi
 
 Not rebindable here and driven by OPTS itself: throttle, brake, steering, gears (W, S, arrows, D/N/R), parking brake (`.`, which also raises `parking_brake_toggle`), cameras (digits, Tab), menus. A vehicle that does not define a trigger simply ignores the key (`handled: false` in the protocol answer).
 
+### A layout per kind of vehicle (2026-10-22)
+
+A bus and a tram are not operated alike, so the keys are kept per kind of vehicle. The actions that exist on both
+(battery, engine start, lights, indicators, hazard lights, horn, wipers, door clearance, cabin and interior lights,
+tickets) have two settings: `controls.vehicle.<id>` for buses and trolleybuses and `controls.rail.<id>` for trams
+and trains; both start with OMSI's key. The player's vehicle decides which one is live (`RailPlayer`), and it
+changes when the player switches vehicle. Actions of one kind only keep their one setting (bus doors, microphone;
+the tram's side selection, power lever, direction, points keys). Keys are checked against clashes **within one
+layout**: Q may be the bus's microphone and the tram's lever, J may be the bus's hazard lights and the tram's
+headlights. A key that drives the vehicle (W is the throttle of a bus) stays refused in a bus layout and is free in
+a tram's, where W is the direction selector. The settings page lists the tram rows next to the bus rows
+("(trams, trains)") and has its own reset row; the help overlay and `vehicle.keys` show the layout of the vehicle in use.
+
 ## Open
 
 * Digits 6 to 9 now raise the interior-light triggers although OMSI's own camera keys are not on them; OPTS's cameras use 0 to 5.

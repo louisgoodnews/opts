@@ -324,3 +324,45 @@ fn a_head_with_no_driven_axle_counts_as_driven_on_all() {
     sim.set_trailers(vec![UnitLoad::with_axles(5_000.0, 2, 2)]);
     assert!((sim.driven_mass_kg() - 15_000.0).abs() < 1.0);
 }
+
+/// A forward torque while the vehicle rolls backwards slows the roll: the traction part of the
+/// acceleration (the difference to a run without torque) is forward at any speed, also negative.
+#[test]
+fn forward_script_torque_pushes_forward_while_rolling_backwards() {
+    for v in [-0.5_f32, -5.0, -12.0] {
+        let accel = |torque: f32| {
+            let mut sim = towing(None, false);
+            sim.chassis.local_velocity.y = v;
+            sim.script_drive = Some(ScriptDrive {
+                wheel_torque_nm: torque,
+                brake_force_n: 0.0,
+            });
+            for _ in 0..4 {
+                sim.step(1.0 / 64.0);
+            }
+            sim.chassis.local_acceleration.y
+        };
+        let traction = accel(4_000.0) - accel(0.0);
+        assert!(traction > 0.0, "at {v} m/s the torque pushed {traction}");
+    }
+}
+
+/// Rolling backwards with a constant forward idle torque (a bus in drive on a flat road): the
+/// speed moves towards zero, it never grows backwards.
+#[test]
+fn a_steady_forward_torque_slows_a_roll_back_on_the_flat() {
+    let mut sim = towing(None, false);
+    sim.chassis.local_velocity.y = -4.0;
+    sim.script_drive = Some(ScriptDrive {
+        wheel_torque_nm: 4_000.0,
+        brake_force_n: 0.0,
+    });
+    let mut last = sim.chassis.forward_speed_m_s();
+    for i in 0..640 {
+        sim.step(1.0 / 64.0);
+        let v = sim.chassis.forward_speed_m_s();
+        assert!(v >= last - 1e-3, "step {i}: {last} -> {v}");
+        last = v;
+    }
+    assert!(last > -4.0, "ended at {last}");
+}
