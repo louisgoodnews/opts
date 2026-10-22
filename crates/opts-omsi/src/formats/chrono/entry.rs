@@ -465,7 +465,8 @@ impl ChronoSet {
         out
     }
 
-    /// The text of `ailists.cfg` in force: the map's file with the `ailists_#upd.cfg` of every
+    /// The text of `ailists.cfg` in force: the map's file (the only place a map's list is read
+    /// from; an active entry's own `ailists.cfg` replaces it) with the `ailists_#upd.cfg` of every
     /// active entry merged in order ([`merge_ailists`]). `None` when the map has no `ailists.cfg`
     /// and no active entry updates it.
     #[must_use]
@@ -474,6 +475,14 @@ impl ChronoSet {
             .and_then(|p| std::fs::read(p).ok())
             .map(|b| decode_bytes(&b));
         for e in self.active_entries(active) {
+            // A complete list in the entry's own folder replaces the map's.
+            if let Some(full) = e
+                .files
+                .get("ailists.cfg")
+                .and_then(|p| std::fs::read(p).ok())
+            {
+                text = Some(decode_bytes(&full));
+            }
             let Some(update) = e
                 .files
                 .get("ailists_#upd.cfg")

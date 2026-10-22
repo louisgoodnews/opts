@@ -402,6 +402,14 @@ Implemented 2026-10-17 on `agent/lighting-cones-rooms` (step 4 of the [lighting 
 * **Open question Q5 (which data wins when `[light_enh_2]` and `[spotlight]` disagree).** The player vehicle's cones come from its `[spotlight]`s (each cone is a child of its `SpotLight` entity and follows `Spot_Select` through the light's intensity over `ScriptLight::base_intensity`); its `[light_enh_2]` headlights then get no cone (`spawn_vehicle_glows_with_cones(..., false)`). A vehicle without `[spotlight]` (AI, parked) gets a cone per `[light_enh_2]` headlight (`is_headlight`) with brightness from the glow's level (`AI_Light`). The reason: `[spotlight]` is the real light's data (range, angles), `[light_enh_2]` is a corona description. Tail, brake and indicator lights get no cone.
 * **Known mismatch (not changed).** `spawn_vehicle_model` passes the `[spotlight]` cone angles to Bevy's `SpotLight` as half angles (`outer_angle: spot.outer_cone.to_radians()`), while the cone reads them as full angles. A 30/70 spotlight therefore lights a 70° half angle (Bevy clamps to 90°) but shows a 25° half-angle cone. If OMSI's values are full angles, the real light is too wide, not the cone too narrow. Left alone: it changes the look of the player's headlights and needs a live comparison.
 
+### Wide corona angles and spot lights (2026-10-22)
+
+A tram's `[light_enh_2]` headlights say outer angle 180 and its `[spotlight]`s 70 degrees; clamped to the 25 degree
+limit those made a 40 m long wedge that fanned over the whole street and ended in a hard flat edge ("a plane of
+light" in front of the NF6D). A headlight whose outer angle is above 90 degrees (a corona angle) and every vehicle
+`[spotlight]` now get a haze cone of at most `HEADLIGHT_CORONA_BEAM_HALF_DEG` (11 degrees); a `[light_enh_2]` that
+states a real beam angle keeps it. The lit area on the road is the Bevy spot light's and keeps its real angle.
+
 ### Selection and budget
 
 `light_cone_pool_system` runs after `LightQualitySet` and `SceneryRuntimeSet`, so it sees this frame's levels and settings.

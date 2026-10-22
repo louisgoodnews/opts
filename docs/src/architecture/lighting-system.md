@@ -559,3 +559,8 @@ Steps 5 and 6 of the plan; design from the [reflections research](reflections-re
 * Bevy 0.20.0 source from the local cargo registry (`bevy_light`, `bevy_pbr`, `bevy_camera`, `bevy_render`, `bevy_app`); every claim carries its file and line.
 * Moon model: low-precision lunar and solar series after Meeus, *Astronomical Algorithms*, ch. 25 and 47 (the formulas, not the code); phase function after Allen's lunar magnitude formula; reference phase times from published tables of lunar phases (principal phases, 2000-2025).
 * **ADR-0002 attestation:** no OMSI executable or DLL was inspected. Only OMSI text and configuration files and one texture were read. No OMSI asset is in the repository.
+
+## Interior views and light maps (2026-10-22)
+
+* **Interior ambient.** In an interior view (cockpit, passenger) the main camera gets its own `AmbientLight` and the sky cube is scaled by `INTERIOR_AMBIENT_SCALE` (0.45): a cabin is lit through its windows and by its own lamps, not by the whole sky, and at full sky ambient the NF6D's dashboard and saloon looked flat and washed out (`light_rooms::interior_ambient_system`, `sky_cube`).
+* **Light-map luminance.** The cameras run at a fixed physical exposure at which 1 cd/m² is black, so a `[matl_lightmap]` at factor 1 was invisible (the NF6D's `Scheinwerfer_A` lens and its tail and indicator lenses did not glow although the variable was 1). A light map now emits `factor × LIGHT_MAP_NITS` (100) (`vehicle_lights.rs`).

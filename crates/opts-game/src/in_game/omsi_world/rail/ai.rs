@@ -1,26 +1,8 @@
 //! AI trains and bikes on the rail network: the unit and train specs read from the vehicle files, the variants, spawning and moving them.
 
+use super::obstacles::{nearest_gap, Obstacle};
+use super::spec::{load_spec, load_zug_spec, TrainSpec};
 use super::*;
-
-/// One unit of a consist.
-struct UnitSpec {
-    name: String,
-    lod: ModelLod,
-    model_dir: std::path::PathBuf,
-    tex_dirs: Vec<std::path::PathBuf>,
-    /// Distance of the unit's origin behind the head unit's origin (m).
-    behind: f32,
-    /// Hangs backwards (coupled with the `true` flag).
-    reversed: bool,
-    /// Half bogie span (`[boogies]`; 0 when unknown).
-    span: f32,
-}
-
-/// A trainset assembled from a `.bus`/`.ovh` chain.
-struct TrainSpec {
-    name: String,
-    units: Vec<UnitSpec>,
-}
 
 /// Rail vehicles found in the map's AI lists.
 #[derive(Resource, Default)]
@@ -66,115 +48,56 @@ pub fn load_rail_variants(
     };
     let lists = opts_core::formats::map::AiLists::parse(&bytes);
     let mut seen = std::collections::HashSet::new();
+    // A map names its own fleet: the depot vehicles (EVAG's NF6D on the tram map) or groups called
+    // after trams. The rest of the lists (U-Bahn cars, regional trains) are traffic of other
+    // networks; they are used only when the map names no fleet of its own.
+    let tram_groups = |name: &str| {
+        let n = name.to_ascii_lowercase();
+        ["tram", "strassenbahn", "variobahn", "stadtbahn"]
+            .iter()
+            .any(|k| n.contains(k))
+    };
+    let mut candidates: Vec<(bool, &str)> = lists
+        .depot_vehicles
+        .iter()
+        .map(|v| (true, v.as_str()))
+        .collect();
     for g in &lists.groups {
-        for e in &g.entries {
-            let f = e.vehicle.to_ascii_lowercase();
-            if !(f.ends_with(".bus") || f.ends_with(".ovh")) || !seen.insert(f) {
-                continue;
-            }
-            if let Some((spec, light)) = load_spec(&job, &e.vehicle) {
-                if light {
-                    bikes.0.specs.push(spec);
-                } else {
-                    pool.specs.push(spec);
-                }
+        let own = tram_groups(&g.name);
+        candidates.extend(g.entries.iter().map(|e| (own, e.vehicle.as_str())));
+    }
+    let mut trains: Vec<(bool, TrainSpec)> = Vec::new();
+    for (own, vehicle) in candidates {
+        let f = vehicle.to_ascii_lowercase();
+        let zug = f.ends_with(".zug");
+        if !(zug || f.ends_with(".bus") || f.ends_with(".ovh")) || !seen.insert(f) {
+            continue;
+        }
+        let loaded = if zug {
+            load_zug_spec(&job, vehicle)
+        } else {
+            load_spec(&job, vehicle)
+        };
+        if let Some((spec, light)) = loaded {
+            if light {
+                bikes.0.specs.push(spec);
+            } else {
+                trains.push((own, spec));
             }
         }
     }
+    // Depot buses are road vehicles: only a rail fleet of the map's own counts as "named".
+    let any_own = trains.iter().any(|(own, _)| *own);
+    pool.specs = trains
+        .into_iter()
+        .filter(|(own, _)| *own || !any_own)
+        .map(|(_, spec)| spec)
+        .collect();
     tracing::info!(
         trains = pool.specs.len(),
         riders = bikes.0.specs.len(),
         "rail vehicles and cycles in the AI lists"
     );
-}
-
-fn parse_unit(
-    job: &WorldLoadJob,
-    path: &Path,
-) -> Option<(
-    BusManifest,
-    ModelLod,
-    std::path::PathBuf,
-    Vec<std::path::PathBuf>,
-)> {
-    let manifest = BusManifest::parse_bytes(&std::fs::read(path).ok()?).ok()?;
-    let dir = path.parent()?.to_path_buf();
-    let cfg = job.install.find_in(&dir, manifest.model_cfg.as_deref()?)?;
-    let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).ok()?).ok()?;
-    let lod = model
-        .lods
-        .iter()
-        .find(|l| l.threshold == 0.0)
-        .or_else(|| model.lods.first())?
-        .clone();
-    let model_dir = cfg.parent()?.to_path_buf();
-    let tex_dirs = vec![
-        job.install
-            .find_in(&dir, "texture")
-            .unwrap_or_else(|| dir.join("texture")),
-        model_dir.join("texture"),
-    ];
-    Some((manifest, lod, model_dir, tex_dirs))
-}
-
-/// The coupling chain of a `[type] 2` vehicle and whether it is a light one (bicycle, e-scooter:
-/// under a tonne; OMSI files them under the rail type too); `None` for road vehicles and
-/// unreadable files.
-fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
-    let path = job.install.find_file(rel)?;
-    let (mut manifest, lod, model_dir, tex_dirs) = parse_unit(job, &path)?;
-    if !is_rail(&manifest) {
-        return None;
-    }
-    let light = manifest.mass_tonnes.is_some_and(|m| m < 1.0);
-    let name = path.file_stem()?.to_string_lossy().into_owned();
-    let mut units = vec![UnitSpec {
-        name: name.clone(),
-        lod,
-        model_dir,
-        tex_dirs,
-        behind: 0.0,
-        reversed: false,
-        span: manifest.bogie_half_span.unwrap_or(0.0),
-    }];
-    let mut dir = path.parent()?.to_path_buf();
-    let mut behind = 0.0_f32;
-    for _ in 0..40 {
-        let Some(next) = manifest.couple_back.clone() else {
-            break;
-        };
-        let Some(next_path) = job.install.find_in(&dir, &next) else {
-            break;
-        };
-        let Some((m, lod, model_dir, tex_dirs)) = parse_unit(job, &next_path) else {
-            break;
-        };
-        let reversed = manifest.couple_back_reversed;
-        let Some((b, f)) = super::super::vehicle::coupling_joint(&manifest, false, &m, reversed)
-        else {
-            break;
-        };
-        // The next unit's origin lies at `b − f` in this unit's frame (y forward).
-        behind += f.y - b.y;
-        units.push(UnitSpec {
-            name: next_path
-                .file_stem()
-                .map(|s| s.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            lod,
-            model_dir,
-            tex_dirs,
-            behind,
-            reversed,
-            span: m.bogie_half_span.unwrap_or(0.0),
-        });
-        if reversed {
-            break; // the ring of a double-ended consist closes here
-        }
-        dir = next_path.parent()?.to_path_buf();
-        manifest = m;
-    }
-    Some((TrainSpec { name, units }, light))
 }
 
 fn next_rand(state: &mut u32) -> f32 {
@@ -312,7 +235,7 @@ fn try_spawn(
         reversed: u.2,
         meshes: u.4,
         vertices: 0,
-        body: None,
+        body: spec.units[i].body,
     };
     let composition = VehicleComposition {
         head: part(0, &units[0]),
@@ -332,18 +255,75 @@ fn try_spawn(
     });
 }
 
+/// What the player's vehicle contributes to the obstacle list.
+type PlayerFootprint = (
+    &'static GlobalTransform,
+    Option<&'static crate::in_game::omsi_world::PlayerBox>,
+    Option<&'static VehicleComposition>,
+);
+
+/// Gap from the front of the train's head to the nearest obstacle ahead in its lane.
+fn ahead_gap(
+    t: &AiTrain,
+    net: &PedestrianNet,
+    owner: Entity,
+    obstacles: &[Obstacle],
+) -> Option<f32> {
+    let (p, h) = t.train.pose(net)?;
+    let here = omsi_to_bevy_pos(p);
+    let ahead = omsi_to_bevy_pos(p + Vec3::new(h.sin(), h.cos(), 0.0));
+    let dir = Vec2::new(ahead.x - here.x, ahead.z - here.z).normalize_or_zero();
+    if dir == Vec2::ZERO {
+        return None;
+    }
+    // From the head unit's front end (its footprint's far end; 3 m when unknown).
+    let front = t
+        .composition
+        .head
+        .body
+        .map_or(3.0, |b| b.offset.y.abs() + b.half.y);
+    let origin = Vec2::new(here.x, here.z) + dir * front;
+    nearest_gap(obstacles, owner, origin, dir, 60.0)
+}
+
 /// Runs the AI trains along their track and poses every unit by its distance behind the head.
+#[allow(clippy::too_many_arguments)]
 pub fn move_ai_trains(
     time: Res<Time>,
     mut commands: Commands,
     rail_net: Res<RailNetwork>,
     bike_net: Res<BikeNetwork>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
+    players: Query<PlayerFootprint, With<opts_bevy::PlayerVehicle>>,
+    globals: Query<&GlobalTransform>,
     mut trains: Query<(Entity, &mut AiTrain)>,
     mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
 ) {
     let dt = time.delta_secs().min(0.1);
     let cam = camera.single().ok().map(|c| c.translation());
+    // What a train must not run into: every unit of the player's traction (its last unit's rear
+    // counts, not just the head) and of the other trains.
+    let mut obstacles: Vec<Obstacle> = Vec::new();
+    for (g, body, composition) in &players {
+        let at = g.compute_transform();
+        obstacles.push(Obstacle::new(Entity::PLACEHOLDER, &at, body.map(|b| b.0)));
+        for p in composition.iter().flat_map(|c| c.followers.iter()) {
+            if let Ok(g) = globals.get(p.entity) {
+                obstacles.push(Obstacle::new(
+                    Entity::PLACEHOLDER,
+                    &g.compute_transform(),
+                    p.body,
+                ));
+            }
+        }
+    }
+    for (owner, t) in &trains {
+        for p in t.composition.parts() {
+            if let Ok((tf, ..)) = units.get(p.entity) {
+                obstacles.push(Obstacle::new(owner, tf, p.body));
+            }
+        }
+    }
     for (head, mut t) in &mut trains {
         let net = if t.bike { &bike_net.0 } else { &rail_net.0 };
         let (accel, cruise) = if t.bike {
@@ -352,6 +332,10 @@ pub fn move_ai_trains(
             (0.8, AI_CRUISE_MS)
         };
         t.speed = (t.speed + accel * dt).min(cruise);
+        if let Some(gap) = ahead_gap(&t, net, head, &obstacles) {
+            // Stop 4 m short of it with a comfortable 1.5 m/s² (the lane clears when it moves on).
+            t.speed = t.speed.min((2.0 * 1.5 * (gap - 4.0).max(0.0)).sqrt());
+        }
         let step = t.speed * dt;
         let end = t.train.advance(step, net) == Moved::EndOfTrack;
         let far = cam.is_some_and(|c| {

@@ -279,6 +279,7 @@ impl WorldLoadJob {
             rebuild: order,
             unloads,
             traffic: switch.touches("ailists_#upd.cfg")
+                || switch.touches("ailists.cfg")
                 || switch.touches("unsched_trafficdens.txt"),
         }
     }

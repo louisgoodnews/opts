@@ -3,8 +3,8 @@
 //!
 //! These files say *which* vehicles may appear as AI traffic and *how dense* that traffic is over
 //! the day. They do not say where vehicles drive: that comes from the `[path]` lanes of splines and
-//! junction objects (`opts-traffic`). Depot groups (`[aigroup_depot*]`) and the legacy `[ailist]`
-//! syntax are skipped for now.
+//! junction objects (`opts-traffic`). The depot groups' vehicle files are kept in
+//! [`AiLists::depot_vehicles`]; the legacy `[ailist]` syntax is skipped for now.
 
 use crate::formats::text::{decode_bytes, scan_blocks};
 
@@ -39,6 +39,9 @@ impl AiGroup {
 pub struct AiLists {
     /// Groups in file order.
     pub groups: Vec<AiGroup>,
+    /// Vehicle files of the depot groups (`[aigroup_depot_typgroup_2]`: the operator's own fleet,
+    /// first line of each block), duplicates removed, in file order.
+    pub depot_vehicles: Vec<String>,
 }
 
 impl AiLists {
@@ -47,6 +50,21 @@ impl AiLists {
     pub fn parse(bytes: &[u8]) -> Self {
         let mut out = Self::default();
         for block in scan_blocks(&decode_bytes(bytes)) {
+            if block.keyword == "aigroup_depot_typgroup_2" {
+                if let Some(file) = block.parameters.first().map(|l| l.trim()) {
+                    let lower = file.to_ascii_lowercase();
+                    let known = [".bus", ".ovh", ".zug"].iter().any(|e| lower.ends_with(e));
+                    if known
+                        && !out
+                            .depot_vehicles
+                            .iter()
+                            .any(|v| v.eq_ignore_ascii_case(file))
+                    {
+                        out.depot_vehicles.push(file.to_owned());
+                    }
+                }
+                continue;
+            }
             if block.keyword != "aigroup_2" {
                 continue;
             }
@@ -264,6 +282,14 @@ mod tests {
         assert_eq!(g.entries[0].weight, Some(7.0));
         assert_eq!(g.entries[1].weight, None);
         assert_eq!(g.total_weight(), 8.0);
+    }
+
+    #[test]
+    fn depot_groups_keep_their_vehicle_file_once() {
+        let text = b"[aigroup_depot]\r\nEVAG|NF2\r\nGladbeck\r\n\r\n[aigroup_depot_typgroup_2]\r\nvehicles\\Tram_NF6D\\NF6D_KI.bus\r\n1\t\tEVAG\r\n[end]\r\n[aigroup_depot_typgroup_2]\r\nvehicles\\Tram_NF6D\\nf6d_ki.bus\r\n2\t\tEVAG\r\n[end]\r\n";
+        let lists = AiLists::parse(text);
+        assert!(lists.groups.is_empty());
+        assert_eq!(lists.depot_vehicles, ["vehicles\\Tram_NF6D\\NF6D_KI.bus"]);
     }
 
     #[test]

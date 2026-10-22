@@ -566,6 +566,8 @@ pub use composition::{Part, VehicleComposition};
 // --- AI trains ---------------------------------------------------------------------------------
 
 mod ai;
+mod obstacles;
+mod spec;
 pub use ai::{
     load_rail_variants, move_ai_trains, spawn_ai_trains, AiTrain, BikeAiPool, RailAiPool,
 };
