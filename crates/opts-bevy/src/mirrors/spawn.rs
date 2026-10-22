@@ -37,6 +37,7 @@ pub fn spawn_mirror_cameras(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    virtual_mirrors: Res<VirtualMirrors>,
     meshes: Res<Assets<Mesh>>,
     vehicles: Query<Entity, With<PlayerVehicle>>,
     buses: Query<&BusVehicle>,
@@ -44,7 +45,7 @@ pub fn spawn_mirror_cameras(
     mut cameras: Query<(Entity, &mut MirrorCamera)>,
     candidates: Query<(&MeshMaterial3d<StandardMaterial>, &Mesh3d), Without<MirrorSurface>>,
 ) {
-    if quality.mirror_count == 0 {
+    if quality.mirror_count == 0 && !virtual_mirrors.any_stream() {
         return;
     }
     let now = time.elapsed_secs_f64();
@@ -187,7 +188,7 @@ pub fn spawn_mirror_cameras(
                         is_active: false,
                         ..default()
                     },
-                    RenderTarget::Image(picture.into()),
+                    RenderTarget::Image(picture.clone().into()),
                     Msaa::Off,
                     Hdr,
                     Tonemapping::None,
@@ -216,6 +217,9 @@ pub fn spawn_mirror_cameras(
                 members,
                 uv_min,
                 uv_max,
+                picture,
+                base_size: size,
+                enlarged: false,
                 tag,
             });
             existing.insert(id, camera);

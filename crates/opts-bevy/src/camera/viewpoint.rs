@@ -4,7 +4,7 @@
 //! A [`Viewpoint`] is an **offset** from the vehicle's own `[add_camera_driver]` preset, so the
 //! default (all zero, no FOV) is exactly the vehicle-defined view. [`ViewpointState`] holds what
 //! the camera shows (`active`), what is stored (`committed`) and the editor's state; the keys live
-//! in [`handle_viewpoint_keys`] (Tab opens and closes, arrows adjust, Enter saves, Esc cancels,
+//! in [`handle_viewpoint_keys`] (Shift + Tab opens, Tab closes and saves, arrows adjust, Enter saves, Esc cancels,
 //! Home resets, M switches between this vehicle and all of its model). Persistence is the
 //! application's job: it loads into `committed`/`active` when the
 //! vehicle or the sub camera changes and drains [`ViewpointState::request`] to write the file
@@ -294,10 +294,10 @@ pub fn not_editing_viewpoint(state: Option<Res<ViewpointState>>) -> bool {
 const REPEAT_DELAY: f32 = 0.35;
 const REPEAT_INTERVAL: f32 = 0.05;
 
-/// Tab opens and closes the editor in the driver's view; while it is open the arrows pick a row
+/// Shift + Tab opens the editor in the driver's view (Tab saves and closes it); while it is open the arrows pick a row
 /// and adjust it (Shift: ten steps), Enter saves, Esc cancels, Home resets to the vehicle's view.
 ///
-/// Tab does nothing in other views, so it never steals a key there. Leaving the driver's view or
+/// Shift + Tab does nothing in other views, so it never steals a key there. Leaving the driver's view or
 /// changing the sub camera cancels an open editor.
 #[allow(clippy::too_many_arguments)]
 pub fn handle_viewpoint_keys(
@@ -316,10 +316,12 @@ pub fn handle_viewpoint_keys(
     if !in_cockpit {
         return;
     }
+    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     if keys.just_pressed(KeyCode::Tab) {
+        // Plain Tab belongs to the virtual mirrors (`crate::mirrors`); inside the editor it saves.
         if state.editing {
             state.save();
-        } else {
+        } else if shift {
             state.camera_index = camera.sub_camera_index;
             state.open();
         }
@@ -348,7 +350,6 @@ pub fn handle_viewpoint_keys(
     if keys.just_pressed(KeyCode::ArrowUp) {
         state.row = state.row.prev();
     }
-    let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
     let factor = if shift { COARSE_FACTOR } else { 1.0 };
     for (key, dir) in [(KeyCode::ArrowLeft, -1.0), (KeyCode::ArrowRight, 1.0)] {
         if keys.just_pressed(key) {

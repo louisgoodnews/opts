@@ -44,7 +44,7 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::KeyN,
     KeyCode::KeyR,
     KeyCode::Space,
-    // The viewpoint editor of the driver's view (Tab; Home resets inside it).
+    // The viewpoint editor (Shift + Tab; Home resets inside it) and the virtual mirrors (Tab).
     KeyCode::Tab,
     KeyCode::ArrowUp,
     KeyCode::ArrowDown,

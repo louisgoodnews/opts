@@ -159,6 +159,12 @@ keys! {
     VIEWPOINT_Y = "hud-viewpoint-y",
     /// Viewpoint editor: forward row.
     VIEWPOINT_Z = "hud-viewpoint-z",
+    /// Virtual mirrors: the area of the left mirror.
+    VMIRROR_LEFT = "hud-vmirror-left",
+    /// Virtual mirrors: the area of the upper right mirror.
+    VMIRROR_RIGHT_UPPER = "hud-vmirror-right-upper",
+    /// Virtual mirrors: the area of the lower right mirror (wide-angle).
+    VMIRROR_RIGHT_LOWER = "hud-vmirror-right-lower",
     /// Viewpoint editor: field of view row.
     VIEWPOINT_FOV = "hud-viewpoint-fov",
     /// Viewpoint editor: an offset in centimetres (`value`).
