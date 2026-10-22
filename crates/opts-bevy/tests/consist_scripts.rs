@@ -58,16 +58,19 @@ fn consist() -> (App, Entity, [Entity; 2]) {
     let c = car(&mut app, "{frame}\n(L.L.bat_r) (S.L.c_sees)\n{end}", None);
     let units = vec![
         ConsistUnit {
+            vehicle: 0,
             part: None,
             head: true,
             cables: vec![cable(false)],
         },
         ConsistUnit {
+            vehicle: 0,
             part: Some(b),
             head: false,
             cables: vec![cable(true), cable(false)],
         },
         ConsistUnit {
+            vehicle: 0,
             part: Some(c),
             head: false,
             cables: vec![cable(true)],

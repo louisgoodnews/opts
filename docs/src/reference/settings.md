@@ -102,8 +102,30 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.ui.switch_vehicle` | Next vehicle | input binding | `F8` | at once | available | Switches to the next vehicle of the session. |
 | `controls.ui.switch_vehicle_prev` | Previous vehicle | input binding | `Shift+F8` | at once | available | Switches to the previous vehicle of the session. |
 | `controls.ui.developer_panel` | Developer panel | input binding | `F10` | at once | available | Shows or hides the developer panel. |
+| `controls.rail.battery` | Battery switch (trams, trains) | input binding | `E` | at once | available | Batterietrennschalter |
+| `controls.rail.engine_start` | Start engine (trams, trains) | input binding | `M` | at once | available | Motor starten |
+| `controls.rail.lights` | Headlights (trams, trains) | input binding | `L` | at once | available | Scheinwerfer |
+| `controls.rail.parking_light` | Parking lights (trams, trains) | input binding | `Shift+L` | at once | available | Standlicht |
+| `controls.rail.high_beam` | High beam (trams, trains) | input binding | `F` | at once | available | Fernlicht |
+| `controls.rail.fog_rear` | Rear fog light (trams, trains) | input binding | `Ctrl+F` | at once | available | Nebelschlussleuchte |
+| `controls.rail.indicator_left` | Indicator left (trams, trains) | input binding | `Numpad7` | at once | available | Blinker links |
+| `controls.rail.indicator_right` | Indicator right (trams, trains) | input binding | `Numpad9` | at once | available | Blinker rechts |
+| `controls.rail.indicator_off` | Indicators off (trams, trains) | input binding | `NumpadDecimal` | at once | available | Blinker aus |
+| `controls.rail.hazard` | Hazard lights (trams, trains) | input binding | `B` | at once | available | Warnblinker |
+| `controls.rail.horn` | Horn (trams, trains) | input binding | `H` | at once | available | Hupe |
+| `controls.rail.wiper` | Wipers (trams, trains) | input binding | `none` | at once | available | Scheibenwischer |
+| `controls.rail.door_clearance` | Door clearance (trams, trains) | input binding | `NumpadSubtract` | at once | available | Türfreigabe |
+| `controls.rail.cabin_light` | Cabin light (trams, trains) | input binding | `Ctrl+L` | at once | available | Kabinenlicht |
+| `controls.rail.interior_driver` | Driver's light (trams, trains) | input binding | `6` | at once | available | Fahrerlicht |
+| `controls.rail.interior_lower_right` | Interior light, lower right (trams, trains) | input binding | `7` | at once | available | Innenlicht unten rechts |
+| `controls.rail.interior_upper` | Interior light, upper deck (trams, trains) | input binding | `8` | at once | available | Innenlicht Oberdeck |
+| `controls.rail.interior_lower` | Interior light, lower deck (trams, trains) | input binding | `9` | at once | available | Innenlicht Unterdeck |
+| `controls.rail.ticket` | Hand over ticket (trams, trains) | input binding | `T` | at once | available | Fahrschein ausgeben |
+| `controls.rail.ticket_change` | Ticket with change (trams, trains) | input binding | `Ctrl+T` | at once | available | Fahrschein mit Rückgeld |
+| `controls.rail.ticket_take` | Collect money (trams, trains) | input binding | `Shift+T` | at once | available | Geld einsammeln |
 | `controls.reset.all` | Reset: all key bindings | action (no stored value) | - | at once | available | Puts all key bindings back to their defaults. |
 | `controls.reset.vehicle` | Reset: vehicle keys | action (no stored value) | - | at once | available | Puts vehicle keys back to their defaults. |
+| `controls.reset.rail` | Reset: tram and train keys | action (no stored value) | - | at once | available | Puts the keys of trams and trains back to their defaults. |
 | `controls.reset.drive` | Reset: driving keys | action (no stored value) | - | at once | available | Puts driving keys back to their defaults. |
 | `controls.reset.camera` | Reset: camera keys | action (no stored value) | - | at once | available | Puts camera keys back to their defaults. |
 | `controls.reset.map` | Reset: map keys | action (no stored value) | - | at once | available | Puts map keys back to their defaults. |

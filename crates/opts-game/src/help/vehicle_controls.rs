@@ -95,6 +95,13 @@ pub fn fill_vehicle_controls(
     added: Query<(), Added<VehicleControlsList>>,
     spots: Query<&MouseTrigger>,
     players: Query<Entity, With<PlayerVehicle>>,
+    rail: Query<
+        (),
+        (
+            With<PlayerVehicle>,
+            With<crate::in_game::omsi_world::RailPlayer>,
+        ),
+    >,
     mut shown: Local<Vec<String>>,
 ) {
     if lists.is_empty() {
@@ -118,8 +125,12 @@ pub fn fill_vehicle_controls(
             commands.entity(*child).despawn();
         }
         commands.entity(list).with_children(|p| {
-            for a in ACTIONS {
-                let text = registry.text(&settings, a.setting).unwrap_or_default();
+            // The keys the player's kind of vehicle has: a tram's layout is its own.
+            let tram = !rail.is_empty();
+            for a in ACTIONS.iter().filter(|a| a.scope.applies(tram)) {
+                let text = registry
+                    .text(&settings, a.setting_for(tram))
+                    .unwrap_or_default();
                 let shown = KeyChord::parse(&text)
                     .ok()
                     .flatten()

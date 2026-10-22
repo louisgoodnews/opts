@@ -15,7 +15,7 @@ use crate::settings_registry::SettingsRegistry;
 use crate::vehicle_keys;
 
 /// The groups of key bindings, in the order of the reset rows.
-pub const GROUPS: [&str; 5] = ["vehicle", "drive", "camera", "map", "ui"];
+pub const GROUPS: [&str; 6] = ["vehicle", "rail", "drive", "camera", "map", "ui"];
 
 /// `controls.mouse_driving`: whether the wheel press switches the mouse driving mode.
 pub const MOUSE_DRIVING_KEY: &str = "controls.mouse_driving";
@@ -23,7 +23,7 @@ pub const MOUSE_DRIVING_KEY: &str = "controls.mouse_driving";
 /// The prefix of the reset rows (`controls.reset.map`, `controls.reset.all`).
 pub const RESET_PREFIX: &str = "controls.reset.";
 
-const RESET_ROWS: [(&str, &str, &str); 6] = [
+const RESET_ROWS: [(&str, &str, &str); 7] = [
     (
         "controls.reset.all",
         "set-reset-keys-all",
@@ -33,6 +33,11 @@ const RESET_ROWS: [(&str, &str, &str); 6] = [
         "controls.reset.vehicle",
         "set-reset-keys-vehicle",
         "set-reset-keys-vehicle-desc",
+    ),
+    (
+        "controls.reset.rail",
+        "set-reset-keys-rail",
+        "set-reset-keys-rail-desc",
     ),
     (
         "controls.reset.drive",
@@ -122,6 +127,11 @@ pub fn binding_settings() -> Vec<(String, &'static str, &'static str)> {
         .map(|a| (a.setting.to_owned(), a.default, "vehicle"))
         .collect();
     v.extend(
+        vehicle_keys::ACTIONS
+            .iter()
+            .filter_map(|a| Some((a.rail_setting?.to_owned(), a.default, "rail"))),
+    );
+    v.extend(
         action_keys::ACTIONS
             .iter()
             .map(|a| (action_keys::setting_of(a), a.default, a.group)),
@@ -132,7 +142,13 @@ pub fn binding_settings() -> Vec<(String, &'static str, &'static str)> {
 /// The vehicles a binding setting is for.
 fn scope_of(setting: &str) -> vehicle_keys::Scope {
     if let Some(a) = vehicle_keys::action(setting) {
-        return a.scope;
+        // A shared action has a layout per kind of vehicle: its rail key is a tram's, its
+        // plain key a bus's.
+        return match (a.rail_setting, a.scope) {
+            (Some(rail), _) if rail == setting => vehicle_keys::Scope::Tram,
+            (Some(_), _) => vehicle_keys::Scope::Bus,
+            (None, scope) => scope,
+        };
     }
     match action_keys::ACTIONS
         .iter()
@@ -145,14 +161,21 @@ fn scope_of(setting: &str) -> vehicle_keys::Scope {
     }
 }
 
-/// Whether `key` is the default key of a built-in action: those keys are no longer fixed, the
-/// action that holds the chord is named instead.
-fn moved_by_an_action(key: KeyCode) -> bool {
+/// Whether `key` is the default key of a built-in action that is in use together with a binding of
+/// `scope`: such keys are no longer fixed, the action that holds the chord is named instead (W is
+/// the throttle of a bus, but the direction selector of a tram).
+fn moved_by_an_action(key: KeyCode, scope: vehicle_keys::Scope) -> bool {
     action_keys::ACTIONS.iter().any(|a| {
-        KeyChord::parse(a.default)
-            .ok()
-            .flatten()
-            .is_some_and(|c| c.key == key)
+        let action_scope = match a.scope {
+            action_keys::ActionScope::Road => vehicle_keys::Scope::Bus,
+            action_keys::ActionScope::Rail => vehicle_keys::Scope::Tram,
+            action_keys::ActionScope::All => vehicle_keys::Scope::Both,
+        };
+        action_scope.overlaps(scope)
+            && KeyChord::parse(a.default)
+                .ok()
+                .flatten()
+                .is_some_and(|c| c.key == key)
     })
 }
 
@@ -165,13 +188,13 @@ pub fn conflict(
     setting: &str,
     chord: KeyChord,
 ) -> Option<String> {
-    if chord.is_reserved() && !moved_by_an_action(chord.key) {
+    let scope = scope_of(setting);
+    if chord.is_reserved() && !moved_by_an_action(chord.key, scope) {
         return Some(format!(
             "{} is used by driving, the cameras or the overlays and cannot be bound (Ctrl+ combinations can)",
             chord.to_text().unwrap_or_default()
         ));
     }
-    let scope = scope_of(setting);
     for (other, _, _) in binding_settings()
         .iter()
         .filter(|(s, _, _)| s != setting && scope_of(s).overlaps(scope))
