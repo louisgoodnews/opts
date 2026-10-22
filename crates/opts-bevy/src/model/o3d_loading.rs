@@ -326,6 +326,23 @@ impl ContentLoader<'_> {
                         }
                     }
                 }
+                // A blended texture that is mostly opaque (a car body with its windows in the
+                // alpha channel) is drawn like the transmap composition: an opaque cut-out body
+                // plus a blended glass pass. Blending the whole body sorts it against the
+                // interior behind it, which then shows through in patches (Bremen parked cars).
+                if glass_tex.is_none()
+                    && !blended_by_map
+                    && over.is_some_and(|o| o.alpha == Some(2) && o.trans_map.is_none())
+                {
+                    if let Some(decoded) = tex
+                        .as_ref()
+                        .and_then(|h| self.images.get(h))
+                        .and_then(crate::texture::decode_to_rgba8)
+                    {
+                        glass_tex =
+                            super::overrides::transmap_glass(&decoded).map(|g| self.images.add(g));
+                    }
+                }
                 if !crate::material::uses_texture_alpha(over.and_then(|o| o.alpha))
                     && !blended_by_map
                 {
