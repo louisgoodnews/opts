@@ -123,6 +123,9 @@ pub struct AxleInput {
     pub right: WheelInput,
 }
 
+/// The lifespan factor of a vehicle that never breaks down (OPTS has no breakdown option yet).
+pub const WEARLIFESPAN_NO_BREAKDOWNS: f32 = 1000.0;
+
 /// Everything the host knows that the scripts may read, in the units of the table.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HostInputs {
@@ -162,7 +165,10 @@ pub struct HostInputs {
     pub street_cond: f32,
     /// Dirt accumulation rate.
     pub dirt_rate: f32,
-    /// Wear (0 new, 1 worn).
+    /// Lifespan factor of the vehicle: the scripts scale their failure limits with it
+    /// (`random(Fehlertoleranz * WearLifespan)` is the distance to the next breakdown, a drive
+    /// failure is `error distance > Fehlertoleranz * WearLifespan`). 0 would break the vehicle at
+    /// the first metre, so the default is [`WEARLIFESPAN_NO_BREAKDOWNS`].
     pub wearlifespan: f32,
     /// Precipitation 0..1.
     pub precip_rate: f32,
@@ -217,7 +223,7 @@ impl Default for HostInputs {
             envir_brightness: 1.0,
             street_cond: 0.0,
             dirt_rate: 0.0,
-            wearlifespan: 0.0,
+            wearlifespan: WEARLIFESPAN_NO_BREAKDOWNS,
             precip_rate: 0.0,
             precip_type: 0.0,
             time_of_day_s: 12.0 * 3600.0,
@@ -534,6 +540,14 @@ pub fn output_row(name: &str) -> Option<&'static OutputRow> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vehicle_has_a_positive_lifespan_so_its_failure_limits_are_not_zero() {
+        // The scripts take `random(Fehlertoleranz * WearLifespan)` as the distance to a breakdown
+        // and fail a drive whose error distance exceeds `Fehlertoleranz * WearLifespan`: with 0
+        // the MAN NG313's drive failed at the first metre and the bus could not pull.
+        assert!(HostInputs::default().wearlifespan >= 1.0);
+    }
 
     #[test]
     fn the_feed_reaches_the_scripts_and_leaves_script_owned_names_alone() {
