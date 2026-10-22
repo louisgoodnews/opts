@@ -132,6 +132,18 @@ pub fn update_vehicle_script_textures(
                         }
                         // A new image with its mip chain: setting the data alone leaves the
                         // image's other mip levels (made for the blank one) empty.
+                        if target.tint.is_some() {
+                            // An LED canvas is a grid of small bright dots: a mip chain would
+                            // average them into the dark between them and the board would fade
+                            // out with distance. Linear sampling of the full size keeps them lit.
+                            *img = opts_bevy::text_texture::led_image(
+                                canvas.width(),
+                                canvas.height(),
+                                data,
+                            );
+                            canvas.clear_dirty();
+                            continue;
+                        }
                         *img = opts_bevy::text_texture::text_image(
                             canvas.width(),
                             canvas.height(),
