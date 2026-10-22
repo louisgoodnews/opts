@@ -39,8 +39,6 @@ pub(super) struct PlannedPart {
     /// The coupling points of the link to the part in front inside its unit (rear point of the
     /// leader, front point of this part); `None` for the first file of a unit.
     pub joint: Option<(Vec3, Vec3)>,
-    /// The vehicle of the formation the part belongs to: 0 the head's own chain, then one per car.
-    pub car: usize,
 }
 
 /// A part in a unit's own frame.
@@ -150,7 +148,6 @@ fn place(
             manifest: p.manifest,
             powered,
             joint: p.joint,
-            car: 0,
         })
         .collect();
     (parts, rear_train)
@@ -176,7 +173,7 @@ pub(super) fn plan(
     let unit = walk(first, files, limit + 1);
     let (parts, mut rear) = place(unit, false, None, true);
     let mut followers: Vec<PlannedPart> = parts.into_iter().skip(1).collect();
-    for (number, car) in cars.iter().enumerate() {
+    for car in cars {
         let left = limit.saturating_sub(followers.len());
         if left == 0 {
             break;
@@ -202,10 +199,7 @@ pub(super) fn plan(
         let powered = car.powered.unwrap_or(unit.len() > 1);
         let (parts, r) = place(unit, car.turned, Some(rear), powered);
         rear = r;
-        followers.extend(parts.into_iter().map(|p| PlannedPart {
-            car: number + 1,
-            ..p
-        }));
+        followers.extend(parts);
     }
     if !cars.is_empty() {
         // A turned unit comes out back to front; the train order is the order of the origins.

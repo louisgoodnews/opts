@@ -343,6 +343,15 @@ pub struct DriveWatch {
     warned: bool,
 }
 
+/// What [`script_drive_system`] reads and writes of a vehicle.
+type DriveBody = (
+    Entity,
+    &'static mut VehicleController,
+    &'static VehicleScripts,
+    Option<&'static crate::consist_scripts::ScriptConsist>,
+    Has<crate::rail_controls::RailControls>,
+);
+
 /// Hands the scripts' torque and brake force to the physics for the next step (only when
 /// [`ScriptDriveEnabled`] and the scripts write `M_Wheel`).
 pub fn script_drive_system(
@@ -350,9 +359,10 @@ pub fn script_drive_system(
     enabled: Res<ScriptDriveEnabled>,
     mut ticks: Local<u32>,
     mut watch: Local<std::collections::HashMap<Entity, DriveWatch>>,
-    mut query: Query<(Entity, &mut VehicleController, &VehicleScripts)>,
+    mut query: Query<DriveBody>,
+    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
-    for (entity, mut controller, scripts) in &mut query {
+    for (entity, mut controller, scripts, consist, rail) in &mut query {
         // A pedal the scripts write themselves (cruise control, AI-style scripts) is theirs: its
         // value reaches the physics' inputs, whatever drives the vehicle.
         if let Ok(engine) = scripts.engine.lock() {
@@ -386,7 +396,7 @@ pub fn script_drive_system(
             }
         }
         let w = watch.entry(entity).or_default();
-        let Some(drive) = script_outputs(&engine) else {
+        let Some(mut drive) = script_outputs(&engine) else {
             if !w.warned {
                 w.warned = true;
                 tracing::warn!(
@@ -396,6 +406,27 @@ pub fn script_drive_system(
             controller.sim.script_drive = None;
             continue;
         };
+        // A rail consist: every unit with scripts of its own drives and brakes its own wheels (the
+        // motor cars of a traction pull with their own scripts); a unit that hangs backwards
+        // writes its torque in its own frame.
+        if rail {
+            for u in consist.iter().flat_map(|c| c.units.iter()) {
+                let Some(part) = u.part.filter(|_| !u.head) else {
+                    continue;
+                };
+                let Ok(scripts) = parts.get(part) else {
+                    continue;
+                };
+                let Ok(unit_engine) = scripts.engine.lock() else {
+                    continue;
+                };
+                if let Some(d) = script_outputs(&unit_engine) {
+                    let sign = if u.turned { -1.0 } else { 1.0 };
+                    drive.wheel_torque_nm += sign * d.wheel_torque_nm;
+                    drive.brake_force_n += d.brake_force_n;
+                }
+            }
+        }
         // Three ways to drive: a script that hands torque to the wheels; one that never does
         // while the driver holds the pedal (const file's torque curve, one INFO); none at all
         // (built-in constants, one WARN, above).

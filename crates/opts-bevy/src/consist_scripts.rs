@@ -29,8 +29,8 @@ pub struct ConsistUnit {
     pub head: bool,
     /// The cables its vehicle file declares.
     pub cables: Vec<Cable>,
-    /// The vehicle of the formation it belongs to (0: the head's own chain).
-    pub vehicle: usize,
+    /// The unit hangs backwards in the train: the torque its scripts write is in its own frame.
+    pub turned: bool,
 }
 
 /// The units of a consist, head first, on the head's entity.
@@ -102,7 +102,6 @@ pub fn run_parts(
         units.push(Unit {
             engine,
             cables: &u.cables,
-            vehicle: u.vehicle,
         });
     }
     bridge(&mut units);
