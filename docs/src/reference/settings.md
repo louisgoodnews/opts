@@ -79,6 +79,13 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.vehicle.ticket_take` | Collect money | input binding | `Shift+T` | at once | available | Geld einsammeln |
 | `controls.mouse_driving` | Drive with the mouse | on / off | `true` | at once | available | The mouse wheel press switches mouse driving: the cursor's height is throttle (upper half) and brake (lower half), its width is the steering. A right click frees the mouse until the next right click. Applies at once. |
 | `controls.drive.parking_brake` | Parking brake | input binding | `Period` | at once | available | Applies or releases the parking brake. |
+| `controls.drive.rail_forward` | Rail: forward | input binding | `W` | at once | available | Rail vehicles: drive forward (the cab's direction switch; a tram's reverse-drive switch off). |
+| `controls.drive.rail_reverse` | Rail: reverse | input binding | `S` | at once | available | Rail vehicles: drive backwards (a standing tram only). |
+| `controls.drive.rail_lever_up` | Rail: power lever up | input binding | `Q` | at once | available | Rail vehicles: moves the power lever towards traction while held; it stays where it is left. |
+| `controls.drive.rail_lever_down` | Rail: power lever down | input binding | `Z` | at once | available | Rail vehicles: moves the power lever towards braking while held; it stays where it is left. Y on a German keyboard. |
+| `controls.drive.rail_branch_left` | Rail: points left | input binding | `ArrowLeft` | at once | available | Rail vehicles: takes the left branch at the next point. |
+| `controls.drive.rail_branch_straight` | Rail: points straight | input binding | `ArrowUp` | at once | available | Rail vehicles: stays on the straight track at the next point. |
+| `controls.drive.rail_branch_right` | Rail: points right | input binding | `ArrowRight` | at once | available | Rail vehicles: takes the right branch at the next point. |
 | `controls.map.minimap_toggle` | Mini map on or off | input binding | `F7` | at once | available | Shows or hides the mini map. |
 | `controls.map.minimap_rotate` | Mini map: north up or heading up | input binding | `Shift+F7` | at once | available | Switches the mini map between north up and heading up. |
 | `controls.map.minimap_speed_zoom` | Mini map: speed zoom | input binding | `Ctrl+F7` | at once | available | Switches the zoom that follows the speed on or off. |

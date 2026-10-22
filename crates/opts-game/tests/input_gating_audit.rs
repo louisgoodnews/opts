@@ -38,6 +38,9 @@ const REVIEWED: &[&str] = &[
     // The registry of key actions only answers `just_pressed(action)`; the systems that ask are
     // gated where they are registered.
     "opts-bevy/src/action_keys.rs",
+    // The rail keys are applied by the vehicle input system (`apply_keys`), which carries the
+    // run conditions `vehicle_accepts_input` and `not_modal_active`.
+    "opts-bevy/src/rail_controls.rs",
     // The mouse driving mode reads the wheel and right button; its systems are registered with the
     // vehicle input system and share its run conditions (`vehicle_accepts_input`, `not_modal_active`).
     "opts-bevy/src/mouse_driving.rs",

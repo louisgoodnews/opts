@@ -445,13 +445,18 @@ pub fn script_startup_system(
     time: Res<Time>,
     enabled: Res<ScriptDriveEnabled>,
     setup: Option<Res<crate::vehicle_setup::VehicleSetup>>,
-    mut query: Query<(&mut VehicleController, &VehicleScripts, &mut ScriptStartup)>,
+    mut query: Query<(
+        &mut VehicleController,
+        &VehicleScripts,
+        &mut ScriptStartup,
+        Has<crate::rail_controls::RailControls>,
+    )>,
 ) {
     if !enabled.0 {
         return;
     }
     let setup = setup.map_or_else(Default::default, |s| *s);
-    for (mut controller, scripts, mut st) in &mut query {
+    for (mut controller, scripts, mut st, rail) in &mut query {
         st.elapsed += time.delta_secs();
         let Ok(mut engine) = scripts.engine.lock() else {
             continue;
@@ -469,13 +474,16 @@ pub fn script_startup_system(
                 "script start-up settled"
             );
         }
-        // Ready to drive: the parking brake comes off once, when the start-up has settled.
-        if settled
-            && setup.degree >= crate::vehicle_setup::READY
-            && controller.sim.inputs.is_parking_brake_engaged()
-            && !st.released
-            && (!crate::vehicle_setup::has_engine(&engine) || engine.get("engine_on") > 0.5)
-        {
+        // Ready to drive: the parking brake comes off once, when the start-up has settled. A rail
+        // vehicle has no key for it and starts free at once.
+        let release = if rail {
+            true
+        } else {
+            settled
+                && setup.degree >= crate::vehicle_setup::READY
+                && (!crate::vehicle_setup::has_engine(&engine) || engine.get("engine_on") > 0.5)
+        };
+        if release && controller.sim.inputs.is_parking_brake_engaged() && !st.released {
             st.released = true;
             controller.sim.inputs.set_parking_brake(false);
         }

@@ -194,6 +194,8 @@ keys! {
     HELP_TAB_ABOUT = "help-tab-about",
     /// Message `help-group-driving`.
     HELP_GROUP_DRIVING = "help-group-driving",
+    /// Message `help-group-rail`.
+    HELP_GROUP_RAIL = "help-group-rail",
     /// Message `help-group-vehicle-keys`.
     HELP_GROUP_VEHICLE_KEYS = "help-group-vehicle-keys",
     /// Message `help-vehicle-keys-note`.
@@ -232,6 +234,10 @@ keys! {
     HELP_KEY_GEARS = "help-key-gears",
     /// Message `help-key-tram`.
     HELP_KEY_TRAM = "help-key-tram",
+    /// Message `help-key-rail-direction`.
+    HELP_KEY_RAIL_DIRECTION = "help-key-rail-direction",
+    /// Message `help-key-rail-lever`.
+    HELP_KEY_RAIL_LEVER = "help-key-rail-lever",
     /// Message `help-key-camera`.
     HELP_KEY_CAMERA = "help-key-camera",
     /// Message `help-key-camera-prev`.

@@ -26,6 +26,8 @@ use super::WorldLoadJob;
 const PATH_TYPE_RAIL: u32 = 2;
 /// A player vehicle spawned farther than this from any track is not put on rails (m).
 const SNAP_MAX_M: f32 = 12.0;
+/// Below this speed (m/s) a rail vehicle may change its direction of travel.
+const STANDSTILL_M_S: f32 = 0.2;
 /// Wheel radius assumed for the scripts' torque when the vehicle file states none (m).
 const DEFAULT_WHEEL_RADIUS_M: f32 = 0.33;
 /// A train formation is put on the nearest track within this distance of its entry point (m): the
@@ -223,6 +225,8 @@ pub struct RailPlayer {
     gave_up: bool,
     /// How far from its spawn point a track is looked for (m).
     snap_m: f32,
+    /// The vehicle backs up: its head moves back along the track it ran over.
+    backing: bool,
     /// Radius of the driven wheels (m): the scripts' torque pulls the train with `M_Wheel / r`.
     wheel_radius_m: f32,
 }
@@ -239,6 +243,7 @@ impl RailPlayer {
             gave_up: false,
             snap_m: SNAP_MAX_M,
             wheel_radius_m: DEFAULT_WHEEL_RADIUS_M,
+            backing: false,
         }
     }
 
@@ -274,10 +279,15 @@ pub fn is_rail(manifest: &BusManifest) -> bool {
 pub fn rail_player_step(
     time: Res<Time>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::action_keys::ActionKeys>>,
     modal: Option<Res<opts_bevy::reporting::ModalActive>>,
     menu: Option<Res<opts_bevy::reporting::MenuModalActive>>,
     net: Res<RailNetwork>,
-    mut players: Query<(&mut VehicleController, &mut RailPlayer)>,
+    mut players: Query<(
+        &mut VehicleController,
+        &mut RailPlayer,
+        Option<&opts_bevy::RailControls>,
+    )>,
 ) {
     // Typing in a modal must not switch points.
     let typing = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
@@ -285,7 +295,7 @@ pub fn rail_player_step(
     if dt <= 0.0 {
         return;
     }
-    for (mut controller, mut rail) in &mut players {
+    for (mut controller, mut rail, controls) in &mut players {
         if rail.gave_up {
             continue;
         }
@@ -298,16 +308,31 @@ pub fn rail_player_step(
                     0.0
                 },
                 i.service_brake(),
-                i.is_parking_brake_engaged(),
+                // A rail vehicle has no parking brake of its own: its controls ignore it.
+                i.is_parking_brake_engaged() && controls.is_none(),
             )
         };
+        // The direction of travel changes only at a standstill; a backing vehicle keeps facing
+        // the way it faced and its head moves back along the track it ran over.
+        if let Some(c) = controls {
+            if rail.speed < STANDSTILL_M_S {
+                rail.backing = c.direction < 0;
+            }
+        }
         // The vehicle's own scripts drive it when they write `M_Wheel`: torque at the wheel
         // radius is the pull, their brake force the brake (the constants are the fallback).
         let script = controller
             .sim
             .script_drive
             .map(|d| opts_sim::rail::ScriptForces {
-                traction_n: d.wheel_torque_nm / rail.wheel_radius_m,
+                // Forward the script pulls with positive torque. Backing up the direction is
+                // ours, so its torque counts whatever its sign: a bus-style script reverses the
+                // sign, the NF6D's reverse-drive switch keeps it.
+                traction_n: if rail.backing {
+                    d.wheel_torque_nm.abs()
+                } else {
+                    d.wheel_torque_nm
+                } / rail.wheel_radius_m,
                 brake_n: d.brake_force_n,
             });
         let ch = &mut controller.sim.chassis;
@@ -353,13 +378,14 @@ pub fn rail_player_step(
         let Some(train) = rail.train.as_mut() else {
             continue;
         };
-        // Route choice at the next point: Z left, X straight, C right.
+        // Route choice at the next point (the `rail_branch_*` actions: the arrows).
+        let keys = opts_bevy::action_keys::resolve(&action_keys);
         if typing {
-        } else if keyboard.just_pressed(KeyCode::KeyZ) {
+        } else if keys.just_pressed(&keyboard, "rail_branch_left") {
             train.branch = Branch::Left;
-        } else if keyboard.just_pressed(KeyCode::KeyX) {
+        } else if keys.just_pressed(&keyboard, "rail_branch_straight") {
             train.branch = Branch::Straight;
-        } else if keyboard.just_pressed(KeyCode::KeyC) {
+        } else if keys.just_pressed(&keyboard, "rail_branch_right") {
             train.branch = Branch::Right;
         }
         let pose_ahead = train.pose(&net.0);
@@ -369,10 +395,16 @@ pub fn rail_player_step(
         };
         let speed = rail.dynamics.step(rail.speed, grade, &input, dt);
         rail.speed = speed;
+        let backing = rail.backing;
         let Some(train) = rail.train.as_mut() else {
             continue;
         };
-        if train.advance(speed * dt, &net.0) == Moved::EndOfTrack {
+        let moved = if backing {
+            train.retreat(speed * dt, &net.0)
+        } else {
+            train.advance(speed * dt, &net.0)
+        };
+        if moved == Moved::EndOfTrack {
             rail.speed = 0.0;
         }
         let Some(train) = rail.train.as_ref() else {
@@ -386,75 +418,6 @@ pub fn rail_player_step(
             ch.local_velocity = Vec2::new(0.0, rail.speed);
             ch.yaw_rate_rad_s = 0.0;
         }
-    }
-}
-
-/// One sub part of a composed vehicle (a car, a bogie, an articulation joint, a coupler).
-#[derive(Debug, Clone)]
-pub struct Part {
-    /// The entity carrying the part's meshes and transform (the root for the head part).
-    pub entity: Entity,
-    /// Name of the part (its `.bus` file name; the head: the vehicle's model name).
-    pub name: String,
-    /// Distance of the part's origin behind the head's origin along the vehicle axis (m).
-    pub behind: f32,
-    /// Half distance between the part's bogies (`[boogies]`), 0 when unknown.
-    pub half_span: f32,
-    /// The part hangs backwards (coupled with the `true` flag).
-    pub reversed: bool,
-    /// Meshes spawned for the part (0 for the head, which is counted with the vehicle).
-    pub meshes: usize,
-    /// Vertices of the part's meshes.
-    pub vertices: usize,
-    /// The part's footprint for collisions (`[boundingbox]` of its `.bus`).
-    pub body: Option<super::BodyBox>,
-}
-
-/// The sub parts of a composed vehicle, resolved once at spawn: the head and the coupled units
-/// behind it in order. Lookups by name or index need no `[couple_back]` walk or file access.
-#[derive(Component, Debug, Clone)]
-pub struct VehicleComposition {
-    /// The leading unit (the vehicle's root entity).
-    pub head: Part,
-    /// The coupled units behind the head, front to back.
-    pub followers: Vec<Part>,
-}
-
-impl VehicleComposition {
-    /// All parts, head first.
-    pub fn parts(&self) -> impl Iterator<Item = &Part> {
-        std::iter::once(&self.head).chain(self.followers.iter())
-    }
-
-    /// The first part with this name (case-insensitive, with or without `.bus`/`.ovh`).
-    #[must_use]
-    pub fn find(&self, name: &str) -> Option<&Part> {
-        let bare = |n: &str| {
-            n.trim_end_matches(".bus")
-                .trim_end_matches(".ovh")
-                .to_string()
-        };
-        let want = bare(name);
-        self.parts()
-            .find(|p| bare(&p.name).eq_ignore_ascii_case(&want))
-    }
-
-    /// Number of parts including the head.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        1 + self.followers.len()
-    }
-
-    /// Always false: a composition has a head.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        false
-    }
-
-    /// Distance from the head's origin to the origin of the last part (m).
-    #[must_use]
-    pub fn length(&self) -> f32 {
-        self.followers.last().map_or(0.0, |p| p.behind)
     }
 }
 
@@ -584,6 +547,9 @@ pub fn rail_player_pose(
         }
     }
 }
+
+mod composition;
+pub use composition::{Part, VehicleComposition};
 
 // --- AI trains ---------------------------------------------------------------------------------
 
