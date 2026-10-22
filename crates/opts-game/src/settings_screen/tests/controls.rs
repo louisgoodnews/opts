@@ -84,10 +84,10 @@ fn a_vehicle_key_is_rebound_by_pressing_it() {
         app.world().resource::<SettingsPageState>().rebinding,
         Some("controls.vehicle.lights")
     );
-    press(&mut app, KeyCode::KeyG);
+    press(&mut app, KeyCode::KeyJ);
     app.update();
-    assert_eq!(text(&app, "controls.vehicle.lights"), "G");
-    assert_eq!(stored(&db, "controls.vehicle.lights").as_deref(), Some("G"));
+    assert_eq!(text(&app, "controls.vehicle.lights"), "J");
+    assert_eq!(stored(&db, "controls.vehicle.lights").as_deref(), Some("J"));
     assert!(app
         .world()
         .resource::<SettingsPageState>()
@@ -99,7 +99,7 @@ fn a_vehicle_key_is_rebound_by_pressing_it() {
     app.update();
     press(&mut app, KeyCode::KeyM);
     app.update();
-    assert_eq!(text(&app, "controls.vehicle.lights"), "G");
+    assert_eq!(text(&app, "controls.vehicle.lights"), "J");
     let notice = app
         .world()
         .resource::<SettingsPageState>()
@@ -113,7 +113,7 @@ fn a_vehicle_key_is_rebound_by_pressing_it() {
     app.update();
     press(&mut app, KeyCode::Escape);
     app.update();
-    assert_eq!(text(&app, "controls.vehicle.lights"), "G");
+    assert_eq!(text(&app, "controls.vehicle.lights"), "J");
     assert!(app.world().resource::<SettingsPageState>().notice.is_none());
 }
 

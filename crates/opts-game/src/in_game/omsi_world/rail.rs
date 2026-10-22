@@ -28,6 +28,8 @@ const PATH_TYPE_RAIL: u32 = 2;
 const SNAP_MAX_M: f32 = 12.0;
 /// Below this speed (m/s) a rail vehicle may change its direction of travel.
 const STANDSTILL_M_S: f32 = 0.2;
+/// How far ahead (m) the key that toggles the points looks for them.
+const SWITCH_REACH_M: f32 = 150.0;
 /// Wheel radius assumed for the scripts' torque when the vehicle file states none (m).
 const DEFAULT_WHEEL_RADIUS_M: f32 = 0.33;
 /// A train formation is put on the nearest track within this distance of its entry point (m): the
@@ -387,6 +389,16 @@ pub fn rail_player_step(
             train.branch = Branch::Straight;
         } else if keys.just_pressed(&keyboard, "rail_branch_right") {
             train.branch = Branch::Right;
+        } else if keys.just_pressed(&keyboard, "rail_switch_toggle") {
+            // The points ahead: the next way they offer, in the order straight, left, right.
+            if let Some(ahead) = train.next_switch(&net.0, SWITCH_REACH_M) {
+                let at = ahead
+                    .branches
+                    .iter()
+                    .position(|b| *b == train.branch)
+                    .unwrap_or(0);
+                train.branch = ahead.branches[(at + 1) % ahead.branches.len()];
+            }
         }
         let pose_ahead = train.pose(&net.0);
         let grade = match (pose_ahead, train.pose_behind(&net.0, 6.0)) {

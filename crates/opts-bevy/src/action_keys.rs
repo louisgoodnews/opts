@@ -76,6 +76,8 @@ pub const ACTIONS: &[ActionDef] = &[
     rail("drive", "rail_reverse", "S"),
     rail("drive", "rail_lever_up", "Q"),
     rail("drive", "rail_lever_down", "Z"),
+    rail("drive", "rail_lever_zero", "X"),
+    rail("drive", "rail_switch_toggle", "G"),
     rail("drive", "rail_branch_left", "ArrowLeft"),
     rail("drive", "rail_branch_straight", "ArrowUp"),
     rail("drive", "rail_branch_right", "ArrowRight"),
@@ -111,6 +113,10 @@ pub fn action(id: &str) -> Option<&'static ActionDef> {
 #[derive(Resource, Debug, Clone, PartialEq)]
 pub struct ActionKeys {
     chords: HashMap<&'static str, Option<KeyChord>>,
+    /// The letter printed on a key where it differs from the US name of its position (the key at
+    /// the Z position of a German keyboard says Y): learned from the key events, or guessed
+    /// from the system locale until the key was pressed.
+    letters: HashMap<KeyCode, char>,
 }
 
 impl Default for ActionKeys {
@@ -120,11 +126,42 @@ impl Default for ActionKeys {
                 .iter()
                 .map(|a| (a.id, KeyChord::parse(a.default).ok().flatten()))
                 .collect(),
+            letters: HashMap::new(),
         }
     }
 }
 
 impl ActionKeys {
+    /// The defaults with the keyboard layout guessed from the system locale: Y and Z swap their
+    /// printed letters for a German locale until a key event tells what a key really says.
+    #[must_use]
+    pub fn with_system_layout() -> Self {
+        let mut keys = Self::default();
+        let locale = ["LC_ALL", "LC_CTYPE", "LANG"]
+            .iter()
+            .find_map(|v| std::env::var(v).ok().filter(|s| !s.is_empty()))
+            .unwrap_or_default();
+        if locale.to_ascii_lowercase().starts_with("de") {
+            keys.letters.insert(KeyCode::KeyZ, 'Y');
+            keys.letters.insert(KeyCode::KeyY, 'Z');
+        }
+        keys
+    }
+
+    /// Learns the letter printed on `key` (as the key events report it); returns whether the
+    /// known letters changed.
+    pub fn learn_letter(&mut self, key: KeyCode, printed: char) -> bool {
+        let printed = printed.to_ascii_uppercase();
+        let us = crate::control::keys::key_name(key)
+            .and_then(|n| n.chars().next().filter(|_| n.len() == 1))
+            .unwrap_or(printed);
+        if printed == us {
+            self.letters.remove(&key).is_some()
+        } else {
+            self.letters.insert(key, printed) != Some(printed)
+        }
+    }
+
     /// The chord of `id`, `None` when unbound (or unknown).
     #[must_use]
     pub fn chord(&self, id: &str) -> Option<KeyChord> {
@@ -142,7 +179,7 @@ impl ActionKeys {
     #[must_use]
     pub fn label(&self, id: &str) -> String {
         self.chord(id)
-            .and_then(display)
+            .and_then(|c| display_on(c, &self.letters))
             .unwrap_or_else(|| "none".to_owned())
     }
 
@@ -183,7 +220,17 @@ pub fn resolve<'a>(keys: &'a Option<Res<ActionKeys>>) -> &'a ActionKeys {
 /// The chord as a player reads it: `Ctrl+Shift+` and the key as printed on it (`.` for Period).
 #[must_use]
 pub fn display(chord: KeyChord) -> Option<String> {
+    display_on(chord, &HashMap::new())
+}
+
+/// [`display`] with the letters the keys of this keyboard really show.
+#[must_use]
+pub fn display_on(chord: KeyChord, letters: &HashMap<KeyCode, char>) -> Option<String> {
     let text = chord.to_text()?;
+    if let Some(letter) = letters.get(&chord.key) {
+        let prefix_len = text.len() - crate::control::keys::key_name(chord.key)?.len();
+        return Some(format!("{}{letter}", &text[..prefix_len]));
+    }
     let prefix_len = text.len() - crate::control::keys::key_name(chord.key)?.len();
     let key = match chord.key {
         KeyCode::Period => ".",
@@ -210,6 +257,36 @@ fn modifiers_match(keys: &ButtonInput<KeyCode>, c: KeyChord) -> bool {
     let shift = keys.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     let ctrl = keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight]);
     shift == c.shift && ctrl == c.ctrl
+}
+
+/// Learns what the keys of the player's keyboard say: the key events carry the logical key next
+/// to the physical one (a German keyboard's Y arrives as the physical `KeyZ`).
+pub fn learn_key_layout(
+    events: Option<MessageReader<bevy::input::keyboard::KeyboardInput>>,
+    mut keys: ResMut<ActionKeys>,
+) {
+    let Some(mut events) = events else { return };
+    use bevy::input::keyboard::Key;
+    for e in events.read() {
+        if !e.state.is_pressed() {
+            continue;
+        }
+        let Key::Character(text) = &e.logical_key else {
+            continue;
+        };
+        let mut chars = text.chars();
+        let (Some(c), None) = (chars.next(), chars.next()) else {
+            continue;
+        };
+        if !c.is_ascii_alphabetic() {
+            continue;
+        }
+        // Looking must not wake every system that watches the registry: only a change does.
+        if keys.bypass_change_detection().learn_letter(e.key_code, c) {
+            keys.set_changed();
+            tracing::info!(physical = ?e.key_code, printed = %c.to_ascii_uppercase(), "keyboard layout learned: the key says another letter than its US name");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -281,5 +358,20 @@ mod tests {
         let f6 = KeyChord::parse("F6").unwrap().unwrap();
         assert_eq!(keys.holder_of(f6, "help"), Some("full_map"));
         assert_eq!(keys.holder_of(f6, "full_map"), None);
+    }
+
+    #[test]
+    fn a_key_that_says_another_letter_is_labelled_with_it() {
+        let mut keys = ActionKeys::default();
+        assert_eq!(keys.label("rail_lever_down"), "Z");
+        // A German keyboard: the key at the Z position says Y.
+        assert!(keys.learn_letter(KeyCode::KeyZ, 'y'));
+        assert_eq!(keys.label("rail_lever_down"), "Y");
+        assert!(!keys.learn_letter(KeyCode::KeyZ, 'Y'), "nothing new");
+        // The same key saying Z again (the layout changed) goes back to its US name.
+        assert!(keys.learn_letter(KeyCode::KeyZ, 'z'));
+        assert_eq!(keys.label("rail_lever_down"), "Z");
+        // A key that says what its position says is left alone.
+        assert!(!keys.learn_letter(KeyCode::KeyQ, 'q'));
     }
 }

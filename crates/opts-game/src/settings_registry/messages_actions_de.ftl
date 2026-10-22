@@ -60,3 +60,7 @@ set-bk-rail_branch_straight = Schiene: Weiche geradeaus
 set-bk-rail_branch_straight-desc = Schienenfahrzeuge: bleibt an der nächsten Weiche auf dem geraden Gleis.
 set-bk-rail_branch_right = Schiene: Weiche rechts
 set-bk-rail_branch_right-desc = Schienenfahrzeuge: nimmt an der nächsten Weiche den rechten Zweig.
+set-bk-rail_lever_zero = Schiene: Hebel auf Null
+set-bk-rail_lever_zero-desc = Schienenfahrzeuge: stellt den Fahrhebel sofort auf Null.
+set-bk-rail_switch_toggle = Schiene: Weiche umstellen
+set-bk-rail_switch_toggle-desc = Schienenfahrzeuge: stellt die Weiche voraus auf den nächsten Weg (gerade, links, rechts); nur wenn eine Weiche in 150 m Entfernung liegt.

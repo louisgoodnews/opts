@@ -5,6 +5,7 @@
 //!   and +1 (full traction) while held and stays where it is left, like the master controller of
 //!   a tram. Above 0 it is the throttle, below 0 the service brake; the pedals of a road vehicle
 //!   are not used.
+//! * **Zero** (`rail_lever_zero`, X): puts the lever back to 0 at once.
 //! * **Direction** (`rail_forward` / `rail_reverse`, W and S): the direction of travel. A tram's
 //!   script has its own switch for backing up; [`apply_direction`] presses it.
 //! * No parking brake: the `parking_brake` action does nothing on a rail vehicle (a tram's rail
@@ -86,6 +87,9 @@ pub fn apply_keys(
         action_keys.pressed(keys, "rail_lever_down"),
         dt,
     );
+    if action_keys.just_pressed(keys, "rail_lever_zero") {
+        controls.lever = 0.0;
+    }
     if action_keys.just_pressed(keys, "rail_forward") {
         controls.select(1);
     }

@@ -32,6 +32,15 @@ type Trail = Vec<(LaneId, i8)>;
 /// Longest trail kept (lanes); older ones are further back than any consist is long.
 const MAX_TRAIL: usize = 64;
 
+/// Points ahead of a train.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SwitchAhead {
+    /// Metres from the head to the points.
+    pub distance_m: f32,
+    /// The ways open there, straight first.
+    pub branches: Vec<Branch>,
+}
+
 /// The head of a train on the network.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Train {
@@ -180,6 +189,67 @@ impl Train {
         Moved::Full
     }
 
+    /// The next points ahead within `within` metres: how far they are and which ways lead on
+    /// from them (the way that continues most straight is [`Branch::Straight`], the others lie to
+    /// its left or right). `None` when the track runs on without a choice.
+    #[must_use]
+    pub fn next_switch(&self, net: &PedestrianNet, within: f32) -> Option<SwitchAhead> {
+        let mut lane = self.lane;
+        let mut dir = self.dir;
+        let mut s = self.s;
+        let mut travelled = 0.0f32;
+        for _ in 0..12 {
+            let l = net.lane(lane)?;
+            let len = l.length();
+            travelled += if dir > 0 { len - s } else { s };
+            if travelled > within {
+                return None;
+            }
+            let end = if dir > 0 { End::End } else { End::Start };
+            let options = net.continuations(lane, end);
+            let here = heading(net, lane, if dir > 0 { len } else { 0.0 }, dir);
+            let turn = |o: &(LaneId, End)| {
+                let (id, entry) = *o;
+                let (at, d) = if entry == End::Start {
+                    (0.0, 1)
+                } else {
+                    (net.lane(id).map_or(0.0, |l| l.length()), -1)
+                };
+                wrap(heading(net, id, at, d) - here)
+            };
+            if options.len() > 1 {
+                let straight = options
+                    .iter()
+                    .min_by(|a, b| turn(a).abs().total_cmp(&turn(b).abs()))?;
+                let mut branches = vec![Branch::Straight];
+                for o in options.iter().filter(|o| *o != straight) {
+                    let b = if turn(o) < turn(straight) {
+                        Branch::Left
+                    } else {
+                        Branch::Right
+                    };
+                    if !branches.contains(&b) {
+                        branches.push(b);
+                    }
+                }
+                return Some(SwitchAhead {
+                    distance_m: travelled,
+                    branches,
+                });
+            }
+            let &(next, entry) = options.first()?;
+            lane = next;
+            if entry == End::Start {
+                dir = 1;
+                s = 0.0;
+            } else {
+                dir = -1;
+                s = net.lane(next).map_or(0.0, |l| l.length());
+            }
+        }
+        None
+    }
+
     /// Moves the head `distance` metres backwards along the track it ran over (a vehicle backing
     /// up keeps facing the way it faced): the trail is taken back lane by lane, and beyond the
     /// known trail the lane behind the first one is looked up.
@@ -326,6 +396,19 @@ mod tests {
         // 25 m behind the head: 20 m on lane 1 … 5 m back on lane 0.
         let (q, _) = t.pose_behind(&n, 25.0).unwrap();
         assert!((q.y - 95.0).abs() < 1e-3, "{q:?}");
+    }
+
+    #[test]
+    fn the_next_points_are_found_with_their_ways() {
+        let n = net();
+        let t = Train::new(0, 70.0, 1);
+        // 30 m to the point at the end of lane 0: straight on or to the right.
+        let ahead = t.next_switch(&n, 100.0).expect("points ahead");
+        assert!((ahead.distance_m - 30.0).abs() < 1e-3);
+        assert_eq!(ahead.branches, vec![Branch::Straight, Branch::Right]);
+        assert!(t.next_switch(&n, 20.0).is_none(), "out of range");
+        // Past the point there is none.
+        assert!(Train::new(1, 10.0, 1).next_switch(&n, 500.0).is_none());
     }
 
     #[test]

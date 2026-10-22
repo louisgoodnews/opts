@@ -310,3 +310,7 @@ set-opt-minimap-heading = Heading up
 set-opt-minimap-north = North up
 settings-font-unavailable = The font { $font } is not installed. The previous font stays.
 settings-font-default = Default
+set-hud-rail-direction = Rail direction
+set-hud-rail-direction-desc = Show the selected direction of travel of a tram.
+set-hud-rail-lever = Rail power lever
+set-hud-rail-lever-desc = Show the position of a tram's power lever in percent (plus: traction, minus: braking).

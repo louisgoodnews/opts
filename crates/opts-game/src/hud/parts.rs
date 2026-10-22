@@ -230,6 +230,20 @@ pub(super) fn build_instrument(
             Some(keys::CAPTION_RPM),
             palette,
         ),
+        Binding::RailDirection => readout(
+            parent,
+            w,
+            (TypeScale::BodyMedium, InstrumentInk::Ok),
+            Some(keys::CAPTION_DIRECTION),
+            palette,
+        ),
+        Binding::RailLever => readout(
+            parent,
+            w,
+            (TypeScale::NumericMedium, InstrumentInk::Text),
+            Some(keys::CAPTION_LEVER),
+            palette,
+        ),
         Binding::ParkingBrake => readout(
             parent,
             w,
