@@ -9,4 +9,4 @@ pub mod dynamics;
 pub mod train;
 
 pub use dynamics::{ConsistLoad, RailDynamics, RailInput, ScriptForces};
-pub use train::{Branch, Moved, Train};
+pub use train::{Branch, Moved, SwitchAhead, Train};

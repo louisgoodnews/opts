@@ -91,6 +91,20 @@ pub fn update_texts(
                     values.gear.clone()
                 }
             }
+            (Binding::RailDirection, Part::Value) => match values.rail {
+                Some((d, _)) if d < 0 => loc.t(keys::RAIL_REVERSE),
+                Some(_) => loc.t(keys::RAIL_FORWARD),
+                None => String::new(),
+            },
+            (Binding::RailLever, Part::Value) => values.rail.map_or_else(String::new, |(_, l)| {
+                // Traction above zero, braking below it, in percent.
+                let pct = (l * 100.0).round() as i32;
+                if pct > 0 {
+                    format!("+{pct}")
+                } else {
+                    pct.to_string()
+                }
+            }),
             (Binding::Rpm, Part::Value) => values
                 .rpm
                 .map_or_else(String::new, |r| format!("{:.0}", r.round())),
@@ -136,6 +150,11 @@ pub fn update_texts(
             // The keys of the rebindable actions are the player's current ones.
             (Binding::ControlsHint, Part::Value) => {
                 let bound = opts_bevy::action_keys_of(&action_keys);
+                if values.rail.is_some() {
+                    let new = rail_hint(&loc, bound, layout.compact);
+                    set_text(&mut text, new);
+                    continue;
+                }
                 loc.t_args(
                     if layout.compact {
                         keys::HINT_CONTROLS_COMPACT
@@ -317,4 +336,27 @@ pub fn camera_label_changes(
         }
         Some(_) => {}
     }
+}
+
+/// The control hint of a rail vehicle: the keys of its lever and its direction selector.
+fn rail_hint(loc: &Localization, bound: &opts_bevy::ActionKeys, compact: bool) -> String {
+    loc.t_args(
+        if compact {
+            keys::HINT_CONTROLS_RAIL_COMPACT
+        } else {
+            keys::HINT_CONTROLS_RAIL
+        },
+        &[
+            ("up".to_owned(), Arg::from(bound.label("rail_lever_up"))),
+            ("down".to_owned(), Arg::from(bound.label("rail_lever_down"))),
+            ("zero".to_owned(), Arg::from(bound.label("rail_lever_zero"))),
+            ("forward".to_owned(), Arg::from(bound.label("rail_forward"))),
+            ("reverse".to_owned(), Arg::from(bound.label("rail_reverse"))),
+            (
+                "switch".to_owned(),
+                Arg::from(bound.label("rail_switch_toggle")),
+            ),
+            ("help".to_owned(), Arg::from(bound.label("help"))),
+        ],
+    )
 }

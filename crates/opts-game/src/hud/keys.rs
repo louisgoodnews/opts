@@ -20,6 +20,14 @@ keys! {
     CAPTION_RPM = "hud-caption-rpm",
     /// Caption of the parking brake lamp.
     CAPTION_PARK = "hud-caption-park",
+    /// Caption of the rail direction.
+    CAPTION_DIRECTION = "hud-caption-direction",
+    /// Caption of the rail power lever.
+    CAPTION_LEVER = "hud-caption-lever",
+    /// Rail direction: forward.
+    RAIL_FORWARD = "hud-rail-forward",
+    /// Rail direction: backwards.
+    RAIL_REVERSE = "hud-rail-reverse",
     /// Parking brake on.
     BRAKE_ON = "hud-brake-on",
     /// Parking brake off.
@@ -32,6 +40,10 @@ keys! {
     CLOCK = "hud-clock",
     /// Hints: the most used keys.
     HINT_CONTROLS = "hud-hint-controls",
+    /// Hints of a rail vehicle (`up`, `down`, `zero`, `forward`, `reverse`, `help`).
+    HINT_CONTROLS_RAIL = "hud-hint-controls-rail",
+    /// Hints of a rail vehicle in a compact layout.
+    HINT_CONTROLS_RAIL_COMPACT = "hud-hint-controls-rail-compact",
     /// Hints in a compact layout: the same keys, shorter.
     HINT_CONTROLS_COMPACT = "hud-hint-controls-compact",
     /// Mouse driving: how to leave it or free the mouse.

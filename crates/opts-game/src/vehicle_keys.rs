@@ -456,11 +456,11 @@ mod tests {
             &mut app.world_mut().resource_mut::<GameSettings>(),
             &caps,
             "controls.vehicle.lights",
-            "G",
+            "J",
         )
         .unwrap();
         app.update();
-        assert_eq!(lights(&app), [KeyCode::KeyG]);
+        assert_eq!(lights(&app), [KeyCode::KeyJ]);
         // "none" unbinds.
         reg.set(
             &mut app.world_mut().resource_mut::<GameSettings>(),

@@ -255,9 +255,16 @@ pub struct ActionKeysPlugin;
 
 impl Plugin for ActionKeysPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ActionKeys>()
+        app.insert_resource(ActionKeys::with_system_layout())
             .init_resource::<opts_bevy::MouseDriving>()
-            .add_systems(PreUpdate, (sync_action_keys, sync_mouse_driving));
+            .add_systems(
+                PreUpdate,
+                (
+                    sync_action_keys,
+                    sync_mouse_driving,
+                    opts_bevy::action_keys::learn_key_layout,
+                ),
+            );
     }
 }
 

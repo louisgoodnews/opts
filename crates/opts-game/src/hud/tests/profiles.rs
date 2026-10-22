@@ -19,7 +19,7 @@ fn every_widget_is_in_a_shipped_profile_and_the_profiles_are_clean() {
 }
 
 #[test]
-fn the_tram_profile_has_no_rpm_and_orders_the_brake_before_the_gear() {
+fn the_tram_profile_has_no_rpm_and_shows_direction_and_lever_instead_of_brake_and_gear() {
     let profiles = HudProfiles::load(None);
     let tram = profiles.get(VehicleKind::Tram).expect("tram");
     let ids: Vec<_> = tram
@@ -27,7 +27,7 @@ fn the_tram_profile_has_no_rpm_and_orders_the_brake_before_the_gear() {
         .iter()
         .map(|(_, w)| w.id)
         .collect();
-    assert_eq!(ids, ["speed", "parking-brake", "gear"]);
+    assert_eq!(ids, ["speed", "rail-direction", "rail-lever"]);
 }
 
 #[test]

@@ -83,6 +83,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.drive.rail_reverse` | Rail: reverse | input binding | `S` | at once | available | Rail vehicles: drive backwards (a standing tram only). |
 | `controls.drive.rail_lever_up` | Rail: power lever up | input binding | `Q` | at once | available | Rail vehicles: moves the power lever towards traction while held; it stays where it is left. |
 | `controls.drive.rail_lever_down` | Rail: power lever down | input binding | `Z` | at once | available | Rail vehicles: moves the power lever towards braking while held; it stays where it is left. Y on a German keyboard. |
+| `controls.drive.rail_lever_zero` | Rail: lever to zero | input binding | `X` | at once | available | Rail vehicles: puts the power lever back to zero at once. |
+| `controls.drive.rail_switch_toggle` | Rail: toggle the points | input binding | `G` | at once | available | Rail vehicles: switches the points ahead to their next way (straight, left, right); only when points are within 150 m. |
 | `controls.drive.rail_branch_left` | Rail: points left | input binding | `ArrowLeft` | at once | available | Rail vehicles: takes the left branch at the next point. |
 | `controls.drive.rail_branch_straight` | Rail: points straight | input binding | `ArrowUp` | at once | available | Rail vehicles: stays on the straight track at the next point. |
 | `controls.drive.rail_branch_right` | Rail: points right | input binding | `ArrowRight` | at once | available | Rail vehicles: takes the right branch at the next point. |
@@ -130,6 +132,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `hud.gear` | Gear | on / off | `true` | at once | available | Show the selected gear. |
 | `hud.rpm` | Engine speed | on / off | `true` | at once | available | Show the engine speed when the simulation provides it. |
 | `hud.parking_brake` | Parking brake lamp | on / off | `true` | at once | available | Show the parking brake state. |
+| `hud.rail_direction` | Rail direction | on / off | `true` | at once | available | Show the selected direction of travel of a tram. |
+| `hud.rail_lever` | Rail power lever | on / off | `true` | at once | available | Show the position of a tram's power lever in percent (plus: traction, minus: braking). |
 | `hud.session_info` | Map and entry point | on / off | `true` | at once | available | Show where the drive takes place; it fades after a few seconds. |
 | `hud.clock` | Clock and weather | on / off | `true` | at once | available | Show the session clock and the weather; it fades after a few seconds. |
 | `hud.camera_label` | Camera name | on / off | `true` | at once | available | Show the name of the camera for a moment after you change it. |

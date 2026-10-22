@@ -236,6 +236,10 @@ keys! {
     HELP_KEY_TRAM = "help-key-tram",
     /// Message `help-key-rail-direction`.
     HELP_KEY_RAIL_DIRECTION = "help-key-rail-direction",
+    /// Message `help-key-rail-zero`.
+    HELP_KEY_RAIL_ZERO = "help-key-rail-zero",
+    /// Message `help-key-rail-switch`.
+    HELP_KEY_RAIL_SWITCH = "help-key-rail-switch",
     /// Message `help-key-rail-lever`.
     HELP_KEY_RAIL_LEVER = "help-key-rail-lever",
     /// Message `help-key-camera`.

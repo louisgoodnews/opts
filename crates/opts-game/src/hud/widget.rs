@@ -123,6 +123,10 @@ pub enum Binding {
     Rpm,
     /// Parking brake state.
     ParkingBrake,
+    /// A rail vehicle's selected direction of travel.
+    RailDirection,
+    /// A rail vehicle's power lever.
+    RailLever,
     /// Map and entry point of the session.
     SessionInfo,
     /// Session clock and weather.
@@ -142,7 +146,12 @@ impl Binding {
     #[must_use]
     pub const fn row(self) -> Option<Row> {
         match self {
-            Self::Speed | Self::Gear | Self::Rpm | Self::ParkingBrake => Some(Row::Instruments),
+            Self::Speed
+            | Self::Gear
+            | Self::Rpm
+            | Self::ParkingBrake
+            | Self::RailDirection
+            | Self::RailLever => Some(Row::Instruments),
             Self::ControlsHint => Some(Row::Hints),
             Self::Alerts => Some(Row::Alerts),
             Self::SessionInfo | Self::SessionClock | Self::CameraLabel | Self::MiniMap => None,
@@ -254,7 +263,15 @@ pub const WIDGETS: &[HudWidget] = &[
             description_key: "set-hud-gear-desc",
             default_on: true,
         }),
-        when: Condition::ALWAYS,
+        when: Condition {
+            kinds: &[
+                VehicleKind::Bus,
+                VehicleKind::ArticulatedBus,
+                VehicleKind::Trolleybus,
+            ],
+            needs_rpm: false,
+            hidden_in: &[],
+        },
     },
     HudWidget {
         id: "rpm",
@@ -290,7 +307,55 @@ pub const WIDGETS: &[HudWidget] = &[
             description_key: "set-hud-parking-brake-desc",
             default_on: true,
         }),
-        when: Condition::ALWAYS,
+        when: Condition {
+            kinds: &[
+                VehicleKind::Bus,
+                VehicleKind::ArticulatedBus,
+                VehicleKind::Trolleybus,
+            ],
+            needs_rpm: false,
+            hidden_in: &[],
+        },
+    },
+    HudWidget {
+        id: "rail-direction",
+        title_key: "hud-widget-rail-direction",
+        binding: Binding::RailDirection,
+        format: Format::Text,
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
+        priority: 85,
+        switch: Some(WidgetSwitch {
+            key: "hud.rail_direction",
+            label_key: "set-hud-rail-direction",
+            description_key: "set-hud-rail-direction-desc",
+            default_on: true,
+        }),
+        when: Condition {
+            kinds: &[VehicleKind::Tram],
+            needs_rpm: false,
+            hidden_in: &[],
+        },
+    },
+    HudWidget {
+        id: "rail-lever",
+        title_key: "hud-widget-rail-lever",
+        binding: Binding::RailLever,
+        format: Format::Text,
+        slot: Slot::ClusterBottomLeft,
+        slots: &[Slot::ClusterBottomLeft],
+        priority: 90,
+        switch: Some(WidgetSwitch {
+            key: "hud.rail_lever",
+            label_key: "set-hud-rail-lever",
+            description_key: "set-hud-rail-lever-desc",
+            default_on: true,
+        }),
+        when: Condition {
+            kinds: &[VehicleKind::Tram],
+            needs_rpm: false,
+            hidden_in: &[],
+        },
     },
     HudWidget {
         id: "session",

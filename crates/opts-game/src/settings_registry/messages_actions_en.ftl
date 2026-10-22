@@ -60,3 +60,7 @@ set-bk-rail_branch_straight = Rail: points straight
 set-bk-rail_branch_straight-desc = Rail vehicles: stays on the straight track at the next point.
 set-bk-rail_branch_right = Rail: points right
 set-bk-rail_branch_right-desc = Rail vehicles: takes the right branch at the next point.
+set-bk-rail_lever_zero = Rail: lever to zero
+set-bk-rail_lever_zero-desc = Rail vehicles: puts the power lever back to zero at once.
+set-bk-rail_switch_toggle = Rail: toggle the points
+set-bk-rail_switch_toggle-desc = Rail vehicles: switches the points ahead to their next way (straight, left, right); only when points are within 150 m.

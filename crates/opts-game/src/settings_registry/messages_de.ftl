@@ -309,3 +309,7 @@ set-opt-minimap-heading = Fahrtrichtung oben
 set-opt-minimap-north = Norden oben
 settings-font-unavailable = Die Schrift { $font } ist nicht installiert. Die bisherige bleibt.
 settings-font-default = Standard
+set-hud-rail-direction = Fahrtrichtung der Bahn
+set-hud-rail-direction-desc = Die gewählte Fahrtrichtung einer Bahn zeigen.
+set-hud-rail-lever = Fahrhebel der Bahn
+set-hud-rail-lever-desc = Die Stellung des Fahrhebels einer Bahn in Prozent zeigen (plus: Traktion, minus: Bremsen).

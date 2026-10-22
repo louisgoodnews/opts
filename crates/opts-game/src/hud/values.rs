@@ -68,6 +68,9 @@ pub struct HudValues {
     pub rpm: Option<f32>,
     /// Parking brake engaged.
     pub parking_brake: bool,
+    /// A rail vehicle's controls: the selected direction (`1` forward, `-1` backwards) and the
+    /// power lever (`-1` braking to `1` traction); `None` for a road vehicle.
+    pub rail: Option<(i8, f32)>,
     /// Camera mode.
     pub camera: CameraMode,
     /// Index of the sub camera (cockpit or passenger).
@@ -85,6 +88,7 @@ impl Default for HudValues {
             gear: String::new(),
             rpm: None,
             parking_brake: false,
+            rail: None,
             camera: CameraMode::External,
             sub_camera: 0,
             sub_total: 0,
@@ -121,6 +125,7 @@ type PlayerParts = (
     Has<RailPlayer>,
     Has<ArticulatedChain>,
     Option<&'static BusVehicle>,
+    Option<&'static opts_bevy::RailControls>,
 );
 
 /// Samples the player's vehicle and the camera.
@@ -134,13 +139,14 @@ pub fn sample_values(
         sub_camera: camera.sub_camera_index,
         ..HudValues::default()
     };
-    if let Ok((c, rail, chain, bus)) = vehicle.single() {
+    if let Ok((c, rail, chain, bus, controls)) = vehicle.single() {
         next.has_vehicle = true;
         next.kind = kind_of(rail, chain);
         next.speed_kmh = c.forward_speed_km_h().abs();
         next.gear = gear_text(c.gear());
         next.rpm = RPM_PROVIDED.then(|| c.engine_rpm());
         next.parking_brake = c.inputs().is_parking_brake_engaged();
+        next.rail = controls.map(|r| (r.direction, r.lever));
         next.sub_total = bus.map_or(0, |b| match camera.mode {
             CameraMode::Cockpit => b.driver_cameras.len(),
             CameraMode::Passenger => b.pax_camera_count(),

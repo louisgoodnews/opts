@@ -155,6 +155,20 @@ pub const GROUPS: &[Group] = &[
                 RAIL_CONTROLS,
             ),
             rebindable(
+                &["rail_lever_zero"],
+                "X",
+                &[KeyCode::KeyX],
+                keys::HELP_KEY_RAIL_ZERO,
+                RAIL_CONTROLS,
+            ),
+            rebindable(
+                &["rail_switch_toggle"],
+                "G",
+                &[KeyCode::KeyG],
+                keys::HELP_KEY_RAIL_SWITCH,
+                RAIL,
+            ),
+            rebindable(
                 &[
                     "rail_branch_left",
                     "rail_branch_straight",
