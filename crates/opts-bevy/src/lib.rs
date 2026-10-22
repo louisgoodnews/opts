@@ -49,6 +49,7 @@ pub mod moon_material;
 pub mod mouse_driving;
 pub mod plugin;
 pub mod position_tag;
+pub mod rail_controls;
 pub mod reflections;
 pub mod render_stats;
 pub mod reporting;
@@ -136,6 +137,7 @@ pub use plugin::{
     OptsVehiclePlugin,
 };
 pub use position_tag::{position_tag, set_loading_tile, set_position_tag};
+pub use rail_controls::RailControls;
 pub use scenery::{
     extrude_spline_profile, extrude_spline_segment, spawn_scenery_object, spline_stations,
     SceneryLoaderError, SceneryObjectAsset, ScoAssetLoader, SliAssetLoader, SplineProfileAsset,

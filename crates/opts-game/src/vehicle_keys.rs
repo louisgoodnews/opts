@@ -176,7 +176,7 @@ pub const ACTIONS: &[VehicleKeyAction] = &[
     ),
     action!("interior_upper", "cp_licht_oberdeck_toggle", "8", false),
     action!("interior_lower", "cp_licht_unterdeck_toggle", "9", false),
-    action!("microphone", "cp_microphone", "Q", true),
+    action!("microphone", "cp_microphone", "Q", true, Scope::Bus, None),
     action!("ticket", "ticket_give", "T", false),
     action!("ticket_change", "change_give", "Ctrl+T", false),
     action!("ticket_take", "change_take", "Shift+T", false),

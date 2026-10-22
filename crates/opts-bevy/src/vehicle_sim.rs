@@ -188,13 +188,20 @@ impl Default for VehicleCameraRig {
     }
 }
 
+/// What the keyboard input system reads and writes of the player's vehicle.
+type PlayerInput<'a> = (
+    &'a mut VehicleController,
+    Option<&'a VehicleInputConfig>,
+    Option<&'a mut crate::rail_controls::RailControls>,
+);
+
 /// Systems that poll desktop keyboard inputs and translate them to [`VehicleInputs`].
 pub fn vehicle_input_system(
     keyboard: Res<ButtonInput<KeyCode>>,
     action_keys: Option<Res<crate::action_keys::ActionKeys>>,
     time: Res<Time>,
     mut remote: ResMut<crate::vehicle_remote::RemoteControls>,
-    mut query: Query<(&mut VehicleController, Option<&VehicleInputConfig>), With<PlayerVehicle>>,
+    mut query: Query<PlayerInput, With<PlayerVehicle>>,
 ) {
     let dt = time.delta_secs();
     if dt <= 0.0 {
@@ -203,9 +210,22 @@ pub fn vehicle_input_system(
 
     let default_config = VehicleInputConfig::default();
 
-    for (mut controller, config_opt) in &mut query {
+    for (mut controller, config_opt, rail) in &mut query {
         let config = config_opt.unwrap_or(&default_config);
         let inputs = controller.inputs_mut();
+        // A rail vehicle has a power lever and a direction selector, no pedals, no parking brake
+        // and no steering (`crate::rail_controls`).
+        if let Some(mut rail) = rail {
+            crate::rail_controls::apply_keys(
+                &mut rail,
+                inputs,
+                &keyboard,
+                crate::action_keys::resolve(&action_keys),
+                dt,
+            );
+            remote.apply(inputs, dt);
+            continue;
+        }
 
         // 1. Throttle pedal (W or ArrowUp)
         let throttle_pressed =
@@ -394,6 +414,7 @@ impl Plugin for OptsVehiclePlugin {
                     crate::vehicle_remote::flush_remote_when_gated
                         .run_if(crate::vehicle_remote::vehicle_input_closed),
                     crate::vehicle_remote::release_trigger_system,
+                    crate::rail_controls::direction_system.after(vehicle_input_system),
                     crate::vehicle_remote::odometer_system,
                     vehicle_transform_sync_system,
                     wheel_transform_sync_system,

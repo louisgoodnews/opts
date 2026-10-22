@@ -87,6 +87,7 @@ const fn rebindable(
 
 const SIM: &str = "crates/opts-bevy/src/vehicle_sim.rs";
 const RAIL: &str = "crates/opts-game/src/in_game/omsi_world/rail.rs";
+const RAIL_CONTROLS: &str = "crates/opts-bevy/src/rail_controls.rs";
 const CAMERA: &str = "crates/opts-bevy/src/camera/input.rs";
 const VIEWPOINT: &str = "crates/opts-bevy/src/camera/viewpoint.rs";
 const EGO: &str = "crates/opts-bevy/src/camera/mode/ego.rs";
@@ -134,9 +135,33 @@ pub const GROUPS: &[Group] = &[
                 keys::HELP_KEY_GEARS,
                 SIM,
             ),
-            bind(
-                "Z / X / C",
-                &[KeyCode::KeyZ, KeyCode::KeyX, KeyCode::KeyC],
+        ],
+    ),
+    (
+        keys::HELP_GROUP_RAIL,
+        &[
+            rebindable(
+                &["rail_forward", "rail_reverse"],
+                "W / S",
+                &[KeyCode::KeyW, KeyCode::KeyS],
+                keys::HELP_KEY_RAIL_DIRECTION,
+                RAIL_CONTROLS,
+            ),
+            rebindable(
+                &["rail_lever_up", "rail_lever_down"],
+                "Q / Y",
+                &[KeyCode::KeyQ, KeyCode::KeyZ],
+                keys::HELP_KEY_RAIL_LEVER,
+                RAIL_CONTROLS,
+            ),
+            rebindable(
+                &[
+                    "rail_branch_left",
+                    "rail_branch_straight",
+                    "rail_branch_right",
+                ],
+                "← ↑ →",
+                &[KeyCode::ArrowLeft, KeyCode::ArrowUp, KeyCode::ArrowRight],
                 keys::HELP_KEY_TRAM,
                 RAIL,
             ),
@@ -377,8 +402,9 @@ mod tests {
 
     #[test]
     fn every_row_has_keys_and_a_shown_text_and_no_key_is_listed_twice() {
-        let mut seen = std::collections::HashSet::new();
         for (_, rows) in GROUPS {
+            // A key may be listed once per group (W and S drive a bus and choose a tram's way).
+            let mut seen = std::collections::HashSet::new();
             for b in *rows {
                 assert!(!b.keys.is_empty() && !b.shown.is_empty(), "{b:?}");
                 for key in b.keys {

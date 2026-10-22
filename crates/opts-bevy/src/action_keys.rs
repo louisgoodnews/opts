@@ -22,15 +22,63 @@ pub struct ActionDef {
     pub group: &'static str,
     /// The default chord as setting text.
     pub default: &'static str,
+    /// Which vehicles the action is for.
+    pub scope: ActionScope,
+}
+
+/// The vehicles an action is for: a key of the rail controls may share its default with a road
+/// vehicle's key (Q is the bus microphone and the tram's lever).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionScope {
+    /// Every vehicle.
+    All,
+    /// Road vehicles (buses, trolleybuses).
+    Road,
+    /// Rail vehicles (trams, trains).
+    Rail,
 }
 
 const fn def(group: &'static str, id: &'static str, default: &'static str) -> ActionDef {
-    ActionDef { id, group, default }
+    ActionDef {
+        id,
+        group,
+        default,
+        scope: ActionScope::All,
+    }
+}
+
+const fn road(group: &'static str, id: &'static str, default: &'static str) -> ActionDef {
+    ActionDef {
+        id,
+        group,
+        default,
+        scope: ActionScope::Road,
+    }
+}
+
+const fn rail(group: &'static str, id: &'static str, default: &'static str) -> ActionDef {
+    ActionDef {
+        id,
+        group,
+        default,
+        scope: ActionScope::Rail,
+    }
 }
 
 /// The actions, in the order of the settings page.
 pub const ACTIONS: &[ActionDef] = &[
-    def("drive", "parking_brake", "Period"),
+    road("drive", "parking_brake", "Period"),
+    // The controls of rail vehicles: no pedals and no parking brake. W and S choose the
+    // direction of travel, Q and Y (the key at the Z position of a QWERTY keyboard) move the
+    // power lever up (towards traction) and down (towards braking), the arrows choose the way at
+    // the next point.
+    rail("drive", "rail_forward", "W"),
+    rail("drive", "rail_reverse", "S"),
+    rail("drive", "rail_lever_up", "Q"),
+    rail("drive", "rail_lever_down", "Z"),
+    rail("drive", "rail_branch_left", "ArrowLeft"),
+    rail("drive", "rail_branch_straight", "ArrowUp"),
+    rail("drive", "rail_branch_right", "ArrowRight"),
     def("map", "minimap_toggle", "F7"),
     def("map", "minimap_rotate", "Shift+F7"),
     def("map", "minimap_speed_zoom", "Ctrl+F7"),

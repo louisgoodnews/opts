@@ -129,9 +129,20 @@ pub fn binding_settings() -> Vec<(String, &'static str, &'static str)> {
     v
 }
 
-/// The vehicles a binding setting is for (built-in actions: all).
+/// The vehicles a binding setting is for.
 fn scope_of(setting: &str) -> vehicle_keys::Scope {
-    vehicle_keys::action(setting).map_or(vehicle_keys::Scope::Both, |a| a.scope)
+    if let Some(a) = vehicle_keys::action(setting) {
+        return a.scope;
+    }
+    match action_keys::ACTIONS
+        .iter()
+        .find(|a| action_keys::setting_of(a) == setting)
+        .map(|a| a.scope)
+    {
+        Some(action_keys::ActionScope::Road) => vehicle_keys::Scope::Bus,
+        Some(action_keys::ActionScope::Rail) => vehicle_keys::Scope::Tram,
+        _ => vehicle_keys::Scope::Both,
+    }
 }
 
 /// Whether `key` is the default key of a built-in action: those keys are no longer fixed, the

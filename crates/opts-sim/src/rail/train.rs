@@ -180,6 +180,88 @@ impl Train {
         Moved::Full
     }
 
+    /// Moves the head `distance` metres backwards along the track it ran over (a vehicle backing
+    /// up keeps facing the way it faced): the trail is taken back lane by lane, and beyond the
+    /// known trail the lane behind the first one is looked up.
+    pub fn retreat(&mut self, distance: f32, net: &PedestrianNet) -> Moved {
+        let mut left = distance.max(0.0);
+        for _ in 0..16 {
+            let Some(lane) = net.lane(self.lane) else {
+                return Moved::EndOfTrack;
+            };
+            let len = lane.length();
+            let rear = if self.dir > 0 { self.s } else { len - self.s };
+            let room = if self.trail.is_empty() {
+                rear
+            } else {
+                self.on_lane.min(rear)
+            };
+            if left <= room {
+                self.s -= f32::from(self.dir) * left;
+                self.on_lane = (self.on_lane - left).max(0.0);
+                return Moved::Full;
+            }
+            left -= room.max(0.0);
+            if let Some((back, back_dir)) = self.trail.pop() {
+                // The lane before was left at its far end in `back_dir`: back onto it.
+                let Some(l) = net.lane(back) else {
+                    return Moved::EndOfTrack;
+                };
+                self.lane = back;
+                self.dir = back_dir;
+                self.s = if back_dir > 0 { l.length() } else { 0.0 };
+                self.on_lane = l.length();
+                continue;
+            }
+            let end = if self.dir > 0 { End::Start } else { End::End };
+            self.s = if self.dir > 0 { 0.0 } else { len };
+            let options = net.continuations(self.lane, end);
+            let Some(&(next, entry)) = self.pick_back(net, &options) else {
+                return Moved::EndOfTrack;
+            };
+            let next_len = net.lane(next).map_or(0.0, |l| l.length());
+            self.lane = next;
+            self.on_lane = 0.0;
+            if entry == End::End {
+                self.dir = 1;
+                self.s = next_len;
+            } else {
+                self.dir = -1;
+                self.s = 0.0;
+            }
+        }
+        Moved::Full
+    }
+
+    /// The lane to back onto among `options`: the one the vehicle would still face the same
+    /// way on (a backing vehicle keeps its heading), `branch` deciding between several.
+    fn pick_back<'a>(
+        &self,
+        net: &PedestrianNet,
+        options: &'a [(LaneId, End)],
+    ) -> Option<&'a (LaneId, End)> {
+        if options.len() <= 1 {
+            return options.first();
+        }
+        let here = heading(net, self.lane, self.s, self.dir);
+        let turn = |o: &(LaneId, End)| {
+            let (lane, entry) = *o;
+            let h = if entry == End::End {
+                heading(net, lane, net.lane(lane).map_or(0.0, |l| l.length()), 1)
+            } else {
+                heading(net, lane, 0.0, -1)
+            };
+            wrap(h - here)
+        };
+        match self.branch {
+            Branch::Straight => options
+                .iter()
+                .min_by(|a, b| turn(a).abs().total_cmp(&turn(b).abs())),
+            Branch::Left => options.iter().min_by(|a, b| turn(a).total_cmp(&turn(b))),
+            Branch::Right => options.iter().max_by(|a, b| turn(a).total_cmp(&turn(b))),
+        }
+    }
+
     fn pick<'a>(
         &self,
         net: &PedestrianNet,
@@ -244,6 +326,42 @@ mod tests {
         // 25 m behind the head: 20 m on lane 1 … 5 m back on lane 0.
         let (q, _) = t.pose_behind(&n, 25.0).unwrap();
         assert!((q.y - 95.0).abs() < 1e-3, "{q:?}");
+    }
+
+    #[test]
+    fn retreating_undoes_an_advance_and_the_trail_gives_the_rear_again() {
+        let n = net();
+        let mut t = Train::new(0, 90.0, 1);
+        t.advance(30.0, &n);
+        assert_eq!(t.lane, 1);
+        // Back over the point onto lane 0, then a little further: the head faces north all along.
+        assert_eq!(t.retreat(35.0, &n), Moved::Full);
+        assert_eq!(t.lane, 0);
+        let (p, h) = t.pose(&n).unwrap();
+        assert!((p.y - 85.0).abs() < 1e-3 && h.abs() < 1e-4, "{p:?} {h}");
+        // Forward again over the same point.
+        t.advance(20.0, &n);
+        assert_eq!(t.lane, 1);
+        assert!((t.pose(&n).unwrap().0.y - 105.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn retreating_beyond_the_known_trail_follows_the_lane_behind() {
+        let n = net();
+        // Spawned on lane 1 (the trail is empty): backing up crosses to lane 0.
+        let mut t = Train::new(1, 10.0, 1);
+        assert_eq!(t.retreat(30.0, &n), Moved::Full);
+        assert_eq!(t.lane, 0);
+        let (p, h) = t.pose(&n).unwrap();
+        assert!((p.y - 80.0).abs() < 1e-3 && h.abs() < 1e-4, "{p:?} {h}");
+    }
+
+    #[test]
+    fn retreating_off_the_beginning_of_the_track_ends_it() {
+        let n = net();
+        let mut t = Train::new(0, 5.0, 1);
+        assert_eq!(t.retreat(10.0, &n), Moved::EndOfTrack);
+        assert!(t.s.abs() < 1e-3);
     }
 
     #[test]

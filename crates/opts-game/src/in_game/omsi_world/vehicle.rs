@@ -129,6 +129,12 @@ pub fn load_player_vehicle(
     }
 
     let mut controller = VehicleController::from_manifest(&manifest);
+    if super::is_rail(&manifest) {
+        // No pedals on rails: drive, the lever at rest (the start-up frees the brake).
+        controller
+            .inputs_mut()
+            .set_gear(opts_sim::GearPosition::Drive);
+    }
     controller.sim.chassis.position = Vec2::new(spawn_world.x, spawn_world.y);
     controller.sim.chassis.elevation_z = spawn_world.z;
     // The simulation uses compass-style heading (clockwise from +Y), like OMSI map headings.
@@ -167,7 +173,9 @@ pub fn load_player_vehicle(
         if !job.formation_cars.is_empty() {
             player = player.with_snap(super::rail::FORMATION_SNAP_M);
         }
-        commands.entity(root).insert(player);
+        commands
+            .entity(root)
+            .insert((player, opts_bevy::RailControls::default()));
     }
     let script_seed = script_seed(job.install.root(), &bus_path, session_id);
     attach_scripts(job, commands, root, &manifest, &bus_dir, script_seed, None);
