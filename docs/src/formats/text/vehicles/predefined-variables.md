@@ -79,7 +79,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `Throttle` | 8,808 | L.L, S.L | accelerator pedal, 0–1 📚 |
 | `M_Wheel` | 4,688 | L.L, S.L | torque passed to the physics ❓📚 |
 | `Brake` | 2,521 | L.L, S.L | brake pedal 📚 |
-| `wearlifespan` | 2,208 | L.L |  |
+| `wearlifespan` | 2,208 | L.L | **Lifespan factor**, not a wear amount: 133 scripts fail the drive when the error distance exceeds `Fehlertoleranz * WearLifespan` and draw breakdown distances with `random(Fehlertoleranz * WearLifespan)`; OPTS feeds 1000 (no breakdowns), 0 broke the MAN NG313 at the first metre |
 | `Cabinair_Temp` | 2,169 | L.L, S.L |  |
 | `n_Wheel` | 1,696 | L.L | mean wheel speed (rpm) 📚 |
 | `AI_Engine` | 1,678 | L.L |  |
@@ -225,7 +225,7 @@ The in-file legend is incomplete: the installed scripts use `$` as the second le
 | `mouse_x` | 3,084 | L.S |  |
 | `Day` | 2,833 | L.S |  |
 | `Month` | 2,320 | L.$, L.S, S.$ |  |
-| `wearlifespan` | 2,208 | L.L |  |
+| `wearlifespan` | 2,208 | L.L | **Lifespan factor**, not a wear amount: 133 scripts fail the drive when the error distance exceeds `Fehlertoleranz * WearLifespan` and draw breakdown distances with `random(Fehlertoleranz * WearLifespan)`; OPTS feeds 1000 (no breakdowns), 0 broke the MAN NG313 at the first metre |
 | `Weather_Temperature` | 2,168 | L.L, L.S | outside air temperature (°C) 📚 |
 | `Year` | 1,749 | L.S |  |
 | `PrecipRate` | 607 | L.L, L.S | precipitation rate; OPTS sets `0…1` = the `.owt` intensity / 255, 0 when dry (the scale is a guess ❓) |
