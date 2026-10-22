@@ -188,6 +188,12 @@ pub struct MirrorCamera {
     pub uv_min: Vec2,
     /// Union of the members' UV rectangles.
     pub uv_max: Vec2,
+    /// The picture the camera renders into.
+    pub picture: Handle<Image>,
+    /// The picture's size when it does not stream.
+    pub base_size: UVec2,
+    /// The picture is at streaming size (virtual mirror).
+    pub enlarged: bool,
     /// The `.bus` camera of this pane (`reflexion<N>.bmp` is tag N), when the vehicle has one and
     /// [`MirrorSettings::use_tags`] is on: the camera then follows it instead of the reflection.
     pub tag: Option<BusMirrorCamera>,
@@ -368,6 +374,12 @@ pub use spawn::spawn_mirror_cameras;
 mod update;
 pub use update::{sync_mirror_camera_look, update_mirror_cameras};
 
+mod virtual_view;
+pub use virtual_view::{
+    assign_slots, stream_size, toggle_virtual_mirrors, MirrorFeed, MirrorSlot, VirtualMirrors,
+    SIDE_MIRROR_FRONT_BAND_M, SIDE_MIRROR_MIN_X_M, SLOT_COUNT,
+};
+
 /// Registers the mirror cameras.
 #[derive(Default)]
 pub struct MirrorPlugin;
@@ -378,6 +390,7 @@ impl Plugin for MirrorPlugin {
             .insert_resource(MirrorSettings::from_env())
             .init_resource::<MirrorFrame>()
             .init_resource::<MirrorStats>()
+            .init_resource::<VirtualMirrors>()
             .add_systems(
                 Update,
                 spawn_mirror_cameras
@@ -385,6 +398,13 @@ impl Plugin for MirrorPlugin {
                     .run_if(resource_exists::<Assets<Image>>)
                     .run_if(resource_exists::<Assets<StandardMaterial>>)
                     .run_if(resource_exists::<Assets<Mesh>>),
+            )
+            .add_systems(
+                Update,
+                toggle_virtual_mirrors
+                    .run_if(crate::reporting::not_modal_active)
+                    .run_if(resource_exists::<crate::camera::CameraState>)
+                    .run_if(resource_exists::<crate::camera::CameraAvailability>),
             )
             .add_systems(
                 PostUpdate,

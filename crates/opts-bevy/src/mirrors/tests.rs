@@ -38,6 +38,7 @@ impl Scene {
             .init_resource::<MirrorSettings>()
             .init_resource::<MirrorFrame>()
             .init_resource::<MirrorStats>()
+            .init_resource::<VirtualMirrors>()
             .add_systems(Update, spawn_mirror_cameras)
             .add_systems(PostUpdate, (update_mirror_cameras, sync_mirror_camera_look));
         let main = app
@@ -473,3 +474,4 @@ fn the_picture_is_mapped_over_the_pane_uv_rectangle_and_the_camera_has_the_pane_
 }
 
 mod tags;
+mod virtual_view;

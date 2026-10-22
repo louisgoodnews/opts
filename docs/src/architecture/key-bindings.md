@@ -30,4 +30,4 @@ Chords are `Ctrl+`, `Shift+` and a physical key (`KeyChord`): `F7`, `Shift+F7`, 
 
 ## Not yet moved to the registry
 
-Throttle, brake, steering, the gear keys, the camera keys (1 to 5, 0, Shift+Space), the viewpoint editor (Tab), simulation pause (P), the vehicle menu (Alt), the tram keys (Z, X, C) and Esc: they need several keys per action (axes) and are the next slice of M-0142. They are still in `OPTS_RESERVED_KEYS`, so no vehicle action can take them.
+Throttle, brake, steering, the gear keys, the camera keys (1 to 5, 0, Shift+Space), the viewpoint editor (Shift + Tab) and the virtual mirrors (Tab), simulation pause (P), the vehicle menu (Alt), the tram keys (Z, X, C) and Esc: they need several keys per action (axes) and are the next slice of M-0142. They are still in `OPTS_RESERVED_KEYS`, so no vehicle action can take them.

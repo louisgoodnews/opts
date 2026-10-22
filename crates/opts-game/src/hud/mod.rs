@@ -25,6 +25,7 @@ pub mod protocol;
 pub mod update;
 pub mod values;
 pub mod viewpoint;
+pub mod virtual_mirrors;
 pub mod widget;
 
 use bevy::prelude::*;
@@ -142,6 +143,22 @@ impl Plugin for HudPlugin {
                     .run_if(in_state(AppState::InGame))
                     .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
                     .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>),
+            )
+            .add_systems(
+                Update,
+                virtual_mirrors::mirror_clicks
+                    .run_if(in_state(AppState::InGame))
+                    .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>),
+            )
+            .add_systems(
+                PostUpdate,
+                virtual_mirrors::sync_virtual_mirrors
+                    .run_if(in_state(AppState::InGame))
+                    .run_if(resource_exists::<opts_gui::prelude::MaterialTheme>)
+                    .run_if(resource_exists::<opts_gui::theme::InstrumentVariant>)
+                    .run_if(resource_exists::<opts_bevy::mirrors::VirtualMirrors>)
+                    .run_if(resource_exists::<opts_bevy::camera::CameraState>)
+                    .run_if(resource_exists::<opts_bevy::camera::CameraAvailability>),
             )
             .add_systems(
                 PostUpdate,

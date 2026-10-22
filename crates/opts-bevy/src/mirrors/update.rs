@@ -20,6 +20,8 @@ pub fn update_mirror_cameras(
     mut stats: ResMut<MirrorStats>,
     mut commands: Commands,
     settings: Res<MirrorSettings>,
+    mut virtual_mirrors: ResMut<VirtualMirrors>,
+    mut images: ResMut<Assets<Image>>,
     vehicles: Query<&GlobalTransform, With<PlayerVehicle>>,
     main: Query<&GlobalTransform, (With<MainCamera>, Without<MirrorCamera>)>,
     mut cameras: Query<(
@@ -37,7 +39,7 @@ pub fn update_mirror_cameras(
     let mut live = Vec::new();
     for (entity, mut info, ..) in &mut cameras {
         info.members.retain(|m| panes.contains(m.entity));
-        let gone = quality.mirror_count == 0
+        let gone = (quality.mirror_count == 0 && !virtual_mirrors.any_stream())
             || !vehicles.contains(info.vehicle)
             || info.members.is_empty();
         if gone {
@@ -110,14 +112,74 @@ pub fn update_mirror_cameras(
         });
     }
     let distances: Vec<f32> = poses.iter().map(|p| p.distance).collect();
-    let selected = nearest(&distances, usize::from(quality.mirror_count));
+    let mut selected = nearest(&distances, usize::from(quality.mirror_count));
+
+    // The virtual mirrors: name the groups by their place on the vehicle and keep the ones that
+    // are switched on streaming (always selected, rendered every frame).
+    let candidates: Vec<(Entity, Vec3)> = poses
+        .iter()
+        .filter_map(|p| {
+            let info = cameras.get(p.camera).ok()?.1;
+            // The tag camera sits where the mirror is, in the vehicle's frame, whether or not
+            // its pane is visible (the other variant of a mirror is shown instead).
+            if let Some(tag) = &info.tag {
+                return Some((p.camera, Vec3::new(tag.x, tag.z, -tag.y)));
+            }
+            let vehicle = vehicles.get(info.vehicle).ok()?;
+            p.distance.is_finite().then(|| {
+                (
+                    p.camera,
+                    vehicle.affine().inverse().transform_point3(p.centre),
+                )
+            })
+        })
+        .collect();
+    let slots = assign_slots(&candidates);
+    let mut streaming: Vec<Entity> = Vec::new();
+    for slot in MirrorSlot::ALL {
+        let i = slot.index();
+        virtual_mirrors.feeds[i] = slots[i].and_then(|camera| {
+            let (_, info, ..) = cameras.get(camera).ok()?;
+            let aspect = info.members.iter().map(|m| m.aspect).sum::<f32>()
+                / info.members.len().max(1) as f32;
+            Some(MirrorFeed {
+                camera,
+                picture: info.picture.clone(),
+                aspect: if info.tag.is_some() { 1.0 } else { aspect },
+            })
+        });
+        if let Some(camera) = virtual_mirrors.streaming_camera(slot) {
+            streaming.push(camera);
+            if let Some(index) = poses.iter().position(|p| p.camera == camera) {
+                if !selected.contains(&index) {
+                    selected.push(index);
+                }
+            }
+        }
+    }
     stats.selected = selected.len();
 
     for (index, p) in poses.iter().enumerate() {
         let rank = selected.iter().position(|i| *i == index);
-        let Ok((_, info, mut t, mut cam, mut projection)) = cameras.get_mut(p.camera) else {
+        let Ok((_, mut info, mut t, mut cam, mut projection)) = cameras.get_mut(p.camera) else {
             continue;
         };
+        let streams = streaming.contains(&p.camera);
+        if info.enlarged != streams {
+            let size = if streams {
+                stream_size(info.base_size)
+            } else {
+                info.base_size
+            };
+            if let Some(mut image) = images.get_mut(&info.picture) {
+                image.resize(bevy::render::render_resource::Extent3d {
+                    width: size.x,
+                    height: size.y,
+                    depth_or_array_layers: 1,
+                });
+            }
+            info.enlarged = streams;
+        }
         // The picture shown on the panes: live when selected, the static texture otherwise.
         let target = if rank.is_some() {
             &info.dynamic
@@ -131,10 +193,11 @@ pub fn update_mirror_cameras(
                 }
             }
         }
-        let render = rank.is_some_and(|r| {
-            mirror_in_front(viewer, forward, p.centre)
-                && is_render_frame(frame.0, r, quality.mirror_every)
-        });
+        let render = streams
+            || rank.is_some_and(|r| {
+                mirror_in_front(viewer, forward, p.centre)
+                    && is_render_frame(frame.0, r, quality.mirror_every)
+            });
         if cam.is_active != render {
             cam.is_active = render;
         }
