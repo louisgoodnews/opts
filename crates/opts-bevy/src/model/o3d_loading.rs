@@ -336,7 +336,12 @@ impl ContentLoader<'_> {
                 if textured {
                     // A textured surface is lit by its texture; the .o3d diffuse tint is a
                     // fixed-function multiplier that is white in practice.
-                    material.base_color = bevy::color::Color::srgba(1.0, 1.0, 1.0, base.diffuse[3]);
+                    material.base_color = bevy::color::Color::srgba(
+                        1.0,
+                        1.0,
+                        1.0,
+                        crate::material::effective_diffuse_alpha(base.diffuse[3]),
+                    );
                 }
                 // A script canvas that is the transparency map (`\S:n`, the LED matrices) is a
                 // light source: it shows its colour whatever the daylight.
