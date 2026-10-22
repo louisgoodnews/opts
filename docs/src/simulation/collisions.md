@@ -33,3 +33,12 @@ Ordered by value over effort; each step is one commit with a test on the pure `o
 ## Not yet
 
 Everything above; pedestrians; `[crashmode_pole]`.
+
+## Under a bridge (2026-10-22, Ahlheim Hauptbahnhof towards Frankenstraße)
+
+A bus stopped under the railway bridge at the station. Three causes, found with `OPTS_DBG_COLLISION=1` (logs what pushes the player) and a minimap-following test drive:
+
+* **The ground step saw the deck.** The step check compared the ground just outside the footprint with the ground inside it; where the road layer has no sample (the apron of the bus station) the only layer was the railway deck 6 m up, a "step" of 6 m that blocked the bus. A ground higher than the vehicle's own height is a deck it passes under, no step (`ground_step`, `clearance`).
+* **The ground height climbed the deck.** `height_at` knew the terrain only where no road layer existed, so the same apron read the deck's 6 m and the bus rose onto it wheel by wheel. The terrain is now a layer too: it wins when it is clearly nearer the vehicle's height than the nearest road layer (0.3 m margin), so a vehicle on the deck stays on it and one on the ground stays on the ground.
+* **One box per collision mesh.** A bridge's mesh reaches from the abutments to the deck, its box filled the passage. A mesh wider than 8 m is now cut into 2 m plan columns that keep only the height intervals their triangles occupy, equal neighbours merged (`collision/mesh_boxes.rs`): the deck is a slab at 5 m, an abutment face a full-height wall, the road between them free. (Not the cause at this bridge, but it would have blocked the next one.)
+

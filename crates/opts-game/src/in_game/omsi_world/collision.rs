@@ -15,6 +15,8 @@
 //! The response moves the chassis out of the overlap (at most half a metre per step), removes the
 //! velocity into the obstacle and scrapes a little off the rest.
 
+mod mesh_boxes;
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -111,7 +113,8 @@ pub struct VehicleCollider {
 }
 
 impl WorldLoadJob {
-    /// Bounding box of a collision mesh in Bevy's local axes, cached; `None` for unreadable
+    /// The boxes of a collision mesh in Bevy's local axes, cached (one box for a small mesh, a
+    /// set that follows the shape for a large one: see [`mesh_boxes`]); `None` for unreadable
     /// (protected) or missing meshes.
     ///
     /// `bend` is the crossing base the object is bent over (`[crossing_heightdeformation]`).
@@ -120,11 +123,11 @@ impl WorldLoadJob {
         model_dir: &Path,
         rel: &str,
         bend: Option<&(PathBuf, Arc<BaseSurface>)>,
-    ) -> Option<(Vec3, Vec3)> {
+    ) -> Option<Vec<(Vec3, Vec3)>> {
         let path = self.install.find_in(model_dir, rel)?;
         let key = (path.clone(), bend.map(|b| b.0.clone()));
         if let Some(b) = self.collision_bounds.get(&key) {
-            return *b;
+            return b.clone();
         }
         let bounds = (|| {
             let mut models = opts_bevy::load_decoded_meshes(&path).ok()?;
@@ -133,7 +136,7 @@ impl WorldLoadJob {
                     base.bend_mesh(m);
                 }
             }
-            let (mut lo, mut hi) = (Vec3::splat(f32::MAX), Vec3::splat(f32::MIN));
+            let (mut positions, mut indices): (Vec<Vec3>, Vec<u32>) = (Vec::new(), Vec::new());
             for m in &models {
                 if matches!(
                     m.vertex_layout(),
@@ -145,15 +148,23 @@ impl WorldLoadJob {
                 if let Some(bevy::mesh::VertexAttributeValues::Float32x3(pos)) =
                     mesh.attribute(Mesh::ATTRIBUTE_POSITION)
                 {
-                    for p in pos {
-                        lo = lo.min(Vec3::from(*p));
-                        hi = hi.max(Vec3::from(*p));
+                    let base = positions.len() as u32;
+                    positions.extend(pos.iter().map(|p| Vec3::from(*p)));
+                    match mesh.indices() {
+                        Some(bevy::mesh::Indices::U32(ix)) => {
+                            indices.extend(ix.iter().map(|i| base + i));
+                        }
+                        Some(bevy::mesh::Indices::U16(ix)) => {
+                            indices.extend(ix.iter().map(|i| base + u32::from(*i)));
+                        }
+                        None => indices.extend(base..base + pos.len() as u32),
                     }
                 }
             }
-            (lo.x <= hi.x).then_some((lo, hi))
+            let boxes = mesh_boxes::boxes_of(&positions, &indices);
+            (!boxes.is_empty()).then_some(boxes)
         })();
-        self.collision_bounds.insert(key, bounds);
+        self.collision_bounds.insert(key, bounds.clone());
         bounds
     }
 }
@@ -175,19 +186,21 @@ pub(super) fn register_object(
     let heading = -yaw;
     let mut boxes = Vec::new();
     for rel in &sco.collision_meshes {
-        let Some((lo, hi)) = job.collision_bounds(model_dir, rel, bend) else {
+        let Some(parts) = job.collision_bounds(model_dir, rel, bend) else {
             continue;
         };
-        let local_centre = (lo + hi) * 0.5;
-        let half = (hi - lo) * 0.5;
-        let c = tf.transform_point(local_centre);
-        boxes.push(Obb::new(
-            Vec2::new(c.x, -c.z),
-            Vec2::new(half.x, half.z),
-            heading,
-            tf.translation.y + lo.y,
-            tf.translation.y + hi.y,
-        ));
+        for (lo, hi) in parts {
+            let local_centre = (lo + hi) * 0.5;
+            let half = (hi - lo) * 0.5;
+            let c = tf.transform_point(local_centre);
+            boxes.push(Obb::new(
+                Vec2::new(c.x, -c.z),
+                Vec2::new(half.x, half.z),
+                heading,
+                tf.translation.y + lo.y,
+                tf.translation.y + hi.y,
+            ));
+        }
     }
     if boxes.is_empty() {
         return;
@@ -390,12 +403,25 @@ pub fn player_collisions(
                 }
             }
             // Steps in the ground around the head's footprint.
-            if let Some(n) = ground_step(&ground, &mine[0], ch.elevation_z) {
+            if let Some(n) = ground_step(&ground, &mine[0], ch.elevation_z, head.0.height) {
                 if worst.is_none_or(|w| 0.05 > w.1) {
                     worst = Some((n, 0.05));
                 }
             }
             let Some((normal, depth)) = worst else { break };
+            if !worst_is_traffic
+                && *logged < 400
+                && std::env::var_os("OPTS_DBG_COLLISION").is_some()
+            {
+                *logged += 1;
+                tracing::info!(
+                    at = ?controller.sim.chassis.position,
+                    z = controller.sim.chassis.elevation_z,
+                    other = ?worst_other,
+                    depth,
+                    "the player's vehicle is pushed by a static box or a ground step"
+                );
+            }
             if worst_is_traffic && *logged < 40 {
                 *logged += 1;
                 tracing::info!(
@@ -435,8 +461,9 @@ pub fn player_collisions(
 }
 
 /// Direction away from a step in the ground around a footprint, if there is one: points on the
-/// outline are compared with the ground 0.4 m closer to the centre.
-fn ground_step(ground: &GroundIndex, body: &Obb, z: f32) -> Option<Vec2> {
+/// outline are compared with the ground 0.4 m closer to the centre. A ground higher than
+/// `clearance` above the vehicle (the deck of a bridge over the road) is no step.
+fn ground_step(ground: &GroundIndex, body: &Obb, z: f32, clearance: f32) -> Option<Vec2> {
     let [fwd, right] = body.axes();
     let mut away = Vec2::ZERO;
     for (a, b) in [(1.0, 0.0), (-1.0, 0.0), (0.0, 1.0), (0.0, -1.0)] {
@@ -454,7 +481,8 @@ fn ground_step(ground: &GroundIndex, body: &Obb, z: f32) -> Option<Vec2> {
             ) else {
                 continue;
             };
-            if outer - inner > STEP_M && outer > z + STEP_M {
+            // A surface higher than the vehicle is a deck it passes under, not a step.
+            if outer - inner > STEP_M && outer > z + STEP_M && outer < z + clearance {
                 away += inward;
             }
         }
@@ -463,7 +491,7 @@ fn ground_step(ground: &GroundIndex, body: &Obb, z: f32) -> Option<Vec2> {
 }
 
 /// The index map for `PathBuf` cache keys (kept here so `mod.rs` stays small).
-pub(super) type BoundsCache = HashMap<(PathBuf, Option<PathBuf>), Option<(Vec3, Vec3)>>;
+pub(super) type BoundsCache = HashMap<(PathBuf, Option<PathBuf>), Option<Vec<(Vec3, Vec3)>>>;
 
 /// Hands the AI traffic the footprints of the player's road vehicles (head and following parts),
 /// so the agents stop behind them or change lanes round them (`opts_traffic::obstacles`) instead
