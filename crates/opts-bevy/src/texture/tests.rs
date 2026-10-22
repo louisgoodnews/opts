@@ -183,3 +183,27 @@ fn an_rgba8_texture_with_its_mip_chain_decodes_to_level_0() {
     assert_eq!(out.texture_descriptor.mip_level_count, 1);
     assert_eq!(out.data.as_deref(), Some(&texels[..]));
 }
+
+#[test]
+fn sixteen_bit_dds_pixels_expand_to_rgba8() {
+    // R5G6B5: pure red, pure green, pure blue, white.
+    let px = |v: u16| v.to_le_bytes();
+    let data: Vec<u8> = [0xF800u16, 0x07E0, 0x001F, 0xFFFF]
+        .iter()
+        .flat_map(|v| px(*v))
+        .collect();
+    let (fmt, rgba) = convert_rgb16_to_rgba(&data, [0xF800, 0x07E0, 0x001F, 0]);
+    assert_eq!(fmt, TextureFormat::Rgba8UnormSrgb);
+    assert_eq!(&rgba[0..4], &[255, 0, 0, 255]);
+    assert_eq!(&rgba[4..8], &[0, 255, 0, 255]);
+    assert_eq!(&rgba[8..12], &[0, 0, 255, 255]);
+    assert_eq!(&rgba[12..16], &[255, 255, 255, 255]);
+    // A4R4G4B4 with half alpha, red.
+    let data = px(0x8F00).to_vec();
+    let (_, rgba) = convert_rgb16_to_rgba(&data, [0x0F00, 0x00F0, 0x000F, 0xF000]);
+    assert_eq!(&rgba[0..4], &[255, 0, 0, 136]);
+    // A1R5G5B5 transparent black.
+    let data = px(0x0000).to_vec();
+    let (_, rgba) = convert_rgb16_to_rgba(&data, [0x7C00, 0x03E0, 0x001F, 0x8000]);
+    assert_eq!(&rgba[0..4], &[0, 0, 0, 0]);
+}

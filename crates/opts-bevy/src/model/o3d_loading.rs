@@ -291,6 +291,15 @@ impl ContentLoader<'_> {
                         }
                     }),
                 };
+                // A `[matl]` entry that names a file that does not exist (a typo in the scenery
+                // object) falls back to the texture the mesh itself names.
+                if tex.is_none() && over.is_some() {
+                    if let Some(own) = base.primary_texture().map(str::to_owned) {
+                        if tex_name.as_deref() != Some(own.as_str()) {
+                            tex = self.texture(&own, tex_dirs);
+                        }
+                    }
+                }
                 // Benchmark sentinel (M-0054): the diffuse texture or the material slot is missing.
                 let sentinel = crate::texture_sentinel::missing_texture_sentinel()
                     && (self.cache.stats.failures.len() > failures_before

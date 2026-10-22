@@ -298,11 +298,47 @@ fn parse_dds_format_and_data(dds: &Dds) -> Result<(TextureFormat, Vec<u8>), Text
         }
     } else if bit_count == 24 {
         convert_rgb24_to_rgba(&dds.data)
+    } else if bit_count == 16 {
+        // R5G6B5, A1R5G5B5, A4R4G4B4: Köln's building textures and many older OMSI objects.
+        let a_mask = pf.a_bit_mask.unwrap_or(0);
+        Ok(convert_rgb16_to_rgba(
+            &dds.data,
+            [r_mask, g_mask, b_mask, a_mask],
+        ))
     } else {
         Err(TextureError::UnsupportedFormat(format!(
             "unsupported DDS pixel format with {bit_count} bpp"
         )))
     }
+}
+
+/// Expands 16-bit pixels with arbitrary channel masks (`[r, g, b, a]`) to RGBA8; a missing alpha
+/// mask means opaque. A mask of 0 for a colour channel reads as 0.
+fn convert_rgb16_to_rgba(data: &[u8], masks: [u32; 4]) -> (TextureFormat, Vec<u8>) {
+    // (shift, max) of a contiguous mask.
+    let field = |m: u32| {
+        if m == 0 {
+            (0, 0)
+        } else {
+            let shift = m.trailing_zeros();
+            (shift, m >> shift)
+        }
+    };
+    let [fr, fg, fb, fa] = masks.map(field);
+    let expand = |px: u32, f: (u32, u32), default: u8| {
+        ((((px >> f.0) & f.1) * 255).checked_div(f.1)).map_or(default, |v| v as u8)
+    };
+    let mut rgba = Vec::with_capacity(data.len() * 2);
+    for c in data.chunks_exact(2) {
+        let px = u32::from(u16::from_le_bytes([c[0], c[1]]));
+        rgba.extend([
+            expand(px, fr, 0),
+            expand(px, fg, 0),
+            expand(px, fb, 0),
+            expand(px, fa, 255),
+        ]);
+    }
+    (TextureFormat::Rgba8UnormSrgb, rgba)
 }
 
 /// Converts BGRA 32-bit pixel data to RGBA by swapping red and blue channels.

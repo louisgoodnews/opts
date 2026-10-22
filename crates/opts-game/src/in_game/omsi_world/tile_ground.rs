@@ -340,6 +340,8 @@ pub(super) fn spawn_splines(
                     StandardMaterial {
                         base_color_texture: handle,
                         perceptual_roughness: 0.9,
+                        // Asphalt and pavement have no specular colour in OMSI: no sun glare.
+                        reflectance: 0.1,
                         double_sided: true,
                         cull_mode: None,
                         alpha_mode: if alpha {
