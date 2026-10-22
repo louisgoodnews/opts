@@ -41,17 +41,14 @@ fn a_value_one_car_sends_reaches_every_car_of_the_run_and_the_sender() {
         Unit {
             engine: Some(&mut a),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut b),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut c),
             cables: &cables,
-            vehicle: 0,
         },
     ]);
     assert_eq!(n, 3);
@@ -69,7 +66,6 @@ fn a_lone_car_gets_its_own_value_back() {
     bridge(&mut [Unit {
         engine: Some(&mut a),
         cables: &cables,
-        vehicle: 0,
     }]);
     assert_eq!(a.get("bat_r"), 1.0);
 }
@@ -84,12 +80,10 @@ fn a_broken_coupling_variable_cuts_the_line() {
         Unit {
             engine: Some(&mut a),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut b),
             cables: &cables,
-            vehicle: 0,
         },
     ]);
     assert_eq!((a.get("bat_r"), b.get("bat_r")), (1.0, 0.0));
@@ -105,17 +99,14 @@ fn a_unit_without_the_cable_ends_the_run_and_one_without_scripts_passes_it_on() 
         Unit {
             engine: Some(&mut a),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: None,
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut c),
             cables: &cables,
-            vehicle: 0,
         },
     ]);
     assert_eq!(c.get("bat_r"), 1.0);
@@ -124,17 +115,14 @@ fn a_unit_without_the_cable_ends_the_run_and_one_without_scripts_passes_it_on() 
         Unit {
             engine: Some(&mut a),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: None,
             cables: &other,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut d),
             cables: &cables,
-            vehicle: 0,
         },
     ]);
     assert_eq!(d.get("bat_r"), 0.0);
@@ -150,66 +138,71 @@ fn the_larger_magnitude_wins() {
         Unit {
             engine: Some(&mut a),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut b),
             cables: &cables,
-            vehicle: 0,
         },
     ]);
     assert_eq!(a.get("bat_r"), -0.8);
 }
 
-/// The inactive flags of a cab stay within their vehicle: the passive trams of a traction write
-/// their heads' "inactive" without the driven tram reading it, while other lines (battery) still
-/// run through the whole formation.
+/// A cab-inactive flag is 1 only while every cab that writes it is inactive: the passive cars of
+/// a traction write 1, the driven cab writes 0 and the line reads 0 everywhere; the other lines
+/// keep the largest value.
 #[test]
-fn a_cabs_inactive_flag_does_not_cross_into_another_vehicle_but_other_lines_do() {
-    let cables: Vec<Cable> = ["inaktiv_r", "bat_r"]
-        .iter()
-        .enumerate()
-        .flat_map(|(i, receive)| {
-            let send = if i == 0 { "inaktiv_w" } else { "bat_w" };
-            [true, false].map(|front| Cable {
-                front,
-                kind: 'C',
-                index: i as u32,
-                receive: (*receive).to_owned(),
-                send: send.to_owned(),
-                coupling: if front { "line_v" } else { "line_h" }.to_owned(),
-            })
+fn an_occupied_cab_clears_the_inactive_flag_for_the_whole_train_but_other_lines_take_the_largest() {
+    let cable_pair = |receive: &str, send: &str, index: u32| {
+        [true, false].map(|front| Cable {
+            front,
+            kind: 'C',
+            index,
+            receive: receive.to_owned(),
+            send: send.to_owned(),
+            coupling: if front { "line_v" } else { "line_h" }.to_owned(),
         })
+    };
+    let cables: Vec<Cable> = cable_pair("inaktiv_r", "inaktiv_w", 0)
+        .into_iter()
+        .chain(cable_pair("bat_r", "bat_w", 1))
         .collect();
-    let wired = || {
-        let mut e = engine(&[
+    // A unit whose scripts write the flag: `from_sources` with a store to the variable.
+    let writer = |flag: f32| {
+        let src = format!("{{frame}}\n{flag} (S.L.inaktiv_w)\n{{end}}");
+        let (mut e, _) = ScriptEngine::from_sources(&[("t.osc", src.as_str())]);
+        let names: Vec<String> = [
             "inaktiv_r",
             "inaktiv_w",
             "bat_r",
             "bat_w",
             "line_v",
             "line_h",
-        ]);
+        ]
+        .iter()
+        .map(|n| (*n).to_owned())
+        .collect();
+        e.declare_variables(&names, false);
         e.set("line_v", 1.0);
         e.set("line_h", 1.0);
         e
     };
-    let (mut driven, mut passive) = (wired(), wired());
+    let (mut driven, mut passive) = (writer(0.0), writer(1.0));
     driven.set("bat_w", 1.0);
-    passive.set("inaktiv_w", 1.0);
     bridge(&mut [
         Unit {
             engine: Some(&mut driven),
             cables: &cables,
-            vehicle: 0,
         },
         Unit {
             engine: Some(&mut passive),
             cables: &cables,
-            vehicle: 1,
         },
     ]);
-    assert_eq!(driven.get("inaktiv_r"), 0.0, "the other vehicle's flag");
-    assert_eq!(passive.get("inaktiv_r"), 1.0, "its own flag");
-    assert_eq!(passive.get("bat_r"), 1.0, "the battery line crosses");
+    assert_eq!(driven.get("inaktiv_r"), 0.0);
+    assert_eq!(passive.get("inaktiv_r"), 0.0, "an occupied cab clears it");
+    assert_eq!(
+        passive.get("bat_r"),
+        1.0,
+        "the battery line takes the largest"
+    );
 }

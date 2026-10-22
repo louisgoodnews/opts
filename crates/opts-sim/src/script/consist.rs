@@ -38,16 +38,14 @@ pub struct Unit<'a> {
     pub engine: Option<&'a mut ScriptEngine>,
     /// The cables the unit's vehicle file declares.
     pub cables: &'a [Cable],
-    /// The vehicle of the formation the unit belongs to (0 for the head's own chain, then one per
-    /// coupled car): the lines of the head flags stay within one vehicle, see `is_local`.
-    pub vehicle: usize,
 }
 
-/// Whether the line `receive` is private to a vehicle of a formation. A cab's *inactive* flags
-/// (`SLR_A_Kopf_Inaktiv`) say whether the ends of **this** tram are occupied; with the passive
-/// trams of a traction on the same line every head would read the inactive flag of another
-/// tram's cab, the driven tram would take itself for a trailing car and cut its own traction.
-fn is_local(receive: &str) -> bool {
+/// Whether the line `receive` is a *cab-inactive* flag (`SLR_A_Kopf_Inaktiv`). Such a line is
+/// 1 only while every cab that writes it is inactive: one occupied cab in the train (it writes
+/// 0) clears it for all cars. With the largest value winning, as on the other lines, the passive
+/// trams of a traction (their inactive cabs write 1) made the driven tram read "both ends
+/// inactive", throttle itself and brake with `Drosselung`.
+fn is_inactive_flag(receive: &str) -> bool {
     receive.to_ascii_lowercase().contains("inaktiv")
 }
 
@@ -88,23 +86,33 @@ pub fn bridge(units: &mut [Unit<'_>]) -> usize {
                 continue;
             }
             // The run of units the line connects: each declares it and the plugs between touch.
-            let local = units[start]
+            let flag = units[start]
                 .declares(key)
-                .is_some_and(|c| is_local(&c.receive));
+                .is_some_and(|c| is_inactive_flag(&c.receive));
             let mut end = start + 1;
             while end < units.len()
                 && units[end].declares(key).is_some()
                 && units[end - 1].plugged(false, key)
                 && units[end].plugged(true, key)
-                && !(local && units[end].vehicle != units[end - 1].vehicle)
             {
                 end += 1;
             }
             let mut value = 0.0f32;
+            let mut writers = 0;
             for u in &units[start..end] {
                 if let (Some(c), Some(e)) = (u.declares(key), u.engine.as_deref()) {
                     let v = e.get(&c.send);
-                    if v.abs() > value.abs() {
+                    if flag {
+                        // Only a unit whose scripts write the flag votes; the smallest wins.
+                        if e.writes(&c.send) {
+                            value = if writers == 0 || v.abs() < value.abs() {
+                                v
+                            } else {
+                                value
+                            };
+                            writers += 1;
+                        }
+                    } else if v.abs() > value.abs() {
                         value = v;
                     }
                 }

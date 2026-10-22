@@ -231,9 +231,6 @@ pub struct RailPlayer {
     backing: bool,
     /// Radius of the driven wheels (m): the scripts' torque pulls the train with `M_Wheel / r`.
     wheel_radius_m: f32,
-    /// What the head's scripts give is the pull and the brake of the head's own tram: a train of
-    /// several trams multiplies the pull by this and the brake by the second (1 for one tram).
-    script_scale: (f32, f32),
 }
 
 impl RailPlayer {
@@ -249,7 +246,6 @@ impl RailPlayer {
             snap_m: SNAP_MAX_M,
             wheel_radius_m: DEFAULT_WHEEL_RADIUS_M,
             backing: false,
-            script_scale: (1.0, 1.0),
         }
     }
 
@@ -265,12 +261,6 @@ impl RailPlayer {
     /// Replaces the dynamics by those of the whole consist (total, powered and braked mass).
     pub fn set_consist(&mut self, load: opts_sim::rail::ConsistLoad) {
         self.dynamics = RailDynamics::for_consist(load);
-    }
-
-    /// Scales the head's script pull and brake force for a train of several trams (see
-    /// `RailPlayer::script_scale`); never below one tram's.
-    pub fn set_script_scale(&mut self, pull: f32, brake: f32) {
-        self.script_scale = (pull.max(1.0), brake.max(1.0));
     }
 
     /// The mass the dynamics move (kg).
@@ -344,9 +334,8 @@ pub fn rail_player_step(
                     d.wheel_torque_nm.abs()
                 } else {
                     d.wheel_torque_nm
-                } / rail.wheel_radius_m
-                    * rail.script_scale.0,
-                brake_n: d.brake_force_n * rail.script_scale.1,
+                } / rail.wheel_radius_m,
+                brake_n: d.brake_force_n,
             });
         let ch = &mut controller.sim.chassis;
         if rail.train.is_none() {

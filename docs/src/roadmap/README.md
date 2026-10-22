@@ -360,7 +360,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] Scan status chip next to *Scan now*: last scan time, green / yellow / red with documented rules (R-29).
 - [x] **🧊 No Blocking Work on the Main Thread** — [M-0088](phase-9/M-0088.md)
   - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
-- [ ] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](phase-9/M-0130.md)
+- [x] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](phase-9/M-0130.md)
   - [ ] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification.
 
 ---
