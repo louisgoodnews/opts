@@ -190,17 +190,25 @@ fn spawn_object_inner(
     // `[rendertype] on_surface` objects (road markings, text on the road) lie on the road they
     // were placed on, not on the terrain below it: the map stores their height above the terrain
     // (0.12 m for the bus text of Ahlheim V5), where the road may be higher or lower.
-    if sco.render_type.as_deref() == Some("on_surface")
-        && !sco.has_absolute_height()
-        && matches!(placement, Placement::Tile)
-    {
+    // A parked car stands on the road of its parking bay the same way: the terrain under a bay
+    // that was built into a street is not carved to the street, so a car placed by terrain
+    // height floated above (or sank into) it (Berlin-Spandau, Westerwaldstraße).
+    let on_road_plane = sco.render_type.as_deref() == Some("on_surface") || site.marker.is_some();
+    if on_road_plane && !sco.has_absolute_height() && matches!(placement, Placement::Tile) {
         let (x, y) = (origin.0 + obj.position.x, origin.1 + obj.position.y);
         if let Some(road) = job
             .tile_ground
             .as_ref()
             .and_then(|g| g.road_height_at(x, y, z))
         {
-            z = road + ON_SURFACE_LIFT_M;
+            // A parked car keeps the height the map gives above its ground; a marking lies a
+            // hair over the road.
+            z = road
+                + if site.marker.is_some() {
+                    obj.position.z
+                } else {
+                    ON_SURFACE_LIFT_M
+                };
         }
     }
     let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);

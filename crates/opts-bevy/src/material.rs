@@ -30,6 +30,16 @@ pub fn specular_power_to_roughness(power: f32) -> f32 {
     }
 }
 
+/// Bevy's `reflectance` (0.5 is a plain dielectric, F0 0.04) for a Direct3D specular colour: the
+/// brightness of the colour, halved, so an OMSI material that says no specular colour (roads,
+/// pavements, most buildings) has no sun glare and one that says full white keeps the default
+/// look. Ignoring the colour made every asphalt shine like a wet road in low sun.
+#[must_use]
+pub fn specular_to_reflectance(specular: [f32; 3]) -> f32 {
+    let lum = 0.2126 * specular[0] + 0.7152 * specular[1] + 0.0722 * specular[2];
+    (lum.clamp(0.0, 1.0) * 0.5).clamp(0.0, 0.5)
+}
+
 /// Converts an OMSI `.o3d` [`Material`](O3dMaterial) into a Bevy [`StandardMaterial`].
 ///
 /// # Arguments
@@ -64,6 +74,7 @@ pub fn o3d_material_to_standard_material(
         base_color_texture: texture_handle,
         emissive,
         perceptual_roughness,
+        reflectance: specular_to_reflectance(mat.specular),
         metallic: 0.0,
         alpha_mode,
         ..Default::default()
@@ -104,6 +115,7 @@ pub fn x_material_to_standard_material(
         base_color_texture: texture_handle,
         emissive,
         perceptual_roughness,
+        reflectance: specular_to_reflectance(mat.specular),
         metallic: 0.0,
         alpha_mode,
         ..Default::default()
