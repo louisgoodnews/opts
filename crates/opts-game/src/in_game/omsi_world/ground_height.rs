@@ -11,6 +11,7 @@ use opts_bevy::scenery::spline_pose;
 use opts_bevy::{TileTerrain, VehicleController};
 use opts_core::formats::map::{MapSplineInstance, TileGrid};
 use opts_core::formats::scenery::SplineProfile;
+use opts_sim::collision::{ColliderGrid, Obb};
 
 /// Session vehicles (active or parked) that follow the ground (rail-bound ones follow their track instead).
 type GroundBound = (
@@ -27,6 +28,8 @@ const SAMPLE_STEP_M: f32 = 2.0;
 const CELL_M: f32 = 8.0;
 /// How much closer than a road layer the terrain must be to the vehicle's height to win (m).
 const TERRAIN_LAYER_MARGIN_M: f32 = 0.3;
+/// A road layer this far above the vehicle is a deck over it, not the ground (m).
+const DECK_GAP_M: f32 = 1.0;
 /// Distance between the two points the pitch is measured from (m).
 const PITCH_BASE_M: f32 = 6.0;
 
@@ -67,12 +70,27 @@ type TileSample = ((i32, i32), RoadSample);
 
 /// Road surfaces and terrain of the resident tiles, in the session frame (metres relative to the
 /// start tile's corner, OMSI axes).
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct GroundIndex {
+    /// The drivable surfaces of `[surface]` objects (junction and street plates): boxes whose top
+    /// is the ground, per tile.
+    plates: ColliderGrid<(i32, i32)>,
     terrain: HashMap<(i32, i32), TileTerrain>,
     cells: HashMap<(i32, i32), Vec<TileSample>>,
     start_tile: (i32, i32),
     grid: TileGrid,
+}
+
+impl Default for GroundIndex {
+    fn default() -> Self {
+        Self {
+            plates: ColliderGrid::new(CELL_M),
+            terrain: HashMap::new(),
+            cells: HashMap::new(),
+            start_tile: (0, 0),
+            grid: TileGrid::default(),
+        }
+    }
 }
 
 fn cell_of(x: f32, y: f32) -> (i32, i32) {
@@ -140,8 +158,16 @@ impl GroundIndex {
         }
     }
 
+    /// Registers the surface plates of a tile (see `GroundIndex::plates`).
+    pub fn insert_plates(&mut self, key: (i32, i32), plates: impl IntoIterator<Item = Obb>) {
+        for p in plates {
+            self.plates.insert(key, p);
+        }
+    }
+
     /// Forgets a tile.
     pub fn remove_tile(&mut self, key: (i32, i32)) {
+        self.plates.remove(&key);
         self.terrain.remove(&key);
         self.cells.retain(|_, v| {
             v.retain(|(k, _)| *k != key);
@@ -191,15 +217,27 @@ impl GroundIndex {
         // Of overlapping surfaces (bridges) the one closest to `near_z`; its height is blended
         // from the samples around the point, so the height is continuous along the road instead
         // of stepping from sample to sample (which made the vehicle pitch and bob).
+        // The plates of `[surface]` objects are road layers as well.
+        let here = Vec2::new(x, y);
+        for plate in self.plates.query(here, 0.5) {
+            if plate.contains(here) {
+                on_road.push((0.0, plate.z_max));
+            }
+        }
         let best = on_road
             .iter()
             .map(|(_, z)| *z)
             .min_by(|a, b| (a - near_z).abs().total_cmp(&(b - near_z).abs()));
-        // The terrain is a layer too: where the road layer that is nearest the vehicle is far from
-        // it (a railway deck above a bus station apron that has no road of its own) the vehicle
-        // stands on the terrain, it does not climb the deck.
+        // The terrain is a layer too. A layer well above the vehicle is a deck over it (a railway
+        // bridge above a bus station apron that has no road of its own): the vehicle stands on
+        // the terrain, it does not climb. A layer slightly above (a street plate a few
+        // decimetres over the terrain) is the ground. A layer below the vehicle loses to the
+        // terrain only when the terrain is clearly nearer.
         if let (Some(z0), Some(t)) = (best, self.terrain_at(x, y)) {
-            if (t - near_z).abs() + TERRAIN_LAYER_MARGIN_M < (z0 - near_z).abs() {
+            let rise = z0 - near_z;
+            let use_terrain = (rise > DECK_GAP_M && (t - near_z).abs() < rise)
+                || (rise < 0.0 && (t - near_z).abs() + TERRAIN_LAYER_MARGIN_M < -rise);
+            if use_terrain {
                 return Some(t);
             }
         }
@@ -535,5 +573,40 @@ mod surface_tests {
         assert!((on_ground - 0.07).abs() < 0.01, "{on_ground}");
         let on_deck = index.height_at(100.0, 100.0, 6.0).expect("deck");
         assert!((on_deck - 6.0).abs() < 0.01, "{on_deck}");
+    }
+
+    /// A street plate a few decimetres over the terrain is the ground (the bus drives on it);
+    /// a deck 6 m up is not (the bus stays on the terrain under it).
+    #[test]
+    fn a_surface_plate_is_the_ground_and_a_high_deck_is_not() {
+        use opts_bevy::TileTerrain;
+        use opts_core::formats::map::MapTerrain;
+        let flat = || GroundIndex {
+            terrain: HashMap::from([(
+                (0, 0),
+                TileTerrain::new(
+                    MapTerrain {
+                        grid_cells: 60,
+                        heights: vec![0.0; 61 * 61],
+                    },
+                    5.0,
+                ),
+            )]),
+            ..GroundIndex::default()
+        };
+        let mut index = flat();
+        let plate =
+            |z0: f32, z1: f32| Obb::new(Vec2::new(100.0, 100.0), Vec2::new(5.0, 5.0), 0.0, z0, z1);
+        index.insert_plates((0, 0), [plate(0.25, 0.35)]);
+        let h = index.height_at(100.0, 100.0, 0.0).expect("height");
+        assert!((h - 0.35).abs() < 0.01, "on the plate: {h}");
+        let outside = index.height_at(120.0, 100.0, 0.0).expect("height");
+        assert!(outside.abs() < 0.01, "beside it: {outside}");
+        let mut over = flat();
+        over.insert_plates((0, 0), [plate(5.0, 6.0)]);
+        let under = over.height_at(100.0, 100.0, 0.0).expect("height");
+        assert!(under.abs() < 0.01, "under the deck: {under}");
+        let on_deck = over.height_at(100.0, 100.0, 6.0).expect("height");
+        assert!((on_deck - 6.0).abs() < 0.01, "on the deck: {on_deck}");
     }
 }

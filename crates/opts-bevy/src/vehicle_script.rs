@@ -363,20 +363,9 @@ pub fn script_drive_system(
     parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     for (entity, mut controller, scripts, consist, rail) in &mut query {
-        // A pedal the scripts write themselves (cruise control, AI-style scripts) is theirs: its
-        // value reaches the physics' inputs, whatever drives the vehicle.
-        if let Ok(engine) = scripts.engine.lock() {
-            if engine.writes("throttle") {
-                controller
-                    .inputs_mut()
-                    .set_throttle(engine.get("throttle").clamp(0.0, 1.0));
-            }
-            if engine.writes("brake") {
-                controller
-                    .inputs_mut()
-                    .set_service_brake(engine.get("brake").clamp(0.0, 1.0));
-            }
-        }
+        // The pedals are the player's: the feed hands them to the scripts every frame, also where
+        // a script writes `Throttle` or `Brake` for a corner case (copying the script's value back
+        // into the pedal made a zero stick: the HH109 1992 never got its throttle).
         if !enabled.0 {
             controller.sim.script_drive = None;
             continue;

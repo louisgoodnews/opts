@@ -2,24 +2,26 @@
 //!
 //! One box around the whole mesh is right for a bench or a stop shelter, wrong for a bridge: the
 //! box of a railway bridge reaches from the ground on its abutments up to the deck, so a bus could
-//! not drive under it. A large mesh is cut into columns on a plan grid; each column keeps only the
-//! height intervals its triangles occupy (a deck far above the road is one thin slab, an abutment
-//! wall a tall one), and equal neighbours are merged into one box.
+//! not drive under it; wrong for a street lamp too: its pole and arm in one plane made a wall
+//! 3.7 m wide and 7.5 m high that stopped a bus on Köln's Frankenstraße. A mesh is cut into
+//! columns on a plan grid (2 m for a bridge, finer for small things); each column keeps only the
+//! height intervals its triangles occupy (a deck far above the road is one thin slab, an
+//! abutment wall or a pole a tall one), and equal neighbours are merged into one box.
 
 use bevy::prelude::*;
 
 /// Meshes whose plan extent is below this stay one box (m).
-const SPLIT_MIN_EXTENT_M: f32 = 8.0;
-/// Edge of a plan column (m).
-const CELL_M: f32 = 2.0;
+const SPLIT_MIN_EXTENT_M: f32 = 1.5;
+/// The plan column edge is the mesh's plan extent over this many, kept between the limits (m).
+const CELLS_ACROSS: f32 = 16.0;
+/// Smallest and largest plan column edge (m).
+const CELL_RANGE_M: (f32, f32) = (0.3, 2.0);
 /// Intervals closer than this in one column are one solid (m).
 const MERGE_GAP_M: f32 = 0.4;
 /// A surface has at least this thickness (m).
 const MIN_THICKNESS_M: f32 = 0.1;
 /// More boxes than this and the mesh stays one box.
 const MAX_BOXES: usize = 600;
-/// Triangles are cut until their plan edges are below this (m).
-const MAX_EDGE_M: f32 = CELL_M;
 /// Height tolerance for merging neighbouring columns (m).
 const SAME_Y_M: f32 = 0.05;
 
@@ -38,8 +40,10 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
     if (hi.x - lo.x).max(hi.z - lo.z) < SPLIT_MIN_EXTENT_M || indices.len() < 3 {
         return whole;
     }
-    let cols_x = ((hi.x - lo.x) / CELL_M).ceil().max(1.0) as usize;
-    let cols_z = ((hi.z - lo.z) / CELL_M).ceil().max(1.0) as usize;
+    let cell =
+        ((hi.x - lo.x).max(hi.z - lo.z) / CELLS_ACROSS).clamp(CELL_RANGE_M.0, CELL_RANGE_M.1);
+    let cols_x = ((hi.x - lo.x) / cell).ceil().max(1.0) as usize;
+    let cols_z = ((hi.z - lo.z) / cell).ceil().max(1.0) as usize;
     if cols_x * cols_z > 40_000 {
         return whole;
     }
@@ -57,17 +61,17 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
                 .length()
                 .max((b - c).xz().length())
                 .max((c - a).xz().length());
-            if edge > MAX_EDGE_M * 1.5 && stack.len() < 4096 {
+            if edge > cell * 1.5 && stack.len() < 4096 {
                 let (ab, bc, ca) = ((a + b) * 0.5, (b + c) * 0.5, (c + a) * 0.5);
                 stack.extend([[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]);
                 continue;
             }
             let (tlo, thi) = (a.min(b).min(c), a.max(b).max(c));
             let ix = |x: f32| {
-                (((x - lo.x) / CELL_M).floor() as isize).clamp(0, cols_x as isize - 1) as usize
+                (((x - lo.x) / cell).floor() as isize).clamp(0, cols_x as isize - 1) as usize
             };
             let iz = |z: f32| {
-                (((z - lo.z) / CELL_M).floor() as isize).clamp(0, cols_z as isize - 1) as usize
+                (((z - lo.z) / cell).floor() as isize).clamp(0, cols_z as isize - 1) as usize
             };
             for cz in iz(tlo.z)..=iz(thi.z) {
                 for cx in ix(tlo.x)..=ix(thi.x) {
@@ -133,11 +137,11 @@ pub fn boxes_of(positions: &[Vec3], indices: &[u32]) -> Vec<(Vec3, Vec3)> {
         .into_iter()
         .map(|(z0, z1, x0, x1, y0, y1)| {
             (
-                Vec3::new(lo.x + x0 as f32 * CELL_M, y0, lo.z + z0 as f32 * CELL_M),
+                Vec3::new(lo.x + x0 as f32 * cell, y0, lo.z + z0 as f32 * cell),
                 Vec3::new(
-                    (lo.x + (x1 + 1) as f32 * CELL_M).min(hi.x),
+                    (lo.x + (x1 + 1) as f32 * cell).min(hi.x),
                     y1,
-                    (lo.z + (z1 + 1) as f32 * CELL_M).min(hi.z),
+                    (lo.z + (z1 + 1) as f32 * cell).min(hi.z),
                 ),
             )
         })
@@ -186,13 +190,46 @@ mod tests {
     }
 
     #[test]
-    fn a_small_mesh_stays_one_box() {
+    fn a_tiny_mesh_stays_one_box() {
         let v = vec![
             Vec3::ZERO,
-            Vec3::new(2.0, 1.0, 0.0),
-            Vec3::new(0.0, 1.0, 2.0),
+            Vec3::new(1.0, 1.0, 0.0),
+            Vec3::new(0.0, 1.0, 1.0),
         ];
         assert_eq!(boxes_of(&v, &[0, 1, 2]).len(), 1);
+    }
+
+    /// A street lamp drawn in one plane: a 0.2 m pole 7.5 m high and an arm 3.7 m long at 7.2 m.
+    /// A bus drives under the arm; the pole stays solid.
+    #[test]
+    fn a_street_lamp_blocks_its_pole_not_the_space_under_its_arm() {
+        let (mut v, mut i) = (Vec::new(), Vec::new());
+        quad(
+            &mut v,
+            &mut i,
+            Vec3::new(-0.1, 0.2, 0.0),
+            Vec3::new(0.1, 0.2, 0.0),
+            Vec3::new(0.1, 7.7, 0.0),
+            Vec3::new(-0.1, 7.7, 0.0),
+        );
+        quad(
+            &mut v,
+            &mut i,
+            Vec3::new(-3.6, 7.2, 0.0),
+            Vec3::new(0.1, 7.2, 0.0),
+            Vec3::new(0.1, 7.5, 0.0),
+            Vec3::new(-3.6, 7.5, 0.0),
+        );
+        let boxes = boxes_of(&v, &i);
+        assert!(boxes.len() > 1, "{boxes:?}");
+        let blocks_at = |x: f32, y: f32| {
+            boxes
+                .iter()
+                .any(|(lo, hi)| lo.x <= x && hi.x >= x && lo.y <= y && hi.y >= y)
+        };
+        assert!(blocks_at(0.0, 2.0), "the pole");
+        assert!(!blocks_at(-2.5, 2.0), "under the arm");
+        assert!(blocks_at(-2.5, 7.3), "the arm itself");
     }
 
     #[test]
