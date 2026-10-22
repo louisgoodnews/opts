@@ -52,6 +52,14 @@ impl Obb {
         [Vec2::new(s, c), Vec2::new(c, -s)]
     }
 
+    /// Whether the plan point `p` lies inside the box (its height is not looked at).
+    #[must_use]
+    pub fn contains(&self, p: Vec2) -> bool {
+        let [fwd, right] = self.axes();
+        let d = p - self.centre;
+        d.dot(right).abs() <= self.half.x && d.dot(fwd).abs() <= self.half.y
+    }
+
     /// Radius of the circle around the centre that contains the box.
     #[must_use]
     pub fn radius(&self) -> f32 {

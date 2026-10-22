@@ -336,7 +336,13 @@ impl FeedPlan {
         let mut rows = Vec::new();
         let mut push = |engine: &mut ScriptEngine, name: String, slot, kind, shared, live| {
             let (id, script_owned) = match kind {
-                Kind::Float => (engine.variable_id(&name), shared && engine.writes(&name)),
+                // The pedals are fed every frame, also when a script writes them: a script that
+                // writes `Throttle` for a corner case (the HH109 1992's idle assist for one bus
+                // number) used to take the pedal away from the player for good.
+                Kind::Float => (
+                    engine.variable_id(&name),
+                    shared && engine.writes(&name) && name != "throttle" && name != "brake",
+                ),
                 Kind::System => (engine.system_id(&name), false),
             };
             rows.push(Planned {
@@ -551,10 +557,12 @@ mod tests {
 
     #[test]
     fn the_feed_reaches_the_scripts_and_leaves_script_owned_names_alone() {
-        let src = "{frame}\n(L.L.Velocity) (S.L.v)\n(L.S.Time) (S.L.t)\n(L.L.Wheel_RotationSpeed_1_R) (S.L.w)\n(L.L.PAX_Entry2_Req) (S.L.p)\n0.7 (S.L.Throttle)\n{end}";
+        let src = "{frame}\n(L.L.Velocity) (S.L.v)\n(L.S.Time) (S.L.t)\n(L.L.Wheel_RotationSpeed_1_R) (S.L.w)\n(L.L.PAX_Entry2_Req) (S.L.p)\n0.7 (S.L.Throttle)\n3 (S.L.Colorscheme)\n{end}";
         let (mut e, _) = ScriptEngine::from_sources(&[("t.osc", src)]);
         let plan = FeedPlan::new(&mut e);
-        assert!(plan.script_owned().contains(&"throttle"));
+        assert!(plan.script_owned().contains(&"colorscheme"));
+        // The pedals are fed every frame even where a script writes them.
+        assert!(!plan.script_owned().contains(&"throttle"));
         assert!(!plan.script_owned().contains(&"brake"));
         let mut h = HostInputs {
             velocity_km_h: 42.5,
@@ -571,12 +579,14 @@ mod tests {
         assert_eq!(e.get("t"), 3600.0);
         assert_eq!(e.get("w"), 123.0);
         assert_eq!(e.get("p"), 1.0);
-        // The script's own `Throttle` survives the next feed.
+        // The script's own `Colorscheme` survives the next feed, its `Throttle` does not.
         feed(&mut e, &plan, &h);
-        assert_eq!(e.get("throttle"), 0.7);
+        assert_eq!(e.get("colorscheme"), 3.0);
+        assert_eq!(e.get("throttle"), 0.2);
         assert!(plan.zero_fed().contains(&"coll_energy"));
         assert_eq!(plan.status("VELOCITY"), Some(true));
-        assert_eq!(plan.status("throttle"), Some(false));
+        assert_eq!(plan.status("throttle"), Some(true));
+        assert_eq!(plan.status("colorscheme"), Some(false));
         assert_eq!(plan.status("engine_n"), None);
     }
 

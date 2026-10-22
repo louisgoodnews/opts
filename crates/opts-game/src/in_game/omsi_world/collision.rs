@@ -205,6 +205,18 @@ pub(super) fn register_object(
     if boxes.is_empty() {
         return;
     }
+    // An object marked `[surface]` is a drivable ground mesh: its collision mesh is what the
+    // vehicles drive on (a junction or street plate a few decimetres over the terrain), not a
+    // wall; it went into the obstacle index and stopped buses at the first plate (Köln,
+    // Frankenstraße).
+    if sco.surface {
+        commands.queue(move |world: &mut World| {
+            if let Some(mut ground) = world.get_resource_mut::<GroundIndex>() {
+                ground.insert_plates(key, boxes);
+            }
+        });
+        return;
+    }
     commands.queue(move |world: &mut World| {
         if let Some(mut index) = world.get_resource_mut::<CollisionIndex>() {
             for b in boxes {
