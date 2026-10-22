@@ -269,6 +269,25 @@ pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
     image
 }
 
+/// An RGBA8 image for a canvas of small bright dots (LED matrices): no mip chain, linear
+/// sampling, wrapping like every OMSI texture.
+#[must_use]
+pub fn led_image(width: u32, height: u32, data: Vec<u8>) -> Image {
+    let mut image = Image::new(
+        Extent3d {
+            width: width.max(1),
+            height: height.max(1),
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    crate::texture_filter::prepare_led_texture(&mut image);
+    image
+}
+
 /// Loads all font definitions found in `Fonts/*.oft`.
 #[must_use]
 pub fn load_fonts(install: &OmsiInstall) -> Vec<OftFont> {

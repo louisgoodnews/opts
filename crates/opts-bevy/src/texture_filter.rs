@@ -163,6 +163,19 @@ pub fn prepare_text_texture(image: &mut bevy::image::Image) {
     prepare(image, true);
 }
 
+/// For a canvas of small bright dots (LED matrices): wrapping like every OMSI texture, linear
+/// sampling and no mip chain, which would average the dots into the dark between them.
+pub fn prepare_led_texture(image: &mut bevy::image::Image) {
+    use bevy::image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor};
+    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        address_mode_u: ImageAddressMode::Repeat,
+        address_mode_v: ImageAddressMode::Repeat,
+        mag_filter: ImageFilterMode::Linear,
+        min_filter: ImageFilterMode::Linear,
+        ..ImageSamplerDescriptor::default()
+    });
+}
+
 fn prepare(image: &mut bevy::image::Image, weight_colour_by_alpha: bool) {
     let filtering = texture_filtering();
     image.sampler = object_sampler(filtering);

@@ -332,6 +332,8 @@ pub struct VehicleRoute {
     pub keys: KeyQueue,
     /// Seconds the target is still offered to the displays ([`keep_target`]).
     pub pending_target_s: f32,
+    /// The keys of a selection are being typed; the target goes to the displays after them.
+    pub offer_after_typing: bool,
 }
 
 impl VehicleRoute {
@@ -342,6 +344,7 @@ impl VehicleRoute {
             handle,
             keys: KeyQueue::default(),
             pending_target_s: 0.0,
+            offer_after_typing: false,
         }
     }
 }
@@ -374,7 +377,12 @@ pub fn select_route_on(
     route_code: i32,
 ) -> Result<RouteSelection, RouteError> {
     let result = select_route(route, engine, route_code);
-    if result.is_ok() || matches!(result, Err(RouteError::NoKeypad)) {
+    if route.keys.is_typing() {
+        // A driver keys the route first; the displays are told the target when the keys are
+        // done (a scheduled target set now would shut the IBIS keypad of vehicles such as the
+        // NF6D, which accepts keys only while no target is set).
+        route.offer_after_typing = true;
+    } else if result.is_ok() || matches!(result, Err(RouteError::NoKeypad)) {
         schedule_target(engine, &route.handle);
         route.pending_target_s = TARGET_OFFER_S;
     }
@@ -387,11 +395,19 @@ pub fn route_typing_system(
     mut query: bevy::prelude::Query<(&mut VehicleRoute, &crate::VehicleScripts)>,
 ) {
     for (mut route, scripts) in &mut query {
-        if !route.keys.is_typing() && route.pending_target_s <= 0.0 {
+        if !route.keys.is_typing() && route.pending_target_s <= 0.0 && !route.offer_after_typing {
             continue;
         }
         if let Ok(mut engine) = scripts.engine.lock() {
             route.keys.press_next(&mut engine, time.delta_secs());
+            if route.keys.is_typing() {
+                continue;
+            }
+            if route.offer_after_typing {
+                route.offer_after_typing = false;
+                schedule_target(&mut engine, &route.handle);
+                route.pending_target_s = TARGET_OFFER_S;
+            }
             let handle = route.handle.clone();
             keep_target(
                 &mut engine,
