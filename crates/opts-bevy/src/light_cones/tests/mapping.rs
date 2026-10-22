@@ -82,7 +82,15 @@ fn a_headlight_cone_follows_the_light_and_a_spotlight_cone_its_range() {
     let s = headlight_cone_shape(&h).expect("headlight");
     assert!((s.dir - Vec3::NEG_Z).length() < 1e-6);
     assert_eq!(s.length, HEADLIGHT_CONE_LENGTH_M);
-    assert!((s.half_angle - 25f32.to_radians()).abs() < 1e-6);
+    assert!(
+        (s.half_angle - HEADLIGHT_CORONA_BEAM_HALF_DEG.to_radians()).abs() < 1e-6,
+        "an outer angle of 190 degrees is a corona angle: a narrow beam"
+    );
+    let beam = headlight_cone_shape(&light(Vec3::Y, false, false, 20.0, 40.0)).expect("beam");
+    assert!(
+        (beam.half_angle - 20f32.to_radians()).abs() < 1e-6,
+        "a real beam angle is kept"
+    );
     assert!(headlight_cone_shape(&light(Vec3::ZERO, false, false, 1.0, 2.0)).is_none());
 
     let spot = Spotlight {
@@ -98,8 +106,8 @@ fn a_headlight_cone_follows_the_light_and_a_spotlight_cone_its_range() {
     assert_eq!((c.apex, c.dir), (Vec3::ZERO, Vec3::NEG_Z));
     assert_eq!(c.length, SPOT_CONE_MAX_LENGTH_M);
     assert!(
-        (c.half_angle - 25f32.to_radians()).abs() < 1e-6,
-        "35 degrees clamped"
+        (c.half_angle - HEADLIGHT_CORONA_BEAM_HALF_DEG.to_radians()).abs() < 1e-6,
+        "35 degrees clamped to the haze limit"
     );
     let near = Spotlight {
         range: 12.0,

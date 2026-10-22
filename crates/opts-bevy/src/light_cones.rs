@@ -56,6 +56,9 @@ pub const LANTERN_DEFAULT_LENGTH_M: f32 = 6.0;
 pub const LANTERN_LENGTH_M: (f32, f32) = (2.0, 14.0);
 /// Vehicle headlight cones: half-angle range (degrees).
 pub const HEADLIGHT_HALF_DEG: (f32, f32) = (6.0, 25.0);
+/// Half angle of the haze cone of a headlight whose outer angle is a corona angle or whose spot is wide
+/// (above 90 degrees), in degrees.
+pub const HEADLIGHT_CORONA_BEAM_HALF_DEG: f32 = 11.0;
 /// Length of a headlight cone built from a `[light_enh_2]` (it has no range) (m).
 pub const HEADLIGHT_CONE_LENGTH_M: f32 = 30.0;
 /// Longest cone of a `[spotlight]` (its range is 100 to 500 m) (m).

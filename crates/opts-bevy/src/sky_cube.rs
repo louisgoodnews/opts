@@ -223,6 +223,7 @@ pub fn sync_sky_cube(
     time: Res<Time<Real>>,
     quality: Res<LightQuality>,
     input: Option<Res<SkyCubeInput>>,
+    cabin: Option<Res<crate::light_rooms::CabinView>>,
     mut state: ResMut<SkyCubeState>,
     mut images: ResMut<Assets<Image>>,
     mut commands: Commands,
@@ -275,7 +276,14 @@ pub fn sync_sky_cube(
             h
         }
     };
-    let intensity = BASE_INTENSITY * exposure(input.sun_elevation_deg, input.ambient);
+    let interior = cabin.is_some_and(|c| c.interior_view);
+    let intensity = BASE_INTENSITY
+        * exposure(input.sun_elevation_deg, input.ambient)
+        * if interior {
+            crate::light_rooms::INTERIOR_AMBIENT_SCALE
+        } else {
+            1.0
+        };
     state.intensity = intensity;
     for (entity, applied, generated, probe) in &mut cameras {
         if !applied {

@@ -36,6 +36,10 @@ pub const CABIN_LEAVE_M: f32 = 15.0;
 /// The map light pool's intensity factor while the camera is in an interior view, so a lamp
 /// outside does not out-shine the cabin light ❓ (tune on screenshots).
 pub const INTERIOR_VIEW_SCALE: f32 = 0.5;
+/// Share of the sky's ambient light (the ambient colour and the sky cube) that reaches the
+/// camera in an interior view: a cabin is lit from the windows and its own lamps, not by the
+/// whole sky, and without this its surfaces look flat and washed out.
+pub const INTERIOR_AMBIENT_SCALE: f32 = 0.45;
 /// Lamps over the vehicle are skipped within this margin around its footprint (m).
 pub const FOOTPRINT_MARGIN_M: f32 = 1.0;
 
@@ -193,6 +197,40 @@ pub fn camera_light_layers_system(
     }
 }
 
+/// Marks the camera whose [`AmbientLight`] [`interior_ambient_system`] wrote.
+#[derive(Component)]
+pub struct InteriorAmbient;
+
+/// In an interior view the main camera gets its own, dimmer ambient light (a camera's
+/// `AmbientLight` replaces the global one); outside it is taken off again.
+pub fn interior_ambient_system(
+    mut commands: Commands,
+    view: Res<CabinView>,
+    global: Option<Res<GlobalAmbientLight>>,
+    cameras: Query<(Entity, Has<InteriorAmbient>), With<crate::MainCamera>>,
+) {
+    for (camera, marked) in &cameras {
+        match (view.interior_view, global.as_deref()) {
+            (true, Some(g)) => {
+                commands.entity(camera).insert((
+                    InteriorAmbient,
+                    AmbientLight {
+                        color: g.color,
+                        brightness: g.brightness * INTERIOR_AMBIENT_SCALE,
+                        affects_lightmapped_meshes: g.affects_lightmapped_meshes,
+                    },
+                ));
+            }
+            _ if marked => {
+                commands
+                    .entity(camera)
+                    .remove::<(InteriorAmbient, AmbientLight)>();
+            }
+            _ => {}
+        }
+    }
+}
+
 /// Registers the light-room systems. They run before the scenery runtime so the map light pool
 /// sees this frame's [`CabinView`].
 #[derive(Default)]
@@ -202,7 +240,11 @@ impl Plugin for LightRoomsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CabinView>().add_systems(
             Update,
-            (vehicle_footprint_system, camera_light_layers_system)
+            (
+                vehicle_footprint_system,
+                camera_light_layers_system,
+                interior_ambient_system,
+            )
                 .chain()
                 .before(SceneryRuntimeSet),
         );

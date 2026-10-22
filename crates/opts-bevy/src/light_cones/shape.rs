@@ -141,11 +141,15 @@ pub fn headlight_cone_shape(light: &ScoLight) -> Option<ConeShape> {
     if dir == Vec3::ZERO {
         return None;
     }
-    let (half_angle, inner_frac) = cone_angles(
-        light.cone_inner_deg,
-        light.cone_outer_deg,
-        HEADLIGHT_HALF_DEG,
-    );
+    // An outer angle past 90 degrees (tram and bus lamps say 180) is the angle the corona is seen
+    // from, not the beam: the cone is then a narrow low beam, not a wedge across the street.
+    let half_deg = if light.cone_outer_deg > 90.0 {
+        (HEADLIGHT_HALF_DEG.0, HEADLIGHT_CORONA_BEAM_HALF_DEG)
+    } else {
+        HEADLIGHT_HALF_DEG
+    };
+    let (half_angle, inner_frac) =
+        cone_angles(light.cone_inner_deg, light.cone_outer_deg, half_deg);
     let apex = omsi_to_bevy_pos(light.position);
     Some(ConeShape {
         apex,
@@ -164,8 +168,13 @@ pub fn headlight_cone_shape(light: &ScoLight) -> Option<ConeShape> {
 /// [`SPOT_CONE_MAX_LENGTH_M`].
 #[must_use]
 pub fn spotlight_cone_shape(spot: &Spotlight) -> ConeShape {
-    let (half_angle, inner_frac) =
-        cone_angles(spot.inner_cone, spot.outer_cone, HEADLIGHT_HALF_DEG);
+    // The lit area on the ground follows the real angle; the haze around the beam stays narrow
+    // (a tram's 70 degree spot would otherwise fan out over the whole street).
+    let (half_angle, inner_frac) = cone_angles(
+        spot.inner_cone,
+        spot.outer_cone,
+        (HEADLIGHT_HALF_DEG.0, HEADLIGHT_CORONA_BEAM_HALF_DEG),
+    );
     let length = if spot.range > 0.0 {
         spot.range.min(SPOT_CONE_MAX_LENGTH_M)
     } else {
