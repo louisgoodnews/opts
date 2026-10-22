@@ -25,6 +25,8 @@ type GroundBound = (
 const SAMPLE_STEP_M: f32 = 2.0;
 /// Cell size of the sample index (m).
 const CELL_M: f32 = 8.0;
+/// How much closer than a road layer the terrain must be to the vehicle's height to win (m).
+const TERRAIN_LAYER_MARGIN_M: f32 = 0.3;
 /// Distance between the two points the pitch is measured from (m).
 const PITCH_BASE_M: f32 = 6.0;
 
@@ -193,6 +195,14 @@ impl GroundIndex {
             .iter()
             .map(|(_, z)| *z)
             .min_by(|a, b| (a - near_z).abs().total_cmp(&(b - near_z).abs()));
+        // The terrain is a layer too: where the road layer that is nearest the vehicle is far from
+        // it (a railway deck above a bus station apron that has no road of its own) the vehicle
+        // stands on the terrain, it does not climb the deck.
+        if let (Some(z0), Some(t)) = (best, self.terrain_at(x, y)) {
+            if (t - near_z).abs() + TERRAIN_LAYER_MARGIN_M < (z0 - near_z).abs() {
+                return Some(t);
+            }
+        }
         match best {
             Some(z0) => {
                 let (mut num, mut den) = (0.0_f32, 0.0_f32);
@@ -493,5 +503,37 @@ mod surface_tests {
             (s.surface_z(100.0, 198.5) - 10.06).abs() < 1e-5,
             "south is the sloping right half"
         );
+    }
+
+    /// The deck of a bridge over bare ground is not a floor for a vehicle that stands on the
+    /// ground, and still is one for a vehicle that stands on it.
+    #[test]
+    fn a_deck_over_the_apron_is_not_climbed_but_is_driven_on() {
+        use opts_bevy::TileTerrain;
+        use opts_core::formats::map::MapTerrain;
+        let terrain = TileTerrain::new(
+            MapTerrain {
+                grid_cells: 60,
+                heights: vec![0.07; 61 * 61],
+            },
+            5.0,
+        );
+        let mut index = GroundIndex::default();
+        index.terrain.insert((0, 0), terrain);
+        let mut deck = sample(false);
+        deck.z = 6.0;
+        deck.x = 100.0;
+        deck.y = 100.0;
+        deck.half_width = 20.0;
+        deck.surface = Arc::new(Vec::new());
+        index
+            .cells
+            .entry(cell_of(100.0, 100.0))
+            .or_default()
+            .push(((0, 0), deck));
+        let on_ground = index.height_at(100.0, 100.0, 0.07).expect("ground");
+        assert!((on_ground - 0.07).abs() < 0.01, "{on_ground}");
+        let on_deck = index.height_at(100.0, 100.0, 6.0).expect("deck");
+        assert!((on_deck - 6.0).abs() < 0.01, "{on_deck}");
     }
 }
