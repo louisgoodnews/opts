@@ -41,12 +41,23 @@ impl VehicleSimulation {
     }
 
     /// Takes one fixed step of ground following: `samples[0]` is the chassis, `samples[k + 1]`
-    /// consist unit `k` (`None`: no ground there, the unit keeps its state). A unit without a
-    /// state yet starts on its goal. The filters run with `dt`, the fixed step, so the result
+    /// consist unit `k` (`None`: no ground there: the unit keeps its height but levels out, pitch
+    /// and roll fade to zero, because a tilt left from the last ground would go on pulling the
+    /// vehicle down a slope that is no longer there). A unit without a state yet starts on its goal. The filters run with `dt`, the fixed step, so the result
     /// depends on nothing else.
     pub fn apply_ground(&mut self, samples: &[Option<GroundSample>], dt: f32) {
         let settle = |body: &mut Option<UnitBody>, sample: &Option<GroundSample>| {
-            let Some(sample) = sample else { return };
+            let Some(sample) = sample else {
+                if let Some(b) = body {
+                    let level = UnitBody {
+                        elevation: b.elevation,
+                        pitch: 0.0,
+                        roll: 0.0,
+                    };
+                    b.settle(level, dt);
+                }
+                return;
+            };
             let goal = sample.goal();
             match body {
                 Some(b) => b.settle(goal, dt),
