@@ -1,6 +1,6 @@
 //! Naming the mirrors of a vehicle for the virtual mirrors.
 
-use super::*;
+use super::{Scene, *};
 
 fn entities(n: usize) -> Vec<Entity> {
     let mut world = World::new();
@@ -54,4 +54,34 @@ fn toggling_a_stream_flips_only_that_slot() {
     assert!(vm.any_stream());
     vm.toggle(MirrorSlot::RightLower);
     assert!(!vm.any_stream());
+}
+
+#[test]
+fn panes_with_different_materials_but_one_mirror_number_share_a_camera() {
+    // The main and the wide-angle pane of a side mirror: two pooled materials, one `reflexion0`.
+    let mut s = Scene::new(
+        &[Vec3::new(-1.3, 0.0, -2.0), Vec3::new(-1.3, -0.3, -2.0)],
+        true,
+    );
+    for original in s.originals.clone() {
+        crate::glass::set_mirror_index(original.id(), 0);
+    }
+    s.quality(2, 1);
+    s.app.update();
+    s.app.update();
+    assert_eq!(s.cameras().len(), 1, "one camera for the mirror number");
+    let camera = s.camera_of(s.mirrors[0]);
+    assert_eq!(s.camera_of(s.mirrors[1]), camera);
+    // Switched off, every pane gets its own material back.
+    s.quality(0, 1);
+    s.app.update();
+    s.app.update();
+    for (pane, original) in s.mirrors.iter().zip(&s.originals) {
+        let current = s
+            .app
+            .world()
+            .get::<MeshMaterial3d<StandardMaterial>>(*pane)
+            .unwrap();
+        assert_eq!(current.0, *original);
+    }
 }

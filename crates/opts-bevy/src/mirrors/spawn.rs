@@ -55,8 +55,7 @@ pub fn spawn_mirror_cameras(
     *last_scan = Some(now);
     for vehicle in &vehicles {
         // New panes of this vehicle, grouped by their (pooled) material.
-        let mut groups: HashMap<AssetId<StandardMaterial>, (Handle<StandardMaterial>, Vec<Found>)> =
-            HashMap::new();
+        let mut groups: HashMap<GroupKey, (Handle<StandardMaterial>, Vec<Found>)> = HashMap::new();
         for entity in children.iter_descendants(vehicle) {
             let Ok((material, mesh)) = candidates.get(entity) else {
                 continue;
@@ -86,7 +85,7 @@ pub fn spawn_mirror_cameras(
                 })
                 .unwrap_or((Vec2::ZERO, Vec2::ONE));
             groups
-                .entry(material.0.id())
+                .entry(GroupKey::of(material.0.id()))
                 .or_insert_with(|| (material.0.clone(), Vec::new()))
                 .1
                 .push(Found {
@@ -96,18 +95,19 @@ pub fn spawn_mirror_cameras(
                         normal,
                         height,
                         aspect,
+                        original: material.0.clone(),
                     },
                     uv_min,
                     uv_max,
                 });
         }
-        let mut existing: HashMap<AssetId<StandardMaterial>, Entity> = cameras
+        let mut existing: HashMap<GroupKey, Entity> = cameras
             .iter()
             .filter(|(_, c)| c.vehicle == vehicle)
-            .map(|(e, c)| (c.material, e))
+            .map(|(e, c)| (c.key, e))
             .collect();
-        for (id, (original, found)) in groups {
-            if let Some(camera) = existing.get(&id).copied() {
+        for (key, (original, found)) in groups {
+            if let Some(camera) = existing.get(&key).copied() {
                 // Late panes join the camera of their group.
                 if let Ok((_, mut info)) = cameras.get_mut(camera) {
                     for f in found {
@@ -141,7 +141,11 @@ pub fn spawn_mirror_cameras(
                 continue;
             };
             let tag = if settings.use_tags {
-                mirror_index(id).and_then(|n| {
+                match key {
+                    GroupKey::Index(n) => Some(n),
+                    GroupKey::Material(id) => mirror_index(id),
+                }
+                .and_then(|n| {
                     buses
                         .get(vehicle)
                         .ok()
@@ -160,7 +164,17 @@ pub fn spawn_mirror_cameras(
             };
             let mut image =
                 Image::new_target_texture(size.x, size.y, TextureFormat::Bgra8UnormSrgb, None);
-            image.sampler = bevy::image::ImageSampler::linear();
+            // Like the `reflexion<N>.bmp` it replaces, the picture wraps: the pane's UVs may lie
+            // outside 0..1 (the mesh slides them with `[texcoordtransX]`), and a clamped picture
+            // smears its edge column over the pane.
+            image.sampler =
+                bevy::image::ImageSampler::Descriptor(bevy::image::ImageSamplerDescriptor {
+                    address_mode_u: bevy::image::ImageAddressMode::Repeat,
+                    address_mode_v: bevy::image::ImageAddressMode::Repeat,
+                    mag_filter: bevy::image::ImageFilterMode::Linear,
+                    min_filter: bevy::image::ImageFilterMode::Linear,
+                    ..default()
+                });
             let picture = images.add(image);
             let (uv_min, uv_max) = found.iter().fold(
                 (Vec2::splat(f32::MAX), Vec2::splat(f32::MIN)),
@@ -211,7 +225,7 @@ pub fn spawn_mirror_cameras(
             }
             commands.entity(camera).insert(MirrorCamera {
                 vehicle,
-                material: id,
+                key,
                 original,
                 dynamic,
                 members,
@@ -222,7 +236,7 @@ pub fn spawn_mirror_cameras(
                 enlarged: false,
                 tag,
             });
-            existing.insert(id, camera);
+            existing.insert(key, camera);
         }
     }
 }
