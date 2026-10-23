@@ -52,7 +52,8 @@ impl TrafficWorld {
             });
             // The nearest of leader, light, conflict zone and such a stop limits the vehicle.
             let mut ahead = leader;
-            for gap in [signal[i], wait, stuck].into_iter().flatten() {
+            let stop = self.stop_gap(i, &looks[i]);
+            for gap in [signal[i], wait, stuck, stop].into_iter().flatten() {
                 if ahead.is_none_or(|(g, _)| gap < g) {
                     ahead = Some((gap, 0.0));
                 }
@@ -88,6 +89,7 @@ impl TrafficWorld {
             a.glide(dt);
         }
         self.time += dt;
+        self.update_stops();
         // A vehicle that cannot make its strategic change re-plans from its lane after a while.
         for i in 0..self.agents.len() {
             let a = &mut self.agents[i];
@@ -156,7 +158,9 @@ impl TrafficWorld {
         let limit = self.stuck_after_s;
         let mut stuck = None;
         for (a, g) in self.agents.iter_mut().zip(&signal) {
-            if !a.foreign && a.speed < 0.2 && g.is_none() {
+            // A scheduled vehicle waiting at its stop is not stuck.
+            let dwelling = a.stops.front().is_some_and(|s| s.arrived_at.is_some());
+            if !a.foreign && a.speed < 0.2 && g.is_none() && !dwelling {
                 a.stuck_s += dt;
                 if stuck.is_none() && a.stuck_s > limit {
                     stuck = Some((a.id, a.lane));

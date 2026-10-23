@@ -118,6 +118,11 @@ impl TrafficWorld {
             let last = a.plan.back().copied().unwrap_or(a.lane);
             let strategic = a.strategic.is_none() && a.no_strategic != Some(last);
             let (class, group) = (a.params.class, usize::from(a.params.density_group));
+            // A scheduled vehicle takes its fixed route while that follows the lanes.
+            if let Some(n) = self.next_route_lane(i, last) {
+                self.agents[i].plan.push_back(n);
+                continue;
+            }
             match self.pick_next(last, class, group, strategic) {
                 Some((n, change)) => {
                     let a = &mut self.agents[i];

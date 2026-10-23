@@ -441,6 +441,42 @@ impl LaneGraph {
             .map(|i| LaneId(i as u32))
     }
 
+    /// The place on an accepted lane nearest to `point` among those that run within
+    /// `max_heading_diff` radians of `heading` (the direction a vehicle standing there faces):
+    /// the lane, the distance along it and the distance from `point` (m). Found by sampling the
+    /// lane every metre; `None` when no such lane lies within `max_dist`.
+    #[must_use]
+    pub fn nearest_place(
+        &self,
+        point: DVec2,
+        heading: f64,
+        max_heading_diff: f64,
+        max_dist: f64,
+        accept: impl Fn(&Lane) -> bool,
+    ) -> Option<(LaneId, f64, f64)> {
+        let mut best: Option<(LaneId, f64, f64)> = None;
+        for (i, lane) in self.lanes.iter().enumerate() {
+            if chord_distance(lane, point) > max_dist + 0.25 * lane.length() || !accept(lane) {
+                continue;
+            }
+            let len = lane.length();
+            let mut s = 0.0;
+            while s <= len + 1e-9 {
+                let d = lane.geometry.point_at(s).distance(point);
+                let mut diff =
+                    (lane.geometry.heading_at(s) - heading).rem_euclid(std::f64::consts::TAU);
+                if diff > std::f64::consts::PI {
+                    diff = std::f64::consts::TAU - diff;
+                }
+                if d <= max_dist && diff <= max_heading_diff && best.is_none_or(|b| d < b.2) {
+                    best = Some((LaneId(i as u32), s.min(len), d));
+                }
+                s += 1.0;
+            }
+        }
+        best
+    }
+
     /// A random place on an accepted lane at a distance of `min..=max` metres from `centre`
     /// (up to 12 tries). `accept` filters lanes, e.g. by kind and density rule.
     pub fn random_spot(

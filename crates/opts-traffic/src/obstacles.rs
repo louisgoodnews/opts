@@ -159,6 +159,8 @@ impl Agent {
             accel: 0.0,
             params,
             plan: std::collections::VecDeque::new(),
+            route: std::collections::VecDeque::new(),
+            stops: std::collections::VecDeque::new(),
             waiting_s: 0.0,
             stuck_s: 0.0,
             ignore_conflicts_until: 0.0,

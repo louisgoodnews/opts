@@ -46,4 +46,5 @@ fn same_seed_same_run() {
 
 use crate::obstacles::Obstacle;
 
+mod scheduled;
 mod standing;

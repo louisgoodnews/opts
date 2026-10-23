@@ -110,6 +110,7 @@ pub fn configure_traffic(
     mut settings: ResMut<TrafficSettings>,
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
+    mut sched: ResMut<ScheduledTraffic>,
 ) {
     // The command line wins for this run (`--traffic N` is the baseline); then the setting *Road traffic*; then the default.
     settings.baseline = args
@@ -118,6 +119,7 @@ pub fn configure_traffic(
         .unwrap_or(DEFAULT_TRAFFIC_BASELINE);
     *state = TrafficState::default();
     *pool = TrafficPool::default();
+    *sched = ScheduledTraffic::default();
 }
 
 /// Empties the pool so that the AI lists are read again (a Chrono switch changed them). Vehicles

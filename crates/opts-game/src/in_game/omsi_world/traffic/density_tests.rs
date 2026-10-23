@@ -9,6 +9,7 @@ fn group(name: &str, density_group: usize, density: Option<GroupDensity>) -> Poo
         name: name.into(),
         density,
         density_group,
+        scheduled: false,
     }
 }
 

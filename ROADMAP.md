@@ -396,7 +396,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 ## 🔭 Phase 11: Advanced Systems, Realism & Continuous Improvement
 *Goal: Build on the session-based simulator with the systems that make it feel finished: in-game map, comfort and accessibility settings, setvar and config depth, deeper and scheduled AI traffic, track switches, adaptive streaming, tunnels, real weather and its effect on driving, the OMSI event system, and a standing roadmap-review practice. Status: planned 2026-10-18; approved by the project lead 2026-10-20, open for implementation. Documents: [phase page](docs/src/roadmap/phase-11/README.md). Force feedback stays in [M-0102](docs/src/roadmap/phase-4/M-0102.md).*
 
-- [ ] **🧬 OMSI Event System Research and Consolidation** — [M-0118](docs/src/roadmap/phase-11/M-0118.md) — 📝 proposed 2026-10-18
+- [ ] **🧬 OMSI Event System Research and Consolidation** — [M-0118](docs/src/roadmap/phase-11/M-0118.md) — 🚧 in progress 2026-10-23 (road buses by timetable)
   - [ ] Event taxonomy, dispatch, base event set, parameter formats, ordering, then a consolidation design (documents).
 - [ ] **🔁 Dev Agent Roadmap Review Process** — [M-0119](docs/src/roadmap/phase-11/M-0119.md) — 📝 proposed 2026-10-18
   - [ ] Prompt P-1010, CONTRIBUTING note, workflow reference and cadence (process).

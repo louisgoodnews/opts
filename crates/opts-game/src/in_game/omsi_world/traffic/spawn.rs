@@ -15,6 +15,7 @@ pub fn spawn_traffic(
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
     settings: Res<TrafficSettings>,
+    mut sched: ResMut<ScheduledTraffic>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -48,6 +49,12 @@ pub fn spawn_traffic(
         &pool.groups,
         &pool.defaults,
     );
+    // Depot groups drive timetable runs only, never as unscheduled traffic.
+    let metres: Vec<f64> = metres
+        .iter()
+        .zip(&pool.groups)
+        .map(|(m, g)| if g.scheduled { 0.0 } else { *m })
+        .collect();
     // The baseline setting spread over the groups, scaled by the map's factors for this hour and
     // day, limited to what the roads hold.
     let (targets, capped) = baseline_targets(&metres, &factors, settings.baseline);
@@ -112,14 +119,29 @@ pub fn spawn_traffic(
             "traffic state"
         );
     }
-    if state.world.agents().len() >= target {
+    // A scheduled vehicle asked for by `plan_scheduled` goes first and does not count against the
+    // target of the unscheduled traffic.
+    let request = sched.request.take();
+    let unscheduled = state
+        .world
+        .agents()
+        .len()
+        .saturating_sub(sched.agent_count());
+    if request.is_none() && unscheduled >= target {
         return;
     }
     let mut rng = pool.rng.take().unwrap_or_else(|| Rng::new(1));
     // Why an attempt found no place, counted for the diagnostic line: no vehicle ready (or no
     // group below its target), no lane in the ring around the camera, lane gone, -, in the
     // camera's view.
+    let requested = request.as_ref().and_then(|r| {
+        let at = state.world.graph().lane(r.lane)?.geometry.point_at(r.s);
+        Some((r.lane, r.s, r.slot, at))
+    });
     let result = (|| -> Result<_, usize> {
+        if let Some(found) = requested {
+            return Ok(found);
+        }
         let fwd = cam.forward();
         let view = DVec2::new(f64::from(fwd.x), -f64::from(fwd.z)).normalize_or_zero();
         // The group and vehicle type come first: bus and truck lanes admit only their own, and
@@ -168,6 +190,9 @@ pub fn spawn_traffic(
     // Build the models of every unit (parts are cached, so repeated types are cheap).
     let SlotState::Ready(variant) = &pool.slots[slot].state else {
         pool.rng = Some(rng);
+        if let Some(r) = &request {
+            sched.failed(r);
+        }
         return;
     };
     let origin = Transform::from_translation(omsi_to_bevy_pos(at.extend(0.0).as_vec3()));
@@ -228,6 +253,9 @@ pub fn spawn_traffic(
             commands.entity(e).despawn();
         }
         tracing::debug!(vehicle = %name, "AI vehicle meshes not ready");
+        if let Some(r) = &request {
+            sched.failed(r);
+        }
         if unusable {
             pool.slots[slot].state = SlotState::Failed;
         } else {
@@ -266,9 +294,15 @@ pub fn spawn_traffic(
             commands.entity(e).despawn();
         }
         pool.rng = Some(rng);
+        if let Some(r) = &request {
+            sched.failed(r);
+        }
         return;
     }
-    let speed = state.world.lane_cap(&params, lane_id) * 0.8;
+    let speed = match &request {
+        Some(r) => r.speed.min(state.world.lane_cap(&params, lane_id)),
+        None => state.world.lane_cap(&params, lane_id) * 0.8,
+    };
     let head = &variant.units[0];
     let sound = head.sound.clone();
     let size = head.size.unwrap_or((4.4, 2.2));
@@ -310,6 +344,13 @@ pub fn spawn_traffic(
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             pool.agent_groups.insert(id, pool_group);
+            if let Some(r) = &request {
+                state.world.set_route(id, r.route.iter().copied());
+                for stop in &r.stops {
+                    state.world.push_stop(id, *stop);
+                }
+                sched.built(id, r);
+            }
             tracing::debug!(
                 agent = id.0,
                 vehicle = %name,
@@ -373,6 +414,9 @@ pub fn spawn_traffic(
         Err(_) => {
             for e in entities {
                 commands.entity(e).despawn();
+            }
+            if let Some(r) = &request {
+                sched.failed(r);
             }
         }
     }

@@ -19,10 +19,12 @@ pub fn load_traffic_variants(
             groups,
             slots,
             defaults,
+            depots,
         } = read_groups(&job);
         pool.groups = groups;
         pool.slots = slots;
         pool.defaults = defaults;
+        pool.depots = depots;
         pool.road_curve = DensityProfile {
             days: 0,
             points: job.manifest.traffic_density_road.clone(),

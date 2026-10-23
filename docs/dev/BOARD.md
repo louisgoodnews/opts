@@ -370,7 +370,7 @@ _Work that is planned but not yet ready — dependencies unmet, scope unclear, o
 - [ ] 🟡 **Measure streaming baselines at walking, driving and fast speeds** (M-0114) — [Hybrid Tile and Object Streaming](../src/roadmap/phase-11/M-0114.md)
 - [ ] 🟡 **Survey weather providers, licences and offline policy** (M-0116) — [Real Weather Research](../src/roadmap/phase-11/M-0116.md)
 - [ ] 🟡 **Define the `SurfaceGrip` model and its inputs from the weather state** (M-0117) — [Weather Effects on Driving and Exhaust](../src/roadmap/phase-11/M-0117.md)
-- [ ] 🟡 **Add the timetable reader API for non-player vehicles (M-0099 is done: `opts_core::formats::timetable::Timetables`)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
+- [x] 🟡 **Add the timetable reader API for non-player vehicles (M-0099 is done: `opts_core::formats::timetable::Timetables`)** (M-0112) — [Scheduled AI Traffic](../src/roadmap/phase-11/M-0112.md)
 - [ ] 🟡 **Census of switch definitions in the installed maps' tiles** (M-0113) — [Track Switch Interaction](../src/roadmap/phase-11/M-0113.md)
 
 #### M-0120–M-0124 — Phase 12: Visual Fidelity & Advanced Physics (proposed 2026-10-18, awaiting approval)
