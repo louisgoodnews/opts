@@ -181,6 +181,7 @@ impl IdmParams {
         let rowdy = (lo + (hi - lo) * roll).clamp(0.0, 1.0);
         let spread = cal.speed_spread * (2.0 * rowdy - 1.0);
         p.speed_factor = 1.0 + spread;
+        p.rowdy = rowdy;
         let top = if heavy {
             cal.default_top_speed.1
         } else {

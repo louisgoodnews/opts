@@ -394,6 +394,7 @@
 - [Provenance Audit](meta/provenance-audit.md)
 - [Roadmap Reconciliation](meta/roadmap-reconciliation.md)
 - [Roadmap Review 2026-10-20](meta/roadmap-review-2026-10-20.md)
+- [AI Traffic Audit 2026-10-24](meta/ai-traffic-audit-2026-10-24.md)
 - [Cross-Reference Graph](meta/cross-references.md)
 
 ---

@@ -60,6 +60,9 @@ pub struct IdmParams {
     /// `[rule] trafficdensity` names. A lane whose rule for this group is `0` is not entered by
     /// lane changes.
     pub density_group: u8,
+    /// How rowdy the driver is, `0` (careful) to `1` (reckless): the more, the more yellow lights
+    /// are passed ([`IdmParams::yellow_decel`]).
+    pub rowdy: f64,
 }
 
 impl Default for IdmParams {
@@ -81,11 +84,20 @@ impl Default for IdmParams {
             max_decel: 9.0,
             class: VehicleClass::Car,
             density_group: 0,
+            rowdy: 0.0,
         }
     }
 }
 
 impl IdmParams {
+    /// The braking (m/s²) the driver accepts to stop for a yellow light: a careful driver stops
+    /// whenever 3 m/s² suffices; the rowdier, the less braking they accept (down to 30 % of that),
+    /// so they pass more yellow lights.
+    #[must_use]
+    pub fn yellow_decel(&self, comfortable: f64) -> f64 {
+        comfortable * (1.0 - 0.7 * self.rowdy.clamp(0.0, 1.0))
+    }
+
     /// A city bus or lorry: slower to accelerate, gentler braking, longer, 80 km/h top speed and
     /// 2.0 m/s² in curves.
     #[must_use]

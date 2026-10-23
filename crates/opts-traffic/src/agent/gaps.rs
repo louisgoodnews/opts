@@ -72,7 +72,9 @@ impl TrafficWorld {
             }
             let stop = match program.aspect_at(self.clock()) {
                 Aspect::Stop => true,
-                Aspect::Yellow => off > a.speed * a.speed / (2.0 * YELLOW_COMFORT_DECEL),
+                Aspect::Yellow => {
+                    off > a.speed * a.speed / (2.0 * a.params.yellow_decel(YELLOW_COMFORT_DECEL))
+                }
                 Aspect::Go | Aspect::Off => false,
             };
             if stop {

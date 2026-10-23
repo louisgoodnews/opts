@@ -41,7 +41,9 @@ impl TrafficWorld {
                 let ok = !succ.contains(&t)
                     && !parallel.contains(&t)
                     && !out.iter().any(|(x, _, _)| *x == t)
-                    && self.graph.lane(t).is_some_and(|l| l.rules.allows(class));
+                    && self.graph.lane(t).is_some_and(|l| {
+                        l.rules.allows(class) && !l.rules.density.closed_for(group)
+                    });
                 if ok {
                     out.push((t, n.lane, n.side));
                 }
@@ -62,16 +64,20 @@ impl TrafficWorld {
         strategic: bool,
     ) -> Option<(LaneId, Option<Strategic>)> {
         let succ = self.graph.successors(lane);
-        let allowed: Vec<LaneId> = succ
-            .iter()
-            .copied()
-            .filter(|s| self.graph.lane(*s).is_none_or(|l| l.rules.allows(class)))
-            .collect();
-        let pool: Vec<LaneId> = if allowed.is_empty() {
-            succ.to_vec()
-        } else {
-            allowed
+        // The lanes the vehicle may use: open to its class and not closed to its density group;
+        // failing that open to its class; failing that all (never stranded by a rule).
+        let open = |s: &LaneId, closed: bool| {
+            self.graph.lane(*s).is_none_or(|l| {
+                l.rules.allows(class) && !(closed && l.rules.density.closed_for(group))
+            })
         };
+        let mut pool: Vec<LaneId> = succ.iter().copied().filter(|s| open(s, true)).collect();
+        if pool.is_empty() {
+            pool = succ.iter().copied().filter(|s| open(s, false)).collect();
+        }
+        if pool.is_empty() {
+            pool = succ.to_vec();
+        }
         let options = if strategic {
             self.strategic_options(lane, class, group)
         } else {
