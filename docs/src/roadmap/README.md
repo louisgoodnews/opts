@@ -431,7 +431,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Audit, then render dirt, rain and condensation overlays from script variables; apply `[nightmapmode]` 0-4; overlay setting.
 - [ ] **🌧️ Wetness and Snow on Vehicles and Scenery** — [M-0121](phase-12/M-0121.md) — 📝 proposed 2026-10-18
   - [ ] Per-texture `[moisture]`/`[puddles]`, wet vehicles and scenery from the `Wetness` driver, `snow_visible` and winter variants.
-- [ ] **🧍 Passenger Load Physics** — [M-0124](phase-12/M-0124.md) — 📝 proposed 2026-10-18
+- [ ] **🧍 Passenger Load Physics** — [M-0124](phase-12/M-0124.md) — 🔄 total-mass effect done; axle loads, override, save open
   - [ ] Dynamic mass from the passenger count into acceleration, braking, steering effort and ride height; Off/Realistic setting.
 - [ ] **⛽ Fuel and Battery State** — [M-0123](phase-12/M-0123.md) — 📝 proposed 2026-10-18
   - [ ] Fuel/battery depletion, torque cut at empty, `tank_percent` to scripts, HUD gauge, Off/Realistic/Accelerated, session save.

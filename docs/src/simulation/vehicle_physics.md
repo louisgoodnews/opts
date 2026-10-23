@@ -153,6 +153,15 @@ $$\Delta W_{\text{long}} = m \cdot a_y \cdot \frac{h_{\text{cg}}}{L}$$
 
 ---
 
+## 🧍 Passenger Mass
+
+`VehicleSimulation::passenger_mass_kg` (M-0124) is added to the mass the longitudinal dynamics move
+(`consist_mass_kg`: drive force, braking, rolling resistance, grade). The game sets it for the
+player's vehicle to `humans_inside × average mass` (`dynamic_mass_kg`); settings
+`gameplay.passenger_weight` (default on) and `gameplay.passenger_mass_kg` (default 75 kg, 40–120).
+Axle loads and suspension still use the curb mass (they wait for M-0073's per-axle input), and AI
+vehicles carry no passenger mass. Tests: `crates/opts-sim/tests/passenger_mass.rs`.
+
 ## ⚖️ Consist Mass
 
 A vehicle with following units (`[couple_back]`, road consists) accelerates, rolls and brakes with the **sum** of the units' masses; each unit states its `[mass]` (a unit without one takes the mass of the unit in front: the installed consists have a median trailer/head ratio of 0.90, `consist_census`). The head's own axle loads (load transfer, suspension) use the head's mass only. Drive force from the scripts is limited by $\mu \cdot g \cdot m_{\text{driven}}$, where $m_{\text{driven}}$ is the static load on the driven axles of all units (each unit's weight distributed over its own axles by the suspension model's static rule, with the centre of gravity at the middle of the axle span; a head with no axle marked driven counts as driven on all of them); braking is limited by $\mu \cdot g \cdot \sum m$. The hitch force and the units' own load transfer are not modelled ([Articulation Physics](../architecture/articulation.md)). Rail consists have their own dynamics.

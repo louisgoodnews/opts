@@ -78,6 +78,7 @@ mod convert;
 mod crowd;
 mod protocol;
 mod rig;
+mod weight;
 
 use crowd::{
     stop_key, StopCrowds, ACTOR_BUDGET, DEFAULT_RATE, FIRST_VISIT_WAIT_MIN, MAX_ACCUMULATE_MIN,
@@ -538,7 +539,9 @@ impl Plugin for PassengersPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            update_passengers.run_if(in_state(crate::app_state::AppState::InGame)),
+            (update_passengers, weight::apply_passenger_mass)
+                .chain()
+                .run_if(in_state(crate::app_state::AppState::InGame)),
         )
         .init_resource::<StopCrowds>();
     }

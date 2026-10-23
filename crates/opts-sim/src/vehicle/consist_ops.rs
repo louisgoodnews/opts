@@ -72,10 +72,12 @@ impl VehicleSimulation {
     }
 
     /// Mass of the whole consist the longitudinal dynamics act on (kg): the chassis' own mass
-    /// plus the following units' (design D2, `Σ mᵢ`).
+    /// plus the following units' (design D2, `Σ mᵢ`) plus the people on board.
     #[must_use]
     pub fn consist_mass_kg(&self) -> f32 {
-        self.chassis.total_mass_kg + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
+        self.chassis.total_mass_kg
+            + self.trailer_loads.iter().map(|u| u.mass_kg).sum::<f32>()
+            + self.passenger_mass_kg
     }
 
     /// Mass of the head unit alone (kg): the chassis' own mass.

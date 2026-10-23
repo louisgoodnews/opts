@@ -31,6 +31,13 @@ pub struct UnitAxle {
     pub rated_n: f32,
 }
 
+/// Curb mass plus `count` people of `average_kg` each (kg): the mass a loaded vehicle moves
+/// (M-0124). A negative average counts as 0.
+#[must_use]
+pub fn dynamic_mass_kg(curb_kg: f32, count: usize, average_kg: f32) -> f32 {
+    curb_kg + count as f32 * average_kg.max(0.0)
+}
+
 /// Mass and axles of one unit of a consist.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct UnitLoad {

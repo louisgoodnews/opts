@@ -181,6 +181,8 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `gameplay.load_all_tiles` | Load all tiles on start | on / off | `false` | at once | available | Loads every tile of the map while the drive loads and keeps them all in memory. Loading takes longer and uses more memory, so large maps may need a strong machine. Applies to the next drive; switching it during a drive loads the rest in the background. |
 | `gameplay.tile_radius` | Tile radius | whole number 0 to 16 | `0` | at once | available | Tiles kept loaded around the one you are on: 1 is 3 x 3, 2 is 5 x 5. 0 chooses automatically for this computer. Unused while all tiles are loaded. |
 | `camera.door_overlay` | Door camera | on / off | `false` | at once | available | Shows the view from a door in the corner of the screen while the door opens or when you press F4 (F4 again: next door, then off). |
+| `gameplay.passenger_weight` | Passenger weight | on / off | `true` | at once | available | People on board add their mass to the vehicle: a full bus accelerates slower and brakes later. Off: the vehicle always moves its curb mass. |
+| `gameplay.passenger_mass_kg` | Average passenger mass | whole number 40 to 120 | `75` | at once | available | Mass of one passenger in kilograms when passenger weight is on. |
 
 ## Vehicle
 

@@ -322,3 +322,7 @@ set-hud-rail-direction = Rail direction
 set-hud-rail-direction-desc = Show the selected direction of travel of a tram.
 set-hud-rail-lever = Rail power lever
 set-hud-rail-lever-desc = Show the position of a tram's power lever in percent (plus: traction, minus: braking).
+set-passenger-weight = Passenger weight
+set-passenger-weight-desc = People on board add their mass to the vehicle: a full bus accelerates slower and brakes later. Off: the vehicle always moves its curb mass.
+set-passenger-mass = Average passenger mass
+set-passenger-mass-desc = Mass of one passenger in kilograms when passenger weight is on.
