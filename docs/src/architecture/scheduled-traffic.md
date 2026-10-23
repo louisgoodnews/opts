@@ -37,3 +37,11 @@ A timetable run is a trip (its stops and times) started at a time of the day. Th
 * **Destination and line text** are not fed to the vehicle's display variables.
 * **Day validity** of tours (weekday, holiday) is not read: every run of the timetable counts.
 * Vehicles appear only near the player and only for stops in loaded tiles; a run is not simulated beyond that.
+
+## The player's schedule
+
+A followed run (`route.select_run`) advances by itself: when the player's vehicle stands (below
+1 km/h) within 18 m of a bus stop object whose ID code is the station id of one of the next three
+stops of the run, `stop_index` moves to that stop (`route_progress.rs`). The delay is the session
+clock minus that stop's scheduled arrival and `GetTTStopIndex`/`GetTTDelay` answer from both. A
+HUD line for next stop and delay is still open.
