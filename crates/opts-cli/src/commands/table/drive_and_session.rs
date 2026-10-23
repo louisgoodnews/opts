@@ -171,6 +171,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{stop_index, stop_count}`")
     .doc("What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable."),
     c(
+        "traffic.scheduled",
+        "drive",
+        "The timetable runs on the road, the vehicles that drive them and their punctuality",
+        "",
+    )
+    .since("1.27")
+    .result("`{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, last_arrivals: [{station, scheduled, actual, delay_s}]}`")
+    .doc("Scheduled AI vehicles (`docs/src/architecture/scheduled-traffic.md`): the runs of the map's timetable that are on the road or start within 90 s at the session clock, how many of them have a vehicle now, the stops reached and left, and the delay at arrival (clock minus the scheduled arrival, seconds; negative is early) of the last arrivals. `mean_delay_s` is `null` before the first arrival. Vehicles appear only near the player, at the bus stop objects of the loaded tiles."),
+    c(
         "config.list",
         "scene",
         "List the saved bus configurations (vehicle, repaint, equipment options) with their check against the installation",

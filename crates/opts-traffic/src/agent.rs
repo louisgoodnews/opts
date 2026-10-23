@@ -22,6 +22,9 @@ use crate::rightofway::{precedence, Precedence};
 use crate::rng::Rng;
 use crate::signals::{Aspect, SignalKey, SignalProgram};
 
+mod stops;
+pub use stops::{StopPoint, ARRIVED_SPEED, ARRIVE_WITHIN_M};
+
 /// Identifies an agent for its lifetime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct AgentId(pub u64);
@@ -50,7 +53,7 @@ pub struct DriverCommand {
 }
 
 /// Something the host may want to react to.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum TrafficEvent {
     /// The agent drove off the end of a lane that has no successor and was removed.
     ReachedDeadEnd {
@@ -66,6 +69,31 @@ pub enum TrafficEvent {
         id: AgentId,
         /// Side it moved to.
         side: Side,
+    },
+    /// A scheduled agent stopped at its stop point (see [`StopPoint`]).
+    ArrivedAtStop {
+        /// The agent.
+        id: AgentId,
+        /// The station.
+        station: u32,
+        /// Clock time (seconds of the day).
+        clock: f64,
+    },
+    /// A scheduled agent left its stop point.
+    DepartedStop {
+        /// The agent.
+        id: AgentId,
+        /// The station.
+        station: u32,
+        /// Clock time (seconds of the day).
+        clock: f64,
+    },
+    /// A scheduled agent passed the lane of a stop without standing there; the stop is dropped.
+    StopMissed {
+        /// The agent.
+        id: AgentId,
+        /// The station.
+        station: u32,
     },
     /// The agent stood still for [`STUCK_AFTER_S`] seconds without a red light or a lane change
     /// to wait for, and was removed (forced despawn) — the first agent to get stuck goes.
@@ -109,6 +137,11 @@ pub struct Agent {
     pub params: IdmParams,
     /// The lanes that follow the current one (chosen ahead of time, at least ~150 m).
     pub plan: VecDeque<LaneId>,
+    /// A fixed route of a scheduled vehicle: the lanes the plan takes next, before any random
+    /// choice ([`TrafficWorld::set_route`]).
+    pub route: VecDeque<LaneId>,
+    /// The stops of a scheduled vehicle in running order ([`TrafficWorld::push_stop`]).
+    pub stops: VecDeque<StopPoint>,
     /// Seconds spent standing still because of a conflict zone.
     pub waiting_s: f64,
     /// Seconds standing still without a red light ahead (the "vehicle stuck" timer).
@@ -524,6 +557,8 @@ impl TrafficWorld {
             accel: 0.0,
             params,
             plan: VecDeque::new(),
+            route: VecDeque::new(),
+            stops: VecDeque::new(),
             waiting_s: 0.0,
             stuck_s: 0.0,
             ignore_conflicts_until: 0.0,

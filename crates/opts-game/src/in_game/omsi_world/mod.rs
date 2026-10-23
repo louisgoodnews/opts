@@ -79,8 +79,9 @@ pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehic
 pub use scenery_objects::{sync_scenery_clock, SceneryWiringStats};
 pub use tile::{advance_tile_loading, load_next_tile, stream_world_tiles, TileRoot};
 pub use traffic::{
-    configure_traffic, load_traffic_variants, move_traffic, spawn_traffic, update_ai_variables,
-    update_traffic_graph, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
+    active_runs, configure_traffic, load_traffic_variants, move_traffic, plan_scheduled, run_phase,
+    spawn_traffic, update_ai_variables, update_traffic_graph, RunPhase, RunRef, ScheduledStats,
+    ScheduledTraffic, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};

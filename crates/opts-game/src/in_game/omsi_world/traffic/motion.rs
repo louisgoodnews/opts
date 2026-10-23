@@ -95,6 +95,7 @@ pub fn move_traffic(
     mut commands: Commands,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     mut state: ResMut<TrafficState>,
+    mut sched: ResMut<ScheduledTraffic>,
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     mut vehicles: Query<(
         Entity,
@@ -118,6 +119,7 @@ pub fn move_traffic(
         if let opts_traffic::TrafficEvent::Stuck { id, lane } = e {
             tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
         }
+        sched.on_event(&e);
     }
     if std::env::var_os("OPTS_DBG_OBSTACLES").is_some() {
         tracing::info!(

@@ -19,6 +19,7 @@ pub mod control_loading;
 pub mod control_profiles;
 pub mod control_route;
 pub mod control_save;
+pub mod control_scheduled;
 pub mod control_session;
 pub mod control_setvars;
 pub mod control_textures;

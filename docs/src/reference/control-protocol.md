@@ -927,6 +927,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.timetables`](#bustimetables) | `line?` (string)<br>`tour?` (integer)<br>`limit?` (integer)<br>`all?` (boolean) | 1.13 | List the map's timetables: line files, their tours and the runs of a tour |
 | [`bus.set_timetable`](#busset_timetable) | `line?` (string)<br>`tour?` (integer)<br>`run?` (integer)<br>`stops?` (integer)<br>`clear?` (boolean) | 1.13 | Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS |
 | [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
+| [`traffic.scheduled`](#trafficscheduled) | - | 1.27 | The timetable runs on the road, the vehicles that drive them and their punctuality |
 | [`vehicle.click`](#vehicleclick) | `name` (string)<br>`frames?` (integer)<br>`hold_ms?` (integer) | 1.20 | Operate a cockpit hot-spot like a player: press, drag, hold, release |
 
 ### `drive.controls`
@@ -1100,6 +1101,14 @@ Set the stop of the route or timetable the vehicle is at (0-based).
 **Result:** `{stop_index, stop_count}`
 
 What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable.
+
+### `traffic.scheduled`
+
+The timetable runs on the road, the vehicles that drive them and their punctuality.
+
+**Result:** `{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, last_arrivals: [{station, scheduled, actual, delay_s}]}`
+
+Scheduled AI vehicles (`docs/src/architecture/scheduled-traffic.md`): the runs of the map's timetable that are on the road or start within 90 s at the session clock, how many of them have a vehicle now, the stops reached and left, and the delay at arrival (clock minus the scheduled arrival, seconds; negative is early) of the last arrivals. `mean_delay_s` is `null` before the first arrival. Vehicles appear only near the player, at the bus stop objects of the loaded tiles.
 
 ### `vehicle.click`
 

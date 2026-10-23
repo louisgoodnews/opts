@@ -210,6 +210,7 @@
 - [Camera System](architecture/camera-system.md)
 - [Virtual Mirrors](architecture/virtual-mirrors.md)
 - [Density Baselines](architecture/density-baselines.md)
+- [Scheduled Traffic](architecture/scheduled-traffic.md)
 - [GUI Design System](architecture/gui-design-system.md)
 - [UI Foundations Spikes](architecture/ui-spikes.md)
 - [GUI Interaction Layer and Components](architecture/gui-interaction-layer.md)

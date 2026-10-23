@@ -64,6 +64,7 @@ impl Plugin for InGamePlugin {
             .init_resource::<omsi_world::TrafficState>()
             .init_resource::<omsi_world::TrafficSettings>()
             .init_resource::<omsi_world::TrafficPool>()
+            .init_resource::<omsi_world::ScheduledTraffic>()
             .init_resource::<SimulationLoadState>()
             .init_resource::<InGameSessionInfo>()
             .init_resource::<opts_bevy::CameraState>()
@@ -210,6 +211,7 @@ impl Plugin for InGamePlugin {
                     // bus, and the step must see where it stands.
                     omsi_world::publish_traffic_obstacles,
                     omsi_world::load_traffic_variants,
+                    omsi_world::plan_scheduled,
                     omsi_world::spawn_traffic,
                     omsi_world::move_traffic,
                     omsi_world::move_traffic_chains,

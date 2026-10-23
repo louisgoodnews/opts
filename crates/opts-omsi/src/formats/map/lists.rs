@@ -34,6 +34,19 @@ impl AiGroup {
     }
 }
 
+/// A depot group of `ailists.cfg` (`[aigroup_depot]`): the vehicles an operator's depot sends
+/// out. A tour of the timetable names the group whose vehicles drive it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DepotGroup {
+    /// Group name (`AVG Solowagen (Kranenburg)`), the `vehicle_group` of a timetable tour.
+    pub name: String,
+    /// The depot it belongs to (second line), empty when absent.
+    pub depot: String,
+    /// Vehicle files of its `[aigroup_depot_typgroup_2]` blocks, in file order (with repeats,
+    /// which weigh the choice).
+    pub vehicles: Vec<String>,
+}
+
 /// Parsed `ailists.cfg` (current `_2` syntax only).
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct AiLists {
@@ -42,6 +55,9 @@ pub struct AiLists {
     /// Vehicle files of the depot groups (`[aigroup_depot_typgroup_2]`: the operator's own fleet,
     /// first line of each block), duplicates removed, in file order.
     pub depot_vehicles: Vec<String>,
+    /// The depot groups with their vehicles: the `[aigroup_depot_typgroup_2]` blocks after an
+    /// `[aigroup_depot]` block belong to it.
+    pub depot_groups: Vec<DepotGroup>,
 }
 
 impl AiLists {
@@ -50,10 +66,29 @@ impl AiLists {
     pub fn parse(bytes: &[u8]) -> Self {
         let mut out = Self::default();
         for block in scan_blocks(&decode_bytes(bytes)) {
+            if block.keyword == "aigroup_depot" {
+                out.depot_groups.push(DepotGroup {
+                    name: block
+                        .parameters
+                        .first()
+                        .map_or_else(String::new, |l| l.trim().to_owned()),
+                    depot: block
+                        .parameters
+                        .get(1)
+                        .map_or_else(String::new, |l| l.trim().to_owned()),
+                    vehicles: Vec::new(),
+                });
+                continue;
+            }
             if block.keyword == "aigroup_depot_typgroup_2" {
                 if let Some(file) = block.parameters.first().map(|l| l.trim()) {
                     let lower = file.to_ascii_lowercase();
                     let known = [".bus", ".ovh", ".zug"].iter().any(|e| lower.ends_with(e));
+                    if known {
+                        if let Some(g) = out.depot_groups.last_mut() {
+                            g.vehicles.push(file.to_owned());
+                        }
+                    }
                     if known
                         && !out
                             .depot_vehicles
@@ -90,6 +125,14 @@ impl AiLists {
             });
         }
         out
+    }
+
+    /// The depot group called `name` (case-insensitive).
+    #[must_use]
+    pub fn depot_group(&self, name: &str) -> Option<&DepotGroup> {
+        self.depot_groups
+            .iter()
+            .find(|g| g.name.eq_ignore_ascii_case(name))
     }
 
     /// The group called `name` (case-insensitive).
@@ -290,6 +333,10 @@ mod tests {
         let lists = AiLists::parse(text);
         assert!(lists.groups.is_empty());
         assert_eq!(lists.depot_vehicles, ["vehicles\\Tram_NF6D\\NF6D_KI.bus"]);
+        // …but the group keeps every entry, repeats included.
+        let g = lists.depot_group("evag|nf2").expect("the depot group");
+        assert_eq!(g.depot, "Gladbeck");
+        assert_eq!(g.vehicles.len(), 2);
     }
 
     #[test]

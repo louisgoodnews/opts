@@ -89,6 +89,12 @@ pub struct TrafficState {
 }
 
 impl TrafficState {
+    /// Vehicles on the lanes (scheduled ones included).
+    #[must_use]
+    pub(crate) fn agent_count(&self) -> usize {
+        self.world.agents().len()
+    }
+
     /// Whether the lanes of tile `key` are in the graph (the tile is resident).
     #[must_use]
     pub(crate) fn has_tile(&self, key: (i32, i32)) -> bool {
@@ -141,6 +147,8 @@ pub struct TrafficPool {
     slots: Vec<Slot>,
     /// Default density of each `unsched_vehgroups.txt` group.
     defaults: Vec<u32>,
+    /// The vehicles of the depot groups by lower-case name (see [`PoolSetup::depots`]).
+    depots: HashMap<String, Vec<(usize, u32)>>,
     /// `global.cfg` `[trafficdensity_road]`: the time curve of groups without their own.
     road_curve: DensityProfile,
     /// The pool group of every vehicle this pool spawned.
@@ -205,6 +213,11 @@ pub use variants::load_traffic_variants;
 
 mod spawn;
 pub use spawn::spawn_traffic;
+
+mod run_schedule;
+pub use run_schedule::{active_runs, run_phase, RunPhase, RunRef};
+mod scheduled;
+pub use scheduled::{plan_scheduled, ScheduledStats, ScheduledTraffic};
 
 mod motion;
 pub use motion::{move_traffic, update_ai_variables};
