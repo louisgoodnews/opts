@@ -69,6 +69,7 @@ impl TrafficWorld {
             .zip(&accels)
             .map(|(a, &acc)| (a.speed.max(a.speed + acc * dt) + MAX_GLIDE_SPEED) * dt)
             .collect();
+        let mut hard = 0;
         for (a, &acc) in self.agents.iter_mut().zip(&accels) {
             if a.foreign {
                 continue;
@@ -85,9 +86,13 @@ impl TrafficWorld {
                 a.s += a.speed * dt + 0.5 * acc * dt * dt;
                 a.speed = v1;
             }
+            if acc < -super::HARD_BRAKE && a.accel >= -super::HARD_BRAKE {
+                hard += 1;
+            }
             a.accel = acc;
             a.glide(dt);
         }
+        self.stats.hard_brakes += hard;
         self.time += dt;
         self.update_stops();
         // A vehicle that cannot make its strategic change re-plans from its lane after a while.

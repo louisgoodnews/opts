@@ -105,6 +105,12 @@ impl TrafficState {
             .copied()
     }
 
+    /// Behaviour counters of the traffic world (hard brakes, aborted lane changes).
+    #[must_use]
+    pub(crate) fn stats(&self) -> opts_traffic::TrafficStats {
+        self.world.stats()
+    }
+
     /// Vehicles on the lanes (scheduled ones included).
     #[must_use]
     pub(crate) fn agent_count(&self) -> usize {
