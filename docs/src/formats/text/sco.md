@@ -393,6 +393,28 @@ red
 | `[switch]` | 1 | Number of switch positions (rail points). |
 | `[switchdir]` | 1 | Selects the switch position for the following `[path]`. |
 
+#### Rail points (`[switch]`, `[switchdir]`)
+
+Census of `Sceneryobjects` (2026-10-24, installation corpus): **282** `.sco` files carry `[switch]`
+(129 in `Kartoffelphantom`, 37 `ADDON_Bad_Huegelsdorf`, 18 each in `Railroad_RUE`, `ADDON_NF6D`,
+`ADDON_Gladbeck_NF6D`, `ADDON_RUHR_NF6D`, `ADDON_SimpleStreets`, 5 `Muenchen_Kreuz`, the rest
+single files). Position counts: **278 with 2**, 4 with 0. `[switchdir] <n>` precedes the `[path]`
+blocks that belong to position *n*: 273 files have two `[switchdir]` lines, one has six, eight have
+none (the four `[switch] 0` files; why the other four have no `[switchdir]` is not checked ❓). Every one of the 282
+also carries a `[mouseevent] toggle_switch` on its tongue meshes.
+
+State and animation: the script (`switch_single.osc`) is a single trigger,
+`{trigger:toggle_switch} (L.L.Switch) ! (S.L.Switch)`: the object variable `Switch` flips 0 ↔ 1 on a click.
+The tongue meshes (`…Zunge_1.o3d`, `…Zunge_2.o3d`) are `[newanim]` `origin_from_mesh` `anim_rot` on `Switch`
+with a `maxspeed`, so the tongue turns towards the active position. `Switch` is thus the whole switch
+state; the position selects which `[switchdir]` path group a vehicle may enter. Only one script
+(`script\switch_varlist.txt`) names the variable.
+
+OPTS (2026-10-24): `[switchdir]` is not parsed. The paths of the object become rail lanes regardless of position (inferred from the code, not re-checked per file); the
+branch is chosen per train (route or key, `rail.switch`), so a train never meets a "wrong" position
+and no switch changes under a vehicle. The `Switch` variable and tongue animation are not driven yet
+(M-0113).
+
 #### `[path]` parameters
 
 | # | Name | Description |
