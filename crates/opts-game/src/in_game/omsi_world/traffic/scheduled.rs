@@ -91,6 +91,8 @@ pub struct ScheduledTraffic {
     pub(super) request: Option<ScheduledRequest>,
     /// Vehicles that reached the last stop of their run: the clock time they may be removed at.
     retire: Vec<(AgentId, f64)>,
+    /// Runs driven by a train or tram on the rails (`rail::scheduled`).
+    rail_runs: std::collections::HashSet<RunRef>,
     /// The figures.
     pub stats: ScheduledStats,
 }
@@ -102,16 +104,72 @@ impl ScheduledTraffic {
         self.active.len()
     }
 
+    /// The runs on the road or about to start with their schedules, as the last pass saw them.
+    #[must_use]
+    pub fn active_list(&self) -> &[(RunRef, opts_core::formats::timetable::ActiveSchedule)] {
+        &self.active
+    }
+
+    /// Whether a train or tram drives `run` now.
+    #[must_use]
+    pub fn rail_has(&self, run: &RunRef) -> bool {
+        self.rail_runs.contains(run)
+    }
+
+    /// Whether a road vehicle drives `run` now.
+    #[must_use]
+    pub fn road_has(&self, run: &RunRef) -> bool {
+        self.runs.get(run).is_some_and(|r| r.agent.is_some())
+    }
+
+    /// Trains and trams on the road.
+    #[must_use]
+    pub fn rail_agents(&self) -> usize {
+        self.rail_runs.len()
+    }
+
+    /// A train or tram was built for `run`.
+    pub fn rail_started(&mut self, run: RunRef) {
+        self.stats.spawned += 1;
+        self.rail_runs.insert(run);
+    }
+
+    /// The train or tram of `run` is gone.
+    pub fn rail_done(&mut self, run: &RunRef) {
+        self.rail_runs.remove(run);
+    }
+
+    /// A train or tram stands at a stop of its run at `clock`; `scheduled` is the timetable's
+    /// arrival there.
+    pub fn rail_arrived(&mut self, station: u32, scheduled: f64, clock: f64) {
+        self.stats.arrivals += 1;
+        self.stats.delay_sum_s += clock - scheduled;
+        self.stats.log.push((station, scheduled, clock));
+        if self.stats.log.len() > 40 {
+            self.stats.log.remove(0);
+        }
+    }
+
+    /// A train or tram left a stop.
+    pub fn rail_departed(&mut self) {
+        self.stats.departures += 1;
+    }
+
+    /// A train or tram dropped a stop it could not reach.
+    pub fn rail_missed(&mut self) {
+        self.stats.missed += 1;
+    }
+
     /// Vehicles of scheduled runs on the road.
     #[must_use]
     pub fn agent_count(&self) -> usize {
-        self.agent_run.len()
+        self.agent_run.len() + self.rail_runs.len()
     }
 
     /// Runs that have a vehicle now.
     #[must_use]
     pub fn driving(&self) -> usize {
-        self.runs.values().filter(|r| r.agent.is_some()).count()
+        self.runs.values().filter(|r| r.agent.is_some()).count() + self.rail_runs.len()
     }
 
     /// The run of a vehicle, with its line text.
@@ -307,6 +365,9 @@ pub fn plan_scheduled(
     };
     let candidates = sched.active.clone();
     for (run, schedule) in candidates {
+        if sched.rail_runs.contains(&run) {
+            continue;
+        }
         let entry = sched.runs.entry(run.clone()).or_default();
         if entry.agent.is_some() || entry.tries >= 3 {
             continue;
