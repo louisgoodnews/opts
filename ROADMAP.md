@@ -374,7 +374,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Decode every keyed `.o3d` of an installation, coverage report with the per-mesh table and the known-broken list, `opts-cli validate-uvs`, visual spot-checks, CI item. The decoder (P-1013 phases A–C) is done and merged.
 - [ ] **🧪 UV Decoder Texture Evidence** — [M-0104](docs/src/roadmap/phase-10/M-0104.md) — ✅ approved 2026-10-14
   - [ ] Feasibility first: does the plain texture atlas rank the true scrambler offset on the twin truth set; integrate into the smooth stage only on a go ([design](docs/src/architecture/uv-decoder-texture-evidence.md)).
-- [ ] **🚆 Train Formation Editor v1** — [M-0106](docs/src/roadmap/phase-10/M-0106.md) — 📝 proposed 2026-10-15
+- [x] **🚆 Train Formation Editor v1** — [M-0106](docs/src/roadmap/phase-10/M-0106.md) — ✅ done 2026-10-15
   - [ ] `.zug` parser and presets, formation editor in the spawn menu, consist spawner with summed mass, TOML store ([design](docs/src/architecture/train-formation-editor.md)).
 - [ ] **🌊 Water Rendering** — [M-0067](docs/src/roadmap/phase-10/M-0067.md)
   - [ ] Resolve the `.water` format semantics, parse the 1,485 corpus files, render water per tile without seams, reality-calibrated material (R-02).
