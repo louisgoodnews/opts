@@ -157,6 +157,8 @@ pub struct MirrorStats {
     pub selected: usize,
     /// Mirror cameras active (rendering) in the last frame.
     pub rendering: usize,
+    /// Mirrors of other vehicles (parked, AI) that have a live picture.
+    pub ambient: usize,
 }
 
 /// What panes share a camera: the panes of one `reflexion<N>.bmp` number (the main and the
@@ -398,6 +400,12 @@ pub use spawn::spawn_mirror_cameras;
 mod update;
 pub use update::{sync_mirror_camera_look, update_mirror_cameras};
 
+mod ambient;
+pub use ambient::{
+    register_ambient_panes, update_ambient_mirrors, AmbientCamera, AmbientPane,
+    AMBIENT_EVERY_FACTOR, AMBIENT_MIN_FACING, AMBIENT_PICTURE, AMBIENT_RANGE_M,
+};
+
 mod virtual_view;
 pub use virtual_view::{
     assign_slots, stream_size, toggle_virtual_mirrors, MirrorFeed, MirrorSlot, VirtualMirrors,
@@ -431,8 +439,17 @@ impl Plugin for MirrorPlugin {
                     .run_if(resource_exists::<crate::camera::CameraAvailability>),
             )
             .add_systems(
+                Update,
+                register_ambient_panes.run_if(resource_exists::<Assets<Mesh>>),
+            )
+            .add_systems(
                 PostUpdate,
-                (update_mirror_cameras, sync_mirror_camera_look)
+                (
+                    update_mirror_cameras,
+                    update_ambient_mirrors,
+                    sync_mirror_camera_look,
+                )
+                    .chain()
                     .before(bevy::transform::TransformSystems::Propagate),
             );
     }

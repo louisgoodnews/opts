@@ -38,3 +38,16 @@ Nothing while no mirror is on. A mirror that is on renders every frame at twice 
 ## Tests
 
 `opts-bevy` `mirrors/tests/virtual_view.rs` (slot choice with the Lion's City data, a vehicle with one right mirror, stream size, toggling); in the running game `ui.click` on `hud.virtual_mirror.<0..2>` after `input.key Tab` in view 2.
+
+## Live mirrors of other vehicles
+
+The player's mirrors have a camera each. The mirrors of other vehicles (AI traffic, parked vehicles) would keep the static `reflexion<N>.bmp`, a baked road scene. `opts_bevy::mirrors::ambient` gives the **nearest** of them a live picture:
+
+* every mesh with a mirror material is marked once when it appears (`AmbientPane`: geometry, UV rectangle, own static material); the player's own panes are skipped;
+* `LightQuality::mirror_count` cameras (2 up to light level 3, none above) serve the panes that are visible, within 30 m, in front of the main camera and facing it, nearest first; a pane keeps its camera while it stays among the nearest;
+* the pose is the geometric reflection of the viewer's ray (no `.bus` tag for these), the picture is 192 pixels square and renders every second `mirror_every`-th frame, staggered by rank; a pane that loses its camera gets its static material back;
+* `sim.get` reports `reflections.mirrors.ambient`, the number of served panes.
+
+Only models whose mirror is a separate pane with a `reflexion<N>` texture are covered: the AI variants of the buses (for example the Lion's City `KI_*` models). Passenger cars bake the mirror into the car texture and keep it.
+
+Tests: `opts-bevy` `mirrors/tests/ambient.rs` (nearest two, out of range or behind the camera, budget 0, a camera keeps its pane) and, with an install, `tests/mirror_content.rs` (real Lion's City meshes of another vehicle get two cameras).
