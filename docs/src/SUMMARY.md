@@ -209,6 +209,7 @@
 - [Ego Perspective & Character Locomotion](architecture/ego-perspective.md)
 - [Camera System](architecture/camera-system.md)
 - [Virtual Mirrors](architecture/virtual-mirrors.md)
+- [Density Baselines](architecture/density-baselines.md)
 - [GUI Design System](architecture/gui-design-system.md)
 - [UI Foundations Spikes](architecture/ui-spikes.md)
 - [GUI Interaction Layer and Components](architecture/gui-interaction-layer.md)

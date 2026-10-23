@@ -21,10 +21,12 @@ use crate::in_game::types::InGameEntity;
 use super::vehicle::load_human_parts;
 use super::WorldLoadJob;
 
-/// Default cap on simultaneously living pedestrians.
-pub const DEFAULT_MAX_PEDESTRIANS: usize = 40;
-/// One pedestrian per this much footpath (m) in the loaded tiles, up to the cap.
-const METRES_OF_PATH_PER_PEDESTRIAN: f32 = 80.0;
+/// Default baseline of pedestrians around the player (setting `gameplay.pedestrians`): how many
+/// there are when the map's passenger factor (`[trafficdensity_passenger]`) is 1. The footpaths
+/// hold at most one per [`MIN_PATH_SPACING_M`].
+pub const DEFAULT_PEDESTRIAN_BASELINE: usize = 120;
+/// Closest spacing (m of footpath in the loaded tiles) the paths are filled to.
+const MIN_PATH_SPACING_M: f32 = 8.0;
 /// Pedestrians appear at least this far from the camera (m)…
 const SPAWN_MIN_M: f32 = 25.0;
 /// …and at most this far.
@@ -41,14 +43,14 @@ pub struct PedestrianNetwork(pub PedestrianNet);
 /// Pedestrian settings.
 #[derive(Resource, Clone, Copy)]
 pub struct PedestrianSettings {
-    /// Cap on living pedestrians (`0` disables them).
-    pub max: usize,
+    /// Baseline of living pedestrians (`0` disables them).
+    pub baseline: usize,
 }
 
 impl Default for PedestrianSettings {
     fn default() -> Self {
         Self {
-            max: DEFAULT_MAX_PEDESTRIANS,
+            baseline: DEFAULT_PEDESTRIAN_BASELINE,
         }
     }
 }
@@ -155,7 +157,7 @@ pub fn load_variants(
     mut images: ResMut<Assets<Image>>,
 ) {
     let Some(mut job) = job else { return };
-    if settings.max == 0 && !pool.wanted {
+    if settings.baseline == 0 && !pool.wanted {
         return;
     }
     if !pool.started {
@@ -262,7 +264,7 @@ pub fn load_variants(
 
 /// Factor of `global.cfg` `[trafficdensity_passenger]` (hour/value pairs, linear between them,
 /// the hour wrapping at midnight) at `hour`; `1` when the map gives no curve.
-pub(super) fn passenger_factor(curve: &[(f32, f32)], hour: f32) -> f32 {
+pub(crate) fn passenger_factor(curve: &[(f32, f32)], hour: f32) -> f32 {
     let profile = opts_core::formats::map::DensityProfile {
         days: 0,
         points: curve.to_vec(),
@@ -286,7 +288,7 @@ pub fn spawn_pedestrians(
     env: Option<Res<opts_bevy::SessionEnvironment>>,
 ) {
     *elapsed += time.delta_secs();
-    if *elapsed < SPAWN_INTERVAL_S || settings.max == 0 {
+    if *elapsed < SPAWN_INTERVAL_S || settings.baseline == 0 {
         return;
     }
     *elapsed = 0.0;
@@ -298,8 +300,8 @@ pub fn spawn_pedestrians(
         }
         _ => 1.0,
     };
-    let target = ((net.0.total_length() / METRES_OF_PATH_PER_PEDESTRIAN * factor) as usize)
-        .min(settings.max);
+    let room = (net.0.total_length() / MIN_PATH_SPACING_M) as usize;
+    let target = ((settings.baseline as f32 * factor) as usize).min(room);
     if living.iter().count() >= target {
         return;
     }
@@ -442,10 +444,10 @@ pub fn configure_pedestrians(
 ) {
     *ground = super::GroundIndex::default();
     // The command line wins for this run; then the setting *Pedestrians*; then the default.
-    settings.max = args
+    settings.baseline = args
         .and_then(|a| a.0.pedestrians)
         .or_else(|| user.and_then(|u| u.raw("gameplay.pedestrians")?.parse().ok()))
-        .unwrap_or(DEFAULT_MAX_PEDESTRIANS);
+        .unwrap_or(DEFAULT_PEDESTRIAN_BASELINE);
     net.0 = PedestrianNet::default();
     *pool = PedestrianPool::default();
 }

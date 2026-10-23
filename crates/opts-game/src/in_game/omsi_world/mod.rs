@@ -39,10 +39,11 @@ pub(crate) mod trace;
 mod traffic;
 mod traffic_chain;
 mod traffic_variant;
+pub(crate) use pedestrians::passenger_factor;
 #[cfg(test)]
-pub(crate) use pedestrians::DEFAULT_MAX_PEDESTRIANS;
+pub(crate) use pedestrians::DEFAULT_PEDESTRIAN_BASELINE;
 #[cfg(test)]
-pub(crate) use traffic::DEFAULT_MAX_TRAFFIC;
+pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
 mod trees;
 mod vehicle;
 pub mod vehicle_script_texture;
@@ -295,6 +296,8 @@ pub struct WorldLoadJob {
     pub camera_std_index: usize,
     /// The session starts with the map only (no vehicle is loaded at the start).
     pub no_vehicle: bool,
+    /// Share of the parking bays that hold a vehicle, per mille (setting `gameplay.parked`).
+    pub parked_permille: u32,
     /// The entry record found by the last [`WorldLoadJob::find_entry_spawn`] search.
     resolved_entry: Option<(u32, String)>,
     /// The entry the session started at (`None`: the start fell back to a road spline).

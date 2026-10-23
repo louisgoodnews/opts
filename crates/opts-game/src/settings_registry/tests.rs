@@ -315,15 +315,15 @@ fn reference_page_is_up_to_date() {
 
 #[test]
 fn gameplay_defaults_equal_the_constants_of_the_session_systems() {
-    use crate::in_game::omsi_world::{DEFAULT_MAX_PEDESTRIANS, DEFAULT_MAX_TRAFFIC};
+    use crate::in_game::omsi_world::{DEFAULT_PEDESTRIAN_BASELINE, DEFAULT_TRAFFIC_BASELINE};
     let r = registry();
     assert_eq!(
         r.get("gameplay.traffic").map(|d| d.default),
-        Some(DEFAULT_MAX_TRAFFIC.to_string().as_str())
+        Some(DEFAULT_TRAFFIC_BASELINE.to_string().as_str())
     );
     assert_eq!(
         r.get("gameplay.pedestrians").map(|d| d.default),
-        Some(DEFAULT_MAX_PEDESTRIANS.to_string().as_str())
+        Some(DEFAULT_PEDESTRIAN_BASELINE.to_string().as_str())
     );
 }
 

@@ -111,11 +111,11 @@ pub fn configure_traffic(
     mut state: ResMut<TrafficState>,
     mut pool: ResMut<TrafficPool>,
 ) {
-    // The command line wins for this run; then the setting *Road traffic*; then the default.
-    settings.max = args
+    // The command line wins for this run (`--traffic N` is the baseline); then the setting *Road traffic*; then the default.
+    settings.baseline = args
         .and_then(|a| a.0.traffic)
         .or_else(|| user.and_then(|u| u.raw("gameplay.traffic")?.parse().ok()))
-        .unwrap_or(DEFAULT_MAX_TRAFFIC);
+        .unwrap_or(DEFAULT_TRAFFIC_BASELINE);
     *state = TrafficState::default();
     *pool = TrafficPool::default();
 }

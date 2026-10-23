@@ -46,6 +46,12 @@ pub(super) fn stage_init(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         let date = chrono_date(crate::new_game_screen::planner::setup_date(&setup));
         begin_world_load_at(cfg, Some(date)).map(|mut job| {
             job.no_vehicle = no_vehicle;
+            // The share of the parking bays that hold a vehicle (setting *Parked vehicles*).
+            job.parked_permille = env
+                .settings
+                .as_deref()
+                .and_then(|s| s.raw("gameplay.parked")?.parse::<u32>().ok())
+                .map_or(1000, |p| p.min(100) * 10);
             // *Load all tiles* and the tile radius decide what the loading screen builds (M-0080).
             let choice = env
                 .settings

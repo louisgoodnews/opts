@@ -37,9 +37,6 @@ const LEFT_M: f32 = 45.0;
 const OUTSIDE_SPEED_M_S: f32 = 1.3;
 /// How far a passenger who got off walks away before they vanish (m).
 const LEAVE_DISTANCE_M: f32 = 9.0;
-/// Most people waiting at a stop.
-const MAX_WAITING: u32 = 7;
-
 /// Whether door `n` of kind `kind` (`entry`/`exit`) is open in the engine of `store`.
 fn door_open(engines: &Query<&VehicleScripts>, (store, n): (Entity, usize), kind: &str) -> bool {
     engines
@@ -78,11 +75,16 @@ fn facing(direction: Vec3) -> Quat {
 }
 
 mod convert;
+mod crowd;
 mod protocol;
 mod rig;
 
+use crowd::{
+    stop_key, StopCrowds, ACTOR_BUDGET, DEFAULT_RATE, FIRST_VISIT_WAIT_MIN, MAX_ACCUMULATE_MIN,
+    MAX_CROWD, MAX_VISIBLE_WAITING, RATE_SETTING, UNSEEN_BOARD_S,
+};
 pub use rig::PassengerRig;
-use rig::{Shown, Walker};
+use rig::{Shown, Unseen, Walker};
 
 pub use convert::{cabin_spec, paths_spec, ticket_book, unit_spec};
 pub use protocol::{command, register};
@@ -110,6 +112,9 @@ pub fn update_passengers(
     globals: Query<&GlobalTransform>,
     mut transforms: Query<&mut Transform>,
     settings: Option<Res<crate::settings::GameSettings>>,
+    mut crowds: ResMut<StopCrowds>,
+    job: Option<Res<crate::in_game::omsi_world::WorldLoadJob>>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
 ) {
     let dt = time.delta_secs().min(0.1);
     if dt <= 0.0 {
@@ -159,10 +164,18 @@ pub fn update_passengers(
             let frame = frames.get(door_unit).copied().unwrap_or(to_world);
             let side = if door.x >= 0.0 { 1.0 } else { -1.0 };
             for slot in 0..n {
-                let Some(actor) =
-                    pool.spawn_actor(&mut commands, &mut bindposes, rig.rng.next_f32())
-                else {
-                    break;
+                // Beyond the drawn crowd a group boards unseen, like the crowd of a real stop.
+                let actor = (slot < MAX_VISIBLE_WAITING)
+                    .then(|| pool.spawn_actor(&mut commands, &mut bindposes, rig.rng.next_f32()))
+                    .flatten();
+                let Some(actor) = actor else {
+                    let entry = rig.force_entry;
+                    rig.unseen.push(Unseen {
+                        entry,
+                        age: 18 + (rig.rng.next_f32() * 50.0) as u32,
+                        stops: 1 + (rig.rng.next_f32() * 3.0) as u32,
+                    });
+                    continue;
                 };
                 let local = door
                     + Vec3::new(
@@ -198,17 +211,52 @@ pub fn update_passengers(
                 rig.sim.arrive_at_stop();
                 if let Ok((_, g)) = stops.get(marker) {
                     let tf = Transform::from(*g);
-                    let n = (rig.rng.next_f32() * (MAX_WAITING + 1) as f32) as u32;
-                    for slot in 0..n {
+                    // The crowd: those left behind by the last visit, and everybody who came since
+                    // (the setting's rate times the map's passenger factor for the hour).
+                    let key = stop_key(&tf);
+                    rig.stop_key = Some(key);
+                    let now = time.elapsed_secs_f64();
+                    let (last, left_behind) = crowds
+                        .0
+                        .get(&key)
+                        .copied()
+                        .unwrap_or((now - FIRST_VISIT_WAIT_MIN * 60.0, 0));
+                    let minutes = ((now - last) / 60.0).clamp(0.0, MAX_ACCUMULATE_MIN) as f32;
+                    let rate = settings
+                        .as_ref()
+                        .and_then(|s| s.raw(RATE_SETTING)?.trim().parse::<f32>().ok())
+                        .unwrap_or(DEFAULT_RATE);
+                    let factor = match (&job, &env) {
+                        (Some(job), Some(env)) => crate::in_game::omsi_world::passenger_factor(
+                            job.passenger_curve(),
+                            env.hour(),
+                        ),
+                        _ => 1.0,
+                    };
+                    let arrivals = rig.rng.poisson(rate * factor * minutes / 60.0);
+                    let total = (left_behind + arrivals).min(MAX_CROWD);
+                    crowds.0.insert(key, (now, 0));
+                    rig.unseen.clear();
+                    for slot in 0..total {
                         let spot = BusStopMarker::waiting_area(&tf, slot);
-                        let Some(actor) =
-                            pool.spawn_actor(&mut commands, &mut bindposes, rig.rng.next_f32())
-                        else {
-                            break;
-                        };
                         let entry = rig.nearest_entry(spot, &frames);
-                        let age = actor.age.unwrap_or(18 + (rig.rng.next_f32() * 50.0) as u32);
+                        let age_roll = 18 + (rig.rng.next_f32() * 50.0) as u32;
                         let stops_to_ride = 1 + (rig.rng.next_f32() * 6.0) as u32;
+                        // The first ones are drawn; the rest of the crowd boards without a figure.
+                        let actor = (slot < MAX_VISIBLE_WAITING)
+                            .then(|| {
+                                pool.spawn_actor(&mut commands, &mut bindposes, rig.rng.next_f32())
+                            })
+                            .flatten();
+                        let Some(actor) = actor else {
+                            rig.unseen.push(Unseen {
+                                entry,
+                                age: age_roll,
+                                stops: stops_to_ride,
+                            });
+                            continue;
+                        };
+                        let age = actor.age.unwrap_or(age_roll);
                         commands
                             .entity(actor.entity)
                             .insert(Transform::from_translation(spot));
@@ -230,6 +278,14 @@ pub fn update_passengers(
                 let gone = near.is_none_or(|(_, d)| d > LEFT_M) || speed > MOVING_KMH;
                 if gone {
                     rig.stop = None;
+                    // Whoever did not get on stays at the stop for the next vehicle.
+                    if let Some(key) = rig.stop_key.take() {
+                        let left = (rig.approaching.len() + rig.unseen.len()) as u32;
+                        if let Some(c) = crowds.0.get_mut(&key) {
+                            c.1 = left;
+                        }
+                    }
+                    rig.unseen.clear();
                     for w in rig.approaching.drain(..) {
                         commands.entity(w.entity).despawn();
                     }
@@ -257,8 +313,15 @@ pub fn update_passengers(
                     apply_gait(h, w.leg_m, w.phase, &mut transforms);
                 }
                 still.push(w);
-            } else if doors.entries.get(w.entry).copied().unwrap_or(false) {
+            } else if doors.entries.get(w.entry).copied().unwrap_or(false)
+                && rig.sim.passengers().len() < rig.sim.capacity()
+            {
                 if let Some(id) = rig.sim.board(w.age, w.stops, w.entry) {
+                    // Beyond the figure budget a person boards unseen.
+                    if rig.actors.len() >= ACTOR_BUDGET {
+                        commands.entity(w.entity).despawn();
+                        continue;
+                    }
                     let unit = rig
                         .sim
                         .passengers()
@@ -295,6 +358,21 @@ pub fn update_passengers(
             }
         }
         rig.approaching = still;
+        // The rest of the crowd boards through the open doors, one person per door in turn, while
+        // there is room.
+        rig.unseen_timer += dt;
+        if rig.unseen_timer >= UNSEEN_BOARD_S && !rig.unseen.is_empty() {
+            rig.unseen_timer = 0.0;
+            for entry in 0..doors.entries.len() {
+                if !doors.entries[entry] || rig.sim.passengers().len() >= rig.sim.capacity() {
+                    continue;
+                }
+                if let Some(i) = rig.unseen.iter().position(|u| u.entry == entry) {
+                    let u = rig.unseen.remove(i);
+                    rig.sim.board(u.age, u.stops, u.entry);
+                }
+            }
+        }
         // The passengers.
         rig.sim.step(dt, &doors);
         for e in rig.sim.take_events() {
@@ -461,6 +539,7 @@ impl Plugin for PassengersPlugin {
         app.add_systems(
             Update,
             update_passengers.run_if(in_state(crate::app_state::AppState::InGame)),
-        );
+        )
+        .init_resource::<StopCrowds>();
     }
 }

@@ -9,7 +9,7 @@ pub fn load_traffic_variants(
     mut pool: ResMut<TrafficPool>,
 ) {
     let Some(job) = job else { return };
-    if settings.max == 0 {
+    if settings.baseline == 0 {
         return;
     }
     if !pool.started {
@@ -158,4 +158,26 @@ pub(super) fn pick_slot(pool: &TrafficPool, deficits: &[f64], rng: &mut Rng) -> 
         pick -= pool.slots[i].weight;
     }
     Some(slot)
+}
+
+/// The vehicles wanted per group: the baseline spread over the groups by their density-weighted
+/// lane metres, each scaled by its time factor (so the total is the baseline times the average
+/// factor), limited to what the roads hold ([`MIN_LANE_SPACING_M`]). The flag says the limit
+/// bound.
+pub(super) fn baseline_targets(
+    metres: &[f64],
+    factors: &[f64],
+    baseline: usize,
+) -> (Vec<f64>, bool) {
+    let total: f64 = metres.iter().sum();
+    if total <= 0.0 || baseline == 0 {
+        return (vec![0.0; metres.len()], false);
+    }
+    let wanted: Vec<f64> = metres
+        .iter()
+        .zip(factors)
+        .map(|(m, f)| baseline as f64 * m / total * f)
+        .collect();
+    let room = metres.iter().zip(factors).map(|(m, f)| m * f).sum::<f64>() / MIN_LANE_SPACING_M;
+    group_targets(&wanted, room.floor().max(0.0) as usize)
 }

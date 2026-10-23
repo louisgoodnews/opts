@@ -31,6 +31,12 @@ pub struct PassengerRig {
     pub(super) rng: Rng,
     /// Visits of stops so far (for the sounds and the report).
     pub stops_served: u32,
+    /// The stop being served, by position (key of [`super::StopCrowds`]).
+    pub(super) stop_key: Option<(i32, i32)>,
+    /// People at the stop beyond the drawn ones: they board without a figure.
+    pub(super) unseen: Vec<Unseen>,
+    /// Seconds since the last unseen person boarded.
+    pub(super) unseen_timer: f32,
     /// People to send to the doors now, stop or no stop (`vehicle.passengers spawn`).
     pub force_group: u32,
     /// The entry that group is sent to (its number in the chain).
@@ -57,6 +63,14 @@ pub(super) struct Shown {
     pub(super) phase: f32,
     pub(super) local: Vec3,
     pub(super) seated: Option<f32>,
+}
+
+/// A person at the stop who is not drawn (the crowd beyond [`super::MAX_VISIBLE_WAITING`]).
+#[derive(Debug, Clone, Copy)]
+pub(super) struct Unseen {
+    pub(super) entry: usize,
+    pub(super) age: u32,
+    pub(super) stops: u32,
 }
 
 /// A person outside: walking up to the bus or away from it.
@@ -103,6 +117,9 @@ impl PassengerRig {
             book,
             seed,
             stop: None,
+            stop_key: None,
+            unseen: Vec::new(),
+            unseen_timer: 0.0,
             actors: HashMap::new(),
             approaching: Vec::new(),
             leaving: Vec::new(),
@@ -116,7 +133,10 @@ impl PassengerRig {
     pub(super) fn sim_of(units: &[UnitSource], book: &TicketBook, seed: u64) -> PassengerSim {
         let specs: Vec<Unit> = units.iter().map(|u| u.unit.clone()).collect();
         let (cabin, paths) = chain(&specs);
-        PassengerSim::new(cabin, &paths, book.clone(), seed)
+        let mut sim = PassengerSim::new(cabin, &paths, book.clone(), seed);
+        // Aisles carry a crowd: standing room beyond what the cabin file lists.
+        sim.add_standing_room();
+        sim
     }
 
     /// Adds the unit behind the chain (its cabin joins the others'); nobody may be aboard yet.
