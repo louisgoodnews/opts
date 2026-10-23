@@ -68,11 +68,17 @@ impl Plugin for OptsCameraPlugin {
                 PostUpdate,
                 (
                     update_ego_camera,
-                    update_cockpit_camera,
                     update_passenger_camera,
                     update_external_camera,
                 )
                     .after(bevy::transform::TransformSystems::Propagate),
+            )
+            // The driver's view is attached to the vehicle: it is placed from the vehicle's
+            // transform of this frame before the propagation, so it never trails by a frame
+            // (a constant lag turns into judder when frame times vary).
+            .add_systems(
+                PostUpdate,
+                update_cockpit_camera.before(bevy::transform::TransformSystems::Propagate),
             );
     }
 }
