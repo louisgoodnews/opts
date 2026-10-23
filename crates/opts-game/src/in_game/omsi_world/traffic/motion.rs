@@ -89,6 +89,12 @@ pub fn update_ai_variables(
     }
 }
 
+/// A scheduled vehicle is removed this long (s) after arriving at the last stop of its run ...
+const RETIRE_AFTER_S: f64 = 8.0;
+/// ... if it is at least this far (m) from the camera; nearer, it drives on and leaves like any
+/// other vehicle.
+const RETIRE_FAR_M: f64 = 80.0;
+
 /// Steps the agents, places the vehicle models and removes finished or distant ones.
 pub fn move_traffic(
     time: Res<Time>,
@@ -120,6 +126,29 @@ pub fn move_traffic(
             tracing::warn!(id = id.0, lane = lane.0, "AI vehicle stuck, despawned");
         }
         sched.on_event(&e);
+        // A scheduled vehicle at the last stop of its run is removed shortly after, when nobody
+        // can see it go (see `RETIRE_FAR_M`); in view it drives on as ordinary traffic.
+        if let opts_traffic::TrafficEvent::ArrivedAtStop { id, clock, .. } = e {
+            if state.world.agent(id).is_some_and(|a| a.stops.len() == 1) {
+                sched.finish_at(id, clock, RETIRE_AFTER_S);
+            }
+        }
+    }
+    let now = state.world.clock();
+    for id in sched.take_retired(now) {
+        let near = state
+            .world
+            .agent(id)
+            .and_then(|a| a.pose(state.world.graph()))
+            .is_some_and(|(p, _)| {
+                camera.single().is_ok_and(|c| {
+                    let c = c.translation();
+                    DVec2::new(f64::from(c.x), -f64::from(c.z)).distance(p) < RETIRE_FAR_M
+                })
+            });
+        if !near {
+            state.world.despawn(id);
+        }
     }
     if std::env::var_os("OPTS_DBG_OBSTACLES").is_some() {
         tracing::info!(

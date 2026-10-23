@@ -33,6 +33,7 @@ pub fn redraw(
     fixture: Option<Res<FixtureRoads>>,
     mut overview: ResMut<OverviewRoads>,
     route: Res<super::super::route_path::PlayerRoutePath>,
+    scheduled: Res<super::super::route_path::ScheduledVehicles>,
 ) {
     overview.poll();
     state.since += time.delta_secs();
@@ -163,6 +164,19 @@ pub fn redraw(
             )
         })
         .collect();
+    let scheduled_px: Vec<(Vec2, f32)> = scheduled
+        .poses
+        .iter()
+        .map(|(p, h)| {
+            (
+                Vec2::new(
+                    (p.x - viewport.centre.x) as f32,
+                    (p.y - viewport.centre.y) as f32,
+                ),
+                *h,
+            )
+        })
+        .collect();
     raster::render_routed(
         canvas,
         view,
@@ -170,6 +184,7 @@ pub fn redraw(
         super::super::minimap::MapRoute {
             lines: &route_lines,
             stops: &route_stops,
+            vehicles: &scheduled_px,
         },
         &drawn_markers,
         &colors,

@@ -95,6 +95,20 @@ impl TrafficState {
         self.world.agents().len()
     }
 
+    /// World position and compass heading of the vehicles `keep` accepts (the maps draw the
+    /// scheduled ones).
+    pub(crate) fn poses_where(&self, keep: impl Fn(AgentId) -> bool, out: &mut Vec<(DVec2, f32)>) {
+        let graph = self.world.graph();
+        out.extend(
+            self.world
+                .agents()
+                .iter()
+                .filter(|a| keep(a.id))
+                .filter_map(|a| a.pose(graph))
+                .map(|(p, h)| (p, h as f32)),
+        );
+    }
+
     /// The lane graph of the resident tiles.
     #[must_use]
     pub(crate) fn lane_graph(&self) -> &LaneGraph {

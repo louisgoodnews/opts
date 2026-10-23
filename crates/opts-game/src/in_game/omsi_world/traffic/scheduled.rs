@@ -89,6 +89,8 @@ pub struct ScheduledTraffic {
     runs: HashMap<RunRef, RunEntry>,
     agent_run: HashMap<AgentId, RunRef>,
     pub(super) request: Option<ScheduledRequest>,
+    /// Vehicles that reached the last stop of their run: the clock time they may be removed at.
+    retire: Vec<(AgentId, f64)>,
     /// The figures.
     pub stats: ScheduledStats,
 }
@@ -155,6 +157,21 @@ impl ScheduledTraffic {
             TrafficEvent::StopMissed { .. } => self.stats.missed += 1,
             _ => {}
         }
+    }
+
+    /// Notes that scheduled vehicle `id` stands at the last stop of its run; it may be removed
+    /// `after_s` seconds after `clock`.
+    pub(super) fn finish_at(&mut self, id: AgentId, clock: f64, after_s: f64) {
+        if self.agent_run.contains_key(&id) {
+            self.retire.push((id, clock + after_s));
+        }
+    }
+
+    /// The vehicles whose time to be removed has come (they are forgotten here).
+    pub(super) fn take_retired(&mut self, clock: f64) -> Vec<AgentId> {
+        let (due, rest): (Vec<_>, Vec<_>) = self.retire.drain(..).partition(|(_, t)| *t <= clock);
+        self.retire = rest;
+        due.into_iter().map(|(id, _)| id).collect()
     }
 
     /// Mean delay at arrival (s), `None` before the first arrival.
@@ -244,7 +261,7 @@ pub fn plan_scheduled(
     sched.refresh += PLAN_EVERY_S;
     if sched.refresh >= 5.0 || sched.active.is_empty() {
         sched.refresh = 0.0;
-        sched.active = active_runs(&tt, now, LEAD_S, HORIZON_S);
+        sched.active = active_runs(&tt, now, LEAD_S, HORIZON_S, Some(env.weekday()));
         let keep: std::collections::HashSet<RunRef> =
             sched.active.iter().map(|(r, _)| r.clone()).collect();
         sched
@@ -462,6 +479,24 @@ fn graph_leg_speed(secs: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_vehicle_at_its_last_stop_is_retired_after_the_delay_and_only_if_it_is_scheduled() {
+        let mut s = ScheduledTraffic::default();
+        s.agent_run.insert(
+            AgentId(1),
+            RunRef {
+                line_file: "l".into(),
+                tour: 0,
+                run: 0,
+            },
+        );
+        s.finish_at(AgentId(1), 100.0, 8.0);
+        s.finish_at(AgentId(2), 100.0, 8.0);
+        assert!(s.take_retired(107.0).is_empty());
+        assert_eq!(s.take_retired(108.0), vec![AgentId(1)]);
+        assert!(s.take_retired(500.0).is_empty(), "forgotten once taken");
+    }
 
     #[test]
     fn a_distance_along_a_route_is_found_on_its_lane() {
