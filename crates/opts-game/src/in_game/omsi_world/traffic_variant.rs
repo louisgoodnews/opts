@@ -22,6 +22,8 @@ const MAX_UNITS: usize = 8;
 /// One unit of an AI vehicle: the head, or a trailing unit coupled behind its predecessor.
 pub(super) struct Unit {
     pub name: String,
+    /// The vehicle file the unit was read from.
+    pub bus_path: PathBuf,
     pub model: ModelConfig,
     pub model_dir: PathBuf,
     pub tex_dirs: Vec<PathBuf>,
@@ -180,6 +182,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         &default_livery,
     );
     let unit = Unit {
+        bus_path: path.to_path_buf(),
         name: path
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
@@ -507,6 +510,7 @@ mod tests {
     #[test]
     fn traits_sum_the_units_of_a_coupled_vehicle() {
         let unit = |mass: f32, brake: f32, len: f32| Unit {
+            bus_path: PathBuf::new(),
             name: "u".into(),
             model: ModelConfig::default(),
             model_dir: PathBuf::new(),

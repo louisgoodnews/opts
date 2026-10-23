@@ -216,6 +216,7 @@ impl Plugin for InGamePlugin {
                     omsi_world::move_traffic,
                     omsi_world::move_traffic_chains,
                     omsi_world::update_ai_variables,
+                    omsi_world::step_ai_scripts.after(omsi_world::update_ai_variables),
                 )
                     .chain(),
                 sky::update_sky

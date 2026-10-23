@@ -30,6 +30,15 @@ fn scheduled(world: &mut World, _params: &Value) -> Outcome {
             "departures": s.stats.departures,
             "missed_stops": s.stats.missed,
             "mean_delay_s": s.mean_delay_s(),
+            "positions": world
+                .get_resource::<crate::hud::route_path::ScheduledVehicles>()
+                .map(|v| {
+                    v.poses
+                        .iter()
+                        .map(|(p, h)| json!({ "x": p.x, "y": p.y, "heading_deg": h.to_degrees() }))
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default(),
             "last_arrivals": s.stats.log.iter().map(|(station, scheduled, actual)| json!({
                 "station": station,
                 "scheduled": clock_text(*scheduled),

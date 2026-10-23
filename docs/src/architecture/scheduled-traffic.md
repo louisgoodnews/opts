@@ -88,9 +88,30 @@ whose previous stop is not on loaded track starts upstream of its next loaded st
 as the time to its arrival at 15 m/s (at most 450 m). Over one run at Ahlheim Hauptbahnhof an S8
 arrived at its stop 14 s after the timetable.
 
-Not done: doors and passengers of scheduled vehicles, and destination text on AI vehicles. AI
-vehicles have no script engine, only a table of animation variables, so there is nothing that
-reads the line and destination of a run; that needs scripts for AI vehicles (M-0098).
+Trains and trams have no scripts yet (see below): their doors stay shut.
+
+## Scripts of scheduled road vehicles
+
+An unscheduled AI vehicle is a table of animation variables. A scheduled road vehicle gets its
+script engine (`traffic/ai_script.rs`, the one-script path of M-0103 for the vehicles that need
+it): the head unit's `[script]` set, with the depot (`.hof`) and the run's timetable behind the
+`GetTerminus*`/`GetTT*` callbacks. Every 0.1 s within 150 m of the camera it is fed like a
+player's vehicle (`opts_sim::script::inputs::feed`, with `AI` and `AI_Engine` set and the route
+for `AI_Target_Index`), the traffic's own animation variables are copied in unless a script
+writes them, and `{frame}` runs (OMSI's AI main scripts do their work in `{frame}`).
+
+The door protocol, read from the scripts (`door_3D_G.osc`, `MAN_12C_main_AI.osc`): the host sets
+`AI_Scheduled_AtStation` to 1 when the vehicle stands at its stop (the scripts open the doors; MAN
+scripts want `PAX_Entry*_Req`/`PAX_Exit*_Req`, which the host sets for the same time), to -1 when
+the passengers are through (half of the dwell; the doors close) and back to 0 when the vehicle
+leaves. The dwell is at least 15 s so that the doors have time to open and close. In a run at
+Ahlheim a Mercedes articulated bus opened both door pairs to 1.0 within a few seconds of
+arriving, closed them again before leaving, and its destination display was handed terminus row
+113 of the depot. No passengers walk to or from the vehicle (they do not exist for AI vehicles).
+
+Not done: the destination text on the model (the display's script texture) was not looked at on
+screen, only the variables; and the same for trains and trams, whose units are built from a
+different path (`rail/ai.rs`).
 
 ## The HUD
 

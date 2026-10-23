@@ -177,7 +177,7 @@ pub(super) const PART: &[CommandSpec] = &[
         "",
     )
     .since("1.27")
-    .result("`{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, last_arrivals: [{station, scheduled, actual, delay_s}]}`")
+    .result("`{available, runs_on_the_road, vehicles, traffic_agents, spawned, arrivals, departures, missed_stops, mean_delay_s, positions: [{x, y, heading_deg}], last_arrivals: [{station, scheduled, actual, delay_s}]}`")
     .doc("Scheduled AI vehicles (`docs/src/architecture/scheduled-traffic.md`): the runs of the map's timetable that are on the road or start within 90 s at the session clock, how many of them have a vehicle now, the stops reached and left, and the delay at arrival (clock minus the scheduled arrival, seconds; negative is early) of the last arrivals. `mean_delay_s` is `null` before the first arrival. Vehicles appear only near the player, at the bus stop objects of the loaded tiles."),
     c(
         "config.list",
