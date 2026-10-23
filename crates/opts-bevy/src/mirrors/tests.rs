@@ -39,8 +39,16 @@ impl Scene {
             .init_resource::<MirrorFrame>()
             .init_resource::<MirrorStats>()
             .init_resource::<VirtualMirrors>()
-            .add_systems(Update, spawn_mirror_cameras)
-            .add_systems(PostUpdate, (update_mirror_cameras, sync_mirror_camera_look));
+            .add_systems(Update, (spawn_mirror_cameras, register_ambient_panes))
+            .add_systems(
+                PostUpdate,
+                (
+                    update_mirror_cameras,
+                    update_ambient_mirrors,
+                    sync_mirror_camera_look,
+                )
+                    .chain(),
+            );
         let main = app
             .world_mut()
             .spawn((
@@ -352,14 +360,9 @@ fn mirrors_are_capped_and_a_removed_vehicle_takes_its_cameras_along() {
     s.app.update();
     s.app.update();
     assert!(s.cameras().is_empty(), "no longer the player's vehicle");
-    assert_eq!(
-        s.app
-            .world()
-            .get::<MeshMaterial3d<StandardMaterial>>(s.mirrors[0])
-            .unwrap()
-            .0,
-        s.originals[0]
-    );
+    // Its panes are no longer the player's: the camera system has let go of them (the nearest
+    // may serve as another vehicle's mirror, see `ambient`).
+    assert!(s.app.world().get::<MirrorSurface>(s.mirrors[0]).is_none());
 }
 
 #[test]
@@ -473,5 +476,6 @@ fn the_picture_is_mapped_over_the_pane_uv_rectangle_and_the_camera_has_the_pane_
     );
 }
 
+mod ambient;
 mod tags;
 mod virtual_view;

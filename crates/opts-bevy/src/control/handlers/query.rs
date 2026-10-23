@@ -144,6 +144,7 @@ fn reflections_json(world: &World) -> Value {
             "cameras": m.cameras,
             "selected": m.selected,
             "rendering": m.rendering,
+            "ambient": m.ambient,
         });
     }
     out

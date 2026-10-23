@@ -2,7 +2,7 @@
 
 use super::*;
 
-fn mirror_material(
+pub(super) fn mirror_material(
     original: &StandardMaterial,
     picture: Handle<Image>,
     uv_min: Vec2,

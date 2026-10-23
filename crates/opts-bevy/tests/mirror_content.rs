@@ -136,8 +136,22 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         })
         .init_resource::<MirrorFrame>()
         .init_resource::<MirrorStats>()
-        .add_systems(Update, spawn_mirror_cameras)
-        .add_systems(PostUpdate, update_mirror_cameras);
+        .init_resource::<opts_bevy::mirrors::VirtualMirrors>()
+        .add_systems(
+            Update,
+            (
+                spawn_mirror_cameras,
+                opts_bevy::mirrors::register_ambient_panes,
+            ),
+        )
+        .add_systems(
+            PostUpdate,
+            (
+                update_mirror_cameras,
+                opts_bevy::mirrors::update_ambient_mirrors,
+            )
+                .chain(),
+        );
     app.world_mut().spawn((
         Camera3d::default(),
         opts_bevy::MainCamera,
@@ -203,12 +217,23 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
     };
     spawn_vehicle(&mut app, false);
     app.update();
+    app.update();
     let mut q = app.world_mut().query::<&MirrorCamera>();
     assert_eq!(
         q.iter(app.world()).count(),
         0,
         "no player vehicle, no mirror cameras"
     );
+    // The panes of another vehicle in front of the viewer get the live pictures of the pool.
+    let mut ambient = app
+        .world_mut()
+        .query::<&opts_bevy::mirrors::AmbientCamera>();
+    let served = ambient
+        .iter(app.world())
+        .filter(|c| c.pane.is_some())
+        .count();
+    eprintln!("ambient cameras with a pane: {served}");
+    assert!(served >= 1, "another vehicle's mirror is live");
 
     spawn_vehicle(&mut app, true);
     app.update();

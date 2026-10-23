@@ -54,10 +54,9 @@ pub fn update_mirror_cameras(
             live.push(entity);
         }
     }
-    *stats = MirrorStats {
-        cameras: live.len(),
-        ..default()
-    };
+    stats.cameras = live.len();
+    stats.selected = 0;
+    stats.rendering = 0;
     let Some(view) = main.iter().next() else {
         for e in &live {
             if let Ok((_, _, _, mut cam, _)) = cameras.get_mut(*e) {
@@ -244,8 +243,18 @@ pub fn update_mirror_cameras(
 /// is scene-linear: no tonemapper, no colour grading; the main camera applies its own once).
 #[allow(clippy::type_complexity)]
 pub fn sync_mirror_camera_look(
-    main: Query<(Has<Hdr>, Option<&DistanceFog>), (With<MainCamera>, Without<MirrorCamera>)>,
-    mirrors: Query<(Entity, Has<Hdr>, Option<&DistanceFog>), With<MirrorCamera>>,
+    main: Query<
+        (Has<Hdr>, Option<&DistanceFog>),
+        (
+            With<MainCamera>,
+            Without<MirrorCamera>,
+            Without<AmbientCamera>,
+        ),
+    >,
+    mirrors: Query<
+        (Entity, Has<Hdr>, Option<&DistanceFog>),
+        Or<(With<MirrorCamera>, With<AmbientCamera>)>,
+    >,
     mut commands: Commands,
 ) {
     let Some((hdr, fog)) = main.iter().next() else {
