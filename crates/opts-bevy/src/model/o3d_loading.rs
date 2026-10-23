@@ -239,8 +239,10 @@ impl ContentLoader<'_> {
 
         let mut parts = Vec::new();
         for model in &models {
-            for (slot, mut mesh) in crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots)
-            {
+            let t_mesh = opts_logging::stream_trace::span("o3d.meshes");
+            let slot_meshes = crate::mesh::o3d_to_bevy_meshes_by_material_slots(model, slots);
+            drop(t_mesh);
+            for (slot, mut mesh) in slot_meshes {
                 // Static model parts carry no skeleton: joint attributes without a `SkinnedMesh`
                 // component make the render pipeline layouts disagree (fatal wgpu validation error).
                 if !keep_skin {
@@ -310,19 +312,39 @@ impl ContentLoader<'_> {
                     (tex.clone(), over.and_then(|o| o.trans_map.clone()))
                 {
                     if let Some(trans_h) = self.texture(&tm, tex_dirs) {
-                        let composed = match (self.images.get(&base_h), self.images.get(&trans_h)) {
-                            (Some(b), Some(t)) => compose_alpha(b, t),
-                            _ => None,
-                        };
-                        if let Some(img) = composed {
-                            // A mostly opaque composition (a car body with its windows) is drawn
-                            // as an opaque cut-out body plus a blended glass pass; blending the
-                            // whole body lets its far side and interior show through.
-                            if over.and_then(|o| o.alpha).is_none_or(|a| a == 2) {
-                                glass_tex = transmap_glass(&img).map(|g| self.images.add(g));
-                            }
-                            tex = Some(self.images.add(img));
+                        let split = over.and_then(|o| o.alpha).is_none_or(|a| a == 2);
+                        let key = (base_h.id(), trans_h.id(), split);
+                        if let Some((done, glass)) = self.cache.composed.get(&key) {
+                            tex = Some(done.clone());
+                            glass_tex = glass.clone();
                             blended_by_map = true;
+                        } else {
+                            let composed =
+                                match (self.images.get(&base_h), self.images.get(&trans_h)) {
+                                    (Some(b), Some(t)) => {
+                                        let _t =
+                                            opts_logging::stream_trace::span("o3d.compose_alpha");
+                                        compose_alpha(b, t)
+                                    }
+                                    _ => None,
+                                };
+                            if let Some(img) = composed {
+                                // A mostly opaque composition (a car body with its windows) is
+                                // drawn as an opaque cut-out body plus a blended glass pass;
+                                // blending the whole body lets its far side and interior show
+                                // through.
+                                let glass = split
+                                    .then(|| transmap_glass(&img))
+                                    .flatten()
+                                    .map(|g| self.images.add(g));
+                                let done = self.images.add(img);
+                                self.cache
+                                    .composed
+                                    .insert(key, (done.clone(), glass.clone()));
+                                tex = Some(done);
+                                glass_tex = glass;
+                                blended_by_map = true;
+                            }
                         }
                     }
                 }
@@ -334,6 +356,7 @@ impl ContentLoader<'_> {
                     && !blended_by_map
                     && over.is_some_and(|o| o.alpha == Some(2) && o.trans_map.is_none())
                 {
+                    let _t = opts_logging::stream_trace::span("o3d.body_glass_split");
                     if let Some(decoded) = tex
                         .as_ref()
                         .and_then(|h| self.images.get(h))
@@ -346,6 +369,7 @@ impl ContentLoader<'_> {
                 if !crate::material::uses_texture_alpha(over.and_then(|o| o.alpha))
                     && !blended_by_map
                 {
+                    let _t = opts_logging::stream_trace::span("o3d.opaque_variant");
                     tex = tex.map(|h| self.opaque_variant(&h));
                 }
                 let textured = tex.is_some();

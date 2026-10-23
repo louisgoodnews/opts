@@ -135,12 +135,26 @@ pub fn load_decoded_meshes(path: &Path) -> Result<Vec<O3d>, String> {
     Ok(models)
 }
 
+/// A composition: base image, transparency map, and whether the glass pass is split off.
+pub(crate) type ComposedKey = (
+    bevy::asset::AssetId<Image>,
+    bevy::asset::AssetId<Image>,
+    bool,
+);
+/// Its result: the composed picture and the glass pass.
+pub(crate) type ComposedImages = (Handle<Image>, Option<Handle<Image>>);
+
 /// Caches shared across a loading session.
 #[derive(Default)]
 pub struct ContentCache {
     pub(crate) textures: HashMap<PathBuf, Option<Handle<Image>>>,
     /// Textures without their alpha channel, by source image (see [`ContentLoader::opaque_variant`]).
     pub(crate) opaque: HashMap<bevy::asset::AssetId<Image>, Handle<Image>>,
+    /// Base texture composed with its transparency map (`[matl_transmap]`): the composed
+    /// picture, and its glass pass when the composition is split. The composition decodes both
+    /// images and builds a new mip chain (tens of milliseconds); every vehicle of a model family
+    /// uses the same pairs, so it is done once.
+    pub(crate) composed: HashMap<ComposedKey, ComposedImages>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,
