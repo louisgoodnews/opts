@@ -1,6 +1,8 @@
 //! A train on a lane network: head position, route choice at points and the pose of any point a
 //! given distance behind the head (bogies, unit origins).
 
+use std::collections::VecDeque;
+
 use glam::Vec3;
 
 use crate::pedestrian::{End, LaneId, PedestrianNet};
@@ -52,6 +54,10 @@ pub struct Train {
     pub dir: i8,
     /// Route choice at the next point.
     pub branch: Branch,
+    /// The lanes the head takes next, one after the other. At a point the head enters the next
+    /// lane of this route when it is among the ways open ([`PedestrianNet::shortest_path`] gives
+    /// one); `branch` decides where the route does not.
+    pub route: VecDeque<LaneId>,
     trail: Trail,
     /// Distance the head has covered on its current lane since it entered it (m).
     on_lane: f32,
@@ -86,6 +92,7 @@ impl Train {
             s,
             dir: if dir >= 0 { 1 } else { -1 },
             branch: Branch::Straight,
+            route: VecDeque::new(),
             trail: Vec::new(),
             on_lane: 0.0,
         }
@@ -169,6 +176,9 @@ impl Train {
             let Some(&(next, entry)) = self.pick(net, &options, end) else {
                 return Moved::EndOfTrack;
             };
+            if self.route.front() == Some(&next) {
+                self.route.pop_front();
+            }
             self.trail.push((self.lane, self.dir));
             if self.trail.len() > MAX_TRAIL {
                 self.trail.remove(0);
@@ -341,6 +351,11 @@ impl Train {
         if options.len() <= 1 {
             return options.first();
         }
+        if let Some(next) = self.route.front() {
+            if let Some(o) = options.iter().find(|(l, _)| l == next) {
+                return Some(o);
+            }
+        }
         let here = heading(net, self.lane, self.s, self.dir);
         let turn = |o: &(LaneId, End)| {
             let (lane, entry) = *o;
@@ -474,5 +489,22 @@ mod tests {
         let t = Train::new(0, 10.0, 1);
         let (q, _) = t.pose_behind(&n, 30.0).unwrap();
         assert!((q.y + 20.0).abs() < 1e-3, "{q:?}");
+    }
+
+    #[test]
+    fn a_route_decides_at_the_point_and_the_shortest_path_finds_it() {
+        let n = net();
+        assert_eq!(n.shortest_path(0, 1, 2, 1000.0), Some(vec![(2, 1)]));
+        assert_eq!(n.shortest_path(0, 1, 1, 1000.0), Some(vec![(1, 1)]));
+        assert_eq!(n.shortest_path(0, 1, 0, 1000.0), Some(Vec::new()));
+        assert_eq!(n.shortest_path(0, 1, 2, 50.0), None, "beyond the limit");
+        // Against the grain no lane leads to lane 1 from the start of lane 0 within reach of
+        // the branch: walking backwards from lane 0 finds nothing.
+        assert_eq!(n.shortest_path(0, -1, 2, 1000.0), None);
+        let mut t = Train::new(0, 90.0, 1);
+        t.route = [2].into();
+        assert_eq!(t.advance(30.0, &n), Moved::Full);
+        assert_eq!(t.lane, 2, "the route overrides the straight way");
+        assert!(t.route.is_empty());
     }
 }

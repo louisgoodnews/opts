@@ -11,6 +11,11 @@ pub struct RailAiPool {
     specs: Vec<TrainSpec>,
     elapsed: f32,
     rng: u32,
+    /// The vehicle files of every list group and depot group, by lower-case group name (the
+    /// `vehicle_group` of a timetable tour).
+    pub(super) group_vehicles: std::collections::HashMap<String, Vec<String>>,
+    /// The vehicle files (lower case) that are rail vehicles.
+    pub(super) rail_files: std::collections::HashSet<String>,
 }
 
 /// Riders found in the map's AI lists (light `[type] 2` vehicles: bicycles, e-scooters).
@@ -20,12 +25,14 @@ pub struct BikeAiPool(RailAiPool);
 /// A running AI train.
 #[derive(Component)]
 pub struct AiTrain {
-    bike: bool,
-    train: Train,
-    speed: f32,
-    composition: VehicleComposition,
+    pub(super) bike: bool,
+    pub(super) train: Train,
+    pub(super) speed: f32,
+    pub(super) composition: VehicleComposition,
     /// Half bogie span of the head unit.
-    wheel_angle: f32,
+    pub(super) wheel_angle: f32,
+    /// The timetable run it drives, if it is a scheduled train.
+    pub(super) plan: Option<super::scheduled::RailPlan>,
 }
 
 /// Reads the AI lists once and keeps every rail vehicle (`[type] 2`) with its coupling chain.
@@ -47,6 +54,16 @@ pub fn load_rail_variants(
         return;
     };
     let lists = opts_core::formats::map::AiLists::parse(&bytes);
+    for g in &lists.groups {
+        pool.group_vehicles.insert(
+            g.name.to_ascii_lowercase(),
+            g.entries.iter().map(|e| e.vehicle.clone()).collect(),
+        );
+    }
+    for d in &lists.depot_groups {
+        pool.group_vehicles
+            .insert(d.name.to_ascii_lowercase(), d.vehicles.clone());
+    }
     let mut seen = std::collections::HashSet::new();
     // A map names its own fleet: the depot vehicles (EVAG's NF6D on the tram map) or groups called
     // after trams. The rest of the lists (U-Bahn cars, regional trains) are traffic of other
@@ -70,7 +87,7 @@ pub fn load_rail_variants(
     for (own, vehicle) in candidates {
         let f = vehicle.to_ascii_lowercase();
         let zug = f.ends_with(".zug");
-        if !(zug || f.ends_with(".bus") || f.ends_with(".ovh")) || !seen.insert(f) {
+        if !(zug || f.ends_with(".bus") || f.ends_with(".ovh")) || !seen.insert(f.clone()) {
             continue;
         }
         let loaded = if zug {
@@ -79,6 +96,9 @@ pub fn load_rail_variants(
             load_spec(&job, vehicle)
         };
         if let Some((spec, light)) = loaded {
+            if !light {
+                pool.rail_files.insert(vehicle.to_ascii_lowercase());
+            }
             if light {
                 bikes.0.specs.push(spec);
             } else {
@@ -126,8 +146,11 @@ pub fn spawn_ai_trains(
         return;
     };
     let centre = (cam.translation().x, -cam.translation().z);
-    let trains = living.iter().filter(|t| !t.bike).count();
-    let riders = living.iter().count() - trains;
+    let trains = living
+        .iter()
+        .filter(|t| !t.bike && t.plan.is_none())
+        .count();
+    let riders = living.iter().filter(|t| t.bike).count();
     let dt = time.delta_secs();
     let mut assets = (&mut *meshes, &mut *materials, &mut *images);
     try_spawn(
@@ -154,7 +177,7 @@ pub fn spawn_ai_trains(
     );
 }
 
-type SpawnAssets<'a> = (
+pub(super) type SpawnAssets<'a> = (
     &'a mut Assets<Mesh>,
     &'a mut Assets<StandardMaterial>,
     &'a mut Assets<Image>,
@@ -178,7 +201,6 @@ fn try_spawn(
         return;
     }
     pool.elapsed = 0.0;
-    let (meshes, materials, images) = (&mut *assets.0, &mut *assets.1, &mut *assets.2);
     let mut rng = pool.rng;
     let spot = net.random_spot(centre, AI_SPAWN_MIN_M, AI_SPAWN_MAX_M, &mut rng);
     let Some((lane, s)) = spot else {
@@ -193,6 +215,29 @@ fn try_spawn(
     };
     pool.rng = rng;
     let spec = &pool.specs[pick];
+    let Some((head, composition)) = build_train(spec, job, commands, assets) else {
+        return;
+    };
+    tracing::info!(vehicle = %spec.name, units = spec.units.len(), lane, bike, "AI rail/cycle vehicle spawned");
+    commands.entity(head).insert(AiTrain {
+        bike,
+        train: Train::new(lane, s, dir),
+        speed: 0.0,
+        composition,
+        wheel_angle: 0.0,
+        plan: None,
+    });
+}
+
+/// The unit entities of a train spec with their meshes, hidden until placed; `None` (and
+/// nothing left behind) while a mesh is still decoding in the background.
+pub(super) fn build_train(
+    spec: &TrainSpec,
+    job: &mut WorldLoadJob,
+    commands: &mut Commands,
+    assets: &mut SpawnAssets,
+) -> Option<(Entity, VehicleComposition)> {
+    let (meshes, materials, images) = (&mut *assets.0, &mut *assets.1, &mut *assets.2);
     let mut units = Vec::new();
     for u in &spec.units {
         let root = commands
@@ -223,9 +268,8 @@ fn try_spawn(
         for (e, ..) in &units {
             commands.entity(*e).despawn();
         }
-        return;
+        return None;
     }
-    tracing::info!(vehicle = %spec.name, units = spec.units.len(), lane, bike, "AI rail/cycle vehicle spawned");
     let head = units[0].0;
     let part = |i: usize, u: &(Entity, f32, bool, f32, usize)| Part {
         entity: u.0,
@@ -246,13 +290,7 @@ fn try_spawn(
             .map(|(i, u)| part(i, u))
             .collect(),
     };
-    commands.entity(head).insert(AiTrain {
-        bike,
-        train: Train::new(lane, s, dir),
-        speed: 0.0,
-        composition,
-        wheel_angle: 0.0,
-    });
+    Some((head, composition))
 }
 
 /// What the player's vehicle contributes to the obstacle list.
@@ -298,7 +336,10 @@ pub fn move_ai_trains(
     globals: Query<&GlobalTransform>,
     mut trains: Query<(Entity, &mut AiTrain)>,
     mut units: Query<(&mut Transform, &mut Visibility, &mut opts_bevy::AiVariables)>,
+    env: Option<Res<opts_bevy::SessionEnvironment>>,
+    mut sched: ResMut<crate::in_game::omsi_world::ScheduledTraffic>,
 ) {
+    let clock = env.as_ref().map_or(0.0, |e| e.seconds_of_day());
     let dt = time.delta_secs().min(0.1);
     let cam = camera.single().ok().map(|c| c.translation());
     // What a train must not run into: every unit of the player's traction (its last unit's rear
@@ -336,6 +377,9 @@ pub fn move_ai_trains(
             // Stop 4 m short of it with a comfortable 1.5 m/s² (the lane clears when it moves on).
             t.speed = t.speed.min((2.0 * 1.5 * (gap - 4.0).max(0.0)).sqrt());
         }
+        if let Some(limit) = super::scheduled::control(&mut t, net, clock, &mut sched) {
+            t.speed = t.speed.min(limit);
+        }
         let step = t.speed * dt;
         let end = t.train.advance(step, net) == Moved::EndOfTrack;
         let far = cam.is_some_and(|c| {
@@ -343,7 +387,14 @@ pub fn move_ai_trains(
                 .pose(net)
                 .is_some_and(|(p, _)| c.distance(omsi_to_bevy_pos(p)) > AI_DESPAWN_M)
         });
-        if end || far || t.train.pose(net).is_none() {
+        if end
+            || far
+            || t.train.pose(net).is_none()
+            || super::scheduled::retired(&t, net, clock, cam)
+        {
+            if let Some(run) = super::scheduled::run_of(&t) {
+                sched.rail_done(run);
+            }
             for p in t.composition.parts() {
                 commands.entity(p.entity).despawn();
             }

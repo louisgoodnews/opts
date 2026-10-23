@@ -71,8 +71,9 @@ pub use pedestrians::{
 };
 pub use rail::{
     configure_rail, is_rail, load_rail_variants, move_ai_trains, rail_player_pose,
-    rail_player_step, spawn_ai_trains, AiTrain, BikeAiPool, BikeNetwork, BikeSettings, Part,
-    RailAiPool, RailNetwork, RailPlayer, RailSettings, VehicleComposition,
+    rail_player_step, spawn_ai_trains, spawn_scheduled_trains, AiTrain, BikeAiPool, BikeNetwork,
+    BikeSettings, Part, RailAiPool, RailNetwork, RailPlayer, RailSettings, ScheduledTrain,
+    VehicleComposition,
 };
 pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};

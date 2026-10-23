@@ -74,3 +74,20 @@ only (public holidays are not known).
 A scheduled vehicle that stands at the last stop of its run is removed 8 s later if it is at least
 80 m from the camera. Nearer, it drives on as ordinary traffic and is removed when it is far
 away like any other vehicle, so nothing vanishes in view.
+
+## Trains and trams
+
+A tour whose vehicle group holds rail vehicles (`.zug` consists, or the trams of a depot group)
+runs on the track network, not the lane graph (`rail/scheduled.rs`). The stops are the same bus
+stop objects (platforms are `[busstop]` objects too); each is put on the nearest track within
+14 m. The train follows the shortest way over the tracks through the stops on loaded tiles
+(`PedestrianNet::shortest_path`; `Train::route` decides at the points), brakes to stand with the
+centre of the train at the stop object, stays for the dwell (15 to 60 s) and until the scheduled
+departure, and is removed 8 s after its last stop if the camera is 80 m or more away. A run
+whose previous stop is not on loaded track starts upstream of its next loaded stop, as far back
+as the time to its arrival at 15 m/s (at most 450 m). Over one run at Ahlheim Hauptbahnhof an S8
+arrived at its stop 14 s after the timetable.
+
+Not done: doors and passengers of scheduled vehicles, and destination text on AI vehicles. AI
+vehicles have no script engine, only a table of animation variables, so there is nothing that
+reads the line and destination of a run; that needs scripts for AI vehicles (M-0098).
