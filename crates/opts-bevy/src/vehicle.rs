@@ -30,6 +30,9 @@ pub struct BusVehicle {
     /// Passenger camera presets of coupled trailer segments, with the segment entity whose
     /// frame each preset is defined in (articulated buses and trams).
     pub trailer_pax_cameras: Vec<(Entity, BusCamera)>,
+    /// Driver camera presets of the cabs of coupled units (the second head of a tram, the end
+    /// cars of a traction), with the unit entity whose frame each is defined in.
+    pub trailer_driver_cameras: Vec<(Entity, BusCamera)>,
     /// Exterior orbit camera focus center in OMSI coordinates.
     pub outside_camera_center: Option<Vec3>,
     /// Index of the standard/default driver camera.
@@ -39,6 +42,54 @@ pub struct BusVehicle {
 }
 
 impl BusVehicle {
+    /// Number of driver cameras over all cabs: the head's first, then those of the coupled units
+    /// in order.
+    #[must_use]
+    pub fn driver_camera_count(&self) -> usize {
+        self.driver_cameras.len() + self.trailer_driver_cameras.len()
+    }
+
+    /// Driver camera `index` of the flattened list, with the unit entity it belongs to (`None` =
+    /// the vehicle root itself).
+    #[must_use]
+    pub fn driver_camera(&self, index: usize) -> Option<(Option<Entity>, &BusCamera)> {
+        if let Some(cam) = self.driver_cameras.get(index) {
+            return Some((None, cam));
+        }
+        self.trailer_driver_cameras
+            .get(index.checked_sub(self.driver_cameras.len())?)
+            .map(|(e, c)| (Some(*e), c))
+    }
+
+    /// The first driver camera of the cab in unit `unit` (`None` = the head), if it has one.
+    #[must_use]
+    pub fn first_driver_camera_of(&self, unit: Option<Entity>) -> Option<usize> {
+        match unit {
+            None => (!self.driver_cameras.is_empty()).then_some(0),
+            Some(e) => self
+                .trailer_driver_cameras
+                .iter()
+                .position(|(u, _)| *u == e)
+                .map(|i| i + self.driver_cameras.len()),
+        }
+    }
+
+    /// The units that have a cab (the head first when it has driver cameras), each once, in
+    /// order.
+    #[must_use]
+    pub fn cab_units(&self) -> Vec<Option<Entity>> {
+        let mut out = Vec::new();
+        if !self.driver_cameras.is_empty() {
+            out.push(None);
+        }
+        for (e, _) in &self.trailer_driver_cameras {
+            if !out.contains(&Some(*e)) {
+                out.push(Some(*e));
+            }
+        }
+        out
+    }
+
     /// Number of passenger cameras over all segments: main segment first, then trailers in order.
     #[must_use]
     pub fn pax_camera_count(&self) -> usize {
@@ -124,6 +175,7 @@ pub fn spawn_vehicle_model(
         pax_cameras: manifest.pax_cameras.clone(),
         mirror_cameras: manifest.mirror_cameras.clone(),
         trailer_pax_cameras: Vec::new(),
+        trailer_driver_cameras: Vec::new(),
         outside_camera_center: manifest.outside_camera_center,
         std_camera_index: std_cam_idx,
         active_camera_index: std_cam_idx,

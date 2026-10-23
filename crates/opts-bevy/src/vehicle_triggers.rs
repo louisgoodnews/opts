@@ -20,6 +20,7 @@ use crate::vehicle_script::VehicleScripts;
 use crate::vehicle_sim::PlayerVehicle;
 
 mod click;
+pub mod door_lock;
 mod hover;
 mod pseudo;
 pub use click::{scripted_click_system, ScriptedClick, ScriptedClicks};
@@ -58,6 +59,7 @@ pub const OPTS_RESERVED_KEYS: &[KeyCode] = &[
     KeyCode::Digit5,
     KeyCode::F1,
     KeyCode::F2,
+    KeyCode::F3,
     KeyCode::F8,
     // The mini map: F7 shows it, Shift+F7 turns it, + and - zoom. F9 is the quick load.
     KeyCode::F7,
@@ -391,12 +393,22 @@ fn raise(vehicles: &Query<&VehicleScripts, Scripted>, owner: Entity, name: &str)
     }
 }
 
+/// What the key triggers need of the player's vehicle: its scripts, its speed (the doors) and the
+/// active cab.
+type KeyTarget = (
+    Entity,
+    &'static VehicleScripts,
+    Option<&'static crate::vehicle_sim::VehicleController>,
+    Option<&'static crate::cab_switch::ActiveCab>,
+);
+
 /// Raises the key-bound triggers on the player's vehicle.
 pub fn script_key_trigger_system(
     keys: Res<ButtonInput<KeyCode>>,
     bindings: Res<ScriptKeyBindings>,
     state: Option<Res<CameraState>>,
-    vehicles: Query<(Entity, &VehicleScripts), With<PlayerVehicle>>,
+    vehicles: Query<KeyTarget, With<PlayerVehicle>>,
+    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
     if bindings.0.is_empty() {
         return;
@@ -412,11 +424,18 @@ pub fn script_key_trigger_system(
     // Keys reach the head's scripts only: the cars behind it have cabs of their own that answer
     // the same triggers (the NF6D's `automatic_D` in car B marks its cab active and the head's
     // inactive); they hear the head through the control cables.
-    for (_, scripts) in &vehicles {
+    for (_, head, controller, active) in &vehicles {
+        // The cab that drives hears the keys.
+        let scripts = crate::cab_switch::cab_scripts(head, active.copied(), &parts);
         let Ok(mut engine) = scripts.engine.lock() else {
             continue;
         };
+        let speed = controller.map_or(0.0, |c| c.forward_speed_km_h());
         for name in &fired {
+            if door_lock::held_back(name, speed) {
+                tracing::debug!(trigger = %name, speed, "door trigger held back: the vehicle moves");
+                continue;
+            }
             let handled = if name == DOOR_SIDE_TOGGLE {
                 toggle_door_side(&mut engine)
             } else if name == CABIN_LIGHT_TOGGLE {
@@ -443,11 +462,13 @@ pub fn script_mouse_trigger_system(
     mouse: Res<ButtonInput<MouseButton>>,
     mut motion: MessageReader<MouseMotion>,
     vehicles: Query<&VehicleScripts, Scripted>,
+    player: Query<&crate::vehicle_sim::VehicleController, With<PlayerVehicle>>,
     mut picker: HotSpotPicker,
     driving: Option<Res<crate::mouse_driving::MouseDriving>>,
     mut held: Local<Option<HeldHotSpot>>,
 ) {
     let delta: Vec2 = motion.read().map(|m| m.delta).sum();
+    let speed = player.iter().next().map_or(0.0, |c| c.forward_speed_km_h());
     if let Some(h) = held.as_mut() {
         if let Ok(scripts) = vehicles.get(h.owner) {
             if let Ok(mut engine) = scripts.engine.lock() {
@@ -460,7 +481,9 @@ pub fn script_mouse_trigger_system(
         // ignition key turns by `mouse_y / -75` per call, so a single call would barely move it).
         if delta != Vec2::ZERO {
             h.dragged = true;
-            raise(&vehicles, h.owner, &format!("{}_drag", h.trigger));
+            if !door_lock::held_back(&h.trigger, speed) {
+                raise(&vehicles, h.owner, &format!("{}_drag", h.trigger));
+            }
         }
         if !mouse.pressed(MouseButton::Left) {
             if let Ok(scripts) = vehicles.get(h.owner) {
@@ -484,6 +507,10 @@ pub fn script_mouse_trigger_system(
     let Some(spot) = picker.under_cursor() else {
         return;
     };
+    if door_lock::held_back(&spot.trigger, speed) {
+        tracing::debug!(trigger = %spot.trigger, speed, "door hot-spot held back: the vehicle moves");
+        return;
+    }
     raise(&vehicles, spot.owner, &spot.trigger);
     *held = Some(HeldHotSpot {
         owner: spot.owner,

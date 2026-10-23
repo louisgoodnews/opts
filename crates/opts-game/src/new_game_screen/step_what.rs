@@ -246,6 +246,24 @@ pub fn fill_what_detail(
         vehicle,
         repaints.as_ref(),
     ));
+    if vehicle.class == "rail" {
+        kids.push(
+            commands
+                .spawn(keyed(
+                    "wiz-what-formation-note",
+                    TypeScale::BodyMedium,
+                    ColorRole::OnSurfaceVariant,
+                ))
+                .id(),
+        );
+        kids.push(super::ui::action_button(
+            commands,
+            "wiz-what-formation",
+            super::ui::Emphasis::Tonal,
+            super::ui::PlannerAction::ComposeFormation,
+            "wizard.what.formation".to_owned(),
+        ));
+    }
     kids.push(super::ui::action_button(
         commands,
         "wiz-what-none",

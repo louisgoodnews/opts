@@ -69,6 +69,7 @@ pub(in crate::in_game::omsi_world) fn next_doors(
 /// Loads the head unit's scripts into an engine, with the depot and the timetable of `run` as
 /// callbacks, and puts them on the vehicle `root`. `canvases` are the script textures the model's
 /// materials show. Returns whether the vehicle has scripts.
+#[allow(clippy::too_many_arguments)]
 pub(super) fn attach(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
@@ -77,8 +78,10 @@ pub(super) fn attach(
     canvases: Arc<RwLock<Vec<CpuScriptTexture>>>,
     run: &RunRef,
     seed: u64,
+    setvars: &[(String, String)],
 ) -> bool {
-    let Some((scripts, vehicle_route)) = engine_for(job, bus_path, canvases, run, seed) else {
+    let Some((scripts, vehicle_route)) = engine_for(job, bus_path, canvases, run, seed, setvars)
+    else {
         return false;
     };
     commands
@@ -95,6 +98,7 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     canvases: Arc<RwLock<Vec<CpuScriptTexture>>>,
     run: &RunRef,
     seed: u64,
+    setvars: &[(String, String)],
 ) -> Option<(VehicleScripts, VehicleRoute)> {
     let manifest = std::fs::read(bus_path)
         .ok()
@@ -126,6 +130,13 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     engine.seed_random(seed as u32);
     engine.set("ai", 1.0);
     engine.set("ai_engine", 1.0);
+    // The equipment of the chosen repaint (`[setvar]` of its `.cti`): the model's parts are shown
+    // or hidden by these variables, so without them a body can be missing from the vehicle.
+    for (var, value) in setvars {
+        if let Ok(v) = value.trim().replace(',', ".").parse::<f32>() {
+            engine.set(var, v);
+        }
+    }
     let ctx = opts_bevy::host_callbacks::VehicleHostContext {
         seed,
         route: route.clone(),

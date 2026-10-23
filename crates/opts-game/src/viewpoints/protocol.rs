@@ -30,7 +30,7 @@ fn describe(world: &mut World) -> Value {
         .query_filtered::<&BusVehicle, With<PlayerVehicle>>()
         .iter(world)
         .next()
-        .map_or(0, |b| b.driver_cameras.len());
+        .map_or(0, |b| b.driver_camera_count());
     let path = world
         .get_resource::<Viewpoints>()
         .and_then(|v| v.path.as_ref().map(|p| p.display().to_string()));

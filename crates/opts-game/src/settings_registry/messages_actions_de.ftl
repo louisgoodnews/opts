@@ -66,3 +66,5 @@ set-bk-rail_lever_zero = Schiene: Hebel auf Null
 set-bk-rail_lever_zero-desc = Schienenfahrzeuge: stellt den Fahrhebel sofort auf Null.
 set-bk-rail_switch_toggle = Schiene: Weiche umstellen
 set-bk-rail_switch_toggle-desc = Schienenfahrzeuge: stellt die Weiche voraus auf den nächsten Weg (gerade, links, rechts); nur wenn eine Weiche in 150 m Entfernung liegt.
+set-bk-rail_switch_cab = Schiene: Führerstand wechseln
+set-bk-rail_switch_cab-desc = Schienenfahrzeuge mit einem Führerstand an jedem Ende (die Köpfe A und B einer Bahn) oder mit mehreren Zügen in Traktion: gibt Steuerung und Führerstandsansicht an den nächsten Führerstand weiter.

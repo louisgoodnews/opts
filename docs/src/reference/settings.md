@@ -87,6 +87,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.drive.rail_lever_down` | Rail: power lever down | input binding | `Z` | at once | available | Rail vehicles: moves the power lever towards braking while held; it stays where it is left. Y on a German keyboard. |
 | `controls.drive.rail_lever_zero` | Rail: lever to zero | input binding | `X` | at once | available | Rail vehicles: puts the power lever back to zero at once. |
 | `controls.drive.rail_switch_toggle` | Rail: toggle the points | input binding | `G` | at once | available | Rail vehicles: switches the points ahead to their next way (straight, left, right); only when points are within 150 m. |
+| `controls.drive.rail_switch_cab` | Rail: switch the cab | input binding | `F3` | at once | available | Rail vehicles with a cab at each end (a tram's heads A and B) or a traction of several trains: hands the controls and the cockpit view to the next cab. |
 | `controls.drive.rail_branch_left` | Rail: points left | input binding | `ArrowLeft` | at once | available | Rail vehicles: takes the left branch at the next point. |
 | `controls.drive.rail_branch_straight` | Rail: points straight | input binding | `ArrowUp` | at once | available | Rail vehicles: stays on the straight track at the next point. |
 | `controls.drive.rail_branch_right` | Rail: points right | input binding | `ArrowRight` | at once | available | Rail vehicles: takes the right branch at the next point. |

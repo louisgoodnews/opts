@@ -122,6 +122,10 @@ pub fn handle_actions(
                 env.setup.custom_setvars.clear();
                 next(&mut env);
             }
+            PlannerAction::ComposeFormation => {
+                commands.insert_resource(ComposeFormationOnStart);
+                next(&mut env);
+            }
             PlannerAction::SaveConfig => configs_save(&mut env, &mut commands),
             PlannerAction::LoadConfig(id) => configs_load(&mut env, &id, &mut commands),
             PlannerAction::FavouriteConfig(id) => {
@@ -292,8 +296,23 @@ fn drive(env: &mut Env, commands: &mut Commands) {
         vehicle = %setup.selected_vehicle,
         "starting the drive"
     );
+    // The wish to compose a train holds only for a rail vehicle (the player may have gone back
+    // and chosen another one).
+    let rail = !setup.no_vehicle
+        && env
+            .catalogue
+            .find_vehicle(&setup.selected_vehicle)
+            .is_some_and(|v| v.class == "rail");
+    if !rail {
+        commands.remove_resource::<ComposeFormationOnStart>();
+    }
     env.next_state.set(AppState::InGame);
 }
+
+/// Set by *Compose a train* of the What step: the formation editor opens when the drive has
+/// started (`crate::in_game::open_formation_on_start`), and is removed then.
+#[derive(Resource, Debug, Clone, Copy)]
+pub struct ComposeFormationOnStart;
 
 /// `Esc` / `Back` inside the wizard: the shell's one Esc mechanism (`shell::esc`) sends
 /// [`ScreenBack`] while a step is left to go back to, and leaves the screen through the back stack

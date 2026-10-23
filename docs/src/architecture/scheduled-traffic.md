@@ -131,3 +131,14 @@ camera (ordinary traffic: 320 m), so a bus that drives off does not vanish at th
 traffic disc. `RUST_LOG`-style debug logging (`--log-level debug`) prints, once per pass without a
 spawn, how many runs there were, how many had started, how many had their stops on loaded lanes
 and how many were in range.
+
+## Cabs (tram heads, traction)
+
+`rail_switch_cab` (F3) hands the controls of a rail vehicle to its next cab (`cab_switch.rs`): the
+NF6D's head A and head B, or the cabs of the trains of a traction. A cab is the head or a unit
+with its own engine that answers the driver's-seat keys (`kw_s_N`/`automatic_D`). The hand-over
+follows the vehicle's own state machine, which the cables carry between the cabs: the old cab
+presses `kw_s_R` (deactivate), 0.3 s later the new one `kw_s_N` (claim), 1.2 s after that
+`automatic_D` (drive). Keys, the direction switch and the cockpit camera then belong to the new
+cab, and driven from a cab at the far end the consist moves back along its track. Checked on the
+NF6D: from B the tram accelerated to 27 km/h backwards along the track, and back in A it drove on.

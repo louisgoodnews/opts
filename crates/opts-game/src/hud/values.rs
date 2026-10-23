@@ -166,7 +166,7 @@ pub fn sample_values(
         next.parking_brake = c.inputs().is_parking_brake_engaged();
         next.rail = controls.map(|r| (r.direction, r.lever));
         next.sub_total = bus.map_or(0, |b| match camera.mode {
-            CameraMode::Cockpit => b.driver_cameras.len(),
+            CameraMode::Cockpit => b.driver_camera_count(),
             CameraMode::Passenger => b.pax_camera_count(),
             _ => 0,
         });

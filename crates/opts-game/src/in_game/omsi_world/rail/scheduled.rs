@@ -404,9 +404,14 @@ pub fn spawn_scheduled_trains(
         // Every unit with scripts of its own runs them (doors, destination display).
         for (i, (part, canvas)) in composition.parts().zip(canvases).enumerate() {
             let seed = (u64::from(run.run as u32) << 8) ^ i as u64 ^ 0x5A11;
-            if let Some((scripts, route)) =
-                engine_for(&mut job, &spec.units[i].defs.bus_path, canvas, &run, seed)
-            {
+            if let Some((scripts, route)) = engine_for(
+                &mut job,
+                &spec.units[i].defs.bus_path,
+                canvas,
+                &run,
+                seed,
+                &[],
+            ) {
                 commands.entity(part.entity).insert((scripts, route));
             }
         }

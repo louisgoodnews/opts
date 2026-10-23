@@ -63,8 +63,12 @@ impl super::super::consist_plan::Files for JobFiles<'_> {
 
 /// Spawns the units behind the head `root`: its `[couple_back]` chain, then the cars of a train
 /// formation (`job.formation_cars`), each with its own chain, where `consist_plan` puts them.
-/// Returns the passenger camera presets of all trailers with the segment entity they are
-/// defined in.
+/// Camera presets with the unit entity they are defined in.
+pub(in super::super::super) type CabCameras =
+    Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)>;
+
+/// Returns the passenger and the driver camera presets of all trailers with the segment entity
+/// they are defined in.
 #[allow(clippy::too_many_arguments)]
 pub(in super::super::super) fn spawn_trailer_chain(
     job: &mut WorldLoadJob,
@@ -75,7 +79,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
     root: Entity,
     bus_dir: &Path,
     tractor: &BusManifest,
-) -> Vec<(Entity, opts_core::formats::vehicles::bus::BusCamera)> {
+) -> (CabCameras, CabCameras) {
     let formation: Vec<FormationCar> = std::mem::take(&mut job.formation_cars);
     let rail = super::super::is_rail(tractor);
     let plan = super::super::consist_plan::plan(
@@ -86,6 +90,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
         &JobFiles(job),
     );
     let mut cams = Vec::new();
+    let mut driver_cams = Vec::new();
     // Mass of the unit in front: what a trailer without a stated mass is assumed to weigh.
     let mut previous_kg = manifest_mass_kg(tractor).unwrap_or(HEAD_MASS_DEFAULT_KG);
     let mut chain = Vec::new();
@@ -281,6 +286,8 @@ pub(in super::super::super) fn spawn_trailer_chain(
                 .map(|(size, centre)| super::super::BodyBox::from_bounding_box(size, centre)),
         });
         cams.extend(manifest.pax_cameras.iter().cloned().map(|c| (seg, c)));
+        // A unit with a cab of its own: its driver cameras, for the cab switch.
+        driver_cams.extend(manifest.driver_cameras.iter().cloned().map(|c| (seg, c)));
     }
     if consist.iter().any(|u| u.part.is_some()) || consist.iter().any(|u| !u.cables.is_empty()) {
         commands
@@ -328,7 +335,7 @@ pub(in super::super::super) fn spawn_trailer_chain(
                 followers: layout,
             },));
     }
-    cams
+    (cams, driver_cams)
 }
 
 /// Mass the simulation assumes for a head unit that states none (kg).

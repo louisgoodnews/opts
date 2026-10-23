@@ -276,6 +276,15 @@ pub fn is_rail(manifest: &BusManifest) -> bool {
     manifest.vehicle_type == Some(2)
 }
 
+/// What the rail step reads and writes of the player's vehicle.
+type RailBody = (
+    &'static mut VehicleController,
+    &'static mut RailPlayer,
+    Option<&'static opts_bevy::RailControls>,
+    Option<&'static opts_bevy::ActiveCab>,
+    Option<&'static opts_bevy::ScriptConsist>,
+);
+
 /// Holds the player's tram on the track and runs its longitudinal dynamics (fixed step, after the
 /// road physics, before the articulation of the following units).
 pub fn rail_player_step(
@@ -285,11 +294,7 @@ pub fn rail_player_step(
     modal: Option<Res<opts_bevy::reporting::ModalActive>>,
     menu: Option<Res<opts_bevy::reporting::MenuModalActive>>,
     net: Res<RailNetwork>,
-    mut players: Query<(
-        &mut VehicleController,
-        &mut RailPlayer,
-        Option<&opts_bevy::RailControls>,
-    )>,
+    mut players: Query<RailBody>,
 ) {
     // Typing in a modal must not switch points.
     let typing = modal.is_some_and(|m| m.0) || menu.is_some_and(|m| m.0);
@@ -297,7 +302,7 @@ pub fn rail_player_step(
     if dt <= 0.0 {
         return;
     }
-    for (mut controller, mut rail, controls) in &mut players {
+    for (mut controller, mut rail, controls, cab, consist) in &mut players {
         if rail.gave_up {
             continue;
         }
@@ -316,9 +321,12 @@ pub fn rail_player_step(
         };
         // The direction of travel changes only at a standstill; a backing vehicle keeps facing
         // the way it faced and its head moves back along the track it ran over.
+        // Driven from the cab at the far end (a tram's head B, the last train of a traction) the
+        // vehicle's forward is the head's backward: the consist moves back along its track.
+        let cab_turned = opts_bevy::cab_switch::cab_is_turned(cab, consist);
         if let Some(c) = controls {
             if rail.speed < STANDSTILL_M_S {
-                rail.backing = c.direction < 0;
+                rail.backing = (c.direction < 0) != cab_turned;
             }
         }
         // The vehicle's own scripts drive it when they write `M_Wheel`: torque at the wheel

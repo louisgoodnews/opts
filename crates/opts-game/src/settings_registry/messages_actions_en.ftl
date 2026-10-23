@@ -66,3 +66,5 @@ set-bk-rail_lever_zero = Rail: lever to zero
 set-bk-rail_lever_zero-desc = Rail vehicles: puts the power lever back to zero at once.
 set-bk-rail_switch_toggle = Rail: toggle the points
 set-bk-rail_switch_toggle-desc = Rail vehicles: switches the points ahead to their next way (straight, left, right); only when points are within 150 m.
+set-bk-rail_switch_cab = Rail: switch the cab
+set-bk-rail_switch_cab-desc = Rail vehicles with a cab at each end (a tram's heads A and B) or a traction of several trains: hands the controls and the cockpit view to the next cab.
