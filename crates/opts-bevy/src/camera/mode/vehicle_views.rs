@@ -144,10 +144,13 @@ pub fn handle_vehicle_view_drag(
     }
 }
 
+/// The player's vehicle, which is not the camera.
+type PlayerNotCamera = (With<PlayerVehicle>, Without<crate::MainCamera>);
+
 /// Key 2: the active `[add_camera_driver]` preset, composed with the vehicle's world transform.
 pub fn update_cockpit_camera(
     state: Res<CameraState>,
-    vehicle: Query<(&GlobalTransform, &BusVehicle), With<PlayerVehicle>>,
+    vehicle: Query<(&Transform, &BusVehicle), PlayerNotCamera>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut viewpoint: ResMut<ViewpointState>,
     mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
@@ -155,13 +158,18 @@ pub fn update_cockpit_camera(
     if state.mode != CameraMode::Cockpit {
         return;
     }
-    let (Ok((gt, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut()) else {
+    let (Ok((vehicle_tf, bus)), Ok((mut tf, mut proj))) = (vehicle.single(), camera.single_mut())
+    else {
         return;
     };
     let Some(cam) = bus.driver_cameras.get(state.sub_camera_index) else {
         return;
     };
-    *tf = preset_world_transform(gt, cam, state.view_yaw, state.view_pitch);
+    // The vehicle's own (root) transform of this frame, not its `GlobalTransform`: this system
+    // runs before the propagation (see `OptsCameraPlugin`), when the global one still holds the
+    // last frame's pose. The camera then moves with the vehicle in the same frame.
+    let gt = GlobalTransform::from(*vehicle_tf);
+    *tf = preset_world_transform(&gt, cam, state.view_yaw, state.view_pitch);
     // Eye position and direction are the vehicle's own `[add_camera_driver]` preset (the player
     // character is hidden in this view, see `crate::human::hide_driver_in_seat_views`).
     // The viewpoint editor's offset (right, up, forward in the driver's frame) and FOV.
