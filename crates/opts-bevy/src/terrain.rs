@@ -29,6 +29,9 @@ pub const CARVE_EPSILON_M: f32 = 0.03;
 /// content (a tunnel, a river bed, stale paving) and stays as authored.
 pub const CARVE_COVER_M: f32 = 1.0;
 
+mod align;
+pub use align::{align_band, boundary_edges, ALIGN_MAX_M};
+
 /// A tile's terrain grid with the size of its cells (`TileGrid::cell` of the tile's row): what
 /// every height consumer samples.
 #[derive(Debug, Clone, PartialEq)]
@@ -164,6 +167,9 @@ pub struct CarveStats {
     pub lowered: usize,
     /// Vertices a surface would have lowered by more than [`CARVE_COVER_M`] (left as authored).
     pub guarded: usize,
+    /// Vertices outside the surfaces pulled towards the height of the nearest outer edge
+    /// ([`align_band`], [`ALIGN_MAX_M`]).
+    pub aligned: usize,
 }
 
 /// Twice the signed area of the 2D triangle `a b c`.
@@ -222,6 +228,7 @@ pub fn carve_terrain(
     let raw = &terrain.grid.heights;
     let mut cap = vec![f32::INFINITY; dim * dim];
     let mut guarded = vec![false; dim * dim];
+    let mut covered = vec![false; dim * dim];
     let ring = -1_i64..=n as i64;
     for tri in surfaces {
         let p = tri.map(|v| v.truncate());
@@ -247,6 +254,16 @@ pub fn carve_terrain(
         let i1 = (hi.x.floor() as i64).min(*ring.end());
         let j0 = (lo.y.floor() as i64).max(*ring.start());
         let j1 = (hi.y.floor() as i64).min(*ring.end());
+        // The vertices under this surface triangle are covered: the alignment leaves them to the
+        // carve.
+        for j in j0.max(0)..=(j1 + 1).min(n as i64) {
+            for i in i0.max(0)..=(i1 + 1).min(n as i64) {
+                let x = Vec2::new(i as f32 * cell, j as f32 * cell);
+                if (0..3).all(|e| cross2(p[e], p[(e + 1) % 3], x) >= 0.0) {
+                    covered[j as usize * dim + i as usize] = true;
+                }
+            }
+        }
         for j in j0..=j1 {
             for i in i0..=i1 {
                 let v = |di: i64, dj: i64| (i + di, j + dj);
@@ -290,6 +307,16 @@ pub fn carve_terrain(
             stats.guarded += 1;
         }
     }
+    // The terrain beside the surfaces follows their outer edges.
+    stats.aligned = align::align_vertices(
+        align::boundary_edges(surfaces),
+        &mut out.grid.heights,
+        &cap,
+        &covered,
+        &guarded,
+        n,
+        cell,
+    );
     (out, stats)
 }
 
@@ -305,11 +332,11 @@ pub fn terrain_material(texture: Option<Handle<Image>>) -> StandardMaterial {
 }
 
 #[cfg(test)]
-mod tests {
+pub(super) mod tests {
     use super::*;
     use opts_core::formats::scenery::{SplineGraphicalProfile, SplineProfilePoint};
 
-    fn flat(h: f32) -> TileTerrain {
+    pub(super) fn flat(h: f32) -> TileTerrain {
         TileTerrain::new(
             MapTerrain {
                 grid_cells: 60,

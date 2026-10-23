@@ -2,7 +2,7 @@
 
 | Metadata | Value |
 | :--- | :--- |
-| **Status** | 🟢 Implemented with deviations (Phase C, C2), see [§8](#8-implementation-notes-2026-10-17); replaces the flat-footprint carve |
+| **Status** | 🟢 Implemented with deviations (Phase C, C2), see [§8](#8-implementation-notes-2026-10-17); replaces the flat-footprint carve; terrain also aligned to outer edges ([§9](#9-alignment-to-outer-edges-2026-10-23)) |
 | **Date** | 2026-10-17 |
 | **Crates** | `opts-core` (`formats/scenery/sli.rs`), `opts-bevy` (`terrain.rs`), `opts-game` (`in_game/omsi_world/{tile_ground,tile,trees,pedestrians,rail,traffic,ground_height}.rs`) |
 | **Related** | [map tiles](../formats/map/tiles.md) (terrain, `[spline_terrain_align*]`), [`.sli`](../formats/text/sli.md), [`.sco`](../formats/text/sco.md) (`[crossing_heightdeformation]`, `[surface]`), [streaming coordinates](streaming-coordinates.md), MI-0043 |
@@ -87,6 +87,18 @@ An overlay that adds or changes splines, or a tile marked `.chronoterrrelevant`,
 * Terrain-relative `[surface]` objects do not carve (their height comes from the terrain itself).
 * Tests: `opts-bevy` `terrain.rs` (Damm1-like embankment, kerb, guard, mirrored profile, `[spline_h]` ramp, border vertices, `terrain_height` = mesh triangles), `tests/spline_winding.rs`, `opts-core` `sli.rs` and `crossing.rs` unit tests, the parts-cache key test in `model.rs`, and the install-gated `opts-bevy/tests/terrain_carve_content.rs` (Berlin-Spandau): 2402/11279 lowers 89 vertices, none by more than 0.79 m, Damm1 flanks untouched; the 11 bent placements have 0.000 % of 72,469 m² below the terrain; 38 of 39 arms meet their spline within 1 cm, one (`Einm_SpandauerD_WiesenD`) at 1.3 cm. The Ruhrau and Hügelsdorf regressions of §7 are not automated (no lowering above 1 m holds by construction).
 * Chrono invalidation (§6) waits for the Chrono implementation.
+
+## 9. Alignment to outer edges (2026-10-23)
+
+The carve only lowers. The terrain beside a road, a pavement or a parking bay stayed as authored, a step of tens of centimetres below or above the surface's outer edge: cars in a bay and objects beside the road floated or sank (Berlin-Spandau, Westerwaldstraße). `opts_bevy::terrain::align` (`carve_terrain` calls it after the carve) pulls the terrain towards the surfaces' **outer edges**:
+
+* the outer edges are the edges of the surface triangles that only one triangle uses (`boundary_edges`: corners compared to a centimetre; the ribbon of a spline, a crossing's ground faces, a `[surface]` object);
+* a vertex that is not under a surface and lies within `align_band(cell)` of an edge (0.6 cells, 1.5–4 m: 3 m on 5 m cells) moves towards the edge's height at the nearest point (minus `CARVE_EPSILON_M`) by a smooth weight (1 at the edge, 0 at the band);
+* the move, up or down, is at most `ALIGN_MAX_M` (0.75 m): a bigger gap is content (a bridge, an embankment, a cutting) and stays;
+* a vertex never rises above its carve cap, so the terrain still never covers a surface (the `terrain_never_covers_a_road` content test holds for the same input);
+* the same edges are seen from every tile that includes them (the 3 × 3 tiles around), so border vertices still agree between tiles.
+
+On Berlin-Spandau tile 2402/11279 it moves 409 vertices. Tests: `terrain/align.rs` (the boundary of a ribbon, pulled up, pulled down, a bridge deck stays, never above an overlapped slanted ribbon) and `terrain_carve_content.rs`. **Open ❓:** whether OMSI shows the stored residue or aligns at run time is still not decided (Q-TC-01); the alignment follows the project lead's request.
 
 ## ❓ Open questions
 

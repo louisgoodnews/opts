@@ -211,8 +211,23 @@ fn spandau_carve_digs_no_pits() {
         stats.lowered, stats.guarded
     );
     assert!(stats.lowered > 0);
+    // The alignment pulls vertices beside the surfaces to their outer edges: up or down, never by
+    // more than ALIGN_MAX_M beyond the carve, and never above the carve's caps (the test above
+    // that the terrain never covers a road holds for the same input).
+    eprintln!("aligned {}", stats.aligned);
     assert!(
-        worst <= CARVE_COVER_M + 1e-4,
+        stats.aligned > 0,
+        "the tile has roads with terrain beside them"
+    );
+    let raised = (0..n)
+        .map(|k| carved.grid.heights[k] - raw.grid.heights[k])
+        .fold(0.0_f32, f32::max);
+    assert!(
+        raised <= opts_bevy::terrain::ALIGN_MAX_M + 1e-4,
+        "a vertex is raised by {raised} m"
+    );
+    assert!(
+        worst <= CARVE_COVER_M + opts_bevy::terrain::ALIGN_MAX_M + 1e-4,
         "a vertex is lowered by {worst} m"
     );
     // Beside the Damm1 embankments (15-30 m from the axis, the old pit) nothing changes.
