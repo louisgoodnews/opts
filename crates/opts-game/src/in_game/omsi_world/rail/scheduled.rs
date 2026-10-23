@@ -14,7 +14,9 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use super::ai::{build_train, AiTrain, SpawnAssets};
 use super::spec::{load_spec, load_zug_spec};
 use super::*;
-use crate::in_game::omsi_world::{run_phase, RunPhase, RunRef, ScheduledTraffic};
+use crate::in_game::omsi_world::{
+    engine_for, run_phase, Doors, RunPhase, RunRef, ScheduledTraffic,
+};
 use opts_bevy::bus_stops::BusStopMarker;
 use opts_sim::pedestrian::LaneId;
 
@@ -73,6 +75,10 @@ pub(super) struct RailPlan {
     run: RunRef,
     stops: VecDeque<RailStop>,
     retire_at: Option<f64>,
+    /// Where the doors are (`AI_Scheduled_AtStation`, as for road vehicles).
+    doors: Doors,
+    /// Seconds since the units' scripts last ran a frame.
+    since: f32,
 }
 
 /// How far a train is from a place on a lane.
@@ -390,10 +396,20 @@ pub fn spawn_scheduled_trains(
         };
         let length = spec.units.last().map_or(20.0, |u| u.behind + 12.0);
         let mut assets: SpawnAssets = (&mut meshes, &mut materials, &mut images);
-        let Some((head, composition)) = build_train(&spec, &mut job, &mut commands, &mut assets)
+        let Some((head, composition, canvases)) =
+            build_train(&spec, &mut job, &mut commands, &mut assets, true)
         else {
             return;
         };
+        // Every unit with scripts of its own runs them (doors, destination display).
+        for (i, (part, canvas)) in composition.parts().zip(canvases).enumerate() {
+            let seed = (u64::from(run.run as u32) << 8) ^ i as u64 ^ 0x5A11;
+            if let Some((scripts, route)) =
+                engine_for(&mut job, &spec.units[i].defs.bus_path, canvas, &run, seed)
+            {
+                commands.entity(part.entity).insert((scripts, route));
+            }
+        }
         // Stop points: the centre of the train stands at the stop object.
         let mut stops_ahead = VecDeque::new();
         for (n, (k, p)) in places.iter().enumerate() {
@@ -443,6 +459,8 @@ pub fn spawn_scheduled_trains(
                     run,
                     stops: stops_ahead,
                     retire_at: None,
+                    doors: Doors::Away,
+                    since: 0.0,
                 }),
             },
             ScheduledTrain,
@@ -518,6 +536,9 @@ fn build_route(
         stop_u,
     })
 }
+
+mod scripts;
+pub use scripts::step_rail_scripts;
 
 #[cfg(test)]
 mod tests;

@@ -419,7 +419,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Providers, licensing, offline policy, mapping to `.owt` presets, location source, go/no-go (research only).
 - [ ] **🌧️ Weather Effects on Driving and Exhaust** — [M-0117](phase-11/M-0117.md) — 📝 proposed 2026-10-18
   - [ ] Wet and snow grip, fog visibility hint, exhaust particles.
-- [ ] **🚏 Scheduled AI Traffic** — [M-0112](phase-11/M-0112.md) — 📝 proposed 2026-10-18
+- [x] **🚏 Scheduled AI Traffic** — [M-0112](phase-11/M-0112.md) — ✅ done 2026-10-23
   - [ ] Buses, trams and trains that spawn at the route start, follow the timetable and despawn at the end (needs M-0099/M-0098).
 - [ ] **🛤️ Track Switch Interaction** — [M-0113](phase-11/M-0113.md) — 📝 proposed 2026-10-18
   - [ ] Switch census from tiles, switch state, route announcement and lock rule for AI and player.

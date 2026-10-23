@@ -177,6 +177,10 @@ pub fn spawn_ai_trains(
     );
 }
 
+/// The canvases of a unit's script textures.
+pub(super) type ScriptCanvases =
+    std::sync::Arc<std::sync::RwLock<Vec<opts_core::formats::script_texture::CpuScriptTexture>>>;
+
 pub(super) type SpawnAssets<'a> = (
     &'a mut Assets<Mesh>,
     &'a mut Assets<StandardMaterial>,
@@ -215,7 +219,7 @@ fn try_spawn(
     };
     pool.rng = rng;
     let spec = &pool.specs[pick];
-    let Some((head, composition)) = build_train(spec, job, commands, assets) else {
+    let Some((head, composition, _)) = build_train(spec, job, commands, assets, false) else {
         return;
     };
     tracing::info!(vehicle = %spec.name, units = spec.units.len(), lane, bike, "AI rail/cycle vehicle spawned");
@@ -236,9 +240,11 @@ pub(super) fn build_train(
     job: &mut WorldLoadJob,
     commands: &mut Commands,
     assets: &mut SpawnAssets,
-) -> Option<(Entity, VehicleComposition)> {
+    scripted: bool,
+) -> Option<(Entity, VehicleComposition, Vec<ScriptCanvases>)> {
     let (meshes, materials, images) = (&mut *assets.0, &mut *assets.1, &mut *assets.2);
     let mut units = Vec::new();
+    let mut canvas_sets: Vec<ScriptCanvases> = Vec::new();
     for u in &spec.units {
         let root = commands
             .spawn((
@@ -249,7 +255,23 @@ pub(super) fn build_train(
                 opts_bevy::AiVariables::default(),
             ))
             .id();
-        job.vehicle_text_defs.clear();
+        // A scripted unit draws its display on its own canvases; the others show no text.
+        if scripted {
+            job.vehicle_text_defs = u.defs.text.clone();
+            job.vehicle_script_defs = u.defs.script.clone();
+            let canvases = u
+                .defs
+                .script
+                .iter()
+                .map(|st| {
+                    opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height)
+                })
+                .collect();
+            job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
+            canvas_sets.push(job.vehicle_script_textures.clone());
+        } else {
+            job.vehicle_text_defs.clear();
+        }
         let (count, ..) = load_segment_meshes(
             job,
             commands,
@@ -290,7 +312,7 @@ pub(super) fn build_train(
             .map(|(i, u)| part(i, u))
             .collect(),
     };
-    Some((head, composition))
+    Some((head, composition, canvas_sets))
 }
 
 /// What the player's vehicle contributes to the obstacle list.

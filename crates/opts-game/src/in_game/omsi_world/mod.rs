@@ -71,9 +71,9 @@ pub use pedestrians::{
 };
 pub use rail::{
     configure_rail, is_rail, load_rail_variants, move_ai_trains, rail_player_pose,
-    rail_player_step, spawn_ai_trains, spawn_scheduled_trains, AiTrain, BikeAiPool, BikeNetwork,
-    BikeSettings, Part, RailAiPool, RailNetwork, RailPlayer, RailSettings, ScheduledTrain,
-    VehicleComposition,
+    rail_player_step, spawn_ai_trains, spawn_scheduled_trains, step_rail_scripts, AiTrain,
+    BikeAiPool, BikeNetwork, BikeSettings, Part, RailAiPool, RailNetwork, RailPlayer, RailSettings,
+    ScheduledTrain, VehicleComposition,
 };
 pub use reload::{ReloadPlan, TileUnload};
 pub use respawn::{handle_vehicle_requests, EntryIndex, ResolvedEntry, SpawnVehicleRequest};
@@ -84,6 +84,7 @@ pub use traffic::{
     spawn_traffic, step_ai_scripts, update_ai_variables, update_traffic_graph, RunPhase, RunRef,
     ScheduledStats, ScheduledTraffic, TrafficPool, TrafficSettings, TrafficState, TrafficVehicle,
 };
+use traffic::{engine_for, next_doors, Doors, DOORS_OPEN_SHARE, FRAME_S, SCRIPT_RADIUS_M};
 pub use traffic_chain::move_traffic_chains;
 pub use vehicle::{load_player_vehicle, FormationCar, SpawnedVehicle};
 pub use vehicle_script_texture::{update_vehicle_script_textures, VehicleScriptTexture};

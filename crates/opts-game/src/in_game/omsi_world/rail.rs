@@ -567,7 +567,7 @@ pub use composition::{Part, VehicleComposition};
 
 mod ai;
 mod scheduled;
-pub use scheduled::{spawn_scheduled_trains, ScheduledTrain};
+pub use scheduled::{spawn_scheduled_trains, step_rail_scripts, ScheduledTrain};
 mod obstacles;
 mod spec;
 pub use ai::{

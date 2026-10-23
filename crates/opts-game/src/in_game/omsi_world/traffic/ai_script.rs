@@ -22,12 +22,12 @@ use super::run_schedule::RunRef;
 use super::*;
 
 /// Scripts run within this distance (m) of the camera; farther vehicles keep their last state.
-const SCRIPT_RADIUS_M: f64 = 150.0;
+pub(in crate::in_game::omsi_world) const SCRIPT_RADIUS_M: f64 = 150.0;
 /// Seconds between two runs of the scripts' frame.
-const FRAME_S: f32 = 0.1;
+pub(in crate::in_game::omsi_world) const FRAME_S: f32 = 0.1;
 /// Share of the dwell (from the arrival) in which passengers want to get in and out, so the doors
 /// are open for that long and closed before the vehicle leaves.
-const DOORS_OPEN_SHARE: f64 = 0.5;
+pub(in crate::in_game::omsi_world) const DOORS_OPEN_SHARE: f64 = 0.5;
 /// Passenger doors the request flags are set for.
 const DOORS: usize = opts_sim::script::inputs::DOORS;
 
@@ -42,7 +42,7 @@ pub struct AiScript {
 /// door scripts open), to `-1` when the passengers are through (they close) and the scripts set
 /// it back to `0` once the doors are shut.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum Doors {
+pub(in crate::in_game::omsi_world) enum Doors {
     #[default]
     Away,
     Open,
@@ -52,7 +52,11 @@ enum Doors {
 /// The doors' next phase and the value to write to `AI_Scheduled_AtStation` (`None`: leave it, the
 /// scripts own it once they have it): `at_stop` is whether the vehicle stands in a stop, `open`
 /// whether the passengers still want in and out.
-fn next_doors(doors: Doors, at_stop: bool, open: bool) -> (Doors, Option<f32>) {
+pub(in crate::in_game::omsi_world) fn next_doors(
+    doors: Doors,
+    at_stop: bool,
+    open: bool,
+) -> (Doors, Option<f32>) {
     match (at_stop, doors) {
         (false, Doors::Away) => (Doors::Away, None),
         (false, _) => (Doors::Away, Some(0.0)),
@@ -74,13 +78,28 @@ pub(super) fn attach(
     run: &RunRef,
     seed: u64,
 ) -> bool {
-    let Some(manifest) = std::fs::read(bus_path)
-        .ok()
-        .and_then(|b| BusManifest::parse_bytes(&b).ok())
-        .filter(|m| !m.scripts.is_empty())
-    else {
+    let Some((scripts, vehicle_route)) = engine_for(job, bus_path, canvases, run, seed) else {
         return false;
     };
+    commands
+        .entity(root)
+        .insert((scripts, vehicle_route, AiScript::default()));
+    true
+}
+
+/// The script engine and route of one unit of a scheduled vehicle (a road vehicle's head, a unit
+/// of a train), `None` when the unit has no scripts or the run is unknown to its depot.
+pub(in crate::in_game::omsi_world) fn engine_for(
+    job: &mut WorldLoadJob,
+    bus_path: &Path,
+    canvases: Arc<RwLock<Vec<CpuScriptTexture>>>,
+    run: &RunRef,
+    seed: u64,
+) -> Option<(VehicleScripts, VehicleRoute)> {
+    let manifest = std::fs::read(bus_path)
+        .ok()
+        .and_then(|b| BusManifest::parse_bytes(&b).ok())
+        .filter(|m| !m.scripts.is_empty())?;
     let dir = bus_path.parent().map(Path::to_path_buf).unwrap_or_default();
     let (mut engine, _) =
         opts_sim::script::load_vehicle_scripts(&manifest, |rel| job.install.find_in(&dir, rel));
@@ -101,7 +120,7 @@ pub(super) fn attach(
     let route = RouteHandle::new(hof.map(Arc::new));
     route.set_timetables(job.timetables());
     if route.select_run(&run.line_file, run.tour, run.run).is_err() {
-        return false;
+        return None;
     }
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
     engine.seed_random(seed as u32);
@@ -123,12 +142,7 @@ pub(super) fn attach(
     ));
     let mut vehicle_route = VehicleRoute::new(route);
     vehicle_route.pending_target_s = TARGET_OFFER_S;
-    commands.entity(root).insert((
-        VehicleScripts::new(engine),
-        vehicle_route,
-        AiScript::default(),
-    ));
-    true
+    Some((VehicleScripts::new(engine), vehicle_route))
 }
 
 /// Feeds the scripts of the scheduled vehicles near the camera and runs their frame.
@@ -211,6 +225,17 @@ pub fn step_ai_scripts(
             ..
         } = &mut *route;
         keep_target(engine, handle, pending_target_s, step);
+        if ai.doors == Doors::Open && ai.since < FRAME_S {
+            tracing::debug!(
+                agent = tv.id.0,
+                front = engine.get_string("matrix_schildfrnt"),
+                line = engine.get_string("matrix_liniennummerstring"),
+                nr = engine.get_string("matrix_nr"),
+                ibis = engine.get_string("ibis"),
+                target = engine.get("target_index_int"),
+                "scheduled vehicle display"
+            );
+        }
         for _ in engine.drain_diagnostics() {}
         for _ in engine.drain_events() {}
     }
