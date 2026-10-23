@@ -25,4 +25,11 @@ of the sample. Cars on bus lanes by routing are what the routing fix removes.
 ## Not done yet (rows 1, 3, 4 partly, 5 red, 7)
 
 Lateral leader search for standing agents, passing rules, continuous gap evaluation, red running by
-`[rowdy_factor]`, barriers. Counters for hard brakes, aborts and violations do not exist either.
+`[rowdy_factor]`, barriers. Counters for light violations do not exist.
+
+## Counters
+
+`traffic.scheduled` reports `hard_brakes` (a deceleration beyond 3 m/s² starting) and
+`lane_change_aborts` (a due lane change found no gap). First reading, Ahlheim Hbf, `--traffic 150`
+(only 2 agents were on the lanes around the player): 2 hard brakes and 0 aborts in 240 s. The sample
+is too small to compare changes; a run with a populated area is needed for before/after numbers.
