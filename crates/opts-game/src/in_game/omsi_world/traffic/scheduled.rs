@@ -37,7 +37,7 @@ const VIEW_CLEAR_M: f64 = 150.0;
 const LANE_REACH_M: f64 = 9.0;
 const LANE_HEADING_TOL: f64 = 0.65;
 /// Dwell limits (s) taken from `Busstops.cfg`.
-const DWELL_MIN_S: f64 = 8.0;
+const DWELL_MIN_S: f64 = 15.0;
 const DWELL_MAX_S: f64 = 45.0;
 
 /// A vehicle asked for, to be built by the spawner.

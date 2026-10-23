@@ -29,6 +29,11 @@ impl AiVariables {
         }
     }
 
+    /// Every value set so far, with its (lower case) name.
+    pub fn iter(&self) -> impl Iterator<Item = (&str, f32)> {
+        self.0.iter().map(|(k, v)| (k.as_str(), *v))
+    }
+
     /// Reads `name`.
     #[must_use]
     pub fn get(&self, name: &str) -> f32 {

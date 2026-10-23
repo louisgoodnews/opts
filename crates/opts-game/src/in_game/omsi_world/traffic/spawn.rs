@@ -214,12 +214,31 @@ pub fn spawn_traffic(
     super::super::trace::begin_frame();
     let mut bounds = Vec::with_capacity(entities.len());
     let mut failed = None;
+    // A scheduled vehicle runs its scripts: the canvases of the head's script textures are the
+    // ones its scripts draw on.
+    let mut head_canvases = None;
+    let head_bus_path = variant.units[0].bus_path.clone();
     for (unit, &entity) in variant.units.iter().zip(&entities) {
         let Some(lod) = unit_lod(unit) else {
             failed = Some(true);
             break;
         };
         job.vehicle_text_defs = unit.model.text_textures.clone();
+        if request.is_some() {
+            job.vehicle_script_defs = unit.model.script_textures.clone();
+            let canvases = unit
+                .model
+                .script_textures
+                .iter()
+                .map(|st| {
+                    opts_core::formats::script_texture::CpuScriptTexture::new(st.width, st.height)
+                })
+                .collect();
+            job.vehicle_script_textures = std::sync::Arc::new(std::sync::RwLock::new(canvases));
+            if entity == root {
+                head_canvases = Some(job.vehicle_script_textures.clone());
+            }
+        }
         // Each vehicle wears one of its `[CTC]` colour schemes (all units the same seed).
         job.cache.texture_replacements = unit
             .repaints
@@ -350,6 +369,18 @@ pub fn spawn_traffic(
                     state.world.push_stop(id, *stop);
                 }
                 sched.built(id, r);
+                if let Some(canvases) = head_canvases.take() {
+                    let seed = id.0.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ r.run.run as u64;
+                    super::ai_script::attach(
+                        &mut job,
+                        &mut commands,
+                        root,
+                        &head_bus_path,
+                        canvases,
+                        &r.run,
+                        seed,
+                    );
+                }
             }
             tracing::debug!(
                 agent = id.0,

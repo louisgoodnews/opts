@@ -234,7 +234,9 @@ pub use variants::load_traffic_variants;
 mod spawn;
 pub use spawn::spawn_traffic;
 
+mod ai_script;
 mod run_schedule;
+pub use ai_script::step_ai_scripts;
 pub use run_schedule::{active_runs, run_phase, RunPhase, RunRef};
 mod scheduled;
 pub use scheduled::{plan_scheduled, ScheduledStats, ScheduledTraffic};
