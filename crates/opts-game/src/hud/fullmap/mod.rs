@@ -31,7 +31,7 @@ use opts_gui::l10n::{L10nKey, Localization};
 use opts_gui::prelude::*;
 use opts_gui::theme::{InstrumentPalette, InstrumentVariant};
 
-use self::overview::OverviewRoads;
+pub use self::overview::OverviewRoads;
 use self::viewport::{wheel_factor, Viewport};
 use super::keys;
 use super::minimap::{
@@ -340,7 +340,8 @@ impl Plugin for FullMapPlugin {
     fn build(&self, app: &mut App) {
         use crate::app_state::AppState;
         let open = |s: Res<FullMapState>| s.open;
-        app.init_resource::<FullMapState>()
+        app.add_plugins(super::route_path::RoutePathPlugin)
+            .init_resource::<FullMapState>()
             .init_resource::<FullMapCanvas>()
             .init_resource::<FullMapImage>()
             .init_resource::<OverviewRoads>()

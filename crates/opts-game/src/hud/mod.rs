@@ -22,6 +22,7 @@ pub mod mouse_driving;
 pub mod parts;
 pub mod profile;
 pub mod protocol;
+pub mod route_path;
 pub mod update;
 pub mod values;
 pub mod viewpoint;

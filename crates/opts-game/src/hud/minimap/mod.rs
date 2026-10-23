@@ -31,7 +31,7 @@ pub use config::{
     step_zoom, MiniMapConfig, Orientation, ZoomMode, BUDGET_US, DEFAULT_ZOOM_M, SETTING_ENABLED,
     SETTING_ORIENTATION, SETTING_ZOOM, SETTING_ZOOM_MODE, UPDATE_INTERVAL, ZOOM_STEPS_M,
 };
-pub use raster::{Canvas, MapColors, MapLine, MapMarker, MapView};
+pub use raster::{Canvas, MapColors, MapLine, MapMarker, MapRoute, MapView};
 pub use source::{may_touch, push_chords, FixtureRoads, MapRoad, MapSource};
 pub use zoom::ZoomFilter;
 
@@ -109,6 +109,7 @@ pub fn colors_of(palette: &InstrumentPalette) -> MapColors {
         active: u8s(palette.text),
         other: u8s(palette.warning),
         north: u8s(palette.text),
+        route: u8s(palette.ok),
     }
 }
 
@@ -238,6 +239,7 @@ pub fn redraw(
     )>,
     cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     traffic: Option<Res<TrafficState>>,
+    route: Option<Res<super::route_path::PlayerRoutePath>>,
     fixture: Option<Res<FixtureRoads>>,
     hud: Option<Res<super::HudValues>>,
 ) {
@@ -347,7 +349,32 @@ pub fn redraw(
             active: *active,
         })
         .collect();
-    raster::render(canvas, view, &lines, &markers, &colors);
+    let mut route_lines: Vec<MapLine> = Vec::new();
+    let mut route_stops: Vec<(Vec2, bool)> = Vec::new();
+    if let Some(r) = &route {
+        for road in &r.roads {
+            push_chords(road, centre, min_chord, &mut route_lines);
+        }
+        route_stops.extend(r.stops.iter().map(|(p, n)| {
+            (
+                Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
+                *n,
+            )
+        }));
+    }
+    raster::render_routed(
+        canvas,
+        view,
+        &lines,
+        MapRoute {
+            lines: &route_lines,
+            stops: &route_stops,
+        },
+        &markers,
+        &colors,
+        canvas.size as f32 / 176.0,
+        true,
+    );
     if let Some(mut image) = images.get_mut(handle) {
         match image.data.as_mut() {
             Some(data) if data.len() == canvas.data.len() => data.copy_from_slice(&canvas.data),

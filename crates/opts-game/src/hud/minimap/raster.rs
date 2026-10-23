@@ -53,6 +53,18 @@ pub struct MapColors {
     pub other: [u8; 4],
     /// North mark and frame.
     pub north: [u8; 4],
+    /// The player's route (its path and stops).
+    pub route: [u8; 4],
+}
+
+/// The player's followed route: the chords of its path and its stops (east, north in metres
+/// relative to the centre; the flag marks the next stop).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MapRoute<'a> {
+    /// The path, drawn under the markers and over the roads.
+    pub lines: &'a [MapLine],
+    /// The stops of the run still ahead.
+    pub stops: &'a [(Vec2, bool)],
 }
 
 /// The buffer: `size * size` RGBA8 pixels, row 0 on top.
@@ -298,11 +310,45 @@ pub fn render_with_unit(
     unit: f32,
     north_mark: bool,
 ) {
+    render_routed(
+        canvas,
+        view,
+        lines,
+        MapRoute::default(),
+        markers,
+        colors,
+        unit,
+        north_mark,
+    );
+}
+
+/// [`render_with_unit`] with the player's route drawn over the roads and under the markers.
+#[allow(clippy::too_many_arguments)]
+pub fn render_routed(
+    canvas: &mut Canvas,
+    view: MapView,
+    lines: &[MapLine],
+    route: MapRoute,
+    markers: &[MapMarker],
+    colors: &MapColors,
+    unit: f32,
+    north_mark: bool,
+) {
     canvas.clear(colors.ground);
     let proj = Projection::new(canvas.size, view);
     for l in lines {
         let width = (l.width_m * proj.px_per_m).max(1.6 * unit.max(0.75));
         draw_line(canvas, proj.point(l.a), proj.point(l.b), width, colors.road);
+    }
+    for l in route.lines {
+        let (a, b) = (proj.point(l.a), proj.point(l.b));
+        draw_line(canvas, a, b, 3.4 * unit.max(0.75), colors.route);
+    }
+    for (p, next) in route.stops {
+        let c = proj.point(*p);
+        let r = if *next { 5.0 } else { 3.2 } * unit.max(0.75);
+        draw_ring(canvas, c, r, 2.4 * unit.max(0.75), colors.ground);
+        draw_ring(canvas, c, r, 1.4 * unit.max(0.75), colors.route);
     }
     // Others first, the active vehicle on top. A ground-coloured halo separates a marker from the
     // roads under it.
