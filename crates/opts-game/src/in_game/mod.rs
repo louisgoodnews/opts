@@ -241,6 +241,12 @@ impl Plugin for InGamePlugin {
                 .before(omsi_world::move_ai_trains)
                 .run_if(in_state(AppState::InGame)),
         );
+        app.add_systems(
+            Update,
+            omsi_world::step_rail_scripts
+                .after(omsi_world::move_ai_trains)
+                .run_if(in_state(AppState::InGame)),
+        );
 
         // The sky cube map for glass reflections reads the sky that `sky::update_sky` keeps current.
         app.add_systems(

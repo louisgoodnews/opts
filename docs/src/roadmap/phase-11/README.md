@@ -18,7 +18,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 8. [M-0114 — Hybrid Tile and Object Streaming](M-0114.md) — 📝 Proposed; speed-adaptive streaming policy.
 9. [M-0116 — Real Weather Research](M-0116.md) — 📝 Proposed; research only, a document and a decision.
 10. [M-0117 — Weather Effects on Driving and Exhaust Visibility](M-0117.md) — 📝 Proposed; grip, fog, exhaust.
-11. [M-0112 — Scheduled AI Traffic](M-0112.md) — 🚧 In progress; road buses by timetable run, trams/trains open.
+11. [M-0112 — Scheduled AI Traffic](M-0112.md) — ✅ Done 2026-10-23; buses, trains and trams by timetable (limits in the milestone).
 12. [M-0113 — Track Switch Interaction](M-0113.md) — 📝 Proposed; points for AI and player on rails.
 
 ## Dependencies on prior phases

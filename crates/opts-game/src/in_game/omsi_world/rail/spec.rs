@@ -16,6 +16,16 @@ pub(super) struct UnitSpec {
     pub(super) span: f32,
     /// The unit's footprint (`[boundingbox]`).
     pub(super) body: Option<super::super::BodyBox>,
+    /// For the unit's script run.
+    pub(super) defs: UnitDefs,
+}
+
+/// What a unit's own script run needs: its vehicle file and the text and script textures of its model.
+#[derive(Clone)]
+pub(super) struct UnitDefs {
+    pub(super) bus_path: std::path::PathBuf,
+    pub(super) text: Vec<opts_core::formats::vehicles::model::TextTexture>,
+    pub(super) script: Vec<opts_core::formats::vehicles::model::ScriptTexture>,
 }
 
 /// A trainset assembled from a `.bus`/`.ovh` chain.
@@ -32,6 +42,7 @@ fn parse_unit(
     ModelLod,
     std::path::PathBuf,
     Vec<std::path::PathBuf>,
+    UnitDefs,
 )> {
     let manifest = BusManifest::parse_bytes(&std::fs::read(path).ok()?).ok()?;
     let dir = path.parent()?.to_path_buf();
@@ -50,7 +61,12 @@ fn parse_unit(
             .unwrap_or_else(|| dir.join("texture")),
         model_dir.join("texture"),
     ];
-    Some((manifest, lod, model_dir, tex_dirs))
+    let defs = UnitDefs {
+        bus_path: path.to_path_buf(),
+        text: model.text_textures.clone(),
+        script: model.script_textures.clone(),
+    };
+    Some((manifest, lod, model_dir, tex_dirs, defs))
 }
 
 /// The coupling chain of a `[type] 2` vehicle and whether it is a light one (bicycle, e-scooter:
@@ -58,13 +74,14 @@ fn parse_unit(
 /// unreadable files.
 pub(super) fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, bool)> {
     let path = job.install.find_file(rel)?;
-    let (mut manifest, lod, model_dir, tex_dirs) = parse_unit(job, &path)?;
+    let (mut manifest, lod, model_dir, tex_dirs, defs) = parse_unit(job, &path)?;
     if !is_rail(&manifest) {
         return None;
     }
     let light = manifest.mass_tonnes.is_some_and(|m| m < 1.0);
     let name = path.file_stem()?.to_string_lossy().into_owned();
     let mut units = vec![UnitSpec {
+        defs: defs.clone(),
         name: name.clone(),
         lod,
         model_dir,
@@ -85,7 +102,7 @@ pub(super) fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, boo
         let Some(next_path) = job.install.find_in(&dir, &next) else {
             break;
         };
-        let Some((m, lod, model_dir, tex_dirs)) = parse_unit(job, &next_path) else {
+        let Some((m, lod, model_dir, tex_dirs, defs)) = parse_unit(job, &next_path) else {
             break;
         };
         let reversed = manifest.couple_back_reversed;
@@ -109,6 +126,7 @@ pub(super) fn load_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec, boo
             body: m
                 .bounding_box
                 .map(|(size, centre)| super::super::BodyBox::from_bounding_box(size, centre)),
+            defs,
         });
         if reversed {
             break; // the ring of a double-ended consist closes here
@@ -138,7 +156,7 @@ pub(super) fn load_zug_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec,
         let Some(car_path) = job.install.find_file(file) else {
             break;
         };
-        let Some((m, lod, model_dir, tex_dirs)) = parse_unit(job, &car_path) else {
+        let Some((m, lod, model_dir, tex_dirs, defs)) = parse_unit(job, &car_path) else {
             break;
         };
         if !is_rail(&m) {
@@ -168,6 +186,7 @@ pub(super) fn load_zug_spec(job: &WorldLoadJob, rel: &str) -> Option<(TrainSpec,
             body: m
                 .bounding_box
                 .map(|(size, centre)| super::super::BodyBox::from_bounding_box(size, centre)),
+            defs,
         });
         prev = Some((m, turned));
     }

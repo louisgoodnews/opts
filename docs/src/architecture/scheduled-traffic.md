@@ -88,7 +88,7 @@ whose previous stop is not on loaded track starts upstream of its next loaded st
 as the time to its arrival at 15 m/s (at most 450 m). Over one run at Ahlheim Hauptbahnhof an S8
 arrived at its stop 14 s after the timetable.
 
-Trains and trams have no scripts yet (see below): their doors stay shut.
+Every unit of a scheduled train or tram that has scripts runs them the way a bus does (`step_rail_scripts`): doors by `AI_Scheduled_AtStation`, the run's line to the display. The BR 425/426 scripts have no door animation, so those trains' doors stay shut; nothing else in the installed content was seen with doors.
 
 ## Scripts of scheduled road vehicles
 
