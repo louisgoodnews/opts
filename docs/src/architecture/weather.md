@@ -213,3 +213,10 @@ of it, plus the old built-in ids. `sim.get` in a drive adds `weather_presets` (t
 * Scenario `.osn.owt` files are parsed (they have the same grammar) but not yet used: OPTS does not
   load `.osn` scenarios.
 * Wind affects clouds and precipitation only (no vehicle forces, no sound, no vegetation).
+
+
+## Rain and snow intensity, puddles on roads (2026-10-23)
+
+* **Intensity settings.** `graphics.rain_intensity` and `graphics.snow_intensity` (0–200 %, default 100) scale what the weather says: the rate of the drops or flakes drawn (`WeatherEffects::scaled`), and the surfaces (`surface_state_for`): rain scales the wetness and the puddle coverage, snow the cover of ground and roads. 0 keeps that kind of precipitation away, 200 is a downpour. They apply at once.
+* **Puddles on splines.** The terrain has its puddles in the ground shader; roads, pavements and parking bays are plain materials, which only got darker and smoother. `in_game/weather/puddles.rs` lays flat, irregular water patches on them around the camera: up to 80 at full coverage and wetness, placed where the ground index has a road, level across the patch (±2 cm), 4–55 m from the camera, removed beyond 75 m. The water has roughness 0.03, reflectance 0.9 (the sky cube is reflected at grazing angles) and a pale sky-grey glow that follows the cloud brightness, so it is grey under cloud and bluer in clear weather.
+* **Scenery objects** get the wet look of their materials from `reflections::Wetness` (darker, smoother) as before; puddles lie on the ground they stand on, not on the objects.

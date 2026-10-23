@@ -60,7 +60,10 @@ fn glass_follows_the_setting_and_restores_exactly() {
         assert!(m.perceptual_roughness <= GLASS_ROUGHNESS + 1e-6);
         assert!(m.reflectance >= GLASS_REFLECTANCE - 1e-6);
         assert!(m.base_color.to_linear().red < original.base_color.to_linear().red);
-        assert!((m.base_color.alpha() - 0.4).abs() < 1e-6, "alpha untouched");
+        assert!(
+            (m.base_color.alpha() - 0.4 * GLASS_CLARITY).abs() < 1e-6,
+            "alpha scaled by the clarity"
+        );
     }
 
     app.world_mut()
@@ -230,5 +233,5 @@ fn glass_whose_texture_cannot_be_read_gets_a_small_diffuse_instead() {
         m.base_color_texture.as_ref().map(|t| t.id()),
         Some(missing.id())
     );
-    assert!((m.base_color.to_linear().red - GLASS_FALLBACK_TINT).abs() < 1e-6);
+    assert!((m.base_color.to_linear().red - GLASS_FALLBACK_TINT * GLASS_CLARITY).abs() < 1e-6);
 }

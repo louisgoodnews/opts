@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use opts_bevy::ground_material::GroundMaterial;
 use opts_bevy::reflections::Wetness;
-use opts_bevy::weather::{road_surface, surface_state, SurfaceState};
+use opts_bevy::weather::{road_surface, surface_state_for, SurfaceState};
 use opts_bevy::{SessionEnvironment, WeatherEffects};
 
 use crate::in_game::omsi_world::WorldLoadJob;
@@ -26,7 +26,11 @@ pub fn ground_wet(s: &SurfaceState) -> Vec4 {
 #[must_use]
 pub fn wanted_state(env: &SessionEnvironment, effects: &WeatherEffects) -> SurfaceState {
     if effects.wet_ground {
-        surface_state(env.conditions())
+        surface_state_for(
+            env.conditions(),
+            effects.rain_factor(),
+            effects.snow_factor(),
+        )
     } else {
         SurfaceState::default()
     }

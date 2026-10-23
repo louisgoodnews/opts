@@ -40,6 +40,13 @@ pub const GLASS_REFLECTANCE: f32 = 0.6;
 /// draws it. A glass without a texture (or one whose texture cannot be read) still gets
 /// [`GLASS_FALLBACK_TINT`] instead.
 pub const GLASS_TINT: f32 = 1.0;
+/// How much of the model's glass tint and opacity is kept with reflections on (colour and alpha
+/// are scaled together, so the pane stays consistently premultiplied). Many models paint their
+/// windows as a light diffuse colour at partial alpha; blended over the interior that is a milky
+/// veil, and the reflections the look adds come on top of it. At this value the pane is clearly
+/// transparent: the view through it keeps most of its contrast and the reflection of the sky
+/// and the sun is what shows on it.
+pub const GLASS_CLARITY: f32 = 0.45;
 /// Factor on the base colour of glass whose texture cannot be premultiplied (block-compressed
 /// formats the CPU decoder does not know): the diffuse part is added at full weight, so it is kept
 /// small.
@@ -325,8 +332,8 @@ fn apply_look(m: &mut StandardMaterial, original: &GlassOriginal, texture: Optio
         (Some(_), None) => (GLASS_FALLBACK_TINT, 1.0),
         _ => (GLASS_TINT, c.alpha),
     };
-    let k = tint * fade;
-    m.base_color = Color::linear_rgba(c.red * k, c.green * k, c.blue * k, c.alpha);
+    let k = tint * fade * GLASS_CLARITY;
+    m.base_color = Color::linear_rgba(c.red * k, c.green * k, c.blue * k, c.alpha * GLASS_CLARITY);
     if let Some(t) = texture {
         m.base_color_texture = Some(t);
     }

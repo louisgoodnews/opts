@@ -315,6 +315,11 @@ pub struct WeatherEffects {
     pub precipitation: PrecipitationQuality,
     /// Wet and snowy ground and roads.
     pub wet_ground: bool,
+    /// How strong rain is drawn, in percent of what the weather says (100: as the preset; the
+    /// settings `gameplay.rain_intensity`): the rate of the drops, the wetness, the puddles.
+    pub rain_percent: u16,
+    /// The same for snow (`gameplay.snow_intensity`): the rate of the flakes and the cover.
+    pub snow_percent: u16,
 }
 
 impl Default for WeatherEffects {
@@ -324,7 +329,37 @@ impl Default for WeatherEffects {
             clouds: true,
             precipitation: PrecipitationQuality::default(),
             wet_ground: true,
+            rain_percent: 100,
+            snow_percent: 100,
         }
+    }
+}
+
+impl WeatherEffects {
+    /// Factor of the rain intensity (1 at 100 %).
+    #[must_use]
+    pub fn rain_factor(&self) -> f32 {
+        f32::from(self.rain_percent) / 100.0
+    }
+
+    /// Factor of the snow intensity (1 at 100 %).
+    #[must_use]
+    pub fn snow_factor(&self) -> f32 {
+        f32::from(self.snow_percent) / 100.0
+    }
+
+    /// `c` with the rate of what falls scaled by its intensity setting (the drops and flakes that
+    /// are drawn; the surfaces use [`surface_state_for`]).
+    #[must_use]
+    pub fn scaled(&self, c: &WeatherConditions) -> WeatherConditions {
+        let mut c = c.clone();
+        let k = match c.precip {
+            PrecipKind::Rain => self.rain_factor(),
+            PrecipKind::Snow => self.snow_factor(),
+            _ => 1.0,
+        };
+        c.precip_rate = (c.precip_rate * k).clamp(0.0, 1.5);
+        c
     }
 }
 
@@ -444,11 +479,26 @@ pub struct SurfaceState {
 /// wetness.
 #[must_use]
 pub fn surface_state(c: &WeatherConditions) -> SurfaceState {
-    let snow_ground = if c.snow { 0.85 } else { 0.0 };
-    let snow_road = if c.snow_on_road { 0.7 } else { 0.0 };
+    surface_state_for(c, 1.0, 1.0)
+}
+
+/// [`surface_state`] with the intensity settings: `rain` scales the wetness and the puddles,
+/// `snow` the cover of the ground and the roads (each at most full).
+#[must_use]
+pub fn surface_state_for(c: &WeatherConditions, rain: f32, snow: f32) -> SurfaceState {
+    let snow_ground = if c.snow {
+        (0.85 * snow).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
+    let snow_road = if c.snow_on_road {
+        (0.7 * snow).clamp(0.0, 1.0)
+    } else {
+        0.0
+    };
     SurfaceState {
-        wet: (c.ground_wet[1] / 255.0).clamp(0.0, 1.0) * (1.0 - 0.6 * snow_ground),
-        puddles: 0.45 * (c.ground_wet[2] / 120.0).clamp(0.0, 1.0) * (1.0 - snow_ground),
+        wet: (c.ground_wet[1] / 255.0 * rain).clamp(0.0, 1.0) * (1.0 - 0.6 * snow_ground),
+        puddles: 0.45 * (c.ground_wet[2] / 120.0 * rain).clamp(0.0, 1.0) * (1.0 - snow_ground),
         snow_ground,
         snow_road,
     }

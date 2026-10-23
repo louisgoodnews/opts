@@ -54,6 +54,10 @@ set-opt-precip-medium = Mittel
 set-opt-precip-high = Hoch
 set-weather-wet-ground = Wetter: nasser und verschneiter Boden
 set-weather-wet-ground-desc = Dunkelt Boden und Straßen bei Nässe ab und macht sie glatter, fügt Pfützen und eine Schneedecke hinzu. Aus lässt sie trocken.
+set-rain-intensity = Regenstärke
+set-rain-intensity-desc = Wie stark es regnet, in Prozent dessen, was das Wetter vorgibt (100: wie das Wetter): die fallenden Tropfen, wie nass Boden und Straßen sind und wie viele Pfützen es gibt. 0 hält den Regen fern, 200 ist ein Wolkenbruch.
+set-snow-intensity = Schneestärke
+set-snow-intensity-desc = Wie stark es schneit, in Prozent dessen, was das Wetter vorgibt (100: wie das Wetter): die fallenden Flocken und wie hoch die Schneedecke auf Boden und Straßen liegt. 0 hält den Schnee fern.
 
 set-audio-master = Gesamtlautstärke
 set-audio-master-desc = Lautstärke des gesamten Simulators.

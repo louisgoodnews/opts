@@ -221,6 +221,12 @@ pub fn hdr_enabled(settings: &GameSettings) -> bool {
 #[must_use]
 pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects {
     let on = |key: &str| settings.raw(key).as_deref() != Some("false");
+    let percent = |key: &str| {
+        settings
+            .raw(key)
+            .and_then(|v| v.trim().parse::<u16>().ok())
+            .map_or(100, |v| v.min(200))
+    };
     opts_bevy::WeatherEffects {
         fog: on("graphics.weather_fog"),
         clouds: on("graphics.weather_clouds"),
@@ -229,6 +235,8 @@ pub fn weather_effects_of(settings: &GameSettings) -> opts_bevy::WeatherEffects 
             .and_then(|q| opts_bevy::weather::PrecipitationQuality::parse(&q))
             .unwrap_or_default(),
         wet_ground: on("graphics.weather_wet_ground"),
+        rain_percent: percent("graphics.rain_intensity"),
+        snow_percent: percent("graphics.snow_intensity"),
     }
 }
 

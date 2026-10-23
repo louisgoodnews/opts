@@ -54,6 +54,10 @@ set-opt-precip-medium = Medium
 set-opt-precip-high = High
 set-weather-wet-ground = Weather: wet and snowy ground
 set-weather-wet-ground-desc = Darkens and smooths the ground and roads when it is wet, adds puddles and a snow cover. Off keeps them dry.
+set-rain-intensity = Rain intensity
+set-rain-intensity-desc = How strong rain is, in percent of what the weather says (100: as the weather): the drops that fall, how wet the ground and the roads are and how many puddles there are. 0 keeps the rain away, 200 is a downpour.
+set-snow-intensity = Snow intensity
+set-snow-intensity-desc = How strong snow is, in percent of what the weather says (100: as the weather): the flakes that fall and how deep the snow cover on the ground and the roads is. 0 keeps the snow away.
 
 set-audio-master = Master volume
 set-audio-master-desc = Overall volume of the simulator.
