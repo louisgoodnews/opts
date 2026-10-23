@@ -89,6 +89,9 @@ pub fn update_ai_variables(
     }
 }
 
+/// A scheduled vehicle follows its run farther than ordinary traffic stays (m), so a bus the
+/// player watched drive off does not vanish at the edge of the traffic disc.
+const SCHEDULED_DESPAWN_M: f32 = 700.0;
 /// A scheduled vehicle is removed this long (s) after arriving at the last stop of its run ...
 const RETIRE_AFTER_S: f64 = 8.0;
 /// ... if it is at least this far (m) from the camera; nearer, it drives on and leaves like any
@@ -201,7 +204,12 @@ pub fn move_traffic(
         let origin = rear - dir * f64::from(v.rear_axle_y);
         let height = z as f32 + v.delta_height;
         let bevy = omsi_to_bevy_pos(Vec3::new(origin.x as f32, origin.y as f32, height));
-        if cam.is_some_and(|c| c.distance(bevy) > DESPAWN_M) {
+        let limit = if sched.run_of(v.id).is_some() {
+            SCHEDULED_DESPAWN_M
+        } else {
+            DESPAWN_M
+        };
+        if cam.is_some_and(|c| c.distance(bevy) > limit) {
             far.push(v.id);
             despawn_chain(&mut commands, entity, chain);
             continue;
