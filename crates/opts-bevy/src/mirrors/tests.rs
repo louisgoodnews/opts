@@ -338,7 +338,7 @@ fn vehicles_that_are_not_the_players_get_no_mirror_cameras() {
 
 #[test]
 fn mirrors_are_capped_and_a_removed_vehicle_takes_its_cameras_along() {
-    let many: Vec<Vec3> = (0..6)
+    let many: Vec<Vec3> = (0..MAX_CAMERAS + 2)
         .map(|i| Vec3::new(i as f32 * 0.5, 0.0, -2.0))
         .collect();
     let mut s = Scene::new(&many, true);

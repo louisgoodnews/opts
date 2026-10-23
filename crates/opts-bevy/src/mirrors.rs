@@ -6,9 +6,12 @@
 //!   convention for the pane of mirror `N` (the housing of the same unit has another texture, so
 //!   the pane is a separate part with only pane faces). AI and parked vehicles are never looked
 //!   at. A scan every [`SCAN_INTERVAL_S`] real seconds finds new panes (the vehicle's parts spawn
-//!   over several frames). Panes sharing one material form a **group** (the two slots of a side
-//!   mirror, or the alternative mirror variants of a model, only one of which is visible); a group
-//!   gets one camera, at most [`MAX_CAMERAS`] groups.
+//!   over several frames). Panes of one `reflexion<N>.bmp` number form a **group** ([`GroupKey`]: the
+//!   main and the wide-angle pane of a side mirror have different pooled materials, and the
+//!   alternative mirror variants of a model, only one of which is visible, are more panes of the
+//!   same number); a pane without a number groups by its material. A group gets one camera, at
+//!   most [`MAX_CAMERAS`] groups. (Grouping by material alone once let the hidden variants use up
+//!   the cameras, and the visible left mirror kept the static picture.)
 //! * **One camera per group**, a `Camera3d` rendering into a [`MirrorSettings::size`] image
 //!   (8-bit; the camera carries `Hdr` like the main camera). The pose is the viewer-ray
 //!   reflection of [`mirror_camera_pose`]: the camera sits just in front of the visible members'
@@ -48,7 +51,7 @@ use crate::vehicle_sim::PlayerVehicle;
 use crate::MainCamera;
 
 /// Most mirror groups (cameras) that exist; at most two render at a time.
-pub const MAX_CAMERAS: usize = 6;
+pub const MAX_CAMERAS: usize = 8;
 /// Real seconds between two scans of the player vehicle for mirror panes.
 pub const SCAN_INTERVAL_S: f64 = 1.0;
 /// Distance of the camera in front of the pane (m).
@@ -156,6 +159,25 @@ pub struct MirrorStats {
     pub rendering: usize,
 }
 
+/// What panes share a camera: the panes of one `reflexion<N>.bmp` number (the main and the
+/// wide-angle pane of a side mirror have different pooled materials but one `.bus` camera), or,
+/// for a pane whose number is unknown, the panes of one pooled material.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GroupKey {
+    /// Mirror number `N` of `reflexion<N>.bmp`.
+    Index(u32),
+    /// A pooled material without a number.
+    Material(AssetId<StandardMaterial>),
+}
+
+impl GroupKey {
+    /// The group of the pane material `id`.
+    #[must_use]
+    pub fn of(id: AssetId<StandardMaterial>) -> Self {
+        mirror_index(id).map_or(Self::Material(id), Self::Index)
+    }
+}
+
 /// One pane mesh of a mirror group.
 #[derive(Debug, Clone)]
 pub struct MirrorMember {
@@ -169,6 +191,8 @@ pub struct MirrorMember {
     pub height: f32,
     /// Width over height of the pane.
     pub aspect: f32,
+    /// The pane's own (static, pooled) material, which comes back when the group is not live.
+    pub original: Handle<StandardMaterial>,
 }
 
 /// A mirror camera (one per group of panes that share a material).
@@ -176,9 +200,9 @@ pub struct MirrorMember {
 pub struct MirrorCamera {
     /// The player vehicle it belongs to.
     pub vehicle: Entity,
-    /// The shared (pooled) material of the group.
-    pub material: AssetId<StandardMaterial>,
-    /// The static (original, pooled) material.
+    /// What the panes of the group have in common.
+    pub key: GroupKey,
+    /// The static (pooled) material the live picture's material is made from.
     pub original: Handle<StandardMaterial>,
     /// The private copy that shows the camera's picture.
     pub dynamic: Handle<StandardMaterial>,

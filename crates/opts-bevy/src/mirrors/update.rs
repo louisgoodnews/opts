@@ -45,7 +45,7 @@ pub fn update_mirror_cameras(
         if gone {
             for m in &info.members {
                 if let Ok(mut e) = commands.get_entity(m.entity) {
-                    e.insert(MeshMaterial3d(info.original.clone()))
+                    e.insert(MeshMaterial3d(m.original.clone()))
                         .remove::<MirrorSurface>();
                 }
             }
@@ -181,12 +181,12 @@ pub fn update_mirror_cameras(
             info.enlarged = streams;
         }
         // The picture shown on the panes: live when selected, the static texture otherwise.
-        let target = if rank.is_some() {
-            &info.dynamic
-        } else {
-            &info.original
-        };
         for m in &info.members {
+            let target = if rank.is_some() {
+                &info.dynamic
+            } else {
+                &m.original
+            };
             if let Ok(mut material) = materials_of.get_mut(m.entity) {
                 if material.0 != *target {
                     material.0 = target.clone();
