@@ -155,6 +155,8 @@ pub struct ContentCache {
     /// images and builds a new mip chain (tens of milliseconds); every vehicle of a model family
     /// uses the same pairs, so it is done once.
     pub(crate) composed: HashMap<ComposedKey, ComposedImages>,
+    /// The glass pass of a blended body texture, by source image (`None`: not mostly opaque).
+    pub(crate) glass_split: HashMap<bevy::asset::AssetId<Image>, Option<Handle<Image>>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
     /// `[crossing_heightdeformation]` base surfaces by file.
     pub(crate) bases: HashMap<PathBuf, Option<std::sync::Arc<BaseSurface>>>,

@@ -357,13 +357,19 @@ impl ContentLoader<'_> {
                     && over.is_some_and(|o| o.alpha == Some(2) && o.trans_map.is_none())
                 {
                     let _t = opts_logging::stream_trace::span("o3d.body_glass_split");
-                    if let Some(decoded) = tex
-                        .as_ref()
-                        .and_then(|h| self.images.get(h))
-                        .and_then(crate::texture::decode_to_rgba8)
-                    {
-                        glass_tex =
-                            super::overrides::transmap_glass(&decoded).map(|g| self.images.add(g));
+                    if let Some(source) = tex.clone() {
+                        glass_tex = if let Some(done) = self.cache.glass_split.get(&source.id()) {
+                            done.clone()
+                        } else {
+                            let made = self
+                                .images
+                                .get(&source)
+                                .and_then(crate::texture::decode_to_rgba8)
+                                .and_then(|decoded| super::overrides::transmap_glass(&decoded))
+                                .map(|g| self.images.add(g));
+                            self.cache.glass_split.insert(source.id(), made.clone());
+                            made
+                        };
                     }
                 }
                 if !crate::material::uses_texture_alpha(over.and_then(|o| o.alpha))
