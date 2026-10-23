@@ -17,6 +17,7 @@ pub mod control_environment;
 pub mod control_hotspots;
 pub mod control_loading;
 pub mod control_profiles;
+pub mod control_rail;
 pub mod control_route;
 pub mod control_save;
 pub mod control_scheduled;

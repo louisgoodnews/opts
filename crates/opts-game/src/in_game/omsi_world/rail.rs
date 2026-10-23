@@ -276,15 +276,6 @@ pub fn is_rail(manifest: &BusManifest) -> bool {
     manifest.vehicle_type == Some(2)
 }
 
-/// What the rail step reads and writes of the player's vehicle.
-type RailBody = (
-    &'static mut VehicleController,
-    &'static mut RailPlayer,
-    Option<&'static opts_bevy::RailControls>,
-    Option<&'static opts_bevy::ActiveCab>,
-    Option<&'static opts_bevy::ScriptConsist>,
-);
-
 /// Holds the player's tram on the track and runs its longitudinal dynamics (fixed step, after the
 /// road physics, before the articulation of the following units).
 pub fn rail_player_step(
@@ -570,6 +561,10 @@ pub fn rail_player_pose(
 
 mod composition;
 pub use composition::{Part, VehicleComposition};
+mod body;
+use body::RailBody;
+mod switch;
+pub use switch::{points_ahead, switch_hint_system, way_by_id, way_id};
 
 // --- AI trains ---------------------------------------------------------------------------------
 

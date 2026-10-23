@@ -142,3 +142,14 @@ presses `kw_s_R` (deactivate), 0.3 s later the new one `kw_s_N` (claim), 1.2 s a
 `automatic_D` (drive). Keys, the direction switch and the cockpit camera then belong to the new
 cab, and driven from a cab at the far end the consist moves back along its track. Checked on the
 NF6D: from B the tram accelerated to 27 km/h backwards along the track, and back in A it drove on.
+
+## Points (M-0113, first slice)
+
+The way over the points ahead is the `branch` of the train, decided when it passes them, so a
+switch can never change under a vehicle. A scheduled train gets its ways from its route
+(`Train::route`, `PedestrianNet::shortest_path`); the player chooses with `rail_branch_*` and
+`rail_switch_toggle`. The HUD announces points within 120 m in the alert slot (distance and way),
+and again when the way changes; `rail.switch` reads the points ahead (distance, ways, chosen)
+and, with `way`, chooses the way. Not done: switch data from the tiles (the ways are the
+geometric continuations of the track lanes), switch animation, waiting before points that are not
+set, a census of the corpus.

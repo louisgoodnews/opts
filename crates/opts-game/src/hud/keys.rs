@@ -152,6 +152,12 @@ keys! {
     ALERT_VIEWPOINT_SAVED = "hud-alert-viewpoint-saved",
     /// Alert: the viewpoint could not be written.
     ALERT_VIEWPOINT_FAILED = "hud-alert-viewpoint-failed",
+    /// Alert: points ahead of a rail vehicle, the way is straight on (`distance`).
+    ALERT_SWITCH_STRAIGHT = "hud-alert-switch-straight",
+    /// Alert: points ahead, the way is to the left (`distance`).
+    ALERT_SWITCH_LEFT = "hud-alert-switch-left",
+    /// Alert: points ahead, the way is to the right (`distance`).
+    ALERT_SWITCH_RIGHT = "hud-alert-switch-right",
     /// Viewpoint editor: title.
     VIEWPOINT_TITLE = "hud-viewpoint-title",
     /// Viewpoint editor: the vehicle's view being edited (`index`, `total`).

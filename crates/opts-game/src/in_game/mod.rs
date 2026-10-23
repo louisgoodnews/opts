@@ -243,8 +243,10 @@ impl Plugin for InGamePlugin {
         );
         app.add_systems(
             Update,
-            omsi_world::step_rail_scripts
-                .after(omsi_world::move_ai_trains)
+            (
+                omsi_world::step_rail_scripts.after(omsi_world::move_ai_trains),
+                omsi_world::switch_hint_system,
+            )
                 .run_if(in_state(AppState::InGame)),
         );
 

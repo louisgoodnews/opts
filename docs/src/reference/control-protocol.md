@@ -927,6 +927,7 @@ Only files with a metadata sidecar and burst or recording directories with a `ma
 | [`bus.timetables`](#bustimetables) | `line?` (string)<br>`tour?` (integer)<br>`limit?` (integer)<br>`all?` (boolean) | 1.13 | List the map's timetables: line files, their tours and the runs of a tour |
 | [`bus.set_timetable`](#busset_timetable) | `line?` (string)<br>`tour?` (integer)<br>`run?` (integer)<br>`stops?` (integer)<br>`clear?` (boolean) | 1.13 | Follow a run of the map's timetable: its stops and times answer the vehicle's timetable callbacks, the depot's matching route is keyed on the IBIS |
 | [`bus.set_stop`](#busset_stop) | `index` (integer) | 1.13 | Set the stop of the route or timetable the vehicle is at (0-based) |
+| [`rail.switch`](#railswitch) | `way?` (string = straight \| left \| right) | 1.28 | The points ahead of the player's rail vehicle and the way it takes; with `way` choose it |
 | [`traffic.scheduled`](#trafficscheduled) | - | 1.27 | The timetable runs on the road, the vehicles that drive them and their punctuality |
 | [`vehicle.click`](#vehicleclick) | `name` (string)<br>`frames?` (integer)<br>`hold_ms?` (integer) | 1.20 | Operate a cockpit hot-spot like a player: press, drag, hold, release |
 
@@ -1101,6 +1102,14 @@ Set the stop of the route or timetable the vehicle is at (0-based).
 **Result:** `{stop_index, stop_count}`
 
 What `GetTTBusstopIndex` answers and which stop the delay is measured at. While a timetable is followed the game advances the stop itself when the bus stands at the next stop; this sets it by hand. `-32602` beyond the stops of the selected route or timetable.
+
+### `rail.switch`
+
+The points ahead of the player's rail vehicle and the way it takes; with `way` choose it.
+
+**Result:** `{placed, ahead: {distance_m, ways, chosen} or null}`
+
+The points within 150 m ahead of the player's rail vehicle: the distance, the ways they open (`straight` first) and the way the vehicle takes (its choice when the points offer it, else `straight`). `way` chooses the way for the next points, as the `rail_branch_*` actions do. The way is decided at the moment the vehicle passes the points, so a switch never changes under a vehicle. `1001` when the player has no rail vehicle; `placed` is false while it is not yet on a track. M-0113.
 
 ### `traffic.scheduled`
 
