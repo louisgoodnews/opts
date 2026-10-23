@@ -7,6 +7,7 @@
 mod about;
 mod controls;
 mod overlay;
+pub mod scroll;
 pub mod vehicle_controls;
 
 use bevy::prelude::*;
@@ -106,7 +107,8 @@ impl Plugin for HelpPlugin {
             )
             .add_systems(
                 Update,
-                (f1_opens_help, overlay::overlay_actions).run_if(not(in_state(AppState::Loading))),
+                (f1_opens_help, overlay::overlay_actions, scroll::scroll_help)
+                    .run_if(not(in_state(AppState::Loading))),
             );
     }
 }
@@ -182,6 +184,7 @@ fn spawn_help(
                 ..default()
             },
             HelpPane,
+            scroll::HelpScroll,
         ));
     });
 }

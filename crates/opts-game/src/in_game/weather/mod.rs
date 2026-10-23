@@ -12,6 +12,7 @@ use crate::app_state::AppState;
 pub mod clouds;
 pub mod fog;
 pub mod precip;
+pub mod puddles;
 pub mod surfaces;
 
 /// Seconds between attempts to read the install's `Weather` folder (until it was read).
@@ -53,6 +54,7 @@ impl Plugin for WeatherPlugin {
             .init_resource::<opts_bevy::reflections::Wetness>()
             .init_resource::<clouds::CloudState>()
             .init_resource::<precip::PrecipState>()
+            .init_resource::<puddles::PuddleState>()
             .add_systems(Update, refresh_weather_catalogue.before(EnvironmentSet))
             .add_systems(
                 Update,
@@ -67,6 +69,7 @@ impl Plugin for WeatherPlugin {
                     fog::update_fog.after(fog::measure_fog_view),
                     clouds::update_clouds,
                     precip::update_precipitation,
+                    puddles::update_puddles.after(surfaces::drive_wetness),
                     (surfaces::drive_wetness, surfaces::update_surfaces).chain(),
                 )
                     .after(EnvironmentSet)

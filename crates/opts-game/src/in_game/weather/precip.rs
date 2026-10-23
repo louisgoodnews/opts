@@ -144,7 +144,7 @@ pub fn flake_corners(p: Vec3, plan: &PrecipPlan, right: Vec3, up: Vec3) -> [Vec3
     [p - r - u, p + r - u, p + r + u, p - r + u]
 }
 
-fn texture(width: u32, height: u32, alpha: impl Fn(f32, f32) -> f32) -> Image {
+pub(super) fn texture(width: u32, height: u32, alpha: impl Fn(f32, f32) -> f32) -> Image {
     let mut data = Vec::with_capacity((width * height * 4) as usize);
     for y in 0..height {
         for x in 0..width {
@@ -221,7 +221,10 @@ pub fn update_precipitation(
     mut layer: Query<(&mut Visibility, &mut MeshMaterial3d<StandardMaterial>), With<PrecipLayer>>,
     mut commands: Commands,
 ) {
-    let plan = precip_plan(env.conditions(), effects.precipitation.budget());
+    let plan = precip_plan(
+        &effects.scaled(env.conditions()),
+        effects.precipitation.budget(),
+    );
     let Some(plan) = plan else {
         state.kind = None;
         for (mut v, _) in &mut layer {

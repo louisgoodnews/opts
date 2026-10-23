@@ -89,6 +89,9 @@ const REVIEWED: &[&str] = &[
     // opts-gui widgets: pointer input is blocked by the modal backdrop; keyboard focus is trapped.
     // Tram route choice (Z/X/C) ignores keys while a modal is up; the menu toggle checks the modals itself.
     "opts-game/src/in_game/omsi_world/rail.rs",
+    // The wheel and the page keys scroll the Help lists; Help is a modal itself and is open while
+    // `ModalActive` is set, so the system cannot be gated on `not_modal_active`.
+    "opts-game/src/help/scroll.rs",
     "opts-game/src/in_game/vehicle_menu.rs",
     // Split out of `vehicle_menu.rs`: the search keys and the route page read input under the
     // same rule (the open menu holds `MenuModalActive`, which gates driving and camera input).

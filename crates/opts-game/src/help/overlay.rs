@@ -59,9 +59,11 @@ fn spawn_overlay(commands: &mut Commands) {
             flex_direction: FlexDirection::Column,
             row_gap: Val::Px(6.0),
             flex_grow: 1.0,
+            min_height: Val::Px(0.0),
             overflow: Overflow::scroll_y(),
             ..default()
         })
+        .insert(super::scroll::HelpScroll)
         .with_children(spawn_controls);
         c.spawn(Node {
             column_gap: Val::Px(12.0),

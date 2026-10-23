@@ -158,6 +158,36 @@ pub(super) fn graphics() -> Vec<D> {
         .keywords(&["weather", "wet", "puddles", "snow cover", "road"])
         .since("0.3"),
         D::new(
+            "graphics.rain_intensity",
+            K::Int {
+                min: 0,
+                max: 200,
+                step: 10,
+            },
+            "100",
+            C::Graphics,
+            79,
+            "set-rain-intensity",
+            "set-rain-intensity-desc",
+        )
+        .keywords(&["weather", "rain", "drops", "wet", "puddles", "intensity"])
+        .since("0.5"),
+        D::new(
+            "graphics.snow_intensity",
+            K::Int {
+                min: 0,
+                max: 200,
+                step: 10,
+            },
+            "100",
+            C::Graphics,
+            80,
+            "set-snow-intensity",
+            "set-snow-intensity-desc",
+        )
+        .keywords(&["weather", "snow", "flakes", "cover", "intensity"])
+        .since("0.5"),
+        D::new(
             "audio.master",
             K::Int {
                 min: 0,

@@ -304,6 +304,8 @@ const MAP_PROFILE_KEYS: &[&str] = &[
     "graphics.weather_clouds",
     "graphics.weather_precipitation",
     "graphics.weather_wet_ground",
+    "graphics.rain_intensity",
+    "graphics.snow_intensity",
     "graphics.light_quality_mode",
     "graphics.light_shafts",
     "graphics.light_night_shafts",

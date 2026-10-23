@@ -240,11 +240,12 @@ pub fn update_mirror_cameras(
 }
 
 /// Copies `Hdr` and `DistanceFog` from the main camera to the mirror cameras (the mirror picture
-/// is scene-linear: no tonemapper, no colour grading; the main camera applies its own once).
+/// is scene-linear: no tonemapper, no colour grading; the main camera applies its own once). A
+/// mirror that streams into a HUD panel takes the main camera's tone mapping too.
 #[allow(clippy::type_complexity)]
 pub fn sync_mirror_camera_look(
     main: Query<
-        (Has<Hdr>, Option<&DistanceFog>),
+        (Has<Hdr>, Option<&DistanceFog>, Option<&Tonemapping>),
         (
             With<MainCamera>,
             Without<MirrorCamera>,
@@ -252,16 +253,35 @@ pub fn sync_mirror_camera_look(
         ),
     >,
     mirrors: Query<
-        (Entity, Has<Hdr>, Option<&DistanceFog>),
+        (
+            Entity,
+            Has<Hdr>,
+            Option<&DistanceFog>,
+            Option<&Tonemapping>,
+            Option<&MirrorCamera>,
+        ),
         Or<(With<MirrorCamera>, With<AmbientCamera>)>,
     >,
     mut commands: Commands,
 ) {
-    let Some((hdr, fog)) = main.iter().next() else {
+    let Some((hdr, fog, tonemapping)) = main.iter().next() else {
         return;
     };
-    for (entity, has_hdr, has_fog) in &mirrors {
+    for (entity, has_hdr, has_fog, has_tonemapping, mirror) in &mirrors {
         let mut e = commands.entity(entity);
+        // A mirror that streams into a panel on the HUD shows its picture as it is (nothing tone-maps
+        // a UI image): it carries the main camera's display transform. The others stay
+        // scene-linear: the main camera tone-maps the pane they are drawn on.
+        let want = if mirror.is_some_and(|m| m.enlarged) {
+            tonemapping.copied()
+        } else {
+            Some(Tonemapping::None)
+        };
+        if let Some(t) = want {
+            if has_tonemapping != Some(&t) {
+                e.insert(t);
+            }
+        }
         if hdr && !has_hdr {
             e.insert(Hdr);
         } else if !hdr && has_hdr {
