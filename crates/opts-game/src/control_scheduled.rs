@@ -17,14 +17,16 @@ fn scheduled(world: &mut World, _params: &Value) -> Outcome {
         let Some(s) = world.get_resource::<ScheduledTraffic>() else {
             return Ok(json!({ "available": false }));
         };
-        let agents = world
-            .get_resource::<TrafficState>()
-            .map_or(0, |t| t.agent_count());
+        let traffic = world.get_resource::<TrafficState>();
+        let agents = traffic.map_or(0, |t| t.agent_count());
+        let behaviour = traffic.map(|t| t.stats()).unwrap_or_default();
         Ok(json!({
             "available": true,
             "runs_on_the_road": s.active_runs(),
             "vehicles": s.driving(),
             "traffic_agents": agents,
+            "hard_brakes": behaviour.hard_brakes,
+            "lane_change_aborts": behaviour.lane_change_aborts,
             "spawned": s.stats.spawned,
             "arrivals": s.stats.arrivals,
             "departures": s.stats.departures,

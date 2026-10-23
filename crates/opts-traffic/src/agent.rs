@@ -332,7 +332,21 @@ pub struct TrafficWorld {
     pub(crate) last_phantoms: usize,
     /// Seconds standing without a light ahead after which an agent counts as stuck.
     stuck_after_s: f64,
+    /// Counters for the behaviour audit ([`TrafficStats`]).
+    pub(crate) stats: TrafficStats,
 }
+
+/// Behaviour counters since the world was created (M-0111 audit).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TrafficStats {
+    /// Times an agent's deceleration first exceeded [`HARD_BRAKE`] (m/s²).
+    pub hard_brakes: u64,
+    /// Lane changes that were due but found no gap and were dropped.
+    pub lane_change_aborts: u64,
+}
+
+/// Deceleration (m/s², magnitude) above which a braking counts as hard.
+pub const HARD_BRAKE: f64 = 3.0;
 
 mod routing;
 
@@ -357,7 +371,14 @@ impl TrafficWorld {
             open_road_speed: crate::idm::OPEN_ROAD_SPEED,
             obstacles: Vec::new(),
             last_phantoms: 0,
+            stats: TrafficStats::default(),
         }
+    }
+
+    /// Behaviour counters since the world was created.
+    #[must_use]
+    pub fn stats(&self) -> TrafficStats {
+        self.stats
     }
 
     /// Sets the limit (m/s) assumed on lanes without a `speedlimit` rule (default 50 km/h).

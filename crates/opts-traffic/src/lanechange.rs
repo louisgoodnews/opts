@@ -120,6 +120,7 @@ impl TrafficWorld {
                         a.lc_due = None;
                         a.lc_side = None;
                         a.lc_cooldown_until = self.time + 3.0;
+                        self.stats.lane_change_aborts += 1;
                     }
                 }
                 continue;
