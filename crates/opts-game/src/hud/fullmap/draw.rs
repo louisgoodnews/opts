@@ -32,6 +32,7 @@ pub fn redraw(
     traffic: Option<Res<TrafficState>>,
     fixture: Option<Res<FixtureRoads>>,
     mut overview: ResMut<OverviewRoads>,
+    route: Res<super::super::route_path::PlayerRoutePath>,
 ) {
     overview.poll();
     state.since += time.delta_secs();
@@ -51,7 +52,7 @@ pub fn redraw(
     let screen = state.screen;
     let side = canvas_px(screen);
     let resized = canvas.0.as_ref().is_none_or(|c| c.size != side) || handle.0.is_none();
-    let view_changed = state.drawn_generation != overview.generation
+    let view_changed = state.drawn_generation != overview.generation + route.generation
         || state
             .drawn
             .as_ref()
@@ -143,10 +144,33 @@ pub fn redraw(
             active: *active,
         })
         .collect();
-    raster::render_with_unit(
+    let mut route_roads = Vec::new();
+    route_roads.extend(route.roads.iter().cloned());
+    let mut route_lines: Vec<MapLine> = Vec::new();
+    for road in &route_roads {
+        push_chords(road, viewport.centre, min_chord, &mut route_lines);
+    }
+    let route_stops: Vec<(Vec2, bool)> = route
+        .stops
+        .iter()
+        .map(|(p, n)| {
+            (
+                Vec2::new(
+                    (p.x - viewport.centre.x) as f32,
+                    (p.y - viewport.centre.y) as f32,
+                ),
+                *n,
+            )
+        })
+        .collect();
+    raster::render_routed(
         canvas,
         view,
         &lines,
+        super::super::minimap::MapRoute {
+            lines: &route_lines,
+            stops: &route_stops,
+        },
         &drawn_markers,
         &colors,
         MARKER_UNIT,
@@ -165,7 +189,7 @@ pub fn redraw(
     state.lines = lines.len();
     state.markers = drawn_markers.len();
     state.drawn = Some((viewport, markers));
-    state.drawn_generation = overview.generation;
+    state.drawn_generation = overview.generation + route.generation;
 }
 
 /// Leaves out what cannot be seen: chords shorter than a pixel, and a chord that another one

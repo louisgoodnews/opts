@@ -169,7 +169,7 @@ pub(super) const PART: &[CommandSpec] = &[
     )
     .since("1.13")
     .result("`{stop_index, stop_count}`")
-    .doc("What `GetTTBusstopIndex` answers and which stop the delay is measured at. The game does not detect bus stops by itself yet, so the stop is set here (or by a script test). `-32602` beyond the stops of the selected route or timetable."),
+    .doc("What `GetTTBusstopIndex` answers and which stop the delay is measured at. While a timetable is followed the game advances the stop itself when the bus stands at the next stop; this sets it by hand. `-32602` beyond the stops of the selected route or timetable."),
     c(
         "traffic.scheduled",
         "drive",

@@ -459,3 +459,33 @@ mod speed_zoom {
         assert_eq!(ZoomMode::default(), ZoomMode::Speed);
     }
 }
+
+#[test]
+fn the_route_is_drawn_over_the_roads_in_its_own_colour_with_its_stops() {
+    let colors = colors();
+    assert_ne!(colors.route, colors.road);
+    let mut canvas = Canvas::new(176, colors.ground);
+    let road = [line((-90.0, 0.0), (90.0, 0.0))];
+    let route_lines = [line((-90.0, 0.0), (0.0, 0.0))];
+    let stops = [(Vec2::new(-40.0, 0.0), true)];
+    raster::render_routed(
+        &mut canvas,
+        NORTH_UP,
+        &road,
+        MapRoute {
+            lines: &route_lines,
+            stops: &stops,
+        },
+        &[],
+        &colors,
+        1.0,
+        false,
+    );
+    let (x, y) = (canvas.size / 4, canvas.size / 2);
+    assert_eq!(canvas.get(x + 30, y)[..3], colors.route[..3]);
+    assert_eq!(
+        canvas.get(canvas.size * 3 / 4, y)[..3],
+        colors.road[..3],
+        "the road beyond the route keeps its colour"
+    );
+}

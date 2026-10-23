@@ -95,6 +95,12 @@ impl TrafficState {
         self.world.agents().len()
     }
 
+    /// The lane graph of the resident tiles.
+    #[must_use]
+    pub(crate) fn lane_graph(&self) -> &LaneGraph {
+        self.world.graph()
+    }
+
     /// Whether the lanes of tile `key` are in the graph (the tile is resident).
     #[must_use]
     pub(crate) fn has_tile(&self, key: (i32, i32)) -> bool {

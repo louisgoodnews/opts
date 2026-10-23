@@ -45,3 +45,13 @@ A followed run (`route.select_run`) advances by itself: when the player's vehicl
 stops of the run, `stop_index` moves to that stop (`route_progress.rs`). The delay is the session
 clock minus that stop's scheduled arrival and `GetTTStopIndex`/`GetTTDelay` answer from both. A
 HUD line for next stop and delay is still open.
+
+### The route on the maps
+
+The mini map and the large map draw the followed run in green: the road path from the current stop
+through the stops still ahead (up to 14) and a ring at each stop, larger at the next one
+(`hud/route_path.rs`, `PlayerRoutePath`). Stop positions come from the bus stop objects: those of
+the resident tiles at once, all others from the background reader of the large map's overview,
+which is started as soon as a timetable is followed. Between two stops the path follows the lane
+graph where both stops are on resident tiles; a leg whose tiles are not resident is drawn as a
+straight connector until the bus is near. Without a followed timetable nothing is drawn.
