@@ -17,8 +17,10 @@
 use opts_bevy::bus_stops::BusStopMarker;
 use opts_traffic::{AgentId, LaneId, StopPoint, TrafficEvent};
 
+mod path;
 use super::run_schedule::{active_runs, run_phase, RunPhase, RunRef};
 use super::*;
+use path::{graph_leg_speed, leg, place_along, walk_back};
 
 /// Most scheduled vehicles on the road at once.
 pub const MAX_SCHEDULED: usize = 24;
@@ -30,12 +32,16 @@ const HORIZON_S: f64 = 3.0 * 3600.0;
 const PLAN_EVERY_S: f32 = 1.0;
 /// Nearest (m) and farthest (m) from the camera a scheduled vehicle appears.
 const APPEAR_MIN_M: f64 = 40.0;
-const APPEAR_MAX_M: f64 = 280.0;
+const APPEAR_MAX_M: f64 = 450.0;
 /// Within this distance (m) of the camera a vehicle does not appear in its plain view.
 const VIEW_CLEAR_M: f64 = 150.0;
 /// How far a stop object may stand from the lane (m) and how much its heading may differ (rad).
 const LANE_REACH_M: f64 = 9.0;
 const LANE_HEADING_TOL: f64 = 0.65;
+/// A vehicle that comes from upstream of a loaded stop is put this far back (m/s times the seconds
+/// until its arrival, at least `UPSTREAM_MIN_M`).
+const UPSTREAM_MS: f64 = 10.0;
+const UPSTREAM_MIN_M: f64 = 40.0;
 /// Dwell limits (s) taken from `Busstops.cfg`.
 const DWELL_MIN_S: f64 = 15.0;
 const DWELL_MAX_S: f64 = 45.0;
@@ -251,37 +257,6 @@ struct StopObject {
     heading: f64,
 }
 
-/// Where the lane distance `d` along `route` (starting `s0` into its first lane) is: the lane
-/// index in the route and the position on it.
-pub(super) fn place_along(lengths: &[f64], s0: f64, d: f64) -> Option<(usize, f64)> {
-    let mut left = d + s0;
-    for (i, len) in lengths.iter().enumerate() {
-        if left <= *len || i + 1 == lengths.len() {
-            return Some((i, left.clamp(0.0, *len)));
-        }
-        left -= len;
-    }
-    None
-}
-
-/// The lanes from stop place `a` to stop place `b` (both included) and their lengths.
-fn leg(
-    graph: &opts_traffic::LaneGraph,
-    a: (LaneId, f64),
-    b: (LaneId, f64),
-) -> Option<(Vec<LaneId>, Vec<f64>)> {
-    let lanes = if a.0 == b.0 && b.1 >= a.1 {
-        vec![a.0]
-    } else {
-        graph.shortest_route(a.0, b.0)?
-    };
-    let lengths = lanes
-        .iter()
-        .map(|l| graph.lane(*l).map_or(0.0, |l| l.length()))
-        .collect();
-    Some((lanes, lengths))
-}
-
 /// Plans the next scheduled vehicle.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn plan_scheduled(
@@ -367,8 +342,24 @@ pub fn plan_scheduled(
             })
             .map(|(lane, s, _)| (lane, s))
     };
-    let candidates = sched.active.clone();
+    let mut candidates = sched.active.clone();
+    // The runs nearest to the player first: a bus the player can see beats one at the edge.
+    let near = |run: &(RunRef, opts_core::formats::timetable::ActiveSchedule)| -> f64 {
+        let idx = match run_phase(&run.1, now) {
+            RunPhase::Between { from, .. } => from + 1,
+            RunPhase::AtStop { index } => index,
+            _ => 0,
+        };
+        run.1
+            .stops
+            .get(idx)
+            .and_then(|s| stops.get(&s.station_id))
+            .map_or(f64::MAX, |o| o.pos.distance(centre))
+    };
+    candidates.sort_by(|a, b| near(a).total_cmp(&near(b)));
+    let mut seen = [0_u32; 4];
     for (run, schedule) in candidates {
+        seen[0] += 1;
         if sched.rail_runs.contains(&run) {
             continue;
         }
@@ -383,17 +374,17 @@ pub fn plan_scheduled(
             RunPhase::Between { from, fraction } => (from, Some(fraction)),
             _ => continue,
         };
-        let Some(a) = schedule
+        seen[1] += 1;
+        let a = schedule
             .stops
             .get(first_stop)
-            .and_then(|s| place(s.station_id))
-        else {
-            continue;
-        };
-        // Where the vehicle is placed: at the stop, or on the way to the next one.
-        let (spawn_lane, spawn_s, route_from) = match offset {
-            None => (a.0, a.1, vec![]),
-            Some(fraction) => {
+            .and_then(|s| place(s.station_id));
+        // Where the vehicle is placed: at the stop, or on the way to the next one; when the stop
+        // it comes from is not on loaded lanes but the next one is, it comes from upstream of that.
+        let (spawn_lane, spawn_s, route_from) = match (offset, a) {
+            (None, Some(a)) => (a.0, a.1, vec![]),
+            (None, None) => continue,
+            (Some(fraction), a) => {
                 let Some(b) = schedule
                     .stops
                     .get(first_stop + 1)
@@ -401,18 +392,33 @@ pub fn plan_scheduled(
                 else {
                     continue;
                 };
-                let Some((lanes, lengths)) = leg(graph, a, b) else {
-                    continue;
-                };
-                let total: f64 = lengths.iter().sum::<f64>()
-                    - a.1
-                    - (lengths.last().copied().unwrap_or(0.0) - b.1);
-                let Some((i, s)) = place_along(&lengths, a.1, fraction * total.max(0.0)) else {
-                    continue;
-                };
-                (lanes[i], s, Vec::new())
+                match a {
+                    Some(a) => {
+                        let Some((lanes, lengths)) = leg(graph, a, b) else {
+                            continue;
+                        };
+                        let total: f64 = lengths.iter().sum::<f64>()
+                            - a.1
+                            - (lengths.last().copied().unwrap_or(0.0) - b.1);
+                        let Some((i, s)) = place_along(&lengths, a.1, fraction * total.max(0.0))
+                        else {
+                            continue;
+                        };
+                        (lanes[i], s, Vec::new())
+                    }
+                    None => {
+                        let due = schedule.stops[first_stop + 1].arrival_s;
+                        let back = ((f64::from(due) - now).max(0.0) * UPSTREAM_MS)
+                            .clamp(UPSTREAM_MIN_M, APPEAR_MAX_M);
+                        let Some((lane, s)) = walk_back(graph, b.0, b.1, back) else {
+                            continue;
+                        };
+                        (lane, s, Vec::new())
+                    }
+                }
             }
         };
+        seen[2] += 1;
         let Some(lane) = graph.lane(spawn_lane) else {
             continue;
         };
@@ -424,6 +430,7 @@ pub fn plan_scheduled(
         {
             continue;
         }
+        seen[3] += 1;
         // The route and the stops through everything that is on the loaded map.
         let mut route = route_from;
         let mut points = Vec::new();
@@ -530,15 +537,13 @@ pub fn plan_scheduled(
         });
         return;
     }
-}
-
-/// A plausible cruising speed (m/s) for a leg that takes `secs`: the vehicle will adapt.
-fn graph_leg_speed(secs: f64) -> f64 {
-    if secs < 30.0 {
-        4.0
-    } else {
-        9.0
-    }
+    tracing::debug!(
+        candidates = seen[0],
+        started = seen[1],
+        placed = seen[2],
+        in_range = seen[3],
+        "scheduled buses: none placed this pass"
+    );
 }
 
 #[cfg(test)]

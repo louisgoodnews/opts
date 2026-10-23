@@ -179,8 +179,9 @@ pub fn spawn_vehicle_model(
         .first()
         .into_iter()
         .flat_map(|lod| lod.meshes.iter().flat_map(|m| m.spotlights.iter()));
+    let front_y = headlight_front_y(model);
     for (i, spot) in model.spotlights.iter().chain(mesh_spots).enumerate() {
-        spawn_spotlight_child(commands, parent, i, spot);
+        spawn_spotlight_child(commands, parent, i, spot, front_y);
     }
 
     // 4. Light effects (`[light_enh]`, `[light_enh_2]`) as glow sprites under the root. When the
@@ -237,8 +238,40 @@ fn spawn_interior_light_child(
     commands.entity(parent).add_children(&[child]);
 }
 
-fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, spot: &Spotlight) {
-    let pos_bevy = omsi_to_bevy_pos(spot.pos);
+/// Where the headlights of a model are along the vehicle (OMSI +y): the front-most forward-facing
+/// white `[light_enh_2]`; `None` when the model has none.
+#[must_use]
+fn headlight_front_y(model: &ModelConfig) -> Option<f32> {
+    crate::vehicle_glow::detail_lights(model)
+        .filter(|l| crate::vehicle_glow::is_headlight(l))
+        .map(|l| l.position.y)
+        .reduce(f32::max)
+}
+
+/// The place a `[spotlight]` shines from. Some models (the MAN Lion's City) put the emitters of
+/// the beams 3 m behind the front, inside the body behind the driver's cabin: OMSI does not mind
+/// (nothing casts shadows there), but here the beam's shadow map fills the passenger area with hard
+/// shadows and a flooded floor. A forward-pointing emitter behind the headlights is moved forward
+/// to them.
+#[must_use]
+fn spot_emitter(spot: &Spotlight, front_y: Option<f32>) -> Vec3 {
+    let mut pos = spot.pos;
+    if let Some(front) = front_y {
+        if spot.dir.y > 0.5 && pos.y < front - 0.5 {
+            pos.y = front;
+        }
+    }
+    pos
+}
+
+fn spawn_spotlight_child(
+    commands: &mut Commands,
+    parent: Entity,
+    index: usize,
+    spot: &Spotlight,
+    front_y: Option<f32>,
+) {
+    let pos_bevy = omsi_to_bevy_pos(spot_emitter(spot, front_y));
     let dir_bevy = omsi_to_bevy_pos(spot.dir).normalize_or_zero();
     let rotation = if dir_bevy.length_squared() > 1e-4 {
         Quat::from_rotation_arc(Vec3::NEG_Z, dir_bevy)
@@ -286,4 +319,29 @@ fn spawn_spotlight_child(commands: &mut Commands, parent: Entity, index: usize, 
     );
 
     commands.entity(parent).add_children(&[child]);
+}
+
+#[cfg(test)]
+mod emitter_tests {
+    use super::*;
+
+    fn spot(y: f32, dir_y: f32) -> Spotlight {
+        Spotlight {
+            pos: Vec3::new(0.0, y, 1.1),
+            dir: Vec3::new(0.0, dir_y, -0.3),
+            color_rgb: [255; 3],
+            range: 100.0,
+            inner_cone: 0.0,
+            outer_cone: 30.0,
+        }
+    }
+
+    #[test]
+    fn a_forward_emitter_inside_the_body_moves_to_the_headlights() {
+        assert_eq!(spot_emitter(&spot(2.5, 1.0), Some(5.9)).y, 5.9);
+        // At the front already, pointing backwards, or without headlights: unchanged.
+        assert_eq!(spot_emitter(&spot(5.8, 1.0), Some(5.9)).y, 5.8);
+        assert_eq!(spot_emitter(&spot(2.5, -1.0), Some(5.9)).y, 2.5);
+        assert_eq!(spot_emitter(&spot(2.5, 1.0), None).y, 2.5);
+    }
 }

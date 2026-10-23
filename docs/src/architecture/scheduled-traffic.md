@@ -119,3 +119,15 @@ While a timetable is followed, the clock pill of the status bar adds the line, t
 its scheduled arrival and the delay (`Time 12:00:50 | Weather: … | Line S8: next Listau S Gl. 4
 5:30 (+0:14)`), and the status bar stays visible instead of fading. The delay is the one when the
 vehicle came to its current stop (the live value keeps growing while it drives on).
+
+## Where scheduled buses appear
+
+A pass looks at the runs in order of their distance to the player (the stop they are at or head
+for), so a bus the player can see wins over one at the edge. A bus appears 40 to 450 m from the
+camera, not in plain view within 150 m. A run between two stops of which only the next is on
+loaded lanes starts upstream of that stop (the lane predecessors, as far back as ten metres per
+second of the time to its arrival, at least 40 m). A scheduled bus is removed only 700 m from the
+camera (ordinary traffic: 320 m), so a bus that drives off does not vanish at the edge of the
+traffic disc. `RUST_LOG`-style debug logging (`--log-level debug`) prints, once per pass without a
+spawn, how many runs there were, how many had started, how many had their stops on loaded lanes
+and how many were in range.
