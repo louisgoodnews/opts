@@ -46,6 +46,7 @@ pub mod passengers;
 pub mod pause;
 pub mod player_sound;
 pub mod report_context;
+pub mod route_progress;
 pub mod save;
 pub mod scenery_sound;
 pub mod session_summary;
@@ -133,6 +134,7 @@ impl Plugin for OptsGamePlugin {
             .add_plugins(ui_typography::UiTypographyPlugin)
             .add_plugins(opts_bevy::door_camera::DoorCameraPlugin)
             .add_plugins(passengers::PassengersPlugin)
+            .add_plugins(route_progress::RouteProgressPlugin)
             .add_plugins(in_game::weather::WeatherPlugin)
             .add_plugins(scenery_sound::SceneryAudioPlugin)
             .add_plugins(vehicle_sound::AiAudioPlugin)
