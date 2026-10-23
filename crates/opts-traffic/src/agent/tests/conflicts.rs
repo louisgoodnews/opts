@@ -360,3 +360,25 @@ fn a_released_vehicle_still_waits_for_one_that_is_driving_through_the_zone() {
         "the released vehicle touched the one in the zone: {min} m"
     );
 }
+
+#[test]
+fn the_rowdier_the_driver_the_more_yellow_lights_are_passed() {
+    // Yellow for 6 s, then red; the car is 50 m before the line at 14 m/s (3.6 s to the line).
+    let passes = |rowdy: f64| {
+        let mut w = light_world(SignalProgram::new(vec![(9, 6.0), (0, 60.0)], 0.0).unwrap());
+        let params = IdmParams {
+            rowdy,
+            ..IdmParams::default()
+        };
+        let id = w.spawn(LaneId(0), 50.0, 14.0, params).unwrap();
+        for _ in 0..50 {
+            w.step(0.1);
+        }
+        w.agent(id).is_none_or(|a| a.lane == LaneId(1))
+    };
+    assert!(
+        !passes(0.0),
+        "a careful driver stops for a yellow he can stop for"
+    );
+    assert!(passes(1.0), "the rowdiest driver passes it");
+}

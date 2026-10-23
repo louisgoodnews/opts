@@ -291,3 +291,39 @@ fn the_indicator_of_a_crossing_path_wins_over_the_turn_heuristic() {
     let id = w.spawn(LaneId(0), 80.0, 5.0, IdmParams::default()).unwrap();
     assert_eq!(w.command(id).unwrap().blinker, Blinker::Off);
 }
+
+#[test]
+fn a_fork_is_taken_on_the_lane_that_is_not_closed_to_the_cars_group() {
+    // Lane 0 ends in a fork: lane 1 is closed to density group 0 (a bus lane), lane 2 is open.
+    let mut closed = LaneSegment::straight(DVec2::new(0.0, 100.0), 0.1, 200.0, LaneKind::Road);
+    closed.rules.density.set(0, 0.0);
+    let open = LaneSegment::straight(DVec2::new(0.0, 100.0), -0.1, 200.0, LaneKind::Road);
+    let mut w = world(&[straight(0.0, 100.0), closed, open]);
+    assert_eq!(
+        w.graph().successors(LaneId(0)).len(),
+        2,
+        "the fork is connected"
+    );
+    let cars: Vec<_> = (0..8)
+        .map(|i| {
+            w.spawn(
+                LaneId(0),
+                5.0 + f64::from(i) * 11.0,
+                10.0,
+                IdmParams::default(),
+            )
+            .unwrap()
+        })
+        .collect();
+    for _ in 0..200 {
+        w.step(0.1);
+    }
+    let mut on_open = 0;
+    for id in cars {
+        if let Some(a) = w.agent(id) {
+            assert_ne!(a.lane, LaneId(1), "a car took the lane closed to its group");
+            on_open += usize::from(a.lane == LaneId(2));
+        }
+    }
+    assert!(on_open >= 4, "only {on_open} cars reached the open lane");
+}
