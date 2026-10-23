@@ -171,6 +171,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .result("`{stop_index, stop_count}`")
     .doc("What `GetTTBusstopIndex` answers and which stop the delay is measured at. While a timetable is followed the game advances the stop itself when the bus stands at the next stop; this sets it by hand. `-32602` beyond the stops of the selected route or timetable."),
     c(
+        "rail.switch",
+        "drive",
+        "The points ahead of the player's rail vehicle and the way it takes; with `way` choose it",
+        "way:s[straight|left|right]?",
+    )
+    .since("1.28")
+    .result("`{placed, ahead: {distance_m, ways, chosen} or null}`")
+    .doc("The points within 150 m ahead of the player's rail vehicle: the distance, the ways they open (`straight` first) and the way the vehicle takes (its choice when the points offer it, else `straight`). `way` chooses the way for the next points, as the `rail_branch_*` actions do. The way is decided at the moment the vehicle passes the points, so a switch never changes under a vehicle. `1001` when the player has no rail vehicle; `placed` is false while it is not yet on a track. M-0113."),
+    c(
         "traffic.scheduled",
         "drive",
         "The timetable runs on the road, the vehicles that drive them and their punctuality",

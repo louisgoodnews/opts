@@ -62,6 +62,7 @@ impl Plugin for GameControlPlugin {
         crate::control_dynamics::register(&mut registry);
         crate::control_route::register(&mut registry);
         crate::control_scheduled::register(&mut registry);
+        crate::control_rail::register(&mut registry);
         crate::control_profiles::register(&mut registry);
         crate::control_trace::add_overlay(app);
         app.add_systems(Update, allow_session_reads);
