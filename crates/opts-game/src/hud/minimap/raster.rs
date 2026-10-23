@@ -65,6 +65,8 @@ pub struct MapRoute<'a> {
     pub lines: &'a [MapLine],
     /// The stops of the run still ahead.
     pub stops: &'a [(Vec2, bool)],
+    /// The scheduled vehicles on the road: position and compass heading.
+    pub vehicles: &'a [(Vec2, f32)],
 }
 
 /// The buffer: `size * size` RGBA8 pixels, row 0 on top.
@@ -343,6 +345,11 @@ pub fn render_routed(
     for l in route.lines {
         let (a, b) = (proj.point(l.a), proj.point(l.b));
         draw_line(canvas, a, b, 3.4 * unit.max(0.75), colors.route);
+    }
+    for (p, h) in route.vehicles {
+        let t = arrow(proj.point(*p), *h - view.up_heading, 6.0 * unit);
+        fill_triangle(canvas, t, colors.ground, 2.0 * unit);
+        fill_triangle(canvas, t, colors.route, 0.0);
     }
     for (p, next) in route.stops {
         let c = proj.point(*p);

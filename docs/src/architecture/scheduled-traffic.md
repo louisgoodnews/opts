@@ -55,3 +55,22 @@ the resident tiles at once, all others from the background reader of the large m
 which is started as soon as a timetable is followed. Between two stops the path follows the lane
 graph where both stops are on resident tiles; a leg whose tiles are not resident is drawn as a
 straight connector until the bus is near. Without a followed timetable nothing is drawn.
+
+## Scheduled vehicles on the maps
+
+Both maps draw each scheduled vehicle as a small filled green arrow (the route's colour), apart
+from the hollow arrows of the session vehicles (`ScheduledVehicles`, `hud/route_path.rs`).
+
+## Which runs run today
+
+Line files carry no calendar, so the file name decides (`line_runs_on`): `Mo-Do`, `Freitag`,
+`Samstag`, `Sonn- und Feiertag` give the weekdays of the session's date; a name without a day runs
+every day. Files of the school holidays (`Ferien`) are not run, because the game knows no school
+calendar and the term-time file of the same days runs instead; `Feiertag` files run on Sundays
+only (public holidays are not known).
+
+## The end of a run
+
+A scheduled vehicle that stands at the last stop of its run is removed 8 s later if it is at least
+80 m from the camera. Nearer, it drives on as ordinary traffic and is removed when it is far
+away like any other vehicle, so nothing vanishes in view.

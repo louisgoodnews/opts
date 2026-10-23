@@ -475,6 +475,7 @@ fn the_route_is_drawn_over_the_roads_in_its_own_colour_with_its_stops() {
         MapRoute {
             lines: &route_lines,
             stops: &stops,
+            vehicles: &[],
         },
         &[],
         &colors,

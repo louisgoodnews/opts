@@ -21,7 +21,7 @@ fn every_installed_map_has_runs_at_midday_and_each_is_on_its_way() {
             continue;
         }
         let tt = Timetables::load_dir(&dir);
-        let runs = active_runs(&tt, 12.0 * 3600.0, 600.0, 4.0 * 3600.0);
+        let runs = active_runs(&tt, 12.0 * 3600.0, 600.0, 4.0 * 3600.0, None);
         eprintln!(
             "{name}: {} runs on the road or starting within 10 min at 12:00",
             runs.len()

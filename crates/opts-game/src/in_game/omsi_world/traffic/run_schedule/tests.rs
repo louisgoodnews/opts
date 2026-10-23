@@ -53,3 +53,18 @@ fn an_empty_run_is_finished() {
     s.stops.clear();
     assert_eq!(run_phase(&s, 0.0), RunPhase::Finished);
 }
+
+#[test]
+fn line_files_run_on_the_days_their_names_give() {
+    assert!(line_runs_on("Eichenhoehe TA11 Mo-Do Schule", 3));
+    assert!(!line_runs_on("Eichenhoehe TA11 Mo-Do Schule", 5));
+    assert!(line_runs_on("Eichenhoehe TA12 Freitag Schule", 5));
+    assert!(line_runs_on("Eichenhoehe TA13 Samstag", 6));
+    assert!(line_runs_on("Eichenhoehe TA14 Sonn- und Feiertag", 7));
+    assert!(!line_runs_on("Eichenhoehe TA14 Sonn- und Feiertag", 1));
+    assert!(
+        !line_runs_on("Eichenhoehe TA31 Mo-Do Ferien", 2),
+        "school holidays are not run"
+    );
+    assert!(line_runs_on("13N", 4) && line_runs_on("Z_KI Zuege Mitte", 7));
+}

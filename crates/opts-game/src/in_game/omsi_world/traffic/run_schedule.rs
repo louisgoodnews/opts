@@ -87,6 +87,37 @@ pub fn run_phase(schedule: &ActiveSchedule, now_s: f64) -> RunPhase {
     RunPhase::Finished
 }
 
+/// Whether the line file runs on ISO weekday `weekday` (1 = Monday … 7 = Sunday). The files carry
+/// no calendar: the days are in the name (`Mo-Do Schule`, `Freitag`, `Samstag`, `Sonn- und
+/// Feiertag`), so the name decides. Files of the school holidays (`Ferien`) are left out, as the
+/// session knows no school calendar and the term-time file of the same days is run; public
+/// holidays are not known either, so `Feiertag` files run on Sundays. A name without a day runs
+/// every day.
+#[must_use]
+pub fn line_runs_on(stem: &str, weekday: u32) -> bool {
+    let n = stem.to_lowercase();
+    if n.contains("ferien") {
+        return false;
+    }
+    let has = |w: &str| n.contains(w);
+    if has("sonn") || has("feiertag") {
+        return weekday == 7;
+    }
+    if has("samstag") {
+        return weekday == 6;
+    }
+    if has("freitag") {
+        return weekday == 5;
+    }
+    if has("mo-do") || has("montag-donnerstag") {
+        return (1..=4).contains(&weekday);
+    }
+    if has("mo-fr") || has("montag-freitag") || has("schulbus") {
+        return (1..=5).contains(&weekday);
+    }
+    true
+}
+
 /// The runs that are on the road at `now_s`, or start within `lead_s`: those whose start lies in
 /// `[now - horizon_s, now + lead_s]` (a run never lasts longer than `horizon_s`) and whose
 /// schedule has not finished. Each with its schedule. Day offsets: the clock is tried as
@@ -97,9 +128,13 @@ pub fn active_runs(
     now_s: f64,
     lead_s: f64,
     horizon_s: f64,
+    weekday: Option<u32>,
 ) -> Vec<(RunRef, ActiveSchedule)> {
     let mut out = Vec::new();
     for (stem, line) in &tt.lines {
+        if weekday.is_some_and(|d| !line_runs_on(stem, d)) {
+            continue;
+        }
         for (t, tour) in line.tours.iter().enumerate() {
             for (r, run) in tour.trips.iter().enumerate() {
                 let start = f64::from(run.start_min) * 60.0;

@@ -240,6 +240,7 @@ pub fn redraw(
     cameras: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
     traffic: Option<Res<TrafficState>>,
     route: Option<Res<super::route_path::PlayerRoutePath>>,
+    scheduled: Option<Res<super::route_path::ScheduledVehicles>>,
     fixture: Option<Res<FixtureRoads>>,
     hud: Option<Res<super::HudValues>>,
 ) {
@@ -362,6 +363,17 @@ pub fn redraw(
             )
         }));
     }
+    let scheduled_px: Vec<(Vec2, f32)> = scheduled.as_ref().map_or_else(Vec::new, |s| {
+        s.poses
+            .iter()
+            .map(|(p, h)| {
+                (
+                    Vec2::new((p.x - centre.x) as f32, (p.y - centre.y) as f32),
+                    *h,
+                )
+            })
+            .collect()
+    });
     raster::render_routed(
         canvas,
         view,
@@ -369,6 +381,7 @@ pub fn redraw(
         MapRoute {
             lines: &route_lines,
             stops: &route_stops,
+            vehicles: &scheduled_px,
         },
         &markers,
         &colors,
