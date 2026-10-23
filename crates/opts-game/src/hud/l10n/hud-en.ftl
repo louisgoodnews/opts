@@ -9,6 +9,7 @@ hud-brake-off = OFF
 hud-session = { $map } - { $entry }
 hud-session-map = { $map }
 hud-clock = Time { $time } | Weather: { $weather }
+hud-clock-timetable = Time { $time } | Weather: { $weather } | Line { $line }: next { $stop } { $due } ({ $delay })
 hud-hint-controls = W/S Throttle and brake  -  Left/Right Steer  -  { $parking } Parking brake  -  1-5 Camera  -  Esc Pause  -  { $help } Help
 hud-pause-button = Pause [Esc]
 hud-camera-ego = Walking view

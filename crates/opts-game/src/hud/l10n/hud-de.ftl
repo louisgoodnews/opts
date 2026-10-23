@@ -9,6 +9,7 @@ hud-brake-off = AUS
 hud-session = { $map } - { $entry }
 hud-session-map = { $map }
 hud-clock = Zeit { $time } | Wetter: { $weather }
+hud-clock-timetable = Zeit { $time } | Wetter: { $weather } | Linie { $line }: nächste { $stop } { $due } ({ $delay })
 hud-hint-controls = W/S Gas und Bremse  -  Links/Rechts Lenken  -  { $parking } Feststellbremse  -  1-5 Kamera  -  Esc Pause  -  { $help } Hilfe
 hud-pause-button = Pause [Esc]
 hud-camera-ego = Gehansicht

@@ -53,6 +53,19 @@ impl SpeedUnit {
     }
 }
 
+/// The followed timetable of the player's vehicle, as the clock pill shows it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TimetableHud {
+    /// Line text of the run.
+    pub line: String,
+    /// The stop after the current one (the last stop when there is none), by name.
+    pub next_stop: String,
+    /// Its scheduled arrival (s after midnight).
+    pub due_s: f32,
+    /// The delay at the current stop (s, late positive).
+    pub delay_s: f32,
+}
+
 /// What the player's vehicle and camera are doing, as the widgets need it.
 #[derive(Resource, Debug, Clone, PartialEq)]
 pub struct HudValues {
@@ -77,6 +90,8 @@ pub struct HudValues {
     pub sub_camera: usize,
     /// How many sub cameras the current mode has.
     pub sub_total: usize,
+    /// The followed timetable, if any.
+    pub timetable: Option<TimetableHud>,
 }
 
 impl Default for HudValues {
@@ -92,6 +107,7 @@ impl Default for HudValues {
             camera: CameraMode::External,
             sub_camera: 0,
             sub_total: 0,
+            timetable: None,
         }
     }
 }
@@ -132,7 +148,9 @@ type PlayerParts = (
 pub fn sample_values(
     camera: Res<CameraState>,
     vehicle: Query<PlayerParts, With<PlayerVehicle>>,
+    routes: Query<&opts_bevy::route::VehicleRoute, With<PlayerVehicle>>,
     mut values: ResMut<HudValues>,
+    mut frozen: Local<Option<(usize, f32)>>,
 ) {
     let mut next = HudValues {
         camera: camera.mode,
@@ -152,6 +170,30 @@ pub fn sample_values(
             CameraMode::Passenger => b.pax_camera_count(),
             _ => 0,
         });
+    }
+    next.timetable = routes.iter().find_map(|r| {
+        r.handle.with(|s| {
+            let sc = s.schedule.as_ref()?;
+            let next = sc.stops.get(s.stop_index + 1).or_else(|| sc.stops.last())?;
+            // The delay is the one when the vehicle came to its current stop: the live value
+            // keeps growing while it drives on.
+            let delay = match *frozen {
+                Some((i, d)) if i == s.stop_index => d,
+                _ => {
+                    *frozen = Some((s.stop_index, s.delay_s.round()));
+                    s.delay_s.round()
+                }
+            };
+            Some(TimetableHud {
+                line: sc.line.clone(),
+                next_stop: next.name.clone(),
+                due_s: next.arrival_s,
+                delay_s: delay,
+            })
+        })
+    });
+    if next.timetable.is_none() {
+        *frozen = None;
     }
     values.set_if_neq(next);
 }

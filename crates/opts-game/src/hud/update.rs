@@ -54,6 +54,23 @@ pub fn tick_session_clock(time: Res<Time>, mut session: ResMut<InGameSessionInfo
     session.sim_elapsed_seconds += time.delta_secs();
 }
 
+/// `h:mm` of a time of day in seconds (wrapping at 24 h).
+fn hhmm(seconds: f32) -> String {
+    let m = (seconds.rem_euclid(86_400.0) / 60.0) as u32;
+    format!("{}:{:02}", m / 60, m % 60)
+}
+
+/// The delay as `+m:ss` (late) or `-m:ss` (early); `h:mm:ss` from an hour on.
+fn delay_text(seconds: f32) -> String {
+    let s = seconds.abs() as u32;
+    let sign = if seconds < 0.0 { '-' } else { '+' };
+    if s >= 3600 {
+        format!("{sign}{}:{:02}:{:02}", s / 3600, s / 60 % 60, s % 60)
+    } else {
+        format!("{sign}{}:{:02}", s / 60, s % 60)
+    }
+}
+
 fn set_text(text: &mut Text, new: String) {
     if text.0 != new {
         text.0 = new;
@@ -137,16 +154,25 @@ pub fn update_texts(
                     &[("map".to_owned(), Arg::from(session.map_name.as_str()))],
                 ),
             },
-            (Binding::SessionClock, Part::Value) => loc.t_args(
-                keys::CLOCK,
-                &[
+            (Binding::SessionClock, Part::Value) => {
+                let mut args = vec![
                     ("time".to_owned(), Arg::from(clock_text(env))),
                     (
                         "weather".to_owned(),
                         Arg::from(name_of(weather, &loc, env.weather())),
                     ),
-                ],
-            ),
+                ];
+                match &values.timetable {
+                    Some(t) => {
+                        args.push(("line".to_owned(), Arg::from(t.line.as_str())));
+                        args.push(("stop".to_owned(), Arg::from(t.next_stop.as_str())));
+                        args.push(("due".to_owned(), Arg::from(hhmm(t.due_s))));
+                        args.push(("delay".to_owned(), Arg::from(delay_text(t.delay_s))));
+                        loc.t_args(keys::CLOCK_TIMETABLE, &args)
+                    }
+                    None => loc.t_args(keys::CLOCK, &args),
+                }
+            }
             // The keys of the rebindable actions are the player's current ones.
             (Binding::ControlsHint, Part::Value) => {
                 let bound = opts_bevy::action_keys_of(&action_keys);
@@ -359,4 +385,19 @@ fn rail_hint(loc: &Localization, bound: &opts_bevy::ActionKeys, compact: bool) -
             ("help".to_owned(), Arg::from(bound.label("help"))),
         ],
     )
+}
+
+#[cfg(test)]
+mod text_tests {
+    use super::*;
+
+    #[test]
+    fn times_and_delays_read_as_a_timetable_does() {
+        assert_eq!(hhmm(5.0 * 3600.0 + 27.0 * 60.0), "5:27");
+        assert_eq!(hhmm(86_400.0 + 61.0), "0:01");
+        assert_eq!(delay_text(74.0), "+1:14");
+        assert_eq!(delay_text(-30.0), "-0:30");
+        assert_eq!(delay_text(0.0), "+0:00");
+        assert_eq!(delay_text(23_619.0), "+6:33:39");
+    }
 }

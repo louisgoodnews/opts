@@ -91,3 +91,10 @@ arrived at its stop 14 s after the timetable.
 Not done: doors and passengers of scheduled vehicles, and destination text on AI vehicles. AI
 vehicles have no script engine, only a table of animation variables, so there is nothing that
 reads the line and destination of a run; that needs scripts for AI vehicles (M-0098).
+
+## The HUD
+
+While a timetable is followed, the clock pill of the status bar adds the line, the next stop with
+its scheduled arrival and the delay (`Time 12:00:50 | Weather: … | Line S8: next Listau S Gl. 4
+5:30 (+0:14)`), and the status bar stays visible instead of fading. The delay is the one when the
+vehicle came to its current stop (the live value keeps growing while it drives on).
