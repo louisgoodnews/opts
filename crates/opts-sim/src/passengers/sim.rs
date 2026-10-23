@@ -1,6 +1,7 @@
 //! The passenger simulation of one unit.
 
 use super::graph::CabinGraph;
+use super::rng::Rng;
 use super::spec::{Cabin, Paths, TicketBook};
 use glam::Vec3;
 
@@ -12,28 +13,6 @@ const BUY_S: f32 = 4.0;
 const STAMP_S: f32 = 1.5;
 /// Chance that a passenger takes a free seat rather than standing.
 const SIT_CHANCE: f32 = 0.7;
-
-/// A small deterministic random source (SplitMix64).
-#[derive(Debug, Clone)]
-pub struct Rng(u64);
-
-impl Rng {
-    /// A source with `seed`.
-    #[must_use]
-    pub fn new(seed: u64) -> Self {
-        Self(seed)
-    }
-
-    /// The next value in `[0, 1)`.
-    pub fn next_f32(&mut self) -> f32 {
-        self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        let mut x = self.0;
-        x = (x ^ (x >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        x = (x ^ (x >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        x ^= x >> 31;
-        (x >> 40) as f32 / 16_777_216.0
-    }
-}
 
 /// What a passenger does now.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -200,6 +179,25 @@ impl PassengerSim {
             next_id: 1,
             revenue: 0.0,
         }
+    }
+
+    /// Adds the standing room of [`standing_room`](super::standing_room) to the cabin: the
+    /// places after the listed ones. Returns how many were added.
+    pub fn add_standing_room(&mut self) -> usize {
+        let extra = super::crowd::standing_room(&self.cabin, &self.graph);
+        let n = extra.len();
+        for p in extra {
+            let node = self.graph.nearest_in_unit(p.position, p.unit).unwrap_or(0);
+            self.place_node.push(node);
+            self.cabin.places.push(p);
+        }
+        n
+    }
+
+    /// How many people the cabin holds: every place, seats and standing.
+    #[must_use]
+    pub fn capacity(&self) -> usize {
+        self.cabin.places.len()
     }
 
     /// The path graph.

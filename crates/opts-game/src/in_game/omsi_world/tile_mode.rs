@@ -32,6 +32,12 @@ impl WorldLoadJob {
         tile_loading::max_radius(self.listed_tiles(), self.start_tile)
     }
 
+    /// The map's `[trafficdensity_passenger]` curve (hour, factor).
+    #[must_use]
+    pub fn passenger_curve(&self) -> &[(f32, f32)] {
+        &self.manifest.traffic_density_passenger
+    }
+
     /// The resident tiles, in key order.
     #[must_use]
     pub fn resident_tiles(&self) -> Vec<(i32, i32)> {

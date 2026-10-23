@@ -179,25 +179,40 @@ pub(super) fn interface() -> Vec<D> {
             "gameplay.traffic",
             K::Int {
                 min: 0,
-                max: 200,
-                step: 5,
+                max: 1000,
+                step: 10,
             },
-            "100",
+            "150",
             C::Gameplay,
             10,
             "set-traffic",
             "set-traffic-desc",
         )
-        .keywords(&["ai", "vehicles", "cars", "density"])
+        .keywords(&["ai", "vehicles", "cars", "density", "baseline"])
         .since("0.2"),
+        D::new(
+            "gameplay.parked",
+            K::Int {
+                min: 0,
+                max: 100,
+                step: 5,
+            },
+            "100",
+            C::Gameplay,
+            12,
+            "set-parked",
+            "set-parked-desc",
+        )
+        .keywords(&["parked", "cars", "bays", "density"])
+        .since("0.5"),
         D::new(
             "gameplay.pedestrians",
             K::Int {
                 min: 0,
-                max: 200,
-                step: 5,
+                max: 1000,
+                step: 10,
             },
-            "40",
+            "120",
             C::Gameplay,
             20,
             "set-pedestrians",
@@ -216,6 +231,21 @@ pub(super) fn interface() -> Vec<D> {
         )
         .keywords(&["people", "boarding", "bus stop", "tickets", "passengers"])
         .since("0.4"),
+        D::new(
+            "gameplay.passenger_rate",
+            K::Int {
+                min: 0,
+                max: 1000,
+                step: 10,
+            },
+            "120",
+            C::Gameplay,
+            26,
+            "set-passenger-rate",
+            "set-passenger-rate-desc",
+        )
+        .keywords(&["people", "boarding", "bus stop", "crowd", "load", "full"])
+        .since("0.5"),
         D::new(
             "gameplay.time_scale",
             K::Float {

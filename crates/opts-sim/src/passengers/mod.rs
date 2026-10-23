@@ -6,12 +6,16 @@
 //! `GetHumanCountOnPathLink`, `PAX_*_Req`) and shows the positions. Specification:
 //! `docs/src/simulation/passengers.md`.
 
+mod crowd;
 mod graph;
+mod rng;
 mod sim;
 mod spec;
 
+pub use crowd::standing_room;
 pub use graph::CabinGraph;
-pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, Rng, WALK_SPEED_M_S};
+pub use rng::Rng;
+pub use sim::{Doors, Event, Passenger, PassengerSim, Phase, WALK_SPEED_M_S};
 pub use spec::{chain, Behaviour, Cabin, Paths, Place, Ticket, TicketBook, Unit};
 
 #[cfg(test)]

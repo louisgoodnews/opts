@@ -1,6 +1,6 @@
 //! Spawning and despawning traffic.
 
-use super::variants::{group_lane_metres, pick_slot, time_factor, unit_lod};
+use super::variants::{baseline_targets, group_lane_metres, pick_slot, time_factor, unit_lod};
 use super::*;
 
 /// Spawns vehicles on lanes around the camera up to the density-derived target.
@@ -22,7 +22,7 @@ pub fn spawn_traffic(
     camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
     *elapsed += time.delta_secs();
-    if *elapsed < SPAWN_INTERVAL_S || settings.max == 0 {
+    if *elapsed < SPAWN_INTERVAL_S || settings.baseline == 0 {
         return;
     }
     *elapsed = 0.0;
@@ -48,31 +48,30 @@ pub fn spawn_traffic(
         &pool.groups,
         &pool.defaults,
     );
+    // The baseline setting spread over the groups, scaled by the map's factors for this hour and
+    // day, limited to what the roads hold.
+    let (targets, capped) = baseline_targets(&metres, &factors, settings.baseline);
     let wanted: Vec<f64> = metres
         .iter()
         .zip(&factors)
         .map(|(m, f)| m * f / METRES_OF_LANE_PER_VEHICLE)
         .collect();
-    let (targets, capped) = group_targets(&wanted, settings.max);
     if capped != pool.capped {
         pool.capped = capped;
-        let wanted_total: f64 = wanted.iter().sum();
         if capped {
             tracing::info!(
-                wanted = wanted_total,
-                ceiling = settings.max,
-                scale = settings.max as f64 / wanted_total,
-                "traffic ceiling binds: every group scaled down in proportion"
+                baseline = settings.baseline,
+                room = ?targets.iter().sum::<f64>(),
+                "the roads are full: every group scaled down in proportion"
             );
         } else {
             tracing::info!(
-                wanted = wanted_total,
-                ceiling = settings.max,
-                "traffic below the ceiling again"
+                baseline = settings.baseline,
+                "the roads hold the baseline again"
             );
         }
     }
-    let target = (targets.iter().sum::<f64>().round() as usize).min(settings.max);
+    let target = targets.iter().sum::<f64>().round() as usize;
     // Vehicles per group.
     let TrafficPool {
         agent_groups,

@@ -146,11 +146,15 @@ set-hud-camera-label = Kameraname
 set-hud-camera-label-desc = Den Namen der Kamera kurz nach einem Wechsel zeigen.
 
 set-traffic = Straßenverkehr
-set-traffic-desc = Höchstzahl gleichzeitig fahrender KI-Fahrzeuge (0 für keine). Gilt für die nächste Fahrt.
+set-traffic-desc = Grundwert der KI-Fahrzeuge, die um dich herum fahren, wenn der Verkehrsfaktor der Karte 1 ist (0 für keine). Der Faktor der Karte für die Tageszeit und die Dichten der Straßen werden darauf angewandt; die Straßen fassen nur eine begrenzte Zahl. Gilt für die nächste Fahrt.
+set-parked = Parkende Fahrzeuge
+set-parked-desc = Anteil der Parkbuchten der Karte, in denen ein Fahrzeug parkt, in Prozent (0 für keine). Gilt für die nächste Fahrt.
 set-pedestrians = Fußgänger
-set-pedestrians-desc = Höchstzahl gleichzeitig laufender Personen (0 für keine). Gilt für die nächste Fahrt.
+set-pedestrians-desc = Grundwert der Personen, die um dich herum laufen, wenn der Fahrgastfaktor der Karte 1 ist (0 für keine). Der Faktor der Karte für die Tageszeit wird darauf angewandt; die Wege fassen nur eine begrenzte Zahl. Gilt für die nächste Fahrt.
 set-passengers = Fahrgäste
 set-passengers-desc = Personen warten an Haltestellen, steigen durch die geöffneten Türen ein, kaufen oder entwerten Fahrscheine, setzen sich oder stehen und steigen wieder aus. Aus: niemand steigt ein.
+set-passenger-rate = Fahrgäste pro Stunde
+set-passenger-rate-desc = Grundwert der Personen, die pro Stunde zu einer Haltestelle kommen, wenn der Fahrgastfaktor der Karte 1 ist. Der Faktor der Karte für die Tageszeit wird darauf angewandt; Personen sammeln sich an einer Haltestelle, solange kein Fahrzeug sie bedient, so füllen ein hoher Wert und eine lange Wartezeit ein Fahrzeug (erst die Sitzplätze, dann die Stehplätze). 0 für niemanden.
 set-time-scale = Zeitraffer
 set-time-scale-desc = Lässt die Uhr der Fahrt schneller als in Echtzeit laufen.
 

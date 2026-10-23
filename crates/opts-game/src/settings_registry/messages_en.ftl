@@ -146,11 +146,15 @@ set-hud-camera-label = Camera name
 set-hud-camera-label-desc = Show the name of the camera for a moment after you change it.
 
 set-traffic = Road traffic
-set-traffic-desc = Most AI vehicles driving at the same time (0 for none). Applies to the next drive.
+set-traffic-desc = Baseline of AI vehicles driving around you when the map's traffic factor is 1 (0 for none). The map's own factor for the time of day and the roads' densities are applied to it; the roads can only hold so many. Applies to the next drive.
+set-parked = Parked vehicles
+set-parked-desc = Share of the map's parking bays that hold a parked vehicle, in percent (0 for none). Applies to the next drive.
 set-pedestrians = Pedestrians
-set-pedestrians-desc = Most people walking at the same time (0 for none). Applies to the next drive.
+set-pedestrians-desc = Baseline of people walking around you when the map's passenger factor is 1 (0 for none). The map's factor for the time of day is applied to it; the paths can only hold so many. Applies to the next drive.
 set-passengers = Passengers
 set-passengers-desc = People wait at bus stops, board your vehicle through its open doors, buy or stamp tickets, take a seat or stand, and get off. Off: nobody boards.
+set-passenger-rate = Passengers per hour
+set-passenger-rate-desc = Baseline of people who come to a stop per hour when the map's passenger factor is 1. The map's factor for the time of day is applied to it; people gather at a stop while no vehicle serves it, so a high value and a long wait fill a vehicle (seats first, then standing room). 0 for nobody.
 set-time-scale = Time scale
 set-time-scale-desc = Runs the session clock faster than real time.
 

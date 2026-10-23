@@ -98,8 +98,29 @@ fn time_factors_wrap_and_follow_the_day() {
 #[test]
 fn ceiling_scales_groups_in_proportion() {
     let wanted = [90.0, 30.0, 0.3];
-    let (t, capped) = group_targets(&wanted, DEFAULT_MAX_TRAFFIC);
+    let (t, capped) = group_targets(&wanted, 100);
     assert!(capped);
-    assert!((t.iter().sum::<f64>() - DEFAULT_MAX_TRAFFIC as f64).abs() < 1e-9);
+    assert!((t.iter().sum::<f64>() - 100.0).abs() < 1e-9);
     assert!((t[0] / t[1] - 3.0).abs() < 1e-9);
+}
+
+/// The baseline is the total at factor 1; the time factors scale it; the roads limit it.
+#[test]
+fn the_baseline_is_spread_by_lane_metres_scaled_by_factors_and_limited_by_the_roads() {
+    use super::variants::baseline_targets;
+    // 4 km of weighted lane in two groups (3:1), factor 1: the baseline is the total.
+    let (t, capped) = baseline_targets(&[3000.0, 1000.0], &[1.0, 1.0], 100);
+    assert!(!capped);
+    assert!((t.iter().sum::<f64>() - 100.0).abs() < 1e-9);
+    assert!((t[0] / t[1] - 3.0).abs() < 1e-9);
+    // Night: the map's factor halves it.
+    let (t, _) = baseline_targets(&[3000.0, 1000.0], &[0.5, 0.5], 100);
+    assert!((t.iter().sum::<f64>() - 50.0).abs() < 1e-9);
+    // A baseline the roads cannot hold is scaled down to one vehicle per spacing.
+    let (t, capped) = baseline_targets(&[500.0], &[1.0], 1000);
+    assert!(capped);
+    assert!((t[0] - 500.0 / super::MIN_LANE_SPACING_M).abs() < 1.0);
+    // Nothing wanted, or no road.
+    assert_eq!(baseline_targets(&[100.0], &[1.0], 0).0, vec![0.0]);
+    assert_eq!(baseline_targets(&[0.0], &[1.0], 50).0, vec![0.0]);
 }

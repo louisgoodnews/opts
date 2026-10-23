@@ -309,6 +309,7 @@ pub fn begin_world_load_at(
         camera: None,
         camera_std_index: 0,
         no_vehicle: false,
+        parked_permille: 1000,
         resolved_entry: None,
         start_entry: None,
     };
@@ -400,6 +401,7 @@ pub fn begin_world_load_at(
 }
 
 mod lookup;
+mod parked;
 
 /// The parking list a `car_park` marker's first string value selects: blank, `0` or no value is
 /// `0` (`parklist_p.txt`), a number `N` is `N` (`parklist_p_N.txt`). Anything else counts as `0`.

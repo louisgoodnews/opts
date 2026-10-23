@@ -36,10 +36,14 @@ use super::traffic_variant::{
 use super::vehicle::load_segment_meshes_for;
 use super::WorldLoadJob;
 
-/// Default ceiling on simultaneously driving AI vehicles. It is a performance limit, not the
-/// density: the map's density model decides how many vehicles there are, and only when that
-/// exceeds the ceiling are all groups scaled down in proportion.
-pub const DEFAULT_MAX_TRAFFIC: usize = 100;
+/// Default baseline of driving AI vehicles around the player (setting `gameplay.traffic`): how
+/// many there are, within the despawn disc, when the map's traffic factor is 1. The map's factors
+/// (`[trafficdensity_road]` curve, group curves, lane rules) shape it; the roads hold at most one
+/// vehicle per [`MIN_LANE_SPACING_M`], and when the baseline exceeds that all groups are scaled
+/// down in proportion.
+pub const DEFAULT_TRAFFIC_BASELINE: usize = 150;
+/// Closest spacing (m of density-weighted lane) the roads are filled to however high the baseline.
+pub const MIN_LANE_SPACING_M: f64 = 25.0;
 /// `L0`: one vehicle per this much lane (m) at density `1` and time factor `1` (the density model,
 /// `docs/src/architecture/ai-traffic.md`). Calibrated with the `density_census` example: the
 /// median, over 56 entry points of 12 maps at 12:00 on a weekday, of the lane metres × density ×
@@ -59,14 +63,14 @@ const MAX_LOAD_TRIES: u32 = 8;
 /// Traffic settings.
 #[derive(Resource, Clone, Copy)]
 pub struct TrafficSettings {
-    /// Cap on driving AI vehicles (`0` disables traffic).
-    pub max: usize,
+    /// Baseline of driving AI vehicles around the player (`0` disables traffic).
+    pub baseline: usize,
 }
 
 impl Default for TrafficSettings {
     fn default() -> Self {
         Self {
-            max: DEFAULT_MAX_TRAFFIC,
+            baseline: DEFAULT_TRAFFIC_BASELINE,
         }
     }
 }

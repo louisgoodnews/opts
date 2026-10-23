@@ -380,69 +380,6 @@ impl WorldLoadJob {
         out
     }
 
-    /// Reads the parking list with this selector (`0` = `parklist_p.txt`), once.
-    fn parklist(&mut self, selector: u32) -> &[String] {
-        if !self.parklists.contains_key(&selector) {
-            let name = parklist_file_name(selector);
-            let list = match self
-                .data_file(&name)
-                .map(|p| std::fs::read(&p).map(|b| (p, b)))
-            {
-                Some(Ok((p, bytes))) => {
-                    self.loading_deps
-                        .insert(opts_bevy::hot_reload::cache::normalize(&p));
-                    let text: String = bytes.iter().map(|&b| char::from(b)).collect();
-                    text.lines()
-                        .map(|l| l.trim().to_string())
-                        .filter(|l| !l.is_empty())
-                        .collect()
-                }
-                Some(Err(e)) => {
-                    tracing::error!(at = %opts_bevy::position_tag(), "{name} unreadable: {e}");
-                    Vec::new()
-                }
-                None if selector == 0 => {
-                    tracing::error!(at = %opts_bevy::position_tag(), map = %self.config.map_dir.display(), "map has parking bays but no parklist_p.txt");
-                    Vec::new()
-                }
-                None => {
-                    tracing::warn!(map = %self.config.map_dir.display(), "parking bays select {name}, which the map lacks: parklist_p.txt instead");
-                    self.parklist(0).to_vec()
-                }
-            };
-            self.parklists.insert(selector, list);
-        }
-        self.parklists.get(&selector).map_or(&[], Vec::as_slice)
-    }
-
-    /// Picks the parked vehicle for a parking-bay marker.
-    ///
-    /// The marker's first string value selects the list (blank or `0`: `parklist_p.txt`, `N`:
-    /// `parklist_p_N.txt`); one `.sco` per line, duplicates raise the pick probability
-    /// (`docs/src/formats/map/lists.md`). The draw is a hash of the marker's id code and position
-    /// (the instances of an attachment share the id), so a bay shows the same car on every load.
-    pub(in super::super::super) fn parked_vehicle(
-        &mut self,
-        marker: &MapObjectInstance,
-    ) -> Option<String> {
-        let selector = parklist_selector(marker.string_vars.first().map(String::as_str));
-        let list = self.parklist(selector);
-        if list.is_empty() {
-            return None;
-        }
-        let cm = |v: f32| (f64::from(v) * 100.0).round() as i64 as u64;
-        let mut h = marker.id_code;
-        for v in [cm(marker.position.x), cm(marker.position.y)] {
-            h = h.rotate_left(21) ^ v;
-        }
-        // splitmix64 finaliser: spreads consecutive ids evenly.
-        h = h.wrapping_add(0x9E37_79B9_7F4A_7C15);
-        h = (h ^ (h >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-        h = (h ^ (h >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-        h ^= h >> 31;
-        Some(list[(h % list.len() as u64) as usize].clone())
-    }
-
     pub(in super::super::super) fn sco(
         &mut self,
         rel: &str,
