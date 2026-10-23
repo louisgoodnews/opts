@@ -38,6 +38,9 @@ keys! {
     SESSION_MAP = "hud-session-map",
     /// Status bar: clock and weather (`time`, `weather`).
     CLOCK = "hud-clock",
+    /// Status bar: clock, weather and the followed timetable (`time`, `weather`, `line`, `stop`,
+    /// `due`, `delay`).
+    CLOCK_TIMETABLE = "hud-clock-timetable",
     /// Hints: the most used keys.
     HINT_CONTROLS = "hud-hint-controls",
     /// Hints of a rail vehicle (`up`, `down`, `zero`, `forward`, `reverse`, `help`).

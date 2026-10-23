@@ -130,13 +130,15 @@ pub enum FadeKind {
     CameraLabel,
 }
 
-/// Pins the status bar while the simulation is paused and restarts its hold on resume.
+/// Pins the status bar while the simulation is paused or a timetable is followed and restarts its hold on resume.
 pub fn status_follows_pause(
     time: Res<Time<Virtual>>,
+    values: Res<super::values::HudValues>,
     mut pills: Query<(&FadeKind, &mut HudFade)>,
     mut was_paused: Local<bool>,
 ) {
-    let paused = time.is_paused();
+    // The status bar also stays while a timetable is followed: it carries the next stop.
+    let paused = time.is_paused() || values.timetable.is_some();
     if paused == *was_paused {
         return;
     }
