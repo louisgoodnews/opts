@@ -507,13 +507,14 @@ pub(super) type BoundsCache = HashMap<(PathBuf, Option<PathBuf>), Option<Vec<(Ve
 
 /// Hands the AI traffic the footprints of the player's road vehicles (head and following parts),
 /// so the agents stop behind them or change lanes round them (`opts_traffic::obstacles`) instead
-/// of driving into them.
+/// of driving into them; the parked vehicles near the camera count too.
 pub fn publish_traffic_obstacles(
     mut state: ResMut<super::traffic::TrafficState>,
     players: Query<PlayerCollide, GroundPlayer>,
     segments: Query<&ArticulatedSegment>,
+    camera: Query<&GlobalTransform, With<opts_bevy::MainCamera>>,
 ) {
-    let mut obstacles = Vec::new();
+    let mut obstacles = vec![];
     for (controller, head, chain, composition) in &players {
         let part_boxes: Vec<BodyBox> = composition
             .map(|c| c.followers.iter().filter_map(|p| p.body).collect())
@@ -532,23 +533,22 @@ pub fn publish_traffic_obstacles(
             .unwrap_or_default();
         let ch = &controller.sim.chassis;
         let v = ch.world_velocity();
-        for b in player_boxes(
+        let boxes = player_boxes(
             ch.position,
             ch.heading_rad,
             ch.elevation_z,
             head,
             &followers,
-        ) {
-            obstacles.push(opts_traffic::Obstacle {
-                centre: bevy::math::DVec2::new(f64::from(b.centre.x), f64::from(b.centre.y)),
-                heading: f64::from(b.heading),
-                length: f64::from(b.half.y) * 2.0,
-                width: f64::from(b.half.x) * 2.0,
-                velocity: bevy::math::DVec2::new(f64::from(v.x), f64::from(v.y)),
-            });
-        }
+        );
+        obstacles.extend(boxes.into_iter().map(|b| opts_traffic::Obstacle {
+            centre: bevy::math::DVec2::new(f64::from(b.centre.x), f64::from(b.centre.y)),
+            heading: f64::from(b.heading),
+            length: f64::from(b.half.y) * 2.0,
+            width: f64::from(b.half.x) * 2.0,
+            velocity: bevy::math::DVec2::new(f64::from(v.x), f64::from(v.y)),
+        }));
     }
-    state.set_obstacles(obstacles);
+    state.set_obstacles_with_parked(obstacles, camera.single().ok());
 }
 
 #[cfg(test)]

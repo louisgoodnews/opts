@@ -41,6 +41,8 @@ pub enum PlannerAction {
     OpenSettings,
     /// *Drive without a vehicle*: map only, then on to the next step.
     NoVehicle,
+    /// A rail vehicle: start with it and open the formation editor, then on to the next step.
+    ComposeFormation,
     /// Save the plan's vehicle, repaint and options as a configuration (the name field's text).
     SaveConfig,
     /// Load the configuration with this id into the plan.

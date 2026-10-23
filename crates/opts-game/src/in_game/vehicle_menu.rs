@@ -290,6 +290,7 @@ impl Plugin for VehicleMenuPlugin {
             .add_systems(
                 Update,
                 (
+                    open_formation_on_start,
                     toggle_menu,
                     search_input,
                     start_entry_index,
@@ -305,6 +306,22 @@ impl Plugin for VehicleMenuPlugin {
             .add_systems(OnEnter(crate::AppState::InGame), reset_menu)
             .add_systems(OnExit(crate::AppState::InGame), reset_menu);
     }
+}
+
+/// *Compose a train* of the wizard: when the drive has loaded, the Select Vehicle formation page
+/// opens (the same as `menu.do open` and `menu.do formation`).
+fn open_formation_on_start(
+    mut commands: Commands,
+    flag: Option<Res<crate::new_game_screen::ComposeFormationOnStart>>,
+    load: Res<SimulationLoadState>,
+    mut remote: ResMut<MenuCommands>,
+) {
+    if flag.is_none() || !load.is_complete {
+        return;
+    }
+    remote.0.push("open".to_owned());
+    remote.0.push("formation".to_owned());
+    commands.remove_resource::<crate::new_game_screen::ComposeFormationOnStart>();
 }
 
 fn reset_menu(

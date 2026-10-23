@@ -105,7 +105,8 @@ pub fn apply_keys(
 
 /// The scripts' own direction switches, by the variable that shows them: a tram's cab has a
 /// reverse-drive switch (`RFahrt_A`, a toggle) next to its drive position (`automatic_D`).
-const DIRECTION_SWITCHES: &[(&str, &str)] = &[("rfahrt_a", "a_kopf_drive")];
+const DIRECTION_SWITCHES: &[(&str, &str)] =
+    &[("rfahrt_a", "a_kopf_drive"), ("rfahrt_b", "b_kopf_drive")];
 
 /// Puts the scripts' direction switches where `reverse` says; returns whether any was pressed.
 pub fn apply_direction(engine: &mut ScriptEngine, reverse: bool) -> bool {
@@ -126,9 +127,19 @@ pub fn apply_direction(engine: &mut ScriptEngine, reverse: bool) -> bool {
 
 /// Tells the scripts of the player's rail vehicle about a direction change.
 pub fn direction_system(
-    mut vehicles: Query<(&mut RailControls, &VehicleScripts), With<PlayerVehicle>>,
+    mut vehicles: Query<
+        (
+            &mut RailControls,
+            &VehicleScripts,
+            Option<&crate::cab_switch::ActiveCab>,
+        ),
+        With<PlayerVehicle>,
+    >,
+    parts: Query<&VehicleScripts, With<crate::consist_scripts::ScriptPart>>,
 ) {
-    for (mut controls, scripts) in &mut vehicles {
+    for (mut controls, head, active) in &mut vehicles {
+        // The switches are the active cab's.
+        let scripts = crate::cab_switch::cab_scripts(head, active.copied(), &parts);
         if !controls.direction_set && controls.lever > 0.02 {
             controls.direction_dirty = true;
             controls.direction_set = true;

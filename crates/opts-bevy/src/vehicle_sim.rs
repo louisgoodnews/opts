@@ -415,6 +415,11 @@ impl Plugin for OptsVehiclePlugin {
                         .run_if(crate::vehicle_remote::vehicle_input_closed),
                     crate::vehicle_remote::release_trigger_system,
                     crate::rail_controls::direction_system.after(vehicle_input_system),
+                    crate::cab_switch::cab_handover_system,
+                    crate::cab_switch::cab_trace_system,
+                    crate::cab_switch::cab_switch_system
+                        .before(crate::rail_controls::direction_system)
+                        .run_if(crate::reporting::not_modal_active),
                     crate::vehicle_remote::odometer_system,
                     vehicle_transform_sync_system,
                     wheel_transform_sync_system,

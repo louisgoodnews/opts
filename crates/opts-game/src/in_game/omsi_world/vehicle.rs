@@ -185,13 +185,14 @@ pub fn load_player_vehicle(
         passengers::attach_passengers(job, commands, root, &manifest, &bus_dir, script_seed);
     }
     load_key_bindings(job, commands);
-    let trailer_cams = spawn_trailer_chain(
+    let (trailer_cams, trailer_driver_cams) = spawn_trailer_chain(
         job, commands, meshes, materials, images, root, &bus_dir, &manifest,
     );
-    if !trailer_cams.is_empty() {
+    if !trailer_cams.is_empty() || !trailer_driver_cams.is_empty() {
         commands.queue(move |world: &mut World| {
             if let Some(mut bus) = world.get_mut::<opts_bevy::BusVehicle>(root) {
                 bus.trailer_pax_cameras = trailer_cams;
+                bus.trailer_driver_cameras = trailer_driver_cams;
             }
         });
     }

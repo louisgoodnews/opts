@@ -218,6 +218,16 @@ pub fn spawn_traffic(
     // ones its scripts draw on.
     let mut head_canvases = None;
     let head_bus_path = variant.units[0].bus_path.clone();
+    let head_setvars = {
+        let repaints = &variant.units[0].repaints;
+        let picked = repaints.pick(repaint_seed);
+        let name = if picked.is_empty() {
+            repaints.default_name.as_str()
+        } else {
+            picked
+        };
+        repaints.setvars.get(name).cloned().unwrap_or_default()
+    };
     for (unit, &entity) in variant.units.iter().zip(&entities) {
         let Some(lod) = unit_lod(unit) else {
             failed = Some(true);
@@ -301,7 +311,13 @@ pub fn spawn_traffic(
     }
     let traits = variant.traits();
     let mut params = IdmParams::from_traits(&traits, &Calibration::default(), rng.next_f64());
-    params.density_group = density_group;
+    // A scheduled vehicle follows its timetable, not a traffic density: it belongs to no group,
+    // so a lane the cars' group is closed on (a bus lane) is open to it.
+    params.density_group = if request.is_some() {
+        u8::MAX
+    } else {
+        density_group
+    };
     // The vehicle may not use the lane it was placed on (its length was unknown before).
     if state
         .world
@@ -379,6 +395,7 @@ pub fn spawn_traffic(
                         canvases,
                         &r.run,
                         seed,
+                        &head_setvars,
                     );
                 }
             }

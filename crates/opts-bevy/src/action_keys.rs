@@ -78,6 +78,8 @@ pub const ACTIONS: &[ActionDef] = &[
     rail("drive", "rail_lever_down", "Z"),
     rail("drive", "rail_lever_zero", "X"),
     rail("drive", "rail_switch_toggle", "G"),
+    // The other cab of a tram (A and B) or of a traction of trains.
+    rail("drive", "rail_switch_cab", "F3"),
     rail("drive", "rail_branch_left", "ArrowLeft"),
     rail("drive", "rail_branch_straight", "ArrowUp"),
     rail("drive", "rail_branch_right", "ArrowRight"),

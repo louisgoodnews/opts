@@ -86,9 +86,25 @@ pub struct TrafficState {
     /// The segments changed; the graph is rebuilt before the next step.
     dirty: bool,
     road_length_m: f64,
+    /// Footprints of the parked vehicles of each resident tile: the traffic stops behind them or
+    /// drives round them like round the player's vehicle.
+    parked: HashMap<(i32, i32), Vec<opts_traffic::Obstacle>>,
 }
 
 impl TrafficState {
+    /// The parked vehicles within `radius` metres of `centre` (session frame).
+    pub(crate) fn parked_near(
+        &self,
+        centre: DVec2,
+        radius: f64,
+    ) -> impl Iterator<Item = opts_traffic::Obstacle> + '_ {
+        self.parked
+            .values()
+            .flatten()
+            .filter(move |o| o.centre.distance(centre) <= radius)
+            .copied()
+    }
+
     /// Vehicles on the lanes (scheduled ones included).
     #[must_use]
     pub(crate) fn agent_count(&self) -> usize {
@@ -109,6 +125,23 @@ impl TrafficState {
         );
     }
 
+    /// Sets the obstacles of the next steps: `obstacles` and the parked vehicles within 400 m of
+    /// the camera (the traffic lives within 320 m of it).
+    pub(super) fn set_obstacles_with_parked(
+        &mut self,
+        mut obstacles: Vec<opts_traffic::Obstacle>,
+        camera: Option<&GlobalTransform>,
+    ) {
+        if let Some(cam) = camera {
+            let centre = DVec2::new(
+                f64::from(cam.translation().x),
+                -f64::from(cam.translation().z),
+            );
+            obstacles.extend(self.parked_near(centre, 400.0));
+        }
+        self.world.set_obstacles(obstacles);
+    }
+
     /// The lane graph of the resident tiles.
     #[must_use]
     pub(crate) fn lane_graph(&self) -> &LaneGraph {
@@ -120,12 +153,6 @@ impl TrafficState {
     pub(crate) fn has_tile(&self, key: (i32, i32)) -> bool {
         self.segments.contains_key(&key)
     }
-
-    /// Sets the vehicles outside the traffic that the agents must stop for or drive round (the
-    /// player's bus), as footprints in the session frame.
-    pub(super) fn set_obstacles(&mut self, obstacles: Vec<opts_traffic::Obstacle>) {
-        self.world.set_obstacles(obstacles);
-    }
 }
 
 impl Default for TrafficState {
@@ -136,6 +163,7 @@ impl Default for TrafficState {
             signals: HashMap::new(),
             dirty: false,
             road_length_m: 0.0,
+            parked: HashMap::new(),
         }
     }
 }
@@ -226,7 +254,9 @@ impl TrafficVehicle {
 
 mod graph;
 pub use graph::{configure_traffic, update_traffic_graph};
-pub(super) use graph::{register_tile, reset_pool, tile_segments, unregister_tile};
+pub(super) use graph::{
+    register_parked_object, register_tile, reset_pool, tile_segments, unregister_tile,
+};
 
 mod variants;
 pub use variants::load_traffic_variants;

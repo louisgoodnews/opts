@@ -55,6 +55,8 @@ const REVIEWED: &[&str] = &[
     // Tab opens the virtual mirrors of the driver's view; gated with `not_modal_active` in
     // `MirrorPlugin`.
     "opts-bevy/src/mirrors/virtual_view.rs",
+    // The cab switch key: gated with `not_modal_active` where it is registered (`vehicle_sim`).
+    "opts-bevy/src/cab_switch.rs",
     // F4 cycles the door camera; gated with `not_modal_active` where it is registered.
     "opts-bevy/src/door_camera.rs",
     "opts-bevy/src/reporting/trigger.rs",

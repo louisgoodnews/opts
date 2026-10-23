@@ -21,6 +21,7 @@ pub mod ai_variables;
 pub mod articulation;
 pub mod audio;
 pub mod bus_stops;
+pub mod cab_switch;
 pub mod camera;
 pub mod capture;
 pub mod consist_scripts;
@@ -89,6 +90,7 @@ pub use audio::{
     AudioSettings, AudioStats, Distance as SoundDistance, OptsAudioPlugin, PcmClip, SoundBus,
     SoundEmitter,
 };
+pub use cab_switch::ActiveCab;
 pub use camera::{
     camera_hint_text, scale_free_roam_speed, CameraAvailability, CameraMode, CameraState,
     MainCamera, OptsCameraPlugin, Viewpoint, ViewpointRequest, ViewpointRow, ViewpointState,

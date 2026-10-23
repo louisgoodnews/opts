@@ -133,6 +133,9 @@ fn spawn_object_inner(
             .is_some_and(|(_, s)| s.carpark_p);
         super::trace::skip_record();
         if !is_marker {
+            if matches!(placement, Placement::Tile) {
+                super::traffic::register_parked_object(job, commands, key, origin, &replaced);
+            }
             spawn_object(
                 job,
                 stats,

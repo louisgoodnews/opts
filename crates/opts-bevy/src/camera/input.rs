@@ -26,7 +26,7 @@ pub fn update_camera_availability(
     let bus = vehicles.single().ok();
     let new = CameraAvailability {
         ego: !humans.is_empty(),
-        cockpit: bus.is_some_and(|b| !b.driver_cameras.is_empty()),
+        cockpit: bus.is_some_and(|b| b.driver_camera_count() > 0),
         external: bus.is_some(),
         passenger: bus.is_some_and(|b| b.pax_camera_count() > 0),
     };

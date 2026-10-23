@@ -71,6 +71,7 @@ fn bus_with_tags(tags: Vec<BusMirrorCamera>) -> BusVehicle {
         pax_cameras: Vec::new(),
         mirror_cameras: tags,
         trailer_pax_cameras: Vec::new(),
+        trailer_driver_cameras: Vec::new(),
         outside_camera_center: None,
         std_camera_index: 0,
         active_camera_index: 0,

@@ -217,6 +217,8 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WHAT_EMPTY,
     wiz::WIZ_WHAT_NONE,
     wiz::WIZ_WHAT_NONE_SUB,
+    wiz::WIZ_WHAT_FORMATION,
+    wiz::WIZ_WHAT_FORMATION_NOTE,
     wiz::WIZ_WHAT_NONE_BODY,
     wiz::WIZ_NO_VEHICLE,
     wiz::WIZ_CLASS_ROAD,
@@ -371,6 +373,10 @@ pub mod wiz {
     pub const WIZ_WHAT_NONE: &str = "wiz-what-none";
     /// `wiz-what-none-sub`.
     pub const WIZ_WHAT_NONE_SUB: &str = "wiz-what-none-sub";
+    /// `wiz-what-formation`.
+    pub const WIZ_WHAT_FORMATION: &str = "wiz-what-formation";
+    /// `wiz-what-formation-note`.
+    pub const WIZ_WHAT_FORMATION_NOTE: &str = "wiz-what-formation-note";
     /// `wiz-what-none-body`.
     pub const WIZ_WHAT_NONE_BODY: &str = "wiz-what-none-body";
     /// `wiz-no-vehicle`.

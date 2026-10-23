@@ -88,7 +88,7 @@ pub fn handle_vehicle_view_wheel(
                 return;
             };
             let len = if state.mode == CameraMode::Cockpit {
-                bus.driver_cameras.len()
+                bus.driver_camera_count()
             } else {
                 bus.pax_camera_count()
             };
@@ -145,12 +145,17 @@ pub fn handle_vehicle_view_drag(
 }
 
 /// The player's vehicle, which is not the camera.
+/// A coupled unit's pose, and whether it hangs under a parent.
+type UnitFrame = (&'static Transform, &'static GlobalTransform, Has<ChildOf>);
+/// Units are neither the player's root nor the camera.
+type UnitsOnly = (Without<PlayerVehicle>, Without<crate::MainCamera>);
 type PlayerNotCamera = (With<PlayerVehicle>, Without<crate::MainCamera>);
 
 /// Key 2: the active `[add_camera_driver]` preset, composed with the vehicle's world transform.
 pub fn update_cockpit_camera(
     state: Res<CameraState>,
     vehicle: Query<(&Transform, &BusVehicle), PlayerNotCamera>,
+    units: Query<UnitFrame, UnitsOnly>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut viewpoint: ResMut<ViewpointState>,
     mut camera: Query<(&mut Transform, &mut Projection), With<crate::MainCamera>>,
@@ -162,13 +167,19 @@ pub fn update_cockpit_camera(
     else {
         return;
     };
-    let Some(cam) = bus.driver_cameras.get(state.sub_camera_index) else {
+    let Some((unit, cam)) = bus.driver_camera(state.sub_camera_index) else {
         return;
     };
     // The vehicle's own (root) transform of this frame, not its `GlobalTransform`: this system
     // runs before the propagation (see `OptsCameraPlugin`), when the global one still holds the
     // last frame's pose. The camera then moves with the vehicle in the same frame.
-    let gt = GlobalTransform::from(*vehicle_tf);
+    // The cab of a coupled unit (a tram's second head) is in that unit's frame; units are placed
+    // in the world frame by the rail systems, so their own `Transform` is this frame's pose.
+    let gt = match unit.and_then(|e| units.get(e).ok()) {
+        Some((t, _, false)) => GlobalTransform::from(*t),
+        Some((_, g, true)) => *g,
+        None => GlobalTransform::from(*vehicle_tf),
+    };
     *tf = preset_world_transform(&gt, cam, state.view_yaw, state.view_pitch);
     // Eye position and direction are the vehicle's own `[add_camera_driver]` preset (the player
     // character is hidden in this view, see `crate::human::hide_driver_in_seat_views`).

@@ -385,7 +385,7 @@ pub fn update_panel(
             text.0 = new;
         }
     }
-    let total = vehicle.single().map_or(0, |b| b.driver_cameras.len());
+    let total = vehicle.single().map_or(0, |b| b.driver_camera_count());
     for mut text in &mut subtitle {
         let new = loc.t_args(
             keys::VIEWPOINT_SUBTITLE,
