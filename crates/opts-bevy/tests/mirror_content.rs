@@ -221,3 +221,55 @@ fn loaded_mirror_parts_become_mirror_cameras_on_the_player_vehicle_only() {
         "reflexion0, 1 and 3 at least: {groups:?}"
     );
 }
+
+/// Every vehicle model of the install: how many mirror numbers (cameras) its first LOD has, and
+/// that the camera budget covers them.
+#[test]
+fn no_vehicle_needs_more_mirror_cameras_than_exist() {
+    let Some(root) = root() else { return };
+    let vehicles = root.join("Vehicles");
+    let Ok(dirs) = std::fs::read_dir(&vehicles) else {
+        return;
+    };
+    let mut table: Vec<(usize, String, Vec<String>)> = Vec::new();
+    for dir in dirs.flatten() {
+        let model = dir.path().join("model");
+        let Ok(cfgs) = std::fs::read_dir(&model) else {
+            continue;
+        };
+        for cfg in cfgs.flatten() {
+            let path = cfg.path();
+            if path
+                .extension()
+                .is_none_or(|e| !e.eq_ignore_ascii_case("cfg"))
+            {
+                continue;
+            }
+            let Some((found, _)) = panes(&model, &path) else {
+                continue;
+            };
+            if found.is_empty() {
+                continue;
+            }
+            let name = format!(
+                "{}/{}",
+                dir.file_name().to_string_lossy(),
+                path.file_name().unwrap().to_string_lossy()
+            );
+            table.push((found.len(), name, found.keys().cloned().collect()));
+        }
+    }
+    table.sort();
+    for (n, name, textures) in table.iter().rev().take(25) {
+        eprintln!("{n:2} mirror numbers  {name}  {textures:?}");
+    }
+    eprintln!("{} models with mirror panes", table.len());
+    let over: Vec<_> = table
+        .iter()
+        .filter(|(n, ..)| *n > opts_bevy::mirrors::MAX_CAMERAS)
+        .collect();
+    assert!(
+        over.is_empty(),
+        "more mirror numbers than cameras: {over:?}"
+    );
+}
