@@ -99,6 +99,9 @@ pub struct CameraState {
     pub free_roam_speed: f32,
     /// External-view distance in metres.
     pub external_zoom: f32,
+    /// The distance the external view starts at and the reset returns to (m): the host sets it
+    /// from the vehicle's length so the whole vehicle is in view.
+    pub external_home_zoom: f32,
     /// External-view yaw in radians.
     pub external_yaw: f32,
     /// External-view pitch in radians.
@@ -135,6 +138,7 @@ impl Default for CameraState {
             sub_camera_index: 0,
             free_roam_speed: FREE_ROAM_MIN_SPEED,
             external_zoom: super::mode::vehicle_views::EXTERNAL_DEFAULT_ZOOM_M,
+            external_home_zoom: super::mode::vehicle_views::EXTERNAL_DEFAULT_ZOOM_M,
             external_yaw: 0.0,
             external_pitch: -15.0_f32.to_radians(),
             pan_offset: Vec3::ZERO,

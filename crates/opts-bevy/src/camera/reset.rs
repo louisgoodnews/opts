@@ -51,7 +51,7 @@ pub fn reset_view(
         CameraMode::External => {
             state.external_yaw = 0.0;
             state.external_pitch = -15.0_f32.to_radians();
-            state.external_zoom = super::mode::vehicle_views::EXTERNAL_DEFAULT_ZOOM_M;
+            state.external_zoom = state.external_home_zoom;
             state.pan_offset = Vec3::ZERO;
         }
         CameraMode::Ego => {
