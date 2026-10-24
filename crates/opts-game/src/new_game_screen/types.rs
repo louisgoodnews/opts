@@ -146,6 +146,9 @@ pub struct NewGameSetup {
     pub minute: u32,
     /// Equipment options set on the vehicle's scripts.
     pub custom_setvars: HashMap<String, i32>,
+    /// A composed train: every car's `.bus` path (relative to the OMSI root) and whether it is
+    /// turned, the first being the chosen vehicle. Empty for a drive with the vehicle alone.
+    pub formation: Vec<(String, bool)>,
 }
 
 impl Default for NewGameSetup {
@@ -167,6 +170,7 @@ impl Default for NewGameSetup {
             hour: 8,
             minute: 30,
             custom_setvars: HashMap::new(),
+            formation: Vec::new(),
         }
     }
 }

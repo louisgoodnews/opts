@@ -41,8 +41,20 @@ pub enum PlannerAction {
     OpenSettings,
     /// *Drive without a vehicle*: map only, then on to the next step.
     NoVehicle,
-    /// A rail vehicle: start with it and open the formation editor, then on to the next step.
+    /// A rail vehicle: open the train composer.
     ComposeFormation,
+    /// Composer: add the car with this `.bus` path behind the others.
+    FormationAdd(String),
+    /// Composer: take car `n` out.
+    FormationRemove(usize),
+    /// Composer: move car `n` one place towards the head.
+    FormationUp(usize),
+    /// Composer: turn car `n` around.
+    FormationTurn(usize),
+    /// Composer: back to the vehicle alone.
+    FormationClear,
+    /// Composer: close it.
+    CloseFormation,
     /// Save the plan's vehicle, repaint and options as a configuration (the name field's text).
     SaveConfig,
     /// Load the configuration with this id into the plan.

@@ -219,6 +219,16 @@ pub const ALL: &[&str] = &[
     wiz::WIZ_WHAT_NONE_SUB,
     wiz::WIZ_WHAT_FORMATION,
     wiz::WIZ_WHAT_FORMATION_NOTE,
+    wiz::WIZ_FORMATION_TITLE,
+    wiz::WIZ_FORMATION_HINT,
+    wiz::WIZ_FORMATION_HEAD,
+    wiz::WIZ_FORMATION_TURNED,
+    wiz::WIZ_FORMATION_UP,
+    wiz::WIZ_FORMATION_TURN,
+    wiz::WIZ_FORMATION_REMOVE,
+    wiz::WIZ_FORMATION_ADD,
+    wiz::WIZ_FORMATION_CLEAR,
+    wiz::WIZ_FORMATION_DONE,
     wiz::WIZ_WHAT_NONE_BODY,
     wiz::WIZ_NO_VEHICLE,
     wiz::WIZ_CLASS_ROAD,
@@ -377,6 +387,26 @@ pub mod wiz {
     pub const WIZ_WHAT_FORMATION: &str = "wiz-what-formation";
     /// `wiz-what-formation-note`.
     pub const WIZ_WHAT_FORMATION_NOTE: &str = "wiz-what-formation-note";
+    /// `wiz-formation-title`.
+    pub const WIZ_FORMATION_TITLE: &str = "wiz-formation-title";
+    /// `wiz-formation-hint`.
+    pub const WIZ_FORMATION_HINT: &str = "wiz-formation-hint";
+    /// `wiz-formation-head`.
+    pub const WIZ_FORMATION_HEAD: &str = "wiz-formation-head";
+    /// `wiz-formation-turned`.
+    pub const WIZ_FORMATION_TURNED: &str = "wiz-formation-turned";
+    /// `wiz-formation-up`.
+    pub const WIZ_FORMATION_UP: &str = "wiz-formation-up";
+    /// `wiz-formation-turn`.
+    pub const WIZ_FORMATION_TURN: &str = "wiz-formation-turn";
+    /// `wiz-formation-remove`.
+    pub const WIZ_FORMATION_REMOVE: &str = "wiz-formation-remove";
+    /// `wiz-formation-add`.
+    pub const WIZ_FORMATION_ADD: &str = "wiz-formation-add";
+    /// `wiz-formation-clear`.
+    pub const WIZ_FORMATION_CLEAR: &str = "wiz-formation-clear";
+    /// `wiz-formation-done`.
+    pub const WIZ_FORMATION_DONE: &str = "wiz-formation-done";
     /// `wiz-what-none-body`.
     pub const WIZ_WHAT_NONE_BODY: &str = "wiz-what-none-body";
     /// `wiz-no-vehicle`.
