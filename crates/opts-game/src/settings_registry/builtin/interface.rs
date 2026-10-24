@@ -294,6 +294,32 @@ pub(super) fn interface() -> Vec<D> {
         ])
         .since("0.3"),
         D::new(
+            "gameplay.passenger_weight",
+            K::Bool,
+            "true",
+            C::Gameplay,
+            96,
+            "set-passenger-weight",
+            "set-passenger-weight-desc",
+        )
+        .keywords(&["passengers", "mass", "weight", "load", "braking"])
+        .since("0.3"),
+        D::new(
+            "gameplay.passenger_mass_kg",
+            K::Int {
+                min: 40,
+                max: 120,
+                step: 5,
+            },
+            "75",
+            C::Gameplay,
+            97,
+            "set-passenger-mass",
+            "set-passenger-mass-desc",
+        )
+        .keywords(&["passengers", "mass", "weight", "kilogram"])
+        .since("0.3"),
+        D::new(
             "gameplay.load_all_tiles",
             K::Bool,
             "false",

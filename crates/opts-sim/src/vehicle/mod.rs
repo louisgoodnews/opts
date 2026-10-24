@@ -19,8 +19,8 @@ pub mod wheels;
 use self::axle::AxleState;
 use self::brakes::{BrakeSystem, BRAKE_FACTOR};
 use self::chassis::ChassisState;
-pub use self::consist::UnitLoad;
 use self::consist::{driven_and_braked_load_n, UnitAxle, GRAVITY};
+pub use self::consist::{dynamic_mass_kg, UnitLoad};
 use self::drivetrain::DrivetrainModel;
 use self::ground::{joint_beta_deg, GroundProbe, GroundSample, UnitBody};
 use self::inputs::VehicleInputs;
@@ -146,6 +146,11 @@ pub struct VehicleSimulation {
     /// axle, left then right): the host fills it from the terrain, missing entries are 0.
     #[serde(default)]
     pub wheel_ground_m: Vec<f32>,
+    /// Mass of the people on board (kg), added to the mass the longitudinal dynamics move
+    /// (M-0124); the host sets it, 0 for an empty vehicle. The axle loads and the suspension
+    /// still use the curb mass.
+    #[serde(default)]
+    pub passenger_mass_kg: f32,
 }
 
 impl Default for VehicleSimulation {
@@ -208,6 +213,7 @@ impl VehicleSimulation {
             head_body: None,
             consist_bodies: Vec::new(),
             teleports: 0,
+            passenger_mass_kg: 0.0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,
@@ -254,6 +260,7 @@ impl VehicleSimulation {
             head_body: None,
             consist_bodies: Vec::new(),
             teleports: 0,
+            passenger_mass_kg: 0.0,
             inputs: VehicleInputs::new(),
             wheelbase_m: wheelbase,
             script_drive: None,

@@ -27,6 +27,17 @@ of the sample. Cars on bus lanes by routing are what the routing fix removes.
 Lateral leader search for standing agents, passing rules, continuous gap evaluation, red running by
 `[rowdy_factor]`, barriers. Counters for light violations do not exist.
 
+## Decisions on the open rows
+
+- **Row 1 (lateral leaders for standing agents):** not built. Agents drive on the lane centre line
+  (`lateral` is non-zero only during a lane change), so a standing vehicle overlaps a neighbouring
+  lane only when the lanes are closer than the two half widths (neighbours start at 2.2 m). Foreign
+  footprints, which do stick out, already become phantoms. Revisit if the counters show hard brakes
+  at stops.
+- **Row 5 (red running):** not built. Red is always obeyed; letting `[rowdy_factor]` drivers run a
+  red adds collisions with cross traffic that the conflict zones do not resolve. Needs a product
+  decision.
+
 ## Counters
 
 `traffic.scheduled` reports `hard_brakes` (a deceleration beyond 3 m/s² starting) and

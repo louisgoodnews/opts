@@ -321,3 +321,7 @@ set-hud-rail-direction = Fahrtrichtung der Bahn
 set-hud-rail-direction-desc = Die gewählte Fahrtrichtung einer Bahn zeigen.
 set-hud-rail-lever = Fahrhebel der Bahn
 set-hud-rail-lever-desc = Die Stellung des Fahrhebels einer Bahn in Prozent zeigen (plus: Traktion, minus: Bremsen).
+set-passenger-weight = Fahrgastgewicht
+set-passenger-weight-desc = Fahrgäste an Bord erhöhen die Masse des Fahrzeugs: Ein voller Bus beschleunigt langsamer und bremst später. Aus: Das Fahrzeug bewegt immer sein Leergewicht.
+set-passenger-mass = Mittleres Fahrgastgewicht
+set-passenger-mass-desc = Masse eines Fahrgasts in Kilogramm, wenn das Fahrgastgewicht an ist.
