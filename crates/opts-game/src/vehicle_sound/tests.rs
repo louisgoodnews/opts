@@ -69,23 +69,23 @@ fn a_loop_is_silent_while_its_condition_does_not_hold() {
             .sounds[0]
             .clone();
     let mut vars = AiVariables::default();
-    publish_sound_variables(&mut vars, 0.0, 0.0, 0.0, 0.5, false);
+    publish_sound_variables(&mut vars, 0.0, 0.0, 0.0, 0.5, false, true);
     assert_eq!(
         ai_loop(&d, &vars).0,
         0.0,
         "standing: velocity is not above 3"
     );
-    publish_sound_variables(&mut vars, 10.0, 0.0, 0.0, 0.5, false);
+    publish_sound_variables(&mut vars, 10.0, 0.0, 0.0, 0.5, false, true);
     assert!(ai_loop(&d, &vars).0 > 0.0);
 }
 
 #[test]
 fn the_drive_state_variables_are_published() {
     let mut vars = AiVariables::default();
-    publish_sound_variables(&mut vars, 0.0, 0.0, 0.0, 0.5, false);
+    publish_sound_variables(&mut vars, 0.0, 0.0, 0.0, 0.5, false, true);
     assert_eq!(vars.get("engine_on"), 1.0);
     assert_eq!(vars.get("antrieb_getr_aktugang"), 0.0);
-    publish_sound_variables(&mut vars, 20.0 / 3.6, 0.0, 0.0, 0.5, true);
+    publish_sound_variables(&mut vars, 20.0 / 3.6, 0.0, 0.0, 0.5, true, true);
     assert_eq!(vars.get("antrieb_getr_aktugang"), 2.0);
     assert_eq!(vars.get("wiperrunning"), 1.0);
 }
@@ -105,16 +105,16 @@ fn the_cap_keeps_the_first_voices() {
 
 #[test]
 fn the_engine_speed_rises_drops_at_a_shift_and_rises_again() {
-    assert_eq!(ai_engine_rpm(0.0), 650.0);
-    assert!(ai_engine_rpm(6.0) > 650.0 && ai_engine_rpm(11.9) < 2100.1);
-    let before = ai_engine_rpm(11.99);
-    let after = ai_engine_rpm(12.1);
+    assert_eq!(ai_engine_rpm(0.0, true), 650.0);
+    assert!(ai_engine_rpm(6.0, true) > 650.0 && ai_engine_rpm(11.9, true) < 2100.1);
+    let before = ai_engine_rpm(11.99, true);
+    let after = ai_engine_rpm(12.1, true);
     assert!(after < before - 500.0, "{before} -> {after}");
-    assert!(ai_engine_rpm(20.0) > after);
-    assert!(ai_engine_rpm(300.0) <= 3200.0);
+    assert!(ai_engine_rpm(20.0, true) > after);
+    assert!(ai_engine_rpm(300.0, true) <= 3200.0);
     let mut last = 0.0;
     for k in 0..=120 {
-        let v = ai_engine_rpm(k as f32);
+        let v = ai_engine_rpm(k as f32, true);
         assert!((600.0..=3200.0).contains(&v));
         last = v;
     }
@@ -124,7 +124,7 @@ fn the_engine_speed_rises_drops_at_a_shift_and_rises_again() {
 #[test]
 fn variables_are_published_and_drive_level_and_pitch() {
     let mut vars = AiVariables::default();
-    publish_sound_variables(&mut vars, 10.0, 0.6, 0.0, 0.5, false);
+    publish_sound_variables(&mut vars, 10.0, 0.6, 0.0, 0.5, false, true);
     assert!((vars.get("Velocity") - 36.0).abs() < 1e-4);
     assert!((vars.get("throttle") - 0.5).abs() < 1e-5);
     assert!(vars.get("wheel_rotationspeed_1_l") > 100.0);
@@ -136,7 +136,7 @@ fn variables_are_published_and_drive_level_and_pitch() {
     let rpm = vars.get("engine_n");
     assert!((speed_of(&d, &vars) - rpm / 1000.0).abs() < 1e-4);
     // Standing: no throttle, idle.
-    publish_sound_variables(&mut vars, 0.0, 1.0, 1.0, 0.5, true);
+    publish_sound_variables(&mut vars, 0.0, 1.0, 1.0, 0.5, true, true);
     assert_eq!(
         (
             vars.get("throttle"),
@@ -145,6 +145,22 @@ fn variables_are_published_and_drive_level_and_pitch() {
         ),
         (0.0, 650.0, 1.0)
     );
+}
+
+#[test]
+fn a_car_idles_higher_and_revs_further_than_a_bus_and_the_gears_follow_the_speed() {
+    assert_eq!(ai_engine_rpm(0.0, false), 800.0);
+    assert!(ai_engine_rpm(15.0, false) > ai_engine_rpm(15.0, true));
+    // Both shift: the speed drops at a gear change.
+    for heavy in [true, false] {
+        let before = ai_engine_rpm(if heavy { 11.99 } else { 17.99 }, heavy);
+        let after = ai_engine_rpm(if heavy { 12.01 } else { 18.01 }, heavy);
+        assert!(after < before - 400.0, "heavy {heavy}: {before} -> {after}");
+    }
+    assert_eq!(ai_gear(0.0, true), 0.0);
+    assert_eq!(ai_gear(20.0, true), 2.0);
+    assert_eq!(ai_gear(20.0, false), 2.0);
+    assert_eq!(ai_gear(50.0, false), 3.0);
 }
 
 mod names {

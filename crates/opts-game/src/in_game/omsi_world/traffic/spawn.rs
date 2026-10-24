@@ -371,6 +371,18 @@ pub fn spawn_traffic(
     };
     let head = &variant.units[0];
     let sound = head.sound.clone();
+    // A bus stops with its front door at the stop (the middle of the waiting area), so its front
+    // bumper stands that far ahead of it.
+    let door_ahead = head
+        .front_door_y
+        .map_or(0.0, |y| (head.size.unwrap_or((4.4, 2.2)).1 - y).max(0.0));
+    // The sound sets of the following units (the second unit of an articulated bus).
+    let unit_sounds: Vec<Option<std::sync::Arc<crate::vehicle_sound::AiSoundSet>>> = variant
+        .units
+        .iter()
+        .skip(1)
+        .map(|u| u.sound.clone())
+        .collect();
     let size = head.size.unwrap_or((4.4, 2.2));
     let heavy = params.class != VehicleClass::Car;
     let wheel_radius = head
@@ -407,13 +419,21 @@ pub fn spawn_traffic(
     }
     let mut rng_pax = Rng::new(rng.next_u64());
     pool.rng = Some(rng);
+    let mut scripted_head = false;
     match state.world.spawn(lane_id, s, speed, params) {
         Ok(id) => {
             pool.agent_groups.insert(id, pool_group);
             if let Some(r) = &request {
                 state.world.set_route(id, r.route.iter().copied());
                 for stop in &r.stops {
-                    state.world.push_stop(id, *stop);
+                    let mut stop = *stop;
+                    let room = state
+                        .world
+                        .graph()
+                        .lane(stop.lane)
+                        .map_or(stop.s, |l| (l.length() - 0.5).max(0.0));
+                    stop.s = (stop.s + f64::from(door_ahead)).min(room);
+                    state.world.push_stop(id, stop);
                 }
                 sched.built(id, r);
                 if let Some(canvases) = head_canvases.take() {
@@ -431,8 +451,9 @@ pub fn spawn_traffic(
                     // The sounds that need the scripts' variables and events (the doors) play
                     // from a vehicle that runs them.
                     if let (true, Some(set)) = (scripted, sound.as_ref()) {
-                        crate::player_sound::attach_defs(&mut commands, root, &set.scripted);
+                        crate::player_sound::attach_defs(&mut commands, root, None, &set.scripted);
                     }
+                    scripted_head = scripted;
                 }
             }
             tracing::debug!(
@@ -492,6 +513,18 @@ pub fn spawn_traffic(
                 opts_bevy::AiVariables::default(),
             ));
             crate::vehicle_sound::attach_ai(&mut commands, root, sound.as_ref());
+            // The following units of an articulated bus have sound configurations of their own
+            // (`sound_*_T_ai.cfg`, at their own places) driven by the head's variables, and the
+            // door sounds of their doors from the head's scripts.
+            for (set, &e) in unit_sounds.iter().zip(entities.iter().skip(1)) {
+                let Some(set) = set else {
+                    continue;
+                };
+                crate::vehicle_sound::attach_ai_unit(&mut commands, e, Some(root), set);
+                if scripted_head {
+                    crate::player_sound::attach_defs(&mut commands, e, Some(root), &set.scripted);
+                }
+            }
             if !chain.is_empty() {
                 commands.entity(root).insert(TrafficChain { units: chain });
             }

@@ -52,6 +52,10 @@ pub(super) struct Unit {
     pub reversed: bool,
     /// The sounds the vehicle can play as AI traffic (M-0140); `None`: silent.
     pub sound: Option<std::sync::Arc<crate::vehicle_sound::AiSoundSet>>,
+    /// Where the first passenger door is, forward from the model origin (m), from the
+    /// passenger cabin and paths files; `None` for a vehicle without them. A scheduled bus stops
+    /// with this door at the stop.
+    pub front_door_y: Option<f32>,
 }
 
 /// A vehicle type of the map's AI list: the head unit and its trailers.
@@ -201,8 +205,28 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         repaints,
         reversed: false,
         sound: crate::vehicle_sound::ai_sound_set(job, &manifest, &dir, path),
+        front_door_y: front_door_y(job, &manifest, &dir),
     };
     Ok((unit, manifest, dir))
+}
+
+/// The forward position (m, vehicle frame) of the first `[entry]` door of the vehicle's passenger
+/// cabin, `None` without cabin, paths or entry.
+fn front_door_y(job: &WorldLoadJob, manifest: &BusManifest, dir: &Path) -> Option<f32> {
+    let read = |rel: Option<&str>| {
+        rel.and_then(|r| job.install.find_in(dir, r))
+            .and_then(|p| std::fs::read(p).ok())
+    };
+    let (cabin, paths) = (
+        read(manifest.passengercabin_cfg.as_deref())?,
+        read(manifest.paths_cfg.as_deref())?,
+    );
+    // Bevy axes: forward is -z.
+    super::vehicle::doors::door_points_from_bytes(&cabin, &paths)
+        .into_iter()
+        .filter(|d| d.entry)
+        .map(|d| -d.position.z)
+        .reduce(f32::max)
 }
 
 /// Runs the vehicle's own AI script and records its response to full throttle and full brake.
@@ -542,6 +566,7 @@ mod tests {
             repaints: Default::default(),
             reversed: false,
             sound: None,
+            front_door_y: None,
         };
         let v = Variant {
             name: "bus".into(),

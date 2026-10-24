@@ -96,6 +96,7 @@ pub fn update_ai_variables(
             command.brake,
             v.wheel_radius,
             wet,
+            agent.params.class != opts_traffic::VehicleClass::Car,
         );
         for i in 0..4 {
             vars.set(&format!("ai_pax{}", i + 1), f32::from(v.pax >> i & 1));

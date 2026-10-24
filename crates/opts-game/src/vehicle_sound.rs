@@ -202,6 +202,10 @@ pub struct AiVoice {
     pub def: Arc<SoundDef>,
     /// The sound file.
     pub file: PathBuf,
+    /// The head of the vehicle whose variables drive this voice when it hangs on a following
+    /// unit (the second unit of an articulated bus has its own configuration at its own places
+    /// and the head's variables); `None`: its parent.
+    pub owner: Option<Entity>,
 }
 
 mod events;
@@ -221,6 +225,7 @@ pub struct AiAudioStats {
 /// Adds the voices of a vehicle type under `root`.
 pub fn attach_ai(commands: &mut Commands, root: Entity, set: Option<&Arc<AiSoundSet>>) {
     let Some(set) = set else { return };
+    attach_ai_unit(commands, root, None, set);
     commands
         .entity(root)
         .insert(AiEvents::default())
@@ -237,13 +242,24 @@ pub fn attach_ai(commands: &mut Commands, root: Entity, set: Option<&Arc<AiSound
                 ));
             }
         });
-    commands.entity(root).with_children(|p| {
+}
+
+/// Adds the loops of one unit's sound set under `unit`: for a following unit of an articulated
+/// bus `owner` is the head, whose variables drive them.
+pub fn attach_ai_unit(
+    commands: &mut Commands,
+    unit: Entity,
+    owner: Option<Entity>,
+    set: &Arc<AiSoundSet>,
+) {
+    commands.entity(unit).with_children(|p| {
         for (def, file) in &set.voices {
             let at = def.position.unwrap_or([0.0; 3]);
             p.spawn((
                 AiVoice {
                     def: def.clone(),
                     file: file.clone(),
+                    owner,
                 },
                 Transform::from_translation(omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2]))),
                 Name::new("AiVoice"),
@@ -252,40 +268,62 @@ pub fn attach_ai(commands: &mut Commands, root: Entity, set: Option<&Arc<AiSound
     });
 }
 
-/// Engine speed (rpm) of a road vehicle at `speed_kmh`: a gear model with idle 650 rpm, shifts
-/// at 2,100 rpm and gear changes at 12, 25, 40, 60 and 90 km/h, so the pitch rises, drops at
-/// every shift and rises again. ❓ OMSI's AI computes `AI_Motor` itself; its model is not known
-/// (Q-AU05), this is a stand-in with the right shape.
+/// The stand-in gear model of a vehicle class: idle and shift speed (rpm) and the speeds (km/h)
+/// of the gear changes. A heavy vehicle idles at 650 rpm and shifts at 2,100 rpm at 12, 25, 40,
+/// 60 and 90 km/h; a car idles at 800 rpm and shifts at 3,600 rpm at 18, 35, 55 and 85 km/h.
+struct Gears {
+    idle: f32,
+    shift: f32,
+    changes: &'static [f32],
+}
+
+const HEAVY: Gears = Gears {
+    idle: 650.0,
+    shift: 2100.0,
+    changes: &[0.0, 12.0, 25.0, 40.0, 60.0, 90.0],
+};
+const LIGHT: Gears = Gears {
+    idle: 800.0,
+    shift: 3600.0,
+    changes: &[0.0, 18.0, 35.0, 55.0, 85.0, 130.0],
+};
+
+/// Engine speed (rpm) of a road vehicle at `speed_kmh`: a gear model of its class, so the pitch
+/// rises, drops at every shift and rises again. ❓ OMSI's AI computes `AI_Motor` itself; its model
+/// is not known (Q-AU05), this is a stand-in with the right shape.
 #[must_use]
-pub fn ai_engine_rpm(speed_kmh: f32) -> f32 {
-    const IDLE: f32 = 650.0;
-    const SHIFT: f32 = 2100.0;
-    const GEARS: [f32; 6] = [0.0, 12.0, 25.0, 40.0, 60.0, 90.0];
+pub fn ai_engine_rpm(speed_kmh: f32, heavy: bool) -> f32 {
+    let g = if heavy { &HEAVY } else { &LIGHT };
     let v = speed_kmh.max(0.0);
     if v < 0.5 {
-        return IDLE;
+        return g.idle;
     }
-    // Each gear covers from the previous change point (where it starts at 1,300 rpm) to its own
-    // (2,100 rpm); the last one runs on at the same slope.
+    // Each gear covers from the previous change point (where it starts at 60 % of the shift
+    // speed) to its own (the shift speed); the last one runs on at the same slope.
     let mut lo = 0.0;
-    let mut hi = GEARS[1];
-    for w in GEARS.windows(2) {
+    let mut hi = g.changes[1];
+    for w in g.changes.windows(2) {
         lo = w[0];
         hi = w[1];
         if v < hi {
             break;
         }
     }
-    let start = if lo == 0.0 { IDLE } else { 1300.0 };
+    let start = if lo == 0.0 { g.idle } else { g.shift * 0.62 };
     let f = ((v - lo) / (hi - lo)).max(0.0);
-    (start + (SHIFT - start) * f).min(3200.0)
+    (start + (g.shift - start) * f).min(g.shift * 1.5)
 }
 
 /// The gear of the stand-in model at `speed_kmh` (`0` below walking pace).
 #[must_use]
-pub fn ai_gear(speed_kmh: f32) -> f32 {
-    const CHANGES: [f32; 5] = [0.5, 12.0, 25.0, 40.0, 60.0];
-    CHANGES.iter().filter(|c| speed_kmh >= **c).count() as f32
+pub fn ai_gear(speed_kmh: f32, heavy: bool) -> f32 {
+    let g = if heavy { &HEAVY } else { &LIGHT };
+    let past = g.changes[1..].iter().filter(|c| speed_kmh >= **c).count();
+    if speed_kmh < 0.5 {
+        0.0
+    } else {
+        (past + 1) as f32
+    }
 }
 
 /// Writes the sound variables of one AI vehicle into its table.
@@ -296,6 +334,7 @@ pub fn publish_sound_variables(
     brake: f32,
     wheel_radius: f32,
     wet: bool,
+    heavy: bool,
 ) {
     let kmh = speed_ms * 3.6;
     let throttle = if speed_ms > 0.3 {
@@ -303,7 +342,7 @@ pub fn publish_sound_variables(
     } else {
         0.0
     };
-    let rpm = ai_engine_rpm(kmh);
+    let rpm = ai_engine_rpm(kmh, heavy);
     vars.set("velocity", kmh);
     vars.set("velocity_ground", kmh);
     vars.set("throttle", throttle);
@@ -319,7 +358,7 @@ pub fn publish_sound_variables(
     vars.set("engine_on", 1.0);
     vars.set("engine_starter", 0.0);
     vars.set("antrieb_wendesatz", 1.0);
-    vars.set("antrieb_getr_aktugang", ai_gear(kmh));
+    vars.set("antrieb_getr_aktugang", ai_gear(kmh, heavy));
     vars.set("wiperrunning", f32::from(wet));
     vars.set("elec_busbar_main_sw", 1.0);
     // Wheel speed in rpm from the rolling radius.
@@ -387,7 +426,7 @@ pub fn stream_ai_voices(
     let (mut total, mut playing) = (0, 0);
     for (entity, voice, tf, parent, emitter) in &mut voices {
         total += 1;
-        let Ok(vars) = vehicles.get(parent.parent()) else {
+        let Ok(vars) = vehicles.get(voice.owner.unwrap_or_else(|| parent.parent())) else {
             continue;
         };
         let curve = SceneryVoice {
