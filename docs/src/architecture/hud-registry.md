@@ -134,6 +134,17 @@ The F10 block is off by default. `WorldStats.overlay_visible` follows the settin
 `SettingsApi`, so the page, the key and the saved value agree). It is painted with the instrument
 tokens and sits below the status bar.
 
+**Pages (2026-10-24).** The short page (default) shows: frame rate and the worst frame of the last
+seconds, the session clock, the camera's and the vehicle's **map coordinates** (tile, place in the
+tile, absolute east/north computed in f64: the absolute values are millions of metres and `f32`
+keeps half a metre), heading, speed, the **road under the vehicle** (lane id, position on it,
+distance, lane height and the vehicle's offset from it, grade, speed limit, lane rules), the nearest
+bus stop with its distance, and the traffic (vehicles, hard brakes, aborted lane changes, scheduled
+runs). **Shift + F10** (action `developer_panel_detail`, rebindable) adds the detailed page: map
+and tile counts, scenery and load statistics, the vehicle's dynamics. Code:
+`in_game/omsi_world/overlay.rs` (the system), `overlay_info.rs` (the lines of the short page, with
+tests).
+
 ## 8. Control protocol
 
 `hud.state` returns the vehicle kind, the widgets with their visibility, every text, the fades, the

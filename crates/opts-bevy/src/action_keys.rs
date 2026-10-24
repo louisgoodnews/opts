@@ -97,6 +97,7 @@ pub const ACTIONS: &[ActionDef] = &[
     def("ui", "switch_vehicle", "F8"),
     def("ui", "switch_vehicle_prev", "Shift+F8"),
     def("ui", "developer_panel", "F10"),
+    def("ui", "developer_panel_detail", "Shift+F10"),
 ];
 
 /// The setting that holds the chord of an action.
