@@ -299,6 +299,9 @@ fn minimap() -> Vec<D> {
 /// (map-profiles design §1). Everything else is the person's or the machine's.
 const MAP_PROFILE_KEYS: &[&str] = &[
     "graphics.view_distance",
+    "graphics.shadow_distance",
+    "graphics.light_distance",
+    "graphics.detail_distance",
     "graphics.water",
     "graphics.weather_fog",
     "graphics.weather_clouds",

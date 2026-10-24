@@ -30,7 +30,9 @@ pub use effects::{
     read_var, EffectTargets, SceneryLight, SceneryLightMap, SceneryMeshRule, SceneryObjectRuntime,
 };
 pub use lights::{scenery_light_system, SceneryLightAssets, LIGHT_DRAW_DISTANCE_M};
-pub use lod::{scenery_lod_system, screen_size, select_band, SceneryLod, SceneryLodMode};
+pub use lod::{
+    scenery_lod_system, screen_size, select_band, SceneryLod, SceneryLodBias, SceneryLodMode,
+};
 pub use maplights::{
     assign as assign_map_lights, choose_nearest, map_light_lumens, map_light_pool_system,
     map_light_range, spawn_map_lights, MapLight, MapLightPool, MapLightSettings, PoolSlot,
@@ -58,6 +60,7 @@ impl Plugin for SceneryRuntimePlugin {
             .init_resource::<SceneryRuntimeStats>()
             .init_resource::<SceneryVariableOverrides>()
             .init_resource::<SceneryLodMode>()
+            .init_resource::<SceneryLodBias>()
             .init_resource::<SceneryDrawDistance>()
             .init_resource::<MapLightSettings>()
             .init_resource::<MapLightPool>()
