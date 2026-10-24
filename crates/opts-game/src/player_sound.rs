@@ -172,6 +172,47 @@ pub fn attach_unit(
     });
 }
 
+/// Adds script-driven voices (definitions with the vehicle's own variables and events) under
+/// `unit`: for a scheduled AI bus, whose door scripts raise `ev_DoorTrigger…` and set `door_N`
+/// (the AI configuration's door sounds). The unit must carry the scripts.
+pub fn attach_defs(
+    commands: &mut Commands,
+    unit: Entity,
+    defs: &[(Arc<SoundDef>, PathBuf)],
+) -> usize {
+    let mut voices = Vec::new();
+    for (def, file) in defs {
+        let playback = playback_of(def);
+        if playback == Playback::Unsupported {
+            continue;
+        }
+        let at = def.position.unwrap_or([0.0; 3]);
+        voices.push((
+            PlayerVoice {
+                def: def.clone(),
+                file: file.clone(),
+                playback,
+                was_active: false,
+                owner: None,
+                goal: None,
+                active_s: 0.0,
+            },
+            omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2])),
+        ));
+    }
+    let n = voices.len();
+    commands.entity(unit).with_children(|p| {
+        for (voice, pos) in voices {
+            p.spawn((
+                voice,
+                Transform::from_translation(pos),
+                Name::new("AiScriptVoice"),
+            ));
+        }
+    });
+    n
+}
+
 /// Whether `listener` (world position) is inside the vehicle at `vehicle`: a box about the body
 /// of a solo bus (1.7 m either side, up to 3.6 m high, 8 m either way; ❓ the model's own bounds
 /// would be better).

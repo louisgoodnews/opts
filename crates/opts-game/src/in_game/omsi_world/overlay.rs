@@ -63,10 +63,31 @@ pub fn toggle_developer_panel(
     }
 }
 
+/// Shift + F10 switches the developer panel between its short and its detailed page.
+pub fn toggle_developer_detail(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    action_keys: Option<Res<opts_bevy::ActionKeys>>,
+    mut detail: ResMut<super::overlay_info::DeveloperDetail>,
+) {
+    if opts_bevy::action_keys_of(&action_keys).just_pressed(&keyboard, "developer_panel_detail") {
+        detail.full = !detail.full;
+    }
+}
+
 /// Refreshes the developer panel text while it is visible.
+#[allow(clippy::too_many_arguments)]
 pub fn update_debug_overlay(
     stats: Res<WorldStats>,
-    vehicle: Query<&opts_bevy::VehicleController, With<opts_bevy::PlayerVehicle>>,
+    detail: Res<super::overlay_info::DeveloperDetail>,
+    vehicle: Query<
+        (&opts_bevy::VehicleController, &GlobalTransform),
+        With<opts_bevy::PlayerVehicle>,
+    >,
+    control: Option<Res<opts_bevy::control::state::ControlState>>,
+    environment: Option<Res<opts_bevy::SessionEnvironment>>,
+    traffic: Option<Res<super::traffic::TrafficState>>,
+    scheduled: Option<Res<super::traffic::ScheduledTraffic>>,
+    stops: Query<(&GlobalTransform, &opts_bevy::bus_stops::BusStopMarker)>,
     mut query: Query<(&mut Text, &mut Visibility), With<DebugOverlayText>>,
 ) {
     for (mut text, mut vis) in &mut query {
@@ -78,14 +99,53 @@ pub fn update_debug_overlay(
         if !stats.overlay_visible {
             continue;
         }
+        let facts = super::overlay_info::PanelFacts {
+            fps: control.as_ref().map(|c| {
+                let worst = c.frame_log.iter().map(|(_, ms)| *ms).fold(0.0, f32::max);
+                (c.fps, worst)
+            }),
+            clock: environment.as_ref().map(|e| e.clock_text()),
+            vehicle: stats.position.vehicle.map(|(p, h)| {
+                let abs = stats.grid.absolute(p.tile, p.local.as_dvec2());
+                ([abs.x, abs.y], p.world.z, h, speed_kmh(&vehicle))
+            }),
+            session: vehicle
+                .single()
+                .ok()
+                .map(|(_, t)| [t.translation().x, -t.translation().z]),
+            traffic: traffic.as_deref(),
+            scheduled: scheduled.as_deref(),
+            stops: stops
+                .iter()
+                .map(|(t, m)| (m.id_code, [t.translation().x, -t.translation().z]))
+                .collect(),
+        };
         text.0 = format!(
+            "[F10 off, Shift+F10 {}] map: {}\n{}",
+            if detail.full { "short page" } else { "details" },
+            stats.map_name,
+            super::overlay_info::lines(&facts)
+        );
+        text.0.push('\n');
+        text.0
+            .push_str(&format_pos("camera ", stats.position.camera, &stats.grid));
+        if let Some((p, _)) = stats.position.vehicle {
+            text.0.push('\n');
+            text.0
+                .push_str(&format_pos("vehicle", Some(p), &stats.grid));
+        }
+        if !detail.full {
+            continue;
+        }
+        text.0.push('\n');
+        text.0.push_str(&format!(
             "[F10] map: {} (start tile {:?})\n{}\n{}\ntiles loaded: {} (missing {})\nscenery objects: {} (trees {}, protected-skipped {}, failed {}, no mesh {}) | splines: {} (failed {})\nvehicle: {} ({} meshes, {} verts)\nscene vertices: {} | asset failures: {} | load problems: {}\nkeyed meshes decoded exactly: {}",
             stats.map_name,
             stats.start_tile,
-            format_pos("camera ", stats.position.camera),
+            format_pos("camera ", stats.position.camera, &stats.grid),
             stats.position.vehicle.map_or_else(
                 || "vehicle: N/A".to_string(),
-                |(p, h)| format!("{} heading {h:.0}°", format_pos("vehicle", Some(p))),
+                |(p, h)| format!("{} heading {h:.0}°", format_pos("vehicle", Some(p), &stats.grid)),
             ),
             stats.tiles_loaded,
             stats.tiles_missing,
@@ -103,8 +163,8 @@ pub fn update_debug_overlay(
             stats.asset_failures,
             stats.load_problems,
             stats.meshes_exact,
-        );
-        if let Ok(c) = vehicle.single() {
+        ));
+        if let Ok((c, _)) = vehicle.single() {
             text.0.push('\n');
             text.0
                 .push_str(&crate::control_dynamics::dynamics_text(&c.sim));
@@ -112,12 +172,29 @@ pub fn update_debug_overlay(
     }
 }
 
-fn format_pos(label: &str, p: Option<WorldPos>) -> String {
+/// The player's vehicle speed (km/h), 0 without one.
+fn speed_kmh(
+    vehicle: &Query<
+        (&opts_bevy::VehicleController, &GlobalTransform),
+        With<opts_bevy::PlayerVehicle>,
+    >,
+) -> f32 {
+    vehicle
+        .single()
+        .map_or(0.0, |(c, _)| c.sim.chassis.forward_speed_km_h().abs())
+}
+
+fn format_pos(label: &str, p: Option<WorldPos>, grid: &TileGrid) -> String {
     match p {
-        Some(p) => format!(
-            "{label} tile {:?} local ({:.1}, {:.1}) | world ({:.1}, {:.1}, {:.1})",
-            p.tile, p.local.x, p.local.y, p.world.x, p.world.y, p.world.z
-        ),
+        Some(p) => {
+            // Absolute coordinates are millions of metres: f32 keeps only half a metre, so the
+            // panel computes them again from the tile and the local place in f64.
+            let abs = grid.absolute(p.tile, p.local.as_dvec2());
+            format!(
+                "{label} tile {:?} local ({:.1}, {:.1}) | world ({:.1}, {:.1}, {:.1})",
+                p.tile, p.local.x, p.local.y, abs.x, abs.y, p.world.z
+            )
+        }
         None => format!("{label} N/A"),
     }
 }

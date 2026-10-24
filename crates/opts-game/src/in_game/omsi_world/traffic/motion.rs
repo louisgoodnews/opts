@@ -15,17 +15,31 @@ pub fn update_ai_variables(
     state: Res<TrafficState>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
     clock: Option<Res<opts_bevy::SceneryClock>>,
-    mut vehicles: Query<(&mut TrafficVehicle, &mut opts_bevy::AiVariables)>,
+    mut vehicles: Query<(
+        &mut TrafficVehicle,
+        &mut opts_bevy::AiVariables,
+        Option<&mut crate::vehicle_sound::AiEvents>,
+    )>,
 ) {
     let dt = time.delta_secs().min(0.2);
     let brightness = clock.as_ref().map(|c| c.envir_brightness());
     let weather = clock.map(|c| (c.temperature_c, c.weather));
     let now = time.elapsed_secs();
     let dark = env.is_some_and(|e| e.night());
-    for (mut v, mut vars) in &mut vehicles {
+    for (mut v, mut vars, events) in &mut vehicles {
         let Some(agent) = state.world.agent(v.id) else {
             continue;
         };
+        // A driver who is stuck sounds the horn (`ev_AI_Horn` of the AI sound configuration).
+        let (fire, next) = super::honk(
+            agent.stuck_s as f32,
+            v.honk_after,
+            agent.params.rowdy as f32,
+        );
+        v.honk_after = next;
+        if let (true, Some(mut events)) = (fire, events) {
+            events.raise("ev_ai_horn");
+        }
         let Some(command) = state.world.command(v.id) else {
             continue;
         };

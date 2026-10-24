@@ -105,6 +105,7 @@ Every setting is declared once as a `SettingDescriptor` ([registry](../architect
 | `controls.ui.switch_vehicle` | Next vehicle | input binding | `F8` | at once | available | Switches to the next vehicle of the session. |
 | `controls.ui.switch_vehicle_prev` | Previous vehicle | input binding | `Shift+F8` | at once | available | Switches to the previous vehicle of the session. |
 | `controls.ui.developer_panel` | Developer panel | input binding | `F10` | at once | available | Shows or hides the developer panel. |
+| `controls.ui.developer_panel_detail` | Developer panel detail | input binding | `Shift+F10` | at once | available | Switches the developer panel between the short page (frame rate, position, road, bus stop, traffic) and the detailed page (adds loading statistics and vehicle dynamics). |
 | `controls.rail.battery` | Battery switch (trams, trains) | input binding | `E` | at once | available | Batterietrennschalter |
 | `controls.rail.engine_start` | Start engine (trams, trains) | input binding | `M` | at once | available | Motor starten |
 | `controls.rail.lights` | Headlights (trams, trains) | input binding | `L` | at once | available | Scheinwerfer |

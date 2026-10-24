@@ -51,6 +51,7 @@ impl Plugin for InGamePlugin {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
             .init_resource::<omsi_world::ChronoState>()
+            .init_resource::<omsi_world::DeveloperDetail>()
             .init_resource::<omsi_world::CollisionIndex>()
             .init_resource::<omsi_world::RailNetwork>()
             .init_resource::<omsi_world::BikeNetwork>()
@@ -264,7 +265,10 @@ impl Plugin for InGamePlugin {
         // F10 changes the developer panel setting (needs the settings registry).
         app.add_systems(
             Update,
-            omsi_world::toggle_developer_panel
+            (
+                omsi_world::toggle_developer_panel,
+                omsi_world::toggle_developer_detail,
+            )
                 .run_if(in_state(AppState::InGame))
                 .run_if(opts_bevy::reporting::not_modal_active)
                 .run_if(resource_exists::<crate::settings_registry::SettingsRegistry>),

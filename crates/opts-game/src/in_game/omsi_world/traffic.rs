@@ -237,6 +237,9 @@ pub struct TrafficVehicle {
     pub(super) heading: f64,
     /// Height of the model origin including `[ai_deltaheight]`.
     pub(super) height: f32,
+    /// Seconds of being stuck (standing with nothing to wait for) after which the driver sounds
+    /// the horn next; reset to the driver's patience when the vehicle moves again.
+    honk_after: f32,
 }
 
 #[cfg(test)]
@@ -254,7 +257,54 @@ impl TrafficVehicle {
             origin,
             heading,
             height,
+            honk_after: HONK_AFTER_S,
         }
+    }
+}
+
+/// Seconds a careful driver is stuck before the first honk.
+pub(super) const HONK_AFTER_S: f32 = 8.0;
+/// Seconds between two honks of a driver who stays stuck.
+pub(super) const HONK_AGAIN_S: f32 = 12.0;
+
+/// Whether a driver who has been stuck for `stuck_s` seconds (`0`: moving) honks now, and when
+/// the next honk is due: a rowdier driver (`rowdy` 0 to 1) is less patient (8 s down to 3 s). The
+/// timer `after` re-arms when the vehicle moves.
+#[must_use]
+pub(super) fn honk(stuck_s: f32, after: f32, rowdy: f32) -> (bool, f32) {
+    let patience = HONK_AFTER_S - 5.0 * rowdy.clamp(0.0, 1.0);
+    if stuck_s <= 0.0 {
+        (false, patience)
+    } else if stuck_s >= after {
+        (true, stuck_s + HONK_AGAIN_S)
+    } else {
+        (false, after)
+    }
+}
+
+#[cfg(test)]
+mod honk_tests {
+    use super::*;
+
+    #[test]
+    fn a_stuck_driver_honks_after_their_patience_and_again_later() {
+        let mut after = HONK_AFTER_S;
+        let mut honks = Vec::new();
+        for t in 1..=40 {
+            let (fire, next) = honk(t as f32, after, 0.0);
+            after = next;
+            if fire {
+                honks.push(t);
+            }
+        }
+        assert_eq!(honks, [8, 20, 32]);
+    }
+
+    #[test]
+    fn a_rowdy_driver_honks_sooner_and_moving_re_arms_the_timer() {
+        let (fire, after) = honk(3.0, honk(0.0, 0.0, 1.0).1, 1.0);
+        assert!(fire && after > 3.0);
+        assert_eq!(honk(0.0, 99.0, 0.0), (false, HONK_AFTER_S));
     }
 }
 

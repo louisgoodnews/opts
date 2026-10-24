@@ -25,6 +25,8 @@ mod ground;
 mod ground_height;
 mod job;
 mod overlay;
+mod overlay_info;
+pub use overlay_info::DeveloperDetail;
 mod pedestrians;
 pub(crate) mod rail;
 mod reload;
@@ -60,9 +62,9 @@ use ground::GroundArray;
 pub use ground_height::{follow_ground, sample_consist_ground, GroundIndex};
 pub use job::{begin_world_load, begin_world_load_at, resolve_session_config};
 pub use overlay::{
-    log_final_position, spawn_debug_overlay, toggle_developer_panel, track_position,
-    update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText, DebugWheelVars,
-    WheelVarsText,
+    log_final_position, spawn_debug_overlay, toggle_developer_detail, toggle_developer_panel,
+    track_position, update_debug_overlay, update_wheel_vars_overlay, DebugOverlayText,
+    DebugWheelVars, WheelVarsText,
 };
 pub(crate) use pedestrians::{advance_phase, apply_gait, apply_rest_pose};
 pub use pedestrians::{

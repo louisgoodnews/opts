@@ -280,7 +280,7 @@ pub const GROUPS: &[Group] = &[
                 THEME,
             ),
             rebindable(
-                &["developer_panel"],
+                &["developer_panel", "developer_panel_detail"],
                 "F10",
                 &[KeyCode::F10],
                 keys::HELP_KEY_DEV,
