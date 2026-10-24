@@ -101,11 +101,8 @@ OPTS is organized as a Cargo workspace. Please ensure your contributions go into
   ./scripts/local-ci.sh      # Linux / macOS
   .\scripts\local-ci.ps1     # Windows PowerShell
   ```
-- **Optional Git pre-commit hook:** You can install the pre-commit hook to automatically verify code formatting and run Clippy checks before each commit:
-  ```bash
-  ln -s ../../scripts/pre-commit .git/hooks/pre-commit
-  ```
-  *(The hook is opt-in and is not installed automatically).*
+- **Git pre-commit hook (opt-in):** `scripts/install-hooks.sh` sets `core.hooksPath` to `scripts`. The hook checks the **staged** tree (exported to `target/precommit-tree` when you have unstaged changes, so they cannot hide a broken commit; no `git stash`): formatting, Clippy with `-D warnings`, the roadmap copies, links, roadmap audit and crate graph. `OPTS_PRECOMMIT_TESTS=1` adds the test suite (CI always runs it). `git commit --no-verify` skips it; CI does not skip.
+- **Disk:** `target/` grows to over 100 GB with several worktrees. Share one with `CARGO_TARGET_DIR`, and trim it with `cargo clean -p <crate>` or `cargo sweep --time 14` (`cargo install cargo-sweep`).
 
 ### 🤖 AI Agent Sessions: One Work Station Each
 

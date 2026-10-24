@@ -1,10 +1,10 @@
 name: CI
 
 on:
+  # Every branch (the agents work on `agent/*` branches), and pull requests against any base.
   push:
-    branches: [main, master]
+    branches: ['**']
   pull_request:
-    branches: [main, master]
 
 env:
   CARGO_TERM_COLOR: always
