@@ -30,9 +30,9 @@ pub fn road_place(
     let point = at.as_dvec2();
     let heading = f64::from(heading);
     let is_road = |l: &opts_traffic::graph::Lane| l.kind == LaneKind::Road;
-    let same = graph.nearest_place(point, heading, SAME_WAY_RAD, SEARCH_M, is_road);
-    let (lane, s, _) = same
-        .or_else(|| graph.nearest_place(point, heading, std::f64::consts::PI, SEARCH_M, is_road))?;
+    let (lane, s, _) = [SAME_WAY_RAD, NEAR_WAY_RAD, std::f64::consts::PI]
+        .into_iter()
+        .find_map(|angle| graph.nearest_place(point, heading, angle, SEARCH_M, is_road))?;
     let lane = graph.lane(lane)?;
     let along = lane.geometry.heading_at(s);
     let mut diff = (along - heading).rem_euclid(std::f64::consts::TAU);
