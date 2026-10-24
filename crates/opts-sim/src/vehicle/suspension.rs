@@ -162,6 +162,9 @@ const BUMP_STOP_STIFFNESS_N_M: f32 = 2.0e6;
 /// Integration substep of the body model (s).
 const BODY_SUBSTEP_S: f32 = 0.004;
 
+/// Gravity (m/s²).
+const GRAVITY: f32 = 9.81;
+
 fn one() -> f32 {
     1.0
 }
@@ -193,6 +196,10 @@ pub struct WheelSuspension {
     pub compression_rate_m_s: f32,
     /// Vertical load on the ground now (N, zero when the wheel has lifted).
     pub load_n: f32,
+    /// The wheel's share of the weight of the people on board (N): a downward force on the body
+    /// at the wheel's position (M-0124); the body sinks until the springs carry it.
+    #[serde(default)]
+    pub payload_n: f32,
 }
 
 /// The body on its wheels: heave, pitch and roll under a spring and a damper per wheel, driven by
@@ -251,6 +258,7 @@ impl BodySuspension {
                     compression_m: 0.0,
                     compression_rate_m_s: 0.0,
                     load_n: load * 0.5,
+                    payload_n: 0.0,
                 });
             }
         }
@@ -279,11 +287,18 @@ impl BodySuspension {
         }
         let n = (dt / BODY_SUBSTEP_S).ceil().max(1.0) as usize;
         let h = dt / n as f32;
-        let (m, ip, ir) = (
+        // The people on board add mass and inertia (their weight sits at the wheels' places).
+        let (mut m, mut ip, mut ir) = (
             self.mass_kg,
             self.pitch_inertia_kg_m2,
             self.roll_inertia_kg_m2,
         );
+        for w in &self.wheels {
+            let pm = w.payload_n / GRAVITY;
+            m += pm;
+            ip += pm * w.x_m * w.x_m;
+            ir += pm * w.y_m * w.y_m;
+        }
         // The d'Alembert forces of the acceleration act at the centre of gravity: speeding up
         // lifts the nose, turning right rolls the body to the left (right side up).
         let m_pitch_ext = m * a_long * self.cg_height_m;
@@ -314,9 +329,11 @@ impl BodySuspension {
                 w.compression_m = compression;
                 w.compression_rate_m_s = rate;
                 w.load_n = load;
-                fz += delta;
-                mp += w.x_m * delta;
-                mr -= w.y_m * delta;
+                // The spring's deviation lifts the body, the payload's weight pulls it down.
+                let net = delta - w.payload_n;
+                fz += net;
+                mp += w.x_m * net;
+                mr -= w.y_m * net;
             }
             let heave_acc = fz / m;
             let pitch_acc = (mp + m_pitch_ext) / ip;
@@ -328,6 +345,19 @@ impl BodySuspension {
             self.pitch_rad += self.pitch_rate_rad_s * h;
             self.roll_rad += self.roll_rate_rad_s * h;
         }
+    }
+
+    /// Sets the weight of the people on board (N per axle, left and right wheel half each).
+    pub fn set_payload(&mut self, axle_loads_n: &[f32]) {
+        for (i, w) in self.wheels.iter_mut().enumerate() {
+            w.payload_n = axle_loads_n.get(i / 2).copied().unwrap_or(0.0) * 0.5;
+        }
+    }
+
+    /// The weight of the people on board (N).
+    #[must_use]
+    pub fn payload_n(&self) -> f32 {
+        self.wheels.iter().map(|w| w.payload_n).sum()
     }
 
     /// Sum of the loads on the wheels of axle `index` (N).

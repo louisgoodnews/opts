@@ -69,3 +69,61 @@ fn a_full_bus_needs_a_longer_braking_distance() {
     let (empty, full) = (stop(0), stop(80));
     assert!(full > empty, "full {full:.1} m vs empty {empty:.1} m");
 }
+
+fn settle(sim: &mut VehicleSimulation, seconds: f32) {
+    sim.inputs.set_parking_brake(true);
+    for _ in 0..(seconds / DT) as usize {
+        sim.step(DT);
+    }
+}
+
+#[test]
+fn people_on_board_sink_the_body_by_their_weight_over_the_spring_rate() {
+    let (mut empty, mut full) = (bus(0), bus(80));
+    settle(&mut empty, 6.0);
+    settle(&mut full, 6.0);
+    let (e, f) = (empty.body.as_ref().unwrap(), full.body.as_ref().unwrap());
+    let weight = 80.0 * 75.0 * 9.81;
+    let stiffness: f32 = f
+        .wheels
+        .iter()
+        .map(|w| w.spring_n_m * w.spring_factor)
+        .sum();
+    let expected = weight / stiffness;
+    let sunk = e.heave_m - f.heave_m;
+    assert!(
+        (sunk - expected).abs() <= 0.15 * expected,
+        "sank {sunk:.4} m, expected {expected:.4} m"
+    );
+}
+
+#[test]
+fn the_wheels_carry_the_curb_weight_plus_the_people() {
+    let mut full = bus(80);
+    settle(&mut full, 6.0);
+    let body = full.body.as_ref().unwrap();
+    let carried = body.total_load_n();
+    let expected = (CURB_KG + 80.0 * 75.0) * 9.81;
+    assert!(
+        (carried - expected).abs() <= 0.02 * expected,
+        "wheels carry {carried:.0} N, expected {expected:.0} N"
+    );
+}
+
+#[test]
+fn the_extra_weight_loads_the_axles_by_their_lever_arms() {
+    let (mut empty, mut full) = (bus(0), bus(80));
+    settle(&mut empty, 6.0);
+    settle(&mut full, 6.0);
+    let (e, f) = (empty.body.as_ref().unwrap(), full.body.as_ref().unwrap());
+    let axles = empty.axles.len();
+    let gains: Vec<f32> = (0..axles)
+        .map(|i| f.axle_load_n(i) - e.axle_load_n(i))
+        .collect();
+    assert!(
+        gains.iter().all(|g| *g > 0.0),
+        "every axle gains load: {gains:?}"
+    );
+    let total: f32 = gains.iter().sum();
+    assert!((total - 80.0 * 75.0 * 9.81).abs() < 0.03 * total, "{total}");
+}

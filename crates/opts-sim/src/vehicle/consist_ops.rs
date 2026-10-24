@@ -80,6 +80,35 @@ impl VehicleSimulation {
             + self.passenger_mass_kg
     }
 
+    /// Gives the body the weight of the people on board, shared over the head's axles as a load
+    /// in the middle of the axle span would be (M-0124). A no-op while it is unchanged.
+    pub(super) fn sync_payload(&mut self) {
+        let Some(body) = self.body.as_mut() else {
+            return;
+        };
+        let weight = self.passenger_mass_kg.max(0.0) * 9.81;
+        if (body.payload_n() - weight).abs() < 1.0 {
+            return;
+        }
+        let positions: Vec<f32> = self.axles.iter().map(|a| a.config.longitudinal_m).collect();
+        let (Some(lo), Some(hi)) = (
+            positions.iter().copied().reduce(f32::min),
+            positions.iter().copied().reduce(f32::max),
+        ) else {
+            return;
+        };
+        // `compute_static_loads` takes at least 100 kg: share a reference mass, scale to the load.
+        let reference = 1_000.0;
+        let model =
+            super::suspension::SuspensionModel::new(self.suspension.cg_height_m, 0.5 * (lo + hi));
+        let loads: Vec<f32> = model
+            .compute_static_loads(&positions, reference)
+            .into_iter()
+            .map(|l| l * (weight / (reference * 9.81)))
+            .collect();
+        body.set_payload(&loads);
+    }
+
     /// Mass of the head unit alone (kg): the chassis' own mass.
     #[must_use]
     pub fn head_mass_kg(&self) -> f32 {

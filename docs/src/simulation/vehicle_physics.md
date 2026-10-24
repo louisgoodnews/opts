@@ -159,8 +159,7 @@ $$\Delta W_{\text{long}} = m \cdot a_y \cdot \frac{h_{\text{cg}}}{L}$$
 (`consist_mass_kg`: drive force, braking, rolling resistance, grade). The game sets it for the
 player's vehicle to `humans_inside × average mass` (`dynamic_mass_kg`); settings
 `gameplay.passenger_weight` (default on) and `gameplay.passenger_mass_kg` (default 75 kg, 40–120).
-Axle loads and suspension still use the curb mass (they wait for M-0073's per-axle input), and AI
-vehicles carry no passenger mass. `vehicle.passengers` with `mass_count` stands in for the people (testing). Tests: `crates/opts-sim/tests/passenger_mass.rs`.
+The weight also loads the body: it is shared over the head's axles as a load in the middle of the axle span (`BodySuspension::set_payload`), pulls the body down at the wheels (the springs carry it: the body sinks by weight ÷ spring rate, and the axle and brake-limit loads rise), and adds mass and inertia to the body model. The curb-weight equilibrium (`rebuild_body`) is unchanged. Following units of a consist and AI vehicles carry no passenger mass. `vehicle.passengers` with `mass_count` stands in for the people (testing). Tests: `crates/opts-sim/tests/passenger_mass.rs`.
 
 ## ⚖️ Consist Mass
 
