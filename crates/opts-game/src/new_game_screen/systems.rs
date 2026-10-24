@@ -133,69 +133,19 @@ pub fn handle_actions(
                     &env.setup,
                 );
             }
-            PlannerAction::FormationAdd(file) => {
-                env.setup.formation.push((file, false));
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
-            PlannerAction::FormationRemove(n) => {
-                if n > 0 && n < env.setup.formation.len() {
-                    env.setup.formation.remove(n);
-                }
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
-            PlannerAction::FormationUp(n) => {
-                if n > 1 && n < env.setup.formation.len() {
-                    env.setup.formation.swap(n, n - 1);
-                }
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
-            PlannerAction::FormationTurn(n) => {
-                if let Some(car) = env.setup.formation.get_mut(n) {
-                    car.1 = !car.1;
-                }
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
-            PlannerAction::FormationClear => {
-                env.setup.formation.truncate(1);
-                super::formation::reopen(
-                    &mut commands,
-                    &env.formation_modals,
-                    &env.loc,
-                    &env.catalogue,
-                    &env.setup,
-                );
-            }
-            PlannerAction::CloseFormation => {
-                super::formation::close(&env.formation_modals, &mut commands);
-                // One car is no train.
-                if env.setup.formation.len() < 2 {
-                    env.setup.formation.clear();
-                }
-            }
+            action @ (PlannerAction::FormationAdd(_)
+            | PlannerAction::FormationRemove(_)
+            | PlannerAction::FormationUp(_)
+            | PlannerAction::FormationTurn(_)
+            | PlannerAction::FormationClear
+            | PlannerAction::CloseFormation) => super::formation::edit(
+                action,
+                &mut env.setup,
+                &env.catalogue,
+                &env.loc,
+                &env.formation_modals,
+                &mut commands,
+            ),
             PlannerAction::SaveConfig => configs_save(&mut env, &mut commands),
             PlannerAction::LoadConfig(id) => configs_load(&mut env, &id, &mut commands),
             PlannerAction::FavouriteConfig(id) => {

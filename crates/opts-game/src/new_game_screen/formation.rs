@@ -34,6 +34,42 @@ pub fn close(modals: &Query<Entity, With<FormationModal>>, commands: &mut Comman
     }
 }
 
+/// Applies a composer action to the train and shows the result (or closes the composer).
+pub fn edit(
+    action: PlannerAction,
+    setup: &mut NewGameSetup,
+    catalogue: &GameCatalogue,
+    loc: &Localization,
+    modals: &Query<Entity, With<FormationModal>>,
+    commands: &mut Commands,
+) {
+    match action {
+        PlannerAction::FormationAdd(file) => setup.formation.push((file, false)),
+        PlannerAction::FormationRemove(n) if n > 0 && n < setup.formation.len() => {
+            setup.formation.remove(n);
+        }
+        PlannerAction::FormationUp(n) if n > 1 && n < setup.formation.len() => {
+            setup.formation.swap(n, n - 1);
+        }
+        PlannerAction::FormationTurn(n) => {
+            if let Some(car) = setup.formation.get_mut(n) {
+                car.1 = !car.1;
+            }
+        }
+        PlannerAction::FormationClear => setup.formation.truncate(1),
+        PlannerAction::CloseFormation => {
+            close(modals, commands);
+            // One car is no train.
+            if setup.formation.len() < 2 {
+                setup.formation.clear();
+            }
+            return;
+        }
+        _ => {}
+    }
+    reopen(commands, modals, loc, catalogue, setup);
+}
+
 /// Builds the composer again from the setup (after every change).
 pub fn reopen(
     commands: &mut Commands,

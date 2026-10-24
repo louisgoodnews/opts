@@ -212,7 +212,7 @@ fn stage_vehicle(env: &mut LoadEnv, state: &mut SimulationLoadState) {
         } = env;
         if let Some(job) = job.as_deref_mut().filter(|j| !j.no_vehicle) {
             // A train composed in the wizard: the cars behind the chosen vehicle.
-            let formation = crate::new_game_screen::apply_formation_at_start(&setup, job);
+            let formation = crate::new_game_screen::apply_formation_at_start(setup, job);
             let params = SpawnParams {
                 catalogue_id: job
                     .vehicle_file()
