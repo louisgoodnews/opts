@@ -29,12 +29,24 @@ pub const MAX_AI_VOICES: usize = 16;
 /// The definitions of an AI vehicle type that can be played, with their sound files.
 #[derive(Debug, Clone, Default)]
 pub struct AiSoundSet {
-    /// The playable definitions (at most [`MAX_AI_VOICES`]) with their files.
+    /// The loops the traffic model can drive (at most [`MAX_AI_VOICES`]) with their files:
+    /// continuous, their conditions and variables all stated by the model.
     pub voices: Vec<(Arc<SoundDef>, PathBuf)>,
-    /// Definitions of the configuration that were left out (other variables, triggers,
-    /// conditions, no file, over the cap).
+    /// One-shots the traffic model raises itself (the horn, [`HOST_EVENTS`]).
+    pub events: Vec<(Arc<SoundDef>, PathBuf)>,
+    /// Definitions that need the vehicle's own scripts (door triggers and door variables,
+    /// anything else the model does not state): played only by a vehicle that runs scripts, a
+    /// scheduled bus (at most [`MAX_SCRIPTED_VOICES`]).
+    pub scripted: Vec<(Arc<SoundDef>, PathBuf)>,
+    /// Definitions of the configuration that were left out (a condition mode that is not
+    /// understood, interior-only sounds, no file, over a cap).
     pub skipped: usize,
 }
+
+/// Most script-driven voices a scheduled AI vehicle carries.
+pub const MAX_SCRIPTED_VOICES: usize = 48;
+/// The events the traffic model raises for an AI vehicle (lower case): `ev_AI_Horn`.
+pub const HOST_EVENTS: [&str; 1] = ["ev_ai_horn"];
 
 /// Whether the traffic model states a variable: the speed and pedals, the engine speed from the
 /// gear model, the wheel speeds, the road state.
@@ -54,6 +66,14 @@ pub fn supported_variable(name: &str) -> bool {
             | "engine_throttle_injection"
             | "n_wheel"
             | "antrieb_n_kardanwelle"
+            // The state of the drive: running, not starting, going forward in its gear, wipers
+            // with rain, the electrics on (see `publish_sound_variables`).
+            | "engine_on"
+            | "engine_starter"
+            | "antrieb_wendesatz"
+            | "antrieb_getr_aktugang"
+            | "wiperrunning"
+            | "elec_busbar_main_sw"
     ) || n
         .strip_prefix("wheel_rotationspeed_")
         .is_some_and(|rest| matches!(rest.as_bytes(), [a, b'_', s] if a.is_ascii_digit() && matches!(s, b'l' | b'r')))
@@ -67,27 +87,65 @@ fn variables_of(d: &SoundDef) -> impl Iterator<Item = &str> {
         .chain(d.volcurves.iter().map(|c| c.variable.as_str()))
 }
 
-/// Whether the AI vehicle can play a definition: continuous, no condition, only supported
-/// variables.
+/// The variables a definition's conditions read.
+fn condition_variables(d: &SoundDef) -> impl Iterator<Item = &str> {
+    d.conditions.iter().map(|c| c.variable.as_str())
+}
+
+/// Whether the traffic model can drive a definition as a loop: it loops while its conditions
+/// hold, and everything it reads (pitch, volume curves, conditions) is a variable the model
+/// states.
 #[must_use]
 pub fn playable(d: &SoundDef) -> bool {
-    d.is_continuous()
-        && d.conditions.is_empty()
+    crate::sound_logic::playback_of(d) == crate::sound_logic::Playback::Loop
         && variables_of(d).all(supported_variable)
+        && condition_variables(d).all(supported_variable)
         && (d.kind == SoundKind::Sound || d.pitch_variable.is_some())
 }
 
-/// Chooses the playable definitions of a configuration; `find` resolves a file name.
+/// Whether a definition is a one-shot on an event the traffic model raises.
+#[must_use]
+pub fn host_event(d: &SoundDef) -> bool {
+    crate::sound_logic::playback_of(d) == crate::sound_logic::Playback::OnTrigger
+        && !d.triggers.is_empty()
+        && d.triggers
+            .iter()
+            .all(|t| HOST_EVENTS.contains(&t.trim().to_ascii_lowercase().as_str()))
+        && condition_variables(d).all(supported_variable)
+        && variables_of(d).all(supported_variable)
+}
+
+/// Sorts the definitions of a configuration: the loops the traffic model drives, the one-shots
+/// it raises, and those that need the vehicle's scripts; `find` resolves a file name. Sounds
+/// that play only inside the vehicle (`[viewpoint]` 2 and 6) are left out: AI vehicles are
+/// heard from outside.
 pub fn choose(cfg: &SoundConfig, find: impl Fn(&str) -> Option<PathBuf>) -> AiSoundSet {
     let mut set = AiSoundSet::default();
     for d in &cfg.sounds {
-        if !playable(d) || set.voices.len() >= MAX_AI_VOICES {
+        let playback = crate::sound_logic::playback_of(d);
+        if playback == crate::sound_logic::Playback::Unsupported
+            || !crate::sound_logic::viewpoint_allows(d.viewpoint, false)
+        {
             set.skipped += 1;
             continue;
         }
-        match find(&d.file) {
-            Some(path) => set.voices.push((Arc::new(d.clone()), path)),
-            None => set.skipped += 1,
+        let Some(path) = find(&d.file) else {
+            set.skipped += 1;
+            continue;
+        };
+        let def = Arc::new(d.clone());
+        if playable(d) {
+            if set.voices.len() < MAX_AI_VOICES {
+                set.voices.push((def, path));
+            } else {
+                set.skipped += 1;
+            }
+        } else if host_event(d) {
+            set.events.push((def, path));
+        } else if set.scripted.len() < MAX_SCRIPTED_VOICES {
+            set.scripted.push((def, path));
+        } else {
+            set.skipped += 1;
         }
     }
     set
@@ -133,7 +191,8 @@ pub fn ai_sound_set(
     })?;
     let (cfg, cfg_dir) = job.read_sound_config(dir, rel)?;
     let set = choose(&cfg, |name| job.find_sound_file(&cfg_dir, name));
-    (!set.voices.is_empty()).then(|| Arc::new(set))
+    (!(set.voices.is_empty() && set.events.is_empty() && set.scripted.is_empty()))
+        .then(|| Arc::new(set))
 }
 
 /// One continuous sound of an AI vehicle, a child at its `[3d]` position.
@@ -145,6 +204,9 @@ pub struct AiVoice {
     pub file: PathBuf,
 }
 
+mod events;
+pub use events::{fire_ai_events, AiEventVoice, AiEvents};
+
 /// What the AI sounds did, for `audio.state`.
 #[derive(Resource, Debug, Clone, Default)]
 pub struct AiAudioStats {
@@ -152,11 +214,29 @@ pub struct AiAudioStats {
     pub voices: usize,
     /// Voices with an emitter now.
     pub playing: usize,
+    /// One-shots started by events the traffic model raised (the horn).
+    pub events: u64,
 }
 
 /// Adds the voices of a vehicle type under `root`.
 pub fn attach_ai(commands: &mut Commands, root: Entity, set: Option<&Arc<AiSoundSet>>) {
     let Some(set) = set else { return };
+    commands
+        .entity(root)
+        .insert(AiEvents::default())
+        .with_children(|p| {
+            for (def, file) in &set.events {
+                let at = def.position.unwrap_or([0.0; 3]);
+                p.spawn((
+                    AiEventVoice {
+                        def: def.clone(),
+                        file: file.clone(),
+                    },
+                    Transform::from_translation(omsi_to_bevy_pos(Vec3::new(at[0], at[1], at[2]))),
+                    Name::new("AiEventVoice"),
+                ));
+            }
+        });
     commands.entity(root).with_children(|p| {
         for (def, file) in &set.voices {
             let at = def.position.unwrap_or([0.0; 3]);
@@ -201,6 +281,13 @@ pub fn ai_engine_rpm(speed_kmh: f32) -> f32 {
     (start + (SHIFT - start) * f).min(3200.0)
 }
 
+/// The gear of the stand-in model at `speed_kmh` (`0` below walking pace).
+#[must_use]
+pub fn ai_gear(speed_kmh: f32) -> f32 {
+    const CHANGES: [f32; 5] = [0.5, 12.0, 25.0, 40.0, 60.0];
+    CHANGES.iter().filter(|c| speed_kmh >= **c).count() as f32
+}
+
 /// Writes the sound variables of one AI vehicle into its table.
 pub fn publish_sound_variables(
     vars: &mut AiVariables,
@@ -227,6 +314,14 @@ pub fn publish_sound_variables(
     vars.set("ai_motor", rpm);
     vars.set("antrieb_n_kardanwelle", rpm);
     vars.set("streetcond", f32::from(wet));
+    // The state of the drive for the conditions: running, not starting, going forward in a gear
+    // of the stand-in model (`0` neutral at a standstill), wipers while it rains, electrics on.
+    vars.set("engine_on", 1.0);
+    vars.set("engine_starter", 0.0);
+    vars.set("antrieb_wendesatz", 1.0);
+    vars.set("antrieb_getr_aktugang", ai_gear(kmh));
+    vars.set("wiperrunning", f32::from(wet));
+    vars.set("elec_busbar_main_sw", 1.0);
     // Wheel speed in rpm from the rolling radius.
     let wheel_rpm = speed_ms / wheel_radius.max(0.05) * 60.0 / std::f32::consts::TAU;
     vars.set("n_wheel", wheel_rpm);
@@ -255,8 +350,11 @@ pub fn speed_of(def: &SoundDef, vars: &AiVariables) -> f32 {
 }
 
 /// Level and speed of an AI loop: the shared rules (`1 + (variable / reference - 1) × scale`,
-/// silent while the pitch is zero).
+/// silent while the pitch is zero), and silent while its conditions do not hold.
 fn ai_loop(def: &SoundDef, vars: &AiVariables) -> (f32, f32) {
+    if crate::sound_logic::conditions_hold(&def.conditions, |n| vars.get(n)) != Some(true) {
+        return (0.0, 1.0);
+    }
     crate::sound_logic::loop_voice(def, |n| vars.get(n))
 }
 
@@ -346,137 +444,10 @@ impl Plugin for AiAudioPlugin {
             .init_resource::<AiAudioStats>()
             .add_systems(
                 Update,
-                stream_ai_voices.after(crate::audio_content::poll_clip_loader),
+                (stream_ai_voices, fire_ai_events).after(crate::audio_content::poll_clip_loader),
             );
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn cfg(text: &str) -> SoundConfig {
-        SoundConfig::parse(text)
-    }
-
-    #[test]
-    fn only_variables_the_traffic_model_states_are_supported() {
-        for ok in [
-            "Velocity",
-            "THROTTLE",
-            "engine_n",
-            "Wheel_RotationSpeed_1_L",
-            "StreetCond",
-        ] {
-            assert!(supported_variable(ok), "{ok}");
-        }
-        for bad in [
-            "door_1",
-            "in_door_sound_01",
-            "engine_turbo_RPM",
-            "Wheel_RotationSpeed_1",
-            "-1",
-            "m_wheel",
-        ] {
-            assert!(!supported_variable(bad), "{bad}");
-        }
-    }
-
-    #[test]
-    fn a_configuration_is_cut_down_to_what_can_be_played() {
-        let text = "[sound]\nrollen.wav\n3\n[3d]\n0\n0\n0\n5\n[volcurve]\nVelocity\n[pnt]\n0\n0\n[pnt]\n80\n1\n\
-[loopsound]\nmotor.wav\n44100\nengine_n\n631\n1\n[3d]\n0\n2\n0.5\n8\n[volcurve]\nThrottle\n[pnt]\n0\n0.3\n[pnt]\n1\n1\n\
-[sound]\ndoor.wav\n1\n[3d]\n0\n0\n0\n5\n[trigger]\nev_door\n\
-[sound]\nhiss.wav\n1\n[3d]\n0\n0\n0\n5\n[volcurve]\nin_door_sound_01\n[pnt]\n0\n1\n\
-[loopsound]\nturbo.wav\n44100\nengine_turbo_RPM\n1000\n1\n[3d]\n0\n0\n0\n5\n\
-[sound]\ngone.wav\n1\n[3d]\n0\n0\n0\n5\n[volcurve]\nVelocity\n[pnt]\n0\n1\n";
-        let set = choose(&cfg(text), |n| (n != "gone.wav").then(|| PathBuf::from(n)));
-        let files: Vec<_> = set.voices.iter().map(|(d, _)| d.file.as_str()).collect();
-        assert_eq!(files, ["rollen.wav", "motor.wav"]);
-        assert_eq!(set.skipped, 4);
-    }
-
-    #[test]
-    fn the_cap_keeps_the_first_voices() {
-        let mut text = String::new();
-        for i in 0..40 {
-            text.push_str(&format!(
-                "[sound]\nv{i}.wav\n1\n[3d]\n0\n0\n0\n5\n[volcurve]\nVelocity\n[pnt]\n0\n1\n"
-            ));
-        }
-        let set = choose(&cfg(&text), |n| Some(PathBuf::from(n)));
-        assert_eq!(set.voices.len(), MAX_AI_VOICES);
-        assert_eq!(set.skipped, 40 - MAX_AI_VOICES);
-    }
-
-    #[test]
-    fn the_engine_speed_rises_drops_at_a_shift_and_rises_again() {
-        assert_eq!(ai_engine_rpm(0.0), 650.0);
-        assert!(ai_engine_rpm(6.0) > 650.0 && ai_engine_rpm(11.9) < 2100.1);
-        let before = ai_engine_rpm(11.99);
-        let after = ai_engine_rpm(12.1);
-        assert!(after < before - 500.0, "{before} -> {after}");
-        assert!(ai_engine_rpm(20.0) > after);
-        assert!(ai_engine_rpm(300.0) <= 3200.0);
-        let mut last = 0.0;
-        for k in 0..=120 {
-            let v = ai_engine_rpm(k as f32);
-            assert!((600.0..=3200.0).contains(&v));
-            last = v;
-        }
-        assert!(last > 650.0);
-    }
-
-    #[test]
-    fn variables_are_published_and_drive_level_and_pitch() {
-        let mut vars = AiVariables::default();
-        publish_sound_variables(&mut vars, 10.0, 0.6, 0.0, 0.5, false);
-        assert!((vars.get("Velocity") - 36.0).abs() < 1e-4);
-        assert!((vars.get("throttle") - 0.5).abs() < 1e-5);
-        assert!(vars.get("wheel_rotationspeed_1_l") > 100.0);
-        assert_eq!(vars.get("streetcond"), 0.0);
-        let d = cfg("[loopsound]\nm.wav\n44100\nengine_n\n1000\n1\n[3d]\n0\n0\n0\n5\n[volcurve]\nVelocity\n[pnt]\n0\n0\n[pnt]\n72\n1\n")
-            .sounds
-            .remove(0);
-        assert!((level_of(&d, &vars) - 0.5).abs() < 1e-4);
-        let rpm = vars.get("engine_n");
-        assert!((speed_of(&d, &vars) - rpm / 1000.0).abs() < 1e-4);
-        // Standing: no throttle, idle.
-        publish_sound_variables(&mut vars, 0.0, 1.0, 1.0, 0.5, true);
-        assert_eq!(
-            (
-                vars.get("throttle"),
-                vars.get("engine_n"),
-                vars.get("streetcond")
-            ),
-            (0.0, 650.0, 1.0)
-        );
-    }
-}
-
-#[cfg(test)]
-mod ai_name_tests {
-    use super::is_ai_name;
-
-    #[test]
-    fn ai_variants_are_told_by_name() {
-        for yes in [
-            "Vehicles/MAN_NL_NG/MAN_GN92_main_KI.bus",
-            "sound\\sound_GN92_M_ai.cfg",
-            "ai_peugeot_106_S1.ovh",
-            "KI_bus.bus",
-            "Vehicles/x/AI_C2_e5g_3door.bus",
-        ] {
-            assert!(is_ai_name(yes), "{yes}");
-        }
-        for no in [
-            "MAN_GN92_main.bus",
-            "sound\\sound_GN92_M.cfg",
-            "Kiel.bus",
-            "maintenance.cfg",
-            "Vehicles/Rain/x.bus",
-        ] {
-            assert!(!is_ai_name(no), "{no}");
-        }
-    }
-}
+mod tests;

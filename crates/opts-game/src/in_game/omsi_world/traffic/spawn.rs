@@ -418,7 +418,7 @@ pub fn spawn_traffic(
                 sched.built(id, r);
                 if let Some(canvases) = head_canvases.take() {
                     let seed = id.0.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ r.run.run as u64;
-                    super::ai_script::attach(
+                    let scripted = super::ai_script::attach(
                         &mut job,
                         &mut commands,
                         root,
@@ -428,6 +428,11 @@ pub fn spawn_traffic(
                         seed,
                         &head_setvars,
                     );
+                    // The sounds that need the scripts' variables and events (the doors) play
+                    // from a vehicle that runs them.
+                    if let (true, Some(set)) = (scripted, sound.as_ref()) {
+                        crate::player_sound::attach_defs(&mut commands, root, &set.scripted);
+                    }
                 }
             }
             tracing::debug!(
@@ -482,6 +487,7 @@ pub fn spawn_traffic(
                     origin: at,
                     heading: 0.0,
                     height: delta_height,
+                    honk_after: HONK_AFTER_S,
                 },
                 opts_bevy::AiVariables::default(),
             ));
