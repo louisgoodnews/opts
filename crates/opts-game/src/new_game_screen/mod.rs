@@ -8,6 +8,7 @@
 
 pub mod choice;
 pub mod configs;
+pub mod formation;
 pub mod history;
 pub mod livery;
 pub mod options;
@@ -34,10 +35,10 @@ use opts_gui::l10n::Localization;
 use crate::app_state::AppState;
 use crate::shell::ShellContent;
 
+pub use formation::apply_to_start as apply_formation_at_start;
 pub use history::PlannerHistory;
 pub use planner::{Note, PlannerState, PlannerStep};
 pub use screen::{FooterButton, PlannerBody};
-pub use systems::ComposeFormationOnStart;
 pub use types::{GameCatalogue, MapItem, NewGameScreenRoot, NewGameSetup, VehicleItem};
 
 /// Everything a step needs to build its body.

@@ -55,6 +55,7 @@ pub struct Env<'w, 's> {
     leave: MessageWriter<'w, NavigateBack>,
     navigate: MessageWriter<'w, Navigate>,
     modals: Query<'w, 's, Entity, With<OptionsModal>>,
+    formation_modals: Query<'w, 's, Entity, With<super::formation::FormationModal>>,
 }
 
 fn go(env: &mut Env, step: PlannerStep) {
@@ -123,9 +124,28 @@ pub fn handle_actions(
                 next(&mut env);
             }
             PlannerAction::ComposeFormation => {
-                commands.insert_resource(ComposeFormationOnStart);
-                next(&mut env);
+                super::formation::ensure_head(&mut env.setup, &env.catalogue);
+                super::formation::reopen(
+                    &mut commands,
+                    &env.formation_modals,
+                    &env.loc,
+                    &env.catalogue,
+                    &env.setup,
+                );
             }
+            action @ (PlannerAction::FormationAdd(_)
+            | PlannerAction::FormationRemove(_)
+            | PlannerAction::FormationUp(_)
+            | PlannerAction::FormationTurn(_)
+            | PlannerAction::FormationClear
+            | PlannerAction::CloseFormation) => super::formation::edit(
+                action,
+                &mut env.setup,
+                &env.catalogue,
+                &env.loc,
+                &env.formation_modals,
+                &mut commands,
+            ),
             PlannerAction::SaveConfig => configs_save(&mut env, &mut commands),
             PlannerAction::LoadConfig(id) => configs_load(&mut env, &id, &mut commands),
             PlannerAction::FavouriteConfig(id) => {
@@ -243,6 +263,7 @@ fn configs_load(env: &mut Env, id: &str, commands: &mut Commands) {
     };
     env.setup.no_vehicle = false;
     env.setup.selected_vehicle = env.catalogue.vehicle_key(vehicle);
+    env.setup.formation.clear();
     env.setup.selected_livery.clone_from(&config.repaint);
     env.setup.custom_setvars = config.setvars.iter().cloned().collect();
     env.library.store.touch(&config.id, now_unix());
@@ -296,23 +317,18 @@ fn drive(env: &mut Env, commands: &mut Commands) {
         vehicle = %setup.selected_vehicle,
         "starting the drive"
     );
-    // The wish to compose a train holds only for a rail vehicle (the player may have gone back
-    // and chosen another one).
+    // A composed train holds only for the rail vehicle it was made for (the player may have gone
+    // back and chosen another one: choosing clears it).
     let rail = !setup.no_vehicle
         && env
             .catalogue
             .find_vehicle(&setup.selected_vehicle)
             .is_some_and(|v| v.class == "rail");
     if !rail {
-        commands.remove_resource::<ComposeFormationOnStart>();
+        env.setup.formation.clear();
     }
     env.next_state.set(AppState::InGame);
 }
-
-/// Set by *Compose a train* of the What step: the formation editor opens when the drive has
-/// started (`crate::in_game::open_formation_on_start`), and is removed then.
-#[derive(Resource, Debug, Clone, Copy)]
-pub struct ComposeFormationOnStart;
 
 /// `Esc` / `Back` inside the wizard: the shell's one Esc mechanism (`shell::esc`) sends
 /// [`ScreenBack`] while a step is left to go back to, and leaves the screen through the back stack
@@ -446,6 +462,7 @@ pub fn handle_list_events(
                     setup.selected_vehicle = key;
                     setup.selected_livery.clear();
                     setup.custom_setvars.clear();
+                    setup.formation.clear();
                 }
                 fill_what_detail(
                     &mut commands,

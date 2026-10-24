@@ -90,7 +90,14 @@ fn a_blocked_continue_does_nothing_and_an_enabled_one_requests_the_last_choices(
     let mut app = home_app(&[record("Berlin", "MAN SD77", 12)]);
     let button =
         opts_gui::ui_tree::find_entity(app.world_mut(), "home.continue").expect("continue");
-    // No catalogue in a test: the button is disabled and says why.
+    // No catalogue in a test: the button is disabled and says why (the system that fills the
+    // reason may need a frame more than the one that built the card).
+    for _ in 0..3 {
+        app.update();
+        if app.world().get::<DisabledReason>(button).is_some() {
+            break;
+        }
+    }
     assert!(app.world().get::<DisabledReason>(button).is_some());
     app.world_mut().write_message(Activated(button));
     for _ in 0..3 {

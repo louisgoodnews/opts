@@ -110,7 +110,7 @@ Pure checks first (no installation), then checks against the installation (vehic
 
 ## 7. UI (B4)
 
-**Where.** The *Select Vehicle* modal of the Left-Alt menu (`in_game/vehicle_menu.rs`) gets a notebook with two tabs: **Vehicle** (today's page, unchanged) and **Formation**. The new-game wizard is unchanged in v1 (a formation is composed in session, as the task's example does).
+**Where.** The *Select Vehicle* modal of the Left-Alt menu (`in_game/vehicle_menu.rs`) gets a notebook with two tabs: **Vehicle** (today's page, unchanged) and **Formation**. The new-game wizard (2026-10-24) has a composer of its own: for a rail vehicle the What step offers *Compose a train…*, a dialog (`new_game_screen/formation.rs`) over the step in which cars of the installation are added behind the chosen vehicle, turned, moved and removed (the choice is `NewGameSetup::formation`, cleared when another vehicle is chosen). The drive starts with the whole train: the loading pipeline resolves it like `formation.spawn` does and sets the cars behind the head (`apply_to_start`). The Formation page of the in-game menu stays for changing a train during the session; presets, saved formations and the entry point are only there.
 
 **Widgets (all existing):** `NotebookBuilder` (tabs), `ModalBuilder` (the modal), `RowBuilder`/`StackBuilder`/`CardBuilder` (layout, one card per segment), `ButtonBuilder` (icon buttons: up, down, turn, remove; text buttons: Add, Save, Load, Spawn), `ComboboxBuilder` (Load: saved formations and `.zug` presets, grouped), `TextFieldBuilder` (name), `LabelBuilder`. **No new widget is needed**: the scrollable lists of the modal are built the way the vehicle list is. A reorderable-list widget would be a nicety for later.
 
