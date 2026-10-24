@@ -193,6 +193,8 @@ enum Action {
     DespawnId(VehicleId),
     /// Puts a session vehicle back at its spawn point.
     Respawn(VehicleId),
+    /// Put the vehicle on the nearest road lane under it.
+    ResetOnRoad(VehicleId),
     OpenSelect,
     /// Opens the train formation editor.
     OpenFormation,

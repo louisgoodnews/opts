@@ -339,6 +339,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
 | [`session.respawn`](#sessionrespawn) | `id?` (integer) | 1.2 | Put a session vehicle back at its spawn point, at rest (default: the active one) |
+| [`session.reset_road`](#sessionreset_road) | `id?` (integer) | 1.29 | Put a session vehicle on the nearest road lane under it, at rest (default: the active one) |
 | [`formation.validate`](#formationvalidate) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean) | 1.6 | Check a train formation against the installation (every problem is listed) |
 | [`formation.spawn`](#formationspawn) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.6 | Spawn a train formation at an entry point; its first car becomes the active vehicle |
 | [`formation.save`](#formationsave) | `saved?` (string)<br>`zug?` (string)<br>`cars?` (json)<br>`name?` (string)<br>`reverse?` (boolean)<br>`id?` (string)<br>`overwrite?` (boolean) | 1.6 | Save a train formation in the user's formation folder |
@@ -399,7 +400,7 @@ Reset the current camera view to its default, like Shift+Space.
 
 **Result:** `{mode, sub_camera}`
 
-Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open.
+Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 14 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open.
 
 ### `camera.look`
 
@@ -512,6 +513,14 @@ Put a session vehicle back at its spawn point, at rest (default: the active one)
 **Result:** `{ok, id}`
 
 Shows the HUD place label again. Answers `1001` when the vehicle is not in the world.
+
+### `session.reset_road`
+
+Put a session vehicle on the nearest road lane under it, at rest (default: the active one).
+
+**Result:** `{ok, id}`
+
+The pause menu's *Reset on road*: the vehicle goes to the nearest road lane within 60 m (one that runs its way if there is one) and faces along it, as it faced before (against the lane, if it stood against it); speed, pedals and steering are cleared. The spawn point is not changed. Answers `1001` when the vehicle is not in the world or no road lane is near.
 
 ### `formation.validate`
 

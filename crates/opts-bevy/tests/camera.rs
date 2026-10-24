@@ -220,7 +220,7 @@ fn shift_space_resets_the_external_view_to_its_defaults() {
     let s = app.world().resource::<CameraState>();
     assert_eq!(
         (s.external_yaw, s.external_zoom, s.pan_offset),
-        (0.0, 8.0, Vec3::ZERO)
+        (0.0, 14.0, Vec3::ZERO)
     );
     assert!((s.external_pitch + 15f32.to_radians()).abs() < 1e-6);
     assert_eq!(s.mode, CameraMode::External);

@@ -4,7 +4,7 @@
 //! | View | Default |
 //! | :--- | :--- |
 //! | Free roam (5) | the pose recorded when the view was entered, speed 5 m/s |
-//! | External (3) | yaw 0, pitch −15°, zoom 8 m, no pan |
+//! | External (3) | yaw 0, pitch −15°, zoom 14 m, no pan |
 //! | Ego (1) | looking along the head's forward direction |
 //! | Cockpit (2) | the sub camera in use, look angles 0, the **stored viewpoint** of the vehicle (or the vehicle's own view); an open editor is cancelled |
 //! | Passenger (4) | the sub camera in use, look angles 0 |
@@ -51,7 +51,7 @@ pub fn reset_view(
         CameraMode::External => {
             state.external_yaw = 0.0;
             state.external_pitch = -15.0_f32.to_radians();
-            state.external_zoom = 8.0;
+            state.external_zoom = state.external_home_zoom;
             state.pan_offset = Vec3::ZERO;
         }
         CameraMode::Ego => {
@@ -116,7 +116,7 @@ mod tests {
         reset_view(&mut s, None, &mut ViewpointState::default());
         assert_eq!(s.external_yaw, 0.0);
         assert!((s.external_pitch + 15f32.to_radians()).abs() < 1e-6);
-        assert_eq!((s.external_zoom, s.pan_offset), (8.0, Vec3::ZERO));
+        assert_eq!((s.external_zoom, s.pan_offset), (14.0, Vec3::ZERO));
     }
 
     #[test]

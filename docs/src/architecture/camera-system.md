@@ -35,7 +35,7 @@ Code: `crates/opts-bevy/src/camera/`. Session wiring: `crates/opts-game/src/in_g
 
 ## Reset (Shift+Space)
 
-Fires on the key edge in every mode, never changes the mode or `previous_mode`, and always logs at `DEBUG`. Per-mode defaults: 5 as above; 3 yaw 0, pitch −15°, zoom 8 m, pan 0; 2/4 sub-camera index 0 (or `[set_camera_std]`).
+Fires on the key edge in every mode, never changes the mode or `previous_mode`, and always logs at `DEBUG`. Per-mode defaults: 5 as above; 3 yaw 0, pitch −15°, zoom 14 m, pan 0; 2/4 sub-camera index 0 (or `[set_camera_std]`).
 
 ## Design decisions (confirm before 1–4)
 

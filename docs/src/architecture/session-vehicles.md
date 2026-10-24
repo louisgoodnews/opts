@@ -59,6 +59,8 @@ All three are functions on the `World` in `session_vehicles::ops`, so the pause 
 
 **Respawn** (`respawn`): puts a living vehicle back at its recorded spawn point at rest, pedals released; the articulation system treats the position jump as a placement and re-seeds the trailers. It also shows the place label again.
 
+**Reset on road** (`reset`, `session.reset_road`; `session_vehicles/road_reset.rs`): puts the vehicle on the nearest road lane within 60 m of where it stands (a lane that runs its way, within 45°, unless another lane is more than 6 m nearer), faces it along the lane (as it faced, if it stood against it), at rest. For a bus that was turned, pushed off the road or got stuck; the spawn point stays as it was.
+
 ## 4. Place label (HUD)
 
 The `session` widget of the status bar shows the map and, while it applies, the **name of the entry point the active vehicle was spawned at** (`PlaceLabel`, computed from the registry; no place name exists in the HUD sources, a source test forbids them). The label is shown while the vehicle stands within **25 m** (`PLACE_LABEL_HIDE_DISTANCE_M`) of its spawn point. Once it has been further away it stays hidden (also when it returns) until the vehicle is respawned or a new vehicle is spawned. Despawned or no vehicle: no label. `hud.state` and `session.vehicles` expose it as `place_label`.

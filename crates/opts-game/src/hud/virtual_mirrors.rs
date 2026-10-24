@@ -56,15 +56,15 @@ pub struct Shown {
 /// What each slot shows given the state: `None` nothing, `Some(None)` the area, `Some(Some(id))`
 /// the stream.
 #[must_use]
-pub fn shown(vm: &VirtualMirrors, visible: bool) -> Shown {
+pub fn shown(vm: &VirtualMirrors, visible: bool, external: bool) -> Shown {
     let mut slots = [None, None, None];
-    if visible {
+    if visible || external {
         for slot in MirrorSlot::ALL {
             let i = slot.index();
             let Some(feed) = &vm.feeds[i] else { continue };
             slots[i] = if vm.streams[i] {
                 Some(Some(feed.picture.id()))
-            } else if vm.open {
+            } else if vm.open && visible {
                 Some(None)
             } else {
                 None
@@ -89,7 +89,10 @@ pub fn sync_virtual_mirrors(
 ) {
     let visible =
         camera.mode == CameraMode::Cockpit && avail.cockpit && !editor.is_some_and(|e| e.editing);
-    let now = shown(&vm, visible);
+    // Streaming panels also show in the external view (the areas to click exist only in the
+    // driver's view).
+    let external = camera.mode == CameraMode::External;
+    let now = shown(&vm, visible, external);
     if last.as_ref() == Some(&now) {
         return;
     }

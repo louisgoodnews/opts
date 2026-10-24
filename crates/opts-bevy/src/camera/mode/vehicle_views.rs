@@ -24,8 +24,12 @@ pub const DEFAULT_FOV_Y: f32 = std::f32::consts::FRAC_PI_4;
 /// Minimum and maximum external orbit distance in metres.
 pub const EXTERNAL_ZOOM_RANGE: (f32, f32) = (0.5, 50.0);
 
-/// Default external pitch (−15°) and zoom (8 m) used by the reset.
+/// Default external pitch (−15°) used by the reset.
 pub const EXTERNAL_DEFAULT_PITCH_DEG: f32 = -15.0;
+
+/// Default external orbit distance (m) and the one the reset returns to: far enough to see the
+/// whole rear of a 12 m bus.
+pub const EXTERNAL_DEFAULT_ZOOM_M: f32 = 14.0;
 
 /// Converts a horizontal field of view to a vertical one for `aspect` (width / height).
 #[must_use]

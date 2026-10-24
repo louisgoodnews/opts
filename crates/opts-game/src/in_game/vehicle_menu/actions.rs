@@ -116,6 +116,7 @@ pub(super) fn menu_actions(
                 .find(|r| r.is_alive() && (has(&r.name) || has(&r.repaint)))
                 .map(|r| Action::Switch(r.id)),
             "respawn" => registry.active_id().map(Action::Respawn),
+            "reset" => registry.active_id().map(Action::ResetOnRoad),
             "toggle" => Some(Action::Toggle(rest.clone())),
             // `step <option> [-1|1]`: the option is the first word, the direction the last.
             "step" => {
@@ -190,6 +191,14 @@ pub(super) fn menu_actions(
                     }
                 });
                 menu.status = "Vehicle put back at its spawn point.".into();
+            }
+            Action::ResetOnRoad(id) => {
+                commands.queue(move |w: &mut World| {
+                    if let Err(e) = crate::session_vehicles::reset_on_road(w, id) {
+                        tracing::warn!("reset on the road refused: {e}");
+                    }
+                });
+                menu.status = "Vehicle put on the nearest road.".into();
             }
             Action::OpenSelect => {
                 menu.page = Page::Select;
