@@ -288,10 +288,11 @@ mod honk_tests {
 
     #[test]
     fn a_stuck_driver_honks_after_their_patience_and_again_later() {
-        let (mut fire, mut after) = (false, HONK_AFTER_S);
+        let mut after = HONK_AFTER_S;
         let mut honks = Vec::new();
         for t in 1..=40 {
-            (fire, after) = honk(t as f32, after, 0.0);
+            let (fire, next) = honk(t as f32, after, 0.0);
+            after = next;
             if fire {
                 honks.push(t);
             }
