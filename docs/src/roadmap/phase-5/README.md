@@ -55,7 +55,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Documentation repair and developer switch reference — [M-0041](M-0041.md) (F-013, F-018, F-020–F-023).
   - [~] CI and toolchain hardening (written, unverified until first CI run; binrw open): link check, mdBook build, toolchain pin, Windows job — [M-0042](M-0042.md) (F-024–F-026).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../../meta/critical-review-2026-10-11.md))**
-  - [ ] Host the repository, activate CI, fix the three gate failures at HEAD (fmt, clippy, rustdoc), isolate agent sessions in worktrees and gate commits on a staged-tree build — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
+  - [ ] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); open: the first green hosted run and Pages, which need the project lead — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
   - [ ] Stop the size and lint-allow growth: fail CI on new size violations, group load-job parameters, fix stale Bevy rustdoc links (appended to [M-0040](M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
