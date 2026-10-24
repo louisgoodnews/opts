@@ -16,7 +16,7 @@ In the driver's view (key 2):
 2. **Click an area.** The mirror's camera streams into a panel there (a picture twice the size of the pane picture, rendered every frame). Click it again to switch it off.
 3. **Tab** again hides the areas of the mirrors that are off. A panel that is on stays while the vehicle is driven.
 
-Leaving the driver's view hides the panels (they return when it is entered again); the viewpoint editor hides them while it is open. A mouse that steers (`MouseDriving`) is let go while the mode is open and given back when it closes.
+The panels that are on also show in the **external view** (view 3), so a mirror stays in sight while the bus is seen from outside (the areas to click exist only in the driver's view). Other views (free roam, passenger) hide the panels (they return when the driver's or the external view is entered again); the viewpoint editor hides them while it is open. A mouse that steers (`MouseDriving`) is let go while the mode is open and given back when it closes.
 
 The picture is mirrored left to right, so that something that comes up on the left of the vehicle appears on the left of the panel, as in a mirror.
 

@@ -134,7 +134,7 @@ impl Default for CameraState {
             previous_mode: CameraMode::FreeRoam,
             sub_camera_index: 0,
             free_roam_speed: FREE_ROAM_MIN_SPEED,
-            external_zoom: 8.0,
+            external_zoom: super::mode::vehicle_views::EXTERNAL_DEFAULT_ZOOM_M,
             external_yaw: 0.0,
             external_pitch: -15.0_f32.to_radians(),
             pan_offset: Vec3::ZERO,

@@ -98,6 +98,10 @@ pub(super) fn build_main(
                 row.commands()
                     .entity(switch)
                     .insert(UiId::new(format!("vehicle.session.{id}.switch")));
+                let reset = button(row, "Reset on road", false, Action::ResetOnRoad(*id));
+                row.commands()
+                    .entity(reset)
+                    .insert(UiId::new(format!("vehicle.session.{id}.reset")));
                 let respawn = button(row, "Respawn", false, Action::Respawn(*id));
                 row.commands()
                     .entity(respawn)

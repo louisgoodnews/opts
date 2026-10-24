@@ -16,11 +16,13 @@ use bevy::prelude::*;
 use opts_gui::l10n::fluent::Arg;
 use opts_gui::l10n::{L10nArgs, Localization};
 
+mod road_reset;
 pub use ops::{OpError, PLACE_LABEL_HIDE_DISTANCE_M};
 pub use registry::{
     DespawnReason, EntrySel, Lifecycle, SessionVehicle, SessionVehicleRecord, SessionVehicles,
     SpawnParams, SpawnPoint, VehicleId, SAVE_SECTION, SAVE_SECTION_VERSION,
 };
+pub use road_reset::{reset_on_road, road_place};
 pub use state::VehicleState;
 
 use crate::app_state::AppState;

@@ -156,14 +156,36 @@ pub fn open_options(
         .id();
     opts_gui::patterns::scroll::wheel_scroll(commands, list);
     for item in &items {
+        // A row never shrinks below its control (the list scrolls instead), and a choice box or a
+        // number field gets its name as a label beside it: the box shows only the value.
         let line = commands
             .spawn(Node {
                 justify_content: JustifyContent::SpaceBetween,
+                align_items: AlignItems::Center,
                 width: Val::Percent(100.0),
+                min_height: Val::Px(56.0),
+                flex_shrink: 0.0,
                 ..row(12.0)
             })
             .id();
         let control = option_control(commands, item);
+        if !matches!(item.kind, SetvarKind::Switch | SetvarKind::Fraction) {
+            let label = commands
+                .spawn((
+                    plain(
+                        item.label.clone(),
+                        TypeScale::BodyMedium,
+                        ColorRole::OnSurface,
+                    ),
+                    Node {
+                        flex_grow: 1.0,
+                        flex_shrink: 1.0,
+                        ..default()
+                    },
+                ))
+                .id();
+            commands.entity(line).add_child(label);
+        }
         commands.entity(line).add_child(control);
         commands.entity(list).add_child(line);
     }

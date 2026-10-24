@@ -20,7 +20,7 @@ pub(super) const PART: &[CommandSpec] = &[
     )
     .since("1.2")
     .result("`{mode, sub_camera}`")
-    .doc("Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 8 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open."),
+    .doc("Same code as the key. Free roam returns to the pose recorded on entry (speed 5 m/s); external to yaw 0, pitch -15 degrees, zoom 14 m, no pan; ego looks forward; the driver's view (2) and the passenger view (4) keep their sub camera and look straight ahead, and view 2 returns to the stored viewpoint (an open editor is cancelled). Never changes the mode. Answers `1009` while a dialog or the vehicle menu is open."),
     c(
         "camera.look",
         "scene",
@@ -286,6 +286,15 @@ pub(super) const PART: &[CommandSpec] = &[
     .since("1.2")
     .result("`{ok, id}`")
     .doc("Shows the HUD place label again. Answers `1001` when the vehicle is not in the world."),
+    c(
+        "session.reset_road",
+        "scene",
+        "Put a session vehicle on the nearest road lane under it, at rest (default: the active one)",
+        "id:i@0?",
+    )
+    .since("1.29")
+    .result("`{ok, id}`")
+    .doc("The pause menu's *Reset on road*: the vehicle goes to the nearest road lane within 60 m (one that runs its way if there is one) and faces along it, as it faced before (against the lane, if it stood against it); speed, pedals and steering are cleared. The spawn point is not changed. Answers `1001` when the vehicle is not in the world or no road lane is near."),
     c(
         "formation.validate",
         "scene",

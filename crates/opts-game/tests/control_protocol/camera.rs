@@ -144,7 +144,7 @@ fn camera_reset_resets_the_current_view_and_follows_the_gates() {
     let r = call(&mut app, "camera.reset", json!({})).expect("reset external");
     assert_eq!(r["mode"], "external");
     let s = app.world().resource::<CameraState>();
-    assert_eq!((s.external_yaw, s.external_zoom), (0.0, 8.0));
+    assert_eq!((s.external_yaw, s.external_zoom), (0.0, 14.0));
 
     {
         let mut s = app.world_mut().resource_mut::<CameraState>();

@@ -25,6 +25,7 @@ pub fn register(registry: &mut ControlRegistry) {
     registry.register("session.switch", switch);
     registry.register("session.despawn", despawn);
     registry.register("session.respawn", respawn);
+    registry.register("session.reset_road", reset_road);
     registry.register("session.change_map", change_map);
 }
 
@@ -248,6 +249,16 @@ fn respawn(world: &mut World, params: &Value) -> Outcome {
         session_up(world)?;
         let id = active_or(world, id_param(params)?)?;
         ops::respawn(world, id).map_err(op_error)?;
+        Ok(json!({ "ok": true, "id": id }))
+    })();
+    result.into()
+}
+
+fn reset_road(world: &mut World, params: &Value) -> Outcome {
+    let result = (|| -> Result<Value, RpcError> {
+        session_up(world)?;
+        let id = active_or(world, id_param(params)?)?;
+        crate::session_vehicles::reset_on_road(world, id).map_err(op_error)?;
         Ok(json!({ "ok": true, "id": id }))
     })();
     result.into()
