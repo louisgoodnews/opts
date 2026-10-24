@@ -230,6 +230,7 @@ pub fn apply_to_start(
     setup: &NewGameSetup,
     job: &mut crate::in_game::omsi_world::WorldLoadJob,
 ) -> Option<opts_core::formats::trains::TrainFormation> {
+    tracing::debug!(cars = setup.formation.len(), "train composed in the wizard");
     if setup.formation.len() < 2 {
         return None;
     }
