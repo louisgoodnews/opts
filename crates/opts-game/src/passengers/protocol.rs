@@ -15,6 +15,11 @@ pub fn command(
     use opts_bevy::control::state::Outcome;
     use opts_cli::protocol::{code, RpcError};
     let spawn = params.get("spawn").and_then(serde_json::Value::as_u64);
+    if let Some(n) = params.get("mass_count").and_then(serde_json::Value::as_i64) {
+        world.insert_resource(super::PassengerCountOverride(
+            usize::try_from(n).ok().map(|n| n.min(400)),
+        ));
+    }
     {
         let mut q0 = world.query_filtered::<&mut PassengerRig, With<PlayerVehicle>>();
         let Some(mut rig) = q0.iter_mut(world).next() else {
@@ -64,11 +69,21 @@ pub fn command(
             .min_by(|a, b| a.0.total_cmp(&b.0))
     });
     let sim = &rig.sim;
+    let forced = world
+        .get_resource::<super::PassengerCountOverride>()
+        .and_then(|f| f.0);
     let places: Vec<serde_json::Value> = (0..sim.cabin.places.len())
         .map(|i| serde_json::json!(sim.on_place(i)))
         .collect();
     Outcome::ok(serde_json::json!({
         "inside": sim.humans_inside(),
+        "mass": {
+            "source": if forced.is_some() { "override" } else { "passengers" },
+            "count": forced.unwrap_or_else(|| sim.humans_inside()),
+            "on": world.get_resource::<crate::settings::GameSettings>().is_none_or(|s| {
+                s.raw(super::weight::SETTING).is_none_or(|v| !v.trim().eq_ignore_ascii_case("false"))
+            }),
+        },
         "approaching": rig.approaching.len(),
         "leaving": rig.leaving.len(),
         "at_stop": rig.stop.is_some(),
