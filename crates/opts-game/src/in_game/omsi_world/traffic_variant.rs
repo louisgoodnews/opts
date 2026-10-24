@@ -300,6 +300,9 @@ pub(super) struct Slot {
     pub weight: f32,
     /// Index into the pool's groups.
     pub group: usize,
+    /// The depot fleet lines of this vehicle (`number`, `plate`, `repaint`): a scheduled run
+    /// takes one and wears its repaint. Empty for the groups of unscheduled traffic.
+    pub fleet: Vec<opts_core::formats::map::FleetEntry>,
     /// Spawn attempts whose meshes were not ready (still decoding, or unreadable).
     pub fails: u32,
     pub state: SlotState,
@@ -402,6 +405,7 @@ pub(super) fn read_groups(job: &WorldLoadJob) -> PoolSetup {
                     file: e.vehicle.clone(),
                     weight: e.weight.unwrap_or(1.0).max(0.0),
                     group: index,
+                    fleet: Vec::new(),
                     fails: 0,
                     state: SlotState::Pending,
                 }),
@@ -444,6 +448,12 @@ pub(super) fn read_groups(job: &WorldLoadJob) -> PoolSetup {
                 file: file.to_owned(),
                 weight: 0.0,
                 group: index,
+                fleet: d
+                    .fleet
+                    .iter()
+                    .filter(|(f, _)| f.eq_ignore_ascii_case(file))
+                    .map(|(_, e)| e.clone())
+                    .collect(),
                 fails: 0,
                 state: SlotState::Idle,
             });

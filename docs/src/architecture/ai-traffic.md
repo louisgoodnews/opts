@@ -318,3 +318,8 @@ Automated checks already in place: unit tests of every module, the OMSI-gated li
 
 - [Map lists & calendars](../formats/map/lists.md), [Script VM](script-vm.md), [Vehicle physics](../simulation/vehicle_physics.md)
 - [M-0049 — AI Traffic](../roadmap/phase-4/M-0049.md)
+
+
+## AI vehicles on slopes (2026-10-24)
+
+An AI vehicle's pose is the rear axle's height and the pitch between the axles, both from the lane's elevation profile (`Agent::ground_pose`): the body lies along a sloping spline instead of hanging at the front bumper's height (which lifted the whole vehicle by gradient × (wheelbase + overhang) at the rear axle, 0.5 m and more on an 8 % slope). Across a lane's start the profile is clamped; roll is not modelled.

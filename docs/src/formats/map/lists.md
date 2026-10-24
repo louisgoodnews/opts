@@ -87,6 +87,8 @@ vehicles\MAN_SD200\MAN_SD77.bus
 - `[aigroup_depot]`: two lines — the **depot group name** and the **depot (`.hof`) file** it uses (📚 AI-traffic page). ✅ In 821 of 1,136 occurrences the second line equals the base name of a `.hof` file present in the install (e.g. `Spandau 1986`); the rest name add-ons that are not installed or differently spelled ❓.
 - `[aigroup_depot_typgroup_2]`: first line a vehicle (`.bus`), then **one row per fleet number**: `<fleet number><TAB><registration plate><TAB><repaint name><TAB><start date><TAB><end date>` — only the fleet number is required (📚). The empty second column in most rows means "no plate set"; the third is the **repaint** (livery/advert) name; dates are `yyyymmdd`, the first is the **start** of validity and the second the optional **end**. ✅ consistent with the rows seen (`2708<TAB><TAB>Bauer+Syrsch<TAB>19870201<TAB>`).
 
+**OPTS (2026-10-24):** the rows are parsed (`DepotGroup::fleet`, `FleetEntry`: number, plate, repaint, service dates). A scheduled bus takes a row of its vehicle that is in service on the map date (by the run's seed) and wears the **repaint** it names when the vehicle has one of that name (case-insensitive); otherwise, and for unscheduled traffic, a seeded choice among the vehicle's repaints. The fleet number and the plate are parsed but not yet shown on the vehicle.
+
 **Legacy syntax** — only in the new-map template `template/NewMap/ailists.cfg` [H]:
 
 ```
