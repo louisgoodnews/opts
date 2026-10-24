@@ -171,3 +171,8 @@ Implemented in branch `agent/scenery-runtime` (2026-10-12): everything above exc
 - Corpus counts: a text scan of the installed `Sceneryobjects/**/*.sco` and the tiles of Grundorf, Gladbeck and Bad Hügelsdorf (2026-10-11, keywords as whole lines). The scanner is not kept.
 - Script reading: `ampel1.osc`, `clock.osc`, `visibleflag_sommerhalbjahr.osc` and `rolltreppe.osc` were read to learn which values they consume; no script text is reproduced here.
 - **ADR-0002 attestation:** no OMSI executable or DLL was inspected. Only OMSI text files (`.sco`, `.osc`, `.map`) were read. No OMSI asset, script or screenshot is in the repository; the tests use self-written fixtures ([ADR-0002](../adr/0002-clean-room-policy.md)).
+
+
+## Distances you can set (2026-10-24)
+
+Three settings (*Settings → Graphics*) widen what is near enough to be detailed: `graphics.detail_distance` (percent, default 200) divides the distance that picks an object's LOD band (`SceneryLodBias`), so each finer band is kept twice as far at 200 %; `graphics.light_distance` (m, default 350, was a fixed 200) is the radius within which lamps get one of the pool's point lights (`MapLightSettings::radius_m`); `graphics.shadow_distance` (m, default 300, Bevy's own 150) is the maximum distance of the sun's four shadow cascades (`live::shadow_cascades`). `graphics.view_distance` keeps drawing objects up to its step. All four are map-profile keys and apply live (`settings_registry::live::sync_detail_distances`).

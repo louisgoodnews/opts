@@ -15,6 +15,18 @@ pub enum SceneryLodMode {
     All,
 }
 
+/// How much farther the finer LOD groups of scenery objects are kept (`graphics.detail_distance`):
+/// the distance that picks the band is divided by it, so `2.0` shows each band at twice the
+/// distance. `1.0` is the pure screen-size rule.
+#[derive(Resource, Debug, Clone, Copy, PartialEq)]
+pub struct SceneryLodBias(pub f32);
+
+impl Default for SceneryLodBias {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
 /// LOD groups of one object (on its root).
 #[derive(Component, Debug, Clone)]
 pub struct SceneryLod {
@@ -63,10 +75,12 @@ pub fn screen_size(radius: f32, distance: f32, fov_y_rad: f32) -> f32 {
 /// Shows the LOD group of each object that matches its current screen size.
 pub fn scenery_lod_system(
     mode: Res<SceneryLodMode>,
+    bias: Option<Res<SceneryLodBias>>,
     cameras: Query<(&Camera, &GlobalTransform, &Projection), With<crate::MainCamera>>,
     mut objects: Query<(&mut SceneryLod, &GlobalTransform)>,
     mut groups: Query<&mut Visibility>,
 ) {
+    let bias = bias.map_or(1.0, |b| b.0.max(0.1));
     let camera = cameras
         .iter()
         .filter(|(c, _, _)| c.is_active)
@@ -84,7 +98,7 @@ pub fn scenery_lod_system(
             SceneryLodMode::Finest => lod.groups.iter().map(|g| g.1).reduce(f32::max),
             SceneryLodMode::Camera => {
                 let Some((cam, fov)) = camera else { continue };
-                let d = transform.transform_point(lod.centre).distance(cam);
+                let d = transform.transform_point(lod.centre).distance(cam) / bias;
                 select_band(
                     lod.groups.iter().map(|g| g.1),
                     screen_size(lod.radius, d, fov),

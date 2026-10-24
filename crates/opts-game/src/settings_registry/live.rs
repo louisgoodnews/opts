@@ -167,6 +167,82 @@ pub fn sync_view_distance(
     }
 }
 
+/// Metres of the sun's shadow cascades when the setting is missing, and the range the setting allows.
+pub const SHADOW_DISTANCE_DEFAULT_M: i64 = 300;
+/// Radius of the lamps that get a light when the setting is missing (m).
+pub const LIGHT_DISTANCE_DEFAULT_M: i64 = 350;
+/// LOD detail distance when the setting is missing (percent: 100 is the pure screen-size rule).
+pub const DETAIL_DISTANCE_DEFAULT_PERCENT: i64 = 200;
+
+fn number(settings: &GameSettings, key: &str, default: i64, lo: i64, hi: i64) -> f32 {
+    settings
+        .raw(key)
+        .and_then(|v| v.trim().parse::<i64>().ok())
+        .unwrap_or(default)
+        .clamp(lo, hi) as f32
+}
+
+/// The shadow cascade configuration for a maximum distance: four cascades, the first reaching a
+/// little farther the farther the last one does.
+#[must_use]
+pub fn shadow_cascades(maximum_distance: f32) -> bevy::light::CascadeShadowConfig {
+    bevy::light::CascadeShadowConfigBuilder {
+        num_cascades: 4,
+        minimum_distance: 0.1,
+        maximum_distance,
+        first_cascade_far_bound: 5.0 * (maximum_distance / 150.0).sqrt().max(1.0),
+        overlap_proportion: 0.2,
+    }
+    .build()
+}
+
+/// `graphics.shadow_distance`, `graphics.light_distance` and `graphics.detail_distance`: how far
+/// the sun's shadows reach, how far lamps get lights and how far the finer LOD groups of scenery
+/// objects are kept.
+pub fn sync_detail_distances(
+    settings: Res<GameSettings>,
+    lod: Option<ResMut<opts_bevy::SceneryLodBias>>,
+    lights: Option<ResMut<opts_bevy::scenery_runtime::MapLightSettings>>,
+    mut cascades: Query<&mut bevy::light::CascadeShadowConfig, With<DirectionalLight>>,
+) {
+    let shadow = number(
+        &settings,
+        "graphics.shadow_distance",
+        SHADOW_DISTANCE_DEFAULT_M,
+        50,
+        2000,
+    );
+    for mut c in &mut cascades {
+        if c.bounds.last().is_none_or(|b| (*b - shadow).abs() > 0.5) {
+            *c = shadow_cascades(shadow);
+        }
+    }
+    if let Some(mut lights) = lights {
+        let radius = number(
+            &settings,
+            "graphics.light_distance",
+            LIGHT_DISTANCE_DEFAULT_M,
+            50,
+            2000,
+        );
+        if (lights.radius_m - radius).abs() > 0.5 {
+            lights.radius_m = radius;
+        }
+    }
+    if let Some(mut lod) = lod {
+        let bias = number(
+            &settings,
+            "graphics.detail_distance",
+            DETAIL_DISTANCE_DEFAULT_PERCENT,
+            25,
+            800,
+        ) / 100.0;
+        if (lod.0 - bias).abs() > 1e-3 {
+            lod.0 = bias;
+        }
+    }
+}
+
 /// The volume settings (`audio.*`, percent) into the sound engine's [`opts_bevy::AudioSettings`]; master 0
 /// switches the sound off, which also frees every voice.
 pub fn sync_audio(settings: Res<GameSettings>, audio: Option<ResMut<opts_bevy::AudioSettings>>) {
@@ -292,6 +368,35 @@ mod view_distance_tests {
         assert_eq!(draw_distance_of(&settings(Some("0"))), Some(150.0));
         assert_eq!(draw_distance_of(&settings(Some("99"))), None);
         assert_eq!(draw_distance_of(&settings(Some("far"))), Some(600.0));
+    }
+
+    #[test]
+    fn the_distance_settings_reach_the_shadows_the_lamps_and_the_lod_bias() {
+        let mut app = App::new();
+        app.insert_resource(settings(None))
+            .init_resource::<opts_bevy::SceneryLodBias>()
+            .init_resource::<opts_bevy::scenery_runtime::MapLightSettings>()
+            .add_systems(Update, sync_detail_distances);
+        app.world_mut().spawn(DirectionalLight::default());
+        app.update();
+        // The defaults: 300 m of shadows, 350 m of lamps, detail kept twice as far.
+        let shadow = app
+            .world_mut()
+            .query::<&bevy::light::CascadeShadowConfig>()
+            .single(app.world())
+            .unwrap()
+            .bounds
+            .last()
+            .copied()
+            .unwrap();
+        assert!((shadow - 300.0).abs() < 0.5, "{shadow}");
+        assert_eq!(
+            app.world()
+                .resource::<opts_bevy::scenery_runtime::MapLightSettings>()
+                .radius_m,
+            350.0
+        );
+        assert_eq!(app.world().resource::<opts_bevy::SceneryLodBias>().0, 2.0);
     }
 
     #[test]
