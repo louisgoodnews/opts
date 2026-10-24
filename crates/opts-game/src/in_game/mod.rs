@@ -246,6 +246,8 @@ impl Plugin for InGamePlugin {
             (
                 omsi_world::step_rail_scripts.after(omsi_world::move_ai_trains),
                 omsi_world::switch_hint_system,
+                omsi_world::set_points_system.before(omsi_world::move_ai_trains),
+                omsi_world::points_visual_system,
             )
                 .run_if(in_state(AppState::InGame)),
         );

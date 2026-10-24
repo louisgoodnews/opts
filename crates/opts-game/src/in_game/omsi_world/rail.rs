@@ -128,6 +128,17 @@ pub(super) fn tile_rail_lanes(
             _ => ground + obj.position.z,
         };
         let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
+        if sco.switch_positions > 0 {
+            let key = opts_sim::pedestrian::switches::switch_key(world.x, world.y);
+            out.extend(opts_sim::pedestrian::lanes_from_points_object(
+                &sco.paths,
+                world,
+                obj.heading_deg,
+                PATH_TYPE_RAIL,
+                key,
+            ));
+            continue;
+        }
         out.extend(lanes_from_object_of_type(
             &sco.paths,
             world,
@@ -563,6 +574,8 @@ mod composition;
 pub use composition::{Part, VehicleComposition};
 mod body;
 use body::RailBody;
+mod points;
+pub use points::{points_visual_system, set_points_system};
 mod switch;
 pub use switch::{points_ahead, switch_hint_system, way_by_id, way_id};
 

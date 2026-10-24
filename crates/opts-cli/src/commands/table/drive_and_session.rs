@@ -177,8 +177,8 @@ pub(super) const PART: &[CommandSpec] = &[
         "way:s[straight|left|right]?",
     )
     .since("1.28")
-    .result("`{placed, ahead: {distance_m, ways, chosen} or null}`")
-    .doc("The points within 150 m ahead of the player's rail vehicle: the distance, the ways they open (`straight` first) and the way the vehicle takes (its choice when the points offer it, else `straight`). `way` chooses the way for the next points, as the `rail_branch_*` actions do. The way is decided at the moment the vehicle passes the points, so a switch never changes under a vehicle. `1001` when the player has no rail vehicle; `placed` is false while it is not yet on a track. M-0113."),
+    .result("`{placed, points_objects, points: [{x, y, position, lanes}], object: {x, y, position, needed} or null, ahead: {distance_m, ways, chosen} or null}`")
+    .doc("The points within 150 m ahead of the player's rail vehicle: the distance, the ways they open (`straight` first) and the way the vehicle takes (its choice when the points offer it, else `straight`). `way` chooses the way for the next points, as the `rail_branch_*` actions do. The points object ahead (`object`, session-frame place) has a position that follows the trains: when the vehicle approaches and no vehicle is on the points, the position is set to the one the vehicle's way needs (`needed`); `points_objects` counts the points objects of the loaded tiles and `points` lists up to 50 of them. A vehicle that finds the points set against it takes the open way; the points never change under a vehicle. `1001` when the player has no rail vehicle; `placed` is false while it is not yet on a track. M-0113."),
     c(
         "traffic.scheduled",
         "drive",

@@ -102,9 +102,18 @@ pub(super) fn apply(
                     extra,
                     traffic_light_index: st.active_traffic_light.take(),
                     approach_distance_m: st.active_approach_dist,
+                    switch_position: st.switch_position,
                 });
                 st.seen_path = true;
             }
+        }
+        "switch" => {
+            if let Some(n) = block.parameters.first().and_then(|s| s.parse::<u32>().ok()) {
+                obj.switch_positions = n;
+            }
+        }
+        "switchdir" => {
+            st.switch_position = block.parameters.first().and_then(|s| s.parse::<u32>().ok());
         }
         "maplight" => {
             if block.parameters.len() >= 7 {

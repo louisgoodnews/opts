@@ -31,6 +31,10 @@ pub struct PedestrianNet {
     /// Lane ends by 1 m cell.
     ends: HashMap<(i32, i32), Vec<(LaneId, End)>>,
     next: LaneId,
+    /// Lanes of each rail points object, by position (see [`super::switches`]).
+    pub(super) gated: HashMap<u64, Vec<LaneId>>,
+    /// The position each rail points object is set to (default 0).
+    pub(super) positions: HashMap<u64, u8>,
 }
 
 fn cell(p: Vec3) -> (i32, i32) {
@@ -49,6 +53,7 @@ impl PedestrianNet {
                 let p = lane.end_point(end == End::End);
                 self.ends.entry(cell(p)).or_default().push((id, end));
             }
+            self.register_gate(id, &lane);
             self.lanes.insert(id, lane);
             ids.push(id);
         }
@@ -62,6 +67,7 @@ impl PedestrianNet {
         };
         for id in ids {
             if let Some(lane) = self.lanes.remove(&id) {
+                self.unregister_gate(id, &lane);
                 for end in [End::Start, End::End] {
                     let c = cell(lane.end_point(end == End::End));
                     if let Some(list) = self.ends.get_mut(&c) {

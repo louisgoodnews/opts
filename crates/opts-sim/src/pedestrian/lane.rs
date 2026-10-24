@@ -44,6 +44,17 @@ pub struct FootLane {
     pub travel: Travel,
     /// Lane width (m).
     pub width: f32,
+    /// The rail points position this lane belongs to, if any.
+    pub gate: Option<Gate>,
+}
+
+/// A lane that is passable only while rail points are in one position (`[switchdir]`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Gate {
+    /// The points, one key per placed object.
+    pub switch: u64,
+    /// The position of the points (`[switchdir]`) in which the lane is passable.
+    pub position: u8,
 }
 
 impl FootLane {
@@ -63,7 +74,15 @@ impl FootLane {
             cum,
             travel,
             width,
+            gate: None,
         })
+    }
+
+    /// The same lane, passable only in one position of rail points.
+    #[must_use]
+    pub fn with_gate(mut self, gate: Gate) -> Self {
+        self.gate = Some(gate);
+        self
     }
 
     /// Total length (m).
@@ -222,6 +241,29 @@ pub fn lanes_from_object_of_type(
     heading_deg: f32,
     path_type: u32,
 ) -> Vec<FootLane> {
+    object_lanes(paths, origin, heading_deg, path_type, None)
+}
+
+/// Like [`lanes_from_object_of_type`] for rail points (`[switch]`): a path with a `[switchdir]`
+/// is passable only in that position of the points `switch` (see [`super::switches`]).
+#[must_use]
+pub fn lanes_from_points_object(
+    paths: &[ScoPath],
+    origin: Vec3,
+    heading_deg: f32,
+    path_type: u32,
+    switch: u64,
+) -> Vec<FootLane> {
+    object_lanes(paths, origin, heading_deg, path_type, Some(switch))
+}
+
+fn object_lanes(
+    paths: &[ScoPath],
+    origin: Vec3,
+    heading_deg: f32,
+    path_type: u32,
+    switch: Option<u64>,
+) -> Vec<FootLane> {
     let (sin, cos) = heading_deg.to_radians().sin_cos();
     // Clockwise rotation of an object-local (x, y) vector.
     let to_world = |p: Vec3| {
@@ -253,7 +295,14 @@ pub fn lanes_from_object_of_type(
                 .iter()
                 .map(|(c, _)| to_world(Vec3::new(c.x, c.y, c.z + p.start.z)))
                 .collect();
-            FootLane::new(points, Travel::from_field(p.direction), p.width_m)
+            let lane = FootLane::new(points, Travel::from_field(p.direction), p.width_m)?;
+            Some(match (switch, p.switch_position) {
+                (Some(switch), Some(position)) => lane.with_gate(Gate {
+                    switch,
+                    position: position.min(u32::from(u8::MAX)) as u8,
+                }),
+                _ => lane,
+            })
         })
         .collect()
 }
@@ -334,6 +383,7 @@ mod tests {
             extra: None,
             traffic_light_index: None,
             approach_distance_m: None,
+            switch_position: None,
         };
         let lanes = lanes_from_object(&[path(-999.99), path(500.0)], Vec3::ZERO, 0.0);
         assert!(lanes[0].end_point(true).x.abs() < 1e-4, "straight");
@@ -429,6 +479,7 @@ mod tests {
             extra: None,
             traffic_light_index: None,
             approach_distance_m: None,
+            switch_position: None,
         };
         // Object turned 90° clockwise: local north becomes east, local east becomes south.
         let lanes = lanes_from_object(&[path], Vec3::new(100.0, 200.0, 3.0), 90.0);

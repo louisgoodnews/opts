@@ -41,6 +41,9 @@ pub struct SwitchAhead {
     pub distance_m: f32,
     /// The ways open there, straight first.
     pub branches: Vec<Branch>,
+    /// The lane the train would take there if the points were set for it (its route or chosen
+    /// branch), whatever the position of the points.
+    pub wanted: LaneId,
 }
 
 /// The head of a train on the network.
@@ -96,6 +99,12 @@ impl Train {
             trail: Vec::new(),
             on_lane: 0.0,
         }
+    }
+
+    /// The lanes the train occupies: the head's and the ones it has left (the rear may still be
+    /// on them).
+    pub fn lanes_occupied(&self) -> impl Iterator<Item = LaneId> + '_ {
+        std::iter::once(self.lane).chain(self.trail.iter().map(|(l, _)| *l))
     }
 
     /// Reverses the direction of travel (the former rear becomes the front is the caller's job:
@@ -242,9 +251,13 @@ impl Train {
                         branches.push(b);
                     }
                 }
+                let wanted = self
+                    .prefer(net, options.iter().collect(), here)
+                    .map_or(straight.0, |o| o.0);
                 return Some(SwitchAhead {
                     distance_m: travelled,
                     branches,
+                    wanted,
                 });
             }
             let &(next, entry) = options.first()?;
@@ -315,17 +328,29 @@ impl Train {
 
     /// The lane to back onto among `options`: the one the vehicle would still face the same
     /// way on (a backing vehicle keeps its heading), `branch` deciding between several.
+    /// The options that are not closed by rail points; all of them when every one is (a train is
+    /// never stranded) or none is.
+    fn passable<'a>(net: &PedestrianNet, options: &'a [(LaneId, End)]) -> Vec<&'a (LaneId, End)> {
+        let open: Vec<_> = options.iter().filter(|(l, _)| !net.is_closed(*l)).collect();
+        if open.is_empty() {
+            options.iter().collect()
+        } else {
+            open
+        }
+    }
+
     fn pick_back<'a>(
         &self,
         net: &PedestrianNet,
         options: &'a [(LaneId, End)],
     ) -> Option<&'a (LaneId, End)> {
+        let options = Self::passable(net, options);
         if options.len() <= 1 {
-            return options.first();
+            return options.first().copied();
         }
         let here = heading(net, self.lane, self.s, self.dir);
-        let turn = |o: &(LaneId, End)| {
-            let (lane, entry) = *o;
+        let turn = |o: &&(LaneId, End)| {
+            let (lane, entry) = **o;
             let h = if entry == End::End {
                 heading(net, lane, net.lane(lane).map_or(0.0, |l| l.length()), 1)
             } else {
@@ -335,10 +360,14 @@ impl Train {
         };
         match self.branch {
             Branch::Straight => options
-                .iter()
+                .into_iter()
                 .min_by(|a, b| turn(a).abs().total_cmp(&turn(b).abs())),
-            Branch::Left => options.iter().min_by(|a, b| turn(a).total_cmp(&turn(b))),
-            Branch::Right => options.iter().max_by(|a, b| turn(a).total_cmp(&turn(b))),
+            Branch::Left => options
+                .into_iter()
+                .min_by(|a, b| turn(a).total_cmp(&turn(b))),
+            Branch::Right => options
+                .into_iter()
+                .max_by(|a, b| turn(a).total_cmp(&turn(b))),
         }
     }
 
@@ -348,17 +377,27 @@ impl Train {
         options: &'a [(LaneId, End)],
         _end: End,
     ) -> Option<&'a (LaneId, End)> {
+        let options = Self::passable(net, options);
         if options.len() <= 1 {
-            return options.first();
+            return options.first().copied();
         }
+        self.prefer(net, options, heading(net, self.lane, self.s, self.dir))
+    }
+
+    /// The option the route or the chosen branch asks for, `here` being the heading at the fork.
+    fn prefer<'a>(
+        &self,
+        net: &PedestrianNet,
+        options: Vec<&'a (LaneId, End)>,
+        here: f32,
+    ) -> Option<&'a (LaneId, End)> {
         if let Some(next) = self.route.front() {
             if let Some(o) = options.iter().find(|(l, _)| l == next) {
                 return Some(o);
             }
         }
-        let here = heading(net, self.lane, self.s, self.dir);
-        let turn = |o: &(LaneId, End)| {
-            let (lane, entry) = *o;
+        let turn = |o: &&(LaneId, End)| {
+            let (lane, entry) = **o;
             let s = if entry == End::Start {
                 0.0
             } else {
@@ -369,10 +408,14 @@ impl Train {
         };
         match self.branch {
             Branch::Straight => options
-                .iter()
+                .into_iter()
                 .min_by(|a, b| turn(a).abs().total_cmp(&turn(b).abs())),
-            Branch::Left => options.iter().min_by(|a, b| turn(a).total_cmp(&turn(b))),
-            Branch::Right => options.iter().max_by(|a, b| turn(a).total_cmp(&turn(b))),
+            Branch::Left => options
+                .into_iter()
+                .min_by(|a, b| turn(a).total_cmp(&turn(b))),
+            Branch::Right => options
+                .into_iter()
+                .max_by(|a, b| turn(a).total_cmp(&turn(b))),
         }
     }
 }
@@ -506,5 +549,68 @@ mod tests {
         assert_eq!(t.advance(30.0, &n), Moved::Full);
         assert_eq!(t.lane, 2, "the route overrides the straight way");
         assert!(t.route.is_empty());
+    }
+
+    /// Lanes 1 (straight on) and 2 (to the north-east) belong to the points `K` in positions 0
+    /// and 1.
+    fn gated_net() -> PedestrianNet {
+        use crate::pedestrian::Gate;
+        let gate = |position| Gate {
+            switch: 7,
+            position,
+        };
+        let mut n = PedestrianNet::default();
+        n.insert_tile(
+            (0, 0),
+            vec![
+                lane(Vec3::ZERO, Vec3::new(0.0, 100.0, 0.0)),
+                lane(Vec3::new(0.0, 100.0, 0.0), Vec3::new(0.0, 200.0, 0.0)).with_gate(gate(0)),
+                lane(Vec3::new(0.0, 100.0, 0.0), Vec3::new(50.0, 150.0, 0.0)).with_gate(gate(1)),
+            ],
+        );
+        n
+    }
+
+    #[test]
+    fn a_train_takes_the_open_way_whatever_it_wants() {
+        let mut n = gated_net();
+        let mut t = Train::new(0, 90.0, 1);
+        t.branch = Branch::Right;
+        n.set_switch_position(7, 0);
+        t.advance(30.0, &n);
+        assert_eq!(
+            t.lane, 1,
+            "points set to straight: the diverging lane is closed"
+        );
+        let mut t = Train::new(0, 90.0, 1);
+        t.branch = Branch::Straight;
+        n.set_switch_position(7, 1);
+        t.advance(30.0, &n);
+        assert_eq!(
+            t.lane, 2,
+            "points set to diverging: the straight lane is closed"
+        );
+    }
+
+    #[test]
+    fn the_points_ahead_name_the_lane_the_train_wants_even_when_it_is_closed() {
+        let mut n = gated_net();
+        n.set_switch_position(7, 0);
+        let mut t = Train::new(0, 50.0, 1);
+        t.branch = Branch::Right;
+        let ahead = t.next_switch(&n, 100.0).expect("points ahead");
+        assert_eq!(ahead.wanted, 2);
+        assert!(n.is_closed(ahead.wanted));
+        t.branch = Branch::Straight;
+        assert_eq!(t.next_switch(&n, 100.0).unwrap().wanted, 1);
+    }
+
+    #[test]
+    fn a_train_is_never_stranded_when_every_way_is_closed() {
+        let mut n = gated_net();
+        n.set_switch_position(7, 5);
+        let mut t = Train::new(0, 90.0, 1);
+        assert_eq!(t.advance(30.0, &n), Moved::Full);
+        assert_eq!(t.lane, 1);
     }
 }
