@@ -318,11 +318,14 @@ pub fn carve_terrain(
     // reach out from under the surface then start at the surface's height at its edge, not 10-25
     // cm lower. A bigger gap is content (a bridge, a cutting) and stays.
     for (k, h) in out.grid.heights.iter_mut().enumerate().take(dim * dim) {
-        if covered[k] && !guarded[k] && cap[k].is_finite() && *h < cap[k] {
-            if cap[k] - *h <= ALIGN_MAX_M {
-                *h = cap[k];
-                stats.raised += 1;
-            }
+        if covered[k]
+            && !guarded[k]
+            && cap[k].is_finite()
+            && *h < cap[k]
+            && cap[k] - *h <= ALIGN_MAX_M
+        {
+            *h = cap[k];
+            stats.raised += 1;
         }
     }
     // The terrain beside the surfaces follows their outer edges.
