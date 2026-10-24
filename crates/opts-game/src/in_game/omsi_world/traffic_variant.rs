@@ -168,12 +168,8 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         .iter()
         .map(|a| a.longitudinal_m)
         .reduce(f32::max);
-    let tex_dirs = vec![
-        job.install
-            .find_in(&dir, "texture")
-            .unwrap_or_else(|| dir.join("texture")),
-        model_dir.join("texture"),
-    ];
+    // Every `texture` folder, whatever the case (`Texture` and `texture` can sit side by side).
+    let tex_dirs = crate::new_game_screen::repaints::texture_dirs(&dir, &model_dir);
     let default_livery = manifest
         .friendly_name
         .as_ref()

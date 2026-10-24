@@ -202,6 +202,22 @@ pub fn dirs_ignoring_case(base: &Path, rel: &str) -> Vec<PathBuf> {
     level
 }
 
+/// The texture folders of a vehicle: every `texture` folder (whatever the case) of its folder and
+/// of its model's, the vehicle's `texture` first; the folder of that name at least.
+#[must_use]
+pub fn texture_dirs(dir: &Path, model_dir: &Path) -> Vec<PathBuf> {
+    let mut out = dirs_ignoring_case(dir, "texture");
+    for d in dirs_ignoring_case(model_dir, "texture") {
+        if !out.contains(&d) {
+            out.push(d);
+        }
+    }
+    if out.is_empty() {
+        out.push(dir.join("texture"));
+    }
+    out
+}
+
 fn add_model_repaints(out: &mut VehicleRepaints, root: &Path, bus_dir: &Path, model: &ModelConfig) {
     let install = OmsiInstall::new(root);
     let mut found: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
@@ -420,6 +436,20 @@ mod tests {
         let dirs = dirs_ignoring_case(&veh, "Texture\\Ads");
         assert_eq!(dirs.len(), 2, "{dirs:?}");
         assert!(dirs_ignoring_case(&veh, "Texture\\Missing").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_vehicles_texture_folders_include_every_case_variant() {
+        let root = tmp_root("tex");
+        let veh = root.join("V");
+        std::fs::create_dir_all(veh.join("texture")).unwrap();
+        std::fs::create_dir_all(veh.join("Texture")).unwrap();
+        std::fs::create_dir_all(veh.join("Model/texture")).unwrap();
+        let dirs = texture_dirs(&veh, &veh.join("Model"));
+        assert_eq!(dirs.len(), 3, "{dirs:?}");
+        let none = texture_dirs(&root.join("W"), &root.join("W/Model"));
+        assert_eq!(none, [root.join("W/texture")]);
         let _ = std::fs::remove_dir_all(&root);
     }
 

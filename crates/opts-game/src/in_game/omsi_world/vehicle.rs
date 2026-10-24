@@ -93,12 +93,7 @@ pub fn load_player_vehicle(
     tracing::info!(path = %cfg_path.display(), lods = model.lods.len(), meshes = lod0.meshes.len(), "vehicle model config parsed");
 
     let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
-    let tex_dirs = vec![
-        job.install
-            .find_in(&bus_dir, "texture")
-            .unwrap_or_else(|| bus_dir.join("texture")),
-        model_dir.join("texture"),
-    ];
+    let tex_dirs = crate::new_game_screen::repaints::texture_dirs(&bus_dir, &model_dir);
 
     // Spawn point: the start road spline's lane position, converted to Bevy space.
     let (spawn_world, heading_deg) = job.spawn.ok_or("no spawn point")?;

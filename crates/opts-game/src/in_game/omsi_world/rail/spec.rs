@@ -55,12 +55,7 @@ fn parse_unit(
         .or_else(|| model.lods.first())?
         .clone();
     let model_dir = cfg.parent()?.to_path_buf();
-    let tex_dirs = vec![
-        job.install
-            .find_in(&dir, "texture")
-            .unwrap_or_else(|| dir.join("texture")),
-        model_dir.join("texture"),
-    ];
+    let tex_dirs = crate::new_game_screen::repaints::texture_dirs(&dir, &model_dir);
     let defs = UnitDefs {
         bus_path: path.to_path_buf(),
         text: model.text_textures.clone(),
