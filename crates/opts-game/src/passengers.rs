@@ -79,6 +79,7 @@ mod crowd;
 mod protocol;
 mod rig;
 mod weight;
+pub(crate) use weight::PassengerCountOverride;
 
 use crowd::{
     stop_key, StopCrowds, ACTOR_BUDGET, DEFAULT_RATE, FIRST_VISIT_WAIT_MIN, MAX_ACCUMULATE_MIN,
@@ -543,6 +544,7 @@ impl Plugin for PassengersPlugin {
                 .chain()
                 .run_if(in_state(crate::app_state::AppState::InGame)),
         )
-        .init_resource::<StopCrowds>();
+        .init_resource::<StopCrowds>()
+        .init_resource::<weight::PassengerCountOverride>();
     }
 }

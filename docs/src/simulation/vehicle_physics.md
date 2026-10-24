@@ -160,7 +160,7 @@ $$\Delta W_{\text{long}} = m \cdot a_y \cdot \frac{h_{\text{cg}}}{L}$$
 player's vehicle to `humans_inside × average mass` (`dynamic_mass_kg`); settings
 `gameplay.passenger_weight` (default on) and `gameplay.passenger_mass_kg` (default 75 kg, 40–120).
 Axle loads and suspension still use the curb mass (they wait for M-0073's per-axle input), and AI
-vehicles carry no passenger mass. Tests: `crates/opts-sim/tests/passenger_mass.rs`.
+vehicles carry no passenger mass. `vehicle.passengers` with `mass_count` stands in for the people (testing). Tests: `crates/opts-sim/tests/passenger_mass.rs`.
 
 ## ⚖️ Consist Mass
 
