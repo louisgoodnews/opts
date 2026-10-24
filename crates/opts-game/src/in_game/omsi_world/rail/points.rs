@@ -78,13 +78,10 @@ pub fn points_visual_system(
         }
         let (x, y) = switch_place(key);
         let at = omsi_to_bevy_pos(Vec3::new(x, y, 0.0));
-        let found = objects
-            .iter()
-            .filter(|(_, t, _)| {
-                let p = t.translation();
-                (p.x - at.x).hypot(p.z - at.z) <= OBJECT_MATCH_M
-            })
-            .next();
+        let found = objects.iter().find(|(_, t, _)| {
+            let p = t.translation();
+            (p.x - at.x).hypot(p.z - at.z) <= OBJECT_MATCH_M
+        });
         if let Some((entity, _, scripts)) = found {
             scripts.with_engine(|e| e.set("Switch", f32::from(position)));
             written.insert(key, (entity, position));
