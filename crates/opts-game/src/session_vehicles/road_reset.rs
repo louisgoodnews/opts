@@ -13,8 +13,8 @@ use crate::in_game::omsi_world::TrafficState;
 /// A lane counts as the vehicle's own when it runs within this angle of its heading (rad); the
 /// nearest such lane is taken first.
 const SAME_WAY_RAD: f64 = 45.0 * std::f64::consts::PI / 180.0;
-/// … failing that, within this angle (a junction or a bend), then in any direction.
-const NEAR_WAY_RAD: f64 = 100.0 * std::f64::consts::PI / 180.0;
+/// … unless the nearest lane in any direction is nearer by more than this (m).
+const SAME_WAY_PREFERENCE_M: f64 = 6.0;
 /// Lanes farther than this from the vehicle are not considered (m).
 const SEARCH_M: f64 = 60.0;
 
@@ -30,9 +30,12 @@ pub fn road_place(
     let point = at.as_dvec2();
     let heading = f64::from(heading);
     let is_road = |l: &opts_traffic::graph::Lane| l.kind == LaneKind::Road;
-    let (lane, s, _) = [SAME_WAY_RAD, NEAR_WAY_RAD, std::f64::consts::PI]
-        .into_iter()
-        .find_map(|angle| graph.nearest_place(point, heading, angle, SEARCH_M, is_road))?;
+    let any = graph.nearest_place(point, heading, std::f64::consts::PI, SEARCH_M, is_road)?;
+    let same = graph.nearest_place(point, heading, SAME_WAY_RAD, SEARCH_M, is_road);
+    // A lane that runs the vehicle's way wins unless another one is much nearer.
+    let (lane, s, _) = same
+        .filter(|s| s.2 <= any.2 + SAME_WAY_PREFERENCE_M)
+        .unwrap_or(any);
     let lane = graph.lane(lane)?;
     let along = lane.geometry.heading_at(s);
     let mut diff = (along - heading).rem_euclid(std::f64::consts::TAU);
