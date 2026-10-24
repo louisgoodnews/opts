@@ -399,6 +399,7 @@ impl VehicleSimulation {
         }
         let a_lat = speed * self.chassis.yaw_rate_rad_s;
         let a_long = self.chassis.local_acceleration.y;
+        self.sync_payload();
         if let Some(body) = self.body.as_mut() {
             body.step(dt, a_long, a_lat, &self.wheel_ground_m);
             for (i, axle) in self.axles.iter_mut().enumerate() {

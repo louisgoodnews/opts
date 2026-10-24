@@ -78,7 +78,7 @@ With the vehicle's scripts driving, the wheels spin as bodies: torque and brake 
 - **Following units** brake with their own rated axles and carry their static loads, but have no body suspension of their own: their visible motion stays the ground following of the articulation model (M-0053). The head's springs take the ground twist of its four outer wheels only.
 - Anti-roll bars, tyre slip curves and a per-wheel angular model are not part of this milestone (the physics contract of the script programme, M-0097, builds the wheel level).
 - The vehicle's own air drag and engine stay generic (`AerodynamicSpec`, `EngineSpec`); the constfiles carry the engine data.
-- Passengers as a changing mass: [M-0124](../roadmap/phase-12/M-0124.md).
+- Passengers as a changing mass: [M-0124](../roadmap/phase-12/M-0124.md) (done for the head: a payload weight on the body, [vehicle physics](vehicle_physics.md#-passenger-mass)); the following units of a consist carry none.
 
 ## 7. Control protocol and developer panel
 
