@@ -1,30 +1,60 @@
 #!/usr/bin/env bash
-# Git pre-commit hook for OPTS.
-# Runs fast validation checks (cargo fmt and cargo clippy) before committing.
+# Git pre-commit hook for OPTS (M-0052 phase C): checks what is about to be committed, not what
+# happens to lie in the working tree.
+#
+# * Without unstaged changes the working tree is the staged tree and the checks run in place.
+# * With unstaged changes the staged tree is exported to `target/precommit-tree` and checked
+#   there (no `git stash`: the stash list is shared by all worktrees of the repository), so an
+#   unstaged fix cannot hide a broken commit. That check builds the workspace again from the new
+#   path (dependencies stay cached).
+#
+# Checks: formatting, Clippy with `-D warnings`, the roadmap copies, the relative links, the
+# roadmap audit and the crate graph (the `docs-links` job of CI). Tests are slower: set
+# `OPTS_PRECOMMIT_TESTS=1` to run `cargo test --workspace --all-features` too (CI always does).
+#
+# Install: `scripts/install-hooks.sh` (sets `core.hooksPath` of this repository to `scripts`).
 
 set -euo pipefail
 
-# Find repository root
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
+fail() {
+    echo >&2 ""
+    echo >&2 "pre-commit hook: $1"
+    exit 1
+}
+
 echo "=== Running pre-commit checks ==="
 
-# 1. Check formatting
-echo "1. Checking formatting (cargo fmt)..."
-if ! cargo fmt --all -- --check; then
-    echo >&2 ""
-    echo >&2 "pre-commit hook: code formatting check failed."
-    echo >&2 "Run 'cargo fmt' to format code before committing."
-    exit 1
+WORK="$ROOT_DIR"
+if ! git diff --quiet; then
+    WORK="$ROOT_DIR/target/precommit-tree"
+    echo "Unstaged changes: checking the staged tree in $WORK"
+    rm -rf "$WORK"
+    mkdir -p "$WORK"
+    git checkout-index -a --prefix="$WORK/"
+    export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT_DIR/target}"
 fi
+cd "$WORK"
 
-# 2. Check Clippy
-echo "2. Checking Clippy warnings..."
-if ! cargo clippy --workspace --all-targets --all-features -- -D warnings; then
-    echo >&2 ""
-    echo >&2 "pre-commit hook: cargo clippy found warnings or errors."
-    exit 1
+echo "1. Formatting (cargo fmt)..."
+cargo fmt --all -- --check || fail "formatting check failed. Run 'cargo fmt' and stage the result."
+
+echo "2. Clippy (-D warnings)..."
+cargo clippy --workspace --all-targets --all-features -- -D warnings \
+    || fail "cargo clippy found warnings or errors."
+
+echo "3. Roadmap copies, links, audit and crate graph..."
+python3 scripts/gen_roadmap_copy.py --check \
+    || fail "the roadmap copies are stale: run 'python3 scripts/gen_roadmap_copy.py' and stage the result."
+python3 scripts/check_links.py || fail "a relative markdown link is broken."
+python3 scripts/roadmap_audit.py --check || fail "the roadmap, board and phase pages disagree."
+python3 scripts/crate_graph.py --check || fail "the crate graph page does not match the workspace."
+
+if [ "${OPTS_PRECOMMIT_TESTS:-0}" = "1" ]; then
+    echo "4. Tests (cargo test)..."
+    cargo test --workspace --all-features || fail "tests failed."
 fi
 
 echo "Pre-commit checks passed."
