@@ -98,7 +98,16 @@ The carve only lowers. The terrain beside a road, a pavement or a parking bay st
 * a vertex never rises above its carve cap, so the terrain still never covers a surface (the `terrain_never_covers_a_road` content test holds for the same input);
 * the same edges are seen from every tile that includes them (the 3 × 3 tiles around), so border vertices still agree between tiles.
 
-On Berlin-Spandau tile 2402/11279 it moves 409 vertices. Tests: `terrain/align.rs` (the boundary of a ribbon, pulled up, pulled down, a bridge deck stays, never above an overlapped slanted ribbon) and `terrain_carve_content.rs`. **Open ❓:** whether OMSI shows the stored residue or aligns at run time is still not decided (Q-TC-01); the alignment follows the project lead's request.
+On Berlin-Spandau tile 2402/11279 it moves 409 vertices. Tests: `terrain/align.rs` (the boundary of a ribbon, pulled up, pulled down, a bridge deck stays, never above an overlapped slanted ribbon) and `terrain_carve_content.rs`. 
+
+**Second step (2026-10-24, the project lead's report on Westerwaldstraße).** The vertex pull alone left the terrain right at the edge 10-25 cm under it (measured on 2402/11279 with the drawn mesh 0.3 m outside every outer edge: median -0.246 m, 94 % of the edges off by more than 5 cm, 55 % by more than 20 cm): a 5 m grid cannot have a step at an edge, and the triangle reaching out from under the surface was dominated by its covered vertex, which the carve had only ever lowered. Two additions in `carve_terrain`:
+
+* **Covered vertices are raised** to their cap (just under the surface) when the terrain lay lower by at most `ALIGN_MAX_M`. Under a surface this changes nothing visible; the triangles that reach out from it now start at the surface's height.
+* **The fit** (`align::fit_edges`): along every outer edge, 1 m apart, the drawn terrain `FIT_OFFSET_M` (0.4 m) outside the edge must be at the edge's height less the carve's clearance. The three vertices of the terrain triangle at that point share the correction (least change), 8 passes settle neighbouring constraints; a vertex stays under its cap, within `ALIGN_MAX_M` of its authored height and untouched when it is buried content. A residual beyond `ALIGN_MAX_M` is content and stays.
+
+Measured the same way, counting the gaps within 0.75 m (the rest is content: embankments, cuttings, bridges): median -0.032 m (the clearance), 33 % of the edges still off by more than 5 cm, 7.8 % by more than 20 cm (curbs where two edges 0.4 m apart differ in height, vertices held by a lower cap). Test `spandau_terrain_beside_the_surface_edges_fits_their_height` guards it (median within 5 cm, under 12 % over 20 cm). What would close the rest is more terrain vertices along the edges (a finer mesh) or a skirt strip, not done.
+
+**Open ❓:** whether OMSI shows the stored residue or aligns at run time is still not decided (Q-TC-01); the alignment follows the project lead's request.
 
 ## ❓ Open questions
 

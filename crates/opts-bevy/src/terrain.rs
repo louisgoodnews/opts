@@ -30,7 +30,7 @@ pub const CARVE_EPSILON_M: f32 = 0.03;
 pub const CARVE_COVER_M: f32 = 1.0;
 
 mod align;
-pub use align::{align_band, boundary_edges, ALIGN_MAX_M};
+pub use align::{align_band, boundary_edges, boundary_edges_out, ALIGN_MAX_M};
 
 /// A tile's terrain grid with the size of its cells (`TileGrid::cell` of the tile's row): what
 /// every height consumer samples.
@@ -167,6 +167,12 @@ pub struct CarveStats {
     pub lowered: usize,
     /// Vertices a surface would have lowered by more than [`CARVE_COVER_M`] (left as authored).
     pub guarded: usize,
+    /// Vertices under a surface raised up to just below it (the terrain lay lower than the
+    /// surface by at most [`ALIGN_MAX_M`]): the terrain beside the surface edge then starts at
+    /// the edge's height instead of a pavement's height lower.
+    pub raised: usize,
+    /// Vertices changed by the fit of the terrain just outside the outer edges to their height.
+    pub fitted: usize,
     /// Vertices outside the surfaces pulled towards the height of the nearest outer edge
     /// ([`align_band`], [`ALIGN_MAX_M`]).
     pub aligned: usize,
@@ -307,9 +313,25 @@ pub fn carve_terrain(
             stats.guarded += 1;
         }
     }
+    // A vertex under a surface that lies lower than the surface is raised to just below it
+    // (never above its cap, so the terrain still covers nothing): the terrain triangles that
+    // reach out from under the surface then start at the surface's height at its edge, not 10-25
+    // cm lower. A bigger gap is content (a bridge, a cutting) and stays.
+    for (k, h) in out.grid.heights.iter_mut().enumerate().take(dim * dim) {
+        if covered[k]
+            && !guarded[k]
+            && cap[k].is_finite()
+            && *h < cap[k]
+            && cap[k] - *h <= ALIGN_MAX_M
+        {
+            *h = cap[k];
+            stats.raised += 1;
+        }
+    }
     // The terrain beside the surfaces follows their outer edges.
+    let outer = align::boundary_edges_out(surfaces);
     stats.aligned = align::align_vertices(
-        align::boundary_edges(surfaces),
+        outer.iter().map(|(a, b, _)| (*a, *b)).collect(),
         &mut out.grid.heights,
         &cap,
         &covered,
@@ -317,6 +339,8 @@ pub fn carve_terrain(
         n,
         cell,
     );
+    // … and the terrain just outside every edge is at the edge's height.
+    stats.fitted = align::fit_edges(&outer, &mut out.grid.heights, raw, &cap, &guarded, n, cell);
     (out, stats)
 }
 

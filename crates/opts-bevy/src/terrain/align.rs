@@ -44,24 +44,130 @@ fn key(v: Vec3) -> Key {
 /// The edges of `surfaces` that only one triangle uses (corners compared to a centimetre).
 #[must_use]
 pub fn boundary_edges(surfaces: &[GroundTriangle]) -> Vec<(Vec3, Vec3)> {
-    let mut count: HashMap<(Key, Key), (u8, Vec3, Vec3)> = HashMap::new();
+    boundary_edges_out(surfaces)
+        .into_iter()
+        .map(|(a, b, _)| (a, b))
+        .collect()
+}
+
+/// The outer edges with the unit direction that points away from their triangle (outside).
+#[must_use]
+pub fn boundary_edges_out(surfaces: &[GroundTriangle]) -> Vec<(Vec3, Vec3, Vec2)> {
+    let mut count: HashMap<(Key, Key), (u8, Vec3, Vec3, Vec3)> = HashMap::new();
     for tri in surfaces {
         for e in 0..3 {
-            let (a, b) = (tri[e], tri[(e + 1) % 3]);
+            let (a, b, c) = (tri[e], tri[(e + 1) % 3], tri[(e + 2) % 3]);
             let (ka, kb) = (key(a), key(b));
             if ka == kb {
                 continue;
             }
             let k = if ka < kb { (ka, kb) } else { (kb, ka) };
-            let entry = count.entry(k).or_insert((0, a, b));
+            let entry = count.entry(k).or_insert((0, a, b, c));
             entry.0 = entry.0.saturating_add(1);
         }
     }
     count
         .into_values()
         .filter(|(n, ..)| *n == 1)
-        .map(|(_, a, b)| (a, b))
+        .filter_map(|(_, a, b, c)| {
+            let ab = (b - a).truncate();
+            let len = ab.length();
+            if len < 1e-4 {
+                return None;
+            }
+            let mut out = Vec2::new(-ab.y, ab.x) / len;
+            if out.dot((c - a).truncate()) > 0.0 {
+                out = -out;
+            }
+            Some((a, b, out))
+        })
         .collect()
+}
+
+/// How far outside an edge the fit looks (m): close enough that the first terrain triangle
+/// beyond the surface is at the edge's height.
+const FIT_OFFSET_M: f32 = 0.4;
+/// Passes of the fit.
+const FIT_PASSES: usize = 8;
+
+/// The three vertices of the drawn terrain triangle at tile-local `(x, y)` and their weights.
+fn triangle_at(n: usize, cell: f32, x: f32, y: f32) -> Option<([usize; 3], [f32; 3])> {
+    let (gx, gy) = (x / cell, y / cell);
+    if !(0.0..n as f32).contains(&gx) || !(0.0..n as f32).contains(&gy) {
+        return None;
+    }
+    let dim = n + 1;
+    let (i, j) = (gx as usize, gy as usize);
+    let (u, w) = (gx - i as f32, gy - j as f32);
+    let at = |i: usize, j: usize| j * dim + i;
+    Some(if u + w <= 1.0 {
+        ([at(i, j), at(i + 1, j), at(i, j + 1)], [1.0 - u - w, u, w])
+    } else {
+        (
+            [at(i + 1, j + 1), at(i, j + 1), at(i + 1, j)],
+            [u + w - 1.0, 1.0 - u, 1.0 - w],
+        )
+    })
+}
+
+/// Fits the terrain just outside every outer edge to the edge's height: along each edge the
+/// drawn terrain [`FIT_OFFSET_M`] outside must be at the edge's height (minus
+/// [`CARVE_EPSILON_M`]), whatever the 5 m terrain grid does there. The three vertices of the
+/// terrain triangle at that point share the correction (the least change that fixes it), a few
+/// passes over all edges settle neighbouring constraints; a vertex stays under its carve cap
+/// (the terrain never covers a surface), within [`ALIGN_MAX_M`] of the authored height and
+/// untouched when it is buried content. A residual bigger than [`ALIGN_MAX_M`] is content (a
+/// bridge, a cutting): it is left alone. Returns how many vertices ended up changed by the fit.
+pub(super) fn fit_edges(
+    edges: &[(Vec3, Vec3, Vec2)],
+    heights: &mut [f32],
+    raw: &[f32],
+    cap: &[f32],
+    guarded: &[bool],
+    n: usize,
+    cell: f32,
+) -> usize {
+    if edges.is_empty() || n == 0 {
+        return 0;
+    }
+    let before: Vec<f32> = heights.to_vec();
+    for _ in 0..FIT_PASSES {
+        for (a, b, out) in edges {
+            let ab = (*b - *a).truncate();
+            let len = ab.length();
+            let dir = ab / len.max(1e-6);
+            let mut s = 0.5_f32.min(len * 0.5);
+            while s <= len {
+                let q = a.truncate() + dir * s + *out * FIT_OFFSET_M;
+                let target = a.z + (b.z - a.z) * (s / len.max(1e-6)) - CARVE_EPSILON_M;
+                s += 1.0;
+                let Some((v, w)) = triangle_at(n, cell, q.x, q.y) else {
+                    continue;
+                };
+                let now: f32 = (0..3).map(|i| w[i] * heights[v[i]]).sum();
+                let residual = target - now;
+                if residual.abs() > ALIGN_MAX_M || residual.abs() < 0.005 {
+                    continue;
+                }
+                let norm: f32 = w.iter().map(|x| x * x).sum();
+                for i in 0..3 {
+                    let k = v[i];
+                    if guarded[k] {
+                        continue;
+                    }
+                    let moved = heights[k] + residual * w[i] / norm * 0.7;
+                    heights[k] = moved
+                        .min(cap[k])
+                        .clamp(raw[k] - ALIGN_MAX_M - 1.0, raw[k] + ALIGN_MAX_M);
+                }
+            }
+        }
+    }
+    heights
+        .iter()
+        .zip(&before)
+        .filter(|(a, b)| (**a - **b).abs() > 1e-4)
+        .count()
 }
 
 /// Edges bucketed by position, each in every bucket its box expanded by the band touches.
@@ -211,10 +317,10 @@ mod tests {
         let near = at(&carved, 8, 20); // x = 40, 1 m from the edge at 41
         assert!(near > 0.15 && near <= 0.27, "{near}");
         assert_eq!(at(&carved, 7, 20), 0.0, "x = 35 is outside the band");
-        assert_eq!(
-            at(&carved, 9, 20),
-            0.0,
-            "x = 45 is under the surface, below it already"
+        let under = at(&carved, 9, 20);
+        assert!(
+            (under - 0.27).abs() < 1e-4,
+            "x = 45 is under the surface: raised to just below it ({under})"
         );
     }
 
@@ -261,5 +367,27 @@ mod tests {
                 "y {y}: terrain {v} over ribbon {ribbon}"
             );
         }
+    }
+
+    #[test]
+    fn the_drawn_terrain_just_outside_an_edge_is_at_the_edges_height() {
+        // The surface at 0.3 m, the terrain 0.25 m lower and flat: after the carve, the
+        // alignment and the fit the terrain 0.4 m outside the edge at x = 41 is within a
+        // centimetre of the edge's height (less the carve's clearance).
+        let (carved, stats) = carve_terrain(&flat(0.05), &strip(41.0, 49.0, 0.3));
+        assert!(stats.fitted > 0);
+        for y in [60.0_f32, 120.0, 200.0] {
+            for x in [40.6_f32, 49.4] {
+                let h = carved.height(x, y);
+                assert!((h - 0.27).abs() < 0.015, "({x}, {y}): {h}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_gap_that_is_content_is_left_alone() {
+        // A surface 3 m above the terrain (a bridge deck): nothing outside it moves.
+        let (carved, _) = carve_terrain(&flat(0.0), &strip(41.0, 49.0, 3.0));
+        assert_eq!(carved.height(40.6, 100.0), 0.0);
     }
 }
