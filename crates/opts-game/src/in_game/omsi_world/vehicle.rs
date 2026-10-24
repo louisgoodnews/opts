@@ -18,7 +18,7 @@ use crate::in_game::types::InGameEntity;
 /// Asset stores the loading systems write to (grouped to stay within Bevy's parameter limit).
 use super::{CameraSetup, WorldLoadJob, WorldStats};
 
-mod doors;
+pub(super) mod doors;
 mod passengers;
 mod segments;
 use segments::{ensure_repaints, repaint_map};

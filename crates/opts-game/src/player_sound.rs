@@ -178,6 +178,7 @@ pub fn attach_unit(
 pub fn attach_defs(
     commands: &mut Commands,
     unit: Entity,
+    owner: Option<Entity>,
     defs: &[(Arc<SoundDef>, PathBuf)],
 ) -> usize {
     let mut voices = Vec::new();
@@ -193,7 +194,7 @@ pub fn attach_defs(
                 file: file.clone(),
                 playback,
                 was_active: false,
-                owner: None,
+                owner,
                 goal: None,
                 active_s: 0.0,
             },

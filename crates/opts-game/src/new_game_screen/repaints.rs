@@ -169,6 +169,39 @@ pub fn discover_for_model(
 }
 
 /// Adds the `.cti` items of `model`'s `Colorscheme` folders to `out`.
+/// Every directory `rel` (backslash or slash separated) names below `base`, comparing names
+/// without regard to case: an installation can hold `texture` and `Texture` side by side (they are
+/// one folder on Windows, where OMSI runs), and the repaints are in both.
+#[must_use]
+pub fn dirs_ignoring_case(base: &Path, rel: &str) -> Vec<PathBuf> {
+    let mut level = vec![base.to_path_buf()];
+    for part in rel
+        .split(['\\', '/'])
+        .filter(|p| !p.is_empty() && *p != ".")
+    {
+        let mut next = Vec::new();
+        for dir in &level {
+            if part == ".." {
+                next.extend(dir.parent().map(Path::to_path_buf));
+                continue;
+            }
+            let Ok(entries) = std::fs::read_dir(dir) else {
+                continue;
+            };
+            let mut hits: Vec<PathBuf> = entries
+                .flatten()
+                .filter(|e| e.file_name().to_string_lossy().eq_ignore_ascii_case(part))
+                .map(|e| e.path())
+                .filter(|p| p.is_dir())
+                .collect();
+            hits.sort();
+            next.extend(hits);
+        }
+        level = next;
+    }
+    level
+}
+
 fn add_model_repaints(out: &mut VehicleRepaints, root: &Path, bus_dir: &Path, model: &ModelConfig) {
     let install = OmsiInstall::new(root);
     let mut found: BTreeMap<String, Vec<(String, String)>> = BTreeMap::new();
@@ -178,31 +211,42 @@ fn add_model_repaints(out: &mut VehicleRepaints, root: &Path, bus_dir: &Path, mo
         .iter()
         .filter(|s| s.name.eq_ignore_ascii_case("Colorscheme"))
     {
-        let Some(folder) = base_folders(bus_dir, root)
+        // All the folders the path names (they differ in case only on a case-sensitive file
+        // system), the first base that has one.
+        let Some(folders) = base_folders(bus_dir, root)
             .iter()
-            .find_map(|b| install.find_in(b, &scheme.texture_path))
-            .filter(|p| p.is_dir())
+            .map(|b| dirs_ignoring_case(b, &scheme.texture_path))
+            .find(|v| !v.is_empty())
         else {
             tracing::error!(folder = %scheme.texture_path, "repaint folder not found");
             continue;
         };
-        let Ok(entries) = std::fs::read_dir(&folder) else {
-            continue;
-        };
-        let mut files: Vec<PathBuf> = entries
-            .flatten()
-            .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("cti")))
-            .collect();
+        let mut files: Vec<(PathBuf, PathBuf)> = Vec::new();
+        for folder in &folders {
+            let Ok(entries) = std::fs::read_dir(folder) else {
+                continue;
+            };
+            files.extend(
+                entries
+                    .flatten()
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("cti")))
+                    .map(|p| (folder.clone(), p)),
+            );
+        }
         files.sort();
-        for file in files {
+        for (folder, file) in files {
             let Ok(bytes) = std::fs::read(&file) else {
                 tracing::error!(file = %file.display(), "cannot read .cti");
                 continue;
             };
             let cti = CtiFile::parse(&bytes);
             for item in cti.items {
-                match install.find_in(&folder, &item.texture) {
+                // The texture lies beside the `.cti` or in the same folder under another case.
+                let texture = std::iter::once(&folder)
+                    .chain(folders.iter())
+                    .find_map(|f| install.find_in(f, &item.texture));
+                match texture {
                     Some(path) => textures
                         .entry(item.name.clone())
                         .or_default()
@@ -354,6 +398,29 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         dir
+    }
+
+    #[test]
+    fn folders_that_differ_in_case_are_all_found_and_their_repaints_merge() {
+        let root = tmp_root("case");
+        let veh = root.join("Vehicles/V");
+        std::fs::create_dir_all(veh.join("texture/Ads")).unwrap();
+        std::fs::create_dir_all(veh.join("Texture/ads")).unwrap();
+        std::fs::write(
+            veh.join("texture/Ads/One.cti"),
+            "[item]\nOne\nfarbschema_tex1\none.dds\n",
+        )
+        .unwrap();
+        std::fs::write(
+            veh.join("Texture/ads/Two.cti"),
+            "[item]\nTwo\nfarbschema_tex1\ntwo.dds\n",
+        )
+        .unwrap();
+        std::fs::write(veh.join("Texture/ads/two.dds"), b"x").unwrap();
+        let dirs = dirs_ignoring_case(&veh, "Texture\\Ads");
+        assert_eq!(dirs.len(), 2, "{dirs:?}");
+        assert!(dirs_ignoring_case(&veh, "Texture\\Missing").is_empty());
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     #[test]
