@@ -93,20 +93,42 @@ pub fn choose(cfg: &SoundConfig, find: impl Fn(&str) -> Option<PathBuf>) -> AiSo
     set
 }
 
+/// Whether a file name marks an AI variant of a vehicle (`MAN_GN92_main_KI.bus`,
+/// `ai_peugeot_106.bus`, `sound_GN92_M_ai.cfg`): a `_ki` or `_ai` part, or a `ki_`/`ai_` start.
+#[must_use]
+pub fn is_ai_name(file: &str) -> bool {
+    let stem = file
+        .rsplit(['/', '\\'])
+        .next()
+        .unwrap_or(file)
+        .rsplit_once('.')
+        .map_or(file, |(s, _)| s)
+        .to_lowercase();
+    stem.starts_with("ki_")
+        || stem.starts_with("ai_")
+        || stem
+            .split(['_', '-', ' '])
+            .any(|part| part == "ki" || part == "ai")
+}
+
 /// The sound set of a vehicle file: its `[sound_ai]` configuration, else its `[sound]` when that
-/// is one of the shared `Sounds/AI_Cars` files. A bus whose `[sound]` is the heavy player
-/// configuration and which has no `[sound_ai]` stays silent.
+/// is one of the shared `Sounds/AI_Cars` files or when the vehicle file (`bus`) or the
+/// configuration is an AI variant by name (`..._KI.bus` names its own light `..._ai.cfg`). A bus
+/// whose `[sound]` is the heavy player configuration and which has no `[sound_ai]` stays silent.
 #[must_use]
 pub fn ai_sound_set(
     job: &WorldLoadJob,
     manifest: &BusManifest,
     dir: &Path,
+    bus: &Path,
 ) -> Option<Arc<AiSoundSet>> {
     let rel = manifest.sound_ai_cfg.as_deref().or_else(|| {
         manifest.sound_cfg.as_deref().filter(|s| {
             s.replace('\\', "/")
                 .to_lowercase()
                 .contains("sounds/ai_cars")
+                || is_ai_name(s)
+                || is_ai_name(&bus.to_string_lossy())
         })
     })?;
     let (cfg, cfg_dir) = job.read_sound_config(dir, rel)?;
@@ -429,5 +451,32 @@ mod tests {
             ),
             (0.0, 650.0, 1.0)
         );
+    }
+}
+
+#[cfg(test)]
+mod ai_name_tests {
+    use super::is_ai_name;
+
+    #[test]
+    fn ai_variants_are_told_by_name() {
+        for yes in [
+            "Vehicles/MAN_NL_NG/MAN_GN92_main_KI.bus",
+            "sound\\sound_GN92_M_ai.cfg",
+            "ai_peugeot_106_S1.ovh",
+            "KI_bus.bus",
+            "Vehicles/x/AI_C2_e5g_3door.bus",
+        ] {
+            assert!(is_ai_name(yes), "{yes}");
+        }
+        for no in [
+            "MAN_GN92_main.bus",
+            "sound\\sound_GN92_M.cfg",
+            "Kiel.bus",
+            "maintenance.cfg",
+            "Vehicles/Rain/x.bus",
+        ] {
+            assert!(!is_ai_name(no), "{no}");
+        }
     }
 }

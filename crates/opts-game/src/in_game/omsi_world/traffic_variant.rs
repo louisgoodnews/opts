@@ -200,7 +200,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         max_alpha_deg: 52.5,
         repaints,
         reversed: false,
-        sound: crate::vehicle_sound::ai_sound_set(job, &manifest, &dir),
+        sound: crate::vehicle_sound::ai_sound_set(job, &manifest, &dir, path),
     };
     Ok((unit, manifest, dir))
 }
