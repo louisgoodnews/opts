@@ -122,3 +122,39 @@ fn the_speed_cap_is_not_carried_over_from_the_spawn_lane() {
         a.speed * 3.6
     );
 }
+
+/// A 200 m road that climbs 10 % from a start at 5 m.
+fn hill() -> TrafficWorld {
+    let climb = LaneSegment {
+        elevation: crate::graph::Elevation {
+            z0: 5.0,
+            grad_start: 0.1,
+            grad_end: 0.1,
+            rise: None,
+        },
+        ..straight(0.0, 200.0)
+    };
+    world(&[climb])
+}
+
+#[test]
+fn on_a_slope_the_body_lies_along_it_and_the_rear_axle_is_lower_than_the_front() {
+    let mut w = hill();
+    let p = IdmParams::default();
+    let id = w.spawn(LaneId(0), 80.0, 0.0, p).unwrap();
+    let a = w.agent(id).unwrap();
+    let (rear_z, pitch) = a.ground_pose(w.graph()).expect("pose");
+    assert!((pitch - 0.1_f64.atan()).abs() < 1e-3, "pitch {pitch}");
+    // The rear axle is one wheelbase and the front overhang behind the bumper (at s = 80).
+    let expected = 5.0 + 0.1 * (80.0 - p.front_overhang - p.wheelbase);
+    assert!((rear_z - expected).abs() < 0.02, "{rear_z} vs {expected}");
+}
+
+#[test]
+fn at_the_start_of_a_lane_the_pitch_is_flat_not_wrong() {
+    let mut w = hill();
+    let id = w.spawn(LaneId(0), 0.0, 0.0, IdmParams::default()).unwrap();
+    let a = w.agent(id).unwrap();
+    let (_, pitch) = a.ground_pose(w.graph()).expect("pose");
+    assert!(pitch.abs() < 1e-9);
+}

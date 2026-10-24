@@ -222,6 +222,29 @@ impl Agent {
         Some(graph.lane(self.lane)?.z_at(self.s))
     }
 
+    /// Height of the rear axle (m) and the pitch of the body (rad, nose up positive) from the
+    /// lane's elevation profile under the two axles: on a slope the body lies along it instead of
+    /// hanging at the front axle's height. Across a lane's start the profile is clamped, which
+    /// gives a flat stretch at most one wheelbase long.
+    #[must_use]
+    pub fn ground_pose(&self, graph: &LaneGraph) -> Option<(f64, f64)> {
+        let lane = graph.lane(self.lane)?;
+        // `s` is the front bumper; the axles lie behind it.
+        let front_s = (self.s - self.params.front_overhang).max(0.0);
+        let wheelbase = self.params.wheelbase.max(1.0);
+        let rear_s = (front_s - wheelbase).max(0.0);
+        let front = lane.z_at(front_s);
+        let span = front_s - rear_s;
+        if span < 0.5 {
+            return Some((front, 0.0));
+        }
+        let rear = lane.z_at(rear_s);
+        let pitch = (front - rear).atan2(span);
+        // The axles are one wheelbase apart: extrapolate the rear height when the lane starts
+        // closer than that.
+        Some((front - pitch.tan() * wheelbase, pitch))
+    }
+
     /// Starts a lane change: the car is now on the new lane, `offset` metres beside its centre.
     pub(crate) fn begin_lane_change(&mut self, offset: f64, side: Side) {
         self.lc_from = offset;

@@ -17,6 +17,7 @@ pub fn spawn_traffic(
     settings: Res<TrafficSettings>,
     mut sched: ResMut<ScheduledTraffic>,
     env: Option<Res<opts_bevy::SessionEnvironment>>,
+    chrono: Option<Res<crate::in_game::omsi_world::ChronoState>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
@@ -218,9 +219,39 @@ pub fn spawn_traffic(
     // ones its scripts draw on.
     let mut head_canvases = None;
     let head_bus_path = variant.units[0].bus_path.clone();
+    // A depot bus wears the repaint its fleet line names (`ailists.cfg`: number, plate,
+    // repaint); a vehicle without such a repaint, and unscheduled traffic, a seeded choice.
+    let fleet_repaint = {
+        let today = chrono
+            .as_ref()
+            .and_then(|c| c.date)
+            .map(opts_core::formats::chrono::ChronoDate::yyyymmdd);
+        // The vehicles in service on the map date (all of them without a date or when none is).
+        let all = &pool.slots[slot].fleet;
+        let in_service: Vec<_> = all
+            .iter()
+            .filter(|e| today.is_none_or(|d| e.in_service(d)))
+            .collect();
+        let fleet = if in_service.is_empty() {
+            all.iter().collect()
+        } else {
+            in_service
+        };
+        (!fleet.is_empty())
+            .then(|| fleet[usize::try_from(repaint_seed % fleet.len() as u64).unwrap_or(0)])
+            .map(|e| e.repaint.clone())
+    };
+    let pick_repaint = |repaints: &crate::new_game_screen::repaints::VehicleRepaints| -> String {
+        fleet_repaint
+            .as_deref()
+            .and_then(|w| repaints.named(w))
+            .unwrap_or_else(|| repaints.pick(repaint_seed))
+            .to_owned()
+    };
     let head_setvars = {
         let repaints = &variant.units[0].repaints;
-        let picked = repaints.pick(repaint_seed);
+        let picked = pick_repaint(repaints);
+        let picked = picked.as_str();
         let name = if picked.is_empty() {
             repaints.default_name.as_str()
         } else {
@@ -252,7 +283,7 @@ pub fn spawn_traffic(
         // Each vehicle wears one of its `[CTC]` colour schemes (all units the same seed).
         job.cache.texture_replacements = unit
             .repaints
-            .replacements(unit.repaints.pick(repaint_seed), &unit.model.ctc_textures)
+            .replacements(&pick_repaint(&unit.repaints), &unit.model.ctc_textures)
             .into_iter()
             .collect();
         let (count, _, min, max) = load_segment_meshes_for(

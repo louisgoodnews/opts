@@ -193,9 +193,10 @@ pub fn move_traffic(
         let graph = state.world.graph();
         let pose = state.world.agent(v.id).and_then(|a| {
             let (_, h) = a.pose(graph)?;
-            Some((a.rear_axle, h, a.height(graph)?))
+            let (rear_z, pitch) = a.ground_pose(graph)?;
+            Some((a.rear_axle, h, rear_z, pitch))
         });
-        let Some((rear, heading, z)) = pose else {
+        let Some((rear, heading, z, pitch)) = pose else {
             despawn_chain(&mut commands, entity, chain);
             continue;
         };
@@ -216,7 +217,11 @@ pub fn move_traffic(
         }
         (v.origin, v.heading, v.height) = (origin, heading, height);
         transform.translation = bevy;
-        transform.rotation = omsi_euler_to_bevy_quat(-(heading.to_degrees() as f32), 0.0, 0.0);
+        transform.rotation = omsi_euler_to_bevy_quat(
+            -(heading.to_degrees() as f32),
+            pitch.to_degrees() as f32,
+            0.0,
+        );
         if *visibility != Visibility::Inherited {
             *visibility = Visibility::Inherited;
         }

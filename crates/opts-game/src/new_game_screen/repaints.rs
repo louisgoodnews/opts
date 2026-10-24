@@ -295,6 +295,23 @@ impl VehicleRepaints {
         }
     }
 
+    /// The repaint called `wanted` (case-insensitive), the default's name included; `None` when
+    /// the vehicle has no such repaint.
+    #[must_use]
+    pub fn named(&self, wanted: &str) -> Option<&str> {
+        let wanted = wanted.trim();
+        if wanted.is_empty() {
+            return None;
+        }
+        if self.default_name.eq_ignore_ascii_case(wanted) {
+            return Some(self.default_name.as_str());
+        }
+        self.names
+            .iter()
+            .find(|n| n.eq_ignore_ascii_case(wanted))
+            .map(String::as_str)
+    }
+
     /// Texture replacements of repaint `name` for a model whose `[CTCTexture]` slots declare the
     /// default texture file of each slot: `(default file name, replacement path)`. Empty for the
     /// default repaint and for unknown names.
