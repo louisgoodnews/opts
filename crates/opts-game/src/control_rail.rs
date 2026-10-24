@@ -42,8 +42,27 @@ fn switch(world: &mut World, params: &Value) -> Outcome {
                 train.branch = b;
             }
             let ahead = points_ahead(train, &net.0, REACH_M);
+            // The points object ahead: its place and position, and the position the train needs.
+            let object = train
+                .next_switch(&net.0, REACH_M)
+                .and_then(|a| net.0.lane(a.wanted)?.gate)
+                .map(|g| {
+                    let (x, y) = opts_sim::pedestrian::switches::switch_place(g.switch);
+                    json!({
+                        "x": x,
+                        "y": y,
+                        "position": net.0.switch_position(g.switch),
+                        "needed": g.position,
+                    })
+                });
             Ok(json!({
                 "placed": true,
+                "points_objects": net.0.switches().count(),
+                "points": net.0.switches().take(50).map(|k| {
+                    let (x, y) = opts_sim::pedestrian::switches::switch_place(k);
+                    json!({ "x": x, "y": y, "position": net.0.switch_position(k), "lanes": net.0.switch_lanes(k).len() })
+                }).collect::<Vec<_>>(),
+                "object": object,
                 "ahead": ahead.map(|a| json!({
                     "distance_m": a.distance_m,
                     "ways": a.ways.iter().map(|b| way_id(*b)).collect::<Vec<_>>(),

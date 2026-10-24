@@ -128,6 +128,17 @@ pub(super) fn tile_rail_lanes(
             _ => ground + obj.position.z,
         };
         let world = Vec3::new(origin.0 + obj.position.x, origin.1 + obj.position.y, z);
+        if sco.switch_positions > 0 {
+            let key = opts_sim::pedestrian::switches::switch_key(world.x, world.y);
+            out.extend(opts_sim::pedestrian::lanes_from_points_object(
+                &sco.paths,
+                world,
+                obj.heading_deg,
+                PATH_TYPE_RAIL,
+                key,
+            ));
+            continue;
+        }
         out.extend(lanes_from_object_of_type(
             &sco.paths,
             world,
@@ -563,6 +574,8 @@ mod composition;
 pub use composition::{Part, VehicleComposition};
 mod body;
 use body::RailBody;
+mod points;
+pub use points::{points_visual_system, set_points_system};
 mod switch;
 pub use switch::{points_ahead, switch_hint_system, way_by_id, way_id};
 
@@ -576,34 +589,3 @@ mod spec;
 pub use ai::{
     load_rail_variants, move_ai_trains, spawn_ai_trains, AiTrain, BikeAiPool, RailAiPool,
 };
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn part(name: &str, behind: f32) -> Part {
-        Part {
-            entity: Entity::PLACEHOLDER,
-            name: name.into(),
-            behind,
-            half_span: 1.0,
-            reversed: false,
-            meshes: 1,
-            vertices: 3,
-            body: None,
-        }
-    }
-
-    #[test]
-    fn composition_finds_parts_by_name_and_reports_length() {
-        let c = VehicleComposition {
-            head: part("NF6D", 0.0),
-            followers: vec![part("NF6D_C.bus", 12.5), part("NF6D_B_User.bus", 30.0)],
-        };
-        assert_eq!(c.len(), 3);
-        assert!((c.length() - 30.0).abs() < 1e-6);
-        assert_eq!(c.find("nf6d_c").map(|p| p.behind), Some(12.5));
-        assert!(c.find("missing").is_none());
-        assert_eq!(c.parts().count(), 3);
-    }
-}

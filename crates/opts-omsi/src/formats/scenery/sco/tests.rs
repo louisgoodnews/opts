@@ -200,3 +200,25 @@ fn busstop_marks_the_object_as_a_bus_stop() {
             .bus_stop
     );
 }
+
+#[test]
+fn rail_points_give_their_paths_a_position() {
+    let path = |x: &str| format!("[path]\n{x}\n10\n0.4\n0\n0\n17\n0\n0\n2\n2.5\n2\n0\n");
+    let text = format!(
+        "[switch]\n2\n\n{}\n[switchdir]\n0\n\n{}\n[switchdir]\n1\n\n{}\n{}",
+        path("0"),
+        path("1"),
+        path("2"),
+        path("3")
+    );
+    let obj = SceneryObject::from_text(&text).expect("parses");
+    assert_eq!(obj.switch_positions, 2);
+    let positions: Vec<_> = obj.paths.iter().map(|p| p.switch_position).collect();
+    assert_eq!(positions, [None, Some(0), Some(1), Some(1)]);
+}
+
+#[test]
+fn an_object_without_points_has_no_positions() {
+    let obj = SceneryObject::from_text("[friendlyname]\nx\n").expect("parses");
+    assert_eq!(obj.switch_positions, 0);
+}

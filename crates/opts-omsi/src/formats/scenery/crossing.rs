@@ -259,6 +259,7 @@ mod tests {
             extra: None,
             traffic_light_index: None,
             approach_distance_m: None,
+            switch_position: None,
         });
         sco.spline_helpers.push(ScoSplineHelper {
             profile_file: "a.sli".into(),

@@ -63,6 +63,7 @@ fn sco_path(x: f32, y: f32) -> ScoPath {
         extra: None,
         traffic_light_index: None,
         approach_distance_m: None,
+        switch_position: None,
     }
 }
 

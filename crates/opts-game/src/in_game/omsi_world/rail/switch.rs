@@ -1,9 +1,9 @@
 //! The points ahead of the player's rail vehicle (M-0113): a hint in the alert slot of the HUD and
 //! the control protocol `rail.switch`.
 //!
-//! The points of a track have no state of their own here: the way a vehicle takes at the next
-//! points is the `branch` of its [`Train`] (the `rail_branch_*` and `rail_switch_toggle` actions),
-//! decided at the moment it passes them, so a switch can never change under a vehicle.
+//! The way a vehicle wants at the next points is the `branch` (or route) of its [`Train`] (the
+//! `rail_branch_*` and `rail_switch_toggle` actions); `points.rs` sets the points object to it
+//! when no vehicle is on the points.
 
 use super::*;
 use crate::hud::{AlertSeverity, RaiseAlert};

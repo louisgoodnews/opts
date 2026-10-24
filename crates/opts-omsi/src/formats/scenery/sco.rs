@@ -280,6 +280,9 @@ pub struct ScoPath {
     pub traffic_light_index: Option<usize>,
     /// Distance in meters before path at which vehicles evaluate traffic light (`[approachdist]`).
     pub approach_distance_m: Option<f32>,
+    /// The position of the rail points (`[switchdir]`) in which this path is passable; `None`
+    /// for a path of every position (and for objects without `[switch]`).
+    pub switch_position: Option<u32>,
 }
 
 /// Spline helper junction arm (`[splinehelper]`).
@@ -413,6 +416,8 @@ pub struct SceneryObject {
     pub attachments: Vec<ScoAttachment>,
     /// Traffic path lane segments.
     pub paths: Vec<ScoPath>,
+    /// Number of positions of the rail points the object is (`[switch]`); 0 for other objects.
+    pub switch_positions: u32,
     /// Spline helper profiles.
     pub spline_helpers: Vec<ScoSplineHelper>,
     /// Map light sources.
@@ -458,6 +463,8 @@ struct ParseState {
     active_approach_dist: Option<f32>,
     /// Whether a `[path]` was seen yet.
     seen_path: bool,
+    /// `[switchdir]` of the paths that follow, until the next one.
+    switch_position: Option<u32>,
 }
 
 impl SceneryObject {

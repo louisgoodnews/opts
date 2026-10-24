@@ -410,10 +410,16 @@ with a `maxspeed`, so the tongue turns towards the active position. `Switch` is 
 state; the position selects which `[switchdir]` path group a vehicle may enter. Only one script
 (`script\switch_varlist.txt`) names the variable.
 
-OPTS (2026-10-24): `[switchdir]` is not parsed. The paths of the object become rail lanes regardless of position (inferred from the code, not re-checked per file); the
-branch is chosen per train (route or key, `rail.switch`), so a train never meets a "wrong" position
-and no switch changes under a vehicle. The `Switch` variable and tongue animation are not driven yet
-(M-0113).
+OPTS (2026-10-24): `[switch]` and `[switchdir]` are parsed (`SceneryObject::switch_positions`,
+`ScoPath::switch_position`; a path before the first `[switchdir]` is passable in every position).
+A placed points object is one switch with one position (`PedestrianNet::switch_position`, key =
+the object's place). Its gated rail lanes are open only in their position; a train chooses among
+the open lanes. Trains that approach (150 m) ask for the lane their route or branch wants and the
+position follows when no train is on the points (`set_points_system`); the object's `Switch`
+variable is written from the position so the tongue meshes turn (`points_visual_system`). A train
+that finds the points set against it (another vehicle holds them) takes the open way. The click
+(`toggle_switch`) is not wired to the position yet, and trailing movements (entering the points
+from a branch) do not set them.
 
 #### `[path]` parameters
 
