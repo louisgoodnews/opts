@@ -141,7 +141,7 @@ fn hill() -> TrafficWorld {
 fn on_a_slope_the_body_lies_along_it_and_the_rear_axle_is_lower_than_the_front() {
     let mut w = hill();
     let p = IdmParams::default();
-    let id = w.spawn(LaneId(0), 80.0, 0.0, p.clone()).unwrap();
+    let id = w.spawn(LaneId(0), 80.0, 0.0, p).unwrap();
     let a = w.agent(id).unwrap();
     let (rear_z, pitch) = a.ground_pose(w.graph()).expect("pose");
     assert!((pitch - 0.1_f64.atan()).abs() < 1e-3, "pitch {pitch}");
