@@ -122,7 +122,8 @@ fn a_light_map_glows_with_ai_light() {
         .unwrap()
         .set("ai_light", 1.0);
     app.update();
-    assert_eq!(emissive(&app, part), LinearRgba::rgb(100.0, 100.0, 100.0));
+    let g = opts_bevy::vehicle_lights::LIGHT_MAP_GAIN;
+    assert_eq!(emissive(&app, part), LinearRgba::rgb(g, g, g));
     // The shared material was copied, not changed.
     let shared = app
         .world()

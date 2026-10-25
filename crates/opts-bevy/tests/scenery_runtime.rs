@@ -122,6 +122,7 @@ fn app() -> App {
                         light_variable: None,
                         alpha_variable: None,
                         image: None,
+                        free_texture: None,
                         pivot: None,
                     }]
                 })

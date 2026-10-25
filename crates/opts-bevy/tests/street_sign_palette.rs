@@ -40,6 +40,7 @@ fn street_sign_plate_keeps_its_texture_and_the_text_quad_gets_the_override() {
                     trans_map: None,
                     image: None,
                     light_map: None,
+                    free_texture: None,
                 })
                 .collect();
             let palette = &models[0].materials;

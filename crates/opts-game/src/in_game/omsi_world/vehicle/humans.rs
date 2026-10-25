@@ -51,6 +51,7 @@ pub(in super::super::super) fn load_human_parts(
                 trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
                 image: None,
                 light_map: None,
+                free_texture: None,
             })
             .collect();
         let mut loader = ContentLoader {

@@ -29,6 +29,7 @@ pub mod control;
 pub mod coords;
 pub mod door_camera;
 pub mod environment;
+pub mod free_texture;
 pub mod glass;
 pub mod ground;
 pub mod ground_material;

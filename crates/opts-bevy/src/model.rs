@@ -36,6 +36,7 @@ use crate::texture::load_bevy_image;
 pub const MAX_PLAUSIBLE_EXTENT_M: f32 = 3000.0;
 
 mod overrides;
+pub use overrides::compose_light;
 use overrides::{base_name, compose_alpha, transmap_glass};
 pub use overrides::{
     find_override, is_static_overlay, transmap_glass_rgba, TextureOverride, TRANSMAP_OPAQUE,
@@ -59,6 +60,9 @@ pub struct ModelPart {
     pub alpha_variable: Option<String>,
     /// The ready-made image that replaced the material's texture (rendered text), if any.
     pub image: Option<Handle<Image>>,
+    /// `[matl_freetex]`: the string variable naming the texture shown at run time, and the
+    /// material's light map, which lights whatever texture it shows (see `crate::free_texture`).
+    pub free_texture: Option<(String, Option<Handle<Image>>)>,
     /// Translation of the mesh file's own `0x79` matrix (the modelling tool's pivot) in Bevy
     /// axes; `None` for files without one and for `.x` meshes (whose frames are applied).
     /// `[newanim] origin_from_mesh` rotates about it.
@@ -155,6 +159,10 @@ pub struct ContentCache {
     /// images and builds a new mip chain (tens of milliseconds); every vehicle of a model family
     /// uses the same pairs, so it is done once.
     pub(crate) composed: HashMap<ComposedKey, ComposedImages>,
+    /// A material's texture lit by its light map (`[matl_lightmap]`): the emissive picture, by
+    /// (texture, light map). Built once per pair like the transmap composition.
+    pub(crate) lit:
+        HashMap<(bevy::asset::AssetId<Image>, bevy::asset::AssetId<Image>), Handle<Image>>,
     /// The glass pass of a blended body texture, by source image (`None`: not mostly opaque).
     pub(crate) glass_split: HashMap<bevy::asset::AssetId<Image>, Option<Handle<Image>>>,
     pub(crate) parts: HashMap<(PathBuf, String), Vec<ModelPart>>,
