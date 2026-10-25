@@ -1,9 +1,9 @@
-//! First run: confirm or choose the OMSI folder, read the content, welcome
+//! First run: choose the OMSI folder when it was not found, read the content, welcome
 //! (`docs/src/roadmap/phase-9/screens.md` section 3).
 //!
-//! * A folder found by searching is **offered for confirmation**, never adopted silently
-//!   ([`decision::decide`]); an explicit choice (command line, `$OMSI_PATH`, the folder confirmed
-//!   earlier) is used as it is.
+//! * An explicit choice (command line, `$OMSI_PATH`, the folder saved earlier) or the installation
+//!   Steam knows is used without asking ([`decision::decide`]); the dialog appears only when none
+//!   is found.
 //! * [`choose_omsi_folder`] opens the native folder dialog; `Settings -> Content`, the Home banner
 //!   and this flow all use it. A valid choice is saved and the catalogue starts at once; an
 //!   invalid one explains what a valid folder contains.
@@ -44,8 +44,6 @@ const BANNER_SAVE: &str = "omsi.save-failed";
 /// The step the first-run flow shows.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Step {
-    /// An installation was found in a default location: confirm it.
-    Found(PathBuf),
     /// Nothing was found: choose a folder.
     Choose,
     /// The content was read: welcome.
@@ -199,7 +197,7 @@ pub fn poll_folder_pick(
     match check_choice(answer) {
         Ok(root) => {
             adopt_root(&mut commands, &mut settings, &root, first_run.persist);
-            if matches!(first_run.step, Some(Step::Found(_) | Step::Choose)) {
+            if matches!(first_run.step, Some(Step::Choose)) {
                 first_run.step = None;
             }
             first_run.error = None;
@@ -284,10 +282,6 @@ pub fn first_run_choices(
 ) {
     for choice in choices.read().filter(|c| c.tag == DIALOG_TAG) {
         match (choice.choice, first_run.step.clone()) {
-            (view::USE, Some(Step::Found(root))) => {
-                adopt_root(&mut commands, &mut settings, &root, first_run.persist);
-                first_run.step = None;
-            }
             (view::LANGUAGE, _) => {
                 // Offered on every step (M-0065): the other language, kept like the setting.
                 let next = if loc.locale().starts_with("de") {
@@ -301,7 +295,7 @@ pub fn first_run_choices(
                     settings.save_in_background();
                 }
             }
-            (view::OTHER | view::CHOOSE, _) => choose_omsi_folder(&mut commands),
+            (view::CHOOSE, _) => choose_omsi_folder(&mut commands),
             (view::QUIT, _) => {
                 exit.write(AppExit::Success);
             }

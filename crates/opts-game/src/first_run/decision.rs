@@ -14,8 +14,8 @@ pub struct StartupFacts {
     pub env: Option<PathBuf>,
     /// The folder the user confirmed earlier (settings), if it is still an installation.
     pub saved: Option<PathBuf>,
-    /// An installation in a default Steam location that was never confirmed.
-    pub candidate: Option<PathBuf>,
+    /// The installation Steam's library configuration names ([`crate::steam_library`]).
+    pub steam: Option<PathBuf>,
     /// Whether a window is there to ask in (not `--headless`, not `--autostart`).
     pub interactive: bool,
 }
@@ -30,8 +30,6 @@ pub enum StartupDecision {
         /// Save it (a folder the user did not give explicitly and that is not saved yet).
         remember: bool,
     },
-    /// Ask the user to confirm this folder (found in a default location).
-    Confirm(PathBuf),
     /// Ask the user to choose a folder.
     Choose,
     /// Nothing found and nobody to ask (headless): the catalogue stays empty.
@@ -39,9 +37,9 @@ pub enum StartupDecision {
 }
 
 /// The decision for `facts`: an explicit choice (command line, environment, saved) is used as it
-/// is; a folder found by searching is **offered for confirmation**, never adopted silently
-/// (`docs/src/roadmap/phase-9/flow.md` section 3.1). Without a window the search result is used,
-/// as before, because nobody could be asked.
+/// is; an installation found through Steam is used and remembered without asking (project lead,
+/// 2026-10-25; `docs/src/roadmap/phase-9/flow.md` section 3.1). Only when Steam does not know it
+/// is the user asked to choose a folder.
 pub fn decide(facts: &StartupFacts) -> StartupDecision {
     if let Some(root) = facts.explicit.clone().or_else(|| facts.env.clone()) {
         return StartupDecision::Adopt {
@@ -55,9 +53,8 @@ pub fn decide(facts: &StartupFacts) -> StartupDecision {
             remember: false,
         };
     }
-    match (&facts.candidate, facts.interactive) {
-        (Some(root), true) => StartupDecision::Confirm(root.clone()),
-        (Some(root), false) => StartupDecision::Adopt {
+    match (&facts.steam, facts.interactive) {
+        (Some(root), _) => StartupDecision::Adopt {
             root: root.clone(),
             remember: true,
         },
@@ -100,7 +97,7 @@ mod tests {
     fn explicit_choices_are_used_without_asking_and_not_saved() {
         let facts = StartupFacts {
             explicit: Some(p("/a")),
-            candidate: Some(p("/steam")),
+            steam: Some(p("/steam")),
             interactive: true,
             ..Default::default()
         };
@@ -124,7 +121,7 @@ mod tests {
     fn a_confirmed_saved_folder_is_used_without_asking_again() {
         let facts = StartupFacts {
             saved: Some(p("/s")),
-            candidate: Some(p("/steam")),
+            steam: Some(p("/steam")),
             interactive: true,
             ..Default::default()
         };
@@ -134,28 +131,22 @@ mod tests {
     }
 
     #[test]
-    fn a_found_folder_is_offered_not_adopted_when_a_window_can_ask() {
-        let facts = StartupFacts {
-            candidate: Some(p("/steam")),
-            interactive: true,
-            ..Default::default()
-        };
-        assert_eq!(decide(&facts), StartupDecision::Confirm(p("/steam")));
-    }
-
-    #[test]
-    fn without_a_window_the_search_result_is_used_and_remembered() {
-        let facts = StartupFacts {
-            candidate: Some(p("/steam")),
-            ..Default::default()
-        };
-        assert_eq!(
-            decide(&facts),
-            StartupDecision::Adopt {
-                root: p("/steam"),
-                remember: true
-            }
-        );
+    fn an_installation_found_through_steam_is_used_and_remembered_without_asking() {
+        for interactive in [true, false] {
+            let facts = StartupFacts {
+                steam: Some(p("/steam")),
+                interactive,
+                ..Default::default()
+            };
+            assert_eq!(
+                decide(&facts),
+                StartupDecision::Adopt {
+                    root: p("/steam"),
+                    remember: true
+                },
+                "interactive {interactive}"
+            );
+        }
         assert_eq!(decide(&StartupFacts::default()), StartupDecision::Missing);
     }
 
