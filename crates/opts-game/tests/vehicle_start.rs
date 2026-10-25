@@ -4,58 +4,10 @@
 //!
 //! Needs an OMSI installation (`OMSI_PATH`); skips without one.
 
+mod vehicle_rig;
+
 use opts_core::formats::vehicles::bus::BusManifest;
-use opts_sim::script::ScriptEngine;
-
-/// The scripts of a vehicle, initialised, with the host callbacks of a headless run.
-fn load(rel: &str) -> Option<ScriptEngine> {
-    let root = std::env::var_os("OMSI_PATH").map(std::path::PathBuf::from)?;
-    let install = opts_bevy::OmsiInstall::new(root);
-    let bus_path = install.find_file(rel)?;
-    let bus_dir = bus_path.parent()?.to_path_buf();
-    let manifest = BusManifest::parse_bytes(&std::fs::read(&bus_path).ok()?).ok()?;
-    let (mut engine, _) =
-        opts_sim::script::load_vehicle_scripts(&manifest, |r| install.find_in(&bus_dir, r));
-    let ctx = opts_bevy::host_callbacks::VehicleHostContext {
-        seed: 42,
-        route: opts_bevy::route::RouteHandle::new(None),
-        script_textures: std::sync::Arc::new(std::sync::RwLock::new(Vec::new())),
-        fonts: std::sync::Arc::new(std::sync::RwLock::new(opts_bevy::text_texture::load_fonts(
-            &install,
-        ))),
-        texture_base_dir: Some(bus_dir.join("Texture")),
-        ..Default::default()
-    };
-    engine.set_external_handler(opts_bevy::host_callbacks::vehicle_callbacks_with_context(
-        ctx,
-    ));
-    engine.run_init();
-    Some(engine)
-}
-
-const DT: f32 = 1.0 / 60.0;
-
-/// Runs `seconds` of simulation.
-fn run(engine: &mut ScriptEngine, seconds: f32) {
-    for _ in 0..(seconds / DT) as u32 {
-        engine.run_frame(DT, false);
-    }
-}
-
-/// A click like `vehicle.click`: press, `frames` frames of drag carrying `drag_y` pixels in all,
-/// hold for `hold_s`, release.
-fn click(engine: &mut ScriptEngine, name: &str, drag_y: f32, frames: u32, hold_s: f32) {
-    engine.trigger(name);
-    for _ in 0..frames {
-        engine.set_system("mouse_x", 0.0);
-        engine.set_system("mouse_y", drag_y / frames as f32);
-        engine.trigger(&format!("{name}_drag"));
-        engine.run_frame(DT, false);
-    }
-    engine.set_system("mouse_y", 0.0);
-    run(engine, hold_s);
-    engine.trigger(&format!("{name}_off"));
-}
+use vehicle_rig::{click, load, run, start_with_setup, tap};
 
 #[test]
 fn citybus_530_starts_through_its_ignition_key() {
@@ -83,13 +35,6 @@ fn citybus_530_starts_through_its_ignition_key() {
     run(&mut e, 2.0);
     let n = e.get("engine_n");
     assert!((400.0..900.0).contains(&n), "idle rpm {n}");
-}
-
-/// A key press and release (`<trigger>`, `<trigger>_off`) with `hold_s` of simulation in between.
-fn tap(engine: &mut ScriptEngine, trigger: &str, hold_s: f32) {
-    engine.trigger(trigger);
-    run(engine, hold_s);
-    engine.trigger(&format!("{trigger}_off"));
 }
 
 #[test]
@@ -428,5 +373,28 @@ fn census_engine_sounds() {
             }
         }
         println!("SND {label}: by kind {counts:?}");
+    }
+}
+
+#[test]
+fn cold_start_buses_start_through_the_setup() {
+    for (rel, recipe) in [
+        ("Vehicles/Luzern_Bus/VBL_Citybus_main.bus", "three-step key"),
+        (
+            "Vehicles/Valiant_Citybus_Family/V_7000_2.bus",
+            "three-step key (battery button)",
+        ),
+        (
+            "Vehicles/MB_C2_EN_BVG/MB_C2_E6_Solo_BVG.bus",
+            "ignition key turned by mouse",
+        ),
+    ] {
+        let Some((on, n, name)) = start_with_setup(rel) else {
+            eprintln!("OMSI_PATH / {rel} not available; skipping");
+            continue;
+        };
+        assert_eq!(name, recipe, "{rel}");
+        assert_eq!(on, 1.0, "{rel}: engine running");
+        assert!(n > 400.0, "{rel}: idle speed {n}");
     }
 }

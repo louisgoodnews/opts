@@ -14,7 +14,7 @@
 | from 0.75 | engine running (parking brake still set) |
 | 1 | ready to drive: parking brake released, the gear selector follows the driver |
 
-Recipes (recognised by a variable the vehicle's scripts own): *stepped ignition key* (Citybus 530: battery key three times, the last one held), *inserted ignition key* (BRT C2: battery key three times, then the start key held), *battery switch and start key* (MAN NL, SD200, NG272 and every vehicle not recognised). The fuel is set as a share of `engine_tank_capacity` (250 l when the vehicle's constants name none). Changes apply to the next vehicle; raising the degree also continues a vehicle that has not got that far. Verified live on the Citybus 530 for 0, 0.25, 0.5 and 1 (cold; electrics, lights and fuel; key in drive position; running with the brake released); the other families in the rig only (`crates/opts-bevy/src/vehicle_setup/tests.rs`, `crates/opts-game/tests/vehicle_start.rs`). Rail vehicles have no recipe yet ❓.
+Recipes (recognised by a variable the vehicle's scripts own, a trigger they answer or a constant they set): *stepped ignition key* (Citybus 530: battery key three times, the last one held), *inserted ignition key* (BRT C2: battery key three times, then the start key held), *three-step key* (Luzern VBL Citybus: battery key three times, the last one held), *three-step key (battery button)* (Valiant 7000 family: the same), *ignition key turned by mouse* (MB C2 family: the key hot-spot dragged to the electrics, released, dragged past the starter position), *battery switch and start key* (MAN NL, SD200, NG272 and every vehicle not recognised). The fuel is set as a share of `engine_tank_capacity` (250 l when the vehicle's constants name none). Changes apply to the next vehicle; raising the degree also continues a vehicle that has not got that far. Verified live on the Citybus 530 for 0, 0.25, 0.5 and 1 (cold; electrics, lights and fuel; key in drive position; running with the brake released); the other families in the rig only (`crates/opts-bevy/src/vehicle_setup/tests.rs`, `crates/opts-game/tests/vehicle_start.rs`). Rail vehicles have no recipe yet ❓.
 
 ## How controls are operated
 
@@ -54,6 +54,16 @@ All three share one procedure: the `battery` key switches the electrics on (`ele
 ## BRT C2 (`C2_2T.bus`, rig 2026-10-20)
 
 Stepped key like the Citybus, with one more step: the `battery` key inserts the key (1st press, nothing else happens), turns it to the electrics (2nd, busbar 1), to the drive position (3rd); the `engine_start` key held then starts the engine from the drive position. The ignition key hot-spot is `C2_CP_Zuendschluessel` (drag).
+
+## Luzern VBL Citybus, Valiant 7000 and MB C2 BVG (rig and live on Berlin-Spandau 2026-10-25)
+
+These three started a drive with the engine off (drive sweep 2026-10-22): the generic recipe did not fit them.
+
+- **Luzern VBL Citybus** (`VBL_Citybus_main.bus`; recognised by `cp_keymode`): the `battery` key steps the key: 1st press inserts it, 2nd switches the electrics on, 3rd (held) is the starter (gear selector in neutral, busbar above 0.3); the release springs back to the drive position. The `engine_start` key steps back.
+- **Valiant 7000 family** (`V_7000_2.bus` and 17 more; recognised by the trigger `cp_start_key_rot_drag`): the same three presses, but the 1st presses the battery button (`cp_batterie_toggle_state`), the 2nd turns the key to the electrics (it needs the battery button and is refused while its lock-out is set), the 3rd (held) starts. Idle right after the start is 730 to 970 rpm.
+- **MB C2 BVG** (`MB_C2_E6_Solo_BVG.bus` and 30 more; recognised by the constant `engine_start_legacy` = 0): **two scripts answer the battery key** — `engine_solo.osc` steps the key (insert, electrics, ignition, starter), `cockpit.osc` toggles the electrics on every press — so on the third press the electrics go off and the starter press finds a dead busbar and is refused. The set-up therefore turns the key hot-spot `cp_key_rot` with the mouse, as a driver does: up from 0.2 the electrics are on, past 0.9 the engine starts (gear in neutral, busbar live); released, the key rests at a third of its travel per mode. Whether OMSI also runs both blocks of one trigger is open ❓ ([osc-guide](../formats/text/vehicles/osc-guide.md): the VM runs every block of a trigger in file order). With `engine_start_legacy` = 1 the scripts take the battery switch and the start key instead, which the generic recipe does.
+
+**Sweep** (`sweep_setup_starts_every_bus` in `crates/opts-game/tests/vehicle_start_sweep.rs`, ignored by default: every player bus of the installation through the game's set-up at the default degree): 948 buses; before this change 114 started with the engine off, now 64; none that started before stops now. Still off ❓: TH Überlandbus (30), Studio Polygon Lite (19), Citybus S31x (7), Chicago Citybus (2), VA GS Hochflurer and Niederflurer (2 each), MB O305 (1), one MB O530 Facelift.
 
 ## Tram NF6D (`NF6D_B_User.bus`, the driver's car; map *Tram*, checked 2026-10-20)
 
