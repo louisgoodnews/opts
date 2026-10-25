@@ -388,6 +388,22 @@ fn cold_start_buses_start_through_the_setup() {
             "Vehicles/MB_C2_EN_BVG/MB_C2_E6_Solo_BVG.bus",
             "ignition key turned by mouse",
         ),
+        // The start key steps (ignition, then starter); the starter is held until the engine
+        // runs on its own.
+        (
+            "Vehicles/TH_Ueberlandbus/O550_Euro3.bus",
+            "battery switch and start key",
+        ),
+        (
+            "Vehicles/TH_Ueberlandbus/O550_Euro3_Automatik.bus",
+            "battery switch and start key",
+        ),
+        // The second starter press waits for the ABS self-test.
+        (
+            "Vehicles/[SP] Studio Polygon Lite/Lite_11.5m_D.bus",
+            "three-step key (master switch)",
+        ),
+        ("Vehicles/Citybus_S31x/S315_1+2_E3.bus", "four-step key"),
     ] {
         let Some((on, n, name)) = start_with_setup(rel) else {
             eprintln!("OMSI_PATH / {rel} not available; skipping");
