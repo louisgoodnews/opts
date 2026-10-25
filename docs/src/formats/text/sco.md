@@ -167,7 +167,7 @@ Parameter counts are the number of lines following the keyword. "—" means a ba
 | `[matl_envmap]` | 2 | Environment-map bitmap, strength (`0.05`–`1`). |
 | `[matl_envmap_mask]` | — | Marks the env-map as masked by the alpha channel. |
 | `[matl_lightmap]` | 1 | Lightmap bitmap (emissive lit windows and signs). 456 `.sco` (by name 137 signs and signals, 106 bus stops and shelters, 38 buildings); 73 placements in Berlin-Spandau. |
-| `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` (the variable-less `[matl_lightmap]` path) instead of swapping the texture ❓. |
+| `[matl_nightmap]` | 1 | Night texture (lit windows), swapped in at night. OPTS (2026-10-17) draws it as an emissive map switched by `NightlightA` instead of swapping the texture ❓; since 2026-10-25 it keeps its own path (`TextureOverride::night_map`): drawn as it is, while a `[matl_lightmap]` lights the texture. |
 | `[matl_transmap]` | — | Material fades by `[alphascale]`. |
 | `[matl_noZwrite]` | — | Do not write depth (transparent decals). |
 | `[matl_noZcheck]` | — | Do not test depth. |

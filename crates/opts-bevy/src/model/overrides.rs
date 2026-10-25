@@ -25,6 +25,9 @@ pub struct TextureOverride {
     /// [`compose_light`]), with an emissive strength of 0; the variable is reported in
     /// [`ModelPart::light_variable`] for the runtime to drive (`crate::vehicle_lights`).
     pub light_map: Option<LightMap>,
+    /// `[matl_nightmap]`: the night texture, drawn as it is (lit windows, a display's backlight)
+    /// when the night switch (`NightlightA`) is on; used when the material has no light map.
+    pub night_map: Option<String>,
     /// `[matl_freetex]`: the string variable that names the texture to show instead of
     /// `texture` at run time (reported in [`ModelPart::free_texture`]).
     pub free_texture: Option<String>,

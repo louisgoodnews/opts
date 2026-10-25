@@ -300,6 +300,7 @@ pub(in super::super::super) fn load_segment_meshes_for(
                     })
                 }),
                 light_map: m.light_map.clone(),
+                night_map: m.night_map.clone().filter(|t| !t.trim().is_empty()),
                 // A texture named by a string variable (`[matl_freetex]`): the C2 display's
                 // pages. Canvases follow theirs through the tint above.
                 free_texture: m

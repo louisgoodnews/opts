@@ -81,8 +81,11 @@ pub fn update_vehicle_text_textures(
         } else {
             job.fonts.render_data(&job.install, &t.spec)
         };
+        // A new image with its mip chain: replacing the data alone left the smaller mip levels
+        // of the first (blank) image empty, so text drawn small (the HH109's EFAD printer: a
+        // 1024 × 64 line on a few centimetres of LCD) disappeared.
         if let (Some(data), Some(mut image)) = (data, images.get_mut(&t.image)) {
-            image.data = Some(data);
+            *image = opts_bevy::text_texture::text_image(t.spec.width, t.spec.height, data);
         }
         t.shown = Some(text);
     }

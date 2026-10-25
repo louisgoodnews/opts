@@ -352,9 +352,15 @@ impl ContentLoader<'_> {
                 // alpha channel) is drawn like the transmap composition: an opaque cut-out body
                 // plus a blended glass pass. Blending the whole body sorts it against the
                 // interior behind it, which then shows through in patches (Bremen parked cars).
+                // Not for a texture chosen at run time (`[matl_freetex]`): its default is a
+                // placeholder (the Lion's City's VDV layers start with an opaque grey one), and
+                // split into an opaque body it would cover the display with grey whatever the
+                // scripts show.
                 if glass_tex.is_none()
                     && !blended_by_map
-                    && over.is_some_and(|o| o.alpha == Some(2) && o.trans_map.is_none())
+                    && over.is_some_and(|o| {
+                        o.alpha == Some(2) && o.trans_map.is_none() && o.free_texture.is_none()
+                    })
                 {
                     let _t = opts_logging::stream_trace::span("o3d.body_glass_split");
                     if let Some(source) = tex.clone() {
@@ -461,6 +467,17 @@ impl ContentLoader<'_> {
                         material.emissive_texture = Some(lit.unwrap_or(h));
                         material.emissive = bevy::color::LinearRgba::BLACK;
                         light_variable = Some(lm.variable.trim().to_owned());
+                    }
+                }
+                // A night map (no light map): the lit picture itself, switched by the night.
+                if light_variable.is_none() {
+                    if let Some(night) = over.and_then(|o| o.night_map.as_ref()) {
+                        if let Some(h) = self.texture(night, tex_dirs) {
+                            material.emissive_texture = Some(h);
+                            material.emissive = bevy::color::LinearRgba::BLACK;
+                            light_variable =
+                                Some(crate::scenery_runtime::NIGHT_VARIABLE.to_owned());
+                        }
                     }
                 }
                 if sentinel {
