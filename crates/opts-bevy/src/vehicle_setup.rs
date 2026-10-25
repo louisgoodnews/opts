@@ -90,6 +90,8 @@ pub struct Step {
     /// over the first [`DRAG_S`] of the hold (`<trigger>_drag` each frame, like a real drag);
     /// 0 for a key press.
     pub drag_y: f32,
+    /// Taken only while the engine is still off (a second try of a key that steps).
+    pub only_if_off: bool,
 }
 
 /// Seconds over which a drag step moves the mouse.
@@ -103,6 +105,7 @@ const fn tap(trigger: &'static str, from: f32) -> Step {
         until_engine: false,
         needs_busbar: false,
         drag_y: 0.0,
+        only_if_off: false,
     }
 }
 
@@ -114,6 +117,17 @@ const fn drag(trigger: &'static str, from: f32, drag_y: f32) -> Step {
         until_engine: false,
         needs_busbar: false,
         drag_y,
+        only_if_off: false,
+    }
+}
+
+/// The start key once more, held, if the first press left the engine off: on many vehicles the
+/// start key itself steps (the first press switches the ignition on, the second runs the
+/// starter: the TH Überlandbus S315/O550).
+const fn start_again(trigger: &'static str) -> Step {
+    Step {
+        only_if_off: true,
+        ..start(trigger)
     }
 }
 
@@ -132,6 +146,7 @@ const fn start(trigger: &'static str) -> Step {
         until_engine: true,
         needs_busbar: true,
         drag_y: 0.0,
+        only_if_off: false,
     }
 }
 
@@ -147,8 +162,24 @@ pub enum Detect {
     Trigger(&'static str),
     /// The constant files set this constant to this value.
     Const(&'static str, f32),
+    /// Every one of these holds.
+    All(&'static [Detect]),
     /// Everything else.
     Otherwise,
+}
+
+impl Detect {
+    /// Whether this vehicle's scripts match.
+    #[must_use]
+    pub fn matches(&self, engine: &ScriptEngine) -> bool {
+        match *self {
+            Self::Writes(var) => engine.writes(var),
+            Self::Trigger(name) => engine.has_trigger(name),
+            Self::Const(name, value) => engine.consts().scalar(name) == Some(value),
+            Self::All(all) => all.iter().all(|d| d.matches(engine)),
+            Self::Otherwise => true,
+        }
+    }
 }
 
 /// A start procedure.
@@ -207,6 +238,36 @@ pub static RECIPES: &[Recipe] = &[
             start(BATTERY),
         ],
     },
+    // Citybus S31x: the battery key inserts the key, turns it to the electrics, to the ignition
+    // and, held, to the starter. Recognised by the three together (each alone is shared: the
+    // Actia dashboard and its drag trigger by the Heuliez/Iveco families, `key_mode` by the
+    // Citelis and MAN Lion's City, which start the generic way).
+    Recipe {
+        name: "four-step key",
+        detect: Detect::All(&[
+            Detect::Writes("key_mode"),
+            Detect::Writes("actia_dash_on"),
+            Detect::Trigger("actia_move_drag"),
+        ]),
+        steps: &[
+            tap(BATTERY, ELECTRICS),
+            tap(BATTERY, ELECTRICS),
+            tap(BATTERY, IGNITION),
+            start(BATTERY),
+        ],
+    },
+    // Studio Polygon Lite (`engineStartSwitch`): the battery key steps `StartMode`: master
+    // switch, ignition, starter (held).
+    Recipe {
+        name: "three-step key (master switch)",
+        detect: Detect::Trigger("enginestartswitch"),
+        steps: &[
+            tap(BATTERY, ELECTRICS),
+            tap(BATTERY, IGNITION),
+            start(BATTERY),
+            start_again(BATTERY),
+        ],
+    },
     // MB C2 family (constant `engine_start_legacy` 0): two scripts answer the battery key (one
     // steps the key, one toggles the electrics), so the key is turned with the mouse like a
     // driver does: to the electrics (`cp_key_rot` 0.2 to 0.8; it springs back to a third on
@@ -219,11 +280,12 @@ pub static RECIPES: &[Recipe] = &[
             start_drag("cp_key_rot", -25.0),
         ],
     },
-    // MAN NL, SD200, NG272 and unknown vehicles: battery switch, start key held.
+    // MAN NL, SD200, NG272 and unknown vehicles: battery switch, start key held (and once
+    // more if the engine is still off).
     Recipe {
         name: "battery switch and start key",
         detect: Detect::Otherwise,
-        steps: &[tap(BATTERY, ELECTRICS), start(START)],
+        steps: &[tap(BATTERY, ELECTRICS), start(START), start_again(START)],
     },
 ];
 
@@ -232,14 +294,23 @@ pub static RECIPES: &[Recipe] = &[
 pub fn recipe_for(engine: &ScriptEngine) -> &'static Recipe {
     RECIPES
         .iter()
-        .find(|r| match r.detect {
-            Detect::Writes(var) => engine.writes(var),
-            Detect::Trigger(name) => engine.has_trigger(name),
-            Detect::Const(name, value) => engine.consts().scalar(name) == Some(value),
-            Detect::Otherwise => true,
-        })
+        .find(|r| r.detect.matches(engine))
         .unwrap_or(&RECIPES[RECIPES.len() - 1])
 }
+
+/// The engine speed from which an engine that fired runs on its own: the starter is held until
+/// then (released at the first firing, the TH O550 stalls at about 350 rpm).
+const SELF_SUSTAINING_RPM: f32 = 400.0;
+/// The longest the starter is held after the engine fired, should it never reach that speed.
+const AFTER_FIRING_S: f32 = 1.5;
+
+/// Script interlocks a second starter press waits for, where the vehicle's scripts own them: the
+/// ABS self-test that the ignition starts (about 6 s on the Studio Polygon Lite) and a
+/// wait-to-start lamp. The first press does not wait, so a vehicle that starts at once is never
+/// delayed.
+const START_INTERLOCKS: [&str; 2] = ["bremse_abs_selftest", "waittostartactive"];
+/// The longest a starter step waits for those interlocks before it is pressed anyway.
+const INTERLOCK_WAIT_S: f32 = 10.0;
 
 /// Seconds between one step and the next.
 const SETTLE_S: f32 = 1.0;
@@ -263,6 +334,8 @@ pub struct SetupRun {
     since: f32,
     /// `now` of the previous call (the frame time of a drag).
     last: f32,
+    /// When the engine first fired during the current starter step.
+    fired_at: Option<f32>,
     fuel_done: bool,
     lights_done: bool,
 }
@@ -297,7 +370,13 @@ impl SetupRun {
                 }
             }
             let done = if step.until_engine {
-                engine.get("engine_on") > 0.5 || now - self.since >= step.hold_s
+                if engine.get("engine_on") > 0.5 && self.fired_at.is_none() {
+                    self.fired_at = Some(now);
+                }
+                let running = self.fired_at.is_some_and(|t| {
+                    engine.get("engine_n") >= SELF_SUSTAINING_RPM || now - t >= AFTER_FIRING_S
+                });
+                running || now - self.since >= step.hold_s
             } else {
                 now - self.since >= step.hold_s
             };
@@ -306,6 +385,7 @@ impl SetupRun {
                     engine.set_system("mouse_y", 0.0);
                 }
                 engine.trigger(&format!("{}_off", step.trigger));
+                self.fired_at = None;
                 self.phase = Phase::Idle;
                 self.step += 1;
                 self.since = now;
@@ -315,6 +395,10 @@ impl SetupRun {
         // A vehicle whose scripts have no engine (a tram) has nothing to start: its start step
         // is skipped, and what waits for a busbar its scripts never raise does not wait.
         if let Some(step) = recipe.steps.get(self.step) {
+            if step.only_if_off && engine.get("engine_on") > 0.5 {
+                self.step += 1;
+                return false;
+            }
             if step.until_engine && !engine.writes("engine_on") {
                 self.step += 1;
                 return false;
@@ -327,8 +411,14 @@ impl SetupRun {
         };
         if let Some(step) = recipe.steps.get(self.step) {
             if step.from <= setup.degree + 1e-4 {
-                let ready =
-                    now - self.since >= SETTLE_S && (!step.needs_busbar || busbar > BUSBAR_MIN);
+                let interlocks_clear = !step.only_if_off
+                    || now - self.since >= SETTLE_S + INTERLOCK_WAIT_S
+                    || START_INTERLOCKS
+                        .iter()
+                        .all(|v| !engine.writes(v) || engine.get(v) < 0.5);
+                let ready = now - self.since >= SETTLE_S
+                    && (!step.needs_busbar || busbar > BUSBAR_MIN)
+                    && interlocks_clear;
                 if ready && now > 0.5 {
                     engine.trigger(step.trigger);
                     self.phase = Phase::Held;
