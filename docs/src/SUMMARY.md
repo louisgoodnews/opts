@@ -189,6 +189,7 @@
 - [Session Environment (date, time, weather)](architecture/session-environment.md)
 - [Lighting System (sun, moon, light rooms, god rays)](architecture/lighting-system.md)
 - [Weather](architecture/weather.md)
+- [Vegetation Wind](architecture/vegetation-wind.md)
 - [Screen Capture](architecture/screen-capture.md)
 - [Collisions](simulation/collisions.md)
 - [Vehicle-Type-Specific Controls](simulation/vehicle-controls.md)
