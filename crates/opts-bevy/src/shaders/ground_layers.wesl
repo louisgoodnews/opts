@@ -1,6 +1,8 @@
-// Layered ground: layer 0 is the base, every further layer is blended over it by its
-// per-tile mask. Layer textures repeat `repeats[i]` times across the tile and keep their own
-// resolution and mip chain, so painted detail stays sharp up close.
+// Layered ground: slot 0 is the base, every further slot blends one of the map's layers over
+// it by the tile's mask of that slot. `slot_layers` names the array layer of each slot, so a
+// tile can paint any of the map's layers (Köln: 21, Ahlheim Laurenzbach: 55). Layer textures
+// repeat `slot_repeats` times across the tile and keep their mip chain, so painted detail stays
+// sharp up close.
 import bevy_pbr::render::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
@@ -21,13 +23,12 @@ import bevy_pbr::render::{
 @group(constants::MATERIAL_BIND_GROUP) @binding(101) var layer_smp: sampler;
 @group(constants::MATERIAL_BIND_GROUP) @binding(102) var mask_tex: texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var mask_smp: sampler;
-@group(constants::MATERIAL_BIND_GROUP) @binding(104) var<uniform> repeats_a: vec4<f32>;
-@group(constants::MATERIAL_BIND_GROUP) @binding(105) var<uniform> repeats_b: vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(104) var<uniform> slot_layers: array<vec4<u32>, 5>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(105) var<uniform> slot_repeats: array<vec4<f32>, 5>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(106) var<uniform> layer_count: vec4<u32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(107) var detail_tex: texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(108) var detail_smp: sampler;
-@group(constants::MATERIAL_BIND_GROUP) @binding(109) var<uniform> detail_repeats_a: vec4<f32>;
-@group(constants::MATERIAL_BIND_GROUP) @binding(110) var<uniform> detail_repeats_b: vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(109) var<uniform> slot_detail_repeats: array<vec4<f32>, 5>;
 
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var<uniform> wet: vec4<f32>;
 
@@ -46,25 +47,12 @@ fn value_noise(p: vec2<f32>) -> f32 {
     return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
-fn repeats(i: u32) -> f32 {
-    if i < 4u {
-        return repeats_a[i];
-    }
-    return repeats_b[i - 4u];
-}
-
-fn detail_repeats(i: u32) -> f32 {
-    if i < 4u {
-        return detail_repeats_a[i];
-    }
-    return detail_repeats_b[i - 4u];
-}
-
-// A layer is its texture (`repeats` times across the tile) multiplied by its detail texture
-// (`detail_repeats` times): the second and third numbers of `[groundtex]`.
-fn layer_color(uv: vec2<f32>, i: u32) -> vec3<f32> {
-    let t = textureSample(layer_tex, layer_smp, uv * repeats(i), i).rgb;
-    let d = textureSample(detail_tex, detail_smp, uv * detail_repeats(i), i).rgb;
+// A slot's layer is its texture (`slot_repeats` times across the tile) multiplied by its detail
+// texture (`slot_detail_repeats` times): the second and third numbers of `[groundtex]`.
+fn layer_color(uv: vec2<f32>, k: u32) -> vec3<f32> {
+    let layer = slot_layers[k / 4u][k % 4u];
+    let t = textureSample(layer_tex, layer_smp, uv * slot_repeats[k / 4u][k % 4u], layer).rgb;
+    let d = textureSample(detail_tex, detail_smp, uv * slot_detail_repeats[k / 4u][k % 4u], layer).rgb;
     return t * d;
 }
 

@@ -23,7 +23,7 @@ use bevy::window::ExitCondition;
 use bevy::winit::WinitPlugin;
 use opts_bevy::ground::CpuImage;
 use opts_bevy::ground_material::{
-    ground_extension, layer_array, mask_array, GroundMaterial, GroundMaterialPlugin,
+    ground_extension, layer_array, mask_array, GroundMaterial, GroundMaterialPlugin, GroundSlot,
 };
 use opts_bevy::{
     CalendarDate, EnvironmentChange, EnvironmentPlugin, EnvironmentSet, WeatherCatalogue,
@@ -132,7 +132,16 @@ fn main() {
                 perceptual_roughness: 0.9,
                 ..default()
             },
-            extension: ground_extension(layers, details, masks, &[40.0], &[1.0]),
+            extension: ground_extension(
+                layers,
+                details,
+                masks,
+                &[GroundSlot {
+                    layer: 0,
+                    repeats: 40.0,
+                    detail_repeats: 1.0,
+                }],
+            ),
         });
     let plane = world
         .resource_mut::<Assets<Mesh>>()
