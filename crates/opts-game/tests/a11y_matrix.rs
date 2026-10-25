@@ -143,11 +143,7 @@ fn every_control_has_an_accessible_name_and_node() {
 
 #[test]
 fn the_dialog_and_summary_screens_really_show_their_content() {
-    for screen in [
-        Screen::FirstRunFound,
-        Screen::FirstRunChoose,
-        Screen::Welcome,
-    ] {
+    for screen in [Screen::FirstRunChoose, Screen::Welcome] {
         let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
         let modals = app
             .world_mut()
@@ -256,11 +252,7 @@ fn the_base_text_size_from_12_to_24_px_keeps_text_inside_and_never_below_12_px()
 fn the_language_can_be_chosen_on_every_first_run_step_and_back() {
     use opts_gui::interaction::Activated;
     use opts_gui::l10n::Localization;
-    for screen in [
-        Screen::FirstRunFound,
-        Screen::FirstRunChoose,
-        Screen::Welcome,
-    ] {
+    for screen in [Screen::FirstRunChoose, Screen::Welcome] {
         let mut app = build(screen, 1280, 720, ThemeKind::Dark, AccentPreset::default());
         let id = opts_gui::ui_tree::snapshot(app.world_mut())
             .flatten()

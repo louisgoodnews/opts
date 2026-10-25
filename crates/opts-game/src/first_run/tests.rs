@@ -69,45 +69,6 @@ fn answer(app: &mut App, picked: Option<PathBuf>) {
 }
 
 #[test]
-fn a_found_folder_is_offered_with_use_as_the_safe_default() {
-    let mut app = app();
-    app.world_mut().resource_mut::<FirstRun>().step =
-        Some(Step::Found(PathBuf::from("/steam/OMSI 2")));
-    run(&mut app, 4);
-    let ids = ids(&mut app);
-    for id in ["use", "other", "quit"] {
-        assert!(
-            ids.iter().any(|i| i == &format!("dialog.first-run.{id}")),
-            "{id}: {ids:?}"
-        );
-    }
-    let snap = opts_gui::ui_tree::snapshot(app.world_mut());
-    assert_eq!(snap.focus.as_deref(), Some("dialog.first-run.use"));
-}
-
-#[test]
-fn confirming_saves_the_folder_and_closes_the_dialog() {
-    let mut app = app();
-    let root = fake_install("use");
-    app.world_mut().resource_mut::<FirstRun>().step = Some(Step::Found(root.clone()));
-    run(&mut app, 3);
-    app.world_mut().write_message(DialogChoice {
-        tag: DIALOG_TAG,
-        choice: view::USE,
-    });
-    run(&mut app, 4);
-    assert_eq!(app.world().resource::<FirstRun>().step, None);
-    assert_eq!(
-        app.world().resource::<GameSettings>().omsi_path,
-        Some(root.clone())
-    );
-    assert!(!ids(&mut app)
-        .iter()
-        .any(|i| i.starts_with("dialog.first-run")));
-    let _ = std::fs::remove_dir_all(root);
-}
-
-#[test]
 fn a_wrong_folder_is_explained_inline_and_the_dialog_stays() {
     let mut app = app();
     app.world_mut().resource_mut::<FirstRun>().step = Some(Step::Choose);

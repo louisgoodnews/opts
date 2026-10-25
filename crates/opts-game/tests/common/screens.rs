@@ -84,20 +84,18 @@ pub enum Screen {
     Settings,
     Wizard,
     Pause,
-    FirstRunFound,
     FirstRunChoose,
     Welcome,
     Summary,
 }
 
 impl Screen {
-    pub const ALL: [Screen; 9] = [
+    pub const ALL: [Screen; 8] = [
         Screen::Home,
         Screen::Help,
         Screen::Settings,
         Screen::Wizard,
         Screen::Pause,
-        Screen::FirstRunFound,
         Screen::FirstRunChoose,
         Screen::Welcome,
         Screen::Summary,
@@ -110,7 +108,6 @@ impl Screen {
             Screen::Settings => "settings",
             Screen::Wizard => "wizard",
             Screen::Pause => "pause",
-            Screen::FirstRunFound => "first-run-found",
             Screen::FirstRunChoose => "first-run-choose",
             Screen::Welcome => "welcome",
             Screen::Summary => "summary",
@@ -212,7 +209,6 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
     {
         use opts_game::first_run::{FirstRun, Step};
         let step = match screen {
-            Screen::FirstRunFound => Some(Step::Found(std::path::PathBuf::from("/fixture/game"))),
             Screen::FirstRunChoose => Some(Step::Choose),
             Screen::Welcome => Some(Step::Welcome),
             _ => None,
@@ -234,9 +230,7 @@ pub fn build(screen: Screen, w: u32, h: u32, kind: ThemeKind, accent: AccentPres
         }
     }
     let state = match screen {
-        Screen::Home | Screen::FirstRunFound | Screen::FirstRunChoose | Screen::Welcome => {
-            AppState::MainMenu
-        }
+        Screen::Home | Screen::FirstRunChoose | Screen::Welcome => AppState::MainMenu,
         Screen::Summary => AppState::MainMenu,
         Screen::Help => AppState::Help,
         Screen::Settings => AppState::Settings,

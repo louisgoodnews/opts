@@ -84,14 +84,6 @@ keys! {
     HOME_TIME_WEATHER = "home-time-weather",
     /// Home text `home-vehicle-livery`.
     HOME_VEHICLE_LIVERY = "home-vehicle-livery",
-    /// Message `firstrun-found-title`.
-    FIRSTRUN_FOUND_TITLE = "firstrun-found-title",
-    /// Message `firstrun-found-body`.
-    FIRSTRUN_FOUND_BODY = "firstrun-found-body",
-    /// Message `firstrun-use`.
-    FIRSTRUN_USE = "firstrun-use",
-    /// Message `firstrun-other`.
-    FIRSTRUN_OTHER = "firstrun-other",
     /// Message `firstrun-quit`.
     FIRSTRUN_QUIT = "firstrun-quit",
     /// Message `firstrun-language`: names the *other* language in its own language.

@@ -337,7 +337,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
 - [ ] **🧭 App Shell & Flow** — [M-0062](docs/src/roadmap/phase-9/M-0062.md)
   - [x] Shell part (2026-10-12, `agent/ui-shell`): navigation rail and screen registry, Home with *Continue*, first run, pause overlay, end-of-session summary, Help and About with F1, notifications; stubs and developer copy removed.
   - [x] Four-step *Plan a drive*, honest loading screen, master-detail pattern (wizard part, 2026-10-12, `agent/ui-wizard`); acceptance goldens at three sizes open.
-  - [ ] Find OMSI 2 through Steam's library configuration (every library, Linux/macOS/Windows) and use it without asking; ask only when Steam does not know it (project lead 2026-10-25, 🔄 `agent/steam-library`).
+  - [x] Find OMSI 2 through Steam's library configuration (every library, Linux/macOS/Windows) and use it without asking; ask only when Steam does not know it (project lead 2026-10-25, done the same day; Windows registry path untested on real Windows).
 - [ ] **⚙️ Settings System** — [M-0063](docs/src/roadmap/phase-9/M-0063.md)
   - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
   - [x] Audio with M-0027 (2026-10-20).

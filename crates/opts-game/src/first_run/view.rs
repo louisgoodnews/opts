@@ -10,10 +10,6 @@ use crate::shell::dialog::{
 };
 use crate::shell::keys;
 
-/// Choice: use the folder that was found.
-pub const USE: &str = "use";
-/// Choice: choose another folder (from the *found* step).
-pub const OTHER: &str = "other";
 /// Choice: choose a folder.
 pub const CHOOSE: &str = "choose";
 /// Choice: quit.
@@ -48,20 +44,6 @@ pub fn spec_for(step: &Step, error: Option<&ChooseError>) -> DialogSpec {
         ),
     });
     match step {
-        Step::Found(path) => DialogSpec {
-            tag: DIALOG_TAG,
-            title_key: keys::FIRSTRUN_FOUND_TITLE,
-            body_key: keys::FIRSTRUN_FOUND_BODY,
-            body_args: L10nArgs::one("path", path.display().to_string()),
-            buttons: vec![
-                button(USE, keys::FIRSTRUN_USE, Primary),
-                button(OTHER, keys::FIRSTRUN_OTHER, Quiet),
-                button(LANGUAGE, keys::FIRSTRUN_LANGUAGE, Quiet),
-                button(QUIT, keys::FIRSTRUN_QUIT, Quiet),
-            ],
-            keep_open: vec![OTHER, LANGUAGE],
-            error,
-        },
         Step::Choose => DialogSpec {
             tag: DIALOG_TAG,
             title_key: keys::FIRSTRUN_CHOOSE_TITLE,

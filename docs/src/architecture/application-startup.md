@@ -110,7 +110,7 @@ When `--headless` is **true**:
 | :--- | :--- |
 | `--omsi-path` (or the root above `--map-path`), `$OMSI_PATH` | explicit: used as is, not saved |
 | the folder the user **confirmed** earlier (`omsi_path` in `settings.db`) | used as is |
-| an installation found **through Steam** ([below](#finding-omsi-through-steam)) | used and saved without asking (project lead, 2026-10-25; it was offered for confirmation before) |
+| an installation found **through Steam** ([below](#finding-omsi-through-steam)) | used and saved without asking (project lead, 2026-10-25; it was offered for confirmation before). Steam's files are read once, by this check: everything else (`omsi_root::locate_omsi_root`, the catalogue) reads the saved path |
 | nothing | with a window the first-run dialog asks to choose a folder with the native dialog (`rfd`, own thread); a wrong folder is explained inline (it needs `maps` and `Vehicles`; a picked `maps/<Map>` resolves to the installation above it); without a window the catalogue stays empty |
 
 A folder found through Steam or chosen in the dialog is saved (`first_run::adopt_root`) and the catalogue starts at once. The same function `first_run::choose_omsi_folder` serves the Home banner *Choose folder* and `Settings -> Content`; its result is the message `OmsiFolderChosen`. After the first scan, with no drive history, one welcome dialog offers *Pick a map and a vehicle* or *Quick drive* (remembered in `first_run.json`). Details: [screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup). Progress of the scan is the stage the catalogue reports (scanning files, reading content, saving) in the Home status chip; the catalogue offers no item counts during a scan, the counts appear when it is done.
@@ -132,7 +132,7 @@ Nothing is written to Steam's files; a missing or unreadable file is skipped. Wi
 
 ## 🗄️ Catalogue Discovery (Startup)
 
-`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, the saved settings path, the Steam libraries), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
+`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, the saved settings path, which holds the installation found through Steam), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
 
 ## 🗺️ Real-Content Loading (In-Game Session)
 
