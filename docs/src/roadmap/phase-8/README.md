@@ -31,15 +31,15 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 *Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference. Decisions of 2026-10-12: reality as reference, Vivid default, hard limit of 2 minutes of added first-run time. Background: [Texture Quality and Colour](../../architecture/texture-quality.md).*
 
 - [ ] **🔬 Texture Filtering & Measurement Harness** — [M-0057](M-0057.md)
-  - [~] Image-metrics tool (done), reference views and a scripted A/B run (minimal set done: `scripts/visual-ab.sh`; more views open); results outside the repository.
+  - [~] Image-metrics tool and scripted A/B run done (`scripts/visual-ab.sh`, five vehicle-relative poses, results outside the repository); reference views on three maps and VRAM figures open.
   - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry (accepted by the project lead 2026-10-25).
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](M-0058.md)
   - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload (accepted 2026-10-25).
   - [x] Chains for the DXT textures without one (48,217 in the installation) through a derived cache, re-encoded with `texpresso` (done 2026-10-25; Köln: +4 s on the first load, 0.2 s from the cache; far below the 120 s limit, so the budget machinery was dropped).
 - [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](M-0059.md)
-  - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
+  - [~] Coverage-preserving alpha mips (in place for detected cutouts since M-0058, fixed cutoff 0.5); alpha-to-coverage with MSAA and per-class cutoffs open.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](M-0060.md)
   - [~] Looks *Vivid* (default), *Natural*, *Bevy default*, live-switchable and persisted (implemented; reviewed 2026-10-25: the effect is too weak and needs expanding; *Natural* equals *Bevy default* until the calibration).
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
 - [ ] **🌑 Shadow Quality and Realism** — [M-0091](M-0091.md)
-  - [ ] Assess and improve shadows with presets and measurements (R-40).
+  - [ ] Assess and improve shadows with presets and measurements (R-40); a live *Shadow distance* setting exists since 2026-10-24 (`4d2a4955`).

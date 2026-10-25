@@ -85,24 +85,26 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 
 - [ ] **🧱 UI Foundations** — [M-0061](M-0061.md)
   - [x] Theme foundations (part A, 2026-10-12): dark default with Light, System, Auto (clock) and High-contrast themes; Noto Sans type scale; UI scale 75–200 %, density, layout classes, 1024×640 minimum window; status roles, shadows, motion with reduced motion; accent presets with a contrast guard and RON theme files; one theme for loading screen, HUD and stubs; instrument tokens.
-  - [ ] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B).
-  - [ ] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold.
+  - [x] Hover/focus/pressed/disabled/error states and keyboard operability in every widget (part B, 2026-10-12, `agent/ui-widgets`).
+  - [x] Action layer, UI ids with `ui.tree`/`ui.click` in the control protocol, CI rules (target size, contrast, keyboard traversal), localisation scaffold (2026-10-12).
+  - [ ] Open: layer-model section of the design-system page, single bundle-returning builders, first-run UI-scale suggestion.
 - [ ] **🧭 App Shell & Flow** — [M-0062](M-0062.md)
   - [x] Shell part (2026-10-12, `agent/ui-shell`): navigation rail and screen registry, Home with *Continue*, first run, pause overlay, end-of-session summary, Help and About with F1, notifications; stubs and developer copy removed.
-  - [ ] Four-step *Plan a drive*, honest loading screen, master-detail pattern (wizard part).
+  - [x] Four-step *Plan a drive*, honest loading screen, master-detail pattern (wizard part, 2026-10-12, `agent/ui-wizard`); acceptance goldens at three sizes open.
 - [ ] **⚙️ Settings System** — [M-0063](M-0063.md)
   - [x] Declarative setting registry, generic settings page with search, *Reset* and revert prompt; Graphics, Interface, Content, Gameplay and Advanced pages with real controls; `settings.*` in the control protocol; generated settings reference (2026-10-12).
-  - [ ] Controls rebinding (rows shown as "Feature not available yet!"; moves to M-0035), Audio with M-0027.
+  - [x] Audio with M-0027 (2026-10-20).
+  - [~] Controls: keyboard rebinding through M-0142 (first slice 2026-10-20); gamepad, wheel and per-vehicle controls open (`controls.rebind` still "Feature not available yet!").
 - [ ] **🕹️ HUD & In-Game UI** — [M-0064](M-0064.md)
   - [x] HUD from registered widgets and vehicle-type profiles (RON), widget switches in Settings, alerts, 1.5 s camera label, Details dialog, developer panel off by default (2026-10-12, `agent/ui-hud`).
-  - [ ] Help overlay generated from the bindings; *Pause → Vehicle*; HUD review sign-off.
+  - [~] Help overlay generated from the controls registry and the player's bindings; *Pause → Vehicle* in place; open: HUD review sign-off and glance-time measurement.
 - [ ] **♿ Accessibility, Localisation & Validation** — [M-0065](M-0065.md)
   - [x] Automatic part (2026-10-12, `agent/ui-a11y`): rules over the laid-out UI tree for target size, text size, contrast in every theme and accent, text overflow in the pseudo-locale and German, UI scale 75–200 %, accessible names, gamepad traversal; colour-blind simulation; golden screenshots of fixture content; WCAG 2.2 AA audit with findings (8 fixed); German/English completeness over all tables; language choice at first run.
-  - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, HUD and loading screen in the matrix.
+  - [ ] Moderated usability test (protocol written, **no participants yet**), screen-reader and hardware checks, GPU screenshots, loading screen and report dialog in the matrix (the HUD is in since M-0071).
 - [x] **🕗 Start Time Defaults from the Map** — [M-0070](M-0070.md)
-  - [ ] *When* step preselects the map's defined start date/time, else the device's current local date and time; the source is shown (R-07).
+  - [x] *When* step preselects the time of day from the map's `laststn.osn`, else the device's local time; the date keeps the map default date (decision 2026-10-18); the source is shown (R-07).
 - [x] **🗺️ HUD Layout Rework** — [M-0071](M-0071.md)
-  - [ ] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map within the HUD registry and UI standards (R-08).
+  - [x] Bottom-left cluster (hints, speed, gear, parking brake, alerts) and a bottom-right mini map (F7) within the HUD registry and UI standards (R-08).
 - [x] **📍 HUD Place Label** — [M-0075](M-0075.md)
   - [x] Replace the hard-coded place string by the entry point name of the active vehicle's spawn; hidden once it has moved away or is despawned (R-12).
 - [x] **⏳ Loading Screen Vehicle** — [M-0076](M-0076.md)
@@ -117,4 +119,4 @@ Answered by the project lead on 2026-10-12. Where the answer differs from the or
 - [x] **🧊 No Blocking Work on the Main Thread** — [M-0088](M-0088.md)
   - [x] Settings Content page freeze: move catalogue/file-system work off the main thread, audit the UI for more (R-31).
 - [x] **🗺️ Per-Map Configuration Profiles and Load Profiler** — [M-0130](M-0130.md)
-  - [ ] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification.
+  - [x] Phase A design (profile scope, TOML store, lifecycle and fallback map → Chrono → global, profiler heuristics, modal); checkpoint; phase B implementation; checkpoint; phase C verification — accepted by the project lead after testing 2026-10-22.
