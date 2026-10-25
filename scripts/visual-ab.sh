@@ -57,7 +57,11 @@ PY
 )
   cli camera.teleport "$px" "$py" "$pz" --yaw "$yaw" --pitch "$6" >/dev/null
   sleep 2
-  cli screenshot --path "$OUT/$1.png" >/dev/null
+  # The game writes captures only below its own captures directory (here in the throw-away
+  # data dir); copy the frame out before cleanup removes it.
+  cli screenshot --name "$1.png" >/dev/null
+  for _ in $(seq 1 20); do [ -s "$data/opts/captures/$1.png" ] && break; sleep 0.5; done
+  cp "$data/opts/captures/$1.png" "$OUT/$1.png"
   echo "$1"
 }
 for look in ${LOOKS:-""}; do

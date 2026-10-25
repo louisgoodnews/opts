@@ -182,6 +182,7 @@ fn prepare(image: &mut bevy::image::Image, weight_colour_by_alpha: bool) {
     if !filtering.is_filtered() {
         return;
     }
+    dev_dxt::visit(image);
     let cutout = !weight_colour_by_alpha
         && image
             .data
@@ -194,6 +195,77 @@ fn prepare(image: &mut bevy::image::Image, weight_colour_by_alpha: bool) {
             weight_colour_by_alpha,
         },
     );
+}
+
+/// Developer measurement for M-0058 phase A (`OPTS_DEV_DXT_MIPS`): block-compressed textures
+/// without a mip chain are counted (`count`), or decoded to RGBA8 so they get a generated chain
+/// like every uncompressed texture (`rgba`, option 1 of the milestone). Unset: nothing happens.
+pub mod dev_dxt {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+    use std::sync::OnceLock;
+
+    use bevy::render::render_resource::TextureFormat;
+
+    static TEXTURES: AtomicU64 = AtomicU64::new(0);
+    static PIXELS: AtomicU64 = AtomicU64::new(0);
+    static DECODE_MICROS: AtomicU64 = AtomicU64::new(0);
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum Mode {
+        Off,
+        Count,
+        Rgba,
+    }
+
+    fn mode() -> Mode {
+        static MODE: OnceLock<Mode> = OnceLock::new();
+        *MODE.get_or_init(|| match std::env::var("OPTS_DEV_DXT_MIPS").as_deref() {
+            Ok("count") => Mode::Count,
+            Ok("rgba") => Mode::Rgba,
+            _ => Mode::Off,
+        })
+    }
+
+    /// Counts and, in `rgba` mode, decodes a chainless BC1/2/3 texture in place.
+    pub(super) fn visit(image: &mut bevy::image::Image) {
+        let mode = mode();
+        let desc = &image.texture_descriptor;
+        if mode == Mode::Off
+            || desc.mip_level_count != 1
+            || !matches!(
+                desc.format,
+                TextureFormat::Bc1RgbaUnormSrgb
+                    | TextureFormat::Bc2RgbaUnormSrgb
+                    | TextureFormat::Bc3RgbaUnormSrgb
+            )
+        {
+            return;
+        }
+        TEXTURES.fetch_add(1, Relaxed);
+        PIXELS.fetch_add(
+            u64::from(desc.size.width) * u64::from(desc.size.height),
+            Relaxed,
+        );
+        if mode == Mode::Rgba {
+            let started = std::time::Instant::now();
+            if let Some(decoded) = crate::texture::decode_to_rgba8(image) {
+                let sampler = image.sampler.clone();
+                *image = decoded;
+                image.sampler = sampler;
+            }
+            DECODE_MICROS.fetch_add(started.elapsed().as_micros() as u64, Relaxed);
+        }
+    }
+
+    /// `(textures, base pixels, decode microseconds)` seen so far in this process.
+    #[must_use]
+    pub fn stats() -> (u64, u64, u64) {
+        (
+            TEXTURES.load(Relaxed),
+            PIXELS.load(Relaxed),
+            DECODE_MICROS.load(Relaxed),
+        )
+    }
 }
 
 #[cfg(test)]

@@ -20,7 +20,7 @@
 | ⚡ **Phase 5** — Tooling, Performance & Optimization | benchmarks, LOD, culling, profiling, CLI inspection | 🟡 started — control protocol, hot reload, Bevy 0.19 upgrade, audit hardening done; Bevy 0.20 merged to `master` 2026-10-11; CI on GitHub (decided 2026-10-24; first green hosted run to be confirmed, M-0052); DLSS planned | [`phase-5/`](phase-5/README.md) |
 | 🌐 **Phase 6** — Modding Ecosystem & Community Content | modding guide, packaging tools, repaint system | ⏳ planned (repaint selection already shipped early; editor mode specified) | [`phase-6/`](phase-6/README.md) |
 | 🚀 **Phase 7** — Release & Cross-Platform Distribution | CI matrix, packaging, v0.1.0-alpha release | ⏳ planned | [`phase-7/`](phase-7/README.md) |
-| 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 first stage reviewed 2026-10-25 (sampler and mip chains accepted, looks too weak); DXT decision being measured | [`phase-8/`](phase-8/README.md) |
+| 🖼️ **Phase 8** — Visual Quality & Realism | texture filtering, mipmaps, foliage coverage, reality-calibrated colour, Vivid default look | 🟡 first stage reviewed 2026-10-25 (sampler and mip chains accepted, looks too weak); DXT decision measured, pending | [`phase-8/`](phase-8/README.md) |
 | 🧭 **Phase 9** — User Interface & Experience | evidence-based UI: looks, feel, flow, expandability; app shell, settings system, HUD, accessibility | 🟡 design approved 2026-10-12, implementation in progress | [`phase-9/`](phase-9/README.md) |
 | 🧩 **Phase 10** — Sessions, World Completeness & Vehicle Dynamics | water, session vehicles and save/restore, mesh fidelity, per-vehicle mass/suspension/brakes on a world physics | 📝 planned 2026-10-13 from the project lead's field report | [`phase-10/`](phase-10/README.md) |
 | 🔭 **Phase 11** — Advanced Systems, Realism & Continuous Improvement | in-game map, QoL and accessibility settings, AI traffic depth, scheduled transport, weather effects, event-system research | 📝 planned 2026-10-18, all milestones proposed | [`phase-11/`](phase-11/README.md) |
@@ -313,7 +313,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry (accepted by the project lead 2026-10-25).
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](phase-8/M-0058.md)
   - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload (accepted 2026-10-25).
-  - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time** (phase A measurement in progress 2026-10-25).
+  - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time** (phase A measured 2026-10-25: recommended option 2 with `texpresso`; decision pending).
 - [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](phase-8/M-0059.md)
   - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](phase-8/M-0060.md)

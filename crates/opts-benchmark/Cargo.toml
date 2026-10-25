@@ -13,6 +13,11 @@ name = "opts-benchmark"
 path = "src/main.rs"
 
 [[example]]
+# M-0058 phase A: cost and quality of mip chains for DXT textures without one.
+name = "dxt_mips"
+required-features = ["scenery"]
+
+[[example]]
 # Q-SB-01 probe: off-screen rendering and readback with no window.
 name = "offscreen_probe"
 required-features = ["scenery"]
@@ -45,3 +50,6 @@ glam = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
+# M-0058 phase A: candidate BC encoders, measured by `examples/dxt_mips.rs` only.
+texpresso = "2.0"
+intel_tex_2 = "0.5"

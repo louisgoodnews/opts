@@ -136,7 +136,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
-- [~] 🔴 **DXT mip chains: decide the path by measurement** (M-0058 phase A, spec + measurement) — started 2026-10-25 on `agent/texture-mips` at the project lead's request: encoder speed and quality (`texpresso`, `intel_tex_2`) over a corpus sample, chainless DXT textures per reference map and their cost, a visual A/B of DXT chains on distance views.
+- [~] 🔴 **DXT mip chains: decide the path by measurement** (M-0058 phase A, spec + measurement) — **measured 2026-10-25 on `agent/texture-mips`, waiting for the project lead's decision**: chains on DXT are clearly visible on Köln (speckle on grass and asphalt gone, −61 % high-frequency energy on the far view), subtle on Bad Hügelsdorf, none on Grundorf; option 1 costs +0.8 to 1.6 s load and up to +0.9 GB VRAM (Köln); recommended option 2 with `texpresso` range fit (keeps DXT1 cutouts; `intel_tex_2` drops them), a few seconds per load at most, far below the 120 s budget; open choice: cache or no cache. Results in [M-0058](../src/roadmap/phase-8/M-0058.md).
 
 - [ ] 🟠 **Vehicle overrides and visual editor (Phase 14)** (M-0135 design, M-0136 profile schema, loader and validation, M-0137 in-game visual mesh editor; design + code) — project lead 2026-10-19. `VehicleProfile` TOML patch layer in `~/.local/share/opts/vehicles/` (sound, script, constant and mesh swaps) with compatibility validation against varlists and constants, and an in-game editor (picking, gizmos, `.o3d` browser). **Design first (M-0135), approval before implementation;** [Phase 14](../src/roadmap/phase-14/README.md).
 
