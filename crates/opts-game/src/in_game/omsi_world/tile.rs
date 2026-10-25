@@ -508,7 +508,7 @@ fn spawn_vehicle_model(
         stats.objects_failed += 1;
         return;
     }
-    let model_dir = cfg_path.parent().map(Path::to_path_buf).unwrap_or_default();
+    let model_dir = super::mesh_dir::model_mesh_dir(&job.install, sco_dir, &cfg_path, &model);
     let tex_dirs = vec![
         job.install
             .find_in(sco_dir, "texture")

@@ -54,7 +54,8 @@ fn parse_unit(
         .find(|l| l.threshold == 0.0)
         .or_else(|| model.lods.first())?
         .clone();
-    let model_dir = cfg.parent()?.to_path_buf();
+    let model_dir =
+        crate::in_game::omsi_world::mesh_dir::model_mesh_dir(&job.install, &dir, &cfg, &model);
     let tex_dirs = crate::new_game_screen::repaints::texture_dirs(&dir, &model_dir);
     let defs = UnitDefs {
         bus_path: path.to_path_buf(),

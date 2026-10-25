@@ -153,7 +153,7 @@ fn load_unit(job: &WorldLoadJob, path: &Path) -> Result<(Unit, BusManifest, Path
         .ok_or_else(|| format!("model config not found: {cfg_rel}"))?;
     let model = ModelConfig::parse_bytes(&std::fs::read(&cfg).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())?;
-    let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
+    let model_dir = super::mesh_dir::model_mesh_dir(&job.install, &dir, &cfg, &model);
     let consts: Vec<ConstFile> = manifest
         .constfiles
         .iter()

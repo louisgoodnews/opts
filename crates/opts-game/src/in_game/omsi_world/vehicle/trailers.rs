@@ -260,7 +260,8 @@ pub(in super::super::super) fn spawn_trailer_chain(
             dir,
         );
         axle_base += manifest.axles.len();
-        let model_dir = cfg.parent().map(Path::to_path_buf).unwrap_or_default();
+        let model_dir =
+            crate::in_game::omsi_world::mesh_dir::model_mesh_dir(&job.install, dir, &cfg, &model);
         let tex_dirs = vec![
             job.install
                 .find_in(dir, "texture")

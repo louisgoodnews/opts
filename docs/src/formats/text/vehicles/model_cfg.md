@@ -101,7 +101,7 @@ A `[mesh]` block is the primary unit of rendering. It declares one `.o3d` file a
 
 | Keyword | Parameters | Description |
 | :--- | :--- | :--- |
-| `[mesh]` | 1 | Path to the `.o3d` file, relative to the vehicle's `model\` directory. |
+| `[mesh]` | 1 | Path to the `.o3d` file, relative to the vehicle's `model\` directory (not to the folder of the `model.cfg`: the Studio Polygon Lite keeps its configs in `Model/Configuration Files/<variant>/` and the MB C2 BVG AI variants in subfolders of `Model/`, both naming meshes from `Model/`; OPTS keeps the config's folder when it resolves every mesh and takes the `model` folder when that resolves more, `opts-game` `omsi_world::mesh_dir`). |
 
 ### Common Properties Within a Mesh Block
 
