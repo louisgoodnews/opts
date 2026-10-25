@@ -4,7 +4,7 @@
 | :--- | :--- |
 | **Status** | ✅ Approved 2026-10-12 (decisions recorded in the [phase page](README.md#decisions)) |
 | **Date** | 2026-10-12 |
-| **Input** | *Clinical Report: Evidence-Based Design Rules for Modern Graphical User Interfaces* (2026), supplied by the project lead as `docs/src/Clinical Report: Evidence-Based Design Rules for Modern Graphical User Interfaces.md` (not yet committed to the repository) |
+| **Input** | *Clinical Report: Evidence-Based Design Rules for Modern Graphical User Interfaces* (2026), supplied by the project lead; in the repository as [`gui-design-rules-report.md`](gui-design-rules-report.md) (committed 2026-10-25, renamed: the original file name has a colon, which Windows cannot check out) |
 | **Output** | Principles **UI-P01 … UI-P13**, used as the checklist of [audit](current-ui-audit.md), [design language](design-language.md), [interaction](interaction-and-feel.md), [flow](flow.md) and every Phase 9 milestone |
 
 ## 1. What the report is

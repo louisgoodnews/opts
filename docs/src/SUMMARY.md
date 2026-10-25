@@ -86,6 +86,7 @@
   - [M-0060: Realistic Colour & Looks](roadmap/phase-8/M-0060.md)
 - [Phase 9: User Interface & Experience](roadmap/phase-9/README.md)
 - [Phase 10: Sessions, World Completeness & Vehicle Dynamics](roadmap/phase-10/README.md)
+  - [The HCI report (input)](roadmap/phase-9/gui-design-rules-report.md)
   - [Report analysis and principles](roadmap/phase-9/report-analysis.md)
   - [Audit of the current UI](roadmap/phase-9/current-ui-audit.md)
   - [Design language (looks)](roadmap/phase-9/design-language.md)
