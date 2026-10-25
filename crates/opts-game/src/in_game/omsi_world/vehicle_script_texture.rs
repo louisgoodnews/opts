@@ -84,6 +84,7 @@ impl VehicleScriptTexture {
 /// Uploads unlocked/dirty script texture canvases into Bevy GPU images.
 pub fn update_vehicle_script_textures(
     mut images: ResMut<Assets<Image>>,
+    mut redrawn: ResMut<opts_bevy::text_texture::RedrawnImages>,
     mut targets: Query<&mut VehicleScriptTexture>,
     scripts: Query<&opts_bevy::VehicleScripts>,
 ) {
@@ -124,6 +125,8 @@ pub fn update_vehicle_script_textures(
                 }
                 if canvas.is_dirty() && !canvas.is_locked() {
                     if let Some(mut img) = images.get_mut(&target.image) {
+                        // Either picture may get a new GPU texture (see `text_image`).
+                        redrawn.0.insert(target.image.id());
                         let mut data = canvas.raw_rgba().to_vec();
                         if let Some(rgb) = target.tint {
                             for p in data.chunks_exact_mut(4) {

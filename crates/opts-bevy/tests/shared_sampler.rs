@@ -7,7 +7,10 @@ const LOADER_SOURCES: [(&str, &str); 3] = [
         "hot_reload/cache.rs",
         include_str!("../src/hot_reload/cache.rs"),
     ),
-    ("text_texture.rs", include_str!("../src/text_texture.rs")),
+    (
+        "text_texture/gpu.rs",
+        include_str!("../src/text_texture/gpu.rs"),
+    ),
 ];
 
 #[test]

@@ -50,6 +50,7 @@ impl Plugin for InGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<bevy::mesh::skinning::SkinnedMeshInverseBindposes>()
             .init_resource::<omsi_world::GroundIndex>()
+            .init_resource::<opts_bevy::text_texture::RedrawnImages>()
             .init_resource::<omsi_world::ChronoState>()
             .init_resource::<omsi_world::DeveloperDetail>()
             .init_resource::<omsi_world::CollisionIndex>()
@@ -199,6 +200,9 @@ impl Plugin for InGamePlugin {
                 (
                     omsi_world::update_vehicle_text_textures,
                     omsi_world::update_vehicle_script_textures,
+                    opts_bevy::text_texture::rebind_redrawn_images
+                        .after(omsi_world::update_vehicle_text_textures)
+                        .after(omsi_world::update_vehicle_script_textures),
                 ),
                 (
                     omsi_world::load_variants,

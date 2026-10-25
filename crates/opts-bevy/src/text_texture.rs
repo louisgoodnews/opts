@@ -8,14 +8,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use bevy::asset::RenderAssetUsages;
 use bevy::asset::{Assets, Handle};
 use bevy::image::Image;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 #[allow(unused_imports)] // `OftChar` is for the tests of `script_text`
 pub(crate) use opts_core::formats::oft::{OftChar, OftFile, OftFont};
 
 use crate::install::OmsiInstall;
+
+mod gpu;
+pub use gpu::{led_image, rebind_redrawn_images, text_image, RedrawnImages};
 
 /// What to draw: one `[texttexture]` slot resolved against one object instance.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -267,45 +268,6 @@ impl FontRegistry {
         self.rendered.insert(spec.clone(), handle.clone());
         Some(handle)
     }
-}
-
-/// An RGBA8 image holding rendered text. Mesh UVs may lie outside 0..1 (negative V is common):
-/// the sampler wraps like every OMSI texture.
-#[must_use]
-pub fn text_image(width: u32, height: u32, data: Vec<u8>) -> Image {
-    let mut image = Image::new(
-        Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    );
-    // Mesh UVs may lie outside 0..1 (negative V is common): wrap like every OMSI texture.
-    crate::texture_filter::prepare_text_texture(&mut image);
-    image
-}
-
-/// An RGBA8 image for a canvas of small bright dots (LED matrices): no mip chain, linear
-/// sampling, wrapping like every OMSI texture.
-#[must_use]
-pub fn led_image(width: u32, height: u32, data: Vec<u8>) -> Image {
-    let mut image = Image::new(
-        Extent3d {
-            width: width.max(1),
-            height: height.max(1),
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::default(),
-    );
-    crate::texture_filter::prepare_led_texture(&mut image);
-    image
 }
 
 /// Loads all font definitions found in `Fonts/*.oft`.

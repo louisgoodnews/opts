@@ -6,7 +6,7 @@
 //! changes.
 
 use bevy::prelude::*;
-use opts_bevy::text_texture::TextSpec;
+use opts_bevy::text_texture::{RedrawnImages, TextSpec};
 use opts_bevy::VehicleScripts;
 use opts_core::formats::vehicles::model::TextTexture;
 
@@ -53,6 +53,7 @@ impl VehicleTextTexture {
 pub fn update_vehicle_text_textures(
     job: Option<ResMut<WorldLoadJob>>,
     mut images: ResMut<Assets<Image>>,
+    mut redrawn: ResMut<RedrawnImages>,
     scripts: Query<&VehicleScripts>,
     mut targets: Query<&mut VehicleTextTexture>,
 ) {
@@ -86,6 +87,7 @@ pub fn update_vehicle_text_textures(
         // 1024 × 64 line on a few centimetres of LCD) disappeared.
         if let (Some(data), Some(mut image)) = (data, images.get_mut(&t.image)) {
             *image = opts_bevy::text_texture::text_image(t.spec.width, t.spec.height, data);
+            redrawn.0.insert(t.image.id());
         }
         t.shown = Some(text);
     }
