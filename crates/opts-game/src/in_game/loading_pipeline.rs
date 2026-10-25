@@ -507,15 +507,13 @@ fn transition_to_active_simulation(
             dropped_dds_chains = opts_bevy::texture::dropped_dds_chains(),
             "generated mip chains"
         );
-        let (dxt, dxt_pixels, dxt_decode_us) = opts_bevy::texture_filter::dev_dxt::stats();
-        if dxt > 0 {
-            tracing::info!(
-                textures = dxt,
-                megapixels = dxt_pixels / 1_000_000,
-                decode_millis = dxt_decode_us / 1000,
-                "chainless block-compressed textures (OPTS_DEV_DXT_MIPS)"
-            );
-        }
+        let bc = opts_bevy::texture::bc_chain_stats();
+        tracing::info!(
+            built = bc.built,
+            from_cache = bc.cached,
+            millis = bc.micros / 1000,
+            "block-compressed mip chains"
+        );
         tracing::info!("Simulation viewport active; driving HUD instantiated");
     }
 }

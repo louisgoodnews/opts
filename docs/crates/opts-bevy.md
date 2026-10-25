@@ -62,6 +62,12 @@ Its primary responsibilities are:
 - `texture::dropped_dds_chains()` counts DDS files whose declared chain disagreed with the data and was reduced to the base level (Q-TQ03); `texture::mip_stats()` totals the generated chains (count, microseconds); both are logged when the HUD appears and at a requested screenshot. `examples/texture_scan.rs` scans a directory for the same numbers.
 - Cost: an integer fast path handles the common exact 2x2 step (about 2 ms per megabyte of base data at the dev profile, i.e. ~7 ms for a 1024x1024 texture, <2 ms for 512x512); other ratios use the exact general path.
 
+### 2d. Block-Compressed Mip Chains and the Derived Cache (`opts_bevy::texture::{bc_chain, chain_cache}`) — M-0058 phase C
+- **`bc_chain(&Image) -> Option<(Vec<u8>, u32)>`** gives a single-level BC1/2/3 (DXT1/3/5) image its full chain: level 0 keeps the file's bytes, levels `1..` are decoded, averaged by `rgba8_srgb_chain` (cutout rule as for uncompressed textures) and re-encoded in the texture's own format with `texpresso`'s range fit. The layout is the one wgpu expects for the 4×4-rounded extent (`dds_chain::chain_bytes`). DXT1 cutout alpha survives (one-bit alpha blocks).
+- **`prepare_block_compressed(&mut Image) -> bool`** is called from `prepare_object_texture` (loader, hot reload, composed textures) unless filtering is Off: it takes the chain from the derived cache or builds and stores it. `bc_chain_stats()` (built, from cache, microseconds) is logged as "block-compressed mip chains" when the HUD appears.
+- **`chain_cache::ChainCache`**: one file per texture in `<cache dir>/opts/textures/` (`~/.cache/opts/textures/` on Linux), named `<sha256 of format, size and level 0>-g<GENERATOR_VERSION>.mip`; a header (magic, generator, format, size, level count, payload length, FNV-1a checksum) guards against short, damaged and mismatching files, which are ignored and rebuilt; a hit also compares level 0 byte for byte. Writes go to a unique temporary file and are renamed (concurrent writers leave one valid file). `prune()` removes other generator versions, stale temporary files and then the least recently used files (a hit touches the modification time) until the cap fits (`DEFAULT_CAP_BYTES`, 4 GiB); the game prunes once on a background thread when the cache is first used. Derived data on the user's machine only, never distributed. Bump `GENERATOR_VERSION` on any change of the chains' content.
+- Cost (Köln, 125 such textures, dev profile): about 4 s of added load time on the first load, 0.2 s from the cache afterwards; 125 MB of cache.
+
 ### 3. Material Conversion Bridge (`opts_bevy::material`)
 - **`o3d_material_to_standard_material(mat: &Material, texture: Option<Handle<Image>>) -> StandardMaterial`:**
   - Translates OMSI `.o3d` material properties into Bevy `StandardMaterial`.
@@ -212,6 +218,8 @@ Following [`coordinates.md`](../src/architecture/coordinates.md):
 | `opts-sim` | Authoritative vehicle dynamics simulation engine (`VehicleSimulation`, `DrivetrainModel`, `AxleState`). |
 | `ddsfile` | DirectDraw Surface (`.dds`) header decoding and block compression support. |
 | `image` | Fallback decoding for `.bmp`, `.tga`, `.png`, and `.jpg` image formats. |
+| `texpresso` | Pure-Rust BC1/2/3 encoder for the generated mip levels of DXT textures (M-0058; chosen over `intel_tex_2`, which drops DXT1 cutout alpha). |
+| `sha2` | Content hash naming the files of the derived mip-chain cache. |
 | `glam` | Vector and matrix math primitives compatible with Bevy math. |
 | `thiserror` | Zero-cost strongly typed error definitions. |
 

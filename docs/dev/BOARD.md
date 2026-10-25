@@ -137,7 +137,7 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
 
 - [x] 🔴 **DXT mip chains: decide the path by measurement** (M-0058 phase A) — **decided by the project lead 2026-10-25: option 2 with `texpresso` range fit and the derived cache** (measurement: chains clearly visible on Köln, subtle on Bad Hügelsdorf; option 1 up to +0.9 GB VRAM; `intel_tex_2` drops DXT1 cutouts). Results in [M-0058](../src/roadmap/phase-8/M-0058.md).
-- [~] 🔴 **DXT mip chains with the derived cache** (M-0058 phase C, code) — started 2026-10-25 on `agent/texture-mips`: chains for chainless DXT1/3/5 re-encoded with `texpresso` range fit, cache `~/.cache/opts/textures/` (content hash + generator version, 4 GiB LRU, atomic writes), hot reload, tests.
+- [x] 🔴 **DXT mip chains with the derived cache** (M-0058 phase C, code) — **done 2026-10-25 on `agent/texture-mips`**: `texpresso` range fit, cache `~/.cache/opts/textures/` (checksummed, atomic, 4 GiB LRU); Köln +4 s on the first load, 0.2 s from the cache, far view as phase A's option 1; time and VRAM budgets dropped as unneeded. Needs the project lead's look while driving (shimmer).
 
 - [ ] 🟠 **Vehicle overrides and visual editor (Phase 14)** (M-0135 design, M-0136 profile schema, loader and validation, M-0137 in-game visual mesh editor; design + code) — project lead 2026-10-19. `VehicleProfile` TOML patch layer in `~/.local/share/opts/vehicles/` (sound, script, constant and mesh swaps) with compatibility validation against varlists and constants, and an in-game editor (picking, gizmos, `.o3d` browser). **Design first (M-0135), approval before implementation;** [Phase 14](../src/roadmap/phase-14/README.md).
 

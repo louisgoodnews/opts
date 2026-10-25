@@ -2,7 +2,7 @@
 
 *Goal: Make OPTS look like the real world: correctly filtered, sharp textures and colours that follow physical reality, with a vivid default look. OMSI's own appearance is not the reference.*
 
-**Status:** 🟡 Decided 2026-10-12 — first stage implemented (sampler, uncompressed mip chains, image-metrics tool, looks). Reviewed by the project lead 2026-10-25: sampler and uncompressed mip chains accepted, the looks too weak (to be expanded with M-0060 step 2). The DXT path is decided (M-0058 phase A: `texpresso` and a derived cache) and phase C is in progress; DXT chains and the cache (M-0058 phase C), coverage mips (M-0059) and the physical calibration (M-0060 step 2) are open.
+**Status:** 🟡 Decided 2026-10-12 — first stage implemented (sampler, uncompressed mip chains, image-metrics tool, looks). Reviewed by the project lead 2026-10-25: sampler and uncompressed mip chains accepted, the looks too weak (to be expanded with M-0060 step 2). DXT textures get chains through `texpresso` and a derived cache (M-0058 phases A and C, 2026-10-25); coverage mips (M-0059) and the physical calibration (M-0060 step 2) are open.
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
@@ -20,7 +20,7 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
 ## Milestones
 
 - [M-0057 — Texture Filtering and Measurement Harness](M-0057.md) — 🟡 In progress (sampler accepted 2026-10-25, image-metrics tool done)
-- [M-0058 — Mipmaps: Generation, Derived Cache and the 2-Minute Budget](M-0058.md) — 🟡 Phase B accepted and phase A decided 2026-10-25 (`texpresso` + derived cache); phase C in progress
+- [M-0058 — Mipmaps: Generation, Derived Cache and the 2-Minute Budget](M-0058.md) — 🟡 Phases A, B and C done 2026-10-25 (DXT chains through `texpresso` and a derived cache); open: the full acceptance run on three maps
 - [M-0059 — Foliage and Cutout Coverage](M-0059.md) — ⏳ Planned (coverage-preserving mips, alpha-to-coverage)
 - [M-0060 — Realistic Colour and Looks](M-0060.md) — 🟡 Step 1 implemented, too weak (review 2026-10-25) (physical light calibration, Vivid default, look presets)
 
@@ -35,7 +35,7 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
   - [x] One shared object-texture sampler (trilinear, anisotropy up to 16×, default 16×) with a settings entry (accepted by the project lead 2026-10-25).
 - [ ] **🪜 Mipmaps & Derived Cache** — [M-0058](M-0058.md)
   - [x] Mipmap generation for all uncompressed textures (sRGB-correct) at load time and in hot reload (accepted 2026-10-25).
-  - [ ] Chains for 46,543 DXT textures through a derived cache, with a **hard 120 s limit on added first-run time** (phase A decided 2026-10-25: re-encode with `texpresso` into a derived cache; phase C in progress).
+  - [x] Chains for the DXT textures without one (48,217 in the installation) through a derived cache, re-encoded with `texpresso` (done 2026-10-25; Köln: +4 s on the first load, 0.2 s from the cache; far below the 120 s limit, so the budget machinery was dropped).
 - [ ] **🌿 Foliage & Cutout Coverage** — [M-0059](M-0059.md)
   - [ ] Coverage-preserving alpha mips and alpha-to-coverage with MSAA.
 - [ ] **🌞 Realistic Colour & Looks** — [M-0060](M-0060.md)
