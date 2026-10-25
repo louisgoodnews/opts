@@ -24,9 +24,11 @@ The checklist for this phase lives in the [roadmap](../../../../ROADMAP.md); thi
 
 *Goal: Implement the Rust code that translates the specifications from Phase 1 into usable data structures.*
 
+*Status sync 2026-10-25: the modules below live in `crates/opts-omsi` since the Phase 13 split (`3f22ff2e`); the `opts_core::formats::*` paths still resolve through the `opts-core` facade. Later parsers (hof, timetable, chrono, humans, envir, weather, ticketpack, trains, `.osn`, AI lists, …) were delivered under Phase 4 and later milestones.*
+
 - [x] **💾 Binary Mesh Parsers** — [M-0013](M-0013.md) & [M-0016](M-0016.md)
   - [x] `.o3d` 3D mesh parser (`opts_core::formats::o3d`)
-  - [x] `.x` legacy DirectX mesh parser (`opts_core::formats::x`) — [M-0016](M-0016.md)
+  - [x] `.x` legacy DirectX mesh parser, text and binary (`opts_core::formats::x`) — [M-0016](M-0016.md)
   - [x] Clean-room mutation fixtures integration tests (`t01`–`t07`, `t10`–`t12`)
 - [x] **📝 Vehicle & Operational Data Parsers** — [M-0014](M-0014.md)
   - [x] `.bus` vehicle manifest parser (`opts_core::formats::vehicles::bus`)

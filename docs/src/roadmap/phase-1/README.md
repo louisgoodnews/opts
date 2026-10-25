@@ -2,7 +2,7 @@
 
 *Goal: Completely document the OMSI 2 file formats and asset pipeline before writing a single Rust parser.*
 
-**Status:** 🟡 In progress: every planned spec is drafted (🟡 Draft); mutation tests and maintainer review are pending
+**Status:** 🟡 Nearly complete (status sync 2026-10-25): 11 of 12 milestones done; 20 specs 🟢 Specified, 23 🟡 Draft; GTFS notes (M-0004) and maintainer review open
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
@@ -29,9 +29,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 
 *Goal: Completely document the OMSI 2 file formats and asset pipeline before writing a single Rust parser. This phase produces the specification that `opts-core` will implement.*
 
-*Status 2026-10-04: first drafts of every planned format exist. All are 🟡 **Draft** — structure verified against the full installed corpus by clean-room analysis (hex dumps, corpus-wide structural walks, statistics; no executables inspected), but many field **meanings** still need mutation tests in OMSI and a maintainer review before they can be marked 🟢.*
+*Status 2026-10-25: every planned format is drafted; 20 pages are 🟢 Specified (o3d, x, sco, sli, lists, texture-cfg, org, money, humans, zug, bus, model_cfg, paths_cfg, passengercabin_cfg, sound_cfg, hof, osc, varnamelist, const, setvars) and 23 remain 🟡 Draft (among them tiles, global-cfg, timetables, textures, cfg, misc-types). Clean-room method unchanged: no executables inspected.*
 
-- [x] **📄 Text Config Formats (Parser: `nom`)** — drafted
+- [x] **📄 Text Config Formats** — drafted *(parsers are hand-written; `nom` is declared in the workspace but unused)*
   - [x] [`formats/text/sco.md`](../../formats/text/sco.md), [`sli.md`](../../formats/text/sli.md) + [corpus audit](../../formats/text/sco-sli-audit.md) (47 undocumented `.sco` keywords, misspelled aliases, BOM/encoding findings).
   - [x] [`formats/text/vehicles/bus.md`](../../formats/text/vehicles/bus.md), [`cfg.md`](../../formats/text/cfg.md), model/paths/passengercabin/sound configs.
   - [x] [`formats/text/vehicles/hof.md`](../../formats/text/vehicles/hof.md), [`osc.md`](../../formats/text/vehicles/osc.md), [`varnamelist.md`](../../formats/text/vehicles/varnamelist.md), [`const.md`](../../formats/text/vehicles/const.md) + [vehicle-side corpus audit](../../formats/text/vehicles/vehicle-corpus-audit.md) (UTF-16 hofs, undocumented `$` functions, duplicate varlist names).
@@ -43,7 +43,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] [`formats/map/tiles.md`](../../formats/map/tiles.md): `tile_<x>_<y>.map` (object/spline records), `.terrain` height grid, `.water`, `.LM.bmp`, `.prt`, `.hole`, `.surf`.
   - [x] [`formats/map/lists.md`](../../formats/map/lists.md): AI lists, unscheduled traffic, parked/human/driver/registration lists, holidays, time zone, signal routes.
   - [x] [`formats/map/timetables.md`](../../formats/map/timetables.md): `Chrono.cfg`, `.ttl`, `.ttp`, `.ttr`, bus stops, station links.
-- [x] **🔢 Binary Formats (Parser: `binrw`)** — 🟢 Specified
+- [x] **🔢 Binary Formats** — 🟢 Specified *(parsers are hand-written; `binrw` is declared but unused)*
   - [x] [`formats/binary/o3d.md`](../../formats/binary/o3d.md) + [chunk reference](../../formats/binary/o3d-chunks.md): layout confirmed on 165,695 of 165,750 non-empty files; field semantics and coordinate space confirmed by mutation testing [M]. 🟢 Specified.
   - [x] Annotated hex breakdown of a simple `.o3d` (self-authored sample in `o3d.md`).
   - [x] [`formats/binary/x.md`](../../formats/binary/x.md): legacy DirectX `.x` (text and binary variants); frame matrix, material ref, and quad triangulation confirmed by mutation testing [M]. 🟢 Specified.
@@ -67,6 +67,6 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [ ] Maintainer review of all 🟡 drafts; promote to 🟢 once the high-priority open questions of that spec are resolved.
   - [x] Add the missing index pages referenced by `SUMMARY.md` (`formats/overview.md`, `formats/text/README.md`, `formats/binary/README.md`) — done in M-0007.
   - [ ] Confirm the drafts' provenance sections against [ADR-0002](../../adr/0002-clean-room-policy.md) (clean-room policy).
-- [ ] **📚 Only shallowly covered:** `.osn` field meanings, the purpose of `.rra`/`.surf`/`.prt` caches, and vehicle `.dsc` fragments. Tool files (`.pdn`, `.sfk`, `.blend`, …) and `.dll` plug-ins are intentionally not specified.
+- [ ] **📚 Only shallowly covered:** `.osn` field meanings (only the `[time]` block is specified and read, M-0070), the purpose of `.rra`/`.surf`/`.prt` caches, and vehicle `.dsc` fragments. Tool files (`.pdn`, `.sfk`, `.blend`, …) and `.dll` plug-ins are intentionally not specified.
 - [x] **📚 Format specification milestones** — [M-0001](M-0001.md), [M-0002](M-0002.md), [M-0003](M-0003.md) and [M-0005](M-0005.md) are complete
-- [ ] **🚏 Transit data specifications** — [M-0004](M-0004.md) (in progress, GTFS notes open)
+- [ ] **🚏 Transit data specifications** — [M-0004](M-0004.md) (in progress; only the low-priority GTFS notes are open; timetable fields now measured in `formats/text/timetable.md`, M-0099)
