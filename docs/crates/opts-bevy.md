@@ -162,6 +162,7 @@ See [Asset Pipeline](../src/architecture/asset-pipeline.md).
 
 ### 8b. Active Script Bridge (`opts_bevy::vehicle_anim`, `vehicle_lights`, `vehicle_triggers`) — M-0045
 - **`MeshAnimation`** (`vehicle_anim`): `[newanim]`/`[visible]` rules of a mesh; `vehicle_animation_system` applies them from the owner's `VehicleScripts`, rate-limited by `maxspeed`.
+- **`FreeTextureBinding`** (`free_texture`, 2026-10-25): a vehicle part whose material has `[matl_freetex]` shows the texture the string variable names (looked up in the vehicle's texture folders, Windows separators, any case) on its own material copy; a light map of the material lights the new texture (`model::compose_light`). Light maps light the material's texture (texture × light map) at gain 1 (`vehicle_lights::LIGHT_MAP_GAIN`).
 - **`ScriptLight`** / **`LightSwitch`** (`vehicle_lights`): attached by `spawn_vehicle_model` to every interior light (`Variable`) and spotlight (`Spot(index)`, on while `Spot_Select` equals the index); `vehicle_light_system` sets intensity and visibility.
 - **`LightMapBinding`**: a mesh part whose `[matl_lightmap]` is scaled by a variable; the shared material is replaced by a private copy the first time the owner runs scripts (`vehicle_light_map_system`).
 - **`ScriptKeyBindings`** / **`dik_to_keycode`** / **`OPTS_RESERVED_KEYS`** (`vehicle_triggers`): `keyboard.cfg` `[vehicles]` entries turned into key → trigger bindings (keys OPTS uses are left out unless Ctrl is needed); `script_key_trigger_system` raises `<name>` on press and `<name>_off` on release of held bindings.

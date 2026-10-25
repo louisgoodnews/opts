@@ -18,10 +18,12 @@ use crate::vehicle_script::VehicleScripts;
 
 /// Upper bound of a brightness variable; brighter values look the same in OMSI.
 pub const MAX_BRIGHTNESS: f32 = 3.0;
-/// Luminance (cd/m2) of a light map at factor 1. The cameras run at a fixed physical exposure at
-/// which 1 cd/m2 is black (a white surface in sunlight is some 800), so a lamp must be bright in
-/// those units to show at all.
-pub const LIGHT_MAP_NITS: f32 = 100.0;
+/// Emission of a light map at factor 1. The emissive picture is the material's texture lit by the
+/// light map (`crate::model::compose_light`), and emission is drawn without the camera's exposure
+/// (`emissive_exposure_weight` 0), so 1 shows a lit display or window in its texture's own
+/// colours, as scenery light maps do. (It was 100 while the light map itself was the emitted
+/// colour: every lit area went white, the MB C2's display among them.)
+pub const LIGHT_MAP_GAIN: f32 = 1.0;
 
 /// What switches a vehicle light.
 #[derive(Debug, Clone, PartialEq)]
@@ -251,8 +253,8 @@ pub fn vehicle_light_map_system(
             binding.private = true;
         }
         if let Some(mut m) = materials.get_mut(&material.0) {
-            let nits = f * LIGHT_MAP_NITS;
-            m.emissive = LinearRgba::rgb(nits, nits, nits);
+            let gain = f * LIGHT_MAP_GAIN;
+            m.emissive = LinearRgba::rgb(gain, gain, gain);
         }
         binding.applied = f;
     }
@@ -270,6 +272,7 @@ impl Plugin for VehicleLightPlugin {
                 vehicle_light_system,
                 vehicle_light_map_system,
                 vehicle_alpha_scale_system,
+                crate::free_texture::free_texture_system,
             ),
         );
     }

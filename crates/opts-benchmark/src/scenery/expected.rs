@@ -191,6 +191,7 @@ fn overrides(sco: &SceneryObject, mesh: &ScoMesh) -> Vec<(TextureOverride, bool)
                     trans_map: None,
                     image: None,
                     light_map: None,
+                    free_texture: None,
                 },
                 text,
             )

@@ -45,21 +45,41 @@ pub struct FontBitmaps {
     pub height: u32,
     /// RGB, row-major from the top.
     pub colour: Vec<[u8; 3]>,
-    /// Alpha bitmap size (normally equal to the colour bitmap).
+    /// Alpha bitmap size. Usually equal to the colour bitmap, but 50 of the corpus's 1,108 fonts
+    /// differ (printer and IBIS fonts: a black 128×128 colour bitmap with a 128×200 or 512×512
+    /// alpha bitmap holding the glyphs); the `.oft` cells are pixel positions in both.
     pub alpha_size: (u32, u32),
     /// Coverage (red channel of the alpha bitmap), row-major from the top.
     pub alpha: Vec<u8>,
 }
 
 impl FontBitmaps {
+    /// Coverage at pixel `x`, `y` of the alpha bitmap (0 outside it). The cell coordinates are
+    /// not scaled to the colour bitmap: a 128×200 alpha bitmap read through a 128×128 colour
+    /// bitmap's proportions put the `j` into every space of the printer fonts.
     pub(crate) fn coverage(&self, x: u32, y: u32) -> u8 {
         let (aw, ah) = self.alpha_size;
-        let ax = (x * aw / self.width.max(1)).min(aw.saturating_sub(1));
-        let ay = (y * ah / self.height.max(1)).min(ah.saturating_sub(1));
-        self.alpha
-            .get((ay * aw + ax) as usize)
+        if x >= aw || y >= ah {
+            return 0;
+        }
+        self.alpha.get((y * aw + x) as usize).copied().unwrap_or(0)
+    }
+
+    /// Colour at pixel `x`, `y` of the colour bitmap; black outside it (glyph rows that only the
+    /// larger alpha bitmap holds).
+    pub(crate) fn colour_at(&self, x: u32, y: u32) -> [u8; 3] {
+        if x >= self.width || y >= self.height {
+            return [0, 0, 0];
+        }
+        self.colour
+            .get((y * self.width + x) as usize)
             .copied()
-            .unwrap_or(0)
+            .unwrap_or([0, 0, 0])
+    }
+
+    /// Whether `x`, `y` lies in either bitmap (where a glyph can have pixels).
+    pub(crate) fn contains(&self, x: u32, y: u32) -> bool {
+        (x < self.width && y < self.height) || (x < self.alpha_size.0 && y < self.alpha_size.1)
     }
 }
 
@@ -121,14 +141,14 @@ pub fn render_rgba(font: &OftFont, bmp: &FontBitmaps, spec: &TextSpec) -> Vec<u8
                 .saturating_sub(1);
             let (start, g) = cells[idx];
             let (sx, sy) = (g.x_start + (tx - start), g.y_top + ty as u32);
-            if sx >= bmp.width || sy >= bmp.height {
+            if !bmp.contains(sx, sy) {
                 continue;
             }
             let a = bmp.coverage(sx, sy);
             let rgb = if spec.mono {
                 spec.rgb
             } else {
-                bmp.colour[(sy * bmp.width + sx) as usize]
+                bmp.colour_at(sx, sy)
             };
             let o = ((dy * w + dx) * 4) as usize;
             out[o..o + 4].copy_from_slice(&[rgb[0], rgb[1], rgb[2], a]);
@@ -480,5 +500,58 @@ mod tests {
         );
         assert_eq!(resolve_text(0, Some("missing"), &vars, &names), None);
         assert_eq!(resolve_text(3, None, &vars, &names), None);
+    }
+
+    /// A printer font: a black 4×2 colour bitmap and a 4×6 alpha bitmap holding the glyphs. The
+    /// space's cell (rows 2 and 3) is empty; `B` lies in rows 4 and 5, below the colour bitmap.
+    fn printer_font() -> (OftFont, FontBitmaps) {
+        let mut chars = std::collections::HashMap::new();
+        chars.insert(
+            ' ',
+            OftChar {
+                x_start: 0,
+                x_end: 4,
+                y_top: 2,
+            },
+        );
+        chars.insert(
+            'B',
+            OftChar {
+                x_start: 0,
+                x_end: 4,
+                y_top: 4,
+            },
+        );
+        let font = OftFont {
+            name: "Printer".into(),
+            bitmap: String::new(),
+            alpha: String::new(),
+            line_height: 2,
+            gap: 0,
+            chars,
+        };
+        let mut alpha = vec![0u8; 24];
+        alpha[16..24].fill(255);
+        let bmp = FontBitmaps {
+            width: 4,
+            height: 2,
+            colour: vec![[0, 0, 0]; 8],
+            alpha_size: (4, 6),
+            alpha,
+        };
+        (font, bmp)
+    }
+
+    #[test]
+    fn a_taller_alpha_bitmap_is_read_at_the_cells_own_pixels() {
+        let (font, bmp) = printer_font();
+        // Scaled to the colour bitmap's height the space's rows would hit `B` (2 -> 6, clamped).
+        let space = render_rgba(&font, &bmp, &spec(" ", 4, 2, 1));
+        assert!(alpha_row(&space, 4, 0).iter().all(|a| *a == 0));
+        assert!(alpha_row(&space, 4, 1).iter().all(|a| *a == 0));
+        // `B` lies below the colour bitmap and is still drawn.
+        let b = render_rgba(&font, &bmp, &spec("B", 4, 2, 1));
+        assert_eq!(alpha_row(&b, 4, 0), [255, 255, 255, 255]);
+        assert_eq!(&b[0..3], &[200, 0, 0], "the text colour of a mono texture");
     }
 }

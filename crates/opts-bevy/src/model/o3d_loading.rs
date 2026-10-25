@@ -434,12 +434,31 @@ impl ContentLoader<'_> {
                 // A light map is emissive light switched by a script variable; it starts dark.
                 // Maps without a variable have no switch and stay off ❓.
                 let mut light_variable = None;
+                let mut light_image = None;
                 if let Some(lm) = over
                     .and_then(|o| o.light_map.as_ref())
                     .filter(|lm| !lm.variable.trim().is_empty())
                 {
                     if let Some(h) = self.texture(&lm.texture, tex_dirs) {
-                        material.emissive_texture = Some(h);
+                        // The light map lights the material's own texture (texture × map).
+                        let lit = material.base_color_texture.clone().and_then(|base_h| {
+                            let key = (base_h.id(), h.id());
+                            if let Some(done) = self.cache.lit.get(&key) {
+                                return Some(done.clone());
+                            }
+                            let img = {
+                                let _t = opts_logging::stream_trace::span("o3d.compose_light");
+                                match (self.images.get(&base_h), self.images.get(&h)) {
+                                    (Some(b), Some(l)) => super::overrides::compose_light(b, l),
+                                    _ => None,
+                                }
+                            }?;
+                            let done = self.images.add(img);
+                            self.cache.lit.insert(key, done.clone());
+                            Some(done)
+                        });
+                        light_image = Some(h.clone());
+                        material.emissive_texture = Some(lit.unwrap_or(h));
                         material.emissive = bevy::color::LinearRgba::BLACK;
                         light_variable = Some(lm.variable.trim().to_owned());
                     }
@@ -487,6 +506,9 @@ impl ContentLoader<'_> {
                         .and_then(|o| o.runtime_alpha_variable())
                         .map(str::to_owned),
                     image: over.and_then(|o| o.image.clone()),
+                    free_texture: over
+                        .and_then(|o| o.free_texture.clone())
+                        .map(|v| (v, light_image.clone())),
                     pivot,
                 };
                 if let Some(glass) = glass_material {

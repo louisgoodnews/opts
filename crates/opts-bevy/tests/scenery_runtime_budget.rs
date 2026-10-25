@@ -87,6 +87,7 @@ fn thousands_of_signal_heads_fit_the_frame_budget() {
                             light_variable: None,
                             alpha_variable: None,
                             image: None,
+                            free_texture: None,
                             pivot: None,
                         }]
                     })

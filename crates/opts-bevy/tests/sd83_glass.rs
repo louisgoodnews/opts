@@ -16,6 +16,7 @@ fn over(m: &opts_core::formats::vehicles::model::ModelMaterial) -> TextureOverri
         trans_map: m.trans_map.clone().filter(|t| !t.trim().is_empty()),
         image: None,
         light_map: None,
+        free_texture: None,
     }
 }
 

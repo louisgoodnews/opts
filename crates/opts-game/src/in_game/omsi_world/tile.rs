@@ -332,6 +332,7 @@ fn spawn_object_inner(
                 alpha_variable: m.alpha_scale.clone(),
                 trans_map: None,
                 light_map: super::scenery_objects::light_map_of(m),
+                free_texture: None,
                 image: m.text_texture.and_then(|i| {
                     let tt = sco.text_textures.get(i)?;
                     let Some(text) = resolve_text(

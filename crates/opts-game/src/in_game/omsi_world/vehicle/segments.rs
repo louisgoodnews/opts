@@ -300,6 +300,14 @@ pub(in super::super::super) fn load_segment_meshes_for(
                     })
                 }),
                 light_map: m.light_map.clone(),
+                // A texture named by a string variable (`[matl_freetex]`): the C2 display's
+                // pages. Canvases follow theirs through the tint above.
+                free_texture: m
+                    .free_tex
+                    .as_ref()
+                    .filter(|_| m.script_texture_index.is_none())
+                    .map(|f| f.variable.trim().to_owned())
+                    .filter(|v| !v.is_empty()),
             })
             .collect();
         let mut loader = ContentLoader {
@@ -400,6 +408,14 @@ pub(in super::super::super) fn load_segment_meshes_for(
             }
             if let Some(var) = &part.light_variable {
                 entity.insert(opts_bevy::LightMapBinding::new(owner, var.clone()));
+            }
+            if let Some((var, light_map)) = &part.free_texture {
+                entity.insert(opts_bevy::free_texture::FreeTextureBinding::new(
+                    owner,
+                    var.clone(),
+                    tex_dirs.to_vec(),
+                    light_map.clone(),
+                ));
             }
             if let Some(var) = &part.alpha_variable {
                 // Starts hidden: the variable decides on the first frame (glass scaled by a

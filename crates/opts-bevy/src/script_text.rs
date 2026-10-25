@@ -125,7 +125,7 @@ pub fn draw_text(
                     continue;
                 }
                 let sx = glyph.x_start + gx as u32;
-                if sx >= bitmaps.width || sy >= bitmaps.height {
+                if !bitmaps.contains(sx, sy) {
                     continue;
                 }
                 let cover = u32::from(bitmaps.coverage(sx, sy));

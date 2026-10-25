@@ -69,3 +69,44 @@ fn threshold_matches_the_mask_cutoff() {
     assert_eq!(glass[3], 242);
     assert_eq!(glass[7], 0);
 }
+
+#[test]
+fn a_light_map_lights_the_texture_instead_of_replacing_it() {
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    let rgba = |w: u32, h: u32, px: &[[u8; 4]]| {
+        let mut img = Image::new(
+            Extent3d {
+                width: w,
+                height: h,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            px.iter().flatten().copied().collect(),
+            TextureFormat::Rgba8UnormSrgb,
+            bevy::asset::RenderAssetUsages::default(),
+        );
+        img.texture_descriptor.mip_level_count = 1;
+        img
+    };
+    // A dark display with one bright pixel, under a white light map (the MB C2 display) and a
+    // half-size light map that lights only the left half.
+    let base = rgba(2, 1, &[[255, 255, 255, 255], [20, 20, 20, 255]]);
+    let white = rgba(1, 1, &[[255, 255, 255, 255]]);
+    let lit = super::overrides::compose_light(&base, &white).expect("composed");
+    let d = lit.data.as_deref().unwrap();
+    assert_eq!(&d[0..3], &[255, 255, 255], "white light keeps the picture");
+    assert_eq!(
+        &d[4..7],
+        &[20, 20, 20],
+        "a dark pixel stays dark, not white"
+    );
+    let left_only = rgba(2, 1, &[[255, 128, 0, 255], [0, 0, 0, 255]]);
+    let lit = super::overrides::compose_light(&base, &left_only).expect("composed");
+    let d = lit.data.as_deref().unwrap();
+    assert_eq!(
+        &d[0..3],
+        &[255, 128, 0],
+        "the light's colour tints the lit area"
+    );
+    assert_eq!(&d[4..7], &[0, 0, 0], "the unlit area emits nothing");
+}
