@@ -68,6 +68,7 @@ pub mod text_texture;
 pub mod texture;
 pub mod texture_filter;
 pub mod texture_sentinel;
+pub mod tree_wind;
 pub mod vehicle;
 pub mod vehicle_anim;
 pub mod vehicle_glow;

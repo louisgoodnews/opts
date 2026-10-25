@@ -1,6 +1,6 @@
 # Vegetation Wind
 
-Status: specified 2026-10-26 for [M-0144](../roadmap/phase-8/M-0144.md); phase B (`[tree]` billboards) in implementation.
+Status: specified 2026-10-26 for [M-0144](../roadmap/phase-8/M-0144.md); phase B (`[tree]` billboards) implemented the same day (`opts_bevy::tree_wind`, `shaders/tree_wind.wesl`). Without `TreeWindPlugin` (headless runs) trees keep their ordinary material.
 
 ## 1. What OMSI does
 

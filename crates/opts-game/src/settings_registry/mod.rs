@@ -375,6 +375,7 @@ impl Plugin for SettingsRegistryPlugin {
                     live::sync_audio,
                     crate::vehicle_setup_settings::sync_vehicle_setup,
                     live::sync_weather_effects,
+                    live::sync_tree_wind,
                 ),
             )
             .add_systems(

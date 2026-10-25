@@ -287,6 +287,18 @@ pub fn sync_hdr(
     }
 }
 
+/// `graphics.tree_wind`: whether `[tree]` billboards move in the wind (M-0144; on by default).
+pub fn sync_tree_wind(
+    settings: Res<GameSettings>,
+    state: Option<ResMut<opts_bevy::tree_wind::TreeWindState>>,
+) {
+    let Some(mut state) = state else { return };
+    let on = settings.raw("graphics.tree_wind").as_deref() != Some("false");
+    if state.enabled != on {
+        state.enabled = on;
+    }
+}
+
 /// Whether `graphics.hdr` is on (the default).
 #[must_use]
 pub fn hdr_enabled(settings: &GameSettings) -> bool {

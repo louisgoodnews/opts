@@ -325,7 +325,7 @@ Each phase folder holds a README with that phase's checklist (mirrored from the 
   - [ ] Assess and improve shadows with presets and measurements (R-40); a live *Shadow distance* setting exists since 2026-10-24 (`4d2a4955`).
 - [ ] **🌳 Trees Move in the Wind** — [M-0144](phase-8/M-0144.md) — requested by the project lead 2026-10-26 (OMSI's trees are static: an OPTS extension)
   - [x] Specification: [vegetation wind](../architecture/vegetation-wind.md).
-  - [ ] `[tree]` billboards bend in a vertex stage (shadows included) with the weather's wind; setting `graphics.tree_wind` (🔄 `agent/tree-wind`).
+  - [x] `[tree]` billboards bend in a vertex stage (shadows included) with the weather's wind; setting `graphics.tree_wind` (2026-10-26).
   - [ ] Mesh trees (`.o3d` trunk and foliage cards).
 
 ---

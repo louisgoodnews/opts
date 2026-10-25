@@ -233,6 +233,17 @@ pub(super) fn graphics() -> Vec<D> {
         .keywords(&["weather", "snow", "flakes", "cover", "intensity"])
         .since("0.5"),
         D::new(
+            "graphics.tree_wind",
+            K::Bool,
+            "true",
+            C::Graphics,
+            82,
+            "set-tree-wind",
+            "set-tree-wind-desc",
+        )
+        .keywords(&["trees", "wind", "sway", "vegetation", "animation"])
+        .since("0.5"),
+        D::new(
             "audio.master",
             K::Int {
                 min: 0,
