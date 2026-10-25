@@ -11,8 +11,11 @@
 //!
 //! * option 1: decode to RGBA8 + generate the sRGB-correct chain (time, VRAM factor);
 //! * option 2: re-encode levels 1.. to the source's BC format with `texpresso` (range fit and
-//!   cluster fit) and `intel_tex_2` (BC1/BC3 only; DXT3 is encoded as BC3), time and PSNR of the
-//!   re-encoded levels against the exact RGBA levels; level 0 stays the original file data.
+//!   cluster fit), time and PSNR of the re-encoded levels against the exact RGBA levels; level 0
+//!   stays the original file data.
+//!
+//! The 2026-10-25 run also measured `intel_tex_2` (results in M-0058); it was dropped from the
+//! example because its prebuilt C++ kernels do not link in the dev profile.
 //!
 //! Prints one summary block (no OMSI content is written anywhere).
 
@@ -32,19 +35,15 @@ struct Totals {
     chain_pixels: u64,
     decode_s: f64,
     chain_s: f64,
-    encode_s: [f64; 3],
-    sq_err: [f64; 3],
+    encode_s: [f64; 2],
+    sq_err: [f64; 2],
     /// Alpha error and samples: index 0 = DXT1 with transparent texels, 1 = DXT3/5.
-    alpha_sq_err: [[f64; 3]; 2],
+    alpha_sq_err: [[f64; 2]; 2],
     alpha_samples: [u64; 2],
     bc1_with_alpha: usize,
 }
 
-const ENCODERS: [&str; 3] = [
-    "texpresso range fit",
-    "texpresso cluster fit",
-    "intel_tex_2",
-];
+const ENCODERS: [&str; 2] = ["texpresso range fit", "texpresso cluster fit"];
 
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -136,51 +135,21 @@ fn main() -> anyhow::Result<()> {
             let src = &chain[offset..offset + lw * lh * 4];
             offset += lw * lh * 4;
             t.chain_pixels += (lw * lh) as u64;
-            for (e, name) in ENCODERS.iter().enumerate() {
+            for e in 0..ENCODERS.len() {
                 let started = Instant::now();
-                let decoded = match *name {
-                    "intel_tex_2" => {
-                        let (pw, ph) = (lw.div_ceil(4) * 4, lh.div_ceil(4) * 4);
-                        let padded = pad(src, lw, lh, pw, ph);
-                        let surface = intel_tex_2::RgbaSurface {
-                            data: &padded,
-                            width: pw as u32,
-                            height: ph as u32,
-                            stride: (pw * 4) as u32,
-                        };
-                        let (blocks, fmt) = if tex_format == texpresso::Format::Bc1 {
-                            (
-                                intel_tex_2::bc1::compress_blocks(&surface),
-                                texpresso::Format::Bc1,
-                            )
-                        } else {
-                            (
-                                intel_tex_2::bc3::compress_blocks(&surface),
-                                texpresso::Format::Bc3,
-                            )
-                        };
-                        t.encode_s[e] += started.elapsed().as_secs_f64();
-                        let mut out = vec![0u8; pw * ph * 4];
-                        fmt.decompress(&blocks, pw, ph, &mut out);
-                        crop(&out, pw, lw, lh)
-                    }
-                    _ => {
-                        let params = texpresso::Params {
-                            algorithm: if e == 0 {
-                                texpresso::Algorithm::RangeFit
-                            } else {
-                                texpresso::Algorithm::ClusterFit
-                            },
-                            ..Default::default()
-                        };
-                        let mut blocks = vec![0u8; tex_format.compressed_size(lw, lh)];
-                        tex_format.compress(src, lw, lh, params, &mut blocks);
-                        t.encode_s[e] += started.elapsed().as_secs_f64();
-                        let mut out = vec![0u8; lw * lh * 4];
-                        tex_format.decompress(&blocks, lw, lh, &mut out);
-                        out
-                    }
+                let params = texpresso::Params {
+                    algorithm: if e == 0 {
+                        texpresso::Algorithm::RangeFit
+                    } else {
+                        texpresso::Algorithm::ClusterFit
+                    },
+                    ..Default::default()
                 };
+                let mut blocks = vec![0u8; tex_format.compressed_size(lw, lh)];
+                tex_format.compress(src, lw, lh, params, &mut blocks);
+                t.encode_s[e] += started.elapsed().as_secs_f64();
+                let mut decoded = vec![0u8; lw * lh * 4];
+                tex_format.decompress(&blocks, lw, lh, &mut decoded);
                 for (a, b) in src.chunks_exact(4).zip(decoded.chunks_exact(4)) {
                     for c in 0..3 {
                         let d = f64::from(a[c]) - f64::from(b[c]);
@@ -237,25 +206,6 @@ fn report(t: &Totals) {
             psnr(t.alpha_sq_err[1][e], t.alpha_samples[1].max(1) as f64),
         );
     }
-}
-
-fn pad(src: &[u8], w: usize, h: usize, pw: usize, ph: usize) -> Vec<u8> {
-    let mut out = vec![0u8; pw * ph * 4];
-    for y in 0..ph {
-        for x in 0..pw {
-            let s = (y.min(h - 1) * w + x.min(w - 1)) * 4;
-            out[(y * pw + x) * 4..][..4].copy_from_slice(&src[s..s + 4]);
-        }
-    }
-    out
-}
-
-fn crop(src: &[u8], pw: usize, w: usize, h: usize) -> Vec<u8> {
-    let mut out = Vec::with_capacity(w * h * 4);
-    for y in 0..h {
-        out.extend_from_slice(&src[y * pw * 4..][..w * 4]);
-    }
-    out
 }
 
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) {

@@ -50,6 +50,5 @@ glam = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
-# M-0058 phase A: candidate BC encoders, measured by `examples/dxt_mips.rs` only.
+# M-0058 phase A: the BC encoder measured by `examples/dxt_mips.rs`.
 texpresso = "2.0"
-intel_tex_2 = "0.5"
