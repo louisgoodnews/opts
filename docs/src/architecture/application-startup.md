@@ -110,14 +110,29 @@ When `--headless` is **true**:
 | :--- | :--- |
 | `--omsi-path` (or the root above `--map-path`), `$OMSI_PATH` | explicit: used as is, not saved |
 | the folder the user **confirmed** earlier (`omsi_path` in `settings.db`) | used as is |
-| an installation in a default Steam location | a *candidate*: with a window the first-run dialog **offers it for confirmation** (*Use this folder* / *Choose another folder…* / *Quit*); without a window (`--headless`, `--autostart`) it is used and saved, as before |
+| an installation found **through Steam** ([below](#finding-omsi-through-steam)) | used and saved without asking (project lead, 2026-10-25; it was offered for confirmation before) |
 | nothing | with a window the first-run dialog asks to choose a folder with the native dialog (`rfd`, own thread); a wrong folder is explained inline (it needs `maps` and `Vehicles`; a picked `maps/<Map>` resolves to the installation above it); without a window the catalogue stays empty |
 
-While confirmation is required (`omsi_root::require_confirmation`), `locate_omsi_root` ignores the Steam candidates, so nothing is scanned before the user agrees. A confirmed folder is saved (`first_run::adopt_root`) and the catalogue starts at once. The same function `first_run::choose_omsi_folder` serves the Home banner *Choose folder* and `Settings -> Content`; its result is the message `OmsiFolderChosen`. After the first scan, with no drive history, one welcome dialog offers *Pick a map and a vehicle* or *Quick drive* (remembered in `first_run.json`). Details: [screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup). Progress of the scan is the stage the catalogue reports (scanning files, reading content, saving) in the Home status chip; the catalogue offers no item counts during a scan, the counts appear when it is done.
+A folder found through Steam or chosen in the dialog is saved (`first_run::adopt_root`) and the catalogue starts at once. The same function `first_run::choose_omsi_folder` serves the Home banner *Choose folder* and `Settings -> Content`; its result is the message `OmsiFolderChosen`. After the first scan, with no drive history, one welcome dialog offers *Pick a map and a vehicle* or *Quick drive* (remembered in `first_run.json`). Details: [screens §3](../roadmap/phase-9/screens.md#3-first-run-modal-flow-over-home-omsisetup). Progress of the scan is the stage the catalogue reports (scanning files, reading content, saving) in the Home status chip; the catalogue offers no item counts during a scan, the counts appear when it is done.
+
+### Finding OMSI through Steam
+
+OMSI 2 is Steam app **252530**. Steam records where its games are in two text files in Valve's KeyValues format (quoted keys and values, `{ }` blocks, `\\` and `\"` escapes, `//` comments):
+
+* `<steam>/steamapps/libraryfolders.vdf` lists the **libraries** (Steam installs games into any of them). Current format: `"libraryfolders" { "0" { "path" "…" "apps" { "<appid>" "<size>" … } } "1" { … } }`; the format before 2021 has the path as the value itself: `"libraryfolders" { "1" "D:\\SteamLibrary" }`. Older Steam also kept a copy in `<steam>/config/libraryfolders.vdf`.
+* `<library>/steamapps/appmanifest_252530.acf` (`"AppState" { … "installdir" "OMSI 2" … }`) names the game's folder below `<library>/steamapps/common/`.
+
+The search (`opts-game/src/steam_library.rs`):
+
+1. **Steam installations** of this platform: Linux `~/.steam/steam`, `~/.steam/root`, `~/.local/share/Steam`, Flatpak `~/.var/app/com.valvesoftware.Steam/.local/share/Steam` (and `…/data/Steam`), Snap `~/snap/steam/common/.local/share/Steam`; macOS `~/Library/Application Support/Steam`; Windows the `SteamPath` value of `HKEY_CURRENT_USER\Software\Valve\Steam` (read with `reg query`), then `InstallPath` under `HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Valve\Steam`, then `Program Files (x86)\Steam` and `Program Files\Steam`. The same folder reached by several of these (symbolic links) is read once.
+2. **Libraries** of each installation from `libraryfolders.vdf`, the installation's own folder included; the libraries whose `apps` list app 252530 come first.
+3. In each library, the folder from `appmanifest_252530.acf` (else `OMSI 2`) below `steamapps/common/`; the first that is an installation (`maps` and `Vehicles`) is the result.
+
+Nothing is written to Steam's files; a missing or unreadable file is skipped. Without a result the folder dialog asks.
 
 ## 🗄️ Catalogue Discovery (Startup)
 
-`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, the saved settings path, known Steam paths), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
+`CataloguePlugin` (`opts-game/src/catalogue_service.rs`) runs at `Startup`: it locates the OMSI root (`--omsi-path`, root of `--map-path`, `$OMSI_PATH`, the saved settings path, the Steam libraries), opens `<config>/catalogue.db`, fills the New Game lists from it, and checks staleness. A catalogue that is missing, built for another root, or older than `discovery_interval_days × 24 h` (default 24 h) is rebuilt on a background thread (≈ 5 s for a full install); `poll_catalogue_discovery` reloads the lists and shows a toast when it commits. There are no embedded map or vehicle lists.
 
 ## 🗺️ Real-Content Loading (In-Game Session)
 
