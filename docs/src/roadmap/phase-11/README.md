@@ -26,7 +26,7 @@ The checklist is in [`ROADMAP.md`](../../../../ROADMAP.md) (Phase 11); this page
 | Milestone | Needs |
 | :--- | :--- |
 | M-0108 | [M-0071](../phase-9/M-0071.md) mini map, [M-0068](../phase-10/M-0068.md) sessions (merged); [M-0069](../phase-10/M-0069.md) session save for carry-over |
-| M-0109 | [M-0063](../phase-9/M-0063.md)/[M-0065](../phase-9/M-0065.md) settings and a11y, [M-0084](../phase-4/M-0084.md) camera; the merge of the parallel branch `agent/spawn-drift-jitter` for the smoothing item |
+| M-0109 | [M-0063](../phase-9/M-0063.md)/[M-0065](../phase-9/M-0065.md) settings and a11y, [M-0084](../phase-4/M-0084.md) camera; the jitter root cause for the smoothing item (resolved 2026-10-25) |
 | M-0110 | [M-0078](../phase-10/M-0078.md) and [M-0077](../phase-10/M-0077.md) (both done 2026-10-18 and 2026-10-20) |
 | M-0111 | [M-0049](../phase-4/M-0049.md), [M-0095](../phase-4/M-0095.md) and the 2026-10 kinematics/lane-change work (merged) |
 | M-0112 | [M-0099](../phase-4/M-0099.md) and [M-0098](../phase-4/M-0098.md) (both not started: the longest dependency chain of the phase) |
@@ -57,7 +57,7 @@ The numbering is the project lead's inventory of 2026-10-18. Items 22 to 26 are 
 | 1 | Full-size in-game map (F6, drag pan, wheel zoom, Esc, position and heading) | [M-0108](M-0108.md) |
 | 2 | In-game map switching via the Alt menu | [M-0108](M-0108.md) |
 | 3 | Door camera | [M-0109](M-0109.md) |
-| 4 | Smooth camera in driver view | [M-0109](M-0109.md) (after the `agent/spawn-drift-jitter` fix) |
+| 4 | Smooth camera in driver view | [M-0109](M-0109.md) (unblocked 2026-10-25; the recorded-drive measurement is next) |
 | 5 | UI scaling setting (100/125/150/200 %) | [M-0109](M-0109.md) |
 | 6 | UI font and base font size | [M-0109](M-0109.md) |
 | 7 | In-simulation setvar editor | [M-0110](M-0110.md) |

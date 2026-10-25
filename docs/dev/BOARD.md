@@ -120,6 +120,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 - [ ] 🟡 **Audio spec: script variables in `[volcurve]` and OMSI's `[3d]` fall-off** (M-0027, spec) — the rest of the spatial audio and curve mapping is in [audio-system](../src/architecture/audio-system.md) since 2026-10-20 (traces to F-009, F-020); these two are undocumented (§8 'Not yet', Q-AU01).
 - [ ] 🟡 **Rewrite articulation.md for the shared consist state (design plan step 8)** (M-0053, spec) — F-002, F-003; the β/γ pitch rule is already in [articulation.md](../src/architecture/articulation.md) and the model in [articulation-physics.md](../src/architecture/articulation-physics.md).
 - [ ] 🔴 **Fix the failing Windows `cargo test` step of `ci.yml`; then the broken-link CI proof** (M-0042, chore) — last hosted run on `c3dba957` (2026-10-24): Linux, macOS and docs-links green, only Windows "Run tests" fails; the job log needs a GitHub login (project lead) to see the cause. Local `master` is 22 commits ahead of `origin/master`.
+- [ ] 🟡 **Smooth driver view: measure the driver's view in a recorded 60 s drive** (M-0109, test) — unblocked 2026-10-25: the root cause was fixed in `44c889a5` and is guarded by `the_driver_camera_does_not_lag_a_frame_behind_a_moving_vehicle`; record the per-frame camera delta against the vehicle motion (criterion 3, within 2 mm) and add `camera.smoothing` only if residual jitter shows.
 
 ---
 
@@ -127,7 +128,7 @@ _Work that is planned, approved, and unblocked. The next items the agent will pu
 
 _Work that cannot proceed until a dependency is resolved._
 
-- [!] 🟡 **Smooth driver view (parked-vehicle drift/jitter fix)** (M-0109) — the last open item of the QoL Suite; blocked on `agent/spawn-drift-jitter`: its merge `e1c4e9ef` was reverted (`19da37bd`), the fix is unverified and needs a debug session.
+_None._
 
 > 📝 Every Blocked item must name its blocking dependency explicitly.
 > If the blocker is another item on this board, it must be linked by
@@ -344,7 +345,7 @@ _Small items discovered during implementation that don't warrant a milestone._
 - `[x]` 🟠 Integrate automated markdown link checker and mdBook validation step into CI workflow (F-015) — `docs-links` job and `deploy-docs.yml`; never executed (M-0052) *(reconciled 2026-10-11, critical review)*
 - `[x]` 🟡 Create `rust-toolchain.toml` (pinned to stable) and `.editorconfig` in repository root (F-016) — both exist (1.97.1) *(reconciled 2026-10-11, critical review)*
 - `[~]` 🟡 Add `windows-latest` to GitHub Actions CI test matrix for cross-platform validation (F-017) — job written; never run (M-0052) *(reconciled 2026-10-11, critical review)*
-- `[ ]` 🟢 Fix the mdbook warnings: unclosed `<var>` tags in `architecture/control-protocol.md` (chore, found 2026-10-25)
+- `[x]` 🟢 Fix the mdbook warnings: unclosed `<var>` tags in `architecture/control-protocol.md` (chore, found 2026-10-25) — done 2026-10-25 (`agent/loose-ends`): pipes inside table code spans escaped, a bare `<map>` escaped; only the search-index size note remains
 - `[ ]` 🟢 Remove the unused `nom` and `binrw` from the root `[workspace.dependencies]` (the parsers are hand-written), or document why they stay (chore, found 2026-10-25)
 
 ---
@@ -354,6 +355,9 @@ _Small items discovered during implementation that don't warrant a milestone._
 _Completed items from the last two cycles. Older items live in git history and milestone files (pruned under Rule 3 on 2026-10-25: the groups of 2026-10-04 to 2026-10-14)._
 
 **2026-10-25 — Phase 8 review (M-0057, M-0058, M-0060), M-0025 ground layers, vehicle mesh paths**
+
+- `[x]` 🟠 **Loose ends after the board audit** (chore, `agent/loose-ends`) — `fix/vehicle-animations` merged (task prompts P-1010..P-1013 and the GUI design-rules report, renamed off Windows-unsafe colons; editor ignores); `stray/escape-html-brackets` merged; stale worktrees `opts-wt-systems` and a detached scratch checkout removed.
+- `[x]` 🔴 **A bus spawned inside a scenery object's collision box is no longer shoved out** (M-0109/M-0073, code) — ported from the reverted `agent/spawn-drift-jitter` (it was still 1.9 m on master); test `parked_vehicle_stays_put.rs` (4 cases, one checks that other boxes still push); its camera half was already solved by `44c889a5` and now has a guarding test. Branch retired.
 
 - `[x]` 🔴 **Shared object-texture sampler (trilinear, anisotropy Off/4/8/16, default 16×) with settings entry and `--texture-filter`** (M-0057, code) — **accepted by the project lead 2026-10-25**: textures load correctly in about 95 % of what they saw; the rest are content/mesh defects to register (M-0066).
 - `[x]` 🔴 **Mip chains for uncompressed textures at load and in hot reload; dropped DDS chains fixed (2,727 → 0)** (M-0058 phase B, code) — +6.5 % load time on Bad Hügelsdorf; **accepted by the project lead 2026-10-25** (load performance acceptable).
@@ -471,10 +475,10 @@ The agent should check these during P-001 audits:
 | Metric | Target | Red Flag | 2026-10-25 |
 | :--- | :--- | :--- | :--- |
 | **WIP (In Progress count)** | ≤ 1 | > 1 means context switching | 2 (one milestone, M-0141/M-0100) ⚠️ |
-| **Blocked count** | ≤ 3 | > 3 means dependencies are tangled | 1 (the M-0109 smooth driver view, on the reverted jitter branch) |
-| **Ready count** | ≥ 3 | < 3 means the plan is under-specified | 6 |
+| **Blocked count** | ≤ 3 | > 3 means dependencies are tangled | 0 (the M-0109 item was unblocked 2026-10-25) |
+| **Ready count** | ≥ 3 | < 3 means the plan is under-specified | 7 |
 | **Review age** | ≤ 1 cycle | Older means reviews are neglected | 7 items, oldest 2026-10-11 (M-0022, M-0032) ⚠️ |
-| **Deferred Cleanup size** | ≤ 10 items | Larger means cleanup is being ignored | 10 open (12 before the 2026-10-25 audit; 4 closed, 2 added) |
+| **Deferred Cleanup size** | ≤ 10 items | Larger means cleanup is being ignored | 9 open (12 before the 2026-10-25 audit; 5 closed, 2 added) |
 
 ---
 
@@ -529,3 +533,5 @@ The agent should check these during P-001 audits:
 - `2026-10-18` — Phase 11 (M-0108–M-0119) proposed: phase page and milestone files created, first task of each milestone added to Backlog (nothing Ready until the phase is approved).
 - `2026-10-18` — Phase 12 (M-0120–M-0124) proposed: phase page, milestones and graphics design brief created; first task of each milestone in Backlog (nothing Ready until approved).
 - `2026-10-25` — Board audit against master `6ce6d078`: four of the five In Progress items (M-0049, M-0050, M-0038, M-0045) had no commits since 2026-10-10 … 10-17 and moved to a *Paused* Backlog group; the M-0047 follow-up was found done (`1d3ad031`, 2026-10-12). M-0141 and its dashboard item are In Progress (WIP 5 → 2). Branch references reconciled (`agent/visual-quality`, `feat/combobox-search`, `research/mesh-instancing`, `research/reflections`, `agent/articulation-physics-impl`, `agent/mesh-audit`, `feat/map-profiles`). M-0052: hosted 2026-10-24 with the commit gate, and Pages live (M-0000), both Done; the M-0042 Windows test failure is Ready. Done items moved out of Ready, Review and Backlog into dated Recently Done groups (2026-10-12 … 10-25); the groups up to 2026-10-14 and the old done items of the Phase 9 and 2026-10-13 field-report sections pruned (Rule 3). Phases 11 and 12 marked approved (2026-10-20); M-0079 items obsolete (decoder retired, `f17f3c3d`); M-0066 and M-0119 to Review; the M-0109 smooth driver view to Blocked; M-0038, M-0085 and M-0089 closed to match their milestone files; M-0062/M-0063 entries added (`roadmap_audit.py --check` board rules clean). Phase 4 items narrowed or closed (M-0049, M-0050, M-0045, M-0140, M-0027, M-0053, M-0046, M-0103, M-0105, M-0084 R-33, the two Phase 4 follow-ups). Ready 6, Review 7, Blocked 1, Deferred Cleanup 10 open.
+
+- `2026-10-25` — Loose ends: M-0109 smooth driver view unblocked (Blocked 1 → 0, Ready 6 → 7); spawn-in-box push fixed from the retired jitter branch; two stray branches merged; mdbook warnings fixed.
