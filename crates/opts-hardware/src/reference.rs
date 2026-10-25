@@ -229,7 +229,10 @@ mod tests {
             std::fs::write(PAGE, &want).unwrap();
             return;
         }
-        let have = std::fs::read_to_string(PAGE).unwrap_or_default();
+        // A Windows checkout (`core.autocrlf`) has CRLF line ends; the page is compared by content.
+        let have = std::fs::read_to_string(PAGE)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         assert_eq!(
             have, want,
             "run: UPDATE_HARDWARE_DOC=1 cargo test -p opts-hardware reference"
