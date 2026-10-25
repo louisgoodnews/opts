@@ -40,7 +40,7 @@ Rules: a destination or control that does **not work yet stays visible but hones
 
 *Principles UI-P03, UI-P11.*
 
-1. **Find OMSI.** The installation is searched as today (CLI, `$OMSI_PATH`, saved path, default Steam folders). A found folder is **offered for confirmation**, not silently adopted; if none is found the user chooses with the native dialog. A wrong folder explains what a valid one contains.
+1. **Find OMSI.** The installation is searched as today (CLI, `$OMSI_PATH`, saved path) and then **through Steam's library configuration** (every Steam library, [startup](../../architecture/application-startup.md#finding-omsi-through-steam)). A folder found through Steam is **used and remembered without asking** (decision of the project lead, 2026-10-25; until then it was offered for confirmation); only if none is found the user chooses with the native dialog. A wrong folder explains what a valid one contains.
 2. **Read the content.** The catalogue is built in the background with a visible stage ("Scanning maps… vehicles… repaints…") and a count; the user may already open Settings or Help.
 3. **Welcome in one screen**: *Pick a map and a vehicle* (→ Plan a drive) or *Quick drive* (a sensible default map and vehicle that exist in the installation). No tour, no nag; tips appear once, contextually, and can be switched off.
 

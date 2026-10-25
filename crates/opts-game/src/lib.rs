@@ -60,6 +60,7 @@ pub mod shell;
 pub mod shutdown;
 pub mod sound_logic;
 pub mod start_options;
+pub mod steam_library;
 pub mod theme_files;
 pub mod ui_typography;
 pub mod vehicle_keys;

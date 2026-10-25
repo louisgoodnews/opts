@@ -68,15 +68,14 @@ Removed from Home: "Clean-Room Simulation Engine", "SQLite (WAL) · Material Des
 
 ## 3. First run (modal flow over Home, `OmsiSetup`)
 
-Start condition: no confirmed installation (`settings.omsi_path` empty or no longer valid).
+Start condition: no installation known (`settings.omsi_path` empty or no longer valid, none given on the command line or in `$OMSI_PATH`, and Steam's library configuration names none). Since 2026-10-25 an installation found through Steam is used without a dialog ([startup](../../architecture/application-startup.md#finding-omsi-through-steam)); the former **Found** step (*Use this folder* / *Choose another folder…*) was removed.
 
 | Step | State | Copy keys | Actions |
 | :--- | :--- | :--- | :--- |
-| **Found** | `locate_omsi_root` found a folder (CLI, `$OMSI_PATH`, Steam defaults, saved path no longer confirmed) | `firstrun-found-title`, `firstrun-found-body` (`{ $path }`) | **Use this folder** (primary, default focus), **Choose another folder…**, **Quit** |
 | **Choose** | nothing found | `firstrun-choose-title`, `firstrun-choose-body` (what a valid folder contains: `maps` and `Vehicles`) | **Choose folder…** (native dialog, own thread), **Quit** |
 | **Wrong folder** | answer fails `root_from_selection` | inline error `firstrun-wrong-folder` (`{ $path }`) beside the buttons, in the error role, with the rule again | the same buttons |
 | **Cancelled dialog** | no answer | `firstrun-cancelled` inline | the same buttons |
-| **Reading** | confirmed, catalogue running | `firstrun-reading-title`; stage line `firstrun-stage-<stage>` + count `firstrun-count` (`{ $done } of { $total }`) from the catalogue service | **Continue in background** (the user may open Settings or Help), no modal |
+| **Reading** | installation known, catalogue running | `firstrun-reading-title`; stage line `firstrun-stage-<stage>` + count `firstrun-count` (`{ $done } of { $total }`) from the catalogue service | **Continue in background** (the user may open Settings or Help), no modal |
 | **Welcome** | catalogue has at least one map and one vehicle | `firstrun-welcome-title`, `firstrun-welcome-body` | **Pick a map and a vehicle** (→ Drive), **Quick drive**; dismisses once and never again (`first_run_done` remembered in `drive_history`'s sibling `first_run.json`, so no settings key is needed) |
 
 Changing the folder later: `Settings → Content` calls `first_run::choose_omsi_folder` (a function that opens the native dialog and validates; the result is a `OmsiFolderChosen(Result<PathBuf, ChooseError>)` message). A **confirmed** folder is saved (`settings.omsi_path`) and the catalogue is rebuilt.

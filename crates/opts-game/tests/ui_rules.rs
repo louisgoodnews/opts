@@ -240,11 +240,7 @@ fn the_pause_overlay_holds_to_the_rules() {
 #[test]
 fn the_first_run_dialogs_hold_to_the_rules() {
     use opts_game::first_run::{FirstRun, Step};
-    for step in [
-        Step::Found(std::path::PathBuf::from("/steam/OMSI 2")),
-        Step::Choose,
-        Step::Welcome,
-    ] {
+    for step in [Step::Choose, Step::Welcome] {
         let mut app = base_app();
         app.world_mut().resource_mut::<FirstRun>().persist = false;
         app.world_mut().resource_mut::<FirstRun>().step = Some(step.clone());
