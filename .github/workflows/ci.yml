@@ -97,8 +97,17 @@ jobs:
       - name: Check (all targets)
         run: cargo check --workspace --all-targets
 
+      # The job log needs a GitHub login; annotations are public. On failure, the failing tests and
+      # their panic messages are reported as annotations of this step (M-0042).
       - name: Run tests
-        run: cargo test --workspace
+        shell: bash
+        run: |
+          set -o pipefail
+          if cargo test --workspace --no-fail-fast 2>&1 | tee test-output.txt; then exit 0; fi
+          failed=$(grep -E '^test .* FAILED$|^error: test failed|^error(\[E[0-9]+\])?: |^    `-p ' test-output.txt | head -40 | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error title=cargo test failures (Windows)::${failed:-no test named; see the panics}"
+          grep -n -A3 'panicked at' test-output.txt | head -120 | awk 'BEGIN{RS="--\n"} NR<=8 {gsub(/%/,"%25"); gsub(/\n/,"%0A"); print "::error title=panic " NR " (Windows)::" $0}'
+          exit 1
 
       # M-0081: the hardware probe has Windows-specific code paths; run its tests explicitly so a
       # failure here is named after the crate.
