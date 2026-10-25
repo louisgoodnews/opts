@@ -345,3 +345,43 @@ fn all_of_several_conditions_must_hold() {
         "battery switch and start key"
     );
 }
+
+/// A serial hybrid (MB O530 GDH): the start key toggles drive readiness; the diesel generator
+/// starts only on demand, so it stays off at standstill.
+const SERIAL_HYBRID: &str = "\
+{trigger:cp_batterietrennschalter_toggle}
+    1 (S.L.elec_busbar_main)
+{end}
+{trigger:kw_m_enginestart}
+    (L.L.startup_mode) !
+    {if}
+        (L.L.elec_busbar_main) 0.3 >
+        {if}
+            1 (S.L.startup_mode)
+        {endif}
+    {else}
+        0 (S.L.startup_mode) (S.L.generator)
+    {endif}
+{end}
+{macro:never}
+    0 (S.L.generator_trigger)
+{end}
+";
+
+#[test]
+fn a_serial_hybrid_is_ready_with_the_diesel_off_and_its_start_key_is_pressed_once() {
+    let mut e = engine(SERIAL_HYBRID);
+    assert_eq!(recipe_for(&e).name, "serial hybrid start button");
+    let mut run = SetupRun::default();
+    drive(&mut e, &mut run, &at(0.75), 20.0);
+    assert_eq!(
+        e.get("startup_mode"),
+        1.0,
+        "a second press would switch it off again"
+    );
+    assert_eq!(e.get("engine_on"), 0.0);
+    assert!(ready(&e));
+    // An ordinary vehicle is ready only with its engine running.
+    let man = engine(MAN_LIKE);
+    assert!(!ready(&man));
+}

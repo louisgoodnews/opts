@@ -138,6 +138,16 @@ const fn start_drag(trigger: &'static str, drag_y: f32) -> Step {
     }
 }
 
+/// A button pressed once at the engine degree (the electrics on), not held for an engine that
+/// fires.
+const fn press(trigger: &'static str) -> Step {
+    Step {
+        hold_s: 0.5,
+        until_engine: false,
+        ..start(trigger)
+    }
+}
+
 const fn start(trigger: &'static str) -> Step {
     Step {
         trigger,
@@ -191,6 +201,9 @@ pub struct Recipe {
     pub detect: Detect,
     /// The key presses in order.
     pub steps: &'static [Step],
+    /// The variable that says the vehicle is ready to drive when that is not a running engine
+    /// (a serial hybrid's drive readiness); `None`: the engine runs.
+    pub ready: Option<&'static str>,
 }
 
 /// The procedures (`docs/src/quality/vehicle-start-procedures.md`), most specific first.
@@ -204,6 +217,7 @@ pub static RECIPES: &[Recipe] = &[
             tap(BATTERY, IGNITION),
             start(BATTERY),
         ],
+        ready: None,
     },
     // BRT C2: the battery key inserts the key, turns it to the electrics and to drive; the start
     // key then starts the engine.
@@ -216,6 +230,7 @@ pub static RECIPES: &[Recipe] = &[
             tap(BATTERY, IGNITION),
             start(START),
         ],
+        ready: None,
     },
     // Luzern VBL Citybus (`cp_keymode`) and Valiant 7000 family (`cp_start_key_rot_drag`): the battery
     // key inserts the key (Valiant: presses the battery button), then turns it to the electrics;
@@ -228,6 +243,7 @@ pub static RECIPES: &[Recipe] = &[
             tap(BATTERY, ELECTRICS),
             start(BATTERY),
         ],
+        ready: None,
     },
     Recipe {
         name: "three-step key (battery button)",
@@ -237,6 +253,7 @@ pub static RECIPES: &[Recipe] = &[
             tap(BATTERY, ELECTRICS),
             start(BATTERY),
         ],
+        ready: None,
     },
     // Citybus S31x: the battery key inserts the key, turns it to the electrics, to the ignition
     // and, held, to the starter. Recognised by the three together (each alone is shared: the
@@ -255,6 +272,7 @@ pub static RECIPES: &[Recipe] = &[
             tap(BATTERY, IGNITION),
             start(BATTERY),
         ],
+        ready: None,
     },
     // Studio Polygon Lite (`engineStartSwitch`): the battery key steps `StartMode`: master
     // switch, ignition, starter (held).
@@ -267,6 +285,7 @@ pub static RECIPES: &[Recipe] = &[
             start(BATTERY),
             start_again(BATTERY),
         ],
+        ready: None,
     },
     // MB C2 family (constant `engine_start_legacy` 0): two scripts answer the battery key (one
     // steps the key, one toggles the electrics), so the key is turned with the mouse like a
@@ -279,6 +298,20 @@ pub static RECIPES: &[Recipe] = &[
             drag("cp_key_rot", ELECTRICS, -15.0),
             start_drag("cp_key_rot", -25.0),
         ],
+        ready: None,
+    },
+    // MB O530 G BlueTEC Hybrid (`Hybrid_Serial.osc`): the start key toggles drive readiness
+    // (`startup_mode`). The diesel generator starts by itself while driving or when the traction
+    // battery runs low, so at standstill it stays off, and a second press would switch the bus
+    // off again.
+    Recipe {
+        name: "serial hybrid start button",
+        detect: Detect::All(&[
+            Detect::Writes("startup_mode"),
+            Detect::Writes("generator_trigger"),
+        ]),
+        steps: &[tap(BATTERY, ELECTRICS), press(START)],
+        ready: Some("startup_mode"),
     },
     // MAN NL, SD200, NG272 and unknown vehicles: battery switch, start key held (and once
     // more if the engine is still off).
@@ -286,6 +319,7 @@ pub static RECIPES: &[Recipe] = &[
         name: "battery switch and start key",
         detect: Detect::Otherwise,
         steps: &[tap(BATTERY, ELECTRICS), start(START), start_again(START)],
+        ready: None,
     },
 ];
 
@@ -296,6 +330,16 @@ pub fn recipe_for(engine: &ScriptEngine) -> &'static Recipe {
         .iter()
         .find(|r| r.detect.matches(engine))
         .unwrap_or(&RECIPES[RECIPES.len() - 1])
+}
+
+/// Whether the vehicle is ready to drive: its engine runs, or the variable its recipe names for
+/// readiness is set (a serial hybrid, whose diesel stays off at standstill).
+#[must_use]
+pub fn ready(engine: &ScriptEngine) -> bool {
+    match recipe_for(engine).ready {
+        Some(var) => engine.get(var) > 0.5,
+        None => engine.get("engine_on") > 0.5,
+    }
 }
 
 /// The engine speed from which an engine that fired runs on its own: the starter is held until
