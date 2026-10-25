@@ -331,3 +331,5 @@ set-light-distance = Lichtweite (m)
 set-light-distance-desc = Bis zu welcher Entfernung von der Kamera Straßenlaternen und andere Kartenlichter leuchten, in Metern. Eine feste Zahl von Lichtern wird auf die nächsten Lampen verteilt.
 set-detail-distance = Objektdetail-Weite (%)
 set-detail-distance-desc = Wie weit die feineren Detailstufen von Szenerieobjekten gehalten werden: 100 % ist die reine Bildschirmgrößen-Regel, 200 % hält jede Stufe doppelt so weit.
+set-tree-wind = Bäume bewegen sich im Wind
+set-tree-wind-desc = Baumkronen schwingen mit dem Wind des Wetters, bei Sturm stärker. In OMSI stehen Bäume still; dies ist eine Ergänzung von OPTS.

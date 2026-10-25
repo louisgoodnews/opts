@@ -131,6 +131,7 @@ pub fn build_app(args: CliArgs) -> App {
         app.add_plugins(opts_bevy::ground_material::GroundMaterialPlugin)
             .add_plugins(opts_bevy::LightConeRenderPlugin)
             .add_plugins(opts_bevy::moon_material::MoonMaterialPlugin)
+            .add_plugins(opts_bevy::tree_wind::TreeWindPlugin)
             .add_plugins(opts_bevy::reporting::ReportingPlugin)
             .add_systems(Update, crate::report_context::update_report_context);
     }

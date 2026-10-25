@@ -7,6 +7,7 @@
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
 - [M-0091 — Shadow Quality and Realism](M-0091.md) — 📝 Planned (R-40)
+- [M-0144 — Trees Move in the Wind](M-0144.md) — 🟡 `[tree]` billboards sway since 2026-10-26 (project lead request); mesh trees open
 
 ## Decisions (project lead, 2026-10-12)
 
@@ -43,3 +44,7 @@ Background, measurements and rejected options: [Texture Quality and Colour (prop
   - [ ] Physically calibrated sun, sky and exposure with cited reference values; reference-surface tests.
 - [ ] **🌑 Shadow Quality and Realism** — [M-0091](M-0091.md)
   - [ ] Assess and improve shadows with presets and measurements (R-40); a live *Shadow distance* setting exists since 2026-10-24 (`4d2a4955`).
+- [ ] **🌳 Trees Move in the Wind** — [M-0144](M-0144.md) — requested by the project lead 2026-10-26 (OMSI's trees are static: an OPTS extension)
+  - [x] Specification: [vegetation wind](../../architecture/vegetation-wind.md).
+  - [x] `[tree]` billboards bend in a vertex stage (shadows included) with the weather's wind; setting `graphics.tree_wind` (2026-10-26).
+  - [ ] Mesh trees (`.o3d` trunk and foliage cards).

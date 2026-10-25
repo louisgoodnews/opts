@@ -332,3 +332,5 @@ set-light-distance = Light distance (m)
 set-light-distance-desc = How far from the camera street lamps and other map lights give light, in metres. A fixed number of lights is shared among the nearest lamps.
 set-detail-distance = Object detail distance (%)
 set-detail-distance-desc = How far the finer level of detail of scenery objects is kept: 100 % is the plain screen-size rule, 200 % keeps each level twice as far.
+set-tree-wind = Trees move in the wind
+set-tree-wind-desc = Tree crowns sway with the weather's wind, more in a storm. OMSI's trees stand still; this is an addition of OPTS.

@@ -75,18 +75,8 @@ pub(super) fn spawn_tree(
         .material(materials, tree_billboard_material(handle));
     let transform = Transform::from_translation(omsi_to_bevy_pos(world))
         .with_rotation(omsi_euler_to_bevy_quat(-obj.heading_deg, 0.0, 0.0));
-    // `OPTS_INSTANCING=merge`: the billboard is baked into the tile's merged mesh.
-    if opts_bevy::instancing::merge()
-        && opts_bevy::instancing::StaticMerger::mesh_ok(&mesh)
-        && materials
-            .get(&material)
-            .is_some_and(opts_bevy::instancing::StaticMerger::material_ok)
-        && job.cache.merger.bake(&mesh, &material, &transform)
-    {
-        stats.trees_loaded += 1;
-        stats.objects_loaded += 1;
-        return None;
-    }
+    // Not baked into a tile's merged mesh (`OPTS_INSTANCING=merge`) since trees move in the wind
+    // (M-0144): each billboard stays its own entity.
     let id = commands
         .spawn((
             (
@@ -94,6 +84,8 @@ pub(super) fn spawn_tree(
                 MeshMaterial3d(material),
                 transform,
             ),
+            // Moves in the wind once `TreeWindPlugin` gives it the tree material (M-0144).
+            opts_bevy::tree_wind::WindTree,
             Name::new(format!("Tree_{}", obj.id_code)),
         ))
         .id();
