@@ -1,5 +1,10 @@
 //! Layered ground material: a standard PBR material whose base colour is blended on the GPU from
 //! the map's `[groundtex]` layers and the tile's per-layer masks.
+//!
+//! A map can list many layers (55 in the installed corpus) while one tile paints few of them (at
+//! most 18 plus the base). The map's layers live in one array texture; each tile names the layers
+//! it paints in **slots** ([`GroundSlot`]): slot 0 is the base, slot `k` blends array layer
+//! `slots[k].layer` by mask `k`.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::asset::{load_internal_asset, Asset};
@@ -15,8 +20,36 @@ use bevy::shader::ShaderRef;
 
 use crate::ground::CpuImage;
 
-/// Most layers a tile can blend (the shader packs repeat counts into two `vec4`s).
-pub const MAX_GROUND_LAYERS: usize = 8;
+/// Most layers one tile can blend, the base included (the shader packs the slots into five
+/// `vec4`s). The corpus maximum is 19 (Grand Paris-Moulon: 18 painted layers and the base).
+pub const MAX_TILE_LAYERS: usize = 20;
+
+/// Upper bound for the map's layer array in bytes (all mip levels): with many layers the common
+/// layer size is halved until the array fits (see [`layer_array_size`]).
+pub const GROUND_ARRAY_BUDGET_BYTES: usize = 256 << 20;
+
+/// One blended layer of a tile.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GroundSlot {
+    /// Index into the map's layer (and detail) array.
+    pub layer: u32,
+    /// Repeats of the layer texture per tile edge (`[groundtex]` parameter 2).
+    pub repeats: f32,
+    /// Repeats of the detail texture per tile edge (`[groundtex]` parameter 3).
+    pub detail_repeats: f32,
+}
+
+/// Common size (a power of two, 256–1024) of a layer array holding `count` layers whose largest
+/// texture edge is `largest`: the largest edge rounded up, halved while the array with its mip
+/// chains would exceed [`GROUND_ARRAY_BUDGET_BYTES`].
+#[must_use]
+pub fn layer_array_size(count: usize, largest: usize) -> usize {
+    let mut size = largest.clamp(256, 1024).next_power_of_two();
+    while size > 256 && count * size * size * 4 * 4 / 3 > GROUND_ARRAY_BUDGET_BYTES {
+        size /= 2;
+    }
+    size
+}
 
 const SHADER: Handle<Shader> = bevy::asset::uuid_handle!("6f707473-6772-6f75-6e64-6c6179657273");
 
@@ -27,29 +60,26 @@ pub struct GroundExtension {
     #[texture(100, dimension = "2d_array")]
     #[sampler(101)]
     pub layers: Handle<Image>,
-    /// Per-tile blend masks (R8), one array layer per ground layer.
+    /// Per-tile blend masks (R8), one array layer per slot (slot 0, the base, fully on).
     #[texture(102, dimension = "2d_array")]
     #[sampler(103)]
     pub masks: Handle<Image>,
-    /// Repeats per tile edge of layers 0–3.
+    /// Layer-array index of each slot, four slots per `UVec4`.
     #[uniform(104)]
-    pub repeats_a: Vec4,
-    /// Repeats per tile edge of layers 4–7.
+    pub slot_layers: [UVec4; MAX_TILE_LAYERS / 4],
+    /// Repeats per tile edge of each slot's layer, four slots per `Vec4`.
     #[uniform(105)]
-    pub repeats_b: Vec4,
-    /// Number of layers in use (x component).
+    pub repeats: [Vec4; MAX_TILE_LAYERS / 4],
+    /// Number of slots in use (x component).
     #[uniform(106)]
     pub layer_count: UVec4,
     /// Detail textures, one per layer (white where a layer has none); they modulate the layer.
     #[texture(107, dimension = "2d_array")]
     #[sampler(108)]
     pub details: Handle<Image>,
-    /// Detail repeats per tile edge of layers 0–3.
+    /// Detail repeats per tile edge of each slot, four slots per `Vec4`.
     #[uniform(109)]
-    pub detail_repeats_a: Vec4,
-    /// Detail repeats per tile edge of layers 4–7.
-    #[uniform(110)]
-    pub detail_repeats_b: Vec4,
+    pub detail_repeats: [Vec4; MAX_TILE_LAYERS / 4],
     /// Wet-surface parameters: x = wetness 0..1, y = puddle coverage 0..1, z = snow cover 0..1
     /// (written by the weather, `in_game::weather::surfaces`). All zero (the default) leaves the
     /// shader output unchanged.
@@ -159,7 +189,7 @@ pub fn layer_array(layers: &[&CpuImage], size: usize) -> Image {
     image
 }
 
-/// Stacks blend masks (`None` = fully off, except layer 0 which is fully on) into an R8 array.
+/// Stacks blend masks (`None` = fully off, except slot 0 which is fully on) into an R8 array.
 #[must_use]
 pub fn mask_array(masks: &[Option<&CpuImage>], size: usize) -> Image {
     let mut data = Vec::with_capacity(masks.len() * size * size);
@@ -198,26 +228,32 @@ pub fn mask_array(masks: &[Option<&CpuImage>], size: usize) -> Image {
     image
 }
 
-/// Builds the extension for one tile.
+/// Builds the extension for one tile from its slots (slot 0 is the base; at most
+/// [`MAX_TILE_LAYERS`] are used, `masks` holds one array layer per slot).
 #[must_use]
 pub fn ground_extension(
     layers: Handle<Image>,
     details: Handle<Image>,
     masks: Handle<Image>,
-    repeats: &[f32],
-    detail_repeats: &[f32],
+    slots: &[GroundSlot],
 ) -> GroundExtension {
-    let r = |i: usize| repeats.get(i).copied().unwrap_or(1.0);
-    let d = |i: usize| detail_repeats.get(i).copied().unwrap_or(1.0);
+    let used = slots.len().min(MAX_TILE_LAYERS);
+    let mut slot_layers = [UVec4::ZERO; MAX_TILE_LAYERS / 4];
+    let mut repeats = [Vec4::ONE; MAX_TILE_LAYERS / 4];
+    let mut detail_repeats = [Vec4::ONE; MAX_TILE_LAYERS / 4];
+    for (k, slot) in slots.iter().take(used).enumerate() {
+        slot_layers[k / 4][k % 4] = slot.layer;
+        repeats[k / 4][k % 4] = slot.repeats;
+        detail_repeats[k / 4][k % 4] = slot.detail_repeats;
+    }
     GroundExtension {
         layers,
         masks,
-        repeats_a: Vec4::new(r(0), r(1), r(2), r(3)),
-        repeats_b: Vec4::new(r(4), r(5), r(6), r(7)),
-        layer_count: UVec4::new(repeats.len().min(MAX_GROUND_LAYERS) as u32, 0, 0, 0),
+        slot_layers,
+        repeats,
+        layer_count: UVec4::new(used as u32, 0, 0, 0),
         details,
-        detail_repeats_a: Vec4::new(d(0), d(1), d(2), d(3)),
-        detail_repeats_b: Vec4::new(d(4), d(5), d(6), d(7)),
+        detail_repeats,
         wet: Vec4::ZERO,
     }
 }
@@ -260,5 +296,56 @@ mod tests {
         assert_eq!(&img.data.as_ref().unwrap()[0..4], &[255; 4]);
         assert_eq!(&img.data.as_ref().unwrap()[4..8], &[128; 4]);
         assert_eq!(&img.data.as_ref().unwrap()[8..12], &[0; 4]);
+    }
+
+    #[test]
+    fn slots_beyond_the_eighth_reach_the_shader_uniforms() {
+        let slots: Vec<GroundSlot> = (0..19)
+            .map(|k| GroundSlot {
+                layer: k * 2,
+                repeats: k as f32 + 1.0,
+                detail_repeats: 0.5,
+            })
+            .collect();
+        let ext = ground_extension(
+            Handle::default(),
+            Handle::default(),
+            Handle::default(),
+            &slots,
+        );
+        assert_eq!(ext.layer_count.x, 19);
+        // Slot 16 blends array layer 32, repeated 17 times (Köln paints layer 16 and more).
+        assert_eq!(ext.slot_layers[4][0], 32);
+        assert_eq!(ext.repeats[4][0], 17.0);
+        assert_eq!(ext.detail_repeats[4][2], 0.5);
+    }
+
+    #[test]
+    fn too_many_slots_are_cut_at_the_limit() {
+        let slots = vec![
+            GroundSlot {
+                layer: 1,
+                repeats: 1.0,
+                detail_repeats: 1.0,
+            };
+            MAX_TILE_LAYERS + 5
+        ];
+        let ext = ground_extension(
+            Handle::default(),
+            Handle::default(),
+            Handle::default(),
+            &slots,
+        );
+        assert_eq!(ext.layer_count.x as usize, MAX_TILE_LAYERS);
+    }
+
+    #[test]
+    fn the_layer_array_shrinks_to_stay_within_the_budget() {
+        assert_eq!(layer_array_size(8, 1024), 1024);
+        assert_eq!(layer_array_size(21, 1024), 1024);
+        // 55 layers of 1024² with mips are ~307 MB: halved to 512.
+        assert_eq!(layer_array_size(55, 1024), 512);
+        assert_eq!(layer_array_size(3, 300), 512);
+        assert_eq!(layer_array_size(10_000, 1024), 256);
     }
 }
