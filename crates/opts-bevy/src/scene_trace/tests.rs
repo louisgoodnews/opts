@@ -241,7 +241,10 @@ fn paths_are_relative_to_the_omsi_folder() {
         )),
         "Sceneryobjects/a/model/x.o3d"
     );
-    assert_eq!(relative(Path::new("/elsewhere/secret/x.o3d")), "x.o3d");
+    // An absolute path outside the installation on every platform (`/elsewhere` has no drive
+    // letter, so it is not absolute on Windows).
+    let outside = std::env::temp_dir().join("elsewhere/secret/x.o3d");
+    assert_eq!(relative(&outside), "x.o3d");
     set_mode(Mode::Off);
 }
 

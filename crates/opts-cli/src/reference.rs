@@ -118,7 +118,10 @@ mod tests {
         if std::env::var_os("UPDATE_CONTROL_DOC").is_some() {
             std::fs::write(&path, &want).expect("write reference page");
         }
-        let have = std::fs::read_to_string(&path).unwrap_or_default();
+        // A Windows checkout (`core.autocrlf`) has CRLF line ends; the page is compared by content.
+        let have = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read the reference page: {e}"))
+            .replace("\r\n", "\n");
         assert_eq!(
             have, want,
             "docs/src/reference/control-protocol.md is stale: run `UPDATE_CONTROL_DOC=1 cargo test -p opts-cli reference`"

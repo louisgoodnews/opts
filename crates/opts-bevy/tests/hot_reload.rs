@@ -169,7 +169,10 @@ fn reload_commands_report_success_and_failure() {
     let bad = dir.join("bad.o3d");
     std::fs::write(&good, VALID_SCO).expect("good");
     std::fs::write(&bad, b"definitely not a mesh").expect("bad");
-    let (g, b) = (good.clone(), bad.clone());
+    // An existing file outside the allowed folder (on every platform, unlike `/etc/hostname`).
+    let outside = temp_dir("control_outside").join("outside.sco");
+    std::fs::write(&outside, VALID_SCO).expect("outside");
+    let (g, b, o) = (good.clone(), bad.clone(), outside.clone());
     let (ok, err, roots, unsupported) = with_client(&mut app, move || {
         let mut c = client(port);
         let ok = c
@@ -180,7 +183,7 @@ fn reload_commands_report_success_and_failure() {
             .expect_err("bad reload");
         let roots = c.call("watch.list", Value::Null).expect("watch.list");
         let unsupported = c
-            .call("reload.asset", json!({"path": "/etc/hostname"}))
+            .call("reload.asset", json!({"path": o}))
             .expect_err("outside");
         (ok, err, roots, unsupported)
     });

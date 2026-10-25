@@ -31,7 +31,7 @@ opts-tools l10n check <user data dir>/lang/fr          # errors and gaps, with f
 
 A pack in the user folder is found at start-up and by *Reload languages*; nothing is compiled. A pack with gaps shows English for the gaps. A broken file only loses its broken messages; a broken pack never stops the game.
 
-Where is the folder? `opts-tools l10n stats` prints it, and so does *Settings → Interface → Language* below the list (`~/.local/share/opts/lang/` on Linux). Each language has its own folder named after its tag:
+Where is the folder? `opts-tools l10n stats` prints it, and so does *Settings → Interface → Language* below the list (`~/.local/share/opts/lang/` on Linux; the environment variable `OPTS_LANG_DIR` points OPTS at another folder, for testing a pack without installing it). Each language has its own folder named after its tag:
 
 ```text
 <user data dir>/lang/fr/pack.json        who, what language, direction, licence

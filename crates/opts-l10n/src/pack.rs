@@ -516,10 +516,15 @@ pub fn discover(root: &Path, reference: &Reference) -> Vec<Pack> {
     dirs.iter().map(|d| load_pack_dir(d, reference)).collect()
 }
 
-/// The folder packs are read from: `<user data dir>/lang`.
+/// The folder packs are read from: `<user data dir>/lang`, or `$OPTS_LANG_DIR` (tests and
+/// automation; on Windows and macOS the user data folder cannot be redirected otherwise).
 #[must_use]
 pub fn default_root() -> Option<PathBuf> {
-    directories::ProjectDirs::from("org", "opts", "opts").map(|d| d.data_dir().join("lang"))
+    std::env::var_os("OPTS_LANG_DIR")
+        .map(PathBuf::from)
+        .or_else(|| {
+            directories::ProjectDirs::from("org", "opts", "opts").map(|d| d.data_dir().join("lang"))
+        })
 }
 
 #[cfg(test)]

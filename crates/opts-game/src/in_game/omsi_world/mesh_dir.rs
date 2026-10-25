@@ -106,7 +106,11 @@ mod tests {
             &cfg,
             &["Exterior\\Body\\body.o3d", "Exterior\\Body\\door.o3d"],
         );
-        assert_eq!(base, bus.join("Model"));
+        // As folders on disk: a case-insensitive file system (Windows) keeps the case as searched.
+        assert_eq!(
+            std::fs::canonicalize(&base).expect("base exists"),
+            std::fs::canonicalize(bus.join("Model")).expect("model folder"),
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

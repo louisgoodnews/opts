@@ -306,7 +306,10 @@ fn reference_page_is_up_to_date() {
     if std::env::var_os("UPDATE_SETTINGS_DOC").is_some() {
         std::fs::write(&path, &want).expect("write reference page");
     }
-    let have = std::fs::read_to_string(&path).unwrap_or_default();
+    // A Windows checkout (`core.autocrlf`) has CRLF line ends; the page is compared by content.
+    let have = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("read the reference page: {e}"))
+        .replace("\r\n", "\n");
     assert_eq!(
         have, want,
         "docs/src/reference/settings.md is stale: run `UPDATE_SETTINGS_DOC=1 cargo test -p opts-game settings_registry`"
