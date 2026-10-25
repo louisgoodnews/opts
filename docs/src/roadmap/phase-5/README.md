@@ -2,7 +2,7 @@
 
 *Goal: Profile, benchmark, and optimize engine throughput, and provide developer CLI inspection utilities.*
 
-**Status:** 🟡 In progress (status sync 2026-10-25) — control protocol, hot reload, Bevy 0.19 and 0.20 upgrades, scene trace, settings protocol, instancing and reflections research done; scenery benchmark Phases A, B, D done; CI runs on GitHub (green except Windows `cargo test`), Pages live; benchmarks (M-0028), tile LOD (M-0029) and DLSS open
+**Status:** 🟡 In progress (status sync 2026-10-25) — control protocol, hot reload, Bevy 0.19 and 0.20 upgrades, scene trace, settings protocol, instancing and reflections research done; scenery benchmark Phases A, B, D done; CI runs on GitHub, every job green since 2026-10-25, Pages live; benchmarks (M-0028), tile LOD (M-0029) and DLSS open
 
 The checklist for this phase lives in the [roadmap](../README.md); this page lists its milestones.
 
@@ -15,7 +15,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0044 — Bevy Engine Upgrade](M-0044.md) — 🟢 Complete (0.14 → 0.19.1)
 - [M-0040 — Code-Quality Debt: Size Limits, Panics, Rustdoc, Stubs](M-0040.md) — 🟡 In progress (audit 5037f89a F-005, F-006, F-009–F-012)
 - [M-0041 — Documentation Repair & Developer Switch Reference](M-0041.md) — 🟢 Complete (audit 5037f89a F-013, F-018, F-020–F-023)
-- [M-0042 — CI & Toolchain Hardening](M-0042.md) — 🟡 Running on GitHub since 2026-10-13; green except the Windows `cargo test` step (audit 5037f89a F-024–F-026)
+- [M-0042 — CI & Toolchain Hardening](M-0042.md) — 🟡 Running on GitHub since 2026-10-13; every job green since 2026-10-25; broken-link proof and `cargo deny` open (audit 5037f89a F-024–F-026)
 - [M-0047 — Bevy 0.20 Upgrade](M-0047.md) — 🟢 Complete (`Interaction` follow-up done 2026-10-12, `1d3ad031`)
 - [M-0029 — Dynamic LOD, Frustum Culling & Occlusion Systems](M-0029.md) — 🟡 View, shadow, light and detail distance settings live (2026-10-24); tile mesh LOD and instancing open
 - [M-0048 — DLSS Upscaling (optional)](M-0048.md) — 📝 Planned
@@ -53,9 +53,9 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [ ] **🧹 Audit-Driven Hardening (audit 5037f89a, 2026-10-10)**
   - [~] Code-quality debt (rustdoc, panics, fixtures, stubs, Bevy bundle links and file splits done — 0 files over 500 lines of code; function splits and `SystemParam` grouping open): size limits, panics in library code, stubs, rustdoc — [M-0040](M-0040.md) (F-005, F-006, F-009–F-012).
   - [x] Documentation repair and developer switch reference — [M-0041](M-0041.md) (F-013, F-018, F-020–F-023).
-  - [~] CI and toolchain hardening (running on GitHub since 2026-10-13; green except Windows `cargo test`, being fixed since 2026-10-25; `binrw` no longer built; broken-link proof open): link check, mdBook build, toolchain pin, Windows job — [M-0042](M-0042.md) (F-024–F-026).
+  - [~] CI and toolchain hardening (running on GitHub since 2026-10-13; every job green since 2026-10-25, the Windows test failures were test assumptions about line ends, letter case, Unix paths and timing; `binrw` no longer built; broken-link proof open): link check, mdBook build, toolchain pin, Windows job — [M-0042](M-0042.md) (F-024–F-026).
 - [ ] **🧾 Critical-Review Work (critical review 2026-10-11, [report](../../meta/critical-review-2026-10-11.md))**
-  - [ ] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); Pages deploys and the site is live; open: a fully green `ci.yml` run (Windows `cargo test` fails) and the remote broken-push proof — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
+  - [ ] 🟡 GitHub hosts the repository (2026-10-24), CI runs on every branch, commits can be gated on the staged tree (`scripts/install-hooks.sh`); Pages deploys and the site is live; `ci.yml` fully green since 2026-10-25; open: the remote broken-push proof — [M-0052](M-0052.md) (F-001, F-018, F-019, F-020).
   - [~] Stop the size and lint-allow growth: fail CI on new size violations (file ratchet in `local-ci.sh` since 2026-10-19, M-0125; not in hosted CI), group load-job parameters (open; lint allows 37 → 144), fix stale Bevy rustdoc links (done, `3c760f73`) (appended to [M-0040](M-0040.md); F-005–F-007).
   - [x] Decide and execute the `bevy-0.20` → `master` merge (appended to [M-0047](M-0047.md); F-019) — fast-forwarded 2026-10-11.
   - [x] Roadmap copy generator with CI check, crate-graph table, crate guides, README and status reconciliation (done in the review pass; F-011, F-013–F-015, F-017).
