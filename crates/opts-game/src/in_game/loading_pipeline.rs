@@ -507,6 +507,13 @@ fn transition_to_active_simulation(
             dropped_dds_chains = opts_bevy::texture::dropped_dds_chains(),
             "generated mip chains"
         );
+        let bc = opts_bevy::texture::bc_chain_stats();
+        tracing::info!(
+            built = bc.built,
+            from_cache = bc.cached,
+            millis = bc.micros / 1000,
+            "block-compressed mip chains"
+        );
         tracing::info!("Simulation viewport active; driving HUD instantiated");
     }
 }

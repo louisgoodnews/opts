@@ -1,6 +1,6 @@
 # 🗂️ OPTS Development Board
 
-_Last updated: 2026-10-18 by Agent (M-0089 step 2)_
+_Last updated: 2026-10-25 by Agent (Phase 8 review, M-0058 phase A)_
 
 ---
 
@@ -102,9 +102,9 @@ _Work actively being executed in the current session._
 _Work completed but not yet marked Done — awaiting human or agent review._
 
 - `[ ]` 🟡 **Articulated trailers follow kinematically; joint angle to scripts; bellows skinned** (M-0022 addendum, code) — `f20ff5f` + parts of `7f24124`; spec [articulation.md](../src/architecture/articulation.md). Needs an in-game look at an articulated bus; follow-ups in M-0053.
-- `[ ]` 🔴 **Shared object-texture sampler (trilinear, anisotropy Off/4/8/16, default 16×) with settings entry and `--texture-filter`** (M-0057, code) — agent/visual-quality; needs the project lead's look at textures and signs; test guide in [progress/visual-quality.md](progress/visual-quality.md).
-- `[ ]` 🔴 **Looks setting *Vivid* (default) / *Natural* / *Bevy default*, live, persisted, `render.look`, `--look`** (M-0060 step 1, code) — agent/visual-quality; the project lead's testing decides the default.
-- `[ ]` 🔴 **Mip chains for uncompressed textures at load and in hot reload; dropped DDS chains fixed (2,727 → 0)** (M-0058 phase B, code) — agent/visual-quality; +6.5 % load time on Bad Hügelsdorf.
+- `[x]` 🔴 **Shared object-texture sampler (trilinear, anisotropy Off/4/8/16, default 16×) with settings entry and `--texture-filter`** (M-0057, code) — **accepted by the project lead 2026-10-25**: textures load correctly in about 95 % of what they saw; the rest are content/mesh defects to register (M-0066).
+- `[ ]` 🔴 **Looks setting *Vivid* (default) / *Natural* / *Bevy default*, live, persisted, `render.look`, `--look`** (M-0060 step 1, code) — **reviewed by the project lead 2026-10-25: the colour effect is too weak, needs expanding in future** (M-0060 step 2 and a stronger *Vivid* grade; not scheduled).
+- `[x]` 🔴 **Mip chains for uncompressed textures at load and in hot reload; dropped DDS chains fixed (2,727 → 0)** (M-0058 phase B, code) — +6.5 % load time on Bad Hügelsdorf; **accepted by the project lead 2026-10-25** (load performance acceptable).
 - `[ ]` 🔴 **`opts-tools image-metrics`, `scripts/visual-ab.sh`, A/B procedure** (M-0057 phase A minimal, code) — agent/visual-quality.
 - `[ ]` 🟡 **Repaints applied in game, `--livery`** (M-0032, code) — `7f24124`; needs a review against [repaints.md](../src/formats/text/repaints.md) Q-RP01/Q-RP02.
 
@@ -135,6 +135,9 @@ _Work completed but not yet marked Done — awaiting human or agent review._
 - [ ] 🟠 **Scripted scenery (dynamic passenger information) is not functional** (M-0099/M-0100, code) — should show a default display and take its data from the stop's timetable/AI schedule (`GetTT*`, hof, `Busstops.cfg`).
 
 _Work that is planned, approved, and unblocked. The next items the agent will pull._
+
+- [x] 🔴 **DXT mip chains: decide the path by measurement** (M-0058 phase A) — **decided by the project lead 2026-10-25: option 2 with `texpresso` range fit and the derived cache** (measurement: chains clearly visible on Köln, subtle on Bad Hügelsdorf; option 1 up to +0.9 GB VRAM; `intel_tex_2` drops DXT1 cutouts). Results in [M-0058](../src/roadmap/phase-8/M-0058.md).
+- [x] 🔴 **DXT mip chains with the derived cache** (M-0058 phase C, code) — **done 2026-10-25 on `agent/texture-mips`**: `texpresso` range fit, cache `~/.cache/opts/textures/` (checksummed, atomic, 4 GiB LRU); Köln +4 s on the first load, 0.2 s from the cache, far view as phase A's option 1; time and VRAM budgets dropped as unneeded. Needs the project lead's look while driving (shimmer).
 
 - [ ] 🟠 **Vehicle overrides and visual editor (Phase 14)** (M-0135 design, M-0136 profile schema, loader and validation, M-0137 in-game visual mesh editor; design + code) — project lead 2026-10-19. `VehicleProfile` TOML patch layer in `~/.local/share/opts/vehicles/` (sound, script, constant and mesh swaps) with compatibility validation against varlists and constants, and an in-game editor (picking, gizmos, `.o3d` browser). **Design first (M-0135), approval before implementation;** [Phase 14](../src/roadmap/phase-14/README.md).
 

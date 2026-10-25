@@ -8,8 +8,13 @@
 
 #![deny(unsafe_code)]
 
+mod bc_mips;
+pub mod chain_cache;
 mod dds_chain;
 mod mips;
+pub use bc_mips::{
+    bc_chain, bc_chain_stats, prepare_block_compressed, BcChainStats, GENERATOR_VERSION,
+};
 pub use mips::{
     full_chain_levels, generate_mip_chain, level_size, looks_like_cutout, mip_stats,
     rgba8_srgb_chain, MipOptions, MipStats,

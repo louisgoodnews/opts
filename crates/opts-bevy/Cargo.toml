@@ -22,6 +22,10 @@ bevy = { workspace = true }
 # Image & Asset Handling
 image = { workspace = true }
 ddsfile = { workspace = true }
+# Mip chains of block-compressed textures (M-0058): BC1/2/3 encoder, pure Rust; content hash
+# of the derived chain cache.
+texpresso = "2.0"
+sha2 = "0.10"
 directories = { workspace = true }
 chrono = { workspace = true }
 # Screen capture: AV1 encoder (the feature set the image crate already builds: pure Rust, no nasm)

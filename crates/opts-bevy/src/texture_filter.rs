@@ -150,9 +150,10 @@ pub fn current_object_sampler() -> ImageSampler {
 }
 
 /// Finishes a freshly decoded object texture: the shared sampler and, unless filtering is *Off*,
-/// a generated mip chain for uncompressed images that lack one (hard cutouts get a
-/// coverage-preserving alpha so foliage does not thin out with distance). Block-compressed
-/// textures keep what the file has.
+/// a generated mip chain for images that lack one (hard cutouts get a coverage-preserving alpha
+/// so foliage does not thin out with distance). Block-compressed textures get theirs re-encoded
+/// in their own format, through the derived cache
+/// ([`prepare_block_compressed`](crate::texture::prepare_block_compressed)).
 pub fn prepare_object_texture(image: &mut bevy::image::Image) {
     prepare(image, false);
 }
@@ -180,6 +181,9 @@ fn prepare(image: &mut bevy::image::Image, weight_colour_by_alpha: bool) {
     let filtering = texture_filtering();
     image.sampler = object_sampler(filtering);
     if !filtering.is_filtered() {
+        return;
+    }
+    if !weight_colour_by_alpha && crate::texture::prepare_block_compressed(image) {
         return;
     }
     let cutout = !weight_colour_by_alpha
