@@ -24,6 +24,7 @@ mod dev_look;
 mod ground;
 mod ground_height;
 mod job;
+pub(crate) mod mesh_dir;
 mod overlay;
 mod overlay_info;
 pub use overlay_info::DeveloperDetail;
