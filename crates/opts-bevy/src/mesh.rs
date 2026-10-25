@@ -460,6 +460,7 @@ Frame Text {\n\
             image: None,
             light_map: None,
             free_texture: None,
+            night_map: None,
         }];
         let palette = &models[0].materials;
         assert!(crate::model::find_override(palette, 0, &over).is_none());
@@ -485,6 +486,7 @@ Frame Text {\n\
             image: None,
             light_map: None,
             free_texture: None,
+            night_map: None,
         }];
         let palette = &models[0].materials;
         assert!(crate::model::find_override(palette, 0, &over).is_none());

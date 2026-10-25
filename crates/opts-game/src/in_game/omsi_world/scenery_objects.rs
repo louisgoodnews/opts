@@ -102,18 +102,14 @@ impl SceneryObjectCache {
 pub fn light_map_of(
     m: &opts_core::formats::scenery::ScoMaterial,
 ) -> Option<opts_core::formats::vehicles::model::LightMap> {
-    let night = || opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned();
-    if let Some(texture) = m.light_map.clone() {
-        let variable = m.light_map_variable.clone().unwrap_or_else(night);
-        return Some(opts_core::formats::vehicles::model::LightMap { texture, variable });
-    }
-    // `[matl_nightmap]`: the night texture (lit windows) is drawn as emissive light switched by
-    // the night switch, like a variable-less light map (OMSI swaps the texture at night ❓).
-    let texture = m.night_map.clone().filter(|t| !t.trim().is_empty())?;
-    Some(opts_core::formats::vehicles::model::LightMap {
-        texture,
-        variable: night(),
-    })
+    // `[matl_nightmap]` is the material's `night_map`, drawn as it is (it is the lit picture,
+    // not a mask that lights the texture like a light map).
+    let texture = m.light_map.clone()?;
+    let variable = m
+        .light_map_variable
+        .clone()
+        .unwrap_or_else(|| opts_bevy::scenery_runtime::NIGHT_VARIABLE.to_owned());
+    Some(opts_core::formats::vehicles::model::LightMap { texture, variable })
 }
 
 fn problems(diags: &[Diagnostic]) -> usize {

@@ -123,6 +123,7 @@ pub fn free_texture_system(
             material.0 = materials.add(copy);
             binding.private = true;
         }
+        tracing::debug!(variable = %binding.variable, texture = %path.display(), lit = lit.is_some(), "free texture applied");
         if let Some(mut m) = materials.get_mut(&material.0) {
             m.base_color_texture = Some(texture);
             if lit.is_some() {

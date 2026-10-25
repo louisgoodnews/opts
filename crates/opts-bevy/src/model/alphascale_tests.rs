@@ -15,6 +15,7 @@ fn over_with(alpha: Option<u32>, trans: Option<&str>, scaled: bool, name: &str) 
         trans_map: trans.map(str::to_owned),
         light_map: None,
         free_texture: None,
+        night_map: None,
         image: None,
     }
 }

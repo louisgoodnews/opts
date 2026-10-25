@@ -17,6 +17,7 @@ fn over(m: &opts_core::formats::vehicles::model::ModelMaterial) -> TextureOverri
         image: None,
         light_map: None,
         free_texture: None,
+        night_map: None,
     }
 }
 

@@ -231,12 +231,21 @@ pub fn vehicle_light_map_system(
     mut parts: Query<(&mut LightMapBinding, &mut MeshMaterial3d<StandardMaterial>)>,
     vehicles: Query<(Option<&VehicleScripts>, Option<&AiVariables>)>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    clock: Option<Res<crate::scenery_runtime::SceneryClock>>,
 ) {
     for (mut binding, mut material) in &mut parts {
         let Ok((scripts, table)) = vehicles.get(binding.owner) else {
             continue;
         };
-        let f = {
+        // Night maps are switched by the night (`NightlightA`), which vehicle scripts do not
+        // own: the environment clock answers it, as for scenery.
+        let night = binding
+            .variable
+            .eq_ignore_ascii_case(crate::scenery_runtime::NIGHT_VARIABLE)
+            .then(|| clock.as_ref().map_or(0.0, |c| f32::from(u8::from(c.night))));
+        let f = if let Some(n) = night {
+            n
+        } else {
             let Some(engine) = VariableSource::of(scripts, table) else {
                 continue;
             };

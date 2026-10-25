@@ -52,6 +52,7 @@ pub(in super::super::super) fn load_human_parts(
                 image: None,
                 light_map: None,
                 free_texture: None,
+                night_map: None,
             })
             .collect();
         let mut loader = ContentLoader {
