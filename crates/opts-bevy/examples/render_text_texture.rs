@@ -30,11 +30,10 @@ fn main() {
         std::process::exit(1);
     };
     let img = images.get(&h).expect("image");
-    // Composite onto a light grey backdrop so transparent text is visible in viewers.
-    let flat: Vec<u8> = img
-        .data
-        .as_deref()
-        .unwrap_or_default()
+    // Composite onto a light grey backdrop so transparent text is visible in viewers. Only the
+    // largest level: the image carries its mip chain after it.
+    let base = (spec.width * spec.height * 4) as usize;
+    let flat: Vec<u8> = img.data.as_deref().unwrap_or_default()[..base]
         .chunks_exact(4)
         .flat_map(|p| {
             let k = u32::from(p[3]);
