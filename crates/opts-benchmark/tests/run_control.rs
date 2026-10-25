@@ -85,11 +85,13 @@ fn crash_hang_recycle_and_resume() {
     let out = tmp.path().join("out");
     // The crash fault travels in the worker environment through `OPTS_BENCH_INJECT`; one spec
     // per run, so the crash is injected in a second run on the same run directory below.
+    // The hang loops forever, so any limit catches it; 10 s leaves room for a fresh worker's
+    // first object on a slow machine (the Windows CI runner timed `a.sco` out at 2 s).
     let first = run(
         &root,
         &out,
         &list,
-        &["--workers", "2", "--timeout-s", "2", "--recycle", "2"],
+        &["--workers", "2", "--timeout-s", "10", "--recycle", "2"],
     );
     let stderr = String::from_utf8_lossy(&first.stderr);
     if !first.status.success() && stderr.contains("failed to start") {

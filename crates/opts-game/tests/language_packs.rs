@@ -265,9 +265,10 @@ fn call(
 #[test]
 fn the_control_methods_list_set_reload_and_report() {
     let root = scratch("control");
-    // `directories` reads XDG_DATA_HOME on every call; this is the only test that sets it.
-    std::env::set_var("XDG_DATA_HOME", &root);
+    // The packs folder of this test (`XDG_DATA_HOME` would only work on Linux); this is the only
+    // test that sets it.
     let lang = root.join("opts/lang");
+    std::env::set_var("OPTS_LANG_DIR", &lang);
     write(&lang, "fr/pack.json", &meta("fr", "French", "Français", ""));
     write(&lang, "fr/s.ftl", "widget-clear = Effacer\n");
     write(

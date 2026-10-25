@@ -120,7 +120,7 @@ mod tests {
         }
         // A Windows checkout (`core.autocrlf`) has CRLF line ends; the page is compared by content.
         let have = std::fs::read_to_string(&path)
-            .unwrap_or_default()
+            .unwrap_or_else(|e| panic!("read the reference page: {e}"))
             .replace("\r\n", "\n");
         assert_eq!(
             have, want,

@@ -416,6 +416,16 @@ mod tests {
         dir
     }
 
+    /// Whether `dir` is on a case-sensitive file system (on Windows `texture` and `Texture` are one
+    /// folder).
+    fn case_sensitive(dir: &std::path::Path) -> bool {
+        let probe = dir.join("case_probe");
+        std::fs::write(&probe, b"x").unwrap();
+        let sensitive = !dir.join("CASE_PROBE").exists();
+        let _ = std::fs::remove_file(probe);
+        sensitive
+    }
+
     #[test]
     fn folders_that_differ_in_case_are_all_found_and_their_repaints_merge() {
         let root = tmp_root("case");
@@ -434,7 +444,11 @@ mod tests {
         .unwrap();
         std::fs::write(veh.join("Texture/ads/two.dds"), b"x").unwrap();
         let dirs = dirs_ignoring_case(&veh, "Texture\\Ads");
-        assert_eq!(dirs.len(), 2, "{dirs:?}");
+        assert_eq!(
+            dirs.len(),
+            if case_sensitive(&root) { 2 } else { 1 },
+            "{dirs:?}"
+        );
         assert!(dirs_ignoring_case(&veh, "Texture\\Missing").is_empty());
         let _ = std::fs::remove_dir_all(&root);
     }
@@ -447,7 +461,11 @@ mod tests {
         std::fs::create_dir_all(veh.join("Texture")).unwrap();
         std::fs::create_dir_all(veh.join("Model/texture")).unwrap();
         let dirs = texture_dirs(&veh, &veh.join("Model"));
-        assert_eq!(dirs.len(), 3, "{dirs:?}");
+        assert_eq!(
+            dirs.len(),
+            if case_sensitive(&root) { 3 } else { 2 },
+            "{dirs:?}"
+        );
         let none = texture_dirs(&root.join("W"), &root.join("W/Model"));
         assert_eq!(none, [root.join("W/texture")]);
         let _ = std::fs::remove_dir_all(&root);
