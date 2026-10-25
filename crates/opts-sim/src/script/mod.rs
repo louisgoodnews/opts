@@ -126,6 +126,12 @@ impl ScriptEngine {
         (Self::new(program), diagnostics)
     }
 
+    /// Constants and curves (`(C.L.x)`, `(F.L.x)`), read only.
+    #[must_use]
+    pub fn consts(&self) -> &ConstTable {
+        &self.consts
+    }
+
     /// Constants and curves (`(C.L.x)`, `(F.L.x)`).
     pub fn consts_mut(&mut self) -> &mut ConstTable {
         self.consts_dirty = true;

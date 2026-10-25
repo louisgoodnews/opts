@@ -86,7 +86,14 @@ pub struct Step {
     pub until_engine: bool,
     /// Wait for the busbar voltage first.
     pub needs_busbar: bool,
+    /// For a cockpit control turned with the mouse: the vertical mouse movement in pixels, spread
+    /// over the first [`DRAG_S`] of the hold (`<trigger>_drag` each frame, like a real drag);
+    /// 0 for a key press.
+    pub drag_y: f32,
 }
+
+/// Seconds over which a drag step moves the mouse.
+pub const DRAG_S: f32 = 0.5;
 
 const fn tap(trigger: &'static str, from: f32) -> Step {
     Step {
@@ -95,6 +102,25 @@ const fn tap(trigger: &'static str, from: f32) -> Step {
         hold_s: 0.3,
         until_engine: false,
         needs_busbar: false,
+        drag_y: 0.0,
+    }
+}
+
+const fn drag(trigger: &'static str, from: f32, drag_y: f32) -> Step {
+    Step {
+        trigger,
+        from,
+        hold_s: DRAG_S + 0.2,
+        until_engine: false,
+        needs_busbar: false,
+        drag_y,
+    }
+}
+
+const fn start_drag(trigger: &'static str, drag_y: f32) -> Step {
+    Step {
+        drag_y,
+        ..start(trigger)
     }
 }
 
@@ -105,6 +131,7 @@ const fn start(trigger: &'static str) -> Step {
         hold_s: 8.0,
         until_engine: true,
         needs_busbar: true,
+        drag_y: 0.0,
     }
 }
 
@@ -116,6 +143,10 @@ const START: &str = "kw_m_enginestart";
 pub enum Detect {
     /// The scripts own this variable.
     Writes(&'static str),
+    /// The scripts answer this trigger.
+    Trigger(&'static str),
+    /// The constant files set this constant to this value.
+    Const(&'static str, f32),
     /// Everything else.
     Otherwise,
 }
@@ -155,6 +186,39 @@ pub static RECIPES: &[Recipe] = &[
             start(START),
         ],
     },
+    // Luzern VBL Citybus (`cp_keymode`) and Valiant 7000 family (`cp_start_key_rot_drag`): the battery
+    // key inserts the key (Valiant: presses the battery button), then turns it to the electrics;
+    // the third press, held, is the starter, and the release springs back to the drive position.
+    Recipe {
+        name: "three-step key",
+        detect: Detect::Writes("cp_keymode"),
+        steps: &[
+            tap(BATTERY, ELECTRICS),
+            tap(BATTERY, ELECTRICS),
+            start(BATTERY),
+        ],
+    },
+    Recipe {
+        name: "three-step key (battery button)",
+        detect: Detect::Trigger("cp_start_key_rot_drag"),
+        steps: &[
+            tap(BATTERY, ELECTRICS),
+            tap(BATTERY, ELECTRICS),
+            start(BATTERY),
+        ],
+    },
+    // MB C2 family (constant `engine_start_legacy` 0): two scripts answer the battery key (one
+    // steps the key, one toggles the electrics), so the key is turned with the mouse like a
+    // driver does: to the electrics (`cp_key_rot` 0.2 to 0.8; it springs back to a third on
+    // release), then past 0.9, which starts the engine.
+    Recipe {
+        name: "ignition key turned by mouse",
+        detect: Detect::Const("engine_start_legacy", 0.0),
+        steps: &[
+            drag("cp_key_rot", ELECTRICS, -15.0),
+            start_drag("cp_key_rot", -25.0),
+        ],
+    },
     // MAN NL, SD200, NG272 and unknown vehicles: battery switch, start key held.
     Recipe {
         name: "battery switch and start key",
@@ -170,6 +234,8 @@ pub fn recipe_for(engine: &ScriptEngine) -> &'static Recipe {
         .iter()
         .find(|r| match r.detect {
             Detect::Writes(var) => engine.writes(var),
+            Detect::Trigger(name) => engine.has_trigger(name),
+            Detect::Const(name, value) => engine.consts().scalar(name) == Some(value),
             Detect::Otherwise => true,
         })
         .unwrap_or(&RECIPES[RECIPES.len() - 1])
@@ -195,6 +261,8 @@ pub struct SetupRun {
     step: usize,
     phase: Phase,
     since: f32,
+    /// `now` of the previous call (the frame time of a drag).
+    last: f32,
     fuel_done: bool,
     lights_done: bool,
 }
@@ -209,14 +277,34 @@ impl SetupRun {
         }
         let recipe = recipe_for(engine);
         let busbar = engine.get("elec_busbar_main");
+        let dt = (now - self.last).max(0.0);
+        self.last = now;
         if self.phase == Phase::Held {
             let step = recipe.steps[self.step];
+            if step.drag_y != 0.0 {
+                let moving = now - self.since <= DRAG_S;
+                engine.set_system("mouse_x", 0.0);
+                engine.set_system(
+                    "mouse_y",
+                    if moving {
+                        step.drag_y * dt / DRAG_S
+                    } else {
+                        0.0
+                    },
+                );
+                if moving {
+                    engine.trigger(&format!("{}_drag", step.trigger));
+                }
+            }
             let done = if step.until_engine {
                 engine.get("engine_on") > 0.5 || now - self.since >= step.hold_s
             } else {
                 now - self.since >= step.hold_s
             };
             if done {
+                if step.drag_y != 0.0 {
+                    engine.set_system("mouse_y", 0.0);
+                }
                 engine.trigger(&format!("{}_off", step.trigger));
                 self.phase = Phase::Idle;
                 self.step += 1;

@@ -36,7 +36,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
 - [M-0099 — Route, Timetable and IBIS Data Layer](M-0099.md) — 🟢 done 2026-10-19
 - [M-0100 — Script Textures: Canvas, Fonts and the `ST*` API](M-0100.md) — 🟡 Partly built; glyph text 2026-10-21
 - [M-0101 — Doors, Passengers, Tickets and Cash](M-0101.md) — 🔴 Not started (proposed 2026-10-14)
-- [M-0141 — Vehicle Controls and Systems: the Driver's Workplace Works](M-0141.md) — 📝 Requested 2026-10-20 (electrics, engine start, lights, doors, heating, dashboard controls; no earlier milestone owned it)
+- [M-0141 — Vehicle Controls and Systems: the Driver's Workplace Works](M-0141.md) — 🟡 In progress (requested 2026-10-20; electrics, engine start, lights, doors, heating, dashboard controls; no earlier milestone owned it)
 - [M-0102 — Sound Events and Force Feedback](M-0102.md) — 🟡 First slice 2026-10-20 (the player vehicle's loops and one-shots from its sound configuration; announcements, mixer inputs, force feedback open)
 - [M-0103 — AI Scripts Near the Player](M-0103.md) — 🔴 Not started (proposed 2026-10-14)
 - [M-0105 — Course Geometry and Path Recognition](M-0105.md) — 📝 Proposed (2026-10-14) - research only, needs approval
@@ -62,7 +62,7 @@ The checklist for this phase lives in the [roadmap](../README.md); this page lis
   - [x] Sound engine in `opts-bevy` (2026-10-20): clips, emitters, voice budget, distance fading, listener, buses with the Audio settings, `audio.*` protocol ([M-0027](M-0027.md), [audio-system](../../architecture/audio-system.md)).
   - [ ] Sounds of scenery objects and splines ([M-0139](M-0139.md)), of AI traffic ([M-0140](M-0140.md)), then the player's vehicle: engine RPM and pneumatic pressure to spatial audio ([M-0102](M-0102.md)).
 - [ ] **🎛️ Vehicle Controls and Systems** — [M-0141](M-0141.md) — requested 2026-10-20
-  - [ ] The driver's workplace works: electrics, engine start procedure per vehicle, lights, doors, heating, wipers and every dashboard control with a function; a start-procedure test per reference vehicle (the Citybus 530 does not start from a cold vehicle yet).
+  - [~] The driver's workplace works: electrics, engine start procedure per vehicle, lights, doors, heating, wipers and every dashboard control with a function; a start-procedure test per reference vehicle (Citybus 530, MAN NL/SD200/NG272 and BRT C2 start from cold since 2026-10-20, the Luzern VBL Citybus, Valiant 7000 and MB C2 BVG families since 2026-10-25; 64 of 948 installed buses still start with the engine off; dashboard displays open).
   - [~] Articulated buses — trailing segments follow the leader kinematically, the joint angle reaches the scripts, bellows are skinned ([spec](../../architecture/articulation.md), M-0022 addendum 2026-10-11); physics coupling, pitch, `[couple_front]` and AI/parked trailers open — [M-0053](M-0053.md) (critical review 2026-10-11 F-002, F-003).
 - [~] **🚶 Pedestrians** — [M-0050](M-0050.md): walking pedestrians on footpath lanes with gait animation done ([design](../../simulation/pedestrians.md)); crossings/signals, stops and boarding open.
 - [ ] **🧑‍🤝‍🧑 Passenger & Routing System**
