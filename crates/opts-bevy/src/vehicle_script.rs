@@ -501,7 +501,8 @@ pub fn script_startup_system(
         } else {
             settled
                 && setup.degree >= crate::vehicle_setup::READY
-                && (!crate::vehicle_setup::has_engine(&engine) || engine.get("engine_on") > 0.5)
+                && (!crate::vehicle_setup::has_engine(&engine)
+                    || crate::vehicle_setup::ready(&engine))
         };
         if release && controller.sim.inputs.is_parking_brake_engaged() && !st.released {
             st.released = true;

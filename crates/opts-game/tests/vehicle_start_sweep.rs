@@ -7,7 +7,8 @@ use vehicle_rig::{load, run, DT};
 
 /// Sweep (M-0141): every player bus of the installation through the game's own set-up
 /// ([`opts_bevy::vehicle_setup::SetupRun`]) at the default degree (engine running); prints one
-/// tab-separated line per vehicle: path, recipe, `engine_on`, engine speed, then where a start
+/// tab-separated line per vehicle: path, recipe, ready to drive (`vehicle_setup::ready`: the
+/// engine runs, or a serial hybrid is ready), engine speed, then where a start
 /// got stuck: busbar voltage, whether the starter ever engaged, gear selector, tank content.
 /// `SWEEP_FILTER` (a substring of the path) limits the run.
 #[test]
@@ -70,7 +71,7 @@ fn sweep_setup_starts_every_bus() {
                     e.run_frame(DT, false);
                     starter_seen = starter_seen.max(e.get("engine_starter"));
                     now += DT;
-                    if done && now > 5.0 && e.get("engine_on") > 0.5 {
+                    if done && now > 5.0 && opts_bevy::vehicle_setup::ready(&e) {
                         break;
                     }
                 }
@@ -78,7 +79,7 @@ fn sweep_setup_starts_every_bus() {
                 lines.lock().unwrap().push(format!(
                     "SWEEP\t{rel}\t{}\t{}\t{:.0}\t{:.2}\t{}\t{}\t{:.0}",
                     opts_bevy::vehicle_setup::recipe_for(&e).name,
-                    e.get("engine_on"),
+                    u8::from(opts_bevy::vehicle_setup::ready(&e)),
                     e.get("engine_n"),
                     e.get("elec_busbar_main"),
                     starter_seen,
