@@ -7,3 +7,6 @@ __pycache__/
 
 # Cargo output when cargo is run from docs/ (once committed by accident: 4.6 GB)
 /docs/target/
+# Editor folders
+.vscode
+.idea
