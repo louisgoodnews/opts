@@ -122,6 +122,9 @@ pub(in crate::in_game::omsi_world) fn engine_for(
     }
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
     engine.seed_random(seed as u32);
+    if let Some(n) = super::super::fleet_number::fleet_number(&job.install, &dir, &manifest, seed) {
+        engine.set_string("number", &n);
+    }
     engine.set("ai", 1.0);
     engine.set("ai_engine", 1.0);
     // The equipment of the chosen repaint (`[setvar]` of its `.cti`): the model's parts are shown

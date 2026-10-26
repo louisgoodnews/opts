@@ -51,6 +51,7 @@ pub(crate) use pedestrians::DEFAULT_PEDESTRIAN_BASELINE;
 pub(crate) use traffic::line_runs_on;
 #[cfg(test)]
 pub(crate) use traffic::DEFAULT_TRAFFIC_BASELINE;
+mod fleet_number;
 mod trees;
 mod vehicle;
 pub mod vehicle_script_texture;

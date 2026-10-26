@@ -95,6 +95,10 @@ pub(super) fn attach_scripts(
     opts_bevy::route::apply_to_scripts(&mut engine, &route);
 
     engine.seed_random(seed as u32);
+    if let Some(n) = super::super::fleet_number::fleet_number(&job.install, bus_dir, manifest, seed)
+    {
+        engine.set_string("number", &n);
+    }
     let counts = opts_bevy::host_callbacks::PassengerCountsHandle::default();
     if part.is_none() {
         commands.entity(root).insert(counts.clone());
