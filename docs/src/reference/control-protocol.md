@@ -2,7 +2,7 @@
 
 # Control Protocol Reference
 
-Protocol version **1.28.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
+Protocol version **1.29.0**. Every command below is declared once in the command table; the same table answers `help <command>` and `commands` at runtime, drives the `opts-cli` argument parser and generates this page. Transport, message format, gating and worked sessions are in [the architecture page](../architecture/control-protocol.md).
 
 *Debug* commands deliberately skip the input layer and its gates (they act on the world directly); every other command goes through the same messages, keys and systems a person would use, so a dialog that swallows a key press also refuses the command (`1009`).
 
@@ -335,7 +335,7 @@ Sets the session environment like the pause menu's *Environment* page: `seconds`
 | [`hud.minimap`](#hudminimap) | `zoom?` (integer)<br>`zoom_mode?` (string = speed \| fixed)<br>`orientation?` (string = north \| heading)<br>`enabled?` (boolean) | 1.4 | Read or change the HUD mini map: zoom (radius in metres), zoom mode, orientation, on/off |
 | [`hud.fullmap`](#hudfullmap) | `open?` (boolean)<br>`span?` (number)<br>`x?` (number)<br>`y?` (number)<br>`follow?` (boolean)<br>`fit?` (boolean) | 1.15 | Read or drive the full-size map: open or close, zoom span, centre, follow |
 | [`camera.door`](#cameradoor) | `door?` (integer) | 1.17 | Read the door camera or choose the door it shows |
-| [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
+| [`session.spawn`](#sessionspawn) | `vehicle` (string)<br>`repaint?` (string)<br>`setvars?` (json)<br>`entry?` (string)<br>`entry_id?` (integer)<br>`stop?` (json) | 1.2 | Spawn a vehicle at an entry point of the map; it becomes the active vehicle when it exists |
 | [`session.change_map`](#sessionchange_map) | `map` (string)<br>`entry?` (string)<br>`vehicle?` (string = carry \| none)<br>`dry_run?` (boolean) | 1.16 | Change the map of the running drive (the Alt menu's Change map): the vehicle and the time are carried over |
 | [`session.switch`](#sessionswitch) | `id?` (integer)<br>`step?` (integer) | 1.2 | Make a session vehicle the active one (cockpit camera, HUD profile, input and scripts follow) |
 | [`session.despawn`](#sessiondespawn) | `id?` (integer) | 1.2 | Remove a session vehicle with its trailers (default: the active one) |
@@ -489,7 +489,7 @@ Spawn a vehicle at an entry point of the map; it becomes the active vehicle when
 
 **Result:** `{id, queued:true}`; poll `session.vehicles` until `lifecycle` is `alive` (or `failed`, with `error`)
 
-`vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on).
+Since 1.29 `stop` (a station id, or a stop name of the map's `Busstops.cfg`) places the vehicle at that bus stop object with its front at the stop instead of at an entry point; while another vehicle (traffic or a session vehicle) stands within 10 m of it the spawn fails with `the stop is occupied`. `vehicle` is an absolute `.bus` path (below an allowed read root) or a catalogue id or name. `repaint` defaults to the vehicle's own; `setvars` is an object `{variable: 0|1}` set on the scripts after the repaint's. `entry` is an entry point name (exact, else the only one containing it), `entry_id` its record number; without either the session's start entry is used. The previous active vehicle is parked (parking brake on).
 
 ### `session.change_map`
 
